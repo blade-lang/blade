@@ -18,6 +18,7 @@ typedef struct {
   b_value stack[STACK_MAX];
   b_value *stack_top;
   b_table strings;
+  b_table globals;
 
   b_obj *objects;
 } b_vm;

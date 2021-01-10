@@ -5,6 +5,13 @@
 #include "value.h"
 
 typedef enum {
+  OP_DEFINE_GLOBAL,
+  OP_GET_GLOBAL,
+  OP_SET_GLOBAL,
+  OP_DEFINE_LGLOBAL,
+  OP_GET_LGLOBAL,
+  OP_SET_LGLOBAL,
+
   OP_EQUAL,
   OP_GREATER,
   OP_LESS,
@@ -20,9 +27,11 @@ typedef enum {
   OP_POW,
   OP_NEGATE,
   OP_NOT,
-  OP_LONG_CONSTANT, // 16-bit constant address... allowing us to have up to
-                    // 65536 constants... (255 - 65536)
-  OP_CONSTANT,      // 8-bit constant address (0 - 255)
+  OP_LCONSTANT, // 16-bit constant address... allowing us to have up to
+                // 65536 constants... (255 - 65536)
+  OP_CONSTANT,  // 8-bit constant address (0 - 255)
+  OP_ECHO,
+  OP_POP,
   OP_RETURN,
 } b_code;
 

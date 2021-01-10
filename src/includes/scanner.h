@@ -74,7 +74,7 @@ typedef enum {
   IMPORT_TOKEN,
   IN_TOKEN,
   ITER_TOKEN,
-  LET_TOKEN,
+  VAR_TOKEN,
   NIL_TOKEN,
   OR_TOKEN,
   PARENT_TOKEN,

@@ -35,7 +35,7 @@ typedef struct {
   b_blob *current_blob;
 } b_parser;
 
-typedef void (*b_parse_fn)(b_parser *);
+typedef void (*b_parse_fn)(b_parser *, bool);
 
 typedef struct {
   b_parse_fn prefix;

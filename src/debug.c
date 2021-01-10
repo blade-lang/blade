@@ -42,10 +42,22 @@ int disassemble_instruction(b_blob *blob, int offset) {
 
   uint8_t instruction = blob->code[offset];
   switch (instruction) {
-  case OP_LONG_CONSTANT:
-    return long_constant_instruction("lload", blob, offset);
+  case OP_DEFINE_GLOBAL:
+    return constant_instruction("dglob", blob, offset);
+  case OP_DEFINE_LGLOBAL:
+    return long_constant_instruction("dlglob", blob, offset);
+  case OP_GET_GLOBAL:
+    return constant_instruction("gglob", blob, offset);
+  case OP_GET_LGLOBAL:
+    return long_constant_instruction("glglob", blob, offset);
+  case OP_SET_GLOBAL:
+    return constant_instruction("sglob", blob, offset);
+  case OP_SET_LGLOBAL:
+    return long_constant_instruction("slglob", blob, offset);
   case OP_CONSTANT:
     return constant_instruction("load", blob, offset);
+  case OP_LCONSTANT:
+    return long_constant_instruction("lload", blob, offset);
   case OP_EQUAL:
     return simple_instruction("eq", offset);
   case OP_GREATER:
@@ -76,6 +88,10 @@ int disassemble_instruction(b_blob *blob, int offset) {
     return simple_instruction("neg", offset);
   case OP_NOT:
     return simple_instruction("not", offset);
+  case OP_ECHO:
+    return simple_instruction("echo", offset);
+  case OP_POP:
+    return simple_instruction("pop", offset);
   case OP_RETURN:
     return simple_instruction("ret", offset);
 
