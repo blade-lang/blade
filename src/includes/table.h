@@ -23,5 +23,6 @@ bool table_delete(b_table *table, b_value key);
 void table_add_all(b_table *from, b_table *to);
 b_obj_string *table_find_string(b_table *table, const char *chars, int length,
                                 uint32_t hash);
+void table_print(b_table *table);
 
 #endif

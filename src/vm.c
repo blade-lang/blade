@@ -14,9 +14,13 @@
 #include "debug.h"
 #endif
 
+#define runtime_error(...)                                                     \
+  _runtime_error(vm, ##__VA_ARGS__);                                           \
+  return PTR_RUNTIME_ERR
+
 static void reset_stack(b_vm *vm) { vm->stack_top = vm->stack; }
 
-void runtime_error(b_vm *vm, const char *format, ...) {
+void _runtime_error(b_vm *vm, const char *format, ...) {
   va_list args;
   va_start(args, format);
   vfprintf(stderr, format, args);
@@ -26,7 +30,7 @@ void runtime_error(b_vm *vm, const char *format, ...) {
   size_t instruction = vm->ip - vm->blob->code - 1;
   int line = vm->blob->lines[instruction];
   fprintf(stderr, "RuntimeError:\n");
-  fprintf(stderr, "    [Line %d] Error in script", line);
+  fprintf(stderr, "    [Line %d] Error in script\n", line);
 
   reset_stack(vm);
 }
@@ -35,11 +39,13 @@ void init_vm(b_vm *vm) {
   reset_stack(vm);
   vm->objects = NULL;
   init_table(&vm->strings);
+  init_table(&vm->globals);
 }
 
 void free_vm(b_vm *vm) {
   free_objects(vm);
   free_table(&vm->strings);
+  free_table(&vm->globals);
 }
 
 void push(b_vm *vm, b_value value) {
@@ -157,16 +163,17 @@ b_ptr_result run(b_vm *vm) {
 
 #define READ_BYTE() (*vm->ip++)
 #define READ_CONSTANT() (vm->blob->constants.values[READ_BYTE()])
-#define READ_LONG_CONSTANT()                                                   \
+#define READ_LCONSTANT()                                                       \
   (vm->blob->constants.values[(READ_BYTE() << 8) | READ_BYTE()])
+#define READ_STRING() (AS_STRING(READ_CONSTANT()))
+#define READ_LSTRING() (AS_STRING(READ_LCONSTANT()))
 
 #define BINARY_OP(type, op)                                                    \
   do {                                                                         \
     if ((!IS_NUMBER(peek(vm, 0)) && !IS_BOOL(peek(vm, 0))) ||                  \
         (!IS_NUMBER(peek(vm, 1)) && !IS_BOOL(peek(vm, 1)))) {                  \
-      runtime_error(vm, "unsupported operand %s for %s and %s", #op,           \
-                    value_type(peek(vm, 0)), value_type(peek(vm, 1)));         \
-      return PTR_RUNTIME_ERR;                                                  \
+      _runtime_error(vm, "unsupported operand %s for %s and %s", #op,          \
+                     value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
     }                                                                          \
     b_value _b = pop(vm);                                                      \
     double b = IS_BOOL(_b) ? (AS_BOOL(_b) ? 1 : 0) : AS_NUMBER(_b);            \
@@ -179,9 +186,8 @@ b_ptr_result run(b_vm *vm) {
   do {                                                                         \
     if ((!IS_NUMBER(peek(vm, 0)) && !IS_BOOL(peek(vm, 0))) ||                  \
         (!IS_NUMBER(peek(vm, 1)) && !IS_BOOL(peek(vm, 1)))) {                  \
-      runtime_error(vm, "unsupported operand %s for %s and %s", #op,           \
-                    value_type(peek(vm, 0)), value_type(peek(vm, 1)));         \
-      return PTR_RUNTIME_ERR;                                                  \
+      _runtime_error(vm, "unsupported operand %s for %s and %s", #op,          \
+                     value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
     }                                                                          \
     b_value _b = pop(vm);                                                      \
     double b = IS_BOOL(_b) ? (AS_BOOL(_b) ? 1 : 0) : AS_NUMBER(_b);            \
@@ -207,22 +213,20 @@ b_ptr_result run(b_vm *vm) {
 
     uint8_t instruction;
     switch (instruction = READ_BYTE()) {
-    case OP_LONG_CONSTANT: {
-      b_value constant = READ_LONG_CONSTANT();
+
+    case OP_CONSTANT:
+    case OP_LCONSTANT: {
+      b_value constant =
+          instruction == OP_CONSTANT ? READ_CONSTANT() : READ_LCONSTANT();
       push(vm, constant);
       break;
     }
-    case OP_CONSTANT: {
-      b_value constant = READ_CONSTANT();
-      push(vm, constant);
-      break;
-    }
+
     case OP_ADD: {
       if (IS_STRING(peek(vm, 0)) || IS_STRING(peek(vm, 1))) {
         if (!concatenate(vm)) {
-          runtime_error(vm, "unsupported operand + for %s and %s",
+          runtime_error("unsupported operand + for %s and %s",
                         value_type(peek(vm, 0)), value_type(peek(vm, 1)));
-          return PTR_RUNTIME_ERR;
         }
       } else {
         BINARY_OP(NUMBER_VAL, +);
@@ -255,8 +259,7 @@ b_ptr_result run(b_vm *vm) {
     }
     case OP_NEGATE: {
       if (!IS_NUMBER(peek(vm, 0))) {
-        runtime_error(vm, "operand must be a number");
-        return PTR_RUNTIME_ERR;
+        runtime_error("operand must be a number");
       }
       push(vm, NUMBER_VAL(-AS_NUMBER(pop(vm))));
       break;
@@ -290,9 +293,59 @@ b_ptr_result run(b_vm *vm) {
     case OP_FALSE:
       push(vm, BOOL_VAL(false));
       break;
-    case OP_RETURN: {
+
+    case OP_ECHO: {
       print_value(pop(vm));
-      printf("\n");
+      printf("\n"); // @TODO: Remove...
+      break;
+    }
+
+    case OP_POP: {
+      pop(vm);
+      break;
+    }
+
+    case OP_DEFINE_GLOBAL:
+    case OP_DEFINE_LGLOBAL: {
+      b_obj_string *name =
+          instruction == OP_DEFINE_GLOBAL ? READ_STRING() : READ_LSTRING();
+      table_set(&vm->globals, OBJ_VAL(name), peek(vm, 0));
+      pop(vm);
+
+#if DEBUG_MODE == 1
+#if DEBUG_TABLE == 1
+      table_print(&vm->globals);
+#endif
+#endif
+      break;
+    }
+
+    case OP_GET_GLOBAL:
+    case OP_GET_LGLOBAL: {
+      b_obj_string *name =
+          instruction == OP_GET_GLOBAL ? READ_STRING() : READ_LSTRING();
+      b_value value;
+      if (!table_get(&vm->globals, OBJ_VAL(name), &value)) {
+        runtime_error("%s is undefined in this scope", name->chars);
+      }
+      push(vm, value);
+      break;
+    }
+
+    case OP_SET_GLOBAL:
+    case OP_SET_LGLOBAL: {
+      b_obj_string *name =
+          instruction == OP_SET_GLOBAL ? READ_STRING() : READ_LSTRING();
+      if (table_set(&vm->globals, OBJ_VAL(name), peek(vm, 0))) {
+        table_delete(&vm->globals, OBJ_VAL(name));
+        runtime_error("%s is undefined in this scope", name->chars);
+      }
+      break;
+    }
+
+    case OP_RETURN: {
+      // print_value(pop(vm));
+      // printf("\n");
       return PTR_OK;
     }
 
@@ -303,6 +356,7 @@ b_ptr_result run(b_vm *vm) {
 
 #undef READ_BYTE
 #undef READ_CONSTANT
+#undef READ_STRING
 #undef BINARY_OP
 #undef BINARY_MOD_OP
 }

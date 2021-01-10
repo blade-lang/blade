@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -8,18 +9,28 @@
 #include "value.h"
 
 void init_table(b_table *table) {
-  table->capacity = 0;
   table->count = 0;
+  table->capacity = -1;
   table->entries = NULL;
 }
 
 void free_table(b_table *table) {
-  FREE_ARRAY(b_entry, table->entries, table->capacity);
+  // FREE_ARRAY(b_entry, table->entries, table->capacity + 1);
   init_table(table);
 }
 
 static b_entry *find_entry(b_entry *entries, int capacity, b_value key) {
-  uint32_t index = hash_value(key) % capacity;
+  uint32_t hash = hash_value(key);
+
+#if DEBUG_MODE == 1
+#if DEBUG_TABLE == 1
+  printf("looking for key ");
+  print_value(key);
+  printf(" with hash %u in table...\n", hash);
+#endif
+#endif
+
+  uint32_t index = hash & capacity;
   b_entry *tombstone = NULL;
 
   for (;;) {
@@ -30,29 +41,54 @@ static b_entry *find_entry(b_entry *entries, int capacity, b_value key) {
         // empty entry
         return tombstone != NULL ? tombstone : entry;
       } else {
-        // we found a tombstone
+        // we found a tombstone.
         if (tombstone == NULL)
           tombstone = entry;
       }
-    } else if (values_equal(entry->key, key)) {
+    } else if (values_equal(key, entry->key)) {
       return entry;
     }
 
-    index = (index + 1) % capacity;
+    index = (index + 1) & capacity;
   }
 }
 
+bool table_get(b_table *table, b_value key, b_value *value) {
+  if (table->count == 0 || table->entries == NULL)
+    return false;
+
+#if DEBUG_MODE == 1
+#if DEBUG_TABLE == 1
+  printf("Getting global variable with hash %u...\n", hash_value(key));
+#endif
+#endif
+
+  b_entry *entry = find_entry(table->entries, table->capacity, key);
+
+  if (IS_NIL(entry->key) || IS_EMPTY(entry->key))
+    return false;
+
+#ifdef DEBUG_TABLE
+  printf("Found global variable for hash %u == ", hash_value(entry->key));
+  print_value(entry->value);
+  printf("\n");
+#endif
+
+  *value = entry->value;
+  return true;
+}
+
 static void adjust_capacity(b_table *table, int capacity) {
-  b_entry *entries = ALLOCATE(b_entry, capacity);
-  for (int i = 0; i < capacity; i++) {
+  b_entry *entries = ALLOCATE(b_entry, capacity + 1);
+  for (int i = 0; i <= capacity; i++) {
     entries[i].key = EMPTY_VAL;
     entries[i].value = NIL_VAL;
   }
 
+  // repopulate buckets
   table->count = 0;
-  for (int i = 0; i < table->capacity; i++) {
+  for (int i = 0; i <= table->capacity; i++) {
     b_entry *entry = &table->entries[i];
-
     if (IS_EMPTY(entry->key))
       continue;
 
@@ -62,39 +98,31 @@ static void adjust_capacity(b_table *table, int capacity) {
     table->count++;
   }
 
-  FREE_ARRAY(b_entry, table->entries, table->capacity);
+  // free the old entries...
+  FREE_ARRAY(b_entry, table->entries, table->capacity + 1);
+
   table->entries = entries;
   table->capacity = capacity;
 }
 
 bool table_set(b_table *table, b_value key, b_value value) {
-  if (table->count + 1 > table->capacity * TABLE_MAX_LOAD) {
-    int capacity = GROW_CAPACITY(table->capacity);
+  if (table->count + 1 > (table->capacity + 1) * TABLE_MAX_LOAD) {
+    int capacity = GROW_CAPACITY(table->capacity + 1) - 1;
     adjust_capacity(table, capacity);
   }
 
   b_entry *entry = find_entry(table->entries, table->capacity, key);
 
-  bool is_new_key = IS_EMPTY(entry->key);
-  if (is_new_key && IS_NIL(entry->value))
+  bool is_new = IS_EMPTY(entry->key);
+
+  if (is_new && IS_NIL(entry->value))
     table->count++;
 
+  // overwrites exisiting entries.
   entry->key = key;
   entry->value = value;
 
-  return is_new_key;
-}
-
-bool table_get(b_table *table, b_value key, b_value *value) {
-  if (table->count == 0)
-    return false;
-
-  b_entry *entry = find_entry(table->entries, table->count, key);
-  if (IS_NIL(entry->key))
-    return false;
-
-  *value = entry->value;
-  return true;
+  return is_new;
 }
 
 bool table_delete(b_table *table, b_value key) {
@@ -106,7 +134,7 @@ bool table_delete(b_table *table, b_value key) {
   if (IS_EMPTY(entry->key))
     return false;
 
-  // place a tombstone
+  // place a tombstone in the entry.
   entry->key = EMPTY_VAL;
   entry->value = BOOL_VAL(true);
 
@@ -114,7 +142,7 @@ bool table_delete(b_table *table, b_value key) {
 }
 
 void table_add_all(b_table *from, b_table *to) {
-  for (int i = 0; i < from->capacity; i++) {
+  for (int i = 0; i <= from->capacity; i++) {
     b_entry *entry = &from->entries[i];
     if (!IS_EMPTY(entry->key)) {
       table_set(to, entry->key, entry->value);
@@ -127,7 +155,7 @@ b_obj_string *table_find_string(b_table *table, const char *chars, int length,
   if (table->count == 0)
     return NULL;
 
-  uint32_t index = hash % table->capacity;
+  uint32_t index = hash & table->capacity;
 
   for (;;) {
     b_entry *entry = &table->entries[index];
@@ -147,6 +175,19 @@ b_obj_string *table_find_string(b_table *table, const char *chars, int length,
       }
     }
 
-    index = (index + 1) % table->capacity;
+    index = (index + 1) & table->capacity;
   }
+}
+
+void table_print(b_table *table) {
+  printf("<HashTable: [");
+  for (int i = 0; i <= table->capacity; i++) {
+    b_entry *entry = &table->entries[i];
+    if (!IS_NIL(entry->key) && !IS_EMPTY(entry->key)) {
+      printf("{key: %u, value: ", hash_value(entry->key));
+      print_value(entry->value);
+      printf("}");
+    }
+  }
+  printf("]>\n");
 }

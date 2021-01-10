@@ -66,6 +66,27 @@ static void consume(b_parser *p, b_tkn_type t, const char *message) {
   error_at_current(p, message);
 }
 
+static bool check(b_parser *p, b_tkn_type t) { return p->current.type == t; }
+
+static bool match(b_parser *p, b_tkn_type t) {
+  if (!check(p, t))
+    return false;
+  advance(p);
+  return true;
+}
+
+static void consume_statement_end(b_parser *p) {
+  if (match(p, SEMICOLON_TOKEN)) {
+    while (match(p, SEMICOLON_TOKEN) || match(p, NEWLINE_TOKEN))
+      ;
+    return;
+  }
+
+  consume(p, NEWLINE_TOKEN, "end of statement expected");
+  while (match(p, SEMICOLON_TOKEN) || match(p, NEWLINE_TOKEN))
+    ;
+}
+
 static void emit_byte(b_parser *p, uint8_t byte) {
   write_blob(p->current_blob, byte, p->previous.line);
 }
@@ -79,7 +100,7 @@ static void emit_return(b_parser *p) { emit_byte(p, OP_RETURN); }
 
 static int make_constant(b_parser *p, b_value value) {
   int constant = add_constant(p->current_blob, value);
-  if (constant > UINT16_MAX) {
+  if (constant >= UINT16_MAX) {
     error(p, "too many constants in current scope");
     return 0;
   }
@@ -88,11 +109,16 @@ static int make_constant(b_parser *p, b_value value) {
 
 static void emit_constant(b_parser *p, b_value value) {
   int constant = make_constant(p, value);
-  if (constant <= 255) {
+  if (constant <= UINT8_MAX) {
     emit_bytes(p, OP_CONSTANT, (uint8_t)constant);
   } else {
-    emit_bytes(p, OP_LONG_CONSTANT, (uint16_t)constant);
+    emit_bytes(p, OP_LCONSTANT, (uint16_t)constant);
   }
+}
+
+static int identifier_constant(b_parser *p, b_token *name) {
+  return make_constant(p,
+                       OBJ_VAL(copy_string(p->vm, name->start, name->length)));
 }
 
 static void end_compiler(b_parser *p) {
@@ -109,11 +135,13 @@ static void end_compiler(b_parser *p) {
 
 // --> Forward declarations start
 static void expression(b_parser *p);
+static void statement(b_parser *p);
+static void declaration(b_parser *p);
 static b_parse_rule *get_rule(b_tkn_type type);
 static void parse_precedence(b_parser *p, b_prec precedence);
 // --> Forward declarations end
 
-static void binary(b_parser *p) {
+static void binary(b_parser *p, bool can_assign) {
   b_tkn_type op = p->previous.type;
 
   // compile the right operand
@@ -169,7 +197,7 @@ static void binary(b_parser *p) {
   }
 }
 
-static void literal(b_parser *p) {
+static void literal(b_parser *p, bool can_assign) {
   switch (p->previous.type) {
   case NIL_TOKEN:
     emit_byte(p, OP_NIL);
@@ -185,12 +213,35 @@ static void literal(b_parser *p) {
   }
 }
 
-static void grouping(b_parser *p) {
+static void named_variable(b_parser *p, b_token t, bool can_assign) {
+  int arg = identifier_constant(p, &t);
+  if (arg <= UINT8_MAX) {
+    if (can_assign && match(p, EQUAL_TOKEN)) {
+      expression(p);
+      emit_bytes(p, OP_SET_GLOBAL, arg);
+    } else {
+      emit_bytes(p, OP_GET_GLOBAL, arg);
+    }
+  } else {
+    if (can_assign && match(p, EQUAL_TOKEN)) {
+      expression(p);
+      emit_bytes(p, OP_SET_LGLOBAL, arg);
+    } else {
+      emit_bytes(p, OP_GET_LGLOBAL, arg);
+    }
+  }
+}
+
+static void variable(b_parser *p, bool can_assign) {
+  named_variable(p, p->previous, can_assign);
+}
+
+static void grouping(b_parser *p, bool can_assign) {
   expression(p);
   consume(p, RPAREN_TOKEN, "expected ')' after grouped expression");
 }
 
-static void number(b_parser *p) {
+static void number(b_parser *p, bool can_assign) {
   if (p->previous.type == BIN_NUMBER_TOKEN) {
     long long value = strtoll(p->previous.start + 2, NULL, 2);
     emit_constant(p, NUMBER_VAL(value));
@@ -253,7 +304,7 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
   return count;
 }
 
-static void string(b_parser *p) {
+static void string(b_parser *p, bool can_assign) {
   char *str = (char *)calloc(p->previous.length - 2, sizeof(char));
   char *real = (char *)(p->previous.start + 1);
 
@@ -325,7 +376,7 @@ static void string(b_parser *p) {
   emit_constant(p, OBJ_VAL(copy_string(p->vm, str, k)));
 }
 
-static void unary(b_parser *p) {
+static void unary(b_parser *p, bool can_assign) {
   b_tkn_type op = p->previous.type;
 
   // compile the expression
@@ -418,7 +469,7 @@ b_parse_rule parse_rules[] = {
     [IMPORT_TOKEN] = {NULL, NULL, PREC_NONE},
     [IN_TOKEN] = {NULL, NULL, PREC_NONE},
     [ITER_TOKEN] = {NULL, NULL, PREC_NONE},
-    [LET_TOKEN] = {NULL, NULL, PREC_NONE},
+    [VAR_TOKEN] = {NULL, NULL, PREC_NONE},
     [NIL_TOKEN] = {literal, NULL, PREC_NONE},
     [OR_TOKEN] = {NULL, NULL, PREC_NONE},
     [PARENT_TOKEN] = {NULL, NULL, PREC_NONE},
@@ -436,7 +487,7 @@ b_parse_rule parse_rules[] = {
     [BIN_NUMBER_TOKEN] = {number, NULL, PREC_NONE}, // binary numbers
     [OCT_NUMBER_TOKEN] = {number, NULL, PREC_NONE}, // octal numbers
     [HEX_NUMBER_TOKEN] = {number, NULL, PREC_NONE}, // hexadecimal numbers
-    [IDENTIFIER_TOKEN] = {NULL, NULL, PREC_NONE},
+    [IDENTIFIER_TOKEN] = {variable, NULL, PREC_NONE},
     [EOF_TOKEN] = {NULL, NULL, PREC_NONE},
 
     // error
@@ -454,18 +505,109 @@ static void parse_precedence(b_parser *p, b_prec precedence) {
     return;
   }
 
-  prefix_rule(p);
+  bool can_assign = precedence <= PREC_ASSIGNMENT;
+  prefix_rule(p, can_assign);
 
   while (precedence <= get_rule(p->current.type)->precedence) {
     advance(p);
     b_parse_fn infix_rule = get_rule(p->previous.type)->infix;
-    infix_rule(p);
+    infix_rule(p, can_assign);
+  }
+
+  if (can_assign && match(p, EQUAL_TOKEN)) {
+    error(p, "invalid assignment target");
   }
 }
 
 static b_parse_rule *get_rule(b_tkn_type type) { return &parse_rules[type]; }
 
+static int parse_variable(b_parser *p, const char *message) {
+  consume(p, IDENTIFIER_TOKEN, message);
+  return identifier_constant(p, &p->previous);
+}
+
+static void define_variable(b_parser *p, int global) {
+  if (global <= UINT8_MAX) { // constant
+    emit_bytes(p, OP_DEFINE_GLOBAL, global);
+  } else { // long constant
+    emit_bytes(p, OP_DEFINE_LGLOBAL, global);
+  }
+}
+
 static void expression(b_parser *p) { parse_precedence(p, PREC_ASSIGNMENT); }
+
+static void var_declaration(b_parser *p) {
+  int global = parse_variable(p, "variable name expected");
+
+  if (match(p, EQUAL_TOKEN)) {
+    expression(p);
+  } else {
+    emit_byte(p, OP_NIL);
+  }
+
+  consume_statement_end(p);
+  define_variable(p, global);
+}
+
+static void expression_statement(b_parser *p) {
+  expression(p);
+  consume_statement_end(p);
+  emit_byte(p, OP_POP);
+}
+
+static void echo_statement(b_parser *p) {
+  expression(p);
+  consume_statement_end(p);
+  emit_byte(p, OP_ECHO);
+}
+
+static void synchronize(b_parser *p) {
+  p->panic_mode = false;
+
+  while (p->current.type != EOF_TOKEN) {
+    if (p->current.type == NEWLINE_TOKEN || p->current.type == SEMICOLON_TOKEN)
+      return;
+
+    switch (p->current.type) {
+    case CLASS_TOKEN:
+    case DEF_TOKEN:
+    case VAR_TOKEN:
+    case FOR_TOKEN:
+    case IF_TOKEN:
+    case USING_TOKEN:
+    case ITER_TOKEN:
+    case WHILE_TOKEN:
+    case ECHO_TOKEN:
+    case DIE_TOKEN:
+    case RETURN_TOKEN:
+    case STATIC_TOKEN:
+      return;
+
+    default:; // do nothing
+    }
+
+    advance(p);
+  }
+}
+
+static void declaration(b_parser *p) {
+  if (match(p, VAR_TOKEN)) {
+    var_declaration(p);
+  } else {
+    statement(p);
+  }
+
+  if (p->panic_mode)
+    synchronize(p);
+}
+
+static void statement(b_parser *p) {
+  if (match(p, ECHO_TOKEN)) {
+    echo_statement(p);
+  } else {
+    expression_statement(p);
+  }
+}
 
 bool compile(b_vm *vm, const char *source, b_blob *blob) {
   b_scanner scanner;
@@ -481,9 +623,10 @@ bool compile(b_vm *vm, const char *source, b_blob *blob) {
   parser.current_blob = blob;
 
   advance(&parser);
-  expression(&parser);
-  // consume(&parser, EOF_TOKEN, "expected end of expression");
-  consume(&parser, NEWLINE_TOKEN, "expected end of expression");
+
+  while (!match(&parser, EOF_TOKEN)) {
+    declaration(&parser);
+  }
 
   end_compiler(&parser);
   return !parser.had_error;

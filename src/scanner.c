@@ -271,8 +271,6 @@ static b_tkn_type identifier_type(b_scanner *s) {
         return check_keyword(s, 2, 2, "er", ITER_TOKEN);
       }
     }
-  case 'l':
-    return check_keyword(s, 1, 2, "et", LET_TOKEN);
   case 'n':
     return check_keyword(s, 1, 2, "il", NIL_TOKEN);
   case 'o':
@@ -295,6 +293,8 @@ static b_tkn_type identifier_type(b_scanner *s) {
   case 'u': {
     return check_keyword(s, 1, 4, "sing", USING_TOKEN);
   }
+  case 'v':
+    return check_keyword(s, 1, 2, "ar", VAR_TOKEN);
   case 'w':
     if (s->current - s->start > 2 && s->start[1] == 'h') {
       switch (s->start[2]) {
