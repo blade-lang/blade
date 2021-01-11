@@ -21,16 +21,18 @@
 static void reset_stack(b_vm *vm) { vm->stack_top = vm->stack; }
 
 void _runtime_error(b_vm *vm, const char *format, ...) {
+
+  size_t instruction = vm->ip - vm->blob->code - 1;
+  int line = vm->blob->lines[instruction];
+
+  fprintf(stderr, "RuntimeError:\n");
+  fprintf(stderr, "    File: <script>, Line: %d\n    Message: ", line);
+
   va_list args;
   va_start(args, format);
   vfprintf(stderr, format, args);
   va_end(args);
   fputs("\n", stderr);
-
-  size_t instruction = vm->ip - vm->blob->code - 1;
-  int line = vm->blob->lines[instruction];
-  fprintf(stderr, "RuntimeError:\n");
-  fprintf(stderr, "    [Line %d] Error in script\n", line);
 
   reset_stack(vm);
 }
@@ -162,10 +164,15 @@ static int floor_div(double a, double b) {
 b_ptr_result run(b_vm *vm) {
 
 #define READ_BYTE() (*vm->ip++)
+
+#define READ_SHORT() (vm->ip += 2, (uint16_t)((vm->ip[-2] << 8) | vm->ip[-1]))
+
 #define READ_CONSTANT() (vm->blob->constants.values[READ_BYTE()])
-#define READ_LCONSTANT()                                                       \
-  (vm->blob->constants.values[(READ_BYTE() << 8) | READ_BYTE()])
+
+#define READ_LCONSTANT() (vm->blob->constants.values[READ_SHORT()])
+
 #define READ_STRING() (AS_STRING(READ_CONSTANT()))
+
 #define READ_LSTRING() (AS_STRING(READ_LCONSTANT()))
 
 #define BINARY_OP(type, op)                                                    \
@@ -340,6 +347,17 @@ b_ptr_result run(b_vm *vm) {
         table_delete(&vm->globals, OBJ_VAL(name));
         runtime_error("%s is undefined in this scope", name->chars);
       }
+      break;
+    }
+
+    case OP_GET_LOCAL: {
+      uint16_t slot = READ_SHORT();
+      push(vm, vm->stack[slot]);
+      break;
+    }
+    case OP_SET_LOCAL: {
+      uint16_t slot = READ_SHORT();
+      vm->stack[slot] = peek(vm, 0);
       break;
     }
 

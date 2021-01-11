@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,7 +14,8 @@
 #include "debug.h"
 #endif
 
-static void error_at(b_parser *p, b_token *t, const char *message) {
+static void error_at(b_parser *p, b_token *t, const char *message,
+                     va_list args) {
   // do not cascade error
   // suppress error if already in panic mode
   if (p->panic_mode)
@@ -22,27 +24,39 @@ static void error_at(b_parser *p, b_token *t, const char *message) {
   p->panic_mode = true;
 
   fprintf(stderr, "SyntaxError:\n");
-  fprintf(stderr, "    [Line %d] Error", t->line);
+  fprintf(stderr, "    File: <script>, Line: %d\n", t->line);
+
+  fprintf(stderr, "    Error");
 
   if (t->type == EOF_TOKEN) {
     fprintf(stderr, " at end");
   } else if (t->type == ERROR_TOKEN) {
     // do nothing
   } else {
-    fprintf(stderr, " at '%.*s'", t->length, t->start);
+    if (t->length == 1 && *t->start == '\n') {
+      fprintf(stderr, " at newline");
+    } else {
+      fprintf(stderr, " at '%.*s'", t->length, t->start);
+    }
   }
 
-  fprintf(stderr, ": %s\n", message);
+  fprintf(stderr, ": ");
+  vfprintf(stderr, message, args);
+  fputs("\n", stderr);
 
   p->had_error = true;
 }
 
-static void error(b_parser *p, const char *message) {
-  error_at(p, &p->previous, message);
+static void error(b_parser *p, const char *message, ...) {
+  va_list args;
+  va_start(args, message);
+  error_at(p, &p->previous, message, args);
 }
 
-static void error_at_current(b_parser *p, const char *message) {
-  error_at(p, &p->current, message);
+static void error_at_current(b_parser *p, const char *message, ...) {
+  va_list args;
+  va_start(args, message);
+  error_at(p, &p->current, message, args);
 }
 
 static void advance(b_parser *p) {
@@ -96,6 +110,12 @@ static void emit_bytes(b_parser *p, uint8_t byte, uint8_t byte2) {
   write_blob(p->current_blob, byte2, p->previous.line);
 }
 
+static void emit_byte_and_long(b_parser *p, uint8_t byte, uint16_t byte2) {
+  write_blob(p->current_blob, byte, p->previous.line);
+  write_blob(p->current_blob, (byte2 >> 8) & 0xff, p->previous.line);
+  write_blob(p->current_blob, byte2 & 0xff, p->previous.line);
+}
+
 static void emit_return(b_parser *p) { emit_byte(p, OP_RETURN); }
 
 static int make_constant(b_parser *p, b_value value) {
@@ -116,9 +136,69 @@ static void emit_constant(b_parser *p, b_value value) {
   }
 }
 
+static void init_compiler(b_parser *p, b_compiler *compiler) {
+  compiler->local_count = 0;
+  compiler->scope_depth = 0;
+  p->compiler = compiler;
+}
+
 static int identifier_constant(b_parser *p, b_token *name) {
   return make_constant(p,
                        OBJ_VAL(copy_string(p->vm, name->start, name->length)));
+}
+
+static bool identifiers_equal(b_token *a, b_token *b) {
+  if (a->length != b->length)
+    return false;
+  return memcmp(a->start, b->start, a->length) == 0;
+}
+
+static int resolve_local(b_parser *p, b_token *name) {
+  for (int i = p->compiler->local_count - 1; i >= 0; i--) {
+    b_local *local = &p->compiler->locals[i];
+    if (identifiers_equal(&local->name, name)) {
+      if (local->depth == -1) {
+        error(p, "cannot read local variable in it's own initializer");
+      }
+      return i;
+    }
+  }
+  return -1;
+}
+
+static void add_local(b_parser *p, b_token name) {
+  if (p->compiler->local_count == UINT8_COUNT) {
+    // we've reached maximum local variables per scope
+    error(p, "too many local variables in scope");
+    return;
+  }
+
+  b_local *local = &p->compiler->locals[p->compiler->local_count++];
+  local->name = name;
+  // local->depth = p->compiler->scope_depth;
+  local->depth = -1;
+}
+
+static void declare_variable(b_parser *p) {
+  // global variables are implicitly declared...
+  if (p->compiler->scope_depth == 0)
+    return;
+
+  b_token *name = &p->previous;
+
+  for (int i = p->compiler->local_count - 1; i >= 0; i--) {
+    b_local *local = &p->compiler->locals[i];
+    if (local->depth != -1 && local->depth < p->compiler->scope_depth) {
+      break;
+    }
+
+    if (identifiers_equal(name, &local->name)) {
+      error(p, "%.*s already declared in current scope", name->length,
+            name->start);
+    }
+  }
+
+  add_local(p, *name);
 }
 
 static void end_compiler(b_parser *p) {
@@ -131,6 +211,20 @@ static void end_compiler(b_parser *p) {
   }
 #endif
 #endif
+}
+
+static void begin_scope(b_parser *p) { p->compiler->scope_depth++; }
+
+static void end_scope(b_parser *p) {
+  p->compiler->scope_depth--;
+
+  // remove all variables declared in scope while exiting...
+  while (p->compiler->local_count > 0 &&
+         p->compiler->locals[p->compiler->local_count - 1].depth >
+             p->compiler->scope_depth) {
+    emit_byte(p, OP_POP);
+    p->compiler->local_count--;
+  }
 }
 
 // --> Forward declarations start
@@ -213,21 +307,30 @@ static void literal(b_parser *p, bool can_assign) {
   }
 }
 
-static void named_variable(b_parser *p, b_token t, bool can_assign) {
-  int arg = identifier_constant(p, &t);
-  if (arg <= UINT8_MAX) {
-    if (can_assign && match(p, EQUAL_TOKEN)) {
-      expression(p);
-      emit_bytes(p, OP_SET_GLOBAL, arg);
+static void named_variable(b_parser *p, b_token name, bool can_assign) {
+  uint8_t get_op, set_op;
+  int arg = resolve_local(p, &name);
+  if (arg != -1) {
+    get_op = OP_GET_LOCAL;
+    set_op = OP_SET_LOCAL;
+  } else {
+    arg = identifier_constant(p, &name);
+    get_op = arg <= UINT8_MAX ? OP_GET_GLOBAL : OP_GET_LGLOBAL;
+    set_op = arg <= UINT8_MAX ? OP_SET_GLOBAL : OP_SET_LGLOBAL;
+  }
+
+  if (can_assign && match(p, EQUAL_TOKEN)) {
+    expression(p);
+    if (arg <= UINT8_MAX) {
+      emit_bytes(p, set_op, (uint8_t)arg);
     } else {
-      emit_bytes(p, OP_GET_GLOBAL, arg);
+      emit_byte_and_long(p, set_op, (uint16_t)arg);
     }
   } else {
-    if (can_assign && match(p, EQUAL_TOKEN)) {
-      expression(p);
-      emit_bytes(p, OP_SET_LGLOBAL, arg);
+    if (arg <= UINT8_MAX) {
+      emit_bytes(p, get_op, (uint8_t)arg);
     } else {
-      emit_bytes(p, OP_GET_LGLOBAL, arg);
+      emit_byte_and_long(p, get_op, (uint16_t)arg);
     }
   }
 }
@@ -523,10 +626,25 @@ static b_parse_rule *get_rule(b_tkn_type type) { return &parse_rules[type]; }
 
 static int parse_variable(b_parser *p, const char *message) {
   consume(p, IDENTIFIER_TOKEN, message);
+
+  declare_variable(p);
+  if (p->compiler->scope_depth > 0) // we are in a local scope...
+    return 0;
+
   return identifier_constant(p, &p->previous);
 }
 
+static void mark_initalized(b_parser *p) {
+  p->compiler->locals[p->compiler->local_count - 1].depth =
+      p->compiler->scope_depth;
+}
+
 static void define_variable(b_parser *p, int global) {
+  if (p->compiler->scope_depth > 0) { // we are in a local scope...
+    mark_initalized(p);
+    return;
+  }
+
   if (global <= UINT8_MAX) { // constant
     emit_bytes(p, OP_DEFINE_GLOBAL, global);
   } else { // long constant
@@ -535,6 +653,13 @@ static void define_variable(b_parser *p, int global) {
 }
 
 static void expression(b_parser *p) { parse_precedence(p, PREC_ASSIGNMENT); }
+
+static void block(b_parser *p) {
+  while (!check(p, RBRACE_TOKEN) && !check(p, EOF_TOKEN)) {
+    declaration(p);
+  }
+  consume(p, RBRACE_TOKEN, "expected '}' after block");
+}
 
 static void var_declaration(b_parser *p) {
   int global = parse_variable(p, "variable name expected");
@@ -604,6 +729,10 @@ static void declaration(b_parser *p) {
 static void statement(b_parser *p) {
   if (match(p, ECHO_TOKEN)) {
     echo_statement(p);
+  } else if (match(p, LBRACE_TOKEN)) {
+    begin_scope(p);
+    block(p);
+    end_scope(p);
   } else {
     expression_statement(p);
   }
@@ -621,6 +750,9 @@ bool compile(b_vm *vm, const char *source, b_blob *blob) {
   parser.had_error = false;
   parser.panic_mode = false;
   parser.current_blob = blob;
+
+  b_compiler compiler;
+  init_compiler(&parser, &compiler);
 
   advance(&parser);
 
