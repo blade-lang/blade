@@ -137,8 +137,30 @@ static void emit_constant(b_parser *p, b_value value) {
   if (constant <= UINT8_MAX) {
     emit_bytes(p, OP_CONSTANT, (uint8_t)constant);
   } else {
-    emit_bytes(p, OP_LCONSTANT, (uint16_t)constant);
+    emit_byte_and_long(p, OP_LCONSTANT, (uint16_t)constant);
   }
+}
+
+static int emit_jump(b_parser *p, uint8_t instruction) {
+  emit_byte(p, instruction);
+
+  // placeholders
+  emit_byte(p, 0xff);
+  emit_byte(p, 0xff);
+
+  return p->current_blob->count - 2;
+}
+
+static void patch_jump(b_parser *p, int offset) {
+  // -2 to adjust the bytecode for the offset itself
+  int jump = p->current_blob->count - offset - 2;
+
+  if (jump > UINT16_MAX) {
+    error(p, "body of conditional block too large");
+  }
+
+  p->current_blob->code[offset] = (jump >> 8) & 0xff;
+  p->current_blob->code[offset + 1] = jump & 0xff;
 }
 
 static void init_compiler(b_parser *p, b_compiler *compiler) {
@@ -224,12 +246,14 @@ static void end_scope(b_parser *p) {
   p->compiler->scope_depth--;
 
   // remove all variables declared in scope while exiting...
+  int count = 0;
   while (p->compiler->local_count > 0 &&
          p->compiler->locals[p->compiler->local_count - 1].depth >
              p->compiler->scope_depth) {
-    emit_byte(p, OP_POP);
+    count++;
     p->compiler->local_count--;
   }
+  emit_byte_and_long(p, OP_POPN, count);
 }
 
 // --> Forward declarations start
@@ -653,7 +677,7 @@ static void define_variable(b_parser *p, int global) {
   if (global <= UINT8_MAX) { // constant
     emit_bytes(p, OP_DEFINE_GLOBAL, global);
   } else { // long constant
-    emit_bytes(p, OP_DEFINE_LGLOBAL, global);
+    emit_byte_and_long(p, OP_DEFINE_LGLOBAL, global);
   }
 }
 
@@ -684,6 +708,24 @@ static void expression_statement(b_parser *p) {
   expression(p);
   consume_statement_end(p);
   emit_byte(p, OP_POP);
+}
+
+static void if_statement(b_parser *p) {
+  expression(p);
+
+  int then_jump = emit_jump(p, OP_JUMP_IF_FALSE);
+  emit_byte(p, OP_POP);
+  statement(p);
+
+  int else_jump = emit_jump(p, OP_JUMP);
+
+  patch_jump(p, then_jump);
+  emit_byte(p, OP_POP);
+
+  if (match(p, ELSE_TOKEN))
+    statement(p);
+
+  patch_jump(p, else_jump);
 }
 
 static void echo_statement(b_parser *p) {
@@ -741,6 +783,8 @@ static void statement(b_parser *p) {
 
   if (match(p, ECHO_TOKEN)) {
     echo_statement(p);
+  } else if (match(p, IF_TOKEN)) {
+    if_statement(p);
   } else if (match(p, LBRACE_TOKEN)) {
     begin_scope(p);
     block(p);

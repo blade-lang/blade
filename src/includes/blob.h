@@ -17,6 +17,9 @@ typedef enum {
   OP_SET_LOCAL,
   OP_SET_LLOCAL,
 
+  OP_JUMP_IF_FALSE,
+  OP_JUMP,
+
   OP_EQUAL,
   OP_GREATER,
   OP_LESS,
@@ -37,6 +40,7 @@ typedef enum {
   OP_CONSTANT,  // 8-bit constant address (0 - 255)
   OP_ECHO,
   OP_POP,
+  OP_POPN,
   OP_RETURN,
 } b_code;
 
