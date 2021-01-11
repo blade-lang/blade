@@ -90,7 +90,7 @@ static bool match(b_parser *p, b_tkn_type t) {
 }
 
 static void consume_statement_end(b_parser *p) {
-  if (match(p, SEMICOLON_TOKEN)) {
+  if (match(p, SEMICOLON_TOKEN) || match(p, EOF_TOKEN)) {
     while (match(p, SEMICOLON_TOKEN) || match(p, NEWLINE_TOKEN))
       ;
     return;
