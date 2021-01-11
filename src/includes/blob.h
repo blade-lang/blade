@@ -13,7 +13,9 @@ typedef enum {
   OP_SET_LGLOBAL,
 
   OP_GET_LOCAL,
+  OP_GET_LLOCAL,
   OP_SET_LOCAL,
+  OP_SET_LLOCAL,
 
   OP_EQUAL,
   OP_GREATER,

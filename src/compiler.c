@@ -101,6 +101,11 @@ static void consume_statement_end(b_parser *p) {
     ;
 }
 
+static void ignore_whitespace(b_parser *p) {
+  while (match(p, NEWLINE_TOKEN))
+    ;
+}
+
 static void emit_byte(b_parser *p, uint8_t byte) {
   write_blob(p->current_blob, byte, p->previous.line);
 }
@@ -311,8 +316,8 @@ static void named_variable(b_parser *p, b_token name, bool can_assign) {
   uint8_t get_op, set_op;
   int arg = resolve_local(p, &name);
   if (arg != -1) {
-    get_op = OP_GET_LOCAL;
-    set_op = OP_SET_LOCAL;
+    get_op = arg <= UINT8_MAX ? OP_GET_LOCAL : OP_GET_LLOCAL;
+    set_op = arg <= UINT8_MAX ? OP_SET_LOCAL : OP_SET_LLOCAL;
   } else {
     arg = identifier_constant(p, &name);
     get_op = arg <= UINT8_MAX ? OP_GET_GLOBAL : OP_GET_LGLOBAL;
@@ -655,6 +660,7 @@ static void define_variable(b_parser *p, int global) {
 static void expression(b_parser *p) { parse_precedence(p, PREC_ASSIGNMENT); }
 
 static void block(b_parser *p) {
+  ignore_whitespace(p);
   while (!check(p, RBRACE_TOKEN) && !check(p, EOF_TOKEN)) {
     declaration(p);
   }
@@ -716,17 +722,23 @@ static void synchronize(b_parser *p) {
 }
 
 static void declaration(b_parser *p) {
+  ignore_whitespace(p);
+
   if (match(p, VAR_TOKEN)) {
     var_declaration(p);
   } else {
     statement(p);
   }
 
+  ignore_whitespace(p);
+
   if (p->panic_mode)
     synchronize(p);
 }
 
 static void statement(b_parser *p) {
+  ignore_whitespace(p);
+
   if (match(p, ECHO_TOKEN)) {
     echo_statement(p);
   } else if (match(p, LBRACE_TOKEN)) {
@@ -736,6 +748,8 @@ static void statement(b_parser *p) {
   } else {
     expression_statement(p);
   }
+
+  ignore_whitespace(p);
 }
 
 bool compile(b_vm *vm, const char *source, b_blob *blob) {
