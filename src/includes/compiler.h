@@ -25,6 +25,17 @@ typedef enum {
 } b_prec;
 
 typedef struct {
+  b_token name;
+  int depth;
+} b_local;
+
+typedef struct {
+  b_local locals[UINT8_COUNT];
+  int local_count;
+  int scope_depth;
+} b_compiler;
+
+typedef struct {
   b_scanner *scanner;
   b_vm *vm;
 
@@ -33,6 +44,7 @@ typedef struct {
   bool had_error;
   bool panic_mode;
   b_blob *current_blob;
+  b_compiler *compiler;
 } b_parser;
 
 typedef void (*b_parse_fn)(b_parser *, bool);

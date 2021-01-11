@@ -32,6 +32,18 @@ int long_constant_instruction(const char *name, b_blob *blob, int offset) {
   return offset + 3;
 }
 
+int short_instruction(const char *name, b_blob *blob, int offset) {
+  uint16_t slot = (blob->code[offset + 1] << 8) | blob->code[offset + 2];
+  printf("%-16s %4d\n", name, slot);
+  return offset + 3;
+}
+
+static int byte_instruction(const char *name, b_blob *blob, int offset) {
+  uint8_t slot = blob->code[offset + 1];
+  printf("%-16s %4d\n", name, slot);
+  return offset + 2;
+}
+
 int disassemble_instruction(b_blob *blob, int offset) {
   printf("%04d ", offset);
   if (offset > 0 && blob->lines[offset] == blob->lines[offset - 1]) {
@@ -54,6 +66,10 @@ int disassemble_instruction(b_blob *blob, int offset) {
     return constant_instruction("sglob", blob, offset);
   case OP_SET_LGLOBAL:
     return long_constant_instruction("slglob", blob, offset);
+  case OP_GET_LOCAL:
+    return short_instruction("gloc", blob, offset);
+  case OP_SET_LOCAL:
+    return short_instruction("sloc", blob, offset);
   case OP_CONSTANT:
     return constant_instruction("load", blob, offset);
   case OP_LCONSTANT:
