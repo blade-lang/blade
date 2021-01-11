@@ -584,7 +584,7 @@ b_parse_rule parse_rules[] = {
     [CDEFAULT_TOKEN] = {NULL, NULL, PREC_NONE},           // ??
 
     // keywords
-    [AND_TOKEN] = {NULL, NULL, PREC_NONE},
+    [AND_TOKEN] = {NULL, and_, PREC_AND},
     [AS_TOKEN] = {NULL, NULL, PREC_NONE},
     [ASSERT_TOKEN] = {NULL, NULL, PREC_NONE},
     [BREAK_TOKEN] = {NULL, NULL, PREC_NONE},
@@ -603,7 +603,7 @@ b_parse_rule parse_rules[] = {
     [ITER_TOKEN] = {NULL, NULL, PREC_NONE},
     [VAR_TOKEN] = {NULL, NULL, PREC_NONE},
     [NIL_TOKEN] = {literal, NULL, PREC_NONE},
-    [OR_TOKEN] = {NULL, NULL, PREC_NONE},
+    [OR_TOKEN] = {NULL, or_, PREC_OR},
     [PARENT_TOKEN] = {NULL, NULL, PREC_NONE},
     [RETURN_TOKEN] = {NULL, NULL, PREC_NONE},
     [SELF_TOKEN] = {NULL, NULL, PREC_NONE},
@@ -679,6 +679,26 @@ static void define_variable(b_parser *p, int global) {
   } else { // long constant
     emit_byte_and_long(p, OP_DEFINE_LGLOBAL, global);
   }
+}
+
+static void and_(b_parser *p, bool can_assign) {
+  int end_jump = emit_jump(p, OP_JUMP_IF_FALSE);
+
+  emit_byte(p, OP_POP);
+  parse_precedence(p, PREC_AND);
+
+  patch_jump(p, end_jump);
+}
+
+static void or_(b_parser *p, bool can_assign) {
+  int else_jump = emit_jump(p, OP_JUMP_IF_FALSE);
+  int end_jump = emit_jump(p, OP_JUMP);
+
+  patch_jump(p, else_jump);
+  emit_byte(p, OP_POP);
+
+  parse_precedence(p, PREC_OR);
+  patch_jump(p, end_jump);
 }
 
 static void expression(b_parser *p) { parse_precedence(p, PREC_ASSIGNMENT); }
