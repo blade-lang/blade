@@ -60,6 +60,11 @@ b_value pop(b_vm *vm) {
   return *vm->stack_top;
 }
 
+b_value popn(b_vm *vm, int n) {
+  vm->stack_top -= n;
+  return *vm->stack_top;
+}
+
 static b_value peek(b_vm *vm, int distance) {
   return vm->stack_top[-1 - distance];
 }
@@ -169,8 +174,7 @@ b_ptr_result run(b_vm *vm) {
 
 #define READ_CONSTANT() (vm->blob->constants.values[READ_BYTE()])
 
-#define READ_LCONSTANT()                                                       \
-  (vm->blob->constants.values[(READ_BYTE() << 8) | READ_BYTE()])
+#define READ_LCONSTANT() (vm->blob->constants.values[READ_SHORT()])
 
 #define READ_STRING() (AS_STRING(READ_CONSTANT()))
 
@@ -206,7 +210,7 @@ b_ptr_result run(b_vm *vm) {
 
   for (;;) {
 
-#ifdef DEBUG_TRACE_EXECUTION
+#if DEBUG_MODE == 1
 #if DEBUG_TRACE_EXECUTION == 1
     printf("          ");
     for (b_value *slot = vm->stack; slot < vm->stack_top; slot++) {
@@ -302,6 +306,19 @@ b_ptr_result run(b_vm *vm) {
       push(vm, BOOL_VAL(false));
       break;
 
+    case OP_JUMP: {
+      uint16_t offset = READ_SHORT();
+      vm->ip += offset;
+      break;
+    }
+    case OP_JUMP_IF_FALSE: {
+      uint16_t offset = READ_SHORT();
+      if (is_falsey(peek(vm, 0))) {
+        vm->ip += offset;
+      }
+      break;
+    }
+
     case OP_ECHO: {
       print_value(pop(vm));
       printf("\n"); // @TODO: Remove...
@@ -310,6 +327,10 @@ b_ptr_result run(b_vm *vm) {
 
     case OP_POP: {
       pop(vm);
+      break;
+    }
+    case OP_POPN: {
+      popn(vm, READ_SHORT());
       break;
     }
 
@@ -376,8 +397,11 @@ b_ptr_result run(b_vm *vm) {
   }
 
 #undef READ_BYTE
+#undef READ_SHORT
 #undef READ_CONSTANT
+#undef READ_LCONSTANT
 #undef READ_STRING
+#undef READ_LSTRING
 #undef BINARY_OP
 #undef BINARY_MOD_OP
 }
