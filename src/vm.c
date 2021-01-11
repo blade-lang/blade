@@ -169,7 +169,8 @@ b_ptr_result run(b_vm *vm) {
 
 #define READ_CONSTANT() (vm->blob->constants.values[READ_BYTE()])
 
-#define READ_LCONSTANT() (vm->blob->constants.values[READ_SHORT()])
+#define READ_LCONSTANT()                                                       \
+  (vm->blob->constants.values[(READ_BYTE() << 8) | READ_BYTE()])
 
 #define READ_STRING() (AS_STRING(READ_CONSTANT()))
 
@@ -350,13 +351,15 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
 
-    case OP_GET_LOCAL: {
-      uint16_t slot = READ_SHORT();
+    case OP_GET_LOCAL:
+    case OP_GET_LLOCAL: {
+      uint16_t slot = instruction == OP_GET_LOCAL ? READ_BYTE() : READ_SHORT();
       push(vm, vm->stack[slot]);
       break;
     }
-    case OP_SET_LOCAL: {
-      uint16_t slot = READ_SHORT();
+    case OP_SET_LOCAL:
+    case OP_SET_LLOCAL: {
+      uint16_t slot = instruction == OP_SET_LOCAL ? READ_BYTE() : READ_SHORT();
       vm->stack[slot] = peek(vm, 0);
       break;
     }

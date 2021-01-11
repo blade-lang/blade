@@ -67,9 +67,13 @@ int disassemble_instruction(b_blob *blob, int offset) {
   case OP_SET_LGLOBAL:
     return long_constant_instruction("slglob", blob, offset);
   case OP_GET_LOCAL:
-    return short_instruction("gloc", blob, offset);
+    return byte_instruction("gloc", blob, offset);
   case OP_SET_LOCAL:
-    return short_instruction("sloc", blob, offset);
+    return byte_instruction("sloc", blob, offset);
+  case OP_GET_LLOCAL:
+    return short_instruction("lgloc", blob, offset);
+  case OP_SET_LLOCAL:
+    return short_instruction("lsloc", blob, offset);
   case OP_CONSTANT:
     return constant_instruction("load", blob, offset);
   case OP_LCONSTANT:
