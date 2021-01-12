@@ -90,6 +90,11 @@ static bool match(b_parser *p, b_tkn_type t) {
 }
 
 static void consume_statement_end(b_parser *p) {
+
+  // allow block last statement to ommit statement end
+  if (p->in_block && check(p, RBRACE_TOKEN))
+    return;
+
   if (match(p, SEMICOLON_TOKEN) || match(p, EOF_TOKEN)) {
     while (match(p, SEMICOLON_TOKEN) || match(p, NEWLINE_TOKEN))
       ;
@@ -528,6 +533,26 @@ static void unary(b_parser *p, bool can_assign) {
   }
 }
 
+static void and_(b_parser *p, bool can_assign) {
+  int end_jump = emit_jump(p, OP_JUMP_IF_FALSE);
+
+  emit_byte(p, OP_POP);
+  parse_precedence(p, PREC_AND);
+
+  patch_jump(p, end_jump);
+}
+
+static void or_(b_parser *p, bool can_assign) {
+  int else_jump = emit_jump(p, OP_JUMP_IF_FALSE);
+  int end_jump = emit_jump(p, OP_JUMP);
+
+  patch_jump(p, else_jump);
+  emit_byte(p, OP_POP);
+
+  parse_precedence(p, PREC_OR);
+  patch_jump(p, end_jump);
+}
+
 b_parse_rule parse_rules[] = {
     // symbols
     [NEWLINE_TOKEN] = {NULL, NULL, PREC_NONE},            // (
@@ -681,33 +706,14 @@ static void define_variable(b_parser *p, int global) {
   }
 }
 
-static void and_(b_parser *p, bool can_assign) {
-  int end_jump = emit_jump(p, OP_JUMP_IF_FALSE);
-
-  emit_byte(p, OP_POP);
-  parse_precedence(p, PREC_AND);
-
-  patch_jump(p, end_jump);
-}
-
-static void or_(b_parser *p, bool can_assign) {
-  int else_jump = emit_jump(p, OP_JUMP_IF_FALSE);
-  int end_jump = emit_jump(p, OP_JUMP);
-
-  patch_jump(p, else_jump);
-  emit_byte(p, OP_POP);
-
-  parse_precedence(p, PREC_OR);
-  patch_jump(p, end_jump);
-}
-
 static void expression(b_parser *p) { parse_precedence(p, PREC_ASSIGNMENT); }
 
 static void block(b_parser *p) {
-  ignore_whitespace(p);
+  p->in_block = true;
   while (!check(p, RBRACE_TOKEN) && !check(p, EOF_TOKEN)) {
     declaration(p);
   }
+  p->in_block = false;
   consume(p, RBRACE_TOKEN, "expected '}' after block");
 }
 
@@ -742,8 +748,9 @@ static void if_statement(b_parser *p) {
   patch_jump(p, then_jump);
   emit_byte(p, OP_POP);
 
-  if (match(p, ELSE_TOKEN))
+  if (match(p, ELSE_TOKEN)) {
     statement(p);
+  }
 
   patch_jump(p, else_jump);
 }
@@ -796,6 +803,8 @@ static void declaration(b_parser *p) {
 
   if (p->panic_mode)
     synchronize(p);
+
+  ignore_whitespace(p);
 }
 
 static void statement(b_parser *p) {
@@ -827,6 +836,7 @@ bool compile(b_vm *vm, const char *source, b_blob *blob) {
 
   parser.had_error = false;
   parser.panic_mode = false;
+  parser.in_block = false;
   parser.current_blob = blob;
 
   b_compiler compiler;
