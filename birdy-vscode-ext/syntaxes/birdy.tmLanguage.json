@@ -81,7 +81,7 @@
 							"name": "punctuation.definition.comment.birdy"
 						}
 					},
-					"match": "@==@",
+					"match": "\/\\*\\*\/",
 					"name": "comment.block.empty.birdy"
 				},
 				{
@@ -98,8 +98,8 @@
 		"comments-doc-oldschool": {
 			"patterns": [
 				{
-					"begin": "@=",
-					"end": "=@",
+					"begin": "\/\\*",
+					"end": "\\*\/",
 					"name": "comment.block.documentation.birdy",
 					"patterns": [
 						{
@@ -147,8 +147,8 @@
 		"comments-block": {
 			"patterns": [
 				{
-					"begin": "@=",
-					"end": "=@",
+					"begin": "\/\\*",
+					"end": "\\*\/",
 					"name": "comment.block.birdy",
 					"patterns": [
 						{
