@@ -728,7 +728,7 @@ static void block(b_parser *p) {
   consume(p, RBRACE_TOKEN, "expected '}' after block");
 }
 
-static void var_declaration(b_parser *p) {
+static void _var_declaration(b_parser *p, bool is_initalizer) {
   int global = parse_variable(p, "variable name expected");
 
   if (match(p, EQUAL_TOKEN)) {
@@ -737,14 +737,96 @@ static void var_declaration(b_parser *p) {
     emit_byte(p, OP_NIL);
   }
 
-  consume_statement_end(p);
+  if (!is_initalizer) {
+    consume_statement_end(p);
+  } else {
+    consume(p, SEMICOLON_TOKEN, "expected ';' after initializer");
+  }
+
   define_variable(p, global);
 }
 
-static void expression_statement(b_parser *p) {
+static void var_declaration(b_parser *p) { _var_declaration(p, false); }
+
+static void _expression_statement(b_parser *p, bool is_initalizer) {
   expression(p);
-  consume_statement_end(p);
+  if (!is_initalizer) {
+    consume_statement_end(p);
+  } else {
+    consume(p, SEMICOLON_TOKEN, "expected ';' after initializer");
+  }
   emit_byte(p, OP_POP);
+}
+
+static void expression_statement(b_parser *p) {
+  _expression_statement(p, false);
+}
+
+/**
+ * iter statements are like for loops in c...
+ * they are desugared into a while loop
+ *
+ * i.e.
+ *
+ * iter i = 0; i < 10; i++ {
+ *    ...
+ * }
+ *
+ * desugars into:
+ *
+ * var i = 0
+ * while i < 10 {
+ *    ...
+ *    i = i + 1
+ * }
+ */
+static void iter_statement(b_parser *p) {
+  begin_scope(p);
+
+  // parse intializer...
+  if (match(p, SEMICOLON_TOKEN)) {
+    // no intializer
+  } else if (match(p, VAR_TOKEN)) {
+    _var_declaration(p, true);
+  } else {
+    _expression_statement(p, true);
+  }
+
+  int loop_start = p->current_blob->count;
+
+  int exit_jump = -1;
+  if (!match(p, SEMICOLON_TOKEN)) { // the condition is optional
+    expression(p);
+    consume(p, SEMICOLON_TOKEN, "expected ';' after condition");
+
+    // jump out of the loop if the condition is false...
+    exit_jump = emit_jump(p, OP_JUMP_IF_FALSE);
+    emit_byte(p, OP_POP); // pop the condition
+  }
+
+  // the iterator...
+  if (!match(p, LBRACE_TOKEN)) {
+    int body_jump = emit_jump(p, OP_JUMP);
+
+    int increment_start = p->current_blob->count;
+    expression(p);
+    emit_byte(p, OP_POP);
+
+    emit_loop(p, loop_start);
+    loop_start = increment_start;
+    patch_jump(p, body_jump);
+  }
+
+  statement(p);
+
+  emit_loop(p, loop_start);
+
+  if (exit_jump != -1) {
+    patch_jump(p, exit_jump);
+    emit_byte(p, OP_POP);
+  }
+
+  end_scope(p);
 }
 
 static void if_statement(b_parser *p) {
@@ -845,6 +927,8 @@ static void statement(b_parser *p) {
     if_statement(p);
   } else if (match(p, WHILE_TOKEN)) {
     while_statement(p);
+  } else if (match(p, ITER_TOKEN)) {
+    iter_statement(p);
   } else if (match(p, LBRACE_TOKEN)) {
     begin_scope(p);
     block(p);
