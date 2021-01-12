@@ -10,12 +10,12 @@
 
 void init_table(b_table *table) {
   table->count = 0;
-  table->capacity = -1;
+  table->capacity = 0;
   table->entries = NULL;
 }
 
 void free_table(b_table *table) {
-  // FREE_ARRAY(b_entry, table->entries, table->capacity + 1);
+  FREE_ARRAY(b_entry, table->entries, table->capacity + 1);
   init_table(table);
 }
 
@@ -30,7 +30,7 @@ static b_entry *find_entry(b_entry *entries, int capacity, b_value key) {
 #endif
 #endif
 
-  uint32_t index = hash & capacity;
+  uint32_t index = hash % capacity;
   b_entry *tombstone = NULL;
 
   for (;;) {
@@ -46,10 +46,20 @@ static b_entry *find_entry(b_entry *entries, int capacity, b_value key) {
           tombstone = entry;
       }
     } else if (values_equal(key, entry->key)) {
+#if DEBUG_MODE == 1
+#if DEBUG_TABLE == 1
+      printf("found entry for key ");
+      print_value(key);
+      printf(" with hash %u in table as ", hash);
+      print_value(entry->value);
+      printf("...\n");
+#endif
+#endif
+
       return entry;
     }
 
-    index = (index + 1) & capacity;
+    index = (index + 1) % capacity;
   }
 }
 
@@ -59,7 +69,7 @@ bool table_get(b_table *table, b_value key, b_value *value) {
 
 #if DEBUG_MODE == 1
 #if DEBUG_TABLE == 1
-  printf("Getting global variable with hash %u...\n", hash_value(key));
+  printf("getting entry with hash %u...\n", hash_value(key));
 #endif
 #endif
 
@@ -69,7 +79,7 @@ bool table_get(b_table *table, b_value key, b_value *value) {
     return false;
 
 #ifdef DEBUG_TABLE
-  printf("Found global variable for hash %u == ", hash_value(entry->key));
+  printf("found entry for hash %u == ", hash_value(entry->key));
   print_value(entry->value);
   printf("\n");
 #endif
@@ -79,15 +89,15 @@ bool table_get(b_table *table, b_value key, b_value *value) {
 }
 
 static void adjust_capacity(b_table *table, int capacity) {
-  b_entry *entries = ALLOCATE(b_entry, capacity + 1);
-  for (int i = 0; i <= capacity; i++) {
+  b_entry *entries = ALLOCATE(b_entry, capacity);
+  for (int i = 0; i < capacity; i++) {
     entries[i].key = EMPTY_VAL;
     entries[i].value = NIL_VAL;
   }
 
   // repopulate buckets
   table->count = 0;
-  for (int i = 0; i <= table->capacity; i++) {
+  for (int i = 0; i < table->capacity; i++) {
     b_entry *entry = &table->entries[i];
     if (IS_EMPTY(entry->key))
       continue;
@@ -99,15 +109,15 @@ static void adjust_capacity(b_table *table, int capacity) {
   }
 
   // free the old entries...
-  FREE_ARRAY(b_entry, table->entries, table->capacity + 1);
+  FREE_ARRAY(b_entry, table->entries, table->capacity);
 
   table->entries = entries;
   table->capacity = capacity;
 }
 
 bool table_set(b_table *table, b_value key, b_value value) {
-  if (table->count + 1 > (table->capacity + 1) * TABLE_MAX_LOAD) {
-    int capacity = GROW_CAPACITY(table->capacity + 1) - 1;
+  if (table->count + 1 > table->capacity * TABLE_MAX_LOAD) {
+    int capacity = GROW_CAPACITY(table->capacity);
     adjust_capacity(table, capacity);
   }
 
@@ -155,7 +165,7 @@ b_obj_string *table_find_string(b_table *table, const char *chars, int length,
   if (table->count == 0)
     return NULL;
 
-  uint32_t index = hash & table->capacity;
+  uint32_t index = hash % table->capacity;
 
   for (;;) {
     b_entry *entry = &table->entries[index];
@@ -175,7 +185,7 @@ b_obj_string *table_find_string(b_table *table, const char *chars, int length,
       }
     }
 
-    index = (index + 1) & table->capacity;
+    index = (index + 1) % table->capacity;
   }
 }
 

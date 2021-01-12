@@ -123,7 +123,8 @@ b_token skip_whitespace(b_scanner *s) {
     }
 
     case '/':
-      if (match(s, '*')) {
+      if (next(s) == '*') {
+        advance(s);
         return skip_block_comments(s);
       } else {
         return make_token(s, EMPTY_TOKEN);

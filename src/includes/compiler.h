@@ -43,6 +43,7 @@ typedef struct {
   b_token previous;
   bool had_error;
   bool panic_mode;
+  bool in_block;
   b_blob *current_blob;
   b_compiler *compiler;
 } b_parser;
