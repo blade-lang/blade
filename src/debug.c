@@ -67,6 +67,8 @@ int disassemble_instruction(b_blob *blob, int offset) {
     return jump_instruction("fjump", 1, blob, offset);
   case OP_JUMP:
     return jump_instruction("jump", 1, blob, offset);
+  case OP_LOOP:
+    return jump_instruction("loop", -1, blob, offset);
 
   case OP_DEFINE_GLOBAL:
     return constant_instruction("dglob", blob, offset);

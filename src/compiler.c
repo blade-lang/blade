@@ -126,6 +126,17 @@ static void emit_byte_and_long(b_parser *p, uint8_t byte, uint16_t byte2) {
   write_blob(p->current_blob, byte2 & 0xff, p->previous.line);
 }
 
+static void emit_loop(b_parser *p, int loop_start) {
+  emit_byte(p, OP_LOOP);
+
+  int offset = p->current_blob->count - loop_start + 2;
+  if (offset > UINT16_MAX)
+    error(p, "loop body too large");
+
+  emit_byte(p, (offset >> 8) & 0xff);
+  emit_byte(p, offset & 0xff);
+}
+
 static void emit_return(b_parser *p) { emit_byte(p, OP_RETURN); }
 
 static int make_constant(b_parser *p, b_value value) {
@@ -761,6 +772,24 @@ static void echo_statement(b_parser *p) {
   emit_byte(p, OP_ECHO);
 }
 
+static void while_statement(b_parser *p) {
+  // we'll be jumping back to right before the
+  // expression after the loop body
+  int loop_start = p->current_blob->count;
+
+  expression(p);
+
+  int exit_jump = emit_jump(p, OP_JUMP_IF_FALSE);
+  emit_byte(p, OP_POP);
+
+  statement(p);
+
+  emit_loop(p, loop_start);
+
+  patch_jump(p, exit_jump);
+  emit_byte(p, OP_POP);
+}
+
 static void synchronize(b_parser *p) {
   p->panic_mode = false;
 
@@ -814,6 +843,8 @@ static void statement(b_parser *p) {
     echo_statement(p);
   } else if (match(p, IF_TOKEN)) {
     if_statement(p);
+  } else if (match(p, WHILE_TOKEN)) {
+    while_statement(p);
   } else if (match(p, LBRACE_TOKEN)) {
     begin_scope(p);
     block(p);
