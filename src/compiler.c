@@ -150,11 +150,7 @@ static int make_constant(b_parser *p, b_value value) {
 
 static void emit_constant(b_parser *p, b_value value) {
   int constant = make_constant(p, value);
-  if (constant <= UINT8_MAX) {
-    emit_bytes(p, OP_CONSTANT, (uint8_t)constant);
-  } else {
-    emit_byte_and_long(p, OP_LCONSTANT, (uint16_t)constant);
-  }
+  emit_byte_and_long(p, OP_CONSTANT, (uint16_t)constant);
 }
 
 static int emit_jump(b_parser *p, uint8_t instruction) {
@@ -269,7 +265,9 @@ static void end_scope(b_parser *p) {
     count++;
     p->compiler->local_count--;
   }
-  emit_byte_and_long(p, OP_POPN, count);
+  if (count > 0) {
+    emit_byte_and_long(p, OP_POPN, count);
+  }
 }
 
 // --> Forward declarations start
@@ -356,27 +354,19 @@ static void named_variable(b_parser *p, b_token name, bool can_assign) {
   uint8_t get_op, set_op;
   int arg = resolve_local(p, &name);
   if (arg != -1) {
-    get_op = arg <= UINT8_MAX ? OP_GET_LOCAL : OP_GET_LLOCAL;
-    set_op = arg <= UINT8_MAX ? OP_SET_LOCAL : OP_SET_LLOCAL;
+    get_op = OP_GET_LOCAL;
+    set_op = OP_SET_LOCAL;
   } else {
     arg = identifier_constant(p, &name);
-    get_op = arg <= UINT8_MAX ? OP_GET_GLOBAL : OP_GET_LGLOBAL;
-    set_op = arg <= UINT8_MAX ? OP_SET_GLOBAL : OP_SET_LGLOBAL;
+    get_op = OP_GET_GLOBAL;
+    set_op = OP_SET_GLOBAL;
   }
 
   if (can_assign && match(p, EQUAL_TOKEN)) {
     expression(p);
-    if (arg <= UINT8_MAX) {
-      emit_bytes(p, set_op, (uint8_t)arg);
-    } else {
-      emit_byte_and_long(p, set_op, (uint16_t)arg);
-    }
+    emit_byte_and_long(p, set_op, (uint16_t)arg);
   } else {
-    if (arg <= UINT8_MAX) {
-      emit_bytes(p, get_op, (uint8_t)arg);
-    } else {
-      emit_byte_and_long(p, get_op, (uint16_t)arg);
-    }
+    emit_byte_and_long(p, get_op, (uint16_t)arg);
   }
 }
 
@@ -710,11 +700,7 @@ static void define_variable(b_parser *p, int global) {
     return;
   }
 
-  if (global <= UINT8_MAX) { // constant
-    emit_bytes(p, OP_DEFINE_GLOBAL, global);
-  } else { // long constant
-    emit_byte_and_long(p, OP_DEFINE_LGLOBAL, global);
-  }
+  emit_byte_and_long(p, OP_DEFINE_GLOBAL, global);
 }
 
 static void expression(b_parser *p) { parse_precedence(p, PREC_ASSIGNMENT); }
@@ -829,6 +815,83 @@ static void iter_statement(b_parser *p) {
   end_scope(p);
 }
 
+/**
+ * using expression {
+ *    when expression {
+ *      ...
+ *    }
+ *    when expression {
+ *      ...
+ *    }
+ *    ...
+ * }
+ */
+static void using_statement(b_parser *p) {
+  expression(p); // the expression
+  consume(p, LBRACE_TOKEN, "expected '{' after using expression");
+  ignore_whitespace(p);
+
+  int state = 0; // 0: before all cases, 1: before default, 2: after default
+  int case_ends[MAX_USING_CASES];
+  int case_count = 0;
+  int previous_case_skip = -1;
+
+  while (!match(p, RBRACE_TOKEN) && !check(p, EOF_TOKEN)) {
+    if (match(p, WHEN_TOKEN) || match(p, DEFAULT_TOKEN)) {
+      b_tkn_type case_type = p->previous.type;
+
+      if (state == 2) {
+        error(p, "cannot have another case after a default case");
+      }
+
+      if (state == 1) {
+        // at the end of the previous case, jump over the others...
+        case_ends[case_count++] = emit_jump(p, OP_JUMP);
+
+        // patch it's condition to jump to the next case (this one)
+        patch_jump(p, previous_case_skip);
+        emit_byte(p, OP_POP);
+      }
+
+      if (case_type == WHEN_TOKEN) {
+        state = 1;
+
+        // check if the case is equal to the value...
+        emit_byte(p, OP_DUP);
+        expression(p);
+
+        emit_byte(p, OP_EQUAL);
+        previous_case_skip = emit_jump(p, OP_JUMP_IF_FALSE);
+
+        // pop the result of the comparison
+        emit_byte(p, OP_POP);
+      } else {
+        state = 2;
+        previous_case_skip = -1;
+      }
+    } else {
+      // otherwise, it's a statement inside the current case
+      if (state == 0) {
+        error(p, "cannot have statements before any case");
+      }
+      statement(p);
+    }
+  }
+
+  // if we ended without a default case, patch its condition jump
+  if (state == 1) {
+    patch_jump(p, previous_case_skip);
+    emit_byte(p, OP_POP);
+  }
+
+  // patch all the case jumps to the end
+  for (int i = 0; i < case_count; i++) {
+    patch_jump(p, case_ends[i]);
+  }
+
+  emit_byte(p, OP_POP);
+}
+
 static void if_statement(b_parser *p) {
   expression(p);
 
@@ -929,6 +992,8 @@ static void statement(b_parser *p) {
     while_statement(p);
   } else if (match(p, ITER_TOKEN)) {
     iter_statement(p);
+  } else if (match(p, USING_TOKEN)) {
+    using_statement(p);
   } else if (match(p, LBRACE_TOKEN)) {
     begin_scope(p);
     block(p);

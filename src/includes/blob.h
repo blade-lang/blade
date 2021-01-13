@@ -8,14 +8,9 @@ typedef enum {
   OP_DEFINE_GLOBAL,
   OP_GET_GLOBAL,
   OP_SET_GLOBAL,
-  OP_DEFINE_LGLOBAL,
-  OP_GET_LGLOBAL,
-  OP_SET_LGLOBAL,
 
   OP_GET_LOCAL,
-  OP_GET_LLOCAL,
   OP_SET_LOCAL,
-  OP_SET_LLOCAL,
 
   OP_JUMP_IF_FALSE,
   OP_JUMP,
@@ -36,11 +31,10 @@ typedef enum {
   OP_POW,
   OP_NEGATE,
   OP_NOT,
-  OP_LCONSTANT, // 16-bit constant address... allowing us to have up to
-                // 65536 constants... (255 - 65536)
-  OP_CONSTANT,  // 8-bit constant address (0 - 255)
+  OP_CONSTANT, // 8-bit constant address (0 - 255)
   OP_ECHO,
   OP_POP,
+  OP_DUP,
   OP_POPN,
   OP_RETURN,
 } b_code;

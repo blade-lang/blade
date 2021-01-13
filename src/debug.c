@@ -71,31 +71,19 @@ int disassemble_instruction(b_blob *blob, int offset) {
     return jump_instruction("loop", -1, blob, offset);
 
   case OP_DEFINE_GLOBAL:
-    return constant_instruction("dglob", blob, offset);
-  case OP_DEFINE_LGLOBAL:
-    return long_constant_instruction("dlglob", blob, offset);
+    return long_constant_instruction("dglob", blob, offset);
   case OP_GET_GLOBAL:
-    return constant_instruction("gglob", blob, offset);
-  case OP_GET_LGLOBAL:
-    return long_constant_instruction("glglob", blob, offset);
+    return long_constant_instruction("gglob", blob, offset);
   case OP_SET_GLOBAL:
-    return constant_instruction("sglob", blob, offset);
-  case OP_SET_LGLOBAL:
-    return long_constant_instruction("slglob", blob, offset);
+    return long_constant_instruction("sglob", blob, offset);
 
   case OP_GET_LOCAL:
-    return byte_instruction("gloc", blob, offset);
+    return short_instruction("gloc", blob, offset);
   case OP_SET_LOCAL:
-    return byte_instruction("sloc", blob, offset);
-  case OP_GET_LLOCAL:
-    return short_instruction("lgloc", blob, offset);
-  case OP_SET_LLOCAL:
-    return short_instruction("lsloc", blob, offset);
+    return short_instruction("sloc", blob, offset);
 
   case OP_CONSTANT:
-    return constant_instruction("load", blob, offset);
-  case OP_LCONSTANT:
-    return long_constant_instruction("lload", blob, offset);
+    return long_constant_instruction("load", blob, offset);
 
   case OP_EQUAL:
     return simple_instruction("eq", offset);
@@ -133,6 +121,8 @@ int disassemble_instruction(b_blob *blob, int offset) {
     return simple_instruction("echo", offset);
   case OP_POP:
     return simple_instruction("pop", offset);
+  case OP_DUP:
+    return simple_instruction("dup", offset);
   case OP_POPN:
     return short_instruction("popn", blob, offset);
 
