@@ -172,13 +172,9 @@ b_ptr_result run(b_vm *vm) {
 
 #define READ_SHORT() (vm->ip += 2, (uint16_t)((vm->ip[-2] << 8) | vm->ip[-1]))
 
-#define READ_CONSTANT() (vm->blob->constants.values[READ_BYTE()])
-
-#define READ_LCONSTANT() (vm->blob->constants.values[READ_SHORT()])
+#define READ_CONSTANT() (vm->blob->constants.values[READ_SHORT()])
 
 #define READ_STRING() (AS_STRING(READ_CONSTANT()))
-
-#define READ_LSTRING() (AS_STRING(READ_LCONSTANT()))
 
 #define BINARY_OP(type, op)                                                    \
   do {                                                                         \
@@ -224,12 +220,11 @@ b_ptr_result run(b_vm *vm) {
 #endif
 
     uint8_t instruction;
+
     switch (instruction = READ_BYTE()) {
 
-    case OP_CONSTANT:
-    case OP_LCONSTANT: {
-      b_value constant =
-          instruction == OP_CONSTANT ? READ_CONSTANT() : READ_LCONSTANT();
+    case OP_CONSTANT: {
+      b_value constant = READ_CONSTANT();
       push(vm, constant);
       break;
     }
@@ -330,6 +325,10 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
 
+    case OP_DUP: {
+      push(vm, pop(vm));
+      break;
+    }
     case OP_POP: {
       pop(vm);
       break;
@@ -339,10 +338,8 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
 
-    case OP_DEFINE_GLOBAL:
-    case OP_DEFINE_LGLOBAL: {
-      b_obj_string *name =
-          instruction == OP_DEFINE_GLOBAL ? READ_STRING() : READ_LSTRING();
+    case OP_DEFINE_GLOBAL: {
+      b_obj_string *name = READ_STRING();
       table_set(&vm->globals, OBJ_VAL(name), peek(vm, 0));
       pop(vm);
 
@@ -354,10 +351,8 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
 
-    case OP_GET_GLOBAL:
-    case OP_GET_LGLOBAL: {
-      b_obj_string *name =
-          instruction == OP_GET_GLOBAL ? READ_STRING() : READ_LSTRING();
+    case OP_GET_GLOBAL: {
+      b_obj_string *name = READ_STRING();
       b_value value;
       if (!table_get(&vm->globals, OBJ_VAL(name), &value)) {
         runtime_error("%s is undefined in this scope", name->chars);
@@ -366,10 +361,8 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
 
-    case OP_SET_GLOBAL:
-    case OP_SET_LGLOBAL: {
-      b_obj_string *name =
-          instruction == OP_SET_GLOBAL ? READ_STRING() : READ_LSTRING();
+    case OP_SET_GLOBAL: {
+      b_obj_string *name = READ_STRING();
       if (table_set(&vm->globals, OBJ_VAL(name), peek(vm, 0))) {
         table_delete(&vm->globals, OBJ_VAL(name));
         runtime_error("%s is undefined in this scope", name->chars);
@@ -377,15 +370,13 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
 
-    case OP_GET_LOCAL:
-    case OP_GET_LLOCAL: {
-      uint16_t slot = instruction == OP_GET_LOCAL ? READ_BYTE() : READ_SHORT();
+    case OP_GET_LOCAL: {
+      uint16_t slot = READ_SHORT();
       push(vm, vm->stack[slot]);
       break;
     }
-    case OP_SET_LOCAL:
-    case OP_SET_LLOCAL: {
-      uint16_t slot = instruction == OP_SET_LOCAL ? READ_BYTE() : READ_SHORT();
+    case OP_SET_LOCAL: {
+      uint16_t slot = READ_SHORT();
       vm->stack[slot] = peek(vm, 0);
       break;
     }
