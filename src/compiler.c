@@ -785,7 +785,13 @@ static void iter_statement(b_parser *p) {
     _expression_statement(p, true);
   }
 
-  int loop_start = p->current_blob->count;
+  // keep a copy of the surrounding loop's start and depth
+  int surrounding_loop_start = p->innermost_loop_start;
+  int surrounding_scope_depth = p->innermost_loop_scope_depth;
+
+  // update the parser's loop start and depth to the current
+  p->innermost_loop_start = p->current_blob->count;
+  p->innermost_loop_scope_depth = p->compiler->scope_depth;
 
   int exit_jump = -1;
   if (!match(p, SEMICOLON_TOKEN)) { // the condition is optional
@@ -805,19 +811,23 @@ static void iter_statement(b_parser *p) {
     expression(p);
     emit_byte(p, OP_POP);
 
-    emit_loop(p, loop_start);
-    loop_start = increment_start;
+    emit_loop(p, p->innermost_loop_start);
+    p->innermost_loop_start = increment_start;
     patch_jump(p, body_jump);
   }
 
   statement(p);
 
-  emit_loop(p, loop_start);
+  emit_loop(p, p->innermost_loop_start);
 
   if (exit_jump != -1) {
     patch_jump(p, exit_jump);
     emit_byte(p, OP_POP);
   }
+
+  // reset the loop start and scope depth to the surrounding value
+  p->innermost_loop_start = surrounding_loop_start;
+  p->innermost_loop_scope_depth = surrounding_scope_depth;
 
   end_scope(p);
 }
@@ -925,9 +935,12 @@ static void echo_statement(b_parser *p) {
 }
 
 static void while_statement(b_parser *p) {
+  int surrounding_loop_start = p->innermost_loop_start;
+  int surrounding_scope_depth = p->innermost_loop_scope_depth;
+
   // we'll be jumping back to right before the
   // expression after the loop body
-  int loop_start = p->current_blob->count;
+  p->innermost_loop_start = p->current_blob->count;
 
   expression(p);
 
@@ -936,10 +949,34 @@ static void while_statement(b_parser *p) {
 
   statement(p);
 
-  emit_loop(p, loop_start);
+  emit_loop(p, p->innermost_loop_start);
 
   patch_jump(p, exit_jump);
   emit_byte(p, OP_POP);
+
+  p->innermost_loop_start = surrounding_loop_start;
+  p->innermost_loop_scope_depth = surrounding_scope_depth;
+}
+
+static void continue_statement(b_parser *p) {
+  if (p->innermost_loop_start == -1) {
+    error(p, "'continue' can only be used in a loop");
+  }
+  consume_statement_end(p);
+
+  // discard local variables created in the loop
+  int locals_count = 0;
+  for (int i = p->compiler->local_count;
+       i >= 0 && p->compiler->locals[i].depth > p->innermost_loop_scope_depth;
+       i--) {
+    locals_count++;
+  }
+  if (locals_count > 0) {
+    emit_byte_and_short(p, OP_POPN, locals_count);
+  }
+
+  // go back to the top of the loop
+  emit_loop(p, p->innermost_loop_start);
 }
 
 static void synchronize(b_parser *p) {
@@ -1001,6 +1038,8 @@ static void statement(b_parser *p) {
     iter_statement(p);
   } else if (match(p, USING_TOKEN)) {
     using_statement(p);
+  } else if (match(p, CONTINUE_TOKEN)) {
+    continue_statement(p);
   } else if (match(p, LBRACE_TOKEN)) {
     begin_scope(p);
     block(p);
@@ -1025,6 +1064,8 @@ bool compile(b_vm *vm, const char *source, b_blob *blob) {
   parser.panic_mode = false;
   parser.in_block = false;
   parser.current_blob = blob;
+  parser.innermost_loop_start = -1;
+  parser.innermost_loop_scope_depth = 0;
 
   b_compiler compiler;
   init_compiler(&parser, &compiler);
