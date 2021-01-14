@@ -326,7 +326,7 @@ b_ptr_result run(b_vm *vm) {
     }
 
     case OP_DUP: {
-      push(vm, pop(vm));
+      push(vm, peek(vm, 0));
       break;
     }
     case OP_POP: {

@@ -14,3 +14,4 @@ using i {
     echo 'default'
   }
 }
+echo 'after'

@@ -17,14 +17,6 @@ int simple_instruction(const char *name, int offset) {
 }
 
 int constant_instruction(const char *name, b_blob *blob, int offset) {
-  uint8_t constant = blob->code[offset + 1];
-  printf("%-16s %4d '", name, constant);
-  print_value(blob->constants.values[constant]);
-  printf("'\n");
-  return offset + 2;
-}
-
-int long_constant_instruction(const char *name, b_blob *blob, int offset) {
   uint16_t constant = (blob->code[offset + 1] << 8) | blob->code[offset + 2];
   printf("%-16s %4d '", name, constant);
   print_value(blob->constants.values[constant]);
@@ -71,11 +63,11 @@ int disassemble_instruction(b_blob *blob, int offset) {
     return jump_instruction("loop", -1, blob, offset);
 
   case OP_DEFINE_GLOBAL:
-    return long_constant_instruction("dglob", blob, offset);
+    return constant_instruction("dglob", blob, offset);
   case OP_GET_GLOBAL:
-    return long_constant_instruction("gglob", blob, offset);
+    return constant_instruction("gglob", blob, offset);
   case OP_SET_GLOBAL:
-    return long_constant_instruction("sglob", blob, offset);
+    return constant_instruction("sglob", blob, offset);
 
   case OP_GET_LOCAL:
     return short_instruction("gloc", blob, offset);
@@ -83,7 +75,7 @@ int disassemble_instruction(b_blob *blob, int offset) {
     return short_instruction("sloc", blob, offset);
 
   case OP_CONSTANT:
-    return long_constant_instruction("load", blob, offset);
+    return constant_instruction("load", blob, offset);
 
   case OP_EQUAL:
     return simple_instruction("eq", offset);

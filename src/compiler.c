@@ -120,8 +120,15 @@ static void emit_bytes(b_parser *p, uint8_t byte, uint8_t byte2) {
   write_blob(p->current_blob, byte2, p->previous.line);
 }
 
+static void emit_byte_and_short(b_parser *p, uint8_t byte, uint16_t byte2) {
+  write_blob(p->current_blob, byte, p->previous.line);
+  write_blob(p->current_blob, (byte2 >> 8) & 0xff, p->previous.line);
+  write_blob(p->current_blob, byte2 & 0xff, p->previous.line);
+}
+
 static void emit_byte_and_long(b_parser *p, uint8_t byte, uint16_t byte2) {
   write_blob(p->current_blob, byte, p->previous.line);
+  write_blob(p->current_blob, (byte2 >> 16) & 0xff, p->previous.line);
   write_blob(p->current_blob, (byte2 >> 8) & 0xff, p->previous.line);
   write_blob(p->current_blob, byte2 & 0xff, p->previous.line);
 }
@@ -150,7 +157,7 @@ static int make_constant(b_parser *p, b_value value) {
 
 static void emit_constant(b_parser *p, b_value value) {
   int constant = make_constant(p, value);
-  emit_byte_and_long(p, OP_CONSTANT, (uint16_t)constant);
+  emit_byte_and_short(p, OP_CONSTANT, (uint16_t)constant);
 }
 
 static int emit_jump(b_parser *p, uint8_t instruction) {
@@ -266,7 +273,7 @@ static void end_scope(b_parser *p) {
     p->compiler->local_count--;
   }
   if (count > 0) {
-    emit_byte_and_long(p, OP_POPN, count);
+    emit_byte_and_short(p, OP_POPN, count);
   }
 }
 
@@ -364,9 +371,9 @@ static void named_variable(b_parser *p, b_token name, bool can_assign) {
 
   if (can_assign && match(p, EQUAL_TOKEN)) {
     expression(p);
-    emit_byte_and_long(p, set_op, (uint16_t)arg);
+    emit_byte_and_short(p, set_op, (uint16_t)arg);
   } else {
-    emit_byte_and_long(p, get_op, (uint16_t)arg);
+    emit_byte_and_short(p, get_op, (uint16_t)arg);
   }
 }
 
@@ -700,7 +707,7 @@ static void define_variable(b_parser *p, int global) {
     return;
   }
 
-  emit_byte_and_long(p, OP_DEFINE_GLOBAL, global);
+  emit_byte_and_short(p, OP_DEFINE_GLOBAL, global);
 }
 
 static void expression(b_parser *p) { parse_precedence(p, PREC_ASSIGNMENT); }
