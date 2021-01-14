@@ -46,6 +46,10 @@ typedef struct {
   bool in_block;
   b_blob *current_blob;
   b_compiler *compiler;
+
+  // used for tracking loops for the continue statement...
+  int innermost_loop_start;
+  int innermost_loop_scope_depth;
 } b_parser;
 
 typedef void (*b_parse_fn)(b_parser *, bool);

@@ -13,6 +13,9 @@ iter ; j >= 1; j = j - 1 {
 iter var i = 1; i <= 10; i = i + 1 {
   echo 'hi = ' + i
   iter var j = 10; j >= 1; j = j - 1 {
+    if j > 4 and j < 7 {
+      continue
+    }
     echo 'jay = ' + j
   }
 }
