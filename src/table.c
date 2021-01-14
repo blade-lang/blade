@@ -78,10 +78,12 @@ bool table_get(b_table *table, b_value key, b_value *value) {
   if (IS_NIL(entry->key) || IS_EMPTY(entry->key))
     return false;
 
-#ifdef DEBUG_TABLE
+#if DEBUG_MODE == 1
+#if DEBUG_TABLE == 1
   printf("found entry for hash %u == ", hash_value(entry->key));
   print_value(entry->value);
   printf("\n");
+#endif
 #endif
 
   *value = entry->value;
