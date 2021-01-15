@@ -1,6 +1,7 @@
 #ifndef bird_compiler_h
 #define bird_compiler_h
 
+#include "object.h"
 #include "scanner.h"
 #include "vm.h"
 
@@ -24,12 +25,21 @@ typedef enum {
   PREC_PRIMARY
 } b_prec;
 
+typedef enum {
+  TYPE_FUNCTION,
+  TYPE_SCRIPT,
+} b_func_type;
+
 typedef struct {
   b_token name;
   int depth;
 } b_local;
 
 typedef struct {
+  // current function
+  b_obj_func *function;
+  b_func_type type;
+
   b_local locals[UINT8_COUNT];
   int local_count;
   int scope_depth;
@@ -44,7 +54,6 @@ typedef struct {
   bool had_error;
   bool panic_mode;
   bool in_block;
-  b_blob *current_blob;
   b_compiler *compiler;
 
   // used for tracking loops for the continue statement...
@@ -60,6 +69,6 @@ typedef struct {
   b_prec precedence;
 } b_parse_rule;
 
-bool compile(b_vm *vm, const char *source, b_blob *blob);
+b_obj_func *compile(b_vm *vm, const char *source, b_blob *blob);
 
 #endif

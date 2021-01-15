@@ -1,6 +1,8 @@
 #ifndef bird_config_h
 #define bird_config_h
 
+#include "common.h"
+
 // global debug mode flag
 #define DEBUG_MODE 0
 
@@ -14,7 +16,8 @@
 #endif
 // --> debug mode options ends here...
 
-#define STACK_MAX 256
+#define FRAMES_MAX 128
+#define STACK_MAX (FRAMES_MAX * UINT8_COUNT)
 #define NUMBER_FORMAT "%.16g"
 #define TABLE_MAX_LOAD 0.75
 

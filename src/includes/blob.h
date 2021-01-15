@@ -37,6 +37,10 @@ typedef enum {
   OP_DUP,
   OP_POPN,
   OP_RETURN,
+
+  // the break placeholder... it never gets to the vm
+  // care should be taken to
+  OP_BREAK_PL,
 } b_code;
 
 typedef struct {

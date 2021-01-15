@@ -56,8 +56,8 @@ const char *value_type(b_value value) {
     return "boolean";
   else if (IS_NUMBER(value))
     return "number";
-  else if (IS_STRING(value))
-    return "string";
+  else if (IS_OBJ(value))
+    return object_type(AS_OBJ(value));
   else
     return "unknown";
 }
