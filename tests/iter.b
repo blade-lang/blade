@@ -19,3 +19,8 @@ iter var i = 1; i <= 10; i = i + 1 {
     echo 'jay = ' + j
   }
 }
+
+iter var x = 0; x < 10; x = x + 1 {
+  if x == 3 break
+  echo 'The new x = ' + x
+}

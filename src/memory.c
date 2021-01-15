@@ -29,6 +29,12 @@ static void free_object(b_obj *object) {
     FREE(b_obj_string, string);
     break;
   }
+  case OBJ_FUNCTION: {
+    b_obj_func *function = (b_obj_func *)object;
+    free_blob(&function->blob);
+    FREE(b_obj_func, function);
+    break;
+  }
 
   default:
     break;

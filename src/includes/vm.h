@@ -3,6 +3,7 @@
 
 #include "blob.h"
 #include "config.h"
+#include "object.h"
 #include "table.h"
 #include "value.h"
 
@@ -13,6 +14,15 @@ typedef enum {
 } b_ptr_result;
 
 typedef struct {
+  b_obj_func *function;
+  uint8_t *ip;
+  b_value *slots;
+} b_call_frame;
+
+struct s_vm {
+  b_call_frame frames[FRAMES_MAX];
+  int frame_count;
+
   b_blob *blob;
   uint8_t *ip;
   b_value stack[STACK_MAX];
@@ -21,7 +31,7 @@ typedef struct {
   b_table globals;
 
   b_obj *objects;
-} b_vm;
+};
 
 void init_vm(b_vm *vm);
 void free_vm(b_vm *vm);

@@ -18,12 +18,17 @@
   _runtime_error(vm, ##__VA_ARGS__);                                           \
   return PTR_RUNTIME_ERR
 
-static void reset_stack(b_vm *vm) { vm->stack_top = vm->stack; }
+static void reset_stack(b_vm *vm) {
+  vm->stack_top = vm->stack;
+  vm->frame_count = 0;
+}
 
 void _runtime_error(b_vm *vm, const char *format, ...) {
 
-  size_t instruction = vm->ip - vm->blob->code - 1;
-  int line = vm->blob->lines[instruction];
+  b_call_frame *frame = &vm->frames[vm->frame_count - 1];
+
+  size_t instruction = frame->ip - frame->function->blob.code - 1;
+  int line = frame->function->blob.lines[instruction];
 
   fprintf(stderr, "RuntimeError:\n");
   fprintf(stderr, "    File: <script>, Line: %d\n    Message: ", line);
@@ -168,11 +173,14 @@ static int floor_div(double a, double b) {
 
 b_ptr_result run(b_vm *vm) {
 
-#define READ_BYTE() (*vm->ip++)
+  b_call_frame *frame = &vm->frames[vm->frame_count - 1];
 
-#define READ_SHORT() (vm->ip += 2, (uint16_t)((vm->ip[-2] << 8) | vm->ip[-1]))
+#define READ_BYTE() (*frame->ip++)
 
-#define READ_CONSTANT() (vm->blob->constants.values[READ_SHORT()])
+#define READ_SHORT()                                                           \
+  (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
+
+#define READ_CONSTANT() (frame->function->blob.constants.values[READ_SHORT()])
 
 #define READ_STRING() (AS_STRING(READ_CONSTANT()))
 
@@ -215,7 +223,8 @@ b_ptr_result run(b_vm *vm) {
       printf(" ]");
     }
     printf("\n");
-    disassemble_instruction(vm->blob, (int)(vm->ip - vm->blob->code));
+    disassemble_instruction(frame->function->blob,
+                            (int)(frame->ip - frame->function->blob.code));
 #endif
 #endif
 
@@ -303,19 +312,19 @@ b_ptr_result run(b_vm *vm) {
 
     case OP_JUMP: {
       uint16_t offset = READ_SHORT();
-      vm->ip += offset;
+      frame->ip += offset;
       break;
     }
     case OP_JUMP_IF_FALSE: {
       uint16_t offset = READ_SHORT();
       if (is_falsey(peek(vm, 0))) {
-        vm->ip += offset;
+        frame->ip += offset;
       }
       break;
     }
     case OP_LOOP: {
       uint16_t offset = READ_SHORT();
-      vm->ip -= offset;
+      frame->ip -= offset;
       break;
     }
 
@@ -372,12 +381,12 @@ b_ptr_result run(b_vm *vm) {
 
     case OP_GET_LOCAL: {
       uint16_t slot = READ_SHORT();
-      push(vm, vm->stack[slot]);
+      push(vm, frame->slots[slot]);
       break;
     }
     case OP_SET_LOCAL: {
       uint16_t slot = READ_SHORT();
-      vm->stack[slot] = peek(vm, 0);
+      frame->slots[slot] = peek(vm, 0);
       break;
     }
 
@@ -406,13 +415,18 @@ b_ptr_result interpret(b_vm *vm, const char *source) {
   b_blob blob;
   init_blob(&blob);
 
-  if (!compile(vm, source, &blob)) {
+  b_obj_func *function = compile(vm, source, &blob);
+
+  if (function == NULL) {
     free_blob(&blob);
     return PTR_COMPILE_ERR;
   }
 
-  vm->blob = &blob;
-  vm->ip = vm->blob->code;
+  push(vm, OBJ_VAL(function));
+  b_call_frame *frame = &vm->frames[vm->frame_count++];
+  frame->function = function;
+  frame->ip = function->blob.code;
+  frame->slots = vm->stack;
 
   b_ptr_result result = run(vm);
 

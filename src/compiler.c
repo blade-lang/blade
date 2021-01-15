@@ -14,6 +14,10 @@
 #include "debug.h"
 #endif
 
+static b_blob *current_blob(b_parser *p) {
+  return &p->compiler->function->blob;
+}
+
 static void error_at(b_parser *p, b_token *t, const char *message,
                      va_list args) {
   // do not cascade error
@@ -111,32 +115,75 @@ static void ignore_whitespace(b_parser *p) {
     ;
 }
 
+static int get_code_args_count(const uint8_t *bytecode,
+                               const b_value *constants, int ip) {
+  b_code code = (b_code)bytecode[ip];
+
+  // @TODO: handle upvalues gracefully...
+  switch (code) {
+  case OP_EQUAL:
+  case OP_GREATER:
+  case OP_LESS:
+  case OP_NIL:
+  case OP_TRUE:
+  case OP_FALSE:
+  case OP_ADD:
+  case OP_SUBTRACT:
+  case OP_MULTIPLY:
+  case OP_DIVIDE:
+  case OP_FDIVIDE:
+  case OP_REMINDER:
+  case OP_POW:
+  case OP_NEGATE:
+  case OP_NOT:
+  case OP_ECHO:
+  case OP_POP:
+  case OP_DUP:
+  case OP_RETURN:
+    return 0;
+
+  case OP_DEFINE_GLOBAL:
+  case OP_GET_GLOBAL:
+  case OP_SET_GLOBAL:
+  case OP_GET_LOCAL:
+  case OP_SET_LOCAL:
+  case OP_JUMP_IF_FALSE:
+  case OP_JUMP:
+  case OP_BREAK_PL:
+  case OP_LOOP:
+  case OP_CONSTANT:
+  case OP_POPN:
+    return 2;
+  }
+  return 0;
+}
+
 static void emit_byte(b_parser *p, uint8_t byte) {
-  write_blob(p->current_blob, byte, p->previous.line);
+  write_blob(current_blob(p), byte, p->previous.line);
 }
 
 static void emit_bytes(b_parser *p, uint8_t byte, uint8_t byte2) {
-  write_blob(p->current_blob, byte, p->previous.line);
-  write_blob(p->current_blob, byte2, p->previous.line);
+  write_blob(current_blob(p), byte, p->previous.line);
+  write_blob(current_blob(p), byte2, p->previous.line);
 }
 
 static void emit_byte_and_short(b_parser *p, uint8_t byte, uint16_t byte2) {
-  write_blob(p->current_blob, byte, p->previous.line);
-  write_blob(p->current_blob, (byte2 >> 8) & 0xff, p->previous.line);
-  write_blob(p->current_blob, byte2 & 0xff, p->previous.line);
+  write_blob(current_blob(p), byte, p->previous.line);
+  write_blob(current_blob(p), (byte2 >> 8) & 0xff, p->previous.line);
+  write_blob(current_blob(p), byte2 & 0xff, p->previous.line);
 }
 
 static void emit_byte_and_long(b_parser *p, uint8_t byte, uint16_t byte2) {
-  write_blob(p->current_blob, byte, p->previous.line);
-  write_blob(p->current_blob, (byte2 >> 16) & 0xff, p->previous.line);
-  write_blob(p->current_blob, (byte2 >> 8) & 0xff, p->previous.line);
-  write_blob(p->current_blob, byte2 & 0xff, p->previous.line);
+  write_blob(current_blob(p), byte, p->previous.line);
+  write_blob(current_blob(p), (byte2 >> 16) & 0xff, p->previous.line);
+  write_blob(current_blob(p), (byte2 >> 8) & 0xff, p->previous.line);
+  write_blob(current_blob(p), byte2 & 0xff, p->previous.line);
 }
 
 static void emit_loop(b_parser *p, int loop_start) {
   emit_byte(p, OP_LOOP);
 
-  int offset = p->current_blob->count - loop_start + 2;
+  int offset = current_blob(p)->count - loop_start + 2;
   if (offset > UINT16_MAX)
     error(p, "loop body too large");
 
@@ -147,7 +194,7 @@ static void emit_loop(b_parser *p, int loop_start) {
 static void emit_return(b_parser *p) { emit_byte(p, OP_RETURN); }
 
 static int make_constant(b_parser *p, b_value value) {
-  int constant = add_constant(p->current_blob, value);
+  int constant = add_constant(current_blob(p), value);
   if (constant >= UINT16_MAX) {
     error(p, "too many constants in current scope");
     return 0;
@@ -167,25 +214,35 @@ static int emit_jump(b_parser *p, uint8_t instruction) {
   emit_byte(p, 0xff);
   emit_byte(p, 0xff);
 
-  return p->current_blob->count - 2;
+  return current_blob(p)->count - 2;
 }
 
 static void patch_jump(b_parser *p, int offset) {
   // -2 to adjust the bytecode for the offset itself
-  int jump = p->current_blob->count - offset - 2;
+  int jump = current_blob(p)->count - offset - 2;
 
   if (jump > UINT16_MAX) {
     error(p, "body of conditional block too large");
   }
 
-  p->current_blob->code[offset] = (jump >> 8) & 0xff;
-  p->current_blob->code[offset + 1] = jump & 0xff;
+  current_blob(p)->code[offset] = (jump >> 8) & 0xff;
+  current_blob(p)->code[offset + 1] = jump & 0xff;
 }
 
-static void init_compiler(b_parser *p, b_compiler *compiler) {
+static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
+  compiler->function = NULL;
+  compiler->type = type;
   compiler->local_count = 0;
   compiler->scope_depth = 0;
+
+  compiler->function = new_function(p->vm);
   p->compiler = compiler;
+
+  // claiming slot zero for use in class methods
+  b_local *local = &p->compiler->locals[p->compiler->local_count++];
+  local->depth = 0;
+  local->name.start = "";
+  local->name.length = 0;
 }
 
 static int identifier_constant(b_parser *p, b_token *name) {
@@ -247,16 +304,20 @@ static void declare_variable(b_parser *p) {
   add_local(p, *name);
 }
 
-static void end_compiler(b_parser *p) {
+static b_obj_func *end_compiler(b_parser *p) {
   emit_return(p);
+  b_obj_func *function = p->compiler->function;
 
 #ifdef DEBUG_PRINT_CODE
 #if DEBUG_PRINT_CODE == 1
   if (!p->had_error) {
-    disassemble_blob(p->current_blob, "code");
+    disassemble_blob(current_blob(p), function->name == NULL
+                                          ? "<script>"
+                                          : function->name->chars);
   }
 #endif
 #endif
+  return function;
 }
 
 static void begin_scope(b_parser *p) { p->compiler->scope_depth++; }
@@ -274,6 +335,59 @@ static void end_scope(b_parser *p) {
   }
   if (count > 0) {
     emit_byte_and_short(p, OP_POPN, count);
+  }
+}
+
+static void discard_local(b_parser *p, int depth) {
+  if (p->compiler->scope_depth == -1) {
+    error(p, "cannot exit top-level scope");
+  }
+
+  // int local = p->compiler->local_count - 1;
+  // while (local >= 0 && p->compiler->locals[local].depth >= depth) {
+  //   // if the local was closed over, make sure the upvalue gets closed when
+  //   it
+  //   // goes out of scope on the stack. We use emitByte() and not emitOp()
+  //   here
+  //   // because we don't want to track that stack effect of these pops since
+  //   the
+  //   // variables are still in scope after the break.
+
+  //   // @TODO: remember to handle upvalues here...
+  //   /* if (p->compiler->locals[local].is_captured) {
+  //     emit_byte(OP_CLOSE_UPVALUE);
+  //   } else { */
+  //   emit_byte(p, OP_POP);
+  //   /* } */
+
+  //   local--;
+  // }
+
+  // int locals_count = 0;
+  for (int i = p->compiler->local_count;
+       i >= 0 && p->compiler->locals[i].depth > depth; i--) {
+    // @TODO: remember to handle upvalues here...
+    emit_byte(p, OP_POP);
+    // locals_count++;
+  }
+  /* if (locals_count > 0) {
+    emit_byte_and_short(p, OP_POPN, locals_count);
+  } */
+}
+
+static void end_loop(b_parser *p) {
+  // find all OP_BREAK_PL placeholder and replace with the appropriate jump...
+  int i = p->innermost_loop_start;
+
+  while (i < p->compiler->function->blob.count) {
+    if (p->compiler->function->blob.code[i] == OP_BREAK_PL) {
+      p->compiler->function->blob.code[i] = OP_JUMP;
+      patch_jump(p, i + 1);
+    } else {
+      i += 1 + get_code_args_count(p->compiler->function->blob.code,
+                                   p->compiler->function->blob.constants.values,
+                                   i);
+    }
   }
 }
 
@@ -790,7 +904,7 @@ static void iter_statement(b_parser *p) {
   int surrounding_scope_depth = p->innermost_loop_scope_depth;
 
   // update the parser's loop start and depth to the current
-  p->innermost_loop_start = p->current_blob->count;
+  p->innermost_loop_start = current_blob(p)->count;
   p->innermost_loop_scope_depth = p->compiler->scope_depth;
 
   int exit_jump = -1;
@@ -807,7 +921,7 @@ static void iter_statement(b_parser *p) {
   if (!match(p, LBRACE_TOKEN)) {
     int body_jump = emit_jump(p, OP_JUMP);
 
-    int increment_start = p->current_blob->count;
+    int increment_start = current_blob(p)->count;
     expression(p);
     emit_byte(p, OP_POP);
 
@@ -824,6 +938,8 @@ static void iter_statement(b_parser *p) {
     patch_jump(p, exit_jump);
     emit_byte(p, OP_POP);
   }
+
+  end_loop(p);
 
   // reset the loop start and scope depth to the surrounding value
   p->innermost_loop_start = surrounding_loop_start;
@@ -940,7 +1056,7 @@ static void while_statement(b_parser *p) {
 
   // we'll be jumping back to right before the
   // expression after the loop body
-  p->innermost_loop_start = p->current_blob->count;
+  p->innermost_loop_start = current_blob(p)->count;
 
   expression(p);
 
@@ -954,11 +1070,37 @@ static void while_statement(b_parser *p) {
   patch_jump(p, exit_jump);
   emit_byte(p, OP_POP);
 
+  end_loop(p);
+
   p->innermost_loop_start = surrounding_loop_start;
   p->innermost_loop_scope_depth = surrounding_scope_depth;
 }
 
 static void continue_statement(b_parser *p) {
+  if (p->innermost_loop_start == -1) {
+    error(p, "'continue' can only be used in a loop");
+  }
+  consume_statement_end(p);
+
+  // discard local variables created in the loop
+  discard_local(p, p->innermost_loop_scope_depth);
+
+  // go back to the top of the loop
+  emit_loop(p, p->innermost_loop_start);
+}
+
+static void break_statement(b_parser *p) {
+  if (p->innermost_loop_start == -1) {
+    error(p, "'break' can only be used in a loop");
+  }
+  consume_statement_end(p);
+
+  // discard local variables created in the loop
+  discard_local(p, p->innermost_loop_scope_depth);
+  emit_jump(p, OP_BREAK_PL);
+}
+
+/* static void continue_statement(b_parser *p) {
   if (p->innermost_loop_start == -1) {
     error(p, "'continue' can only be used in a loop");
   }
@@ -977,7 +1119,7 @@ static void continue_statement(b_parser *p) {
 
   // go back to the top of the loop
   emit_loop(p, p->innermost_loop_start);
-}
+} */
 
 static void synchronize(b_parser *p) {
   p->panic_mode = false;
@@ -1040,6 +1182,8 @@ static void statement(b_parser *p) {
     using_statement(p);
   } else if (match(p, CONTINUE_TOKEN)) {
     continue_statement(p);
+  } else if (match(p, BREAK_TOKEN)) {
+    break_statement(p);
   } else if (match(p, LBRACE_TOKEN)) {
     begin_scope(p);
     block(p);
@@ -1051,7 +1195,7 @@ static void statement(b_parser *p) {
   ignore_whitespace(p);
 }
 
-bool compile(b_vm *vm, const char *source, b_blob *blob) {
+b_obj_func *compile(b_vm *vm, const char *source, b_blob *blob) {
   b_scanner scanner;
   init_scanner(&scanner, source);
 
@@ -1063,12 +1207,11 @@ bool compile(b_vm *vm, const char *source, b_blob *blob) {
   parser.had_error = false;
   parser.panic_mode = false;
   parser.in_block = false;
-  parser.current_blob = blob;
   parser.innermost_loop_start = -1;
   parser.innermost_loop_scope_depth = 0;
 
   b_compiler compiler;
-  init_compiler(&parser, &compiler);
+  init_compiler(&parser, &compiler, TYPE_SCRIPT);
 
   advance(&parser);
 
@@ -1076,6 +1219,6 @@ bool compile(b_vm *vm, const char *source, b_blob *blob) {
     declaration(&parser);
   }
 
-  end_compiler(&parser);
-  return !parser.had_error;
+  b_obj_func *function = end_compiler(&parser);
+  return parser.had_error ? NULL : function;
 }
