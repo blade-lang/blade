@@ -35,6 +35,10 @@ static void free_object(b_obj *object) {
     FREE(b_obj_func, function);
     break;
   }
+  case OBJ_NATIVE: {
+    FREE(b_obj_native, object);
+    break;
+  }
 
   default:
     break;
