@@ -28,6 +28,13 @@ b_obj_func *new_function(b_vm *vm) {
   return function;
 }
 
+b_obj_native *new_native(b_vm *vm, b_native_fn function, const char *name) {
+  b_obj_native *native = ALLOCATE_OBJ(b_obj_native, OBJ_NATIVE);
+  native->function = function;
+  native->name = name;
+  return native;
+}
+
 b_obj_string *allocate_string(b_vm *vm, char *chars, int length,
                               uint32_t hash) {
   b_obj_string *string = ALLOCATE_OBJ(b_obj_string, OBJ_STRING);
@@ -84,6 +91,11 @@ void print_object(b_value value) {
     print_function(AS_FUNCTION(value));
     break;
   }
+  case OBJ_NATIVE: {
+    b_obj_native *native = AS_NATIVE(value);
+    printf("<function(native) %s at 0x%lx>", native->name, (long)native);
+    break;
+  }
   }
 }
 
@@ -92,6 +104,8 @@ const char *object_type(b_obj *object) {
   case OBJ_STRING:
     return "string";
   case OBJ_FUNCTION:
+    return "function";
+  case OBJ_NATIVE:
     return "function";
 
   default:

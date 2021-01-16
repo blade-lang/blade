@@ -7,6 +7,7 @@
 #include "compiler.h"
 #include "config.h"
 #include "memory.h"
+#include "native.h"
 #include "object.h"
 #include "vm.h"
 
@@ -59,19 +60,6 @@ void _runtime_error(b_vm *vm, const char *format, ...) {
   reset_stack(vm);
 }
 
-void init_vm(b_vm *vm) {
-  reset_stack(vm);
-  vm->objects = NULL;
-  init_table(&vm->strings);
-  init_table(&vm->globals);
-}
-
-void free_vm(b_vm *vm) {
-  free_objects(vm);
-  free_table(&vm->strings);
-  free_table(&vm->globals);
-}
-
 void push(b_vm *vm, b_value value) {
   *vm->stack_top = value;
   vm->stack_top++;
@@ -89,6 +77,30 @@ b_value popn(b_vm *vm, int n) {
 
 static b_value peek(b_vm *vm, int distance) {
   return vm->stack_top[-1 - distance];
+}
+
+static void define_native(b_vm *vm, const char *name, b_native_fn function) {
+  push(vm, OBJ_VAL(copy_string(vm, name, (int)strlen(name))));
+  push(vm, OBJ_VAL(new_native(vm, function, name)));
+  table_set(&vm->globals, vm->stack[0], vm->stack[1]);
+  popn(vm, 2);
+}
+
+void init_vm(b_vm *vm) {
+  reset_stack(vm);
+  vm->objects = NULL;
+  init_table(&vm->strings);
+  init_table(&vm->globals);
+
+  DEFINE_NATIVE(time);
+  DEFINE_NATIVE(microtime);
+  DEFINE_NATIVE(id);
+}
+
+void free_vm(b_vm *vm) {
+  free_objects(vm);
+  free_table(&vm->strings);
+  free_table(&vm->globals);
 }
 
 static bool call(b_vm *vm, b_obj_func *function, int arg_count) {
@@ -116,7 +128,14 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
     switch (OBJ_TYPE(callee)) {
     case OBJ_FUNCTION: {
       return call(vm, AS_FUNCTION(callee), arg_count);
-      break;
+    }
+
+    case OBJ_NATIVE: {
+      b_native_fn native = AS_NATIVE(callee)->function;
+      b_value result = native(vm, arg_count, vm->stack_top - arg_count);
+      vm->stack_top -= arg_count + 1;
+      push(vm, result);
+      return true;
     }
 
     default: // non callable
