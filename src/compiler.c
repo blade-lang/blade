@@ -191,7 +191,10 @@ static void emit_loop(b_parser *p, int loop_start) {
   emit_byte(p, offset & 0xff);
 }
 
-static void emit_return(b_parser *p) { emit_byte(p, OP_RETURN); }
+static void emit_return(b_parser *p) {
+  emit_byte(p, OP_NIL);
+  emit_byte(p, OP_RETURN);
+}
 
 static int make_constant(b_parser *p, b_value value) {
   int constant = add_constant(current_blob(p), value);
@@ -230,6 +233,7 @@ static void patch_jump(b_parser *p, int offset) {
 }
 
 static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
+  compiler->enclosing = p->compiler;
   compiler->function = NULL;
   compiler->type = type;
   compiler->local_count = 0;
@@ -237,6 +241,11 @@ static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
 
   compiler->function = new_function(p->vm);
   p->compiler = compiler;
+
+  if (type != TYPE_SCRIPT) {
+    p->compiler->function->name =
+        copy_string(p->vm, p->previous.start, p->previous.length);
+  }
 
   // claiming slot zero for use in class methods
   b_local *local = &p->compiler->locals[p->compiler->local_count++];
@@ -317,6 +326,7 @@ static b_obj_func *end_compiler(b_parser *p) {
   }
 #endif
 #endif
+  p->compiler = p->compiler->enclosing;
   return function;
 }
 
@@ -453,6 +463,11 @@ static void binary(b_parser *p, bool can_assign) {
   default:
     break;
   }
+}
+
+static void call(b_parser *p, bool can_assign) {
+  uint8_t arg_count = argument_list(p);
+  emit_bytes(p, OP_CALL, arg_count);
 }
 
 static void literal(b_parser *p, bool can_assign) {
@@ -678,7 +693,7 @@ static void or_(b_parser *p, bool can_assign) {
 b_parse_rule parse_rules[] = {
     // symbols
     [NEWLINE_TOKEN] = {NULL, NULL, PREC_NONE},            // (
-    [LPAREN_TOKEN] = {grouping, NULL, PREC_NONE},         // (
+    [LPAREN_TOKEN] = {grouping, call, PREC_CALL},         // (
     [RPAREN_TOKEN] = {NULL, NULL, PREC_NONE},             // )
     [LBRACKET_TOKEN] = {NULL, NULL, PREC_NONE},           // [
     [RBRACKET_TOKEN] = {NULL, NULL, PREC_NONE},           // ]
@@ -811,6 +826,9 @@ static int parse_variable(b_parser *p, const char *message) {
 }
 
 static void mark_initalized(b_parser *p) {
+  if (p->compiler->scope_depth == 0)
+    return;
+
   p->compiler->locals[p->compiler->local_count - 1].depth =
       p->compiler->scope_depth;
 }
@@ -824,6 +842,22 @@ static void define_variable(b_parser *p, int global) {
   emit_byte_and_short(p, OP_DEFINE_GLOBAL, global);
 }
 
+static uint8_t argument_list(b_parser *p) {
+  uint8_t arg_count = 0;
+  if (!check(p, RPAREN_TOKEN)) {
+    do {
+      expression(p);
+      if (arg_count == MAX_FUNCTION_PARAMETERS) {
+        error(p, "cannot have more than %d arguments to a function",
+              MAX_FUNCTION_PARAMETERS);
+      }
+      arg_count++;
+    } while (match(p, COMMA_TOKEN));
+  }
+  consume(p, RPAREN_TOKEN, "expected ')' after argument list");
+  return arg_count;
+}
+
 static void expression(b_parser *p) { parse_precedence(p, PREC_ASSIGNMENT); }
 
 static void block(b_parser *p) {
@@ -833,6 +867,44 @@ static void block(b_parser *p) {
   }
   p->in_block = false;
   consume(p, RBRACE_TOKEN, "expected '}' after block");
+}
+
+static void function(b_parser *p, b_func_type type) {
+  b_compiler compiler;
+  init_compiler(p, &compiler, type);
+  begin_scope(p);
+
+  // compile parameter list
+  consume(p, LPAREN_TOKEN, "expected '(' after function name");
+  if (!check(p, RPAREN_TOKEN)) {
+    // compile argument list...
+    do {
+      p->compiler->function->arity++;
+      if (p->compiler->function->arity > MAX_FUNCTION_PARAMETERS) {
+        error_at_current(p, "cannot have more than %d function parameters",
+                         MAX_FUNCTION_PARAMETERS);
+      }
+
+      int param_constant = parse_variable(p, "expected parameter name");
+      define_variable(p, param_constant);
+    } while (match(p, COMMA_TOKEN));
+  }
+  consume(p, RPAREN_TOKEN, "expected ')' after function parameters");
+
+  // compile the body
+  consume(p, LBRACE_TOKEN, "expected '{' before function body");
+  block(p);
+
+  // create the function object
+  b_obj_func *function = end_compiler(p);
+  emit_byte_and_short(p, OP_CONSTANT, make_constant(p, OBJ_VAL(function)));
+}
+
+static void function_declaration(b_parser *p) {
+  int global = parse_variable(p, "function name expected");
+  mark_initalized(p);
+  function(p, TYPE_FUNCTION);
+  define_variable(p, global);
 }
 
 static void _var_declaration(b_parser *p, bool is_initalizer) {
@@ -1050,6 +1122,20 @@ static void echo_statement(b_parser *p) {
   emit_byte(p, OP_ECHO);
 }
 
+static void return_statement(b_parser *p) {
+  if (p->compiler->type == TYPE_SCRIPT) {
+    error(p, "cannot return from top-level code");
+  }
+
+  if (match(p, SEMICOLON_TOKEN) || match(p, NEWLINE_TOKEN)) {
+    emit_return(p);
+  } else {
+    expression(p);
+    consume_statement_end(p);
+    emit_byte(p, OP_RETURN);
+  }
+}
+
 static void while_statement(b_parser *p) {
   int surrounding_loop_start = p->innermost_loop_start;
   int surrounding_scope_depth = p->innermost_loop_scope_depth;
@@ -1153,7 +1239,9 @@ static void synchronize(b_parser *p) {
 static void declaration(b_parser *p) {
   ignore_whitespace(p);
 
-  if (match(p, VAR_TOKEN)) {
+  if (match(p, DEF_TOKEN)) {
+    function_declaration(p);
+  } else if (match(p, VAR_TOKEN)) {
     var_declaration(p);
   } else {
     statement(p);
@@ -1184,6 +1272,8 @@ static void statement(b_parser *p) {
     continue_statement(p);
   } else if (match(p, BREAK_TOKEN)) {
     break_statement(p);
+  } else if (match(p, RETURN_TOKEN)) {
+    return_statement(p);
   } else if (match(p, LBRACE_TOKEN)) {
     begin_scope(p);
     block(p);

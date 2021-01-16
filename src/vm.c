@@ -39,6 +39,23 @@ void _runtime_error(b_vm *vm, const char *format, ...) {
   va_end(args);
   fputs("\n", stderr);
 
+  fprintf(stderr, "StackTrace:\n");
+  for (int i = vm->frame_count - 1; i >= 0; i--) {
+    b_call_frame *frame = &vm->frames[i];
+    b_obj_func *function = frame->function;
+
+    // -1 because the IP is sitting on the next instruction to be executed
+    size_t instruction = frame->ip - frame->function->blob.code - 1;
+
+    fprintf(stderr, "    File: <script>, Line: %d, In: ",
+            function->blob.lines[instruction]);
+    if (function->name == NULL) {
+      fprintf(stderr, "<script>\n");
+    } else {
+      fprintf(stderr, "%s()" function->name->chars);
+    }
+  }
+
   reset_stack(vm);
 }
 
@@ -72,6 +89,42 @@ b_value popn(b_vm *vm, int n) {
 
 static b_value peek(b_vm *vm, int distance) {
   return vm->stack_top[-1 - distance];
+}
+
+static bool call(b_vm *vm, b_obj_func *function, int arg_count) {
+  if (arg_count != function->arity) {
+    _runtime_error(vm, "expected %d arguments but got %d", function->arity,
+                   arg_count);
+    return false;
+  }
+
+  if (vm->frame_count == FRAMES_MAX) {
+    _runtime_error(vm, "stack overflow");
+    return false;
+  }
+
+  b_call_frame *frame = &vm->frames[&vm->frame_count++];
+  frame->function = function;
+  frame->ip = function->blob.code;
+
+  frame->slots = vm->stack_top - arg_count - 1;
+  return true;
+}
+
+static bool call_value(b_vm *vm, b_value callee, int arg_count) {
+  if (IS_OBJ(callee)) {
+    switch (OBJ_TYPE(callee)) {
+    case OBJ_FUNCTION: {
+      return call(vm, AS_FUNCTION(callee), arg_count);
+      break;
+    }
+
+    default: // non callable
+      break;
+    }
+  }
+  _runtime_error(vm, "only functions and classes can be called");
+  return false;
 }
 
 static bool is_falsey(b_value value) {
@@ -390,10 +443,29 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
 
+    case OP_CALL: {
+      int arg_count = READ_BYTE();
+      if (!call_value(vm, peek(vm, arg_count), arg_count)) {
+        return PTR_RUNTIME_ERR;
+      }
+      frame = &vm->frames[vm->frame_count - 1];
+      break;
+    }
+
     case OP_RETURN: {
-      // print_value(pop(vm));
-      // printf("\n");
-      return PTR_OK;
+      b_value result = pop(vm);
+
+      vm->frame_count--;
+      if (vm->frame_count == 0) {
+        pop(vm);
+        return PTR_OK;
+      }
+
+      vm->stack_top = frame->slots;
+      push(vm, result);
+
+      frame = vm->frames[vm->frame_count - 1];
+      break;
     }
 
     default:
@@ -423,14 +495,9 @@ b_ptr_result interpret(b_vm *vm, const char *source) {
   }
 
   push(vm, OBJ_VAL(function));
-  b_call_frame *frame = &vm->frames[vm->frame_count++];
-  frame->function = function;
-  frame->ip = function->blob.code;
-  frame->slots = vm->stack;
+  call_value(vm, OBJ_VAL(function), 0);
 
   b_ptr_result result = run(vm);
-
-  free_blob(&blob);
 
   return result;
 }

@@ -118,6 +118,8 @@ int disassemble_instruction(b_blob *blob, int offset) {
   case OP_POPN:
     return short_instruction("popn", blob, offset);
 
+  case OP_CALL:
+    return byte_instruction("ret", blob, offset);
   case OP_RETURN:
     return simple_instruction("ret", offset);
 
