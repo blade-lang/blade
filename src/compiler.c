@@ -142,6 +142,9 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_RETURN:
     return 0;
 
+  case OP_CALL:
+    return 1;
+
   case OP_DEFINE_GLOBAL:
   case OP_GET_GLOBAL:
   case OP_SET_GLOBAL:
@@ -312,6 +315,32 @@ static void declare_variable(b_parser *p) {
 
   add_local(p, *name);
 }
+static int parse_variable(b_parser *p, const char *message) {
+  consume(p, IDENTIFIER_TOKEN, message);
+
+  declare_variable(p);
+  if (p->compiler->scope_depth > 0) // we are in a local scope...
+    return 0;
+
+  return identifier_constant(p, &p->previous);
+}
+
+static void mark_initalized(b_parser *p) {
+  if (p->compiler->scope_depth == 0)
+    return;
+
+  p->compiler->locals[p->compiler->local_count - 1].depth =
+      p->compiler->scope_depth;
+}
+
+static void define_variable(b_parser *p, int global) {
+  if (p->compiler->scope_depth > 0) { // we are in a local scope...
+    mark_initalized(p);
+    return;
+  }
+
+  emit_byte_and_short(p, OP_DEFINE_GLOBAL, global);
+}
 
 static b_obj_func *end_compiler(b_parser *p) {
   emit_return(p);
@@ -463,6 +492,24 @@ static void binary(b_parser *p, bool can_assign) {
   default:
     break;
   }
+}
+
+static uint8_t argument_list(b_parser *p) {
+  uint8_t arg_count = 0;
+  if (!check(p, RPAREN_TOKEN)) {
+    do {
+      ignore_whitespace(p);
+      expression(p);
+      if (arg_count == MAX_FUNCTION_PARAMETERS) {
+        error(p, "cannot have more than %d arguments to a function",
+              MAX_FUNCTION_PARAMETERS);
+      }
+      arg_count++;
+    } while (match(p, COMMA_TOKEN));
+  }
+  ignore_whitespace(p);
+  consume(p, RPAREN_TOKEN, "expected ')' after argument list");
+  return arg_count;
 }
 
 static void call(b_parser *p, bool can_assign) {
@@ -815,53 +862,11 @@ static void parse_precedence(b_parser *p, b_prec precedence) {
 
 static b_parse_rule *get_rule(b_tkn_type type) { return &parse_rules[type]; }
 
-static int parse_variable(b_parser *p, const char *message) {
-  consume(p, IDENTIFIER_TOKEN, message);
-
-  declare_variable(p);
-  if (p->compiler->scope_depth > 0) // we are in a local scope...
-    return 0;
-
-  return identifier_constant(p, &p->previous);
-}
-
-static void mark_initalized(b_parser *p) {
-  if (p->compiler->scope_depth == 0)
-    return;
-
-  p->compiler->locals[p->compiler->local_count - 1].depth =
-      p->compiler->scope_depth;
-}
-
-static void define_variable(b_parser *p, int global) {
-  if (p->compiler->scope_depth > 0) { // we are in a local scope...
-    mark_initalized(p);
-    return;
-  }
-
-  emit_byte_and_short(p, OP_DEFINE_GLOBAL, global);
-}
-
-static uint8_t argument_list(b_parser *p) {
-  uint8_t arg_count = 0;
-  if (!check(p, RPAREN_TOKEN)) {
-    do {
-      expression(p);
-      if (arg_count == MAX_FUNCTION_PARAMETERS) {
-        error(p, "cannot have more than %d arguments to a function",
-              MAX_FUNCTION_PARAMETERS);
-      }
-      arg_count++;
-    } while (match(p, COMMA_TOKEN));
-  }
-  consume(p, RPAREN_TOKEN, "expected ')' after argument list");
-  return arg_count;
-}
-
 static void expression(b_parser *p) { parse_precedence(p, PREC_ASSIGNMENT); }
 
 static void block(b_parser *p) {
   p->in_block = true;
+  ignore_whitespace(p);
   while (!check(p, RBRACE_TOKEN) && !check(p, EOF_TOKEN)) {
     declaration(p);
   }

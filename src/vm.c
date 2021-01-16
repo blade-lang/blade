@@ -52,7 +52,7 @@ void _runtime_error(b_vm *vm, const char *format, ...) {
     if (function->name == NULL) {
       fprintf(stderr, "<script>\n");
     } else {
-      fprintf(stderr, "%s()" function->name->chars);
+      fprintf(stderr, "%s()\n", function->name->chars);
     }
   }
 
@@ -103,7 +103,7 @@ static bool call(b_vm *vm, b_obj_func *function, int arg_count) {
     return false;
   }
 
-  b_call_frame *frame = &vm->frames[&vm->frame_count++];
+  b_call_frame *frame = &vm->frames[vm->frame_count++];
   frame->function = function;
   frame->ip = function->blob.code;
 
@@ -464,7 +464,7 @@ b_ptr_result run(b_vm *vm) {
       vm->stack_top = frame->slots;
       push(vm, result);
 
-      frame = vm->frames[vm->frame_count - 1];
+      frame = &vm->frames[vm->frame_count - 1];
       break;
     }
 

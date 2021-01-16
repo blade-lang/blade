@@ -3,3 +3,17 @@ def test() {
 }
 
 echo test
+test()
+
+
+# testing stack trace
+
+def a() { 
+  b()
+}
+
+def b() {
+  c()
+}
+
+a()
