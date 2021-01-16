@@ -68,9 +68,9 @@ b_obj_string *copy_string(b_vm *vm, const char *chars, int length) {
 
 static void print_function(b_obj_func *function) {
   if (function->name == NULL) {
-    printf("<script>");
+    printf("<script at 0x%lx>", (long)function);
   } else {
-    printf("<fn %s>", function->name->chars);
+    printf("<function %s at 0x%lx>", function->name->chars, (long)function);
   }
 }
 

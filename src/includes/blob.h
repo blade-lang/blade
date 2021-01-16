@@ -36,6 +36,8 @@ typedef enum {
   OP_POP,
   OP_DUP,
   OP_POPN,
+
+  OP_CALL,
   OP_RETURN,
 
   // the break placeholder... it never gets to the vm

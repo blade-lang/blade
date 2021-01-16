@@ -35,7 +35,9 @@ typedef struct {
   int depth;
 } b_local;
 
-typedef struct {
+typedef struct b_compiler {
+  struct b_compiler *enclosing;
+
   // current function
   b_obj_func *function;
   b_func_type type;
