@@ -1,7 +1,10 @@
 #ifndef bird_vm_h
 #define bird_vm_h
 
+typedef struct s_compiler b_compiler;
+
 #include "blob.h"
+#include "compiler.h"
 #include "config.h"
 #include "object.h"
 #include "table.h"
@@ -32,6 +35,14 @@ struct s_vm {
   b_obj_upvalue *open_upvalues;
 
   b_obj *objects;
+  b_compiler *compiler;
+
+  // gc
+  int gray_count;
+  int gray_capacity;
+  b_obj **gray_stack;
+  size_t bytes_allocated;
+  size_t next_gc;
 };
 
 void init_vm(b_vm *vm);
@@ -39,5 +50,8 @@ void free_vm(b_vm *vm);
 b_ptr_result interpret(b_vm *vm, const char *source);
 void push(b_vm *vm, b_value value);
 b_value pop(b_vm *vm);
+
+// the main bird vm
+extern b_vm main_vm;
 
 #endif

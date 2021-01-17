@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "common.h"
@@ -10,6 +11,8 @@
 #include "native.h"
 #include "object.h"
 #include "vm.h"
+
+b_vm main_vm;
 
 #if DEBUG_MODE == 1
 #include "debug.h"
@@ -89,7 +92,15 @@ static void define_native(b_vm *vm, const char *name, b_native_fn function) {
 
 void init_vm(b_vm *vm) {
   reset_stack(vm);
+  vm->compiler = NULL;
   vm->objects = NULL;
+  vm->bytes_allocated = 0;
+  vm->next_gc = 1024 * 1024; // 1mb
+
+  vm->gray_count = 0;
+  vm->gray_capacity = 0;
+  vm->gray_stack = NULL;
+
   init_table(&vm->strings);
   init_table(&vm->globals);
 
@@ -134,8 +145,12 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
     case OBJ_NATIVE: {
       b_native_fn native = AS_NATIVE(callee)->function;
       b_value result = native(vm, arg_count, vm->stack_top - arg_count);
-      vm->stack_top -= arg_count + 1;
-      push(vm, result);
+      if (IS_EMPTY(result)) {
+        return false;
+      } else if (!IS_UNDEFINED(result)) {
+        vm->stack_top -= arg_count + 1;
+        push(vm, result);
+      }
       return true;
     }
 
@@ -213,13 +228,15 @@ static bool is_falsey(b_value value) {
 }
 
 static bool concatenate(b_vm *vm) {
-  b_value _b = pop(vm);
-  b_value _a = pop(vm);
+  b_value _b = peek(vm, 0);
+  b_value _a = peek(vm, 1);
 
   if (IS_NIL(_a)) {
+    pop(vm);
+    pop(vm);
     push(vm, _b);
   } else if (IS_NIL(_b)) {
-    push(vm, _a);
+    pop(vm);
   } else if (IS_NUMBER(_a)) {
     double a = AS_NUMBER(_a);
 
@@ -236,8 +253,11 @@ static bool concatenate(b_vm *vm) {
     chars[length] = '\0';
 
     b_obj_string *result = take_string(vm, chars, length);
+    pop(vm);
+    pop(vm);
     push(vm, OBJ_VAL(result));
   } else if (IS_NUMBER(_b)) {
+    pop(vm); // pop _b out...
     b_obj_string *a = AS_STRING(_a);
     double b = AS_NUMBER(_b);
 
@@ -246,12 +266,13 @@ static bool concatenate(b_vm *vm) {
     int num_length = strlen(num_str);
 
     int length = num_length + a->length;
-    char *chars = ALLOCATE(char, length + 1);
+    char *chars = (char *)malloc(sizeof(char) * (length + 1));
     memcpy(chars, a->chars, a->length);
     memcpy(chars + a->length, num_str, num_length);
     chars[length] = '\0';
 
     b_obj_string *result = take_string(vm, chars, length);
+    pop(vm);
     push(vm, OBJ_VAL(result));
   } else if (IS_STRING(_a) && IS_STRING(_b)) {
     b_obj_string *b = AS_STRING(_b);
@@ -264,6 +285,9 @@ static bool concatenate(b_vm *vm) {
     chars[length] = '\0';
 
     b_obj_string *result = take_string(vm, chars, length);
+
+    pop(vm);
+    pop(vm);
     push(vm, OBJ_VAL(result));
   } else {
     return false;
