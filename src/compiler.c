@@ -439,37 +439,14 @@ static void discard_local(b_parser *p, int depth) {
   if (p->compiler->scope_depth == -1) {
     error(p, "cannot exit top-level scope");
   }
-
-  // int local = p->compiler->local_count - 1;
-  // while (local >= 0 && p->compiler->locals[local].depth >= depth) {
-  //   // if the local was closed over, make sure the upvalue gets closed when
-  //   it
-  //   // goes out of scope on the stack. We use emitByte() and not emitOp()
-  //   here
-  //   // because we don't want to track that stack effect of these pops since
-  //   the
-  //   // variables are still in scope after the break.
-
-  //   // @TODO: remember to handle upvalues here...
-  //   /* if (p->compiler->locals[local].is_captured) {
-  //     emit_byte(OP_CLOSE_UPVALUE);
-  //   } else { */
-  //   emit_byte(p, OP_POP);
-  //   /* } */
-
-  //   local--;
-  // }
-
-  // int locals_count = 0;
   for (int i = p->compiler->local_count;
        i >= 0 && p->compiler->locals[i].depth > depth; i--) {
-    // @TODO: remember to handle upvalues here...
-    emit_byte(p, OP_POP);
-    // locals_count++;
+    if (p->compiler->locals[i].is_captured) {
+      emit_byte(p, OP_CLOSE_UPVALUE);
+    } else {
+      emit_byte(p, OP_POP);
+    }
   }
-  /* if (locals_count > 0) {
-    emit_byte_and_short(p, OP_POPN, locals_count);
-  } */
 }
 
 static void end_loop(b_parser *p) {
@@ -1256,27 +1233,6 @@ static void break_statement(b_parser *p) {
   discard_local(p, p->innermost_loop_scope_depth);
   emit_jump(p, OP_BREAK_PL);
 }
-
-/* static void continue_statement(b_parser *p) {
-  if (p->innermost_loop_start == -1) {
-    error(p, "'continue' can only be used in a loop");
-  }
-  consume_statement_end(p);
-
-  // discard local variables created in the loop
-  int locals_count = 0;
-  for (int i = p->compiler->local_count;
-       i >= 0 && p->compiler->locals[i].depth > p->innermost_loop_scope_depth;
-       i--) {
-    locals_count++;
-  }
-  if (locals_count > 0) {
-    emit_byte_and_short(p, OP_POPN, locals_count);
-  }
-
-  // go back to the top of the loop
-  emit_loop(p, p->innermost_loop_start);
-} */
 
 static void synchronize(b_parser *p) {
   p->panic_mode = false;
