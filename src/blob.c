@@ -2,6 +2,7 @@
 
 #include "blob.h"
 #include "memory.h"
+#include "vm.h"
 
 void init_blob(b_blob *blob) {
   blob->count = 0;
@@ -32,6 +33,8 @@ void free_blob(b_blob *blob) {
 }
 
 int add_constant(b_blob *blob, b_value value) {
+  push(&main_vm, value); // fixing gc corruption
   write_value_arr(&blob->constants, value);
+  pop(&main_vm); // fixing gc corruption
   return blob->constants.count - 1;
 }

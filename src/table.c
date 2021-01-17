@@ -203,3 +203,20 @@ void table_print(b_table *table) {
   }
   printf("]>\n");
 }
+
+void mark_table(b_vm *vm, b_table *table) {
+  for (int i = 0; i < table->capacity; i++) {
+    b_entry *entry = &table->entries[i];
+    mark_value(vm, entry->key);
+    mark_value(vm, entry->value);
+  }
+}
+
+void table_remove_whites(b_table *table) {
+  for (int i = 0; i < table->capacity; i++) {
+    b_entry *entry = &table->entries[i];
+    if (IS_OBJ(entry->key) && AS_OBJ(entry->key)->is_marked) {
+      table_delete(table, entry->key);
+    }
+  }
+}

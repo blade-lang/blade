@@ -41,8 +41,8 @@ typedef struct {
   bool is_local;
 } b_upvalue;
 
-typedef struct b_compiler {
-  struct b_compiler *enclosing;
+struct s_compiler {
+  b_compiler *enclosing;
 
   // current function
   b_obj_func *function;
@@ -52,7 +52,7 @@ typedef struct b_compiler {
   int local_count;
   b_upvalue upvalues[UINT8_COUNT];
   int scope_depth;
-} b_compiler;
+};
 
 typedef struct {
   b_scanner *scanner;
@@ -79,5 +79,6 @@ typedef struct {
 } b_parse_rule;
 
 b_obj_func *compile(b_vm *vm, const char *source, b_blob *blob);
+void mark_compiler_roots(b_vm *vm);
 
 #endif

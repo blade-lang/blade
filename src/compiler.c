@@ -6,6 +6,7 @@
 #include "common.h"
 #include "compiler.h"
 #include "config.h"
+#include "memory.h"
 #include "object.h"
 #include "scanner.h"
 #include "util.h"
@@ -1338,5 +1339,16 @@ b_obj_func *compile(b_vm *vm, const char *source, b_blob *blob) {
   }
 
   b_obj_func *function = end_compiler(&parser);
+
+  vm->compiler = &compiler;
+
   return parser.had_error ? NULL : function;
+}
+
+void mark_compiler_roots(b_vm *vm) {
+  b_compiler *compiler = vm->compiler;
+  while (compiler != NULL) {
+    mark_object(vm, (b_obj *)compiler->function);
+    compiler = compiler->enclosing;
+  }
 }

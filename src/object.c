@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "config.h"
 #include "memory.h"
 #include "object.h"
 #include "table.h"
@@ -12,10 +13,18 @@
 
 static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   b_obj *object = (b_obj *)reallocate(NULL, 0, size);
+
   object->type = type;
+  object->is_marked = false;
 
   object->next = vm->objects;
   vm->objects = object;
+
+#if DEBUG_MODE == 1
+#if DEBUG_LOG_GC == 1
+  printf("%p allocate %ld for %d\n", (void *)object, size, type);
+#endif
+#endif
 
   return object;
 }
@@ -56,7 +65,9 @@ b_obj_string *allocate_string(b_vm *vm, char *chars, int length,
   string->length = length;
   string->hash = hash;
 
+  push(vm, OBJ_VAL(string)); // fixing gc corruption
   table_set(&vm->strings, OBJ_VAL(string), NIL_VAL);
+  pop(vm); // fixing gc corruption
 
   return string;
 }
