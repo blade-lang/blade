@@ -22,14 +22,15 @@
 static void reset_stack(b_vm *vm) {
   vm->stack_top = vm->stack;
   vm->frame_count = 0;
+  vm->open_upvalues = NULL;
 }
 
 void _runtime_error(b_vm *vm, const char *format, ...) {
 
   b_call_frame *frame = &vm->frames[vm->frame_count - 1];
 
-  size_t instruction = frame->ip - frame->function->blob.code - 1;
-  int line = frame->function->blob.lines[instruction];
+  size_t instruction = frame->ip - frame->closure->function->blob.code - 1;
+  int line = frame->closure->function->blob.lines[instruction];
 
   fprintf(stderr, "RuntimeError:\n");
   fprintf(stderr, "    File: <script>, Line: %d\n    Message: ", line);
@@ -43,10 +44,10 @@ void _runtime_error(b_vm *vm, const char *format, ...) {
   fprintf(stderr, "StackTrace:\n");
   for (int i = vm->frame_count - 1; i >= 0; i--) {
     b_call_frame *frame = &vm->frames[i];
-    b_obj_func *function = frame->function;
+    b_obj_func *function = frame->closure->function;
 
     // -1 because the IP is sitting on the next instruction to be executed
-    size_t instruction = frame->ip - frame->function->blob.code - 1;
+    size_t instruction = frame->ip - frame->closure->function->blob.code - 1;
 
     fprintf(stderr, "    File: <script>, Line: %d, In: ",
             function->blob.lines[instruction]);
@@ -103,10 +104,10 @@ void free_vm(b_vm *vm) {
   free_table(&vm->globals);
 }
 
-static bool call(b_vm *vm, b_obj_func *function, int arg_count) {
-  if (arg_count != function->arity) {
-    _runtime_error(vm, "expected %d arguments but got %d", function->arity,
-                   arg_count);
+static bool call(b_vm *vm, b_obj_closure *closure, int arg_count) {
+  if (arg_count != closure->function->arity) {
+    _runtime_error(vm, "expected %d arguments but got %d",
+                   closure->function->arity, arg_count);
     return false;
   }
 
@@ -116,8 +117,8 @@ static bool call(b_vm *vm, b_obj_func *function, int arg_count) {
   }
 
   b_call_frame *frame = &vm->frames[vm->frame_count++];
-  frame->function = function;
-  frame->ip = function->blob.code;
+  frame->closure = closure;
+  frame->ip = closure->function->blob.code;
 
   frame->slots = vm->stack_top - arg_count - 1;
   return true;
@@ -126,8 +127,8 @@ static bool call(b_vm *vm, b_obj_func *function, int arg_count) {
 static bool call_value(b_vm *vm, b_value callee, int arg_count) {
   if (IS_OBJ(callee)) {
     switch (OBJ_TYPE(callee)) {
-    case OBJ_FUNCTION: {
-      return call(vm, AS_FUNCTION(callee), arg_count);
+    case OBJ_CLOSURE: {
+      return call(vm, AS_CLOSURE(callee), arg_count);
     }
 
     case OBJ_NATIVE: {
@@ -146,6 +147,39 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
   return false;
 }
 
+static b_obj_upvalue *capture_upvalue(b_vm *vm, b_value *local) {
+  b_obj_upvalue *prev_upvalue = NULL;
+  b_obj_upvalue *upvalue = vm->open_upvalues;
+
+  while (upvalue != NULL && upvalue->location > local) {
+    prev_upvalue = upvalue;
+    upvalue = upvalue->next;
+  }
+
+  if (upvalue != NULL && upvalue->location == local)
+    return upvalue;
+
+  b_obj_upvalue *created_upvalue = new_upvalue(vm, local);
+  created_upvalue->next = upvalue;
+
+  if (prev_upvalue == NULL) {
+    vm->open_upvalues = created_upvalue;
+  } else {
+    prev_upvalue->next = created_upvalue;
+  }
+
+  return created_upvalue;
+}
+
+static void close_upvalues(b_vm *vm, b_value *last) {
+  while (vm->open_upvalues != NULL && vm->open_upvalues->location >= last) {
+    b_obj_upvalue *upvalue = vm->open_upvalues;
+    upvalue->closed = *upvalue->location;
+    upvalue->location = &upvalue->closed;
+    vm->open_upvalues = upvalue->next;
+  }
+}
+
 static bool is_falsey(b_value value) {
   if (IS_BOOL(value))
     return IS_BOOL(value) && !AS_BOOL(value);
@@ -156,11 +190,11 @@ static bool is_falsey(b_value value) {
   if (IS_NUMBER(value))
     return AS_NUMBER(value) < 0;
 
-  /* // Non-empty strings are true, empty strings are false.
+  // Non-empty strings are true, empty strings are false.
   if (IS_STRING(value))
     return strlen(AS_STRING(value)->chars) < 1;
 
-  // Non-empty lists are true, empty lists are false.
+  /* // Non-empty lists are true, empty lists are false.
   if (IS_LIST(value))
     return AS_LIST(value)->values.count == 0;
 
@@ -252,7 +286,8 @@ b_ptr_result run(b_vm *vm) {
 #define READ_SHORT()                                                           \
   (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
 
-#define READ_CONSTANT() (frame->function->blob.constants.values[READ_SHORT()])
+#define READ_CONSTANT()                                                        \
+  (frame->closure->function->blob.constants.values[READ_SHORT()])
 
 #define READ_STRING() (AS_STRING(READ_CONSTANT()))
 
@@ -295,8 +330,9 @@ b_ptr_result run(b_vm *vm) {
       printf(" ]");
     }
     printf("\n");
-    disassemble_instruction(frame->function->blob,
-                            (int)(frame->ip - frame->function->blob.code));
+    disassemble_instruction(
+        frame->closure->function->blob,
+        (int)(frame->ip - frame->closure->function->blob.code));
 #endif
 #endif
 
@@ -418,6 +454,11 @@ b_ptr_result run(b_vm *vm) {
       popn(vm, READ_SHORT());
       break;
     }
+    case OP_CLOSE_UPVALUE: {
+      close_upvalues(vm, vm->stack_top - 1);
+      pop(vm);
+      break;
+    }
 
     case OP_DEFINE_GLOBAL: {
       b_obj_string *name = READ_STRING();
@@ -462,6 +503,35 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
 
+    case OP_CLOSURE: {
+      b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
+      b_obj_closure *closure = new_closure(vm, function);
+      push(vm, OBJ_VAL(closure));
+
+      for (int i = 0; i < closure->upvalue_count; i++) {
+        uint8_t is_local = READ_BYTE();
+        int index = READ_SHORT();
+
+        if (is_local) {
+          closure->upvalues[i] = capture_upvalue(vm, frame->slots + index);
+        } else {
+          closure->upvalues[i] = frame->closure->upvalues[index];
+        }
+      }
+
+      break;
+    }
+    case OP_GET_UPVALUE: {
+      int index = READ_SHORT();
+      push(vm, *frame->closure->upvalues[index]->location);
+      break;
+    }
+    case OP_SET_UPVALUE: {
+      int index = READ_SHORT();
+      *frame->closure->upvalues[index]->location = peek(vm, 0);
+      break;
+    }
+
     case OP_CALL: {
       int arg_count = READ_BYTE();
       if (!call_value(vm, peek(vm, arg_count), arg_count)) {
@@ -473,6 +543,8 @@ b_ptr_result run(b_vm *vm) {
 
     case OP_RETURN: {
       b_value result = pop(vm);
+
+      close_upvalues(vm, frame->slots);
 
       vm->frame_count--;
       if (vm->frame_count == 0) {
@@ -514,7 +586,10 @@ b_ptr_result interpret(b_vm *vm, const char *source) {
   }
 
   push(vm, OBJ_VAL(function));
-  call_value(vm, OBJ_VAL(function), 0);
+  b_obj_closure *closure = new_closure(vm, function);
+  pop(vm);
+  push(vm, OBJ_VAL(closure));
+  call_value(vm, OBJ_VAL(closure), 0);
 
   b_ptr_result result = run(vm);
 

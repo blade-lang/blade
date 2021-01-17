@@ -138,6 +138,7 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_NOT:
   case OP_ECHO:
   case OP_POP:
+  case OP_CLOSE_UPVALUE:
   case OP_DUP:
   case OP_RETURN:
     return 0;
@@ -150,6 +151,8 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_SET_GLOBAL:
   case OP_GET_LOCAL:
   case OP_SET_LOCAL:
+  case OP_GET_UPVALUE:
+  case OP_SET_UPVALUE:
   case OP_JUMP_IF_FALSE:
   case OP_JUMP:
   case OP_BREAK_PL:
@@ -157,12 +160,26 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_CONSTANT:
   case OP_POPN:
     return 2;
+
+  case OP_CLOSURE: {
+    int constant = (bytecode[ip + 1] << 8) | bytecode[ip + 2];
+    b_obj_func *fn = AS_FUNCTION(constants[constant]);
+
+    // There is two byte for the constant, then three for each upvalue.
+    // @TODO: change 2 to 3 when supporting variadic index...
+    return 2 + (fn->upvalue_count * 3);
+  }
   }
   return 0;
 }
 
 static void emit_byte(b_parser *p, uint8_t byte) {
   write_blob(current_blob(p), byte, p->previous.line);
+}
+
+static void emit_short(b_parser *p, uint16_t byte) {
+  write_blob(current_blob(p), (byte >> 8) & 0xff, p->previous.line);
+  write_blob(current_blob(p), byte & 0xff, p->previous.line);
 }
 
 static void emit_bytes(b_parser *p, uint8_t byte, uint8_t byte2) {
@@ -253,6 +270,7 @@ static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
   // claiming slot zero for use in class methods
   b_local *local = &p->compiler->locals[p->compiler->local_count++];
   local->depth = 0;
+  local->is_captured = false;
   local->name.start = "";
   local->name.length = 0;
 }
@@ -268,9 +286,9 @@ static bool identifiers_equal(b_token *a, b_token *b) {
   return memcmp(a->start, b->start, a->length) == 0;
 }
 
-static int resolve_local(b_parser *p, b_token *name) {
-  for (int i = p->compiler->local_count - 1; i >= 0; i--) {
-    b_local *local = &p->compiler->locals[i];
+static int resolve_local(b_parser *p, b_compiler *compiler, b_token *name) {
+  for (int i = compiler->local_count - 1; i >= 0; i--) {
+    b_local *local = &compiler->locals[i];
     if (identifiers_equal(&local->name, name)) {
       if (local->depth == -1) {
         error(p, "cannot read local variable in it's own initializer");
@@ -278,6 +296,45 @@ static int resolve_local(b_parser *p, b_token *name) {
       return i;
     }
   }
+  return -1;
+}
+
+static int add_upvalue(b_parser *p, b_compiler *compiler, uint16_t index,
+                       bool is_local) {
+  int upvalue_count = compiler->function->upvalue_count;
+
+  for (int i = 0; i < upvalue_count; i++) {
+    b_upvalue *upvalue = &compiler->upvalues[i];
+    if (upvalue->index == index && upvalue->is_local == is_local) {
+      return i;
+    }
+  }
+
+  if (upvalue_count == UINT8_COUNT) {
+    error(p, "too many closure variables in function");
+    return 0;
+  }
+
+  compiler->upvalues[upvalue_count].is_local = is_local;
+  compiler->upvalues[upvalue_count].index = index;
+  return compiler->function->upvalue_count++;
+}
+
+static int resolve_upvalue(b_parser *p, b_compiler *compiler, b_token *name) {
+  if (compiler->enclosing == NULL)
+    return -1;
+
+  int local = resolve_local(p, compiler->enclosing, name);
+  if (local != -1) {
+    compiler->enclosing->locals[local].is_captured = true;
+    return add_upvalue(p, compiler, (uint16_t)local, true);
+  }
+
+  int upvalue = resolve_upvalue(p, compiler->enclosing, name);
+  if (upvalue != -1) {
+    return add_upvalue(p, compiler, (uint16_t)upvalue, false);
+  }
+
   return -1;
 }
 
@@ -292,6 +349,7 @@ static void add_local(b_parser *p, b_token name) {
   local->name = name;
   // local->depth = p->compiler->scope_depth;
   local->depth = -1;
+  local->is_captured = false;
 }
 
 static void declare_variable(b_parser *p) {
@@ -365,15 +423,15 @@ static void end_scope(b_parser *p) {
   p->compiler->scope_depth--;
 
   // remove all variables declared in scope while exiting...
-  int count = 0;
   while (p->compiler->local_count > 0 &&
          p->compiler->locals[p->compiler->local_count - 1].depth >
              p->compiler->scope_depth) {
-    count++;
+    if (p->compiler->locals[p->compiler->local_count - 1].is_captured) {
+      emit_byte(p, OP_CLOSE_UPVALUE);
+    } else {
+      emit_byte(p, OP_POP);
+    }
     p->compiler->local_count--;
-  }
-  if (count > 0) {
-    emit_byte_and_short(p, OP_POPN, count);
   }
 }
 
@@ -535,10 +593,13 @@ static void literal(b_parser *p, bool can_assign) {
 
 static void named_variable(b_parser *p, b_token name, bool can_assign) {
   uint8_t get_op, set_op;
-  int arg = resolve_local(p, &name);
+  int arg = resolve_local(p, p->compiler, &name);
   if (arg != -1) {
     get_op = OP_GET_LOCAL;
     set_op = OP_SET_LOCAL;
+  } else if ((arg = resolve_upvalue(p, p->compiler, &name)) != -1) {
+    get_op = OP_GET_UPVALUE;
+    set_op = OP_SET_UPVALUE;
   } else {
     arg = identifier_constant(p, &name);
     get_op = OP_GET_GLOBAL;
@@ -902,7 +963,12 @@ static void function(b_parser *p, b_func_type type) {
 
   // create the function object
   b_obj_func *function = end_compiler(p);
-  emit_byte_and_short(p, OP_CONSTANT, make_constant(p, OBJ_VAL(function)));
+  emit_byte_and_short(p, OP_CLOSURE, make_constant(p, OBJ_VAL(function)));
+
+  for (int i = 0; i < function->upvalue_count; i++) {
+    emit_byte(p, compiler.upvalues[i].is_local ? 1 : 0);
+    emit_short(p, compiler.upvalues[i].index);
+  }
 }
 
 static void function_declaration(b_parser *p) {
@@ -1304,6 +1370,7 @@ b_obj_func *compile(b_vm *vm, const char *source, b_blob *blob) {
   parser.in_block = false;
   parser.innermost_loop_start = -1;
   parser.innermost_loop_scope_depth = 0;
+  parser.compiler = NULL;
 
   b_compiler compiler;
   init_compiler(&parser, &compiler, TYPE_SCRIPT);
