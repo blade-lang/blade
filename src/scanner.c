@@ -1,5 +1,7 @@
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "common.h"
 #include "scanner.h"
@@ -21,11 +23,18 @@ static b_token make_token(b_scanner *s, b_tkn_type type) {
   return t;
 }
 
-static b_token error_token(b_scanner *s, const char *message) {
+static b_token error_token(b_scanner *s, const char *message, int count, ...) {
+  char *err = (char *)malloc(sizeof(char *) * count);
+
+  va_list args;
+  va_start(args, count);
+  vsprintf(err, message, args);
+  va_end(args);
+
   b_token t;
   t.type = ERROR_TOKEN;
-  t.start = message;
-  t.length = (int)strlen(message);
+  t.start = err;
+  t.length = (int)strlen(err);
   t.line = s->line;
   return t;
 }
@@ -74,7 +83,7 @@ b_token skip_block_comments(b_scanner *s) {
   int nesting = 1;
   while (nesting > 0) {
     if (is_at_end(s)) {
-      return error_token(s, "unclosed block comment");
+      return error_token(s, "unclosed block comment", 0);
     }
 
     // internal comment open
@@ -146,7 +155,7 @@ static b_token string(b_scanner *s, char quote) {
   }
 
   if (is_at_end(s))
-    return error_token(s, "unterminated string (opening quote not matched)");
+    return error_token(s, "unterminated string (opening quote not matched)", 0);
 
   match(s, quote); // the closing quote
   return make_token(s, LITERAL_TOKEN);
@@ -352,6 +361,8 @@ b_token scan_token(b_scanner *s) {
     return make_token(s, BACKSLASH_TOKEN);
   case ':':
     return make_token(s, COLON_TOKEN);
+  case ',':
+    return make_token(s, COMMA_TOKEN);
   case '@':
     return make_token(s, AT_TOKEN);
   case '!':
@@ -439,5 +450,5 @@ b_token scan_token(b_scanner *s) {
     break;
   }
 
-  return error_token(s, "unexpected character.");
+  return error_token(s, "unexpected character %c", 1, c);
 }

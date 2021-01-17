@@ -30,3 +30,23 @@ def outer() {
 var mid = outer()
 var _in = mid()
 _in()
+
+
+iter var i = 0; i < 10; i = i + 1 {
+  var start = time()
+  var sum = 0
+  iter var j = 0; j < 1000000; j = j + 1 {
+    def outer(a, b, c) {
+      def inner() {
+        return a + b + c
+      }
+      return inner
+    }
+
+    var closure = outer(j, j, j)
+    sum = sum + closure()
+  }
+
+  echo sum
+  echo time() - start;
+}
