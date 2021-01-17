@@ -39,6 +39,18 @@ static void free_object(b_obj *object) {
     FREE(b_obj_native, object);
     break;
   }
+  case OBJ_CLOSURE: {
+    b_obj_closure *closure = (b_obj_closure *)object;
+    FREE_ARRAY(b_obj_upvalue *, closure->upvalues, closure->upvalue_count);
+    // there may be multiple closures that all reference the same function
+    // for this reason, we do not free functions when freeing closures
+    FREE(b_obj_closure, object);
+    break;
+  }
+  case OBJ_UPVALUE: {
+    FREE(b_obj_upvalue, object);
+    break;
+  }
 
   default:
     break;

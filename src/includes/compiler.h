@@ -33,7 +33,13 @@ typedef enum {
 typedef struct {
   b_token name;
   int depth;
+  bool is_captured;
 } b_local;
+
+typedef struct {
+  uint16_t index;
+  bool is_local;
+} b_upvalue;
 
 typedef struct b_compiler {
   struct b_compiler *enclosing;
@@ -44,6 +50,7 @@ typedef struct b_compiler {
 
   b_local locals[UINT8_COUNT];
   int local_count;
+  b_upvalue upvalues[UINT8_COUNT];
   int scope_depth;
 } b_compiler;
 

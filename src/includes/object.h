@@ -11,19 +11,23 @@
 #define IS_STRING(v) is_obj_type(v, OBJ_STRING)
 #define IS_NATIVE(v) is_obj_type(v, OBJ_NATIVE)
 #define IS_FUNCTION(v) is_obj_type(v, OBJ_FUNCTION)
+#define IS_CLOSURE(v) is_obj_type(v, OBJ_CLOSURE)
 
 // promote b_value to object
 #define AS_STRING(v) ((b_obj_string *)AS_OBJ(v))
 #define AS_NATIVE(v) ((b_obj_native *)AS_OBJ(v))
 #define AS_FUNCTION(v) ((b_obj_func *)AS_OBJ(v))
+#define AS_CLOSURE(v) ((b_obj_closure *)AS_OBJ(v))
 
 // demote bird value to c string
 #define AS_CSTRING(v) (((b_obj_string *)AS_OBJ(v))->chars)
 
 typedef enum {
+  OBJ_CLOSURE,
   OBJ_FUNCTION,
   OBJ_NATIVE,
   OBJ_STRING,
+  OBJ_UPVALUE,
 } b_obj_type;
 
 struct s_obj {
@@ -31,12 +35,34 @@ struct s_obj {
   struct s_obj *next;
 };
 
+struct s_obj_string {
+  b_obj obj;
+  int length;
+  char *chars;
+  uint32_t hash;
+};
+
+typedef struct b_obj_upvalue {
+  b_obj obj;
+  b_value *location;
+  b_value closed;
+  struct b_obj_upvalue *next;
+} b_obj_upvalue;
+
 typedef struct {
   b_obj obj;
   int arity;
+  int upvalue_count;
   b_blob blob;
   b_obj_string *name;
 } b_obj_func;
+
+typedef struct {
+  b_obj obj;
+  b_obj_func *function;
+  b_obj_upvalue **upvalues;
+  int upvalue_count;
+} b_obj_closure;
 
 typedef b_value (*b_native_fn)(b_vm *, int, b_value *);
 
@@ -46,14 +72,9 @@ typedef struct {
   b_native_fn function;
 } b_obj_native;
 
-struct s_obj_string {
-  b_obj obj;
-  int length;
-  char *chars;
-  uint32_t hash;
-};
-
 b_obj_func *new_function(b_vm *vm);
+b_obj_closure *new_closure(b_vm *vm, b_obj_func *function);
+b_obj_upvalue *new_upvalue(b_vm *vm, b_value *slot);
 b_obj_native *new_native(b_vm *vm, b_native_fn function, const char *name);
 b_obj_string *copy_string(b_vm *vm, const char *chars, int length);
 b_obj_string *take_string(b_vm *vm, char *chars, int length);

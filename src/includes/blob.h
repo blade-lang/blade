@@ -10,7 +10,10 @@ typedef enum {
   OP_SET_GLOBAL,
 
   OP_GET_LOCAL,
+  OP_GET_UPVALUE,
   OP_SET_LOCAL,
+  OP_SET_UPVALUE,
+  OP_CLOSE_UPVALUE,
 
   OP_JUMP_IF_FALSE,
   OP_JUMP,
@@ -37,6 +40,7 @@ typedef enum {
   OP_DUP,
   OP_POPN,
 
+  OP_CLOSURE,
   OP_CALL,
   OP_RETURN,
 

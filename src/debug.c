@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "debug.h"
+#include "object.h"
 #include "value.h"
 
 void disassemble_blob(b_blob *blob, const char *name) {
@@ -74,6 +75,11 @@ int disassemble_instruction(b_blob *blob, int offset) {
   case OP_SET_LOCAL:
     return short_instruction("sloc", blob, offset);
 
+  case OP_GET_UPVALUE:
+    return short_instruction("gupv", blob, offset);
+  case OP_SET_UPVALUE:
+    return short_instruction("supv", blob, offset);
+
   case OP_CONSTANT:
     return constant_instruction("load", blob, offset);
 
@@ -113,13 +119,34 @@ int disassemble_instruction(b_blob *blob, int offset) {
     return simple_instruction("echo", offset);
   case OP_POP:
     return simple_instruction("pop", offset);
+  case OP_CLOSE_UPVALUE:
+    return simple_instruction("clupv", offset);
   case OP_DUP:
     return simple_instruction("dup", offset);
   case OP_POPN:
     return short_instruction("popn", blob, offset);
 
+  case OP_CLOSURE: {
+    offset++;
+    uint16_t constant = blob->code[offset++] << 8;
+    constant |= blob->code[offset++];
+    printf("%-16s %4d ", "clsur", constant);
+    print_value(blob->constants.values[constant]);
+    printf("\n");
+
+    b_obj_func *function = AS_FUNCTION(blob->constants.values[constant]);
+    for (int j = 0; j < function->upvalue_count; j++) {
+      int is_local = blob->code[offset++];
+      uint16_t index = blob->code[offset++] << 8;
+      index |= blob->code[offset++];
+      printf("%04d      |                     %s %d\n", offset - 3,
+             is_local ? "local" : "upvalue", (int)index);
+    }
+
+    return offset;
+  }
   case OP_CALL:
-    return byte_instruction("ret", blob, offset);
+    return byte_instruction("call", blob, offset);
   case OP_RETURN:
     return simple_instruction("ret", offset);
 
