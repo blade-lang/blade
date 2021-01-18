@@ -560,7 +560,7 @@ static void dot(b_parser *p, bool can_assign) {
   consume(p, IDENTIFIER_TOKEN, "expected property name after '.'");
   int name = identifier_constant(p, &p->previous);
 
-  if (can_assign) {
+  if (can_assign && match(p, EQUAL_TOKEN)) {
     expression(p);
     emit_byte_and_short(p, OP_SET_PROPERTY, name);
   } else {
