@@ -19,7 +19,8 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
   if (new_size > old_size) {
 #if DEBUG_MODE == 1
 #if DEBUG_STRESS_GC == 1
-    collect_garbage(vm);
+    // @TODO: fix bug associated with enabling stressed gc
+    // collect_garbage(vm);
 #endif
 #endif
 
@@ -48,9 +49,9 @@ void mark_object(b_vm *vm, b_obj *object) {
 
 #if DEBUG_MODE == 1
 #if DEBUG_LOG_GC == 1
-    // printf("%p mark ", (void *)object);
-    // print_object(OBJ_VAL(object));
-    // printf("\n");
+  printf("%p mark ", (void *)object);
+  print_object(OBJ_VAL(object));
+  printf("\n");
 #endif
 #endif
 
@@ -79,9 +80,9 @@ static void mark_array(b_vm *vm, b_value_arr *array) {
 static void blacken_object(b_vm *vm, b_obj *object) {
 #if DEBUG_MODE == 1
 #if DEBUG_LOG_GC == 1
-  // printf("%p blacken ", (void *)object);
-  // print_object(OBJ_VAL(object));
-  // printf("\n");
+  printf("%p blacken ", (void *)object);
+  print_object(OBJ_VAL(object));
+  printf("\n");
 #endif
 #endif
 
@@ -116,7 +117,7 @@ static void blacken_object(b_vm *vm, b_obj *object) {
 static void free_object(b_vm *vm, b_obj *object) {
 #if DEBUG_MODE == 1
 #if DEBUG_LOG_GC == 1
-  // printf("%p free type %d\n", (void *)object, object->type);
+  printf("%p free type %d\n", (void *)object, object->type);
 #endif
 #endif
 
@@ -124,13 +125,13 @@ static void free_object(b_vm *vm, b_obj *object) {
   case OBJ_STRING: {
     b_obj_string *string = (b_obj_string *)object;
     FREE_ARRAY(char, string->chars, string->length + 1);
-    FREE(b_obj_string, string);
+    FREE(b_obj_string, object);
     break;
   }
   case OBJ_FUNCTION: {
     b_obj_func *function = (b_obj_func *)object;
     free_blob(vm, &function->blob);
-    FREE(b_obj_func, function);
+    FREE(b_obj_func, object);
     break;
   }
   case OBJ_NATIVE: {
