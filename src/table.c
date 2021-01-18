@@ -154,7 +154,7 @@ bool table_delete(b_table *table, b_value key) {
 }
 
 void table_add_all(b_vm *vm, b_table *from, b_table *to) {
-  for (int i = 0; i <= from->capacity; i++) {
+  for (int i = 0; i < from->capacity; i++) {
     b_entry *entry = &from->entries[i];
     if (!IS_EMPTY(entry->key)) {
       table_set(vm, to, entry->key, entry->value);

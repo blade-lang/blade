@@ -29,6 +29,13 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   return object;
 }
 
+b_obj_class *new_class(b_vm *vm, b_obj_string *name) {
+  b_obj_class *klass = ALLOCATE_OBJ(b_obj_class, OBJ_CLASS);
+  klass->name = name;
+  init_table(&klass->fields);
+  return klass;
+}
+
 b_obj_func *new_function(b_vm *vm) {
   b_obj_func *function = ALLOCATE_OBJ(b_obj_func, OBJ_FUNCTION);
   function->arity = 0;
@@ -36,6 +43,14 @@ b_obj_func *new_function(b_vm *vm) {
   function->name = NULL;
   init_blob(&function->blob);
   return function;
+}
+
+b_obj_instance *new_instance(b_vm *vm, b_obj_class *klass) {
+  b_obj_instance *instance = ALLOCATE_OBJ(b_obj_instance, OBJ_INSTANCE);
+  instance->klass = klass;
+  init_table(&instance->fields);
+  table_add_all(vm, &klass->fields, &instance->fields);
+  return instance;
 }
 
 b_obj_native *new_native(b_vm *vm, b_native_fn function, const char *name) {
@@ -108,33 +123,45 @@ b_obj_upvalue *new_upvalue(b_vm *vm, b_value *slot) {
 
 static void print_function(b_obj_func *function) {
   if (function->name == NULL) {
-    printf("<script at 0x%lx>", (long)function);
+    printf("<script at %p>", (void *)function);
   } else {
-    printf("<function %s at 0x%lx>", function->name->chars, (long)function);
+    printf("<function %s at %p>", function->name->chars, (void *)function);
   }
 }
 
 void print_object(b_value value) {
   switch (OBJ_TYPE(value)) {
-  case OBJ_STRING: {
-    printf("%s", AS_CSTRING(value));
-    break;
-  }
-  case OBJ_FUNCTION: {
-    print_function(AS_FUNCTION(value));
+  case OBJ_CLASS: {
+    printf("<class %s at %p>", AS_CLASS(value)->name->chars,
+           (void *)AS_CLASS(value));
     break;
   }
   case OBJ_CLOSURE: {
     print_function(AS_CLOSURE(value)->function);
     break;
   }
+  case OBJ_FUNCTION: {
+    print_function(AS_FUNCTION(value));
+    break;
+  }
+  case OBJ_INSTANCE: {
+    // @TODO: support the to_string() override
+    b_obj_instance *instance = AS_INSTANCE(value);
+    printf("<class %s instance at %p>", instance->klass->name->chars,
+           (void *)instance);
+    break;
+  }
   case OBJ_NATIVE: {
     b_obj_native *native = AS_NATIVE(value);
-    printf("<function(native) %s at 0x%lx>", native->name, (long)native);
+    printf("<function(native) %s at %p>", native->name, (void *)native);
     break;
   }
   case OBJ_UPVALUE: {
     printf("upvalue");
+    break;
+  }
+  case OBJ_STRING: {
+    printf("%s", AS_CSTRING(value));
     break;
   }
   }
@@ -142,13 +169,19 @@ void print_object(b_value value) {
 
 const char *object_type(b_obj *object) {
   switch (object->type) {
-  case OBJ_STRING:
-    return "string";
+  case OBJ_CLASS:
+    return "class";
 
   case OBJ_FUNCTION:
   case OBJ_NATIVE:
   case OBJ_CLOSURE:
     return "function";
+
+  case OBJ_INSTANCE:
+    return ((b_obj_instance *)object)->klass->name->chars;
+
+  case OBJ_STRING:
+    return "string";
 
   default:
     return "unknown";

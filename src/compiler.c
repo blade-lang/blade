@@ -160,6 +160,9 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_LOOP:
   case OP_CONSTANT:
   case OP_POPN:
+  case OP_CLASS:
+  case OP_GET_PROPERTY:
+  case OP_SET_PROPERTY:
     return 2;
 
   case OP_CLOSURE: {
@@ -553,6 +556,18 @@ static void call(b_parser *p, bool can_assign) {
   emit_bytes(p, OP_CALL, arg_count);
 }
 
+static void dot(b_parser *p, bool can_assign) {
+  consume(p, IDENTIFIER_TOKEN, "expected property name after '.'");
+  int name = identifier_constant(p, &p->previous);
+
+  if (can_assign) {
+    expression(p);
+    emit_byte_and_short(p, OP_SET_PROPERTY, name);
+  } else {
+    emit_byte_and_short(p, OP_GET_PROPERTY, name);
+  }
+}
+
 static void literal(b_parser *p, bool can_assign) {
   switch (p->previous.type) {
   case NIL_TOKEN:
@@ -792,7 +807,7 @@ b_parse_rule parse_rules[] = {
     [BANG_EQ_TOKEN] = {NULL, binary, PREC_EQUALITY},      // !=
     [COLON_TOKEN] = {NULL, NULL, PREC_NONE},              // :
     [AT_TOKEN] = {NULL, NULL, PREC_NONE},                 // @
-    [DOT_TOKEN] = {NULL, NULL, PREC_NONE},                // .
+    [DOT_TOKEN] = {NULL, dot, PREC_CALL},                 // .
     [RANGE_TOKEN] = {NULL, NULL, PREC_NONE},              // ..
     [TRIDOT_TOKEN] = {NULL, NULL, PREC_NONE},             // ...
     [PLUS_TOKEN] = {NULL, binary, PREC_TERM},             // +
@@ -954,6 +969,18 @@ static void function_declaration(b_parser *p) {
   mark_initalized(p);
   function(p, TYPE_FUNCTION);
   define_variable(p, global);
+}
+
+static void class_declaration(b_parser *p) {
+  consume(p, IDENTIFIER_TOKEN, "class name expected");
+  int name_constant = identifier_constant(p, &p->previous);
+  declare_variable(p);
+
+  emit_byte_and_short(p, OP_CLASS, name_constant);
+  define_variable(p, name_constant);
+
+  consume(p, LBRACE_TOKEN, "expected '{' before class body");
+  consume(p, RBRACE_TOKEN, "expected '}' after class body");
 }
 
 static void _var_declaration(b_parser *p, bool is_initalizer) {
@@ -1267,7 +1294,9 @@ static void synchronize(b_parser *p) {
 static void declaration(b_parser *p) {
   ignore_whitespace(p);
 
-  if (match(p, DEF_TOKEN)) {
+  if (match(p, CLASS_TOKEN)) {
+    class_declaration(p);
+  } else if (match(p, DEF_TOKEN)) {
     function_declaration(p);
   } else if (match(p, VAR_TOKEN)) {
     var_declaration(p);

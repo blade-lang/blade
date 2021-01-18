@@ -14,6 +14,8 @@ typedef enum {
   OP_SET_LOCAL,
   OP_SET_UPVALUE,
   OP_CLOSE_UPVALUE,
+  OP_GET_PROPERTY,
+  OP_SET_PROPERTY,
 
   OP_JUMP_IF_FALSE,
   OP_JUMP,
@@ -43,6 +45,8 @@ typedef enum {
   OP_CLOSURE,
   OP_CALL,
   OP_RETURN,
+
+  OP_CLASS,
 
   // the break placeholder... it never gets to the vm
   // care should be taken to
