@@ -52,7 +52,7 @@ DECLARE_NATIVE(hasprop) {
 /**
  * getprop(object: instance, name: string)
  *
- * returns the property of object matching the name
+ * returns the property of the object matching the given name
  * or nil if the object contains no property with a matching
  * name
  */
@@ -70,8 +70,10 @@ DECLARE_NATIVE(getprop) {
 /**
  * setprop(object: instance, name: string, value: any)
  *
- * sets the name property of object to value
+ * sets the named property of the object to value
  * if the property already exist, it overwrites it
+ * @returns bool: true if a new property was set, false if a property was
+ * updated
  */
 DECLARE_NATIVE(setprop) {
   ENFORCE_ARG_COUNT(setprop, 3);
@@ -80,6 +82,20 @@ DECLARE_NATIVE(setprop) {
 
   b_obj_instance *instance = AS_INSTANCE(args[0]);
   b_value value;
-  table_set(vm, &instance->fields, args[1], args[2]);
-  RETURN;
+  RETURN_BOOL(table_set(vm, &instance->fields, args[1], args[2]));
+}
+
+/**
+ * delprop(object: instance, name: string)
+ *
+ * deletes the named proprety from the object
+ * @returns bool
+ */
+DECLARE_NATIVE(delprop) {
+  ENFORCE_ARG_COUNT(delprop, 2);
+  ENFORCE_ARG_TYPE(delprop, 0, IS_INSTANCE);
+  ENFORCE_ARG_TYPE(delprop, 1, IS_STRING);
+
+  b_obj_instance *instance = AS_INSTANCE(args[0]);
+  RETURN_BOOL(table_delete(&instance->fields, args[1]));
 }
