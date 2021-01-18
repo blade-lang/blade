@@ -18,7 +18,6 @@ typedef enum {
   VAL_NUMBER,
   VAL_OBJ,
   VAL_EMPTY,
-  VAL_UNDEFINED,
 } b_val_type;
 
 typedef struct {
@@ -32,7 +31,6 @@ typedef struct {
 
 // promote C values to bird value
 #define EMPTY_VAL ((b_value){VAL_EMPTY, {.number = 0}})
-#define UNDEFINED_VAL ((b_value){VAL_UNDEFINED, {.number = 0}})
 #define NIL_VAL ((b_value){VAL_NIL, {.number = 0}})
 #define BOOL_VAL(v) ((b_value){VAL_BOOL, {.boolean = v}})
 #define NUMBER_VAL(v) ((b_value){VAL_NUMBER, {.number = v}})
@@ -49,7 +47,6 @@ typedef struct {
 #define IS_NUMBER(v) ((v).type == VAL_NUMBER)
 #define IS_OBJ(v) ((v).type == VAL_OBJ)
 #define IS_EMPTY(v) ((v).type == VAL_EMPTY)
-#define IS_UNDEFINED(v) ((v).type == VAL_UNDEFINED)
 
 typedef struct {
   int capacity;

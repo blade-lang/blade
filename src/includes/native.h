@@ -39,8 +39,7 @@
     return EMPTY_VAL;                                                          \
   }
 
-#define RETURN_NIL return NIL_VAL
-#define RETURN return UNDEFINED_VAL
+#define RETURN return NIL_VAL
 #define RETURN_BOOL(v) return BOOL_VAL(v)
 #define RETURN_TRUE return BOOL_VAL(true)
 #define RETURN_FALSE return BOOL_VAL(false)
@@ -52,5 +51,6 @@ DECLARE_NATIVE(id);
 DECLARE_NATIVE(hasprop);
 DECLARE_NATIVE(getprop);
 DECLARE_NATIVE(setprop);
+DECLARE_NATIVE(delprop);
 
 #endif

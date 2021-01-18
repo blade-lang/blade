@@ -103,6 +103,7 @@ void init_vm(b_vm *vm) {
   DEFINE_NATIVE(hasprop);
   DEFINE_NATIVE(getprop);
   DEFINE_NATIVE(setprop);
+  DEFINE_NATIVE(delprop);
 }
 
 void free_vm(b_vm *vm) {
@@ -149,10 +150,10 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
       b_value result = native(vm, arg_count, vm->stack_top - arg_count);
       if (IS_EMPTY(result)) {
         return false;
-      } else if (!IS_UNDEFINED(result)) {
-        vm->stack_top -= arg_count + 1;
-        push(vm, result);
       }
+
+      vm->stack_top -= arg_count + 1;
+      push(vm, result);
       return true;
     }
 
