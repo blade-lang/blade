@@ -12,7 +12,7 @@
   (type *)allocate_object(vm, sizeof(type), obj_type)
 
 static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
-  b_obj *object = (b_obj *)reallocate(NULL, 0, size);
+  b_obj *object = (b_obj *)reallocate(vm, NULL, 0, size);
 
   object->type = type;
   object->is_marked = false;
@@ -66,7 +66,7 @@ b_obj_string *allocate_string(b_vm *vm, char *chars, int length,
   string->hash = hash;
 
   push(vm, OBJ_VAL(string)); // fixing gc corruption
-  table_set(&vm->strings, OBJ_VAL(string), NIL_VAL);
+  table_set(vm, &vm->strings, OBJ_VAL(string), NIL_VAL);
   pop(vm); // fixing gc corruption
 
   return string;

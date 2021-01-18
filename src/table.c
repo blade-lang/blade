@@ -14,7 +14,7 @@ void init_table(b_table *table) {
   table->entries = NULL;
 }
 
-void free_table(b_table *table) {
+void free_table(b_vm *vm, b_table *table) {
   FREE_ARRAY(b_entry, table->entries, table->capacity + 1);
   init_table(table);
 }
@@ -90,7 +90,7 @@ bool table_get(b_table *table, b_value key, b_value *value) {
   return true;
 }
 
-static void adjust_capacity(b_table *table, int capacity) {
+static void adjust_capacity(b_vm *vm, b_table *table, int capacity) {
   b_entry *entries = ALLOCATE(b_entry, capacity);
   for (int i = 0; i < capacity; i++) {
     entries[i].key = EMPTY_VAL;
@@ -117,10 +117,10 @@ static void adjust_capacity(b_table *table, int capacity) {
   table->capacity = capacity;
 }
 
-bool table_set(b_table *table, b_value key, b_value value) {
+bool table_set(b_vm *vm, b_table *table, b_value key, b_value value) {
   if (table->count + 1 > table->capacity * TABLE_MAX_LOAD) {
     int capacity = GROW_CAPACITY(table->capacity);
-    adjust_capacity(table, capacity);
+    adjust_capacity(vm, table, capacity);
   }
 
   b_entry *entry = find_entry(table->entries, table->capacity, key);
@@ -153,11 +153,11 @@ bool table_delete(b_table *table, b_value key) {
   return true;
 }
 
-void table_add_all(b_table *from, b_table *to) {
+void table_add_all(b_vm *vm, b_table *from, b_table *to) {
   for (int i = 0; i <= from->capacity; i++) {
     b_entry *entry = &from->entries[i];
     if (!IS_EMPTY(entry->key)) {
-      table_set(to, entry->key, entry->value);
+      table_set(vm, to, entry->key, entry->value);
     }
   }
 }
@@ -215,7 +215,8 @@ void mark_table(b_vm *vm, b_table *table) {
 void table_remove_whites(b_table *table) {
   for (int i = 0; i < table->capacity; i++) {
     b_entry *entry = &table->entries[i];
-    if (IS_OBJ(entry->key) && AS_OBJ(entry->key)->is_marked) {
+    if (!IS_EMPTY(entry->key) && IS_OBJ(entry->key) &&
+        !AS_OBJ(entry->key)->is_marked) {
       table_delete(table, entry->key);
     }
   }

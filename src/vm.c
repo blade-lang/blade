@@ -1,7 +1,6 @@
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "common.h"
@@ -11,8 +10,6 @@
 #include "native.h"
 #include "object.h"
 #include "vm.h"
-
-b_vm main_vm;
 
 #if DEBUG_MODE == 1
 #include "debug.h"
@@ -86,7 +83,7 @@ static b_value peek(b_vm *vm, int distance) {
 static void define_native(b_vm *vm, const char *name, b_native_fn function) {
   push(vm, OBJ_VAL(copy_string(vm, name, (int)strlen(name))));
   push(vm, OBJ_VAL(new_native(vm, function, name)));
-  table_set(&vm->globals, vm->stack[0], vm->stack[1]);
+  table_set(vm, &vm->globals, vm->stack[0], vm->stack[1]);
   popn(vm, 2);
 }
 
@@ -111,8 +108,8 @@ void init_vm(b_vm *vm) {
 
 void free_vm(b_vm *vm) {
   free_objects(vm);
-  free_table(&vm->strings);
-  free_table(&vm->globals);
+  free_table(vm, &vm->strings);
+  free_table(vm, &vm->globals);
 }
 
 static bool call(b_vm *vm, b_obj_closure *closure, int arg_count) {
@@ -257,7 +254,6 @@ static bool concatenate(b_vm *vm) {
     pop(vm);
     push(vm, OBJ_VAL(result));
   } else if (IS_NUMBER(_b)) {
-    pop(vm); // pop _b out...
     b_obj_string *a = AS_STRING(_a);
     double b = AS_NUMBER(_b);
 
@@ -266,12 +262,13 @@ static bool concatenate(b_vm *vm) {
     int num_length = strlen(num_str);
 
     int length = num_length + a->length;
-    char *chars = (char *)malloc(sizeof(char) * (length + 1));
+    char *chars = ALLOCATE(char, length + 1);
     memcpy(chars, a->chars, a->length);
     memcpy(chars + a->length, num_str, num_length);
     chars[length] = '\0';
 
     b_obj_string *result = take_string(vm, chars, length);
+    pop(vm);
     pop(vm);
     push(vm, OBJ_VAL(result));
   } else if (IS_STRING(_a) && IS_STRING(_b)) {
@@ -486,7 +483,7 @@ b_ptr_result run(b_vm *vm) {
 
     case OP_DEFINE_GLOBAL: {
       b_obj_string *name = READ_STRING();
-      table_set(&vm->globals, OBJ_VAL(name), peek(vm, 0));
+      table_set(vm, &vm->globals, OBJ_VAL(name), peek(vm, 0));
       pop(vm);
 
 #if DEBUG_MODE == 1
@@ -509,7 +506,7 @@ b_ptr_result run(b_vm *vm) {
 
     case OP_SET_GLOBAL: {
       b_obj_string *name = READ_STRING();
-      if (table_set(&vm->globals, OBJ_VAL(name), peek(vm, 0))) {
+      if (table_set(vm, &vm->globals, OBJ_VAL(name), peek(vm, 0))) {
         table_delete(&vm->globals, OBJ_VAL(name));
         runtime_error("%s is undefined in this scope", name->chars);
       }
@@ -605,7 +602,7 @@ b_ptr_result interpret(b_vm *vm, const char *source) {
   b_obj_func *function = compile(vm, source, &blob);
 
   if (function == NULL) {
-    free_blob(&blob);
+    free_blob(vm, &blob);
     return PTR_COMPILE_ERR;
   }
 

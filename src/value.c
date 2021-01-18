@@ -12,7 +12,7 @@ void init_value_arr(b_value_arr *array) {
   array->values = NULL;
 }
 
-void write_value_arr(b_value_arr *array, b_value value) {
+void write_value_arr(b_vm *vm, b_value_arr *array, b_value value) {
   if (array->capacity < array->count + 1) {
     int old_capacity = array->capacity;
     array->capacity = GROW_CAPACITY(old_capacity);
@@ -24,7 +24,7 @@ void write_value_arr(b_value_arr *array, b_value value) {
   array->count++;
 }
 
-void free_value_arr(b_value_arr *array) {
+void free_value_arr(b_vm *vm, b_value_arr *array) {
   FREE_ARRAY(b_value, array->values, array->capacity);
   init_value_arr(array);
 }
