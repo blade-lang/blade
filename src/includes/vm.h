@@ -51,4 +51,10 @@ b_ptr_result interpret(b_vm *vm, const char *source);
 void push(b_vm *vm, b_value value);
 b_value pop(b_vm *vm);
 
+void _runtime_error(b_vm *vm, const char *format, ...);
+
+#define runtime_error(...)                                                     \
+  _runtime_error(vm, ##__VA_ARGS__);                                           \
+  return PTR_RUNTIME_ERR
+
 #endif

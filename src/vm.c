@@ -15,10 +15,6 @@
 #include "debug.h"
 #endif
 
-#define runtime_error(...)                                                     \
-  _runtime_error(vm, ##__VA_ARGS__);                                           \
-  return PTR_RUNTIME_ERR
-
 static void reset_stack(b_vm *vm) {
   vm->stack_top = vm->stack;
   vm->frame_count = 0;
@@ -104,6 +100,9 @@ void init_vm(b_vm *vm) {
   DEFINE_NATIVE(time);
   DEFINE_NATIVE(microtime);
   DEFINE_NATIVE(id);
+  DEFINE_NATIVE(hasprop);
+  DEFINE_NATIVE(getprop);
+  DEFINE_NATIVE(setprop);
 }
 
 void free_vm(b_vm *vm) {
