@@ -33,6 +33,7 @@ b_obj_class *new_class(b_vm *vm, b_obj_string *name) {
   b_obj_class *klass = ALLOCATE_OBJ(b_obj_class, OBJ_CLASS);
   klass->name = name;
   init_table(&klass->fields);
+  init_table(&klass->methods);
   return klass;
 }
 

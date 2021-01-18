@@ -198,6 +198,20 @@ static void close_upvalues(b_vm *vm, b_value *last) {
   }
 }
 
+static void define_method(b_vm *vm, b_obj_string *name) {
+  b_value method = peek(vm, 0);
+  b_obj_class *klass = AS_CLASS(peek(vm, 1));
+  table_set(vm, &klass->methods, OBJ_VAL(name), method);
+  pop(vm);
+}
+
+static void define_property(b_vm *vm, b_obj_string *name) {
+  b_value property = peek(vm, 0);
+  b_obj_class *klass = AS_CLASS(peek(vm, 1));
+  table_set(vm, &klass->fields, OBJ_VAL(name), property);
+  pop(vm);
+}
+
 static bool is_falsey(b_value value) {
   if (IS_BOOL(value))
     return IS_BOOL(value) && !AS_BOOL(value);
@@ -600,6 +614,14 @@ b_ptr_result run(b_vm *vm) {
 
     case OP_CLASS: {
       push(vm, OBJ_VAL(new_class(vm, READ_STRING())));
+      break;
+    }
+    case OP_METHOD: {
+      define_method(vm, READ_STRING());
+      break;
+    }
+    case OP_CLASS_PROPERTY: {
+      define_property(vm, READ_STRING());
       break;
     }
 

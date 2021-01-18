@@ -47,6 +47,8 @@ typedef enum {
   OP_RETURN,
 
   OP_CLASS,
+  OP_METHOD,
+  OP_CLASS_PROPERTY,
 
   // the break placeholder... it never gets to the vm
   // care should be taken to

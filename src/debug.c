@@ -157,6 +157,10 @@ int disassemble_instruction(b_blob *blob, int offset) {
 
   case OP_CLASS:
     return constant_instruction("class", blob, offset);
+  case OP_METHOD:
+    return constant_instruction("methd", blob, offset);
+  case OP_CLASS_PROPERTY:
+    return constant_instruction("clprop", blob, offset);
 
   default:
     printf("unknown opcode %d\n", instruction);
