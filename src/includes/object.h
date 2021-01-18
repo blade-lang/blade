@@ -76,6 +76,7 @@ typedef struct {
   b_obj obj;
   b_obj_string *name;
   b_table fields;
+  b_table methods;
 } b_obj_class;
 
 typedef struct {

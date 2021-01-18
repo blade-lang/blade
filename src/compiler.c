@@ -163,6 +163,8 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_CLASS:
   case OP_GET_PROPERTY:
   case OP_SET_PROPERTY:
+  case OP_CLASS_PROPERTY:
+  case OP_METHOD:
     return 2;
 
   case OP_CLOSURE: {
@@ -964,6 +966,15 @@ static void function(b_parser *p, b_func_type type) {
   }
 }
 
+static void method(b_parser *p) {
+  consume(p, IDENTIFIER_TOKEN, "method name expected");
+  int constant = identifier_constant(p, &p->previous);
+
+  b_func_type type = TYPE_FUNCTION;
+  function(p, type);
+  emit_byte_and_short(p, OP_METHOD, constant);
+}
+
 static void function_declaration(b_parser *p) {
   int global = parse_variable(p, "function name expected");
   mark_initalized(p);
@@ -974,13 +985,34 @@ static void function_declaration(b_parser *p) {
 static void class_declaration(b_parser *p) {
   consume(p, IDENTIFIER_TOKEN, "class name expected");
   int name_constant = identifier_constant(p, &p->previous);
+  b_token class_name = p->previous;
   declare_variable(p);
 
   emit_byte_and_short(p, OP_CLASS, name_constant);
   define_variable(p, name_constant);
 
+  named_variable(p, class_name, false);
+
   consume(p, LBRACE_TOKEN, "expected '{' before class body");
+  ignore_whitespace(p);
+  while (!check(p, RBRACE_TOKEN) && !check(p, EOF_TOKEN)) {
+    if (match(p, VAR_TOKEN)) {
+      consume(p, IDENTIFIER_TOKEN, "method name expected");
+      int field_constant = identifier_constant(p, &p->previous);
+
+      consume(p, EQUAL_TOKEN, "expected '=' after class field name");
+      expression(p);
+      consume_statement_end(p);
+      ignore_whitespace(p);
+
+      emit_byte_and_short(p, OP_CLASS_PROPERTY, field_constant);
+    } else {
+      method(p);
+      ignore_whitespace(p);
+    }
+  }
   consume(p, RBRACE_TOKEN, "expected '}' after class body");
+  emit_byte(p, OP_POP);
 }
 
 static void _var_declaration(b_parser *p, bool is_initalizer) {
