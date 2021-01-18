@@ -12,7 +12,7 @@ void init_blob(b_blob *blob) {
   init_value_arr(&blob->constants);
 }
 
-void write_blob(b_blob *blob, uint8_t byte, int line) {
+void write_blob(b_vm *vm, b_blob *blob, uint8_t byte, int line) {
   if (blob->capacity < blob->count + 1) {
     int old_capacity = blob->capacity;
     blob->capacity = GROW_CAPACITY(old_capacity);
@@ -25,16 +25,16 @@ void write_blob(b_blob *blob, uint8_t byte, int line) {
   blob->count++;
 }
 
-void free_blob(b_blob *blob) {
+void free_blob(b_vm *vm, b_blob *blob) {
   FREE_ARRAY(uint8_t, blob->code, blob->capacity);
   FREE_ARRAY(int, blob->lines, blob->capacity);
   init_value_arr(&blob->constants);
   init_blob(blob);
 }
 
-int add_constant(b_blob *blob, b_value value) {
-  push(&main_vm, value); // fixing gc corruption
-  write_value_arr(&blob->constants, value);
-  pop(&main_vm); // fixing gc corruption
+int add_constant(b_vm *vm, b_blob *blob, b_value value) {
+  push(vm, value); // fixing gc corruption
+  write_value_arr(vm, &blob->constants, value);
+  pop(vm); // fixing gc corruption
   return blob->constants.count - 1;
 }

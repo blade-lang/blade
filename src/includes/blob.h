@@ -58,8 +58,8 @@ typedef struct {
 } b_blob;
 
 void init_blob(b_blob *blob);
-void free_blob(b_blob *blob);
-void write_blob(b_blob *blob, uint8_t byte, int line);
-int add_constant(b_blob *blob, b_value value);
+void free_blob(b_vm *vm, b_blob *blob);
+void write_blob(b_vm *vm, b_blob *blob, uint8_t byte, int line);
+int add_constant(b_vm *vm, b_blob *blob, b_value value);
 
 #endif

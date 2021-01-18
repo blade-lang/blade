@@ -7,18 +7,18 @@
 #define GROW_CAPACITY(capacity) ((capacity) < 8 ? 8 : (capacity * 2))
 
 #define GROW_ARRAY(type, pointer, old_count, new_count)                        \
-  (type *)reallocate(pointer, sizeof(type) * (old_count),                      \
+  (type *)reallocate(vm, pointer, sizeof(type) * (old_count),                  \
                      sizeof(type) * (new_count))
 
 #define FREE_ARRAY(type, pointer, old_count)                                   \
-  reallocate(pointer, sizeof(type) * (old_count), 0)
+  reallocate(vm, pointer, sizeof(type) * (old_count), 0)
 
-#define FREE(type, pointer) reallocate(pointer, sizeof(type), 0)
+#define FREE(type, pointer) reallocate(vm, pointer, sizeof(type), 0)
 
 #define ALLOCATE(type, count)                                                  \
-  (type *)reallocate(NULL, 0, sizeof(type) * (count))
+  (type *)reallocate(vm, NULL, 0, sizeof(type) * (count))
 
-void *reallocate(void *pointer, size_t old_size, size_t new_size);
+void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size);
 void free_objects(b_vm *vm);
 void mark_object(b_vm *vm, b_obj *object);
 void mark_value(b_vm *vm, b_value value);

@@ -13,18 +13,18 @@
 #endif
 #endif
 
-void *reallocate(void *pointer, size_t old_size, size_t new_size) {
-  main_vm.bytes_allocated += new_size - old_size;
+void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
+  vm->bytes_allocated += new_size - old_size;
 
   if (new_size > old_size) {
 #if DEBUG_MODE == 1
 #if DEBUG_STRESS_GC == 1
-    collect_garbage(&main_vm);
+    collect_garbage(vm);
 #endif
 #endif
 
-    if (main_vm.bytes_allocated > main_vm.next_gc) {
-      collect_garbage(&main_vm);
+    if (vm->bytes_allocated > vm->next_gc) {
+      collect_garbage(vm);
     }
   }
 
@@ -48,9 +48,9 @@ void mark_object(b_vm *vm, b_obj *object) {
 
 #if DEBUG_MODE == 1
 #if DEBUG_LOG_GC == 1
-  printf("%p mark ", (void *)object);
-  print_object(OBJ_VAL(object));
-  printf("\n");
+    // printf("%p mark ", (void *)object);
+    // print_object(OBJ_VAL(object));
+    // printf("\n");
 #endif
 #endif
 
@@ -79,9 +79,9 @@ static void mark_array(b_vm *vm, b_value_arr *array) {
 static void blacken_object(b_vm *vm, b_obj *object) {
 #if DEBUG_MODE == 1
 #if DEBUG_LOG_GC == 1
-  printf("%p blacken ", (void *)object);
-  print_object(OBJ_VAL(object));
-  printf("\n");
+  // printf("%p blacken ", (void *)object);
+  // print_object(OBJ_VAL(object));
+  // printf("\n");
 #endif
 #endif
 
@@ -113,10 +113,10 @@ static void blacken_object(b_vm *vm, b_obj *object) {
   }
 }
 
-static void free_object(b_obj *object) {
+static void free_object(b_vm *vm, b_obj *object) {
 #if DEBUG_MODE == 1
 #if DEBUG_LOG_GC == 1
-  printf("%p free type %d\n", (void *)object, object->type);
+  // printf("%p free type %d\n", (void *)object, object->type);
 #endif
 #endif
 
@@ -129,7 +129,7 @@ static void free_object(b_obj *object) {
   }
   case OBJ_FUNCTION: {
     b_obj_func *function = (b_obj_func *)object;
-    free_blob(&function->blob);
+    free_blob(vm, &function->blob);
     FREE(b_obj_func, function);
     break;
   }
@@ -196,7 +196,7 @@ static void sweep(b_vm *vm) {
         vm->objects = object;
       }
 
-      free_object(unreached);
+      free_object(vm, unreached);
     }
   }
 }
@@ -205,7 +205,7 @@ void free_objects(b_vm *vm) {
   b_obj *object = vm->objects;
   while (object != NULL) {
     b_obj *next = object->next;
-    free_object(object);
+    free_object(vm, object);
     object = next;
   }
 

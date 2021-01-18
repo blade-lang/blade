@@ -66,17 +66,18 @@ static void run_file(b_vm *vm, const char *file) {
 }
 
 int main(int argc, const char *argv[]) {
-  init_vm(&main_vm);
+  b_vm vm;
+  init_vm(&vm);
 
   if (argc == 1) {
-    repl(&main_vm);
+    repl(&vm);
   } else if (argc == 2) {
-    run_file(&main_vm, argv[1]);
+    run_file(&vm, argv[1]);
   } else {
     fprintf(stderr, "Usage: bird [path]\n");
     exit(64);
   }
 
-  free_vm(&main_vm);
+  free_vm(&vm);
   return 0;
 }

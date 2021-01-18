@@ -175,31 +175,31 @@ static int get_code_args_count(const uint8_t *bytecode,
 }
 
 static void emit_byte(b_parser *p, uint8_t byte) {
-  write_blob(current_blob(p), byte, p->previous.line);
+  write_blob(p->vm, current_blob(p), byte, p->previous.line);
 }
 
 static void emit_short(b_parser *p, uint16_t byte) {
-  write_blob(current_blob(p), (byte >> 8) & 0xff, p->previous.line);
-  write_blob(current_blob(p), byte & 0xff, p->previous.line);
+  write_blob(p->vm, current_blob(p), (byte >> 8) & 0xff, p->previous.line);
+  write_blob(p->vm, current_blob(p), byte & 0xff, p->previous.line);
 }
 
 static void emit_bytes(b_parser *p, uint8_t byte, uint8_t byte2) {
-  write_blob(current_blob(p), byte, p->previous.line);
-  write_blob(current_blob(p), byte2, p->previous.line);
+  write_blob(p->vm, current_blob(p), byte, p->previous.line);
+  write_blob(p->vm, current_blob(p), byte2, p->previous.line);
 }
 
 static void emit_byte_and_short(b_parser *p, uint8_t byte, uint16_t byte2) {
-  write_blob(current_blob(p), byte, p->previous.line);
-  write_blob(current_blob(p), (byte2 >> 8) & 0xff, p->previous.line);
-  write_blob(current_blob(p), byte2 & 0xff, p->previous.line);
+  write_blob(p->vm, current_blob(p), byte, p->previous.line);
+  write_blob(p->vm, current_blob(p), (byte2 >> 8) & 0xff, p->previous.line);
+  write_blob(p->vm, current_blob(p), byte2 & 0xff, p->previous.line);
 }
 
-static void emit_byte_and_long(b_parser *p, uint8_t byte, uint16_t byte2) {
-  write_blob(current_blob(p), byte, p->previous.line);
-  write_blob(current_blob(p), (byte2 >> 16) & 0xff, p->previous.line);
-  write_blob(current_blob(p), (byte2 >> 8) & 0xff, p->previous.line);
-  write_blob(current_blob(p), byte2 & 0xff, p->previous.line);
-}
+/* static void emit_byte_and_long(b_parser *p, uint8_t byte, uint16_t byte2) {
+  write_blob(p->vm, current_blob(p), byte, p->previous.line);
+  write_blob(p->vm, current_blob(p), (byte2 >> 16) & 0xff, p->previous.line);
+  write_blob(p->vm, current_blob(p), (byte2 >> 8) & 0xff, p->previous.line);
+  write_blob(p->vm, current_blob(p), byte2 & 0xff, p->previous.line);
+} */
 
 static void emit_loop(b_parser *p, int loop_start) {
   emit_byte(p, OP_LOOP);
@@ -218,7 +218,7 @@ static void emit_return(b_parser *p) {
 }
 
 static int make_constant(b_parser *p, b_value value) {
-  int constant = add_constant(current_blob(p), value);
+  int constant = add_constant(p->vm, current_blob(p), value);
   if (constant >= UINT16_MAX) {
     error(p, "too many constants in current scope");
     return 0;

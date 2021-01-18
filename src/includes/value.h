@@ -58,8 +58,8 @@ typedef struct {
 } b_value_arr;
 
 void init_value_arr(b_value_arr *array);
-void free_value_arr(b_value_arr *array);
-void write_value_arr(b_value_arr *array, b_value value);
+void free_value_arr(b_vm *vm, b_value_arr *array);
+void write_value_arr(b_vm *vm, b_value_arr *array, b_value value);
 void print_value(b_value value);
 const char *value_type(b_value value);
 bool values_equal(b_value a, b_value b);
