@@ -87,6 +87,11 @@ static void blacken_object(b_vm *vm, b_obj *object) {
 #endif
 
   switch (object->type) {
+  case OBJ_CLASS: {
+    b_obj_class *klass = (b_obj_class *)object;
+    mark_object(vm, (b_obj *)klass->name);
+    break;
+  }
   case OBJ_CLOSURE: {
     b_obj_closure *closure = (b_obj_closure *)object;
     mark_object(vm, (b_obj *)closure->function);
@@ -100,6 +105,12 @@ static void blacken_object(b_vm *vm, b_obj *object) {
     b_obj_func *function = (b_obj_func *)object;
     mark_object(vm, (b_obj *)function->name);
     mark_array(vm, &function->blob.constants);
+    break;
+  }
+  case OBJ_INSTANCE: {
+    b_obj_instance *instance = (b_obj_instance *)object;
+    mark_object(vm, (b_obj *)instance->klass);
+    mark_table(vm, &instance->fields);
     break;
   }
 
@@ -122,20 +133,8 @@ static void free_object(b_vm *vm, b_obj *object) {
 #endif
 
   switch (object->type) {
-  case OBJ_STRING: {
-    b_obj_string *string = (b_obj_string *)object;
-    FREE_ARRAY(char, string->chars, string->length + 1);
-    FREE(b_obj_string, object);
-    break;
-  }
-  case OBJ_FUNCTION: {
-    b_obj_func *function = (b_obj_func *)object;
-    free_blob(vm, &function->blob);
-    FREE(b_obj_func, object);
-    break;
-  }
-  case OBJ_NATIVE: {
-    FREE(b_obj_native, object);
+  case OBJ_CLASS: {
+    FREE(b_obj_class, object);
     break;
   }
   case OBJ_CLOSURE: {
@@ -146,8 +145,30 @@ static void free_object(b_vm *vm, b_obj *object) {
     FREE(b_obj_closure, object);
     break;
   }
+  case OBJ_FUNCTION: {
+    b_obj_func *function = (b_obj_func *)object;
+    free_blob(vm, &function->blob);
+    FREE(b_obj_func, object);
+    break;
+  }
+  case OBJ_INSTANCE: {
+    b_obj_instance *instance = (b_obj_instance *)object;
+    free_table(vm, &instance->fields);
+    FREE(b_obj_instance, object);
+    break;
+  }
+  case OBJ_NATIVE: {
+    FREE(b_obj_native, object);
+    break;
+  }
   case OBJ_UPVALUE: {
     FREE(b_obj_upvalue, object);
+    break;
+  }
+  case OBJ_STRING: {
+    b_obj_string *string = (b_obj_string *)object;
+    FREE_ARRAY(char, string->chars, string->length + 1);
+    FREE(b_obj_string, object);
     break;
   }
 

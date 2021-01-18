@@ -75,6 +75,11 @@ int disassemble_instruction(b_blob *blob, int offset) {
   case OP_SET_LOCAL:
     return short_instruction("sloc", blob, offset);
 
+  case OP_GET_PROPERTY:
+    return constant_instruction("gprop", blob, offset);
+  case OP_SET_PROPERTY:
+    return constant_instruction("sprop", blob, offset);
+
   case OP_GET_UPVALUE:
     return short_instruction("gupv", blob, offset);
   case OP_SET_UPVALUE:
@@ -149,6 +154,9 @@ int disassemble_instruction(b_blob *blob, int offset) {
     return byte_instruction("call", blob, offset);
   case OP_RETURN:
     return simple_instruction("ret", offset);
+
+  case OP_CLASS:
+    return constant_instruction("class", blob, offset);
 
   default:
     printf("unknown opcode %d\n", instruction);

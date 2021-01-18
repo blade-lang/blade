@@ -135,6 +135,12 @@ static bool call(b_vm *vm, b_obj_closure *closure, int arg_count) {
 static bool call_value(b_vm *vm, b_value callee, int arg_count) {
   if (IS_OBJ(callee)) {
     switch (OBJ_TYPE(callee)) {
+    case OBJ_CLASS: {
+      b_obj_class *klass = AS_CLASS(callee);
+      vm->stack_top[-arg_count - 1] = OBJ_VAL(new_instance(vm, klass));
+      return true;
+    }
+
     case OBJ_CLOSURE: {
       return call(vm, AS_CLOSURE(callee), arg_count);
     }
@@ -524,6 +530,36 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
 
+    case OP_GET_PROPERTY: {
+      if (!IS_INSTANCE(peek(vm, 0))) {
+        runtime_error("only instances can have properties");
+      }
+
+      b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
+      b_obj_string *name = READ_STRING();
+      b_value value;
+      if (table_get(&instance->fields, OBJ_VAL(name), &value)) {
+        pop(vm); // pop the instance...
+        push(vm, value);
+        break;
+      }
+
+      runtime_error("undefined property %s", name->chars);
+    }
+    case OP_SET_PROPERTY: {
+      if (!IS_INSTANCE(peek(vm, 1))) {
+        runtime_error("only instances can have properties");
+      }
+
+      b_obj_instance *instance = AS_INSTANCE(peek(vm, 1));
+      table_set(vm, &instance->fields, OBJ_VAL(READ_STRING()), peek(vm, 0));
+
+      b_value value = pop(vm);
+      pop(vm); // removing the instance object
+      push(vm, value);
+      break;
+    }
+
     case OP_CLOSURE: {
       b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
       b_obj_closure *closure = new_closure(vm, function);
@@ -559,6 +595,11 @@ b_ptr_result run(b_vm *vm) {
         return PTR_RUNTIME_ERR;
       }
       frame = &vm->frames[vm->frame_count - 1];
+      break;
+    }
+
+    case OP_CLASS: {
+      push(vm, OBJ_VAL(new_class(vm, READ_STRING())));
       break;
     }
 

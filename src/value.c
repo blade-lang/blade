@@ -114,18 +114,18 @@ uint32_t hash_string(const char *key, int length) {
 // Generates a hash code for [object].
 static uint32_t hash_object(b_obj *object) {
   switch (object->type) {
-    /* case OBJ_CLASS:
-      // Classes just use their name.
-      return hash_object((b_obj *)((b_obj_class *)object)->name);
+  case OBJ_CLASS:
+    // Classes just use their name.
+    return hash_object((b_obj *)((b_obj_class *)object)->name);
 
-      // Allow bare (non-closure) functions so that we can use a map to find
-      // existing constants in a function's constant table. This is only used
-      // internally. Since user code never sees a non-closure function, they
-      // cannot use them as map keys.
-    case OBJ_FUNCTION: {
-      b_obj_func *fn = (b_obj_func *)object;
-      return hash_double(fn->arity) ^ hash_double(fn->blob.count);
-    } */
+    // Allow bare (non-closure) functions so that we can use a map to find
+    // existing constants in a function's constant table. This is only used
+    // internally. Since user code never sees a non-closure function, they
+    // cannot use them as map keys.
+  case OBJ_FUNCTION: {
+    b_obj_func *fn = (b_obj_func *)object;
+    return hash_double(fn->arity) ^ hash_double(fn->blob.count);
+  }
 
   case OBJ_STRING:
     return ((b_obj_string *)object)->hash;
