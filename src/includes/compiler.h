@@ -27,6 +27,8 @@ typedef enum {
 
 typedef enum {
   TYPE_FUNCTION,
+  TYPE_METHOD,
+  TYPE_INITIALIZER,
   TYPE_SCRIPT,
 } b_func_type;
 
@@ -54,6 +56,11 @@ struct s_compiler {
   int scope_depth;
 };
 
+typedef struct b_class_compiler {
+  struct b_class_compiler *enclosing;
+  b_token name;
+} b_class_compiler;
+
 typedef struct {
   b_scanner *scanner;
   b_vm *vm;
@@ -64,6 +71,7 @@ typedef struct {
   bool panic_mode;
   bool in_block;
   b_compiler *compiler;
+  b_class_compiler *current_class;
 
   // used for tracking loops for the continue statement...
   int innermost_loop_start;

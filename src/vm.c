@@ -37,20 +37,22 @@ void _runtime_error(b_vm *vm, const char *format, ...) {
   va_end(args);
   fputs("\n", stderr);
 
-  fprintf(stderr, "StackTrace:\n");
-  for (int i = vm->frame_count - 1; i >= 0; i--) {
-    b_call_frame *frame = &vm->frames[i];
-    b_obj_func *function = frame->closure->function;
+  if (vm->frame_count > 1) {
+    fprintf(stderr, "StackTrace:\n");
+    for (int i = vm->frame_count - 1; i >= 0; i--) {
+      b_call_frame *frame = &vm->frames[i];
+      b_obj_func *function = frame->closure->function;
 
-    // -1 because the IP is sitting on the next instruction to be executed
-    size_t instruction = frame->ip - frame->closure->function->blob.code - 1;
+      // -1 because the IP is sitting on the next instruction to be executed
+      size_t instruction = frame->ip - frame->closure->function->blob.code - 1;
 
-    fprintf(stderr, "    File: <script>, Line: %d, In: ",
-            function->blob.lines[instruction]);
-    if (function->name == NULL) {
-      fprintf(stderr, "<script>\n");
-    } else {
-      fprintf(stderr, "%s()\n", function->name->chars);
+      fprintf(stderr, "    File: <script>, Line: %d, In: ",
+              function->blob.lines[instruction]);
+      if (function->name == NULL) {
+        fprintf(stderr, "<script>\n");
+      } else {
+        fprintf(stderr, "%s()\n", function->name->chars);
+      }
     }
   }
 
@@ -135,9 +137,23 @@ static bool call(b_vm *vm, b_obj_closure *closure, int arg_count) {
 static bool call_value(b_vm *vm, b_value callee, int arg_count) {
   if (IS_OBJ(callee)) {
     switch (OBJ_TYPE(callee)) {
+    case OBJ_BOUND_METHOD: {
+      b_obj_bound *bound = AS_BOUND(callee);
+      vm->stack_top[-arg_count - 1] = bound->receiver;
+      return call(vm, bound->method, arg_count);
+    }
+
     case OBJ_CLASS: {
       b_obj_class *klass = AS_CLASS(callee);
       vm->stack_top[-arg_count - 1] = OBJ_VAL(new_instance(vm, klass));
+      b_value initializer;
+      if (!IS_EMPTY(klass->initializer)) {
+        return call(vm, AS_CLOSURE(klass->initializer), arg_count);
+      } else if (arg_count != 0) {
+        _runtime_error(vm, "%s constructor expects 0 arguments, %d given",
+                       klass->name, arg_count);
+        return false;
+      }
       return true;
     }
 
@@ -163,6 +179,50 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
   }
   _runtime_error(vm, "only functions and classes can be called");
   return false;
+}
+
+static bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
+                              int arg_count) {
+  b_value method;
+  if (!table_get(&klass->methods, OBJ_VAL(name), &method)) {
+    _runtime_error(vm, "undefined method '%s'", name->chars);
+    return false;
+  }
+
+  return call(vm, AS_CLOSURE(method), arg_count);
+}
+
+static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
+  b_value receiver = peek(vm, arg_count);
+
+  if (!IS_INSTANCE(receiver)) {
+    _runtime_error(vm, "cannot call method %s on object of type %s",
+                   name->chars, value_type(receiver));
+    return false;
+  }
+
+  b_obj_instance *instance = AS_INSTANCE(receiver);
+
+  b_value value;
+  if (table_get(&instance->fields, OBJ_VAL(name), &value)) {
+    vm->stack_top[-arg_count - 1] = value;
+    call_value(vm, value, arg_count);
+  }
+
+  return invoke_from_class(vm, instance->klass, name, arg_count);
+}
+
+static bool bind_method(b_vm *vm, b_obj_class *klass, b_obj_string *name) {
+  b_value method;
+  if (!table_get(&klass->methods, OBJ_VAL(name), &method)) {
+    _runtime_error(vm, "undefined property '%s'", name->chars);
+    return false;
+  }
+
+  b_obj_bound *bound = new_bound_method(vm, peek(vm, 0), AS_CLOSURE(method));
+  pop(vm);
+  push(vm, OBJ_VAL(bound));
+  return true;
 }
 
 static b_obj_upvalue *capture_upvalue(b_vm *vm, b_value *local) {
@@ -201,7 +261,11 @@ static void close_upvalues(b_vm *vm, b_value *last) {
 static void define_method(b_vm *vm, b_obj_string *name) {
   b_value method = peek(vm, 0);
   b_obj_class *klass = AS_CLASS(peek(vm, 1));
-  table_set(vm, &klass->methods, OBJ_VAL(name), method);
+  if (name == klass->name) {
+    klass->initializer = method;
+  } else {
+    table_set(vm, &klass->methods, OBJ_VAL(name), method);
+  }
   pop(vm);
 }
 
@@ -232,15 +296,13 @@ static bool is_falsey(b_value value) {
 
   // Non-empty dicts are true, empty dicts are false.
   if (IS_DICT(value))
-    return AS_DICT(value)->names.count == 0;
+    return AS_DICT(value)->names.count == 0; */
 
   // All classes are true
-  // All functions are in themselves true if you do not account
-  // for what they return.
-  if (IS_CLASS(value) || IS_CLOSURE(value) || IS_FUNCTION(value) ||
-      IS_BOUND_METHOD(value))
-    return false; */
-
+  // All closures are true
+  // All bound methods are true
+  // All functions are in themselves true if you do not account for what they
+  // return.
   return false;
 }
 
@@ -558,7 +620,10 @@ b_ptr_result run(b_vm *vm) {
         break;
       }
 
-      runtime_error("undefined property %s", name->chars);
+      if (!bind_method(vm, instance->klass, name)) {
+        return PTR_RUNTIME_ERR;
+      }
+      break;
     }
     case OP_SET_PROPERTY: {
       if (!IS_INSTANCE(peek(vm, 1))) {
@@ -606,6 +671,15 @@ b_ptr_result run(b_vm *vm) {
     case OP_CALL: {
       int arg_count = READ_BYTE();
       if (!call_value(vm, peek(vm, arg_count), arg_count)) {
+        return PTR_RUNTIME_ERR;
+      }
+      frame = &vm->frames[vm->frame_count - 1];
+      break;
+    }
+    case OP_INVOKE: {
+      b_obj_string *method = READ_STRING();
+      int arg_count = READ_BYTE();
+      if (!invoke(vm, method, arg_count)) {
         return PTR_RUNTIME_ERR;
       }
       frame = &vm->frames[vm->frame_count - 1];

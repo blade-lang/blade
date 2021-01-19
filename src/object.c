@@ -29,11 +29,20 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   return object;
 }
 
+b_obj_bound *new_bound_method(b_vm *vm, b_value receiver,
+                              b_obj_closure *method) {
+  b_obj_bound *bound = ALLOCATE_OBJ(b_obj_bound, OBJ_BOUND_METHOD);
+  bound->receiver = receiver;
+  bound->method = method;
+  return bound;
+}
+
 b_obj_class *new_class(b_vm *vm, b_obj_string *name) {
   b_obj_class *klass = ALLOCATE_OBJ(b_obj_class, OBJ_CLASS);
   klass->name = name;
   init_table(&klass->fields);
   init_table(&klass->methods);
+  klass->initializer = EMPTY_VAL;
   return klass;
 }
 
@@ -132,6 +141,10 @@ static void print_function(b_obj_func *function) {
 
 void print_object(b_value value) {
   switch (OBJ_TYPE(value)) {
+  case OBJ_BOUND_METHOD: {
+    print_function(AS_BOUND(value)->method->function);
+    break;
+  }
   case OBJ_CLASS: {
     printf("<class %s at %p>", AS_CLASS(value)->name->chars,
            (void *)AS_CLASS(value));
@@ -176,6 +189,7 @@ const char *object_type(b_obj *object) {
   case OBJ_FUNCTION:
   case OBJ_NATIVE:
   case OBJ_CLOSURE:
+  case OBJ_BOUND_METHOD:
     return "function";
 
   case OBJ_INSTANCE:

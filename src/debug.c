@@ -46,6 +46,17 @@ static int jump_instruction(const char *name, int sign, b_blob *blob,
   return offset + 3;
 }
 
+static int invoke_instruction(const char *name, b_blob *blob, int offset) {
+  uint16_t constant = (uint16_t)(blob->code[offset + 1] << 8);
+  constant |= blob->code[offset + 2];
+  uint8_t arg_count = blob->code[offset + 3];
+
+  printf("%-16s (%d args) %4d '", name, arg_count, constant);
+  print_value(blob->constants.values[constant]);
+  printf("'\n");
+  return offset + 4;
+}
+
 int disassemble_instruction(b_blob *blob, int offset) {
   printf("%04d ", offset);
   if (offset > 0 && blob->lines[offset] == blob->lines[offset - 1]) {
@@ -152,6 +163,8 @@ int disassemble_instruction(b_blob *blob, int offset) {
   }
   case OP_CALL:
     return byte_instruction("call", blob, offset);
+  case OP_INVOKE:
+    return invoke_instruction("invk", blob, offset);
   case OP_RETURN:
     return simple_instruction("ret", offset);
 
