@@ -75,7 +75,7 @@ bool table_get(b_table *table, b_value key, b_value *value) {
 
   b_entry *entry = find_entry(table->entries, table->capacity, key);
 
-  if (IS_NIL(entry->key) || IS_EMPTY(entry->key))
+  if (IS_EMPTY(entry->key) || IS_NIL(entry->key))
     return false;
 
 #if DEBUG_MODE == 1
@@ -193,9 +193,9 @@ b_obj_string *table_find_string(b_table *table, const char *chars, int length,
 
 void table_print(b_table *table) {
   printf("<HashTable: [");
-  for (int i = 0; i <= table->capacity; i++) {
+  for (int i = 0; i < table->capacity; i++) {
     b_entry *entry = &table->entries[i];
-    if (!IS_NIL(entry->key) && !IS_EMPTY(entry->key)) {
+    if (!IS_EMPTY(entry->key)) {
       printf("{key: %u, value: ", hash_value(entry->key));
       print_value(entry->value);
       printf("}");

@@ -174,6 +174,12 @@ int disassemble_instruction(b_blob *blob, int offset) {
     return constant_instruction("methd", blob, offset);
   case OP_CLASS_PROPERTY:
     return constant_instruction("clprop", blob, offset);
+  case OP_GET_SUPER:
+    return constant_instruction("gsup", blob, offset);
+  case OP_INHERIT:
+    return simple_instruction("inher", offset);
+  case OP_SUPER_INVOKE:
+    return invoke_instruction("sinvk", blob, offset);
 
   default:
     printf("unknown opcode %d\n", instruction);

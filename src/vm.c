@@ -185,7 +185,8 @@ static bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
                               int arg_count) {
   b_value method;
   if (!table_get(&klass->methods, OBJ_VAL(name), &method)) {
-    _runtime_error(vm, "undefined method '%s'", name->chars);
+    _runtime_error(vm, "undefined method '%s' in %s", name->chars,
+                   klass->name->chars);
     return false;
   }
 
@@ -261,10 +262,9 @@ static void close_upvalues(b_vm *vm, b_value *last) {
 static void define_method(b_vm *vm, b_obj_string *name) {
   b_value method = peek(vm, 0);
   b_obj_class *klass = AS_CLASS(peek(vm, 1));
+  table_set(vm, &klass->methods, OBJ_VAL(name), method);
   if (name == klass->name) {
     klass->initializer = method;
-  } else {
-    table_set(vm, &klass->methods, OBJ_VAL(name), method);
   }
   pop(vm);
 }
@@ -687,7 +687,8 @@ b_ptr_result run(b_vm *vm) {
     }
 
     case OP_CLASS: {
-      push(vm, OBJ_VAL(new_class(vm, READ_STRING())));
+      b_obj_string *name = READ_STRING();
+      push(vm, OBJ_VAL(new_class(vm, name)));
       break;
     }
     case OP_METHOD: {
@@ -696,6 +697,36 @@ b_ptr_result run(b_vm *vm) {
     }
     case OP_CLASS_PROPERTY: {
       define_property(vm, READ_STRING());
+      break;
+    }
+    case OP_INHERIT: {
+      if (!IS_CLASS(peek(vm, 1))) {
+        runtime_error("cannot inherit from non-class object");
+      }
+
+      b_obj_class *superclass = AS_CLASS(peek(vm, 1));
+      b_obj_class *subclass = AS_CLASS(peek(vm, 0));
+      table_add_all(vm, &superclass->fields, &subclass->fields);
+      table_add_all(vm, &superclass->methods, &subclass->methods);
+      pop(vm); // pop the subclass
+      break;
+    }
+    case OP_GET_SUPER: {
+      b_obj_string *name = READ_STRING();
+      b_obj_class *superclass = AS_CLASS(pop(vm));
+      if (!bind_method(vm, superclass, name)) {
+        return PTR_RUNTIME_ERR;
+      }
+      break;
+    }
+    case OP_SUPER_INVOKE: {
+      b_obj_string *method = READ_STRING();
+      int arg_count = READ_BYTE();
+      b_obj_class *superclass = AS_CLASS(pop(vm));
+      if (!invoke_from_class(vm, superclass, method, arg_count)) {
+        return PTR_RUNTIME_ERR;
+      }
+      frame = &vm->frames[vm->frame_count - 1];
       break;
     }
 

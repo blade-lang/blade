@@ -142,6 +142,8 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_CLOSE_UPVALUE:
   case OP_DUP:
   case OP_RETURN:
+  case OP_INHERIT:
+  case OP_GET_SUPER:
     return 0;
 
   case OP_CALL:
@@ -168,6 +170,7 @@ static int get_code_args_count(const uint8_t *bytecode,
     return 2;
 
   case OP_INVOKE:
+  case OP_SUPER_INVOKE:
     return 3;
 
   case OP_CLOSURE: {
@@ -630,12 +633,43 @@ static void variable(b_parser *p, bool can_assign) {
   named_variable(p, p->previous, can_assign);
 }
 
+static b_token synthetic_token(const char *name) {
+  b_token token;
+  token.start = name;
+  token.length = (int)strlen(name);
+  return token;
+}
+
 static void self(b_parser *p, bool can_assign) {
   if (p->current_class == NULL) {
     error(p, "cannot use keyword 'self' outside of a class");
     return;
   }
   variable(p, false);
+}
+
+static void parent(b_parser *p, bool can_assign) {
+  if (p->current_class == NULL) {
+    error(p, "cannot use keyword 'parent' outside of a class");
+  } else if (!p->current_class->has_superclass) {
+    error(p, "cannot use keyword 'parent' in a class without a parent");
+  }
+
+  consume(p, DOT_TOKEN, "expected . after super");
+  consume(p, IDENTIFIER_TOKEN, "expected parent class method name after .");
+  int name = identifier_constant(p, &p->previous);
+
+  named_variable(p, synthetic_token("self"), false);
+
+  if (match(p, LPAREN_TOKEN)) {
+    uint8_t arg_count = argument_list(p);
+    named_variable(p, synthetic_token("parent"), false);
+    emit_byte_and_short(p, OP_SUPER_INVOKE, name);
+    emit_byte(p, arg_count);
+  } else {
+    named_variable(p, synthetic_token("parent"), false);
+    emit_byte_and_short(p, OP_GET_SUPER, name);
+  }
 }
 
 static void grouping(b_parser *p, bool can_assign) {
@@ -894,7 +928,7 @@ b_parse_rule parse_rules[] = {
     [VAR_TOKEN] = {NULL, NULL, PREC_NONE},
     [NIL_TOKEN] = {literal, NULL, PREC_NONE},
     [OR_TOKEN] = {NULL, or_, PREC_OR},
-    [PARENT_TOKEN] = {NULL, NULL, PREC_NONE},
+    [PARENT_TOKEN] = {parent, NULL, PREC_NONE},
     [RETURN_TOKEN] = {NULL, NULL, PREC_NONE},
     [SELF_TOKEN] = {self, NULL, PREC_NONE},
     [STATIC_TOKEN] = {NULL, NULL, PREC_NONE},
@@ -1024,8 +1058,27 @@ static void class_declaration(b_parser *p) {
 
   b_class_compiler class_compiler;
   class_compiler.name = p->previous;
+  class_compiler.has_superclass = false;
   class_compiler.enclosing = p->current_class;
   p->current_class = &class_compiler;
+
+  if (match(p, LESS_TOKEN)) {
+    consume(p, IDENTIFIER_TOKEN, "name of superclass expected");
+    variable(p, false);
+
+    if (identifiers_equal(&class_name, &p->previous)) {
+      error(p, "class %.*s cannot inherit from itself", class_name.start,
+            class_name.length);
+    }
+
+    begin_scope(p);
+    add_local(p, synthetic_token("parent"));
+    define_variable(p, 0);
+
+    named_variable(p, class_name, false);
+    emit_byte(p, OP_INHERIT);
+    class_compiler.has_superclass = true;
+  }
 
   named_variable(p, class_name, false);
 
@@ -1052,6 +1105,10 @@ static void class_declaration(b_parser *p) {
   }
   consume(p, RBRACE_TOKEN, "expected '}' after class body");
   emit_byte(p, OP_POP);
+
+  if (class_compiler.has_superclass) {
+    end_scope(p);
+  }
 
   p->current_class = p->current_class->enclosing;
 }
@@ -1353,12 +1410,15 @@ static void synchronize(b_parser *p) {
     case FOR_TOKEN:
     case IF_TOKEN:
     case USING_TOKEN:
+    case WHEN_TOKEN:
     case ITER_TOKEN:
     case WHILE_TOKEN:
     case ECHO_TOKEN:
     case DIE_TOKEN:
     case RETURN_TOKEN:
     case STATIC_TOKEN:
+    case SELF_TOKEN:
+    case PARENT_TOKEN:
       return;
 
     default:; // do nothing

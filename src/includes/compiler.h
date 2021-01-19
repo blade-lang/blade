@@ -59,6 +59,7 @@ struct s_compiler {
 typedef struct b_class_compiler {
   struct b_class_compiler *enclosing;
   b_token name;
+  bool has_superclass;
 } b_class_compiler;
 
 typedef struct {
