@@ -15,6 +15,7 @@
 #define IS_CLOSURE(v) is_obj_type(v, OBJ_CLOSURE)
 #define IS_CLASS(v) is_obj_type(v, OBJ_CLASS)
 #define IS_INSTANCE(v) is_obj_type(v, OBJ_INSTANCE)
+#define IS_BOUND(v) is_obj_type(v, OBJ_BOUND_METHOD)
 
 // promote b_value to object
 #define AS_STRING(v) ((b_obj_string *)AS_OBJ(v))
@@ -23,11 +24,13 @@
 #define AS_CLOSURE(v) ((b_obj_closure *)AS_OBJ(v))
 #define AS_CLASS(v) ((b_obj_class *)AS_OBJ(v))
 #define AS_INSTANCE(v) ((b_obj_instance *)AS_OBJ(v))
+#define AS_BOUND(v) ((b_obj_bound *)AS_OBJ(v))
 
 // demote bird value to c string
 #define AS_CSTRING(v) (((b_obj_string *)AS_OBJ(v))->chars)
 
 typedef enum {
+  OBJ_BOUND_METHOD,
   OBJ_CLASS,
   OBJ_CLOSURE,
   OBJ_FUNCTION,
@@ -77,6 +80,7 @@ typedef struct {
   b_obj_string *name;
   b_table fields;
   b_table methods;
+  b_value initializer;
 } b_obj_class;
 
 typedef struct {
@@ -84,6 +88,12 @@ typedef struct {
   b_obj_class *klass;
   b_table fields;
 } b_obj_instance;
+
+typedef struct {
+  b_obj obj;
+  b_value receiver;
+  b_obj_closure *method;
+} b_obj_bound; // a bound method
 
 typedef b_value (*b_native_fn)(b_vm *, int, b_value *);
 
@@ -93,6 +103,7 @@ typedef struct {
   b_native_fn function;
 } b_obj_native;
 
+b_obj_bound *new_bound_method(b_vm *vm, b_value receiver, b_obj_closure *method);
 b_obj_class *new_class(b_vm *vm, b_obj_string *name);
 b_obj_closure *new_closure(b_vm *vm, b_obj_func *function);
 b_obj_func *new_function(b_vm *vm);

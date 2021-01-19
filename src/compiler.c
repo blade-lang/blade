@@ -167,6 +167,9 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_METHOD:
     return 2;
 
+  case OP_INVOKE:
+    return 3;
+
   case OP_CLOSURE: {
     int constant = (bytecode[ip + 1] << 8) | bytecode[ip + 2];
     b_obj_func *fn = AS_FUNCTION(constants[constant]);
@@ -218,7 +221,11 @@ static void emit_loop(b_parser *p, int loop_start) {
 }
 
 static void emit_return(b_parser *p) {
-  emit_byte(p, OP_NIL);
+  if (p->compiler->type == TYPE_INITIALIZER) {
+    emit_byte_and_short(p, OP_GET_LOCAL, 0);
+  } else {
+    emit_byte(p, OP_NIL);
+  }
   emit_byte(p, OP_RETURN);
 }
 
@@ -277,8 +284,14 @@ static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
   b_local *local = &p->compiler->locals[p->compiler->local_count++];
   local->depth = 0;
   local->is_captured = false;
-  local->name.start = "";
-  local->name.length = 0;
+
+  if (type != TYPE_FUNCTION) {
+    local->name.start = "self";
+    local->name.length = 4;
+  } else {
+    local->name.start = "";
+    local->name.length = 0;
+  }
 }
 
 static int identifier_constant(b_parser *p, b_token *name) {
@@ -565,6 +578,10 @@ static void dot(b_parser *p, bool can_assign) {
   if (can_assign && match(p, EQUAL_TOKEN)) {
     expression(p);
     emit_byte_and_short(p, OP_SET_PROPERTY, name);
+  } else if (match(p, LPAREN_TOKEN)) {
+    uint8_t arg_count = argument_list(p);
+    emit_byte_and_short(p, OP_INVOKE, name);
+    emit_byte(p, arg_count);
   } else {
     emit_byte_and_short(p, OP_GET_PROPERTY, name);
   }
@@ -611,6 +628,14 @@ static void named_variable(b_parser *p, b_token name, bool can_assign) {
 
 static void variable(b_parser *p, bool can_assign) {
   named_variable(p, p->previous, can_assign);
+}
+
+static void self(b_parser *p, bool can_assign) {
+  if (p->current_class == NULL) {
+    error(p, "cannot use keyword 'self' outside of a class");
+    return;
+  }
+  variable(p, false);
 }
 
 static void grouping(b_parser *p, bool can_assign) {
@@ -871,7 +896,7 @@ b_parse_rule parse_rules[] = {
     [OR_TOKEN] = {NULL, or_, PREC_OR},
     [PARENT_TOKEN] = {NULL, NULL, PREC_NONE},
     [RETURN_TOKEN] = {NULL, NULL, PREC_NONE},
-    [SELF_TOKEN] = {NULL, NULL, PREC_NONE},
+    [SELF_TOKEN] = {self, NULL, PREC_NONE},
     [STATIC_TOKEN] = {NULL, NULL, PREC_NONE},
     [TRUE_TOKEN] = {literal, NULL, PREC_NONE},
     [USING_TOKEN] = {NULL, NULL, PREC_NONE},
@@ -966,11 +991,15 @@ static void function(b_parser *p, b_func_type type) {
   }
 }
 
-static void method(b_parser *p) {
+static void method(b_parser *p, b_token class_name) {
   consume(p, IDENTIFIER_TOKEN, "method name expected");
   int constant = identifier_constant(p, &p->previous);
 
-  b_func_type type = TYPE_FUNCTION;
+  b_func_type type = TYPE_METHOD;
+  if (p->previous.length == class_name.length &&
+      memcmp(p->previous.start, class_name.start, class_name.length) == 0) {
+    type = TYPE_INITIALIZER;
+  }
   function(p, type);
   emit_byte_and_short(p, OP_METHOD, constant);
 }
@@ -991,6 +1020,11 @@ static void class_declaration(b_parser *p) {
   emit_byte_and_short(p, OP_CLASS, name_constant);
   define_variable(p, name_constant);
 
+  b_class_compiler class_compiler;
+  class_compiler.name = p->previous;
+  class_compiler.enclosing = p->current_class;
+  p->current_class = &class_compiler;
+
   named_variable(p, class_name, false);
 
   consume(p, LBRACE_TOKEN, "expected '{' before class body");
@@ -1000,19 +1034,24 @@ static void class_declaration(b_parser *p) {
       consume(p, IDENTIFIER_TOKEN, "method name expected");
       int field_constant = identifier_constant(p, &p->previous);
 
-      consume(p, EQUAL_TOKEN, "expected '=' after class field name");
-      expression(p);
+      if (match(p, EQUAL_TOKEN)) {
+        expression(p);
+      } else {
+        emit_byte(p, OP_NIL);
+      }
       consume_statement_end(p);
       ignore_whitespace(p);
 
       emit_byte_and_short(p, OP_CLASS_PROPERTY, field_constant);
     } else {
-      method(p);
+      method(p, class_name);
       ignore_whitespace(p);
     }
   }
   consume(p, RBRACE_TOKEN, "expected '}' after class body");
   emit_byte(p, OP_POP);
+
+  p->current_class = p->current_class->enclosing;
 }
 
 static void _var_declaration(b_parser *p, bool is_initalizer) {
@@ -1238,6 +1277,10 @@ static void return_statement(b_parser *p) {
   if (match(p, SEMICOLON_TOKEN) || match(p, NEWLINE_TOKEN)) {
     emit_return(p);
   } else {
+    if (p->compiler->type == TYPE_INITIALIZER) {
+      error(p, "cannot return value from constructor");
+    }
+
     expression(p);
     consume_statement_end(p);
     emit_byte(p, OP_RETURN);
@@ -1389,6 +1432,7 @@ b_obj_func *compile(b_vm *vm, const char *source, b_blob *blob) {
   parser.innermost_loop_start = -1;
   parser.innermost_loop_scope_depth = 0;
   parser.compiler = NULL;
+  parser.current_class = NULL;
 
   b_compiler compiler;
   init_compiler(&parser, &compiler, TYPE_SCRIPT);

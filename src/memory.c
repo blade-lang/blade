@@ -87,6 +87,12 @@ static void blacken_object(b_vm *vm, b_obj *object) {
 #endif
 
   switch (object->type) {
+  case OBJ_BOUND_METHOD: {
+    b_obj_bound *bound = (b_obj_bound *)object;
+    mark_value(vm, bound->receiver);
+    mark_object(vm, (b_obj *)bound->method);
+    break;
+  }
   case OBJ_CLASS: {
     b_obj_class *klass = (b_obj_class *)object;
     mark_object(vm, (b_obj *)klass->name);
@@ -135,6 +141,12 @@ static void free_object(b_vm *vm, b_obj *object) {
 #endif
 
   switch (object->type) {
+  case OBJ_BOUND_METHOD: {
+    // a closure may be bound to multiple instances
+    // for this reason, we do not free closures when freeing bound methods
+    FREE(b_obj_bound, object);
+    break;
+  }
   case OBJ_CLASS: {
     b_obj_class *klass = (b_obj_class *)object;
     free_table(vm, &klass->methods);
