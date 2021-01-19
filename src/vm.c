@@ -146,7 +146,6 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
     case OBJ_CLASS: {
       b_obj_class *klass = AS_CLASS(callee);
       vm->stack_top[-arg_count - 1] = OBJ_VAL(new_instance(vm, klass));
-      b_value initializer;
       if (!IS_EMPTY(klass->initializer)) {
         return call(vm, AS_CLOSURE(klass->initializer), arg_count);
       } else if (arg_count != 0) {
