@@ -81,7 +81,6 @@ DECLARE_NATIVE(setprop) {
   ENFORCE_ARG_TYPE(setprop, 1, IS_STRING);
 
   b_obj_instance *instance = AS_INSTANCE(args[0]);
-  b_value value;
   RETURN_BOOL(table_set(vm, &instance->fields, args[1], args[2]));
 }
 
