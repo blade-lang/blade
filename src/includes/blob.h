@@ -50,6 +50,9 @@ typedef enum {
   OP_CLASS,
   OP_METHOD,
   OP_CLASS_PROPERTY,
+  OP_INHERIT,
+  OP_GET_SUPER,
+  OP_SUPER_INVOKE,
 
   // the break placeholder... it never gets to the vm
   // care should be taken to
