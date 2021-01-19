@@ -918,6 +918,7 @@ b_parse_rule parse_rules[] = {
 };
 
 static void parse_precedence(b_parser *p, b_prec precedence) {
+  ignore_whitespace(p);
   advance(p);
 
   b_parse_fn prefix_rule = get_rule(p->previous.type)->prefix;
@@ -931,6 +932,7 @@ static void parse_precedence(b_parser *p, b_prec precedence) {
   prefix_rule(p, can_assign);
 
   while (precedence <= get_rule(p->current.type)->precedence) {
+    ignore_whitespace(p);
     advance(p);
     b_parse_fn infix_rule = get_rule(p->previous.type)->infix;
     infix_rule(p, can_assign);
