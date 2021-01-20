@@ -199,7 +199,7 @@ static void mark_roots(b_vm *vm) {
     mark_value(vm, *slot);
   }
   for (int i = 0; i < vm->frame_count; i++) {
-    mark_object(vm, (b_obj *)vm->frames[i].closure);
+    mark_object(vm, (b_obj *)vm->frames[i].function);
   }
   for (b_obj_upvalue *upvalue = vm->open_upvalues; upvalue != NULL;
        upvalue = upvalue->next) {

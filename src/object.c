@@ -29,8 +29,7 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   return object;
 }
 
-b_obj_bound *new_bound_method(b_vm *vm, b_value receiver,
-                              b_obj_closure *method) {
+b_obj_bound *new_bound_method(b_vm *vm, b_value receiver, b_obj *method) {
   b_obj_bound *bound = ALLOCATE_OBJ(b_obj_bound, OBJ_BOUND_METHOD);
   bound->receiver = receiver;
   bound->method = method;
@@ -142,7 +141,12 @@ static void print_function(b_obj_func *function) {
 void print_object(b_value value) {
   switch (OBJ_TYPE(value)) {
   case OBJ_BOUND_METHOD: {
-    print_function(AS_BOUND(value)->method->function);
+    b_obj *method = AS_BOUND(value)->method;
+    if (method->type == OBJ_CLOSURE) {
+      print_function(((b_obj_closure *)method)->function);
+    } else {
+      print_function((b_obj_func *)method);
+    }
     break;
   }
   case OBJ_CLASS: {
