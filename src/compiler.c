@@ -144,6 +144,12 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_RETURN:
   case OP_INHERIT:
   case OP_GET_SUPER:
+  case OP_AND:
+  case OP_OR:
+  case OP_XOR:
+  case OP_LSHIFT:
+  case OP_RSHIFT:
+  case OP_BIT_NOT:
     return 0;
 
   case OP_CALL:
@@ -546,6 +552,27 @@ static void binary(b_parser *p, bool can_assign) {
     emit_bytes(p, OP_GREATER, OP_NOT);
     break;
 
+    // bitwise
+  case AMP_TOKEN:
+    emit_byte(p, OP_AND);
+    break;
+
+  case BAR_TOKEN:
+    emit_byte(p, OP_OR);
+    break;
+
+  case XOR_TOKEN:
+    emit_byte(p, OP_XOR);
+    break;
+
+  case LSHIFT_TOKEN:
+    emit_byte(p, OP_LSHIFT);
+    break;
+
+  case RSHIFT_TOKEN:
+    emit_byte(p, OP_RSHIFT);
+    break;
+
   default:
     break;
   }
@@ -826,6 +853,9 @@ static void unary(b_parser *p, bool can_assign) {
   case BANG_TOKEN:
     emit_byte(p, OP_NOT);
     break;
+  case TILDE_TOKEN:
+    emit_byte(p, OP_BIT_NOT);
+    break;
 
   default:
     break;
@@ -889,21 +919,21 @@ b_parse_rule parse_rules[] = {
     [EQUAL_EQ_TOKEN] = {NULL, binary, PREC_EQUALITY},     // ==
     [LESS_TOKEN] = {NULL, binary, PREC_COMPARISON},       // <
     [LESS_EQ_TOKEN] = {NULL, binary, PREC_COMPARISON},    // <=
-    [LSHIFT_TOKEN] = {NULL, NULL, PREC_NONE},             // <<
+    [LSHIFT_TOKEN] = {NULL, binary, PREC_SHIFT},          // <<
     [LSHIFT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},          // <<=
     [GREATER_TOKEN] = {NULL, binary, PREC_COMPARISON},    // >
     [GREATER_EQ_TOKEN] = {NULL, binary, PREC_COMPARISON}, // >=
-    [RSHIFT_TOKEN] = {NULL, NULL, PREC_NONE},             // >>
+    [RSHIFT_TOKEN] = {NULL, binary, PREC_SHIFT},          // >>
     [RSHIFT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},          // >>=
     [PERCENT_TOKEN] = {NULL, binary, PREC_FACTOR},        // %
     [PERCENT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},         // %=
-    [AMP_TOKEN] = {NULL, NULL, PREC_NONE},                // &
+    [AMP_TOKEN] = {NULL, binary, PREC_BIT_AND},           // &
     [AMP_EQ_TOKEN] = {NULL, NULL, PREC_NONE},             // &=
-    [BAR_TOKEN] = {NULL, NULL, PREC_NONE},                // |
+    [BAR_TOKEN] = {NULL, binary, PREC_BIT_OR},            // |
     [BAR_EQ_TOKEN] = {NULL, NULL, PREC_NONE},             // |=
-    [TILDE_TOKEN] = {NULL, NULL, PREC_NONE},              // ~
+    [TILDE_TOKEN] = {unary, NULL, PREC_UNARY},            // ~
     [TILDE_EQ_TOKEN] = {NULL, NULL, PREC_NONE},           // ~=
-    [XOR_TOKEN] = {NULL, NULL, PREC_NONE},                // ^
+    [XOR_TOKEN] = {NULL, binary, PREC_BIT_XOR},           // ^
     [XOR_EQ_TOKEN] = {NULL, NULL, PREC_NONE},             // ^=
     [CDEFAULT_TOKEN] = {NULL, NULL, PREC_NONE},           // ??
 

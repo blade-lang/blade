@@ -407,6 +407,18 @@ b_ptr_result run(b_vm *vm) {
     push(vm, type(a op b));                                                    \
   } while (false)
 
+#define BINARY_BIT_OP(type, op)                                                \
+  do {                                                                         \
+    if ((!IS_NUMBER(peek(vm, 0)) && !IS_BOOL(peek(vm, 0))) ||                  \
+        (!IS_NUMBER(peek(vm, 1)) && !IS_BOOL(peek(vm, 1)))) {                  \
+      _runtime_error(vm, "unsupported operand %s for %s and %s", #op,          \
+                     value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
+    }                                                                          \
+    int b = AS_NUMBER(pop(vm));                                                \
+    int a = AS_NUMBER(pop(vm));                                                \
+    push(vm, type((double)(a op b)));                                          \
+  } while (false)
+
 #define BINARY_MOD_OP(type, op)                                                \
   do {                                                                         \
     if ((!IS_NUMBER(peek(vm, 0)) && !IS_BOOL(peek(vm, 0))) ||                  \
@@ -485,9 +497,38 @@ b_ptr_result run(b_vm *vm) {
     }
     case OP_NEGATE: {
       if (!IS_NUMBER(peek(vm, 0))) {
-        runtime_error("operand must be a number");
+        runtime_error("operator - not defined for object of type %s",
+                      value_type(peek(vm, 0)));
       }
       push(vm, NUMBER_VAL(-AS_NUMBER(pop(vm))));
+      break;
+    }
+    case OP_BIT_NOT: {
+      if (!IS_NUMBER(peek(vm, 0))) {
+        runtime_error("operator ~ not defined for object of type %s",
+                      value_type(peek(vm, 0)));
+      }
+      push(vm, INTEGER_VAL(~((int)AS_NUMBER(pop(vm)))));
+      break;
+    }
+    case OP_AND: {
+      BINARY_BIT_OP(NUMBER_VAL, &);
+      break;
+    }
+    case OP_OR: {
+      BINARY_BIT_OP(NUMBER_VAL, |);
+      break;
+    }
+    case OP_XOR: {
+      BINARY_BIT_OP(NUMBER_VAL, ^);
+      break;
+    }
+    case OP_LSHIFT: {
+      BINARY_BIT_OP(NUMBER_VAL, <<);
+      break;
+    }
+    case OP_RSHIFT: {
+      BINARY_BIT_OP(NUMBER_VAL, >>);
       break;
     }
 
