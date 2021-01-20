@@ -50,9 +50,9 @@ struct s_compiler {
   b_obj_func *function;
   b_func_type type;
 
-  b_local locals[UINT8_COUNT];
+  b_local locals[UINT16_COUNT];
   int local_count;
-  b_upvalue upvalues[UINT8_COUNT];
+  b_upvalue upvalues[UINT16_COUNT];
   int scope_depth;
 };
 
