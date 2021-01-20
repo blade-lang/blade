@@ -36,6 +36,13 @@ typedef enum {
   OP_POW,
   OP_NEGATE,
   OP_NOT,
+  OP_BIT_NOT,
+  OP_AND,
+  OP_OR,
+  OP_XOR,
+  OP_LSHIFT,
+  OP_RSHIFT,
+
   OP_CONSTANT, // 8-bit constant address (0 - 255)
   OP_ECHO,
   OP_POP,

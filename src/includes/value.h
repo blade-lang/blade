@@ -9,6 +9,11 @@ typedef struct s_obj b_obj;
 typedef struct s_obj_string b_obj_string;
 typedef struct s_vm b_vm;
 
+typedef union {
+  uint64_t bits;
+  double num;
+} b_double_union;
+
 #if defined(USE_NAN_BOXING) && USE_NAN_BOXING == 1
 
 // binary representation = 1111111111111 i.e.
@@ -32,6 +37,7 @@ typedef uint64_t b_value;
 #define NIL_VAL ((b_value)(uint64_t)(QNAN | NIL_TAG))
 #define BOOL_VAL(v) ((v) ? TRUE_VAL : FALSE_VAL)
 #define NUMBER_VAL(v) number_to_value(v)
+#define INTEGER_VAL(v) integer_to_value(v)
 #define OBJ_VAL(obj) (b_value)(SIGN_BIT | QNAN | (uint64_t)(uintptr_t)(obj))
 
 #define AS_BOOL(v) ((v) == TRUE_VAL)
@@ -48,6 +54,12 @@ static inline b_value number_to_value(double v) {
   b_value value;
   memcpy(&value, &v, sizeof(double));
   return value;
+}
+
+static inline b_value integer_to_value(int v) {
+  b_double_union data;
+  data.num = (double)v;
+  return data.bits;
 }
 
 static inline double value_to_number(b_value v) {
@@ -80,6 +92,7 @@ typedef struct {
 #define NIL_VAL ((b_value){VAL_NIL, {.number = 0}})
 #define BOOL_VAL(v) ((b_value){VAL_BOOL, {.boolean = v}})
 #define NUMBER_VAL(v) ((b_value){VAL_NUMBER, {.number = v}})
+#define INTEGER_VAL(v) ((b_value){VAL_NUMBER, {.number = v}})
 #define OBJ_VAL(v) ((b_value){VAL_OBJ, {.obj = (b_obj *)v}})
 
 // demote bird values to C value
@@ -95,11 +108,6 @@ typedef struct {
 #define IS_EMPTY(v) ((v).type == VAL_EMPTY)
 
 #endif
-
-typedef union {
-  uint64_t bits;
-  double num;
-} b_double_union;
 
 typedef struct {
   int capacity;

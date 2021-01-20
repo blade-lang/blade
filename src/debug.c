@@ -130,6 +130,18 @@ int disassemble_instruction(b_blob *blob, int offset) {
     return simple_instruction("neg", offset);
   case OP_NOT:
     return simple_instruction("not", offset);
+  case OP_BIT_NOT:
+    return simple_instruction("bnot", offset);
+  case OP_AND:
+    return simple_instruction("band", offset);
+  case OP_OR:
+    return simple_instruction("bor", offset);
+  case OP_XOR:
+    return simple_instruction("bxor", offset);
+  case OP_LSHIFT:
+    return simple_instruction("lshift", offset);
+  case OP_RSHIFT:
+    return simple_instruction("rshift", offset);
 
   case OP_ECHO:
     return simple_instruction("echo", offset);
