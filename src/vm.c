@@ -21,12 +21,20 @@ static void reset_stack(b_vm *vm) {
   vm->open_upvalues = NULL;
 }
 
+static inline b_obj_func *get_frame_function(b_call_frame *frame) {
+  if (frame->function->type == OBJ_FUNCTION) {
+    return (b_obj_func *)frame->function;
+  } else {
+    return ((b_obj_closure *)frame->function)->function;
+  }
+}
+
 void _runtime_error(b_vm *vm, const char *format, ...) {
 
   b_call_frame *frame = &vm->frames[vm->frame_count - 1];
 
-  size_t instruction = frame->ip - frame->closure->function->blob.code - 1;
-  int line = frame->closure->function->blob.lines[instruction];
+  size_t instruction = frame->ip - get_frame_function(frame)->blob.code - 1;
+  int line = get_frame_function(frame)->blob.lines[instruction];
 
   fprintf(stderr, "RuntimeError:\n");
   fprintf(stderr, "    File: <script>, Line: %d\n    Message: ", line);
@@ -41,10 +49,10 @@ void _runtime_error(b_vm *vm, const char *format, ...) {
     fprintf(stderr, "StackTrace:\n");
     for (int i = vm->frame_count - 1; i >= 0; i--) {
       b_call_frame *frame = &vm->frames[i];
-      b_obj_func *function = frame->closure->function;
+      b_obj_func *function = get_frame_function(frame);
 
       // -1 because the IP is sitting on the next instruction to be executed
-      size_t instruction = frame->ip - frame->closure->function->blob.code - 1;
+      size_t instruction = frame->ip - get_frame_function(frame)->blob.code - 1;
 
       fprintf(stderr, "    File: <script>, Line: %d, In: ",
               function->blob.lines[instruction]);
@@ -114,10 +122,10 @@ void free_vm(b_vm *vm) {
   free_table(vm, &vm->globals);
 }
 
-static bool call(b_vm *vm, b_obj_closure *closure, int arg_count) {
-  if (arg_count != closure->function->arity) {
-    _runtime_error(vm, "expected %d arguments but got %d",
-                   closure->function->arity, arg_count);
+static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
+  if (arg_count != function->arity) {
+    _runtime_error(vm, "expected %d arguments but got %d", function->arity,
+                   arg_count);
     return false;
   }
 
@@ -127,11 +135,19 @@ static bool call(b_vm *vm, b_obj_closure *closure, int arg_count) {
   }
 
   b_call_frame *frame = &vm->frames[vm->frame_count++];
-  frame->closure = closure;
-  frame->ip = closure->function->blob.code;
+  frame->function = (b_obj *)callee;
+  frame->ip = function->blob.code;
 
   frame->slots = vm->stack_top - arg_count - 1;
   return true;
+}
+
+static bool call_closure(b_vm *vm, b_obj_closure *closure, int arg_count) {
+  return call(vm, (b_obj *)closure, closure->function, arg_count);
+}
+
+static bool call_function(b_vm *vm, b_obj_func *function, int arg_count) {
+  return call(vm, (b_obj *)function, function, arg_count);
 }
 
 static bool call_value(b_vm *vm, b_value callee, int arg_count) {
@@ -140,14 +156,22 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
     case OBJ_BOUND_METHOD: {
       b_obj_bound *bound = AS_BOUND(callee);
       vm->stack_top[-arg_count - 1] = bound->receiver;
-      return call(vm, bound->method, arg_count);
+      if (bound->method->type == OBJ_CLOSURE) {
+        return call_closure(vm, (b_obj_closure *)bound->method, arg_count);
+      } else {
+        return call_function(vm, (b_obj_func *)bound->method, arg_count);
+      }
     }
 
     case OBJ_CLASS: {
       b_obj_class *klass = AS_CLASS(callee);
       vm->stack_top[-arg_count - 1] = OBJ_VAL(new_instance(vm, klass));
       if (!IS_EMPTY(klass->initializer)) {
-        return call(vm, AS_CLOSURE(klass->initializer), arg_count);
+        if (IS_CLOSURE(klass->initializer)) {
+          return call_closure(vm, AS_CLOSURE(klass->initializer), arg_count);
+        } else {
+          return call_function(vm, AS_FUNCTION(klass->initializer), arg_count);
+        }
       } else if (arg_count != 0) {
         _runtime_error(vm, "%s constructor expects 0 arguments, %d given",
                        klass->name, arg_count);
@@ -157,7 +181,11 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
     }
 
     case OBJ_CLOSURE: {
-      return call(vm, AS_CLOSURE(callee), arg_count);
+      return call_closure(vm, AS_CLOSURE(callee), arg_count);
+    }
+
+    case OBJ_FUNCTION: {
+      return call_function(vm, AS_FUNCTION(callee), arg_count);
     }
 
     case OBJ_NATIVE: {
@@ -189,7 +217,11 @@ static bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
     return false;
   }
 
-  return call(vm, AS_CLOSURE(method), arg_count);
+  if (IS_CLOSURE(method)) {
+    return call_closure(vm, AS_CLOSURE(method), arg_count);
+  } else {
+    return call_function(vm, AS_FUNCTION(method), arg_count);
+  }
 }
 
 static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
@@ -219,7 +251,7 @@ static bool bind_method(b_vm *vm, b_obj_class *klass, b_obj_string *name) {
     return false;
   }
 
-  b_obj_bound *bound = new_bound_method(vm, peek(vm, 0), AS_CLOSURE(method));
+  b_obj_bound *bound = new_bound_method(vm, peek(vm, 0), AS_OBJ(method));
   pop(vm);
   push(vm, OBJ_VAL(bound));
   return true;
@@ -389,7 +421,7 @@ b_ptr_result run(b_vm *vm) {
   (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
 
 #define READ_CONSTANT()                                                        \
-  (frame->closure->function->blob.constants.values[READ_SHORT()])
+  (get_frame_function(frame)->blob.constants.values[READ_SHORT()])
 
 #define READ_STRING() (AS_STRING(READ_CONSTANT()))
 
@@ -695,7 +727,8 @@ b_ptr_result run(b_vm *vm) {
         if (is_local) {
           closure->upvalues[i] = capture_upvalue(vm, frame->slots + index);
         } else {
-          closure->upvalues[i] = frame->closure->upvalues[index];
+          closure->upvalues[i] =
+              ((b_obj_closure *)frame->function)->upvalues[index];
         }
       }
 
@@ -703,12 +736,13 @@ b_ptr_result run(b_vm *vm) {
     }
     case OP_GET_UPVALUE: {
       int index = READ_SHORT();
-      push(vm, *frame->closure->upvalues[index]->location);
+      push(vm, *((b_obj_closure *)frame->function)->upvalues[index]->location);
       break;
     }
     case OP_SET_UPVALUE: {
       int index = READ_SHORT();
-      *frame->closure->upvalues[index]->location = peek(vm, 0);
+      *((b_obj_closure *)frame->function)->upvalues[index]->location =
+          peek(vm, 0);
       break;
     }
 

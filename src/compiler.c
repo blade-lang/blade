@@ -1101,11 +1101,18 @@ static void function(b_parser *p, b_func_type type) {
 
   // create the function object
   b_obj_func *function = end_compiler(p);
-  emit_byte_and_short(p, OP_CLOSURE, make_constant(p, OBJ_VAL(function)));
 
-  for (int i = 0; i < function->upvalue_count; i++) {
-    emit_byte(p, compiler.upvalues[i].is_local ? 1 : 0);
-    emit_short(p, compiler.upvalues[i].index);
+  int function_constant = make_constant(p, OBJ_VAL(function));
+
+  if (function->upvalue_count > 0) {
+    emit_byte_and_short(p, OP_CLOSURE, function_constant);
+
+    for (int i = 0; i < function->upvalue_count; i++) {
+      emit_byte(p, compiler.upvalues[i].is_local ? 1 : 0);
+      emit_short(p, compiler.upvalues[i].index);
+    }
+  } else {
+    emit_byte_and_short(p, OP_CONSTANT, function_constant);
   }
 }
 

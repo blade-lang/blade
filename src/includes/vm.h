@@ -17,7 +17,7 @@ typedef enum {
 } b_ptr_result;
 
 typedef struct {
-  b_obj_closure *closure;
+  b_obj *function;
   uint8_t *ip;
   b_value *slots;
 } b_call_frame;

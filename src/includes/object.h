@@ -92,7 +92,7 @@ typedef struct {
 typedef struct {
   b_obj obj;
   b_value receiver;
-  b_obj_closure *method;
+  b_obj *method;
 } b_obj_bound; // a bound method
 
 typedef b_value (*b_native_fn)(b_vm *, int, b_value *);
@@ -103,7 +103,7 @@ typedef struct {
   b_native_fn function;
 } b_obj_native;
 
-b_obj_bound *new_bound_method(b_vm *vm, b_value receiver, b_obj_closure *method);
+b_obj_bound *new_bound_method(b_vm *vm, b_value receiver, b_obj *method);
 b_obj_class *new_class(b_vm *vm, b_obj_string *name);
 b_obj_closure *new_closure(b_vm *vm, b_obj_func *function);
 b_obj_func *new_function(b_vm *vm);
