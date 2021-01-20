@@ -900,7 +900,7 @@ static void unary(b_parser *p, bool can_assign) {
   // emit instruction
   switch (op) {
   case MINUS_TOKEN:
-    emit_byte(p, OP_SUBTRACT);
+    emit_byte(p, OP_NEGATE);
     break;
   case BANG_TOKEN:
     emit_byte(p, OP_NOT);

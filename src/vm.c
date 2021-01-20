@@ -337,6 +337,25 @@ static bool is_falsey(b_value value) {
   return false;
 }
 
+static b_obj_string *multiply_string(b_vm *vm, b_obj_string *str,
+                                     double number) {
+  int times = (int)number;
+
+  if (times <= 0) // 'str' * 0 == '', 'str' * -1 == ''
+    return copy_string(vm, "", 0);
+  else if (times == 1) // 'str' * 1 == 'str'
+    return str;
+
+  int total_length = str->length * times;
+  char *result = ALLOCATE(char, total_length + 1);
+
+  for (int i = 0; i < times; i++) {
+    memcpy(result + (str->length * i), str->chars, str->length);
+  }
+  result[total_length] = '\0';
+  return take_string(vm, result, total_length);
+}
+
 static bool concatenate(b_vm *vm) {
   b_value _b = peek(vm, 0);
   b_value _a = peek(vm, 1);
@@ -508,6 +527,12 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
     case OP_MULTIPLY: {
+      if (IS_STRING(peek(vm, 1)) && IS_NUMBER(peek(vm, 0))) {
+        double number = AS_NUMBER(pop(vm));
+        b_obj_string *string = AS_STRING(pop(vm));
+        push(vm, OBJ_VAL(multiply_string(vm, string, number)));
+        break;
+      }
       BINARY_OP(NUMBER_VAL, *);
       break;
     }
