@@ -531,6 +531,10 @@ b_ptr_result run(b_vm *vm) {
       BINARY_BIT_OP(NUMBER_VAL, >>);
       break;
     }
+    case OP_ONE: {
+      push(vm, NUMBER_VAL(1));
+      break;
+    }
 
     // comparisons
     case OP_EQUAL: {

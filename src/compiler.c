@@ -100,11 +100,14 @@ static void consume_statement_end(b_parser *p) {
   if (p->in_block && check(p, RBRACE_TOKEN))
     return;
 
-  if (match(p, SEMICOLON_TOKEN) || match(p, EOF_TOKEN)) {
+  if (match(p, SEMICOLON_TOKEN)) {
     while (match(p, SEMICOLON_TOKEN) || match(p, NEWLINE_TOKEN))
       ;
     return;
   }
+
+  if (match(p, EOF_TOKEN))
+    return;
 
   consume(p, NEWLINE_TOKEN, "end of statement expected");
   while (match(p, SEMICOLON_TOKEN) || match(p, NEWLINE_TOKEN))
@@ -150,6 +153,7 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_LSHIFT:
   case OP_RSHIFT:
   case OP_BIT_NOT:
+  case OP_ONE:
     return 0;
 
   case OP_CALL:
@@ -601,22 +605,6 @@ static void call(b_parser *p, bool can_assign) {
   emit_bytes(p, OP_CALL, arg_count);
 }
 
-static void dot(b_parser *p, bool can_assign) {
-  consume(p, IDENTIFIER_TOKEN, "expected property name after '.'");
-  int name = identifier_constant(p, &p->previous);
-
-  if (can_assign && match(p, EQUAL_TOKEN)) {
-    expression(p);
-    emit_byte_and_short(p, OP_SET_PROPERTY, name);
-  } else if (match(p, LPAREN_TOKEN)) {
-    uint8_t arg_count = argument_list(p);
-    emit_byte_and_short(p, OP_INVOKE, name);
-    emit_byte(p, arg_count);
-  } else {
-    emit_byte_and_short(p, OP_GET_PROPERTY, name);
-  }
-}
-
 static void literal(b_parser *p, bool can_assign) {
   switch (p->previous.type) {
   case NIL_TOKEN:
@@ -630,6 +618,75 @@ static void literal(b_parser *p, bool can_assign) {
     break;
   default:
     return;
+  }
+}
+
+static void parse_assignment(b_parser *p, uint8_t real_op, uint8_t get_op,
+                             uint8_t set_op, int arg) {
+  emit_byte_and_short(p, get_op, arg);
+  expression(p);
+  emit_byte(p, real_op);
+  emit_byte_and_short(p, set_op, (uint16_t)arg);
+}
+
+static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg,
+                       bool can_assign) {
+  if (can_assign && match(p, EQUAL_TOKEN)) {
+    expression(p);
+    emit_byte_and_short(p, set_op, (uint16_t)arg);
+  } else if (can_assign && match(p, PLUS_EQ_TOKEN)) {
+    parse_assignment(p, OP_ADD, get_op, set_op, arg);
+  } else if (can_assign && match(p, MINUS_EQ_TOKEN)) {
+    parse_assignment(p, OP_SUBTRACT, get_op, set_op, arg);
+  } else if (can_assign && match(p, MULTIPLY_EQ_TOKEN)) {
+    parse_assignment(p, OP_MULTIPLY, get_op, set_op, arg);
+  } else if (can_assign && match(p, DIVIDE_EQ_TOKEN)) {
+    parse_assignment(p, OP_DIVIDE, get_op, set_op, arg);
+  } else if (can_assign && match(p, POW_EQ_TOKEN)) {
+    parse_assignment(p, OP_POW, get_op, set_op, arg);
+  } else if (can_assign && match(p, PERCENT_EQ_TOKEN)) {
+    parse_assignment(p, OP_REMINDER, get_op, set_op, arg);
+  } else if (can_assign && match(p, FLOOR_EQ_TOKEN)) {
+    parse_assignment(p, OP_FDIVIDE, get_op, set_op, arg);
+  } else if (can_assign && match(p, AMP_EQ_TOKEN)) {
+    parse_assignment(p, OP_AND, get_op, set_op, arg);
+  } else if (can_assign && match(p, BAR_EQ_TOKEN)) {
+    parse_assignment(p, OP_OR, get_op, set_op, arg);
+  } else if (can_assign && match(p, TILDE_EQ_TOKEN)) {
+    parse_assignment(p, OP_BIT_NOT, get_op, set_op, arg);
+  } else if (can_assign && match(p, XOR_EQ_TOKEN)) {
+    parse_assignment(p, OP_XOR, get_op, set_op, arg);
+  } else if (can_assign && match(p, LSHIFT_EQ_TOKEN)) {
+    parse_assignment(p, OP_LSHIFT, get_op, set_op, arg);
+  } else if (can_assign && match(p, RSHIFT_EQ_TOKEN)) {
+    parse_assignment(p, OP_RSHIFT, get_op, set_op, arg);
+  } else if (can_assign && match(p, INCREMENT_TOKEN)) {
+    // consume_statement_end(p);
+
+    emit_byte_and_short(p, get_op, arg);
+    emit_bytes(p, OP_ONE, OP_ADD);
+    emit_byte_and_short(p, set_op, (uint16_t)arg);
+  } else if (can_assign && match(p, DECREMENT_TOKEN)) {
+    // consume_statement_end(p);
+
+    emit_byte_and_short(p, get_op, arg);
+    emit_bytes(p, OP_ONE, OP_SUBTRACT);
+    emit_byte_and_short(p, set_op, (uint16_t)arg);
+  } else {
+    emit_byte_and_short(p, get_op, (uint16_t)arg);
+  }
+}
+
+static void dot(b_parser *p, bool can_assign) {
+  consume(p, IDENTIFIER_TOKEN, "expected property name after '.'");
+  int name = identifier_constant(p, &p->previous);
+
+  if (match(p, LPAREN_TOKEN)) {
+    uint8_t arg_count = argument_list(p);
+    emit_byte_and_short(p, OP_INVOKE, name);
+    emit_byte(p, arg_count);
+  } else {
+    assignment(p, OP_GET_PROPERTY, OP_SET_PROPERTY, name, can_assign);
   }
 }
 
@@ -648,12 +705,7 @@ static void named_variable(b_parser *p, b_token name, bool can_assign) {
     set_op = OP_SET_GLOBAL;
   }
 
-  if (can_assign && match(p, EQUAL_TOKEN)) {
-    expression(p);
-    emit_byte_and_short(p, set_op, (uint16_t)arg);
-  } else {
-    emit_byte_and_short(p, get_op, (uint16_t)arg);
-  }
+  assignment(p, get_op, set_op, arg, can_assign);
 }
 
 static void variable(b_parser *p, bool can_assign) {
