@@ -1,16 +1,62 @@
 #ifndef bird_value_h
 #define bird_value_h
 
+#include <string.h>
+
 #include "common.h"
 
 typedef struct s_obj b_obj;
 typedef struct s_obj_string b_obj_string;
 typedef struct s_vm b_vm;
 
-typedef union {
-  uint64_t bits;
-  double num;
-} b_double_union;
+#if defined(USE_NAN_BOXING) && USE_NAN_BOXING == 1
+
+// binary representation = 1111111111111 i.e.
+// 11 bits + 1 bit for quite nan and another
+// bit to dodge intel's QNaN Floating-Point Indefinite bit
+#define QNAN ((uint64_t)0x7ffc000000000000)
+
+#define SIGN_BIT ((uint64_t)0x8000000000000000)
+
+#define EMPTY_TAG 0 // 00
+#define NIL_TAG 1   // 01
+#define FALSE_TAG 2 // 10
+#define TRUE_TAG 3  // 11
+
+typedef uint64_t b_value;
+
+#define FALSE_VAL ((b_value)(uint64_t)(QNAN | FALSE_TAG))
+#define TRUE_VAL ((b_value)(uint64_t)(QNAN | TRUE_TAG))
+
+#define EMPTY_VAL ((b_value)(uint64_t)(QNAN | EMPTY_TAG))
+#define NIL_VAL ((b_value)(uint64_t)(QNAN | NIL_TAG))
+#define BOOL_VAL(v) ((v) ? TRUE_VAL : FALSE_VAL)
+#define NUMBER_VAL(v) number_to_value(v)
+#define OBJ_VAL(obj) (b_value)(SIGN_BIT | QNAN | (uint64_t)(uintptr_t)(obj))
+
+#define AS_BOOL(v) ((v) == TRUE_VAL)
+#define AS_NUMBER(v) value_to_number(v)
+#define AS_OBJ(v) ((b_obj *)(uintptr_t)((v) & ~(SIGN_BIT | QNAN)))
+
+#define IS_EMPTY(v) ((v) == EMPTY_VAL)
+#define IS_NIL(v) ((v) == NIL_VAL)
+#define IS_BOOL(v) (((v) | 1) == TRUE_VAL)
+#define IS_NUMBER(v) (((v)&QNAN) != QNAN)
+#define IS_OBJ(v) (((v) & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT))
+
+static inline b_value number_to_value(double v) {
+  b_value value;
+  memcpy(&value, &v, sizeof(double));
+  return value;
+}
+
+static inline double value_to_number(b_value v) {
+  double number;
+  memcpy(&number, &v, sizeof(b_value));
+  return number;
+}
+
+#else
 
 typedef enum {
   VAL_NIL,
@@ -47,6 +93,13 @@ typedef struct {
 #define IS_NUMBER(v) ((v).type == VAL_NUMBER)
 #define IS_OBJ(v) ((v).type == VAL_OBJ)
 #define IS_EMPTY(v) ((v).type == VAL_EMPTY)
+
+#endif
+
+typedef union {
+  uint64_t bits;
+  double num;
+} b_double_union;
 
 typedef struct {
   int capacity;

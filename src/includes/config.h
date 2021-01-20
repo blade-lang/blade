@@ -23,4 +23,6 @@
 #define TABLE_MAX_LOAD 0.75
 #define GC_HEAP_GROWTH_FACTOR 2
 
+#define USE_NAN_BOXING 1
+
 #endif

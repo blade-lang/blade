@@ -30,6 +30,16 @@ void free_value_arr(b_vm *vm, b_value_arr *array) {
 }
 
 void print_value(b_value value) {
+#if defined(USE_NAN_BOXING) && USE_NAN_BOXING == 1
+  if (IS_NIL(value))
+    printf("nil");
+  else if (IS_BOOL(value))
+    printf(AS_BOOL(value) ? "true" : "false");
+  else if (IS_NUMBER(value))
+    printf(NUMBER_FORMAT, AS_NUMBER(value));
+  else
+    print_object(value);
+#else
   switch (value.type) {
   case VAL_NIL:
     printf("nil");
@@ -47,6 +57,7 @@ void print_value(b_value value) {
   default:
     break;
   }
+#endif
 }
 
 const char *value_type(b_value value) {
@@ -63,6 +74,11 @@ const char *value_type(b_value value) {
 }
 
 bool values_equal(b_value a, b_value b) {
+#if defined(USE_NAN_BOXING) && USE_NAN_BOXING == 1
+  if (IS_NUMBER(a) && IS_NUMBER(b))
+    return AS_NUMBER(a) == AS_NUMBER(b);
+  return a == b;
+#else
   if (a.type != b.type)
     return false;
 
@@ -79,6 +95,7 @@ bool values_equal(b_value a, b_value b) {
   default:
     return false;
   }
+#endif
 }
 
 static inline uint32_t hash_bits(uint64_t hash) {
@@ -136,11 +153,11 @@ static uint32_t hash_object(b_obj *object) {
 }
 
 uint32_t hash_value(b_value value) {
-  /* #ifdef NAN_BOXING
-    if (IS_OBJ(value))
-      return hash_object(AS_OBJ(value));
-    return hash_bits(value);
-  #else */
+#if defined(USE_NAN_BOXING) && USE_NAN_BOXING == 1
+  if (IS_OBJ(value))
+    return hash_object(AS_OBJ(value));
+  return hash_bits(value);
+#else
   switch (value.type) {
   case VAL_BOOL:
     return AS_BOOL(value) ? 3 : 5;
@@ -157,5 +174,5 @@ uint32_t hash_value(b_value value) {
   default: // VAL_EMPTY
     return 0;
   }
-  /* #endif */
+#endif
 }
