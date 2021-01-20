@@ -32,10 +32,10 @@ var _in = mid()
 _in()
 
 
-iter var i = 0; i < 10; i = i + 1 {
+iter var i = 0; i < 10; i++ {
   var start = time()
   var sum = 0
-  iter var j = 0; j < 1000000; j = j + 1 {
+  iter var j = 0; j < 1000000; j++ {
     def outer(a, b, c) {
       def inner() {
         return a + b + c
@@ -48,5 +48,5 @@ iter var i = 0; i < 10; i = i + 1 {
   }
 
   echo sum
-  echo time() - start;
+  echo time() - start
 }
