@@ -42,6 +42,7 @@ typedef enum {
   OP_XOR,
   OP_LSHIFT,
   OP_RSHIFT,
+  OP_ONE,
 
   OP_CONSTANT, // 8-bit constant address (0 - 255)
   OP_ECHO,
