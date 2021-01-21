@@ -14,3 +14,6 @@ echo list
 
 list += ['Value 1', 'Value 2']
 echo list
+
+list *= 3
+echo list
