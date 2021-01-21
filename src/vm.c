@@ -123,6 +123,19 @@ void free_vm(b_vm *vm) {
 }
 
 static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
+  // handle variadic arguments...
+  if (function->is_variadic && arg_count >= function->arity - 1) {
+    int va_args_start = arg_count - function->arity;
+    b_obj_list *args_list = new_list(vm);
+
+    for (int i = va_args_start; i >= 0; i--) {
+      write_value_arr(vm, &args_list->items, peek(vm, i));
+    }
+    arg_count -= va_args_start;
+    popn(vm, va_args_start + 1);
+    push(vm, OBJ_VAL(args_list));
+  }
+
   if (arg_count != function->arity) {
     _runtime_error(vm, "expected %d arguments but got %d", function->arity,
                    arg_count);

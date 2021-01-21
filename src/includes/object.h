@@ -74,6 +74,7 @@ typedef struct {
   b_obj obj;
   int arity;
   int upvalue_count;
+  bool is_variadic;
   b_blob blob;
   b_obj_string *name;
 } b_obj_func;
