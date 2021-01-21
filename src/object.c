@@ -29,6 +29,12 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   return object;
 }
 
+b_obj_list *new_list(b_vm *vm) {
+  b_obj_list *list = ALLOCATE_OBJ(b_obj_list, OBJ_LIST);
+  init_value_arr(&list->items);
+  return list;
+}
+
 b_obj_bound *new_bound_method(b_vm *vm, b_value receiver, b_obj *method) {
   b_obj_bound *bound = ALLOCATE_OBJ(b_obj_bound, OBJ_BOUND_METHOD);
   bound->receiver = receiver;
@@ -140,6 +146,19 @@ static void print_function(b_obj_func *function) {
 
 void print_object(b_value value) {
   switch (OBJ_TYPE(value)) {
+  case OBJ_LIST: {
+    printf("[");
+    b_obj_list *list = AS_LIST(value);
+    for (int i = 0; i < list->items.count; i++) {
+      print_value(list->items.values[i]);
+      if (i != list->items.count - 1) {
+        printf(", ");
+      }
+    }
+    printf("]");
+    break;
+  }
+
   case OBJ_BOUND_METHOD: {
     b_obj *method = AS_BOUND(value)->method;
     if (method->type == OBJ_CLOSURE) {
@@ -187,6 +206,9 @@ void print_object(b_value value) {
 
 const char *object_type(b_obj *object) {
   switch (object->type) {
+  case OBJ_LIST:
+    return "list";
+
   case OBJ_CLASS:
     return "class";
 
