@@ -1139,6 +1139,13 @@ static void function(b_parser *p, b_func_type type) {
                          MAX_FUNCTION_PARAMETERS);
       }
 
+      if (match(p, TRIDOT_TOKEN)) {
+        p->compiler->function->is_variadic = true;
+        add_local(p, synthetic_token("__args__"));
+        define_variable(p, 0);
+        break;
+      }
+
       int param_constant = parse_variable(p, "expected parameter name");
       define_variable(p, param_constant);
     } while (match(p, COMMA_TOKEN));
