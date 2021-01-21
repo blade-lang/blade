@@ -732,7 +732,9 @@ static void list(b_parser *p, bool can_assign) {
   int count = 0;
   if (!check(p, RBRACKET_TOKEN)) {
     do {
+      ignore_whitespace(p);
       expression(p);
+      ignore_whitespace(p);
       count++;
     } while (match(p, COMMA_TOKEN));
   }
