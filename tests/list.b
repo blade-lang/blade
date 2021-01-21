@@ -4,7 +4,7 @@ echo [1, 2, 3, 4, 5]
 var c = [1, 2] * 500000000
 echo time() - start */
 
-var list = [1, 'Richard', 3.5, false, 'A', nil]
+var list = [1, 'Ink', 3.5, false, 'A', nil]
 echo list
 
 echo list[1,3]
@@ -12,7 +12,10 @@ echo list[1,3]
 list[4] = 'Maggie'
 echo list
 
-list += ['Value 1', 'Value 2']
+list += [
+  'Apple', 
+  'Peach'
+]
 echo list
 
 list *= 3
