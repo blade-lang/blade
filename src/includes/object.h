@@ -36,9 +36,6 @@
 #define AS_CSTRING(v) (((b_obj_string *)AS_OBJ(v))->chars)
 
 typedef enum {
-  // containers
-  OBJ_LIST,
-
   // base object types
   OBJ_BOUND_METHOD,
   OBJ_CLASS,
@@ -48,6 +45,9 @@ typedef enum {
   OBJ_NATIVE,
   OBJ_STRING,
   OBJ_UPVALUE,
+
+  // containers
+  OBJ_LIST,
 } b_obj_type;
 
 struct s_obj {
