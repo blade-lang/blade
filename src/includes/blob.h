@@ -63,6 +63,8 @@ typedef enum {
   OP_SUPER_INVOKE,
 
   OP_LIST,
+  OP_GET_INDEX,
+  OP_SET_INDEX,
 
   // the break placeholder... it never gets to the vm
   // care should be taken to

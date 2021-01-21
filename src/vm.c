@@ -381,6 +381,95 @@ static b_obj_list *multiply_list(b_vm *vm, b_obj_list *a, b_obj_list *new_list,
   return new_list;
 }
 
+static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
+  b_value upper = peek(vm, 0);
+  b_value lower = peek(vm, 1);
+
+  if (IS_NIL(upper)) {
+    if (!IS_NUMBER(lower)) {
+      _runtime_error(vm, "list are numerically indexed");
+      return false;
+    }
+
+    pop(vm); // discard upper... we won't need it so gc can free it.
+    int index = AS_NUMBER(lower);
+    if (index < 0)
+      index = list->items.count + index;
+
+    if (index < list->items.count) {
+      if (!will_assign) {
+        pop(vm); // we can safely get rid of the index from the stack
+      }
+
+      push(vm, list->items.values[index]);
+      return true;
+    } else {
+      _runtime_error(vm, "lists index %d out of range", index);
+      return false;
+    }
+  } else {
+    if (!IS_NUMBER(lower) || !IS_NUMBER(upper)) {
+      _runtime_error(vm, "list are numerically indexed");
+      return false;
+    }
+
+    int lower_index = AS_NUMBER(lower);
+    int upper_index = AS_NUMBER(upper);
+
+    if (lower_index < 0 ||
+        (upper_index < 0 && ((list->items.count + upper_index) < 0))) {
+      // always return an empty list...
+      if (!will_assign) {
+        popn(vm, 3); // +1 for the list itself
+      }
+      push(vm, OBJ_VAL(new_list(vm)));
+      return true;
+    }
+
+    if (upper_index < 0)
+      upper_index = list->items.count + upper_index;
+
+    if (upper_index > list->items.count)
+      upper_index = list->items.count;
+
+    b_obj_list *n_list = new_list(vm);
+
+    for (int i = lower_index; i < upper_index; i++) {
+      write_value_arr(vm, &n_list->items, list->items.values[i]);
+    }
+
+    if (!will_assign) {
+      popn(vm, 3); // +1 for the list itself
+    }
+    push(vm, OBJ_VAL(n_list));
+    return true;
+  }
+}
+
+static bool list_set_index(b_vm *vm, b_obj_list *list, b_value index,
+                           b_value value) {
+  if (!IS_NUMBER(index)) {
+    _runtime_error(vm, "list are numerically indexed");
+    return false;
+  }
+
+  int _position = AS_NUMBER(index);
+  int position = _position < 0 ? list->items.count + _position : _position;
+
+  if (position < list->items.count && position > -(list->items.count)) {
+    list->items.values[position] = value;
+    popn(vm, 4); // pop the value, nil, index and list out
+
+    // leave the value on the stack for consumption
+    // e.g. variable = list[index] = 10
+    push(vm, value);
+    return true;
+  }
+
+  _runtime_error(vm, "lists index %d out of range", _position);
+  return false;
+}
+
 static bool concatenate(b_vm *vm) {
   b_value _b = peek(vm, 0);
   b_value _a = peek(vm, 1);
@@ -517,8 +606,8 @@ b_ptr_result run(b_vm *vm) {
     }
     printf("\n");
     disassemble_instruction(
-        frame->closure->function->blob,
-        (int)(frame->ip - frame->closure->function->blob.code));
+        &get_frame_function(frame)->blob,
+        (int)(frame->ip - get_frame_function(frame)->blob.code));
 #endif
 #endif
 
@@ -878,6 +967,35 @@ b_ptr_result run(b_vm *vm) {
       }
       popn(vm, count);
       push(vm, OBJ_VAL(list));
+      break;
+    }
+    case OP_GET_INDEX: {
+      int will_assign = READ_BYTE();
+
+      if (!IS_LIST(peek(vm, 2))) {
+        runtime_error("only iterables have indices");
+      }
+      if (IS_LIST(peek(vm, 2))) {
+        if (!list_get_index(vm, AS_LIST(peek(vm, 2)),
+                            will_assign == 1 ? true : false)) {
+          return PTR_RUNTIME_ERR;
+        }
+      }
+      break;
+    }
+    case OP_SET_INDEX: {
+      if (!IS_LIST(peek(vm, 3))) {
+        runtime_error("only iterables have indices");
+      }
+
+      b_value value = peek(vm, 0);
+      b_value index = peek(vm, 2); // since peek 1 will be nil
+
+      if (IS_LIST(peek(vm, 3))) {
+        if (!list_set_index(vm, AS_LIST(peek(vm, 3)), index, value)) {
+          return PTR_RUNTIME_ERR;
+        }
+      }
       break;
     }
 
