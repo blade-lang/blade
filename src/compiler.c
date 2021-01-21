@@ -154,9 +154,11 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_RSHIFT:
   case OP_BIT_NOT:
   case OP_ONE:
+  case OP_SET_INDEX:
     return 0;
 
   case OP_CALL:
+  case OP_GET_INDEX:
     return 1;
 
   case OP_DEFINE_GLOBAL:
@@ -624,44 +626,57 @@ static void literal(b_parser *p, bool can_assign) {
 
 static void parse_assignment(b_parser *p, uint8_t real_op, uint8_t get_op,
                              uint8_t set_op, int arg) {
-  emit_byte_and_short(p, get_op, arg);
+  if (arg != -1) {
+    emit_byte_and_short(p, get_op, arg);
+  } else {
+    emit_bytes(p, get_op, 1);
+  }
+
   expression(p);
   emit_byte(p, real_op);
-  emit_byte_and_short(p, set_op, (uint16_t)arg);
+  if (arg != -1) {
+    emit_byte_and_short(p, set_op, (uint16_t)arg);
+  } else {
+    emit_byte(p, set_op);
+  }
 }
 
 static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg,
                        bool can_assign) {
-  if (can_assign && match(p, EQUAL_TOKEN)) {
+  if (can_assign && arg > -2 && match(p, EQUAL_TOKEN)) {
     expression(p);
-    emit_byte_and_short(p, set_op, (uint16_t)arg);
-  } else if (can_assign && match(p, PLUS_EQ_TOKEN)) {
+    if (arg != -1) {
+      emit_byte_and_short(p, set_op, (uint16_t)arg);
+    } else {
+      emit_byte(p, set_op);
+    }
+  } else if (can_assign && arg > -2 && match(p, PLUS_EQ_TOKEN)) {
     parse_assignment(p, OP_ADD, get_op, set_op, arg);
-  } else if (can_assign && match(p, MINUS_EQ_TOKEN)) {
+  } else if (can_assign && arg > -2 && match(p, MINUS_EQ_TOKEN)) {
     parse_assignment(p, OP_SUBTRACT, get_op, set_op, arg);
-  } else if (can_assign && match(p, MULTIPLY_EQ_TOKEN)) {
+  } else if (can_assign && arg > -2 && match(p, MULTIPLY_EQ_TOKEN)) {
     parse_assignment(p, OP_MULTIPLY, get_op, set_op, arg);
-  } else if (can_assign && match(p, DIVIDE_EQ_TOKEN)) {
+  } else if (can_assign && arg > -2 && match(p, DIVIDE_EQ_TOKEN)) {
     parse_assignment(p, OP_DIVIDE, get_op, set_op, arg);
-  } else if (can_assign && match(p, POW_EQ_TOKEN)) {
+  } else if (can_assign && arg > -2 && match(p, POW_EQ_TOKEN)) {
     parse_assignment(p, OP_POW, get_op, set_op, arg);
-  } else if (can_assign && match(p, PERCENT_EQ_TOKEN)) {
+  } else if (can_assign && arg > -2 && match(p, PERCENT_EQ_TOKEN)) {
     parse_assignment(p, OP_REMINDER, get_op, set_op, arg);
-  } else if (can_assign && match(p, FLOOR_EQ_TOKEN)) {
+  } else if (can_assign && arg > -2 && match(p, FLOOR_EQ_TOKEN)) {
     parse_assignment(p, OP_FDIVIDE, get_op, set_op, arg);
-  } else if (can_assign && match(p, AMP_EQ_TOKEN)) {
+  } else if (can_assign && arg > -2 && match(p, AMP_EQ_TOKEN)) {
     parse_assignment(p, OP_AND, get_op, set_op, arg);
-  } else if (can_assign && match(p, BAR_EQ_TOKEN)) {
+  } else if (can_assign && arg > -2 && match(p, BAR_EQ_TOKEN)) {
     parse_assignment(p, OP_OR, get_op, set_op, arg);
-  } else if (can_assign && match(p, TILDE_EQ_TOKEN)) {
+  } else if (can_assign && arg > -2 && match(p, TILDE_EQ_TOKEN)) {
     parse_assignment(p, OP_BIT_NOT, get_op, set_op, arg);
-  } else if (can_assign && match(p, XOR_EQ_TOKEN)) {
+  } else if (can_assign && arg > -2 && match(p, XOR_EQ_TOKEN)) {
     parse_assignment(p, OP_XOR, get_op, set_op, arg);
-  } else if (can_assign && match(p, LSHIFT_EQ_TOKEN)) {
+  } else if (can_assign && arg > -2 && match(p, LSHIFT_EQ_TOKEN)) {
     parse_assignment(p, OP_LSHIFT, get_op, set_op, arg);
-  } else if (can_assign && match(p, RSHIFT_EQ_TOKEN)) {
+  } else if (can_assign && arg > -2 && match(p, RSHIFT_EQ_TOKEN)) {
     parse_assignment(p, OP_RSHIFT, get_op, set_op, arg);
-  } else if (can_assign && match(p, INCREMENT_TOKEN)) {
+  } else if (can_assign && arg > -2 && match(p, INCREMENT_TOKEN)) {
     // consume_statement_end(p);
 
     emit_byte_and_short(p, get_op, arg);
@@ -674,7 +689,11 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg,
     emit_bytes(p, OP_ONE, OP_SUBTRACT);
     emit_byte_and_short(p, set_op, (uint16_t)arg);
   } else {
-    emit_byte_and_short(p, get_op, (uint16_t)arg);
+    if (arg != -1) {
+      emit_byte_and_short(p, get_op, (uint16_t)arg);
+    } else {
+      emit_bytes(p, get_op, 0);
+    }
   }
 }
 
@@ -720,6 +739,23 @@ static void list(b_parser *p, bool can_assign) {
   consume(p, RBRACKET_TOKEN, "expected ']' at end of list");
 
   emit_byte_and_short(p, OP_LIST, count);
+}
+
+static void indexing(b_parser *p, bool can_assign) {
+  expression(p);
+  bool assignable = true;
+
+  if (!check(p, RBRACKET_TOKEN)) {
+    consume(p, COMMA_TOKEN, "expecting ',' or ']'");
+    expression(p);
+    assignable = false;
+  } else {
+    emit_byte(p, OP_NIL);
+  }
+
+  consume(p, RBRACKET_TOKEN, "expected ']' at end of index");
+
+  assignment(p, OP_GET_INDEX, OP_SET_INDEX, assignable ? -1 : -2, can_assign);
 }
 
 static void variable(b_parser *p, bool can_assign) {
@@ -953,7 +989,7 @@ b_parse_rule parse_rules[] = {
     [NEWLINE_TOKEN] = {NULL, NULL, PREC_NONE},            // (
     [LPAREN_TOKEN] = {grouping, call, PREC_CALL},         // (
     [RPAREN_TOKEN] = {NULL, NULL, PREC_NONE},             // )
-    [LBRACKET_TOKEN] = {list, NULL, PREC_NONE},           // [
+    [LBRACKET_TOKEN] = {list, indexing, PREC_CALL},       // [
     [RBRACKET_TOKEN] = {NULL, NULL, PREC_NONE},           // ]
     [LBRACE_TOKEN] = {NULL, NULL, PREC_NONE},             // {
     [RBRACE_TOKEN] = {NULL, NULL, PREC_NONE},             // }
