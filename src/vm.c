@@ -356,13 +356,38 @@ static b_obj_string *multiply_string(b_vm *vm, b_obj_string *str,
   return take_string(vm, result, total_length);
 }
 
+static b_obj_list *add_list(b_vm *vm, b_obj_list *a, b_obj_list *b) {
+  b_obj_list *list = new_list(vm);
+
+  for (int i = 0; i < a->items.count; i++) {
+    write_value_arr(vm, &list->items, a->items.values[i]);
+  }
+
+  for (int i = 0; i < b->items.count; i++) {
+    write_value_arr(vm, &list->items, b->items.values[i]);
+  }
+
+  return list;
+}
+
+static b_obj_list *multiply_list(b_vm *vm, b_obj_list *a, int times) {
+  b_obj_list *list = new_list(vm);
+
+  for (int i = 0; i < times; i++) {
+    for (int j = 0; j < a->items.count; j++) {
+      write_value_arr(vm, &list->items, a->items.values[j]);
+    }
+  }
+
+  return list;
+}
+
 static bool concatenate(b_vm *vm) {
   b_value _b = peek(vm, 0);
   b_value _a = peek(vm, 1);
 
   if (IS_NIL(_a)) {
-    pop(vm);
-    pop(vm);
+    popn(vm, 2);
     push(vm, _b);
   } else if (IS_NIL(_b)) {
     pop(vm);
@@ -382,8 +407,7 @@ static bool concatenate(b_vm *vm) {
     chars[length] = '\0';
 
     b_obj_string *result = take_string(vm, chars, length);
-    pop(vm);
-    pop(vm);
+    popn(vm, 2);
     push(vm, OBJ_VAL(result));
   } else if (IS_NUMBER(_b)) {
     b_obj_string *a = AS_STRING(_a);
@@ -400,8 +424,7 @@ static bool concatenate(b_vm *vm) {
     chars[length] = '\0';
 
     b_obj_string *result = take_string(vm, chars, length);
-    pop(vm);
-    pop(vm);
+    popn(vm, 2);
     push(vm, OBJ_VAL(result));
   } else if (IS_STRING(_a) && IS_STRING(_b)) {
     b_obj_string *b = AS_STRING(_b);
@@ -415,8 +438,7 @@ static bool concatenate(b_vm *vm) {
 
     b_obj_string *result = take_string(vm, chars, length);
 
-    pop(vm);
-    pop(vm);
+    popn(vm, 2);
     push(vm, OBJ_VAL(result));
   } else {
     return false;
@@ -517,6 +539,11 @@ b_ptr_result run(b_vm *vm) {
           runtime_error("unsupported operand + for %s and %s",
                         value_type(peek(vm, 0)), value_type(peek(vm, 1)));
         }
+      } else if (IS_LIST(peek(vm, 0)) && IS_LIST(peek(vm, 1))) {
+        b_value result =
+            OBJ_VAL(add_list(vm, AS_LIST(peek(vm, 1)), AS_LIST(peek(vm, 0))));
+        popn(vm, 2);
+        push(vm, result);
       } else {
         BINARY_OP(NUMBER_VAL, +);
       }
@@ -528,9 +555,18 @@ b_ptr_result run(b_vm *vm) {
     }
     case OP_MULTIPLY: {
       if (IS_STRING(peek(vm, 1)) && IS_NUMBER(peek(vm, 0))) {
-        double number = AS_NUMBER(pop(vm));
-        b_obj_string *string = AS_STRING(pop(vm));
-        push(vm, OBJ_VAL(multiply_string(vm, string, number)));
+        double number = AS_NUMBER(peek(vm, 0));
+        b_obj_string *string = AS_STRING(peek(vm, 1));
+        b_value result = OBJ_VAL(multiply_string(vm, string, number));
+        popn(vm, 2);
+        push(vm, result);
+        break;
+      } else if (IS_LIST(peek(vm, 1)) && IS_NUMBER(peek(vm, 0))) {
+        int number = (int)AS_NUMBER(peek(vm, 0));
+        b_obj_list *list = AS_LIST(peek(vm, 1));
+        b_value result = OBJ_VAL(multiply_list(vm, list, number));
+        popn(vm, 2);
+        push(vm, result);
         break;
       }
       BINARY_OP(NUMBER_VAL, *);
@@ -830,6 +866,17 @@ b_ptr_result run(b_vm *vm) {
         return PTR_RUNTIME_ERR;
       }
       frame = &vm->frames[vm->frame_count - 1];
+      break;
+    }
+
+    case OP_LIST: {
+      int count = READ_SHORT();
+      b_obj_list *list = new_list(vm);
+      for (int i = count - 1; i >= 0; i--) {
+        write_value_arr(vm, &list->items, peek(vm, i));
+      }
+      popn(vm, count);
+      push(vm, OBJ_VAL(list));
       break;
     }
 

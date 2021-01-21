@@ -177,6 +177,7 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_SET_PROPERTY:
   case OP_CLASS_PROPERTY:
   case OP_METHOD:
+  case OP_LIST:
     return 2;
 
   case OP_INVOKE:
@@ -708,6 +709,19 @@ static void named_variable(b_parser *p, b_token name, bool can_assign) {
   assignment(p, get_op, set_op, arg, can_assign);
 }
 
+static void list(b_parser *p, bool can_assign) {
+  int count = 0;
+  if (!check(p, RBRACKET_TOKEN)) {
+    do {
+      expression(p);
+      count++;
+    } while (match(p, COMMA_TOKEN));
+  }
+  consume(p, RBRACKET_TOKEN, "expected ']' at end of list");
+
+  emit_byte_and_short(p, OP_LIST, count);
+}
+
 static void variable(b_parser *p, bool can_assign) {
   named_variable(p, p->previous, can_assign);
 }
@@ -939,7 +953,7 @@ b_parse_rule parse_rules[] = {
     [NEWLINE_TOKEN] = {NULL, NULL, PREC_NONE},            // (
     [LPAREN_TOKEN] = {grouping, call, PREC_CALL},         // (
     [RPAREN_TOKEN] = {NULL, NULL, PREC_NONE},             // )
-    [LBRACKET_TOKEN] = {NULL, NULL, PREC_NONE},           // [
+    [LBRACKET_TOKEN] = {list, NULL, PREC_NONE},           // [
     [RBRACKET_TOKEN] = {NULL, NULL, PREC_NONE},           // ]
     [LBRACE_TOKEN] = {NULL, NULL, PREC_NONE},             // {
     [RBRACE_TOKEN] = {NULL, NULL, PREC_NONE},             // }

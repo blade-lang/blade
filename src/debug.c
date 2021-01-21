@@ -156,6 +156,10 @@ int disassemble_instruction(b_blob *blob, int offset) {
   case OP_POPN:
     return short_instruction("popn", blob, offset);
 
+    // data container manipulators
+  case OP_LIST:
+    return short_instruction("list", blob, offset);
+
   case OP_CLOSURE: {
     offset++;
     uint16_t constant = blob->code[offset++] << 8;
