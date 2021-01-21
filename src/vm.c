@@ -370,16 +370,15 @@ static b_obj_list *add_list(b_vm *vm, b_obj_list *a, b_obj_list *b) {
   return list;
 }
 
-static b_obj_list *multiply_list(b_vm *vm, b_obj_list *a, int times) {
-  b_obj_list *list = new_list(vm);
-
+static b_obj_list *multiply_list(b_vm *vm, b_obj_list *a, b_obj_list *new_list,
+                                 int times) {
   for (int i = 0; i < times; i++) {
     for (int j = 0; j < a->items.count; j++) {
-      write_value_arr(vm, &list->items, a->items.values[j]);
+      write_value_arr(vm, &new_list->items, a->items.values[j]);
     }
   }
 
-  return list;
+  return new_list;
 }
 
 static bool concatenate(b_vm *vm) {
@@ -562,9 +561,11 @@ b_ptr_result run(b_vm *vm) {
         push(vm, result);
         break;
       } else if (IS_LIST(peek(vm, 1)) && IS_NUMBER(peek(vm, 0))) {
-        int number = (int)AS_NUMBER(peek(vm, 0));
-        b_obj_list *list = AS_LIST(peek(vm, 1));
-        b_value result = OBJ_VAL(multiply_list(vm, list, number));
+        int number = (int)AS_NUMBER(pop(vm));
+        b_obj_list *list = AS_LIST(peek(vm, 0));
+        b_obj_list *n_list = new_list(vm);
+        push(vm, OBJ_VAL(n_list));
+        b_value result = OBJ_VAL(multiply_list(vm, list, n_list, number));
         popn(vm, 2);
         push(vm, result);
         break;
