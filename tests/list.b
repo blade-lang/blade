@@ -11,3 +11,6 @@ echo list[1,3]
 
 list[4] = 'Maggie'
 echo list
+
+list += ['Value 1', 'Value 2']
+echo list
