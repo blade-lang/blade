@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "config.h"
@@ -53,6 +54,39 @@ void print_value(b_value value) {
   case VAL_OBJ:
     print_object(value);
     break;
+
+  default:
+    break;
+  }
+#endif
+}
+
+static inline char *number_to_string(double number) {
+  char *num_str = (char *)calloc(1, sizeof(char *));
+  sprintf(num_str, NUMBER_FORMAT, number);
+  return num_str;
+}
+
+char *value_to_string(b_vm *vm, b_value value) {
+#if defined(USE_NAN_BOXING) && USE_NAN_BOXING == 1
+  if (IS_NIL(value))
+    return "nil";
+  else if (IS_BOOL(value))
+    return AS_BOOL(value) ? "true" : "false";
+  else if (IS_NUMBER(value))
+    return number_to_string(AS_NUMBER(value));
+  else
+    return object_to_string(vm, value);
+#else
+  switch (value.type) {
+  case VAL_NIL:
+    return "nil";
+  case VAL_BOOL:
+    return AS_BOOL(value) ? "true" : "false";
+  case VAL_NUMBER:
+    return number_to_string(AS_NUMBER(value));
+  case VAL_OBJ:
+    return object_to_string(vm, value);
 
   default:
     break;

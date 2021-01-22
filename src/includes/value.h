@@ -24,9 +24,9 @@ typedef union {
 #define SIGN_BIT ((uint64_t)0x8000000000000000)
 
 #define EMPTY_TAG 0 // 00
-#define NIL_TAG 1   // 01
+#define NIL_TAG 1 // 01
 #define FALSE_TAG 2 // 10
-#define TRUE_TAG 3  // 11
+#define TRUE_TAG 3 // 11
 
 typedef uint64_t b_value;
 
@@ -121,6 +121,7 @@ void write_value_arr(b_vm *vm, b_value_arr *array, b_value value);
 void print_value(b_value value);
 const char *value_type(b_value value);
 bool values_equal(b_value a, b_value b);
+char *value_to_string(b_vm *vm, b_value value);
 
 // hash
 uint32_t hash_string(const char *key, int length);

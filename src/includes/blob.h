@@ -63,6 +63,7 @@ typedef enum {
   OP_SUPER_INVOKE,
 
   OP_LIST,
+  OP_DICT,
   OP_GET_INDEX,
   OP_SET_INDEX,
 

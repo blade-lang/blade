@@ -180,6 +180,7 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_CLASS_PROPERTY:
   case OP_METHOD:
   case OP_LIST:
+  case OP_DICT:
     return 2;
 
   case OP_INVOKE:
@@ -439,15 +440,14 @@ static b_obj_func *end_compiler(b_parser *p) {
   emit_return(p);
   b_obj_func *function = p->compiler->function;
 
-#ifdef DEBUG_PRINT_CODE
-#if DEBUG_PRINT_CODE == 1
+#if defined(DEBUG_PRINT_CODE) && DEBUG_PRINT_CODE == 1
   if (!p->had_error) {
     disassemble_blob(current_blob(p), function->name == NULL
                                           ? "<script>"
                                           : function->name->chars);
   }
 #endif
-#endif
+
   p->compiler = p->compiler->enclosing;
   return function;
 }
@@ -738,9 +738,40 @@ static void list(b_parser *p, bool can_assign) {
       count++;
     } while (match(p, COMMA_TOKEN));
   }
+  ignore_whitespace(p);
   consume(p, RBRACKET_TOKEN, "expected ']' at end of list");
 
   emit_byte_and_short(p, OP_LIST, count);
+}
+
+static void dictionary(b_parser *p, bool can_assign) {
+  int item_count = 0;
+  if (!check(p, RBRACE_TOKEN)) {
+    do {
+      ignore_whitespace(p);
+
+      if (!check(p, RBRACE_TOKEN)) { // allow last pair to end with a comma
+        if (check(p, IDENTIFIER_TOKEN)) {
+          consume(p, IDENTIFIER_TOKEN, "");
+          emit_constant(p, OBJ_VAL(copy_string(p->vm, p->previous.start,
+                                               p->previous.length)));
+        } else {
+          expression(p);
+        }
+
+        ignore_whitespace(p);
+        consume(p, COLON_TOKEN, "expected ':' after dictionary key");
+        ignore_whitespace(p);
+
+        expression(p);
+        item_count++;
+      }
+    } while (match(p, COMMA_TOKEN));
+  }
+  ignore_whitespace(p);
+  consume(p, RBRACE_TOKEN, "expected '}' after dictionary");
+
+  emit_byte_and_short(p, OP_DICT, item_count);
 }
 
 static void indexing(b_parser *p, bool can_assign) {
@@ -993,7 +1024,7 @@ b_parse_rule parse_rules[] = {
     [RPAREN_TOKEN] = {NULL, NULL, PREC_NONE},             // )
     [LBRACKET_TOKEN] = {list, indexing, PREC_CALL},       // [
     [RBRACKET_TOKEN] = {NULL, NULL, PREC_NONE},           // ]
-    [LBRACE_TOKEN] = {NULL, NULL, PREC_NONE},             // {
+    [LBRACE_TOKEN] = {dictionary, NULL, PREC_NONE},       // {
     [RBRACE_TOKEN] = {NULL, NULL, PREC_NONE},             // }
     [SEMICOLON_TOKEN] = {NULL, NULL, PREC_NONE},          // ;
     [COMMA_TOKEN] = {NULL, NULL, PREC_NONE},              // ,
