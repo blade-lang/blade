@@ -6,22 +6,18 @@
 #include "memory.h"
 #include "object.h"
 
-#if DEBUG_MODE == 1
-#if DEBUG_LOG_GC == 1
+#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC == 1
 #include "debug.h"
 #include <stdio.h>
-#endif
 #endif
 
 void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
   vm->bytes_allocated += new_size - old_size;
 
   if (new_size > old_size) {
-#if DEBUG_MODE == 1
-#if DEBUG_STRESS_GC == 1
+#if defined(DEBUG_STRESS_GC) && DEBUG_STRESS_GC == 1
     // @TODO: fix bug associated with enabling stressed gc
     // collect_garbage(vm);
-#endif
 #endif
 
     if (vm->bytes_allocated > vm->next_gc) {
@@ -47,12 +43,10 @@ void mark_object(b_vm *vm, b_obj *object) {
   if (object == NULL || object->is_marked)
     return;
 
-#if DEBUG_MODE == 1
-#if DEBUG_LOG_GC == 1
+#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC == 1
   printf("%p mark ", (void *)object);
   print_object(OBJ_VAL(object));
   printf("\n");
-#endif
 #endif
 
   object->is_marked = true;
@@ -78,15 +72,19 @@ static void mark_array(b_vm *vm, b_value_arr *array) {
 }
 
 static void blacken_object(b_vm *vm, b_obj *object) {
-#if DEBUG_MODE == 1
-#if DEBUG_LOG_GC == 1
+#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC == 1
   printf("%p blacken ", (void *)object);
   print_object(OBJ_VAL(object));
   printf("\n");
 #endif
-#endif
 
   switch (object->type) {
+  case OBJ_DICT: {
+    b_obj_dict *dict = (b_obj_dict *)object;
+    mark_array(vm, &dict->names);
+    mark_table(vm, &dict->items);
+    break;
+  }
   case OBJ_LIST: {
     b_obj_list *list = (b_obj_list *)object;
     mark_array(vm, &list->items);
@@ -140,13 +138,18 @@ static void blacken_object(b_vm *vm, b_obj *object) {
 }
 
 static void free_object(b_vm *vm, b_obj *object) {
-#if DEBUG_MODE == 1
-#if DEBUG_LOG_GC == 1
+#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC == 1
   printf("%p free type %d\n", (void *)object, object->type);
-#endif
 #endif
 
   switch (object->type) {
+  case OBJ_DICT: {
+    b_obj_dict *dict = (b_obj_dict *)object;
+    free_value_arr(vm, &dict->names);
+    free_table(vm, &dict->items);
+    FREE(b_obj_list, object);
+    break;
+  }
   case OBJ_LIST: {
     b_obj_list *list = (b_obj_list *)object;
     free_value_arr(vm, &list->items);
@@ -265,11 +268,9 @@ void free_objects(b_vm *vm) {
 }
 
 void collect_garbage(b_vm *vm) {
-#if DEBUG_MODE == 1
-#if DEBUG_LOG_GC == 1
+#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC == 1
   printf("-- gc begins\n");
   size_t before = vm->bytes_allocated;
-#endif
 #endif
 
   mark_roots(vm);
@@ -279,12 +280,10 @@ void collect_garbage(b_vm *vm) {
 
   vm->next_gc = vm->bytes_allocated * GC_HEAP_GROWTH_FACTOR;
 
-#if DEBUG_MODE == 1
-#if DEBUG_LOG_GC == 1
+#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC == 1
   printf("-- gc ends\n");
   printf("   collected %ld bytes (from %ld to %ld), next at %ld\n",
          before - vm->bytes_allocated, before, vm->bytes_allocated,
          vm->next_gc);
-#endif
 #endif
 }

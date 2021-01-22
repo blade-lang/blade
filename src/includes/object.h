@@ -19,6 +19,7 @@
 
 // containers
 #define IS_LIST(v) is_obj_type(v, OBJ_LIST)
+#define IS_DICT(v) is_obj_type(v, OBJ_DICT)
 
 // promote b_value to object
 #define AS_STRING(v) ((b_obj_string *)AS_OBJ(v))
@@ -31,6 +32,7 @@
 
 // containers
 #define AS_LIST(v) ((b_obj_list *)AS_OBJ(v))
+#define AS_DICT(v) ((b_obj_dict *)AS_OBJ(v))
 
 // demote bird value to c string
 #define AS_CSTRING(v) (((b_obj_string *)AS_OBJ(v))->chars)
@@ -48,6 +50,7 @@ typedef enum {
 
   // containers
   OBJ_LIST,
+  OBJ_DICT,
 } b_obj_type;
 
 struct s_obj {
@@ -119,8 +122,15 @@ typedef struct {
   b_value_arr items;
 } b_obj_list;
 
+typedef struct {
+  b_obj obj;
+  b_value_arr names;
+  b_table items;
+} b_obj_dict;
+
 // data containers
 b_obj_list *new_list(b_vm *vm);
+b_obj_dict *new_dict(b_vm *vm);
 
 // base objects
 b_obj_bound *new_bound_method(b_vm *vm, b_value receiver, b_obj *method);
@@ -134,6 +144,7 @@ b_obj_string *copy_string(b_vm *vm, const char *chars, int length);
 b_obj_string *take_string(b_vm *vm, char *chars, int length);
 void print_object(b_value value);
 const char *object_type(b_obj *object);
+char *object_to_string(b_vm *vm, b_value value);
 
 static inline bool is_obj_type(b_value v, b_obj_type t) {
   return IS_OBJ(v) && AS_OBJ(v)->type == t;

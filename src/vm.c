@@ -334,13 +334,13 @@ static bool is_falsey(b_value value) {
   if (IS_STRING(value))
     return strlen(AS_STRING(value)->chars) < 1;
 
-  /* // Non-empty lists are true, empty lists are false.
+  // Non-empty lists are true, empty lists are false.
   if (IS_LIST(value))
-    return AS_LIST(value)->values.count == 0;
+    return AS_LIST(value)->items.count == 0;
 
   // Non-empty dicts are true, empty dicts are false.
   if (IS_DICT(value))
-    return AS_DICT(value)->names.count == 0; */
+    return AS_DICT(value)->names.count == 0;
 
   // All classes are true
   // All closures are true
@@ -348,6 +348,48 @@ static bool is_falsey(b_value value) {
   // All functions are in themselves true if you do not account for what they
   // return.
   return false;
+}
+
+void dict_add_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value) {
+  write_value_arr(vm, &dict->names, key);
+  table_set(vm, &dict->items, key, value);
+}
+
+bool dict_get_entry(b_obj_dict *dict, b_value key, b_value *value) {
+  /* // this will be easier to search than the entire tables
+  // if the key doesn't exist.
+  if (dict->names.count < (int)sizeof(uint8_t)) {
+    int i;
+    bool found = false;
+    for (i = 0; i < dict->names.count; i++) {
+      if (values_equal(dict->names.values[i], key)) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found)
+      return false;
+  } */
+  return table_get(&dict->items, key, value);
+}
+
+bool dict_set_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value) {
+  b_value temp_value;
+#if defined(USE_NAN_BOXING) && USE_NAN_BOXING == 1
+  bool found = false;
+  for (int i = 0; i < dict->names.count; i++) {
+    if (values_equal(dict->names.values[i], key))
+      found = true;
+  }
+  if (!found)
+    write_value_arr(vm, &dict->names, key); // add key if it doesn't exist.
+#else
+  if (!table_get(&dict->items, key, &temp_value)) {
+    write_value_arr(vm, &dict->names, key); // add key if it doesn't exist.
+  }
+#endif
+  return table_set(vm, &dict->items, key, value);
 }
 
 static b_obj_string *multiply_string(b_vm *vm, b_obj_string *str,
@@ -392,6 +434,23 @@ static b_obj_list *multiply_list(b_vm *vm, b_obj_list *a, b_obj_list *new_list,
   }
 
   return new_list;
+}
+
+static bool dict_get_index(b_vm *vm, b_obj_dict *dict, bool will_assign) {
+  pop(vm); // discard upper... we won't need it so gc can free it.
+  b_value index = peek(vm, 0);
+
+  b_value result;
+  if (dict_get_entry(dict, index, &result)) {
+    if (!will_assign) {
+      pop(vm); // we can safely get rid of the index from the stack
+    }
+    push(vm, result);
+    return true;
+  }
+
+  _runtime_error(vm, "invalid index %s", value_to_string(vm, index));
+  return false;
 }
 
 static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
@@ -459,6 +518,16 @@ static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
   }
 }
 
+static void dict_set_index(b_vm *vm, b_obj_dict *dict, b_value index,
+                           b_value value) {
+  dict_set_entry(vm, dict, index, value);
+  popn(vm, 4); // pop the value, nil, index and dict out
+
+  // leave the value on the stack for consumption
+  // e.g. variable = dict[index] = 10
+  push(vm, value);
+}
+
 static bool list_set_index(b_vm *vm, b_obj_list *list, b_value index,
                            b_value value) {
   if (!IS_NUMBER(index)) {
@@ -495,7 +564,7 @@ static bool concatenate(b_vm *vm) {
   } else if (IS_NUMBER(_a)) {
     double a = AS_NUMBER(_a);
 
-    char num_str[200];
+    char num_str[27]; // + 1 for null terminator
     sprintf(num_str, NUMBER_FORMAT, a);
     int num_length = strlen(num_str);
 
@@ -514,7 +583,7 @@ static bool concatenate(b_vm *vm) {
     b_obj_string *a = AS_STRING(_a);
     double b = AS_NUMBER(_b);
 
-    char num_str[200];
+    char num_str[27]; // + 1 for null terminator
     sprintf(num_str, NUMBER_FORMAT, b);
     int num_length = strlen(num_str);
 
@@ -609,8 +678,7 @@ b_ptr_result run(b_vm *vm) {
 
   for (;;) {
 
-#if DEBUG_MODE == 1
-#if DEBUG_TRACE_EXECUTION == 1
+#if defined(DEBUG_TRACE_EXECUTION) && DEBUG_TRACE_EXECUTION == 1
     printf("          ");
     for (b_value *slot = vm->stack; slot < vm->stack_top; slot++) {
       printf("[ ");
@@ -621,7 +689,6 @@ b_ptr_result run(b_vm *vm) {
     disassemble_instruction(
         &get_frame_function(frame)->blob,
         (int)(frame->ip - get_frame_function(frame)->blob.code));
-#endif
 #endif
 
     uint8_t instruction;
@@ -808,10 +875,8 @@ b_ptr_result run(b_vm *vm) {
       table_set(vm, &vm->globals, OBJ_VAL(name), peek(vm, 0));
       pop(vm);
 
-#if DEBUG_MODE == 1
-#if DEBUG_TABLE == 1
+#if defined(DEBUG_TABLE) && DEBUG_TABLE == 1
       table_print(&vm->globals);
-#endif
 #endif
       break;
     }
@@ -982,22 +1047,43 @@ b_ptr_result run(b_vm *vm) {
       push(vm, OBJ_VAL(list));
       break;
     }
+    case OP_DICT: {
+      int count = READ_SHORT() * 2; // 1 for key, 1 for value
+      b_obj_dict *dict = new_dict(vm);
+      for (int i = 0; i < count; i += 2) {
+        b_value name = vm->stack_top[-count + i];
+        b_value value = vm->stack_top[-count + i + 1];
+        dict_add_entry(vm, dict, name, value);
+      }
+      popn(vm, count);
+      push(vm, OBJ_VAL(dict));
+      break;
+    }
     case OP_GET_INDEX: {
       int will_assign = READ_BYTE();
 
-      if (!IS_LIST(peek(vm, 2))) {
+      if (!IS_LIST(peek(vm, 2)) && !IS_DICT(peek(vm, 2))) {
         runtime_error("only iterables have indices");
       }
+
       if (IS_LIST(peek(vm, 2))) {
         if (!list_get_index(vm, AS_LIST(peek(vm, 2)),
                             will_assign == 1 ? true : false)) {
           return PTR_RUNTIME_ERR;
         }
+      } else if (IS_DICT(peek(vm, 2)) && IS_NIL(peek(vm, 0))) {
+        if (!dict_get_index(vm, AS_DICT(peek(vm, 2)),
+                            will_assign == 1 ? true : false)) {
+          return PTR_RUNTIME_ERR;
+        } else {
+          break;
+        }
       }
-      break;
+
+      runtime_error("invalid index");
     }
     case OP_SET_INDEX: {
-      if (!IS_LIST(peek(vm, 3))) {
+      if (!IS_LIST(peek(vm, 3)) && !IS_DICT(peek(vm, 3))) {
         runtime_error("only iterables have indices");
       }
 
@@ -1008,6 +1094,9 @@ b_ptr_result run(b_vm *vm) {
         if (!list_set_index(vm, AS_LIST(peek(vm, 3)), index, value)) {
           return PTR_RUNTIME_ERR;
         }
+      } else if (IS_DICT(peek(vm, 3))) {
+        dict_set_index(vm, AS_DICT(peek(vm, 3)), index, value);
+        break;
       }
       break;
     }

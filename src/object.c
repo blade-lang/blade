@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "config.h"
@@ -20,10 +21,8 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   object->next = vm->objects;
   vm->objects = object;
 
-#if DEBUG_MODE == 1
-#if DEBUG_LOG_GC == 1
+#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC == 1
   printf("%p allocate %ld for %d\n", (void *)object, size, type);
-#endif
 #endif
 
   return object;
@@ -33,6 +32,13 @@ b_obj_list *new_list(b_vm *vm) {
   b_obj_list *list = ALLOCATE_OBJ(b_obj_list, OBJ_LIST);
   init_value_arr(&list->items);
   return list;
+}
+
+b_obj_dict *new_dict(b_vm *vm) {
+  b_obj_dict *dict = ALLOCATE_OBJ(b_obj_dict, OBJ_DICT);
+  init_value_arr(&dict->names);
+  init_table(&dict->items);
+  return dict;
 }
 
 b_obj_bound *new_bound_method(b_vm *vm, b_value receiver, b_obj *method) {
@@ -145,18 +151,43 @@ static void print_function(b_obj_func *function) {
   }
 }
 
+static void print_list(b_obj_list *list) {
+  printf("[");
+  for (int i = 0; i < list->items.count; i++) {
+    print_value(list->items.values[i]);
+    if (i != list->items.count - 1) {
+      printf(", ");
+    }
+  }
+  printf("]");
+}
+
+static void print_dict(b_obj_dict *dict) {
+  printf("{");
+  for (int i = 0; i < dict->names.count; i++) {
+    print_value(dict->names.values[i]);
+
+    printf(": ");
+
+    b_value value;
+    table_get(&dict->items, dict->names.values[i], &value);
+    print_value(value);
+
+    if (i != dict->names.count - 1) {
+      printf(", ");
+    }
+  }
+  printf("}");
+}
+
 void print_object(b_value value) {
   switch (OBJ_TYPE(value)) {
+  case OBJ_DICT: {
+    print_dict(AS_DICT(value));
+    break;
+  }
   case OBJ_LIST: {
-    printf("[");
-    b_obj_list *list = AS_LIST(value);
-    for (int i = 0; i < list->items.count; i++) {
-      print_value(list->items.values[i]);
-      if (i != list->items.count - 1) {
-        printf(", ");
-      }
-    }
-    printf("]");
+    print_list(AS_LIST(value));
     break;
   }
 
@@ -205,8 +236,95 @@ void print_object(b_value value) {
   }
 }
 
+static inline char *function_to_string(b_obj_func *func) {
+  if (func->name == NULL) {
+    return "<script 0x00>";
+  }
+  char *str = (char *)calloc(1, sizeof(char *));
+  sprintf(str, "<function %s>", func->name->chars);
+  return str;
+}
+
+static inline char *list_to_string(b_vm *vm, b_value_arr array) {
+  char *str = (char *)calloc(1, sizeof(char *));
+  strncat(str, "[", 1);
+  int i;
+  for (i = 0; i < array.count; i++) {
+    char *val = value_to_string(vm, array.values[i]);
+    strncat(str, val, strlen(val));
+    if (i != array.count - 1) {
+      strncat(str, ", ", 2);
+    }
+  }
+  strncat(str, "]", 1);
+  return str;
+}
+
+static char *dict_to_string(b_vm *vm, b_obj_dict *dict) {
+  char *str = (char *)calloc(1, sizeof(char *));
+  strncat(str, "{", 1);
+  int i;
+  for (i = 0; i < dict->names.count; i++) {
+    // print_value(dict->names.values[i]);
+    b_value key = dict->names.values[i];
+    char *s = value_to_string(vm, key);
+    strncat(str, s, strlen(s));
+    strncat(str, ": ", 2);
+
+    b_value value;
+    table_get(&dict->items, key, &value);
+    s = value_to_string(vm, value);
+    strncat(str, s, strlen(s));
+
+    if (i != dict->names.count - 1) {
+      strncat(str, ", ", 2);
+    }
+  }
+  strncat(str, "}", 1);
+  return str;
+}
+
+char *object_to_string(b_vm *vm, b_value value) {
+  char *str = (char *)calloc(1, sizeof(char *));
+
+  switch (OBJ_TYPE(value)) {
+  case OBJ_CLASS:
+    sprintf(str, "<class %s>", AS_CLASS(value)->name->chars);
+    break;
+  case OBJ_INSTANCE:
+    sprintf(str, "<instance of %s>", AS_INSTANCE(value)->klass->name->chars);
+    break;
+  case OBJ_CLOSURE:
+    return function_to_string(AS_CLOSURE(value)->function);
+  case OBJ_BOUND_METHOD: {
+    b_obj *method = AS_BOUND(value)->method;
+    if (method->type == OBJ_CLOSURE) {
+      return function_to_string(((b_obj_closure *)method)->function);
+    }
+    return function_to_string((b_obj_func *)method);
+  }
+  case OBJ_FUNCTION:
+    return function_to_string(AS_FUNCTION(value));
+  case OBJ_NATIVE:
+    sprintf(str, "<native-function %s>", AS_NATIVE(value)->name);
+    break;
+  case OBJ_STRING:
+    return AS_CSTRING(value);
+  case OBJ_UPVALUE:
+    return (char *)"<upvalue>";
+  case OBJ_LIST:
+    return list_to_string(vm, AS_LIST(value)->items);
+  case OBJ_DICT:
+    return dict_to_string(vm, AS_DICT(value));
+  }
+
+  return str;
+}
+
 const char *object_type(b_obj *object) {
   switch (object->type) {
+  case OBJ_DICT:
+    return "dictionary";
   case OBJ_LIST:
     return "list";
 

@@ -22,12 +22,10 @@ void free_table(b_vm *vm, b_table *table) {
 static b_entry *find_entry(b_entry *entries, int capacity, b_value key) {
   uint32_t hash = hash_value(key);
 
-#if DEBUG_MODE == 1
-#if DEBUG_TABLE == 1
+#if defined(DEBUG_TABLE) && DEBUG_TABLE == 1
   printf("looking for key ");
   print_value(key);
   printf(" with hash %u in table...\n", hash);
-#endif
 #endif
 
   uint32_t index = hash & capacity;
@@ -46,14 +44,12 @@ static b_entry *find_entry(b_entry *entries, int capacity, b_value key) {
           tombstone = entry;
       }
     } else if (values_equal(key, entry->key)) {
-#if DEBUG_MODE == 1
-#if DEBUG_TABLE == 1
+#if defined(DEBUG_TABLE) && DEBUG_TABLE == 1
       printf("found entry for key ");
       print_value(key);
       printf(" with hash %u in table as ", hash);
       print_value(entry->value);
       printf("...\n");
-#endif
 #endif
 
       return entry;
@@ -67,10 +63,8 @@ bool table_get(b_table *table, b_value key, b_value *value) {
   if (table->count == 0 || table->entries == NULL)
     return false;
 
-#if DEBUG_MODE == 1
-#if DEBUG_TABLE == 1
+#if defined(DEBUG_TABLE) && DEBUG_TABLE == 1
   printf("getting entry with hash %u...\n", hash_value(key));
-#endif
 #endif
 
   b_entry *entry = find_entry(table->entries, table->capacity, key);
@@ -78,12 +72,10 @@ bool table_get(b_table *table, b_value key, b_value *value) {
   if (IS_EMPTY(entry->key) || IS_NIL(entry->key))
     return false;
 
-#if DEBUG_MODE == 1
-#if DEBUG_TABLE == 1
+#if defined(DEBUG_TABLE) && DEBUG_TABLE == 1
   printf("found entry for hash %u == ", hash_value(entry->key));
   print_value(entry->value);
   printf("\n");
-#endif
 #endif
 
   *value = entry->value;

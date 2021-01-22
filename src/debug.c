@@ -159,6 +159,8 @@ int disassemble_instruction(b_blob *blob, int offset) {
     // data container manipulators
   case OP_LIST:
     return short_instruction("list", blob, offset);
+  case OP_DICT:
+    return short_instruction("dict", blob, offset);
   case OP_GET_INDEX:
     return byte_instruction("gindx", blob, offset);
   case OP_SET_INDEX:
