@@ -14,4 +14,4 @@ using i {
     echo 'default'
   }
 }
-echo '\nafter\n'
+echo 'after'

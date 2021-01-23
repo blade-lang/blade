@@ -5,18 +5,18 @@ var c = [1, 2] * 500000000
 print(time() - start) */
 
 var list = [1, 'Ink', 3.5, false, 'A', nil]
-print(list)
+echo list
 
-print(list[1,3])
+echo list[1,3]
 
-list[4] = 'Maggie'
-print(list)
+var g = list[4] = 'Maggie'
+echo list
 
 list += [
   'Apple', 
   'Peach'
 ]
-print(list)
+echo list
 
 list *= 3
-print(list)
+echo list

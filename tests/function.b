@@ -1,14 +1,19 @@
+a = 'outer'
+
 def test() {
-  echo 'It works!\n'
+  a = 'inner'
+  echo 'It works! ' + a
 }
 
-print(test)
+echo a
+
+echo test
 test()
 
 def test2(name, age, ...) {
-  print(name)
-  print(age)
-  print(__args__)
+  echo name
+  echo age
+  echo __args__
 }
 
 test2('Richard', 20, 'James')

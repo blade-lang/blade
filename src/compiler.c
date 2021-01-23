@@ -11,7 +11,7 @@
 #include "scanner.h"
 #include "util.h"
 
-#if DEBUG_MODE == 1
+#if defined(DEBUG_MODE) && DEBUG_MODE == 1
 #include "debug.h"
 #endif
 
@@ -679,13 +679,22 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg,
   } else if (can_assign && arg > -2 && match(p, INCREMENT_TOKEN)) {
     // consume_statement_end(p);
 
-    emit_byte_and_short(p, get_op, arg);
+    if (arg != -1) {
+      emit_byte_and_short(p, get_op, arg);
+    } else {
+      emit_bytes(p, get_op, 1);
+    }
+
     emit_bytes(p, OP_ONE, OP_ADD);
     emit_byte_and_short(p, set_op, (uint16_t)arg);
   } else if (can_assign && match(p, DECREMENT_TOKEN)) {
     // consume_statement_end(p);
+    if (arg != -1) {
+      emit_byte_and_short(p, get_op, arg);
+    } else {
+      emit_bytes(p, get_op, 1);
+    }
 
-    emit_byte_and_short(p, get_op, arg);
     emit_bytes(p, OP_ONE, OP_SUBTRACT);
     emit_byte_and_short(p, set_op, (uint16_t)arg);
   } else {
@@ -1293,21 +1302,25 @@ static void class_declaration(b_parser *p) {
 }
 
 static void _var_declaration(b_parser *p, bool is_initalizer) {
-  int global = parse_variable(p, "variable name expected");
 
-  if (match(p, EQUAL_TOKEN)) {
-    expression(p);
-  } else {
-    emit_byte(p, OP_NIL);
-  }
+  do {
+    int global = parse_variable(p, "variable name expected");
+
+    if (match(p, EQUAL_TOKEN)) {
+      expression(p);
+    } else {
+      emit_byte(p, OP_NIL);
+    }
+
+    define_variable(p, global);
+  } while (match(p, COMMA_TOKEN));
 
   if (!is_initalizer) {
     consume_statement_end(p);
   } else {
     consume(p, SEMICOLON_TOKEN, "expected ';' after initializer");
+    ignore_whitespace(p);
   }
-
-  define_variable(p, global);
 }
 
 static void var_declaration(b_parser *p) { _var_declaration(p, false); }
@@ -1318,6 +1331,7 @@ static void _expression_statement(b_parser *p, bool is_initalizer) {
     consume_statement_end(p);
   } else {
     consume(p, SEMICOLON_TOKEN, "expected ';' after initializer");
+    ignore_whitespace(p);
   }
   emit_byte(p, OP_POP);
 }
@@ -1368,6 +1382,7 @@ static void iter_statement(b_parser *p) {
   if (!match(p, SEMICOLON_TOKEN)) { // the condition is optional
     expression(p);
     consume(p, SEMICOLON_TOKEN, "expected ';' after condition");
+    ignore_whitespace(p);
 
     // jump out of the loop if the condition is false...
     exit_jump = emit_jump(p, OP_JUMP_IF_FALSE);
@@ -1375,11 +1390,12 @@ static void iter_statement(b_parser *p) {
   }
 
   // the iterator...
-  if (!match(p, LBRACE_TOKEN)) {
+  if (!check(p, LBRACE_TOKEN)) {
     int body_jump = emit_jump(p, OP_JUMP);
 
     int increment_start = current_blob(p)->count;
     expression(p);
+    ignore_whitespace(p);
     emit_byte(p, OP_POP);
 
     emit_loop(p, p->innermost_loop_start);

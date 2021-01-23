@@ -11,7 +11,7 @@
 #include "object.h"
 #include "vm.h"
 
-#if DEBUG_MODE == 1
+#if defined(DEBUG_MODE) && DEBUG_MODE == 1
 #include "debug.h"
 #endif
 
@@ -860,6 +860,7 @@ b_ptr_result run(b_vm *vm) {
 
     case OP_ECHO: {
       print_value(pop(vm));
+      printf("\n"); // @TODO: remove when library function print is ready
       break;
     }
 
@@ -905,8 +906,8 @@ b_ptr_result run(b_vm *vm) {
     case OP_SET_GLOBAL: {
       b_obj_string *name = READ_STRING();
       if (table_set(vm, &vm->globals, OBJ_VAL(name), peek(vm, 0))) {
-        table_delete(&vm->globals, OBJ_VAL(name));
-        runtime_error("%s is undefined in this scope", name->chars);
+        /* table_delete(&vm->globals, OBJ_VAL(name));
+        runtime_error("%s is undefined in this scope", name->chars); */
       }
       break;
     }
@@ -1074,7 +1075,8 @@ b_ptr_result run(b_vm *vm) {
       int will_assign = READ_BYTE();
 
       if (!IS_LIST(peek(vm, 2)) && !IS_DICT(peek(vm, 2))) {
-        runtime_error("only iterables have indices");
+        runtime_error("type of %s is not a valid iterable",
+                      value_type(peek(vm, 2)));
       }
 
       if (IS_LIST(peek(vm, 2))) {
@@ -1097,7 +1099,8 @@ b_ptr_result run(b_vm *vm) {
     }
     case OP_SET_INDEX: {
       if (!IS_LIST(peek(vm, 3)) && !IS_DICT(peek(vm, 3))) {
-        runtime_error("only iterables have indices");
+        runtime_error("type of %s is not a valid iterable",
+                      value_type(peek(vm, 3)));
       }
 
       b_value value = peek(vm, 0);
