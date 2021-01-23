@@ -4,5 +4,5 @@ def fib(n) {
 }
 
 var start = time()
-print(fib(35))
-print(time() - start)
+echo fib(35)
+echo time() - start
