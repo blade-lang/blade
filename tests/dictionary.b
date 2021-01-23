@@ -6,11 +6,11 @@ var dict = {
   children: 1,
 }
 
-echo dict
+print(dict)
 
 echo dict['address']
-echo dict['age'] = 30
+print(dict['age'] = 30)
 
 dict['children'] += 1
 
-echo dict
+print(dict)

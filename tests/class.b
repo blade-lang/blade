@@ -29,7 +29,7 @@ class Person {
   }
 
   welcome(age) {
-    echo 'welcome ' + self.name + '. You are ' + (self.age + age) + ' years old'
+    echo 'welcome ' + self.name + '. You are ' + (self.age + age) + ' years old\n'
   }
 }
 
@@ -42,7 +42,7 @@ person2.welcome(15)
 
 class A {
   say() {
-    echo "A"
+    echo "A\n"
   }
 }
 
@@ -55,13 +55,13 @@ class B < A {
   }
 
   say() {
-    echo "B"
+    echo "B\n"
   }
 }
 
 class C < B {
   say() {
-    echo "C"
+    echo "C\n"
   }
 }
 

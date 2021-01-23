@@ -1,4 +1,4 @@
-var a = 'it works'
+var a = 'it works\n'
 echo a
 
 var b = 20
