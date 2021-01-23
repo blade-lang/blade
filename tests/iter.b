@@ -20,6 +20,10 @@ iter var i = 1;
       continue
     }
     echo 'jay = ' + j
+
+    iter var k = 1; k <= 10; k++ {
+      echo 'kay = ' + k
+    }
   }
 }
 
