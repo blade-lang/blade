@@ -98,3 +98,33 @@ DECLARE_NATIVE(delprop) {
   b_obj_instance *instance = AS_INSTANCE(args[0]);
   RETURN_BOOL(table_delete(&instance->fields, args[1]));
 }
+
+/**
+ * max(a: number, b: number)
+ *
+ * returns the greater number of a and b
+ */
+DECLARE_NATIVE(max) {
+  ENFORCE_ARG_COUNT(max, 2);
+  ENFORCE_ARG_TYPE(max, 0, IS_NUMBER);
+  ENFORCE_ARG_TYPE(max, 1, IS_NUMBER);
+
+  if (AS_NUMBER(args[0]) > AS_NUMBER(args[1]))
+    return args[0];
+  return args[1];
+}
+
+/**
+ * min(a: number, b: number)
+ *
+ * returns the smaller number of a and b
+ */
+DECLARE_NATIVE(min) {
+  ENFORCE_ARG_COUNT(min, 2);
+  ENFORCE_ARG_TYPE(min, 0, IS_NUMBER);
+  ENFORCE_ARG_TYPE(min, 1, IS_NUMBER);
+
+  if (AS_NUMBER(args[0]) < AS_NUMBER(args[1]))
+    return args[0];
+  return args[1];
+}
