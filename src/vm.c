@@ -114,6 +114,8 @@ void init_vm(b_vm *vm) {
   DEFINE_NATIVE(getprop);
   DEFINE_NATIVE(setprop);
   DEFINE_NATIVE(delprop);
+  DEFINE_NATIVE(max);
+  DEFINE_NATIVE(min);
 }
 
 void free_vm(b_vm *vm) {
@@ -375,7 +377,6 @@ bool dict_get_entry(b_obj_dict *dict, b_value key, b_value *value) {
 }
 
 bool dict_set_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value) {
-  b_value temp_value;
 #if defined(USE_NAN_BOXING) && USE_NAN_BOXING == 1
   bool found = false;
   for (int i = 0; i < dict->names.count; i++) {
@@ -385,6 +386,7 @@ bool dict_set_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value) {
   if (!found)
     write_value_arr(vm, &dict->names, key); // add key if it doesn't exist.
 #else
+  b_value temp_value;
   if (!table_get(&dict->items, key, &temp_value)) {
     write_value_arr(vm, &dict->names, key); // add key if it doesn't exist.
   }
@@ -437,13 +439,18 @@ static b_obj_list *multiply_list(b_vm *vm, b_obj_list *a, b_obj_list *new_list,
 }
 
 static bool dict_get_index(b_vm *vm, b_obj_dict *dict, bool will_assign) {
-  pop(vm); // discard upper... we won't need it so gc can free it.
-  b_value index = peek(vm, 0);
+  b_value index;
+  if (!will_assign) {
+    pop(vm); // discard upper... we won't need it so gc can free it.
+    index = peek(vm, 0);
+  } else {
+    index = peek(vm, 1);
+  }
 
   b_value result;
   if (dict_get_entry(dict, index, &result)) {
     if (!will_assign) {
-      pop(vm); // we can safely get rid of the index from the stack
+      popn(vm, 2); // we can safely get rid of the index from the stack
     }
     push(vm, result);
     return true;
@@ -463,14 +470,17 @@ static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
       return false;
     }
 
-    pop(vm); // discard upper... we won't need it so gc can free it.
+    if (!will_assign) {
+      pop(vm); // discard upper... we won't need it so gc can free it.
+    }
     int index = AS_NUMBER(lower);
     if (index < 0)
       index = list->items.count + index;
 
     if (index < list->items.count) {
       if (!will_assign) {
-        pop(vm); // we can safely get rid of the index from the stack
+        // we can safely get rid of the index from the stack
+        popn(vm, 2); // +1 for the list itself
       }
 
       push(vm, list->items.values[index]);
@@ -1070,6 +1080,8 @@ b_ptr_result run(b_vm *vm) {
         if (!list_get_index(vm, AS_LIST(peek(vm, 2)),
                             will_assign == 1 ? true : false)) {
           return PTR_RUNTIME_ERR;
+        } else {
+          break;
         }
       } else if (IS_DICT(peek(vm, 2)) && IS_NIL(peek(vm, 0))) {
         if (!dict_get_index(vm, AS_DICT(peek(vm, 2)),
@@ -1080,7 +1092,7 @@ b_ptr_result run(b_vm *vm) {
         }
       }
 
-      runtime_error("invalid index");
+      runtime_error("invalid index %s", value_to_string(vm, peek(vm, 0)));
     }
     case OP_SET_INDEX: {
       if (!IS_LIST(peek(vm, 3)) && !IS_DICT(peek(vm, 3))) {

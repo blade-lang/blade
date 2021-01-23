@@ -52,5 +52,7 @@ DECLARE_NATIVE(hasprop);
 DECLARE_NATIVE(getprop);
 DECLARE_NATIVE(setprop);
 DECLARE_NATIVE(delprop);
+DECLARE_NATIVE(max);
+DECLARE_NATIVE(min);
 
 #endif
