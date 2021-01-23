@@ -31,7 +31,7 @@ def main(n) {
   var maxDepth = max(minDepth + 2, n)
   var stretchDepth = maxDepth + 1
 
-  echo 'stretch tree of depth ' + stretchDepth + '\t check: ' + bottomUpTree(stretchDepth).check() + '\n'
+  echo 'stretch tree of depth ' + stretchDepth + '\t check: ' + bottomUpTree(stretchDepth).check()
 
   var longLivedTree = bottomUpTree(maxDepth)
 
@@ -44,10 +44,10 @@ def main(n) {
       check += tempTree.check()
     }
 
-    echo iterations + '\t trees of depth ' + depth + '\t check: ' + check + '\n'
+    echo iterations + '\t trees of depth ' + depth + '\t check: ' + check
   }
 
-  echo 'long lived tree of depth ' + maxDepth + '\t check: ' + longLivedTree.check() + '\n'
+  echo 'long lived tree of depth ' + maxDepth + '\t check: ' + longLivedTree.check()
 }
 
 var start = time()
