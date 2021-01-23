@@ -462,6 +462,69 @@ static bool dict_get_index(b_vm *vm, b_obj_dict *dict, bool will_assign) {
   return false;
 }
 
+static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
+  b_value upper = peek(vm, 0);
+  b_value lower = peek(vm, 1);
+
+  if (IS_NIL(upper)) {
+    if (!IS_NUMBER(lower)) {
+      _runtime_error(vm, "strings are numerically indexed");
+      return false;
+    }
+
+    if (!will_assign) {
+      pop(vm); // discard upper... we won't need it so gc can free it.
+    }
+    int index = AS_NUMBER(lower);
+    if (index < 0)
+      index = string->length + index;
+
+    if (index < string->length) {
+      if (!will_assign) {
+        // we can safely get rid of the index from the stack
+        popn(vm, 2); // +1 for the list itself
+      }
+
+      push(vm, OBJ_VAL(copy_string(vm, &string->chars[index], 1)));
+      return true;
+    } else {
+      _runtime_error(vm, "string index %d out of range", index);
+      return false;
+    }
+  } else {
+    if (!IS_NUMBER(lower) || !IS_NUMBER(upper)) {
+      _runtime_error(vm, "string are numerically indexed");
+      return false;
+    }
+
+    int lower_index = AS_NUMBER(lower);
+    int upper_index = AS_NUMBER(upper);
+
+    if (lower_index < 0 ||
+        (upper_index < 0 && ((string->length + upper_index) < 0))) {
+      // always return an empty list...
+      if (!will_assign) {
+        popn(vm, 3); // +1 for the list itself
+      }
+      push(vm, OBJ_VAL(copy_string(vm, "", 0)));
+      return true;
+    }
+
+    if (upper_index < 0)
+      upper_index = string->length + upper_index;
+
+    if (upper_index > string->length)
+      upper_index = string->length;
+
+    if (!will_assign) {
+      popn(vm, 3); // +1 for the list itself
+    }
+    push(vm, OBJ_VAL(copy_string(vm, string->chars + lower_index,
+                                 upper_index - lower_index)));
+    return true;
+  }
+}
+
 static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
   b_value upper = peek(vm, 0);
   b_value lower = peek(vm, 1);
@@ -488,7 +551,7 @@ static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
       push(vm, list->items.values[index]);
       return true;
     } else {
-      _runtime_error(vm, "lists index %d out of range", index);
+      _runtime_error(vm, "list index %d out of range", index);
       return false;
     }
   } else {
@@ -1074,12 +1137,20 @@ b_ptr_result run(b_vm *vm) {
     case OP_GET_INDEX: {
       int will_assign = READ_BYTE();
 
-      if (!IS_LIST(peek(vm, 2)) && !IS_DICT(peek(vm, 2))) {
+      if (!IS_STRING(peek(vm, 2)) && !IS_LIST(peek(vm, 2)) &&
+          !IS_DICT(peek(vm, 2))) {
         runtime_error("type of %s is not a valid iterable",
                       value_type(peek(vm, 2)));
       }
 
-      if (IS_LIST(peek(vm, 2))) {
+      if (IS_STRING(peek(vm, 2))) {
+        if (!string_get_index(vm, AS_STRING(peek(vm, 2)),
+                              will_assign == 1 ? true : false)) {
+          return PTR_RUNTIME_ERR;
+        } else {
+          break;
+        }
+      } else if (IS_LIST(peek(vm, 2))) {
         if (!list_get_index(vm, AS_LIST(peek(vm, 2)),
                             will_assign == 1 ? true : false)) {
           return PTR_RUNTIME_ERR;
@@ -1099,8 +1170,12 @@ b_ptr_result run(b_vm *vm) {
     }
     case OP_SET_INDEX: {
       if (!IS_LIST(peek(vm, 3)) && !IS_DICT(peek(vm, 3))) {
-        runtime_error("type of %s is not a valid iterable",
-                      value_type(peek(vm, 3)));
+        if (!IS_STRING(peek(vm, 3))) {
+          runtime_error("type of %s is not a valid iterable",
+                        value_type(peek(vm, 3)));
+        } else {
+          runtime_error("strings do not support object assignment");
+        }
       }
 
       b_value value = peek(vm, 0);
