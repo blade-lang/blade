@@ -50,6 +50,7 @@ void free_vm(b_vm *vm);
 b_ptr_result interpret(b_vm *vm, const char *source);
 void push(b_vm *vm, b_value value);
 b_value pop(b_vm *vm);
+b_value popn(b_vm *vm, int n);
 
 void _runtime_error(b_vm *vm, const char *format, ...);
 

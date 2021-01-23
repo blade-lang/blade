@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "compat/unistd.h"
@@ -11,6 +12,8 @@
  * returns the current timestamp in seconds
  */
 DECLARE_NATIVE(time) {
+  ENFORCE_ARG_COUNT(time, 0);
+
   struct timeval tv;
   gettimeofday(&tv, NULL);
   RETURN_NUMBER((double)(1000000 * tv.tv_sec + tv.tv_usec) / 1000000);
@@ -22,6 +25,8 @@ DECLARE_NATIVE(time) {
  * returns the current time in microseconds
  */
 DECLARE_NATIVE(microtime) {
+  ENFORCE_ARG_COUNT(microtime, 0);
+
   struct timeval tv;
   gettimeofday(&tv, NULL);
   RETURN_NUMBER(1000000 * tv.tv_sec + tv.tv_usec);
@@ -32,7 +37,20 @@ DECLARE_NATIVE(microtime) {
  *
  * returns the unique identifier of value within the system
  */
-DECLARE_NATIVE(id) { RETURN_NUMBER((long)&args[0]); }
+DECLARE_NATIVE(id) {
+  ENFORCE_ARG_COUNT(id, 1);
+  RETURN_NUMBER((long)&args[0]);
+}
+
+/**
+ * hash(value: any)
+ *
+ * returns the hash of a value as used in a dictionary underlying implementation
+ */
+DECLARE_NATIVE(hash) {
+  ENFORCE_ARG_COUNT(hash, 1);
+  RETURN_NUMBER((double)hash_value(args[0]));
+}
 
 /**
  * hasprop(object: instance, name: string)
@@ -127,4 +145,20 @@ DECLARE_NATIVE(min) {
   if (AS_NUMBER(args[0]) < AS_NUMBER(args[1]))
     return args[0];
   return args[1];
+}
+
+/**
+ * print(...)
+ *
+ * prints values to the standard output
+ */
+DECLARE_NATIVE(print) {
+  for (int i = 0; i < arg_count; i++) {
+    print_value(args[i]);
+    if (i != arg_count - 1) {
+      printf(" ");
+    }
+  }
+  printf("\n");
+  RETURN;
 }

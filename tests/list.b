@@ -2,21 +2,21 @@ echo [1, 2, 3, 4, 5]
 
 /* var start = time()
 var c = [1, 2] * 500000000
-echo time() - start */
+print(time() - start) */
 
 var list = [1, 'Ink', 3.5, false, 'A', nil]
-echo list
+print(list)
 
-echo list[1,3]
+print(list[1,3])
 
 list[4] = 'Maggie'
-echo list
+print(list)
 
 list += [
   'Apple', 
   'Peach'
 ]
-echo list
+print(list)
 
 list *= 3
-echo list
+print(list)

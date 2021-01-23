@@ -1,6 +1,6 @@
-var x = "global"
+var x = "global\n"
 def outer() {
-  var x = "outer"
+  var x = "outer\n"
   def inner() {
     echo x
   }
@@ -13,17 +13,17 @@ outer()
 # test 2
 
 def outer() {
-  var x = "value"
+  var x = "value\n"
   def middle() {
     def inner() {
       echo x
     }
 
-    echo "create inner closure"
+    echo "create inner closure\n"
     return inner
   }
 
-  echo "return from outer"
+  echo "return from outer\n"
   return middle
 }
 
@@ -47,6 +47,6 @@ iter var i = 0; i < 10; i++ {
     sum = sum + closure()
   }
 
-  echo sum
-  echo time() - start
+  print(sum)
+  print(time() - start)
 }

@@ -110,12 +110,14 @@ void init_vm(b_vm *vm) {
   DEFINE_NATIVE(time);
   DEFINE_NATIVE(microtime);
   DEFINE_NATIVE(id);
+  DEFINE_NATIVE(hash);
   DEFINE_NATIVE(hasprop);
   DEFINE_NATIVE(getprop);
   DEFINE_NATIVE(setprop);
   DEFINE_NATIVE(delprop);
   DEFINE_NATIVE(max);
   DEFINE_NATIVE(min);
+  DEFINE_NATIVE(print);
 }
 
 void free_vm(b_vm *vm) {
@@ -858,7 +860,6 @@ b_ptr_result run(b_vm *vm) {
 
     case OP_ECHO: {
       print_value(pop(vm));
-      printf("\n"); // @TODO: Remove...
       break;
     }
 
