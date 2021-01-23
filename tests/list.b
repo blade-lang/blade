@@ -20,3 +20,12 @@ echo list
 
 list *= 3
 echo list
+
+var list2 = [
+  [1, 2, 3],
+  [4, 5, 6],
+  [7, 8, 9]
+]
+
+echo list2[0][2]++
+echo list2
