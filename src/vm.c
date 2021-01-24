@@ -132,6 +132,17 @@ void init_vm(b_vm *vm) {
   DEFINE_NATIVE(hex);
   DEFINE_NATIVE(id);
   DEFINE_NATIVE(int);
+  DEFINE_NATIVE(is_bool);
+  DEFINE_NATIVE(is_callable);
+  DEFINE_NATIVE(is_class);
+  DEFINE_NATIVE(is_dict);
+  DEFINE_NATIVE(is_function);
+  DEFINE_NATIVE(is_instance);
+  DEFINE_NATIVE(is_int);
+  DEFINE_NATIVE(is_list);
+  DEFINE_NATIVE(is_number);
+  DEFINE_NATIVE(is_object);
+  DEFINE_NATIVE(is_string);
   DEFINE_NATIVE(max);
   DEFINE_NATIVE(microtime);
   DEFINE_NATIVE(min);
@@ -148,6 +159,7 @@ void init_vm(b_vm *vm) {
   DEFINE_NATIVE(to_list);
   DEFINE_NATIVE(to_number);
   DEFINE_NATIVE(to_string);
+  DEFINE_NATIVE(type);
 
   // string methods
   DEFINE_METHOD(string, length);
