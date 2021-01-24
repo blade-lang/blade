@@ -12,8 +12,8 @@
 #include "vm.h"
 
 #include "bstring.h"
-#include "list.h"
 #include "dict.h"
+#include "list.h"
 
 #if defined(DEBUG_MODE) && DEBUG_MODE == 1
 #include "debug.h"
@@ -109,6 +109,7 @@ void init_vm(b_vm *vm) {
   vm->objects = NULL;
   vm->bytes_allocated = 0;
   vm->next_gc = 1024 * 1024; // 1mb
+  vm->is_repl = false;
 
   vm->gray_count = 0;
   vm->gray_capacity = 0;
