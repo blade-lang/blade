@@ -48,6 +48,9 @@ struct s_vm {
   b_table methods_string;
   b_table methods_list;
   b_table methods_dict;
+
+  // repl flag
+  bool is_repl;
 };
 
 void init_vm(b_vm *vm);

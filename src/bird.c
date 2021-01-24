@@ -5,6 +5,7 @@
 #include "vm.h"
 
 static void repl(b_vm *vm) {
+  vm->is_repl = true;
   char line[4096];
 
   for (;;) {
