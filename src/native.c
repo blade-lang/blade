@@ -517,6 +517,144 @@ DECLARE_NATIVE(rand) {
   RETURN_NUMBER(lower_limit + x % n);
 }
 
+/**
+ * type(value: any)
+ *
+ * returns the name of the type of value
+ */
+DECLARE_NATIVE(type) {
+  ENFORCE_ARG_COUNT(type, 1);
+  RETURN_STRING(value_type(args[0]));
+}
+
+/**
+ * is_callable(value: any)
+ *
+ * returns true if the value is a callable function or class and false otherwise
+ */
+DECLARE_NATIVE(is_callable) {
+  ENFORCE_ARG_COUNT(is_callable, 1);
+  RETURN_BOOL(IS_CLASS(args[0]) || IS_FUNCTION(args[0]) ||
+              IS_CLOSURE(args[0]) || IS_BOUND(args[0]) || IS_NATIVE(args[0]));
+}
+
+/**
+ * is_bool(value: any)
+ *
+ * returns true if the value is a boolean or false otherwise
+ */
+DECLARE_NATIVE(is_bool) {
+  ENFORCE_ARG_COUNT(is_bool, 1);
+  RETURN_BOOL(IS_BOOL(args[0]));
+}
+
+/**
+ * is_number(value: any)
+ *
+ * returns true if the value is a number or false otherwise
+ */
+DECLARE_NATIVE(is_number) {
+  ENFORCE_ARG_COUNT(is_number, 1);
+  RETURN_BOOL(IS_NUMBER(args[0]));
+}
+
+/**
+ * is_int(value: any)
+ *
+ * returns true if the value is an integer or false otherwise
+ */
+DECLARE_NATIVE(is_int) {
+  ENFORCE_ARG_COUNT(is_int, 1);
+  RETURN_BOOL(IS_NUMBER(args[0]) &&
+              (((int)AS_NUMBER(args[0])) == AS_NUMBER(args[0])));
+}
+
+/**
+ * is_string(value: any)
+ *
+ * returns true if the value is a string or false otherwise
+ */
+DECLARE_NATIVE(is_string) {
+  ENFORCE_ARG_COUNT(is_string, 1);
+  RETURN_BOOL(IS_STRING(args[0]));
+}
+
+/**
+ * is_list(value: any)
+ *
+ * returns true if the value is a list or false otherwise
+ */
+DECLARE_NATIVE(is_list) {
+  ENFORCE_ARG_COUNT(is_list, 1);
+  RETURN_BOOL(IS_LIST(args[0]));
+}
+
+/**
+ * is_dict(value: any)
+ *
+ * returns true if the value is a dictionary or false otherwise
+ */
+DECLARE_NATIVE(is_dict) {
+  ENFORCE_ARG_COUNT(is_dict, 1);
+  RETURN_BOOL(IS_DICT(args[0]));
+}
+
+/**
+ * is_object(value: any)
+ *
+ * returns true if the value is an object or false otherwise
+ */
+DECLARE_NATIVE(is_object) {
+  ENFORCE_ARG_COUNT(is_object, 1);
+  RETURN_BOOL(IS_OBJ(args[0]));
+}
+
+/**
+ * is_function(value: any)
+ *
+ * returns true if the value is a function or false otherwise
+ */
+DECLARE_NATIVE(is_function) {
+  ENFORCE_ARG_COUNT(is_function, 1);
+  RETURN_BOOL(IS_FUNCTION(args[0]) || IS_CLOSURE(args[0]) ||
+              IS_BOUND(args[0]) || IS_NATIVE(args[0]));
+}
+
+/**
+ * is_class(value: any)
+ *
+ * returns true if the value is a class or false otherwise
+ */
+DECLARE_NATIVE(is_class) {
+  ENFORCE_ARG_COUNT(is_class, 1);
+  RETURN_BOOL(IS_CLASS(args[0]));
+}
+
+/**
+ * is_instance(value: any, name: string)
+ *
+ * returns true if the value is an instance of a class with name `name` or false
+ * otherwise
+ */
+DECLARE_NATIVE(is_instance) {
+  ENFORCE_ARG_COUNT(is_instance, 2);
+  ENFORCE_ARG_TYPE(is_instance, 1, IS_STRING);
+
+  if (!IS_INSTANCE(args[0]))
+    RETURN_FALSE;
+
+  b_obj_instance *instance = AS_INSTANCE(args[0]);
+  b_obj_string *klass = AS_STRING(args[1]);
+
+  if (instance->klass->name->length != klass->length)
+    RETURN_FALSE;
+
+  if (strcasecmp(instance->klass->name->chars, klass->chars) == 0)
+    RETURN_TRUE;
+
+  RETURN_FALSE;
+}
+
 //------------------------------------------------------------------------------
 
 /**
