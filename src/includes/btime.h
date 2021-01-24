@@ -1,6 +1,7 @@
-#ifndef bird_time_h
-#define bird_time_h
+#ifndef bird_compat_time_h
+#define bird_compat_time_h
 
+#include "common.h"
 #include <time.h>
 
 #ifdef IS_UNIX

@@ -43,6 +43,11 @@ struct s_vm {
   b_obj **gray_stack;
   size_t bytes_allocated;
   size_t next_gc;
+
+  // object methods
+  b_table methods_string;
+  b_table methods_list;
+  b_table methods_dict;
 };
 
 void init_vm(b_vm *vm);
@@ -51,6 +56,14 @@ b_ptr_result interpret(b_vm *vm, const char *source);
 void push(b_vm *vm, b_value value);
 b_value pop(b_vm *vm);
 b_value popn(b_vm *vm, int n);
+b_value peek(b_vm *vm, int distance);
+
+bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
+                       int arg_count);
+bool is_falsey(b_value value);
+void dict_add_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value);
+bool dict_get_entry(b_obj_dict *dict, b_value key, b_value *value);
+bool dict_set_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value);
 
 void _runtime_error(b_vm *vm, const char *format, ...);
 

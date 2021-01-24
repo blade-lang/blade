@@ -11,6 +11,10 @@
 #include "object.h"
 #include "vm.h"
 
+#include "bstring.h"
+#include "list.h"
+#include "dict.h"
+
 #if defined(DEBUG_MODE) && DEBUG_MODE == 1
 #include "debug.h"
 #endif
@@ -82,14 +86,20 @@ b_value popn(b_vm *vm, int n) {
   return *vm->stack_top;
 }
 
-static b_value peek(b_vm *vm, int distance) {
-  return vm->stack_top[-1 - distance];
-}
+b_value peek(b_vm *vm, int distance) { return vm->stack_top[-1 - distance]; }
 
 static void define_native(b_vm *vm, const char *name, b_native_fn function) {
   push(vm, OBJ_VAL(copy_string(vm, name, (int)strlen(name))));
   push(vm, OBJ_VAL(new_native(vm, function, name)));
   table_set(vm, &vm->globals, vm->stack[0], vm->stack[1]);
+  popn(vm, 2);
+}
+
+static void define_native_method(b_vm *vm, b_table *table, const char *name,
+                                 b_native_fn function) {
+  push(vm, OBJ_VAL(copy_string(vm, name, (int)strlen(name))));
+  push(vm, OBJ_VAL(new_native(vm, function, name)));
+  table_set(vm, table, vm->stack[0], vm->stack[1]);
   popn(vm, 2);
 }
 
@@ -107,17 +117,46 @@ void init_vm(b_vm *vm) {
   init_table(&vm->strings);
   init_table(&vm->globals);
 
-  DEFINE_NATIVE(time);
-  DEFINE_NATIVE(microtime);
-  DEFINE_NATIVE(id);
+  // object methods tables
+  init_table(&vm->methods_string);
+  init_table(&vm->methods_list);
+  init_table(&vm->methods_dict);
+
+  DEFINE_NATIVE(abs);
+  DEFINE_NATIVE(bin);
+  DEFINE_NATIVE(chr);
+  DEFINE_NATIVE(delprop);
+  DEFINE_NATIVE(getprop);
   DEFINE_NATIVE(hash);
   DEFINE_NATIVE(hasprop);
-  DEFINE_NATIVE(getprop);
-  DEFINE_NATIVE(setprop);
-  DEFINE_NATIVE(delprop);
+  DEFINE_NATIVE(hex);
+  DEFINE_NATIVE(id);
+  DEFINE_NATIVE(int);
   DEFINE_NATIVE(max);
+  DEFINE_NATIVE(microtime);
   DEFINE_NATIVE(min);
+  DEFINE_NATIVE(oct);
+  DEFINE_NATIVE(ord);
   DEFINE_NATIVE(print);
+  DEFINE_NATIVE(rand);
+  DEFINE_NATIVE(setprop);
+  DEFINE_NATIVE(sum);
+  DEFINE_NATIVE(time);
+  DEFINE_NATIVE(to_bool);
+  DEFINE_NATIVE(to_dict);
+  DEFINE_NATIVE(to_int);
+  DEFINE_NATIVE(to_list);
+  DEFINE_NATIVE(to_number);
+  DEFINE_NATIVE(to_string);
+
+  // string methods
+  DEFINE_METHOD(string, length);
+
+  // list methods
+  DEFINE_METHOD(list, length);
+
+  // dictionary methods
+  DEFINE_METHOD(dict, length);
 }
 
 void free_vm(b_vm *vm) {
@@ -225,8 +264,8 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
   return false;
 }
 
-static bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
-                              int arg_count) {
+bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
+                       int arg_count) {
   b_value method;
   if (!table_get(&klass->methods, OBJ_VAL(name), &method)) {
     _runtime_error(vm, "undefined method '%s' in %s", name->chars,
@@ -244,21 +283,33 @@ static bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
 static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
   b_value receiver = peek(vm, arg_count);
 
-  if (!IS_INSTANCE(receiver)) {
-    _runtime_error(vm, "cannot call method %s on object of type %s",
-                   name->chars, value_type(receiver));
-    return false;
-  }
-
-  b_obj_instance *instance = AS_INSTANCE(receiver);
-
   b_value value;
-  if (table_get(&instance->fields, OBJ_VAL(name), &value)) {
-    vm->stack_top[-arg_count - 1] = value;
-    call_value(vm, value, arg_count);
+  if (IS_INSTANCE(receiver)) {
+    b_obj_instance *instance = AS_INSTANCE(receiver);
+
+    if (table_get(&instance->fields, OBJ_VAL(name), &value)) {
+      vm->stack_top[-arg_count - 1] = value;
+      return call_value(vm, value, arg_count);
+    }
+
+    return invoke_from_class(vm, instance->klass, name, arg_count);
+  } else if (IS_STRING(receiver)) {
+    if (table_get(&vm->methods_string, OBJ_VAL(name), &value)) {
+      return call_value(vm, value, arg_count);
+    }
+  } else if (IS_LIST(receiver)) {
+    if (table_get(&vm->methods_list, OBJ_VAL(name), &value)) {
+      return call_value(vm, value, arg_count);
+    }
+  } else if (IS_DICT(receiver)) {
+    if (table_get(&vm->methods_dict, OBJ_VAL(name), &value)) {
+      return call_value(vm, value, arg_count);
+    }
   }
 
-  return invoke_from_class(vm, instance->klass, name, arg_count);
+  _runtime_error(vm, "cannot call method %s on object of type %s", name->chars,
+                 value_type(receiver));
+  return false;
 }
 
 static bool bind_method(b_vm *vm, b_obj_class *klass, b_obj_string *name) {
@@ -324,7 +375,7 @@ static void define_property(b_vm *vm, b_obj_string *name) {
   pop(vm);
 }
 
-static bool is_falsey(b_value value) {
+bool is_falsey(b_value value) {
   if (IS_BOOL(value))
     return IS_BOOL(value) && !AS_BOOL(value);
   if (IS_NIL(value))
