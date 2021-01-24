@@ -1,5 +1,5 @@
-#ifndef bird_win32_h
-#define bird_win32_h
+#ifndef bird_compat_win32_h
+#define bird_compat_win32_h
 
 #include "common.h"
 
