@@ -6,6 +6,7 @@
 #include "memory.h"
 #include "object.h"
 #include "table.h"
+#include "util.h"
 #include "value.h"
 #include "vm.h"
 
@@ -245,42 +246,35 @@ static inline char *function_to_string(b_obj_func *func) {
   return str;
 }
 
-static inline char *list_to_string(b_vm *vm, b_value_arr array) {
-  char *str = (char *)calloc(1, sizeof(char *));
-  strncat(str, "[", 1);
-  int i;
-  for (i = 0; i < array.count; i++) {
-    char *val = value_to_string(vm, array.values[i]);
-    strncat(str, val, strlen(val));
-    if (i != array.count - 1) {
-      strncat(str, ", ", 2);
+static inline char *list_to_string(b_vm *vm, b_value_arr *array) {
+  char *str = "[";
+  for (int i = 0; i < array->count; i++) {
+    str = append_strings(str, value_to_string(vm, array->values[i]));
+    if (i != array->count - 1) {
+      str = append_strings(str, ", ");
     }
   }
-  strncat(str, "]", 1);
+  str = append_strings(str, "]");
   return str;
 }
 
 static char *dict_to_string(b_vm *vm, b_obj_dict *dict) {
-  char *str = (char *)calloc(1, sizeof(char *));
-  strncat(str, "{", 1);
-  int i;
-  for (i = 0; i < dict->names.count; i++) {
+  char *str = "{";
+  for (int i = 0; i < dict->names.count; i++) {
     // print_value(dict->names.values[i]);
     b_value key = dict->names.values[i];
-    char *s = value_to_string(vm, key);
-    strncat(str, s, strlen(s));
-    strncat(str, ": ", 2);
+    str = append_strings(str, value_to_string(vm, key));
+    str = append_strings(str, ": ");
 
     b_value value;
     table_get(&dict->items, key, &value);
-    s = value_to_string(vm, value);
-    strncat(str, s, strlen(s));
+    str = append_strings(str, value_to_string(vm, value));
 
     if (i != dict->names.count - 1) {
-      strncat(str, ", ", 2);
+      str = append_strings(str, ", ");
     }
   }
-  strncat(str, "}", 1);
+  str = append_strings(str, "}");
   return str;
 }
 
@@ -313,7 +307,7 @@ char *object_to_string(b_vm *vm, b_value value) {
   case OBJ_UPVALUE:
     return (char *)"<upvalue>";
   case OBJ_LIST:
-    return list_to_string(vm, AS_LIST(value)->items);
+    return list_to_string(vm, &AS_LIST(value)->items);
   case OBJ_DICT:
     return dict_to_string(vm, AS_DICT(value));
   }

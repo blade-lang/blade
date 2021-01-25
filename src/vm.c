@@ -11,9 +11,9 @@
 #include "object.h"
 #include "vm.h"
 
-#include "builtin/string.h"
 #include "builtin/dict.h"
 #include "builtin/list.h"
+#include "builtin/string.h"
 
 #if defined(DEBUG_MODE) && DEBUG_MODE == 1
 #include "debug.h"
@@ -189,6 +189,7 @@ void init_vm(b_vm *vm) {
   DEFINE_STRING_METHOD(to_list);
   DEFINE_STRING_METHOD(lpad);
   DEFINE_STRING_METHOD(rpad);
+  DEFINE_STRING_METHOD(match);
 
   // list methods
   DEFINE_LIST_METHOD(length);

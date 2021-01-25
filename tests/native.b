@@ -16,6 +16,7 @@ class A {
 echo abs(-10)
 echo abs(A())
 echo to_string([1, 2, 3])
+echo to_string({name: 'Richard', age: 28})
 echo to_string(A())
 
 var start = time()

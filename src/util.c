@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 // returns the number of bytes contained in a unicode character
 int utf8_number_bytes(int value) {
@@ -111,4 +112,19 @@ int utf8_decode(const uint8_t *bytes, uint32_t length) {
   }
 
   return value;
+}
+
+char *append_strings(const char *old, const char *new_str) {
+  // find the size of the string to allocate
+  const size_t old_len = strlen(old), new_len = strlen(new_str);
+  const size_t out_len = old_len + new_len + 1;
+
+  // allocate a pointer to the new string
+  char *out = malloc(out_len);
+
+  // concat both strings and return
+  memcpy(out, old, old_len);
+  memcpy(out + old_len, new_str, new_len + 1);
+
+  return out;
 }

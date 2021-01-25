@@ -1,9 +1,14 @@
 #ifndef bird_native_h
 #define bird_native_h
 
+#include "config.h"
+
+#include "memory.h"
 #include "object.h"
 #include "util.h"
 #include "value.h"
+
+#include "pcre2.h"
 
 #define DECLARE_NATIVE(name)                                                   \
   b_value native_fn_##name(b_vm *vm, int arg_count, b_value *args)
@@ -98,6 +103,40 @@
 #define RETURN_STRING(v) return OBJ_VAL(copy_string(vm, v, (int)strlen(v)))
 #define RETURN_TSTRING(v, l) return OBJ_VAL(take_string(vm, v, l))
 #define RETURN_VALUE(v) return v
+
+#define REGEX_COMPILATION_ERROR(re, error_number, error_offset)                \
+  if (re == NULL) {                                                            \
+    PCRE2_UCHAR8 buffer[256];                                                  \
+    pcre2_get_error_message_8(error_number, buffer, sizeof(buffer));           \
+    RETURN_ERROR("regular expression compilation failed at offset %d: %s\n",   \
+                 (int)error_offset, buffer);                                   \
+  }
+
+#define REGEX_ASSERTION_ERROR(re, match_data, ovector)                         \
+  if (ovector[0] > ovector[1]) {                                               \
+    runtime_error(                                                             \
+        "match aborted: regular expression used \\K in an assertion %.*s to "  \
+        "set match start after its end.\n",                                    \
+        (int)(ovector[0] - ovector[1]), (char *)(subject + ovector[1]));       \
+    pcre2_match_data_free(match_data);                                         \
+    pcre2_code_free(re);                                                       \
+    return EMPTY_VAL;                                                          \
+  }
+
+#define REGEX_RC_ERROR() RETURN_ERROR("regular expression error %d\n", rc);
+
+#define GET_REGEX_COMPILE_OPTIONS(name, string, regex_show_error)              \
+  uint32_t compile_options = is_regex(string);                                 \
+  if (regex_show_error && (int)compile_options == -1) {                        \
+    RETURN_ERROR("invalid regular expression passed to " #name "()");          \
+  } else if (regex_show_error && (int)compile_options < -1) {                  \
+    RETURN_ERROR("invalid regular expression delimiter or character %c "       \
+                 "supplied to " #name "()",                                    \
+                 (char)abs((int)compile_options));                             \
+  }
+
+extern int is_regex(b_obj_string *string);
+extern char *remove_regex_delimiter(b_vm *vm, b_obj_string *string);
 
 DECLARE_NATIVE(time);
 DECLARE_NATIVE(microtime);
