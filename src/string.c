@@ -1,9 +1,120 @@
 #include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "builtin/string.h"
-#include "memory.h"
+
+/**
+ * a Bird regex must always start and end with the same delimiter e.g. /
+ *
+ * e.g.
+ * /\d+/
+ *
+ * it can be followed by one or more matching fine tuning constants
+ *
+ * e.g.
+ *
+ * /\d+.+[a-z]+/sim -> '.' matches all, it's case insensitive and multiline
+ * (see the function for list of available options)
+ *
+ * returns:
+ * -1 -> false
+ * 0 -> true
+ * negative value -> invalid delimiter where abs(value) is the character
+ * positive value > 0 ? for compiled delimeters
+ */
+int is_regex(b_obj_string *string) {
+  char start = string->chars[0];
+  bool match_found = false;
+
+  uint32_t coptions = 0; // pcre2 options
+
+  int i;
+  for (i = 1; i < string->length; i++) {
+    if (string->chars[i] == start) {
+      match_found = true;
+      continue;
+    }
+
+    if (match_found) {
+      // compile the delimiters
+      switch (string->chars[i]) {
+      /* Perl compatible options */
+      case 'i':
+        coptions |= PCRE2_CASELESS;
+        break;
+      case 'm':
+        coptions |= PCRE2_MULTILINE;
+        break;
+      case 's':
+        coptions |= PCRE2_DOTALL;
+        break;
+      case 'x':
+        coptions |= PCRE2_EXTENDED;
+        break;
+
+      /* PCRE specific options */
+      case 'A':
+        coptions |= PCRE2_ANCHORED;
+        break;
+      case 'D':
+        coptions |= PCRE2_DOLLAR_ENDONLY;
+        break;
+      case 'S': /* Pass. */
+        break;
+      case 'X': /* Pass. */
+        break;
+      case 'U':
+        coptions |= PCRE2_UNGREEDY;
+        break;
+      case 'u':
+        coptions |= PCRE2_UTF;
+        /* In  PCRE,  by  default, \d, \D, \s, \S, \w, and \W recognize only
+       ASCII characters, even in UTF-8 mode. However, this can be changed by
+       setting the PCRE2_UCP option. */
+#ifdef PCRE2_UCP
+        coptions |= PCRE2_UCP;
+#endif
+        break;
+      case 'J':
+        coptions |= PCRE2_DUPNAMES;
+        break;
+
+      case ' ':
+      case '\n':
+      case '\r':
+        break;
+
+      default:
+        return coptions = -string->chars[i];
+      }
+    }
+  }
+
+  if (!match_found)
+    return -1;
+  else
+    return coptions;
+}
+
+char *remove_regex_delimiter(b_vm *vm, b_obj_string *string) {
+  if (string->length == 0)
+    return string->chars;
+
+  char start = string->chars[0];
+  int i = string->length - 1;
+  for (; i > 0; i--) {
+    if (string->chars[i] == start)
+      break;
+  }
+
+  char *str = ALLOCATE(char, i);
+  memcpy(str, string->chars + 1, i - 1);
+  str[i - 1] = '\0';
+
+  return str;
+}
 
 DECLARE_STRING_METHOD(length) {
   ENFORCE_ARG_COUNT(string.length, 0);
@@ -423,6 +534,124 @@ DECLARE_STRING_METHOD(rpad) {
   RETURN_OBJ(copy_string(vm, str, string->length + fill_size));
 }
 
-DECLARE_STRING_METHOD(match);
+DECLARE_STRING_METHOD(match) {
+  ENFORCE_ARG_COUNT(string.match, 1);
+  ENFORCE_ARG_TYPE(string.match, 0, IS_STRING);
+
+  b_obj_string *string = AS_STRING(METHOD_OBJECT);
+  b_obj_string *substr = AS_STRING(args[0]);
+
+  if (string->length == 0 && substr->length == 0) {
+    RETURN_TRUE;
+  } else if (string->length == 0 || substr->length == 0) {
+    RETURN_FALSE;
+  }
+
+  GET_REGEX_COMPILE_OPTIONS(string.match, substr, false);
+
+  if ((int)compile_options < 0) {
+    RETURN_BOOL(strstr(string->chars, substr->chars) - string->chars > -1);
+  }
+
+  char *real_regex = remove_regex_delimiter(vm, substr);
+
+  int error_number;
+  PCRE2_SIZE error_offset;
+
+  PCRE2_SPTR pattern = (PCRE2_SPTR)real_regex;
+  PCRE2_SPTR subject = (PCRE2_SPTR)string->chars;
+  PCRE2_SIZE subject_length = (PCRE2_SIZE)string->length;
+
+  pcre2_code *re =
+      pcre2_compile(pattern, PCRE2_ZERO_TERMINATED, compile_options,
+                    &error_number, &error_offset, NULL);
+
+  REGEX_COMPILATION_ERROR(re, error_number, error_offset);
+
+  pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(re, NULL);
+
+  int rc = pcre2_match(re, subject, subject_length, 0, 0, match_data, NULL);
+
+  if (rc < 0) {
+    switch (rc) {
+    case PCRE2_ERROR_NOMATCH:
+      RETURN_FALSE;
+      break;
+
+    default:
+      REGEX_RC_ERROR();
+    }
+  }
+
+  PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
+  uint32_t name_count;
+  uint32_t name_entry_size;
+  PCRE2_SPTR name_table;
+
+  b_obj_list *result = new_list(vm);
+  (void)pcre2_pattern_info(re, PCRE2_INFO_NAMECOUNT, &name_count);
+
+  if (name_count == 0) {
+    for (int i = 0; i < rc; i++) {
+      PCRE2_SIZE substring_length = ovector[2 * i + 1] - ovector[2 * i];
+      if (substring_length > 0) {
+        PCRE2_SPTR substring_start = subject + ovector[2 * i];
+        write_value_arr(vm, &result->items,
+                        OBJ_VAL(copy_string(vm, (char *)substring_start,
+                                            (int)substring_length)));
+      }
+    }
+  } else {
+
+    b_obj_list *match_list = new_list(vm);
+    b_obj_dict *match_dict = new_dict(vm);
+
+    for (int i = 0; i < rc; i++) {
+      PCRE2_SIZE substring_length = ovector[2 * i + 1] - ovector[2 * i];
+      if (substring_length > 0) {
+        PCRE2_SPTR substring_start = subject + ovector[2 * i];
+        write_value_arr(vm, &match_list->items,
+                        OBJ_VAL(copy_string(vm, (char *)substring_start,
+                                            (int)substring_length)));
+      }
+    }
+
+    PCRE2_SPTR tabptr;
+
+    (void)pcre2_pattern_info(re, PCRE2_INFO_NAMETABLE, &name_table);
+    (void)pcre2_pattern_info(re, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
+
+    tabptr = name_table;
+
+    for (int i = 0; i < (int)name_count; i++) {
+      int n = (tabptr[0] << 8) | tabptr[1];
+
+      char *_key = malloc(sizeof(char *));
+      char *_val = malloc(sizeof(char *));
+      sprintf(_key, "%*s", name_entry_size - 3, tabptr + 2);
+      sprintf(_val, "%*s", (int)(ovector[2 * n + 1] - ovector[2 * n]),
+              subject + ovector[2 * n]);
+
+      while (isspace((unsigned char)*_key))
+        _key++;
+
+      dict_add_entry(
+          vm, match_dict, OBJ_VAL(copy_string(vm, _key, name_entry_size - 3)),
+          OBJ_VAL(copy_string(vm, _val,
+                              (int)(ovector[2 * n + 1] - ovector[2 * n]))));
+
+      tabptr += name_entry_size;
+    }
+
+    write_value_arr(vm, &match_list->items, OBJ_VAL(match_dict));
+    write_value_arr(vm, &result->items, OBJ_VAL(match_list));
+  }
+
+  pcre2_match_data_free(match_data);
+  pcre2_code_free(re);
+
+  RETURN_OBJ(result);
+}
+
 DECLARE_STRING_METHOD(matches);
 DECLARE_STRING_METHOD(replace);

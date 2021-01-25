@@ -1,0 +1,12 @@
+# Package Information for pkg-config
+
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libpcre2-16
+Description: PCRE2 - Perl compatible regular expressions C library (2nd API) with 16 bit character support
+Version: 10.10
+Libs: -L${libdir} -lpcre2-16
+Cflags: -I${includedir} 

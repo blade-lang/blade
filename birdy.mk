@@ -12,6 +12,7 @@ ifeq ($(OS),mingw32)
 endif
 
 CFLAGS := -std=c99 -Wall -Wextra -Werror -Wno-unused-parameter 
+USE_SYSTEM_PCRE := 0
 
 # # For Windows OS, you may need to uncomment this section
 # CFLAGS += -Wno-implicit-fallthrough -Wno-format-zero-length -Wno-maybe-uninitialized
@@ -51,7 +52,11 @@ SOURCES := 						$(wildcard $(SOURCE_DIR)/*.c)
 
 SOURCES_OBJECTS := 		$(addprefix $(BUILD_DIR)/, $(notdir $(SOURCES:.c=.o)))
 
-# LIB_PCRE2 := deps/pcre2/.libs/libpcre2-8.a
+ifeq ($(USE_SYSTEM_PCRE),1)
+	LIB_PCRE2 := 
+else
+	LIB_PCRE2 := deps/pcre2/.libs/libpcre2-8.a
+endif
 
 CFLAGS += -I$(HEADERS_DIR)
 
@@ -68,8 +73,8 @@ endif
 # Targets ---------------------------------------------------------------------
 
 # Link the interpreter.
-# build/$(NAME): $(SOURCES_OBJECTS) $(LIB_PCRE2)
-build/$(NAME): $(SOURCES_OBJECTS)
+# build/$(NAME): $(SOURCES_OBJECTS)
+build/$(NAME): $(SOURCES_OBJECTS) $(LIB_PCRE2)
 	@ printf "%8s %s %s\n" $(CC) $@ "$(CFLAGS)"
 	@ mkdir -p build
 	@ $(CC) $(CFLAGS) -lreadline $^ -o $@
