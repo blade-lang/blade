@@ -11,9 +11,9 @@
 #include "object.h"
 #include "vm.h"
 
-#include "bstring.h"
-#include "dict.h"
-#include "list.h"
+#include "builtin/string.h"
+#include "builtin/dict.h"
+#include "builtin/list.h"
 
 #if defined(DEBUG_MODE) && DEBUG_MODE == 1
 #include "debug.h"

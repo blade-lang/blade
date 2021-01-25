@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "bstring.h"
+#include "builtin/string.h"
 #include "memory.h"
 
 DECLARE_STRING_METHOD(length) {
