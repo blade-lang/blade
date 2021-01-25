@@ -85,13 +85,18 @@
   } while (0);
 
 #define RETURN return NIL_VAL
-#define RETURN_ERROR return EMPTY_VAL
+#define RETURN_ERROR(...)                                                      \
+  {                                                                            \
+    _runtime_error(vm, ##__VA_ARGS__);                                         \
+    return EMPTY_VAL;                                                          \
+  }
 #define RETURN_BOOL(v) return BOOL_VAL(v)
 #define RETURN_TRUE return BOOL_VAL(true)
 #define RETURN_FALSE return BOOL_VAL(false)
 #define RETURN_NUMBER(v) return NUMBER_VAL(v)
 #define RETURN_OBJ(v) return OBJ_VAL(v)
 #define RETURN_STRING(v) return OBJ_VAL(copy_string(vm, v, (int)strlen(v)))
+#define RETURN_TSTRING(v, l) return OBJ_VAL(take_string(vm, v, l))
 #define RETURN_VALUE(v) return v
 
 DECLARE_NATIVE(time);

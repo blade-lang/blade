@@ -104,6 +104,10 @@ static void define_native_method(b_vm *vm, b_table *table, const char *name,
 }
 
 void init_vm(b_vm *vm) {
+#define DEFINE_STRING_METHOD(name) DEFINE_METHOD(string, name)
+#define DEFINE_LIST_METHOD(name) DEFINE_METHOD(list, name)
+#define DEFINE_DICT_METHOD(name) DEFINE_METHOD(dict, name)
+
   reset_stack(vm);
   vm->compiler = NULL;
   vm->objects = NULL;
@@ -163,13 +167,38 @@ void init_vm(b_vm *vm) {
   DEFINE_NATIVE(type);
 
   // string methods
-  DEFINE_METHOD(string, length);
+  DEFINE_STRING_METHOD(length);
+  DEFINE_STRING_METHOD(upper);
+  DEFINE_STRING_METHOD(lower);
+  DEFINE_STRING_METHOD(is_alpha);
+  DEFINE_STRING_METHOD(is_alnum);
+  DEFINE_STRING_METHOD(is_number);
+  DEFINE_STRING_METHOD(is_lower);
+  DEFINE_STRING_METHOD(is_upper);
+  DEFINE_STRING_METHOD(is_space);
+  DEFINE_STRING_METHOD(trim);
+  DEFINE_STRING_METHOD(ltrim);
+  DEFINE_STRING_METHOD(rtrim);
+  DEFINE_STRING_METHOD(join);
+  DEFINE_STRING_METHOD(split);
+  DEFINE_STRING_METHOD(index_of);
+  DEFINE_STRING_METHOD(starts_with);
+  DEFINE_STRING_METHOD(ends_with);
+  DEFINE_STRING_METHOD(count);
+  DEFINE_STRING_METHOD(to_number);
+  DEFINE_STRING_METHOD(to_list);
+  DEFINE_STRING_METHOD(lpad);
+  DEFINE_STRING_METHOD(rpad);
 
   // list methods
-  DEFINE_METHOD(list, length);
+  DEFINE_LIST_METHOD(length);
 
   // dictionary methods
-  DEFINE_METHOD(dict, length);
+  DEFINE_DICT_METHOD(length);
+
+#undef DEFINE_STRING_METHOD
+#undef DEFINE_LIST_METHOD
+#undef DEFINE_DICT_METHOD
 }
 
 void free_vm(b_vm *vm) {
