@@ -190,6 +190,8 @@ void init_vm(b_vm *vm) {
   DEFINE_STRING_METHOD(lpad);
   DEFINE_STRING_METHOD(rpad);
   DEFINE_STRING_METHOD(match);
+  DEFINE_STRING_METHOD(matches);
+  DEFINE_STRING_METHOD(replace);
 
   // list methods
   DEFINE_LIST_METHOD(length);

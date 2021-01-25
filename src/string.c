@@ -653,5 +653,318 @@ DECLARE_STRING_METHOD(match) {
   RETURN_OBJ(result);
 }
 
-DECLARE_STRING_METHOD(matches);
-DECLARE_STRING_METHOD(replace);
+DECLARE_STRING_METHOD(matches) {
+  ENFORCE_ARG_COUNT(string.matches, 1);
+  ENFORCE_ARG_TYPE(string.matches, 0, IS_STRING);
+
+  b_obj_list *result = new_list(vm);
+
+  b_obj_string *string = AS_STRING(METHOD_OBJECT);
+  b_obj_string *substr = AS_STRING(args[0]);
+
+  if (string->length == 0 && substr->length == 0) {
+    RETURN_OBJ(result); // empty string matches empty string to empty list
+  } else if (string->length == 0 || substr->length == 0) {
+    RETURN_FALSE; // if either string or str is empty, return false
+  }
+
+  GET_REGEX_COMPILE_OPTIONS(string.matches, substr, true);
+
+  char *real_regex = remove_regex_delimiter(vm, substr);
+
+  int error_number;
+  PCRE2_SIZE error_offset;
+  uint32_t option_bits;
+  uint32_t newline;
+  uint32_t name_count;
+  uint32_t name_entry_size;
+  PCRE2_SPTR name_table;
+
+  PCRE2_SPTR pattern = (PCRE2_SPTR)real_regex;
+  PCRE2_SPTR subject = (PCRE2_SPTR)string->chars;
+  PCRE2_SIZE subject_length = (PCRE2_SIZE)string->length;
+
+  pcre2_code *re = pcre2_compile(pattern, PCRE2_ZERO_TERMINATED, 0,
+                                 &error_number, &error_offset, NULL);
+
+  REGEX_COMPILATION_ERROR(re, error_number, error_offset);
+
+  pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(re, NULL);
+
+  int rc = pcre2_match(re, subject, subject_length, 0, 0, match_data, NULL);
+
+  if (rc < 0) {
+    switch (rc) {
+    case PCRE2_ERROR_NOMATCH:
+      RETURN_FALSE;
+      break;
+    default:
+      REGEX_RC_ERROR();
+    }
+  }
+
+  PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
+
+  // REGEX_VECTOR_SIZE_WARNING();
+
+  // handle edge cases such as /(?=.\K)/
+  REGEX_ASSERTION_ERROR(re, match_data, ovector);
+
+  (void)pcre2_pattern_info(re, PCRE2_INFO_NAMECOUNT, &name_count);
+
+  // add first set of matches to response
+  if (name_count == 0) {
+    int i;
+    for (i = 0; i < rc; i++) {
+      PCRE2_SIZE substring_length = ovector[2 * i + 1] - ovector[2 * i];
+      if (substring_length > 0) {
+        PCRE2_SPTR substring_start = subject + ovector[2 * i];
+        write_value_arr(vm, &result->items,
+                        OBJ_VAL(copy_string(vm, (char *)substring_start,
+                                            (int)substring_length)));
+      }
+    }
+  } else {
+
+    b_obj_list *match_list = new_list(vm);
+    b_obj_dict *match_dict = new_dict(vm);
+
+    int i;
+    for (i = 0; i < rc; i++) {
+      PCRE2_SIZE substring_length = ovector[2 * i + 1] - ovector[2 * i];
+      if (substring_length > 0) {
+        PCRE2_SPTR substring_start = subject + ovector[2 * i];
+        write_value_arr(vm, &match_list->items,
+                        OBJ_VAL(copy_string(vm, (char *)substring_start,
+                                            (int)substring_length)));
+      }
+    }
+
+    PCRE2_SPTR tabptr;
+
+    (void)pcre2_pattern_info(re, PCRE2_INFO_NAMETABLE, &name_table);
+
+    (void)pcre2_pattern_info(re, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
+
+    tabptr = name_table;
+
+    for (i = 0; i < (int)name_count; i++) {
+      int n = (tabptr[0] << 8) | tabptr[1];
+
+      char *_key = malloc(sizeof(char *));
+      char *_val = malloc(sizeof(char *));
+      sprintf(_key, "%*s", name_entry_size - 3, tabptr + 2);
+      sprintf(_val, "%*s", (int)(ovector[2 * n + 1] - ovector[2 * n]),
+              subject + ovector[2 * n]);
+
+      while (isspace((unsigned char)*_key))
+        _key++;
+
+      dict_add_entry(
+          vm, match_dict, OBJ_VAL(copy_string(vm, _key, name_entry_size - 3)),
+          OBJ_VAL(copy_string(vm, _val,
+                              (int)(ovector[2 * n + 1] - ovector[2 * n]))));
+
+      tabptr += name_entry_size;
+    }
+
+    write_value_arr(vm, &match_list->items, OBJ_VAL(match_dict));
+    write_value_arr(vm, &result->items, OBJ_VAL(match_list));
+  }
+
+  (void)pcre2_pattern_info(re, PCRE2_INFO_ALLOPTIONS, &option_bits);
+  int utf8 = (option_bits & PCRE2_UTF) != 0;
+
+  (void)pcre2_pattern_info(re, PCRE2_INFO_NEWLINE, &newline);
+  int crlf_is_newline = newline == PCRE2_NEWLINE_ANY ||
+                        newline == PCRE2_NEWLINE_CRLF ||
+                        newline == PCRE2_NEWLINE_ANYCRLF;
+
+  // find the other matchs
+  for (;;) {
+    uint32_t options = 0;
+    PCRE2_SIZE start_offset = ovector[1];
+
+    // if the previous match was for an empty string
+    if (ovector[0] == ovector[1]) {
+      if (ovector[0] == subject_length)
+        break;
+      options = PCRE2_NOTEMPTY_ATSTART | PCRE2_ANCHORED;
+    } else {
+      PCRE2_SIZE startchar = pcre2_get_startchar(match_data);
+      if (start_offset <= startchar) {
+        if (startchar >= subject_length)
+          break;
+        start_offset = startchar + 1;
+        if (utf8) {
+          for (; start_offset < subject_length; start_offset++)
+            if ((subject[start_offset] & 0xc0) != 0x80)
+              break;
+        }
+      }
+    }
+
+    rc = pcre2_match(re, subject, subject_length, start_offset, options,
+                     match_data, NULL);
+
+    if (rc == PCRE2_ERROR_NOMATCH) {
+      if (options == 0)
+        break;
+      ovector[1] = start_offset + 1;
+      if (crlf_is_newline && start_offset < subject_length - 1 &&
+          subject[start_offset] == '\r' && subject[start_offset + 1] == '\n')
+        ovector[1] += 1;
+      else if (utf8) {
+        while (ovector[1] < subject_length) {
+          if ((subject[ovector[1]] & 0xc0) != 0x80)
+            break;
+          ovector[1] += 1;
+        }
+      }
+      continue;
+    }
+
+    if (rc < 0) {
+      runtime_error("regular expression error %d\n", rc);
+      pcre2_match_data_free(match_data);
+      pcre2_code_free(re);
+      return EMPTY_VAL;
+    }
+
+    // REGEX_VECTOR_SIZE_WARNING();
+    REGEX_ASSERTION_ERROR(re, match_data, ovector);
+
+    if (name_count == 0) {
+      int i;
+      for (i = 0; i < rc; i++) {
+        PCRE2_SIZE substring_length = ovector[2 * i + 1] - ovector[2 * i];
+        if (substring_length > 0) {
+          PCRE2_SPTR substring_start = subject + ovector[2 * i];
+          write_value_arr(vm, &result->items,
+                          OBJ_VAL(copy_string(vm, (char *)substring_start,
+                                              (int)substring_length)));
+        }
+      }
+    } else {
+
+      b_obj_list *match_list = new_list(vm);
+      b_obj_dict *match_dict = new_dict(vm);
+
+      int i;
+      for (i = 0; i < rc; i++) {
+        PCRE2_SIZE substring_length = ovector[2 * i + 1] - ovector[2 * i];
+        if (substring_length > 0) {
+          PCRE2_SPTR substring_start = subject + ovector[2 * i];
+          write_value_arr(vm, &match_list->items,
+                          OBJ_VAL(copy_string(vm, (char *)substring_start,
+                                              (int)substring_length)));
+        }
+      }
+
+      PCRE2_SPTR tabptr;
+
+      (void)pcre2_pattern_info(re, PCRE2_INFO_NAMETABLE, &name_table);
+
+      (void)pcre2_pattern_info(re, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
+
+      tabptr = name_table;
+
+      for (i = 0; i < (int)name_count; i++) {
+        int n = (tabptr[0] << 8) | tabptr[1];
+
+        char *_key = malloc(sizeof(char *));
+        char *_val = malloc(sizeof(char *));
+        sprintf(_key, "%*s", name_entry_size - 3, tabptr + 2);
+        sprintf(_val, "%*s", (int)(ovector[2 * n + 1] - ovector[2 * n]),
+                subject + ovector[2 * n]);
+
+        while (isspace((unsigned char)*_key))
+          _key++;
+
+        dict_add_entry(
+            vm, match_dict, OBJ_VAL(copy_string(vm, _key, name_entry_size - 3)),
+            OBJ_VAL(copy_string(vm, _val,
+                                (int)(ovector[2 * n + 1] - ovector[2 * n]))));
+
+        tabptr += name_entry_size;
+      }
+
+      write_value_arr(vm, &match_list->items, OBJ_VAL(match_dict));
+      write_value_arr(vm, &result->items, OBJ_VAL(match_list));
+    }
+  }
+
+  pcre2_match_data_free(match_data);
+  pcre2_code_free(re);
+
+  RETURN_OBJ(result);
+}
+
+DECLARE_STRING_METHOD(replace) {
+  ENFORCE_ARG_COUNT(string.replace, 2);
+  ENFORCE_ARG_TYPE(string.replace, 0, IS_STRING);
+  ENFORCE_ARG_TYPE(string.replace, 1, IS_STRING);
+
+  b_obj_string *string = AS_STRING(METHOD_OBJECT);
+  b_obj_string *substr = AS_STRING(args[0]);
+  b_obj_string *rep_substr = AS_STRING(args[1]);
+
+  if (string->length == 0 && substr->length == 0) {
+    RETURN_TRUE;
+  } else if (string->length == 0 || substr->length == 0) {
+    RETURN_FALSE;
+  }
+
+  GET_REGEX_COMPILE_OPTIONS(string.replace, substr, false);
+  char *real_regex = substr->chars;
+  if ((int)compile_options > -1) {
+    real_regex = remove_regex_delimiter(vm, substr);
+  }
+
+  PCRE2_SPTR input = (PCRE2_SPTR)string->chars;
+  PCRE2_SPTR pattern = (PCRE2_SPTR)real_regex;
+  PCRE2_SPTR replacement = (PCRE2_SPTR)rep_substr->chars;
+
+  int result, error_number;
+  PCRE2_SIZE error_offset;
+
+  pcre2_code *re =
+      pcre2_compile(pattern, PCRE2_ZERO_TERMINATED, PCRE2_MULTILINE,
+                    &error_number, &error_offset, 0);
+
+  REGEX_COMPILATION_ERROR(re, error_number, error_offset);
+
+  pcre2_match_context *match_context = pcre2_match_context_create(0);
+
+  PCRE2_SIZE output_length = 0;
+  result = pcre2_substitute(
+      re, input, PCRE2_ZERO_TERMINATED, 0,
+      PCRE2_SUBSTITUTE_GLOBAL | PCRE2_SUBSTITUTE_OVERFLOW_LENGTH |
+          PCRE2_SUBSTITUTE_EXTENDED,
+      0, match_context, replacement, PCRE2_ZERO_TERMINATED, 0, &output_length);
+
+  if (result != PCRE2_ERROR_NOMEMORY) {
+    runtime_error("regular expression post-compilation failed for replacement");
+    return EMPTY_VAL;
+  }
+
+  PCRE2_UCHAR *output_buffer = malloc(output_length * sizeof(PCRE2_UCHAR));
+
+  result = pcre2_substitute(
+      re, input, PCRE2_ZERO_TERMINATED, 0,
+      PCRE2_SUBSTITUTE_GLOBAL | PCRE2_SUBSTITUTE_EXTENDED, 0, match_context,
+      replacement, PCRE2_ZERO_TERMINATED, output_buffer, &output_length);
+
+  if (result < 0) {
+    runtime_error("regular expression error at replacement time");
+    return EMPTY_VAL;
+  }
+
+  b_obj_string *response =
+      copy_string(vm, (char *)output_buffer, output_length);
+
+  pcre2_match_context_free(match_context);
+  pcre2_code_free(re);
+
+  RETURN_OBJ(response);
+}
