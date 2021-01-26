@@ -1,7 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "config.h"
 #include "memory.h"
 #include "object.h"
@@ -9,6 +5,10 @@
 #include "util.h"
 #include "value.h"
 #include "vm.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define ALLOCATE_OBJ(type, obj_type)                                           \
   (type *)allocate_object(vm, sizeof(type), obj_type)

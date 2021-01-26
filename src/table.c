@@ -1,12 +1,12 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "config.h"
 #include "memory.h"
 #include "object.h"
 #include "table.h"
 #include "value.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 void init_table(b_table *table) {
   table->count = 0;

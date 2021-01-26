@@ -3,28 +3,31 @@
 *************************************************/
 
 /* This is a demonstration program to illustrate a straightforward way of
-calling the PCRE2 regular expression library from a C program. See the
+using the PCRE2 regular expression library from a C program. See the
 pcre2sample documentation for a short discussion ("man pcre2sample" if you have
 the PCRE2 man pages installed). PCRE2 is a revised API for the library, and is
 incompatible with the original PCRE API.
 
 There are actually three libraries, each supporting a different code unit
-width. This demonstration program uses the 8-bit library.
+width. This demonstration program uses the 8-bit library. The default is to
+process each code unit as a separate character, but if the pattern begins with
+"(*UTF)", both it and the subject are treated as UTF-8 strings, where
+characters may occupy multiple code units.
 
 In Unix-like environments, if PCRE2 is installed in your standard system
 libraries, you should be able to compile this program using this command:
 
-gcc -Wall pcre2demo.c -lpcre2-8 -o pcre2demo
+cc -Wall pcre2demo.c -lpcre2-8 -o pcre2demo
 
 If PCRE2 is not installed in a standard place, it is likely to be installed
 with support for the pkg-config mechanism. If you have pkg-config, you can
 compile this program using this command:
 
-gcc -Wall pcre2demo.c `pkg-config --cflags --libs libpcre2-8` -o pcre2demo
+cc -Wall pcre2demo.c `pkg-config --cflags --libs libpcre2-8` -o pcre2demo
 
-If you do not have pkg-config, you may have to use this:
+If you do not have pkg-config, you may have to use something like this:
 
-gcc -Wall pcre2demo.c -I/usr/local/include -L/usr/local/lib \
+cc -Wall pcre2demo.c -I/usr/local/include -L/usr/local/lib \
   -R/usr/local/lib -lpcre2-8 -o pcre2demo
 
 Replace "/usr/local/include" and "/usr/local/lib" with wherever the include and
@@ -39,9 +42,14 @@ the following line. */
 
 /* #define PCRE2_STATIC */
 
-/* This macro must be defined before including pcre2.h. For a program that uses
-only one code unit width, it makes it possible to use generic function names
-such as pcre2_compile(). */
+/* The PCRE2_CODE_UNIT_WIDTH macro must be defined before including pcre2.h.
+For a program that uses only one code unit width, setting it to 8, 16, or 32
+makes it possible to use generic function names such as pcre2_compile(). Note
+that just changing 8 to 16 (for example) is not sufficient to convert this
+program to process 16-bit characters. Even in a fully 16-bit environment, where
+string-handling functions such as strcmp() and printf() work with 16-bit
+characters, the code for handling the table of named substrings will still need
+to be modified. */
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 
@@ -62,42 +70,45 @@ int main(int argc, char **argv)
 {
 pcre2_code *re;
 PCRE2_SPTR pattern;     /* PCRE2_SPTR is a pointer to unsigned code units of */
-PCRE2_SPTR subject;     /* the appropriate width (8, 16, or 32 bits). */
+PCRE2_SPTR subject;     /* the appropriate width (in this case, 8 bits). */
 PCRE2_SPTR name_table;
 
 int crlf_is_newline;
 int errornumber;
 int find_all;
 int i;
-int namecount;
-int name_entry_size;
 int rc;
 int utf8;
 
 uint32_t option_bits;
+uint32_t namecount;
+uint32_t name_entry_size;
 uint32_t newline;
 
 PCRE2_SIZE erroroffset;
 PCRE2_SIZE *ovector;
+PCRE2_SIZE subject_length;
 
-size_t subject_length;
 pcre2_match_data *match_data;
-
 
 
 /**************************************************************************
 * First, sort out the command line. There is only one possible option at  *
 * the moment, "-g" to request repeated matching to find all occurrences,  *
 * like Perl's /g option. We set the variable find_all to a non-zero value *
-* if the -g option is present. Apart from that, there must be exactly two *
-* arguments.                                                              *
+* if the -g option is present.                                            *
 **************************************************************************/
 
 find_all = 0;
 for (i = 1; i < argc; i++)
   {
   if (strcmp(argv[i], "-g") == 0) find_all = 1;
-    else break;
+  else if (argv[i][0] == '-')
+    {
+    printf("Unrecognised option %s\n", argv[i]);
+    return 1;
+    }
+  else break;
   }
 
 /* After the options, we require exactly two arguments, which are the pattern,
@@ -105,16 +116,18 @@ and the subject string. */
 
 if (argc - i != 2)
   {
-  printf("Two arguments required: a regex and a subject string\n");
+  printf("Exactly two arguments required: a regex and a subject string\n");
   return 1;
   }
 
-/* As pattern and subject are char arguments, they can be straightforwardly
-cast to PCRE2_SPTR as we are working in 8-bit code units. */
+/* Pattern and subject are char arguments, so they can be straightforwardly
+cast to PCRE2_SPTR because we are working in 8-bit code units. The subject
+length is cast to PCRE2_SIZE for completeness, though PCRE2_SIZE is in fact
+defined to be size_t. */
 
 pattern = (PCRE2_SPTR)argv[i];
 subject = (PCRE2_SPTR)argv[i+1];
-subject_length = strlen((char *)subject);
+subject_length = (PCRE2_SIZE)strlen((char *)subject);
 
 
 /*************************************************************************
@@ -143,16 +156,21 @@ if (re == NULL)
 
 
 /*************************************************************************
-* If the compilation succeeded, we call PCRE again, in order to do a     *
+* If the compilation succeeded, we call PCRE2 again, in order to do a    *
 * pattern match against the subject string. This does just ONE match. If *
 * further matching is needed, it will be done below. Before running the  *
-* match we must set up a match_data block for holding the result.        *
+* match we must set up a match_data block for holding the result. Using  *
+* pcre2_match_data_create_from_pattern() ensures that the block is       *
+* exactly the right size for the number of capturing parentheses in the  *
+* pattern. If you need to know the actual size of a match_data block as  *
+* a number of bytes, you can find it like this:                          *
+*                                                                        *
+* PCRE2_SIZE match_data_size = pcre2_get_match_data_size(match_data);    *
 *************************************************************************/
 
-/* Using this function ensures that the block is exactly the right size for
-the number of capturing parentheses in the pattern. */
-
 match_data = pcre2_match_data_create_from_pattern(re, NULL);
+
+/* Now run the match. */
 
 rc = pcre2_match(
   re,                   /* the compiled pattern */
@@ -176,7 +194,7 @@ if (rc < 0)
     default: printf("Matching error %d\n", rc); break;
     }
   pcre2_match_data_free(match_data);   /* Release memory used for the match */
-  pcre2_code_free(re);                 /* data and the compiled pattern. */
+  pcre2_code_free(re);                 /*   data and the compiled pattern. */
   return 1;
   }
 
@@ -184,7 +202,7 @@ if (rc < 0)
 stored. */
 
 ovector = pcre2_get_ovector_pointer(match_data);
-printf("\nMatch succeeded at offset %d\n", (int)ovector[0]);
+printf("Match succeeded at offset %d\n", (int)ovector[0]);
 
 
 /*************************************************************************
@@ -199,13 +217,28 @@ pcre2_match_data_create_from_pattern() above. */
 if (rc == 0)
   printf("ovector was not big enough for all the captured substrings\n");
 
+/* We must guard against patterns such as /(?=.\K)/ that use \K in an assertion
+to set the start of a match later than its end. In this demonstration program,
+we just detect this case and give up. */
+
+if (ovector[0] > ovector[1])
+  {
+  printf("\\K was used in an assertion to set the match start after its end.\n"
+    "From end to start the match was: %.*s\n", (int)(ovector[0] - ovector[1]),
+      (char *)(subject + ovector[1]));
+  printf("Run abandoned\n");
+  pcre2_match_data_free(match_data);
+  pcre2_code_free(re);
+  return 1;
+  }
+
 /* Show substrings stored in the output vector by number. Obviously, in a real
 application you might want to do things other than print them. */
 
 for (i = 0; i < rc; i++)
   {
   PCRE2_SPTR substring_start = subject + ovector[2*i];
-  size_t substring_length = ovector[2*i+1] - ovector[2*i];
+  PCRE2_SIZE substring_length = ovector[2*i+1] - ovector[2*i];
   printf("%2d: %.*s\n", i, (int)substring_length, (char *)substring_start);
   }
 
@@ -225,7 +258,7 @@ we have to extract the count of named parentheses from the pattern. */
   PCRE2_INFO_NAMECOUNT, /* get the number of named substrings */
   &namecount);          /* where to put the answer */
 
-if (namecount <= 0) printf("No named substrings\n"); else
+if (namecount == 0) printf("No named substrings\n"); else
   {
   PCRE2_SPTR tabptr;
   printf("Named substrings\n");
@@ -313,8 +346,8 @@ crlf_is_newline = newline == PCRE2_NEWLINE_ANY ||
 
 for (;;)
   {
-  uint32_t options = 0;                    /* Normally no options */
-  PCRE2_SIZE start_offset = ovector[1];  /* Start at end of previous match */
+  uint32_t options = 0;                   /* Normally no options */
+  PCRE2_SIZE start_offset = ovector[1];   /* Start at end of previous match */
 
   /* If the previous match was for an empty string, we are finished if we are
   at the end of the subject. Otherwise, arrange to run another match at the
@@ -324,6 +357,29 @@ for (;;)
     {
     if (ovector[0] == subject_length) break;
     options = PCRE2_NOTEMPTY_ATSTART | PCRE2_ANCHORED;
+    }
+
+  /* If the previous match was not an empty string, there is one tricky case to
+  consider. If a pattern contains \K within a lookbehind assertion at the
+  start, the end of the matched string can be at the offset where the match
+  started. Without special action, this leads to a loop that keeps on matching
+  the same substring. We must detect this case and arrange to move the start on
+  by one character. The pcre2_get_startchar() function returns the starting
+  offset that was passed to pcre2_match(). */
+
+  else
+    {
+    PCRE2_SIZE startchar = pcre2_get_startchar(match_data);
+    if (start_offset <= startchar)
+      {
+      if (startchar >= subject_length) break;   /* Reached end of subject.   */
+      start_offset = startchar + 1;             /* Advance by one character. */
+      if (utf8)                                 /* If UTF-8, it may be more  */
+        {                                       /*   than one code unit.     */
+        for (; start_offset < subject_length; start_offset++)
+          if ((subject[start_offset] & 0xc0) != 0x80) break;
+        }
+      }
     }
 
   /* Run the next matching operation */
@@ -354,7 +410,7 @@ for (;;)
     {
     if (options == 0) break;                    /* All matches found */
     ovector[1] = start_offset + 1;              /* Advance one code unit */
-    if (crlf_is_newline &&                      /* If CRLF is newline & */
+    if (crlf_is_newline &&                      /* If CRLF is a newline & */
         start_offset < subject_length - 1 &&    /* we are at CRLF, */
         subject[start_offset] == '\r' &&
         subject[start_offset + 1] == '\n')
@@ -390,6 +446,21 @@ for (;;)
   if (rc == 0)
     printf("ovector was not big enough for all the captured substrings\n");
 
+  /* We must guard against patterns such as /(?=.\K)/ that use \K in an
+  assertion to set the start of a match later than its end. In this
+  demonstration program, we just detect this case and give up. */
+
+  if (ovector[0] > ovector[1])
+    {
+    printf("\\K was used in an assertion to set the match start after its end.\n"
+      "From end to start the match was: %.*s\n", (int)(ovector[0] - ovector[1]),
+        (char *)(subject + ovector[1]));
+    printf("Run abandoned\n");
+    pcre2_match_data_free(match_data);
+    pcre2_code_free(re);
+    return 1;
+    }
+
   /* As before, show substrings stored in the output vector by number, and then
   also any named substrings. */
 
@@ -400,7 +471,7 @@ for (;;)
     printf("%2d: %.*s\n", i, (int)substring_length, (char *)substring_start);
     }
 
-  if (namecount <= 0) printf("No named substrings\n"); else
+  if (namecount == 0) printf("No named substrings\n"); else
     {
     PCRE2_SPTR tabptr = name_table;
     printf("Named substrings\n");

@@ -1,8 +1,8 @@
-#include <stdlib.h>
-
 #include "blob.h"
 #include "memory.h"
 #include "vm.h"
+
+#include <stdlib.h>
 
 void init_blob(b_blob *blob) {
   blob->count = 0;

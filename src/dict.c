@@ -1,6 +1,6 @@
-#include <stdlib.h>
-
 #include "builtin/dict.h"
+
+#include <stdlib.h>
 
 /**
  * dictionary.length()

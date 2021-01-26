@@ -1,6 +1,6 @@
-#include <stdlib.h>
-
 #include "builtin/list.h"
+
+#include <stdlib.h>
 
 static inline void write_list(b_vm *vm, b_obj_list *list, b_value value) {
   write_value_arr(vm, &list->items, value);

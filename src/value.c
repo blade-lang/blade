@@ -1,11 +1,11 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "config.h"
 #include "memory.h"
 #include "object.h"
 #include "value.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 void init_value_arr(b_value_arr *array) {
   array->capacity = 0;

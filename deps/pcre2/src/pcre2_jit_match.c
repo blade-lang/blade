@@ -7,7 +7,7 @@ and semantics are as close as possible to those of the Perl 5 language.
 
                        Written by Philip Hazel
      Original API code Copyright (c) 1997-2012 University of Cambridge
-         New API code Copyright (c) 2014 University of Cambridge
+          New API code Copyright (c) 2016-2018 University of Cambridge
 
 -----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
@@ -46,13 +46,13 @@ POSSIBILITY OF SUCH DAMAGE.
 
 static SLJIT_NOINLINE int jit_machine_stack_exec(jit_arguments *arguments, jit_function executable_func)
 {
-sljit_ub local_space[MACHINE_STACK_SIZE];
+sljit_u8 local_space[MACHINE_STACK_SIZE];
 struct sljit_stack local_stack;
 
-local_stack.top = (sljit_sw)&local_space;
-local_stack.base = local_stack.top;
-local_stack.limit = local_stack.base + MACHINE_STACK_SIZE;
-local_stack.max_limit = local_stack.limit;
+local_stack.min_start = local_space;
+local_stack.start = local_space;
+local_stack.end = local_space + MACHINE_STACK_SIZE;
+local_stack.top = local_space + MACHINE_STACK_SIZE;
 arguments->stack = &local_stack;
 return executable_func(arguments);
 }
@@ -74,7 +74,6 @@ Arguments:
   options         option bits
   match_data      points to a match_data block
   mcontext        points to a match context
-  jit_stack       points to a JIT stack
 
 Returns:          > 0 => success; value is the number of ovector pairs filled
                   = 0 => success, but ovector is not big enough
@@ -118,7 +117,7 @@ if ((options & PCRE2_PARTIAL_HARD) != 0)
 else if ((options & PCRE2_PARTIAL_SOFT) != 0)
   index = 1;
 
-if (functions->executable_funcs[index] == NULL)
+if (functions == NULL || functions->executable_funcs[index] == NULL)
   return PCRE2_ERROR_JIT_BADOPTION;
 
 /* Sanity checks should be handled by pcre_exec. */
@@ -128,15 +127,13 @@ arguments.end = subject + length;
 arguments.match_data = match_data;
 arguments.startchar_ptr = subject;
 arguments.mark_ptr = NULL;
-/* JIT decreases this value less frequently than the interpreter. */
-arguments.notbol = (options & PCRE2_NOTBOL) != 0;
-arguments.noteol = (options & PCRE2_NOTEOL) != 0;
-arguments.notempty = (options & PCRE2_NOTEMPTY) != 0;
-arguments.notempty_atstart = (options & PCRE2_NOTEMPTY_ATSTART) != 0;
+arguments.options = options;
+
 if (mcontext != NULL)
   {
   arguments.callout = mcontext->callout;
   arguments.callout_data = mcontext->callout_data;
+  arguments.offset_limit = mcontext->offset_limit;
   arguments.limit_match = (mcontext->match_limit < re->limit_match)?
     mcontext->match_limit : re->limit_match;
   if (mcontext->jit_callback != NULL)
@@ -148,13 +145,12 @@ else
   {
   arguments.callout = NULL;
   arguments.callout_data = NULL;
+  arguments.offset_limit = PCRE2_UNSET;
   arguments.limit_match = (MATCH_LIMIT < re->limit_match)?
     MATCH_LIMIT : re->limit_match;
   jit_stack = NULL;
   }
 
-/* JIT only need two offsets for each ovector entry. Hence
-   the last 1/3 of the ovector will never be touched. */
 
 max_oveccount = functions->top_bracket;
 if (oveccount > max_oveccount)
@@ -174,7 +170,7 @@ else
 if (rc > (int)oveccount)
   rc = 0;
 match_data->code = re;
-match_data->subject = subject;
+match_data->subject = (rc >= 0 || rc == PCRE2_ERROR_PARTIAL)? subject : NULL;
 match_data->rc = rc;
 match_data->startchar = arguments.startchar_ptr - subject;
 match_data->leftchar = 0;

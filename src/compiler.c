@@ -1,8 +1,3 @@
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "common.h"
 #include "compiler.h"
 #include "config.h"
@@ -10,6 +5,11 @@
 #include "object.h"
 #include "scanner.h"
 #include "util.h"
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #if defined(DEBUG_MODE) && DEBUG_MODE == 1
 #include "debug.h"
