@@ -117,12 +117,12 @@ char *remove_regex_delimiter(b_vm *vm, b_obj_string *string) {
 }
 
 DECLARE_STRING_METHOD(length) {
-  ENFORCE_ARG_COUNT(string.length, 0);
+  ENFORCE_ARG_COUNT(length, 0);
   RETURN_NUMBER(AS_STRING(METHOD_OBJECT)->length);
 }
 
 DECLARE_STRING_METHOD(upper) {
-  ENFORCE_ARG_COUNT(string.upper, 0);
+  ENFORCE_ARG_COUNT(upper, 0);
   char *string = (char *)AS_CSTRING(METHOD_OBJECT);
   for (char *p = string; *p; p++)
     *p = toupper(*p);
@@ -130,7 +130,7 @@ DECLARE_STRING_METHOD(upper) {
 }
 
 DECLARE_STRING_METHOD(lower) {
-  ENFORCE_ARG_COUNT(string.lower, 0);
+  ENFORCE_ARG_COUNT(lower, 0);
   char *string = (char *)AS_CSTRING(METHOD_OBJECT);
   for (char *p = string; *p; p++)
     *p = tolower(*p);
@@ -138,7 +138,7 @@ DECLARE_STRING_METHOD(lower) {
 }
 
 DECLARE_STRING_METHOD(is_alpha) {
-  ENFORCE_ARG_COUNT(string.is_alpha, 0);
+  ENFORCE_ARG_COUNT(is_alpha, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
     if (!isalpha(string->chars[i]))
@@ -148,7 +148,7 @@ DECLARE_STRING_METHOD(is_alpha) {
 }
 
 DECLARE_STRING_METHOD(is_alnum) {
-  ENFORCE_ARG_COUNT(string.is_alnum, 0);
+  ENFORCE_ARG_COUNT(is_alnum, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
     if (!isalnum(string->chars[i]))
@@ -158,7 +158,7 @@ DECLARE_STRING_METHOD(is_alnum) {
 }
 
 DECLARE_STRING_METHOD(is_number) {
-  ENFORCE_ARG_COUNT(string.is_number, 0);
+  ENFORCE_ARG_COUNT(is_number, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
     if (!isnumber(string->chars[i]))
@@ -168,7 +168,7 @@ DECLARE_STRING_METHOD(is_number) {
 }
 
 DECLARE_STRING_METHOD(is_lower) {
-  ENFORCE_ARG_COUNT(string.is_lower, 0);
+  ENFORCE_ARG_COUNT(is_lower, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
     if (!islower(string->chars[i]))
@@ -178,7 +178,7 @@ DECLARE_STRING_METHOD(is_lower) {
 }
 
 DECLARE_STRING_METHOD(is_upper) {
-  ENFORCE_ARG_COUNT(string.is_upper, 0);
+  ENFORCE_ARG_COUNT(is_upper, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
     if (!isupper(string->chars[i]))
@@ -188,7 +188,7 @@ DECLARE_STRING_METHOD(is_upper) {
 }
 
 DECLARE_STRING_METHOD(is_space) {
-  ENFORCE_ARG_COUNT(string.is_space, 0);
+  ENFORCE_ARG_COUNT(is_space, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
     if (!isspace(string->chars[i]))
@@ -198,12 +198,12 @@ DECLARE_STRING_METHOD(is_space) {
 }
 
 DECLARE_STRING_METHOD(trim) {
-  ENFORCE_ARG_RANGE(string.trim, 0, 1);
+  ENFORCE_ARG_RANGE(trim, 0, 1);
 
   char trimmer = '\0';
 
   if (arg_count == 1) {
-    ENFORCE_ARG_TYPE(string.trim, 0, IS_CHAR);
+    ENFORCE_ARG_TYPE(trim, 0, IS_CHAR);
     trimmer = (char)AS_STRING(args[0])->chars[0];
   }
 
@@ -240,12 +240,12 @@ DECLARE_STRING_METHOD(trim) {
 }
 
 DECLARE_STRING_METHOD(ltrim) {
-  ENFORCE_ARG_RANGE(string.ltrim, 0, 1);
+  ENFORCE_ARG_RANGE(ltrim, 0, 1);
 
   char trimmer = '\0';
 
   if (arg_count == 1) {
-    ENFORCE_ARG_TYPE(string.ltrim, 0, IS_CHAR);
+    ENFORCE_ARG_TYPE(ltrim, 0, IS_CHAR);
     trimmer = (char)AS_STRING(args[0])->chars[0];
   }
 
@@ -274,12 +274,12 @@ DECLARE_STRING_METHOD(ltrim) {
 }
 
 DECLARE_STRING_METHOD(rtrim) {
-  ENFORCE_ARG_RANGE(string.rtrim, 0, 1);
+  ENFORCE_ARG_RANGE(rtrim, 0, 1);
 
   char trimmer = '\0';
 
   if (arg_count == 1) {
-    ENFORCE_ARG_TYPE(string.rtrim, 0, IS_CHAR);
+    ENFORCE_ARG_TYPE(rtrim, 0, IS_CHAR);
     trimmer = (char)AS_STRING(args[0])->chars[0];
   }
 
@@ -306,8 +306,8 @@ DECLARE_STRING_METHOD(rtrim) {
 }
 
 DECLARE_STRING_METHOD(join) {
-  ENFORCE_ARG_COUNT(string.join, 1);
-  ENFORCE_ARG_TYPE(string.join, 0, IS_OBJ);
+  ENFORCE_ARG_COUNT(join, 1);
+  ENFORCE_ARG_TYPE(join, 0, IS_OBJ);
 
   b_value argument = args[0];
   int length = 0;
@@ -344,7 +344,7 @@ DECLARE_STRING_METHOD(join) {
       array[i] = value_to_string(vm, values[i]);
     }
   } else {
-    RETURN_ERROR("string.join() does not support object of type %s",
+    RETURN_ERROR("join() does not support object of type %s",
                  value_type(argument))
   }
 
@@ -361,8 +361,8 @@ DECLARE_STRING_METHOD(join) {
 }
 
 DECLARE_STRING_METHOD(split) {
-  ENFORCE_ARG_COUNT(string.split, 1);
-  ENFORCE_ARG_TYPE(string.split, 0, IS_STRING);
+  ENFORCE_ARG_COUNT(split, 1);
+  ENFORCE_ARG_TYPE(split, 0, IS_STRING);
 
   b_obj_list *list = new_list(vm);
 
@@ -391,8 +391,8 @@ DECLARE_STRING_METHOD(split) {
 }
 
 DECLARE_STRING_METHOD(index_of) {
-  ENFORCE_ARG_COUNT(string.index_of, 1);
-  ENFORCE_ARG_TYPE(string.index_of, 0, IS_STRING);
+  ENFORCE_ARG_COUNT(index_of, 1);
+  ENFORCE_ARG_TYPE(index_of, 0, IS_STRING);
 
   char *str = AS_CSTRING(METHOD_OBJECT);
   char *result = strstr(str, AS_CSTRING(args[0]));
@@ -401,8 +401,8 @@ DECLARE_STRING_METHOD(index_of) {
 }
 
 DECLARE_STRING_METHOD(starts_with) {
-  ENFORCE_ARG_COUNT(string.starts_with, 1);
-  ENFORCE_ARG_TYPE(string.starts_with, 0, IS_STRING);
+  ENFORCE_ARG_COUNT(starts_with, 1);
+  ENFORCE_ARG_TYPE(starts_with, 0, IS_STRING);
 
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   b_obj_string *substr = AS_STRING(args[0]);
@@ -415,8 +415,8 @@ DECLARE_STRING_METHOD(starts_with) {
 }
 
 DECLARE_STRING_METHOD(ends_with) {
-  ENFORCE_ARG_COUNT(string.ends_with, 1);
-  ENFORCE_ARG_TYPE(string.ends_with, 0, IS_STRING);
+  ENFORCE_ARG_COUNT(ends_with, 1);
+  ENFORCE_ARG_TYPE(ends_with, 0, IS_STRING);
 
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   b_obj_string *substr = AS_STRING(args[0]);
@@ -432,8 +432,8 @@ DECLARE_STRING_METHOD(ends_with) {
 }
 
 DECLARE_STRING_METHOD(count) {
-  ENFORCE_ARG_COUNT(string.count, 1);
-  ENFORCE_ARG_TYPE(string.count, 0, IS_STRING);
+  ENFORCE_ARG_COUNT(count, 1);
+  ENFORCE_ARG_TYPE(count, 0, IS_STRING);
 
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   b_obj_string *substr = AS_STRING(args[0]);
@@ -452,12 +452,12 @@ DECLARE_STRING_METHOD(count) {
 }
 
 DECLARE_STRING_METHOD(to_number) {
-  ENFORCE_ARG_COUNT(string.to_number, 0);
+  ENFORCE_ARG_COUNT(to_number, 0);
   RETURN_NUMBER(strtod(AS_CSTRING(METHOD_OBJECT), NULL));
 }
 
 DECLARE_STRING_METHOD(to_list) {
-  ENFORCE_ARG_COUNT(string.to_list, 0);
+  ENFORCE_ARG_COUNT(to_list, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   b_obj_list *list = new_list(vm);
 
@@ -473,15 +473,15 @@ DECLARE_STRING_METHOD(to_list) {
 }
 
 DECLARE_STRING_METHOD(lpad) {
-  ENFORCE_ARG_RANGE(string.lpad, 1, 2);
-  ENFORCE_ARG_TYPE(string.lpad, 0, IS_NUMBER);
+  ENFORCE_ARG_RANGE(lpad, 1, 2);
+  ENFORCE_ARG_TYPE(lpad, 0, IS_NUMBER);
 
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   int width = AS_NUMBER(args[0]);
   char fill_char = ' ';
 
   if (arg_count == 2) {
-    ENFORCE_ARG_TYPE(string.lpad, 1, IS_CHAR);
+    ENFORCE_ARG_TYPE(lpad, 1, IS_CHAR);
     fill_char = AS_CSTRING(args[1])[0];
   }
 
@@ -504,15 +504,15 @@ DECLARE_STRING_METHOD(lpad) {
 }
 
 DECLARE_STRING_METHOD(rpad) {
-  ENFORCE_ARG_RANGE(string.rpad, 1, 2);
-  ENFORCE_ARG_TYPE(string.rpad, 0, IS_NUMBER);
+  ENFORCE_ARG_RANGE(rpad, 1, 2);
+  ENFORCE_ARG_TYPE(rpad, 0, IS_NUMBER);
 
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   int width = AS_NUMBER(args[0]);
   char fill_char = ' ';
 
   if (arg_count == 2) {
-    ENFORCE_ARG_TYPE(string.rpad, 1, IS_CHAR);
+    ENFORCE_ARG_TYPE(rpad, 1, IS_CHAR);
     fill_char = AS_CSTRING(args[1])[0];
   }
 
@@ -535,8 +535,8 @@ DECLARE_STRING_METHOD(rpad) {
 }
 
 DECLARE_STRING_METHOD(match) {
-  ENFORCE_ARG_COUNT(string.match, 1);
-  ENFORCE_ARG_TYPE(string.match, 0, IS_STRING);
+  ENFORCE_ARG_COUNT(match, 1);
+  ENFORCE_ARG_TYPE(match, 0, IS_STRING);
 
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   b_obj_string *substr = AS_STRING(args[0]);
@@ -547,7 +547,7 @@ DECLARE_STRING_METHOD(match) {
     RETURN_FALSE;
   }
 
-  GET_REGEX_COMPILE_OPTIONS(string.match, substr, false);
+  GET_REGEX_COMPILE_OPTIONS(match, substr, false);
 
   if ((int)compile_options < 0) {
     RETURN_BOOL(strstr(string->chars, substr->chars) - string->chars > -1);
@@ -654,8 +654,8 @@ DECLARE_STRING_METHOD(match) {
 }
 
 DECLARE_STRING_METHOD(matches) {
-  ENFORCE_ARG_COUNT(string.matches, 1);
-  ENFORCE_ARG_TYPE(string.matches, 0, IS_STRING);
+  ENFORCE_ARG_COUNT(matches, 1);
+  ENFORCE_ARG_TYPE(matches, 0, IS_STRING);
 
   b_obj_list *result = new_list(vm);
 
@@ -668,7 +668,7 @@ DECLARE_STRING_METHOD(matches) {
     RETURN_FALSE; // if either string or str is empty, return false
   }
 
-  GET_REGEX_COMPILE_OPTIONS(string.matches, substr, true);
+  GET_REGEX_COMPILE_OPTIONS(matches, substr, true);
 
   char *real_regex = remove_regex_delimiter(vm, substr);
 
@@ -825,7 +825,7 @@ DECLARE_STRING_METHOD(matches) {
     }
 
     if (rc < 0) {
-      runtime_error("regular expression error %d\n", rc);
+      runtime_error("regular expression error %d", rc);
       pcre2_match_data_free(match_data);
       pcre2_code_free(re);
       return EMPTY_VAL;
@@ -901,9 +901,9 @@ DECLARE_STRING_METHOD(matches) {
 }
 
 DECLARE_STRING_METHOD(replace) {
-  ENFORCE_ARG_COUNT(string.replace, 2);
-  ENFORCE_ARG_TYPE(string.replace, 0, IS_STRING);
-  ENFORCE_ARG_TYPE(string.replace, 1, IS_STRING);
+  ENFORCE_ARG_COUNT(replace, 2);
+  ENFORCE_ARG_TYPE(replace, 0, IS_STRING);
+  ENFORCE_ARG_TYPE(replace, 1, IS_STRING);
 
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   b_obj_string *substr = AS_STRING(args[0]);
@@ -915,7 +915,7 @@ DECLARE_STRING_METHOD(replace) {
     RETURN_FALSE;
   }
 
-  GET_REGEX_COMPILE_OPTIONS(string.replace, substr, false);
+  GET_REGEX_COMPILE_OPTIONS(replace, substr, false);
   char *real_regex = substr->chars;
   if ((int)compile_options > -1) {
     real_regex = remove_regex_delimiter(vm, substr);

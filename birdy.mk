@@ -61,13 +61,23 @@ endif
 CFLAGS += -I$(HEADERS_DIR)
 
 ifneq (,$(findstring darwin,$(OS)))
+
+# for OSX environments
 	SHARED_EXT := dylib
+else ifeq ($(OS),cygwin) || ifeq ($(OS),mingw32)
+
+# for cygwin and mingw32 environments
+	SHARED_LIB_FLAGS := -Wl,-soname,libbirdy.dll
+	SHARED_EXT := dll
+CFLAGS += -Wno-return-local-addr -Wno-implicit-fallthrough -Wno-maybe-uninitialized
+
 else
+
+# for linux environments
 	SHARED_LIB_FLAGS := -Wl,-soname,libbirdy.so
 	SHARED_EXT := so
 
-# for linux environments
-CFLAGS += -Wno-return-local-addr -Wno-implicit-fallthrough
+CFLAGS += -Wno-return-local-addr -Wno-implicit-fallthrough -lreadline 
 endif
 
 # Targets ---------------------------------------------------------------------
@@ -77,7 +87,7 @@ endif
 build/$(NAME): $(SOURCES_OBJECTS) $(LIB_PCRE2)
 	@ printf "%8s %s %s\n" $(CC) $@ "$(CFLAGS)"
 	@ mkdir -p build
-	@ $(CC) $(CFLAGS) -lreadline $^ -o $@
+	@ $(CC) $(CFLAGS) $^ -o $@
 
 # Compile source object files.
 $(BUILD_DIR)/%.o: $(SOURCE_DIR)/%.c

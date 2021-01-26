@@ -195,6 +195,30 @@ void init_vm(b_vm *vm) {
 
   // list methods
   DEFINE_LIST_METHOD(length);
+  DEFINE_LIST_METHOD(append);
+  DEFINE_LIST_METHOD(clear);
+  DEFINE_LIST_METHOD(clone);
+  DEFINE_LIST_METHOD(count);
+  DEFINE_LIST_METHOD(extend);
+  DEFINE_LIST_METHOD(index_of);
+  DEFINE_LIST_METHOD(insert);
+  DEFINE_LIST_METHOD(pop);
+  DEFINE_LIST_METHOD(shift);
+  DEFINE_LIST_METHOD(remove_at);
+  DEFINE_LIST_METHOD(remove);
+  DEFINE_LIST_METHOD(reverse);
+  DEFINE_LIST_METHOD(sort);
+  DEFINE_LIST_METHOD(contains);
+  DEFINE_LIST_METHOD(delete);
+  DEFINE_LIST_METHOD(first);
+  DEFINE_LIST_METHOD(last);
+  DEFINE_LIST_METHOD(is_empty);
+  DEFINE_LIST_METHOD(take);
+  DEFINE_LIST_METHOD(get);
+  DEFINE_LIST_METHOD(compact);
+  DEFINE_LIST_METHOD(unique);
+  DEFINE_LIST_METHOD(zip);
+  DEFINE_LIST_METHOD(to_dict);
 
   // dictionary methods
   DEFINE_DICT_METHOD(length);

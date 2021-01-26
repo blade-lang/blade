@@ -13,3 +13,5 @@ deps/pcre2/src/*.lo
 deps/pcre2/src/*.o
 deps/pcre2/*.log
 .DS_Store
+birdd.exe
+bird.exe
