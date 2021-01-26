@@ -8,7 +8,6 @@ deps/pcre2/.libs
 deps/pcre2/doc
 deps/pcre2/testdata
 deps/pcre2/src/.libs
-deps/pcre2/src/.deps
 deps/pcre2/src/*.lo
 deps/pcre2/src/*.o
 deps/pcre2/*.log
