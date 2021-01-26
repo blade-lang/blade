@@ -240,6 +240,48 @@ uint32_t hash_value(b_value value) {
 }
 
 /**
+ * returns the greater of the two values.
+ * this function encapsulates Birdy's object heirachy
+ */
+static b_value find_max_value(b_value a, b_value b) {
+  if (IS_NIL(a)) {
+    return b;
+  } else if (IS_BOOL(a)) {
+    if (IS_NIL(b) || (IS_BOOL(b) && AS_BOOL(b) == false))
+      return a; // only nil, false and false are lower than numbers
+    else
+      return b;
+  } else if (IS_NUMBER(a)) {
+    if (IS_NIL(b) || IS_BOOL(b))
+      return a;
+    else if (IS_NUMBER(b))
+      return AS_NUMBER(a) >= AS_NUMBER(b) ? a : b;
+    else
+      return b; // every other thing is greater than a number
+  } else if (IS_OBJ(a)) {
+    if (IS_STRING(a) && IS_STRING(b)) {
+      return strcasecmp(AS_CSTRING(a), AS_CSTRING(b)) >= 0 ? a : b;
+    } else if (IS_CLOSURE(a) && IS_CLOSURE(b)) {
+      return AS_CLOSURE(a)->function->arity >= AS_CLOSURE(b)->function->arity
+                 ? a
+                 : b;
+    } else if (IS_CLASS(a) && IS_CLASS(b)) {
+      return AS_CLASS(a)->methods.count >= AS_CLASS(b)->methods.count ? a : b;
+    } else if (IS_LIST(a) && IS_LIST(b)) {
+      return AS_LIST(a)->items.count >= AS_LIST(b)->items.count ? a : b;
+    } else if (IS_DICT(a) && IS_DICT(b)) {
+      return AS_DICT(a)->names.count >= AS_DICT(b)->names.count ? a : b;
+    } else if (IS_OBJ(b)) {
+      return AS_OBJ(a)->type >= AS_OBJ(b)->type ? a : b;
+    } else {
+      return a;
+    }
+  } else {
+    return a;
+  }
+}
+
+/**
  * sorts values in an array using the bubble-sort algorithm
  */
 void sort_values(b_value *values, int count) {
