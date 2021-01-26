@@ -23,6 +23,7 @@ bool table_delete(b_table *table, b_value key);
 void table_add_all(b_vm *vm, b_table *from, b_table *to);
 b_obj_string *table_find_string(b_table *table, const char *chars, int length,
                                 uint32_t hash);
+b_value table_find_key(b_table *table, b_value value);
 void table_print(b_table *table);
 void mark_table(b_vm *vm, b_table *table);
 void table_remove_whites(b_table *table);

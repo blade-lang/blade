@@ -1,10 +1,10 @@
+#include "vm.h"
 #include "common.h"
 #include "compiler.h"
 #include "config.h"
 #include "memory.h"
 #include "native.h"
 #include "object.h"
-#include "vm.h"
 
 #include "builtin/dict.h"
 #include "builtin/list.h"
@@ -222,6 +222,21 @@ void init_vm(b_vm *vm) {
 
   // dictionary methods
   DEFINE_DICT_METHOD(length);
+  DEFINE_DICT_METHOD(add);
+  DEFINE_DICT_METHOD(clear);
+  DEFINE_DICT_METHOD(clone);
+  DEFINE_DICT_METHOD(compact);
+  DEFINE_DICT_METHOD(contains);
+  DEFINE_DICT_METHOD(extend);
+  DEFINE_DICT_METHOD(get);
+  DEFINE_DICT_METHOD(keys);
+  DEFINE_DICT_METHOD(values);
+  DEFINE_DICT_METHOD(remove);
+  DEFINE_DICT_METHOD(assign);
+  DEFINE_DICT_METHOD(is_empty);
+  DEFINE_DICT_METHOD(find_key);
+  DEFINE_DICT_METHOD(to_list);
+  DEFINE_DICT_METHOD(has_attr);
 
 #undef DEFINE_STRING_METHOD
 #undef DEFINE_LIST_METHOD
