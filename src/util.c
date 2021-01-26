@@ -1,6 +1,7 @@
+#include "util.h"
+
 #include <stdlib.h>
 #include <string.h>
-#include "util.h"
 
 // returns the number of bytes contained in a unicode character
 int utf8_number_bytes(int value) {

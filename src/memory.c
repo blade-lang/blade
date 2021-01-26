@@ -1,10 +1,10 @@
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "compiler.h"
 #include "config.h"
 #include "memory.h"
 #include "object.h"
+
+#include <stdio.h>
+#include <stdlib.h>
 
 #if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC == 1
 #include "debug.h"

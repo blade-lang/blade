@@ -1,9 +1,10 @@
+#include "builtin/string.h"
+#include "util.h"
+
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "builtin/string.h"
 
 /**
  * a Bird regex must always start and end with the same delimiter e.g. /
@@ -141,7 +142,7 @@ DECLARE_STRING_METHOD(is_alpha) {
   ENFORCE_ARG_COUNT(is_alpha, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
-    if (!isalpha(string->chars[i]))
+    if (!isalpha((unsigned char)string->chars[i]))
       RETURN_FALSE;
   }
   RETURN_TRUE;
@@ -151,7 +152,7 @@ DECLARE_STRING_METHOD(is_alnum) {
   ENFORCE_ARG_COUNT(is_alnum, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
-    if (!isalnum(string->chars[i]))
+    if (!isalnum((unsigned char)string->chars[i]))
       RETURN_FALSE;
   }
   RETURN_TRUE;
@@ -161,7 +162,7 @@ DECLARE_STRING_METHOD(is_number) {
   ENFORCE_ARG_COUNT(is_number, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
-    if (!isnumber(string->chars[i]))
+    if (!isdigit((unsigned char)string->chars[i]))
       RETURN_FALSE;
   }
   RETURN_TRUE;
@@ -171,7 +172,7 @@ DECLARE_STRING_METHOD(is_lower) {
   ENFORCE_ARG_COUNT(is_lower, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
-    if (!islower(string->chars[i]))
+    if (!islower((unsigned char)string->chars[i]))
       RETURN_FALSE;
   }
   RETURN_TRUE;
@@ -181,7 +182,7 @@ DECLARE_STRING_METHOD(is_upper) {
   ENFORCE_ARG_COUNT(is_upper, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
-    if (!isupper(string->chars[i]))
+    if (!isupper((unsigned char)string->chars[i]))
       RETURN_FALSE;
   }
   RETURN_TRUE;
@@ -191,7 +192,7 @@ DECLARE_STRING_METHOD(is_space) {
   ENFORCE_ARG_COUNT(is_space, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
-    if (!isspace(string->chars[i]))
+    if (!isspace((unsigned char)string->chars[i]))
       RETURN_FALSE;
   }
   RETURN_TRUE;
@@ -349,12 +350,11 @@ DECLARE_STRING_METHOD(join) {
   }
 
   for (int i = 0; i < length; i++) {
-    if (i != 0)
-      strncat(array[0], array[i], strlen(array[i]));
+    if (i != 0) 
+      array[0] = append_strings(array[0], array[1]);
 
     if (i != length - 1)
-      strncat(array[0], AS_CSTRING(METHOD_OBJECT),
-              strlen(AS_CSTRING(METHOD_OBJECT)));
+      array[0] = append_strings(array[0], AS_CSTRING(METHOD_OBJECT));
   }
 
   RETURN_STRING(array[0]);

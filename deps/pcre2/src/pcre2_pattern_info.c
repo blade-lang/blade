@@ -7,7 +7,7 @@ and semantics are as close as possible to those of the Perl 5 language.
 
                        Written by Philip Hazel
      Original API code Copyright (c) 1997-2012 University of Cambridge
-         New API code Copyright (c) 2014 University of Cambridge
+          New API code Copyright (c) 2016-2018 University of Cambridge
 
 -----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
@@ -75,9 +75,13 @@ if (where == NULL)   /* Requests field length */
     case PCRE2_INFO_BACKREFMAX:
     case PCRE2_INFO_BSR:
     case PCRE2_INFO_CAPTURECOUNT:
+    case PCRE2_INFO_DEPTHLIMIT:
+    case PCRE2_INFO_EXTRAOPTIONS:
     case PCRE2_INFO_FIRSTCODETYPE:
     case PCRE2_INFO_FIRSTCODEUNIT:
+    case PCRE2_INFO_HASBACKSLASHC:
     case PCRE2_INFO_HASCRORLF:
+    case PCRE2_INFO_HEAPLIMIT:
     case PCRE2_INFO_JCHANGED:
     case PCRE2_INFO_LASTCODETYPE:
     case PCRE2_INFO_LASTCODEUNIT:
@@ -88,7 +92,6 @@ if (where == NULL)   /* Requests field length */
     case PCRE2_INFO_NAMEENTRYSIZE:
     case PCRE2_INFO_NAMECOUNT:
     case PCRE2_INFO_NEWLINE:
-    case PCRE2_INFO_RECURSIONLIMIT:
     return sizeof(uint32_t);
 
     case PCRE2_INFO_FIRSTBITMAP:
@@ -96,6 +99,7 @@ if (where == NULL)   /* Requests field length */
 
     case PCRE2_INFO_JITSIZE:
     case PCRE2_INFO_SIZE:
+    case PCRE2_INFO_FRAMESIZE:
     return sizeof(size_t);
 
     case PCRE2_INFO_NAMETABLE:
@@ -136,6 +140,15 @@ switch(what)
   *((uint32_t *)where) = re->top_bracket;
   break;
 
+  case PCRE2_INFO_DEPTHLIMIT:
+  *((uint32_t *)where) = re->limit_depth;
+  if (re->limit_depth == UINT32_MAX) return PCRE2_ERROR_UNSET;
+  break;
+
+  case PCRE2_INFO_EXTRAOPTIONS:
+  *((uint32_t *)where) = re->extra_options;
+  break;
+
   case PCRE2_INFO_FIRSTCODETYPE:
   *((uint32_t *)where) = ((re->flags & PCRE2_FIRSTSET) != 0)? 1 :
                          ((re->flags & PCRE2_STARTLINE) != 0)? 2 : 0;
@@ -151,8 +164,22 @@ switch(what)
     &(re->start_bitmap[0]) : NULL;
   break;
 
+  case PCRE2_INFO_FRAMESIZE:
+  *((size_t *)where) = offsetof(heapframe, ovector) +
+    re->top_bracket * 2 * sizeof(PCRE2_SIZE);
+  break;
+
+  case PCRE2_INFO_HASBACKSLASHC:
+  *((uint32_t *)where) = (re->flags & PCRE2_HASBKC) != 0;
+  break;
+
   case PCRE2_INFO_HASCRORLF:
   *((uint32_t *)where) = (re->flags & PCRE2_HASCRORLF) != 0;
+  break;
+
+  case PCRE2_INFO_HEAPLIMIT:
+  *((uint32_t *)where) = re->limit_heap;
+  if (re->limit_heap == UINT32_MAX) return PCRE2_ERROR_UNSET;
   break;
 
   case PCRE2_INFO_JCHANGED:
@@ -210,11 +237,6 @@ switch(what)
   *((uint32_t *)where) = re->newline_convention;
   break;
 
-  case PCRE2_INFO_RECURSIONLIMIT:
-  *((uint32_t *)where) = re->limit_recursion;
-  if (re->limit_recursion == UINT32_MAX) return PCRE2_ERROR_UNSET;
-  break;
-
   case PCRE2_INFO_SIZE:
   *((size_t *)where) = re->blocksize;
   break;
@@ -223,6 +245,188 @@ switch(what)
   }
 
 return 0;
+}
+
+
+
+/*************************************************
+*              Callout enumerator                *
+*************************************************/
+
+/*
+Arguments:
+  code          points to compiled code
+  callback      function called for each callout block
+  callout_data  user data passed to the callback
+
+Returns:        0 when successfully completed
+                < 0 on local error
+               != 0 for callback error
+*/
+
+PCRE2_EXP_DEFN int PCRE2_CALL_CONVENTION
+pcre2_callout_enumerate(const pcre2_code *code,
+  int (*callback)(pcre2_callout_enumerate_block *, void *), void *callout_data)
+{
+pcre2_real_code *re = (pcre2_real_code *)code;
+pcre2_callout_enumerate_block cb;
+PCRE2_SPTR cc;
+#ifdef SUPPORT_UNICODE
+BOOL utf;
+#endif
+
+if (re == NULL) return PCRE2_ERROR_NULL;
+
+#ifdef SUPPORT_UNICODE
+utf = (re->overall_options & PCRE2_UTF) != 0;
+#endif
+
+/* Check that the first field in the block is the magic number. If it is not,
+return with PCRE2_ERROR_BADMAGIC. */
+
+if (re->magic_number != MAGIC_NUMBER) return PCRE2_ERROR_BADMAGIC;
+
+/* Check that this pattern was compiled in the correct bit mode */
+
+if ((re->flags & (PCRE2_CODE_UNIT_WIDTH/8)) == 0) return PCRE2_ERROR_BADMODE;
+
+cb.version = 0;
+cc = (PCRE2_SPTR)((uint8_t *)re + sizeof(pcre2_real_code))
+     + re->name_count * re->name_entry_size;
+
+while (TRUE)
+  {
+  int rc;
+  switch (*cc)
+    {
+    case OP_END:
+    return 0;
+
+    case OP_CHAR:
+    case OP_CHARI:
+    case OP_NOT:
+    case OP_NOTI:
+    case OP_STAR:
+    case OP_MINSTAR:
+    case OP_PLUS:
+    case OP_MINPLUS:
+    case OP_QUERY:
+    case OP_MINQUERY:
+    case OP_UPTO:
+    case OP_MINUPTO:
+    case OP_EXACT:
+    case OP_POSSTAR:
+    case OP_POSPLUS:
+    case OP_POSQUERY:
+    case OP_POSUPTO:
+    case OP_STARI:
+    case OP_MINSTARI:
+    case OP_PLUSI:
+    case OP_MINPLUSI:
+    case OP_QUERYI:
+    case OP_MINQUERYI:
+    case OP_UPTOI:
+    case OP_MINUPTOI:
+    case OP_EXACTI:
+    case OP_POSSTARI:
+    case OP_POSPLUSI:
+    case OP_POSQUERYI:
+    case OP_POSUPTOI:
+    case OP_NOTSTAR:
+    case OP_NOTMINSTAR:
+    case OP_NOTPLUS:
+    case OP_NOTMINPLUS:
+    case OP_NOTQUERY:
+    case OP_NOTMINQUERY:
+    case OP_NOTUPTO:
+    case OP_NOTMINUPTO:
+    case OP_NOTEXACT:
+    case OP_NOTPOSSTAR:
+    case OP_NOTPOSPLUS:
+    case OP_NOTPOSQUERY:
+    case OP_NOTPOSUPTO:
+    case OP_NOTSTARI:
+    case OP_NOTMINSTARI:
+    case OP_NOTPLUSI:
+    case OP_NOTMINPLUSI:
+    case OP_NOTQUERYI:
+    case OP_NOTMINQUERYI:
+    case OP_NOTUPTOI:
+    case OP_NOTMINUPTOI:
+    case OP_NOTEXACTI:
+    case OP_NOTPOSSTARI:
+    case OP_NOTPOSPLUSI:
+    case OP_NOTPOSQUERYI:
+    case OP_NOTPOSUPTOI:
+    cc += PRIV(OP_lengths)[*cc];
+#ifdef SUPPORT_UNICODE
+    if (utf && HAS_EXTRALEN(cc[-1])) cc += GET_EXTRALEN(cc[-1]);
+#endif
+    break;
+
+    case OP_TYPESTAR:
+    case OP_TYPEMINSTAR:
+    case OP_TYPEPLUS:
+    case OP_TYPEMINPLUS:
+    case OP_TYPEQUERY:
+    case OP_TYPEMINQUERY:
+    case OP_TYPEUPTO:
+    case OP_TYPEMINUPTO:
+    case OP_TYPEEXACT:
+    case OP_TYPEPOSSTAR:
+    case OP_TYPEPOSPLUS:
+    case OP_TYPEPOSQUERY:
+    case OP_TYPEPOSUPTO:
+    cc += PRIV(OP_lengths)[*cc];
+#ifdef SUPPORT_UNICODE
+    if (cc[-1] == OP_PROP || cc[-1] == OP_NOTPROP) cc += 2;
+#endif
+    break;
+
+#if defined SUPPORT_UNICODE || PCRE2_CODE_UNIT_WIDTH != 8
+    case OP_XCLASS:
+    cc += GET(cc, 1);
+    break;
+#endif
+
+    case OP_MARK:
+    case OP_COMMIT_ARG:
+    case OP_PRUNE_ARG:
+    case OP_SKIP_ARG:
+    case OP_THEN_ARG:
+    cc += PRIV(OP_lengths)[*cc] + cc[1];
+    break;
+
+    case OP_CALLOUT:
+    cb.pattern_position = GET(cc, 1);
+    cb.next_item_length = GET(cc, 1 + LINK_SIZE);
+    cb.callout_number = cc[1 + 2*LINK_SIZE];
+    cb.callout_string_offset = 0;
+    cb.callout_string_length = 0;
+    cb.callout_string = NULL;
+    rc = callback(&cb, callout_data);
+    if (rc != 0) return rc;
+    cc += PRIV(OP_lengths)[*cc];
+    break;
+
+    case OP_CALLOUT_STR:
+    cb.pattern_position = GET(cc, 1);
+    cb.next_item_length = GET(cc, 1 + LINK_SIZE);
+    cb.callout_number = 0;
+    cb.callout_string_offset = GET(cc, 1 + 3*LINK_SIZE);
+    cb.callout_string_length =
+      GET(cc, 1 + 2*LINK_SIZE) - (1 + 4*LINK_SIZE) - 2;
+    cb.callout_string = cc + (1 + 4*LINK_SIZE) + 1;
+    rc = callback(&cb, callout_data);
+    if (rc != 0) return rc;
+    cc += GET(cc, 1 + 2*LINK_SIZE);
+    break;
+
+    default:
+    cc += PRIV(OP_lengths)[*cc];
+    break;
+    }
+  }
 }
 
 /* End of pcre2_pattern_info.c */

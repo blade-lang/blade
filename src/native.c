@@ -1,11 +1,12 @@
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "btime.h"
 #include "compat/unistd.h"
 #include "native.h"
 #include "vm.h"
+
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 static b_obj_string *bin_to_string(b_vm *vm, int n) {
   // To store the binary number
@@ -648,7 +649,7 @@ DECLARE_NATIVE(is_instance) {
   if (instance->klass->name->length != klass->length)
     RETURN_FALSE;
 
-  if (strcasecmp(instance->klass->name->chars, klass->chars) == 0)
+  if (memcmp(instance->klass->name->chars, klass->chars, instance->klass->name->length) == 0)
     RETURN_TRUE;
 
   RETURN_FALSE;

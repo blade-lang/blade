@@ -7,7 +7,7 @@ and semantics are as close as possible to those of the Perl 5 language.
 
                        Written by Philip Hazel
      Original API code Copyright (c) 1997-2012 University of Cambridge
-         New API code Copyright (c) 2014 University of Cambridge
+         New API code Copyright (c) 2016 University of Cambridge
 
 -----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
@@ -145,6 +145,11 @@ maxsize = (maxsize + STACK_GROWTH_RATE - 1) & ~(STACK_GROWTH_RATE - 1);
 jit_stack = PRIV(memctl_malloc)(sizeof(pcre2_real_jit_stack), (pcre2_memctl *)gcontext);
 if (jit_stack == NULL) return NULL;
 jit_stack->stack = sljit_allocate_stack(startsize, maxsize, &jit_stack->memctl);
+if (jit_stack->stack == NULL)
+  {
+  jit_stack->memctl.free(jit_stack, jit_stack->memctl.memory_data);
+  return NULL;
+  }
 return jit_stack;
 
 #endif

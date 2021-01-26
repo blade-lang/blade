@@ -1,10 +1,10 @@
+#include "common.h"
+#include "scanner.h"
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
-#include "common.h"
-#include "scanner.h"
 
 void init_scanner(b_scanner *s, const char *source) {
   s->current = source;

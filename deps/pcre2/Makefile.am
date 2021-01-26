@@ -2,7 +2,10 @@
 
 AUTOMAKE_OPTIONS = subdir-objects
 ACLOCAL_AMFLAGS = -I m4
-AM_CPPFLAGS = -I$(builddir)/src -I$(srcdir)/src
+
+## This seems to have become necessary for building in non-source directory.
+
+AM_CPPFLAGS="-I$(srcdir)/src"
 
 ## Specify the documentation files that are distributed.
 
@@ -24,18 +27,26 @@ dist_html_DATA = \
   doc/html/index.html \
   doc/html/pcre2-config.html \
   doc/html/pcre2.html \
+  doc/html/pcre2_callout_enumerate.html \
+  doc/html/pcre2_code_copy.html \
+  doc/html/pcre2_code_copy_with_tables.html \
   doc/html/pcre2_code_free.html \
   doc/html/pcre2_compile.html \
   doc/html/pcre2_compile_context_copy.html \
   doc/html/pcre2_compile_context_create.html \
   doc/html/pcre2_compile_context_free.html \
   doc/html/pcre2_config.html \
+  doc/html/pcre2_convert_context_copy.html \
+  doc/html/pcre2_convert_context_create.html \
+  doc/html/pcre2_convert_context_free.html \
+  doc/html/pcre2_converted_pattern_free.html \
   doc/html/pcre2_dfa_match.html \
   doc/html/pcre2_general_context_copy.html \
   doc/html/pcre2_general_context_create.html \
   doc/html/pcre2_general_context_free.html \
   doc/html/pcre2_get_error_message.html \
   doc/html/pcre2_get_mark.html \
+  doc/html/pcre2_get_match_data_size.html \
   doc/html/pcre2_get_ovector_count.html \
   doc/html/pcre2_get_ovector_pointer.html \
   doc/html/pcre2_get_startchar.html \
@@ -46,6 +57,7 @@ dist_html_DATA = \
   doc/html/pcre2_jit_stack_create.html \
   doc/html/pcre2_jit_stack_free.html \
   doc/html/pcre2_maketables.html \
+  doc/html/pcre2_maketables_free.html \
   doc/html/pcre2_match.html \
   doc/html/pcre2_match_context_copy.html \
   doc/html/pcre2_match_context_create.html \
@@ -53,6 +65,7 @@ dist_html_DATA = \
   doc/html/pcre2_match_data_create.html \
   doc/html/pcre2_match_data_create_from_pattern.html \
   doc/html/pcre2_match_data_free.html \
+  doc/html/pcre2_pattern_convert.html \
   doc/html/pcre2_pattern_info.html \
   doc/html/pcre2_serialize_decode.html \
   doc/html/pcre2_serialize_encode.html \
@@ -61,12 +74,20 @@ dist_html_DATA = \
   doc/html/pcre2_set_bsr.html \
   doc/html/pcre2_set_callout.html \
   doc/html/pcre2_set_character_tables.html \
+  doc/html/pcre2_set_compile_extra_options.html \
   doc/html/pcre2_set_compile_recursion_guard.html \
+  doc/html/pcre2_set_depth_limit.html \
+  doc/html/pcre2_set_glob_escape.html \
+  doc/html/pcre2_set_glob_separator.html \
+  doc/html/pcre2_set_heap_limit.html \
   doc/html/pcre2_set_match_limit.html \
+  doc/html/pcre2_set_max_pattern_length.html \
+  doc/html/pcre2_set_offset_limit.html \
   doc/html/pcre2_set_newline.html \
   doc/html/pcre2_set_parens_nest_limit.html \
   doc/html/pcre2_set_recursion_limit.html \
   doc/html/pcre2_set_recursion_memory_management.html \
+  doc/html/pcre2_set_substitute_callout.html \
   doc/html/pcre2_substitute.html \
   doc/html/pcre2_substring_copy_byname.html \
   doc/html/pcre2_substring_copy_bynumber.html \
@@ -83,6 +104,7 @@ dist_html_DATA = \
   doc/html/pcre2build.html \
   doc/html/pcre2callout.html \
   doc/html/pcre2compat.html \
+  doc/html/pcre2convert.html \
   doc/html/pcre2demo.html \
   doc/html/pcre2grep.html \
   doc/html/pcre2jit.html \
@@ -94,7 +116,6 @@ dist_html_DATA = \
   doc/html/pcre2posix.html \
   doc/html/pcre2sample.html \
   doc/html/pcre2serialize.html \
-  doc/html/pcre2stack.html \
   doc/html/pcre2syntax.html \
   doc/html/pcre2test.html \
   doc/html/pcre2unicode.html
@@ -102,18 +123,26 @@ dist_html_DATA = \
 dist_man_MANS = \
   doc/pcre2-config.1 \
   doc/pcre2.3 \
+  doc/pcre2_callout_enumerate.3 \
+  doc/pcre2_code_copy.3 \
+  doc/pcre2_code_copy_with_tables.3 \
   doc/pcre2_code_free.3 \
   doc/pcre2_compile.3 \
   doc/pcre2_compile_context_copy.3 \
   doc/pcre2_compile_context_create.3 \
   doc/pcre2_compile_context_free.3 \
   doc/pcre2_config.3 \
+  doc/pcre2_convert_context_copy.3 \
+  doc/pcre2_convert_context_create.3 \
+  doc/pcre2_convert_context_free.3 \
+  doc/pcre2_converted_pattern_free.3 \
   doc/pcre2_dfa_match.3 \
   doc/pcre2_general_context_copy.3 \
   doc/pcre2_general_context_create.3 \
   doc/pcre2_general_context_free.3 \
   doc/pcre2_get_error_message.3 \
   doc/pcre2_get_mark.3 \
+  doc/pcre2_get_match_data_size.3 \
   doc/pcre2_get_ovector_count.3 \
   doc/pcre2_get_ovector_pointer.3 \
   doc/pcre2_get_startchar.3 \
@@ -124,6 +153,7 @@ dist_man_MANS = \
   doc/pcre2_jit_stack_create.3 \
   doc/pcre2_jit_stack_free.3 \
   doc/pcre2_maketables.3 \
+  doc/pcre2_maketables_free.3 \
   doc/pcre2_match.3 \
   doc/pcre2_match_context_copy.3 \
   doc/pcre2_match_context_create.3 \
@@ -131,6 +161,7 @@ dist_man_MANS = \
   doc/pcre2_match_data_create.3 \
   doc/pcre2_match_data_create_from_pattern.3 \
   doc/pcre2_match_data_free.3 \
+  doc/pcre2_pattern_convert.3 \
   doc/pcre2_pattern_info.3 \
   doc/pcre2_serialize_decode.3 \
   doc/pcre2_serialize_encode.3 \
@@ -139,12 +170,20 @@ dist_man_MANS = \
   doc/pcre2_set_bsr.3 \
   doc/pcre2_set_callout.3 \
   doc/pcre2_set_character_tables.3 \
+  doc/pcre2_set_compile_extra_options.3 \
   doc/pcre2_set_compile_recursion_guard.3 \
+  doc/pcre2_set_depth_limit.3 \
+  doc/pcre2_set_glob_escape.3 \
+  doc/pcre2_set_glob_separator.3 \
+  doc/pcre2_set_heap_limit.3 \
   doc/pcre2_set_match_limit.3 \
+  doc/pcre2_set_max_pattern_length.3 \
+  doc/pcre2_set_offset_limit.3 \
   doc/pcre2_set_newline.3 \
   doc/pcre2_set_parens_nest_limit.3 \
   doc/pcre2_set_recursion_limit.3 \
   doc/pcre2_set_recursion_memory_management.3 \
+  doc/pcre2_set_substitute_callout.3 \
   doc/pcre2_substitute.3 \
   doc/pcre2_substring_copy_byname.3 \
   doc/pcre2_substring_copy_bynumber.3 \
@@ -161,6 +200,7 @@ dist_man_MANS = \
   doc/pcre2build.3 \
   doc/pcre2callout.3 \
   doc/pcre2compat.3 \
+  doc/pcre2convert.3 \
   doc/pcre2demo.3 \
   doc/pcre2grep.1 \
   doc/pcre2jit.3 \
@@ -172,7 +212,6 @@ dist_man_MANS = \
   doc/pcre2posix.3 \
   doc/pcre2sample.3 \
   doc/pcre2serialize.3 \
-  doc/pcre2stack.3 \
   doc/pcre2syntax.3 \
   doc/pcre2test.1 \
   doc/pcre2unicode.3
@@ -198,7 +237,7 @@ noinst_PROGRAMS =
 # and 'make maintainer-clean'.
 
 CLEANFILES =
-DISTCLEANFILES = src/config.h.in~ config.h
+DISTCLEANFILES = src/config.h.in~
 MAINTAINERCLEANFILES =
 
 # Additional files to bundle with the distribution, over and above what
@@ -286,18 +325,18 @@ include_HEADERS = src/pcre2posix.h
 bin_SCRIPTS = pcre2-config
 
 ## ---------------------------------------------------------------
-## The dftables program is used to rebuild character tables before compiling
-## PCRE2, if --enable-rebuild-chartables is specified. It is not a user-visible
-## program. The default (when --enable-rebuild-chartables is not specified) is
-## to copy a distributed set of tables that are defined for ASCII code. In this
-## case, dftables is not needed.
+## The pcre2_dftables program is used to rebuild character tables before
+## compiling PCRE2, if --enable-rebuild-chartables is specified. It is not an
+## installed program. The default (when --enable-rebuild-chartables is not
+## specified) is to copy a distributed set of tables that are defined for ASCII
+## code. In this case, pcre2_dftables is not needed.
 
 if WITH_REBUILD_CHARTABLES
-noinst_PROGRAMS += dftables
-dftables_SOURCES = src/dftables.c
-src/pcre2_chartables.c: dftables$(EXEEXT)
+noinst_PROGRAMS += pcre2_dftables
+pcre2_dftables_SOURCES = src/pcre2_dftables.c
+src/pcre2_chartables.c: pcre2_dftables$(EXEEXT)
 	rm -f $@
-	./dftables$(EXEEXT) $@
+	./pcre2_dftables$(EXEEXT) $@
 else
 src/pcre2_chartables.c: $(srcdir)/src/pcre2_chartables.c.dist
 	rm -f $@
@@ -315,17 +354,23 @@ COMMON_SOURCES = \
   src/pcre2_compile.c \
   src/pcre2_config.c \
   src/pcre2_context.c \
+  src/pcre2_convert.c \
   src/pcre2_dfa_match.c \
   src/pcre2_error.c \
+  src/pcre2_extuni.c \
+  src/pcre2_find_bracket.c \
   src/pcre2_internal.h \
   src/pcre2_intmodedep.h \
   src/pcre2_jit_compile.c \
+  src/pcre2_jit_neon_inc.h \
+  src/pcre2_jit_simd_inc.h \
   src/pcre2_maketables.c \
   src/pcre2_match.c \
   src/pcre2_match_data.c \
   src/pcre2_newline.c \
   src/pcre2_ord2utf.c \
   src/pcre2_pattern_info.c \
+  src/pcre2_script_run.c \
   src/pcre2_serialize.c \
   src/pcre2_string_utils.c \
   src/pcre2_study.c \
@@ -407,6 +452,7 @@ EXTRA_DIST += \
   src/sljit/sljitNativeX86_32.c \
   src/sljit/sljitNativeX86_64.c \
   src/sljit/sljitNativeX86_common.c \
+  src/sljit/sljitProtExecAllocator.c \
   src/sljit/sljitUtils.c
 
 # Some of the JIT sources are also in separate files that are #included.
@@ -464,7 +510,7 @@ libpcre2_posix_la_CFLAGS += $(GCOV_CFLAGS)
 endif # WITH_GCOV
 endif # WITH_PCRE2_8
 
-## Build pcre2grep if the 8-bit library is enabled
+## Build pcre2grep and optional fuzzer stuff if the 8-bit library is enabled
 
 if WITH_PCRE2_8
 bin_PROGRAMS += pcre2grep
@@ -476,6 +522,26 @@ if WITH_GCOV
 pcre2grep_CFLAGS += $(GCOV_CFLAGS)
 pcre2grep_LDADD += $(GCOV_LIBS)
 endif # WITH_GCOV
+
+## If fuzzer support is enabled, build a non-distributed library containing the
+## fuzzing function. Also build the standalone checking binary from the same
+## source but using -DSTANDALONE.
+
+if WITH_FUZZ_SUPPORT
+noinst_LIBRARIES = .libs/libpcre2-fuzzsupport.a
+_libs_libpcre2_fuzzsupport_a_SOURCES = src/pcre2_fuzzsupport.c
+_libs_libpcre2_fuzzsupport_a_CFLAGS = $(AM_CFLAGS)
+_libs_libpcre2_fuzzsupport_a_LIBADD =
+
+noinst_PROGRAMS += pcre2fuzzcheck
+pcre2fuzzcheck_SOURCES = src/pcre2_fuzzsupport.c
+pcre2fuzzcheck_CFLAGS = -DSTANDALONE $(AM_CFLAGS)
+pcre2fuzzcheck_LDADD = libpcre2-8.la
+if WITH_GCOV
+pcre2fuzzcheck_CFLAGS += $(GCOV_CFLAGS)
+pcre2fuzzcheck_LDADD += $(GCOV_LIBS)
+endif # WITH_GCOV
+endif # WITH FUZZ_SUPPORT
 endif # WITH_PCRE2_8
 
 ## -------- Testing ----------
@@ -536,17 +602,17 @@ endif # WITH_GCOV
 
 ## The main library tests. Each test is a binary plus a script that runs that
 ## binary in various ways. We install these test binaries in case folks find it
-## helpful.
+## helpful. The two .bat files are for running the tests under Windows.
 
 TESTS += RunTest
-dist_noinst_SCRIPTS += RunTest
-
 EXTRA_DIST += RunTest.bat
+dist_noinst_SCRIPTS += RunTest
 
 ## When the 8-bit library is configured, pcre2grep will have been built.
 
 if WITH_PCRE2_8
 TESTS += RunGrepTest
+EXTRA_DIST += RunGrepTest.bat
 dist_noinst_SCRIPTS += RunGrepTest
 endif # WITH_PCRE2_8
 
@@ -558,13 +624,17 @@ EXTRA_DIST += \
   testdata/grepinput \
   testdata/grepinput3 \
   testdata/grepinput8 \
+  testdata/grepinputM \
   testdata/grepinputv \
   testdata/grepinputx \
   testdata/greplist \
   testdata/grepoutput \
   testdata/grepoutput8 \
+  testdata/grepoutputC \
+  testdata/grepoutputCN \
   testdata/grepoutputN \
   testdata/greppatN4 \
+  testdata/testbtables \
   testdata/testinput1 \
   testdata/testinput2 \
   testdata/testinput3 \
@@ -584,6 +654,12 @@ EXTRA_DIST += \
   testdata/testinput17 \
   testdata/testinput18 \
   testdata/testinput19 \
+  testdata/testinput20 \
+  testdata/testinput21 \
+  testdata/testinput22 \
+  testdata/testinput23 \
+  testdata/testinput24 \
+  testdata/testinput25 \
   testdata/testinputEBC \
   testdata/testoutput1 \
   testdata/testoutput2 \
@@ -594,9 +670,15 @@ EXTRA_DIST += \
   testdata/testoutput5 \
   testdata/testoutput6 \
   testdata/testoutput7 \
-  testdata/testoutput8-16 \
-  testdata/testoutput8-32 \
-  testdata/testoutput8-8 \
+  testdata/testoutput8-16-2 \
+  testdata/testoutput8-16-3 \
+  testdata/testoutput8-16-4 \
+  testdata/testoutput8-32-2 \
+  testdata/testoutput8-32-3 \
+  testdata/testoutput8-32-4 \
+  testdata/testoutput8-8-2 \
+  testdata/testoutput8-8-3 \
+  testdata/testoutput8-8-4 \
   testdata/testoutput9 \
   testdata/testoutput10 \
   testdata/testoutput11-16 \
@@ -604,13 +686,24 @@ EXTRA_DIST += \
   testdata/testoutput12-16 \
   testdata/testoutput12-32 \
   testdata/testoutput13 \
-  testdata/testoutput14 \
+  testdata/testoutput14-16 \
+  testdata/testoutput14-32 \
+  testdata/testoutput14-8 \
   testdata/testoutput15 \
   testdata/testoutput16 \
   testdata/testoutput17 \
   testdata/testoutput18 \
   testdata/testoutput19 \
+  testdata/testoutput20 \
+  testdata/testoutput21 \
+  testdata/testoutput22-16 \
+  testdata/testoutput22-32 \
+  testdata/testoutput22-8 \
+  testdata/testoutput23 \
+  testdata/testoutput24 \
+  testdata/testoutput25 \
   testdata/testoutputEBC \
+  testdata/valgrind-jit.supp \
   testdata/wintestinput3 \
   testdata/wintestoutput3 \
   perltest.sh

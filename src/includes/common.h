@@ -1,6 +1,10 @@
 #ifndef bird_common_h
 #define bird_common_h
 
+
+// special definitions for Cygwin
+#define _DEFAULT_SOURCE 1
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>

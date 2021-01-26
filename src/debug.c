@@ -1,8 +1,8 @@
-#include <stdio.h>
-
 #include "debug.h"
 #include "object.h"
 #include "value.h"
+
+#include <stdio.h>
 
 void disassemble_blob(b_blob *blob, const char *name) {
   printf("== %s ==\n", name);
