@@ -41,54 +41,6 @@
 
 #define NORMALIZE(token) NORMALIZE_##token
 
-#define ENFORCE_ARG_COUNT(name, d)                                             \
-  if (arg_count != d) {                                                        \
-    _runtime_error(vm, #name "() expects %d arguments, %d given", d,           \
-                   arg_count);                                                 \
-    return EMPTY_VAL;                                                          \
-  }
-
-#define ENFORCE_MIN_ARG(name, d)                                               \
-  if (arg_count < d) {                                                         \
-    _runtime_error(vm, #name "() expects minimum of %d arguments, %d given",   \
-                   d, arg_count);                                              \
-    return EMPTY_VAL;                                                          \
-  }
-
-#define ENFORCE_MAX_ARG(name, d)                                               \
-  if (arg_count < d) {                                                         \
-    _runtime_error(vm, #name "() expects maximum of %d arguments, %d given",   \
-                   d, arg_count);                                              \
-    return EMPTY_VAL;                                                          \
-  }
-
-#define ENFORCE_ARG_RANGE(name, low, up)                                       \
-  if (arg_count < low || arg_count > up) {                                     \
-    _runtime_error(vm,                                                         \
-                   #name "() expects between %d and %d arguments, %d given",   \
-                   low, up, arg_count);                                        \
-    return EMPTY_VAL;                                                          \
-  }
-
-#define ENFORCE_ARG_TYPE(name, i, type)                                        \
-  if (!type(args[i])) {                                                        \
-    _runtime_error(                                                            \
-        vm, #name "() expects argument %d as " NORMALIZE(type) ", %s given",   \
-        i + 1, value_type(args[i]));                                           \
-    return EMPTY_VAL;                                                          \
-  }
-
-#define METHOD_OVERRIDE(override, i)                                           \
-  do {                                                                         \
-    if (IS_INSTANCE(args[0])) {                                                \
-      b_obj_instance *instance = AS_INSTANCE(args[0]);                         \
-      if (invoke_from_class(vm, instance->klass,                               \
-                            copy_string(vm, #override, i), 0)) {               \
-        RETURN;                                                                \
-      }                                                                        \
-    }                                                                          \
-  } while (0);
-
 #define RETURN return NIL_VAL
 #define RETURN_ERROR(...)                                                      \
   {                                                                            \
@@ -104,11 +56,52 @@
 #define RETURN_TSTRING(v, l) return OBJ_VAL(take_string(vm, v, l))
 #define RETURN_VALUE(v) return v
 
+#define ENFORCE_ARG_COUNT(name, d)                                             \
+  if (arg_count != d) {                                                        \
+    RETURN_ERROR(#name "() expects %d arguments, %d given", d, arg_count);     \
+  }
+
+#define ENFORCE_MIN_ARG(name, d)                                               \
+  if (arg_count < d) {                                                         \
+    RETURN_ERROR(#name "() expects minimum of %d arguments, %d given", d,      \
+                 arg_count);                                                   \
+  }
+
+#define ENFORCE_MAX_ARG(name, d)                                               \
+  if (arg_count < d) {                                                         \
+    RETURN_ERROR(#name "() expects maximum of %d arguments, %d given", d,      \
+                 arg_count);                                                   \
+  }
+
+#define ENFORCE_ARG_RANGE(name, low, up)                                       \
+  if (arg_count < low || arg_count > up) {                                     \
+    RETURN_ERROR(#name "() expects between %d and %d arguments, %d given",     \
+                 low, up, arg_count);                                          \
+  }
+
+#define ENFORCE_ARG_TYPE(name, i, type)                                        \
+  if (!type(args[i])) {                                                        \
+    RETURN_ERROR(#name                                                         \
+                 "() expects argument %d as " NORMALIZE(type) ", %s given",    \
+                 i + 1, value_type(args[i]));                                  \
+  }
+
+#define METHOD_OVERRIDE(override, i)                                           \
+  do {                                                                         \
+    if (IS_INSTANCE(args[0])) {                                                \
+      b_obj_instance *instance = AS_INSTANCE(args[0]);                         \
+      if (invoke_from_class(vm, instance->klass,                               \
+                            copy_string(vm, #override, i), 0)) {               \
+        RETURN;                                                                \
+      }                                                                        \
+    }                                                                          \
+  } while (0);
+
 #define REGEX_COMPILATION_ERROR(re, error_number, error_offset)                \
   if (re == NULL) {                                                            \
     PCRE2_UCHAR8 buffer[256];                                                  \
     pcre2_get_error_message_8(error_number, buffer, sizeof(buffer));           \
-    RETURN_ERROR("regular expression compilation failed at offset %d: %s\n",   \
+    RETURN_ERROR("regular expression compilation failed at offset %d: %s",     \
                  (int)error_offset, buffer);                                   \
   }
 
@@ -116,14 +109,14 @@
   if (ovector[0] > ovector[1]) {                                               \
     runtime_error(                                                             \
         "match aborted: regular expression used \\K in an assertion %.*s to "  \
-        "set match start after its end.\n",                                    \
+        "set match start after its end.",                                      \
         (int)(ovector[0] - ovector[1]), (char *)(subject + ovector[1]));       \
     pcre2_match_data_free(match_data);                                         \
     pcre2_code_free(re);                                                       \
     return EMPTY_VAL;                                                          \
   }
 
-#define REGEX_RC_ERROR() RETURN_ERROR("regular expression error %d\n", rc);
+#define REGEX_RC_ERROR() RETURN_ERROR("regular expression error %d", rc);
 
 #define GET_REGEX_COMPILE_OPTIONS(name, string, regex_show_error)              \
   uint32_t compile_options = is_regex(string);                                 \

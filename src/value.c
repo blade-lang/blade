@@ -25,6 +25,34 @@ void write_value_arr(b_vm *vm, b_value_arr *array, b_value value) {
   array->count++;
 }
 
+void insert_value_arr(b_vm *vm, b_value_arr *array, b_value value, int index) {
+
+  if (array->capacity <= index) {
+    array->capacity = GROW_CAPACITY(index);
+    array->values =
+        GROW_ARRAY(b_value, array->values, array->count, array->capacity);
+  } else if (array->capacity < array->count + 2) {
+    int capacity = array->capacity;
+    array->capacity = GROW_CAPACITY(capacity);
+    array->values =
+        GROW_ARRAY(b_value, array->values, capacity, array->capacity);
+  }
+
+  if (index <= array->count) {
+    for (int i = array->count - 1; i >= index; i--) {
+      array->values[i + 1] = array->values[i];
+    }
+  } else {
+    for (int i = array->count; i < index; i++) {
+      array->values[i] = NIL_VAL; // nil out overflow indices
+      array->count++;
+    }
+  }
+
+  array->values[index] = value;
+  array->count++;
+}
+
 void free_value_arr(b_vm *vm, b_value_arr *array) {
   FREE_ARRAY(b_value, array->values, array->capacity);
   init_value_arr(array);
@@ -209,4 +237,29 @@ uint32_t hash_value(b_value value) {
     return 0;
   }
 #endif
+}
+
+/**
+ * sorts values in an array using the bubble-sort algorithm
+ */
+void sort_values(b_value *values, int count) {
+  int i;
+  for (i = 0; i < count; i++) {
+    int j;
+    for (j = 0; j < count; j++) {
+      if (values_equal(values[j], find_max_value(values[i], values[j]))) {
+        b_value temp = values[i];
+        values[i] = values[j];
+        values[j] = temp;
+
+        if (IS_LIST(values[i]))
+          sort_values(AS_LIST(values[i])->items.values,
+                      AS_LIST(values[i])->items.count);
+
+        if (IS_LIST(values[j]))
+          sort_values(AS_LIST(values[j])->items.values,
+                      AS_LIST(values[j])->items.count);
+      }
+    }
+  }
 }
