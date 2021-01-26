@@ -183,6 +183,17 @@ b_obj_string *table_find_string(b_table *table, const char *chars, int length,
   }
 }
 
+b_value table_find_key(b_table *table, b_value value) {
+  for (int i = 0; i <= table->capacity; i++) {
+    b_entry *entry = &table->entries[i];
+    if (!IS_NIL(entry->key) && !IS_EMPTY(entry->key)) {
+      if (values_equal(entry->value, value))
+        return entry->key;
+    }
+  }
+  return NIL_VAL;
+}
+
 void table_print(b_table *table) {
   printf("<HashTable: [");
   for (int i = 0; i <= table->capacity; i++) {

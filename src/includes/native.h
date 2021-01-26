@@ -86,6 +86,12 @@
                  i + 1, value_type(args[i]));                                  \
   }
 
+#define EXCLUDE_ARG_TYPE(method_name, arg_type, index)                         \
+  if (arg_type(args[index])) {                                                 \
+    RETURN_ERROR("invalid type %s() as argument %d in %s()",                   \
+                 value_type(args[index]), index + 1, #method_name);            \
+  }
+
 #define METHOD_OVERRIDE(override, i)                                           \
   do {                                                                         \
     if (IS_INSTANCE(args[0])) {                                                \
@@ -130,6 +136,8 @@
 
 extern int is_regex(b_obj_string *string);
 extern char *remove_regex_delimiter(b_vm *vm, b_obj_string *string);
+extern void write_list(b_vm *vm, b_obj_list *list, b_value value);
+extern b_obj_list *copy_list(b_vm *vm, b_obj_list *list, int start, int length);
 
 DECLARE_NATIVE(time);
 DECLARE_NATIVE(microtime);
