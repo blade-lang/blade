@@ -7,6 +7,7 @@
 #include "object.h"
 
 #include "builtin/dict.h"
+#include "builtin/file.h"
 #include "builtin/list.h"
 #include "builtin/string.h"
 
@@ -131,6 +132,7 @@ void init_vm(b_vm *vm) {
   DEFINE_NATIVE(bin);
   DEFINE_NATIVE(chr);
   DEFINE_NATIVE(delprop);
+  DEFINE_NATIVE(file);
   DEFINE_NATIVE(getprop);
   DEFINE_NATIVE(hash);
   DEFINE_NATIVE(hasprop);

@@ -6,6 +6,8 @@
 #include "table.h"
 #include "value.h"
 
+#include <stdio.h>
+
 #define OBJ_TYPE(v) (AS_OBJ(v)->type)
 
 // object type checks
@@ -20,6 +22,7 @@
 // containers
 #define IS_LIST(v) is_obj_type(v, OBJ_LIST)
 #define IS_DICT(v) is_obj_type(v, OBJ_DICT)
+#define IS_FILE(v) is_obj_type(v, OBJ_FILE)
 
 // promote b_value to object
 #define AS_STRING(v) ((b_obj_string *)AS_OBJ(v))
@@ -33,6 +36,7 @@
 // containers
 #define AS_LIST(v) ((b_obj_list *)AS_OBJ(v))
 #define AS_DICT(v) ((b_obj_dict *)AS_OBJ(v))
+#define AS_FILE(v) ((b_obj_file *)AS_OBJ(v))
 
 // demote bird value to c string
 #define AS_CSTRING(v) (((b_obj_string *)AS_OBJ(v))->chars)
@@ -53,6 +57,7 @@ typedef enum {
   // containers
   OBJ_LIST,
   OBJ_DICT,
+  OBJ_FILE,
 } b_obj_type;
 
 struct s_obj {
@@ -130,9 +135,19 @@ typedef struct {
   b_table items;
 } b_obj_dict;
 
+typedef struct {
+  b_obj obj;
+  bool is_open;
+  b_obj_string *mode;
+  b_obj_string *path;
+  FILE *file;
+} b_obj_file;
+
 // data containers
 b_obj_list *new_list(b_vm *vm);
 b_obj_dict *new_dict(b_vm *vm);
+b_obj_file *new_file(b_vm *vm, FILE *fp, b_obj_string *path,
+                     b_obj_string *mode);
 
 // base objects
 b_obj_bound *new_bound_method(b_vm *vm, b_value receiver, b_obj *method);
