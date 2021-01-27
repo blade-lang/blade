@@ -48,6 +48,7 @@ struct s_vm {
   b_table methods_string;
   b_table methods_list;
   b_table methods_dict;
+  b_table methods_file;
 
   // repl flag
   bool is_repl;

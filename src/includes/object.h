@@ -146,8 +146,7 @@ typedef struct {
 // data containers
 b_obj_list *new_list(b_vm *vm);
 b_obj_dict *new_dict(b_vm *vm);
-b_obj_file *new_file(b_vm *vm, FILE *fp, b_obj_string *path,
-                     b_obj_string *mode);
+b_obj_file *new_file(b_vm *vm, b_obj_string *path, b_obj_string *mode);
 
 // base objects
 b_obj_bound *new_bound_method(b_vm *vm, b_value receiver, b_obj *method);
