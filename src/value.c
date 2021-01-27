@@ -1,7 +1,7 @@
+#include "value.h"
 #include "config.h"
 #include "memory.h"
 #include "object.h"
-#include "value.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +11,11 @@ void init_value_arr(b_value_arr *array) {
   array->capacity = 0;
   array->count = 0;
   array->values = NULL;
+}
+
+void init_byte_arr(b_byte_arr *array, int length) {
+  array->count = length;
+  array->bytes = NULL;
 }
 
 void write_value_arr(b_vm *vm, b_value_arr *array, b_value value) {
@@ -56,6 +61,10 @@ void insert_value_arr(b_vm *vm, b_value_arr *array, b_value value, int index) {
 void free_value_arr(b_vm *vm, b_value_arr *array) {
   FREE_ARRAY(b_value, array->values, array->capacity);
   init_value_arr(array);
+}
+
+void free_byte_arr(b_vm *vm, b_byte_arr *array) {
+  FREE_ARRAY(unsigned char, array->bytes, array->count);
 }
 
 void print_value(b_value value) {

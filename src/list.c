@@ -6,8 +6,7 @@ void write_list(b_vm *vm, b_obj_list *list, b_value value) {
   write_value_arr(vm, &list->items, value);
 }
 
-b_obj_list *copy_list(b_vm *vm, b_obj_list *list, int start,
-                                    int length) {
+b_obj_list *copy_list(b_vm *vm, b_obj_list *list, int start, int length) {
   b_obj_list *_list = new_list(vm);
 
   _list->items.values = &list->items.values[start];

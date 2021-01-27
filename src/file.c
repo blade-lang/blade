@@ -196,7 +196,7 @@ DECLARE_FILE_METHOD(read) {
   buffer[bytes_read] = '\0';
 
   // close file
-  file_close(file);
+  // file_close(file);
 
   RETURN_STRING(buffer);
 }
@@ -236,7 +236,9 @@ DECLARE_FILE_METHOD(write) {
 
   size_t count =
       fwrite(string->chars, sizeof(char), string->length, file->file);
-  file_close(file);
+
+  // close file
+  // file_close(file);
 
   if (count > (size_t)0) {
     RETURN_TRUE;

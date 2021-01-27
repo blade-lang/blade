@@ -1,6 +1,6 @@
+#include "native.h"
 #include "btime.h"
 #include "compat/unistd.h"
-#include "native.h"
 #include "vm.h"
 
 #include <math.h>
@@ -649,7 +649,8 @@ DECLARE_NATIVE(is_instance) {
   if (instance->klass->name->length != klass->length)
     RETURN_FALSE;
 
-  if (memcmp(instance->klass->name->chars, klass->chars, instance->klass->name->length) == 0)
+  if (memcmp(instance->klass->name->chars, klass->chars,
+             instance->klass->name->length) == 0)
     RETURN_TRUE;
 
   RETURN_FALSE;
