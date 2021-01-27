@@ -1,6 +1,6 @@
+#include "memory.h"
 #include "compiler.h"
 #include "config.h"
-#include "memory.h"
 #include "object.h"
 
 #include <stdio.h>
@@ -79,6 +79,12 @@ static void blacken_object(b_vm *vm, b_obj *object) {
 #endif
 
   switch (object->type) {
+  case OBJ_FILE: {
+    b_obj_file *file = (b_obj_file *)object;
+    mark_object(vm, (b_obj *)file->mode);
+    mark_object(vm, (b_obj *)file->path);
+    break;
+  }
   case OBJ_DICT: {
     b_obj_dict *dict = (b_obj_dict *)object;
     mark_array(vm, &dict->names);
@@ -143,6 +149,13 @@ static void free_object(b_vm *vm, b_obj *object) {
 #endif
 
   switch (object->type) {
+  case OBJ_FILE: {
+    b_obj_file *file = (b_obj_file *)object;
+    fclose(file->file);
+    free(file->file);
+    FREE(b_obj_file, object);
+    break;
+  }
   case OBJ_DICT: {
     b_obj_dict *dict = (b_obj_dict *)object;
     free_value_arr(vm, &dict->names);

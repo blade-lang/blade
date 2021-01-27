@@ -1,6 +1,6 @@
+#include "object.h"
 #include "config.h"
 #include "memory.h"
-#include "object.h"
 #include "table.h"
 #include "util.h"
 #include "value.h"
@@ -40,6 +40,16 @@ b_obj_dict *new_dict(b_vm *vm) {
   init_value_arr(&dict->names);
   init_table(&dict->items);
   return dict;
+}
+
+b_obj_file *new_file(b_vm *vm, FILE *fp, b_obj_string *path,
+                     b_obj_string *mode) {
+  b_obj_file *file = ALLOCATE_OBJ(b_obj_file, OBJ_FILE);
+  file->is_open = true;
+  file->mode = mode;
+  file->path = path;
+  file->file = fp;
+  return file;
 }
 
 b_obj_bound *new_bound_method(b_vm *vm, b_value receiver, b_obj *method) {
@@ -181,8 +191,16 @@ static void print_dict(b_obj_dict *dict) {
   printf("}");
 }
 
+static void print_file(b_obj_file *file) {
+  printf("<file at %s in mode %s>", file->path->chars, file->mode->chars);
+}
+
 void print_object(b_value value) {
   switch (OBJ_TYPE(value)) {
+  case OBJ_FILE: {
+    print_file(AS_FILE(value));
+    break;
+  }
   case OBJ_DICT: {
     print_dict(AS_DICT(value));
     break;
@@ -310,6 +328,12 @@ char *object_to_string(b_vm *vm, b_value value) {
     return list_to_string(vm, &AS_LIST(value)->items);
   case OBJ_DICT:
     return dict_to_string(vm, AS_DICT(value));
+  case OBJ_FILE: {
+    b_obj_file *file = AS_FILE(value);
+    sprintf(str, "<file at %s in mode %s>", file->path->chars,
+            file->mode->chars);
+    break;
+  }
   }
 
   return str;
@@ -317,6 +341,8 @@ char *object_to_string(b_vm *vm, b_value value) {
 
 const char *object_type(b_obj *object) {
   switch (object->type) {
+  case OBJ_FILE:
+    return "file";
   case OBJ_DICT:
     return "dictionary";
   case OBJ_LIST:
