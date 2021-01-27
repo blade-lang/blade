@@ -42,13 +42,12 @@ b_obj_dict *new_dict(b_vm *vm) {
   return dict;
 }
 
-b_obj_file *new_file(b_vm *vm, FILE *fp, b_obj_string *path,
-                     b_obj_string *mode) {
+b_obj_file *new_file(b_vm *vm, b_obj_string *path, b_obj_string *mode) {
   b_obj_file *file = ALLOCATE_OBJ(b_obj_file, OBJ_FILE);
   file->is_open = true;
   file->mode = mode;
   file->path = path;
-  file->file = fp;
+  file->file = NULL;
   return file;
 }
 

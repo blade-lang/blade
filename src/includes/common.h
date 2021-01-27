@@ -1,7 +1,6 @@
 #ifndef bird_common_h
 #define bird_common_h
 
-
 // special definitions for Cygwin
 #define _DEFAULT_SOURCE 1
 
@@ -20,5 +19,7 @@
 #else
 #define IS_WINDOWS
 #endif
+
+#define BIRDY_EXTENSION ".b"
 
 #endif

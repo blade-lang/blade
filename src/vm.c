@@ -104,30 +104,7 @@ static void define_native_method(b_vm *vm, b_table *table, const char *name,
   popn(vm, 2);
 }
 
-void init_vm(b_vm *vm) {
-#define DEFINE_STRING_METHOD(name) DEFINE_METHOD(string, name)
-#define DEFINE_LIST_METHOD(name) DEFINE_METHOD(list, name)
-#define DEFINE_DICT_METHOD(name) DEFINE_METHOD(dict, name)
-
-  reset_stack(vm);
-  vm->compiler = NULL;
-  vm->objects = NULL;
-  vm->bytes_allocated = 0;
-  vm->next_gc = 1024 * 1024; // 1mb
-  vm->is_repl = false;
-
-  vm->gray_count = 0;
-  vm->gray_capacity = 0;
-  vm->gray_stack = NULL;
-
-  init_table(&vm->strings);
-  init_table(&vm->globals);
-
-  // object methods tables
-  init_table(&vm->methods_string);
-  init_table(&vm->methods_list);
-  init_table(&vm->methods_dict);
-
+void init_builtin_functions(b_vm *vm) {
   DEFINE_NATIVE(abs);
   DEFINE_NATIVE(bin);
   DEFINE_NATIVE(chr);
@@ -167,6 +144,13 @@ void init_vm(b_vm *vm) {
   DEFINE_NATIVE(to_number);
   DEFINE_NATIVE(to_string);
   DEFINE_NATIVE(type);
+}
+
+void init_builtin_methods(b_vm *vm) {
+#define DEFINE_STRING_METHOD(name) DEFINE_METHOD(string, name)
+#define DEFINE_LIST_METHOD(name) DEFINE_METHOD(list, name)
+#define DEFINE_DICT_METHOD(name) DEFINE_METHOD(dict, name)
+#define DEFINE_FILE_METHOD(name) DEFINE_METHOD(file, name)
 
   // string methods
   DEFINE_STRING_METHOD(length);
@@ -240,9 +224,57 @@ void init_vm(b_vm *vm) {
   DEFINE_DICT_METHOD(to_list);
   DEFINE_DICT_METHOD(has_attr);
 
+  // file methods
+  DEFINE_FILE_METHOD(exists);
+  DEFINE_FILE_METHOD(close);
+  DEFINE_FILE_METHOD(read);
+  DEFINE_FILE_METHOD(write);
+  DEFINE_FILE_METHOD(number);
+  DEFINE_FILE_METHOD(is_tty);
+  DEFINE_FILE_METHOD(flush);
+  DEFINE_FILE_METHOD(stats);
+  DEFINE_FILE_METHOD(symlink);
+  DEFINE_FILE_METHOD(delete);
+  DEFINE_FILE_METHOD(rename);
+  DEFINE_FILE_METHOD(path);
+  DEFINE_FILE_METHOD(abs_path);
+  DEFINE_FILE_METHOD(copy);
+  DEFINE_FILE_METHOD(truncate);
+  DEFINE_FILE_METHOD(chmod);
+  DEFINE_FILE_METHOD(set_times);
+  DEFINE_FILE_METHOD(seek);
+  DEFINE_FILE_METHOD(tell);
+
 #undef DEFINE_STRING_METHOD
 #undef DEFINE_LIST_METHOD
 #undef DEFINE_DICT_METHOD
+#undef DEFINE_FILE_METHOD
+}
+
+void init_vm(b_vm *vm) {
+
+  reset_stack(vm);
+  vm->compiler = NULL;
+  vm->objects = NULL;
+  vm->bytes_allocated = 0;
+  vm->next_gc = 1024 * 1024; // 1mb
+  vm->is_repl = false;
+
+  vm->gray_count = 0;
+  vm->gray_capacity = 0;
+  vm->gray_stack = NULL;
+
+  init_table(&vm->strings);
+  init_table(&vm->globals);
+
+  // object methods tables
+  init_table(&vm->methods_string);
+  init_table(&vm->methods_list);
+  init_table(&vm->methods_dict);
+  init_table(&vm->methods_file);
+
+  init_builtin_functions(vm);
+  init_builtin_methods(vm);
 }
 
 void free_vm(b_vm *vm) {
@@ -389,6 +421,10 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
     }
   } else if (IS_DICT(receiver)) {
     if (table_get(&vm->methods_dict, OBJ_VAL(name), &value)) {
+      return call_value(vm, value, arg_count);
+    }
+  } else if (IS_FILE(receiver)) {
+    if (table_get(&vm->methods_file, OBJ_VAL(name), &value)) {
       return call_value(vm, value, arg_count);
     }
   }
