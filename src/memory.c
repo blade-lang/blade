@@ -152,7 +152,7 @@ static void free_object(b_vm *vm, b_obj *object) {
   switch (object->type) {
   case OBJ_BYTES: {
     b_obj_bytes *bytes = (b_obj_bytes *)object;
-    // free_byte_arr(vm, &bytes->bytes);
+    free_byte_arr(vm, &bytes->bytes);
     FREE(b_obj_bytes, object);
     break;
   }
