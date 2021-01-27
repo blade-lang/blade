@@ -6,6 +6,7 @@
 #include "native.h"
 #include "object.h"
 
+#include "builtin/bytes.h"
 #include "builtin/dict.h"
 #include "builtin/file.h"
 #include "builtin/list.h"
@@ -107,6 +108,7 @@ static void define_native_method(b_vm *vm, b_table *table, const char *name,
 void init_builtin_functions(b_vm *vm) {
   DEFINE_NATIVE(abs);
   DEFINE_NATIVE(bin);
+  DEFINE_NATIVE(bytes);
   DEFINE_NATIVE(chr);
   DEFINE_NATIVE(delprop);
   DEFINE_NATIVE(file);
@@ -151,6 +153,7 @@ void init_builtin_methods(b_vm *vm) {
 #define DEFINE_LIST_METHOD(name) DEFINE_METHOD(list, name)
 #define DEFINE_DICT_METHOD(name) DEFINE_METHOD(dict, name)
 #define DEFINE_FILE_METHOD(name) DEFINE_METHOD(file, name)
+#define DEFINE_BYTES_METHOD(name) DEFINE_METHOD(bytes, name)
 
   // string methods
   DEFINE_STRING_METHOD(length);
@@ -245,10 +248,30 @@ void init_builtin_methods(b_vm *vm) {
   DEFINE_FILE_METHOD(seek);
   DEFINE_FILE_METHOD(tell);
 
+  // bytes
+  DEFINE_BYTES_METHOD(length);
+  DEFINE_BYTES_METHOD(append);
+  DEFINE_BYTES_METHOD(clone);
+  DEFINE_BYTES_METHOD(extend);
+  DEFINE_BYTES_METHOD(pop);
+  DEFINE_BYTES_METHOD(remove);
+  DEFINE_BYTES_METHOD(reverse);
+  DEFINE_BYTES_METHOD(first);
+  DEFINE_BYTES_METHOD(last);
+  DEFINE_BYTES_METHOD(get);
+  DEFINE_BYTES_METHOD(is_alpha);
+  DEFINE_BYTES_METHOD(is_alnum);
+  DEFINE_BYTES_METHOD(is_number);
+  DEFINE_BYTES_METHOD(is_lower);
+  DEFINE_BYTES_METHOD(is_upper);
+  DEFINE_BYTES_METHOD(is_space);
+  DEFINE_BYTES_METHOD(to_list);
+
 #undef DEFINE_STRING_METHOD
 #undef DEFINE_LIST_METHOD
 #undef DEFINE_DICT_METHOD
 #undef DEFINE_FILE_METHOD
+#undef DEFINE_BYTES_METHOD
 }
 
 void init_vm(b_vm *vm) {
@@ -272,6 +295,7 @@ void init_vm(b_vm *vm) {
   init_table(&vm->methods_list);
   init_table(&vm->methods_dict);
   init_table(&vm->methods_file);
+  init_table(&vm->methods_bytes);
 
   init_builtin_functions(vm);
   init_builtin_methods(vm);
@@ -425,6 +449,10 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
     }
   } else if (IS_FILE(receiver)) {
     if (table_get(&vm->methods_file, OBJ_VAL(name), &value)) {
+      return call_value(vm, value, arg_count);
+    }
+  } else if (IS_BYTES(receiver)) {
+    if (table_get(&vm->methods_bytes, OBJ_VAL(name), &value)) {
       return call_value(vm, value, arg_count);
     }
   }
@@ -600,6 +628,20 @@ static b_obj_list *add_list(b_vm *vm, b_obj_list *a, b_obj_list *b) {
   }
 
   return list;
+}
+
+static b_obj_bytes *add_bytes(b_vm *vm, b_obj_bytes *a, b_obj_bytes *b) {
+  b_obj_bytes *bytes = new_bytes(vm, a->bytes.count + b->bytes.count);
+
+  bytes->bytes.count = a->bytes.count + b->bytes.count;
+  bytes->bytes.capacity = a->bytes.count + b->bytes.count;
+
+  memcpy(bytes->bytes.bytes, a->bytes.bytes,
+         a->bytes.count * sizeof(unsigned char *));
+  memcpy(bytes->bytes.bytes + a->bytes.count, b->bytes.bytes,
+         b->bytes.count * sizeof(unsigned char *));
+
+  return bytes;
 }
 
 static b_obj_list *multiply_list(b_vm *vm, b_obj_list *a, b_obj_list *new_list,
@@ -958,6 +1000,11 @@ b_ptr_result run(b_vm *vm) {
       } else if (IS_LIST(peek(vm, 0)) && IS_LIST(peek(vm, 1))) {
         b_value result =
             OBJ_VAL(add_list(vm, AS_LIST(peek(vm, 1)), AS_LIST(peek(vm, 0))));
+        popn(vm, 2);
+        push(vm, result);
+      } else if (IS_BYTES(peek(vm, 0)) && IS_BYTES(peek(vm, 1))) {
+        b_value result = OBJ_VAL(
+            add_bytes(vm, AS_BYTES(peek(vm, 1)), AS_BYTES(peek(vm, 0))));
         popn(vm, 2);
         push(vm, result);
       } else {

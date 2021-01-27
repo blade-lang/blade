@@ -29,6 +29,16 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   return object;
 }
 
+b_obj_bytes *new_bytes(b_vm *vm, int length) {
+  b_obj_bytes *bytes = ALLOCATE_OBJ(b_obj_bytes, OBJ_BYTES);
+  init_byte_arr(&bytes->bytes, length);
+
+  bytes->bytes.bytes =
+      reallocate(vm, bytes->bytes.bytes, 0, sizeof(unsigned char *) * length);
+
+  return bytes;
+}
+
 b_obj_list *new_list(b_vm *vm) {
   b_obj_list *list = ALLOCATE_OBJ(b_obj_list, OBJ_LIST);
   init_value_arr(&list->items);
@@ -172,6 +182,18 @@ static void print_list(b_obj_list *list) {
   printf("]");
 }
 
+static void print_bytes(b_obj_bytes *bytes) {
+  printf("(");
+  for (int i = 0; i < bytes->bytes.count; i++) {
+    printf("0x%x", bytes->bytes.bytes[i]);
+
+    if (i != bytes->bytes.count - 1) {
+      printf(" ");
+    }
+  }
+  printf(")");
+}
+
 static void print_dict(b_obj_dict *dict) {
   printf("{");
   for (int i = 0; i < dict->names.count; i++) {
@@ -206,6 +228,10 @@ void print_object(b_value value) {
   }
   case OBJ_LIST: {
     print_list(AS_LIST(value));
+    break;
+  }
+  case OBJ_BYTES: {
+    print_bytes(AS_BYTES(value));
     break;
   }
 
@@ -275,6 +301,20 @@ static inline char *list_to_string(b_vm *vm, b_value_arr *array) {
   return str;
 }
 
+static inline char *bytes_to_string(b_vm *vm, b_byte_arr *array) {
+  char *str = "(";
+  for (int i = 0; i < array->count; i++) {
+    char *chrs = (char *)calloc(1, sizeof(char *));
+    sprintf(chrs, "0x%x", array->bytes[i]);
+
+    if (i != array->count - 1) {
+      str = append_strings(str, " ");
+    }
+  }
+  str = append_strings(str, ")");
+  return str;
+}
+
 static char *dict_to_string(b_vm *vm, b_obj_dict *dict) {
   char *str = "{";
   for (int i = 0; i < dict->names.count; i++) {
@@ -323,6 +363,8 @@ char *object_to_string(b_vm *vm, b_value value) {
     return AS_CSTRING(value);
   case OBJ_UPVALUE:
     return (char *)"<upvalue>";
+  case OBJ_BYTES:
+    return bytes_to_string(vm, &AS_BYTES(value)->bytes);
   case OBJ_LIST:
     return list_to_string(vm, &AS_LIST(value)->items);
   case OBJ_DICT:
@@ -340,6 +382,8 @@ char *object_to_string(b_vm *vm, b_value value) {
 
 const char *object_type(b_obj *object) {
   switch (object->type) {
+  case OBJ_BYTES:
+    return "bytes";
   case OBJ_FILE:
     return "file";
   case OBJ_DICT:

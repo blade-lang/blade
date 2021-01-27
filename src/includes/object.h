@@ -20,6 +20,7 @@
 #define IS_BOUND(v) is_obj_type(v, OBJ_BOUND_METHOD)
 
 // containers
+#define IS_BYTES(v) is_obj_type(v, OBJ_BYTES)
 #define IS_LIST(v) is_obj_type(v, OBJ_LIST)
 #define IS_DICT(v) is_obj_type(v, OBJ_DICT)
 #define IS_FILE(v) is_obj_type(v, OBJ_FILE)
@@ -34,6 +35,7 @@
 #define AS_BOUND(v) ((b_obj_bound *)AS_OBJ(v))
 
 // containers
+#define AS_BYTES(v) ((b_obj_bytes *)AS_OBJ(v))
 #define AS_LIST(v) ((b_obj_list *)AS_OBJ(v))
 #define AS_DICT(v) ((b_obj_dict *)AS_OBJ(v))
 #define AS_FILE(v) ((b_obj_file *)AS_OBJ(v))
@@ -55,6 +57,7 @@ typedef enum {
   OBJ_UPVALUE,
 
   // containers
+  OBJ_BYTES,
   OBJ_LIST,
   OBJ_DICT,
   OBJ_FILE,
@@ -131,6 +134,11 @@ typedef struct {
 
 typedef struct {
   b_obj obj;
+  b_byte_arr bytes;
+} b_obj_bytes;
+
+typedef struct {
+  b_obj obj;
   b_value_arr names;
   b_table items;
 } b_obj_dict;
@@ -145,6 +153,7 @@ typedef struct {
 
 // data containers
 b_obj_list *new_list(b_vm *vm);
+b_obj_bytes *new_bytes(b_vm *vm, int length);
 b_obj_dict *new_dict(b_vm *vm);
 b_obj_file *new_file(b_vm *vm, b_obj_string *path, b_obj_string *mode);
 

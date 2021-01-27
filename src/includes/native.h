@@ -28,6 +28,7 @@
 #define METHOD_OBJECT peek(vm, arg_count)
 
 #define NORMALIZE_IS_BOOL "bool"
+#define NORMALIZE_IS_BYTES "bytes"
 #define NORMALIZE_IS_NUMBER "number"
 #define NORMALIZE_IS_CHAR "char"
 #define NORMALIZE_IS_STRING "string"

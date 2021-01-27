@@ -137,6 +137,7 @@ static void blacken_object(b_vm *vm, b_obj *object) {
     break;
   }
 
+  case OBJ_BYTES:
   case OBJ_NATIVE:
   case OBJ_STRING:
     break;
@@ -149,6 +150,12 @@ static void free_object(b_vm *vm, b_obj *object) {
 #endif
 
   switch (object->type) {
+  case OBJ_BYTES: {
+    b_obj_bytes *bytes = (b_obj_bytes *)object;
+    // free_byte_arr(vm, &bytes->bytes);
+    FREE(b_obj_bytes, object);
+    break;
+  }
   case OBJ_FILE: {
     b_obj_file *file = (b_obj_file *)object;
     fclose(file->file);
