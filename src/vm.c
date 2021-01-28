@@ -693,10 +693,11 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
       pop(vm); // discard upper... we won't need it so gc can free it.
     }
     int index = AS_NUMBER(lower);
+    int real_index = index;
     if (index < 0)
       index = string->length + index;
 
-    if (index < string->length) {
+    if (index < string->length && index >= 0) {
       if (!will_assign) {
         // we can safely get rid of the index from the stack
         popn(vm, 2); // +1 for the list itself
@@ -705,7 +706,7 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
       push(vm, OBJ_VAL(copy_string(vm, &string->chars[index], 1)));
       return true;
     } else {
-      _runtime_error(vm, "string index %d out of range", index);
+      _runtime_error(vm, "string index %d out of range", real_index);
       return false;
     }
   } else {
@@ -742,6 +743,72 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
   }
 }
 
+static bool bytes_get_index(b_vm *vm, b_obj_bytes *bytes, bool will_assign) {
+  b_value upper = peek(vm, 0);
+  b_value lower = peek(vm, 1);
+
+  if (IS_NIL(upper)) {
+    if (!IS_NUMBER(lower)) {
+      _runtime_error(vm, "bytes are numerically indexed");
+      return false;
+    }
+
+    if (!will_assign) {
+      pop(vm); // discard upper... we won't need it so gc can free it.
+    }
+    int index = AS_NUMBER(lower);
+    int real_index = index;
+    if (index < 0)
+      index = bytes->bytes.count + index;
+
+    if (index < bytes->bytes.count && index >= 0) {
+      printf("index: %d, count: %d\n", index, bytes->bytes.count);
+      if (!will_assign) {
+        // we can safely get rid of the index from the stack
+        popn(vm, 2); // +1 for the list itself
+      }
+
+      push(vm, OBJ_VAL(copy_bytes(vm, &bytes->bytes.bytes[index], 1)));
+      return true;
+    } else {
+      _runtime_error(vm, "bytes index %d out of range", real_index);
+      return false;
+    }
+  } else {
+    if (!IS_NUMBER(lower) || !IS_NUMBER(upper)) {
+      _runtime_error(vm, "bytes are numerically indexed");
+      return false;
+    }
+
+    int lower_index = AS_NUMBER(lower);
+    int upper_index = AS_NUMBER(upper);
+
+    if (lower_index < 0 ||
+        (upper_index < 0 && ((bytes->bytes.count + upper_index) < 0))) {
+      // always return an empty list...
+      if (!will_assign) {
+        popn(vm, 3); // +1 for the list itself
+      }
+      _runtime_error(vm, "bytes index %d out of range",
+                     lower_index < 0 ? lower_index : upper_index);
+      return false;
+    }
+
+    if (upper_index < 0)
+      upper_index = bytes->bytes.count + upper_index;
+
+    if (upper_index > bytes->bytes.count)
+      upper_index = bytes->bytes.count;
+
+    if (!will_assign) {
+      popn(vm, 3); // +1 for the list itself
+    }
+    push(vm, OBJ_VAL(copy_bytes(vm, bytes->bytes.bytes + lower_index,
+                                upper_index - lower_index)));
+    return true;
+  }
+}
+
 static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
   b_value upper = peek(vm, 0);
   b_value lower = peek(vm, 1);
@@ -756,10 +823,11 @@ static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
       pop(vm); // discard upper... we won't need it so gc can free it.
     }
     int index = AS_NUMBER(lower);
+    int real_index = index;
     if (index < 0)
       index = list->items.count + index;
 
-    if (index < list->items.count) {
+    if (index < list->items.count && index >= 0) {
       if (!will_assign) {
         // we can safely get rid of the index from the stack
         popn(vm, 2); // +1 for the list itself
@@ -768,7 +836,7 @@ static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
       push(vm, list->items.values[index]);
       return true;
     } else {
-      _runtime_error(vm, "list index %d out of range", index);
+      _runtime_error(vm, "list index %d out of range", real_index);
       return false;
     }
   } else {
@@ -841,6 +909,36 @@ static bool list_set_index(b_vm *vm, b_obj_list *list, b_value index,
   }
 
   _runtime_error(vm, "lists index %d out of range", _position);
+  return false;
+}
+
+static bool bytes_set_index(b_vm *vm, b_obj_bytes *bytes, b_value index,
+                            b_value value) {
+  if (!IS_NUMBER(index)) {
+    _runtime_error(vm, "bytes are numerically indexed");
+    return false;
+  } else if (!IS_NUMBER(value) || AS_NUMBER(value) < 0 ||
+             AS_NUMBER(value) > 255) {
+    _runtime_error(vm, "invalid byte. bytes are numbers between 0 and 255.");
+    return false;
+  }
+
+  int _position = AS_NUMBER(index);
+  int byte = AS_NUMBER(value);
+
+  int position = _position < 0 ? bytes->bytes.count + _position : _position;
+
+  if (position < bytes->bytes.count && position > -(bytes->bytes.count)) {
+    bytes->bytes.bytes[position] = (unsigned char)byte;
+    popn(vm, 4); // pop the value, nil, index and bytes out
+
+    // leave the value on the stack for consumption
+    // e.g. variable = bytes[index] = 10
+    push(vm, NUMBER_VAL(value));
+    return true;
+  }
+
+  _runtime_error(vm, "bytes index %d out of range", _position);
   return false;
 }
 
@@ -1402,7 +1500,7 @@ b_ptr_result run(b_vm *vm) {
       int will_assign = READ_BYTE();
 
       if (!IS_STRING(peek(vm, 2)) && !IS_LIST(peek(vm, 2)) &&
-          !IS_DICT(peek(vm, 2))) {
+          !IS_DICT(peek(vm, 2)) && !IS_BYTES(peek(vm, 2))) {
         runtime_error("type of %s is not a valid iterable",
                       value_type(peek(vm, 2)));
       }
@@ -1421,6 +1519,13 @@ b_ptr_result run(b_vm *vm) {
         } else {
           break;
         }
+      } else if (IS_BYTES(peek(vm, 2))) {
+        if (!bytes_get_index(vm, AS_BYTES(peek(vm, 2)),
+                             will_assign == 1 ? true : false)) {
+          return PTR_RUNTIME_ERR;
+        } else {
+          break;
+        }
       } else if (IS_DICT(peek(vm, 2)) && IS_NIL(peek(vm, 0))) {
         if (!dict_get_index(vm, AS_DICT(peek(vm, 2)),
                             will_assign == 1 ? true : false)) {
@@ -1433,7 +1538,8 @@ b_ptr_result run(b_vm *vm) {
       runtime_error("invalid index %s", value_to_string(vm, peek(vm, 0)));
     }
     case OP_SET_INDEX: {
-      if (!IS_LIST(peek(vm, 3)) && !IS_DICT(peek(vm, 3))) {
+      if (!IS_LIST(peek(vm, 3)) && !IS_DICT(peek(vm, 3)) &&
+          !IS_BYTES(peek(vm, 3))) {
         if (!IS_STRING(peek(vm, 3))) {
           runtime_error("type of %s is not a valid iterable",
                         value_type(peek(vm, 3)));
@@ -1447,6 +1553,10 @@ b_ptr_result run(b_vm *vm) {
 
       if (IS_LIST(peek(vm, 3))) {
         if (!list_set_index(vm, AS_LIST(peek(vm, 3)), index, value)) {
+          return PTR_RUNTIME_ERR;
+        }
+      } else if (IS_BYTES(peek(vm, 3))) {
+        if (!bytes_set_index(vm, AS_BYTES(peek(vm, 3)), index, value)) {
           return PTR_RUNTIME_ERR;
         }
       } else if (IS_DICT(peek(vm, 3))) {
