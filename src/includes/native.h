@@ -54,6 +54,7 @@
 #define RETURN_NUMBER(v) return NUMBER_VAL(v)
 #define RETURN_OBJ(v) return OBJ_VAL(v)
 #define RETURN_STRING(v) return OBJ_VAL(copy_string(vm, v, (int)strlen(v)))
+#define RETURN_LSTRING(v, l) return OBJ_VAL(copy_string(vm, v, l))
 #define RETURN_TSTRING(v, l) return OBJ_VAL(take_string(vm, v, l))
 #define RETURN_VALUE(v) return v
 

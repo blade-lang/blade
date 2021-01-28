@@ -256,5 +256,5 @@ DECLARE_BYTES_METHOD(to_string) {
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
 
   char *string = (char *)bytes->bytes.bytes;
-  RETURN_TSTRING(string, bytes->bytes.count);
+  RETURN_LSTRING(string, bytes->bytes.count);
 }
