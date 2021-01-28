@@ -24,9 +24,9 @@ typedef union {
 #define SIGN_BIT ((uint64_t)0x8000000000000000)
 
 #define EMPTY_TAG 0 // 00
-#define NIL_TAG 1   // 01
+#define NIL_TAG 1 // 01
 #define FALSE_TAG 2 // 10
-#define TRUE_TAG 3  // 11
+#define TRUE_TAG 3 // 11
 
 typedef uint64_t b_value;
 
@@ -116,7 +116,6 @@ typedef struct {
 } b_value_arr;
 
 typedef struct {
-  int capacity;
   int count;
   unsigned char *bytes;
 } b_byte_arr;
