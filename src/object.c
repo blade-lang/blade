@@ -36,7 +36,6 @@ b_obj_bytes *new_bytes(b_vm *vm, int length) {
   bytes->bytes.bytes =
       reallocate(vm, bytes->bytes.bytes, 0, sizeof(unsigned char *) * length);
   bytes->bytes.count = length;
-  bytes->bytes.capacity = length;
 
   return bytes;
 }
