@@ -155,6 +155,7 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_BIT_NOT:
   case OP_ONE:
   case OP_SET_INDEX:
+  case OP_EMPTY:
     return 0;
 
   case OP_CALL:
