@@ -966,3 +966,9 @@ DECLARE_STRING_METHOD(replace) {
 
   RETURN_OBJ(response);
 }
+
+DECLARE_STRING_METHOD(to_bytes) {
+  ENFORCE_ARG_COUNT(to_bytes, 0);
+  b_obj_string *string = AS_STRING(METHOD_OBJECT);
+  RETURN_OBJ(copy_bytes(vm, (unsigned char *)string->chars, string->length));
+}

@@ -133,8 +133,15 @@ DECLARE_BYTES_METHOD(is_space);
 /**
  * bytes.to_list()
  *
- * returns a list of every character in a string
+ * returns a list of every character in the bytes
  */
 DECLARE_BYTES_METHOD(to_list);
+
+/**
+ * bytes.to_string()
+ *
+ * returns a string representation of the bytes
+ */
+DECLARE_BYTES_METHOD(to_string);
 
 #endif

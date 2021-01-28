@@ -250,3 +250,11 @@ DECLARE_BYTES_METHOD(to_list) {
 
   RETURN_OBJ(list);
 }
+
+DECLARE_BYTES_METHOD(to_string) {
+  ENFORCE_ARG_COUNT(to_string, 0);
+  b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
+
+  char *string = (char *)bytes->bytes.bytes;
+  RETURN_TSTRING(string, bytes->bytes.count);
+}
