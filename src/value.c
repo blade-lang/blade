@@ -69,6 +69,8 @@ void free_byte_arr(b_vm *vm, b_byte_arr *array) {
 
 void print_value(b_value value) {
 #if defined(USE_NAN_BOXING) && USE_NAN_BOXING == 1
+  if (IS_EMPTY(value))
+    printf("");
   if (IS_NIL(value))
     printf("nil");
   else if (IS_BOOL(value))
@@ -107,6 +109,8 @@ static inline char *number_to_string(double number) {
 char *value_to_string(b_vm *vm, b_value value) {
 #if defined(USE_NAN_BOXING) && USE_NAN_BOXING == 1
   if (IS_NIL(value))
+    return "";
+  if (IS_NIL(value))
     return "nil";
   else if (IS_BOOL(value))
     return AS_BOOL(value) ? "true" : "false";
@@ -132,6 +136,8 @@ char *value_to_string(b_vm *vm, b_value value) {
 }
 
 const char *value_type(b_value value) {
+  if (IS_EMPTY(value))
+    return "empty";
   if (IS_NIL(value))
     return "nil";
   else if (IS_BOOL(value))

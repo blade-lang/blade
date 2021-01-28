@@ -201,7 +201,7 @@
 					"name": "keyword.cast.birdy"
 				},
 				{
-					"match": "(?<!\\$)\\b(try|on|catch|finally|throw|rethrow)\\b(?!\\$)",
+					"match": "(?<!\\$)\\b(try|catch|finally|throw)\\b(?!\\$)",
 					"name": "keyword.control.catch-exception.birdy"
 				},
 				{
@@ -265,7 +265,7 @@
 					"name": "storage.modifier.birdy"
 				},
 				{
-					"match": "(?<!\\$)\\b(?:var|echo|die)\\b(?!\\$)",
+					"match": "(?<!\\$)\\b(?:var|echo|die|empty)\\b(?!\\$)",
 					"name": "storage.type.primitive.birdy"
 				}
 			]
