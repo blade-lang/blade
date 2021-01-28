@@ -242,6 +242,13 @@ static void mark_roots(b_vm *vm) {
     mark_object(vm, (b_obj *)upvalue);
   }
   mark_table(vm, &vm->globals);
+
+  mark_table(vm, &vm->methods_string);
+  mark_table(vm, &vm->methods_bytes);
+  mark_table(vm, &vm->methods_file);
+  mark_table(vm, &vm->methods_list);
+  mark_table(vm, &vm->methods_dict);
+
   mark_compiler_roots(vm);
 }
 

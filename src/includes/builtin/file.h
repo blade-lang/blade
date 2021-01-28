@@ -35,10 +35,36 @@ DECLARE_FILE_METHOD(exists);
 DECLARE_FILE_METHOD(close);
 
 /**
+ * file.open()
+ *
+ * opens the stream to a file for the operation specified in the file
+ * constructor.
+ * you will need to call this method after a call to read or write if you wish
+ * to read or write again as the file will already be closed.
+ */
+DECLARE_FILE_METHOD(open);
+
+/**
+ * file.is_open()
+ *
+ * returns true if a file is open for reading or writing; false otherwise.
+ * _NOTE_: std files are always open
+ */
+DECLARE_FILE_METHOD(is_open);
+
+/**
+ * file.is_closed()
+ *
+ * returns true if a file is closed for reading or writing; false otherwise.
+ * _NOTE_: std files are never closed
+ */
+DECLARE_FILE_METHOD(is_closed);
+
+/**
  * file.read([size: number])
  *
- * reads the contents of an opened file and return it as string
- * // TODO: support binary mode
+ * reads the contents of an opened file and return it as string or bytes when
+ * opened in binary mode
  * - this requires mode 'r' (which is the default) on the file
  */
 DECLARE_FILE_METHOD(read);
@@ -46,9 +72,7 @@ DECLARE_FILE_METHOD(read);
 /**
  * file.write(data: string)
  *
- * // TODO: support binary file
- *
- * writes a string to an opened file.
+ * writes a string or bytes to an opened file.
  * - this requires mode 'w', 'a' or 'r+'
  */
 DECLARE_FILE_METHOD(write);
