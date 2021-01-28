@@ -534,7 +534,7 @@ static void define_property(b_vm *vm, b_obj_string *name) {
 bool is_falsey(b_value value) {
   if (IS_BOOL(value))
     return IS_BOOL(value) && !AS_BOOL(value);
-  if (IS_NIL(value))
+  if (IS_NIL(value) || IS_EMPTY(value))
     return true;
 
   // -1 is the number equivalent of false in Birdy
