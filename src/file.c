@@ -119,15 +119,34 @@ DECLARE_FILE_METHOD(close) {
   RETURN;
 }
 
+DECLARE_FILE_METHOD(open) {
+  ENFORCE_ARG_COUNT(open, 0);
+  file_open(AS_FILE(METHOD_OBJECT));
+  RETURN;
+}
+
+DECLARE_FILE_METHOD(is_open) {
+  b_obj_file *file = AS_FILE(METHOD_OBJECT);
+  RETURN_BOOL(is_std_file(file) || (file->is_open && file->file != NULL));
+}
+
+DECLARE_FILE_METHOD(is_closed) {
+  b_obj_file *file = AS_FILE(METHOD_OBJECT);
+  RETURN_BOOL(!is_std_file(file) && !file->is_open && file->file == NULL);
+}
+
 DECLARE_FILE_METHOD(read) {
   ENFORCE_ARG_RANGE(read, 0, 1);
   size_t file_size = -1;
+  size_t file_size_real = -1;
   if (arg_count == 1) {
     ENFORCE_ARG_TYPE(read, 0, IS_NUMBER);
     file_size = (size_t)AS_NUMBER(args[0]);
   }
 
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
+
+  bool in_binary_mode = strstr(file->mode->chars, "b") != NULL;
 
   if (!is_std_file(file)) {
     // file is in read mode and file does not exist
@@ -145,14 +164,11 @@ DECLARE_FILE_METHOD(read) {
       file_open(file);
     }
 
-    // TODO: support byte mode
-
     if (file->file == NULL) {
       FILE_ERROR(Read, "could not read file");
     }
 
     // Get file size
-    size_t file_size_real;
     struct stat stats; // stats is super faster on large files
     if (lstat(file->path->chars, &stats) == 0) {
       file_size_real = (size_t)stats.st_size;
@@ -188,7 +204,7 @@ DECLARE_FILE_METHOD(read) {
 
   size_t bytes_read = fread(buffer, sizeof(char), file_size, file->file);
 
-  if (bytes_read < file_size) {
+  if (bytes_read < file_size && file_size == file_size_real) {
     FILE_ERROR(Read, "could not read file contents");
   }
 
@@ -196,18 +212,33 @@ DECLARE_FILE_METHOD(read) {
   buffer[bytes_read] = '\0';
 
   // close file
-  // file_close(file);
+  if (bytes_read == file_size) {
+    file_close(file);
+  }
 
-  RETURN_STRING(buffer);
+  if (!in_binary_mode) {
+    RETURN_STRING(buffer);
+  }
+
+  RETURN_OBJ(copy_bytes(vm, (unsigned char *)buffer, bytes_read));
 }
 
 DECLARE_FILE_METHOD(write) {
   ENFORCE_ARG_COUNT(write, 1);
-  ENFORCE_ARG_TYPE(write, 0, IS_STRING);
-  // TODO: support binary file
 
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
-  b_obj_string *string = AS_STRING(args[0]);
+  b_obj_string *string;
+  b_obj_bytes *bytes;
+
+  bool in_binary_mode = strstr(file->mode->chars, "b") != NULL;
+
+  if (!in_binary_mode) {
+    ENFORCE_ARG_TYPE(write, 0, IS_STRING);
+    string = AS_STRING(args[0]);
+  } else {
+    ENFORCE_ARG_TYPE(write, 0, IS_BYTES);
+    bytes = AS_BYTES(args[0]);
+  }
 
   // file is in read only mode
   if (!is_std_file(file)) {
@@ -216,7 +247,7 @@ DECLARE_FILE_METHOD(write) {
       FILE_ERROR(Unsupported, "cannot read file in write mode");
     }
 
-    if (string->length == 0) {
+    if ((!in_binary_mode ? string->length : bytes->bytes.count) == 0) {
       FILE_ERROR(Write, "cannot write empty buffer to file");
     }
 
@@ -234,11 +265,19 @@ DECLARE_FILE_METHOD(write) {
     }
   }
 
-  size_t count =
-      fwrite(string->chars, sizeof(char), string->length, file->file);
+  size_t count;
+
+  if (!in_binary_mode) {
+    count = fwrite(string->chars, sizeof(char), string->length, file->file);
+  } else {
+    count = fwrite(bytes->bytes.bytes, sizeof(unsigned char),
+                   bytes->bytes.count, file->file);
+  }
 
   // close file
-  // file_close(file);
+  if (count == (size_t)(in_binary_mode ? bytes->bytes.count : string->length)) {
+    file_close(file);
+  }
 
   if (count > (size_t)0) {
     RETURN_TRUE;

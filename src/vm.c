@@ -230,10 +230,13 @@ void init_builtin_methods(b_vm *vm) {
   // file methods
   DEFINE_FILE_METHOD(exists);
   DEFINE_FILE_METHOD(close);
+  DEFINE_FILE_METHOD(open);
   DEFINE_FILE_METHOD(read);
   DEFINE_FILE_METHOD(write);
   DEFINE_FILE_METHOD(number);
   DEFINE_FILE_METHOD(is_tty);
+  DEFINE_FILE_METHOD(is_open);
+  DEFINE_FILE_METHOD(is_closed);
   DEFINE_FILE_METHOD(flush);
   DEFINE_FILE_METHOD(stats);
   DEFINE_FILE_METHOD(symlink);
@@ -632,9 +635,6 @@ static b_obj_list *add_list(b_vm *vm, b_obj_list *a, b_obj_list *b) {
 
 static b_obj_bytes *add_bytes(b_vm *vm, b_obj_bytes *a, b_obj_bytes *b) {
   b_obj_bytes *bytes = new_bytes(vm, a->bytes.count + b->bytes.count);
-
-  bytes->bytes.count = a->bytes.count + b->bytes.count;
-  bytes->bytes.capacity = a->bytes.count + b->bytes.count;
 
   memcpy(bytes->bytes.bytes, a->bytes.bytes,
          a->bytes.count * sizeof(unsigned char *));
@@ -1207,23 +1207,65 @@ b_ptr_result run(b_vm *vm) {
     }
 
     case OP_GET_PROPERTY: {
-      if (!IS_INSTANCE(peek(vm, 0))) {
+      if (!IS_INSTANCE(peek(vm, 0)) && !IS_DICT(peek(vm, 0)) &&
+          !!IS_LIST(peek(vm, 0)) && !IS_BYTES(peek(vm, 0)) &&
+          !IS_FILE(peek(vm, 0)) && !IS_STRING(peek(vm, 0))) {
         runtime_error("only instances can have properties");
       }
 
-      b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
       b_obj_string *name = READ_STRING();
-      b_value value;
-      if (table_get(&instance->fields, OBJ_VAL(name), &value)) {
-        pop(vm); // pop the instance...
-        push(vm, value);
-        break;
+
+      if (IS_INSTANCE(peek(vm, 0))) {
+
+        b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
+        b_value value;
+        if (table_get(&instance->fields, OBJ_VAL(name), &value)) {
+          pop(vm); // pop the instance...
+          push(vm, value);
+          break;
+        }
+
+        if (!bind_method(vm, instance->klass, name)) {
+          return PTR_RUNTIME_ERR;
+        }
+      } else if (IS_DICT(peek(vm, 0))) {
+        b_value value;
+        if (table_get(&vm->methods_dict, OBJ_VAL(name), &value)) {
+          pop(vm); // pop the dictionary...
+          push(vm, value);
+          break;
+        }
+      } else if (IS_LIST(peek(vm, 0))) {
+        b_value value;
+        if (table_get(&vm->methods_list, OBJ_VAL(name), &value)) {
+          pop(vm); // pop the list...
+          push(vm, value);
+          break;
+        }
+      } else if (IS_BYTES(peek(vm, 0))) {
+        b_value value;
+        if (table_get(&vm->methods_bytes, OBJ_VAL(name), &value)) {
+          pop(vm); // pop the bytes...
+          push(vm, value);
+          break;
+        }
+      } else if (IS_FILE(peek(vm, 0))) {
+        b_value value;
+        if (table_get(&vm->methods_file, OBJ_VAL(name), &value)) {
+          pop(vm); // pop the file...
+          push(vm, value);
+          break;
+        }
+      } else if (IS_STRING(peek(vm, 0))) {
+        b_value value;
+        if (table_get(&vm->methods_string, OBJ_VAL(name), &value)) {
+          pop(vm); // pop the string...
+          push(vm, value);
+          break;
+        }
       }
 
-      if (!bind_method(vm, instance->klass, name)) {
-        return PTR_RUNTIME_ERR;
-      }
-      break;
+      runtime_error("only instances can have properties");
     }
     case OP_SET_PROPERTY: {
       if (!IS_INSTANCE(peek(vm, 1))) {

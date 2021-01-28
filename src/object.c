@@ -35,6 +35,8 @@ b_obj_bytes *new_bytes(b_vm *vm, int length) {
 
   bytes->bytes.bytes =
       reallocate(vm, bytes->bytes.bytes, 0, sizeof(unsigned char *) * length);
+  bytes->bytes.count = length;
+  bytes->bytes.capacity = length;
 
   return bytes;
 }
@@ -278,6 +280,13 @@ void print_object(b_value value) {
     break;
   }
   }
+}
+
+b_obj_bytes *copy_bytes(b_vm *vm, unsigned char *b, int length) {
+  b_obj_bytes *bytes = new_bytes(vm, length);
+
+  memcpy(bytes->bytes.bytes, b, length * sizeof(unsigned char *));
+  return bytes;
 }
 
 static inline char *function_to_string(b_obj_func *func) {
