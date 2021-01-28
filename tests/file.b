@@ -12,3 +12,5 @@ echo 'Successfully copied file me.png to me2.png in ' + (time() - start) + 's'
 
 var f3 = file('README.md')
 echo f3.read()
+
+# file('test', 'w').write('It works')

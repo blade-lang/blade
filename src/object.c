@@ -289,6 +289,13 @@ b_obj_bytes *copy_bytes(b_vm *vm, unsigned char *b, int length) {
   return bytes;
 }
 
+b_obj_bytes *take_bytes(b_vm *vm, unsigned char *b, int length) {
+  b_obj_bytes *bytes = new_bytes(vm, length);
+
+  bytes->bytes.bytes = b;
+  return bytes;
+}
+
 static inline char *function_to_string(b_obj_func *func) {
   if (func->name == NULL) {
     return "<script 0x00>";

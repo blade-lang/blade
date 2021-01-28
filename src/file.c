@@ -217,10 +217,13 @@ DECLARE_FILE_METHOD(read) {
   }
 
   if (!in_binary_mode) {
-    RETURN_STRING(buffer);
+    RETURN_TSTRING(buffer, bytes_read);
   }
 
-  RETURN_OBJ(copy_bytes(vm, (unsigned char *)buffer, bytes_read));
+  /* b_obj_bytes *bytes = copy_bytes(vm, (unsigned char *)buffer, bytes_read);
+  free(buffer); */
+
+  RETURN_OBJ(take_bytes(vm, (unsigned char *)buffer, bytes_read));
 }
 
 DECLARE_FILE_METHOD(write) {
