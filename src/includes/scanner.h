@@ -98,6 +98,7 @@ typedef enum {
   // error
   ERROR_TOKEN,
   EMPTY_TOKEN,
+  UNDEFINED_TOKEN,
 } b_tkn_type;
 
 typedef struct {
