@@ -616,7 +616,7 @@ static void literal(b_parser *p, bool can_assign) {
     break;
   case EMPTY_TOKEN: {
     if (p->compiler->type != TYPE_METHOD && !p->is_returning) {
-      error(p, "can only use the empty keyword the a return statement of a "
+      error(p, "can only use the empty keyword in the return statement of a "
                "class method");
     }
     emit_byte(p, OP_EMPTY);
