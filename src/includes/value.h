@@ -27,12 +27,14 @@ typedef union {
 #define NIL_TAG 1 // 01
 #define FALSE_TAG 2 // 10
 #define TRUE_TAG 3 // 11
+#define UNDEFINED_TAG 4 // 100
 
 typedef uint64_t b_value;
 
 #define FALSE_VAL ((b_value)(uint64_t)(QNAN | FALSE_TAG))
 #define TRUE_VAL ((b_value)(uint64_t)(QNAN | TRUE_TAG))
 
+#define UNDEFINED_VAL ((b_value)(uint64_t)(QNAN | UNDEFINED_TAG))
 #define EMPTY_VAL ((b_value)(uint64_t)(QNAN | EMPTY_TAG))
 #define NIL_VAL ((b_value)(uint64_t)(QNAN | NIL_TAG))
 #define BOOL_VAL(v) ((v) ? TRUE_VAL : FALSE_VAL)
@@ -44,6 +46,7 @@ typedef uint64_t b_value;
 #define AS_NUMBER(v) value_to_number(v)
 #define AS_OBJ(v) ((b_obj *)(uintptr_t)((v) & ~(SIGN_BIT | QNAN)))
 
+#define IS_UNDEFINED(v) ((v) == UNDEFINED_VAL)
 #define IS_EMPTY(v) ((v) == EMPTY_VAL)
 #define IS_NIL(v) ((v) == NIL_VAL)
 #define IS_BOOL(v) (((v) | 1) == TRUE_VAL)
@@ -76,6 +79,7 @@ typedef enum {
   VAL_NUMBER,
   VAL_OBJ,
   VAL_EMPTY,
+  VAL_UNDEFINED,
 } b_val_type;
 
 typedef struct {
@@ -88,6 +92,7 @@ typedef struct {
 } b_value;
 
 // promote C values to bird value
+#define UNDEFINED_VAL ((b_value){VAL_UNDEFINED, {.number = 0}})
 #define EMPTY_VAL ((b_value){VAL_EMPTY, {.number = 0}})
 #define NIL_VAL ((b_value){VAL_NIL, {.number = 0}})
 #define BOOL_VAL(v) ((b_value){VAL_BOOL, {.boolean = v}})
@@ -106,6 +111,7 @@ typedef struct {
 #define IS_NUMBER(v) ((v).type == VAL_NUMBER)
 #define IS_OBJ(v) ((v).type == VAL_OBJ)
 #define IS_EMPTY(v) ((v).type == VAL_EMPTY)
+#define IS_UNDEFINED(v) ((v).type == VAL_UNDEFINED)
 
 #endif
 
