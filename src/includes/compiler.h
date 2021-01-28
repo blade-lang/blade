@@ -71,6 +71,7 @@ typedef struct {
   bool had_error;
   bool panic_mode;
   bool in_block;
+  bool is_returning;
   b_compiler *compiler;
   b_class_compiler *current_class;
 

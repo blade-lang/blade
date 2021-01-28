@@ -1,10 +1,10 @@
-#include "common.h"
 #include "scanner.h"
+#include "common.h"
 
 #include <stdarg.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 void init_scanner(b_scanner *s, const char *source) {
   s->current = source;
@@ -105,7 +105,7 @@ b_token skip_block_comments(b_scanner *s) {
     advance(s);
   }
 
-  return make_token(s, EMPTY_TOKEN);
+  return make_token(s, UNDEFINED_TOKEN);
 }
 
 b_token skip_whitespace(b_scanner *s) {
@@ -136,15 +136,15 @@ b_token skip_whitespace(b_scanner *s) {
         advance(s);
         return skip_block_comments(s);
       } else {
-        return make_token(s, EMPTY_TOKEN);
+        return make_token(s, UNDEFINED_TOKEN);
       }
 
     // exit as soon as we see a non-whitespace...
     default:
-      return make_token(s, EMPTY_TOKEN);
+      return make_token(s, UNDEFINED_TOKEN);
     }
   }
-  return make_token(s, EMPTY_TOKEN);
+  return make_token(s, UNDEFINED_TOKEN);
 }
 
 static b_token string(b_scanner *s, char quote) {
@@ -257,6 +257,8 @@ static b_tkn_type identifier_type(b_scanner *s) {
         return check_keyword(s, 2, 2, "ho", ECHO_TOKEN);
       case 'l':
         return check_keyword(s, 2, 2, "se", ELSE_TOKEN);
+      case 'm':
+        return check_keyword(s, 2, 3, "pty", EMPTY_TOKEN);
       }
     }
   case 'f':
@@ -326,7 +328,7 @@ static b_token identifier(b_scanner *s) {
 
 b_token scan_token(b_scanner *s) {
   b_token tk = skip_whitespace(s);
-  if (tk.type != EMPTY_TOKEN) {
+  if (tk.type != UNDEFINED_TOKEN) {
     return tk;
   }
 

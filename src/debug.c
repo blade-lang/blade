@@ -108,6 +108,8 @@ int disassemble_instruction(b_blob *blob, int offset) {
     return simple_instruction("less", offset);
   case OP_NIL:
     return simple_instruction("nil", offset);
+  case OP_EMPTY:
+    return simple_instruction("empty", offset);
   case OP_TRUE:
     return simple_instruction("true", offset);
   case OP_FALSE:

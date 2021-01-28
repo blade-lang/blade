@@ -1,5 +1,5 @@
-#include "common.h"
 #include "compiler.h"
+#include "common.h"
 #include "config.h"
 #include "memory.h"
 #include "object.h"
@@ -613,6 +613,14 @@ static void literal(b_parser *p, bool can_assign) {
   case NIL_TOKEN:
     emit_byte(p, OP_NIL);
     break;
+  case EMPTY_TOKEN: {
+    if (p->compiler->type != TYPE_METHOD && !p->is_returning) {
+      error(p, "can only use the empty keyword the a return statement of a "
+               "class method");
+    }
+    emit_byte(p, OP_EMPTY);
+    break;
+  }
   case TRUE_TOKEN:
     emit_byte(p, OP_TRUE);
     break;
@@ -1122,7 +1130,8 @@ b_parse_rule parse_rules[] = {
 
     // error
     [ERROR_TOKEN] = {NULL, NULL, PREC_NONE},
-    [EMPTY_TOKEN] = {NULL, NULL, PREC_NONE},
+    [EMPTY_TOKEN] = {literal, NULL, PREC_NONE},
+    [UNDEFINED_TOKEN] = {NULL, NULL, PREC_NONE},
 };
 
 static void parse_precedence(b_parser *p, b_prec precedence) {
@@ -1524,6 +1533,7 @@ static void echo_statement(b_parser *p) {
 }
 
 static void return_statement(b_parser *p) {
+  p->is_returning = true;
   if (p->compiler->type == TYPE_SCRIPT) {
     error(p, "cannot return from top-level code");
   }
@@ -1539,6 +1549,7 @@ static void return_statement(b_parser *p) {
     consume_statement_end(p);
     emit_byte(p, OP_RETURN);
   }
+  p->is_returning = false;
 }
 
 static void while_statement(b_parser *p) {
@@ -1686,6 +1697,7 @@ b_obj_func *compile(b_vm *vm, const char *source, b_blob *blob) {
   parser.had_error = false;
   parser.panic_mode = false;
   parser.in_block = false;
+  parser.is_returning = false;
   parser.innermost_loop_start = -1;
   parser.innermost_loop_scope_depth = 0;
   parser.compiler = NULL;

@@ -1217,6 +1217,9 @@ b_ptr_result run(b_vm *vm) {
     case OP_NIL:
       push(vm, NIL_VAL);
       break;
+    case OP_EMPTY:
+      push(vm, EMPTY_VAL);
+      break;
     case OP_TRUE:
       push(vm, BOOL_VAL(true));
       break;
