@@ -66,6 +66,8 @@ DECLARE_FILE_METHOD(is_closed);
  * reads the contents of an opened file and return it as string or bytes when
  * opened in binary mode
  * - this requires mode 'r' (which is the default) on the file
+ * - when reading binary files (mode 'b'), you will have to close it yourself if
+ * you didn't read the entire file
  */
 DECLARE_FILE_METHOD(read);
 
@@ -74,6 +76,7 @@ DECLARE_FILE_METHOD(read);
  *
  * writes a string or bytes to an opened file.
  * - this requires mode 'w', 'a' or 'r+'
+ * - when writing binary (mode 'b'), you will have to close it yourself if you
  */
 DECLARE_FILE_METHOD(write);
 
