@@ -57,6 +57,10 @@
     RETURN_TRUE;                                                               \
   }
 
+#define DENY_STD()                                                             \
+  if (file->mode->length == 0)                                                 \
+    RETURN_ERROR("method not supported for std files");
+
 #define SET_DICT_STRING(d, n, l, v)                                            \
   dict_add_entry(vm, d, OBJ_VAL(copy_string(vm, n, l)), v)
 
@@ -110,6 +114,7 @@ DECLARE_NATIVE(file) {
 DECLARE_FILE_METHOD(exists) {
   ENFORCE_ARG_COUNT(exists, 0);
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
+  DENY_STD();
   RETURN_BOOL(file_exists(file->path->chars));
 }
 
@@ -415,6 +420,8 @@ DECLARE_FILE_METHOD(symlink) {
   ENFORCE_ARG_COUNT(symlink, 1);
   ENFORCE_ARG_TYPE(symlink, 0, IS_STRING);
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
+  DENY_STD();
+
   if (file_exists(file->path->chars)) {
     b_obj_string *path = AS_STRING(args[0]);
     RETURN_BOOL(symlink(file->path->chars, path->chars) == 0);
@@ -426,6 +433,8 @@ DECLARE_FILE_METHOD(symlink) {
 DECLARE_FILE_METHOD(delete) {
   ENFORCE_ARG_COUNT(delete, 0);
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
+  DENY_STD();
+
   file_close(file);
   RETURN_STATUS(unlink(file->path->chars));
 }
@@ -435,6 +444,8 @@ DECLARE_FILE_METHOD(rename) {
   ENFORCE_ARG_TYPE(rename, 0, IS_STRING);
 
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
+  DENY_STD();
+
   if (file_exists(file->path->chars)) {
     b_obj_string *new_name = AS_STRING(args[0]);
     if (new_name->length == 0) {
@@ -449,12 +460,16 @@ DECLARE_FILE_METHOD(rename) {
 
 DECLARE_FILE_METHOD(path) {
   ENFORCE_ARG_COUNT(path, 0);
-  RETURN_OBJ(AS_FILE(METHOD_OBJECT)->path);
+  b_obj_file *file = AS_FILE(METHOD_OBJECT);
+  DENY_STD();
+  RETURN_OBJ(file->path);
 }
 
 DECLARE_FILE_METHOD(abs_path) {
   ENFORCE_ARG_COUNT(abs_path, 0);
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
+  DENY_STD();
+
   char *abs_path = realpath(file->path->chars, NULL);
   RETURN_STRING(abs_path);
 }
@@ -463,6 +478,7 @@ DECLARE_FILE_METHOD(copy) {
   ENFORCE_ARG_COUNT(copy, 1);
   ENFORCE_ARG_TYPE(copy, 0, IS_STRING);
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
+  DENY_STD();
 
   if (file_exists(file->path->chars)) {
     b_obj_string *name = AS_STRING(args[0]);
@@ -516,6 +532,8 @@ DECLARE_FILE_METHOD(truncate) {
     final_size = (off_t)AS_NUMBER(args[0]);
   }
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
+  DENY_STD();
+
   RETURN_STATUS(truncate(file->path->chars, final_size));
 }
 
@@ -524,6 +542,8 @@ DECLARE_FILE_METHOD(chmod) {
   ENFORCE_ARG_TYPE(chmod, 0, IS_NUMBER);
 
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
+  DENY_STD();
+
   if (file_exists(file->path->chars)) {
     int mode = AS_NUMBER(args[0]);
     RETURN_STATUS(chmod(file->path->chars, (mode_t)mode));
@@ -538,6 +558,7 @@ DECLARE_FILE_METHOD(set_times) {
   ENFORCE_ARG_TYPE(set_times, 1, IS_NUMBER);
 
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
+  DENY_STD();
 
   if (file_exists(file->path->chars)) {
 
@@ -590,6 +611,8 @@ DECLARE_FILE_METHOD(seek) {
   ENFORCE_ARG_TYPE(seek, 1, IS_NUMBER);
 
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
+  DENY_STD();
+
   long position = (long)AS_NUMBER(args[0]);
   int seek_type = AS_NUMBER(args[1]);
   RETURN_STATUS(fseek(file->file, position, seek_type));
@@ -597,9 +620,12 @@ DECLARE_FILE_METHOD(seek) {
 
 DECLARE_FILE_METHOD(tell) {
   ENFORCE_ARG_COUNT(tell, 0);
-  RETURN_NUMBER(ftell(AS_FILE(METHOD_OBJECT)->file));
+  b_obj_file *file = AS_FILE(METHOD_OBJECT);
+  DENY_STD();
+  RETURN_NUMBER(ftell(file->file));
 }
 
 #undef FILE_ERROR
 #undef RETURN_STATUS
 #undef SET_DICT_STRING
+#undef DENY_STD

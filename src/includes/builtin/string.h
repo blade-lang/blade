@@ -206,4 +206,11 @@ DECLARE_STRING_METHOD(matches);
  */
 DECLARE_STRING_METHOD(replace);
 
+/**
+ * string.to_bytes()
+ *
+ * returns the bytes making up the string
+ */
+DECLARE_STRING_METHOD(to_bytes);
+
 #endif

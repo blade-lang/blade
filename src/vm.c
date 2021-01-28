@@ -176,6 +176,7 @@ void init_builtin_methods(b_vm *vm) {
   DEFINE_STRING_METHOD(count);
   DEFINE_STRING_METHOD(to_number);
   DEFINE_STRING_METHOD(to_list);
+  DEFINE_STRING_METHOD(to_bytes);
   DEFINE_STRING_METHOD(lpad);
   DEFINE_STRING_METHOD(rpad);
   DEFINE_STRING_METHOD(match);
@@ -269,6 +270,7 @@ void init_builtin_methods(b_vm *vm) {
   DEFINE_BYTES_METHOD(is_upper);
   DEFINE_BYTES_METHOD(is_space);
   DEFINE_BYTES_METHOD(to_list);
+  DEFINE_BYTES_METHOD(to_string);
 
 #undef DEFINE_STRING_METHOD
 #undef DEFINE_LIST_METHOD
