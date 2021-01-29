@@ -317,6 +317,10 @@ static int identifier_constant(b_parser *p, b_token *name) {
                        OBJ_VAL(copy_string(p->vm, name->start, name->length)));
 }
 
+static int identifier_constant_2(b_parser *p, b_token name) {
+  return make_constant(p, OBJ_VAL(copy_string(p->vm, name.start, name.length)));
+}
+
 static bool identifiers_equal(b_token *a, b_token *b) {
   if (a->length != b->length)
     return false;
@@ -435,6 +439,13 @@ static void define_variable(b_parser *p, int global) {
   }
 
   emit_byte_and_short(p, OP_DEFINE_GLOBAL, global);
+}
+
+static b_token synthetic_token(const char *name) {
+  b_token token;
+  token.start = name;
+  token.length = (int)strlen(name);
+  return token;
 }
 
 static b_obj_func *end_compiler(b_parser *p) {
@@ -728,6 +739,23 @@ static void dot(b_parser *p, bool can_assign) {
   }
 }
 
+static int create_local_variable(b_parser *p, const char *name) {
+  add_local(p, synthetic_token(name));
+  define_variable(p, 0);
+  return p->compiler->local_count;
+}
+
+static int get_variable(b_parser *p, b_token name) {
+  uint8_t get_op, set_op;
+  int arg = resolve_local(p, p->compiler, &name);
+  if (arg != -1) {
+  } else if ((arg = resolve_upvalue(p, p->compiler, &name)) != -1) {
+  } else {
+    arg = identifier_constant(p, &name);
+  }
+  return arg;
+}
+
 static void named_variable(b_parser *p, b_token name, bool can_assign) {
   uint8_t get_op, set_op;
   int arg = resolve_local(p, p->compiler, &name);
@@ -811,13 +839,6 @@ static void indexing(b_parser *p, bool can_assign) {
 
 static void variable(b_parser *p, bool can_assign) {
   named_variable(p, p->previous, can_assign);
-}
-
-static b_token synthetic_token(const char *name) {
-  b_token token;
-  token.start = name;
-  token.length = (int)strlen(name);
-  return token;
 }
 
 static void self(b_parser *p, bool can_assign) {
@@ -1432,6 +1453,126 @@ static void iter_statement(b_parser *p) {
 }
 
 /**
+ * for x in iterable {
+ *    ...
+ * }
+ *
+ * ==
+ *
+ * {
+ *    var x = iterable.__itern__()[0]
+ *    while x != empty {
+ *      ...
+ *      x = iterable.__itern__()[0]
+ *    }
+ * }
+ *
+ * ---------------------------------
+ *
+ * for x, y in iterable {
+ *    ...
+ * }
+ *
+ * ==
+ *
+ * {
+ *    var _ = iterable.__itern__()
+ *    var x = _[0]
+ *    var y = _[1]
+ *    while _ != empty {
+ *      ...
+ *      _ = iterable.__itern__()
+ *      x = _[0]
+ *      y = _[1]
+ *    }
+ * }
+ */
+static void for_statement(b_parser *p) {
+  begin_scope(p);
+
+  int key = -1, value = -1;
+
+  consume(p, IDENTIFIER_TOKEN, "expect variable name after 'for'");
+  add_local(p, p->previous);
+  define_variable(p, 0);
+  key = p->compiler->local_count;
+
+  if (match(p, COMMA_TOKEN)) {
+    consume(p, IDENTIFIER_TOKEN, "expect variable name after ,");
+    add_local(p, p->previous);
+    define_variable(p, 0);
+    value = p->compiler->local_count;
+  }
+
+  consume(p, IN_TOKEN, "expected 'in' after for loop variables");
+
+  expression(p); // the iterable
+
+  // var iterable
+  int iterable = create_local_variable(p, " iterable ");
+  emit_byte_and_short(p, OP_SET_LOCAL, iterable);
+  emit_byte(p, OP_POP);
+
+  // var _
+  int _ = create_local_variable(p, " _ ");
+
+  int surrounding_loop_start = p->innermost_loop_start;
+  int surrounding_scope_depth = p->innermost_loop_scope_depth;
+
+  // we'll be jumping back to right before the
+  // expression after the loop body
+  p->innermost_loop_start = current_blob(p)->count;
+
+  // _ = iterable.__iter__()
+  emit_byte_and_short(p, OP_GET_LOCAL, iterable);
+  emit_byte_and_short(p, OP_INVOKE,
+                      identifier_constant_2(p, synthetic_token("__iter__")));
+  emit_byte(p, 0);
+  emit_byte_and_short(p, OP_SET_LOCAL, _);
+
+  // _ == empty
+  emit_byte_and_short(p, OP_GET_LOCAL, _);
+  emit_byte(p, OP_EMPTY);
+  emit_byte(p, OP_EQUAL);
+
+  int false_jump = emit_jump(p, OP_JUMP_IF_FALSE);
+  int truth_jump = emit_jump(p, OP_JUMP);
+
+  patch_jump(p, false_jump);
+  emit_byte(p, OP_POP);
+
+  // key = _[0]
+  emit_byte_and_short(p, OP_GET_LOCAL, _);
+  emit_byte_and_short(p, OP_CONSTANT, make_constant(p, NUMBER_VAL(0)));
+  emit_byte(p, OP_NIL);
+  emit_bytes(p, OP_GET_INDEX, 0);
+  emit_byte_and_short(p, OP_SET_LOCAL, key);
+
+  if (value != -1) {
+    // value = _[1]
+    emit_byte_and_short(p, OP_GET_LOCAL, _);
+    emit_byte_and_short(p, OP_CONSTANT, make_constant(p, NUMBER_VAL(1)));
+    emit_byte(p, OP_NIL);
+    emit_bytes(p, OP_GET_INDEX, 0);
+    emit_byte_and_short(p, OP_SET_LOCAL, value);
+  }
+
+  statement(p);
+
+  emit_loop(p, p->innermost_loop_start);
+
+  patch_jump(p, truth_jump);
+  emit_byte(p, OP_POP);
+
+  end_loop(p);
+
+  p->innermost_loop_start = surrounding_loop_start;
+  p->innermost_loop_scope_depth = surrounding_scope_depth;
+
+  end_scope(p);
+}
+
+/**
  * using expression {
  *    when expression {
  *      ...
@@ -1667,6 +1808,8 @@ static void statement(b_parser *p) {
     while_statement(p);
   } else if (match(p, ITER_TOKEN)) {
     iter_statement(p);
+  } else if (match(p, FOR_TOKEN)) {
+    for_statement(p);
   } else if (match(p, USING_TOKEN)) {
     using_statement(p);
   } else if (match(p, CONTINUE_TOKEN)) {
