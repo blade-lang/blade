@@ -1,5 +1,6 @@
 #include "pathinfo.h"
 #include "compat/unistd.h"
+#include "config.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -118,7 +119,7 @@ bool file_exists(char *filepath) { return access(filepath, F_OK) == 0; }
 
 char *get_calling_dir() { return getenv("PWD"); }
 
-char *get_birdy_filename(char *filename) {
+char *get_bird_filename(char *filename) {
   return merge_paths(filename, BIRDY_EXTENSION, strlen(BIRDY_EXTENSION));
 }
 
@@ -132,4 +133,27 @@ char *get_filename(char *filepath) {
   char *string = malloc(sizeof(char));
   strncat(string, filepath + start, length);
   return string;
+}
+
+char *resolve_import_path(char *module_name, const char *current_file) {
+  char *bird_file_name = get_bird_filename(module_name);
+  int name_length = (int)strlen(bird_file_name);
+
+  // check relative to the current file...
+  char *file_directory = dirname((char *)current_file);
+  char *relative_file =
+      merge_paths(file_directory, bird_file_name, name_length);
+
+  if (file_exists(relative_file))
+    return relative_file;
+
+  // check in bird's default location
+  char *bird_directory = merge_paths(get_exe_dir(), LIBRARY_DIRECTORY,
+                                     (int)strlen(LIBRARY_DIRECTORY));
+  char *library_file = merge_paths(bird_directory, bird_file_name, name_length);
+
+  if (file_exists(library_file))
+    return library_file;
+
+  return NULL;
 }

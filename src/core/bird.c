@@ -26,7 +26,7 @@ static char *read_file(const char *path) {
   // file not readable (maybe due to permission)
   if (fp == NULL) {
     fprintf(stderr, "could not open file %s\n", path);
-    exit(74);
+    return NULL;
   }
 
   fseek(fp, 0L, SEEK_END);
@@ -38,7 +38,7 @@ static char *read_file(const char *path) {
   // the system might not have enough memory to read the file.
   if (buffer == NULL) {
     fprintf(stderr, "not enough memory to read file %s\n", path);
-    exit(74);
+    return NULL;
   }
 
   size_t bytes_read = fread(buffer, sizeof(char), file_size, fp);
@@ -46,7 +46,7 @@ static char *read_file(const char *path) {
   // if we couldn't read the entire file
   if (bytes_read < file_size) {
     fprintf(stderr, "could not read file %s\n", path);
-    exit(74);
+    return NULL;
   }
 
   buffer[bytes_read] = '\0';
@@ -57,6 +57,10 @@ static char *read_file(const char *path) {
 
 static void run_file(b_vm *vm, const char *file) {
   char *source = read_file(file);
+  if (source == NULL) {
+    exit(74);
+  }
+
   b_ptr_result result = interpret(vm, source, file);
   free(source);
 

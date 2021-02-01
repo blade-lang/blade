@@ -16,7 +16,8 @@ char *get_exe_dir();
 char *get_calling_dir();
 char *merge_paths(char *a, char *b, int length);
 bool file_exists(char *filepath);
-char *get_birdy_filename(char *filename);
+char *get_bird_filename(char *filename);
 char *get_filename(char *filepath);
+char *resolve_import_path(char *module_name, const char *current_file);
 
 #endif

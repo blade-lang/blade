@@ -30,4 +30,6 @@
 #define USE_NAN_BOXING 1
 #define PCRE2_CODE_UNIT_WIDTH 8
 
+#define LIBRARY_DIRECTORY "libs"
+
 #endif

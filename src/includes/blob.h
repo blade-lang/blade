@@ -68,6 +68,8 @@ typedef enum {
   OP_GET_INDEX,
   OP_SET_INDEX,
 
+  OP_CALL_IMPORT,
+
   // the break placeholder... it never gets to the vm
   // care should be taken to
   OP_BREAK_PL,

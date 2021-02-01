@@ -1596,6 +1596,12 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
 
+    case OP_CALL_IMPORT: {
+      call_function(vm, AS_FUNCTION(peek(vm, 0)), 0);
+      frame = &vm->frames[vm->frame_count - 1];
+      break;
+    }
+
     default:
       break;
     }

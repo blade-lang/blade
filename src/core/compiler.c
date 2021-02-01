@@ -3,6 +3,7 @@
 #include "config.h"
 #include "memory.h"
 #include "object.h"
+#include "pathinfo.h"
 #include "scanner.h"
 #include "util.h"
 
@@ -156,6 +157,7 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_ONE:
   case OP_SET_INDEX:
   case OP_EMPTY:
+  case OP_CALL_IMPORT:
     return 0;
 
   case OP_CALL:
@@ -923,8 +925,7 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
     count--; */
   return count;
 }
-
-static void string(b_parser *p, bool can_assign) {
+static char *_string(b_parser *p, bool can_assign) {
   char *str = (char *)calloc(p->previous.length - 2, sizeof(char));
   char *real = (char *)(p->previous.start + 1);
 
@@ -993,7 +994,12 @@ static void string(b_parser *p, bool can_assign) {
     memcpy(str + k, &c, 1);
   }
 
-  emit_constant(p, OBJ_VAL(copy_string(p->vm, str, k)));
+  return str;
+}
+
+static void string(b_parser *p, bool can_assign) {
+  char *str = _string(p, can_assign);
+  emit_constant(p, OBJ_VAL(copy_string(p->vm, str, (int)strlen(str))));
 }
 
 static void unary(b_parser *p, bool can_assign) {
@@ -1674,6 +1680,67 @@ static void echo_statement(b_parser *p) {
   emit_byte(p, OP_ECHO);
 }
 
+static char *read_file(const char *path) {
+  FILE *fp = fopen(path, "rb");
+
+  // file not readable (maybe due to permission)
+  if (fp == NULL) {
+    return NULL;
+  }
+
+  fseek(fp, 0L, SEEK_END);
+  size_t file_size = ftell(fp);
+  rewind(fp);
+
+  char *buffer = (char *)malloc(file_size + 1);
+
+  // the system might not have enough memory to read the file.
+  if (buffer == NULL) {
+    return NULL;
+  }
+
+  size_t bytes_read = fread(buffer, sizeof(char), file_size, fp);
+
+  // if we couldn't read the entire file
+  if (bytes_read < file_size) {
+    return NULL;
+  }
+
+  buffer[bytes_read] = '\0';
+
+  fclose(fp);
+  return buffer;
+}
+
+static void import_statement(b_parser *p) {
+  consume(p, LITERAL_TOKEN, "expected module name");
+  char *module_name = _string(p, false);
+
+  char *module_path = resolve_import_path(module_name, p->current_file);
+  if (module_path == NULL) {
+    error(p, "module not found");
+  }
+
+  consume_statement_end(p);
+
+  // do the import here...
+  char *source = read_file(module_path);
+  if (source == NULL) {
+    error(p, "could not read import file %s", module_path);
+  }
+
+  b_obj_func *function =
+      compile(p->vm, source, module_path, &p->compiler->function->blob);
+
+  if (function == NULL) {
+    error(p, "failed to import %s", module_name);
+  }
+
+  int import_constant = make_constant(p, OBJ_VAL(function));
+  emit_byte_and_short(p, OP_CONSTANT, import_constant);
+  emit_byte(p, OP_CALL_IMPORT);
+}
+
 static void return_statement(b_parser *p) {
   p->is_returning = true;
   if (p->compiler->type == TYPE_SCRIPT) {
@@ -1822,6 +1889,8 @@ static void statement(b_parser *p) {
     begin_scope(p);
     block(p);
     end_scope(p);
+  } else if (match(p, IMPORT_TOKEN)) {
+    import_statement(p);
   } else {
     expression_statement(p);
   }
