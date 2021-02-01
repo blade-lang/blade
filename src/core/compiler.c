@@ -468,9 +468,6 @@ static void begin_scope(b_parser *p) { p->compiler->scope_depth++; }
 static void end_scope(b_parser *p) {
   p->compiler->scope_depth--;
 
-  if (p->compiler->scope_depth == 0)
-    return;
-
   // remove all variables declared in scope while exiting...
   while (p->compiler->local_count > 0 &&
          p->compiler->locals[p->compiler->local_count - 1].depth >
