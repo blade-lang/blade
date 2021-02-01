@@ -1,13 +1,15 @@
 # Makefile for building a single configuration of the C interpreter. It expects
 # variables to be passed in for:
 #
-# MODE         "debug" or "release".
-# NAME         Name of the output executable (and object file directory).
-# SOURCE_DIR   Directory where source files and headers are found.
+# MODE         	"debug" or "release".
+# NAME         	Name of the output executable (and object file directory).
+# MODULE_DIR   	Directory where builtin modules source files and headers are found.
+# HEADERS_DIR   Directory where source files headers are found.
+# SOURCE_DIR   	Directory where source files are found.
 
-# MinGW--or at least some versions of it--default CC to "cc" but then don't
+# MinGW and Cygwin--or at least some versions of them--default CC to "cc" but then don't
 # provide an executable named "cc". Manually point to "gcc" instead.
-ifeq ($(OS),mingw32)
+ifeq ($(OS),mingw32) || ifeq ($(OS),cygwin)
 	CC = GCC
 endif
 
@@ -49,8 +51,10 @@ endif
 # Files.
 
 SOURCES := 						$(wildcard $(SOURCE_DIR)/*.c)
+MODULES_SOURCES := 						$(wildcard $(MODULE_DIR)/*.c)
 
 SOURCES_OBJECTS := 		$(addprefix $(BUILD_DIR)/, $(notdir $(SOURCES:.c=.o)))
+MODULES_OBJECTS := 		$(addprefix $(BUILD_DIR)/, $(notdir $(MODULES_SOURCES:.c=.o)))
 
 ifeq ($(USE_SYSTEM_PCRE),1)
 	LIB_PCRE2 := 
@@ -89,10 +93,16 @@ endif
 
 # Link the interpreter.
 # build/$(NAME): $(SOURCES_OBJECTS)
-build/$(NAME): $(SOURCES_OBJECTS) $(LIB_PCRE2)
+build/$(NAME): $(SOURCES_OBJECTS) $(MODULES_OBJECTS) $(LIB_PCRE2)
 	@ printf "%8s %s %s\n" $(CC) $@ "$(CFLAGS)"
 	@ mkdir -p build
 	@ $(CC) $(CFLAGS) $^ -o $@
+
+# Compile module object files.
+$(BUILD_DIR)/modules/%.o: $(MODULE_DIR)/%.c
+	@ printf "%8s %s %s\n" $(CC) $< "$(CFLAGS)"
+	@ mkdir -p $(BUILD_DIR)/modules
+	@ $(CC) -c $(CFLAGS) -o $@ $<
 
 # Compile source object files.
 $(BUILD_DIR)/%.o: $(SOURCE_DIR)/%.c
