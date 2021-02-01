@@ -56,6 +56,8 @@ static bool is_hexadecimal(char c) {
 
 static char advance(b_scanner *s) {
   s->current++;
+  if (s->current[-1] == '\n')
+    s->line++;
   return s->current[-1];
 }
 
@@ -66,6 +68,8 @@ static bool match(b_scanner *s, char expected) {
     return false;
 
   s->current++;
+  if (s->current[-1] == '\n')
+    s->line++;
   return true;
 }
 
@@ -428,10 +432,8 @@ b_token scan_token(b_scanner *s) {
     return make_token(s, match(s, '=') ? XOR_EQ_TOKEN : XOR_TOKEN);
 
   // newline
-  case '\n': {
-    s->line++;
+  case '\n':
     return make_token(s, NEWLINE_TOKEN);
-  }
 
   case '"':
     return string(s, '"');

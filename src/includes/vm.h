@@ -51,6 +51,9 @@ struct s_vm {
   b_table methods_file;
   b_table methods_bytes;
 
+  // compiler aid
+  int anonymous_globals_count;
+
   // repl flag
   bool is_repl;
 };

@@ -199,4 +199,18 @@ DECLARE_LIST_METHOD(zip);
  */
 DECLARE_LIST_METHOD(to_dict);
 
+/**
+ * list.__iter__()
+ *
+ * implementing the iterable interface
+ */
+DECLARE_LIST_METHOD(__iter__);
+
+/**
+ * list.__itern__()
+ *
+ * implementing the iterable interface
+ */
+DECLARE_LIST_METHOD(__itern__);
+
 #endif

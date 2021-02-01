@@ -209,6 +209,8 @@ void init_builtin_methods(b_vm *vm) {
   DEFINE_LIST_METHOD(unique);
   DEFINE_LIST_METHOD(zip);
   DEFINE_LIST_METHOD(to_dict);
+  DEFINE_LIST_METHOD(__iter__);
+  DEFINE_LIST_METHOD(__itern__);
 
   // dictionary methods
   DEFINE_DICT_METHOD(length);
@@ -227,6 +229,8 @@ void init_builtin_methods(b_vm *vm) {
   DEFINE_DICT_METHOD(find_key);
   DEFINE_DICT_METHOD(to_list);
   DEFINE_DICT_METHOD(has_attr);
+  DEFINE_DICT_METHOD(__iter__);
+  DEFINE_DICT_METHOD(__itern__);
 
   // file methods
   DEFINE_FILE_METHOD(exists);
@@ -291,6 +295,9 @@ void init_vm(b_vm *vm) {
   vm->gray_count = 0;
   vm->gray_capacity = 0;
   vm->gray_stack = NULL;
+
+  // compiler aid
+  vm->anonymous_globals_count = 0;
 
   init_table(&vm->strings);
   init_table(&vm->globals);
@@ -397,10 +404,9 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
       if (IS_UNDEFINED(result)) {
         return false;
       }
-      if (!IS_EMPTY(result)) {
-        vm->stack_top -= arg_count + 1;
-        push(vm, result);
-      }
+
+      vm->stack_top -= arg_count + 1;
+      push(vm, result);
       return true;
     }
 

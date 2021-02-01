@@ -317,10 +317,6 @@ static int identifier_constant(b_parser *p, b_token *name) {
                        OBJ_VAL(copy_string(p->vm, name->start, name->length)));
 }
 
-static int identifier_constant_2(b_parser *p, b_token name) {
-  return make_constant(p, OBJ_VAL(copy_string(p->vm, name.start, name.length)));
-}
-
 static bool identifiers_equal(b_token *a, b_token *b) {
   if (a->length != b->length)
     return false;
@@ -379,18 +375,18 @@ static int resolve_upvalue(b_parser *p, b_compiler *compiler, b_token *name) {
   return -1;
 }
 
-static void add_local(b_parser *p, b_token name) {
+static int add_local(b_parser *p, b_token name) {
   if (p->compiler->local_count == UINT8_COUNT) {
     // we've reached maximum local variables per scope
     error(p, "too many local variables in scope");
-    return;
+    return -1;
   }
 
   b_local *local = &p->compiler->locals[p->compiler->local_count++];
   local->name = name;
-  // local->depth = p->compiler->scope_depth;
   local->depth = -1;
   local->is_captured = false;
+  return p->compiler->local_count;
 }
 
 static void declare_variable(b_parser *p) {
@@ -468,6 +464,9 @@ static void begin_scope(b_parser *p) { p->compiler->scope_depth++; }
 
 static void end_scope(b_parser *p) {
   p->compiler->scope_depth--;
+
+  if (p->compiler->scope_depth == 0)
+    return;
 
   // remove all variables declared in scope while exiting...
   while (p->compiler->local_count > 0 &&
@@ -1460,10 +1459,10 @@ static void iter_statement(b_parser *p) {
  * ==
  *
  * {
- *    var x = iterable.__itern__()[0]
+ *    var x = iterable.__iter__()
  *    while x != empty {
  *      ...
- *      x = iterable.__itern__()[0]
+ *      x = iterable.__iter__()
  *    }
  * }
  *
@@ -1476,45 +1475,71 @@ static void iter_statement(b_parser *p) {
  * ==
  *
  * {
- *    var _ = iterable.__itern__()
- *    var x = _[0]
- *    var y = _[1]
- *    while _ != empty {
+ *    var iterable
+ *
+ *    iterable = expression()
+ *    x = iterable.__iter__()
+ *    y = iterable.__itern__()
+ *
+ *    while x != empty {
  *      ...
- *      _ = iterable.__itern__()
- *      x = _[0]
- *      y = _[1]
+ *      x = iterable.__iter__()
+ *      y = iterable.__itern__()
  *    }
  * }
+ *
+ * Every bird iterable must implement the __iter__() and the __itern__()
+ * function.
+ *
+ * to make instances of a user created class iterable,
+ * the class must implement the __iter__() and the __itern__() function.
+ * the __iter__() must return the current iterating index of the object and the
+ * __itern__() function must return the value at that index.
+ * _NOTE_: the __itern__() function will no longer be called after the
+ * __iter__() function returns empty. so the __itern__() never needs to return
+ * empty
  */
 static void for_statement(b_parser *p) {
   begin_scope(p);
 
-  int key = -1, value = -1;
+  // define __iter__ and __itern__ constant
+  int __iter__ = make_constant(p, OBJ_VAL(copy_string(p->vm, "__iter__", 8)));
+  int __itern__ = make_constant(p, OBJ_VAL(copy_string(p->vm, "__itern__", 9)));
 
-  consume(p, IDENTIFIER_TOKEN, "expect variable name after 'for'");
-  add_local(p, p->previous);
-  define_variable(p, 0);
-  key = p->compiler->local_count;
+  consume(p, IDENTIFIER_TOKEN, "expected variable name after 'for'");
+  b_token key_token = p->previous, value_token;
+  emit_byte(p, OP_NIL);
 
   if (match(p, COMMA_TOKEN)) {
-    consume(p, IDENTIFIER_TOKEN, "expect variable name after ,");
-    add_local(p, p->previous);
-    define_variable(p, 0);
-    value = p->compiler->local_count;
+    consume(p, IDENTIFIER_TOKEN, "expected variable name after ','");
+    value_token = p->previous;
+  } else {
+    value_token = key_token;
+    key_token = synthetic_token(" _ ");
   }
+  emit_byte(p, OP_NIL);
 
-  consume(p, IN_TOKEN, "expected 'in' after for loop variables");
+  consume(p, IN_TOKEN, "expected 'in' after for loop variable(s)");
 
-  expression(p); // the iterable
+  char *iterable_name = (char *)calloc(1, sizeof(char *));
+  int iterable_name_length =
+      sprintf(iterable_name, " iterable %d ", p->vm->anonymous_globals_count++);
+  int iterable_constant = make_constant(
+      p, OBJ_VAL(take_string(p->vm, iterable_name, iterable_name_length)));
 
-  // var iterable
-  int iterable = create_local_variable(p, " iterable ");
-  emit_byte_and_short(p, OP_SET_LOCAL, iterable);
+  expression(p);
+  emit_byte_and_short(p, OP_DEFINE_GLOBAL, iterable_constant);
+
+  // set key variable
+
+  // key = iterable.__iter__()
+  emit_byte_and_short(p, OP_GET_GLOBAL, iterable_constant);
+  emit_byte_and_short(p, OP_INVOKE, __iter__);
+  emit_byte(p, 0);
+  int key = add_local(p, key_token) - 1;
+  define_variable(p, key);
+  emit_byte_and_short(p, OP_SET_LOCAL, key);
   emit_byte(p, OP_POP);
-
-  // var _
-  int _ = create_local_variable(p, " _ ");
 
   int surrounding_loop_start = p->innermost_loop_start;
   int surrounding_scope_depth = p->innermost_loop_scope_depth;
@@ -1523,45 +1548,35 @@ static void for_statement(b_parser *p) {
   // expression after the loop body
   p->innermost_loop_start = current_blob(p)->count;
 
-  // _ = iterable.__iter__()
-  emit_byte_and_short(p, OP_GET_LOCAL, iterable);
-  emit_byte_and_short(p, OP_INVOKE,
-                      identifier_constant_2(p, synthetic_token("__iter__")));
-  emit_byte(p, 0);
-  emit_byte_and_short(p, OP_SET_LOCAL, _);
-
-  // _ == empty
-  emit_byte_and_short(p, OP_GET_LOCAL, _);
+  // key != empty
+  emit_byte_and_short(p, OP_GET_LOCAL, key);
   emit_byte(p, OP_EMPTY);
-  emit_byte(p, OP_EQUAL);
+  emit_bytes(p, OP_EQUAL, OP_NOT);
 
   int false_jump = emit_jump(p, OP_JUMP_IF_FALSE);
-  int truth_jump = emit_jump(p, OP_JUMP);
-
-  patch_jump(p, false_jump);
   emit_byte(p, OP_POP);
 
-  // key = _[0]
-  emit_byte_and_short(p, OP_GET_LOCAL, _);
-  emit_byte_and_short(p, OP_CONSTANT, make_constant(p, NUMBER_VAL(0)));
-  emit_byte(p, OP_NIL);
-  emit_bytes(p, OP_GET_INDEX, 0);
-  emit_byte_and_short(p, OP_SET_LOCAL, key);
-
-  if (value != -1) {
-    // value = _[1]
-    emit_byte_and_short(p, OP_GET_LOCAL, _);
-    emit_byte_and_short(p, OP_CONSTANT, make_constant(p, NUMBER_VAL(1)));
-    emit_byte(p, OP_NIL);
-    emit_bytes(p, OP_GET_INDEX, 0);
-    emit_byte_and_short(p, OP_SET_LOCAL, value);
-  }
+  // value = iterable.__itern__()
+  emit_byte_and_short(p, OP_GET_GLOBAL, iterable_constant);
+  emit_byte_and_short(p, OP_INVOKE, __itern__);
+  emit_byte(p, 0);
+  int value = add_local(p, value_token) - 1;
+  define_variable(p, value);
+  emit_byte_and_short(p, OP_SET_LOCAL, value);
+  emit_byte(p, OP_POP);
 
   statement(p);
 
+  // run the increment
+  emit_byte_and_short(p, OP_GET_GLOBAL, iterable_constant);
+  emit_byte_and_short(p, OP_INVOKE, __iter__);
+  emit_byte(p, 0);
+  emit_byte_and_short(p, OP_SET_LOCAL, key);
+  emit_byte(p, OP_POP);
+
   emit_loop(p, p->innermost_loop_start);
 
-  patch_jump(p, truth_jump);
+  patch_jump(p, false_jump);
   emit_byte(p, OP_POP);
 
   end_loop(p);
@@ -1570,6 +1585,7 @@ static void for_statement(b_parser *p) {
   p->innermost_loop_scope_depth = surrounding_scope_depth;
 
   end_scope(p);
+  // p->compiler->local_count -= 2;
 }
 
 /**

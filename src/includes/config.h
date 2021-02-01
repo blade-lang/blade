@@ -2,7 +2,7 @@
 #define bird_config_h
 
 // global debug mode flag
-#define DEBUG_MODE 1
+#define DEBUG_MODE 0
 
 // --> debug mode options starts here...
 #if DEBUG_MODE == 1

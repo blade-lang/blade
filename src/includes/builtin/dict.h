@@ -127,4 +127,18 @@ DECLARE_DICT_METHOD(to_list);
  */
 DECLARE_DICT_METHOD(has_attr);
 
+/**
+ * dict.__iter__()
+ *
+ * implementing the iterable interface
+ */
+DECLARE_DICT_METHOD(__iter__);
+
+/**
+ * dict.__itern__()
+ *
+ * implementing the iterable interface
+ */
+DECLARE_DICT_METHOD(__itern__);
+
 #endif
