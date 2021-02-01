@@ -147,6 +147,9 @@ int disassemble_instruction(b_blob *blob, int offset) {
   case OP_ONE:
     return simple_instruction("one", offset);
 
+  case OP_CALL_IMPORT:
+    return simple_instruction("cimport", offset);
+
   case OP_ECHO:
     return simple_instruction("echo", offset);
   case OP_POP:
