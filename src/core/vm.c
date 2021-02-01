@@ -1597,7 +1597,7 @@ b_ptr_result run(b_vm *vm) {
     }
 
     case OP_CALL_IMPORT: {
-      call_function(vm, AS_FUNCTION(peek(vm, 0)), 0);
+      call_function(vm, AS_FUNCTION(READ_CONSTANT()), 0);
       frame = &vm->frames[vm->frame_count - 1];
       break;
     }

@@ -157,7 +157,6 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_ONE:
   case OP_SET_INDEX:
   case OP_EMPTY:
-  case OP_CALL_IMPORT:
     return 0;
 
   case OP_CALL:
@@ -184,6 +183,7 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_METHOD:
   case OP_LIST:
   case OP_DICT:
+  case OP_CALL_IMPORT:
     return 2;
 
   case OP_INVOKE:
@@ -1734,8 +1734,7 @@ static void import_statement(b_parser *p) {
   }
 
   int import_constant = make_constant(p, OBJ_VAL(function));
-  emit_byte_and_short(p, OP_CONSTANT, import_constant);
-  emit_byte(p, OP_CALL_IMPORT);
+  emit_byte_and_short(p, OP_CALL_IMPORT, import_constant);
 }
 
 static void return_statement(b_parser *p) {
