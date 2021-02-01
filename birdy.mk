@@ -3,13 +3,13 @@
 #
 # MODE         	"debug" or "release".
 # NAME         	Name of the output executable (and object file directory).
-# MODULE_DIR   	Directory where builtin modules source files and headers are found.
-# HEADERS_DIR   Directory where source files headers are found.
 # SOURCE_DIR   	Directory where source files are found.
 
 # MinGW and Cygwin--or at least some versions of them--default CC to "cc" but then don't
 # provide an executable named "cc". Manually point to "gcc" instead.
-ifeq ($(OS),mingw32) || ifeq ($(OS),cygwin)
+ifeq ($(OS),mingw32)
+	CC = GCC
+else ifeq ($(OS),cygwin)
 	CC = GCC
 endif
 
@@ -48,13 +48,6 @@ else
 	BUILD_DIR := build/release
 endif
 
-# Files.
-
-SOURCES := 						$(wildcard $(SOURCE_DIR)/*.c)
-MODULES_SOURCES := 						$(wildcard $(MODULE_DIR)/*.c)
-
-SOURCES_OBJECTS := 		$(addprefix $(BUILD_DIR)/, $(notdir $(SOURCES:.c=.o)))
-MODULES_OBJECTS := 		$(addprefix $(BUILD_DIR)/, $(notdir $(MODULES_SOURCES:.c=.o)))
 
 ifeq ($(USE_SYSTEM_PCRE),1)
 	LIB_PCRE2 := 
@@ -62,13 +55,18 @@ else
 	LIB_PCRE2 := deps/pcre2/.libs/libpcre2-8.a
 endif
 
-CFLAGS += -I$(HEADERS_DIR)
-
 ifneq (,$(findstring darwin,$(OS)))
 
 # for OSX environments
 	SHARED_EXT := dylib
-else ifeq ($(OS),cygwin) || ifeq ($(OS),mingw32)
+else ifeq ($(OS),cygwin)
+
+# for cygwin and mingw32 environments
+	SHARED_LIB_FLAGS := -Wl,-soname,libbirdy.dll
+	SHARED_EXT := dll
+CFLAGS += -Wno-return-local-addr -Wno-implicit-fallthrough -Wno-maybe-uninitialized
+
+else ifeq ($(OS),mingw32)
 
 # for cygwin and mingw32 environments
 	SHARED_LIB_FLAGS := -Wl,-soname,libbirdy.dll
@@ -85,29 +83,36 @@ CFLAGS += -Wno-return-local-addr -Wno-implicit-fallthrough -lreadline
 endif
 
 ifeq ($(OS),cygwin)
+	CFLAGS += -Ideps/pcre2/src
 else ifeq ($(OS),mingw32)
 	CFLAGS += -Ideps/pcre2/src
 endif
 
-# Targets ---------------------------------------------------------------------
+# Files.
 
-# Link the interpreter.
-# build/$(NAME): $(SOURCES_OBJECTS)
-build/$(NAME): $(SOURCES_OBJECTS) $(MODULES_OBJECTS) $(LIB_PCRE2)
-	@ printf "%8s %s %s\n" $(CC) $@ "$(CFLAGS)"
+SUB_DIRS := core builtin modules
+SRC_DIR := $(addprefix $(SOURCE_DIR)/, $(SUB_DIRS))
+BLD_DIRS := $(addprefix $(BUILD_DIR)/, $(SUB_DIRS))
+
+SOURCES = $(foreach sdir, $(SRC_DIR), $(wildcard $(sdir)/*.c))
+OBJECTS = $(patsubst $(SOURCE_DIR)/*.c, $(BUILD_DIR)/*.c, $(SOURCES))
+INCLUDES = $(addprefix $(SOURCE_DIR)/, includes)
+
+vpath %.c $(SRC_DIR)
+
+CFLAGS += -I$(INCLUDES)
+
+define make-goal
+$1/*.o: %.c
+	$(CC) -I$(INCLUDES) -c $$< -o $$@
+endef
+
+build/$(NAME): $(OBJECTS) $(LIB_PCRE2)
+	@ printf "Building Bird in %s mode into %s...\n" $(MODE) $(NAME)
+	@ printf "%s %s %s\n" $(CC) $@ "$(CFLAGS)"
 	@ mkdir -p build
 	@ $(CC) $(CFLAGS) $^ -o $@
 
-# Compile module object files.
-$(BUILD_DIR)/modules/%.o: $(MODULE_DIR)/%.c
-	@ printf "%8s %s %s\n" $(CC) $< "$(CFLAGS)"
-	@ mkdir -p $(BUILD_DIR)/modules
-	@ $(CC) -c $(CFLAGS) -o $@ $<
-
-# Compile source object files.
-$(BUILD_DIR)/%.o: $(SOURCE_DIR)/%.c
-	@ printf "%8s %s %s\n" $(CC) $< "$(CFLAGS)"
-	@ mkdir -p $(BUILD_DIR)
-	@ $(CC) -c $(CFLAGS) -o $@ $<
-
 .PHONY: default
+
+$(foreach bdir,$(BLD_DIRS),$(eval $(call make-goal,$(bdir))))
