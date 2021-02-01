@@ -2,6 +2,7 @@
 #include "memory.h"
 
 #include <ctype.h>
+#include <string.h>
 
 DECLARE_NATIVE(bytes) {
   ENFORCE_ARG_COUNT(bytes, 1);

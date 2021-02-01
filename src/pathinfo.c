@@ -1,6 +1,9 @@
 #include "pathinfo.h"
 #include "compat/unistd.h"
 
+#include <stdlib.h>
+#include <string.h>
+
 #if defined(_Win32)
 #include <Shlwapi.h>
 #include <io.h>
@@ -13,15 +16,11 @@
 #include <libgen.h>
 #include <limits.h>
 #include <mach-o/dyld.h>
-#include <stdlib.h>
-#include <string.h>
 #endif
 
 #ifdef __linux__
 #include <libgen.h>
 #include <limits.h>
-#include <stdlib.h>
-#include <string.h>
 
 #if defined(__sun)
 #define PROC_SELF_EXE "/proc/self/path/a.out"
