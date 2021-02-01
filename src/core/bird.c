@@ -16,7 +16,7 @@ static void repl(b_vm *vm) {
       break;
     }
 
-    interpret(vm, line);
+    interpret(vm, line, "<repl>");
   }
 }
 
@@ -57,7 +57,7 @@ static char *read_file(const char *path) {
 
 static void run_file(b_vm *vm, const char *file) {
   char *source = read_file(file);
-  b_ptr_result result = interpret(vm, source);
+  b_ptr_result result = interpret(vm, source, file);
   free(source);
 
   if (result == PTR_COMPILE_ERR)

@@ -74,6 +74,7 @@ typedef struct {
   bool is_returning;
   b_compiler *compiler;
   b_class_compiler *current_class;
+  const char *current_file;
 
   // used for tracking loops for the continue statement...
   int innermost_loop_start;
@@ -88,7 +89,8 @@ typedef struct {
   b_prec precedence;
 } b_parse_rule;
 
-b_obj_func *compile(b_vm *vm, const char *source, b_blob *blob);
+b_obj_func *compile(b_vm *vm, const char *source, const char *file,
+                    b_blob *blob);
 void mark_compiler_roots(b_vm *vm);
 
 #endif

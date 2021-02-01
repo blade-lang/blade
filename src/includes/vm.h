@@ -60,7 +60,7 @@ struct s_vm {
 
 void init_vm(b_vm *vm);
 void free_vm(b_vm *vm);
-b_ptr_result interpret(b_vm *vm, const char *source);
+b_ptr_result interpret(b_vm *vm, const char *source, const char *filename);
 void push(b_vm *vm, b_value value);
 b_value pop(b_vm *vm);
 b_value popn(b_vm *vm, int n);
