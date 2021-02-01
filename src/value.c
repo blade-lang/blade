@@ -71,7 +71,7 @@ void print_value(b_value value) {
 #if defined(USE_NAN_BOXING) && USE_NAN_BOXING == 1
   if (IS_EMPTY(value))
     printf("");
-  if (IS_NIL(value))
+  else if (IS_NIL(value))
     printf("nil");
   else if (IS_BOOL(value))
     printf(AS_BOOL(value) ? "true" : "false");
@@ -81,6 +81,9 @@ void print_value(b_value value) {
     print_object(value);
 #else
   switch (value.type) {
+  case VAL_EMPTY:
+    printf("");
+    break;
   case VAL_NIL:
     printf("nil");
     break;

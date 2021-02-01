@@ -209,4 +209,28 @@ DECLARE_DICT_METHOD(has_attr) {
   RETURN_FALSE;
 }
 
+DECLARE_DICT_METHOD(__iter__) {
+  ENFORCE_ARG_COUNT(__iter__, 0);
+  b_obj_dict *dict = AS_DICT(METHOD_OBJECT);
+  dict->iter_index++;
+  if (dict->iter_index < dict->names.count) {
+    RETURN_VALUE(dict->names.values[dict->iter_index]);
+  }
+
+  dict->iter_index = -1;
+  RETURN_EMPTY;
+}
+
+DECLARE_DICT_METHOD(__itern__) {
+  ENFORCE_ARG_COUNT(__itern__, 0);
+  b_obj_dict *dict = AS_DICT(METHOD_OBJECT);
+  if (dict->iter_index > -1) {
+    b_value result;
+    table_get(&dict->items, dict->names.values[dict->iter_index], &result);
+    RETURN_VALUE(result);
+  }
+
+  RETURN;
+}
+
 #undef ENFORCE_VALID_DICT_KEY

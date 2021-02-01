@@ -80,7 +80,8 @@ else
 CFLAGS += -Wno-return-local-addr -Wno-implicit-fallthrough -lreadline 
 endif
 
-ifeq ($(OS),cygwin) || ifeq ($(OS),mingw32)
+ifeq ($(OS),cygwin)
+else ifeq ($(OS),mingw32)
 	CFLAGS += -Ideps/pcre2/src
 endif
 

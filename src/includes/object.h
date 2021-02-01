@@ -129,6 +129,7 @@ typedef struct {
 
 typedef struct {
   b_obj obj;
+  int iter_index;
   b_value_arr items;
 } b_obj_list;
 
@@ -139,6 +140,7 @@ typedef struct {
 
 typedef struct {
   b_obj obj;
+  int iter_index;
   b_value_arr names;
   b_table items;
 } b_obj_dict;

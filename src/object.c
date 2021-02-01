@@ -42,12 +42,14 @@ b_obj_bytes *new_bytes(b_vm *vm, int length) {
 
 b_obj_list *new_list(b_vm *vm) {
   b_obj_list *list = ALLOCATE_OBJ(b_obj_list, OBJ_LIST);
+  list->iter_index = -1;
   init_value_arr(&list->items);
   return list;
 }
 
 b_obj_dict *new_dict(b_vm *vm) {
   b_obj_dict *dict = ALLOCATE_OBJ(b_obj_dict, OBJ_DICT);
+  dict->iter_index = -1;
   init_value_arr(&dict->names);
   init_table(&dict->items);
   return dict;
