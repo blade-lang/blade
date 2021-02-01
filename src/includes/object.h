@@ -90,6 +90,7 @@ typedef struct {
   bool is_variadic;
   b_blob blob;
   b_obj_string *name;
+  const char *file;
 } b_obj_func;
 
 typedef struct {

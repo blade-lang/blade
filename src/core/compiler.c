@@ -29,7 +29,7 @@ static void error_at(b_parser *p, b_token *t, const char *message,
   p->panic_mode = true;
 
   fprintf(stderr, "SyntaxError:\n");
-  fprintf(stderr, "    File: <script>, Line: %d\n", t->line);
+  fprintf(stderr, "    File: %s, Line: %d\n", p->current_file, t->line);
 
   fprintf(stderr, "    Error");
 
@@ -291,6 +291,7 @@ static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
   compiler->scope_depth = 0;
 
   compiler->function = new_function(p->vm);
+  compiler->function->file = p->current_file;
   p->compiler = compiler;
 
   if (type != TYPE_SCRIPT) {
@@ -451,7 +452,7 @@ static b_obj_func *end_compiler(b_parser *p) {
 #if defined(DEBUG_PRINT_CODE) && DEBUG_PRINT_CODE == 1
   if (!p->had_error) {
     disassemble_blob(current_blob(p), function->name == NULL
-                                          ? "<script>"
+                                          ? p->current_file
                                           : function->name->chars);
   }
 #endif
@@ -1828,7 +1829,8 @@ static void statement(b_parser *p) {
   ignore_whitespace(p);
 }
 
-b_obj_func *compile(b_vm *vm, const char *source, b_blob *blob) {
+b_obj_func *compile(b_vm *vm, const char *source, const char *file,
+                    b_blob *blob) {
   b_scanner scanner;
   init_scanner(&scanner, source);
 
@@ -1845,6 +1847,7 @@ b_obj_func *compile(b_vm *vm, const char *source, b_blob *blob) {
   parser.innermost_loop_scope_depth = 0;
   parser.compiler = NULL;
   parser.current_class = NULL;
+  parser.current_file = file;
 
   b_compiler compiler;
   init_compiler(&parser, &compiler, TYPE_SCRIPT);

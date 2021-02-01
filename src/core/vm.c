@@ -43,7 +43,8 @@ void _runtime_error(b_vm *vm, const char *format, ...) {
   int line = get_frame_function(frame)->blob.lines[instruction];
 
   fprintf(stderr, "RuntimeError:\n");
-  fprintf(stderr, "    File: <script>, Line: %d\n    Message: ", line);
+  fprintf(stderr, "    File: %s, Line: %d\n    Message: ",
+          get_frame_function(frame)->file, line);
 
   va_list args;
   va_start(args, format);
@@ -60,7 +61,8 @@ void _runtime_error(b_vm *vm, const char *format, ...) {
       // -1 because the IP is sitting on the next instruction to be executed
       size_t instruction = frame->ip - get_frame_function(frame)->blob.code - 1;
 
-      fprintf(stderr, "    File: <script>, Line: %d, In: ",
+      fprintf(stderr,
+              "    File: %s, Line: %d, In: ", get_frame_function(frame)->file,
               function->blob.lines[instruction]);
       if (function->name == NULL) {
         fprintf(stderr, "<script>\n");
@@ -1609,11 +1611,11 @@ b_ptr_result run(b_vm *vm) {
 #undef BINARY_MOD_OP
 }
 
-b_ptr_result interpret(b_vm *vm, const char *source) {
+b_ptr_result interpret(b_vm *vm, const char *source, const char *filename) {
   b_blob blob;
   init_blob(&blob);
 
-  b_obj_func *function = compile(vm, source, &blob);
+  b_obj_func *function = compile(vm, source, filename, &blob);
 
   if (function == NULL) {
     free_blob(vm, &blob);
@@ -1621,10 +1623,7 @@ b_ptr_result interpret(b_vm *vm, const char *source) {
   }
 
   push(vm, OBJ_VAL(function));
-  b_obj_closure *closure = new_closure(vm, function);
-  pop(vm);
-  push(vm, OBJ_VAL(closure));
-  call_value(vm, OBJ_VAL(closure), 0);
+  call_function(vm, function, 0);
 
   b_ptr_result result = run(vm);
 
