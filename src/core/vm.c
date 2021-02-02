@@ -430,7 +430,9 @@ bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
     return false;
   }
 
-  if (IS_CLOSURE(method)) {
+  if (IS_NATIVE(method)) {
+    return call_value(vm, method, arg_count);
+  } else if (IS_CLOSURE(method)) {
     return call_closure(vm, AS_CLOSURE(method), arg_count);
   } else {
     return call_function(vm, AS_FUNCTION(method), arg_count);
@@ -1302,8 +1304,8 @@ b_ptr_result run(b_vm *vm) {
     case OP_SET_GLOBAL: {
       b_obj_string *name = READ_STRING();
       if (table_set(vm, &vm->globals, OBJ_VAL(name), peek(vm, 0))) {
-        /* table_delete(&vm->globals, OBJ_VAL(name));
-        runtime_error("%s is undefined in this scope", name->chars); */
+        table_delete(&vm->globals, OBJ_VAL(name));
+        runtime_error("%s is undefined in this scope", name->chars);
       }
       break;
     }
@@ -1323,7 +1325,8 @@ b_ptr_result run(b_vm *vm) {
       if (!IS_INSTANCE(peek(vm, 0)) && !IS_DICT(peek(vm, 0)) &&
           !!IS_LIST(peek(vm, 0)) && !IS_BYTES(peek(vm, 0)) &&
           !IS_FILE(peek(vm, 0)) && !IS_STRING(peek(vm, 0))) {
-        runtime_error("only instances can have properties");
+        runtime_error("only instances can have properties, %s given",
+                      value_type(peek(vm, 0)));
       }
 
       b_obj_string *name = READ_STRING();
@@ -1340,6 +1343,8 @@ b_ptr_result run(b_vm *vm) {
 
         if (!bind_method(vm, instance->klass, name)) {
           return PTR_RUNTIME_ERR;
+        } else {
+          break;
         }
       } else if (IS_DICT(peek(vm, 0))) {
         b_value value;
@@ -1378,11 +1383,13 @@ b_ptr_result run(b_vm *vm) {
         }
       }
 
-      runtime_error("only instances can have properties");
+      runtime_error("only instances can have properties, %s given",
+                    value_type(peek(vm, 0)));
     }
     case OP_SET_PROPERTY: {
       if (!IS_INSTANCE(peek(vm, 1))) {
-        runtime_error("only instances can have properties");
+        runtime_error("only instances can have properties, %s given",
+                      value_type(peek(vm, 1)));
       }
 
       b_obj_instance *instance = AS_INSTANCE(peek(vm, 1));
@@ -1601,6 +1608,11 @@ b_ptr_result run(b_vm *vm) {
       b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
       call_function(vm, function, 0);
       frame = &vm->frames[vm->frame_count - 1];
+      break;
+    }
+
+    case OP_FINISH_MODULE: {
+      b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
       // if it is a native module, attach c codes to cask methods
       bind_native_modules(vm, function->name, function->file);
       break;

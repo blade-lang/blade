@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 
-DECLARE_MODULE_METHOD(os, exec) {
+DECLARE_MODULE_METHOD(os_exec) {
   ENFORCE_ARG_COUNT(exec, 1);
   ENFORCE_ARG_TYPE(exec, 0, IS_STRING);
   b_obj_string *string = AS_STRING(args[0]);
@@ -35,7 +35,7 @@ DECLARE_MODULE_METHOD(os, exec) {
   RETURN_STRING(output);
 }
 
-DECLARE_MODULE_METHOD(os, info) {
+DECLARE_MODULE_METHOD(os_info) {
   ENFORCE_ARG_COUNT(info, 0);
   struct utsname os;
   if (uname(&os) != 0) {
@@ -57,22 +57,25 @@ DECLARE_MODULE_METHOD(os, info) {
   RETURN_OBJ(dict);
 }
 
-DECLARE_MODULE_METHOD(os, sleep) {
+DECLARE_MODULE_METHOD(os_sleep) {
   ENFORCE_ARG_COUNT(sleep, 1);
   ENFORCE_ARG_TYPE(sleep, 0, IS_NUMBER);
   sleep((int)AS_NUMBER(args[0]));
   RETURN;
 }
 
-CREATE_MODULE_LOADER(os) {
+static b_func_reg os_class_functions[] = {
+    {"info", GET_MODULE_METHOD(os_info)},
+    {"exec", GET_MODULE_METHOD(os_exec)},
+    {"sleep", GET_MODULE_METHOD(os_sleep)},
+    {NULL, NULL},
+};
 
-  b_class_reg *klass = new_class_reg("Os");
-  add_class_method(klass, "info", GET_MODULE_METHOD(os, info));
-  add_class_method(klass, "exec", GET_MODULE_METHOD(os, exec));
-  add_class_method(klass, "sleep", GET_MODULE_METHOD(os, sleep));
+static b_class_reg klasses[] = {
+    {"Os", os_class_functions},
+    {NULL, NULL},
+};
 
-  b_module *module = new_module();
-  add_module_class(module, klass);
+static b_module_reg module = {NULL, klasses};
 
-  return module;
-}
+CREATE_MODULE_LOADER(os) { return module; }

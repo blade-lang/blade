@@ -4,7 +4,7 @@
 
 #include "modules/os.h"
 
-typedef b_module *(*b_module_func)(b_vm *);
+typedef b_module_reg (*b_module_func)(b_vm *);
 
 typedef struct {
   const char *name;
@@ -22,34 +22,51 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
     for (int i = 0; modules[i].name != NULL; i++) {
       if (memcmp(modules[i].name, module_name->chars, module_name->length) ==
           0) {
-        b_module *module = modules[i].module_func(vm);
-        b_func_reg *functions = module->functions;
-        b_class_reg **klasses = module->klasses;
+        b_module_reg module = modules[i].module_func(vm);
 
-        if (functions != NULL) {
-          for (int j = 0; j < module->function_count; j++) {
-            b_func_reg func = functions[j];
-            define_native_method(vm, &vm->globals, func.name, func.function);
+        if (module.functions != NULL) {
+          for (int j = 0; module.functions[j].name != NULL; j++) {
+            b_func_reg func = module.functions[j];
+            b_value func_name =
+                OBJ_VAL(copy_string(vm, func.name, (int)strlen(func.name)));
+
+            b_value func_value;
+            if (table_get(&vm->globals, func_name, &func_value)) {
+
+              b_value func_real_value =
+                  OBJ_VAL(new_native(vm, func.function, func.name));
+
+              table_set(vm, &vm->globals, func_name, func_real_value);
+            }
           }
         }
 
-        if (klasses != NULL) {
-          for (int j = 0; j < module->class_count; j++) {
-            b_class_reg *klass_reg = klasses[j];
+        if (module.klasses != NULL) {
+          for (int j = 0; module.klasses[j].name != NULL; j++) {
+            b_class_reg klass_reg = module.klasses[j];
 
             b_value class_key = OBJ_VAL(
-                copy_string(vm, klass_reg->name, (int)strlen(klass_reg->name)));
+                copy_string(vm, klass_reg.name, (int)strlen(klass_reg.name)));
 
             b_value class_value;
             if (table_get(&vm->globals, class_key, &class_value)) {
               b_obj_class *klass = AS_CLASS(class_value);
 
-              for (int k = 0; k < klass_reg->function_count; k++) {
+              for (int k = 0; klass_reg.functions[k].name != NULL; k++) {
 
-                b_native_fn func = klass_reg->functions[k];
-                const char *name = klass_reg->names[k];
-                // bind class methods here...
-                define_native_method(vm, &klass->methods, name, func);
+                b_func_reg func = klass_reg.functions[k];
+
+                b_value func_name =
+                    OBJ_VAL(copy_string(vm, func.name, (int)strlen(func.name)));
+
+                b_value func_value;
+                if (table_get(&klass->methods, func_name, &func_value)) {
+
+                  b_value func_real_value =
+                      OBJ_VAL(new_native(vm, func.function, func.name));
+
+                  table_set(vm, &klass->methods, func_name, func_real_value);
+                }
               }
             }
           }
