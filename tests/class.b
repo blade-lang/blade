@@ -31,10 +31,16 @@ class Person {
   welcome(age) {
     echo 'welcome ' + self.name + '. You are ' + (self.age + age) + ' years old'
   }
+
+  static shout() {
+    echo 'Person is shouting'
+  }
 }
 
 var person1 = Person('Richard')
 var person2 = Person('Jane')
+
+Person.shout()
 
 person1.welcome(5)
 person2.welcome(15)

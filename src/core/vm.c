@@ -472,6 +472,10 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
     if (table_get(&vm->methods_bytes, OBJ_VAL(name), &value)) {
       return call_value(vm, value, arg_count);
     }
+  } else if (IS_CLASS(receiver)) {
+    if (table_get(&AS_CLASS(receiver)->static_methods, OBJ_VAL(name), &value)) {
+      return call_value(vm, value, arg_count);
+    }
   }
 
   _runtime_error(vm, "cannot call method %s on object of type %s", name->chars,
@@ -525,11 +529,15 @@ static void close_upvalues(b_vm *vm, b_value *last) {
   }
 }
 
-static void define_method(b_vm *vm, b_obj_string *name) {
+static void define_method(b_vm *vm, b_obj_string *name, bool is_static) {
   b_value method = peek(vm, 0);
   b_obj_class *klass = AS_CLASS(peek(vm, 1));
-  table_set(vm, &klass->methods, OBJ_VAL(name), method);
-  if (name == klass->name) {
+  if (!is_static) {
+    table_set(vm, &klass->methods, OBJ_VAL(name), method);
+  } else {
+    table_set(vm, &klass->static_methods, OBJ_VAL(name), method);
+  }
+  if (name == klass->name && !is_static) {
     klass->initializer = method;
   }
   pop(vm);
@@ -1324,7 +1332,8 @@ b_ptr_result run(b_vm *vm) {
     case OP_GET_PROPERTY: {
       if (!IS_INSTANCE(peek(vm, 0)) && !IS_DICT(peek(vm, 0)) &&
           !!IS_LIST(peek(vm, 0)) && !IS_BYTES(peek(vm, 0)) &&
-          !IS_FILE(peek(vm, 0)) && !IS_STRING(peek(vm, 0))) {
+          !IS_FILE(peek(vm, 0)) && !IS_STRING(peek(vm, 0)) &&
+          !IS_CLASS(peek(vm, 0))) {
         runtime_error("only instances can have properties, %s given",
                       value_type(peek(vm, 0)));
       }
@@ -1378,6 +1387,14 @@ b_ptr_result run(b_vm *vm) {
         b_value value;
         if (table_get(&vm->methods_string, OBJ_VAL(name), &value)) {
           pop(vm); // pop the string...
+          push(vm, value);
+          break;
+        }
+      } else if (IS_CLASS(peek(vm, 0))) {
+        b_value value;
+        if (table_get(&AS_CLASS(peek(vm, 0))->static_methods, OBJ_VAL(name),
+                      &value)) {
+          pop(vm); // pop the class...
           push(vm, value);
           break;
         }
@@ -1456,7 +1473,9 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
     case OP_METHOD: {
-      define_method(vm, READ_STRING());
+      b_obj_string *name = READ_STRING();
+      bool is_static = READ_BYTE() == 1;
+      define_method(vm, name, is_static);
       break;
     }
     case OP_CLASS_PROPERTY: {
