@@ -1618,6 +1618,23 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
 
+    case OP_ASSERT: {
+      b_value message = pop(vm);
+      b_value expression = pop(vm);
+      if (is_falsey(expression)) {
+        if (!IS_NIL(message)) {
+          runtime_error("AssertionError: %s", value_to_string(vm, message));
+        } else {
+          runtime_error("AssertionError");
+        }
+      }
+      break;
+    }
+
+    case OP_DIE: {
+      runtime_error(value_to_string(vm, pop(vm)));
+    }
+
     default:
       break;
     }

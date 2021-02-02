@@ -154,12 +154,16 @@ int disassemble_instruction(b_blob *blob, int offset) {
 
   case OP_ECHO:
     return simple_instruction("echo", offset);
+  case OP_DIE:
+    return simple_instruction("die", offset);
   case OP_POP:
     return simple_instruction("pop", offset);
   case OP_CLOSE_UPVALUE:
     return simple_instruction("clupv", offset);
   case OP_DUP:
     return simple_instruction("dup", offset);
+  case OP_ASSERT:
+    return simple_instruction("assrt", offset);
   case OP_POPN:
     return short_instruction("popn", blob, offset);
 
