@@ -157,3 +157,16 @@ char *resolve_import_path(char *module_name, const char *current_file) {
 
   return NULL;
 }
+
+bool is_core_library_file(char *filepath, char *file_name) {
+  char *bird_file_name = get_bird_filename(file_name);
+  char *bird_directory = merge_paths(get_exe_dir(), LIBRARY_DIRECTORY,
+                                     (int)strlen(LIBRARY_DIRECTORY));
+  char *library_file =
+      merge_paths(bird_directory, bird_file_name, (int)strlen(bird_file_name));
+
+  if (file_exists(library_file)) {
+    return memcmp(library_file, filepath, (int)strlen(filepath)) == 0;
+  }
+  return false;
+}

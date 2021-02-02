@@ -19,5 +19,6 @@ bool file_exists(char *filepath);
 char *get_bird_filename(char *filename);
 char *get_filename(char *filepath);
 char *resolve_import_path(char *module_name, const char *current_file);
+bool is_core_library_file(char *filepath, char *file_name);
 
 #endif

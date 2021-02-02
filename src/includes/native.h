@@ -16,8 +16,12 @@
 #define DECLARE_METHOD(name)                                                   \
   b_value native_method_##name(b_vm *vm, int arg_count, b_value *args)
 
+#define DECLARE_MODULE_METHOD(module, name)                                    \
+  b_value native_module_##module##name(b_vm *vm, int arg_count, b_value *args)
+
 #define GET_NATIVE(name) native_fn_##name
 #define GET_METHOD(name) native_method_##name
+#define GET_MODULE_METHOD(module, name) native_module_##module##name
 
 #define DEFINE_NATIVE(name) define_native(vm, #name, GET_NATIVE(name))
 
