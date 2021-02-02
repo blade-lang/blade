@@ -3,6 +3,7 @@
 #include "compiler.h"
 #include "config.h"
 #include "memory.h"
+#include "module.h"
 #include "native.h"
 #include "object.h"
 
@@ -99,8 +100,8 @@ static void define_native(b_vm *vm, const char *name, b_native_fn function) {
   popn(vm, 2);
 }
 
-static void define_native_method(b_vm *vm, b_table *table, const char *name,
-                                 b_native_fn function) {
+void define_native_method(b_vm *vm, b_table *table, const char *name,
+                          b_native_fn function) {
   push(vm, OBJ_VAL(copy_string(vm, name, (int)strlen(name))));
   push(vm, OBJ_VAL(new_native(vm, function, name)));
   table_set(vm, table, vm->stack[0], vm->stack[1]);
@@ -1597,8 +1598,11 @@ b_ptr_result run(b_vm *vm) {
     }
 
     case OP_CALL_IMPORT: {
-      call_function(vm, AS_FUNCTION(READ_CONSTANT()), 0);
+      b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
+      call_function(vm, function, 0);
       frame = &vm->frames[vm->frame_count - 1];
+      // if it is a native module, attach c codes to cask methods
+      bind_native_modules(vm, function->name, function->file);
       break;
     }
 

@@ -1728,6 +1728,7 @@ static void import_statement(b_parser *p) {
 
   b_obj_func *function =
       compile(p->vm, source, module_path, &p->compiler->function->blob);
+  function->name = copy_string(p->vm, module_name, (int)strlen(module_name));
 
   if (function == NULL) {
     error(p, "failed to import %s", module_name);

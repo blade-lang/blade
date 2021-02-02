@@ -73,6 +73,9 @@ void dict_add_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value);
 bool dict_get_entry(b_obj_dict *dict, b_value key, b_value *value);
 bool dict_set_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value);
 
+void define_native_method(b_vm *vm, b_table *table, const char *name,
+                          b_native_fn function);
+
 void _runtime_error(b_vm *vm, const char *format, ...);
 
 #define runtime_error(...)                                                     \
