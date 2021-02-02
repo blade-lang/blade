@@ -90,7 +90,7 @@ endif
 
 # Files.
 
-SUB_DIRS := core builtin modules
+SUB_DIRS := core modules
 SRC_DIR := $(addprefix $(SOURCE_DIR)/, $(SUB_DIRS))
 BLD_DIRS := $(addprefix $(BUILD_DIR)/, $(SUB_DIRS))
 
