@@ -1,4 +1,4 @@
-#include "modules/os.h"
+#include "os.h"
 #include "compat/unistd.h"
 #include <sys/utsname.h>
 
