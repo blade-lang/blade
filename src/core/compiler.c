@@ -1717,6 +1717,7 @@ static void import_statement(b_parser *p) {
   char *module_path = resolve_import_path(module_name, p->current_file);
   if (module_path == NULL) {
     error(p, "module not found");
+    return;
   }
 
   consume_statement_end(p);
@@ -1725,6 +1726,7 @@ static void import_statement(b_parser *p) {
   char *source = read_file(module_path);
   if (source == NULL) {
     error(p, "could not read import file %s", module_path);
+    return;
   }
 
   b_obj_func *function =
@@ -1733,6 +1735,7 @@ static void import_statement(b_parser *p) {
 
   if (function == NULL) {
     error(p, "failed to import %s", module_name);
+    return;
   }
 
   int import_constant = make_constant(p, OBJ_VAL(function));

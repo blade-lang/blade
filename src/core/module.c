@@ -2,6 +2,7 @@
 #include "pathinfo.h"
 #include "value.h"
 
+#include "modules/base64.h"
 #include "modules/os.h"
 
 typedef b_module_reg (*b_module_func)(b_vm *);
@@ -13,6 +14,7 @@ typedef struct {
 
 b_module_registry modules[] = {
     {"os", GET_MODULE_LOADER(os)},
+    {"base64", GET_MODULE_LOADER(base64)},
     {NULL, NULL},
 };
 
@@ -30,14 +32,10 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
             b_value func_name =
                 OBJ_VAL(copy_string(vm, func.name, (int)strlen(func.name)));
 
-            b_value func_value;
-            if (table_get(&vm->globals, func_name, &func_value)) {
+            b_value func_real_value =
+                OBJ_VAL(new_native(vm, func.function, func.name));
 
-              b_value func_real_value =
-                  OBJ_VAL(new_native(vm, func.function, func.name));
-
-              table_set(vm, &vm->globals, func_name, func_real_value);
-            }
+            table_set(vm, &vm->globals, func_name, func_real_value);
           }
         }
 
@@ -59,14 +57,10 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
                 b_value func_name =
                     OBJ_VAL(copy_string(vm, func.name, (int)strlen(func.name)));
 
-                b_value func_value;
-                if (table_get(&klass->methods, func_name, &func_value)) {
+                b_value func_real_value =
+                    OBJ_VAL(new_native(vm, func.function, func.name));
 
-                  b_value func_real_value =
-                      OBJ_VAL(new_native(vm, func.function, func.name));
-
-                  table_set(vm, &klass->methods, func_name, func_real_value);
-                }
+                table_set(vm, &klass->methods, func_name, func_real_value);
               }
             }
           }
