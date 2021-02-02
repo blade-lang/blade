@@ -182,7 +182,6 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_GET_PROPERTY:
   case OP_SET_PROPERTY:
   case OP_CLASS_PROPERTY:
-  case OP_METHOD:
   case OP_LIST:
   case OP_DICT:
   case OP_CALL_IMPORT:
@@ -191,6 +190,7 @@ static int get_code_args_count(const uint8_t *bytecode,
 
   case OP_INVOKE:
   case OP_SUPER_INVOKE:
+  case OP_METHOD:
     return 3;
 
   case OP_CLOSURE: {
@@ -1235,7 +1235,7 @@ static void function(b_parser *p, b_func_type type) {
   }
 }
 
-static void method(b_parser *p, b_token class_name) {
+static void method(b_parser *p, b_token class_name, bool is_static) {
   consume(p, IDENTIFIER_TOKEN, "method name expected");
   int constant = identifier_constant(p, &p->previous);
 
@@ -1246,6 +1246,7 @@ static void method(b_parser *p, b_token class_name) {
   }
   function(p, type);
   emit_byte_and_short(p, OP_METHOD, constant);
+  emit_byte(p, is_static ? 1 : 0);
 }
 
 static void function_declaration(b_parser *p) {
@@ -1307,7 +1308,11 @@ static void class_declaration(b_parser *p) {
 
       emit_byte_and_short(p, OP_CLASS_PROPERTY, field_constant);
     } else {
-      method(p, class_name);
+      bool is_static = false;
+      if (match(p, STATIC_TOKEN))
+        is_static = true;
+
+      method(p, class_name, is_static);
       ignore_whitespace(p);
     }
   }

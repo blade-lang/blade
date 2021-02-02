@@ -105,6 +105,7 @@ typedef struct {
   b_obj_string *name;
   b_table fields;
   b_table methods;
+  b_table static_methods;
   b_value initializer;
 } b_obj_class;
 

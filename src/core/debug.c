@@ -57,6 +57,17 @@ static int invoke_instruction(const char *name, b_blob *blob, int offset) {
   return offset + 4;
 }
 
+static int method_instruction(const char *name, b_blob *blob, int offset) {
+  uint16_t constant = (uint16_t)(blob->code[offset + 1] << 8);
+  constant |= blob->code[offset + 2];
+  uint8_t is_static = blob->code[offset + 3];
+
+  printf("%-16s %4d '", name, constant);
+  print_value(blob->constants.values[constant]);
+  printf("' %d\n", is_static);
+  return offset + 4;
+}
+
 int disassemble_instruction(b_blob *blob, int offset) {
   printf("%04d ", offset);
   if (offset > 0 && blob->lines[offset] == blob->lines[offset - 1]) {
@@ -206,7 +217,7 @@ int disassemble_instruction(b_blob *blob, int offset) {
   case OP_CLASS:
     return constant_instruction("class", blob, offset);
   case OP_METHOD:
-    return constant_instruction("methd", blob, offset);
+    return method_instruction("methd", blob, offset);
   case OP_CLASS_PROPERTY:
     return constant_instruction("clprop", blob, offset);
   case OP_GET_SUPER:
