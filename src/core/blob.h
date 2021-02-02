@@ -50,6 +50,8 @@ typedef enum {
   OP_POP,
   OP_DUP,
   OP_POPN,
+  OP_ASSERT,
+  OP_DIE,
 
   OP_CLOSURE,
   OP_CALL,

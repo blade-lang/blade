@@ -1,0 +1,1 @@
+die 'I am a dead script'

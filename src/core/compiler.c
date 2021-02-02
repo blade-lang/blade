@@ -157,6 +157,8 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_ONE:
   case OP_SET_INDEX:
   case OP_EMPTY:
+  case OP_ASSERT:
+  case OP_DIE:
     return 0;
 
   case OP_CALL:
@@ -1678,6 +1680,12 @@ static void echo_statement(b_parser *p) {
   emit_byte(p, OP_ECHO);
 }
 
+static void die_statement(b_parser *p) {
+  expression(p);
+  consume_statement_end(p);
+  emit_byte(p, OP_DIE);
+}
+
 static char *read_file(const char *path) {
   FILE *fp = fopen(path, "rb");
 
@@ -1741,6 +1749,19 @@ static void import_statement(b_parser *p) {
   int import_constant = make_constant(p, OBJ_VAL(function));
   emit_byte_and_short(p, OP_CALL_IMPORT, import_constant);
   emit_byte_and_short(p, OP_FINISH_MODULE, import_constant);
+}
+
+static void assert_statement(b_parser *p) {
+  expression(p);
+  if (match(p, COMMA_TOKEN)) {
+    ignore_whitespace(p);
+    expression(p);
+  } else {
+    emit_byte(p, OP_NIL);
+  }
+  consume_statement_end(p);
+
+  emit_byte(p, OP_ASSERT);
 }
 
 static void return_statement(b_parser *p) {
@@ -1887,6 +1908,10 @@ static void statement(b_parser *p) {
     break_statement(p);
   } else if (match(p, RETURN_TOKEN)) {
     return_statement(p);
+  } else if (match(p, ASSERT_TOKEN)) {
+    assert_statement(p);
+  } else if (match(p, DIE_TOKEN)) {
+    die_statement(p);
   } else if (match(p, LBRACE_TOKEN)) {
     begin_scope(p);
     block(p);
