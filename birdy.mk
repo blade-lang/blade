@@ -96,11 +96,11 @@ BLD_DIRS := $(addprefix $(BUILD_DIR)/, $(SUB_DIRS))
 
 SOURCES = $(foreach sdir, $(SRC_DIR), $(wildcard $(sdir)/*.c))
 OBJECTS = $(patsubst $(SOURCE_DIR)/*.c, $(BUILD_DIR)/*.c, $(SOURCES))
-INCLUDES = $(addprefix $(SOURCE_DIR)/, includes)
+# INCLUDES = $(addprefix -I, $(addprefix $(SOURCE_DIR)/, $(SUB_DIRS)))
 
 vpath %.c $(SRC_DIR)
 
-CFLAGS += -I$(INCLUDES)
+CFLAGS += -I$(SOURCE_DIR)/core -I$(SOURCE_DIR)
 
 define make-goal
 $1/*.o: %.c

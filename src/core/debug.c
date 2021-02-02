@@ -149,6 +149,8 @@ int disassemble_instruction(b_blob *blob, int offset) {
 
   case OP_CALL_IMPORT:
     return short_instruction("cimport", blob, offset);
+  case OP_FINISH_MODULE:
+    return short_instruction("fimport", blob, offset);
 
   case OP_ECHO:
     return simple_instruction("echo", offset);
