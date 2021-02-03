@@ -373,6 +373,16 @@ DECLARE_LIST_METHOD(to_dict) {
 DECLARE_LIST_METHOD(__iter__) {
   ENFORCE_ARG_COUNT(__iter__, 0);
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
+  if (list->iter_index > -1) {
+    RETURN_VALUE(list->items.values[list->iter_index]);
+  }
+
+  RETURN;
+}
+
+DECLARE_LIST_METHOD(__itern__) {
+  ENFORCE_ARG_COUNT(__itern__, 0);
+  b_obj_list *list = AS_LIST(METHOD_OBJECT);
   list->iter_index++;
   if (list->iter_index < list->items.count) {
     RETURN_NUMBER(list->iter_index);
@@ -380,14 +390,4 @@ DECLARE_LIST_METHOD(__iter__) {
 
   list->iter_index = -1;
   RETURN_EMPTY;
-}
-
-DECLARE_LIST_METHOD(__itern__) {
-  ENFORCE_ARG_COUNT(__itern__, 0);
-  b_obj_list *list = AS_LIST(METHOD_OBJECT);
-  if (list->iter_index > -1) {
-    RETURN_VALUE(list->items.values[list->iter_index]);
-  }
-
-  RETURN;
 }

@@ -144,4 +144,18 @@ DECLARE_BYTES_METHOD(to_list);
  */
 DECLARE_BYTES_METHOD(to_string);
 
+/**
+ * bytes.__iter__()
+ *
+ * implementing the iterable interface
+ */
+DECLARE_BYTES_METHOD(__iter__);
+
+/**
+ * bytes.__itern__()
+ *
+ * implementing the iterable interface
+ */
+DECLARE_BYTES_METHOD(__itern__);
+
 #endif

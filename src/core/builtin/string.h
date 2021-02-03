@@ -213,4 +213,18 @@ DECLARE_STRING_METHOD(replace);
  */
 DECLARE_STRING_METHOD(to_bytes);
 
+/**
+ * string.__iter__()
+ *
+ * implementing the iterable interface
+ */
+DECLARE_STRING_METHOD(__iter__);
+
+/**
+ * string.__itern__()
+ *
+ * implementing the iterable interface
+ */
+DECLARE_STRING_METHOD(__itern__);
+
 #endif

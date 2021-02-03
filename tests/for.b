@@ -15,3 +15,11 @@ for x, y in details {
     }
   }
 }
+
+for n in 'name' {
+  echo n
+}
+
+for g in bytes([10, 21, 13, 47]) {
+  echo g
+}

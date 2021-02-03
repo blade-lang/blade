@@ -259,3 +259,25 @@ DECLARE_BYTES_METHOD(to_string) {
   char *string = (char *)bytes->bytes.bytes;
   RETURN_LSTRING(string, bytes->bytes.count);
 }
+
+DECLARE_BYTES_METHOD(__iter__) {
+  ENFORCE_ARG_COUNT(__iter__, 0);
+  b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
+  if (bytes->iter_index > -1) {
+    RETURN_NUMBER((int)bytes->bytes.bytes[bytes->iter_index]);
+  }
+
+  RETURN;
+}
+
+DECLARE_BYTES_METHOD(__itern__) {
+  ENFORCE_ARG_COUNT(__itern__, 0);
+  b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
+  bytes->iter_index++;
+  if (bytes->iter_index < bytes->bytes.count) {
+    RETURN_NUMBER(bytes->iter_index);
+  }
+
+  bytes->iter_index = -1;
+  RETURN_EMPTY;
+}
