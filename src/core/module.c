@@ -60,7 +60,10 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
                 b_value func_real_value =
                     OBJ_VAL(new_native(vm, func.function, func.name));
 
-                table_set(vm, &klass->methods, func_name, func_real_value);
+                table_set(vm,
+                          func.is_static ? &klass->static_methods
+                                         : &klass->methods,
+                          func_name, func_real_value);
               }
             }
           }

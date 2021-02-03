@@ -7,6 +7,7 @@
 
 typedef struct {
   const char *name;
+  bool is_static;
   b_native_fn function;
 } b_func_reg;
 

@@ -65,10 +65,10 @@ DECLARE_MODULE_METHOD(os_sleep) {
 }
 
 static b_func_reg os_class_functions[] = {
-    {"info", GET_MODULE_METHOD(os_info)},
-    {"exec", GET_MODULE_METHOD(os_exec)},
-    {"sleep", GET_MODULE_METHOD(os_sleep)},
-    {NULL, NULL},
+    {"info", true, GET_MODULE_METHOD(os_info)},
+    {"exec", true, GET_MODULE_METHOD(os_exec)},
+    {"sleep", true, GET_MODULE_METHOD(os_sleep)},
+    {NULL, false, NULL},
 };
 
 static b_class_reg klasses[] = {
