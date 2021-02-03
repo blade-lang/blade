@@ -23,3 +23,22 @@ for n in 'name' {
 for g in bytes([10, 21, 13, 47]) {
   echo g
 }
+
+class Iterable {
+  var index = -1
+  var items = ['Richard', 'Alex', 'Justina']
+
+  __iter__() {
+    return self.items[self.index]
+  }
+
+  __itern__() {
+    if self.index < self.items.length() - 1
+      return self.index++
+    return empty
+  }
+}
+
+for it in Iterable() {
+  echo it
+}
