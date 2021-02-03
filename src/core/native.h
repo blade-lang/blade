@@ -93,6 +93,14 @@
                  i + 1, value_type(args[i]));                                  \
   }
 
+#define ENFORCE_CONSTRUCTOR_ARG_TYPE(name, i, type)                            \
+  if (!type(args[i])) {                                                        \
+    RETURN_ERROR(#name                                                         \
+                 "() expects argument %d to class constructor as " NORMALIZE(  \
+                     type) ", %s given",                                       \
+                 i + 1, value_type(args[i]));                                  \
+  }
+
 #define EXCLUDE_ARG_TYPE(method_name, arg_type, index)                         \
   if (arg_type(args[index])) {                                                 \
     RETURN_ERROR("invalid type %s() as argument %d in %s()",                   \
