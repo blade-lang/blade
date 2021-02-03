@@ -229,6 +229,8 @@ static b_tkn_type identifier_type(b_scanner *s) {
   case 'c':
     if (s->current - s->start > 1) {
       switch (s->start[1]) {
+      case 'a':
+        return check_keyword(s, 2, 3, "tch", CATCH_TOKEN);
       case 'l':
         return check_keyword(s, 2, 3, "ass", CLASS_TOKEN);
       case 'o':
@@ -305,7 +307,14 @@ static b_tkn_type identifier_type(b_scanner *s) {
       }
     }
   case 't':
-    return check_keyword(s, 1, 3, "rue", TRUE_TOKEN);
+    if (s->current - s->start > 2 && s->start[1] == 'r') {
+      switch (s->start[2]) {
+      case 'u':
+        return check_keyword(s, 3, 1, "e", TRUE_TOKEN);
+      case 'y':
+        return check_keyword(s, 3, 0, "", TRY_TOKEN);
+      }
+    }
   case 'u': {
     return check_keyword(s, 1, 4, "sing", USING_TOKEN);
   }

@@ -73,6 +73,10 @@ typedef enum {
   OP_CALL_IMPORT,
   OP_FINISH_MODULE,
 
+  OP_TRY,
+  OP_END_TRY,
+  OP_GET_CATCH,
+
   // the break placeholder... it never gets to the vm
   // care should be taken to
   OP_BREAK_PL,
