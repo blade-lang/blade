@@ -185,6 +185,8 @@ void init_builtin_methods(b_vm *vm) {
   DEFINE_STRING_METHOD(match);
   DEFINE_STRING_METHOD(matches);
   DEFINE_STRING_METHOD(replace);
+  DEFINE_STRING_METHOD(__iter__);
+  DEFINE_STRING_METHOD(__itern__);
 
   // list methods
   DEFINE_LIST_METHOD(length);
@@ -278,6 +280,8 @@ void init_builtin_methods(b_vm *vm) {
   DEFINE_BYTES_METHOD(is_space);
   DEFINE_BYTES_METHOD(to_list);
   DEFINE_BYTES_METHOD(to_string);
+  DEFINE_BYTES_METHOD(__iter__);
+  DEFINE_BYTES_METHOD(__itern__);
 
 #undef DEFINE_STRING_METHOD
 #undef DEFINE_LIST_METHOD

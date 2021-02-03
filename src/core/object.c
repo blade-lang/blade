@@ -36,6 +36,7 @@ b_obj_bytes *new_bytes(b_vm *vm, int length) {
   bytes->bytes.bytes =
       reallocate(vm, bytes->bytes.bytes, 0, sizeof(unsigned char *) * length);
   bytes->bytes.count = length;
+  bytes->iter_index = -1;
 
   return bytes;
 }
@@ -125,6 +126,7 @@ b_obj_string *allocate_string(b_vm *vm, char *chars, int length,
   string->chars = chars;
   string->length = length;
   string->hash = hash;
+  string->iter_index = -1;
 
   push(vm, OBJ_VAL(string)); // fixing gc corruption
   table_set(vm, &vm->strings, OBJ_VAL(string), NIL_VAL);

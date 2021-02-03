@@ -972,3 +972,25 @@ DECLARE_STRING_METHOD(to_bytes) {
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   RETURN_OBJ(copy_bytes(vm, (unsigned char *)string->chars, string->length));
 }
+
+DECLARE_STRING_METHOD(__iter__) {
+  ENFORCE_ARG_COUNT(__iter__, 0);
+  b_obj_string *string = AS_STRING(METHOD_OBJECT);
+  if (string->iter_index > -1) {
+    RETURN_LSTRING(&string->chars[string->iter_index], 1);
+  }
+
+  RETURN;
+}
+
+DECLARE_STRING_METHOD(__itern__) {
+  ENFORCE_ARG_COUNT(__itern__, 0);
+  b_obj_string *string = AS_STRING(METHOD_OBJECT);
+  string->iter_index++;
+  if (string->iter_index < string->length) {
+    RETURN_NUMBER(string->iter_index);
+  }
+
+  string->iter_index = -1;
+  RETURN_EMPTY;
+}

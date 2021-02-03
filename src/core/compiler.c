@@ -1473,13 +1473,13 @@ static void iter_statement(b_parser *p) {
  *    var iterable
  *
  *    iterable = expression()
- *    x = iterable.__iter__()
- *    y = iterable.__itern__()
+ *    x = iterable.__itern__()
+ *    y = iterable.__iter__()
  *
  *    while x != empty {
  *      ...
- *      x = iterable.__iter__()
- *      y = iterable.__itern__()
+ *      x = iterable.__itern__()
+ *      y = iterable.__iter__()
  *    }
  * }
  *
@@ -1488,10 +1488,10 @@ static void iter_statement(b_parser *p) {
  *
  * to make instances of a user created class iterable,
  * the class must implement the __iter__() and the __itern__() function.
- * the __iter__() must return the current iterating index of the object and the
- * __itern__() function must return the value at that index.
- * _NOTE_: the __itern__() function will no longer be called after the
- * __iter__() function returns empty. so the __itern__() never needs to return
+ * the __itern__() must return the current iterating index of the object and the
+ * __iter__() function must return the value at that index.
+ * _NOTE_: the __iter__() function will no longer be called after the
+ * __itern__() function returns empty. so the __iter__() never needs to return
  * empty
  */
 static void for_statement(b_parser *p) {
@@ -1527,9 +1527,9 @@ static void for_statement(b_parser *p) {
 
   // set key variable
 
-  // key = iterable.__iter__()
+  // key = iterable.__itern__()
   emit_byte_and_short(p, OP_GET_GLOBAL, iterable_constant);
-  emit_byte_and_short(p, OP_INVOKE, __iter__);
+  emit_byte_and_short(p, OP_INVOKE, __itern__);
   emit_byte(p, 0);
   int key = add_local(p, key_token) - 1;
   define_variable(p, key);
@@ -1551,9 +1551,9 @@ static void for_statement(b_parser *p) {
   int false_jump = emit_jump(p, OP_JUMP_IF_FALSE);
   emit_byte(p, OP_POP);
 
-  // value = iterable.__itern__()
+  // value = iterable.__iter__()
   emit_byte_and_short(p, OP_GET_GLOBAL, iterable_constant);
-  emit_byte_and_short(p, OP_INVOKE, __itern__);
+  emit_byte_and_short(p, OP_INVOKE, __iter__);
   emit_byte(p, 0);
   int value = add_local(p, value_token) - 1;
   define_variable(p, value);
@@ -1564,7 +1564,7 @@ static void for_statement(b_parser *p) {
 
   // run the increment
   emit_byte_and_short(p, OP_GET_GLOBAL, iterable_constant);
-  emit_byte_and_short(p, OP_INVOKE, __iter__);
+  emit_byte_and_short(p, OP_INVOKE, __itern__);
   emit_byte(p, 0);
   emit_byte_and_short(p, OP_SET_LOCAL, key);
   emit_byte(p, OP_POP);
