@@ -22,6 +22,12 @@ typedef struct {
   b_value *slots;
 } b_call_frame;
 
+typedef struct b_catch_frame {
+  uint16_t offset;
+  b_call_frame *frame;
+  struct b_catch_frame *previous;
+} b_catch_frame;
+
 struct s_vm {
   b_call_frame frames[FRAMES_MAX];
   int frame_count;
@@ -36,6 +42,7 @@ struct s_vm {
 
   b_obj *objects;
   b_compiler *compiler;
+  b_catch_frame *catch_frame;
 
   // gc
   int gray_count;
@@ -78,8 +85,19 @@ void define_native_method(b_vm *vm, b_table *table, const char *name,
 
 void _runtime_error(b_vm *vm, const char *format, ...);
 
+// the +3 in the else clause is to skip the OP_TRY instruction itself
+#define EXIT_VM()                                                              \
+  if (vm->catch_frame == NULL) {                                               \
+    return PTR_RUNTIME_ERR;                                                    \
+  } else {                                                                     \
+    frame = vm->catch_frame->frame;                                            \
+    frame->ip =                                                                \
+        get_frame_function(frame)->blob.code + vm->catch_frame->offset + 3;    \
+    break;                                                                     \
+  }
+
 #define runtime_error(...)                                                     \
   _runtime_error(vm, ##__VA_ARGS__);                                           \
-  return PTR_RUNTIME_ERR
+  EXIT_VM();
 
 #endif

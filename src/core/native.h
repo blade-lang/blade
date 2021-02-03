@@ -128,7 +128,8 @@
 
 #define REGEX_ASSERTION_ERROR(re, match_data, ovector)                         \
   if (ovector[0] > ovector[1]) {                                               \
-    runtime_error(                                                             \
+    _runtime_error(                                                            \
+        vm,                                                                    \
         "match aborted: regular expression used \\K in an assertion %.*s to "  \
         "set match start after its end.",                                      \
         (int)(ovector[0] - ovector[1]), (char *)(subject + ovector[1]));       \
