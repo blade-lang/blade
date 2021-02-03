@@ -823,7 +823,7 @@ DECLARE_STRING_METHOD(matches) {
     }
 
     if (rc < 0) {
-      runtime_error("regular expression error %d", rc);
+      _runtime_error(vm,"regular expression error %d", rc);
       pcre2_match_data_free(match_data);
       pcre2_code_free(re);
       return EMPTY_VAL;
@@ -942,7 +942,7 @@ DECLARE_STRING_METHOD(replace) {
       0, match_context, replacement, PCRE2_ZERO_TERMINATED, 0, &output_length);
 
   if (result != PCRE2_ERROR_NOMEMORY) {
-    runtime_error("regular expression post-compilation failed for replacement");
+    _runtime_error(vm,"regular expression post-compilation failed for replacement");
     return EMPTY_VAL;
   }
 
@@ -954,7 +954,7 @@ DECLARE_STRING_METHOD(replace) {
       replacement, PCRE2_ZERO_TERMINATED, output_buffer, &output_length);
 
   if (result < 0) {
-    runtime_error("regular expression error at replacement time");
+    _runtime_error(vm,"regular expression error at replacement time");
     return EMPTY_VAL;
   }
 

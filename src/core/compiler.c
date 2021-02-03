@@ -160,7 +160,6 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_ASSERT:
   case OP_DIE:
   case OP_END_TRY:
-  case OP_GET_CATCH:
     return 0;
 
   case OP_CALL:
@@ -1794,7 +1793,7 @@ static void try_statement(b_parser *p) {
 
   // jump into the catch statement if an error occured
   patch_jump(p, try_begins);
-  emit_byte(p, OP_GET_CATCH);
+  emit_byte(p, OP_END_TRY);
   emit_byte_and_short(p, OP_SET_LOCAL, error_message);
 
   block(p);

@@ -109,7 +109,7 @@ int disassemble_instruction(b_blob *blob, int offset) {
   case OP_SET_UPVALUE:
     return short_instruction("supv", blob, offset);
 
-  case OP_GET_CATCH:
+  case OP_END_TRY:
     return simple_instruction("gcatch", offset);
 
   case OP_CONSTANT:

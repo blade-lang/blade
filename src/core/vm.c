@@ -1,5 +1,6 @@
 #include "vm.h"
 #include "common.h"
+#include "compat/asprintf.h"
 #include "compiler.h"
 #include "config.h"
 #include "memory.h"
@@ -38,42 +39,56 @@ static inline b_obj_func *get_frame_function(b_call_frame *frame) {
 
 void _runtime_error(b_vm *vm, const char *format, ...) {
 
-  b_call_frame *frame = &vm->frames[vm->frame_count - 1];
+  // only throw error when there is no surrounding try...catch... statement
+  if (vm->catch_frame == NULL) {
 
-  size_t instruction = frame->ip - get_frame_function(frame)->blob.code - 1;
-  int line = get_frame_function(frame)->blob.lines[instruction];
+    b_call_frame *frame = &vm->frames[vm->frame_count - 1];
 
-  fprintf(stderr, "RuntimeError:\n");
-  fprintf(stderr, "    File: %s, Line: %d\n    Message: ",
-          get_frame_function(frame)->file, line);
+    size_t instruction = frame->ip - get_frame_function(frame)->blob.code - 1;
+    int line = get_frame_function(frame)->blob.lines[instruction];
 
-  va_list args;
-  va_start(args, format);
-  vfprintf(stderr, format, args);
-  va_end(args);
-  fputs("\n", stderr);
+    fprintf(stderr, "RuntimeError:\n");
+    fprintf(stderr, "    File: %s, Line: %d\n    Message: ",
+            get_frame_function(frame)->file, line);
 
-  if (vm->frame_count > 1) {
-    fprintf(stderr, "StackTrace:\n");
-    for (int i = vm->frame_count - 1; i >= 0; i--) {
-      b_call_frame *frame = &vm->frames[i];
-      b_obj_func *function = get_frame_function(frame);
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+    fputs("\n", stderr);
 
-      // -1 because the IP is sitting on the next instruction to be executed
-      size_t instruction = frame->ip - get_frame_function(frame)->blob.code - 1;
+    if (vm->frame_count > 1) {
+      fprintf(stderr, "StackTrace:\n");
+      for (int i = vm->frame_count - 1; i >= 0; i--) {
+        b_call_frame *frame = &vm->frames[i];
+        b_obj_func *function = get_frame_function(frame);
 
-      fprintf(stderr,
-              "    File: %s, Line: %d, In: ", get_frame_function(frame)->file,
-              function->blob.lines[instruction]);
-      if (function->name == NULL) {
-        fprintf(stderr, "<script>\n");
-      } else {
-        fprintf(stderr, "%s()\n", function->name->chars);
+        // -1 because the IP is sitting on the next instruction to be executed
+        size_t instruction =
+            frame->ip - get_frame_function(frame)->blob.code - 1;
+
+        fprintf(stderr,
+                "    File: %s, Line: %d, In: ", get_frame_function(frame)->file,
+                function->blob.lines[instruction]);
+        if (function->name == NULL) {
+          fprintf(stderr, "<script>\n");
+        } else {
+          fprintf(stderr, "%s()\n", function->name->chars);
+        }
       }
     }
-  }
 
-  reset_stack(vm);
+    reset_stack(vm);
+  } else {
+    char *result;
+
+    va_list args;
+    va_start(args, format);
+    int length = vasprintf(&result, format, args);
+    va_end(args);
+
+    push(vm, OBJ_VAL(take_string(vm, result, length)));
+  }
 }
 
 void push(b_vm *vm, b_value value) {
@@ -294,6 +309,7 @@ void init_vm(b_vm *vm) {
 
   reset_stack(vm);
   vm->compiler = NULL;
+  vm->catch_frame = NULL;
   vm->objects = NULL;
   vm->bytes_allocated = 0;
   vm->next_gc = 1024 * 1024; // 1mb
@@ -324,6 +340,16 @@ void free_vm(b_vm *vm) {
   free_objects(vm);
   free_table(vm, &vm->strings);
   free_table(vm, &vm->globals);
+
+  free_table(vm, &vm->methods_string);
+  free_table(vm, &vm->methods_list);
+  free_table(vm, &vm->methods_dict);
+  free_table(vm, &vm->methods_file);
+  free_table(vm, &vm->methods_bytes);
+
+  if (vm->catch_frame != NULL) {
+    FREE(b_call_frame, vm->catch_frame);
+  }
 }
 
 static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
@@ -983,9 +1009,8 @@ static bool concatenate(b_vm *vm) {
   } else if (IS_NUMBER(_a)) {
     double a = AS_NUMBER(_a);
 
-    char num_str[27]; // + 1 for null terminator
-    sprintf(num_str, NUMBER_FORMAT, a);
-    int num_length = strlen(num_str);
+    char *num_str; // + 1 for null terminator
+    int num_length = asprintf(&num_str, NUMBER_FORMAT, a);
 
     b_obj_string *b = AS_STRING(_b);
 
@@ -1002,9 +1027,8 @@ static bool concatenate(b_vm *vm) {
     b_obj_string *a = AS_STRING(_a);
     double b = AS_NUMBER(_b);
 
-    char num_str[27]; // + 1 for null terminator
-    sprintf(num_str, NUMBER_FORMAT, b);
-    int num_length = strlen(num_str);
+    char *num_str; // + 1 for null terminator
+    int num_length = asprintf(&num_str, NUMBER_FORMAT, b);
 
     int length = num_length + a->length;
     char *chars = ALLOCATE(char, length + 1);
@@ -1360,7 +1384,7 @@ b_ptr_result run(b_vm *vm) {
         }
 
         if (!bind_method(vm, instance->klass, name)) {
-          return PTR_RUNTIME_ERR;
+          EXIT_VM();
         } else {
           break;
         }
@@ -1461,7 +1485,7 @@ b_ptr_result run(b_vm *vm) {
     case OP_CALL: {
       int arg_count = READ_BYTE();
       if (!call_value(vm, peek(vm, arg_count), arg_count)) {
-        return PTR_RUNTIME_ERR;
+        EXIT_VM();
       }
       frame = &vm->frames[vm->frame_count - 1];
       break;
@@ -1470,7 +1494,7 @@ b_ptr_result run(b_vm *vm) {
       b_obj_string *method = READ_STRING();
       int arg_count = READ_BYTE();
       if (!invoke(vm, method, arg_count)) {
-        return PTR_RUNTIME_ERR;
+        EXIT_VM();
       }
       frame = &vm->frames[vm->frame_count - 1];
       break;
@@ -1507,7 +1531,7 @@ b_ptr_result run(b_vm *vm) {
       b_obj_string *name = READ_STRING();
       b_obj_class *superclass = AS_CLASS(pop(vm));
       if (!bind_method(vm, superclass, name)) {
-        return PTR_RUNTIME_ERR;
+        EXIT_VM();
       }
       break;
     }
@@ -1516,7 +1540,7 @@ b_ptr_result run(b_vm *vm) {
       int arg_count = READ_BYTE();
       b_obj_class *superclass = AS_CLASS(pop(vm));
       if (!invoke_from_class(vm, superclass, method, arg_count)) {
-        return PTR_RUNTIME_ERR;
+        EXIT_VM();
       }
       frame = &vm->frames[vm->frame_count - 1];
       break;
@@ -1556,28 +1580,28 @@ b_ptr_result run(b_vm *vm) {
       if (IS_STRING(peek(vm, 2))) {
         if (!string_get_index(vm, AS_STRING(peek(vm, 2)),
                               will_assign == 1 ? true : false)) {
-          return PTR_RUNTIME_ERR;
+          EXIT_VM();
         } else {
           break;
         }
       } else if (IS_LIST(peek(vm, 2))) {
         if (!list_get_index(vm, AS_LIST(peek(vm, 2)),
                             will_assign == 1 ? true : false)) {
-          return PTR_RUNTIME_ERR;
+          EXIT_VM();
         } else {
           break;
         }
       } else if (IS_BYTES(peek(vm, 2))) {
         if (!bytes_get_index(vm, AS_BYTES(peek(vm, 2)),
                              will_assign == 1 ? true : false)) {
-          return PTR_RUNTIME_ERR;
+          EXIT_VM();
         } else {
           break;
         }
       } else if (IS_DICT(peek(vm, 2)) && IS_NIL(peek(vm, 0))) {
         if (!dict_get_index(vm, AS_DICT(peek(vm, 2)),
                             will_assign == 1 ? true : false)) {
-          return PTR_RUNTIME_ERR;
+          EXIT_VM();
         } else {
           break;
         }
@@ -1601,11 +1625,11 @@ b_ptr_result run(b_vm *vm) {
 
       if (IS_LIST(peek(vm, 3))) {
         if (!list_set_index(vm, AS_LIST(peek(vm, 3)), index, value)) {
-          return PTR_RUNTIME_ERR;
+          EXIT_VM();
         }
       } else if (IS_BYTES(peek(vm, 3))) {
         if (!bytes_set_index(vm, AS_BYTES(peek(vm, 3)), index, value)) {
-          return PTR_RUNTIME_ERR;
+          EXIT_VM();
         }
       } else if (IS_DICT(peek(vm, 3))) {
         dict_set_index(vm, AS_DICT(peek(vm, 3)), index, value);
@@ -1660,7 +1684,24 @@ b_ptr_result run(b_vm *vm) {
     }
 
     case OP_DIE: {
-      runtime_error(value_to_string(vm, pop(vm)));
+      print_value(pop(vm));
+      printf("\n");
+      return PTR_OK;
+    }
+
+    case OP_TRY: {
+      uint16_t offset = READ_SHORT();
+      b_catch_frame catch_frame;
+      catch_frame.frame = frame;
+      catch_frame.offset = offset;
+      catch_frame.previous = vm->catch_frame;
+      vm->catch_frame = &catch_frame;
+      break;
+    }
+
+    case OP_END_TRY: {
+      vm->catch_frame = vm->catch_frame->previous;
+      break;
     }
 
     default:
