@@ -82,6 +82,8 @@ int disassemble_instruction(b_blob *blob, int offset) {
     return jump_instruction("fjump", 1, blob, offset);
   case OP_JUMP:
     return jump_instruction("jump", 1, blob, offset);
+  case OP_TRY:
+    return jump_instruction("itry", 1, blob, offset);
   case OP_LOOP:
     return jump_instruction("loop", -1, blob, offset);
 
@@ -106,6 +108,9 @@ int disassemble_instruction(b_blob *blob, int offset) {
     return short_instruction("gupv", blob, offset);
   case OP_SET_UPVALUE:
     return short_instruction("supv", blob, offset);
+
+  case OP_GET_CATCH:
+    return simple_instruction("gcatch", offset);
 
   case OP_CONSTANT:
     return constant_instruction("load", blob, offset);

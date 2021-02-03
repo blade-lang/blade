@@ -159,6 +159,8 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_EMPTY:
   case OP_ASSERT:
   case OP_DIE:
+  case OP_END_TRY:
+  case OP_GET_CATCH:
     return 0;
 
   case OP_CALL:
@@ -186,6 +188,7 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_DICT:
   case OP_CALL_IMPORT:
   case OP_FINISH_MODULE:
+  case OP_TRY:
     return 2;
 
   case OP_INVOKE:
@@ -1129,6 +1132,8 @@ b_parse_rule parse_rules[] = {
     [USING_TOKEN] = {NULL, NULL, PREC_NONE},
     [WHEN_TOKEN] = {NULL, NULL, PREC_NONE},
     [WHILE_TOKEN] = {NULL, NULL, PREC_NONE},
+    [TRY_TOKEN] = {NULL, NULL, PREC_NONE},
+    [CATCH_TOKEN] = {NULL, NULL, PREC_NONE},
 
     // types token
     [LITERAL_TOKEN] = {string, NULL, PREC_NONE},
@@ -1769,6 +1774,36 @@ static void assert_statement(b_parser *p) {
   emit_byte(p, OP_ASSERT);
 }
 
+static void try_statement(b_parser *p) {
+  consume(p, LBRACE_TOKEN, "expected '{' after try");
+
+  int try_begins = emit_jump(p, OP_TRY);
+
+  block(p); // compile the try body
+  int exit_jump = emit_jump(p, OP_JUMP);
+
+  // catch body must maintain it's own scope
+  begin_scope(p);
+  consume(p, CATCH_TOKEN, "expected 'catch' at end of try block");
+
+  consume(p, IDENTIFIER_TOKEN, "expected variable name after catch");
+  int error_message = add_local(p, p->previous) - 1;
+  define_variable(p, 0);
+
+  consume(p, LBRACE_TOKEN, "expected '{' after catch");
+
+  // jump into the catch statement if an error occured
+  patch_jump(p, try_begins);
+  emit_byte(p, OP_GET_CATCH);
+  emit_byte_and_short(p, OP_SET_LOCAL, error_message);
+
+  block(p);
+  end_scope(p);
+
+  // jump out of the code block completely if no error occurs
+  patch_jump(p, exit_jump);
+}
+
 static void return_statement(b_parser *p) {
   p->is_returning = true;
   if (p->compiler->type == TYPE_SCRIPT) {
@@ -1857,6 +1892,8 @@ static void synchronize(b_parser *p) {
     case ITER_TOKEN:
     case WHILE_TOKEN:
     case ECHO_TOKEN:
+    case ASSERT_TOKEN:
+    case TRY_TOKEN:
     case DIE_TOKEN:
     case RETURN_TOKEN:
     case STATIC_TOKEN:
@@ -1923,6 +1960,8 @@ static void statement(b_parser *p) {
     end_scope(p);
   } else if (match(p, IMPORT_TOKEN)) {
     import_statement(p);
+  } else if (match(p, TRY_TOKEN)) {
+    try_statement(p);
   } else {
     expression_statement(p);
   }

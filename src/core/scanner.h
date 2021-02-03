@@ -85,6 +85,8 @@ typedef enum {
   USING_TOKEN,
   WHEN_TOKEN,
   WHILE_TOKEN,
+  TRY_TOKEN,
+  CATCH_TOKEN,
 
   // types token
   LITERAL_TOKEN,
