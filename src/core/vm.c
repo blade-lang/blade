@@ -429,8 +429,13 @@ bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
                        int arg_count) {
   b_value method;
   if (!table_get(&klass->methods, OBJ_VAL(name), &method)) {
-    _runtime_error(vm, "undefined method '%s' in %s", name->chars,
-                   klass->name->chars);
+    if (!table_get(&klass->static_methods, OBJ_VAL(name), &method)) {
+      _runtime_error(vm, "undefined method '%s' in %s", name->chars,
+                     klass->name->chars);
+    } else {
+      _runtime_error(vm, "cannot call static method '%s' from instance of %s",
+                     name->chars, klass->name->chars);
+    }
     return false;
   }
 

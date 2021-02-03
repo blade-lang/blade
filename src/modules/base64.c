@@ -147,9 +147,9 @@ DECLARE_MODULE_METHOD(base64__encode) {
 }
 
 static b_func_reg class_functions[] = {
-    {"_decode", GET_MODULE_METHOD(base64__decode)},
-    {"_encode", GET_MODULE_METHOD(base64__encode)},
-    {NULL, NULL},
+    {"_decode", false, GET_MODULE_METHOD(base64__decode)},
+    {"_encode", false, GET_MODULE_METHOD(base64__encode)},
+    {NULL, false, NULL},
 };
 
 static b_class_reg klasses[] = {
