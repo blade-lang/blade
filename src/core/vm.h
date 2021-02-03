@@ -89,10 +89,10 @@ void _runtime_error(b_vm *vm, const char *format, ...);
 #define EXIT_VM()                                                              \
   if (vm->catch_frame == NULL) {                                               \
     return PTR_RUNTIME_ERR;                                                    \
-  } else {                                                                     \
+  } else {                                                                   \
     frame = vm->catch_frame->frame;                                            \
     frame->ip =                                                                \
-        get_frame_function(frame)->blob.code + vm->catch_frame->offset + 3;    \
+        get_frame_function(frame)->blob.code + vm->catch_frame->offset;    \
     break;                                                                     \
   }
 

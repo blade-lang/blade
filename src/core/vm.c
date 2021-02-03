@@ -346,10 +346,6 @@ void free_vm(b_vm *vm) {
   free_table(vm, &vm->methods_dict);
   free_table(vm, &vm->methods_file);
   free_table(vm, &vm->methods_bytes);
-
-  if (vm->catch_frame != NULL) {
-    FREE(b_call_frame, vm->catch_frame);
-  }
 }
 
 static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {

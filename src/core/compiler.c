@@ -290,6 +290,17 @@ static void patch_jump(b_parser *p, int offset) {
   current_blob(p)->code[offset + 1] = jump & 0xff;
 }
 
+static void patch_try(b_parser *p, int offset) {
+  int jump = current_blob(p)->count;
+
+  if (jump > UINT16_MAX) {
+    error(p, "body of conditional block too large");
+  }
+
+  current_blob(p)->code[offset] = (jump >> 8) & 0xff;
+  current_blob(p)->code[offset + 1] = jump & 0xff;
+}
+
 static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
   compiler->enclosing = p->compiler;
   compiler->function = NULL;
@@ -1792,7 +1803,7 @@ static void try_statement(b_parser *p) {
   consume(p, LBRACE_TOKEN, "expected '{' after catch");
 
   // jump into the catch statement if an error occured
-  patch_jump(p, try_begins);
+  patch_try(p, try_begins);
   emit_byte(p, OP_END_TRY);
   emit_byte_and_short(p, OP_SET_LOCAL, error_message);
 
