@@ -46,6 +46,15 @@ static int jump_instruction(const char *name, int sign, b_blob *blob,
   return offset + 3;
 }
 
+static int try_instruction(const char *name, b_blob *blob,
+                            int offset) {
+  uint16_t jump = (uint16_t)(blob->code[offset + 1] << 8);
+  jump |= blob->code[offset + 2];
+
+  printf("%-16s %4d -> %d\n", name, offset, jump);
+  return offset + 3;
+}
+
 static int invoke_instruction(const char *name, b_blob *blob, int offset) {
   uint16_t constant = (uint16_t)(blob->code[offset + 1] << 8);
   constant |= blob->code[offset + 2];
@@ -83,7 +92,7 @@ int disassemble_instruction(b_blob *blob, int offset) {
   case OP_JUMP:
     return jump_instruction("jump", 1, blob, offset);
   case OP_TRY:
-    return jump_instruction("itry", 1, blob, offset);
+    return try_instruction("itry", blob, offset);
   case OP_LOOP:
     return jump_instruction("loop", -1, blob, offset);
 
@@ -110,7 +119,7 @@ int disassemble_instruction(b_blob *blob, int offset) {
     return short_instruction("supv", blob, offset);
 
   case OP_END_TRY:
-    return simple_instruction("gcatch", offset);
+    return simple_instruction("etry", offset);
 
   case OP_CONSTANT:
     return constant_instruction("load", blob, offset);
