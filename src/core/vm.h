@@ -23,7 +23,7 @@ typedef struct {
 } b_call_frame;
 
 typedef struct b_catch_frame {
-  uint16_t offset;
+  int offset;
   b_call_frame *frame;
   struct b_catch_frame *previous;
 } b_catch_frame;
@@ -89,10 +89,10 @@ void _runtime_error(b_vm *vm, const char *format, ...);
 #define EXIT_VM()                                                              \
   if (vm->catch_frame == NULL) {                                               \
     return PTR_RUNTIME_ERR;                                                    \
-  } else {                                                                   \
+  } else {                                                                     \
     frame = vm->catch_frame->frame;                                            \
     frame->ip =                                                                \
-        get_frame_function(frame)->blob.code + vm->catch_frame->offset;    \
+        get_frame_function(frame)->blob.code + vm->catch_frame->offset;        \
     break;                                                                     \
   }
 
