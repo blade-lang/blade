@@ -80,7 +80,7 @@ void _runtime_error(b_vm *vm, const char *format, ...) {
 
     reset_stack(vm);
   } else {
-    char *result;
+    char *result = NULL;
 
     va_list args;
     va_start(args, format);
@@ -1686,17 +1686,18 @@ b_ptr_result run(b_vm *vm) {
     }
 
     case OP_TRY: {
-      uint16_t offset = READ_SHORT();
       b_catch_frame catch_frame;
       catch_frame.frame = frame;
-      catch_frame.offset = offset;
+      catch_frame.offset = READ_SHORT();
       catch_frame.previous = vm->catch_frame;
       vm->catch_frame = &catch_frame;
       break;
     }
 
     case OP_END_TRY: {
-      vm->catch_frame = vm->catch_frame->previous;
+      if (vm->catch_frame != NULL) {
+        vm->catch_frame = vm->catch_frame->previous;
+      }
       break;
     }
 
