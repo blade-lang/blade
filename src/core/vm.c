@@ -37,6 +37,23 @@ static inline b_obj_func *get_frame_function(b_call_frame *frame) {
   }
 }
 
+static void initalize_exceptions(b_vm *vm) {
+  b_obj_class *klass = new_class(vm, copy_string(vm, "Exception", 9));
+  table_set(vm, &klass->fields, OBJ_VAL(copy_string(vm, "message", 7)),
+            NIL_VAL);
+  table_set(vm, &klass->fields, OBJ_VAL(copy_string(vm, "trace", 5)), NIL_VAL);
+  vm->exception_class = klass;
+}
+
+static b_obj_instance *create_exception(b_vm *vm, char *message, char *trace) {
+  b_obj_instance *instance = new_instance(vm, vm->exception_class);
+  table_set(vm, &instance->fields, OBJ_VAL(copy_string(vm, "message", 7)),
+            OBJ_VAL(take_string(vm, message, (int)strlen(message))));
+  table_set(vm, &instance->fields, OBJ_VAL(copy_string(vm, "trace", 5)),
+            OBJ_VAL(take_string(vm, trace, (int)strlen(trace))));
+  return instance;
+}
+
 void _runtime_error(b_vm *vm, const char *format, ...) {
 
   // only throw error when there is no surrounding try...catch... statement
@@ -80,14 +97,40 @@ void _runtime_error(b_vm *vm, const char *format, ...) {
 
     reset_stack(vm);
   } else {
-    char *result = NULL;
+    char *message = NULL;
 
     va_list args;
     va_start(args, format);
-    int length = vasprintf(&result, format, args);
+    vasprintf(&message, format, args);
     va_end(args);
 
-    push(vm, OBJ_VAL(take_string(vm, result, length)));
+    char *trace = (char *)calloc(1, sizeof(char *));
+
+    // fprintf(stderr, "StackTrace:\n");
+    for (int i = vm->frame_count - 1; i >= 0; i--) {
+      b_call_frame *frame = &vm->frames[i];
+      b_obj_func *function = get_frame_function(frame);
+
+      // -1 because the IP is sitting on the next instruction to be executed
+      size_t instruction = frame->ip - get_frame_function(frame)->blob.code - 1;
+
+      char *trace_part = NULL;
+      asprintf(&trace_part,
+               "File: %s, Line: %d, In: ", get_frame_function(frame)->file,
+               function->blob.lines[instruction]);
+
+      if (function->name == NULL) {
+        trace_part =
+            append_strings(trace_part, i > 0 ? "<script>\n" : "<script>");
+      } else {
+        trace_part = append_strings(trace_part, function->name->chars);
+        trace_part = append_strings(trace_part, i > 0 ? "()\n" : "()");
+      }
+
+      trace = append_strings(trace, trace_part);
+    }
+
+    push(vm, OBJ_VAL(create_exception(vm, message, trace)));
   }
 }
 
@@ -123,7 +166,7 @@ void define_native_method(b_vm *vm, b_table *table, const char *name,
   popn(vm, 2);
 }
 
-void init_builtin_functions(b_vm *vm) {
+static void init_builtin_functions(b_vm *vm) {
   DEFINE_NATIVE(abs);
   DEFINE_NATIVE(bin);
   DEFINE_NATIVE(bytes);
@@ -166,7 +209,7 @@ void init_builtin_functions(b_vm *vm) {
   DEFINE_NATIVE(type);
 }
 
-void init_builtin_methods(b_vm *vm) {
+static void init_builtin_methods(b_vm *vm) {
 #define DEFINE_STRING_METHOD(name) DEFINE_METHOD(string, name)
 #define DEFINE_LIST_METHOD(name) DEFINE_METHOD(list, name)
 #define DEFINE_DICT_METHOD(name) DEFINE_METHOD(dict, name)
@@ -311,6 +354,7 @@ void init_vm(b_vm *vm) {
   vm->compiler = NULL;
   vm->catch_frame = NULL;
   vm->objects = NULL;
+  vm->exception_class = NULL;
   vm->bytes_allocated = 0;
   vm->next_gc = 1024 * 1024; // 1mb
   vm->is_repl = false;
@@ -334,6 +378,7 @@ void init_vm(b_vm *vm) {
 
   init_builtin_functions(vm);
   init_builtin_methods(vm);
+  initalize_exceptions(vm);
 }
 
 void free_vm(b_vm *vm) {
@@ -1680,9 +1725,7 @@ b_ptr_result run(b_vm *vm) {
     }
 
     case OP_DIE: {
-      print_value(pop(vm));
-      printf("\n");
-      return PTR_OK;
+      runtime_error(value_to_string(vm, pop(vm)));
     }
 
     case OP_TRY: {
@@ -1695,9 +1738,7 @@ b_ptr_result run(b_vm *vm) {
     }
 
     case OP_END_TRY: {
-      if (vm->catch_frame != NULL) {
-        vm->catch_frame = vm->catch_frame->previous;
-      }
+      vm->catch_frame = vm->catch_frame->previous;
       break;
     }
 

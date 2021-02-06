@@ -5,8 +5,16 @@ try {
   try {
     echo [1,2,3][-10]
   } catch e {
-    echo e
+    echo 'Message: ' + e.message + '\nTrace: ' + e.trace
   }
 } catch e {
   echo e
 }
+
+# try {
+  die 'I am a thrown exception'
+/* } catch e {
+  echo '\n\nCatching exception...'
+  echo 'Exception message: ' + e.message
+  echo 'Exception trace: ' + e.trace
+} */
