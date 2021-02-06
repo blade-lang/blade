@@ -85,6 +85,7 @@ void define_native_method(b_vm *vm, b_table *table, const char *name,
                           b_native_fn function);
 
 void _runtime_error(b_vm *vm, const char *format, ...);
+b_obj_instance *create_exception(b_vm *vm, b_obj_string *message);
 
 #define EXIT_VM()                                                              \
   if (vm->catch_frame == NULL) {                                               \

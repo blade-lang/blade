@@ -201,5 +201,6 @@ DECLARE_NATIVE(is_class);
 DECLARE_NATIVE(is_instance);
 
 DECLARE_NATIVE(print);
+DECLARE_NATIVE(__Exception__);
 
 #endif

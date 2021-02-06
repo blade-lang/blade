@@ -5,14 +5,15 @@ try {
   try {
     echo [1,2,3][-10]
   } catch e {
-    echo 'Message: ' + e.message + '\nTrace: ' + e.trace
+    echo 'Message: ' + e.message + '\nTrace: \n' + e.trace
   }
 } catch e {
   echo e
 }
 
 try {
-  die 'I am a thrown exception'
+  die Exception('I am a thrown exception')
+  die Exception('Second exception we will never reach')
 } catch e {
   echo '\n\nCatching exception...'
   echo 'Exception message: ' + e.message

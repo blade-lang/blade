@@ -1,1 +1,1 @@
-die 'I am a dead script'
+die Exception('I am a dead script')
