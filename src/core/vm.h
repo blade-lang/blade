@@ -43,6 +43,7 @@ struct s_vm {
   b_obj *objects;
   b_compiler *compiler;
   b_catch_frame *catch_frame;
+  b_obj_class *exception_class;
 
   // gc
   int gray_count;

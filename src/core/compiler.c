@@ -1804,7 +1804,6 @@ static void try_statement(b_parser *p) {
 
   // jump into the catch statement if an error occured
   patch_try(p, try_begins);
-  emit_byte(p, OP_END_TRY);
   emit_byte_and_short(p, OP_SET_LOCAL, error_message);
 
   block(p);
@@ -1812,6 +1811,7 @@ static void try_statement(b_parser *p) {
 
   // jump out of the code block completely if no error occurs
   patch_jump(p, exit_jump);
+  emit_byte(p, OP_END_TRY);
 }
 
 static void return_statement(b_parser *p) {
