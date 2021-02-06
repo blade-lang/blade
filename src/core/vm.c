@@ -39,17 +39,57 @@ static inline b_obj_func *get_frame_function(b_call_frame *frame) {
 }
 
 static void initalize_exceptions(b_vm *vm) {
-  b_obj_class *klass = new_class(vm, copy_string(vm, "Exception", 9));
+  b_obj_string *class_name = copy_string(vm, "Exception", 9);
+  b_obj_class *klass = new_class(vm, class_name);
+
+  b_value initializer =
+      OBJ_VAL(new_native(vm, GET_NATIVE(__Exception__), class_name->chars));
+
+  // set class constructor
+  table_set(vm, &klass->methods,
+            OBJ_VAL(copy_string(vm, class_name->chars, class_name->length)),
+            initializer);
+  klass->initializer = initializer;
+
+  // set class fields
   table_set(vm, &klass->fields, OBJ_VAL(copy_string(vm, "message", 7)),
             NIL_VAL);
   table_set(vm, &klass->fields, OBJ_VAL(copy_string(vm, "trace", 5)), NIL_VAL);
+
+  table_set(vm, &vm->globals, OBJ_VAL(class_name), OBJ_VAL(klass));
   vm->exception_class = klass;
 }
 
-static b_obj_instance *create_exception(b_vm *vm, char *message, char *trace) {
+b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
+  char *trace = (char *)malloc(sizeof(char));
+
+  // fprintf(stderr, "StackTrace:\n");
+  for (int i = vm->frame_count - 1; i >= 0; i--) {
+    b_call_frame *frame = &vm->frames[i];
+    b_obj_func *function = get_frame_function(frame);
+
+    // -1 because the IP is sitting on the next instruction to be executed
+    size_t instruction = frame->ip - get_frame_function(frame)->blob.code - 1;
+
+    char *trace_part = NULL;
+    asprintf(&trace_part,
+             "    File: %s, Line: %d, In: ", get_frame_function(frame)->file,
+             function->blob.lines[instruction]);
+
+    if (function->name == NULL) {
+      trace_part =
+          append_strings(trace_part, i > 0 ? "<script>\n" : "<script>");
+    } else {
+      trace_part = append_strings(trace_part, function->name->chars);
+      trace_part = append_strings(trace_part, i > 0 ? "()\n" : "()");
+    }
+
+    trace = append_strings(trace, trace_part);
+  }
+
   b_obj_instance *instance = new_instance(vm, vm->exception_class);
   table_set(vm, &instance->fields, OBJ_VAL(copy_string(vm, "message", 7)),
-            OBJ_VAL(take_string(vm, message, (int)strlen(message))));
+            OBJ_VAL(message));
   table_set(vm, &instance->fields, OBJ_VAL(copy_string(vm, "trace", 5)),
             OBJ_VAL(take_string(vm, trace, (int)strlen(trace))));
   return instance;
@@ -102,36 +142,10 @@ void _runtime_error(b_vm *vm, const char *format, ...) {
 
     va_list args;
     va_start(args, format);
-    vasprintf(&message, format, args);
+    int length = vasprintf(&message, format, args);
     va_end(args);
 
-    char *trace = (char *)calloc(1, sizeof(char *));
-
-    // fprintf(stderr, "StackTrace:\n");
-    for (int i = vm->frame_count - 1; i >= 0; i--) {
-      b_call_frame *frame = &vm->frames[i];
-      b_obj_func *function = get_frame_function(frame);
-
-      // -1 because the IP is sitting on the next instruction to be executed
-      size_t instruction = frame->ip - get_frame_function(frame)->blob.code - 1;
-
-      char *trace_part = NULL;
-      asprintf(&trace_part,
-               "File: %s, Line: %d, In: ", get_frame_function(frame)->file,
-               function->blob.lines[instruction]);
-
-      if (function->name == NULL) {
-        trace_part =
-            append_strings(trace_part, i > 0 ? "<script>\n" : "<script>");
-      } else {
-        trace_part = append_strings(trace_part, function->name->chars);
-        trace_part = append_strings(trace_part, i > 0 ? "()\n" : "()");
-      }
-
-      trace = append_strings(trace, trace_part);
-    }
-
-    push(vm, OBJ_VAL(create_exception(vm, message, trace)));
+    push(vm, OBJ_VAL(create_exception(vm, take_string(vm, message, length))));
   }
 }
 
@@ -453,6 +467,8 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
       if (!IS_EMPTY(klass->initializer)) {
         if (IS_CLOSURE(klass->initializer)) {
           return call_closure(vm, AS_CLOSURE(klass->initializer), arg_count);
+        } else if (IS_NATIVE(klass->initializer)) {
+          return call_value(vm, klass->initializer, arg_count);
         } else {
           return call_function(vm, AS_FUNCTION(klass->initializer), arg_count);
         }
@@ -654,6 +670,32 @@ bool is_falsey(b_value value) {
   // All functions are in themselves true if you do not account for what they
   // return.
   return false;
+}
+
+static bool is_instance_of(b_obj_class *klass1, b_obj_class *klass2) {
+  while (klass2 != NULL) {
+    if (memcmp(klass1->name->chars, klass2->name->chars,
+               klass1->name->length) == 0) {
+      return true;
+    }
+    klass2 = klass2->superclass;
+  }
+
+  return false;
+}
+
+static void print_exception(b_vm *vm, b_obj_instance *exception) {
+  b_value message, trace;
+  if (table_get(&exception->fields, OBJ_VAL(copy_string(vm, "message", 7)),
+                &message) &&
+      table_get(&exception->fields, OBJ_VAL(copy_string(vm, "trace", 5)),
+                &trace)) {
+    fprintf(stderr, "Unhandled Exception: %s: %s\n",
+            exception->klass->name->chars, value_to_string(vm, message));
+    fprintf(stderr, "%s\n", value_to_string(vm, trace));
+  } else {
+    _runtime_error(vm, "invalid Exception or Exception subclass instance");
+  }
 }
 
 void dict_add_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value) {
@@ -1565,6 +1607,7 @@ b_ptr_result run(b_vm *vm) {
       b_obj_class *subclass = AS_CLASS(peek(vm, 0));
       table_add_all(vm, &superclass->fields, &subclass->fields);
       table_add_all(vm, &superclass->methods, &subclass->methods);
+      subclass->superclass = superclass;
       pop(vm); // pop the subclass
       break;
     }
@@ -1725,7 +1768,21 @@ b_ptr_result run(b_vm *vm) {
     }
 
     case OP_DIE: {
-      runtime_error(value_to_string(vm, pop(vm)));
+      if (!IS_INSTANCE(peek(vm, 0)) ||
+          !is_instance_of(AS_INSTANCE(peek(vm, 0))->klass,
+                          vm->exception_class)) {
+        runtime_error("instance of Exception expected");
+      }
+
+      if (vm->catch_frame == NULL) {
+        print_exception(vm, AS_INSTANCE(peek(vm, 0)));
+        return PTR_RUNTIME_ERR;
+      } else {
+        frame = vm->catch_frame->frame;
+        frame->ip =
+            get_frame_function(frame)->blob.code + vm->catch_frame->offset;
+        break;
+      }
     }
 
     case OP_TRY: {

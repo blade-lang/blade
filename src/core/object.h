@@ -101,13 +101,14 @@ typedef struct {
   int upvalue_count;
 } b_obj_closure;
 
-typedef struct {
+typedef struct b_obj_class {
   b_obj obj;
   b_obj_string *name;
   b_table fields;
   b_table methods;
   b_table static_methods;
   b_value initializer;
+  struct b_obj_class *superclass;
 } b_obj_class;
 
 typedef struct {

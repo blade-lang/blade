@@ -673,3 +673,11 @@ DECLARE_NATIVE(print) {
   printf("\n");
   RETURN;
 }
+
+DECLARE_NATIVE(__Exception__) {
+  ENFORCE_ARG_COUNT(Exception, 1);
+  ENFORCE_ARG_TYPE(Exception, 0, IS_STRING);
+
+  b_obj_instance *exception = create_exception(vm, AS_STRING(args[0]));
+  RETURN_OBJ(exception);
+}
