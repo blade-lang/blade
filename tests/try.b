@@ -11,10 +11,10 @@ try {
   echo e
 }
 
-# try {
+try {
   die 'I am a thrown exception'
-/* } catch e {
+} catch e {
   echo '\n\nCatching exception...'
   echo 'Exception message: ' + e.message
   echo 'Exception trace: ' + e.trace
-} */
+}

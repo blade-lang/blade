@@ -27,6 +27,7 @@ static void reset_stack(b_vm *vm) {
   vm->stack_top = vm->stack;
   vm->frame_count = 0;
   vm->open_upvalues = NULL;
+  vm->catch_frame = NULL;
 }
 
 static inline b_obj_func *get_frame_function(b_call_frame *frame) {
@@ -352,7 +353,6 @@ void init_vm(b_vm *vm) {
 
   reset_stack(vm);
   vm->compiler = NULL;
-  vm->catch_frame = NULL;
   vm->objects = NULL;
   vm->exception_class = NULL;
   vm->bytes_allocated = 0;
@@ -1729,16 +1729,19 @@ b_ptr_result run(b_vm *vm) {
     }
 
     case OP_TRY: {
-      b_catch_frame catch_frame;
-      catch_frame.frame = frame;
-      catch_frame.offset = READ_SHORT();
-      catch_frame.previous = vm->catch_frame;
-      vm->catch_frame = &catch_frame;
+      b_catch_frame *catch_frame =
+          (b_catch_frame *)malloc(sizeof(b_catch_frame));
+      catch_frame->frame = frame;
+      catch_frame->offset = READ_SHORT();
+      catch_frame->previous = vm->catch_frame;
+      vm->catch_frame = catch_frame;
       break;
     }
 
     case OP_END_TRY: {
-      vm->catch_frame = vm->catch_frame->previous;
+      b_catch_frame *catch_frame = vm->catch_frame->previous;
+      free(vm->catch_frame);
+      vm->catch_frame = catch_frame;
       break;
     }
 
