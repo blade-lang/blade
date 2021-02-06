@@ -39,7 +39,7 @@
 #ifdef __clang__
 
 #define COMPILER                                                               \
-  VERSION_STRING("Clang++", __clang_major__, __clang_minor__,                  \
+  VERSION_STRING("Clang", __clang_major__, __clang_minor__,                    \
                  __clang_patchlevel__)
 
 #elif defined(_MSC_VER)
@@ -59,7 +59,7 @@
 #elif defined(__GNUC__)
 
 #define COMPILER                                                               \
-  VERSION_STRING("G++", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
+  VERSION_STRING("GCC", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
 
 #else
 
