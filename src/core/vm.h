@@ -86,7 +86,6 @@ void define_native_method(b_vm *vm, b_table *table, const char *name,
 
 void _runtime_error(b_vm *vm, const char *format, ...);
 
-// the +3 in the else clause is to skip the OP_TRY instruction itself
 #define EXIT_VM()                                                              \
   if (vm->catch_frame == NULL) {                                               \
     return PTR_RUNTIME_ERR;                                                    \
