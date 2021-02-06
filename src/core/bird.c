@@ -28,7 +28,7 @@ static void repl(b_vm *vm) {
 
   fprintf(stdout, "Birdy %s (running on BVM %s), REPL/Interactive mode = ON\n",
           BIRD_VERSION_STRING, BVM_VERSION);
-  fprintf(stdout, "Copyright 2021, Ore Richard Muyiwa\n");
+  fprintf(stdout, "%s, (Build time = %s, %s)\n", COMPILER, __DATE__, __TIME__);
   fprintf(stdout,
           "Type \"exit()\" to quit, \"help()\" or \"credits()\" for more "
           "information\n");
