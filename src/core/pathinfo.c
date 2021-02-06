@@ -1,6 +1,6 @@
 #include "pathinfo.h"
+#include "common.h"
 #include "compat/unistd.h"
-#include "config.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -120,7 +120,7 @@ bool file_exists(char *filepath) { return access(filepath, F_OK) == 0; }
 char *get_calling_dir() { return getenv("PWD"); }
 
 char *get_bird_filename(char *filename) {
-  return merge_paths(filename, BIRDY_EXTENSION, strlen(BIRDY_EXTENSION));
+  return merge_paths(filename, BIRD_EXTENSION, strlen(BIRD_EXTENSION));
 }
 
 char *get_filename(char *filepath) {

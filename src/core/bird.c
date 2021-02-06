@@ -1,22 +1,91 @@
+#include "util.h"
 #include "vm.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <readline/history.h>
+#include <readline/readline.h>
+#include <setjmp.h>
+#include <signal.h>
+
+sigjmp_buf ctrlc_buf;
+
+void handle_signals(int signo) {
+  if (signo == SIGINT) {
+    printf("\n<KeyboardInterrupt>\n");
+    siglongjmp(ctrlc_buf, 1);
+  }
+}
+
 static void repl(b_vm *vm) {
+  if (signal(SIGINT, handle_signals) == SIG_ERR) {
+    printf("failed to register interrupts with kernel\n");
+  }
+
   vm->is_repl = true;
-  char line[4096];
+
+  fprintf(stdout, "Birdy %s (running on BVM %s), REPL/Interactive mode = ON\n",
+          BIRD_VERSION_STRING, BVM_VERSION);
+  fprintf(stdout, "Copyright 2021, Ore Richard Muyiwa\n");
+  fprintf(stdout,
+          "Type \"exit()\" to quit, \"help()\" or \"credits()\" for more "
+          "information\n");
+
+  char *source = (char *)malloc(sizeof(char));
+  int current_line = 0;
+  int brace_count = 0, paren_count = 0, bracket_count = 0;
 
   for (;;) {
-    printf("$ ");
+    while (sigsetjmp(ctrlc_buf, 1) != 0)
+      ;
+    current_line++;
 
-    if (!fgets(line, sizeof(line), stdin)) {
-      printf("\n");
-      break;
+    const char *cursor = "> ";
+    if (brace_count > 0 || bracket_count > 0 || paren_count > 0) {
+      cursor = "| ";
     }
 
-    interpret(vm, line, "<repl>");
+    char *line = readline(cursor);
+    int line_length = strlen(line);
+
+    // terminate early if we receive a terminating command such as exit()
+    if (strcmp(line, "exit()") == 0) {
+      exit(EXIT_SUCCESS);
+    }
+
+    // allow user to navigate through past input in terminal...
+    add_history(line);
+
+    // find count of { and }, ( and ), [ and ]
+    for (int i = 0; i < line_length; i++) {
+      // scope openers...
+      if (line[i] == '{')
+        brace_count++;
+      else if (line[i] == '(')
+        paren_count++;
+      else if (line[i] == '[')
+        bracket_count++;
+
+      // scope closers...
+      else if (line[i] == '}')
+        brace_count--;
+      else if (line[i] == ')')
+        paren_count--;
+      else if (line[i] == ']')
+        bracket_count--;
+    }
+
+    source = append_strings(source, line);
+
+    if (bracket_count == 0 && paren_count == 0 && brace_count == 0) {
+
+      interpret(vm, source, "<repl>");
+
+      // reset source...
+      memset(source, 0, strlen(source));
+    }
   }
 }
 

@@ -59,6 +59,8 @@ ifneq (,$(findstring darwin,$(OS)))
 
 # for OSX environments
 	SHARED_EXT := dylib
+
+CFLAGS += -lreadline 
 else ifeq ($(OS),cygwin)
 
 # for cygwin and mingw32 environments
