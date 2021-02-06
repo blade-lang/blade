@@ -32,6 +32,10 @@
 #define IS_WINDOWS
 #endif
 
-#define BIRDY_EXTENSION ".b"
+#define BIRD_EXTENSION ".b"
+#define BIRD_VERSION_STRING "0.0.1"
+#define BVM_VERSION "0.0.1"
+#define BIRD_VERSION_NUMBER 1
+#define BVM_VERSION_NUMBER 1
 
 #endif
