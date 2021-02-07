@@ -635,10 +635,14 @@ static void define_method(b_vm *vm, b_obj_string *name, bool is_static) {
   pop(vm);
 }
 
-static void define_property(b_vm *vm, b_obj_string *name) {
+static void define_property(b_vm *vm, b_obj_string *name, bool is_static) {
   b_value property = peek(vm, 0);
   b_obj_class *klass = AS_CLASS(peek(vm, 1));
-  table_set(vm, &klass->fields, OBJ_VAL(name), property);
+  if (!is_static) {
+    table_set(vm, &klass->fields, OBJ_VAL(name), property);
+  } else {
+    table_set(vm, &klass->static_fields, OBJ_VAL(name), property);
+  }
   pop(vm);
 }
 
@@ -1509,6 +1513,8 @@ b_ptr_result run(b_vm *vm) {
       } else if (IS_CLASS(peek(vm, 0))) {
         b_value value;
         if (table_get(&AS_CLASS(peek(vm, 0))->static_methods, OBJ_VAL(name),
+                      &value) ||
+            table_get(&AS_CLASS(peek(vm, 0))->static_fields, OBJ_VAL(name),
                       &value)) {
           pop(vm); // pop the class...
           push(vm, value);
@@ -1595,7 +1601,7 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
     case OP_CLASS_PROPERTY: {
-      define_property(vm, READ_STRING());
+      define_property(vm, READ_STRING(), READ_BYTE() == 1);
       break;
     }
     case OP_INHERIT: {

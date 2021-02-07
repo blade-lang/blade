@@ -1,5 +1,6 @@
 #include "util.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -129,4 +130,27 @@ char *append_strings(const char *old, const char *new_str) {
   memcpy(out + old_len, new_str, new_len + 1);
 
   return out;
+}
+
+int read_line(char line[], int max) {
+  int nch = 0;
+  int c;
+  max = max - 1; // leave room for '\0'
+
+  while ((c = getchar()) != EOF) {
+    if (c == '\n')
+      break;
+
+    if (nch < max) {
+      line[nch] = *utf8_encode(c);
+      nch = nch + 1;
+    }
+  }
+
+  if (c == EOF && nch == 0)
+    return EOF;
+
+  line[nch] = '\0';
+
+  return nch;
 }
