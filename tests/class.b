@@ -23,6 +23,7 @@ scone.topping('berries', 'cream')
 
 class Person {
   var age = 10
+  static var id = 2001
 
   Person(name) {
     self.name = name
@@ -41,6 +42,7 @@ var person1 = Person('Richard')
 var person2 = Person('Jane')
 
 Person.shout()
+echo Person.id
 
 person1.welcome(5)
 person2.welcome(15)

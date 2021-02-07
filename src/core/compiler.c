@@ -182,7 +182,6 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_CLASS:
   case OP_GET_PROPERTY:
   case OP_SET_PROPERTY:
-  case OP_CLASS_PROPERTY:
   case OP_LIST:
   case OP_DICT:
   case OP_CALL_IMPORT:
@@ -193,6 +192,7 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_INVOKE:
   case OP_SUPER_INVOKE:
   case OP_METHOD:
+  case OP_CLASS_PROPERTY:
     return 3;
 
   case OP_CLOSURE: {
@@ -1264,6 +1264,22 @@ static void method(b_parser *p, b_token class_name, bool is_static) {
   emit_byte(p, is_static ? 1 : 0);
 }
 
+static void field(b_parser *p, bool is_static) {
+  consume(p, IDENTIFIER_TOKEN, "method name expected");
+  int field_constant = identifier_constant(p, &p->previous);
+
+  if (match(p, EQUAL_TOKEN)) {
+    expression(p);
+  } else {
+    emit_byte(p, OP_NIL);
+  }
+  consume_statement_end(p);
+  ignore_whitespace(p);
+
+  emit_byte_and_short(p, OP_CLASS_PROPERTY, field_constant);
+  emit_byte(p, is_static ? 1 : 0);
+}
+
 static void function_declaration(b_parser *p) {
   int global = parse_variable(p, "function name expected");
   mark_initalized(p);
@@ -1309,24 +1325,13 @@ static void class_declaration(b_parser *p) {
   consume(p, LBRACE_TOKEN, "expected '{' before class body");
   ignore_whitespace(p);
   while (!check(p, RBRACE_TOKEN) && !check(p, EOF_TOKEN)) {
+    bool is_static = false;
+    if (match(p, STATIC_TOKEN))
+      is_static = true;
+
     if (match(p, VAR_TOKEN)) {
-      consume(p, IDENTIFIER_TOKEN, "method name expected");
-      int field_constant = identifier_constant(p, &p->previous);
-
-      if (match(p, EQUAL_TOKEN)) {
-        expression(p);
-      } else {
-        emit_byte(p, OP_NIL);
-      }
-      consume_statement_end(p);
-      ignore_whitespace(p);
-
-      emit_byte_and_short(p, OP_CLASS_PROPERTY, field_constant);
+      field(p, is_static);
     } else {
-      bool is_static = false;
-      if (match(p, STATIC_TOKEN))
-        is_static = true;
-
       method(p, class_name, is_static);
       ignore_whitespace(p);
     }

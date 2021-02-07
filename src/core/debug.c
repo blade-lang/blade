@@ -46,8 +46,7 @@ static int jump_instruction(const char *name, int sign, b_blob *blob,
   return offset + 3;
 }
 
-static int try_instruction(const char *name, b_blob *blob,
-                            int offset) {
+static int try_instruction(const char *name, b_blob *blob, int offset) {
   uint16_t jump = (uint16_t)(blob->code[offset + 1] << 8);
   jump |= blob->code[offset + 2];
 
@@ -233,7 +232,9 @@ int disassemble_instruction(b_blob *blob, int offset) {
   case OP_METHOD:
     return method_instruction("methd", blob, offset);
   case OP_CLASS_PROPERTY:
-    return constant_instruction("clprop", blob, offset);
+    return method_instruction("clprop", blob, offset);
+  /* case OP_CLASS_PROPERTY:
+    return constant_instruction("clprop", blob, offset); */
   case OP_GET_SUPER:
     return constant_instruction("gsup", blob, offset);
   case OP_INHERIT:

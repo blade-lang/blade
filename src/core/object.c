@@ -76,6 +76,7 @@ b_obj_class *new_class(b_vm *vm, b_obj_string *name) {
   b_obj_class *klass = ALLOCATE_OBJ(b_obj_class, OBJ_CLASS);
   klass->name = name;
   init_table(&klass->fields);
+  init_table(&klass->static_fields);
   init_table(&klass->methods);
   init_table(&klass->static_methods);
   klass->initializer = EMPTY_VAL;

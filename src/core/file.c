@@ -64,7 +64,7 @@
 #define SET_DICT_STRING(d, n, l, v)                                            \
   dict_add_entry(vm, d, OBJ_VAL(copy_string(vm, n, l)), v)
 
-static bool is_std_file(b_obj_file *file) { return file->mode->length == 0; }
+bool is_std_file(b_obj_file *file) { return file->mode->length == 0; }
 
 static void file_close(b_obj_file *file) {
   if (file->file != NULL && !is_std_file(file)) {
