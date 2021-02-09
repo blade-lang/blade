@@ -459,11 +459,14 @@ DECLARE_STRING_METHOD(to_list) {
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   b_obj_list *list = new_list(vm);
 
-  if (string->length > 0) {
+  if (string->utf8_length > 0) {
 
-    for (int i = 0; i < string->length; i++) {
-      char *ch = &string->chars[i];
-      write_list(vm, list, OBJ_VAL(copy_string(vm, ch, 1)));
+    for (int i = 0; i < string->utf8_length; i++) {
+      int start = i, end = i + 1;
+      utf8slice(string->chars, &start, &end);
+      write_list(
+          vm, list,
+          OBJ_VAL(copy_string(vm, string->chars + start, (int)(end - start))));
     }
   }
 
