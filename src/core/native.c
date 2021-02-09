@@ -631,6 +631,16 @@ DECLARE_NATIVE(is_class) {
 }
 
 /**
+ * is_file(value: any)
+ *
+ * returns true if the value is a file or false otherwise
+ */
+DECLARE_NATIVE(is_file) {
+  ENFORCE_ARG_COUNT(is_file, 1);
+  RETURN_BOOL(IS_FILE(args[0]));
+}
+
+/**
  * is_instance(value: any, name: string)
  *
  * returns true if the value is an instance of a class with name `name` or false

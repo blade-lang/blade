@@ -158,8 +158,10 @@ static void free_object(b_vm *vm, b_obj *object) {
   }
   case OBJ_FILE: {
     b_obj_file *file = (b_obj_file *)object;
-    fclose(file->file);
-    free(file->file);
+    if (file->mode->length != 0) {
+      fclose(file->file);
+      free(file->file);
+    }
     FREE(b_obj_file, object);
     break;
   }

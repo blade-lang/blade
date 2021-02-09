@@ -127,6 +127,7 @@ b_obj_string *allocate_string(b_vm *vm, char *chars, int length,
   b_obj_string *string = ALLOCATE_OBJ(b_obj_string, OBJ_STRING);
   string->chars = chars;
   string->length = length;
+  string->utf8_length = utf8len(chars);
   string->hash = hash;
   string->iter_index = -1;
 

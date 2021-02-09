@@ -9,23 +9,24 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-struct termios tty_terminal_original_termios;
-
-void disable_tty_raw_mode() {
-  tcsetattr(STDIN_FILENO, TCSAFLUSH, &tty_terminal_original_termios);
-}
-
 /**
  * tty._tcgetattr()
  *
  * returns the configuration of the current tty input
  */
 DECLARE_MODULE_METHOD(io_tty__tcgetattr) {
-  ENFORCE_ARG_COUNT(_tcgetattr, 0);
+  ENFORCE_ARG_COUNT(_tcgetattr, 1);
+  ENFORCE_ARG_TYPE(_tcsetattr, 0, IS_FILE);
+
+  b_obj_file *file = AS_FILE(args[0]);
+
+  if (!is_std_file(file)) {
+    RETURN_ERROR("can only use tty on std objects");
+  }
+
   struct termios raw_attr;
   int status;
-  if ((status = tcgetattr(STDIN_FILENO, &raw_attr)) != 0) {
+  if ((status = tcgetattr(fileno(file->file), &raw_attr)) != 0) {
     switch (status) {
     case ENOTTY:
       RETURN_ERROR("stdin is not a TTY");
@@ -92,28 +93,26 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
   b_value iflag = EMPTY_VAL, oflag = EMPTY_VAL, cflag = EMPTY_VAL,
           lflag = EMPTY_VAL, ispeed = EMPTY_VAL, ospeed = EMPTY_VAL;
 
-  tcgetattr(STDIN_FILENO, &tty_terminal_original_termios);
-  atexit(disable_tty_raw_mode);
-
-  struct termios raw = tty_terminal_original_termios;
+  struct termios raw;
+  tcgetattr(fileno(file->file), &raw);
 
   if (dict_get_entry(dict, NUMBER_VAL(0), &iflag)) {
-    raw.c_iflag = (int)AS_NUMBER(iflag);
+    raw.c_iflag = (long)AS_NUMBER(iflag);
   }
   if (dict_get_entry(dict, NUMBER_VAL(1), &iflag)) {
-    raw.c_oflag = (int)AS_NUMBER(oflag);
+    raw.c_oflag = (long)AS_NUMBER(oflag);
   }
   if (dict_get_entry(dict, NUMBER_VAL(2), &iflag)) {
-    raw.c_cflag = (int)AS_NUMBER(cflag);
+    raw.c_cflag = (long)AS_NUMBER(cflag);
   }
   if (dict_get_entry(dict, NUMBER_VAL(3), &iflag)) {
-    raw.c_lflag = (int)AS_NUMBER(lflag);
+    raw.c_lflag = (long)AS_NUMBER(lflag);
   }
   if (dict_get_entry(dict, NUMBER_VAL(4), &iflag)) {
-    raw.c_ispeed = (int)AS_NUMBER(ispeed);
+    raw.c_ispeed = (long)AS_NUMBER(ispeed);
   }
   if (dict_get_entry(dict, NUMBER_VAL(5), &iflag)) {
-    raw.c_ospeed = (int)AS_NUMBER(ospeed);
+    raw.c_ospeed = (long)AS_NUMBER(ospeed);
   }
 
   RETURN_BOOL(tcsetattr(fileno(file->file), type, &raw) != -1);
@@ -124,7 +123,7 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
  *
  * flushes the standard output and standard error interface
  */
-DECLARE_MODULE_METHOD(io_tty_flush) {
+DECLARE_MODULE_METHOD(io_tty__flush) {
   ENFORCE_ARG_COUNT(TTY.flush, 0);
   fflush(stdout);
   fflush(stderr);
@@ -245,7 +244,7 @@ static b_func_reg io_functions[] = {
 static b_func_reg tty_class_functions[] = {
     {"_tcgetattr", false, GET_MODULE_METHOD(io_tty__tcgetattr)},
     {"_tcsetattr", false, GET_MODULE_METHOD(io_tty__tcsetattr)},
-    {"flush", false, GET_MODULE_METHOD(io_tty_flush)},
+    {"_flush", false, GET_MODULE_METHOD(io_tty__flush)},
     {NULL, false, NULL},
 };
 

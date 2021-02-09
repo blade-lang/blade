@@ -93,27 +93,38 @@ class TTY {
   /*
   The constructor of the TTY class. 
   */
-  TTY() {
+  TTY(std) {
+    if !is_file(std) {
+      die Exception('TTY expects a standard file as argument, ' + type(std) + ' given')
+    }
+
+    self.std = std
+
     # retain a copy of TTY's default attr as at when TTY() was first called
-    self.default_attr = self.get_attr()
+    self.default_attr = nil
   }
 
-  # stub method for native declared _tcsetattr and _tcgetattr
+  # stub method for native declared _tcsetattr, _tcgetattr and _flush
 
   /*
-  _tcsetattr(attrs: dict)
+  _tcsetattr(file, attrs: dict)
 
-  sets the attributes of a tty
+  sets the attributes of a tty file
 
   @return true if succeed or false otherwise
   TODO: support the c_cc flag 
   */
-  _tcsetattr(attrs) {}
+  _tcsetattr(file, attrs) {}
 
   /*
-  _tcgetattr() returns the configuration of the current tty input
+  _tcgetattr(file) returns the configuration of the current tty file
   */
-  _tcgetattr() {}
+  _tcgetattr(file) {}
+
+  /*
+  _flush(file) flushes the standard file
+  */
+  _flush(file) {}
 
   /*
   get_attr() 
@@ -122,14 +133,13 @@ class TTY {
   The returned a attributes is a dict containing the TTY_ flags 
   */
   get_attr() {
-    return self._tcgetattr()
+    return self._tcgetattr(self.std)
   }
 
   /* 
-  set_attr(std: std_file, option: number, attrs: dict) 
+  set_attr(option: number, attrs: dict) 
   
   sets the attributes of the current tty session
-  - std: one of stdin, stdout and stderr
   - option: one ot the TCSA options above (see their description above)
   - attrs a dictionary of the TTY_ flags listed above
 
@@ -137,8 +147,8 @@ class TTY {
   Bird will fill in the default values as it exists.
   - Note that this flags will be merged and not overwritten
   */
-  set_attr(std, option, attrs) {
-    return self._tcsetattr(std, option, attrs)
+  set_attr(option, attrs) {
+    return self._tcsetattr(self.std, option, attrs)
   }
 
   /*
@@ -147,7 +157,7 @@ class TTY {
   sets the current tty to raw mode
   */
   set_raw() {
-    var new_attr = self.default_attr
+    var new_attr = self.self.get_attr()
 
     new_attr[TTY_IFLAG] = new_attr[TTY_IFLAG] & ~(TTY.IGNBRK | TTY.BRKINT | TTY.PARMRK | TTY.ISTRIP | TTY.INLCR | TTY.IGNCR | TTY.ICRNL | TTY.IXON)
     new_attr[TTY_OFLAG] = new_attr[TTY_OFLAG] & ~TTY.OPOST
@@ -155,14 +165,25 @@ class TTY {
     new_attr[TTY_CFLAG] = new_attr[TTY_CFLAG] & ~(TTY.CSIZE | TTY.PARENB)
     new_attr[TTY_CFLAG] = new_attr[TTY_CFLAG] | (TTY.CS8)
     
-    self.set_attr(stdin(), TTY.TCSAFLUSH, new_attr)
+    return self.set_attr(TTY.TCSAFLUSH, new_attr)
   }
 
-  # stub method for flush
+  /*
+  exit_raw() 
+  
+  disables the raw mode flags on the current tty
+  */
+  exit_raw() {
+    echo self.default_attr
+    return self.set_attr(TTY.TCSAFLUSH, self.default_attr)
+  }
+
   /*
   flush() flushes the standard output and standard error interface
   */
-  flush() {}
+  flush() {
+    self._flush(self.std);
+  }
 }
 
 /* 

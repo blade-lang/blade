@@ -91,8 +91,8 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-build_triplet = x86_64-pc-cygwin
-host_triplet = x86_64-pc-cygwin
+build_triplet = x86_64-apple-darwin18.7.0
+host_triplet = x86_64-apple-darwin18.7.0
 TESTS = $(am__EXEEXT_4) RunTest $(am__append_32)
 bin_PROGRAMS = $(am__EXEEXT_1) pcre2test$(EXEEXT)
 noinst_PROGRAMS = $(am__EXEEXT_2) $(am__EXEEXT_3) $(am__EXEEXT_4)
@@ -752,7 +752,7 @@ am__set_TESTS_bases = \
   bases=`echo $$bases`
 RECHECK_LOGS = $(TEST_LOGS)
 TEST_SUITE_LOG = test-suite.log
-TEST_EXTENSIONS = .exe .test
+TEST_EXTENSIONS =  .test
 LOG_DRIVER = $(SHELL) $(top_srcdir)/test-driver
 LOG_COMPILE = $(LOG_COMPILER) $(AM_LOG_FLAGS) $(LOG_FLAGS)
 am__set_b = \
@@ -766,7 +766,7 @@ am__set_b = \
       b='$*';; \
   esac
 am__test_logs1 = $(TESTS:=.log)
-am__test_logs2 = $(am__test_logs1:.exe.log=.log)
+am__test_logs2 = $(am__test_logs1:.log=.log)
 TEST_LOGS = $(am__test_logs2:.test.log=.log)
 TEST_LOG_DRIVER = $(SHELL) $(top_srcdir)/test-driver
 TEST_LOG_COMPILE = $(TEST_LOG_COMPILER) $(AM_TEST_LOG_FLAGS) \
@@ -795,36 +795,36 @@ distuninstallcheck_listfiles = find . -type f -print
 am__distuninstallcheck_listfiles = $(distuninstallcheck_listfiles) \
   | sed 's|^\./|$(prefix)/|' | grep -v '$(infodir)/dir$$'
 distcleancheck_listfiles = find . -type f -print
-ACLOCAL = ${SHELL} /cygdrive/c/Users/Richard/Documents/Bird/deps/pcre2/missing aclocal-1.16
+ACLOCAL = ${SHELL} /Users/appzone/c/birdy/deps/pcre2/missing aclocal-1.16
 AMTAR = $${TAR-tar}
 AM_DEFAULT_VERBOSITY = 0
 AR = ar
 AS = as
-AUTOCONF = ${SHELL} /cygdrive/c/Users/Richard/Documents/Bird/deps/pcre2/missing autoconf
-AUTOHEADER = ${SHELL} /cygdrive/c/Users/Richard/Documents/Bird/deps/pcre2/missing autoheader
-AUTOMAKE = ${SHELL} /cygdrive/c/Users/Richard/Documents/Bird/deps/pcre2/missing automake-1.16
-AWK = gawk
+AUTOCONF = ${SHELL} /Users/appzone/c/birdy/deps/pcre2/missing autoconf
+AUTOHEADER = ${SHELL} /Users/appzone/c/birdy/deps/pcre2/missing autoheader
+AUTOMAKE = ${SHELL} /Users/appzone/c/birdy/deps/pcre2/missing automake-1.16
+AWK = awk
 CC = gcc
 CCDEPMODE = depmode=gcc3
 CFLAGS = -O2
 CPP = gcc -E
-CPPFLAGS = 
-CYGPATH_W = cygpath -w
+CPPFLAGS = -I/usr/local/Cellar/llvm/11.0.0/include
+CYGPATH_W = echo
 DEFS = -DHAVE_CONFIG_H
 DEPDIR = .deps
 DISTCHECK_CONFIGURE_FLAGS = CFLAGS='' CXXFLAGS='' --enable-pcre2-16 --enable-pcre2-32 --enable-jit
 DLLTOOL = dlltool
-DSYMUTIL = 
+DSYMUTIL = dsymutil
 DUMPBIN = 
-ECHO_C = 
-ECHO_N = -n
+ECHO_C = \c
+ECHO_N = 
 ECHO_T = 
 EGREP = /usr/bin/grep -E
-EXEEXT = .exe
-EXTRA_LIBPCRE2_16_LDFLAGS =    -no-undefined -version-info 10:0:10
-EXTRA_LIBPCRE2_32_LDFLAGS =    -no-undefined -version-info 10:0:10
-EXTRA_LIBPCRE2_8_LDFLAGS =    -no-undefined -version-info 10:0:10
-EXTRA_LIBPCRE2_POSIX_LDFLAGS =    -no-undefined -version-info 2:3:0
+EXEEXT = 
+EXTRA_LIBPCRE2_16_LDFLAGS =     -version-info 10:0:10
+EXTRA_LIBPCRE2_32_LDFLAGS =     -version-info 10:0:10
+EXTRA_LIBPCRE2_8_LDFLAGS =     -version-info 10:0:10
+EXTRA_LIBPCRE2_POSIX_LDFLAGS =     -version-info 2:3:0
 FGREP = /usr/bin/grep -F
 GCOV_CFLAGS = 
 GCOV_CXXFLAGS = 
@@ -838,27 +838,27 @@ INSTALL_PROGRAM = ${INSTALL}
 INSTALL_SCRIPT = ${INSTALL}
 INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
 LCOV = 
-LD = /usr/x86_64-pc-cygwin/bin/ld.exe
-LDFLAGS = 
+LD = /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld
+LDFLAGS = -L/usr/local/Cellar/llvm/11.0.0/lib
 LIBBZ2 = 
 LIBOBJS = 
 LIBREADLINE = 
 LIBS = 
 LIBTOOL = $(SHELL) $(top_builddir)/libtool
 LIBZ = 
-LIPO = 
+LIPO = lipo
 LN_S = ln -s
 LTLIBOBJS = 
 LT_SYS_LIBRARY_PATH = 
-MAKEINFO = ${SHELL} /cygdrive/c/Users/Richard/Documents/Bird/deps/pcre2/missing makeinfo
+MAKEINFO = ${SHELL} /Users/appzone/c/birdy/deps/pcre2/missing makeinfo
 MANIFEST_TOOL = :
-MKDIR_P = /usr/bin/mkdir -p
+MKDIR_P = ./install-sh -c -d
 NM = /usr/bin/nm -B
-NMEDIT = 
+NMEDIT = nmedit
 OBJDUMP = objdump
 OBJEXT = o
-OTOOL = 
-OTOOL64 = 
+OTOOL = otool
+OTOOL64 = :
 PACKAGE = pcre2
 PACKAGE_BUGREPORT = 
 PACKAGE_NAME = PCRE2
@@ -889,10 +889,10 @@ VALGRIND_LIBS =
 VERSION = 10.35
 VISIBILITY_CFLAGS = -fvisibility=hidden
 VISIBILITY_CXXFLAGS = -fvisibility=hidden -fvisibility-inlines-hidden
-abs_builddir = /cygdrive/c/Users/Richard/Documents/Bird/deps/pcre2
-abs_srcdir = /cygdrive/c/Users/Richard/Documents/Bird/deps/pcre2
-abs_top_builddir = /cygdrive/c/Users/Richard/Documents/Bird/deps/pcre2
-abs_top_srcdir = /cygdrive/c/Users/Richard/Documents/Bird/deps/pcre2
+abs_builddir = /Users/appzone/c/birdy/deps/pcre2
+abs_srcdir = /Users/appzone/c/birdy/deps/pcre2
+abs_top_builddir = /Users/appzone/c/birdy/deps/pcre2
+abs_top_srcdir = /Users/appzone/c/birdy/deps/pcre2
 ac_ct_AR = ar
 ac_ct_CC = gcc
 ac_ct_DUMPBIN = 
@@ -903,11 +903,11 @@ am__tar = $${TAR-tar} chof - "$$tardir"
 am__untar = $${TAR-tar} xf -
 ax_pthread_config = 
 bindir = ${exec_prefix}/bin
-build = x86_64-pc-cygwin
+build = x86_64-apple-darwin18.7.0
 build_alias = 
 build_cpu = x86_64
-build_os = cygwin
-build_vendor = pc
+build_os = darwin18.7.0
+build_vendor = apple
 builddir = .
 datadir = ${datarootdir}
 datarootdir = ${prefix}/share
@@ -917,15 +917,15 @@ enable_pcre2_16 = no
 enable_pcre2_32 = no
 enable_pcre2_8 = yes
 exec_prefix = ${prefix}
-host = x86_64-pc-cygwin
+host = x86_64-apple-darwin18.7.0
 host_alias = 
 host_cpu = x86_64
-host_os = cygwin
-host_vendor = pc
+host_os = darwin18.7.0
+host_vendor = apple
 htmldir = ${docdir}/html
 includedir = ${prefix}/include
 infodir = ${datarootdir}/info
-install_sh = ${SHELL} /cygdrive/c/Users/Richard/Documents/Bird/deps/pcre2/install-sh
+install_sh = ${SHELL} /Users/appzone/c/birdy/deps/pcre2/install-sh
 libdir = ${exec_prefix}/lib
 libexecdir = ${exec_prefix}/libexec
 localedir = ${datarootdir}/locale
@@ -3017,13 +3017,13 @@ RunGrepTest.log: RunGrepTest
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_TEST_LOG_DRIVER_FLAGS) $(TEST_LOG_DRIVER_FLAGS) -- $(TEST_LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
-.test$(EXEEXT).log:
-	@p='$<'; \
-	$(am__set_b); \
-	$(am__check_pre) $(TEST_LOG_DRIVER) --test-name "$$f" \
-	--log-file $$b.log --trs-file $$b.trs \
-	$(am__common_driver_flags) $(AM_TEST_LOG_DRIVER_FLAGS) $(TEST_LOG_DRIVER_FLAGS) -- $(TEST_LOG_COMPILE) \
-	"$$tst" $(AM_TESTS_FD_REDIRECT)
+#.test$(EXEEXT).log:
+#	@p='$<'; \
+#	$(am__set_b); \
+#	$(am__check_pre) $(TEST_LOG_DRIVER) --test-name "$$f" \
+#	--log-file $$b.log --trs-file $$b.trs \
+#	$(am__common_driver_flags) $(AM_TEST_LOG_DRIVER_FLAGS) $(TEST_LOG_DRIVER_FLAGS) -- $(TEST_LOG_COMPILE) \
+#	"$$tst" $(AM_TESTS_FD_REDIRECT)
 
 distdir: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) distdir-am

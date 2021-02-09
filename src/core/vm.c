@@ -205,6 +205,7 @@ static void init_builtin_functions(b_vm *vm) {
   DEFINE_NATIVE(is_number);
   DEFINE_NATIVE(is_object);
   DEFINE_NATIVE(is_string);
+  DEFINE_NATIVE(is_file);
   DEFINE_NATIVE(max);
   DEFINE_NATIVE(microtime);
   DEFINE_NATIVE(min);
@@ -837,15 +838,19 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
     int index = AS_NUMBER(lower);
     int real_index = index;
     if (index < 0)
-      index = string->length + index;
+      index = string->utf8_length + index;
 
-    if (index < string->length && index >= 0) {
+    if (index < string->utf8_length && index >= 0) {
       if (!will_assign) {
         // we can safely get rid of the index from the stack
         popn(vm, 2); // +1 for the list itself
       }
 
-      push(vm, OBJ_VAL(copy_string(vm, &string->chars[index], 1)));
+      int start = index, end = index + 1;
+      utf8slice(string->chars, &start, &end);
+
+      push(vm,
+           OBJ_VAL(copy_string(vm, string->chars + start, (int)(end - start))));
       return true;
     } else {
       _runtime_error(vm, "string index %d out of range", real_index);
@@ -861,7 +866,7 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
     int upper_index = AS_NUMBER(upper);
 
     if (lower_index < 0 ||
-        (upper_index < 0 && ((string->length + upper_index) < 0))) {
+        (upper_index < 0 && ((string->utf8_length + upper_index) < 0))) {
       // always return an empty list...
       if (!will_assign) {
         popn(vm, 3); // +1 for the list itself
@@ -871,16 +876,20 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
     }
 
     if (upper_index < 0)
-      upper_index = string->length + upper_index;
+      upper_index = string->utf8_length + upper_index;
 
-    if (upper_index > string->length)
-      upper_index = string->length;
+    if (upper_index > string->utf8_length)
+      upper_index = string->utf8_length;
 
     if (!will_assign) {
       popn(vm, 3); // +1 for the list itself
     }
-    push(vm, OBJ_VAL(copy_string(vm, string->chars + lower_index,
-                                 upper_index - lower_index)));
+
+    int start = lower_index, end = upper_index;
+    utf8slice(string->chars, &start, &end);
+
+    push(vm,
+         OBJ_VAL(copy_string(vm, string->chars + start, (int)(end - start))));
     return true;
   }
 }

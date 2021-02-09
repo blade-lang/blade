@@ -26,7 +26,7 @@ static void repl(b_vm *vm) {
 
   vm->is_repl = true;
 
-  fprintf(stdout, "Birdy %s (running on BVM %s), REPL/Interactive mode = ON\n",
+  fprintf(stdout, "Bird %s (running on BVM %s), REPL/Interactive mode = ON\n",
           BIRD_VERSION_STRING, BVM_VERSION);
   fprintf(stdout, "%s, (Build time = %s, %s)\n", COMPILER, __DATE__, __TIME__);
   fprintf(stdout,

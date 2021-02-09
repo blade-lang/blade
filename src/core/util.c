@@ -154,3 +154,32 @@ int read_line(char line[], int max) {
 
   return nch;
 }
+
+int utf8len(char *s) {
+  int len = 0;
+  for (; *s; ++s)
+    if ((*s & 0xC0) != 0x80)
+      ++len;
+  return len;
+}
+
+// returns a pointer to the beginning of the pos'th utf8 codepoint
+// in the buffer at s
+char *utf8index(char *s, int pos) {
+  ++pos;
+  for (; *s; ++s) {
+    if ((*s & 0xC0) != 0x80)
+      --pos;
+    if (pos == 0)
+      return s;
+  }
+  return NULL;
+}
+
+// converts codepoint indexes start and end to byte offsets in the buffer at s
+void utf8slice(char *s, int *start, int *end) {
+  char *p = utf8index(s, *start);
+  *start = p != NULL ? p - s : -1;
+  p = utf8index(s, *end);
+  *end = p != NULL ? p - s : (int)strlen(s);
+}
