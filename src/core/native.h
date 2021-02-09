@@ -198,6 +198,7 @@ DECLARE_NATIVE(is_dict);
 DECLARE_NATIVE(is_object);
 DECLARE_NATIVE(is_function);
 DECLARE_NATIVE(is_class);
+DECLARE_NATIVE(is_file);
 DECLARE_NATIVE(is_instance);
 
 DECLARE_NATIVE(print);

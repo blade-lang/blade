@@ -54,13 +54,13 @@ sure both macros are undefined; an emulation function will then be used. */
 /* #undef EBCDIC_NL25 */
 
 /* Define this if your compiler supports __attribute__((uninitialized)) */
-/* #undef HAVE_ATTRIBUTE_UNINITIALIZED */
+#define HAVE_ATTRIBUTE_UNINITIALIZED 1
 
 /* Define to 1 if you have the `bcopy' function. */
 #define HAVE_BCOPY 1
 
 /* Define to 1 if you have the <bzlib.h> header file. */
-/* #undef HAVE_BZLIB_H */
+#define HAVE_BZLIB_H 1
 
 /* Define to 1 if you have the <dirent.h> header file. */
 #define HAVE_DIRENT_H 1
@@ -105,7 +105,7 @@ sure both macros are undefined; an emulation function will then be used. */
 /* #undef HAVE_READLINE_READLINE_H */
 
 /* Define to 1 if you have the `secure_getenv' function. */
-#define HAVE_SECURE_GETENV 1
+/* #undef HAVE_SECURE_GETENV */
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1
@@ -138,10 +138,10 @@ sure both macros are undefined; an emulation function will then be used. */
 #define HAVE_VISIBILITY 1
 
 /* Define to 1 if you have the <windows.h> header file. */
-#define HAVE_WINDOWS_H 1
+/* #undef HAVE_WINDOWS_H */
 
 /* Define to 1 if you have the <zlib.h> header file. */
-/* #undef HAVE_ZLIB_H */
+#define HAVE_ZLIB_H 1
 
 /* This limits the amount of memory that may be used while matching a pattern.
    It applies to both pcre2_match() and pcre2_dfa_match(). It does not apply

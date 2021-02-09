@@ -119,7 +119,7 @@ char *remove_regex_delimiter(b_vm *vm, b_obj_string *string) {
 
 DECLARE_STRING_METHOD(length) {
   ENFORCE_ARG_COUNT(length, 0);
-  RETURN_NUMBER(AS_STRING(METHOD_OBJECT)->length);
+  RETURN_NUMBER(AS_STRING(METHOD_OBJECT)->utf8_length);
 }
 
 DECLARE_STRING_METHOD(upper) {
@@ -336,7 +336,7 @@ DECLARE_STRING_METHOD(join) {
                                         : AS_DICT(argument)->names.values;
 
     if (length == 0)
-      RETURN_VALUE(argument);
+      RETURN_LSTRING("", 0);
 
     array = (char **)calloc(length, sizeof(char **));
 
@@ -351,7 +351,7 @@ DECLARE_STRING_METHOD(join) {
 
   for (int i = 0; i < length; i++) {
     if (i != 0)
-      array[0] = append_strings(array[0], array[1]);
+      array[0] = append_strings(array[0], array[i]);
 
     if (i != length - 1)
       array[0] = append_strings(array[0], AS_CSTRING(METHOD_OBJECT));
@@ -823,10 +823,9 @@ DECLARE_STRING_METHOD(matches) {
     }
 
     if (rc < 0) {
-      _runtime_error(vm,"regular expression error %d", rc);
       pcre2_match_data_free(match_data);
       pcre2_code_free(re);
-      return EMPTY_VAL;
+      RETURN_ERROR("regular expression error %d", rc);
     }
 
     // REGEX_VECTOR_SIZE_WARNING();
@@ -926,9 +925,9 @@ DECLARE_STRING_METHOD(replace) {
   int result, error_number;
   PCRE2_SIZE error_offset;
 
-  pcre2_code *re =
-      pcre2_compile(pattern, PCRE2_ZERO_TERMINATED, PCRE2_MULTILINE,
-                    &error_number, &error_offset, 0);
+  pcre2_code *re = pcre2_compile(pattern, PCRE2_ZERO_TERMINATED,
+                                 compile_options & PCRE2_MULTILINE,
+                                 &error_number, &error_offset, 0);
 
   REGEX_COMPILATION_ERROR(re, error_number, error_offset);
 
@@ -942,8 +941,7 @@ DECLARE_STRING_METHOD(replace) {
       0, match_context, replacement, PCRE2_ZERO_TERMINATED, 0, &output_length);
 
   if (result != PCRE2_ERROR_NOMEMORY) {
-    _runtime_error(vm,"regular expression post-compilation failed for replacement");
-    return EMPTY_VAL;
+    RETURN_ERROR("regular expression post-compilation failed for replacement");
   }
 
   PCRE2_UCHAR *output_buffer = malloc(output_length * sizeof(PCRE2_UCHAR));
@@ -954,8 +952,7 @@ DECLARE_STRING_METHOD(replace) {
       replacement, PCRE2_ZERO_TERMINATED, output_buffer, &output_length);
 
   if (result < 0) {
-    _runtime_error(vm,"regular expression error at replacement time");
-    return EMPTY_VAL;
+    RETURN_ERROR("regular expression error at replacement time");
   }
 
   b_obj_string *response =

@@ -72,6 +72,7 @@ struct s_obj {
 struct s_obj_string {
   b_obj obj;
   int length;
+  int utf8_length;
   int iter_index;
   char *chars;
   uint32_t hash;
