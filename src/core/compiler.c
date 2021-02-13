@@ -161,6 +161,7 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_DIE:
   case OP_END_TRY:
   case OP_RANGE:
+  case OP_STRINGIFY:
     return 0;
 
   case OP_CALL:
@@ -958,6 +959,9 @@ static char *_string(b_parser *p, bool can_assign) {
       case '0':
         c = '\0';
         break;
+      case '$':
+        c = '$';
+        break;
       case '\'':
         c = '\'';
         break;
@@ -1019,6 +1023,22 @@ static char *_string(b_parser *p, bool can_assign) {
 static void string(b_parser *p, bool can_assign) {
   char *str = _string(p, can_assign);
   emit_constant(p, OBJ_VAL(copy_string(p->vm, str, (int)strlen(str))));
+}
+
+static void string_interpolation(b_parser *p, bool can_assign) {
+  do {
+    string(p,can_assign);
+
+    expression(p);
+    emit_byte(p,OP_STRINGIFY);
+
+    emit_byte(p,OP_ADD);
+  } while(match(p,INTERPOLATION_TOKEN));
+
+  consume(p,LITERAL_TOKEN,"unterminated string interpolation");
+  string(p,can_assign);
+
+  emit_byte(p,OP_ADD);
 }
 
 static void unary(b_parser *p, bool can_assign) {
@@ -1158,6 +1178,7 @@ b_parse_rule parse_rules[] = {
     [OCT_NUMBER_TOKEN] = {number, NULL, PREC_NONE}, // octal numbers
     [HEX_NUMBER_TOKEN] = {number, NULL, PREC_NONE}, // hexadecimal numbers
     [IDENTIFIER_TOKEN] = {variable, NULL, PREC_NONE},
+    [INTERPOLATION_TOKEN] = {string_interpolation, NULL, PREC_NONE},
     [EOF_TOKEN] = {NULL, NULL, PREC_NONE},
 
     // error

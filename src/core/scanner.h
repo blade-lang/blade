@@ -95,6 +95,7 @@ typedef enum {
   OCT_NUMBER_TOKEN, // octal numbers
   HEX_NUMBER_TOKEN, // hexadecimal numbers
   IDENTIFIER_TOKEN,
+  INTERPOLATION_TOKEN,
   EOF_TOKEN,
 
   // error
@@ -114,6 +115,7 @@ typedef struct {
   const char *start;
   const char *current;
   int line;
+  char interpolating;
 } b_scanner;
 
 void init_scanner(b_scanner *s, const char *source);

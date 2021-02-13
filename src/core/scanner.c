@@ -10,6 +10,7 @@ void init_scanner(b_scanner *s, const char *source) {
   s->current = source;
   s->start = source;
   s->line = 1;
+  s->interpolating = '\0';
 }
 
 static bool is_at_end(b_scanner *s) { return *s->current == '\0'; }
@@ -155,6 +156,13 @@ static b_token string(b_scanner *s, char quote) {
   while (
       ((previous(s) == '\\' && current(s) == quote) || current(s) != quote) &&
       !is_at_end(s)) {
+    if (current(s) == '$' && next(s) == '{' && previous(s) != '\\') { // interpolation started
+      s->interpolating = quote;
+      s->current++;
+      b_token tkn = make_token(s, INTERPOLATION_TOKEN);
+      s->current++;
+      return tkn;
+    }
     advance(s);
   }
 
@@ -360,7 +368,7 @@ b_token scan_token(b_scanner *s) {
   switch (c) {
   case '(':
     return make_token(s, LPAREN_TOKEN);
-  case ')':
+  case ')': 
     return make_token(s, RPAREN_TOKEN);
   case '[':
     return make_token(s, LBRACKET_TOKEN);
@@ -369,6 +377,11 @@ b_token scan_token(b_scanner *s) {
   case '{':
     return make_token(s, LBRACE_TOKEN);
   case '}':
+    if (s->interpolating != '\0') {
+      char quote = s->interpolating;
+      s->interpolating = '\0';
+      return string(s, quote);
+    }
     return make_token(s, RBRACE_TOKEN);
   case ';':
     return make_token(s, SEMICOLON_TOKEN);

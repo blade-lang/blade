@@ -1399,6 +1399,12 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
 
+    case OP_STRINGIFY: {
+      char *value = value_to_string(vm, pop(vm));
+      push(vm, OBJ_VAL(take_string(vm, value, (int)strlen(value))));
+      break;
+    }
+
     case OP_DUP: {
       push(vm, peek(vm, 0));
       break;
