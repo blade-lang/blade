@@ -1,6 +1,8 @@
 #ifndef bird_scanner_h
 #define bird_scanner_h
 
+#include "common.h"
+
 typedef enum {
   // symbols
   NEWLINE_TOKEN,     // \n
@@ -115,7 +117,8 @@ typedef struct {
   const char *start;
   const char *current;
   int line;
-  char interpolating;
+  char interpolating[MAX_INTERPOLATION_NESTING];
+  int interpolating_count;
 } b_scanner;
 
 void init_scanner(b_scanner *s, const char *source);

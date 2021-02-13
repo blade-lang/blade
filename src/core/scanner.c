@@ -10,7 +10,7 @@ void init_scanner(b_scanner *s, const char *source) {
   s->current = source;
   s->start = source;
   s->line = 1;
-  s->interpolating = '\0';
+  s->interpolating_count = -1;
 }
 
 static bool is_at_end(b_scanner *s) { return *s->current == '\0'; }
@@ -157,11 +157,15 @@ static b_token string(b_scanner *s, char quote) {
       ((previous(s) == '\\' && current(s) == quote) || current(s) != quote) &&
       !is_at_end(s)) {
     if (current(s) == '$' && next(s) == '{' && previous(s) != '\\') { // interpolation started
-      s->interpolating = quote;
-      s->current++;
-      b_token tkn = make_token(s, INTERPOLATION_TOKEN);
-      s->current++;
-      return tkn;
+      if(s->interpolating_count - 1 < MAX_INTERPOLATION_NESTING) {
+        s->interpolating[s->interpolating_count++] = quote;
+        s->current++;
+        b_token tkn = make_token(s, INTERPOLATION_TOKEN);
+        s->current++;
+        return tkn;
+      }
+
+      return error_token(s, "maxmimum interpolation nesting exceeded", 0);
     }
     advance(s);
   }
@@ -377,10 +381,9 @@ b_token scan_token(b_scanner *s) {
   case '{':
     return make_token(s, LBRACE_TOKEN);
   case '}':
-    if (s->interpolating != '\0') {
-      char quote = s->interpolating;
-      s->interpolating = '\0';
-      return string(s, quote);
+    if (s->interpolating_count > -1) {
+      s->interpolating_count--;
+      return string(s, s->interpolating[s->interpolating_count]);
     }
     return make_token(s, RBRACE_TOKEN);
   case ';':
