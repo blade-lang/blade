@@ -1648,10 +1648,11 @@ b_ptr_result run(b_vm *vm) {
     case OP_LIST: {
       int count = READ_SHORT();
       b_obj_list *list = new_list(vm);
+      push(vm, OBJ_VAL(list));
       for (int i = count - 1; i >= 0; i--) {
-        write_value_arr(vm, &list->items, peek(vm, i));
+        write_list(vm, list, peek(vm, i + 1)); // +1 to skip the list
       }
-      popn(vm, count);
+      popn(vm, count + 1); // + 1 for the list itself
       push(vm, OBJ_VAL(list));
       break;
     }

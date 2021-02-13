@@ -261,23 +261,38 @@ DECLARE_BYTES_METHOD(to_string) {
 }
 
 DECLARE_BYTES_METHOD(__iter__) {
-  ENFORCE_ARG_COUNT(__iter__, 0);
+  ENFORCE_ARG_COUNT(__iter__, 1);
+  ENFORCE_ARG_TYPE(__iter__, 0, IS_NUMBER);
+
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
-  if (bytes->iter_index > -1) {
-    RETURN_NUMBER((int)bytes->bytes.bytes[bytes->iter_index]);
+
+  int index = AS_NUMBER(args[0]);
+
+  if (index > -1 && index < bytes->bytes.count) {
+    RETURN_NUMBER((int)bytes->bytes.bytes[index]);
   }
 
   RETURN;
 }
 
 DECLARE_BYTES_METHOD(__itern__) {
-  ENFORCE_ARG_COUNT(__itern__, 0);
+  ENFORCE_ARG_COUNT(__itern__, 1);
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
-  bytes->iter_index++;
-  if (bytes->iter_index < bytes->bytes.count) {
-    RETURN_NUMBER(bytes->iter_index);
+
+  if (IS_NIL(args[0])) {
+    if (bytes->bytes.count == 0)
+      RETURN_FALSE;
+    RETURN_NUMBER(0);
   }
 
-  bytes->iter_index = -1;
-  RETURN_EMPTY;
+  if (!IS_NUMBER(args[0])) {
+    RETURN_ERROR("bytes are numerically indexed");
+  }
+
+  int index = AS_NUMBER(args[0]);
+  if (index < bytes->bytes.count - 1) {
+    RETURN_NUMBER(index + 1);
+  }
+
+  RETURN;
 }

@@ -974,23 +974,40 @@ DECLARE_STRING_METHOD(to_bytes) {
 }
 
 DECLARE_STRING_METHOD(__iter__) {
-  ENFORCE_ARG_COUNT(__iter__, 0);
+  ENFORCE_ARG_COUNT(__iter__, 1);
+  ENFORCE_ARG_TYPE(__iter__, 0, IS_NUMBER);
+
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
-  if (string->iter_index > -1) {
-    RETURN_LSTRING(&string->chars[string->iter_index], 1);
+  int index = AS_NUMBER(args[0]);
+
+  if (index > -1 && index < string->length) {
+    int start = index, end = index + 1;
+    utf8slice(string->chars, &start, &end);
+
+    RETURN_LSTRING(string->chars + start, (int)(end - start));
   }
 
   RETURN;
 }
 
 DECLARE_STRING_METHOD(__itern__) {
-  ENFORCE_ARG_COUNT(__itern__, 0);
+  ENFORCE_ARG_COUNT(__itern__, 1);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
-  string->iter_index++;
-  if (string->iter_index < string->length) {
-    RETURN_NUMBER(string->iter_index);
+
+  if (IS_NIL(args[0])) {
+    if (string->length == 0)
+      RETURN_FALSE;
+    RETURN_NUMBER(0);
   }
 
-  string->iter_index = -1;
-  RETURN_EMPTY;
+  if (!IS_NUMBER(args[0])) {
+    RETURN_ERROR("bytes are numerically indexed");
+  }
+
+  int index = AS_NUMBER(args[0]);
+  if (index < string->length - 1) {
+    RETURN_NUMBER(index + 1);
+  }
+
+  RETURN;
 }
