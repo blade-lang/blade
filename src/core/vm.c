@@ -678,12 +678,12 @@ bool is_falsey(b_value value) {
 }
 
 bool is_instance_of(b_obj_class *klass1, b_obj_class *klass2) {
-  while (klass2 != NULL) {
+  while (klass1 != NULL) {
     if (memcmp(klass1->name->chars, klass2->name->chars,
                klass1->name->length) == 0) {
       return true;
     }
-    klass2 = klass2->superclass;
+    klass1 = klass1->superclass;
   }
 
   return false;
