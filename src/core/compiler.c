@@ -1027,18 +1027,18 @@ static void string(b_parser *p, bool can_assign) {
 
 static void string_interpolation(b_parser *p, bool can_assign) {
   do {
-    string(p,can_assign);
+    string(p, can_assign);
 
     expression(p);
-    emit_byte(p,OP_STRINGIFY);
+    emit_byte(p, OP_STRINGIFY);
 
-    emit_byte(p,OP_ADD);
-  } while(match(p,INTERPOLATION_TOKEN));
+    emit_byte(p, OP_ADD);
+  } while (match(p, INTERPOLATION_TOKEN));
 
-  consume(p,LITERAL_TOKEN,"unterminated string interpolation");
-  string(p,can_assign);
+  consume(p, LITERAL_TOKEN, "unterminated string interpolation");
+  string(p, can_assign);
 
-  emit_byte(p,OP_ADD);
+  emit_byte(p, OP_ADD);
 }
 
 static void unary(b_parser *p, bool can_assign) {
