@@ -192,6 +192,8 @@ int disassemble_instruction(b_blob *blob, int offset) {
     return short_instruction("popn", blob, offset);
 
     // data container manipulators
+  case OP_RANGE:
+    return short_instruction("range", blob, offset);
   case OP_LIST:
     return short_instruction("list", blob, offset);
   case OP_DICT:

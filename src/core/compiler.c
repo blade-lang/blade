@@ -160,6 +160,7 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_ASSERT:
   case OP_DIE:
   case OP_END_TRY:
+  case OP_RANGE:
     return 0;
 
   case OP_CALL:
@@ -605,6 +606,11 @@ static void binary(b_parser *p, bool can_assign) {
 
   case RSHIFT_TOKEN:
     emit_byte(p, OP_RSHIFT);
+    break;
+
+  // range
+  case RANGE_TOKEN:
+    emit_byte(p, OP_RANGE);
     break;
 
   default:
@@ -1075,7 +1081,7 @@ b_parse_rule parse_rules[] = {
     [COLON_TOKEN] = {NULL, NULL, PREC_NONE},              // :
     [AT_TOKEN] = {NULL, NULL, PREC_NONE},                 // @
     [DOT_TOKEN] = {NULL, dot, PREC_CALL},                 // .
-    [RANGE_TOKEN] = {NULL, NULL, PREC_NONE},              // ..
+    [RANGE_TOKEN] = {NULL, binary, PREC_RANGE},           // ..
     [TRIDOT_TOKEN] = {NULL, NULL, PREC_NONE},             // ...
     [PLUS_TOKEN] = {NULL, binary, PREC_TERM},             // +
     [PLUS_EQ_TOKEN] = {NULL, NULL, PREC_NONE},            // +=
