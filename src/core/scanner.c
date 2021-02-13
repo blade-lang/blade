@@ -156,8 +156,9 @@ static b_token string(b_scanner *s, char quote) {
   while (
       ((previous(s) == '\\' && current(s) == quote) || current(s) != quote) &&
       !is_at_end(s)) {
-    if (current(s) == '$' && next(s) == '{' && previous(s) != '\\') { // interpolation started
-      if(s->interpolating_count - 1 < MAX_INTERPOLATION_NESTING) {
+    if (current(s) == '$' && next(s) == '{' &&
+        previous(s) != '\\') { // interpolation started
+      if (s->interpolating_count - 1 < MAX_INTERPOLATION_NESTING) {
         s->interpolating[s->interpolating_count++] = quote;
         s->current++;
         b_token tkn = make_token(s, INTERPOLATION_TOKEN);
@@ -372,7 +373,7 @@ b_token scan_token(b_scanner *s) {
   switch (c) {
   case '(':
     return make_token(s, LPAREN_TOKEN);
-  case ')': 
+  case ')':
     return make_token(s, RPAREN_TOKEN);
   case '[':
     return make_token(s, LBRACKET_TOKEN);
