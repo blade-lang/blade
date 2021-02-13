@@ -980,7 +980,7 @@ DECLARE_STRING_METHOD(__iter__) {
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   int index = AS_NUMBER(args[0]);
 
-  if (index > -1 && index < string->length) {
+  if (index > -1 && index < string->utf8_length) {
     int start = index, end = index + 1;
     utf8slice(string->chars, &start, &end);
 
@@ -995,7 +995,7 @@ DECLARE_STRING_METHOD(__itern__) {
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
 
   if (IS_NIL(args[0])) {
-    if (string->length == 0)
+    if (string->utf8_length == 0)
       RETURN_FALSE;
     RETURN_NUMBER(0);
   }
@@ -1005,7 +1005,7 @@ DECLARE_STRING_METHOD(__itern__) {
   }
 
   int index = AS_NUMBER(args[0]);
-  if (index < string->length - 1) {
+  if (index < string->utf8_length - 1) {
     RETURN_NUMBER(index + 1);
   }
 
