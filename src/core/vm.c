@@ -1656,6 +1656,31 @@ b_ptr_result run(b_vm *vm) {
       push(vm, OBJ_VAL(list));
       break;
     }
+    case OP_RANGE: {
+      b_value _upper = peek(vm, 0), _lower = peek(vm, 1);
+
+      if (!IS_NUMBER(_upper) || !IS_NUMBER(_lower)) {
+        runtime_error("invalid range boundaries");
+      }
+
+      double lower = AS_NUMBER(_lower), upper = AS_NUMBER(_upper);
+      b_obj_list *list = new_list(vm);
+      push(vm, OBJ_VAL(list));
+
+      if (upper > lower) {
+        for (double i = lower; i < upper; i++) {
+          write_list(vm, list, NUMBER_VAL(i));
+        }
+      } else if (lower > upper) {
+        for (double i = lower; i > upper; i--) {
+          write_list(vm, list, NUMBER_VAL(i));
+        }
+      }
+
+      popn(vm, 2 + 1); // + 1 for the list itself
+      push(vm, OBJ_VAL(list));
+      break;
+    }
     case OP_DICT: {
       int count = READ_SHORT() * 2; // 1 for key, 1 for value
       b_obj_dict *dict = new_dict(vm);
