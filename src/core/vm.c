@@ -677,7 +677,7 @@ bool is_falsey(b_value value) {
   return false;
 }
 
-static bool is_instance_of(b_obj_class *klass1, b_obj_class *klass2) {
+bool is_instance_of(b_obj_class *klass1, b_obj_class *klass2) {
   while (klass2 != NULL) {
     if (memcmp(klass1->name->chars, klass2->name->chars,
                klass1->name->length) == 0) {
