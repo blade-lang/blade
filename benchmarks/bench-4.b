@@ -38,15 +38,17 @@ var center = -1, moves = 0
 def init() {
   var n = 0
 
-  iter var i = 0; i < board.length(); i++ {
-    if board[i] == '○' {
-      center = i
+  iter var pos = 0; pos < board.length(); pos++ {
+    var field = board[pos]
+  # for pos, field in board {
+    if field == '○' {
+      center = pos
       n++
     }
   }
 
   if n != 1 {
-    center = -1
+    center = -1 # no single hole
   }
 }
 
@@ -85,15 +87,19 @@ board position is printed first, all the way back to
 the starting board position). */
 def solve() {
   var last = 0, n = 0
-
-  iter var pos = 0; pos < board.length(); pos ++ {
+  
+  iter var pos = 0; pos < board.length(); pos++ {
     var field = board[pos]
+  # for pos, field in board {
 
+    # try each board position
     if field == '●' {
+
       # found a peg
       iter var i = 0; i < dirs.length(); i++ {
         var dir = dirs[i]
-
+      # for dir in dirs {
+        
         # try each direction
         if move(pos, dir) {
           # a valid move was found and executed,
@@ -110,7 +116,7 @@ def solve() {
       }
 
       last = pos
-      n++
+      n = n + 1
     }
   }
 

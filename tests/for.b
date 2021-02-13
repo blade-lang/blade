@@ -25,17 +25,18 @@ for g in bytes([10, 21, 13, 47]) {
 }
 
 class Iterable {
-  var index = -1
   var items = ['Richard', 'Alex', 'Justina']
 
-  __iter__() {
-    return self.items[self.index]
+  __iter__(x) {
+    return self.items[x]
   }
 
-  __itern__() {
-    if self.index < self.items.length() - 1
-      return self.index++
-    return empty
+  __itern__(x) {
+    if x == nil return 0
+
+    if x < self.items.length() - 1
+      return x + 1
+    return false
   }
 }
 

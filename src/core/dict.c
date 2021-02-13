@@ -210,11 +210,11 @@ DECLARE_DICT_METHOD(has_attr) {
 }
 
 DECLARE_DICT_METHOD(__iter__) {
-  ENFORCE_ARG_COUNT(__iter__, 0);
+  ENFORCE_ARG_COUNT(__iter__, 1);
   b_obj_dict *dict = AS_DICT(METHOD_OBJECT);
-  if (dict->iter_index > -1) {
-    b_value result;
-    table_get(&dict->items, dict->names.values[dict->iter_index], &result);
+
+  b_value result;
+  if (table_get(&dict->items, args[0], &result)) {
     RETURN_VALUE(result);
   }
 
@@ -222,15 +222,22 @@ DECLARE_DICT_METHOD(__iter__) {
 }
 
 DECLARE_DICT_METHOD(__itern__) {
-  ENFORCE_ARG_COUNT(__itern__, 0);
+  ENFORCE_ARG_COUNT(__itern__, 1);
   b_obj_dict *dict = AS_DICT(METHOD_OBJECT);
-  dict->iter_index++;
-  if (dict->iter_index < dict->names.count) {
-    RETURN_VALUE(dict->names.values[dict->iter_index]);
+
+  if (IS_NIL(args[0])) {
+    if (dict->names.count == 0)
+      RETURN_FALSE;
+    RETURN_VALUE(dict->names.values[0]);
+  }
+  for (int i = 0; i < dict->names.count; i++) {
+    if (values_equal(args[0], dict->names.values[i]) &&
+        (i + 1) < dict->names.count) {
+      RETURN_VALUE(dict->names.values[i + 1]);
+    }
   }
 
-  dict->iter_index = -1;
-  RETURN_EMPTY;
+  RETURN;
 }
 
 #undef ENFORCE_VALID_DICT_KEY

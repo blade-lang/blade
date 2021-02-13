@@ -28,7 +28,9 @@ def fannkuchredux(n) {
     var count = [0] * n, temp_permutation = [0] * n, current_permutation = [0] * n
 
     # Initialize count and current_permutation.
-    iter var i = 0; i < n; i++ current_permutation[i] = i
+    iter var i = 0; i < n; i++ {
+      current_permutation[i] = i
+    }
 
     iter var i = n - 1, permutation_index = initial_permutation_index_for_block; i > 0; i-- {
       var d = permutation_index / factorial_lookup_table[i]

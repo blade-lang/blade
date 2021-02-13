@@ -1474,10 +1474,12 @@ static void iter_statement(b_parser *p) {
  * ==
  *
  * {
- *    var x = iterable.__iter__()
- *    while x != empty {
+ *    var iterable = expression()
+ *    var _
+ *
+ *    while _ = iterable.__itern__() {
+ *      var x = iterable.__iter__()
  *      ...
- *      x = iterable.__iter__()
  *    }
  * }
  *
@@ -1490,29 +1492,26 @@ static void iter_statement(b_parser *p) {
  * ==
  *
  * {
- *    var iterable
+ *    var iterable = expression()
+ *    var x
  *
- *    iterable = expression()
- *    x = iterable.__itern__()
- *    y = iterable.__iter__()
- *
- *    while x != empty {
+ *    while x = iterable.__itern__() {
+ *      var y = iterable.__iter__()
  *      ...
- *      x = iterable.__itern__()
- *      y = iterable.__iter__()
  *    }
  * }
  *
- * Every bird iterable must implement the __iter__() and the __itern__()
+ * Every bird iterable must implement the __iter__(x) and the __itern__(x)
  * function.
  *
  * to make instances of a user created class iterable,
- * the class must implement the __iter__() and the __itern__() function.
- * the __itern__() must return the current iterating index of the object and the
- * __iter__() function must return the value at that index.
- * _NOTE_: the __iter__() function will no longer be called after the
- * __itern__() function returns empty. so the __iter__() never needs to return
- * empty
+ * the class must implement the __iter__(x) and the __itern__(x) function.
+ * the __itern__(x) must return the current iterating index of the object and
+ * the
+ * __iter__(x) function must return the value at that index.
+ * _NOTE_: the __iter__(x) function will no longer be called after the
+ * __itern__(x) function returns a false value. so the __iter__(x) never needs
+ * to return a false value
  */
 static void for_statement(b_parser *p) {
   begin_scope(p);
@@ -1522,39 +1521,42 @@ static void for_statement(b_parser *p) {
   int __itern__ = make_constant(p, OBJ_VAL(copy_string(p->vm, "__itern__", 9)));
 
   consume(p, IDENTIFIER_TOKEN, "expected variable name after 'for'");
-  b_token key_token = p->previous, value_token;
-  emit_byte(p, OP_NIL);
+  b_token key_token, value_token;
 
-  if (match(p, COMMA_TOKEN)) {
-    consume(p, IDENTIFIER_TOKEN, "expected variable name after ','");
+  if (!check(p, COMMA_TOKEN)) {
+    key_token = synthetic_token(" _ ");
     value_token = p->previous;
   } else {
-    value_token = key_token;
-    key_token = synthetic_token(" _ ");
+    key_token = p->previous;
+
+    consume(p, COMMA_TOKEN, "");
+    consume(p, IDENTIFIER_TOKEN, "expected variable name after ','");
+    value_token = p->previous;
   }
-  emit_byte(p, OP_NIL);
 
   consume(p, IN_TOKEN, "expected 'in' after for loop variable(s)");
+  ignore_whitespace(p);
 
-  char *iterable_name = (char *)calloc(1, sizeof(char *));
-  int iterable_name_length =
-      sprintf(iterable_name, " iterable %d ", p->vm->anonymous_globals_count++);
-  int iterable_constant = make_constant(
-      p, OBJ_VAL(take_string(p->vm, iterable_name, iterable_name_length)));
+  // The space in the variable name ensures it won't collide with a user-defined
+  // variable.
+  b_token iterator_token = synthetic_token(" iterator ");
 
+  // Evaluate the sequence expression and store it in a hidden local variable.
   expression(p);
-  emit_byte_and_short(p, OP_DEFINE_GLOBAL, iterable_constant);
 
-  // set key variable
+  if (p->compiler->local_count + 3 > UINT8_COUNT) {
+    error(p, "cannot declare more than %d variables in one scope", UINT8_COUNT);
+    return;
+  }
 
-  // key = iterable.__itern__()
-  emit_byte_and_short(p, OP_GET_GLOBAL, iterable_constant);
-  emit_byte_and_short(p, OP_INVOKE, __itern__);
-  emit_byte(p, 0);
-  int key = add_local(p, key_token) - 1;
-  define_variable(p, key);
-  emit_byte_and_short(p, OP_SET_LOCAL, key);
-  emit_byte(p, OP_POP);
+  // add the iterator to the local scope
+  int iterator_slot = add_local(p, iterator_token) - 1;
+  define_variable(p, 0);
+
+  // Create the key local variable.
+  emit_byte(p, OP_NIL);
+  int key_slot = add_local(p, key_token) - 1;
+  define_variable(p, key_slot);
 
   int surrounding_loop_start = p->innermost_loop_start;
   int surrounding_scope_depth = p->innermost_loop_scope_depth;
@@ -1563,31 +1565,33 @@ static void for_statement(b_parser *p) {
   // expression after the loop body
   p->innermost_loop_start = current_blob(p)->count;
 
-  // key != empty
-  emit_byte_and_short(p, OP_GET_LOCAL, key);
-  emit_byte(p, OP_EMPTY);
-  emit_bytes(p, OP_EQUAL, OP_NOT);
+  // key = iterable.__itern__(key)
+  emit_byte_and_short(p, OP_GET_LOCAL, iterator_slot);
+  emit_byte_and_short(p, OP_GET_LOCAL, key_slot);
+  emit_byte_and_short(p, OP_INVOKE, __itern__);
+  emit_byte(p, 1);
+  emit_byte_and_short(p, OP_SET_LOCAL, key_slot);
 
   int false_jump = emit_jump(p, OP_JUMP_IF_FALSE);
   emit_byte(p, OP_POP);
 
-  // value = iterable.__iter__()
-  emit_byte_and_short(p, OP_GET_GLOBAL, iterable_constant);
+  // value = iterable.__iter__(key)
+  emit_byte_and_short(p, OP_GET_LOCAL, iterator_slot);
+  emit_byte_and_short(p, OP_GET_LOCAL, key_slot);
   emit_byte_and_short(p, OP_INVOKE, __iter__);
-  emit_byte(p, 0);
-  int value = add_local(p, value_token) - 1;
-  define_variable(p, value);
-  emit_byte_and_short(p, OP_SET_LOCAL, value);
-  emit_byte(p, OP_POP);
+  emit_byte(p, 1);
+
+  // Bind the loop value in its own scope. This ensures we get a fresh
+  // variable each iteration so that closures for it don't all see the same one.
+  begin_scope(p);
+
+  // update the value
+  add_local(p, value_token);
+  define_variable(p, 0);
 
   statement(p);
 
-  // run the increment
-  emit_byte_and_short(p, OP_GET_GLOBAL, iterable_constant);
-  emit_byte_and_short(p, OP_INVOKE, __itern__);
-  emit_byte(p, 0);
-  emit_byte_and_short(p, OP_SET_LOCAL, key);
-  emit_byte(p, OP_POP);
+  end_scope(p);
 
   emit_loop(p, p->innermost_loop_start);
 
@@ -1600,7 +1604,6 @@ static void for_statement(b_parser *p) {
   p->innermost_loop_scope_depth = surrounding_scope_depth;
 
   end_scope(p);
-  // p->compiler->local_count -= 2;
 }
 
 /**

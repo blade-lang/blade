@@ -6,7 +6,7 @@
 
 #define MAX_USING_CASES 256
 #define MAX_FUNCTION_PARAMETERS 255
-#define FRAMES_MAX 256
+#define FRAMES_MAX 512
 #define NUMBER_FORMAT "%.16g"
 
 // Maximum load factor of 12/14
