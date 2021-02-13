@@ -641,29 +641,17 @@ DECLARE_NATIVE(is_file) {
 }
 
 /**
- * is_instance(value: any, name: string)
+ * is_instance(value: any, name: class)
  *
- * returns true if the value is an instance of a class with name `name` or false
+ * returns true if the value is an instance the given class, false
  * otherwise
  */
 DECLARE_NATIVE(is_instance) {
   ENFORCE_ARG_COUNT(is_instance, 2);
-  ENFORCE_ARG_TYPE(is_instance, 1, IS_STRING);
+  ENFORCE_ARG_TYPE(is_instance, 0, IS_INSTANCE);
+  ENFORCE_ARG_TYPE(is_instance, 1, IS_CLASS);
 
-  if (!IS_INSTANCE(args[0]))
-    RETURN_FALSE;
-
-  b_obj_instance *instance = AS_INSTANCE(args[0]);
-  b_obj_string *klass = AS_STRING(args[1]);
-
-  if (instance->klass->name->length != klass->length)
-    RETURN_FALSE;
-
-  if (memcmp(instance->klass->name->chars, klass->chars,
-             instance->klass->name->length) == 0)
-    RETURN_TRUE;
-
-  RETURN_FALSE;
+  RETURN_BOOL(is_instance_of(AS_INSTANCE(args[0])->klass, AS_CLASS(args[1])));
 }
 
 //------------------------------------------------------------------------------

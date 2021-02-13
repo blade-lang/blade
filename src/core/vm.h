@@ -83,6 +83,7 @@ bool dict_set_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value);
 
 void define_native_method(b_vm *vm, b_table *table, const char *name,
                           b_native_fn function);
+bool is_instance_of(b_obj_class *klass1, b_obj_class *klass2);
 
 void _runtime_error(b_vm *vm, const char *format, ...);
 b_obj_instance *create_exception(b_vm *vm, b_obj_string *message);
