@@ -1,7 +1,7 @@
+#include "table.h"
 #include "config.h"
 #include "memory.h"
 #include "object.h"
-#include "table.h"
 #include "value.h"
 
 #include <stdio.h>
@@ -199,7 +199,9 @@ void table_print(b_table *table) {
   for (int i = 0; i <= table->capacity; i++) {
     b_entry *entry = &table->entries[i];
     if (!IS_EMPTY(entry->key)) {
-      printf("{key: %u, value: ", hash_value(entry->key));
+      printf("{key: ");
+      print_value(entry->key);
+      printf(", value: ");
       print_value(entry->value);
       printf("}");
     }

@@ -21,4 +21,4 @@ echo to_string(A())
 
 var start = time()
 echo fib(35)
-echo time() - start
+echo 'Time taken: ${time() - start}s'

@@ -1,8 +1,8 @@
-a = 'outer'
+var a = 'outer'
 
 def test() {
-  a = 'inner'
-  echo 'It works! ' + a
+  var a = 'inner'
+  echo 'It works! ${a}'
 }
 
 echo a
