@@ -2,7 +2,7 @@
 #define bird_config_h
 
 // global debug mode flag
-#define DEBUG_MODE 0
+#define DEBUG_MODE 1
 
 #define MAX_USING_CASES 256
 #define MAX_FUNCTION_PARAMETERS 255

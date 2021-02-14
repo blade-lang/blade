@@ -195,6 +195,10 @@ static void print_bytes(b_obj_bytes *bytes) {
   printf("(");
   for (int i = 0; i < bytes->bytes.count; i++) {
     printf("0x%x", bytes->bytes.bytes[i]);
+    if (i > 10) {
+      printf("...");
+      break;
+    }
 
     if (i != bytes->bytes.count - 1) {
       printf(" ");
