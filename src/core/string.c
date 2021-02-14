@@ -127,7 +127,7 @@ DECLARE_STRING_METHOD(upper) {
   char *string = (char *)AS_CSTRING(METHOD_OBJECT);
   for (char *p = string; *p; p++)
     *p = toupper(*p);
-  RETURN_TSTRING(string, AS_STRING(METHOD_OBJECT)->length);
+  RETURN_LSTRING(string, AS_STRING(METHOD_OBJECT)->length);
 }
 
 DECLARE_STRING_METHOD(lower) {
@@ -135,7 +135,7 @@ DECLARE_STRING_METHOD(lower) {
   char *string = (char *)AS_CSTRING(METHOD_OBJECT);
   for (char *p = string; *p; p++)
     *p = tolower(*p);
-  RETURN_TSTRING(string, AS_STRING(METHOD_OBJECT)->length);
+  RETURN_LSTRING(string, AS_STRING(METHOD_OBJECT)->length);
 }
 
 DECLARE_STRING_METHOD(is_alpha) {
