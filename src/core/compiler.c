@@ -156,7 +156,6 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_BIT_NOT:
   case OP_ONE:
   case OP_SET_INDEX:
-  case OP_EMPTY:
   case OP_ASSERT:
   case OP_DIE:
   case OP_END_TRY:
@@ -647,14 +646,6 @@ static void literal(b_parser *p, bool can_assign) {
   case NIL_TOKEN:
     emit_byte(p, OP_NIL);
     break;
-  case EMPTY_TOKEN: {
-    if (p->compiler->type != TYPE_METHOD && !p->is_returning) {
-      error(p, "can only use the empty keyword in the return statement of a "
-               "class method");
-    }
-    emit_byte(p, OP_EMPTY);
-    break;
-  }
   case TRUE_TOKEN:
     emit_byte(p, OP_TRUE);
     break;

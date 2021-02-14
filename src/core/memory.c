@@ -137,7 +137,11 @@ static void blacken_object(b_vm *vm, b_obj *object) {
     break;
   }
 
-  case OBJ_BYTES:
+  case OBJ_BYTES: {
+    mark_object(vm, object);
+    break;
+  }
+
   case OBJ_NATIVE:
   case OBJ_STRING:
     break;
