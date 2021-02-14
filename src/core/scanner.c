@@ -159,14 +159,18 @@ static b_token string(b_scanner *s, char quote) {
     if (current(s) == '$' && next(s) == '{' &&
         previous(s) != '\\') { // interpolation started
       if (s->interpolating_count - 1 < MAX_INTERPOLATION_NESTING) {
-        s->interpolating[s->interpolating_count++] = quote;
+        s->interpolating_count++;
+        s->interpolating[s->interpolating_count] = quote;
         s->current++;
         b_token tkn = make_token(s, INTERPOLATION_TOKEN);
         s->current++;
         return tkn;
       }
 
-      return error_token(s, "maxmimum interpolation nesting exceeded", 0);
+      return error_token(
+          s, "maximum interpolation nesting of %d exceeded by %d", 1,
+          MAX_INTERPOLATION_NESTING,
+          MAX_INTERPOLATION_NESTING - s->interpolating_count + 1);
     }
     advance(s);
   }
@@ -383,8 +387,9 @@ b_token scan_token(b_scanner *s) {
     return make_token(s, LBRACE_TOKEN);
   case '}':
     if (s->interpolating_count > -1) {
+      b_token token = string(s, s->interpolating[s->interpolating_count]);
       s->interpolating_count--;
-      return string(s, s->interpolating[s->interpolating_count]);
+      return token;
     }
     return make_token(s, RBRACE_TOKEN);
   case ';':

@@ -1105,7 +1105,7 @@ static bool concatenate(b_vm *vm) {
   } else if (IS_NUMBER(_a)) {
     double a = AS_NUMBER(_a);
 
-    char *num_str; // + 1 for null terminator
+    char *num_str = NULL; // + 1 for null terminator
     int num_length = asprintf(&num_str, NUMBER_FORMAT, a);
 
     b_obj_string *b = AS_STRING(_b);
@@ -1123,7 +1123,7 @@ static bool concatenate(b_vm *vm) {
     b_obj_string *a = AS_STRING(_a);
     double b = AS_NUMBER(_b);
 
-    char *num_str; // + 1 for null terminator
+    char *num_str = NULL; // + 1 for null terminator
     int num_length = asprintf(&num_str, NUMBER_FORMAT, b);
 
     int length = num_length + a->length;
@@ -1400,8 +1400,7 @@ b_ptr_result run(b_vm *vm) {
     }
 
     case OP_STRINGIFY: {
-      char *value = value_to_string(vm, peek(vm, 0));
-      pop(vm);
+      char *value = value_to_string(vm, pop(vm));
       push(vm, OBJ_VAL(copy_string(vm, value, (int)strlen(value))));
       break;
     }

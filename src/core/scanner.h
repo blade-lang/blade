@@ -117,8 +117,8 @@ typedef struct {
   const char *start;
   const char *current;
   int line;
-  char interpolating[MAX_INTERPOLATION_NESTING];
   int interpolating_count;
+  int interpolating[MAX_INTERPOLATION_NESTING];
 } b_scanner;
 
 void init_scanner(b_scanner *s, const char *source);
