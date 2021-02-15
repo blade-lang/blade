@@ -73,7 +73,6 @@ struct s_obj_string {
   b_obj obj;
   int length;
   int utf8_length;
-  int iter_index;
   char *chars;
   uint32_t hash;
 };
@@ -135,19 +134,16 @@ typedef struct {
 
 typedef struct {
   b_obj obj;
-  int iter_index;
   b_value_arr items;
 } b_obj_list;
 
 typedef struct {
   b_obj obj;
-  int iter_index;
   b_byte_arr bytes;
 } b_obj_bytes;
 
 typedef struct {
   b_obj obj;
-  int iter_index;
   b_value_arr names;
   b_table items;
 } b_obj_dict;

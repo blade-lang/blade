@@ -36,21 +36,18 @@ b_obj_bytes *new_bytes(b_vm *vm, int length) {
   bytes->bytes.bytes =
       reallocate(vm, bytes->bytes.bytes, 0, sizeof(unsigned char *) * length);
   bytes->bytes.count = length;
-  bytes->iter_index = -1;
 
   return bytes;
 }
 
 b_obj_list *new_list(b_vm *vm) {
   b_obj_list *list = ALLOCATE_OBJ(b_obj_list, OBJ_LIST);
-  list->iter_index = -1;
   init_value_arr(&list->items);
   return list;
 }
 
 b_obj_dict *new_dict(b_vm *vm) {
   b_obj_dict *dict = ALLOCATE_OBJ(b_obj_dict, OBJ_DICT);
-  dict->iter_index = -1;
   init_value_arr(&dict->names);
   init_table(&dict->items);
   return dict;
@@ -129,7 +126,6 @@ b_obj_string *allocate_string(b_vm *vm, char *chars, int length,
   string->length = length;
   string->utf8_length = utf8len(chars);
   string->hash = hash;
-  string->iter_index = -1;
 
   push(vm, OBJ_VAL(string)); // fixing gc corruption
   table_set(vm, &vm->strings, OBJ_VAL(string), NIL_VAL);
