@@ -3,6 +3,7 @@
 #include "memory.h"
 #include "object.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -197,11 +198,12 @@ uint32_t hash_double(double value) {
   return hash_bits(bits.bits);
 }
 
-uint32_t hash_string(const char *key, int length) {
+uint32_t inline hash_string(const char *key, int length) {
   uint32_t hash = 2166136261u;
+  const char *be = key + length;
 
-  for (int i = 0; i < length; i++) {
-    hash ^= key[i];
+  while (key < be) {
+    hash ^= *key++;
     hash *= 16777619;
   }
 

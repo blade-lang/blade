@@ -6,4 +6,4 @@ var message = '"I am great"'
 
 echo 'Simon says ${message}'
 
-echo 'This is ${"john's last ${20}".upper()} cent'
+echo '${message} at ${5 * 5}, This is ${"john's ${'last'.upper()} ${20}"} cent'
