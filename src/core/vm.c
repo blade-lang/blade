@@ -492,7 +492,7 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
     case OBJ_NATIVE: {
       b_native_fn native = AS_NATIVE(callee)->function;
       b_value result = native(vm, arg_count, vm->stack_top - arg_count);
-      if (IS_UNDEFINED(result)) {
+      if (IS_EMPTY(result)) {
         return false;
       }
 
