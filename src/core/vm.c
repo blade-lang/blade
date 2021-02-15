@@ -1397,8 +1397,10 @@ b_ptr_result run(b_vm *vm) {
     }
 
     case OP_STRINGIFY: {
-      char *value = value_to_string(vm, pop(vm));
-      push(vm, OBJ_VAL(copy_string(vm, value, (int)strlen(value))));
+      if (!IS_STRING(peek(vm, 0))) {
+        char *value = value_to_string(vm, pop(vm));
+        push(vm, OBJ_VAL(copy_string(vm, value, (int)strlen(value))));
+      }
       break;
     }
 

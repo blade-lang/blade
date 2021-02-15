@@ -138,4 +138,4 @@ init()
 if !solve() {
   echo 'No solution found!'
 }
-echo moves + ' moves tried in ' + (time() - start) + 's'
+echo '${moves} moves tried in ${time() - start}s'

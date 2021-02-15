@@ -1017,19 +1017,34 @@ static void string(b_parser *p, bool can_assign) {
 }
 
 static void string_interpolation(b_parser *p, bool can_assign) {
+  int count = 0;
   do {
-    string(p, can_assign);
+    bool do_add = false;
+
+    if (p->previous.length - 2 > 0) {
+      string(p, can_assign);
+      do_add = true;
+
+      if (count > 0) {
+        emit_byte(p, OP_ADD);
+      }
+    }
 
     expression(p);
     emit_byte(p, OP_STRINGIFY);
 
-    emit_byte(p, OP_ADD);
+    if (do_add) {
+      emit_byte(p, OP_ADD);
+    }
+    count++;
   } while (match(p, INTERPOLATION_TOKEN));
 
   consume(p, LITERAL_TOKEN, "unterminated string interpolation");
-  string(p, can_assign);
 
-  emit_byte(p, OP_ADD);
+  if (p->previous.length - 2 > 0) {
+    string(p, can_assign);
+    emit_byte(p, OP_ADD);
+  }
 }
 
 static void unary(b_parser *p, bool can_assign) {
