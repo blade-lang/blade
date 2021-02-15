@@ -37,6 +37,7 @@ struct s_vm {
   b_value stack[STACK_MAX];
   b_value *stack_top;
   b_table strings;
+  b_table bytes;
   b_table globals;
   b_obj_upvalue *open_upvalues;
 

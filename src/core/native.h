@@ -50,7 +50,7 @@
 #define RETURN_ERROR(...)                                                      \
   {                                                                            \
     _runtime_error(vm, ##__VA_ARGS__);                                         \
-    return UNDEFINED_VAL;                                                      \
+    return EMPTY_VAL;                                                          \
   }
 #define RETURN_EMPTY return EMPTY_VAL
 #define RETURN_BOOL(v) return BOOL_VAL(v)
