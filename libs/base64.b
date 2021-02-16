@@ -25,4 +25,4 @@
   decode() {
     return self._decode(self.data)
   }
- }
+}

@@ -3,6 +3,7 @@
 #include <sys/utsname.h>
 
 #include <stdio.h>
+#include <ctype.h>
 
 DECLARE_MODULE_METHOD(os_exec) {
   ENFORCE_ARG_COUNT(exec, 1);
@@ -19,7 +20,7 @@ DECLARE_MODULE_METHOD(os_exec) {
   char buffer[256];
   size_t nread;
   size_t output_size = 256;
-  size_t length = 0;
+  int length = 0;
   char *output = malloc(output_size);
 
   while ((nread = fread(buffer, 1, sizeof(buffer), fd)) != 0) {
@@ -31,8 +32,13 @@ DECLARE_MODULE_METHOD(os_exec) {
     length += nread;
   }
 
+  if(length == 0)
+    RETURN;
+  
+  output[length - 1] = '\0';
+
   pclose(fd);
-  RETURN_STRING(output);
+  RETURN_LSTRING(output, length);
 }
 
 DECLARE_MODULE_METHOD(os_info) {
