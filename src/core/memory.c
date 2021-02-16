@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC == 1
+#if defined DEBUG_LOG_GC && DEBUG_LOG_GC
 #include "debug.h"
 #include <stdio.h>
 #endif
@@ -15,7 +15,7 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
   vm->bytes_allocated += new_size - old_size;
 
   if (new_size > old_size) {
-#if defined(DEBUG_STRESS_GC) && DEBUG_STRESS_GC == 1
+#if defined DEBUG_STRESS_GC && DEBUG_STRESS_GC
     // @TODO: fix bug associated with enabling stressed gc
     // collect_garbage(vm);
 #endif
@@ -43,7 +43,7 @@ void mark_object(b_vm *vm, b_obj *object) {
   if (object == NULL || object->is_marked)
     return;
 
-#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC == 1
+#if defined DEBUG_LOG_GC && DEBUG_LOG_GC
   printf("%p mark ", (void *)object);
   print_object(OBJ_VAL(object));
   printf("\n");
@@ -72,7 +72,7 @@ static void mark_array(b_vm *vm, b_value_arr *array) {
 }
 
 static void blacken_object(b_vm *vm, b_obj *object) {
-#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC == 1
+#if defined DEBUG_LOG_GC && DEBUG_LOG_GC
   printf("%p blacken ", (void *)object);
   print_object(OBJ_VAL(object));
   printf("\n");
@@ -149,7 +149,7 @@ static void blacken_object(b_vm *vm, b_obj *object) {
 }
 
 static void free_object(b_vm *vm, b_obj *object) {
-#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC == 1
+#if defined DEBUG_LOG_GC && DEBUG_LOG_GC
   printf("%p free type %d\n", (void *)object, object->type);
 #endif
 
@@ -302,7 +302,7 @@ void free_objects(b_vm *vm) {
 }
 
 void collect_garbage(b_vm *vm) {
-#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC == 1
+#if defined DEBUG_LOG_GC && DEBUG_LOG_GC
   printf("-- gc begins\n");
   size_t before = vm->bytes_allocated;
 #endif
@@ -314,7 +314,7 @@ void collect_garbage(b_vm *vm) {
 
   vm->next_gc = vm->bytes_allocated * GC_HEAP_GROWTH_FACTOR;
 
-#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC == 1
+#if defined DEBUG_LOG_GC && DEBUG_LOG_GC
   printf("-- gc ends\n");
   printf("   collected %ld bytes (from %ld to %ld), next at %ld\n",
          before - vm->bytes_allocated, before, vm->bytes_allocated,

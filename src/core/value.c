@@ -69,7 +69,7 @@ void free_byte_arr(b_vm *vm, b_byte_arr *array) {
 }
 
 void print_value(b_value value) {
-#if defined(USE_NAN_BOXING) && USE_NAN_BOXING == 1
+#if defined USE_NAN_BOXING && USE_NAN_BOXING
   if (IS_EMPTY(value))
     printf("");
   else if (IS_NIL(value))
@@ -112,7 +112,7 @@ static inline char *number_to_string(double number) {
 }
 
 char *value_to_string(b_vm *vm, b_value value) {
-#if defined(USE_NAN_BOXING) && USE_NAN_BOXING == 1
+#if defined USE_NAN_BOXING && USE_NAN_BOXING
   if (IS_NIL(value))
     return "";
   if (IS_NIL(value))
@@ -135,7 +135,7 @@ char *value_to_string(b_vm *vm, b_value value) {
     return object_to_string(vm, value);
 
   default:
-    break;
+    return "";
   }
 #endif
 }
@@ -156,7 +156,7 @@ const char *value_type(b_value value) {
 }
 
 bool values_equal(b_value a, b_value b) {
-#if defined(USE_NAN_BOXING) && USE_NAN_BOXING == 1
+#if defined USE_NAN_BOXING && USE_NAN_BOXING
   if (IS_NUMBER(a) && IS_NUMBER(b))
     return AS_NUMBER(a) == AS_NUMBER(b);
   return a == b;
@@ -344,7 +344,7 @@ static uint32_t hash_object(b_obj *object) {
 }
 
 uint32_t hash_value(b_value value) {
-#if defined(USE_NAN_BOXING) && USE_NAN_BOXING == 1
+#if defined USE_NAN_BOXING && USE_NAN_BOXING
   if (IS_OBJ(value))
     return hash_object(AS_OBJ(value));
   return hash_bits(value);

@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#if defined(DEBUG_MODE) && DEBUG_MODE == 1
+#if defined DEBUG_MODE && DEBUG_MODE
 #include "debug.h"
 #endif
 
@@ -728,7 +728,7 @@ bool dict_get_entry(b_obj_dict *dict, b_value key, b_value *value) {
 }
 
 bool dict_set_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value) {
-#if defined(USE_NAN_BOXING) && USE_NAN_BOXING == 1
+#if defined USE_NAN_BOXING && USE_NAN_BOXING
   bool found = false;
   for (int i = 0; i < dict->names.count; i++) {
     if (values_equal(dict->names.values[i], key))
@@ -1085,7 +1085,7 @@ static bool bytes_set_index(b_vm *vm, b_obj_bytes *bytes, b_value index,
 
     // leave the value on the stack for consumption
     // e.g. variable = bytes[index] = 10
-    push(vm, NUMBER_VAL(value));
+    push(vm, value);
     return true;
   }
 
@@ -1217,7 +1217,7 @@ b_ptr_result run(b_vm *vm) {
 
   for (;;) {
 
-#if defined(DEBUG_TRACE_EXECUTION) && DEBUG_TRACE_EXECUTION == 1
+#if defined DEBUG_TRACE_EXECUTION && DEBUG_TRACE_EXECUTION
     printf("          ");
     for (b_value *slot = vm->stack; slot < vm->stack_top; slot++) {
       printf("[ ");
@@ -1427,7 +1427,7 @@ b_ptr_result run(b_vm *vm) {
       table_set(vm, &vm->globals, OBJ_VAL(name), peek(vm, 0));
       pop(vm);
 
-#if defined(DEBUG_TABLE) && DEBUG_TABLE == 1
+#if defined DEBUG_TABLE && DEBUG_TABLE
       table_print(&vm->globals);
 #endif
       break;
