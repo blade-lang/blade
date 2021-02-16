@@ -191,7 +191,7 @@ static void print_bytes(b_obj_bytes *bytes) {
   printf("(");
   for (int i = 0; i < bytes->bytes.count; i++) {
     printf("0x%x", bytes->bytes.bytes[i]);
-    if (i > 10) {
+    if (i > 100) { // as bytes can get really heavy
       printf("...");
       break;
     }
@@ -383,7 +383,8 @@ char *object_to_string(b_vm *vm, b_value value) {
     sprintf(str, "<native-function %s>", AS_NATIVE(value)->name);
     break;
   case OBJ_STRING:
-    return AS_CSTRING(value);
+    memcpy(str, AS_CSTRING(value), AS_STRING(value)->length);
+    break;
   case OBJ_UPVALUE:
     return (char *)"<upvalue>";
   case OBJ_BYTES:
