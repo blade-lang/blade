@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(DEBUG_MODE) && DEBUG_MODE == 1
+#if defined DEBUG_MODE && DEBUG_MODE
 #include "debug.h"
 #endif
 
@@ -468,7 +468,7 @@ static b_obj_func *end_compiler(b_parser *p) {
   emit_return(p);
   b_obj_func *function = p->compiler->function;
 
-#if defined(DEBUG_PRINT_CODE) && DEBUG_PRINT_CODE == 1
+#if defined DEBUG_PRINT_CODE && DEBUG_PRINT_CODE
   if (!p->had_error) {
     disassemble_blob(current_blob(p), function->name == NULL
                                           ? p->current_file

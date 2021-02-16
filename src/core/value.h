@@ -14,7 +14,7 @@ typedef union {
   double num;
 } b_double_union;
 
-#if defined(USE_NAN_BOXING) && USE_NAN_BOXING == 1
+#if defined USE_NAN_BOXING && USE_NAN_BOXING
 
 // binary representation = 1111111111111 i.e.
 // 11 bits + 1 bit for quite nan and another
@@ -90,6 +90,8 @@ typedef struct {
 // promote C values to bird value
 #define EMPTY_VAL ((b_value){VAL_EMPTY, {.number = 0}})
 #define NIL_VAL ((b_value){VAL_NIL, {.number = 0}})
+#define TRUE_VAL ((b_value){VAL_BOOL, {.boolean = true}})
+#define FALSE_VAL ((b_value){VAL_BOOL, {.boolean = false}})
 #define BOOL_VAL(v) ((b_value){VAL_BOOL, {.boolean = v}})
 #define NUMBER_VAL(v) ((b_value){VAL_NUMBER, {.number = v}})
 #define INTEGER_VAL(v) ((b_value){VAL_NUMBER, {.number = v}})
