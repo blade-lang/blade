@@ -105,7 +105,8 @@ void print_value(b_value value) {
 }
 
 static inline char *number_to_string(double number) {
-  char *num_str = (char *)calloc(1, sizeof(char *));
+  int length = snprintf(NULL, 0, NUMBER_FORMAT, number);
+  char *num_str = (char *)calloc(length, sizeof(char));
   sprintf(num_str, NUMBER_FORMAT, number);
   return num_str;
 }
@@ -198,16 +199,124 @@ uint32_t hash_double(double value) {
   return hash_bits(bits.bits);
 }
 
+/* uint32_t inline hash_string(const char *key, int length) {
+  uint32_t hash = 0;
+
+  for (int i = 0, j = length - 1; i < length; i++, j--) {
+    hash += key[i] * 92821 ^ j;
+  }
+
+  return hash;
+} */
+
+/* #if defined(SUPPORT_LITTLE_ENDIAN) && SUPPORT_LITTLE_ENDIAN == 1
+#define _le64toh(x) ((uint64_t)(x))
+#elif defined(__APPLE__)
+#include <libkern/OSByteOrder.h>
+#define _le64toh(x) OSSwapLittleToHostInt64(x)
+#elif defined(HAVE_LETOH64)
+#if defined(HAVE_SYS_ENDIAN_H)
+#include <sys/endian.h>
+#else
+#include <endian.h>
+#endif
+#define _le64toh(x) le64toh(x)
+#else
+#define _le64toh(x)                                                            \
+  (((uint64_t)(x) << 56) | (((uint64_t)(x) << 40) & 0xff000000000000ULL) |     \
+   (((uint64_t)(x) << 24) & 0xff0000000000ULL) |                               \
+   (((uint64_t)(x) << 8) & 0xff00000000ULL) |                                  \
+   (((uint64_t)(x) >> 8) & 0xff000000ULL) |                                    \
+   (((uint64_t)(x) >> 24) & 0xff0000ULL) |                                     \
+   (((uint64_t)(x) >> 40) & 0xff00ULL) | ((uint64_t)(x) >> 56))
+#endif
+
+#ifdef _MSC_VER
+#define ROTATE(x, b) _rotl64(x, b)
+#else
+#define ROTATE(x, b) (uint64_t)(((x) << (b)) | ((x) >> (64 - (b))))
+#endif
+
+#define HALF_ROUND(a, b, c, d, s, t)                                           \
+  a += b;                                                                      \
+  c += d;                                                                      \
+  b = ROTATE(b, s) ^ a;                                                        \
+  d = ROTATE(d, t) ^ c;                                                        \
+  a = ROTATE(a, 32);
+
+#define DOUBLE_ROUND(v0, v1, v2, v3)                                           \
+  HALF_ROUND(v0, v1, v2, v3, 13, 16);                                          \
+  HALF_ROUND(v2, v1, v0, v3, 17, 21);                                          \
+  HALF_ROUND(v0, v1, v2, v3, 13, 16);                                          \
+  HALF_ROUND(v2, v1, v0, v3, 17, 21);
+
+static uint64_t siphash24(uint64_t k0, uint64_t k1, const char *src,
+                          int src_sz) {
+  uint64_t b = (uint64_t)src_sz << 56;
+  const uint64_t *in = (uint64_t *)src;
+
+  uint64_t v0 = k0 ^ 0x736f6d6570736575ULL;
+  uint64_t v1 = k1 ^ 0x646f72616e646f6dULL;
+  uint64_t v2 = k0 ^ 0x6c7967656e657261ULL;
+  uint64_t v3 = k1 ^ 0x7465646279746573ULL;
+
+  uint64_t t;
+  uint8_t *pt;
+  uint8_t *m;
+
+  while (src_sz >= 8) {
+    uint64_t mi = _le64toh(*in);
+    in += 1;
+    src_sz -= 8;
+    v3 ^= mi;
+    DOUBLE_ROUND(v0, v1, v2, v3);
+    v0 ^= mi;
+  }
+
+  t = 0;
+  pt = (uint8_t *)&t;
+  m = (uint8_t *)in;
+  switch (src_sz) {
+  case 7:
+    pt[6] = m[6]; // fall through
+  case 6:
+    pt[5] = m[5]; // fall through
+  case 5:
+    pt[4] = m[4]; // fall through
+  case 4:
+    memcpy(pt, m, sizeof(uint32_t));
+    break;
+  case 3:
+    pt[2] = m[2]; // fall through
+  case 2:
+    pt[1] = m[1]; // fall through
+  case 1:
+    pt[0] = m[0]; // fall through
+  }
+  b |= _le64toh(t);
+
+  v3 ^= b;
+  DOUBLE_ROUND(v0, v1, v2, v3);
+  v0 ^= b;
+  v2 ^= 0xff;
+  DOUBLE_ROUND(v0, v1, v2, v3);
+  DOUBLE_ROUND(v0, v1, v2, v3);
+
+  // modified
+  t = (v0 ^ v1) ^ (v2 ^ v3);
+  return t;
+} */
+
 uint32_t inline hash_string(const char *key, int length) {
   uint32_t hash = 2166136261u;
   const char *be = key + length;
 
   while (key < be) {
-    hash ^= *key++;
-    hash *= 16777619;
+    hash = (hash ^ *key++) * 16777619;
   }
 
   return hash;
+  // return siphash24(127, 255, key, length);
 }
 
 // Generates a hash code for [object].
