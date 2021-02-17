@@ -83,11 +83,11 @@ static void repl(b_vm *vm) {
         bracket_count++;
 
       // scope closers...
-      else if (line[i] == '}')
+      else if (line[i] == '}' && brace_count > 0)
         brace_count--;
-      else if (line[i] == ')')
+      else if (line[i] == ')' && paren_count > 0)
         paren_count--;
-      else if (line[i] == ']')
+      else if (line[i] == ']' && bracket_count > 0)
         bracket_count--;
     }
 

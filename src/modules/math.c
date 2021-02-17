@@ -129,6 +129,14 @@ DECLARE_MODULE_METHOD(math__log1p) {
   RETURN_NUMBER(log1p(AS_NUMBER(args[0])));
 }
 
+DECLARE_MODULE_METHOD(math__floor) {
+  ENFORCE_ARG_COUNT(floor, 1);
+  if (IS_NIL(args[0]))
+    RETURN_NUMBER(0);
+  ENFORCE_ARG_TYPE(floor, 0, IS_NUMBER);
+  RETURN_NUMBER(floor(AS_NUMBER(args[0])));
+}
+
 static b_func_reg class_functions[] = {
     {"sin", true, GET_MODULE_METHOD(math__sin)},
     {"cos", true, GET_MODULE_METHOD(math__cos)},
@@ -151,6 +159,7 @@ static b_func_reg class_functions[] = {
     {"log2", true, GET_MODULE_METHOD(math__log2)},
     {"log10", true, GET_MODULE_METHOD(math__log10)},
     {"log1p", true, GET_MODULE_METHOD(math__log1p)},
+    {"floor", true, GET_MODULE_METHOD(math__floor)},
     {NULL, false, NULL},
 };
 

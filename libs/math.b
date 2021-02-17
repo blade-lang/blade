@@ -143,9 +143,13 @@ class Math {
 
   static sign(n) {
     if !is_number(n) n = to_number(n)
-    
+
     if n > 0 return 1
     else if n < 0 return -1
     return n
   }
+
+  # A number representing the largest integer less than or 
+  # equal to the specified number
+  static floor(n) {}
 }
