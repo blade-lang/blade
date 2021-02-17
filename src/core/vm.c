@@ -64,7 +64,7 @@ b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
   char *trace = (char *)malloc(sizeof(char));
 
   // fprintf(stderr, "StackTrace:\n");
-  for (int i = vm->frame_count - 1; i >= 0; i--) {
+  for (int i = 0; i < vm->frame_count; i++) {
     b_call_frame *frame = &vm->frames[i];
     b_obj_func *function = get_frame_function(frame);
 
@@ -77,11 +77,12 @@ b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
              function->blob.lines[instruction]);
 
     if (function->name == NULL) {
-      trace_part =
-          append_strings(trace_part, i > 0 ? "<script>\n" : "<script>");
+      trace_part = append_strings(
+          trace_part, i < vm->frame_count - 1 ? "<script>\n" : "<script>");
     } else {
       trace_part = append_strings(trace_part, function->name->chars);
-      trace_part = append_strings(trace_part, i > 0 ? "()\n" : "()");
+      trace_part =
+          append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" : "()");
     }
 
     trace = append_strings(trace, trace_part);
@@ -698,6 +699,7 @@ static void print_exception(b_vm *vm, b_obj_instance *exception) {
     fprintf(stderr, "Unhandled Exception: %s: %s\n",
             exception->klass->name->chars, value_to_string(vm, message));
     fprintf(stderr, "%s\n", value_to_string(vm, trace));
+    vm->frame_count = 0;
   } else {
     _runtime_error(vm, "invalid Exception or Exception subclass instance");
   }
