@@ -1800,12 +1800,13 @@ static void import_statement(b_parser *p) {
 
   b_obj_func *function =
       compile(p->vm, source, module_path, &p->compiler->function->blob);
-  function->name = copy_string(p->vm, module_name, (int)strlen(module_name));
 
   if (function == NULL) {
     error(p, "failed to import %s", module_name);
     return;
   }
+
+  function->name = copy_string(p->vm, module_name, (int)strlen(module_name));
 
   int import_constant = make_constant(p, OBJ_VAL(function));
   emit_byte_and_short(p, OP_CALL_IMPORT, import_constant);

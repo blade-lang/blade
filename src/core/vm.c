@@ -1181,6 +1181,7 @@ b_ptr_result run(b_vm *vm) {
         (!IS_NUMBER(peek(vm, 1)) && !IS_BOOL(peek(vm, 1)))) {                  \
       _runtime_error(vm, "unsupported operand %s for %s and %s", #op,          \
                      value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
+      EXIT_VM();                                                               \
     }                                                                          \
     b_value _b = pop(vm);                                                      \
     double b = IS_BOOL(_b) ? (AS_BOOL(_b) ? 1 : 0) : AS_NUMBER(_b);            \
@@ -1195,6 +1196,7 @@ b_ptr_result run(b_vm *vm) {
         (!IS_NUMBER(peek(vm, 1)) && !IS_BOOL(peek(vm, 1)))) {                  \
       _runtime_error(vm, "unsupported operand %s for %s and %s", #op,          \
                      value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
+      EXIT_VM();                                                               \
     }                                                                          \
     int b = AS_NUMBER(pop(vm));                                                \
     int a = AS_NUMBER(pop(vm));                                                \
@@ -1207,6 +1209,7 @@ b_ptr_result run(b_vm *vm) {
         (!IS_NUMBER(peek(vm, 1)) && !IS_BOOL(peek(vm, 1)))) {                  \
       _runtime_error(vm, "unsupported operand %s for %s and %s", #op,          \
                      value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
+      EXIT_VM();                                                               \
     }                                                                          \
     b_value _b = pop(vm);                                                      \
     double b = IS_BOOL(_b) ? (AS_BOOL(_b) ? 1 : 0) : AS_NUMBER(_b);            \
