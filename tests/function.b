@@ -17,3 +17,17 @@ def test2(name, age, ...) {
 }
 
 test2('Richard', 20, 'James')
+
+def sin(n) {
+  var t = n, sine = t
+
+  iter var a = 1; a < 24; a++ {
+    var mult = -n * n / ((2 * a + 1) * (2 * a))
+    t *= mult
+    sine += t
+  }
+
+  return sine
+}
+
+echo 'Sin 10 = ${sin(10)}'

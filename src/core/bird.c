@@ -92,7 +92,9 @@ static void repl(b_vm *vm) {
     }
 
     source = append_strings(source, line);
-    source = append_strings(source, "\n");
+    if (line_length > 0) {
+      source = append_strings(source, "\n");
+    }
 
     if (bracket_count == 0 && paren_count == 0 && brace_count == 0) {
 

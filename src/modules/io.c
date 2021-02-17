@@ -90,8 +90,8 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
     }
   }
 
-  b_value iflag = EMPTY_VAL, oflag = EMPTY_VAL, cflag = EMPTY_VAL,
-          lflag = EMPTY_VAL, ispeed = EMPTY_VAL, ospeed = EMPTY_VAL;
+  b_value iflag = NIL_VAL, oflag = NIL_VAL, cflag = NIL_VAL, lflag = NIL_VAL,
+          ispeed = NIL_VAL, ospeed = NIL_VAL;
 
   struct termios raw;
   tcgetattr(fileno(file->file), &raw);

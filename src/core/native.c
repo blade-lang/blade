@@ -509,7 +509,10 @@ DECLARE_NATIVE(rand) {
   int n = upper_limit - lower_limit + 1;
   int remainder = RAND_MAX % n;
   int x;
-  srand(time(NULL));
+
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  srand((unsigned int)(1000000 * tv.tv_sec + tv.tv_usec));
   do {
     x = rand();
   } while (x >= RAND_MAX - remainder);
