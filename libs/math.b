@@ -55,7 +55,7 @@ class Math {
   # @return number
   static factorial(n) {
     if !is_number(n) {
-      die Exception('factorial expects parameter of type number')
+      die Exception('factorial() expects parameter of type number')
     }
 
     var result = 1
@@ -173,7 +173,7 @@ class Math {
   # returns the cube root of a number n
   static cbrt(n) {
     if !is_number(n) {
-      die Exception('cbrt expects parameter of type number')
+      die Exception('cbrt() expects parameter of type number')
     }
 
     if n == nil return 0
@@ -209,7 +209,7 @@ class Math {
   # returns the integer part of a number by removing any fractional
   static trunc(n) {
     if !is_number(n) {
-      die Exception('trunc expects parameter of type number')
+      die Exception('trunc() expects parameter of type number')
     }
 
     if n < 0 return Math.ceil(n)
@@ -219,7 +219,7 @@ class Math {
   # returns the square root of a nunmber
   static sqrt(n) {
     if !is_number(n) {
-      die Exception('sqrt expects parameter of type number')
+      die Exception('sqrt() expects parameter of type number')
     }
 
     return n ** 0.5
