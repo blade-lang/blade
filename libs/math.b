@@ -11,6 +11,38 @@ class Math {
   # to its diameter
   static var PI = 3.141592653589793
 
+  # Math.E
+  # represents Euler's number, the base of natural logarithms
+  static var E = 2.718281828459045
+
+  # Math.LOG_10
+  # represents the natural logarithm of 10
+  static var LOG_10 = 2.302585092994046
+
+  # Math.LOG_10_E
+  # represents the base 10 logarithm of e
+  static var LOG_10_E = 0.4342944819032518
+
+  # Math.LOG_2
+  # represents the natural logarithm of 2
+  static var LOG_2 = 0.6931471805599453
+
+  # Math.LOG_2_E
+  # represents the base 2 logarithm of e
+  static var LOG_2_E = 1.4426950408889634
+
+  # Math.ROOT_2
+  # represents the square root of 2
+  static var ROOT_2 = 1.4142135623730951
+
+  # Math.ROOT_3
+  # represents the square root of 3
+  static var ROOT_3 = 1.732050807568877
+
+  # Math.ROOT_HALF
+  # represents the square root of 1/2
+  static var ROOT_HALF = 0.7071067811865476
+
   # Mathematical infinity
   static var Infinity = 1/0
 
@@ -22,6 +54,10 @@ class Math {
   # numbers less than or equal to a given positive number n
   # @return number
   static factorial(n) {
+    if !is_number(n) {
+      die Exception('factorial expects parameter of type number')
+    }
+
     var result = 1
     iter var i = 1; i <= n; i++ result *= i
     return result
@@ -136,11 +172,18 @@ class Math {
 
   # returns the cube root of a number n
   static cbrt(n) {
+    if !is_number(n) {
+      die Exception('cbrt expects parameter of type number')
+    }
+
     if n == nil return 0
     else if n < 0 return -(-n ** (1/3))
     return n ** (1/3)
   }
 
+  # returns either a positive or negative +/- 1, indicating the sign of 
+  # a number passed into the argument. 
+  # If the number passed into Math.sign() is 0, it will return a 0.
   static sign(n) {
     if !is_number(n) n = to_number(n)
 
@@ -152,4 +195,33 @@ class Math {
   # A number representing the largest integer less than or 
   # equal to the specified number
   static floor(n) {}
+
+  # returns true if the given number is equal to NaN or false otherwise
+  static is_nan(n) {
+    return n == Math.NaN
+  }
+
+  # returns true if the given number is equal to Infinity or -Infinity or false otherwise
+  static is_inf(n) {
+    return n == Math.Infinity or n == -Math.Infinity
+  }
+
+  # returns the integer part of a number by removing any fractional
+  static trunc(n) {
+    if !is_number(n) {
+      die Exception('trunc expects parameter of type number')
+    }
+
+    if n < 0 return Math.ceil(n)
+    return Math.floor(n)
+  }
+
+  # returns the square root of a nunmber
+  static sqrt(n) {
+    if !is_number(n) {
+      die Exception('sqrt expects parameter of type number')
+    }
+
+    return n ** 0.5
+  }
 }

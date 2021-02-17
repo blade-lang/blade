@@ -383,8 +383,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     sprintf(str, "<native-function %s>", AS_NATIVE(value)->name);
     break;
   case OBJ_STRING:
-    memcpy(str, AS_CSTRING(value), AS_STRING(value)->length);
-    break;
+    return AS_CSTRING(value);
   case OBJ_UPVALUE:
     return (char *)"<upvalue>";
   case OBJ_BYTES:
