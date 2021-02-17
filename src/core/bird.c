@@ -10,11 +10,13 @@
 #include <setjmp.h>
 #include <signal.h>
 
+static bool continue_repl = true;
 sigjmp_buf ctrlc_buf;
 
 void handle_signals(int signo) {
   if (signo == SIGINT) {
     printf("\n<KeyboardInterrupt>\n");
+    continue_repl = false;
     siglongjmp(ctrlc_buf, 1);
   }
 }
@@ -40,6 +42,18 @@ static void repl(b_vm *vm) {
   for (;;) {
     while (sigsetjmp(ctrlc_buf, 1) != 0)
       ;
+
+    if (!continue_repl) {
+      current_line = 0;
+      brace_count = 0;
+      paren_count = 0;
+      bracket_count = 0;
+
+      // reset source...
+      memset(source, 0, strlen(source));
+      continue_repl = true;
+    }
+
     current_line++;
 
     const char *cursor = "> ";
@@ -78,6 +92,7 @@ static void repl(b_vm *vm) {
     }
 
     source = append_strings(source, line);
+    source = append_strings(source, "\n");
 
     if (bracket_count == 0 && paren_count == 0 && brace_count == 0) {
 
