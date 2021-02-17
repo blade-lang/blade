@@ -212,6 +212,17 @@ static b_token number(b_scanner *s) {
 
     while (is_digit(current(s)))
       advance(s);
+
+    // E or e are only valid here when followed by a digit and occuring after a
+    // dot
+    if ((current(s) == 'e' || current(s) == 'E') &&
+        (next(s) == '+' || next(s) == '-')) {
+      advance(s);
+      advance(s);
+
+      while (is_digit(current(s)))
+        advance(s);
+    }
   }
 
   return make_token(s, REG_NUMBER_TOKEN);
