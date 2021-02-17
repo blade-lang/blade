@@ -2,8 +2,7 @@
  * Base64 (RFC1341)
  *
  * Provides interface for encoding and decoding base64 data
- * @copyright Ore Richard
- */
+ * @copyright Ore Richard */
 
  class Base64 {
 
