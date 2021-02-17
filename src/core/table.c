@@ -95,7 +95,6 @@ static void adjust_capacity(b_vm *vm, b_table *table, int capacity) {
     b_entry *entry = &table->entries[i];
     if (IS_EMPTY(entry->key))
       continue;
-
     b_entry *dest = find_entry(entries, capacity, entry->key);
     dest->key = entry->key;
     dest->value = entry->value;
@@ -165,19 +164,19 @@ b_obj_string *table_find_string(b_table *table, const char *chars, int length,
     b_entry *entry = &table->entries[index];
 
     if (IS_EMPTY(entry->key)) {
-      // stop if we find an empty non-tombstone entry
-      if (IS_NIL(entry->value))
-        return NULL;
+      /* // stop if we find an empty non-tombstone entry
+      if (IS_NIL(entry->value)) */
+      return NULL;
     }
 
-    if (IS_STRING(entry->key)) {
-      b_obj_string *string = AS_STRING(entry->key);
-      if (string->length == length && string->hash == hash &&
-          memcmp(string->chars, chars, length) == 0) {
-        // we found it
-        return string;
-      }
+    // if (IS_STRING(entry->key)) {
+    b_obj_string *string = AS_STRING(entry->key);
+    if (string->length == length && string->hash == hash &&
+        memcmp(string->chars, chars, length) == 0) {
+      // we found it
+      return string;
     }
+    // }
 
     index = (index + 1) & table->capacity;
   }
