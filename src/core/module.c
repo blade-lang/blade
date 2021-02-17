@@ -4,6 +4,7 @@
 
 #include "modules/base64.h"
 #include "modules/io.h"
+#include "modules/math.h"
 #include "modules/os.h"
 
 typedef b_module_reg (*b_module_func)(b_vm *);
@@ -17,6 +18,7 @@ b_module_registry modules[] = {
     {"os", GET_MODULE_LOADER(os)},
     {"io", GET_MODULE_LOADER(io)},
     {"base64", GET_MODULE_LOADER(base64)},
+    {"math", GET_MODULE_LOADER(math)},
     {NULL, NULL},
 };
 
