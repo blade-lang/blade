@@ -624,6 +624,18 @@ DECLARE_NATIVE(is_function) {
 }
 
 /**
+ * is_iterable(value: any)
+ *
+ * returns true if the value is an iterable or false otherwise
+ */
+DECLARE_NATIVE(is_iterable) {
+  ENFORCE_ARG_COUNT(is_iterable, 1);
+  RETURN_BOOL(IS_LIST(args[0]) || IS_DICT(args[0]) || IS_BYTES(args[0]) ||
+              (IS_INSTANCE(args[0]) &&
+               is_instance_of(AS_INSTANCE(args[0])->klass, "Iterable")));
+}
+
+/**
  * is_class(value: any)
  *
  * returns true if the value is a class or false otherwise
@@ -654,7 +666,8 @@ DECLARE_NATIVE(is_instance) {
   ENFORCE_ARG_TYPE(is_instance, 0, IS_INSTANCE);
   ENFORCE_ARG_TYPE(is_instance, 1, IS_CLASS);
 
-  RETURN_BOOL(is_instance_of(AS_INSTANCE(args[0])->klass, AS_CLASS(args[1])));
+  RETURN_BOOL(is_instance_of(AS_INSTANCE(args[0])->klass,
+                             AS_CLASS(args[1])->name->chars));
 }
 
 //------------------------------------------------------------------------------
