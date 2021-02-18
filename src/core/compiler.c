@@ -870,7 +870,9 @@ static void parent(b_parser *p, bool can_assign) {
 }
 
 static void grouping(b_parser *p, bool can_assign) {
+  ignore_whitespace(p);
   expression(p);
+  ignore_whitespace(p);
   consume(p, RPAREN_TOKEN, "expected ')' after grouped expression");
 }
 
