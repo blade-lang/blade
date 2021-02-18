@@ -68,7 +68,7 @@ void free_byte_arr(b_vm *vm, b_byte_arr *array) {
   FREE_ARRAY(unsigned char, array->bytes, array->count);
 }
 
-void print_value(b_value value) {
+static inline void do_print_value(b_value value, bool fix_string) {
 #if defined USE_NAN_BOXING && USE_NAN_BOXING
   if (IS_EMPTY(value))
     printf("");
@@ -79,7 +79,7 @@ void print_value(b_value value) {
   else if (IS_NUMBER(value))
     printf(NUMBER_FORMAT, AS_NUMBER(value));
   else
-    print_object(value);
+    print_object(value, fix_string);
 #else
   switch (value.type) {
   case VAL_EMPTY:
@@ -103,6 +103,9 @@ void print_value(b_value value) {
   }
 #endif
 }
+
+void print_value(b_value value) { do_print_value(value, false); }
+void echo_value(b_value value) { do_print_value(value, true); }
 
 static inline char *number_to_string(double number) {
   int length = snprintf(NULL, 0, NUMBER_FORMAT, number);

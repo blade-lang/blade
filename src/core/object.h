@@ -172,7 +172,7 @@ b_obj_upvalue *new_upvalue(b_vm *vm, b_value *slot);
 b_obj_native *new_native(b_vm *vm, b_native_fn function, const char *name);
 b_obj_string *copy_string(b_vm *vm, const char *chars, int length);
 b_obj_string *take_string(b_vm *vm, char *chars, int length);
-void print_object(b_value value);
+void print_object(b_value value, bool fix_string);
 const char *object_type(b_obj *object);
 char *object_to_string(b_vm *vm, b_value value);
 

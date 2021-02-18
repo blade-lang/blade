@@ -225,7 +225,7 @@ static void print_file(b_obj_file *file) {
   printf("<file at %s in mode %s>", file->path->chars, file->mode->chars);
 }
 
-void print_object(b_value value) {
+void print_object(b_value value, bool fix_string) {
   switch (OBJ_TYPE(value)) {
   case OBJ_FILE: {
     print_file(AS_FILE(value));
@@ -283,7 +283,12 @@ void print_object(b_value value) {
     break;
   }
   case OBJ_STRING: {
-    printf("%s", AS_CSTRING(value));
+    char *string = AS_CSTRING(value);
+    if (fix_string) {
+      printf(strchr(string, '\'') != NULL ? "\"%s\"" : "'%s'", string);
+    } else {
+      printf("%s", string);
+    }
     break;
   }
   }

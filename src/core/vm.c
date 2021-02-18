@@ -1396,7 +1396,11 @@ b_ptr_result run(b_vm *vm) {
     }
 
     case OP_ECHO: {
-      print_value(pop(vm));
+      if(vm->is_repl) {
+        echo_value(pop(vm));
+      } else {
+        print_value(pop(vm));
+      }
       printf("\n"); // @TODO: remove when library function print is ready
       break;
     }
