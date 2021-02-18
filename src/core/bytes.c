@@ -201,7 +201,7 @@ DECLARE_BYTES_METHOD(is_number) {
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
 
   for (int i = 0; i < bytes->bytes.count; i++) {
-    if (!isnumber(bytes->bytes.bytes[i]))
+    if (!isdigit(bytes->bytes.bytes[i]))
       RETURN_FALSE;
   }
   RETURN_TRUE;

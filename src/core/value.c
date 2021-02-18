@@ -104,8 +104,8 @@ static inline void do_print_value(b_value value, bool fix_string) {
 #endif
 }
 
-void print_value(b_value value) { do_print_value(value, false); }
-void echo_value(b_value value) { do_print_value(value, true); }
+inline void print_value(b_value value) { do_print_value(value, false); }
+inline void echo_value(b_value value) { do_print_value(value, true); }
 
 static inline char *number_to_string(double number) {
   int length = snprintf(NULL, 0, NUMBER_FORMAT, number);
