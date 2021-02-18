@@ -10,17 +10,17 @@ for x, y in details {
   for i, j in [6,7,8,9,10] {
     echo '${i} = ${j}'
 
-    for i in [11,12,13,14,15] {
+    for _, i in [11,12,13,14,15] {
       echo i
     }
   }
 }
 
-for n in 'name' {
+for _, n in 'name' {
   echo n
 }
 
-for g in bytes([10, 21, 13, 47]) {
+for _, g in bytes([10, 21, 13, 47]) {
   echo g
 }
 
@@ -40,6 +40,6 @@ class Iterable {
   }
 }
 
-for it in Iterable() {
+for _, it in Iterable() {
   echo it
 }

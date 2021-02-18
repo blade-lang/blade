@@ -239,11 +239,21 @@ class Math {
 
     var result
 
-    for i in arg {
-      if result == nil result = i
-      else {
-        if is_list(i) or is_dict(i) result *= Math.product(i)
-        else result *= i
+    if is_dict(arg) {
+      for i, _ in arg {
+        if result == nil result = i
+        else {
+          if is_list(i) or is_dict(i) result *= Math.product(i)
+          else result *= i
+        }
+      }
+    } else {
+      for _, i in arg {
+        if result == nil result = i
+        else {
+          if is_list(i) or is_dict(i) result *= Math.product(i)
+          else result *= i
+        }
       }
     }
 

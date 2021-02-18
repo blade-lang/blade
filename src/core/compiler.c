@@ -1559,8 +1559,10 @@ static void for_statement(b_parser *p) {
   b_token key_token, value_token;
 
   if (!check(p, COMMA_TOKEN)) {
-    key_token = synthetic_token(" _ ");
-    value_token = p->previous;
+    /* key_token = synthetic_token(" _ ");
+    value_token = p->previous; */
+    key_token = p->previous;
+    value_token = synthetic_token(" _ ");
   } else {
     key_token = p->previous;
 
