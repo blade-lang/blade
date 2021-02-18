@@ -200,6 +200,7 @@ DECLARE_NATIVE(is_function);
 DECLARE_NATIVE(is_class);
 DECLARE_NATIVE(is_file);
 DECLARE_NATIVE(is_instance);
+DECLARE_NATIVE(is_iterable);
 
 DECLARE_NATIVE(print);
 DECLARE_NATIVE(__Exception__);

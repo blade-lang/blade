@@ -208,6 +208,11 @@ class Math {
     return n == Math.Infinity or n == -Math.Infinity
   }
 
+  # return true if x is neither an Infinity nor a NaN, and false otherwise
+  static is_finite(n) {
+    return !is_inf(n) and !is_nan(n)
+  }
+
   # returns the integer part of a number by removing any fractional
   static trunc(n) {
     if !is_number(n) {
@@ -225,5 +230,23 @@ class Math {
     }
 
     return n ** 0.5
+  }
+
+  static product(arg) {
+    if !is_iterable(arg) {
+      die Exception('iterable expected')
+    }
+
+    var result
+
+    for i in arg {
+      if result == nil result = i
+      else {
+        if is_list(i) or is_dict(i) result *= Math.product(i)
+        else result *= i
+      }
+    }
+
+    return result
   }
 }

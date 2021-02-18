@@ -207,6 +207,7 @@ static void init_builtin_functions(b_vm *vm) {
   DEFINE_NATIVE(is_object);
   DEFINE_NATIVE(is_string);
   DEFINE_NATIVE(is_file);
+  DEFINE_NATIVE(is_iterable);
   DEFINE_NATIVE(max);
   DEFINE_NATIVE(microtime);
   DEFINE_NATIVE(min);
@@ -678,10 +679,9 @@ bool is_falsey(b_value value) {
   return false;
 }
 
-bool is_instance_of(b_obj_class *klass1, b_obj_class *klass2) {
+bool is_instance_of(b_obj_class *klass1, char *klass2_name) {
   while (klass1 != NULL) {
-    if (memcmp(klass1->name->chars, klass2->name->chars,
-               klass1->name->length) == 0) {
+    if (memcmp(klass1->name->chars, klass2_name, klass1->name->length) == 0) {
       return true;
     }
     klass1 = klass1->superclass;
@@ -1821,7 +1821,7 @@ b_ptr_result run(b_vm *vm) {
     case OP_DIE: {
       if (!IS_INSTANCE(peek(vm, 0)) ||
           !is_instance_of(AS_INSTANCE(peek(vm, 0))->klass,
-                          vm->exception_class)) {
+                          vm->exception_class->name->chars)) {
         runtime_error("instance of Exception expected");
       }
 
