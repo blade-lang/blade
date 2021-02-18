@@ -212,7 +212,7 @@ DECLARE_NATIVE(sum) {
   double sum = 0;
   for (int i = 0; i < arg_count; i++) {
     ENFORCE_ARG_TYPE(sum, i, IS_NUMBER);
-    sum += AS_NUMBER(args[0]);
+    sum += AS_NUMBER(args[i]);
   }
 
   RETURN_NUMBER(sum);
