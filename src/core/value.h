@@ -127,6 +127,7 @@ void free_value_arr(b_vm *vm, b_value_arr *array);
 void write_value_arr(b_vm *vm, b_value_arr *array, b_value value);
 void insert_value_arr(b_vm *vm, b_value_arr *array, b_value value, int index);
 void print_value(b_value value);
+void echo_value(b_value value);
 const char *value_type(b_value value);
 bool values_equal(b_value a, b_value b);
 char *value_to_string(b_vm *vm, b_value value);
