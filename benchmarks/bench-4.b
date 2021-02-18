@@ -98,7 +98,7 @@ def solve() {
       # found a peg
       iter var i = 0; i < dirs.length(); i++ {
         var dir = dirs[i]
-      # for dir in dirs {
+      # for _, dir in dirs {
         
         # try each direction
         if move(pos, dir) {
