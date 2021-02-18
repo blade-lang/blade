@@ -7,7 +7,9 @@ def log(n) {
   return 2 * g
 }
 
-import 'math'
 
 echo log(21)
+
+# Compare against the Math library
+import 'math'
 echo Math.log(21)
