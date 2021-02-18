@@ -24,6 +24,7 @@ b_module_registry modules[] = {
 
 void bind_native_modules(b_vm *vm, b_obj_string *module_name,
                          const char *module_path) {
+
   if (is_core_library_file((char *)module_path, module_name->chars)) {
     for (int i = 0; modules[i].name != NULL; i++) {
       if (memcmp(modules[i].name, module_name->chars, module_name->length) ==

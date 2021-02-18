@@ -1,6 +1,7 @@
 #include "pathinfo.h"
 #include "common.h"
 #include "compat/unistd.h"
+#include "util.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -91,25 +92,22 @@ char *get_exe_dir() {
   return exe_dir;
 }
 
-char *merge_paths(char *a, char *b, int length) {
-  char *final_path = malloc(PATH_MAX * sizeof(char));
-  int length_a = strlen(a);
+char *merge_paths(char *a, char *b) {
+  char *final_path = "";
 
   // edge cases
   // 1. a itself is a file
   // 2. b is a bird runtime constant such as <repl>, <script> and <module>
 
   if (strstr(a, ".") == NULL && strstr(b, "<") == NULL && strlen(a) > 0) {
-    strncpy(final_path, a, length_a);
-  } else {
-    length_a = 0;
+    final_path = append_strings(final_path, a);
   }
   if (strlen(a) > 0 && b[0] != '.' && strstr(a, ".") == NULL &&
       strstr(b, "<") == NULL) {
-    strncpy(final_path + length_a, BIRD_PATH_SEPARATOR, 1);
-    strncpy(final_path + length_a + 1, b, length);
+    final_path = append_strings(final_path, BIRD_PATH_SEPARATOR);
+    final_path = append_strings(final_path, b);
   } else {
-    strncpy(final_path + length_a, b, length);
+    final_path = append_strings(final_path, b);
   }
   return final_path;
 }
@@ -120,7 +118,7 @@ bool file_exists(char *filepath) { return access(filepath, F_OK) == 0; }
 char *get_calling_dir() { return getenv("PWD"); }
 
 char *get_bird_filename(char *filename) {
-  return merge_paths(filename, BIRD_EXTENSION, strlen(BIRD_EXTENSION));
+  return merge_paths(filename, BIRD_EXTENSION);
 }
 
 char *get_filename(char *filepath) {
@@ -137,20 +135,17 @@ char *get_filename(char *filepath) {
 
 char *resolve_import_path(char *module_name, const char *current_file) {
   char *bird_file_name = get_bird_filename(module_name);
-  int name_length = (int)strlen(bird_file_name);
 
   // check relative to the current file...
   char *file_directory = dirname((char *)current_file);
-  char *relative_file =
-      merge_paths(file_directory, bird_file_name, name_length);
+  char *relative_file = merge_paths(file_directory, bird_file_name);
 
   if (file_exists(relative_file))
     return relative_file;
 
   // check in bird's default location
-  char *bird_directory = merge_paths(get_exe_dir(), LIBRARY_DIRECTORY,
-                                     (int)strlen(LIBRARY_DIRECTORY));
-  char *library_file = merge_paths(bird_directory, bird_file_name, name_length);
+  char *bird_directory = merge_paths(get_exe_dir(), LIBRARY_DIRECTORY);
+  char *library_file = merge_paths(bird_directory, bird_file_name);
 
   if (file_exists(library_file))
     return library_file;
@@ -158,12 +153,11 @@ char *resolve_import_path(char *module_name, const char *current_file) {
   return NULL;
 }
 
+#include <stdio.h>
 bool is_core_library_file(char *filepath, char *file_name) {
   char *bird_file_name = get_bird_filename(file_name);
-  char *bird_directory = merge_paths(get_exe_dir(), LIBRARY_DIRECTORY,
-                                     (int)strlen(LIBRARY_DIRECTORY));
-  char *library_file =
-      merge_paths(bird_directory, bird_file_name, (int)strlen(bird_file_name));
+  char *bird_directory = merge_paths(get_exe_dir(), LIBRARY_DIRECTORY);
+  char *library_file = merge_paths(bird_directory, bird_file_name);
 
   if (file_exists(library_file)) {
     return memcmp(library_file, filepath, (int)strlen(filepath)) == 0;
