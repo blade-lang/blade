@@ -31,6 +31,7 @@
 #define IS_UNIX
 #elif defined _WIN32
 #define IS_WINDOWS
+// #define NO_OLDNAMES
 #endif
 
 #define VERSION(x) #x

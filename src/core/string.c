@@ -228,7 +228,7 @@ DECLARE_STRING_METHOD(trim) {
 
   char *string = AS_CSTRING(METHOD_OBJECT);
 
-  char *end;
+  char *end = NULL;
 
   // Trim leading space
   if (trimmer == '\0') {
@@ -270,7 +270,7 @@ DECLARE_STRING_METHOD(ltrim) {
 
   char *string = AS_CSTRING(METHOD_OBJECT);
 
-  char *end;
+  char *end = NULL;
 
   // Trim leading space
   if (trimmer == '\0') {
@@ -304,7 +304,7 @@ DECLARE_STRING_METHOD(rtrim) {
 
   char *string = AS_CSTRING(METHOD_OBJECT);
 
-  char *end;
+  char *end = NULL;
 
   if (*string == 0) // All spaces?
     RETURN_OBJ(copy_string(vm, "", 0));
