@@ -3,6 +3,7 @@
 
 // special definitions for Cygwin
 #define _DEFAULT_SOURCE 1
+#define _ln_
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -28,7 +29,7 @@
 
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 #define IS_UNIX
-#else
+#elif defined _WIN32
 #define IS_WINDOWS
 #endif
 
@@ -49,12 +50,12 @@
 #elif defined(__MINGW32_MAJOR_VERSION)
 
 #define COMPILER                                                               \
-  VERSION_STRING("MinGW32", __MINGW32_MAJOR_VERSION, __MINGW32_MINOR_VERSION)
+  VERSION_STRING("MinGW32", __MINGW32_MAJOR_VERSION, __MINGW32_MINOR_VERSION, 0)
 
 #elif defined(__MINGW64_VERSION_MAJOR)
 
 #define COMPILER                                                               \
-  VERSION_STRING("MinGW-64", __MINGW64_VERSION_MAJOR, __MINGW64_VERSION_MAJOR)
+  VERSION_STRING("MinGW-64", __MINGW64_VERSION_MAJOR, __MINGW64_VERSION_MAJOR, 0)
 
 #elif defined(__GNUC__)
 

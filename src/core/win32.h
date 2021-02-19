@@ -3,12 +3,20 @@
 
 #include "common.h"
 
-#ifdef IS_WINDOWS
+#ifdef _WIN32
 
-#include <winbase.h>
 #include <windows.h>
+#include <winbase.h>
+#include <_timeval.h>
+#include <time.h>
 
-int gettimeofday(struct timeval *time_Info, struct timezone *timezone_Info)
+#define sigjmp_buf jmp_buf
+#define siglongjmp longjmp
+#define sigsetjmp(a,b) setjmp(a)
+#define lstat stat
+#define S_ISLNK S_ISBLK
+
+int gettimeofday(struct timeval *time_Info, struct timezone *timezone_Info);
 
 #endif
 

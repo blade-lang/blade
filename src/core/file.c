@@ -2,6 +2,7 @@
 #include "btime.h"
 #include "compat/unistd.h"
 #include "pathinfo.h"
+#include "win32.h"
 
 #include <errno.h>
 #include <stdarg.h>
@@ -365,8 +366,7 @@ DECLARE_FILE_METHOD(stats) {
         SET_DICT_STRING(dict, "uid", 3, NUMBER_VAL(stats.st_uid));
         SET_DICT_STRING(dict, "gid", 3, NUMBER_VAL(stats.st_gid));
 
-#if !defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE) ||                  \
-    defined(IS_WINDOWS)
+#if !defined(_WIN32) && (!defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE))
 
         // last modified time in milliseconds
         SET_DICT_STRING(dict, "mtime", 5,
@@ -422,12 +422,16 @@ DECLARE_FILE_METHOD(symlink) {
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
   DENY_STD();
 
+#ifdef _WIN32
+    RETURN_ERROR("symlink not supported in windows");
+#else
   if (file_exists(file->path->chars)) {
     b_obj_string *path = AS_STRING(args[0]);
     RETURN_BOOL(symlink(file->path->chars, path->chars) == 0);
   } else {
     RETURN_ERROR("symlink to file not found");
   }
+#endif
 }
 
 DECLARE_FILE_METHOD(delete) {
@@ -570,8 +574,7 @@ DECLARE_FILE_METHOD(set_times) {
     if (status == 0) {
       struct utimbuf new_times;
 
-#if !defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE) ||                  \
-    defined(IS_WINDOWS)
+#if !defined(_WIN32) && (!defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE))
 
       if (atime == (time_t)-1)
         new_times.actime = stats.st_atimespec.tv_sec;

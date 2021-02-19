@@ -6,6 +6,24 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+char* strsep(char** stringp, const char* delim) {
+  char* start = *stringp;
+  char* p;
+
+  p = (start != NULL) ? strpbrk(start, delim) : NULL;
+
+  if (p == NULL) {
+    *stringp = NULL;
+  } else {
+    *p = '\0';
+    *stringp = p + 1;
+  }
+
+  return start;
+}
+#endif
+
 /**
  * a Bird regex must always start and end with the same delimiter e.g. /
  *

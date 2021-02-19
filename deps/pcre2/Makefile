@@ -19,7 +19,7 @@
 
 
 
-
+VPATH = .
 am__is_gnu_make = { \
   if test -z '$(MAKELEVEL)'; then \
     false; \
@@ -91,8 +91,8 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-build_triplet = x86_64-apple-darwin18.7.0
-host_triplet = x86_64-apple-darwin18.7.0
+build_triplet = x86_64-pc-cygwin
+host_triplet = x86_64-pc-cygwin
 TESTS = $(am__EXEEXT_4) RunTest $(am__append_32)
 bin_PROGRAMS = $(am__EXEEXT_1) pcre2test$(EXEEXT)
 noinst_PROGRAMS = $(am__EXEEXT_2) $(am__EXEEXT_3) $(am__EXEEXT_4)
@@ -752,7 +752,7 @@ am__set_TESTS_bases = \
   bases=`echo $$bases`
 RECHECK_LOGS = $(TEST_LOGS)
 TEST_SUITE_LOG = test-suite.log
-TEST_EXTENSIONS =  .test
+TEST_EXTENSIONS = .exe .test
 LOG_DRIVER = $(SHELL) $(top_srcdir)/test-driver
 LOG_COMPILE = $(LOG_COMPILER) $(AM_LOG_FLAGS) $(LOG_FLAGS)
 am__set_b = \
@@ -766,7 +766,7 @@ am__set_b = \
       b='$*';; \
   esac
 am__test_logs1 = $(TESTS:=.log)
-am__test_logs2 = $(am__test_logs1:.log=.log)
+am__test_logs2 = $(am__test_logs1:.exe.log=.log)
 TEST_LOGS = $(am__test_logs2:.test.log=.log)
 TEST_LOG_DRIVER = $(SHELL) $(top_srcdir)/test-driver
 TEST_LOG_COMPILE = $(TEST_LOG_COMPILER) $(AM_TEST_LOG_FLAGS) \
@@ -795,36 +795,36 @@ distuninstallcheck_listfiles = find . -type f -print
 am__distuninstallcheck_listfiles = $(distuninstallcheck_listfiles) \
   | sed 's|^\./|$(prefix)/|' | grep -v '$(infodir)/dir$$'
 distcleancheck_listfiles = find . -type f -print
-ACLOCAL = ${SHELL} /Users/appzone/c/birdy/deps/pcre2/missing aclocal-1.16
+ACLOCAL = ${SHELL} /cygdrive/c/Users/Richard/Documents/bird/deps/pcre2/missing aclocal-1.16
 AMTAR = $${TAR-tar}
 AM_DEFAULT_VERBOSITY = 0
 AR = ar
 AS = as
-AUTOCONF = ${SHELL} /Users/appzone/c/birdy/deps/pcre2/missing autoconf
-AUTOHEADER = ${SHELL} /Users/appzone/c/birdy/deps/pcre2/missing autoheader
-AUTOMAKE = ${SHELL} /Users/appzone/c/birdy/deps/pcre2/missing automake-1.16
-AWK = awk
+AUTOCONF = ${SHELL} /cygdrive/c/Users/Richard/Documents/bird/deps/pcre2/missing autoconf
+AUTOHEADER = ${SHELL} /cygdrive/c/Users/Richard/Documents/bird/deps/pcre2/missing autoheader
+AUTOMAKE = ${SHELL} /cygdrive/c/Users/Richard/Documents/bird/deps/pcre2/missing automake-1.16
+AWK = gawk
 CC = gcc
-CCDEPMODE = depmode=gcc3
+CCDEPMODE = depmode=none
 CFLAGS = -O2
 CPP = gcc -E
-CPPFLAGS = -I/usr/local/Cellar/llvm/11.0.0/include
-CYGPATH_W = echo
+CPPFLAGS = 
+CYGPATH_W = cygpath -w
 DEFS = -DHAVE_CONFIG_H
 DEPDIR = .deps
 DISTCHECK_CONFIGURE_FLAGS = CFLAGS='' CXXFLAGS='' --enable-pcre2-16 --enable-pcre2-32 --enable-jit
 DLLTOOL = dlltool
-DSYMUTIL = dsymutil
+DSYMUTIL = 
 DUMPBIN = 
-ECHO_C = \c
-ECHO_N = 
+ECHO_C = 
+ECHO_N = -n
 ECHO_T = 
 EGREP = /usr/bin/grep -E
-EXEEXT = 
-EXTRA_LIBPCRE2_16_LDFLAGS =     -version-info 10:0:10
-EXTRA_LIBPCRE2_32_LDFLAGS =     -version-info 10:0:10
-EXTRA_LIBPCRE2_8_LDFLAGS =     -version-info 10:0:10
-EXTRA_LIBPCRE2_POSIX_LDFLAGS =     -version-info 2:3:0
+EXEEXT = .exe
+EXTRA_LIBPCRE2_16_LDFLAGS =    -no-undefined -version-info 10:0:10
+EXTRA_LIBPCRE2_32_LDFLAGS =    -no-undefined -version-info 10:0:10
+EXTRA_LIBPCRE2_8_LDFLAGS =    -no-undefined -version-info 10:0:10
+EXTRA_LIBPCRE2_POSIX_LDFLAGS =    -no-undefined -version-info 2:3:0
 FGREP = /usr/bin/grep -F
 GCOV_CFLAGS = 
 GCOV_CXXFLAGS = 
@@ -838,27 +838,27 @@ INSTALL_PROGRAM = ${INSTALL}
 INSTALL_SCRIPT = ${INSTALL}
 INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
 LCOV = 
-LD = /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld
-LDFLAGS = -L/usr/local/Cellar/llvm/11.0.0/lib
+LD = /usr/x86_64-pc-cygwin/bin/ld.exe
+LDFLAGS = 
 LIBBZ2 = 
 LIBOBJS = 
 LIBREADLINE = 
 LIBS = 
 LIBTOOL = $(SHELL) $(top_builddir)/libtool
 LIBZ = 
-LIPO = lipo
+LIPO = 
 LN_S = ln -s
 LTLIBOBJS = 
 LT_SYS_LIBRARY_PATH = 
-MAKEINFO = ${SHELL} /Users/appzone/c/birdy/deps/pcre2/missing makeinfo
+MAKEINFO = ${SHELL} /cygdrive/c/Users/Richard/Documents/bird/deps/pcre2/missing makeinfo
 MANIFEST_TOOL = :
-MKDIR_P = ./install-sh -c -d
+MKDIR_P = /usr/bin/mkdir -p
 NM = /usr/bin/nm -B
-NMEDIT = nmedit
+NMEDIT = 
 OBJDUMP = objdump
 OBJEXT = o
-OTOOL = otool
-OTOOL64 = :
+OTOOL = 
+OTOOL64 = 
 PACKAGE = pcre2
 PACKAGE_BUGREPORT = 
 PACKAGE_NAME = PCRE2
@@ -889,10 +889,10 @@ VALGRIND_LIBS =
 VERSION = 10.35
 VISIBILITY_CFLAGS = -fvisibility=hidden
 VISIBILITY_CXXFLAGS = -fvisibility=hidden -fvisibility-inlines-hidden
-abs_builddir = /Users/appzone/c/birdy/deps/pcre2
-abs_srcdir = /Users/appzone/c/birdy/deps/pcre2
-abs_top_builddir = /Users/appzone/c/birdy/deps/pcre2
-abs_top_srcdir = /Users/appzone/c/birdy/deps/pcre2
+abs_builddir = /cygdrive/c/Users/Richard/Documents/bird/deps/pcre2
+abs_srcdir = /cygdrive/c/Users/Richard/Documents/bird/deps/pcre2
+abs_top_builddir = /cygdrive/c/Users/Richard/Documents/bird/deps/pcre2
+abs_top_srcdir = /cygdrive/c/Users/Richard/Documents/bird/deps/pcre2
 ac_ct_AR = ar
 ac_ct_CC = gcc
 ac_ct_DUMPBIN = 
@@ -903,11 +903,11 @@ am__tar = $${TAR-tar} chof - "$$tardir"
 am__untar = $${TAR-tar} xf -
 ax_pthread_config = 
 bindir = ${exec_prefix}/bin
-build = x86_64-apple-darwin18.7.0
+build = x86_64-pc-cygwin
 build_alias = 
 build_cpu = x86_64
-build_os = darwin18.7.0
-build_vendor = apple
+build_os = cygwin
+build_vendor = pc
 builddir = .
 datadir = ${datarootdir}
 datarootdir = ${prefix}/share
@@ -917,15 +917,15 @@ enable_pcre2_16 = no
 enable_pcre2_32 = no
 enable_pcre2_8 = yes
 exec_prefix = ${prefix}
-host = x86_64-apple-darwin18.7.0
+host = x86_64-pc-cygwin
 host_alias = 
 host_cpu = x86_64
-host_os = darwin18.7.0
-host_vendor = apple
+host_os = cygwin
+host_vendor = pc
 htmldir = ${docdir}/html
 includedir = ${prefix}/include
 infodir = ${datarootdir}/info
-install_sh = ${SHELL} /Users/appzone/c/birdy/deps/pcre2/install-sh
+install_sh = ${SHELL} /cygdrive/c/Users/Richard/Documents/bird/deps/pcre2/install-sh
 libdir = ${exec_prefix}/lib
 libexecdir = ${exec_prefix}/libexec
 localedir = ${datarootdir}/locale
@@ -1921,672 +1921,672 @@ $(am__depfiles_remade):
 am--depfiles: $(am__depfiles_remade)
 
 .c.o:
-	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
-	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
-	$(am__mv) $$depbase.Tpo $$depbase.Po
-#	$(AM_V_CC)source='$<' object='$@' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(COMPILE) -c -o $@ $<
+#	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
+#	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+#	$(am__mv) $$depbase.Tpo $$depbase.Po
+	$(AM_V_CC)source='$<' object='$@' libtool=no \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(COMPILE) -c -o $@ $<
 
 .c.obj:
-	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
-	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
-	$(am__mv) $$depbase.Tpo $$depbase.Po
-#	$(AM_V_CC)source='$<' object='$@' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+#	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
+#	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
+#	$(am__mv) $$depbase.Tpo $$depbase.Po
+	$(AM_V_CC)source='$<' object='$@' libtool=no \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
 .c.lo:
-	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.lo$$||'`;\
-	$(LTCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
-	$(am__mv) $$depbase.Tpo $$depbase.Plo
-#	$(AM_V_CC)source='$<' object='$@' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LTCOMPILE) -c -o $@ $<
+#	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.lo$$||'`;\
+#	$(LTCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+#	$(am__mv) $$depbase.Tpo $$depbase.Plo
+	$(AM_V_CC)source='$<' object='$@' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LTCOMPILE) -c -o $@ $<
 
 src/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.o: src/pcre2_fuzzsupport.c
-	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(_libs_libpcre2_fuzzsupport_a_CFLAGS) $(CFLAGS) -MT src/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.o -MD -MP -MF src/$(DEPDIR)/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.Tpo -c -o src/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.o `test -f 'src/pcre2_fuzzsupport.c' || echo '$(srcdir)/'`src/pcre2_fuzzsupport.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.Tpo src/$(DEPDIR)/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.Po
-#	$(AM_V_CC)source='src/pcre2_fuzzsupport.c' object='src/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.o' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(_libs_libpcre2_fuzzsupport_a_CFLAGS) $(CFLAGS) -c -o src/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.o `test -f 'src/pcre2_fuzzsupport.c' || echo '$(srcdir)/'`src/pcre2_fuzzsupport.c
+#	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(_libs_libpcre2_fuzzsupport_a_CFLAGS) $(CFLAGS) -MT src/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.o -MD -MP -MF src/$(DEPDIR)/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.Tpo -c -o src/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.o `test -f 'src/pcre2_fuzzsupport.c' || echo '$(srcdir)/'`src/pcre2_fuzzsupport.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.Tpo src/$(DEPDIR)/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.Po
+	$(AM_V_CC)source='src/pcre2_fuzzsupport.c' object='src/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.o' libtool=no \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(_libs_libpcre2_fuzzsupport_a_CFLAGS) $(CFLAGS) -c -o src/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.o `test -f 'src/pcre2_fuzzsupport.c' || echo '$(srcdir)/'`src/pcre2_fuzzsupport.c
 
 src/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.obj: src/pcre2_fuzzsupport.c
-	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(_libs_libpcre2_fuzzsupport_a_CFLAGS) $(CFLAGS) -MT src/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.obj -MD -MP -MF src/$(DEPDIR)/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.Tpo -c -o src/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.obj `if test -f 'src/pcre2_fuzzsupport.c'; then $(CYGPATH_W) 'src/pcre2_fuzzsupport.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2_fuzzsupport.c'; fi`
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.Tpo src/$(DEPDIR)/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.Po
-#	$(AM_V_CC)source='src/pcre2_fuzzsupport.c' object='src/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.obj' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(_libs_libpcre2_fuzzsupport_a_CFLAGS) $(CFLAGS) -c -o src/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.obj `if test -f 'src/pcre2_fuzzsupport.c'; then $(CYGPATH_W) 'src/pcre2_fuzzsupport.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2_fuzzsupport.c'; fi`
+#	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(_libs_libpcre2_fuzzsupport_a_CFLAGS) $(CFLAGS) -MT src/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.obj -MD -MP -MF src/$(DEPDIR)/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.Tpo -c -o src/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.obj `if test -f 'src/pcre2_fuzzsupport.c'; then $(CYGPATH_W) 'src/pcre2_fuzzsupport.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2_fuzzsupport.c'; fi`
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.Tpo src/$(DEPDIR)/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.Po
+	$(AM_V_CC)source='src/pcre2_fuzzsupport.c' object='src/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.obj' libtool=no \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(_libs_libpcre2_fuzzsupport_a_CFLAGS) $(CFLAGS) -c -o src/_libs_libpcre2_fuzzsupport_a-pcre2_fuzzsupport.obj `if test -f 'src/pcre2_fuzzsupport.c'; then $(CYGPATH_W) 'src/pcre2_fuzzsupport.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2_fuzzsupport.c'; fi`
 
 src/libpcre2_16_la-pcre2_auto_possess.lo: src/pcre2_auto_possess.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_auto_possess.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_auto_possess.Tpo -c -o src/libpcre2_16_la-pcre2_auto_possess.lo `test -f 'src/pcre2_auto_possess.c' || echo '$(srcdir)/'`src/pcre2_auto_possess.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_auto_possess.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_auto_possess.Plo
-#	$(AM_V_CC)source='src/pcre2_auto_possess.c' object='src/libpcre2_16_la-pcre2_auto_possess.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_auto_possess.lo `test -f 'src/pcre2_auto_possess.c' || echo '$(srcdir)/'`src/pcre2_auto_possess.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_auto_possess.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_auto_possess.Tpo -c -o src/libpcre2_16_la-pcre2_auto_possess.lo `test -f 'src/pcre2_auto_possess.c' || echo '$(srcdir)/'`src/pcre2_auto_possess.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_auto_possess.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_auto_possess.Plo
+	$(AM_V_CC)source='src/pcre2_auto_possess.c' object='src/libpcre2_16_la-pcre2_auto_possess.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_auto_possess.lo `test -f 'src/pcre2_auto_possess.c' || echo '$(srcdir)/'`src/pcre2_auto_possess.c
 
 src/libpcre2_16_la-pcre2_compile.lo: src/pcre2_compile.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_compile.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_compile.Tpo -c -o src/libpcre2_16_la-pcre2_compile.lo `test -f 'src/pcre2_compile.c' || echo '$(srcdir)/'`src/pcre2_compile.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_compile.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_compile.Plo
-#	$(AM_V_CC)source='src/pcre2_compile.c' object='src/libpcre2_16_la-pcre2_compile.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_compile.lo `test -f 'src/pcre2_compile.c' || echo '$(srcdir)/'`src/pcre2_compile.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_compile.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_compile.Tpo -c -o src/libpcre2_16_la-pcre2_compile.lo `test -f 'src/pcre2_compile.c' || echo '$(srcdir)/'`src/pcre2_compile.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_compile.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_compile.Plo
+	$(AM_V_CC)source='src/pcre2_compile.c' object='src/libpcre2_16_la-pcre2_compile.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_compile.lo `test -f 'src/pcre2_compile.c' || echo '$(srcdir)/'`src/pcre2_compile.c
 
 src/libpcre2_16_la-pcre2_config.lo: src/pcre2_config.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_config.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_config.Tpo -c -o src/libpcre2_16_la-pcre2_config.lo `test -f 'src/pcre2_config.c' || echo '$(srcdir)/'`src/pcre2_config.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_config.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_config.Plo
-#	$(AM_V_CC)source='src/pcre2_config.c' object='src/libpcre2_16_la-pcre2_config.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_config.lo `test -f 'src/pcre2_config.c' || echo '$(srcdir)/'`src/pcre2_config.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_config.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_config.Tpo -c -o src/libpcre2_16_la-pcre2_config.lo `test -f 'src/pcre2_config.c' || echo '$(srcdir)/'`src/pcre2_config.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_config.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_config.Plo
+	$(AM_V_CC)source='src/pcre2_config.c' object='src/libpcre2_16_la-pcre2_config.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_config.lo `test -f 'src/pcre2_config.c' || echo '$(srcdir)/'`src/pcre2_config.c
 
 src/libpcre2_16_la-pcre2_context.lo: src/pcre2_context.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_context.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_context.Tpo -c -o src/libpcre2_16_la-pcre2_context.lo `test -f 'src/pcre2_context.c' || echo '$(srcdir)/'`src/pcre2_context.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_context.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_context.Plo
-#	$(AM_V_CC)source='src/pcre2_context.c' object='src/libpcre2_16_la-pcre2_context.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_context.lo `test -f 'src/pcre2_context.c' || echo '$(srcdir)/'`src/pcre2_context.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_context.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_context.Tpo -c -o src/libpcre2_16_la-pcre2_context.lo `test -f 'src/pcre2_context.c' || echo '$(srcdir)/'`src/pcre2_context.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_context.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_context.Plo
+	$(AM_V_CC)source='src/pcre2_context.c' object='src/libpcre2_16_la-pcre2_context.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_context.lo `test -f 'src/pcre2_context.c' || echo '$(srcdir)/'`src/pcre2_context.c
 
 src/libpcre2_16_la-pcre2_convert.lo: src/pcre2_convert.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_convert.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_convert.Tpo -c -o src/libpcre2_16_la-pcre2_convert.lo `test -f 'src/pcre2_convert.c' || echo '$(srcdir)/'`src/pcre2_convert.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_convert.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_convert.Plo
-#	$(AM_V_CC)source='src/pcre2_convert.c' object='src/libpcre2_16_la-pcre2_convert.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_convert.lo `test -f 'src/pcre2_convert.c' || echo '$(srcdir)/'`src/pcre2_convert.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_convert.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_convert.Tpo -c -o src/libpcre2_16_la-pcre2_convert.lo `test -f 'src/pcre2_convert.c' || echo '$(srcdir)/'`src/pcre2_convert.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_convert.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_convert.Plo
+	$(AM_V_CC)source='src/pcre2_convert.c' object='src/libpcre2_16_la-pcre2_convert.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_convert.lo `test -f 'src/pcre2_convert.c' || echo '$(srcdir)/'`src/pcre2_convert.c
 
 src/libpcre2_16_la-pcre2_dfa_match.lo: src/pcre2_dfa_match.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_dfa_match.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_dfa_match.Tpo -c -o src/libpcre2_16_la-pcre2_dfa_match.lo `test -f 'src/pcre2_dfa_match.c' || echo '$(srcdir)/'`src/pcre2_dfa_match.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_dfa_match.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_dfa_match.Plo
-#	$(AM_V_CC)source='src/pcre2_dfa_match.c' object='src/libpcre2_16_la-pcre2_dfa_match.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_dfa_match.lo `test -f 'src/pcre2_dfa_match.c' || echo '$(srcdir)/'`src/pcre2_dfa_match.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_dfa_match.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_dfa_match.Tpo -c -o src/libpcre2_16_la-pcre2_dfa_match.lo `test -f 'src/pcre2_dfa_match.c' || echo '$(srcdir)/'`src/pcre2_dfa_match.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_dfa_match.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_dfa_match.Plo
+	$(AM_V_CC)source='src/pcre2_dfa_match.c' object='src/libpcre2_16_la-pcre2_dfa_match.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_dfa_match.lo `test -f 'src/pcre2_dfa_match.c' || echo '$(srcdir)/'`src/pcre2_dfa_match.c
 
 src/libpcre2_16_la-pcre2_error.lo: src/pcre2_error.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_error.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_error.Tpo -c -o src/libpcre2_16_la-pcre2_error.lo `test -f 'src/pcre2_error.c' || echo '$(srcdir)/'`src/pcre2_error.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_error.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_error.Plo
-#	$(AM_V_CC)source='src/pcre2_error.c' object='src/libpcre2_16_la-pcre2_error.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_error.lo `test -f 'src/pcre2_error.c' || echo '$(srcdir)/'`src/pcre2_error.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_error.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_error.Tpo -c -o src/libpcre2_16_la-pcre2_error.lo `test -f 'src/pcre2_error.c' || echo '$(srcdir)/'`src/pcre2_error.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_error.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_error.Plo
+	$(AM_V_CC)source='src/pcre2_error.c' object='src/libpcre2_16_la-pcre2_error.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_error.lo `test -f 'src/pcre2_error.c' || echo '$(srcdir)/'`src/pcre2_error.c
 
 src/libpcre2_16_la-pcre2_extuni.lo: src/pcre2_extuni.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_extuni.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_extuni.Tpo -c -o src/libpcre2_16_la-pcre2_extuni.lo `test -f 'src/pcre2_extuni.c' || echo '$(srcdir)/'`src/pcre2_extuni.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_extuni.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_extuni.Plo
-#	$(AM_V_CC)source='src/pcre2_extuni.c' object='src/libpcre2_16_la-pcre2_extuni.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_extuni.lo `test -f 'src/pcre2_extuni.c' || echo '$(srcdir)/'`src/pcre2_extuni.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_extuni.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_extuni.Tpo -c -o src/libpcre2_16_la-pcre2_extuni.lo `test -f 'src/pcre2_extuni.c' || echo '$(srcdir)/'`src/pcre2_extuni.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_extuni.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_extuni.Plo
+	$(AM_V_CC)source='src/pcre2_extuni.c' object='src/libpcre2_16_la-pcre2_extuni.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_extuni.lo `test -f 'src/pcre2_extuni.c' || echo '$(srcdir)/'`src/pcre2_extuni.c
 
 src/libpcre2_16_la-pcre2_find_bracket.lo: src/pcre2_find_bracket.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_find_bracket.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_find_bracket.Tpo -c -o src/libpcre2_16_la-pcre2_find_bracket.lo `test -f 'src/pcre2_find_bracket.c' || echo '$(srcdir)/'`src/pcre2_find_bracket.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_find_bracket.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_find_bracket.Plo
-#	$(AM_V_CC)source='src/pcre2_find_bracket.c' object='src/libpcre2_16_la-pcre2_find_bracket.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_find_bracket.lo `test -f 'src/pcre2_find_bracket.c' || echo '$(srcdir)/'`src/pcre2_find_bracket.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_find_bracket.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_find_bracket.Tpo -c -o src/libpcre2_16_la-pcre2_find_bracket.lo `test -f 'src/pcre2_find_bracket.c' || echo '$(srcdir)/'`src/pcre2_find_bracket.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_find_bracket.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_find_bracket.Plo
+	$(AM_V_CC)source='src/pcre2_find_bracket.c' object='src/libpcre2_16_la-pcre2_find_bracket.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_find_bracket.lo `test -f 'src/pcre2_find_bracket.c' || echo '$(srcdir)/'`src/pcre2_find_bracket.c
 
 src/libpcre2_16_la-pcre2_jit_compile.lo: src/pcre2_jit_compile.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_jit_compile.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_jit_compile.Tpo -c -o src/libpcre2_16_la-pcre2_jit_compile.lo `test -f 'src/pcre2_jit_compile.c' || echo '$(srcdir)/'`src/pcre2_jit_compile.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_jit_compile.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_jit_compile.Plo
-#	$(AM_V_CC)source='src/pcre2_jit_compile.c' object='src/libpcre2_16_la-pcre2_jit_compile.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_jit_compile.lo `test -f 'src/pcre2_jit_compile.c' || echo '$(srcdir)/'`src/pcre2_jit_compile.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_jit_compile.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_jit_compile.Tpo -c -o src/libpcre2_16_la-pcre2_jit_compile.lo `test -f 'src/pcre2_jit_compile.c' || echo '$(srcdir)/'`src/pcre2_jit_compile.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_jit_compile.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_jit_compile.Plo
+	$(AM_V_CC)source='src/pcre2_jit_compile.c' object='src/libpcre2_16_la-pcre2_jit_compile.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_jit_compile.lo `test -f 'src/pcre2_jit_compile.c' || echo '$(srcdir)/'`src/pcre2_jit_compile.c
 
 src/libpcre2_16_la-pcre2_maketables.lo: src/pcre2_maketables.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_maketables.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_maketables.Tpo -c -o src/libpcre2_16_la-pcre2_maketables.lo `test -f 'src/pcre2_maketables.c' || echo '$(srcdir)/'`src/pcre2_maketables.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_maketables.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_maketables.Plo
-#	$(AM_V_CC)source='src/pcre2_maketables.c' object='src/libpcre2_16_la-pcre2_maketables.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_maketables.lo `test -f 'src/pcre2_maketables.c' || echo '$(srcdir)/'`src/pcre2_maketables.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_maketables.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_maketables.Tpo -c -o src/libpcre2_16_la-pcre2_maketables.lo `test -f 'src/pcre2_maketables.c' || echo '$(srcdir)/'`src/pcre2_maketables.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_maketables.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_maketables.Plo
+	$(AM_V_CC)source='src/pcre2_maketables.c' object='src/libpcre2_16_la-pcre2_maketables.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_maketables.lo `test -f 'src/pcre2_maketables.c' || echo '$(srcdir)/'`src/pcre2_maketables.c
 
 src/libpcre2_16_la-pcre2_match.lo: src/pcre2_match.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_match.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_match.Tpo -c -o src/libpcre2_16_la-pcre2_match.lo `test -f 'src/pcre2_match.c' || echo '$(srcdir)/'`src/pcre2_match.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_match.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_match.Plo
-#	$(AM_V_CC)source='src/pcre2_match.c' object='src/libpcre2_16_la-pcre2_match.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_match.lo `test -f 'src/pcre2_match.c' || echo '$(srcdir)/'`src/pcre2_match.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_match.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_match.Tpo -c -o src/libpcre2_16_la-pcre2_match.lo `test -f 'src/pcre2_match.c' || echo '$(srcdir)/'`src/pcre2_match.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_match.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_match.Plo
+	$(AM_V_CC)source='src/pcre2_match.c' object='src/libpcre2_16_la-pcre2_match.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_match.lo `test -f 'src/pcre2_match.c' || echo '$(srcdir)/'`src/pcre2_match.c
 
 src/libpcre2_16_la-pcre2_match_data.lo: src/pcre2_match_data.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_match_data.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_match_data.Tpo -c -o src/libpcre2_16_la-pcre2_match_data.lo `test -f 'src/pcre2_match_data.c' || echo '$(srcdir)/'`src/pcre2_match_data.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_match_data.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_match_data.Plo
-#	$(AM_V_CC)source='src/pcre2_match_data.c' object='src/libpcre2_16_la-pcre2_match_data.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_match_data.lo `test -f 'src/pcre2_match_data.c' || echo '$(srcdir)/'`src/pcre2_match_data.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_match_data.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_match_data.Tpo -c -o src/libpcre2_16_la-pcre2_match_data.lo `test -f 'src/pcre2_match_data.c' || echo '$(srcdir)/'`src/pcre2_match_data.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_match_data.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_match_data.Plo
+	$(AM_V_CC)source='src/pcre2_match_data.c' object='src/libpcre2_16_la-pcre2_match_data.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_match_data.lo `test -f 'src/pcre2_match_data.c' || echo '$(srcdir)/'`src/pcre2_match_data.c
 
 src/libpcre2_16_la-pcre2_newline.lo: src/pcre2_newline.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_newline.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_newline.Tpo -c -o src/libpcre2_16_la-pcre2_newline.lo `test -f 'src/pcre2_newline.c' || echo '$(srcdir)/'`src/pcre2_newline.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_newline.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_newline.Plo
-#	$(AM_V_CC)source='src/pcre2_newline.c' object='src/libpcre2_16_la-pcre2_newline.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_newline.lo `test -f 'src/pcre2_newline.c' || echo '$(srcdir)/'`src/pcre2_newline.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_newline.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_newline.Tpo -c -o src/libpcre2_16_la-pcre2_newline.lo `test -f 'src/pcre2_newline.c' || echo '$(srcdir)/'`src/pcre2_newline.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_newline.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_newline.Plo
+	$(AM_V_CC)source='src/pcre2_newline.c' object='src/libpcre2_16_la-pcre2_newline.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_newline.lo `test -f 'src/pcre2_newline.c' || echo '$(srcdir)/'`src/pcre2_newline.c
 
 src/libpcre2_16_la-pcre2_ord2utf.lo: src/pcre2_ord2utf.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_ord2utf.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_ord2utf.Tpo -c -o src/libpcre2_16_la-pcre2_ord2utf.lo `test -f 'src/pcre2_ord2utf.c' || echo '$(srcdir)/'`src/pcre2_ord2utf.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_ord2utf.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_ord2utf.Plo
-#	$(AM_V_CC)source='src/pcre2_ord2utf.c' object='src/libpcre2_16_la-pcre2_ord2utf.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_ord2utf.lo `test -f 'src/pcre2_ord2utf.c' || echo '$(srcdir)/'`src/pcre2_ord2utf.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_ord2utf.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_ord2utf.Tpo -c -o src/libpcre2_16_la-pcre2_ord2utf.lo `test -f 'src/pcre2_ord2utf.c' || echo '$(srcdir)/'`src/pcre2_ord2utf.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_ord2utf.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_ord2utf.Plo
+	$(AM_V_CC)source='src/pcre2_ord2utf.c' object='src/libpcre2_16_la-pcre2_ord2utf.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_ord2utf.lo `test -f 'src/pcre2_ord2utf.c' || echo '$(srcdir)/'`src/pcre2_ord2utf.c
 
 src/libpcre2_16_la-pcre2_pattern_info.lo: src/pcre2_pattern_info.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_pattern_info.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_pattern_info.Tpo -c -o src/libpcre2_16_la-pcre2_pattern_info.lo `test -f 'src/pcre2_pattern_info.c' || echo '$(srcdir)/'`src/pcre2_pattern_info.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_pattern_info.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_pattern_info.Plo
-#	$(AM_V_CC)source='src/pcre2_pattern_info.c' object='src/libpcre2_16_la-pcre2_pattern_info.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_pattern_info.lo `test -f 'src/pcre2_pattern_info.c' || echo '$(srcdir)/'`src/pcre2_pattern_info.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_pattern_info.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_pattern_info.Tpo -c -o src/libpcre2_16_la-pcre2_pattern_info.lo `test -f 'src/pcre2_pattern_info.c' || echo '$(srcdir)/'`src/pcre2_pattern_info.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_pattern_info.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_pattern_info.Plo
+	$(AM_V_CC)source='src/pcre2_pattern_info.c' object='src/libpcre2_16_la-pcre2_pattern_info.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_pattern_info.lo `test -f 'src/pcre2_pattern_info.c' || echo '$(srcdir)/'`src/pcre2_pattern_info.c
 
 src/libpcre2_16_la-pcre2_script_run.lo: src/pcre2_script_run.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_script_run.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_script_run.Tpo -c -o src/libpcre2_16_la-pcre2_script_run.lo `test -f 'src/pcre2_script_run.c' || echo '$(srcdir)/'`src/pcre2_script_run.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_script_run.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_script_run.Plo
-#	$(AM_V_CC)source='src/pcre2_script_run.c' object='src/libpcre2_16_la-pcre2_script_run.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_script_run.lo `test -f 'src/pcre2_script_run.c' || echo '$(srcdir)/'`src/pcre2_script_run.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_script_run.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_script_run.Tpo -c -o src/libpcre2_16_la-pcre2_script_run.lo `test -f 'src/pcre2_script_run.c' || echo '$(srcdir)/'`src/pcre2_script_run.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_script_run.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_script_run.Plo
+	$(AM_V_CC)source='src/pcre2_script_run.c' object='src/libpcre2_16_la-pcre2_script_run.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_script_run.lo `test -f 'src/pcre2_script_run.c' || echo '$(srcdir)/'`src/pcre2_script_run.c
 
 src/libpcre2_16_la-pcre2_serialize.lo: src/pcre2_serialize.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_serialize.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_serialize.Tpo -c -o src/libpcre2_16_la-pcre2_serialize.lo `test -f 'src/pcre2_serialize.c' || echo '$(srcdir)/'`src/pcre2_serialize.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_serialize.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_serialize.Plo
-#	$(AM_V_CC)source='src/pcre2_serialize.c' object='src/libpcre2_16_la-pcre2_serialize.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_serialize.lo `test -f 'src/pcre2_serialize.c' || echo '$(srcdir)/'`src/pcre2_serialize.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_serialize.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_serialize.Tpo -c -o src/libpcre2_16_la-pcre2_serialize.lo `test -f 'src/pcre2_serialize.c' || echo '$(srcdir)/'`src/pcre2_serialize.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_serialize.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_serialize.Plo
+	$(AM_V_CC)source='src/pcre2_serialize.c' object='src/libpcre2_16_la-pcre2_serialize.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_serialize.lo `test -f 'src/pcre2_serialize.c' || echo '$(srcdir)/'`src/pcre2_serialize.c
 
 src/libpcre2_16_la-pcre2_string_utils.lo: src/pcre2_string_utils.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_string_utils.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_string_utils.Tpo -c -o src/libpcre2_16_la-pcre2_string_utils.lo `test -f 'src/pcre2_string_utils.c' || echo '$(srcdir)/'`src/pcre2_string_utils.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_string_utils.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_string_utils.Plo
-#	$(AM_V_CC)source='src/pcre2_string_utils.c' object='src/libpcre2_16_la-pcre2_string_utils.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_string_utils.lo `test -f 'src/pcre2_string_utils.c' || echo '$(srcdir)/'`src/pcre2_string_utils.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_string_utils.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_string_utils.Tpo -c -o src/libpcre2_16_la-pcre2_string_utils.lo `test -f 'src/pcre2_string_utils.c' || echo '$(srcdir)/'`src/pcre2_string_utils.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_string_utils.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_string_utils.Plo
+	$(AM_V_CC)source='src/pcre2_string_utils.c' object='src/libpcre2_16_la-pcre2_string_utils.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_string_utils.lo `test -f 'src/pcre2_string_utils.c' || echo '$(srcdir)/'`src/pcre2_string_utils.c
 
 src/libpcre2_16_la-pcre2_study.lo: src/pcre2_study.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_study.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_study.Tpo -c -o src/libpcre2_16_la-pcre2_study.lo `test -f 'src/pcre2_study.c' || echo '$(srcdir)/'`src/pcre2_study.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_study.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_study.Plo
-#	$(AM_V_CC)source='src/pcre2_study.c' object='src/libpcre2_16_la-pcre2_study.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_study.lo `test -f 'src/pcre2_study.c' || echo '$(srcdir)/'`src/pcre2_study.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_study.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_study.Tpo -c -o src/libpcre2_16_la-pcre2_study.lo `test -f 'src/pcre2_study.c' || echo '$(srcdir)/'`src/pcre2_study.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_study.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_study.Plo
+	$(AM_V_CC)source='src/pcre2_study.c' object='src/libpcre2_16_la-pcre2_study.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_study.lo `test -f 'src/pcre2_study.c' || echo '$(srcdir)/'`src/pcre2_study.c
 
 src/libpcre2_16_la-pcre2_substitute.lo: src/pcre2_substitute.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_substitute.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_substitute.Tpo -c -o src/libpcre2_16_la-pcre2_substitute.lo `test -f 'src/pcre2_substitute.c' || echo '$(srcdir)/'`src/pcre2_substitute.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_substitute.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_substitute.Plo
-#	$(AM_V_CC)source='src/pcre2_substitute.c' object='src/libpcre2_16_la-pcre2_substitute.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_substitute.lo `test -f 'src/pcre2_substitute.c' || echo '$(srcdir)/'`src/pcre2_substitute.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_substitute.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_substitute.Tpo -c -o src/libpcre2_16_la-pcre2_substitute.lo `test -f 'src/pcre2_substitute.c' || echo '$(srcdir)/'`src/pcre2_substitute.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_substitute.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_substitute.Plo
+	$(AM_V_CC)source='src/pcre2_substitute.c' object='src/libpcre2_16_la-pcre2_substitute.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_substitute.lo `test -f 'src/pcre2_substitute.c' || echo '$(srcdir)/'`src/pcre2_substitute.c
 
 src/libpcre2_16_la-pcre2_substring.lo: src/pcre2_substring.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_substring.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_substring.Tpo -c -o src/libpcre2_16_la-pcre2_substring.lo `test -f 'src/pcre2_substring.c' || echo '$(srcdir)/'`src/pcre2_substring.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_substring.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_substring.Plo
-#	$(AM_V_CC)source='src/pcre2_substring.c' object='src/libpcre2_16_la-pcre2_substring.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_substring.lo `test -f 'src/pcre2_substring.c' || echo '$(srcdir)/'`src/pcre2_substring.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_substring.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_substring.Tpo -c -o src/libpcre2_16_la-pcre2_substring.lo `test -f 'src/pcre2_substring.c' || echo '$(srcdir)/'`src/pcre2_substring.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_substring.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_substring.Plo
+	$(AM_V_CC)source='src/pcre2_substring.c' object='src/libpcre2_16_la-pcre2_substring.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_substring.lo `test -f 'src/pcre2_substring.c' || echo '$(srcdir)/'`src/pcre2_substring.c
 
 src/libpcre2_16_la-pcre2_tables.lo: src/pcre2_tables.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_tables.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_tables.Tpo -c -o src/libpcre2_16_la-pcre2_tables.lo `test -f 'src/pcre2_tables.c' || echo '$(srcdir)/'`src/pcre2_tables.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_tables.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_tables.Plo
-#	$(AM_V_CC)source='src/pcre2_tables.c' object='src/libpcre2_16_la-pcre2_tables.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_tables.lo `test -f 'src/pcre2_tables.c' || echo '$(srcdir)/'`src/pcre2_tables.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_tables.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_tables.Tpo -c -o src/libpcre2_16_la-pcre2_tables.lo `test -f 'src/pcre2_tables.c' || echo '$(srcdir)/'`src/pcre2_tables.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_tables.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_tables.Plo
+	$(AM_V_CC)source='src/pcre2_tables.c' object='src/libpcre2_16_la-pcre2_tables.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_tables.lo `test -f 'src/pcre2_tables.c' || echo '$(srcdir)/'`src/pcre2_tables.c
 
 src/libpcre2_16_la-pcre2_ucd.lo: src/pcre2_ucd.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_ucd.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_ucd.Tpo -c -o src/libpcre2_16_la-pcre2_ucd.lo `test -f 'src/pcre2_ucd.c' || echo '$(srcdir)/'`src/pcre2_ucd.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_ucd.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_ucd.Plo
-#	$(AM_V_CC)source='src/pcre2_ucd.c' object='src/libpcre2_16_la-pcre2_ucd.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_ucd.lo `test -f 'src/pcre2_ucd.c' || echo '$(srcdir)/'`src/pcre2_ucd.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_ucd.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_ucd.Tpo -c -o src/libpcre2_16_la-pcre2_ucd.lo `test -f 'src/pcre2_ucd.c' || echo '$(srcdir)/'`src/pcre2_ucd.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_ucd.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_ucd.Plo
+	$(AM_V_CC)source='src/pcre2_ucd.c' object='src/libpcre2_16_la-pcre2_ucd.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_ucd.lo `test -f 'src/pcre2_ucd.c' || echo '$(srcdir)/'`src/pcre2_ucd.c
 
 src/libpcre2_16_la-pcre2_valid_utf.lo: src/pcre2_valid_utf.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_valid_utf.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_valid_utf.Tpo -c -o src/libpcre2_16_la-pcre2_valid_utf.lo `test -f 'src/pcre2_valid_utf.c' || echo '$(srcdir)/'`src/pcre2_valid_utf.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_valid_utf.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_valid_utf.Plo
-#	$(AM_V_CC)source='src/pcre2_valid_utf.c' object='src/libpcre2_16_la-pcre2_valid_utf.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_valid_utf.lo `test -f 'src/pcre2_valid_utf.c' || echo '$(srcdir)/'`src/pcre2_valid_utf.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_valid_utf.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_valid_utf.Tpo -c -o src/libpcre2_16_la-pcre2_valid_utf.lo `test -f 'src/pcre2_valid_utf.c' || echo '$(srcdir)/'`src/pcre2_valid_utf.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_valid_utf.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_valid_utf.Plo
+	$(AM_V_CC)source='src/pcre2_valid_utf.c' object='src/libpcre2_16_la-pcre2_valid_utf.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_valid_utf.lo `test -f 'src/pcre2_valid_utf.c' || echo '$(srcdir)/'`src/pcre2_valid_utf.c
 
 src/libpcre2_16_la-pcre2_xclass.lo: src/pcre2_xclass.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_xclass.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_xclass.Tpo -c -o src/libpcre2_16_la-pcre2_xclass.lo `test -f 'src/pcre2_xclass.c' || echo '$(srcdir)/'`src/pcre2_xclass.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_xclass.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_xclass.Plo
-#	$(AM_V_CC)source='src/pcre2_xclass.c' object='src/libpcre2_16_la-pcre2_xclass.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_xclass.lo `test -f 'src/pcre2_xclass.c' || echo '$(srcdir)/'`src/pcre2_xclass.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_xclass.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_xclass.Tpo -c -o src/libpcre2_16_la-pcre2_xclass.lo `test -f 'src/pcre2_xclass.c' || echo '$(srcdir)/'`src/pcre2_xclass.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_xclass.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_xclass.Plo
+	$(AM_V_CC)source='src/pcre2_xclass.c' object='src/libpcre2_16_la-pcre2_xclass.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_xclass.lo `test -f 'src/pcre2_xclass.c' || echo '$(srcdir)/'`src/pcre2_xclass.c
 
 src/libpcre2_16_la-pcre2_chartables.lo: src/pcre2_chartables.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_chartables.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_chartables.Tpo -c -o src/libpcre2_16_la-pcre2_chartables.lo `test -f 'src/pcre2_chartables.c' || echo '$(srcdir)/'`src/pcre2_chartables.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_chartables.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_chartables.Plo
-#	$(AM_V_CC)source='src/pcre2_chartables.c' object='src/libpcre2_16_la-pcre2_chartables.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_chartables.lo `test -f 'src/pcre2_chartables.c' || echo '$(srcdir)/'`src/pcre2_chartables.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_16_la-pcre2_chartables.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_16_la-pcre2_chartables.Tpo -c -o src/libpcre2_16_la-pcre2_chartables.lo `test -f 'src/pcre2_chartables.c' || echo '$(srcdir)/'`src/pcre2_chartables.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_16_la-pcre2_chartables.Tpo src/$(DEPDIR)/libpcre2_16_la-pcre2_chartables.Plo
+	$(AM_V_CC)source='src/pcre2_chartables.c' object='src/libpcre2_16_la-pcre2_chartables.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_16_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_16_la-pcre2_chartables.lo `test -f 'src/pcre2_chartables.c' || echo '$(srcdir)/'`src/pcre2_chartables.c
 
 src/libpcre2_32_la-pcre2_auto_possess.lo: src/pcre2_auto_possess.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_auto_possess.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_auto_possess.Tpo -c -o src/libpcre2_32_la-pcre2_auto_possess.lo `test -f 'src/pcre2_auto_possess.c' || echo '$(srcdir)/'`src/pcre2_auto_possess.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_auto_possess.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_auto_possess.Plo
-#	$(AM_V_CC)source='src/pcre2_auto_possess.c' object='src/libpcre2_32_la-pcre2_auto_possess.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_auto_possess.lo `test -f 'src/pcre2_auto_possess.c' || echo '$(srcdir)/'`src/pcre2_auto_possess.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_auto_possess.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_auto_possess.Tpo -c -o src/libpcre2_32_la-pcre2_auto_possess.lo `test -f 'src/pcre2_auto_possess.c' || echo '$(srcdir)/'`src/pcre2_auto_possess.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_auto_possess.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_auto_possess.Plo
+	$(AM_V_CC)source='src/pcre2_auto_possess.c' object='src/libpcre2_32_la-pcre2_auto_possess.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_auto_possess.lo `test -f 'src/pcre2_auto_possess.c' || echo '$(srcdir)/'`src/pcre2_auto_possess.c
 
 src/libpcre2_32_la-pcre2_compile.lo: src/pcre2_compile.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_compile.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_compile.Tpo -c -o src/libpcre2_32_la-pcre2_compile.lo `test -f 'src/pcre2_compile.c' || echo '$(srcdir)/'`src/pcre2_compile.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_compile.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_compile.Plo
-#	$(AM_V_CC)source='src/pcre2_compile.c' object='src/libpcre2_32_la-pcre2_compile.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_compile.lo `test -f 'src/pcre2_compile.c' || echo '$(srcdir)/'`src/pcre2_compile.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_compile.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_compile.Tpo -c -o src/libpcre2_32_la-pcre2_compile.lo `test -f 'src/pcre2_compile.c' || echo '$(srcdir)/'`src/pcre2_compile.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_compile.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_compile.Plo
+	$(AM_V_CC)source='src/pcre2_compile.c' object='src/libpcre2_32_la-pcre2_compile.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_compile.lo `test -f 'src/pcre2_compile.c' || echo '$(srcdir)/'`src/pcre2_compile.c
 
 src/libpcre2_32_la-pcre2_config.lo: src/pcre2_config.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_config.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_config.Tpo -c -o src/libpcre2_32_la-pcre2_config.lo `test -f 'src/pcre2_config.c' || echo '$(srcdir)/'`src/pcre2_config.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_config.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_config.Plo
-#	$(AM_V_CC)source='src/pcre2_config.c' object='src/libpcre2_32_la-pcre2_config.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_config.lo `test -f 'src/pcre2_config.c' || echo '$(srcdir)/'`src/pcre2_config.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_config.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_config.Tpo -c -o src/libpcre2_32_la-pcre2_config.lo `test -f 'src/pcre2_config.c' || echo '$(srcdir)/'`src/pcre2_config.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_config.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_config.Plo
+	$(AM_V_CC)source='src/pcre2_config.c' object='src/libpcre2_32_la-pcre2_config.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_config.lo `test -f 'src/pcre2_config.c' || echo '$(srcdir)/'`src/pcre2_config.c
 
 src/libpcre2_32_la-pcre2_context.lo: src/pcre2_context.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_context.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_context.Tpo -c -o src/libpcre2_32_la-pcre2_context.lo `test -f 'src/pcre2_context.c' || echo '$(srcdir)/'`src/pcre2_context.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_context.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_context.Plo
-#	$(AM_V_CC)source='src/pcre2_context.c' object='src/libpcre2_32_la-pcre2_context.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_context.lo `test -f 'src/pcre2_context.c' || echo '$(srcdir)/'`src/pcre2_context.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_context.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_context.Tpo -c -o src/libpcre2_32_la-pcre2_context.lo `test -f 'src/pcre2_context.c' || echo '$(srcdir)/'`src/pcre2_context.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_context.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_context.Plo
+	$(AM_V_CC)source='src/pcre2_context.c' object='src/libpcre2_32_la-pcre2_context.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_context.lo `test -f 'src/pcre2_context.c' || echo '$(srcdir)/'`src/pcre2_context.c
 
 src/libpcre2_32_la-pcre2_convert.lo: src/pcre2_convert.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_convert.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_convert.Tpo -c -o src/libpcre2_32_la-pcre2_convert.lo `test -f 'src/pcre2_convert.c' || echo '$(srcdir)/'`src/pcre2_convert.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_convert.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_convert.Plo
-#	$(AM_V_CC)source='src/pcre2_convert.c' object='src/libpcre2_32_la-pcre2_convert.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_convert.lo `test -f 'src/pcre2_convert.c' || echo '$(srcdir)/'`src/pcre2_convert.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_convert.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_convert.Tpo -c -o src/libpcre2_32_la-pcre2_convert.lo `test -f 'src/pcre2_convert.c' || echo '$(srcdir)/'`src/pcre2_convert.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_convert.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_convert.Plo
+	$(AM_V_CC)source='src/pcre2_convert.c' object='src/libpcre2_32_la-pcre2_convert.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_convert.lo `test -f 'src/pcre2_convert.c' || echo '$(srcdir)/'`src/pcre2_convert.c
 
 src/libpcre2_32_la-pcre2_dfa_match.lo: src/pcre2_dfa_match.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_dfa_match.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_dfa_match.Tpo -c -o src/libpcre2_32_la-pcre2_dfa_match.lo `test -f 'src/pcre2_dfa_match.c' || echo '$(srcdir)/'`src/pcre2_dfa_match.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_dfa_match.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_dfa_match.Plo
-#	$(AM_V_CC)source='src/pcre2_dfa_match.c' object='src/libpcre2_32_la-pcre2_dfa_match.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_dfa_match.lo `test -f 'src/pcre2_dfa_match.c' || echo '$(srcdir)/'`src/pcre2_dfa_match.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_dfa_match.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_dfa_match.Tpo -c -o src/libpcre2_32_la-pcre2_dfa_match.lo `test -f 'src/pcre2_dfa_match.c' || echo '$(srcdir)/'`src/pcre2_dfa_match.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_dfa_match.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_dfa_match.Plo
+	$(AM_V_CC)source='src/pcre2_dfa_match.c' object='src/libpcre2_32_la-pcre2_dfa_match.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_dfa_match.lo `test -f 'src/pcre2_dfa_match.c' || echo '$(srcdir)/'`src/pcre2_dfa_match.c
 
 src/libpcre2_32_la-pcre2_error.lo: src/pcre2_error.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_error.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_error.Tpo -c -o src/libpcre2_32_la-pcre2_error.lo `test -f 'src/pcre2_error.c' || echo '$(srcdir)/'`src/pcre2_error.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_error.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_error.Plo
-#	$(AM_V_CC)source='src/pcre2_error.c' object='src/libpcre2_32_la-pcre2_error.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_error.lo `test -f 'src/pcre2_error.c' || echo '$(srcdir)/'`src/pcre2_error.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_error.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_error.Tpo -c -o src/libpcre2_32_la-pcre2_error.lo `test -f 'src/pcre2_error.c' || echo '$(srcdir)/'`src/pcre2_error.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_error.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_error.Plo
+	$(AM_V_CC)source='src/pcre2_error.c' object='src/libpcre2_32_la-pcre2_error.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_error.lo `test -f 'src/pcre2_error.c' || echo '$(srcdir)/'`src/pcre2_error.c
 
 src/libpcre2_32_la-pcre2_extuni.lo: src/pcre2_extuni.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_extuni.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_extuni.Tpo -c -o src/libpcre2_32_la-pcre2_extuni.lo `test -f 'src/pcre2_extuni.c' || echo '$(srcdir)/'`src/pcre2_extuni.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_extuni.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_extuni.Plo
-#	$(AM_V_CC)source='src/pcre2_extuni.c' object='src/libpcre2_32_la-pcre2_extuni.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_extuni.lo `test -f 'src/pcre2_extuni.c' || echo '$(srcdir)/'`src/pcre2_extuni.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_extuni.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_extuni.Tpo -c -o src/libpcre2_32_la-pcre2_extuni.lo `test -f 'src/pcre2_extuni.c' || echo '$(srcdir)/'`src/pcre2_extuni.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_extuni.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_extuni.Plo
+	$(AM_V_CC)source='src/pcre2_extuni.c' object='src/libpcre2_32_la-pcre2_extuni.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_extuni.lo `test -f 'src/pcre2_extuni.c' || echo '$(srcdir)/'`src/pcre2_extuni.c
 
 src/libpcre2_32_la-pcre2_find_bracket.lo: src/pcre2_find_bracket.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_find_bracket.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_find_bracket.Tpo -c -o src/libpcre2_32_la-pcre2_find_bracket.lo `test -f 'src/pcre2_find_bracket.c' || echo '$(srcdir)/'`src/pcre2_find_bracket.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_find_bracket.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_find_bracket.Plo
-#	$(AM_V_CC)source='src/pcre2_find_bracket.c' object='src/libpcre2_32_la-pcre2_find_bracket.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_find_bracket.lo `test -f 'src/pcre2_find_bracket.c' || echo '$(srcdir)/'`src/pcre2_find_bracket.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_find_bracket.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_find_bracket.Tpo -c -o src/libpcre2_32_la-pcre2_find_bracket.lo `test -f 'src/pcre2_find_bracket.c' || echo '$(srcdir)/'`src/pcre2_find_bracket.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_find_bracket.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_find_bracket.Plo
+	$(AM_V_CC)source='src/pcre2_find_bracket.c' object='src/libpcre2_32_la-pcre2_find_bracket.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_find_bracket.lo `test -f 'src/pcre2_find_bracket.c' || echo '$(srcdir)/'`src/pcre2_find_bracket.c
 
 src/libpcre2_32_la-pcre2_jit_compile.lo: src/pcre2_jit_compile.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_jit_compile.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_jit_compile.Tpo -c -o src/libpcre2_32_la-pcre2_jit_compile.lo `test -f 'src/pcre2_jit_compile.c' || echo '$(srcdir)/'`src/pcre2_jit_compile.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_jit_compile.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_jit_compile.Plo
-#	$(AM_V_CC)source='src/pcre2_jit_compile.c' object='src/libpcre2_32_la-pcre2_jit_compile.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_jit_compile.lo `test -f 'src/pcre2_jit_compile.c' || echo '$(srcdir)/'`src/pcre2_jit_compile.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_jit_compile.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_jit_compile.Tpo -c -o src/libpcre2_32_la-pcre2_jit_compile.lo `test -f 'src/pcre2_jit_compile.c' || echo '$(srcdir)/'`src/pcre2_jit_compile.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_jit_compile.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_jit_compile.Plo
+	$(AM_V_CC)source='src/pcre2_jit_compile.c' object='src/libpcre2_32_la-pcre2_jit_compile.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_jit_compile.lo `test -f 'src/pcre2_jit_compile.c' || echo '$(srcdir)/'`src/pcre2_jit_compile.c
 
 src/libpcre2_32_la-pcre2_maketables.lo: src/pcre2_maketables.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_maketables.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_maketables.Tpo -c -o src/libpcre2_32_la-pcre2_maketables.lo `test -f 'src/pcre2_maketables.c' || echo '$(srcdir)/'`src/pcre2_maketables.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_maketables.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_maketables.Plo
-#	$(AM_V_CC)source='src/pcre2_maketables.c' object='src/libpcre2_32_la-pcre2_maketables.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_maketables.lo `test -f 'src/pcre2_maketables.c' || echo '$(srcdir)/'`src/pcre2_maketables.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_maketables.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_maketables.Tpo -c -o src/libpcre2_32_la-pcre2_maketables.lo `test -f 'src/pcre2_maketables.c' || echo '$(srcdir)/'`src/pcre2_maketables.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_maketables.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_maketables.Plo
+	$(AM_V_CC)source='src/pcre2_maketables.c' object='src/libpcre2_32_la-pcre2_maketables.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_maketables.lo `test -f 'src/pcre2_maketables.c' || echo '$(srcdir)/'`src/pcre2_maketables.c
 
 src/libpcre2_32_la-pcre2_match.lo: src/pcre2_match.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_match.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_match.Tpo -c -o src/libpcre2_32_la-pcre2_match.lo `test -f 'src/pcre2_match.c' || echo '$(srcdir)/'`src/pcre2_match.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_match.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_match.Plo
-#	$(AM_V_CC)source='src/pcre2_match.c' object='src/libpcre2_32_la-pcre2_match.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_match.lo `test -f 'src/pcre2_match.c' || echo '$(srcdir)/'`src/pcre2_match.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_match.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_match.Tpo -c -o src/libpcre2_32_la-pcre2_match.lo `test -f 'src/pcre2_match.c' || echo '$(srcdir)/'`src/pcre2_match.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_match.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_match.Plo
+	$(AM_V_CC)source='src/pcre2_match.c' object='src/libpcre2_32_la-pcre2_match.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_match.lo `test -f 'src/pcre2_match.c' || echo '$(srcdir)/'`src/pcre2_match.c
 
 src/libpcre2_32_la-pcre2_match_data.lo: src/pcre2_match_data.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_match_data.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_match_data.Tpo -c -o src/libpcre2_32_la-pcre2_match_data.lo `test -f 'src/pcre2_match_data.c' || echo '$(srcdir)/'`src/pcre2_match_data.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_match_data.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_match_data.Plo
-#	$(AM_V_CC)source='src/pcre2_match_data.c' object='src/libpcre2_32_la-pcre2_match_data.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_match_data.lo `test -f 'src/pcre2_match_data.c' || echo '$(srcdir)/'`src/pcre2_match_data.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_match_data.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_match_data.Tpo -c -o src/libpcre2_32_la-pcre2_match_data.lo `test -f 'src/pcre2_match_data.c' || echo '$(srcdir)/'`src/pcre2_match_data.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_match_data.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_match_data.Plo
+	$(AM_V_CC)source='src/pcre2_match_data.c' object='src/libpcre2_32_la-pcre2_match_data.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_match_data.lo `test -f 'src/pcre2_match_data.c' || echo '$(srcdir)/'`src/pcre2_match_data.c
 
 src/libpcre2_32_la-pcre2_newline.lo: src/pcre2_newline.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_newline.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_newline.Tpo -c -o src/libpcre2_32_la-pcre2_newline.lo `test -f 'src/pcre2_newline.c' || echo '$(srcdir)/'`src/pcre2_newline.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_newline.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_newline.Plo
-#	$(AM_V_CC)source='src/pcre2_newline.c' object='src/libpcre2_32_la-pcre2_newline.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_newline.lo `test -f 'src/pcre2_newline.c' || echo '$(srcdir)/'`src/pcre2_newline.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_newline.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_newline.Tpo -c -o src/libpcre2_32_la-pcre2_newline.lo `test -f 'src/pcre2_newline.c' || echo '$(srcdir)/'`src/pcre2_newline.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_newline.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_newline.Plo
+	$(AM_V_CC)source='src/pcre2_newline.c' object='src/libpcre2_32_la-pcre2_newline.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_newline.lo `test -f 'src/pcre2_newline.c' || echo '$(srcdir)/'`src/pcre2_newline.c
 
 src/libpcre2_32_la-pcre2_ord2utf.lo: src/pcre2_ord2utf.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_ord2utf.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_ord2utf.Tpo -c -o src/libpcre2_32_la-pcre2_ord2utf.lo `test -f 'src/pcre2_ord2utf.c' || echo '$(srcdir)/'`src/pcre2_ord2utf.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_ord2utf.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_ord2utf.Plo
-#	$(AM_V_CC)source='src/pcre2_ord2utf.c' object='src/libpcre2_32_la-pcre2_ord2utf.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_ord2utf.lo `test -f 'src/pcre2_ord2utf.c' || echo '$(srcdir)/'`src/pcre2_ord2utf.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_ord2utf.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_ord2utf.Tpo -c -o src/libpcre2_32_la-pcre2_ord2utf.lo `test -f 'src/pcre2_ord2utf.c' || echo '$(srcdir)/'`src/pcre2_ord2utf.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_ord2utf.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_ord2utf.Plo
+	$(AM_V_CC)source='src/pcre2_ord2utf.c' object='src/libpcre2_32_la-pcre2_ord2utf.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_ord2utf.lo `test -f 'src/pcre2_ord2utf.c' || echo '$(srcdir)/'`src/pcre2_ord2utf.c
 
 src/libpcre2_32_la-pcre2_pattern_info.lo: src/pcre2_pattern_info.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_pattern_info.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_pattern_info.Tpo -c -o src/libpcre2_32_la-pcre2_pattern_info.lo `test -f 'src/pcre2_pattern_info.c' || echo '$(srcdir)/'`src/pcre2_pattern_info.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_pattern_info.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_pattern_info.Plo
-#	$(AM_V_CC)source='src/pcre2_pattern_info.c' object='src/libpcre2_32_la-pcre2_pattern_info.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_pattern_info.lo `test -f 'src/pcre2_pattern_info.c' || echo '$(srcdir)/'`src/pcre2_pattern_info.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_pattern_info.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_pattern_info.Tpo -c -o src/libpcre2_32_la-pcre2_pattern_info.lo `test -f 'src/pcre2_pattern_info.c' || echo '$(srcdir)/'`src/pcre2_pattern_info.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_pattern_info.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_pattern_info.Plo
+	$(AM_V_CC)source='src/pcre2_pattern_info.c' object='src/libpcre2_32_la-pcre2_pattern_info.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_pattern_info.lo `test -f 'src/pcre2_pattern_info.c' || echo '$(srcdir)/'`src/pcre2_pattern_info.c
 
 src/libpcre2_32_la-pcre2_script_run.lo: src/pcre2_script_run.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_script_run.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_script_run.Tpo -c -o src/libpcre2_32_la-pcre2_script_run.lo `test -f 'src/pcre2_script_run.c' || echo '$(srcdir)/'`src/pcre2_script_run.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_script_run.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_script_run.Plo
-#	$(AM_V_CC)source='src/pcre2_script_run.c' object='src/libpcre2_32_la-pcre2_script_run.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_script_run.lo `test -f 'src/pcre2_script_run.c' || echo '$(srcdir)/'`src/pcre2_script_run.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_script_run.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_script_run.Tpo -c -o src/libpcre2_32_la-pcre2_script_run.lo `test -f 'src/pcre2_script_run.c' || echo '$(srcdir)/'`src/pcre2_script_run.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_script_run.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_script_run.Plo
+	$(AM_V_CC)source='src/pcre2_script_run.c' object='src/libpcre2_32_la-pcre2_script_run.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_script_run.lo `test -f 'src/pcre2_script_run.c' || echo '$(srcdir)/'`src/pcre2_script_run.c
 
 src/libpcre2_32_la-pcre2_serialize.lo: src/pcre2_serialize.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_serialize.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_serialize.Tpo -c -o src/libpcre2_32_la-pcre2_serialize.lo `test -f 'src/pcre2_serialize.c' || echo '$(srcdir)/'`src/pcre2_serialize.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_serialize.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_serialize.Plo
-#	$(AM_V_CC)source='src/pcre2_serialize.c' object='src/libpcre2_32_la-pcre2_serialize.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_serialize.lo `test -f 'src/pcre2_serialize.c' || echo '$(srcdir)/'`src/pcre2_serialize.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_serialize.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_serialize.Tpo -c -o src/libpcre2_32_la-pcre2_serialize.lo `test -f 'src/pcre2_serialize.c' || echo '$(srcdir)/'`src/pcre2_serialize.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_serialize.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_serialize.Plo
+	$(AM_V_CC)source='src/pcre2_serialize.c' object='src/libpcre2_32_la-pcre2_serialize.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_serialize.lo `test -f 'src/pcre2_serialize.c' || echo '$(srcdir)/'`src/pcre2_serialize.c
 
 src/libpcre2_32_la-pcre2_string_utils.lo: src/pcre2_string_utils.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_string_utils.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_string_utils.Tpo -c -o src/libpcre2_32_la-pcre2_string_utils.lo `test -f 'src/pcre2_string_utils.c' || echo '$(srcdir)/'`src/pcre2_string_utils.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_string_utils.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_string_utils.Plo
-#	$(AM_V_CC)source='src/pcre2_string_utils.c' object='src/libpcre2_32_la-pcre2_string_utils.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_string_utils.lo `test -f 'src/pcre2_string_utils.c' || echo '$(srcdir)/'`src/pcre2_string_utils.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_string_utils.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_string_utils.Tpo -c -o src/libpcre2_32_la-pcre2_string_utils.lo `test -f 'src/pcre2_string_utils.c' || echo '$(srcdir)/'`src/pcre2_string_utils.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_string_utils.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_string_utils.Plo
+	$(AM_V_CC)source='src/pcre2_string_utils.c' object='src/libpcre2_32_la-pcre2_string_utils.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_string_utils.lo `test -f 'src/pcre2_string_utils.c' || echo '$(srcdir)/'`src/pcre2_string_utils.c
 
 src/libpcre2_32_la-pcre2_study.lo: src/pcre2_study.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_study.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_study.Tpo -c -o src/libpcre2_32_la-pcre2_study.lo `test -f 'src/pcre2_study.c' || echo '$(srcdir)/'`src/pcre2_study.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_study.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_study.Plo
-#	$(AM_V_CC)source='src/pcre2_study.c' object='src/libpcre2_32_la-pcre2_study.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_study.lo `test -f 'src/pcre2_study.c' || echo '$(srcdir)/'`src/pcre2_study.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_study.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_study.Tpo -c -o src/libpcre2_32_la-pcre2_study.lo `test -f 'src/pcre2_study.c' || echo '$(srcdir)/'`src/pcre2_study.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_study.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_study.Plo
+	$(AM_V_CC)source='src/pcre2_study.c' object='src/libpcre2_32_la-pcre2_study.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_study.lo `test -f 'src/pcre2_study.c' || echo '$(srcdir)/'`src/pcre2_study.c
 
 src/libpcre2_32_la-pcre2_substitute.lo: src/pcre2_substitute.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_substitute.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_substitute.Tpo -c -o src/libpcre2_32_la-pcre2_substitute.lo `test -f 'src/pcre2_substitute.c' || echo '$(srcdir)/'`src/pcre2_substitute.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_substitute.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_substitute.Plo
-#	$(AM_V_CC)source='src/pcre2_substitute.c' object='src/libpcre2_32_la-pcre2_substitute.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_substitute.lo `test -f 'src/pcre2_substitute.c' || echo '$(srcdir)/'`src/pcre2_substitute.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_substitute.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_substitute.Tpo -c -o src/libpcre2_32_la-pcre2_substitute.lo `test -f 'src/pcre2_substitute.c' || echo '$(srcdir)/'`src/pcre2_substitute.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_substitute.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_substitute.Plo
+	$(AM_V_CC)source='src/pcre2_substitute.c' object='src/libpcre2_32_la-pcre2_substitute.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_substitute.lo `test -f 'src/pcre2_substitute.c' || echo '$(srcdir)/'`src/pcre2_substitute.c
 
 src/libpcre2_32_la-pcre2_substring.lo: src/pcre2_substring.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_substring.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_substring.Tpo -c -o src/libpcre2_32_la-pcre2_substring.lo `test -f 'src/pcre2_substring.c' || echo '$(srcdir)/'`src/pcre2_substring.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_substring.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_substring.Plo
-#	$(AM_V_CC)source='src/pcre2_substring.c' object='src/libpcre2_32_la-pcre2_substring.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_substring.lo `test -f 'src/pcre2_substring.c' || echo '$(srcdir)/'`src/pcre2_substring.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_substring.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_substring.Tpo -c -o src/libpcre2_32_la-pcre2_substring.lo `test -f 'src/pcre2_substring.c' || echo '$(srcdir)/'`src/pcre2_substring.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_substring.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_substring.Plo
+	$(AM_V_CC)source='src/pcre2_substring.c' object='src/libpcre2_32_la-pcre2_substring.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_substring.lo `test -f 'src/pcre2_substring.c' || echo '$(srcdir)/'`src/pcre2_substring.c
 
 src/libpcre2_32_la-pcre2_tables.lo: src/pcre2_tables.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_tables.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_tables.Tpo -c -o src/libpcre2_32_la-pcre2_tables.lo `test -f 'src/pcre2_tables.c' || echo '$(srcdir)/'`src/pcre2_tables.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_tables.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_tables.Plo
-#	$(AM_V_CC)source='src/pcre2_tables.c' object='src/libpcre2_32_la-pcre2_tables.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_tables.lo `test -f 'src/pcre2_tables.c' || echo '$(srcdir)/'`src/pcre2_tables.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_tables.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_tables.Tpo -c -o src/libpcre2_32_la-pcre2_tables.lo `test -f 'src/pcre2_tables.c' || echo '$(srcdir)/'`src/pcre2_tables.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_tables.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_tables.Plo
+	$(AM_V_CC)source='src/pcre2_tables.c' object='src/libpcre2_32_la-pcre2_tables.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_tables.lo `test -f 'src/pcre2_tables.c' || echo '$(srcdir)/'`src/pcre2_tables.c
 
 src/libpcre2_32_la-pcre2_ucd.lo: src/pcre2_ucd.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_ucd.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_ucd.Tpo -c -o src/libpcre2_32_la-pcre2_ucd.lo `test -f 'src/pcre2_ucd.c' || echo '$(srcdir)/'`src/pcre2_ucd.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_ucd.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_ucd.Plo
-#	$(AM_V_CC)source='src/pcre2_ucd.c' object='src/libpcre2_32_la-pcre2_ucd.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_ucd.lo `test -f 'src/pcre2_ucd.c' || echo '$(srcdir)/'`src/pcre2_ucd.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_ucd.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_ucd.Tpo -c -o src/libpcre2_32_la-pcre2_ucd.lo `test -f 'src/pcre2_ucd.c' || echo '$(srcdir)/'`src/pcre2_ucd.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_ucd.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_ucd.Plo
+	$(AM_V_CC)source='src/pcre2_ucd.c' object='src/libpcre2_32_la-pcre2_ucd.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_ucd.lo `test -f 'src/pcre2_ucd.c' || echo '$(srcdir)/'`src/pcre2_ucd.c
 
 src/libpcre2_32_la-pcre2_valid_utf.lo: src/pcre2_valid_utf.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_valid_utf.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_valid_utf.Tpo -c -o src/libpcre2_32_la-pcre2_valid_utf.lo `test -f 'src/pcre2_valid_utf.c' || echo '$(srcdir)/'`src/pcre2_valid_utf.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_valid_utf.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_valid_utf.Plo
-#	$(AM_V_CC)source='src/pcre2_valid_utf.c' object='src/libpcre2_32_la-pcre2_valid_utf.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_valid_utf.lo `test -f 'src/pcre2_valid_utf.c' || echo '$(srcdir)/'`src/pcre2_valid_utf.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_valid_utf.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_valid_utf.Tpo -c -o src/libpcre2_32_la-pcre2_valid_utf.lo `test -f 'src/pcre2_valid_utf.c' || echo '$(srcdir)/'`src/pcre2_valid_utf.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_valid_utf.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_valid_utf.Plo
+	$(AM_V_CC)source='src/pcre2_valid_utf.c' object='src/libpcre2_32_la-pcre2_valid_utf.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_valid_utf.lo `test -f 'src/pcre2_valid_utf.c' || echo '$(srcdir)/'`src/pcre2_valid_utf.c
 
 src/libpcre2_32_la-pcre2_xclass.lo: src/pcre2_xclass.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_xclass.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_xclass.Tpo -c -o src/libpcre2_32_la-pcre2_xclass.lo `test -f 'src/pcre2_xclass.c' || echo '$(srcdir)/'`src/pcre2_xclass.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_xclass.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_xclass.Plo
-#	$(AM_V_CC)source='src/pcre2_xclass.c' object='src/libpcre2_32_la-pcre2_xclass.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_xclass.lo `test -f 'src/pcre2_xclass.c' || echo '$(srcdir)/'`src/pcre2_xclass.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_xclass.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_xclass.Tpo -c -o src/libpcre2_32_la-pcre2_xclass.lo `test -f 'src/pcre2_xclass.c' || echo '$(srcdir)/'`src/pcre2_xclass.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_xclass.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_xclass.Plo
+	$(AM_V_CC)source='src/pcre2_xclass.c' object='src/libpcre2_32_la-pcre2_xclass.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_xclass.lo `test -f 'src/pcre2_xclass.c' || echo '$(srcdir)/'`src/pcre2_xclass.c
 
 src/libpcre2_32_la-pcre2_chartables.lo: src/pcre2_chartables.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_chartables.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_chartables.Tpo -c -o src/libpcre2_32_la-pcre2_chartables.lo `test -f 'src/pcre2_chartables.c' || echo '$(srcdir)/'`src/pcre2_chartables.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_chartables.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_chartables.Plo
-#	$(AM_V_CC)source='src/pcre2_chartables.c' object='src/libpcre2_32_la-pcre2_chartables.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_chartables.lo `test -f 'src/pcre2_chartables.c' || echo '$(srcdir)/'`src/pcre2_chartables.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_32_la-pcre2_chartables.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_32_la-pcre2_chartables.Tpo -c -o src/libpcre2_32_la-pcre2_chartables.lo `test -f 'src/pcre2_chartables.c' || echo '$(srcdir)/'`src/pcre2_chartables.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_32_la-pcre2_chartables.Tpo src/$(DEPDIR)/libpcre2_32_la-pcre2_chartables.Plo
+	$(AM_V_CC)source='src/pcre2_chartables.c' object='src/libpcre2_32_la-pcre2_chartables.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_32_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_32_la-pcre2_chartables.lo `test -f 'src/pcre2_chartables.c' || echo '$(srcdir)/'`src/pcre2_chartables.c
 
 src/libpcre2_8_la-pcre2_auto_possess.lo: src/pcre2_auto_possess.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_auto_possess.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_auto_possess.Tpo -c -o src/libpcre2_8_la-pcre2_auto_possess.lo `test -f 'src/pcre2_auto_possess.c' || echo '$(srcdir)/'`src/pcre2_auto_possess.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_auto_possess.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_auto_possess.Plo
-#	$(AM_V_CC)source='src/pcre2_auto_possess.c' object='src/libpcre2_8_la-pcre2_auto_possess.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_auto_possess.lo `test -f 'src/pcre2_auto_possess.c' || echo '$(srcdir)/'`src/pcre2_auto_possess.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_auto_possess.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_auto_possess.Tpo -c -o src/libpcre2_8_la-pcre2_auto_possess.lo `test -f 'src/pcre2_auto_possess.c' || echo '$(srcdir)/'`src/pcre2_auto_possess.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_auto_possess.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_auto_possess.Plo
+	$(AM_V_CC)source='src/pcre2_auto_possess.c' object='src/libpcre2_8_la-pcre2_auto_possess.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_auto_possess.lo `test -f 'src/pcre2_auto_possess.c' || echo '$(srcdir)/'`src/pcre2_auto_possess.c
 
 src/libpcre2_8_la-pcre2_compile.lo: src/pcre2_compile.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_compile.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_compile.Tpo -c -o src/libpcre2_8_la-pcre2_compile.lo `test -f 'src/pcre2_compile.c' || echo '$(srcdir)/'`src/pcre2_compile.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_compile.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_compile.Plo
-#	$(AM_V_CC)source='src/pcre2_compile.c' object='src/libpcre2_8_la-pcre2_compile.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_compile.lo `test -f 'src/pcre2_compile.c' || echo '$(srcdir)/'`src/pcre2_compile.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_compile.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_compile.Tpo -c -o src/libpcre2_8_la-pcre2_compile.lo `test -f 'src/pcre2_compile.c' || echo '$(srcdir)/'`src/pcre2_compile.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_compile.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_compile.Plo
+	$(AM_V_CC)source='src/pcre2_compile.c' object='src/libpcre2_8_la-pcre2_compile.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_compile.lo `test -f 'src/pcre2_compile.c' || echo '$(srcdir)/'`src/pcre2_compile.c
 
 src/libpcre2_8_la-pcre2_config.lo: src/pcre2_config.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_config.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_config.Tpo -c -o src/libpcre2_8_la-pcre2_config.lo `test -f 'src/pcre2_config.c' || echo '$(srcdir)/'`src/pcre2_config.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_config.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_config.Plo
-#	$(AM_V_CC)source='src/pcre2_config.c' object='src/libpcre2_8_la-pcre2_config.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_config.lo `test -f 'src/pcre2_config.c' || echo '$(srcdir)/'`src/pcre2_config.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_config.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_config.Tpo -c -o src/libpcre2_8_la-pcre2_config.lo `test -f 'src/pcre2_config.c' || echo '$(srcdir)/'`src/pcre2_config.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_config.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_config.Plo
+	$(AM_V_CC)source='src/pcre2_config.c' object='src/libpcre2_8_la-pcre2_config.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_config.lo `test -f 'src/pcre2_config.c' || echo '$(srcdir)/'`src/pcre2_config.c
 
 src/libpcre2_8_la-pcre2_context.lo: src/pcre2_context.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_context.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_context.Tpo -c -o src/libpcre2_8_la-pcre2_context.lo `test -f 'src/pcre2_context.c' || echo '$(srcdir)/'`src/pcre2_context.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_context.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_context.Plo
-#	$(AM_V_CC)source='src/pcre2_context.c' object='src/libpcre2_8_la-pcre2_context.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_context.lo `test -f 'src/pcre2_context.c' || echo '$(srcdir)/'`src/pcre2_context.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_context.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_context.Tpo -c -o src/libpcre2_8_la-pcre2_context.lo `test -f 'src/pcre2_context.c' || echo '$(srcdir)/'`src/pcre2_context.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_context.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_context.Plo
+	$(AM_V_CC)source='src/pcre2_context.c' object='src/libpcre2_8_la-pcre2_context.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_context.lo `test -f 'src/pcre2_context.c' || echo '$(srcdir)/'`src/pcre2_context.c
 
 src/libpcre2_8_la-pcre2_convert.lo: src/pcre2_convert.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_convert.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_convert.Tpo -c -o src/libpcre2_8_la-pcre2_convert.lo `test -f 'src/pcre2_convert.c' || echo '$(srcdir)/'`src/pcre2_convert.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_convert.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_convert.Plo
-#	$(AM_V_CC)source='src/pcre2_convert.c' object='src/libpcre2_8_la-pcre2_convert.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_convert.lo `test -f 'src/pcre2_convert.c' || echo '$(srcdir)/'`src/pcre2_convert.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_convert.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_convert.Tpo -c -o src/libpcre2_8_la-pcre2_convert.lo `test -f 'src/pcre2_convert.c' || echo '$(srcdir)/'`src/pcre2_convert.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_convert.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_convert.Plo
+	$(AM_V_CC)source='src/pcre2_convert.c' object='src/libpcre2_8_la-pcre2_convert.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_convert.lo `test -f 'src/pcre2_convert.c' || echo '$(srcdir)/'`src/pcre2_convert.c
 
 src/libpcre2_8_la-pcre2_dfa_match.lo: src/pcre2_dfa_match.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_dfa_match.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_dfa_match.Tpo -c -o src/libpcre2_8_la-pcre2_dfa_match.lo `test -f 'src/pcre2_dfa_match.c' || echo '$(srcdir)/'`src/pcre2_dfa_match.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_dfa_match.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_dfa_match.Plo
-#	$(AM_V_CC)source='src/pcre2_dfa_match.c' object='src/libpcre2_8_la-pcre2_dfa_match.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_dfa_match.lo `test -f 'src/pcre2_dfa_match.c' || echo '$(srcdir)/'`src/pcre2_dfa_match.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_dfa_match.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_dfa_match.Tpo -c -o src/libpcre2_8_la-pcre2_dfa_match.lo `test -f 'src/pcre2_dfa_match.c' || echo '$(srcdir)/'`src/pcre2_dfa_match.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_dfa_match.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_dfa_match.Plo
+	$(AM_V_CC)source='src/pcre2_dfa_match.c' object='src/libpcre2_8_la-pcre2_dfa_match.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_dfa_match.lo `test -f 'src/pcre2_dfa_match.c' || echo '$(srcdir)/'`src/pcre2_dfa_match.c
 
 src/libpcre2_8_la-pcre2_error.lo: src/pcre2_error.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_error.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_error.Tpo -c -o src/libpcre2_8_la-pcre2_error.lo `test -f 'src/pcre2_error.c' || echo '$(srcdir)/'`src/pcre2_error.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_error.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_error.Plo
-#	$(AM_V_CC)source='src/pcre2_error.c' object='src/libpcre2_8_la-pcre2_error.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_error.lo `test -f 'src/pcre2_error.c' || echo '$(srcdir)/'`src/pcre2_error.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_error.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_error.Tpo -c -o src/libpcre2_8_la-pcre2_error.lo `test -f 'src/pcre2_error.c' || echo '$(srcdir)/'`src/pcre2_error.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_error.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_error.Plo
+	$(AM_V_CC)source='src/pcre2_error.c' object='src/libpcre2_8_la-pcre2_error.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_error.lo `test -f 'src/pcre2_error.c' || echo '$(srcdir)/'`src/pcre2_error.c
 
 src/libpcre2_8_la-pcre2_extuni.lo: src/pcre2_extuni.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_extuni.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_extuni.Tpo -c -o src/libpcre2_8_la-pcre2_extuni.lo `test -f 'src/pcre2_extuni.c' || echo '$(srcdir)/'`src/pcre2_extuni.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_extuni.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_extuni.Plo
-#	$(AM_V_CC)source='src/pcre2_extuni.c' object='src/libpcre2_8_la-pcre2_extuni.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_extuni.lo `test -f 'src/pcre2_extuni.c' || echo '$(srcdir)/'`src/pcre2_extuni.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_extuni.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_extuni.Tpo -c -o src/libpcre2_8_la-pcre2_extuni.lo `test -f 'src/pcre2_extuni.c' || echo '$(srcdir)/'`src/pcre2_extuni.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_extuni.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_extuni.Plo
+	$(AM_V_CC)source='src/pcre2_extuni.c' object='src/libpcre2_8_la-pcre2_extuni.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_extuni.lo `test -f 'src/pcre2_extuni.c' || echo '$(srcdir)/'`src/pcre2_extuni.c
 
 src/libpcre2_8_la-pcre2_find_bracket.lo: src/pcre2_find_bracket.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_find_bracket.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_find_bracket.Tpo -c -o src/libpcre2_8_la-pcre2_find_bracket.lo `test -f 'src/pcre2_find_bracket.c' || echo '$(srcdir)/'`src/pcre2_find_bracket.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_find_bracket.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_find_bracket.Plo
-#	$(AM_V_CC)source='src/pcre2_find_bracket.c' object='src/libpcre2_8_la-pcre2_find_bracket.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_find_bracket.lo `test -f 'src/pcre2_find_bracket.c' || echo '$(srcdir)/'`src/pcre2_find_bracket.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_find_bracket.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_find_bracket.Tpo -c -o src/libpcre2_8_la-pcre2_find_bracket.lo `test -f 'src/pcre2_find_bracket.c' || echo '$(srcdir)/'`src/pcre2_find_bracket.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_find_bracket.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_find_bracket.Plo
+	$(AM_V_CC)source='src/pcre2_find_bracket.c' object='src/libpcre2_8_la-pcre2_find_bracket.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_find_bracket.lo `test -f 'src/pcre2_find_bracket.c' || echo '$(srcdir)/'`src/pcre2_find_bracket.c
 
 src/libpcre2_8_la-pcre2_jit_compile.lo: src/pcre2_jit_compile.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_jit_compile.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_jit_compile.Tpo -c -o src/libpcre2_8_la-pcre2_jit_compile.lo `test -f 'src/pcre2_jit_compile.c' || echo '$(srcdir)/'`src/pcre2_jit_compile.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_jit_compile.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_jit_compile.Plo
-#	$(AM_V_CC)source='src/pcre2_jit_compile.c' object='src/libpcre2_8_la-pcre2_jit_compile.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_jit_compile.lo `test -f 'src/pcre2_jit_compile.c' || echo '$(srcdir)/'`src/pcre2_jit_compile.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_jit_compile.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_jit_compile.Tpo -c -o src/libpcre2_8_la-pcre2_jit_compile.lo `test -f 'src/pcre2_jit_compile.c' || echo '$(srcdir)/'`src/pcre2_jit_compile.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_jit_compile.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_jit_compile.Plo
+	$(AM_V_CC)source='src/pcre2_jit_compile.c' object='src/libpcre2_8_la-pcre2_jit_compile.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_jit_compile.lo `test -f 'src/pcre2_jit_compile.c' || echo '$(srcdir)/'`src/pcre2_jit_compile.c
 
 src/libpcre2_8_la-pcre2_maketables.lo: src/pcre2_maketables.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_maketables.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_maketables.Tpo -c -o src/libpcre2_8_la-pcre2_maketables.lo `test -f 'src/pcre2_maketables.c' || echo '$(srcdir)/'`src/pcre2_maketables.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_maketables.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_maketables.Plo
-#	$(AM_V_CC)source='src/pcre2_maketables.c' object='src/libpcre2_8_la-pcre2_maketables.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_maketables.lo `test -f 'src/pcre2_maketables.c' || echo '$(srcdir)/'`src/pcre2_maketables.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_maketables.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_maketables.Tpo -c -o src/libpcre2_8_la-pcre2_maketables.lo `test -f 'src/pcre2_maketables.c' || echo '$(srcdir)/'`src/pcre2_maketables.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_maketables.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_maketables.Plo
+	$(AM_V_CC)source='src/pcre2_maketables.c' object='src/libpcre2_8_la-pcre2_maketables.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_maketables.lo `test -f 'src/pcre2_maketables.c' || echo '$(srcdir)/'`src/pcre2_maketables.c
 
 src/libpcre2_8_la-pcre2_match.lo: src/pcre2_match.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_match.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_match.Tpo -c -o src/libpcre2_8_la-pcre2_match.lo `test -f 'src/pcre2_match.c' || echo '$(srcdir)/'`src/pcre2_match.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_match.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_match.Plo
-#	$(AM_V_CC)source='src/pcre2_match.c' object='src/libpcre2_8_la-pcre2_match.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_match.lo `test -f 'src/pcre2_match.c' || echo '$(srcdir)/'`src/pcre2_match.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_match.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_match.Tpo -c -o src/libpcre2_8_la-pcre2_match.lo `test -f 'src/pcre2_match.c' || echo '$(srcdir)/'`src/pcre2_match.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_match.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_match.Plo
+	$(AM_V_CC)source='src/pcre2_match.c' object='src/libpcre2_8_la-pcre2_match.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_match.lo `test -f 'src/pcre2_match.c' || echo '$(srcdir)/'`src/pcre2_match.c
 
 src/libpcre2_8_la-pcre2_match_data.lo: src/pcre2_match_data.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_match_data.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_match_data.Tpo -c -o src/libpcre2_8_la-pcre2_match_data.lo `test -f 'src/pcre2_match_data.c' || echo '$(srcdir)/'`src/pcre2_match_data.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_match_data.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_match_data.Plo
-#	$(AM_V_CC)source='src/pcre2_match_data.c' object='src/libpcre2_8_la-pcre2_match_data.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_match_data.lo `test -f 'src/pcre2_match_data.c' || echo '$(srcdir)/'`src/pcre2_match_data.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_match_data.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_match_data.Tpo -c -o src/libpcre2_8_la-pcre2_match_data.lo `test -f 'src/pcre2_match_data.c' || echo '$(srcdir)/'`src/pcre2_match_data.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_match_data.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_match_data.Plo
+	$(AM_V_CC)source='src/pcre2_match_data.c' object='src/libpcre2_8_la-pcre2_match_data.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_match_data.lo `test -f 'src/pcre2_match_data.c' || echo '$(srcdir)/'`src/pcre2_match_data.c
 
 src/libpcre2_8_la-pcre2_newline.lo: src/pcre2_newline.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_newline.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_newline.Tpo -c -o src/libpcre2_8_la-pcre2_newline.lo `test -f 'src/pcre2_newline.c' || echo '$(srcdir)/'`src/pcre2_newline.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_newline.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_newline.Plo
-#	$(AM_V_CC)source='src/pcre2_newline.c' object='src/libpcre2_8_la-pcre2_newline.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_newline.lo `test -f 'src/pcre2_newline.c' || echo '$(srcdir)/'`src/pcre2_newline.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_newline.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_newline.Tpo -c -o src/libpcre2_8_la-pcre2_newline.lo `test -f 'src/pcre2_newline.c' || echo '$(srcdir)/'`src/pcre2_newline.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_newline.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_newline.Plo
+	$(AM_V_CC)source='src/pcre2_newline.c' object='src/libpcre2_8_la-pcre2_newline.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_newline.lo `test -f 'src/pcre2_newline.c' || echo '$(srcdir)/'`src/pcre2_newline.c
 
 src/libpcre2_8_la-pcre2_ord2utf.lo: src/pcre2_ord2utf.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_ord2utf.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_ord2utf.Tpo -c -o src/libpcre2_8_la-pcre2_ord2utf.lo `test -f 'src/pcre2_ord2utf.c' || echo '$(srcdir)/'`src/pcre2_ord2utf.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_ord2utf.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_ord2utf.Plo
-#	$(AM_V_CC)source='src/pcre2_ord2utf.c' object='src/libpcre2_8_la-pcre2_ord2utf.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_ord2utf.lo `test -f 'src/pcre2_ord2utf.c' || echo '$(srcdir)/'`src/pcre2_ord2utf.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_ord2utf.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_ord2utf.Tpo -c -o src/libpcre2_8_la-pcre2_ord2utf.lo `test -f 'src/pcre2_ord2utf.c' || echo '$(srcdir)/'`src/pcre2_ord2utf.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_ord2utf.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_ord2utf.Plo
+	$(AM_V_CC)source='src/pcre2_ord2utf.c' object='src/libpcre2_8_la-pcre2_ord2utf.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_ord2utf.lo `test -f 'src/pcre2_ord2utf.c' || echo '$(srcdir)/'`src/pcre2_ord2utf.c
 
 src/libpcre2_8_la-pcre2_pattern_info.lo: src/pcre2_pattern_info.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_pattern_info.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_pattern_info.Tpo -c -o src/libpcre2_8_la-pcre2_pattern_info.lo `test -f 'src/pcre2_pattern_info.c' || echo '$(srcdir)/'`src/pcre2_pattern_info.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_pattern_info.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_pattern_info.Plo
-#	$(AM_V_CC)source='src/pcre2_pattern_info.c' object='src/libpcre2_8_la-pcre2_pattern_info.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_pattern_info.lo `test -f 'src/pcre2_pattern_info.c' || echo '$(srcdir)/'`src/pcre2_pattern_info.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_pattern_info.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_pattern_info.Tpo -c -o src/libpcre2_8_la-pcre2_pattern_info.lo `test -f 'src/pcre2_pattern_info.c' || echo '$(srcdir)/'`src/pcre2_pattern_info.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_pattern_info.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_pattern_info.Plo
+	$(AM_V_CC)source='src/pcre2_pattern_info.c' object='src/libpcre2_8_la-pcre2_pattern_info.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_pattern_info.lo `test -f 'src/pcre2_pattern_info.c' || echo '$(srcdir)/'`src/pcre2_pattern_info.c
 
 src/libpcre2_8_la-pcre2_script_run.lo: src/pcre2_script_run.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_script_run.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_script_run.Tpo -c -o src/libpcre2_8_la-pcre2_script_run.lo `test -f 'src/pcre2_script_run.c' || echo '$(srcdir)/'`src/pcre2_script_run.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_script_run.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_script_run.Plo
-#	$(AM_V_CC)source='src/pcre2_script_run.c' object='src/libpcre2_8_la-pcre2_script_run.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_script_run.lo `test -f 'src/pcre2_script_run.c' || echo '$(srcdir)/'`src/pcre2_script_run.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_script_run.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_script_run.Tpo -c -o src/libpcre2_8_la-pcre2_script_run.lo `test -f 'src/pcre2_script_run.c' || echo '$(srcdir)/'`src/pcre2_script_run.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_script_run.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_script_run.Plo
+	$(AM_V_CC)source='src/pcre2_script_run.c' object='src/libpcre2_8_la-pcre2_script_run.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_script_run.lo `test -f 'src/pcre2_script_run.c' || echo '$(srcdir)/'`src/pcre2_script_run.c
 
 src/libpcre2_8_la-pcre2_serialize.lo: src/pcre2_serialize.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_serialize.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_serialize.Tpo -c -o src/libpcre2_8_la-pcre2_serialize.lo `test -f 'src/pcre2_serialize.c' || echo '$(srcdir)/'`src/pcre2_serialize.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_serialize.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_serialize.Plo
-#	$(AM_V_CC)source='src/pcre2_serialize.c' object='src/libpcre2_8_la-pcre2_serialize.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_serialize.lo `test -f 'src/pcre2_serialize.c' || echo '$(srcdir)/'`src/pcre2_serialize.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_serialize.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_serialize.Tpo -c -o src/libpcre2_8_la-pcre2_serialize.lo `test -f 'src/pcre2_serialize.c' || echo '$(srcdir)/'`src/pcre2_serialize.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_serialize.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_serialize.Plo
+	$(AM_V_CC)source='src/pcre2_serialize.c' object='src/libpcre2_8_la-pcre2_serialize.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_serialize.lo `test -f 'src/pcre2_serialize.c' || echo '$(srcdir)/'`src/pcre2_serialize.c
 
 src/libpcre2_8_la-pcre2_string_utils.lo: src/pcre2_string_utils.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_string_utils.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_string_utils.Tpo -c -o src/libpcre2_8_la-pcre2_string_utils.lo `test -f 'src/pcre2_string_utils.c' || echo '$(srcdir)/'`src/pcre2_string_utils.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_string_utils.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_string_utils.Plo
-#	$(AM_V_CC)source='src/pcre2_string_utils.c' object='src/libpcre2_8_la-pcre2_string_utils.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_string_utils.lo `test -f 'src/pcre2_string_utils.c' || echo '$(srcdir)/'`src/pcre2_string_utils.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_string_utils.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_string_utils.Tpo -c -o src/libpcre2_8_la-pcre2_string_utils.lo `test -f 'src/pcre2_string_utils.c' || echo '$(srcdir)/'`src/pcre2_string_utils.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_string_utils.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_string_utils.Plo
+	$(AM_V_CC)source='src/pcre2_string_utils.c' object='src/libpcre2_8_la-pcre2_string_utils.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_string_utils.lo `test -f 'src/pcre2_string_utils.c' || echo '$(srcdir)/'`src/pcre2_string_utils.c
 
 src/libpcre2_8_la-pcre2_study.lo: src/pcre2_study.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_study.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_study.Tpo -c -o src/libpcre2_8_la-pcre2_study.lo `test -f 'src/pcre2_study.c' || echo '$(srcdir)/'`src/pcre2_study.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_study.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_study.Plo
-#	$(AM_V_CC)source='src/pcre2_study.c' object='src/libpcre2_8_la-pcre2_study.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_study.lo `test -f 'src/pcre2_study.c' || echo '$(srcdir)/'`src/pcre2_study.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_study.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_study.Tpo -c -o src/libpcre2_8_la-pcre2_study.lo `test -f 'src/pcre2_study.c' || echo '$(srcdir)/'`src/pcre2_study.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_study.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_study.Plo
+	$(AM_V_CC)source='src/pcre2_study.c' object='src/libpcre2_8_la-pcre2_study.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_study.lo `test -f 'src/pcre2_study.c' || echo '$(srcdir)/'`src/pcre2_study.c
 
 src/libpcre2_8_la-pcre2_substitute.lo: src/pcre2_substitute.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_substitute.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_substitute.Tpo -c -o src/libpcre2_8_la-pcre2_substitute.lo `test -f 'src/pcre2_substitute.c' || echo '$(srcdir)/'`src/pcre2_substitute.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_substitute.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_substitute.Plo
-#	$(AM_V_CC)source='src/pcre2_substitute.c' object='src/libpcre2_8_la-pcre2_substitute.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_substitute.lo `test -f 'src/pcre2_substitute.c' || echo '$(srcdir)/'`src/pcre2_substitute.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_substitute.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_substitute.Tpo -c -o src/libpcre2_8_la-pcre2_substitute.lo `test -f 'src/pcre2_substitute.c' || echo '$(srcdir)/'`src/pcre2_substitute.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_substitute.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_substitute.Plo
+	$(AM_V_CC)source='src/pcre2_substitute.c' object='src/libpcre2_8_la-pcre2_substitute.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_substitute.lo `test -f 'src/pcre2_substitute.c' || echo '$(srcdir)/'`src/pcre2_substitute.c
 
 src/libpcre2_8_la-pcre2_substring.lo: src/pcre2_substring.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_substring.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_substring.Tpo -c -o src/libpcre2_8_la-pcre2_substring.lo `test -f 'src/pcre2_substring.c' || echo '$(srcdir)/'`src/pcre2_substring.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_substring.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_substring.Plo
-#	$(AM_V_CC)source='src/pcre2_substring.c' object='src/libpcre2_8_la-pcre2_substring.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_substring.lo `test -f 'src/pcre2_substring.c' || echo '$(srcdir)/'`src/pcre2_substring.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_substring.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_substring.Tpo -c -o src/libpcre2_8_la-pcre2_substring.lo `test -f 'src/pcre2_substring.c' || echo '$(srcdir)/'`src/pcre2_substring.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_substring.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_substring.Plo
+	$(AM_V_CC)source='src/pcre2_substring.c' object='src/libpcre2_8_la-pcre2_substring.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_substring.lo `test -f 'src/pcre2_substring.c' || echo '$(srcdir)/'`src/pcre2_substring.c
 
 src/libpcre2_8_la-pcre2_tables.lo: src/pcre2_tables.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_tables.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_tables.Tpo -c -o src/libpcre2_8_la-pcre2_tables.lo `test -f 'src/pcre2_tables.c' || echo '$(srcdir)/'`src/pcre2_tables.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_tables.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_tables.Plo
-#	$(AM_V_CC)source='src/pcre2_tables.c' object='src/libpcre2_8_la-pcre2_tables.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_tables.lo `test -f 'src/pcre2_tables.c' || echo '$(srcdir)/'`src/pcre2_tables.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_tables.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_tables.Tpo -c -o src/libpcre2_8_la-pcre2_tables.lo `test -f 'src/pcre2_tables.c' || echo '$(srcdir)/'`src/pcre2_tables.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_tables.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_tables.Plo
+	$(AM_V_CC)source='src/pcre2_tables.c' object='src/libpcre2_8_la-pcre2_tables.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_tables.lo `test -f 'src/pcre2_tables.c' || echo '$(srcdir)/'`src/pcre2_tables.c
 
 src/libpcre2_8_la-pcre2_ucd.lo: src/pcre2_ucd.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_ucd.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_ucd.Tpo -c -o src/libpcre2_8_la-pcre2_ucd.lo `test -f 'src/pcre2_ucd.c' || echo '$(srcdir)/'`src/pcre2_ucd.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_ucd.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_ucd.Plo
-#	$(AM_V_CC)source='src/pcre2_ucd.c' object='src/libpcre2_8_la-pcre2_ucd.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_ucd.lo `test -f 'src/pcre2_ucd.c' || echo '$(srcdir)/'`src/pcre2_ucd.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_ucd.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_ucd.Tpo -c -o src/libpcre2_8_la-pcre2_ucd.lo `test -f 'src/pcre2_ucd.c' || echo '$(srcdir)/'`src/pcre2_ucd.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_ucd.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_ucd.Plo
+	$(AM_V_CC)source='src/pcre2_ucd.c' object='src/libpcre2_8_la-pcre2_ucd.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_ucd.lo `test -f 'src/pcre2_ucd.c' || echo '$(srcdir)/'`src/pcre2_ucd.c
 
 src/libpcre2_8_la-pcre2_valid_utf.lo: src/pcre2_valid_utf.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_valid_utf.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_valid_utf.Tpo -c -o src/libpcre2_8_la-pcre2_valid_utf.lo `test -f 'src/pcre2_valid_utf.c' || echo '$(srcdir)/'`src/pcre2_valid_utf.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_valid_utf.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_valid_utf.Plo
-#	$(AM_V_CC)source='src/pcre2_valid_utf.c' object='src/libpcre2_8_la-pcre2_valid_utf.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_valid_utf.lo `test -f 'src/pcre2_valid_utf.c' || echo '$(srcdir)/'`src/pcre2_valid_utf.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_valid_utf.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_valid_utf.Tpo -c -o src/libpcre2_8_la-pcre2_valid_utf.lo `test -f 'src/pcre2_valid_utf.c' || echo '$(srcdir)/'`src/pcre2_valid_utf.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_valid_utf.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_valid_utf.Plo
+	$(AM_V_CC)source='src/pcre2_valid_utf.c' object='src/libpcre2_8_la-pcre2_valid_utf.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_valid_utf.lo `test -f 'src/pcre2_valid_utf.c' || echo '$(srcdir)/'`src/pcre2_valid_utf.c
 
 src/libpcre2_8_la-pcre2_xclass.lo: src/pcre2_xclass.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_xclass.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_xclass.Tpo -c -o src/libpcre2_8_la-pcre2_xclass.lo `test -f 'src/pcre2_xclass.c' || echo '$(srcdir)/'`src/pcre2_xclass.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_xclass.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_xclass.Plo
-#	$(AM_V_CC)source='src/pcre2_xclass.c' object='src/libpcre2_8_la-pcre2_xclass.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_xclass.lo `test -f 'src/pcre2_xclass.c' || echo '$(srcdir)/'`src/pcre2_xclass.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_xclass.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_xclass.Tpo -c -o src/libpcre2_8_la-pcre2_xclass.lo `test -f 'src/pcre2_xclass.c' || echo '$(srcdir)/'`src/pcre2_xclass.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_xclass.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_xclass.Plo
+	$(AM_V_CC)source='src/pcre2_xclass.c' object='src/libpcre2_8_la-pcre2_xclass.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_xclass.lo `test -f 'src/pcre2_xclass.c' || echo '$(srcdir)/'`src/pcre2_xclass.c
 
 src/libpcre2_8_la-pcre2_chartables.lo: src/pcre2_chartables.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_chartables.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_chartables.Tpo -c -o src/libpcre2_8_la-pcre2_chartables.lo `test -f 'src/pcre2_chartables.c' || echo '$(srcdir)/'`src/pcre2_chartables.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_chartables.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_chartables.Plo
-#	$(AM_V_CC)source='src/pcre2_chartables.c' object='src/libpcre2_8_la-pcre2_chartables.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_chartables.lo `test -f 'src/pcre2_chartables.c' || echo '$(srcdir)/'`src/pcre2_chartables.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_8_la-pcre2_chartables.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_8_la-pcre2_chartables.Tpo -c -o src/libpcre2_8_la-pcre2_chartables.lo `test -f 'src/pcre2_chartables.c' || echo '$(srcdir)/'`src/pcre2_chartables.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_8_la-pcre2_chartables.Tpo src/$(DEPDIR)/libpcre2_8_la-pcre2_chartables.Plo
+	$(AM_V_CC)source='src/pcre2_chartables.c' object='src/libpcre2_8_la-pcre2_chartables.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_8_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_8_la-pcre2_chartables.lo `test -f 'src/pcre2_chartables.c' || echo '$(srcdir)/'`src/pcre2_chartables.c
 
 src/libpcre2_posix_la-pcre2posix.lo: src/pcre2posix.c
-	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_posix_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_posix_la-pcre2posix.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_posix_la-pcre2posix.Tpo -c -o src/libpcre2_posix_la-pcre2posix.lo `test -f 'src/pcre2posix.c' || echo '$(srcdir)/'`src/pcre2posix.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_posix_la-pcre2posix.Tpo src/$(DEPDIR)/libpcre2_posix_la-pcre2posix.Plo
-#	$(AM_V_CC)source='src/pcre2posix.c' object='src/libpcre2_posix_la-pcre2posix.lo' libtool=yes \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_posix_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_posix_la-pcre2posix.lo `test -f 'src/pcre2posix.c' || echo '$(srcdir)/'`src/pcre2posix.c
+#	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_posix_la_CFLAGS) $(CFLAGS) -MT src/libpcre2_posix_la-pcre2posix.lo -MD -MP -MF src/$(DEPDIR)/libpcre2_posix_la-pcre2posix.Tpo -c -o src/libpcre2_posix_la-pcre2posix.lo `test -f 'src/pcre2posix.c' || echo '$(srcdir)/'`src/pcre2posix.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpcre2_posix_la-pcre2posix.Tpo src/$(DEPDIR)/libpcre2_posix_la-pcre2posix.Plo
+	$(AM_V_CC)source='src/pcre2posix.c' object='src/libpcre2_posix_la-pcre2posix.lo' libtool=yes \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libpcre2_posix_la_CFLAGS) $(CFLAGS) -c -o src/libpcre2_posix_la-pcre2posix.lo `test -f 'src/pcre2posix.c' || echo '$(srcdir)/'`src/pcre2posix.c
 
 src/pcre2_jit_test-pcre2_jit_test.o: src/pcre2_jit_test.c
-	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2_jit_test_CFLAGS) $(CFLAGS) -MT src/pcre2_jit_test-pcre2_jit_test.o -MD -MP -MF src/$(DEPDIR)/pcre2_jit_test-pcre2_jit_test.Tpo -c -o src/pcre2_jit_test-pcre2_jit_test.o `test -f 'src/pcre2_jit_test.c' || echo '$(srcdir)/'`src/pcre2_jit_test.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/pcre2_jit_test-pcre2_jit_test.Tpo src/$(DEPDIR)/pcre2_jit_test-pcre2_jit_test.Po
-#	$(AM_V_CC)source='src/pcre2_jit_test.c' object='src/pcre2_jit_test-pcre2_jit_test.o' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2_jit_test_CFLAGS) $(CFLAGS) -c -o src/pcre2_jit_test-pcre2_jit_test.o `test -f 'src/pcre2_jit_test.c' || echo '$(srcdir)/'`src/pcre2_jit_test.c
+#	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2_jit_test_CFLAGS) $(CFLAGS) -MT src/pcre2_jit_test-pcre2_jit_test.o -MD -MP -MF src/$(DEPDIR)/pcre2_jit_test-pcre2_jit_test.Tpo -c -o src/pcre2_jit_test-pcre2_jit_test.o `test -f 'src/pcre2_jit_test.c' || echo '$(srcdir)/'`src/pcre2_jit_test.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/pcre2_jit_test-pcre2_jit_test.Tpo src/$(DEPDIR)/pcre2_jit_test-pcre2_jit_test.Po
+	$(AM_V_CC)source='src/pcre2_jit_test.c' object='src/pcre2_jit_test-pcre2_jit_test.o' libtool=no \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2_jit_test_CFLAGS) $(CFLAGS) -c -o src/pcre2_jit_test-pcre2_jit_test.o `test -f 'src/pcre2_jit_test.c' || echo '$(srcdir)/'`src/pcre2_jit_test.c
 
 src/pcre2_jit_test-pcre2_jit_test.obj: src/pcre2_jit_test.c
-	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2_jit_test_CFLAGS) $(CFLAGS) -MT src/pcre2_jit_test-pcre2_jit_test.obj -MD -MP -MF src/$(DEPDIR)/pcre2_jit_test-pcre2_jit_test.Tpo -c -o src/pcre2_jit_test-pcre2_jit_test.obj `if test -f 'src/pcre2_jit_test.c'; then $(CYGPATH_W) 'src/pcre2_jit_test.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2_jit_test.c'; fi`
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/pcre2_jit_test-pcre2_jit_test.Tpo src/$(DEPDIR)/pcre2_jit_test-pcre2_jit_test.Po
-#	$(AM_V_CC)source='src/pcre2_jit_test.c' object='src/pcre2_jit_test-pcre2_jit_test.obj' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2_jit_test_CFLAGS) $(CFLAGS) -c -o src/pcre2_jit_test-pcre2_jit_test.obj `if test -f 'src/pcre2_jit_test.c'; then $(CYGPATH_W) 'src/pcre2_jit_test.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2_jit_test.c'; fi`
+#	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2_jit_test_CFLAGS) $(CFLAGS) -MT src/pcre2_jit_test-pcre2_jit_test.obj -MD -MP -MF src/$(DEPDIR)/pcre2_jit_test-pcre2_jit_test.Tpo -c -o src/pcre2_jit_test-pcre2_jit_test.obj `if test -f 'src/pcre2_jit_test.c'; then $(CYGPATH_W) 'src/pcre2_jit_test.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2_jit_test.c'; fi`
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/pcre2_jit_test-pcre2_jit_test.Tpo src/$(DEPDIR)/pcre2_jit_test-pcre2_jit_test.Po
+	$(AM_V_CC)source='src/pcre2_jit_test.c' object='src/pcre2_jit_test-pcre2_jit_test.obj' libtool=no \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2_jit_test_CFLAGS) $(CFLAGS) -c -o src/pcre2_jit_test-pcre2_jit_test.obj `if test -f 'src/pcre2_jit_test.c'; then $(CYGPATH_W) 'src/pcre2_jit_test.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2_jit_test.c'; fi`
 
 src/pcre2fuzzcheck-pcre2_fuzzsupport.o: src/pcre2_fuzzsupport.c
-	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2fuzzcheck_CFLAGS) $(CFLAGS) -MT src/pcre2fuzzcheck-pcre2_fuzzsupport.o -MD -MP -MF src/$(DEPDIR)/pcre2fuzzcheck-pcre2_fuzzsupport.Tpo -c -o src/pcre2fuzzcheck-pcre2_fuzzsupport.o `test -f 'src/pcre2_fuzzsupport.c' || echo '$(srcdir)/'`src/pcre2_fuzzsupport.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/pcre2fuzzcheck-pcre2_fuzzsupport.Tpo src/$(DEPDIR)/pcre2fuzzcheck-pcre2_fuzzsupport.Po
-#	$(AM_V_CC)source='src/pcre2_fuzzsupport.c' object='src/pcre2fuzzcheck-pcre2_fuzzsupport.o' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2fuzzcheck_CFLAGS) $(CFLAGS) -c -o src/pcre2fuzzcheck-pcre2_fuzzsupport.o `test -f 'src/pcre2_fuzzsupport.c' || echo '$(srcdir)/'`src/pcre2_fuzzsupport.c
+#	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2fuzzcheck_CFLAGS) $(CFLAGS) -MT src/pcre2fuzzcheck-pcre2_fuzzsupport.o -MD -MP -MF src/$(DEPDIR)/pcre2fuzzcheck-pcre2_fuzzsupport.Tpo -c -o src/pcre2fuzzcheck-pcre2_fuzzsupport.o `test -f 'src/pcre2_fuzzsupport.c' || echo '$(srcdir)/'`src/pcre2_fuzzsupport.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/pcre2fuzzcheck-pcre2_fuzzsupport.Tpo src/$(DEPDIR)/pcre2fuzzcheck-pcre2_fuzzsupport.Po
+	$(AM_V_CC)source='src/pcre2_fuzzsupport.c' object='src/pcre2fuzzcheck-pcre2_fuzzsupport.o' libtool=no \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2fuzzcheck_CFLAGS) $(CFLAGS) -c -o src/pcre2fuzzcheck-pcre2_fuzzsupport.o `test -f 'src/pcre2_fuzzsupport.c' || echo '$(srcdir)/'`src/pcre2_fuzzsupport.c
 
 src/pcre2fuzzcheck-pcre2_fuzzsupport.obj: src/pcre2_fuzzsupport.c
-	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2fuzzcheck_CFLAGS) $(CFLAGS) -MT src/pcre2fuzzcheck-pcre2_fuzzsupport.obj -MD -MP -MF src/$(DEPDIR)/pcre2fuzzcheck-pcre2_fuzzsupport.Tpo -c -o src/pcre2fuzzcheck-pcre2_fuzzsupport.obj `if test -f 'src/pcre2_fuzzsupport.c'; then $(CYGPATH_W) 'src/pcre2_fuzzsupport.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2_fuzzsupport.c'; fi`
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/pcre2fuzzcheck-pcre2_fuzzsupport.Tpo src/$(DEPDIR)/pcre2fuzzcheck-pcre2_fuzzsupport.Po
-#	$(AM_V_CC)source='src/pcre2_fuzzsupport.c' object='src/pcre2fuzzcheck-pcre2_fuzzsupport.obj' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2fuzzcheck_CFLAGS) $(CFLAGS) -c -o src/pcre2fuzzcheck-pcre2_fuzzsupport.obj `if test -f 'src/pcre2_fuzzsupport.c'; then $(CYGPATH_W) 'src/pcre2_fuzzsupport.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2_fuzzsupport.c'; fi`
+#	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2fuzzcheck_CFLAGS) $(CFLAGS) -MT src/pcre2fuzzcheck-pcre2_fuzzsupport.obj -MD -MP -MF src/$(DEPDIR)/pcre2fuzzcheck-pcre2_fuzzsupport.Tpo -c -o src/pcre2fuzzcheck-pcre2_fuzzsupport.obj `if test -f 'src/pcre2_fuzzsupport.c'; then $(CYGPATH_W) 'src/pcre2_fuzzsupport.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2_fuzzsupport.c'; fi`
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/pcre2fuzzcheck-pcre2_fuzzsupport.Tpo src/$(DEPDIR)/pcre2fuzzcheck-pcre2_fuzzsupport.Po
+	$(AM_V_CC)source='src/pcre2_fuzzsupport.c' object='src/pcre2fuzzcheck-pcre2_fuzzsupport.obj' libtool=no \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2fuzzcheck_CFLAGS) $(CFLAGS) -c -o src/pcre2fuzzcheck-pcre2_fuzzsupport.obj `if test -f 'src/pcre2_fuzzsupport.c'; then $(CYGPATH_W) 'src/pcre2_fuzzsupport.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2_fuzzsupport.c'; fi`
 
 src/pcre2grep-pcre2grep.o: src/pcre2grep.c
-	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2grep_CFLAGS) $(CFLAGS) -MT src/pcre2grep-pcre2grep.o -MD -MP -MF src/$(DEPDIR)/pcre2grep-pcre2grep.Tpo -c -o src/pcre2grep-pcre2grep.o `test -f 'src/pcre2grep.c' || echo '$(srcdir)/'`src/pcre2grep.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/pcre2grep-pcre2grep.Tpo src/$(DEPDIR)/pcre2grep-pcre2grep.Po
-#	$(AM_V_CC)source='src/pcre2grep.c' object='src/pcre2grep-pcre2grep.o' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2grep_CFLAGS) $(CFLAGS) -c -o src/pcre2grep-pcre2grep.o `test -f 'src/pcre2grep.c' || echo '$(srcdir)/'`src/pcre2grep.c
+#	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2grep_CFLAGS) $(CFLAGS) -MT src/pcre2grep-pcre2grep.o -MD -MP -MF src/$(DEPDIR)/pcre2grep-pcre2grep.Tpo -c -o src/pcre2grep-pcre2grep.o `test -f 'src/pcre2grep.c' || echo '$(srcdir)/'`src/pcre2grep.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/pcre2grep-pcre2grep.Tpo src/$(DEPDIR)/pcre2grep-pcre2grep.Po
+	$(AM_V_CC)source='src/pcre2grep.c' object='src/pcre2grep-pcre2grep.o' libtool=no \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2grep_CFLAGS) $(CFLAGS) -c -o src/pcre2grep-pcre2grep.o `test -f 'src/pcre2grep.c' || echo '$(srcdir)/'`src/pcre2grep.c
 
 src/pcre2grep-pcre2grep.obj: src/pcre2grep.c
-	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2grep_CFLAGS) $(CFLAGS) -MT src/pcre2grep-pcre2grep.obj -MD -MP -MF src/$(DEPDIR)/pcre2grep-pcre2grep.Tpo -c -o src/pcre2grep-pcre2grep.obj `if test -f 'src/pcre2grep.c'; then $(CYGPATH_W) 'src/pcre2grep.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2grep.c'; fi`
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/pcre2grep-pcre2grep.Tpo src/$(DEPDIR)/pcre2grep-pcre2grep.Po
-#	$(AM_V_CC)source='src/pcre2grep.c' object='src/pcre2grep-pcre2grep.obj' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2grep_CFLAGS) $(CFLAGS) -c -o src/pcre2grep-pcre2grep.obj `if test -f 'src/pcre2grep.c'; then $(CYGPATH_W) 'src/pcre2grep.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2grep.c'; fi`
+#	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2grep_CFLAGS) $(CFLAGS) -MT src/pcre2grep-pcre2grep.obj -MD -MP -MF src/$(DEPDIR)/pcre2grep-pcre2grep.Tpo -c -o src/pcre2grep-pcre2grep.obj `if test -f 'src/pcre2grep.c'; then $(CYGPATH_W) 'src/pcre2grep.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2grep.c'; fi`
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/pcre2grep-pcre2grep.Tpo src/$(DEPDIR)/pcre2grep-pcre2grep.Po
+	$(AM_V_CC)source='src/pcre2grep.c' object='src/pcre2grep-pcre2grep.obj' libtool=no \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2grep_CFLAGS) $(CFLAGS) -c -o src/pcre2grep-pcre2grep.obj `if test -f 'src/pcre2grep.c'; then $(CYGPATH_W) 'src/pcre2grep.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2grep.c'; fi`
 
 src/pcre2test-pcre2test.o: src/pcre2test.c
-	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2test_CFLAGS) $(CFLAGS) -MT src/pcre2test-pcre2test.o -MD -MP -MF src/$(DEPDIR)/pcre2test-pcre2test.Tpo -c -o src/pcre2test-pcre2test.o `test -f 'src/pcre2test.c' || echo '$(srcdir)/'`src/pcre2test.c
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/pcre2test-pcre2test.Tpo src/$(DEPDIR)/pcre2test-pcre2test.Po
-#	$(AM_V_CC)source='src/pcre2test.c' object='src/pcre2test-pcre2test.o' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2test_CFLAGS) $(CFLAGS) -c -o src/pcre2test-pcre2test.o `test -f 'src/pcre2test.c' || echo '$(srcdir)/'`src/pcre2test.c
+#	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2test_CFLAGS) $(CFLAGS) -MT src/pcre2test-pcre2test.o -MD -MP -MF src/$(DEPDIR)/pcre2test-pcre2test.Tpo -c -o src/pcre2test-pcre2test.o `test -f 'src/pcre2test.c' || echo '$(srcdir)/'`src/pcre2test.c
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/pcre2test-pcre2test.Tpo src/$(DEPDIR)/pcre2test-pcre2test.Po
+	$(AM_V_CC)source='src/pcre2test.c' object='src/pcre2test-pcre2test.o' libtool=no \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2test_CFLAGS) $(CFLAGS) -c -o src/pcre2test-pcre2test.o `test -f 'src/pcre2test.c' || echo '$(srcdir)/'`src/pcre2test.c
 
 src/pcre2test-pcre2test.obj: src/pcre2test.c
-	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2test_CFLAGS) $(CFLAGS) -MT src/pcre2test-pcre2test.obj -MD -MP -MF src/$(DEPDIR)/pcre2test-pcre2test.Tpo -c -o src/pcre2test-pcre2test.obj `if test -f 'src/pcre2test.c'; then $(CYGPATH_W) 'src/pcre2test.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2test.c'; fi`
-	$(AM_V_at)$(am__mv) src/$(DEPDIR)/pcre2test-pcre2test.Tpo src/$(DEPDIR)/pcre2test-pcre2test.Po
-#	$(AM_V_CC)source='src/pcre2test.c' object='src/pcre2test-pcre2test.obj' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2test_CFLAGS) $(CFLAGS) -c -o src/pcre2test-pcre2test.obj `if test -f 'src/pcre2test.c'; then $(CYGPATH_W) 'src/pcre2test.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2test.c'; fi`
+#	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2test_CFLAGS) $(CFLAGS) -MT src/pcre2test-pcre2test.obj -MD -MP -MF src/$(DEPDIR)/pcre2test-pcre2test.Tpo -c -o src/pcre2test-pcre2test.obj `if test -f 'src/pcre2test.c'; then $(CYGPATH_W) 'src/pcre2test.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2test.c'; fi`
+#	$(AM_V_at)$(am__mv) src/$(DEPDIR)/pcre2test-pcre2test.Tpo src/$(DEPDIR)/pcre2test-pcre2test.Po
+	$(AM_V_CC)source='src/pcre2test.c' object='src/pcre2test-pcre2test.obj' libtool=no \
+	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pcre2test_CFLAGS) $(CFLAGS) -c -o src/pcre2test-pcre2test.obj `if test -f 'src/pcre2test.c'; then $(CYGPATH_W) 'src/pcre2test.c'; else $(CYGPATH_W) '$(srcdir)/src/pcre2test.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -3017,13 +3017,13 @@ RunGrepTest.log: RunGrepTest
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_TEST_LOG_DRIVER_FLAGS) $(TEST_LOG_DRIVER_FLAGS) -- $(TEST_LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
-#.test$(EXEEXT).log:
-#	@p='$<'; \
-#	$(am__set_b); \
-#	$(am__check_pre) $(TEST_LOG_DRIVER) --test-name "$$f" \
-#	--log-file $$b.log --trs-file $$b.trs \
-#	$(am__common_driver_flags) $(AM_TEST_LOG_DRIVER_FLAGS) $(TEST_LOG_DRIVER_FLAGS) -- $(TEST_LOG_COMPILE) \
-#	"$$tst" $(AM_TESTS_FD_REDIRECT)
+.test$(EXEEXT).log:
+	@p='$<'; \
+	$(am__set_b); \
+	$(am__check_pre) $(TEST_LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_TEST_LOG_DRIVER_FLAGS) $(TEST_LOG_DRIVER_FLAGS) -- $(TEST_LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 
 distdir: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) distdir-am

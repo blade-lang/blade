@@ -5,6 +5,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <libgen.h>
 
 #if defined(_Win32)
 #include <Shlwapi.h>
@@ -15,13 +16,11 @@
 #endif
 
 #ifdef __APPLE__
-#include <libgen.h>
 #include <limits.h>
 #include <mach-o/dyld.h>
 #endif
 
-#ifdef __linux__
-#include <libgen.h>
+#if defined __linux__ || defined __CYGWIN__
 #include <limits.h>
 
 #if defined(__sun)
@@ -34,31 +33,35 @@
 
 #if defined(_WIN32)
 
+#include "win32.h"
+#include <shlwapi.h>
+
 char *get_exe_path() {
-  char raw_path_name[MAX_PATH];
-  GetModuleFileNameA(NULL, raw_path_name, MAX_PATH);
+  char raw_path_name[PATH_MAX];
+  GetModuleFileNameA(NULL, raw_path_name, PATH_MAX);
   return raw_path_name;
 }
 
 char *get_exe_dir() {
   char *exe_path = get_exe_path();
-  char e_path[strlen(exe_path)];
-  strcpy(e_path, exe_path);
+  int length = strlen(exe_path);
+  char e_path[length + 1];
+  memcpy(e_path, exe_path, length);
   PathRemoveFileSpecA(e_path);
   free(exe_path);
   return e_path;
 }
 
-char *merge_paths(char *a, char *b, int length) {
-  char combined[MAX_PATH];
+char *merge_paths(char *a, char *b) {
+  char combined[PATH_MAX];
   PathCombineA(combined, a, b);
-  free(b);
+  // free(b);
   return combined;
 }
 
 #endif
 
-#ifdef __linux__
+#if defined __linux__ ||  defined __CYGWIN__
 
 char *get_exe_path() {
   char raw_path[PATH_MAX];
@@ -81,7 +84,7 @@ char *get_exe_path() {
 }
 #endif
 
-#if defined(__linux__) || defined(__APPLE__)
+#if defined __CYGWIN__ || defined __linux__ || defined __APPLE__
 
 char *get_exe_dir() {
   char *exe_path = get_exe_path();

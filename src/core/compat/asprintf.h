@@ -33,7 +33,7 @@ int vscprintf(const char *format, va_list ap) {
  * GNU-C-compatible compilers implement these with the same names, thus we
  * don't have to do anything
  */
-#ifdef _MSC_VER
+#if defined __CYGWIN__ || defined _WIN64 || defined _WIN32
 int vasprintf(char **strp, const char *format, va_list ap) {
   int len = vscprintf(format, ap);
   if (len == -1)

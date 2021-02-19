@@ -10,6 +10,8 @@
 #include <setjmp.h>
 #include <signal.h>
 
+#include "win32.h"
+
 static bool continue_repl = true;
 sigjmp_buf ctrlc_buf;
 
