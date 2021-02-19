@@ -18,3 +18,4 @@ deps/pcre2/libtool
 .DS_Store
 birdd.exe
 bird.exe
+*.dll

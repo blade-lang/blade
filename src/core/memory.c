@@ -40,7 +40,9 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
 }
 
 void mark_object(b_vm *vm, b_obj *object) {
-  if (object == NULL || object->is_marked)
+  if (object == NULL)
+    return;
+  if (object->is_marked)
     return;
 
 #if defined DEBUG_LOG_GC && DEBUG_LOG_GC
@@ -54,7 +56,12 @@ void mark_object(b_vm *vm, b_obj *object) {
   if (vm->gray_capacity < vm->gray_count + 1) {
     vm->gray_capacity = GROW_CAPACITY(vm->gray_capacity);
     vm->gray_stack =
-        realloc(vm->gray_stack, sizeof(b_obj *) * vm->gray_capacity);
+        (b_obj **)realloc(vm->gray_stack, sizeof(b_obj *) * vm->gray_capacity);
+
+    if (vm->gray_stack == NULL) {
+      fprintf(stderr, "GC encountered an error");
+      exit(1);
+    }
   }
   vm->gray_stack[vm->gray_count++] = object;
 }
