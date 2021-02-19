@@ -9,7 +9,6 @@ clean:
 
 # Compile the Jade interpreter.
 release:
-	@ $(MAKE) clean
 	@ rm -rf bird
 	@ $(MAKE) -f birdy.mk NAME=bird MODE=release SOURCE_DIR=src
 	@ cp build/bird bird # For convenience, copy the interpreter to the top level.
@@ -17,7 +16,6 @@ release:
 
 # Compile a debug build of Jade.
 debug:
-	@ $(MAKE) clean
 	@ rm -rf birdd
 	@ $(MAKE) -f birdy.mk NAME=birdd MODE=debug SOURCE_DIR=src
 	@ cp build/birdd birdd # For convenience, copy the interpreter to the top level.
