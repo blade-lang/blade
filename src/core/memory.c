@@ -323,7 +323,7 @@ void collect_garbage(b_vm *vm) {
 
 #if defined DEBUG_LOG_GC && DEBUG_LOG_GC
   printf("-- gc ends\n");
-  printf("   collected %ld bytes (from %ld to %ld), next at %ld\n",
+  printf("   collected %zu bytes (from %zu to %zu), next at %zu\n",
          before - vm->bytes_allocated, before, vm->bytes_allocated,
          vm->next_gc);
 #endif
