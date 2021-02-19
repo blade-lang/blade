@@ -97,7 +97,7 @@ DECLARE_NATIVE(file) {
     RETURN_ERROR("file path cannot be empty");
   }
 
-  b_obj_string *mode;
+  b_obj_string *mode = NULL;
 
   if (arg_count == 2) {
     ENFORCE_ARG_TYPE(file, 1, IS_STRING);
@@ -233,8 +233,8 @@ DECLARE_FILE_METHOD(write) {
   ENFORCE_ARG_COUNT(write, 1);
 
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
-  b_obj_string *string;
-  b_obj_bytes *bytes;
+  b_obj_string *string = NULL;
+  b_obj_bytes *bytes = NULL;
 
   bool in_binary_mode = strstr(file->mode->chars, "b") != NULL;
 

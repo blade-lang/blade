@@ -83,7 +83,7 @@ static inline void do_print_value(b_value value, bool fix_string) {
 #else
   switch (value.type) {
   case VAL_EMPTY:
-    printf("");
+    printf("%s", "");
     break;
   case VAL_NIL:
     printf("nil");
@@ -95,7 +95,7 @@ static inline void do_print_value(b_value value, bool fix_string) {
     printf(NUMBER_FORMAT, AS_NUMBER(value));
     break;
   case VAL_OBJ:
-    print_object(value);
+    print_object(value, fix_string);
     break;
 
   default:

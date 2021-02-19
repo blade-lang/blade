@@ -7,12 +7,12 @@
 #include <string.h>
 #include <libgen.h>
 
-#if defined(_Win32)
-#include <Shlwapi.h>
+#if defined _WIN32
+#include <shlwapi.h>
 #include <io.h>
 #include <windows.h>
 
-#define access _access_s
+// #define access _access_s
 #endif
 
 #ifdef __APPLE__
