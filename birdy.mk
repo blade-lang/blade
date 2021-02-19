@@ -67,14 +67,14 @@ else ifeq ($(OS),cygwin)
 # for cygwin and mingw32 environments
 	SHARED_LIB_FLAGS := -Wl,-soname,libbirdy.dll
 	SHARED_EXT := dll
-CFLAGS += -Wno-return-local-addr -Wno-implicit-fallthrough -Wno-maybe-uninitialized
+CFLAGS += -Wno-return-local-addr -Wno-maybe-uninitialized -Wno-sequence-point
 
 else ifeq ($(OS),mingw32)
 
 # for cygwin and mingw32 environments
 	SHARED_LIB_FLAGS := -Wl,-soname,libbirdy.dll
 	SHARED_EXT := dll
-CFLAGS += -Wno-return-local-addr -Wno-implicit-fallthrough -Wno-maybe-uninitialized
+CFLAGS += -Wno-return-local-addr -Wno-maybe-uninitialized -Wno-sequence-point
 
 else
 
@@ -85,10 +85,15 @@ else
 CFLAGS += -Wno-return-local-addr -Wno-implicit-fallthrough -lreadline 
 endif
 
+LIB_WIN32 :=
+
 ifeq ($(OS),cygwin)
 	CFLAGS += -Ideps/pcre2/src
+	LIB_READLINE = /usr/lib/libreadline.dll.a
 else ifeq ($(OS),mingw32)
-	CFLAGS += -Ideps/pcre2/src
+	CFLAGS += -Ideps/pcre2/src -lshlwapi
+	LIB_PCRE2 = deps/pcre2/.libs/libpcre2-8.dll.a
+	LIB_WIN32 = /mingw64/lib/libreadline.dll.a /mingw64/x86_64-w64-mingw32/lib/libshlwapi.a /mingw64/x86_64-w64-mingw32/lib/libws2_32.a /mingw64/x86_64-w64-mingw32/lib/libnetapi32.a
 endif
 
 # Files.
@@ -110,9 +115,9 @@ $1/*.o: %.c
 	$(CC) -I$(INCLUDES) -c $$< -o $$@
 endef
 
-build/$(NAME): $(OBJECTS) $(LIB_PCRE2)
+build/$(NAME): $(OBJECTS) $(LIB_PCRE2) $(LIB_WIN32)
 	@ printf "Building Bird in %s mode into %s...\n" $(MODE) $(NAME)
-	@ printf "%s %s %s\n" $(CC) $@ "$(CFLAGS)"
+	@ printf "%s %s %s\n" $(CC) $@ "$(CFLAGS) $(LIB_PCRE2) $(LIB_WIN32)"
 	@ mkdir -p build
 	@ $(CC) $(CFLAGS) $^ -o $@
 

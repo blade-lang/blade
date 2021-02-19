@@ -3,12 +3,19 @@
 
 #include "common.h"
 
-#if defined(__linux__) || defined(__APPLE__)
+#if defined __linux__ || defined __APPLE__
+
 #define BIRD_PATH_SEPARATOR "/"
-#elif defined(_Win32)
+
+#elif defined(_WIN32)
+
 #define BIRD_PATH_SEPARATOR "\\"
+#define realpath(N,R) _fullpath((R),(N),_MAX_PATH)
+
 #else
+
 #define BIRD_PATH_SEPARATOR "/"
+
 #endif
 
 char *get_exe_path();

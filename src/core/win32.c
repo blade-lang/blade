@@ -2,34 +2,32 @@
 
 #ifdef IS_WINDOWS
 
-#include "birdy_win32.h"
+#include "win32.h"
 
 typedef VOID(WINAPI *MyGetSystemTimeAsFileTime)(
     LPFILETIME lpSystemTimeAsFileTime);
 
-static MyGetSystemTimeAsFileTime timefunc = NULL;
-
-static MyGetSystemTimeAsFileTime get_time_func(void) {
+static MyGetSystemTimeAsFileTime get_time_func() {
   MyGetSystemTimeAsFileTime timefunc = NULL;
   HMODULE hMod = GetModuleHandle("kernel32.dll");
 
   if (hMod) {
     /* Max possible resolution <1us, win8/server2012 */
-    timefunc = (MyGetSystemTimeAsFileTime)GetProcAddress(
-        hMod, "GetSystemTimePreciseAsFileTime");
+    return (MyGetSystemTimeAsFileTime)((void*)GetProcAddress(
+        hMod, "GetSystemTimePreciseAsFileTime"));
   }
 
   if (!timefunc) {
     /* 100ns blocks since 01-Jan-1641 */
-    timefunc = (MyGetSystemTimeAsFileTime)GetSystemTimeAsFileTime;
+    return (MyGetSystemTimeAsFileTime)GetSystemTimeAsFileTime;
   }
 
-  return timefunc;
+  return NULL;
 }
 
-static MyGetSystemTimeAsFileTime timefunc = NULL;
-
 static int getfilesystemtime(struct timeval *tv) {
+  MyGetSystemTimeAsFileTime timefunc = get_time_func();
+
   FILETIME ft;
   unsigned __int64 ff = 0;
   ULARGE_INTEGER fft;
@@ -46,11 +44,11 @@ static int getfilesystemtime(struct timeval *tv) {
   fft.LowPart = ft.dwLowDateTime;
   ff = fft.QuadPart;
 
-  ff /= 10Ui64;                /* convert to microseconds */
-  ff -= 11644473600000000Ui64; /* convert to unix epoch */
+  ff /= 10ULL;                /* convert to microseconds */
+  ff -= 11644473600000000ULL; /* convert to unix epoch */
 
-  tv->tv_sec = (long)(ff / 1000000Ui64);
-  tv->tv_usec = (long)(ff % 1000000Ui64);
+  tv->tv_sec = (long)(ff / 1000000ULL);
+  tv->tv_usec = (long)(ff % 1000000ULL);
 
   return 0;
 }

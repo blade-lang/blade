@@ -12,6 +12,9 @@ deps/pcre2/src/.deps
 deps/pcre2/src/*.lo
 deps/pcre2/src/*.o
 deps/pcre2/*.log
+deps/pcre2/*.status
+deps/pcre2/src/stamp-*
+deps/pcre2/libtool
 .DS_Store
 birdd.exe
 bird.exe

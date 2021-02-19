@@ -75,7 +75,12 @@ DECLARE_NATIVE(microtime) {
  */
 DECLARE_NATIVE(id) {
   ENFORCE_ARG_COUNT(id, 1);
+
+#ifdef _WIN32
+  RETURN_NUMBER((long)args[0]);
+#else
   RETURN_NUMBER((long)&args[0]);
+#endif
 }
 
 /**

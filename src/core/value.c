@@ -71,7 +71,7 @@ void free_byte_arr(b_vm *vm, b_byte_arr *array) {
 static inline void do_print_value(b_value value, bool fix_string) {
 #if defined USE_NAN_BOXING && USE_NAN_BOXING
   if (IS_EMPTY(value))
-    printf("");
+    printf("%s", "");
   else if (IS_NIL(value))
     printf("nil");
   else if (IS_BOOL(value))
@@ -310,7 +310,7 @@ static uint64_t siphash24(uint64_t k0, uint64_t k1, const char *src,
   return t;
 } */
 
-uint32_t inline hash_string(const char *key, int length) {
+inline uint32_t hash_string(const char *key, int length) {
   uint32_t hash = 2166136261u;
   const char *be = key + length;
 
@@ -392,7 +392,7 @@ static b_value find_max_value(b_value a, b_value b) {
       return b; // every other thing is greater than a number
   } else if (IS_OBJ(a)) {
     if (IS_STRING(a) && IS_STRING(b)) {
-      return strcasecmp(AS_CSTRING(a), AS_CSTRING(b)) >= 0 ? a : b;
+      return strcmp(AS_CSTRING(a), AS_CSTRING(b)) >= 0 ? a : b;
     } else if (IS_CLOSURE(a) && IS_CLOSURE(b)) {
       return AS_CLOSURE(a)->function->arity >= AS_CLOSURE(b)->function->arity
                  ? a

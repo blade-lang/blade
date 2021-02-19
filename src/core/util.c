@@ -23,38 +23,42 @@ int utf8_number_bytes(int value) {
 
 char *utf8_encode(unsigned int code) {
   int count = utf8_number_bytes(code);
-  char *chars = calloc(count, sizeof(char));
-  if (code <= 0x7F) {
-    chars[0] = (code & 0x7F);
-    chars[1] = '\0';
-  } else if (code <= 0x7FF) {
-    // one continuation byte
-    chars[1] = 0x80 | (code & 0x3F);
-    code = (code >> 6);
-    chars[0] = 0xC0 | (code & 0x1F);
-  } else if (code <= 0xFFFF) {
-    // two continuation bytes
-    chars[2] = 0x80 | (code & 0x3F);
-    code = (code >> 6);
-    chars[1] = 0x80 | (code & 0x3F);
-    code = (code >> 6);
-    chars[0] = 0xE0 | (code & 0xF);
-  } else if (code <= 0x10FFFF) {
-    // three continuation bytes
-    chars[3] = 0x80 | (code & 0x3F);
-    code = (code >> 6);
-    chars[2] = 0x80 | (code & 0x3F);
-    code = (code >> 6);
-    chars[1] = 0x80 | (code & 0x3F);
-    code = (code >> 6);
-    chars[0] = 0xF0 | (code & 0x7);
-  } else {
-    // unicode replacement character
-    chars[2] = 0xEF;
-    chars[1] = 0xBF;
-    chars[0] = 0xBD;
+  if(count > 0 ){
+    char * chars = (char*)calloc(count + 1, sizeof(char));
+    if (code <= 0x7F) {
+      chars[0] = (code & 0x7F);
+      chars[1] = '\0';
+    } else if (code <= 0x7FF) {
+      // one continuation byte
+      chars[1] = 0x80 | (code & 0x3F);
+      code = (code >> 6);
+      chars[0] = 0xC0 | (code & 0x1F);
+    } else if (code <= 0xFFFF) {
+      // two continuation bytes
+      chars[2] = 0x80 | (code & 0x3F);
+      code = (code >> 6);
+      chars[1] = 0x80 | (code & 0x3F);
+      code = (code >> 6);
+      chars[0] = 0xE0 | (code & 0xF);
+    } else if (code <= 0x10FFFF) {
+      // three continuation bytes
+      chars[3] = 0x80 | (code & 0x3F);
+      code = (code >> 6);
+      chars[2] = 0x80 | (code & 0x3F);
+      code = (code >> 6);
+      chars[1] = 0x80 | (code & 0x3F);
+      code = (code >> 6);
+      chars[0] = 0xF0 | (code & 0x7);
+    } else {
+      // unicode replacement character
+      chars[2] = 0xEF;
+      chars[1] = 0xBF;
+      chars[0] = 0xBD;
+    }
+    return chars;
   }
-  return chars;
+  char result = (char)code;
+  return &result;
 }
 
 int utf8_decode_num_bytes(uint8_t byte) {

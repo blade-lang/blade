@@ -250,8 +250,10 @@ static b_tkn_type identifier_type(b_scanner *s) {
         } else {
           return check_keyword(s, 2, 0, "", AS_TOKEN);
         }
+        break;
       }
     }
+    break;
   case 'b':
     return check_keyword(s, 1, 4, "reak", BREAK_TOKEN);
   case 'c':
@@ -280,10 +282,12 @@ static b_tkn_type identifier_type(b_scanner *s) {
             break;
           }
         }
+        break;
       case 'i':
         return check_keyword(s, 2, 1, "e", DIE_TOKEN);
       }
     }
+    break;
   case 'e':
     if (s->current - s->start > 1) {
       switch (s->start[1]) {
@@ -295,6 +299,7 @@ static b_tkn_type identifier_type(b_scanner *s) {
         return check_keyword(s, 2, 3, "pty", EMPTY_TOKEN);
       }
     }
+    break;
   case 'f':
     if (s->current - s->start > 1) {
       switch (s->start[1]) {
@@ -304,6 +309,7 @@ static b_tkn_type identifier_type(b_scanner *s) {
         return check_keyword(s, 2, 1, "r", FOR_TOKEN);
       }
     }
+    break;
   case 'i':
     if (s->current - s->start > 1) {
       switch (s->start[1]) {
@@ -317,6 +323,7 @@ static b_tkn_type identifier_type(b_scanner *s) {
         return check_keyword(s, 2, 2, "er", ITER_TOKEN);
       }
     }
+    break;
   case 'n':
     return check_keyword(s, 1, 2, "il", NIL_TOKEN);
   case 'o':
@@ -334,6 +341,7 @@ static b_tkn_type identifier_type(b_scanner *s) {
         return check_keyword(s, 2, 4, "atic", STATIC_TOKEN);
       }
     }
+    break;
   case 't':
     if (s->current - s->start > 2 && s->start[1] == 'r') {
       switch (s->start[2]) {
@@ -343,6 +351,7 @@ static b_tkn_type identifier_type(b_scanner *s) {
         return check_keyword(s, 3, 0, "", TRY_TOKEN);
       }
     }
+    break;
   case 'u': {
     return check_keyword(s, 1, 4, "sing", USING_TOKEN);
   }
@@ -357,6 +366,7 @@ static b_tkn_type identifier_type(b_scanner *s) {
         return check_keyword(s, 3, 1, "n", WHEN_TOKEN);
       }
     }
+    break;
   }
   return IDENTIFIER_TOKEN;
 }
