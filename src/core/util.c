@@ -23,8 +23,8 @@ int utf8_number_bytes(int value) {
 
 char *utf8_encode(unsigned int code) {
   int count = utf8_number_bytes(code);
-  if(count > 0 ){
-    char * chars = (char*)calloc(count + 1, sizeof(char));
+  if (count > 0) {
+    char *chars = (char *)calloc(count + 1, sizeof(char));
     if (code <= 0x7F) {
       chars[0] = (code & 0x7F);
       chars[1] = '\0';
@@ -57,8 +57,7 @@ char *utf8_encode(unsigned int code) {
     }
     return chars;
   }
-  char result = (char)code;
-  return &result;
+  return (char *)"";
 }
 
 int utf8_decode_num_bytes(uint8_t byte) {
