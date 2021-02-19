@@ -11,30 +11,28 @@ clean:
 release:
 	@ rm -rf bird
 	@ $(MAKE) -f birdy.mk NAME=bird MODE=release SOURCE_DIR=src
-	@ cp build/bird bird # For convenience, copy the interpreter to the top level.
 
 
 # Compile a debug build of Jade.
 debug:
 	@ rm -rf birdd
 	@ $(MAKE) -f birdy.mk NAME=birdd MODE=debug SOURCE_DIR=src
-	@ cp build/birdd birdd # For convenience, copy the interpreter to the top level.
 
 
 test:
-	@ ./birdd tests/$(call args,main).b
+	@ ./build/birdd tests/$(call args,main).b
 
 # test for release
 rtest:
-	@ ./bird tests/$(call args,main).b
+	@ ./build/bird tests/$(call args,main).b
 
 # module test
 mtest:
-	@ ./birdd tests/modules/$(call args,main).b
+	@ ./build/birdd tests/modules/$(call args,main).b
 
 # module release test
 gtest:
-	@ ./bird tests/modules/$(call args,main).b
+	@ ./build/bird tests/modules/$(call args,main).b
 
 internal:
 	@ $(MAKE) make_internal
@@ -44,11 +42,11 @@ tests:
 	@ bash run-tests.sh
 
 bench:
-	@ ./birdd benchmarks/bench-$(call args,main).b
+	@ ./build/birdd benchmarks/bench-$(call args,main).b
 
 # benchmark for release
 rbench:
-	@ ./bird benchmarks/bench-$(call args,main).b
+	@ ./build/bird benchmarks/bench-$(call args,main).b
 
 
 .PHONY: clean release debug test tests
