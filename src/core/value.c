@@ -316,9 +316,9 @@ static uint64_t siphash24(uint64_t k0, uint64_t k1, const char *src,
 } */
 
 #ifndef _WIN32
-static inline uint32_t hash_string(const char* key, int length) {
+inline uint32_t hash_string(const char *key, int length) {
 #else
-uint32_t hash_string(const char* key, int length) {
+uint32_t hash_string(const char *key, int length) {
 #endif // !_WIN32
 
   uint32_t hash = 2166136261u;
