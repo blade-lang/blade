@@ -15,177 +15,177 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\core\bird.c">
+    <ClCompile Include="..\src\core\bird.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\blob.c">
+    <ClCompile Include="..\src\core\blob.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\bytes.c">
+    <ClCompile Include="..\src\core\bytes.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\compiler.c">
+    <ClCompile Include="..\src\core\compiler.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\debug.c">
+    <ClCompile Include="..\src\core\debug.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\dict.c">
+    <ClCompile Include="..\src\core\dict.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\file.c">
+    <ClCompile Include="..\src\core\file.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\list.c">
+    <ClCompile Include="..\src\core\list.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\memory.c">
+    <ClCompile Include="..\src\core\memory.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\module.c">
+    <ClCompile Include="..\src\core\module.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\native.c">
+    <ClCompile Include="..\src\core\native.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\object.c">
+    <ClCompile Include="..\src\core\object.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\pathinfo.c">
+    <ClCompile Include="..\src\core\pathinfo.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\scanner.c">
+    <ClCompile Include="..\src\core\scanner.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\string.c">
+    <ClCompile Include="..\src\core\string.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\table.c">
+    <ClCompile Include="..\src\core\table.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\util.c">
+    <ClCompile Include="..\src\core\util.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\value.c">
+    <ClCompile Include="..\src\core\value.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\vm.c">
+    <ClCompile Include="..\src\core\vm.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\win32.c">
+    <ClCompile Include="..\src\core\win32.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\modules\base64.c">
+    <ClCompile Include="..\src\modules\base64.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\modules\io.c">
+    <ClCompile Include="..\src\modules\io.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\modules\math.c">
+    <ClCompile Include="..\src\modules\math.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\modules\os.c">
+    <ClCompile Include="..\src\modules\os.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\getopt.c">
+    <ClCompile Include="..\src\core\getopt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\core\blob.h">
+    <ClInclude Include="..\src\core\blob.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\btime.h">
+    <ClInclude Include="..\src\core\btime.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\common.h">
+    <ClInclude Include="..\src\core\common.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\compiler.h">
+    <ClInclude Include="..\src\core\compiler.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\config.h">
+    <ClInclude Include="..\src\core\config.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\debug.h">
+    <ClInclude Include="..\src\core\debug.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\memory.h">
+    <ClInclude Include="..\src\core\memory.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\module.h">
+    <ClInclude Include="..\src\core\module.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\native.h">
+    <ClInclude Include="..\src\core\native.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\object.h">
+    <ClInclude Include="..\src\core\object.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\pathinfo.h">
+    <ClInclude Include="..\src\core\pathinfo.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\scanner.h">
+    <ClInclude Include="..\src\core\scanner.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\table.h">
+    <ClInclude Include="..\src\core\table.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\util.h">
+    <ClInclude Include="..\src\core\util.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\value.h">
+    <ClInclude Include="..\src\core\value.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\vm.h">
+    <ClInclude Include="..\src\core\vm.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\win32.h">
+    <ClInclude Include="..\src\core\win32.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\builtin\bytes.h">
+    <ClInclude Include="..\src\core\builtin\bytes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\builtin\dict.h">
+    <ClInclude Include="..\src\core\builtin\dict.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\builtin\file.h">
+    <ClInclude Include="..\src\core\builtin\file.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\builtin\list.h">
+    <ClInclude Include="..\src\core\builtin\list.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\builtin\string.h">
+    <ClInclude Include="..\src\core\builtin\string.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\compat\asprintf.h">
+    <ClInclude Include="..\src\core\compat\asprintf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\compat\termios.h">
+    <ClInclude Include="..\src\core\compat\termios.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\compat\unistd.h">
+    <ClInclude Include="..\src\core\compat\unistd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\modules\base64.h">
+    <ClInclude Include="..\src\modules\base64.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\modules\io.h">
+    <ClInclude Include="..\src\modules\io.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\modules\math.h">
+    <ClInclude Include="..\src\modules\math.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\modules\os.h">
+    <ClInclude Include="..\src\modules\os.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\compat\getopt.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\core\compat\replxx.h">
+    <ClInclude Include="..\src\core\compat\getopt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="deps\includes\pcre2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\core\compat\replxx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
