@@ -5,6 +5,7 @@
 #include "util.h"
 #include "value.h"
 #include "vm.h"
+#include "win32.h"
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -6,6 +6,7 @@
 #include "pathinfo.h"
 #include "scanner.h"
 #include "util.h"
+#include "win32.h"
 
 #include <stdarg.h>
 #include <stdio.h>

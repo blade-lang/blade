@@ -129,8 +129,10 @@ char *append_strings(const char *old, const char *new_str) {
   char *out = malloc(out_len);
 
   // concat both strings and return
-  memcpy(out, old, old_len);
-  memcpy(out + old_len, new_str, new_len + 1);
+  if (out != NULL) {
+      memcpy(out, old, old_len);
+      memcpy(out + old_len, new_str, new_len + 1);
+  }
 
   return out;
 }

@@ -5,7 +5,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <libgen.h>
 
 #if defined _WIN32
 #include <shlwapi.h>
@@ -16,11 +15,13 @@
 #endif
 
 #ifdef __APPLE__
+#include <libgen.h>
 #include <limits.h>
 #include <mach-o/dyld.h>
 #endif
 
-#if defined __linux__ || defined __CYGWIN__
+#if defined __linux__ || defined __CYGWIN__ || defined __MINGW32_MAJOR_VERSION
+#include <libgen.h>
 #include <limits.h>
 
 #if defined(__sun)
@@ -31,32 +32,30 @@
 
 #endif
 
-#if defined(_WIN32)
+#if defined _WIN32
 
 #include "win32.h"
 #include <shlwapi.h>
 
-char *get_exe_path() {
-  char raw_path_name[PATH_MAX];
-  GetModuleFileNameA(NULL, raw_path_name, PATH_MAX);
-  return raw_path_name;
-}
-
 char *get_exe_dir() {
-  char *exe_path = get_exe_path();
-  int length = strlen(exe_path);
-  char e_path[length + 1];
-  memcpy(e_path, exe_path, length);
-  PathRemoveFileSpecA(e_path);
-  free(exe_path);
-  return e_path;
+  char* exe_path = (char*)malloc(sizeof(char) * MAX_PATH);
+  if (exe_path != NULL) {
+      int length = (int)GetModuleFileNameA(NULL, exe_path, MAX_PATH);
+      if (length > 0) {
+          return exe_path;
+      }
+      else {
+          return NULL;
+      }
+  }
+  return NULL;
 }
 
-char *merge_paths(char *a, char *b) {
-  char combined[PATH_MAX];
-  PathCombineA(combined, a, b);
-  // free(b);
-  return combined;
+char* dirname(char* path) {
+    char* drive = (char*)malloc(sizeof(char));
+    char* dir = (char*)malloc(sizeof(char) * MAX_PATH);
+    _splitpath((const char*)path, drive, dir, NULL, NULL);
+    return append_strings(drive, dir);
 }
 
 #endif
@@ -94,46 +93,60 @@ char *get_exe_dir() {
   free(exe_path_str);
   return exe_dir;
 }
-
-char *merge_paths(char *a, char *b) {
-  char *final_path = "";
-
-  // edge cases
-  // 1. a itself is a file
-  // 2. b is a bird runtime constant such as <repl>, <script> and <module>
-
-  if (strstr(a, ".") == NULL && strstr(b, "<") == NULL && strlen(a) > 0) {
-    final_path = append_strings(final_path, a);
-  }
-  if (strlen(a) > 0 && b[0] != '.' && strstr(a, ".") == NULL &&
-      strstr(b, "<") == NULL) {
-    final_path = append_strings(final_path, BIRD_PATH_SEPARATOR);
-    final_path = append_strings(final_path, b);
-  } else {
-    final_path = append_strings(final_path, b);
-  }
-  return final_path;
-}
 #endif
+
+
+
+char* merge_paths(char* a, char* b) {
+    char* final_path = "";
+
+    // edge cases
+    // 1. a itself is a file
+    // 2. b is a bird runtime constant such as <repl>, <script> and <module>
+
+    if (strstr(a, ".") == NULL && strstr(b, "<") == NULL && strlen(a) > 0) {
+        final_path = append_strings(final_path, a);
+    }
+    if (strlen(a) > 0 && b[0] != '.' && strstr(a, ".") == NULL &&
+        strstr(b, "<") == NULL) {
+        final_path = append_strings(final_path, BIRD_PATH_SEPARATOR);
+        final_path = append_strings(final_path, b);
+  }
+    else {
+        final_path = append_strings(final_path, b);
+    }
+    return final_path;
+}
 
 bool file_exists(char *filepath) { return access(filepath, F_OK) == 0; }
 
-char *get_calling_dir() { return getenv("PWD"); }
+#ifndef _WIN32
+char* get_calling_dir() { return getenv("PWD"); }
+
+char* get_filename(char* filepath) {
+    int start = 0, length = strlen(filepath);
+    for (int i = 0; i < length; i++) {
+        if (filepath[i] == BIRD_PATH_SEPARATOR[0])
+            start = i;
+    }
+    length = length - start;
+    char* string = malloc(sizeof(char));
+    strncat(string, filepath + start, length);
+    return string;
+}
+#else
+char* get_calling_dir() { return _fullpath(NULL, "", 0); }
+
+char* get_filename(char* filepath) {
+    char* file = (char*)malloc(sizeof(char));
+    char* ext = (char*)malloc(sizeof(char));
+    _splitpath((const char*)filepath, NULL, NULL, file, ext);
+    return merge_paths(file, ext);
+}
+#endif // !_WIN32
 
 char *get_bird_filename(char *filename) {
   return merge_paths(filename, BIRD_EXTENSION);
-}
-
-char *get_filename(char *filepath) {
-  int start = 0, length = strlen(filepath);
-  for (int i = 0; i < length; i++) {
-    if (filepath[i] == BIRD_PATH_SEPARATOR[0])
-      start = i;
-  }
-  length = length - start;
-  char *string = malloc(sizeof(char));
-  strncat(string, filepath + start, length);
-  return string;
 }
 
 char *resolve_import_path(char *module_name, const char *current_file) {

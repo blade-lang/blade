@@ -1,5 +1,6 @@
 #include "builtin/string.h"
 #include "util.h"
+#include "win32.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -508,7 +509,7 @@ DECLARE_STRING_METHOD(lpad) {
     RETURN_VALUE(METHOD_OBJECT);
 
   int fill_size = width - string->length;
-  char fill[fill_size];
+  char *fill = ALLOCATE(char, fill_size + 1);
 
   int i;
   for (i = 0; i < fill_size; i++)
@@ -539,7 +540,7 @@ DECLARE_STRING_METHOD(rpad) {
     RETURN_VALUE(METHOD_OBJECT);
 
   int fill_size = width - string->length;
-  char fill[fill_size];
+  char *fill = ALLOCATE(char, fill_size + 1);
 
   int i;
   for (i = 0; i < fill_size; i++)

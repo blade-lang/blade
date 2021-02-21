@@ -3,6 +3,7 @@
 #ifdef IS_WINDOWS
 
 #include "win32.h"
+//#include <math.h>
 
 typedef VOID(WINAPI *MyGetSystemTimeAsFileTime)(
     LPFILETIME lpSystemTimeAsFileTime);
@@ -47,8 +48,8 @@ static int getfilesystemtime(struct timeval *tv) {
   ff /= 10ULL;                /* convert to microseconds */
   ff -= 11644473600000000ULL; /* convert to unix epoch */
 
-  tv->tv_sec = (long)(ff / 1000000ULL);
-  tv->tv_usec = (long)(ff % 1000000ULL);
+  tv->tv_sec = (long)(ff / 1000ULL);
+  tv->tv_usec = (long)(ff % 1000ULL);
 
   return 0;
 }
