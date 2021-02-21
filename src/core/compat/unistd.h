@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__MINGW32_MAJOR_VERSION)
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__MINGW32_MAJOR_VERSION) || defined(__CYGWIN__)
 #include <unistd.h>
 #else
 
@@ -16,7 +16,7 @@
  */
 
 #include <direct.h> /* for _getcwd() and _chdir() */
-#include <getopt.h> /* getopt at: https://gist.github.com/ashelly/7776712 */
+#include "compat/getopt.h" /* getopt at: https://gist.github.com/ashelly/7776712 */
 #include <io.h>
 #include <process.h> /* for getpid() and the exec..() family */
 #include <stdlib.h>
@@ -41,12 +41,14 @@
 #define chdir _chdir
 #define isatty _isatty
 #define lseek _lseek
+#define rmdir _rmdir
+//#define truncate _truncate
 /* read, write, and close are NOT being #defined here, because while there are
  * file handle specific versions for Windows, they probably don't work for
  * sockets. You need to look at your app and consider whether to call e.g.
  * closesocket(). */
 
-#ifdef _WIN64
+#ifdef _WIN32
 #define ssize_t __int64
 #else
 #define ssize_t long
@@ -67,19 +69,7 @@ typedef unsigned __int64 uint64_t;
 
 #endif /* unistd.h  */
 
-int symlink(const char *pathname, const char *slink);
-ssize_t write(int, const void *, size_t);
-ssize_t read(int, void *, size_t);
-int rmdir(const char *);
-int access(const char *, int);
-
-int ftruncate(int fildes, off_t length);
-int truncate(const char *path, off_t length);
-
 #ifdef IS_WINDOWS
-#define stat _stat
-#define lstat _lstat
-#define fstat _fstat
 #define ftruncate _chsize
 #define fileno _fileno
 #endif

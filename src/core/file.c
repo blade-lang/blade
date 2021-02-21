@@ -10,7 +10,16 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <time.h>
+
+#if defined _WIN32 && !defined(__MINGW32_MAJOR_VERSION)
+struct utimbuf {
+    time_t actime; /* Access time */
+    time_t modtime; /* Modification time */
+};
+#else
 #include <utime.h>
+#endif // _WIN32
+
 
 #define FILE_ERROR(type, message)                                              \
   file_close(file);                                                            \
@@ -32,6 +41,7 @@
     break;                                                                     \
   case ENOENT:                                                                 \
     FILE_ERROR(Access, "file no longer exist");                                \
+    break;                                                                     \
     break;                                                                     \
   case EPERM:                                                                  \
     FILE_ERROR(Operation, "specified file is a directory");                    \
@@ -215,7 +225,8 @@ DECLARE_FILE_METHOD(read) {
   }
 
   // we made use of +1 so we can terminate the string.
-  buffer[bytes_read] = '\0';
+  if(buffer != NULL)
+    buffer[bytes_read + 1] = '\0';
 
   // close file
   if (bytes_read == file_size) {
@@ -341,6 +352,7 @@ DECLARE_FILE_METHOD(stats) {
       struct stat stats;
       if (lstat(file->path->chars, &stats) == 0) {
 
+#ifndef _WIN32
         // read mode
         SET_DICT_STRING(dict, "is_readable", 11,
                         BOOL_VAL(((stats.st_mode & S_IRUSR) != 0)));
@@ -356,6 +368,22 @@ DECLARE_FILE_METHOD(stats) {
         // is symbolic link
         SET_DICT_STRING(dict, "is_symbolic", 11,
                         BOOL_VAL((S_ISLNK(stats.st_mode) != 0)));
+#else
+          // read mode
+          SET_DICT_STRING(dict, "is_readable", 11,
+              BOOL_VAL(((stats.st_mode & S_IREAD) != 0)));
+
+          // write mode
+          SET_DICT_STRING(dict, "is_writable", 11,
+              BOOL_VAL(((stats.st_mode & S_IWRITE) != 0)));
+
+          // execute mode
+          SET_DICT_STRING(dict, "is_executable", 13,
+              BOOL_VAL(((stats.st_mode & S_IEXEC) != 0)));
+
+          // is symbolic link
+          SET_DICT_STRING(dict, "is_symbolic", 11, BOOL_VAL(false));
+#endif
 
         // file details
         SET_DICT_STRING(dict, "size", 4, NUMBER_VAL(stats.st_size));
@@ -527,6 +555,10 @@ DECLARE_FILE_METHOD(copy) {
   }
 }
 
+#ifdef _WIN32
+#define truncate Truncate
+#endif // _WIN32
+
 DECLARE_FILE_METHOD(truncate) {
   ENFORCE_ARG_RANGE(truncate, 0, 1);
 
@@ -538,7 +570,11 @@ DECLARE_FILE_METHOD(truncate) {
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
   DENY_STD();
 
+#ifndef _WIN32
   RETURN_STATUS(truncate(file->path->chars, final_size));
+#else
+  RETURN_STATUS(_chsize_s(file->path->chars, final_size));
+#endif // !_WIN32
 }
 
 DECLARE_FILE_METHOD(chmod) {

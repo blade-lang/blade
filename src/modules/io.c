@@ -662,7 +662,7 @@ DECLARE_NATIVE(io_getc) {
   }
 
   int nread;
-  char c[length];
+  char *c = ALLOCATE(char, length + 1);
   while ((nread = read(STDIN_FILENO, c, length)) != 1) {
     if (nread == -1 && errno != EAGAIN) {
       RETURN_ERROR("error reading character from stdin");
@@ -673,7 +673,7 @@ DECLARE_NATIVE(io_getc) {
     char *ch = utf8_encode(c[0]);
     RETURN_STRING(ch);
   } else {
-    char result[length + 1];
+    char *result = ALLOCATE(char, length + 2);
     length = read_line(result, length + 1);
     RETURN_LSTRING(result, length);
   }

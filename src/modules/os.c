@@ -16,72 +16,55 @@ struct utsname
 
 #include <lm.h>
 
-bool GetWinMajorMinorVersion(DWORD *major, DWORD *minor)
+const char* GetWindowsVersionString()
 {
-    bool bRetCode = false;
-    LPBYTE pinfoRawData = 0;
-    if (NERR_Success == NetWkstaGetInfo(NULL, 100, &pinfoRawData))
-    {
-        WKSTA_INFO_100* pworkstationInfo = (WKSTA_INFO_100*)pinfoRawData;
-        *major = pworkstationInfo->wki100_ver_major;
-        *minor = pworkstationInfo->wki100_ver_minor;
-        NetApiBufferFree(pinfoRawData);
-        bRetCode = true;
-    }
-    return bRetCode;
-}
-
-const char *GetWindowsVersionString(WORD *arch)
-{
-    const char*     winver;
-    OSVERSIONINFOEX osver;
+    const char* winver = NULL;
+    OSVERSIONINFOEXW osver;
     SYSTEM_INFO     sysInfo;
 
-    memset(&osver, 0, sizeof(osver));
+#ifndef __MINGW32_MAJOR_VERSION
+    __pragma(warning(push))
+        __pragma(warning(disable:4996))
+#endif
+        memset(&osver, 0, sizeof(osver));
     osver.dwOSVersionInfoSize = sizeof(osver);
-    GetVersionEx((LPOSVERSIONINFO)&osver);
+    GetVersionExW((LPOSVERSIONINFOW)&osver);
 
-    DWORD major = 0;
-    DWORD minor = 0;
-    if (GetWinMajorMinorVersion(&major, &minor))
-    {
-        osver.dwMajorVersion = major;
-        osver.dwMinorVersion = minor;
-    }
-    else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 2)
-    {
-        OSVERSIONINFOEXW osvi;
-        ULONGLONG cm = 0;
-        cm = VerSetConditionMask(cm, VER_MINORVERSION, VER_EQUAL);
-        ZeroMemory(&osvi, sizeof(osvi));
-        osvi.dwOSVersionInfoSize = sizeof(osvi);
-        osvi.dwMinorVersion = 3;
-        if (VerifyVersionInfoW(&osvi, VER_MINORVERSION, cm))
+#ifndef __MINGW32_MAJOR_VERSION
+    __pragma(warning(pop))
+#endif
+
+        if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 2)
         {
-            osver.dwMinorVersion = 3;
+            OSVERSIONINFOEXW osvi = osver;
+            ULONGLONG cm = 0;
+            cm = VerSetConditionMask(cm, VER_MINORVERSION, VER_EQUAL);
+            osvi.dwOSVersionInfoSize = sizeof(osvi);
+            osvi.dwMinorVersion = 3;
+            if (VerifyVersionInfoW(&osvi, VER_MINORVERSION, cm))
+            {
+                osver.dwMinorVersion = 3;
+            }
         }
-    }
 
     GetSystemInfo(&sysInfo);
 
-    *arch = sysInfo.wProcessorArchitecture;
-
     if (osver.dwMajorVersion == 10 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows 10 Server";
-    if (osver.dwMajorVersion == 10 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows 10";
-    if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 3 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows Server 2012 R2";
-    if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 3 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows 8.1";
-    if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 2 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows Server 2012";
-    if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 2 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows 8";
-    if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 1 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows Server 2008 R2";
-    if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 1 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows 7";
-    if (osver.dwMajorVersion == 6 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows Server 2008";
-    if (osver.dwMajorVersion == 6  && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows Vista";
-    if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 2 && osver.wProductType == VER_NT_WORKSTATION
-        &&  sysInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64)  winver = "Windows XP x64";
-    if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 2)   winver = "Windows Server 2003";
-    if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 1)   winver = "Windows XP";
-    if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 0)   winver = "Windows 2000";
-    if (osver.dwMajorVersion < 5)   winver = "unknown";
+    else if (osver.dwMajorVersion == 10 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows 10";
+    else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 3 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows Server 2012 R2";
+    else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 3 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows 8.1";
+    else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 2 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows Server 2012";
+    else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 2 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows 8";
+    else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 1 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows Server 2008 R2";
+    else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 1 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows 7";
+    else if (osver.dwMajorVersion == 6 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows Server 2008";
+    else if (osver.dwMajorVersion == 6 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows Vista";
+    else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 2 && osver.wProductType == VER_NT_WORKSTATION
+        && sysInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64)  winver = "Windows XP x64";
+    else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 2)   winver = "Windows Server 2003";
+    else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 1)   winver = "Windows XP";
+    else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 0)   winver = "Windows 2000";
+    else winver = "unknown";
     return winver;
 }
 
@@ -90,7 +73,7 @@ int uname (struct utsname * sys) {
   strncpy(sys->sysname, "Windows", 8);
 
   // get system version
-  WORD arch;
+  WORD arch = 0;
   const char* sysname = GetWindowsVersionString(&arch);
   memcpy(sys->version, sysname, (int)strlen(sysname));
   memcpy(sys->release, sysname, (int)strlen(sysname));
@@ -131,6 +114,13 @@ int uname (struct utsname * sys) {
 #include <stdio.h>
 #include <ctype.h>
 
+#ifdef _WIN32
+#define popen _popen
+#define pclose _pclose
+#define sleep(s) Sleep((DWORD)s)
+#endif // _WIN32
+
+
 DECLARE_MODULE_METHOD(os_exec) {
   ENFORCE_ARG_COUNT(exec, 1);
   ENFORCE_ARG_TYPE(exec, 0, IS_STRING);
@@ -152,9 +142,17 @@ DECLARE_MODULE_METHOD(os_exec) {
   while ((nread = fread(buffer, 1, sizeof(buffer), fd)) != 0) {
     if (length + nread >= output_size) {
       output_size *= 2;
-      output = realloc(output, output_size);
+      void* temp = realloc(output, output_size);
+      if (temp == NULL) {
+          RETURN_ERROR("device out of memory");
+      }
+      else {
+          output = temp;
+      }
     }
-    strncat(output + length, buffer, nread);
+    if ((output + length) != NULL) {
+        strncat(output + length, buffer, nread);
+    }
     length += nread;
   }
 

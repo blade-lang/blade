@@ -50,11 +50,7 @@ else
 endif
 
 
-ifeq ($(USE_SYSTEM_PCRE),1)
-	LIB_PCRE2 := 
-else
-	LIB_PCRE2 := deps/pcre2/.libs/libpcre2-8.a
-endif
+LIB_PCRE2 := deps/lib/pcre2/darwin/libpcre2-8.a
 
 ifneq (,$(findstring darwin,$(OS)))
 
@@ -88,11 +84,11 @@ endif
 LIB_WIN32 :=
 
 ifeq ($(OS),cygwin)
-	CFLAGS += -Ideps/pcre2/src
+	LIB_PCRE2 = deps/lib/pcre2/mingw/libpcre2-8.dll.a
 	LIB_READLINE = /usr/lib/libreadline.dll.a
 else ifeq ($(OS),mingw32)
-	CFLAGS += -Ideps/pcre2/src -lshlwapi
-	LIB_PCRE2 = deps/pcre2/.libs/libpcre2-8.dll.a
+	CFLAGS += -lshlwapi
+	LIB_PCRE2 = deps/lib/pcre2/mingw/libpcre2-8.dll.a
 	LIB_WIN32 = /mingw64/lib/libreadline.dll.a /mingw64/x86_64-w64-mingw32/lib/libshlwapi.a /mingw64/x86_64-w64-mingw32/lib/libws2_32.a /mingw64/x86_64-w64-mingw32/lib/libnetapi32.a
 endif
 
@@ -108,7 +104,7 @@ OBJECTS = $(patsubst $(SOURCE_DIR)/*.c, $(BUILD_DIR)/*.c, $(SOURCES))
 
 vpath %.c $(SRC_DIR)
 
-CFLAGS += -I$(SOURCE_DIR)/core -I$(SOURCE_DIR)
+CFLAGS += -I$(SOURCE_DIR)/core -I$(SOURCE_DIR) -Ideps/includes
 
 define make-goal
 $1/*.o: %.c

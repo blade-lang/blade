@@ -104,8 +104,13 @@ static inline void do_print_value(b_value value, bool fix_string) {
 #endif
 }
 
+#ifndef _WIN32
 inline void print_value(b_value value) { do_print_value(value, false); }
 inline void echo_value(b_value value) { do_print_value(value, true); }
+#else
+void print_value(b_value value) { do_print_value(value, false); }
+void echo_value(b_value value) { do_print_value(value, true); }
+#endif // !_WIN32
 
 static inline char *number_to_string(double number) {
   int length = snprintf(NULL, 0, NUMBER_FORMAT, number);
@@ -310,7 +315,12 @@ static uint64_t siphash24(uint64_t k0, uint64_t k1, const char *src,
   return t;
 } */
 
-inline uint32_t hash_string(const char *key, int length) {
+#ifndef _WIN32
+static inline uint32_t hash_string(const char* key, int length) {
+#else
+uint32_t hash_string(const char* key, int length) {
+#endif // !_WIN32
+
   uint32_t hash = 2166136261u;
   const char *be = key + length;
 

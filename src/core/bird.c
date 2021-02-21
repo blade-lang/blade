@@ -5,8 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if !defined _WIN32 && !defined __CYGWIN__
 #include <readline/history.h>
 #include <readline/readline.h>
+#endif
+
 #include <setjmp.h>
 #include <signal.h>
 
@@ -63,7 +66,14 @@ static void repl(b_vm *vm) {
       cursor = "| ";
     }
 
-    char *line = readline(cursor);
+#if defined _WIN32 || defined __CYGWIN__
+    char buffer[4096];
+    printf(cursor);
+    char* line = fgets(buffer, 4096, stdin);
+#else
+    char* line = readline(cursor);
+#endif // _WIN32
+
     int line_length = strlen(line);
 
     // terminate early if we receive a terminating command such as exit()
@@ -71,8 +81,11 @@ static void repl(b_vm *vm) {
       exit(EXIT_SUCCESS);
     }
 
+#if !defined _WIN32 && !defined __CYGWIN__
     // allow user to navigate through past input in terminal...
     add_history(line);
+#endif // !_WIN32
+
 
     // find count of { and }, ( and ), [ and ]
     for (int i = 0; i < line_length; i++) {
@@ -159,18 +172,20 @@ static void run_file(b_vm *vm, const char *file) {
 }
 
 int main(int argc, const char *argv[]) {
-  b_vm vm;
-  init_vm(&vm);
+  b_vm *vm = (b_vm*)malloc(sizeof(b_vm));
+  memset(vm, 0, sizeof(b_vm));
+
+  init_vm(vm);
 
   if (argc == 1) {
-    repl(&vm);
+    repl(vm);
   } else if (argc == 2) {
-    run_file(&vm, argv[1]);
+    run_file(vm, argv[1]);
   } else {
     fprintf(stderr, "Usage: bird [path]\n");
     exit(64);
   }
 
-  free_vm(&vm);
+  free_vm(vm);
   return 0;
 }
