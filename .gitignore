@@ -17,6 +17,8 @@ deps/pcre2/src/stamp-*
 deps/pcre2/libtool
 Debug/*
 Release/*
+winbuild/x64
+winbuild/x86
 .DS_Store
 birdd.exe
 bird.exe
