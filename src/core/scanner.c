@@ -110,7 +110,9 @@ b_token skip_block_comments(b_scanner *s) {
     advance(s);
   }
 
+#ifdef _WIN32
   advance(s);
+#endif
 
   return make_token(s, UNDEFINED_TOKEN);
 }
