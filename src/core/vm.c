@@ -1624,7 +1624,9 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
     case OP_CLASS_PROPERTY: {
-      define_property(vm, READ_STRING(), READ_BYTE() == 1);
+      b_obj_string* name = READ_STRING();
+      int is_static = READ_BYTE();
+      define_property(vm, name, is_static == 1);
       break;
     }
     case OP_INHERIT: {

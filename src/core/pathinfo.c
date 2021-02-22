@@ -35,27 +35,22 @@
 #if defined _WIN32
 
 #include "win32.h"
-#include <shlwapi.h>
 
 char *get_exe_dir() {
-  char* exe_path = (char*)malloc(sizeof(char) * MAX_PATH);
-  if (exe_path != NULL) {
-      int length = (int)GetModuleFileNameA(NULL, exe_path, MAX_PATH);
-      if (length > 0) {
-          return exe_path;
-      }
-      else {
-          return NULL;
-      }
-  }
-  return NULL;
-}
+    char* exe_path = (char*)malloc(sizeof(char) * MAX_PATH);
+    if (exe_path != NULL) {
+        int length = (int)GetModuleFileNameA(NULL, exe_path, MAX_PATH);
+        if (length > 0) {
+            char* path = dirname(exe_path);
+            path[(int)strlen(path) - 1] = '\0';
+            return path;
 
-char* dirname(char* path) {
-    char* drive = (char*)malloc(sizeof(char));
-    char* dir = (char*)malloc(sizeof(char) * MAX_PATH);
-    _splitpath((const char*)path, drive, dir, NULL, NULL);
-    return append_strings(drive, dir);
+        }
+        else {
+            return NULL;
+        }
+    }
+  return NULL;
 }
 
 #endif

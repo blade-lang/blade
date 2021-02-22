@@ -40,7 +40,7 @@ static void repl(b_vm *vm) {
           "Type \"exit()\" to quit, \"help()\" or \"credits()\" for more "
           "information\n");
 
-  char *source = (char *)malloc(sizeof(char));
+  char *source = (char *)calloc(1, sizeof(char));
   int current_line = 0;
   int brace_count = 0, paren_count = 0, bracket_count = 0;
 
@@ -67,17 +67,18 @@ static void repl(b_vm *vm) {
     }
 
 #if defined _WIN32 || defined __CYGWIN__
-    char buffer[4096];
+    char buffer[1024];
     printf(cursor);
-    char* line = fgets(buffer, 4096, stdin);
+    char* line = fgets(buffer, 1024, stdin);
+    int line_length = strcspn(line, "\r\n");
+    line[line_length] = 0;
 #else
     char* line = readline(cursor);
+    int line_length = (int)strlen(line);
 #endif // _WIN32
 
-    int line_length = strlen(line);
-
     // terminate early if we receive a terminating command such as exit()
-    if (strcmp(line, "exit()") == 0) {
+    if (strcmp(line, "exit()", line_length) == 0) {
       exit(EXIT_SUCCESS);
     }
 

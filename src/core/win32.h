@@ -45,7 +45,27 @@ struct timezone {
 #endif
 #define strdup _strdup
 
-int gettimeofday(struct timeval *time_Info, struct timezone *timezone_Info);
+
+#define _UTSNAME_LENGTH 256
+struct utsname
+{
+    char sysname[_UTSNAME_LENGTH];
+    char nodename[MAX_COMPUTERNAME_LENGTH + 1];
+    char release[_UTSNAME_LENGTH];
+    char version[_UTSNAME_LENGTH];
+    char machine[_UTSNAME_LENGTH];
+    char domainname[_UTSNAME_LENGTH];
+};
+
+struct utimbuf {
+    time_t actime; /* Access time */
+    time_t modtime; /* Modification time */
+};
+
+int gettimeofday(struct timeval *time_info, struct timezone *timezone_info);
+const char* GetWindowsVersionString();
+int uname(struct utsname* sys);
+char* dirname(char* path);
 
 #endif
 

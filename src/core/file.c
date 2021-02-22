@@ -2,7 +2,6 @@
 #include "btime.h"
 #include "compat/unistd.h"
 #include "pathinfo.h"
-#include "win32.h"
 
 #include <errno.h>
 #include <stdarg.h>
@@ -12,10 +11,7 @@
 #include <time.h>
 
 #if defined _WIN32 && !defined(__MINGW32_MAJOR_VERSION)
-struct utimbuf {
-    time_t actime; /* Access time */
-    time_t modtime; /* Modification time */
-};
+#include "win32.h"
 #else
 #include <utime.h>
 #endif // _WIN32

@@ -52,7 +52,11 @@ DECLARE_NATIVE(time) {
 
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  RETURN_NUMBER((double)(1000000 * tv.tv_sec + tv.tv_usec) / 1000000);
+#ifndef _WIN32
+  RETURN_NUMBER((double)(1000000 * (double)tv.tv_sec + (double)tv.tv_usec) / 1000000);
+#else
+  RETURN_NUMBER((double)tv.tv_sec + ((double)tv.tv_usec / 10000000));
+#endif // !_WIN32
 }
 
 /**
@@ -65,7 +69,11 @@ DECLARE_NATIVE(microtime) {
 
   struct timeval tv;
   gettimeofday(&tv, NULL);
+#ifndef _WIN32
   RETURN_NUMBER(1000000 * tv.tv_sec + tv.tv_usec);
+#else
+  RETURN_NUMBER((1000000 * (double)tv.tv_sec) + ((double)tv.tv_usec / 10));
+#endif // !_WIN32
 }
 
 /**
