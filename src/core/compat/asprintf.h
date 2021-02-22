@@ -35,10 +35,10 @@ int vscprintf(const char *format, va_list ap) {
  */
 #if defined __CYGWIN__ || defined _WIN64 || defined _WIN32
 int vasprintf(char **strp, const char *format, va_list ap) {
-  int len = vscprintf(format, ap);
+  int len = _vscprintf(format, ap);
   if (len == -1)
     return -1;
-  char *str = (char *)malloc((size_t)len + 1);
+  char *str = (char *)malloc((len + 1) * sizeof(char));
   if (!str)
     return -1;
   int retval = vsnprintf(str, len + 1, format, ap);

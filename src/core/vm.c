@@ -62,6 +62,7 @@ static void initalize_exceptions(b_vm *vm) {
 
 b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
   char *trace = (char *)malloc(sizeof(char));
+  memset(trace, 0, sizeof(trace));
 
   // fprintf(stderr, "StackTrace:\n");
   for (int i = 0; i < vm->frame_count; i++) {
