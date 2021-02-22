@@ -1,72 +1,141 @@
 #include "common.h"
+#include "util.h"
 
 #ifdef IS_WINDOWS
 
 #include "win32.h"
-//#include <math.h>
+#include <sys/timeb.h>
+#include <lm.h>
 
-typedef VOID(WINAPI *MyGetSystemTimeAsFileTime)(
-    LPFILETIME lpSystemTimeAsFileTime);
+const char* GetWindowsVersionString()
+{
+    const char* winver = NULL;
+    OSVERSIONINFOEXW osver;
+    SYSTEM_INFO     sysInfo;
 
-static MyGetSystemTimeAsFileTime get_time_func() {
-  MyGetSystemTimeAsFileTime timefunc = NULL;
-  HMODULE hMod = GetModuleHandle("kernel32.dll");
+#ifndef __MINGW32_MAJOR_VERSION
+    __pragma(warning(push))
+        __pragma(warning(disable:4996))
+#endif
+        memset(&osver, 0, sizeof(osver));
+    osver.dwOSVersionInfoSize = sizeof(osver);
+    GetVersionExW((LPOSVERSIONINFOW)&osver);
 
-  if (hMod) {
-    /* Max possible resolution <1us, win8/server2012 */
-    return (MyGetSystemTimeAsFileTime)((void*)GetProcAddress(
-        hMod, "GetSystemTimePreciseAsFileTime"));
-  }
+#ifndef __MINGW32_MAJOR_VERSION
+    __pragma(warning(pop))
+#endif
 
-  if (!timefunc) {
-    /* 100ns blocks since 01-Jan-1641 */
-    return (MyGetSystemTimeAsFileTime)GetSystemTimeAsFileTime;
-  }
+        if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 2)
+        {
+            OSVERSIONINFOEXW osvi = osver;
+            ULONGLONG cm = 0;
+            cm = VerSetConditionMask(cm, VER_MINORVERSION, VER_EQUAL);
+            osvi.dwOSVersionInfoSize = sizeof(osvi);
+            osvi.dwMinorVersion = 3;
+            if (VerifyVersionInfoW(&osvi, VER_MINORVERSION, cm))
+            {
+                osver.dwMinorVersion = 3;
+            }
+        }
 
-  return NULL;
+    GetSystemInfo(&sysInfo);
+
+    if (osver.dwMajorVersion == 10 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows 10 Server";
+    else if (osver.dwMajorVersion == 10 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows 10";
+    else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 3 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows Server 2012 R2";
+    else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 3 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows 8.1";
+    else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 2 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows Server 2012";
+    else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 2 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows 8";
+    else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 1 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows Server 2008 R2";
+    else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 1 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows 7";
+    else if (osver.dwMajorVersion == 6 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows Server 2008";
+    else if (osver.dwMajorVersion == 6 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows Vista";
+    else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 2 && osver.wProductType == VER_NT_WORKSTATION
+        && sysInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64)  winver = "Windows XP x64";
+    else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 2)   winver = "Windows Server 2003";
+    else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 1)   winver = "Windows XP";
+    else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 0)   winver = "Windows 2000";
+    else winver = "unknown";
+    return winver;
 }
 
-static int getfilesystemtime(struct timeval *tv) {
-  MyGetSystemTimeAsFileTime timefunc = get_time_func();
+int uname(struct utsname* sys) {
+    // sys
+    strncpy(sys->sysname, "Windows", 8);
 
-  FILETIME ft;
-  unsigned __int64 ff = 0;
-  ULARGE_INTEGER fft;
+    // get system version
+    WORD arch = 0;
+    const char* sysname = GetWindowsVersionString(&arch);
+    memcpy(sys->version, sysname, (int)strlen(sysname));
+    memcpy(sys->release, sysname, (int)strlen(sysname));
 
-  timefunc(&ft);
+    // Get computer name
+    DWORD cc_buffer_size = MAX_COMPUTERNAME_LENGTH + 1;
+    if (!GetComputerNameA(sys->nodename, &cc_buffer_size)) {
+        return 1;
+    }
 
-  /*
-   * Do not cast a pointer to a FILETIME structure to either a
-   * ULARGE_INTEGER* or __int64* value because it can cause alignment faults on
-   * 64-bit Windows. via
-   * http://technet.microsoft.com/en-us/library/ms724284(v=vs.85).aspx
-   */
-  fft.HighPart = ft.dwHighDateTime;
-  fft.LowPart = ft.dwLowDateTime;
-  ff = fft.QuadPart;
+    // Set machine
+    switch (arch) {
+    case PROCESSOR_ARCHITECTURE_INTEL:
+    case PROCESSOR_AMD_X8664: {
+        strncpy(sys->machine, "x86_64", 7);
+        break;
+    }
+    case PROCESSOR_ARCHITECTURE_AMD64: {
+        strncpy(sys->machine, "amd64", 6);
+        break;
+    }
+    case PROCESSOR_ARCHITECTURE_ARM: {
+        strncpy(sys->machine, "arm", 4);
+        break;
+    }
+    default: {
+        strncpy(sys->machine, "unknown", 8);
+        break;
+    }
+    }
 
-  ff /= 10ULL;                /* convert to microseconds */
-  ff -= 11644473600000000ULL; /* convert to unix epoch */
+    return 0;
+}
 
-  tv->tv_sec = (long)(ff / 1000ULL);
-  tv->tv_usec = (long)(ff % 1000ULL);
+int gettimeofday(struct timeval *time_info, struct timezone *timezone_info) {
+
+   if (time_info != NULL) {
+
+       uint64_t UNIX_TIME_START = 116444736000000000Ui64; //January 1, 1970 (start of Unix epoch) in "ticks"
+       uint64_t TICKS_PER_SECOND = 10000000Ui64; //a tick is 100ns
+
+       FILETIME ft;
+       GetSystemTimeAsFileTime(&ft); //returns ticks in UTC
+
+       //Copy the low and high parts of FILETIME into a LARGE_INTEGER
+       //This is so we can access the full 64-bits as an Int64 without causing an alignment fault
+       LARGE_INTEGER li;
+       li.LowPart = ft.dwLowDateTime;
+       li.HighPart = ft.dwHighDateTime;
+
+       uint64_t tm = li.QuadPart - UNIX_TIME_START;
+
+       //Convert ticks since 1/1/1970 into seconds
+       time_info->tv_sec = tm / TICKS_PER_SECOND;
+       time_info->tv_usec = (long)(tm % TICKS_PER_SECOND);
+   }
+
+   if (timezone_info != NULL) {
+       _tzset();
+       timezone_info->tz_minuteswest = _timezone;
+       timezone_info->tz_dsttime = _daylight;
+   }
 
   return 0;
 }
 
-int gettimeofday(struct timeval *time_Info, struct timezone *timezone_Info) {
-  /* Get the time, if they want it */
-  if (time_Info != NULL) {
-    getfilesystemtime(time_Info);
-  }
-  /* Get the timezone, if they want it */
-  if (timezone_Info != NULL) {
-    _tzset();
-    timezone_Info->tz_minuteswest = _timezone;
-    timezone_Info->tz_dsttime = _daylight;
-  }
-  /* And return */
-  return 0;
+char* dirname(char* path) {
+    char* drive = (char*)malloc(sizeof(char));
+    char* dir = (char*)malloc(sizeof(char) * MAX_PATH);
+    _splitpath((const char*)path, drive, dir, NULL, NULL);
+    return append_strings(drive, dir);
 }
 
 #endif

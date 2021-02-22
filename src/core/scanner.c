@@ -110,6 +110,8 @@ b_token skip_block_comments(b_scanner *s) {
     advance(s);
   }
 
+  advance(s);
+
   return make_token(s, UNDEFINED_TOKEN);
 }
 
@@ -138,6 +140,7 @@ b_token skip_whitespace(b_scanner *s) {
 
     case '/':
       if (next(s) == '*') {
+        advance(s);
         advance(s);
         return skip_block_comments(s);
       } else {
