@@ -69,16 +69,21 @@ static void repl(b_vm *vm) {
 #if defined _WIN32 || defined __CYGWIN__
     char buffer[1024];
     printf(cursor);
-    char* line = fgets(buffer, 1024, stdin);
+    char *line = fgets(buffer, 1024, stdin);
     int line_length = strcspn(line, "\r\n");
     line[line_length] = 0;
 #else
-    char* line = readline(cursor);
+    char *line = readline(cursor);
     int line_length = (int)strlen(line);
 #endif // _WIN32
 
     // terminate early if we receive a terminating command such as exit()
+
+#ifdef _MSC_VER
     if (strcmp(line, "exit()", line_length) == 0) {
+#else
+    if (strcmp(line, "exit()") == 0) {
+#endif
       exit(EXIT_SUCCESS);
     }
 
@@ -86,7 +91,6 @@ static void repl(b_vm *vm) {
     // allow user to navigate through past input in terminal...
     add_history(line);
 #endif // !_WIN32
-
 
     // find count of { and }, ( and ), [ and ]
     for (int i = 0; i < line_length; i++) {
@@ -173,7 +177,7 @@ static void run_file(b_vm *vm, const char *file) {
 }
 
 int main(int argc, const char *argv[]) {
-  b_vm *vm = (b_vm*)malloc(sizeof(b_vm));
+  b_vm *vm = (b_vm *)malloc(sizeof(b_vm));
   memset(vm, 0, sizeof(b_vm));
 
   init_vm(vm);
