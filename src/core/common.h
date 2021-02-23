@@ -46,7 +46,7 @@
 
 #elif defined(_MSC_VER)
 
-#define COMPILER VERSION_STRING("Microsoft Visual C++", _MSC_VER)
+#define COMPILER VERSION_STRING("MSC", _MSC_VER)
 
 #elif defined(__MINGW32_MAJOR_VERSION)
 
