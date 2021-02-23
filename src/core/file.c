@@ -230,6 +230,11 @@ DECLARE_FILE_METHOD(read) {
   }
 
   if (!in_binary_mode) {
+#ifndef _MSC_VER
+    RETURN_TSTRING(buffer, bytes_read);
+#else
+    RETURN_LSTRING(buffer, bytes_read);
+#endif // !_MSC_VER
     RETURN_TSTRING(buffer, bytes_read);
   }
 

@@ -79,7 +79,7 @@ static void repl(b_vm *vm) {
 
     // terminate early if we receive a terminating command such as exit()
 
-#ifdef _MSC_VER
+#if defined _MSC_VER && defined _DEBUG
     if (strcmp(line, "exit()", line_length) == 0) {
 #else
     if (strcmp(line, "exit()") == 0) {
