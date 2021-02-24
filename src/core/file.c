@@ -222,7 +222,7 @@ DECLARE_FILE_METHOD(read) {
 
   // we made use of +1 so we can terminate the string.
   if(buffer != NULL)
-    buffer[bytes_read + 1] = '\0';
+    buffer[file_size] = '\0';
 
   // close file
   if (bytes_read == file_size) {
@@ -230,11 +230,6 @@ DECLARE_FILE_METHOD(read) {
   }
 
   if (!in_binary_mode) {
-#ifndef _MSC_VER
-    RETURN_TSTRING(buffer, bytes_read);
-#else
-    RETURN_LSTRING(buffer, bytes_read);
-#endif // !_MSC_VER
     RETURN_TSTRING(buffer, bytes_read);
   }
 
