@@ -33,11 +33,6 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
 b_obj_bytes *new_bytes(b_vm *vm, int length) {
   b_obj_bytes *bytes = ALLOCATE_OBJ(b_obj_bytes, OBJ_BYTES);
   init_byte_arr(&bytes->bytes, length);
-
-  bytes->bytes.bytes =
-      reallocate(vm, bytes->bytes.bytes, 0, sizeof(unsigned char *) * length);
-  bytes->bytes.count = length;
-
   return bytes;
 }
 
@@ -304,7 +299,6 @@ b_obj_bytes *copy_bytes(b_vm *vm, unsigned char *b, int length) {
 
 b_obj_bytes *take_bytes(b_vm *vm, unsigned char *b, int length) {
   b_obj_bytes *bytes = new_bytes(vm, length);
-
   bytes->bytes.bytes = b;
   return bytes;
 }
