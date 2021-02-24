@@ -243,10 +243,8 @@ class Math {
     var result = 1
 
     for i in arg {
-      else {
-        if is_list(i) or is_dict(i) result *= Math.product(i)
-        else result *= i
-      }
+      if is_list(i) or is_dict(i) result *= Math.product(i)
+      else result *= i
     }
 
     return result
