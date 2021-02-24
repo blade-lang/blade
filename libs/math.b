@@ -232,15 +232,17 @@ class Math {
     return n ** 0.5
   }
 
+  # calculate the product of all the elements in the input iterable
+  # the default start value for the product is 1.
+  # when the iterable is empty, it returns 1
   static product(arg) {
     if !is_iterable(arg) {
       die Exception('iterable expected')
     }
 
-    var result
+    var result = 1
 
     for i in arg {
-      if result == nil result = i
       else {
         if is_list(i) or is_dict(i) result *= Math.product(i)
         else result *= i
@@ -248,5 +250,17 @@ class Math {
     }
 
     return result
+  }
+
+  # returns the fractional part of a number as a whole number 
+  # by removing any integer
+  static fraction(n) {
+    if !is_number(n) {
+      die Exception('number expected')
+    }
+
+    var str = to_string(n).split('.')
+    if str.length() == 1 return 0
+    return to_number(str[1])
   }
 }
