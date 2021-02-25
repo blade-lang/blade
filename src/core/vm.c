@@ -1397,7 +1397,7 @@ b_ptr_result run(b_vm *vm) {
     }
 
     case OP_ECHO: {
-      if(vm->is_repl) {
+      if (vm->is_repl) {
         echo_value(pop(vm));
       } else {
         print_value(pop(vm));
@@ -1478,7 +1478,7 @@ b_ptr_result run(b_vm *vm) {
           !!IS_LIST(peek(vm, 0)) && !IS_BYTES(peek(vm, 0)) &&
           !IS_FILE(peek(vm, 0)) && !IS_STRING(peek(vm, 0)) &&
           !IS_CLASS(peek(vm, 0))) {
-        runtime_error("only instances can have properties, %s given",
+        runtime_error("object of type %s does not carry properties",
                       value_type(peek(vm, 0)));
       }
 
@@ -1546,12 +1546,12 @@ b_ptr_result run(b_vm *vm) {
         }
       }
 
-      runtime_error("only instances can have properties, %s given",
+      runtime_error("object of type %s does not carry properties",
                     value_type(peek(vm, 0)));
     }
     case OP_SET_PROPERTY: {
       if (!IS_INSTANCE(peek(vm, 1))) {
-        runtime_error("only instances can have properties, %s given",
+        runtime_error("object of type %s does not carry properties",
                       value_type(peek(vm, 1)));
       }
 
@@ -1625,7 +1625,7 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
     case OP_CLASS_PROPERTY: {
-      b_obj_string* name = READ_STRING();
+      b_obj_string *name = READ_STRING();
       int is_static = READ_BYTE();
       define_property(vm, name, is_static == 1);
       break;
