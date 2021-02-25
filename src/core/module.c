@@ -82,7 +82,7 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
                   table_set(vm,
                             field.is_static ? &klass->static_fields
                                             : &klass->fields,
-                            field_name, field.value);
+                            field_name, field.field_value(vm));
                 }
               }
             }

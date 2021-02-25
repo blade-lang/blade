@@ -146,17 +146,19 @@ DECLARE_MODULE_METHOD(base64__encode) {
   RETURN_LSTRING(data, output_length);
 }
 
-static b_func_reg class_functions[] = {
-    {"_decode", false, GET_MODULE_METHOD(base64__decode)},
-    {"_encode", false, GET_MODULE_METHOD(base64__encode)},
-    {NULL, false, NULL},
-};
+CREATE_MODULE_LOADER(base64) {
+  static b_func_reg class_functions[] = {
+      {"_decode", false, GET_MODULE_METHOD(base64__decode)},
+      {"_encode", false, GET_MODULE_METHOD(base64__encode)},
+      {NULL, false, NULL},
+  };
 
-static b_class_reg klasses[] = {
-    {"Base64", NULL, class_functions},
-    {NULL, NULL, NULL},
-};
+  static b_class_reg klasses[] = {
+      {"Base64", NULL, class_functions},
+      {NULL, NULL, NULL},
+  };
 
-static b_module_reg module = {NULL, klasses};
+  static b_module_reg module = {NULL, klasses};
 
-CREATE_MODULE_LOADER(base64) { return module; }
+  return module;
+}

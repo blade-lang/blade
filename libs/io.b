@@ -156,7 +156,7 @@ class TTY {
   sets the current tty to raw mode
   */
   set_raw() {
-    var new_attr = self.self.get_attr()
+    var new_attr = self.get_attr()
 
     new_attr[TTY_IFLAG] = new_attr[TTY_IFLAG] & ~(TTY.IGNBRK | TTY.BRKINT | TTY.PARMRK | TTY.ISTRIP | TTY.INLCR | TTY.IGNCR | TTY.ICRNL | TTY.IXON)
     new_attr[TTY_OFLAG] = new_attr[TTY_OFLAG] & ~TTY.OPOST
