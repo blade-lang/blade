@@ -88,18 +88,72 @@ DECLARE_MODULE_METHOD(os_sleep) {
   RETURN;
 }
 
-static b_func_reg os_class_functions[] = {
-    {"info", true, GET_MODULE_METHOD(os_info)},
-    {"exec", true, GET_MODULE_METHOD(os_exec)},
-    {"sleep", true, GET_MODULE_METHOD(os_sleep)},
-    {NULL, false, NULL},
-};
+b_value get_os_platform(b_vm *vm) {
 
-static b_class_reg klasses[] = {
-    {"Os", NULL, os_class_functions},
-    {NULL, NULL, NULL},
-};
+#if defined(_WIN32)
+#define PLATFORM_NAME "windows" // Windows
+#elif defined(_WIN64)
+#define PLATFORM_NAME "windows" // Windows
+#elif defined(__CYGWIN__) && !defined(_WIN32)
+#define PLATFORM_NAME "windows" // Windows (Cygwin POSIX under Microsoft Window)
+#elif defined(__ANDROID__)
+#define PLATFORM_NAME                                                          \
+  "android" // Android (implies Linux, so it must come first)
+#elif defined(__linux__)
+#define PLATFORM_NAME                                                          \
+  "linux" // Debian, Ubuntu, Gentoo, Fedora, openSUSE, RedHat, Centos and other
+#elif defined(__unix__) || !defined(__APPLE__) && defined(__MACH__)
+#include <sys/param.h>
+#if defined(BSD)
+#define PLATFORM_NAME "bsd" // FreeBSD, NetBSD, OpenBSD, DragonFly BSD
+#endif
+#elif defined(__hpux)
+#define PLATFORM_NAME "hp-ux" // HP-UX
+#elif defined(_AIX)
+#define PLATFORM_NAME "aix"                   // IBM AIX
+#elif defined(__APPLE__) && defined(__MACH__) // Apple OSX and iOS (Darwin)
+#include <TargetConditionals.h>
+#if TARGET_IPHONE_SIMULATOR == 1
+#define PLATFORM_NAME "ios" // Apple iOS
+#elif TARGET_OS_IPHONE == 1
+#define PLATFORM_NAME "ios" // Apple iOS
+#elif TARGET_OS_MAC == 1
+#define PLATFORM_NAME "osx" // Apple OSX
+#endif
+#elif defined(__sun) && defined(__SVR4)
+#define PLATFORM_NAME "solaris" // Oracle Solaris, Open Indiana
+#elif defined(__OS400__)
+#define PLATFORM_NAME "ibm" // IBM OS/400
+#elif defined(AMIGA) || defined(__MORPHOS__)
+#define PLATFORM_NAME "amiga"
+#else
+#define PLATFORM_NAME "unknown"
+#endif
 
-static b_module_reg module = {NULL, klasses};
+  RETURN_LSTRING(PLATFORM_NAME, (int)strlen(PLATFORM_NAME));
 
-CREATE_MODULE_LOADER(os) { return module; }
+#undef PLATFORM_NAME
+}
+
+CREATE_MODULE_LOADER(os) {
+  static b_func_reg os_class_functions[] = {
+      {"info", true, GET_MODULE_METHOD(os_info)},
+      {"exec", true, GET_MODULE_METHOD(os_exec)},
+      {"sleep", true, GET_MODULE_METHOD(os_sleep)},
+      {NULL, false, NULL},
+  };
+
+  static b_field_reg os_class_fields[] = {
+      {"platform", true, get_os_platform},
+      {NULL, false, NULL},
+  };
+
+  static b_class_reg klasses[] = {
+      {"Os", os_class_fields, os_class_functions},
+      {NULL, NULL, NULL},
+  };
+
+  static b_module_reg module = {NULL, klasses};
+
+  return module;
+}

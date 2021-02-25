@@ -767,27 +767,29 @@ DECLARE_NATIVE(io_stderr) {
   RETURN_OBJ(file);
 }
 
-static b_func_reg io_functions[] = {
-    {"getc", false, GET_NATIVE(io_getc)},
-    {"putc", false, GET_NATIVE(io_putc)},
-    {"stdin", false, GET_NATIVE(io_stdin)},
-    {"stdout", false, GET_NATIVE(io_stdout)},
-    {"stderr", false, GET_NATIVE(io_stderr)},
-    {NULL, false, NULL},
-};
+CREATE_MODULE_LOADER(io) {
+  static b_func_reg io_functions[] = {
+      {"getc", false, GET_NATIVE(io_getc)},
+      {"putc", false, GET_NATIVE(io_putc)},
+      {"stdin", false, GET_NATIVE(io_stdin)},
+      {"stdout", false, GET_NATIVE(io_stdout)},
+      {"stderr", false, GET_NATIVE(io_stderr)},
+      {NULL, false, NULL},
+  };
 
-static b_func_reg tty_class_functions[] = {
-    {"_tcgetattr", false, GET_MODULE_METHOD(io_tty__tcgetattr)},
-    {"_tcsetattr", false, GET_MODULE_METHOD(io_tty__tcsetattr)},
-    {"_flush", false, GET_MODULE_METHOD(io_tty__flush)},
-    {NULL, false, NULL},
-};
+  static b_func_reg tty_class_functions[] = {
+      {"_tcgetattr", false, GET_MODULE_METHOD(io_tty__tcgetattr)},
+      {"_tcsetattr", false, GET_MODULE_METHOD(io_tty__tcsetattr)},
+      {"_flush", false, GET_MODULE_METHOD(io_tty__flush)},
+      {NULL, false, NULL},
+  };
 
-static b_class_reg klasses[] = {
-    {"TTY", NULL, tty_class_functions},
-    {NULL, NULL, NULL},
-};
+  static b_class_reg klasses[] = {
+      {"TTY", NULL, tty_class_functions},
+      {NULL, NULL, NULL},
+  };
 
-static b_module_reg module = {io_functions, klasses};
+  static b_module_reg module = {io_functions, klasses};
 
-CREATE_MODULE_LOADER(io) { return module; }
+  return module;
+}

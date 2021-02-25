@@ -11,10 +11,12 @@ typedef struct {
   b_native_fn function;
 } b_func_reg;
 
+typedef b_value (*b_class_field)(b_vm *);
+
 typedef struct {
   const char *name;
   bool is_static;
-  b_value value;
+  b_class_field field_value;
 } b_field_reg;
 
 typedef struct {
