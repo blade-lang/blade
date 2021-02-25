@@ -1501,7 +1501,8 @@ b_ptr_result run(b_vm *vm) {
         }
       } else if (IS_DICT(peek(vm, 0))) {
         b_value value;
-        if (table_get(&vm->methods_dict, OBJ_VAL(name), &value)) {
+        if (table_get(&AS_DICT(peek(vm, 0))->items, OBJ_VAL(name), &value) ||
+            table_get(&vm->methods_dict, OBJ_VAL(name), &value)) {
           pop(vm); // pop the dictionary...
           push(vm, value);
           break;
