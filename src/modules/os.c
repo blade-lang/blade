@@ -7,15 +7,14 @@
 #include <sys/utsname.h>
 #endif
 
-#include <stdio.h>
 #include <ctype.h>
+#include <stdio.h>
 
 #ifdef _WIN32
 #define popen _popen
 #define pclose _pclose
 #define sleep(s) Sleep((DWORD)s)
 #endif // _WIN32
-
 
 DECLARE_MODULE_METHOD(os_exec) {
   ENFORCE_ARG_COUNT(exec, 1);
@@ -38,23 +37,22 @@ DECLARE_MODULE_METHOD(os_exec) {
   while ((nread = fread(buffer, 1, sizeof(buffer), fd)) != 0) {
     if (length + nread >= output_size) {
       output_size *= 2;
-      void* temp = realloc(output, output_size);
+      void *temp = realloc(output, output_size);
       if (temp == NULL) {
-          RETURN_ERROR("device out of memory");
-      }
-      else {
-          output = temp;
+        RETURN_ERROR("device out of memory");
+      } else {
+        output = temp;
       }
     }
     if ((output + length) != NULL) {
-        strncat(output + length, buffer, nread);
+      strncat(output + length, buffer, nread);
     }
     length += nread;
   }
 
-  if(length == 0)
+  if (length == 0)
     RETURN;
-  
+
   output[length - 1] = '\0';
 
   pclose(fd);
@@ -98,8 +96,8 @@ static b_func_reg os_class_functions[] = {
 };
 
 static b_class_reg klasses[] = {
-    {"Os", os_class_functions},
-    {NULL, NULL},
+    {"Os", NULL, os_class_functions},
+    {NULL, NULL, NULL},
 };
 
 static b_module_reg module = {NULL, klasses};

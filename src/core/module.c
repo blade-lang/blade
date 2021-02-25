@@ -55,20 +55,35 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
             if (table_get(&vm->globals, class_key, &class_value)) {
               b_obj_class *klass = AS_CLASS(class_value);
 
-              for (int k = 0; klass_reg.functions[k].name != NULL; k++) {
+              if (klass_reg.functions != NULL) {
+                for (int k = 0; klass_reg.functions[k].name != NULL; k++) {
 
-                b_func_reg func = klass_reg.functions[k];
+                  b_func_reg func = klass_reg.functions[k];
 
-                b_value func_name =
-                    OBJ_VAL(copy_string(vm, func.name, (int)strlen(func.name)));
+                  b_value func_name = OBJ_VAL(
+                      copy_string(vm, func.name, (int)strlen(func.name)));
 
-                b_value func_real_value =
-                    OBJ_VAL(new_native(vm, func.function, func.name));
+                  b_value func_real_value =
+                      OBJ_VAL(new_native(vm, func.function, func.name));
 
-                table_set(vm,
-                          func.is_static ? &klass->static_methods
-                                         : &klass->methods,
-                          func_name, func_real_value);
+                  table_set(vm,
+                            func.is_static ? &klass->static_methods
+                                           : &klass->methods,
+                            func_name, func_real_value);
+                }
+              }
+
+              if (klass_reg.fields != NULL) {
+                for (int j = 0; klass_reg.fields[j].name != NULL; j++) {
+                  b_field_reg field = klass_reg.fields[j];
+                  b_value field_name = OBJ_VAL(
+                      copy_string(vm, field.name, (int)strlen(field.name)));
+
+                  table_set(vm,
+                            field.is_static ? &klass->static_fields
+                                            : &klass->fields,
+                            field_name, field.value);
+                }
               }
             }
           }
