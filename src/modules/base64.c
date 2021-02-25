@@ -153,8 +153,8 @@ static b_func_reg class_functions[] = {
 };
 
 static b_class_reg klasses[] = {
-    {"Base64", class_functions},
-    {NULL, NULL},
+    {"Base64", NULL, class_functions},
+    {NULL, NULL, NULL},
 };
 
 static b_module_reg module = {NULL, klasses};

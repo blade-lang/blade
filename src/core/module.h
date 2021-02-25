@@ -13,6 +13,13 @@ typedef struct {
 
 typedef struct {
   const char *name;
+  bool is_static;
+  b_value value;
+} b_field_reg;
+
+typedef struct {
+  const char *name;
+  b_field_reg *fields;
   b_func_reg *functions;
 } b_class_reg;
 

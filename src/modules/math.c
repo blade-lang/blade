@@ -164,8 +164,8 @@ static b_func_reg class_functions[] = {
 };
 
 static b_class_reg klasses[] = {
-    {"Math", class_functions},
-    {NULL, NULL},
+    {"Math", NULL, class_functions},
+    {NULL, NULL, NULL},
 };
 
 static b_module_reg module = {NULL, klasses};

@@ -17,17 +17,17 @@
 
 typedef struct COM {
   HANDLE hComm;
-  int fd; //Actually it's completely useless
+  int fd; // Actually it's completely useless
   char port[128];
 } COM;
 
-DCB SerialParams = { 0 }; //Initializing DCB structure
+DCB SerialParams = {0}; // Initializing DCB structure
 struct COM com;
-COMMTIMEOUTS timeouts = { 0 }; //Initializing COMMTIMEOUTS structure
+COMMTIMEOUTS timeouts = {0}; // Initializing COMMTIMEOUTS structure
 
-//LOCAL functions
+// LOCAL functions
 
-//nbyte 0->7
+// nbyte 0->7
 
 int getByte(tcflag_t flag, int nbyte, int nibble) {
 
@@ -39,7 +39,7 @@ int getByte(tcflag_t flag, int nbyte, int nibble) {
   return byte;
 }
 
-//INPUT FUNCTIONS
+// INPUT FUNCTIONS
 
 int getIXOptions(tcflag_t flag) {
 
@@ -56,7 +56,7 @@ int getIXOptions(tcflag_t flag) {
   return byte;
 }
 
-//LOCALOPT FUNCTIONS
+// LOCALOPT FUNCTIONS
 
 int getEchoOptions(tcflag_t flag) {
 
@@ -111,11 +111,12 @@ int getToStop(tcflag_t flag) {
   return byte;
 }
 
-//CONTROLOPT FUNCTIONS
+// CONTROLOPT FUNCTIONS
 
 int getCharSet(tcflag_t flag) {
 
-  //FLAG IS MADE UP OF 8 BYTES, A FLAG IS MADE UP OF A NIBBLE -> 4 BITS, WE NEED TO EXTRACT THE SECOND NIBBLE (1st) FROM THE FIFTH BYTE (6th).
+  // FLAG IS MADE UP OF 8 BYTES, A FLAG IS MADE UP OF A NIBBLE -> 4 BITS, WE
+  // NEED TO EXTRACT THE SECOND NIBBLE (1st) FROM THE FIFTH BYTE (6th).
   int byte = getByte(flag, 1, 1);
 
   switch (byte) {
@@ -155,26 +156,28 @@ int getControlOptions(tcflag_t flag) {
   return byte;
 }
 
-//LIBFUNCTIONS
+// LIBFUNCTIONS
 
-int tcgetattr(int fd, struct termios* termios_p) {
+int tcgetattr(int fd, struct termios *termios_p) {
 
-  if (fd != com.fd) return -1;
- return GetCommState(com.hComm, &SerialParams);
+  if (fd != com.fd)
+    return -1;
+  return GetCommState(com.hComm, &SerialParams);
 }
 
-int tcsetattr(int fd, int optional_actions, const struct termios* termios_p) {
+int tcsetattr(int fd, int optional_actions, const struct termios *termios_p) {
 
-  if (fd != com.fd) return -1;
+  if (fd != com.fd)
+    return -1;
   int ret = 0;
 
-  //Store flags into local variables
+  // Store flags into local variables
   tcflag_t iflag = termios_p->c_iflag;
   // tcflag_t lflag = termios_p->c_lflag;
   tcflag_t cflag = termios_p->c_cflag;
   // tcflag_t oflag = termios_p->c_oflag;
 
-  //iflag
+  // iflag
 
   int IX = getIXOptions(iflag);
 
@@ -185,14 +188,14 @@ int tcsetattr(int fd, int optional_actions, const struct termios* termios_p) {
     SerialParams.fTXContinueOnXoff = TRUE;
   }
 
-  //lflag
+  // lflag
   // int EchoOpt = getEchoOptions(lflag);
   // int l_opt = getLocalOptions(lflag);
   // int tostop = getToStop(lflag);
 
-  //Missing parameters...
+  // Missing parameters...
 
-  //cflags
+  // cflags
 
   int CharSet = getCharSet(cflag);
   int c_opt = getControlOptions(cflag);
@@ -249,21 +252,23 @@ int tcsetattr(int fd, int optional_actions, const struct termios* termios_p) {
     break;
   }
 
-  //aflags
+  // aflags
 
   /*
   int OP;
   if(oflag == OPOST)
   else ...
   */
-  //Missing parameters...
+  // Missing parameters...
 
-  //special characters
+  // special characters
 
-  if (termios_p->c_cc[VEOF] != 0) SerialParams.EofChar = (char)termios_p->c_cc[VEOF];
-  if (termios_p->c_cc[VINTR] != 0) SerialParams.EvtChar = (char)termios_p->c_cc[VINTR];
+  if (termios_p->c_cc[VEOF] != 0)
+    SerialParams.EofChar = (char)termios_p->c_cc[VEOF];
+  if (termios_p->c_cc[VINTR] != 0)
+    SerialParams.EvtChar = (char)termios_p->c_cc[VINTR];
 
-  if (termios_p->c_cc[VMIN] == 1) { //Blocking
+  if (termios_p->c_cc[VMIN] == 1) { // Blocking
 
     timeouts.ReadIntervalTimeout = 0;         // in milliseconds
     timeouts.ReadTotalTimeoutConstant = 0;    // in milliseconds
@@ -271,18 +276,23 @@ int tcsetattr(int fd, int optional_actions, const struct termios* termios_p) {
     timeouts.WriteTotalTimeoutConstant = 0;   // in milliseconds
     timeouts.WriteTotalTimeoutMultiplier = 0; // in milliseconds
 
-  } else { //Non blocking
+  } else { // Non blocking
 
-    timeouts.ReadIntervalTimeout = termios_p->c_cc[VTIME] * 100;         // in milliseconds
-    timeouts.ReadTotalTimeoutConstant = termios_p->c_cc[VTIME] * 100;    // in milliseconds
-    timeouts.ReadTotalTimeoutMultiplier = termios_p->c_cc[VTIME] * 100;  // in milliseconds
-    timeouts.WriteTotalTimeoutConstant = termios_p->c_cc[VTIME] * 100;   // in milliseconds
-    timeouts.WriteTotalTimeoutMultiplier = termios_p->c_cc[VTIME] * 100; // in milliseconds
+    timeouts.ReadIntervalTimeout =
+        termios_p->c_cc[VTIME] * 100; // in milliseconds
+    timeouts.ReadTotalTimeoutConstant =
+        termios_p->c_cc[VTIME] * 100; // in milliseconds
+    timeouts.ReadTotalTimeoutMultiplier =
+        termios_p->c_cc[VTIME] * 100; // in milliseconds
+    timeouts.WriteTotalTimeoutConstant =
+        termios_p->c_cc[VTIME] * 100; // in milliseconds
+    timeouts.WriteTotalTimeoutMultiplier =
+        termios_p->c_cc[VTIME] * 100; // in milliseconds
   }
 
   SetCommTimeouts(com.hComm, &timeouts);
 
-  //EOF
+  // EOF
 
   ret = SetCommState(com.hComm, &SerialParams);
   if (ret != 0)
@@ -293,7 +303,8 @@ int tcsetattr(int fd, int optional_actions, const struct termios* termios_p) {
 
 int tcsendbreak(int fd, int duration) {
 
-  if (fd != com.fd) return -1;
+  if (fd != com.fd)
+    return -1;
 
   int ret = 0;
   ret = TransmitCommChar(com.hComm, '\x00');
@@ -305,13 +316,15 @@ int tcsendbreak(int fd, int duration) {
 
 int tcdrain(int fd) {
 
-  if (fd != com.fd) return -1;
+  if (fd != com.fd)
+    return -1;
   return FlushFileBuffers(com.hComm);
 }
 
 int tcflush(int fd, int queue_selector) {
 
-  if (fd != com.fd) return -1;
+  if (fd != com.fd)
+    return -1;
   int rc = 0;
 
   switch (queue_selector) {
@@ -342,7 +355,8 @@ int tcflush(int fd, int queue_selector) {
 
 int tcflow(int fd, int action) {
 
-  if (fd != com.fd) return -1;
+  if (fd != com.fd)
+    return -1;
   int rc = 0;
 
   switch (action) {
@@ -374,44 +388,45 @@ int tcflow(int fd, int action) {
     return -1;
 }
 
-void cfmakeraw(struct termios* termios_p) {
+void cfmakeraw(struct termios *termios_p) {
 
   SerialParams.ByteSize = 8;
   SerialParams.StopBits = ONESTOPBIT;
   SerialParams.Parity = NOPARITY;
 }
 
-speed_t cfgetispeed(const struct termios* termios_p) {
+speed_t cfgetispeed(const struct termios *termios_p) {
 
   return SerialParams.BaudRate;
 }
 
-speed_t cfgetospeed(const struct termios* termios_p) {
+speed_t cfgetospeed(const struct termios *termios_p) {
 
   return SerialParams.BaudRate;
 }
 
-int cfsetispeed(struct termios* termios_p, speed_t speed) {
+int cfsetispeed(struct termios *termios_p, speed_t speed) {
 
   SerialParams.BaudRate = speed;
   return 0;
 }
 
-int cfsetospeed(struct termios* termios_p, speed_t speed) {
+int cfsetospeed(struct termios *termios_p, speed_t speed) {
 
   SerialParams.BaudRate = speed;
   return 0;
 }
 
-int cfsetspeed(struct termios* termios_p, speed_t speed) {
+int cfsetspeed(struct termios *termios_p, speed_t speed) {
 
   SerialParams.BaudRate = speed;
   return 0;
 }
 
-ssize_t read_serial(int fd, void* buffer, size_t count) {
+ssize_t read_serial(int fd, void *buffer, size_t count) {
 
-  if (fd != com.fd) return -1;
+  if (fd != com.fd)
+    return -1;
   long unsigned int rc = 0;
   int ret;
 
@@ -423,9 +438,10 @@ ssize_t read_serial(int fd, void* buffer, size_t count) {
     return (ssize_t)rc;
 }
 
-ssize_t write_serial(int fd, const void* buffer, size_t count) {
+ssize_t write_serial(int fd, const void *buffer, size_t count) {
 
-  if (fd != com.fd) return -1;
+  if (fd != com.fd)
+    return -1;
   long unsigned int rc = 0;
   int ret;
 
@@ -437,14 +453,15 @@ ssize_t write_serial(int fd, const void* buffer, size_t count) {
     return (ssize_t)rc;
 }
 
-int open_serial(const char* portname, int opt) {
+int open_serial(const char *portname, int opt) {
 
-  if (strlen(portname) < 4) return -1;
+  if (strlen(portname) < 4)
+    return -1;
 
   // Set to zero
   memset(com.port, 0x00, 128);
 
-  //COMxx
+  // COMxx
   size_t portSize = 0;
   if (strlen(portname) > 4) {
     portSize = sizeof(char) * strlen("\\\\.\\COM10") + 1;
@@ -454,7 +471,7 @@ int open_serial(const char* portname, int opt) {
     strncat(com.port, "\\\\.\\", strlen("\\\\.\\") - 1);
 #endif
   }
-  //COMx
+  // COMx
   else {
     portSize = sizeof(char) * 5;
   }
@@ -469,15 +486,18 @@ int open_serial(const char* portname, int opt) {
   switch (opt) {
 
   case O_RDWR:
-    com.hComm = CreateFile(com.port, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+    com.hComm = CreateFile(com.port, GENERIC_READ | GENERIC_WRITE, 0, NULL,
+                           OPEN_EXISTING, 0, NULL);
     break;
 
   case O_RDONLY:
-    com.hComm = CreateFile(com.port, GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
+    com.hComm =
+        CreateFile(com.port, GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
     break;
 
   case O_WRONLY:
-    com.hComm = CreateFile(com.port, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+    com.hComm =
+        CreateFile(com.port, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
     break;
   }
 
@@ -498,7 +518,8 @@ int close_serial(int fd) {
     return -1;
 }
 
-int select_serial(int nfds, fd_set* readfds, fd_set* writefds, fd_set* exceptfds, struct timeval* timeout) {
+int select_serial(int nfds, fd_set *readfds, fd_set *writefds,
+                  fd_set *exceptfds, struct timeval *timeout) {
 
   SetCommMask(com.hComm, EV_RXCHAR);
   DWORD dwEventMask;
@@ -518,10 +539,8 @@ int select_serial(int nfds, fd_set* readfds, fd_set* writefds, fd_set* exceptfds
   return 0; // No data
 }
 
-//Returns hComm from the COM structure
-HANDLE getHandle() {
-  return com.hComm;
-}
+// Returns hComm from the COM structure
+HANDLE getHandle() { return com.hComm; }
 
 #endif
 
@@ -765,8 +784,8 @@ static b_func_reg tty_class_functions[] = {
 };
 
 static b_class_reg klasses[] = {
-    {"TTY", tty_class_functions},
-    {NULL, NULL},
+    {"TTY", NULL, tty_class_functions},
+    {NULL, NULL, NULL},
 };
 
 static b_module_reg module = {io_functions, klasses};
