@@ -337,6 +337,8 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_FILE_METHOD(set_times);
   DEFINE_FILE_METHOD(seek);
   DEFINE_FILE_METHOD(tell);
+  DEFINE_FILE_METHOD(mode);
+  DEFINE_FILE_METHOD(name);
 
   // bytes
   DEFINE_BYTES_METHOD(length);
@@ -916,13 +918,12 @@ static bool bytes_get_index(b_vm *vm, b_obj_bytes *bytes, bool will_assign) {
       index = bytes->bytes.count + index;
 
     if (index < bytes->bytes.count && index >= 0) {
-      printf("index: %d, count: %d\n", index, bytes->bytes.count);
       if (!will_assign) {
         // we can safely get rid of the index from the stack
         popn(vm, 2); // +1 for the list itself
       }
 
-      push(vm, OBJ_VAL(copy_bytes(vm, &bytes->bytes.bytes[index], 1)));
+      push(vm, NUMBER_VAL((int)bytes->bytes.bytes[index]));
       return true;
     } else {
       _runtime_error(vm, "bytes index %d out of range", real_index);

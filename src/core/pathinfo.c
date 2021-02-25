@@ -7,8 +7,8 @@
 #include <string.h>
 
 #if defined _WIN32
-#include <shlwapi.h>
 #include <io.h>
+#include <shlwapi.h>
 #include <windows.h>
 
 // #define access _access_s
@@ -37,25 +37,24 @@
 #include "win32.h"
 
 char *get_exe_dir() {
-    char* exe_path = (char*)malloc(sizeof(char) * MAX_PATH);
-    if (exe_path != NULL) {
-        int length = (int)GetModuleFileNameA(NULL, exe_path, MAX_PATH);
-        if (length > 0) {
-            char* path = dirname(exe_path);
-            path[(int)strlen(path) - 1] = '\0';
-            return path;
+  char *exe_path = (char *)malloc(sizeof(char) * MAX_PATH);
+  if (exe_path != NULL) {
+    int length = (int)GetModuleFileNameA(NULL, exe_path, MAX_PATH);
+    if (length > 0) {
+      char *path = dirname(exe_path);
+      path[(int)strlen(path) - 1] = '\0';
+      return path;
 
-        }
-        else {
-            return NULL;
-        }
+    } else {
+      return NULL;
     }
+  }
   return NULL;
 }
 
 #endif
 
-#if defined __linux__ ||  defined __CYGWIN__
+#if defined __linux__ || defined __CYGWIN__
 
 char *get_exe_path() {
   char raw_path[PATH_MAX];
@@ -90,53 +89,50 @@ char *get_exe_dir() {
 }
 #endif
 
+char *merge_paths(char *a, char *b) {
+  char *final_path = "";
 
+  // edge cases
+  // 1. a itself is a file
+  // 2. b is a bird runtime constant such as <repl>, <script> and <module>
 
-char* merge_paths(char* a, char* b) {
-    char* final_path = "";
-
-    // edge cases
-    // 1. a itself is a file
-    // 2. b is a bird runtime constant such as <repl>, <script> and <module>
-
-    if (strstr(a, ".") == NULL && strstr(b, "<") == NULL && strlen(a) > 0) {
-        final_path = append_strings(final_path, a);
-    }
-    if (strlen(a) > 0 && b[0] != '.' && strstr(a, ".") == NULL &&
-        strstr(b, "<") == NULL) {
-        final_path = append_strings(final_path, BIRD_PATH_SEPARATOR);
-        final_path = append_strings(final_path, b);
+  if (strstr(a, ".") == NULL && strstr(b, "<") == NULL && strlen(a) > 0) {
+    final_path = append_strings(final_path, a);
   }
-    else {
-        final_path = append_strings(final_path, b);
-    }
-    return final_path;
+  if (strlen(a) > 0 && b[0] != '.' && strstr(a, ".") == NULL &&
+      strstr(b, "<") == NULL) {
+    final_path = append_strings(final_path, BIRD_PATH_SEPARATOR);
+    final_path = append_strings(final_path, b);
+  } else {
+    final_path = append_strings(final_path, b);
+  }
+  return final_path;
 }
 
 bool file_exists(char *filepath) { return access(filepath, F_OK) == 0; }
 
 #ifndef _WIN32
-char* get_calling_dir() { return getenv("PWD"); }
+char *get_calling_dir() { return getenv("PWD"); }
 
-char* get_filename(char* filepath) {
-    int start = 0, length = strlen(filepath);
-    for (int i = 0; i < length; i++) {
-        if (filepath[i] == BIRD_PATH_SEPARATOR[0])
-            start = i;
-    }
-    length = length - start;
-    char* string = malloc(sizeof(char));
-    strncat(string, filepath + start, length);
-    return string;
+char *get_filename(char *filepath) {
+  int start = 0, length = strlen(filepath);
+  for (int i = 0; i < length; i++) {
+    if (filepath[i] == BIRD_PATH_SEPARATOR[0])
+      start = i;
+  }
+  length = length - start;
+  char *string = malloc(sizeof(char));
+  strncat(string, filepath + start, length);
+  return string;
 }
 #else
-char* get_calling_dir() { return _fullpath(NULL, "", 0); }
+char *get_calling_dir() { return _fullpath(NULL, "", 0); }
 
-char* get_filename(char* filepath) {
-    char* file = (char*)malloc(sizeof(char));
-    char* ext = (char*)malloc(sizeof(char));
-    _splitpath((const char*)filepath, NULL, NULL, file, ext);
-    return merge_paths(file, ext);
+char *get_filename(char *filepath) {
+  char *file = (char *)malloc(sizeof(char));
+  char *ext = (char *)malloc(sizeof(char));
+  _splitpath((const char *)filepath, NULL, NULL, file, ext);
+  return merge_paths(file, ext);
 }
 #endif // !_WIN32
 
@@ -175,3 +171,5 @@ bool is_core_library_file(char *filepath, char *file_name) {
   }
   return false;
 }
+
+char *get_real_file_name(char *path) { return basename(path); }

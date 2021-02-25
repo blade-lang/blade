@@ -5,9 +5,9 @@
 
 #ifdef _WIN32
 
-#include <windows.h>
-#include <winbase.h>
 #include <time.h>
+#include <winbase.h>
+#include <windows.h>
 
 /*
 //struct timeval
@@ -19,7 +19,8 @@
 //#define timerisset(tvp)		((tvp)->tv_sec || (tvp)->tv_usec)
 //#define timercmp(tvp,uvp,cmp)					\
 //		((tvp)->tv_sec cmp (uvp)->tv_sec ||		\
-//		 ((tvp)->tv_sec == (uvp)->tv_sec && (tvp)->tv_usec cmp (uvp)->tv_usec))
+//		 ((tvp)->tv_sec == (uvp)->tv_sec && (tvp)->tv_usec cmp
+(uvp)->tv_usec))
 //#define timerclear(tvp)		(tvp)->tv_sec = (tvp)->tv_usec = 0
 */
 
@@ -27,14 +28,14 @@
 
 #ifndef __MINGW32_MAJOR_VERSION
 struct timezone {
-	int tz_minuteswest;
-	int tz_dsttime;
+  int tz_minuteswest;
+  int tz_dsttime;
 };
 #endif
 
 #define sigjmp_buf jmp_buf
 #define siglongjmp longjmp
-#define sigsetjmp(a,b) setjmp(a)
+#define sigsetjmp(a, b) setjmp(a)
 #define lstat stat
 #define S_ISLNK S_ISBLK
 
@@ -45,27 +46,26 @@ struct timezone {
 #endif
 #define strdup _strdup
 
-
 #define _UTSNAME_LENGTH 256
-struct utsname
-{
-    char sysname[_UTSNAME_LENGTH];
-    char nodename[MAX_COMPUTERNAME_LENGTH + 1];
-    char release[_UTSNAME_LENGTH];
-    char version[_UTSNAME_LENGTH];
-    char machine[_UTSNAME_LENGTH];
-    char domainname[_UTSNAME_LENGTH];
+struct utsname {
+  char sysname[_UTSNAME_LENGTH];
+  char nodename[MAX_COMPUTERNAME_LENGTH + 1];
+  char release[_UTSNAME_LENGTH];
+  char version[_UTSNAME_LENGTH];
+  char machine[_UTSNAME_LENGTH];
+  char domainname[_UTSNAME_LENGTH];
 };
 
 struct utimbuf {
-    time_t actime; /* Access time */
-    time_t modtime; /* Modification time */
+  time_t actime;  /* Access time */
+  time_t modtime; /* Modification time */
 };
 
 int gettimeofday(struct timeval *time_info, struct timezone *timezone_info);
-const char* GetWindowsVersionString();
-int uname(struct utsname* sys);
-char* dirname(char* path);
+const char *GetWindowsVersionString();
+int uname(struct utsname *sys);
+char *dirname(char *path);
+char *basename(char *path);
 
 #endif
 
