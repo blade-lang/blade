@@ -148,6 +148,20 @@ DECLARE_FILE_METHOD(rename);
 DECLARE_FILE_METHOD(path);
 
 /**
+ * file.mode()
+ *
+ * returns the current opened mode of a file
+ */
+DECLARE_FILE_METHOD(mode);
+
+/**
+ * file.name()
+ *
+ * returns name of the current file
+ */
+DECLARE_FILE_METHOD(name);
+
+/**
  * file.abs_path()
  *
  * returns the absolute path to a file

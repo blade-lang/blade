@@ -10,12 +10,11 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#if defined _WIN32 && !defined(__MINGW32_MAJOR_VERSION)
+#if defined _MSC_VER
 #include "win32.h"
 #else
 #include <utime.h>
 #endif // _WIN32
-
 
 #define FILE_ERROR(type, message)                                              \
   file_close(file);                                                            \
@@ -221,7 +220,7 @@ DECLARE_FILE_METHOD(read) {
   }
 
   // we made use of +1 so we can terminate the string.
-  if(buffer != NULL)
+  if (buffer != NULL)
     buffer[file_size] = '\0';
 
   // close file
@@ -365,20 +364,20 @@ DECLARE_FILE_METHOD(stats) {
         SET_DICT_STRING(dict, "is_symbolic", 11,
                         BOOL_VAL((S_ISLNK(stats.st_mode) != 0)));
 #else
-          // read mode
-          SET_DICT_STRING(dict, "is_readable", 11,
-              BOOL_VAL(((stats.st_mode & S_IREAD) != 0)));
+        // read mode
+        SET_DICT_STRING(dict, "is_readable", 11,
+                        BOOL_VAL(((stats.st_mode & S_IREAD) != 0)));
 
-          // write mode
-          SET_DICT_STRING(dict, "is_writable", 11,
-              BOOL_VAL(((stats.st_mode & S_IWRITE) != 0)));
+        // write mode
+        SET_DICT_STRING(dict, "is_writable", 11,
+                        BOOL_VAL(((stats.st_mode & S_IWRITE) != 0)));
 
-          // execute mode
-          SET_DICT_STRING(dict, "is_executable", 13,
-              BOOL_VAL(((stats.st_mode & S_IEXEC) != 0)));
+        // execute mode
+        SET_DICT_STRING(dict, "is_executable", 13,
+                        BOOL_VAL(((stats.st_mode & S_IEXEC) != 0)));
 
-          // is symbolic link
-          SET_DICT_STRING(dict, "is_symbolic", 11, BOOL_VAL(false));
+        // is symbolic link
+        SET_DICT_STRING(dict, "is_symbolic", 11, BOOL_VAL(false));
 #endif
 
         // file details
@@ -447,7 +446,7 @@ DECLARE_FILE_METHOD(symlink) {
   DENY_STD();
 
 #ifdef _WIN32
-    RETURN_ERROR("symlink not supported in windows");
+  RETURN_ERROR("symlink not supported in windows");
 #else
   if (file_exists(file->path->chars)) {
     b_obj_string *path = AS_STRING(args[0]);
@@ -491,6 +490,21 @@ DECLARE_FILE_METHOD(path) {
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
   DENY_STD();
   RETURN_OBJ(file->path);
+}
+
+DECLARE_FILE_METHOD(mode) {
+  ENFORCE_ARG_COUNT(mode, 0);
+  b_obj_file *file = AS_FILE(METHOD_OBJECT);
+  DENY_STD();
+  RETURN_OBJ(file->mode);
+}
+
+DECLARE_FILE_METHOD(name) {
+  ENFORCE_ARG_COUNT(name, 0);
+  b_obj_file *file = AS_FILE(METHOD_OBJECT);
+  DENY_STD();
+  char *name = get_real_file_name(file->path->chars);
+  RETURN_STRING(name);
 }
 
 DECLARE_FILE_METHOD(abs_path) {

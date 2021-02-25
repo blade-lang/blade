@@ -4,20 +4,18 @@
 #ifdef IS_WINDOWS
 
 #include "win32.h"
-#include <sys/timeb.h>
 #include <lm.h>
+#include <sys/timeb.h>
 
-const char* GetWindowsVersionString()
-{
-  const char* winver = NULL;
+const char *GetWindowsVersionString() {
+  const char *winver = NULL;
   OSVERSIONINFOEXW osver;
-  SYSTEM_INFO     sysInfo;
+  SYSTEM_INFO sysInfo;
 
 #ifndef __MINGW32_MAJOR_VERSION
-  __pragma(warning(push))
-  __pragma(warning(disable:4996))
+  __pragma(warning(push)) __pragma(warning(disable : 4996))
 #endif
-    memset(&osver, 0, sizeof(osver));
+      memset(&osver, 0, sizeof(osver));
   osver.dwOSVersionInfoSize = sizeof(osver);
   GetVersionExW((LPOSVERSIONINFOW)&osver);
 
@@ -25,48 +23,71 @@ const char* GetWindowsVersionString()
   __pragma(warning(pop))
 #endif
 
-    if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 2)
-    {
-      OSVERSIONINFOEXW osvi = osver;
-      ULONGLONG cm = 0;
-      cm = VerSetConditionMask(cm, VER_MINORVERSION, VER_EQUAL);
-      osvi.dwOSVersionInfoSize = sizeof(osvi);
-      osvi.dwMinorVersion = 3;
-      if (VerifyVersionInfoW(&osvi, VER_MINORVERSION, cm))
-      {
-        osver.dwMinorVersion = 3;
-      }
+      if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 2) {
+    OSVERSIONINFOEXW osvi = osver;
+    ULONGLONG cm = 0;
+    cm = VerSetConditionMask(cm, VER_MINORVERSION, VER_EQUAL);
+    osvi.dwOSVersionInfoSize = sizeof(osvi);
+    osvi.dwMinorVersion = 3;
+    if (VerifyVersionInfoW(&osvi, VER_MINORVERSION, cm)) {
+      osver.dwMinorVersion = 3;
     }
+  }
 
   GetSystemInfo(&sysInfo);
 
-  if (osver.dwMajorVersion == 10 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows 10 Server";
-  else if (osver.dwMajorVersion == 10 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows 10";
-  else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 3 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows Server 2012 R2";
-  else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 3 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows 8.1";
-  else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 2 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows Server 2012";
-  else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 2 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows 8";
-  else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 1 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows Server 2008 R2";
-  else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 1 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows 7";
-  else if (osver.dwMajorVersion == 6 && osver.wProductType != VER_NT_WORKSTATION)  winver = "Windows Server 2008";
-  else if (osver.dwMajorVersion == 6 && osver.wProductType == VER_NT_WORKSTATION)  winver = "Windows Vista";
-  else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 2 && osver.wProductType == VER_NT_WORKSTATION
-    && sysInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64)  winver = "Windows XP x64";
-  else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 2)   winver = "Windows Server 2003";
-  else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 1)   winver = "Windows XP";
-  else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 0)   winver = "Windows 2000";
-  else winver = "unknown";
+  if (osver.dwMajorVersion == 10 && osver.wProductType != VER_NT_WORKSTATION)
+    winver = "Windows 10 Server";
+  else if (osver.dwMajorVersion == 10 &&
+           osver.wProductType == VER_NT_WORKSTATION)
+    winver = "Windows 10";
+  else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 3 &&
+           osver.wProductType != VER_NT_WORKSTATION)
+    winver = "Windows Server 2012 R2";
+  else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 3 &&
+           osver.wProductType == VER_NT_WORKSTATION)
+    winver = "Windows 8.1";
+  else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 2 &&
+           osver.wProductType != VER_NT_WORKSTATION)
+    winver = "Windows Server 2012";
+  else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 2 &&
+           osver.wProductType == VER_NT_WORKSTATION)
+    winver = "Windows 8";
+  else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 1 &&
+           osver.wProductType != VER_NT_WORKSTATION)
+    winver = "Windows Server 2008 R2";
+  else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 1 &&
+           osver.wProductType == VER_NT_WORKSTATION)
+    winver = "Windows 7";
+  else if (osver.dwMajorVersion == 6 &&
+           osver.wProductType != VER_NT_WORKSTATION)
+    winver = "Windows Server 2008";
+  else if (osver.dwMajorVersion == 6 &&
+           osver.wProductType == VER_NT_WORKSTATION)
+    winver = "Windows Vista";
+  else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 2 &&
+           osver.wProductType == VER_NT_WORKSTATION &&
+           sysInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64)
+    winver = "Windows XP x64";
+  else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 2)
+    winver = "Windows Server 2003";
+  else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 1)
+    winver = "Windows XP";
+  else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 0)
+    winver = "Windows 2000";
+  else
+    winver = "unknown";
   return winver;
 }
 
-int uname(struct utsname* sys) {
+int uname(struct utsname *sys) {
 
   // sys
   strncpy(sys->sysname, "Windows", 8);
 
   // get system version
   WORD arch = 0;
-  const char* sysn_info = GetWindowsVersionString(&arch);
+  const char *sysn_info = GetWindowsVersionString(&arch);
   int sysname_length = (int)strlen(sysn_info);
   memcpy(sys->version, sysn_info, sysname_length);
   memcpy(sys->release, sysn_info, sysname_length);
@@ -103,25 +124,28 @@ int uname(struct utsname* sys) {
   return 0;
 }
 
-int gettimeofday(struct timeval* time_info, struct timezone* timezone_info) {
+int gettimeofday(struct timeval *time_info, struct timezone *timezone_info) {
 
   if (time_info != NULL) {
 
-    uint64_t UNIX_TIME_START = 116444736000000000Ui64; //January 1, 1970 (start of Unix epoch) in "ticks"
-    uint64_t TICKS_PER_SECOND = 10000000Ui64; //a tick is 100ns
+    uint64_t UNIX_TIME_START =
+        116444736000000000Ui64; // January 1, 1970 (start of Unix epoch) in
+                                // "ticks"
+    uint64_t TICKS_PER_SECOND = 10000000Ui64; // a tick is 100ns
 
     FILETIME ft;
-    GetSystemTimeAsFileTime(&ft); //returns ticks in UTC
+    GetSystemTimeAsFileTime(&ft); // returns ticks in UTC
 
-    //Copy the low and high parts of FILETIME into a LARGE_INTEGER
-    //This is so we can access the full 64-bits as an Int64 without causing an alignment fault
+    // Copy the low and high parts of FILETIME into a LARGE_INTEGER
+    // This is so we can access the full 64-bits as an Int64 without causing an
+    // alignment fault
     LARGE_INTEGER li;
     li.LowPart = ft.dwLowDateTime;
     li.HighPart = ft.dwHighDateTime;
 
     uint64_t tm = li.QuadPart - UNIX_TIME_START;
 
-    //Convert ticks since 1/1/1970 into seconds
+    // Convert ticks since 1/1/1970 into seconds
     time_info->tv_sec = tm / TICKS_PER_SECOND;
     time_info->tv_usec = (long)(tm % TICKS_PER_SECOND);
   }
@@ -135,11 +159,18 @@ int gettimeofday(struct timeval* time_info, struct timezone* timezone_info) {
   return 0;
 }
 
-char* dirname(char* path) {
-  char* drive = (char*)malloc(sizeof(char));
-  char* dir = (char*)malloc(sizeof(char) * MAX_PATH);
-  _splitpath((const char*)path, drive, dir, NULL, NULL);
+char *dirname(char *path) {
+  char *drive = (char *)malloc(sizeof(char));
+  char *dir = (char *)malloc(sizeof(char) * MAX_PATH);
+  _splitpath((const char *)path, drive, dir, NULL, NULL);
   return append_strings(drive, dir);
+}
+
+char *basename(char *path) {
+  char *name = (char *)malloc(sizeof(char) * MAX_PATH);
+  char *ext = (char *)malloc(sizeof(char));
+  _splitpath((const char *)path, NULL, NULL, name, ext);
+  return append_strings(name, ext);
 }
 
 #endif
