@@ -55,21 +55,26 @@ class Mime {
     '.bmp': _MimeFormat('image/bmp', [[0x42, 0x4D]]),
     '.bz2': _MimeFormat('application/x-bzip2', [[0x42, 0x5A, 0x68]]),
     '.bz': _MimeFormat('application/x-bzip', nil),
+    '.cab': _MimeFormat('application/vnd.ms-cab-compressed', [[0x4D, 0x53, 0x43, 0x46]]),
     '.cdf': _MimeFormat('application/x-netcdf', nil),
     '.cgm': _MimeFormat('image/cgm', nil),
+    '.chm': _MimeFormat('application/vnd.ms-htmlhelp', [[0x49, 0x54, 0x53, 0x46, 0x03, 0x00, 0x00, 0x00, 0x60, 0x00, 0x00, 0x00]]),
     '.class': _MimeFormat('application/octet-stream', [[0xCA, 0xFE, 0xBA, 0xBE]]),
+    '.conf': _MimeFormat('text/plain', nil),
     '.cpio': _MimeFormat('application/x-cpio', nil),
     '.cpt': _MimeFormat('application/mac-compactpro', nil),
     '.csh': _MimeFormat('application/x-csh', nil),
     '.css': _MimeFormat('text/css', nil),
     '.csv': _MimeFormat('text/csv', nil),
     '.dcr': _MimeFormat('application/x-director', nil),
+    '.deb': _MimeFormat('application/x-debian-package', [[0x21, 0x3C, 0x61, 0x72, 0x63, 0x68, 0x3E]]),
+    '.def': _MimeFormat('text/plain', nil),
     '.dif': _MimeFormat('video/x-dv', nil),
     '.dir': _MimeFormat('application/x-director', nil),
     '.djv': _MimeFormat('image/vnd.djvu', nil),
     '.djvu': _MimeFormat('image/vnd.djvu', nil),
-    '.dll': _MimeFormat('application/octet-stream', [[0x49, 0x5A]]),
-    '.dmg': _MimeFormat('application/octet-stream', [[0x78]]),
+    '.dll': _MimeFormat('application/x-msdownload', [[0x49, 0x5A]]),
+    '.dmg': _MimeFormat('application/x-apple-diskimage', [[0x78]]),
     '.dms': _MimeFormat('application/octet-stream', nil),
     '.doc': _MimeFormat('application/msword', [
       [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1],
@@ -99,15 +104,17 @@ class Mime {
     ]),
     '.epub': _MimeFormat('application/epub+zip', nil),
     '.etx': _MimeFormat('text/x-setext', nil),
-    '.exe': _MimeFormat('application/octet-stream', [
+    '.exe': _MimeFormat('application/x-msdownload', [
       [0x4D, 0x5A]
     ]),
     '.ez': _MimeFormat('application/andrew-inset', nil),
+    '.flac': _MimeFormat('audio/flac', [[0x66, 0x4C, 0x61, 0x43]]),
     '.flv': _MimeFormat('video/x-flv', [
       [0x46, 0x4C, 0x56, 0x01]
     ]),
     '.gif': _MimeFormat('image/gif', [
-      [0x47, 0x49, 0x46, 0x38]
+      [0x47, 0x49, 0x46, 0x38, 0x37, 0x61],
+      [0x47, 0x49, 0x46, 0x38, 0x39, 0x61]
     ]),
     '.gz': _MimeFormat('application/gzip', [
       [0x1F, 0x8B, 0x08]
@@ -128,6 +135,9 @@ class Mime {
     '.ifb': _MimeFormat('text/calendar', nil),
     '.iges': _MimeFormat('model/iges', nil),
     '.igs': _MimeFormat('model/iges', nil),
+    '.in': _MimeFormat('text/plain', nil),
+    '.ini': _MimeFormat('text/plain', nil),
+    '.iso': _MimeFormat('application/x-iso9660-image', [[0x43, 0x44, 0x30, 0x30, 0x31]]),
     '.jar': _MimeFormat('application/java-archive', [
       [0x50, 0x4B, 0x03, 0x04],
       [0x5F, 0x27, 0xA8, 0x89],
@@ -151,6 +161,7 @@ class Mime {
       [0xFF, 0xD8, 0xFF, 0xE1], 
       [0xFF, 0xD8, 0xFF, 0xE8]
     ]),
+    '.jpgv': _MimeFormat('video/jpeg', nil),
     '.js': _MimeFormat('application/x-javascript', nil),
     '.json': _MimeFormat('application/json', nil),
     '.jsonld': _MimeFormat('application/ld+json', nil),
@@ -158,6 +169,8 @@ class Mime {
     '.latex': _MimeFormat('application/x-latex', nil),
     '.lha': _MimeFormat('application/octet-stream', nil),
     '.lib': _MimeFormat('application/octet-stream', [[0x21, 0x3C, 0x61, 0x72, 0x63, 0x68, 0x3E, 0x0A]]),
+    '.list': _MimeFormat('text/plain', nil),
+    '.log': _MimeFormat('text/plain', nil),
     '.lzh': _MimeFormat('application/octet-stream', nil),
     '.m3u': _MimeFormat('audio/x-mpegurl', nil),
     '.m4a': _MimeFormat('audio/mp4a-latm', nil),
@@ -172,21 +185,41 @@ class Mime {
     '.mesh': _MimeFormat('model/mesh', nil),
     '.mid': _MimeFormat('audio/midi', [[0x4D, 0x54, 0x68, 0x64]]),
     '.midi': _MimeFormat('audio/midi', [[0x4D, 0x54, 0x68, 0x64]]),
-    '.mif': _MimeFormat('application/vnd.mif', nil),
+    '.mif': _MimeFormat('application/vnd.mif', [
+      [0x3C, 0x4D, 0x61, 0x6B, 0x65, 0x72, 0x46, 0x69], # Adobe FrameMaker
+      [0x56, 0x65, 0x72, 0x73, 0x69, 0x6F, 0x6E, 0x20] # MapInfo Interchange Format file
+    ]),
     '.mjs': _MimeFormat('text/javascript', nil),
+    '.mka': _MimeFormat('audio/x-matroska', [[0x1A, 0x45, 0xDF, 0xA3]]),
     '.mkv': _MimeFormat('video/x-matroska', [[0x1A, 0x45, 0xDF, 0xA3, 0x93, 0x42, 0x82, 0x88]]),
-    '.mov': _MimeFormat('video/quicktime', nil),
+    '.mov': _MimeFormat('video/quicktime', [
+      [0x6D, 0x6F, 0x6F, 0x76],
+      [0x66, 0x72, 0x65, 0x65],
+      [0x6D, 0x64, 0x61, 0x74],
+      [0x77, 0x69, 0x64, 0x65],
+      [0x70, 0x6E, 0x6F, 0x74],
+      [0x73, 0x6B, 0x69, 0x70]
+    ]),
     '.movie': _MimeFormat('video/x-sgi-movie', nil),
     '.mp2': _MimeFormat('audio/mpeg', nil),
-    '.mp3': _MimeFormat('audio/mpeg', [[0x49, 0x44, 0x33]]),
-    '.mp4': _MimeFormat('video/mp4', nil),
+    '.mp3': _MimeFormat('audio/mpeg', [
+      [0x49, 0x44, 0x33],
+      [0xFF, 0xFB],
+      [0xFF, 0xF3],
+      [0xFF, 0xF2] # last three are for files without id3 or with id3v1 tag
+    ]),
+    '.mp4': _MimeFormat('video/mp4', [[0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6F, 0x6D]]),
     '.mpe': _MimeFormat('video/mpeg', nil),
     '.mpeg': _MimeFormat('video/mpeg', nil),
-    '.mpg': _MimeFormat('video/mpeg', nil),
+    '.mpg': _MimeFormat('video/mpeg', [
+      [0x00, 0x00, 0x01, 0xBA], # DVD video
+      [0x00, 0x00, 0x01, 0xB3] # MPEG video
+    ]),
     '.mpga': _MimeFormat('audio/mpeg', nil),
     '.mpkg': _MimeFormat('application/vnd.apple.installer+xml', nil),
     '.ms': _MimeFormat('application/x-troff-ms', nil),
     '.msh': _MimeFormat('model/mesh', nil),
+    '.msi': _MimeFormat('application/x-msdownload', nil),
     '.mxu': _MimeFormat('video/vnd.mpegurl', nil),
     '.nc': _MimeFormat('application/x-netcdf', nil),
     '.oda': _MimeFormat('application/oda', nil),
@@ -242,6 +275,7 @@ class Mime {
     '.rgb': _MimeFormat('image/x-rgb', [[0x01, 0xDA, 0x01, 0x01, 0x00, 0x03]]),
     '.rm': _MimeFormat('application/vnd.rn-realmedia', [[0x2E, 0x52, 0x4D, 0x46]]),
     '.roff': _MimeFormat('application/x-troff', nil),
+    '.rpm': _MimeFormat('application/x-rpm', [[0xED, 0xAB, 0xEE, 0xDB]]),
     '.rtf': _MimeFormat('text/rtf', [[0x7B, 0x5C, 0x72, 0x74, 0x66, 0x31]]),
     '.rtx': _MimeFormat('text/richtext', nil),
     '.sgm': _MimeFormat('text/sgml', nil),
@@ -262,6 +296,8 @@ class Mime {
     '.snd': _MimeFormat('audio/basic', nil),
     '.so': _MimeFormat('application/octet-stream', nil),
     '.spl': _MimeFormat('application/x-futuresplash', [[0x00, 0x00, 0x01, 0x00]]),
+    '.sqlite': _MimeFormat('application/vnd.sqlite3', [[0x53, 0x51, 0x4C, 0x69, 0x74, 0x65, 0x20, 0x66, 0x6F, 0x72, 0x6D, 0x61, 0x74, 0x20, 0x33, 0x00]]),
+    '.sqlitedb': _MimeFormat('application/vnd.sqlite3', [[0x53, 0x51, 0x4C, 0x69, 0x74, 0x65, 0x20, 0x66, 0x6F, 0x72, 0x6D, 0x61, 0x74, 0x20, 0x33, 0x00]]),
     '.src': _MimeFormat('application/x-wais-source', nil),
     '.sv4cpio': _MimeFormat('application/x-sv4cpio', nil),
     '.sv4crc': _MimeFormat('application/x-sv4crc', nil),
@@ -269,6 +305,10 @@ class Mime {
     '.swf': _MimeFormat('application/x-shockwave-flash', [[0x46, 0x57, 0x53]]),
     '.t': _MimeFormat('application/x-troff', nil),
     '.tar': _MimeFormat('application/x-tar', [[0x75, 0x73, 0x74, 0x61, 0x72]]),
+    '.tar.z': _MimeFormat('application/x-tar', [
+      [0x1F, 0x9D], # Compressed using Lempel-Ziv-Welch
+      [0x1F, 0xA0] # Compressed using LZH
+    ]),
     '.tcl': _MimeFormat('application/x-tcl', nil),
     '.tex': _MimeFormat('application/x-tex', nil),
     '.texi': _MimeFormat('application/x-texinfo', nil),
@@ -292,17 +332,20 @@ class Mime {
     '.tsv': _MimeFormat('text/tab-separated-values', nil),
     '.ttf': _MimeFormat('application/x-font-ttf', [[0x00, 0x01, 0x00, 0x00, 0x00]]),
     '.txt': _MimeFormat('text/plain', nil),
+    '.text': _MimeFormat('text/plain', nil),
     '.ustar': _MimeFormat('application/x-ustar', nil),
     '.vcd': _MimeFormat('application/x-cdlink', nil),
+    '.vcs': _MimeFormat('text/x-vcard', nil),
+    '.vcard': _MimeFormat('text/vcard', nil),
     '.vrml': _MimeFormat('model/vrml', nil),
     '.vsd': _MimeFormat('application/vnd.visio', nil),
     '.vxml': _MimeFormat('application/voicexml+xml', nil),
     '.wav': _MimeFormat('audio/x-wav', [[0x52, 0x49, 0x46, 0x46]]),
     '.wbmp': _MimeFormat('image/vnd.wap.wbmp', nil),
     '.wbmxl': _MimeFormat('application/vnd.wap.wbxml', nil),
-    '.weba': _MimeFormat('image/weba', nil),
-    '.webm': _MimeFormat('image/webm', nil),
-    '.webp': _MimeFormat('image/webp', nil),
+    '.weba': _MimeFormat('audio/webm', nil),
+    '.webm': _MimeFormat('video/webm', [[0x1A, 0x45, 0xDF, 0xA3, 0x93, 0x42, 0x82, 0x88]]),
+    '.webp': _MimeFormat('image/webp', [[0x52, 0x49, 0x46, 0x46, nil, nil, nil, nil, 0x57, 0x45, 0x42, 0x50]]),
     '.woff': _MimeFormat('font/woff', nil),
     '.woff2': _MimeFormat('font/woff2', nil),
     '.wml': _MimeFormat('text/vnd.wap.wml', nil),
@@ -390,7 +433,10 @@ class Mime {
           var header = mime.header[i]
 
           iter var j = 0; j < header.length(); j++ {
-            if header[j] != top_16[j] {
+            # we use nil value to skip extra data in header signatures
+            # such as webp filesize part...
+            # ie. RIFF ... WEBP where ... is represented as nil
+            if header[j] != top_16[j] and header[j] != nil {
               mime_match = false
               break
             }
