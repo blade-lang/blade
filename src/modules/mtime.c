@@ -12,8 +12,8 @@ DECLARE_MODULE_METHOD(time__localtime) {
 
   b_obj_dict *dict = new_dict(vm);
 
-  ADD_TIME("year", 4, timeinfo->tm_year + 1900);
-  ADD_TIME("month", 5, timeinfo->tm_mon + 1);
+  ADD_TIME("year", 4, (double)timeinfo->tm_year + 1900);
+  ADD_TIME("month", 5, (double)timeinfo->tm_mon + 1);
   ADD_TIME("day", 3, timeinfo->tm_mday);
   ADD_TIME("hour", 4, timeinfo->tm_hour);
   ADD_TIME("minute", 6, timeinfo->tm_min);
@@ -33,8 +33,8 @@ DECLARE_MODULE_METHOD(time__gmtime) {
 
   b_obj_dict *dict = new_dict(vm);
 
-  ADD_TIME("year", 4, timeinfo->tm_year + 1900);
-  ADD_TIME("month", 5, timeinfo->tm_mon + 1);
+  ADD_TIME("year", 4, (double)timeinfo->tm_year + 1900);
+  ADD_TIME("month", 5, (double)timeinfo->tm_mon + 1);
   ADD_TIME("day", 3, timeinfo->tm_mday);
   ADD_TIME("hour", 4, timeinfo->tm_hour);
   ADD_TIME("minute", 6, timeinfo->tm_min);

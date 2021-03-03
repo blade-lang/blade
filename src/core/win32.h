@@ -6,8 +6,11 @@
 #ifdef _WIN32
 
 #include <time.h>
-#include <winbase.h>
+// Hack to force windows.h to always appear before winbase.h
+// irrespective of C formatting standard
 #include <windows.h>
+//--
+#include <winbase.h>
 
 /*
 //struct timeval

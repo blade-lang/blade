@@ -90,6 +90,9 @@
     <ClCompile Include="..\src\core\getopt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\modules\mtime.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\core\blob.h">
@@ -187,6 +190,9 @@
     </ClInclude>
     <ClInclude Include="..\src\core\compat\replxx.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\modules\mtime.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
