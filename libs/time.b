@@ -28,7 +28,7 @@ class Date {
 
   _Check_Int_Field(field, name) {
     if !is_int(field)
-      die name + ' must be an integer'
+      die Exception('${name} must be an integer')
   }
 
   _Check_Date_Fields(year, month, day, hour, minute, second) {
@@ -37,23 +37,23 @@ class Date {
     self._Check_Int_Field(day, 'day')
 
     if Date.MIN_YEAR > year or year > Date.MAX_YEAR
-      die 'year must be in ' + Date.MIN_YEAR + '..' + Date.MAX_YEAR    
+      die Exception('year must be in ${Date.MIN_YEAR}..${Date.MAX_YEAR}')   
     if 1 > month or month > 12
-      die 'month must be in 1..12' 
-    dim = self.days_in_month(year, month)   
+      die Exception('month must be in 1..12') 
+    var dim = self.days_in_month(year, month)   
     if 1 > month or month > dim
-      die 'month must be in 1..' + dim   
+      die Exception('month must be in 1..${dim}')   
 
     self._Check_Int_Field(hour, 'hour')
     self._Check_Int_Field(minute, 'minute')
     self._Check_Int_Field(second, 'second')
 
     if 0 > hour or hour > 23
-      die 'hour must be in 0..23'
+      die Exception('hour must be in 0..23')
     if 0 > minute or minute > 59
-      die 'minute must be in 0..59'
+      die Exception('minute must be in 0..59')
     if 0 > second or second > 59
-      die 'second must be in 0..59'
+      die Exception('second must be in 0..59')
   }
 
   # the number of days in each month of the year
@@ -62,7 +62,7 @@ class Date {
 
   # the name of months in a year
   # the nil is meant for proper indexing
-  _Months_In_Year = [
+  var _Months_In_Year = [
       nil,
       'January', 'February', 'March', 'April', 'May', 'June', 
       'July', 'August', 'September', 'October', 'November', 'December'
@@ -70,7 +70,7 @@ class Date {
 
   # the short name of months in a year
   # the nil is meant for proper indexing
-  _Months_In_Year_Short = [
+  var _Months_In_Year_Short = [
     nil,
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
@@ -79,9 +79,9 @@ class Date {
   # internal declaration to get the
   # days before month
   static var _Days_before_month = |m, g| {
-    days_before_month = []
-    days = 0
-    for f in Date._Days_In_Month[m:] {
+    var days_before_month = []
+    var days = 0
+    for f in Date._Days_In_Month[m,-1] {
       days_before_month.append(days)
       days += f 
     }
@@ -89,7 +89,7 @@ class Date {
   }
 
   static var _Days_before_year = |year| {
-    y = year - 1
+    var y = year - 1
     return y*365 + y//4 - y//100 + y//400
   }
 
@@ -101,6 +101,7 @@ class Date {
   static var _Ymd_to_ordinal = |year, month, day| {
     assert month >= 1 and month <= 12, 'month must be in 1..12'
 
+    var dim
     if month == 2 and Date._Is_leap(year)
       dim = 29
     else dim = Date._Days_In_Month[month]
@@ -116,7 +117,7 @@ class Date {
   -----------
   required argument is year
   */
-  new(year, month, day, hour, minute, second) {
+  Date(year, month, day, hour, minute, second) {
 
     if year {
       self.year = year
@@ -143,7 +144,7 @@ class Date {
       self.day_of_year = Date._Days_before_month(1, self.month) + self.day */
 
     } else {
-      date = self._localtime()
+      var date = self._localtime()
 
       self.year = date.year
       self.month = date.month
@@ -173,19 +174,21 @@ class Date {
       'year must be in 1..' + Date.MAX_YEAR
     assert year > self.year, 'year must be greater than current year'
 
-    if self.month < Date.MAX_MONTH
-      days_left_in_year = self.days_before_month(Date.MAX_MONTH) + 
+    if self.month < Date.MAX_MONTH {
+      var days_left_in_year = self.days_before_month(Date.MAX_MONTH) + 
           Date._Days_In_Month[Date.MAX_MONTH]
-    else
-      days_left_in_year = Date._Days_In_Month[Date.MAX_MONTH] - self.day
+    } else {
+      var days_left_in_year = Date._Days_In_Month[Date.MAX_MONTH] - self.day
+    }
 
-    if self.is_leap()
-      days_in_year = 366 - days_left_in_year
-    else
-      days_in_year = 365 - days_left_in_year
+    if self.is_leap() {
+      var days_in_year = 366 - days_left_in_year
+    } else {
+      var days_in_year = 365 - days_left_in_year
+    }
       
-    days_till_today = Date._Days_before_year(self.year) + days_in_year
-    days_before_year = Date._Days_before_year(year)
+    var days_till_today = Date._Days_before_year(self.year) + days_in_year
+    var days_before_year = Date._Days_before_year(year)
 
     return days_before_year - days_till_today
   }
@@ -208,7 +211,7 @@ class Date {
   days_before_month(month) {
     assert month >= 1 and month <= 12, 'month must be in 1..12'
 
-    let start, end, day, comparator = self.month, month, self.day, end < 2
+    var start = self.month, end = month, day = self.day, comparator = end < 2
     if self.month > month {
       start = month
       end = self.month 
@@ -216,7 +219,7 @@ class Date {
       comparator = start <= 2
     }
 
-    days_before = Date._Days_before_month(start, end - start)
+    var days_before = Date._Days_before_month(start, end - start)
     if comparator and self.is_leap() {
       return days_before + 1 - day
     }
@@ -234,18 +237,18 @@ class Date {
   */
   static from_time(time) {
 
-    _DI400Y = Date._Days_before_year(401) # number of days in 400 years
-    _DI100Y = Date._Days_before_year(101) # number of days in 100 years
-    _DI4Y = Date._Days_before_year(5)     # number of days in 4 years
+    var _DI400Y = Date._Days_before_year(401) # number of days in 400 years
+    var _DI100Y = Date._Days_before_year(101) # number of days in 100 years
+    var _DI4Y = Date._Days_before_year(5)     # number of days in 4 years
 
     assert _DI4Y == 4 * 365 + 1
     assert _DI400Y == 4 * _DI100Y + 1
     assert _DI100Y == 25 * _DI4Y - 1
 
-    _SI1D = 86400 # seconds in a day
-    _DTUNIX = 719162 # days from UTC year 1 to unix year 1970
+    var _SI1D = 86400 # seconds in a day
+    var _DTUNIX = 719162 # days from UTC year 1 to unix year 1970
 
-    n = to_int(time / _SI1D + _DTUNIX)
+    var n = to_int(time / _SI1D + _DTUNIX)
 
     # n is a 1-based index, starting at 1-Jan-1.  The pattern of leap years
     # repeats exactly every 400 years.  The basic strategy is to find the
@@ -268,28 +271,30 @@ class Date {
     #     31 Dec  400         _DI400Y        _DI400Y -1
     #      1 Jan  401         _DI400Y +1     _DI400Y      400-year boundary
     n--
-    n400 = to_int(n / _DI400Y)
+    var n400 = to_int(n / _DI400Y)
     n %= _DI400Y
-    year = n400 * 400 + 1   # ..., -399, 1, 401, ...
+    var year = n400 * 400 + 1   # ..., -399, 1, 401, ...
 
     # Now n is the (non-negative) offset, in days, from January 1 of year, to
     # the desired date.  Now compute how many 100-year cycles precede n.
     # Note that it's possible for n100 to equal 4!  In that case 4 full
     # 100-year cycles precede the desired day, which implies the desired
     # day is December 31 at the end of a 400-year cycle.
-    n100 = to_int(n / _DI100Y)
+    var n100 = to_int(n / _DI100Y)
     n %= _DI100Y
 
     # Now compute how many 4-year cycles precede it.
-    n4 = to_int(n / _DI4Y)
+    var n4 = to_int(n / _DI4Y)
     n %= _DI4Y
 
     # And now how many single years.  Again n1 can be 4, and again meaning
     # that the desired day is December 31 at the end of the 4-year cycle.
-    n1 = to_int(n / 365)
+    var n1 = to_int(n / 365)
     n %= 365
 
     year += n100 * 100 + n4 * 4 + n1
+    var month, day
+
     if n1 == 4 or n100 == 4 {
       assert n == 0
       year -= 1
@@ -300,11 +305,11 @@ class Date {
 
       # Now the year is correct, and n is the offset from January 1.  We find
       # the month via an estimate that's either exact or one too large.
-      leapyear = n1 == 3 and (n4 != 24 or n100 == 3)
+      var leapyear = n1 == 3 and (n4 != 24 or n100 == 3)
       assert leapyear == Date._Is_leap(year)
 
       month = (n + 50) >> 5
-      preceding = Date._Days_before_month(0, month) + to_number(month > 2 and leapyear)
+      var preceding = Date._Days_before_month(0, month) + to_number(month > 2 and leapyear)
       
       if preceding > n {  # estimate is too large
         month -= 1
@@ -313,17 +318,20 @@ class Date {
       day = n - preceding + 1
     }
 
-    today = time - ((Date._Ymd_to_ordinal(year, month, day) - _DTUNIX) * _SI1D)
-    hour = to_int(today / 3600) - Date.MAX_HOUR # where 3600 is number of seconds in hour
-    if hour == Date.MAX_HOUR + 1 hour = 0 
-    now = today % 3600
+    var today = time - ((Date._Ymd_to_ordinal(year, month, day) - _DTUNIX) * _SI1D)
+    var hour = to_int(today / 3600) - Date.MAX_HOUR # where 3600 is number of seconds in hour
+    
+    if hour == Date.MAX_HOUR + 1 hour = 0
+    else if hour < 1 hour += Date.MAX_HOUR + 1
 
-    minute = to_int(now / 60) # 60 seconds in a minute
+    var now = today % 3600
+
+    var minute = to_int(now / 60) # 60 seconds in a minute
     now %= 60
 
     # Now the year and month are correct, and n is the offset from the
     # start of that month:  we're done!
-    return Date(year, month, day, hour, minute, now)
+    return Date(year, month, day, hour, minute, int(now))
   }
 
   /*
@@ -351,8 +359,8 @@ class Date {
   | S         | long second             | 09        |
   */
   format(format) {
-    result = ''
-    iter i = 0; i < format.length; i++ {
+    var result = ''
+    iter var i = 0; i < format.length(); i++ {
       using format[i] {
         when 'A' {
           if self.hour >= 12 result += 'PM'
@@ -398,7 +406,7 @@ class Date {
           else result += self.second
         }
         when 'y' {
-          result += to_string(self.year)[2:]
+          result += to_string(self.year)[2,-1]
         }
         when 'Y' {
           result += self.year
