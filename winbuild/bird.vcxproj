@@ -43,10 +43,12 @@
     <ClCompile Include="..\src\modules\base64.c" />
     <ClCompile Include="..\src\modules\io.c" />
     <ClCompile Include="..\src\modules\math.c" />
+    <ClCompile Include="..\src\modules\mtime.c" />
     <ClCompile Include="..\src\modules\os.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="deps\includes\pcre2.h" />
+    <ClInclude Include="..\src\modules\mtime.h" />
+    <ClInclude Include="..\deps\includes\pcre2.h" />
     <ClInclude Include="..\src\core\blob.h" />
     <ClInclude Include="..\src\core\btime.h" />
     <ClInclude Include="..\src\core\builtin\bytes.h" />
