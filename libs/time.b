@@ -144,7 +144,7 @@ class Date {
       self.day_of_year = Date._Days_before_month(1, self.month) + self.day */
 
     } else {
-      var date = self._localtime()
+      var date = Date.localtime()
 
       self.year = date.year
       self.month = date.month
@@ -155,9 +155,11 @@ class Date {
     }
   }
 
-  # cask method for native gmtime and localtime
-  _gmtime() {}
-  _localtime() {}
+  # cask method for native gmtime
+  static gmtime() {}
+
+  # cask method for native localtime
+  static localtime() {}
 
   /*
   is_leap() returns true if the year is a leap year or false otherwise
