@@ -425,11 +425,20 @@ static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
     arg_count -= va_args_start;
     popn(vm, va_args_start + 1);
     push(vm, OBJ_VAL(args_list));
+  } else if (!function->is_variadic && arg_count < function->arity) {
+    for (; arg_count < function->arity; arg_count++) {
+      push(vm, NIL_VAL);
+    }
   }
 
   if (arg_count != function->arity) {
-    _runtime_error(vm, "expected %d arguments but got %d", function->arity,
-                   arg_count);
+    if (function->is_variadic) {
+      _runtime_error(vm, "expected at least %d arguments but got %d",
+                     function->arity - 1, arg_count);
+    } else {
+      _runtime_error(vm, "expected %d arguments but got %d", function->arity,
+                     arg_count);
+    }
     return false;
   }
 
@@ -571,7 +580,8 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
       return call_value(vm, value, arg_count);
     }
   } else if (IS_CLASS(receiver)) {
-    if (table_get(&AS_CLASS(receiver)->static_methods, OBJ_VAL(name), &value)) {
+    if (table_get(&AS_CLASS(receiver)->static_methods, OBJ_VAL(name), &value) ||
+        table_get(&AS_CLASS(receiver)->static_fields, OBJ_VAL(name), &value)) {
       return call_value(vm, value, arg_count);
     }
   }

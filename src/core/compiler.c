@@ -533,6 +533,7 @@ static void end_loop(b_parser *p) {
 static void expression(b_parser *p);
 static void statement(b_parser *p);
 static void declaration(b_parser *p);
+static void anonymous(b_parser *p, bool can_assign);
 static b_parse_rule *get_rule(b_tkn_type type);
 static void parse_precedence(b_parser *p, b_prec precedence);
 // --> Forward declarations end
@@ -1141,7 +1142,7 @@ b_parse_rule parse_rules[] = {
     [PERCENT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},         // %=
     [AMP_TOKEN] = {NULL, binary, PREC_BIT_AND},           // &
     [AMP_EQ_TOKEN] = {NULL, NULL, PREC_NONE},             // &=
-    [BAR_TOKEN] = {NULL, binary, PREC_BIT_OR},            // |
+    [BAR_TOKEN] = {anonymous, binary, PREC_BIT_OR},       // |
     [BAR_EQ_TOKEN] = {NULL, NULL, PREC_NONE},             // |=
     [TILDE_TOKEN] = {unary, NULL, PREC_UNARY},            // ~
     [TILDE_EQ_TOKEN] = {NULL, NULL, PREC_NONE},           // ~=
@@ -1237,35 +1238,28 @@ static void block(b_parser *p) {
   consume(p, RBRACE_TOKEN, "expected '}' after block");
 }
 
-static void function(b_parser *p, b_func_type type) {
-  b_compiler compiler;
-  init_compiler(p, &compiler, type);
-  begin_scope(p);
+static void function_args(b_parser *p) {
+  // compile argument list...
+  do {
+    p->compiler->function->arity++;
+    if (p->compiler->function->arity > MAX_FUNCTION_PARAMETERS) {
+      error_at_current(p, "cannot have more than %d function parameters",
+                       MAX_FUNCTION_PARAMETERS);
+    }
 
-  // compile parameter list
-  consume(p, LPAREN_TOKEN, "expected '(' after function name");
-  if (!check(p, RPAREN_TOKEN)) {
-    // compile argument list...
-    do {
-      p->compiler->function->arity++;
-      if (p->compiler->function->arity > MAX_FUNCTION_PARAMETERS) {
-        error_at_current(p, "cannot have more than %d function parameters",
-                         MAX_FUNCTION_PARAMETERS);
-      }
+    if (match(p, TRIDOT_TOKEN)) {
+      p->compiler->function->is_variadic = true;
+      add_local(p, synthetic_token("__args__"));
+      define_variable(p, 0);
+      break;
+    }
 
-      if (match(p, TRIDOT_TOKEN)) {
-        p->compiler->function->is_variadic = true;
-        add_local(p, synthetic_token("__args__"));
-        define_variable(p, 0);
-        break;
-      }
+    int param_constant = parse_variable(p, "expected parameter name");
+    define_variable(p, param_constant);
+  } while (match(p, COMMA_TOKEN));
+}
 
-      int param_constant = parse_variable(p, "expected parameter name");
-      define_variable(p, param_constant);
-    } while (match(p, COMMA_TOKEN));
-  }
-  consume(p, RPAREN_TOKEN, "expected ')' after function parameters");
-
+static void function_body(b_parser *p, b_compiler *compiler) {
   // compile the body
   consume(p, LBRACE_TOKEN, "expected '{' before function body");
   block(p);
@@ -1279,12 +1273,27 @@ static void function(b_parser *p, b_func_type type) {
     emit_byte_and_short(p, OP_CLOSURE, function_constant);
 
     for (int i = 0; i < function->upvalue_count; i++) {
-      emit_byte(p, compiler.upvalues[i].is_local ? 1 : 0);
-      emit_short(p, compiler.upvalues[i].index);
+      emit_byte(p, compiler->upvalues[i].is_local ? 1 : 0);
+      emit_short(p, compiler->upvalues[i].index);
     }
   } else {
     emit_byte_and_short(p, OP_CONSTANT, function_constant);
   }
+}
+
+static void function(b_parser *p, b_func_type type) {
+  b_compiler compiler;
+  init_compiler(p, &compiler, type);
+  begin_scope(p);
+
+  // compile parameter list
+  consume(p, LPAREN_TOKEN, "expected '(' after function name");
+  if (!check(p, RPAREN_TOKEN)) {
+    function_args(p);
+  }
+  consume(p, RPAREN_TOKEN, "expected ')' after function parameters");
+
+  function_body(p, &compiler);
 }
 
 static void method(b_parser *p, b_token class_name, bool is_static) {
@@ -1299,6 +1308,20 @@ static void method(b_parser *p, b_token class_name, bool is_static) {
   function(p, type);
   emit_byte_and_short(p, OP_METHOD, constant);
   emit_byte(p, is_static ? 1 : 0);
+}
+
+static void anonymous(b_parser *p, bool can_assign) {
+  b_compiler compiler;
+  init_compiler(p, &compiler, TYPE_FUNCTION);
+  begin_scope(p);
+
+  // compile parameter list
+  if (!check(p, BAR_TOKEN)) {
+    function_args(p);
+  }
+  consume(p, BAR_TOKEN, "expected '|' after anonymous function parameters");
+
+  function_body(p, &compiler);
 }
 
 static void field(b_parser *p, bool is_static) {
