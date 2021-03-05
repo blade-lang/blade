@@ -352,9 +352,10 @@ class Date {
   | F         | long month name         | August    |
   | y         | short year              | 09        |
   | Y         | long year               | 2009      |
-  | h         | short hour              | 9         |
-  | H         | long hour               | 09        |
-  | g         | hour in 12 hrs format   | 9         |
+  | h         | 12 hour format of an hour with leader zeros               | 01 to 12        |
+  | H         | 24 hour format of an hour with leader zeros               | 01 to 24        |
+  | g         | 12 hour format of an hour without leader zeros            | 1 to 12         |
+  | G         | 24 hour format of an hour without leader zeros            | 1 to 24         |
   | i         | short minute            | 9         |
   | I         | long minute             | 09        |
   | s         | short second            | 9         |
@@ -364,6 +365,10 @@ class Date {
     var result = ''
     iter var i = 0; i < format.length(); i++ {
       using format[i] {
+        when 'a' {
+          if self.hour >= 12 result += 'pm'
+          else result += 'am'
+        }
         when 'A' {
           if self.hour >= 12 result += 'PM'
           else result += 'AM'
@@ -383,7 +388,11 @@ class Date {
           else result += self.month
         }
         when 'h' {
-          result += self.hour
+          var hour = self.hour
+          if hour > 12 hour -= 12
+
+          if hour <= 9 result += ('0' + hour)
+          else result += hour
         }
         when 'H' {
           if self.hour <= 9 result += ('0' + self.hour)
