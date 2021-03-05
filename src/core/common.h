@@ -56,7 +56,8 @@
 #elif defined(__MINGW64_VERSION_MAJOR)
 
 #define COMPILER                                                               \
-  VERSION_STRING("MinGW-64", __MINGW64_VERSION_MAJOR, __MINGW64_VERSION_MAJOR, 0)
+  VERSION_STRING("MinGW-64", __MINGW64_VERSION_MAJOR, __MINGW64_VERSION_MAJOR, \
+                 0)
 
 #elif defined(__GNUC__)
 

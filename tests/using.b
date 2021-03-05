@@ -8,7 +8,8 @@ using i {
     echo 'five'
   }
   when 10 {
-    echo 'ten'
+    var result = 'ten'
+    echo result
   }
   default {
     echo 'default'

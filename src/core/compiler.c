@@ -162,6 +162,8 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_END_TRY:
   case OP_RANGE:
   case OP_STRINGIFY:
+  case OP_START_CASE:
+  case OP_END_CASE:
     return 0;
 
   case OP_CALL:
@@ -1716,6 +1718,7 @@ static void using_statement(b_parser *p) {
 
         // pop the result of the comparison
         emit_byte(p, OP_POP);
+        emit_byte(p, OP_START_CASE);
       } else {
         state = 2;
         previous_case_skip = -1;
@@ -1740,7 +1743,8 @@ static void using_statement(b_parser *p) {
     patch_jump(p, case_ends[i]);
   }
 
-  emit_byte(p, OP_POP);
+  // emit_byte(p, OP_POP);
+  emit_byte(p, OP_END_CASE);
 }
 
 static void if_statement(b_parser *p) {

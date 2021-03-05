@@ -77,6 +77,8 @@ typedef enum {
   OP_END_TRY,
 
   OP_STRINGIFY,
+  OP_START_CASE,
+  OP_END_CASE,
 
   // the break placeholder... it never gets to the vm
   // care should be taken to
