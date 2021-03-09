@@ -65,7 +65,6 @@ struct s_vm {
 
   // repl flag
   bool is_repl;
-  int using_cases_matched;
 };
 
 void init_vm(b_vm *vm);

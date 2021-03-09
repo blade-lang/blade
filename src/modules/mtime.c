@@ -5,6 +5,13 @@
 #define ADD_TIME(n, l, v)                                                      \
   dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, n, l)), NUMBER_VAL(v))
 
+#define ADD_BTIME(n, l, v)                                                     \
+  dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, n, l)), BOOL_VAL(v))
+
+#define ADD_STIME(n, l, v, g)                                                  \
+  dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, n, l)),                     \
+                 OBJ_VAL(copy_string(vm, v, g)))
+
 DECLARE_MODULE_METHOD(time__localtime) {
   time_t rawtime;
   time(&rawtime);
@@ -15,6 +22,8 @@ DECLARE_MODULE_METHOD(time__localtime) {
   ADD_TIME("year", 4, (double)timeinfo->tm_year + 1900);
   ADD_TIME("month", 5, (double)timeinfo->tm_mon + 1);
   ADD_TIME("day", 3, timeinfo->tm_mday);
+  ADD_TIME("week_day", 8, timeinfo->tm_wday);
+  ADD_TIME("year_day", 8, timeinfo->tm_yday);
   ADD_TIME("hour", 4, timeinfo->tm_hour);
   ADD_TIME("minute", 6, timeinfo->tm_min);
   if (timeinfo->tm_sec <= 59) {
@@ -22,6 +31,13 @@ DECLARE_MODULE_METHOD(time__localtime) {
   } else {
     ADD_TIME("second", 6, 59);
   }
+
+  ADD_BTIME("is_dst", 6, timeinfo->tm_isdst == 1 ? true : false);
+  // set time zone
+  ADD_STIME("zone", 4, timeinfo->tm_zone, (int)strlen(timeinfo->tm_zone));
+
+  // setting gmt offset
+  ADD_TIME("gmt_offset", 10, timeinfo->tm_gmtoff);
 
   RETURN_OBJ(dict);
 }
@@ -36,6 +52,8 @@ DECLARE_MODULE_METHOD(time__gmtime) {
   ADD_TIME("year", 4, (double)timeinfo->tm_year + 1900);
   ADD_TIME("month", 5, (double)timeinfo->tm_mon + 1);
   ADD_TIME("day", 3, timeinfo->tm_mday);
+  ADD_TIME("week_day", 8, timeinfo->tm_wday);
+  ADD_TIME("year_day", 8, timeinfo->tm_yday);
   ADD_TIME("hour", 4, timeinfo->tm_hour);
   ADD_TIME("minute", 6, timeinfo->tm_min);
   if (timeinfo->tm_sec <= 59) {
@@ -43,6 +61,13 @@ DECLARE_MODULE_METHOD(time__gmtime) {
   } else {
     ADD_TIME("second", 6, 59);
   }
+
+  ADD_BTIME("is_dst", 6, timeinfo->tm_isdst == 1 ? true : false);
+  // set time zone
+  ADD_STIME("zone", 4, timeinfo->tm_zone, (int)strlen(timeinfo->tm_zone));
+
+  // setting gmt offset
+  ADD_TIME("gmt_offset", 10, timeinfo->tm_gmtoff);
 
   RETURN_OBJ(dict);
 }
@@ -65,3 +90,5 @@ CREATE_MODULE_LOADER(time) {
 }
 
 #undef ADD_TIME
+#undef ADD_BTIME
+#undef ADD_STIME
