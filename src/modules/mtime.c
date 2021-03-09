@@ -1,4 +1,5 @@
 #include "mtime.h"
+#include "btime.h"
 
 #include <time.h>
 
@@ -13,9 +14,9 @@
                  OBJ_VAL(copy_string(vm, v, g)))
 
 DECLARE_MODULE_METHOD(time__localtime) {
-  time_t rawtime;
-  time(&rawtime);
-  struct tm *timeinfo = localtime(&rawtime);
+  struct timeval rawtime;
+  gettimeofday(&rawtime, NULL);
+  struct tm *timeinfo = localtime(&rawtime.tv_sec);
 
   b_obj_dict *dict = new_dict(vm);
 
@@ -31,6 +32,7 @@ DECLARE_MODULE_METHOD(time__localtime) {
   } else {
     ADD_TIME("second", 6, 59);
   }
+  ADD_TIME("microsecond", 11, rawtime.tv_usec);
 
   ADD_BTIME("is_dst", 6, timeinfo->tm_isdst == 1 ? true : false);
   // set time zone
@@ -43,9 +45,9 @@ DECLARE_MODULE_METHOD(time__localtime) {
 }
 
 DECLARE_MODULE_METHOD(time__gmtime) {
-  time_t rawtime;
-  time(&rawtime);
-  struct tm *timeinfo = gmtime(&rawtime);
+  struct timeval rawtime;
+  gettimeofday(&rawtime, NULL);
+  struct tm *timeinfo = gmtime(&rawtime.tv_sec);
 
   b_obj_dict *dict = new_dict(vm);
 
@@ -61,6 +63,7 @@ DECLARE_MODULE_METHOD(time__gmtime) {
   } else {
     ADD_TIME("second", 6, 59);
   }
+  ADD_TIME("microsecond", 11, rawtime.tv_usec);
 
   ADD_BTIME("is_dst", 6, timeinfo->tm_isdst == 1 ? true : false);
   // set time zone

@@ -128,8 +128,9 @@ class Date {
 
   /*
   Constructor
-  -----------
-  required argument is year
+
+  - All arguments are optional
+  - When no argument is give, the date will be set to the current system date
   */
   Date(year, month, day, hour, minute, second) {
 
@@ -151,6 +152,7 @@ class Date {
       if second self.second = second
       else self.second = 0
     
+      # check for valid input values
       self._Check_Date_Fields(self.year, self.month, self.day, 
           self.hour, self.minute, self.second)
 
@@ -160,6 +162,7 @@ class Date {
       self.zone = 'UTC'
       self.is_dst = false
       self.gmt_offset = 0
+      self.microsecond = 0
 
     } else {
       var date = Date.localtime()
@@ -175,6 +178,7 @@ class Date {
       self.zone = date.zone
       self.is_dst = date.is_dst
       self.gmt_offset = date.gmt_offset
+      self.microsecond = date.microsecond
     }
   }
 
@@ -396,40 +400,44 @@ class Date {
   format(format: string)
   formats the current date based on the specified string
 
-  Birdy Date formatting table
-  | Character | Description             | Example   |
-  |-----------|-------------------------|-----------|
-  | A         | uppercase Ante meridiem and Post meridiem                | AM or PM       |
-  | a         | lowercase Ante meridiem and Post meridiem               | am or pm        |
-  | d         | day of the month with leading zero               | 01 to 31         |
-  | D         | textual representation of a day, three letters               | Mon - Sun        |
-  | j         | day of the month without leading zero               | 1 to 31         |
-  | l         | full textual representation of the day of the week              | Monday - Sunday        |
-  | N         | ISO-8601 numeric representation of the day of the week              | 1 - 7        |
-  | S         | English ordinal suffix for the day of the month, 2 characters             | st, nd, rd or th        |
-  | w         | numeric representation of the day of the week             | 0 - 6        |
-  | z         | the day of the year (starting from 0)            | 0 - 365        |
-  | W         | ISO-8601 week number of year, weeks starting on Monday            | E.g. 33 (the 33rd week of the year)        |
-  | F         | full textual representation of a month, such as January or March         | January - December    |
-  | m         | numeric representation of a month, with leading zeros             | 01 - 12         |
-  | n         | numeric representation of a month, without leading zeros             | 1 - 12         |
-  | M         | short textual representation of a month, three letters              | Jan - Dec        |
-  | t         | number of days in the given month              | 28 - 31        |
-  | L         | whether it's a leap year              | 1 if true, 0 otherwise       |
-  | y         | two digit representation of a year              | e.g. 09 or 99        |
-  | Y         | full numeric representation of a year using 4 digits               | e.g. 2009 or 1999      |
-  | h         | 12 hour format of an hour with leading zeros               | 01 - 12        |
-  | H         | 24 hour format of an hour with leading zeros               | 01 - 24        |
-  | g         | 12 hour format of an hour without leading zeros            | 1 - 12         |
-  | G         | 24 hour format of an hour without leading zeros            | 1 - 24         |
-  | i         | minutes with leading zero            | 00 - 59         |
-  | s         | second with leading zero            | 00 - 59         |
-  | e         | timezone identifier            | e.g. GMT, UTC, WAT        |
-  | I         | whether or not the date is in daylight saving time            | 1 for true, 0 otherwise        |
-  | O         | difference to Greenwich time (GMT) without colon between hours and minutes            | e.g. +0100        |
-  | P         | difference to Greenwich time (GMT) with colon between hours and minutes            | e.g. +01:00        |
-  | Z         | timezone offset in seconds            | -43200 - 50400       |
-  | c         | ISO 8601 date            | e.g. 2020-03-04T15:19:21+00:00      |
+  Bird's Date formatting table
+
+  Character | Description                                               | Example
+  ----------|-----------------------------------------------------------|-----------------------------------
+  A         | uppercase Ante meridiem and Post meridiem                 | AM or PM
+  a         | lowercase Ante meridiem and Post meridiem                 | am or pm
+  d         | day of the month with leading zero                        | 01 to 31
+  D         | textual representation of a day, three letters            | Mon - Sun
+  j         | day of the month without leading zero                     | 1 to 31
+  l         | full textual representation of the day of the week        | Monday - Sunday
+  N         | ISO-8601 numeric representation of the day of the week    | 1 - 7
+  S         | English ordinal suffix for the day of the month           | st, nd, rd or th
+  w         | numeric representation of the day of the week             | 0 - 6
+  z         | the day of the year (starting from 0)                     | 0 - 365
+  W         | ISO-8601 week number of year, weeks starting on Monday    | E.g. 33 (the 33rd week of the year)
+  F         | full textual representation of a month                    | January - December
+  m         | numeric representation of a month, with leading zeros     | 01 - 12
+  n         | numeric representation of a month, without leading zeros  | 1 - 12
+  M         | short textual representation of a month, three letters    | Jan - Dec
+  t         | number of days in the given month                         | 28 - 31
+  L         | whether it's a leap year                                  | 1 if true, 0 otherwise
+  y         | two digit representation of a year                        | e.g. 09 or 99
+  Y         | full numeric representation of a year using 4 digits      | e.g. 2009 or 1999
+  h         | 12 hour format of an hour with leading zeros              | 01 - 12
+  H         | 24 hour format of an hour with leading zeros              | 01 - 24
+  g         | 12 hour format of an hour without leading zeros           | 1 - 12
+  G         | 24 hour format of an hour without leading zeros           | 1 - 24
+  i         | minutes with leading zero                                 | 00 - 59
+  s         | second with leading zero                                  | 00 - 59
+  u         | microsecond                                               | e.g. 987654
+  v         | millisecond                                               | e.g. 987
+  e         | timezone identifier                                       | e.g. GMT, UTC, WAT
+  I         | whether or not the date is in daylight saving time        | 1 for true, 0 otherwise
+  O         | difference to GMT without colon between hours and minutes | e.g. +0100
+  P         | difference to GMT with colon between hours and minutes    | e.g. +01:00
+  Z         | timezone offset in seconds                                | -43200 - 50400
+  c         | ISO 8601 date                                             | e.g. 2020-03-04T15:19:21+00:00
+  r         | RFC 2822 formatted date                                   | e.g. Thu, 21 Dec 2000 16:01:07 +0200
   */
   format(format) {
     var result = ''
@@ -514,6 +522,12 @@ class Date {
           if self.second <= 9 result += '0${self.second}'
           else result += self.second
         }
+        when 'u' {
+          result += self.microsecond
+        }
+        when 'v' {
+          result += int(self.microsecond / 1000)
+        }
         when 'S' {
           var ends = ['th', 'st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th', 'th']
           if (self.day % 100) >= 11 and (self.day % 100) <= 13 {
@@ -576,6 +590,9 @@ class Date {
         }
         when 'c' {
           result += self.format('Y-m-dTh:i:sP')
+        }
+        when 'r' {
+          result += self.format('D, d M Y h:i:s O')
         }
         default {
           result += format[i]
