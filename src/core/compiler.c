@@ -162,8 +162,6 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_END_TRY:
   case OP_RANGE:
   case OP_STRINGIFY:
-  case OP_START_CASE:
-  case OP_END_CASE:
     return 0;
 
   case OP_CALL:
@@ -1680,9 +1678,20 @@ static void for_statement(b_parser *p) {
  * }
  */
 static void using_statement(b_parser *p) {
+  p->using_count++;
+
+  char *using_name_chars = (char *)malloc(sizeof(char));
+  int using_name_length =
+      sprintf(using_name_chars, " using%d ", p->using_count);
+
+  int using_name = make_constant(
+      p, OBJ_VAL(copy_string(p->vm, using_name_chars, using_name_length)));
+
   expression(p); // the expression
   consume(p, LBRACE_TOKEN, "expected '{' after using expression");
   ignore_whitespace(p);
+
+  emit_byte_and_short(p, OP_DEFINE_GLOBAL, using_name);
 
   int state = 0; // 0: before all cases, 1: before default, 2: after default
   int case_ends[MAX_USING_CASES];
@@ -1710,7 +1719,8 @@ static void using_statement(b_parser *p) {
         state = 1;
 
         // check if the case is equal to the value...
-        emit_byte(p, OP_DUP);
+        emit_byte_and_short(p, OP_GET_GLOBAL, using_name);
+        // emit_byte(p, OP_DUP);
         expression(p);
 
         emit_byte(p, OP_EQUAL);
@@ -1718,7 +1728,6 @@ static void using_statement(b_parser *p) {
 
         // pop the result of the comparison
         emit_byte(p, OP_POP);
-        emit_byte(p, OP_START_CASE);
       } else {
         state = 2;
         previous_case_skip = -1;
@@ -1742,9 +1751,6 @@ static void using_statement(b_parser *p) {
   for (int i = 0; i < case_count; i++) {
     patch_jump(p, case_ends[i]);
   }
-
-  // emit_byte(p, OP_POP);
-  emit_byte(p, OP_END_CASE);
 }
 
 static void if_statement(b_parser *p) {
@@ -2071,6 +2077,7 @@ b_obj_func *compile(b_vm *vm, const char *source, const char *file,
   parser.compiler = NULL;
   parser.current_class = NULL;
   parser.current_file = file;
+  parser.using_count = -1;
 
   b_compiler compiler;
   init_compiler(&parser, &compiler, TYPE_SCRIPT);

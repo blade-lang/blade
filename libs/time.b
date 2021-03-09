@@ -76,12 +76,26 @@ class Date {
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
   ]
 
+  # the short name of days in a week
+  # the nil is meant for proper indexing
+  var _Weekdays_Short = [
+    nil,
+    'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'
+  ]
+
+  # the long name of days in a week
+  # the nil is meant for proper indexing
+  var _Weekdays_Long = [
+    nil,
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+  ]
+
   # internal declaration to get the
   # days before month
   static var _Days_before_month = |m, g| {
     var days_before_month = []
     var days = 0
-    for f in Date._Days_In_Month[m,-1] {
+    for f in Date._Days_In_Month[m,Date.MAX_MONTH+1] {
       days_before_month.append(days)
       days += f 
     }
@@ -140,8 +154,12 @@ class Date {
       self._Check_Date_Fields(self.year, self.month, self.day, 
           self.hour, self.minute, self.second)
 
-      /* self.weekday = (Date._Ymd_to_ordinal(self.year, self.month, self.day) + 6) % 7
-      self.day_of_year = Date._Days_before_month(1, self.month) + self.day */
+
+      self.week_day = self.weekday()
+      self.year_day = Date._Days_before_month(1, self.month) + self.day
+      self.zone = 'UTC'
+      self.is_dst = false
+      self.gmt_offset = 0
 
     } else {
       var date = Date.localtime()
@@ -152,6 +170,11 @@ class Date {
       self.hour = date.hour
       self.minute = date.minute
       self.second = date.second
+      self.week_day = date.week_day
+      self.year_day = date.year_day
+      self.zone = date.zone
+      self.is_dst = date.is_dst
+      self.gmt_offset = date.gmt_offset
     }
   }
 
@@ -176,17 +199,18 @@ class Date {
       'year must be in 1..' + Date.MAX_YEAR
     assert year > self.year, 'year must be greater than current year'
 
+    var days_left_in_year, days_in_year
     if self.month < Date.MAX_MONTH {
-      var days_left_in_year = self.days_before_month(Date.MAX_MONTH) + 
+      days_left_in_year = self.days_before_month(Date.MAX_MONTH) + 
           Date._Days_In_Month[Date.MAX_MONTH]
     } else {
-      var days_left_in_year = Date._Days_In_Month[Date.MAX_MONTH] - self.day
+      days_left_in_year = Date._Days_In_Month[Date.MAX_MONTH] - self.day
     }
 
     if self.is_leap() {
-      var days_in_year = 366 - days_left_in_year
+      days_in_year = 366 - days_left_in_year
     } else {
-      var days_in_year = 365 - days_left_in_year
+      days_in_year = 365 - days_left_in_year
     }
       
     var days_till_today = Date._Days_before_year(self.year) + days_in_year
@@ -202,6 +226,20 @@ class Date {
     if month == 2 and Date._Is_leap(year)
       return 29
     return Date._Days_In_Month[month]
+  }
+  /*
+  weekday()
+
+  returns the numbered day of the week
+  */
+  weekday() {
+    var day = self.day, month = self.month, year = self.year
+
+    if month < 3 {
+      day += year--
+    } else day += year - 2
+
+    return int(23 * month/9 + day + 4 + year/4 - year/100 + year/400) % 7
   }
 
   /*
@@ -231,6 +269,24 @@ class Date {
       return -(days_before - day - 1)
 
     return days_before - day
+  }
+
+  week_number() {
+    var year = self.year
+    var d1w1 = ((11 - Date(year, 1, 1).week_day) % 7) - 3
+    var tv
+
+    if self.year_day < d1w1 {
+      d1w1 = ((11 - Date(year - 1, 1, 1).week_day) % 7) - 3
+    } else {
+      tv = ((11 - Date(year + 1, 1, 1).week_day) % 7) - 3
+      if self.year_day >= tv {
+        d1w1 = tv
+        year++
+      }
+    }
+
+    return int((self.year_day - d1w1) / 7) + 1
   }
 
   /*
@@ -343,28 +399,46 @@ class Date {
   Birdy Date formatting table
   | Character | Description             | Example   |
   |-----------|-------------------------|-----------|
-  | A         | AM or PM                | AM        |
-  | d         | short day               | 1         |
-  | D         | long day                | 01        |
-  | m         | short month             | 9         |
-  | M         | long month              | 09        |
-  | E         | short month name        | Aug       |
-  | F         | long month name         | August    |
-  | y         | short year              | 09        |
-  | Y         | long year               | 2009      |
-  | h         | 12 hour format of an hour with leader zeros               | 01 to 12        |
-  | H         | 24 hour format of an hour with leader zeros               | 01 to 24        |
-  | g         | 12 hour format of an hour without leader zeros            | 1 to 12         |
-  | G         | 24 hour format of an hour without leader zeros            | 1 to 24         |
-  | i         | short minute            | 9         |
-  | I         | long minute             | 09        |
-  | s         | short second            | 9         |
-  | S         | long second             | 09        |
+  | A         | uppercase Ante meridiem and Post meridiem                | AM or PM       |
+  | a         | lowercase Ante meridiem and Post meridiem               | am or pm        |
+  | d         | day of the month with leading zero               | 01 to 31         |
+  | D         | textual representation of a day, three letters               | Mon - Sun        |
+  | j         | day of the month without leading zero               | 1 to 31         |
+  | l         | full textual representation of the day of the week              | Monday - Sunday        |
+  | N         | ISO-8601 numeric representation of the day of the week              | 1 - 7        |
+  | S         | English ordinal suffix for the day of the month, 2 characters             | st, nd, rd or th        |
+  | w         | numeric representation of the day of the week             | 0 - 6        |
+  | z         | the day of the year (starting from 0)            | 0 - 365        |
+  | W         | ISO-8601 week number of year, weeks starting on Monday            | E.g. 33 (the 33rd week of the year)        |
+  | F         | full textual representation of a month, such as January or March         | January - December    |
+  | m         | numeric representation of a month, with leading zeros             | 01 - 12         |
+  | n         | numeric representation of a month, without leading zeros             | 1 - 12         |
+  | M         | short textual representation of a month, three letters              | Jan - Dec        |
+  | t         | number of days in the given month              | 28 - 31        |
+  | L         | whether it's a leap year              | 1 if true, 0 otherwise       |
+  | y         | two digit representation of a year              | e.g. 09 or 99        |
+  | Y         | full numeric representation of a year using 4 digits               | e.g. 2009 or 1999      |
+  | h         | 12 hour format of an hour with leading zeros               | 01 - 12        |
+  | H         | 24 hour format of an hour with leading zeros               | 01 - 24        |
+  | g         | 12 hour format of an hour without leading zeros            | 1 - 12         |
+  | G         | 24 hour format of an hour without leading zeros            | 1 - 24         |
+  | i         | minutes with leading zero            | 00 - 59         |
+  | s         | second with leading zero            | 00 - 59         |
+  | e         | timezone identifier            | e.g. GMT, UTC, WAT        |
+  | I         | whether or not the date is in daylight saving time            | 1 for true, 0 otherwise        |
+  | O         | difference to Greenwich time (GMT) without colon between hours and minutes            | e.g. +0100        |
+  | P         | difference to Greenwich time (GMT) with colon between hours and minutes            | e.g. +01:00        |
+  | Z         | timezone offset in seconds            | -43200 - 50400       |
+  | c         | ISO 8601 date            | e.g. 2020-03-04T15:19:21+00:00      |
   */
   format(format) {
     var result = ''
     iter var i = 0; i < format.length(); i++ {
       using format[i] {
+        when '\\' {
+          i++
+          result += format[i]
+        }
         when 'a' {
           if self.hour >= 12 result += 'pm'
           else result += 'am'
@@ -374,47 +448,79 @@ class Date {
           else result += 'AM'
         }
         when 'd' {
+          if self.day <= 9 result += '0${self.day}'
+          else result += self.day
+        }
+        when 'j' {
           result += self.day
         }
         when 'D' {
-          if self.day <= 9 result += ('0' + self.day)
-          else result += self.day
+          result += self._Weekdays_Short[self.week_day]
+        }
+        when 'l' {
+          result += self._Weekdays_Long[self.week_day]
+        }
+        when 'N' {
+          result += self.week_day
+        }
+        when 'w' {
+          result += self.week_day - 1
+        }
+        when 'z' {
+          result += Date._Days_before_month(0,self.month) + self.day
+        }
+        when 'W' {
+          result += self.week_number()
         }
         when 'm' {
+          if self.month <= 9 result += '0${self.month}'
+          else result += self.month
+        }
+        when 'n' {
           result += self.month
         }
-        when 'M' {
-          if self.month <= 9 result += ('0' + self.month)
-          else result += self.month
+        when 't' {
+          result += Date._Days_In_Month[self.month]
+        }
+        when 'L' {
+          if self.is_leap() result += 1
+          else result += 0
         }
         when 'h' {
           var hour = self.hour
           if hour > 12 hour -= 12
 
-          if hour <= 9 result += ('0' + hour)
+          if hour <= 9 result += '0${hour}'
           else result += hour
         }
-        when 'H' {
-          if self.hour <= 9 result += ('0' + self.hour)
-          else result += self.hour
+        when 'M' {
+          result += self._Months_In_Year_Short[self.month]
+        }
+        when 'F' {
+          result += self._Months_In_Year[self.month]
         }
         when 'g' {
           if self.hour <= 12 result += self.hour
           else result += self.hour - 12
         }
-        when 'i' {
-          result += self.minute
+        when 'G' {
+          result += self.hour
         }
-        when 'I' {
-          if self.minute <= 9 result += ('0' + self.minute)
+        when 'i' {
+          if self.minute <= 9 result += '0${self.minute}'
           else result += self.minute
         }
         when 's' {
-          result += self.second
+          if self.second <= 9 result += '0${self.second}'
+          else result += self.second
         }
         when 'S' {
-          if self.second <= 9 result += ('0' + self.second)
-          else result += self.second
+          var ends = ['th', 'st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th', 'th']
+          if (self.day % 100) >= 11 and (self.day % 100) <= 13 {
+            result += 'th'
+          } else {
+            result += ends[self.day % 10]
+          }
         }
         when 'y' {
           result += to_string(self.year)[2,-1]
@@ -422,11 +528,54 @@ class Date {
         when 'Y' {
           result += self.year
         }
-        when 'E' {
-          result += self._Months_In_Year_Short[self.month]
+        when 'e' {
+          result += self.zone
         }
-        when 'F' {
-          result += self._Months_In_Year[self.month]
+        when 'I' {
+          if self.is_dst result += 1
+          else result += 0
+        }
+        when 'O' {
+          var hour = int(self.gmt_offset / 3600)
+          var minute = self.gmt_offset % 60
+
+          if hour > 0 {
+            if hour <= 9 result += '+0${hour}'
+            else result += '+${hour}'
+          } else if hour == 0 {
+            if minute < 0 result += '-00'
+            else result += '+00'
+          } else {
+            if hour >= -9 result += '-0${hour}'
+            else result += '-${hour}'
+          }
+
+          if minute <= 9 result += '0${minute}'
+          else result += minute
+        }
+        when 'P' {
+          var hour = int(self.gmt_offset / 3600)
+          var minute = self.gmt_offset % 60
+
+          if hour > 0 {
+            if hour <= 9 result += '+0${hour}'
+            else result += '+${hour}'
+          } else if hour == 0 {
+            if minute < 0 result += '-00'
+            else result += '+00'
+          } else {
+            if hour >= -9 result += '-0${hour}'
+            else result += '-${hour}'
+          }
+
+          if minute <= 9 result += ':0${minute}'
+          else result += ':${minute}'
+        }
+        when 'Z' {
+          result += self.gmt_offset
+        }
+        when 'c' {
+          result += self.format('Y-m-dTh:i:sP')
         }
         default {
           result += format[i]

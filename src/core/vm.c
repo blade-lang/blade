@@ -378,7 +378,6 @@ void init_vm(b_vm *vm) {
   vm->bytes_allocated = 0;
   vm->next_gc = 1024 * 1024; // 1mb
   vm->is_repl = false;
-  vm->using_cases_matched = 0;
 
   vm->gray_count = 0;
   vm->gray_capacity = 0;
@@ -1870,20 +1869,6 @@ b_ptr_result run(b_vm *vm) {
       b_catch_frame *catch_frame = vm->catch_frame->previous;
       free(vm->catch_frame);
       vm->catch_frame = catch_frame;
-      break;
-    }
-
-    case OP_START_CASE: {
-      vm->using_cases_matched++;
-      pop(vm);
-      break;
-    }
-    case OP_END_CASE: {
-      if (vm->using_cases_matched == 0) {
-        pop(vm);
-      }
-      if (vm->using_cases_matched != 0)
-        --vm->using_cases_matched;
       break;
     }
 

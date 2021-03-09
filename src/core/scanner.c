@@ -158,9 +158,8 @@ b_token skip_whitespace(b_scanner *s) {
 }
 
 static b_token string(b_scanner *s, char quote) {
-  while (
-      ((previous(s) == '\\' && current(s) == quote) || current(s) != quote) &&
-      !is_at_end(s)) {
+  while (current(s) != quote && !is_at_end(s)) {
+
     if (current(s) == '$' && next(s) == '{' &&
         previous(s) != '\\') { // interpolation started
       if (s->interpolating_count - 1 < MAX_INTERPOLATION_NESTING) {
@@ -176,6 +175,9 @@ static b_token string(b_scanner *s, char quote) {
           s, "maximum interpolation nesting of %d exceeded by %d", 1,
           MAX_INTERPOLATION_NESTING,
           MAX_INTERPOLATION_NESTING - s->interpolating_count + 1);
+    }
+    if (current(s) == '\\' && next(s) == quote && previous(s) != '\\') {
+      advance(s);
     }
     advance(s);
   }

@@ -190,10 +190,6 @@ int disassemble_instruction(b_blob *blob, int offset) {
     return simple_instruction("assrt", offset);
   case OP_POPN:
     return short_instruction("popn", blob, offset);
-  case OP_START_CASE:
-    return short_instruction("scase", blob, offset);
-  case OP_END_CASE:
-    return short_instruction("ecase", blob, offset);
 
     // data container manipulators
   case OP_RANGE:
