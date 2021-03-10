@@ -24,14 +24,14 @@ class Date {
   static var MAX_MONTH = 12
   static var MAX_HOUR = 23
   static var MAX_MINUTE = 59
-  static var MAX_SECOND = 59
+  static var MAX_seconds = 59
 
   _Check_Int_Field(field, name) {
     if !is_int(field)
       die Exception('${name} must be an integer')
   }
 
-  _Check_Date_Fields(year, month, day, hour, minute, second) {
+  _Check_Date_Fields(year, month, day, hour, minute, seconds) {
     self._Check_Int_Field(year, 'year')
     self._Check_Int_Field(month, 'month')
     self._Check_Int_Field(day, 'day')
@@ -46,14 +46,14 @@ class Date {
 
     self._Check_Int_Field(hour, 'hour')
     self._Check_Int_Field(minute, 'minute')
-    self._Check_Int_Field(second, 'second')
+    self._Check_Int_Field(seconds, 'seconds')
 
     if 0 > hour or hour > 23
       die Exception('hour must be in 0..23')
     if 0 > minute or minute > 59
       die Exception('minute must be in 0..59')
-    if 0 > second or second > 59
-      die Exception('second must be in 0..59')
+    if 0 > seconds or seconds > 59
+      die Exception('seconds must be in 0..59')
   }
 
   # the number of days in each month of the year
@@ -132,7 +132,7 @@ class Date {
   - All arguments are optional
   - When no argument is give, the date will be set to the current system date
   */
-  Date(year, month, day, hour, minute, second) {
+  Date(year, month, day, hour, minute, seconds) {
 
     if year {
       self.year = year
@@ -149,12 +149,12 @@ class Date {
       if minute self.minute = minute
       else self.minute = 0
 
-      if second self.second = second
-      else self.second = 0
+      if seconds self.seconds = seconds
+      else self.seconds = 0
     
       # check for valid input values
       self._Check_Date_Fields(self.year, self.month, self.day, 
-          self.hour, self.minute, self.second)
+          self.hour, self.minute, self.seconds)
 
 
       self.week_day = self.weekday()
@@ -162,7 +162,7 @@ class Date {
       self.zone = 'UTC'
       self.is_dst = false
       self.gmt_offset = 0
-      self.microsecond = 0
+      self.microseconds = 0
 
     } else {
       var date = Date.localtime()
@@ -172,13 +172,13 @@ class Date {
       self.day = date.day
       self.hour = date.hour
       self.minute = date.minute
-      self.second = date.second
+      self.seconds = date.seconds
       self.week_day = date.week_day
       self.year_day = date.year_day
       self.zone = date.zone
       self.is_dst = date.is_dst
       self.gmt_offset = date.gmt_offset
-      self.microsecond = date.microsecond
+      self.microseconds = date.microseconds
     }
   }
 
@@ -371,11 +371,13 @@ class Date {
       assert leapyear == Date._Is_leap(year)
 
       month = (n + 50) >> 5
-      var preceding = Date._Days_before_month(0, month) + to_number(month > 2 and leapyear)
+      var preceding = Date._Days_before_month(0, month) + 
+            to_number(month > 2 and leapyear)
       
       if preceding > n {  # estimate is too large
         month -= 1
-        preceding -= Date._Days_In_Month[month] + to_number(month == 2 and leapyear)
+        preceding -= Date._Days_In_Month[month] + 
+            to_number(month == 2 and leapyear)
       }
       day = n - preceding + 1
     }
@@ -428,9 +430,9 @@ class Date {
   g         | 12 hour format of an hour without leading zeros           | 1 - 12
   G         | 24 hour format of an hour without leading zeros           | 1 - 24
   i         | minutes with leading zero                                 | 00 - 59
-  s         | second with leading zero                                  | 00 - 59
-  u         | microsecond                                               | e.g. 987654
-  v         | millisecond                                               | e.g. 987
+  s         | seconds with leading zero                                  | 00 - 59
+  u         | microseconds                                               | e.g. 987654
+  v         | milliseconds                                               | e.g. 987
   e         | timezone identifier                                       | e.g. GMT, UTC, WAT
   I         | whether or not the date is in daylight saving time        | 1 for true, 0 otherwise
   O         | difference to GMT without colon between hours and minutes | e.g. +0100
@@ -519,14 +521,14 @@ class Date {
           else result += self.minute
         }
         when 's' {
-          if self.second <= 9 result += '0${self.second}'
-          else result += self.second
+          if self.seconds <= 9 result += '0${self.seconds}'
+          else result += self.seconds
         }
         when 'u' {
-          result += self.microsecond
+          result += self.microseconds
         }
         when 'v' {
-          result += int(self.microsecond / 1000)
+          result += int(self.microseconds / 1000)
         }
         when 'S' {
           var ends = ['th', 'st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th', 'th']
@@ -601,5 +603,37 @@ class Date {
     }
 
     return result
+  }
+
+  /* 
+  jd() 
+  
+  converts the current date to a julian day
+  */
+  jd() {
+    /* var y = self.year + 8000
+    var m = self.month
+
+    if m < 3 {
+      y--
+      m += 12
+    }
+
+    return int(y*365) + int(y/4) - int(y/100) + int(y/400) - 1200820 + 
+        int((m * 153 + 3)/5) -92 + 
+        self.day - 1 */
+
+    # calculate the julian day i.e. Y-m-d value
+    var jday = int(367 * self.year - 7 * (self.year + (self.month + 9) / 12) / 4 +
+              275 * self.month / 9 +
+              self.day + 1721014)
+
+    # calculate the time i.e. h:m:s value
+    var jdate = jday - 0.5
+    jdate += self.hour / 24.0
+    jdate += self.minute / 1440.0
+    jdate += self.seconds / 86400.0
+
+    return jdate
   }
 }

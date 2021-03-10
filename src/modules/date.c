@@ -1,4 +1,4 @@
-#include "mtime.h"
+#include "date.h"
 #include "btime.h"
 
 #include <time.h>
@@ -13,7 +13,7 @@
   dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, n, l)),                     \
                  OBJ_VAL(copy_string(vm, v, g)))
 
-DECLARE_MODULE_METHOD(time__localtime) {
+DECLARE_MODULE_METHOD(date__localtime) {
   struct timeval rawtime;
   gettimeofday(&rawtime, NULL);
   struct tm *timeinfo = localtime(&rawtime.tv_sec);
@@ -28,11 +28,11 @@ DECLARE_MODULE_METHOD(time__localtime) {
   ADD_TIME("hour", 4, timeinfo->tm_hour);
   ADD_TIME("minute", 6, timeinfo->tm_min);
   if (timeinfo->tm_sec <= 59) {
-    ADD_TIME("second", 6, timeinfo->tm_sec);
+    ADD_TIME("seconds", 6, timeinfo->tm_sec);
   } else {
-    ADD_TIME("second", 6, 59);
+    ADD_TIME("seconds", 6, 59);
   }
-  ADD_TIME("microsecond", 11, rawtime.tv_usec);
+  ADD_TIME("microseconds", 11, rawtime.tv_usec);
 
   ADD_BTIME("is_dst", 6, timeinfo->tm_isdst == 1 ? true : false);
   // set time zone
@@ -44,7 +44,7 @@ DECLARE_MODULE_METHOD(time__localtime) {
   RETURN_OBJ(dict);
 }
 
-DECLARE_MODULE_METHOD(time__gmtime) {
+DECLARE_MODULE_METHOD(date__gmtime) {
   struct timeval rawtime;
   gettimeofday(&rawtime, NULL);
   struct tm *timeinfo = gmtime(&rawtime.tv_sec);
@@ -59,11 +59,11 @@ DECLARE_MODULE_METHOD(time__gmtime) {
   ADD_TIME("hour", 4, timeinfo->tm_hour);
   ADD_TIME("minute", 6, timeinfo->tm_min);
   if (timeinfo->tm_sec <= 59) {
-    ADD_TIME("second", 6, timeinfo->tm_sec);
+    ADD_TIME("seconds", 6, timeinfo->tm_sec);
   } else {
-    ADD_TIME("second", 6, 59);
+    ADD_TIME("seconds", 6, 59);
   }
-  ADD_TIME("microsecond", 11, rawtime.tv_usec);
+  ADD_TIME("microseconds", 11, rawtime.tv_usec);
 
   ADD_BTIME("is_dst", 6, timeinfo->tm_isdst == 1 ? true : false);
   // set time zone
@@ -77,8 +77,8 @@ DECLARE_MODULE_METHOD(time__gmtime) {
 
 CREATE_MODULE_LOADER(time) {
   static b_func_reg date_class_functions[] = {
-      {"localtime", true, GET_MODULE_METHOD(time__localtime)},
-      {"gmtime", true, GET_MODULE_METHOD(time__gmtime)},
+      {"localtime", true, GET_MODULE_METHOD(date__localtime)},
+      {"gmtime", true, GET_MODULE_METHOD(date__gmtime)},
       {NULL, false, NULL},
   };
 
