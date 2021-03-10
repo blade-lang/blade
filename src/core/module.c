@@ -20,7 +20,7 @@ b_module_registry modules[] = {
     {"io", GET_MODULE_LOADER(io)},         //
     {"base64", GET_MODULE_LOADER(base64)}, //
     {"math", GET_MODULE_LOADER(math)},     //
-    {"time", GET_MODULE_LOADER(time)},     //
+    {"date", GET_MODULE_LOADER(date)},     //
     {NULL, NULL},
 };
 

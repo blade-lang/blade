@@ -13,6 +13,11 @@ Jade's implementation of date
 
 A date here refers to a calendar day consisting of
 year, month and day
+
+Julian date conversion is based on the C implementation at:
+http://www.lsc-group.phys.uwm.edu/lal/slug/nightly/doxygen.old/html/Julian_8c-source.html
+and
+https://stackoverflow.com/questions/29627533/conversion-of-julian-date-number-to-normal-date-utc-in-javascript
 */
 class Date {
 
@@ -99,7 +104,7 @@ class Date {
       days_before_month.append(days)
       days += f 
     }
-    return days_before_month[g]
+    return days_before_month[g - m]
   }
 
   static var _Days_before_year = |year| {
@@ -120,7 +125,7 @@ class Date {
       dim = 29
     else dim = Date._Days_In_Month[month]
     
-    assert day >= 1 and day <= dim, 'day must be in 1..%d'
+    assert day >= 1 and day <= dim, 'day must be in 1..${dim}'
     return (Date._Days_before_year(year) +
             Date._Days_before_month(0, month) +
             day)
@@ -187,6 +192,12 @@ class Date {
 
   # cask method for native localtime
   static localtime() {}
+
+  # creates a unix timestamp from the given date
+  # - only year is required
+  # - is_dst must be boolean specifying if the time given is in
+  #   daylight saving time.
+  __mktime(year, month, day, hour, minute, seconds, gmt_off, is_dst) {}
 
   /*
   is_leap() returns true if the year is a leap year or false otherwise
@@ -611,18 +622,6 @@ class Date {
   converts the current date to a julian day
   */
   jd() {
-    /* var y = self.year + 8000
-    var m = self.month
-
-    if m < 3 {
-      y--
-      m += 12
-    }
-
-    return int(y*365) + int(y/4) - int(y/100) + int(y/400) - 1200820 + 
-        int((m * 153 + 3)/5) -92 + 
-        self.day - 1 */
-
     # calculate the julian day i.e. Y-m-d value
     var jday = int(367 * self.year - 7 * (self.year + (self.month + 9) / 12) / 4 +
               275 * self.month / 9 +
@@ -630,10 +629,54 @@ class Date {
 
     # calculate the time i.e. h:m:s value
     var jdate = jday - 0.5
-    jdate += self.hour / 24.0
+    jdate += (self.hour + 12) / 24.0
     jdate += self.minute / 1440.0
     jdate += self.seconds / 86400.0
 
     return jdate
+  }
+
+  static from_jd(jdate) {
+    if jdate < 0 die Exception('Invalid julian date')
+
+    var x = jdate + 0.5, z = int(x), f = x - z
+    var y = int((z - 1867216.25) / 36524.25)
+    var a = z + 1 + y - int(y / 4), b = a + 1524
+    var c = int((b - 122.1) / 365.25), d = int(365.25 * c)
+    var g = int((b - d) / 30.6001)
+
+    var month
+    if g < 13.5 month = g - 1
+    else month = g - 13
+
+    var year
+    if month < 2.5 year = c - 4715 # if month is january or february
+    else year = c - 4716
+
+    var ut = b - d - int(30.6001 * g) + f
+    var day = int(ut)
+
+    # calculate time
+    ut -= int(ut)
+    ut *= 24
+
+    var hour = int(ut)
+
+    ut -= int(ut)
+    ut *= 60
+
+    var minute = int(ut)
+
+    ut -= int(ut)
+    ut *= 60
+
+    var seconds = int(ut)
+
+    return Date(year, month, day, hour, minute, seconds)
+  }
+
+  unix_time() {
+    return self.__mktime(self.year, self.month, self.day, self.hour, 
+              self.minute, self.seconds, self.gmt_offset, self.is_dst)
   }
 }
