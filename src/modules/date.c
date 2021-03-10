@@ -13,6 +13,52 @@
   dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, n, l)),                     \
                  OBJ_VAL(copy_string(vm, v, g)))
 
+DECLARE_MODULE_METHOD(date____mktime) {
+  ENFORCE_ARG_RANGE(mktime, 1, 8);
+
+  if (arg_count < 8) {
+    for (int i = 0; i < arg_count; i++) {
+      ENFORCE_ARG_TYPE(mktime, i, IS_NUMBER);
+    }
+  } else {
+    for (int i = 0; i < 7; i++) {
+      ENFORCE_ARG_TYPE(mktime, i, IS_NUMBER);
+    }
+    ENFORCE_ARG_TYPE(mktime, 7, IS_BOOL);
+  }
+
+  int year = -1900, month = 1, day = 1, hour = 0, minute = 0, seconds = 0,
+      is_dst = 0, gmt_off = 0;
+  year += AS_NUMBER(args[0]);
+
+  if (arg_count > 1)
+    month = AS_NUMBER(args[1]);
+  if (arg_count > 2)
+    day = AS_NUMBER(args[2]);
+  if (arg_count > 3)
+    hour = AS_NUMBER(args[3]);
+  if (arg_count > 4)
+    minute = AS_NUMBER(args[4]);
+  if (arg_count > 5)
+    seconds = AS_NUMBER(args[5]);
+  if (arg_count > 6)
+    gmt_off = AS_NUMBER(args[6]);
+  if (arg_count > 7)
+    is_dst = AS_BOOL(args[6]) ? 1 : 0;
+
+  struct tm t;
+  t.tm_year = year;
+  t.tm_mon = month - 1;
+  t.tm_mday = day;
+  t.tm_hour = hour;
+  t.tm_min = minute;
+  t.tm_sec = seconds;
+  t.tm_isdst = is_dst;
+  t.tm_gmtoff = gmt_off;
+
+  RETURN_NUMBER((long)mktime(&t));
+}
+
 DECLARE_MODULE_METHOD(date__localtime) {
   struct timeval rawtime;
   gettimeofday(&rawtime, NULL);
@@ -28,11 +74,11 @@ DECLARE_MODULE_METHOD(date__localtime) {
   ADD_TIME("hour", 4, timeinfo->tm_hour);
   ADD_TIME("minute", 6, timeinfo->tm_min);
   if (timeinfo->tm_sec <= 59) {
-    ADD_TIME("seconds", 6, timeinfo->tm_sec);
+    ADD_TIME("seconds", 7, timeinfo->tm_sec);
   } else {
-    ADD_TIME("seconds", 6, 59);
+    ADD_TIME("seconds", 7, 59);
   }
-  ADD_TIME("microseconds", 11, rawtime.tv_usec);
+  ADD_TIME("microseconds", 12, rawtime.tv_usec);
 
   ADD_BTIME("is_dst", 6, timeinfo->tm_isdst == 1 ? true : false);
   // set time zone
@@ -59,11 +105,11 @@ DECLARE_MODULE_METHOD(date__gmtime) {
   ADD_TIME("hour", 4, timeinfo->tm_hour);
   ADD_TIME("minute", 6, timeinfo->tm_min);
   if (timeinfo->tm_sec <= 59) {
-    ADD_TIME("seconds", 6, timeinfo->tm_sec);
+    ADD_TIME("seconds", 7, timeinfo->tm_sec);
   } else {
-    ADD_TIME("seconds", 6, 59);
+    ADD_TIME("seconds", 7, 59);
   }
-  ADD_TIME("microseconds", 11, rawtime.tv_usec);
+  ADD_TIME("microseconds", 12, rawtime.tv_usec);
 
   ADD_BTIME("is_dst", 6, timeinfo->tm_isdst == 1 ? true : false);
   // set time zone
@@ -75,10 +121,11 @@ DECLARE_MODULE_METHOD(date__gmtime) {
   RETURN_OBJ(dict);
 }
 
-CREATE_MODULE_LOADER(time) {
+CREATE_MODULE_LOADER(date) {
   static b_func_reg date_class_functions[] = {
       {"localtime", true, GET_MODULE_METHOD(date__localtime)},
       {"gmtime", true, GET_MODULE_METHOD(date__gmtime)},
+      {"__mktime", false, GET_MODULE_METHOD(date____mktime)},
       {NULL, false, NULL},
   };
 

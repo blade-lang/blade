@@ -5,6 +5,6 @@
 #include "native.h"
 #include "value.h"
 
-CREATE_MODULE_LOADER(time);
+CREATE_MODULE_LOADER(date);
 
 #endif
