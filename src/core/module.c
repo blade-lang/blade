@@ -3,9 +3,9 @@
 #include "value.h"
 
 #include "modules/base64.h"
+#include "modules/date.h"
 #include "modules/io.h"
 #include "modules/math.h"
-#include "modules/mtime.h"
 #include "modules/os.h"
 
 typedef b_module_reg (*b_module_func)(b_vm *);
