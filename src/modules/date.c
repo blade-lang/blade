@@ -16,19 +16,19 @@
 DECLARE_MODULE_METHOD(date____mktime) {
   ENFORCE_ARG_RANGE(mktime, 1, 8);
 
-  if (arg_count < 8) {
+  if (arg_count < 7) {
     for (int i = 0; i < arg_count; i++) {
       ENFORCE_ARG_TYPE(mktime, i, IS_NUMBER);
     }
   } else {
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < 6; i++) {
       ENFORCE_ARG_TYPE(mktime, i, IS_NUMBER);
     }
-    ENFORCE_ARG_TYPE(mktime, 7, IS_BOOL);
+    ENFORCE_ARG_TYPE(mktime, 6, IS_BOOL);
   }
 
   int year = -1900, month = 1, day = 1, hour = 0, minute = 0, seconds = 0,
-      is_dst = 0, gmt_off = 0;
+      is_dst = 0;
   year += AS_NUMBER(args[0]);
 
   if (arg_count > 1)
@@ -42,9 +42,7 @@ DECLARE_MODULE_METHOD(date____mktime) {
   if (arg_count > 5)
     seconds = AS_NUMBER(args[5]);
   if (arg_count > 6)
-    gmt_off = AS_NUMBER(args[6]);
-  if (arg_count > 7)
-    is_dst = AS_BOOL(args[6]) ? 1 : 0;
+    is_dst = AS_BOOL(args[5]) ? 1 : 0;
 
   struct tm t;
   t.tm_year = year;
@@ -54,7 +52,6 @@ DECLARE_MODULE_METHOD(date____mktime) {
   t.tm_min = minute;
   t.tm_sec = seconds;
   t.tm_isdst = is_dst;
-  t.tm_gmtoff = gmt_off;
 
   RETURN_NUMBER((long)mktime(&t));
 }

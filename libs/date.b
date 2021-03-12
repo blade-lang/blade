@@ -197,7 +197,7 @@ class Date {
   # - only year is required
   # - is_dst must be boolean specifying if the time given is in
   #   daylight saving time.
-  __mktime(year, month, day, hour, minute, seconds, gmt_off, is_dst) {}
+  __mktime(year, month, day, hour, minute, seconds, is_dst) {}
 
   /*
   is_leap() returns true if the year is a leap year or false otherwise
@@ -677,6 +677,6 @@ class Date {
 
   unix_time() {
     return self.__mktime(self.year, self.month, self.day, self.hour, 
-              self.minute, self.seconds, self.gmt_offset, self.is_dst)
+              self.minute, self.seconds, self.is_dst)
   }
 }
