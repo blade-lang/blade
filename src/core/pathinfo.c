@@ -147,15 +147,27 @@ char *resolve_import_path(char *module_name, const char *current_file) {
   char *file_directory = dirname((char *)current_file);
   char *relative_file = merge_paths(file_directory, bird_file_name);
 
-  if (file_exists(relative_file))
-    return relative_file;
+  if (file_exists(relative_file)) {
+    // stop a user module from importing itself
+    char *path1 = realpath(relative_file, NULL);
+    char *path2 = realpath(current_file, NULL);
+
+    if (memcmp(path1, path2, (int)strlen(path2)) != 0)
+      return relative_file;
+  }
 
   // check in bird's default location
   char *bird_directory = merge_paths(get_exe_dir(), LIBRARY_DIRECTORY);
   char *library_file = merge_paths(bird_directory, bird_file_name);
 
-  if (file_exists(library_file))
-    return library_file;
+  if (file_exists(library_file)) {
+    // stop a core library from importing itself
+    char *path1 = realpath(library_file, NULL);
+    char *path2 = realpath(current_file, NULL);
+
+    if (memcmp(path1, path2, (int)strlen(path2)) != 0)
+      return library_file;
+  }
 
   return NULL;
 }

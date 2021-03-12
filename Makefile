@@ -22,19 +22,19 @@ debug:
 
 
 test:
-	@ ./build/birdd tests/$(call args,main).b
+	@ ./birdd tests/$(call args,main).b
 
 # test for release
 rtest:
-	@ ./build/bird tests/$(call args,main).b
+	@ ./bird tests/$(call args,main).b
 
 # module test
-mtest:
-	@ ./build/birdd tests/modules/$(call args,main).b
+ltest:
+	@ ./birdd tests/libs/$(call args,main).b
 
 # module release test
 gtest:
-	@ ./build/bird tests/modules/$(call args,main).b
+	@ ./bird tests/libs/$(call args,main).b
 
 internal:
 	@ $(MAKE) make_internal
@@ -44,11 +44,11 @@ tests:
 	@ bash run-tests.sh
 
 bench:
-	@ ./build/birdd benchmarks/bench-$(call args,main).b
+	@ ./birdd benchmarks/bench-$(call args,main).b
 
 # benchmark for release
 rbench:
-	@ ./build/bird benchmarks/bench-$(call args,main).b
+	@ ./bird benchmarks/bench-$(call args,main).b
 
 
 .PHONY: clean release debug test tests
