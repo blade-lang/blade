@@ -1,6 +1,6 @@
 import 'date'
 
-var total = 10000
+var total = 100000
 var start = time()
 
 iter var i = 0; i < total; i++ {
