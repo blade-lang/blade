@@ -1683,7 +1683,7 @@ static void using_statement(b_parser *p) {
   char *using_name_chars = (char *)calloc(
       // fixed abort trap 6 on release
       snprintf(NULL, 0, " using%d ", p->using_count), //
-      sizeof(char *));
+      sizeof(char));
 
   int using_name_length =
       sprintf(using_name_chars, " using%d ", p->using_count);

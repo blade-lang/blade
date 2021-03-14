@@ -76,7 +76,7 @@ DECLARE_MODULE_METHOD(date__localtime) {
   } else {
     ADD_TIME("seconds", 7, 59);
   }
-  ADD_TIME("microseconds", 12, rawtime.tv_usec);
+  ADD_TIME("microseconds", 12, (double)rawtime.tv_usec);
 
   ADD_BTIME("is_dst", 6, timeinfo->tm_isdst == 1 ? true : false);
   // set time zone
@@ -109,7 +109,7 @@ DECLARE_MODULE_METHOD(date__gmtime) {
   } else {
     ADD_TIME("seconds", 7, 59);
   }
-  ADD_TIME("microseconds", 12, rawtime.tv_usec);
+  ADD_TIME("microseconds", 12, (double)rawtime.tv_usec);
 
   ADD_BTIME("is_dst", 6, timeinfo->tm_isdst == 1 ? true : false);
   // set time zone
