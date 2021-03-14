@@ -152,7 +152,7 @@ char *resolve_import_path(char *module_name, const char *current_file) {
     char *path1 = realpath(relative_file, NULL);
     char *path2 = realpath(current_file, NULL);
 
-    if (memcmp(path1, path2, (int)strlen(path2)) != 0)
+    if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
       return relative_file;
   }
 
@@ -165,7 +165,7 @@ char *resolve_import_path(char *module_name, const char *current_file) {
     char *path1 = realpath(library_file, NULL);
     char *path2 = realpath(current_file, NULL);
 
-    if (memcmp(path1, path2, (int)strlen(path2)) != 0)
+    if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
       return library_file;
   }
 
