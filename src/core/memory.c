@@ -67,9 +67,8 @@ void mark_object(b_vm *vm, b_obj *object) {
 }
 
 void mark_value(b_vm *vm, b_value value) {
-  if (!IS_OBJ(value))
-    return;
-  mark_object(vm, AS_OBJ(value));
+  if (IS_OBJ(value))
+    mark_object(vm, AS_OBJ(value));
 }
 
 static void mark_array(b_vm *vm, b_value_arr *array) {
