@@ -34,6 +34,10 @@
 #define AS_INSTANCE(v) ((b_obj_instance *)AS_OBJ(v))
 #define AS_BOUND(v) ((b_obj_bound *)AS_OBJ(v))
 
+// non-user obects
+#define AS_SWITCH(v) ((b_obj_switch *)AS_OBJ(v))
+#define IS_SWITCH(v) is_obj_type(v, OBJ_SWITCH)
+
 // containers
 #define AS_BYTES(v) ((b_obj_bytes *)AS_OBJ(v))
 #define AS_LIST(v) ((b_obj_list *)AS_OBJ(v))
@@ -46,6 +50,9 @@
 #define IS_CHAR(v) (IS_STRING(v) && AS_STRING(v)->length == 1)
 
 typedef enum {
+  // non-user objects
+  OBJ_SWITCH,
+
   // base object types
   OBJ_BOUND_METHOD,
   OBJ_CLASS,
@@ -155,6 +162,15 @@ typedef struct {
   b_obj_string *path;
   FILE *file;
 } b_obj_file;
+
+typedef struct {
+  b_obj obj;
+  int default_ip;
+  b_table table;
+} b_obj_switch;
+
+// non-user objects...
+b_obj_switch *new_switch(b_vm *vm);
 
 // data containers
 b_obj_list *new_list(b_vm *vm);

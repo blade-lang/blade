@@ -85,6 +85,11 @@ static void blacken_object(b_vm *vm, b_obj *object) {
 #endif
 
   switch (object->type) {
+  case OBJ_SWITCH: {
+    b_obj_switch *sw = (b_obj_switch *)object;
+    mark_table(vm, &sw->table);
+    break;
+  }
   case OBJ_FILE: {
     b_obj_file *file = (b_obj_file *)object;
     mark_object(vm, (b_obj *)file->mode);
@@ -162,6 +167,12 @@ static void free_object(b_vm *vm, b_obj *object) {
 #endif
 
   switch (object->type) {
+  case OBJ_SWITCH: {
+    b_obj_switch *sw = (b_obj_switch *)object;
+    free_table(vm, &sw->table);
+    FREE(b_obj_switch, object);
+    break;
+  }
   case OBJ_BYTES: {
     b_obj_bytes *bytes = (b_obj_bytes *)object;
     free_byte_arr(vm, &bytes->bytes);

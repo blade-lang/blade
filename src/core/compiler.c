@@ -87,6 +87,15 @@ static void consume(b_parser *p, b_tkn_type t, const char *message) {
   error_at_current(p, message);
 }
 
+static bool check_number(b_parser *p) {
+  if (p->previous.type == REG_NUMBER_TOKEN ||
+      p->previous.type == OCT_NUMBER_TOKEN ||
+      p->previous.type == BIN_NUMBER_TOKEN ||
+      p->previous.type == HEX_NUMBER_TOKEN)
+    return true;
+  return false;
+}
+
 static bool check(b_parser *p, b_tkn_type t) { return p->current.type == t; }
 
 static bool match(b_parser *p, b_tkn_type t) {
@@ -189,6 +198,7 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_CALL_IMPORT:
   case OP_FINISH_MODULE:
   case OP_TRY:
+  case OP_SWITCH:
     return 2;
 
   case OP_INVOKE:
@@ -878,20 +888,24 @@ static void grouping(b_parser *p, bool can_assign) {
   consume(p, RPAREN_TOKEN, "expected ')' after grouped expression");
 }
 
-static void number(b_parser *p, bool can_assign) {
+static b_value _number(b_parser *p) {
   if (p->previous.type == BIN_NUMBER_TOKEN) {
     long long value = strtoll(p->previous.start + 2, NULL, 2);
-    emit_constant(p, NUMBER_VAL(value));
+    return NUMBER_VAL(value);
   } else if (p->previous.type == OCT_NUMBER_TOKEN) {
     long value = strtol(p->previous.start + 2, NULL, 8);
-    emit_constant(p, NUMBER_VAL(value));
+    return NUMBER_VAL(value);
   } else if (p->previous.type == HEX_NUMBER_TOKEN) {
     long value = strtol(p->previous.start, NULL, 16);
-    emit_constant(p, NUMBER_VAL(value));
+    return NUMBER_VAL(value);
   } else {
     double value = strtod(p->previous.start, NULL);
-    emit_constant(p, NUMBER_VAL(value));
+    return NUMBER_VAL(value);
   }
+}
+
+static void number(b_parser *p, bool can_assign) {
+  emit_constant(p, _number(p));
 }
 
 // Reads the next character, which should be a hex digit (0-9, a-f, or A-F) and
@@ -940,7 +954,7 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
     count--; */
   return count;
 }
-static char *_string(b_parser *p, bool can_assign) {
+static char *_string(b_parser *p) {
   char *str = (char *)calloc(p->previous.length - 2, sizeof(char));
   char *real = (char *)(p->previous.start + 1);
 
@@ -1017,7 +1031,7 @@ static char *_string(b_parser *p, bool can_assign) {
 }
 
 static void string(b_parser *p, bool can_assign) {
-  char *str = _string(p, can_assign);
+  char *str = _string(p);
   emit_constant(p, OBJ_VAL(copy_string(p->vm, str, (int)strlen(str))));
 }
 
@@ -1677,7 +1691,7 @@ static void for_statement(b_parser *p) {
  *    ...
  * }
  */
-static void using_statement(b_parser *p) {
+/* static void using_statement(b_parser *p) {
   p->using_count++;
 
   char *using_name_chars = (char *)calloc(
@@ -1755,6 +1769,76 @@ static void using_statement(b_parser *p) {
   for (int i = 0; i < case_count; i++) {
     patch_jump(p, case_ends[i]);
   }
+} */
+
+static void using_statement(b_parser *p) {
+  expression(p); // the expression
+  consume(p, LBRACE_TOKEN, "expected '{' after using expression");
+  ignore_whitespace(p);
+
+  int state = 0; // 0: before all cases, 1: before default, 2: after default
+  int case_ends[MAX_USING_CASES];
+  int case_count = 0;
+
+  b_obj_switch *sw = new_switch(p->vm);
+  emit_byte_and_short(p, OP_SWITCH, make_constant(p, OBJ_VAL(sw)));
+  int start_offset = current_blob(p)->count;
+
+  while (!match(p, RBRACE_TOKEN) && !check(p, EOF_TOKEN)) {
+    if (match(p, WHEN_TOKEN) || match(p, DEFAULT_TOKEN)) {
+      b_tkn_type case_type = p->previous.type;
+
+      if (state == 2) {
+        error(p, "cannot have another case after a default case");
+      }
+
+      if (state == 1) {
+        // at the end of the previous case, jump over the others...
+        case_ends[case_count++] = emit_jump(p, OP_JUMP);
+      }
+
+      if (case_type == WHEN_TOKEN) {
+        state = 1;
+        advance(p);
+
+        b_value jump = NUMBER_VAL(current_blob(p)->count - start_offset);
+
+        if (p->previous.type == TRUE_TOKEN) {
+          table_set(p->vm, &sw->table, TRUE_VAL, jump);
+        } else if (p->previous.type == FALSE_TOKEN) {
+          table_set(p->vm, &sw->table, FALSE_VAL, jump);
+        } else if (p->previous.type == LITERAL_TOKEN) {
+          char *str = _string(p);
+          table_set(p->vm, &sw->table,
+                    OBJ_VAL(copy_string(p->vm, str, (int)strlen(str))), jump);
+        } else if (check_number(p)) {
+          table_set(p->vm, &sw->table, _number(p), jump);
+        } else {
+          error(p, "only constants can be used in when expressions");
+          return;
+        }
+      } else {
+        state = 2;
+        sw->default_ip = current_blob(p)->count - start_offset;
+      }
+    } else {
+      // otherwise, it's a statement inside the current case
+      if (state == 0) {
+        error(p, "cannot have statements before any case");
+      }
+      statement(p);
+    }
+  }
+
+  // if we ended without a default case, patch its condition jump
+  if (state == 1) {
+    case_ends[case_count++] = emit_jump(p, OP_JUMP);
+  }
+
+  // patch all the case jumps to the end
+  for (int i = 0; i < case_count; i++) {
+    patch_jump(p, case_ends[i]);
+  }
 }
 
 static void if_statement(b_parser *p) {
@@ -1822,7 +1906,7 @@ static char *read_file(const char *path) {
 
 static void import_statement(b_parser *p) {
   consume(p, LITERAL_TOKEN, "expected module name");
-  char *module_name = _string(p, false);
+  char *module_name = _string(p);
 
   char *module_path = resolve_import_path(module_name, p->current_file);
   if (module_path == NULL) {

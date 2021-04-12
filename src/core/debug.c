@@ -191,6 +191,10 @@ int disassemble_instruction(b_blob *blob, int offset) {
   case OP_POPN:
     return short_instruction("popn", blob, offset);
 
+    // non-user objects...
+  case OP_SWITCH:
+    return short_instruction("switch", blob, offset);
+
     // data container manipulators
   case OP_RANGE:
     return short_instruction("range", blob, offset);
