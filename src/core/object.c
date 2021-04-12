@@ -30,6 +30,13 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   return object;
 }
 
+b_obj_switch *new_switch(b_vm *vm) {
+  b_obj_switch *_switch = ALLOCATE_OBJ(b_obj_switch, OBJ_SWITCH);
+  init_table(&_switch->table);
+  _switch->default_ip = -1;
+  return _switch;
+}
+
 b_obj_bytes *new_bytes(b_vm *vm, int length) {
   b_obj_bytes *bytes = ALLOCATE_OBJ(b_obj_bytes, OBJ_BYTES);
   init_byte_arr(&bytes->bytes, length);
@@ -223,6 +230,9 @@ static void print_file(b_obj_file *file) {
 
 void print_object(b_value value, bool fix_string) {
   switch (OBJ_TYPE(value)) {
+  case OBJ_SWITCH: {
+    break;
+  }
   case OBJ_FILE: {
     print_file(AS_FILE(value));
     break;
@@ -362,6 +372,9 @@ char *object_to_string(b_vm *vm, b_value value) {
   char *str = (char *)calloc(1, sizeof(char *));
 
   switch (OBJ_TYPE(value)) {
+  case OBJ_SWITCH: {
+    break;
+  }
   case OBJ_CLASS:
     sprintf(str, "<class %s>", AS_CLASS(value)->name->chars);
     break;

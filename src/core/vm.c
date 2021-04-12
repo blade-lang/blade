@@ -1872,6 +1872,22 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
 
+    case OP_SWITCH: {
+      b_obj_switch *_switch = AS_SWITCH(READ_CONSTANT());
+      b_value expr = peek(vm, 0);
+      int index;
+
+      b_value value;
+      if (table_get(&_switch->table, expr, &value)) {
+        pop(vm);
+        frame->ip += (int)AS_NUMBER(value);
+      } else if (_switch->default_ip != -1) {
+        pop(vm);
+        frame->ip += _switch->default_ip;
+      }
+      break;
+    }
+
     default:
       break;
     }
