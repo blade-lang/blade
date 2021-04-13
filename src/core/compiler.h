@@ -8,7 +8,7 @@
 typedef enum {
   PREC_NONE,
   PREC_ASSIGNMENT, // =, >=, <=, &=, |=, *=, +=, -=, /=, **=, %=, >>=, <<=, ^=,
-                   // ~=
+  // ~=
   PREC_OR,         // or
   PREC_AND,        // and
   PREC_EQUALITY,   // ==, !=
@@ -23,7 +23,7 @@ typedef enum {
   PREC_UNARY, // !, -, ~, (++, -- this two will now be treated as statements)
   PREC_CALL,  // ., ()
   PREC_PRIMARY
-} b_prec;
+} b_precedence;
 
 typedef enum {
   TYPE_FUNCTION,
@@ -41,7 +41,7 @@ typedef struct {
 typedef struct {
   uint16_t index;
   bool is_local;
-} b_upvalue;
+} b_up_value;
 
 struct s_compiler {
   b_compiler *enclosing;
@@ -52,7 +52,7 @@ struct s_compiler {
 
   b_local locals[UINT8_COUNT];
   int local_count;
-  b_upvalue upvalues[UINT8_COUNT];
+  b_up_value up_values[UINT8_COUNT];
   int scope_depth;
 };
 
@@ -89,11 +89,12 @@ typedef void (*b_parse_fn)(b_parser *, bool);
 typedef struct {
   b_parse_fn prefix;
   b_parse_fn infix;
-  b_prec precedence;
+  b_precedence precedence;
 } b_parse_rule;
 
 b_obj_func *compile(b_vm *vm, const char *source, const char *file,
                     b_blob *blob);
+
 void mark_compiler_roots(b_vm *vm);
 
 #endif

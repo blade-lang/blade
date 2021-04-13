@@ -4,7 +4,9 @@
 #include "common.h"
 
 #ifdef IS_UNIX
+
 #include <sys/time.h>
+
 #else
 #include "win32.h"
 #endif

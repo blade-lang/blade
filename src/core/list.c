@@ -85,7 +85,7 @@ DECLARE_LIST_METHOD(insert) {
   ENFORCE_ARG_TYPE(insert, 1, IS_NUMBER);
 
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
-  int index = (int)AS_NUMBER(args[1]);
+  int index = (int) AS_NUMBER(args[1]);
 
   insert_value_arr(vm, &list->items, args[0], index);
   RETURN;
@@ -117,9 +117,9 @@ DECLARE_LIST_METHOD(shift) {
     list->items.count = 0;
     RETURN;
   } else if (count > 0) {
-    b_obj_list *nlist = new_list(vm);
+    b_obj_list *n_list = new_list(vm);
     for (int i = 0; i < count; i++) {
-      write_list(vm, nlist, list->items.values[0]);
+      write_list(vm, n_list, list->items.values[0]);
       for (int j = 0; j < list->items.count; j++) {
         list->items.values[j] = list->items.values[j + 1];
       }
@@ -127,9 +127,9 @@ DECLARE_LIST_METHOD(shift) {
     }
 
     if (count == 1) {
-      RETURN_VALUE(nlist->items.values[0]);
+      RETURN_VALUE(n_list->items.values[0]);
     } else {
-      RETURN_OBJ(nlist);
+      RETURN_OBJ(n_list);
     }
   }
   RETURN;
@@ -297,43 +297,43 @@ DECLARE_LIST_METHOD(compact) {
   ENFORCE_ARG_COUNT(compact, 0);
 
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
-  b_obj_list *nlist = new_list(vm);
+  b_obj_list *n_list = new_list(vm);
 
   for (int i = 0; i < list->items.count; i++) {
     if (!values_equal(list->items.values[i], NIL_VAL)) {
-      write_list(vm, nlist, list->items.values[i]);
+      write_list(vm, n_list, list->items.values[i]);
     }
   }
 
-  RETURN_OBJ(nlist);
+  RETURN_OBJ(n_list);
 }
 
 DECLARE_LIST_METHOD(unique) {
   ENFORCE_ARG_COUNT(unique, 0);
 
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
-  b_obj_list *nlist = new_list(vm);
+  b_obj_list *n_list = new_list(vm);
 
   for (int i = 0; i < list->items.count; i++) {
     bool found = false;
-    for (int j = 0; j < nlist->items.count; j++) {
-      if (values_equal(nlist->items.values[j], list->items.values[i])) {
+    for (int j = 0; j < n_list->items.count; j++) {
+      if (values_equal(n_list->items.values[j], list->items.values[i])) {
         found = true;
         continue;
       }
     }
 
     if (!found) {
-      write_list(vm, nlist, list->items.values[i]);
+      write_list(vm, n_list, list->items.values[i]);
     }
   }
 
-  RETURN_OBJ(nlist);
+  RETURN_OBJ(n_list);
 }
 
 DECLARE_LIST_METHOD(zip) {
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
-  b_obj_list *nlist = new_list(vm);
+  b_obj_list *n_list = new_list(vm);
 
   b_obj_list **arg_list = ALLOCATE(b_obj_list *, arg_count);
   for (int i = 0; i < arg_count; i++) {
@@ -353,10 +353,10 @@ DECLARE_LIST_METHOD(zip) {
       }
     }
 
-    write_list(vm, nlist, OBJ_VAL(a_list));
+    write_list(vm, n_list, OBJ_VAL(a_list));
   }
 
-  RETURN_OBJ(nlist);
+  RETURN_OBJ(n_list);
 }
 
 DECLARE_LIST_METHOD(to_dict) {

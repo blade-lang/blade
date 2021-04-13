@@ -121,7 +121,7 @@ bool table_set(b_vm *vm, b_table *table, b_value key, b_value value) {
   if (is_new && IS_NIL(entry->value))
     table->count++;
 
-  // overwrites exisiting entries.
+  // overwrites existing entries.
   entry->key = key;
   entry->value = value;
 
@@ -194,25 +194,28 @@ b_value table_find_key(b_table *table, b_value value) {
 }
 
 void table_print(b_table *table) {
-  printf("<HashTable: [");
+  printf("<HashTable: {");
   for (int i = 0; i < table->capacity; i++) {
     b_entry *entry = &table->entries[i];
     if (!IS_EMPTY(entry->key)) {
-      printf("{key: ");
       print_value(entry->key);
-      printf(", value: ");
+      printf(": ");
       print_value(entry->value);
-      printf("}");
+      if(i != table->capacity - 1) {
+        printf(",");
+      }
     }
   }
-  printf("]>\n");
+  printf("}>\n");
 }
 
 void mark_table(b_vm *vm, b_table *table) {
   for (int i = 0; i < table->capacity; i++) {
     b_entry *entry = &table->entries[i];
-    mark_value(vm, entry->key);
-    mark_value(vm, entry->value);
+    if(entry && entry->key) {
+      mark_value(vm, entry->key);
+      mark_value(vm, entry->value);
+    }
   }
 }
 

@@ -4,7 +4,9 @@
 #ifdef _WIN32
 #include "win32.h"
 #else
+
 #include <sys/utsname.h>
+
 #endif
 
 #include <ctype.h>
@@ -29,13 +31,13 @@ DECLARE_MODULE_METHOD(os_exec) {
     RETURN;
 
   char buffer[256];
-  size_t nread;
+  size_t n_read;
   size_t output_size = 256;
   int length = 0;
   char *output = malloc(output_size);
 
-  while ((nread = fread(buffer, 1, sizeof(buffer), fd)) != 0) {
-    if (length + nread >= output_size) {
+  while ((n_read = fread(buffer, 1, sizeof(buffer), fd)) != 0) {
+    if (length + n_read >= output_size) {
       output_size *= 2;
       void *temp = realloc(output, output_size);
       if (temp == NULL) {
@@ -45,9 +47,9 @@ DECLARE_MODULE_METHOD(os_exec) {
       }
     }
     if ((output + length) != NULL) {
-      strncat(output + length, buffer, nread);
+      strncat(output + length, buffer, n_read);
     }
-    length += nread;
+    length += (int)n_read;
   }
 
   if (length == 0)
@@ -56,7 +58,7 @@ DECLARE_MODULE_METHOD(os_exec) {
   output[length - 1] = '\0';
 
   pclose(fd);
-  RETURN_LSTRING(output, length);
+  RETURN_L_STRING(output, length);
 }
 
 DECLARE_MODULE_METHOD(os_info) {
@@ -84,7 +86,7 @@ DECLARE_MODULE_METHOD(os_info) {
 DECLARE_MODULE_METHOD(os_sleep) {
   ENFORCE_ARG_COUNT(sleep, 1);
   ENFORCE_ARG_TYPE(sleep, 0, IS_NUMBER);
-  sleep((int)AS_NUMBER(args[0]));
+  sleep((int) AS_NUMBER(args[0]));
   RETURN;
 }
 
@@ -112,7 +114,9 @@ b_value get_os_platform(b_vm *vm) {
 #elif defined(_AIX)
 #define PLATFORM_NAME "aix"                   // IBM AIX
 #elif defined(__APPLE__) && defined(__MACH__) // Apple OSX and iOS (Darwin)
+
 #include <TargetConditionals.h>
+
 #if TARGET_IPHONE_SIMULATOR == 1
 #define PLATFORM_NAME "ios" // Apple iOS
 #elif TARGET_OS_IPHONE == 1
@@ -130,30 +134,30 @@ b_value get_os_platform(b_vm *vm) {
 #define PLATFORM_NAME "unknown"
 #endif
 
-  RETURN_LSTRING(PLATFORM_NAME, (int)strlen(PLATFORM_NAME));
+  RETURN_L_STRING(PLATFORM_NAME, (int) strlen(PLATFORM_NAME));
 
 #undef PLATFORM_NAME
 }
 
 CREATE_MODULE_LOADER(os) {
   static b_func_reg os_class_functions[] = {
-      {"info", true, GET_MODULE_METHOD(os_info)},
-      {"exec", true, GET_MODULE_METHOD(os_exec)},
-      {"sleep", true, GET_MODULE_METHOD(os_sleep)},
-      {NULL, false, NULL},
+      {"info",  true,  GET_MODULE_METHOD(os_info)},
+      {"exec",  true,  GET_MODULE_METHOD(os_exec)},
+      {"sleep", true,  GET_MODULE_METHOD(os_sleep)},
+      {NULL,    false, NULL},
   };
 
   static b_field_reg os_class_fields[] = {
       {"platform", true, get_os_platform},
-      {NULL, false, NULL},
+      {NULL,       false, NULL},
   };
 
-  static b_class_reg klasses[] = {
+  static b_class_reg classes[] = {
       {"Os", os_class_fields, os_class_functions},
       {NULL, NULL, NULL},
   };
 
-  static b_module_reg module = {NULL, klasses};
+  static b_module_reg module = {NULL, classes};
 
   return module;
 }

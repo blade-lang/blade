@@ -21,7 +21,7 @@ typedef enum {
   AT_TOKEN,          // @
   DOT_TOKEN,         // .
   RANGE_TOKEN,       // ..
-  TRIDOT_TOKEN,      // ...
+  TRI_DOT_TOKEN,      // ...
   PLUS_TOKEN,        // +
   PLUS_EQ_TOKEN,     // +=
   INCREMENT_TOKEN,   // ++
@@ -56,7 +56,7 @@ typedef enum {
   TILDE_EQ_TOKEN,    // ~=
   XOR_TOKEN,         // ^
   XOR_EQ_TOKEN,      // ^=
-  CDEFAULT_TOKEN,    // ??
+  C_DEFAULT_TOKEN,    // ??
 
   // keywords
   AND_TOKEN,
@@ -122,6 +122,7 @@ typedef struct {
 } b_scanner;
 
 void init_scanner(b_scanner *s, const char *source);
+
 b_token scan_token(b_scanner *s);
 
 #endif

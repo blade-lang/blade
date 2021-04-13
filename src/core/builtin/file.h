@@ -11,7 +11,7 @@
  *
  * opens a new file handle to the file specified
  * available modes are as exists in C, with the following exception
- * - w+ does not tructuate the file, but will still create it
+ * - w+ does not truncate the file, but will still create it
  *   if it does not exist
  * - default mode is 'r' i.e. read only
  */
@@ -188,7 +188,7 @@ DECLARE_FILE_METHOD(truncate);
  * file.chmod(mode: number)
  *
  * changes the permission on a file to the specified number
- * - this number can be a series or ored FilePerm items
+ * - this number can be a series or or-ed FilePerm items
  */
 DECLARE_FILE_METHOD(chmod);
 

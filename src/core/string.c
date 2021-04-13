@@ -42,13 +42,13 @@ char* strsep(char** stringp, const char* delim) {
  * -1 -> false
  * 0 -> true
  * negative value -> invalid delimiter where abs(value) is the character
- * positive value > 0 ? for compiled delimeters
+ * positive value > 0 ? for compiled delimiters
  */
 int is_regex(b_obj_string *string) {
   char start = string->chars[0];
   bool match_found = false;
 
-  uint32_t coptions = 0; // pcre2 options
+  uint32_t c_options = 0; // pcre2 options
 
   int i;
   for (i = 1; i < string->length; i++) {
@@ -60,54 +60,54 @@ int is_regex(b_obj_string *string) {
     if (match_found) {
       // compile the delimiters
       switch (string->chars[i]) {
-      /* Perl compatible options */
-      case 'i':
-        coptions |= PCRE2_CASELESS;
-        break;
-      case 'm':
-        coptions |= PCRE2_MULTILINE;
-        break;
-      case 's':
-        coptions |= PCRE2_DOTALL;
-        break;
-      case 'x':
-        coptions |= PCRE2_EXTENDED;
-        break;
+        /* Perl compatible options */
+        case 'i':
+          c_options |= PCRE2_CASELESS;
+          break;
+        case 'm':
+          c_options |= PCRE2_MULTILINE;
+          break;
+        case 's':
+          c_options |= PCRE2_DOTALL;
+          break;
+        case 'x':
+          c_options |= PCRE2_EXTENDED;
+          break;
 
-      /* PCRE specific options */
-      case 'A':
-        coptions |= PCRE2_ANCHORED;
-        break;
-      case 'D':
-        coptions |= PCRE2_DOLLAR_ENDONLY;
-        break;
-      case 'S': /* Pass. */
-        break;
-      case 'X': /* Pass. */
-        break;
-      case 'U':
-        coptions |= PCRE2_UNGREEDY;
-        break;
-      case 'u':
-        coptions |= PCRE2_UTF;
-        /* In  PCRE,  by  default, \d, \D, \s, \S, \w, and \W recognize only
-       ASCII characters, even in UTF-8 mode. However, this can be changed by
-       setting the PCRE2_UCP option. */
+          /* PCRE specific options */
+        case 'A':
+          c_options |= PCRE2_ANCHORED;
+          break;
+        case 'D':
+          c_options |= PCRE2_DOLLAR_ENDONLY;
+          break;
+        case 'S': /* Pass. */
+          break;
+        case 'X': /* Pass. */
+          break;
+        case 'U':
+          c_options |= PCRE2_UNGREEDY;
+          break;
+        case 'u':
+          c_options |= PCRE2_UTF;
+          /* In  PCRE,  by  default, \d, \D, \s, \S, \w, and \W recognize only
+         ASCII characters, even in UTF-8 mode. However, this can be changed by
+         setting the PCRE2_UCP option. */
 #ifdef PCRE2_UCP
-        coptions |= PCRE2_UCP;
+          c_options |= PCRE2_UCP;
 #endif
-        break;
-      case 'J':
-        coptions |= PCRE2_DUPNAMES;
-        break;
+          break;
+        case 'J':
+          c_options |= PCRE2_DUPNAMES;
+          break;
 
-      case ' ':
-      case '\n':
-      case '\r':
-        break;
+        case ' ':
+        case '\n':
+        case '\r':
+          break;
 
-      default:
-        return coptions = -string->chars[i];
+        default:
+          return c_options = -string->chars[i];
       }
     }
   }
@@ -115,7 +115,7 @@ int is_regex(b_obj_string *string) {
   if (!match_found)
     return -1;
   else
-    return coptions;
+    return c_options;
 }
 
 char *remove_regex_delimiter(b_vm *vm, b_obj_string *string) {
@@ -143,25 +143,25 @@ DECLARE_STRING_METHOD(length) {
 
 DECLARE_STRING_METHOD(upper) {
   ENFORCE_ARG_COUNT(upper, 0);
-  char *string = (char *)AS_CSTRING(METHOD_OBJECT);
+  char *string = (char *) AS_C_STRING(METHOD_OBJECT);
   for (char *p = string; *p; p++)
     *p = toupper(*p);
-  RETURN_LSTRING(string, AS_STRING(METHOD_OBJECT)->length);
+  RETURN_L_STRING(string, AS_STRING(METHOD_OBJECT)->length);
 }
 
 DECLARE_STRING_METHOD(lower) {
   ENFORCE_ARG_COUNT(lower, 0);
-  char *string = (char *)AS_CSTRING(METHOD_OBJECT);
+  char *string = (char *) AS_C_STRING(METHOD_OBJECT);
   for (char *p = string; *p; p++)
     *p = tolower(*p);
-  RETURN_LSTRING(string, AS_STRING(METHOD_OBJECT)->length);
+  RETURN_L_STRING(string, AS_STRING(METHOD_OBJECT)->length);
 }
 
 DECLARE_STRING_METHOD(is_alpha) {
   ENFORCE_ARG_COUNT(is_alpha, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
-    if (!isalpha((unsigned char)string->chars[i]))
+    if (!isalpha((unsigned char) string->chars[i]))
       RETURN_FALSE;
   }
   RETURN_TRUE;
@@ -171,7 +171,7 @@ DECLARE_STRING_METHOD(is_alnum) {
   ENFORCE_ARG_COUNT(is_alnum, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
-    if (!isalnum((unsigned char)string->chars[i]))
+    if (!isalnum((unsigned char) string->chars[i]))
       RETURN_FALSE;
   }
   RETURN_TRUE;
@@ -181,7 +181,7 @@ DECLARE_STRING_METHOD(is_number) {
   ENFORCE_ARG_COUNT(is_number, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
-    if (!isdigit((unsigned char)string->chars[i]))
+    if (!isdigit((unsigned char) string->chars[i]))
       RETURN_FALSE;
   }
   RETURN_TRUE;
@@ -191,7 +191,7 @@ DECLARE_STRING_METHOD(is_lower) {
   ENFORCE_ARG_COUNT(is_lower, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
-    if (!islower((unsigned char)string->chars[i]))
+    if (!islower((unsigned char) string->chars[i]))
       RETURN_FALSE;
   }
   RETURN_TRUE;
@@ -201,7 +201,7 @@ DECLARE_STRING_METHOD(is_upper) {
   ENFORCE_ARG_COUNT(is_upper, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
-    if (!isupper((unsigned char)string->chars[i]))
+    if (!isupper((unsigned char) string->chars[i]))
       RETURN_FALSE;
   }
   RETURN_TRUE;
@@ -211,7 +211,7 @@ DECLARE_STRING_METHOD(is_space) {
   ENFORCE_ARG_COUNT(is_space, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
-    if (!isspace((unsigned char)string->chars[i]))
+    if (!isspace((unsigned char) string->chars[i]))
       RETURN_FALSE;
   }
   RETURN_TRUE;
@@ -224,16 +224,16 @@ DECLARE_STRING_METHOD(trim) {
 
   if (arg_count == 1) {
     ENFORCE_ARG_TYPE(trim, 0, IS_CHAR);
-    trimmer = (char)AS_STRING(args[0])->chars[0];
+    trimmer = (char) AS_STRING(args[0])->chars[0];
   }
 
-  char *string = AS_CSTRING(METHOD_OBJECT);
+  char *string = AS_C_STRING(METHOD_OBJECT);
 
   char *end = NULL;
 
   // Trim leading space
   if (trimmer == '\0') {
-    while (isspace((unsigned char)*string))
+    while (isspace((unsigned char) *string))
       string++;
   } else {
     while (trimmer == *string)
@@ -246,7 +246,7 @@ DECLARE_STRING_METHOD(trim) {
   // Trim trailing space
   end = string + strlen(string) - 1;
   if (trimmer == '\0') {
-    while (end > string && isspace((unsigned char)*end))
+    while (end > string && isspace((unsigned char) *end))
       end--;
   } else {
     while (end > string && trimmer == *end)
@@ -266,16 +266,16 @@ DECLARE_STRING_METHOD(ltrim) {
 
   if (arg_count == 1) {
     ENFORCE_ARG_TYPE(ltrim, 0, IS_CHAR);
-    trimmer = (char)AS_STRING(args[0])->chars[0];
+    trimmer = (char) AS_STRING(args[0])->chars[0];
   }
 
-  char *string = AS_CSTRING(METHOD_OBJECT);
+  char *string = AS_C_STRING(METHOD_OBJECT);
 
   char *end = NULL;
 
   // Trim leading space
   if (trimmer == '\0') {
-    while (isspace((unsigned char)*string))
+    while (isspace((unsigned char) *string))
       string++;
   } else {
     while (trimmer == *string)
@@ -300,10 +300,10 @@ DECLARE_STRING_METHOD(rtrim) {
 
   if (arg_count == 1) {
     ENFORCE_ARG_TYPE(rtrim, 0, IS_CHAR);
-    trimmer = (char)AS_STRING(args[0])->chars[0];
+    trimmer = (char) AS_STRING(args[0])->chars[0];
   }
 
-  char *string = AS_CSTRING(METHOD_OBJECT);
+  char *string = AS_C_STRING(METHOD_OBJECT);
 
   char *end = NULL;
 
@@ -312,7 +312,7 @@ DECLARE_STRING_METHOD(rtrim) {
 
   end = string + strlen(string) - 1;
   if (trimmer == '\0') {
-    while (end > string && isspace((unsigned char)*end))
+    while (end > string && isspace((unsigned char) *end))
       end--;
   } else {
     while (end > string && trimmer == *end)
@@ -338,12 +338,12 @@ DECLARE_STRING_METHOD(join) {
     if (AS_STRING(argument)->length == 0)
       RETURN_VALUE(argument);
 
-    char *string = (char *)AS_CSTRING(argument);
+    char *string = (char *) AS_C_STRING(argument);
     length = AS_STRING(argument)->length;
-    array = (char **)calloc(length, sizeof(char **));
+    array = (char **) calloc(length, sizeof(char **));
 
     for (int i = 0; i < length; i++) {
-      array[i] = (char *)calloc(2, sizeof(char *));
+      array[i] = (char *) calloc(2, sizeof(char *));
       char str[2] = {string[i], '\0'};
       strcpy(array[i], str);
     }
@@ -355,9 +355,9 @@ DECLARE_STRING_METHOD(join) {
                                         : AS_DICT(argument)->names.values;
 
     if (length == 0)
-      RETURN_LSTRING("", 0);
+      RETURN_L_STRING("", 0);
 
-    array = (char **)calloc(length, sizeof(char **));
+    array = (char **) calloc(length, sizeof(char **));
 
     for (int i = 0; i < length; i++) {
       // get interpreted string here
@@ -373,7 +373,7 @@ DECLARE_STRING_METHOD(join) {
       array[0] = append_strings(array[0], array[i]);
 
     if (i != length - 1)
-      array[0] = append_strings(array[0], AS_CSTRING(METHOD_OBJECT));
+      array[0] = append_strings(array[0], AS_C_STRING(METHOD_OBJECT));
   }
 
   RETURN_STRING(array[0]);
@@ -390,16 +390,16 @@ DECLARE_STRING_METHOD(split) {
 
   // main work here...
   if (AS_STRING(args[0])->length > 0) {
-    char *token, *str, *tofree;
+    char *token, *str, *to_free;
 
-    tofree = str =
-        strdup(AS_CSTRING(METHOD_OBJECT)); // We own str's memory now.
-    while ((token = strsep(&str, AS_CSTRING(args[0]))))
+    to_free = str =
+        strdup(AS_C_STRING(METHOD_OBJECT)); // We own str's memory now.
+    while ((token = strsep(&str, AS_C_STRING(args[0]))))
       write_list(vm, list, OBJ_VAL(copy_string(vm, token, strlen(token))));
-    free(tofree);
+    free(to_free);
   } else {
-    const char *string = AS_CSTRING(METHOD_OBJECT);
-    for (int i = 0; i < (int)strlen(string); i++) {
+    const char *string = AS_C_STRING(METHOD_OBJECT);
+    for (int i = 0; i < (int) strlen(string); i++) {
       write_list(vm, list, OBJ_VAL(copy_string(vm, &string[i], 1)));
     }
   }
@@ -411,8 +411,8 @@ DECLARE_STRING_METHOD(index_of) {
   ENFORCE_ARG_COUNT(index_of, 1);
   ENFORCE_ARG_TYPE(index_of, 0, IS_STRING);
 
-  char *str = AS_CSTRING(METHOD_OBJECT);
-  char *result = strstr(str, AS_CSTRING(args[0]));
+  char *str = AS_C_STRING(METHOD_OBJECT);
+  char *result = strstr(str, AS_C_STRING(args[0]));
 
   RETURN_NUMBER(result - str);
 }
@@ -470,7 +470,7 @@ DECLARE_STRING_METHOD(count) {
 
 DECLARE_STRING_METHOD(to_number) {
   ENFORCE_ARG_COUNT(to_number, 0);
-  RETURN_NUMBER(strtod(AS_CSTRING(METHOD_OBJECT), NULL));
+  RETURN_NUMBER(strtod(AS_C_STRING(METHOD_OBJECT), NULL));
 }
 
 DECLARE_STRING_METHOD(to_list) {
@@ -485,7 +485,7 @@ DECLARE_STRING_METHOD(to_list) {
       utf8slice(string->chars, &start, &end);
       write_list(
           vm, list,
-          OBJ_VAL(copy_string(vm, string->chars + start, (int)(end - start))));
+          OBJ_VAL(copy_string(vm, string->chars + start, (int) (end - start))));
     }
   }
 
@@ -502,7 +502,7 @@ DECLARE_STRING_METHOD(lpad) {
 
   if (arg_count == 2) {
     ENFORCE_ARG_TYPE(lpad, 1, IS_CHAR);
-    fill_char = AS_CSTRING(args[1])[0];
+    fill_char = AS_C_STRING(args[1])[0];
   }
 
   if (width <= string->length)
@@ -533,7 +533,7 @@ DECLARE_STRING_METHOD(rpad) {
 
   if (arg_count == 2) {
     ENFORCE_ARG_TYPE(rpad, 1, IS_CHAR);
-    fill_char = AS_CSTRING(args[1])[0];
+    fill_char = AS_C_STRING(args[1])[0];
   }
 
   if (width <= string->length)
@@ -569,7 +569,7 @@ DECLARE_STRING_METHOD(match) {
 
   GET_REGEX_COMPILE_OPTIONS(match, substr, false);
 
-  if ((int)compile_options < 0) {
+  if ((int) compile_options < 0) {
     RETURN_BOOL(strstr(string->chars, substr->chars) - string->chars > -1);
   }
 
@@ -578,9 +578,9 @@ DECLARE_STRING_METHOD(match) {
   int error_number;
   PCRE2_SIZE error_offset;
 
-  PCRE2_SPTR pattern = (PCRE2_SPTR)real_regex;
-  PCRE2_SPTR subject = (PCRE2_SPTR)string->chars;
-  PCRE2_SIZE subject_length = (PCRE2_SIZE)string->length;
+  PCRE2_SPTR pattern = (PCRE2_SPTR) real_regex;
+  PCRE2_SPTR subject = (PCRE2_SPTR) string->chars;
+  PCRE2_SIZE subject_length = (PCRE2_SIZE) string->length;
 
   pcre2_code *re =
       pcre2_compile(pattern, PCRE2_ZERO_TERMINATED, compile_options,
@@ -594,31 +594,29 @@ DECLARE_STRING_METHOD(match) {
 
   if (rc < 0) {
     switch (rc) {
-    case PCRE2_ERROR_NOMATCH:
-      RETURN_FALSE;
-      break;
+      case PCRE2_ERROR_NOMATCH:
+        RETURN_FALSE;
 
-    default:
-      REGEX_RC_ERROR();
+      default: REGEX_RC_ERROR();
     }
   }
 
-  PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
+  PCRE2_SIZE *o_vector = pcre2_get_ovector_pointer(match_data);
   uint32_t name_count;
   uint32_t name_entry_size;
   PCRE2_SPTR name_table;
 
   b_obj_list *result = new_list(vm);
-  (void)pcre2_pattern_info(re, PCRE2_INFO_NAMECOUNT, &name_count);
+  (void) pcre2_pattern_info(re, PCRE2_INFO_NAMECOUNT, &name_count);
 
   if (name_count == 0) {
     for (int i = 0; i < rc; i++) {
-      PCRE2_SIZE substring_length = ovector[2 * i + 1] - ovector[2 * i];
+      PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
       if (substring_length > 0) {
-        PCRE2_SPTR substring_start = subject + ovector[2 * i];
+        PCRE2_SPTR substring_start = subject + o_vector[2 * i];
         write_list(vm, result,
-                   OBJ_VAL(copy_string(vm, (char *)substring_start,
-                                       (int)substring_length)));
+                   OBJ_VAL(copy_string(vm, (char *) substring_start,
+                                       (int) substring_length)));
       }
     }
   } else {
@@ -627,40 +625,40 @@ DECLARE_STRING_METHOD(match) {
     b_obj_dict *match_dict = new_dict(vm);
 
     for (int i = 0; i < rc; i++) {
-      PCRE2_SIZE substring_length = ovector[2 * i + 1] - ovector[2 * i];
+      PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
       if (substring_length > 0) {
-        PCRE2_SPTR substring_start = subject + ovector[2 * i];
+        PCRE2_SPTR substring_start = subject + o_vector[2 * i];
         write_value_arr(vm, &match_list->items,
-                        OBJ_VAL(copy_string(vm, (char *)substring_start,
-                                            (int)substring_length)));
+                        OBJ_VAL(copy_string(vm, (char *) substring_start,
+                                            (int) substring_length)));
       }
     }
 
-    PCRE2_SPTR tabptr;
+    PCRE2_SPTR tab_ptr;
 
-    (void)pcre2_pattern_info(re, PCRE2_INFO_NAMETABLE, &name_table);
-    (void)pcre2_pattern_info(re, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
+    (void) pcre2_pattern_info(re, PCRE2_INFO_NAMETABLE, &name_table);
+    (void) pcre2_pattern_info(re, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
 
-    tabptr = name_table;
+    tab_ptr = name_table;
 
-    for (int i = 0; i < (int)name_count; i++) {
-      int n = (tabptr[0] << 8) | tabptr[1];
+    for (int i = 0; i < (int) name_count; i++) {
+      int n = (tab_ptr[0] << 8) | tab_ptr[1];
 
       char *_key = malloc(sizeof(char *));
       char *_val = malloc(sizeof(char *));
-      sprintf(_key, "%*s", name_entry_size - 3, tabptr + 2);
-      sprintf(_val, "%*s", (int)(ovector[2 * n + 1] - ovector[2 * n]),
-              subject + ovector[2 * n]);
+      sprintf(_key, "%*s", name_entry_size - 3, tab_ptr + 2);
+      sprintf(_val, "%*s", (int) (o_vector[2 * n + 1] - o_vector[2 * n]),
+              subject + o_vector[2 * n]);
 
-      while (isspace((unsigned char)*_key))
+      while (isspace((unsigned char) *_key))
         _key++;
 
       dict_add_entry(
           vm, match_dict, OBJ_VAL(copy_string(vm, _key, name_entry_size - 3)),
           OBJ_VAL(copy_string(vm, _val,
-                              (int)(ovector[2 * n + 1] - ovector[2 * n]))));
+                              (int) (o_vector[2 * n + 1] - o_vector[2 * n]))));
 
-      tabptr += name_entry_size;
+      tab_ptr += name_entry_size;
     }
 
     write_value_arr(vm, &match_list->items, OBJ_VAL(match_dict));
@@ -700,9 +698,9 @@ DECLARE_STRING_METHOD(matches) {
   uint32_t name_entry_size;
   PCRE2_SPTR name_table;
 
-  PCRE2_SPTR pattern = (PCRE2_SPTR)real_regex;
-  PCRE2_SPTR subject = (PCRE2_SPTR)string->chars;
-  PCRE2_SIZE subject_length = (PCRE2_SIZE)string->length;
+  PCRE2_SPTR pattern = (PCRE2_SPTR) real_regex;
+  PCRE2_SPTR subject = (PCRE2_SPTR) string->chars;
+  PCRE2_SIZE subject_length = (PCRE2_SIZE) string->length;
 
   pcre2_code *re = pcre2_compile(pattern, PCRE2_ZERO_TERMINATED, 0,
                                  &error_number, &error_offset, NULL);
@@ -715,33 +713,32 @@ DECLARE_STRING_METHOD(matches) {
 
   if (rc < 0) {
     switch (rc) {
-    case PCRE2_ERROR_NOMATCH:
-      RETURN_FALSE;
-      break;
-    default:
-      REGEX_RC_ERROR();
+      case PCRE2_ERROR_NOMATCH:
+        RETURN_FALSE;
+        break;
+      default: REGEX_RC_ERROR();
     }
   }
 
-  PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
+  PCRE2_SIZE *o_vector = pcre2_get_ovector_pointer(match_data);
 
   // REGEX_VECTOR_SIZE_WARNING();
 
   // handle edge cases such as /(?=.\K)/
-  REGEX_ASSERTION_ERROR(re, match_data, ovector);
+  REGEX_ASSERTION_ERROR(re, match_data, o_vector);
 
-  (void)pcre2_pattern_info(re, PCRE2_INFO_NAMECOUNT, &name_count);
+  (void) pcre2_pattern_info(re, PCRE2_INFO_NAMECOUNT, &name_count);
 
   // add first set of matches to response
   if (name_count == 0) {
     int i;
     for (i = 0; i < rc; i++) {
-      PCRE2_SIZE substring_length = ovector[2 * i + 1] - ovector[2 * i];
+      PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
       if (substring_length > 0) {
-        PCRE2_SPTR substring_start = subject + ovector[2 * i];
+        PCRE2_SPTR substring_start = subject + o_vector[2 * i];
         write_list(vm, result,
-                   OBJ_VAL(copy_string(vm, (char *)substring_start,
-                                       (int)substring_length)));
+                   OBJ_VAL(copy_string(vm, (char *) substring_start,
+                                       (int) substring_length)));
       }
     }
   } else {
@@ -751,71 +748,71 @@ DECLARE_STRING_METHOD(matches) {
 
     int i;
     for (i = 0; i < rc; i++) {
-      PCRE2_SIZE substring_length = ovector[2 * i + 1] - ovector[2 * i];
+      PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
       if (substring_length > 0) {
-        PCRE2_SPTR substring_start = subject + ovector[2 * i];
+        PCRE2_SPTR substring_start = subject + o_vector[2 * i];
         write_value_arr(vm, &match_list->items,
-                        OBJ_VAL(copy_string(vm, (char *)substring_start,
-                                            (int)substring_length)));
+                        OBJ_VAL(copy_string(vm, (char *) substring_start,
+                                            (int) substring_length)));
       }
     }
 
-    PCRE2_SPTR tabptr;
+    PCRE2_SPTR tab_ptr;
 
-    (void)pcre2_pattern_info(re, PCRE2_INFO_NAMETABLE, &name_table);
+    (void) pcre2_pattern_info(re, PCRE2_INFO_NAMETABLE, &name_table);
 
-    (void)pcre2_pattern_info(re, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
+    (void) pcre2_pattern_info(re, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
 
-    tabptr = name_table;
+    tab_ptr = name_table;
 
-    for (i = 0; i < (int)name_count; i++) {
-      int n = (tabptr[0] << 8) | tabptr[1];
+    for (i = 0; i < (int) name_count; i++) {
+      int n = (tab_ptr[0] << 8) | tab_ptr[1];
 
       char *_key = malloc(sizeof(char *));
       char *_val = malloc(sizeof(char *));
-      sprintf(_key, "%*s", name_entry_size - 3, tabptr + 2);
-      sprintf(_val, "%*s", (int)(ovector[2 * n + 1] - ovector[2 * n]),
-              subject + ovector[2 * n]);
+      sprintf(_key, "%*s", name_entry_size - 3, tab_ptr + 2);
+      sprintf(_val, "%*s", (int) (o_vector[2 * n + 1] - o_vector[2 * n]),
+              subject + o_vector[2 * n]);
 
-      while (isspace((unsigned char)*_key))
+      while (isspace((unsigned char) *_key))
         _key++;
 
       dict_add_entry(
           vm, match_dict, OBJ_VAL(copy_string(vm, _key, name_entry_size - 3)),
           OBJ_VAL(copy_string(vm, _val,
-                              (int)(ovector[2 * n + 1] - ovector[2 * n]))));
+                              (int) (o_vector[2 * n + 1] - o_vector[2 * n]))));
 
-      tabptr += name_entry_size;
+      tab_ptr += name_entry_size;
     }
 
     write_value_arr(vm, &match_list->items, OBJ_VAL(match_dict));
     write_list(vm, result, OBJ_VAL(match_list));
   }
 
-  (void)pcre2_pattern_info(re, PCRE2_INFO_ALLOPTIONS, &option_bits);
+  (void) pcre2_pattern_info(re, PCRE2_INFO_ALLOPTIONS, &option_bits);
   int utf8 = (option_bits & PCRE2_UTF) != 0;
 
-  (void)pcre2_pattern_info(re, PCRE2_INFO_NEWLINE, &newline);
+  (void) pcre2_pattern_info(re, PCRE2_INFO_NEWLINE, &newline);
   int crlf_is_newline = newline == PCRE2_NEWLINE_ANY ||
                         newline == PCRE2_NEWLINE_CRLF ||
                         newline == PCRE2_NEWLINE_ANYCRLF;
 
-  // find the other matchs
+  // find the other matches
   for (;;) {
     uint32_t options = 0;
-    PCRE2_SIZE start_offset = ovector[1];
+    PCRE2_SIZE start_offset = o_vector[1];
 
     // if the previous match was for an empty string
-    if (ovector[0] == ovector[1]) {
-      if (ovector[0] == subject_length)
+    if (o_vector[0] == o_vector[1]) {
+      if (o_vector[0] == subject_length)
         break;
       options = PCRE2_NOTEMPTY_ATSTART | PCRE2_ANCHORED;
     } else {
-      PCRE2_SIZE startchar = pcre2_get_startchar(match_data);
-      if (start_offset <= startchar) {
-        if (startchar >= subject_length)
+      PCRE2_SIZE start_char = pcre2_get_startchar(match_data);
+      if (start_offset <= start_char) {
+        if (start_char >= subject_length)
           break;
-        start_offset = startchar + 1;
+        start_offset = start_char + 1;
         if (utf8) {
           for (; start_offset < subject_length; start_offset++)
             if ((subject[start_offset] & 0xc0) != 0x80)
@@ -830,15 +827,15 @@ DECLARE_STRING_METHOD(matches) {
     if (rc == PCRE2_ERROR_NOMATCH) {
       if (options == 0)
         break;
-      ovector[1] = start_offset + 1;
+      o_vector[1] = start_offset + 1;
       if (crlf_is_newline && start_offset < subject_length - 1 &&
           subject[start_offset] == '\r' && subject[start_offset + 1] == '\n')
-        ovector[1] += 1;
+        o_vector[1] += 1;
       else if (utf8) {
-        while (ovector[1] < subject_length) {
-          if ((subject[ovector[1]] & 0xc0) != 0x80)
+        while (o_vector[1] < subject_length) {
+          if ((subject[o_vector[1]] & 0xc0) != 0x80)
             break;
-          ovector[1] += 1;
+          o_vector[1] += 1;
         }
       }
       continue;
@@ -851,17 +848,17 @@ DECLARE_STRING_METHOD(matches) {
     }
 
     // REGEX_VECTOR_SIZE_WARNING();
-    REGEX_ASSERTION_ERROR(re, match_data, ovector);
+    REGEX_ASSERTION_ERROR(re, match_data, o_vector);
 
     if (name_count == 0) {
       int i;
       for (i = 0; i < rc; i++) {
-        PCRE2_SIZE substring_length = ovector[2 * i + 1] - ovector[2 * i];
+        PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
         if (substring_length > 0) {
-          PCRE2_SPTR substring_start = subject + ovector[2 * i];
+          PCRE2_SPTR substring_start = subject + o_vector[2 * i];
           write_list(vm, result,
-                     OBJ_VAL(copy_string(vm, (char *)substring_start,
-                                         (int)substring_length)));
+                     OBJ_VAL(copy_string(vm, (char *) substring_start,
+                                         (int) substring_length)));
         }
       }
     } else {
@@ -871,41 +868,41 @@ DECLARE_STRING_METHOD(matches) {
 
       int i;
       for (i = 0; i < rc; i++) {
-        PCRE2_SIZE substring_length = ovector[2 * i + 1] - ovector[2 * i];
+        PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
         if (substring_length > 0) {
-          PCRE2_SPTR substring_start = subject + ovector[2 * i];
+          PCRE2_SPTR substring_start = subject + o_vector[2 * i];
           write_value_arr(vm, &match_list->items,
-                          OBJ_VAL(copy_string(vm, (char *)substring_start,
-                                              (int)substring_length)));
+                          OBJ_VAL(copy_string(vm, (char *) substring_start,
+                                              (int) substring_length)));
         }
       }
 
-      PCRE2_SPTR tabptr;
+      PCRE2_SPTR tab_ptr;
 
-      (void)pcre2_pattern_info(re, PCRE2_INFO_NAMETABLE, &name_table);
+      (void) pcre2_pattern_info(re, PCRE2_INFO_NAMETABLE, &name_table);
 
-      (void)pcre2_pattern_info(re, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
+      (void) pcre2_pattern_info(re, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
 
-      tabptr = name_table;
+      tab_ptr = name_table;
 
-      for (i = 0; i < (int)name_count; i++) {
-        int n = (tabptr[0] << 8) | tabptr[1];
+      for (i = 0; i < (int) name_count; i++) {
+        int n = (tab_ptr[0] << 8) | tab_ptr[1];
 
         char *_key = malloc(sizeof(char *));
         char *_val = malloc(sizeof(char *));
-        sprintf(_key, "%*s", name_entry_size - 3, tabptr + 2);
-        sprintf(_val, "%*s", (int)(ovector[2 * n + 1] - ovector[2 * n]),
-                subject + ovector[2 * n]);
+        sprintf(_key, "%*s", name_entry_size - 3, tab_ptr + 2);
+        sprintf(_val, "%*s", (int) (o_vector[2 * n + 1] - o_vector[2 * n]),
+                subject + o_vector[2 * n]);
 
-        while (isspace((unsigned char)*_key))
+        while (isspace((unsigned char) *_key))
           _key++;
 
         dict_add_entry(
             vm, match_dict, OBJ_VAL(copy_string(vm, _key, name_entry_size - 3)),
             OBJ_VAL(copy_string(vm, _val,
-                                (int)(ovector[2 * n + 1] - ovector[2 * n]))));
+                                (int) (o_vector[2 * n + 1] - o_vector[2 * n]))));
 
-        tabptr += name_entry_size;
+        tab_ptr += name_entry_size;
       }
 
       write_value_arr(vm, &match_list->items, OBJ_VAL(match_dict));
@@ -936,13 +933,13 @@ DECLARE_STRING_METHOD(replace) {
 
   GET_REGEX_COMPILE_OPTIONS(replace, substr, false);
   char *real_regex = substr->chars;
-  if ((int)compile_options > -1) {
+  if ((int) compile_options > -1) {
     real_regex = remove_regex_delimiter(vm, substr);
   }
 
-  PCRE2_SPTR input = (PCRE2_SPTR)string->chars;
-  PCRE2_SPTR pattern = (PCRE2_SPTR)real_regex;
-  PCRE2_SPTR replacement = (PCRE2_SPTR)rep_substr->chars;
+  PCRE2_SPTR input = (PCRE2_SPTR) string->chars;
+  PCRE2_SPTR pattern = (PCRE2_SPTR) real_regex;
+  PCRE2_SPTR replacement = (PCRE2_SPTR) rep_substr->chars;
 
   int result, error_number;
   PCRE2_SIZE error_offset;
@@ -959,7 +956,7 @@ DECLARE_STRING_METHOD(replace) {
   result = pcre2_substitute(
       re, input, PCRE2_ZERO_TERMINATED, 0,
       PCRE2_SUBSTITUTE_GLOBAL | PCRE2_SUBSTITUTE_OVERFLOW_LENGTH |
-          PCRE2_SUBSTITUTE_EXTENDED,
+      PCRE2_SUBSTITUTE_EXTENDED,
       0, match_context, replacement, PCRE2_ZERO_TERMINATED, 0, &output_length);
 
   if (result != PCRE2_ERROR_NOMEMORY) {
@@ -978,7 +975,7 @@ DECLARE_STRING_METHOD(replace) {
   }
 
   b_obj_string *response =
-      copy_string(vm, (char *)output_buffer, output_length);
+      copy_string(vm, (char *) output_buffer, (int)output_length);
 
   pcre2_match_context_free(match_context);
   pcre2_code_free(re);
@@ -989,7 +986,7 @@ DECLARE_STRING_METHOD(replace) {
 DECLARE_STRING_METHOD(to_bytes) {
   ENFORCE_ARG_COUNT(to_bytes, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
-  RETURN_OBJ(copy_bytes(vm, (unsigned char *)string->chars, string->length));
+  RETURN_OBJ(copy_bytes(vm, (unsigned char *) string->chars, string->length));
 }
 
 DECLARE_STRING_METHOD(__iter__) {
@@ -1003,7 +1000,7 @@ DECLARE_STRING_METHOD(__iter__) {
     int start = index, end = index + 1;
     utf8slice(string->chars, &start, &end);
 
-    RETURN_LSTRING(string->chars + start, (int)(end - start));
+    RETURN_L_STRING(string->chars + start, (int) (end - start));
   }
 
   RETURN;

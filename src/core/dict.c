@@ -38,31 +38,31 @@ DECLARE_DICT_METHOD(clear) {
 DECLARE_DICT_METHOD(clone) {
   ENFORCE_ARG_COUNT(clone, 0);
   b_obj_dict *dict = AS_DICT(METHOD_OBJECT);
-  b_obj_dict *ndict = new_dict(vm);
+  b_obj_dict *n_dict = new_dict(vm);
 
-  table_add_all(vm, &dict->items, &ndict->items);
+  table_add_all(vm, &dict->items, &n_dict->items);
 
   for (int i = 0; i < dict->names.count; i++) {
-    write_value_arr(vm, &ndict->names, dict->names.values[i]);
+    write_value_arr(vm, &n_dict->names, dict->names.values[i]);
   }
 
-  RETURN_OBJ(ndict);
+  RETURN_OBJ(n_dict);
 }
 
 DECLARE_DICT_METHOD(compact) {
   ENFORCE_ARG_COUNT(compact, 0);
   b_obj_dict *dict = AS_DICT(METHOD_OBJECT);
-  b_obj_dict *ndict = new_dict(vm);
+  b_obj_dict *n_dict = new_dict(vm);
 
   for (int i = 0; i < dict->names.count; i++) {
     b_value tmp_value;
     table_get(&dict->items, dict->names.values[i], &tmp_value);
     if (!values_equal(tmp_value, NIL_VAL)) {
-      dict_add_entry(vm, ndict, dict->names.values[i], tmp_value);
+      dict_add_entry(vm, n_dict, dict->names.values[i], tmp_value);
     }
   }
 
-  RETURN_OBJ(ndict);
+  RETURN_OBJ(n_dict);
 }
 
 DECLARE_DICT_METHOD(contains) {

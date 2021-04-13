@@ -6,8 +6,10 @@
 #include <string.h>
 
 #if !defined _WIN32 && !defined __CYGWIN__
+
 #include <readline/history.h>
 #include <readline/readline.h>
+
 #endif
 
 #include <setjmp.h>
@@ -18,8 +20,8 @@
 static bool continue_repl = true;
 sigjmp_buf ctrlc_buf;
 
-void handle_signals(int signo) {
-  if (signo == SIGINT) {
+void handle_signals(int sig_no) {
+  if (sig_no == SIGINT) {
     printf("\n<KeyboardInterrupt>\n");
     continue_repl = false;
     siglongjmp(ctrlc_buf, 1);
@@ -40,13 +42,12 @@ static void repl(b_vm *vm) {
           "Type \"exit()\" to quit, \"help()\" or \"credits()\" for more "
           "information\n");
 
-  char *source = (char *)calloc(1, sizeof(char));
+  char *source = (char *) calloc(1, sizeof(char));
   int current_line = 0;
   int brace_count = 0, paren_count = 0, bracket_count = 0;
 
   for (;;) {
-    while (sigsetjmp(ctrlc_buf, 1) != 0)
-      ;
+    while (sigsetjmp(ctrlc_buf, 1) != 0);
 
     if (!continue_repl) {
       current_line = 0;
@@ -74,7 +75,7 @@ static void repl(b_vm *vm) {
     line[line_length] = 0;
 #else
     char *line = readline(cursor);
-    int line_length = (int)strlen(line);
+    int line_length = (int) strlen(line);
 #endif // _WIN32
 
     // terminate early if we receive a terminating command such as exit()
@@ -102,7 +103,7 @@ static void repl(b_vm *vm) {
       else if (line[i] == '[')
         bracket_count++;
 
-      // scope closers...
+        // scope closers...
       else if (line[i] == '}' && brace_count > 0)
         brace_count--;
       else if (line[i] == ')' && paren_count > 0)
@@ -139,7 +140,7 @@ static char *read_file(const char *path) {
   size_t file_size = ftell(fp);
   rewind(fp);
 
-  char *buffer = (char *)malloc(file_size + 1);
+  char *buffer = (char *) malloc(file_size + 1);
 
   // the system might not have enough memory to read the file.
   if (buffer == NULL) {
@@ -177,7 +178,7 @@ static void run_file(b_vm *vm, const char *file) {
 }
 
 int main(int argc, const char *argv[]) {
-  b_vm *vm = (b_vm *)malloc(sizeof(b_vm));
+  b_vm *vm = (b_vm *) malloc(sizeof(b_vm));
   memset(vm, 0, sizeof(b_vm));
 
   init_vm(vm);

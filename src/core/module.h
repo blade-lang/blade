@@ -27,7 +27,7 @@ typedef struct {
 
 typedef struct {
   b_func_reg *functions;
-  b_class_reg *klasses;
+  b_class_reg *classes;
 } b_module_reg;
 
 #define CREATE_MODULE_LOADER(module)                                           \

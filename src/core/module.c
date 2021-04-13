@@ -16,18 +16,18 @@ typedef struct {
 } b_module_registry;
 
 b_module_registry modules[] = {
-    {"os", GET_MODULE_LOADER(os)},         //
-    {"io", GET_MODULE_LOADER(io)},         //
+    {"os",     GET_MODULE_LOADER(os)},         //
+    {"io",     GET_MODULE_LOADER(io)},         //
     {"base64", GET_MODULE_LOADER(base64)}, //
-    {"math", GET_MODULE_LOADER(math)},     //
-    {"date", GET_MODULE_LOADER(date)},     //
-    {NULL, NULL},
+    {"math",   GET_MODULE_LOADER(math)},     //
+    {"date",   GET_MODULE_LOADER(date)},     //
+    {NULL,     NULL},
 };
 
 void bind_native_modules(b_vm *vm, b_obj_string *module_name,
                          const char *module_path) {
 
-  if (is_core_library_file((char *)module_path, module_name->chars)) {
+  if (is_core_library_file((char *) module_path, module_name->chars)) {
     for (int i = 0; modules[i].name != NULL; i++) {
       if (memcmp(modules[i].name, module_name->chars, module_name->length) ==
           0) {
@@ -37,7 +37,7 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
           for (int j = 0; module.functions[j].name != NULL; j++) {
             b_func_reg func = module.functions[j];
             b_value func_name =
-                OBJ_VAL(copy_string(vm, func.name, (int)strlen(func.name)));
+                OBJ_VAL(copy_string(vm, func.name, (int) strlen(func.name)));
 
             b_value func_real_value =
                 OBJ_VAL(new_native(vm, func.function, func.name));
@@ -46,12 +46,12 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
           }
         }
 
-        if (module.klasses != NULL) {
-          for (int j = 0; module.klasses[j].name != NULL; j++) {
-            b_class_reg klass_reg = module.klasses[j];
+        if (module.classes != NULL) {
+          for (int j = 0; module.classes[j].name != NULL; j++) {
+            b_class_reg klass_reg = module.classes[j];
 
             b_value class_key = OBJ_VAL(
-                copy_string(vm, klass_reg.name, (int)strlen(klass_reg.name)));
+                copy_string(vm, klass_reg.name, (int) strlen(klass_reg.name)));
 
             b_value class_value;
             if (table_get(&vm->globals, class_key, &class_value)) {
@@ -63,7 +63,7 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
                   b_func_reg func = klass_reg.functions[k];
 
                   b_value func_name = OBJ_VAL(
-                      copy_string(vm, func.name, (int)strlen(func.name)));
+                      copy_string(vm, func.name, (int) strlen(func.name)));
 
                   b_value func_real_value =
                       OBJ_VAL(new_native(vm, func.function, func.name));
@@ -76,10 +76,10 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
               }
 
               if (klass_reg.fields != NULL) {
-                for (int j = 0; klass_reg.fields[j].name != NULL; j++) {
-                  b_field_reg field = klass_reg.fields[j];
+                for (int k = 0; klass_reg.fields[k].name != NULL; k++) {
+                  b_field_reg field = klass_reg.fields[k];
                   b_value field_name = OBJ_VAL(
-                      copy_string(vm, field.name, (int)strlen(field.name)));
+                      copy_string(vm, field.name, (int) strlen(field.name)));
 
                   table_set(vm,
                             field.is_static ? &klass->static_fields

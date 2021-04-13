@@ -39,7 +39,7 @@ struct s_vm {
   b_table strings;
   b_table bytes;
   b_table globals;
-  b_obj_upvalue *open_upvalues;
+  b_obj_up_value *open_up_values;
 
   b_obj *objects;
   b_compiler *compiler;
@@ -60,9 +60,6 @@ struct s_vm {
   b_table methods_file;
   b_table methods_bytes;
 
-  // compiler aid
-  int anonymous_globals_count;
-
   // repl flag
   bool is_repl;
 };
@@ -72,7 +69,7 @@ void free_vm(b_vm *vm);
 b_ptr_result interpret(b_vm *vm, const char *source, const char *filename);
 void push(b_vm *vm, b_value value);
 b_value pop(b_vm *vm);
-b_value popn(b_vm *vm, int n);
+b_value pop_n(b_vm *vm, int n);
 b_value peek(b_vm *vm, int distance);
 
 bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
