@@ -102,14 +102,14 @@ SOURCES = $(foreach sdir, $(SRC_DIR), $(wildcard $(sdir)/*.c))
 OBJECTS = $(patsubst $(SOURCE_DIR)/*.c, $(BUILD_DIR)/*.c, $(SOURCES))
 # INCLUDES = $(addprefix -I, $(addprefix $(SOURCE_DIR)/, $(SUB_DIRS)))
 
-vpath %.c $(SRC_DIR)
+#vpath %.c $(SRC_DIR)
 
 CFLAGS += -I$(SOURCE_DIR)/core -I$(SOURCE_DIR) -Ideps/includes
 
-define make-goal
-$1/*.o: %.c
-	$(CC) -I$(INCLUDES) -c $$< -o $$@
-endef
+#define make-goal
+#$1/*.o: %.c
+#	$(CC) -I$(INCLUDES) -c $$< -o $$@
+#endef
 
 build/$(NAME): $(OBJECTS) $(LIB_PCRE2) $(LIB_WIN32)
 	@ printf "Building Bird in %s mode into %s...\n" $(MODE) $(NAME)
@@ -119,4 +119,4 @@ build/$(NAME): $(OBJECTS) $(LIB_PCRE2) $(LIB_WIN32)
 
 .PHONY: default
 
-$(foreach bdir,$(BLD_DIRS),$(eval $(call make-goal,$(bdir))))
+#$(foreach bdir,$(BLD_DIRS),$(eval $(call make-goal,$(bdir))))

@@ -22,42 +22,42 @@ int utf8_number_bytes(int value) {
 }
 
 char *utf8_encode(unsigned int code) {
-  int count = utf8_number_bytes(code);
+  int count = utf8_number_bytes((int)code);
   if (count > 0) {
-    char *chars = (char *)calloc(count + 1, sizeof(char));
+    char *chars = (char *) calloc(count + 1, sizeof(char));
     if (code <= 0x7F) {
-      chars[0] = (code & 0x7F);
+      chars[0] = (char)(code & 0x7F);
       chars[1] = '\0';
     } else if (code <= 0x7FF) {
       // one continuation byte
-      chars[1] = 0x80 | (code & 0x3F);
+      chars[1] = (char)(0x80 | (code & 0x3F));
       code = (code >> 6);
-      chars[0] = 0xC0 | (code & 0x1F);
+      chars[0] = (char)(0xC0 | (code & 0x1F));
     } else if (code <= 0xFFFF) {
       // two continuation bytes
-      chars[2] = 0x80 | (code & 0x3F);
+      chars[2] = (char)(0x80 | (code & 0x3F));
       code = (code >> 6);
-      chars[1] = 0x80 | (code & 0x3F);
+      chars[1] = (char)(0x80 | (code & 0x3F));
       code = (code >> 6);
-      chars[0] = 0xE0 | (code & 0xF);
+      chars[0] = (char)(0xE0 | (code & 0xF));
     } else if (code <= 0x10FFFF) {
       // three continuation bytes
-      chars[3] = 0x80 | (code & 0x3F);
+      chars[3] = (char)(0x80 | (code & 0x3F));
       code = (code >> 6);
-      chars[2] = 0x80 | (code & 0x3F);
+      chars[2] = (char)(0x80 | (code & 0x3F));
       code = (code >> 6);
-      chars[1] = 0x80 | (code & 0x3F);
+      chars[1] = (char)(0x80 | (code & 0x3F));
       code = (code >> 6);
-      chars[0] = 0xF0 | (code & 0x7);
+      chars[0] = (char)(0xF0 | (code & 0x7));
     } else {
       // unicode replacement character
-      chars[2] = 0xEF;
-      chars[1] = 0xBF;
-      chars[0] = 0xBD;
+      chars[2] = (char)0xEF;
+      chars[1] = (char)0xBF;
+      chars[0] = (char)0xBD;
     }
     return chars;
   }
-  return (char *)"";
+  return (char *) "";
 }
 
 int utf8_decode_num_bytes(uint8_t byte) {
@@ -130,8 +130,8 @@ char *append_strings(const char *old, const char *new_str) {
 
   // concat both strings and return
   if (out != NULL) {
-      memcpy(out, old, old_len);
-      memcpy(out + old_len, new_str, new_len + 1);
+    memcpy(out, old, old_len);
+    memcpy(out + old_len, new_str, new_len + 1);
   }
 
   return out;
@@ -184,7 +184,7 @@ char *utf8index(char *s, int pos) {
 // converts codepoint indexes start and end to byte offsets in the buffer at s
 void utf8slice(char *s, int *start, int *end) {
   char *p = utf8index(s, *start);
-  *start = p != NULL ? p - s : -1;
+  *start = p != NULL ? (int)(p - s) : -1;
   p = utf8index(s, *end);
-  *end = p != NULL ? p - s : (int)strlen(s);
+  *end = p != NULL ? (int)(p - s) : (int) strlen(s);
 }

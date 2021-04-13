@@ -7,7 +7,7 @@
 DECLARE_NATIVE(bytes) {
   ENFORCE_ARG_COUNT(bytes, 1);
   if (IS_NUMBER(args[0])) {
-    b_obj_bytes *bytes = new_bytes(vm, (int)AS_NUMBER(args[0]));
+    b_obj_bytes *bytes = new_bytes(vm, (int) AS_NUMBER(args[0]));
     RETURN_OBJ(bytes);
   } else if (IS_LIST(args[0])) {
     b_obj_list *list = AS_LIST(args[0]);
@@ -24,7 +24,7 @@ DECLARE_NATIVE(bytes) {
         RETURN_ERROR("invalid byte. bytes range from 0 to 255");
       }
 
-      bytes->bytes.bytes[i] = (unsigned char)byte;
+      bytes->bytes.bytes[i] = (unsigned char) byte;
     }
 
     RETURN_OBJ(bytes);
@@ -42,7 +42,7 @@ DECLARE_BYTES_METHOD(append) {
   ENFORCE_ARG_COUNT(append, 1);
 
   if (IS_NUMBER(args[0])) {
-    int byte = (int)AS_NUMBER(args[0]);
+    int byte = (int) AS_NUMBER(args[0]);
     if (byte < 0 || byte > 255) {
       RETURN_ERROR("invalid byte. bytes range from 0 to 255");
     }
@@ -51,7 +51,7 @@ DECLARE_BYTES_METHOD(append) {
     b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
     bytes->bytes.bytes = reallocate(vm, bytes->bytes.bytes, bytes->bytes.count,
                                     bytes->bytes.count++);
-    bytes->bytes.bytes[bytes->bytes.count - 1] = (unsigned char)byte;
+    bytes->bytes.bytes[bytes->bytes.count - 1] = (unsigned char) byte;
     RETURN;
   } else if (IS_LIST(args[0])) {
     b_obj_list *list = AS_LIST(args[0]);
@@ -67,12 +67,12 @@ DECLARE_BYTES_METHOD(append) {
           RETURN_ERROR("bytes lists can only contain numbers");
         }
 
-        int byte = (int)AS_NUMBER(list->items.values[i]);
+        int byte = (int) AS_NUMBER(list->items.values[i]);
         if (byte < 0 || byte > 255) {
           RETURN_ERROR("invalid byte. bytes range from 0 to 255");
         }
 
-        bytes->bytes.bytes[bytes->bytes.count + i] = (unsigned char)byte;
+        bytes->bytes.bytes[bytes->bytes.count + i] = (unsigned char) byte;
       }
 
       bytes->bytes.count += list->items.count;
@@ -86,25 +86,25 @@ DECLARE_BYTES_METHOD(append) {
 DECLARE_BYTES_METHOD(clone) {
   ENFORCE_ARG_COUNT(clone, 0);
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
-  b_obj_bytes *nbytes = new_bytes(vm, bytes->bytes.count);
+  b_obj_bytes *n_bytes = new_bytes(vm, bytes->bytes.count);
 
-  memcpy(nbytes->bytes.bytes, bytes->bytes.bytes, bytes->bytes.count);
+  memcpy(n_bytes->bytes.bytes, bytes->bytes.bytes, bytes->bytes.count);
 
-  RETURN_OBJ(nbytes);
+  RETURN_OBJ(n_bytes);
 }
 
 DECLARE_BYTES_METHOD(extend) {
   ENFORCE_ARG_COUNT(extend, 1);
   ENFORCE_ARG_TYPE(extend, 0, IS_BYTES);
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
-  b_obj_bytes *nbytes = AS_BYTES(args[0]);
+  b_obj_bytes *n_bytes = AS_BYTES(args[0]);
 
   bytes->bytes.bytes = reallocate(vm, bytes->bytes.bytes, bytes->bytes.count,
-                                  bytes->bytes.count + nbytes->bytes.count);
+                                  bytes->bytes.count + n_bytes->bytes.count);
 
-  memcpy(bytes->bytes.bytes + bytes->bytes.count, nbytes->bytes.bytes,
-         nbytes->bytes.count);
-  bytes->bytes.count += nbytes->bytes.count;
+  memcpy(bytes->bytes.bytes + bytes->bytes.count, n_bytes->bytes.bytes,
+         n_bytes->bytes.count);
+  bytes->bytes.count += n_bytes->bytes.count;
   RETURN;
 }
 
@@ -113,7 +113,7 @@ DECLARE_BYTES_METHOD(pop) {
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
   unsigned char c = bytes->bytes.bytes[bytes->bytes.count - 1];
   bytes->bytes.count--;
-  RETURN_NUMBER((double)((int)c));
+  RETURN_NUMBER((double) ((int) c));
 }
 
 DECLARE_BYTES_METHOD(remove) {
@@ -134,31 +134,31 @@ DECLARE_BYTES_METHOD(remove) {
   }
   bytes->bytes.count--;
 
-  RETURN_NUMBER((double)((int)val));
+  RETURN_NUMBER((double) ((int) val));
 }
 
 DECLARE_BYTES_METHOD(reverse) {
   ENFORCE_ARG_COUNT(reverse, 0);
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
 
-  b_obj_bytes *nbytes = new_bytes(vm, bytes->bytes.count);
+  b_obj_bytes *n_bytes = new_bytes(vm, bytes->bytes.count);
 
   for (int i = 0; i < bytes->bytes.count; i++) {
-    nbytes->bytes.bytes[i] = bytes->bytes.bytes[bytes->bytes.count - i - 1];
+    n_bytes->bytes.bytes[i] = bytes->bytes.bytes[bytes->bytes.count - i - 1];
   }
 
-  RETURN_OBJ(nbytes);
+  RETURN_OBJ(n_bytes);
 }
 
 DECLARE_BYTES_METHOD(first) {
   ENFORCE_ARG_COUNT(first, 0);
-  RETURN_NUMBER((double)((int)AS_BYTES(METHOD_OBJECT)->bytes.bytes[0]));
+  RETURN_NUMBER((double) ((int) AS_BYTES(METHOD_OBJECT)->bytes.bytes[0]));
 }
 
 DECLARE_BYTES_METHOD(last) {
   ENFORCE_ARG_COUNT(first, 0);
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
-  RETURN_NUMBER((double)((int)bytes->bytes.bytes[bytes->bytes.count - 1]));
+  RETURN_NUMBER((double) ((int) bytes->bytes.bytes[bytes->bytes.count - 1]));
 }
 
 DECLARE_BYTES_METHOD(get) {
@@ -171,7 +171,7 @@ DECLARE_BYTES_METHOD(get) {
     RETURN_ERROR("bytes index %d out of range", index);
   }
 
-  RETURN_NUMBER((double)((int)bytes->bytes.bytes[index]));
+  RETURN_NUMBER((double) ((int) bytes->bytes.bytes[index]));
 }
 
 DECLARE_BYTES_METHOD(is_alpha) {
@@ -246,7 +246,7 @@ DECLARE_BYTES_METHOD(to_list) {
   b_obj_list *list = new_list(vm);
 
   for (int i = 0; i < bytes->bytes.count; i++) {
-    write_list(vm, list, NUMBER_VAL((double)((int)bytes->bytes.bytes[i])));
+    write_list(vm, list, NUMBER_VAL((double) ((int) bytes->bytes.bytes[i])));
   }
 
   RETURN_OBJ(list);
@@ -256,8 +256,8 @@ DECLARE_BYTES_METHOD(to_string) {
   ENFORCE_ARG_COUNT(to_string, 0);
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
 
-  char *string = (char *)bytes->bytes.bytes;
-  RETURN_LSTRING(string, bytes->bytes.count);
+  char *string = (char *) bytes->bytes.bytes;
+  RETURN_L_STRING(string, bytes->bytes.count);
 }
 
 DECLARE_BYTES_METHOD(__iter__) {
@@ -269,7 +269,7 @@ DECLARE_BYTES_METHOD(__iter__) {
   int index = AS_NUMBER(args[0]);
 
   if (index > -1 && index < bytes->bytes.count) {
-    RETURN_NUMBER((int)bytes->bytes.bytes[index]);
+    RETURN_NUMBER((int) bytes->bytes.bytes[index]);
   }
 
   RETURN;

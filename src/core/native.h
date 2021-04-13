@@ -11,13 +11,13 @@
 #include "pcre2.h"
 
 #define DECLARE_NATIVE(name)                                                   \
-  b_value native_fn_##name(b_vm *vm, int arg_count, b_value *args)
+  b_value native_fn_##name(b_vm *vm, int arg_count, const b_value *args)
 
 #define DECLARE_METHOD(name)                                                   \
-  b_value native_method_##name(b_vm *vm, int arg_count, b_value *args)
+  b_value native_method_##name(b_vm *vm, int arg_count, const b_value *args)
 
 #define DECLARE_MODULE_METHOD(name)                                            \
-  b_value native_module_##name(b_vm *vm, int arg_count, b_value *args)
+  b_value native_module_##name(b_vm *vm, int arg_count, const b_value *args)
 
 #define GET_NATIVE(name) native_fn_##name
 #define GET_METHOD(name) native_method_##name
@@ -59,8 +59,8 @@
 #define RETURN_NUMBER(v) return NUMBER_VAL(v)
 #define RETURN_OBJ(v) return OBJ_VAL(v)
 #define RETURN_STRING(v) return OBJ_VAL(copy_string(vm, v, (int)strlen(v)))
-#define RETURN_LSTRING(v, l) return OBJ_VAL(copy_string(vm, v, l))
-#define RETURN_TSTRING(v, l) return OBJ_VAL(take_string(vm, v, l))
+#define RETURN_L_STRING(v, l) return OBJ_VAL(copy_string(vm, v, l))
+#define RETURN_T_STRING(v, l) return OBJ_VAL(take_string(vm, v, l))
 #define RETURN_VALUE(v) return v
 
 #define ENFORCE_ARG_COUNT(name, d)                                             \
@@ -151,37 +151,59 @@
   }
 
 extern int is_regex(b_obj_string *string);
+
 extern char *remove_regex_delimiter(b_vm *vm, b_obj_string *string);
+
 extern void write_list(b_vm *vm, b_obj_list *list, b_value value);
+
 extern b_obj_list *copy_list(b_vm *vm, b_obj_list *list, int start, int length);
 
 DECLARE_NATIVE(time);
+
 DECLARE_NATIVE(microtime);
 
 DECLARE_NATIVE(hasprop);
+
 DECLARE_NATIVE(getprop);
+
 DECLARE_NATIVE(setprop);
+
 DECLARE_NATIVE(delprop);
 
 DECLARE_NATIVE(id);
+
 DECLARE_NATIVE(hash);
 
 DECLARE_NATIVE(max);
+
 DECLARE_NATIVE(min);
+
 DECLARE_NATIVE(sum);
+
 DECLARE_NATIVE(abs);
+
 DECLARE_NATIVE(int);
+
 DECLARE_NATIVE(hex);
+
 DECLARE_NATIVE(oct);
+
 DECLARE_NATIVE(bin);
+
 DECLARE_NATIVE(ord);
+
 DECLARE_NATIVE(chr);
 
 DECLARE_NATIVE(to_dict);
+
 DECLARE_NATIVE(to_list);
+
 DECLARE_NATIVE(to_int);
+
 DECLARE_NATIVE(to_number);
+
 DECLARE_NATIVE(to_string);
+
 DECLARE_NATIVE(to_bool);
 
 DECLARE_NATIVE(rand);
@@ -189,20 +211,33 @@ DECLARE_NATIVE(rand);
 DECLARE_NATIVE(type);
 
 DECLARE_NATIVE(is_callable);
+
 DECLARE_NATIVE(is_bool);
+
 DECLARE_NATIVE(is_number);
+
 DECLARE_NATIVE(is_int);
+
 DECLARE_NATIVE(is_string);
+
 DECLARE_NATIVE(is_list);
+
 DECLARE_NATIVE(is_dict);
+
 DECLARE_NATIVE(is_object);
+
 DECLARE_NATIVE(is_function);
+
 DECLARE_NATIVE(is_class);
+
 DECLARE_NATIVE(is_file);
+
 DECLARE_NATIVE(is_instance);
+
 DECLARE_NATIVE(is_iterable);
 
 DECLARE_NATIVE(print);
+
 DECLARE_NATIVE(__Exception__);
 
 #endif

@@ -3,7 +3,9 @@
 #include "util.h"
 
 #ifdef IS_UNIX
+
 #include <termios.h>
+
 #else
 #include "compat/termios.h"
 #endif
@@ -563,12 +565,8 @@ DECLARE_MODULE_METHOD(io_tty__tcgetattr) {
   int status;
   if ((status = tcgetattr(fileno(file->file), &raw_attr)) != 0) {
     switch (status) {
-    case ENOTTY:
-      RETURN_ERROR("stdin is not a TTY");
-      break;
-    case EBADF:
-      RETURN_ERROR("stdin is a bad file descriptor");
-      break;
+      case ENOTTY: RETURN_ERROR("stdin is not a TTY");
+      case EBADF: RETURN_ERROR("stdin is a bad file descriptor");
     }
     RETURN;
   }
@@ -626,28 +624,28 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
   }
 
   b_value iflag = NIL_VAL, oflag = NIL_VAL, cflag = NIL_VAL, lflag = NIL_VAL,
-          ispeed = NIL_VAL, ospeed = NIL_VAL;
+      ispeed = NIL_VAL, ospeed = NIL_VAL;
 
   struct termios raw;
   tcgetattr(fileno(file->file), &raw);
 
   if (dict_get_entry(dict, NUMBER_VAL(0), &iflag)) {
-    raw.c_iflag = (long)AS_NUMBER(iflag);
+    raw.c_iflag = (long) AS_NUMBER(iflag);
   }
   if (dict_get_entry(dict, NUMBER_VAL(1), &iflag)) {
-    raw.c_oflag = (long)AS_NUMBER(oflag);
+    raw.c_oflag = (long) AS_NUMBER(oflag);
   }
   if (dict_get_entry(dict, NUMBER_VAL(2), &iflag)) {
-    raw.c_cflag = (long)AS_NUMBER(cflag);
+    raw.c_cflag = (long) AS_NUMBER(cflag);
   }
   if (dict_get_entry(dict, NUMBER_VAL(3), &iflag)) {
-    raw.c_lflag = (long)AS_NUMBER(lflag);
+    raw.c_lflag = (long) AS_NUMBER(lflag);
   }
   if (dict_get_entry(dict, NUMBER_VAL(4), &iflag)) {
-    raw.c_ispeed = (long)AS_NUMBER(ispeed);
+    raw.c_ispeed = (long) AS_NUMBER(ispeed);
   }
   if (dict_get_entry(dict, NUMBER_VAL(5), &iflag)) {
-    raw.c_ospeed = (long)AS_NUMBER(ospeed);
+    raw.c_ospeed = (long) AS_NUMBER(ospeed);
   }
 
   RETURN_BOOL(tcsetattr(fileno(file->file), type, &raw) != -1);
@@ -680,10 +678,10 @@ DECLARE_NATIVE(io_getc) {
     length = AS_NUMBER(args[0]);
   }
 
-  int nread;
+  int n_read;
   char *c = ALLOCATE(char, length + 1);
-  while ((nread = read(STDIN_FILENO, c, length)) != 1) {
-    if (nread == -1 && errno != EAGAIN) {
+  while ((n_read = (int)read(STDIN_FILENO, c, length)) != 1) {
+    if (n_read == -1 && errno != EAGAIN) {
       RETURN_ERROR("error reading character from stdin");
     }
   }
@@ -694,7 +692,7 @@ DECLARE_NATIVE(io_getc) {
   } else {
     char *result = ALLOCATE(char, length + 2);
     length = read_line(result, length + 1);
-    RETURN_LSTRING(result, length);
+    RETURN_L_STRING(result, length);
   }
 }
 
@@ -769,27 +767,27 @@ DECLARE_NATIVE(io_stderr) {
 
 CREATE_MODULE_LOADER(io) {
   static b_func_reg io_functions[] = {
-      {"getc", false, GET_NATIVE(io_getc)},
-      {"putc", false, GET_NATIVE(io_putc)},
-      {"stdin", false, GET_NATIVE(io_stdin)},
+      {"getc",   false, GET_NATIVE(io_getc)},
+      {"putc",   false, GET_NATIVE(io_putc)},
+      {"stdin",  false, GET_NATIVE(io_stdin)},
       {"stdout", false, GET_NATIVE(io_stdout)},
       {"stderr", false, GET_NATIVE(io_stderr)},
-      {NULL, false, NULL},
+      {NULL,     false, NULL},
   };
 
   static b_func_reg tty_class_functions[] = {
       {"_tcgetattr", false, GET_MODULE_METHOD(io_tty__tcgetattr)},
       {"_tcsetattr", false, GET_MODULE_METHOD(io_tty__tcsetattr)},
-      {"_flush", false, GET_MODULE_METHOD(io_tty__flush)},
-      {NULL, false, NULL},
+      {"_flush",     false, GET_MODULE_METHOD(io_tty__flush)},
+      {NULL,         false, NULL},
   };
 
-  static b_class_reg klasses[] = {
+  static b_class_reg classes[] = {
       {"TTY", NULL, tty_class_functions},
-      {NULL, NULL, NULL},
+      {NULL,  NULL, NULL},
   };
 
-  static b_module_reg module = {io_functions, klasses};
+  static b_module_reg module = {io_functions, classes};
 
   return module;
 }

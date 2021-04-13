@@ -51,4 +51,10 @@ rbench:
 	@ ./bird benchmarks/bench-$(call args,main).b
 
 
+all:
+	@ rm -rf build birdd
+	@ $(MAKE) -f birdy.mk NAME=birdd MODE=debug SOURCE_DIR=src
+	@ cp build/birdd birdd
+
+
 .PHONY: clean release debug test tests

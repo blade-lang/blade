@@ -13,7 +13,9 @@
 #if defined _MSC_VER
 #include "win32.h"
 #else
+
 #include <utime.h>
+
 #endif // _WIN32
 
 #define FILE_ERROR(type, message)                                              \
@@ -86,7 +88,7 @@ static void file_open(b_obj_file *file) {
     char *mode = file->mode->chars;
     if (strstr(file->mode->chars, "w") != NULL &&
         strstr(file->mode->chars, "+") != NULL) {
-      mode = (char *)"a+";
+      mode = (char *) "a+";
     }
     file->file = fopen(file->path->chars, mode);
     file->is_open = true;
@@ -152,7 +154,7 @@ DECLARE_FILE_METHOD(read) {
   size_t file_size_real = -1;
   if (arg_count == 1) {
     ENFORCE_ARG_TYPE(read, 0, IS_NUMBER);
-    file_size = (size_t)AS_NUMBER(args[0]);
+    file_size = (size_t) AS_NUMBER(args[0]);
   }
 
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
@@ -165,7 +167,7 @@ DECLARE_FILE_METHOD(read) {
         !file_exists(file->path->chars)) {
       FILE_ERROR(NotFound, "no such file or directory");
     }
-    // file is in write only mode
+      // file is in write only mode
     else if (strstr(file->mode->chars, "w") != NULL &&
              strstr(file->mode->chars, "+") == NULL) {
       FILE_ERROR(Unsupported, "cannot read file in write mode");
@@ -182,7 +184,7 @@ DECLARE_FILE_METHOD(read) {
     // Get file size
     struct stat stats; // stats is super faster on large files
     if (lstat(file->path->chars, &stats) == 0) {
-      file_size_real = (size_t)stats.st_size;
+      file_size_real = (size_t) stats.st_size;
     } else {
       // fallback
       fseek(file->file, 0L, SEEK_END);
@@ -190,7 +192,7 @@ DECLARE_FILE_METHOD(read) {
       rewind(file->file);
     }
 
-    if (file_size == (size_t)-1 || file_size > file_size_real) {
+    if (file_size == (size_t) -1 || file_size > file_size_real) {
       file_size = file_size_real;
     }
   } else {
@@ -202,12 +204,12 @@ DECLARE_FILE_METHOD(read) {
 
     // for non-file objects such as stdin
     // minimum read bytes should be 1
-    if (file_size == (size_t)-1) {
+    if (file_size == (size_t) -1) {
       file_size = 1;
     }
   }
 
-  char *buffer = (char *)malloc(file_size + 1); // +1 for terminator '\0'
+  char *buffer = (char *) malloc(file_size + 1); // +1 for terminator '\0'
 
   if (buffer == NULL && file_size != 0) {
     FILE_ERROR(Buffer, "not enough memory to read file");
@@ -229,10 +231,10 @@ DECLARE_FILE_METHOD(read) {
   }
 
   if (!in_binary_mode) {
-    RETURN_TSTRING(buffer, bytes_read);
+    RETURN_T_STRING(buffer, bytes_read);
   }
 
-  RETURN_OBJ(take_bytes(vm, (unsigned char *)buffer, bytes_read));
+  RETURN_OBJ(take_bytes(vm, (unsigned char *) buffer, bytes_read));
 }
 
 DECLARE_FILE_METHOD(write) {
@@ -287,11 +289,11 @@ DECLARE_FILE_METHOD(write) {
   }
 
   // close file
-  if (count == (size_t)(in_binary_mode ? bytes->bytes.count : string->length)) {
+  if (count == (size_t) (in_binary_mode ? bytes->bytes.count : string->length)) {
     file_close(file);
   }
 
-  if (count > (size_t)0) {
+  if (count > (size_t) 0) {
     RETURN_TRUE;
   }
   RETURN_FALSE;
@@ -325,8 +327,7 @@ DECLARE_FILE_METHOD(flush) {
 #ifdef IS_UNIX
   // using fflush on stdin have undesired effect on unix environments
   if (fileno(stdin) == fileno(file->file)) {
-    while ((getchar()) != '\n')
-      ;
+    while ((getchar()) != '\n');
   } else {
     fflush(file->file);
   }
@@ -540,18 +541,18 @@ DECLARE_FILE_METHOD(copy) {
       FILE_ERROR(Permission, "unable to create new file");
     }
 
-    size_t nread, nwrite;
+    size_t n_read, n_write;
     unsigned char buffer[8192];
     do {
-      nread = fread(buffer, 1, sizeof(buffer), file->file);
-      if (nread > 0) {
-        nwrite = fwrite(buffer, 1, nread, fp);
+      n_read = fread(buffer, 1, sizeof(buffer), file->file);
+      if (n_read > 0) {
+        n_write = fwrite(buffer, 1, n_read, fp);
       } else {
-        nwrite = 0;
+        n_write = 0;
       }
-    } while ((nread > 0) && (nread == nwrite));
+    } while ((n_read > 0) && (n_read == n_write));
 
-    if (nwrite > 0) {
+    if (n_write > 0) {
       FILE_ERROR(Operation, "error copying file");
     }
 
@@ -559,7 +560,7 @@ DECLARE_FILE_METHOD(copy) {
     fclose(fp);
     file_close(file);
 
-    RETURN_BOOL(nread == nwrite);
+    RETURN_BOOL(n_read == n_write);
   } else {
     RETURN_ERROR("file not found");
   }
@@ -575,7 +576,7 @@ DECLARE_FILE_METHOD(truncate) {
   off_t final_size = 0;
   if (arg_count == 1) {
     ENFORCE_ARG_TYPE(truncate, 0, IS_NUMBER);
-    final_size = (off_t)AS_NUMBER(args[0]);
+    final_size = (off_t) AS_NUMBER(args[0]);
   }
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
   DENY_STD();
@@ -596,7 +597,7 @@ DECLARE_FILE_METHOD(chmod) {
 
   if (file_exists(file->path->chars)) {
     int mode = AS_NUMBER(args[0]);
-    RETURN_STATUS(chmod(file->path->chars, (mode_t)mode));
+    RETURN_STATUS(chmod(file->path->chars, (mode_t) mode));
   } else {
     RETURN_ERROR("file not found");
   }
@@ -612,8 +613,8 @@ DECLARE_FILE_METHOD(set_times) {
 
   if (file_exists(file->path->chars)) {
 
-    time_t atime = (time_t)AS_NUMBER(args[0]);
-    time_t mtime = (time_t)AS_NUMBER(args[1]);
+    time_t atime = (time_t) AS_NUMBER(args[0]);
+    time_t mtime = (time_t) AS_NUMBER(args[1]);
 
     struct stat stats;
     int status = lstat(file->path->chars, &stats);
@@ -622,12 +623,12 @@ DECLARE_FILE_METHOD(set_times) {
 
 #if !defined(_WIN32) && (!defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE))
 
-      if (atime == (time_t)-1)
+      if (atime == (time_t) -1)
         new_times.actime = stats.st_atimespec.tv_sec;
       else
         new_times.actime = atime;
 
-      if (mtime == (time_t)-1)
+      if (mtime == (time_t) -1)
         new_times.modtime = stats.st_mtimespec.tv_sec;
       else
         new_times.modtime = mtime;
@@ -662,7 +663,7 @@ DECLARE_FILE_METHOD(seek) {
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
   DENY_STD();
 
-  long position = (long)AS_NUMBER(args[0]);
+  long position = (long) AS_NUMBER(args[0]);
   int seek_type = AS_NUMBER(args[1]);
   RETURN_STATUS(fseek(file->file, position, seek_type));
 }

@@ -4,6 +4,7 @@
 #if defined(__GNUC__) && !defined(_GNU_SOURCE)
 #define _GNU_SOURCE /* needed for (v)asprintf, affects '#include <stdio.h>' */
 #endif
+
 #include <stdarg.h> /* needed for va_*         */
 #include <stdio.h>  /* needed for vsnprintf    */
 #include <stdlib.h> /* needed for malloc, free */
@@ -18,6 +19,7 @@
 #endif
 
 #ifdef __GNUC__
+
 int vscprintf(const char *format, va_list ap) {
   va_list ap_copy;
   va_copy(ap_copy, ap);
@@ -25,6 +27,7 @@ int vscprintf(const char *format, va_list ap) {
   va_end(ap_copy);
   return retval;
 }
+
 #endif
 
 /*

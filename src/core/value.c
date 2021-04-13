@@ -16,7 +16,7 @@ void init_value_arr(b_value_arr *array) {
 
 void init_byte_arr(b_byte_arr *array, int length) {
   array->count = length;
-  array->bytes = (unsigned char*)calloc(length, sizeof(unsigned char));
+  array->bytes = (unsigned char *) calloc(length, sizeof(unsigned char));
 }
 
 void write_value_arr(b_vm *vm, b_value_arr *array, b_value value) {
@@ -105,8 +105,11 @@ static inline void do_print_value(b_value value, bool fix_string) {
 }
 
 #ifndef _WIN32
+
 inline void print_value(b_value value) { do_print_value(value, false); }
+
 inline void echo_value(b_value value) { do_print_value(value, true); }
+
 #else
 void print_value(b_value value) { do_print_value(value, false); }
 void echo_value(b_value value) { do_print_value(value, true); }
@@ -114,7 +117,7 @@ void echo_value(b_value value) { do_print_value(value, true); }
 
 static inline char *number_to_string(double number) {
   int length = snprintf(NULL, 0, NUMBER_FORMAT, number);
-  char *num_str = (char *)calloc(length, sizeof(char));
+  char *num_str = (char *) calloc(length, sizeof(char));
   sprintf(num_str, NUMBER_FORMAT, number);
   return num_str;
 }
@@ -198,7 +201,7 @@ static inline uint32_t hash_bits(uint64_t hash) {
   hash = hash ^ (hash >> 11);
   hash = hash + (hash << 6);
   hash = hash ^ (hash >> 22);
-  return (uint32_t)(hash & 0x3fffffff);
+  return (uint32_t) (hash & 0x3fffffff);
 }
 
 uint32_t hash_double(double value) {
@@ -316,9 +319,10 @@ static uint64_t siphash24(uint64_t k0, uint64_t k1, const char *src,
 } */
 
 #ifndef _WIN32
+
 inline uint32_t hash_string(const char *key, int length) {
 #else
-uint32_t hash_string(const char *key, int length) {
+  uint32_t hash_string(const char *key, int length) {
 #endif // !_WIN32
 
   uint32_t hash = 2166136261u;
@@ -335,24 +339,24 @@ uint32_t hash_string(const char *key, int length) {
 // Generates a hash code for [object].
 static uint32_t hash_object(b_obj *object) {
   switch (object->type) {
-  case OBJ_CLASS:
-    // Classes just use their name.
-    return hash_object((b_obj *)((b_obj_class *)object)->name);
+    case OBJ_CLASS:
+      // Classes just use their name.
+      return hash_object((b_obj *) ((b_obj_class *) object)->name);
 
-    // Allow bare (non-closure) functions so that we can use a map to find
-    // existing constants in a function's constant table. This is only used
-    // internally. Since user code never sees a non-closure function, they
-    // cannot use them as map keys.
-  case OBJ_FUNCTION: {
-    b_obj_func *fn = (b_obj_func *)object;
-    return hash_double(fn->arity) ^ hash_double(fn->blob.count);
-  }
+      // Allow bare (non-closure) functions so that we can use a map to find
+      // existing constants in a function's constant table. This is only used
+      // internally. Since user code never sees a non-closure function, they
+      // cannot use them as map keys.
+    case OBJ_FUNCTION: {
+      b_obj_func *fn = (b_obj_func *) object;
+      return hash_double(fn->arity) ^ hash_double(fn->blob.count);
+    }
 
-  case OBJ_STRING:
-    return ((b_obj_string *)object)->hash;
+    case OBJ_STRING:
+      return ((b_obj_string *) object)->hash;
 
-  default:
-    return 0;
+    default:
+      return 0;
   }
 }
 
@@ -383,7 +387,7 @@ uint32_t hash_value(b_value value) {
 
 /**
  * returns the greater of the two values.
- * this function encapsulates Birdy's object heirachy
+ * this function encapsulates Bird's object hierarchy
  */
 static b_value find_max_value(b_value a, b_value b) {
   if (IS_NIL(a)) {
@@ -402,11 +406,11 @@ static b_value find_max_value(b_value a, b_value b) {
       return b; // every other thing is greater than a number
   } else if (IS_OBJ(a)) {
     if (IS_STRING(a) && IS_STRING(b)) {
-      return strcmp(AS_CSTRING(a), AS_CSTRING(b)) >= 0 ? a : b;
+      return strcmp(AS_C_STRING(a), AS_C_STRING(b)) >= 0 ? a : b;
     } else if (IS_CLOSURE(a) && IS_CLOSURE(b)) {
       return AS_CLOSURE(a)->function->arity >= AS_CLOSURE(b)->function->arity
-                 ? a
-                 : b;
+             ? a
+             : b;
     } else if (IS_CLASS(a) && IS_CLASS(b)) {
       return AS_CLASS(a)->methods.count >= AS_CLASS(b)->methods.count ? a : b;
     } else if (IS_LIST(a) && IS_LIST(b)) {

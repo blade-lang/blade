@@ -45,7 +45,7 @@ DECLARE_DICT_METHOD(compact);
 /**
  * dict.contains(key: any)
  *
- * returns true if the ddictionary contains the key or false otherwise
+ * returns true if the dictionary contains the key or false otherwise
  */
 DECLARE_DICT_METHOD(contains);
 

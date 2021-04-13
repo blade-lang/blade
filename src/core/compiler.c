@@ -6,7 +6,7 @@
 #include "pathinfo.h"
 #include "scanner.h"
 #include "util.h"
-#include "win32.h"
+//#include "win32.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -107,13 +107,12 @@ static bool match(b_parser *p, b_tkn_type t) {
 
 static void consume_statement_end(b_parser *p) {
 
-  // allow block last statement to ommit statement end
+  // allow block last statement to omit statement end
   if (p->in_block && check(p, RBRACE_TOKEN))
     return;
 
   if (match(p, SEMICOLON_TOKEN)) {
-    while (match(p, SEMICOLON_TOKEN) || match(p, NEWLINE_TOKEN))
-      ;
+    while (match(p, SEMICOLON_TOKEN) || match(p, NEWLINE_TOKEN));
     return;
   }
 
@@ -121,100 +120,101 @@ static void consume_statement_end(b_parser *p) {
     return;
 
   consume(p, NEWLINE_TOKEN, "end of statement expected");
-  while (match(p, SEMICOLON_TOKEN) || match(p, NEWLINE_TOKEN))
-    ;
+  while (match(p, SEMICOLON_TOKEN) || match(p, NEWLINE_TOKEN));
 }
 
 static void ignore_whitespace(b_parser *p) {
-  while (match(p, NEWLINE_TOKEN))
-    ;
+  while (match(p, NEWLINE_TOKEN));
 }
 
 static int get_code_args_count(const uint8_t *bytecode,
                                const b_value *constants, int ip) {
-  b_code code = (b_code)bytecode[ip];
+  b_code code = (b_code) bytecode[ip];
 
-  // @TODO: handle upvalues gracefully...
+  // @TODO: handle up values gracefully...
   switch (code) {
-  case OP_EQUAL:
-  case OP_GREATER:
-  case OP_LESS:
-  case OP_NIL:
-  case OP_TRUE:
-  case OP_FALSE:
-  case OP_ADD:
-  case OP_SUBTRACT:
-  case OP_MULTIPLY:
-  case OP_DIVIDE:
-  case OP_FDIVIDE:
-  case OP_REMINDER:
-  case OP_POW:
-  case OP_NEGATE:
-  case OP_NOT:
-  case OP_ECHO:
-  case OP_POP:
-  case OP_CLOSE_UPVALUE:
-  case OP_DUP:
-  case OP_RETURN:
-  case OP_INHERIT:
-  case OP_GET_SUPER:
-  case OP_AND:
-  case OP_OR:
-  case OP_XOR:
-  case OP_LSHIFT:
-  case OP_RSHIFT:
-  case OP_BIT_NOT:
-  case OP_ONE:
-  case OP_SET_INDEX:
-  case OP_ASSERT:
-  case OP_DIE:
-  case OP_END_TRY:
-  case OP_RANGE:
-  case OP_STRINGIFY:
-    return 0;
+    case OP_EQUAL:
+    case OP_GREATER:
+    case OP_LESS:
+    case OP_NIL:
+    case OP_TRUE:
+    case OP_FALSE:
+    case OP_ADD:
+    case OP_SUBTRACT:
+    case OP_MULTIPLY:
+    case OP_DIVIDE:
+    case OP_F_DIVIDE:
+    case OP_REMINDER:
+    case OP_POW:
+    case OP_NEGATE:
+    case OP_NOT:
+    case OP_ECHO:
+    case OP_POP:
+    case OP_CLOSE_UP_VALUE:
+    case OP_DUP:
+    case OP_RETURN:
+    case OP_INHERIT:
+    case OP_GET_SUPER:
+    case OP_AND:
+    case OP_OR:
+    case OP_XOR:
+    case OP_LSHIFT:
+    case OP_RSHIFT:
+    case OP_BIT_NOT:
+    case OP_ONE:
+    case OP_SET_INDEX:
+    case OP_ASSERT:
+    case OP_DIE:
+    case OP_END_TRY:
+    case OP_RANGE:
+    case OP_STRINGIFY:
+      return 0;
 
-  case OP_CALL:
-  case OP_GET_INDEX:
-    return 1;
+    case OP_CALL:
+    case OP_GET_INDEX:
+      return 1;
 
-  case OP_DEFINE_GLOBAL:
-  case OP_GET_GLOBAL:
-  case OP_SET_GLOBAL:
-  case OP_GET_LOCAL:
-  case OP_SET_LOCAL:
-  case OP_GET_UPVALUE:
-  case OP_SET_UPVALUE:
-  case OP_JUMP_IF_FALSE:
-  case OP_JUMP:
-  case OP_BREAK_PL:
-  case OP_LOOP:
-  case OP_CONSTANT:
-  case OP_POPN:
-  case OP_CLASS:
-  case OP_GET_PROPERTY:
-  case OP_SET_PROPERTY:
-  case OP_LIST:
-  case OP_DICT:
-  case OP_CALL_IMPORT:
-  case OP_FINISH_MODULE:
-  case OP_TRY:
-  case OP_SWITCH:
-    return 2;
+    case OP_DEFINE_GLOBAL:
+    case OP_GET_GLOBAL:
+    case OP_SET_GLOBAL:
+    case OP_GET_LOCAL:
+    case OP_SET_LOCAL:
+    case OP_GET_UP_VALUE:
+    case OP_SET_UP_VALUE:
+    case OP_JUMP_IF_FALSE:
+    case OP_JUMP:
+    case OP_BREAK_PL:
+    case OP_LOOP:
+    case OP_CONSTANT:
+    case OP_POP_N:
+    case OP_CLASS:
+    case OP_GET_PROPERTY:
+    case OP_SET_PROPERTY:
+    case OP_LIST:
+    case OP_DICT:
+    case OP_CALL_IMPORT:
+    case OP_FINISH_MODULE:
+    case OP_TRY:
+    case OP_SWITCH:
+      return 2;
 
-  case OP_INVOKE:
-  case OP_SUPER_INVOKE:
-  case OP_METHOD:
-  case OP_CLASS_PROPERTY:
-    return 3;
+    case OP_INVOKE:
+    case OP_SUPER_INVOKE:
+    case OP_METHOD:
+    case OP_CLASS_PROPERTY:
+      return 3;
 
-  case OP_CLOSURE: {
-    int constant = (bytecode[ip + 1] << 8) | bytecode[ip + 2];
-    b_obj_func *fn = AS_FUNCTION(constants[constant]);
+    case OP_CLOSURE: {
+      int constant = (bytecode[ip + 1] << 8) | bytecode[ip + 2];
+      b_obj_func *fn = AS_FUNCTION(constants[constant]);
 
-    // There is two byte for the constant, then three for each upvalue.
-    // @TODO: change 2 to 3 when supporting variadic index...
-    return 2 + (fn->upvalue_count * 3);
-  }
+      // There is two byte for the constant, then three for each up value.
+      // @TODO: change 2 to 3 when supporting variadic index...
+      return 2 + (fn->up_value_count * 3);
+    }
+
+    default:
+      return 0;
   }
   return 0;
 }
@@ -277,7 +277,7 @@ static int make_constant(b_parser *p, b_value value) {
 
 static void emit_constant(b_parser *p, b_value value) {
   int constant = make_constant(p, value);
-  emit_byte_and_short(p, OP_CONSTANT, (uint16_t)constant);
+  emit_byte_and_short(p, OP_CONSTANT, (uint16_t) constant);
 }
 
 static int emit_jump(b_parser *p, uint8_t instruction) {
@@ -288,6 +288,21 @@ static int emit_jump(b_parser *p, uint8_t instruction) {
   emit_byte(p, 0xff);
 
   return current_blob(p)->count - 2;
+}
+
+static int emit_switch(b_parser *p) {
+  emit_byte(p, OP_SWITCH);
+
+  // placeholders
+  emit_byte(p, 0xff);
+  emit_byte(p, 0xff);
+
+  return current_blob(p)->count - 2;
+}
+
+static void patch_switch(b_parser *p, int offset, int constant) {
+  current_blob(p)->code[offset] = (constant >> 8) & 0xff;
+  current_blob(p)->code[offset + 1] = constant & 0xff;
 }
 
 static void patch_jump(b_parser *p, int offset) {
@@ -367,40 +382,40 @@ static int resolve_local(b_parser *p, b_compiler *compiler, b_token *name) {
   return -1;
 }
 
-static int add_upvalue(b_parser *p, b_compiler *compiler, uint16_t index,
-                       bool is_local) {
-  int upvalue_count = compiler->function->upvalue_count;
+static int add_up_value(b_parser *p, b_compiler *compiler, uint16_t index,
+                        bool is_local) {
+  int up_value_count = compiler->function->up_value_count;
 
-  for (int i = 0; i < upvalue_count; i++) {
-    b_upvalue *upvalue = &compiler->upvalues[i];
-    if (upvalue->index == index && upvalue->is_local == is_local) {
+  for (int i = 0; i < up_value_count; i++) {
+    b_up_value *up_value = &compiler->up_values[i];
+    if (up_value->index == index && up_value->is_local == is_local) {
       return i;
     }
   }
 
-  if (upvalue_count == UINT8_COUNT) {
+  if (up_value_count == UINT8_COUNT) {
     error(p, "too many closure variables in function");
     return 0;
   }
 
-  compiler->upvalues[upvalue_count].is_local = is_local;
-  compiler->upvalues[upvalue_count].index = index;
-  return compiler->function->upvalue_count++;
+  compiler->up_values[up_value_count].is_local = is_local;
+  compiler->up_values[up_value_count].index = index;
+  return compiler->function->up_value_count++;
 }
 
-static int resolve_upvalue(b_parser *p, b_compiler *compiler, b_token *name) {
+static int resolve_up_value(b_parser *p, b_compiler *compiler, b_token *name) {
   if (compiler->enclosing == NULL)
     return -1;
 
   int local = resolve_local(p, compiler->enclosing, name);
   if (local != -1) {
     compiler->enclosing->locals[local].is_captured = true;
-    return add_upvalue(p, compiler, (uint16_t)local, true);
+    return add_up_value(p, compiler, (uint16_t) local, true);
   }
 
-  int upvalue = resolve_upvalue(p, compiler->enclosing, name);
-  if (upvalue != -1) {
-    return add_upvalue(p, compiler, (uint16_t)upvalue, false);
+  int up_value = resolve_up_value(p, compiler->enclosing, name);
+  if (up_value != -1) {
+    return add_up_value(p, compiler, (uint16_t) up_value, false);
   }
 
   return -1;
@@ -441,6 +456,7 @@ static void declare_variable(b_parser *p) {
 
   add_local(p, *name);
 }
+
 static int parse_variable(b_parser *p, const char *message) {
   consume(p, IDENTIFIER_TOKEN, message);
 
@@ -451,7 +467,7 @@ static int parse_variable(b_parser *p, const char *message) {
   return identifier_constant(p, &p->previous);
 }
 
-static void mark_initalized(b_parser *p) {
+static void mark_initialized(b_parser *p) {
   if (p->compiler->scope_depth == 0)
     return;
 
@@ -461,7 +477,7 @@ static void mark_initalized(b_parser *p) {
 
 static void define_variable(b_parser *p, int global) {
   if (p->compiler->scope_depth > 0) { // we are in a local scope...
-    mark_initalized(p);
+    mark_initialized(p);
     return;
   }
 
@@ -471,7 +487,7 @@ static void define_variable(b_parser *p, int global) {
 static b_token synthetic_token(const char *name) {
   b_token token;
   token.start = name;
-  token.length = (int)strlen(name);
+  token.length = (int) strlen(name);
   return token;
 }
 
@@ -499,9 +515,9 @@ static void end_scope(b_parser *p) {
   // remove all variables declared in scope while exiting...
   while (p->compiler->local_count > 0 &&
          p->compiler->locals[p->compiler->local_count - 1].depth >
-             p->compiler->scope_depth) {
+         p->compiler->scope_depth) {
     if (p->compiler->locals[p->compiler->local_count - 1].is_captured) {
-      emit_byte(p, OP_CLOSE_UPVALUE);
+      emit_byte(p, OP_CLOSE_UP_VALUE);
     } else {
       emit_byte(p, OP_POP);
     }
@@ -516,7 +532,7 @@ static void discard_local(b_parser *p, int depth) {
   for (int i = p->compiler->local_count;
        i >= 0 && p->compiler->locals[i].depth > depth; i--) {
     if (p->compiler->locals[i].is_captured) {
-      emit_byte(p, OP_CLOSE_UPVALUE);
+      emit_byte(p, OP_CLOSE_UP_VALUE);
     } else {
       emit_byte(p, OP_POP);
     }
@@ -541,11 +557,16 @@ static void end_loop(b_parser *p) {
 
 // --> Forward declarations start
 static void expression(b_parser *p);
+
 static void statement(b_parser *p);
+
 static void declaration(b_parser *p);
+
 static void anonymous(b_parser *p, bool can_assign);
+
 static b_parse_rule *get_rule(b_tkn_type type);
-static void parse_precedence(b_parser *p, b_prec precedence);
+
+static void parse_precedence(b_parser *p, b_precedence precedence);
 // --> Forward declarations end
 
 static void binary(b_parser *p, bool can_assign) {
@@ -553,80 +574,80 @@ static void binary(b_parser *p, bool can_assign) {
 
   // compile the right operand
   b_parse_rule *rule = get_rule(op);
-  parse_precedence(p, (b_prec)(rule->precedence + 1));
+  parse_precedence(p, (b_precedence) (rule->precedence + 1));
 
   // emit the operator instruction
   switch (op) {
-  case PLUS_TOKEN:
-    emit_byte(p, OP_ADD);
-    break;
-  case MINUS_TOKEN:
-    emit_byte(p, OP_SUBTRACT);
-    break;
-  case MULTIPLY_TOKEN:
-    emit_byte(p, OP_MULTIPLY);
-    break;
-  case DIVIDE_TOKEN:
-    emit_byte(p, OP_DIVIDE);
-    break;
-  case PERCENT_TOKEN:
-    emit_byte(p, OP_REMINDER);
-    break;
-  case POW_TOKEN:
-    emit_byte(p, OP_POW);
-    break;
-  case FLOOR_TOKEN:
-    emit_byte(p, OP_FDIVIDE);
-    break;
+    case PLUS_TOKEN:
+      emit_byte(p, OP_ADD);
+      break;
+    case MINUS_TOKEN:
+      emit_byte(p, OP_SUBTRACT);
+      break;
+    case MULTIPLY_TOKEN:
+      emit_byte(p, OP_MULTIPLY);
+      break;
+    case DIVIDE_TOKEN:
+      emit_byte(p, OP_DIVIDE);
+      break;
+    case PERCENT_TOKEN:
+      emit_byte(p, OP_REMINDER);
+      break;
+    case POW_TOKEN:
+      emit_byte(p, OP_POW);
+      break;
+    case FLOOR_TOKEN:
+      emit_byte(p, OP_F_DIVIDE);
+      break;
 
-  // equality
-  case EQUAL_EQ_TOKEN:
-    emit_byte(p, OP_EQUAL);
-    break;
-  case BANG_EQ_TOKEN:
-    emit_bytes(p, OP_EQUAL, OP_NOT);
-    break;
-  case GREATER_TOKEN:
-    emit_byte(p, OP_GREATER);
-    break;
-  case GREATER_EQ_TOKEN:
-    emit_bytes(p, OP_LESS, OP_NOT);
-    break;
-  case LESS_TOKEN:
-    emit_byte(p, OP_LESS);
-    break;
-  case LESS_EQ_TOKEN:
-    emit_bytes(p, OP_GREATER, OP_NOT);
-    break;
+      // equality
+    case EQUAL_EQ_TOKEN:
+      emit_byte(p, OP_EQUAL);
+      break;
+    case BANG_EQ_TOKEN:
+      emit_bytes(p, OP_EQUAL, OP_NOT);
+      break;
+    case GREATER_TOKEN:
+      emit_byte(p, OP_GREATER);
+      break;
+    case GREATER_EQ_TOKEN:
+      emit_bytes(p, OP_LESS, OP_NOT);
+      break;
+    case LESS_TOKEN:
+      emit_byte(p, OP_LESS);
+      break;
+    case LESS_EQ_TOKEN:
+      emit_bytes(p, OP_GREATER, OP_NOT);
+      break;
 
-    // bitwise
-  case AMP_TOKEN:
-    emit_byte(p, OP_AND);
-    break;
+      // bitwise
+    case AMP_TOKEN:
+      emit_byte(p, OP_AND);
+      break;
 
-  case BAR_TOKEN:
-    emit_byte(p, OP_OR);
-    break;
+    case BAR_TOKEN:
+      emit_byte(p, OP_OR);
+      break;
 
-  case XOR_TOKEN:
-    emit_byte(p, OP_XOR);
-    break;
+    case XOR_TOKEN:
+      emit_byte(p, OP_XOR);
+      break;
 
-  case LSHIFT_TOKEN:
-    emit_byte(p, OP_LSHIFT);
-    break;
+    case LSHIFT_TOKEN:
+      emit_byte(p, OP_LSHIFT);
+      break;
 
-  case RSHIFT_TOKEN:
-    emit_byte(p, OP_RSHIFT);
-    break;
+    case RSHIFT_TOKEN:
+      emit_byte(p, OP_RSHIFT);
+      break;
 
-  // range
-  case RANGE_TOKEN:
-    emit_byte(p, OP_RANGE);
-    break;
+      // range
+    case RANGE_TOKEN:
+      emit_byte(p, OP_RANGE);
+      break;
 
-  default:
-    break;
+    default:
+      break;
   }
 }
 
@@ -655,17 +676,17 @@ static void call(b_parser *p, bool can_assign) {
 
 static void literal(b_parser *p, bool can_assign) {
   switch (p->previous.type) {
-  case NIL_TOKEN:
-    emit_byte(p, OP_NIL);
-    break;
-  case TRUE_TOKEN:
-    emit_byte(p, OP_TRUE);
-    break;
-  case FALSE_TOKEN:
-    emit_byte(p, OP_FALSE);
-    break;
-  default:
-    return;
+    case NIL_TOKEN:
+      emit_byte(p, OP_NIL);
+      break;
+    case TRUE_TOKEN:
+      emit_byte(p, OP_TRUE);
+      break;
+    case FALSE_TOKEN:
+      emit_byte(p, OP_FALSE);
+      break;
+    default:
+      return;
   }
 }
 
@@ -680,7 +701,7 @@ static void parse_assignment(b_parser *p, uint8_t real_op, uint8_t get_op,
   expression(p);
   emit_byte(p, real_op);
   if (arg != -1) {
-    emit_byte_and_short(p, set_op, (uint16_t)arg);
+    emit_byte_and_short(p, set_op, (uint16_t) arg);
   } else {
     emit_byte(p, set_op);
   }
@@ -691,7 +712,7 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg,
   if (can_assign && arg > -2 && match(p, EQUAL_TOKEN)) {
     expression(p);
     if (arg != -1) {
-      emit_byte_and_short(p, set_op, (uint16_t)arg);
+      emit_byte_and_short(p, set_op, (uint16_t) arg);
     } else {
       emit_byte(p, set_op);
     }
@@ -708,7 +729,7 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg,
   } else if (can_assign && arg > -2 && match(p, PERCENT_EQ_TOKEN)) {
     parse_assignment(p, OP_REMINDER, get_op, set_op, arg);
   } else if (can_assign && arg > -2 && match(p, FLOOR_EQ_TOKEN)) {
-    parse_assignment(p, OP_FDIVIDE, get_op, set_op, arg);
+    parse_assignment(p, OP_F_DIVIDE, get_op, set_op, arg);
   } else if (can_assign && arg > -2 && match(p, AMP_EQ_TOKEN)) {
     parse_assignment(p, OP_AND, get_op, set_op, arg);
   } else if (can_assign && arg > -2 && match(p, BAR_EQ_TOKEN)) {
@@ -731,7 +752,7 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg,
     }
 
     emit_bytes(p, OP_ONE, OP_ADD);
-    emit_byte_and_short(p, set_op, (uint16_t)arg);
+    emit_byte_and_short(p, set_op, (uint16_t) arg);
   } else if (can_assign && match(p, DECREMENT_TOKEN)) {
     // consume_statement_end(p);
     if (arg != -1) {
@@ -741,10 +762,10 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg,
     }
 
     emit_bytes(p, OP_ONE, OP_SUBTRACT);
-    emit_byte_and_short(p, set_op, (uint16_t)arg);
+    emit_byte_and_short(p, set_op, (uint16_t) arg);
   } else {
     if (arg != -1) {
-      emit_byte_and_short(p, get_op, (uint16_t)arg);
+      emit_byte_and_short(p, get_op, (uint16_t) arg);
     } else {
       emit_bytes(p, get_op, 0);
     }
@@ -770,9 +791,9 @@ static void named_variable(b_parser *p, b_token name, bool can_assign) {
   if (arg != -1) {
     get_op = OP_GET_LOCAL;
     set_op = OP_SET_LOCAL;
-  } else if ((arg = resolve_upvalue(p, p->compiler, &name)) != -1) {
-    get_op = OP_GET_UPVALUE;
-    set_op = OP_SET_UPVALUE;
+  } else if ((arg = resolve_up_value(p, p->compiler, &name)) != -1) {
+    get_op = OP_GET_UP_VALUE;
+    set_op = OP_SET_UP_VALUE;
   } else {
     arg = identifier_constant(p, &name);
     get_op = OP_GET_GLOBAL;
@@ -888,7 +909,7 @@ static void grouping(b_parser *p, bool can_assign) {
   consume(p, RPAREN_TOKEN, "expected ')' after grouped expression");
 }
 
-static b_value _number(b_parser *p) {
+static b_value compile_number(b_parser *p) {
   if (p->previous.type == BIN_NUMBER_TOKEN) {
     long long value = strtoll(p->previous.start + 2, NULL, 2);
     return NUMBER_VAL(value);
@@ -905,7 +926,7 @@ static b_value _number(b_parser *p) {
 }
 
 static void number(b_parser *p, bool can_assign) {
-  emit_constant(p, _number(p));
+  emit_constant(p, compile_number(p));
 }
 
 // Reads the next character, which should be a hex digit (0-9, a-f, or A-F) and
@@ -926,7 +947,7 @@ static int read_hex_escape(b_parser *p, char *str, int index, int count) {
   int value = 0;
   int i = 0, digit = 0;
   for (; i < count; i++) {
-    int digit = read_hex_digit(str[index + i + 2]);
+    digit = read_hex_digit(str[index + i + 2]);
     if (digit == -1) {
       error(p, "invalid escape sequence");
     }
@@ -954,9 +975,10 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
     count--; */
   return count;
 }
-static char *_string(b_parser *p) {
-  char *str = (char *)calloc(p->previous.length - 2, sizeof(char));
-  char *real = (char *)(p->previous.start + 1);
+
+static char *compile_string(b_parser *p) {
+  char *str = (char *) calloc(p->previous.length - 2, sizeof(char));
+  char *real = (char *) (p->previous.start + 1);
 
   int real_length = p->previous.length - 2;
   int i = 0, k = 0;
@@ -965,61 +987,61 @@ static char *_string(b_parser *p) {
     char c = real[i];
     if (c == '\\' && i < real_length - 1) {
       switch (real[i + 1]) {
-      case '0':
-        c = '\0';
-        break;
-      case '$':
-        c = '$';
-        break;
-      case '\'':
-        c = '\'';
-        break;
-      case '"':
-        c = '"';
-        break;
-      case 'a':
-        c = '\a';
-        break;
-      case 'b':
-        c = '\b';
-        break;
-      case 'f':
-        c = '\f';
-        break;
-      case 'n':
-        c = '\n';
-        break;
-      case 'r':
-        c = '\r';
-        break;
-      case 't':
-        c = '\t';
-        break;
-      case '\\':
-        c = '\\';
-        break;
-      case 'v':
-        c = '\v';
-        break;
-      case 'x': {
-        k += read_unicode_escape(p, str, real, 2, i, k) - 1;
-        i += 3;
-        continue;
-      }
-      case 'u': {
-        int count = read_unicode_escape(p, str, real, 4, i, k);
-        k += count > 4 ? count - 2 : count - 1;
-        i += count > 4 ? 6 : 5;
-        continue;
-      }
-      case 'U': {
-        k += read_unicode_escape(p, str, real, 8, i, k) - 1;
-        i += 9;
-        continue;
-      }
-      default:
-        i--;
-        break;
+        case '0':
+          c = '\0';
+          break;
+        case '$':
+          c = '$';
+          break;
+        case '\'':
+          c = '\'';
+          break;
+        case '"':
+          c = '"';
+          break;
+        case 'a':
+          c = '\a';
+          break;
+        case 'b':
+          c = '\b';
+          break;
+        case 'f':
+          c = '\f';
+          break;
+        case 'n':
+          c = '\n';
+          break;
+        case 'r':
+          c = '\r';
+          break;
+        case 't':
+          c = '\t';
+          break;
+        case '\\':
+          c = '\\';
+          break;
+        case 'v':
+          c = '\v';
+          break;
+        case 'x': {
+          k += read_unicode_escape(p, str, real, 2, i, k) - 1;
+          i += 3;
+          continue;
+        }
+        case 'u': {
+          int count = read_unicode_escape(p, str, real, 4, i, k);
+          k += count > 4 ? count - 2 : count - 1;
+          i += count > 4 ? 6 : 5;
+          continue;
+        }
+        case 'U': {
+          k += read_unicode_escape(p, str, real, 8, i, k) - 1;
+          i += 9;
+          continue;
+        }
+        default:
+          i--;
+          break;
       }
       i++;
     }
@@ -1031,8 +1053,8 @@ static char *_string(b_parser *p) {
 }
 
 static void string(b_parser *p, bool can_assign) {
-  char *str = _string(p);
-  emit_constant(p, OBJ_VAL(copy_string(p->vm, str, (int)strlen(str))));
+  char *str = compile_string(p);
+  emit_constant(p, OBJ_VAL(copy_string(p->vm, str, (int) strlen(str))));
 }
 
 static void string_interpolation(b_parser *p, bool can_assign) {
@@ -1074,18 +1096,18 @@ static void unary(b_parser *p, bool can_assign) {
 
   // emit instruction
   switch (op) {
-  case MINUS_TOKEN:
-    emit_byte(p, OP_NEGATE);
-    break;
-  case BANG_TOKEN:
-    emit_byte(p, OP_NOT);
-    break;
-  case TILDE_TOKEN:
-    emit_byte(p, OP_BIT_NOT);
-    break;
+    case MINUS_TOKEN:
+      emit_byte(p, OP_NEGATE);
+      break;
+    case BANG_TOKEN:
+      emit_byte(p, OP_NOT);
+      break;
+    case TILDE_TOKEN:
+      emit_byte(p, OP_BIT_NOT);
+      break;
 
-  default:
-    break;
+    default:
+      break;
   }
 }
 
@@ -1127,7 +1149,7 @@ b_parse_rule parse_rules[] = {
     [AT_TOKEN] = {NULL, NULL, PREC_NONE},                 // @
     [DOT_TOKEN] = {NULL, dot, PREC_CALL},                 // .
     [RANGE_TOKEN] = {NULL, binary, PREC_RANGE},           // ..
-    [TRIDOT_TOKEN] = {NULL, NULL, PREC_NONE},             // ...
+    [TRI_DOT_TOKEN] = {NULL, NULL, PREC_NONE},             // ...
     [PLUS_TOKEN] = {NULL, binary, PREC_TERM},             // +
     [PLUS_EQ_TOKEN] = {NULL, NULL, PREC_NONE},            // +=
     [INCREMENT_TOKEN] = {NULL, NULL, PREC_NONE},          // ++
@@ -1162,7 +1184,7 @@ b_parse_rule parse_rules[] = {
     [TILDE_EQ_TOKEN] = {NULL, NULL, PREC_NONE},           // ~=
     [XOR_TOKEN] = {NULL, binary, PREC_BIT_XOR},           // ^
     [XOR_EQ_TOKEN] = {NULL, NULL, PREC_NONE},             // ^=
-    [CDEFAULT_TOKEN] = {NULL, NULL, PREC_NONE},           // ??
+    [C_DEFAULT_TOKEN] = {NULL, NULL, PREC_NONE},           // ??
 
     // keywords
     [AND_TOKEN] = {NULL, and_, PREC_AND},
@@ -1212,7 +1234,7 @@ b_parse_rule parse_rules[] = {
     [UNDEFINED_TOKEN] = {NULL, NULL, PREC_NONE},
 };
 
-static void parse_precedence(b_parser *p, b_prec precedence) {
+static void parse_precedence(b_parser *p, b_precedence precedence) {
   ignore_whitespace(p);
   advance(p);
 
@@ -1261,7 +1283,7 @@ static void function_args(b_parser *p) {
                        MAX_FUNCTION_PARAMETERS);
     }
 
-    if (match(p, TRIDOT_TOKEN)) {
+    if (match(p, TRI_DOT_TOKEN)) {
       p->compiler->function->is_variadic = true;
       add_local(p, synthetic_token("__args__"));
       define_variable(p, 0);
@@ -1283,12 +1305,12 @@ static void function_body(b_parser *p, b_compiler *compiler) {
 
   int function_constant = make_constant(p, OBJ_VAL(function));
 
-  if (function->upvalue_count > 0) {
+  if (function->up_value_count > 0) {
     emit_byte_and_short(p, OP_CLOSURE, function_constant);
 
-    for (int i = 0; i < function->upvalue_count; i++) {
-      emit_byte(p, compiler->upvalues[i].is_local ? 1 : 0);
-      emit_short(p, compiler->upvalues[i].index);
+    for (int i = 0; i < function->up_value_count; i++) {
+      emit_byte(p, compiler->up_values[i].is_local ? 1 : 0);
+      emit_short(p, compiler->up_values[i].index);
     }
   } else {
     emit_byte_and_short(p, OP_CONSTANT, function_constant);
@@ -1356,7 +1378,7 @@ static void field(b_parser *p, bool is_static) {
 
 static void function_declaration(b_parser *p) {
   int global = parse_variable(p, "function name expected");
-  mark_initalized(p);
+  mark_initialized(p);
   function(p, TYPE_FUNCTION);
   define_variable(p, global);
 }
@@ -1420,7 +1442,7 @@ static void class_declaration(b_parser *p) {
   p->current_class = p->current_class->enclosing;
 }
 
-static void _var_declaration(b_parser *p, bool is_initalizer) {
+static void compile_var_declaration(b_parser *p, bool is_initializer) {
 
   do {
     int global = parse_variable(p, "variable name expected");
@@ -1434,7 +1456,7 @@ static void _var_declaration(b_parser *p, bool is_initalizer) {
     define_variable(p, global);
   } while (match(p, COMMA_TOKEN));
 
-  if (!is_initalizer) {
+  if (!is_initializer) {
     consume_statement_end(p);
   } else {
     consume(p, SEMICOLON_TOKEN, "expected ';' after initializer");
@@ -1442,11 +1464,11 @@ static void _var_declaration(b_parser *p, bool is_initalizer) {
   }
 }
 
-static void var_declaration(b_parser *p) { _var_declaration(p, false); }
+static void var_declaration(b_parser *p) { compile_var_declaration(p, false); }
 
-static void _expression_statement(b_parser *p, bool is_initalizer) {
+static void compile_expression_statement(b_parser *p, bool is_initializer) {
   expression(p);
-  if (!is_initalizer) {
+  if (!is_initializer) {
     consume_statement_end(p);
   } else {
     consume(p, SEMICOLON_TOKEN, "expected ';' after initializer");
@@ -1456,7 +1478,7 @@ static void _expression_statement(b_parser *p, bool is_initalizer) {
 }
 
 static void expression_statement(b_parser *p) {
-  _expression_statement(p, false);
+  compile_expression_statement(p, false);
 }
 
 /**
@@ -1480,13 +1502,13 @@ static void expression_statement(b_parser *p) {
 static void iter_statement(b_parser *p) {
   begin_scope(p);
 
-  // parse intializer...
+  // parse initializer...
   if (match(p, SEMICOLON_TOKEN)) {
-    // no intializer
+    // no initializer
   } else if (match(p, VAR_TOKEN)) {
-    _var_declaration(p, true);
+    compile_var_declaration(p, true);
   } else {
-    _expression_statement(p, true);
+    compile_expression_statement(p, true);
   }
 
   // keep a copy of the surrounding loop's start and depth
@@ -1590,9 +1612,9 @@ static void iter_statement(b_parser *p) {
 static void for_statement(b_parser *p) {
   begin_scope(p);
 
-  // define __iter__ and __itern__ constant
-  int __iter__ = make_constant(p, OBJ_VAL(copy_string(p->vm, "__iter__", 8)));
-  int __itern__ = make_constant(p, OBJ_VAL(copy_string(p->vm, "__itern__", 9)));
+  // define __iter__ and __iter__ constant
+  int iter__ = make_constant(p, OBJ_VAL(copy_string(p->vm, "__iter__", 8)));
+  int iter_n__ = make_constant(p, OBJ_VAL(copy_string(p->vm, "__itern__", 9)));
 
   consume(p, IDENTIFIER_TOKEN, "expected variable name after 'for'");
   b_token key_token, value_token;
@@ -1639,20 +1661,20 @@ static void for_statement(b_parser *p) {
   // expression after the loop body
   p->innermost_loop_start = current_blob(p)->count;
 
-  // key = iterable.__itern__(key)
+  // key = iterable.iter_n__(key)
   emit_byte_and_short(p, OP_GET_LOCAL, iterator_slot);
   emit_byte_and_short(p, OP_GET_LOCAL, key_slot);
-  emit_byte_and_short(p, OP_INVOKE, __itern__);
+  emit_byte_and_short(p, OP_INVOKE, iter_n__);
   emit_byte(p, 1);
   emit_byte_and_short(p, OP_SET_LOCAL, key_slot);
 
   int false_jump = emit_jump(p, OP_JUMP_IF_FALSE);
   emit_byte(p, OP_POP);
 
-  // value = iterable.__iter__(key)
+  // value = iterable.iter__(key)
   emit_byte_and_short(p, OP_GET_LOCAL, iterator_slot);
   emit_byte_and_short(p, OP_GET_LOCAL, key_slot);
-  emit_byte_and_short(p, OP_INVOKE, __iter__);
+  emit_byte_and_short(p, OP_INVOKE, iter__);
   emit_byte(p, 1);
 
   // Bind the loop value in its own scope. This ensures we get a fresh
@@ -1781,7 +1803,8 @@ static void using_statement(b_parser *p) {
   int case_count = 0;
 
   b_obj_switch *sw = new_switch(p->vm);
-  emit_byte_and_short(p, OP_SWITCH, make_constant(p, OBJ_VAL(sw)));
+  int switch_code = emit_switch(p);
+  // emit_byte_and_short(p, OP_SWITCH, make_constant(p, OBJ_VAL(sw)));
   int start_offset = current_blob(p)->count;
 
   while (!match(p, RBRACE_TOKEN) && !check(p, EOF_TOKEN)) {
@@ -1808,11 +1831,11 @@ static void using_statement(b_parser *p) {
         } else if (p->previous.type == FALSE_TOKEN) {
           table_set(p->vm, &sw->table, FALSE_VAL, jump);
         } else if (p->previous.type == LITERAL_TOKEN) {
-          char *str = _string(p);
-          table_set(p->vm, &sw->table,
-                    OBJ_VAL(copy_string(p->vm, str, (int)strlen(str))), jump);
+          char *str = compile_string(p);
+          b_obj_string *string = copy_string(p->vm, str, (int) strlen(str));
+          table_set(p->vm, &sw->table, OBJ_VAL(string), jump);
         } else if (check_number(p)) {
-          table_set(p->vm, &sw->table, _number(p), jump);
+          table_set(p->vm, &sw->table, compile_number(p), jump);
         } else {
           error(p, "only constants can be used in when expressions");
           return;
@@ -1839,6 +1862,8 @@ static void using_statement(b_parser *p) {
   for (int i = 0; i < case_count; i++) {
     patch_jump(p, case_ends[i]);
   }
+
+  patch_switch(p, switch_code, make_constant(p, OBJ_VAL(sw)));
 }
 
 static void if_statement(b_parser *p) {
@@ -1884,7 +1909,7 @@ static char *read_file(const char *path) {
   size_t file_size = ftell(fp);
   rewind(fp);
 
-  char *buffer = (char *)malloc(file_size + 1);
+  char *buffer = (char *) malloc(file_size + 1);
 
   // the system might not have enough memory to read the file.
   if (buffer == NULL) {
@@ -1906,7 +1931,7 @@ static char *read_file(const char *path) {
 
 static void import_statement(b_parser *p) {
   consume(p, LITERAL_TOKEN, "expected module name");
-  char *module_name = _string(p);
+  char *module_name = compile_string(p);
 
   char *module_path = resolve_import_path(module_name, p->current_file);
   if (module_path == NULL) {
@@ -1931,7 +1956,7 @@ static void import_statement(b_parser *p) {
     return;
   }
 
-  function->name = copy_string(p->vm, module_name, (int)strlen(module_name));
+  function->name = copy_string(p->vm, module_name, (int) strlen(module_name));
 
   int import_constant = make_constant(p, OBJ_VAL(function));
   emit_byte_and_short(p, OP_CALL_IMPORT, import_constant);
@@ -1969,7 +1994,7 @@ static void try_statement(b_parser *p) {
 
   consume(p, LBRACE_TOKEN, "expected '{' after catch");
 
-  // jump into the catch statement if an error occured
+  // jump into the catch statement if an error occurred
   patch_try(p, try_begins);
   emit_byte_and_short(p, OP_SET_LOCAL, error_message);
 
@@ -2059,26 +2084,26 @@ static void synchronize(b_parser *p) {
       return;
 
     switch (p->current.type) {
-    case CLASS_TOKEN:
-    case DEF_TOKEN:
-    case VAR_TOKEN:
-    case FOR_TOKEN:
-    case IF_TOKEN:
-    case USING_TOKEN:
-    case WHEN_TOKEN:
-    case ITER_TOKEN:
-    case WHILE_TOKEN:
-    case ECHO_TOKEN:
-    case ASSERT_TOKEN:
-    case TRY_TOKEN:
-    case DIE_TOKEN:
-    case RETURN_TOKEN:
-    case STATIC_TOKEN:
-    case SELF_TOKEN:
-    case PARENT_TOKEN:
-      return;
+      case CLASS_TOKEN:
+      case DEF_TOKEN:
+      case VAR_TOKEN:
+      case FOR_TOKEN:
+      case IF_TOKEN:
+      case USING_TOKEN:
+      case WHEN_TOKEN:
+      case ITER_TOKEN:
+      case WHILE_TOKEN:
+      case ECHO_TOKEN:
+      case ASSERT_TOKEN:
+      case TRY_TOKEN:
+      case DIE_TOKEN:
+      case RETURN_TOKEN:
+      case STATIC_TOKEN:
+      case SELF_TOKEN:
+      case PARENT_TOKEN:
+        return;
 
-    default:; // do nothing
+      default:; // do nothing
     }
 
     advance(p);
@@ -2186,7 +2211,7 @@ b_obj_func *compile(b_vm *vm, const char *source, const char *file,
 void mark_compiler_roots(b_vm *vm) {
   b_compiler *compiler = vm->compiler;
   while (compiler != NULL) {
-    mark_object(vm, (b_obj *)compiler->function);
+    mark_object(vm, (b_obj *) compiler->function);
     compiler = compiler->enclosing;
   }
 }

@@ -42,16 +42,16 @@ char *base64_encode(const unsigned char *data, int input_length,
 
   *output_length = 4 * ((input_length + 2) / 3);
 
-  char *encoded_data = (char *)malloc(*output_length);
+  char *encoded_data = (char *) malloc(*output_length);
 
   if (encoded_data == NULL)
     return NULL;
 
   for (int i = 0, j = 0; i < input_length;) {
 
-    uint32_t octet_a = i < input_length ? (unsigned char)data[i++] : 0;
-    uint32_t octet_b = i < input_length ? (unsigned char)data[i++] : 0;
-    uint32_t octet_c = i < input_length ? (unsigned char)data[i++] : 0;
+    uint32_t octet_a = i < input_length ? (unsigned char) data[i++] : 0;
+    uint32_t octet_b = i < input_length ? (unsigned char) data[i++] : 0;
+    uint32_t octet_c = i < input_length ? (unsigned char) data[i++] : 0;
 
     uint32_t triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c;
 
@@ -80,7 +80,7 @@ unsigned char *base64_decode(const char *data, int input_length,
   if (data[input_length - 2] == '=')
     (*output_length)--;
 
-  unsigned char *decoded_data = (unsigned char *)malloc(*output_length);
+  unsigned char *decoded_data = (unsigned char *) malloc(*output_length);
 
   if (decoded_data == NULL)
     return NULL;
@@ -88,13 +88,13 @@ unsigned char *base64_decode(const char *data, int input_length,
   for (int i = 0, j = 0; i < input_length;) {
 
     uint32_t sextet_a =
-        data[i] == '=' ? 0 & i++ : decoding_table[(int)data[i++]];
+        data[i] == '=' ? 0 & i++ : decoding_table[(int) data[i++]];
     uint32_t sextet_b =
-        data[i] == '=' ? 0 & i++ : decoding_table[(int)data[i++]];
+        data[i] == '=' ? 0 & i++ : decoding_table[(int) data[i++]];
     uint32_t sextet_c =
-        data[i] == '=' ? 0 & i++ : decoding_table[(int)data[i++]];
+        data[i] == '=' ? 0 & i++ : decoding_table[(int) data[i++]];
     uint32_t sextet_d =
-        data[i] == '=' ? 0 & i++ : decoding_table[(int)data[i++]];
+        data[i] == '=' ? 0 & i++ : decoding_table[(int) data[i++]];
 
     uint32_t triple = (sextet_a << 3 * 6) + (sextet_b << 2 * 6) +
                       (sextet_c << 1 * 6) + (sextet_d << 0 * 6);
@@ -117,7 +117,7 @@ DECLARE_MODULE_METHOD(base64__decode) {
   b_obj_string *string = AS_STRING(args[0]);
 
   int output_length;
-  unsigned char *data = base64_decode((const char *)string->chars,
+  unsigned char *data = base64_decode((const char *) string->chars,
                                       string->length, &output_length);
 
   if (data == NULL)
@@ -137,28 +137,28 @@ DECLARE_MODULE_METHOD(base64__encode) {
   b_obj_bytes *bytes = AS_BYTES(args[0]);
 
   int output_length;
-  char *data = base64_encode((const unsigned char *)bytes->bytes.bytes,
+  char *data = base64_encode((const unsigned char *) bytes->bytes.bytes,
                              bytes->bytes.count, &output_length);
 
   if (data == NULL)
     RETURN;
 
-  RETURN_LSTRING(data, output_length);
+  RETURN_L_STRING(data, output_length);
 }
 
 CREATE_MODULE_LOADER(base64) {
   static b_func_reg class_functions[] = {
       {"_decode", false, GET_MODULE_METHOD(base64__decode)},
       {"_encode", false, GET_MODULE_METHOD(base64__encode)},
-      {NULL, false, NULL},
+      {NULL,      false, NULL},
   };
 
-  static b_class_reg klasses[] = {
+  static b_class_reg classes[] = {
       {"Base64", NULL, class_functions},
-      {NULL, NULL, NULL},
+      {NULL,     NULL, NULL},
   };
 
-  static b_module_reg module = {NULL, klasses};
+  static b_module_reg module = {NULL, classes};
 
   return module;
 }

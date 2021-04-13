@@ -1,5 +1,5 @@
-#ifndef bird_bstring_h
-#define bird_bstring_h
+#ifndef bird_b_string_h
+#define bird_b_string_h
 
 #include "common.h"
 #include "native.h"
@@ -102,9 +102,9 @@ DECLARE_STRING_METHOD(rtrim);
 DECLARE_STRING_METHOD(join);
 
 /**
- * string.split(delimeter: string)
+ * string.split(delimiter: string)
  *
- * splits the content of a string based on the specified delimeter
+ * splits the content of a string based on the specified delimiter
  *
  * Notice
  * =======

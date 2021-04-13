@@ -139,37 +139,37 @@ DECLARE_MODULE_METHOD(math__floor) {
 
 CREATE_MODULE_LOADER(math) {
   static b_func_reg class_functions[] = {
-      {"sin", true, GET_MODULE_METHOD(math__sin)},
-      {"cos", true, GET_MODULE_METHOD(math__cos)},
-      {"tan", true, GET_MODULE_METHOD(math__tan)},
-      {"sinh", true, GET_MODULE_METHOD(math__sinh)},
-      {"cosh", true, GET_MODULE_METHOD(math__cosh)},
-      {"tanh", true, GET_MODULE_METHOD(math__tanh)},
-      {"asin", true, GET_MODULE_METHOD(math__asin)},
-      {"acos", true, GET_MODULE_METHOD(math__acos)},
-      {"atan", true, GET_MODULE_METHOD(math__atan)},
-      {"atan2", true, GET_MODULE_METHOD(math__atan2)},
-      {"asinh", true, GET_MODULE_METHOD(math__asinh)},
-      {"acosh", true, GET_MODULE_METHOD(math__acosh)},
-      {"atanh", true, GET_MODULE_METHOD(math__atanh)},
-      {"exp", true, GET_MODULE_METHOD(math__exp)},
-      {"expm1", true, GET_MODULE_METHOD(math__expm1)},
-      {"ceil", true, GET_MODULE_METHOD(math__ceil)},
-      {"round", true, GET_MODULE_METHOD(math__round)},
-      {"log", true, GET_MODULE_METHOD(math__log)},
-      {"log2", true, GET_MODULE_METHOD(math__log2)},
-      {"log10", true, GET_MODULE_METHOD(math__log10)},
-      {"log1p", true, GET_MODULE_METHOD(math__log1p)},
-      {"floor", true, GET_MODULE_METHOD(math__floor)},
-      {NULL, false, NULL},
+      {"sin",   true,  GET_MODULE_METHOD(math__sin)},
+      {"cos",   true,  GET_MODULE_METHOD(math__cos)},
+      {"tan",   true,  GET_MODULE_METHOD(math__tan)},
+      {"sinh",  true,  GET_MODULE_METHOD(math__sinh)},
+      {"cosh",  true,  GET_MODULE_METHOD(math__cosh)},
+      {"tanh",  true,  GET_MODULE_METHOD(math__tanh)},
+      {"asin",  true,  GET_MODULE_METHOD(math__asin)},
+      {"acos",  true,  GET_MODULE_METHOD(math__acos)},
+      {"atan",  true,  GET_MODULE_METHOD(math__atan)},
+      {"atan2", true,  GET_MODULE_METHOD(math__atan2)},
+      {"asinh", true,  GET_MODULE_METHOD(math__asinh)},
+      {"acosh", true,  GET_MODULE_METHOD(math__acosh)},
+      {"atanh", true,  GET_MODULE_METHOD(math__atanh)},
+      {"exp",   true,  GET_MODULE_METHOD(math__exp)},
+      {"expm1", true,  GET_MODULE_METHOD(math__expm1)},
+      {"ceil",  true,  GET_MODULE_METHOD(math__ceil)},
+      {"round", true,  GET_MODULE_METHOD(math__round)},
+      {"log",   true,  GET_MODULE_METHOD(math__log)},
+      {"log2",  true,  GET_MODULE_METHOD(math__log2)},
+      {"log10", true,  GET_MODULE_METHOD(math__log10)},
+      {"log1p", true,  GET_MODULE_METHOD(math__log1p)},
+      {"floor", true,  GET_MODULE_METHOD(math__floor)},
+      {NULL,    false, NULL},
   };
 
-  static b_class_reg klasses[] = {
+  static b_class_reg classes[] = {
       {"Math", NULL, class_functions},
-      {NULL, NULL, NULL},
+      {NULL,   NULL, NULL},
   };
 
-  static b_module_reg module = {NULL, klasses};
+  static b_module_reg module = {NULL, classes};
 
   return module;
 }

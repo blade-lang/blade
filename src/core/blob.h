@@ -10,10 +10,10 @@ typedef enum {
   OP_SET_GLOBAL,
 
   OP_GET_LOCAL,
-  OP_GET_UPVALUE,
+  OP_GET_UP_VALUE,
   OP_SET_LOCAL,
-  OP_SET_UPVALUE,
-  OP_CLOSE_UPVALUE,
+  OP_SET_UP_VALUE,
+  OP_CLOSE_UP_VALUE,
   OP_GET_PROPERTY,
   OP_SET_PROPERTY,
 
@@ -31,7 +31,7 @@ typedef enum {
   OP_SUBTRACT,
   OP_MULTIPLY,
   OP_DIVIDE,
-  OP_FDIVIDE, // floor divide
+  OP_F_DIVIDE, // floor divide
   OP_REMINDER,
   OP_POW,
   OP_NEGATE,
@@ -48,7 +48,7 @@ typedef enum {
   OP_ECHO,
   OP_POP,
   OP_DUP,
-  OP_POPN,
+  OP_POP_N,
   OP_ASSERT,
   OP_DIE,
 
@@ -93,8 +93,11 @@ typedef struct {
 } b_blob;
 
 void init_blob(b_blob *blob);
+
 void free_blob(b_vm *vm, b_blob *blob);
+
 void write_blob(b_vm *vm, b_blob *blob, uint8_t byte, int line);
+
 int add_constant(b_vm *vm, b_blob *blob, b_value value);
 
 #endif
