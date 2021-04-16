@@ -7,6 +7,7 @@
 #include "modules/io.h"
 #include "modules/math.h"
 #include "modules/os.h"
+#include "modules/http.h"
 
 typedef b_module_reg (*b_module_func)(b_vm *);
 
@@ -21,6 +22,7 @@ b_module_registry modules[] = {
     {"base64", GET_MODULE_LOADER(base64)}, //
     {"math",   GET_MODULE_LOADER(math)},     //
     {"date",   GET_MODULE_LOADER(date)},     //
+    {"http",   GET_MODULE_LOADER(http)},     //
     {NULL,     NULL},
 };
 

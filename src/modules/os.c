@@ -142,11 +142,42 @@ b_value get_os_platform(b_vm *vm) {
 #undef PLATFORM_NAME
 }
 
+DECLARE_MODULE_METHOD(os_getenv) {
+  ENFORCE_ARG_COUNT(getenv, 1);
+  ENFORCE_ARG_TYPE(getenv, 0, IS_STRING);
+
+  char *env = getenv(AS_C_STRING(args[0]));
+  if(env != NULL) RETURN_STRING(env);
+  else RETURN;
+}
+
+DECLARE_MODULE_METHOD(os_setenv) {
+  ENFORCE_ARG_RANGE(setenv, 2, 3);
+  ENFORCE_ARG_TYPE(setenv, 0, IS_STRING);
+  ENFORCE_ARG_TYPE(setenv, 1, IS_STRING);
+
+  int overwrite = 1;
+  if(arg_count == 3) {
+    ENFORCE_ARG_TYPE(setenv, 2, IS_BOOL);
+    overwrite = AS_BOOL(args[2]) ? 1 : 0;
+  }
+
+#ifdef _WIN32
+#define setenv(e, v, i) _putenv_s(e, v)
+#endif
+
+  if(setenv(AS_C_STRING(args[0]), AS_C_STRING(args[1]), overwrite) == 0)
+    RETURN_TRUE;
+  RETURN_FALSE;
+}
+
 CREATE_MODULE_LOADER(os) {
   static b_func_reg os_class_functions[] = {
       {"info",  true,  GET_MODULE_METHOD(os_info)},
       {"exec",  true,  GET_MODULE_METHOD(os_exec)},
       {"sleep", true,  GET_MODULE_METHOD(os_sleep)},
+      {"getenv", true,  GET_MODULE_METHOD(os_getenv)},
+      {"setenv", true,  GET_MODULE_METHOD(os_setenv)},
       {NULL,    false, NULL},
   };
 
