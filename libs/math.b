@@ -2,9 +2,8 @@
  * Math
  *
  * Bird's mathematical library
- * @copyright Ore Richard */
-
-
+ * @copyright Ore Richard
+ */
 class Math {
   # Math.PI
   # represents the ratio of the circumference of a circle 

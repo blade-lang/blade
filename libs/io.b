@@ -107,27 +107,26 @@ class TTY {
 
   /*
   _tcsetattr(file, attrs: dict)
-
   sets the attributes of a tty file
-
   @return true if succeed or false otherwise
   TODO: support the c_cc flag 
   */
   _tcsetattr(file, attrs) {}
 
   /*
-  _tcgetattr(file) returns the configuration of the current tty file
+  _tcgetattr(file)
+  returns the configuration of the current tty file
   */
   _tcgetattr(file) {}
 
   /*
-  _flush(file) flushes the standard file
+  _flush(file)
+  flushes the standard file
   */
   _flush(file) {}
 
   /*
-  get_attr() 
-  
+  get_attr()
   Returns the attribute of the current tty session
   The returned a attributes is a dict containing the TTY_ flags 
   */
@@ -136,8 +135,7 @@ class TTY {
   }
 
   /* 
-  set_attr(option: number, attrs: dict) 
-  
+  set_attr(option: number, attrs: dict)
   sets the attributes of the current tty session
   - option: one ot the TCSA options above (see their description above)
   - attrs a dictionary of the TTY_ flags listed above
@@ -151,8 +149,7 @@ class TTY {
   }
 
   /*
-  set_raw() 
-  
+  set_raw()
   sets the current tty to raw mode
   */
   set_raw() {
@@ -168,8 +165,7 @@ class TTY {
   }
 
   /*
-  exit_raw() 
-  
+  exit_raw()
   disables the raw mode flags on the current tty
   */
   exit_raw() {
@@ -177,48 +173,60 @@ class TTY {
     return self.set_attr(TTY.TCSAFLUSH, self.default_attr)
   }
 
-  /*
-  flush() flushes the standard output and standard error interface
-  */
+  /**
+   * flush()
+   * flushes the standard output and standard error interface
+   * @return nil
+   */
   flush() {
     self._flush(self.std);
   }
 }
 
 /* 
-stdin() returns an handle to the standard input file of the system
+stdin()
+returns an handle to the standard input file of the system
 
 This method is a cask for stdin() method which was declared in
 native C.
+@return file<std>
 */
 def stdin() {}
 
 /* 
-stdout() returns an handle to the standard output file of the system
+stdout()
+returns an handle to the standard output file of the system
 
 This method is a cask for stdout() method which was declared in
 native C.
+@return file<std>
 */
 def stdout() {}
 
 /*
-stderr() returns an handle to the standard error file of the system
+stderr()
+returns an handle to the standard error file of the system
 
 This method is a cask for stderr() method which was declared in
 native C.
+@return file<std>
 */
 def stderr() {}
 
-/*
-putc(c: char)
-
-writes character c to the screen
-*/
+/**
+ * putc(c: char)
+ * writes character c to the screen
+ * @return nil
+ */
 def putc(c) {}
 
-/*
-getc() reads a single character from standard input
-
-@returns char
-*/
-def gutc() {}
+/**
+ * getc()
+ *
+ * reads character(s) from standard input
+ *
+ * when length is given, gets `length` number of characters
+ * else, gets a single character
+ * @returns char or string
+ */
+def getc() {}

@@ -2,7 +2,8 @@
  * Mime
  *
  * Bird's mimetype detection library
- * @copyright Ore Richard */
+ * @copyright Ore Richard
+ */
 
 # Internal helper class to help
 # Mime class represent and organize it's mimes better

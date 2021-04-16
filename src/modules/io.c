@@ -653,8 +653,8 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
 
 /**
  * TTY.flush()
- *
  * flushes the standard output and standard error interface
+ * @return nil
  */
 DECLARE_MODULE_METHOD(io_tty__flush) {
   ENFORCE_ARG_COUNT(TTY.flush, 0);
@@ -666,7 +666,10 @@ DECLARE_MODULE_METHOD(io_tty__flush) {
 /**
  * getc()
  *
- * reads a single character from standard input
+ * reads character(s) from standard input
+ *
+ * when length is given, gets `length` number of characters
+ * else, gets a single character
  * @returns char
  */
 DECLARE_NATIVE(io_getc) {
@@ -698,8 +701,8 @@ DECLARE_NATIVE(io_getc) {
 
 /**
  * putc(c: char)
- *
  * writes character c to the screen
+ * @return nil
  */
 DECLARE_NATIVE(io_putc) {
   ENFORCE_ARG_COUNT(putc, 1);

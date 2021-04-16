@@ -2,13 +2,13 @@
  * Base64 (RFC1341)
  *
  * Provides interface for encoding and decoding base64 data
- * @copyright Ore Richard */
-
- class Base64 {
+ * @copyright Ore Richard
+ */
+class Base64 {
 
   /* 
-  The constructor accepts either a string or a bytes.
-  To encode, you should pass in a bytes to the constructor 
+  The constructor accepts either a string or bytes.
+  To encode, you should pass in bytes to the constructor
   and a string for decoding. 
   */
   Base64(data) {
