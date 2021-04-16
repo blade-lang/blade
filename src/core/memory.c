@@ -121,6 +121,7 @@ static void blacken_object(b_vm *vm, b_obj *object) {
       mark_table(vm, &klass->static_methods);
       mark_table(vm, &klass->fields);
       mark_table(vm, &klass->static_fields);
+      mark_value(vm, klass->initializer);
       break;
     }
     case OBJ_CLOSURE: {
@@ -210,6 +211,11 @@ static void free_object(b_vm *vm, b_obj *object) {
     }
     case OBJ_CLASS: {
       b_obj_class *klass = (b_obj_class *) object;
+      if(IS_FUNCTION(klass->initializer)) {
+        free_object(vm, (b_obj*) AS_FUNCTION(klass->initializer));
+      } else {
+        free_object(vm, (b_obj*) AS_CLOSURE(klass->initializer));
+      }
       free_table(vm, &klass->methods);
       free_table(vm, &klass->static_methods);
       free_table(vm, &klass->fields);

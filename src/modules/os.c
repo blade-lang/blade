@@ -69,6 +69,8 @@ DECLARE_MODULE_METHOD(os_info) {
   }
 
   b_obj_dict *dict = new_dict(vm);
+  push(vm, OBJ_VAL(dict));
+
   dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, "sysname", 7)),
                  OBJ_VAL(copy_string(vm, os.sysname, strlen(os.sysname))));
   dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, "nodename", 8)),
@@ -80,6 +82,7 @@ DECLARE_MODULE_METHOD(os_info) {
   dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, "machine", 7)),
                  OBJ_VAL(copy_string(vm, os.machine, strlen(os.machine))));
 
+  pop(vm);
   RETURN_OBJ(dict);
 }
 

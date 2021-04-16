@@ -209,7 +209,6 @@ static int get_code_args_count(const uint8_t *bytecode,
       b_obj_func *fn = AS_FUNCTION(constants[constant]);
 
       // There is two byte for the constant, then three for each up value.
-      // @TODO: change 2 to 3 when supporting variadic index...
       return 2 + (fn->up_value_count * 3);
     }
 

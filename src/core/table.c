@@ -212,7 +212,12 @@ void table_print(b_table *table) {
 void mark_table(b_vm *vm, b_table *table) {
   for (int i = 0; i < table->capacity; i++) {
     b_entry *entry = &table->entries[i];
+
+#if defined USE_NAN_BOXING && USE_NAN_BOXING
     if(entry && entry->key) {
+#else
+    if(entry != NULL) {
+#endif
       mark_value(vm, entry->key);
       mark_value(vm, entry->value);
     }
