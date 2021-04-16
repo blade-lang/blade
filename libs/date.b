@@ -200,14 +200,16 @@ class Date {
   __mktime(year, month, day, hour, minute, seconds, is_dst) {}
 
   /*
-  is_leap() returns true if the year is a leap year or false otherwise
+  is_leap()
+  returns true if the year is a leap year or false otherwise
   */
   is_leap() {
     return Date._Is_leap(self.year)
   }
 
   /*
-  days_before_year() returns the number of days before January 1st of year
+  days_before_year()
+  returns the number of days before January 1st of year
   */
   days_before_year(year) {
     assert year >= Date.MIN_YEAR and year <= Date.MAX_YEAR,
@@ -235,7 +237,8 @@ class Date {
   }
 
   /*
-  days_in_month() returns the number of days in month for the specified year
+  days_in_month()
+  returns the number of days in month for the specified year
   */
   days_in_month(year, month) {
     if month == 2 and Date._Is_leap(year)
@@ -244,7 +247,6 @@ class Date {
   }
   /*
   weekday()
-
   returns the numbered day of the week
   */
   weekday() {
@@ -259,7 +261,6 @@ class Date {
 
   /*
   days_before_month()
-
   returns the number of days in the year preceeding the first 
   day of the month
   */
@@ -617,8 +618,7 @@ class Date {
   }
 
   /* 
-  jd() 
-  
+  jd()
   converts the current date to a julian day
   */
   jd() {
@@ -636,6 +636,10 @@ class Date {
     return jdate
   }
 
+  /**
+  from_jd(julian_date: number)
+  returns a date instance representing the julian date
+  */
   static from_jd(jdate) {
     if jdate < 0 die Exception('Invalid julian date')
 
@@ -675,6 +679,10 @@ class Date {
     return Date(year, month, day, hour, minute, seconds)
   }
 
+  /**
+  unix_time()
+  returns unix `mktime` equivalent of the current date
+  */
   unix_time() {
     return self.__mktime(self.year, self.month, self.day, self.hour, 
               self.minute, self.seconds, self.is_dst)
