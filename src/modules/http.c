@@ -26,7 +26,7 @@ DECLARE_MODULE_METHOD(http___client) {
   if (curl) {
     curl_easy_setopt(curl, CURLOPT_URL, url->chars);
 
-    if(user_agent->length > 0) {
+    if (user_agent->length > 0) {
       curl_easy_setopt(curl, CURLOPT_USERAGENT, user_agent->chars);
     }
 
@@ -87,19 +87,15 @@ DECLARE_MODULE_METHOD(http___client) {
 
     fclose(body_file);
 
-    b_value status_key = OBJ_VAL(copy_string(vm, "status", 6));
-    b_value error_key = OBJ_VAL(copy_string(vm, "error", 5));
-    b_value body_key = OBJ_VAL(copy_string(vm, "content", 7));
-
     curl_easy_cleanup(curl);
 
-    b_obj_dict *result = new_dict(vm);
-    dict_add_entry(vm, result, status_key, NUMBER_VAL(status_code));
-    dict_add_entry(vm, result, error_key, error);
-    dict_add_entry(vm, result, body_key,
-                   OBJ_VAL(copy_string(vm, body_content, (int)body_size)));
+    b_obj_list *list = new_list(vm);
+    write_list(vm, list, NUMBER_VAL(status_code));
+    write_list(vm, list, error);
+    write_list(vm, list,
+               OBJ_VAL(copy_string(vm, body_content, (int)body_size)));
 
-    RETURN_OBJ(result);
+    RETURN_OBJ(list);
   }
 
   RETURN_ERROR("unable to initialize client");
