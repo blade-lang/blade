@@ -90,6 +90,14 @@ class HttpClient {
   # Makes Http GET request to the given URL and calls
   # the callback upon success or failure
   get(url, on_success, on_failure) {
+    # result to return
+    var result = {
+      error: nil,
+      status_code: 0,
+      headers: {},
+      body: nil
+    }
+
     if url.length() > 0 {
       var response = self.__client(url, self._user_agent, 
           self._referer, self._timeout, self._follow_redirect, 
@@ -97,16 +105,24 @@ class HttpClient {
       )
 
       if !response[1] {
-        # request was successful... process here... 
+
+        if response[0] == 200 {
+          # process response
+          # call on_success
+        } else {
+          # process response
+          # call on_failure
+        }
       } else {
-        die Exception(response[1])
+        result['error'] = response[1]
       }
       
       # @TODO: Remove...
-      echo response
+      # echo response
     } else {
-      die Exception("invalid url '${url}'")
+      result['error'] = "invalid url '${url}'"
     }
-    return self
+
+    return result
   }
 }
