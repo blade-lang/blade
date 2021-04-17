@@ -1276,6 +1276,7 @@ static void block(b_parser *p) {
 static void function_args(b_parser *p) {
   // compile argument list...
   do {
+    ignore_whitespace(p);
     p->compiler->function->arity++;
     if (p->compiler->function->arity > MAX_FUNCTION_PARAMETERS) {
       error_at_current(p, "cannot have more than %d function parameters",

@@ -104,7 +104,7 @@ OBJECTS = $(patsubst $(SOURCE_DIR)/*.c, $(BUILD_DIR)/*.c, $(SOURCES))
 
 #vpath %.c $(SRC_DIR)
 
-CFLAGS += -I$(SOURCE_DIR)/core -I$(SOURCE_DIR) -Ideps/includes
+CFLAGS += -I$(SOURCE_DIR)/core -I$(SOURCE_DIR) -Ideps/includes -lcurl
 
 #define make-goal
 #$1/*.o: %.c

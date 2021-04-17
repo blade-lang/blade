@@ -16,11 +16,13 @@ class Base64 {
   }
 
   # Encodes a bytes into a base64 string
+  # @return string
   encode() {
     return self._encode(self.data)
   }
 
   # Decodes a base64 string into it's corresponding bytes
+  # @return bytes
   decode() {
     return self._decode(self.data)
   }
