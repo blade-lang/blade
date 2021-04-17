@@ -25,6 +25,11 @@ DECLARE_MODULE_METHOD(http___client) {
 
   if (curl) {
     curl_easy_setopt(curl, CURLOPT_URL, url->chars);
+
+    if(user_agent->length > 0) {
+      curl_easy_setopt(curl, CURLOPT_USERAGENT, user_agent->chars);
+    }
+
     if (skip_hostname_verification) {
       curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
     } else {
