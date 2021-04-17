@@ -96,10 +96,10 @@ class HttpClient {
           self._skip_hostname_verification, self._skip_peer_verification
       )
 
-      if !response.error {
+      if !response[1] {
         # request was successful... process here... 
       } else {
-        die Exception(response.error)
+        die Exception(response[1])
       }
       
       # @TODO: Remove...
