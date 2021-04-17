@@ -79,6 +79,7 @@ class HttpClient {
       die Exception('integer expected')
     }
     self._timeout = duration
+    return self
   }
 
   # cask method
@@ -88,15 +89,24 @@ class HttpClient {
 
   # Makes Http GET request to the given URL and calls
   # the callback upon success or failure
-  get(url, on_success, on_faliure) {
+  get(url, on_success, on_failure) {
     if url.length() > 0 {
       var response = self.__client(url, self._user_agent, 
           self._referer, self._timeout, self._follow_redirect, 
           self._skip_hostname_verification, self._skip_peer_verification
       )
+
+      if !response.error {
+        # request was successful... process here... 
+      } else {
+        die Exception(response.error)
+      }
+      
+      # @TODO: Remove...
       echo response
     } else {
       die Exception("invalid url '${url}'")
     }
+    return self
   }
 }
