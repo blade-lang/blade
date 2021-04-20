@@ -43,6 +43,10 @@ class HttpClient {
   # custom request headers
   var _headers = {}
 
+  # whether to remove the expect header or not
+  # only applies to requests with files in the body
+  var _no_expect = false
+
   HttpClient() {
   }
 
@@ -97,10 +101,15 @@ class HttpClient {
     return self
   }
 
+  no_expect() {
+    self._no_expect = true
+    return self
+  }
+
   # cask method
   __client(url, user_agent, referer, timeout, follow_redirect,
           skip_hostname_verification, skip_peer_verification, 
-          ca_cert, cookie_file, method){
+          ca_cert, cookie_file, method, no_expect){
   }
 
   _process_header(header, version_callback) {
@@ -158,7 +167,7 @@ class HttpClient {
           self._referer, self._headers, self._timeout, self._follow_redirect, 
           self._skip_hostname_verification, self._skip_peer_verification,
           self._ca_cert, self._cookie_file, method.upper(),
-          data
+          data, self._no_expect
       )
       
       return self._process_reponse(response)

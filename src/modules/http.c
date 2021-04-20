@@ -11,7 +11,7 @@ static inline size_t http_module_write_header(void *ptr, size_t size,
 }
 
 DECLARE_MODULE_METHOD(http___client) {
-  ENFORCE_ARG_COUNT(__client, 12);
+  ENFORCE_ARG_COUNT(__client, 13);
 
   ENFORCE_ARG_TYPE(__client, 0, IS_STRING);
   ENFORCE_ARG_TYPE(__client, 1, IS_STRING);
@@ -34,6 +34,7 @@ DECLARE_MODULE_METHOD(http___client) {
   bool skip_hostname_verification = AS_BOOL(args[6]);
   bool skip_peer_verification = AS_BOOL(args[7]);
   b_obj_string *request_type = AS_STRING(args[10]);
+  bool no_expect = AS_BOOL(args[12]);
 
   CURL *curl = curl_easy_init();
 
@@ -97,16 +98,25 @@ DECLARE_MODULE_METHOD(http___client) {
       curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, request_type->chars);
     }
 
+    // initialize mime form
+    curl_mime *form = NULL;
+    curl_mimepart *field = NULL;
+    // initialize the headers...
+    struct curl_slist *heads = NULL;
+
     // if request body is given
-    struct curl_httppost *form = NULL;
-    struct curl_httppost *last_form = NULL;
     if (!IS_NIL(args[11])) {
+      form = curl_mime_init(curl);
+
+      bool has_file = false;
+
       if (IS_DICT(args[11])) {
+
         b_obj_dict *request_body = AS_DICT(args[11]);
 
         if (request_body->names.count > 0) {
 
-          char *input = "";
+          /*char *input = "";*/
 
           for (int i = 0; i < request_body->names.count; i++) {
             b_obj_string *key = AS_STRING(request_body->names.values[i]);
@@ -120,14 +130,16 @@ DECLARE_MODULE_METHOD(http___client) {
                                  &val)) {
 
                 if (IS_FILE(val)) {
-                  curl_formadd(&form, &last_form, CURLFORM_COPYNAME,
-                               escaped_key, CURLFORM_FILE,
-                               realpath(AS_FILE(val)->path->chars, NULL),
-                               CURLFORM_END);
+                  has_file = true;
+
+                  field = curl_mime_addpart(form);
+                  curl_mime_name(field, escaped_key);
+                  curl_mime_filedata(field, realpath(AS_FILE(val)->path->chars, NULL));
+
                 } else {
-                  input = append_strings(input, escaped_key);
+                  /*input = append_strings(input, escaped_key);
                   input = append_strings(input, "=");
-                  free(escaped_key);
+                  free(escaped_key);*/
 
                   char *value = value_to_string(vm, val);
 
@@ -135,16 +147,26 @@ DECLARE_MODULE_METHOD(http___client) {
                       curl_easy_escape(curl, value, (int)strlen(value));
 
                   if (escaped_value != NULL) {
-                    input = append_strings(input, escaped_value);
-                    free(escaped_value);
+                    /*input = append_strings(input, escaped_value);
+                    free(escaped_value);*/
+                    field = curl_mime_addpart(form);
+                    curl_mime_name(field, escaped_key);
+                    curl_mime_data(field, escaped_value, CURL_ZERO_TERMINATED);
                   }
-                  input = append_strings(input, "&");
+                  /*input = append_strings(input, "&");*/
                 }
               }
             }
           }
 
-          curl_easy_setopt(curl, CURLOPT_POSTFIELDS, input);
+          if(has_file) {
+            if(no_expect) {
+              heads = curl_slist_append(heads, "Expect:");
+            }
+          }
+
+          /*curl_easy_setopt(curl, CURLOPT_POSTFIELDS, input);*/
+          curl_easy_setopt(form, CURLOPT_MIMEPOST, form);
         } else {
           curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
         }
@@ -156,7 +178,6 @@ DECLARE_MODULE_METHOD(http___client) {
     // NOTE: Always set the user's headers after setting request body
     // this will enable the user to override curl's headers due to such
     // contents as files in the request body...
-    struct curl_slist *heads = NULL;
     if (headers->names.count > 0) {
 
       for (int i = 0; i < headers->names.count; i++) {
@@ -228,12 +249,11 @@ DECLARE_MODULE_METHOD(http___client) {
         copy_string(vm, effective_url, (int)strlen(effective_url));
 
     // clean up
-    free(effective_url);
-    free(stream_content);
-    curl_formfree(form);
-    curl_formfree(last_form);
-    curl_slist_free_all(heads);
     curl_easy_cleanup(curl);
+    curl_mime_free(form);
+    curl_slist_free_all(heads);
+//    free(effective_url);
+//    free(stream_content);
 
     b_obj_list *list = new_list(vm);
     write_list(vm, list, NUMBER_VAL(status_code));

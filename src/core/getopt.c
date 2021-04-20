@@ -1063,8 +1063,7 @@ argv[0], argv[optind - 1]);
   }
 }
 
-int
-getopt(argc, argv, optstring)
+int getopt(argc, argv, optstring)
     int argc;
     char *const *argv;
     const char *optstring;
