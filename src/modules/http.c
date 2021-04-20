@@ -98,25 +98,24 @@ DECLARE_MODULE_METHOD(http___client) {
       curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, request_type->chars);
     }
 
+    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+
     // initialize mime form
     curl_mime *form = NULL;
     curl_mimepart *field = NULL;
     // initialize the headers...
     struct curl_slist *heads = NULL;
+    bool has_file = false;
 
     // if request body is given
     if (!IS_NIL(args[11])) {
-      form = curl_mime_init(curl);
-
-      bool has_file = false;
 
       if (IS_DICT(args[11])) {
 
         b_obj_dict *request_body = AS_DICT(args[11]);
 
         if (request_body->names.count > 0) {
-
-          /*char *input = "";*/
+          form = curl_mime_init(curl);
 
           for (int i = 0; i < request_body->names.count; i++) {
             b_obj_string *key = AS_STRING(request_body->names.values[i]);
@@ -126,8 +125,7 @@ DECLARE_MODULE_METHOD(http___client) {
             if (escaped_key != NULL) {
 
               b_value val;
-              if (dict_get_entry(request_body, request_body->names.values[i],
-                                 &val)) {
+              if (dict_get_entry(request_body, request_body->names.values[i], &val)) {
 
                 if (IS_FILE(val)) {
                   has_file = true;
@@ -137,35 +135,20 @@ DECLARE_MODULE_METHOD(http___client) {
                   curl_mime_filedata(field, realpath(AS_FILE(val)->path->chars, NULL));
 
                 } else {
-                  /*input = append_strings(input, escaped_key);
-                  input = append_strings(input, "=");
-                  free(escaped_key);*/
-
                   char *value = value_to_string(vm, val);
-
                   char *escaped_value =
                       curl_easy_escape(curl, value, (int)strlen(value));
 
                   if (escaped_value != NULL) {
-                    /*input = append_strings(input, escaped_value);
-                    free(escaped_value);*/
                     field = curl_mime_addpart(form);
                     curl_mime_name(field, escaped_key);
                     curl_mime_data(field, escaped_value, CURL_ZERO_TERMINATED);
                   }
-                  /*input = append_strings(input, "&");*/
                 }
               }
             }
           }
 
-          if(has_file) {
-            if(no_expect) {
-              heads = curl_slist_append(heads, "Expect:");
-            }
-          }
-
-          /*curl_easy_setopt(curl, CURLOPT_POSTFIELDS, input);*/
           curl_easy_setopt(form, CURLOPT_MIMEPOST, form);
         } else {
           curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
@@ -193,6 +176,11 @@ DECLARE_MODULE_METHOD(http___client) {
 
           heads = curl_slist_append(heads, header_line);
         }
+      }
+
+      if(no_expect) {
+        printf("No expect\n");
+        heads = curl_slist_append(heads, "Expect:");
       }
 
       curl_easy_setopt(curl, CURLOPT_HTTPHEADER, heads);
