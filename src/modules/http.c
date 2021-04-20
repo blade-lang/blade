@@ -1,25 +1,39 @@
 #include "http.h"
 
 #include <curl/curl.h>
+#include <string.h>
+
+static inline size_t http_module_write_header(void *ptr, size_t size,
+                                              size_t nmemb, void *stream) {
+  int *data = (int *)stream;
+  *data += (int)(nmemb * size);
+  return nmemb * size;
+}
 
 DECLARE_MODULE_METHOD(http___client) {
-  ENFORCE_ARG_COUNT(__client, 7);
+  ENFORCE_ARG_COUNT(__client, 12);
 
   ENFORCE_ARG_TYPE(__client, 0, IS_STRING);
   ENFORCE_ARG_TYPE(__client, 1, IS_STRING);
   ENFORCE_ARG_TYPE(__client, 2, IS_STRING);
-  ENFORCE_ARG_TYPE(__client, 3, IS_NUMBER);
-  ENFORCE_ARG_TYPE(__client, 4, IS_BOOL);
+  ENFORCE_ARG_TYPE(__client, 3, IS_DICT);
+  ENFORCE_ARG_TYPE(__client, 4, IS_NUMBER);
   ENFORCE_ARG_TYPE(__client, 5, IS_BOOL);
   ENFORCE_ARG_TYPE(__client, 6, IS_BOOL);
+  ENFORCE_ARG_TYPE(__client, 7, IS_BOOL);
+  //  ENFORCE_ARG_TYPE(__client, 8, IS_FILE);
+  //  ENFORCE_ARG_TYPE(__client, 9, IS_FILE);
+  ENFORCE_ARG_TYPE(__client, 10, IS_STRING);
 
   b_obj_string *url = AS_STRING(args[0]);
   b_obj_string *user_agent = AS_STRING(args[1]);
   b_obj_string *referer = AS_STRING(args[2]);
-  double timeout = AS_NUMBER(args[3]);
-  bool follow_redirect = AS_BOOL(args[4]);
-  bool skip_hostname_verification = AS_BOOL(args[5]);
-  bool skip_peer_verification = AS_BOOL(args[6]);
+  b_obj_dict *headers = AS_DICT(args[3]);
+  double timeout = AS_NUMBER(args[4]);
+  bool follow_redirect = AS_BOOL(args[5]);
+  bool skip_hostname_verification = AS_BOOL(args[6]);
+  bool skip_peer_verification = AS_BOOL(args[7]);
+  b_obj_string *request_type = AS_STRING(args[10]);
 
   CURL *curl = curl_easy_init();
 
@@ -59,15 +73,128 @@ DECLARE_MODULE_METHOD(http___client) {
       curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long)timeout);
     }
 
-    // general options...
-    curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
-    curl_easy_setopt(curl, CURLOPT_HEADER, 1L);
+    if (!IS_NIL(args[8])) {
+      ENFORCE_ARG_TYPE(__client, 8, IS_FILE);
+      b_obj_file *file = AS_FILE(args[8]);
+      curl_easy_setopt(curl, CURLOPT_CAPATH, realpath(file->path->chars, NULL));
+    }
 
-    FILE *body_file = tmpfile();
+    if (!IS_NIL(args[9])) {
+      ENFORCE_ARG_TYPE(__client, 9, IS_FILE);
+      b_obj_file *file = AS_FILE(args[9]);
+      curl_easy_setopt(curl, CURLOPT_COOKIEFILE,
+                       realpath(file->path->chars, NULL));
+    }
+
+    // @TODO: Handle all options appropriately
+    if (memcmp(request_type->chars, "GET", request_type->length) == 0) {
+      curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+    } else if (memcmp(request_type->chars, "POST", request_type->length) == 0) {
+      curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    } else if (memcmp(request_type->chars, "HEAD", request_type->length) == 0) {
+      curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+    } else {
+      curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, request_type->chars);
+    }
+
+    // if request body is given
+    struct curl_httppost *form = NULL;
+    struct curl_httppost *last_form = NULL;
+    if (!IS_NIL(args[11])) {
+      if (IS_DICT(args[11])) {
+        b_obj_dict *request_body = AS_DICT(args[11]);
+
+        if (request_body->names.count > 0) {
+
+          char *input = "";
+
+          for (int i = 0; i < request_body->names.count; i++) {
+            b_obj_string *key = AS_STRING(request_body->names.values[i]);
+
+            char *escaped_key = curl_easy_escape(curl, key->chars, key->length);
+
+            if (escaped_key != NULL) {
+
+              b_value val;
+              if (dict_get_entry(request_body, request_body->names.values[i],
+                                 &val)) {
+
+                if (IS_FILE(val)) {
+                  curl_formadd(&form, &last_form, CURLFORM_COPYNAME,
+                               escaped_key, CURLFORM_FILE,
+                               realpath(AS_FILE(val)->path->chars, NULL),
+                               CURLFORM_END);
+                } else {
+                  input = append_strings(input, escaped_key);
+                  input = append_strings(input, "=");
+                  free(escaped_key);
+
+                  char *value = value_to_string(vm, val);
+
+                  char *escaped_value =
+                      curl_easy_escape(curl, value, (int)strlen(value));
+
+                  if (escaped_value != NULL) {
+                    input = append_strings(input, escaped_value);
+                    free(escaped_value);
+                  }
+                  input = append_strings(input, "&");
+                }
+              }
+            }
+          }
+
+          curl_easy_setopt(curl, CURLOPT_POSTFIELDS, input);
+        } else {
+          curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
+        }
+      } else if (IS_STRING(args[11])) {
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, AS_C_STRING(args[11]));
+      }
+    }
+
+    // NOTE: Always set the user's headers after setting request body
+    // this will enable the user to override curl's headers due to such
+    // contents as files in the request body...
+    struct curl_slist *heads = NULL;
+    if (headers->names.count > 0) {
+
+      for (int i = 0; i < headers->names.count; i++) {
+        b_obj_string *key = AS_STRING(headers->names.values[i]);
+        b_value val;
+        if (dict_get_entry(headers, headers->names.values[i], &val) &&
+            IS_STRING(val)) {
+          b_obj_string *value = AS_STRING(val);
+
+          char *header_line = strdup(key->chars);
+          header_line = append_strings(header_line, ": ");
+          header_line = append_strings(header_line, value->chars);
+
+          heads = curl_slist_append(heads, header_line);
+        }
+      }
+
+      curl_easy_setopt(curl, CURLOPT_HTTPHEADER, heads);
+    }
+
+    FILE *stream = tmpfile();
+    int header_length = 0;
+
+    // GENERAL OPTIONS...
+    curl_easy_setopt(curl, CURLOPT_HEADER, 1L);
+    curl_easy_setopt(curl, CURLOPT_PROTOCOLS,
+                     CURLPROTO_HTTP | CURLPROTO_HTTPS | CURLPROTO_FILE);
     // for writing the body
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, body_file);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, stream);
+    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, http_module_write_header);
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, &header_length);
 
     CURLcode res_code = curl_easy_perform(curl);
+
+    // we want to reset to the default in case we aren't going
+    // to need a custom request in the next request. Else,
+    // curl will keep using the custom request.
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, NULL);
 
     long status_code = 0;
     curl_easy_getinfo(curl, CURLINFO_HTTP_CODE, &status_code);
@@ -78,22 +205,44 @@ DECLARE_MODULE_METHOD(http___client) {
       error = OBJ_VAL(copy_string(vm, err, (int)strlen(err)));
     }
 
-    fseek(body_file, 0L, SEEK_END);
-    size_t body_size = ftell(body_file);
-    rewind(body_file);
+    fseek(stream, 0L, SEEK_END);
+    size_t stream_length = ftell(stream);
+    rewind(stream);
 
-    char *body_content = (char *)malloc(body_size + 1);
-    fread(body_content, sizeof(char), body_size, body_file);
+    char *stream_content = (char *)malloc(stream_length);
+    fread(stream_content, sizeof(char), stream_length, stream);
 
-    fclose(body_file);
+    fclose(stream);
 
+    long redirect_count;
+    double total_time;
+    char *effective_url = NULL;
+    curl_easy_getinfo(curl, CURLINFO_REDIRECT_COUNT, &redirect_count);
+    curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &total_time);
+    curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &effective_url);
+
+    b_obj_string *header = copy_string(vm, stream_content, header_length);
+    b_obj_string *body = copy_string(vm, stream_content + header_length,
+                                     (int)stream_length - header_length);
+    b_obj_string *responder =
+        copy_string(vm, effective_url, (int)strlen(effective_url));
+
+    // clean up
+    free(effective_url);
+    free(stream_content);
+    curl_formfree(form);
+    curl_formfree(last_form);
+    curl_slist_free_all(heads);
     curl_easy_cleanup(curl);
 
     b_obj_list *list = new_list(vm);
     write_list(vm, list, NUMBER_VAL(status_code));
     write_list(vm, list, error);
-    write_list(vm, list,
-               OBJ_VAL(copy_string(vm, body_content, (int)body_size)));
+    write_list(vm, list, OBJ_VAL(header));
+    write_list(vm, list, OBJ_VAL(body));
+    write_list(vm, list, NUMBER_VAL(total_time));
+    write_list(vm, list, NUMBER_VAL(redirect_count));
+    write_list(vm, list, OBJ_VAL(responder));
 
     RETURN_OBJ(list);
   }
