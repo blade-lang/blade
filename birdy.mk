@@ -50,7 +50,7 @@ else
 endif
 
 
-LIB_PCRE2 := deps/lib/pcre2/darwin/libpcre2-8.a
+LIB_STATICS := deps/lib/darwin/libpcre2-8.a
 
 ifneq (,$(findstring darwin,$(OS)))
 
@@ -84,12 +84,10 @@ endif
 LIB_WIN32 :=
 
 ifeq ($(OS),cygwin)
-	LIB_PCRE2 = deps/lib/pcre2/mingw/libpcre2-8.dll.a
-	LIB_READLINE = /usr/lib/libreadline.dll.a
+	LIB_WIN32 = deps/lib/mingw/libpcre2-8.dll.a /usr/lib/libreadline.dll.a
 else ifeq ($(OS),mingw32)
 	CFLAGS += -lshlwapi
-	LIB_PCRE2 = deps/lib/pcre2/mingw/libpcre2-8.dll.a
-	LIB_WIN32 = /mingw64/lib/libreadline.dll.a /mingw64/x86_64-w64-mingw32/lib/libshlwapi.a /mingw64/x86_64-w64-mingw32/lib/libws2_32.a /mingw64/x86_64-w64-mingw32/lib/libnetapi32.a
+	LIB_WIN32 = deps/lib/mingw/libpcre2-8.dll.a /mingw64/lib/libreadline.dll.a /mingw64/x86_64-w64-mingw32/lib/libshlwapi.a /mingw64/x86_64-w64-mingw32/lib/libws2_32.a /mingw64/x86_64-w64-mingw32/lib/libnetapi32.a
 endif
 
 # Files.
@@ -111,9 +109,9 @@ CFLAGS += -I$(SOURCE_DIR)/core -I$(SOURCE_DIR) -Ideps/includes -lcurl
 #	$(CC) -I$(INCLUDES) -c $$< -o $$@
 #endef
 
-build/$(NAME): $(OBJECTS) $(LIB_PCRE2) $(LIB_WIN32)
+build/$(NAME): $(OBJECTS) $(LIB_STATICS) $(LIB_WIN32)
 	@ printf "Building Bird in %s mode into %s...\n" $(MODE) $(NAME)
-	@ printf "%s %s %s\n" $(CC) $@ "$(CFLAGS) $(LIB_PCRE2) $(LIB_WIN32)"
+	@ printf "%s %s %s\n" $(CC) $@ "$(CFLAGS) $(LIB_STATICS) $(LIB_WIN32)"
 	@ mkdir -p build
 	@ $(CC) $(CFLAGS) $^ -o $@
 

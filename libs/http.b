@@ -40,13 +40,14 @@ class HttpClient {
   # set to -1 to set no timeout limit to the request
   var _timeout = -1
 
+  # custom request headers
+  var _headers = {}
+
   HttpClient() {
   }
 
   user_agent(str) {
-    if !is_string(str) {
-      die Exception('string expected')
-    }
+    if !is_string(str) die Exception('string expected')
     self._user_agent = str
     return self
   }
@@ -67,62 +68,117 @@ class HttpClient {
   }
 
   referer(str) {
-    if !is_string(str) {
-      die Exception('string expected')
-    }
+    if !is_string(str) die Exception('string expected')
     self._referer = str
     return self
   }
 
   timeout(duration) {
-    if !is_int(duration) {
-      die Exception('integer expected')
-    }
+    if !is_int(duration) die Exception('integer expected')
     self._timeout = duration
+    return self
+  }
+
+  headers(data) {
+    if !is_dict(data) die Exception('dictionary expected')
+    self._headers = data
+    return self
+  }
+
+  cookie_file(file) {
+    if !is_file(file) die Exception('file expected')
+    self._cookie_file = file
+    return self
+  }
+
+  ca_cert_file(file) {
+    if !is_file(file) die Exception('file expected')
+    self._ca_cert = file
     return self
   }
 
   # cask method
   __client(url, user_agent, referer, timeout, follow_redirect,
-          skip_hostname_verification, skip_peer_verification){
+          skip_hostname_verification, skip_peer_verification, 
+          ca_cert, cookie_file, method){
   }
 
-  # Makes Http GET request to the given URL and calls
-  # the callback upon success or failure
-  get(url, on_success, on_failure) {
-    # result to return
-    var result = {
-      error: nil,
-      status_code: 0,
-      headers: {},
-      body: nil
-    }
+  _process_header(header, version_callback) {
+    var result = {}
 
-    if url.length() > 0 {
-      var response = self.__client(url, self._user_agent, 
-          self._referer, self._timeout, self._follow_redirect, 
-          self._skip_hostname_verification, self._skip_peer_verification
-      )
+    # Follow redirect headers...
+    var data = header.trim().split('\r\n')
 
-      if !response[1] {
-
-        if response[0] == 200 {
-          # process response
-          # call on_success
-        } else {
-          # process response
-          # call on_failure
-        }
-      } else {
-        result['error'] = response[1]
+    iter var i = 0; i < data.length(); i++ {
+      var d = data[i].index_of(':')
+      if d > -1 {
+        result.add(data[i][0,d], data[i][d + 1,data[i].length()])
+      } else if(data[i].lower().starts_with('http/')){
+        var http_version = data[i].split(' ')[0].replace('http/', '')
+        if version_callback version_callback(http_version)
       }
-      
-      # @TODO: Remove...
-      # echo response
-    } else {
-      result['error'] = "invalid url '${url}'"
     }
 
     return result
+  }
+
+  _process_reponse(response) {
+    # result to return
+    var result = {
+      status_code: 0,
+      http_version: '1.0',
+      time_taken: 0,
+      redirects: 0,
+      responder: nil,
+      headers: {},
+      error: nil,
+      body: nil
+    }
+
+    var status_code = result['status_code']  = response[0]
+    var error = result['error'] = response[1]
+    var headers = result['headers'] = self._process_header(response[2], |s|{
+      result['http_version'] = s
+    })
+    var body = result['body']  = response[3]
+    result['time_taken'] = response[4]
+    result['redirects'] = response[5]
+    result['responder'] = response[6]
+
+    if error {
+      result['error'] = error
+    }
+
+    return result
+  }
+
+  _make_request(method, url, data) {
+    if url.length() > 0 {
+      var response = self.__client(url, self._user_agent,
+          self._referer, self._headers, self._timeout, self._follow_redirect, 
+          self._skip_hostname_verification, self._skip_peer_verification,
+          self._ca_cert, self._cookie_file, method.upper(),
+          data
+      )
+      
+      return self._process_reponse(response)
+    } else {
+      die Exception("invalid url '${url}'")
+    }
+  }
+
+  # Makes Http GET request to the given URL
+  # @return dictionary
+  get(url) {
+    if !is_string(url) die Exception('string expected for url')
+    return self._make_request('GET', url)
+  }
+
+  # Makes Http POST request to the given URL with the given data
+  # @return dictionary
+  post(url, data) {
+    if !is_dict(data) and !is_string(data) 
+      die Exception('post body must be a dictionary or string')
+    return self._make_request('POST', url, data)
   }
 }
