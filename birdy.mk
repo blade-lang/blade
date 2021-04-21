@@ -56,22 +56,22 @@ ifneq (,$(findstring darwin,$(OS)))
 
 # for OSX environments
 	SHARED_EXT := dylib
-	CFLAGS += -L/usr/local/opt/curl/lib
+	CFLAGS += -Ldeps/lib/darwin
 
-CFLAGS += -lreadline 
+	CFLAGS += -lreadline 
 else ifeq ($(OS),cygwin)
 
 # for cygwin and mingw32 environments
 	SHARED_LIB_FLAGS := -Wl,-soname,libbirdy.dll
 	SHARED_EXT := dll
-CFLAGS += -Wno-return-local-addr -Wno-maybe-uninitialized -Wno-sequence-point
+	CFLAGS += -Wno-return-local-addr -Wno-maybe-uninitialized -Wno-sequence-point
 
 else ifeq ($(OS),mingw32)
 
 # for cygwin and mingw32 environments
 	SHARED_LIB_FLAGS := -Wl,-soname,libbirdy.dll
 	SHARED_EXT := dll
-CFLAGS += -Wno-return-local-addr -Wno-maybe-uninitialized -Wno-sequence-point
+	CFLAGS += -Wno-return-local-addr -Wno-maybe-uninitialized -Wno-sequence-point
 
 else
 
@@ -79,7 +79,7 @@ else
 	SHARED_LIB_FLAGS := -Wl,-soname,libbirdy.so
 	SHARED_EXT := so
 
-CFLAGS += -Wno-return-local-addr -Wno-implicit-fallthrough -lreadline 
+	CFLAGS += -Wno-return-local-addr -Wno-implicit-fallthrough -lreadline 
 endif
 
 LIB_WIN32 :=

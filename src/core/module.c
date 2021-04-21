@@ -8,6 +8,7 @@
 #include "modules/math.h"
 #include "modules/os.h"
 #include "modules/http.h"
+#include "modules/socket.h"
 
 typedef b_module_reg (*b_module_func)(b_vm *);
 
@@ -23,6 +24,7 @@ b_module_registry modules[] = {
     {"math",   GET_MODULE_LOADER(math)},     //
     {"date",   GET_MODULE_LOADER(date)},     //
     {"http",   GET_MODULE_LOADER(http)},     //
+    {"socket", GET_MODULE_LOADER(socket)},     //
     {NULL,     NULL},
 };
 
