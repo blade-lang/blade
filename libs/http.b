@@ -163,11 +163,19 @@ class HttpClient {
 
   _make_request(method, url, data) {
     if url.length() > 0 {
+      var has_file = false
+
+      if is_dict(data) {
+        for value in data {
+          if is_file(value) has_file = true
+        }
+      }
+
       var response = self.__client(url, self._user_agent,
           self._referer, self._headers, self._timeout, self._follow_redirect, 
           self._skip_hostname_verification, self._skip_peer_verification,
           self._ca_cert, self._cookie_file, method.upper(),
-          data, self._no_expect
+          data, self._no_expect, has_file
       )
       
       return self._process_reponse(response)

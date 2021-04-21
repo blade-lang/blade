@@ -1,5 +1,11 @@
 #include "http.h"
+#include "pathinfo.h"
 
+#if defined _MSC_VER
+#include "win32.h"
+#endif
+
+#include <sys/stat.h>
 #include <curl/curl.h>
 #include <string.h>
 
@@ -10,8 +16,22 @@ static inline size_t http_module_write_header(void *ptr, size_t size,
   return nmemb * size;
 }
 
+size_t http_module_file_reader(char *buffer, size_t size, size_t nitems, void *arg)
+{
+  size_t return_code = fread(buffer, size, nitems, (FILE *)arg);
+  return return_code;
+}
+
+int http_module_file_seeker(void *arg, curl_off_t offset, int origin)
+{
+  if (fseek((FILE *)arg, offset, origin) == 0)
+    return CURL_SEEKFUNC_OK;
+  else
+    return CURL_SEEKFUNC_FAIL;
+}
+
 DECLARE_MODULE_METHOD(http___client) {
-  ENFORCE_ARG_COUNT(__client, 13);
+  ENFORCE_ARG_COUNT(__client, 14);
 
   ENFORCE_ARG_TYPE(__client, 0, IS_STRING);
   ENFORCE_ARG_TYPE(__client, 1, IS_STRING);
@@ -34,14 +54,34 @@ DECLARE_MODULE_METHOD(http___client) {
   bool skip_hostname_verification = AS_BOOL(args[6]);
   bool skip_peer_verification = AS_BOOL(args[7]);
   b_obj_string *request_type = AS_STRING(args[10]);
+  b_value request_body = args[11];
   bool no_expect = AS_BOOL(args[12]);
+  bool has_file = AS_BOOL(args[13]);
 
   CURL *curl = curl_easy_init();
 
-  if (curl) {
-    curl_easy_setopt(curl, CURLOPT_URL, url->chars);
+  // initialize mime form
+  curl_mime *form = NULL;
+  curl_mimepart *field = NULL;
+  // initialize the headers...
+  struct curl_slist *heads = NULL;
 
-    if (user_agent->length > 0) {
+  if (curl) {
+    form = curl_mime_init(curl);
+
+    /*form = curl_mime_init(curl);
+
+    field = curl_mime_addpart(form);
+    curl_mime_name(field, "file");
+    curl_mime_filedata(field, "/Users/appzone/c/birdy/me.png");
+
+    curl_easy_setopt(curl, CURLOPT_URL, url->chars);
+    curl_easy_setopt(curl, CURLOPT_MIMEPOST, form);
+    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);*/
+
+     curl_easy_setopt(curl, CURLOPT_URL, url->chars);
+
+     if (user_agent->length > 0) {
       curl_easy_setopt(curl, CURLOPT_USERAGENT, user_agent->chars);
     }
 
@@ -87,7 +127,6 @@ DECLARE_MODULE_METHOD(http___client) {
                        realpath(file->path->chars, NULL));
     }
 
-    // @TODO: Handle all options appropriately
     if (memcmp(request_type->chars, "GET", request_type->length) == 0) {
       curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
     } else if (memcmp(request_type->chars, "POST", request_type->length) == 0) {
@@ -100,63 +139,128 @@ DECLARE_MODULE_METHOD(http___client) {
 
     curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
-    // initialize mime form
-    curl_mime *form = NULL;
-    curl_mimepart *field = NULL;
-    // initialize the headers...
-    struct curl_slist *heads = NULL;
-    bool has_file = false;
-
     // if request body is given
-    if (!IS_NIL(args[11])) {
+    if(!IS_NIL(request_body)) {
+      if(IS_DICT(request_body)) {
+        if(has_file) {
+
+          for (int i = 0; i < AS_DICT(request_body)->names.count; i++) {
+            b_obj_string *key = AS_STRING(AS_DICT(request_body)->names.values[i]);
+
+            b_value val;
+            if(dict_get_entry(AS_DICT(request_body), OBJ_VAL(key), &val)) {
+              if(IS_FILE(val)) {
+                char *file_path = realpath(AS_FILE(val)->path->chars, NULL);
+
+                field = curl_mime_addpart(form);
+                curl_mime_name(field, key->chars);
+                curl_mime_filename(field, get_real_file_name(file_path));
+                curl_mime_filedata(field, file_path);
+              } else {
+                field = curl_mime_addpart(form);
+                curl_mime_name(field, key->chars);
+                curl_mime_filedata(field, value_to_string(vm, val));
+              }
+            }
+          }
+
+          curl_easy_setopt(curl, CURLOPT_MIMEPOST, form);
+        } else {
+          char *input = "";
+
+          for (int i = 0; i < AS_DICT(request_body)->names.count; i++) {
+            b_obj_string *key = AS_STRING(AS_DICT(request_body)->names.values[i]);
+            char *escaped_key = curl_easy_escape(curl, key->chars, key->length);
+
+            if(escaped_key != NULL) {
+              input = append_strings(input, escaped_key);
+              input = append_strings(input, "=");
+
+              b_value val;
+              if(dict_get_entry(AS_DICT(request_body), AS_DICT(request_body)->names.values[i], &val)) {
+
+                char *value = value_to_string(vm, val);
+                char *escaped_value = curl_easy_escape(curl, value, (int)strlen(value));
+
+                if (escaped_value != NULL) {
+                  input = append_strings(input, escaped_value);
+                }
+                input = append_strings(input, "&");
+              }
+            }
+          }
+
+          curl_easy_setopt(curl, CURLOPT_POSTFIELDS, input);
+        }
+      } else {
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, AS_C_STRING(request_body));
+      }
+    }
+    /*if (!IS_NIL(args[11])) {
 
       if (IS_DICT(args[11])) {
-
         b_obj_dict *request_body = AS_DICT(args[11]);
 
         if (request_body->names.count > 0) {
-          form = curl_mime_init(curl);
+          if(!has_file) {
+            char *input = "";
 
-          for (int i = 0; i < request_body->names.count; i++) {
-            b_obj_string *key = AS_STRING(request_body->names.values[i]);
+            for (int i = 0; i < request_body->names.count; i++) {
+              b_obj_string *key = AS_STRING(request_body->names.values[i]);
 
-            char *escaped_key = curl_easy_escape(curl, key->chars, key->length);
+              char *escaped_key = curl_easy_escape(curl, key->chars, key->length);
 
-            if (escaped_key != NULL) {
+              if(escaped_key != NULL) {
+                input = append_strings(input, escaped_key);
+                input = append_strings(input, "=");
+
+                b_value val;
+                if(dict_get_entry(request_body, request_body->names.values[i], &val)) {
+
+                  char *value = value_to_string(vm, val);
+                  char *escaped_value = curl_easy_escape(curl, value, (int)strlen(value));
+
+                  if (escaped_value != NULL) {
+                    input = append_strings(input, escaped_value);
+                  }
+                  input = append_strings(input, "&");
+                }
+              }
+            }
+
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, input);
+          } else {
+
+            for (int i = 0; i < request_body->names.count; i++) {
+              b_obj_string *key = AS_STRING(request_body->names.values[i]);
 
               b_value val;
               if (dict_get_entry(request_body, request_body->names.values[i], &val)) {
 
                 if (IS_FILE(val)) {
-                  has_file = true;
+                  char *file_path = realpath(AS_FILE(val)->path->chars, NULL);
 
                   field = curl_mime_addpart(form);
-                  curl_mime_name(field, escaped_key);
-                  curl_mime_filedata(field, realpath(AS_FILE(val)->path->chars, NULL));
-
+                  curl_mime_name(field, key->chars);
+                  curl_mime_filedata(field, file_path);
                 } else {
                   char *value = value_to_string(vm, val);
-                  char *escaped_value =
-                      curl_easy_escape(curl, value, (int)strlen(value));
-
-                  if (escaped_value != NULL) {
-                    field = curl_mime_addpart(form);
-                    curl_mime_name(field, escaped_key);
-                    curl_mime_data(field, escaped_value, CURL_ZERO_TERMINATED);
-                  }
+                  field = curl_mime_addpart(form);
+                  curl_mime_name(field, key->chars);
+                  curl_mime_data(field, value, CURL_ZERO_TERMINATED);
                 }
               }
             }
-          }
 
-          curl_easy_setopt(form, CURLOPT_MIMEPOST, form);
+            curl_easy_setopt(form, CURLOPT_MIMEPOST, form);
+          }
         } else {
           curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
         }
       } else if (IS_STRING(args[11])) {
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, AS_C_STRING(args[11]));
       }
-    }
+    }*/
 
     // NOTE: Always set the user's headers after setting request body
     // this will enable the user to override curl's headers due to such
@@ -179,7 +283,6 @@ DECLARE_MODULE_METHOD(http___client) {
       }
 
       if(no_expect) {
-        printf("No expect\n");
         heads = curl_slist_append(heads, "Expect:");
       }
 
