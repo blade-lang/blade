@@ -220,4 +220,6 @@ DECLARE_FILE_METHOD(seek);
  */
 DECLARE_FILE_METHOD(tell);
 
+bool is_std_file(b_obj_file *file);
+
 #endif

@@ -1,7 +1,7 @@
 #include "http.h"
 #include "pathinfo.h"
 
-#if defined _MSC_VER
+#if defined _MSC_VER || defined _WIN32
 #include "win32.h"
 #endif
 
@@ -14,20 +14,6 @@ static inline size_t http_module_write_header(void *ptr, size_t size,
   int *data = (int *)stream;
   *data += (int)(nmemb * size);
   return nmemb * size;
-}
-
-size_t http_module_file_reader(char *buffer, size_t size, size_t nitems, void *arg)
-{
-  size_t return_code = fread(buffer, size, nitems, (FILE *)arg);
-  return return_code;
-}
-
-int http_module_file_seeker(void *arg, curl_off_t offset, int origin)
-{
-  if (fseek((FILE *)arg, offset, origin) == 0)
-    return CURL_SEEKFUNC_OK;
-  else
-    return CURL_SEEKFUNC_FAIL;
 }
 
 DECLARE_MODULE_METHOD(http___client) {
@@ -136,8 +122,6 @@ DECLARE_MODULE_METHOD(http___client) {
     } else {
       curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, request_type->chars);
     }
-
-    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
     // if request body is given
     if(!IS_NIL(request_body)) {

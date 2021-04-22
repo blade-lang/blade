@@ -34,9 +34,9 @@ static void reset_stack(b_vm *vm) {
 
 static inline b_obj_func *get_frame_function(b_call_frame *frame) {
   if (frame->function->type == OBJ_FUNCTION) {
-    return (b_obj_func *) frame->function;
+    return (b_obj_func *)frame->function;
   } else {
-    return ((b_obj_closure *) frame->function)->function;
+    return ((b_obj_closure *)frame->function)->function;
   }
 }
 
@@ -63,7 +63,7 @@ static void initialize_exceptions(b_vm *vm) {
 }
 
 b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
-  char *trace = (char *) malloc(sizeof(char));
+  char *trace = (char *)malloc(sizeof(char));
   memset(trace, 0, sizeof(char));
 
   // fprintf(stderr, "StackTrace:\n");
@@ -95,7 +95,7 @@ b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
   table_set(vm, &instance->fields, OBJ_VAL(copy_string(vm, "message", 7)),
             OBJ_VAL(message));
   table_set(vm, &instance->fields, OBJ_VAL(copy_string(vm, "trace", 5)),
-            OBJ_VAL(take_string(vm, trace, (int) strlen(trace))));
+            OBJ_VAL(take_string(vm, trace, (int)strlen(trace))));
   return instance;
 }
 
@@ -126,8 +126,7 @@ void _runtime_error(b_vm *vm, const char *format, ...) {
         b_obj_func *function = get_frame_function(frame);
 
         // -1 because the IP is sitting on the next instruction to be executed
-        instruction =
-            frame->ip - get_frame_function(frame)->blob.code - 1;
+        instruction = frame->ip - get_frame_function(frame)->blob.code - 1;
 
         fprintf(stderr,
                 "    File: %s, Line: %d, In: ", get_frame_function(frame)->file,
@@ -171,7 +170,7 @@ b_value pop_n(b_vm *vm, int n) {
 b_value peek(b_vm *vm, int distance) { return vm->stack_top[-1 - distance]; }
 
 static void define_native(b_vm *vm, const char *name, b_native_fn function) {
-  push(vm, OBJ_VAL(copy_string(vm, name, (int) strlen(name))));
+  push(vm, OBJ_VAL(copy_string(vm, name, (int)strlen(name))));
   push(vm, OBJ_VAL(new_native(vm, function, name)));
   table_set(vm, &vm->globals, vm->stack[0], vm->stack[1]);
   pop_n(vm, 2);
@@ -179,7 +178,7 @@ static void define_native(b_vm *vm, const char *name, b_native_fn function) {
 
 void define_native_method(b_vm *vm, b_table *table, const char *name,
                           b_native_fn function) {
-  push(vm, OBJ_VAL(copy_string(vm, name, (int) strlen(name))));
+  push(vm, OBJ_VAL(copy_string(vm, name, (int)strlen(name))));
   push(vm, OBJ_VAL(new_native(vm, function, name)));
   table_set(vm, table, vm->stack[0], vm->stack[1]);
   pop_n(vm, 2);
@@ -453,7 +452,7 @@ static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
   }
 
   b_call_frame *frame = &vm->frames[vm->frame_count++];
-  frame->function = (b_obj *) callee;
+  frame->function = (b_obj *)callee;
   frame->ip = function->blob.code;
 
   frame->slots = vm->stack_top - arg_count - 1;
@@ -461,67 +460,67 @@ static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
 }
 
 static bool call_closure(b_vm *vm, b_obj_closure *closure, int arg_count) {
-  return call(vm, (b_obj *) closure, closure->function, arg_count);
+  return call(vm, (b_obj *)closure, closure->function, arg_count);
 }
 
 static bool call_function(b_vm *vm, b_obj_func *function, int arg_count) {
-  return call(vm, (b_obj *) function, function, arg_count);
+  return call(vm, (b_obj *)function, function, arg_count);
 }
 
 static bool call_value(b_vm *vm, b_value callee, int arg_count) {
   if (IS_OBJ(callee)) {
     switch (OBJ_TYPE(callee)) {
-      case OBJ_BOUND_METHOD: {
-        b_obj_bound *bound = AS_BOUND(callee);
-        vm->stack_top[-arg_count - 1] = bound->receiver;
-        if (bound->method->type == OBJ_CLOSURE) {
-          return call_closure(vm, (b_obj_closure *) bound->method, arg_count);
+    case OBJ_BOUND_METHOD: {
+      b_obj_bound *bound = AS_BOUND(callee);
+      vm->stack_top[-arg_count - 1] = bound->receiver;
+      if (bound->method->type == OBJ_CLOSURE) {
+        return call_closure(vm, (b_obj_closure *)bound->method, arg_count);
+      } else {
+        return call_function(vm, (b_obj_func *)bound->method, arg_count);
+      }
+    }
+
+    case OBJ_CLASS: {
+      b_obj_class *klass = AS_CLASS(callee);
+      vm->stack_top[-arg_count - 1] = OBJ_VAL(new_instance(vm, klass));
+      if (!IS_EMPTY(klass->initializer)) {
+        if (IS_CLOSURE(klass->initializer)) {
+          return call_closure(vm, AS_CLOSURE(klass->initializer), arg_count);
+        } else if (IS_NATIVE(klass->initializer)) {
+          return call_value(vm, klass->initializer, arg_count);
         } else {
-          return call_function(vm, (b_obj_func *) bound->method, arg_count);
+          return call_function(vm, AS_FUNCTION(klass->initializer), arg_count);
         }
+      } else if (arg_count != 0) {
+        _runtime_error(vm, "%s constructor expects 0 arguments, %d given",
+                       klass->name, arg_count);
+        return false;
+      }
+      return true;
+    }
+
+    case OBJ_CLOSURE: {
+      return call_closure(vm, AS_CLOSURE(callee), arg_count);
+    }
+
+    case OBJ_FUNCTION: {
+      return call_function(vm, AS_FUNCTION(callee), arg_count);
+    }
+
+    case OBJ_NATIVE: {
+      b_native_fn native = AS_NATIVE(callee)->function;
+      b_value result = native(vm, arg_count, vm->stack_top - arg_count);
+      if (IS_EMPTY(result)) {
+        return false;
       }
 
-      case OBJ_CLASS: {
-        b_obj_class *klass = AS_CLASS(callee);
-        vm->stack_top[-arg_count - 1] = OBJ_VAL(new_instance(vm, klass));
-        if (!IS_EMPTY(klass->initializer)) {
-          if (IS_CLOSURE(klass->initializer)) {
-            return call_closure(vm, AS_CLOSURE(klass->initializer), arg_count);
-          } else if (IS_NATIVE(klass->initializer)) {
-            return call_value(vm, klass->initializer, arg_count);
-          } else {
-            return call_function(vm, AS_FUNCTION(klass->initializer), arg_count);
-          }
-        } else if (arg_count != 0) {
-          _runtime_error(vm, "%s constructor expects 0 arguments, %d given",
-                         klass->name, arg_count);
-          return false;
-        }
-        return true;
-      }
+      vm->stack_top -= arg_count + 1;
+      push(vm, result);
+      return true;
+    }
 
-      case OBJ_CLOSURE: {
-        return call_closure(vm, AS_CLOSURE(callee), arg_count);
-      }
-
-      case OBJ_FUNCTION: {
-        return call_function(vm, AS_FUNCTION(callee), arg_count);
-      }
-
-      case OBJ_NATIVE: {
-        b_native_fn native = AS_NATIVE(callee)->function;
-        b_value result = native(vm, arg_count, vm->stack_top - arg_count);
-        if (IS_EMPTY(result)) {
-          return false;
-        }
-
-        vm->stack_top -= arg_count + 1;
-        push(vm, result);
-        return true;
-      }
-
-      default: // non callable
-        break;
+    default: // non callable
+      break;
     }
   }
   _runtime_error(vm, "only functions and classes can be called");
@@ -767,7 +766,7 @@ bool dict_set_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value) {
 
 static b_obj_string *multiply_string(b_vm *vm, b_obj_string *str,
                                      double number) {
-  int times = (int) number;
+  int times = (int)number;
 
   if (times <= 0) // 'str' * 0 == '', 'str' * -1 == ''
     return copy_string(vm, "", 0);
@@ -870,7 +869,7 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
       utf8slice(string->chars, &start, &end);
 
       push(vm,
-           OBJ_VAL(copy_string(vm, string->chars + start, (int) (end - start))));
+           OBJ_VAL(copy_string(vm, string->chars + start, (int)(end - start))));
       return true;
     } else {
       _runtime_error(vm, "string index %d out of range", real_index);
@@ -909,7 +908,7 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
     utf8slice(string->chars, &start, &end);
 
     push(vm,
-         OBJ_VAL(copy_string(vm, string->chars + start, (int) (end - start))));
+         OBJ_VAL(copy_string(vm, string->chars + start, (int)(end - start))));
     return true;
   }
 }
@@ -938,7 +937,7 @@ static bool bytes_get_index(b_vm *vm, b_obj_bytes *bytes, bool will_assign) {
         pop_n(vm, 2); // +1 for the list itself
       }
 
-      push(vm, NUMBER_VAL((int) bytes->bytes.bytes[index]));
+      push(vm, NUMBER_VAL((int)bytes->bytes.bytes[index]));
       return true;
     } else {
       _runtime_error(vm, "bytes index %d out of range", real_index);
@@ -1099,7 +1098,7 @@ static bool bytes_set_index(b_vm *vm, b_obj_bytes *bytes, b_value index,
   int position = _position < 0 ? bytes->bytes.count + _position : _position;
 
   if (position < bytes->bytes.count && position > -(bytes->bytes.count)) {
-    bytes->bytes.bytes[position] = (unsigned char) byte;
+    bytes->bytes.bytes[position] = (unsigned char)byte;
     pop_n(vm, 4); // pop the value, nil, index and bytes out
 
     // leave the value on the stack for consumption
@@ -1176,7 +1175,7 @@ static bool concatenate(b_vm *vm) {
 }
 
 static int floor_div(double a, double b) {
-  int d = (int) a / (int) b;
+  int d = (int)a / (int)b;
   return d - ((d * b == a) & ((a < 0) ^ (b < 0)));
 }
 
@@ -1256,645 +1255,645 @@ b_ptr_result run(b_vm *vm) {
 
     switch (instruction = READ_BYTE()) {
 
-      case OP_CONSTANT: {
-        b_value constant = READ_CONSTANT();
-        push(vm, constant);
-        break;
-      }
+    case OP_CONSTANT: {
+      b_value constant = READ_CONSTANT();
+      push(vm, constant);
+      break;
+    }
 
-      case OP_ADD: {
-        if (IS_STRING(peek(vm, 0)) || IS_STRING(peek(vm, 1))) {
-          if (!concatenate(vm)) {
-            runtime_error("unsupported operand + for %s and %s",
-                          value_type(peek(vm, 0)), value_type(peek(vm, 1)));
-          }
-        } else if (IS_LIST(peek(vm, 0)) && IS_LIST(peek(vm, 1))) {
-          b_value result =
-              OBJ_VAL(add_list(vm, AS_LIST(peek(vm, 1)), AS_LIST(peek(vm, 0))));
-          pop_n(vm, 2);
-          push(vm, result);
-        } else if (IS_BYTES(peek(vm, 0)) && IS_BYTES(peek(vm, 1))) {
-          b_value result = OBJ_VAL(
-              add_bytes(vm, AS_BYTES(peek(vm, 1)), AS_BYTES(peek(vm, 0))));
-          pop_n(vm, 2);
-          push(vm, result);
-        } else {
-          BINARY_OP(NUMBER_VAL, +);
+    case OP_ADD: {
+      if (IS_STRING(peek(vm, 0)) || IS_STRING(peek(vm, 1))) {
+        if (!concatenate(vm)) {
+          runtime_error("unsupported operand + for %s and %s",
+                        value_type(peek(vm, 0)), value_type(peek(vm, 1)));
         }
+      } else if (IS_LIST(peek(vm, 0)) && IS_LIST(peek(vm, 1))) {
+        b_value result =
+            OBJ_VAL(add_list(vm, AS_LIST(peek(vm, 1)), AS_LIST(peek(vm, 0))));
+        pop_n(vm, 2);
+        push(vm, result);
+      } else if (IS_BYTES(peek(vm, 0)) && IS_BYTES(peek(vm, 1))) {
+        b_value result = OBJ_VAL(
+            add_bytes(vm, AS_BYTES(peek(vm, 1)), AS_BYTES(peek(vm, 0))));
+        pop_n(vm, 2);
+        push(vm, result);
+      } else {
+        BINARY_OP(NUMBER_VAL, +);
+      }
+      break;
+    }
+    case OP_SUBTRACT: {
+      BINARY_OP(NUMBER_VAL, -);
+      break;
+    }
+    case OP_MULTIPLY: {
+      if (IS_STRING(peek(vm, 1)) && IS_NUMBER(peek(vm, 0))) {
+        double number = AS_NUMBER(peek(vm, 0));
+        b_obj_string *string = AS_STRING(peek(vm, 1));
+        b_value result = OBJ_VAL(multiply_string(vm, string, number));
+        pop_n(vm, 2);
+        push(vm, result);
+        break;
+      } else if (IS_LIST(peek(vm, 1)) && IS_NUMBER(peek(vm, 0))) {
+        int number = (int)AS_NUMBER(pop(vm));
+        b_obj_list *list = AS_LIST(peek(vm, 0));
+        b_obj_list *n_list = new_list(vm);
+        push(vm, OBJ_VAL(n_list));
+        b_value result = OBJ_VAL(multiply_list(vm, list, n_list, number));
+        pop_n(vm, 2);
+        push(vm, result);
         break;
       }
-      case OP_SUBTRACT: {
-        BINARY_OP(NUMBER_VAL, -);
-        break;
+      BINARY_OP(NUMBER_VAL, *);
+      break;
+    }
+    case OP_DIVIDE: {
+      BINARY_OP(NUMBER_VAL, /);
+      break;
+    }
+    case OP_REMINDER: {
+      BINARY_MOD_OP(NUMBER_VAL, fmod);
+      break;
+    }
+    case OP_POW: {
+      BINARY_MOD_OP(NUMBER_VAL, pow);
+      break;
+    }
+    case OP_F_DIVIDE: {
+      BINARY_MOD_OP(NUMBER_VAL, floor_div);
+      break;
+    }
+    case OP_NEGATE: {
+      if (!IS_NUMBER(peek(vm, 0))) {
+        runtime_error("operator - not defined for object of type %s",
+                      value_type(peek(vm, 0)));
       }
-      case OP_MULTIPLY: {
-        if (IS_STRING(peek(vm, 1)) && IS_NUMBER(peek(vm, 0))) {
-          double number = AS_NUMBER(peek(vm, 0));
-          b_obj_string *string = AS_STRING(peek(vm, 1));
-          b_value result = OBJ_VAL(multiply_string(vm, string, number));
-          pop_n(vm, 2);
-          push(vm, result);
-          break;
-        } else if (IS_LIST(peek(vm, 1)) && IS_NUMBER(peek(vm, 0))) {
-          int number = (int) AS_NUMBER(pop(vm));
-          b_obj_list *list = AS_LIST(peek(vm, 0));
-          b_obj_list *n_list = new_list(vm);
-          push(vm, OBJ_VAL(n_list));
-          b_value result = OBJ_VAL(multiply_list(vm, list, n_list, number));
-          pop_n(vm, 2);
-          push(vm, result);
-          break;
-        }
-        BINARY_OP(NUMBER_VAL, *);
-        break;
+      push(vm, NUMBER_VAL(-AS_NUMBER(pop(vm))));
+      break;
+    }
+    case OP_BIT_NOT: {
+      if (!IS_NUMBER(peek(vm, 0))) {
+        runtime_error("operator ~ not defined for object of type %s",
+                      value_type(peek(vm, 0)));
       }
-      case OP_DIVIDE: {
-        BINARY_OP(NUMBER_VAL, /);
-        break;
-      }
-      case OP_REMINDER: {
-        BINARY_MOD_OP(NUMBER_VAL, fmod);
-        break;
-      }
-      case OP_POW: {
-        BINARY_MOD_OP(NUMBER_VAL, pow);
-        break;
-      }
-      case OP_F_DIVIDE: {
-        BINARY_MOD_OP(NUMBER_VAL, floor_div);
-        break;
-      }
-      case OP_NEGATE: {
-        if (!IS_NUMBER(peek(vm, 0))) {
-          runtime_error("operator - not defined for object of type %s",
-                        value_type(peek(vm, 0)));
-        }
-        push(vm, NUMBER_VAL(-AS_NUMBER(pop(vm))));
-        break;
-      }
-      case OP_BIT_NOT: {
-        if (!IS_NUMBER(peek(vm, 0))) {
-          runtime_error("operator ~ not defined for object of type %s",
-                        value_type(peek(vm, 0)));
-        }
-        push(vm, INTEGER_VAL(~((int) AS_NUMBER(pop(vm)))));
-        break;
-      }
-      case OP_AND: {
-        BINARY_BIT_OP(NUMBER_VAL, &);
-        break;
-      }
-      case OP_OR: {
-        BINARY_BIT_OP(NUMBER_VAL, |);
-        break;
-      }
-      case OP_XOR: {
-        BINARY_BIT_OP(NUMBER_VAL, ^);
-        break;
-      }
-      case OP_LSHIFT: {
-        BINARY_BIT_OP(NUMBER_VAL, <<);
-        break;
-      }
-      case OP_RSHIFT: {
-        BINARY_BIT_OP(NUMBER_VAL, >>);
-        break;
-      }
-      case OP_ONE: {
-        push(vm, NUMBER_VAL(1));
-        break;
-      }
+      push(vm, INTEGER_VAL(~((int)AS_NUMBER(pop(vm)))));
+      break;
+    }
+    case OP_AND: {
+      BINARY_BIT_OP(NUMBER_VAL, &);
+      break;
+    }
+    case OP_OR: {
+      BINARY_BIT_OP(NUMBER_VAL, |);
+      break;
+    }
+    case OP_XOR: {
+      BINARY_BIT_OP(NUMBER_VAL, ^);
+      break;
+    }
+    case OP_LSHIFT: {
+      BINARY_BIT_OP(NUMBER_VAL, <<);
+      break;
+    }
+    case OP_RSHIFT: {
+      BINARY_BIT_OP(NUMBER_VAL, >>);
+      break;
+    }
+    case OP_ONE: {
+      push(vm, NUMBER_VAL(1));
+      break;
+    }
 
-        // comparisons
-      case OP_EQUAL: {
-        b_value b = pop(vm);
-        b_value a = pop(vm);
-        push(vm, BOOL_VAL(values_equal(a, b)));
-        break;
-      }
-      case OP_GREATER: {
-        BINARY_OP(BOOL_VAL, >);
-        break;
-      }
-      case OP_LESS: {
-        BINARY_OP(BOOL_VAL, <);
-        break;
-      }
+      // comparisons
+    case OP_EQUAL: {
+      b_value b = pop(vm);
+      b_value a = pop(vm);
+      push(vm, BOOL_VAL(values_equal(a, b)));
+      break;
+    }
+    case OP_GREATER: {
+      BINARY_OP(BOOL_VAL, >);
+      break;
+    }
+    case OP_LESS: {
+      BINARY_OP(BOOL_VAL, <);
+      break;
+    }
 
-      case OP_NOT:
-        push(vm, BOOL_VAL(is_falsey(pop(vm))));
-        break;
-      case OP_NIL:
-        push(vm, NIL_VAL);
-        break;
-      case OP_TRUE:
-        push(vm, BOOL_VAL(true));
-        break;
-      case OP_FALSE:
-        push(vm, BOOL_VAL(false));
-        break;
+    case OP_NOT:
+      push(vm, BOOL_VAL(is_falsey(pop(vm))));
+      break;
+    case OP_NIL:
+      push(vm, NIL_VAL);
+      break;
+    case OP_TRUE:
+      push(vm, BOOL_VAL(true));
+      break;
+    case OP_FALSE:
+      push(vm, BOOL_VAL(false));
+      break;
 
-      case OP_JUMP: {
-        uint16_t offset = READ_SHORT();
+    case OP_JUMP: {
+      uint16_t offset = READ_SHORT();
+      frame->ip += offset;
+      break;
+    }
+    case OP_JUMP_IF_FALSE: {
+      uint16_t offset = READ_SHORT();
+      if (is_falsey(peek(vm, 0))) {
         frame->ip += offset;
-        break;
       }
-      case OP_JUMP_IF_FALSE: {
-        uint16_t offset = READ_SHORT();
-        if (is_falsey(peek(vm, 0))) {
-          frame->ip += offset;
-        }
-        break;
-      }
-      case OP_LOOP: {
-        uint16_t offset = READ_SHORT();
-        frame->ip -= offset;
-        break;
-      }
+      break;
+    }
+    case OP_LOOP: {
+      uint16_t offset = READ_SHORT();
+      frame->ip -= offset;
+      break;
+    }
 
-      case OP_ECHO: {
-        if (vm->is_repl) {
-          echo_value(pop(vm));
-        } else {
-          print_value(pop(vm));
-        }
-        printf("\n"); // @TODO: remove when library function print is ready
-        break;
+    case OP_ECHO: {
+      if (vm->is_repl) {
+        echo_value(pop(vm));
+      } else {
+        print_value(pop(vm));
       }
+      printf("\n"); // @TODO: remove when library function print is ready
+      break;
+    }
 
-      case OP_STRINGIFY: {
-        if (!IS_STRING(peek(vm, 0))) {
-          char *value = value_to_string(vm, pop(vm));
-          push(vm, OBJ_VAL(copy_string(vm, value, (int) strlen(value))));
-        }
-        break;
+    case OP_STRINGIFY: {
+      if (!IS_STRING(peek(vm, 0))) {
+        char *value = value_to_string(vm, pop(vm));
+        push(vm, OBJ_VAL(copy_string(vm, value, (int)strlen(value))));
       }
+      break;
+    }
 
-      case OP_DUP: {
-        push(vm, peek(vm, 0));
-        break;
-      }
-      case OP_POP: {
-        pop(vm);
-        break;
-      }
-      case OP_POP_N: {
-        pop_n(vm, READ_SHORT());
-        break;
-      }
-      case OP_CLOSE_UP_VALUE: {
-        close_up_values(vm, vm->stack_top - 1);
-        pop(vm);
-        break;
-      }
+    case OP_DUP: {
+      push(vm, peek(vm, 0));
+      break;
+    }
+    case OP_POP: {
+      pop(vm);
+      break;
+    }
+    case OP_POP_N: {
+      pop_n(vm, READ_SHORT());
+      break;
+    }
+    case OP_CLOSE_UP_VALUE: {
+      close_up_values(vm, vm->stack_top - 1);
+      pop(vm);
+      break;
+    }
 
-      case OP_DEFINE_GLOBAL: {
-        b_obj_string *name = READ_STRING();
-        table_set(vm, &vm->globals, OBJ_VAL(name), peek(vm, 0));
-        pop(vm);
+    case OP_DEFINE_GLOBAL: {
+      b_obj_string *name = READ_STRING();
+      table_set(vm, &vm->globals, OBJ_VAL(name), peek(vm, 0));
+      pop(vm);
 
 #if defined DEBUG_TABLE && DEBUG_TABLE
-        table_print(&vm->globals);
+      table_print(&vm->globals);
 #endif
-        break;
+      break;
+    }
+
+    case OP_GET_GLOBAL: {
+      b_obj_string *name = READ_STRING();
+      b_value value;
+      if (!table_get(&vm->globals, OBJ_VAL(name), &value)) {
+        runtime_error("%s is undefined in this scope", name->chars);
       }
+      push(vm, value);
+      break;
+    }
 
-      case OP_GET_GLOBAL: {
-        b_obj_string *name = READ_STRING();
-        b_value value;
-        if (!table_get(&vm->globals, OBJ_VAL(name), &value)) {
-          runtime_error("%s is undefined in this scope", name->chars);
-        }
-        push(vm, value);
-        break;
+    case OP_SET_GLOBAL: {
+      b_obj_string *name = READ_STRING();
+      if (table_set(vm, &vm->globals, OBJ_VAL(name), peek(vm, 0))) {
+        table_delete(&vm->globals, OBJ_VAL(name));
+        runtime_error("%s is undefined in this scope", name->chars);
       }
+      break;
+    }
 
-      case OP_SET_GLOBAL: {
-        b_obj_string *name = READ_STRING();
-        if (table_set(vm, &vm->globals, OBJ_VAL(name), peek(vm, 0))) {
-          table_delete(&vm->globals, OBJ_VAL(name));
-          runtime_error("%s is undefined in this scope", name->chars);
-        }
-        break;
-      }
+    case OP_GET_LOCAL: {
+      uint16_t slot = READ_SHORT();
+      push(vm, frame->slots[slot]);
+      break;
+    }
+    case OP_SET_LOCAL: {
+      uint16_t slot = READ_SHORT();
+      frame->slots[slot] = peek(vm, 0);
+      break;
+    }
 
-      case OP_GET_LOCAL: {
-        uint16_t slot = READ_SHORT();
-        push(vm, frame->slots[slot]);
-        break;
-      }
-      case OP_SET_LOCAL: {
-        uint16_t slot = READ_SHORT();
-        frame->slots[slot] = peek(vm, 0);
-        break;
-      }
-
-      case OP_GET_PROPERTY: {
-        if (!IS_INSTANCE(peek(vm, 0)) && !IS_DICT(peek(vm, 0)) &&
-            !IS_LIST(peek(vm, 0)) && !IS_BYTES(peek(vm, 0)) &&
-            !IS_FILE(peek(vm, 0)) && !IS_STRING(peek(vm, 0)) &&
-            !IS_CLASS(peek(vm, 0))) {
-          runtime_error("object of type %s does not carry properties",
-                        value_type(peek(vm, 0)));
-        }
-
-        b_obj_string *name = READ_STRING();
-
-        if (IS_INSTANCE(peek(vm, 0))) {
-
-          b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
-          b_value value;
-          if (table_get(&instance->fields, OBJ_VAL(name), &value)) {
-            pop(vm); // pop the instance...
-            push(vm, value);
-            break;
-          }
-
-          if (!bind_method(vm, instance->klass, name)) {
-            EXIT_VM();
-          } else {
-            break;
-          }
-        } else if (IS_DICT(peek(vm, 0))) {
-          b_value value;
-          if (table_get(&AS_DICT(peek(vm, 0))->items, OBJ_VAL(name), &value) ||
-              table_get(&vm->methods_dict, OBJ_VAL(name), &value)) {
-            pop(vm); // pop the dictionary...
-            push(vm, value);
-            break;
-          }
-        } else if (IS_LIST(peek(vm, 0))) {
-          b_value value;
-          if (table_get(&vm->methods_list, OBJ_VAL(name), &value)) {
-            pop(vm); // pop the list...
-            push(vm, value);
-            break;
-          }
-        } else if (IS_BYTES(peek(vm, 0))) {
-          b_value value;
-          if (table_get(&vm->methods_bytes, OBJ_VAL(name), &value)) {
-            pop(vm); // pop the bytes...
-            push(vm, value);
-            break;
-          }
-        } else if (IS_FILE(peek(vm, 0))) {
-          b_value value;
-          if (table_get(&vm->methods_file, OBJ_VAL(name), &value)) {
-            pop(vm); // pop the file...
-            push(vm, value);
-            break;
-          }
-        } else if (IS_STRING(peek(vm, 0))) {
-          b_value value;
-          if (table_get(&vm->methods_string, OBJ_VAL(name), &value)) {
-            pop(vm); // pop the string...
-            push(vm, value);
-            break;
-          }
-        } else if (IS_CLASS(peek(vm, 0))) {
-          b_value value;
-          if (table_get(&AS_CLASS(peek(vm, 0))->static_methods, OBJ_VAL(name),
-                        &value) ||
-              table_get(&AS_CLASS(peek(vm, 0))->static_fields, OBJ_VAL(name),
-                        &value)) {
-            pop(vm); // pop the class...
-            push(vm, value);
-            break;
-          }
-        }
-
+    case OP_GET_PROPERTY: {
+      if (!IS_INSTANCE(peek(vm, 0)) && !IS_DICT(peek(vm, 0)) &&
+          !IS_LIST(peek(vm, 0)) && !IS_BYTES(peek(vm, 0)) &&
+          !IS_FILE(peek(vm, 0)) && !IS_STRING(peek(vm, 0)) &&
+          !IS_CLASS(peek(vm, 0))) {
         runtime_error("object of type %s does not carry properties",
                       value_type(peek(vm, 0)));
       }
-      case OP_SET_PROPERTY: {
-        if (!IS_INSTANCE(peek(vm, 1))) {
-          runtime_error("object of type %s does not carry properties",
-                        value_type(peek(vm, 1)));
-        }
 
-        b_obj_instance *instance = AS_INSTANCE(peek(vm, 1));
-        table_set(vm, &instance->fields, OBJ_VAL(READ_STRING()), peek(vm, 0));
+      b_obj_string *name = READ_STRING();
 
-        b_value value = pop(vm);
-        pop(vm); // removing the instance object
-        push(vm, value);
-        break;
-      }
+      if (IS_INSTANCE(peek(vm, 0))) {
 
-      case OP_CLOSURE: {
-        b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
-        b_obj_closure *closure = new_closure(vm, function);
-        push(vm, OBJ_VAL(closure));
-
-        for (int i = 0; i < closure->up_value_count; i++) {
-          uint8_t is_local = READ_BYTE();
-          int index = READ_SHORT();
-
-          if (is_local) {
-            closure->up_values[i] = capture_up_value(vm, frame->slots + index);
-          } else {
-            closure->up_values[i] =
-                ((b_obj_closure *) frame->function)->up_values[index];
-          }
-        }
-
-        break;
-      }
-      case OP_GET_UP_VALUE: {
-        int index = READ_SHORT();
-        push(vm, *((b_obj_closure *) frame->function)->up_values[index]->location);
-        break;
-      }
-      case OP_SET_UP_VALUE: {
-        int index = READ_SHORT();
-        *((b_obj_closure *) frame->function)->up_values[index]->location =
-            peek(vm, 0);
-        break;
-      }
-
-      case OP_CALL: {
-        int arg_count = READ_BYTE();
-        if (!call_value(vm, peek(vm, arg_count), arg_count)) {
-          EXIT_VM();
-        }
-        frame = &vm->frames[vm->frame_count - 1];
-        break;
-      }
-      case OP_INVOKE: {
-        b_obj_string *method = READ_STRING();
-        int arg_count = READ_BYTE();
-        if (!invoke(vm, method, arg_count)) {
-          EXIT_VM();
-        }
-        frame = &vm->frames[vm->frame_count - 1];
-        break;
-      }
-
-      case OP_CLASS: {
-        b_obj_string *name = READ_STRING();
-        push(vm, OBJ_VAL(new_class(vm, name)));
-        break;
-      }
-      case OP_METHOD: {
-        b_obj_string *name = READ_STRING();
-        bool is_static = READ_BYTE() == 1;
-        define_method(vm, name, is_static);
-        break;
-      }
-      case OP_CLASS_PROPERTY: {
-        b_obj_string *name = READ_STRING();
-        int is_static = READ_BYTE();
-        define_property(vm, name, is_static == 1);
-        break;
-      }
-      case OP_INHERIT: {
-        if (!IS_CLASS(peek(vm, 1))) {
-          runtime_error("cannot inherit from non-class object");
-        }
-
-        b_obj_class *superclass = AS_CLASS(peek(vm, 1));
-        b_obj_class *subclass = AS_CLASS(peek(vm, 0));
-        table_add_all(vm, &superclass->fields, &subclass->fields);
-        table_add_all(vm, &superclass->methods, &subclass->methods);
-        subclass->superclass = superclass;
-        pop(vm); // pop the subclass
-        break;
-      }
-      case OP_GET_SUPER: {
-        b_obj_string *name = READ_STRING();
-        b_obj_class *superclass = AS_CLASS(pop(vm));
-        if (!bind_method(vm, superclass, name)) {
-          EXIT_VM();
-        }
-        break;
-      }
-      case OP_SUPER_INVOKE: {
-        b_obj_string *method = READ_STRING();
-        int arg_count = READ_BYTE();
-        b_obj_class *superclass = AS_CLASS(pop(vm));
-        if (!invoke_from_class(vm, superclass, method, arg_count)) {
-          EXIT_VM();
-        }
-        frame = &vm->frames[vm->frame_count - 1];
-        break;
-      }
-
-      case OP_LIST: {
-        int count = READ_SHORT();
-        b_obj_list *list = new_list(vm);
-        push(vm, OBJ_VAL(list));
-        for (int i = count - 1; i >= 0; i--) {
-          write_list(vm, list, peek(vm, i + 1)); // +1 to skip the list
-        }
-        pop_n(vm, count + 1); // + 1 for the list itself
-        push(vm, OBJ_VAL(list));
-        break;
-      }
-      case OP_RANGE: {
-        b_value _upper = peek(vm, 0), _lower = peek(vm, 1);
-
-        if (!IS_NUMBER(_upper) || !IS_NUMBER(_lower)) {
-          runtime_error("invalid range boundaries");
-        }
-
-        double lower = AS_NUMBER(_lower), upper = AS_NUMBER(_upper);
-        b_obj_list *list = new_list(vm);
-        push(vm, OBJ_VAL(list));
-
-        if (upper > lower) {
-          for (int i = (int) lower; i < upper; i++) {
-            write_list(vm, list, NUMBER_VAL(i));
-          }
-        } else if (lower > upper) {
-          for (int i = (int) lower; i > upper; i--) {
-            write_list(vm, list, NUMBER_VAL(i));
-          }
-        }
-
-        pop_n(vm, 2 + 1); // + 1 for the list itself
-        push(vm, OBJ_VAL(list));
-        break;
-      }
-      case OP_DICT: {
-        int count = READ_SHORT() * 2; // 1 for key, 1 for value
-        b_obj_dict *dict = new_dict(vm);
-        for (int i = 0; i < count; i += 2) {
-          b_value name = vm->stack_top[-count + i];
-          b_value value = vm->stack_top[-count + i + 1];
-          dict_add_entry(vm, dict, name, value);
-        }
-        pop_n(vm, count);
-        push(vm, OBJ_VAL(dict));
-        break;
-      }
-      case OP_GET_INDEX: {
-        int will_assign = READ_BYTE();
-
-        if (!IS_STRING(peek(vm, 2)) && !IS_LIST(peek(vm, 2)) &&
-            !IS_DICT(peek(vm, 2)) && !IS_BYTES(peek(vm, 2))) {
-          runtime_error("type of %s is not a valid iterable",
-                        value_type(peek(vm, 2)));
-        }
-
-        if (IS_STRING(peek(vm, 2))) {
-          if (!string_get_index(vm, AS_STRING(peek(vm, 2)),
-                                will_assign == 1 ? true : false)) {
-            EXIT_VM();
-          } else {
-            break;
-          }
-        } else if (IS_LIST(peek(vm, 2))) {
-          if (!list_get_index(vm, AS_LIST(peek(vm, 2)),
-                              will_assign == 1 ? true : false)) {
-            EXIT_VM();
-          } else {
-            break;
-          }
-        } else if (IS_BYTES(peek(vm, 2))) {
-          if (!bytes_get_index(vm, AS_BYTES(peek(vm, 2)),
-                               will_assign == 1 ? true : false)) {
-            EXIT_VM();
-          } else {
-            break;
-          }
-        } else if (IS_DICT(peek(vm, 2)) && IS_NIL(peek(vm, 0))) {
-          if (!dict_get_index(vm, AS_DICT(peek(vm, 2)),
-                              will_assign == 1 ? true : false)) {
-            EXIT_VM();
-          } else {
-            break;
-          }
-        }
-
-        runtime_error("invalid index %s", value_to_string(vm, peek(vm, 0)));
-      }
-      case OP_SET_INDEX: {
-        if (!IS_LIST(peek(vm, 3)) && !IS_DICT(peek(vm, 3)) &&
-            !IS_BYTES(peek(vm, 3))) {
-          if (!IS_STRING(peek(vm, 3))) {
-            runtime_error("type of %s is not a valid iterable",
-                          value_type(peek(vm, 3)));
-          } else {
-            runtime_error("strings do not support object assignment");
-          }
-        }
-
-        b_value value = peek(vm, 0);
-        b_value index = peek(vm, 2); // since peek 1 will be nil
-
-        if (IS_LIST(peek(vm, 3))) {
-          if (!list_set_index(vm, AS_LIST(peek(vm, 3)), index, value)) {
-            EXIT_VM();
-          }
-        } else if (IS_BYTES(peek(vm, 3))) {
-          if (!bytes_set_index(vm, AS_BYTES(peek(vm, 3)), index, value)) {
-            EXIT_VM();
-          }
-        } else if (IS_DICT(peek(vm, 3))) {
-          dict_set_index(vm, AS_DICT(peek(vm, 3)), index, value);
-          break;
-        }
-        break;
-      }
-
-      case OP_RETURN: {
-        b_value result = pop(vm);
-
-        close_up_values(vm, frame->slots);
-
-        vm->frame_count--;
-        if (vm->frame_count == 0) {
-          pop(vm);
-          return PTR_OK;
-        }
-
-        vm->stack_top = frame->slots;
-        push(vm, result);
-
-        frame = &vm->frames[vm->frame_count - 1];
-        break;
-      }
-
-      case OP_CALL_IMPORT: {
-        b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
-        call_function(vm, function, 0);
-        frame = &vm->frames[vm->frame_count - 1];
-        break;
-      }
-
-      case OP_FINISH_MODULE: {
-        b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
-        // if it is a native module, attach c codes to cask methods
-        bind_native_modules(vm, function->name, function->file);
-        break;
-      }
-
-      case OP_ASSERT: {
-        b_value message = pop(vm);
-        b_value expression = pop(vm);
-        if (is_falsey(expression)) {
-          if (!IS_NIL(message)) {
-            runtime_error("AssertionError: %s", value_to_string(vm, message));
-          } else {
-            runtime_error("AssertionError");
-          }
-        }
-        break;
-      }
-
-      case OP_DIE: {
-        if (!IS_INSTANCE(peek(vm, 0)) ||
-            !is_instance_of(AS_INSTANCE(peek(vm, 0))->klass,
-                            vm->exception_class->name->chars)) {
-          runtime_error("instance of Exception expected");
-        }
-
-        if (vm->catch_frame == NULL) {
-          print_exception(vm, AS_INSTANCE(peek(vm, 0)));
-          return PTR_RUNTIME_ERR;
-        } else {
-          frame = vm->catch_frame->frame;
-          frame->ip =
-              get_frame_function(frame)->blob.code + vm->catch_frame->offset;
-          break;
-        }
-      }
-
-      case OP_TRY: {
-        b_catch_frame *catch_frame =
-            (b_catch_frame *) malloc(sizeof(b_catch_frame));
-        catch_frame->frame = frame;
-        catch_frame->offset = READ_SHORT();
-        catch_frame->previous = vm->catch_frame;
-        vm->catch_frame = catch_frame;
-        break;
-      }
-
-      case OP_END_TRY: {
-        b_catch_frame *catch_frame = vm->catch_frame->previous;
-        free(vm->catch_frame);
-        vm->catch_frame = catch_frame;
-        break;
-      }
-
-      case OP_SWITCH: {
-        b_obj_switch *sw = AS_SWITCH(READ_CONSTANT());
-        b_value expr = peek(vm, 0);
-//      push(vm, OBJ_VAL(sw));
-
+        b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
         b_value value;
-        if (table_get(&sw->table, expr, &value)) {
-          frame->ip += (int) AS_NUMBER(value);
-        } else if (sw->default_ip != -1) {
-          frame->ip += sw->default_ip;
+        if (table_get(&instance->fields, OBJ_VAL(name), &value)) {
+          pop(vm); // pop the instance...
+          push(vm, value);
+          break;
         }
-//      pop_n(vm, 2);
-        pop(vm);
-        break;
+
+        if (!bind_method(vm, instance->klass, name)) {
+          EXIT_VM();
+        } else {
+          break;
+        }
+      } else if (IS_DICT(peek(vm, 0))) {
+        b_value value;
+        if (table_get(&AS_DICT(peek(vm, 0))->items, OBJ_VAL(name), &value) ||
+            table_get(&vm->methods_dict, OBJ_VAL(name), &value)) {
+          pop(vm); // pop the dictionary...
+          push(vm, value);
+          break;
+        }
+      } else if (IS_LIST(peek(vm, 0))) {
+        b_value value;
+        if (table_get(&vm->methods_list, OBJ_VAL(name), &value)) {
+          pop(vm); // pop the list...
+          push(vm, value);
+          break;
+        }
+      } else if (IS_BYTES(peek(vm, 0))) {
+        b_value value;
+        if (table_get(&vm->methods_bytes, OBJ_VAL(name), &value)) {
+          pop(vm); // pop the bytes...
+          push(vm, value);
+          break;
+        }
+      } else if (IS_FILE(peek(vm, 0))) {
+        b_value value;
+        if (table_get(&vm->methods_file, OBJ_VAL(name), &value)) {
+          pop(vm); // pop the file...
+          push(vm, value);
+          break;
+        }
+      } else if (IS_STRING(peek(vm, 0))) {
+        b_value value;
+        if (table_get(&vm->methods_string, OBJ_VAL(name), &value)) {
+          pop(vm); // pop the string...
+          push(vm, value);
+          break;
+        }
+      } else if (IS_CLASS(peek(vm, 0))) {
+        b_value value;
+        if (table_get(&AS_CLASS(peek(vm, 0))->static_methods, OBJ_VAL(name),
+                      &value) ||
+            table_get(&AS_CLASS(peek(vm, 0))->static_fields, OBJ_VAL(name),
+                      &value)) {
+          pop(vm); // pop the class...
+          push(vm, value);
+          break;
+        }
       }
 
-      default:
+      runtime_error("object of type %s does not carry properties",
+                    value_type(peek(vm, 0)));
+    }
+    case OP_SET_PROPERTY: {
+      if (!IS_INSTANCE(peek(vm, 1))) {
+        runtime_error("object of type %s does not carry properties",
+                      value_type(peek(vm, 1)));
+      }
+
+      b_obj_instance *instance = AS_INSTANCE(peek(vm, 1));
+      table_set(vm, &instance->fields, OBJ_VAL(READ_STRING()), peek(vm, 0));
+
+      b_value value = pop(vm);
+      pop(vm); // removing the instance object
+      push(vm, value);
+      break;
+    }
+
+    case OP_CLOSURE: {
+      b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
+      b_obj_closure *closure = new_closure(vm, function);
+      push(vm, OBJ_VAL(closure));
+
+      for (int i = 0; i < closure->up_value_count; i++) {
+        uint8_t is_local = READ_BYTE();
+        int index = READ_SHORT();
+
+        if (is_local) {
+          closure->up_values[i] = capture_up_value(vm, frame->slots + index);
+        } else {
+          closure->up_values[i] =
+              ((b_obj_closure *)frame->function)->up_values[index];
+        }
+      }
+
+      break;
+    }
+    case OP_GET_UP_VALUE: {
+      int index = READ_SHORT();
+      push(vm, *((b_obj_closure *)frame->function)->up_values[index]->location);
+      break;
+    }
+    case OP_SET_UP_VALUE: {
+      int index = READ_SHORT();
+      *((b_obj_closure *)frame->function)->up_values[index]->location =
+          peek(vm, 0);
+      break;
+    }
+
+    case OP_CALL: {
+      int arg_count = READ_BYTE();
+      if (!call_value(vm, peek(vm, arg_count), arg_count)) {
+        EXIT_VM();
+      }
+      frame = &vm->frames[vm->frame_count - 1];
+      break;
+    }
+    case OP_INVOKE: {
+      b_obj_string *method = READ_STRING();
+      int arg_count = READ_BYTE();
+      if (!invoke(vm, method, arg_count)) {
+        EXIT_VM();
+      }
+      frame = &vm->frames[vm->frame_count - 1];
+      break;
+    }
+
+    case OP_CLASS: {
+      b_obj_string *name = READ_STRING();
+      push(vm, OBJ_VAL(new_class(vm, name)));
+      break;
+    }
+    case OP_METHOD: {
+      b_obj_string *name = READ_STRING();
+      bool is_static = READ_BYTE() == 1;
+      define_method(vm, name, is_static);
+      break;
+    }
+    case OP_CLASS_PROPERTY: {
+      b_obj_string *name = READ_STRING();
+      int is_static = READ_BYTE();
+      define_property(vm, name, is_static == 1);
+      break;
+    }
+    case OP_INHERIT: {
+      if (!IS_CLASS(peek(vm, 1))) {
+        runtime_error("cannot inherit from non-class object");
+      }
+
+      b_obj_class *superclass = AS_CLASS(peek(vm, 1));
+      b_obj_class *subclass = AS_CLASS(peek(vm, 0));
+      table_add_all(vm, &superclass->fields, &subclass->fields);
+      table_add_all(vm, &superclass->methods, &subclass->methods);
+      subclass->superclass = superclass;
+      pop(vm); // pop the subclass
+      break;
+    }
+    case OP_GET_SUPER: {
+      b_obj_string *name = READ_STRING();
+      b_obj_class *superclass = AS_CLASS(pop(vm));
+      if (!bind_method(vm, superclass, name)) {
+        EXIT_VM();
+      }
+      break;
+    }
+    case OP_SUPER_INVOKE: {
+      b_obj_string *method = READ_STRING();
+      int arg_count = READ_BYTE();
+      b_obj_class *superclass = AS_CLASS(pop(vm));
+      if (!invoke_from_class(vm, superclass, method, arg_count)) {
+        EXIT_VM();
+      }
+      frame = &vm->frames[vm->frame_count - 1];
+      break;
+    }
+
+    case OP_LIST: {
+      int count = READ_SHORT();
+      b_obj_list *list = new_list(vm);
+      push(vm, OBJ_VAL(list));
+      for (int i = count - 1; i >= 0; i--) {
+        write_list(vm, list, peek(vm, i + 1)); // +1 to skip the list
+      }
+      pop_n(vm, count + 1); // + 1 for the list itself
+      push(vm, OBJ_VAL(list));
+      break;
+    }
+    case OP_RANGE: {
+      b_value _upper = peek(vm, 0), _lower = peek(vm, 1);
+
+      if (!IS_NUMBER(_upper) || !IS_NUMBER(_lower)) {
+        runtime_error("invalid range boundaries");
+      }
+
+      double lower = AS_NUMBER(_lower), upper = AS_NUMBER(_upper);
+      b_obj_list *list = new_list(vm);
+      push(vm, OBJ_VAL(list));
+
+      if (upper > lower) {
+        for (int i = (int)lower; i < upper; i++) {
+          write_list(vm, list, NUMBER_VAL(i));
+        }
+      } else if (lower > upper) {
+        for (int i = (int)lower; i > upper; i--) {
+          write_list(vm, list, NUMBER_VAL(i));
+        }
+      }
+
+      pop_n(vm, 2 + 1); // + 1 for the list itself
+      push(vm, OBJ_VAL(list));
+      break;
+    }
+    case OP_DICT: {
+      int count = READ_SHORT() * 2; // 1 for key, 1 for value
+      b_obj_dict *dict = new_dict(vm);
+      for (int i = 0; i < count; i += 2) {
+        b_value name = vm->stack_top[-count + i];
+        b_value value = vm->stack_top[-count + i + 1];
+        dict_add_entry(vm, dict, name, value);
+      }
+      pop_n(vm, count);
+      push(vm, OBJ_VAL(dict));
+      break;
+    }
+    case OP_GET_INDEX: {
+      int will_assign = READ_BYTE();
+
+      if (!IS_STRING(peek(vm, 2)) && !IS_LIST(peek(vm, 2)) &&
+          !IS_DICT(peek(vm, 2)) && !IS_BYTES(peek(vm, 2))) {
+        runtime_error("type of %s is not a valid iterable",
+                      value_type(peek(vm, 2)));
+      }
+
+      if (IS_STRING(peek(vm, 2))) {
+        if (!string_get_index(vm, AS_STRING(peek(vm, 2)),
+                              will_assign == 1 ? true : false)) {
+          EXIT_VM();
+        } else {
+          break;
+        }
+      } else if (IS_LIST(peek(vm, 2))) {
+        if (!list_get_index(vm, AS_LIST(peek(vm, 2)),
+                            will_assign == 1 ? true : false)) {
+          EXIT_VM();
+        } else {
+          break;
+        }
+      } else if (IS_BYTES(peek(vm, 2))) {
+        if (!bytes_get_index(vm, AS_BYTES(peek(vm, 2)),
+                             will_assign == 1 ? true : false)) {
+          EXIT_VM();
+        } else {
+          break;
+        }
+      } else if (IS_DICT(peek(vm, 2)) && IS_NIL(peek(vm, 0))) {
+        if (!dict_get_index(vm, AS_DICT(peek(vm, 2)),
+                            will_assign == 1 ? true : false)) {
+          EXIT_VM();
+        } else {
+          break;
+        }
+      }
+
+      runtime_error("invalid index %s", value_to_string(vm, peek(vm, 0)));
+    }
+    case OP_SET_INDEX: {
+      if (!IS_LIST(peek(vm, 3)) && !IS_DICT(peek(vm, 3)) &&
+          !IS_BYTES(peek(vm, 3))) {
+        if (!IS_STRING(peek(vm, 3))) {
+          runtime_error("type of %s is not a valid iterable",
+                        value_type(peek(vm, 3)));
+        } else {
+          runtime_error("strings do not support object assignment");
+        }
+      }
+
+      b_value value = peek(vm, 0);
+      b_value index = peek(vm, 2); // since peek 1 will be nil
+
+      if (IS_LIST(peek(vm, 3))) {
+        if (!list_set_index(vm, AS_LIST(peek(vm, 3)), index, value)) {
+          EXIT_VM();
+        }
+      } else if (IS_BYTES(peek(vm, 3))) {
+        if (!bytes_set_index(vm, AS_BYTES(peek(vm, 3)), index, value)) {
+          EXIT_VM();
+        }
+      } else if (IS_DICT(peek(vm, 3))) {
+        dict_set_index(vm, AS_DICT(peek(vm, 3)), index, value);
         break;
+      }
+      break;
+    }
+
+    case OP_RETURN: {
+      b_value result = pop(vm);
+
+      close_up_values(vm, frame->slots);
+
+      vm->frame_count--;
+      if (vm->frame_count == 0) {
+        pop(vm);
+        return PTR_OK;
+      }
+
+      vm->stack_top = frame->slots;
+      push(vm, result);
+
+      frame = &vm->frames[vm->frame_count - 1];
+      break;
+    }
+
+    case OP_CALL_IMPORT: {
+      b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
+      call_function(vm, function, 0);
+      frame = &vm->frames[vm->frame_count - 1];
+      break;
+    }
+
+    case OP_FINISH_MODULE: {
+      b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
+      // if it is a native module, attach c codes to cask methods
+      bind_native_modules(vm, function->name, function->file);
+      break;
+    }
+
+    case OP_ASSERT: {
+      b_value message = pop(vm);
+      b_value expression = pop(vm);
+      if (is_falsey(expression)) {
+        if (!IS_NIL(message)) {
+          runtime_error("AssertionError: %s", value_to_string(vm, message));
+        } else {
+          runtime_error("AssertionError");
+        }
+      }
+      break;
+    }
+
+    case OP_DIE: {
+      if (!IS_INSTANCE(peek(vm, 0)) ||
+          !is_instance_of(AS_INSTANCE(peek(vm, 0))->klass,
+                          vm->exception_class->name->chars)) {
+        runtime_error("instance of Exception expected");
+      }
+
+      if (vm->catch_frame == NULL) {
+        print_exception(vm, AS_INSTANCE(peek(vm, 0)));
+        return PTR_RUNTIME_ERR;
+      } else {
+        frame = vm->catch_frame->frame;
+        frame->ip =
+            get_frame_function(frame)->blob.code + vm->catch_frame->offset;
+        break;
+      }
+    }
+
+    case OP_TRY: {
+      b_catch_frame *catch_frame =
+          (b_catch_frame *)malloc(sizeof(b_catch_frame));
+      catch_frame->frame = frame;
+      catch_frame->offset = READ_SHORT();
+      catch_frame->previous = vm->catch_frame;
+      vm->catch_frame = catch_frame;
+      break;
+    }
+
+    case OP_END_TRY: {
+      b_catch_frame *catch_frame = vm->catch_frame->previous;
+      free(vm->catch_frame);
+      vm->catch_frame = catch_frame;
+      break;
+    }
+
+    case OP_SWITCH: {
+      b_obj_switch *sw = AS_SWITCH(READ_CONSTANT());
+      b_value expr = peek(vm, 0);
+      //      push(vm, OBJ_VAL(sw));
+
+      b_value value;
+      if (table_get(&sw->table, expr, &value)) {
+        frame->ip += (int)AS_NUMBER(value);
+      } else if (sw->default_ip != -1) {
+        frame->ip += sw->default_ip;
+      }
+      //      pop_n(vm, 2);
+      pop(vm);
+      break;
+    }
+
+    default:
+      break;
     }
   }
 
