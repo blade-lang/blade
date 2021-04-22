@@ -6,7 +6,10 @@
 #include "pathinfo.h"
 #include "scanner.h"
 #include "util.h"
-//#include "win32.h"
+
+#ifdef _WIN32
+#include "win32.h"
+#endif
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -910,7 +913,7 @@ static void grouping(b_parser *p, bool can_assign) {
   expression(p);
   ignore_whitespace(p);
   consume(p, RPAREN_TOKEN, "expected ')' after grouped expression");
-  ignore_whitespace(p);
+//  ignore_whitespace(p);
 }
 
 static b_value compile_number(b_parser *p) {
@@ -1901,38 +1904,6 @@ static void die_statement(b_parser *p) {
   expression(p);
   consume_statement_end(p);
   emit_byte(p, OP_DIE);
-}
-
-static char *read_file(const char *path) {
-  FILE *fp = fopen(path, "rb");
-
-  // file not readable (maybe due to permission)
-  if (fp == NULL) {
-    return NULL;
-  }
-
-  fseek(fp, 0L, SEEK_END);
-  size_t file_size = ftell(fp);
-  rewind(fp);
-
-  char *buffer = (char *)malloc(file_size + 1);
-
-  // the system might not have enough memory to read the file.
-  if (buffer == NULL) {
-    return NULL;
-  }
-
-  size_t bytes_read = fread(buffer, sizeof(char), file_size, fp);
-
-  // if we couldn't read the entire file
-  if (bytes_read < file_size) {
-    return NULL;
-  }
-
-  buffer[bytes_read] = '\0';
-
-  fclose(fp);
-  return buffer;
 }
 
 static void import_statement(b_parser *p) {

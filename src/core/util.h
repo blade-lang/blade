@@ -21,4 +21,6 @@ char *utf8index(char *s, int pos);
 
 void utf8slice(char *s, int *start, int *end);
 
+char *read_file(const char *path);
+
 #endif

@@ -1,6 +1,5 @@
 #include "builtin/string.h"
 #include "util.h"
-#include "win32.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -8,6 +7,8 @@
 #include <string.h>
 
 #ifdef _WIN32
+#include "win32.h"
+
 char* strsep(char** stringp, const char* delim) {
   char* start = *stringp;
   char* p;

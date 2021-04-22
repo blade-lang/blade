@@ -15,7 +15,9 @@
 #include <setjmp.h>
 #include <signal.h>
 
+#ifdef _WIN32
 #include "win32.h"
+#endif
 
 static bool continue_repl = true;
 sigjmp_buf ctrlc_buf;
@@ -125,41 +127,6 @@ static void repl(b_vm *vm) {
       memset(source, 0, strlen(source));
     }
   }
-}
-
-static char *read_file(const char *path) {
-  FILE *fp = fopen(path, "rb");
-
-  // file not readable (maybe due to permission)
-  if (fp == NULL) {
-    fprintf(stderr, "could not open file %s\n", path);
-    return NULL;
-  }
-
-  fseek(fp, 0L, SEEK_END);
-  size_t file_size = ftell(fp);
-  rewind(fp);
-
-  char *buffer = (char *) malloc(file_size + 1);
-
-  // the system might not have enough memory to read the file.
-  if (buffer == NULL) {
-    fprintf(stderr, "not enough memory to read file %s\n", path);
-    return NULL;
-  }
-
-  size_t bytes_read = fread(buffer, sizeof(char), file_size, fp);
-
-  // if we couldn't read the entire file
-  if (bytes_read < file_size) {
-    fprintf(stderr, "could not read file %s\n", path);
-    return NULL;
-  }
-
-  buffer[bytes_read] = '\0';
-
-  fclose(fp);
-  return buffer;
 }
 
 static void run_file(b_vm *vm, const char *file) {

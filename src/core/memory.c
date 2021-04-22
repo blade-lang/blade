@@ -2,6 +2,7 @@
 #include "compiler.h"
 #include "config.h"
 #include "object.h"
+#include "builtin/file.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -182,9 +183,9 @@ static void free_object(b_vm *vm, b_obj *object) {
   }
   case OBJ_FILE: {
     b_obj_file *file = (b_obj_file *)object;
-    if (file->mode->length != 0) {
+    if (file->mode->length != 0 && !is_std_file(file)) {
       fclose(file->file);
-      free(file->file);
+//      free(file->file);
     }
     FREE(b_obj_file, object);
     break;
@@ -211,7 +212,9 @@ static void free_object(b_vm *vm, b_obj *object) {
   }
   case OBJ_CLASS: {
     b_obj_class *klass = (b_obj_class *)object;
-    free_object(vm, AS_OBJ(klass->initializer));
+    /*if(IS_OBJ(klass->initializer)) {
+      free_object(vm, AS_OBJ(klass->initializer));
+    }*/
     free_table(vm, &klass->methods);
     free_table(vm, &klass->static_methods);
     free_table(vm, &klass->fields);

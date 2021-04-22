@@ -5,7 +5,10 @@
 #include "util.h"
 #include "value.h"
 #include "vm.h"
+
+#ifdef _WIN32
 #include "win32.h"
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
