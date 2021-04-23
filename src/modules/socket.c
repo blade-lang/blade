@@ -162,7 +162,15 @@ DECLARE_MODULE_METHOD(socket__recv) {
   int length = AS_NUMBER(args[1]);
   int flags = AS_NUMBER(args[2]);
 
-  /*struct timeval timeout = {1, 0}; // 1 seconds timeout
+  struct timeval timeout;
+  int option_length;
+  int rc = getsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, (socklen_t  *)&option_length);
+
+  if(rc != 0 || option_length != sizeof timeout || (timeout.tv_sec == 0 && timeout.tv_usec == 0)) {
+    // set default timeout to 5 minutes
+    timeout.tv_sec = 300;
+    timeout.tv_usec = 0;
+  }
 
   fd_set read_set;
   FD_ZERO(&read_set);
@@ -173,41 +181,23 @@ DECLARE_MODULE_METHOD(socket__recv) {
     FD_SET(sock, &read_set);//tcp socket
   }
 
-  int has_content = select(sock + 1, &read_set, NULL, NULL, &timeout);*/
+  if(select(sock + 1, &read_set, NULL, NULL, &timeout)) {
+    int content_length;
+    ioctl(sock, FIONREAD, &content_length);
 
-  int content_length;
-  ioctl(sock, FIONREAD, &content_length);
+    if(content_length > 0) {
+      if(length != -1 && length < content_length)
+        content_length = length;
 
-  if(content_length > 0) {
-//    int total_length = 0;
-//    char *response = "";
-//
-//    if(length != -1 && length < content_length)
-//      content_length = length;
-//
-//    if(length == -1) {
-//      char buffer[content_length + 1]; // reading 8KB at a time...
-//      ssize_t ret_val;
-//
-//      while((ret_val = recv(sock, buffer, content_length, flags)) != 0){
-//        total_length += (int)ret_val;
-//        buffer[ret_val] = '\0'; // terminate it
-//        response = append_strings(response, buffer);
-//      }
-//    } else {
-//      response = (char*)malloc(sizeof(char) * (content_length + 1));
-//      total_length = (int)recv(sock, response, content_length, flags);
-//      response[total_length] = '\0';
-//    }
+      char *response = (char*)malloc(sizeof(char) * (content_length + 1));
+      ssize_t total_length = recv(sock, response, content_length, flags);
+      response[total_length] = '\0';
 
-    if(length != -1 && length < content_length)
-      content_length = length;
-
-    char *response = (char*)malloc(sizeof(char) * (content_length + 1));
-    ssize_t total_length = recv(sock, response, content_length, flags);
-    response[total_length] = '\0';
-
-    RETURN_L_STRING(response, total_length);
+      RETURN_L_STRING(response, total_length);
+    }
+  } else {
+    errno = ETIMEDOUT;
+    RETURN_NUMBER(-1);
   }
   RETURN;
 }
@@ -228,19 +218,19 @@ DECLARE_MODULE_METHOD(socket__setsockopt) {
 
 #ifdef _WIN32
       DWORD timeout = AS_NUMBER(value);
-      RETURN_NUMBER(setsockopt(sock, SOL_SOCKET, option, (char*)&timeout, sizeof(timeout)));
+      RETURN_NUMBER(setsockopt(sock, SOL_SOCKET, option, (const char*)&timeout, sizeof(timeout)));
 #else
       int milliseconds = AS_NUMBER(value);
       struct timeval tv = {(long)(milliseconds /  1000),
           (int)((milliseconds % 1000) * 1000)};
 
-      RETURN_NUMBER(setsockopt(sock, SOL_SOCKET, option, &tv, sizeof(tv)));
+      RETURN_NUMBER(setsockopt(sock, SOL_SOCKET, option, (const char*)&tv, sizeof tv));
 #endif
     }
     default: {
       ENFORCE_ARG_TYPE(_setsockopt, 2, IS_BOOL);
       int val = AS_BOOL(value) ? 1 : 0;
-      RETURN_NUMBER(setsockopt(sock, SOL_SOCKET, option, &val, sizeof(val)));
+      RETURN_NUMBER(setsockopt(sock, SOL_SOCKET, option, (const char*)&val, sizeof val));
     }
   }
 }

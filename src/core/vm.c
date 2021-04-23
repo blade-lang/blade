@@ -40,6 +40,37 @@ static inline b_obj_func *get_frame_function(b_call_frame *frame) {
   }
 }
 
+DECLARE_NATIVE(__exception_trace__) {
+  char *trace = (char *)malloc(sizeof(char));
+  memset(trace, 0, sizeof(char));
+
+  for (int i = 0; i < vm->frame_count; i++) {
+    b_call_frame *frame = &vm->frames[i];
+    b_obj_func *function = get_frame_function(frame);
+
+    // -1 because the IP is sitting on the next instruction to be executed
+    size_t instruction = frame->ip - get_frame_function(frame)->blob.code - 1;
+
+    char *trace_part = NULL;
+    asprintf(&trace_part,
+    "    File: %s, Line: %d, In: ", get_frame_function(frame)->file,
+    function->blob.lines[instruction]);
+
+    if (function->name == NULL) {
+      trace_part = append_strings(
+          trace_part, i < vm->frame_count - 1 ? "<script>\n" : "<script>");
+    } else {
+      trace_part = append_strings(trace_part, function->name->chars);
+      trace_part =
+      append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" : "()");
+    }
+
+    trace = append_strings(trace, trace_part);
+  }
+
+  RETURN_STRING(trace);
+}
+
 static void initialize_exceptions(b_vm *vm) {
   b_obj_string *class_name = copy_string(vm, "Exception", 9);
   b_obj_class *klass = new_class(vm, class_name);
@@ -56,7 +87,9 @@ static void initialize_exceptions(b_vm *vm) {
   // set class fields
   table_set(vm, &klass->fields, OBJ_VAL(copy_string(vm, "message", 7)),
             NIL_VAL);
-  table_set(vm, &klass->fields, OBJ_VAL(copy_string(vm, "trace", 5)), NIL_VAL);
+  b_obj_native *trace_fn = new_native(vm, GET_NATIVE(__exception_trace__), "trace");
+  table_set(vm, &klass->methods,
+            OBJ_VAL(copy_string(vm, "trace", 5)), OBJ_VAL(trace_fn));
 
   table_set(vm, &vm->globals, OBJ_VAL(class_name), OBJ_VAL(klass));
   vm->exception_class = klass;
@@ -66,36 +99,36 @@ b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
   char *trace = (char *)malloc(sizeof(char));
   memset(trace, 0, sizeof(char));
 
-  // fprintf(stderr, "StackTrace:\n");
-  for (int i = 0; i < vm->frame_count; i++) {
-    b_call_frame *frame = &vm->frames[i];
-    b_obj_func *function = get_frame_function(frame);
-
-    // -1 because the IP is sitting on the next instruction to be executed
-    size_t instruction = frame->ip - get_frame_function(frame)->blob.code - 1;
-
-    char *trace_part = NULL;
-    asprintf(&trace_part,
-             "    File: %s, Line: %d, In: ", get_frame_function(frame)->file,
-             function->blob.lines[instruction]);
-
-    if (function->name == NULL) {
-      trace_part = append_strings(
-          trace_part, i < vm->frame_count - 1 ? "<script>\n" : "<script>");
-    } else {
-      trace_part = append_strings(trace_part, function->name->chars);
-      trace_part =
-          append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" : "()");
-    }
-
-    trace = append_strings(trace, trace_part);
-  }
+//  // fprintf(stderr, "StackTrace:\n");
+//  for (int i = 0; i < vm->frame_count; i++) {
+//    b_call_frame *frame = &vm->frames[i];
+//    b_obj_func *function = get_frame_function(frame);
+//
+//    // -1 because the IP is sitting on the next instruction to be executed
+//    size_t instruction = frame->ip - get_frame_function(frame)->blob.code - 1;
+//
+//    char *trace_part = NULL;
+//    asprintf(&trace_part,
+//             "    File: %s, Line: %d, In: ", get_frame_function(frame)->file,
+//             function->blob.lines[instruction]);
+//
+//    if (function->name == NULL) {
+//      trace_part = append_strings(
+//          trace_part, i < vm->frame_count - 1 ? "<script>\n" : "<script>");
+//    } else {
+//      trace_part = append_strings(trace_part, function->name->chars);
+//      trace_part =
+//          append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" : "()");
+//    }
+//
+//    trace = append_strings(trace, trace_part);
+//  }
 
   b_obj_instance *instance = new_instance(vm, vm->exception_class);
   table_set(vm, &instance->fields, OBJ_VAL(copy_string(vm, "message", 7)),
             OBJ_VAL(message));
-  table_set(vm, &instance->fields, OBJ_VAL(copy_string(vm, "trace", 5)),
-            OBJ_VAL(take_string(vm, trace, (int)strlen(trace))));
+//  table_set(vm, &instance->fields, OBJ_VAL(copy_string(vm, "trace", 5)),
+//            OBJ_VAL(take_string(vm, trace, (int)strlen(trace))));
   return instance;
 }
 
@@ -711,11 +744,12 @@ static void print_exception(b_vm *vm, b_obj_instance *exception) {
   b_value message, trace;
   if (table_get(&exception->fields, OBJ_VAL(copy_string(vm, "message", 7)),
                 &message) &&
-      table_get(&exception->fields, OBJ_VAL(copy_string(vm, "trace", 5)),
+      table_get(&exception->klass->methods, OBJ_VAL(copy_string(vm, "trace", 5)),
                 &trace)) {
     fprintf(stderr, "Unhandled Exception: %s: %s\n",
             exception->klass->name->chars, value_to_string(vm, message));
-    fprintf(stderr, "%s\n", value_to_string(vm, trace));
+    call_value(vm, trace, 0);
+    fprintf(stderr, "%s\n", AS_C_STRING(pop(vm)));
     vm->frame_count = 0;
   } else {
     _runtime_error(vm, "invalid Exception or Exception subclass instance");
