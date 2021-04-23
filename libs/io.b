@@ -157,12 +157,12 @@ class TTY {
     var new_attr = self.get_attr()
 
     new_attr[TTY.TTY_IFLAG] = new_attr[TTY.TTY_IFLAG] & ~(TTY.IGNBRK | TTY.BRKINT | TTY.PARMRK | TTY.ISTRIP | TTY.INLCR | TTY.IGNCR | TTY.ICRNL | TTY.IXON)
-    # new_attr[TTY.TTY_OFLAG] = new_attr[TTY.TTY_OFLAG] & ~TTY.OPOST
-    # new_attr[TTY.TTY_LFLAG] = new_attr[TTY.TTY_LFLAG] & ~(TTY.ECHO | TTY.ECHONL | TTY.ICANON | TTY.ISIG | TTY.IEXTEN)
-    # new_attr[TTY.TTY_CFLAG] = new_attr[TTY.TTY_CFLAG] & ~(TTY.CSIZE | TTY.PARENB)
-    # new_attr[TTY.TTY_CFLAG] = new_attr[TTY.TTY_CFLAG] | (TTY.CS8)
+    new_attr[TTY.TTY_OFLAG] = new_attr[TTY.TTY_OFLAG] & ~TTY.OPOST
+    new_attr[TTY.TTY_LFLAG] = new_attr[TTY.TTY_LFLAG] & ~(TTY.ECHO | TTY.ECHONL | TTY.ICANON | TTY.ISIG | TTY.IEXTEN)
+    new_attr[TTY.TTY_CFLAG] = new_attr[TTY.TTY_CFLAG] & ~(TTY.CSIZE | TTY.PARENB)
+    new_attr[TTY.TTY_CFLAG] = new_attr[TTY.TTY_CFLAG] | (TTY.CS8)
     
-    # return self.set_attr(TTY.TCSAFLUSH, new_attr)
+    return self.set_attr(TTY.TCSAFLUSH, new_attr)
   }
 
   /*

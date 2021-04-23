@@ -11,13 +11,19 @@ import 'io'
 # echo 'Client connected: ${client.host}'
 
 # while true {
-#   var data = client.receive()
-#   if data {
-#     if data.trim() == '.bye' {
-#       client.close()
-#       break
+#   try {
+#     var data = client.receive()
+#     if data {
+#       if data.trim() == '.bye' {
+#         client.close()
+#         break
+#       }
+#       echo data
 #     }
-#     echo data
+#   } catch e {
+#     echo 'Client disconnected! ${e.message}'
+#     client.shutdown()
+#     break
 #   }
 # }
 
@@ -28,7 +34,7 @@ import 'io'
 # Client
 var client = Socket()
 client.connect(nil, 3000)
-client.set_option(Socket.SO_SNDTIMEO, 10) # 10 milliseconds
+client.set_option(Socket.SO_SNDTIMEO, 1000) # 10 milliseconds
 
 while true {
 
@@ -38,7 +44,12 @@ while true {
     message += input
   }
 
-  client.send(message)
+  try {
+    client.send(message)
+  } catch e {
+    echo 'Connection closed ${e.message}'
+    break
+  }
 
   if message.trim() == '.bye' {
     client.close()

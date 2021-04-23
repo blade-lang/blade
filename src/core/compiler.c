@@ -913,7 +913,6 @@ static void grouping(b_parser *p, bool can_assign) {
   expression(p);
   ignore_whitespace(p);
   consume(p, RPAREN_TOKEN, "expected ')' after grouped expression");
-//  ignore_whitespace(p);
 }
 
 static b_value compile_number(b_parser *p) {

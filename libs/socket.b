@@ -197,7 +197,7 @@ class Socket {
 
   send(message, flags) {
     if !message message = ''
-    if !flags flags = self._flags
+    if !flags flags = 0
 
     if !is_string(message) and !is_bytes(message) and !is_file(message) 
       die Exception('message must string, bytes or file')
@@ -217,7 +217,7 @@ class Socket {
 
   receive(length, flags) {
     if !length length = -1
-    if !flags flags = self._flags
+    if !flags flags = 0
 
     if !is_int(length) 
       die Exception('integer expected for length, ${type(length)} given')
@@ -232,7 +232,10 @@ class Socket {
     if !self.is_listening and !self.is_connected
       die Exception('socket not listening or connected')
     
-    return self._recv(self.socket_id, length, flags)
+    var result = self._recv(self.socket_id, length, flags)
+    if is_string(result) return result
+
+    return self._check_error(result)
   }
 
   listen(max_connections) {
