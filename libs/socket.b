@@ -247,7 +247,7 @@ class Socket {
     var result = self._recv(self.socket_id, length, flags)
     if is_string(result) return result
 
-    return self._check_error(result)
+    return result
   }
 
   listen(max_connections) {
