@@ -130,7 +130,8 @@ ifeq ($(_OS),linux)
 # for linux environments
 	SHARED_LIB_FLAGS := -Wl,-soname,libbirdy.so
 	SHARED_EXT := so
-	CFLAGS += -Wno-return-local-addr -Wno-implicit-fallthrough -Wno-unused-result -Wno-sequence-point -lreadline 
+# we want to make sure GCC compilers enable asprintf and vasprintf	
+	CFLAGS += -D_GNU_SOURCE -Wno-return-local-addr -Wno-implicit-fallthrough -Wno-unused-result -Wno-sequence-point -lreadline 
 endif
 
 LIB_WIN32 :=
