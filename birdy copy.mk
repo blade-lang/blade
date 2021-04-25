@@ -7,79 +7,17 @@
 
 # MinGW and Cygwin--or at least some versions of them--default CC to "cc" but then don't
 # provide an executable named "cc". Manually point to "gcc" instead.
-_OS :=
-_ARCH :=
-
-# detect OS and architecture (for future use)
-ifeq ($(OS),Windows_NT)
-  _OS = -D windows
-	ifeq ($(PROCESSOR_ARCHITEW6432),AMD64)
-		_ARCH = -D amd64
-	else
-		ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
-			_ARCH = -D amd64
-		endif
-		ifeq ($(PROCESSOR_ARCHITECTURE),x86)
-			_ARCH = -D ia32
-		endif
-	endif
-else ifeq ($(OS),mingw32)
-	_OS = mingw
-	ifeq ($(PROCESSOR_ARCHITEW6432),AMD64)
-    _ARCH = -D amd64
-	else
-		ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
-			_ARCH = -D amd64
-		endif
-		ifeq ($(PROCESSOR_ARCHITECTURE),x86)
-			_ARCH = -D ia32
-		endif
-	endif
+ifeq ($(OS),mingw32)
+	CC = GCC
 else ifeq ($(OS),cygwin)
-	_OS = cygwin
-	ifeq ($(PROCESSOR_ARCHITEW6432),AMD64)
-    _ARCH = -D amd64
-	else
-		ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
-			_ARCH = -D amd64
-		endif
-		ifeq ($(PROCESSOR_ARCHITECTURE),x86)
-			_ARCH = -D ia32
-		endif
-	endif
-else
-    UNAME_S := $(shell uname -s)
-    ifeq ($(UNAME_S),Linux)
-			_OS = linux
-    endif
-    ifeq ($(UNAME_S),Darwin)
-      _OS = osx
-    endif
-    UNAME_P := $(shell uname -p)
-    ifeq ($(UNAME_P),x86_64)
-      _ARCH += -D amd64
-    endif
-    ifneq ($(filter %86,$(UNAME_P)),)
-      _ARCH += -D ia32
-    endif
-    ifneq ($(filter arm%,$(UNAME_P)),)
-      _ARCH += -D arm
-    endif
-endif
-
-# enforce gcc for mingw and cygwin
-ifeq ($(_OS),mingw)
-	CC = GCC
-else ifeq ($(_OS),cygwin)
 	CC = GCC
 endif
 
-CFLAGS := -std=c99 -Wall -Wextra -Werror -Wno-unused-parameter
+CFLAGS := -std=c99 -Wall -Wextra -Werror -Wno-unused-parameter 
+USE_SYSTEM_PCRE := 0
 
-# # For Linux OS,
-# ifeq ($(_OS),linux)
-# 	CFLAGS += -Wno-unused-result -Wno-sequence-point
-# endif
+# # For Windows OS, you may need to uncomment this section
+# CFLAGS += -Wno-implicit-fallthrough -Wno-format-zero-length -Wno-maybe-uninitialized
 
 # If we're building at a point in the middle of an edit, don't fail if there
 # are functions that aren't used yet.
@@ -94,9 +32,8 @@ OS := $(lastword $(subst -, ,$(shell gcc -dumpmachine)))
 
 # Don't add -fPIC on Windows since it generates a warning which gets promoted
 # to an error by -Werror.
-ifeq ($(_OS),mingw)
-else ifeq ($(_OS),cygwin)
-else ifeq ($(_OS),windows)
+ifeq      ($(OS),mingw32)
+else ifeq ($(OS),cygwin)
 	# Do nothing.
 else
 	CFLAGS += -fPIC
@@ -115,35 +52,47 @@ endif
 
 LIB_STATICS := deps/lib/darwin/libpcre2-8.a
 
-ifeq ($(_OS),osx)
+ifneq (,$(findstring darwin,$(OS)))
+
 # for OSX environments
 	SHARED_EXT := dylib
-	CFLAGS += -Ldeps/lib/darwin -lreadline
-endif
-ifeq ($(_OS),$(filter $(_OS), cygwin mingw))
+	CFLAGS += -Ldeps/lib/darwin
+
+	CFLAGS += -lreadline 
+else ifeq ($(OS),cygwin)
+
 # for cygwin and mingw32 environments
 	SHARED_LIB_FLAGS := -Wl,-soname,libbirdy.dll
 	SHARED_EXT := dll
 	CFLAGS += -Wno-return-local-addr -Wno-maybe-uninitialized -Wno-sequence-point
-endif
-ifeq ($(_OS),linux)
+
+else ifeq ($(OS),mingw32)
+
+# for cygwin and mingw32 environments
+	SHARED_LIB_FLAGS := -Wl,-soname,libbirdy.dll
+	SHARED_EXT := dll
+	CFLAGS += -Wno-return-local-addr -Wno-maybe-uninitialized -Wno-sequence-point
+
+else
+
 # for linux environments
 	SHARED_LIB_FLAGS := -Wl,-soname,libbirdy.so
 	SHARED_EXT := so
-	CFLAGS += -Wno-return-local-addr -Wno-implicit-fallthrough -Wno-unused-result -Wno-sequence-point -lreadline 
+
+	CFLAGS += -Wno-return-local-addr -Wno-implicit-fallthrough -lreadline 
 endif
 
 LIB_WIN32 :=
 
-# for mingw and cygwin
-ifeq ($(_OS),cygwin)
+ifeq ($(OS),cygwin)
 	LIB_WIN32 = deps/lib/mingw/libpcre2-8.dll.a /usr/lib/libreadline.dll.a
-else ifeq ($(_OS),mingw)
+else ifeq ($(OS),mingw32)
 	CFLAGS += -lshlwapi
 	LIB_WIN32 = deps/lib/mingw/libpcre2-8.dll.a /mingw64/lib/libreadline.dll.a /mingw64/x86_64-w64-mingw32/lib/libshlwapi.a /mingw64/x86_64-w64-mingw32/lib/libws2_32.a /mingw64/x86_64-w64-mingw32/lib/libnetapi32.a
 endif
 
 # Files.
+
 SUB_DIRS := core modules
 SRC_DIR := $(addprefix $(SOURCE_DIR)/, $(SUB_DIRS))
 BLD_DIRS := $(addprefix $(BUILD_DIR)/, $(SUB_DIRS))
@@ -152,15 +101,15 @@ SOURCES = $(foreach sdir, $(SRC_DIR), $(wildcard $(sdir)/*.c))
 OBJECTS = $(patsubst $(SOURCE_DIR)/*.c, $(BUILD_DIR)/*.c, $(SOURCES))
 # INCLUDES = $(addprefix -I, $(addprefix $(SOURCE_DIR)/, $(SUB_DIRS)))
 
-# Adding the include paths
-# 
-# Curl needs to be available somehow on the device
-# and even though we try to supply the library for the build,
-# I have detected that those libraries may not work without
-# the -lcurl flag.
+#vpath %.c $(SRC_DIR)
+
 CFLAGS += -I$(SOURCE_DIR)/core -I$(SOURCE_DIR) -Ideps/includes -lcurl
 
-# Main build...
+#define make-goal
+#$1/*.o: %.c
+#	$(CC) -I$(INCLUDES) -c $$< -o $$@
+#endef
+
 build/$(NAME): $(OBJECTS) $(LIB_STATICS) $(LIB_WIN32)
 	@ printf "Building Bird in %s mode into %s...\n" $(MODE) $(NAME)
 	@ printf "%s %s %s\n" $(CC) $@ "$(CFLAGS) $(LIB_STATICS) $(LIB_WIN32)"
@@ -168,3 +117,5 @@ build/$(NAME): $(OBJECTS) $(LIB_STATICS) $(LIB_WIN32)
 	@ $(CC) $(CFLAGS) $^ -o $@
 
 .PHONY: default
+
+#$(foreach bdir,$(BLD_DIRS),$(eval $(call make-goal,$(bdir))))
