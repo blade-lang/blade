@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macOS-latest]
-        curl: ['sudo apt-get install libcurl-dev', 'brew install curl']
+        curl: ['sudo apt-get install libcurl4-openssl-dev', 'brew install curl']
 
     steps:
     - uses: actions/checkout@v2
