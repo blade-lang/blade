@@ -3,11 +3,13 @@ import 'io'
 
 # # Server
 # var server = Socket()
+# server.set_option(Socket.SO_REUSEADDR, true)
 # server.bind(Socket.IP_ANY, 3000)
 # server.listen()
 # echo 'Listening on port ${Socket.IP_ANY}:3000'
 
 # var client = server.accept()
+# client.set_option(Socket.SO_RCVTIMEO, 100);
 # echo 'Client connected: ${client.host}'
 
 # while true {
@@ -33,8 +35,8 @@ import 'io'
 
 # Client
 var client = Socket()
-client.connect(nil, 3000)
-client.set_option(Socket.SO_SNDTIMEO, 1000) # 10 milliseconds
+client.connect(nil, 8000, 1000) # 1 seconds
+# client.set_option(Socket.SO_SNDTIMEO, 100) # 100 milliseconds
 
 while true {
 
@@ -45,7 +47,7 @@ while true {
   }
 
   try {
-    client.send(message)
+    client.send('${message}\n')
   } catch e {
     echo 'Connection closed ${e.message}'
     break

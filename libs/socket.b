@@ -6,6 +6,12 @@
  * @copyright Ore Richard
  */
 
+class SocketException < Exception {
+  SocketException(message) {
+    self.message = message
+  }
+}
+
 class Socket {
   /*
    * Types
@@ -73,13 +79,13 @@ class Socket {
   var port = 0
 
   # the default family for the socket is AF_INET
-  var _family = 2
+  var family = 2
 
   # the default socket type is SOCK_STREAM
-  var _type = 1
+  var type = 1
 
   # initialize flags for default behavior...
-  var _flags = 0
+  var flags = 0
 
   # this variable holds the id of the socket on
   # the host machine. This value will be passed
@@ -105,23 +111,26 @@ class Socket {
   var send_timeout = -1
   var receive_timeout = -1
 
+  # as well as when we are running in blocking mode
+  var is_blocking = false
+
   # constructor...
   # called without parameters, is same as
   # Socket(Socket.AF_INET, Socket.SOCK_STREAM, 0)
   Socket(family, type_, flags) {
-    if family self._family = family
-    if type_ self._type = type_
-    if flags self._flags = flags
+    if family self.family = family
+    if type_ self.type = type_
+    if flags self.flags = flags
 
-    if !is_int(self._family) 
-      die Exception('integer expected for family, ${type(self._family)} given')
-    if !is_int(self._type) 
-      die Exception('integer expected for type, ${type(self._type)} given')
-    if !is_int(self._flags) 
-      die Exception('integer expected for flags, ${type(self._flags)} given')
+    if !is_int(self.family) 
+      die SocketException('AF_* expected for family, ${type(self.family)} given')
+    if !is_int(self.type) 
+      die SocketException('SOCK_* expected for type, ${type(self.type)} given')
+    if !is_int(self.flags) 
+      die SocketException('integer expected for flags, ${type(self.flags)} given')
 
-    var id = self._create(self._family, self._type, self._flags)
-    if id == -1 die Exception('could not create socket')
+    var id = self._create(self.family, self.type, self.flags)
+    if id == -1 die SocketException('could not create socket')
 
     self.socket_id = id
   }
@@ -141,27 +150,30 @@ class Socket {
   }
 
   # checks if a response code is valid
-  # returns the code if it is or throws an exception otherwise
+  # returns the code if it is or throws an SocketException otherwise
   _check_error(code) {
     var err = self._error(code)
-    if err die Exception(err)
+    if err die SocketException(err)
     return code
   }
 
-  connect(host, port) {
+  connect(host, port, timeout) {
     if !host host = self.host
+    if !timeout timeout = 300000 # default timeout is 300 seconds
 
-    if !port die Exception('port not specified')
+    if !port die SocketException('port not specified')
     if !is_string(host) 
-      die Exception('string expected for host, ${type(host)} given')
+      die SocketException('string expected for host, ${type(host)} given')
     if !is_int(port) 
-      die Exception('integer expected for port, ${type(port)} given')
+      die SocketException('integer expected for port, ${type(port)} given')
+    if !is_int(timeout) 
+      die SocketException('integer expected for timeout, ${type(timeout)} given')
 
-    if self.socket_id == -1 or self.is_closed die Exception('socket is in an illegal state')
+    if self.socket_id == -1 or self.is_closed die SocketException('socket is in an illegal state')
 
-    if self.is_connected die Exception('socket has existing connection')
+    if self.is_connected die SocketException('socket has existing connection')
 
-    var result = self._check_error(self._connect(self.socket_id, host, port, self._family))
+    var result = self._check_error(self._connect(self.socket_id, host, port, self.family, timeout, self.is_blocking))
     if result {
       self.is_client = true
       self.is_connected = true
@@ -174,18 +186,18 @@ class Socket {
   bind(host, port) {
     if !host host = self.host
 
-    if !port die Exception('port not specified')
+    if !port die SocketException('port not specified')
     if !is_string(host) 
-      die Exception('string expected for host, ${type(host)} given')
+      die SocketException('string expected for host, ${type(host)} given')
     if !is_int(port) 
-      die Exception('integer expected for port, ${type(port)} given')
+      die SocketException('integer expected for port, ${type(port)} given')
 
-    if self.socket_id == -1 or self.is_closed die Exception('socket is in an illegal state')
+    if self.socket_id == -1 or self.is_closed die SocketException('socket is in an illegal state')
 
 
-    if self.is_bound die Exception('socket previously bound')
+    if self.is_bound die SocketException('socket previously bound')
 
-    var result = self._check_error(self._bind(self.socket_id, host, port, self._family))
+    var result = self._check_error(self._bind(self.socket_id, host, port, self.family))
     if result {
       self.is_bound = true
       self.is_listening = false # it's freshly bound
@@ -200,17 +212,17 @@ class Socket {
     if !flags flags = 0
 
     if !is_string(message) and !is_bytes(message) and !is_file(message) 
-      die Exception('message must string, bytes or file')
+      die SocketException('message must string, bytes or file')
     if !is_int(flags) 
-      die Exception('integer expected for flags, ${type(flags)} given')
+      die SocketException('integer expected for flags, ${type(flags)} given')
 
     if self.socket_id == -1 or self.is_closed or (self.is_shutdown and 
       (self.shutdown_reason == Socket.SHUT_WR or 
         self.shutdown_reason == Socket.SHUT_RDWR)) 
-      die Exception('socket is in an illegal state')
+      die SocketException('socket is in an illegal state')
 
     if !self.is_listening and !self.is_connected
-      die Exception('socket not listening or connected')
+      die SocketException('socket not listening or connected')
 
     return self._check_error(self._send(self.socket_id, message, flags))
   }
@@ -220,17 +232,17 @@ class Socket {
     if !flags flags = 0
 
     if !is_int(length) 
-      die Exception('integer expected for length, ${type(length)} given')
+      die SocketException('integer expected for length, ${type(length)} given')
     if !is_int(flags) 
-      die Exception('integer expected for flags, ${type(flags)} given')
+      die SocketException('integer expected for flags, ${type(flags)} given')
 
     if self.socket_id == -1 or self.is_closed or (self.is_shutdown and 
       (self.shutdown_reason == Socket.SHUT_RD or 
         self.shutdown_reason == Socket.SHUT_RDWR)) 
-      die Exception('socket is in an illegal state')
+      die SocketException('socket is in an illegal state')
 
     if !self.is_listening and !self.is_connected
-      die Exception('socket not listening or connected')
+      die SocketException('socket not listening or connected')
     
     var result = self._recv(self.socket_id, length, flags)
     if is_string(result) return result
@@ -242,9 +254,9 @@ class Socket {
     if !max_connections max_connections = 1024 # default to 1024 simulataneous clients...
 
     if !is_int(max_connections) 
-      die Exception('integer expected for max_connections, ${type(max_connections)} given')
+      die SocketException('integer expected for max_connections, ${type(max_connections)} given')
 
-    if !self.is_bound or self.is_listening or self.is_closed die Exception('socket is in an illegal state')
+    if !self.is_bound or self.is_listening or self.is_closed die SocketException('socket is in an illegal state')
 
     var result = self._check_error(self._listen(self.socket_id, max_connections))
     if result {
@@ -256,9 +268,9 @@ class Socket {
   accept() {
     if self.is_bound and self.is_listening and !self.is_closed {
       var result = self._accept(self.socket_id)
-      return Socket._Socket(self._family, self._type, self._flags, result[0], result[1], result[2], true)
+      return Socket._Socket(self.family, self.type, self.flags, result[0], result[1], result[2], true)
     }
-    die Exception('socket not bound/listening')
+    die SocketException('socket not bound/listening')
   }
 
   close() {
@@ -280,15 +292,15 @@ class Socket {
     if !how how = Socket.SHUT_RD
     
     if !is_int(how) 
-      die Exception('integer expected for how, ${type(how)} given')
+      die SocketException('integer expected for how, ${type(how)} given')
 
     if how < Socket.SHUT_RD or how > Socket.SHUT_RDWR
-      die Exception('expected one of Socket.SHUT_* flags')
+      die SocketException('expected one of Socket.SHUT_* flags')
 
     # consecutive call to the same shutdown type should be ignored
     if self.is_shutdown and self.shutdown_reason == how return true
 
-    if self.is_closed die Exception('socket is in an illegal state')
+    if self.is_closed die SocketException('socket is in an illegal state')
 
     var result = self._check_error(self._shutdown(self.socket_id, how)) > 0
     if result {
@@ -304,11 +316,11 @@ class Socket {
 
   set_option(option, value) {
     if !option or !value 
-      die Exception('both option and value are required')
+      die SocketException('both option and value are required')
     if !is_int(option) 
-      die Exception('integer expected for option, ${type(option)} given')
+      die SocketException('integer expected for option, ${type(option)} given')
     if option < Socket.SO_DEBUG or option > Socket.SO_TYPE # @TODO: update SO_TYPE as options increase
-      die Exception('expected one of Socket.SO_* options')
+      die SocketException('expected one of Socket.SO_* options')
 
     var result = self._check_error(self._setsockopt(self.socket_id, option, value)) > 0
 
@@ -319,5 +331,10 @@ class Socket {
     }
 
     return result
+  }
+
+  set_blocking(mode) {
+    if !is_bool(mode) die SocketException('boolean expected')
+    self.is_blocking = mode
   }
 }

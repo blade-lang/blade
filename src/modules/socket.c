@@ -15,6 +15,7 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/ioctl.h>
+#include <fcntl.h>
 
 #ifdef _WIN32
 #include "win32.h"
@@ -31,6 +32,18 @@
 #define BIGSIZ 8192		/* big buffers */
 #define SMALLSIZ 256		/* small buffers, hostnames, etc */
 
+DECLARE_MODULE_METHOD(socket__error) {
+  ENFORCE_ARG_COUNT(_error, 1);
+  ENFORCE_ARG_TYPE(_error, 0, IS_NUMBER);
+
+  // do not report errno == EINPROGRESS, EWOULDBLOCK and EAGAIN as error
+  if(AS_NUMBER(args[0]) == -1 && errno != EINPROGRESS && errno != EWOULDBLOCK && errno != EAGAIN) {
+    char *error = strerror(errno);
+    RETURN_STRING(error);
+  }
+  RETURN;
+}
+
 DECLARE_MODULE_METHOD(socket__create) {
   ENFORCE_ARG_COUNT(_create, 3);
   ENFORCE_ARG_TYPE(_create, 0, IS_NUMBER); // family
@@ -41,16 +54,20 @@ DECLARE_MODULE_METHOD(socket__create) {
 
 // @TODO: Support IPv6 connect...
 DECLARE_MODULE_METHOD(socket__connect) {
-  ENFORCE_ARG_COUNT(_connect, 4);
+  ENFORCE_ARG_COUNT(_connect, 6);
   ENFORCE_ARG_TYPE(_connect, 0, IS_NUMBER); // the socket id
   ENFORCE_ARG_TYPE(_connect, 1, IS_STRING); // the address
   ENFORCE_ARG_TYPE(_connect, 2, IS_NUMBER); // the port
   ENFORCE_ARG_TYPE(_connect, 3, IS_NUMBER); // the family
+  ENFORCE_ARG_TYPE(_connect, 4, IS_NUMBER); // is_blocking
+  ENFORCE_ARG_TYPE(_connect, 5, IS_BOOL); // is_blocking
 
   int sock = AS_NUMBER(args[0]);
   char *address = AS_C_STRING(args[1]);
   int port = AS_NUMBER(args[2]);
   int family = AS_NUMBER(args[3]);
+  int time_out = AS_NUMBER(args[4]);
+  bool is_blocking = AS_BOOL(args[5]);
 
   struct sockaddr_in remote = {0};
 
@@ -62,7 +79,42 @@ DECLARE_MODULE_METHOD(socket__connect) {
     RETURN_ERROR("Address not valid or unsupported");
   }
 
-  RETURN_NUMBER(connect(sock, (struct sockaddr *)&remote, sizeof(struct sockaddr_in)));
+  fd_set read_set;
+  FD_ZERO(&read_set);
+  if(!FD_ISSET(sock, &read_set)) {
+    FD_SET(sock, &read_set);//tcp socket
+  }
+
+  long arg = O_NONBLOCK;
+  fcntl(sock, F_SETFL, arg);
+
+  if(connect(sock, (struct sockaddr *)&remote, sizeof(struct sockaddr_in)) == -1) {
+    if(errno != EINPROGRESS) {
+      RETURN_NUMBER(-1);
+    }
+  }
+
+  // getting the timeout...
+  struct timeval timeout = {(long)(time_out / 1000), (int)((time_out % 1000) * 1000)};
+
+  if(select(sock + 1, NULL, &read_set, NULL, &timeout)) {
+    int so_error;
+    socklen_t len = sizeof so_error;
+
+    getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
+    if (so_error == 0) {
+      if(is_blocking) {
+        arg &= (~O_NONBLOCK);
+        fcntl(sock, F_SETFL, arg);
+      }
+      RETURN_NUMBER(so_error);
+    } else {
+      errno = so_error;
+    }
+  } else {
+    errno = ETIMEDOUT;
+  }
+  RETURN_NUMBER(-1);
 }
 
 // @TODO: Support IPv6 bind...
@@ -133,7 +185,7 @@ DECLARE_MODULE_METHOD(socket__send) {
 
   int sock = AS_NUMBER(args[0]);
   b_value data = args[1];
-  int flags = AS_NUMBER(args[3]);
+  int flags = AS_NUMBER(args[2]);
 
   char *content = NULL;
   int length;
@@ -233,16 +285,6 @@ DECLARE_MODULE_METHOD(socket__setsockopt) {
       RETURN_NUMBER(setsockopt(sock, SOL_SOCKET, option, (const char*)&val, sizeof val));
     }
   }
-}
-
-DECLARE_MODULE_METHOD(socket__error) {
-  ENFORCE_ARG_COUNT(_error, 1);
-  ENFORCE_ARG_TYPE(_error, 0, IS_NUMBER);
-  if(AS_NUMBER(args[0]) == -1) {
-    char *error = strerror(errno);
-    RETURN_STRING(error);
-  }
-  RETURN;
 }
 
 DECLARE_MODULE_METHOD(socket__close) {
