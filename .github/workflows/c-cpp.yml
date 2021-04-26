@@ -3,9 +3,9 @@ name: Default Linux and OSX Build CI
 on:
   push:
     branches: [ main ]
+    types: [ published ]
   pull_request:
     branches: [ main ]
-    types: [ published ]
 
 jobs:
   build:
