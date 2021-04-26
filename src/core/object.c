@@ -99,9 +99,13 @@ b_obj_func *new_function(b_vm *vm) {
 
 b_obj_instance *new_instance(b_vm *vm, b_obj_class *klass) {
   b_obj_instance *instance = ALLOCATE_OBJ(b_obj_instance, OBJ_INSTANCE);
+  push(vm, OBJ_VAL(instance)); // gc fix
+
   instance->klass = klass;
   init_table(&instance->fields);
   table_add_all(vm, &klass->fields, &instance->fields);
+
+  pop(vm); // gc fix
   return instance;
 }
 
@@ -217,8 +221,9 @@ static void print_dict(b_obj_dict *dict) {
     printf(": ");
 
     b_value value;
-    table_get(&dict->items, dict->names.values[i], &value);
-    print_value(value);
+    if(table_get(&dict->items, dict->names.values[i], &value)) {
+      print_value(value);
+    }
 
     if (i != dict->names.count - 1) {
       printf(", ");
