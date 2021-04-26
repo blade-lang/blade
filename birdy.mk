@@ -127,6 +127,8 @@ ifeq ($(_OS),linux)
 # we want to make sure GCC compilers enable asprintf and vasprintf
 # We also need to link the math lib here
 	CFLAGS += -D_GNU_SOURCE -lm
+# and add the proper path for libraries installed under /usr/local
+	CFLAGS += -L/usr/local/lib
 endif
 
 LIB_WIN32 :=
