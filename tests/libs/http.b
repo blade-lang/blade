@@ -1,10 +1,19 @@
 import 'http'
 import 'os'
 
-for i in 1..1000 {
-  echo 'Attempt ${i}'
-  echo HttpClient().get('localhost:8000')
+var total = 10000
+var start = time()
+
+for i in 1..total {
+  # try {
+    echo 'Attempt ${i}'
+    echo HttpClient().get('localhost:8000')
+  # } catch e {
+  #   # echo e.message
+  # }
 }
+
+echo 'Made ${total} http get calls in ${time() - start} seconds'
 
 # echo Os.exec('pwd')
 

@@ -11,16 +11,18 @@ clean:
 
 # Compile the Jade interpreter.
 release:
-	@ rm -rf build bird
+	@ rm -rf build
 	@ $(MAKE) -f birdy.mk NAME=bird MODE=release SOURCE_DIR=src
-	@ cp build/bird bird
+# @ cp build/bird bird
+	@ cp -r libs build/libs
 
 
 # Compile a debug build of Jade.
 debug:
-	@ rm -rf build birdd
+	@ rm -rf build
 	@ $(MAKE) -f birdy.mk NAME=birdd MODE=debug SOURCE_DIR=src
-	@ cp build/birdd birdd
+# @ cp build/birdd birdd
+	@ cp -r libs build/libs
 
 
 test:

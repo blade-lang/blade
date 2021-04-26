@@ -11,7 +11,7 @@
 void init_value_arr(b_value_arr *array) {
   array->capacity = 0;
   array->count = 0;
-  array->values = NULL;
+  array->values = (b_value *)malloc(sizeof(b_value));
 }
 
 void init_byte_arr(b_byte_arr *array, int length) {

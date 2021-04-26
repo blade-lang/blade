@@ -410,7 +410,7 @@ void init_vm(b_vm *vm) {
   vm->objects = NULL;
   vm->exception_class = NULL;
   vm->bytes_allocated = 0;
-  vm->next_gc = 1024 * 1024; // 1mb
+  vm->next_gc = 1024 * 1024; // 10mb
   vm->is_repl = false;
 
   vm->gray_count = 0;
@@ -1447,10 +1447,11 @@ b_ptr_result run(b_vm *vm) {
 
     case OP_ECHO: {
       if (vm->is_repl) {
-        echo_value(pop(vm));
+        echo_value(peek(vm, 0));
       } else {
-        print_value(pop(vm));
+        print_value(peek(vm, 0));
       }
+      pop(vm);
       printf("\n"); // @TODO: remove when library function print is ready
       break;
     }
@@ -1751,12 +1752,14 @@ b_ptr_result run(b_vm *vm) {
     case OP_DICT: {
       int count = READ_SHORT() * 2; // 1 for key, 1 for value
       b_obj_dict *dict = new_dict(vm);
+      push(vm, OBJ_VAL(dict)); // fix gc
+
       for (int i = 0; i < count; i += 2) {
-        b_value name = vm->stack_top[-count + i];
-        b_value value = vm->stack_top[-count + i + 1];
+        b_value name = vm->stack_top[-count + i - 1];
+        b_value value = vm->stack_top[-count + i];
         dict_add_entry(vm, dict, name, value);
       }
-      pop_n(vm, count);
+      pop_n(vm, count + 1);
       push(vm, OBJ_VAL(dict));
       break;
     }
