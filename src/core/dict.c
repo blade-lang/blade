@@ -53,6 +53,7 @@ DECLARE_DICT_METHOD(compact) {
   ENFORCE_ARG_COUNT(compact, 0);
   b_obj_dict *dict = AS_DICT(METHOD_OBJECT);
   b_obj_dict *n_dict = new_dict(vm);
+  push(vm, OBJ_VAL(n_dict)); // looking at gc
 
   for (int i = 0; i < dict->names.count; i++) {
     b_value tmp_value;
@@ -62,6 +63,7 @@ DECLARE_DICT_METHOD(compact) {
     }
   }
 
+  pop(vm); // looking at gc
   RETURN_OBJ(n_dict);
 }
 

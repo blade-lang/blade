@@ -364,8 +364,7 @@ static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
 }
 
 static int identifier_constant(b_parser *p, b_token *name) {
-  return make_constant(p,
-                       OBJ_VAL(copy_string(p->vm, name->start, name->length)));
+  return make_constant(p, OBJ_VAL(copy_string(p->vm, name->start, name->length)));
 }
 
 static bool identifiers_equal(b_token *a, b_token *b) {

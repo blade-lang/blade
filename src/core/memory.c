@@ -28,7 +28,8 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
 
   if (new_size == 0) {
     free(pointer);
-    return NULL;
+//    return NULL;
+    return malloc(sizeof pointer);
   }
   void *result = realloc(pointer, new_size);
 
@@ -56,13 +57,15 @@ void mark_object(b_vm *vm, b_obj *object) {
 
   if (vm->gray_capacity < vm->gray_count + 1) {
     vm->gray_capacity = GROW_CAPACITY(vm->gray_capacity);
-    vm->gray_stack =
+    b_obj **result =
         (b_obj **)realloc(vm->gray_stack, sizeof(b_obj *) * vm->gray_capacity);
 
-    if (vm->gray_stack == NULL) {
+    if (result == NULL) {
       fprintf(stderr, "GC encountered an error");
       exit(1);
     }
+
+    vm->gray_stack = result;
   }
   vm->gray_stack[vm->gray_count++] = object;
 }
