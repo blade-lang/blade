@@ -13,6 +13,30 @@
   dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, n, l)),                     \
                  OBJ_VAL(copy_string(vm, v, g)))
 
+/*#define ADD_TIME(n, l, v)  do { \
+    b_value key = OBJ_VAL(copy_string(vm, n, l)); \
+    push(vm, key);\
+    dict_add_entry(vm, dict, key, NUMBER_VAL(v)); \
+    pop(vm);      \
+  } while(false)
+
+#define ADD_B_TIME(n, l, v)    do {  \
+    b_value key = OBJ_VAL(copy_string(vm, n, l)); \
+    push(vm, key);\
+    dict_add_entry(vm, dict, key, BOOL_VAL(v));   \
+    pop(vm); \
+  } while(false)
+
+#define ADD_S_TIME(n, l, v, g)   do {  \
+    b_value key = OBJ_VAL(copy_string(vm, n, l)); \
+    push(vm, key);\
+    b_value value = OBJ_VAL(copy_string(vm, v, g)); \
+    push(vm, value);                                   \
+    dict_add_entry(vm, dict, key, value);         \
+    pop(vm);                           \
+    pop(vm);\
+  } while(false)*/
+
 DECLARE_MODULE_METHOD(date____mktime) {
   ENFORCE_ARG_RANGE(mktime, 1, 8);
 
