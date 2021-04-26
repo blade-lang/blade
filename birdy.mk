@@ -5,46 +5,49 @@
 # NAME         	Name of the output executable (and object file directory).
 # SOURCE_DIR   	Directory where source files are found.
 
-# MinGW and Cygwin--or at least some versions of them--default CC to "cc" but then don't
-# provide an executable named "cc". Manually point to "gcc" instead.
+# Some platform-specific workarounds. Note that we use "gcc" explicitly in the
+# call to get the machine name because one of these workarounds deals with $(CC)
+# itself not working.
+# OS := $(lastword $(subst -, ,$(shell gcc -dumpmachine)))
+
 _OS :=
 _ARCH :=
 
 # detect OS and architecture (for future use)
 ifeq ($(OS),Windows_NT)
-  _OS = -D windows
+  _OS = windows
 	ifeq ($(PROCESSOR_ARCHITEW6432),AMD64)
-		_ARCH = -D amd64
+		_ARCH = amd64
 	else
 		ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
-			_ARCH = -D amd64
+			_ARCH = amd64
 		endif
 		ifeq ($(PROCESSOR_ARCHITECTURE),x86)
-			_ARCH = -D ia32
+			_ARCH = ia32
 		endif
 	endif
 else ifeq ($(OS),mingw32)
 	_OS = mingw
 	ifeq ($(PROCESSOR_ARCHITEW6432),AMD64)
-    _ARCH = -D amd64
+    _ARCH = amd64
 	else
 		ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
-			_ARCH = -D amd64
+			_ARCH = amd64
 		endif
 		ifeq ($(PROCESSOR_ARCHITECTURE),x86)
-			_ARCH = -D ia32
+			_ARCH = ia32
 		endif
 	endif
 else ifeq ($(OS),cygwin)
 	_OS = cygwin
 	ifeq ($(PROCESSOR_ARCHITEW6432),AMD64)
-    _ARCH = -D amd64
+    _ARCH = amd64
 	else
 		ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
-			_ARCH = -D amd64
+			_ARCH = amd64
 		endif
 		ifeq ($(PROCESSOR_ARCHITECTURE),x86)
-			_ARCH = -D ia32
+			_ARCH = ia32
 		endif
 	endif
 else
@@ -57,40 +60,29 @@ else
     endif
     UNAME_P := $(shell uname -p)
     ifeq ($(UNAME_P),x86_64)
-      _ARCH += -D amd64
+      _ARCH += amd64
     endif
     ifneq ($(filter %86,$(UNAME_P)),)
-      _ARCH += -D ia32
+      _ARCH += ia32
     endif
     ifneq ($(filter arm%,$(UNAME_P)),)
-      _ARCH += -D arm
+      _ARCH += arm
     endif
 endif
 
-# enforce gcc for mingw and cygwin
-ifeq ($(_OS),mingw)
-	CC = GCC
-else ifeq ($(_OS),cygwin)
+# MinGW and Cygwin--or at least some versions of them--default CC to "cc" but then don't
+# provide an executable named "cc". Manually point to "gcc" instead.
+ifeq ($(_OS),$(filter $(_OS), cygwin mingw))
 	CC = GCC
 endif
 
 CFLAGS := -std=c99 -Wall -Wextra -Werror -Wno-unused-parameter
-
-# # For Linux OS,
-# ifeq ($(_OS),linux)
-# 	CFLAGS += -Wno-unused-result -Wno-sequence-point
-# endif
 
 # If we're building at a point in the middle of an edit, don't fail if there
 # are functions that aren't used yet.
 ifeq ($(MODE),debug)
 	CFLAGS += -Wno-unused-function -Wno-unused-variable
 endif
-
-# Some platform-specific workarounds. Note that we use "gcc" explicitly in the
-# call to get the machine name because one of these workarounds deals with $(CC)
-# itself not working.
-OS := $(lastword $(subst -, ,$(shell gcc -dumpmachine)))
 
 # Don't add -fPIC on Windows since it generates a warning which gets promoted
 # to an error by -Werror.
@@ -107,17 +99,18 @@ ifeq ($(MODE),debug)
 	CFLAGS += -O0 -DDEBUG -g
 	BUILD_DIR := build/debug
 else
-	# CFLAGS += -O3 -flto
+# CFLAGS += -O3 -flto
 	CFLAGS += -Ofast -flto
 	BUILD_DIR := build/release
 endif
 
 
-LIB_STATICS := deps/lib/darwin/libpcre2-8.a
+LIB_STATICS:=
 
 ifeq ($(_OS),osx)
 # for OSX environments
 	SHARED_EXT := dylib
+	LIB_STATICS	= deps/lib/darwin/libpcre2-8.a
 	CFLAGS += -Ldeps/lib/darwin -lreadline
 endif
 ifeq ($(_OS),$(filter $(_OS), cygwin mingw))
@@ -129,9 +122,11 @@ endif
 ifeq ($(_OS),linux)
 # for linux environments
 	SHARED_LIB_FLAGS := -Wl,-soname,libbirdy.so
-	SHARED_EXT := so
-# we want to make sure GCC compilers enable asprintf and vasprintf	
-	CFLAGS += -D_GNU_SOURCE -Wno-return-local-addr -Wno-implicit-fallthrough -Wno-maybe-uninitialized -Wno-unused-result -Wno-sequence-point -lreadline 
+	SHARED_EXT := so	
+	CFLAGS += -Wno-return-local-addr -Wno-implicit-fallthrough -Wno-maybe-uninitialized -Wno-unused-result -Wno-sequence-point -lreadline
+# we want to make sure GCC compilers enable asprintf and vasprintf
+# We also need to link the math lib here
+	CFLAGS += -D_GNU_SOURCE -lm
 endif
 
 LIB_WIN32 :=
@@ -163,7 +158,7 @@ CFLAGS += -I$(SOURCE_DIR)/core -I$(SOURCE_DIR) -Ideps/includes -lcurl
 
 # Main build...
 build/$(NAME): $(OBJECTS) $(LIB_STATICS) $(LIB_WIN32)
-	@ printf "Building Bird in %s mode into %s...\n" $(MODE) $(NAME)
+	@ printf "Building Bird in %s mode into %s for %s %s...\n" $(MODE) $(NAME) $(_OS) $(_ARCH)
 	@ printf "%s %s %s\n" $(CC) $@ "$(CFLAGS) $(LIB_STATICS) $(LIB_WIN32)"
 	@ mkdir -p build
 	@ $(CC) $(CFLAGS) $^ -o $@
