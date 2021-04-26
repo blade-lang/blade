@@ -2,6 +2,8 @@ BUILD_DIR := build
 
 args = `arg="$(filter-out $@,$(MAKECMDGOALS))" && echo $${arg:-${1}}`
 
+default: release
+
 # Remove all build outputs and intermediate files.
 clean:
 	@ rm -rf $(BUILD_DIR)
@@ -36,10 +38,6 @@ ltest:
 gtest:
 	@ ./bird tests/libs/$(call args,main).b
 
-internal:
-	@ $(MAKE) make_internal
-	@ ./make_internal $(call args,main)
-
 tests:
 	@ bash run-tests.sh
 
@@ -51,10 +49,10 @@ rbench:
 	@ ./bird benchmarks/bench-$(call args,main).b
 
 
-all:
-	@ rm -rf build birdd
-	@ $(MAKE) -f birdy.mk NAME=birdd MODE=debug SOURCE_DIR=src
-	@ cp build/birdd birdd
+all: release
+# 	@ rm -rf build birdd
+# 	@ $(MAKE) -f birdy.mk NAME=birdd MODE=release SOURCE_DIR=src
+# 	@ cp build/birdd birdd
 
 
 .PHONY: clean release debug test tests
