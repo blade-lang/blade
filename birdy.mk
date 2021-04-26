@@ -23,7 +23,7 @@ ifeq ($(OS),Windows_NT)
 			_ARCH = amd64
 		endif
 		ifeq ($(PROCESSOR_ARCHITECTURE),x86)
-			_ARCH = ia32
+			_ARCH = x86
 		endif
 	endif
 else ifeq ($(OS),mingw32)
@@ -35,7 +35,7 @@ else ifeq ($(OS),mingw32)
 			_ARCH = amd64
 		endif
 		ifeq ($(PROCESSOR_ARCHITECTURE),x86)
-			_ARCH = ia32
+			_ARCH = i386
 		endif
 	endif
 else ifeq ($(OS),cygwin)
@@ -47,7 +47,7 @@ else ifeq ($(OS),cygwin)
 			_ARCH = amd64
 		endif
 		ifeq ($(PROCESSOR_ARCHITECTURE),x86)
-			_ARCH = ia32
+			_ARCH = i386
 		endif
 	endif
 else
@@ -63,7 +63,7 @@ else
       _ARCH += amd64
     endif
     ifneq ($(filter %86,$(UNAME_P)),)
-      _ARCH += ia32
+      _ARCH += i386
     endif
     ifneq ($(filter arm%,$(UNAME_P)),)
       _ARCH += arm
@@ -127,8 +127,6 @@ ifeq ($(_OS),linux)
 # we want to make sure GCC compilers enable asprintf and vasprintf
 # We also need to link the math lib here
 	CFLAGS += -D_GNU_SOURCE -lm
-# and add the proper path for libraries installed under /usr/local
-	CFLAGS += -L/usr/local/lib
 endif
 
 LIB_WIN32 :=
