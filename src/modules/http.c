@@ -301,7 +301,6 @@ DECLARE_MODULE_METHOD(http___client) {
       error = OBJ_VAL(copy_string(vm, err, (int)strlen(err)));
     }
 
-    // guard against gc corruption
     if(!IS_NIL(error)) {
       push(vm, error);
     }
@@ -337,8 +336,6 @@ DECLARE_MODULE_METHOD(http___client) {
     curl_easy_cleanup(curl);
     curl_mime_free(form);
     curl_slist_free_all(heads);
-//    free(effective_url);
-//    free(stream_content);
 
     b_obj_list *list = new_list(vm);
     push(vm, OBJ_VAL(list)); // fix gc

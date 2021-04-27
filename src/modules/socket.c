@@ -4,17 +4,16 @@
 #ifndef _WIN32
 #include <sys/socket.h>
 #include <arpa/inet.h>
-//#include <arpa/telnet.h>
+#include <arpa/telnet.h>
 //#include <arpa/ftp.h>
 //#include <arpa/tftp.h>
 //#include <arpa/nameser.h>
+#include <sys/ioctl.h>
 #endif
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <sys/ioctl.h>
 #include <fcntl.h>
 
 #ifdef _WIN32
@@ -25,7 +24,9 @@
 #define strcasecmp		strcmpi
 #define EADDRINUSE		WSAEADDRINUSE
 #define ETIMEDOUT		WSAETIMEDOUT
-#define ECONNREFUSED	WSAECONNREFUSED
+#define EINPROGRESS		WSAEINPROGRESS
+#define EWOULDBLOCK		WSAEWOULDBLOCK
+#define EAGAIN		WSAEAGAIN
 #define ioctl ioctlsocket
 #endif
 
@@ -287,6 +288,106 @@ DECLARE_MODULE_METHOD(socket__setsockopt) {
   }
 }
 
+DECLARE_MODULE_METHOD(socket__getsockopt) {
+  ENFORCE_ARG_COUNT(_getsockopt, 2);
+  ENFORCE_ARG_TYPE(_getsockopt, 0, IS_NUMBER); // the socket id
+  ENFORCE_ARG_TYPE(_getsockopt, 1, IS_NUMBER); // the option id
+
+  int sock = AS_NUMBER(args[0]);
+  int option = AS_NUMBER(args[1]);
+
+
+  /*int so_error;
+  socklen_t len = sizeof so_error;
+
+  getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
+  if (so_error == 0) {
+    if(is_blocking) {
+      arg &= (~O_NONBLOCK);
+      fcntl(sock, F_SETFL, arg);
+    }
+    RETURN_NUMBER(so_error);
+  } else {
+    errno = so_error;
+  }*/
+
+  switch(option) {
+    case SO_ERROR: {
+      int so_error;
+      socklen_t len = sizeof so_error;
+
+      getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
+      if(so_error == 0) RETURN;
+      char * error = strerror(so_error);
+      RETURN_STRING(error);
+    }
+
+    case SO_SNDTIMEO:
+    case SO_RCVTIMEO: {
+
+#ifdef _WIN32
+      DWORD timeout;
+      if(getsockopt(sock, SOL_SOCKET, option, &timeout, sizeof(timeout)) >= 0) {
+        RETURN_NUMBER(timeout);
+      }
+#else
+      struct timeval tv;
+      socklen_t len = sizeof tv;
+      getsockopt(sock, SOL_SOCKET, option, &tv, &len);
+      if(len == sizeof tv) {
+        RETURN_NUMBER((tv.tv_sec * 1000) + ((double)tv.tv_usec / 1000));
+      }
+#endif
+      RETURN_NUMBER(-1);
+    }
+    default: {
+      int so_result;
+      socklen_t len = sizeof so_result;
+      getsockopt(sock, SOL_SOCKET, option, &so_result, &len);
+      if(len == sizeof so_result) {
+        RETURN_NUMBER(so_result);
+      }
+      RETURN_NUMBER(-1);
+    }
+  }
+}
+
+// @TODO: Add IPv6 support...
+DECLARE_MODULE_METHOD(socket__getsockname) {
+  ENFORCE_ARG_COUNT(_getsockname, 1);
+  ENFORCE_ARG_TYPE(_getsockname, 0, IS_NUMBER);
+
+  int sock = AS_NUMBER(args[0]);
+
+  struct sockaddr_in address;
+  bzero(&address, sizeof(address));
+
+  int length = sizeof address;
+  if(getsockname(sock, (struct sockaddr *)&address, (socklen_t*)&length) >= 0) {
+    char *ip = inet_ntoa(address.sin_addr);
+    int port = ntohs(address.sin_port);
+
+    b_obj_dict *dict = new_dict(vm);
+    push(vm, OBJ_VAL(dict));
+
+    b_value address_key = STRING_L_VAL("address", 7);
+    push(vm, address_key); // gc protect
+    b_value port_key = STRING_L_VAL("port", 4);
+    push(vm, port_key); // gc protect
+    b_value family_key = STRING_L_VAL("family", 4);
+    push(vm, family_key); // gc protect
+
+    dict_add_entry(vm, dict, address_key,STRING_VAL(ip));
+    dict_add_entry(vm, dict, port_key,NUMBER_VAL(port));
+    dict_add_entry(vm, dict, family_key,NUMBER_VAL(ntohs(address.sin_family)));
+
+    pop_n(vm, 4); // pop the gc protections
+    RETURN_OBJ(dict);
+  }
+
+  RETURN;
+}
+
 DECLARE_MODULE_METHOD(socket__close) {
   ENFORCE_ARG_COUNT(_error, 1);
   ENFORCE_ARG_TYPE(_error, 0, IS_NUMBER);
@@ -308,12 +409,14 @@ CREATE_MODULE_LOADER(socket) {
       {"_send", false, GET_MODULE_METHOD(socket__send)},
       {"_recv", false, GET_MODULE_METHOD(socket__recv)},
       {"_setsockopt", false, GET_MODULE_METHOD(socket__setsockopt)},
+      {"_getsockopt", false, GET_MODULE_METHOD(socket__getsockopt)},
       {"_bind", false, GET_MODULE_METHOD(socket__bind)},
       {"_listen", false, GET_MODULE_METHOD(socket__listen)},
       {"_accept", false, GET_MODULE_METHOD(socket__accept)},
       {"_error", false, GET_MODULE_METHOD(socket__error)},
       {"_close", false, GET_MODULE_METHOD(socket__close)},
       {"_shutdown", false, GET_MODULE_METHOD(socket__shutdown)},
+      {"_getsockname", false, GET_MODULE_METHOD(socket__getsockname)},
       {NULL, false, NULL},
   };
 
