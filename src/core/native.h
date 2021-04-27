@@ -208,7 +208,7 @@ DECLARE_NATIVE(to_bool);
 
 DECLARE_NATIVE(rand);
 
-DECLARE_NATIVE(type);
+DECLARE_NATIVE(typeof);
 
 DECLARE_NATIVE(is_callable);
 
