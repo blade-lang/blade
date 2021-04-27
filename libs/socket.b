@@ -19,6 +19,7 @@ class Socket {
   static var SOCK_STREAM    = 1 # stream socket
   static var SOCK_DGRAM     = 2 # datagram socket
   static var SOCK_RAW       = 3 # raw-protocol interface
+  static var SOCK_RDM       = 4 # reliably-delivered message
   static var SOCK_SEQPACKET = 5 # sequenced packet stream
 
   /*
@@ -31,6 +32,7 @@ class Socket {
   static var SO_DONTROUTE     = 0x0010 # just use interface addresses
   static var SO_BROADCAST     = 0x0020 # permit sending of broadcast msgs
   static var SO_USELOOPBACK   = 0x0040 # bypass hardware when possible
+  static var SO_LINGER        = 0x0080 # linger on close if data present (in ticks)
   static var SO_OOBINLINE     = 0x0100 # leave received OOB data in line
   static var SO_REUSEPORT     = 0x0200 # allow local address & port reuse
 
@@ -54,11 +56,26 @@ class Socket {
   /*
    * Address families.
    */
-  static var AF_UNSPEC  = 0 # unspecified
-  static var AF_UNIX    = 1 # local to host (pipes)
-  static var AF_LOCAL   = 1 # same as AF_UNIX
-  static var AF_INET    = 2 # internetwork: UDP, TCP, etc.
-  static var AF_INET6   = 30 # ipv6
+  static var AF_UNSPEC    = 0 # unspecified
+  static var AF_UNIX      = 1 # local to host (pipes)
+  static var AF_LOCAL     = 1 # same as AF_UNIX
+  static var AF_INET      = 2 # internetwork: UDP, TCP, etc.
+  static var AF_IMPLINK   = 3 # arpanet imp addresses
+  static var AF_PUP       = 4 # pup protocols: e.g. BSP
+  static var AF_CHAOS     = 5 # mit CHAOS protocols
+  static var AF_NS        = 6 # XEROX NS protocols
+  static var AF_ISO       = 7 # ISO protocols
+  static var AF_OSI       = 7 # OSI protocols (same as ISO)
+  static var AF_ECMA      = 8 # European computer manufacturers
+  static var AF_DATAKIT   = 9 # datakit protocols
+  static var AF_CCITT     = 10 # CITT protocols, X.25 etc
+  static var AF_SNA       = 11 # IBM SNA
+  static var AF_DECnet    = 12 # DECnet
+  static var AF_DLI       = 13 # DEC Direct data link interface
+  static var AF_LAT       = 14 # LAT
+  static var AF_HYLINK    = 15 # NSC Hyperchannel
+  static var AF_APPLETALK = 16 # AppleTalk
+  static var AF_INET6     = 30 # ipv6
 
   /*
    * howto arguments for shutdown(2), specified by Posix.1g.
@@ -66,6 +83,11 @@ class Socket {
   static var SHUT_RD       = 0 # shut down the reading side
   static var SHUT_WR       = 1 # shut down the writing side
   static var SHUT_RDWR     = 2 # shut down both sides
+
+  /*
+   * Maximum queue length specifiable by listen.
+   */
+  static var SOMAXCONN = 128
 
   /*
    * Static helpers
@@ -250,15 +272,17 @@ class Socket {
     return result
   }
 
-  listen(max_connections) {
-    if !max_connections max_connections = 1024 # default to 1024 simulataneous clients...
+  listen(queue_length) {
+    if !queue_length queue_length = Socket.SOMAXCONN # default to 1024 simulataneous clients...
 
-    if !is_int(max_connections) 
-      die SocketException('integer expected for max_connections, ${type(max_connections)} given')
+    if !is_int(queue_length) 
+      die SocketException('integer expected for queue_length, ${type(queue_length)} given')
+    if queue_length > Socket.SOMAXCONN 
+      die SocketException('maximum queue length of ${Socket.SOMAXCONN} exceeded')
 
     if !self.is_bound or self.is_listening or self.is_closed die SocketException('socket is in an illegal state')
 
-    var result = self._check_error(self._listen(self.socket_id, max_connections))
+    var result = self._check_error(self._listen(self.socket_id, queue_length))
     if result {
       self.is_listening = true
     }
@@ -277,7 +301,7 @@ class Socket {
     # silently ignore multiple calls to close()
     if self.is_closed return true
 
-    var result = self._check_error(self._close(self.socket_id)) > 0
+    var result = self._check_error(self._close(self.socket_id)) >= 0
     if result {
       self.is_connected = false
       self.is_listening = false
@@ -302,7 +326,7 @@ class Socket {
 
     if self.is_closed die SocketException('socket is in an illegal state')
 
-    var result = self._check_error(self._shutdown(self.socket_id, how)) > 0
+    var result = self._check_error(self._shutdown(self.socket_id, how)) >= 0
     if result {
       self.is_connected = false
       self.is_listening = false
@@ -322,7 +346,10 @@ class Socket {
     if option < Socket.SO_DEBUG or option > Socket.SO_TYPE # @TODO: update SO_TYPE as options increase
       die SocketException('expected one of Socket.SO_* options')
 
-    var result = self._check_error(self._setsockopt(self.socket_id, option, value)) > 0
+    if option == Socket.SO_TYPE or option == Socket.SO_ERROR
+      die Exception('the given option is read-only')
+
+    var result = self._check_error(self._setsockopt(self.socket_id, option, value)) >= 0
 
     if result {
       # get an update on SO_SNDTIMEO and SO_RCVTIMEO
@@ -333,8 +360,29 @@ class Socket {
     return result
   }
 
+  get_option(option) {
+    if !option
+      return nil
+
+    if !is_int(option) 
+      die SocketException('integer expected for option, ${type(option)} given')
+    if option < Socket.SO_DEBUG or option > Socket.SO_TYPE # @TODO: update SO_TYPE as options increase
+      die SocketException('expected one of Socket.SO_* options')
+
+    # we have a local copy of SO_RCVTIMEO and SO_SNDTIMEO
+    # we can simply return them when required
+    if option == Socket.SO_RCVTIMEO return self.receive_timeout
+    else if option == Socket.SO_SNDTIMEO return self.send_timeout
+
+    return self._getsockopt(self.socket_id, option)
+  }
+
   set_blocking(mode) {
     if !is_bool(mode) die SocketException('boolean expected')
     self.is_blocking = mode
+  }
+
+  info() {
+    return self._getsockinfo(self.socket_id)
   }
 }
