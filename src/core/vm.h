@@ -60,6 +60,13 @@ struct s_vm {
   b_table methods_file;
   b_table methods_bytes;
 
+  // gc protection
+  b_obj **gc_protected;
+  int gc_protected_capacity;
+  int gc_protected_count;
+  bool protecting_gc;
+  int gc_protection_scope;
+
   // repl flag
   bool is_repl;
 };
@@ -99,5 +106,11 @@ b_obj_instance *create_exception(b_vm *vm, b_obj_string *message);
 #define runtime_error(...)                                                     \
   _runtime_error(vm, ##__VA_ARGS__);                                           \
   EXIT_VM();
+
+void gc_start_protect(b_vm *vm);
+void gc_stop_protection(b_vm *vm);
+
+#define GUARD(t, n, v) t *n = v; \
+  push(vm, OBJ_VAL(n))
 
 #endif
