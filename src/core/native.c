@@ -1,6 +1,5 @@
 #include "native.h"
 #include "btime.h"
-#include "compat/unistd.h"
 #include "vm.h"
 
 #include <math.h>
@@ -538,8 +537,8 @@ DECLARE_NATIVE(rand) {
  *
  * returns the name of the type of value
  */
-DECLARE_NATIVE(type) {
-  ENFORCE_ARG_COUNT(type, 1);
+DECLARE_NATIVE(typeof) {
+  ENFORCE_ARG_COUNT(typeof, 1);
   RETURN_STRING(value_type(args[0]));
 }
 
