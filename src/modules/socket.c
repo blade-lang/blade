@@ -353,9 +353,9 @@ DECLARE_MODULE_METHOD(socket__getsockopt) {
 }
 
 // @TODO: Add IPv6 support...
-DECLARE_MODULE_METHOD(socket__getsockname) {
-  ENFORCE_ARG_COUNT(_getsockname, 1);
-  ENFORCE_ARG_TYPE(_getsockname, 0, IS_NUMBER);
+DECLARE_MODULE_METHOD(socket__getsockinfo) {
+  ENFORCE_ARG_COUNT(_getsockinfo, 1);
+  ENFORCE_ARG_TYPE(_getsockinfo, 0, IS_NUMBER);
 
   int sock = AS_NUMBER(args[0]);
 
@@ -374,7 +374,7 @@ DECLARE_MODULE_METHOD(socket__getsockname) {
     push(vm, address_key); // gc protect
     b_value port_key = STRING_L_VAL("port", 4);
     push(vm, port_key); // gc protect
-    b_value family_key = STRING_L_VAL("family", 4);
+    b_value family_key = STRING_L_VAL("family", 6);
     push(vm, family_key); // gc protect
 
     dict_add_entry(vm, dict, address_key,STRING_VAL(ip));
@@ -416,7 +416,7 @@ CREATE_MODULE_LOADER(socket) {
       {"_error", false, GET_MODULE_METHOD(socket__error)},
       {"_close", false, GET_MODULE_METHOD(socket__close)},
       {"_shutdown", false, GET_MODULE_METHOD(socket__shutdown)},
-      {"_getsockname", false, GET_MODULE_METHOD(socket__getsockname)},
+      {"_getsockinfo", false, GET_MODULE_METHOD(socket__getsockinfo)},
       {NULL, false, NULL},
   };
 

@@ -26,20 +26,6 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   object->next = vm->objects;
   vm->objects = object;
 
-  if(vm->protecting_gc) {
-    if (vm->gc_protected_capacity < vm->gc_protected_count + 1) {
-      vm->gc_protected_capacity = GROW_CAPACITY(vm->gc_protected_capacity);
-      vm->gc_protected =
-          (b_obj **)realloc(vm->gc_protected, sizeof(b_obj *) * vm->gc_protected_capacity);
-
-      if (vm->gc_protected == NULL) {
-        fprintf(stderr, "VM encountered an error");
-        exit(1);
-      }
-    }
-    vm->gc_protected[vm->gc_protected_count++] = object;
-  }
-
 #if defined DEBUG_LOG_GC && DEBUG_LOG_GC
   printf("%p allocate %ld for %d\n", (void *)object, size, type);
 #endif

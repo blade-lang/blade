@@ -417,13 +417,6 @@ void init_vm(b_vm *vm) {
   vm->gray_capacity = 0;
   vm->gray_stack = NULL;
 
-  vm->gc_protected = NULL;
-
-  vm->protecting_gc = false;
-  vm->gc_protected_count = 0;
-  vm->gc_protected_capacity = 0;
-  vm->gc_protection_scope = -1;
-
   init_table(&vm->strings);
   init_table(&vm->globals);
 
@@ -455,25 +448,6 @@ void free_vm(b_vm *vm) {
   free_table(vm, &vm->methods_dict);
   free_table(vm, &vm->methods_file);
   free_table(vm, &vm->methods_bytes);
-}
-
-void gc_start_protect(b_vm *vm) {
-  vm->protecting_gc = true;
-  vm->gc_protection_scope++;
-}
-
-void gc_stop_protection(b_vm *vm) {
-  if(vm->gc_protected != NULL && vm->gc_protection_scope > -1) {
-    vm->gc_protection_scope--;
-
-    if(vm->gc_protection_scope == -1) {
-      free(vm->gc_protected);
-      vm->gc_protected = NULL;
-      vm->protecting_gc = false;
-      vm->gc_protected_count = 0;
-      vm->gc_protected_capacity = 0;
-    }
-  }
 }
 
 static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
@@ -567,18 +541,15 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
     }
 
     case OBJ_NATIVE: {
-      /*gc_start_protect(vm);*/
       b_native_fn native = AS_NATIVE(callee)->function;
       b_value result = native(vm, arg_count, vm->stack_top - arg_count);
 
       if (IS_EMPTY(result)) {
-        /*gc_stop_protection(vm);*/
         return false;
       }
 
       vm->stack_top -= arg_count + 1;
       push(vm, result);
-      /*gc_stop_protection(vm);*/
       return true;
     }
 
