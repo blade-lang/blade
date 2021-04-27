@@ -270,13 +270,6 @@ static void mark_roots(b_vm *vm) {
   for (b_value *slot = vm->stack; slot < vm->stack_top; slot++) {
     mark_value(vm, *slot);
   }
-
-  /*// trace gc protected objects next
-  while (vm->gc_protected_count > 0) {
-    b_obj *object = vm->gc_protected[--vm->gc_protected_count];
-    mark_object(vm, object);
-  }*/
-
   for (int i = 0; i < vm->frame_count; i++) {
     mark_object(vm, (b_obj *)vm->frames[i].function);
   }

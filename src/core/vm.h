@@ -60,13 +60,6 @@ struct s_vm {
   b_table methods_file;
   b_table methods_bytes;
 
-  // gc protection
-  b_obj **gc_protected;
-  int gc_protected_capacity;
-  int gc_protected_count;
-  bool protecting_gc;
-  int gc_protection_scope;
-
   // repl flag
   bool is_repl;
 };

@@ -382,7 +382,7 @@ class Socket {
     self.is_blocking = mode
   }
 
-  name() {
-    return self._getsockname(self.socket_id)
+  info() {
+    return self._getsockinfo(self.socket_id)
   }
 }
