@@ -10,19 +10,19 @@ var SEEK_SET = 0
 var SEEK_CUR = 1
 var SEEK_END = 2
 
-# TTY flags
-var TTY_IFLAG = 0
-var TTY_OFLAG = 1
-var TTY_CFLAG = 2
-var TTY_LFLAG = 3
-var TTY_ISPEED = 4
-var TTY_OSPEED = 5
-
 /**
  * an interface to TTY terminals
  * this class contains definitions to control TTY terminals
  */
 class TTY {
+
+  # TTY flags
+  static var TTY_IFLAG = 0
+  static var TTY_OFLAG = 1
+  static var TTY_CFLAG = 2
+  static var TTY_LFLAG = 3
+  static var TTY_ISPEED = 4
+  static var TTY_OSPEED = 5
 
   # input flags for input processing
   static var IGNBRK   = 0x00000001      # ignore BREAK condition 
@@ -95,13 +95,13 @@ class TTY {
   */
   TTY(std) {
     if !is_file(std) {
-      die Exception('TTY expects a standard file as argument, ' + type(std) + ' given')
+      die Exception('TTY expects a standard file as argument, ${typeof(std)} given')
     }
 
     self.std = std
 
     # retain a copy of TTY's default attr as at when TTY() was first called
-    self.default_attr = nil
+    self.default_attr = self.get_attr()
   }
 
   # stub method for native declared _tcsetattr, _tcgetattr and _flush
@@ -146,6 +146,10 @@ class TTY {
   - Note that this flags will be merged and not overwritten
   */
   set_attr(option, attrs) {
+    if !is_int(option) 
+      die Exception('integer expected as first argument, ${typeof(option)} given')
+    if !is_dict(attrs) 
+      die Exception('dictionary expected as second argument, ${typeof(attrs)} given')
     return self._tcsetattr(self.std, option, attrs)
   }
 
@@ -154,7 +158,7 @@ class TTY {
   sets the current tty to raw mode
   */
   set_raw() {
-    var new_attr = self.get_attr()
+    var new_attr = self.default_attr
 
     new_attr[TTY.TTY_IFLAG] = new_attr[TTY.TTY_IFLAG] & ~(TTY.IGNBRK | TTY.BRKINT | TTY.PARMRK | TTY.ISTRIP | TTY.INLCR | TTY.IGNCR | TTY.ICRNL | TTY.IXON)
     new_attr[TTY.TTY_OFLAG] = new_attr[TTY.TTY_OFLAG] & ~TTY.OPOST
@@ -170,7 +174,6 @@ class TTY {
   disables the raw mode flags on the current tty
   */
   exit_raw() {
-    echo self.default_attr
     return self.set_attr(TTY.TCSAFLUSH, self.default_attr)
   }
 
@@ -231,3 +234,19 @@ def putc(c) {}
  * @returns char or string
  */
 def getc() {}
+
+/**
+ * readline()
+ *
+ * reads an entire line from standard input
+ * @returns string
+ */
+def readline() {
+  var result = ''
+  var input
+
+  while (input = stdin().read()) and input != '\n' and input != '\0'
+    result += input
+
+  return result
+}

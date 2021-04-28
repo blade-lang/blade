@@ -26,19 +26,19 @@ debug:
 
 
 test:
-	@ ./birdd tests/$(call args,main).b
+	@ ./build/birdd tests/$(call args,main).b
 
 # test for release
 rtest:
-	@ ./bird tests/$(call args,main).b
+	@ ./build/bird tests/$(call args,main).b
 
 # module test
 ltest:
-	@ ./birdd tests/libs/$(call args,main).b
+	@ ./build/birdd tests/libs/$(call args,main).b
 
 # module release test
 gtest:
-	@ ./bird tests/libs/$(call args,main).b
+	@ ./build/bird tests/libs/$(call args,main).b
 
 tests:
 	@ bash run-tests.sh
