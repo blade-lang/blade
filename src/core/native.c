@@ -2,6 +2,10 @@
 #include "btime.h"
 #include "vm.h"
 
+#ifdef _WIN32
+#include "win32.h"
+#endif
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

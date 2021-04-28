@@ -70,8 +70,7 @@ int uname(struct utsname *sys);
 char *dirname(char *path);
 char *basename(char *path);
 
-
-#define errno h_errno
+//#define errno h_errno
 
 #endif
 

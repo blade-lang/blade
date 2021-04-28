@@ -1,5 +1,6 @@
 #include "socket.h"
 #include "compat/unistd.h"
+#include "pathinfo.h"
 
 #ifndef _WIN32
 #include <sys/socket.h>
@@ -17,16 +18,15 @@
 #include <fcntl.h>
 
 #ifdef _WIN32
+
+#define _WINSOCK_DEPRECATED_NO_WARNINGS 1
+
+#include <ws2tcpip.h>
 #include "win32.h"
 #pragma comment (lib, "ws2_32") /* winsock support */
-#include "getopt.h"
+#include "compat/getopt.h"
 #define sleep			_sleep
 #define strcasecmp		strcmpi
-#define EADDRINUSE		WSAEADDRINUSE
-#define ETIMEDOUT		WSAETIMEDOUT
-#define EINPROGRESS		WSAEINPROGRESS
-#define EWOULDBLOCK		WSAEWOULDBLOCK
-#define EAGAIN		WSAEAGAIN
 #define ioctl ioctlsocket
 #endif
 
@@ -86,8 +86,13 @@ DECLARE_MODULE_METHOD(socket__connect) {
     FD_SET(sock, &read_set);//tcp socket
   }
 
+#ifndef _WIN32
   long arg = O_NONBLOCK;
   fcntl(sock, F_SETFL, arg);
+#else
+  unsigned long arg = 1;
+  ioctlsocket(sock, FIONBIO, &arg);
+#endif
 
   if(connect(sock, (struct sockaddr *)&remote, sizeof(struct sockaddr_in)) == -1) {
     if(errno != EINPROGRESS) {
@@ -105,8 +110,13 @@ DECLARE_MODULE_METHOD(socket__connect) {
     getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
     if (so_error == 0) {
       if(is_blocking) {
+#ifndef _WIN32
         arg &= (~O_NONBLOCK);
         fcntl(sock, F_SETFL, arg);
+#else
+          unsigned long arg = 0;
+          ioctlsocket(sock, FIONBIO, &arg);
+#endif
       }
       RETURN_NUMBER(so_error);
     } else {
@@ -360,7 +370,7 @@ DECLARE_MODULE_METHOD(socket__getsockinfo) {
   int sock = AS_NUMBER(args[0]);
 
   struct sockaddr_in address;
-  bzero(&address, sizeof(address));
+  memset(&address, 0, sizeof(address));
 
   int length = sizeof address;
   if(getsockname(sock, (struct sockaddr *)&address, (socklen_t*)&length) >= 0) {

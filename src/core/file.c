@@ -561,7 +561,12 @@ DECLARE_FILE_METHOD(chmod) {
 
   if (file_exists(file->path->chars)) {
     int mode = AS_NUMBER(args[0]);
-    RETURN_STATUS(chmod(file->path->chars, (mode_t) mode));
+
+#ifndef _WIN32
+    RETURN_STATUS(chmod(file->path->chars, (mode_t)mode));
+#else
+    RETURN_STATUS(_chmod(file->path->chars, (mode_t)mode));
+#endif // !_WIN32
   } else {
     RETURN_ERROR("file not found");
   }

@@ -1,7 +1,7 @@
 #include "common.h"
 #include "util.h"
 
-#ifdef IS_WINDOWS
+#ifdef _WIN32
 
 #include "win32.h"
 #include <lm.h>

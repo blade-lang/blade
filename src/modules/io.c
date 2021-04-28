@@ -716,7 +716,7 @@ DECLARE_NATIVE(io_putc) {
   b_obj_string *string = AS_STRING(args[0]);
 
   int count = string->length;
-#ifdef IS_WINDOWS
+#ifdef _WIN32
   if (count > 32767 && isatty(STDIN_FILENO)) {
     /* Issue #11395: the Windows console returns an error (12: not
        enough space error) on writing into stdout if stdout mode is
