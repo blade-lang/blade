@@ -15,6 +15,10 @@ def highlight(str) {
   return str.replace(regex, '\x1b[32m$1\x1b[0m')
 }
 
+# go full screen by clearning output
+# stdout().write("\x1b[2J");
+# stdout().write("\x1b[H");
+
 print('\x1b[33m')
 print('A simple TTY implementation for Birdy io module demonstration')
 print('Note that your cursor can move left and right.')
