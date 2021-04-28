@@ -259,7 +259,7 @@ static void init_builtin_functions(b_vm *vm) {
   DEFINE_NATIVE(to_list);
   DEFINE_NATIVE(to_number);
   DEFINE_NATIVE(to_string);
-  DEFINE_NATIVE(type);
+  DEFINE_NATIVE(typeof);
 }
 
 static void init_builtin_methods(b_vm *vm) {
