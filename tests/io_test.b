@@ -45,9 +45,9 @@ while s = stdin().read() {
     break
   } else if ord(s) >= 32 and ord(s) <= 126 {
     if index < input.length()
-      input = input[0,index] + s + input[index,-1]
+      input = input[0,index] + s + input[index, input.length()]
     else
-      input = input[0,index] + s
+      input += s
     index++
   } else if [10, 13].contains(ord(s)) { # enter key
     stdout().write('\x1b[1000D\n')
@@ -70,19 +70,25 @@ while s = stdin().read() {
           input = history[history_index]
           index = input.length()
           history_index--
+        } else {
+          input = ''
+          index = 0
         }
       } else if next2 == 66 { # down
         if history_index < history.length() - 1 {
           history_index++
           input = history[history_index]
           index = input.length()
+        } else {
+          input = ''
+          index = 0
         }
       }
     }
   } else if ord(s) == 127 { # backspace
     if input.length() > 0 {
       if index < input.length()
-        input = input[0,index - 1] + input[index,-1]
+        input = input[0,index - 1] + input[index,input.length()]
       else
         input = input[0,index - 1]
       index--
@@ -98,4 +104,8 @@ while s = stdin().read() {
     stdout().write('\x1b[' + index + 'C')
   stdout().flush()
 }
-echo '\n'
+
+# Clear the terminal (classic Nano and Vim style)
+stdout().write("\x1b[2J");
+stdout().write("\x1b[H");
+stdout().flush()

@@ -546,6 +546,11 @@ HANDLE getHandle() { return com.hComm; }
 
 #endif
 
+struct termios orig_termios;
+void disable_raw_mode() {
+  tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+}
+
 /**
  * tty._tcgetattr()
  *
@@ -561,15 +566,12 @@ DECLARE_MODULE_METHOD(io_tty__tcgetattr) {
     RETURN_ERROR("can only use tty on std objects");
   }
 
-  struct termios raw_attr;
+  struct termios raw_attr = orig_termios;
   int status;
-  if ((status = tcgetattr(fileno(file->file), &raw_attr)) != 0) {
-    switch (status) {
-      case ENOTTY: RETURN_ERROR("stdin is not a TTY");
-      case EBADF: RETURN_ERROR("stdin is a bad file descriptor");
-    }
-    RETURN;
+  if ((status = tcgetattr(fileno(file->file), &orig_termios)) != 0) {
+    RETURN_ERROR(strerror(status));
   }
+  atexit(disable_raw_mode);
 
   // we have our attributes already
   b_obj_dict *dict = new_dict(vm);
@@ -626,8 +628,8 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
   b_value iflag = NIL_VAL, oflag = NIL_VAL, cflag = NIL_VAL, lflag = NIL_VAL,
       ispeed = NIL_VAL, ospeed = NIL_VAL;
 
-  struct termios raw;
-  tcgetattr(fileno(file->file), &raw);
+
+  struct termios raw = orig_termios;
 
   if (dict_get_entry(dict, NUMBER_VAL(0), &iflag)) {
     raw.c_iflag = (long) AS_NUMBER(iflag);
@@ -648,7 +650,10 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
     raw.c_ospeed = (long) AS_NUMBER(ospeed);
   }
 
-  RETURN_BOOL(tcsetattr(fileno(file->file), type, &raw) != -1);
+  bool is_set = tcsetattr(fileno(file->file), type, &raw) != -1;
+//  atexit(disable_raw_mode);
+
+  RETURN_BOOL(is_set);
 }
 
 /**
