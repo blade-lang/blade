@@ -20,49 +20,13 @@
 
 #define FILE_ERROR(type, message)                                              \
   file_close(file);                                                            \
-  RETURN_ERROR("File" #type "Exception: " message ": %s", file->path->chars);
+  RETURN_ERROR("File" #type "Exception: %s", message, file->path->chars);
 
-#define RETURN_STATUS(status)                                                  \
-  switch (status) {                                                            \
-  case EACCES:                                                                 \
-    FILE_ERROR(Permission, "permission denied");                               \
-    break;                                                                     \
-  case EBUSY:                                                                  \
-    FILE_ERROR(Operation, "file in use by the system or some other process");  \
-    break;                                                                     \
-  case ELOOP:                                                                  \
-    FILE_ERROR(Operation, "loop exists in symbolic links");                    \
-    break;                                                                     \
-  case ENAMETOOLONG:                                                           \
-    FILE_ERROR(Operation, "path name is too long");                            \
-    break;                                                                     \
-  case ENOENT:                                                                 \
-    FILE_ERROR(Access, "file no longer exist");                                \
-    break;                                                                     \
-    break;                                                                     \
-  case EPERM:                                                                  \
-    FILE_ERROR(Operation, "specified file is a directory");                    \
-    break;                                                                     \
-  case EROFS:                                                                  \
-    FILE_ERROR(Access, "file is on a read-only file system");                  \
-    break;                                                                     \
-  case EISDIR:                                                                 \
-    FILE_ERROR(Operation, "target is a directory when source is not");         \
-    break;                                                                     \
-  case EIO:                                                                    \
-    FILE_ERROR(Operation, "physical i/o error");                               \
-    break;                                                                     \
-  case EINVAL:                                                                 \
-    FILE_ERROR(Access, "invalid path");                                        \
-    break;                                                                     \
-  case EXDEV:                                                                  \
-    FILE_ERROR(Operation, "different filesystem operations");                  \
-    break;                                                                     \
-  case ETXTBSY:                                                                \
-    FILE_ERROR(Operation, "file in use");                                      \
-    break;                                                                     \
-  default:                                                                     \
-    RETURN_TRUE;                                                               \
+#define RETURN_STATUS(status) \
+  if((status) == 0) { \
+    RETURN_TRUE;                                            \
+  } else {                                      \
+   FILE_ERROR(, strerror(errno));  \
   }
 
 #define DENY_STD()                                                             \
