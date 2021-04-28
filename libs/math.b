@@ -209,7 +209,7 @@ class Math {
 
   # return true if x is neither an Infinity nor a NaN, and false otherwise
   static is_finite(n) {
-    return !is_inf(n) and !is_nan(n)
+    return !Math.is_inf(n) and !Math.is_nan(n)
   }
 
   # returns the integer part of a number by removing any fractional

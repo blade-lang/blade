@@ -139,17 +139,17 @@ class Socket {
   # constructor...
   # called without parameters, is same as
   # Socket(Socket.AF_INET, Socket.SOCK_STREAM, 0)
-  Socket(family, type_, flags) {
+  Socket(family, type, flags) {
     if family self.family = family
-    if type_ self.type = type_
+    if type self.type = type
     if flags self.flags = flags
 
     if !is_int(self.family) 
-      die SocketException('AF_* expected for family, ${type(self.family)} given')
+      die SocketException('AF_* expected for family, ${typeof(self.family)} given')
     if !is_int(self.type) 
-      die SocketException('SOCK_* expected for type, ${type(self.type)} given')
+      die SocketException('SOCK_* expected for type, ${typeof(self.type)} given')
     if !is_int(self.flags) 
-      die SocketException('integer expected for flags, ${type(self.flags)} given')
+      die SocketException('integer expected for flags, ${typeof(self.flags)} given')
 
     var id = self._create(self.family, self.type, self.flags)
     if id == -1 die SocketException('could not create socket')
@@ -185,11 +185,11 @@ class Socket {
 
     if !port die SocketException('port not specified')
     if !is_string(host) 
-      die SocketException('string expected for host, ${type(host)} given')
+      die SocketException('string expected for host, ${typeof(host)} given')
     if !is_int(port) 
-      die SocketException('integer expected for port, ${type(port)} given')
+      die SocketException('integer expected for port, ${typeof(port)} given')
     if !is_int(timeout) 
-      die SocketException('integer expected for timeout, ${type(timeout)} given')
+      die SocketException('integer expected for timeout, ${typeof(timeout)} given')
 
     if self.socket_id == -1 or self.is_closed die SocketException('socket is in an illegal state')
 
@@ -210,9 +210,9 @@ class Socket {
 
     if !port die SocketException('port not specified')
     if !is_string(host) 
-      die SocketException('string expected for host, ${type(host)} given')
+      die SocketException('string expected for host, ${typeof(host)} given')
     if !is_int(port) 
-      die SocketException('integer expected for port, ${type(port)} given')
+      die SocketException('integer expected for port, ${typeof(port)} given')
 
     if self.socket_id == -1 or self.is_closed die SocketException('socket is in an illegal state')
 
@@ -236,7 +236,7 @@ class Socket {
     if !is_string(message) and !is_bytes(message) and !is_file(message) 
       die SocketException('message must string, bytes or file')
     if !is_int(flags) 
-      die SocketException('integer expected for flags, ${type(flags)} given')
+      die SocketException('integer expected for flags, ${typeof(flags)} given')
 
     if self.socket_id == -1 or self.is_closed or (self.is_shutdown and 
       (self.shutdown_reason == Socket.SHUT_WR or 
@@ -254,9 +254,9 @@ class Socket {
     if !flags flags = 0
 
     if !is_int(length) 
-      die SocketException('integer expected for length, ${type(length)} given')
+      die SocketException('integer expected for length, ${typeof(length)} given')
     if !is_int(flags) 
-      die SocketException('integer expected for flags, ${type(flags)} given')
+      die SocketException('integer expected for flags, ${typeof(flags)} given')
 
     if self.socket_id == -1 or self.is_closed or (self.is_shutdown and 
       (self.shutdown_reason == Socket.SHUT_RD or 
@@ -276,7 +276,7 @@ class Socket {
     if !queue_length queue_length = Socket.SOMAXCONN # default to 1024 simulataneous clients...
 
     if !is_int(queue_length) 
-      die SocketException('integer expected for queue_length, ${type(queue_length)} given')
+      die SocketException('integer expected for queue_length, ${typeof(queue_length)} given')
     if queue_length > Socket.SOMAXCONN 
       die SocketException('maximum queue length of ${Socket.SOMAXCONN} exceeded')
 
@@ -316,7 +316,7 @@ class Socket {
     if !how how = Socket.SHUT_RD
     
     if !is_int(how) 
-      die SocketException('integer expected for how, ${type(how)} given')
+      die SocketException('integer expected for how, ${typeof(how)} given')
 
     if how < Socket.SHUT_RD or how > Socket.SHUT_RDWR
       die SocketException('expected one of Socket.SHUT_* flags')
@@ -342,7 +342,7 @@ class Socket {
     if !option or !value 
       die SocketException('both option and value are required')
     if !is_int(option) 
-      die SocketException('integer expected for option, ${type(option)} given')
+      die SocketException('integer expected for option, ${typeof(option)} given')
     if option < Socket.SO_DEBUG or option > Socket.SO_TYPE # @TODO: update SO_TYPE as options increase
       die SocketException('expected one of Socket.SO_* options')
 
@@ -365,7 +365,7 @@ class Socket {
       return nil
 
     if !is_int(option) 
-      die SocketException('integer expected for option, ${type(option)} given')
+      die SocketException('integer expected for option, ${typeof(option)} given')
     if option < Socket.SO_DEBUG or option > Socket.SO_TYPE # @TODO: update SO_TYPE as options increase
       die SocketException('expected one of Socket.SO_* options')
 
