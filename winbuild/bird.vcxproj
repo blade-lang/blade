@@ -41,13 +41,26 @@
     <ClCompile Include="..\src\core\vm.c" />
     <ClCompile Include="..\src\core\win32.c" />
     <ClCompile Include="..\src\modules\base64.c" />
+    <ClCompile Include="..\src\modules\date.c" />
+    <ClCompile Include="..\src\modules\http.c" />
     <ClCompile Include="..\src\modules\io.c" />
     <ClCompile Include="..\src\modules\math.c" />
-    <ClCompile Include="..\src\modules\mtime.c" />
     <ClCompile Include="..\src\modules\os.c" />
+    <ClCompile Include="..\src\modules\socket.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\modules\mtime.h" />
+    <ClInclude Include="..\deps\includes\curl\curl.h" />
+    <ClInclude Include="..\deps\includes\curl\curlver.h" />
+    <ClInclude Include="..\deps\includes\curl\easy.h" />
+    <ClInclude Include="..\deps\includes\curl\mprintf.h" />
+    <ClInclude Include="..\deps\includes\curl\multi.h" />
+    <ClInclude Include="..\deps\includes\curl\options.h" />
+    <ClInclude Include="..\deps\includes\curl\stdcheaders.h" />
+    <ClInclude Include="..\deps\includes\curl\system.h" />
+    <ClInclude Include="..\deps\includes\curl\typecheck-gcc.h" />
+    <ClInclude Include="..\deps\includes\curl\urlapi.h" />
+    <ClInclude Include="..\src\modules\date.h" />
+    <ClInclude Include="..\src\modules\http.h" />
     <ClInclude Include="..\deps\includes\pcre2.h" />
     <ClInclude Include="..\src\core\blob.h" />
     <ClInclude Include="..\src\core\btime.h" />
@@ -80,6 +93,7 @@
     <ClInclude Include="..\src\modules\io.h" />
     <ClInclude Include="..\src\modules\math.h" />
     <ClInclude Include="..\src\modules\os.h" />
+    <ClInclude Include="..\src\modules\socket.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -145,6 +159,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <VcpkgUseStatic>false</VcpkgUseStatic>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -172,7 +189,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>..\deps\lib\pcre2\windows\x64\pcre2-8.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\deps\lib\windows\x64\pcre2-8.lib;..\deps\lib\windows\x64\libcurl.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -210,7 +227,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalDependencies>..\deps\lib\pcre2\windows\x64\pcre2-8.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\deps\lib\windows\x64\pcre2-8.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ManifestFile>$(IntDir)$(TargetName)$(TargetExt).manifest</ManifestFile>
       <LinkTimeCodeGeneration>UseFastLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>

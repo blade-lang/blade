@@ -30,7 +30,6 @@
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 #define IS_UNIX
 #elif defined _WIN32
-#define
 // #define NO_OLDNAMES
 #endif
 

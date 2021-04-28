@@ -1,6 +1,10 @@
 #include "date.h"
 #include "btime.h"
 
+#ifdef _WIN32
+#include "win32.h"
+#endif
+
 #include <time.h>
 
 #define ADD_TIME(n, l, v)                                                      \
@@ -78,11 +82,18 @@ DECLARE_MODULE_METHOD(date__localtime) {
   ADD_TIME("microseconds", 12, (double) raw_time.tv_usec);
 
   ADD_B_TIME("is_dst", 6, time_info->tm_isdst == 1 ? true : false);
-  // set time zone
-  ADD_S_TIME("zone", 4, time_info->tm_zone, (int) strlen(time_info->tm_zone));
 
+#ifndef _WIN32
+  // set time zone
+  ADD_S_TIME("zone", 4, time_info->tm_zone, (int)strlen(time_info->tm_zone));
   // setting gmt offset
   ADD_TIME("gmt_offset", 10, time_info->tm_gmtoff);
+#else
+  // set time zone
+  ADD_S_TIME("zone", 4, "", 0);
+  // setting gmt offset
+  ADD_TIME("gmt_offset", 10, 0);
+#endif
 
   pop(vm);
   RETURN_OBJ(dict);
@@ -111,11 +122,18 @@ DECLARE_MODULE_METHOD(date__gmtime) {
   ADD_TIME("microseconds", 12, (double) raw_time.tv_usec);
 
   ADD_B_TIME("is_dst", 6, time_info->tm_isdst == 1 ? true : false);
-  // set time zone
-  ADD_S_TIME("zone", 4, time_info->tm_zone, (int) strlen(time_info->tm_zone));
 
+#ifndef _WIN32
+  // set time zone
+  ADD_S_TIME("zone", 4, time_info->tm_zone, (int)strlen(time_info->tm_zone));
   // setting gmt offset
   ADD_TIME("gmt_offset", 10, time_info->tm_gmtoff);
+#else
+  // set time zone
+  ADD_S_TIME("zone", 4, "", 0);
+  // setting gmt offset
+  ADD_TIME("gmt_offset", 10, 0);
+#endif
 
   pop(vm);
   RETURN_OBJ(dict);
