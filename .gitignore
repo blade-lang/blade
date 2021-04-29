@@ -24,3 +24,4 @@ birdd.exe
 bird.exe
 *.dll
 *.stackdump
+tmp

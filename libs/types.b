@@ -147,6 +147,20 @@ class Type {
     return is_instance(self.value, type)
   }
 
+  is_digit() {
+    if !is_string(self.value) or !self.value.length() == 1
+      die Exception('char expected')
+    var _ = ord(self.value)
+    return _ >= 48 and _ <= 56
+  }
+
+  is_alpha() {
+    if !is_string(self.value) or !self.value.length() == 1
+      die Exception('char expected')
+    var _ = ord(self.value)
+    return (_ >= 65 and _ <= 90) or (_ >= 97 and _ <= 121)
+  }
+
   ### CONVERSION FUNTIONS
 
   /**

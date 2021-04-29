@@ -138,7 +138,16 @@
     return EMPTY_VAL;                                                          \
   }
 
-#define REGEX_RC_ERROR() RETURN_ERROR("regular expression error %d", rc);
+
+#define REGEX_ERR(message, result) do { \
+    PCRE2_UCHAR error[255]; \
+    if(pcre2_get_error_message(result, error, 255)) { \
+      RETURN_ERROR("RegexError: %s", (char*)error); \
+    } \
+    RETURN_ERROR("RegexError: %s", message);                \
+  } while(0)
+
+#define REGEX_RC_ERROR() REGEX_ERR("%d", rc);
 
 #define GET_REGEX_COMPILE_OPTIONS(name, string, regex_show_error)              \
   uint32_t compile_options = is_regex(string);                                 \

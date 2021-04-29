@@ -696,6 +696,12 @@ static void literal(b_parser *p, bool can_assign) {
 
 static void parse_assignment(b_parser *p, uint8_t real_op, uint8_t get_op,
                              uint8_t set_op, int arg) {
+  if (p->self_active) {
+    // we are doing something like self.property += ...
+    emit_byte_and_short(p, OP_GET_LOCAL, 0);
+    p->self_active = false; // reset
+  }
+
   if (arg != -1) {
     emit_byte_and_short(p, get_op, arg);
   } else {
@@ -796,6 +802,11 @@ static void named_variable(b_parser *p, b_token name, bool can_assign) {
   if (arg != -1) {
     get_op = OP_GET_LOCAL;
     set_op = OP_SET_LOCAL;
+
+    if(arg == 0) {
+      // we are working with the self keyword
+      p->self_active = true;
+    }
   } else if ((arg = resolve_up_value(p, p->compiler, &name)) != -1) {
     get_op = OP_GET_UP_VALUE;
     set_op = OP_SET_UP_VALUE;
@@ -1721,15 +1732,15 @@ static void for_statement(b_parser *p) {
  * }
  */
 /* static void using_statement(b_parser *p) {
-  p->using_count++;
+  p->self_active++;
 
   char *using_name_chars = (char *)calloc(
       // fixed abort trap 6 on release
-      snprintf(NULL, 0, " using%d ", p->using_count), //
+      snprintf(NULL, 0, " using%d ", p->self_active), //
       sizeof(char));
 
   int using_name_length =
-      sprintf(using_name_chars, " using%d ", p->using_count);
+      sprintf(using_name_chars, " using%d ", p->self_active);
 
   int using_name = make_constant(
       p, OBJ_VAL(copy_string(p->vm, using_name_chars, using_name_length)));
@@ -2165,7 +2176,7 @@ b_obj_func *compile(b_vm *vm, const char *source, const char *file,
   parser.compiler = NULL;
   parser.current_class = NULL;
   parser.current_file = file;
-  parser.using_count = -1;
+  parser.self_active = false;
 
   b_compiler compiler;
   init_compiler(&parser, &compiler, TYPE_SCRIPT);
