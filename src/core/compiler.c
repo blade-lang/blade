@@ -901,7 +901,7 @@ static void parent(b_parser *p, bool can_assign) {
     error(p, "cannot use keyword 'parent' in a class without a parent");
   }
 
-  consume(p, DOT_TOKEN, "expected . after super");
+  consume(p, DOT_TOKEN, "expected . after parent");
   consume(p, IDENTIFIER_TOKEN, "expected parent class method name after .");
   int name = identifier_constant(p, &p->previous);
 
@@ -909,11 +909,11 @@ static void parent(b_parser *p, bool can_assign) {
 
   if (match(p, LPAREN_TOKEN)) {
     uint8_t arg_count = argument_list(p);
-    named_variable(p, synthetic_token("parent"), false);
+//    named_variable(p, synthetic_token("parent"), false);
     emit_byte_and_short(p, OP_SUPER_INVOKE, name);
     emit_byte(p, arg_count);
   } else {
-    named_variable(p, synthetic_token("parent"), false);
+//    named_variable(p, synthetic_token("parent"), false);
     emit_byte_and_short(p, OP_GET_SUPER, name);
   }
 }
