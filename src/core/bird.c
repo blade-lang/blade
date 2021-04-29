@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #if !defined _WIN32 && !defined __CYGWIN__
 
@@ -132,6 +133,7 @@ static void repl(b_vm *vm) {
 static void run_file(b_vm *vm, const char *file) {
   char *source = read_file(file);
   if (source == NULL) {
+    fprintf(stderr, "(Bird):\n  Launch aborted for %s\n  Reason: %s\n", file, strerror(errno));
     exit(74);
   }
 

@@ -749,8 +749,12 @@ static void print_exception(b_vm *vm, b_obj_instance *exception) {
                 &trace)) {
     fprintf(stderr, "Unhandled Exception: %s: %s\n",
             exception->klass->name->chars, value_to_string(vm, message));
-    call_value(vm, trace, 0);
-    fprintf(stderr, "%s\n", AS_C_STRING(pop(vm)));
+    if(call_value(vm, trace, 0)) {
+      // while value to string may be heavy here, we can't make
+      // any assumption that the user will not try to override
+      // the trace method and return a value we do not anticipate.
+      fprintf(stderr, "%s\n", value_to_string(vm, pop(vm)));
+    }
     vm->frame_count = 0;
   } else {
     _runtime_error(vm, "invalid Exception or Exception subclass instance");
@@ -1710,8 +1714,8 @@ b_ptr_result run(b_vm *vm) {
     }
     case OP_GET_SUPER: {
       b_obj_string *name = READ_STRING();
-      b_obj_class *superclass = AS_CLASS(pop(vm));
-      if (!bind_method(vm, superclass, name)) {
+      b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
+      if (!bind_method(vm, instance->klass->superclass, name)) {
         EXIT_VM();
       }
       break;
@@ -1719,8 +1723,8 @@ b_ptr_result run(b_vm *vm) {
     case OP_SUPER_INVOKE: {
       b_obj_string *method = READ_STRING();
       int arg_count = READ_BYTE();
-      b_obj_class *superclass = AS_CLASS(pop(vm));
-      if (!invoke_from_class(vm, superclass, method, arg_count)) {
+      b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
+      if (!invoke_from_class(vm, instance->klass->superclass, method, arg_count)) {
         EXIT_VM();
       }
       frame = &vm->frames[vm->frame_count - 1];
