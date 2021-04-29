@@ -81,7 +81,7 @@ typedef struct {
   int innermost_loop_scope_depth;
 
   //
-  int using_count;
+  bool self_active;
 } b_parser;
 
 typedef void (*b_parse_fn)(b_parser *, bool);

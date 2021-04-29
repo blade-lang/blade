@@ -463,7 +463,7 @@ DECLARE_NATIVE(to_dict) {
  */
 DECLARE_NATIVE(chr) {
   ENFORCE_ARG_COUNT(chr, 1);
-  ENFORCE_ARG_TYPE(char, 0, IS_NUMBER);
+  ENFORCE_ARG_TYPE(chr, 0, IS_NUMBER);
   char *string = utf8_encode((int) AS_NUMBER(args[0]));
   RETURN_STRING(string);
 }
@@ -475,7 +475,7 @@ DECLARE_NATIVE(chr) {
  */
 DECLARE_NATIVE(ord) {
   ENFORCE_ARG_COUNT(ord, 1);
-  ENFORCE_ARG_TYPE(char, 0, IS_STRING);
+  ENFORCE_ARG_TYPE(ord, 0, IS_STRING);
   b_obj_string *string = AS_STRING(args[0]);
 
   int max_length = string->length > 1 && (int) string->chars[0] < 1 ? 3 : 1;
