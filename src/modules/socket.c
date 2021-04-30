@@ -114,7 +114,7 @@ DECLARE_MODULE_METHOD(socket__connect) {
         arg &= (~O_NONBLOCK);
         fcntl(sock, F_SETFL, arg);
 #else
-          unsigned long arg = 0;
+        unsigned long arg = 0;
           ioctlsocket(sock, FIONBIO, &arg);
 #endif
       }
@@ -285,7 +285,7 @@ DECLARE_MODULE_METHOD(socket__setsockopt) {
 #else
       int milliseconds = AS_NUMBER(value);
       struct timeval tv = {(long)(milliseconds /  1000),
-          (int)((milliseconds % 1000) * 1000)};
+                           (int)((milliseconds % 1000) * 1000)};
 
       RETURN_NUMBER(setsockopt(sock, SOL_SOCKET, option, (const char*)&tv, sizeof tv));
 #endif
@@ -305,21 +305,6 @@ DECLARE_MODULE_METHOD(socket__getsockopt) {
 
   int sock = AS_NUMBER(args[0]);
   int option = AS_NUMBER(args[1]);
-
-
-  /*int so_error;
-  socklen_t len = sizeof so_error;
-
-  getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
-  if (so_error == 0) {
-    if(is_blocking) {
-      arg &= (~O_NONBLOCK);
-      fcntl(sock, F_SETFL, arg);
-    }
-    RETURN_NUMBER(so_error);
-  } else {
-    errno = so_error;
-  }*/
 
   switch(option) {
     case SO_ERROR: {
