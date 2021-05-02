@@ -2,7 +2,7 @@
  * I/O
  *
  * provides Birdy's interface to I/O stream handling and operations
- * @copyright Ore Richard 
+ * @copyright 2021, Ore Richard Muyiwa 
  */
 
  # for file seek

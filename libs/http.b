@@ -3,7 +3,7 @@
  *
  * Provides interface for working with Http client requests
  * and servers.
- * @copyright Ore Richard
+ * @copyright 2021, Ore Richard Muyiwa
  */
 
 class HttpClient {

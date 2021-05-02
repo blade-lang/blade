@@ -118,8 +118,8 @@
 		"comments-doc": {
 			"patterns": [
 				{
-					"begin": "#",
-					"while": "^\\s*#",
+					"begin": "\/\\*",
+					"while": "^\\s*\\*\/",
 					"patterns": [
 						{
 							"include": "#birdydoc"
@@ -181,7 +181,7 @@
 					"name": "constant.numeric.birdy"
 				},
 				{
-					"match": "(?<![a-zA-Z0-9_$])([_$]*[A-Z][a-zA-Z0-9_$]*|bool\\b|num\\b|int\\b|double\\b|dynamic\\b)",
+					"match": "(?<![a-zA-Z0-9_$])([_$]*[A-Z][a-zA-Z0-9_$]*)",
 					"name": "support.class.birdy"
 				},
 				{
@@ -201,7 +201,7 @@
 					"name": "keyword.cast.birdy"
 				},
 				{
-					"match": "(?<!\\$)\\b(try|catch|finally|throw)\\b(?!\\$)",
+					"match": "(?<!\\$)\\b(try|catch|die)\\b(?!\\$)",
 					"name": "keyword.control.catch-exception.birdy"
 				},
 				{
@@ -213,7 +213,7 @@
 					"name": "keyword.control.boolean.birdy"
 				},
 				{
-					"match": "(?<!\\$)\\b(class|def)\\b(?!\\$)",
+					"match": "(?<!\\$)\\b(var|class|def)\\b(?!\\$)",
 					"name": "keyword.declaration.birdy"
 				},
 				{
@@ -265,7 +265,7 @@
 					"name": "storage.modifier.birdy"
 				},
 				{
-					"match": "(?<!\\$)\\b(?:var|echo|die|empty)\\b(?!\\$)",
+					"match": "(?<!\\$)\\b(?:echo)\\b(?!\\$)",
 					"name": "storage.type.primitive.birdy"
 				}
 			]
@@ -281,7 +281,7 @@
 							"name": "variable.parameter.birdy"
 						}
 					},
-					"match": "\\$((\\w+)|\\{([^{}]+)\\})"
+					"match": "\\$(\\{([^{}]+)\\})"
 				},
 				{
 					"match": "\\\\.",

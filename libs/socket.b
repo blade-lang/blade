@@ -3,7 +3,7 @@
  *
  * Provides interface for working with Socket clients
  * and servers.
- * @copyright Ore Richard
+ * @copyright 2021, Ore Richard Muyiwa
  */
 
 class SocketException < Exception {

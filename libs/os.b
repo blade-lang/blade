@@ -2,7 +2,7 @@
  * Bird core OS module
  * 
  * provides functionalities for interfacing with the underlying operating system
- * @copyright Bird
+ * @copyright 2021, Ore Richard Muyiwa
  */
 class Os {
 

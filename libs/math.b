@@ -2,7 +2,7 @@
  * Math
  *
  * Bird's mathematical library
- * @copyright Ore Richard
+ * @copyright 2021, Ore Richard Muyiwa
  */
 class Math {
   # Math.PI
