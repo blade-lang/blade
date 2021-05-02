@@ -3,7 +3,6 @@
     "displayName": "Bird",
     "description": "Support for the Bird programming language",
     "author": "Ore Richard Muyiwa",
-    "repository": "https://github.com/mcfriend99/bird/birdy-vscode-ext",
     "icon": "icon.png",
     "version": "0.0.1",
     "engines": {
