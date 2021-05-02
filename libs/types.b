@@ -4,7 +4,9 @@
  * Bird's type validation and conversion library
  *
  * This class is an object oriented wrapper to the builtin functions
- * @copyright Ore Richard
+ * where applicable and does and return the same thing as the builtin
+ * alternative.
+ * @copyright 2021, Ore Richard Muyiwa
  */
 class Type {
 
@@ -52,6 +54,15 @@ class Type {
    */
   is_number() {
     return is_number(self.value)
+  }
+
+  /**
+   * is_char()
+   *
+   * returns true if the value is a single character or false otherwise
+   */
+  is_char() {
+    return is_string(self.value) and self.value.length() == 1
   }
 
   /**

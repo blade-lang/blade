@@ -1,7 +1,10 @@
 {
-    "name": "birdy",
-    "displayName": "Birdy",
-    "description": "Support for the Birdy programming language",
+    "name": "bird",
+    "displayName": "Bird",
+    "description": "Support for the Bird programming language",
+    "author": "Ore Richard Muyiwa",
+    "repository": "https://github.com/mcfriend99/bird/birdy-vscode-ext",
+    "icon": "icon.png",
     "version": "0.0.1",
     "engines": {
         "vscode": "^1.44.0"
@@ -12,10 +15,10 @@
     "contributes": {
         "languages": [
             {
-                "id": "birdy",
+                "id": "bird",
                 "aliases": [
-                    "Birdy",
-                    "birdy"
+                    "Bird",
+                    "bird"
                 ],
                 "extensions": [
                     ".b"
@@ -25,9 +28,9 @@
         ],
         "grammars": [
             {
-                "language": "birdy",
-                "scopeName": "source.birdy",
-                "path": "./syntaxes/birdy.tmLanguage.json"
+                "language": "bird",
+                "scopeName": "source.bird",
+                "path": "./syntaxes/bird.tmLanguage.json"
             }
         ]
     }
