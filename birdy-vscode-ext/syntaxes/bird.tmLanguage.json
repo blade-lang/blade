@@ -1,25 +1,25 @@
 {
 	"fileTypes": [
-		"birdy"
+		"bird"
 	],
 	"foldingStartMarker": "\\{\\s*$",
 	"foldingStopMarker": "^\\s*\\}",
-	"name": "Birdy",
+	"name": "Bird",
 	"patterns": [
 		{
 			"begin": "^\\w*\\b(import)\\b",
 			"beginCaptures": {
 				"0": {
-					"name": "keyword.other.import.birdy"
+					"name": "keyword.other.import.bird"
 				}
 			},
 			"end": "\n",
 			"endCaptures": {
 				"0": {
-					"name": "punctuation.terminator.birdy"
+					"name": "punctuation.terminator.bird"
 				}
 			},
-			"name": "meta.declaration.birdy",
+			"name": "meta.declaration.bird",
 			"patterns": [
 				{
 					"include": "#strings"
@@ -29,7 +29,7 @@
 				},
 				{
 					"match": "\\b(as)\\b",
-					"name": "keyword.other.import.birdy"
+					"name": "keyword.other.import.bird"
 				}
 			]
 		},
@@ -53,13 +53,13 @@
 		}
 	],
 	"repository": {
-		"birdydoc": {
+		"birddoc": {
 			"patterns": [
 				{
 					"match": "(@[a-zA-Z_]+)",
 					"captures": {
 						"0": {
-							"name": "variable.name.source.birdy"
+							"name": "variable.name.source.bird"
 						}
 					}
 				},
@@ -67,7 +67,7 @@
 					"match": "(`.*?`)",
 					"captures": {
 						"0": {
-							"name": "variable.other.source.birdy"
+							"name": "variable.other.source.bird"
 						}
 					}
 				}
@@ -78,11 +78,11 @@
 				{
 					"captures": {
 						"0": {
-							"name": "punctuation.definition.comment.birdy"
+							"name": "punctuation.definition.comment.bird"
 						}
 					},
 					"match": "\/\\*\\*\/",
-					"name": "comment.block.empty.birdy"
+					"name": "comment.block.empty.bird"
 				},
 				{
 					"include": "#comments-doc-oldschool"
@@ -100,7 +100,7 @@
 				{
 					"begin": "\/\\*",
 					"end": "\\*\/",
-					"name": "comment.block.documentation.birdy",
+					"name": "comment.block.documentation.bird",
 					"patterns": [
 						{
 							"include": "#comments-doc-oldschool"
@@ -109,7 +109,7 @@
 							"include": "#comments-block"
 						},
 						{
-							"include": "#birdydoc"
+							"include": "#birddoc"
 						}
 					]
 				}
@@ -122,10 +122,10 @@
 					"while": "^\\s*\\*\/",
 					"patterns": [
 						{
-							"include": "#birdydoc"
+							"include": "#birddoc"
 						}
 					],
-					"name": "comment.block.documentation.birdy"
+					"name": "comment.block.documentation.bird"
 				}
 			]
 		},
@@ -137,7 +137,7 @@
 				{
 					"captures": {
 						"1": {
-							"name": "comment.line.double-slash.birdy"
+							"name": "comment.line.double-slash.bird"
 						}
 					},
 					"match": "((#).*)$"
@@ -149,7 +149,7 @@
 				{
 					"begin": "\/\\*",
 					"end": "\\*\/",
-					"name": "comment.block.birdy",
+					"name": "comment.block.bird",
 					"patterns": [
 						{
 							"include": "#comments-block"
@@ -162,7 +162,7 @@
 			"patterns": [
 				{
 					"match": "@",
-					"name": "storage.type.annotation.birdy"
+					"name": "storage.type.annotation.bird"
 				}
 			]
 		},
@@ -170,25 +170,25 @@
 			"patterns": [
 				{
 					"match": "(?<!\\$)\\b(true|false|nil)\\b(?!\\$)",
-					"name": "constant.language.birdy"
+					"name": "constant.language.bird"
 				},
 				{
 					"match": "((?<!\\$)\\b(self|parent)\\b(?!\\$)|(__[a-zA-Z_0-9]+__))",
-					"name": "variable.language.birdy"
+					"name": "variable.language.bird"
 				},
 				{
 					"match": "(?<!\\$)\\b((0(x|X)[0-9a-fA-F]*)|(([0-9]+\\.?[0-9]*)|(\\.[0-9]+))((e|E)(\\+|-)?[0-9]+)?)\\b(?!\\$)",
-					"name": "constant.numeric.birdy"
+					"name": "constant.numeric.bird"
 				},
 				{
 					"match": "(?<![a-zA-Z0-9_$])([_$]*[A-Z][a-zA-Z0-9_$]*)",
-					"name": "support.class.birdy"
+					"name": "support.class.bird"
 				},
 				{
 					"match": "([_$]*[a-z][a-zA-Z0-9_$]*)(<|\\(|\\s+=>)",
 					"captures": {
 						"1": {
-							"name": "entity.name.function.birdy"
+							"name": "entity.name.function.bird"
 						}
 					}
 				}
@@ -198,75 +198,75 @@
 			"patterns": [
 				{
 					"match": "(?<!\\$)\\bas\\b(?!\\$)",
-					"name": "keyword.cast.birdy"
+					"name": "keyword.cast.bird"
 				},
 				{
 					"match": "(?<!\\$)\\b(try|catch|die)\\b(?!\\$)",
-					"name": "keyword.control.catch-exception.birdy"
+					"name": "keyword.control.catch-exception.bird"
 				},
 				{
 					"match": "(?<!\\$)\\b(break|when|continue|default|else|for|if|in|return|using|while|iter)\\b(?!\\$)",
-					"name": "keyword.control.birdy"
+					"name": "keyword.control.bird"
 				},
 				{
 					"match": "(?<!\\$)\\b(or|and|assert)\\b(?!\\$)",
-					"name": "keyword.control.boolean.birdy"
+					"name": "keyword.control.boolean.bird"
 				},
 				{
 					"match": "(?<!\\$)\\b(var|class|def)\\b(?!\\$)",
-					"name": "keyword.declaration.birdy"
+					"name": "keyword.declaration.bird"
 				},
 				{
 					"match": "(?<!\\$)\\b(is\\!?)\\b(?!\\$)",
-					"name": "keyword.operator.birdy"
+					"name": "keyword.operator.bird"
 				},
 				{
 					"match": "\\?\\?",
-					"name": "keyword.operator.conditional.birdy"
+					"name": "keyword.operator.conditional.bird"
 				},
 				{
 					"match": "(<<|>>>?|~|\\^|\\||&)",
-					"name": "keyword.operator.bitwise.birdy"
+					"name": "keyword.operator.bitwise.bird"
 				},
 				{
 					"match": "((&|\\^|\\||<<|>>?)=)",
-					"name": "keyword.operator.assignment.bitwise.birdy"
+					"name": "keyword.operator.assignment.bitwise.bird"
 				},
 				{
 					"match": "(=>)",
-					"name": "keyword.operator.closure.birdy"
+					"name": "keyword.operator.closure.bird"
 				},
 				{
 					"match": "(==|!=|<<?=?|>>?=?|(\\.\\.\\.))",
-					"name": "keyword.operator.comparison.birdy"
+					"name": "keyword.operator.comparison.bird"
 				},
 				{
 					"match": "(([+*/%-]|\\~)=)",
-					"name": "keyword.operator.assignment.arithmetic.birdy"
+					"name": "keyword.operator.assignment.arithmetic.bird"
 				},
 				{
 					"match": "(=)",
-					"name": "keyword.operator.assignment.birdy"
+					"name": "keyword.operator.assignment.bird"
 				},
 				{
 					"match": "(\\-\\-|\\+\\+)",
-					"name": "keyword.operator.increment-decrement.birdy"
+					"name": "keyword.operator.increment-decrement.bird"
 				},
 				{
 					"match": "(\\-|\\+|\\*|\\/|\\~\\/|%|\\*\\*)",
-					"name": "keyword.operator.arithmetic.birdy"
+					"name": "keyword.operator.arithmetic.bird"
 				},
 				{
 					"match": "(!)",
-					"name": "keyword.operator.binary.birdy"
+					"name": "keyword.operator.binary.bird"
 				},
 				{
 					"match": "(?<!\\$)\\b(static)\\b(?!\\$)",
-					"name": "storage.modifier.birdy"
+					"name": "storage.modifier.bird"
 				},
 				{
 					"match": "(?<!\\$)\\b(?:echo)\\b(?!\\$)",
-					"name": "storage.type.primitive.birdy"
+					"name": "storage.type.primitive.bird"
 				}
 			]
 		},
@@ -275,17 +275,17 @@
 				{
 					"captures": {
 						"2": {
-							"name": "variable.parameter.birdy"
+							"name": "variable.parameter.bird"
 						},
 						"3": {
-							"name": "variable.parameter.birdy"
+							"name": "variable.parameter.bird"
 						}
 					},
 					"match": "\\$(\\{([^{}]+)\\})"
 				},
 				{
 					"match": "\\\\.",
-					"name": "constant.character.escape.birdy"
+					"name": "constant.character.escape.bird"
 				}
 			]
 		},
@@ -294,7 +294,7 @@
 				{
 					"begin": "(?<!\\|r)\"",
 					"end": "\"",
-					"name": "string.interpolated.double.birdy",
+					"name": "string.interpolated.double.bird",
 					"patterns": [
 						{
 							"match": "\\n",
@@ -308,7 +308,7 @@
 				{
 					"begin": "r\"",
 					"end": "\"",
-					"name": "string.quoted.double.birdy",
+					"name": "string.quoted.double.bird",
 					"patterns": [
 						{
 							"match": "\\n",
@@ -319,7 +319,7 @@
 				{
 					"begin": "(?<!\\|r)'",
 					"end": "'",
-					"name": "string.interpolated.single.birdy",
+					"name": "string.interpolated.single.bird",
 					"patterns": [
 						{
 							"match": "\\n",
@@ -333,7 +333,7 @@
 				{
 					"begin": "r'",
 					"end": "'",
-					"name": "string.quoted.single.birdy",
+					"name": "string.quoted.single.bird",
 					"patterns": [
 						{
 							"match": "\\n",
@@ -347,18 +347,18 @@
 			"patterns": [
 				{
 					"match": ",",
-					"name": "punctuation.comma.birdy"
+					"name": "punctuation.comma.bird"
 				},
 				{
 					"match": "\n",
-					"name": "punctuation.terminator.birdy"
+					"name": "punctuation.terminator.bird"
 				},
 				{
 					"match": "\\.",
-					"name": "punctuation.dot.birdy"
+					"name": "punctuation.dot.bird"
 				}
 			]
 		}
 	},
-	"scopeName": "source.birdy"
+	"scopeName": "source.bird"
 }

@@ -1,24 +1,24 @@
 /*
-This modules provides Bird's implementation of date and time
-manipulation methods.
-
-Time is stored internally as the number of seconds 
-with fraction since the Epoch, January 1, 1970 00:00 UTC.
-
-@copyright 2021, Ore Richard Muyiwa
-*/
+ * This modules provides Bird's implementation of date and time
+ * manipulation methods.
+ * 
+ * Time is stored internally as the number of seconds 
+ * with fraction since the Epoch, January 1, 1970 00:00 UTC.
+ * 
+ * @copyright 2021, Ore Richard Muyiwa
+ */
 
 /*
-Jade's implementation of date
-
-A date here refers to a calendar day consisting of
-year, month and day
-
-Julian date conversion is based on the C implementation at:
-http://www.lsc-group.phys.uwm.edu/lal/slug/nightly/doxygen.old/html/Julian_8c-source.html
-and
-https://stackoverflow.com/questions/29627533/conversion-of-julian-date-number-to-normal-date-utc-in-javascript
-*/
+ * Bird's implementation of date
+ * 
+ * A date here refers to a calendar day consisting of
+ * year, month and day
+ * 
+ * Julian date conversion is based on the C implementation at:
+ * http://www.lsc-group.phys.uwm.edu/lal/slug/nightly/doxygen.old/html/Julian_8c-source.html
+ * and
+ * https://stackoverflow.com/questions/29627533/conversion-of-julian-date-number-to-normal-date-utc-in-javascript
+ */
 class Date {
 
   static var MIN_YEAR = 1
