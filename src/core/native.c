@@ -31,16 +31,16 @@ static b_obj_string *bin_to_string(b_vm *vm, int n) {
   return copy_string(vm, str, length);
 }
 
-static b_obj_string *number_to_oct(b_vm *vm, long long n) {
+static b_obj_string *number_to_oct(b_vm *vm, long long n, bool numeric) {
   char str[66]; // assume maximum of 64 bits + 2 octal indicators (0c)
-  int length = sprintf(str, "0c%llo", n);
+  int length = sprintf(str, numeric ? "0c%llo" : "%llo", n);
 
   return copy_string(vm, str, length);
 }
 
-static b_obj_string *number_to_hex(b_vm *vm, long long n) {
+static b_obj_string *number_to_hex(b_vm *vm, long long n, bool numeric) {
   char str[66]; // assume maximum of 64 bits + 2 hex indicators (0x)
-  int length = sprintf(str, "0x%llx", n);
+  int length = sprintf(str, numeric ? "0x%llx" : "%llx", n);
 
   return copy_string(vm, str, length);
 }
@@ -56,7 +56,8 @@ DECLARE_NATIVE(time) {
   struct timeval tv;
   gettimeofday(&tv, NULL);
 #ifndef _WIN32
-  RETURN_NUMBER((double) (1000000 * (double) tv.tv_sec + (double) tv.tv_usec) / 1000000);
+  RETURN_NUMBER((double)(1000000 * (double)tv.tv_sec + (double)tv.tv_usec) /
+                1000000);
 #else
   RETURN_NUMBER((double)tv.tv_sec + ((double)tv.tv_usec / 10000000));
 #endif // !_WIN32
@@ -90,7 +91,7 @@ DECLARE_NATIVE(id) {
 #ifdef _WIN32
   RETURN_NUMBER(PtrToLong(&args[0]));
 #else
-  RETURN_NUMBER((long) &args[0]);
+  RETURN_NUMBER((long)&args[0]);
 #endif
 }
 
@@ -106,7 +107,7 @@ DECLARE_NATIVE(id) {
 DECLARE_NATIVE(hash) {
   ENFORCE_ARG_COUNT(hash, 1);
   METHOD_OVERRIDE(__hash__, 8);
-  RETURN_NUMBER((double) hash_value(args[0]));
+  RETURN_NUMBER((double)hash_value(args[0]));
 }
 
 /**
@@ -275,7 +276,7 @@ DECLARE_NATIVE(int) {
   METHOD_OVERRIDE(to_number, 9);
 
   ENFORCE_ARG_TYPE(int, 0, IS_NUMBER);
-  RETURN_NUMBER((double) ((int) AS_NUMBER(args[0])));
+  RETURN_NUMBER((double)((int)AS_NUMBER(args[0])));
 }
 
 /**
@@ -311,7 +312,7 @@ DECLARE_NATIVE(oct) {
   METHOD_OVERRIDE(to_oct, 6);
 
   ENFORCE_ARG_TYPE(oct, 0, IS_NUMBER);
-  RETURN_OBJ(number_to_oct(vm, AS_NUMBER(args[0])));
+  RETURN_OBJ(number_to_oct(vm, AS_NUMBER(args[0]), false));
 }
 
 /**
@@ -329,7 +330,7 @@ DECLARE_NATIVE(hex) {
   METHOD_OVERRIDE(to_hex, 6);
 
   ENFORCE_ARG_TYPE(hex, 0, IS_NUMBER);
-  RETURN_OBJ(number_to_hex(vm, AS_NUMBER(args[0])));
+  RETURN_OBJ(number_to_hex(vm, AS_NUMBER(args[0]), false));
 }
 
 /**
@@ -378,7 +379,7 @@ DECLARE_NATIVE(to_number) {
     RETURN_NUMBER(AS_BOOL(args[0]) ? 1 : 0);
   else if (IS_NIL(args[0]))
     RETURN_NUMBER(-1);
-  RETURN_NUMBER(strtod((const char *) value_to_string(vm, args[0]), NULL));
+  RETURN_NUMBER(strtod((const char *)value_to_string(vm, args[0]), NULL));
 }
 
 /**
@@ -393,7 +394,7 @@ DECLARE_NATIVE(to_int) {
   ENFORCE_ARG_COUNT(to_int, 1);
   METHOD_OVERRIDE(to_int, 6);
   ENFORCE_ARG_TYPE(to_int, 0, IS_NUMBER);
-  RETURN_NUMBER((int) AS_NUMBER(args[0]));
+  RETURN_NUMBER((int)AS_NUMBER(args[0]));
 }
 
 /**
@@ -464,7 +465,7 @@ DECLARE_NATIVE(to_dict) {
 DECLARE_NATIVE(chr) {
   ENFORCE_ARG_COUNT(chr, 1);
   ENFORCE_ARG_TYPE(chr, 0, IS_NUMBER);
-  char *string = utf8_encode((int) AS_NUMBER(args[0]));
+  char *string = utf8_encode((int)AS_NUMBER(args[0]));
   RETURN_STRING(string);
 }
 
@@ -478,20 +479,20 @@ DECLARE_NATIVE(ord) {
   ENFORCE_ARG_TYPE(ord, 0, IS_STRING);
   b_obj_string *string = AS_STRING(args[0]);
 
-  int max_length = string->length > 1 && (int) string->chars[0] < 1 ? 3 : 1;
+  int max_length = string->length > 1 && (int)string->chars[0] < 1 ? 3 : 1;
 
   if (string->length > max_length) {
     RETURN_ERROR("ord() expects single character as argument, %d given",
                  string->length / max_length);
   }
 
-  const uint8_t *bytes = (uint8_t *) string->chars;
+  const uint8_t *bytes = (uint8_t *)string->chars;
   if ((bytes[0] & 0xc0) == 0x80) {
     RETURN_NUMBER(-1);
   }
 
   // Decode the UTF-8 sequence.
-  RETURN_NUMBER(utf8_decode((uint8_t *) string->chars, string->length));
+  RETURN_NUMBER(utf8_decode((uint8_t *)string->chars, string->length));
 }
 
 /**
@@ -528,7 +529,7 @@ DECLARE_NATIVE(rand) {
 
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  srand((unsigned int) (1000000 * tv.tv_sec + tv.tv_usec));
+  srand((unsigned int)(1000000 * tv.tv_sec + tv.tv_usec));
   do {
     x = rand();
   } while (x >= RAND_MAX - remainder);
@@ -585,7 +586,7 @@ DECLARE_NATIVE(is_number) {
 DECLARE_NATIVE(is_int) {
   ENFORCE_ARG_COUNT(is_int, 1);
   RETURN_BOOL(IS_NUMBER(args[0]) &&
-              (((int) AS_NUMBER(args[0])) == AS_NUMBER(args[0])));
+              (((int)AS_NUMBER(args[0])) == AS_NUMBER(args[0])));
 }
 
 /**
