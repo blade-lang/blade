@@ -380,7 +380,7 @@ DECLARE_MODULE_METHOD(socket__getsockinfo) {
     RETURN_OBJ(dict);
   }
 
-  RETURN;
+  RETURN_NUMBER(-1);
 }
 
 DECLARE_MODULE_METHOD(socket__close) {

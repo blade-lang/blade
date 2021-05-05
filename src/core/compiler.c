@@ -364,7 +364,8 @@ static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
 }
 
 static int identifier_constant(b_parser *p, b_token *name) {
-  return make_constant(p, OBJ_VAL(copy_string(p->vm, name->start, name->length)));
+  return make_constant(p,
+                       OBJ_VAL(copy_string(p->vm, name->start, name->length)));
 }
 
 static bool identifiers_equal(b_token *a, b_token *b) {
@@ -533,7 +534,7 @@ static void discard_local(b_parser *p, int depth) {
   if (p->compiler->scope_depth == -1) {
     error(p, "cannot exit top-level scope");
   }
-  for (int i = p->compiler->local_count;
+  for (int i = p->compiler->local_count - 1;
        i >= 0 && p->compiler->locals[i].depth > depth; i--) {
     if (p->compiler->locals[i].is_captured) {
       emit_byte(p, OP_CLOSE_UP_VALUE);
@@ -1673,12 +1674,18 @@ static void for_statement(b_parser *p) {
   int key_slot = add_local(p, key_token) - 1;
   define_variable(p, key_slot);
 
+  // create the local value slot
+  emit_byte(p, OP_NIL);
+  int value_slot = add_local(p, value_token) - 1;
+  define_variable(p, 0);
+
   int surrounding_loop_start = p->innermost_loop_start;
   int surrounding_scope_depth = p->innermost_loop_scope_depth;
 
   // we'll be jumping back to right before the
   // expression after the loop body
   p->innermost_loop_start = current_blob(p)->count;
+  p->innermost_loop_scope_depth = p->compiler->scope_depth;
 
   // key = iterable.iter_n__(key)
   emit_byte_and_short(p, OP_GET_LOCAL, iterator_slot);
@@ -1701,8 +1708,8 @@ static void for_statement(b_parser *p) {
   begin_scope(p);
 
   // update the value
-  add_local(p, value_token);
-  define_variable(p, 0);
+  emit_byte_and_short(p, OP_SET_LOCAL, value_slot);
+  emit_byte(p, OP_POP);
 
   statement(p);
 

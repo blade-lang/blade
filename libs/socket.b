@@ -267,7 +267,7 @@ class Socket {
       die SocketException('socket not listening or connected')
     
     var result = self._recv(self.socket_id, length, flags)
-    if is_string(result) return result
+    if is_string(result) or result == nil return result
 
     return self._check_error(result)
   }

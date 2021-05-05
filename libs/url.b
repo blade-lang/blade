@@ -70,6 +70,7 @@ class Url {
       for sc in Url.ALTERNATE_SCHEMES {
         if url.starts_with(sc) {
           match_found = true
+          break
         }
       }
 
