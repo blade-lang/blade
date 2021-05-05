@@ -699,7 +699,6 @@ static void parse_assignment(b_parser *p, uint8_t real_op, uint8_t get_op,
   if (p->self_active) {
     // we are doing something like self.property += ...
     emit_byte_and_short(p, OP_GET_LOCAL, 0);
-    p->self_active = false; // reset
   }
 
   if (arg != -1) {
@@ -780,6 +779,8 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg,
       emit_bytes(p, get_op, 0);
     }
   }
+
+  p->self_active = false; // reset
 }
 
 static void dot(b_parser *p, bool can_assign) {
@@ -803,7 +804,7 @@ static void named_variable(b_parser *p, b_token name, bool can_assign) {
     get_op = OP_GET_LOCAL;
     set_op = OP_SET_LOCAL;
 
-    if(arg == 0) {
+    if (arg == 0) {
       // we are working with the self keyword
       p->self_active = true;
     }
@@ -909,11 +910,11 @@ static void parent(b_parser *p, bool can_assign) {
 
   if (match(p, LPAREN_TOKEN)) {
     uint8_t arg_count = argument_list(p);
-//    named_variable(p, synthetic_token("parent"), false);
+    //    named_variable(p, synthetic_token("parent"), false);
     emit_byte_and_short(p, OP_SUPER_INVOKE, name);
     emit_byte(p, arg_count);
   } else {
-//    named_variable(p, synthetic_token("parent"), false);
+    //    named_variable(p, synthetic_token("parent"), false);
     emit_byte_and_short(p, OP_GET_SUPER, name);
   }
 }
