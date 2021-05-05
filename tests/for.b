@@ -1,5 +1,6 @@
 for i in [1,2,3,4,5] {
   echo i
+  if i == 4 break
 }
 
 var details = {name: 'Richard', age: 27, address: 'Nigeria'}
