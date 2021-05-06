@@ -187,8 +187,8 @@ class Url {
         if path.starts_with('//') die UrlMalformedException('invalid path')
 
         # what should we parse next
-        if i < url.length() and url[i] == '?' query_starts = true
-        if i < url.length() and url[i] == '#' hash_starts = true
+        query_starts = i < url.length() and url[i] == '?'
+        hash_starts = i < url.length() and url[i] == '#'
       } else if query_starts {
 
         if hash_starts {
@@ -212,7 +212,7 @@ class Url {
         # reset for some abnormal urls that may be correct in users implementation
         query_starts = false
 
-        if i < url.length() and url[i] == '#' hash_starts = true
+        hash_starts = i < url.length() and url[i] == '#'
       } else if hash_starts {
         # scan the hash
         hash = ''
