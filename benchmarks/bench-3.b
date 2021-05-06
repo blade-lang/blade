@@ -11,13 +11,8 @@ def fannkuchredux(n) {
   # block_size from being set to 0. This also causes smaller values of n to
   # be computed serially which is faster and uses less resources for small
   # values of n.
-  var block_size
-
-  if factorial_lookup_table[n] < PREFERRED_NUMBER_OF_BLOCKS_TO_USE {
-    block_size = factorial_lookup_table[n]
-  } else {
-    block_size = factorial_lookup_table[n] / PREFERRED_NUMBER_OF_BLOCKS_TO_USE
-  }
+  var block_size = factorial_lookup_table[n] < PREFERRED_NUMBER_OF_BLOCKS_TO_USE ?
+          factorial_lookup_table[n] : factorial_lookup_table[n] / PREFERRED_NUMBER_OF_BLOCKS_TO_USE
 
   var maximum_flip_count = 0, checksum = 0
 

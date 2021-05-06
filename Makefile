@@ -44,11 +44,11 @@ tests:
 	@ bash run-tests.sh
 
 bench:
-	@ ./birdd benchmarks/bench-$(call args,main).b
+	@ ./build/birdd benchmarks/bench-$(call args,main).b
 
 # benchmark for release
 rbench:
-	@ ./bird benchmarks/bench-$(call args,main).b
+	@ ./build/bird benchmarks/bench-$(call args,main).b
 
 
 all: release
