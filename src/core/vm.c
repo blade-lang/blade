@@ -1947,6 +1947,20 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
 
+    case OP_CHOICE: {
+      b_value _else = peek(vm, 0);
+      b_value _then = peek(vm, 1);
+      b_value _condition = peek(vm, 2);
+
+      pop_n(vm, 3);
+      if(!is_falsey(_condition)) {
+        push(vm, _then);
+      } else {
+        push(vm, _else);
+      }
+      break;
+    }
+
     default:
       break;
     }

@@ -21,7 +21,7 @@ typedef enum {
   AT_TOKEN,          // @
   DOT_TOKEN,         // .
   RANGE_TOKEN,       // ..
-  TRI_DOT_TOKEN,      // ...
+  TRI_DOT_TOKEN,     // ...
   PLUS_TOKEN,        // +
   PLUS_EQ_TOKEN,     // +=
   INCREMENT_TOKEN,   // ++
@@ -56,7 +56,7 @@ typedef enum {
   TILDE_EQ_TOKEN,    // ~=
   XOR_TOKEN,         // ^
   XOR_EQ_TOKEN,      // ^=
-  C_DEFAULT_TOKEN,    // ??
+  QUESTION_TOKEN,    // ??
 
   // keywords
   AND_TOKEN,
