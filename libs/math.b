@@ -218,8 +218,7 @@ class Math {
       die Exception('number expected')
     }
 
-    if n < 0 return Math.ceil(n)
-    return Math.floor(n)
+    return n < 0 ?  Math.ceil(n) : Math.floor(n)
   }
 
   # returns the square root of a nunmber
@@ -257,7 +256,6 @@ class Math {
     }
 
     var str = to_string(n).split('.')
-    if str.length() == 1 return 0
-    return to_number(str[1])
+    return str.length() == 1 ? 0 : to_number(str[1])
   }
 }

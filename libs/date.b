@@ -120,10 +120,7 @@ class Date {
   static var _Ymd_to_ordinal = |year, month, day| {
     assert month >= 1 and month <= 12, 'month must be in 1..12'
 
-    var dim
-    if month == 2 and Date._Is_leap(year)
-      dim = 29
-    else dim = Date._Days_In_Month[month]
+    var dim = month == 2 and Date._Is_leap(year) ? 29 : Date._Days_In_Month[month]
     
     assert day >= 1 and day <= dim, 'day must be in 1..${dim}'
     return (Date._Days_before_year(year) +
@@ -216,7 +213,7 @@ class Date {
       'year must be in 1..' + Date.MAX_YEAR
     assert year > self.year, 'year must be greater than current year'
 
-    var days_left_in_year, days_in_year
+    var days_left_in_year
     if self.month < Date.MAX_MONTH {
       days_left_in_year = self.days_before_month(Date.MAX_MONTH) + 
           Date._Days_In_Month[Date.MAX_MONTH]
@@ -224,11 +221,7 @@ class Date {
       days_left_in_year = Date._Days_In_Month[Date.MAX_MONTH] - self.day
     }
 
-    if self.is_leap() {
-      days_in_year = 366 - days_left_in_year
-    } else {
-      days_in_year = 365 - days_left_in_year
-    }
+    var days_in_year = (self.is_leap() ? 366 : 365) - days_left_in_year
       
     var days_till_today = Date._Days_before_year(self.year) + days_in_year
     var days_before_year = Date._Days_before_year(year)
@@ -512,8 +505,7 @@ class Date {
           var hour = self.hour
           if hour > 12 hour -= 12
 
-          if hour <= 9 result += '0${hour}'
-          else result += hour
+          result += hour <= 9 ? '0${hour}' : hour
         }
         when 'M' {
           result += self._Months_In_Year_Short[self.month]
@@ -522,19 +514,16 @@ class Date {
           result += self._Months_In_Year[self.month]
         }
         when 'g' {
-          if self.hour <= 12 result += self.hour
-          else result += self.hour - 12
+          result += self.hour <= 12 ? self.hour : self.hour - 12
         }
         when 'G' {
           result += self.hour
         }
         when 'i' {
-          if self.minute <= 9 result += '0${self.minute}'
-          else result += self.minute
+          result += self.minute <= 9 ? '0${self.minute}' : self.minute
         }
         when 's' {
-          if self.seconds <= 9 result += '0${self.seconds}'
-          else result += self.seconds
+          result += self.seconds <= 9 ? '0${self.seconds}' : self.seconds
         }
         when 'u' {
           result += self.microseconds
@@ -560,44 +549,35 @@ class Date {
           result += self.zone
         }
         when 'I' {
-          if self.is_dst result += 1
-          else result += 0
+          result += self.is_dst ? 1 : 0
         }
         when 'O' {
           var hour = int(self.gmt_offset / 3600)
           var minute = self.gmt_offset % 60
 
           if hour > 0 {
-            if hour <= 9 result += '+0${hour}'
-            else result += '+${hour}'
+            result += hour <= 9 ? '+0${hour}' : '+${hour}'
           } else if hour == 0 {
-            if minute < 0 result += '-00'
-            else result += '+00'
+            result += minute < 0 ? '-00' : '+00'
           } else {
-            if hour >= -9 result += '-0${hour}'
-            else result += '-${hour}'
+            result +=  hour >= -9 ? '-0${hour}' : '-${hour}'
           }
 
-          if minute <= 9 result += '0${minute}'
-          else result += minute
+          result += minute <= 9 ? '0${minute}' : minute
         }
         when 'P' {
           var hour = int(self.gmt_offset / 3600)
           var minute = self.gmt_offset % 60
 
           if hour > 0 {
-            if hour <= 9 result += '+0${hour}'
-            else result += '+${hour}'
+            result += hour <= 9 ? '+0${hour}' : '+${hour}'
           } else if hour == 0 {
-            if minute < 0 result += '-00'
-            else result += '+00'
+            result += minute < 0 ? '-00' : '+00'
           } else {
-            if hour >= -9 result += '-0${hour}'
-            else result += '-${hour}'
+            result += hour >= -9 ? '-0${hour}' : '-${hour}'
           }
 
-          if minute <= 9 result += ':0${minute}'
-          else result += ':${minute}'
+          result += minute <= 9 ? ':0${minute}' : ':${minute}'
         }
         when 'Z' {
           result += self.gmt_offset
@@ -649,13 +629,10 @@ class Date {
     var c = int((b - 122.1) / 365.25), d = int(365.25 * c)
     var g = int((b - d) / 30.6001)
 
-    var month
-    if g < 13.5 month = g - 1
-    else month = g - 13
+    var month = g - (g < 13.5 ? 1 : 13)
 
-    var year
-    if month < 2.5 year = c - 4715 # if month is january or february
-    else year = c - 4716
+    # if month is january or february use 4715 else, 4716
+    var year = c - (month < 2.5 ? 4715 : 4716)
 
     var ut = b - d - int(30.6001 * g) + f
     var day = int(ut)
