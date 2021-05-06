@@ -48,6 +48,9 @@ class Url {
   var username
   var password
 
+  # the absolute uri (i.e. the url in it's original state)
+  var absolute_uri
+
   # a list of schemes that does not conform to the standard ://
   # after the scheme name in their urls
   static var ALTERNATE_SCHEMES = ['mailto', 'tel']
@@ -245,6 +248,7 @@ class Url {
     result.query = query
     result.username = username
     result.password = password
+    result.absolute_uri = url
 
     return result
   }
@@ -282,6 +286,32 @@ class Url {
       return authority
     }
     return ''
+  }
+
+  /**
+   * host_is_ipv4()
+   * returns true if the host of the url is a valid ipv4 address
+   * and false otherwise
+   * @return bool
+   */
+  host_is_ipv4() {
+    if self.host {
+      return self.host.match('/^((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])(\.(?!$)|$)){4}$/')
+    }
+    return false
+  }
+
+  /**
+   * host_is_ipv6()
+   * returns true if the host of the url is a valid ipv6 address
+   * and false otherwise
+   * @return bool
+   */
+  host_is_ipv6() {
+    if self.host {
+      return self.host.match('/(?:^|(?<=\s))(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))(?=\s|$)/')
+    }
+    return false
   }
 
   /**
