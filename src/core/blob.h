@@ -78,6 +78,7 @@ typedef enum {
 
   OP_STRINGIFY,
   OP_SWITCH,
+  OP_CHOICE,
 
   // the break placeholder... it never gets to the vm
   // care should be taken to

@@ -139,87 +139,88 @@ static int get_code_args_count(const uint8_t *bytecode,
 
   // @TODO: handle up values gracefully...
   switch (code) {
-  case OP_EQUAL:
-  case OP_GREATER:
-  case OP_LESS:
-  case OP_NIL:
-  case OP_TRUE:
-  case OP_FALSE:
-  case OP_ADD:
-  case OP_SUBTRACT:
-  case OP_MULTIPLY:
-  case OP_DIVIDE:
-  case OP_F_DIVIDE:
-  case OP_REMINDER:
-  case OP_POW:
-  case OP_NEGATE:
-  case OP_NOT:
-  case OP_ECHO:
-  case OP_POP:
-  case OP_CLOSE_UP_VALUE:
-  case OP_DUP:
-  case OP_RETURN:
-  case OP_INHERIT:
-  case OP_GET_SUPER:
-  case OP_AND:
-  case OP_OR:
-  case OP_XOR:
-  case OP_LSHIFT:
-  case OP_RSHIFT:
-  case OP_BIT_NOT:
-  case OP_ONE:
-  case OP_SET_INDEX:
-  case OP_ASSERT:
-  case OP_DIE:
-  case OP_END_TRY:
-  case OP_RANGE:
-  case OP_STRINGIFY:
-    return 0;
+    case OP_EQUAL:
+    case OP_GREATER:
+    case OP_LESS:
+    case OP_NIL:
+    case OP_TRUE:
+    case OP_FALSE:
+    case OP_ADD:
+    case OP_SUBTRACT:
+    case OP_MULTIPLY:
+    case OP_DIVIDE:
+    case OP_F_DIVIDE:
+    case OP_REMINDER:
+    case OP_POW:
+    case OP_NEGATE:
+    case OP_NOT:
+    case OP_ECHO:
+    case OP_POP:
+    case OP_CLOSE_UP_VALUE:
+    case OP_DUP:
+    case OP_RETURN:
+    case OP_INHERIT:
+    case OP_GET_SUPER:
+    case OP_AND:
+    case OP_OR:
+    case OP_XOR:
+    case OP_LSHIFT:
+    case OP_RSHIFT:
+    case OP_BIT_NOT:
+    case OP_ONE:
+    case OP_SET_INDEX:
+    case OP_ASSERT:
+    case OP_DIE:
+    case OP_END_TRY:
+    case OP_RANGE:
+    case OP_STRINGIFY:
+    case OP_CHOICE:
+      return 0;
 
-  case OP_CALL:
-  case OP_GET_INDEX:
-    return 1;
+    case OP_CALL:
+    case OP_GET_INDEX:
+      return 1;
 
-  case OP_DEFINE_GLOBAL:
-  case OP_GET_GLOBAL:
-  case OP_SET_GLOBAL:
-  case OP_GET_LOCAL:
-  case OP_SET_LOCAL:
-  case OP_GET_UP_VALUE:
-  case OP_SET_UP_VALUE:
-  case OP_JUMP_IF_FALSE:
-  case OP_JUMP:
-  case OP_BREAK_PL:
-  case OP_LOOP:
-  case OP_CONSTANT:
-  case OP_POP_N:
-  case OP_CLASS:
-  case OP_GET_PROPERTY:
-  case OP_SET_PROPERTY:
-  case OP_LIST:
-  case OP_DICT:
-  case OP_CALL_IMPORT:
-  case OP_FINISH_MODULE:
-  case OP_TRY:
-  case OP_SWITCH:
-    return 2;
+    case OP_DEFINE_GLOBAL:
+    case OP_GET_GLOBAL:
+    case OP_SET_GLOBAL:
+    case OP_GET_LOCAL:
+    case OP_SET_LOCAL:
+    case OP_GET_UP_VALUE:
+    case OP_SET_UP_VALUE:
+    case OP_JUMP_IF_FALSE:
+    case OP_JUMP:
+    case OP_BREAK_PL:
+    case OP_LOOP:
+    case OP_CONSTANT:
+    case OP_POP_N:
+    case OP_CLASS:
+    case OP_GET_PROPERTY:
+    case OP_SET_PROPERTY:
+    case OP_LIST:
+    case OP_DICT:
+    case OP_CALL_IMPORT:
+    case OP_FINISH_MODULE:
+    case OP_TRY:
+    case OP_SWITCH:
+      return 2;
 
-  case OP_INVOKE:
-  case OP_SUPER_INVOKE:
-  case OP_METHOD:
-  case OP_CLASS_PROPERTY:
-    return 3;
+    case OP_INVOKE:
+    case OP_SUPER_INVOKE:
+    case OP_METHOD:
+    case OP_CLASS_PROPERTY:
+      return 3;
 
-  case OP_CLOSURE: {
-    int constant = (bytecode[ip + 1] << 8) | bytecode[ip + 2];
-    b_obj_func *fn = AS_FUNCTION(constants[constant]);
+    case OP_CLOSURE: {
+      int constant = (bytecode[ip + 1] << 8) | bytecode[ip + 2];
+      b_obj_func *fn = AS_FUNCTION(constants[constant]);
 
-    // There is two byte for the constant, then three for each up value.
-    return 2 + (fn->up_value_count * 3);
-  }
+      // There is two byte for the constant, then three for each up value.
+      return 2 + (fn->up_value_count * 3);
+    }
 
-  default:
-    return 0;
+    default:
+      return 0;
   }
   return 0;
 }
@@ -1149,60 +1150,72 @@ static void or_(b_parser *p, bool can_assign) {
   patch_jump(p, end_jump);
 }
 
+static void conditional(b_parser *p, bool can_assign) {
+  // compile the then expression
+  parse_precedence(p, PREC_CONDITIONAL);
+  consume(p, COLON_TOKEN, "expected matching ':' after '?' conditional");
+  // compile the else expression
+  // here we parse at PREC_ASSIGNMENT precedence as
+  // linear conditionals can be nested.
+  parse_precedence(p, PREC_ASSIGNMENT);
+
+  emit_byte(p, OP_CHOICE);
+}
+
 b_parse_rule parse_rules[] = {
     // symbols
-    [NEWLINE_TOKEN] = {NULL, NULL, PREC_NONE},            // (
-    [LPAREN_TOKEN] = {grouping, call, PREC_CALL},         // (
-    [RPAREN_TOKEN] = {NULL, NULL, PREC_NONE},             // )
-    [LBRACKET_TOKEN] = {list, indexing, PREC_CALL},       // [
-    [RBRACKET_TOKEN] = {NULL, NULL, PREC_NONE},           // ]
-    [LBRACE_TOKEN] = {dictionary, NULL, PREC_NONE},       // {
-    [RBRACE_TOKEN] = {NULL, NULL, PREC_NONE},             // }
-    [SEMICOLON_TOKEN] = {NULL, NULL, PREC_NONE},          // ;
-    [COMMA_TOKEN] = {NULL, NULL, PREC_NONE},              // ,
-    [BACKSLASH_TOKEN] = {NULL, NULL, PREC_NONE},          // '\'
-    [BANG_TOKEN] = {unary, NULL, PREC_NONE},              // !
-    [BANG_EQ_TOKEN] = {NULL, binary, PREC_EQUALITY},      // !=
-    [COLON_TOKEN] = {NULL, NULL, PREC_NONE},              // :
-    [AT_TOKEN] = {NULL, NULL, PREC_NONE},                 // @
-    [DOT_TOKEN] = {NULL, dot, PREC_CALL},                 // .
-    [RANGE_TOKEN] = {NULL, binary, PREC_RANGE},           // ..
-    [TRI_DOT_TOKEN] = {NULL, NULL, PREC_NONE},            // ...
-    [PLUS_TOKEN] = {NULL, binary, PREC_TERM},             // +
-    [PLUS_EQ_TOKEN] = {NULL, NULL, PREC_NONE},            // +=
-    [INCREMENT_TOKEN] = {NULL, NULL, PREC_NONE},          // ++
-    [MINUS_TOKEN] = {unary, binary, PREC_TERM},           // -
-    [MINUS_EQ_TOKEN] = {NULL, NULL, PREC_NONE},           // -=
-    [DECREMENT_TOKEN] = {NULL, NULL, PREC_NONE},          // --
-    [MULTIPLY_TOKEN] = {NULL, binary, PREC_FACTOR},       // *
-    [MULTIPLY_EQ_TOKEN] = {NULL, NULL, PREC_NONE},        // *=
-    [POW_TOKEN] = {NULL, binary, PREC_FACTOR},            // **
-    [POW_EQ_TOKEN] = {NULL, NULL, PREC_NONE},             // **=
-    [DIVIDE_TOKEN] = {NULL, binary, PREC_FACTOR},         // '/'
-    [DIVIDE_EQ_TOKEN] = {NULL, NULL, PREC_NONE},          // '/='
-    [FLOOR_TOKEN] = {NULL, binary, PREC_FACTOR},          // '//'
-    [FLOOR_EQ_TOKEN] = {NULL, NULL, PREC_NONE},           // '//='
-    [EQUAL_TOKEN] = {NULL, NULL, PREC_NONE},              // =
-    [EQUAL_EQ_TOKEN] = {NULL, binary, PREC_EQUALITY},     // ==
-    [LESS_TOKEN] = {NULL, binary, PREC_COMPARISON},       // <
-    [LESS_EQ_TOKEN] = {NULL, binary, PREC_COMPARISON},    // <=
-    [LSHIFT_TOKEN] = {NULL, binary, PREC_SHIFT},          // <<
-    [LSHIFT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},          // <<=
-    [GREATER_TOKEN] = {NULL, binary, PREC_COMPARISON},    // >
-    [GREATER_EQ_TOKEN] = {NULL, binary, PREC_COMPARISON}, // >=
-    [RSHIFT_TOKEN] = {NULL, binary, PREC_SHIFT},          // >>
-    [RSHIFT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},          // >>=
-    [PERCENT_TOKEN] = {NULL, binary, PREC_FACTOR},        // %
-    [PERCENT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},         // %=
-    [AMP_TOKEN] = {NULL, binary, PREC_BIT_AND},           // &
-    [AMP_EQ_TOKEN] = {NULL, NULL, PREC_NONE},             // &=
-    [BAR_TOKEN] = {anonymous, binary, PREC_BIT_OR},       // |
-    [BAR_EQ_TOKEN] = {NULL, NULL, PREC_NONE},             // |=
-    [TILDE_TOKEN] = {unary, NULL, PREC_UNARY},            // ~
-    [TILDE_EQ_TOKEN] = {NULL, NULL, PREC_NONE},           // ~=
-    [XOR_TOKEN] = {NULL, binary, PREC_BIT_XOR},           // ^
-    [XOR_EQ_TOKEN] = {NULL, NULL, PREC_NONE},             // ^=
-    [C_DEFAULT_TOKEN] = {NULL, NULL, PREC_NONE},          // ??
+    [NEWLINE_TOKEN] = {NULL, NULL, PREC_NONE},                // (
+    [LPAREN_TOKEN] = {grouping, call, PREC_CALL},             // (
+    [RPAREN_TOKEN] = {NULL, NULL, PREC_NONE},                 // )
+    [LBRACKET_TOKEN] = {list, indexing, PREC_CALL},           // [
+    [RBRACKET_TOKEN] = {NULL, NULL, PREC_NONE},               // ]
+    [LBRACE_TOKEN] = {dictionary, NULL, PREC_NONE},           // {
+    [RBRACE_TOKEN] = {NULL, NULL, PREC_NONE},                 // }
+    [SEMICOLON_TOKEN] = {NULL, NULL, PREC_NONE},              // ;
+    [COMMA_TOKEN] = {NULL, NULL, PREC_NONE},                  // ,
+    [BACKSLASH_TOKEN] = {NULL, NULL, PREC_NONE},              // '\'
+    [BANG_TOKEN] = {unary, NULL, PREC_NONE},                  // !
+    [BANG_EQ_TOKEN] = {NULL, binary, PREC_EQUALITY},          // !=
+    [COLON_TOKEN] = {NULL, NULL, PREC_NONE},                  // :
+    [AT_TOKEN] = {NULL, NULL, PREC_NONE},                     // @
+    [DOT_TOKEN] = {NULL, dot, PREC_CALL},                     // .
+    [RANGE_TOKEN] = {NULL, binary, PREC_RANGE},               // ..
+    [TRI_DOT_TOKEN] = {NULL, NULL, PREC_NONE},                // ...
+    [PLUS_TOKEN] = {NULL, binary, PREC_TERM},                 // +
+    [PLUS_EQ_TOKEN] = {NULL, NULL, PREC_NONE},                // +=
+    [INCREMENT_TOKEN] = {NULL, NULL, PREC_NONE},              // ++
+    [MINUS_TOKEN] = {unary, binary, PREC_TERM},               // -
+    [MINUS_EQ_TOKEN] = {NULL, NULL, PREC_NONE},               // -=
+    [DECREMENT_TOKEN] = {NULL, NULL, PREC_NONE},              // --
+    [MULTIPLY_TOKEN] = {NULL, binary, PREC_FACTOR},           // *
+    [MULTIPLY_EQ_TOKEN] = {NULL, NULL, PREC_NONE},            // *=
+    [POW_TOKEN] = {NULL, binary, PREC_FACTOR},                // **
+    [POW_EQ_TOKEN] = {NULL, NULL, PREC_NONE},                 // **=
+    [DIVIDE_TOKEN] = {NULL, binary, PREC_FACTOR},             // '/'
+    [DIVIDE_EQ_TOKEN] = {NULL, NULL, PREC_NONE},              // '/='
+    [FLOOR_TOKEN] = {NULL, binary, PREC_FACTOR},              // '//'
+    [FLOOR_EQ_TOKEN] = {NULL, NULL, PREC_NONE},               // '//='
+    [EQUAL_TOKEN] = {NULL, NULL, PREC_NONE},                  // =
+    [EQUAL_EQ_TOKEN] = {NULL, binary, PREC_EQUALITY},         // ==
+    [LESS_TOKEN] = {NULL, binary, PREC_COMPARISON},           // <
+    [LESS_EQ_TOKEN] = {NULL, binary, PREC_COMPARISON},        // <=
+    [LSHIFT_TOKEN] = {NULL, binary, PREC_SHIFT},              // <<
+    [LSHIFT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},              // <<=
+    [GREATER_TOKEN] = {NULL, binary, PREC_COMPARISON},        // >
+    [GREATER_EQ_TOKEN] = {NULL, binary, PREC_COMPARISON},     // >=
+    [RSHIFT_TOKEN] = {NULL, binary, PREC_SHIFT},              // >>
+    [RSHIFT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},              // >>=
+    [PERCENT_TOKEN] = {NULL, binary, PREC_FACTOR},            // %
+    [PERCENT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},             // %=
+    [AMP_TOKEN] = {NULL, binary, PREC_BIT_AND},               // &
+    [AMP_EQ_TOKEN] = {NULL, NULL, PREC_NONE},                 // &=
+    [BAR_TOKEN] = {anonymous, binary, PREC_BIT_OR},           // |
+    [BAR_EQ_TOKEN] = {NULL, NULL, PREC_NONE},                 // |=
+    [TILDE_TOKEN] = {unary, NULL, PREC_UNARY},                // ~
+    [TILDE_EQ_TOKEN] = {NULL, NULL, PREC_NONE},               // ~=
+    [XOR_TOKEN] = {NULL, binary, PREC_BIT_XOR},               // ^
+    [XOR_EQ_TOKEN] = {NULL, NULL, PREC_NONE},                 // ^=
+    [QUESTION_TOKEN] = {NULL, conditional, PREC_CONDITIONAL}, // ??
 
     // keywords
     [AND_TOKEN] = {NULL, and_, PREC_AND},
