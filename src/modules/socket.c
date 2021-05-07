@@ -51,6 +51,16 @@ DECLARE_MODULE_METHOD(socket__create) {
   ENFORCE_ARG_TYPE(_create, 0, IS_NUMBER); // family
   ENFORCE_ARG_TYPE(_create, 1, IS_NUMBER); // type
   ENFORCE_ARG_TYPE(_create, 2, IS_NUMBER); // flags
+
+#ifdef _WIN32
+  WSADATA wsa_data;
+  int i_result = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+  if (i_result != NO_ERROR) {
+      errno = i_result;
+      RETURN_NUMBER(-1);
+  }
+#endif
+
   RETURN_NUMBER(socket((int)AS_NUMBER(args[0]), (int)AS_NUMBER(args[1]), (int)AS_NUMBER(args[2])));
 }
 
@@ -61,7 +71,7 @@ DECLARE_MODULE_METHOD(socket__connect) {
   ENFORCE_ARG_TYPE(_connect, 1, IS_STRING); // the address
   ENFORCE_ARG_TYPE(_connect, 2, IS_NUMBER); // the port
   ENFORCE_ARG_TYPE(_connect, 3, IS_NUMBER); // the family
-  ENFORCE_ARG_TYPE(_connect, 4, IS_NUMBER); // is_blocking
+  ENFORCE_ARG_TYPE(_connect, 4, IS_NUMBER); // timeout
   ENFORCE_ARG_TYPE(_connect, 5, IS_BOOL); // is_blocking
 
   int sock = AS_NUMBER(args[0]);
@@ -78,7 +88,8 @@ DECLARE_MODULE_METHOD(socket__connect) {
   remote.sin_port = htons(port);
 
   if(inet_pton(AF_INET, address, &remote.sin_addr) <= 0) {
-    RETURN_ERROR("Address not valid or unsupported");
+    errno = EADDRNOTAVAIL;
+    RETURN_NUMBER(-1);
   }
 
   fd_set read_set;

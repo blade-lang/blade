@@ -191,7 +191,7 @@ class TTY {
 stdin()
 returns an handle to the standard input file of the system
 
-This method is a cask for stdin() method which was declared in
+This method is a stub for stdin() method which was declared in
 native C.
 @return file<std>
 */
@@ -201,7 +201,7 @@ def stdin() {}
 stdout()
 returns an handle to the standard output file of the system
 
-This method is a cask for stdout() method which was declared in
+This method is a stub for stdout() method which was declared in
 native C.
 @return file<std>
 */
@@ -211,7 +211,7 @@ def stdout() {}
 stderr()
 returns an handle to the standard error file of the system
 
-This method is a cask for stderr() method which was declared in
+This method is a stub for stderr() method which was declared in
 native C.
 @return file<std>
 */
