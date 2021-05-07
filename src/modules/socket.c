@@ -23,6 +23,7 @@
 
 #include <ws2tcpip.h>
 #include "win32.h"
+#include <winsock2.h>
 #pragma comment (lib, "ws2_32") /* winsock support */
 #include "compat/getopt.h"
 #define sleep			_sleep
