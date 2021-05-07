@@ -419,7 +419,8 @@ DECLARE_STRING_METHOD(index_of) {
   char *str = AS_C_STRING(METHOD_OBJECT);
   char *result = strstr(str, AS_C_STRING(args[0]));
 
-  RETURN_NUMBER(result - str);
+  if(result != NULL) RETURN_NUMBER((int)(result - str));
+  RETURN_NUMBER(-1);
 }
 
 DECLARE_STRING_METHOD(starts_with) {

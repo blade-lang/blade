@@ -141,6 +141,7 @@ class HttpRequest {
 
         # separate the headers and the body
         var body_starts = response_data.index_of('\r\n\r\n')
+        echo response_data.index_of('\n')
 
         if body_starts {
           header = response_data[0,body_starts].trim()
@@ -157,11 +158,11 @@ class HttpRequest {
 
     # return a valid HttpResponse
     var result = HttpResponse()
-
-    result.status_code  = 0
+    
     result.error = error
-    result.headers = self._process_header(header, |s|{
-      result.http_version = s
+    result.headers = self._process_header(header, |version, status|{
+      result.http_version = version
+      result.status_code  = status
     })
     result.body  = body
     result.time_taken = time_taken
@@ -171,19 +172,24 @@ class HttpRequest {
     return result
   }
 
-  _process_header(header, version_callback) {
+  _process_header(header, meta_callback) {
     var result = {}
 
-    # Follow redirect headers...
-    var data = header.trim().split('\r\n')
+    if header {
+      # Follow redirect headers...
+      var data = header.trim().split('\r\n')
 
-    iter var i = 0; i < data.length(); i++ {
-      var d = data[i].index_of(':')
-      if d > -1 {
-        result.add(data[i][0,d], data[i][d + 1,data[i].length()])
-      } else if(data[i].lower().starts_with('http/')){
-        var http_version = data[i].split(' ')[0].replace('http/', '')
-        if version_callback version_callback(http_version)
+      iter var i = 0; i < data.length(); i++ {
+        var d = data[i].index_of(':')
+        if d > -1 {
+          result.add(data[i][0,d], data[i][d + 1,data[i].length()])
+        } else if(data[i].lower().starts_with('http/')){
+          var split = data[i].split(' ')
+          var http_version = split[0].replace('http/', '')
+
+          # call back with (version, status code)
+          if meta_callback meta_callback(http_version, to_number(split[1]))
+        }
       }
     }
 

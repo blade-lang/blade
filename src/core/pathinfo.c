@@ -60,8 +60,11 @@ char *get_exe_dir() {
 
 char *get_exe_path() {
   char raw_path[PATH_MAX];
-  realpath(PROC_SELF_EXE, raw_path);
-  return raw_path;
+  ssize_t read_length;
+  if((read_length = readlink(PROC_SELF_EXE, raw_path, sizeof(raw_path))) > -1 && read_length < PATH_MAX){
+    return strdup(raw_path);
+  }
+  return "";
 }
 
 #endif
@@ -84,12 +87,7 @@ char *get_exe_path() {
 #if defined __CYGWIN__ || defined __linux__ || defined __APPLE__
 
 char *get_exe_dir() {
-  char *exe_path = get_exe_path();
-  char *exe_path_str = malloc((strlen(exe_path) + 1) * sizeof(char));
-  strcpy(exe_path_str, exe_path);
-  char *exe_dir = dirname(exe_path_str);
-  free(exe_path_str);
-  return exe_dir;
+  return dirname(get_exe_path());
 }
 
 #endif
@@ -151,7 +149,7 @@ char *resolve_import_path(char *module_name, const char *current_file) {
   char *bird_file_name = get_bird_filename(module_name);
 
   // check relative to the current file...
-  char *file_directory = dirname((char *) current_file);
+  char *file_directory = dirname((char *) strdup(current_file));
   char *relative_file = merge_paths(file_directory, bird_file_name);
 
   if (file_exists(relative_file)) {

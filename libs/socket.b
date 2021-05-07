@@ -278,7 +278,7 @@ class Socket {
     if !is_int(queue_length) 
       die SocketException('integer expected for queue_length, ${typeof(queue_length)} given')
     if queue_length > Socket.SOMAXCONN 
-      die SocketException('maximum queue length of ${Socket.SOMAXCONN} exceeded')
+      die SocketException('maximum queue length exceeded')
 
     if !self.is_bound or self.is_listening or self.is_closed die SocketException('socket is in an illegal state')
 
