@@ -184,10 +184,10 @@ class Date {
     }
   }
 
-  # cask method for native gmtime
+  # stub method for native gmtime
   static gmtime() {}
 
-  # cask method for native localtime
+  # stub method for native localtime
   static localtime() {}
 
   # creates a unix timestamp from the given date

@@ -106,7 +106,7 @@ class HttpClient {
     return self
   }
 
-  # cask method
+  # stub method
   __client(url, user_agent, referer, timeout, follow_redirect,
           skip_hostname_verification, skip_peer_verification, 
           ca_cert, cookie_file, method, no_expect){

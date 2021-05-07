@@ -136,6 +136,10 @@ class Socket {
   # as well as when we are running in blocking mode
   var is_blocking = false
 
+  # stub method for _create and _connect private method
+  _create(family, type, flag){}
+  _connect(id, address, port, family, timeout, is_blocking){}
+
   # constructor...
   # called without parameters, is same as
   # Socket(Socket.AF_INET, Socket.SOCK_STREAM, 0)
