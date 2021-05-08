@@ -14,7 +14,7 @@
  * MSVC implements this as _vscprintf, thus we just 'symlink' it here
  * GNU-C-compatible compilers do not implement this, thus we implement it here
  */
-#ifdef _MSC_VER
+#ifdef _WIN32
 #define vscprintf _vscprintf
 #endif
 
@@ -38,7 +38,7 @@ int vscprintf(const char *format, va_list ap) {
  */
 #if defined __CYGWIN__ || defined _WIN64 || defined _WIN32
 int vasprintf(char **strp, const char *format, va_list ap) {
-  int len = _vscprintf(format, ap);
+  int len = vscprintf(format, ap);
   if (len == -1)
     return -1;
   char *str = (char *)malloc((len + 1) * sizeof(char));

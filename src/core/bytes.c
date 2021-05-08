@@ -49,8 +49,10 @@ DECLARE_BYTES_METHOD(append) {
 
     // append here...
     b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
-    bytes->bytes.bytes = reallocate(vm, bytes->bytes.bytes, bytes->bytes.count,
-                                    bytes->bytes.count++);
+    int old_count = bytes->bytes.count;
+    bytes->bytes.count++;
+    bytes->bytes.bytes = reallocate(vm, bytes->bytes.bytes, old_count,
+                                    bytes->bytes.count);
     bytes->bytes.bytes[bytes->bytes.count - 1] = (unsigned char) byte;
     RETURN;
   } else if (IS_LIST(args[0])) {
