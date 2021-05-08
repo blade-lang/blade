@@ -189,8 +189,15 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>..\deps\lib\windows\x64\pcre2-8.lib;..\deps\lib\windows\x64\libcurl.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>XCOPY /Y /R "$(ProjectDir)..\libs\*" "$(TargetDir)\libs\"
+DEL $(TargetDir)\*.obj
+DEL $(TargetDir)\*.iobj
+DEL $(TargetDir)\*.log
+DEL $(TargetDir)\*.CopyComplete</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -227,10 +234,17 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalDependencies>..\deps\lib\windows\x64\pcre2-8.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <ManifestFile>$(IntDir)$(TargetName)$(TargetExt).manifest</ManifestFile>
       <LinkTimeCodeGeneration>UseFastLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
+    <PostBuildEvent>
+      <Command>XCOPY /Y /R "$(ProjectDir)..\libs\*" "$(TargetDir)\libs\"
+DEL $(TargetDir)\*.obj
+DEL $(TargetDir)\*.iobj
+DEL $(TargetDir)\*.log
+DEL $(TargetDir)\*.CopyComplete</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
