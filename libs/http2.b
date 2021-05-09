@@ -141,7 +141,6 @@ class HttpRequest {
 
         # separate the headers and the body
         var body_starts = response_data.index_of('\r\n\r\n')
-        echo response_data.index_of('\n')
 
         if body_starts {
           header = response_data[0,body_starts].trim()
