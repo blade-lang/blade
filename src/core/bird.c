@@ -47,7 +47,7 @@ static void repl(b_vm *vm) {
 
   char *source = (char *) calloc(1, sizeof(char));
   int current_line = 0;
-  int brace_count = 0, paren_count = 0, bracket_count = 0;
+  int brace_count = 0, paren_count = 0, bracket_count = 0, single_quote_count = 0, double_quote_count = 0;
 
   for (;;) {
     while (sigsetjmp(ctrlc_buf, 1) != 0);
@@ -57,6 +57,8 @@ static void repl(b_vm *vm) {
       brace_count = 0;
       paren_count = 0;
       bracket_count = 0;
+      single_quote_count = 0;
+      double_quote_count = 0;
 
       // reset source...
       memset(source, 0, strlen(source));
@@ -68,6 +70,8 @@ static void repl(b_vm *vm) {
     const char *cursor = "> ";
     if (brace_count > 0 || bracket_count > 0 || paren_count > 0) {
       cursor = "| ";
+    } else if (single_quote_count == 1 || double_quote_count == 1) {
+      cursor = "  ";
     }
 
 #if defined _WIN32 || defined __CYGWIN__
@@ -106,6 +110,20 @@ static void repl(b_vm *vm) {
       else if (line[i] == '[')
         bracket_count++;
 
+      // quotes
+      else if(((i == 0 && line[i] == '\'') || (line[i] == '\'' && line[i - 1] != '\\')) && double_quote_count == 0) {
+        if(single_quote_count == 0) 
+          single_quote_count = 1; 
+        else 
+          single_quote_count = 0;
+      }
+      else if(((i == 0 && line[i] == '"') || (line[i] == '"' && line[i - 1] != '\\')) && single_quote_count == 0){
+        if(double_quote_count == 0) 
+          double_quote_count = 1; 
+        else 
+          double_quote_count = 0;
+      }
+
         // scope closers...
       else if (line[i] == '}' && brace_count > 0)
         brace_count--;
@@ -120,7 +138,7 @@ static void repl(b_vm *vm) {
       source = append_strings(source, "\n");
     }
 
-    if (bracket_count == 0 && paren_count == 0 && brace_count == 0) {
+    if (bracket_count == 0 && paren_count == 0 && brace_count == 0 && single_quote_count == 0 && double_quote_count == 0) {
 
       interpret(vm, source, "<repl>");
 
