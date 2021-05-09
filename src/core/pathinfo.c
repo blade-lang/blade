@@ -150,6 +150,13 @@ char *resolve_import_path(char *module_name, const char *current_file) {
 
   // check relative to the current file...
   char *file_directory = dirname((char *) strdup(current_file));
+
+  // fixing last path / if exists (looking at windows)...
+  int file_directory_length = (int)strlen(file_directory);
+  if (file_directory[file_directory_length - 1] == '\\') {
+    file_directory[file_directory_length - 1] = '\0';
+  }
+
   char *relative_file = merge_paths(file_directory, bird_file_name);
 
   if (file_exists(relative_file)) {
@@ -157,8 +164,10 @@ char *resolve_import_path(char *module_name, const char *current_file) {
     char *path1 = realpath(relative_file, NULL);
     char *path2 = realpath(current_file, NULL);
 
-    if (path2 == NULL || memcmp(path1, path2, (int) strlen(path2)) != 0)
-      return relative_file;
+    if (path1 != NULL) {
+      if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
+        return relative_file;
+    }
   }
 
   // check in bird's default location
@@ -170,8 +179,10 @@ char *resolve_import_path(char *module_name, const char *current_file) {
     char *path1 = realpath(library_file, NULL);
     char *path2 = realpath(current_file, NULL);
 
-    if (path2 == NULL || memcmp(path1, path2, (int) strlen(path2)) != 0)
-      return library_file;
+    if (path1 != NULL) {
+      if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
+        return library_file;
+    }
   }
 
   return NULL;
