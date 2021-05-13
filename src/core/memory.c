@@ -1,8 +1,8 @@
 #include "memory.h"
+#include "builtin/file.h"
 #include "compiler.h"
 #include "config.h"
 #include "object.h"
-#include "builtin/file.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,7 +18,7 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
   if (new_size > old_size) {
 #if defined DEBUG_STRESS_GC && DEBUG_STRESS_GC
     // @TODO: fix bug associated with enabling stressed gc
-     collect_garbage(vm);
+    collect_garbage(vm);
 #endif
 
     if (vm->bytes_allocated > vm->next_gc) {
@@ -28,8 +28,8 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
 
   if (new_size == 0) {
     free(pointer);
-//    return NULL;
-    return malloc(sizeof pointer);
+    return NULL;
+    // return malloc(sizeof pointer);
   }
   void *result = realloc(pointer, new_size);
 
@@ -39,6 +39,32 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
     exit(1);
   }
   return result;
+}
+
+void add_active_object(b_vm *vm, b_obj *object) {
+  if (vm->active_objects_capacity < vm->active_objects_count + 1) {
+    vm->active_objects_capacity = GROW_CAPACITY(vm->active_objects_capacity);
+    b_obj **result = (b_obj **)realloc(
+        vm->active_objects, sizeof(b_obj *) * vm->active_objects_capacity);
+
+    if (result == NULL) {
+      fprintf(stderr, "GC encountered an error");
+      exit(1);
+    }
+
+    vm->active_objects = result;
+  }
+  object->is_marked = true;
+  vm->active_objects[vm->active_objects_count++] = object;
+}
+
+void clear_active_objects(b_vm *vm) {
+  if (vm->active_objects != NULL) {
+    free(vm->active_objects);
+    vm->active_objects_capacity = 0;
+    vm->active_objects_count = 0;
+    vm->active_objects = NULL;
+  }
 }
 
 void mark_object(b_vm *vm, b_obj *object) {
@@ -191,7 +217,7 @@ static void free_object(b_vm *vm, b_obj *object) {
     b_obj_file *file = (b_obj_file *)object;
     if (file->mode->length != 0 && !is_std_file(file)) {
       fclose(file->file);
-//      free(file->file);
+      //      free(file->file);
     }
     FREE(b_obj_file, object);
     break;
@@ -319,6 +345,11 @@ static void sweep(b_vm *vm) {
 
       free_object(vm, unreached);
     }
+  }
+
+  // re-validate active objects
+  for (int i = 0; i < vm->active_objects_count; i++) {
+    vm->active_objects[i]->is_marked = true;
   }
 }
 

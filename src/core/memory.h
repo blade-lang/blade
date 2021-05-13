@@ -28,4 +28,7 @@ void mark_value(b_vm *vm, b_value value);
 
 void collect_garbage(b_vm *vm);
 
+void add_active_object(b_vm *vm, b_obj *object);
+void clear_active_objects(b_vm *vm);
+
 #endif
