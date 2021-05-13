@@ -18,7 +18,7 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
   if (new_size > old_size) {
 #if defined DEBUG_STRESS_GC && DEBUG_STRESS_GC
     // @TODO: fix bug associated with enabling stressed gc
-    // collect_garbage(vm);
+     collect_garbage(vm);
 #endif
 
     if (vm->bytes_allocated > vm->next_gc) {
@@ -160,7 +160,10 @@ static void blacken_object(b_vm *vm, b_obj *object) {
     break;
   }
 
-  case OBJ_NATIVE:
+  case OBJ_NATIVE: {
+    mark_object(vm, object);
+    break;
+  }
   case OBJ_STRING:
     break;
   }

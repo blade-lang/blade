@@ -1173,7 +1173,7 @@ static bool concatenate(b_vm *vm) {
     memcpy(chars + num_length, b->chars, b->length);
     chars[length] = '\0';
 
-    b_obj_string *result = take_string(vm, chars, length);
+    b_obj_string *result = copy_string(vm, chars, length);
     result->utf8_length = utf8len(result->chars);
 
     pop_n(vm, 2);
@@ -1191,7 +1191,7 @@ static bool concatenate(b_vm *vm) {
     memcpy(chars + a->length, num_str, num_length);
     chars[length] = '\0';
 
-    b_obj_string *result = take_string(vm, chars, length);
+    b_obj_string *result = copy_string(vm, chars, length);
     result->utf8_length = utf8len(result->chars);
 
     pop_n(vm, 2);
@@ -1206,7 +1206,7 @@ static bool concatenate(b_vm *vm) {
     memcpy(chars + a->length, b->chars, b->length);
     chars[length] = '\0';
 
-    b_obj_string *result = take_string(vm, chars, length);
+    b_obj_string *result = copy_string(vm, chars, length);
     result->utf8_length = utf8len(result->chars);
 
     pop_n(vm, 2);

@@ -24,16 +24,16 @@ class HttpResponse {
   var body
 
   to_string() {
-    return {
-      status_code: status_code,
-      http_version: http_version,
-      time_taken: time_taken,
-      redirects: redirects,
-      responder: responder,
-      headers: headers,
-      error: error,
-      body: error
-    }.to_string()
+    return to_string({
+      status_code: self.status_code,
+      http_version: self.http_version,
+      time_taken: self.time_taken,
+      redirects: self.redirects,
+      responder: self.responder,
+      headers: self.headers,
+      error: self.error,
+      body: self.body
+    })
   }
 }
 
