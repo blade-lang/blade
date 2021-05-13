@@ -26,6 +26,10 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   object->next = vm->objects;
   vm->objects = object;
 
+  if (vm->is_calling_native) {
+    add_active_object(vm, object);
+  }
+
 #if defined DEBUG_LOG_GC && DEBUG_LOG_GC
   printf("%p allocate %ld for %d\n", (void *)object, size, type);
 #endif
@@ -405,7 +409,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     sprintf(str, "<native-function %s>", AS_NATIVE(value)->name);
     break;
   case OBJ_STRING:
-    return AS_C_STRING(value);
+    return strdup(AS_C_STRING(value));
   case OBJ_UP_VALUE:
     return (char *)"<up value>";
   case OBJ_BYTES:

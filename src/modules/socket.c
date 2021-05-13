@@ -194,8 +194,9 @@ DECLARE_MODULE_METHOD(socket__accept) {
   int port = (int) ntohs(client.sin_port);
 
   b_obj_list *response = new_list(vm);
+
   write_list(vm, response, NUMBER_VAL(new_sock));
-  write_list(vm, response, OBJ_VAL(copy_string(vm, ip, (int)strlen(ip))));
+  write_list(vm, response, OBJ_VAL(take_string(vm, ip, (int)strlen(ip))));
   write_list(vm, response, NUMBER_VAL(port));
 
   RETURN_OBJ(response);
@@ -375,20 +376,15 @@ DECLARE_MODULE_METHOD(socket__getsockinfo) {
     int port = ntohs(address.sin_port);
 
     b_obj_dict *dict = new_dict(vm);
-    push(vm, OBJ_VAL(dict));
 
     b_value address_key = STRING_L_VAL("address", 7);
-    push(vm, address_key); // gc protect
     b_value port_key = STRING_L_VAL("port", 4);
-    push(vm, port_key); // gc protect
     b_value family_key = STRING_L_VAL("family", 6);
-    push(vm, family_key); // gc protect
 
     dict_add_entry(vm, dict, address_key,STRING_VAL(ip));
     dict_add_entry(vm, dict, port_key,NUMBER_VAL(port));
     dict_add_entry(vm, dict, family_key,NUMBER_VAL(ntohs(address.sin_family)));
 
-    pop_n(vm, 4); // pop the gc protections
     RETURN_OBJ(dict);
   }
 

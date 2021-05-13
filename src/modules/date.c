@@ -65,7 +65,6 @@ DECLARE_MODULE_METHOD(date__localtime) {
   struct tm *time_info = localtime(&raw_time.tv_sec);
 
   b_obj_dict *dict = new_dict(vm);
-  push(vm, OBJ_VAL(dict));
 
   ADD_TIME("year", 4, (double) time_info->tm_year + 1900);
   ADD_TIME("month", 5, (double) time_info->tm_mon + 1);
@@ -95,7 +94,6 @@ DECLARE_MODULE_METHOD(date__localtime) {
   ADD_TIME("gmt_offset", 10, 0);
 #endif
 
-  pop(vm);
   RETURN_OBJ(dict);
 }
 
@@ -105,7 +103,6 @@ DECLARE_MODULE_METHOD(date__gmtime) {
   struct tm *time_info = gmtime(&raw_time.tv_sec);
 
   b_obj_dict *dict = new_dict(vm);
-  push(vm, OBJ_VAL(dict));
 
   ADD_TIME("year", 4, (double) time_info->tm_year + 1900);
   ADD_TIME("month", 5, (double) time_info->tm_mon + 1);
@@ -135,7 +132,6 @@ DECLARE_MODULE_METHOD(date__gmtime) {
   ADD_TIME("gmt_offset", 10, 0);
 #endif
 
-  pop(vm);
   RETURN_OBJ(dict);
 }
 

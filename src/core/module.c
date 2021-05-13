@@ -40,8 +40,7 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
         if (module.functions != NULL) {
           for (int j = 0; module.functions[j].name != NULL; j++) {
             b_func_reg func = module.functions[j];
-            b_value func_name =
-                OBJ_VAL(copy_string(vm, func.name, (int) strlen(func.name)));
+            b_value func_name = STRING_VAL(func.name);
 
             b_value func_real_value =
                 OBJ_VAL(new_native(vm, func.function, func.name));
@@ -54,8 +53,7 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
           for (int j = 0; module.classes[j].name != NULL; j++) {
             b_class_reg klass_reg = module.classes[j];
 
-            b_value class_key = OBJ_VAL(
-                copy_string(vm, klass_reg.name, (int) strlen(klass_reg.name)));
+            b_value class_key = STRING_VAL(klass_reg.name);
 
             b_value class_value;
             if (table_get(&vm->globals, class_key, &class_value)) {
@@ -66,8 +64,7 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
 
                   b_func_reg func = klass_reg.functions[k];
 
-                  b_value func_name = OBJ_VAL(
-                      copy_string(vm, func.name, (int) strlen(func.name)));
+                  b_value func_name = STRING_VAL(func.name);
 
                   b_value func_real_value =
                       OBJ_VAL(new_native(vm, func.function, func.name));
@@ -82,8 +79,7 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
               if (klass_reg.fields != NULL) {
                 for (int k = 0; klass_reg.fields[k].name != NULL; k++) {
                   b_field_reg field = klass_reg.fields[k];
-                  b_value field_name = OBJ_VAL(
-                      copy_string(vm, field.name, (int) strlen(field.name)));
+                  b_value field_name = STRING_VAL(field.name);
 
                   table_set(vm,
                             field.is_static ? &klass->static_fields
