@@ -2009,6 +2009,8 @@ static void try_statement(b_parser *p) {
   emit_byte_and_short(p, OP_SET_LOCAL, error_message);
 
   block(p);
+
+  discard_local(p, p->compiler->scope_depth);
   end_scope(p);
 
   // jump out of the code block completely if no error occurs
