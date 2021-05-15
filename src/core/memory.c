@@ -187,7 +187,7 @@ static void blacken_object(b_vm *vm, b_obj *object) {
   }
 
   case OBJ_NATIVE: {
-    mark_object(vm, object);
+    // mark_object(vm, object);
     break;
   }
   case OBJ_STRING:
@@ -364,12 +364,20 @@ void free_objects(b_vm *vm) {
   free(vm->gray_stack);
 }
 
+void mark_active_objects(b_vm *vm) {
+  for (int i = 0; i < vm->active_objects_count; i++) {
+    printf("marking active object...\n");
+    vm->active_objects[i]->is_marked = true;
+  }
+}
+
 void collect_garbage(b_vm *vm) {
 #if defined DEBUG_LOG_GC && DEBUG_LOG_GC
   printf("-- gc begins\n");
   size_t before = vm->bytes_allocated;
 #endif
 
+  mark_active_objects(vm);
   mark_roots(vm);
   trace_references(vm);
   table_remove_whites(&vm->strings);
