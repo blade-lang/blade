@@ -26,6 +26,11 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   object->next = vm->objects;
   vm->objects = object;
 
+  if (vm->is_calling_native) {
+    push(vm, OBJ_VAL(object));
+    vm->active_objects_count++;
+  }
+
 #if defined DEBUG_LOG_GC && DEBUG_LOG_GC
   printf("%p allocate %ld for %d\n", (void *)object, size, type);
 #endif
@@ -99,13 +104,18 @@ b_obj_func *new_function(b_vm *vm) {
 
 b_obj_instance *new_instance(b_vm *vm, b_obj_class *klass) {
   b_obj_instance *instance = ALLOCATE_OBJ(b_obj_instance, OBJ_INSTANCE);
-  push(vm, OBJ_VAL(instance)); // gc fix
+
+  if(!vm->is_calling_native){
+    push(vm, OBJ_VAL(instance)); // gc fix
+  }
 
   instance->klass = klass;
   init_table(&instance->fields);
   table_add_all(vm, &klass->fields, &instance->fields);
 
-  pop(vm); // gc fix
+  if (!vm->is_calling_native) {
+    pop(vm); // gc fix
+  }
   return instance;
 }
 
@@ -138,9 +148,14 @@ b_obj_string *allocate_string(b_vm *vm, char *chars, int length,
   string->utf8_length = utf8len(chars);
   string->hash = hash;
 
-  push(vm, OBJ_VAL(string)); // fixing gc corruption
+  if(!vm->is_calling_native){
+    push(vm, OBJ_VAL(string)); // fixing gc corruption
+  }
   table_set(vm, &vm->strings, OBJ_VAL(string), NIL_VAL);
-  pop(vm); // fixing gc corruption
+
+  if(!vm->is_calling_native){
+    pop(vm); // fixing gc corruption
+  }
 
   return string;
 }
@@ -405,7 +420,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     sprintf(str, "<native-function %s>", AS_NATIVE(value)->name);
     break;
   case OBJ_STRING:
-    return AS_C_STRING(value);
+    return strdup(AS_C_STRING(value));
   case OBJ_UP_VALUE:
     return (char *)"<up value>";
   case OBJ_BYTES:

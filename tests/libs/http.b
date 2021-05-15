@@ -6,8 +6,8 @@ var start = time()
 
 for i in 1..total {
   try {
-    echo 'Attempt ${i}'
-    echo HttpClient().get('localhost:3000')
+    echo '\n\nAttempt ${i}'
+    echo HttpClient().get('localhost:8000')
   } catch e {
     # echo e.message
   }

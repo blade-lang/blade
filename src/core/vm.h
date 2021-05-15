@@ -51,6 +51,7 @@ struct s_vm {
   int gray_capacity;
   b_obj **gray_stack;
   size_t bytes_allocated;
+  int active_objects_count;
   size_t next_gc;
 
   // object methods
@@ -60,8 +61,9 @@ struct s_vm {
   b_table methods_file;
   b_table methods_bytes;
 
-  // repl flag
+  // boolean and control flags
   bool is_repl;
+  bool is_calling_native;
 };
 
 void init_vm(b_vm *vm);
@@ -100,10 +102,8 @@ b_obj_instance *create_exception(b_vm *vm, b_obj_string *message);
   _runtime_error(vm, ##__VA_ARGS__);                                           \
   EXIT_VM();
 
-void gc_start_protect(b_vm *vm);
-void gc_stop_protection(b_vm *vm);
-
-#define GUARD(t, n, v) t *n = v; \
+#define GUARD(t, n, v)                                                         \
+  t *n = v;                                                                    \
   push(vm, OBJ_VAL(n))
 
 #endif
