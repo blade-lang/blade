@@ -22,6 +22,14 @@ DECLARE_DICT_METHOD(length);
 DECLARE_DICT_METHOD(add);
 
 /**
+ * dict.set(key: any, value: any)
+ *
+ * sets the value of the given key in the dictionary.
+ * creates the key if it does not exist
+ */
+DECLARE_DICT_METHOD(set);
+
+/**
  * dict.clear()
  *
  * clears the contents of the dictionary

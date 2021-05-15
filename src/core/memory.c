@@ -1,8 +1,8 @@
 #include "memory.h"
+#include "builtin/file.h"
 #include "compiler.h"
 #include "config.h"
 #include "object.h"
-#include "builtin/file.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,7 +18,7 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
   if (new_size > old_size) {
 #if defined DEBUG_STRESS_GC && DEBUG_STRESS_GC
     // @TODO: fix bug associated with enabling stressed gc
-     collect_garbage(vm);
+    collect_garbage(vm);
 #endif
 
     if (vm->bytes_allocated > vm->next_gc) {
@@ -28,8 +28,8 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
 
   if (new_size == 0) {
     free(pointer);
-//    return NULL;
-    return malloc(sizeof pointer);
+    return NULL;
+    // return malloc(sizeof pointer);
   }
   void *result = realloc(pointer, new_size);
 
@@ -161,7 +161,7 @@ static void blacken_object(b_vm *vm, b_obj *object) {
   }
 
   case OBJ_NATIVE: {
-    mark_object(vm, object);
+    // mark_object(vm, object);
     break;
   }
   case OBJ_STRING:
@@ -191,7 +191,7 @@ static void free_object(b_vm *vm, b_obj *object) {
     b_obj_file *file = (b_obj_file *)object;
     if (file->mode->length != 0 && !is_std_file(file)) {
       fclose(file->file);
-//      free(file->file);
+      //      free(file->file);
     }
     FREE(b_obj_file, object);
     break;
