@@ -419,8 +419,6 @@ void init_vm(b_vm *vm) {
   vm->gray_capacity = 0;
   vm->gray_stack = NULL;
   vm->active_objects_count = 0;
-  vm->active_objects_capacity = 0;
-  vm->active_objects = NULL;
 
   init_table(&vm->strings);
   init_table(&vm->globals);
@@ -554,9 +552,15 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
         return false;
       }
 
+      // clear active objects...
+      if(vm->active_objects_count > 0) {
+        pop_n(vm, vm->active_objects_count);
+        vm->active_objects_count = 0;
+      }
+
       vm->stack_top -= arg_count + 1;
       push(vm, result);
-      clear_active_objects(vm);
+
       vm->is_calling_native = false;
       return true;
     }
