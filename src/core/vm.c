@@ -414,7 +414,6 @@ void init_vm(b_vm *vm) {
   vm->compiler = NULL;
   vm->objects = NULL;
   vm->exception_class = NULL;
-  vm->runtime_exception_class = NULL;
   vm->bytes_allocated = 0;
   vm->next_gc = 1024 * 1024; // 1mb // @TODO: Increase before going production.
   vm->is_repl = false;
