@@ -17,16 +17,17 @@ typedef enum {
 } b_ptr_result;
 
 typedef struct {
+  uint16_t address;
+  b_obj_class *klass;
+} b_exception_frame;
+
+typedef struct {
   b_obj *function;
   uint8_t *ip;
   b_value *slots;
+  int handlers_count;
+  b_exception_frame handlers[MAX_EXCEPTION_HANDLERS];
 } b_call_frame;
-
-typedef struct b_catch_frame {
-  int offset;
-  b_call_frame *frame;
-  struct b_catch_frame *previous;
-} b_catch_frame;
 
 struct s_vm {
   b_call_frame frames[FRAMES_MAX];
@@ -43,8 +44,8 @@ struct s_vm {
 
   b_obj *objects;
   b_compiler *compiler;
-  b_catch_frame *catch_frame;
   b_obj_class *exception_class;
+  b_obj_class *runtime_exception_class;
 
   // gc
   int gray_count;
@@ -83,22 +84,16 @@ void define_native_method(b_vm *vm, b_table *table, const char *name,
                           b_native_fn function);
 bool is_instance_of(b_obj_class *klass1, char *klass2_name);
 
+bool throw_exception(b_vm *vm, const char *format, ...); 
 void _runtime_error(b_vm *vm, const char *format, ...);
 b_obj_instance *create_exception(b_vm *vm, b_obj_string *message);
 
-#define EXIT_VM()                                                              \
-  if (vm->catch_frame == NULL) {                                               \
-    return PTR_RUNTIME_ERR;                                                    \
-  } else {                                                                     \
-    frame = vm->catch_frame->frame;                                            \
-    frame->ip =                                                                \
-        get_frame_function(frame)->blob.code + vm->catch_frame->offset;        \
-    break;                                                                     \
-  }
+#define EXIT_VM() return PTR_RUNTIME_ERR
 
 #define runtime_error(...)                                                     \
-  _runtime_error(vm, ##__VA_ARGS__);                                           \
-  EXIT_VM();
+  if(!throw_exception(vm, ##__VA_ARGS__)){                                     \
+    EXIT_VM(); \
+  }
 
 void gc_start_protect(b_vm *vm);
 void gc_stop_protection(b_vm *vm);
