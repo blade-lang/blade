@@ -45,7 +45,6 @@ struct s_vm {
   b_obj *objects;
   b_compiler *compiler;
   b_obj_class *exception_class;
-  b_obj_class *runtime_exception_class;
 
   // gc
   int gray_count;
