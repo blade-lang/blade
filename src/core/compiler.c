@@ -823,8 +823,6 @@ static void named_variable(b_parser *p, b_token name, bool can_assign) {
 }
 
 static void list(b_parser *p, bool can_assign) {
-  emit_byte(p, OP_NIL); // placeholder to hold the list
-
   int count = 0;
   if (!check(p, RBRACKET_TOKEN)) {
     do {
@@ -841,8 +839,6 @@ static void list(b_parser *p, bool can_assign) {
 }
 
 static void dictionary(b_parser *p, bool can_assign) {
-  emit_byte(p, OP_NIL); // placeholder to hold the dictionary
-  
   int item_count = 0;
   if (!check(p, RBRACE_TOKEN)) {
     do {
