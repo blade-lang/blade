@@ -264,7 +264,7 @@ DECLARE_MODULE_METHOD(socket__recv) {
       if(length != -1 && length < content_length)
         content_length = length;
 
-      char *response = (char*)malloc(sizeof(char) * (content_length + 1));
+      char *response = (char*)ALLOCATE(char, content_length + 1);
       ssize_t total_length = recv(sock, response, content_length, flags);
       response[total_length] = '\0';
 

@@ -399,7 +399,8 @@ DECLARE_STRING_METHOD(split) {
     char *to_free, *str, *token;
     to_free = str = strdup(object); // We own str's memory now.
     while ((token = strsep(&str, delimeter)))
-      write_list(vm, list, OBJ_VAL(take_string(vm, token, strlen(token))));
+      write_list(vm, list, OBJ_VAL(copy_string(vm, token, strlen(token))));
+    free(to_free);
   } else {
     const char *string = AS_C_STRING(METHOD_OBJECT);
     for (int i = 0; i < (int)strlen(string); i++) {
