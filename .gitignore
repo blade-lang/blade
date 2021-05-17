@@ -25,3 +25,4 @@ bird.exe
 *.dll
 *.stackdump
 tmp
+nbproject
