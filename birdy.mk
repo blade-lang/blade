@@ -99,8 +99,8 @@ ifeq ($(MODE),debug)
 	CFLAGS += -O0 -DDEBUG -g
 	BUILD_DIR := build/debug
 else
-	CFLAGS += -O3 -flto
-#	CFLAGS += -Ofast -flto
+# CFLAGS += -O3 -flto
+	CFLAGS += -Ofast -flto
 	BUILD_DIR := build/release
 endif
 

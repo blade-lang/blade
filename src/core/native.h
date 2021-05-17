@@ -58,8 +58,8 @@
 #define RETURN_FALSE return BOOL_VAL(false)
 #define RETURN_NUMBER(v) return NUMBER_VAL(v)
 #define RETURN_OBJ(v) return OBJ_VAL(v)
-#define RETURN_STRING(v) return STRING_VAL(v)
-#define RETURN_L_STRING(v, l) return STRING_L_VAL(v, l)
+#define RETURN_STRING(v) return OBJ_VAL(copy_string(vm, v, (int)strlen(v)))
+#define RETURN_L_STRING(v, l) return OBJ_VAL(copy_string(vm, v, l))
 #define RETURN_T_STRING(v, l) return OBJ_VAL(take_string(vm, v, l))
 #define RETURN_VALUE(v) return v
 

@@ -53,8 +53,8 @@ DECLARE_NATIVE(__exception_trace__) {
 
     char *trace_part = NULL;
     asprintf(&trace_part,
-             "    File: %s, Line: %d, In: ", get_frame_function(frame)->file,
-             function->blob.lines[instruction]);
+    "    File: %s, Line: %d, In: ", get_frame_function(frame)->file,
+    function->blob.lines[instruction]);
 
     if (function->name == NULL) {
       trace_part = append_strings(
@@ -62,7 +62,7 @@ DECLARE_NATIVE(__exception_trace__) {
     } else {
       trace_part = append_strings(trace_part, function->name->chars);
       trace_part =
-          append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" : "()");
+      append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" : "()");
     }
 
     trace = append_strings(trace, trace_part);
@@ -80,14 +80,16 @@ static void initialize_exceptions(b_vm *vm) {
 
   // set class constructor
   table_set(vm, &klass->methods,
-            STRING_L_VAL(class_name->chars, class_name->length), initializer);
+            OBJ_VAL(copy_string(vm, class_name->chars, class_name->length)),
+            initializer);
   klass->initializer = initializer;
 
   // set class fields
-  table_set(vm, &klass->fields, STRING_L_VAL("message", 7), NIL_VAL);
-  b_obj_native *trace_fn =
-      new_native(vm, GET_NATIVE(__exception_trace__), "trace");
-  table_set(vm, &klass->methods, STRING_L_VAL("trace", 5), OBJ_VAL(trace_fn));
+  table_set(vm, &klass->fields, OBJ_VAL(copy_string(vm, "message", 7)),
+            NIL_VAL);
+  b_obj_native *trace_fn = new_native(vm, GET_NATIVE(__exception_trace__), "trace");
+  table_set(vm, &klass->methods,
+            OBJ_VAL(copy_string(vm, "trace", 5)), OBJ_VAL(trace_fn));
 
   table_set(vm, &vm->globals, OBJ_VAL(class_name), OBJ_VAL(klass));
   vm->exception_class = klass;
@@ -97,38 +99,36 @@ b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
   char *trace = (char *)malloc(sizeof(char));
   memset(trace, 0, sizeof(char));
 
-  //  // fprintf(stderr, "StackTrace:\n");
-  //  for (int i = 0; i < vm->frame_count; i++) {
-  //    b_call_frame *frame = &vm->frames[i];
-  //    b_obj_func *function = get_frame_function(frame);
-  //
-  //    // -1 because the IP is sitting on the next instruction to be executed
-  //    size_t instruction = frame->ip - get_frame_function(frame)->blob.code -
-  //    1;
-  //
-  //    char *trace_part = NULL;
-  //    asprintf(&trace_part,
-  //             "    File: %s, Line: %d, In: ",
-  //             get_frame_function(frame)->file,
-  //             function->blob.lines[instruction]);
-  //
-  //    if (function->name == NULL) {
-  //      trace_part = append_strings(
-  //          trace_part, i < vm->frame_count - 1 ? "<script>\n" : "<script>");
-  //    } else {
-  //      trace_part = append_strings(trace_part, function->name->chars);
-  //      trace_part =
-  //          append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" :
-  //          "()");
-  //    }
-  //
-  //    trace = append_strings(trace, trace_part);
-  //  }
+//  // fprintf(stderr, "StackTrace:\n");
+//  for (int i = 0; i < vm->frame_count; i++) {
+//    b_call_frame *frame = &vm->frames[i];
+//    b_obj_func *function = get_frame_function(frame);
+//
+//    // -1 because the IP is sitting on the next instruction to be executed
+//    size_t instruction = frame->ip - get_frame_function(frame)->blob.code - 1;
+//
+//    char *trace_part = NULL;
+//    asprintf(&trace_part,
+//             "    File: %s, Line: %d, In: ", get_frame_function(frame)->file,
+//             function->blob.lines[instruction]);
+//
+//    if (function->name == NULL) {
+//      trace_part = append_strings(
+//          trace_part, i < vm->frame_count - 1 ? "<script>\n" : "<script>");
+//    } else {
+//      trace_part = append_strings(trace_part, function->name->chars);
+//      trace_part =
+//          append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" : "()");
+//    }
+//
+//    trace = append_strings(trace, trace_part);
+//  }
 
   b_obj_instance *instance = new_instance(vm, vm->exception_class);
-  table_set(vm, &instance->fields, STRING_L_VAL("message", 7), OBJ_VAL(message));
-  //  table_set(vm, &instance->fields, OBJ_VAL(copy_string(vm, "trace", 5)),
-  //            OBJ_VAL(take_string(vm, trace, (int)strlen(trace))));
+  table_set(vm, &instance->fields, OBJ_VAL(copy_string(vm, "message", 7)),
+            OBJ_VAL(message));
+//  table_set(vm, &instance->fields, OBJ_VAL(copy_string(vm, "trace", 5)),
+//            OBJ_VAL(take_string(vm, trace, (int)strlen(trace))));
   return instance;
 }
 
@@ -203,7 +203,7 @@ b_value pop_n(b_vm *vm, int n) {
 b_value peek(b_vm *vm, int distance) { return vm->stack_top[-1 - distance]; }
 
 static void define_native(b_vm *vm, const char *name, b_native_fn function) {
-  push(vm, STRING_VAL(name));
+  push(vm, OBJ_VAL(copy_string(vm, name, (int)strlen(name))));
   push(vm, OBJ_VAL(new_native(vm, function, name)));
   table_set(vm, &vm->globals, vm->stack[0], vm->stack[1]);
   pop_n(vm, 2);
@@ -211,7 +211,7 @@ static void define_native(b_vm *vm, const char *name, b_native_fn function) {
 
 void define_native_method(b_vm *vm, b_table *table, const char *name,
                           b_native_fn function) {
-  push(vm, STRING_VAL(name));
+  push(vm, OBJ_VAL(copy_string(vm, name, (int)strlen(name))));
   push(vm, OBJ_VAL(new_native(vm, function, name)));
   table_set(vm, table, vm->stack[0], vm->stack[1]);
   pop_n(vm, 2);
@@ -331,7 +331,6 @@ static void init_builtin_methods(b_vm *vm) {
   // dictionary methods
   DEFINE_DICT_METHOD(length);
   DEFINE_DICT_METHOD(add);
-  DEFINE_DICT_METHOD(set);
   DEFINE_DICT_METHOD(clear);
   DEFINE_DICT_METHOD(clone);
   DEFINE_DICT_METHOD(compact);
@@ -413,14 +412,10 @@ void init_vm(b_vm *vm) {
   vm->bytes_allocated = 0;
   vm->next_gc = 1024 * 1024; // 1mb // @TODO: Increase before going production.
   vm->is_repl = false;
-  vm->is_calling_native = false;
 
   vm->gray_count = 0;
   vm->gray_capacity = 0;
   vm->gray_stack = NULL;
-  vm->active_objects_count = 0;
-  vm->active_objects_capacity = 0;
-  vm->active_objects = NULL;
 
   init_table(&vm->strings);
   init_table(&vm->globals);
@@ -546,7 +541,6 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
     }
 
     case OBJ_NATIVE: {
-      vm->is_calling_native = true;
       b_native_fn native = AS_NATIVE(callee)->function;
       b_value result = native(vm, arg_count, vm->stack_top - arg_count);
 
@@ -556,8 +550,6 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
 
       vm->stack_top -= arg_count + 1;
       push(vm, result);
-      clear_active_objects(vm);
-      vm->is_calling_native = false;
       return true;
     }
 
@@ -751,11 +743,13 @@ bool is_instance_of(b_obj_class *klass1, char *klass2_name) {
 
 static void print_exception(b_vm *vm, b_obj_instance *exception) {
   b_value message, trace;
-  if (table_get(&exception->fields, STRING_L_VAL("message", 7), &message) &&
-      table_get(&exception->klass->methods, STRING_L_VAL("trace", 5), &trace)) {
+  if (table_get(&exception->fields, OBJ_VAL(copy_string(vm, "message", 7)),
+                &message) &&
+      table_get(&exception->klass->methods, OBJ_VAL(copy_string(vm, "trace", 5)),
+                &trace)) {
     fprintf(stderr, "Unhandled Exception: %s: %s\n",
             exception->klass->name->chars, value_to_string(vm, message));
-    if (call_value(vm, trace, 0)) {
+    if(call_value(vm, trace, 0)) {
       // while value to string may be heavy here, we can't make
       // any assumption that the user will not try to override
       // the trace method and return a value we do not anticipate.
@@ -819,7 +813,7 @@ static b_obj_string *multiply_string(b_vm *vm, b_obj_string *str,
     return str;
 
   int total_length = str->length * times;
-  char *result = calloc(total_length + 1, sizeof(char));
+  char *result = ALLOCATE(char, total_length + 1);
 
   for (int i = 0; i < times; i++) {
     memcpy(result + (str->length * i), str->chars, str->length);
@@ -913,7 +907,8 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
       int start = index, end = index + 1;
       utf8slice(string->chars, &start, &end);
 
-      push(vm, STRING_L_VAL(string->chars + start, (int)(end - start)));
+      push(vm,
+           OBJ_VAL(copy_string(vm, string->chars + start, (int)(end - start))));
       return true;
     } else {
       _runtime_error(vm, "string index %d out of range", real_index);
@@ -934,7 +929,7 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
       if (!will_assign) {
         pop_n(vm, 3); // +1 for the list itself
       }
-      push(vm, STRING_L_VAL("", 0));
+      push(vm, OBJ_VAL(copy_string(vm, "", 0)));
       return true;
     }
 
@@ -951,7 +946,8 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
     int start = lower_index, end = upper_index;
     utf8slice(string->chars, &start, &end);
 
-    push(vm, STRING_L_VAL(string->chars + start, (int)(end - start)));
+    push(vm,
+         OBJ_VAL(copy_string(vm, string->chars + start, (int)(end - start))));
     return true;
   }
 }
@@ -1177,7 +1173,7 @@ static bool concatenate(b_vm *vm) {
     memcpy(chars + num_length, b->chars, b->length);
     chars[length] = '\0';
 
-    b_obj_string *result = take_string(vm, chars, length);
+    b_obj_string *result = copy_string(vm, chars, length);
     result->utf8_length = utf8len(result->chars);
 
     pop_n(vm, 2);
@@ -1195,7 +1191,7 @@ static bool concatenate(b_vm *vm) {
     memcpy(chars + a->length, num_str, num_length);
     chars[length] = '\0';
 
-    b_obj_string *result = take_string(vm, chars, length);
+    b_obj_string *result = copy_string(vm, chars, length);
     result->utf8_length = utf8len(result->chars);
 
     pop_n(vm, 2);
@@ -1210,7 +1206,7 @@ static bool concatenate(b_vm *vm) {
     memcpy(chars + a->length, b->chars, b->length);
     chars[length] = '\0';
 
-    b_obj_string *result = take_string(vm, chars, length);
+    b_obj_string *result = copy_string(vm, chars, length);
     result->utf8_length = utf8len(result->chars);
 
     pop_n(vm, 2);
@@ -1473,7 +1469,7 @@ b_ptr_result run(b_vm *vm) {
     case OP_STRINGIFY: {
       if (!IS_STRING(peek(vm, 0))) {
         char *value = value_to_string(vm, pop(vm));
-        push(vm, OBJ_VAL(take_string(vm, value, (int)strlen(value))));
+        push(vm, OBJ_VAL(copy_string(vm, value, (int)strlen(value))));
       }
       break;
     }
@@ -1611,14 +1607,12 @@ b_ptr_result run(b_vm *vm) {
         }
       }
 
-      if (IS_CLASS(peek(vm, 0))) {
-        runtime_error(
-            "class %s does not have a static field or method named %s",
-            AS_CLASS(peek(vm, 0))->name->chars, name->chars);
-      } else if (IS_INSTANCE(peek(vm, 0))) {
-        runtime_error(
-            "instance of class %s %s does not have a field or method named %s",
-            AS_INSTANCE(peek(vm, 0))->klass->name->chars, name->chars);
+      if(IS_CLASS(peek(vm, 0))) {
+        runtime_error("class %s does not have a static field or method named %s",
+                      AS_CLASS(peek(vm, 0))->name->chars, name->chars);
+      } else if(IS_INSTANCE(peek(vm, 0))) {
+        runtime_error("instance of class %s %s does not have a field or method named %s",
+                      AS_INSTANCE(peek(vm, 0))->klass->name->chars, name->chars);
       } else {
         runtime_error("object of type %s does not have a property %s",
                       value_type(peek(vm, 0)), name->chars);
@@ -1730,8 +1724,7 @@ b_ptr_result run(b_vm *vm) {
       b_obj_string *method = READ_STRING();
       int arg_count = READ_BYTE();
       b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
-      if (!invoke_from_class(vm, instance->klass->superclass, method,
-                             arg_count)) {
+      if (!invoke_from_class(vm, instance->klass->superclass, method, arg_count)) {
         EXIT_VM();
       }
       frame = &vm->frames[vm->frame_count - 1];
@@ -1741,14 +1734,12 @@ b_ptr_result run(b_vm *vm) {
     case OP_LIST: {
       int count = READ_SHORT();
       b_obj_list *list = new_list(vm);
-      add_active_object(vm, (b_obj *)list); // protect against gc corruption
-
+      push(vm, OBJ_VAL(list));
       for (int i = count - 1; i >= 0; i--) {
         write_list(vm, list, peek(vm, i + 1)); // +1 to skip the list
       }
-      pop_n(vm, count);
+      pop_n(vm, count + 1); // + 1 for the list itself
       push(vm, OBJ_VAL(list));
-      clear_active_objects(vm);
       break;
     }
     case OP_RANGE: {
@@ -1760,7 +1751,7 @@ b_ptr_result run(b_vm *vm) {
 
       double lower = AS_NUMBER(_lower), upper = AS_NUMBER(_upper);
       b_obj_list *list = new_list(vm);
-      add_active_object(vm, (b_obj *)list); // protect against gc corruption
+      push(vm, OBJ_VAL(list));
 
       if (upper > lower) {
         for (int i = (int)lower; i < upper; i++) {
@@ -1772,24 +1763,22 @@ b_ptr_result run(b_vm *vm) {
         }
       }
 
-      pop_n(vm, 2);
+      pop_n(vm, 2 + 1); // + 1 for the list itself
       push(vm, OBJ_VAL(list));
-      clear_active_objects(vm);
       break;
     }
     case OP_DICT: {
       int count = READ_SHORT() * 2; // 1 for key, 1 for value
       b_obj_dict *dict = new_dict(vm);
-      add_active_object(vm, (b_obj *)dict); // protect against gc corruption
+      push(vm, OBJ_VAL(dict)); // fix gc
 
       for (int i = 0; i < count; i += 2) {
-        b_value name = vm->stack_top[-count + i];
-        b_value value = vm->stack_top[-count + i + 1];
+        b_value name = vm->stack_top[-count + i - 1];
+        b_value value = vm->stack_top[-count + i];
         dict_add_entry(vm, dict, name, value);
       }
-      pop_n(vm, count);
+      pop_n(vm, count + 1);
       push(vm, OBJ_VAL(dict));
-      clear_active_objects(vm);
       break;
     }
     case OP_GET_INDEX: {
@@ -1964,7 +1953,7 @@ b_ptr_result run(b_vm *vm) {
       b_value _condition = peek(vm, 2);
 
       pop_n(vm, 3);
-      if (!is_falsey(_condition)) {
+      if(!is_falsey(_condition)) {
         push(vm, _then);
       } else {
         push(vm, _else);

@@ -5,9 +5,9 @@
 #include "win32.h"
 #endif
 
+#include <sys/stat.h>
 #include <curl/curl.h>
 #include <string.h>
-#include <sys/stat.h>
 
 static inline size_t http_module_write_header(void *ptr, size_t size,
                                               size_t nmemb, void *stream) {
@@ -55,9 +55,19 @@ DECLARE_MODULE_METHOD(http___client) {
   if (curl) {
     form = curl_mime_init(curl);
 
-    curl_easy_setopt(curl, CURLOPT_URL, url->chars);
+    /*form = curl_mime_init(curl);
 
-    if (user_agent->length > 0) {
+    field = curl_mime_addpart(form);
+    curl_mime_name(field, "file");
+    curl_mime_filedata(field, "/Users/appzone/c/birdy/me.png");
+
+    curl_easy_setopt(curl, CURLOPT_URL, url->chars);
+    curl_easy_setopt(curl, CURLOPT_MIMEPOST, form);
+    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);*/
+
+     curl_easy_setopt(curl, CURLOPT_URL, url->chars);
+
+     if (user_agent->length > 0) {
       curl_easy_setopt(curl, CURLOPT_USERAGENT, user_agent->chars);
     }
 
@@ -114,17 +124,16 @@ DECLARE_MODULE_METHOD(http___client) {
     }
 
     // if request body is given
-    if (!IS_NIL(request_body)) {
-      if (IS_DICT(request_body)) {
-        if (has_file) {
+    if(!IS_NIL(request_body)) {
+      if(IS_DICT(request_body)) {
+        if(has_file) {
 
           for (int i = 0; i < AS_DICT(request_body)->names.count; i++) {
-            b_obj_string *key =
-                AS_STRING(AS_DICT(request_body)->names.values[i]);
+            b_obj_string *key = AS_STRING(AS_DICT(request_body)->names.values[i]);
 
             b_value val;
-            if (dict_get_entry(AS_DICT(request_body), OBJ_VAL(key), &val)) {
-              if (IS_FILE(val)) {
+            if(dict_get_entry(AS_DICT(request_body), OBJ_VAL(key), &val)) {
+              if(IS_FILE(val)) {
                 char *file_path = realpath(AS_FILE(val)->path->chars, NULL);
 
                 field = curl_mime_addpart(form);
@@ -144,22 +153,18 @@ DECLARE_MODULE_METHOD(http___client) {
           char *input = "";
 
           for (int i = 0; i < AS_DICT(request_body)->names.count; i++) {
-            b_obj_string *key =
-                AS_STRING(AS_DICT(request_body)->names.values[i]);
+            b_obj_string *key = AS_STRING(AS_DICT(request_body)->names.values[i]);
             char *escaped_key = curl_easy_escape(curl, key->chars, key->length);
 
-            if (escaped_key != NULL) {
+            if(escaped_key != NULL) {
               input = append_strings(input, escaped_key);
               input = append_strings(input, "=");
 
               b_value val;
-              if (dict_get_entry(AS_DICT(request_body),
-                                 AS_DICT(request_body)->names.values[i],
-                                 &val)) {
+              if(dict_get_entry(AS_DICT(request_body), AS_DICT(request_body)->names.values[i], &val)) {
 
                 char *value = value_to_string(vm, val);
-                char *escaped_value =
-                    curl_easy_escape(curl, value, (int)strlen(value));
+                char *escaped_value = curl_easy_escape(curl, value, (int)strlen(value));
 
                 if (escaped_value != NULL) {
                   input = append_strings(input, escaped_value);
@@ -175,6 +180,71 @@ DECLARE_MODULE_METHOD(http___client) {
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, AS_C_STRING(request_body));
       }
     }
+    /*if (!IS_NIL(args[11])) {
+
+      if (IS_DICT(args[11])) {
+        b_obj_dict *request_body = AS_DICT(args[11]);
+
+        if (request_body->names.count > 0) {
+          if(!has_file) {
+            char *input = "";
+
+            for (int i = 0; i < request_body->names.count; i++) {
+              b_obj_string *key = AS_STRING(request_body->names.values[i]);
+
+              char *escaped_key = curl_easy_escape(curl, key->chars, key->length);
+
+              if(escaped_key != NULL) {
+                input = append_strings(input, escaped_key);
+                input = append_strings(input, "=");
+
+                b_value val;
+                if(dict_get_entry(request_body, request_body->names.values[i], &val)) {
+
+                  char *value = value_to_string(vm, val);
+                  char *escaped_value = curl_easy_escape(curl, value, (int)strlen(value));
+
+                  if (escaped_value != NULL) {
+                    input = append_strings(input, escaped_value);
+                  }
+                  input = append_strings(input, "&");
+                }
+              }
+            }
+
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, input);
+          } else {
+
+            for (int i = 0; i < request_body->names.count; i++) {
+              b_obj_string *key = AS_STRING(request_body->names.values[i]);
+
+              b_value val;
+              if (dict_get_entry(request_body, request_body->names.values[i], &val)) {
+
+                if (IS_FILE(val)) {
+                  char *file_path = realpath(AS_FILE(val)->path->chars, NULL);
+
+                  field = curl_mime_addpart(form);
+                  curl_mime_name(field, key->chars);
+                  curl_mime_filedata(field, file_path);
+                } else {
+                  char *value = value_to_string(vm, val);
+                  field = curl_mime_addpart(form);
+                  curl_mime_name(field, key->chars);
+                  curl_mime_data(field, value, CURL_ZERO_TERMINATED);
+                }
+              }
+            }
+
+            curl_easy_setopt(form, CURLOPT_MIMEPOST, form);
+          }
+        } else {
+          curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
+        }
+      } else if (IS_STRING(args[11])) {
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, AS_C_STRING(args[11]));
+      }
+    }*/
 
     // NOTE: Always set the user's headers after setting request body
     // this will enable the user to override curl's headers due to such
@@ -196,7 +266,7 @@ DECLARE_MODULE_METHOD(http___client) {
         }
       }
 
-      if (no_expect) {
+      if(no_expect) {
         heads = curl_slist_append(heads, "Expect:");
       }
 
@@ -228,7 +298,11 @@ DECLARE_MODULE_METHOD(http___client) {
     b_value error = NIL_VAL;
     if (res_code != CURLE_OK) {
       const char *err = curl_easy_strerror(res_code);
-      error = STRING_VAL(err);
+      error = OBJ_VAL(copy_string(vm, err, (int)strlen(err)));
+    }
+
+    if(!IS_NIL(error)) {
+      push(vm, error);
     }
 
     fseek(stream, 0L, SEEK_END);
@@ -247,22 +321,34 @@ DECLARE_MODULE_METHOD(http___client) {
     curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &total_time);
     curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &effective_url);
 
-    b_obj_list *list = new_list(vm);
+    b_obj_string *header = copy_string(vm, stream_content, header_length);
+    b_obj_string *body = copy_string(vm, stream_content + header_length,
+                                     (int)stream_length - header_length);
+    b_obj_string *responder =
+        copy_string(vm, effective_url, (int)strlen(effective_url));
 
-    write_list(vm, list, NUMBER_VAL(status_code));
-    write_list(vm, list, error);
-    write_list(vm, list, STRING_L_VAL(stream_content, header_length));
-    write_list(vm, list, STRING_L_VAL(stream_content + header_length, (int)stream_length - header_length));
-    write_list(vm, list, NUMBER_VAL(total_time));
-    write_list(vm, list, NUMBER_VAL(redirect_count));
-    write_list(vm, list, STRING_VAL(effective_url));
+    // guard against gc corruption
+    push(vm, OBJ_VAL(header));
+    push(vm, OBJ_VAL(body));
+    push(vm, OBJ_VAL(responder));
 
     // clean up
-    free(stream_content);
     curl_easy_cleanup(curl);
     curl_mime_free(form);
     curl_slist_free_all(heads);
 
+    b_obj_list *list = new_list(vm);
+    push(vm, OBJ_VAL(list)); // fix gc
+
+    write_list(vm, list, NUMBER_VAL(status_code));
+    write_list(vm, list, error);
+    write_list(vm, list, OBJ_VAL(header));
+    write_list(vm, list, OBJ_VAL(body));
+    write_list(vm, list, NUMBER_VAL(total_time));
+    write_list(vm, list, NUMBER_VAL(redirect_count));
+    write_list(vm, list, OBJ_VAL(responder));
+
+    pop_n(vm, IS_NIL(error) ? 4 : 5); // remove our gc guards
     RETURN_OBJ(list);
   }
 

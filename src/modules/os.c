@@ -69,25 +69,27 @@ DECLARE_MODULE_METHOD(os_info) {
   }
 
   b_obj_dict *dict = new_dict(vm);
+  push(vm, OBJ_VAL(dict));
 
-  dict_add_entry(vm, dict, STRING_L_VAL("sysname", 7),
-                 STRING_L_VAL(os.sysname, strlen(os.sysname)));
-  dict_add_entry(vm, dict, STRING_L_VAL("nodename", 8),
-                 STRING_L_VAL(os.nodename, strlen(os.nodename)));
-  dict_add_entry(vm, dict, STRING_L_VAL("version", 7),
-                 STRING_L_VAL(os.version, strlen(os.version)));
-  dict_add_entry(vm, dict, STRING_L_VAL("release", 7),
-                 STRING_L_VAL(os.release, strlen(os.release)));
-  dict_add_entry(vm, dict, STRING_L_VAL("machine", 7),
-                 STRING_L_VAL(os.machine, strlen(os.machine)));
+  dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, "sysname", 7)),
+                 OBJ_VAL(copy_string(vm, os.sysname, strlen(os.sysname))));
+  dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, "nodename", 8)),
+                 OBJ_VAL(copy_string(vm, os.nodename, strlen(os.nodename))));
+  dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, "version", 7)),
+                 OBJ_VAL(copy_string(vm, os.version, strlen(os.version))));
+  dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, "release", 7)),
+                 OBJ_VAL(copy_string(vm, os.release, strlen(os.release))));
+  dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, "machine", 7)),
+                 OBJ_VAL(copy_string(vm, os.machine, strlen(os.machine))));
 
+  pop(vm);
   RETURN_OBJ(dict);
 }
 
 DECLARE_MODULE_METHOD(os_sleep) {
   ENFORCE_ARG_COUNT(sleep, 1);
   ENFORCE_ARG_TYPE(sleep, 0, IS_NUMBER);
-  sleep((int)AS_NUMBER(args[0]));
+  sleep((int) AS_NUMBER(args[0]));
   RETURN;
 }
 
@@ -135,7 +137,7 @@ b_value get_os_platform(b_vm *vm) {
 #define PLATFORM_NAME "unknown"
 #endif
 
-  RETURN_L_STRING(PLATFORM_NAME, (int)strlen(PLATFORM_NAME));
+  RETURN_L_STRING(PLATFORM_NAME, (int) strlen(PLATFORM_NAME));
 
 #undef PLATFORM_NAME
 }
@@ -145,10 +147,8 @@ DECLARE_MODULE_METHOD(os_getenv) {
   ENFORCE_ARG_TYPE(getenv, 0, IS_STRING);
 
   char *env = getenv(AS_C_STRING(args[0]));
-  if (env != NULL)
-    RETURN_STRING(env);
-  else
-    RETURN;
+  if(env != NULL) RETURN_STRING(env);
+  else RETURN;
 }
 
 DECLARE_MODULE_METHOD(os_setenv) {
@@ -157,7 +157,7 @@ DECLARE_MODULE_METHOD(os_setenv) {
   ENFORCE_ARG_TYPE(setenv, 1, IS_STRING);
 
   int overwrite = 1;
-  if (arg_count == 3) {
+  if(arg_count == 3) {
     ENFORCE_ARG_TYPE(setenv, 2, IS_BOOL);
     overwrite = AS_BOOL(args[2]) ? 1 : 0;
   }
@@ -166,24 +166,24 @@ DECLARE_MODULE_METHOD(os_setenv) {
 #define setenv(e, v, i) _putenv_s(e, v)
 #endif
 
-  if (setenv(AS_C_STRING(args[0]), AS_C_STRING(args[1]), overwrite) == 0)
+  if(setenv(AS_C_STRING(args[0]), AS_C_STRING(args[1]), overwrite) == 0)
     RETURN_TRUE;
   RETURN_FALSE;
 }
 
 CREATE_MODULE_LOADER(os) {
   static b_func_reg os_class_functions[] = {
-      {"info", true, GET_MODULE_METHOD(os_info)},
-      {"exec", true, GET_MODULE_METHOD(os_exec)},
-      {"sleep", true, GET_MODULE_METHOD(os_sleep)},
-      {"getenv", true, GET_MODULE_METHOD(os_getenv)},
-      {"setenv", true, GET_MODULE_METHOD(os_setenv)},
-      {NULL, false, NULL},
+      {"info",  true,  GET_MODULE_METHOD(os_info)},
+      {"exec",  true,  GET_MODULE_METHOD(os_exec)},
+      {"sleep", true,  GET_MODULE_METHOD(os_sleep)},
+      {"getenv", true,  GET_MODULE_METHOD(os_getenv)},
+      {"setenv", true,  GET_MODULE_METHOD(os_setenv)},
+      {NULL,    false, NULL},
   };
 
   static b_field_reg os_class_fields[] = {
       {"platform", true, get_os_platform},
-      {NULL, false, NULL},
+      {NULL,       false, NULL},
   };
 
   static b_class_reg classes[] = {
