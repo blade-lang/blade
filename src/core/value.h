@@ -153,6 +153,5 @@ void sort_values(b_value *values, int count);
 
 #define STRING_VAL(val) OBJ_VAL(copy_string(vm, val, (int)strlen(val)))
 #define STRING_L_VAL(val, l) OBJ_VAL(copy_string(vm, val, l))
-#define STRING_T_VAL(val, l) OBJ_VAL(take_string(vm, val, l))
 
 #endif
