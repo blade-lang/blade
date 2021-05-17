@@ -173,7 +173,7 @@ DECLARE_FILE_METHOD(read) {
     }
   }
 
-  char *buffer = (char *) malloc(file_size + 1); // +1 for terminator '\0'
+  char *buffer = (char *) ALLOCATE(char, file_size + 1); // +1 for terminator '\0'
 
   if (buffer == NULL && file_size != 0) {
     FILE_ERROR(Buffer, "not enough memory to read file");

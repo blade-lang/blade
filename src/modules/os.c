@@ -34,7 +34,7 @@ DECLARE_MODULE_METHOD(os_exec) {
   size_t n_read;
   size_t output_size = 256;
   int length = 0;
-  char *output = malloc(output_size);
+  char *output = ALLOCATE(char, output_size);
 
   while ((n_read = fread(buffer, 1, sizeof(buffer), fd)) != 0) {
     if (length + n_read >= output_size) {
@@ -58,7 +58,7 @@ DECLARE_MODULE_METHOD(os_exec) {
   output[length - 1] = '\0';
 
   pclose(fd);
-  RETURN_L_STRING(output, length);
+  RETURN_T_STRING(output, length);
 }
 
 DECLARE_MODULE_METHOD(os_info) {
