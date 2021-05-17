@@ -47,11 +47,13 @@ static int jump_instruction(const char *name, int sign, b_blob *blob,
 }
 
 static int try_instruction(const char *name, b_blob *blob, int offset) {
-  uint16_t jump = (uint16_t) (blob->code[offset + 1] << 8);
-  jump |= blob->code[offset + 2];
+  uint16_t type = (uint16_t) (blob->code[offset + 1] << 8);
+  type |= blob->code[offset + 2];
+  uint16_t address = (uint16_t) (blob->code[offset + 3] << 8);
+  address |= blob->code[offset + 4];
 
-  printf("%-16s %4d -> %d\n", name, offset, jump);
-  return offset + 3;
+  printf("%-16s %4d -> %d\n", name, type, address);
+  return offset + 5;
 }
 
 static int invoke_instruction(const char *name, b_blob *blob, int offset) {

@@ -151,7 +151,7 @@ class HttpRequest {
         # and change will connect to true
         will_connect = false
       }
-    } catch e {
+    } catch Exception as e {
       error = e.message
     }
 
