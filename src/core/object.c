@@ -27,8 +27,7 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   vm->objects = object;
 
   if (vm->is_calling_native) {
-    push(vm, OBJ_VAL(object));
-    vm->active_objects_count++;
+    add_active_object(vm, object);
   }
 
 #if defined DEBUG_LOG_GC && DEBUG_LOG_GC
@@ -104,18 +103,13 @@ b_obj_func *new_function(b_vm *vm) {
 
 b_obj_instance *new_instance(b_vm *vm, b_obj_class *klass) {
   b_obj_instance *instance = ALLOCATE_OBJ(b_obj_instance, OBJ_INSTANCE);
-
-  if(!vm->is_calling_native){
-    push(vm, OBJ_VAL(instance)); // gc fix
-  }
+  push(vm, OBJ_VAL(instance)); // gc fix
 
   instance->klass = klass;
   init_table(&instance->fields);
   table_add_all(vm, &klass->fields, &instance->fields);
 
-  if (!vm->is_calling_native) {
-    pop(vm); // gc fix
-  }
+  pop(vm); // gc fix
   return instance;
 }
 
@@ -148,14 +142,9 @@ b_obj_string *allocate_string(b_vm *vm, char *chars, int length,
   string->utf8_length = utf8len(chars);
   string->hash = hash;
 
-  if(!vm->is_calling_native){
-    push(vm, OBJ_VAL(string)); // fixing gc corruption
-  }
+  push(vm, OBJ_VAL(string)); // fixing gc corruption
   table_set(vm, &vm->strings, OBJ_VAL(string), NIL_VAL);
-
-  if(!vm->is_calling_native){
-    pop(vm); // fixing gc corruption
-  }
+  pop(vm); // fixing gc corruption
 
   return string;
 }
