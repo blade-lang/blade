@@ -331,6 +331,7 @@ static void init_builtin_methods(b_vm *vm) {
   // dictionary methods
   DEFINE_DICT_METHOD(length);
   DEFINE_DICT_METHOD(add);
+  DEFINE_DICT_METHOD(set);
   DEFINE_DICT_METHOD(clear);
   DEFINE_DICT_METHOD(clone);
   DEFINE_DICT_METHOD(compact);

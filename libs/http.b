@@ -121,7 +121,19 @@ class HttpClient {
     iter var i = 0; i < data.length(); i++ {
       var d = data[i].index_of(':')
       if d > -1 {
-        result.add(data[i][0,d], data[i][d + 1,data[i].length()])
+        var key = data[i][0,d]
+        var value = data[i][d + 1,data[i].length()]
+
+        # handle cookies in header
+        if key == 'Set-Cookie' {
+          if result.contains(key) {
+            result[key].append(value)
+          } else {
+            result[key] = [value]
+          }
+        } else {
+          result.set(key, value)
+        }
       } else if(data[i].lower().starts_with('http/')){
         var http_version = data[i].split(' ')[0].replace('http/', '')
         if version_callback version_callback(http_version)
@@ -144,19 +156,15 @@ class HttpClient {
       body: nil
     }
 
-    var status_code = result['status_code']  = response[0]
-    var error = result['error'] = response[1]
-    var headers = result['headers'] = self._process_header(response[2], |s|{
+    result['status_code']  = response[0]
+    result['error'] = response[1]
+    result['headers'] = self._process_header(response[2], |s|{
       result['http_version'] = s
     })
-    var body = result['body']  = response[3]
+    result['body']  = response[3]
     result['time_taken'] = response[4]
     result['redirects'] = response[5]
     result['responder'] = response[6]
-
-    if error {
-      result['error'] = error
-    }
 
     return result
   }

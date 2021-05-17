@@ -268,7 +268,7 @@ DECLARE_MODULE_METHOD(socket__recv) {
       ssize_t total_length = recv(sock, response, content_length, flags);
       response[total_length] = '\0';
 
-      RETURN_L_STRING(response, total_length);
+      RETURN_T_STRING(response, total_length);
     }
   } else {
     errno = ETIMEDOUT;

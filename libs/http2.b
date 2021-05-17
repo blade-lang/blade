@@ -181,7 +181,19 @@ class HttpRequest {
       iter var i = 0; i < data.length(); i++ {
         var d = data[i].index_of(':')
         if d > -1 {
-          result.add(data[i][0,d], data[i][d + 1,data[i].length()])
+          var key = data[i][0,d]
+          var value = data[i][d + 1,data[i].length()]
+
+          # handle cookies in header
+          if key == 'Set-Cookie' {
+            if result.contains(key) {
+              result[key].append(value)
+            } else {
+              result[key] = [value]
+            }
+          } else {
+            result.set(key, value)
+          }
         } else if(data[i].lower().starts_with('http/')){
           var split = data[i].split(' ')
           var http_version = split[0].replace('http/', '')
