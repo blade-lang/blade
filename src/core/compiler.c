@@ -835,6 +835,8 @@ static void named_variable(b_parser *p, b_token name, bool can_assign) {
 }
 
 static void list(b_parser *p, bool can_assign) {
+  emit_byte(p, OP_NIL); // placeholder for the list
+
   int count = 0;
   if (!check(p, RBRACKET_TOKEN)) {
     do {
@@ -851,6 +853,8 @@ static void list(b_parser *p, bool can_assign) {
 }
 
 static void dictionary(b_parser *p, bool can_assign) {
+  emit_byte(p, OP_NIL); // placeholder for the dictionary
+
   int item_count = 0;
   if (!check(p, RBRACE_TOKEN)) {
     do {
@@ -1886,7 +1890,7 @@ static void using_statement(b_parser *p) {
           table_set(p->vm, &sw->table, FALSE_VAL, jump);
         } else if (p->previous.type == LITERAL_TOKEN) {
           char *str = compile_string(p);
-          b_obj_string *string = take_string(p->vm, str, (int)strlen(str));
+          b_obj_string *string = copy_string(p->vm, str, (int)strlen(str));
           table_set(p->vm, &sw->table, OBJ_VAL(string), jump);
         } else if (check_number(p)) {
           table_set(p->vm, &sw->table, compile_number(p), jump);
@@ -1978,7 +1982,7 @@ static void import_statement(b_parser *p) {
     return;
   }
 
-  function->name = take_string(p->vm, module_name, (int)strlen(module_name));
+  function->name = copy_string(p->vm, module_name, (int)strlen(module_name));
 
   int import_constant = make_constant(p, OBJ_VAL(function));
   emit_byte_and_short(p, OP_CALL_IMPORT, import_constant);

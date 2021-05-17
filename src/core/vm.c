@@ -1695,12 +1695,12 @@ b_ptr_result run(b_vm *vm) {
     case OP_LIST: {
       int count = READ_SHORT();
       b_obj_list *list = new_list(vm);
-      push(vm, OBJ_VAL(list));
+      vm->stack_top[-count - 1] = OBJ_VAL(list);
+      
       for (int i = count - 1; i >= 0; i--) {
-        write_list(vm, list, peek(vm, i + 1)); // +1 to skip the list
+        write_list(vm, list, peek(vm, i));
       }
-      pop_n(vm, count + 1); // + 1 for the list itself
-      push(vm, OBJ_VAL(list));
+      pop_n(vm, count);
       break;
     }
     case OP_RANGE: {
@@ -1711,6 +1711,7 @@ b_ptr_result run(b_vm *vm) {
       }
 
       double lower = AS_NUMBER(_lower), upper = AS_NUMBER(_upper);
+      pop_n(vm, 2);
       b_obj_list *list = new_list(vm);
       push(vm, OBJ_VAL(list));
 
@@ -1723,23 +1724,19 @@ b_ptr_result run(b_vm *vm) {
           write_list(vm, list, NUMBER_VAL(i));
         }
       }
-
-      pop_n(vm, 2 + 1); // + 1 for the list itself
-      push(vm, OBJ_VAL(list));
       break;
     }
     case OP_DICT: {
       int count = READ_SHORT() * 2; // 1 for key, 1 for value
       b_obj_dict *dict = new_dict(vm);
-      push(vm, OBJ_VAL(dict)); // fix gc
+      vm->stack_top[-count - 1] = OBJ_VAL(dict);
 
       for (int i = 0; i < count; i += 2) {
-        b_value name = vm->stack_top[-count + i - 1];
-        b_value value = vm->stack_top[-count + i];
+        b_value name = vm->stack_top[-count + i];
+        b_value value = vm->stack_top[-count + i + 1];
         dict_add_entry(vm, dict, name, value);
       }
-      pop_n(vm, count + 1);
-      push(vm, OBJ_VAL(dict));
+      pop_n(vm, count);
       break;
     }
     case OP_GET_INDEX: {
