@@ -1744,7 +1744,7 @@ b_ptr_result run(b_vm *vm) {
       add_active_object(vm, (b_obj *)list); // protect against gc corruption
 
       for (int i = count - 1; i >= 0; i--) {
-        write_list(vm, list, peek(vm, i)); // +1 to skip the list
+        write_list(vm, list, peek(vm, i + 1)); // +1 to skip the list
       }
       pop_n(vm, count);
       push(vm, OBJ_VAL(list));
