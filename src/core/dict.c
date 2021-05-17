@@ -26,6 +26,15 @@ DECLARE_DICT_METHOD(add) {
   RETURN;
 }
 
+DECLARE_DICT_METHOD(set) {
+  ENFORCE_ARG_COUNT(set, 2);
+  ENFORCE_VALID_DICT_KEY(set, 0);
+
+  b_obj_dict *dict = AS_DICT(METHOD_OBJECT);
+  dict_set_entry(vm, dict, args[0], args[1]);
+  RETURN;
+}
+
 DECLARE_DICT_METHOD(clear) {
   ENFORCE_ARG_COUNT(dict, 0);
 
