@@ -333,6 +333,7 @@ DECLARE_MODULE_METHOD(http___client) {
     push(vm, OBJ_VAL(responder));
 
     // clean up
+    free(stream_content);
     curl_easy_cleanup(curl);
     curl_mime_free(form);
     curl_slist_free_all(heads);

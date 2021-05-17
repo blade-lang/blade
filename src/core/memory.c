@@ -89,83 +89,83 @@ static void blacken_object(b_vm *vm, b_obj *object) {
 #endif
 
   switch (object->type) {
-  case OBJ_SWITCH: {
-    b_obj_switch *sw = (b_obj_switch *)object;
-    mark_table(vm, &sw->table);
-    break;
-  }
-  case OBJ_FILE: {
-    b_obj_file *file = (b_obj_file *)object;
-    mark_object(vm, (b_obj *)file->mode);
-    mark_object(vm, (b_obj *)file->path);
-    break;
-  }
-  case OBJ_DICT: {
-    b_obj_dict *dict = (b_obj_dict *)object;
-    mark_array(vm, &dict->names);
-    mark_table(vm, &dict->items);
-    break;
-  }
-  case OBJ_LIST: {
-    b_obj_list *list = (b_obj_list *)object;
-    mark_array(vm, &list->items);
-    break;
-  }
-
-  case OBJ_BOUND_METHOD: {
-    b_obj_bound *bound = (b_obj_bound *)object;
-    mark_value(vm, bound->receiver);
-    mark_object(vm, (b_obj *)bound->method);
-    break;
-  }
-  case OBJ_CLASS: {
-    b_obj_class *klass = (b_obj_class *)object;
-    mark_object(vm, (b_obj *)klass->name);
-    mark_table(vm, &klass->methods);
-    mark_table(vm, &klass->static_methods);
-    mark_table(vm, &klass->fields);
-    mark_table(vm, &klass->static_fields);
-    mark_value(vm, klass->initializer);
-    break;
-  }
-  case OBJ_CLOSURE: {
-    b_obj_closure *closure = (b_obj_closure *)object;
-    mark_object(vm, (b_obj *)closure->function);
-    for (int i = 0; i < closure->up_value_count; i++) {
-      mark_object(vm, (b_obj *)closure->up_values[i]);
+    case OBJ_SWITCH: {
+      b_obj_switch *sw = (b_obj_switch *)object;
+      mark_table(vm, &sw->table);
+      break;
     }
-    break;
-  }
+    case OBJ_FILE: {
+      b_obj_file *file = (b_obj_file *)object;
+      mark_object(vm, (b_obj *)file->mode);
+      mark_object(vm, (b_obj *)file->path);
+      break;
+    }
+    case OBJ_DICT: {
+      b_obj_dict *dict = (b_obj_dict *)object;
+      mark_array(vm, &dict->names);
+      mark_table(vm, &dict->items);
+      break;
+    }
+    case OBJ_LIST: {
+      b_obj_list *list = (b_obj_list *)object;
+      mark_array(vm, &list->items);
+      break;
+    }
 
-  case OBJ_FUNCTION: {
-    b_obj_func *function = (b_obj_func *)object;
-    mark_object(vm, (b_obj *)function->name);
-    mark_array(vm, &function->blob.constants);
-    break;
-  }
-  case OBJ_INSTANCE: {
-    b_obj_instance *instance = (b_obj_instance *)object;
-    mark_object(vm, (b_obj *)instance->klass);
-    mark_table(vm, &instance->fields);
-    break;
-  }
+    case OBJ_BOUND_METHOD: {
+      b_obj_bound *bound = (b_obj_bound *)object;
+      mark_value(vm, bound->receiver);
+      mark_object(vm, (b_obj *)bound->method);
+      break;
+    }
+    case OBJ_CLASS: {
+      b_obj_class *klass = (b_obj_class *)object;
+      mark_object(vm, (b_obj *)klass->name);
+      mark_table(vm, &klass->methods);
+      mark_table(vm, &klass->static_methods);
+      mark_table(vm, &klass->fields);
+      mark_table(vm, &klass->static_fields);
+      mark_value(vm, klass->initializer);
+      break;
+    }
+    case OBJ_CLOSURE: {
+      b_obj_closure *closure = (b_obj_closure *)object;
+      mark_object(vm, (b_obj *)closure->function);
+      for (int i = 0; i < closure->up_value_count; i++) {
+        mark_object(vm, (b_obj *)closure->up_values[i]);
+      }
+      break;
+    }
 
-  case OBJ_UP_VALUE: {
-    mark_value(vm, ((b_obj_up_value *)object)->closed);
-    break;
-  }
+    case OBJ_FUNCTION: {
+      b_obj_func *function = (b_obj_func *)object;
+      mark_object(vm, (b_obj *)function->name);
+      mark_array(vm, &function->blob.constants);
+      break;
+    }
+    case OBJ_INSTANCE: {
+      b_obj_instance *instance = (b_obj_instance *)object;
+      mark_object(vm, (b_obj *)instance->klass);
+      mark_table(vm, &instance->fields);
+      break;
+    }
 
-  case OBJ_BYTES: {
-    mark_object(vm, object);
-    break;
-  }
+    case OBJ_UP_VALUE: {
+      mark_value(vm, ((b_obj_up_value *)object)->closed);
+      break;
+    }
 
-  case OBJ_NATIVE: {
-    mark_object(vm, object);
-    break;
-  }
-  case OBJ_STRING:
-    break;
+    case OBJ_BYTES: {
+      mark_object(vm, object);
+      break;
+    }
+
+    case OBJ_NATIVE: {
+      mark_object(vm, object);
+      break;
+    }
+    case OBJ_STRING:
+      break;
   }
 }
 
@@ -175,97 +175,97 @@ static void free_object(b_vm *vm, b_obj *object) {
 #endif
 
   switch (object->type) {
-  case OBJ_SWITCH: {
-    b_obj_switch *sw = (b_obj_switch *)object;
-    free_table(vm, &sw->table);
-    FREE(b_obj_switch, object);
-    break;
-  }
-  case OBJ_BYTES: {
-    b_obj_bytes *bytes = (b_obj_bytes *)object;
-    free_byte_arr(vm, &bytes->bytes);
-    FREE(b_obj_bytes, object);
-    break;
-  }
-  case OBJ_FILE: {
-    b_obj_file *file = (b_obj_file *)object;
-    if (file->mode->length != 0 && !is_std_file(file)) {
-      fclose(file->file);
-//      free(file->file);
+    case OBJ_SWITCH: {
+      b_obj_switch *sw = (b_obj_switch *)object;
+      free_table(vm, &sw->table);
+      FREE(b_obj_switch, object);
+      break;
     }
-    FREE(b_obj_file, object);
-    break;
-  }
-  case OBJ_DICT: {
-    b_obj_dict *dict = (b_obj_dict *)object;
-    free_value_arr(vm, &dict->names);
-    free_table(vm, &dict->items);
-    FREE(b_obj_list, object);
-    break;
-  }
-  case OBJ_LIST: {
-    b_obj_list *list = (b_obj_list *)object;
-    free_value_arr(vm, &list->items);
-    FREE(b_obj_list, object);
-    break;
-  }
+    case OBJ_BYTES: {
+      b_obj_bytes *bytes = (b_obj_bytes *)object;
+      free_byte_arr(vm, &bytes->bytes);
+      FREE(b_obj_bytes, object);
+      break;
+    }
+    case OBJ_FILE: {
+      b_obj_file *file = (b_obj_file *)object;
+      if (file->mode->length != 0 && !is_std_file(file)) {
+        fclose(file->file);
+  //      free(file->file);
+      }
+      FREE(b_obj_file, object);
+      break;
+    }
+    case OBJ_DICT: {
+      b_obj_dict *dict = (b_obj_dict *)object;
+      free_value_arr(vm, &dict->names);
+      free_table(vm, &dict->items);
+      FREE(b_obj_list, object);
+      break;
+    }
+    case OBJ_LIST: {
+      b_obj_list *list = (b_obj_list *)object;
+      free_value_arr(vm, &list->items);
+      FREE(b_obj_list, object);
+      break;
+    }
 
-  case OBJ_BOUND_METHOD: {
-    // a closure may be bound to multiple instances
-    // for this reason, we do not free closures when freeing bound methods
-    FREE(b_obj_bound, object);
-    break;
-  }
-  case OBJ_CLASS: {
-    b_obj_class *klass = (b_obj_class *)object;
-    /*if(IS_OBJ(klass->initializer)) {
-      free_object(vm, AS_OBJ(klass->initializer));
-    }*/
-    free_table(vm, &klass->methods);
-    free_table(vm, &klass->static_methods);
-    free_table(vm, &klass->fields);
-    free_table(vm, &klass->static_fields);
-    FREE(b_obj_class, object);
-    break;
-  }
-  case OBJ_CLOSURE: {
-    b_obj_closure *closure = (b_obj_closure *)object;
-    FREE_ARRAY(b_obj_up_value *, closure->up_values, closure->up_value_count);
-    // there may be multiple closures that all reference the same function
-    // for this reason, we do not free functions when freeing closures
-    FREE(b_obj_closure, object);
-    break;
-  }
-  case OBJ_FUNCTION: {
-    b_obj_func *function = (b_obj_func *)object;
-    free_blob(vm, &function->blob);
-    // free((void *)function->file);
-    FREE(b_obj_func, object);
-    break;
-  }
-  case OBJ_INSTANCE: {
-    b_obj_instance *instance = (b_obj_instance *)object;
-    free_table(vm, &instance->fields);
-    FREE(b_obj_instance, object);
-    break;
-  }
-  case OBJ_NATIVE: {
-    FREE(b_obj_native, object);
-    break;
-  }
-  case OBJ_UP_VALUE: {
-    FREE(b_obj_up_value, object);
-    break;
-  }
-  case OBJ_STRING: {
-    b_obj_string *string = (b_obj_string *)object;
-    FREE_ARRAY(char, string->chars, string->length + 1);
-    FREE(b_obj_string, object);
-    break;
-  }
+    case OBJ_BOUND_METHOD: {
+      // a closure may be bound to multiple instances
+      // for this reason, we do not free closures when freeing bound methods
+      FREE(b_obj_bound, object);
+      break;
+    }
+    case OBJ_CLASS: {
+      b_obj_class *klass = (b_obj_class *)object;
+      /*if(IS_OBJ(klass->initializer)) {
+        free_object(vm, AS_OBJ(klass->initializer));
+      }*/
+      free_table(vm, &klass->methods);
+      free_table(vm, &klass->static_methods);
+      free_table(vm, &klass->fields);
+      free_table(vm, &klass->static_fields);
+      FREE(b_obj_class, object);
+      break;
+    }
+    case OBJ_CLOSURE: {
+      b_obj_closure *closure = (b_obj_closure *)object;
+      FREE_ARRAY(b_obj_up_value *, closure->up_values, closure->up_value_count);
+      // there may be multiple closures that all reference the same function
+      // for this reason, we do not free functions when freeing closures
+      FREE(b_obj_closure, object);
+      break;
+    }
+    case OBJ_FUNCTION: {
+      b_obj_func *function = (b_obj_func *)object;
+      free_blob(vm, &function->blob);
+      // free((void *)function->file);
+      FREE(b_obj_func, object);
+      break;
+    }
+    case OBJ_INSTANCE: {
+      b_obj_instance *instance = (b_obj_instance *)object;
+      free_table(vm, &instance->fields);
+      FREE(b_obj_instance, object);
+      break;
+    }
+    case OBJ_NATIVE: {
+      FREE(b_obj_native, object);
+      break;
+    }
+    case OBJ_UP_VALUE: {
+      FREE(b_obj_up_value, object);
+      break;
+    }
+    case OBJ_STRING: {
+      b_obj_string *string = (b_obj_string *)object;
+      FREE_ARRAY(char, string->chars, string->length + 1);
+      FREE(b_obj_string, object);
+      break;
+    }
 
-  default:
-    break;
+    default:
+      break;
   }
 }
 
