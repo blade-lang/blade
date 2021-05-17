@@ -49,7 +49,7 @@
 #define RETURN return NIL_VAL
 #define RETURN_ERROR(...)                                                      \
   {                                                                            \
-    _runtime_error(vm, ##__VA_ARGS__);                                         \
+    throw_exception(vm, ##__VA_ARGS__);                                         \
     return EMPTY_VAL;                                                          \
   }
 #define RETURN_EMPTY return EMPTY_VAL
@@ -128,7 +128,7 @@
 
 #define REGEX_ASSERTION_ERROR(re, match_data, ovector)                         \
   if (ovector[0] > ovector[1]) {                                               \
-    _runtime_error(                                                            \
+    throw_exception(                                                            \
         vm,                                                                    \
         "match aborted: regular expression used \\K in an assertion %.*s to "  \
         "set match start after its end.",                                      \

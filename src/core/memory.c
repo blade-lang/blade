@@ -35,7 +35,7 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
 
   // just in case reallocation fails... computers ain't infinite!
   if (result == NULL) {
-    fprintf(stderr, "Exit: device out of memory");
+    fprintf(stderr, "Exit: device out of memory\n");
     exit(1);
   }
   return result;

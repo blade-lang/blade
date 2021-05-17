@@ -9,6 +9,7 @@
 #define FRAMES_MAX 512
 #define NUMBER_FORMAT "%.16g"
 #define MAX_INTERPOLATION_NESTING 8
+#define MAX_EXCEPTION_HANDLERS 16
 
 // Maximum load factor of 12/14
 // see: https://engineering.fb.com/2019/04/25/developer-tools/f14/

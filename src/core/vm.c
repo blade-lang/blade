@@ -29,7 +29,6 @@ static void reset_stack(b_vm *vm) {
   vm->stack_top = vm->stack;
   vm->frame_count = 0;
   vm->open_up_values = NULL;
-  vm->catch_frame = NULL;
 }
 
 static inline b_obj_func *get_frame_function(b_call_frame *frame) {
@@ -40,7 +39,7 @@ static inline b_obj_func *get_frame_function(b_call_frame *frame) {
   }
 }
 
-DECLARE_NATIVE(__exception_trace__) {
+static b_value get_stack_trace(b_vm *vm){
   char *trace = (char *)malloc(sizeof(char));
   memset(trace, 0, sizeof(char));
 
@@ -49,12 +48,11 @@ DECLARE_NATIVE(__exception_trace__) {
     b_obj_func *function = get_frame_function(frame);
 
     // -1 because the IP is sitting on the next instruction to be executed
-    size_t instruction = frame->ip - get_frame_function(frame)->blob.code - 1;
+    size_t instruction = frame->ip - function->blob.code - 1;
 
     char *trace_part = NULL;
-    asprintf(&trace_part,
-    "    File: %s, Line: %d, In: ", get_frame_function(frame)->file,
-    function->blob.lines[instruction]);
+    asprintf(&trace_part, "    File: %s, Line: %d, In: ", function->file,
+             function->blob.lines[instruction]);
 
     if (function->name == NULL) {
       trace_part = append_strings(
@@ -62,13 +60,71 @@ DECLARE_NATIVE(__exception_trace__) {
     } else {
       trace_part = append_strings(trace_part, function->name->chars);
       trace_part =
-      append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" : "()");
+          append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" : "()");
     }
 
     trace = append_strings(trace, trace_part);
   }
 
-  RETURN_STRING(trace);
+  RETURN_T_STRING(trace, (int)strlen(trace));
+}
+
+bool propagate_exception(b_vm *vm, b_obj_instance *exception) {
+  while (vm->frame_count > 0) {
+    b_call_frame *frame = &vm->frames[vm->frame_count - 1];
+    for(int i = frame->handlers_count; i > 0; i--) {
+      b_exception_frame handler = frame->handlers[i - 1];
+      if(is_instance_of(exception->klass, handler.klass->name->chars)) {
+        frame->ip = &get_frame_function(frame)->blob.code[handler.address];
+        return true;
+      }
+    }
+    vm->frame_count--;
+  }
+
+  b_value message, trace;
+  fprintf(stderr, "Unhandled %s: ", exception->klass->name->chars);
+  if (table_get(&exception->fields, STRING_L_VAL("message", 7), &message)) {
+    fprintf(stderr, "%s\n", value_to_string(vm, message));
+  } else {
+    fprintf(stderr, "\n");
+  }
+
+  if (table_get(&exception->fields, STRING_L_VAL("stacktrace", 10),&trace)) {
+    fprintf(stderr, "  StackTrace:\n%s\n", value_to_string(vm, trace));
+  }
+
+  fflush(stderr);
+
+  return false;
+}
+
+bool push_exception_handler(b_vm *vm, b_obj_class *type, int address) {
+  b_call_frame *frame = &vm->frames[vm->frame_count - 1];
+  if(frame->handlers_count == MAX_EXCEPTION_HANDLERS) {
+    _runtime_error(vm, "too many nested exception handlers in one function");
+    return false;
+  }
+  frame->handlers[frame->handlers_count].address = address;
+  frame->handlers[frame->handlers_count].klass = type;
+  frame->handlers_count++;
+  return true;
+}
+
+bool throw_exception(b_vm *vm, const char *format, ...) {
+  char *message = NULL;
+
+  va_list args;
+  va_start(args, format);
+  int length = vasprintf(&message, format, args);
+  va_end(args);
+
+  b_obj_instance *instance = create_exception(vm, take_string(vm, message, length));
+  push(vm, OBJ_VAL(instance));
+
+  b_value stacktrace = get_stack_trace(vm);
+  table_set(vm, &instance->fields, STRING_L_VAL("stacktrace", 10), stacktrace);
+  return propagate_exception(vm, instance);
 }
 
 static void initialize_exceptions(b_vm *vm) {
@@ -79,110 +135,58 @@ static void initialize_exceptions(b_vm *vm) {
       OBJ_VAL(new_native(vm, GET_NATIVE(__Exception__), class_name->chars));
 
   // set class constructor
-  table_set(vm, &klass->methods,
-            OBJ_VAL(copy_string(vm, class_name->chars, class_name->length)),
-            initializer);
+  table_set(vm, &klass->methods, OBJ_VAL(class_name), initializer);
   klass->initializer = initializer;
 
   // set class fields
-  table_set(vm, &klass->fields, OBJ_VAL(copy_string(vm, "message", 7)),
-            NIL_VAL);
-  b_obj_native *trace_fn = new_native(vm, GET_NATIVE(__exception_trace__), "trace");
-  table_set(vm, &klass->methods,
-            OBJ_VAL(copy_string(vm, "trace", 5)), OBJ_VAL(trace_fn));
+  table_set(vm, &klass->fields, STRING_L_VAL("message", 7), NIL_VAL);
+  table_set(vm, &klass->fields, STRING_L_VAL("stacktrace", 10), NIL_VAL);
 
   table_set(vm, &vm->globals, OBJ_VAL(class_name), OBJ_VAL(klass));
   vm->exception_class = klass;
 }
 
 b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
-  char *trace = (char *)malloc(sizeof(char));
-  memset(trace, 0, sizeof(char));
-
-//  // fprintf(stderr, "StackTrace:\n");
-//  for (int i = 0; i < vm->frame_count; i++) {
-//    b_call_frame *frame = &vm->frames[i];
-//    b_obj_func *function = get_frame_function(frame);
-//
-//    // -1 because the IP is sitting on the next instruction to be executed
-//    size_t instruction = frame->ip - get_frame_function(frame)->blob.code - 1;
-//
-//    char *trace_part = NULL;
-//    asprintf(&trace_part,
-//             "    File: %s, Line: %d, In: ", get_frame_function(frame)->file,
-//             function->blob.lines[instruction]);
-//
-//    if (function->name == NULL) {
-//      trace_part = append_strings(
-//          trace_part, i < vm->frame_count - 1 ? "<script>\n" : "<script>");
-//    } else {
-//      trace_part = append_strings(trace_part, function->name->chars);
-//      trace_part =
-//          append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" : "()");
-//    }
-//
-//    trace = append_strings(trace, trace_part);
-//  }
-
   b_obj_instance *instance = new_instance(vm, vm->exception_class);
-  table_set(vm, &instance->fields, OBJ_VAL(copy_string(vm, "message", 7)),
-            OBJ_VAL(message));
-//  table_set(vm, &instance->fields, OBJ_VAL(copy_string(vm, "trace", 5)),
-//            OBJ_VAL(take_string(vm, trace, (int)strlen(trace))));
+  table_set(vm, &instance->fields, STRING_L_VAL("message", 7), OBJ_VAL(message));
   return instance;
 }
 
 void _runtime_error(b_vm *vm, const char *format, ...) {
+  b_call_frame *frame = &vm->frames[vm->frame_count - 1];
+  b_obj_func *function = get_frame_function(frame);
 
-  // only throw error when there is no surrounding try...catch... statement
-  if (vm->catch_frame == NULL) {
+  size_t instruction = frame->ip - function->blob.code - 1;
+  int line = function->blob.lines[instruction];
 
-    b_call_frame *frame = &vm->frames[vm->frame_count - 1];
+  fprintf(stderr, "RuntimeError:\n");
+  fprintf(stderr, "    File: %s, Line: %d\n    Message: ", function->file, line);
 
-    size_t instruction = frame->ip - get_frame_function(frame)->blob.code - 1;
-    int line = get_frame_function(frame)->blob.lines[instruction];
+  va_list args;
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  fputs("\n", stderr);
 
-    fprintf(stderr, "RuntimeError:\n");
-    fprintf(stderr, "    File: %s, Line: %d\n    Message: ",
-            get_frame_function(frame)->file, line);
+  if (vm->frame_count > 1) {
+    fprintf(stderr, "StackTrace:\n");
+    for (int i = vm->frame_count - 1; i >= 0; i--) {
+      frame = &vm->frames[i];
+      b_obj_func *function = get_frame_function(frame);
 
-    va_list args;
-    va_start(args, format);
-    vfprintf(stderr, format, args);
-    va_end(args);
-    fputs("\n", stderr);
+      // -1 because the IP is sitting on the next instruction to be executed
+      instruction = frame->ip - function->blob.code - 1;
 
-    if (vm->frame_count > 1) {
-      fprintf(stderr, "StackTrace:\n");
-      for (int i = vm->frame_count - 1; i >= 0; i--) {
-        frame = &vm->frames[i];
-        b_obj_func *function = get_frame_function(frame);
-
-        // -1 because the IP is sitting on the next instruction to be executed
-        instruction = frame->ip - get_frame_function(frame)->blob.code - 1;
-
-        fprintf(stderr,
-                "    File: %s, Line: %d, In: ", get_frame_function(frame)->file,
-                function->blob.lines[instruction]);
-        if (function->name == NULL) {
-          fprintf(stderr, "<script>\n");
-        } else {
-          fprintf(stderr, "%s()\n", function->name->chars);
-        }
+      fprintf(stderr, "    File: %s, Line: %d, In: ", function->file, function->blob.lines[instruction]);
+      if (function->name == NULL) {
+        fprintf(stderr, "<script>\n");
+      } else {
+        fprintf(stderr, "%s()\n", function->name->chars);
       }
     }
-
-    reset_stack(vm);
-  } else {
-    char *message = NULL;
-
-    va_list args;
-    va_start(args, format);
-    int length = vasprintf(&message, format, args);
-    va_end(args);
-
-    push(vm, OBJ_VAL(create_exception(vm, take_string(vm, message, length))));
   }
+
+  reset_stack(vm);
 }
 
 void push(b_vm *vm, b_value value) {
@@ -410,6 +414,7 @@ void init_vm(b_vm *vm) {
   vm->compiler = NULL;
   vm->objects = NULL;
   vm->exception_class = NULL;
+  vm->runtime_exception_class = NULL;
   vm->bytes_allocated = 0;
   vm->next_gc = 1024 * 1024; // 1mb // @TODO: Increase before going production.
   vm->is_repl = false;
@@ -471,18 +476,16 @@ static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
 
   if (arg_count != function->arity) {
     if (function->is_variadic) {
-      _runtime_error(vm, "expected at least %d arguments but got %d",
-                     function->arity - 1, arg_count);
+      return throw_exception(vm, "expected at least %d arguments but got %d",
+                             function->arity - 1, arg_count);
     } else {
-      _runtime_error(vm, "expected %d arguments but got %d", function->arity,
-                     arg_count);
+      return throw_exception(vm, "expected %d arguments but got %d",
+                             function->arity, arg_count);
     }
-    return false;
   }
 
   if (vm->frame_count == FRAMES_MAX) {
-    _runtime_error(vm, "stack overflow");
-    return false;
+    return throw_exception(vm, "stack overflow");
   }
 
   b_call_frame *frame = &vm->frames[vm->frame_count++];
@@ -526,8 +529,8 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
           return call_function(vm, AS_FUNCTION(klass->initializer), arg_count);
         }
       } else if (arg_count != 0) {
-        _runtime_error(vm, "%s constructor expects 0 arguments, %d given",
-                       klass->name, arg_count);
+        return throw_exception(vm, "%s constructor expects 0 arguments, %d given",
+                               klass->name, arg_count);
         return false;
       }
       return true;
@@ -558,8 +561,7 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
       break;
     }
   }
-  _runtime_error(vm, "only functions and classes can be called");
-  return false;
+  return throw_exception(vm, "only functions and classes can be called");
 }
 
 bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
@@ -567,13 +569,13 @@ bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
   b_value method;
   if (!table_get(&klass->methods, OBJ_VAL(name), &method)) {
     if (!table_get(&klass->static_methods, OBJ_VAL(name), &method)) {
-      _runtime_error(vm, "undefined method '%s' in %s", name->chars,
-                     klass->name->chars);
+      return throw_exception(vm, "undefined method '%s' in %s", name->chars,
+                             klass->name->chars);
     } else {
-      _runtime_error(vm, "cannot call static method '%s' from instance of %s",
-                     name->chars, klass->name->chars);
+      return throw_exception(
+          vm, "cannot call static method '%s' from instance of %s", name->chars,
+          klass->name->chars);
     }
-    return false;
   }
 
   if (IS_NATIVE(method)) {
@@ -625,16 +627,14 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
     }
   }
 
-  _runtime_error(vm, "cannot call method %s on object of type %s", name->chars,
-                 value_type(receiver));
-  return false;
+  return throw_exception(vm, "cannot call method %s on object of type %s",
+                         name->chars, value_type(receiver));
 }
 
 static bool bind_method(b_vm *vm, b_obj_class *klass, b_obj_string *name) {
   b_value method;
   if (!table_get(&klass->methods, OBJ_VAL(name), &method)) {
-    _runtime_error(vm, "undefined property '%s'", name->chars);
-    return false;
+    return throw_exception(vm, "undefined property '%s'", name->chars);
   }
 
   b_obj_bound *bound = new_bound_method(vm, peek(vm, 0), AS_OBJ(method));
@@ -740,26 +740,6 @@ bool is_instance_of(b_obj_class *klass1, char *klass2_name) {
   }
 
   return false;
-}
-
-static void print_exception(b_vm *vm, b_obj_instance *exception) {
-  b_value message, trace;
-  if (table_get(&exception->fields, OBJ_VAL(copy_string(vm, "message", 7)),
-                &message) &&
-      table_get(&exception->klass->methods, OBJ_VAL(copy_string(vm, "trace", 5)),
-                &trace)) {
-    fprintf(stderr, "Unhandled Exception: %s: %s\n",
-            exception->klass->name->chars, value_to_string(vm, message));
-    if(call_value(vm, trace, 0)) {
-      // while value to string may be heavy here, we can't make
-      // any assumption that the user will not try to override
-      // the trace method and return a value we do not anticipate.
-      fprintf(stderr, "%s\n", value_to_string(vm, pop(vm)));
-    }
-    vm->frame_count = 0;
-  } else {
-    _runtime_error(vm, "invalid Exception or Exception subclass instance");
-  }
 }
 
 void dict_add_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value) {
@@ -877,8 +857,7 @@ static bool dict_get_index(b_vm *vm, b_obj_dict *dict, bool will_assign) {
     return true;
   }
 
-  _runtime_error(vm, "invalid index %s", value_to_string(vm, index));
-  return false;
+  return throw_exception(vm, "invalid index %s", value_to_string(vm, index));
 }
 
 static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
@@ -887,8 +866,7 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
 
   if (IS_NIL(upper)) {
     if (!IS_NUMBER(lower)) {
-      _runtime_error(vm, "strings are numerically indexed");
-      return false;
+      return throw_exception(vm, "strings are numerically indexed");
     }
 
     if (!will_assign) {
@@ -912,13 +890,11 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
            OBJ_VAL(copy_string(vm, string->chars + start, (int)(end - start))));
       return true;
     } else {
-      _runtime_error(vm, "string index %d out of range", real_index);
-      return false;
+      return throw_exception(vm, "string index %d out of range", real_index);
     }
   } else {
     if (!IS_NUMBER(lower) || !IS_NUMBER(upper)) {
-      _runtime_error(vm, "string are numerically indexed");
-      return false;
+      return throw_exception(vm, "string are numerically indexed");
     }
 
     int lower_index = AS_NUMBER(lower);
@@ -959,8 +935,7 @@ static bool bytes_get_index(b_vm *vm, b_obj_bytes *bytes, bool will_assign) {
 
   if (IS_NIL(upper)) {
     if (!IS_NUMBER(lower)) {
-      _runtime_error(vm, "bytes are numerically indexed");
-      return false;
+      return throw_exception(vm, "bytes are numerically indexed");
     }
 
     if (!will_assign) {
@@ -980,13 +955,11 @@ static bool bytes_get_index(b_vm *vm, b_obj_bytes *bytes, bool will_assign) {
       push(vm, NUMBER_VAL((int)bytes->bytes.bytes[index]));
       return true;
     } else {
-      _runtime_error(vm, "bytes index %d out of range", real_index);
-      return false;
+      return throw_exception(vm, "bytes index %d out of range", real_index);
     }
   } else {
     if (!IS_NUMBER(lower) || !IS_NUMBER(upper)) {
-      _runtime_error(vm, "bytes are numerically indexed");
-      return false;
+      return throw_exception(vm, "bytes are numerically indexed");
     }
 
     int lower_index = AS_NUMBER(lower);
@@ -998,9 +971,8 @@ static bool bytes_get_index(b_vm *vm, b_obj_bytes *bytes, bool will_assign) {
       if (!will_assign) {
         pop_n(vm, 3); // +1 for the list itself
       }
-      _runtime_error(vm, "bytes index %d out of range",
-                     lower_index < 0 ? lower_index : upper_index);
-      return false;
+      return throw_exception(vm, "bytes index %d out of range",
+                             lower_index < 0 ? lower_index : upper_index);
     }
 
     if (upper_index < 0)
@@ -1024,8 +996,7 @@ static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
 
   if (IS_NIL(upper)) {
     if (!IS_NUMBER(lower)) {
-      _runtime_error(vm, "list are numerically indexed");
-      return false;
+      return throw_exception(vm, "list are numerically indexed");
     }
 
     if (!will_assign) {
@@ -1045,13 +1016,11 @@ static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
       push(vm, list->items.values[index]);
       return true;
     } else {
-      _runtime_error(vm, "list index %d out of range", real_index);
-      return false;
+      return throw_exception(vm, "list index %d out of range", real_index);
     }
   } else {
     if (!IS_NUMBER(lower) || !IS_NUMBER(upper)) {
-      _runtime_error(vm, "list are numerically indexed");
-      return false;
+      return throw_exception(vm, "list are numerically indexed");
     }
 
     int lower_index = AS_NUMBER(lower);
@@ -1100,8 +1069,7 @@ static void dict_set_index(b_vm *vm, b_obj_dict *dict, b_value index,
 static bool list_set_index(b_vm *vm, b_obj_list *list, b_value index,
                            b_value value) {
   if (!IS_NUMBER(index)) {
-    _runtime_error(vm, "list are numerically indexed");
-    return false;
+    return throw_exception(vm, "list are numerically indexed");
   }
 
   int _position = AS_NUMBER(index);
@@ -1117,19 +1085,16 @@ static bool list_set_index(b_vm *vm, b_obj_list *list, b_value index,
     return true;
   }
 
-  _runtime_error(vm, "lists index %d out of range", _position);
-  return false;
+  return throw_exception(vm, "lists index %d out of range", _position);
 }
 
 static bool bytes_set_index(b_vm *vm, b_obj_bytes *bytes, b_value index,
                             b_value value) {
   if (!IS_NUMBER(index)) {
-    _runtime_error(vm, "bytes are numerically indexed");
-    return false;
+    return throw_exception(vm, "bytes are numerically indexed");
   } else if (!IS_NUMBER(value) || AS_NUMBER(value) < 0 ||
              AS_NUMBER(value) > 255) {
-    _runtime_error(vm, "invalid byte. bytes are numbers between 0 and 255.");
-    return false;
+    return throw_exception(vm, "invalid byte. bytes are numbers between 0 and 255.");
   }
 
   int _position = AS_NUMBER(index);
@@ -1147,8 +1112,7 @@ static bool bytes_set_index(b_vm *vm, b_obj_bytes *bytes, b_value index,
     return true;
   }
 
-  _runtime_error(vm, "bytes index %d out of range", _position);
-  return false;
+  return throw_exception(vm, "bytes index %d out of range", _position);
 }
 
 static bool concatenate(b_vm *vm) {
@@ -1174,7 +1138,7 @@ static bool concatenate(b_vm *vm) {
     memcpy(chars + num_length, b->chars, b->length);
     chars[length] = '\0';
 
-    b_obj_string *result = copy_string(vm, chars, length);
+    b_obj_string *result = take_string(vm, chars, length);
     result->utf8_length = utf8len(result->chars);
 
     pop_n(vm, 2);
@@ -1192,7 +1156,7 @@ static bool concatenate(b_vm *vm) {
     memcpy(chars + a->length, num_str, num_length);
     chars[length] = '\0';
 
-    b_obj_string *result = copy_string(vm, chars, length);
+    b_obj_string *result = take_string(vm, chars, length);
     result->utf8_length = utf8len(result->chars);
 
     pop_n(vm, 2);
@@ -1207,7 +1171,7 @@ static bool concatenate(b_vm *vm) {
     memcpy(chars + a->length, b->chars, b->length);
     chars[length] = '\0';
 
-    b_obj_string *result = copy_string(vm, chars, length);
+    b_obj_string *result = take_string(vm, chars, length);
     result->utf8_length = utf8len(result->chars);
 
     pop_n(vm, 2);
@@ -1242,9 +1206,8 @@ b_ptr_result run(b_vm *vm) {
   do {                                                                         \
     if ((!IS_NUMBER(peek(vm, 0)) && !IS_BOOL(peek(vm, 0))) ||                  \
         (!IS_NUMBER(peek(vm, 1)) && !IS_BOOL(peek(vm, 1)))) {                  \
-      _runtime_error(vm, "unsupported operand %s for %s and %s", #op,          \
+      runtime_error("unsupported operand %s for %s and %s", #op,          \
                      value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
-      EXIT_VM();                                                               \
     }                                                                          \
     b_value _b = pop(vm);                                                      \
     double b = IS_BOOL(_b) ? (AS_BOOL(_b) ? 1 : 0) : AS_NUMBER(_b);            \
@@ -1257,9 +1220,8 @@ b_ptr_result run(b_vm *vm) {
   do {                                                                         \
     if ((!IS_NUMBER(peek(vm, 0)) && !IS_BOOL(peek(vm, 0))) ||                  \
         (!IS_NUMBER(peek(vm, 1)) && !IS_BOOL(peek(vm, 1)))) {                  \
-      _runtime_error(vm, "unsupported operand %s for %s and %s", #op,          \
+      runtime_error("unsupported operand %s for %s and %s", #op,          \
                      value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
-      EXIT_VM();                                                               \
     }                                                                          \
     int b = AS_NUMBER(pop(vm));                                                \
     int a = AS_NUMBER(pop(vm));                                                \
@@ -1270,9 +1232,8 @@ b_ptr_result run(b_vm *vm) {
   do {                                                                         \
     if ((!IS_NUMBER(peek(vm, 0)) && !IS_BOOL(peek(vm, 0))) ||                  \
         (!IS_NUMBER(peek(vm, 1)) && !IS_BOOL(peek(vm, 1)))) {                  \
-      _runtime_error(vm, "unsupported operand %s for %s and %s", #op,          \
+      runtime_error("unsupported operand %s for %s and %s", #op,          \
                      value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
-      EXIT_VM();                                                               \
     }                                                                          \
     b_value _b = pop(vm);                                                      \
     double b = IS_BOOL(_b) ? (AS_BOOL(_b) ? 1 : 0) : AS_NUMBER(_b);            \
@@ -1904,31 +1865,30 @@ b_ptr_result run(b_vm *vm) {
         runtime_error("instance of Exception expected");
       }
 
-      if (vm->catch_frame == NULL) {
-        print_exception(vm, AS_INSTANCE(peek(vm, 0)));
-        return PTR_RUNTIME_ERR;
-      } else {
-        frame = vm->catch_frame->frame;
-        frame->ip =
-            get_frame_function(frame)->blob.code + vm->catch_frame->offset;
+      b_value stacktrace = get_stack_trace(vm);
+      b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
+      table_set(vm, &instance->fields, STRING_L_VAL("stacktrace", 10), stacktrace);
+      if(propagate_exception(vm, instance)) {
+        frame = &vm->frames[vm->frame_count - 1];
         break;
       }
+      EXIT_VM();
     }
 
     case OP_TRY: {
-      b_catch_frame *catch_frame =
-          (b_catch_frame *)malloc(sizeof(b_catch_frame));
-      catch_frame->frame = frame;
-      catch_frame->offset = READ_SHORT();
-      catch_frame->previous = vm->catch_frame;
-      vm->catch_frame = catch_frame;
+      b_obj_string *type = READ_STRING();
+      uint16_t address = READ_SHORT();
+
+      b_value value;
+      if(!table_get(&vm->globals, OBJ_VAL(type), &value) || !IS_CLASS(value)) {
+        runtime_error("object of type '%s' is not an exception", type->chars);
+      }
+      push_exception_handler(vm, AS_CLASS(value), address);
       break;
     }
 
     case OP_END_TRY: {
-      b_catch_frame *catch_frame = vm->catch_frame->previous;
-      free(vm->catch_frame);
-      vm->catch_frame = catch_frame;
+      frame->handlers_count--;
       break;
     }
 

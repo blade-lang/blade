@@ -399,8 +399,7 @@ DECLARE_STRING_METHOD(split) {
     char *to_free, *str, *token;
     to_free = str = strdup(object); // We own str's memory now.
     while ((token = strsep(&str, delimeter)))
-      write_list(vm, list, OBJ_VAL(copy_string(vm, token, strlen(token))));
-    free(to_free);
+      write_list(vm, list, OBJ_VAL(take_string(vm, token, strlen(token))));
   } else {
     const char *string = AS_C_STRING(METHOD_OBJECT);
     for (int i = 0; i < (int)strlen(string); i++) {
@@ -526,7 +525,7 @@ DECLARE_STRING_METHOD(lpad) {
   memcpy(str + fill_size, string->chars, string->length);
   str[string->length + fill_size] = '\0';
 
-  RETURN_OBJ(copy_string(vm, str, string->length + fill_size));
+  RETURN_OBJ(take_string(vm, str, string->length + fill_size));
 }
 
 DECLARE_STRING_METHOD(rpad) {
@@ -557,7 +556,7 @@ DECLARE_STRING_METHOD(rpad) {
   memcpy(str + string->length, fill, fill_size);
   str[string->length + fill_size] = '\0';
 
-  RETURN_OBJ(copy_string(vm, str, string->length + fill_size));
+  RETURN_OBJ(take_string(vm, str, string->length + fill_size));
 }
 
 DECLARE_STRING_METHOD(match) {
@@ -661,8 +660,8 @@ DECLARE_STRING_METHOD(match) {
         _key++;
 
       dict_add_entry(
-          vm, match_dict, OBJ_VAL(copy_string(vm, _key, name_entry_size - 3)),
-          OBJ_VAL(copy_string(vm, _val,
+          vm, match_dict, OBJ_VAL(take_string(vm, _key, name_entry_size - 3)),
+          OBJ_VAL(take_string(vm, _val,
                               (int)(o_vector[2 * n + 1] - o_vector[2 * n]))));
 
       tab_ptr += name_entry_size;
@@ -786,8 +785,8 @@ DECLARE_STRING_METHOD(matches) {
         _key++;
 
       dict_add_entry(
-          vm, match_dict, OBJ_VAL(copy_string(vm, _key, name_entry_size - 3)),
-          OBJ_VAL(copy_string(vm, _val,
+          vm, match_dict, OBJ_VAL(take_string(vm, _key, name_entry_size - 3)),
+          OBJ_VAL(take_string(vm, _val,
                               (int)(o_vector[2 * n + 1] - o_vector[2 * n]))));
 
       tab_ptr += name_entry_size;
@@ -906,8 +905,8 @@ DECLARE_STRING_METHOD(matches) {
           _key++;
 
         dict_add_entry(
-            vm, match_dict, OBJ_VAL(copy_string(vm, _key, name_entry_size - 3)),
-            OBJ_VAL(copy_string(vm, _val,
+            vm, match_dict, OBJ_VAL(take_string(vm, _key, name_entry_size - 3)),
+            OBJ_VAL(take_string(vm, _val,
                                 (int)(o_vector[2 * n + 1] - o_vector[2 * n]))));
 
         tab_ptr += name_entry_size;
@@ -984,7 +983,7 @@ DECLARE_STRING_METHOD(replace) {
   }
 
   b_obj_string *response =
-      copy_string(vm, (char *)output_buffer, (int)output_length);
+      take_string(vm, (char *)output_buffer, (int)output_length);
 
   pcre2_match_context_free(match_context);
   pcre2_code_free(re);
