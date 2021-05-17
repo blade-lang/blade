@@ -41,6 +41,32 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
   return result;
 }
 
+void add_active_object(b_vm *vm, b_obj *object) {
+  if (vm->active_objects_capacity < vm->active_objects_count + 1) {
+    vm->active_objects_capacity = GROW_CAPACITY(vm->active_objects_capacity);
+    b_obj **result = (b_obj **)realloc(
+        vm->active_objects, sizeof(b_obj *) * vm->active_objects_capacity);
+
+    if (result == NULL) {
+      fprintf(stderr, "GC encountered an error");
+      exit(1);
+    }
+
+    vm->active_objects = result;
+  }
+  object->is_marked = true;
+  vm->active_objects[vm->active_objects_count++] = object;
+}
+
+void clear_active_objects(b_vm *vm) {
+  if (vm->active_objects != NULL) {
+    free(vm->active_objects);
+    vm->active_objects_capacity = 0;
+    vm->active_objects_count = 0;
+    vm->active_objects = NULL;
+  }
+}
+
 void mark_object(b_vm *vm, b_obj *object) {
   if (object == NULL)
     return;
@@ -320,6 +346,11 @@ static void sweep(b_vm *vm) {
       free_object(vm, unreached);
     }
   }
+
+  // re-validate active objects
+  for (int i = 0; i < vm->active_objects_count; i++) {
+    vm->active_objects[i]->is_marked = true;
+  }
 }
 
 void free_objects(b_vm *vm) {
@@ -333,12 +364,20 @@ void free_objects(b_vm *vm) {
   free(vm->gray_stack);
 }
 
+void mark_active_objects(b_vm *vm) {
+  for (int i = 0; i < vm->active_objects_count; i++) {
+    printf("marking active object...\n");
+    vm->active_objects[i]->is_marked = true;
+  }
+}
+
 void collect_garbage(b_vm *vm) {
 #if defined DEBUG_LOG_GC && DEBUG_LOG_GC
   printf("-- gc begins\n");
   size_t before = vm->bytes_allocated;
 #endif
 
+  mark_active_objects(vm);
   mark_roots(vm);
   trace_references(vm);
   table_remove_whites(&vm->strings);

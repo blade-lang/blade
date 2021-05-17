@@ -269,7 +269,7 @@ DECLARE_MODULE_METHOD(socket__recv) {
       ssize_t total_length = recv(sock, response, content_length, flags);
       response[total_length] = '\0';
 
-      RETURN_T_STRING(response, total_length);
+      RETURN_L_STRING(response, total_length);
     }
   } else {
     errno = ETIMEDOUT;
@@ -377,10 +377,13 @@ DECLARE_MODULE_METHOD(socket__getsockinfo) {
 
     b_obj_dict *dict = new_dict(vm);
 
-    dict_add_entry(vm, dict, STRING_L_VAL("address", 7), STRING_VAL(ip));
-    dict_add_entry(vm, dict, STRING_L_VAL("port", 4), NUMBER_VAL(port));
-    dict_add_entry(vm, dict, STRING_L_VAL("family", 6),
-                   NUMBER_VAL(ntohs(address.sin_family)));
+    b_value address_key = STRING_L_VAL("address", 7);
+    b_value port_key = STRING_L_VAL("port", 4);
+    b_value family_key = STRING_L_VAL("family", 6);
+
+    dict_add_entry(vm, dict, address_key,STRING_VAL(ip));
+    dict_add_entry(vm, dict, port_key,NUMBER_VAL(port));
+    dict_add_entry(vm, dict, family_key,NUMBER_VAL(ntohs(address.sin_family)));
 
     RETURN_OBJ(dict);
   }

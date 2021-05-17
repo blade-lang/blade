@@ -51,8 +51,10 @@ struct s_vm {
   int gray_capacity;
   b_obj **gray_stack;
   size_t bytes_allocated;
-  int active_objects_count;
   size_t next_gc;
+  int active_objects_count;
+  int active_objects_capacity;
+  b_obj **active_objects;
 
   // object methods
   b_table methods_string;
