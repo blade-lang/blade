@@ -306,25 +306,37 @@ static int emit_switch(b_parser *p) {
   return current_blob(p)->count - 2;
 }
 
+static int emit_try(b_parser *p) {
+  emit_byte(p, OP_TRY);
+  // type placeholders
+  emit_byte(p, 0xff);
+  emit_byte(p, 0xff);
+
+  // handler placeholders
+  emit_byte(p, 0xff);
+  emit_byte(p, 0xff);
+
+  return current_blob(p)->count - 4;
+}
+
 static void patch_switch(b_parser *p, int offset, int constant) {
   current_blob(p)->code[offset] = (constant >> 8) & 0xff;
   current_blob(p)->code[offset + 1] = constant & 0xff;
 }
 
+static void patch_try(b_parser *p, int offset, int type) {
+  // patch type
+  current_blob(p)->code[offset] = (type >> 8) & 0xff;
+  current_blob(p)->code[offset + 1] = type & 0xff;
+  // patch address
+  int address = current_blob(p)->count;
+  current_blob(p)->code[offset + 2] = (address >> 8) & 0xff;
+  current_blob(p)->code[offset + 3] = address & 0xff;
+}
+
 static void patch_jump(b_parser *p, int offset) {
   // -2 to adjust the bytecode for the offset itself
   int jump = current_blob(p)->count - offset - 2;
-
-  if (jump > UINT16_MAX) {
-    error(p, "body of conditional block too large");
-  }
-
-  current_blob(p)->code[offset] = (jump >> 8) & 0xff;
-  current_blob(p)->code[offset + 1] = jump & 0xff;
-}
-
-static void patch_try(b_parser *p, int offset) {
-  int jump = current_blob(p)->count;
 
   if (jump > UINT16_MAX) {
     error(p, "body of conditional block too large");
@@ -1073,7 +1085,7 @@ static char *compile_string(b_parser *p) {
 
 static void string(b_parser *p, bool can_assign) {
   char *str = compile_string(p);
-  emit_constant(p, OBJ_VAL(copy_string(p->vm, str, (int)strlen(str))));
+  emit_constant(p, OBJ_VAL(take_string(p->vm, str, (int)strlen(str))));
 }
 
 static void string_interpolation(b_parser *p, bool can_assign) {
@@ -1874,7 +1886,7 @@ static void using_statement(b_parser *p) {
           table_set(p->vm, &sw->table, FALSE_VAL, jump);
         } else if (p->previous.type == LITERAL_TOKEN) {
           char *str = compile_string(p);
-          b_obj_string *string = copy_string(p->vm, str, (int)strlen(str));
+          b_obj_string *string = take_string(p->vm, str, (int)strlen(str));
           table_set(p->vm, &sw->table, OBJ_VAL(string), jump);
         } else if (check_number(p)) {
           table_set(p->vm, &sw->table, compile_number(p), jump);
@@ -1966,7 +1978,7 @@ static void import_statement(b_parser *p) {
     return;
   }
 
-  function->name = copy_string(p->vm, module_name, (int)strlen(module_name));
+  function->name = take_string(p->vm, module_name, (int)strlen(module_name));
 
   int import_constant = make_constant(p, OBJ_VAL(function));
   emit_byte_and_short(p, OP_CALL_IMPORT, import_constant);
@@ -1988,34 +2000,38 @@ static void assert_statement(b_parser *p) {
 
 static void try_statement(b_parser *p) {
   consume(p, LBRACE_TOKEN, "expected '{' after try");
-
-  int try_begins = emit_jump(p, OP_TRY);
+  ignore_whitespace(p);
+  // @TODO: at least one of catch or finally must be given.
+  int try_begins = emit_try(p);
 
   block(p); // compile the try body
+  emit_byte(p, OP_END_TRY);
   int exit_jump = emit_jump(p, OP_JUMP);
 
   // catch body must maintain it's own scope
-  begin_scope(p);
-  consume(p, CATCH_TOKEN, "expected 'catch' at end of try block");
+  if (match(p, CATCH_TOKEN)) {
+    begin_scope(p);
 
-  consume(p, IDENTIFIER_TOKEN, "expected variable name after catch");
-  int error_message = add_local(p, p->previous) - 1;
-  define_variable(p, 0);
+    consume(p, IDENTIFIER_TOKEN, "missing exception class name");
+    int type = identifier_constant(p, &p->previous);
+    patch_try(p, try_begins, type);
 
-  consume(p, LBRACE_TOKEN, "expected '{' after catch");
+    if (match(p, AS_TOKEN)) {
+      consume(p, IDENTIFIER_TOKEN, "expected variable name");
+      add_local(p, p->previous);
+      mark_initialized(p);
+      uint16_t var = resolve_local(p, p->compiler, &p->previous);
+      emit_byte_and_short(p, OP_SET_LOCAL, var);
+    }
 
-  // jump into the catch statement if an error occurred
-  patch_try(p, try_begins);
-  emit_byte_and_short(p, OP_SET_LOCAL, error_message);
+    emit_byte(p, OP_END_TRY);
+    consume(p, LBRACE_TOKEN, "expected '{' after catch expression");
+    block(p);
 
-  block(p);
+    end_scope(p);
+  }
 
-  discard_local(p, p->compiler->scope_depth);
-  end_scope(p);
-
-  // jump out of the code block completely if no error occurs
   patch_jump(p, exit_jump);
-  emit_byte(p, OP_END_TRY);
 }
 
 static void return_statement(b_parser *p) {
@@ -2108,6 +2124,7 @@ static void synchronize(b_parser *p) {
     case ECHO_TOKEN:
     case ASSERT_TOKEN:
     case TRY_TOKEN:
+    case CATCH_TOKEN:
     case DIE_TOKEN:
     case RETURN_TOKEN:
     case STATIC_TOKEN:
