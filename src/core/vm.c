@@ -891,16 +891,16 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
       index = string->utf8_length + index;
 
     if (index < string->utf8_length && index >= 0) {
-      if (!will_assign) {
-        // we can safely get rid of the index from the stack
-        pop_n(vm, 2); // +1 for the list itself
-      }
 
       int start = index, end = index + 1;
       utf8slice(string->chars, &start, &end);
 
-      push(vm,
-           OBJ_VAL(copy_string(vm, string->chars + start, (int)(end - start))));
+      if (!will_assign) {
+        // we can safely get rid of the index from the stack
+        pop_n(vm, 2); // +1 for the string itself
+      }
+
+      push(vm, STRING_L_VAL(string->chars + start, (int)(end - start)));
       return true;
     } else {
       return throw_exception(vm, "string index %d out of range", real_index);
@@ -917,9 +917,9 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
         (upper_index < 0 && ((string->utf8_length + upper_index) < 0))) {
       // always return an empty list...
       if (!will_assign) {
-        pop_n(vm, 3); // +1 for the list itself
+        pop_n(vm, 3); // +1 for the string itself
       }
-      push(vm, OBJ_VAL(copy_string(vm, "", 0)));
+      push(vm, STRING_L_VAL("", 0));
       return true;
     }
 
@@ -929,15 +929,14 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
     if (upper_index > string->utf8_length)
       upper_index = string->utf8_length;
 
-    if (!will_assign) {
-      pop_n(vm, 3); // +1 for the list itself
-    }
-
     int start = lower_index, end = upper_index;
     utf8slice(string->chars, &start, &end);
 
-    push(vm,
-         OBJ_VAL(copy_string(vm, string->chars + start, (int)(end - start))));
+    if (!will_assign) {
+      pop_n(vm, 3); // +1 for the string itself
+    }
+
+    push(vm, STRING_L_VAL(string->chars + start, (int)(end - start)));
     return true;
   }
 }

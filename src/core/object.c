@@ -23,9 +23,12 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   object->type = type;
   object->mark = !vm->mark_value;
 
-  if (vm->active_native_fn != NULL) {
-    vm->active_native_fn->objects[vm->active_native_fn->objects_count] = object;
-    vm->active_native_fn->objects_count++;
+  if(type == OBJ_LIST || type == OBJ_DICT || type == OBJ_FILE) {
+    if (vm->active_native_fn != NULL) {
+      vm->active_native_fn->objects[vm->active_native_fn->objects_count] =
+          object;
+      vm->active_native_fn->objects_count++;
+    }
   }
 
   object->next = vm->objects;
