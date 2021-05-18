@@ -171,7 +171,7 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_SET_INDEX:
   case OP_ASSERT:
   case OP_DIE:
-  case OP_END_TRY:
+  case OP_POP_TRY:
   case OP_RANGE:
   case OP_STRINGIFY:
   case OP_CHOICE:
@@ -316,7 +316,11 @@ static int emit_try(b_parser *p) {
   emit_byte(p, 0xff);
   emit_byte(p, 0xff);
 
-  return current_blob(p)->count - 4;
+  // fianlly placeholders
+  emit_byte(p, 0xff);
+  emit_byte(p, 0xff);
+
+  return current_blob(p)->count - 6;
 }
 
 static void patch_switch(b_parser *p, int offset, int constant) {
@@ -324,14 +328,16 @@ static void patch_switch(b_parser *p, int offset, int constant) {
   current_blob(p)->code[offset + 1] = constant & 0xff;
 }
 
-static void patch_try(b_parser *p, int offset, int type) {
+static void patch_try(b_parser *p, int offset, int type, int address, int finally) {
   // patch type
   current_blob(p)->code[offset] = (type >> 8) & 0xff;
   current_blob(p)->code[offset + 1] = type & 0xff;
   // patch address
-  int address = current_blob(p)->count;
   current_blob(p)->code[offset + 2] = (address >> 8) & 0xff;
   current_blob(p)->code[offset + 3] = address & 0xff;
+  // patch finally
+  current_blob(p)->code[offset + 4] = (finally >> 8) & 0xff;
+  current_blob(p)->code[offset + 5] = finally & 0xff;
 }
 
 static void patch_jump(b_parser *p, int offset) {
@@ -1083,7 +1089,7 @@ static char *compile_string(b_parser *p) {
     memcpy(str + k, &c, 1);
   }
 
-  str[i] = '\0';
+  str[k] = '\0';
   return str;
 }
 
@@ -1267,6 +1273,7 @@ b_parse_rule parse_rules[] = {
     [WHILE_TOKEN] = {NULL, NULL, PREC_NONE},
     [TRY_TOKEN] = {NULL, NULL, PREC_NONE},
     [CATCH_TOKEN] = {NULL, NULL, PREC_NONE},
+    [FINALLY_TOKEN] = {NULL, NULL, PREC_NONE},
 
     // types token
     [LITERAL_TOKEN] = {string, NULL, PREC_NONE},
@@ -2009,26 +2016,27 @@ static void try_statement(b_parser *p) {
   int try_begins = emit_try(p);
 
   block(p); // compile the try body
-  emit_byte(p, OP_END_TRY);
+  emit_byte(p, OP_POP_TRY);
   int exit_jump = emit_jump(p, OP_JUMP);
+  int address = 0xff, type = -1, finally = 0xff;
 
   // catch body must maintain it's own scope
   if (match(p, CATCH_TOKEN)) {
     begin_scope(p);
 
     consume(p, IDENTIFIER_TOKEN, "missing exception class name");
-    int type = identifier_constant(p, &p->previous);
-    patch_try(p, try_begins, type);
+    type = identifier_constant(p, &p->previous);
+    address = current_blob(p)->count;
+    // patch_try(p, try_begins, type);
 
-    if (match(p, AS_TOKEN)) {
-      consume(p, IDENTIFIER_TOKEN, "expected variable name");
+    if (match(p, IDENTIFIER_TOKEN)) {
       add_local(p, p->previous);
       mark_initialized(p);
       uint16_t var = resolve_local(p, p->compiler, &p->previous);
       emit_byte_and_short(p, OP_SET_LOCAL, var);
     }
 
-    emit_byte(p, OP_END_TRY);
+    emit_byte(p, OP_POP_TRY);
     consume(p, LBRACE_TOKEN, "expected '{' after catch expression");
     block(p);
 
@@ -2036,6 +2044,24 @@ static void try_statement(b_parser *p) {
   }
 
   patch_jump(p, exit_jump);
+
+  if(match(p, FINALLY_TOKEN)) {
+    // if we arrived here from either the try or handler block,
+    // we dont want to continue propagating the exception
+    emit_byte(p, OP_FALSE);
+    finally = current_blob(p)->count;
+
+    consume(p, LBRACE_TOKEN, "expected '{' after finally");
+    block(p);
+
+    int continue_execution_address = emit_jump(p, OP_JUMP_IF_FALSE);
+    emit_byte(p, OP_POP); // pop the bool off the stack
+    emit_byte(p, OP_PUBLISH_TRY);
+    patch_jump(p, continue_execution_address);
+    emit_byte(p, OP_POP);
+  }
+
+  patch_try(p, try_begins, type, address, finally);
 }
 
 static void return_statement(b_parser *p) {

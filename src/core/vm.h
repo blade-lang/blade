@@ -18,6 +18,7 @@ typedef enum {
 
 typedef struct {
   uint16_t address;
+  uint16_t finally_address;
   b_obj_class *klass;
 } b_exception_frame;
 
