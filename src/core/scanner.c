@@ -309,6 +309,8 @@ static b_tkn_type identifier_type(b_scanner *s) {
       switch (s->start[1]) {
       case 'a':
         return check_keyword(s, 2, 3, "lse", FALSE_TOKEN);
+      case 'i':
+        return check_keyword(s, 2, 5, "nally", FINALLY_TOKEN);
       case 'o':
         return check_keyword(s, 2, 1, "r", FOR_TOKEN);
       }

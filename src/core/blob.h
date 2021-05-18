@@ -74,7 +74,8 @@ typedef enum {
   OP_FINISH_MODULE,
 
   OP_TRY,
-  OP_END_TRY,
+  OP_POP_TRY,
+  OP_PUBLISH_TRY,
 
   OP_STRINGIFY,
   OP_SWITCH,
