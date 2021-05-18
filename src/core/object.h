@@ -72,7 +72,7 @@ typedef enum {
 
 struct s_obj {
   b_obj_type type;
-  bool is_marked;
+  bool mark;
   struct s_obj *next;
 };
 

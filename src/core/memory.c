@@ -44,7 +44,7 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
 void mark_object(b_vm *vm, b_obj *object) {
   if (object == NULL)
     return;
-  if (object->is_marked)
+  if (object->mark == vm->mark_value)
     return;
 
 #if defined DEBUG_LOG_GC && DEBUG_LOG_GC
@@ -53,7 +53,7 @@ void mark_object(b_vm *vm, b_obj *object) {
   printf("\n");
 #endif
 
-  object->is_marked = true;
+  object->mark = vm->mark_value;
 
   if (vm->gray_capacity < vm->gray_count + 1) {
     vm->gray_capacity = GROW_CAPACITY(vm->gray_capacity);
@@ -303,8 +303,7 @@ static void sweep(b_vm *vm) {
   b_obj *object = vm->objects;
 
   while (object != NULL) {
-    if (object->is_marked) {
-      object->is_marked = false;
+    if (object->mark == vm->mark_value) {
       previous = object;
       object = object->next;
     } else {
@@ -341,10 +340,11 @@ void collect_garbage(b_vm *vm) {
 
   mark_roots(vm);
   trace_references(vm);
-  table_remove_whites(&vm->strings);
+  table_remove_whites(vm, &vm->strings);
   sweep(vm);
 
   vm->next_gc = vm->bytes_allocated * GC_HEAP_GROWTH_FACTOR;
+  vm->mark_value = !vm->mark_value;
 
 #if defined DEBUG_LOG_GC && DEBUG_LOG_GC
   printf("-- gc ends\n");

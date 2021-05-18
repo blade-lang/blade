@@ -21,7 +21,7 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   b_obj *object = (b_obj *)reallocate(vm, NULL, 0, size);
 
   object->type = type;
-  object->is_marked = false;
+  object->mark = !vm->mark_value;
 
   object->next = vm->objects;
   vm->objects = object;

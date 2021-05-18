@@ -422,6 +422,7 @@ void init_vm(b_vm *vm) {
   vm->bytes_allocated = 0;
   vm->next_gc = 1024 * 1024; // 1mb // @TODO: Increase before going production.
   vm->is_repl = false;
+  vm->mark_value = true;
 
   vm->gray_count = 0;
   vm->gray_capacity = 0;
