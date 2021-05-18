@@ -124,8 +124,9 @@ bool throw_exception(b_vm *vm, const char *format, ...) {
   int length = vasprintf(&message, format, args);
   va_end(args);
 
-  b_obj_instance *instance = create_exception(vm, take_string(vm, message, length));
+  b_obj_instance *instance = create_exception(vm, copy_string(vm, message, length));
   push(vm, OBJ_VAL(instance));
+  free(message);
 
   b_value stacktrace = get_stack_trace(vm);
   table_set(vm, &instance->fields, STRING_L_VAL("stacktrace", 10), stacktrace);
@@ -1473,7 +1474,7 @@ b_ptr_result run(b_vm *vm) {
       b_obj_string *name = READ_STRING();
       b_value value;
       if (!table_get(&vm->globals, OBJ_VAL(name), &value)) {
-        runtime_error("%s is undefined in this scope", name->chars);
+        runtime_error("'%s' is undefined in this scope", name->chars);
       }
       push(vm, value);
       break;

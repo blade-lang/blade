@@ -62,6 +62,7 @@ class Url {
    */
   static parse(url) {
     if !is_string(url) die Exception('string expected')
+    url = url.trim() # support urls surrounded by whitespaces
 
     var scheme, host, port, path = '/', query, hash, username, password
 

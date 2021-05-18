@@ -661,9 +661,11 @@ DECLARE_STRING_METHOD(match) {
         _key++;
 
       dict_add_entry(
-          vm, match_dict, OBJ_VAL(take_string(vm, _key, name_entry_size - 3)),
-          OBJ_VAL(take_string(vm, _val,
+          vm, match_dict, OBJ_VAL(copy_string(vm, _key, name_entry_size - 3)),
+          OBJ_VAL(copy_string(vm, _val,
                               (int)(o_vector[2 * n + 1] - o_vector[2 * n]))));
+      free(_key);
+      free(_val);
 
       tab_ptr += name_entry_size;
     }
@@ -786,9 +788,11 @@ DECLARE_STRING_METHOD(matches) {
         _key++;
 
       dict_add_entry(
-          vm, match_dict, OBJ_VAL(take_string(vm, _key, name_entry_size - 3)),
-          OBJ_VAL(take_string(vm, _val,
+          vm, match_dict, OBJ_VAL(copy_string(vm, _key, name_entry_size - 3)),
+          OBJ_VAL(copy_string(vm, _val,
                               (int)(o_vector[2 * n + 1] - o_vector[2 * n]))));
+      free(_key);
+      free(_val);
 
       tab_ptr += name_entry_size;
     }
@@ -906,9 +910,11 @@ DECLARE_STRING_METHOD(matches) {
           _key++;
 
         dict_add_entry(
-            vm, match_dict, OBJ_VAL(take_string(vm, _key, name_entry_size - 3)),
-            OBJ_VAL(take_string(vm, _val,
+            vm, match_dict, OBJ_VAL(copy_string(vm, _key, name_entry_size - 3)),
+            OBJ_VAL(copy_string(vm, _val,
                                 (int)(o_vector[2 * n + 1] - o_vector[2 * n]))));
+        free(_key);
+        free(_val);
 
         tab_ptr += name_entry_size;
       }
@@ -984,7 +990,8 @@ DECLARE_STRING_METHOD(replace) {
   }
 
   b_obj_string *response =
-      take_string(vm, (char *)output_buffer, (int)output_length);
+      copy_string(vm, (char *)output_buffer, (int)output_length);
+  free(output_buffer);
 
   pcre2_match_context_free(match_context);
   pcre2_code_free(re);

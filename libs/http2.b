@@ -93,23 +93,24 @@ class HttpRequest {
   # the main http request method
   __(method, data, has_file){
 
-    var responder = self.url.absolute_uri, header, body, time_taken, error
-    var will_connect = true, redirect_count = 0
+    var responder = self.url.absolute_uri, headers, body, time_taken, error
+    var will_connect = true, redirect_count = 0, http_version = '1.0', status_code = 0
 
-    # construct message
-    var message = '${method} ${self.url.path} HTTP/1.1\r\n\r\n'
-    
-    # do real request here...
-    var client = Socket()
-
-    # @TODO: in the else clause, get ipv4 address from the hostname
-    var host = self.url.host == 'localhost' ? nil : (
-      self.url.host_is_ipv4() ? self.url.host : ''
-    )
-    var port = self.url.port
-
-    try {
+    # try {
       while will_connect {
+
+        # @TODO: in the else clause, get ipv4 address from the hostname
+        var host = self.url.host == 'localhost' ? nil : (
+          self.url.host_is_ipv4() ? self.url.host : ''
+        )
+        var port = self.url.port
+
+        # construct message
+        var message = '${method} ${self.url.path} HTTP/1.1\r\n\r\n'
+
+        # do real request here...
+        var client = Socket()
+
         var start = time()
 
         # connect to the url host on the specified port and send the request message
@@ -143,26 +144,35 @@ class HttpRequest {
         var body_starts = response_data.index_of('\r\n\r\n')
 
         if body_starts {
-          header = response_data[0,body_starts].trim()
+          headers = response_data[0,body_starts].trim()
           body = response_data[body_starts + 2, response_data.length()].trim()
         }
 
         # @TODO: if there was a redirect, update the host and port
         # and change will connect to true
-        will_connect = false
+        headers = self._process_header(headers, |version, status|{
+          http_version = version
+          status_code  = status
+        })
+
+        if self.follow_redirect and headers.contains('Location') {
+          self.url = Url.parse(headers['Location'])
+          self.referer = headers['Location']
+        } else {
+          will_connect = false
+        }
       }
-    } catch Exception e {
-      error = e.message
-    }
+    # } catch Exception e {
+    #   error = e.message
+    # }
 
     # return a valid HttpResponse
     var result = HttpResponse()
     
     result.error = error
-    result.headers = self._process_header(header, |version, status|{
-      result.http_version = version
-      result.status_code  = status
-    })
+    result.headers = headers
+    result.http_version = http_version
+    result.status_code = status_code
     result.body  = body
     result.time_taken = time_taken
     result.redirects = redirect_count
