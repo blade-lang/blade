@@ -10,6 +10,7 @@
 #define NUMBER_FORMAT "%.16g"
 #define MAX_INTERPOLATION_NESTING 8
 #define MAX_EXCEPTION_HANDLERS 16
+#define MAX_OBJECTS_IN_NATIVE_FN 16
 
 // Maximum load factor of 12/14
 // see: https://engineering.fb.com/2019/04/25/developer-tools/f14/

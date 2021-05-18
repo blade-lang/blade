@@ -421,6 +421,7 @@ void init_vm(b_vm *vm) {
   vm->compiler = NULL;
   vm->objects = NULL;
   vm->exception_class = NULL;
+  vm->active_native_fn = NULL; 
   vm->bytes_allocated = 0;
   vm->next_gc = 1024 * 1024; // 1mb // @TODO: Increase before going production.
   vm->is_repl = false;
@@ -552,8 +553,10 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
     }
 
     case OBJ_NATIVE: {
-      b_native_fn native = AS_NATIVE(callee)->function;
-      b_value result = native(vm, arg_count, vm->stack_top - arg_count);
+      b_obj_native *native = AS_NATIVE(callee);
+
+      vm->active_native_fn = native; // mark this native as active
+      b_value result = native->function(vm, arg_count, vm->stack_top - arg_count);
 
       if (IS_EMPTY(result)) {
         return false;
@@ -561,6 +564,9 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
 
       vm->stack_top -= arg_count + 1;
       push(vm, result);
+      
+      vm->active_native_fn->objects_count = 0;
+      vm->active_native_fn = NULL; // unmark this native as active
       return true;
     }
 
