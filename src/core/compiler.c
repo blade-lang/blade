@@ -2020,8 +2020,11 @@ static void try_statement(b_parser *p) {
   int exit_jump = emit_jump(p, OP_JUMP);
   int address = 0xff, type = -1, finally = 0xff;
 
+  bool catch_exists = false, final_exists = false;
+
   // catch body must maintain it's own scope
   if (match(p, CATCH_TOKEN)) {
+    catch_exists = true;
     begin_scope(p);
 
     consume(p, IDENTIFIER_TOKEN, "missing exception class name");
@@ -2046,6 +2049,7 @@ static void try_statement(b_parser *p) {
   patch_jump(p, exit_jump);
 
   if(match(p, FINALLY_TOKEN)) {
+    final_exists = true;
     // if we arrived here from either the try or handler block,
     // we dont want to continue propagating the exception
     emit_byte(p, OP_FALSE);
@@ -2059,6 +2063,10 @@ static void try_statement(b_parser *p) {
     emit_byte(p, OP_PUBLISH_TRY);
     patch_jump(p, continue_execution_address);
     emit_byte(p, OP_POP);
+  }
+
+  if(!final_exists && !catch_exists) {
+    error(p, "try block must contain at least one of catch or finally");
   }
 
   patch_try(p, try_begins, type, address, finally);
