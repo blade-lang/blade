@@ -35,6 +35,7 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
 
   // just in case reallocation fails... computers ain't infinite!
   if (result == NULL) {
+    fflush(stdout); // flush out anything on stdout first
     fprintf(stderr, "Exit: device out of memory\n");
     exit(1);
   }
@@ -61,6 +62,7 @@ void mark_object(b_vm *vm, b_obj *object) {
         (b_obj **)realloc(vm->gray_stack, sizeof(b_obj *) * vm->gray_capacity);
 
     if (result == NULL) {
+      fflush(stdout); // flush out anything on stdout first
       fprintf(stderr, "GC encountered an error");
       exit(1);
     }

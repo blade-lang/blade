@@ -26,6 +26,8 @@ static b_blob *current_blob(b_parser *p) {
 
 static void error_at(b_parser *p, b_token *t, const char *message,
                      va_list args) {
+  fflush(stdout); // flush out anything on stdout first
+
   // do not cascade error
   // suppress error if already in panic mode
   if (p->panic_mode)
@@ -2168,6 +2170,8 @@ static void synchronize(b_parser *p) {
     case STATIC_TOKEN:
     case SELF_TOKEN:
     case PARENT_TOKEN:
+    case FINALLY_TOKEN:
+    case IN_TOKEN:
       return;
 
     default:; // do nothing
