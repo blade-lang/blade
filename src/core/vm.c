@@ -124,9 +124,8 @@ bool throw_exception(b_vm *vm, const char *format, ...) {
   int length = vasprintf(&message, format, args);
   va_end(args);
 
-  b_obj_instance *instance = create_exception(vm, copy_string(vm, message, length));
+  b_obj_instance *instance = create_exception(vm, take_string(vm, message, length));
   push(vm, OBJ_VAL(instance));
-  free(message);
 
   b_value stacktrace = get_stack_trace(vm);
   table_set(vm, &instance->fields, STRING_L_VAL("stacktrace", 10), stacktrace);
