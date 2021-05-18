@@ -61,8 +61,9 @@ struct s_vm {
   b_table methods_file;
   b_table methods_bytes;
 
-  // repl flag
+  // boolean flags
   bool is_repl;
+  bool mark_value;
 };
 
 void init_vm(b_vm *vm);
