@@ -201,7 +201,7 @@
 					"name": "keyword.cast.bird"
 				},
 				{
-					"match": "(?<!\\$)\\b(try|catch|die)\\b(?!\\$)",
+					"match": "(?<!\\$)\\b(try|catch|finally|die)\\b(?!\\$)",
 					"name": "keyword.control.catch-exception.bird"
 				},
 				{
