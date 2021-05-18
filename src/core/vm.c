@@ -74,8 +74,12 @@ bool propagate_exception(b_vm *vm, b_obj_instance *exception) {
     b_call_frame *frame = &vm->frames[vm->frame_count - 1];
     for(int i = frame->handlers_count; i > 0; i--) {
       b_exception_frame handler = frame->handlers[i - 1];
-      if(is_instance_of(exception->klass, handler.klass->name->chars)) {
+      if (handler.address != 0xff && is_instance_of(exception->klass, handler.klass->name->chars)) {
         frame->ip = &get_frame_function(frame)->blob.code[handler.address];
+        return true;
+      } else if (handler.finally_address != 0xff) {
+        push(vm, TRUE_VAL); // continue propagating once the finally block completes
+        frame->ip = &get_frame_function(frame)->blob.code[handler.finally_address];
         return true;
       }
     }
@@ -99,13 +103,14 @@ bool propagate_exception(b_vm *vm, b_obj_instance *exception) {
   return false;
 }
 
-bool push_exception_handler(b_vm *vm, b_obj_class *type, int address) {
+bool push_exception_handler(b_vm *vm, b_obj_class *type, int address, int finally_address) {
   b_call_frame *frame = &vm->frames[vm->frame_count - 1];
   if(frame->handlers_count == MAX_EXCEPTION_HANDLERS) {
     _runtime_error(vm, "too many nested exception handlers in one function");
     return false;
   }
   frame->handlers[frame->handlers_count].address = address;
+  frame->handlers[frame->handlers_count].finally_address = finally_address;
   frame->handlers[frame->handlers_count].klass = type;
   frame->handlers_count++;
   return true;
@@ -1874,18 +1879,33 @@ b_ptr_result run(b_vm *vm) {
     case OP_TRY: {
       b_obj_string *type = READ_STRING();
       uint16_t address = READ_SHORT();
+      uint16_t finally_address = READ_SHORT();
 
-      b_value value;
-      if(!table_get(&vm->globals, OBJ_VAL(type), &value) || !IS_CLASS(value)) {
-        runtime_error("object of type '%s' is not an exception", type->chars);
+      if(address != 0xff) {
+        b_value value;
+        if(!table_get(&vm->globals, OBJ_VAL(type), &value) || !IS_CLASS(value)) {
+          runtime_error("object of type '%s' is not an exception", type->chars);
+        }
+        push_exception_handler(vm, AS_CLASS(value), address, finally_address);
+      } else {
+        push_exception_handler(vm, NULL, address, finally_address);
       }
-      push_exception_handler(vm, AS_CLASS(value), address);
       break;
     }
 
-    case OP_END_TRY: {
+    case OP_POP_TRY: {
       frame->handlers_count--;
       break;
+    }
+
+    case OP_PUBLISH_TRY: {
+      b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
+      frame->handlers_count--;
+      if(!propagate_exception(vm, instance)) {
+        frame = &vm->frames[vm->frame_count - 1];
+        break;
+      }
+      EXIT_VM();
     }
 
     case OP_SWITCH: {

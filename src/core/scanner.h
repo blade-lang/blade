@@ -89,6 +89,7 @@ typedef enum {
   WHILE_TOKEN,
   TRY_TOKEN,
   CATCH_TOKEN,
+  FINALLY_TOKEN,
 
   // types token
   LITERAL_TOKEN,
