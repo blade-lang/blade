@@ -8,7 +8,7 @@ for i in 1..total {
   try {
     echo 'Attempt ${i}'
     echo HttpClient().get('localhost:3000')
-  } catch Exception as e {
+  } catch Exception e {
     echo e.message
   }
 }
