@@ -301,9 +301,9 @@ DECLARE_MODULE_METHOD(http___client) {
       error = OBJ_VAL(copy_string(vm, err, (int)strlen(err)));
     }
 
-    if(!IS_NIL(error)) {
+    /* if(!IS_NIL(error)) {
       push(vm, error);
-    }
+    } */
 
     fseek(stream, 0L, SEEK_END);
     size_t stream_length = ftell(stream);
@@ -328,9 +328,9 @@ DECLARE_MODULE_METHOD(http___client) {
         copy_string(vm, effective_url, (int)strlen(effective_url));
 
     // guard against gc corruption
-    push(vm, OBJ_VAL(header));
+    /* push(vm, OBJ_VAL(header));
     push(vm, OBJ_VAL(body));
-    push(vm, OBJ_VAL(responder));
+    push(vm, OBJ_VAL(responder)); */
 
     // clean up
     free(stream_content);
@@ -339,7 +339,7 @@ DECLARE_MODULE_METHOD(http___client) {
     curl_slist_free_all(heads);
 
     b_obj_list *list = new_list(vm);
-    push(vm, OBJ_VAL(list)); // fix gc
+    // push(vm, OBJ_VAL(list)); // fix gc
 
     write_list(vm, list, NUMBER_VAL(status_code));
     write_list(vm, list, error);
@@ -349,7 +349,7 @@ DECLARE_MODULE_METHOD(http___client) {
     write_list(vm, list, NUMBER_VAL(redirect_count));
     write_list(vm, list, OBJ_VAL(responder));
 
-    pop_n(vm, IS_NIL(error) ? 4 : 5); // remove our gc guards
+    // pop_n(vm, IS_NIL(error) ? 4 : 5); // remove our gc guards
     RETURN_OBJ(list);
   }
 
