@@ -18,7 +18,7 @@ try {
   } catch Exception e {
     echo '\nMessage: ${e.message}'
   } finally {
-    echo 'Despite the error, I run because I am in finally\n'
+    echo 'Despite the error, I run because I am in finally'
   }
 } catch Exception e {
   echo e
@@ -34,13 +34,13 @@ try {
 }
 
 try {
-  echo 'Try block called'
+  echo '\nTry block called'
 } finally {
-  echo 'Final block called'
+  echo 'Final block called\n'
 }
 
 try {
   echo 'name'[10]
 } finally {
-  echo 'Error occured, but I still fun'
+  echo 'Error occured, so I will not run'
 }
