@@ -1095,7 +1095,7 @@ static char *compile_string(b_parser *p) {
 
 static void string(b_parser *p, bool can_assign) {
   char *str = compile_string(p);
-  emit_constant(p, OBJ_VAL(take_string(p->vm, str, (int)strlen(str))));
+  emit_constant(p, OBJ_VAL(copy_string(p->vm, str, (int)strlen(str))));
 }
 
 static void string_interpolation(b_parser *p, bool can_assign) {
