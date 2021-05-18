@@ -51,9 +51,11 @@ static int try_instruction(const char *name, b_blob *blob, int offset) {
   type |= blob->code[offset + 2];
   uint16_t address = (uint16_t) (blob->code[offset + 3] << 8);
   address |= blob->code[offset + 4];
+  uint16_t finally = (uint16_t) (blob->code[offset + 5] << 8);
+  finally |= blob->code[offset + 6];
 
-  printf("%-16s %4d -> %d\n", name, type, address);
-  return offset + 5;
+  printf("%-16s %4d -> %d, %d\n", name, type, address, finally);
+  return offset + 7;
 }
 
 static int invoke_instruction(const char *name, b_blob *blob, int offset) {
@@ -119,8 +121,10 @@ int disassemble_instruction(b_blob *blob, int offset) {
     case OP_SET_UP_VALUE:
       return short_instruction("supv", blob, offset);
 
-    case OP_END_TRY:
-      return simple_instruction("etry", offset);
+    case OP_POP_TRY:
+      return simple_instruction("ptry", offset);
+    case OP_PUBLISH_TRY:
+      return simple_instruction("pubtry", offset);
 
     case OP_CONSTANT:
       return constant_instruction("load", blob, offset);
