@@ -39,12 +39,10 @@ static void repl(b_vm *vm) {
 
   vm->is_repl = true;
 
-  fprintf(stdout, "Bird %s (running on BVM %s), REPL/Interactive mode = ON\n",
+  printf("Bird %s (running on BVM %s), REPL/Interactive mode = ON\n",
           BIRD_VERSION_STRING, BVM_VERSION);
-  fprintf(stdout, "%s, (Build time = %s, %s)\n", COMPILER, __DATE__, __TIME__);
-  fprintf(stdout,
-          "Type \"exit()\" to quit, \"help()\" or \"credits()\" for more "
-          "information\n");
+  printf("%s, (Build time = %s, %s)\n", COMPILER, __DATE__, __TIME__);
+  printf("Type \"exit()\" to quit, \"help()\" or \"credits()\" for more information\n");
 
   char *source = (char *) calloc(1, sizeof(char));
   int current_line = 0;
@@ -181,10 +179,11 @@ int main(int argc, const char *argv[]) {
   } else if (argc == 2) {
     run_file(vm, argv[1]);
   } else {
-    fprintf(stderr, "Usage: bird [path]\n");
+    printf("Usage: bird [path]\n");
     exit(64);
   }
 
+  fflush(stdout);
   free_vm(vm);
   return 0;
 }

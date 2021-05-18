@@ -86,6 +86,8 @@ bool propagate_exception(b_vm *vm, b_obj_instance *exception) {
     vm->frame_count--;
   }
 
+  fflush(stdout); // flush out anything on stdout first
+
   b_value message, trace;
   fprintf(stderr, "Unhandled %s: ", exception->klass->name->chars);
   if (table_get(&exception->fields, STRING_L_VAL("message", 7), &message)) {
@@ -97,8 +99,6 @@ bool propagate_exception(b_vm *vm, b_obj_instance *exception) {
   if (table_get(&exception->fields, STRING_L_VAL("stacktrace", 10),&trace)) {
     fprintf(stderr, "  StackTrace:\n%s\n", value_to_string(vm, trace));
   }
-
-  fflush(stderr);
 
   return false;
 }
@@ -158,6 +158,8 @@ b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
 }
 
 void _runtime_error(b_vm *vm, const char *format, ...) {
+  fflush(stdout); // flush out anything on stdout first
+  
   b_call_frame *frame = &vm->frames[vm->frame_count - 1];
   b_obj_func *function = get_frame_function(frame);
 
