@@ -392,7 +392,7 @@ DECLARE_STRING_METHOD(split) {
   if (AS_STRING(METHOD_OBJECT)->length == 0)
     return OBJ_VAL(list);
 
-  push(vm, OBJ_VAL(list)); // gc fix
+  // push(vm, OBJ_VAL(list)); // gc fix
 
   // main work here...
   if (AS_STRING(args[0])->length > 0) {
@@ -408,7 +408,7 @@ DECLARE_STRING_METHOD(split) {
     }
   }
 
-  pop(vm); // gc fix
+  // pop(vm); // gc fix
   RETURN_OBJ(list);
 }
 

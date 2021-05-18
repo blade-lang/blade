@@ -1,3 +1,3 @@
 # BUGS
 
-1. `break` keyword does not work properly in a `try...catch...` block.
+1. There are still some gc issues on release
