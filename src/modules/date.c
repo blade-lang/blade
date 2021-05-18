@@ -16,6 +16,9 @@
 #define ADD_S_TIME(n, l, v, g)                                                  \
   dict_add_entry(vm, dict, STRING_L_VAL(n, l), STRING_L_VAL(v, g))
 
+#define ADD_G_TIME(n, l, v)                                                  \
+  dict_add_entry(vm, dict, STRING_L_VAL(n, l), STRING_L_VAL(v, (int)strlen(v)))
+
 DECLARE_MODULE_METHOD(date____mktime) {
   ENFORCE_ARG_RANGE(mktime, 1, 8);
 
@@ -65,7 +68,7 @@ DECLARE_MODULE_METHOD(date__localtime) {
   struct tm *time_info = localtime(&raw_time.tv_sec);
 
   b_obj_dict *dict = new_dict(vm);
-  push(vm, OBJ_VAL(dict));
+  // push(vm, OBJ_VAL(dict));
 
   ADD_TIME("year", 4, (double) time_info->tm_year + 1900);
   ADD_TIME("month", 5, (double) time_info->tm_mon + 1);
@@ -85,7 +88,7 @@ DECLARE_MODULE_METHOD(date__localtime) {
 
 #ifndef _WIN32
   // set time zone
-  ADD_S_TIME("zone", 4, time_info->tm_zone, (int)strlen(time_info->tm_zone));
+  ADD_G_TIME("zone", 4, time_info->tm_zone);
   // setting gmt offset
   ADD_TIME("gmt_offset", 10, time_info->tm_gmtoff);
 #else
@@ -95,7 +98,7 @@ DECLARE_MODULE_METHOD(date__localtime) {
   ADD_TIME("gmt_offset", 10, 0);
 #endif
 
-  pop(vm);
+  // pop(vm);
   RETURN_OBJ(dict);
 }
 
@@ -105,7 +108,7 @@ DECLARE_MODULE_METHOD(date__gmtime) {
   struct tm *time_info = gmtime(&raw_time.tv_sec);
 
   b_obj_dict *dict = new_dict(vm);
-  push(vm, OBJ_VAL(dict));
+  // push(vm, OBJ_VAL(dict));
 
   ADD_TIME("year", 4, (double) time_info->tm_year + 1900);
   ADD_TIME("month", 5, (double) time_info->tm_mon + 1);
@@ -125,7 +128,7 @@ DECLARE_MODULE_METHOD(date__gmtime) {
 
 #ifndef _WIN32
   // set time zone
-  ADD_S_TIME("zone", 4, time_info->tm_zone, (int)strlen(time_info->tm_zone));
+  ADD_G_TIME("zone", 4, time_info->tm_zone);
   // setting gmt offset
   ADD_TIME("gmt_offset", 10, time_info->tm_gmtoff);
 #else
@@ -135,7 +138,7 @@ DECLARE_MODULE_METHOD(date__gmtime) {
   ADD_TIME("gmt_offset", 10, 0);
 #endif
 
-  pop(vm);
+  // pop(vm);
   RETURN_OBJ(dict);
 }
 
