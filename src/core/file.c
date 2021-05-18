@@ -276,8 +276,10 @@ DECLARE_FILE_METHOD(number) {
 DECLARE_FILE_METHOD(is_tty) {
   ENFORCE_ARG_COUNT(is_tty, 0);
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
-  RETURN_BOOL(isatty(fileno(file->file)) &&
-              fileno(file->file) == fileno(stdout));
+  if(is_std_file(file)) {
+    RETURN_BOOL(isatty(fileno(file->file)) && fileno(file->file) == fileno(stdout));
+  }
+  RETURN_FALSE;
 }
 
 DECLARE_FILE_METHOD(flush) {

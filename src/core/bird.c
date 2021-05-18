@@ -1,5 +1,6 @@
 #include "util.h"
 #include "vm.h"
+#include "compat/unistd.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -167,8 +168,13 @@ static void run_file(b_vm *vm, const char *file) {
 int main(int argc, const char *argv[]) {
   b_vm *vm = (b_vm *) malloc(sizeof(b_vm));
   memset(vm, 0, sizeof(b_vm));
-
   init_vm(vm);
+
+  // forcing printf buffering for TTYs and terminals
+  if (isatty(fileno(stdout))) {
+    char buffer[8192];
+    setvbuf(stdout, buffer, _IOFBF, sizeof(buffer));
+  }
 
   if (argc == 1) {
     repl(vm);
