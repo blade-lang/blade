@@ -384,27 +384,31 @@ DECLARE_STRING_METHOD(split) {
   ENFORCE_ARG_COUNT(split, 1);
   ENFORCE_ARG_TYPE(split, 0, IS_STRING);
 
-  char *object = AS_C_STRING(METHOD_OBJECT);
-  char *delimeter = AS_C_STRING(args[0]);
+  b_obj_string *object = AS_STRING(METHOD_OBJECT);
+  b_obj_string *delimeter = AS_STRING(args[0]);
 
   b_obj_list *list = new_list(vm);
 
-  if (AS_STRING(METHOD_OBJECT)->length == 0)
+  if (object->length == 0)
     return OBJ_VAL(list);
 
   // push(vm, OBJ_VAL(list)); // gc fix
 
   // main work here...
-  if (AS_STRING(args[0])->length > 0) {
+  if (delimeter->length > 0) {
     char *to_free, *str, *token;
-    to_free = str = strdup(object); // We own str's memory now.
-    while ((token = strsep(&str, delimeter)))
+    to_free = str = strdup(object->chars); // We own str's memory now.
+    while ((token = strsep(&str, delimeter->chars)))
       write_list(vm, list, OBJ_VAL(copy_string(vm, token, strlen(token))));
     free(to_free);
   } else {
-    const char *string = AS_C_STRING(METHOD_OBJECT);
-    for (int i = 0; i < (int)strlen(string); i++) {
-      write_list(vm, list, OBJ_VAL(copy_string(vm, &string[i], 1)));
+    char *string = object->chars;
+    for (int i = 0; i < object->utf8_length; i++) {
+
+      int start = i, end = i + 1;
+      utf8slice(object->chars, &start, &end);
+
+      write_list(vm, list, STRING_L_VAL(object->chars + start, (int)(end - start)));
     }
   }
 
