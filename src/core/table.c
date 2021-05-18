@@ -227,8 +227,7 @@ void mark_table(b_vm *vm, b_table *table) {
 void table_remove_whites(b_vm *vm, b_table *table) {
   for (int i = 0; i < table->capacity; i++) {
     b_entry *entry = &table->entries[i];
-    if (!IS_EMPTY(entry->key) && IS_OBJ(entry->key) &&
-        AS_OBJ(entry->key)->mark != vm->mark_value) {
+    if (IS_OBJ(entry->key) && AS_OBJ(entry->key)->mark != vm->mark_value) {
       table_delete(table, entry->key);
     }
   }

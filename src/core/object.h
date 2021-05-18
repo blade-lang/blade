@@ -137,6 +137,8 @@ typedef struct {
   b_obj obj;
   const char *name;
   b_native_fn function;
+  b_obj **objects;
+  int objects_count;
 } b_obj_native;
 
 typedef struct {

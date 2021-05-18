@@ -137,7 +137,7 @@ b_value get_os_platform(b_vm *vm) {
 #define PLATFORM_NAME "unknown"
 #endif
 
-  RETURN_L_STRING(PLATFORM_NAME, (int) strlen(PLATFORM_NAME));
+  RETURN_STRING(PLATFORM_NAME);
 
 #undef PLATFORM_NAME
 }
