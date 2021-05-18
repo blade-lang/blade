@@ -201,7 +201,9 @@ static void free_object(b_vm *vm, b_obj *object) {
     case OBJ_DICT: {
       b_obj_dict *dict = (b_obj_dict *)object;
       free_value_arr(vm, &dict->names);
-      free_table(vm, &dict->items);
+      // free_table(vm, &dict->items);
+      // since objects in the dictionary may be referenced elsewhere...
+      table_remove_whites(vm, &dict->items);
       FREE(b_obj_list, object);
       break;
     }
