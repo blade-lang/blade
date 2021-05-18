@@ -20,7 +20,7 @@
 
 #define FILE_ERROR(type, message)                                              \
   file_close(file);                                                            \
-  RETURN_ERROR("File" #type "Exception: %s", message, file->path->chars);
+  RETURN_ERROR(#type " -> %s", message, file->path->chars);
 
 #define RETURN_STATUS(status) \
   if((status) == 0) { \
