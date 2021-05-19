@@ -413,12 +413,12 @@ DECLARE_NATIVE(to_list) {
     RETURN_VALUE(args[0]);
   }
 
-  b_obj_list *list = new_list(vm);
+  b_obj_list *list = (b_obj_list *)GC(new_list(vm));
 
   if (IS_DICT(args[0])) {
     b_obj_dict *dict = AS_DICT(args[0]);
     for (int i = 0; i < dict->names.count; i++) {
-      b_obj_list *n_list = new_list(vm);
+      b_obj_list *n_list = (b_obj_list *)GC(new_list(vm));
       write_value_arr(vm, &n_list->items, dict->names.values[i]);
 
       b_value value;
@@ -450,7 +450,7 @@ DECLARE_NATIVE(to_dict) {
     RETURN_VALUE(args[0]);
   }
 
-  b_obj_dict *dict = new_dict(vm);
+  b_obj_dict *dict = (b_obj_dict *)GC(new_dict(vm));
   dict_set_entry(vm, dict, NUMBER_VAL(0), args[0]);
 
   RETURN_OBJ(dict);

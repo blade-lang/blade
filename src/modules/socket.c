@@ -374,15 +374,13 @@ DECLARE_MODULE_METHOD(socket__getsockinfo) {
     char *ip = inet_ntoa(address.sin_addr);
     int port = ntohs(address.sin_port);
 
-    b_obj_dict *dict = new_dict(vm);
-    // push(vm, OBJ_VAL(dict));
+    b_obj_dict *dict = (b_obj_dict *)GC(new_dict(vm));
 
     dict_add_entry(vm, dict, STRING_L_VAL("address", 7), STRING_VAL(ip));
     dict_add_entry(vm, dict, STRING_L_VAL("port", 4), NUMBER_VAL(port));
     dict_add_entry(vm, dict, STRING_L_VAL("family", 6),
                    NUMBER_VAL(ntohs(address.sin_family)));
 
-    // pop_n(vm, 4); // pop the gc protections
     RETURN_OBJ(dict);
   }
 

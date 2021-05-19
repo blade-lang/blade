@@ -117,7 +117,7 @@ static void blacken_object(b_vm *vm, b_obj *object) {
     case OBJ_BOUND_METHOD: {
       b_obj_bound *bound = (b_obj_bound *)object;
       mark_value(vm, bound->receiver);
-      mark_object(vm, (b_obj *)bound->method);
+      mark_object(vm, bound->method);
       break;
     }
     case OBJ_CLASS: {

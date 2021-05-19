@@ -422,6 +422,7 @@ void init_vm(b_vm *vm) {
   vm->objects = NULL;
   vm->exception_class = NULL;
   vm->bytes_allocated = 0;
+  vm->gc_protected = 0; 
   vm->next_gc = 1024 * 1024; // 1mb // @TODO: Increase before going production.
   vm->is_repl = false;
   vm->mark_value = true;
@@ -560,6 +561,7 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
       }
 
       vm->stack_top -= arg_count + 1;
+      CLEAR_GC();
       push(vm, result);
       return true;
     }
