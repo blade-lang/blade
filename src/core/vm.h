@@ -53,7 +53,6 @@ struct s_vm {
   b_obj **gray_stack;
   size_t bytes_allocated;
   size_t next_gc;
-  b_obj_native *active_native_fn;
 
   // object methods
   b_table methods_string;
