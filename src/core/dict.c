@@ -47,7 +47,7 @@ DECLARE_DICT_METHOD(clear) {
 DECLARE_DICT_METHOD(clone) {
   ENFORCE_ARG_COUNT(clone, 0);
   b_obj_dict *dict = AS_DICT(METHOD_OBJECT);
-  b_obj_dict *n_dict = new_dict(vm);
+  b_obj_dict *n_dict = (b_obj_dict*)GC(new_dict(vm));
 
   table_add_all(vm, &dict->items, &n_dict->items);
 
@@ -61,8 +61,7 @@ DECLARE_DICT_METHOD(clone) {
 DECLARE_DICT_METHOD(compact) {
   ENFORCE_ARG_COUNT(compact, 0);
   b_obj_dict *dict = AS_DICT(METHOD_OBJECT);
-  b_obj_dict *n_dict = new_dict(vm);
-  push(vm, OBJ_VAL(n_dict)); // looking at gc
+  b_obj_dict *n_dict = (b_obj_dict *)GC(new_dict(vm));
 
   for (int i = 0; i < dict->names.count; i++) {
     b_value tmp_value;
@@ -72,7 +71,6 @@ DECLARE_DICT_METHOD(compact) {
     }
   }
 
-  pop(vm); // looking at gc
   RETURN_OBJ(n_dict);
 }
 
@@ -119,7 +117,7 @@ DECLARE_DICT_METHOD(get) {
 DECLARE_DICT_METHOD(keys) {
   ENFORCE_ARG_COUNT(keys, 0);
   b_obj_dict *dict = AS_DICT(METHOD_OBJECT);
-  b_obj_list *list = new_list(vm);
+  b_obj_list *list = (b_obj_list *)GC(new_list(vm));
   for (int i = 0; i < dict->names.count; i++) {
     write_list(vm, list, dict->names.values[i]);
   }
@@ -129,7 +127,7 @@ DECLARE_DICT_METHOD(keys) {
 DECLARE_DICT_METHOD(values) {
   ENFORCE_ARG_COUNT(values, 0);
   b_obj_dict *dict = AS_DICT(METHOD_OBJECT);
-  b_obj_list *list = new_list(vm);
+  b_obj_list *list = (b_obj_list *)GC(new_list(vm));
   for (int i = 0; i < dict->names.count; i++) {
     b_value tmp_value;
     dict_get_entry(dict, dict->names.values[i], &tmp_value);
@@ -191,8 +189,8 @@ DECLARE_DICT_METHOD(to_list) {
   ENFORCE_ARG_COUNT(to_list, 0);
 
   b_obj_dict *dict = AS_DICT(METHOD_OBJECT);
-  b_obj_list *name_list = new_list(vm);
-  b_obj_list *value_list = new_list(vm);
+  b_obj_list *name_list = (b_obj_list*)GC(new_list(vm));
+  b_obj_list *value_list = (b_obj_list *)GC(new_list(vm));
   for (int i = 0; i < dict->names.count; i++) {
     write_list(vm, name_list, dict->names.values[i]);
     b_value value;
@@ -203,7 +201,7 @@ DECLARE_DICT_METHOD(to_list) {
     }
   }
 
-  b_obj_list *list = new_list(vm);
+  b_obj_list *list = (b_obj_list *)GC(new_list(vm));
   write_list(vm, list, OBJ_VAL(name_list));
   write_list(vm, list, OBJ_VAL(value_list));
 

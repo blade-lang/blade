@@ -117,7 +117,7 @@ DECLARE_LIST_METHOD(shift) {
     list->items.count = 0;
     RETURN;
   } else if (count > 0) {
-    b_obj_list *n_list = new_list(vm);
+    b_obj_list *n_list = (b_obj_list *)GC(new_list(vm));
     for (int i = 0; i < count; i++) {
       write_list(vm, n_list, list->items.values[0]);
       for (int j = 0; j < list->items.count; j++) {
@@ -297,7 +297,7 @@ DECLARE_LIST_METHOD(compact) {
   ENFORCE_ARG_COUNT(compact, 0);
 
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
-  b_obj_list *n_list = new_list(vm);
+  b_obj_list *n_list = (b_obj_list *)GC(new_list(vm));
 
   for (int i = 0; i < list->items.count; i++) {
     if (!values_equal(list->items.values[i], NIL_VAL)) {
@@ -312,7 +312,7 @@ DECLARE_LIST_METHOD(unique) {
   ENFORCE_ARG_COUNT(unique, 0);
 
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
-  b_obj_list *n_list = new_list(vm);
+  b_obj_list *n_list = (b_obj_list *)GC(new_list(vm));
 
   for (int i = 0; i < list->items.count; i++) {
     bool found = false;
@@ -333,7 +333,7 @@ DECLARE_LIST_METHOD(unique) {
 
 DECLARE_LIST_METHOD(zip) {
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
-  b_obj_list *n_list = new_list(vm);
+  b_obj_list *n_list = (b_obj_list *)GC(new_list(vm));
 
   b_obj_list **arg_list = ALLOCATE(b_obj_list *, arg_count);
   for (int i = 0; i < arg_count; i++) {
@@ -342,7 +342,7 @@ DECLARE_LIST_METHOD(zip) {
   }
 
   for (int i = 0; i < list->items.count; i++) {
-    b_obj_list *a_list = new_list(vm);
+    b_obj_list *a_list = (b_obj_list *)GC(new_list(vm));
     write_list(vm, a_list, list->items.values[i]); // item of main list
 
     for (int j = 0; j < arg_count; j++) { // item of argument lists
@@ -362,7 +362,7 @@ DECLARE_LIST_METHOD(zip) {
 DECLARE_LIST_METHOD(to_dict) {
   ENFORCE_ARG_COUNT(to_dict, 0);
 
-  b_obj_dict *dict = new_dict(vm);
+  b_obj_dict *dict = (b_obj_dict *)GC(new_dict(vm));
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
   for (int i = 0; i < list->items.count; i++) {
     dict_set_entry(vm, dict, NUMBER_VAL(i), list->items.values[i]);

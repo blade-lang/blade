@@ -387,20 +387,30 @@ DECLARE_STRING_METHOD(split) {
   b_obj_string *object = AS_STRING(METHOD_OBJECT);
   b_obj_string *delimeter = AS_STRING(args[0]);
 
-  b_obj_list *list = new_list(vm);
+  if (object->length == 0 || delimeter->length > object->length)
+    return OBJ_VAL(new_list(vm));
 
-  if (object->length == 0)
-    return OBJ_VAL(list);
-
-  // push(vm, OBJ_VAL(list)); // gc fix
+  b_obj_list *list = (b_obj_list *)GC(new_list(vm));
 
   // main work here...
   if (delimeter->length > 0) {
-    char *to_free, *str, *token;
-    to_free = str = strdup(object->chars); // We own str's memory now.
+    /* char *token = (char*)malloc(sizeof(char));
+    char *string = strdup(object->chars);
+
+    while((token = strtok_r(string, delimeter->chars, &string))) {
+      if (token != NULL) {
+        if (strlen(token) != 0)
+          write_list(vm, list, STRING_VAL(token));
+      }
+    }
+    free(string); */
+
+    char *token, *str, *tofree;
+    tofree = str = strdup(object->chars); // We own str's memory now.
     while ((token = strsep(&str, delimeter->chars)))
-      write_list(vm, list, OBJ_VAL(copy_string(vm, token, strlen(token))));
-    free(to_free);
+      write_list(vm, list,
+                 OBJ_VAL(GC(copy_string(vm, token, (int)strlen(token)))));
+    free(tofree);
   } else {
     char *string = object->chars;
     for (int i = 0; i < object->utf8_length; i++) {
@@ -412,7 +422,6 @@ DECLARE_STRING_METHOD(split) {
     }
   }
 
-  // pop(vm); // gc fix
   RETURN_OBJ(list);
 }
 
@@ -486,7 +495,7 @@ DECLARE_STRING_METHOD(to_number) {
 DECLARE_STRING_METHOD(to_list) {
   ENFORCE_ARG_COUNT(to_list, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
-  b_obj_list *list = new_list(vm);
+  b_obj_list *list = (b_obj_list *)GC(new_list(vm));
 
   if (string->utf8_length > 0) {
 
@@ -495,7 +504,7 @@ DECLARE_STRING_METHOD(to_list) {
       utf8slice(string->chars, &start, &end);
       write_list(
           vm, list,
-          OBJ_VAL(copy_string(vm, string->chars + start, (int)(end - start))));
+          OBJ_VAL(GC(copy_string(vm, string->chars + start, (int)(end - start)))));
     }
   }
 
@@ -617,7 +626,7 @@ DECLARE_STRING_METHOD(match) {
   uint32_t name_entry_size;
   PCRE2_SPTR name_table;
 
-  b_obj_list *result = new_list(vm);
+  b_obj_list *result = (b_obj_list *)GC(new_list(vm));
   (void)pcre2_pattern_info(re, PCRE2_INFO_NAMECOUNT, &name_count);
 
   if (name_count == 0) {
@@ -626,22 +635,22 @@ DECLARE_STRING_METHOD(match) {
       if (substring_length > 0) {
         PCRE2_SPTR substring_start = subject + o_vector[2 * i];
         write_list(vm, result,
-                   OBJ_VAL(copy_string(vm, (char *)substring_start,
-                                       (int)substring_length)));
+                   OBJ_VAL(GC(copy_string(vm, (char *)substring_start,
+                                       (int)substring_length))));
       }
     }
   } else {
 
-    b_obj_list *match_list = new_list(vm);
-    b_obj_dict *match_dict = new_dict(vm);
+    b_obj_list *match_list = (b_obj_list *)GC(new_list(vm));
+    b_obj_dict *match_dict = (b_obj_dict *)GC(new_dict(vm));
 
     for (int i = 0; i < rc; i++) {
       PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
       if (substring_length > 0) {
         PCRE2_SPTR substring_start = subject + o_vector[2 * i];
         write_value_arr(vm, &match_list->items,
-                        OBJ_VAL(copy_string(vm, (char *)substring_start,
-                                            (int)substring_length)));
+                        OBJ_VAL(GC(copy_string(vm, (char *)substring_start,
+                                            (int)substring_length))));
       }
     }
 
@@ -665,9 +674,9 @@ DECLARE_STRING_METHOD(match) {
         _key++;
 
       dict_add_entry(
-          vm, match_dict, OBJ_VAL(take_string(vm, _key, name_entry_size - 3)),
-          OBJ_VAL(take_string(vm, _val,
-                              (int)(o_vector[2 * n + 1] - o_vector[2 * n]))));
+          vm, match_dict, OBJ_VAL(GC(take_string(vm, _key, name_entry_size - 3))),
+          OBJ_VAL(GC(take_string(vm, _val,
+                              (int)(o_vector[2 * n + 1] - o_vector[2 * n])))));
 
       tab_ptr += name_entry_size;
     }
@@ -686,13 +695,11 @@ DECLARE_STRING_METHOD(matches) {
   ENFORCE_ARG_COUNT(matches, 1);
   ENFORCE_ARG_TYPE(matches, 0, IS_STRING);
 
-  b_obj_list *result = new_list(vm);
-
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   b_obj_string *substr = AS_STRING(args[0]);
 
   if (string->length == 0 && substr->length == 0) {
-    RETURN_OBJ(result); // empty string matches empty string to empty list
+    RETURN_OBJ(new_list(vm)); // empty string matches empty string to empty list
   } else if (string->length == 0 || substr->length == 0) {
     RETURN_FALSE; // if either string or str is empty, return false
   }
@@ -741,6 +748,8 @@ DECLARE_STRING_METHOD(matches) {
 
   (void)pcre2_pattern_info(re, PCRE2_INFO_NAMECOUNT, &name_count);
 
+  b_obj_list *result = (b_obj_list *)GC(new_list(vm));
+
   // add first set of matches to response
   if (name_count == 0) {
     int i;
@@ -749,14 +758,14 @@ DECLARE_STRING_METHOD(matches) {
       if (substring_length > 0) {
         PCRE2_SPTR substring_start = subject + o_vector[2 * i];
         write_list(vm, result,
-                   OBJ_VAL(copy_string(vm, (char *)substring_start,
-                                       (int)substring_length)));
+                   OBJ_VAL(GC(copy_string(vm, (char *)substring_start,
+                                       (int)substring_length))));
       }
     }
   } else {
 
-    b_obj_list *match_list = new_list(vm);
-    b_obj_dict *match_dict = new_dict(vm);
+    b_obj_list *match_list = (b_obj_list *)GC(new_list(vm));
+    b_obj_dict *match_dict = (b_obj_dict *)GC(new_dict(vm));
 
     int i;
     for (i = 0; i < rc; i++) {
@@ -764,8 +773,8 @@ DECLARE_STRING_METHOD(matches) {
       if (substring_length > 0) {
         PCRE2_SPTR substring_start = subject + o_vector[2 * i];
         write_value_arr(vm, &match_list->items,
-                        OBJ_VAL(copy_string(vm, (char *)substring_start,
-                                            (int)substring_length)));
+                        OBJ_VAL(GC(copy_string(vm, (char *)substring_start,
+                                            (int)substring_length))));
       }
     }
 
@@ -790,9 +799,9 @@ DECLARE_STRING_METHOD(matches) {
         _key++;
 
       dict_add_entry(
-          vm, match_dict, OBJ_VAL(take_string(vm, _key, name_entry_size - 3)),
-          OBJ_VAL(take_string(vm, _val,
-                              (int)(o_vector[2 * n + 1] - o_vector[2 * n]))));
+          vm, match_dict, OBJ_VAL(GC(take_string(vm, _key, name_entry_size - 3))),
+          OBJ_VAL(GC(take_string(vm, _val,
+                              (int)(o_vector[2 * n + 1] - o_vector[2 * n])))));
 
       tab_ptr += name_entry_size;
     }
@@ -869,14 +878,14 @@ DECLARE_STRING_METHOD(matches) {
         if (substring_length > 0) {
           PCRE2_SPTR substring_start = subject + o_vector[2 * i];
           write_list(vm, result,
-                     OBJ_VAL(copy_string(vm, (char *)substring_start,
-                                         (int)substring_length)));
+                     OBJ_VAL(GC(copy_string(vm, (char *)substring_start,
+                                         (int)substring_length))));
         }
       }
     } else {
 
-      b_obj_list *match_list = new_list(vm);
-      b_obj_dict *match_dict = new_dict(vm);
+      b_obj_list *match_list = (b_obj_list *)GC(new_list(vm));
+      b_obj_dict *match_dict = (b_obj_dict *)GC(new_dict(vm));
 
       int i;
       for (i = 0; i < rc; i++) {
@@ -884,8 +893,8 @@ DECLARE_STRING_METHOD(matches) {
         if (substring_length > 0) {
           PCRE2_SPTR substring_start = subject + o_vector[2 * i];
           write_value_arr(vm, &match_list->items,
-                          OBJ_VAL(copy_string(vm, (char *)substring_start,
-                                              (int)substring_length)));
+                          OBJ_VAL(GC(copy_string(vm, (char *)substring_start,
+                                              (int)substring_length))));
         }
       }
 
@@ -910,9 +919,9 @@ DECLARE_STRING_METHOD(matches) {
           _key++;
 
         dict_add_entry(
-            vm, match_dict, OBJ_VAL(take_string(vm, _key, name_entry_size - 3)),
-            OBJ_VAL(take_string(vm, _val,
-                                (int)(o_vector[2 * n + 1] - o_vector[2 * n]))));
+            vm, match_dict, OBJ_VAL(GC(take_string(vm, _key, name_entry_size - 3))),
+            OBJ_VAL(GC(take_string(vm, _val,
+                                (int)(o_vector[2 * n + 1] - o_vector[2 * n])))));
 
         tab_ptr += name_entry_size;
       }

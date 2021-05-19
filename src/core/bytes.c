@@ -245,7 +245,7 @@ DECLARE_BYTES_METHOD(is_space) {
 DECLARE_BYTES_METHOD(to_list) {
   ENFORCE_ARG_COUNT(to_list, 0);
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
-  b_obj_list *list = new_list(vm);
+  b_obj_list *list = (b_obj_list *)GC(new_list(vm));
 
   for (int i = 0; i < bytes->bytes.count; i++) {
     write_list(vm, list, NUMBER_VAL((double) ((int) bytes->bytes.bytes[i])));

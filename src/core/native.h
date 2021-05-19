@@ -29,6 +29,10 @@
   define_native_method(vm, &vm->methods_##table, #name,                        \
                        native_method_##table##name)
 
+// NOTE: METHOD_OBJECT must always be retrieved
+// before any call to create an object in a native function.
+// faliure to do so will lead to the first object created
+// within the function to appear as METHOD_OBJECT
 #define METHOD_OBJECT peek(vm, arg_count)
 
 #define NORMALIZE_IS_BOOL "bool"
