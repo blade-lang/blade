@@ -50,6 +50,7 @@ struct s_vm {
   // gc
   int gray_count;
   int gray_capacity;
+  int gc_protected;
   b_obj **gray_stack;
   size_t bytes_allocated;
   size_t next_gc;
@@ -101,5 +102,30 @@ void gc_stop_protection(b_vm *vm);
 
 #define GUARD(t, n, v) t *n = v; \
   push(vm, OBJ_VAL(n))
+
+
+static inline b_obj *gc_protect(b_vm *vm, b_obj *object) {
+  push(vm, OBJ_VAL(object));
+  vm->gc_protected++; 
+  return object;
+}
+
+static inline void gc_clear_protection(b_vm *vm) {
+  if(vm->gc_protected > 0) {
+    pop_n(vm, vm->gc_protected);
+  }
+  vm->gc_protected = 0;
+}
+
+// NOTE:
+// any call to GC() within a function/block must accompanied by
+// at least one call to CLEAR_GC() before exiting the function/block
+// otherwise, expected unexpected behavior
+// NOTE as well that the call to CLEAR_GC() will be automatic for
+// native functions.
+// NOTE as well that METHOD_OBJECT must be retrieved before any call
+// to GC() in a native function.
+#define GC(o) gc_protect(vm, (b_obj*)(o))
+#define CLEAR_GC() gc_clear_protection(vm)
 
 #endif

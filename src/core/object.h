@@ -133,7 +133,7 @@ typedef struct {
 
 typedef b_value (*b_native_fn)(b_vm *, int, const b_value *);
 
-typedef struct {
+typedef struct b_obj_native {
   b_obj obj;
   const char *name;
   b_native_fn function;

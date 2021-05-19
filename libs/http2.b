@@ -189,6 +189,7 @@ class HttpRequest {
       var data = header.trim().split('\r\n')
 
       iter var i = 0; i < data.length(); i++ {
+        echo data[i]
         var d = data[i].index_of(':')
         if d > -1 {
           var key = data[i][0,d]
@@ -206,6 +207,7 @@ class HttpRequest {
           }
         } else if(data[i].lower().starts_with('http/')){
           var split = data[i].split(' ')
+          echo split
           var http_version = split[0].replace('http/', '')
 
           # call back with (version, status code)

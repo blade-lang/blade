@@ -34,7 +34,7 @@
     RETURN_ERROR("method not supported for std files");
 
 #define SET_DICT_STRING(d, n, l, v)                                            \
-  dict_add_entry(vm, d, OBJ_VAL(copy_string(vm, n, l)), v)
+  dict_add_entry(vm, d, OBJ_VAL(GC(copy_string(vm, n, l))), v)
 
 bool is_std_file(b_obj_file *file) { return file->mode->length == 0; }
 
@@ -74,7 +74,7 @@ DECLARE_NATIVE(file) {
     ENFORCE_ARG_TYPE(file, 1, IS_STRING);
     mode = AS_STRING(args[1]);
   } else {
-    mode = copy_string(vm, "r", 1);
+    mode = (b_obj_string *)GC(copy_string(vm, "r", 1));
   }
 
   b_obj_file *file = new_file(vm, path, mode);
@@ -307,7 +307,7 @@ DECLARE_FILE_METHOD(stats) {
   ENFORCE_ARG_COUNT(stats, 0);
 
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
-  b_obj_dict *dict = new_dict(vm);
+  b_obj_dict *dict = (b_obj_dict *)GC(new_dict(vm));
 
   if (!is_std_file(file)) {
     if (file_exists(file->path->chars)) {

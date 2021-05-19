@@ -117,7 +117,7 @@ static void blacken_object(b_vm *vm, b_obj *object) {
     case OBJ_BOUND_METHOD: {
       b_obj_bound *bound = (b_obj_bound *)object;
       mark_value(vm, bound->receiver);
-      mark_object(vm, (b_obj *)bound->method);
+      mark_object(vm, bound->method);
       break;
     }
     case OBJ_CLASS: {
@@ -127,7 +127,6 @@ static void blacken_object(b_vm *vm, b_obj *object) {
       mark_table(vm, &klass->static_methods);
       mark_table(vm, &klass->fields);
       mark_table(vm, &klass->static_fields);
-      mark_value(vm, klass->initializer);
       break;
     }
     case OBJ_CLOSURE: {
@@ -193,7 +192,6 @@ static void free_object(b_vm *vm, b_obj *object) {
       b_obj_file *file = (b_obj_file *)object;
       if (file->mode->length != 0 && !is_std_file(file)) {
         fclose(file->file);
-  //      free(file->file);
       }
       FREE(b_obj_file, object);
       break;
@@ -202,7 +200,7 @@ static void free_object(b_vm *vm, b_obj *object) {
       b_obj_dict *dict = (b_obj_dict *)object;
       free_value_arr(vm, &dict->names);
       free_table(vm, &dict->items);
-      FREE(b_obj_list, object);
+      FREE(b_obj_dict, object);
       break;
     }
     case OBJ_LIST: {
@@ -220,9 +218,6 @@ static void free_object(b_vm *vm, b_obj *object) {
     }
     case OBJ_CLASS: {
       b_obj_class *klass = (b_obj_class *)object;
-      /*if(IS_OBJ(klass->initializer)) {
-        free_object(vm, AS_OBJ(klass->initializer));
-      }*/
       free_table(vm, &klass->methods);
       free_table(vm, &klass->static_methods);
       free_table(vm, &klass->fields);
@@ -252,7 +247,6 @@ static void free_object(b_vm *vm, b_obj *object) {
       break;
     }
     case OBJ_NATIVE: {
-      b_obj_native *native = (b_obj_native*)object;
       FREE(b_obj_native, object);
       break;
     }
