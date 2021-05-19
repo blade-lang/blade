@@ -201,9 +201,7 @@ static void free_object(b_vm *vm, b_obj *object) {
     case OBJ_DICT: {
       b_obj_dict *dict = (b_obj_dict *)object;
       free_value_arr(vm, &dict->names);
-      // free_table(vm, &dict->items);
-      // since objects in the dictionary may be referenced elsewhere...
-      table_remove_whites(vm, &dict->items);
+      free_table(vm, &dict->items);
       FREE(b_obj_list, object);
       break;
     }
@@ -255,7 +253,6 @@ static void free_object(b_vm *vm, b_obj *object) {
     }
     case OBJ_NATIVE: {
       b_obj_native *native = (b_obj_native*)object;
-      FREE(b_obj**, native->objects);
       FREE(b_obj_native, object);
       break;
     }
@@ -293,13 +290,6 @@ static void mark_roots(b_vm *vm) {
   mark_table(vm, &vm->methods_file);
   mark_table(vm, &vm->methods_list);
   mark_table(vm, &vm->methods_dict);
-
-  if(vm->active_native_fn != NULL) {
-    for(int i = 0; i < vm->active_native_fn->objects_count; i++) {
-      mark_object(vm, vm->active_native_fn->objects[i]);
-    }
-    mark_object(vm, (b_obj*)vm->active_native_fn);
-  }
 
   mark_compiler_roots(vm);
 }
