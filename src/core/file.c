@@ -34,7 +34,7 @@
     RETURN_ERROR("method not supported for std files");
 
 #define SET_DICT_STRING(d, n, l, v)                                            \
-  dict_add_entry(vm, d, OBJ_VAL(GC(copy_string(vm, n, l))), v)
+  dict_add_entry(vm, d, GC_L_STRING(n, l), v)
 
 bool is_std_file(b_obj_file *file) { return file->mode->length == 0; }
 

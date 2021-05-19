@@ -163,6 +163,10 @@
                  (char)abs((int)compile_options));                             \
   }
 
+#define GC_STRING(o) OBJ_VAL(GC(copy_string(vm, (o), (int)strlen(o))))
+#define GC_L_STRING(o, l) OBJ_VAL(GC(copy_string(vm, (o), (l))))
+#define GC_T_STRING(o, l) OBJ_VAL(GC(take_string(vm, (o), (l))))
+
 extern int is_regex(b_obj_string *string);
 
 extern char *remove_regex_delimiter(b_vm *vm, b_obj_string *string);

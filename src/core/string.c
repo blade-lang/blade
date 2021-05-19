@@ -408,8 +408,7 @@ DECLARE_STRING_METHOD(split) {
     char *token, *str, *tofree;
     tofree = str = strdup(object->chars); // We own str's memory now.
     while ((token = strsep(&str, delimeter->chars)))
-      write_list(vm, list,
-                 OBJ_VAL(GC(copy_string(vm, token, (int)strlen(token)))));
+      write_list(vm, list, GC_STRING(token));
     free(tofree);
   } else {
     for (int i = 0; i < object->utf8_length; i++) {
@@ -501,9 +500,7 @@ DECLARE_STRING_METHOD(to_list) {
     for (int i = 0; i < string->utf8_length; i++) {
       int start = i, end = i + 1;
       utf8slice(string->chars, &start, &end);
-      write_list(
-          vm, list,
-          OBJ_VAL(GC(copy_string(vm, string->chars + start, (int)(end - start)))));
+      write_list(vm, list, GC_L_STRING(string->chars + start, (int)(end - start)));
     }
   }
 
@@ -633,9 +630,7 @@ DECLARE_STRING_METHOD(match) {
       PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
       if (substring_length > 0) {
         PCRE2_SPTR substring_start = subject + o_vector[2 * i];
-        write_list(vm, result,
-                   OBJ_VAL(GC(copy_string(vm, (char *)substring_start,
-                                       (int)substring_length))));
+        write_list(vm, result, GC_L_STRING((char *)substring_start, (int)substring_length));
       }
     }
   } else {
@@ -648,8 +643,7 @@ DECLARE_STRING_METHOD(match) {
       if (substring_length > 0) {
         PCRE2_SPTR substring_start = subject + o_vector[2 * i];
         write_value_arr(vm, &match_list->items,
-                        OBJ_VAL(GC(copy_string(vm, (char *)substring_start,
-                                            (int)substring_length))));
+                        GC_L_STRING((char *)substring_start, (int)substring_length));
       }
     }
 
@@ -756,9 +750,7 @@ DECLARE_STRING_METHOD(matches) {
       PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
       if (substring_length > 0) {
         PCRE2_SPTR substring_start = subject + o_vector[2 * i];
-        write_list(vm, result,
-                   OBJ_VAL(GC(copy_string(vm, (char *)substring_start,
-                                       (int)substring_length))));
+        write_list(vm, result, GC_L_STRING((char *)substring_start, (int)substring_length));
       }
     }
   } else {
@@ -772,8 +764,7 @@ DECLARE_STRING_METHOD(matches) {
       if (substring_length > 0) {
         PCRE2_SPTR substring_start = subject + o_vector[2 * i];
         write_value_arr(vm, &match_list->items,
-                        OBJ_VAL(GC(copy_string(vm, (char *)substring_start,
-                                            (int)substring_length))));
+                        GC_L_STRING((char *)substring_start, (int)substring_length));
       }
     }
 
@@ -876,9 +867,7 @@ DECLARE_STRING_METHOD(matches) {
         PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
         if (substring_length > 0) {
           PCRE2_SPTR substring_start = subject + o_vector[2 * i];
-          write_list(vm, result,
-                     OBJ_VAL(GC(copy_string(vm, (char *)substring_start,
-                                         (int)substring_length))));
+          write_list(vm, result, GC_L_STRING((char *)substring_start, (int)substring_length));
         }
       }
     } else {
@@ -892,8 +881,7 @@ DECLARE_STRING_METHOD(matches) {
         if (substring_length > 0) {
           PCRE2_SPTR substring_start = subject + o_vector[2 * i];
           write_value_arr(vm, &match_list->items,
-                          OBJ_VAL(GC(copy_string(vm, (char *)substring_start,
-                                              (int)substring_length))));
+              GC_L_STRING((char *)substring_start, (int)substring_length));
         }
       }
 

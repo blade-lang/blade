@@ -298,7 +298,7 @@ DECLARE_MODULE_METHOD(http___client) {
     b_value error = NIL_VAL;
     if (res_code != CURLE_OK) {
       const char *err = curl_easy_strerror(res_code);
-      error = OBJ_VAL(GC(copy_string(vm, err, (int)strlen(err))));
+      error = GC_STRING(err);
     }
 
     fseek(stream, 0L, SEEK_END);
@@ -317,21 +317,15 @@ DECLARE_MODULE_METHOD(http___client) {
     curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &total_time);
     curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &effective_url);
 
-    // guard against gc corruption
-    /* push(vm, OBJ_VAL(header));
-    push(vm, OBJ_VAL(body));
-    push(vm, OBJ_VAL(responder)); */
-
     b_obj_list *list = (b_obj_list *)GC(new_list(vm));
-    // push(vm, OBJ_VAL(list)); // fix gc
 
     write_list(vm, list, NUMBER_VAL(status_code));
     write_list(vm, list, error);
-    write_list(vm, list, OBJ_VAL(GC(copy_string(vm, stream_content, header_length))));
-    write_list(vm, list, OBJ_VAL(GC(copy_string(vm, stream_content + header_length, (int)stream_length - header_length))));
+    write_list(vm, list, GC_L_STRING(stream_content, header_length));
+    write_list(vm, list, GC_L_STRING(stream_content + header_length, (int)stream_length - header_length));
     write_list(vm, list, NUMBER_VAL(total_time));
     write_list(vm, list, NUMBER_VAL(redirect_count));
-    write_list(vm, list, OBJ_VAL(GC(copy_string(vm, effective_url, (int)strlen(effective_url)))));
+    write_list(vm, list, GC_STRING(effective_url));
 
     // clean up
     free(stream_content);
@@ -339,7 +333,6 @@ DECLARE_MODULE_METHOD(http___client) {
     curl_mime_free(form);
     curl_slist_free_all(heads);
 
-    // pop_n(vm, IS_NIL(error) ? 4 : 5); // remove our gc guards
     RETURN_OBJ(list);
   }
 
