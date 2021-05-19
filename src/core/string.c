@@ -412,7 +412,6 @@ DECLARE_STRING_METHOD(split) {
                  OBJ_VAL(GC(copy_string(vm, token, (int)strlen(token)))));
     free(tofree);
   } else {
-    char *string = object->chars;
     for (int i = 0; i < object->utf8_length; i++) {
 
       int start = i, end = i + 1;
