@@ -23,14 +23,6 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   object->type = type;
   object->mark = !vm->mark_value;
 
-  if(type == OBJ_LIST || type == OBJ_DICT || type == OBJ_FILE) {
-    if (vm->active_native_fn != NULL) {
-      vm->active_native_fn->objects[vm->active_native_fn->objects_count] =
-          object;
-      vm->active_native_fn->objects_count++;
-    }
-  }
-
   object->next = vm->objects;
   vm->objects = object;
 
@@ -121,8 +113,6 @@ b_obj_native *new_native(b_vm *vm, b_native_fn function, const char *name) {
   b_obj_native *native = ALLOCATE_OBJ(b_obj_native, OBJ_NATIVE);
   native->function = function;
   native->name = name;
-  native->objects = (b_obj **)malloc(sizeof(b_obj *) * MAX_OBJECTS_IN_NATIVE_FN);
-  native->objects_count = 0;
   return native;
 }
 
