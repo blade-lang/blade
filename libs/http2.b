@@ -20,7 +20,7 @@ class HttpResponse {
   var redirects = 0
   var responder
   var headers = {}
-  var error
+  var error # Exception instance
   var body
 
   to_string() {
@@ -96,7 +96,7 @@ class HttpRequest {
     var responder = self.url.absolute_uri, headers, body, time_taken, error
     var will_connect = true, redirect_count = 0, http_version = '1.0', status_code = 0
 
-    # try {
+    try {
       while will_connect {
 
         # @TODO: in the else clause, get ipv4 address from the hostname
@@ -162,9 +162,9 @@ class HttpRequest {
           will_connect = false
         }
       }
-    # } catch Exception e {
-    #   error = e.message
-    # }
+    } catch Exception e {
+      error = e
+    }
 
     # return a valid HttpResponse
     var result = HttpResponse()
