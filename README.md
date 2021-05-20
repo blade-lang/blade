@@ -6,7 +6,7 @@ and expressiveness (the core pillars). It aims to maintain the
 core pillars of the language while still being powerful enough to
 do anything.
 
-### Features
+## Features
 
 - Simple syntax and minimal keywords.
 - Dynamically typed.
@@ -21,11 +21,11 @@ do anything.
 - Lightweight.
 - Highly portable.
 
-### Directory Structure
+## Directory Structure
 
 | Directory | Contents 
 |-----------|----------
-| `benchmarks` | Contains the sample benchmarks for Bird (some are based on the Benchmarks games).
+| `benchmarks` | Contains the sample benchmarks for Bird (some are based on the Benchmark games).
 | `birdy-vscode-ext` | The visual studio code extension for Bird that enables syntax highlighting for the language.
 | `deps` | Contains static libraries to be used for compiling when matching libraries are not found on the system.
 | `docs` | Contains the source code Sphinx documentation for Bird.
@@ -34,23 +34,23 @@ do anything.
 | `tests` | A few test cases that Bird implementation must pass.
 | `winbuild` | Contains the windows build files for Bird.
 
-### How to compile
+## How to compile
 
-For now, Bird can only build on one Windows, Linux and Macosx devices.
+For now, Bird can only build on one of Windows, Linux and Macosx devices.
 
--   #### For Linux and OSX
+-   ### For Linux and OSX
   
     Simply run one of `make debug` or `make release` as 
     desired and you will get the compiled output in the `build` 
     directory. You may customize the output directory by simply
     changing it in the `Makefile`.
     
--   #### For Windows
+-   ### For Windows
     
     Open the solution file in `winbuild` in Visual Studio 2017 
     and above and build your desired release (`Debug` or `Release`).
 
-### How to contribute
+## How to contribute
 
 The standard. The general workflow is as follows.
 
@@ -67,7 +67,7 @@ To simply submit a bug from your own repo, simply modify the
 
 You can also just mail your issues to [me](mailto:eqliqandfriends@gmail.com) directly.
 
-### Coding Standard
+## Coding Standard
 
 -   I decided to break from the popular camel case common to C style
     languages and went with snake cases. Honestly speaking, the only
@@ -84,6 +84,6 @@ You can also just mail your issues to [me](mailto:eqliqandfriends@gmail.com) dir
     
 That simple!
 
-### Sponsors
+## Sponsors
 
 ![JetBrains Logo](jetbrains.png)
