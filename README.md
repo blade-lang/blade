@@ -86,4 +86,4 @@ That simple!
 
 ### Sponsors
 
-![](./jetbrains-variant-2.png =40x40)
+![JetBrains Logo](jetbrains.png =40x40)
