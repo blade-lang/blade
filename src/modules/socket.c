@@ -9,6 +9,7 @@
 //#include <arpa/ftp.h>
 //#include <arpa/tftp.h>
 //#include <arpa/nameser.h>
+#include <netdb.h> //hostent
 #include <sys/ioctl.h>
 #endif
 
@@ -387,6 +388,62 @@ DECLARE_MODULE_METHOD(socket__getsockinfo) {
   RETURN_NUMBER(-1);
 }
 
+// @TODO: Add IPv6 support...
+DECLARE_MODULE_METHOD(socket__getaddrinfo) {
+  ENFORCE_ARG_COUNT(_getaddrinfo, 2);
+  ENFORCE_ARG_TYPE(_getaddrinfo, 0, IS_STRING);
+  ENFORCE_ARG_TYPE(_getaddrinfo, 1, IS_NUMBER);
+
+  b_obj_string *addr = AS_STRING(args[0]);
+  int family = AS_NUMBER(args[1]);
+
+  struct addrinfo *res, hints = {0};
+
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_family = family;
+
+  if(getaddrinfo(addr->chars, NULL,  &hints, &res) == 0) {
+    while(res) {
+      if(res->ai_family == family) {
+
+        b_obj_dict *dict = (b_obj_dict*)GC(new_dict(vm));
+        if(res->ai_canonname != NULL) {
+          dict_add_entry(vm, dict, GC_L_STRING("cannon_name", 11), GC_STRING(res->ai_canonname));
+        } else {
+          dict_add_entry(vm, dict, GC_L_STRING("cannon_name", 11), NIL_VAL);
+        }
+
+        char *result = NULL;
+
+        switch(family) {
+          case AF_INET: {
+            void *ptr = &((struct sockaddr_in*) res->ai_addr)->sin_addr;
+            result = ALLOCATE(char, 16); // INET_ADDRSTRLEN
+            inet_ntop(res->ai_family, ptr, result, 16);
+            break;
+          }
+          case AF_INET6: {
+            void *ptr = &((struct sockaddr_in6*) res->ai_addr)->sin6_addr;
+            result = ALLOCATE(char, 46); // INET6_ADDRSTRLEN
+            inet_ntop(res->ai_family, ptr, result, 46);
+            break;
+          }
+          default: {
+            result = ALLOCATE(char, 1);
+            result[0] = '\0';
+            break;
+          }
+        }
+
+        dict_add_entry(vm, dict, GC_L_STRING("ip", 2), GC_TT_STRING(result));
+        RETURN_OBJ(dict);
+      }
+    }
+  }
+
+  RETURN;
+}
+
 DECLARE_MODULE_METHOD(socket__close) {
   ENFORCE_ARG_COUNT(_error, 1);
   ENFORCE_ARG_TYPE(_error, 0, IS_NUMBER);
@@ -416,6 +473,7 @@ CREATE_MODULE_LOADER(socket) {
       {"_close", false, GET_MODULE_METHOD(socket__close)},
       {"_shutdown", false, GET_MODULE_METHOD(socket__shutdown)},
       {"_getsockinfo", false, GET_MODULE_METHOD(socket__getsockinfo)},
+      {"_getaddrinfo", true, GET_MODULE_METHOD(socket__getaddrinfo)},
       {NULL, false, NULL},
   };
 

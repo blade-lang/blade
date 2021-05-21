@@ -385,4 +385,12 @@ class Socket {
   info() {
     return self._getsockinfo(self.socket_id)
   }
+
+  static get_address_info(address, family) {
+    if !is_string(address) 
+      die SocketException('string expected for address, ${typeof(address)} given')
+    if !family family = Socket.AF_INET
+    
+    return Socket._getaddrinfo(address, family)
+  }
 }
