@@ -15,15 +15,8 @@
 void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
   vm->bytes_allocated += new_size - old_size;
 
-  if (new_size > old_size) {
-#if defined DEBUG_STRESS_GC && DEBUG_STRESS_GC
-    // @TODO: fix bug associated with enabling stressed gc
-     collect_garbage(vm);
-#endif
-
-    if (vm->bytes_allocated > vm->next_gc) {
-      collect_garbage(vm);
-    }
+  if (new_size > old_size && vm->bytes_allocated > vm->next_gc) {
+    collect_garbage(vm);
   }
 
   if (new_size == 0) {

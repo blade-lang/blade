@@ -203,7 +203,6 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_DICT:
   case OP_CALL_IMPORT:
   case OP_FINISH_MODULE:
-  case OP_TRY:
   case OP_SWITCH:
     return 2;
 
@@ -212,6 +211,9 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_METHOD:
   case OP_CLASS_PROPERTY:
     return 3;
+
+  case OP_TRY:
+    return 6;
 
   case OP_CLOSURE: {
     int constant = (bytecode[ip + 1] << 8) | bytecode[ip + 2];
@@ -1020,7 +1022,7 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
 }
 
 static char *compile_string(b_parser *p) {
-  char *str = (char *)malloc((p->previous.length - 2) * sizeof(char));
+  char *str = (char *)malloc(sizeof(char) * ((p->previous.length - 2) + 1));
   char *real = (char *)(p->previous.start + 1);
 
   int real_length = p->previous.length - 2;
@@ -2014,13 +2016,12 @@ static void assert_statement(b_parser *p) {
 static void try_statement(b_parser *p) {
   consume(p, LBRACE_TOKEN, "expected '{' after try");
   ignore_whitespace(p);
-  // @TODO: at least one of catch or finally must be given.
   int try_begins = emit_try(p);
 
   block(p); // compile the try body
   emit_byte(p, OP_POP_TRY);
   int exit_jump = emit_jump(p, OP_JUMP);
-  int address = 0xff, type = -1, finally = 0xff;
+  int address = 0xffff, type = -1, finally = 0xffff;
 
   bool catch_exists = false, final_exists = false;
 

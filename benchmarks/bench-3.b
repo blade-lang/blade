@@ -132,7 +132,7 @@ def fannkuchredux(n) {
   }
 
   # output the result
-  echo '${checksum}\nPfannkuchen${n} = ${maximum_flip_count}'
+  echo '${checksum}\nPfannkuchen(${n}) = ${maximum_flip_count}'
 }
 
 fannkuchredux(12)
