@@ -4,15 +4,17 @@ def fannkuchredux(n) {
 
   # create and initialize factorial_lookup_table
   var factorial_lookup_table = [1] * (n + 1)
-  iter var i = 0; i <= n; i++ factorial_lookup_table[i] = i + factorial_lookup_table[i - 1]
+  iter var i = 1; i <= n; i++
+    factorial_lookup_table[i] = i + factorial_lookup_table[i - 1]
 
   # Determine the block_size to use. If n! is less than
   # PREFERRED_NUMBER_OF_BLOCKS_TO_USE then just use a single block to prevent
   # block_size from being set to 0. This also causes smaller values of n to
   # be computed serially which is faster and uses less resources for small
   # values of n.
-  var block_size = factorial_lookup_table[n] < PREFERRED_NUMBER_OF_BLOCKS_TO_USE ?
-          factorial_lookup_table[n] : factorial_lookup_table[n] / PREFERRED_NUMBER_OF_BLOCKS_TO_USE
+  var block_size = factorial_lookup_table[n] / (
+    factorial_lookup_table[n] < PREFERRED_NUMBER_OF_BLOCKS_TO_USE ? 1 : PREFERRED_NUMBER_OF_BLOCKS_TO_USE
+  )
 
   var maximum_flip_count = 0, checksum = 0
 
@@ -20,23 +22,17 @@ def fannkuchredux(n) {
       initial_permutation_index_for_block < factorial_lookup_table[n]; 
       initial_permutation_index_for_block += block_size {
     
-    var count = [0] * n, temp_permutation = [0] * n, current_permutation = [0] * n
-
-    # Initialize count and current_permutation.
-    iter var i = 0; i < n; i++ {
-      current_permutation[i] = i
-    }
+    var count = [0] * n, temp_permutation, current_permutation = 0..n
 
     iter var i = n - 1, permutation_index = initial_permutation_index_for_block; i > 0; i-- {
       var d = permutation_index / factorial_lookup_table[i]
       permutation_index = permutation_index % factorial_lookup_table[i]
       count[i] = d
 
-      iter var j = 0; j < n; j++ temp_permutation[j] = current_permutation[j]
+      temp_permutation = current_permutation.clone()
 
       iter var j = 0; j <= i; j++ {
-        if j + d <= i current_permutation[j] = temp_permutation[j + d]
-        else current_permutation[j] = temp_permutation[j + d - i - 1]
+        current_permutation[j] = j+d <= i ? temp_permutation[j + d] : temp_permutation[j + d - i - 1]
       }
     }
 
