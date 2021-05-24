@@ -177,6 +177,7 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_RANGE:
   case OP_STRINGIFY:
   case OP_CHOICE:
+  case OP_EMPTY:
     return 0;
 
   case OP_CALL:
@@ -798,9 +799,13 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg,
     emit_byte_and_short(p, set_op, (uint16_t)arg);
   } else {
     if (arg != -1) {
-      emit_byte_and_short(p, get_op, (uint16_t)arg);
+      if(get_op == OP_GET_INDEX) {
+        emit_bytes(p, get_op, (uint8_t)0);
+      } else {
+        emit_byte_and_short(p, get_op, (uint16_t)arg);
+      }
     } else {
-      emit_bytes(p, get_op, 0);
+      emit_bytes(p, get_op, (uint8_t)0);
     }
   }
 
@@ -898,15 +903,18 @@ static void indexing(b_parser *p, bool can_assign) {
   expression(p);
   bool assignable = true;
 
-  if (!check(p, RBRACKET_TOKEN)) {
+  if (!match(p, RBRACKET_TOKEN)) {
     consume(p, COMMA_TOKEN, "expecting ',' or ']'");
-    expression(p);
+    if(match(p, RBRACKET_TOKEN)) {
+      emit_byte(p, OP_NIL);
+    } else {
+      expression(p);
+      consume(p, RBRACKET_TOKEN, "expected ']' after indexing");
+    }
     assignable = false;
   } else {
-    emit_byte(p, OP_NIL);
+    emit_byte(p, OP_EMPTY);
   }
-
-  consume(p, RBRACKET_TOKEN, "expected ']' at end of index");
 
   assignment(p, OP_GET_INDEX, OP_SET_INDEX, assignable ? -1 : -2, can_assign);
 }
