@@ -65,6 +65,9 @@ struct s_vm {
   // boolean flags
   bool is_repl;
   bool mark_value;
+  // for switching through the command line args...
+  bool should_debug_stack;
+  bool should_print_bytecode;
 };
 
 void init_vm(b_vm *vm);

@@ -3,7 +3,7 @@
 #
 # MODE         	"debug" or "release".
 # NAME         	Name of the output executable (and object file directory).
-# SOURCE_DIR   	Directory where source files are found.
+# SRC_DIR   	Directory where source files are found.
 
 # Some platform-specific workarounds. Note that we use "gcc" explicitly in the
 # call to get the machine name because one of these workarounds deals with $(CC)
@@ -106,21 +106,14 @@ endif
 
 
 # Files.
-SUB_DIRS := core modules
-SRC_DIR := $(addprefix $(SOURCE_DIR)/, $(SUB_DIRS))
-BLD_DIRS := $(addprefix $(BUILD_DIR)/, $(SUB_DIRS))
+SUB_DIRS := standard
 
-SOURCES = $(foreach sdir, $(SRC_DIR), $(wildcard $(sdir)/*.c))
-OBJECTS = $(patsubst $(SOURCE_DIR)/*.c, $(BUILD_DIR)/*.c, $(SOURCES))
-# INCLUDES = $(addprefix -I, $(addprefix $(SOURCE_DIR)/, $(SUB_DIRS)))
+SOURCES = $(wildcard $(SRC_DIR)/*.c)
+SOURCES += $(foreach sdir, $(addprefix $(SRC_DIR)/, $(SUB_DIRS)), $(wildcard $(sdir)/*.c))
+OBJECTS = $(patsubst $(SRC_DIR)/*.c, $(BUILD_DIR)/*.c, $(SOURCES))
 
 # Adding the include paths
-# 
-# Curl needs to be available somehow on the device
-# and even though we try to supply the library for the build,
-# I have detected that those libraries may not work without
-# the -lcurl flag.
-CFLAGS += -I$(SOURCE_DIR)/core -I$(SOURCE_DIR) -Ideps/includes
+CFLAGS += -I$(SRC_DIR) -Ideps/includes
 
 LIB_WIN32 :=
 
@@ -156,11 +149,19 @@ ifeq ($(_OS),linux)
 	CFLAGS += -lm -lpcre2-8
 endif
 
+# Curl needs to be available somehow on the device
+# and even though we try to supply the library for the build,
+# I have detected that those libraries may not work without
+# the -lcurl flag.
 CFLAGS +=  -lcurl
 
 # Main build...
 build/$(NAME): $(OBJECTS) $(LIB_STATICS) $(LIB_WIN32)
-	@ printf "Building Bird in %s mode into %s for %s %s...\n" $(MODE) $(NAME) $(_OS) $(_ARCH)
+	@ printf "======================================================================\n"
+	@ printf "Building Bird in %s mode into %s for %s %s.\n\n" $(MODE) $(NAME) $(_OS) $(_ARCH)
+	@ printf "From Sources:\n\n"
+	@ printf "%s -> Found\n" $(SOURCES)
+	@ printf "======================================================================\n\n"
 	@ printf "%s %s %s\n" $(CC) $@ "$(CFLAGS) $(LIB_STATICS) $(LIB_WIN32)"
 	@ mkdir -p build
 	@ $(CC) -v $^ -o $@ $(CFLAGS)

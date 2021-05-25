@@ -1,5 +1,5 @@
 #include "socket.h"
-#include "compat/unistd.h"
+#include "b_unistd.h"
 #include "pathinfo.h"
 
 #ifndef _WIN32

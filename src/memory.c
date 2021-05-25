@@ -2,7 +2,7 @@
 #include "compiler.h"
 #include "config.h"
 #include "object.h"
-#include "builtin/file.h"
+#include "b_file.h"
 
 #include <stdio.h>
 #include <stdlib.h>

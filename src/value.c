@@ -16,7 +16,7 @@ void init_value_arr(b_value_arr *array) {
 
 void init_byte_arr(b_byte_arr *array, int length) {
   array->count = length;
-  array->bytes = (unsigned char *) calloc(length, sizeof(unsigned char));
+  array->bytes = (unsigned char *) calloc(length, sizeof(unsigned char *));
 }
 
 void write_value_arr(b_vm *vm, b_value_arr *array, b_value value) {

@@ -1,4 +1,4 @@
-#include "builtin/bytes.h"
+#include "bytes.h"
 #include "memory.h"
 
 #include <ctype.h>
@@ -7,8 +7,7 @@
 DECLARE_NATIVE(bytes) {
   ENFORCE_ARG_COUNT(bytes, 1);
   if (IS_NUMBER(args[0])) {
-    b_obj_bytes *bytes = new_bytes(vm, (int) AS_NUMBER(args[0]));
-    RETURN_OBJ(bytes);
+    RETURN_OBJ(new_bytes(vm, (int) AS_NUMBER(args[0])));
   } else if (IS_LIST(args[0])) {
     b_obj_list *list = AS_LIST(args[0]);
     b_obj_bytes *bytes = new_bytes(vm, list->items.count);
