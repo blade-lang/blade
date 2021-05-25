@@ -141,6 +141,8 @@ static void repl(b_vm *vm) {
 
       interpret(vm, source, "<repl>");
 
+      fflush(stdout); // flush all outputs
+
       // reset source...
       memset(source, 0, strlen(source));
     }
@@ -156,6 +158,8 @@ static void run_file(b_vm *vm, const char *file) {
 
   b_ptr_result result = interpret(vm, source, file);
   free(source);
+
+  fflush(stdout);
 
   if (result == PTR_COMPILE_ERR)
     exit(65);
@@ -183,7 +187,6 @@ int main(int argc, const char *argv[]) {
     exit(64);
   }
 
-  fflush(stdout);
   free_vm(vm);
   return 0;
 }

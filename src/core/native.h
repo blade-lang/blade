@@ -65,6 +65,7 @@
 #define RETURN_STRING(v) return OBJ_VAL(copy_string(vm, v, (int)strlen(v)))
 #define RETURN_L_STRING(v, l) return OBJ_VAL(copy_string(vm, v, l))
 #define RETURN_T_STRING(v, l) return OBJ_VAL(take_string(vm, v, l))
+#define RETURN_TT_STRING(v) return OBJ_VAL(take_string(vm, v, (int)strlen(v)))
 #define RETURN_VALUE(v) return v
 
 #define ENFORCE_ARG_COUNT(name, d)                                             \
@@ -166,6 +167,7 @@
 #define GC_STRING(o) OBJ_VAL(GC(copy_string(vm, (o), (int)strlen(o))))
 #define GC_L_STRING(o, l) OBJ_VAL(GC(copy_string(vm, (o), (l))))
 #define GC_T_STRING(o, l) OBJ_VAL(GC(take_string(vm, (o), (l))))
+#define GC_TT_STRING(o) OBJ_VAL(GC(take_string(vm, (o), (int)strlen(o))))
 
 extern int is_regex(b_obj_string *string);
 
