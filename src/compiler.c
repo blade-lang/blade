@@ -16,9 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined DEBUG_MODE && DEBUG_MODE
 #include "debug.h"
-#endif
 
 static b_blob *current_blob(b_parser *p) {
   return &p->compiler->function->blob;
@@ -524,13 +522,11 @@ static b_obj_func *end_compiler(b_parser *p) {
   emit_return(p);
   b_obj_func *function = p->compiler->function;
 
-#if defined DEBUG_PRINT_CODE && DEBUG_PRINT_CODE
-  if (!p->had_error) {
+  if (!p->had_error && p->vm->should_print_bytecode) {
     disassemble_blob(current_blob(p), function->name == NULL
                                           ? p->current_file
                                           : function->name->chars);
   }
-#endif
 
   p->compiler = p->compiler->enclosing;
   return function;

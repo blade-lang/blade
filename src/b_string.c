@@ -1,4 +1,4 @@
-#include "builtin/string.h"
+#include "b_string.h"
 #include "util.h"
 
 #include <ctype.h>

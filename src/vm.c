@@ -1,6 +1,6 @@
 #include "vm.h"
 #include "common.h"
-#include "compat/asprintf.h"
+#include "b_asprintf.h"
 #include "compiler.h"
 #include "config.h"
 #include "memory.h"
@@ -8,11 +8,11 @@
 #include "native.h"
 #include "object.h"
 
-#include "builtin/bytes.h"
-#include "builtin/dict.h"
-#include "builtin/file.h"
-#include "builtin/list.h"
-#include "builtin/string.h"
+#include "bytes.h"
+#include "b_dict.h"
+#include "b_file.h"
+#include "b_list.h"
+#include "b_string.h"
 
 #include <math.h>
 #include <stdarg.h>
@@ -21,9 +21,8 @@
 
 #include <curl/curl.h>
 
-#if defined DEBUG_MODE && DEBUG_MODE
+// for debugging...
 #include "debug.h"
-#endif
 
 static void reset_stack(b_vm *vm) {
   vm->stack_top = vm->stack;
@@ -431,9 +430,11 @@ void init_vm(b_vm *vm) {
   vm->exception_class = NULL;
   vm->bytes_allocated = 0;
   vm->gc_protected = 0; 
-  vm->next_gc = 1024 * 1024; // 1mb // @TODO: Increase before going production.
+  vm->next_gc = DEFAULT_GC_START; // default is 1mb. Can be modified via the -g flag.
   vm->is_repl = false;
   vm->mark_value = true;
+  vm->should_debug_stack = false;
+  vm->should_print_bytecode = false;
 
   vm->gray_count = 0;
   vm->gray_capacity = 0;
@@ -1260,18 +1261,18 @@ b_ptr_result run(b_vm *vm) {
 
   for (;;) {
 
-#if defined DEBUG_TRACE_EXECUTION && DEBUG_TRACE_EXECUTION
-    printf("          ");
-    for (b_value *slot = vm->stack; slot < vm->stack_top; slot++) {
-      printf("[ ");
-      print_value(*slot);
-      printf(" ]");
+    if(vm->should_debug_stack) {
+      printf("          ");
+      for (b_value *slot = vm->stack; slot < vm->stack_top; slot++) {
+        printf("[ ");
+        print_value(*slot);
+        printf(" ]");
+      }
+      printf("\n");
+      disassemble_instruction(
+          &get_frame_function(frame)->blob,
+          (int)(frame->ip - get_frame_function(frame)->blob.code));
     }
-    printf("\n");
-    disassemble_instruction(
-        &get_frame_function(frame)->blob,
-        (int)(frame->ip - get_frame_function(frame)->blob.code));
-#endif
 
     uint8_t instruction;
 

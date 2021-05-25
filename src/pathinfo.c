@@ -1,6 +1,6 @@
 #include "pathinfo.h"
 #include "common.h"
-#include "compat/unistd.h"
+#include "b_unistd.h"
 #include "util.h"
 
 #include <stdlib.h>

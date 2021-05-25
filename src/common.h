@@ -68,6 +68,8 @@
 
 #endif
 
+#define DEFAULT_GC_START (1024 * 1024)
+
 #define BIRD_EXTENSION ".b"
 #define BIRD_VERSION_STRING "0.0.1"
 #define BVM_VERSION "0.0.1"

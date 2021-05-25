@@ -1,6 +1,6 @@
-#include "builtin/file.h"
-#include "btime.h"
-#include "compat/unistd.h"
+#include "b_file.h"
+#include "b_time.h"
+#include "b_unistd.h"
 #include "pathinfo.h"
 
 #include <errno.h>

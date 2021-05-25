@@ -12,7 +12,7 @@ clean:
 # Compile the Bird interpreter.
 release:
 	@ rm -rf build
-	@ $(MAKE) -f birdy.mk NAME=bird MODE=release SOURCE_DIR=src
+	@ $(MAKE) -f birdy.mk NAME=bird MODE=release SRC_DIR=src
 # @ cp build/bird bird
 	@ cp -r libs build/libs
 
@@ -20,7 +20,7 @@ release:
 # Compile a debug build of Bird.
 debug:
 	@ rm -rf build
-	@ $(MAKE) -f birdy.mk NAME=birdd MODE=debug SOURCE_DIR=src
+	@ $(MAKE) -f birdy.mk NAME=birdd MODE=debug SRC_DIR=src
 # @ cp build/birdd birdd
 	@ cp -r libs build/libs
 
