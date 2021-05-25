@@ -83,7 +83,7 @@ def fannkuchredux(n) {
             temp_permutation[high_index] = temp_permutation[low_index]
             temp_permutation[low_index] = temp
 
-            while (low_index++ + 3) <= (high_index--) and low_index < 16 {
+            while (low_index+++3) <= (high_index--) and low_index < 16 {
               temp = temp_permutation[high_index]
               temp_permutation[high_index] = temp_permutation[low_index]
               temp_permutation[low_index] = temp
@@ -100,12 +100,14 @@ def fannkuchredux(n) {
         else checksum -= flip_count
 
         # Update maximum_flip_count if necessary.
-        if flip_count > maximum_flip_count maximum_flip_count = flip_count
+        if flip_count > maximum_flip_count
+          maximum_flip_count = flip_count
       }
 
       # Break out of the loop when we get to the
       # last_permutation_index_in_block.
-      if permutation_index >= last_permutation_index_in_block break
+      if permutation_index >= last_permutation_index_in_block
+        break
 
       # Generate the next permutation.
       var first_value = current_permutation[1]
