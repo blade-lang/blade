@@ -319,7 +319,7 @@ static int emit_try(b_parser *p) {
   emit_byte(p, 0xff);
   emit_byte(p, 0xff);
 
-  // fianlly placeholders
+  // finally placeholders
   emit_byte(p, 0xff);
   emit_byte(p, 0xff);
 
@@ -2025,7 +2025,10 @@ static void try_statement(b_parser *p) {
   block(p); // compile the try body
   emit_byte(p, OP_POP_TRY);
   int exit_jump = emit_jump(p, OP_JUMP);
-  int address = 0xffff, type = -1, finally = 0xffff;
+
+  // we can safely use 0 because a program cannot start with a
+  // catch or finally block
+  int address = 0, type = -1, finally = 0;
 
   bool catch_exists = false, final_exists = false;
 
@@ -2044,6 +2047,7 @@ static void try_statement(b_parser *p) {
       mark_initialized(p);
       uint16_t var = resolve_local(p, p->compiler, &p->previous);
       emit_byte_and_short(p, OP_SET_LOCAL, var);
+      emit_byte(p, OP_POP);
     }
 
     emit_byte(p, OP_POP_TRY);

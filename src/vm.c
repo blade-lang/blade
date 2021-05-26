@@ -80,10 +80,10 @@ bool propagate_exception(b_vm *vm) {
     for(int i = frame->handlers_count; i > 0; i--) {
       b_exception_frame handler = frame->handlers[i - 1];
 
-      if (handler.address != 0xffff && is_instance_of(exception->klass, handler.klass->name->chars)) {
+      if (handler.address != 0 && is_instance_of(exception->klass, handler.klass->name->chars)) {
         frame->ip = &get_frame_function(frame)->blob.code[handler.address];
         return true;
-      } else if (handler.finally_address != 0xffff) {
+      } else if (handler.finally_address != 0) {
         push(vm, TRUE_VAL); // continue propagating once the finally block completes
         frame->ip = &get_frame_function(frame)->blob.code[handler.finally_address];
         return true;
@@ -492,6 +492,7 @@ static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
   }
 
   if (arg_count != function->arity) {
+    pop_n(vm, arg_count);
     if (function->is_variadic) {
       return throw_exception(vm, "expected at least %d arguments but got %d",
                              function->arity - 1, arg_count);
@@ -502,6 +503,7 @@ static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
   }
 
   if (vm->frame_count == FRAMES_MAX) {
+    pop_n(vm, arg_count);
     return throw_exception(vm, "stack overflow");
   }
 
@@ -875,6 +877,7 @@ static bool dict_get_index(b_vm *vm, b_obj_dict *dict, bool will_assign) {
     return true;
   }
 
+  pop_n(vm, !will_assign ? 1 : 2);
   return throw_exception(vm, "invalid index %s", value_to_string(vm, index));
 }
 
@@ -884,6 +887,7 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
 
   if (IS_EMPTY(upper)) {
     if (!IS_NUMBER(lower)) {
+      pop_n(vm, 2);
       return throw_exception(vm, "strings are numerically indexed");
     }
 
@@ -908,10 +912,12 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
       push(vm, STRING_L_VAL(string->chars + start, (int)(end - start)));
       return true;
     } else {
+      pop_n(vm,  !will_assign? 1 : 2);
       return throw_exception(vm, "string index %d out of range", real_index);
     }
   } else {
     if (!IS_NUMBER(lower) || !(IS_NUMBER(upper) || IS_NIL(upper))) {
+      pop_n(vm, 2);
       return throw_exception(vm, "string are numerically indexed");
     }
 
@@ -920,7 +926,7 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
 
     if (lower_index < 0 ||
         (upper_index < 0 && ((string->utf8_length + upper_index) < 0))) {
-      // always return an empty list...
+      // always return an empty string...
       if (!will_assign) {
         pop_n(vm, 3); // +1 for the string itself
       }
@@ -952,6 +958,7 @@ static bool bytes_get_index(b_vm *vm, b_obj_bytes *bytes, bool will_assign) {
 
   if (IS_EMPTY(upper)) {
     if (!IS_NUMBER(lower)) {
+      pop_n(vm, 2);
       return throw_exception(vm, "bytes are numerically indexed");
     }
 
@@ -972,10 +979,12 @@ static bool bytes_get_index(b_vm *vm, b_obj_bytes *bytes, bool will_assign) {
       push(vm, NUMBER_VAL((int)bytes->bytes.bytes[index]));
       return true;
     } else {
+      pop_n(vm,  !will_assign? 1 : 2);
       return throw_exception(vm, "bytes index %d out of range", real_index);
     }
   } else {
     if (!IS_NUMBER(lower) || !(IS_NUMBER(upper) || IS_NIL(upper))) {
+      pop_n(vm, 2);
       return throw_exception(vm, "bytes are numerically indexed");
     }
 
@@ -984,12 +993,12 @@ static bool bytes_get_index(b_vm *vm, b_obj_bytes *bytes, bool will_assign) {
 
     if (lower_index < 0 ||
         (upper_index < 0 && ((bytes->bytes.count + upper_index) < 0))) {
-      // always return an empty list...
+      // always return an empty bytes...
       if (!will_assign) {
-        pop_n(vm, 3); // +1 for the list itself
+        pop_n(vm, 3); // +1 for the bytes itself
       }
-      return throw_exception(vm, "bytes index %d out of range",
-                             lower_index < 0 ? lower_index : upper_index);
+      push(vm, OBJ_VAL(new_bytes(vm, 0)));
+      return true;
     }
 
     if (upper_index < 0)
@@ -1013,6 +1022,7 @@ static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
 
   if (IS_EMPTY(upper)) {
     if (!IS_NUMBER(lower)) {
+      pop_n(vm, 2);
       return throw_exception(vm, "list are numerically indexed");
     }
 
@@ -1033,10 +1043,12 @@ static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
       push(vm, list->items.values[index]);
       return true;
     } else {
+      pop_n(vm,  !will_assign? 1 : 2);
       return throw_exception(vm, "list index %d out of range", real_index);
     }
   } else {
     if (!IS_NUMBER(lower) || !(IS_NUMBER(upper) || IS_NIL(upper))) {
+      pop_n(vm, 2);
       return throw_exception(vm, "list are numerically indexed");
     }
 
@@ -1086,6 +1098,7 @@ static void dict_set_index(b_vm *vm, b_obj_dict *dict, b_value index,
 static bool list_set_index(b_vm *vm, b_obj_list *list, b_value index,
                            b_value value) {
   if (!IS_NUMBER(index)) {
+    pop_n(vm, 4); // pop the value, nil, index and list out
     return throw_exception(vm, "list are numerically indexed");
   }
 
@@ -1102,15 +1115,17 @@ static bool list_set_index(b_vm *vm, b_obj_list *list, b_value index,
     return true;
   }
 
+  pop_n(vm, 4); // pop the value, nil, index and list out
   return throw_exception(vm, "lists index %d out of range", _position);
 }
 
 static bool bytes_set_index(b_vm *vm, b_obj_bytes *bytes, b_value index,
                             b_value value) {
   if (!IS_NUMBER(index)) {
+    pop_n(vm, 4); // pop the value, nil, index and bytes out
     return throw_exception(vm, "bytes are numerically indexed");
-  } else if (!IS_NUMBER(value) || AS_NUMBER(value) < 0 ||
-             AS_NUMBER(value) > 255) {
+  } else if (!IS_NUMBER(value) || AS_NUMBER(value) < 0 || AS_NUMBER(value) > 255) {
+    pop_n(vm, 4); // pop the value, nil, index and bytes out
     return throw_exception(vm, "invalid byte. bytes are numbers between 0 and 255.");
   }
 
@@ -1129,6 +1144,7 @@ static bool bytes_set_index(b_vm *vm, b_obj_bytes *bytes, b_value index,
     return true;
   }
 
+  pop_n(vm, 4); // pop the value, nil, index and bytes out
   return throw_exception(vm, "bytes index %d out of range", _position);
 }
 
@@ -1770,29 +1786,25 @@ b_ptr_result run(b_vm *vm) {
       }
 
       if (IS_STRING(peek(vm, 2))) {
-        if (!string_get_index(vm, AS_STRING(peek(vm, 2)),
-                              will_assign == 1 ? true : false)) {
+        if (!string_get_index(vm, AS_STRING(peek(vm, 2)), will_assign == (uint8_t)1)) {
           EXIT_VM();
         } else {
           break;
         }
       } else if (IS_LIST(peek(vm, 2))) {
-        if (!list_get_index(vm, AS_LIST(peek(vm, 2)),
-                            will_assign == (uint8_t)1 ? true : false)) {
+        if (!list_get_index(vm, AS_LIST(peek(vm, 2)), will_assign == (uint8_t)1)) {
           EXIT_VM();
         } else {
           break;
         }
       } else if (IS_BYTES(peek(vm, 2))) {
-        if (!bytes_get_index(vm, AS_BYTES(peek(vm, 2)),
-                             will_assign == 1 ? true : false)) {
+        if (!bytes_get_index(vm, AS_BYTES(peek(vm, 2)), will_assign == (uint8_t)1)) {
           EXIT_VM();
         } else {
           break;
         }
-      } else if (IS_DICT(peek(vm, 2)) && IS_NIL(peek(vm, 0))) {
-        if (!dict_get_index(vm, AS_DICT(peek(vm, 2)),
-                            will_assign == 1 ? true : false)) {
+      } else if (IS_DICT(peek(vm, 2)) && IS_EMPTY(peek(vm, 0))) {
+        if (!dict_get_index(vm, AS_DICT(peek(vm, 2)), will_assign == (uint8_t)1)) {
           EXIT_VM();
         } else {
           break;
@@ -1897,7 +1909,7 @@ b_ptr_result run(b_vm *vm) {
       uint16_t address = READ_SHORT();
       uint16_t finally_address = READ_SHORT();
 
-      if(address != 0xffff) {
+      if(address != 0) {
         b_value value;
         if(!table_get(&vm->globals, OBJ_VAL(type), &value) || !IS_CLASS(value)) {
           runtime_error("object of type '%s' is not an exception", type->chars);
