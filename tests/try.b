@@ -14,7 +14,7 @@ try {
   echo i
 
   try {
-    echo [1,2,3][-10]
+    echo [1,2,3][10]
   } catch Exception e {
     echo '\nMessage: ${e.message}'
   } finally {
@@ -42,5 +42,9 @@ try {
 try {
   echo 'name'[10]
 } finally {
-  echo 'Error occured, so I will not run'
+  echo 'Error occurred, but I will still run'
 }
+
+# this code should never run...
+# because we didn't catch the last exception.
+echo 500

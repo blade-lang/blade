@@ -221,3 +221,9 @@ char *read_file(const char *path) {
   fclose(fp);
   return buffer;
 }
+
+void flush_output() {
+  if(fflush(stdout) != 0) {
+    fwrite(NULL, 0, 0, stdout);
+  }
+}

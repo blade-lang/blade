@@ -1,3 +1,4 @@
 # BUGS
 
-1. There are still some gc issues on release
+1. Finally block not run in a try block if the catch 
+   block executes.

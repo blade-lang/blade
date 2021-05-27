@@ -92,7 +92,7 @@ bool propagate_exception(b_vm *vm) {
     vm->frame_count--;
   }
 
-  fflush(stdout); // flush out anything on stdout first
+  flush_output(); // flush out anything on stdout first
 
   b_value message, trace;
   fprintf(stderr, "Unhandled %s: ", exception->klass->name->chars);
@@ -165,7 +165,7 @@ b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
 }
 
 void _runtime_error(b_vm *vm, const char *format, ...) {
-  fflush(stdout); // flush out anything on stdout first
+  flush_output(); // flush out anything on stdout first
   
   b_call_frame *frame = &vm->frames[vm->frame_count - 1];
   b_obj_func *function = get_frame_function(frame);
@@ -1222,7 +1222,6 @@ static int floor_div(double a, double b) {
 }
 
 b_ptr_result run(b_vm *vm) {
-
   b_call_frame *frame = &vm->frames[vm->frame_count - 1];
 
 #define READ_BYTE() (*frame->ip++)
@@ -1276,6 +1275,14 @@ b_ptr_result run(b_vm *vm) {
   } while (false)
 
   for (;;) {
+
+    // try...finally... (i.e. try without a catch but a finally
+    // but whose try body raises an exception)
+    // can cause us to go into an invalid mode where frame count == 0
+    // to fix this, we need to exit with an appropriate mode here.
+    if(vm->frame_count == 0) {
+      return PTR_RUNTIME_ERR;
+    }
 
     if(vm->should_debug_stack) {
       printf("          ");
@@ -1616,6 +1623,7 @@ b_ptr_result run(b_vm *vm) {
                       value_type(peek(vm, 0)), name->chars);
       }
     }
+
     case OP_SET_PROPERTY: {
       if (!IS_INSTANCE(peek(vm, 1))) {
         runtime_error("object of type %s can not carry properties",
@@ -1985,6 +1993,10 @@ b_ptr_result interpret(b_vm *vm, const char *source, const char *filename) {
   init_blob(&blob);
 
   b_obj_func *function = compile(vm, source, filename, &blob);
+
+  if(vm->should_print_bytecode) {
+    return PTR_OK;
+  }
 
   if (function == NULL) {
     free_blob(vm, &blob);

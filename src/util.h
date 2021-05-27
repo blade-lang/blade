@@ -23,4 +23,6 @@ void utf8slice(char *s, int *start, int *end);
 
 char *read_file(const char *path);
 
+void flush_output();
+
 #endif
