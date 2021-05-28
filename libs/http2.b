@@ -96,85 +96,80 @@ class HttpRequest {
     var responder = self.url.absolute_uri, headers, body, time_taken, error
     var will_connect = true, redirect_count = 0, http_version = '1.0', status_code = 0
 
-    try {
-      while will_connect {
+    while will_connect {
 
-        # @TODO: in the else clause, get ipv4 address from the hostname
-        var resolved_host = Socket.get_address_info(self.url.host)
+      # @TODO: in the else clause, get ipv4 address from the hostname
+      var resolved_host = Socket.get_address_info(self.url.host)
 
-        if resolved_host {
-          var host = resolved_host.ip
-          var port = self.url.port
+      if resolved_host {
+        var host = resolved_host.ip
+        var port = self.url.port
 
-          # construct message
-          var message = '${method} ${self.url.path} HTTP/1.1\r\n\r\n'
+        # construct message
+        var message = '${method} ${self.url.path} HTTP/1.1\r\n\r\n'
 
-          # do real request here...
-          var client = Socket()
+        # do real request here...
+        var client = Socket()
 
-          var start = time()
+        var start = time()
 
-          # connect to the url host on the specified port and send the request message
-          client.connect(host, port, self.connect_timeout)
-          client.send(message)
+        # connect to the url host on the specified port and send the request message
+        client.connect(host, port, self.connect_timeout)
+        client.send(message)
 
-          # receive the response...
-          var response_data = client.receive()
+        # receive the response...
+        var response_data = client.receive()
 
-          # gracefully handle responses being sent in multiple packets
-          # if the request header contains the Content-Length,
-          # get that length and keep reading until we have read the total
-          # length of the response
-          if response_data.index_of('Content-Length') {
-            var m = response_data.matches('/Content\-Length:\s*\d+/')
-            if m {
-              var length = to_number(m[0].replace('/[^0-9]/', ''))
-              while response_data.length() < length {
-                # append the new data in the stream
-                response_data += client.receive()
-              }
+        # gracefully handle responses being sent in multiple packets
+        # if the request header contains the Content-Length,
+        # get that length and keep reading until we have read the total
+        # length of the response
+        if response_data.index_of('Content-Length') {
+          var m = response_data.matches('/Content\-Length:\s*\d+/')
+          if m {
+            var length = to_number(m[0].replace('/[^0-9]/', ''))
+            while response_data.length() < length {
+              # append the new data in the stream
+              response_data += client.receive()
             }
           }
+        }
 
-          time_taken = time() - start
+        time_taken = time() - start
 
-          # close the client...
-          client.close()
+        # close the client...
+        client.close()
 
-          # separate the headers and the body
-          var body_starts = response_data.index_of('\r\n\r\n')
+        # separate the headers and the body
+        var body_starts = response_data.index_of('\r\n\r\n')
 
-          if body_starts {
-            headers = response_data[0,body_starts].trim()
-            body = response_data[body_starts + 2, response_data.length()].trim()
-          }
+        if body_starts {
+          headers = response_data[0,body_starts].trim()
+          body = response_data[body_starts + 2, response_data.length()].trim()
+        }
 
-          # @TODO: if there was a redirect, update the host and port
-          # and change will connect to true
-          headers = self._process_header(headers, |version, status|{
-            http_version = version
-            status_code  = status
-          })
+        # @TODO: if there was a redirect, update the host and port
+        # and change will connect to true
+        headers = self._process_header(headers, |version, status|{
+          http_version = version
+          status_code  = status
+        })
 
-          if self.follow_redirect and headers.contains('Location') {
-            self.url = Url.parse(headers['Location'])
-            self.referer = headers['Location']
-          } else {
-            will_connect = false
-          }
+        if self.follow_redirect and headers.contains('Location') {
+          self.url = Url.parse(headers['Location'])
+          self.referer = headers['Location']
         } else {
           will_connect = false
-          die Exception('could not resolve ip address')
         }
+      } else {
+        will_connect = false
+        die Exception('could not resolve ip address')
       }
-    } catch Exception e {
-      error = e
     }
 
     # return a valid HttpResponse
     var result = HttpResponse()
     
-    result.error = error
     result.headers = headers
     result.http_version = http_version
     result.status_code = status_code

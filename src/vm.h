@@ -78,8 +78,7 @@ b_value pop(b_vm *vm);
 b_value pop_n(b_vm *vm, int n);
 b_value peek(b_vm *vm, int distance);
 
-bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
-                       int arg_count);
+bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name, int arg_count);
 bool is_falsey(b_value value);
 void dict_add_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value);
 bool dict_get_entry(b_obj_dict *dict, b_value key, b_value *value);

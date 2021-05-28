@@ -79,16 +79,18 @@ bool propagate_exception(b_vm *vm) {
     b_call_frame *frame = &vm->frames[vm->frame_count - 1];
     for(int i = frame->handlers_count; i > 0; i--) {
       b_exception_frame handler = frame->handlers[i - 1];
+      b_obj_func *function = get_frame_function(frame);
 
       if (handler.address != 0 && is_instance_of(exception->klass, handler.klass->name->chars)) {
-        frame->ip = &get_frame_function(frame)->blob.code[handler.address];
+        frame->ip = &function->blob.code[handler.address];
         return true;
       } else if (handler.finally_address != 0) {
         push(vm, TRUE_VAL); // continue propagating once the finally block completes
-        frame->ip = &get_frame_function(frame)->blob.code[handler.finally_address];
+        frame->ip = &function->blob.code[handler.finally_address];
         return true;
       }
     }
+
     vm->frame_count--;
   }
 

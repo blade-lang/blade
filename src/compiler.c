@@ -2047,6 +2047,7 @@ static void try_statement(b_parser *p) {
       mark_initialized(p);
       uint16_t var = resolve_local(p, p->compiler, &p->previous);
       emit_byte_and_short(p, OP_SET_LOCAL, var);
+      emit_byte(p, OP_POP);
     }
 
     emit_byte(p, OP_POP_TRY);
