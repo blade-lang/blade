@@ -361,6 +361,7 @@ static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
   compiler->type = type;
   compiler->local_count = 0;
   compiler->scope_depth = 0;
+  compiler->handler_count = 0;
 
   compiler->function = new_function(p->vm);
   compiler->function->file = p->current_file;
@@ -2018,6 +2019,12 @@ static void assert_statement(b_parser *p) {
 }
 
 static void try_statement(b_parser *p) {
+
+  if(p->compiler->handler_count == MAX_EXCEPTION_HANDLERS) {
+    error(p, "maximum exception handler in scope exceeded");
+  }
+  p->compiler->handler_count++;
+
   consume(p, LBRACE_TOKEN, "expected '{' after try");
   ignore_whitespace(p);
   int try_begins = emit_try(p);
