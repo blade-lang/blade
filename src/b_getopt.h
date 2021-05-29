@@ -1,3 +1,7 @@
+#ifndef _WIN32
+#include <getopt.h>
+#else
+
 #pragma once
 
 /* getopt.h */
@@ -179,3 +183,5 @@ extern int _getopt_internal();
 #undef __need_getopt
 
 #endif /* getopt.h */
+
+#endif

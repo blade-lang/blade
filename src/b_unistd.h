@@ -13,6 +13,8 @@
 #ifndef _UNISTD_H
 #define _UNISTD_H 1
 
+#include "b_getopt.h"
+
 /* This is intended as a drop-in replacement for unistd.h on Windows.
  * Please add functionality as neeeded.
  * https://stackoverflow.com/a/826027/1202830
@@ -78,5 +80,7 @@ typedef unsigned __int64 uint64_t;
 #endif
 
 #endif
+
+#include "b_getopt.h"
 
 #endif
