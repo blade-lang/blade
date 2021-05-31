@@ -1,6 +1,5 @@
 /* 
-This program solves the (English) peg
-solitaire board game.
+This program solves the (English) peg solitaire board game.
 http://en.wikipedia.org/wiki/Peg_solitaire 
 
 Adapted from the Golang playground solution

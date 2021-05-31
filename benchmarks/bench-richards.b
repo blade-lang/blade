@@ -1,3 +1,13 @@
+# based on the Python version by Isaac Gouy
+#  that was based on a Java version:
+#  Based on original version written in BCPL by Dr Martin Richards
+#  in 1981 at Cambridge University Computer Laboratory, England
+#  and a C++ version derived from a Smalltalk version written by
+#  L Peter Deutsch.
+#  Java version:  Copyright (C) 1995 Sun Microsystems, Inc.
+#  Translation from C++, Mario Wolczko
+#  Outer loop added by Alex Jacoby
+
 # Copyright 2008-2010 Isaac Gouy
 # Copyright (c) 2013, 2014, Regents of the University of California
 # Copyright (c) 2018, 2021, Oracle and/or its affiliates.
@@ -34,16 +44,6 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-# based on the Python version by Isaac Gouy
-#  that was based on a Java version:
-#  Based on original version written in BCPL by Dr Martin Richards
-#  in 1981 at Cambridge University Computer Laboratory, England
-#  and a C++ version derived from a Smalltalk version written by
-#  L Peter Deutsch.
-#  Java version:  Copyright (C) 1995 Sun Microsystems, Inc.
-#  Translation from C++, Mario Wolczko
-#  Outer loop added by Alex Jacoby
 
 # Task IDs
 var I_IDLE = 1

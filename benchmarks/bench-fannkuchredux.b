@@ -1,3 +1,23 @@
+/* The Computer Language Benchmarks Game
+ * https://salsa.debian.org/benchmarksgame-team/benchmarksgame/
+ *
+ * fannkuch-redux Bird program 
+ * Based on the C solution by Jeremy Zerfas
+ * that was based on the Ada program by Jonathan Parker and Georg Bauhaus which in turn
+ * was based on code by Dave Fladebo, Eckehard Berns, Heiner Marxen, Hongwei Xi,
+ * and The Anh Tran and also the Java program by Oleg Mazurov.
+ *
+ * contributed by Richard Ore
+ * *reset*
+*/
+
+# This value controls how many blocks the workload is broken up into (as long
+# as the value is less than or equal to the factorial of the argument to this
+# program) in order to allow the blocks to be processed in parallel if
+# possible. PREFERRED_NUMBER_OF_BLOCKS_TO_USE should be some number which
+# divides evenly into all factorials larger than it. It should also be around
+# 2-8 times the amount of threads you want to use in order to create enough
+# blocks to more evenly distribute the workload amongst the threads.
 var PREFERRED_NUMBER_OF_BLOCKS_TO_USE = 12
 
 def fannkuchredux(n) {
