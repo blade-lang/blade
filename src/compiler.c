@@ -895,7 +895,6 @@ static void dictionary(b_parser *p, bool can_assign) {
 }
 
 static void indexing(b_parser *p, bool can_assign) {
-  int copy_start = current_blob(p)->count;
   expression(p);
   bool assignable = true;
 
