@@ -65,6 +65,7 @@ typedef enum {
   OP_INHERIT,
   OP_GET_SUPER,
   OP_SUPER_INVOKE,
+  OP_SUPER_INVOKE_SELF,
 
   OP_RANGE,
   OP_LIST,

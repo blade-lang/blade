@@ -81,9 +81,6 @@ typedef struct {
   // used for tracking loops for the continue statement...
   int innermost_loop_start;
   int innermost_loop_scope_depth;
-
-  //
-  bool self_active;
 } b_parser;
 
 typedef void (*b_parse_fn)(b_parser *, bool);

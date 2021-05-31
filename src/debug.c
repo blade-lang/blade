@@ -255,6 +255,8 @@ int disassemble_instruction(b_blob *blob, int offset) {
       return simple_instruction("inher", offset);
     case OP_SUPER_INVOKE:
       return invoke_instruction("s_invk", blob, offset);
+    case OP_SUPER_INVOKE_SELF:
+      return byte_instruction("s_invk_s", blob, offset);
 
     default:
       printf("unknown opcode %d\n", instruction);

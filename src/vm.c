@@ -42,7 +42,7 @@ static b_value get_stack_trace(b_vm *vm){
   char *trace = (char *)malloc(sizeof(char));
   memset(trace, 0, sizeof(char));
 
-  for (int i = 0; i < vm->frame_count; i++) {
+  for (int i = vm->frame_count - 1; i >= 0; i--) {
     b_call_frame *frame = &vm->frames[i];
     b_obj_func *function = get_frame_function(frame);
 
@@ -59,11 +59,11 @@ static b_value get_stack_trace(b_vm *vm){
 
     if (function->name == NULL) {
       trace_part = append_strings(
-          trace_part, i < vm->frame_count - 1 ? "<script>\n" : "<script>");
+          trace_part, i > 0 ? "<script>\n" : "<script>");
     } else {
       trace_part = append_strings(trace_part, function->name->chars);
       trace_part =
-          append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" : "()");
+          append_strings(trace_part, i > 0 ? "()\n" : "()");
     }
 
     trace = append_strings(trace, trace_part);
@@ -1627,17 +1627,26 @@ b_ptr_result run(b_vm *vm) {
     }
 
     case OP_SET_PROPERTY: {
-      if (!IS_INSTANCE(peek(vm, 1))) {
+      if (!IS_INSTANCE(peek(vm, 1)) && !IS_DICT(peek(vm, 1)) ) {
         runtime_error("object of type %s can not carry properties",
                       value_type(peek(vm, 1)));
       }
 
-      b_obj_instance *instance = AS_INSTANCE(peek(vm, 1));
-      table_set(vm, &instance->fields, OBJ_VAL(READ_STRING()), peek(vm, 0));
+      if(IS_INSTANCE(peek(vm, 1))) {
+        b_obj_instance *instance = AS_INSTANCE(peek(vm, 1));
+        table_set(vm, &instance->fields, OBJ_VAL(READ_STRING()), peek(vm, 0));
 
-      b_value value = pop(vm);
-      pop(vm); // removing the instance object
-      push(vm, value);
+        b_value value = pop(vm);
+        pop(vm); // removing the instance object
+        push(vm, value);
+      } else {
+        b_obj_dict *dict = AS_DICT(peek(vm, 1));
+        dict_set_entry(vm, dict, OBJ_VAL(READ_STRING()), peek(vm, 0));
+
+        b_value value = pop(vm);
+        pop(vm); // removing the dictionary object
+        push(vm, value);
+      }
       break;
     }
 
@@ -1722,8 +1731,8 @@ b_ptr_result run(b_vm *vm) {
     }
     case OP_GET_SUPER: {
       b_obj_string *name = READ_STRING();
-      b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
-      if (!bind_method(vm, instance->klass->superclass, name)) {
+      b_obj_class *klass = AS_CLASS(peek(vm, 0));
+      if (!bind_method(vm, klass->superclass, name)) {
         EXIT_VM();
       }
       break;
@@ -1731,8 +1740,17 @@ b_ptr_result run(b_vm *vm) {
     case OP_SUPER_INVOKE: {
       b_obj_string *method = READ_STRING();
       int arg_count = READ_BYTE();
-      b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
-      if (!invoke_from_class(vm, instance->klass->superclass, method, arg_count)) {
+      b_obj_class *klass = AS_CLASS(pop(vm));
+      if (!invoke_from_class(vm, klass, method, arg_count)) {
+        EXIT_VM();
+      }
+      frame = &vm->frames[vm->frame_count - 1];
+      break;
+    }
+    case OP_SUPER_INVOKE_SELF: {
+      int arg_count = READ_BYTE();
+      b_obj_class *klass = AS_CLASS(pop(vm));
+      if (!invoke_from_class(vm, klass, klass->name, arg_count)) {
         EXIT_VM();
       }
       frame = &vm->frames[vm->frame_count - 1];
