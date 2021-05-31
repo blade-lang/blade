@@ -1,4 +1,3 @@
 # BUGS
 
-1. Finally block not run in a try block if the catch 
-   block executes.
+1. Catching exception in http2 causes SocketExceptions to be returned instead of HttpResponse
