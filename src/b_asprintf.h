@@ -20,13 +20,13 @@
 
 #ifdef __GNUC__
 
-int vscprintf(const char *format, va_list ap) {
+/*int vscprintf(const char *format, va_list ap) {
   va_list ap_copy;
   va_copy(ap_copy, ap);
   int retval = vsnprintf(NULL, 0, format, ap_copy);
   va_end(ap_copy);
   return retval;
-}
+}*/
 
 #endif
 
