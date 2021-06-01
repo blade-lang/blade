@@ -357,5 +357,8 @@ CREATE_MODULE_LOADER(http) {
 
   static b_module_reg module = {NULL, classes};
 
+  // this should be called once for the lifetime of an application
+  curl_global_init(CURL_GLOBAL_ALL);
+
   return module;
 }

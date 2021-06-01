@@ -1,5 +1,6 @@
 #include "scanner.h"
 #include "common.h"
+#include "b_asprintf.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -24,11 +25,12 @@ static b_token make_token(b_scanner *s, b_tkn_type type) {
   return t;
 }
 
-static b_token error_token(b_scanner *s, const char *message, int count, ...) {
-  char *err = (char *)malloc(sizeof(char *) * count);
+static b_token error_token(b_scanner *s, const char *message, ...) {
 
   va_list args;
-  va_start(args, count);
+  va_start(args, message);
+  int length = vsnprintf(NULL, 0, message, args);
+  char *err = (char*) malloc(sizeof(char) * (length + 1));
   vsprintf(err, message, args);
   va_end(args);
 
@@ -88,7 +90,7 @@ b_token skip_block_comments(b_scanner *s) {
   int nesting = 1;
   while (nesting > 0) {
     if (is_at_end(s)) {
-      return error_token(s, "unclosed block comment", 0);
+      return error_token(s, "unclosed block comment");
     }
 
     // internal comment open
@@ -171,7 +173,7 @@ static b_token string(b_scanner *s, char quote) {
       }
 
       return error_token(
-          s, "maximum interpolation nesting of %d exceeded by %d", 1,
+          s, "maximum interpolation nesting of %d exceeded by %d",
           MAX_INTERPOLATION_NESTING,
           MAX_INTERPOLATION_NESTING - s->interpolating_count + 1);
     }
@@ -182,7 +184,7 @@ static b_token string(b_scanner *s, char quote) {
   }
 
   if (is_at_end(s))
-    return error_token(s, "unterminated string (opening quote not matched)", 0);
+    return error_token(s, "unterminated string (opening quote not matched)");
 
   match(s, quote); // the closing quote
   return make_token(s, LITERAL_TOKEN);
@@ -511,5 +513,5 @@ b_token scan_token(b_scanner *s) {
     break;
   }
 
-  return error_token(s, "unexpected character %c", 1, c);
+  return error_token(s, "unexpected character %c", c);
 }

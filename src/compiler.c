@@ -1036,10 +1036,10 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
 }
 
 static char *compile_string(b_parser *p) {
-  char *str = (char *)malloc(sizeof(char) * ((p->previous.length - 2) + 1));
-  char *real = (char *)(p->previous.start + 1);
+  char *str = (char *)malloc(sizeof(char) * ((p->previous.length - (p->had_error ? 1 : 2)) + 1));
+  char *real = (char *)(p->previous.start + (p->had_error ? 0 : 1));
 
-  int real_length = p->previous.length - 2;
+  int real_length = p->previous.length - (p->had_error ? 1 : 2);
   int i = 0, k = 0;
 
   for (; i < real_length; i++, k++) {

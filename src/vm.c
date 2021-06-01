@@ -42,7 +42,7 @@ static b_value get_stack_trace(b_vm *vm){
   char *trace = (char *)malloc(sizeof(char));
   memset(trace, 0, sizeof(char));
 
-  for (int i = vm->frame_count - 1; i >= 0; i--) {
+  for (int i = 0; i < vm->frame_count; i++) {
     b_call_frame *frame = &vm->frames[i];
     b_obj_func *function = get_frame_function(frame);
 
@@ -455,9 +455,6 @@ void init_vm(b_vm *vm) {
   init_builtin_functions(vm);
   init_builtin_methods(vm);
   initialize_exceptions(vm);
-
-  // this should be called once for the lifetime of an application
-  curl_global_init(CURL_GLOBAL_ALL);
 }
 
 void free_vm(b_vm *vm) {
@@ -1174,7 +1171,7 @@ static bool concatenate(b_vm *vm) {
     chars[length] = '\0';
 
     b_obj_string *result = take_string(vm, chars, length);
-    result->utf8_length = utf8len(result->chars);
+    result->utf8_length = num_length + b->utf8_length;
 
     pop_n(vm, 2);
     push(vm, OBJ_VAL(result));
@@ -1192,7 +1189,7 @@ static bool concatenate(b_vm *vm) {
     chars[length] = '\0';
 
     b_obj_string *result = take_string(vm, chars, length);
-    result->utf8_length = utf8len(result->chars);
+    result->utf8_length = num_length + a->utf8_length;
 
     pop_n(vm, 2);
     push(vm, OBJ_VAL(result));
@@ -1207,7 +1204,7 @@ static bool concatenate(b_vm *vm) {
     chars[length] = '\0';
 
     b_obj_string *result = take_string(vm, chars, length);
-    result->utf8_length = utf8len(result->chars);
+    result->utf8_length = a->utf8_length + b->utf8_length;
 
     pop_n(vm, 2);
     push(vm, OBJ_VAL(result));
@@ -1476,7 +1473,11 @@ b_ptr_result run(b_vm *vm) {
     case OP_STRINGIFY: {
       if (!IS_STRING(peek(vm, 0))) {
         char *value = value_to_string(vm, pop(vm));
-        push(vm, OBJ_VAL(take_string(vm, value, (int)strlen(value))));
+        if((int)strlen(value) != 0) {
+          push(vm, OBJ_VAL(take_string(vm, value, (int) strlen(value))));
+        } else {
+          push(vm, NIL_VAL);
+        }
       }
       break;
     }

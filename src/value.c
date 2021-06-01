@@ -11,7 +11,7 @@
 void init_value_arr(b_value_arr *array) {
   array->capacity = 0;
   array->count = 0;
-  array->values = (b_value *)malloc(sizeof(b_value));
+  array->values = NULL;
 }
 
 void init_byte_arr(b_byte_arr *array, int length) {
@@ -319,10 +319,9 @@ static uint64_t siphash24(uint64_t k0, uint64_t k1, const char *src,
 } */
 
 #ifndef _WIN32
-
 inline uint32_t hash_string(const char *key, int length) {
 #else
-  uint32_t hash_string(const char *key, int length) {
+uint32_t hash_string(const char *key, int length) {
 #endif // !_WIN32
 
   uint32_t hash = 2166136261u;
@@ -335,6 +334,24 @@ inline uint32_t hash_string(const char *key, int length) {
   return hash;
   // return siphash24(127, 255, key, length);
 }
+
+/*#define _PADr_KAZE(x, n) ( ((x) << (n))>>(n) )
+uint32_t hash_string(const char *str, int wrdlen) {
+  const uint32_t PRIME = 591798841; uint32_t hash32;
+  uint64_t hash64 = 14695981039346656037u; const char *p = str;
+  int i, Cycles, NDhead;
+  if (wrdlen > 8) {
+    Cycles = ((wrdlen - 1)>>4) + 1; NDhead = wrdlen - (Cycles<<3);
+    for(i=0; i<Cycles; i++) {
+      hash64 = ( hash64 ^ (*(uint64_t *)(p)) ) * PRIME;
+      hash64 = ( hash64 ^ (*(uint64_t *)(p+NDhead)) ) * PRIME;
+      p += 8;
+    }
+  } else {
+    hash64 = (hash64 ^ _PADr_KAZE(*(uint64_t *) (p + 0), (8 - wrdlen) << 3)) * PRIME;
+  }
+  hash32 = (uint32_t)(hash64 ^ (hash64>>32)); return hash32 ^ (hash32 >> 16);
+}*/
 
 // Generates a hash code for [object].
 static uint32_t hash_object(b_obj *object) {

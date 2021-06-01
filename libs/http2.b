@@ -76,7 +76,9 @@ class HttpRequest {
   var receive_timeout = -1
 
   # custom request headers
-  var headers = {}
+  var headers = {
+    'Content-Type': 'application/x-www-form-urlencoded'
+  }
 
   # whether to remove the expect header or not
   # only applies to requests with files in the body
@@ -88,6 +90,20 @@ class HttpRequest {
 
     # parse the url into component parts
     self.url = Url.parse(url)
+  }
+
+  _generate_data_content(data) {
+    if self.headers.contains('Content-Type') {
+      var c_type = self.headers['Content-Type']
+      if c_type.index_of('application/json') > -1 {
+        # treat as json request...
+        # json encode data
+      } else {
+        # treat as form request...
+        # form encode data
+      }
+    }
+    return nil
   }
 
   # the main http request method
@@ -106,7 +122,13 @@ class HttpRequest {
         var port = self.url.port
 
         # construct message
-        var message = '${method} ${self.url.path} HTTP/1.1\r\n\r\n'
+        var message = '${method} ${self.url.path} HTTP/1.1'
+        if !self.headers.contains('Host')
+          message += '\r\nHost: ${self.url.host}'
+        for key, value in self.headers {
+          message += '\r\n${key}: ${value}'
+        }
+        message += '\r\n\r\n${self._generate_data_content(data)}'
 
         # do real request here...
         var client = Socket()
