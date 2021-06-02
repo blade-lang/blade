@@ -61,12 +61,14 @@ static void error(b_parser *p, const char *message, ...) {
   va_list args;
   va_start(args, message);
   error_at(p, &p->previous, message, args);
+  va_end(args);
 }
 
 static void error_at_current(b_parser *p, const char *message, ...) {
   va_list args;
   va_start(args, message);
   error_at(p, &p->current, message, args);
+  va_end(args);
 }
 
 static void advance(b_parser *p) {
@@ -2217,7 +2219,6 @@ b_obj_func *compile(b_vm *vm, const char *source, const char *file,
   }
 
   b_obj_func *function = end_compiler(&parser);
-
   vm->compiler = &compiler;
 
   return parser.had_error ? NULL : function;

@@ -44,7 +44,7 @@ static void repl(b_vm *vm) {
   printf("%s, (Build time = %s, %s)\n", COMPILER, __DATE__, __TIME__);
   printf("Type \"exit()\" to quit, \"help()\" or \"credits()\" for more information\n");
 
-  char *source = (char *) calloc(1, sizeof(char));
+  char *source = (char *) malloc(sizeof(char));
   int current_line = 0;
   int brace_count = 0, paren_count = 0, bracket_count = 0, single_quote_count = 0, double_quote_count = 0;
 

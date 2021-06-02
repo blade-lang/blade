@@ -377,7 +377,7 @@ DECLARE_STRING_METHOD(join) {
       array[0] = append_strings(array[0], AS_C_STRING(METHOD_OBJECT));
   }
 
-  RETURN_STRING(array[0]);
+  RETURN_TT_STRING(array[0]);
 }
 
 DECLARE_STRING_METHOD(split) {

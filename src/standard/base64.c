@@ -143,7 +143,7 @@ DECLARE_MODULE_METHOD(base64__encode) {
   if (data == NULL)
     RETURN;
 
-  RETURN_L_STRING(data, output_length);
+  RETURN_T_STRING(data, output_length);
 }
 
 CREATE_MODULE_LOADER(base64) {

@@ -326,7 +326,7 @@ static inline char *function_to_string(b_obj_func *func) {
   if (func->name == NULL) {
     return "<script 0x00>";
   }
-  char *str = (char *)calloc(1, sizeof(char *));
+  char *str = (char *)malloc(sizeof(char *));
   sprintf(str, "<function %s>", func->name->chars);
   return str;
 }
@@ -346,7 +346,7 @@ static inline char *list_to_string(b_vm *vm, b_value_arr *array) {
 static inline char *bytes_to_string(b_vm *vm, b_byte_arr *array) {
   char *str = "(";
   for (int i = 0; i < array->count; i++) {
-    char *chars = (char *)calloc(1, sizeof(char *));
+    char *chars = (char *)malloc(sizeof(char *));
     sprintf(chars, "0x%x", array->bytes[i]);
 
     if (i != array->count - 1) {
@@ -378,7 +378,7 @@ static char *dict_to_string(b_vm *vm, b_obj_dict *dict) {
 }
 
 char *object_to_string(b_vm *vm, b_value value) {
-  char *str = (char *)calloc(1, sizeof(char *));
+  char *str = (char *)malloc(sizeof(char *));
 
   switch (OBJ_TYPE(value)) {
   case OBJ_SWITCH: {

@@ -59,17 +59,17 @@ static b_value get_stack_trace(b_vm *vm){
 
     if (function->name == NULL) {
       trace_part = append_strings(
-          trace_part, i > 0 ? "<script>\n" : "<script>");
+          trace_part, i < vm->frame_count - 1 ? "<script>\n" : "<script>");
     } else {
       trace_part = append_strings(trace_part, function->name->chars);
       trace_part =
-          append_strings(trace_part, i > 0 ? "()\n" : "()");
+          append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" : "()");
     }
 
     trace = append_strings(trace, trace_part);
   }
 
-  RETURN_T_STRING(trace, (int)strlen(trace));
+  RETURN_TT_STRING(trace);
 }
 
 bool propagate_exception(b_vm *vm) {
@@ -507,18 +507,18 @@ static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
   }
 
   b_call_frame *frame = &vm->frames[vm->frame_count++];
-  frame->function = (b_obj *)callee;
+  frame->function = callee;
   frame->ip = function->blob.code;
 
   frame->slots = vm->stack_top - arg_count - 1;
   return true;
 }
 
-static bool call_closure(b_vm *vm, b_obj_closure *closure, int arg_count) {
+static inline bool call_closure(b_vm *vm, b_obj_closure *closure, int arg_count) {
   return call(vm, (b_obj *)closure, closure->function, arg_count);
 }
 
-static bool call_function(b_vm *vm, b_obj_func *function, int arg_count) {
+static inline bool call_function(b_vm *vm, b_obj_func *function, int arg_count) {
   return call(vm, (b_obj *)function, function, arg_count);
 }
 
@@ -549,7 +549,6 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
       } else if (arg_count != 0) {
         return throw_exception(vm, "%s constructor expects 0 arguments, %d given",
                                klass->name, arg_count);
-        return false;
       }
       return true;
     }
@@ -803,8 +802,7 @@ bool dict_set_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value) {
   return table_set(vm, &dict->items, key, value);
 }
 
-static b_obj_string *multiply_string(b_vm *vm, b_obj_string *str,
-                                     double number) {
+static b_obj_string *multiply_string(b_vm *vm, b_obj_string *str, double number) {
   int times = (int)number;
 
   if (times <= 0) // 'str' * 0 == '', 'str' * -1 == ''
@@ -839,16 +837,13 @@ static b_obj_list *add_list(b_vm *vm, b_obj_list *a, b_obj_list *b) {
 static b_obj_bytes *add_bytes(b_vm *vm, b_obj_bytes *a, b_obj_bytes *b) {
   b_obj_bytes *bytes = new_bytes(vm, a->bytes.count + b->bytes.count);
 
-  memcpy(bytes->bytes.bytes, a->bytes.bytes,
-         a->bytes.count * sizeof(unsigned char *));
-  memcpy(bytes->bytes.bytes + a->bytes.count, b->bytes.bytes,
-         b->bytes.count * sizeof(unsigned char *));
+  memcpy(bytes->bytes.bytes, a->bytes.bytes, a->bytes.count);
+  memcpy(bytes->bytes.bytes + a->bytes.count, b->bytes.bytes, b->bytes.count);
 
   return bytes;
 }
 
-static b_obj_list *multiply_list(b_vm *vm, b_obj_list *a, b_obj_list *new_list,
-                                 int times) {
+static b_obj_list *multiply_list(b_vm *vm, b_obj_list *a, b_obj_list *new_list, int times) {
   for (int i = 0; i < times; i++) {
     for (int j = 0; j < a->items.count; j++) {
       write_value_arr(vm, &new_list->items, a->items.values[j]);

@@ -99,12 +99,6 @@ b_obj_instance *create_exception(b_vm *vm, b_obj_string *message);
     EXIT_VM(); \
   }
 
-void gc_start_protect(b_vm *vm);
-void gc_stop_protection(b_vm *vm);
-
-#define GUARD(t, n, v) t *n = v; \
-  push(vm, OBJ_VAL(n))
-
 
 static inline b_obj *gc_protect(b_vm *vm, b_obj *object) {
   push(vm, OBJ_VAL(object));

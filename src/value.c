@@ -124,7 +124,7 @@ static inline char *number_to_string(double number) {
 
 char *value_to_string(b_vm *vm, b_value value) {
 #if defined USE_NAN_BOXING && USE_NAN_BOXING
-  if (IS_NIL(value))
+  if (IS_EMPTY(value))
     return "";
   if (IS_NIL(value))
     return "nil";
