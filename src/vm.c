@@ -53,7 +53,7 @@ static b_value get_stack_trace(b_vm *vm){
     const char* trace_start = "    File: %s, Line: %d, In: ";
     size_t trace_start_length = snprintf(NULL, 0, trace_start, function->file, line);
 
-    char *trace_part = (char*)malloc(trace_start_length + sizeof(char));
+    char *trace_part = (char*)calloc(trace_start_length + 1, sizeof(char));
     sprintf(trace_part, trace_start, function->file, line);
     trace_part[(int)trace_start_length] = '\0';
 

@@ -657,8 +657,12 @@ DECLARE_STRING_METHOD(match) {
     for (int i = 0; i < (int)name_count; i++) {
       int n = (tab_ptr[0] << 8) | tab_ptr[1];
 
-      char *_key = malloc(sizeof(char *));
-      char *_val = malloc(sizeof(char *));
+      char *_key = malloc(sizeof(char));
+      memset(_key, 0, sizeof(char));
+
+      char *_val = malloc(sizeof(char));
+      memset(_val, 0, sizeof(char));
+
       sprintf(_key, "%*s", name_entry_size - 3, tab_ptr + 2);
       sprintf(_val, "%*s", (int)(o_vector[2 * n + 1] - o_vector[2 * n]),
               subject + o_vector[2 * n]);
@@ -779,8 +783,12 @@ DECLARE_STRING_METHOD(matches) {
     for (i = 0; i < (int)name_count; i++) {
       int n = (tab_ptr[0] << 8) | tab_ptr[1];
 
-      char *_key = malloc(sizeof(char *));
-      char *_val = malloc(sizeof(char *));
+      char *_key = malloc(sizeof(char));
+      memset(_key, 0, sizeof(char));
+
+      char *_val = malloc(sizeof(char));
+      memset(_val, 0, sizeof(char));
+
       sprintf(_key, "%*s", name_entry_size - 3, tab_ptr + 2);
       sprintf(_val, "%*s", (int)(o_vector[2 * n + 1] - o_vector[2 * n]),
               subject + o_vector[2 * n]);
@@ -896,8 +904,12 @@ DECLARE_STRING_METHOD(matches) {
       for (i = 0; i < (int)name_count; i++) {
         int n = (tab_ptr[0] << 8) | tab_ptr[1];
 
-        char *_key = malloc(sizeof(char *));
-        char *_val = malloc(sizeof(char *));
+        char *_key = malloc(sizeof(char));
+        memset(_key, 0, sizeof(char));
+
+        char *_val = malloc(sizeof(char));
+        memset(_val, 0, sizeof(char));
+
         sprintf(_key, "%*s", name_entry_size - 3, tab_ptr + 2);
         sprintf(_val, "%*s", (int)(o_vector[2 * n + 1] - o_vector[2 * n]),
                 subject + o_vector[2 * n]);

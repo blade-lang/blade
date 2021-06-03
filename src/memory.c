@@ -229,7 +229,7 @@ static void free_object(b_vm *vm, b_obj *object) {
     case OBJ_FUNCTION: {
       b_obj_func *function = (b_obj_func *)object;
       free_blob(vm, &function->blob);
-      // free((void *)function->file);
+      function->file = NULL;
       FREE(b_obj_func, object);
       break;
     }
@@ -320,6 +320,7 @@ void free_objects(b_vm *vm) {
   }
 
   free(vm->gray_stack);
+  vm->gray_stack = NULL;
 }
 
 void collect_garbage(b_vm *vm) {

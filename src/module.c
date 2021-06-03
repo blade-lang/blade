@@ -27,7 +27,9 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
 
   if (is_core_library_file((char *) module_path, module_name->chars)) {
     for (int i = 0; modules[i].name != NULL; i++) {
-      if (memcmp(modules[i].name, module_name->chars, module_name->length) ==
+      int _module_name_length = (int)strlen(modules[i].name);
+      if (_module_name_length == module_name->length &&
+        memcmp(modules[i].name, module_name->chars, _module_name_length) ==
           0) {
         b_module_reg module = modules[i].module_func(vm);
 

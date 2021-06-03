@@ -1038,7 +1038,7 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
 }
 
 static char *compile_string(b_parser *p) {
-  char *str = (char *)malloc(sizeof(char) * ((p->previous.length - (p->had_error ? 1 : 2)) + 1));
+  char *str = (char *)calloc((p->previous.length - (p->had_error ? 1 : 2)) + 1, sizeof(char));
   char *real = (char *)(p->previous.start + (p->had_error ? 0 : 1));
 
   int real_length = p->previous.length - (p->had_error ? 1 : 2);

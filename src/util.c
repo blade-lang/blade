@@ -24,7 +24,7 @@ int utf8_number_bytes(int value) {
 char *utf8_encode(unsigned int code) {
   int count = utf8_number_bytes((int)code);
   if (count > 0) {
-    char *chars = (char *) malloc((count + 1) * sizeof(char));
+    char *chars = (char *) calloc(count + 1, sizeof(char));
     if (code <= 0x7F) {
       chars[0] = (char)(code & 0x7F);
       chars[1] = '\0';
@@ -126,7 +126,7 @@ char *append_strings(const char *old, const char *new_str) {
   const size_t out_len = old_len + new_len;
 
   // allocate a pointer to the new string
-  char *out = malloc(out_len + sizeof(char));
+  char *out = calloc(out_len + 1, sizeof(char));
 
   // concat both strings and return
   if (out != NULL) {
@@ -206,6 +206,7 @@ char *read_file(const char *path) {
 
   // the system might not have enough memory to read the file.
   if (buffer == NULL) {
+    fclose(fp);
     return NULL;
   }
 
@@ -213,6 +214,8 @@ char *read_file(const char *path) {
 
   // if we couldn't read the entire file
   if (bytes_read < file_size) {
+    fclose(fp);
+    free(buffer);
     return NULL;
   }
 

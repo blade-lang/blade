@@ -41,7 +41,7 @@ int vasprintf(char **strp, const char *format, va_list ap) {
   int len = vscprintf(format, ap);
   if (len == -1)
     return -1;
-  char *str = (char *)malloc((len + 1) * sizeof(char));
+  char *str = (char *)calloc(len + 1, sizeof(char));
   if (!str)
     return -1;
   int retval = vsnprintf(str, len + 1, format, ap);

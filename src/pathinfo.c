@@ -73,7 +73,7 @@ char *get_exe_path() {
 
 char *get_exe_path() {
   char raw_path[PATH_MAX];
-  char *real_path = malloc(PATH_MAX * sizeof(char));
+  char *real_path = (char *)malloc(PATH_MAX * sizeof(char));
   uint32_t raw_size = (uint32_t) sizeof(raw_path);
 
   if (!_NSGetExecutablePath(raw_path, &raw_size)) {
@@ -126,6 +126,8 @@ char *get_filename(char *filepath) {
   }
   length = length - start;
   char *string = malloc(sizeof(char));
+  memset(string, 0, sizeof(char));
+
   strncat(string, filepath + start, length);
   return string;
 }
