@@ -311,8 +311,7 @@ void print_object(b_value value, bool fix_string) {
 
 b_obj_bytes *copy_bytes(b_vm *vm, unsigned char *b, int length) {
   b_obj_bytes *bytes = new_bytes(vm, length);
-
-  memcpy(bytes->bytes.bytes, b, length * sizeof(unsigned char *));
+  memcpy(bytes->bytes.bytes, b, length);
   return bytes;
 }
 
@@ -378,8 +377,7 @@ static char *dict_to_string(b_vm *vm, b_obj_dict *dict) {
 }
 
 char *object_to_string(b_vm *vm, b_value value) {
-  char *str = (char *)malloc(sizeof(char));
-  memset(str, 0, sizeof(char));
+  char *str = (char *)calloc(0, sizeof(char));
 
   switch (OBJ_TYPE(value)) {
   case OBJ_SWITCH: {

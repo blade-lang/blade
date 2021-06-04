@@ -125,8 +125,7 @@ char *get_filename(char *filepath) {
       start = i;
   }
   length = length - start;
-  char *string = malloc(sizeof(char));
-  memset(string, 0, sizeof(char));
+  char *string = (char*)calloc(0, sizeof(char));
 
   strncat(string, filepath + start, length);
   return string;
@@ -198,7 +197,10 @@ bool is_core_library_file(char *filepath, char *file_name) {
   char *library_file = merge_paths(bird_directory, bird_file_name);
 
   if (file_exists(library_file)) {
-    return memcmp(library_file, filepath, (int) strlen(filepath)) == 0;
+    int filepath_length = (int) strlen(filepath);
+    int library_file_length = (int) strlen(library_file);
+    return library_file_length == filepath_length
+           && memcmp(library_file, filepath, filepath_length) == 0;
   }
   return false;
 }

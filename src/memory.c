@@ -30,7 +30,7 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
   if (result == NULL) {
     fflush(stdout); // flush out anything on stdout first
     fprintf(stderr, "Exit: device out of memory\n");
-    exit(1);
+    exit(EXIT_TERMINAL);
   }
   return result;
 }

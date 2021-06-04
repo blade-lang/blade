@@ -13,6 +13,7 @@
 #include "b_file.h"
 #include "b_list.h"
 #include "b_string.h"
+#include "util.h"
 
 #include <math.h>
 #include <stdarg.h>
@@ -39,8 +40,7 @@ static inline b_obj_func *get_frame_function(b_call_frame *frame) {
 }
 
 static b_value get_stack_trace(b_vm *vm){
-  char *trace = (char *)malloc(sizeof(char));
-  memset(trace, 0, sizeof(char));
+  char *trace = (char *)calloc(0, sizeof(char));
 
   for (int i = 0; i < vm->frame_count; i++) {
     b_call_frame *frame = &vm->frames[i];
@@ -62,8 +62,7 @@ static b_value get_stack_trace(b_vm *vm){
           trace_part, i < vm->frame_count - 1 ? "<script>\n" : "<script>");
     } else {
       trace_part = append_strings(trace_part, function->name->chars);
-      trace_part =
-          append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" : "()");
+      trace_part = append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" : "()");
     }
 
     trace = append_strings(trace, trace_part);
@@ -566,11 +565,13 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
       b_value result = native->function(vm, arg_count, vm->stack_top - arg_count);
 
       if (IS_EMPTY(result)) {
+        CLEAR_GC();
+        vm->stack_top -= arg_count + 1;
         return false;
       }
 
-      vm->stack_top -= arg_count + 1;
       CLEAR_GC();
+      vm->stack_top -= arg_count + 1;
       push(vm, result);
       return true;
     }
@@ -751,7 +752,8 @@ bool is_falsey(b_value value) {
 
 bool is_instance_of(b_obj_class *klass1, char *klass2_name) {
   while (klass1 != NULL) {
-    if (memcmp(klass1->name->chars, klass2_name, klass1->name->length) == 0) {
+    if ((int)strlen(klass2_name) == klass1->name->length
+        && memcmp(klass1->name->chars, klass2_name, klass1->name->length) == 0) {
       return true;
     }
     klass1 = klass1->superclass;
