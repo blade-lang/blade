@@ -377,7 +377,7 @@ static char *dict_to_string(b_vm *vm, b_obj_dict *dict) {
 }
 
 char *object_to_string(b_vm *vm, b_value value) {
-  char *str = (char *)calloc(0, sizeof(char));
+  char *str = (char *)calloc(1, sizeof(char));
 
   switch (OBJ_TYPE(value)) {
   case OBJ_SWITCH: {

@@ -125,7 +125,7 @@ char *get_filename(char *filepath) {
       start = i;
   }
   length = length - start;
-  char *string = (char*)calloc(0, sizeof(char));
+  char *string = (char*)calloc(1, sizeof(char));
 
   strncat(string, filepath + start, length);
   return string;

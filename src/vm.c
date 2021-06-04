@@ -40,7 +40,7 @@ static inline b_obj_func *get_frame_function(b_call_frame *frame) {
 }
 
 static b_value get_stack_trace(b_vm *vm){
-  char *trace = (char *)calloc(0, sizeof(char));
+  char *trace = (char *)calloc(1, sizeof(char));
 
   for (int i = 0; i < vm->frame_count; i++) {
     b_call_frame *frame = &vm->frames[i];
@@ -720,13 +720,13 @@ static void define_property(b_vm *vm, b_obj_string *name, bool is_static) {
   pop(vm);
 }
 
-bool is_falsey(b_value value) {
+bool is_false(b_value value) {
   if (IS_BOOL(value))
     return IS_BOOL(value) && !AS_BOOL(value);
   if (IS_NIL(value) || IS_EMPTY(value))
     return true;
 
-  // -1 is the number equivalent of false in Birdy
+  // -1 is the number equivalent of false in Bird
   if (IS_NUMBER(value))
     return AS_NUMBER(value) < 0;
 
@@ -1423,7 +1423,7 @@ b_ptr_result run(b_vm *vm) {
     }
 
     case OP_NOT:
-      push(vm, BOOL_VAL(is_falsey(pop(vm))));
+      push(vm, BOOL_VAL(is_false(pop(vm))));
       break;
     case OP_NIL:
       push(vm, NIL_VAL);
@@ -1445,7 +1445,7 @@ b_ptr_result run(b_vm *vm) {
     }
     case OP_JUMP_IF_FALSE: {
       uint16_t offset = READ_SHORT();
-      if (is_falsey(peek(vm, 0))) {
+      if (is_false(peek(vm, 0))) {
         frame->ip += offset;
       }
       break;
@@ -1903,7 +1903,7 @@ b_ptr_result run(b_vm *vm) {
     case OP_ASSERT: {
       b_value message = pop(vm);
       b_value expression = pop(vm);
-      if (is_falsey(expression)) {
+      if (is_false(expression)) {
         if (!IS_NIL(message)) {
           runtime_error("AssertionError: %s", value_to_string(vm, message));
         } else {
@@ -1983,7 +1983,7 @@ b_ptr_result run(b_vm *vm) {
       b_value _condition = peek(vm, 2);
 
       pop_n(vm, 3);
-      if(!is_falsey(_condition)) {
+      if(!is_false(_condition)) {
         push(vm, _then);
       } else {
         push(vm, _else);
