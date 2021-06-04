@@ -30,7 +30,7 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
   if (result == NULL) {
     fflush(stdout); // flush out anything on stdout first
     fprintf(stderr, "Exit: device out of memory\n");
-    exit(1);
+    exit(EXIT_TERMINAL);
   }
   return result;
 }
@@ -229,7 +229,7 @@ static void free_object(b_vm *vm, b_obj *object) {
     case OBJ_FUNCTION: {
       b_obj_func *function = (b_obj_func *)object;
       free_blob(vm, &function->blob);
-      // free((void *)function->file);
+      function->file = NULL;
       FREE(b_obj_func, object);
       break;
     }
@@ -320,6 +320,7 @@ void free_objects(b_vm *vm) {
   }
 
   free(vm->gray_stack);
+  vm->gray_stack = NULL;
 }
 
 void collect_garbage(b_vm *vm) {

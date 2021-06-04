@@ -30,7 +30,7 @@ static b_token error_token(b_scanner *s, const char *message, ...) {
   va_list args;
   va_start(args, message);
   int length = vsnprintf(NULL, 0, message, args);
-  char *err = (char*) malloc(sizeof(char) * (length + 1));
+  char *err = (char*) calloc(length + 1, sizeof(char));
   vsprintf(err, message, args);
   va_end(args);
 

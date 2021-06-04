@@ -113,11 +113,11 @@ DECLARE_MODULE_METHOD(http___client) {
                        realpath(file->path->chars, NULL));
     }
 
-    if (memcmp(request_type->chars, "GET", request_type->length) == 0) {
+    if (request_type->length == 3 && memcmp(request_type->chars, "GET", request_type->length) == 0) {
       curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
-    } else if (memcmp(request_type->chars, "POST", request_type->length) == 0) {
+    } else if (request_type->length == 4 && memcmp(request_type->chars, "POST", request_type->length) == 0) {
       curl_easy_setopt(curl, CURLOPT_POST, 1L);
-    } else if (memcmp(request_type->chars, "HEAD", request_type->length) == 0) {
+    } else if (request_type->length == 4 && memcmp(request_type->chars, "HEAD", request_type->length) == 0) {
       curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
     } else {
       curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, request_type->chars);

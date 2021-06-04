@@ -74,4 +74,9 @@
 #define BIRD_VERSION_STRING "0.0.1"
 #define BVM_VERSION "0.0.1"
 
+
+#define EXIT_COMPILE 10
+#define EXIT_RUNTIME 10
+#define EXIT_TERMINAL 12
+
 #endif

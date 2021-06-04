@@ -16,7 +16,7 @@ void init_value_arr(b_value_arr *array) {
 
 void init_byte_arr(b_byte_arr *array, int length) {
   array->count = length;
-  array->bytes = (unsigned char *) calloc(length, sizeof(unsigned char *));
+  array->bytes = (unsigned char *) calloc(length, sizeof(unsigned char));
 }
 
 void write_value_arr(b_vm *vm, b_value_arr *array, b_value value) {
@@ -117,14 +117,14 @@ void echo_value(b_value value) { do_print_value(value, true); }
 
 static inline char *number_to_string(double number) {
   int length = snprintf(NULL, 0, NUMBER_FORMAT, number);
-  char *num_str = (char *) calloc(length, sizeof(char));
+  char *num_str = (char *) calloc(length + 1, sizeof(char));
   sprintf(num_str, NUMBER_FORMAT, number);
   return num_str;
 }
 
 char *value_to_string(b_vm *vm, b_value value) {
 #if defined USE_NAN_BOXING && USE_NAN_BOXING
-  if (IS_NIL(value))
+  if (IS_EMPTY(value))
     return "";
   if (IS_NIL(value))
     return "nil";

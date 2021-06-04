@@ -126,7 +126,7 @@ char *append_strings(const char *old, const char *new_str) {
   const size_t out_len = old_len + new_len;
 
   // allocate a pointer to the new string
-  char *out = malloc(out_len + sizeof(char));
+  char *out = calloc((int)out_len + 1, sizeof(char));
 
   // concat both strings and return
   if (out != NULL) {
@@ -137,6 +137,19 @@ char *append_strings(const char *old, const char *new_str) {
 
   return out;
 }
+
+/*char *append_strings(char *old, char *new_str) {
+  // find the size of the string to allocate
+  const size_t out_len = strlen(old) + strlen(new_str);
+  char *result = realloc(old, out_len + 1);
+
+  if (result != NULL) {
+    strcat(result, new_str);
+    result[out_len] = '\0'; // enforce string termination
+  }
+
+  return result;
+}*/
 
 int read_line(char line[], int max) {
   int nch = 0;
@@ -206,6 +219,7 @@ char *read_file(const char *path) {
 
   // the system might not have enough memory to read the file.
   if (buffer == NULL) {
+    fclose(fp);
     return NULL;
   }
 
@@ -213,6 +227,8 @@ char *read_file(const char *path) {
 
   // if we couldn't read the entire file
   if (bytes_read < file_size) {
+    fclose(fp);
+    free(buffer);
     return NULL;
   }
 
@@ -222,8 +238,9 @@ char *read_file(const char *path) {
   return buffer;
 }
 
-void flush_output() {
-  if(fflush(stdout) != 0) {
+inline void flush_output() {
+  fflush(stdout);
+  /*if(fflush(stdout) != 0) {
     fwrite(NULL, 0, 0, stdout);
-  }
+  }*/
 }

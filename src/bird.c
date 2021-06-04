@@ -133,6 +133,7 @@ static void repl(b_vm *vm) {
     }
 
     source = append_strings(source, line);
+    free(line);
     if (line_length > 0) {
       source = append_strings(source, "\n");
     }
@@ -153,7 +154,7 @@ static void run_file(b_vm *vm, const char *file) {
   char *source = read_file(file);
   if (source == NULL) {
     fprintf(stderr, "(Bird):\n  Launch aborted for %s\n  Reason: %s\n", file, strerror(errno));
-    exit(74);
+    exit(EXIT_FAILURE);
   }
 
   b_ptr_result result = interpret(vm, source, file);
@@ -162,9 +163,9 @@ static void run_file(b_vm *vm, const char *file) {
   fflush(stdout);
 
   if (result == PTR_COMPILE_ERR)
-    exit(65);
+    exit(EXIT_COMPILE);
   if (result == PTR_RUNTIME_ERR)
-    exit(70);
+    exit(EXIT_RUNTIME);
 }
 
 void show_usage(char *argv[]) {
@@ -228,5 +229,5 @@ int main(int argc, char *argv[]) {
   }
 
   free_vm(vm);
-  return 0;
+  return EXIT_SUCCESS;
 }
