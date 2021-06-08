@@ -7,7 +7,7 @@ var start = time()
 for i in 1..total {
   try {
     echo 'Attempt ${i}'
-    echo HttpClient().get('localhost:3000')
+    echo HttpRequest('localhost:3000').get().body
   } catch Exception e {
     echo e.message
   }

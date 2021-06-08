@@ -6,7 +6,6 @@
 #include "standard/io.h"
 #include "standard/math.h"
 #include "standard/os.h"
-#include "standard/http.h"
 #include "standard/socket.h"
 
 #endif //bird_standard_h
