@@ -236,7 +236,7 @@ DECLARE_LIST_METHOD(delete) {
         list->items.values[i + upper_index + 1];
   }
   list->items.count -= upper_index - lower_index + 1;
-  RETURN_NUMBER(upper_index - lower_index + 1);
+  RETURN_NUMBER((double)upper_index - (double)lower_index + 1);
 }
 
 DECLARE_LIST_METHOD(first) {
@@ -401,7 +401,7 @@ DECLARE_LIST_METHOD(__itern__) {
 
   int index = AS_NUMBER(args[0]);
   if (index < list->items.count - 1) {
-    RETURN_NUMBER(index + 1);
+    RETURN_NUMBER((double)index + 1);
   }
 
   RETURN;

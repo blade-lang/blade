@@ -44,7 +44,7 @@
 
 #elif defined(_MSC_VER)
 
-#define COMPILER VERSION_STRING("MSC", _MSC_VER)
+#define COMPILER VERSION_STRING("MSC", _MSC_VER, 0, 0)
 
 #elif defined(__MINGW32_MAJOR_VERSION)
 

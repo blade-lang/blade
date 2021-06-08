@@ -534,7 +534,7 @@ DECLARE_NATIVE(rand) {
     x = rand();
   } while (x >= RAND_MAX - remainder);
 
-  RETURN_NUMBER(lower_limit + x % n);
+  RETURN_NUMBER((double)lower_limit + x % n);
 }
 
 /**

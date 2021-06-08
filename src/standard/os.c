@@ -36,29 +36,37 @@ DECLARE_MODULE_METHOD(os_exec) {
   int length = 0;
   char *output = ALLOCATE(char, output_size);
 
-  while ((n_read = fread(buffer, 1, sizeof(buffer), fd)) != 0) {
-    if (length + n_read >= output_size) {
-      output_size *= 2;
-      void *temp = realloc(output, output_size);
-      if (temp == NULL) {
-        RETURN_ERROR("device out of memory");
-      } else {
-        output = temp;
+  if (output != NULL) {
+    while ((n_read = fread(buffer, 1, sizeof(buffer), fd)) != 0) {
+      if (length + n_read >= output_size) {
+        output_size *= 2;
+        void* temp = realloc(output, output_size);
+        if (temp == NULL) {
+          RETURN_ERROR("device out of memory");
+        }
+        else {
+          output = temp;
+        }
       }
+      if ((output + length) != NULL) {
+        strncat(output + length, buffer, n_read);
+      }
+      length += (int)n_read;
     }
-    if ((output + length) != NULL) {
-      strncat(output + length, buffer, n_read);
+
+    if (length == 0) {
+      pclose(fd);
+      RETURN;
     }
-    length += (int)n_read;
+
+    output[length - 1] = '\0';
+
+    pclose(fd);
+    RETURN_T_STRING(output, length);
   }
 
-  if (length == 0)
-    RETURN;
-
-  output[length - 1] = '\0';
-
   pclose(fd);
-  RETURN_T_STRING(output, length);
+  RETURN_STRING("");
 }
 
 DECLARE_MODULE_METHOD(os_info) {

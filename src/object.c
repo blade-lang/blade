@@ -150,7 +150,7 @@ b_obj_string *take_string(b_vm *vm, char *chars, int length) {
 
   b_obj_string *interned = table_find_string(&vm->strings, chars, length, hash);
   if (interned != NULL) {
-    FREE_ARRAY(char, chars, length + 1);
+    FREE_ARRAY(char, chars, (size_t)length + 1);
     return interned;
   }
 
@@ -164,7 +164,7 @@ b_obj_string *copy_string(b_vm *vm, const char *chars, int length) {
   if (interned != NULL)
     return interned;
 
-  char *heap_chars = ALLOCATE(char, length + 1);
+  char *heap_chars = ALLOCATE(char, (size_t)length + 1);
   memcpy(heap_chars, chars, length);
   heap_chars[length] = '\0';
 
@@ -326,8 +326,11 @@ static inline char *function_to_string(b_obj_func *func) {
     return "<script 0x00>";
   }
   char *str = (char *)malloc(sizeof(char) * (snprintf(NULL, 0, "<function %s>", func->name->chars)));
-  sprintf(str, "<function %s>", func->name->chars);
-  return str;
+  if (str != NULL) {
+    sprintf(str, "<function %s>", func->name->chars);
+    return str;
+  }
+  return strdup(func->name->chars);
 }
 
 static inline char *list_to_string(b_vm *vm, b_value_arr *array) {
@@ -346,7 +349,10 @@ static inline char *bytes_to_string(b_vm *vm, b_byte_arr *array) {
   char *str = "(";
   for (int i = 0; i < array->count; i++) {
     char *chars = (char *)malloc(sizeof(char) * (snprintf(NULL, 0, "0x%x", array->bytes[i])));
-    sprintf(chars, "0x%x", array->bytes[i]);
+    if (chars != NULL) {
+      sprintf(chars, "0x%x", array->bytes[i]);
+      str = append_strings(str, chars);
+    }
 
     if (i != array->count - 1) {
       str = append_strings(str, " ");
@@ -384,10 +390,18 @@ char *object_to_string(b_vm *vm, b_value value) {
     return "<switch>";
   }
   case OBJ_CLASS:
-    sprintf(str, "<class %s>", AS_CLASS(value)->name->chars);
+    if (str != NULL) {
+      sprintf(str, "<class %s>", AS_CLASS(value)->name->chars);
+    }  else {
+      str = strdup(AS_CLASS(value)->name->chars);
+    }
     break;
   case OBJ_INSTANCE:
-    sprintf(str, "<instance of %s>", AS_INSTANCE(value)->klass->name->chars);
+    if (str != NULL) {
+      sprintf(str, "<instance of %s>", AS_INSTANCE(value)->klass->name->chars);
+    } else {
+      str = strdup(AS_INSTANCE(value)->klass->name->chars);
+    }
     break;
   case OBJ_CLOSURE:
     return function_to_string(AS_CLOSURE(value)->function);

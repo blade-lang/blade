@@ -1029,7 +1029,7 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
   if (value > 65535) // check for greater that \uffff
     count++;
   if (count != 0) {
-    memcpy(string + index, utf8_encode(value), count + 1);
+    memcpy(string + index, utf8_encode(value), (size_t)count + 1);
   }
   /* if (value > 65535) // but greater than \uffff doesn't occupy any extra byte
     count--; */
@@ -1037,7 +1037,7 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
 }
 
 static char *compile_string(b_parser *p, int *length) {
-  char *str = (char *)malloc(((p->previous.length - 2) + 1) * sizeof(char));
+  char *str = (char *)malloc((((size_t)p->previous.length - 2) + 1) * sizeof(char));
   char *real = (char *)p->previous.start + 1;
 
   int real_length = p->previous.length - 2, k = 0;
@@ -1829,7 +1829,7 @@ static void using_statement(b_parser *p) {
         state = 1;
         advance(p);
 
-        b_value jump = NUMBER_VAL(current_blob(p)->count - start_offset);
+        b_value jump = NUMBER_VAL((double)current_blob(p)->count - (double)start_offset);
 
         if (p->previous.type == TRUE_TOKEN) {
           table_set(p->vm, &sw->table, TRUE_VAL, jump);

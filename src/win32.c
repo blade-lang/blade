@@ -9,71 +9,72 @@
 
 const char *GetWindowsVersionString() {
   const char *winver = NULL;
-  OSVERSIONINFOEXW osver;
+  OSVERSIONINFOEXW *osver = (OSVERSIONINFOEXW*)malloc(sizeof(OSVERSIONINFOEXW));
+  if (osver == NULL) return "";
+
   SYSTEM_INFO sysInfo;
 
 #ifndef __MINGW32_MAJOR_VERSION
   __pragma(warning(push)) __pragma(warning(disable : 4996))
 #endif
-      memset(&osver, 0, sizeof(osver));
-  osver.dwOSVersionInfoSize = sizeof(osver);
-  GetVersionExW((LPOSVERSIONINFOW)&osver);
+  osver->dwOSVersionInfoSize = sizeof(osver);
+  GetVersionExW((LPOSVERSIONINFOW)osver);
 
 #ifndef __MINGW32_MAJOR_VERSION
   __pragma(warning(pop))
 #endif
 
-      if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 2) {
-    OSVERSIONINFOEXW osvi = osver;
+      if (osver->dwMajorVersion == 6 && osver->dwMinorVersion == 2) {
+    OSVERSIONINFOEXW *osvi = osver;
     ULONGLONG cm = 0;
     cm = VerSetConditionMask(cm, VER_MINORVERSION, VER_EQUAL);
-    osvi.dwOSVersionInfoSize = sizeof(osvi);
-    osvi.dwMinorVersion = 3;
+    osvi->dwOSVersionInfoSize = sizeof(osvi);
+    osvi->dwMinorVersion = 3;
     if (VerifyVersionInfoW(&osvi, VER_MINORVERSION, cm)) {
-      osver.dwMinorVersion = 3;
+      osver->dwMinorVersion = 3;
     }
   }
 
   GetSystemInfo(&sysInfo);
 
-  if (osver.dwMajorVersion == 10 && osver.wProductType != VER_NT_WORKSTATION)
+  if (osver->dwMajorVersion == 10 && osver->wProductType != VER_NT_WORKSTATION)
     winver = "Windows 10 Server";
-  else if (osver.dwMajorVersion == 10 &&
-           osver.wProductType == VER_NT_WORKSTATION)
+  else if (osver->dwMajorVersion == 10 &&
+           osver->wProductType == VER_NT_WORKSTATION)
     winver = "Windows 10";
-  else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 3 &&
-           osver.wProductType != VER_NT_WORKSTATION)
+  else if (osver->dwMajorVersion == 6 && osver->dwMinorVersion == 3 &&
+           osver->wProductType != VER_NT_WORKSTATION)
     winver = "Windows Server 2012 R2";
-  else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 3 &&
-           osver.wProductType == VER_NT_WORKSTATION)
+  else if (osver->dwMajorVersion == 6 && osver->dwMinorVersion == 3 &&
+           osver->wProductType == VER_NT_WORKSTATION)
     winver = "Windows 8.1";
-  else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 2 &&
-           osver.wProductType != VER_NT_WORKSTATION)
+  else if (osver->dwMajorVersion == 6 && osver->dwMinorVersion == 2 &&
+           osver->wProductType != VER_NT_WORKSTATION)
     winver = "Windows Server 2012";
-  else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 2 &&
-           osver.wProductType == VER_NT_WORKSTATION)
+  else if (osver->dwMajorVersion == 6 && osver->dwMinorVersion == 2 &&
+           osver->wProductType == VER_NT_WORKSTATION)
     winver = "Windows 8";
-  else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 1 &&
-           osver.wProductType != VER_NT_WORKSTATION)
+  else if (osver->dwMajorVersion == 6 && osver->dwMinorVersion == 1 &&
+           osver->wProductType != VER_NT_WORKSTATION)
     winver = "Windows Server 2008 R2";
-  else if (osver.dwMajorVersion == 6 && osver.dwMinorVersion == 1 &&
-           osver.wProductType == VER_NT_WORKSTATION)
+  else if (osver->dwMajorVersion == 6 && osver->dwMinorVersion == 1 &&
+           osver->wProductType == VER_NT_WORKSTATION)
     winver = "Windows 7";
-  else if (osver.dwMajorVersion == 6 &&
-           osver.wProductType != VER_NT_WORKSTATION)
+  else if (osver->dwMajorVersion == 6 &&
+           osver->wProductType != VER_NT_WORKSTATION)
     winver = "Windows Server 2008";
-  else if (osver.dwMajorVersion == 6 &&
-           osver.wProductType == VER_NT_WORKSTATION)
+  else if (osver->dwMajorVersion == 6 &&
+           osver->wProductType == VER_NT_WORKSTATION)
     winver = "Windows Vista";
-  else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 2 &&
-           osver.wProductType == VER_NT_WORKSTATION &&
+  else if (osver->dwMajorVersion == 5 && osver->dwMinorVersion == 2 &&
+           osver->wProductType == VER_NT_WORKSTATION &&
            sysInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64)
     winver = "Windows XP x64";
-  else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 2)
+  else if (osver->dwMajorVersion == 5 && osver->dwMinorVersion == 2)
     winver = "Windows Server 2003";
-  else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 1)
+  else if (osver->dwMajorVersion == 5 && osver->dwMinorVersion == 1)
     winver = "Windows XP";
-  else if (osver.dwMajorVersion == 5 && osver.dwMinorVersion == 0)
+  else if (osver->dwMajorVersion == 5 && osver->dwMinorVersion == 0)
     winver = "Windows 2000";
   else
     winver = "unknown";

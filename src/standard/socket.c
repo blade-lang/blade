@@ -120,7 +120,11 @@ DECLARE_MODULE_METHOD(socket__connect) {
     int so_error;
     socklen_t len = sizeof so_error;
 
+#ifndef _WIN32
     getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
+#else
+    getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&so_error, &len);
+#endif
     if (so_error == 0) {
       if(is_blocking) {
 #ifndef _WIN32
@@ -239,8 +243,13 @@ DECLARE_MODULE_METHOD(socket__recv) {
   int flags = AS_NUMBER(args[2]);
 
   struct timeval timeout;
-  int option_length;
-  int rc = getsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, (socklen_t  *)&option_length);
+  int option_length = 0;
+
+#ifndef _WIN32
+  int rc = getsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, (socklen_t*)&option_length);
+#else
+  int rc = getsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, (socklen_t*)&option_length);
+#endif // !_WIN32
 
   if(rc != 0 || option_length != sizeof timeout || (timeout.tv_sec == 0 && timeout.tv_usec == 0)) {
     // set default timeout to 5 minutes
@@ -265,7 +274,7 @@ DECLARE_MODULE_METHOD(socket__recv) {
       if(length != -1 && length < content_length)
         content_length = length;
 
-      char *response = (char*)ALLOCATE(char, content_length + 1);
+      char *response = (char*)ALLOCATE(char, (size_t)content_length + 1);
       ssize_t total_length = recv(sock, response, content_length, flags);
       response[total_length] = '\0';
 
@@ -324,7 +333,12 @@ DECLARE_MODULE_METHOD(socket__getsockopt) {
       int so_error;
       socklen_t len = sizeof so_error;
 
+#ifndef _WIN32
       getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
+#else
+      getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&so_error, &len);
+#endif // !_WIN32
+
       if(so_error == 0) RETURN;
       char * error = strerror(so_error);
       RETURN_STRING(error);
@@ -335,7 +349,7 @@ DECLARE_MODULE_METHOD(socket__getsockopt) {
 
 #ifdef _WIN32
       DWORD timeout;
-      if(getsockopt(sock, SOL_SOCKET, option, &timeout, sizeof(timeout)) >= 0) {
+      if(getsockopt(sock, SOL_SOCKET, option, (char *)&timeout, sizeof(timeout)) >= 0) {
         RETURN_NUMBER(timeout);
       }
 #else
@@ -351,7 +365,12 @@ DECLARE_MODULE_METHOD(socket__getsockopt) {
     default: {
       int so_result;
       socklen_t len = sizeof so_result;
+#ifndef _WIN32
       getsockopt(sock, SOL_SOCKET, option, &so_result, &len);
+#else
+      getsockopt(sock, SOL_SOCKET, option, (char *)&so_result, &len);
+#endif // _WIN32
+
       if(len == sizeof so_result) {
         RETURN_NUMBER(so_result);
       }

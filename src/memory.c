@@ -249,7 +249,7 @@ static void free_object(b_vm *vm, b_obj *object) {
     }
     case OBJ_STRING: {
       b_obj_string *string = (b_obj_string *)object;
-      FREE_ARRAY(char, string->chars, string->length + 1);
+      FREE_ARRAY(char, string->chars, (size_t)string->length + 1);
       FREE(b_obj_string, object);
       break;
     }
