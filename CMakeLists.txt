@@ -78,11 +78,18 @@ target_link_libraries(libbird ${PCRE2_LIB_FILE})
 
 if(UNIX)
   target_link_libraries(libbird readline)
+  target_link_libraries(libbird m)
 endif(UNIX)
 
 target_link_libraries(bird libbird)
 
-add_custom_command(TARGET bird POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/libs ${CMAKE_CURRENT_BINARY_DIR}/bin/libs
-)
+if(RUNTIME_OUTPUT_DIRECTORY)
+  add_custom_command(TARGET bird POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/libs ${RUNTIME_OUTPUT_DIRECTORY}/libs
+      )
+else()
+  add_custom_command(TARGET bird POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/libs ${CMAKE_CURRENT_BINARY_DIR}/libs
+      )
+endif(RUNTIME_OUTPUT_DIRECTORY)
 
