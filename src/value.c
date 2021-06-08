@@ -128,11 +128,11 @@ static inline char *number_to_string(double number) {
 char *value_to_string(b_vm *vm, b_value value) {
 #if defined USE_NAN_BOXING && USE_NAN_BOXING
   if (IS_EMPTY(value))
-    return "";
+    return strdup("");
   if (IS_NIL(value))
-    return "nil";
+    return strdup("nil");
   else if (IS_BOOL(value))
-    return AS_BOOL(value) ? "true" : "false";
+    return strdup(AS_BOOL(value) ? "true" : "false");
   else if (IS_NUMBER(value))
     return number_to_string(AS_NUMBER(value));
   else

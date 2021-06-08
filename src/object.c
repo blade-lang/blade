@@ -1,5 +1,4 @@
 #include "object.h"
-#include "config.h"
 #include "memory.h"
 #include "table.h"
 #include "util.h"
@@ -323,7 +322,7 @@ b_obj_bytes *take_bytes(b_vm *vm, unsigned char *b, int length) {
 
 static inline char *function_to_string(b_obj_func *func) {
   if (func->name == NULL) {
-    return "<script 0x00>";
+    return strdup("<script 0x00>");
   }
   char *str = (char *)malloc(sizeof(char) * (snprintf(NULL, 0, "<function %s>", func->name->chars)));
   if (str != NULL) {
@@ -334,9 +333,13 @@ static inline char *function_to_string(b_obj_func *func) {
 }
 
 static inline char *list_to_string(b_vm *vm, b_value_arr *array) {
-  char *str = "[";
+  char *str = strdup("[");
   for (int i = 0; i < array->count; i++) {
-    str = append_strings(str, value_to_string(vm, array->values[i]));
+    char *val = value_to_string(vm, array->values[i]);
+    if(val != NULL) {
+      str = append_strings(str, val);
+      free(val);
+    }
     if (i != array->count - 1) {
       str = append_strings(str, ", ");
     }
@@ -346,7 +349,7 @@ static inline char *list_to_string(b_vm *vm, b_value_arr *array) {
 }
 
 static inline char *bytes_to_string(b_vm *vm, b_byte_arr *array) {
-  char *str = "(";
+  char *str = strdup("(");
   for (int i = 0; i < array->count; i++) {
     char *chars = (char *)malloc(sizeof(char) * (snprintf(NULL, 0, "0x%x", array->bytes[i])));
     if (chars != NULL) {
@@ -363,16 +366,24 @@ static inline char *bytes_to_string(b_vm *vm, b_byte_arr *array) {
 }
 
 static char *dict_to_string(b_vm *vm, b_obj_dict *dict) {
-  char *str = "{";
+  char *str = strdup("{");
   for (int i = 0; i < dict->names.count; i++) {
     // print_value(dict->names.values[i]);
     b_value key = dict->names.values[i];
-    str = append_strings(str, value_to_string(vm, key));
+    char *_key = value_to_string(vm, key);
+    if(_key != NULL) {
+      str = append_strings(str, _key);
+      free(_key);
+    }
     str = append_strings(str, ": ");
 
     b_value value;
     table_get(&dict->items, key, &value);
-    str = append_strings(str, value_to_string(vm, value));
+    char *val = value_to_string(vm, value);
+    if(val != NULL) {
+      str = append_strings(str, val);
+      free(val);
+    }
 
     if (i != dict->names.count - 1) {
       str = append_strings(str, ", ");

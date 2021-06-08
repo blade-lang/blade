@@ -379,8 +379,8 @@ DECLARE_STRING_METHOD(join) {
     if (array != NULL) {
       if (i != 0) {
         array[0] = append_strings(array[0], array[i]);
-      }
-      else if (i != length - 1) {
+        free(array[i]);
+      } else if (i != length - 1) {
         array[0] = append_strings(array[0], AS_C_STRING(METHOD_OBJECT));
       }
     }

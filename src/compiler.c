@@ -1115,7 +1115,7 @@ static char *compile_string(b_parser *p, int *length) {
 static void string(b_parser *p, bool can_assign) {
   int length;
   char *str = compile_string(p, &length);
-  emit_constant(p, OBJ_VAL(copy_string(p->vm, str, length)));
+  emit_constant(p, OBJ_VAL(take_string(p->vm, str, length)));
 }
 
 static void string_interpolation(b_parser *p, bool can_assign) {
@@ -2210,8 +2210,8 @@ b_obj_func *compile(b_vm *vm, const char *source, const char *file,
   parser.current_class = NULL;
   parser.current_file = file;
 
-  b_compiler *compiler = (b_compiler*) malloc(sizeof(b_compiler));
-  init_compiler(&parser, compiler, TYPE_SCRIPT);
+  b_compiler compiler;
+  init_compiler(&parser, &compiler, TYPE_SCRIPT);
 
   advance(&parser);
 
@@ -2220,7 +2220,7 @@ b_obj_func *compile(b_vm *vm, const char *source, const char *file,
   }
 
   b_obj_func *function = end_compiler(&parser);
-  vm->compiler = compiler;
+  vm->compiler = &compiler;
 
   return parser.had_error ? NULL : function;
 }

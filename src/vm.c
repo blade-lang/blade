@@ -66,6 +66,7 @@ static b_value get_stack_trace(b_vm *vm){
     }
 
     trace = append_strings(trace, trace_part);
+    free(trace_part);
   }
 
   if (trace != NULL) {

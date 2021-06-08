@@ -164,14 +164,18 @@ char *dirname(char *path) {
   char *drive = (char *)malloc(sizeof(char));
   char *dir = (char *)malloc(sizeof(char) * MAX_PATH);
   _splitpath((const char *)path, drive, dir, NULL, NULL);
-  return append_strings(drive, dir);
+  drive = append_strings(drive, dir);
+  free(dir);
+  return drive;
 }
 
 char *basename(char *path) {
   char *name = (char *)malloc(sizeof(char) * MAX_PATH);
   char *ext = (char *)malloc(sizeof(char));
   _splitpath((const char *)path, NULL, NULL, name, ext);
-  return append_strings(name, ext);
+  name = append_strings(name, ext);
+  free(ext);
+  return name;
 }
 
 #endif

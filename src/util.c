@@ -122,22 +122,22 @@ int utf8_decode(const uint8_t *bytes, uint32_t length) {
   return value;
 }
 
-char *append_strings(const char *old, const char *new_str) {
+char *append_strings(char *old, char *new_str) {
   // find the size of the string to allocate
   const size_t old_len = strlen(old), new_len = strlen(new_str);
   const size_t out_len = old_len + new_len;
 
   // allocate a pointer to the new string
-  char *out = calloc((size_t)out_len + 1, sizeof(char));
+  char *out = (char*)realloc((void*)old, out_len + 1);
 
   // concat both strings and return
   if (out != NULL) {
-    memcpy(out, old, old_len);
     memcpy(out + old_len, new_str, new_len);
     out[out_len] = '\0';
+    return out;
   }
 
-  return out;
+  return old;
 }
 
 /*char *append_strings(char *old, char *new_str) {

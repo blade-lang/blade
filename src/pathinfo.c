@@ -93,7 +93,7 @@ char *get_exe_dir() {
 #endif
 
 char *merge_paths(char *a, char *b) {
-  char *final_path = "";
+  char *final_path = (char*)calloc(1, sizeof(char));
 
   // edge cases
   // 1. a itself is a file
