@@ -726,8 +726,9 @@ DECLARE_NATIVE(io_putc) {
   }
 #endif
 
-  write(STDOUT_FILENO, string->chars, count);
-  fflush(stdout);
+  if(write(STDOUT_FILENO, string->chars, count) != -1) {
+    fflush(stdout);
+  }
   RETURN;
 }
 

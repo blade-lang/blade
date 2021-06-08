@@ -128,11 +128,12 @@ bool push_exception_handler(b_vm *vm, b_obj_class *type, int address, int finall
 }
 
 bool throw_exception(b_vm *vm, const char *format, ...) {
-  char *message = NULL;
 
   va_list args;
   va_start(args, format);
-  int length = vasprintf(&message, format, args);
+  int length = vsnprintf(NULL, 0, format, args);
+  char *message = (char*)calloc((size_t)length + 1, sizeof(char));
+  vsprintf(message, format, args);
   va_end(args);
 
   b_obj_instance *instance = create_exception(vm, take_string(vm, message, length));
