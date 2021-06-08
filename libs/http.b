@@ -5,205 +5,242 @@
  * and servers.
  * @copyright 2021, Ore Richard Muyiwa
  */
+import 'url'
+import 'socket'
 
-class HttpClient {
+
+/**
+ * HttpResponse
+ * represents the response to an HttpRequest
+ */
+class HttpResponse {
+  var status_code = 0
+  var http_version = '1.0'
+  var time_taken = 0
+  var redirects = 0
+  var responder
+  var headers = {}
+  var error # Exception instance
+  var body
+
+  to_string() {
+    return to_string({
+      status_code: self.status_code,
+      http_version: self.http_version,
+      time_taken: self.time_taken,
+      redirects: self.redirects,
+      responder: self.responder,
+      headers: self.headers,
+      error: self.error,
+      body: self.body
+    })
+  }
+}
+
+class HttpRequest {
   # the user agent of the client used to make the request
-  var _user_agent = 'Mozilla/4.0'
+  var user_agent = 'Mozilla/4.0'
 
   # if we receive a redirect from a server,
   # this flag tells us whether we should follow it or not.
-  var _follow_redirect = true
+  var follow_redirect = true
 
   # if the site you're connecting to uses a different host name that what
   # they have mentioned in their server certificate's commonName (or
   # subjectAltName) fields, connection will fail. You can skip
   # this check by setting to true, but this will make the connection less secure.
-  var _skip_hostname_verification = false
+  var skip_hostname_verification = false
 
   # if you want to connect to a site who isn't using a certificate that is
   # signed by one of the certs in the CA bundle you have, you can skip the
   # verification of the server's certificate. This makes the connection
   # A LOT LESS SECURE.
-  var _skip_peer_verification = false
+  var skip_peer_verification = false
 
   # ...
-  var _cookie_file
+  var cookie_file
 
   # the site that refers us to the current site
-  var _referer = ''
+  var referer = ''
 
   # if you have a CA cert for the server stored someplace else 
   # than in the default bundle
-  var _ca_cert
+  var ca_cert
 
-  # The request timeout duration in milliseconds
-  # set to -1 to set no timeout limit to the request
-  var _timeout = -1
+  # set timeouts to -1 to set no timeout limit
+  # The connect timeout duration in milliseconds (default to 60 seconds)
+  var connect_timeout = 60000
+  # The send timeout duration in milliseconds
+  var send_timeout = -1
+  # The receive timeout duration in milliseconds
+  var receive_timeout = -1
 
   # custom request headers
-  var _headers = {}
+  var headers = {}
 
   # whether to remove the expect header or not
   # only applies to requests with files in the body
-  var _no_expect = false
+  var no_expect = false
 
-  HttpClient() {
+  HttpRequest(url) {
+    if !url or !is_string(url) 
+      die Exception('invalid url')
+
+    # parse the url into component parts
+    self.url = Url.parse(url)
   }
 
-  user_agent(str) {
-    if !is_string(str) die Exception('string expected')
-    self._user_agent = str
-    return self
+  # the main http request method
+  __(method, data, has_file){
+
+    var responder = self.url.absolute_uri, headers, body, time_taken, error
+    var will_connect = true, redirect_count = 0, http_version = '1.0', status_code = 0
+
+    while will_connect {
+
+      # @TODO: in the else clause, get ipv4 address from the hostname
+      var resolved_host = Socket.get_address_info(self.url.host)
+
+      if resolved_host {
+        var host = resolved_host.ip
+        var port = self.url.port
+
+        # construct message
+        var message = '${method} ${self.url.path} HTTP/1.1\r\n\r\n'
+
+        # do real request here...
+        var client = Socket()
+
+        var start = time()
+
+        # connect to the url host on the specified port and send the request message
+        client.connect(host, port, self.connect_timeout)
+        client.send(message)
+
+        # receive the response...
+        var response_data = client.receive()
+
+        # gracefully handle responses being sent in multiple packets
+        # if the request header contains the Content-Length,
+        # get that length and keep reading until we have read the total
+        # length of the response
+        if response_data.index_of('Content-Length') {
+          var m = response_data.matches('/Content\-Length:\s*\d+/')
+          if m {
+            var length = to_number(m[0].replace('/[^0-9]/', ''))
+            while response_data.length() < length {
+              # append the new data in the stream
+              response_data += client.receive()
+            }
+          }
+        }
+
+        time_taken = time() - start
+
+        # close the client...
+        client.close()
+
+        # separate the headers and the body
+        var body_starts = response_data.index_of('\r\n\r\n')
+
+        if body_starts {
+          headers = response_data[0,body_starts].trim()
+          body = response_data[body_starts + 2, response_data.length()].trim()
+        }
+
+        # @TODO: if there was a redirect, update the host and port
+        # and change will connect to true
+        headers = self._process_header(headers, |version, status|{
+          http_version = version
+          status_code  = status
+        })
+
+        if self.follow_redirect and headers.contains('Location') {
+          self.url = Url.parse(headers['Location'])
+          self.referer = headers['Location']
+        } else {
+          will_connect = false
+        }
+      } else {
+        will_connect = false
+        die Exception('could not resolve ip address')
+      }
+    }
+
+    # return a valid HttpResponse
+    var result = HttpResponse()
+    
+    result.headers = headers
+    result.http_version = http_version
+    result.status_code = status_code
+    result.body  = body
+    result.time_taken = time_taken
+    result.redirects = redirect_count
+    result.responder = responder
+
+    return result
   }
 
-  ignore_redirect() {
-    self._follow_redirect = false
-    return self
-  }
-
-  skip_hostname_verification() {
-    self._skip_hostname_verification = true
-    return self
-  }
-
-  skip_peer_verification() {
-    self._skip_peer_verification = true
-    return self
-  }
-
-  referer(str) {
-    if !is_string(str) die Exception('string expected')
-    self._referer = str
-    return self
-  }
-
-  timeout(duration) {
-    if !is_int(duration) die Exception('integer expected')
-    self._timeout = duration
-    return self
-  }
-
-  headers(data) {
-    if !is_dict(data) die Exception('dictionary expected')
-    self._headers = data
-    return self
-  }
-
-  cookie_file(file) {
-    if !is_file(file) die Exception('file expected')
-    self._cookie_file = file
-    return self
-  }
-
-  ca_cert_file(file) {
-    if !is_file(file) die Exception('file expected')
-    self._ca_cert = file
-    return self
-  }
-
-  no_expect() {
-    self._no_expect = true
-    return self
-  }
-
-  # stub method
-  __client(url, user_agent, referer, timeout, follow_redirect,
-          skip_hostname_verification, skip_peer_verification, 
-          ca_cert, cookie_file, method, no_expect){
-  }
-
-  _process_header(header, version_callback) {
+  _process_header(header, meta_callback) {
     var result = {}
 
-    # Follow redirect headers...
-    var data = header.trim().split('\r\n')
+    if header {
+      # Follow redirect headers...
+      var data = header.trim().split('\r\n')
 
-    iter var i = 0; i < data.length(); i++ {
-      var d = data[i].index_of(':')
-      if d > -1 {
-        var key = data[i][0,d]
-        var value = data[i][d + 1,data[i].length()]
+      iter var i = 0; i < data.length(); i++ {
+        var d = data[i].index_of(':')
+        if d > -1 {
+          var key = data[i][0,d]
+          var value = data[i][d + 1,data[i].length()]
 
-        # handle cookies in header
-        if key == 'Set-Cookie' {
-          if result.contains(key) {
-            result[key].append(value)
+          # handle cookies in header
+          if key == 'Set-Cookie' {
+            if result.contains(key) {
+              result[key].append(value)
+            } else {
+              result[key] = [value]
+            }
           } else {
-            result[key] = [value]
+            result.set(key, value)
           }
-        } else {
-          result.set(key, value)
+        } else if(data[i].lower().starts_with('http/')){
+          var split = data[i].split(' ')
+          var http_version = split[0].replace('http/', '')
+
+          # call back with (version, status code)
+          if meta_callback meta_callback(http_version, to_number(split[1]))
         }
-      } else if(data[i].lower().starts_with('http/')){
-        var http_version = data[i].split(' ')[0].replace('http/', '')
-        if version_callback version_callback(http_version)
       }
     }
 
     return result
   }
 
-  _process_reponse(response) {
-    # result to return
-    var result = {
-      status_code: 0,
-      http_version: '1.0',
-      time_taken: 0,
-      redirects: 0,
-      responder: nil,
-      headers: {},
-      error: nil,
-      body: nil
-    }
+  _make_request(method, data) {
+    var has_file = false
 
-    result['status_code']  = response[0]
-    result['error'] = response[1]
-    result['headers'] = self._process_header(response[2], |s|{
-      result['http_version'] = s
-    })
-    result['body']  = response[3]
-    result['time_taken'] = response[4]
-    result['redirects'] = response[5]
-    result['responder'] = response[6]
-
-    return result
-  }
-
-  _make_request(method, url, data) {
-    if url.length() > 0 {
-      var has_file = false
-
-      if is_dict(data) {
-        for value in data {
-          if is_file(value) has_file = true
-        }
+    if is_dict(data) {
+      for value in data {
+        if is_file(value) has_file = true
       }
-
-      var response = self.__client(url, self._user_agent,
-          self._referer, self._headers, self._timeout, self._follow_redirect, 
-          self._skip_hostname_verification, self._skip_peer_verification,
-          self._ca_cert, self._cookie_file, method.upper(),
-          data, self._no_expect, has_file
-      )
-      
-      return self._process_reponse(response)
-    } else {
-      die Exception("invalid url '${url}'")
     }
+
+    return self.__(method.upper(), data, has_file)
   }
 
   # Makes Http GET request to the given URL
   # @return dictionary
-  get(url) {
-    if !is_string(url) die Exception('string expected for url')
-    return self._make_request('GET', url)
+  get() {
+    return self._make_request('GET')
   }
 
   # Makes Http POST request to the given URL with the given data
   # @return dictionary
-  post(url, data) {
+  post(data) {
     if !is_dict(data) and !is_string(data) 
       die Exception('post body must be a dictionary or string')
-    return self._make_request('POST', url, data)
+
+    return self._make_request('POST', data)
   }
 }

@@ -17,7 +17,6 @@ b_module_registry modules[] = {
     {"base64", GET_MODULE_LOADER(base64)}, //
     {"math",   GET_MODULE_LOADER(math)},     //
     {"date",   GET_MODULE_LOADER(date)},     //
-    {"http",   GET_MODULE_LOADER(http)},     //
     {"socket", GET_MODULE_LOADER(socket)},     //
     {NULL,     NULL},
 };

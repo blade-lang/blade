@@ -19,8 +19,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <curl/curl.h>
-
 // for debugging...
 #include "debug.h"
 
@@ -455,15 +453,9 @@ void init_vm(b_vm *vm) {
   init_builtin_functions(vm);
   init_builtin_methods(vm);
   initialize_exceptions(vm);
-
-  // this should be called once for the lifetime of an application
-  curl_global_init(CURL_GLOBAL_ALL);
 }
 
 void free_vm(b_vm *vm) {
-  // this should be called once for the lifetime of an application
-  curl_global_cleanup();
-
   free_objects(vm);
   free_table(vm, &vm->strings);
   free_table(vm, &vm->globals);
