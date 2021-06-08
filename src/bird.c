@@ -16,6 +16,7 @@
 
 #include <setjmp.h>
 #include <signal.h>
+#include <fcntl.h>
 
 #ifdef _WIN32
 #include "win32.h"
