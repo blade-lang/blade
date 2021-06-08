@@ -1029,7 +1029,7 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
   if (value > 65535) // check for greater that \uffff
     count++;
   if (count != 0) {
-    memcpy(string + index, utf8_encode(value), count + 1);
+    memcpy(string + index, utf8_encode(value), (size_t)count + 1);
   }
   /* if (value > 65535) // but greater than \uffff doesn't occupy any extra byte
     count--; */
@@ -1037,7 +1037,7 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
 }
 
 static char *compile_string(b_parser *p, int *length) {
-  char *str = (char *)malloc(((p->previous.length - 2) + 1) * sizeof(char));
+  char *str = (char *)malloc((((size_t)p->previous.length - 2) + 1) * sizeof(char));
   char *real = (char *)p->previous.start + 1;
 
   int real_length = p->previous.length - 2, k = 0;
@@ -1094,7 +1094,8 @@ static char *compile_string(b_parser *p, int *length) {
         continue;
       }
       case 'U': {
-        k += read_unicode_escape(p, str, real, 8, i, k) - 1;
+        int count = read_unicode_escape(p, str, real, 8, i, k);
+        k += count > 4 ? count - 2 : count - 1;
         i += 9;
         continue;
       }
@@ -1115,7 +1116,7 @@ static char *compile_string(b_parser *p, int *length) {
 static void string(b_parser *p, bool can_assign) {
   int length;
   char *str = compile_string(p, &length);
-  emit_constant(p, OBJ_VAL(copy_string(p->vm, str, length)));
+  emit_constant(p, OBJ_VAL(take_string(p->vm, str, length)));
 }
 
 static void string_interpolation(b_parser *p, bool can_assign) {
@@ -1829,7 +1830,7 @@ static void using_statement(b_parser *p) {
         state = 1;
         advance(p);
 
-        b_value jump = NUMBER_VAL(current_blob(p)->count - start_offset);
+        b_value jump = NUMBER_VAL((double)current_blob(p)->count - (double)start_offset);
 
         if (p->previous.type == TRUE_TOKEN) {
           table_set(p->vm, &sw->table, TRUE_VAL, jump);
@@ -2210,8 +2211,8 @@ b_obj_func *compile(b_vm *vm, const char *source, const char *file,
   parser.current_class = NULL;
   parser.current_file = file;
 
-  b_compiler *compiler = (b_compiler*) malloc(sizeof(b_compiler));
-  init_compiler(&parser, compiler, TYPE_SCRIPT);
+  b_compiler compiler;
+  init_compiler(&parser, &compiler, TYPE_SCRIPT);
 
   advance(&parser);
 
@@ -2220,7 +2221,7 @@ b_obj_func *compile(b_vm *vm, const char *source, const char *file,
   }
 
   b_obj_func *function = end_compiler(&parser);
-  vm->compiler = compiler;
+  vm->compiler = &compiler;
 
   return parser.had_error ? NULL : function;
 }

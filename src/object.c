@@ -1,5 +1,4 @@
 #include "object.h"
-#include "config.h"
 #include "memory.h"
 #include "table.h"
 #include "util.h"
@@ -150,7 +149,7 @@ b_obj_string *take_string(b_vm *vm, char *chars, int length) {
 
   b_obj_string *interned = table_find_string(&vm->strings, chars, length, hash);
   if (interned != NULL) {
-    FREE_ARRAY(char, chars, length + 1);
+    FREE_ARRAY(char, chars, (size_t)length + 1);
     return interned;
   }
 
@@ -164,7 +163,7 @@ b_obj_string *copy_string(b_vm *vm, const char *chars, int length) {
   if (interned != NULL)
     return interned;
 
-  char *heap_chars = ALLOCATE(char, length + 1);
+  char *heap_chars = ALLOCATE(char, (size_t)length + 1);
   memcpy(heap_chars, chars, length);
   heap_chars[length] = '\0';
 
@@ -323,17 +322,24 @@ b_obj_bytes *take_bytes(b_vm *vm, unsigned char *b, int length) {
 
 static inline char *function_to_string(b_obj_func *func) {
   if (func->name == NULL) {
-    return "<script 0x00>";
+    return strdup("<script 0x00>");
   }
   char *str = (char *)malloc(sizeof(char) * (snprintf(NULL, 0, "<function %s>", func->name->chars)));
-  sprintf(str, "<function %s>", func->name->chars);
-  return str;
+  if (str != NULL) {
+    sprintf(str, "<function %s>", func->name->chars);
+    return str;
+  }
+  return strdup(func->name->chars);
 }
 
 static inline char *list_to_string(b_vm *vm, b_value_arr *array) {
-  char *str = "[";
+  char *str = strdup("[");
   for (int i = 0; i < array->count; i++) {
-    str = append_strings(str, value_to_string(vm, array->values[i]));
+    char *val = value_to_string(vm, array->values[i]);
+    if(val != NULL) {
+      str = append_strings(str, val);
+      free(val);
+    }
     if (i != array->count - 1) {
       str = append_strings(str, ", ");
     }
@@ -343,10 +349,13 @@ static inline char *list_to_string(b_vm *vm, b_value_arr *array) {
 }
 
 static inline char *bytes_to_string(b_vm *vm, b_byte_arr *array) {
-  char *str = "(";
+  char *str = strdup("(");
   for (int i = 0; i < array->count; i++) {
     char *chars = (char *)malloc(sizeof(char) * (snprintf(NULL, 0, "0x%x", array->bytes[i])));
-    sprintf(chars, "0x%x", array->bytes[i]);
+    if (chars != NULL) {
+      sprintf(chars, "0x%x", array->bytes[i]);
+      str = append_strings(str, chars);
+    }
 
     if (i != array->count - 1) {
       str = append_strings(str, " ");
@@ -357,16 +366,24 @@ static inline char *bytes_to_string(b_vm *vm, b_byte_arr *array) {
 }
 
 static char *dict_to_string(b_vm *vm, b_obj_dict *dict) {
-  char *str = "{";
+  char *str = strdup("{");
   for (int i = 0; i < dict->names.count; i++) {
     // print_value(dict->names.values[i]);
     b_value key = dict->names.values[i];
-    str = append_strings(str, value_to_string(vm, key));
+    char *_key = value_to_string(vm, key);
+    if(_key != NULL) {
+      str = append_strings(str, _key);
+      free(_key);
+    }
     str = append_strings(str, ": ");
 
     b_value value;
     table_get(&dict->items, key, &value);
-    str = append_strings(str, value_to_string(vm, value));
+    char *val = value_to_string(vm, value);
+    if(val != NULL) {
+      str = append_strings(str, val);
+      free(val);
+    }
 
     if (i != dict->names.count - 1) {
       str = append_strings(str, ", ");
@@ -384,10 +401,18 @@ char *object_to_string(b_vm *vm, b_value value) {
     return "<switch>";
   }
   case OBJ_CLASS:
-    sprintf(str, "<class %s>", AS_CLASS(value)->name->chars);
+    if (str != NULL) {
+      sprintf(str, "<class %s>", AS_CLASS(value)->name->chars);
+    }  else {
+      str = strdup(AS_CLASS(value)->name->chars);
+    }
     break;
   case OBJ_INSTANCE:
-    sprintf(str, "<instance of %s>", AS_INSTANCE(value)->klass->name->chars);
+    if (str != NULL) {
+      sprintf(str, "<instance of %s>", AS_INSTANCE(value)->klass->name->chars);
+    } else {
+      str = strdup(AS_INSTANCE(value)->klass->name->chars);
+    }
     break;
   case OBJ_CLOSURE:
     return function_to_string(AS_CLOSURE(value)->function);

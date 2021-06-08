@@ -131,7 +131,7 @@ char *remove_regex_delimiter(b_vm *vm, b_obj_string *string) {
   }
 
   char *str = ALLOCATE(char, i);
-  memcpy(str, string->chars + 1, i - 1);
+  memcpy(str, string->chars + 1, (size_t)i - 1);
   str[i - 1] = '\0';
 
   return str;
@@ -343,10 +343,14 @@ DECLARE_STRING_METHOD(join) {
     length = AS_STRING(argument)->length;
     array = (char **)calloc(length, sizeof(char **));
 
-    for (int i = 0; i < length; i++) {
-      array[i] = (char *)calloc(2, sizeof(char *));
-      char str[2] = {string[i], '\0'};
-      strcpy(array[i], str);
+    if (array != NULL) {
+      for (int i = 0; i < length; i++) {
+        array[i] = (char*)calloc(2, sizeof(char*));
+        char str[2] = { string[i], '\0' };
+        if (array[i] != NULL) {
+          strcpy(array[i], str);
+        }
+      }
     }
   } else if (IS_LIST(argument) || IS_DICT(argument)) {
 
@@ -360,9 +364,11 @@ DECLARE_STRING_METHOD(join) {
 
     array = (char **)calloc(length, sizeof(char **));
 
-    for (int i = 0; i < length; i++) {
-      // get interpreted string here
-      array[i] = value_to_string(vm, values[i]);
+    if (array != NULL) {
+      for (int i = 0; i < length; i++) {
+        // get interpreted string here
+        array[i] = value_to_string(vm, values[i]);
+      }
     }
   } else {
     RETURN_ERROR("join() does not support object of type %s",
@@ -370,14 +376,22 @@ DECLARE_STRING_METHOD(join) {
   }
 
   for (int i = 0; i < length; i++) {
-    if (i != 0)
-      array[0] = append_strings(array[0], array[i]);
-
-    if (i != length - 1)
-      array[0] = append_strings(array[0], AS_C_STRING(METHOD_OBJECT));
+    if (array != NULL) {
+      if (i != 0) {
+        array[0] = append_strings(array[0], array[i]);
+        free(array[i]);
+      } else if (i != length - 1) {
+        array[0] = append_strings(array[0], AS_C_STRING(METHOD_OBJECT));
+      }
+    }
   }
 
-  RETURN_TT_STRING(array[0]);
+  if(array != NULL && array[0] != NULL) {
+    RETURN_TT_STRING(array[0]);
+  }
+
+  char *result = strdup(AS_C_STRING(argument));
+  RETURN_TT_STRING(result);
 }
 
 DECLARE_STRING_METHOD(split) {
@@ -523,13 +537,13 @@ DECLARE_STRING_METHOD(lpad) {
     RETURN_VALUE(METHOD_OBJECT);
 
   int fill_size = width - string->length;
-  char *fill = ALLOCATE(char, fill_size + 1);
+  char *fill = ALLOCATE(char, (size_t)fill_size + 1);
 
   int i;
   for (i = 0; i < fill_size; i++)
     fill[i] = fill_char;
 
-  char *str = ALLOCATE(char, string->length + fill_size + 1);
+  char *str = ALLOCATE(char, (size_t)string->length + (size_t)fill_size + 1);
   memcpy(str, fill, fill_size);
   memcpy(str + fill_size, string->chars, string->length);
   str[string->length + fill_size] = '\0';
@@ -554,13 +568,13 @@ DECLARE_STRING_METHOD(rpad) {
     RETURN_VALUE(METHOD_OBJECT);
 
   int fill_size = width - string->length;
-  char *fill = ALLOCATE(char, fill_size + 1);
+  char *fill = ALLOCATE(char, (size_t)fill_size + 1);
 
   int i;
   for (i = 0; i < fill_size; i++)
     fill[i] = fill_char;
 
-  char *str = ALLOCATE(char, string->length + fill_size + 1);
+  char *str = ALLOCATE(char, (size_t)string->length + (size_t)fill_size + 1);
   memcpy(str, string->chars, string->length);
   memcpy(str + string->length, fill, fill_size);
   str[string->length + fill_size] = '\0';
@@ -1033,7 +1047,7 @@ DECLARE_STRING_METHOD(__itern__) {
 
   int index = AS_NUMBER(args[0]);
   if (index < string->utf8_length - 1) {
-    RETURN_NUMBER(index + 1);
+    RETURN_NUMBER((double)index + 1);
   }
 
   RETURN;

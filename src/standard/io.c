@@ -7,7 +7,7 @@
 #include <termios.h>
 
 #else
-#include "compat/termios.h"
+#include "b_termios.h"
 #endif
 
 #include <errno.h>
@@ -524,7 +524,7 @@ int select_serial(int nfds, fd_set *readfds, fd_set *writefds,
                   fd_set *exceptfds, struct timeval *timeout) {
 
   SetCommMask(com.hComm, EV_RXCHAR);
-  DWORD dwEventMask;
+  DWORD dwEventMask = NULL;
   if (WaitCommEvent(com.hComm, &dwEventMask, NULL) == 0) {
     return -1; // Return -1 if failed
   }
@@ -687,7 +687,7 @@ DECLARE_NATIVE(io_getc) {
   }
 
   int n_read;
-  char *c = ALLOCATE(char, length + 1);
+  char *c = ALLOCATE(char, (size_t)length + 1);
   while ((n_read = (int)read(STDIN_FILENO, c, length)) != 1) {
     if (n_read == -1 && errno != EAGAIN) {
       RETURN_ERROR("error reading character from stdin");
@@ -698,7 +698,7 @@ DECLARE_NATIVE(io_getc) {
     char *ch = utf8_encode(c[0]);
     RETURN_STRING(ch);
   } else {
-    char *result = ALLOCATE(char, length + 2);
+    char *result = ALLOCATE(char, (size_t)length + 2);
     length = read_line(result, length + 1);
     RETURN_L_STRING(result, length);
   }

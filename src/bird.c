@@ -16,6 +16,7 @@
 
 #include <setjmp.h>
 #include <signal.h>
+#include <fcntl.h>
 
 #ifdef _WIN32
 #include "win32.h"
@@ -44,7 +45,9 @@ static void repl(b_vm *vm) {
   printf("%s, (Build time = %s, %s)\n", COMPILER, __DATE__, __TIME__);
   printf("Type \"exit()\" to quit, \"help()\" or \"credits()\" for more information\n");
 
-  char *source = (char *) calloc(1, sizeof(char));
+  char *source = (char *) malloc(sizeof(char));
+  memset(source, 0, sizeof(char));
+
   int current_line = 0;
   int brace_count = 0, paren_count = 0, bracket_count = 0, single_quote_count = 0, double_quote_count = 0;
 
@@ -85,12 +88,7 @@ static void repl(b_vm *vm) {
 #endif // _WIN32
 
     // terminate early if we receive a terminating command such as exit()
-
-#if defined _MSC_VER && defined _DEBUG
-    if (strcmp(line, "exit()", line_length) == 0) {
-#else
     if (strcmp(line, "exit()") == 0) {
-#endif
       exit(EXIT_SUCCESS);
     }
 
@@ -208,26 +206,32 @@ int main(int argc, char *argv[]) {
   }
 
   b_vm *vm = (b_vm *) malloc(sizeof(b_vm));
-  memset(vm, 0, sizeof(b_vm));
-  init_vm(vm);
+  if (vm != NULL) {
+    memset(vm, 0, sizeof(b_vm));
+    init_vm(vm);
 
-  // set vm options...
-  vm->should_debug_stack = should_debug_stack;
-  vm->should_print_bytecode = should_print_bytecode;
-  vm->next_gc = next_gc_start;
+    // set vm options...
+    vm->should_debug_stack = should_debug_stack;
+    vm->should_print_bytecode = should_print_bytecode;
+    vm->next_gc = next_gc_start;
 
-  /*// forcing printf buffering for TTYs and terminals
-  if (isatty(fileno(stdout))) {
-    char buffer[8192];
-    setvbuf(stdout, buffer, _IOFBF, sizeof(buffer));
-  }*/
+    /*// forcing printf buffering for TTYs and terminals
+    if (isatty(fileno(stdout))) {
+      char buffer[8192];
+      setvbuf(stdout, buffer, _IOFBF, sizeof(buffer));
+    }*/
 
-  if (argc == 1 || argc <= optind) {
-    repl(vm);
-  } else {
-    run_file(vm, argv[optind]);
+    if (argc == 1 || argc <= optind) {
+      repl(vm);
+    }
+    else {
+      run_file(vm, argv[optind]);
+    }
+
+    free_vm(vm);
+    return EXIT_SUCCESS;
   }
 
-  free_vm(vm);
-  return EXIT_SUCCESS;
+  fprintf(stderr, "Device out of memory.");
+  exit(EXIT_FAILURE);
 }

@@ -61,7 +61,7 @@ DECLARE_BYTES_METHOD(append) {
       b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
       bytes->bytes.bytes =
           reallocate(vm, bytes->bytes.bytes, bytes->bytes.count,
-                     bytes->bytes.count + list->items.count);
+                     (size_t)bytes->bytes.count + (size_t)list->items.count);
 
       for (int i = 0; i < list->items.count; i++) {
         if (!IS_NUMBER(list->items.values[i])) {
@@ -101,7 +101,7 @@ DECLARE_BYTES_METHOD(extend) {
   b_obj_bytes *n_bytes = AS_BYTES(args[0]);
 
   bytes->bytes.bytes = reallocate(vm, bytes->bytes.bytes, bytes->bytes.count,
-                                  bytes->bytes.count + n_bytes->bytes.count);
+    (size_t)bytes->bytes.count + (size_t)n_bytes->bytes.count);
 
   memcpy(bytes->bytes.bytes + bytes->bytes.count, n_bytes->bytes.bytes,
          n_bytes->bytes.count);
@@ -292,7 +292,7 @@ DECLARE_BYTES_METHOD(__itern__) {
 
   int index = AS_NUMBER(args[0]);
   if (index < bytes->bytes.count - 1) {
-    RETURN_NUMBER(index + 1);
+    RETURN_NUMBER((double)index + 1);
   }
 
   RETURN;

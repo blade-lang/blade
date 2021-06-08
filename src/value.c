@@ -117,19 +117,22 @@ void echo_value(b_value value) { do_print_value(value, true); }
 
 static inline char *number_to_string(double number) {
   int length = snprintf(NULL, 0, NUMBER_FORMAT, number);
-  char *num_str = (char *) calloc(length + 1, sizeof(char));
-  sprintf(num_str, NUMBER_FORMAT, number);
-  return num_str;
+  char *num_str = (char *) calloc((size_t)length + 1, sizeof(char));
+  if (num_str != NULL) {
+    sprintf(num_str, NUMBER_FORMAT, number);
+    return num_str;
+  }
+  return "";
 }
 
 char *value_to_string(b_vm *vm, b_value value) {
 #if defined USE_NAN_BOXING && USE_NAN_BOXING
   if (IS_EMPTY(value))
-    return "";
+    return strdup("");
   if (IS_NIL(value))
-    return "nil";
+    return strdup("nil");
   else if (IS_BOOL(value))
-    return AS_BOOL(value) ? "true" : "false";
+    return strdup(AS_BOOL(value) ? "true" : "false");
   else if (IS_NUMBER(value))
     return number_to_string(AS_NUMBER(value));
   else

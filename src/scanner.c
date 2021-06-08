@@ -1,6 +1,5 @@
 #include "scanner.h"
 #include "common.h"
-#include "b_asprintf.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -30,14 +29,20 @@ static b_token error_token(b_scanner *s, const char *message, ...) {
   va_list args;
   va_start(args, message);
   int length = vsnprintf(NULL, 0, message, args);
-  char *err = (char*) calloc(length + 1, sizeof(char));
-  vsprintf(err, message, args);
-  va_end(args);
+  char *err = (char*) calloc((size_t)length + 1, sizeof(char));
+  if (err != NULL) {
+    vsprintf(err, message, args);
+    va_end(args);
+  }
 
   b_token t;
   t.type = ERROR_TOKEN;
   t.start = err;
-  t.length = (int)strlen(err);
+  if (err != NULL) {
+    t.length = (int)strlen(err);
+  } else {
+    t.length = 0;
+  }
   t.line = s->line;
   return t;
 }
@@ -238,7 +243,7 @@ static b_token number(b_scanner *s) {
 
 static b_tkn_type check_keyword(b_scanner *s, int start, int length,
                                 const char *rest, b_tkn_type type) {
-  if (s->current - s->start == start + length &&
+  if ((int)(s->current - s->start) == start + length &&
       memcmp(s->start + start, rest, length) == 0) {
     return type;
   }

@@ -1,6 +1,6 @@
-#ifndef _WIN32
-#include <getopt.h>
-#else
+//#ifndef _WIN32
+//#include <getopt.h>
+//#else
 
 #pragma once
 
@@ -184,4 +184,4 @@ extern int _getopt_internal();
 
 #endif /* getopt.h */
 
-#endif
+//#endif

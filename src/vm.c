@@ -52,8 +52,10 @@ static b_value get_stack_trace(b_vm *vm){
     size_t trace_start_length = snprintf(NULL, 0, trace_start, function->file, line);
 
     char *trace_part = (char*)calloc(trace_start_length + 1, sizeof(char));
-    sprintf(trace_part, trace_start, function->file, line);
-    trace_part[(int)trace_start_length] = '\0';
+    if (trace_part != NULL) {
+      sprintf(trace_part, trace_start, function->file, line);
+      trace_part[(int)trace_start_length] = '\0';
+    }
 
     if (function->name == NULL) {
       trace_part = append_strings(
@@ -64,9 +66,13 @@ static b_value get_stack_trace(b_vm *vm){
     }
 
     trace = append_strings(trace, trace_part);
+    free(trace_part);
   }
 
-  RETURN_TT_STRING(trace);
+  if (trace != NULL) {
+    RETURN_TT_STRING(trace);
+  }
+  RETURN_STRING("");
 }
 
 bool propagate_exception(b_vm *vm) {
@@ -91,7 +97,7 @@ bool propagate_exception(b_vm *vm) {
     vm->frame_count--;
   }
 
-  flush_output(); // flush out anything on stdout first
+  fflush(stdout); // flush out anything on stdout first
 
   b_value message, trace;
   fprintf(stderr, "Unhandled %s: ", exception->klass->name->chars);
@@ -164,7 +170,7 @@ b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
 }
 
 void _runtime_error(b_vm *vm, const char *format, ...) {
-  flush_output(); // flush out anything on stdout first
+  fflush(stdout); // flush out anything on stdout first
   
   b_call_frame *frame = &vm->frames[vm->frame_count - 1];
   b_obj_func *function = get_frame_function(frame);
@@ -808,7 +814,7 @@ static b_obj_string *multiply_string(b_vm *vm, b_obj_string *str, double number)
     return str;
 
   int total_length = str->length * times;
-  char *result = ALLOCATE(char, total_length + 1);
+  char *result = ALLOCATE(char, (size_t)total_length + 1);
 
   for (int i = 0; i < times; i++) {
     memcpy(result + (str->length * i), str->chars, str->length);
@@ -1157,7 +1163,7 @@ static bool concatenate(b_vm *vm) {
     b_obj_string *b = AS_STRING(_b);
 
     int length = num_length + b->length;
-    char *chars = ALLOCATE(char, length + 1);
+    char *chars = ALLOCATE(char, (size_t)length + 1);
     memcpy(chars, num_str, num_length);
     memcpy(chars + num_length, b->chars, b->length);
     chars[length] = '\0';
@@ -1175,7 +1181,7 @@ static bool concatenate(b_vm *vm) {
     int num_length = sprintf(num_str, NUMBER_FORMAT, b);
 
     int length = num_length + a->length;
-    char *chars = ALLOCATE(char, length + 1);
+    char *chars = ALLOCATE(char, (size_t)length + 1);
     memcpy(chars, a->chars, a->length);
     memcpy(chars + a->length, num_str, num_length);
     chars[length] = '\0';
@@ -1190,7 +1196,7 @@ static bool concatenate(b_vm *vm) {
     b_obj_string *a = AS_STRING(_a);
 
     int length = a->length + b->length;
-    char *chars = ALLOCATE(char, length + 1);
+    char *chars = ALLOCATE(char, (size_t)length + 1);
     memcpy(chars, a->chars, a->length);
     memcpy(chars + a->length, b->chars, b->length);
     chars[length] = '\0';

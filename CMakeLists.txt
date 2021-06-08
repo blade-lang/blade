@@ -8,12 +8,13 @@ include(ExternalProject)
 
 set(CMAKE_C_STANDARD 11)
 
+set(cfsp " ")
 set(SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/..)
 
 # set dependency directories
 set(PCRE2_DIR ${CMAKE_CURRENT_BINARY_DIR}/pcre2-build)
 
-message("Adding external library: pcre2...")
+message(STATUS "Adding external library: pcre2...")
 ExternalProject_Add(pcre2
     SOURCE_DIR ${SRC_DIR}/deps/pcre2-8
     PREFIX ${PCRE2_DIR}
@@ -83,13 +84,27 @@ endif(UNIX)
 
 target_link_libraries(bird libbird)
 
-if(RUNTIME_OUTPUT_DIRECTORY)
-  add_custom_command(TARGET bird POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/libs ${RUNTIME_OUTPUT_DIRECTORY}/libs
-      )
-else()
-  add_custom_command(TARGET bird POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/libs ${CMAKE_CURRENT_BINARY_DIR}/libs
-      )
-endif(RUNTIME_OUTPUT_DIRECTORY)
+add_custom_command(TARGET bird POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/libs ${CMAKE_CURRENT_BINARY_DIR}/bin/libs
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/tests ${CMAKE_CURRENT_BINARY_DIR}/bin/tests
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/benchmarks ${CMAKE_CURRENT_BINARY_DIR}/bin/benchmarks
+)
 
+STRING(TOUPPER "${CMAKE_BUILD_TYPE}" buildtype)
+
+STRING(TOUPPER "${CMAKE_BUILD_TYPE}" buildtype)
+message(STATUS "Bird configuration summary")
+message(STATUS "  Install prefix .................. : ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "  C compiler ...................... : ${CMAKE_C_COMPILER}")
+message(STATUS "  Build type ...................... : ${buildtype}")
+message(STATUS "  C compiler flags ................ : ${${CMAKE_C_FLAGS}${cfsp}}${CMAKE_C_FLAGS_${buildtype}}")
+
+# for LTO
+include(CheckIPOSupported)
+check_ipo_supported(RESULT supported OUTPUT error)
+if(supported)
+  message(STATUS "  IPO/LTO ......................... : enabled")
+  set_property(TARGET libbird PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+  message(STATUS "  IPO/LTO ......................... : not supported: <${error}>")
+endif()
