@@ -386,7 +386,12 @@ DECLARE_STRING_METHOD(join) {
     }
   }
 
-  RETURN_TT_STRING(array != NULL && array[0] != NULL ? array[0] : strdup(argument));
+  if(array != NULL && array[0] != NULL) {
+    RETURN_TT_STRING(array[0]);
+  }
+
+  char *result = strdup(AS_C_STRING(argument));
+  RETURN_TT_STRING(result);
 }
 
 DECLARE_STRING_METHOD(split) {
