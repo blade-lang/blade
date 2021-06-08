@@ -1094,7 +1094,8 @@ static char *compile_string(b_parser *p, int *length) {
         continue;
       }
       case 'U': {
-        k += read_unicode_escape(p, str, real, 8, i, k) - 1;
+        int count = read_unicode_escape(p, str, real, 8, i, k);
+        k += count > 4 ? count - 2 : count - 1;
         i += 9;
         continue;
       }

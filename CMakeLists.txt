@@ -78,6 +78,7 @@ target_link_libraries(libbird ${PCRE2_LIB_FILE})
 
 if(UNIX)
   target_link_libraries(libbird readline)
+  target_link_libraries(libbird m)
 endif(UNIX)
 
 target_link_libraries(bird libbird)
