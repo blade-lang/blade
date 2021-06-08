@@ -21,7 +21,7 @@
  */
 
 #include <direct.h> /* for _getcwd() and _chdir() */
-#include "compat/getopt.h" /* getopt at: https://gist.github.com/ashelly/7776712 */
+#include "b_getopt.h" /* getopt at: https://gist.github.com/ashelly/7776712 */
 #include <io.h>
 #include <process.h> /* for getpid() and the exec..() family */
 #include <stdlib.h>
