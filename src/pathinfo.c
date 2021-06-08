@@ -73,7 +73,7 @@ char *get_exe_path() {
 
 char *get_exe_path() {
   char raw_path[PATH_MAX];
-  char *real_path = malloc(PATH_MAX * sizeof(char));
+  char *real_path = (char *)malloc(PATH_MAX * sizeof(char));
   uint32_t raw_size = (uint32_t) sizeof(raw_path);
 
   if (!_NSGetExecutablePath(raw_path, &raw_size)) {
@@ -125,7 +125,8 @@ char *get_filename(char *filepath) {
       start = i;
   }
   length = length - start;
-  char *string = malloc(sizeof(char));
+  char *string = (char*)calloc(1, sizeof(char));
+
   strncat(string, filepath + start, length);
   return string;
 }
@@ -196,7 +197,10 @@ bool is_core_library_file(char *filepath, char *file_name) {
   char *library_file = merge_paths(bird_directory, bird_file_name);
 
   if (file_exists(library_file)) {
-    return memcmp(library_file, filepath, (int) strlen(filepath)) == 0;
+    int filepath_length = (int) strlen(filepath);
+    int library_file_length = (int) strlen(library_file);
+    return library_file_length == filepath_length
+           && memcmp(library_file, filepath, filepath_length) == 0;
   }
   return false;
 }

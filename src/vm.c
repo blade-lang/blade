@@ -13,6 +13,7 @@
 #include "b_file.h"
 #include "b_list.h"
 #include "b_string.h"
+#include "util.h"
 
 #include <math.h>
 #include <stdarg.h>
@@ -37,10 +38,9 @@ static inline b_obj_func *get_frame_function(b_call_frame *frame) {
 }
 
 static b_value get_stack_trace(b_vm *vm){
-  char *trace = (char *)malloc(sizeof(char));
-  memset(trace, 0, sizeof(char));
+  char *trace = (char *)calloc(1, sizeof(char));
 
-  for (int i = vm->frame_count - 1; i >= 0; i--) {
+  for (int i = 0; i < vm->frame_count; i++) {
     b_call_frame *frame = &vm->frames[i];
     b_obj_func *function = get_frame_function(frame);
 
@@ -51,23 +51,22 @@ static b_value get_stack_trace(b_vm *vm){
     const char* trace_start = "    File: %s, Line: %d, In: ";
     size_t trace_start_length = snprintf(NULL, 0, trace_start, function->file, line);
 
-    char *trace_part = (char*)malloc(trace_start_length + sizeof(char));
+    char *trace_part = (char*)calloc(trace_start_length + 1, sizeof(char));
     sprintf(trace_part, trace_start, function->file, line);
     trace_part[(int)trace_start_length] = '\0';
 
     if (function->name == NULL) {
       trace_part = append_strings(
-          trace_part, i > 0 ? "<script>\n" : "<script>");
+          trace_part, i < vm->frame_count - 1 ? "<script>\n" : "<script>");
     } else {
       trace_part = append_strings(trace_part, function->name->chars);
-      trace_part =
-          append_strings(trace_part, i > 0 ? "()\n" : "()");
+      trace_part = append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" : "()");
     }
 
     trace = append_strings(trace, trace_part);
   }
 
-  RETURN_T_STRING(trace, (int)strlen(trace));
+  RETURN_TT_STRING(trace);
 }
 
 bool propagate_exception(b_vm *vm) {
@@ -502,18 +501,18 @@ static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
   }
 
   b_call_frame *frame = &vm->frames[vm->frame_count++];
-  frame->function = (b_obj *)callee;
+  frame->function = callee;
   frame->ip = function->blob.code;
 
   frame->slots = vm->stack_top - arg_count - 1;
   return true;
 }
 
-static bool call_closure(b_vm *vm, b_obj_closure *closure, int arg_count) {
+static inline bool call_closure(b_vm *vm, b_obj_closure *closure, int arg_count) {
   return call(vm, (b_obj *)closure, closure->function, arg_count);
 }
 
-static bool call_function(b_vm *vm, b_obj_func *function, int arg_count) {
+static inline bool call_function(b_vm *vm, b_obj_func *function, int arg_count) {
   return call(vm, (b_obj *)function, function, arg_count);
 }
 
@@ -544,7 +543,6 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
       } else if (arg_count != 0) {
         return throw_exception(vm, "%s constructor expects 0 arguments, %d given",
                                klass->name, arg_count);
-        return false;
       }
       return true;
     }
@@ -562,11 +560,13 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
       b_value result = native->function(vm, arg_count, vm->stack_top - arg_count);
 
       if (IS_EMPTY(result)) {
+        CLEAR_GC();
+        vm->stack_top -= arg_count + 1;
         return false;
       }
 
-      vm->stack_top -= arg_count + 1;
       CLEAR_GC();
+      vm->stack_top -= arg_count + 1;
       push(vm, result);
       return true;
     }
@@ -715,13 +715,13 @@ static void define_property(b_vm *vm, b_obj_string *name, bool is_static) {
   pop(vm);
 }
 
-bool is_falsey(b_value value) {
+bool is_false(b_value value) {
   if (IS_BOOL(value))
     return IS_BOOL(value) && !AS_BOOL(value);
   if (IS_NIL(value) || IS_EMPTY(value))
     return true;
 
-  // -1 is the number equivalent of false in Birdy
+  // -1 is the number equivalent of false in Bird
   if (IS_NUMBER(value))
     return AS_NUMBER(value) < 0;
 
@@ -747,7 +747,8 @@ bool is_falsey(b_value value) {
 
 bool is_instance_of(b_obj_class *klass1, char *klass2_name) {
   while (klass1 != NULL) {
-    if (memcmp(klass1->name->chars, klass2_name, klass1->name->length) == 0) {
+    if ((int)strlen(klass2_name) == klass1->name->length
+        && memcmp(klass1->name->chars, klass2_name, klass1->name->length) == 0) {
       return true;
     }
     klass1 = klass1->superclass;
@@ -798,8 +799,7 @@ bool dict_set_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value) {
   return table_set(vm, &dict->items, key, value);
 }
 
-static b_obj_string *multiply_string(b_vm *vm, b_obj_string *str,
-                                     double number) {
+static b_obj_string *multiply_string(b_vm *vm, b_obj_string *str, double number) {
   int times = (int)number;
 
   if (times <= 0) // 'str' * 0 == '', 'str' * -1 == ''
@@ -834,16 +834,13 @@ static b_obj_list *add_list(b_vm *vm, b_obj_list *a, b_obj_list *b) {
 static b_obj_bytes *add_bytes(b_vm *vm, b_obj_bytes *a, b_obj_bytes *b) {
   b_obj_bytes *bytes = new_bytes(vm, a->bytes.count + b->bytes.count);
 
-  memcpy(bytes->bytes.bytes, a->bytes.bytes,
-         a->bytes.count * sizeof(unsigned char *));
-  memcpy(bytes->bytes.bytes + a->bytes.count, b->bytes.bytes,
-         b->bytes.count * sizeof(unsigned char *));
+  memcpy(bytes->bytes.bytes, a->bytes.bytes, a->bytes.count);
+  memcpy(bytes->bytes.bytes + a->bytes.count, b->bytes.bytes, b->bytes.count);
 
   return bytes;
 }
 
-static b_obj_list *multiply_list(b_vm *vm, b_obj_list *a, b_obj_list *new_list,
-                                 int times) {
+static b_obj_list *multiply_list(b_vm *vm, b_obj_list *a, b_obj_list *new_list, int times) {
   for (int i = 0; i < times; i++) {
     for (int j = 0; j < a->items.count; j++) {
       write_value_arr(vm, &new_list->items, a->items.values[j]);
@@ -1166,7 +1163,7 @@ static bool concatenate(b_vm *vm) {
     chars[length] = '\0';
 
     b_obj_string *result = take_string(vm, chars, length);
-    result->utf8_length = utf8len(result->chars);
+    result->utf8_length = num_length + b->utf8_length;
 
     pop_n(vm, 2);
     push(vm, OBJ_VAL(result));
@@ -1184,7 +1181,7 @@ static bool concatenate(b_vm *vm) {
     chars[length] = '\0';
 
     b_obj_string *result = take_string(vm, chars, length);
-    result->utf8_length = utf8len(result->chars);
+    result->utf8_length = num_length + a->utf8_length;
 
     pop_n(vm, 2);
     push(vm, OBJ_VAL(result));
@@ -1199,7 +1196,7 @@ static bool concatenate(b_vm *vm) {
     chars[length] = '\0';
 
     b_obj_string *result = take_string(vm, chars, length);
-    result->utf8_length = utf8len(result->chars);
+    result->utf8_length = a->utf8_length + b->utf8_length;
 
     pop_n(vm, 2);
     push(vm, OBJ_VAL(result));
@@ -1421,7 +1418,7 @@ b_ptr_result run(b_vm *vm) {
     }
 
     case OP_NOT:
-      push(vm, BOOL_VAL(is_falsey(pop(vm))));
+      push(vm, BOOL_VAL(is_false(pop(vm))));
       break;
     case OP_NIL:
       push(vm, NIL_VAL);
@@ -1443,7 +1440,7 @@ b_ptr_result run(b_vm *vm) {
     }
     case OP_JUMP_IF_FALSE: {
       uint16_t offset = READ_SHORT();
-      if (is_falsey(peek(vm, 0))) {
+      if (is_false(peek(vm, 0))) {
         frame->ip += offset;
       }
       break;
@@ -1468,7 +1465,11 @@ b_ptr_result run(b_vm *vm) {
     case OP_STRINGIFY: {
       if (!IS_STRING(peek(vm, 0))) {
         char *value = value_to_string(vm, pop(vm));
-        push(vm, OBJ_VAL(take_string(vm, value, (int)strlen(value))));
+        if((int)strlen(value) != 0) {
+          push(vm, OBJ_VAL(take_string(vm, value, (int) strlen(value))));
+        } else {
+          push(vm, NIL_VAL);
+        }
       }
       break;
     }
@@ -1897,7 +1898,7 @@ b_ptr_result run(b_vm *vm) {
     case OP_ASSERT: {
       b_value message = pop(vm);
       b_value expression = pop(vm);
-      if (is_falsey(expression)) {
+      if (is_false(expression)) {
         if (!IS_NIL(message)) {
           runtime_error("AssertionError: %s", value_to_string(vm, message));
         } else {
@@ -1977,7 +1978,7 @@ b_ptr_result run(b_vm *vm) {
       b_value _condition = peek(vm, 2);
 
       pop_n(vm, 3);
-      if(!is_falsey(_condition)) {
+      if(!is_false(_condition)) {
         push(vm, _then);
       } else {
         push(vm, _else);

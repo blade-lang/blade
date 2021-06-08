@@ -79,7 +79,7 @@ b_value pop_n(b_vm *vm, int n);
 b_value peek(b_vm *vm, int distance);
 
 bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name, int arg_count);
-bool is_falsey(b_value value);
+bool is_false(b_value value);
 void dict_add_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value);
 bool dict_get_entry(b_obj_dict *dict, b_value key, b_value *value);
 bool dict_set_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value);
@@ -98,12 +98,6 @@ b_obj_instance *create_exception(b_vm *vm, b_obj_string *message);
   if(!throw_exception(vm, ##__VA_ARGS__)){                                     \
     EXIT_VM(); \
   }
-
-void gc_start_protect(b_vm *vm);
-void gc_stop_protection(b_vm *vm);
-
-#define GUARD(t, n, v) t *n = v; \
-  push(vm, OBJ_VAL(n))
 
 
 static inline b_obj *gc_protect(b_vm *vm, b_obj *object) {

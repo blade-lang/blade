@@ -20,13 +20,13 @@
 
 #ifdef __GNUC__
 
-int vscprintf(const char *format, va_list ap) {
+/*int vscprintf(const char *format, va_list ap) {
   va_list ap_copy;
   va_copy(ap_copy, ap);
   int retval = vsnprintf(NULL, 0, format, ap_copy);
   va_end(ap_copy);
   return retval;
-}
+}*/
 
 #endif
 
@@ -41,7 +41,7 @@ int vasprintf(char **strp, const char *format, va_list ap) {
   int len = vscprintf(format, ap);
   if (len == -1)
     return -1;
-  char *str = (char *)malloc((len + 1) * sizeof(char));
+  char *str = (char *)calloc(len + 1, sizeof(char));
   if (!str)
     return -1;
   int retval = vsnprintf(str, len + 1, format, ap);

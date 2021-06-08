@@ -61,12 +61,14 @@ static void error(b_parser *p, const char *message, ...) {
   va_list args;
   va_start(args, message);
   error_at(p, &p->previous, message, args);
+  va_end(args);
 }
 
 static void error_at_current(b_parser *p, const char *message, ...) {
   va_list args;
   va_start(args, message);
   error_at(p, &p->current, message, args);
+  va_end(args);
 }
 
 static void advance(b_parser *p) {
@@ -392,10 +394,8 @@ static int identifier_constant(b_parser *p, b_token *name) {
                        OBJ_VAL(copy_string(p->vm, name->start, name->length)));
 }
 
-static bool identifiers_equal(b_token *a, b_token *b) {
-  if (a->length != b->length)
-    return false;
-  return memcmp(a->start, b->start, a->length) == 0;
+static inline bool identifiers_equal(b_token *a, b_token *b) {
+  return a->length == b->length && memcmp(a->start, b->start, a->length) == 0;
 }
 
 static int resolve_local(b_parser *p, b_compiler *compiler, b_token *name) {
@@ -567,7 +567,8 @@ static void discard_local(b_parser *p, int depth) {
 }
 
 static void end_loop(b_parser *p) {
-  // find all OP_BREAK_PL placeholder and replace with the appropriate jump...
+  // find all OP_BREAK_PL placeholder and replace with the app
+  // ropriate jump...
   int i = p->innermost_loop_start;
 
   while (i < p->compiler->function->blob.count) {
@@ -1035,14 +1036,13 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
   return count;
 }
 
-static char *compile_string(b_parser *p) {
-  char *str = (char *)malloc(sizeof(char) * ((p->previous.length - 2) + 1));
-  char *real = (char *)(p->previous.start + 1);
+static char *compile_string(b_parser *p, int *length) {
+  char *str = (char *)malloc(((p->previous.length - 2) + 1) * sizeof(char));
+  char *real = (char *)p->previous.start + 1;
 
-  int real_length = p->previous.length - 2;
-  int i = 0, k = 0;
+  int real_length = p->previous.length - 2, k = 0;
 
-  for (; i < real_length; i++, k++) {
+  for (int i = 0; i < real_length; i++, k++) {
     char c = real[i];
     if (c == '\\' && i < real_length - 1) {
       switch (real[i + 1]) {
@@ -1107,13 +1107,15 @@ static char *compile_string(b_parser *p) {
     memcpy(str + k, &c, 1);
   }
 
+  *length = k;
   str[k] = '\0';
   return str;
 }
 
 static void string(b_parser *p, bool can_assign) {
-  char *str = compile_string(p);
-  emit_constant(p, OBJ_VAL(copy_string(p->vm, str, (int)strlen(str))));
+  int length;
+  char *str = compile_string(p, &length);
+  emit_constant(p, OBJ_VAL(copy_string(p->vm, str, length)));
 }
 
 static void string_interpolation(b_parser *p, bool can_assign) {
@@ -1834,8 +1836,9 @@ static void using_statement(b_parser *p) {
         } else if (p->previous.type == FALSE_TOKEN) {
           table_set(p->vm, &sw->table, FALSE_VAL, jump);
         } else if (p->previous.type == LITERAL_TOKEN) {
-          char *str = compile_string(p);
-          b_obj_string *string = copy_string(p->vm, str, (int)strlen(str));
+          int length;
+          char *str = compile_string(p, &length);
+          b_obj_string *string = copy_string(p->vm, str, length);
           table_set(p->vm, &sw->table, OBJ_VAL(string), jump);
         } else if (check_number(p)) {
           table_set(p->vm, &sw->table, compile_number(p), jump);
@@ -1902,7 +1905,8 @@ static void die_statement(b_parser *p) {
 
 static void import_statement(b_parser *p) {
   consume(p, LITERAL_TOKEN, "expected module name");
-  char *module_name = compile_string(p);
+  int module_name_length;
+  char *module_name = compile_string(p, &module_name_length);
 
   char *module_path = resolve_import_path(module_name, p->current_file);
   if (module_path == NULL) {
@@ -1919,15 +1923,14 @@ static void import_statement(b_parser *p) {
     return;
   }
 
-  b_obj_func *function =
-      compile(p->vm, source, module_path, &p->compiler->function->blob);
+  b_obj_func *function = compile(p->vm, source, module_path, &p->compiler->function->blob);
 
   if (function == NULL) {
     error(p, "failed to import %s", module_name);
     return;
   }
 
-  function->name = copy_string(p->vm, module_name, (int)strlen(module_name));
+  function->name = copy_string(p->vm, module_name, module_name_length);
 
   int import_constant = make_constant(p, OBJ_VAL(function));
   emit_byte_and_short(p, OP_CALL_IMPORT, import_constant);
@@ -2207,8 +2210,8 @@ b_obj_func *compile(b_vm *vm, const char *source, const char *file,
   parser.current_class = NULL;
   parser.current_file = file;
 
-  b_compiler compiler;
-  init_compiler(&parser, &compiler, TYPE_SCRIPT);
+  b_compiler *compiler = (b_compiler*) malloc(sizeof(b_compiler));
+  init_compiler(&parser, compiler, TYPE_SCRIPT);
 
   advance(&parser);
 
@@ -2217,8 +2220,7 @@ b_obj_func *compile(b_vm *vm, const char *source, const char *file,
   }
 
   b_obj_func *function = end_compiler(&parser);
-
-  vm->compiler = &compiler;
+  vm->compiler = compiler;
 
   return parser.had_error ? NULL : function;
 }

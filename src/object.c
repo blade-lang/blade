@@ -311,8 +311,7 @@ void print_object(b_value value, bool fix_string) {
 
 b_obj_bytes *copy_bytes(b_vm *vm, unsigned char *b, int length) {
   b_obj_bytes *bytes = new_bytes(vm, length);
-
-  memcpy(bytes->bytes.bytes, b, length * sizeof(unsigned char *));
+  memcpy(bytes->bytes.bytes, b, length);
   return bytes;
 }
 
@@ -326,7 +325,7 @@ static inline char *function_to_string(b_obj_func *func) {
   if (func->name == NULL) {
     return "<script 0x00>";
   }
-  char *str = (char *)calloc(1, sizeof(char *));
+  char *str = (char *)malloc(sizeof(char) * (snprintf(NULL, 0, "<function %s>", func->name->chars)));
   sprintf(str, "<function %s>", func->name->chars);
   return str;
 }
@@ -346,7 +345,7 @@ static inline char *list_to_string(b_vm *vm, b_value_arr *array) {
 static inline char *bytes_to_string(b_vm *vm, b_byte_arr *array) {
   char *str = "(";
   for (int i = 0; i < array->count; i++) {
-    char *chars = (char *)calloc(1, sizeof(char *));
+    char *chars = (char *)malloc(sizeof(char) * (snprintf(NULL, 0, "0x%x", array->bytes[i])));
     sprintf(chars, "0x%x", array->bytes[i]);
 
     if (i != array->count - 1) {
@@ -378,7 +377,7 @@ static char *dict_to_string(b_vm *vm, b_obj_dict *dict) {
 }
 
 char *object_to_string(b_vm *vm, b_value value) {
-  char *str = (char *)calloc(1, sizeof(char *));
+  char *str = (char *)calloc(1, sizeof(char));
 
   switch (OBJ_TYPE(value)) {
   case OBJ_SWITCH: {

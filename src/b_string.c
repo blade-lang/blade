@@ -377,7 +377,7 @@ DECLARE_STRING_METHOD(join) {
       array[0] = append_strings(array[0], AS_C_STRING(METHOD_OBJECT));
   }
 
-  RETURN_STRING(array[0]);
+  RETURN_TT_STRING(array[0]);
 }
 
 DECLARE_STRING_METHOD(split) {
@@ -461,8 +461,7 @@ DECLARE_STRING_METHOD(ends_with) {
 
   int difference = string->length - substr->length;
 
-  RETURN_BOOL(
-      memcmp(substr->chars, string->chars + difference, substr->length) == 0);
+  RETURN_BOOL(memcmp(substr->chars, string->chars + difference, substr->length) == 0);
 }
 
 DECLARE_STRING_METHOD(count) {
@@ -657,8 +656,9 @@ DECLARE_STRING_METHOD(match) {
     for (int i = 0; i < (int)name_count; i++) {
       int n = (tab_ptr[0] << 8) | tab_ptr[1];
 
-      char *_key = malloc(sizeof(char *));
-      char *_val = malloc(sizeof(char *));
+      char *_key = malloc(0);
+      char *_val = malloc(0);
+
       sprintf(_key, "%*s", name_entry_size - 3, tab_ptr + 2);
       sprintf(_val, "%*s", (int)(o_vector[2 * n + 1] - o_vector[2 * n]),
               subject + o_vector[2 * n]);
@@ -779,8 +779,9 @@ DECLARE_STRING_METHOD(matches) {
     for (i = 0; i < (int)name_count; i++) {
       int n = (tab_ptr[0] << 8) | tab_ptr[1];
 
-      char *_key = malloc(sizeof(char *));
-      char *_val = malloc(sizeof(char *));
+      char *_key = malloc(0);
+      char *_val = malloc(0);
+
       sprintf(_key, "%*s", name_entry_size - 3, tab_ptr + 2);
       sprintf(_val, "%*s", (int)(o_vector[2 * n + 1] - o_vector[2 * n]),
               subject + o_vector[2 * n]);
@@ -896,8 +897,9 @@ DECLARE_STRING_METHOD(matches) {
       for (i = 0; i < (int)name_count; i++) {
         int n = (tab_ptr[0] << 8) | tab_ptr[1];
 
-        char *_key = malloc(sizeof(char *));
-        char *_val = malloc(sizeof(char *));
+        char *_key = malloc(0);
+        char *_val = malloc(0);
+
         sprintf(_key, "%*s", name_entry_size - 3, tab_ptr + 2);
         sprintf(_val, "%*s", (int)(o_vector[2 * n + 1] - o_vector[2 * n]),
                 subject + o_vector[2 * n]);

@@ -344,7 +344,7 @@ DECLARE_NATIVE(hex) {
 DECLARE_NATIVE(to_bool) {
   ENFORCE_ARG_COUNT(to_bool, 1);
   METHOD_OVERRIDE(to_bool, 7);
-  RETURN_BOOL(!is_falsey(args[0]));
+  RETURN_BOOL(!is_false(args[0]));
 }
 
 /**
