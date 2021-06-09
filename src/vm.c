@@ -131,9 +131,8 @@ bool throw_exception(b_vm *vm, const char *format, ...) {
 
   va_list args;
   va_start(args, format);
-  int length = vsnprintf(NULL, 0, format, args);
-  char *message = (char*)calloc((size_t)length + 1, sizeof(char));
-  vsprintf(message, format, args);
+  char *message = NULL;
+  int length = vasprintf(&message, format, args);
   va_end(args);
 
   b_obj_instance *instance = create_exception(vm, take_string(vm, message, length));
@@ -1907,9 +1906,9 @@ b_ptr_result run(b_vm *vm) {
       b_value expression = pop(vm);
       if (is_false(expression)) {
         if (!IS_NIL(message)) {
-          runtime_error("AssertionError: %s", value_to_string(vm, message));
+          throw_exception(vm, "AssertionError: %s", value_to_string(vm, message));
         } else {
-          runtime_error("AssertionError");
+          throw_exception(vm, "AssertionError");
         }
       }
       break;

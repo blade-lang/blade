@@ -373,7 +373,6 @@ static char *dict_to_string(b_vm *vm, b_obj_dict *dict) {
     char *_key = value_to_string(vm, key);
     if(_key != NULL) {
       str = append_strings(str, _key);
-      free(_key);
     }
     str = append_strings(str, ": ");
 
@@ -382,7 +381,6 @@ static char *dict_to_string(b_vm *vm, b_obj_dict *dict) {
     char *val = value_to_string(vm, value);
     if(val != NULL) {
       str = append_strings(str, val);
-      free(val);
     }
 
     if (i != dict->names.count - 1) {
@@ -431,7 +429,7 @@ char *object_to_string(b_vm *vm, b_value value) {
   case OBJ_STRING:
     return AS_C_STRING(value);
   case OBJ_UP_VALUE:
-    return (char *)"<up value>";
+    return strdup("<up value>");
   case OBJ_BYTES:
     return bytes_to_string(vm, &AS_BYTES(value)->bytes);
   case OBJ_LIST:

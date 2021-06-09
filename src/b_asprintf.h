@@ -18,15 +18,15 @@
 #define vscprintf _vscprintf
 #endif
 
-#ifdef __GNUC__
+#if !defined(__APPLE__) && !defined(__MACH__) && !defined(_WIN32)
 
-/*int vscprintf(const char *format, va_list ap) {
+int vscprintf(const char *format, va_list ap) {
   va_list ap_copy;
   va_copy(ap_copy, ap);
   int retval = vsnprintf(NULL, 0, format, ap_copy);
   va_end(ap_copy);
   return retval;
-}*/
+}
 
 #endif
 
@@ -36,7 +36,8 @@
  * GNU-C-compatible compilers implement these with the same names, thus we
  * don't have to do anything
  */
-#if defined __CYGWIN__ || defined _WIN64 || defined _WIN32
+#if !defined(__APPLE__) && !defined(__MACH__)
+
 int vasprintf(char **strp, const char *format, va_list ap) {
   int len = vscprintf(format, ap);
   if (len == -1)

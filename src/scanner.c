@@ -1,5 +1,6 @@
 #include "scanner.h"
 #include "common.h"
+#include "b_asprintf.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -28,18 +29,15 @@ static b_token error_token(b_scanner *s, const char *message, ...) {
 
   va_list args;
   va_start(args, message);
-  int length = vsnprintf(NULL, 0, message, args);
-  char *err = (char*) calloc((size_t)length + 1, sizeof(char));
-  if (err != NULL) {
-    vsprintf(err, message, args);
-    va_end(args);
-  }
+  char *err = NULL;
+  int length = vasprintf(&err, message, args);
+  va_end(args);
 
   b_token t;
   t.type = ERROR_TOKEN;
   t.start = err;
   if (err != NULL) {
-    t.length = (int)strlen(err);
+    t.length = length;
   } else {
     t.length = 0;
   }
