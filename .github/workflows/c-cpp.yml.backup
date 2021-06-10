@@ -1,4 +1,4 @@
-name: Default Linux and OSX Build CI
+name: Default  and OSX Build CI
 
 on:
   push:

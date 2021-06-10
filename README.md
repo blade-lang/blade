@@ -6,6 +6,10 @@ and expressiveness (the core pillars). It aims to maintain the
 core pillars of the language while still being powerful enough to
 do anything.
 
+![example workflow](https://github.com/mcfriend99/Bird/actions/workflows/linux-build.yml/badge.svg)
+![example workflow](https://github.com/mcfriend99/Bird/actions/workflows/osx-build.yml/badge.svg)
+![example workflow](https://github.com/mcfriend99/Bird/actions/workflows/windows-build.yml/badge.svg)
+
 ## Features
 
 - Simple syntax and minimal keywords.
