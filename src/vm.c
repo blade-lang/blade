@@ -1,6 +1,5 @@
 #include "vm.h"
 #include "common.h"
-#include "b_asprintf.h"
 #include "compiler.h"
 #include "config.h"
 #include "memory.h"
@@ -14,6 +13,8 @@
 #include "b_list.h"
 #include "b_string.h"
 #include "util.h"
+
+#include "b_asprintf.h"
 
 #include <math.h>
 #include <stdarg.h>

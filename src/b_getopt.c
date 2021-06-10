@@ -24,10 +24,6 @@
 # define _NO_PROTO
 #endif
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
 #if !defined __STDC__ || !__STDC__
 /* This is a separate conditional since some stdc systems
    reject `defined (const)'.  */
@@ -65,7 +61,7 @@
    contain conflicting prototypes for getopt.  */
 # include <stdlib.h>
 # include <unistd.h>
-#endif  /* GNU C library.  */
+#endif  /* __GNU_LIBRARY__  */
 
 #ifdef VMS
 # include <unixlib.h>
@@ -188,10 +184,10 @@ static char *posixly_correct;
 #else
 
 # if HAVE_STRING_H || _WIN32 /* Pete Wilson mod 7/28/02 */
-#  include <string.h>
+#include <string.h>
 # else
 
-#  include <strings.h>
+#include <strings.h>
 
 # endif
 
