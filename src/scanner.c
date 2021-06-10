@@ -1,6 +1,6 @@
 #include "scanner.h"
 #include "common.h"
-#include "b_asprintf.h"
+#include "b_sprintf.h"
 
 #include <stdarg.h>
 #include <stdio.h>

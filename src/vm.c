@@ -1,3 +1,4 @@
+#include "b_sprintf.h"
 #include "vm.h"
 #include "common.h"
 #include "compiler.h"
@@ -13,8 +14,6 @@
 #include "b_list.h"
 #include "b_string.h"
 #include "util.h"
-
-#include "b_asprintf.h"
 
 #include <math.h>
 #include <stdarg.h>

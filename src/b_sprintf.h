@@ -1,5 +1,5 @@
-#ifndef bird_compat_asprintf_h
-#define bird_compat_asprintf_h
+#ifndef bird_compat_sprintf_h
+#define bird_compat_sprintf_h
 
 #ifdef __GNUC__
 // we want TR 24731-2:2010 extensions
@@ -48,4 +48,4 @@ int asprintf(char **strp, const char *fmt, ...) {
 
 #endif
 
-#endif // bird_compat_asprintf_h
+#endif // bird_compat_sprintf_h
