@@ -548,7 +548,7 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
         }
       } else if (arg_count != 0) {
         return throw_exception(vm, "%s constructor expects 0 arguments, %d given",
-                               klass->name, arg_count);
+                               klass->name->chars, arg_count);
       }
       return true;
     }
@@ -1617,7 +1617,7 @@ b_ptr_result run(b_vm *vm) {
         runtime_error("class %s does not have a static field or method named %s",
                       AS_CLASS(peek(vm, 0))->name->chars, name->chars);
       } else if(IS_INSTANCE(peek(vm, 0))) {
-        runtime_error("instance of class %s %s does not have a field or method named %s",
+        runtime_error("instance of class %s does not have a field or method named %s",
                       AS_INSTANCE(peek(vm, 0))->klass->name->chars, name->chars);
       } else {
         runtime_error("object of type %s does not have a property %s",

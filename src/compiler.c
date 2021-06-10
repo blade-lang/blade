@@ -1483,8 +1483,7 @@ static void class_declaration(b_parser *p) {
     variable(p, false);
 
     if (identifiers_equal(&class_name, &p->previous)) {
-      error(p, "class %.*s cannot inherit from itself", class_name.start,
-            class_name.length);
+      error(p, "class %.*s cannot inherit from itself", class_name.length, class_name.start);
     }
 
     begin_scope(p);

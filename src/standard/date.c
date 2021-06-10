@@ -65,31 +65,32 @@ DECLARE_MODULE_METHOD(date____mktime) {
 DECLARE_MODULE_METHOD(date__localtime) {
   struct timeval raw_time;
   gettimeofday(&raw_time, NULL);
-  struct tm *time_info = localtime(&raw_time.tv_sec);
+  struct tm now;
+  localtime_r(&raw_time.tv_sec, &now);
 
   b_obj_dict *dict = (b_obj_dict *)GC(new_dict(vm));
 
-  ADD_TIME("year", 4, (double) time_info->tm_year + 1900);
-  ADD_TIME("month", 5, (double) time_info->tm_mon + 1);
-  ADD_TIME("day", 3, time_info->tm_mday);
-  ADD_TIME("week_day", 8, time_info->tm_wday);
-  ADD_TIME("year_day", 8, time_info->tm_yday);
-  ADD_TIME("hour", 4, time_info->tm_hour);
-  ADD_TIME("minute", 6, time_info->tm_min);
-  if (time_info->tm_sec <= 59) {
-    ADD_TIME("seconds", 7, time_info->tm_sec);
+  ADD_TIME("year", 4, (double) now.tm_year + 1900);
+  ADD_TIME("month", 5, (double) now.tm_mon + 1);
+  ADD_TIME("day", 3, now.tm_mday);
+  ADD_TIME("week_day", 8, now.tm_wday);
+  ADD_TIME("year_day", 8, now.tm_yday);
+  ADD_TIME("hour", 4, now.tm_hour);
+  ADD_TIME("minute", 6, now.tm_min);
+  if (now.tm_sec <= 59) {
+    ADD_TIME("seconds", 7, now.tm_sec);
   } else {
     ADD_TIME("seconds", 7, 59);
   }
   ADD_TIME("microseconds", 12, (double) raw_time.tv_usec);
 
-  ADD_B_TIME("is_dst", 6, time_info->tm_isdst == 1 ? true : false);
+  ADD_B_TIME("is_dst", 6, now.tm_isdst == 1 ? true : false);
 
 #ifndef _WIN32
   // set time zone
-  ADD_G_TIME("zone", 4, time_info->tm_zone);
+  ADD_G_TIME("zone", 4, now.tm_zone);
   // setting gmt offset
-  ADD_TIME("gmt_offset", 10, time_info->tm_gmtoff);
+  ADD_TIME("gmt_offset", 10, now.tm_gmtoff);
 #else
   // set time zone
   ADD_S_TIME("zone", 4, "", 0);
@@ -103,31 +104,32 @@ DECLARE_MODULE_METHOD(date__localtime) {
 DECLARE_MODULE_METHOD(date__gmtime) {
   struct timeval raw_time;
   gettimeofday(&raw_time, NULL);
-  struct tm *time_info = gmtime(&raw_time.tv_sec);
+  struct tm now;
+  gmtime_r(&raw_time.tv_sec, &now);
 
   b_obj_dict *dict = (b_obj_dict *)GC(new_dict(vm));
 
-  ADD_TIME("year", 4, (double) time_info->tm_year + 1900);
-  ADD_TIME("month", 5, (double) time_info->tm_mon + 1);
-  ADD_TIME("day", 3, time_info->tm_mday);
-  ADD_TIME("week_day", 8, time_info->tm_wday);
-  ADD_TIME("year_day", 8, time_info->tm_yday);
-  ADD_TIME("hour", 4, time_info->tm_hour);
-  ADD_TIME("minute", 6, time_info->tm_min);
-  if (time_info->tm_sec <= 59) {
-    ADD_TIME("seconds", 7, time_info->tm_sec);
+  ADD_TIME("year", 4, (double) now.tm_year + 1900);
+  ADD_TIME("month", 5, (double) now.tm_mon + 1);
+  ADD_TIME("day", 3, now.tm_mday);
+  ADD_TIME("week_day", 8, now.tm_wday);
+  ADD_TIME("year_day", 8, now.tm_yday);
+  ADD_TIME("hour", 4, now.tm_hour);
+  ADD_TIME("minute", 6, now.tm_min);
+  if (now.tm_sec <= 59) {
+    ADD_TIME("seconds", 7, now.tm_sec);
   } else {
     ADD_TIME("seconds", 7, 59);
   }
   ADD_TIME("microseconds", 12, (double) raw_time.tv_usec);
 
-  ADD_B_TIME("is_dst", 6, time_info->tm_isdst == 1 ? true : false);
+  ADD_B_TIME("is_dst", 6, now.tm_isdst == 1 ? true : false);
 
 #ifndef _WIN32
   // set time zone
-  ADD_G_TIME("zone", 4, time_info->tm_zone);
+  ADD_G_TIME("zone", 4, now.tm_zone);
   // setting gmt offset
-  ADD_TIME("gmt_offset", 10, time_info->tm_gmtoff);
+  ADD_TIME("gmt_offset", 10, now.tm_gmtoff);
 #else
   // set time zone
   ADD_S_TIME("zone", 4, "", 0);
