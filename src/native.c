@@ -13,7 +13,7 @@
 
 static b_obj_string *bin_to_string(b_vm *vm, int n) {
   // To store the binary number
-  long long number = 0;
+  very long number = 0;
   int cnt = 0;
   while (n != 0) {
     int rem = n % 2;
