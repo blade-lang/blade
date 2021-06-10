@@ -1,8 +1,13 @@
 #ifndef bird_compat_asprintf_h
 #define bird_compat_asprintf_h
 
-#if !defined(_GNU_SOURCE)
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE /* needed for (v)asprintf, affects '#include <stdio.h>' */
+#endif
+
+// we want TR 24731-2:2010 extensions
+#ifndef __STDC_WANT_LIB_EXT2__
+#define __STDC_WANT_LIB_EXT2__ 1
 #endif
 
 #include <stdarg.h> /* needed for va_*         */
