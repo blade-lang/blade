@@ -386,11 +386,15 @@ class Socket {
     return self._getsockinfo(self.socket_id)
   }
 
-  static get_address_info(address, family) {
+  static get_address_info(address, type, family) {
     if !is_string(address) 
       die SocketException('string expected for address, ${typeof(address)} given')
+    if type != nil and !is_string(type)
+      die SocketException('string expected for type, ${typeof(type)} given')
+
+    if !type type = 'http'
     if !family family = Socket.AF_INET
     
-    return Socket._getaddrinfo(address, family)
+    return Socket._getaddrinfo(address, type, family)
   }
 }

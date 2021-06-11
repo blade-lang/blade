@@ -409,19 +409,24 @@ DECLARE_MODULE_METHOD(socket__getsockinfo) {
 
 // @TODO: Add IPv6 support...
 DECLARE_MODULE_METHOD(socket__getaddrinfo) {
-  ENFORCE_ARG_COUNT(_getaddrinfo, 2);
+  ENFORCE_ARG_COUNT(_getaddrinfo, 3);
   ENFORCE_ARG_TYPE(_getaddrinfo, 0, IS_STRING);
-  ENFORCE_ARG_TYPE(_getaddrinfo, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(_getaddrinfo, 2, IS_NUMBER);
 
   b_obj_string *addr = AS_STRING(args[0]);
-  int family = AS_NUMBER(args[1]);
+  char *type = NULL;
+  if(!IS_NIL(args[1])){
+    ENFORCE_ARG_TYPE(_getaddrinfo, 1, IS_STRING);
+    type = AS_C_STRING(args[1]);
+  }
+  int family = AS_NUMBER(args[2]);
 
   struct addrinfo *res, hints = {0};
 
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_family = family;
 
-  if(getaddrinfo(addr->chars, NULL,  &hints, &res) == 0) {
+  if(getaddrinfo(addr->length > 0 ? addr->chars : NULL, type,  &hints, &res) == 0) {
     while(res) {
       if(res->ai_family == family) {
 

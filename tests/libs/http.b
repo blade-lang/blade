@@ -1,19 +1,22 @@
 import 'http'
 import 'os'
 
-var total = 10000
-var start = time()
+# var total = 10000
+# var start = time()
 
-for i in 1..total {
-  try {
-    echo 'Attempt ${i}'
-    echo HttpRequest('localhost:3000').get().body
-  } catch Exception e {
-    echo e.message
-  }
-}
+# for i in 1..total {
+#   try {
+#     echo 'Attempt ${i}'
+#     echo HttpRequest('localhost:3000').send().body
+#   } catch Exception e {
+#     echo e.message
+#   }
+# }
 
-echo 'Made ${total} http get calls in ${time() - start} seconds'
+# echo 'Made ${total} http get calls in ${time() - start} seconds'
+
+
+echo HttpRequest('localhost:3000').send().body
 
 # echo Os.exec('pwd')
 

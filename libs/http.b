@@ -63,6 +63,10 @@ class HttpRequest {
   # the site that refers us to the current site
   var referer = ''
 
+  # the request method
+  # default = GET
+  var method = 'GET'
+
   # if you have a CA cert for the server stored someplace else 
   # than in the default bundle
   var ca_cert
@@ -75,7 +79,7 @@ class HttpRequest {
   # The receive timeout duration in milliseconds
   var receive_timeout = -1
 
-  # custom request headers
+  # request headers
   var headers = {}
 
   # whether to remove the expect header or not
@@ -91,7 +95,7 @@ class HttpRequest {
   }
 
   # the main http request method
-  __(method, data, has_file){
+  __(method, data){
 
     var responder = self.url.absolute_uri, headers, body, time_taken, error
     var will_connect = true, redirect_count = 0, http_version = '1.0', status_code = 0
@@ -106,7 +110,22 @@ class HttpRequest {
         var port = self.url.port
 
         # construct message
-        var message = '${method} ${self.url.path} HTTP/1.1\r\n\r\n'
+        var message = '${method} ${self.url.path} HTTP/1.1'
+        if !self.headers.contains('Host') {
+          message += '\r\nHost: ${self.url.host}'
+        }
+        # add custom headers
+        for key, value in self.headers {
+          message += '\r\n${key}: ${value}'
+        }
+
+        if data {
+          # append the correct content length to the message
+          message += '\r\nContent-Length: ${data.length()}'
+        }
+
+        # append the body
+        message += '\r\n\r\n${data}'
 
         # do real request here...
         var client = Socket()
@@ -217,30 +236,9 @@ class HttpRequest {
     return result
   }
 
-  _make_request(method, data) {
-    var has_file = false
-
-    if is_dict(data) {
-      for value in data {
-        if is_file(value) has_file = true
-      }
-    }
-
-    return self.__(method.upper(), data, has_file)
-  }
-
-  # Makes Http GET request to the given URL
-  # @return dictionary
-  get() {
-    return self._make_request('GET')
-  }
-
-  # Makes Http POST request to the given URL with the given data
-  # @return dictionary
-  post(data) {
-    if !is_dict(data) and !is_string(data) 
-      die Exception('post body must be a dictionary or string')
-
-    return self._make_request('POST', data)
+  send(data) {
+    if data != nil and !is_string(data)
+      die Exception('string expected, ${typeof(data)} give')
+    return self.__(self.method.upper(), data)
   }
 }
