@@ -27,3 +27,4 @@ class Base64 {
     return self._decode(self.data)
   }
 }
+

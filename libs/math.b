@@ -259,3 +259,4 @@ class Math {
     return str.length() == 1 ? 0 : to_number(str[1])
   }
 }
+

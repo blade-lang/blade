@@ -246,3 +246,4 @@ class Type {
     return to_dict(self.value)
   }
 }
+

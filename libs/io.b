@@ -250,3 +250,4 @@ def readline() {
 
   return result
 }
+

@@ -1377,6 +1377,7 @@ static void function_args(b_parser *p) {
 
 static void function_body(b_parser *p, b_compiler *compiler) {
   // compile the body
+  ignore_whitespace(p);
   consume(p, LBRACE_TOKEN, "expected '{' before function body");
   block(p);
 
@@ -1497,6 +1498,7 @@ static void class_declaration(b_parser *p) {
 
   named_variable(p, class_name, false);
 
+  ignore_whitespace(p);
   consume(p, LBRACE_TOKEN, "expected '{' before class body");
   ignore_whitespace(p);
   while (!check(p, RBRACE_TOKEN) && !check(p, EOF_TOKEN)) {

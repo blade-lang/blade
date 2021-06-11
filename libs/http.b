@@ -1,8 +1,7 @@
 /**
  * HTTP
  *
- * Provides interface for working with Http client requests
- * and servers.
+ * Provides interfaces for working with Http client requests.
  * @copyright 2021, Ore Richard Muyiwa
  */
 import 'url'
@@ -37,6 +36,94 @@ class HttpResponse {
   }
 }
 
+
+
+/**
+ * HttpStatus
+ * represents the standard response codes to an HttpRequest
+ */
+class HttpStatus {
+  # Informational
+  static var CONTINUE = 100
+  static var SWITCHING_PROTOCOLS = 101
+  static var PROCESSING = 102
+
+  # Succcess
+  static var OK = 200
+  static var CREATED = 201
+  static var ACCEPTED = 202
+  static var NON_AUTHORITATIVE_INFORMATION = 203
+  static var NO_CONTENT = 204
+  static var RESET_CONTENT = 205
+  static var PARTIAL_CONTENT = 206
+  static var MULTI_STATUS = 207
+  static var ALREADY_REPORTED = 208
+  static var IM_USED = 226
+
+  # Redirection
+  static var MULTIPLE_CHOICES = 300
+  static var MOVED_PERMANENTLY = 301
+  static var FOUND = 302
+  static var SEE_OTHER = 303
+  static var NOT_MODIFIED = 304
+  static var USE_PROXY = 305
+  static var TEMPORARY_REDIRECT = 307
+  static var PERMANENT_REDIRECT = 308
+
+  # Client Error
+  static var BAD_REQUEST = 400
+  static var UNAUTHORIZED = 401
+  static var PAYMENT_REQUIRED = 402
+  static var FORBIDDEN = 403
+  static var NOT_FOUND = 404
+  static var METHOD_NOT_ALLOWED = 405
+  static var NOT_ACCEPTABLE = 406
+  static var PROXY_AUTHENTICATION_REQUIRED = 407
+  static var REQUEST_TIMEOUT = 408
+  static var CONFLICT = 409
+  static var GONE = 410
+  static var LENGTH_REQUIRED = 411
+  static var PRECONDITION_FAILED = 412
+  static var PAYLOAD_TOO_LARGE = 413
+  static var REQUEST_URI_TOO_LONG = 414
+  static var UNSUPPORTED_MEDIA_TYPE = 415
+  static var REQUESTED_RANGE_NOT_SATISFIABLE = 416
+  static var EXPECTATION_FAILED = 417
+  static var TEAPOT = 418
+  static var MISDIRECTED_REQUEST = 421
+  static var UNPROCESSABLE_ENTITY = 422
+  static var LOCKED = 423
+  static var FAILED_DEPENDENCY = 424
+  static var UPGRADE_REQUIRED = 426
+  static var PRECONDITION_REQUIRED = 428
+  static var TOO_MANY_REQUESTS = 429
+  static var REQUEST_HEADER_FIELDS_TOO_LARGE = 431
+  static var CONNECTION_CLOSED_WITHOUT_RESPONSE = 444
+  static var UNAVAILABLE_FOR_LEGAL_REASONS = 451
+  static var CLIENT_CLOSED_REQUEST = 499
+
+  # Server Error
+  static var INTERNAL_SERVER_ERROR = 500
+  static var NOT_IMPLEMENTED = 501
+  static var BAD_GATEWAY = 502
+  static var SERVICE_UNAVAILABLE = 503
+  static var GATEWAY_TIMEOUT = 504
+  static var HTTP_VERSION_NOT_SUPPORTED = 505
+  static var VARIANT_ALSO_NEGOTIATES = 506
+  static var INSUFFICIENT_STORAGE = 507
+  static var LOOP_DETECTED = 508
+  static var NOT_EXTENDED = 510
+  static var NETWORK_AUTHENTICATION_REQUIRED = 511
+  static var NETWORK_CONNECT_TIMEOUT_ERROR = 599
+}
+
+
+
+/**
+ * HttpRequest
+ *
+ * handles http requests.
+ */
 class HttpRequest {
   # the user agent of the client used to make the request
   var user_agent = 'Mozilla/4.0'
@@ -98,9 +185,9 @@ class HttpRequest {
   __(method, data){
 
     var responder = self.url.absolute_uri, headers, body, time_taken, error
-    var will_connect = true, redirect_count = 0, http_version = '1.0', status_code = 0
+    var should_connect = true, redirect_count = 0, http_version = '1.0', status_code = 0
 
-    while will_connect {
+    while should_connect {
 
       # @TODO: in the else clause, get ipv4 address from the hostname
       var resolved_host = Socket.get_address_info(self.url.host)
@@ -114,9 +201,15 @@ class HttpRequest {
         if !self.headers.contains('Host') {
           message += '\r\nHost: ${self.url.host}'
         }
+
+        # handle no_expect
+        if self.no_expect message += '\r\nExpect:'
+
         # add custom headers
         for key, value in self.headers {
-          message += '\r\n${key}: ${value}'
+          if key != 'Expect' and self.no_expect {
+            message += '\r\n${key}: ${value}'
+          }
         }
 
         if data {
@@ -178,10 +271,10 @@ class HttpRequest {
           self.url = Url.parse(headers['Location'])
           self.referer = headers['Location']
         } else {
-          will_connect = false
+          should_connect = false
         }
       } else {
-        will_connect = false
+        should_connect = false
         die Exception('could not resolve ip address')
       }
     }
@@ -242,3 +335,4 @@ class HttpRequest {
     return self.__(self.method.upper(), data)
   }
 }
+

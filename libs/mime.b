@@ -472,3 +472,4 @@ class Mime {
     return self.detect_from_name()
   }
 }
+
