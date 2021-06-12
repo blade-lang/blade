@@ -50,6 +50,7 @@ set(BIRD_SOURCES
     src/standard/math.c
     src/standard/os.c
     src/standard/socket.c
+    src/standard/hash.c
 )
 
 add_library(libbird ${BIRD_SOURCES})

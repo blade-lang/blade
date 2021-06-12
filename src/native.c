@@ -358,7 +358,8 @@ DECLARE_NATIVE(to_bool) {
 DECLARE_NATIVE(to_string) {
   ENFORCE_ARG_COUNT(to_string, 1);
   METHOD_OVERRIDE(to_string, 9);
-  RETURN_STRING(value_to_string(vm, args[0]));
+  char *result = value_to_string(vm, args[0]);
+  RETURN_STRING(result);
 }
 
 /**
@@ -544,7 +545,8 @@ DECLARE_NATIVE(rand) {
  */
 DECLARE_NATIVE(typeof) {
   ENFORCE_ARG_COUNT(typeof, 1);
-  RETURN_STRING(value_type(args[0]));
+  char *result = (char*)value_type(args[0]);
+  RETURN_STRING(result);
 }
 
 /**

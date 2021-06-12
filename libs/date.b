@@ -129,11 +129,11 @@ class Date {
   }
 
   /*
-  Constructor
-
-  - All arguments are optional
-  - When no argument is give, the date will be set to the current system date
-  */
+   * Constructor
+   *
+   * - All arguments are optional
+   * - When no argument is give, the date will be set to the current system date
+   */
   Date(year, month, day, hour, minute, seconds) {
 
     if year {

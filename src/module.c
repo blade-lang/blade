@@ -18,6 +18,7 @@ b_module_registry modules[] = {
     {"math",   GET_MODULE_LOADER(math)},     //
     {"date",   GET_MODULE_LOADER(date)},     //
     {"socket", GET_MODULE_LOADER(socket)},     //
+    {"hash", GET_MODULE_LOADER(hash)},     //
     {NULL,     NULL},
 };
 

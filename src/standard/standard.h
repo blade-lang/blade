@@ -7,5 +7,6 @@
 #include "standard/math.h"
 #include "standard/os.h"
 #include "standard/socket.h"
+#include "standard/hash.h"
 
 #endif //bird_standard_h

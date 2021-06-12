@@ -17,7 +17,7 @@ typedef union {
 #if defined USE_NAN_BOXING && USE_NAN_BOXING
 
 // binary representation = 1111111111111 i.e.
-// 11 bits + 1 bit for quite nan and another
+// 11 bits + 1 bit for quiet nan and another
 // bit to dodge intel's QNaN Floating-Point Indefinite bit
 #define QNAN ((uint64_t)0x7ffc000000000000)
 
@@ -29,6 +29,8 @@ typedef union {
 #define TRUE_TAG 3  // 11
 
 typedef uint64_t b_value;
+
+#define UNDEFINED_VAL ((b_value)(uint64_t)(QNAN))
 
 #define FALSE_VAL ((b_value)(uint64_t)(QNAN | FALSE_TAG))
 #define TRUE_VAL ((b_value)(uint64_t)(QNAN | TRUE_TAG))
@@ -44,6 +46,7 @@ typedef uint64_t b_value;
 #define AS_NUMBER(v) value_to_number(v)
 #define AS_OBJ(v) ((b_obj *)(uintptr_t)((v) & ~(SIGN_BIT | QNAN)))
 
+#define IS_UNDEFINED(v) ((v) == UNDEFINED_VAL)
 #define IS_EMPTY(v) ((v) == EMPTY_VAL)
 #define IS_NIL(v) ((v) == NIL_VAL)
 #define IS_BOOL(v) (((v) | 1) == TRUE_VAL)
@@ -76,6 +79,7 @@ typedef enum {
   VAL_NUMBER,
   VAL_OBJ,
   VAL_EMPTY,
+  VAL_UNDEFINED,
 } b_val_type;
 
 typedef struct {
@@ -88,6 +92,7 @@ typedef struct {
 } b_value;
 
 // promote C values to bird value
+#define UNDEFINED_VAL ((b_value){VAL_UNDEFINED, {.number = 0}})
 #define EMPTY_VAL ((b_value){VAL_EMPTY, {.number = 0}})
 #define NIL_VAL ((b_value){VAL_NIL, {.number = 0}})
 #define TRUE_VAL ((b_value){VAL_BOOL, {.boolean = true}})
@@ -108,6 +113,7 @@ typedef struct {
 #define IS_NUMBER(v) ((v).type == VAL_NUMBER)
 #define IS_OBJ(v) ((v).type == VAL_OBJ)
 #define IS_EMPTY(v) ((v).type == VAL_EMPTY)
+#define IS_UNDEFINED(v) ((v).type == VAL_UNDEFINED)
 
 #endif
 

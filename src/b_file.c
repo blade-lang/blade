@@ -480,7 +480,8 @@ DECLARE_FILE_METHOD(abs_path) {
   DENY_STD();
 
   char *abs_path = realpath(file->path->chars, NULL);
-  RETURN_STRING(abs_path != NULL ? abs_path : "");
+  if(abs_path != NULL) RETURN_STRING(abs_path);
+  RETURN_STRING("");
 }
 
 DECLARE_FILE_METHOD(copy) {

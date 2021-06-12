@@ -565,6 +565,12 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
       b_obj_native *native = AS_NATIVE(callee);
       b_value result = native->function(vm, arg_count, vm->stack_top - arg_count);
 
+      // for method overrides
+      if(IS_UNDEFINED(result)) {
+        CLEAR_GC();
+        return true;
+      }
+
       if (IS_EMPTY(result)) {
         CLEAR_GC();
         vm->stack_top -= arg_count + 1;

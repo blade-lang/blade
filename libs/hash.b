@@ -1,0 +1,30 @@
+/**
+ * Hash
+ *
+ * Provides interface for cryptographic and non-cryptographic encryption
+ * @copyright 2021, Ore Richard Muyiwa
+ */
+class Hash {
+
+  /**
+   * crc32(str: string | bytes, [value: number])
+   * returns the crc32 value of the given string or bytes
+   *
+   * if value is given, it is used as the base value of the crc32
+   * computation. Else, 0 is used.
+   */
+  static crc32(str, value) {}
+
+  /**
+   * md5(str: string | bytes)
+   * returns the md5 hash of the given string or bytes
+   */
+  static md5(str) {}
+
+  /**
+   * md5_file(str: file)
+   * returns the md5 hash of the given file
+   */
+  static md5_file(file) {}
+}
+
