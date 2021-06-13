@@ -229,14 +229,6 @@ static void SHA1Final(unsigned char digest[20], SHA1_CTX* context) {
   memset(&finalcount, '\0', sizeof(finalcount));
 }
 
-static char *SHA1DigestToString(unsigned char digest[20]) {
-  char *result = (char*)calloc(41, sizeof(char));
-  for (int i = 0; i < 20; i++)
-    sprintf (result + (i * 2), "%02x", digest[i]);
-
-  return result;
-}
-
 static char *SHA1String(unsigned char *string, int length) {
   SHA1_CTX ctx;
   unsigned char digest[20];
@@ -245,7 +237,11 @@ static char *SHA1String(unsigned char *string, int length) {
   SHA1Update(&ctx, string, length);
   SHA1Final(digest, &ctx);
 
-  return SHA1DigestToString(digest);
+  char *result = (char*)calloc(41, sizeof(char));
+  for (int i = 0; i < 20; i++)
+    sprintf (result + (i * 2), "%02x", digest[i]);
+
+  return result;
 }
 
 #endif // BIRD_MODULE_HASH_SHA1_H

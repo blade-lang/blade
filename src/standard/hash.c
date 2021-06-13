@@ -131,11 +131,11 @@ DECLARE_MODULE_METHOD(hash__sha512) {
 
   if(IS_STRING(args[0])){
     b_obj_string *string = AS_STRING(args[0]);
-    char *result = SHA512((unsigned char *)string->chars, string->length);
+    char *result = SHA512String((unsigned char *) string->chars, string->length);
     RETURN_T_STRING(result, 128);
   } else {
     b_obj_bytes *bytes = AS_BYTES(args[0]);
-    char *result = sha256_string(bytes->bytes.bytes, bytes->bytes.count);
+    char *result = SHA512String(bytes->bytes.bytes, bytes->bytes.count);
     RETURN_T_STRING(result, 128);
   }
 }

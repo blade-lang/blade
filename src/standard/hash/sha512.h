@@ -14,7 +14,7 @@
  * - Removed _End and _Data functions
  * - Added ldns_shaX(data, len, digest) convenience functions
  * - Removed prototypes of _Transform functions and made those static
- * Modified by Wouter, and trimmed, to provide SHA512 for getentropy_fallback.
+ * Modified by Wouter, and trimmed, to provide SHA512String for getentropy_fallback.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -249,7 +249,7 @@ static const sha2_word64 sha512_initial_hash_value[8] = {
     0x5be0cd19137e2179ULL
 };
 
-typedef union _ldns_sha2_buffer_union {
+typedef union {
   uint8_t*  theChars;
   uint64_t* theLongs;
 } ldns_sha2_buffer_union;
@@ -462,7 +462,7 @@ static void SHA512_Final(sha2_byte digest[], SHA512_CTX* context) {
   SHA512_MEMSET_BZERO(context, sizeof(SHA512_CTX));
 }
 
-static char *SHA512(void *data, unsigned int data_len) {
+static char *SHA512String(void *data, unsigned int data_len) {
   unsigned char digest[64];
 
   SHA512_CTX ctx;

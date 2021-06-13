@@ -378,14 +378,6 @@ void sha256_final (SHA256_CTX *sc, uint8_t hash[SHA256_HASH_SIZE]) {
   }
 }
 
-static char *sha256_digest_to_string(unsigned char digest[32]) {
-  char *result = (char*)calloc(65, sizeof(char));
-  for (int i = 0; i < 32; i++)
-    sprintf (result + (i * 2), "%02x", digest[i]);
-
-  return result;
-}
-
 static char *sha256_string(unsigned char *string, int length) {
   SHA256_CTX ctx;
   unsigned char digest[SHA256_HASH_SIZE];
@@ -394,7 +386,11 @@ static char *sha256_string(unsigned char *string, int length) {
   sha256_update(&ctx, string, length);
   sha256_final(&ctx, digest);
 
-  return sha256_digest_to_string(digest);
+  char *result = (char*)calloc(65, sizeof(char));
+  for (int i = 0; i < 32; i++)
+    sprintf (result + (i * 2), "%02x", digest[i]);
+
+  return result;
 }
 
 #endif //BIRD_MODULE_HASH_SHA256_H
