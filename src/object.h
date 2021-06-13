@@ -131,7 +131,7 @@ typedef struct {
   b_obj *method;
 } b_obj_bound; // a bound method
 
-typedef b_value (*b_native_fn)(b_vm *, int, const b_value *);
+typedef bool (*b_native_fn)(b_vm *, int, b_value *);
 
 typedef struct b_obj_native {
   b_obj obj;

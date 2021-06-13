@@ -374,12 +374,13 @@ DECLARE_NATIVE(to_number) {
   ENFORCE_ARG_COUNT(to_number, 1);
   METHOD_OVERRIDE(to_number, 9);
 
-  if (IS_NUMBER(args[0]))
+  if (IS_NUMBER(args[0])) {
     RETURN_VALUE(args[0]);
-  else if (IS_BOOL(args[0]))
+  } else if (IS_BOOL(args[0])) {
     RETURN_NUMBER(AS_BOOL(args[0]) ? 1 : 0);
-  else if (IS_NIL(args[0]))
+  } else if (IS_NIL(args[0])) {
     RETURN_NUMBER(-1);
+  }
   RETURN_NUMBER(strtod((const char *)value_to_string(vm, args[0]), NULL));
 }
 

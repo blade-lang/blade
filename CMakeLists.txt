@@ -14,12 +14,20 @@ set(SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/..)
 
 # set dependency directories
 set(PCRE2_DIR ${CMAKE_CURRENT_BINARY_DIR}/pcre2-build)
+set(ZLIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/pcre2-build)
 
 message(STATUS "Adding external library: pcre2...")
 ExternalProject_Add(pcre2
     SOURCE_DIR ${SRC_DIR}/deps/pcre2-8
     PREFIX ${PCRE2_DIR}
     CMAKE_ARGS -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:PATH=${PCRE2_DIR}/build
+)
+
+message(STATUS "Adding external library: zlib...")
+ExternalProject_Add(zlib
+    SOURCE_DIR ${SRC_DIR}/deps/zlib
+    PREFIX ${ZLIB_DIR}
+    CMAKE_ARGS -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:PATH=${ZLIB_DIR}/build
 )
 
 set(BIRD_SOURCES
@@ -58,12 +66,13 @@ add_executable(bird src/bird.c)
 
 # set dependency shared lib path
 set(PCRE2_LIB_FILE ${PCRE2_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}pcre2-8${CMAKE_STATIC_LIBRARY_SUFFIX})
+set(ZLIB_LIB_FILE ${ZLIB_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}z${CMAKE_STATIC_LIBRARY_SUFFIX})
 
 # add dependency includes
-include_directories(src ${PCRE2_DIR}/build/include)
+include_directories(src ${PCRE2_DIR}/build/include ${ZLIB_DIR}/build/include)
 
 # add dependencies
-add_dependencies(libbird pcre2)
+add_dependencies(libbird pcre2 zlib)
 
 set_target_properties(bird
     PROPERTIES
@@ -78,6 +87,7 @@ set_target_properties(libbird
 )
 
 target_link_libraries(libbird ${PCRE2_LIB_FILE})
+target_link_libraries(libbird ${ZLIB_LIB_FILE})
 
 if(UNIX)
   target_link_libraries(libbird readline)

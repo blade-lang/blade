@@ -1,6 +1,6 @@
 #include "hash.h"
 #include "hash/md5.h"
-#include "hash/crc32.h"
+#include "zlib.h"
 #include "pathinfo.h"
 
 DECLARE_MODULE_METHOD(hash__crc32) {
@@ -12,7 +12,7 @@ DECLARE_MODULE_METHOD(hash__crc32) {
 
   uint32_t crc = 0;
   if(!IS_NIL(args[1])){
-    ENFORCE_ARG_TYPE(crc32, 0, IS_NUMBER);
+    ENFORCE_ARG_TYPE(crc32, 1, IS_NUMBER);
     crc = (uint32_t) AS_NUMBER(args[1]);
   }
 
@@ -22,6 +22,28 @@ DECLARE_MODULE_METHOD(hash__crc32) {
   } else {
     b_obj_bytes *bytes = AS_BYTES(args[0]);
     RETURN_NUMBER(crc32(crc, bytes->bytes.bytes, bytes->bytes.count));
+  }
+}
+
+DECLARE_MODULE_METHOD(hash__adler32) {
+  ENFORCE_ARG_RANGE(adler32, 1, 2);
+
+  if(!IS_STRING(args[0]) && !IS_BYTES(args[0])){
+    RETURN_ERROR("adler32() expects string or bytes");
+  }
+
+  unsigned int adler = 1;
+  if(!IS_NIL(args[1])){
+    ENFORCE_ARG_TYPE(adler32, 1, IS_NUMBER);
+    adler = (unsigned int) AS_NUMBER(args[1]);
+  }
+
+  if(IS_STRING(args[0])){
+    b_obj_string *string = AS_STRING(args[0]);
+    RETURN_NUMBER(adler32(adler, (unsigned char *)string->chars, string->length));
+  } else {
+    b_obj_bytes *bytes = AS_BYTES(args[0]);
+    RETURN_NUMBER(adler32(adler, bytes->bytes.bytes, bytes->bytes.count));
   }
 }
 
@@ -63,7 +85,8 @@ DECLARE_MODULE_METHOD(hash__md5_file) {
 
 CREATE_MODULE_LOADER(hash) {
   static b_func_reg class_functions[] = {
-      {"crc32", true, GET_MODULE_METHOD(hash__crc32)},
+      {"_adler32", true, GET_MODULE_METHOD(hash__adler32)},
+      {"_crc32", true, GET_MODULE_METHOD(hash__crc32)},
       {"md5", true, GET_MODULE_METHOD(hash__md5)},
       {"md5_file", true, GET_MODULE_METHOD(hash__md5_file)},
       {NULL,      false, NULL},

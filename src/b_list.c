@@ -73,8 +73,9 @@ DECLARE_LIST_METHOD(index_of) {
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
 
   for (int i = 0; i < list->items.count; i++) {
-    if (values_equal(list->items.values[i], args[0]))
+    if (values_equal(list->items.values[i], args[0])) {
       RETURN_NUMBER(i);
+    }
   }
 
   RETURN_NUMBER(-1);
@@ -205,8 +206,9 @@ DECLARE_LIST_METHOD(contains) {
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
 
   for (int i = 0; i < list->items.count; i++) {
-    if (values_equal(args[0], list->items.values[i]))
+    if (values_equal(args[0], list->items.values[i])) {
       RETURN_TRUE;
+    }
   }
   RETURN_FALSE;
 }
@@ -390,8 +392,9 @@ DECLARE_LIST_METHOD(__itern__) {
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
 
   if (IS_NIL(args[0])) {
-    if (list->items.count == 0)
+    if (list->items.count == 0) {
       RETURN_FALSE;
+    }
     RETURN_NUMBER(0);
   }
 

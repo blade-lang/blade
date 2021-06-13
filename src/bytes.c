@@ -180,8 +180,9 @@ DECLARE_BYTES_METHOD(is_alpha) {
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
 
   for (int i = 0; i < bytes->bytes.count; i++) {
-    if (!isalpha(bytes->bytes.bytes[i]))
+    if (!isalpha(bytes->bytes.bytes[i])) {
       RETURN_FALSE;
+    }
   }
   RETURN_TRUE;
 }
@@ -191,8 +192,9 @@ DECLARE_BYTES_METHOD(is_alnum) {
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
 
   for (int i = 0; i < bytes->bytes.count; i++) {
-    if (!isalnum(bytes->bytes.bytes[i]))
+    if (!isalnum(bytes->bytes.bytes[i])) {
       RETURN_FALSE;
+    }
   }
   RETURN_TRUE;
 }
@@ -202,8 +204,9 @@ DECLARE_BYTES_METHOD(is_number) {
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
 
   for (int i = 0; i < bytes->bytes.count; i++) {
-    if (!isdigit(bytes->bytes.bytes[i]))
+    if (!isdigit(bytes->bytes.bytes[i])) {
       RETURN_FALSE;
+    }
   }
   RETURN_TRUE;
 }
@@ -213,8 +216,9 @@ DECLARE_BYTES_METHOD(is_lower) {
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
 
   for (int i = 0; i < bytes->bytes.count; i++) {
-    if (!islower(bytes->bytes.bytes[i]))
+    if (!islower(bytes->bytes.bytes[i])) {
       RETURN_FALSE;
+    }
   }
   RETURN_TRUE;
 }
@@ -224,8 +228,9 @@ DECLARE_BYTES_METHOD(is_upper) {
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
 
   for (int i = 0; i < bytes->bytes.count; i++) {
-    if (!isupper(bytes->bytes.bytes[i]))
+    if (!isupper(bytes->bytes.bytes[i])) {
       RETURN_FALSE;
+    }
   }
   RETURN_TRUE;
 }
@@ -235,8 +240,9 @@ DECLARE_BYTES_METHOD(is_space) {
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
 
   for (int i = 0; i < bytes->bytes.count; i++) {
-    if (!isspace(bytes->bytes.bytes[i]))
+    if (!isspace(bytes->bytes.bytes[i])) {
       RETURN_FALSE;
+    }
   }
   RETURN_TRUE;
 }
