@@ -52,5 +52,11 @@ class Hash {
    * returns the sha256 hash of the given string or bytes
    */
   static sha256(str) {}
+
+  /**
+   * sha512(str: string | bytes)
+   * returns the sha512 hash of the given string or bytes
+   */
+  static sha512(str) {}
 }
 
