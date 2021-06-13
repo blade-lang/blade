@@ -46,5 +46,11 @@ class Hash {
    * returns the sha1 hash of the given string or bytes
    */
   static sha1(str) {}
+
+  /**
+   * sha256(str: string | bytes)
+   * returns the sha256 hash of the given string or bytes
+   */
+  static sha256(str) {}
 }
 

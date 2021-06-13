@@ -1,6 +1,7 @@
 #include "hash.h"
 #include "hash/md5.h"
 #include "hash/sha1.h"
+#include "hash/sha256.h"
 #include "zlib.h"
 #include "pathinfo.h"
 
@@ -102,6 +103,24 @@ DECLARE_MODULE_METHOD(hash__sha1) {
   }
 }
 
+DECLARE_MODULE_METHOD(hash__sha256) {
+  ENFORCE_ARG_COUNT(sha256, 1);
+
+  if(!IS_STRING(args[0]) && !IS_BYTES(args[0])){
+    RETURN_ERROR("sha256() expects string or bytes");
+  }
+
+  if(IS_STRING(args[0])){
+    b_obj_string *string = AS_STRING(args[0]);
+    char *result = sha256_string((unsigned char *)string->chars, string->length);
+    RETURN_T_STRING(result, 64);
+  } else {
+    b_obj_bytes *bytes = AS_BYTES(args[0]);
+    char *result = sha256_string(bytes->bytes.bytes, bytes->bytes.count);
+    RETURN_T_STRING(result, 64);
+  }
+}
+
 CREATE_MODULE_LOADER(hash) {
   static b_func_reg class_functions[] = {
       {"_adler32", true, GET_MODULE_METHOD(hash__adler32)},
@@ -109,6 +128,7 @@ CREATE_MODULE_LOADER(hash) {
       {"md5", true, GET_MODULE_METHOD(hash__md5)},
       {"md5_file", true, GET_MODULE_METHOD(hash__md5_file)},
       {"sha1", true, GET_MODULE_METHOD(hash__sha1)},
+      {"sha256", true, GET_MODULE_METHOD(hash__sha256)},
       {NULL,      false, NULL},
   };
 
