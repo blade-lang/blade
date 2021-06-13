@@ -1,5 +1,5 @@
-#ifndef bird_vm_h
-#define bird_vm_h
+#ifndef BIRD_VM_H
+#define BIRD_VM_H
 
 typedef struct s_compiler b_compiler;
 

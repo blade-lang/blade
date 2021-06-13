@@ -1,5 +1,5 @@
-#ifndef bird_blob_h
-#define bird_blob_h
+#ifndef BIRD_BLOB_H
+#define BIRD_BLOB_H
 
 #include "common.h"
 #include "value.h"

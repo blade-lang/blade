@@ -1,5 +1,5 @@
-#ifndef bird_object_h
-#define bird_object_h
+#ifndef BIRD_OBJECT_H
+#define BIRD_OBJECT_H
 
 #include "blob.h"
 #include "common.h"

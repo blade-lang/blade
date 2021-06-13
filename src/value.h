@@ -1,5 +1,5 @@
-#ifndef bird_value_h
-#define bird_value_h
+#ifndef BIRD_VALUE_H
+#define BIRD_VALUE_H
 
 #include <string.h>
 

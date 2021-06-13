@@ -1,5 +1,5 @@
-#ifndef bird_debug_h
-#define bird_debug_h
+#ifndef BIRD_DEBUG_H
+#define BIRD_DEBUG_H
 
 #include "blob.h"
 

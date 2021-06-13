@@ -1,5 +1,6 @@
 #include "hash.h"
 #include "hash/md5.h"
+#include "hash/sha1.h"
 #include "zlib.h"
 #include "pathinfo.h"
 
@@ -83,12 +84,31 @@ DECLARE_MODULE_METHOD(hash__md5_file) {
   RETURN_ERROR("md5_file() file not found");
 }
 
+DECLARE_MODULE_METHOD(hash__sha1) {
+  ENFORCE_ARG_COUNT(sha1, 1);
+
+  if(!IS_STRING(args[0]) && !IS_BYTES(args[0])){
+    RETURN_ERROR("sha1() expects string or bytes");
+  }
+
+  if(IS_STRING(args[0])){
+    b_obj_string *string = AS_STRING(args[0]);
+    char *result = SHA1String((unsigned char *)string->chars, string->length);
+    RETURN_T_STRING(result, 40);
+  } else {
+    b_obj_bytes *bytes = AS_BYTES(args[0]);
+    char *result = SHA1String(bytes->bytes.bytes, bytes->bytes.count);
+    RETURN_T_STRING(result, 40);
+  }
+}
+
 CREATE_MODULE_LOADER(hash) {
   static b_func_reg class_functions[] = {
       {"_adler32", true, GET_MODULE_METHOD(hash__adler32)},
       {"_crc32", true, GET_MODULE_METHOD(hash__crc32)},
       {"md5", true, GET_MODULE_METHOD(hash__md5)},
       {"md5_file", true, GET_MODULE_METHOD(hash__md5_file)},
+      {"sha1", true, GET_MODULE_METHOD(hash__sha1)},
       {NULL,      false, NULL},
   };
 

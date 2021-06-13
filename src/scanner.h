@@ -1,5 +1,5 @@
-#ifndef bird_scanner_h
-#define bird_scanner_h
+#ifndef BIRD_SCANNER_H
+#define BIRD_SCANNER_H
 
 #include "common.h"
 

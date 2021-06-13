@@ -1,5 +1,5 @@
-#ifndef bird_dictionary_h
-#define bird_dictionary_h
+#ifndef BIRD_DICTIONARY_H
+#define BIRD_DICTIONARY_H
 
 #include "common.h"
 #include "native.h"

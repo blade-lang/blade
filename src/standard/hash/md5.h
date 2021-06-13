@@ -1,5 +1,5 @@
-#ifndef bird_module_hash_hash_h
-#define bird_module_hash_hash_h
+#ifndef BIRD_MODULE_HASH_MD5_H
+#define BIRD_MODULE_HASH_MD5_H
 
 /* Copyright (C) 1991-2, RSA Data Security, Inc. Created 1991. All
 rights reserved.
@@ -368,4 +368,4 @@ static char *MD5File(char *filename) {
   return MD5DigestToString(digest);
 }
 
-#endif //bird_module_hash_hash_h
+#endif // BIRD_MODULE_HASH_MD5_H

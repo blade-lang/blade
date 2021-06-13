@@ -40,5 +40,11 @@ class Hash {
    * returns the md5 hash of the given file
    */
   static md5_file(file) {}
+
+  /**
+   * sha1(str: string | bytes)
+   * returns the sha1 hash of the given string or bytes
+   */
+  static sha1(str) {}
 }
 

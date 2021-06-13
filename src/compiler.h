@@ -1,5 +1,5 @@
-#ifndef bird_compiler_h
-#define bird_compiler_h
+#ifndef BIRD_COMPILER_H
+#define BIRD_COMPILER_H
 
 #include "object.h"
 #include "scanner.h"

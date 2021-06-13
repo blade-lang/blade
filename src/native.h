@@ -1,5 +1,5 @@
-#ifndef bird_native_h
-#define bird_native_h
+#ifndef BIRD_NATIVE_H
+#define BIRD_NATIVE_H
 
 #include "config.h"
 

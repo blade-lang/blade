@@ -1,5 +1,5 @@
-#ifndef bird_bytes_h
-#define bird_bytes_h
+#ifndef BIRD_BYTES_H
+#define BIRD_BYTES_H
 
 #include "common.h"
 #include "native.h"
