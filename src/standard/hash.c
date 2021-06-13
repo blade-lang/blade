@@ -3,6 +3,7 @@
 #include "hash/sha1.h"
 #include "hash/sha256.h"
 #include "hash/sha512.h"
+#include "hash/fnv.h"
 #include "zlib.h"
 #include "pathinfo.h"
 
@@ -140,6 +141,82 @@ DECLARE_MODULE_METHOD(hash__sha512) {
   }
 }
 
+DECLARE_MODULE_METHOD(hash__fnv1) {
+  ENFORCE_ARG_COUNT(fnv1, 1);
+
+  if(!IS_STRING(args[0]) && !IS_BYTES(args[0])){
+    RETURN_ERROR("fnv1() expects string or bytes");
+  }
+
+  char *result;
+  if(IS_STRING(args[0])){
+    b_obj_string *string = AS_STRING(args[0]);
+    result = FNV1((unsigned char *)string->chars, string->length);
+  } else {
+    b_obj_bytes *bytes = AS_BYTES(args[0]);
+    result = FNV1(bytes->bytes.bytes, bytes->bytes.count);
+  }
+
+  RETURN_TT_STRING(result);
+}
+
+DECLARE_MODULE_METHOD(hash__fnv1a) {
+  ENFORCE_ARG_COUNT(fnv1a, 1);
+
+  if(!IS_STRING(args[0]) && !IS_BYTES(args[0])){
+    RETURN_ERROR("fnv1a() expects string or bytes");
+  }
+
+  char *result;
+  if(IS_STRING(args[0])){
+    b_obj_string *string = AS_STRING(args[0]);
+    result = FNV1a((unsigned char *)string->chars, string->length);
+  } else {
+    b_obj_bytes *bytes = AS_BYTES(args[0]);
+    result = FNV1a(bytes->bytes.bytes, bytes->bytes.count);
+  }
+
+  RETURN_TT_STRING(result);
+}
+
+DECLARE_MODULE_METHOD(hash__fnv1_64) {
+  ENFORCE_ARG_COUNT(fnv1_64, 1);
+
+  if(!IS_STRING(args[0]) && !IS_BYTES(args[0])){
+    RETURN_ERROR("fnv1_64() expects string or bytes");
+  }
+
+  char *result;
+  if(IS_STRING(args[0])){
+    b_obj_string *string = AS_STRING(args[0]);
+    result = FNV164((unsigned char *)string->chars, string->length);
+  } else {
+    b_obj_bytes *bytes = AS_BYTES(args[0]);
+    result = FNV164(bytes->bytes.bytes, bytes->bytes.count);
+  }
+
+  RETURN_TT_STRING(result);
+}
+
+DECLARE_MODULE_METHOD(hash__fnv1a_64) {
+  ENFORCE_ARG_COUNT(fnv1a64, 1);
+
+  if(!IS_STRING(args[0]) && !IS_BYTES(args[0])){
+    RETURN_ERROR("fnv1a_64() expects string or bytes");
+  }
+
+  char *result;
+  if(IS_STRING(args[0])){
+    b_obj_string *string = AS_STRING(args[0]);
+    result = FNV1a64((unsigned char *)string->chars, string->length);
+  } else {
+    b_obj_bytes *bytes = AS_BYTES(args[0]);
+    result = FNV1a64(bytes->bytes.bytes, bytes->bytes.count);
+  }
+
+  RETURN_TT_STRING(result);
+}
+
 CREATE_MODULE_LOADER(hash) {
   static b_func_reg class_functions[] = {
       {"_adler32", true, GET_MODULE_METHOD(hash__adler32)},
@@ -149,6 +226,10 @@ CREATE_MODULE_LOADER(hash) {
       {"sha1", true, GET_MODULE_METHOD(hash__sha1)},
       {"sha256", true, GET_MODULE_METHOD(hash__sha256)},
       {"sha512", true, GET_MODULE_METHOD(hash__sha512)},
+      {"fnv1", true, GET_MODULE_METHOD(hash__fnv1)},
+      {"fnv1a", true, GET_MODULE_METHOD(hash__fnv1a)},
+      {"fnv1_64", true, GET_MODULE_METHOD(hash__fnv1_64)},
+      {"fnv1a_64", true, GET_MODULE_METHOD(hash__fnv1a_64)},
       {NULL,      false, NULL},
   };
 

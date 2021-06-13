@@ -58,5 +58,29 @@ class Hash {
    * returns the sha512 hash of the given string or bytes
    */
   static sha512(str) {}
+
+  /**
+   * fnv1(str: string | bytes)
+   * returns the 32 bit fnv1 hash of the given string or bytes
+   */
+  static fnv1(str) {}
+
+  /**
+   * fnv1_64(str: string | bytes)
+   * returns the 64 bit fnv1 hash of the given string or bytes
+   */
+  static fnv1_64(str) {}
+
+  /**
+   * fnv1a(str: string | bytes)
+   * returns the 32 bit fnv1a hash of the given string or bytes
+   */
+  static fnv1a(str) {}
+
+  /**
+   * fnv1a_64(str: string | bytes)
+   * returns the 64 bit fnv1a hash of the given string or bytes
+   */
+  static fnv1a_64(str) {}
 }
 
