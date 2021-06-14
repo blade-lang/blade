@@ -209,7 +209,6 @@ static void MD4Final(unsigned char digest[16], MD4_CTX *context) {
 
   /* Zeroize sensitive information.
    */
-//  ZEND_SECURE_ZERO((unsigned char *) context, sizeof(*context));
   MD_memset((unsigned char *) context, 0, sizeof(*context));
 }
 
