@@ -160,6 +160,23 @@ void sha256_init (SHA256_CTX *sc) {
   sc->bufferLength = 0L;
 }
 
+void sha224_init (SHA256_CTX *sc) {
+#ifdef RUNTIME_ENDIAN
+  setEndian (&sc->littleEndian);
+#endif /* RUNTIME_ENDIAN */
+
+  sc->totalLength = 0LL;
+  sc->hash[0] = 0xc1059ed8L;
+  sc->hash[1] = 0x367cd507L;
+  sc->hash[2] = 0x3070dd17L;
+  sc->hash[3] = 0xf70e5939L;
+  sc->hash[4] = 0xffc00b31L;
+  sc->hash[5] = 0x68581511L;
+  sc->hash[6] = 0x64f98fa7L;
+  sc->hash[7] = 0xbefa4fa4L;
+  sc->bufferLength = 0L;
+}
+
 static void burnStack (int size) {
   char buf[128];
 
@@ -388,6 +405,21 @@ static char *sha256_string(unsigned char *string, int length) {
 
   char *result = (char*)calloc(65, sizeof(char));
   for (int i = 0; i < 32; i++)
+    sprintf (result + (i * 2), "%02x", digest[i]);
+
+  return result;
+}
+
+static char *sha224_string(unsigned char *string, int length) {
+  SHA256_CTX ctx;
+  unsigned char digest[SHA256_HASH_SIZE];
+
+  sha224_init(&ctx);
+  sha256_update(&ctx, string, length);
+  sha256_final(&ctx, digest);
+
+  char *result = (char*)calloc(57, sizeof(char));
+  for (int i = 0; i < 28; i++)
     sprintf (result + (i * 2), "%02x", digest[i]);
 
   return result;

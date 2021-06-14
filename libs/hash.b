@@ -30,6 +30,18 @@ class Hash {
   }
 
   /**
+   * md2(str: string | bytes)
+   * returns the md2 hash of the given string or bytes
+   */
+  static md2(str) {}
+
+  /**
+   * md4(str: string | bytes)
+   * returns the md4 hash of the given string or bytes
+   */
+  static md4(str) {}
+
+  /**
    * md5(str: string | bytes)
    * returns the md5 hash of the given string or bytes
    */
@@ -48,10 +60,22 @@ class Hash {
   static sha1(str) {}
 
   /**
+   * sha224(str: string | bytes)
+   * returns the sha224 hash of the given string or bytes
+   */
+  static sha224(str) {}
+
+  /**
    * sha256(str: string | bytes)
    * returns the sha256 hash of the given string or bytes
    */
   static sha256(str) {}
+
+  /**
+   * sha384(str: string | bytes)
+   * returns the sha384 hash of the given string or bytes
+   */
+  static sha384(str) {}
 
   /**
    * sha512(str: string | bytes)

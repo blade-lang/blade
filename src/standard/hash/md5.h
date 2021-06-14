@@ -63,9 +63,9 @@ void MD5Final (unsigned char*, MD5_CTX *);
 
 static void MD5Transform(uint32_t[4], unsigned char[64]);
 
-static void Encode(unsigned char *, uint32_t *, unsigned int);
+static void MD5Encode(unsigned char *, uint32_t *, unsigned int);
 
-static void Decode (uint32_t * , unsigned char *, unsigned int);
+static void MD5Decode (uint32_t * , unsigned char *, unsigned int);
 
 static void MD5_memcpy(b_md5_ptr, b_md5_ptr, unsigned int);
 
@@ -175,7 +175,7 @@ void MD5Final(unsigned char digest[16], MD5_CTX *context) {
   unsigned int index, padLen;
 
   /* Save number of bits */
-  Encode(bits, context->count, 8);
+  MD5Encode(bits, context->count, 8);
 
   /* Pad out to 56 mod 64.
 */
@@ -186,7 +186,7 @@ void MD5Final(unsigned char digest[16], MD5_CTX *context) {
   /* Append length (before padding) */
   MD5Update(context, bits, 8);
   /* Store state in digest */
-  Encode(digest, context->state, 16);
+  MD5Encode(digest, context->state, 16);
 
   /* Zeroize sensitive information. */
   MD5_memset((b_md5_ptr) context, 0, sizeof(*context));
@@ -198,7 +198,7 @@ void MD5Final(unsigned char digest[16], MD5_CTX *context) {
 static void MD5Transform(uint32_t state[4], unsigned char block[64]) {
   uint32_t a = state[0], b = state[1], c = state[2], d = state[3], x[16];
 
-  Decode(x, block, 64);
+  MD5Decode(x, block, 64);
 
   /* Round 1 */
   FF (a, b, c, d, x[0], S11, 0xd76aa478); /* 1 */
@@ -282,10 +282,10 @@ static void MD5Transform(uint32_t state[4], unsigned char block[64]) {
 }
 
 /*
- * Encodes input (uint32_t) into output (unsigned char). Assumes len it's
+ * MD5Encodes input (uint32_t) into output (unsigned char). Assumes len it's
  * a multiple of 4.
  */
-static void Encode(unsigned char *output, uint32_t *input, unsigned int len) {
+static void MD5Encode(unsigned char *output, uint32_t *input, unsigned int len) {
   unsigned int i, j;
 
   for (i = 0, j = 0; j < len; i++, j += 4) {
@@ -297,10 +297,10 @@ static void Encode(unsigned char *output, uint32_t *input, unsigned int len) {
 }
 
 /*
- * Decodes input (unsigned char) into output (uint32_t). Assumes len is
+ * MD5Decodes input (unsigned char) into output (uint32_t). Assumes len is
  * a multiple of 4.
  */
-static void Decode(uint32_t *output, unsigned char *input, unsigned int len) {
+static void MD5Decode(uint32_t *output, unsigned char *input, unsigned int len) {
   unsigned int i, j;
 
   for (i = 0, j = 0; j < len; i++, j += 4)
@@ -336,12 +336,12 @@ static char *MD5DigestToString(unsigned char digest[16]) {
   return result;
 }
 
-static char *MD5String(char *string, int length) {
+static char *MD5String(unsigned char *string, int length) {
   MD5_CTX context;
   unsigned char digest[16];
 
   MD5Init(&context);
-  MD5Update(&context, (unsigned char*)string, length);
+  MD5Update(&context, string, length);
   MD5Final(digest, &context);
 
   return MD5DigestToString(digest);
