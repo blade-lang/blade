@@ -1,5 +1,5 @@
-#ifndef bird_module_socket_h
-#define bird_module_socket_h
+#ifndef BIRD_MODULE_SOCKET_H
+#define BIRD_MODULE_SOCKET_H
 
 #include "module.h"
 #include "native.h"

@@ -18,8 +18,8 @@ class Type {
 
   /**
    * type(value: any)
-   *
    * returns the name of the type of value
+   *
    * @note method implemented as part of core language features
    */
   static of(value) { 
@@ -30,7 +30,6 @@ class Type {
 
   /**
    * is_int()
-   *
    * returns true if the value is an integer or false otherwise
    */
   is_int() {
@@ -39,7 +38,6 @@ class Type {
 
   /**
    * is_bool()
-   *
    * returns true if the value is a boolean or false otherwise
    */
   is_bool() {
@@ -48,8 +46,8 @@ class Type {
 
   /**
    * is_number()
-   *
    * returns true if the value is a number or false otherwise
+   *
    * @note this method also returns true for integers
    */
   is_number() {
@@ -58,7 +56,6 @@ class Type {
 
   /**
    * is_char()
-   *
    * returns true if the value is a single character or false otherwise
    */
   is_char() {
@@ -67,7 +64,6 @@ class Type {
 
   /**
    * is_string()
-   *
    * returns true if the value is a string or false otherwise
    */
   is_string() {
@@ -76,7 +72,6 @@ class Type {
 
   /**
    * is_list()
-   *
    * returns true if the value is a list or false otherwise
    */
   is_list() {
@@ -85,7 +80,6 @@ class Type {
 
   /**
    * is_dict()
-   *
    * returns true if the value is a dictionary or false otherwise
    */
   is_dict() {
@@ -94,7 +88,6 @@ class Type {
 
   /**
    * is_object()
-   *
    * returns true if the value is an object or false otherwise
    */
   is_object() {
@@ -103,7 +96,6 @@ class Type {
 
   /**
    * is_function()
-   *
    * returns true if the value is a function or false otherwise
    */
   is_function() {
@@ -112,7 +104,6 @@ class Type {
 
   /**
    * is_class()
-   *
    * returns true if the value is a class or false otherwise
    */
   is_class() {
@@ -121,7 +112,6 @@ class Type {
 
   /**
    * is_file()
-   *
    * returns true if the value is a file or false otherwise
    */
   is_file() {
@@ -130,7 +120,6 @@ class Type {
 
   /**
    * is_iterable()
-   *
    * returns true if the value is an iterable or false otherwise
    */
   is_iterable() {
@@ -139,7 +128,6 @@ class Type {
 
   /**
    * is_callable()
-   *
    * returns true if the value is a callable function or class and false otherwise
    */
   is_callable() {
@@ -148,7 +136,6 @@ class Type {
 
   /**
    * is_instance(type: class)
-   *
    * returns true if the value is an instance the given class, false
    * otherwise
    */
@@ -158,6 +145,11 @@ class Type {
     return is_instance(self.value, type)
   }
 
+  /**
+   * is_digit()
+   * returns true if the value is a character and digit,
+   * otherwise returns false
+   */
   is_digit() {
     if !is_string(self.value) or !self.value.length() == 1
       die Exception('char expected')
@@ -165,6 +157,11 @@ class Type {
     return _ >= 48 and _ <= 56
   }
 
+  /**
+   * is_alpha()
+   * returns true if the value is a character and alphabetic,
+   * otherwise returns false
+   */
   is_alpha() {
     if !is_string(self.value) or !self.value.length() == 1
       die Exception('char expected')
@@ -176,7 +173,6 @@ class Type {
 
   /**
    * to_int()
-   *
    * convert the value into an integer.
    *
    * classes may override the return value by declaring a to_int()
@@ -188,7 +184,6 @@ class Type {
 
   /**
    * to_number()
-   *
    * convert the value into a number.
    *
    * classes may override the return value by declaring a to_number()
@@ -200,7 +195,6 @@ class Type {
 
   /**
    * to_string()
-   *
    * convert the value into a string.
    *
    * classes may override the return value by declaring a to_string()
@@ -212,7 +206,6 @@ class Type {
 
   /**
    * to_bool()
-   *
    * converts the value into a boolean.
    *
    * classes may override the return value by declaring a to_bool()
@@ -224,7 +217,6 @@ class Type {
 
   /**
    * to_list()
-   *
    * convert the value into a list.
    *
    * classes may override the return value by declaring a to_list()
@@ -236,7 +228,6 @@ class Type {
 
   /**
    * to_dict()
-   *
    * convert the value value into a dictionary.
    *
    * classes may override the return value by declaring a to_dict()

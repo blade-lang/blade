@@ -1,5 +1,5 @@
-#ifndef bird_pathinfo_h
-#define bird_pathinfo_h
+#ifndef BIRD_PATHINFO_H
+#define BIRD_PATHINFO_H
 
 #include "common.h"
 

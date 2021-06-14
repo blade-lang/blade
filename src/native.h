@@ -1,5 +1,5 @@
-#ifndef bird_native_h
-#define bird_native_h
+#ifndef BIRD_NATIVE_H
+#define BIRD_NATIVE_H
 
 #include "config.h"
 
@@ -11,13 +11,13 @@
 #include "pcre2.h"
 
 #define DECLARE_NATIVE(name)                                                   \
-  b_value native_fn_##name(b_vm *vm, int arg_count, const b_value *args)
+  bool native_fn_##name(b_vm *vm, int arg_count, b_value *args)
 
 #define DECLARE_METHOD(name)                                                   \
-  b_value native_method_##name(b_vm *vm, int arg_count, const b_value *args)
+  bool native_method_##name(b_vm *vm, int arg_count, b_value *args)
 
 #define DECLARE_MODULE_METHOD(name)                                            \
-  b_value native_module_##name(b_vm *vm, int arg_count, const b_value *args)
+  bool native_module_##name(b_vm *vm, int arg_count, b_value *args)
 
 #define GET_NATIVE(name) native_fn_##name
 #define GET_METHOD(name) native_method_##name
@@ -31,9 +31,9 @@
 
 // NOTE: METHOD_OBJECT must always be retrieved
 // before any call to create an object in a native function.
-// faliure to do so will lead to the first object created
+// failure to do so will lead to the first object created
 // within the function to appear as METHOD_OBJECT
-#define METHOD_OBJECT peek(vm, arg_count)
+#define METHOD_OBJECT args[-1]
 
 #define NORMALIZE_IS_BOOL "bool"
 #define NORMALIZE_IS_BYTES "bytes"
@@ -50,24 +50,24 @@
 
 #define NORMALIZE(token) NORMALIZE_##token
 
-#define RETURN return NIL_VAL
+#define RETURN { args[-1] = NIL_VAL; return true; }
 #define RETURN_ERROR(...)                                                      \
   {                                                                            \
     pop_n(vm, arg_count); \
-    throw_exception(vm, ##__VA_ARGS__);                                         \
-    return EMPTY_VAL;                                                          \
+    throw_exception(vm, ##__VA_ARGS__);                                        \
+    args[-1] = FALSE_VAL; \
+    return false;                                                          \
   }
-#define RETURN_EMPTY return EMPTY_VAL
-#define RETURN_BOOL(v) return BOOL_VAL(v)
-#define RETURN_TRUE return BOOL_VAL(true)
-#define RETURN_FALSE return BOOL_VAL(false)
-#define RETURN_NUMBER(v) return NUMBER_VAL(v)
-#define RETURN_OBJ(v) return OBJ_VAL(v)
-#define RETURN_STRING(v) return OBJ_VAL(copy_string(vm, v, (int)strlen(v)))
-#define RETURN_L_STRING(v, l) return OBJ_VAL(copy_string(vm, v, l))
-#define RETURN_T_STRING(v, l) return OBJ_VAL(take_string(vm, v, l))
-#define RETURN_TT_STRING(v) return OBJ_VAL(take_string(vm, v, (int)strlen(v)))
-#define RETURN_VALUE(v) return v
+#define RETURN_BOOL(v) { args[-1] = BOOL_VAL(v); return true; }
+#define RETURN_TRUE { args[-1] = BOOL_VAL(true); return true; }
+#define RETURN_FALSE { args[-1] = BOOL_VAL(false); return true; }
+#define RETURN_NUMBER(v) { args[-1] = NUMBER_VAL(v); return true; }
+#define RETURN_OBJ(v) { args[-1] = OBJ_VAL(v); return true; }
+#define RETURN_STRING(v) { args[-1] = OBJ_VAL(copy_string(vm, v, (int)strlen(v))); return true; }
+#define RETURN_L_STRING(v, l) { args[-1] = OBJ_VAL(copy_string(vm, v, l)); return true; }
+#define RETURN_T_STRING(v, l) { args[-1] = OBJ_VAL(take_string(vm, v, l)); return true; }
+#define RETURN_TT_STRING(v) { args[-1] = OBJ_VAL(take_string(vm, v, (int)strlen(v))); return true; }
+#define RETURN_VALUE(v) { args[-1] = v; return true; }
 
 #define ENFORCE_ARG_COUNT(name, d)                                             \
   if (arg_count != d) {                                                        \
@@ -119,7 +119,8 @@
       b_obj_instance *instance = AS_INSTANCE(args[0]);                         \
       if (invoke_from_class(vm, instance->klass,                               \
                             copy_string(vm, #override, i), 0)) {               \
-        RETURN;                                                                \
+        args[-1] = TRUE_VAL;                                                   \
+        return false; \
       }                                                                        \
     }                                                                          \
   } while (0);

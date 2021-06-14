@@ -1,5 +1,5 @@
-#ifndef bird_value_h
-#define bird_value_h
+#ifndef BIRD_VALUE_H
+#define BIRD_VALUE_H
 
 #include <string.h>
 
@@ -17,7 +17,7 @@ typedef union {
 #if defined USE_NAN_BOXING && USE_NAN_BOXING
 
 // binary representation = 1111111111111 i.e.
-// 11 bits + 1 bit for quite nan and another
+// 11 bits + 1 bit for quiet nan and another
 // bit to dodge intel's QNaN Floating-Point Indefinite bit
 #define QNAN ((uint64_t)0x7ffc000000000000)
 

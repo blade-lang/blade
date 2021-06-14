@@ -1,5 +1,5 @@
-#ifndef bird_common_h
-#define bird_common_h
+#ifndef BIRD_COMMON_H
+#define BIRD_COMMON_H
 
 // special definitions for Cygwin
 #define _DEFAULT_SOURCE 1

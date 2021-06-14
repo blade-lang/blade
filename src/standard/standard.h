@@ -1,5 +1,5 @@
-#ifndef bird_standard_h
-#define bird_standard_h
+#ifndef BIRD_STANDARD_H
+#define BIRD_STANDARD_H
 
 #include "standard/base64.h"
 #include "standard/date.h"
@@ -7,5 +7,6 @@
 #include "standard/math.h"
 #include "standard/os.h"
 #include "standard/socket.h"
+#include "standard/hash.h"
 
-#endif //bird_standard_h
+#endif // BIRD_STANDARD_H

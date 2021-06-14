@@ -1,5 +1,5 @@
-#ifndef bird_vm_h
-#define bird_vm_h
+#ifndef BIRD_VM_H
+#define BIRD_VM_H
 
 typedef struct s_compiler b_compiler;
 
@@ -108,7 +108,7 @@ static inline b_obj *gc_protect(b_vm *vm, b_obj *object) {
 
 static inline void gc_clear_protection(b_vm *vm) {
   if(vm->gc_protected > 0) {
-    pop_n(vm, vm->gc_protected);
+    vm->stack_top -= vm->gc_protected;
   }
   vm->gc_protected = 0;
 }

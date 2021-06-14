@@ -329,6 +329,12 @@ class HttpRequest {
     return result
   }
 
+  /**
+   * send([data: string])
+   *
+   * sends an HttpRequest and returns an HttpResponse
+   * or throws one of SocketException or Exception if it fails
+   */
   send(data) {
     if data != nil and !is_string(data)
       die Exception('string expected, ${typeof(data)} give')

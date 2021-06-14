@@ -5,11 +5,14 @@
  * @copyright O2021, Ore Richard Muyiwa
  */
 
-# Internal helper class to help
-# Mime class represent and organize it's mimes better
-# @note, This class is not intended for calling outside of this library
-# unless it provides you with the exact mechanism you need to solve
-# your problem.
+/**
+ * Internal helper class to help
+ * Mime class represent and organize it's mimes better.
+ *
+ * @note, This class is not intended for calling outside of this library
+ * unless it provides you with the exact mechanism you need to solve
+ * your problem.
+ */
 class _MimeFormat {
   _MimeFormat(mimetype, header) {
     if header and !is_list(header) {
@@ -21,17 +24,20 @@ class _MimeFormat {
   }
 }
 
-# This class is capable of detecting file mimetypes even
-# in the abscence of an exception.
-# Example:
-#
-# var f = file('myfile', 'rb')
-# 
-# # using 'rb' here for two reasons: 
-# # 1. Our file has no extension, so extension based detection is impossible
-# # 2. We want more accuracy by having Mime check file headers
-#
-# echo Mime(f).detect()
+/**
+ * This class is capable of detecting file mimetypes even
+ * in the abscence of an extension.
+ *
+ * Example:
+ *
+ * var f = file('myfile', 'rb')
+ * 
+ * # using 'rb' here for two reasons: 
+ * # 1. Our file has no extension, so extension based detection is impossible
+ * # 2. We want more accuracy by having Mime check file headers
+ *
+ * echo Mime(f).detect()
+ */
 class Mime {
 
   # internal library of mime formats mapped by extension
@@ -387,11 +393,14 @@ class Mime {
     ])
   }
 
-  # The Mime class constructor, accepts the file to work on as argument
-  # When dealing with not-so-popular files, 
-  # the path passed to the file constructor should contain a valid 
-  # extension for optimal accuracy,
-  # This is however not required for files to contain any...
+  /**
+   * The Mime class constructor, accepts the file to work on as argument.
+   *
+   * When dealing with not-so-popular files, 
+   * the path passed to the file constructor should contain a valid 
+   * extension for optimal accuracy;
+   * It is however not required for files to contain any extension.
+   */
   Mime(file) {
     if !is_file(file) {
       die Exception('file expected, ${type(file)} given')
@@ -399,11 +408,15 @@ class Mime {
     self.file = file
   }
 
-  # Detects the mimetype of a file based on the
-  # extension defined in it's path.
-  # @note, For popular files such as Jpeg and Pngs,
-  # calling this method directly is more efficient and
-  # provides a faster lookup
+  /**
+   * detect_from_name()
+   * Detects the mimetype of a file based on the
+   * extension defined in it's path.
+   *
+   * @note, For popular files such as Jpeg and Pngs,
+   * calling this method directly is more efficient and
+   * provides a faster lookup
+   */
   detect_from_name() {
     for ext, mime in self._mimes {
       if self.file.name().ends_with(ext) return mime.mimetype
@@ -411,14 +424,19 @@ class Mime {
     return 'application/octet-stream'
   }
 
-  # Detects the mimetype of a file based on it's file header.
-  # When multiple file formats share very similar or shadowing
-  # file headers (such as the relationship between Zip files and Docx files),
-  # this method will perform an extension before returning it's result.
-  # @note, For dealing with files without extension, or where the accuracy of the 
-  # file extension cannot be trusted, this method provides a more efficient lookup.
-  # @note, This method may produce slightly more rigorous results
-  # @note, This method requires that the file must be opened in binary mode
+  /**
+   * detect_from_header() 
+   * Detects the mimetype of a file based on it's file header.
+   *
+   * When multiple file formats share very similar or shadowing
+   * file headers (such as the relationship between Zip files and Docx files),
+   * this method will perform an extension before returning it's result.
+   *
+   * @note, For dealing with files without extension, or where the accuracy of the 
+   * file extension cannot be trusted, this method provides a more efficient lookup.
+   * @note, This method may produce slightly more rigorous results
+   * @note, This method requires that the file must be opened in binary mode
+   */
   detect_from_header() {
     if !self.file.mode().match('b') {
       die Exception('detect_from_header expects file to be opened in binary mode')
@@ -455,12 +473,17 @@ class Mime {
     return 'application/octet-stream'
   }
 
-  # Performs mimetype detection on a file.
-  # If the file is opened in binary mode, it first attempt the more
-  # accurate header check. If the header check returns a generic result 
-  # (i.e. application/octet-stream), it performs an extension lookup.
-  # @note, this method gives the best result, but slightly slower than
-  # a direct lookup of name or header.
+  /**
+   * detect()
+   * Performs mimetype detection on a file.
+   *
+   * If the file is opened in binary mode, it first attempt the more
+   * accurate header check. If the header check returns a generic result 
+   * (i.e. application/octet-stream), it performs an extension lookup.
+   *
+   * @note, this method gives the best result, but slightly slower than
+   * a direct lookup of name or header.
+   */
   detect() {
     if self.file.mode().match('b') {
       var mime = self.detect_from_header()

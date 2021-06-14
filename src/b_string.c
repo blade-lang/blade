@@ -162,8 +162,9 @@ DECLARE_STRING_METHOD(is_alpha) {
   ENFORCE_ARG_COUNT(is_alpha, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
-    if (!isalpha((unsigned char)string->chars[i]))
+    if (!isalpha((unsigned char)string->chars[i])) {
       RETURN_FALSE;
+    }
   }
   RETURN_TRUE;
 }
@@ -172,8 +173,9 @@ DECLARE_STRING_METHOD(is_alnum) {
   ENFORCE_ARG_COUNT(is_alnum, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
-    if (!isalnum((unsigned char)string->chars[i]))
+    if (!isalnum((unsigned char)string->chars[i])) {
       RETURN_FALSE;
+    }
   }
   RETURN_TRUE;
 }
@@ -182,8 +184,9 @@ DECLARE_STRING_METHOD(is_number) {
   ENFORCE_ARG_COUNT(is_number, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
-    if (!isdigit((unsigned char)string->chars[i]))
+    if (!isdigit((unsigned char)string->chars[i])){
       RETURN_FALSE;
+    }
   }
   RETURN_TRUE;
 }
@@ -192,8 +195,9 @@ DECLARE_STRING_METHOD(is_lower) {
   ENFORCE_ARG_COUNT(is_lower, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
-    if (!islower((unsigned char)string->chars[i]))
+    if (!islower((unsigned char)string->chars[i])) {
       RETURN_FALSE;
+    }
   }
   RETURN_TRUE;
 }
@@ -202,8 +206,9 @@ DECLARE_STRING_METHOD(is_upper) {
   ENFORCE_ARG_COUNT(is_upper, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
-    if (!isupper((unsigned char)string->chars[i]))
+    if (!isupper((unsigned char)string->chars[i])) {
       RETURN_FALSE;
+    }
   }
   RETURN_TRUE;
 }
@@ -212,8 +217,9 @@ DECLARE_STRING_METHOD(is_space) {
   ENFORCE_ARG_COUNT(is_space, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   for (int i = 0; i < string->length; i++) {
-    if (!isspace((unsigned char)string->chars[i]))
+    if (!isspace((unsigned char)string->chars[i])) {
       RETURN_FALSE;
+    }
   }
   RETURN_TRUE;
 }
@@ -241,8 +247,9 @@ DECLARE_STRING_METHOD(trim) {
       string++;
   }
 
-  if (*string == 0) // All spaces?
+  if (*string == 0) { // All spaces?
     RETURN_OBJ(copy_string(vm, "", 0));
+  }
 
   // Trim trailing space
   end = string + strlen(string) - 1;
@@ -283,8 +290,9 @@ DECLARE_STRING_METHOD(ltrim) {
       string++;
   }
 
-  if (*string == 0) // All spaces?
+  if (*string == 0) { // All spaces?
     RETURN_OBJ(copy_string(vm, "", 0));
+  }
 
   end = string + strlen(string) - 1;
 
@@ -308,8 +316,9 @@ DECLARE_STRING_METHOD(rtrim) {
 
   char *end = NULL;
 
-  if (*string == 0) // All spaces?
+  if (*string == 0) { // All spaces?
     RETURN_OBJ(copy_string(vm, "", 0));
+  }
 
   end = string + strlen(string) - 1;
   if (trimmer == '\0') {
@@ -336,8 +345,9 @@ DECLARE_STRING_METHOD(join) {
 
   if (IS_STRING(argument)) {
     // empty argument
-    if (AS_STRING(argument)->length == 0)
+    if (AS_STRING(argument)->length == 0) {
       RETURN_VALUE(argument);
+    }
 
     char *string = (char *)AS_C_STRING(argument);
     length = AS_STRING(argument)->length;
@@ -1036,8 +1046,9 @@ DECLARE_STRING_METHOD(__itern__) {
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
 
   if (IS_NIL(args[0])) {
-    if (string->utf8_length == 0)
+    if (string->utf8_length == 0) {
       RETURN_FALSE;
+    }
     RETURN_NUMBER(0);
   }
 

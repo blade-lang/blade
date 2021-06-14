@@ -1,5 +1,5 @@
-#ifndef bird_b_string_h
-#define bird_b_string_h
+#ifndef BIRD_B_STRING_H
+#define BIRD_B_STRING_H
 
 #include "common.h"
 #include "native.h"

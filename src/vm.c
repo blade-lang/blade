@@ -70,9 +70,9 @@ static b_value get_stack_trace(b_vm *vm){
   }
 
   if (trace != NULL) {
-    RETURN_TT_STRING(trace);
+    return OBJ_VAL(take_string(vm, trace, (int)strlen(trace)));
   }
-  RETURN_STRING("");
+  return OBJ_VAL(copy_string(vm, "", 0));
 }
 
 bool propagate_exception(b_vm *vm) {
@@ -563,17 +563,34 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
 
     case OBJ_NATIVE: {
       b_obj_native *native = AS_NATIVE(callee);
-      b_value result = native->function(vm, arg_count, vm->stack_top - arg_count);
-
-      if (IS_EMPTY(result)) {
+      if(native->function(vm, arg_count, vm->stack_top - arg_count)){
         CLEAR_GC();
-        vm->stack_top -= arg_count + 1;
-        return false;
+        vm->stack_top -= arg_count;
+        return true;
+      } else {
+        CLEAR_GC();
+        bool overridden = AS_BOOL(vm->stack_top[-arg_count - 1]);
+        if(!overridden) {
+          vm->stack_top -= arg_count + 1;
+        }
+        return overridden;
       }
 
-      CLEAR_GC();
-      vm->stack_top -= arg_count + 1;
-      push(vm, result);
+      // for method overrides
+//      if(IS_UNDEFINED(result)) {
+//        CLEAR_GC();
+//        return true;
+//      }
+
+//      if (IS_EMPTY(result)) {
+//        CLEAR_GC();
+//        vm->stack_top -= arg_count + 1;
+//        return false;
+//      }
+
+//      CLEAR_GC();
+//      vm->stack_top -= arg_count + 1;
+//      push(vm, result);
       return true;
     }
 

@@ -1,5 +1,5 @@
-#ifndef bird_config_h
-#define bird_config_h
+#ifndef BIRD_CONFIG_H
+#define BIRD_CONFIG_H
 
 // global debug mode flag
 #define DEBUG_MODE 0

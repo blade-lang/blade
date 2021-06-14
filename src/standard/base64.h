@@ -1,5 +1,5 @@
-#ifndef bird_module_base64_h
-#define bird_module_base64_h
+#ifndef BIRD_MODULE_BASE64_H
+#define BIRD_MODULE_BASE64_H
 
 #include "module.h"
 #include "native.h"

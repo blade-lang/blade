@@ -145,7 +145,7 @@ b_value get_os_platform(b_vm *vm) {
 #define PLATFORM_NAME "unknown"
 #endif
 
-  RETURN_STRING(PLATFORM_NAME);
+  return OBJ_VAL(copy_string(vm, PLATFORM_NAME, (int)strlen(PLATFORM_NAME)));
 
 #undef PLATFORM_NAME
 }
@@ -155,8 +155,11 @@ DECLARE_MODULE_METHOD(os_getenv) {
   ENFORCE_ARG_TYPE(getenv, 0, IS_STRING);
 
   char *env = getenv(AS_C_STRING(args[0]));
-  if(env != NULL) RETURN_STRING(env);
-  else RETURN;
+  if(env != NULL) {
+    RETURN_STRING(env);
+  } else {
+    RETURN;
+  }
 }
 
 DECLARE_MODULE_METHOD(os_setenv) {
@@ -174,8 +177,9 @@ DECLARE_MODULE_METHOD(os_setenv) {
 #define setenv(e, v, i) _putenv_s(e, v)
 #endif
 
-  if(setenv(AS_C_STRING(args[0]), AS_C_STRING(args[1]), overwrite) == 0)
+  if(setenv(AS_C_STRING(args[0]), AS_C_STRING(args[1]), overwrite) == 0) {
     RETURN_TRUE;
+  }
   RETURN_FALSE;
 }
 

@@ -1,5 +1,5 @@
-#ifndef bird_util_h
-#define bird_util_h
+#ifndef BIRD_UTIL_H
+#define BIRD_UTIL_H
 
 #include "common.h"
 

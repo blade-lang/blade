@@ -1,5 +1,5 @@
-#ifndef bird_compat_time_h
-#define bird_compat_time_h
+#ifndef BIRD_COMPAT_TIME_H
+#define BIRD_COMPAT_TIME_H
 
 #include "common.h"
 

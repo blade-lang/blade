@@ -131,8 +131,9 @@ DECLARE_MODULE_METHOD(math__log1p) {
 
 DECLARE_MODULE_METHOD(math__floor) {
   ENFORCE_ARG_COUNT(floor, 1);
-  if (IS_NIL(args[0]))
+  if (IS_NIL(args[0])) {
     RETURN_NUMBER(0);
+  }
   ENFORCE_ARG_TYPE(floor, 0, IS_NUMBER);
   RETURN_NUMBER(floor(AS_NUMBER(args[0])));
 }
