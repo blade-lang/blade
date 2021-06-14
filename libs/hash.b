@@ -106,5 +106,11 @@ class Hash {
    * returns the 64 bit fnv1a hash of the given string or bytes
    */
   static fnv1a_64(str) {}
+
+  /**
+   * whirlpool(str: string | bytes)
+   * returns the whirlpool hash of the given string or bytes
+   */
+  static whirlpool(str) {}
 }
 
