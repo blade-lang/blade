@@ -237,6 +237,18 @@ static const sha2_word64 K512[80] = {
     0x5fcb6fab3ad6faecULL, 0x6c44198c4a475817ULL
 };
 
+/* initial hash value H for SHA-384 */
+static const sha2_word64 sha384_initial_hash_value[8] = {
+    0xcbbb9d5dc1059ed8ULL,
+    0x629a292a367cd507ULL,
+    0x9159015a3070dd17ULL,
+    0x152fecd8f70e5939ULL,
+    0x67332667ffc00b31ULL,
+    0x8eb44a8768581511ULL,
+    0xdb0c2e0d64f98fa7ULL,
+    0x47b5481dbefa4fa4ULL
+};
+
 /* initial hash value H for SHA-512 */
 static const sha2_word64 sha512_initial_hash_value[8] = {
     0x6a09e667f3bcc908ULL,
@@ -253,6 +265,15 @@ typedef union {
   uint8_t*  theChars;
   uint64_t* theLongs;
 } ldns_sha2_buffer_union;
+
+static void SHA384_Init(SHA512_CTX* context) {
+  if (context == (SHA512_CTX*)0) {
+    return;
+  }
+  SHA512_MEMCPY_BCOPY(context->state, sha384_initial_hash_value, SHA512_DIGEST_LENGTH);
+  SHA512_MEMSET_BZERO(context->buffer, SHA512_BLOCK_LENGTH);
+  context->bitcount[0] = context->bitcount[1] =  0;
+}
 
 /*** SHA-512: *********************************************************/
 static void SHA512_Init(SHA512_CTX* context) {
@@ -460,6 +481,21 @@ static void SHA512_Final(sha2_byte digest[], SHA512_CTX* context) {
 
   /* Zero out state data */
   SHA512_MEMSET_BZERO(context, sizeof(SHA512_CTX));
+}
+
+static char *SHA384String(void *data, unsigned int data_len) {
+  unsigned char digest[64];
+
+  SHA512_CTX ctx;
+  SHA384_Init(&ctx);
+  SHA512_Update(&ctx, data, data_len);
+  SHA512_Final(digest, &ctx);
+
+  char *result = (char*)calloc(97, sizeof(char));
+  for (int i = 0; i < 48; i++)
+    sprintf (result + (i * 2), "%02x", digest[i]);
+
+  return result;
 }
 
 static char *SHA512String(void *data, unsigned int data_len) {

@@ -1,4 +1,5 @@
 #include "hash.h"
+#include "hash/md.h"
 #include "hash/md5.h"
 #include "hash/sha1.h"
 #include "hash/sha256.h"
@@ -51,6 +52,44 @@ DECLARE_MODULE_METHOD(hash__adler32) {
   }
 }
 
+DECLARE_MODULE_METHOD(hash__md2) {
+  ENFORCE_ARG_COUNT(md2, 1);
+
+  if(!IS_STRING(args[0]) && !IS_BYTES(args[0])){
+    RETURN_ERROR("md2() expects string or bytes");
+  }
+
+  char *result;
+  if(IS_STRING(args[0])){
+    b_obj_string *string = AS_STRING(args[0]);
+    result = MD2String((unsigned char*)string->chars, string->length);
+  } else {
+    b_obj_bytes *bytes = AS_BYTES(args[0]);
+    result = MD2String(bytes->bytes.bytes, bytes->bytes.count);
+  }
+
+  RETURN_T_STRING(result, 32);
+}
+
+DECLARE_MODULE_METHOD(hash__md4) {
+  ENFORCE_ARG_COUNT(md4, 1);
+
+  if(!IS_STRING(args[0]) && !IS_BYTES(args[0])){
+    RETURN_ERROR("md4() expects string or bytes");
+  }
+
+  char *result;
+  if(IS_STRING(args[0])){
+    b_obj_string *string = AS_STRING(args[0]);
+    result = MD4String((unsigned char*)string->chars, string->length);
+  } else {
+    b_obj_bytes *bytes = AS_BYTES(args[0]);
+    result = MD4String(bytes->bytes.bytes, bytes->bytes.count);
+  }
+
+  RETURN_T_STRING(result, 32);
+}
+
 DECLARE_MODULE_METHOD(hash__md5) {
   ENFORCE_ARG_COUNT(md5, 1);
 
@@ -58,15 +97,16 @@ DECLARE_MODULE_METHOD(hash__md5) {
     RETURN_ERROR("md5() expects string or bytes");
   }
 
+  char *result;
   if(IS_STRING(args[0])){
     b_obj_string *string = AS_STRING(args[0]);
-    char *result = MD5String(string->chars, string->length);
-    RETURN_T_STRING(result, 32);
+    result = MD5String((unsigned char*)string->chars, string->length);
   } else {
     b_obj_bytes *bytes = AS_BYTES(args[0]);
-    char *result = MD5String((char *)bytes->bytes.bytes, bytes->bytes.count);
-    RETURN_T_STRING(result, 32);
+    result = MD5String(bytes->bytes.bytes, bytes->bytes.count);
   }
+
+  RETURN_T_STRING(result, 32);
 }
 
 DECLARE_MODULE_METHOD(hash__md5_file) {
@@ -94,15 +134,37 @@ DECLARE_MODULE_METHOD(hash__sha1) {
     RETURN_ERROR("sha1() expects string or bytes");
   }
 
+  char *result;
   if(IS_STRING(args[0])){
     b_obj_string *string = AS_STRING(args[0]);
-    char *result = SHA1String((unsigned char *)string->chars, string->length);
-    RETURN_T_STRING(result, 40);
+    result = SHA1String((unsigned char *)string->chars, string->length);
   } else {
     b_obj_bytes *bytes = AS_BYTES(args[0]);
-    char *result = SHA1String(bytes->bytes.bytes, bytes->bytes.count);
-    RETURN_T_STRING(result, 40);
+    result = SHA1String(bytes->bytes.bytes, bytes->bytes.count);
   }
+
+  RETURN_T_STRING(result, 40);
+}
+
+DECLARE_MODULE_METHOD(hash__sha224) {
+  ENFORCE_ARG_COUNT(sha224, 1);
+
+  if(!IS_STRING(args[0]) && !IS_BYTES(args[0])){
+    RETURN_ERROR("sha224() expects string or bytes");
+  }
+
+  char *result;
+  if(IS_STRING(args[0])){
+    b_obj_string *string = AS_STRING(args[0]);
+    result = sha224_string((unsigned char *)string->chars, string->length);
+  } else {
+    b_obj_bytes *bytes = AS_BYTES(args[0]);
+    result = sha224_string(bytes->bytes.bytes, bytes->bytes.count);
+  }
+
+  b_obj_string *string = copy_string(vm, result, 56);
+  free(result);
+  RETURN_OBJ(string);
 }
 
 DECLARE_MODULE_METHOD(hash__sha256) {
@@ -112,15 +174,37 @@ DECLARE_MODULE_METHOD(hash__sha256) {
     RETURN_ERROR("sha256() expects string or bytes");
   }
 
+  char *result;
   if(IS_STRING(args[0])){
     b_obj_string *string = AS_STRING(args[0]);
-    char *result = sha256_string((unsigned char *)string->chars, string->length);
-    RETURN_T_STRING(result, 64);
+    result = sha256_string((unsigned char *)string->chars, string->length);
   } else {
     b_obj_bytes *bytes = AS_BYTES(args[0]);
-    char *result = sha256_string(bytes->bytes.bytes, bytes->bytes.count);
-    RETURN_T_STRING(result, 64);
+    result = sha256_string(bytes->bytes.bytes, bytes->bytes.count);
   }
+
+  RETURN_T_STRING(result, 64);
+}
+
+DECLARE_MODULE_METHOD(hash__sha384) {
+  ENFORCE_ARG_COUNT(sha384, 1);
+
+  if(!IS_STRING(args[0]) && !IS_BYTES(args[0])){
+    RETURN_ERROR("sha384() expects string or bytes");
+  }
+
+  char *result;
+  if(IS_STRING(args[0])){
+    b_obj_string *string = AS_STRING(args[0]);
+    result = SHA384String((unsigned char *) string->chars, string->length);
+  } else {
+    b_obj_bytes *bytes = AS_BYTES(args[0]);
+    result = SHA384String(bytes->bytes.bytes, bytes->bytes.count);
+  }
+
+  b_obj_string *string = copy_string(vm, result, 96);
+  free(result);
+  RETURN_OBJ(string);
 }
 
 DECLARE_MODULE_METHOD(hash__sha512) {
@@ -130,15 +214,16 @@ DECLARE_MODULE_METHOD(hash__sha512) {
     RETURN_ERROR("sha512() expects string or bytes");
   }
 
+  char *result;
   if(IS_STRING(args[0])){
     b_obj_string *string = AS_STRING(args[0]);
-    char *result = SHA512String((unsigned char *) string->chars, string->length);
-    RETURN_T_STRING(result, 128);
+    result = SHA512String((unsigned char *) string->chars, string->length);
   } else {
     b_obj_bytes *bytes = AS_BYTES(args[0]);
-    char *result = SHA512String(bytes->bytes.bytes, bytes->bytes.count);
-    RETURN_T_STRING(result, 128);
+    result = SHA512String(bytes->bytes.bytes, bytes->bytes.count);
   }
+
+  RETURN_T_STRING(result, 128);
 }
 
 DECLARE_MODULE_METHOD(hash__fnv1) {
@@ -221,10 +306,14 @@ CREATE_MODULE_LOADER(hash) {
   static b_func_reg class_functions[] = {
       {"_adler32", true, GET_MODULE_METHOD(hash__adler32)},
       {"_crc32", true, GET_MODULE_METHOD(hash__crc32)},
+      {"md2", true, GET_MODULE_METHOD(hash__md2)},
+      {"md4", true, GET_MODULE_METHOD(hash__md4)},
       {"md5", true, GET_MODULE_METHOD(hash__md5)},
       {"md5_file", true, GET_MODULE_METHOD(hash__md5_file)},
       {"sha1", true, GET_MODULE_METHOD(hash__sha1)},
+      {"sha224", true, GET_MODULE_METHOD(hash__sha224)},
       {"sha256", true, GET_MODULE_METHOD(hash__sha256)},
+      {"sha384", true, GET_MODULE_METHOD(hash__sha384)},
       {"sha512", true, GET_MODULE_METHOD(hash__sha512)},
       {"fnv1", true, GET_MODULE_METHOD(hash__fnv1)},
       {"fnv1a", true, GET_MODULE_METHOD(hash__fnv1a)},
