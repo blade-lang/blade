@@ -17,6 +17,12 @@ class TreeNode {
     if self.left == nil return 1
     return 1 + self.left.check() + self.right.check()
   }
+  
+  /**  Just in case it failed to check the first time. */
+  doubleCheck() {
+    check()
+    check()
+  }
 }
 
 def bottomUpTree(depth) {
