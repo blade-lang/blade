@@ -29,7 +29,9 @@ typedef struct {
 
 #if defined(vax) || defined(ns32000) || defined(sun386) || defined(__i386__) || \
     defined(MIPSEL) || defined(_MIPSEL) || defined(BIT_ZERO_ON_RIGHT) || \
-    defined(__alpha__) || defined(__alpha)
+    defined(__alpha__) || defined(__alpha) || \
+     defined(_M_IX86) || defined(_M_X64) || defined(_M_IA64) || /* msvc for intel processors */ \
+     defined(_M_ARM) /* msvc code on arm executes in little endian mode */
 #define BYTE_ORDER	LITTLE_ENDIAN
 #endif
 
@@ -39,7 +41,8 @@ typedef struct {
     defined(apollo) || defined(__convex__) || defined(_CRAY) || \
     defined(__hppa) || defined(__hp9000) || \
     defined(__hp9000s300) || defined(__hp9000s700) || \
-    defined (BIT_ZERO_ON_LEFT) || defined(m68k) || defined(__sparc)
+    defined (BIT_ZERO_ON_LEFT) || defined(m68k) || defined(__sparc)|| \
+     defined(_M_PPC)
 #define BYTE_ORDER	BIG_ENDIAN
 #endif
 #endif /* linux */

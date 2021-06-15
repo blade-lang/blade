@@ -1,4 +1,3 @@
-#include "b_sprintf.h"
 #include "vm.h"
 #include "common.h"
 #include "compiler.h"

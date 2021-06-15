@@ -3,6 +3,8 @@
 
 #ifdef _WIN32
 #include "win32.h"
+#define localtime_r(a, v) localtime_s(v, a)
+#define gmtime_r(a, v) gmtime_s(v, a)
 #endif
 
 #include <time.h>
