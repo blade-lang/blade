@@ -112,5 +112,11 @@ class Hash {
    * returns the whirlpool hash of the given string or bytes
    */
   static whirlpool(str) {}
+
+  /**
+   * snefru(str: string | bytes)
+   * returns the snefru cyrptographic hash of the given string or bytes
+   */
+  static snefru(str) {}
 }
 

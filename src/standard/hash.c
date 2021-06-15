@@ -5,6 +5,7 @@
 #include "hash/sha256.h"
 #include "hash/sha512.h"
 #include "hash/whirlpool.h"
+#include "hash/snefru.h"
 #include "hash/fnv.h"
 #include "zlib.h"
 #include "pathinfo.h"
@@ -322,6 +323,25 @@ DECLARE_MODULE_METHOD(hash__whirlpool) {
   RETURN_TT_STRING(result);
 }
 
+DECLARE_MODULE_METHOD(hash__snefru) {
+  ENFORCE_ARG_COUNT(snefru, 1);
+
+  if(!IS_STRING(args[0]) && !IS_BYTES(args[0])){
+    RETURN_ERROR("snefru() expects string or bytes");
+  }
+
+  char *result;
+  if(IS_STRING(args[0])){
+    b_obj_string *string = AS_STRING(args[0]);
+    result = SnefruString((unsigned char *) string->chars, string->length);
+  } else {
+    b_obj_bytes *bytes = AS_BYTES(args[0]);
+    result = SnefruString(bytes->bytes.bytes, bytes->bytes.count);
+  }
+
+  RETURN_TT_STRING(result);
+}
+
 CREATE_MODULE_LOADER(hash) {
   static b_func_reg class_functions[] = {
       {"_adler32", true, GET_MODULE_METHOD(hash__adler32)},
@@ -340,6 +360,7 @@ CREATE_MODULE_LOADER(hash) {
       {"fnv1_64", true, GET_MODULE_METHOD(hash__fnv1_64)},
       {"fnv1a_64", true, GET_MODULE_METHOD(hash__fnv1a_64)},
       {"whirlpool", true, GET_MODULE_METHOD(hash__whirlpool)},
+      {"snefru", true, GET_MODULE_METHOD(hash__snefru)},
       {NULL,      false, NULL},
   };
 

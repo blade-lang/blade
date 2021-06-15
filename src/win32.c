@@ -87,7 +87,7 @@ int uname(struct utsname *sys) {
   strncpy(sys->sysname, "Windows", 8);
 
   // get system version
-  sha256_word arch = 0;
+  WORD arch = 0;
   const char *sysn_info = GetWindowsVersionString(&arch);
   int sysname_length = (int)strlen(sysn_info);
   memcpy(sys->version, sysn_info, sysname_length);
