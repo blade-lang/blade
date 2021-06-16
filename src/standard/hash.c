@@ -7,6 +7,7 @@
 #include "hash/whirlpool.h"
 #include "hash/snefru.h"
 #include "hash/fnv.h"
+#include "hash/siphash.h"
 #include "zlib.h"
 #include "pathinfo.h"
 
@@ -342,6 +343,24 @@ DECLARE_MODULE_METHOD(hash__snefru) {
   RETURN_TT_STRING(result);
 }
 
+DECLARE_MODULE_METHOD(hash__siphash) {
+  ENFORCE_ARG_COUNT(_siphash, 2);
+
+  if(!IS_BYTES(args[0]) && !IS_BYTES(args[1])){
+    RETURN_ERROR("_siphash() expects key and str as bytes");
+  }
+
+  b_obj_bytes *key = AS_BYTES(args[0]);
+  b_obj_bytes *str = AS_BYTES(args[1]);
+
+  uint64_t sip = siphash24(str->bytes.bytes, str->bytes.count, (const char *)key->bytes.bytes);
+
+  char result[17]; // assume maximum of 16 bits
+  int length = sprintf(result, "%llx", sip);
+
+  RETURN_L_STRING(result, length);
+}
+
 CREATE_MODULE_LOADER(hash) {
   static b_func_reg class_functions[] = {
       {"_adler32", true, GET_MODULE_METHOD(hash__adler32)},
@@ -361,6 +380,7 @@ CREATE_MODULE_LOADER(hash) {
       {"fnv1a_64", true, GET_MODULE_METHOD(hash__fnv1a_64)},
       {"whirlpool", true, GET_MODULE_METHOD(hash__whirlpool)},
       {"snefru", true, GET_MODULE_METHOD(hash__snefru)},
+      {"_siphash", true, GET_MODULE_METHOD(hash__siphash)},
       {NULL,      false, NULL},
   };
 

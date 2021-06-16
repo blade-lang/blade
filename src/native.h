@@ -51,6 +51,7 @@
 #define NORMALIZE(token) NORMALIZE_##token
 
 #define RETURN { args[-1] = NIL_VAL; return true; }
+#define RETURN_EMPTY { args[-1] = NIL_VAL; return false; }
 #define RETURN_ERROR(...)                                                      \
   {                                                                            \
     pop_n(vm, arg_count); \
@@ -141,7 +142,7 @@
         (int)(ovector[0] - ovector[1]), (char *)(subject + ovector[1]));       \
     pcre2_match_data_free(match_data);                                         \
     pcre2_code_free(re);                                                       \
-    return EMPTY_VAL;                                                          \
+    RETURN_EMPTY;                                                          \
   }
 
 
@@ -239,6 +240,8 @@ DECLARE_NATIVE(is_number);
 DECLARE_NATIVE(is_int);
 
 DECLARE_NATIVE(is_string);
+
+DECLARE_NATIVE(is_bytes);
 
 DECLARE_NATIVE(is_list);
 

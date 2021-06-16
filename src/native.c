@@ -140,7 +140,7 @@ DECLARE_NATIVE(getprop) {
   b_obj_instance *instance = AS_INSTANCE(args[0]);
   b_value value;
   table_get(&instance->fields, args[1], &value);
-  return value;
+  RETURN_VALUE(value);
 }
 
 /**
@@ -252,8 +252,7 @@ DECLARE_NATIVE(abs) {
   ENFORCE_ARG_TYPE(abs, 0, IS_NUMBER);
   double value = AS_NUMBER(args[0]);
 
-  if (value > -1)
-    return args[0];
+  if (value > -1) RETURN_VALUE(args[0]);
   RETURN_NUMBER(-value);
 }
 
@@ -600,6 +599,16 @@ DECLARE_NATIVE(is_int) {
 DECLARE_NATIVE(is_string) {
   ENFORCE_ARG_COUNT(is_string, 1);
   RETURN_BOOL(IS_STRING(args[0]));
+}
+
+/**
+ * is_bytes(value: any)
+ *
+ * returns true if the value is a bytes or false otherwise
+ */
+DECLARE_NATIVE(is_bytes) {
+  ENFORCE_ARG_COUNT(is_bytes, 1);
+  RETURN_BOOL(IS_BYTES(args[0]));
 }
 
 /**

@@ -403,7 +403,7 @@ DECLARE_FILE_METHOD(stats) {
     SET_DICT_STRING(dict, "is_executable", 13, FALSE_VAL);
     SET_DICT_STRING(dict, "size", 4, NUMBER_VAL(1));
   }
-  return OBJ_VAL(dict);
+  RETURN_OBJ(dict);
 }
 
 DECLARE_FILE_METHOD(symlink) {

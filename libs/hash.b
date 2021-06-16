@@ -30,6 +30,12 @@ class Hash {
   }
 
   /**
+   * novak(str: string | bytes)
+   * returns the novak hash (based on Rijndael S Box) of the given string or bytes
+   */
+  static novak(str) {}
+
+  /**
    * md2(str: string | bytes)
    * returns the md2 hash of the given string or bytes
    */
@@ -118,5 +124,29 @@ class Hash {
    * returns the snefru cyrptographic hash of the given string or bytes
    */
   static snefru(str) {}
+
+  /**
+   * siphash(key: string | bytes, str: string | bytes)
+   * returns the siphash cyrptographic hash of the given string or bytes
+   */
+  static siphash(key, str) {
+    if !is_string(key) and !is_bytes(key) {
+      die Exception('key must be string or bytes')
+    } else if !is_string(str) and !is_bytes(str) {
+      die Exception('str must be string or bytes')
+    }
+
+    if key.length() > 16
+      die Exception('key must be maximum of 16 characters/bytes long')
+    else if key.length() < 16 {
+      if is_bytes(key) key = key.to_string()
+      key = key.rpad(16, '\0')
+    }
+
+    if is_string(key) key = key.to_bytes()
+    if is_string(str) str = str.to_bytes()
+
+    return self._siphash(key, str)
+  }
 }
 
