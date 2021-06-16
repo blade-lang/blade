@@ -3,8 +3,21 @@
 
 #ifdef _WIN32
 #include "win32.h"
-#define localtime_r(a, v) localtime_s(v, a)
-#define gmtime_r(a, v) gmtime_s(v, a)
+//struct tm* gmtime_r(const time_t* _clock, struct tm* _result) {
+//  struct tm* p = gmtime(_clock);
+//  if (p)
+//    *(_result) = *p;
+//  return p;
+//}
+//
+//struct tm* localtime_r(const time_t* _clock, struct tm* _result) {
+//  struct tm* p = _localtime32(_clock);
+//  if (p)
+//    *(_result) = *p;
+//  return p;
+//}
+#define localtime_r(o, e) _localtime32_s(e, o)
+#define gmtime_r(o, e) _gmtime32_s(e, o)
 #endif
 
 #include <time.h>

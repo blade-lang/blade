@@ -131,10 +131,13 @@ static void repl(b_vm *vm) {
     }
 
     source = append_strings(source, line);
-    free(line);
     if (line_length > 0) {
       source = append_strings(source, "\n");
     }
+
+#ifndef _WIN32
+    free(line);
+#endif // !_WIN32
 
     if (bracket_count == 0 && paren_count == 0 && brace_count == 0 && single_quote_count == 0 && double_quote_count == 0) {
 

@@ -161,7 +161,7 @@ int gettimeofday(struct timeval *time_info, struct timezone *timezone_info) {
 }
 
 char *dirname(char *path) {
-  char *drive = (char *)malloc(sizeof(char));
+  char *drive = (char *)malloc(sizeof(char) * _MAX_DRIVE);
   char *dir = (char *)malloc(sizeof(char) * MAX_PATH);
   _splitpath((const char *)path, drive, dir, NULL, NULL);
   drive = append_strings(drive, dir);

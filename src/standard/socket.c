@@ -55,7 +55,7 @@ DECLARE_MODULE_METHOD(socket__create) {
 
 #ifdef _WIN32
   WSADATA wsa_data;
-  int i_result = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+  int i_result = WSAStartup(MAKEWORD(1, 1), &wsa_data);
   if (i_result != NO_ERROR) {
       errno = i_result;
       RETURN_NUMBER(-1);
@@ -88,7 +88,7 @@ DECLARE_MODULE_METHOD(socket__connect) {
   remote.sin_family = family;
   remote.sin_port = htons(port);
 
-  if(inet_pton(AF_INET, address, &remote.sin_addr) <= 0) {
+  if(inet_pton(family, address, &remote.sin_addr) <= 0) {
     errno = EADDRNOTAVAIL;
     RETURN_NUMBER(-1);
   }
@@ -100,15 +100,19 @@ DECLARE_MODULE_METHOD(socket__connect) {
   }
 
 #ifndef _WIN32
-  long arg = O_NONBLOCK;
-  fcntl(sock, F_SETFL, arg);
+  long arg = fcntl(sock, F_GETFL) | O_NONBLOCK;
+  bool non_blocking = fcntl(sock, F_SETFL, arg) == 0;
 #else
   unsigned long arg = 1;
-  ioctlsocket(sock, FIONBIO, &arg);
+  bool non_blocking = ioctl(sock, FIONBIO, &arg) == 0;
 #endif
 
-  if(connect(sock, (struct sockaddr *)&remote, sizeof(struct sockaddr_in)) == -1) {
-    if(errno != EINPROGRESS) {
+  if (connect(sock, (struct sockaddr*) & remote, sizeof(remote)) < 0) {
+#ifndef _WIN32
+    if (errno != EINPROGRESS) {
+#else
+    if (errno != ENOENT && errno != EINPROGRESS) {
+#endif // !_WIN32
       RETURN_NUMBER(-1);
     }
   }
@@ -126,13 +130,13 @@ DECLARE_MODULE_METHOD(socket__connect) {
     getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&so_error, &len);
 #endif
     if (so_error == 0) {
-      if(is_blocking) {
+      if(is_blocking && non_blocking) {
 #ifndef _WIN32
         arg &= (~O_NONBLOCK);
         fcntl(sock, F_SETFL, arg);
 #else
         unsigned long arg = 0;
-          ioctlsocket(sock, FIONBIO, &arg);
+        ioctl(sock, FIONBIO, &arg);
 #endif
       }
       RETURN_NUMBER(so_error);
@@ -414,7 +418,7 @@ DECLARE_MODULE_METHOD(socket__getaddrinfo) {
   ENFORCE_ARG_TYPE(_getaddrinfo, 2, IS_NUMBER);
 
   b_obj_string *addr = AS_STRING(args[0]);
-  char *type = NULL;
+  char *type = "http";
   if(!IS_NIL(args[1])){
     ENFORCE_ARG_TYPE(_getaddrinfo, 1, IS_STRING);
     type = AS_C_STRING(args[1]);
@@ -425,6 +429,14 @@ DECLARE_MODULE_METHOD(socket__getaddrinfo) {
 
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_family = family;
+
+#ifdef _WIN32
+  WSADATA wsa_data;
+  int i_result = WSAStartup(MAKEWORD(1, 1), &wsa_data);
+  if (i_result != NO_ERROR) {
+    RETURN;
+  }
+#endif
 
   if(getaddrinfo(addr->length > 0 ? addr->chars : NULL, type,  &hints, &res) == 0) {
     while(res) {
@@ -471,7 +483,8 @@ DECLARE_MODULE_METHOD(socket__getaddrinfo) {
 DECLARE_MODULE_METHOD(socket__close) {
   ENFORCE_ARG_COUNT(_error, 1);
   ENFORCE_ARG_TYPE(_error, 0, IS_NUMBER);
-  RETURN_NUMBER(closesocket((int) AS_NUMBER(args[0])));
+  int result = closesocket((int)AS_NUMBER(args[0]));
+  RETURN_NUMBER(result);
 }
 
 DECLARE_MODULE_METHOD(socket__shutdown) {
@@ -511,6 +524,8 @@ CREATE_MODULE_LOADER(socket) {
   };
 
   static b_module_reg module = {NULL, classes};
+
+  // @TODO: WSACleanup() on module cleanup function when implemented.
 
   return module;
 }
