@@ -71,6 +71,14 @@ class Type {
   }
 
   /**
+   * is_bytes()
+   * returns true if the value is a bytes or false otherwise
+   */
+  is_bytes() {
+    return is_bytes(self.value)
+  }
+
+  /**
    * is_list()
    * returns true if the value is a list or false otherwise
    */

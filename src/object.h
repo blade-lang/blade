@@ -47,7 +47,7 @@
 // demote bird value to c string
 #define AS_C_STRING(v) (((b_obj_string *)AS_OBJ(v))->chars)
 
-#define IS_CHAR(v) (IS_STRING(v) && AS_STRING(v)->length == 1)
+#define IS_CHAR(v) (IS_STRING(v) && (AS_STRING(v)->length == 1 || AS_STRING(v)->length == 0))
 
 typedef enum {
   // base object types

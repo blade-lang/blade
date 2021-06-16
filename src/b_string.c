@@ -1,5 +1,6 @@
 #include "b_string.h"
 #include "util.h"
+#include "native.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -412,7 +413,7 @@ DECLARE_STRING_METHOD(split) {
   b_obj_string *delimeter = AS_STRING(args[0]);
 
   if (object->length == 0 || delimeter->length > object->length)
-    return OBJ_VAL(new_list(vm));
+    RETURN_OBJ(new_list(vm));
 
   b_obj_list *list = (b_obj_list *)GC(new_list(vm));
 
@@ -543,22 +544,27 @@ DECLARE_STRING_METHOD(lpad) {
     fill_char = AS_C_STRING(args[1])[0];
   }
 
-  if (width <= string->length)
+  if (width <= string->utf8_length)
     RETURN_VALUE(METHOD_OBJECT);
 
-  int fill_size = width - string->length;
+  int fill_size = width - string->utf8_length;
   char *fill = ALLOCATE(char, (size_t)fill_size + 1);
 
-  int i;
-  for (i = 0; i < fill_size; i++)
+  int final_size = string->length + fill_size;
+  int final_utf8_size = string->utf8_length + fill_size;
+
+  for (int i = 0; i < fill_size; i++)
     fill[i] = fill_char;
 
   char *str = ALLOCATE(char, (size_t)string->length + (size_t)fill_size + 1);
   memcpy(str, fill, fill_size);
   memcpy(str + fill_size, string->chars, string->length);
-  str[string->length + fill_size] = '\0';
+  str[final_size] = '\0';
 
-  RETURN_OBJ(take_string(vm, str, string->length + fill_size));
+  b_obj_string *result = take_string(vm, str, final_size);
+  result->utf8_length = final_utf8_size;
+  result->length = final_size;
+  RETURN_OBJ(result);
 }
 
 DECLARE_STRING_METHOD(rpad) {
@@ -574,22 +580,27 @@ DECLARE_STRING_METHOD(rpad) {
     fill_char = AS_C_STRING(args[1])[0];
   }
 
-  if (width <= string->length)
+  if (width <= string->utf8_length)
     RETURN_VALUE(METHOD_OBJECT);
 
-  int fill_size = width - string->length;
+  int fill_size = width - string->utf8_length;
   char *fill = ALLOCATE(char, (size_t)fill_size + 1);
 
-  int i;
-  for (i = 0; i < fill_size; i++)
+  int final_size = string->length + fill_size;
+  int final_utf8_size = string->utf8_length + fill_size;
+
+  for (int i = 0; i < fill_size; i++)
     fill[i] = fill_char;
 
   char *str = ALLOCATE(char, (size_t)string->length + (size_t)fill_size + 1);
   memcpy(str, string->chars, string->length);
   memcpy(str + string->length, fill, fill_size);
-  str[string->length + fill_size] = '\0';
+  str[final_size] = '\0';
 
-  RETURN_OBJ(take_string(vm, str, string->length + fill_size));
+  b_obj_string *result = take_string(vm, str, final_size);
+  result->utf8_length = final_utf8_size;
+  result->length = final_size;
+  RETURN_OBJ(result);
 }
 
 DECLARE_STRING_METHOD(match) {

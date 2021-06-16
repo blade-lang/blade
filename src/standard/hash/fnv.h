@@ -1,7 +1,3 @@
-//
-// Created by Richard Ore on 13/06/2021.
-//
-
 #ifndef BIRD_MODULE_HASH_FNV_H
 #define BIRD_MODULE_HASH_FNV_H
 
