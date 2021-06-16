@@ -41,8 +41,8 @@ for i in 1..1000001 {
   Hash.sha1('hello, world')
 }
 
-star
-echo '1 million sha1 in ${time() - start}s't = time()
+echo '1 million sha1 in ${time() - start}s'
+start = time()
 
 for i in 1..1000001 {
   Hash.sha224('hello, world')
