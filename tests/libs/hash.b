@@ -17,13 +17,6 @@ echo '1 million crc32 in ${time() - start}s'
 start = time()
 
 for i in 1..1000001 {
-  Hash.novak('hello, world')
-}
-
-echo '1 million novak in ${time() - start}s'
-start = time()
-
-for i in 1..1000001 {
   Hash.md2('hello, world')
 }
 
@@ -105,3 +98,17 @@ for i in 1..1000001 {
 }
 
 echo '1 million snefru in ${time() - start}s'
+start = time()
+
+for i in 1..1000001 {
+  Hash.gost('hello, world')
+}
+
+echo '1 million gost in ${time() - start}s'
+start = time()
+
+for i in 1..1000001 {
+  Hash.siphash('0123456789ABCDEF', 'hello, world')
+}
+
+echo '1 million siphash in ${time() - start}s'

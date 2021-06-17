@@ -30,12 +30,6 @@ class Hash {
   }
 
   /**
-   * novak(str: string | bytes)
-   * returns the novak hash (based on Rijndael S Box) of the given string or bytes
-   */
-  static novak(str) {}
-
-  /**
    * md2(str: string | bytes)
    * returns the md2 hash of the given string or bytes
    */
@@ -148,5 +142,11 @@ class Hash {
 
     return self._siphash(key, str)
   }
+
+  /**
+   * gost(str: string | bytes)
+   * returns the gost cyrptographic hash of the given string or bytes
+   */
+  static gost(str) {}
 }
 
