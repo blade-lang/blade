@@ -4,6 +4,8 @@
  * Provides interface for cryptographic and non-cryptographic encryption
  * @copyright 2021, Ore Richard Muyiwa
  */
+import 'convert'
+
 class Hash {
 
 
@@ -150,21 +152,6 @@ class Hash {
   static gost(str) {}
 
   /**
-   * hex_to_bytes(str)
-   * converts hexadecimal string of any length to bytes
-   */
-  static hex_to_bytes(str) {
-    var length = str.length()
-    var b = bytes(length / 2)
-
-    iter var i = 0; i < length - 1; i += 2 {
-      b[i / 2] = to_number('0x${str[i,i+2]}')
-    }
-
-    return b
-  }
-
-  /**
    * hmac(method: function, key: string | bytes, str: string | bytes)
    * computes an HMAC with the key and str using the given method
    */
@@ -193,7 +180,7 @@ class Hash {
     # Keys longer than blockSize are shortened by hashing them
     if key.length() > BLOCK_SIZE {
       # key is outputSize bytes long
-      key = Hash.hex_to_bytes(method(key))
+      key = Convert.hex_to_bytes(method(key))
     }
 
     # Keys shorter than blockSize are padded to blockSize by 
@@ -210,7 +197,7 @@ class Hash {
     iter var i = 0; i < key.length(); i++ inner[i] = 0x36 ^ key[i]
     iter var i = key.length(); i < BLOCK_SIZE; i++ inner[i] = 0x36 ^ 0x00
 
-    var inner_hash = Hash.hex_to_bytes(method(inner.extend(str)))
+    var inner_hash = Convert.hex_to_bytes(method(inner.extend(str)))
 
     return method(outer.extend(inner_hash))
   }
