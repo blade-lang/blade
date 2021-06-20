@@ -112,3 +112,10 @@ for i in 1..1000001 {
 }
 
 echo '1 million siphash in ${time() - start}s'
+start = time()
+
+for i in 1..1000001 {
+  Hash.hmac_sha256('0123456789ABCDEF', 'hello, world')
+}
+
+echo '1 million hmac_sha256 in ${time() - start}s'

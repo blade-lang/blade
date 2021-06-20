@@ -148,5 +148,159 @@ class Hash {
    * returns the gost cyrptographic hash of the given string or bytes
    */
   static gost(str) {}
+
+  /**
+   * hex_to_bytes(str)
+   * converts hexadecimal string of any length to bytes
+   */
+  static hex_to_bytes(str) {
+    var length = str.length()
+    var b = bytes(length / 2)
+
+    iter var i = 0; i < length - 1; i += 2 {
+      b[i / 2] = to_number('0x${str[i,i+2]}')
+    }
+
+    return b
+  }
+
+  /**
+   * hmac(method: function, key: string | bytes, str: string | bytes)
+   * computes an HMAC with the key and str using the given method
+   */
+  static hmac(method, key, str) {
+    if ![
+          Hash.md2,
+          Hash.md4,
+          Hash.md5,
+          Hash.sha1,
+          Hash.sha224,
+          Hash.sha256,
+          Hash.sha384,
+          Hash.sha512,
+          Hash.whirlpool,
+          Hash.snefru,
+          Hash.gost
+        ].contains(method)
+      die Exception('invalid HMAC method')
+
+    # convert key and str to array of bytes.
+    key = key.to_bytes()
+    str = str.to_bytes()
+
+    var BLOCK_SIZE = 64
+
+    # Keys longer than blockSize are shortened by hashing them
+    if key.length() > BLOCK_SIZE {
+      # key is outputSize bytes long
+      key = Hash.hex_to_bytes(method(key))
+    }
+
+    # Keys shorter than blockSize are padded to blockSize by 
+    # padding with zeros on the right
+    iter var i = key.length(); i < BLOCK_SIZE; i++ key.append(0x00)
+
+    # Outer padded key
+    var outer = bytes(BLOCK_SIZE)
+    iter var i = 0; i < key.length(); i++ outer[i] = 0x5C ^ key[i]
+    iter var i = key.length(); i < BLOCK_SIZE; i++ outer[i] = 0x5C ^ 0x00
+
+    # Inner padded key
+    var inner = bytes(BLOCK_SIZE)
+    iter var i = 0; i < key.length(); i++ inner[i] = 0x36 ^ key[i]
+    iter var i = key.length(); i < BLOCK_SIZE; i++ inner[i] = 0x36 ^ 0x00
+
+    var inner_hash = Hash.hex_to_bytes(method(inner.extend(str)))
+
+    return method(outer.extend(inner_hash))
+  }
+
+  /**
+   * hmac_md2(key: string | bytes, str: string | bytes)
+   * returns the HMAC-MD2 cyrptographic hash of the given string or bytes
+   */
+  static hmac_md2(key, str) {
+    return Hash.hmac(Hash.md2, key, str)
+  }
+
+  /**
+   * hmac_md4(key: string | bytes, str: string | bytes)
+   * returns the HMAC-MD4 cyrptographic hash of the given string or bytes
+   */
+  static hmac_md4(key, str) {
+    return Hash.hmac(Hash.md4, key, str)
+  }
+
+  /**
+   * hmac_md5(key: string | bytes, str: string | bytes)
+   * returns the HMAC-MD5 cyrptographic hash of the given string or bytes
+   */
+  static hmac_md5(key, str) {
+    return Hash.hmac(Hash.md5, key, str)
+  }
+
+  /**
+   * hmac_sha1(key: string | bytes, str: string | bytes)
+   * returns the HMAC-SHA1 cyrptographic hash of the given string or bytes
+   */
+  static hmac_sha1(key, str) {
+    return Hash.hmac(Hash.sha1, key, str)
+  }
+
+  /**
+   * hmac_sha224(key: string | bytes, str: string | bytes)
+   * returns the HMAC-SHA224 cyrptographic hash of the given string or bytes
+   */
+  static hmac_sha224(key, str) {
+    return Hash.hmac(Hash.sha224, key, str)
+  }
+
+  /**
+   * hmac_sha256(key: string | bytes, str: string | bytes)
+   * returns the HMAC-SHA256 cyrptographic hash of the given string or bytes
+   */
+  static hmac_sha256(key, str) {
+    return Hash.hmac(Hash.sha256, key, str)
+  }
+
+  /**
+   * hmac_sha384(key: string | bytes, str: string | bytes)
+   * returns the HMAC-SHA384 cyrptographic hash of the given string or bytes
+   */
+  static hmac_sha384(key, str) {
+    return Hash.hmac(Hash.sha384, key, str)
+  }
+
+  /**
+   * hmac_sha512(key: string | bytes, str: string | bytes)
+   * returns the HMAC-SHA512 cyrptographic hash of the given string or bytes
+   */
+  static hmac_sha512(key, str) {
+    return Hash.hmac(Hash.sha512, key, str)
+  }
+
+  /**
+   * hmac_whirlpool(key: string | bytes, str: string | bytes)
+   * returns the HMAC-WHIRLPOOL cyrptographic hash of the given string or bytes
+   */
+  static hmac_whirlpool(key, str) {
+    return Hash.hmac(Hash.whirlpool, key, str)
+  }
+
+  /**
+   * hmac_snefru(key: string | bytes, str: string | bytes)
+   * returns the HMAC-SNEFRU cyrptographic hash of the given string or bytes
+   */
+  static hmac_snefru(key, str) {
+    return Hash.hmac(Hash.snefru, key, str)
+  }
+
+  /**
+   * hmac_gost(key: string | bytes, str: string | bytes)
+   * returns the HMAC-GOST cyrptographic hash of the given string or bytes
+   */
+  static hmac_gost(key, str) {
+    return Hash.hmac(Hash.gost, key, str)
+  }
 }
 
