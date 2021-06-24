@@ -8,6 +8,7 @@
 #include "hash/snefru.h"
 #include "hash/fnv.h"
 #include "hash/siphash.h"
+#include "hash/gost.h"
 #include "zlib.h"
 #include "pathinfo.h"
 
@@ -361,6 +362,25 @@ DECLARE_MODULE_METHOD(hash__siphash) {
   RETURN_L_STRING(result, length);
 }
 
+DECLARE_MODULE_METHOD(hash__gost) {
+  ENFORCE_ARG_COUNT(gost, 1);
+
+  if(!IS_STRING(args[0]) && !IS_BYTES(args[0])){
+    RETURN_ERROR("gost() expects string or bytes");
+  }
+
+  char *result;
+  if(IS_STRING(args[0])){
+    b_obj_string *string = AS_STRING(args[0]);
+    result = GOSTString((unsigned char *) string->chars, string->length);
+  } else {
+    b_obj_bytes *bytes = AS_BYTES(args[0]);
+    result = GOSTString(bytes->bytes.bytes, bytes->bytes.count);
+  }
+
+  RETURN_TT_STRING(result);
+}
+
 CREATE_MODULE_LOADER(hash) {
   static b_func_reg class_functions[] = {
       {"_adler32", true, GET_MODULE_METHOD(hash__adler32)},
@@ -381,6 +401,7 @@ CREATE_MODULE_LOADER(hash) {
       {"whirlpool", true, GET_MODULE_METHOD(hash__whirlpool)},
       {"snefru", true, GET_MODULE_METHOD(hash__snefru)},
       {"_siphash", true, GET_MODULE_METHOD(hash__siphash)},
+      {"gost", true, GET_MODULE_METHOD(hash__gost)},
       {NULL,      false, NULL},
   };
 

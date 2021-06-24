@@ -106,7 +106,7 @@ DECLARE_BYTES_METHOD(extend) {
   memcpy(bytes->bytes.bytes + bytes->bytes.count, n_bytes->bytes.bytes,
          n_bytes->bytes.count);
   bytes->bytes.count += n_bytes->bytes.count;
-  RETURN;
+  RETURN_OBJ(bytes);
 }
 
 DECLARE_BYTES_METHOD(pop) {
