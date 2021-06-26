@@ -1,6 +1,8 @@
 #ifndef BIRD_MODULE_HASH_SHA512_H
 #define BIRD_MODULE_HASH_SHA512_H
 
+#include "common.h"
+
 /*
  * AUTHOR:	Aaron D. Gifford - http://www.aarongifford.com/
  *
@@ -59,39 +61,6 @@ typedef struct _SHA512_CTX {
 } SHA512_CTX;
 #endif /* do we have sha512 header defs */
 
-
-/*** SHA-256/384/512 Machine Architecture Definitions *****************/
-/*
- * BYTE_ORDER NOTE:
- *
- * Please make sure that your system defines BYTE_ORDER.  If your
- * architecture is little-endian, make sure it also defines
- * LITTLE_ENDIAN and that the two (BYTE_ORDER and LITTLE_ENDIAN) are
- * equivilent.
- *
- * If your system does not define the above, then you can do so by
- * hand like this:
- *
- *   #define SHA512_LITTLE_ENDIAN 1234
- *   #define SHA512_BIG_ENDIAN    4321
- *
- * And for little-endian machines, add:
- *
- *   #define SHA512_BYTE_ORDER LITTLE_ENDIAN
- *
- * Or for big-endian machines:
- *
- *   #define SHA512_BYTE_ORDER BIG_ENDIAN
- *
- * The FreeBSD machine this was written on defines BYTE_ORDER
- * appropriately by including <sys/types.h> (which in turn includes
- * <machine/endian.h> where the appropriate definitions are actually
- * made).
- */
-#if !defined(BYTE_ORDER) || (BYTE_ORDER != LITTLE_ENDIAN && BYTE_ORDER != BIG_ENDIAN)
-#error Define BYTE_ORDER to be equal to either LITTLE_ENDIAN or BIG_ENDIAN
-#endif
-
 typedef uint8_t  sha2_byte;	/* Exactly 1 byte */
 typedef uint32_t sha2_word32;	/* Exactly 4 bytes */
 #ifdef S_SPLINT_S
@@ -105,7 +74,7 @@ typedef uint64_t sha2_word64;	/* Exactly 8 bytes */
 
 
 /*** ENDIAN REVERSAL MACROS *******************************************/
-#if BYTE_ORDER == LITTLE_ENDIAN
+#if IS_LITTLE_ENDIAN
 #define SHA512_REVERSE32(w,x)	{ \
 	sha2_word32 tmp = (w); \
 	tmp = (tmp >> 16) | (tmp << 16); \
@@ -123,7 +92,7 @@ typedef uint64_t sha2_word64;	/* Exactly 8 bytes */
 #else /* splint */
 #define SHA512_REVERSE64(w,x) /* splint */
 #endif /* splint */
-#endif /* BYTE_ORDER == LITTLE_ENDIAN */
+#endif /* IS_LITTLE_ENDIAN */
 
 /*
  * Macro for incrementally adding the unsigned 64-bit integer n to the
@@ -303,15 +272,15 @@ static void SHA512_Transform(SHA512_CTX* context,
 
   j = 0;
   do {
-#if BYTE_ORDER == LITTLE_ENDIAN
+#if IS_LITTLE_ENDIAN
     /* Convert TO host byte order */
     SHA512_REVERSE64(*data++, W512[j]);
     /* Apply the SHA-512 compression function to update a..h */
     T1 = h + SHA512_Sigma1_512(e) + Ch(e, f, g) + K512[j] + W512[j];
-#else /* BYTE_ORDER == LITTLE_ENDIAN */
+#else /* IS_LITTLE_ENDIAN */
     /* Apply the SHA-512 compression function to update a..h with copy */
 		T1 = h + Sigma1_512(e) + Ch(e, f, g) + K512[j] + (W512[j] = *data++);
-#endif /* BYTE_ORDER == LITTLE_ENDIAN */
+#endif /* IS_LITTLE_ENDIAN */
     T2 = SHA512_Sigma0_512(a) + Maj(a, b, c);
     h = g;
     g = f;
@@ -416,7 +385,7 @@ static void SHA512_Last(SHA512_CTX* context) {
   ldns_sha2_buffer_union cast_var;
 
   usedspace = (context->bitcount[0] >> 3) % SHA512_BLOCK_LENGTH;
-#if BYTE_ORDER == LITTLE_ENDIAN
+#if IS_LITTLE_ENDIAN
   /* Convert FROM host byte order */
   SHA512_REVERSE64(context->bitcount[0],context->bitcount[0]);
   SHA512_REVERSE64(context->bitcount[1],context->bitcount[1]);
@@ -465,7 +434,7 @@ static void SHA512_Final(sha2_byte digest[], SHA512_CTX* context) {
     SHA512_Last(context);
 
     /* Save the hash data for output: */
-#if BYTE_ORDER == LITTLE_ENDIAN
+#if IS_LITTLE_ENDIAN
     {
       /* Convert TO host byte order */
       int	j;

@@ -10,6 +10,7 @@
 #include <stdint.h>
 
 #include "config.h"
+#include "b_endian.h"
 
 // --> debug mode options starts here...
 #if DEBUG_MODE == 1

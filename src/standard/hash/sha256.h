@@ -72,12 +72,12 @@ static const uint32_t K[64] = {
 
 #ifndef RUNTIME_ENDIAN
 
-#if WORDS_BIGENDIAN == 1
+#if IS_BIG_ENDIAN
 
 #define BYTESWAP(x) (x)
 #define BYTESWAP64(x) (x)
 
-#else /* WORDS_BIGENDIAN */
+#else /* IS_BIG_ENDIAN */
 
 #define BYTESWAP(x) ((ROTR((x), 8) & 0xff00ff00L) | \
 		     (ROTL((x), 8) & 0x00ff00ffL))
@@ -89,7 +89,7 @@ static inline uint64_t _byteswap64(uint64_t x) {
   return ((uint64_t) BYTESWAP(b) << 32) | (uint64_t) BYTESWAP(a);
 }
 
-#endif /* WORDS_BIGENDIAN */
+#endif /* IS_BIG_ENDIAN */
 
 #else /* !RUNTIME_ENDIAN */
 

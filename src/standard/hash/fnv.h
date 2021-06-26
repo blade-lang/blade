@@ -120,7 +120,7 @@ static void FNV1a32Update(FNV132_CTX *context, const unsigned char *input, size_
 }
 
 static void FNV132Final(FNV132_CTX * context, unsigned char digest[4]) {
-#ifdef WORDS_BIGENDIAN
+#ifdef IS_BIG_ENDIAN
   memcpy(digest, &context->state, 4);
 #else
   unsigned char *c = (unsigned char *) &context->state;
@@ -145,7 +145,7 @@ static void FNV1a64Update(FNV164_CTX *context, const unsigned char *input, size_
 }
 
 static void FNV164Final(FNV164_CTX * context, unsigned char digest[8]) {
-#ifdef WORDS_BIGENDIAN
+#ifdef IS_BIG_ENDIAN
   memcpy(digest, &context->state, 8);
 #else
   unsigned char *c = (unsigned char *) &context->state;
