@@ -55,7 +55,7 @@ struct s_vm {
   size_t bytes_allocated;
   size_t next_gc;
 
-  // object methods
+  // object public methods
   b_table methods_string;
   b_table methods_list;
   b_table methods_dict;

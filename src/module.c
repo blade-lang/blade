@@ -65,13 +65,16 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
                   b_value func_name = OBJ_VAL(
                       copy_string(vm, func.name, (int) strlen(func.name)));
 
-                  b_value func_real_value =
-                      OBJ_VAL(new_native(vm, func.function, func.name));
+                  b_obj_native *native = new_native(vm, func.function, func.name);
 
-                  table_set(vm,
-                            func.is_static ? &klass->static_methods
-                                           : &klass->methods,
-                            func_name, func_real_value);
+                  if(func.is_static) {
+                    native->type = TYPE_STATIC;
+                  }
+
+                  bool is_private = strlen(func.name) > 0 && func.name[0] == '_';
+
+                  table_set(vm, is_private ? &klass->private_methods
+                    : &klass->public_methods, func_name, OBJ_VAL(native));
                 }
               }
 
@@ -82,8 +85,8 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
                       copy_string(vm, field.name, (int) strlen(field.name)));
 
                   table_set(vm,
-                            field.is_static ? &klass->static_fields
-                                            : &klass->fields,
+                            field.is_static ? &klass->static_properties
+                                            : &klass->properties,
                             field_name, field.field_value(vm));
                 }
               }

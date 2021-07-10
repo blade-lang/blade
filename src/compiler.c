@@ -206,11 +206,12 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_CALL_IMPORT:
   case OP_FINISH_MODULE:
   case OP_SWITCH:
+  case OP_METHOD:
     return 2;
 
   case OP_INVOKE:
+  case OP_INVOKE_SELF:
   case OP_SUPER_INVOKE:
-  case OP_METHOD:
   case OP_CLASS_PROPERTY:
     return 3;
 
@@ -366,7 +367,7 @@ static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
   compiler->scope_depth = 0;
   compiler->handler_count = 0;
 
-  compiler->function = new_function(p->vm);
+  compiler->function = new_function(p->vm, type);
   compiler->function->file = p->current_file;
   p->compiler = compiler;
 
@@ -597,7 +598,7 @@ static b_parse_rule *get_rule(b_tkn_type type);
 static void parse_precedence(b_parser *p, b_precedence precedence);
 // --> Forward declarations end
 
-static void binary(b_parser *p, bool can_assign) {
+static void binary(b_parser *p, b_token previous, bool can_assign) {
   b_tkn_type op = p->previous.type;
 
   // compile the right operand
@@ -697,7 +698,7 @@ static uint8_t argument_list(b_parser *p) {
   return arg_count;
 }
 
-static void call(b_parser *p, bool can_assign) {
+static void call(b_parser *p, b_token previous, bool can_assign) {
   uint8_t arg_count = argument_list(p);
   emit_bytes(p, OP_CALL, arg_count);
 }
@@ -813,14 +814,19 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg, boo
   }
 }
 
-static void dot(b_parser *p, bool can_assign) {
+static void dot(b_parser *p, b_token previous, bool can_assign) {
   ignore_whitespace(p);
   consume(p, IDENTIFIER_TOKEN, "expected property name after '.'");
   int name = identifier_constant(p, &p->previous);
 
   if (match(p, LPAREN_TOKEN)) {
     uint8_t arg_count = argument_list(p);
-    emit_byte_and_short(p, OP_INVOKE, name);
+    if (p->current_class != NULL && (previous.type == SELF_TOKEN
+        || identifiers_equal(&p->previous, &p->current_class->name))) {
+      emit_byte_and_short(p, OP_INVOKE_SELF, name);
+    } else {
+      emit_byte_and_short(p, OP_INVOKE, name);
+    }
     emit_byte(p, arg_count);
   } else {
     assignment(p, OP_GET_PROPERTY, OP_SET_PROPERTY, name, can_assign);
@@ -895,7 +901,7 @@ static void dictionary(b_parser *p, bool can_assign) {
   emit_byte_and_short(p, OP_DICT, item_count);
 }
 
-static void indexing(b_parser *p, bool can_assign) {
+static void indexing(b_parser *p, b_token previous, bool can_assign) {
   expression(p);
   bool assignable = true;
 
@@ -1173,7 +1179,7 @@ static void unary(b_parser *p, bool can_assign) {
   }
 }
 
-static void and_(b_parser *p, bool can_assign) {
+static void and_(b_parser *p, b_token previous, bool can_assign) {
   int end_jump = emit_jump(p, OP_JUMP_IF_FALSE);
 
   emit_byte(p, OP_POP);
@@ -1182,7 +1188,7 @@ static void and_(b_parser *p, bool can_assign) {
   patch_jump(p, end_jump);
 }
 
-static void or_(b_parser *p, bool can_assign) {
+static void or_(b_parser *p, b_token previous, bool can_assign) {
   int else_jump = emit_jump(p, OP_JUMP_IF_FALSE);
   int end_jump = emit_jump(p, OP_JUMP);
 
@@ -1193,7 +1199,7 @@ static void or_(b_parser *p, bool can_assign) {
   patch_jump(p, end_jump);
 }
 
-static void conditional(b_parser *p, bool can_assign) {
+static void conditional(b_parser *p, b_token previous, bool can_assign) {
   ignore_whitespace(p);
   // compile the then expression
   parse_precedence(p, PREC_CONDITIONAL);
@@ -1316,7 +1322,7 @@ static void parse_precedence(b_parser *p, b_precedence precedence) {
   ignore_whitespace(p);
   advance(p);
 
-  b_parse_fn prefix_rule = get_rule(p->previous.type)->prefix;
+  b_parse_prefix_fn prefix_rule = get_rule(p->previous.type)->prefix;
 
   if (prefix_rule == NULL) {
     error(p, "expected expression");
@@ -1327,10 +1333,11 @@ static void parse_precedence(b_parser *p, b_precedence precedence) {
   prefix_rule(p, can_assign);
 
   while (precedence <= get_rule(p->current.type)->precedence) {
+    b_token previous = p->previous;
     ignore_whitespace(p);
     advance(p);
-    b_parse_fn infix_rule = get_rule(p->previous.type)->infix;
-    infix_rule(p, can_assign);
+    b_parse_infix_fn infix_rule = get_rule(p->previous.type)->infix;
+    infix_rule(p, previous, can_assign);
   }
 
   if (can_assign && match(p, EQUAL_TOKEN)) {
@@ -1417,14 +1424,13 @@ static void method(b_parser *p, b_token class_name, bool is_static) {
   consume(p, IDENTIFIER_TOKEN, "method name expected");
   int constant = identifier_constant(p, &p->previous);
 
-  b_func_type type = TYPE_METHOD;
+  b_func_type type = is_static ? TYPE_STATIC : TYPE_METHOD;
   if (p->previous.length == class_name.length &&
       memcmp(p->previous.start, class_name.start, class_name.length) == 0) {
     type = TYPE_INITIALIZER;
   }
   function(p, type);
   emit_byte_and_short(p, OP_METHOD, constant);
-  emit_byte(p, is_static ? 1 : 0);
 }
 
 static void anonymous(b_parser *p, bool can_assign) {
@@ -1654,8 +1660,8 @@ static void iter_statement(b_parser *p) {
  *    var iterable = expression()
  *    var _
  *
- *    while _ = iterable.__itern__() {
- *      var x = iterable.__iter__()
+ *    while _ = iterable.@itern() {
+ *      var x = iterable.@iter()
  *      ...
  *    }
  * }
@@ -1672,30 +1678,30 @@ static void iter_statement(b_parser *p) {
  *    var iterable = expression()
  *    var x
  *
- *    while x = iterable.__itern__() {
- *      var y = iterable.__iter__()
+ *    while x = iterable.@itern() {
+ *      var y = iterable.@iter()
  *      ...
  *    }
  * }
  *
- * Every bird iterable must implement the __iter__(x) and the __itern__(x)
+ * Every bird iterable must implement the @iter(x) and the @itern(x)
  * function.
  *
  * to make instances of a user created class iterable,
- * the class must implement the __iter__(x) and the __itern__(x) function.
- * the __itern__(x) must return the current iterating index of the object and
+ * the class must implement the @iter(x) and the @itern(x) function.
+ * the @itern(x) must return the current iterating index of the object and
  * the
- * __iter__(x) function must return the value at that index.
- * _NOTE_: the __iter__(x) function will no longer be called after the
- * __itern__(x) function returns a false value. so the __iter__(x) never needs
+ * @iter(x) function must return the value at that index.
+ * _NOTE_: the @iter(x) function will no longer be called after the
+ * @itern(x) function returns a false value. so the @iter(x) never needs
  * to return a false value
  */
 static void for_statement(b_parser *p) {
   begin_scope(p);
 
-  // define __iter__ and __iter__ constant
-  int iter__ = make_constant(p, OBJ_VAL(copy_string(p->vm, "__iter__", 8)));
-  int iter_n__ = make_constant(p, OBJ_VAL(copy_string(p->vm, "__itern__", 9)));
+  // define @iter and @itern constant
+  int iter__ = make_constant(p, OBJ_VAL(copy_string(p->vm, "@iter", 5)));
+  int iter_n__ = make_constant(p, OBJ_VAL(copy_string(p->vm, "@itern", 6)));
 
   consume(p, IDENTIFIER_TOKEN, "expected variable name after 'for'");
   b_token key_token, value_token;

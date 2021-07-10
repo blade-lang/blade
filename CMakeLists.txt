@@ -88,8 +88,10 @@ endif(UNIX)
 # add dependency includes
 include_directories(src ${PCRE2_DIR}/build/include ${ZLIB_DIR}/build/include)
 
+add_custom_target(bird_files)
+
 # add dependencies
-add_dependencies(libbird pcre2 zlib)
+add_dependencies(libbird pcre2 zlib bird_files)
 
 set_target_properties(bird
     PROPERTIES
@@ -115,7 +117,7 @@ endif(UNIX)
 
 target_link_libraries(bird libbird)
 
-add_custom_command(TARGET bird POST_BUILD
+add_custom_command(TARGET bird_files POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/libs ${CMAKE_CURRENT_BINARY_DIR}/bin/libs
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/tests ${CMAKE_CURRENT_BINARY_DIR}/bin/tests
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/benchmarks ${CMAKE_CURRENT_BINARY_DIR}/bin/benchmarks
@@ -166,6 +168,8 @@ do_test(bird class 4 "2001")
 do_test(bird class 5 "Richard. You are 15")
 do_test(bird class 6 "Jane. You are 25")
 do_test(bird class 7 "A")
+do_test(bird class 8 "Name is set")
+do_test(bird class 9 "cannot call private method '_echo'")
 do_test(bird closure 0 "outer\nreturn from outer\ncreate inner closure\nvalue\n1499998500000")
 do_test(bird condition 0 "Test passed\nTest passed")
 do_test(bird dictionary 0 "age: 28")
@@ -201,3 +205,10 @@ do_test(bird native 3 "{name: Richard, age: 28}")
 do_test(bird native 4 "A class called A")
 do_test(bird native 5 "9227465\nTime taken")
 do_test(bird native 6 "1548008755920\nTime taken")
+do_test(bird pi 0 "3.141592653589734")
+do_test(bird scope 1 "inner\nouter")
+do_test(bird string 0 "25, This is john's LAST 20")
+do_test(bird try 0 "string index 10 out of range")
+do_test(bird using 0 "ten\nafter")
+do_test(bird var 0 "it works\n20\ntrue")
+do_test(bird while 0 "x = 51")

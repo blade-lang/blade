@@ -182,14 +182,13 @@ class HttpRequest {
   }
 
   # the main http request method
-  __(method, data){
+  _do_http(method, data){
 
     var responder = self.url.absolute_uri, headers, body, time_taken, error
     var should_connect = true, redirect_count = 0, http_version = '1.0', status_code = 0
 
     while should_connect {
 
-      # @TODO: in the else clause, get ipv4 address from the hostname
       var resolved_host = Socket.get_address_info(self.url.host)
 
       if resolved_host {
@@ -222,6 +221,7 @@ class HttpRequest {
 
         # do real request here...
         var client = Socket()
+        client.set_option(Socket.SO_REUSEADDR, true)
 
         var start = time()
 
@@ -338,7 +338,7 @@ class HttpRequest {
   send(data) {
     if data != nil and !is_string(data)
       die Exception('string expected, ${typeof(data)} give')
-    return self.__(self.method.upper(), data)
+    return self._do_http(self.method.upper(), data)
   }
 }
 
