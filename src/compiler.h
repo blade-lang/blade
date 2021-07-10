@@ -76,11 +76,12 @@ typedef struct {
   int innermost_loop_scope_depth;
 } b_parser;
 
-typedef void (*b_parse_fn)(b_parser *, bool);
+typedef void (*b_parse_prefix_fn)(b_parser *, bool);
+typedef void (*b_parse_infix_fn)(b_parser *, b_token, bool);
 
 typedef struct {
-  b_parse_fn prefix;
-  b_parse_fn infix;
+  b_parse_prefix_fn prefix;
+  b_parse_infix_fn infix;
   b_precedence precedence;
 } b_parse_rule;
 

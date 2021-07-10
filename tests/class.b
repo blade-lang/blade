@@ -74,3 +74,23 @@ class C < B {
 }
 
 C().getClosure()()
+
+
+class Animal {
+  setName() {
+    self._echo()
+  }
+
+  _echo() {
+    echo 'Name is set'
+  }
+}
+
+class Dog < Animal {
+  getName() {
+    return parent._echo()
+  }
+}
+
+Animal().setName()
+Dog().getName()

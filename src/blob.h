@@ -57,6 +57,7 @@ typedef enum {
   OP_CLOSURE,
   OP_CALL,
   OP_INVOKE,
+  OP_INVOKE_SELF,
   OP_RETURN,
 
   OP_CLASS,

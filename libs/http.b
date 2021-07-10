@@ -189,7 +189,6 @@ class HttpRequest {
 
     while should_connect {
 
-      # @TODO: in the else clause, get ipv4 address from the hostname
       var resolved_host = Socket.get_address_info(self.url.host)
 
       if resolved_host {

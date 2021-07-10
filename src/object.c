@@ -80,7 +80,7 @@ b_obj_class *new_class(b_vm *vm, b_obj_string *name) {
   init_table(&klass->fields);
   init_table(&klass->static_fields);
   init_table(&klass->methods);
-  init_table(&klass->static_methods);
+  init_table(&klass->private_methods);
   klass->initializer = EMPTY_VAL;
   klass->superclass = NULL;
   return klass;
@@ -113,6 +113,7 @@ b_obj_native *new_native(b_vm *vm, b_native_fn function, const char *name) {
   b_obj_native *native = ALLOCATE_OBJ(b_obj_native, OBJ_NATIVE);
   native->function = function;
   native->name = name;
+  native->type = TYPE_FUNCTION;
   return native;
 }
 

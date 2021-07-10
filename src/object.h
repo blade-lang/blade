@@ -123,7 +123,7 @@ typedef struct b_obj_class {
   b_table fields;
   b_table static_fields;
   b_table methods;
-  b_table static_methods;
+  b_table private_methods;
   b_value initializer;
   struct b_obj_class *superclass;
 } b_obj_class;
@@ -146,6 +146,7 @@ typedef struct b_obj_native {
   b_obj obj;
   const char *name;
   b_native_fn function;
+  b_func_type type;
 } b_obj_native;
 
 typedef struct {

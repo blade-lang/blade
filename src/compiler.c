@@ -210,6 +210,7 @@ static int get_code_args_count(const uint8_t *bytecode,
     return 2;
 
   case OP_INVOKE:
+  case OP_INVOKE_SELF:
   case OP_SUPER_INVOKE:
   case OP_CLASS_PROPERTY:
     return 3;
@@ -597,7 +598,7 @@ static b_parse_rule *get_rule(b_tkn_type type);
 static void parse_precedence(b_parser *p, b_precedence precedence);
 // --> Forward declarations end
 
-static void binary(b_parser *p, bool can_assign) {
+static void binary(b_parser *p, b_token previous, bool can_assign) {
   b_tkn_type op = p->previous.type;
 
   // compile the right operand
@@ -697,7 +698,7 @@ static uint8_t argument_list(b_parser *p) {
   return arg_count;
 }
 
-static void call(b_parser *p, bool can_assign) {
+static void call(b_parser *p, b_token previous, bool can_assign) {
   uint8_t arg_count = argument_list(p);
   emit_bytes(p, OP_CALL, arg_count);
 }
@@ -813,14 +814,19 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg, boo
   }
 }
 
-static void dot(b_parser *p, bool can_assign) {
+static void dot(b_parser *p, b_token previous, bool can_assign) {
   ignore_whitespace(p);
   consume(p, IDENTIFIER_TOKEN, "expected property name after '.'");
   int name = identifier_constant(p, &p->previous);
 
   if (match(p, LPAREN_TOKEN)) {
     uint8_t arg_count = argument_list(p);
-    emit_byte_and_short(p, OP_INVOKE, name);
+    if (p->current_class != NULL && (previous.type == SELF_TOKEN
+        || identifiers_equal(&p->previous, &p->current_class->name))) {
+      emit_byte_and_short(p, OP_INVOKE_SELF, name);
+    } else {
+      emit_byte_and_short(p, OP_INVOKE, name);
+    }
     emit_byte(p, arg_count);
   } else {
     assignment(p, OP_GET_PROPERTY, OP_SET_PROPERTY, name, can_assign);
@@ -895,7 +901,7 @@ static void dictionary(b_parser *p, bool can_assign) {
   emit_byte_and_short(p, OP_DICT, item_count);
 }
 
-static void indexing(b_parser *p, bool can_assign) {
+static void indexing(b_parser *p, b_token previous, bool can_assign) {
   expression(p);
   bool assignable = true;
 
@@ -1173,7 +1179,7 @@ static void unary(b_parser *p, bool can_assign) {
   }
 }
 
-static void and_(b_parser *p, bool can_assign) {
+static void and_(b_parser *p, b_token previous, bool can_assign) {
   int end_jump = emit_jump(p, OP_JUMP_IF_FALSE);
 
   emit_byte(p, OP_POP);
@@ -1182,7 +1188,7 @@ static void and_(b_parser *p, bool can_assign) {
   patch_jump(p, end_jump);
 }
 
-static void or_(b_parser *p, bool can_assign) {
+static void or_(b_parser *p, b_token previous, bool can_assign) {
   int else_jump = emit_jump(p, OP_JUMP_IF_FALSE);
   int end_jump = emit_jump(p, OP_JUMP);
 
@@ -1193,7 +1199,7 @@ static void or_(b_parser *p, bool can_assign) {
   patch_jump(p, end_jump);
 }
 
-static void conditional(b_parser *p, bool can_assign) {
+static void conditional(b_parser *p, b_token previous, bool can_assign) {
   ignore_whitespace(p);
   // compile the then expression
   parse_precedence(p, PREC_CONDITIONAL);
@@ -1316,7 +1322,7 @@ static void parse_precedence(b_parser *p, b_precedence precedence) {
   ignore_whitespace(p);
   advance(p);
 
-  b_parse_fn prefix_rule = get_rule(p->previous.type)->prefix;
+  b_parse_prefix_fn prefix_rule = get_rule(p->previous.type)->prefix;
 
   if (prefix_rule == NULL) {
     error(p, "expected expression");
@@ -1327,10 +1333,11 @@ static void parse_precedence(b_parser *p, b_precedence precedence) {
   prefix_rule(p, can_assign);
 
   while (precedence <= get_rule(p->current.type)->precedence) {
+    b_token previous = p->previous;
     ignore_whitespace(p);
     advance(p);
-    b_parse_fn infix_rule = get_rule(p->previous.type)->infix;
-    infix_rule(p, can_assign);
+    b_parse_infix_fn infix_rule = get_rule(p->previous.type)->infix;
+    infix_rule(p, previous, can_assign);
   }
 
   if (can_assign && match(p, EQUAL_TOKEN)) {

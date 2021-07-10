@@ -229,6 +229,8 @@ int disassemble_instruction(b_blob *blob, int offset) {
       return byte_instruction("call", blob, offset);
     case OP_INVOKE:
       return invoke_instruction("invk", blob, offset);
+    case OP_INVOKE_SELF:
+      return invoke_instruction("invk_s", blob, offset);
     case OP_RETURN:
       return simple_instruction("ret", offset);
 

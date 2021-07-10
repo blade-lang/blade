@@ -510,7 +510,7 @@ CREATE_MODULE_LOADER(socket) {
       {"_close", false, GET_MODULE_METHOD(socket__close)},
       {"_shutdown", false, GET_MODULE_METHOD(socket__shutdown)},
       {"_getsockinfo", false, GET_MODULE_METHOD(socket__getsockinfo)},
-      {"_getaddrinfo", true, GET_MODULE_METHOD(socket__getaddrinfo)},
+      {"_getaddrinfo", false, GET_MODULE_METHOD(socket__getaddrinfo)},
       {NULL, false, NULL},
   };
 
