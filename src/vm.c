@@ -713,15 +713,11 @@ static void close_up_values(b_vm *vm, const b_value *last) {
   }
 }
 
-static void define_method(b_vm *vm, b_obj_string *name, bool is_static) {
+static void define_method(b_vm *vm, b_obj_string *name) {
   b_value method = peek(vm, 0);
   b_obj_class *klass = AS_CLASS(peek(vm, 1));
-  if (!is_static) {
-    table_set(vm, &klass->methods, OBJ_VAL(name), method);
-  } else {
-    table_set(vm, &klass->static_methods, OBJ_VAL(name), method);
-  }
-  if (name == klass->name && !is_static) {
+  table_set(vm, &klass->methods, OBJ_VAL(name), method);
+  if (name == klass->name && AS_FUNCTION(method)->type != TYPE_STATIC) {
     klass->initializer = method;
   }
   pop(vm);
@@ -1722,8 +1718,7 @@ b_ptr_result run(b_vm *vm) {
     }
     case OP_METHOD: {
       b_obj_string *name = READ_STRING();
-      bool is_static = READ_BYTE() == 1;
-      define_method(vm, name, is_static);
+      define_method(vm, name);
       break;
     }
     case OP_CLASS_PROPERTY: {

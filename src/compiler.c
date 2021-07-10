@@ -206,11 +206,11 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_CALL_IMPORT:
   case OP_FINISH_MODULE:
   case OP_SWITCH:
+  case OP_METHOD:
     return 2;
 
   case OP_INVOKE:
   case OP_SUPER_INVOKE:
-  case OP_METHOD:
   case OP_CLASS_PROPERTY:
     return 3;
 
@@ -366,7 +366,7 @@ static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
   compiler->scope_depth = 0;
   compiler->handler_count = 0;
 
-  compiler->function = new_function(p->vm);
+  compiler->function = new_function(p->vm, type);
   compiler->function->file = p->current_file;
   p->compiler = compiler;
 
@@ -1417,14 +1417,13 @@ static void method(b_parser *p, b_token class_name, bool is_static) {
   consume(p, IDENTIFIER_TOKEN, "method name expected");
   int constant = identifier_constant(p, &p->previous);
 
-  b_func_type type = TYPE_METHOD;
+  b_func_type type = is_static ? TYPE_STATIC : TYPE_METHOD;
   if (p->previous.length == class_name.length &&
       memcmp(p->previous.start, class_name.start, class_name.length) == 0) {
     type = TYPE_INITIALIZER;
   }
   function(p, type);
   emit_byte_and_short(p, OP_METHOD, constant);
-  emit_byte(p, is_static ? 1 : 0);
 }
 
 static void anonymous(b_parser *p, bool can_assign) {

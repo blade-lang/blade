@@ -8,6 +8,14 @@
 
 #include <stdio.h>
 
+typedef enum {
+  TYPE_FUNCTION,
+  TYPE_METHOD,
+  TYPE_INITIALIZER,
+  TYPE_STATIC,
+  TYPE_SCRIPT,
+} b_func_type;
+
 #define OBJ_TYPE(v) (AS_OBJ(v)->type)
 
 // object type checks
@@ -93,6 +101,7 @@ typedef struct b_obj_up_value {
 
 typedef struct {
   b_obj obj;
+  b_func_type type;
   int arity;
   int up_value_count;
   bool is_variadic;
@@ -188,7 +197,7 @@ b_obj_class *new_class(b_vm *vm, b_obj_string *name);
 
 b_obj_closure *new_closure(b_vm *vm, b_obj_func *function);
 
-b_obj_func *new_function(b_vm *vm);
+b_obj_func *new_function(b_vm *vm, b_func_type type);
 
 b_obj_instance *new_instance(b_vm *vm, b_obj_class *klass);
 

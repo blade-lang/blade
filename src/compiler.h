@@ -26,13 +26,6 @@ typedef enum {
   PREC_PRIMARY
 } b_precedence;
 
-typedef enum {
-  TYPE_FUNCTION,
-  TYPE_METHOD,
-  TYPE_INITIALIZER,
-  TYPE_SCRIPT,
-} b_func_type;
-
 typedef struct {
   b_token name;
   int depth;

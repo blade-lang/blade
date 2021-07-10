@@ -86,12 +86,13 @@ b_obj_class *new_class(b_vm *vm, b_obj_string *name) {
   return klass;
 }
 
-b_obj_func *new_function(b_vm *vm) {
+b_obj_func *new_function(b_vm *vm, b_func_type type) {
   b_obj_func *function = ALLOCATE_OBJ(b_obj_func, OBJ_FUNCTION);
   function->arity = 0;
   function->up_value_count = 0;
   function->is_variadic = false;
   function->name = NULL;
+  function->type = type;
   init_blob(&function->blob);
   return function;
 }
