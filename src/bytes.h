@@ -145,14 +145,14 @@ DECLARE_BYTES_METHOD(to_list);
 DECLARE_BYTES_METHOD(to_string);
 
 /**
- * bytes.__iter__()
+ * bytes.@iter()
  *
  * implementing the iterable interface
  */
 DECLARE_BYTES_METHOD(__iter__);
 
 /**
- * bytes.__itern__()
+ * bytes.@itern()
  *
  * implementing the iterable interface
  */

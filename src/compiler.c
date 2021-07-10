@@ -1660,8 +1660,8 @@ static void iter_statement(b_parser *p) {
  *    var iterable = expression()
  *    var _
  *
- *    while _ = iterable.__itern__() {
- *      var x = iterable.__iter__()
+ *    while _ = iterable.@itern() {
+ *      var x = iterable.@iter()
  *      ...
  *    }
  * }
@@ -1678,30 +1678,30 @@ static void iter_statement(b_parser *p) {
  *    var iterable = expression()
  *    var x
  *
- *    while x = iterable.__itern__() {
- *      var y = iterable.__iter__()
+ *    while x = iterable.@itern() {
+ *      var y = iterable.@iter()
  *      ...
  *    }
  * }
  *
- * Every bird iterable must implement the __iter__(x) and the __itern__(x)
+ * Every bird iterable must implement the @iter(x) and the @itern(x)
  * function.
  *
  * to make instances of a user created class iterable,
- * the class must implement the __iter__(x) and the __itern__(x) function.
- * the __itern__(x) must return the current iterating index of the object and
+ * the class must implement the @iter(x) and the @itern(x) function.
+ * the @itern(x) must return the current iterating index of the object and
  * the
- * __iter__(x) function must return the value at that index.
- * _NOTE_: the __iter__(x) function will no longer be called after the
- * __itern__(x) function returns a false value. so the __iter__(x) never needs
+ * @iter(x) function must return the value at that index.
+ * _NOTE_: the @iter(x) function will no longer be called after the
+ * @itern(x) function returns a false value. so the @iter(x) never needs
  * to return a false value
  */
 static void for_statement(b_parser *p) {
   begin_scope(p);
 
-  // define __iter__ and __iter__ constant
-  int iter__ = make_constant(p, OBJ_VAL(copy_string(p->vm, "__iter__", 8)));
-  int iter_n__ = make_constant(p, OBJ_VAL(copy_string(p->vm, "__itern__", 9)));
+  // define @iter and @itern constant
+  int iter__ = make_constant(p, OBJ_VAL(copy_string(p->vm, "@iter", 5)));
+  int iter_n__ = make_constant(p, OBJ_VAL(copy_string(p->vm, "@itern", 6)));
 
   consume(p, IDENTIFIER_TOKEN, "expected variable name after 'for'");
   b_token key_token, value_token;

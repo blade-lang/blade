@@ -432,7 +432,7 @@ b_token scan_token(b_scanner *s) {
   case ',':
     return make_token(s, COMMA_TOKEN);
   case '@':
-    return make_token(s, AT_TOKEN);
+    return identifier(s);
   case '!':
     return make_token(s, match(s, '=') ? BANG_EQ_TOKEN : BANG_TOKEN);
   case '.':

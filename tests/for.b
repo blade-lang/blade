@@ -28,11 +28,11 @@ for g in bytes([10, 21, 13, 47]) {
 class Iterable {
   var items = ['Richard', 'Alex', 'Justina']
 
-  __iter__(x) {
+  @iter(x) {
     return self.items[x]
   }
 
-  __itern__(x) {
+  @itern(x) {
     if x == nil return 0
 
     if x < self.items.length() - 1

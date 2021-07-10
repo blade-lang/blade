@@ -319,8 +319,8 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_STRING_METHOD(match);
   DEFINE_STRING_METHOD(matches);
   DEFINE_STRING_METHOD(replace);
-  DEFINE_STRING_METHOD(__iter__);
-  DEFINE_STRING_METHOD(__itern__);
+  define_native_method(vm, &vm->methods_string, "@iter", native_method_string__iter__);
+  define_native_method(vm, &vm->methods_string, "@itern", native_method_string__itern__);
 
   // list methods
   DEFINE_LIST_METHOD(length);
@@ -348,8 +348,8 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_LIST_METHOD(unique);
   DEFINE_LIST_METHOD(zip);
   DEFINE_LIST_METHOD(to_dict);
-  DEFINE_LIST_METHOD(__iter__);
-  DEFINE_LIST_METHOD(__itern__);
+  define_native_method(vm, &vm->methods_list, "@iter", native_method_list__iter__);
+  define_native_method(vm, &vm->methods_list, "@itern", native_method_list__itern__);
 
   // dictionary methods
   DEFINE_DICT_METHOD(length);
@@ -369,8 +369,8 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_DICT_METHOD(find_key);
   DEFINE_DICT_METHOD(to_list);
   DEFINE_DICT_METHOD(has_attr);
-  DEFINE_DICT_METHOD(__iter__);
-  DEFINE_DICT_METHOD(__itern__);
+  define_native_method(vm, &vm->methods_dict, "@iter", native_method_dict__iter__);
+  define_native_method(vm, &vm->methods_dict, "@itern", native_method_dict__itern__);
 
   // file methods
   DEFINE_FILE_METHOD(exists);
@@ -417,8 +417,8 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_BYTES_METHOD(is_space);
   DEFINE_BYTES_METHOD(to_list);
   DEFINE_BYTES_METHOD(to_string);
-  DEFINE_BYTES_METHOD(__iter__);
-  DEFINE_BYTES_METHOD(__itern__);
+  define_native_method(vm, &vm->methods_bytes, "@iter", native_method_bytes__iter__);
+  define_native_method(vm, &vm->methods_bytes, "@itern", native_method_bytes__itern__);
 
 #undef DEFINE_STRING_METHOD
 #undef DEFINE_LIST_METHOD
@@ -461,7 +461,8 @@ void init_vm(b_vm *vm) {
 }
 
 void free_vm(b_vm *vm) {
-  free_objects(vm);
+  // @TODO: Fix free_objects() bug.
+//  free_objects(vm);
   free_table(vm, &vm->strings);
   free_table(vm, &vm->globals);
 
@@ -781,13 +782,37 @@ static void define_method(b_vm *vm, b_obj_string *name) {
 }
 
 static void define_property(b_vm *vm, b_obj_string *name, bool is_static) {
-  b_value property = peek(vm, 0);
+  /*b_value property = peek(vm, 0);
   b_obj_class *klass = AS_CLASS(peek(vm, 1));
+
   if (!is_static) {
     table_set(vm, &klass->fields, OBJ_VAL(name), property);
   } else {
     table_set(vm, &klass->static_fields, OBJ_VAL(name), property);
   }
+  pop(vm);*/
+
+  b_value property = peek(vm, 0);
+  b_obj_class *klass = AS_CLASS(peek(vm, 1));
+
+  bool is_function = IS_FUNCTION(property) || IS_CLOSURE(property);
+  b_table *table;
+
+  if(is_function) {
+    bool is_private = name->length > 0 && name->chars[0] == '_';
+    if(is_static) {
+      b_obj_func *fn;
+      if(IS_FUNCTION(property)) fn = AS_FUNCTION(property);
+      else fn = AS_CLOSURE(property)->function;
+      fn->type = TYPE_STATIC;
+    }
+
+    table = is_private ? &klass->private_methods : &klass->methods;
+  } else {
+    table = is_static ? &klass->static_fields : &klass->fields;
+  }
+
+  table_set(vm, table, OBJ_VAL(name), property);
   pop(vm);
 }
 
