@@ -74,7 +74,7 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
                   bool is_private = strlen(func.name) > 0 && func.name[0] == '_';
 
                   table_set(vm, is_private ? &klass->private_methods
-                    : &klass->methods, func_name, OBJ_VAL(native));
+                    : &klass->public_methods, func_name, OBJ_VAL(native));
                 }
               }
 
@@ -85,8 +85,8 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
                       copy_string(vm, field.name, (int) strlen(field.name)));
 
                   table_set(vm,
-                            field.is_static ? &klass->static_fields
-                                            : &klass->fields,
+                            field.is_static ? &klass->static_properties
+                                            : &klass->properties,
                             field_name, field.field_value(vm));
                 }
               }

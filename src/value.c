@@ -432,7 +432,7 @@ static b_value find_max_value(b_value a, b_value b) {
              ? a
              : b;
     } else if (IS_CLASS(a) && IS_CLASS(b)) {
-      return AS_CLASS(a)->methods.count >= AS_CLASS(b)->methods.count ? a : b;
+      return AS_CLASS(a)->public_methods.count >= AS_CLASS(b)->public_methods.count ? a : b;
     } else if (IS_LIST(a) && IS_LIST(b)) {
       return AS_LIST(a)->items.count >= AS_LIST(b)->items.count ? a : b;
     } else if (IS_DICT(a) && IS_DICT(b)) {

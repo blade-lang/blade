@@ -120,9 +120,9 @@ typedef struct {
 typedef struct b_obj_class {
   b_obj obj;
   b_obj_string *name;
-  b_table fields;
-  b_table static_fields;
-  b_table methods;
+  b_table properties;
+  b_table static_properties;
+  b_table public_methods;
   b_table private_methods;
   b_value initializer;
   struct b_obj_class *superclass;

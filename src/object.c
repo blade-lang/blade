@@ -77,9 +77,9 @@ b_obj_bound *new_bound_method(b_vm *vm, b_value receiver, b_obj *method) {
 b_obj_class *new_class(b_vm *vm, b_obj_string *name) {
   b_obj_class *klass = ALLOCATE_OBJ(b_obj_class, OBJ_CLASS);
   klass->name = name;
-  init_table(&klass->fields);
-  init_table(&klass->static_fields);
-  init_table(&klass->methods);
+  init_table(&klass->properties);
+  init_table(&klass->static_properties);
+  init_table(&klass->public_methods);
   init_table(&klass->private_methods);
   klass->initializer = EMPTY_VAL;
   klass->superclass = NULL;
@@ -103,7 +103,7 @@ b_obj_instance *new_instance(b_vm *vm, b_obj_class *klass) {
 
   instance->klass = klass;
   init_table(&instance->fields);
-  table_add_all(vm, &klass->fields, &instance->fields);
+  table_add_all(vm, &klass->properties, &instance->fields);
 
   pop(vm); // gc fix
   return instance;
