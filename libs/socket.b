@@ -112,7 +112,7 @@ class Socket {
   # this variable holds the id of the socket on
   # the host machine. This value will be passed
   # to the backend whenever the socket id is required.
-  var socket_id = -1
+  var id = -1
 
   # tracking the kind of socket we have...
   # i.e. client or server!
@@ -154,16 +154,16 @@ class Socket {
     var id = self._create(self.family, self.type, self.flags)
     if id == -1 die SocketException('could not create socket')
 
-    self.socket_id = id
+    self.id = id
   }
   
   # creates a new instance of socket with prefilled information
   # this helps us create sockets on the fly binding to different
   # id's on the device.
   # @return Socket
-  static _Socket(family, type, flags, id, host, port, is_client) {
+  static New(family, type, flags, id, host, port, is_client) {
     var socket = Socket(family, type, flags)
-    socket.socket_id = id
+    socket.id = id
     socket.host = host
     socket.port = port
     socket.is_client = is_client
@@ -191,11 +191,11 @@ class Socket {
     if !is_int(timeout) 
       die SocketException('integer expected for timeout, ${typeof(timeout)} given')
 
-    if self.socket_id == -1 or self.is_closed die SocketException('socket is in an illegal state')
+    if self.id == -1 or self.is_closed die SocketException('socket is in an illegal state')
 
     if self.is_connected die SocketException('socket has existing connection')
 
-    var result = self._check_error(self._connect(self.socket_id, host, port, self.family, timeout, self.is_blocking))
+    var result = self._check_error(self._connect(self.id, host, port, self.family, timeout, self.is_blocking))
     if result {
       self.is_client = true
       self.is_connected = true
@@ -214,12 +214,12 @@ class Socket {
     if !is_int(port) 
       die SocketException('integer expected for port, ${typeof(port)} given')
 
-    if self.socket_id == -1 or self.is_closed die SocketException('socket is in an illegal state')
+    if self.id == -1 or self.is_closed die SocketException('socket is in an illegal state')
 
 
     if self.is_bound die SocketException('socket previously bound')
 
-    var result = self._check_error(self._bind(self.socket_id, host, port, self.family))
+    var result = self._check_error(self._bind(self.id, host, port, self.family))
     if result {
       self.is_bound = true
       self.is_listening = false # it's freshly bound
@@ -238,7 +238,7 @@ class Socket {
     if !is_int(flags) 
       die SocketException('integer expected for flags, ${typeof(flags)} given')
 
-    if self.socket_id == -1 or self.is_closed or (self.is_shutdown and 
+    if self.id == -1 or self.is_closed or (self.is_shutdown and 
       (self.shutdown_reason == Socket.SHUT_WR or 
         self.shutdown_reason == Socket.SHUT_RDWR)) 
       die SocketException('socket is in an illegal state')
@@ -246,7 +246,9 @@ class Socket {
     if !self.is_listening and !self.is_connected
       die SocketException('socket not listening or connected')
 
-    return self._check_error(self._send(self.socket_id, message, flags))
+    echo self.id
+
+    return self._check_error(self._send(self.id, message, flags))
   }
 
   receive(length, flags) {
@@ -258,7 +260,7 @@ class Socket {
     if !is_int(flags) 
       die SocketException('integer expected for flags, ${typeof(flags)} given')
 
-    if self.socket_id == -1 or self.is_closed or (self.is_shutdown and 
+    if self.id == -1 or self.is_closed or (self.is_shutdown and 
       (self.shutdown_reason == Socket.SHUT_RD or 
         self.shutdown_reason == Socket.SHUT_RDWR)) 
       die SocketException('socket is in an illegal state')
@@ -266,7 +268,7 @@ class Socket {
     if !self.is_listening and !self.is_connected
       die SocketException('socket not listening or connected')
     
-    var result = self._recv(self.socket_id, length, flags)
+    var result = self._recv(self.id, length, flags)
     if is_string(result) or result == nil return result
 
     return self._check_error(result)
@@ -282,7 +284,7 @@ class Socket {
 
     if !self.is_bound or self.is_listening or self.is_closed die SocketException('socket is in an illegal state')
 
-    var result = self._check_error(self._listen(self.socket_id, queue_length))
+    var result = self._check_error(self._listen(self.id, queue_length))
     if result {
       self.is_listening = true
     }
@@ -291,8 +293,8 @@ class Socket {
 
   accept() {
     if self.is_bound and self.is_listening and !self.is_closed {
-      var result = self._accept(self.socket_id)
-      return Socket._Socket(self.family, self.type, self.flags, result[0], result[1], result[2], true)
+      var result = self._accept(self.id)
+      return Socket.New(self.family, self.type, self.flags, result[0], result[1], result[2], true)
     }
     die SocketException('socket not bound/listening')
   }
@@ -301,7 +303,7 @@ class Socket {
     # silently ignore multiple calls to close()
     if self.is_closed return true
 
-    var result = self._check_error(self._close(self.socket_id)) >= 0
+    var result = self._check_error(self._close(self.id)) >= 0
     if result {
       self.is_connected = false
       self.is_listening = false
@@ -326,7 +328,7 @@ class Socket {
 
     if self.is_closed die SocketException('socket is in an illegal state')
 
-    var result = self._check_error(self._shutdown(self.socket_id, how)) >= 0
+    var result = self._check_error(self._shutdown(self.id, how)) >= 0
     if result {
       self.is_connected = false
       self.is_listening = false
@@ -349,7 +351,7 @@ class Socket {
     if option == Socket.SO_TYPE or option == Socket.SO_ERROR
       die Exception('the given option is read-only')
 
-    var result = self._check_error(self._setsockopt(self.socket_id, option, value)) >= 0
+    var result = self._check_error(self._setsockopt(self.id, option, value)) >= 0
 
     if result {
       # get an update on SO_SNDTIMEO and SO_RCVTIMEO
@@ -374,7 +376,7 @@ class Socket {
     if option == Socket.SO_RCVTIMEO return self.receive_timeout
     else if option == Socket.SO_SNDTIMEO return self.send_timeout
 
-    return self._getsockopt(self.socket_id, option)
+    return self._getsockopt(self.id, option)
   }
 
   set_blocking(mode) {
@@ -383,7 +385,7 @@ class Socket {
   }
 
   info() {
-    return self._getsockinfo(self.socket_id)
+    return self._getsockinfo(self.id)
   }
 
   get_address(address, type, family) {
