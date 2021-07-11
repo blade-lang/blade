@@ -79,8 +79,7 @@ b_obj_class *new_class(b_vm *vm, b_obj_string *name) {
   klass->name = name;
   init_table(&klass->properties);
   init_table(&klass->static_properties);
-  init_table(&klass->public_methods);
-  init_table(&klass->private_methods);
+  init_table(&klass->methods);
   klass->initializer = EMPTY_VAL;
   klass->superclass = NULL;
   return klass;
@@ -102,8 +101,8 @@ b_obj_instance *new_instance(b_vm *vm, b_obj_class *klass) {
   push(vm, OBJ_VAL(instance)); // gc fix
 
   instance->klass = klass;
-  init_table(&instance->fields);
-  table_add_all(vm, &klass->properties, &instance->fields);
+  init_table(&instance->properties);
+  table_add_all(vm, &klass->properties, &instance->properties);
 
   pop(vm); // gc fix
   return instance;

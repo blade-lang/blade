@@ -102,13 +102,13 @@ bool propagate_exception(b_vm *vm) {
 
   b_value message, trace;
   fprintf(stderr, "Unhandled %s: ", exception->klass->name->chars);
-  if (table_get(&exception->fields, STRING_L_VAL("message", 7), &message)) {
+  if (table_get(&exception->properties, STRING_L_VAL("message", 7), &message)) {
     fprintf(stderr, "%s\n", value_to_string(vm, message));
   } else {
     fprintf(stderr, "\n");
   }
 
-  if (table_get(&exception->fields, STRING_L_VAL("stacktrace", 10),&trace)) {
+  if (table_get(&exception->properties, STRING_L_VAL("stacktrace", 10), &trace)) {
     fprintf(stderr, "  StackTrace:\n%s\n", value_to_string(vm, trace));
   }
 
@@ -140,7 +140,7 @@ bool throw_exception(b_vm *vm, const char *format, ...) {
   push(vm, OBJ_VAL(instance));
 
   b_value stacktrace = get_stack_trace(vm);
-  table_set(vm, &instance->fields, STRING_L_VAL("stacktrace", 10), stacktrace);
+  table_set(vm, &instance->properties, STRING_L_VAL("stacktrace", 10), stacktrace);
   return propagate_exception(vm);
 }
 
@@ -152,7 +152,7 @@ static void initialize_exceptions(b_vm *vm) {
       OBJ_VAL(new_native(vm, GET_NATIVE(__Exception__), class_name->chars));
 
   // set class constructor
-  table_set(vm, &klass->public_methods, OBJ_VAL(class_name), initializer);
+  table_set(vm, &klass->methods, OBJ_VAL(class_name), initializer);
   klass->initializer = initializer;
 
   // set class properties
@@ -165,7 +165,7 @@ static void initialize_exceptions(b_vm *vm) {
 
 b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
   b_obj_instance *instance = (b_obj_instance*)GC(new_instance(vm, vm->exception_class));
-  table_set(vm, &instance->fields, GC_L_STRING("message", 7), OBJ_VAL(message));
+  table_set(vm, &instance->properties, GC_L_STRING("message", 7), OBJ_VAL(message));
   CLEAR_GC();
   return instance;
 }
@@ -294,7 +294,7 @@ static void init_builtin_methods(b_vm *vm) {
 #define DEFINE_FILE_METHOD(name) DEFINE_METHOD(file, name)
 #define DEFINE_BYTES_METHOD(name) DEFINE_METHOD(bytes, name)
 
-  // string public_methods
+  // string methods
   DEFINE_STRING_METHOD(length);
   DEFINE_STRING_METHOD(upper);
   DEFINE_STRING_METHOD(lower);
@@ -324,7 +324,7 @@ static void init_builtin_methods(b_vm *vm) {
   define_native_method(vm, &vm->methods_string, "@iter", native_method_string__iter__);
   define_native_method(vm, &vm->methods_string, "@itern", native_method_string__itern__);
 
-  // list public_methods
+  // list methods
   DEFINE_LIST_METHOD(length);
   DEFINE_LIST_METHOD(append);
   DEFINE_LIST_METHOD(clear);
@@ -353,7 +353,7 @@ static void init_builtin_methods(b_vm *vm) {
   define_native_method(vm, &vm->methods_list, "@iter", native_method_list__iter__);
   define_native_method(vm, &vm->methods_list, "@itern", native_method_list__itern__);
 
-  // dictionary public_methods
+  // dictionary methods
   DEFINE_DICT_METHOD(length);
   DEFINE_DICT_METHOD(add);
   DEFINE_DICT_METHOD(set);
@@ -374,7 +374,7 @@ static void init_builtin_methods(b_vm *vm) {
   define_native_method(vm, &vm->methods_dict, "@iter", native_method_dict__iter__);
   define_native_method(vm, &vm->methods_dict, "@itern", native_method_dict__itern__);
 
-  // file public_methods
+  // file methods
   DEFINE_FILE_METHOD(exists);
   DEFINE_FILE_METHOD(close);
   DEFINE_FILE_METHOD(open);
@@ -450,7 +450,7 @@ void init_vm(b_vm *vm) {
   init_table(&vm->strings);
   init_table(&vm->globals);
 
-  // object public_methods tables
+  // object methods tables
   init_table(&vm->methods_string);
   init_table(&vm->methods_list);
   init_table(&vm->methods_dict);
@@ -601,21 +601,16 @@ static b_func_type get_method_type(b_value method) {
 bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
                        int arg_count) {
   b_value method;
-  if (!table_get(&klass->public_methods, OBJ_VAL(name), &method)) {
-    if (!table_get(&klass->private_methods, OBJ_VAL(name), &method)) {
-      return throw_exception(vm, "undefined method '%s' in %s", name->chars, klass->name->chars);
+  if (table_get(&klass->methods, OBJ_VAL(name), &method)) {
+    if (get_method_type(method) == TYPE_PRIVATE) {
+      return throw_exception(vm, "cannot call private method '%s' from instance of %s",
+                             name->chars, klass->name->chars);
     }
 
-    return throw_exception(vm, "cannot call private method '%s' from instance of %s", name->chars, klass->name->chars);
+    return call_value(vm, method, arg_count);
   }
 
-  if (IS_NATIVE(method)) {
-    return call_value(vm, method, arg_count);
-  } else if (IS_CLOSURE(method)) {
-    return call_closure(vm, AS_CLOSURE(method), arg_count);
-  } else {
-    return call_function(vm, AS_FUNCTION(method), arg_count);
-  }
+  return throw_exception(vm, "undefined method '%s' in %s", name->chars, klass->name->chars);
 }
 
 static bool invoke_self(b_vm *vm, b_obj_string *name, int arg_count) {
@@ -625,25 +620,17 @@ static bool invoke_self(b_vm *vm, b_obj_string *name, int arg_count) {
   if (IS_INSTANCE(receiver)) {
     b_obj_instance *instance = AS_INSTANCE(receiver);
 
-    if(table_get(&instance->klass->private_methods, OBJ_VAL(name), &value)) {
-      return call_value(vm, value, arg_count);
-    } else if(table_get(&instance->klass->public_methods, OBJ_VAL(name), &value)) {
+    if(table_get(&instance->klass->methods, OBJ_VAL(name), &value)) {
       return call_value(vm, value, arg_count);
     }
 
-    if (table_get(&instance->fields, OBJ_VAL(name), &value)) {
+    if (table_get(&instance->properties, OBJ_VAL(name), &value)) {
       vm->stack_top[-arg_count - 1] = value;
       return call_value(vm, value, arg_count);
     }
   } else if (IS_CLASS(receiver)) {
-    // @TODO: Add support for class public_methods. e.g. __str__, __methods__ etc...
-    if(table_get(&AS_CLASS(receiver)->private_methods, OBJ_VAL(name), &value)) {
-      if(get_method_type(value) == TYPE_STATIC) {
-        return call_value(vm, value, arg_count);
-      }
-
-      return throw_exception(vm, "cannot call non-static method %s() on non instance", name->chars);
-    } else if(table_get(&AS_CLASS(receiver)->public_methods, OBJ_VAL(name), &value)) {
+    // @TODO: Add support for class methods. e.g. __str__, __methods__ etc...
+    if(table_get(&AS_CLASS(receiver)->methods, OBJ_VAL(name), &value)) {
       if(get_method_type(value) == TYPE_STATIC) {
         return call_value(vm, value, arg_count);
       }
@@ -661,26 +648,28 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
   b_value value;
 
   if(!IS_OBJ(receiver)) {
-    // @TODO: have public_methods for non objects as well.
+    // @TODO: have methods for non objects as well.
     return throw_exception(vm, "non-object %s has no method", value_type(receiver));
   } else {
     switch(AS_OBJ(receiver)->type) {
       case OBJ_CLASS: {
-        // @TODO: Add support for class public_methods. e.g. __str__, __methods__ etc...
-        if(table_get(&AS_CLASS(receiver)->public_methods, OBJ_VAL(name), &value)) {
+        // @TODO: Add support for class methods. e.g. __str__, __methods__ etc...
+        if(table_get(&AS_CLASS(receiver)->methods, OBJ_VAL(name), &value)) {
+          if(get_method_type(value) == TYPE_PRIVATE) {
+            return throw_exception(vm, "cannot call private method %s() on %s",
+                                   name->chars, AS_CLASS(receiver)->name->chars);
+          }
           return call_value(vm, value, arg_count);
         } else if(table_get(&AS_CLASS(receiver)->static_properties, OBJ_VAL(name), &value)) {
           return call_value(vm, value, arg_count);
-        } else if(table_get(&AS_CLASS(receiver)->private_methods, OBJ_VAL(name), &value)) {
-          return throw_exception(vm, "cannot call private method %s() on %s",
-                                 name->chars, AS_CLASS(receiver)->name->chars);
         }
-        return throw_exception(vm, "class %s has no method %s()", AS_CLASS(receiver)->name->chars, name->chars);
+
+        return throw_exception(vm, "unknown method %s() in class %s", name->chars, AS_CLASS(receiver)->name->chars);
       }
       case OBJ_INSTANCE: {
         b_obj_instance *instance = AS_INSTANCE(receiver);
 
-        if (table_get(&instance->fields, OBJ_VAL(name), &value)) {
+        if (table_get(&instance->properties, OBJ_VAL(name), &value)) {
           vm->stack_top[-arg_count - 1] = value;
           return call_value(vm, value, arg_count);
         }
@@ -727,14 +716,18 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
 
 static bool bind_method(b_vm *vm, b_obj_class *klass, b_obj_string *name) {
   b_value method;
-  if (!table_get(&klass->public_methods, OBJ_VAL(name), &method)) {
-    return throw_exception(vm, "undefined property '%s'", name->chars);
+  if (table_get(&klass->methods, OBJ_VAL(name), &method)) {
+    if(get_method_type(method) == TYPE_PRIVATE) {
+      return throw_exception(vm, "cannot get private property '%s' from instance", name->chars);
+    }
+
+    b_obj_bound *bound = new_bound_method(vm, peek(vm, 0), AS_OBJ(method));
+    pop(vm);
+    push(vm, OBJ_VAL(bound));
+    return true;
   }
 
-  b_obj_bound *bound = new_bound_method(vm, peek(vm, 0), AS_OBJ(method));
-  pop(vm);
-  push(vm, OBJ_VAL(bound));
-  return true;
+  return throw_exception(vm, "undefined property '%s'", name->chars);
 }
 
 static b_obj_up_value *capture_up_value(b_vm *vm, b_value *local) {
@@ -774,10 +767,8 @@ static void define_method(b_vm *vm, b_obj_string *name) {
   b_value method = peek(vm, 0);
   b_obj_class *klass = AS_CLASS(peek(vm, 1));
 
-  bool is_private = name->length > 0 && name->chars[0] == '_';
-
-  table_set(vm, is_private ? &klass->private_methods : &klass->public_methods, OBJ_VAL(name), method);
-  if (name == klass->name && get_method_type(method) != TYPE_STATIC) {
+  table_set(vm, &klass->methods, OBJ_VAL(name), method);
+  if (get_method_type(method) == TYPE_INITIALIZER) {
     klass->initializer = method;
   }
   pop(vm);
@@ -793,29 +784,6 @@ static void define_property(b_vm *vm, b_obj_string *name, bool is_static) {
     table_set(vm, &klass->static_properties, OBJ_VAL(name), property);
   }
   pop(vm);
-
-  /*b_value property = peek(vm, 0);
-  b_obj_class *klass = AS_CLASS(peek(vm, 1));
-
-  bool is_function = IS_FUNCTION(property) || IS_CLOSURE(property);
-  b_table *table;
-
-  if(is_function) {
-    bool is_private = name->length > 0 && name->chars[0] == '_';
-    if(is_static) {
-      b_obj_func *fn;
-      if(IS_FUNCTION(property)) fn = AS_FUNCTION(property);
-      else fn = AS_CLOSURE(property)->function;
-      fn->type = TYPE_STATIC;
-    }
-
-    table = is_private ? &klass->private_methods : &klass->public_methods;
-  } else {
-    table = is_static ? &klass->static_properties : &klass->properties;
-  }
-
-  table_set(vm, table, OBJ_VAL(name), property);
-  pop(vm);*/
 }
 
 bool is_false(b_value value) {
@@ -842,7 +810,7 @@ bool is_false(b_value value) {
 
   // All classes are true
   // All closures are true
-  // All bound public_methods are true
+  // All bound methods are true
   // All functions are in themselves true if you do not account for what they
   // return.
   return false;
@@ -1649,27 +1617,48 @@ b_ptr_result run(b_vm *vm) {
 
         switch(AS_OBJ(peek(vm, 0))->type) {
           case OBJ_CLASS: {
-            if(table_get(&AS_CLASS(peek(vm, 0))->private_methods, OBJ_VAL(name), &value)
-               || table_get(&AS_CLASS(peek(vm, 0))->public_methods, OBJ_VAL(name), &value)) {
+            if(table_get(&AS_CLASS(peek(vm, 0))->methods, OBJ_VAL(name), &value)) {
               if(get_method_type(value) == TYPE_STATIC) {
+                if(name->length > 0 && name->chars[0] == '_') {
+                  runtime_error("cannot call private property '%s' of class %s",
+                                name->chars, AS_CLASS(peek(vm, 0))->name->chars);
+                  break;
+                }
                 pop(vm); // pop the class...
                 push(vm, value);
                 break;
               }
             } else if(table_get(&AS_CLASS(peek(vm, 0))->static_properties, OBJ_VAL(name), &value)) {
+              if(name->length > 0 && name->chars[0] == '_') {
+                runtime_error("cannot call private property '%s' of class %s",
+                              name->chars, AS_CLASS(peek(vm, 0))->name->chars);
+                break;
+              }
               pop(vm); // pop the class...
               push(vm, value);
               break;
             }
-            runtime_error("class %s does not have a static field or method named '%s'",
+
+            runtime_error("class %s does not have a static property or method named '%s'",
                           AS_CLASS(peek(vm, 0))->name->chars, name->chars);
             break;
           }
           case OBJ_INSTANCE: {
             b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
-            if (table_get(&instance->fields, OBJ_VAL(name), &value)) {
+            if (table_get(&instance->properties, OBJ_VAL(name), &value)) {
+              if(name->length > 0 && name->chars[0] == '_') {
+                runtime_error("cannot call private property '%s' from instance of %s",
+                              name->chars, instance->klass->name->chars);
+                break;
+              }
               pop(vm); // pop the instance...
               push(vm, value);
+              break;
+            }
+
+            if(name->length > 0 && name->chars[0] == '_') {
+              runtime_error("cannot bind private property '%s' to instance of %s",
+                            name->chars, instance->klass->name->chars);
               break;
             }
 
@@ -1679,7 +1668,7 @@ b_ptr_result run(b_vm *vm) {
               break;
             }
 
-            runtime_error("instance of class %s does not have a field or method named '%s'",
+            runtime_error("instance of class %s does not have a property or method named '%s'",
                           AS_INSTANCE(peek(vm, 0))->klass->name->chars, name->chars);
             break;
           }
@@ -1746,6 +1735,48 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
 
+    case OP_GET_SELF_PROPERTY: {
+      b_obj_string *name = READ_STRING();
+      b_value value;
+
+      if(IS_INSTANCE(peek(vm, 0))) {
+        b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
+        if (table_get(&instance->properties, OBJ_VAL(name), &value)) {
+          pop(vm); // pop the instance...
+          push(vm, value);
+          break;
+        }
+
+        if (!bind_method(vm, instance->klass, name)) {
+          EXIT_VM();
+        } else {
+          break;
+        }
+
+        runtime_error("instance of class %s does not have a property or method named '%s'",
+                      AS_INSTANCE(peek(vm, 0))->klass->name->chars, name->chars);
+        break;
+      } else if(IS_CLASS(peek(vm, 0))) {
+        if(table_get(&AS_CLASS(peek(vm, 0))->methods, OBJ_VAL(name), &value)) {
+          if(get_method_type(value) == TYPE_STATIC) {
+            pop(vm); // pop the class...
+            push(vm, value);
+            break;
+          }
+        } else if(table_get(&AS_CLASS(peek(vm, 0))->static_properties, OBJ_VAL(name), &value)) {
+          pop(vm); // pop the class...
+          push(vm, value);
+          break;
+        }
+        runtime_error("class %s does not have a static property or method named '%s'",
+                      AS_CLASS(peek(vm, 0))->name->chars, name->chars);
+        break;
+      }
+
+      runtime_error("non-object type %s does not have properties", value_type(peek(vm, 0)));
+      break;
+    }
+
     case OP_SET_PROPERTY: {
       if (!IS_INSTANCE(peek(vm, 1)) && !IS_DICT(peek(vm, 1)) ) {
         runtime_error("object of type %s can not carry properties", value_type(peek(vm, 1)));
@@ -1755,7 +1786,7 @@ b_ptr_result run(b_vm *vm) {
 
       if(IS_INSTANCE(peek(vm, 1))) {
         b_obj_instance *instance = AS_INSTANCE(peek(vm, 1));
-        table_set(vm, &instance->fields, OBJ_VAL(name), peek(vm, 0));
+        table_set(vm, &instance->properties, OBJ_VAL(name), peek(vm, 0));
 
         b_value value = pop(vm);
         pop(vm); // removing the instance object
@@ -1854,7 +1885,7 @@ b_ptr_result run(b_vm *vm) {
       b_obj_class *superclass = AS_CLASS(peek(vm, 1));
       b_obj_class *subclass = AS_CLASS(peek(vm, 0));
       table_add_all(vm, &superclass->properties, &subclass->properties);
-      table_add_all(vm, &superclass->public_methods, &subclass->public_methods);
+      table_add_all(vm, &superclass->methods, &subclass->methods);
       subclass->superclass = superclass;
       pop(vm); // pop the subclass
       break;
@@ -2029,7 +2060,7 @@ b_ptr_result run(b_vm *vm) {
 
     case OP_FINISH_MODULE: {
       b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
-      // if it is a native module, attach c codes to cask public_methods
+      // if it is a native module, attach c codes to cask methods
       bind_native_modules(vm, function->name, function->file);
       break;
     }
@@ -2057,7 +2088,7 @@ b_ptr_result run(b_vm *vm) {
 
       b_value stacktrace = get_stack_trace(vm);
       b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
-      table_set(vm, &instance->fields, STRING_L_VAL("stacktrace", 10), stacktrace);
+      table_set(vm, &instance->properties, STRING_L_VAL("stacktrace", 10), stacktrace);
       if(propagate_exception(vm)) {
         frame = &vm->frames[vm->frame_count - 1];
         break;
