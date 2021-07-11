@@ -1,10 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
 
-if(MSVC)
-  set(CMAKE_SYSTEM_VERSION "10.0.20348.0" CACHE STRING INTERNAL FORCE)
-  set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION "10.0.20348.0" CACHE STRING INTERNAL FORCE)
-endif()
-
 project(bird)
 
 # required modules for our task
@@ -89,11 +84,15 @@ endif()
 # set dependency shared lib path
 set(PCRE2_LIB_FILE ${PCRE2_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}pcre2-8${LIBRARY_NAME_END})
 
+message(STATUS ${PCRE2_LIB_FILE})
+
 if(UNIX)
 	set(ZLIB_LIB_FILE ${ZLIB_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}z${LIBRARY_NAME_END})
 else()
 	set(ZLIB_LIB_FILE ${ZLIB_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}zlib${LIBRARY_NAME_END})
 endif()
+
+message(STATUS ${ZLIB_LIB_FILE})
 
 # add dependency includes
 include_directories(src ${PCRE2_DIR}/build/include ${ZLIB_DIR}/build/include)
