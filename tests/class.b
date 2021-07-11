@@ -92,7 +92,11 @@ class Animal {
 }
 
 class Dog < Animal {
+
+  var _x = 50
+
   getName() {
+    echo self._x
     return parent._echo()
   }
 }

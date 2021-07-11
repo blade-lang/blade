@@ -92,6 +92,18 @@ static void consume(b_parser *p, b_tkn_type t, const char *message) {
   error_at_current(p, message);
 }
 
+static void consume_or(b_parser *p, const char *message, const b_tkn_type ts[], int count) {
+
+  for(int i = 0; i < count; i++) {
+    if (p->current.type == ts[i]) {
+      advance(p);
+      return;
+    }
+  }
+
+  error_at_current(p, message);
+}
+
 static bool check_number(b_parser *p) {
   if (p->previous.type == REG_NUMBER_TOKEN ||
       p->previous.type == OCT_NUMBER_TOKEN ||
@@ -200,6 +212,7 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_POP_N:
   case OP_CLASS:
   case OP_GET_PROPERTY:
+  case OP_GET_SELF_PROPERTY:
   case OP_SET_PROPERTY:
   case OP_LIST:
   case OP_DICT:
@@ -721,7 +734,7 @@ static void literal(b_parser *p, bool can_assign) {
 
 static void parse_assignment(b_parser *p, uint8_t real_op, uint8_t get_op,
                              uint8_t set_op, int arg) {
-  if(get_op == OP_GET_PROPERTY) {
+  if(get_op == OP_GET_PROPERTY || get_op == OP_GET_SELF_PROPERTY) {
     emit_byte(p, OP_DUP);
   }
 
@@ -776,7 +789,7 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg, boo
   } else if (can_assign && match(p, RSHIFT_EQ_TOKEN)) {
     parse_assignment(p, OP_RSHIFT, get_op, set_op, arg);
   } else if (can_assign && match(p, INCREMENT_TOKEN)) {
-    if(get_op == OP_GET_PROPERTY) {
+    if(get_op == OP_GET_PROPERTY || get_op == OP_GET_SELF_PROPERTY) {
       emit_byte(p, OP_DUP);
     }
 
@@ -789,7 +802,7 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg, boo
     emit_bytes(p, OP_ONE, OP_ADD);
     emit_byte_and_short(p, set_op, (uint16_t)arg);
   } else if (can_assign && match(p, DECREMENT_TOKEN)) {
-    if(get_op == OP_GET_PROPERTY) {
+    if(get_op == OP_GET_PROPERTY || get_op == OP_GET_SELF_PROPERTY) {
       emit_byte(p, OP_DUP);
     }
 
@@ -829,7 +842,14 @@ static void dot(b_parser *p, b_token previous, bool can_assign) {
     }
     emit_byte(p, arg_count);
   } else {
-    assignment(p, OP_GET_PROPERTY, OP_SET_PROPERTY, name, can_assign);
+    b_code get_op = OP_GET_PROPERTY, set_op = OP_SET_PROPERTY;
+
+    if (p->current_class != NULL && (previous.type == SELF_TOKEN
+                                     || identifiers_equal(&p->previous, &p->current_class->name))) {
+      get_op = OP_GET_SELF_PROPERTY;
+    }
+
+    assignment(p, get_op, set_op, name, can_assign);
   }
 }
 
@@ -1421,7 +1441,9 @@ static void function(b_parser *p, b_func_type type) {
 }
 
 static void method(b_parser *p, b_token class_name, bool is_static) {
-  consume(p, IDENTIFIER_TOKEN, "method name expected");
+  b_tkn_type tkns[] = {IDENTIFIER_TOKEN, DECORATOR_TOKEN};
+
+  consume_or(p, "method name expected", tkns, 2);
   int constant = identifier_constant(p, &p->previous);
 
   b_func_type type = is_static ? TYPE_STATIC : TYPE_METHOD;
@@ -1429,6 +1451,7 @@ static void method(b_parser *p, b_token class_name, bool is_static) {
       memcmp(p->previous.start, class_name.start, class_name.length) == 0) {
     type = TYPE_INITIALIZER;
   }
+
   function(p, type);
   emit_byte_and_short(p, OP_METHOD, constant);
 }

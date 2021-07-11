@@ -98,6 +98,7 @@ typedef enum {
   OCT_NUMBER_TOKEN, // octal numbers
   HEX_NUMBER_TOKEN, // hexadecimal numbers
   IDENTIFIER_TOKEN,
+  DECORATOR_TOKEN,
   INTERPOLATION_TOKEN,
   EOF_TOKEN,
 

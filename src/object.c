@@ -102,8 +102,8 @@ b_obj_instance *new_instance(b_vm *vm, b_obj_class *klass) {
   push(vm, OBJ_VAL(instance)); // gc fix
 
   instance->klass = klass;
-  init_table(&instance->fields);
-  table_add_all(vm, &klass->properties, &instance->fields);
+  init_table(&instance->properties);
+  table_add_all(vm, &klass->properties, &instance->properties);
 
   pop(vm); // gc fix
   return instance;

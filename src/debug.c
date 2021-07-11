@@ -102,6 +102,8 @@ int disassemble_instruction(b_blob *blob, int offset) {
 
     case OP_GET_PROPERTY:
       return constant_instruction("g_prop", blob, offset);
+    case OP_GET_SELF_PROPERTY:
+      return constant_instruction("g_props", blob, offset);
     case OP_SET_PROPERTY:
       return constant_instruction("s_prop", blob, offset);
 

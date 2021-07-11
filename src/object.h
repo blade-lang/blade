@@ -131,7 +131,7 @@ typedef struct b_obj_class {
 typedef struct {
   b_obj obj;
   b_obj_class *klass;
-  b_table fields;
+  b_table properties;
 } b_obj_instance;
 
 typedef struct {
