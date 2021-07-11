@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 
-project(bird)
+project(bird C)
 
 # required modules for our task
 include(CheckIncludeFile)
