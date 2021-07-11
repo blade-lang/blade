@@ -100,13 +100,13 @@ bool propagate_exception(b_vm *vm) {
 
   b_value message, trace;
   fprintf(stderr, "Unhandled %s: ", exception->klass->name->chars);
-  if (table_get(&exception->fields, STRING_L_VAL("message", 7), &message)) {
+  if (table_get(&exception->properties, STRING_L_VAL("message", 7), &message)) {
     fprintf(stderr, "%s\n", value_to_string(vm, message));
   } else {
     fprintf(stderr, "\n");
   }
 
-  if (table_get(&exception->fields, STRING_L_VAL("stacktrace", 10),&trace)) {
+  if (table_get(&exception->properties, STRING_L_VAL("stacktrace", 10), &trace)) {
     fprintf(stderr, "  StackTrace:\n%s\n", value_to_string(vm, trace));
   }
 
@@ -138,7 +138,7 @@ bool throw_exception(b_vm *vm, const char *format, ...) {
   push(vm, OBJ_VAL(instance));
 
   b_value stacktrace = get_stack_trace(vm);
-  table_set(vm, &instance->fields, STRING_L_VAL("stacktrace", 10), stacktrace);
+  table_set(vm, &instance->properties, STRING_L_VAL("stacktrace", 10), stacktrace);
   return propagate_exception(vm);
 }
 
@@ -163,7 +163,7 @@ static void initialize_exceptions(b_vm *vm) {
 
 b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
   b_obj_instance *instance = (b_obj_instance*)GC(new_instance(vm, vm->exception_class));
-  table_set(vm, &instance->fields, GC_L_STRING("message", 7), OBJ_VAL(message));
+  table_set(vm, &instance->properties, GC_L_STRING("message", 7), OBJ_VAL(message));
   CLEAR_GC();
   return instance;
 }
@@ -629,7 +629,7 @@ static bool invoke_self(b_vm *vm, b_obj_string *name, int arg_count) {
       return call_value(vm, value, arg_count);
     }
 
-    if (table_get(&instance->fields, OBJ_VAL(name), &value)) {
+    if (table_get(&instance->properties, OBJ_VAL(name), &value)) {
       vm->stack_top[-arg_count - 1] = value;
       return call_value(vm, value, arg_count);
     }
@@ -678,7 +678,7 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
       case OBJ_INSTANCE: {
         b_obj_instance *instance = AS_INSTANCE(receiver);
 
-        if (table_get(&instance->fields, OBJ_VAL(name), &value)) {
+        if (table_get(&instance->properties, OBJ_VAL(name), &value)) {
           vm->stack_top[-arg_count - 1] = value;
           return call_value(vm, value, arg_count);
         }
@@ -1650,24 +1650,46 @@ b_ptr_result run(b_vm *vm) {
             if(table_get(&AS_CLASS(peek(vm, 0))->private_methods, OBJ_VAL(name), &value)
                || table_get(&AS_CLASS(peek(vm, 0))->public_methods, OBJ_VAL(name), &value)) {
               if(get_method_type(value) == TYPE_STATIC) {
+                if(name->length > 0 && name->chars[0] == '_') {
+                  runtime_error("cannot call private property '%s' of class %s",
+                                name->chars, AS_CLASS(peek(vm, 0))->name->chars);
+                  break;
+                }
                 pop(vm); // pop the class...
                 push(vm, value);
                 break;
               }
             } else if(table_get(&AS_CLASS(peek(vm, 0))->static_properties, OBJ_VAL(name), &value)) {
+              if(name->length > 0 && name->chars[0] == '_') {
+                runtime_error("cannot call private property '%s' of class %s",
+                              name->chars, AS_CLASS(peek(vm, 0))->name->chars);
+                break;
+              }
               pop(vm); // pop the class...
               push(vm, value);
               break;
             }
-            runtime_error("class %s does not have a static field or method named '%s'",
+
+            runtime_error("class %s does not have a static property or method named '%s'",
                           AS_CLASS(peek(vm, 0))->name->chars, name->chars);
             break;
           }
           case OBJ_INSTANCE: {
             b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
-            if (table_get(&instance->fields, OBJ_VAL(name), &value)) {
+            if (table_get(&instance->properties, OBJ_VAL(name), &value)) {
+              if(name->length > 0 && name->chars[0] == '_') {
+                runtime_error("cannot call private property '%s' from instance of %s",
+                              name->chars, instance->klass->name->chars);
+                break;
+              }
               pop(vm); // pop the instance...
               push(vm, value);
+              break;
+            }
+
+            if(name->length > 0 && name->chars[0] == '_') {
+              runtime_error("cannot bind private property '%s' to instance of %s",
+                            name->chars, instance->klass->name->chars);
               break;
             }
 
@@ -1677,7 +1699,7 @@ b_ptr_result run(b_vm *vm) {
               break;
             }
 
-            runtime_error("instance of class %s does not have a field or method named '%s'",
+            runtime_error("instance of class %s does not have a property or method named '%s'",
                           AS_INSTANCE(peek(vm, 0))->klass->name->chars, name->chars);
             break;
           }
@@ -1744,6 +1766,49 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
 
+    case OP_GET_SELF_PROPERTY: {
+      b_obj_string *name = READ_STRING();
+      b_value value;
+
+      if(IS_INSTANCE(peek(vm, 0))) {
+        b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
+        if (table_get(&instance->properties, OBJ_VAL(name), &value)) {
+          pop(vm); // pop the instance...
+          push(vm, value);
+          break;
+        }
+
+        if (!bind_method(vm, instance->klass, name)) {
+          EXIT_VM();
+        } else {
+          break;
+        }
+
+        runtime_error("instance of class %s does not have a property or method named '%s'",
+                      AS_INSTANCE(peek(vm, 0))->klass->name->chars, name->chars);
+        break;
+      } else if(IS_CLASS(peek(vm, 0))) {
+        if(table_get(&AS_CLASS(peek(vm, 0))->private_methods, OBJ_VAL(name), &value)
+           || table_get(&AS_CLASS(peek(vm, 0))->public_methods, OBJ_VAL(name), &value)) {
+          if(get_method_type(value) == TYPE_STATIC) {
+            pop(vm); // pop the class...
+            push(vm, value);
+            break;
+          }
+        } else if(table_get(&AS_CLASS(peek(vm, 0))->static_properties, OBJ_VAL(name), &value)) {
+          pop(vm); // pop the class...
+          push(vm, value);
+          break;
+        }
+        runtime_error("class %s does not have a static property or method named '%s'",
+                      AS_CLASS(peek(vm, 0))->name->chars, name->chars);
+        break;
+      }
+
+      runtime_error("non-object type %s does not have properties", value_type(peek(vm, 0)));
+      break;
+    }
+
     case OP_SET_PROPERTY: {
       if (!IS_INSTANCE(peek(vm, 1)) && !IS_DICT(peek(vm, 1)) ) {
         runtime_error("object of type %s can not carry properties", value_type(peek(vm, 1)));
@@ -1753,7 +1818,7 @@ b_ptr_result run(b_vm *vm) {
 
       if(IS_INSTANCE(peek(vm, 1))) {
         b_obj_instance *instance = AS_INSTANCE(peek(vm, 1));
-        table_set(vm, &instance->fields, OBJ_VAL(name), peek(vm, 0));
+        table_set(vm, &instance->properties, OBJ_VAL(name), peek(vm, 0));
 
         b_value value = pop(vm);
         pop(vm); // removing the instance object
@@ -2055,7 +2120,7 @@ b_ptr_result run(b_vm *vm) {
 
       b_value stacktrace = get_stack_trace(vm);
       b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
-      table_set(vm, &instance->fields, STRING_L_VAL("stacktrace", 10), stacktrace);
+      table_set(vm, &instance->properties, STRING_L_VAL("stacktrace", 10), stacktrace);
       if(propagate_exception(vm)) {
         frame = &vm->frames[vm->frame_count - 1];
         break;

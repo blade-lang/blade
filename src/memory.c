@@ -140,7 +140,7 @@ static void blacken_object(b_vm *vm, b_obj *object) {
     case OBJ_INSTANCE: {
       b_obj_instance *instance = (b_obj_instance *)object;
       mark_object(vm, (b_obj *)instance->klass);
-      mark_table(vm, &instance->fields);
+      mark_table(vm, &instance->properties);
       break;
     }
 
@@ -237,7 +237,7 @@ static void free_object(b_vm *vm, b_obj *object) {
     }
     case OBJ_INSTANCE: {
       b_obj_instance *instance = (b_obj_instance *)object;
-      free_table(vm, &instance->fields);
+      free_table(vm, &instance->properties);
       FREE(b_obj_instance, object);
       break;
     }
