@@ -1,4 +1,10 @@
 cmake_minimum_required(VERSION 3.18)
+
+if(MSVC)
+  set(CMAKE_SYSTEM_VERSION "10.0.20348.0" CACHE STRING INTERNAL FORCE)
+  set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION "10.0.20348.0" CACHE STRING INTERNAL FORCE)
+endif()
+
 project(bird)
 
 # required modules for our task
@@ -8,11 +14,6 @@ include(ExternalProject)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
-
-if(MSVC)
-  set(CMAKE_SYSTEM_VERSION "10.0.20348.0" CACHE STRING INTERNAL FORCE)
-  set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION "10.0.20348.0" CACHE STRING INTERNAL FORCE)
-endif(MSVC)
 
 set(cfsp " ")
 set(SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/..)
@@ -77,7 +78,7 @@ if(MSVC)
     set(CMAKE_DEBUG_POSTFIX "d")
 else()
 	set(CMAKE_DEBUG_POSTFIX "")
-endif(MSVC)
+endif()
 
 set(LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
@@ -88,7 +89,7 @@ if(UNIX)
 	set(ZLIB_LIB_FILE ${ZLIB_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}z${LIBRARY_NAME_END})
 else()
 	set(ZLIB_LIB_FILE ${ZLIB_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}zlib${LIBRARY_NAME_END})
-endif(UNIX)
+endif()
 
 # add dependency includes
 include_directories(src ${PCRE2_DIR}/build/include ${ZLIB_DIR}/build/include)
@@ -118,7 +119,7 @@ target_link_libraries(libbird ${ZLIB_LIB_FILE})
 if(UNIX)
   target_link_libraries(libbird readline)
   target_link_libraries(libbird m)
-endif(UNIX)
+endif()
 
 target_link_libraries(bird libbird)
 
