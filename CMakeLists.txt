@@ -75,17 +75,16 @@ add_library(libbird ${BIRD_SOURCES})
 add_executable(bird src/bird.c)
 
 if(MSVC)
-  set(CMAKE_DEBUG_POSTFIX
-      $<$<CONFIG:Debug>:"d">
-      $<$<CONFIG:RelWithDebInfo>:"">
-      $<$<CONFIG:Release>:"">
-      $<$<CONFIG:MinSizeRel>:"">
-      )
+  set(CMAKE_DEBUG_POSTFIX "d")
 else()
 	set(CMAKE_DEBUG_POSTFIX "")
 endif()
 
-set(LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+else()
+  set(LIBRARY_NAME_END "${CMAKE_STATIC_LIBRARY_SUFFIX}")
+endif()
 
 # set dependency shared lib path
 set(PCRE2_LIB_FILE ${PCRE2_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}pcre2-8${LIBRARY_NAME_END})
