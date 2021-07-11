@@ -116,8 +116,7 @@ static void blacken_object(b_vm *vm, b_obj *object) {
     case OBJ_CLASS: {
       b_obj_class *klass = (b_obj_class *)object;
       mark_object(vm, (b_obj *)klass->name);
-      mark_table(vm, &klass->public_methods);
-      mark_table(vm, &klass->private_methods);
+      mark_table(vm, &klass->methods);
       mark_table(vm, &klass->properties);
       mark_table(vm, &klass->static_properties);
       break;
@@ -140,7 +139,7 @@ static void blacken_object(b_vm *vm, b_obj *object) {
     case OBJ_INSTANCE: {
       b_obj_instance *instance = (b_obj_instance *)object;
       mark_object(vm, (b_obj *)instance->klass);
-      mark_table(vm, &instance->fields);
+      mark_table(vm, &instance->properties);
       break;
     }
 
@@ -205,15 +204,14 @@ static void free_object(b_vm *vm, b_obj *object) {
 
     case OBJ_BOUND_METHOD: {
       // a closure may be bound to multiple instances
-      // for this reason, we do not free closures when freeing bound public_methods
+      // for this reason, we do not free closures when freeing bound methods
       FREE(b_obj_bound, object);
       break;
     }
     case OBJ_CLASS: {
       b_obj_class *klass = (b_obj_class *)object;
       free_object(vm, (b_obj *)klass->name);
-      free_table(vm, &klass->public_methods);
-      free_table(vm, &klass->private_methods);
+      free_table(vm, &klass->methods);
       free_table(vm, &klass->properties);
       free_table(vm, &klass->static_properties);
       FREE(b_obj_class, object);
@@ -237,7 +235,7 @@ static void free_object(b_vm *vm, b_obj *object) {
     }
     case OBJ_INSTANCE: {
       b_obj_instance *instance = (b_obj_instance *)object;
-      free_table(vm, &instance->fields);
+      free_table(vm, &instance->properties);
       FREE(b_obj_instance, object);
       break;
     }

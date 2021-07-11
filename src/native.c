@@ -122,7 +122,7 @@ DECLARE_NATIVE(hasprop) {
 
   b_obj_instance *instance = AS_INSTANCE(args[0]);
   b_value dummy;
-  RETURN_BOOL(table_get(&instance->fields, args[1], &dummy));
+  RETURN_BOOL(table_get(&instance->properties, args[1], &dummy));
 }
 
 /**
@@ -139,7 +139,7 @@ DECLARE_NATIVE(getprop) {
 
   b_obj_instance *instance = AS_INSTANCE(args[0]);
   b_value value;
-  table_get(&instance->fields, args[1], &value);
+  table_get(&instance->properties, args[1], &value);
   RETURN_VALUE(value);
 }
 
@@ -158,7 +158,7 @@ DECLARE_NATIVE(setprop) {
   ENFORCE_ARG_TYPE(setprop, 1, IS_STRING);
 
   b_obj_instance *instance = AS_INSTANCE(args[0]);
-  RETURN_BOOL(table_set(vm, &instance->fields, args[1], args[2]));
+  RETURN_BOOL(table_set(vm, &instance->properties, args[1], args[2]));
 }
 
 /**
@@ -173,7 +173,7 @@ DECLARE_NATIVE(delprop) {
   ENFORCE_ARG_TYPE(delprop, 1, IS_STRING);
 
   b_obj_instance *instance = AS_INSTANCE(args[0]);
-  RETURN_BOOL(table_delete(&instance->fields, args[1]));
+  RETURN_BOOL(table_delete(&instance->properties, args[1]));
 }
 
 /**

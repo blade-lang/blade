@@ -387,6 +387,12 @@ static b_token identifier(b_scanner *s) {
   return make_token(s, identifier_type(s));
 }
 
+static b_token decorator(b_scanner *s) {
+  while (is_alpha(current(s)) || is_digit(current(s)))
+    advance(s);
+  return make_token(s, DECORATOR_TOKEN);
+}
+
 b_token scan_token(b_scanner *s) {
   b_token tk = skip_whitespace(s);
   if (tk.type != UNDEFINED_TOKEN) {
@@ -432,7 +438,7 @@ b_token scan_token(b_scanner *s) {
   case ',':
     return make_token(s, COMMA_TOKEN);
   case '@':
-    return identifier(s);
+    return decorator(s);
   case '!':
     return make_token(s, match(s, '=') ? BANG_EQ_TOKEN : BANG_TOKEN);
   case '.':
