@@ -75,7 +75,12 @@ add_library(libbird ${BIRD_SOURCES})
 add_executable(bird src/bird.c)
 
 if(MSVC)
-    set(CMAKE_DEBUG_POSTFIX "d")
+  set(CMAKE_DEBUG_POSTFIX
+      $<$<CONFIG:Debug>:d>
+      $<$<CONFIG:RelWithDebInfo>:>
+      $<$<CONFIG:Release>:>
+      $<$<CONFIG:MinSizeRel>:>
+      )
 else()
 	set(CMAKE_DEBUG_POSTFIX "")
 endif()
