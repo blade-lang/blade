@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#if defined DEBUG_LOG_GC && DEBUG_LOG_GC
+#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
 #include "debug.h"
 #include <stdio.h>
 #endif
@@ -41,7 +41,7 @@ void mark_object(b_vm *vm, b_obj *object) {
   if (object->mark == vm->mark_value)
     return;
 
-#if defined DEBUG_LOG_GC && DEBUG_LOG_GC
+#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
   printf("%p mark ", (void *)object);
   print_object(OBJ_VAL(object), false);
   printf("\n");
@@ -77,7 +77,7 @@ static void mark_array(b_vm *vm, b_value_arr *array) {
 }
 
 static void blacken_object(b_vm *vm, b_obj *object) {
-#if defined DEBUG_LOG_GC && DEBUG_LOG_GC
+#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
   printf("%p blacken ", (void *)object);
   print_object(OBJ_VAL(object), false);
   printf("\n");
@@ -164,7 +164,7 @@ static void blacken_object(b_vm *vm, b_obj *object) {
 }
 
 static void free_object(b_vm *vm, b_obj *object) {
-#if defined DEBUG_LOG_GC && DEBUG_LOG_GC
+#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
   printf("%p free type %d\n", (void *)object, object->type);
 #endif
 
@@ -326,7 +326,7 @@ void free_objects(b_vm *vm) {
 }
 
 void collect_garbage(b_vm *vm) {
-#if defined DEBUG_LOG_GC && DEBUG_LOG_GC
+#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
   printf("-- gc begins\n");
   size_t before = vm->bytes_allocated;
 #endif
@@ -339,7 +339,7 @@ void collect_garbage(b_vm *vm) {
   vm->next_gc = vm->bytes_allocated * GC_HEAP_GROWTH_FACTOR;
   vm->mark_value = !vm->mark_value;
 
-#if defined DEBUG_LOG_GC && DEBUG_LOG_GC
+#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
   printf("-- gc ends\n");
   printf("   collected %zu bytes (from %zu to %zu), next at %zu\n",
          before - vm->bytes_allocated, before, vm->bytes_allocated,

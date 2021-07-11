@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-#if defined __linux__ || defined __APPLE__
+#if defined(__linux__) || defined(__APPLE__)
 
 #define BIRD_PATH_SEPARATOR "/"
 

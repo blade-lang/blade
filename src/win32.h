@@ -5,12 +5,12 @@
 
 #ifdef _WIN32
 
-#include <time.h>
 // Hack to force windows.h to always appear before winbase.h
 // irrespective of C formatting standard
 #include <windows.h>
 //--
 #include <winbase.h>
+#include <time.h>
 
 /*
 //struct timeval
@@ -27,7 +27,7 @@
 //#define timerclear(tvp)		(tvp)->tv_sec = (tvp)->tv_usec = 0
 */
 
-#define _CRT_INTERNAL_NONSTDC_NAMES 1
+//#define _CRT_INTERNAL_NONSTDC_NAMES 1
 
 #ifndef __MINGW32_MAJOR_VERSION
 struct timezone {

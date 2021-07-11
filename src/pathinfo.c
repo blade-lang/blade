@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined _WIN32
+#if defined(_WIN32)
 #include <io.h>
 #include <shlwapi.h>
 #include <windows.h>
@@ -22,7 +22,7 @@
 
 #endif
 
-#if defined __linux__ || defined __CYGWIN__ || defined __MINGW32_MAJOR_VERSION
+#if defined(__linux__) || defined(__CYGWIN__) || defined(__MINGW32_MAJOR_VERSION)
 #include <libgen.h>
 #include <limits.h>
 
@@ -34,7 +34,7 @@
 
 #endif
 
-#if defined _WIN32
+#if defined(_WIN32)
 
 #include "win32.h"
 
@@ -56,7 +56,7 @@ char *get_exe_dir() {
 
 #endif
 
-#if defined __linux__ || defined __CYGWIN__
+#if defined(__linux__) || defined(__CYGWIN__)
 
 char *get_exe_path() {
   char raw_path[PATH_MAX];
@@ -84,7 +84,7 @@ char *get_exe_path() {
 
 #endif
 
-#if defined __CYGWIN__ || defined __linux__ || defined __APPLE__
+#if defined(__CYGWIN__) || defined(__linux__) || defined(__APPLE__)
 
 char *get_exe_dir() {
   return dirname(get_exe_path());

@@ -39,7 +39,7 @@
    not defined, include <ctype.h>, which will pull in <features.h> for us
    if it's from glibc.  (Why ctype.h?  It's guaranteed to exist and it
    doesn't flood the namespace with stuff the way some other headers do.)  */
-#if !defined __GNU_LIBRARY__
+#if !defined(__GNU_LIBRARY__)
 
 # include <ctype.h>
 
@@ -97,7 +97,7 @@ extern int optopt;
    returns the contents of the `val' field.  */
 
 struct option {
-# if (defined __STDC__ && __STDC__) || defined __cplusplus
+# if (defined(__STDC__) && __STDC__) || defined(__cplusplus)
   const char *name;
 # else
   char* name;
@@ -136,7 +136,7 @@ struct option {
    arguments to the option '\0'.  This behavior is specific to the GNU
    `getopt'.  */
 
-#if (defined __STDC__ && __STDC__) || defined __cplusplus
+#if (defined __STDC__ && __STDC__) || defined(__cplusplus)
 # ifdef __GNU_LIBRARY__
 /* Many other libraries have conflicting prototypes for getopt, with
    differences in the consts, in stdlib.h.  To avoid compilation

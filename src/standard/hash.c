@@ -12,6 +12,10 @@
 #include "zlib.h"
 #include "pathinfo.h"
 
+#ifdef _MSC_VER
+#define PRIx64 "llx"
+#endif
+
 DECLARE_MODULE_METHOD(hash__crc32) {
   ENFORCE_ARG_RANGE(crc32, 1, 2);
 
@@ -357,7 +361,7 @@ DECLARE_MODULE_METHOD(hash__siphash) {
   uint64_t sip = siphash24(str->bytes.bytes, str->bytes.count, (const char *)key->bytes.bytes);
 
   char result[17]; // assume maximum of 16 bits
-  int length = sprintf(result, "%llx", sip);
+  int length = sprintf(result, "%" PRIx64 , sip);
 
   RETURN_L_STRING(result, length);
 }

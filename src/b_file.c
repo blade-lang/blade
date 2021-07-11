@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#if defined _MSC_VER || defined _WIN32
+#if defined(_MSC_VER) || defined(_WIN32)
 #include "win32.h"
 #else
 

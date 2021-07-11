@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "b_sprintf.h"
+
 // for debugging...
 #include "debug.h"
 
@@ -883,7 +885,7 @@ bool dict_get_entry(b_obj_dict *dict, b_value key, b_value *value) {
 }
 
 bool dict_set_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value) {
-#if defined USE_NAN_BOXING && USE_NAN_BOXING
+#if defined(USE_NAN_BOXING) && USE_NAN_BOXING
   bool found = false;
   for (int i = 0; i < dict->names.count; i++) {
     if (values_equal(dict->names.values[i], key))
@@ -1601,7 +1603,7 @@ b_ptr_result run(b_vm *vm) {
       table_set(vm, &vm->globals, OBJ_VAL(name), peek(vm, 0));
       pop(vm);
 
-#if defined DEBUG_TABLE && DEBUG_TABLE
+#if defined(DEBUG_TABLE) && DEBUG_TABLE
       table_print(&vm->globals);
 #endif
       break;

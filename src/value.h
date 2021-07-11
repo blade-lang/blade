@@ -14,7 +14,7 @@ typedef union {
   double num;
 } b_double_union;
 
-#if defined USE_NAN_BOXING && USE_NAN_BOXING
+#if defined(USE_NAN_BOXING) && USE_NAN_BOXING
 
 // binary representation = 1111111111111 i.e.
 // 11 bits + 1 bit for quiet nan and another

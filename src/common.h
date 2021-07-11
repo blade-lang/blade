@@ -3,6 +3,7 @@
 
 // special definitions for Cygwin
 #define _DEFAULT_SOURCE 1
+#define _GNU_SOURCE 1
 #define _ln_
 
 #include <stdbool.h>

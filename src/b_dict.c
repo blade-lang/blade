@@ -4,7 +4,8 @@
 
 #define ENFORCE_VALID_DICT_KEY(name, index)                                    \
   EXCLUDE_ARG_TYPE(name, IS_LIST, index);                                      \
-  EXCLUDE_ARG_TYPE(name, IS_DICT, index);
+  EXCLUDE_ARG_TYPE(name, IS_DICT, index); \
+  EXCLUDE_ARG_TYPE(name, IS_FILE, index);
 
 DECLARE_DICT_METHOD(length) {
   ENFORCE_ARG_COUNT(dictionary.length, 0);

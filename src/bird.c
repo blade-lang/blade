@@ -7,7 +7,7 @@
 #include <string.h>
 #include <errno.h>
 
-#if !defined _WIN32 && !defined __CYGWIN__
+#if !defined(_WIN32) && !defined(__CYGWIN__)
 
 #include <readline/history.h>
 #include <readline/readline.h>
@@ -76,7 +76,7 @@ static void repl(b_vm *vm) {
       cursor = "  ";
     }
 
-#if defined _WIN32 || defined __CYGWIN__
+#if defined(_WIN32) || defined(__CYGWIN__)
     char buffer[1024];
     printf(cursor);
     char *line = fgets(buffer, 1024, stdin);
@@ -92,7 +92,7 @@ static void repl(b_vm *vm) {
       exit(EXIT_SUCCESS);
     }
 
-#if !defined _WIN32 && !defined __CYGWIN__
+#if !defined(_WIN32) && !defined(__CYGWIN__)
     // allow user to navigate through past input in terminal...
     add_history(line);
 #endif // !_WIN32
