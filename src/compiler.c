@@ -1450,6 +1450,8 @@ static void method(b_parser *p, b_token class_name, bool is_static) {
   if (p->previous.length == class_name.length &&
       memcmp(p->previous.start, class_name.start, class_name.length) == 0) {
     type = TYPE_INITIALIZER;
+  } else if(p->previous.length > 0 && p->previous.start[0] == '_') {
+    type = TYPE_PRIVATE;
   }
 
   function(p, type);

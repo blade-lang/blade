@@ -117,7 +117,6 @@ static void blacken_object(b_vm *vm, b_obj *object) {
       b_obj_class *klass = (b_obj_class *)object;
       mark_object(vm, (b_obj *)klass->name);
       mark_table(vm, &klass->public_methods);
-      mark_table(vm, &klass->private_methods);
       mark_table(vm, &klass->properties);
       mark_table(vm, &klass->static_properties);
       break;
@@ -213,7 +212,6 @@ static void free_object(b_vm *vm, b_obj *object) {
       b_obj_class *klass = (b_obj_class *)object;
       free_object(vm, (b_obj *)klass->name);
       free_table(vm, &klass->public_methods);
-      free_table(vm, &klass->private_methods);
       free_table(vm, &klass->properties);
       free_table(vm, &klass->static_properties);
       FREE(b_obj_class, object);

@@ -69,12 +69,11 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
 
                   if(func.is_static) {
                     native->type = TYPE_STATIC;
+                  } else if(strlen(func.name) > 0 && func.name[0] == '_') {
+                    native->type = TYPE_PRIVATE;
                   }
 
-                  bool is_private = strlen(func.name) > 0 && func.name[0] == '_';
-
-                  table_set(vm, is_private ? &klass->private_methods
-                    : &klass->public_methods, func_name, OBJ_VAL(native));
+                  table_set(vm, &klass->public_methods, func_name, OBJ_VAL(native));
                 }
               }
 

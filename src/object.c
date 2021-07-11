@@ -80,7 +80,6 @@ b_obj_class *new_class(b_vm *vm, b_obj_string *name) {
   init_table(&klass->properties);
   init_table(&klass->static_properties);
   init_table(&klass->public_methods);
-  init_table(&klass->private_methods);
   klass->initializer = EMPTY_VAL;
   klass->superclass = NULL;
   return klass;

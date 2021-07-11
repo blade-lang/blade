@@ -599,21 +599,16 @@ static b_func_type get_method_type(b_value method) {
 bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
                        int arg_count) {
   b_value method;
-  if (!table_get(&klass->public_methods, OBJ_VAL(name), &method)) {
-    if (!table_get(&klass->private_methods, OBJ_VAL(name), &method)) {
-      return throw_exception(vm, "undefined method '%s' in %s", name->chars, klass->name->chars);
+  if (table_get(&klass->public_methods, OBJ_VAL(name), &method)) {
+    if (get_method_type(method) == TYPE_PRIVATE) {
+      return throw_exception(vm, "cannot call private method '%s' from instance of %s",
+                             name->chars, klass->name->chars);
     }
 
-    return throw_exception(vm, "cannot call private method '%s' from instance of %s", name->chars, klass->name->chars);
+    return call_value(vm, method, arg_count);
   }
 
-  if (IS_NATIVE(method)) {
-    return call_value(vm, method, arg_count);
-  } else if (IS_CLOSURE(method)) {
-    return call_closure(vm, AS_CLOSURE(method), arg_count);
-  } else {
-    return call_function(vm, AS_FUNCTION(method), arg_count);
-  }
+  return throw_exception(vm, "undefined method '%s' in %s", name->chars, klass->name->chars);
 }
 
 static bool invoke_self(b_vm *vm, b_obj_string *name, int arg_count) {
@@ -623,9 +618,7 @@ static bool invoke_self(b_vm *vm, b_obj_string *name, int arg_count) {
   if (IS_INSTANCE(receiver)) {
     b_obj_instance *instance = AS_INSTANCE(receiver);
 
-    if(table_get(&instance->klass->private_methods, OBJ_VAL(name), &value)) {
-      return call_value(vm, value, arg_count);
-    } else if(table_get(&instance->klass->public_methods, OBJ_VAL(name), &value)) {
+    if(table_get(&instance->klass->public_methods, OBJ_VAL(name), &value)) {
       return call_value(vm, value, arg_count);
     }
 
@@ -635,13 +628,7 @@ static bool invoke_self(b_vm *vm, b_obj_string *name, int arg_count) {
     }
   } else if (IS_CLASS(receiver)) {
     // @TODO: Add support for class public_methods. e.g. __str__, __methods__ etc...
-    if(table_get(&AS_CLASS(receiver)->private_methods, OBJ_VAL(name), &value)) {
-      if(get_method_type(value) == TYPE_STATIC) {
-        return call_value(vm, value, arg_count);
-      }
-
-      return throw_exception(vm, "cannot call non-static method %s() on non instance", name->chars);
-    } else if(table_get(&AS_CLASS(receiver)->public_methods, OBJ_VAL(name), &value)) {
+    if(table_get(&AS_CLASS(receiver)->public_methods, OBJ_VAL(name), &value)) {
       if(get_method_type(value) == TYPE_STATIC) {
         return call_value(vm, value, arg_count);
       }
@@ -666,14 +653,16 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
       case OBJ_CLASS: {
         // @TODO: Add support for class public_methods. e.g. __str__, __methods__ etc...
         if(table_get(&AS_CLASS(receiver)->public_methods, OBJ_VAL(name), &value)) {
+          if(get_method_type(value) == TYPE_PRIVATE) {
+            return throw_exception(vm, "cannot call private method %s() on %s",
+                                   name->chars, AS_CLASS(receiver)->name->chars);
+          }
           return call_value(vm, value, arg_count);
         } else if(table_get(&AS_CLASS(receiver)->static_properties, OBJ_VAL(name), &value)) {
           return call_value(vm, value, arg_count);
-        } else if(table_get(&AS_CLASS(receiver)->private_methods, OBJ_VAL(name), &value)) {
-          return throw_exception(vm, "cannot call private method %s() on %s",
-                                 name->chars, AS_CLASS(receiver)->name->chars);
         }
-        return throw_exception(vm, "class %s has no method %s()", AS_CLASS(receiver)->name->chars, name->chars);
+
+        return throw_exception(vm, "unknown method %s() in class %s", name->chars, AS_CLASS(receiver)->name->chars);
       }
       case OBJ_INSTANCE: {
         b_obj_instance *instance = AS_INSTANCE(receiver);
@@ -725,14 +714,18 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
 
 static bool bind_method(b_vm *vm, b_obj_class *klass, b_obj_string *name) {
   b_value method;
-  if (!table_get(&klass->public_methods, OBJ_VAL(name), &method)) {
-    return throw_exception(vm, "undefined property '%s'", name->chars);
+  if (table_get(&klass->public_methods, OBJ_VAL(name), &method)) {
+    if(get_method_type(method) == TYPE_PRIVATE) {
+      return throw_exception(vm, "cannot get private property '%s' from instance", name->chars);
+    }
+
+    b_obj_bound *bound = new_bound_method(vm, peek(vm, 0), AS_OBJ(method));
+    pop(vm);
+    push(vm, OBJ_VAL(bound));
+    return true;
   }
 
-  b_obj_bound *bound = new_bound_method(vm, peek(vm, 0), AS_OBJ(method));
-  pop(vm);
-  push(vm, OBJ_VAL(bound));
-  return true;
+  return throw_exception(vm, "undefined property '%s'", name->chars);
 }
 
 static b_obj_up_value *capture_up_value(b_vm *vm, b_value *local) {
@@ -772,10 +765,8 @@ static void define_method(b_vm *vm, b_obj_string *name) {
   b_value method = peek(vm, 0);
   b_obj_class *klass = AS_CLASS(peek(vm, 1));
 
-  bool is_private = name->length > 0 && name->chars[0] == '_';
-
-  table_set(vm, is_private ? &klass->private_methods : &klass->public_methods, OBJ_VAL(name), method);
-  if (name == klass->name && get_method_type(method) != TYPE_STATIC) {
+  table_set(vm, &klass->public_methods, OBJ_VAL(name), method);
+  if (get_method_type(method) == TYPE_INITIALIZER) {
     klass->initializer = method;
   }
   pop(vm);
@@ -791,29 +782,6 @@ static void define_property(b_vm *vm, b_obj_string *name, bool is_static) {
     table_set(vm, &klass->static_properties, OBJ_VAL(name), property);
   }
   pop(vm);
-
-  /*b_value property = peek(vm, 0);
-  b_obj_class *klass = AS_CLASS(peek(vm, 1));
-
-  bool is_function = IS_FUNCTION(property) || IS_CLOSURE(property);
-  b_table *table;
-
-  if(is_function) {
-    bool is_private = name->length > 0 && name->chars[0] == '_';
-    if(is_static) {
-      b_obj_func *fn;
-      if(IS_FUNCTION(property)) fn = AS_FUNCTION(property);
-      else fn = AS_CLOSURE(property)->function;
-      fn->type = TYPE_STATIC;
-    }
-
-    table = is_private ? &klass->private_methods : &klass->public_methods;
-  } else {
-    table = is_static ? &klass->static_properties : &klass->properties;
-  }
-
-  table_set(vm, table, OBJ_VAL(name), property);
-  pop(vm);*/
 }
 
 bool is_false(b_value value) {
@@ -1647,8 +1615,7 @@ b_ptr_result run(b_vm *vm) {
 
         switch(AS_OBJ(peek(vm, 0))->type) {
           case OBJ_CLASS: {
-            if(table_get(&AS_CLASS(peek(vm, 0))->private_methods, OBJ_VAL(name), &value)
-               || table_get(&AS_CLASS(peek(vm, 0))->public_methods, OBJ_VAL(name), &value)) {
+            if(table_get(&AS_CLASS(peek(vm, 0))->public_methods, OBJ_VAL(name), &value)) {
               if(get_method_type(value) == TYPE_STATIC) {
                 if(name->length > 0 && name->chars[0] == '_') {
                   runtime_error("cannot call private property '%s' of class %s",
@@ -1788,8 +1755,7 @@ b_ptr_result run(b_vm *vm) {
                       AS_INSTANCE(peek(vm, 0))->klass->name->chars, name->chars);
         break;
       } else if(IS_CLASS(peek(vm, 0))) {
-        if(table_get(&AS_CLASS(peek(vm, 0))->private_methods, OBJ_VAL(name), &value)
-           || table_get(&AS_CLASS(peek(vm, 0))->public_methods, OBJ_VAL(name), &value)) {
+        if(table_get(&AS_CLASS(peek(vm, 0))->public_methods, OBJ_VAL(name), &value)) {
           if(get_method_type(value) == TYPE_STATIC) {
             pop(vm); // pop the class...
             push(vm, value);
