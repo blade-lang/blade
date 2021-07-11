@@ -73,7 +73,7 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
                     native->type = TYPE_PRIVATE;
                   }
 
-                  table_set(vm, &klass->public_methods, func_name, OBJ_VAL(native));
+                  table_set(vm, &klass->methods, func_name, OBJ_VAL(native));
                 }
               }
 

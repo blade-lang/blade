@@ -123,7 +123,7 @@ typedef struct b_obj_class {
   b_obj_string *name;
   b_table properties;
   b_table static_properties;
-  b_table public_methods;
+  b_table methods;
   b_value initializer;
   struct b_obj_class *superclass;
 } b_obj_class;
