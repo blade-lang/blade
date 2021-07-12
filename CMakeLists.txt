@@ -150,7 +150,7 @@ if(MSVC)
 		COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/libs ${CMAKE_CURRENT_BINARY_DIR}/bin/libs
 		COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/tests ${CMAKE_CURRENT_BINARY_DIR}/bin/tests
 		COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/benchmarks ${CMAKE_CURRENT_BINARY_DIR}/bin/benchmarks
-		COMMAND ${CMAKE_COMMAND} -E copy_file ${ZLIB_DIR}/build/bin/zlib.dll ${CMAKE_CURRENT_BINARY_DIR}/bin/zlib.dll
+		COMMAND ${CMAKE_COMMAND} -E copy ${ZLIB_DIR}/build/bin/zlib.dll ${CMAKE_CURRENT_BINARY_DIR}/bin/zlib.dll
 	)
 else()
 	add_custom_command(TARGET bird_files POST_BUILD
