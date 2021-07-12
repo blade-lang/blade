@@ -19,7 +19,10 @@
 #include <stdio.h>
 #include <string.h>
 
+// fix MSVC redefinition issue...
+#ifndef _WIN32
 #include "b_sprintf.h"
+#endif
 
 // for debugging...
 #include "debug.h"

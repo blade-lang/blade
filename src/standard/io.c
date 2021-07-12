@@ -1,3 +1,8 @@
+#ifdef _MSC_VER
+#pragma warning (disable : 4113)
+#pragma warning (disable : 4047)
+#endif
+
 #include "io.h"
 #include "b_unistd.h"
 #include "util.h"
@@ -547,7 +552,7 @@ HANDLE getHandle() { return com.hComm; }
 #endif
 
 struct termios orig_termios;
-void disable_raw_mode() {
+void disable_raw_mode(void) {
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
 }
 

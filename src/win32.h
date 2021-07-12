@@ -5,6 +5,11 @@
 
 #ifdef _WIN32
 
+
+#ifdef _MSC_VER
+#pragma warning (disable : 5105)
+#endif
+
 // Hack to force windows.h to always appear before winbase.h
 // irrespective of C formatting standard
 #include <windows.h>

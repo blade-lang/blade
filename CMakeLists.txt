@@ -10,7 +10,7 @@ include(ExternalProject)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
-set(CMAKE_VERBOSE_MAKEFILE on)
+#set(CMAKE_VERBOSE_MAKEFILE on)
 
 set(cfsp " ")
 set(SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/..)
