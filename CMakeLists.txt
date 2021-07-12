@@ -30,7 +30,6 @@ message(STATUS "Adding external library: pcre2...")
 ExternalProject_Add(pcre
     SOURCE_DIR ${SRC_DIR}/deps/pcre2-8
     PREFIX ${PCRE2_DIR}
-    BINARY_DIR ${PCRE2_DIR}
     CMAKE_ARGS -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:PATH=${PCRE2_DIR}/build
 )
 
@@ -72,7 +71,7 @@ set(BIRD_SOURCES
     src/standard/hash.c
 )
 
-add_library(libbird ${BIRD_SOURCES})
+add_library(libbird SHARED ${BIRD_SOURCES})
 add_executable(bird src/bird.c)
 
 if(MSVC)
@@ -121,12 +120,12 @@ set_target_properties(libbird
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}
 )
 
-if(MSVC)
-  set_target_properties(bird PROPERTIES COMPILE_FLAGS "/GL")
-  set_target_properties(libbird PROPERTIES COMPILE_FLAGS "/GL")
-  set_target_properties(bird PROPERTIES LINK_FLAGS "/LTCG")
-  set_target_properties(libbird PROPERTIES LINK_FLAGS "/LTCG")
-endif(MSVC)
+#if(MSVC)
+#  set_target_properties(bird PROPERTIES COMPILE_FLAGS "/GL")
+#  set_target_properties(libbird PROPERTIES COMPILE_FLAGS "/GL")
+#  set_target_properties(bird PROPERTIES LINK_FLAGS "/LTCG")
+#  set_target_properties(libbird PROPERTIES LINK_FLAGS "/LTCG")
+#endif(MSVC)
 
 target_link_libraries(libbird ${PCRE2_LIB_FILE})
 target_link_libraries(libbird ${ZLIB_LIB_FILE})
