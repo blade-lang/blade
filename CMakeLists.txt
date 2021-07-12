@@ -1,15 +1,11 @@
 cmake_minimum_required(VERSION 3.18)
 
-project(bird
-		LANGUAGES C
-		DESCRIPTION "An interpreted high-level general-purpose multi-paradigm programming language"
-)
+project(bird C)
 
 # required modules for our task
 include(CheckIncludeFile)
 include(CheckIncludeFiles)
 include(ExternalProject)
-include(SelectLibraryConfigurations)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
@@ -34,14 +30,14 @@ message(STATUS "Adding external library: pcre2...")
 ExternalProject_Add(pcre
     SOURCE_DIR ${SRC_DIR}/deps/pcre2-8
     PREFIX ${PCRE2_DIR}
-    CMAKE_ARGS -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:PATH=${PCRE2_DIR}/build
+    CMAKE_ARGS -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:PATH=${PCRE2_DIR}/build -DCMAKE_LIBRARY_OUTPUT_DIRECTORY:PATH=${PCRE2_DIR}
 )
 
 message(STATUS "Adding external library: zlib...")
 ExternalProject_Add(zlib
     SOURCE_DIR ${SRC_DIR}/deps/zlib
     PREFIX ${ZLIB_DIR}
-    CMAKE_ARGS -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:PATH=${ZLIB_DIR}/build
+    CMAKE_ARGS -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:PATH=${ZLIB_DIR}/build -DCMAKE_LIBRARY_OUTPUT_DIRECTORY:PATH=${ZLIB_DIR}
 )
 
 set(BIRD_SOURCES
@@ -78,36 +74,29 @@ set(BIRD_SOURCES
 add_library(libbird ${BIRD_SOURCES})
 add_executable(bird src/bird.c)
 
-
-
 if(MSVC)
-	target_compile_definitions(
-			libbird
-			PRIVATE -DUNICODE -D_UNICODE _CRT_SECURE_NO_WARNINGS
-	)
-	target_compile_definitions(
-			bird
-			PRIVATE -DUNICODE -D_UNICODE _CRT_SECURE_NO_WARNINGS
-	)
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_DEBUG_POSTFIX "d")
+  else()
+    set(CMAKE_DEBUG_POSTFIX "")
+  endif()
+else()
+	set(CMAKE_DEBUG_POSTFIX "")
 endif(MSVC)
+
+set(LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+set(SHARED_LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
 # set dependency shared lib path
-set(PCRE2_LIBRARY_RELEASE ${PCRE2_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}pcre2-8${CMAKE_STATIC_LIBRARY_SUFFIX})
-if(MSVC)
-  set(PCRE2_LIBRARY_DEBUG ${PCRE2_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}pcre2-8d${CMAKE_STATIC_LIBRARY_SUFFIX})
-endif(MSVC)
-select_library_configurations(PCRE2)
-
-message(STATUS ${PCRE2_LIBRARY})
+set(PCRE2_LIB_FILE ${PCRE2_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}pcre2-8${LIBRARY_NAME_END})
+message(STATUS ${PCRE2_LIB_FILE})
 
 if(UNIX)
-	set(ZLIB_LIBRARY ${ZLIB_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}z${CMAKE_STATIC_LIBRARY_SUFFIX})
+	set(ZLIB_LIB_FILE ${ZLIB_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}z${LIBRARY_NAME_END})
 else()
-	set(ZLIB_LIBRARY_DEBUG ${ZLIB_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}zlibd${CMAKE_STATIC_LIBRARY_SUFFIX})
-	set(ZLIB_LIBRARY_RELEASE ${ZLIB_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}zlib${CMAKE_STATIC_LIBRARY_SUFFIX})
-  select_library_configurations(ZLIB)
+	set(ZLIB_LIB_FILE ${ZLIB_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}zlib${LIBRARY_NAME_END})
 endif(UNIX)
-message(STATUS ${ZLIB_LIBRARY})
+message(STATUS ${ZLIB_LIB_FILE})
 
 # add dependency includes
 include_directories(src ${PCRE2_DIR}/build/include ${ZLIB_DIR}/build/include)
@@ -138,12 +127,12 @@ if(MSVC)
   set_target_properties(libbird PROPERTIES LINK_FLAGS "/LTCG")
 endif(MSVC)
 
-target_link_libraries(libbird PUBLIC ${PCRE2_LIBRARY})
-target_link_libraries(libbird PUBLIC ${ZLIB_LIBRARY})
+target_link_libraries(libbird ${PCRE2_LIB_FILE})
+target_link_libraries(libbird ${ZLIB_LIB_FILE})
 
 if(UNIX)
-  target_link_libraries(libbird PUBLIC readline)
-  target_link_libraries(libbird PUBLIC m)
+  target_link_libraries(libbird readline)
+  target_link_libraries(libbird m)
 endif(UNIX)
 
 target_link_libraries(bird libbird)
@@ -189,18 +178,6 @@ else()
 endif()
 
 enable_testing()
-
-install(TARGETS bird
-    RUNTIME DESTINATION bin
-    LIBRARY DESTINATION bin
-    ARCHIVE DESTINATION bin
-)
-
-install(TARGETS libbird
-    RUNTIME DESTINATION bin
-    LIBRARY DESTINATION bin
-    ARCHIVE DESTINATION bin
-)
 
 # define a function to simplify adding tests
 function(add_bird_test target arg index result)
