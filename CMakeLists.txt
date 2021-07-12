@@ -30,7 +30,7 @@ message(STATUS "Adding external library: pcre2...")
 ExternalProject_Add(pcre
     SOURCE_DIR ${SRC_DIR}/deps/pcre2-8
     PREFIX ${PCRE2_DIR}
-    CMAKE_ARGS -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:PATH=${PCRE2_DIR}/build
+    CMAKE_ARGS -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:PATH=${PCRE2_DIR}/build -DPCRE2_STATIC_RUNTIME=ON
 )
 
 message(STATUS "Adding external library: zlib...")
@@ -119,7 +119,6 @@ set_target_properties(bird
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}
-    LINKER_LANGUAGE C
 )
 
 set_target_properties(libbird
@@ -127,7 +126,6 @@ set_target_properties(libbird
     OUTPUT_NAME bird
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}
-    LINKER_LANGUAGE C
 )
 
 if(MSVC)
@@ -135,7 +133,6 @@ if(MSVC)
   set_target_properties(libbird PROPERTIES COMPILE_FLAGS "/GL")
   set_target_properties(bird PROPERTIES LINK_FLAGS "/LTCG")
   set_target_properties(libbird PROPERTIES LINK_FLAGS "/LTCG")
-  set(PCRE2_STATIC_RUNTIME ON)
 endif(MSVC)
 
 target_link_libraries(libbird ${PCRE2_LIB_FILE})
