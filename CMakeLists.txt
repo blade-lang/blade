@@ -130,7 +130,7 @@ if(MSVC)
 endif(MSVC)
 
 find_library(PCRE2_LIB pcre2-8 HINTS ${PCRE2_DIR}/build/lib)
-find_library(ZLIB_LIB z zlib libz zlibstatic HINTS ${PCRE2_DIR}/build/lib)
+find_library(ZLIB_LIB z zlib libz zlibstatic HINTS ${ZLIB_DIR}/build/lib)
 
 if(NOT PCRE2_LIB)
   if(MSVC)
@@ -142,7 +142,7 @@ endif()
 
 if(NOT ZLIB_LIB)
   if(MSVC)
-    set(ZLIB_LIB ${PCRE2_DIR}/build/lib/zlib${LIBRARY_NAME_END})
+    set(ZLIB_LIB ${ZLIB_DIR}/build/lib/zlib${LIBRARY_NAME_END})
   else()
     message(FATAL_ERROR "Something went wrong while building zlib")
   endif()
