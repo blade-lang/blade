@@ -87,17 +87,22 @@ else()
   set(CMAKE_DEBUG_POSTFIX "")
 endif()
 
-set(LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+set(STATIC_LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+#set(SHARED_LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
 # set dependency shared lib path
-set(PCRE2_LIB_FILE ${PCRE2_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}pcre2-8${LIBRARY_NAME_END})
+if(UNIX)
+  set(PCRE2_LIB_FILE ${PCRE2_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}pcre2-8${STATIC_LIBRARY_NAME_END})
+else()
+  set(PCRE2_LIB_FILE ${PCRE2_DIR}/build/lib/${CMAKE_SHARED_LIBRARY_PREFIX}pcre2-8${SHARED_LIBRARY_NAME_END})
+endif(UNIX)
 
 message(STATUS ${PCRE2_LIB_FILE})
 
 if(UNIX)
-	set(ZLIB_LIB_FILE ${ZLIB_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}z${LIBRARY_NAME_END})
+	set(ZLIB_LIB_FILE ${ZLIB_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}z${STATIC_LIBRARY_NAME_END})
 else()
-	set(ZLIB_LIB_FILE ${ZLIB_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}zlib${LIBRARY_NAME_END})
+	set(ZLIB_LIB_FILE ${ZLIB_DIR}/build/lib/${CMAKE_SHARED_LIBRARY_PREFIX}zlib${SHARED_LIBRARY_NAME_END})
 endif(UNIX)
 
 message(STATUS ${ZLIB_LIB_FILE})
@@ -129,27 +134,8 @@ if(MSVC)
   set_target_properties(libbird PROPERTIES LINK_FLAGS "/LTCG")
 endif(MSVC)
 
-find_library(PCRE2_LIB pcre2-8 HINTS ${PCRE2_DIR}/build/lib)
-find_library(ZLIB_LIB z zlib libz zlibstatic HINTS ${ZLIB_DIR}/build/lib)
-
-if(NOT PCRE2_LIB)
-  if(MSVC)
-    set(PCRE2_LIB ${PCRE2_DIR}/build/lib/pcre2-8${LIBRARY_NAME_END})
-  else()
-    message(FATAL_ERROR "Something went wrong while building pcre2-8")
-  endif()
-endif()
-
-if(NOT ZLIB_LIB)
-  if(MSVC)
-    set(ZLIB_LIB ${ZLIB_DIR}/build/lib/zlib${LIBRARY_NAME_END})
-  else()
-    message(FATAL_ERROR "Something went wrong while building zlib")
-  endif()
-endif()
-
-target_link_libraries(libbird ${PCRE2_LIB})
-target_link_libraries(libbird ${ZLIB_LIB})
+target_link_libraries(libbird ${PCRE2_LIB_FILE})
+target_link_libraries(libbird ${ZLIB_LIB_FILE})
 
 if(UNIX)
   target_link_libraries(libbird readline)
