@@ -118,8 +118,8 @@ set_target_properties(libbird
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}
 )
 
-target_link_libraries(libbird ${PCRE2_LIB_FILE})
 target_link_libraries(libbird ${ZLIB_LIB_FILE})
+target_link_libraries(libbird ${PCRE2_LIB_FILE})
 
 if(UNIX)
   target_link_libraries(libbird readline)
