@@ -806,7 +806,6 @@ DECLARE_STRING_METHOD(matches) {
     PCRE2_SPTR tab_ptr;
 
     (void)pcre2_pattern_info(re, PCRE2_INFO_NAMETABLE, &name_table);
-
     (void)pcre2_pattern_info(re, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
 
     tab_ptr = name_table;
@@ -924,7 +923,6 @@ DECLARE_STRING_METHOD(matches) {
       PCRE2_SPTR tab_ptr;
 
       (void)pcre2_pattern_info(re, PCRE2_INFO_NAMETABLE, &name_table);
-
       (void)pcre2_pattern_info(re, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
 
       tab_ptr = name_table;

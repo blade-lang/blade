@@ -1,6 +1,7 @@
 #ifdef _MSC_VER
 #pragma warning (disable : 4113)
 #pragma warning (disable : 4047)
+#pragma warning (disable : 5105)
 #endif
 
 #include "io.h"

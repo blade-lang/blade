@@ -1,3 +1,7 @@
+#ifdef _MSC_VER
+#pragma warning (disable : 5105)
+#endif
+
 #include "socket.h"
 #include "b_unistd.h"
 #include "pathinfo.h"
@@ -353,7 +357,8 @@ DECLARE_MODULE_METHOD(socket__getsockopt) {
 
 #ifdef _WIN32
       DWORD timeout;
-      if(getsockopt(sock, SOL_SOCKET, option, (char *)&timeout, sizeof(timeout)) >= 0) {
+      int len = sizeof(timeout);
+      if(getsockopt(sock, SOL_SOCKET, option, (char *)&timeout, &len) >= 0) {
         RETURN_NUMBER(timeout);
       }
 #else

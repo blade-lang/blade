@@ -1,3 +1,7 @@
+#ifdef _MSC_VER
+#pragma warning (disable : 5105)
+#endif
+
 #include "pathinfo.h"
 #include "common.h"
 #include "b_unistd.h"

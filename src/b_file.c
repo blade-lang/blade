@@ -551,7 +551,7 @@ DECLARE_FILE_METHOD(truncate) {
 #ifndef _WIN32
   RETURN_STATUS(truncate(file->path->chars, final_size));
 #else
-  RETURN_STATUS(_chsize_s(file->path->chars, final_size));
+  RETURN_STATUS(_chsize_s(fileno(file->file), final_size));
 #endif // !_WIN32
 }
 

@@ -30,7 +30,7 @@ const char *GetWindowsVersionString() {
     cm = VerSetConditionMask(cm, VER_MINORVERSION, VER_EQUAL);
     osvi->dwOSVersionInfoSize = sizeof(osvi);
     osvi->dwMinorVersion = 3;
-    if (VerifyVersionInfoW(&osvi, VER_MINORVERSION, cm)) {
+    if (VerifyVersionInfoW(osvi, VER_MINORVERSION, cm)) {
       osver->dwMinorVersion = 3;
     }
   }
