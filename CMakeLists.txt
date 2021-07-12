@@ -75,7 +75,7 @@ if(MSVC)
   set(CMAKE_DEBUG_POSTFIX "d")
 else()
 	set(CMAKE_DEBUG_POSTFIX "")
-endif()
+endif(MSVC)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_STATIC_LIBRARY_SUFFIX}")
@@ -91,8 +91,8 @@ message(STATUS ${PCRE2_LIB_FILE})
 if(UNIX)
 	set(ZLIB_LIB_FILE ${ZLIB_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}z${LIBRARY_NAME_END})
 else()
-	set(ZLIB_LIB_FILE ${ZLIB_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}zlibstatic${LIBRARY_NAME_END})
-endif()
+	set(ZLIB_LIB_FILE ${ZLIB_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}zlib${LIBRARY_NAME_END})
+endif(UNIX)
 
 message(STATUS ${ZLIB_LIB_FILE})
 
@@ -118,13 +118,18 @@ set_target_properties(libbird
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}
 )
 
+if(MSVC)
+  set_target_properties(libbird PROPERTIES COMPILE_FLAGS "/GL")
+  set_target_properties(libbird PROPERTIES LINK_FLAGS "/LTCG")
+endif(MSVC)
+
 target_link_libraries(libbird ${ZLIB_LIB_FILE})
 target_link_libraries(libbird ${PCRE2_LIB_FILE})
 
 if(UNIX)
   target_link_libraries(libbird readline)
   target_link_libraries(libbird m)
-endif()
+endif(UNIX)
 
 target_link_libraries(bird libbird)
 
@@ -157,7 +162,7 @@ enable_testing()
 
 # define a function to simplify adding tests
 function(do_test target arg index result)
-  message(STATUS "setting up test ${CMAKE_CURRENT_BINARY_DIR}/bin/${PROJECT_NAME} tests/${arg}.b")
+#  message(STATUS "setting up test ${CMAKE_CURRENT_BINARY_DIR}/bin/${PROJECT_NAME} tests/${arg}.b")
   add_test(NAME ${arg}_test_${index} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/bin/${PROJECT_NAME} bin/tests/${arg}.b)
   set_tests_properties(${arg}_test_${index}
       PROPERTIES PASS_REGULAR_EXPRESSION ${result}
