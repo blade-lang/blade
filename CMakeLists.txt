@@ -126,13 +126,13 @@ endif(MSVC)
 find_library(PCRE2_LIB pcre2-8 HINTS ${PCRE2_DIR}/build/lib)
 find_library(ZLIB_LIB z zlib libz zlibstatic HINTS ${PCRE2_DIR}/build/lib)
 
-if(NOT PCRE2_LIB)
-  message(FATAL_ERROR "Something went wrong while building pcre2-8")
-endif()
-
-if(NOT ZLIB_LIB)
-  message(FATAL_ERROR "Something went wrong while building zlib")
-endif()
+#if(NOT PCRE2_LIB)
+#  message(FATAL_ERROR "Something went wrong while building pcre2-8")
+#endif()
+#
+#if(NOT ZLIB_LIB)
+#  message(FATAL_ERROR "Something went wrong while building zlib")
+#endif()
 
 target_link_libraries(libbird ${PCRE2_LIB})
 target_link_libraries(libbird ${ZLIB_LIB})
