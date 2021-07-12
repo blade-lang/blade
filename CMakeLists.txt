@@ -142,7 +142,7 @@ endif()
 
 if(NOT ZLIB_LIB)
   if(MSVC)
-    set(PCRE2_LIB ${PCRE2_DIR}/build/lib/zlib${LIBRARY_NAME_END})
+    set(ZLIB_LIB ${PCRE2_DIR}/build/lib/zlib${LIBRARY_NAME_END})
   else()
     message(FATAL_ERROR "Something went wrong while building zlib")
   endif()
