@@ -131,8 +131,11 @@ set_target_properties(libbird
 )
 
 if(MSVC)
+  set_target_properties(bird PROPERTIES COMPILE_FLAGS "/GL")
   set_target_properties(libbird PROPERTIES COMPILE_FLAGS "/GL")
+  set_target_properties(bird PROPERTIES LINK_FLAGS "/LTCG")
   set_target_properties(libbird PROPERTIES LINK_FLAGS "/LTCG")
+  set(PCRE2_STATIC_RUNTIME ON)
 endif(MSVC)
 
 target_link_libraries(libbird ${PCRE2_LIB_FILE})
