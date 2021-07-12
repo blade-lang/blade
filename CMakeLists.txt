@@ -30,7 +30,8 @@ message(STATUS "Adding external library: pcre2...")
 ExternalProject_Add(pcre
     SOURCE_DIR ${SRC_DIR}/deps/pcre2-8
     PREFIX ${PCRE2_DIR}
-    CMAKE_ARGS -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:PATH=${PCRE2_DIR}/build -DCMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE:PATH=${PCRE2_DIR}
+    BINARY_DIR ${PCRE2_DIR}
+    CMAKE_ARGS -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:PATH=${PCRE2_DIR}/build
 )
 
 message(STATUS "Adding external library: zlib...")
