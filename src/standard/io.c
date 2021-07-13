@@ -13,7 +13,7 @@
 #include <termios.h>
 
 #else
-#include "b_termios.h"
+#include "blade_termios.h"
 #endif
 
 #include <errno.h>

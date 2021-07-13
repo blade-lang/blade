@@ -30,7 +30,7 @@
 #include "win32.h"
 #include <winsock2.h>
 #pragma comment (lib, "ws2_32") /* winsock support */
-#include "b_getopt.h"
+#include "blade_getopt.h"
 #define sleep			_sleep
 #define strcasecmp		strcmpi
 #define ioctl ioctlsocket
