@@ -11,6 +11,9 @@ do anything.
 ![osx build](https://github.com/mcfriend99/Bird/actions/workflows/osx-build.yml/badge.svg)
 ![windows build](https://github.com/mcfriend99/Bird/actions/workflows/windows-build.yml/badge.svg)
 
+
+
+
 ## Features
 
 - Simple syntax and minimal keywords.
@@ -26,6 +29,12 @@ do anything.
 - Lightweight.
 - Highly portable.
 
+
+
+### Documentation
+
+
+
 ## Directory Structure
 
 | Directory | Contents 
@@ -37,23 +46,36 @@ do anything.
 | `libs` | Contains the Bird standard library.
 | `src` | The source code of the Bird language including the native implementation of some Bird library classes and functions in the modules directory.
 | `tests` | A few test cases that Bird implementation must pass.
-| `winbuild` | Contains the windows build files for Bird.
 
-## How to compile
+
+
+## How to build
 
 For now, Bird can only build on one of Windows, Linux and Macosx devices.
 
--   ### For Linux and OSX
-  
-    Simply run one of `make debug` or `make release` as 
-    desired and you will get the compiled output in the `build` 
-    directory. You may customize the output directory by simply
-    changing it in the `Makefile`.
-    
--   ### For Windows
-    
-    Open the solution file in `winbuild` in Visual Studio 2017 
-    and above and build your desired release (`Debug` or `Release`).
+You'll need `cmake` installed to build Bird. Both `Debug` and `Release` 
+build types are supported.
+For example, to build into the directory `build`, you can run the following 
+commands on all three platforms to create a `Release` build:
+
+```bash
+cmake -B ./build -DCMAKE_BUILD_TYPE=Release
+cmake --build ./build --config Release
+```
+
+For debug builds, 
+
+```bash
+cmake -B ./build -DCMAKE_BUILD_TYPE=Debug
+cmake --build ./build --config Debug
+```
+
+> NOTE: For Windows, MSVC (Visual Studio) is the supported compiler.
+> Other compilers such as MingW or Cygwin may work, but are not
+> guaranteed to work.
+
+
+
 
 ## How to contribute
 
@@ -66,11 +88,15 @@ The standard. The general workflow is as follows.
 
 You can also contribute by finding bugs but not fixing them.
 To simply submit a bug from your own repo, simply modify the
-`BUGS.md` file in a new branch a submit a PR.
+`BUGS.md` file in a new branch a submit a PR. Kindly ensure
+what is being reported as a bug is not already captured in
+`TODO.md`
 
 > NOTE: Bugs submitted via the `BUGS.md` file take priority.
 
 You can also just mail your issues to [me](mailto:eqliqandfriends@gmail.com) directly.
+
+
 
 ## Coding Standard
 
@@ -88,6 +114,8 @@ You can also just mail your issues to [me](mailto:eqliqandfriends@gmail.com) dir
     IDE(s) to format your code before submitting for PR.
     
 That simple!
+
+
 
 ## Sponsors
 
