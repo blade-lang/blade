@@ -105,6 +105,7 @@ add_custom_target(bird_files)
 
 # add dependencies
 add_dependencies(libbird pcre zlib bird_files)
+add_dependencies(bird libbird)
 
 set_target_properties(bird
     PROPERTIES
@@ -132,10 +133,20 @@ target_link_libraries(libbird ${ZLIB_LIB_FILE})
 
 if(UNIX)
   target_link_libraries(libbird readline)
+  target_link_libraries(bird readline)
   target_link_libraries(libbird m)
+  target_link_libraries(bird m)
 endif(UNIX)
 
-target_link_libraries(bird libbird)
+set(BIRD_LIB ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}/${CMAKE_STATIC_LIBRARY_PREFIX}bird${CMAKE_SHARED_LIBRARY_SUFFIX})
+
+target_link_libraries(bird ${BIRD_LIB})
+
+install(TARGETS libbird
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
 
 if(MSVC)
 	add_custom_command(TARGET bird_files POST_BUILD
@@ -166,6 +177,7 @@ message(STATUS "  Install prefix .................. : ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "  C compiler ...................... : ${CMAKE_C_COMPILER}")
 message(STATUS "  Build type ...................... : ${buildtype}")
 message(STATUS "  C compiler flags ................ : ${${CMAKE_C_FLAGS}${cfsp}}${CMAKE_C_FLAGS_${buildtype}}")
+message(STATUS "  Bird library .................... : ${BIRD_LIB}")
 
 # for LTO
 include(CheckIPOSupported)
