@@ -407,7 +407,7 @@ uint32_t hash_value(b_value value) {
 
 /**
  * returns the greater of the two values.
- * this function encapsulates Bird's object hierarchy
+ * this function encapsulates Blade's object hierarchy
  */
 static b_value find_max_value(b_value a, b_value b) {
   if (IS_NIL(a)) {

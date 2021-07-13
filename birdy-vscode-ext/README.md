@@ -1,6 +1,6 @@
-# bird README
+# blade README
 
-This is the README for your extension "bird". After writing up a brief description, we recommend including the following sections.
+This is the README for your extension "blade". After writing up a brief description, we recommend including the following sections.
 
 ## Features
 

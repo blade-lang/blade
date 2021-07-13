@@ -1,5 +1,5 @@
 /**
- * Bird core Url module
+ * Blade core Url module
  * 
  * provides functionalities for parsing and processing URLs
  * @copyright 2021, Ore Richard Muyiwa

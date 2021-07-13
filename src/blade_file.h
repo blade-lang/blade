@@ -1,5 +1,5 @@
-#ifndef BIRD_FILE_H
-#define BIRD_FILE_H
+#ifndef BLADE_FILE_H
+#define BLADE_FILE_H
 
 #include "native.h"
 #include "object.h"

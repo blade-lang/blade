@@ -1,7 +1,7 @@
 /**
  * Math
  *
- * Bird's mathematical library
+ * Blade's mathematical library
  * @copyright 2021, Ore Richard Muyiwa
  */
 class Math {

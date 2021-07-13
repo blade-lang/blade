@@ -1,6 +1,6 @@
 #include "util.h"
 #include "vm.h"
-#include "b_unistd.h"
+#include "blade_unistd.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,8 +40,8 @@ static void repl(b_vm *vm) {
 
   vm->is_repl = true;
 
-  printf("Bird %s (running on BVM %s), REPL/Interactive mode = ON\n",
-          BIRD_VERSION_STRING, BVM_VERSION);
+  printf("Blade %s (running on BladeVM %s), REPL/Interactive mode = ON\n",
+          BLADE_VERSION_STRING, BVM_VERSION);
   printf("%s, (Build time = %s, %s)\n", COMPILER, __DATE__, __TIME__);
   printf("Type \"exit()\" to quit, \"help()\" or \"credits()\" for more information\n");
 
@@ -154,7 +154,7 @@ static void repl(b_vm *vm) {
 static void run_file(b_vm *vm, const char *file) {
   char *source = read_file(file);
   if (source == NULL) {
-    fprintf(stderr, "(Bird):\n  Launch aborted for %s\n  Reason: %s\n", file, strerror(errno));
+    fprintf(stderr, "(Blade):\n  Launch aborted for %s\n  Reason: %s\n", file, strerror(errno));
     exit(EXIT_FAILURE);
   }
 
@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {
         case 'd': should_print_bytecode = true; break;
         case 'j': should_debug_stack = true; break;
         case 'v': {
-          printf("Bird " BIRD_VERSION_STRING " (running on BVM " BVM_VERSION ")\n");
+          printf("Blade " BLADE_VERSION_STRING " (running on BVM " BVM_VERSION ")\n");
           return 0;
         }
         case 'g': {

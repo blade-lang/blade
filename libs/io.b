@@ -1,7 +1,7 @@
 /**
  * I/O
  *
- * provides Birdy's interface to I/O stream handling and operations
+ * provides Bladey's interface to I/O stream handling and operations
  * @copyright 2021, Ore Richard Muyiwa 
  */
 
@@ -142,7 +142,7 @@ class TTY {
   - attrs a dictionary of the TTY_ flags listed above
 
   one can safely omit any of the TTY_ flags listed above and
-  Bird will fill in the default values as it exists.
+  Blade will fill in the default values as it exists.
   - Note that this flags will be merged and not overwritten
   */
   set_attr(option, attrs) {

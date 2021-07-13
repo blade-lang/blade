@@ -1,5 +1,5 @@
-#ifndef BIRD_UTIL_H
-#define BIRD_UTIL_H
+#ifndef BLADE_UTIL_H
+#define BLADE_UTIL_H
 
 #include "common.h"
 

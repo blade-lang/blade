@@ -1,5 +1,5 @@
 /*
- * This modules provides Bird's implementation of date and time
+ * This modules provides Blade's implementation of date and time
  * manipulation methods.
  * 
  * Time is stored internally as the number of seconds 
@@ -9,7 +9,7 @@
  */
 
 /*
- * Bird's implementation of date
+ * Blade's implementation of date
  * 
  * A date here refers to a calendar day consisting of
  * year, month and day
@@ -407,7 +407,7 @@ class Date {
   format(format: string)
   formats the current date based on the specified string
 
-  Bird's Date formatting table
+  Blade's Date formatting table
 
   Character | Description                                               | Example
   ----------|-----------------------------------------------------------|-----------------------------------

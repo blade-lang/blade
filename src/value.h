@@ -1,5 +1,5 @@
-#ifndef BIRD_VALUE_H
-#define BIRD_VALUE_H
+#ifndef BLADE_VALUE_H
+#define BLADE_VALUE_H
 
 #include <string.h>
 
@@ -87,7 +87,7 @@ typedef struct {
   } as;
 } b_value;
 
-// promote C values to bird value
+// promote C values to blade value
 #define EMPTY_VAL ((b_value){VAL_EMPTY, {.number = 0}})
 #define NIL_VAL ((b_value){VAL_NIL, {.number = 0}})
 #define TRUE_VAL ((b_value){VAL_BOOL, {.boolean = true}})
@@ -97,12 +97,12 @@ typedef struct {
 #define INTEGER_VAL(v) ((b_value){VAL_NUMBER, {.number = v}})
 #define OBJ_VAL(v) ((b_value){VAL_OBJ, {.obj = (b_obj *)v}})
 
-// demote bird values to C value
+// demote blade values to C value
 #define AS_BOOL(v) ((v).as.boolean)
 #define AS_NUMBER(v) ((v).as.number)
 #define AS_OBJ(v) ((v).as.obj)
 
-// testing bird value types
+// testing blade value types
 #define IS_NIL(v) ((v).type == VAL_NIL)
 #define IS_BOOL(v) ((v).type == VAL_BOOL)
 #define IS_NUMBER(v) ((v).type == VAL_NUMBER)

@@ -1,5 +1,5 @@
-#ifndef BIRD_TABLE_H
-#define BIRD_TABLE_H
+#ifndef BLADE_TABLE_H
+#define BLADE_TABLE_H
 
 #include "common.h"
 #include "value.h"

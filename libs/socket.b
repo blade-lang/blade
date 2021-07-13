@@ -246,8 +246,6 @@ class Socket {
     if !self.is_listening and !self.is_connected
       die SocketException('socket not listening or connected')
 
-    echo self.id
-
     return self._check_error(self._send(self.id, message, flags))
   }
 

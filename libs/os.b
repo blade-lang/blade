@@ -1,5 +1,5 @@
 /**
- * Bird core OS module
+ * Blade core OS module
  * 
  * provides functionalities for interfacing with the underlying operating system
  * @copyright 2021, Ore Richard Muyiwa

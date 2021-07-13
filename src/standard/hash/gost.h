@@ -1,5 +1,5 @@
-#ifndef BIRD_MODULE_HASH_GOST_H
-#define BIRD_MODULE_HASH_GOST_H
+#ifndef BLADE_MODULE_HASH_GOST_H
+#define BLADE_MODULE_HASH_GOST_H
 
 #include <inttypes.h>
 
@@ -581,4 +581,4 @@ static char *GOSTString(unsigned char *data, unsigned int data_len) {
   return result;
 }
 
-#endif //BIRD_MODULE_HASH_GOST_H
+#endif //BLADE_MODULE_HASH_GOST_H

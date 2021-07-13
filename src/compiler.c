@@ -1709,7 +1709,7 @@ static void iter_statement(b_parser *p) {
  *    }
  * }
  *
- * Every bird iterable must implement the @iter(x) and the @itern(x)
+ * Every blade iterable must implement the @iter(x) and the @itern(x)
  * function.
  *
  * to make instances of a user created class iterable,

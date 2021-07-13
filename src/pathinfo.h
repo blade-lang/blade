@@ -1,20 +1,20 @@
-#ifndef BIRD_PATHINFO_H
-#define BIRD_PATHINFO_H
+#ifndef BLADE_PATHINFO_H
+#define BLADE_PATHINFO_H
 
 #include "common.h"
 
 #if defined(__linux__) || defined(__APPLE__)
 
-#define BIRD_PATH_SEPARATOR "/"
+#define BLADE_PATH_SEPARATOR "/"
 
 #elif defined(_WIN32)
 
-#define BIRD_PATH_SEPARATOR "\\"
+#define BLADE_PATH_SEPARATOR "\\"
 #define realpath(N, R) _fullpath((R), (N), _MAX_PATH)
 
 #else
 
-#define BIRD_PATH_SEPARATOR "/"
+#define BLADE_PATH_SEPARATOR "/"
 
 #endif
 
@@ -28,7 +28,7 @@ char *merge_paths(char *a, char *b);
 
 bool file_exists(char *filepath);
 
-char *get_bird_filename(char *filename);
+char *get_blade_filename(char *filename);
 
 char *get_filename(char *filepath);
 

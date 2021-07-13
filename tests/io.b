@@ -20,11 +20,11 @@ def highlight(str) {
 # stdout().write("\x1b[H");
 
 print('\x1b[33m')
-print('A simple TTY implementation for Birdy io module demonstration')
+print('A simple TTY implementation for Bladey io module demonstration')
 print('Note that your cursor can move left and right.')
 print('Nope! That\'s not how the terminal works by default.')
 print('And we have a few key words too: ' + ', '.join(keywords))
-print('That\'s the power of Birdy!')
+print('That\'s the power of Bladey!')
 print('Press Ctrl+C to quit')
 print('-------------------------------------------------------------')
 print('\x1b[0m')

@@ -1,5 +1,5 @@
-#ifndef BIRD_MODULE_IO_H
-#define BIRD_MODULE_IO_H
+#ifndef BLADE_MODULE_IO_H
+#define BLADE_MODULE_IO_H
 
 #include "module.h"
 #include "native.h"

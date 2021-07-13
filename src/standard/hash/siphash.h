@@ -1,5 +1,5 @@
-#ifndef BIRD_MODULE_HASH_SIPHASH_H
-#define BIRD_MODULE_HASH_SIPHASH_H
+#ifndef BLADE_MODULE_HASH_SIPHASH_H
+#define BLADE_MODULE_HASH_SIPHASH_H
 
 /* <MIT License>
  Copyright (c) 2013  Marek Majkowski <marek@popcount.org>
@@ -96,4 +96,4 @@ uint64_t siphash24(const void *src, unsigned long src_sz, const char key[16]) {
   return (v0 ^ v1) ^ (v2 ^ v3);
 }
 
-#endif //BIRD_MODULE_HASH_SIPHASH_H
+#endif //BLADE_MODULE_HASH_SIPHASH_H

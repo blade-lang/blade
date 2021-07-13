@@ -1,5 +1,5 @@
-#ifndef BIRD_COMPAT_SPRINTF_H
-#define BIRD_COMPAT_SPRINTF_H
+#ifndef BLADE_COMPAT_SPRINTF_H
+#define BLADE_COMPAT_SPRINTF_H
 
 #ifdef __GNUC__
 // we want TR 24731-2:2010 extensions
@@ -48,4 +48,4 @@ int asprintf(char **strp, const char *fmt, ...) {
 
 #endif
 
-#endif // BIRD_COMPAT_SPRINTF_H
+#endif // BLADE_COMPAT_SPRINTF_H

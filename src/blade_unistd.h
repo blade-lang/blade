@@ -1,5 +1,5 @@
-#ifndef birdy_compart_unistd_h
-#define birdy_compart_unistd_h
+#ifndef bladey_compart_unistd_h
+#define bladey_compart_unistd_h
 
 #include "common.h"
 
@@ -81,6 +81,6 @@ typedef unsigned __int64 uint64_t;
 
 #endif
 
-#include "b_getopt.h"
+#include "blade_getopt.h"
 
 #endif

@@ -1,5 +1,5 @@
-#ifndef BIRD_MODULE_TIME_H
-#define BIRD_MODULE_TIME_H
+#ifndef BLADE_MODULE_TIME_H
+#define BLADE_MODULE_TIME_H
 
 #include "module.h"
 #include "native.h"

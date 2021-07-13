@@ -1,5 +1,5 @@
-#ifndef BIRD_MODULE_HASH_SHA512_H
-#define BIRD_MODULE_HASH_SHA512_H
+#ifndef BLADE_MODULE_HASH_SHA512_H
+#define BLADE_MODULE_HASH_SHA512_H
 
 #include "common.h"
 
@@ -482,4 +482,4 @@ static char *SHA512String(void *data, unsigned int data_len) {
   return result;
 }
 
-#endif //BIRD_MODULE_HASH_SHA512_H
+#endif //BLADE_MODULE_HASH_SHA512_H

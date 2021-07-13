@@ -1,5 +1,5 @@
-#ifndef BIRD_OBJECT_H
-#define BIRD_OBJECT_H
+#ifndef BLADE_OBJECT_H
+#define BLADE_OBJECT_H
 
 #include "blob.h"
 #include "common.h"
@@ -53,7 +53,7 @@ typedef enum {
 #define AS_DICT(v) ((b_obj_dict *)AS_OBJ(v))
 #define AS_FILE(v) ((b_obj_file *)AS_OBJ(v))
 
-// demote bird value to c string
+// demote blade value to c string
 #define AS_C_STRING(v) (((b_obj_string *)AS_OBJ(v))->chars)
 
 #define IS_CHAR(v) (IS_STRING(v) && (AS_STRING(v)->length == 1 || AS_STRING(v)->length == 0))

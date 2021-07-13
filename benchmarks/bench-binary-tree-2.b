@@ -1,7 +1,7 @@
 /* The Computer Language Benchmarks Game
  * https://salsa.debian.org/benchmarksgame-team/benchmarksgame/
  *
- * binary-trees Bird #2 program 
+ * binary-trees Blade #2 program
  * Alternate solution based on the Python solution
  *
  * contributed by Richard Ore

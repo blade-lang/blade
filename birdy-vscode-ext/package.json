@@ -1,7 +1,7 @@
 {
-    "name": "bird",
-    "displayName": "Bird",
-    "description": "Support for the Bird programming language",
+    "name": "blade",
+    "displayName": "Blade",
+    "description": "Support for the Blade programming language",
     "author": "Ore Richard Muyiwa",
     "icon": "icon.png",
     "version": "0.0.1",
@@ -14,10 +14,10 @@
     "contributes": {
         "languages": [
             {
-                "id": "bird",
+                "id": "blade",
                 "aliases": [
-                    "Bird",
-                    "bird"
+                    "Blade",
+                    "blade"
                 ],
                 "extensions": [
                     ".b"
@@ -27,9 +27,9 @@
         ],
         "grammars": [
             {
-                "language": "bird",
-                "scopeName": "source.bird",
-                "path": "./syntaxes/bird.tmLanguage.json"
+                "language": "blade",
+                "scopeName": "source.blade",
+                "path": "./syntaxes/blade.tmLanguage.json"
             }
         ]
     }

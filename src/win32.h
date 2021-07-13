@@ -1,5 +1,5 @@
-#ifndef BIRD_COMPAT_WIN32_H
-#define BIRD_COMPAT_WIN32_H
+#ifndef BLADE_COMPAT_WIN32_H
+#define BLADE_COMPAT_WIN32_H
 
 #include "common.h"
 

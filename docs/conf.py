@@ -17,7 +17,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'Bird'
+project = 'Blade'
 copyright = '2021, Ore Richard'
 author = 'Ore Richard'
 

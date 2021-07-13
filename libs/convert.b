@@ -1,7 +1,7 @@
 /**
  * Convert
  *
- * Bird's data conversion library
+ * Blade's data conversion library
  * @copyright 2021, Ore Richard Muyiwa
  */
 class Convert {

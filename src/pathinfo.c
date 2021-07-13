@@ -4,7 +4,7 @@
 
 #include "pathinfo.h"
 #include "common.h"
-#include "b_unistd.h"
+#include "blade_unistd.h"
 #include "util.h"
 
 #include <stdlib.h>
@@ -101,14 +101,14 @@ char *merge_paths(char *a, char *b) {
 
   // edge cases
   // 1. a itself is a file
-  // 2. b is a bird runtime constant such as <repl>, <script> and <module>
+  // 2. b is a blade runtime constant such as <repl>, <script> and <module>
 
   if (strstr(a, ".") == NULL && strstr(b, "<") == NULL && strlen(a) > 0) {
     final_path = append_strings(final_path, a);
   }
   if (strlen(a) > 0 && b[0] != '.' && strstr(a, ".") == NULL &&
       strstr(b, "<") == NULL) {
-    final_path = append_strings(final_path, BIRD_PATH_SEPARATOR);
+    final_path = append_strings(final_path, BLADE_PATH_SEPARATOR);
     final_path = append_strings(final_path, b);
   } else {
     final_path = append_strings(final_path, b);
@@ -125,7 +125,7 @@ char *get_calling_dir() { return getenv("PWD"); }
 char *get_filename(char *filepath) {
   int start = 0, length = (int)strlen(filepath);
   for (int i = 0; i < length; i++) {
-    if (filepath[i] == BIRD_PATH_SEPARATOR[0])
+    if (filepath[i] == BLADE_PATH_SEPARATOR[0])
       start = i;
   }
   length = length - start;
@@ -146,12 +146,12 @@ char *get_filename(char *filepath) {
 }
 #endif // !_WIN32
 
-char *get_bird_filename(char *filename) {
-  return merge_paths(filename, BIRD_EXTENSION);
+char *get_blade_filename(char *filename) {
+  return merge_paths(filename, BLADE_EXTENSION);
 }
 
 char *resolve_import_path(char *module_name, const char *current_file) {
-  char *bird_file_name = get_bird_filename(module_name);
+  char *blade_file_name = get_blade_filename(module_name);
 
   // check relative to the current file...
   char *file_directory = dirname((char *) strdup(current_file));
@@ -162,7 +162,7 @@ char *resolve_import_path(char *module_name, const char *current_file) {
     file_directory[file_directory_length - 1] = '\0';
   }
 
-  char *relative_file = merge_paths(file_directory, bird_file_name);
+  char *relative_file = merge_paths(file_directory, blade_file_name);
 
   if (file_exists(relative_file)) {
     // stop a user module from importing itself
@@ -175,9 +175,9 @@ char *resolve_import_path(char *module_name, const char *current_file) {
     }
   }
 
-  // check in bird's default location
-  char *bird_directory = merge_paths(get_exe_dir(), LIBRARY_DIRECTORY);
-  char *library_file = merge_paths(bird_directory, bird_file_name);
+  // check in blade's default location
+  char *blade_directory = merge_paths(get_exe_dir(), LIBRARY_DIRECTORY);
+  char *library_file = merge_paths(blade_directory, blade_file_name);
 
   if (file_exists(library_file)) {
     // stop a core library from importing itself
@@ -196,9 +196,9 @@ char *resolve_import_path(char *module_name, const char *current_file) {
 #include <stdio.h>
 
 bool is_core_library_file(char *filepath, char *file_name) {
-  char *bird_file_name = get_bird_filename(file_name);
-  char *bird_directory = merge_paths(get_exe_dir(), LIBRARY_DIRECTORY);
-  char *library_file = merge_paths(bird_directory, bird_file_name);
+  char *blade_file_name = get_blade_filename(file_name);
+  char *blade_directory = merge_paths(get_exe_dir(), LIBRARY_DIRECTORY);
+  char *library_file = merge_paths(blade_directory, blade_file_name);
 
   if (file_exists(library_file)) {
     int filepath_length = (int) strlen(filepath);

@@ -1,25 +1,25 @@
 {
 	"fileTypes": [
-		"bird"
+		"blade"
 	],
 	"foldingStartMarker": "\\{\\s*$",
 	"foldingStopMarker": "^\\s*\\}",
-	"name": "Bird",
+	"name": "Blade",
 	"patterns": [
 		{
 			"begin": "^\\w*\\b(import)\\b",
 			"beginCaptures": {
 				"0": {
-					"name": "keyword.other.import.bird"
+					"name": "keyword.other.import.blade"
 				}
 			},
 			"end": "\n",
 			"endCaptures": {
 				"0": {
-					"name": "punctuation.terminator.bird"
+					"name": "punctuation.terminator.blade"
 				}
 			},
-			"name": "meta.declaration.bird",
+			"name": "meta.declaration.blade",
 			"patterns": [
 				{
 					"include": "#strings"
@@ -29,7 +29,7 @@
 				},
 				{
 					"match": "\\b(as)\\b",
-					"name": "keyword.other.import.bird"
+					"name": "keyword.other.import.blade"
 				}
 			]
 		},
@@ -53,13 +53,13 @@
 		}
 	],
 	"repository": {
-		"birddoc": {
+		"bladedoc": {
 			"patterns": [
 				{
 					"match": "(@[a-zA-Z_]+)",
 					"captures": {
 						"0": {
-							"name": "variable.name.source.bird"
+							"name": "variable.name.source.blade"
 						}
 					}
 				},
@@ -67,7 +67,7 @@
 					"match": "(`.*?`)",
 					"captures": {
 						"0": {
-							"name": "variable.other.source.bird"
+							"name": "variable.other.source.blade"
 						}
 					}
 				}
@@ -78,11 +78,11 @@
 				{
 					"captures": {
 						"0": {
-							"name": "punctuation.definition.comment.bird"
+							"name": "punctuation.definition.comment.blade"
 						}
 					},
 					"match": "\/\\*\\*\/",
-					"name": "comment.block.empty.bird"
+					"name": "comment.block.empty.blade"
 				},
 				{
 					"include": "#comments-doc-oldschool"
@@ -100,7 +100,7 @@
 				{
 					"begin": "\/\\*",
 					"end": "\\*\/",
-					"name": "comment.block.documentation.bird",
+					"name": "comment.block.documentation.blade",
 					"patterns": [
 						{
 							"include": "#comments-doc-oldschool"
@@ -109,7 +109,7 @@
 							"include": "#comments-block"
 						},
 						{
-							"include": "#birddoc"
+							"include": "#bladedoc"
 						}
 					]
 				}
@@ -122,10 +122,10 @@
 					"while": "^\\s*\\*\/",
 					"patterns": [
 						{
-							"include": "#birddoc"
+							"include": "#bladedoc"
 						}
 					],
-					"name": "comment.block.documentation.bird"
+					"name": "comment.block.documentation.blade"
 				}
 			]
 		},
@@ -137,7 +137,7 @@
 				{
 					"captures": {
 						"1": {
-							"name": "comment.line.double-slash.bird"
+							"name": "comment.line.double-slash.blade"
 						}
 					},
 					"match": "((#).*)$"
@@ -149,7 +149,7 @@
 				{
 					"begin": "\/\\*",
 					"end": "\\*\/",
-					"name": "comment.block.bird",
+					"name": "comment.block.blade",
 					"patterns": [
 						{
 							"include": "#comments-block"
@@ -162,7 +162,7 @@
 			"patterns": [
 				{
 					"match": "@",
-					"name": "storage.type.annotation.bird"
+					"name": "storage.type.annotation.blade"
 				}
 			]
 		},
@@ -170,25 +170,25 @@
 			"patterns": [
 				{
 					"match": "(?<!\\$)\\b(true|false|nil)\\b(?!\\$)",
-					"name": "constant.language.bird"
+					"name": "constant.language.blade"
 				},
 				{
 					"match": "((?<!\\$)\\b(self|parent)\\b(?!\\$)|(__[a-zA-Z_0-9]+__))",
-					"name": "variable.language.bird"
+					"name": "variable.language.blade"
 				},
 				{
 					"match": "(?<!\\$)\\b((0(x|X)[0-9a-fA-F]*)|(([0-9]+\\.?[0-9]*)|(\\.[0-9]+))((e|E)(\\+|-)?[0-9]+)?)\\b(?!\\$)",
-					"name": "constant.numeric.bird"
+					"name": "constant.numeric.blade"
 				},
 				{
 					"match": "(?<![a-zA-Z0-9_$])([_$]*[A-Z][a-zA-Z0-9_$]*)",
-					"name": "support.class.bird"
+					"name": "support.class.blade"
 				},
 				{
 					"match": "([_$]*[a-z][a-zA-Z0-9_$]*)(<|\\(|\\s+=>)",
 					"captures": {
 						"1": {
-							"name": "entity.name.function.bird"
+							"name": "entity.name.function.blade"
 						}
 					}
 				}
@@ -198,75 +198,75 @@
 			"patterns": [
 				{
 					"match": "(?<!\\$)\\bas\\b(?!\\$)",
-					"name": "keyword.cast.bird"
+					"name": "keyword.cast.blade"
 				},
 				{
 					"match": "(?<!\\$)\\b(try|catch|finally|die)\\b(?!\\$)",
-					"name": "keyword.control.catch-exception.bird"
+					"name": "keyword.control.catch-exception.blade"
 				},
 				{
 					"match": "(?<!\\$)\\b(break|when|continue|default|else|for|if|in|return|using|while|iter)\\b(?!\\$)",
-					"name": "keyword.control.bird"
+					"name": "keyword.control.blade"
 				},
 				{
 					"match": "(?<!\\$)\\b(or|and|assert)\\b(?!\\$)",
-					"name": "keyword.control.boolean.bird"
+					"name": "keyword.control.boolean.blade"
 				},
 				{
 					"match": "(?<!\\$)\\b(var|class|def)\\b(?!\\$)",
-					"name": "keyword.declaration.bird"
+					"name": "keyword.declaration.blade"
 				},
 				{
 					"match": "(?<!\\$)\\b(is\\!?)\\b(?!\\$)",
-					"name": "keyword.operator.bird"
+					"name": "keyword.operator.blade"
 				},
 				{
 					"match": "\\?\\?",
-					"name": "keyword.operator.conditional.bird"
+					"name": "keyword.operator.conditional.blade"
 				},
 				{
 					"match": "(<<|>>>?|~|\\^|\\||&)",
-					"name": "keyword.operator.bitwise.bird"
+					"name": "keyword.operator.bitwise.blade"
 				},
 				{
 					"match": "((&|\\^|\\||<<|>>?)=)",
-					"name": "keyword.operator.assignment.bitwise.bird"
+					"name": "keyword.operator.assignment.bitwise.blade"
 				},
 				{
 					"match": "(=>)",
-					"name": "keyword.operator.closure.bird"
+					"name": "keyword.operator.closure.blade"
 				},
 				{
 					"match": "(==|!=|<<?=?|>>?=?|(\\.\\.\\.))",
-					"name": "keyword.operator.comparison.bird"
+					"name": "keyword.operator.comparison.blade"
 				},
 				{
 					"match": "(([+*/%-]|\\~)=)",
-					"name": "keyword.operator.assignment.arithmetic.bird"
+					"name": "keyword.operator.assignment.arithmetic.blade"
 				},
 				{
 					"match": "(=)",
-					"name": "keyword.operator.assignment.bird"
+					"name": "keyword.operator.assignment.blade"
 				},
 				{
 					"match": "(\\-\\-|\\+\\+)",
-					"name": "keyword.operator.increment-decrement.bird"
+					"name": "keyword.operator.increment-decrement.blade"
 				},
 				{
 					"match": "(\\-|\\+|\\*|\\/|\\~\\/|%|\\*\\*)",
-					"name": "keyword.operator.arithmetic.bird"
+					"name": "keyword.operator.arithmetic.blade"
 				},
 				{
 					"match": "(!)",
-					"name": "keyword.operator.binary.bird"
+					"name": "keyword.operator.binary.blade"
 				},
 				{
 					"match": "(?<!\\$)\\b(static)\\b(?!\\$)",
-					"name": "storage.modifier.bird"
+					"name": "storage.modifier.blade"
 				},
 				{
 					"match": "(?<!\\$)\\b(?:echo)\\b(?!\\$)",
-					"name": "storage.type.primitive.bird"
+					"name": "storage.type.primitive.blade"
 				}
 			]
 		},
@@ -275,17 +275,17 @@
 				{
 					"captures": {
 						"2": {
-							"name": "variable.parameter.bird"
+							"name": "variable.parameter.blade"
 						},
 						"3": {
-							"name": "variable.parameter.bird"
+							"name": "variable.parameter.blade"
 						}
 					},
 					"match": "\\$(\\{([^{}]+)\\})"
 				},
 				{
 					"match": "\\\\.",
-					"name": "constant.character.escape.bird"
+					"name": "constant.character.escape.blade"
 				}
 			]
 		},
@@ -294,7 +294,7 @@
 				{
 					"begin": "(?<!\\|r)\"",
 					"end": "\"",
-					"name": "string.interpolated.double.bird",
+					"name": "string.interpolated.double.blade",
 					"patterns": [
 						{
 							"match": "\\n",
@@ -308,7 +308,7 @@
 				{
 					"begin": "r\"",
 					"end": "\"",
-					"name": "string.quoted.double.bird",
+					"name": "string.quoted.double.blade",
 					"patterns": [
 						{
 							"match": "\\n",
@@ -319,7 +319,7 @@
 				{
 					"begin": "(?<!\\|r)'",
 					"end": "'",
-					"name": "string.interpolated.single.bird",
+					"name": "string.interpolated.single.blade",
 					"patterns": [
 						{
 							"match": "\\n",
@@ -333,7 +333,7 @@
 				{
 					"begin": "r'",
 					"end": "'",
-					"name": "string.quoted.single.bird",
+					"name": "string.quoted.single.blade",
 					"patterns": [
 						{
 							"match": "\\n",
@@ -347,18 +347,18 @@
 			"patterns": [
 				{
 					"match": ",",
-					"name": "punctuation.comma.bird"
+					"name": "punctuation.comma.blade"
 				},
 				{
 					"match": "\n",
-					"name": "punctuation.terminator.bird"
+					"name": "punctuation.terminator.blade"
 				},
 				{
 					"match": "\\.",
-					"name": "punctuation.dot.bird"
+					"name": "punctuation.dot.blade"
 				}
 			]
 		}
 	},
-	"scopeName": "source.bird"
+	"scopeName": "source.blade"
 }

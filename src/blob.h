@@ -1,5 +1,5 @@
-#ifndef BIRD_BLOB_H
-#define BIRD_BLOB_H
+#ifndef BLADE_BLOB_H
+#define BLADE_BLOB_H
 
 #include "common.h"
 #include "value.h"

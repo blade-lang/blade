@@ -2,8 +2,8 @@
 // Created by Richard Ore on 13/06/2021.
 //
 
-#ifndef BIRD_MODULE_HASH_SHA256_H
-#define BIRD_MODULE_HASH_SHA256_H
+#ifndef BLADE_MODULE_HASH_SHA256_H
+#define BLADE_MODULE_HASH_SHA256_H
 
 /*********************************************************************
 * Filename:   sha256.h
@@ -181,4 +181,4 @@ static char *sha256_string(unsigned char *string, int length) {
   return result;
 }
 
-#endif //BIRD_MODULE_HASH_SHA256_H
+#endif //BLADE_MODULE_HASH_SHA256_H

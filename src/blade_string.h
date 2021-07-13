@@ -1,5 +1,5 @@
-#ifndef BIRD_B_STRING_H
-#define BIRD_B_STRING_H
+#ifndef BLADE_BLADE_STRING_H
+#define BLADE_BLADE_STRING_H
 
 #include "common.h"
 #include "native.h"

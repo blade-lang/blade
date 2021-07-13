@@ -1,5 +1,5 @@
-#ifndef BIRD_MEMORY_H
-#define BIRD_MEMORY_H
+#ifndef BLADE_MEMORY_H
+#define BLADE_MEMORY_H
 
 #include "common.h"
 #include "vm.h"

@@ -1,5 +1,5 @@
-#ifndef BIRD_LIST_H
-#define BIRD_LIST_H
+#ifndef BLADE_LIST_H
+#define BLADE_LIST_H
 
 #include "common.h"
 #include "native.h"

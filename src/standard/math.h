@@ -1,5 +1,5 @@
-#ifndef BIRD_MODULE_MATH_H
-#define BIRD_MODULE_MATH_H
+#ifndef BLADE_MODULE_MATH_H
+#define BLADE_MODULE_MATH_H
 
 #include "module.h"
 #include "native.h"

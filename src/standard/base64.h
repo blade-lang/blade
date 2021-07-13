@@ -1,5 +1,5 @@
-#ifndef BIRD_MODULE_BASE64_H
-#define BIRD_MODULE_BASE64_H
+#ifndef BLADE_MODULE_BASE64_H
+#define BLADE_MODULE_BASE64_H
 
 #include "module.h"
 #include "native.h"

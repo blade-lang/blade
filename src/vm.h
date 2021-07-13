@@ -1,5 +1,5 @@
-#ifndef BIRD_VM_H
-#define BIRD_VM_H
+#ifndef BLADE_VM_H
+#define BLADE_VM_H
 
 typedef struct s_compiler b_compiler;
 

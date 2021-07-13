@@ -1,5 +1,5 @@
-#ifndef BIRD_MODULE_HASH_H
-#define BIRD_MODULE_HASH_H
+#ifndef BLADE_MODULE_HASH_H
+#define BLADE_MODULE_HASH_H
 
 #include "module.h"
 #include "native.h"

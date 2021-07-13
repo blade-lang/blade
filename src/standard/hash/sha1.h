@@ -1,5 +1,5 @@
-#ifndef BIRD_MODULE_HASH_SHA1_H
-#define BIRD_MODULE_HASH_SHA1_H
+#ifndef BLADE_MODULE_HASH_SHA1_H
+#define BLADE_MODULE_HASH_SHA1_H
 
 #define SHA1HANDSOFF
 
@@ -197,4 +197,4 @@ static char *SHA1String(unsigned char *string, int length) {
   return result;
 }
 
-#endif // BIRD_MODULE_HASH_SHA1_H
+#endif // BLADE_MODULE_HASH_SHA1_H

@@ -123,7 +123,7 @@ class CStruct {
  * this class is responsible for interacting with C shared libraries
  * 
  * it provides interfaces for loading libraries, calling functions, 
- * returning value, declarating types between C and Bird
+ * returning value, declarating types between C and Blade
  */
 class CLib {
   /**

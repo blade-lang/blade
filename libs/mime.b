@@ -1,7 +1,7 @@
 /**
  * Mime
  *
- * Bird's mimetype detection library
+ * Blade's mimetype detection library
  * @copyright O2021, Ore Richard Muyiwa
  */
 

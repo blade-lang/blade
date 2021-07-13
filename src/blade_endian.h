@@ -1,5 +1,5 @@
-#ifndef BIRD_ENDIAN_H
-#define BIRD_ENDIAN_H
+#ifndef BLADE_ENDIAN_H
+#define BLADE_ENDIAN_H
 
 #ifndef BYTE_ORDER
 #if (BSD >= 199103) || defined(__MACH__) || defined(__APPLE__)
@@ -56,4 +56,4 @@
 #define IS_LITTLE_ENDIAN BYTE_ORDER == LITTLE_ENDIAN
 #define IS_BIG_ENDIAN BYTE_ORDER == BIG_ENDIAN
 
-#endif //BIRD_ENDIAN_H
+#endif //BLADE_ENDIAN_H

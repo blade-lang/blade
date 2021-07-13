@@ -1,4 +1,4 @@
-#include "b_string.h"
+#include "blade_string.h"
 #include "util.h"
 #include "native.h"
 
@@ -28,7 +28,7 @@ char *strsep(char **stringp, const char *delim) {
 #endif
 
 /**
- * a Bird regex must always start and end with the same delimiter e.g. /
+ * a Blade regex must always start and end with the same delimiter e.g. /
  *
  * e.g.
  * /\d+/

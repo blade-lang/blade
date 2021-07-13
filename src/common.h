@@ -1,5 +1,5 @@
-#ifndef BIRD_COMMON_H
-#define BIRD_COMMON_H
+#ifndef BLADE_COMMON_H
+#define BLADE_COMMON_H
 
 // special definitions for Cygwin
 #define _DEFAULT_SOURCE 1
@@ -11,7 +11,7 @@
 #include <stdint.h>
 
 #include "config.h"
-#include "b_endian.h"
+#include "blade_endian.h"
 
 // --> debug mode options starts here...
 #if DEBUG_MODE == 1
@@ -72,8 +72,8 @@
 
 #define DEFAULT_GC_START (1024 * 1024)
 
-#define BIRD_EXTENSION ".b"
-#define BIRD_VERSION_STRING "0.0.1"
+#define BLADE_EXTENSION ".b"
+#define BLADE_VERSION_STRING "0.0.1"
 #define BVM_VERSION "0.0.1"
 
 

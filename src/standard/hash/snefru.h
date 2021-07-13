@@ -1,5 +1,5 @@
-#ifndef BIRD_MODULE_HASH_SNEFRU_H
-#define BIRD_MODULE_HASH_SNEFRU_H
+#ifndef BLADE_MODULE_HASH_SNEFRU_H
+#define BLADE_MODULE_HASH_SNEFRU_H
 
 // this implementation is based on the PHP7 by Zend implementation
 
@@ -1088,4 +1088,4 @@ static char *SnefruString(void *data, unsigned int data_len) {
   return result;
 }
 
-#endif //BIRD_MODULE_HASH_SNEFRU_H
+#endif //BLADE_MODULE_HASH_SNEFRU_H

@@ -1,5 +1,5 @@
-#ifndef BIRD_MODULE_HASH_MD_H
-#define BIRD_MODULE_HASH_MD_H
+#ifndef BLADE_MODULE_HASH_MD_H
+#define BLADE_MODULE_HASH_MD_H
 
 /* MD4 context */
 typedef struct {
@@ -327,4 +327,4 @@ static char *MD2String(unsigned char *string, int length) {
 }
 
 
-#endif //BIRD_MODULE_HASH_MD_H
+#endif //BLADE_MODULE_HASH_MD_H

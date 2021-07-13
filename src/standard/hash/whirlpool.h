@@ -1,5 +1,5 @@
-#ifndef BIRD_MODULE_HASH_WHIRLPOOL_H
-#define BIRD_MODULE_HASH_WHIRLPOOL_H
+#ifndef BLADE_MODULE_HASH_WHIRLPOOL_H
+#define BLADE_MODULE_HASH_WHIRLPOOL_H
 
 /* WHIRLPOOL context */
 typedef struct {
@@ -993,4 +993,4 @@ static char *WhirlpoolString(void *data, unsigned int data_len) {
 }
 
 
-#endif //BIRD_MODULE_HASH_WHIRLPOOL_H
+#endif //BLADE_MODULE_HASH_WHIRLPOOL_H

@@ -1,7 +1,7 @@
 /**
  * Type
  *
- * Bird's type validation and conversion library
+ * Blade's type validation and conversion library
  *
  * This class is an object oriented wrapper to the builtin functions
  * where applicable and does and return the same thing as the builtin

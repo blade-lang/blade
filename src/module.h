@@ -1,5 +1,5 @@
-#ifndef BIRD_MODULE_H
-#define BIRD_MODULE_H
+#ifndef BLADE_MODULE_H
+#define BLADE_MODULE_H
 
 #include "native.h"
 #include "object.h"
@@ -31,8 +31,8 @@ typedef struct {
 } b_module_reg;
 
 #define CREATE_MODULE_LOADER(module)                                           \
-  b_module_reg bird_module_loader_##module(b_vm *vm)
-#define GET_MODULE_LOADER(module) &bird_module_loader_##module
+  b_module_reg blade_module_loader_##module(b_vm *vm)
+#define GET_MODULE_LOADER(module) &blade_module_loader_##module
 
 #define REGISTER_FUNCTION(name)                                                \
   { #name, &GET_MODULE_METHOD(name) }

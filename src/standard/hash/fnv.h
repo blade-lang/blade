@@ -1,5 +1,5 @@
-#ifndef BIRD_MODULE_HASH_FNV_H
-#define BIRD_MODULE_HASH_FNV_H
+#ifndef BLADE_MODULE_HASH_FNV_H
+#define BLADE_MODULE_HASH_FNV_H
 
 #include <stdint.h>
 
@@ -215,4 +215,4 @@ static char* FNV1a64(unsigned char *data, int length) {
   return FNV164String(digest);
 }
 
-#endif //BIRD_MODULE_HASH_FNV_H
+#endif //BLADE_MODULE_HASH_FNV_H

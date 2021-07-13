@@ -1,7 +1,7 @@
 /* The Computer Language Benchmarks Game
  * https://salsa.debian.org/benchmarksgame-team/benchmarksgame/
  *
- * n-body Bird program
+ * n-body Blade program
  *
  * based on work by Isaac Gouy
  * contributed by Richard Ore 

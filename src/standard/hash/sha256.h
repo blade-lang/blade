@@ -1,5 +1,5 @@
-#ifndef BIRD_MODULE_HASH_SHA256_H
-#define BIRD_MODULE_HASH_SHA256_H
+#ifndef BLADE_MODULE_HASH_SHA256_H
+#define BLADE_MODULE_HASH_SHA256_H
 
 #define SHA256_HASH_SIZE 32
 
@@ -425,4 +425,4 @@ static char *sha224_string(unsigned char *string, int length) {
   return result;
 }
 
-#endif //BIRD_MODULE_HASH_SHA256_H
+#endif //BLADE_MODULE_HASH_SHA256_H

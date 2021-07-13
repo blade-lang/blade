@@ -8,10 +8,10 @@
 #include "object.h"
 
 #include "bytes.h"
-#include "b_dict.h"
-#include "b_file.h"
-#include "b_list.h"
-#include "b_string.h"
+#include "blade_dict.h"
+#include "blade_file.h"
+#include "blade_list.h"
+#include "blade_string.h"
 #include "util.h"
 
 #include <math.h>
@@ -21,7 +21,7 @@
 
 // fix MSVC redefinition issue...
 #ifndef _WIN32
-#include "b_sprintf.h"
+#include "blade_sprintf.h"
 #endif
 
 // for debugging...
@@ -795,7 +795,7 @@ bool is_false(b_value value) {
   if (IS_NIL(value) || IS_EMPTY(value))
     return true;
 
-  // -1 is the number equivalent of false in Bird
+  // -1 is the number equivalent of false in Blade
   if (IS_NUMBER(value))
     return AS_NUMBER(value) < 0;
 
