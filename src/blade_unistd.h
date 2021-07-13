@@ -13,7 +13,7 @@
 #ifndef _UNISTD_H
 #define _UNISTD_H 1
 
-#include "b_getopt.h"
+#include "blade_getopt.h"
 
 /* This is intended as a drop-in replacement for unistd.h on Windows.
  * Please add functionality as neeeded.
@@ -21,7 +21,7 @@
  */
 
 #include <direct.h> /* for _getcwd() and _chdir() */
-#include "b_getopt.h" /* getopt at: https://gist.github.com/ashelly/7776712 */
+#include "blade_getopt.h" /* getopt at: https://gist.github.com/ashelly/7776712 */
 #include <io.h>
 #include <process.h> /* for getpid() and the exec..() family */
 #include <stdlib.h>
