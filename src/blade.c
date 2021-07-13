@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {
         case 'd': should_print_bytecode = true; break;
         case 'j': should_debug_stack = true; break;
         case 'v': {
-          printf("Blade " BLADE_VERSION_STRING " (running on BVM " BVM_VERSION ")\n");
+          printf("Blade " BLADE_VERSION_STRING " (running on BladeVM " BVM_VERSION ")\n");
           return 0;
         }
         case 'g': {
