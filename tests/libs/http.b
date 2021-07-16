@@ -4,10 +4,12 @@ import 'os'
 var total = 10000
 var start = time()
 
+modified var client = HttpClient()
+
 for i in 1..total {
   #try {
     echo 'Attempt ${i}'
-    echo to_string(HttpRequest('localhost:3000').send())
+    echo to_string(client.get('localhost:3000'))
   #} catch Exception e {
   #  echo e.message
   #}

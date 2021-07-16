@@ -97,7 +97,7 @@ class Socket {
 
   # Whenever a host is not given, the host will default
   # to localhost.
-  var host = '127.0.0.1'
+  var host = 'localhost'
   var port = 0
 
   # the default family for the socket is AF_INET

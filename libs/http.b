@@ -10,7 +10,7 @@ import 'socket'
 
 /**
  * HttpResponse
- * represents the response to an HttpRequest
+ * represents the response to an Http request
  */
 class HttpResponse {
   var status_code = 0
@@ -40,7 +40,7 @@ class HttpResponse {
 
 /**
  * HttpStatus
- * represents the standard response codes to an HttpRequest
+ * represents the standard response codes to an Http request
  */
 class HttpStatus {
   # Informational
@@ -120,11 +120,11 @@ class HttpStatus {
 
 
 /**
- * HttpRequest
+ * HttpClient
  *
  * handles http requests.
  */
-class HttpRequest {
+class HttpClient {
   # the user agent of the client used to make the request
   var user_agent = 'Mozilla/4.0'
 
@@ -150,10 +150,6 @@ class HttpRequest {
   # the site that refers us to the current site
   var referer = ''
 
-  # the request method
-  # default = GET
-  var method = 'GET'
-
   # if you have a CA cert for the server stored someplace else 
   # than in the default bundle
   var ca_cert
@@ -173,32 +169,24 @@ class HttpRequest {
   # only applies to requests with files in the body
   var no_expect = false
 
-  HttpRequest(url) {
-    if !url or !is_string(url) 
-      die Exception('invalid url')
-
-    # parse the url into component parts
-    self.url = Url.parse(url)
-  }
-
   # the main http request method
-  _do_http(method, data){
+  _do_http(url, method, data){
 
-    var responder = self.url.absolute_uri, headers, body, time_taken, error
+    var responder = url.absolute_uri, headers, body, time_taken, error
     var should_connect = true, redirect_count = 0, http_version = '1.0', status_code = 0
 
     while should_connect {
 
-      var resolved_host = Socket.get_address_info(self.url.host)
+      var resolved_host = Socket.get_address_info(url.host)
 
       if resolved_host {
         var host = resolved_host.ip
-        var port = self.url.port
+        var port = url.port
 
         # construct message
-        var message = '${method} ${self.url.path} HTTP/1.1'
+        var message = '${method} ${url.path} HTTP/1.1'
         if !self.headers.contains('Host') {
-          message += '\r\nHost: ${self.url.host}'
+          message += '\r\nHost: ${url.host}'
         }
 
         # handle no_expect
@@ -221,7 +209,6 @@ class HttpRequest {
 
         # do real request here...
         var client = Socket()
-        client.set_option(Socket.SO_REUSEADDR, true)
 
         var start = time()
 
@@ -249,7 +236,7 @@ class HttpRequest {
 
         time_taken = time() - start
 
-        # close the client...
+        # close client
         client.close()
 
         # separate the headers and the body
@@ -268,7 +255,7 @@ class HttpRequest {
         })
 
         if self.follow_redirect and headers.contains('Location') {
-          self.url = Url.parse(headers['Location'])
+          url = Url.parse(headers['Location'])
           self.referer = headers['Location']
         } else {
           should_connect = false
@@ -330,15 +317,49 @@ class HttpRequest {
   }
 
   /**
-   * send([data: string])
+   * _send(url: string, [method: string = 'GET', data: string])
    *
-   * sends an HttpRequest and returns an HttpResponse
+   * sends an Http request and returns an HttpResponse
    * or throws one of SocketException or Exception if it fails
    */
-  send(data) {
+  _send(url, method, data) {
+
+    if !url or !is_string(url) 
+      die Exception('invalid url')
+
+    # parse the url into component parts
+    url = Url.parse(url)
+
+    if !method {
+      # the request method
+      # default = GET
+      method = 'GET'
+    }
+
     if data != nil and !is_string(data)
       die Exception('string expected, ${typeof(data)} give')
-    return self._do_http(self.method.upper(), data)
+
+    return self._do_http(url, method.upper(), data)
+  }
+
+  /**
+   * get(url: string)
+   *
+   * sends an Http GET request and returns an HttpResponse
+   * or throws one of SocketException or Exception if it fails
+   */
+  get(url) {
+    return self._send(url, 'GET')
+  }
+
+  /**
+   * post(url: string, [data: string])
+   *
+   * sends an Http POST request and returns an HttpResponse
+   * or throws one of SocketException or Exception if it fails
+   */
+  post(url, data) {
+    return self._send(url, 'POST', data)
   }
 }
 
