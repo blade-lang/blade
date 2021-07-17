@@ -1,21 +1,7 @@
 #
 # @module mime
 #
-# Blade's mimetype detection library
-# 
-# This class is capable of detecting file mimetypes even
-# in the abscence of an extension.
-# 
-# Example:
-# 
-# var f = file('myfile', 'rb')
-# 
-# # using 'rb' here for two reasons: 
-# # 1. Our file has no extension, so extension based detection is impossible
-# # 2. We want more accuracy by having Mime check file headers
-# 
-# echo mime.detect(f)
-# 
+# provides mimetype detection capabilities.
 # @copyright O2021, Ore Richard Muyiwa
 # 
 
@@ -394,14 +380,14 @@ var _mimes = {
 
 
 /**
-  * detect_from_name(name: string)
-  * Detects the mimetype of a file based on the
-  * extension defined in it's path.
-  *
-  * @note, For popular files such as Jpeg and Pngs,
-  * calling this method directly is more efficient and
-  * provides a faster lookup
-  */
+ * detect_from_name(name: string)
+ * Detects the mimetype of a file based on the
+ * extension defined in it's path.
+ *
+ * @note, For popular files such as Jpeg and Pngs,
+ * calling this method directly is more efficient and
+ * provides a faster lookup
+ */
 def detect_from_name(name) {
   if !is_string(name)
     die Exception('name must be string')
@@ -413,18 +399,18 @@ def detect_from_name(name) {
 }
 
 /**
-  * detect_from_header(file: file) 
-  * Detects the mimetype of a file based on it's file header.
-  *
-  * When multiple file formats share very similar or shadowing
-  * file headers (such as the relationship between Zip files and Docx files),
-  * this method will perform an extension before returning it's result.
-  *
-  * @note, For dealing with files without extension, or where the accuracy of the 
-  * file extension cannot be trusted, this method provides a more efficient lookup.
-  * @note, This method may produce slightly more rigorous results
-  * @note, This method requires that the file must be opened in binary mode
-  */
+ * detect_from_header(file: file) 
+ * Detects the mimetype of a file based on it's file header.
+ *
+ * When multiple file formats share very similar or shadowing
+ * file headers (such as the relationship between Zip files and Docx files),
+ * this method will perform an extension before returning it's result.
+ *
+ * @note, For dealing with files without extension, or where the accuracy of the 
+ * file extension cannot be trusted, this method provides a more efficient lookup.
+ * @note, This method may produce slightly more rigorous results
+ * @note, This method requires that the file must be opened in binary mode
+ */
 def detect_from_header(file) {
   if !is_file(file)
     die Exception('file object expected')
@@ -465,16 +451,29 @@ def detect_from_header(file) {
 }
 
 /**
-  * detect(file: file)
-  * Performs mimetype detection on a file.
-  *
-  * If the file is opened in binary mode, it first attempt the more
-  * accurate header check. If the header check returns a generic result 
-  * (i.e. application/octet-stream), it performs an extension lookup.
-  *
-  * @note, this method gives the best result, but slightly slower than
-  * a direct lookup of name or header.
-  */
+ * detect(file: file)
+ * Performs mimetype detection on a file.
+ * 
+ * this method is capable of detecting file mimetypes even
+ * in the abscence of an extension.
+ *
+ * If the file is opened in binary mode, it first attempt the more
+ * accurate header check. If the header check returns a generic result 
+ * (i.e. application/octet-stream), it performs an extension lookup.
+ *
+ * @note, this method gives the best result, but slightly slower than
+ * a direct lookup of name or header.
+ * 
+ * @example
+ * 
+ * var f = file('myfile', 'rb')
+ * 
+ * # using 'rb' here for two reasons: 
+ * # 1. Our file has no extension, so extension based detection is impossible
+ * # 2. We want more accuracy by having Mime check file headers
+ * 
+ * echo mime.detect(f)
+ */
 def detect(file) {
   if !is_file(file)
     die Exception('file object expected')
