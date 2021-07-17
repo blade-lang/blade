@@ -33,6 +33,16 @@ void bind_native_modules(b_vm *vm, b_obj_module *the_module, b_obj_string *modul
           0) {
         b_module_reg module = modules[i].module_func(vm);
 
+        if (module.fields != NULL) {
+          for (int j = 0; module.fields[j].name != NULL; j++) {
+            b_field_reg field = module.fields[j];
+            b_value field_name =
+                OBJ_VAL(copy_string(vm, field.name, (int) strlen(field.name)));
+
+            table_set(vm, &the_module->values, field_name, field.field_value(vm));
+          }
+        }
+
         if (module.functions != NULL) {
           for (int j = 0; module.functions[j].name != NULL; j++) {
             b_func_reg func = module.functions[j];

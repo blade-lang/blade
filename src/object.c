@@ -445,7 +445,7 @@ char *object_to_string(b_vm *vm, b_value value) {
       sprintf(str, "<module %s>", AS_MODULE(value)->name);
       break;
     case OBJ_STRING:
-      return AS_C_STRING(value);
+      return strdup(AS_C_STRING(value));
     case OBJ_UP_VALUE:
       return strdup("<up value>");
     case OBJ_BYTES:

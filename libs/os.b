@@ -7,6 +7,12 @@
 
 
 /**
+ * stores the name of the current platform in string
+ */
+var platform
+
+
+/**
  * platform()
  *
  * returns the name of the current platform/OS

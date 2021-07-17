@@ -1,6 +1,6 @@
-import 'dictionary'
-import 'iter'
-import 'class'
+import dictionary
+import iter
+import class
 
 class D < C {}
 

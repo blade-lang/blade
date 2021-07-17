@@ -101,9 +101,7 @@ DECLARE_MODULE_METHOD(os_sleep) {
   RETURN;
 }
 
-DECLARE_MODULE_METHOD(os_platform) {
-
-  ENFORCE_ARG_COUNT(platform, 0);
+b_value get_os_platform(b_vm *vm) {
 
 #if defined(_WIN32)
 #define PLATFORM_NAME "windows" // Windows
@@ -147,7 +145,7 @@ DECLARE_MODULE_METHOD(os_platform) {
 #define PLATFORM_NAME "unknown"
 #endif
 
-  RETURN_L_STRING(PLATFORM_NAME, (int)strlen(PLATFORM_NAME));
+  return OBJ_VAL(copy_string(vm, PLATFORM_NAME, (int)strlen(PLATFORM_NAME)));
 
 #undef PLATFORM_NAME
 }
@@ -187,7 +185,6 @@ DECLARE_MODULE_METHOD(os_setenv) {
 
 CREATE_MODULE_LOADER(os) {
   static b_func_reg os_module_functions[] = {
-      {"platform",  true,  GET_MODULE_METHOD(os_platform)},
       {"info",  true,  GET_MODULE_METHOD(os_info)},
       {"exec",  true,  GET_MODULE_METHOD(os_exec)},
       {"sleep", true,  GET_MODULE_METHOD(os_sleep)},
@@ -196,7 +193,12 @@ CREATE_MODULE_LOADER(os) {
       {NULL,    false, NULL},
   };
 
-  static b_module_reg module = {os_module_functions, NULL};
+  static b_field_reg os_module_fields[] = {
+      {"platform", true, get_os_platform},
+      {NULL,       false, NULL},
+  };
+
+  static b_module_reg module = {os_module_fields, os_module_functions, NULL};
 
   return module;
 }

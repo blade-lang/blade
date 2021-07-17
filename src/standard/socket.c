@@ -528,7 +528,7 @@ CREATE_MODULE_LOADER(socket) {
       {NULL, NULL, NULL},
   };
 
-  static b_module_reg module = {NULL, classes};
+  static b_module_reg module = {NULL,NULL, classes};
 
   // @TODO: WSACleanup() on module cleanup function when implemented.
 
