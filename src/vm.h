@@ -38,9 +38,6 @@ struct s_vm {
   uint8_t *ip;
   b_value stack[STACK_MAX];
   b_value *stack_top;
-  b_table strings;
-  b_table bytes;
-  b_table globals;
   b_obj_up_value *open_up_values;
 
   b_obj *objects;
@@ -54,6 +51,12 @@ struct s_vm {
   b_obj **gray_stack;
   size_t bytes_allocated;
   size_t next_gc;
+
+  // objects tracker
+  b_table modules;
+  b_table strings;
+  b_table bytes;
+  b_table globals;
 
   // object public methods
   b_table methods_string;
@@ -72,11 +75,13 @@ struct s_vm {
 
 void init_vm(b_vm *vm);
 void free_vm(b_vm *vm);
-b_ptr_result interpret(b_vm *vm, const char *source, const char *filename);
+b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source);
 void push(b_vm *vm, b_value value);
 b_value pop(b_vm *vm);
 b_value pop_n(b_vm *vm, int n);
 b_value peek(b_vm *vm, int distance);
+
+void add_module(b_vm *vm, b_obj_module *module);
 
 bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name, int arg_count);
 bool is_false(b_value value);

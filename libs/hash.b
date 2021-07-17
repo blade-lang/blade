@@ -4,7 +4,7 @@
  * Provides interface for cryptographic and non-cryptographic encryption
  * @copyright 2021, Ore Richard Muyiwa
  */
-import 'convert'
+import convert
 
 class Hash {
 

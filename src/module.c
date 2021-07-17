@@ -22,7 +22,7 @@ b_module_registry modules[] = {
     {NULL,     NULL},
 };
 
-void bind_native_modules(b_vm *vm, b_obj_string *module_name,
+void bind_native_modules(b_vm *vm, b_obj_module *the_module, b_obj_string *module_name,
                          const char *module_path) {
 
   if (is_core_library_file((char *) module_path, module_name->chars)) {
@@ -42,7 +42,7 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
             b_value func_real_value =
                 OBJ_VAL(new_native(vm, func.function, func.name));
 
-            table_set(vm, &vm->globals, func_name, func_real_value);
+            table_set(vm, &the_module->values, func_name, func_real_value);
           }
         }
 
@@ -54,7 +54,7 @@ void bind_native_modules(b_vm *vm, b_obj_string *module_name,
                 copy_string(vm, klass_reg.name, (int) strlen(klass_reg.name)));
 
             b_value class_value;
-            if (table_get(&vm->globals, class_key, &class_value)) {
+            if (table_get(&the_module->values, class_key, &class_value)) {
               b_obj_class *klass = AS_CLASS(class_value);
 
               if (klass_reg.functions != NULL) {

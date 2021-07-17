@@ -37,7 +37,7 @@ typedef struct {
 #define REGISTER_FUNCTION(name)                                                \
   { #name, &GET_MODULE_METHOD(name) }
 
-void bind_native_modules(b_vm *vm, b_obj_string *module_name,
+void bind_native_modules(b_vm *vm, b_obj_module *the_module, b_obj_string *module_name,
                          const char *module_path);
 
 #endif

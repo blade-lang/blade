@@ -76,7 +76,7 @@ static void mark_array(b_vm *vm, b_value_arr *array) {
   }
 }
 
-static void blacken_object(b_vm *vm, b_obj *object) {
+void blacken_object(b_vm *vm, b_obj *object) {
 #if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
   printf("%p blacken ", (void *)object);
   print_object(OBJ_VAL(object), false);
@@ -84,6 +84,11 @@ static void blacken_object(b_vm *vm, b_obj *object) {
 #endif
 
   switch (object->type) {
+    case OBJ_MODULE: {
+      b_obj_module *module = (b_obj_module *)object;
+      mark_table(vm, &module->values);
+      break;
+    }
     case OBJ_SWITCH: {
       b_obj_switch *sw = (b_obj_switch *)object;
       mark_table(vm, &sw->table);
@@ -168,6 +173,12 @@ static void free_object(b_vm *vm, b_obj *object) {
 #endif
 
   switch (object->type) {
+    case OBJ_MODULE: {
+      b_obj_module *module = (b_obj_module*)object;
+      free_table(vm, &module->values);
+      FREE(b_obj_module, object);
+      break;
+    }
     case OBJ_SWITCH: {
       b_obj_switch *sw = (b_obj_switch *)object;
       free_table(vm, &sw->table);
@@ -229,7 +240,6 @@ static void free_object(b_vm *vm, b_obj *object) {
       b_obj_func *function = (b_obj_func *)object;
       free_blob(vm, &function->blob);
       free_object(vm, (b_obj *)function->name);
-      function->file = NULL;
       FREE(b_obj_func, object);
       break;
     }
@@ -271,6 +281,7 @@ static void mark_roots(b_vm *vm) {
     mark_object(vm, (b_obj *)up_value);
   }
   mark_table(vm, &vm->globals);
+  mark_table(vm, &vm->modules);
 
   mark_table(vm, &vm->methods_string);
   mark_table(vm, &vm->methods_bytes);

@@ -53,11 +53,11 @@ static b_value get_stack_trace(b_vm *vm){
     int line = function->blob.lines[instruction];
 
     const char* trace_start = "    File: %s, Line: %d, In: ";
-    size_t trace_start_length = snprintf(NULL, 0, trace_start, function->file, line);
+    size_t trace_start_length = snprintf(NULL, 0, trace_start, function->module->file, line);
 
     char *trace_part = (char*)calloc(trace_start_length + 1, sizeof(char));
     if (trace_part != NULL) {
-      sprintf(trace_part, trace_start, function->file, line);
+      sprintf(trace_part, trace_start, function->module->file, line);
       trace_part[(int)trace_start_length] = '\0';
     }
 
@@ -183,7 +183,7 @@ void _runtime_error(b_vm *vm, const char *format, ...) {
   int line = function->blob.lines[instruction];
 
   fprintf(stderr, "RuntimeError:\n");
-  fprintf(stderr, "    File: %s, Line: %d\n    Message: ", function->file, line);
+  fprintf(stderr, "    File: %s, Line: %d\n    Message: ", function->module->file, line);
 
   va_list args;
   va_start(args, format);
@@ -200,7 +200,7 @@ void _runtime_error(b_vm *vm, const char *format, ...) {
       // -1 because the IP is sitting on the next instruction to be executed
       instruction = frame->ip - function->blob.code - 1;
 
-      fprintf(stderr, "    File: %s, Line: %d, In: ", function->file, function->blob.lines[instruction]);
+      fprintf(stderr, "    File: %s, Line: %d, In: ", function->module->file, function->blob.lines[instruction]);
       if (function->name == NULL) {
         fprintf(stderr, "<script>\n");
       } else {
@@ -450,6 +450,7 @@ void init_vm(b_vm *vm) {
   vm->gray_capacity = 0;
   vm->gray_stack = NULL;
 
+  init_table(&vm->modules);
   init_table(&vm->strings);
   init_table(&vm->globals);
 
@@ -470,12 +471,24 @@ void free_vm(b_vm *vm) {
 //  free_objects(vm);
   free_table(vm, &vm->strings);
   free_table(vm, &vm->globals);
+  free_table(vm, &vm->modules);
 
   free_table(vm, &vm->methods_string);
   free_table(vm, &vm->methods_list);
   free_table(vm, &vm->methods_dict);
   free_table(vm, &vm->methods_file);
   free_table(vm, &vm->methods_bytes);
+}
+
+void add_module(b_vm *vm, b_obj_module *module) {
+  table_set(vm, &vm->modules,
+            OBJ_VAL(copy_string(vm, module->file, (int)strlen(module->file))),
+            OBJ_VAL(module)
+  );
+  table_set(vm, &vm->globals,
+            OBJ_VAL(copy_string(vm, module->name, (int)strlen(module->name))),
+            OBJ_VAL(module)
+  );
 }
 
 static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
@@ -655,6 +668,17 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
     return throw_exception(vm, "non-object %s has no method", value_type(receiver));
   } else {
     switch(AS_OBJ(receiver)->type) {
+      case OBJ_MODULE: {
+        b_obj_module *module = AS_MODULE(receiver);
+        if(table_get(&module->values, OBJ_VAL(name), &value)) {
+          if(name->length > 0 && name->chars[0] == '_') {
+            return throw_exception(vm, "cannot call private module method '%s'", name->chars);
+          }
+          return call_value(vm, value, arg_count);
+        }
+        return throw_exception(vm, "module %s does not define class or method %s()", module->name, name->chars);
+        break;
+      }
       case OBJ_CLASS: {
         // @TODO: Add support for class methods. e.g. __str__, __methods__ etc...
         if(table_get(&AS_CLASS(receiver)->methods, OBJ_VAL(name), &value)) {
@@ -1571,7 +1595,8 @@ b_ptr_result run(b_vm *vm) {
 
     case OP_DEFINE_GLOBAL: {
       b_obj_string *name = READ_STRING();
-      table_set(vm, &vm->globals, OBJ_VAL(name), peek(vm, 0));
+      table_set(vm, &get_frame_function(frame)->module->values, OBJ_VAL(name), peek(vm, 0));
+//      table_set(vm, &vm->globals, OBJ_VAL(name), peek(vm, 0));
       pop(vm);
 
 #if defined(DEBUG_TABLE) && DEBUG_TABLE
@@ -1583,9 +1608,11 @@ b_ptr_result run(b_vm *vm) {
     case OP_GET_GLOBAL: {
       b_obj_string *name = READ_STRING();
       b_value value;
-      if (!table_get(&vm->globals, OBJ_VAL(name), &value)) {
-        runtime_error("'%s' is undefined in this scope", name->chars);
-        break;
+      if (!table_get(&get_frame_function(frame)->module->values, OBJ_VAL(name), &value)) {
+        if (!table_get(&vm->globals, OBJ_VAL(name), &value)) {
+          runtime_error("'%s' is undefined in this scope", name->chars);
+          break;
+        }
       }
       push(vm, value);
       break;
@@ -1593,8 +1620,10 @@ b_ptr_result run(b_vm *vm) {
 
     case OP_SET_GLOBAL: {
       b_obj_string *name = READ_STRING();
-      if (table_set(vm, &vm->globals, OBJ_VAL(name), peek(vm, 0))) {
-        table_delete(&vm->globals, OBJ_VAL(name));
+      b_table *table = &get_frame_function(frame)->module->values;
+//      b_table *table = &vm->globals;
+      if (table_set(vm, table, OBJ_VAL(name), peek(vm, 0))) {
+        table_delete(table, OBJ_VAL(name));
         runtime_error("%s is undefined in this scope", name->chars);
         break;
       }
@@ -1619,6 +1648,22 @@ b_ptr_result run(b_vm *vm) {
         b_value value;
 
         switch(AS_OBJ(peek(vm, 0))->type) {
+          case OBJ_MODULE: {
+            b_obj_module *module = AS_MODULE(peek(vm, 0));
+            if (table_get(&module->values, OBJ_VAL(name), &value)) {
+              if(name->length > 0 && name->chars[0] == '_') {
+                runtime_error("cannot get private module property '%s'", name->chars);
+                break;
+              }
+
+              pop(vm); // pop the list...
+              push(vm, value);
+              break;
+            }
+
+            runtime_error("%s module does not define '%s'", module->name, name->chars);
+            break;
+          }
           case OBJ_CLASS: {
             if(table_get(&AS_CLASS(peek(vm, 0))->methods, OBJ_VAL(name), &value)) {
               if(get_method_type(value) == TYPE_STATIC) {
@@ -2056,6 +2101,7 @@ b_ptr_result run(b_vm *vm) {
 
     case OP_CALL_IMPORT: {
       b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
+      add_module(vm, function->module);
       call_function(vm, function, 0);
       frame = &vm->frames[vm->frame_count - 1];
       break;
@@ -2064,7 +2110,7 @@ b_ptr_result run(b_vm *vm) {
     case OP_FINISH_MODULE: {
       b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
       // if it is a native module, attach c codes to cask methods
-      bind_native_modules(vm, function->name, function->file);
+      bind_native_modules(vm, function->module, function->name, function->module->file);
       break;
     }
 
@@ -2176,11 +2222,11 @@ b_ptr_result run(b_vm *vm) {
 #undef BINARY_MOD_OP
 }
 
-b_ptr_result interpret(b_vm *vm, const char *source, const char *filename) {
+b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
   b_blob blob;
   init_blob(&blob);
 
-  b_obj_func *function = compile(vm, source, filename, &blob);
+  b_obj_func *function = compile(vm, module, source, &blob);
 
   if(vm->should_print_bytecode) {
     return PTR_OK;

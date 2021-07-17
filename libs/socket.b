@@ -1,10 +1,10 @@
-/**
- * Socket
- *
- * Provides interface for working with Socket clients
- * and servers.
- * @copyright 2021, Ore Richard Muyiwa
- */
+#
+# @module socket
+#
+# Provides interface for working with Socket clients
+# and servers.
+# @copyright 2021, Ore Richard Muyiwa
+# 
 
 class SocketException < Exception {
   SocketException(message) {
@@ -12,6 +12,12 @@ class SocketException < Exception {
   }
 }
 
+/**
+ * class Socket
+ *
+ * Provides interface for working with Socket clients
+ * and servers.
+ */
 class Socket {
   /*
    * Types

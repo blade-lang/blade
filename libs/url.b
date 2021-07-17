@@ -1,18 +1,27 @@
-/**
- * Blade core Url module
- * 
- * provides functionalities for parsing and processing URLs
- * @copyright 2021, Ore Richard Muyiwa
- */
-import 'types'
+#
+# @module url
+#  
+# provides functionalities for parsing and processing URLs
+# @copyright 2021, Ore Richard Muyiwa
+# 
 
-# Excpetion thrown when the url is malformed
+import types
+
+/**
+ * class UrlMalformedException
+ * Excpetion thrown when the url is malformed
+ */
 class UrlMalformedException < Exception {
   UrlMalformedException(s) {
     self.message = s
   }
 }
 
+
+/**
+ * class Url
+ * provides functionalities for parsing and processing URLs
+ */
 class Url {
 
   # the url scheme e.g. http, https, ftp, tcp etc...
@@ -93,7 +102,7 @@ class Url {
       var _scan_port = || {
           var _port = ''
           i++
-          while i < url.length() and Type(url[i]).is_digit() { # id_digit
+          while i < url.length() and types.digit(url[i]) { # id_digit
             _port += url[i]
             i++
           }
@@ -130,14 +139,14 @@ class Url {
       } else if !host and scheme {
         # scan the host
         host = ''
-        while i < url.length() and (Type(url[i]).is_digit() or Type(url[i]).is_alpha() or 
+        while i < url.length() and (types.digit(url[i]) or types.alpha(url[i]) or 
             url[i] == '.' or url[i] == '@' or url[i] == '-') {
           host += url[i]
           i++
         }
 
         if i < url.length() - 1 and url[i] == ':' {
-          if url.length() - 1 > i and (Type(url[i + 1]).is_alpha() or url[i + 1] == '@') {
+          if url.length() - 1 > i and (types.alpha(url[i + 1]) or url[i + 1] == '@') {
             # username password combo encountered...
             username = host
             host = nil # we'll need to rescan for the host later...
