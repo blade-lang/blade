@@ -1943,8 +1943,16 @@ static void import_statement(b_parser *p) {
   char *module_name = NULL;
   char *module_file = NULL;
 
+  bool consume_name = true;
+  if(match(p, DOT_TOKEN)) {
+    advance(p); // take the next token as is an interpret name out of it
+    consume_name = false;
+  }
+
   do {
-    consume(p, IDENTIFIER_TOKEN, "module name expected");
+    if(consume_name) {
+      consume(p, IDENTIFIER_TOKEN, "module name expected");
+    }
 
     char *name = (char*)calloc(p->previous.length + 1, sizeof(char));
     memcpy(name, p->previous.start, p->previous.length);
