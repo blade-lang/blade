@@ -62,7 +62,6 @@ typedef enum {
 
 typedef enum {
   // base object types
-  OBJ_MODULE,
   OBJ_BOUND_METHOD,
   OBJ_CLASS,
   OBJ_CLOSURE,
@@ -79,6 +78,7 @@ typedef enum {
   OBJ_FILE,
 
   // non-user objects
+  OBJ_MODULE,
   OBJ_SWITCH,
 } b_obj_type;
 

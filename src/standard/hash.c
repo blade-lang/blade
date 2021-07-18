@@ -386,7 +386,7 @@ DECLARE_MODULE_METHOD(hash__gost) {
 }
 
 CREATE_MODULE_LOADER(hash) {
-  static b_func_reg class_functions[] = {
+  static b_func_reg module_functions[] = {
       {"_adler32", true, GET_MODULE_METHOD(hash__adler32)},
       {"_crc32", true, GET_MODULE_METHOD(hash__crc32)},
       {"md2", true, GET_MODULE_METHOD(hash__md2)},
@@ -409,12 +409,7 @@ CREATE_MODULE_LOADER(hash) {
       {NULL,      false, NULL},
   };
 
-  static b_class_reg classes[] = {
-      {"Hash", NULL, class_functions},
-      {NULL,     NULL, NULL},
-  };
-
-  static b_module_reg module = {NULL,NULL, classes};
+  static b_module_reg module = {NULL, module_functions, NULL};
 
   return module;
 }
