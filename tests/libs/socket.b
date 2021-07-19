@@ -31,11 +31,11 @@ def serve(port, on_client_receive) {
       }
     } catch Exception e {
       print('Client error: ${e.message}')
+    } finally {
+      id++
+      client.close()
+      print('Client disconnected...')
     }
-
-    id++
-    client.close()
-    print('Client disconnected...')
   }
 }
 

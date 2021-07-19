@@ -149,39 +149,31 @@ class Socket {
   # as well as when we are running in blocking mode
   var is_blocking = false
 
-  # constructor...
-  # called without parameters, is same as
-  # Socket(AF_INET, SOCK_STREAM, 0)
-  Socket(family, type, flags) {
-    if family self.family = family
-    if type self.type = type
-    if flags self.flags = flags
+  /**
+   * Socket(family: number [, type: number, flags: number [, id: number]])
+   * @constructor
+   * @example
+   * Socket(AF_INET, SOCK_STREAM, 0)
+   */
+  Socket(family, type, flags, id) {
+    if !id {
+      if family self.family = family
+      if type self.type = type
+      if flags self.flags = flags
 
-    if !is_int(self.family) 
-      die SocketException('AF_* expected for family, ${typeof(self.family)} given')
-    if !is_int(self.type) 
-      die SocketException('SOCK_* expected for type, ${typeof(self.type)} given')
-    if !is_int(self.flags) 
-      die SocketException('integer expected for flags, ${typeof(self.flags)} given')
+      if !is_int(self.family) 
+        die SocketException('AF_* expected for family, ${typeof(self.family)} given')
+      if !is_int(self.type) 
+        die SocketException('SOCK_* expected for type, ${typeof(self.type)} given')
+      if !is_int(self.flags) 
+        die SocketException('integer expected for flags, ${typeof(self.flags)} given')
 
-    var id = _socket.create(self.family, self.type, self.flags)
-    if id == -1 die SocketException('could not create socket')
-
-    self.id = id
-  }
-  
-  # creates a new instance of socket with prefilled information
-  # this helps us create sockets on the fly binding to different
-  # id's on the device.
-  # @return Socket
-  static New(family, type, flags, id, host, port, is_client) {
-    var socket = Socket(family, type, flags)
-    socket.id = id
-    socket.host = host
-    socket.port = port
-    socket.is_client = is_client
-    socket.is_connected = true
-    return socket
+      var id = _socket.create(self.family, self.type, self.flags)
+      if id == -1 die SocketException('could not create socket')
+      self.id = id
+    } else {
+      self.id = id
+    }
   }
 
   # checks if a response code is valid
@@ -305,7 +297,15 @@ class Socket {
   accept() {
     if self.is_bound and self.is_listening and !self.is_closed {
       var result = _socket.accept(self.id)
-      return Socket.New(self.family, self.type, self.flags, result[0], result[1], result[2], true)
+
+      if result and result != -1  {
+        var socket = Socket(self.family, self.type, self.flags, result[0])
+        socket.host = result[1]
+        socket.port = result[2]
+        socket.is_client = true
+        socket.is_connected = true
+        return socket
+      }
     }
     die SocketException('socket not bound/listening')
   }
@@ -314,15 +314,16 @@ class Socket {
     # silently ignore multiple calls to close()
     if self.is_closed return true
 
-    var result = self._check_error(_socket.close(self.id)) >= 0
-    if result {
+    if self._check_error(_socket.close(self.id)) == 0 {
       self.is_connected = false
       self.is_listening = false
       self.is_bound = false
       self.is_client = false # may be reused as a server...
       self.is_closed = true
+      return true
     }
-    return result
+    
+    return false
   }
 
   shutdown(how) {

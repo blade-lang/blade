@@ -489,12 +489,15 @@ DECLARE_MODULE_METHOD(socket__getaddrinfo) {
 DECLARE_MODULE_METHOD(socket__close) {
   ENFORCE_ARG_COUNT(_close, 1);
   ENFORCE_ARG_TYPE(_close, 0, IS_NUMBER);
-#ifndef _WIN32
-  int result = close((int)AS_NUMBER(args[0]));
-#else
-  int result = closesocket((int)AS_NUMBER(args[0]));
-#endif
-  RETURN_NUMBER(result);
+  int sock = AS_NUMBER(args[0]);
+
+//  // discard all leftover readable data...
+//  char buf[16];
+//  while (read(sock, buf, sizeof(buf)-1) > 0){}
+
+  // close socket
+  RETURN_NUMBER(closesocket(sock));
+
 }
 
 DECLARE_MODULE_METHOD(socket__shutdown) {
