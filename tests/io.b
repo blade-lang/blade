@@ -1,7 +1,7 @@
-import 'io'
+import io
 
 # simple test
-var tty = TTY(stdin())
+var tty = io.TTY(io.stdin)
 
 var keywords = ['default', 'def', 'class', 'echo', 'for', 'if', 'in', 
   'as', 'import', 'let', 'using', 'when', 'while', 'iter', 'die', 'break', 'continue']
@@ -41,10 +41,11 @@ var index = 0
 
 var s
 
-while s = stdin().read() {
+while s = io.stdin.read() {
   if ord(s) == 3 { # ctrl + c
-    stdout().write('\x1b[1000D\n')
-    stdout().flush()
+    io.stdout.write('\x1b[1000D\n')
+    io.stdout.flush()
+    echo 'Exiting...'
     tty.exit_raw()
     break
   } else if ord(s) >= 32 and ord(s) <= 126 {
@@ -54,7 +55,7 @@ while s = stdin().read() {
       input += s
     index++
   } else if [10, 13].contains(ord(s)) { # enter key
-    stdout().write('\x1b[1000D\n')
+    io.stdout.write('\x1b[1000D\n')
     history.append(input)
     history_index++
     # you can take this out to see the output
@@ -62,8 +63,8 @@ while s = stdin().read() {
     input = ''
     index = 0
   } else if ord(s) == 27 { # arrow keys
-    var next1 = ord(stdin().read()) 
-    var next2 = ord(stdin().read())
+    var next1 = ord(io.stdin.read()) 
+    var next2 = ord(io.stdin.read())
     if next1 == 91 {
       if next2 == 68 #left
         index = max(0, index - 1)
@@ -100,16 +101,16 @@ while s = stdin().read() {
   }
 
   # print out the current input-string
-  stdout().write('\x1b[1000D') # move all the way left
-  stdout().write('\x1b[0K') # clear the line
-  stdout().write(highlight(input))
-  stdout().write('\x1b[1000D') # move all the way left again
+  io.stdout.write('\x1b[1000D') # move all the way left
+  io.stdout.write('\x1b[0K') # clear the line
+  io.stdout.write(highlight(input))
+  io.stdout.write('\x1b[1000D') # move all the way left again
   if index > 0
-    stdout().write('\x1b[' + index + 'C')
-  stdout().flush()
+    io.stdout.write('\x1b[' + index + 'C')
+  io.stdout.flush()
 }
 
 # Clear the terminal (classic Nano and Vim style)
-stdout().write("\x1b[2J");
-stdout().write("\x1b[H");
-stdout().flush()
+# io.stdout.write("\x1b[2J");
+# io.stdout.write("\x1b[H");
+# io.stdout.flush()

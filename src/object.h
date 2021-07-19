@@ -46,6 +46,8 @@ typedef enum {
 // non-user objects
 #define AS_SWITCH(v) ((b_obj_switch *)AS_OBJ(v))
 #define IS_SWITCH(v) is_obj_type(v, OBJ_SWITCH)
+#define AS_MODULE(v) ((b_obj_module *)AS_OBJ(v))
+#define IS_MODULE(v) is_obj_type(v, OBJ_MODULE)
 
 // containers
 #define AS_BYTES(v) ((b_obj_bytes *)AS_OBJ(v))
@@ -76,6 +78,7 @@ typedef enum {
   OBJ_FILE,
 
   // non-user objects
+  OBJ_MODULE,
   OBJ_SWITCH,
 } b_obj_type;
 
@@ -102,13 +105,20 @@ typedef struct b_obj_up_value {
 
 typedef struct {
   b_obj obj;
+  char *name;
+  const char *file;
+  b_table values;
+} b_obj_module;
+
+typedef struct {
+  b_obj obj;
   b_func_type type;
   int arity;
   int up_value_count;
   bool is_variadic;
   b_blob blob;
   b_obj_string *name;
-  const char *file;
+  b_obj_module *module;
 } b_obj_func;
 
 typedef struct {
@@ -180,6 +190,7 @@ typedef struct {
 } b_obj_switch;
 
 // non-user objects...
+b_obj_module *new_module(b_vm *vm, char *name, const char *file);
 b_obj_switch *new_switch(b_vm *vm);
 
 // data containers
@@ -198,7 +209,7 @@ b_obj_class *new_class(b_vm *vm, b_obj_string *name);
 
 b_obj_closure *new_closure(b_vm *vm, b_obj_func *function);
 
-b_obj_func *new_function(b_vm *vm, b_func_type type);
+b_obj_func *new_function(b_vm *vm, b_obj_module *module, b_func_type type);
 
 b_obj_instance *new_instance(b_vm *vm, b_obj_class *klass);
 

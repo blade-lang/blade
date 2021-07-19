@@ -51,6 +51,9 @@ static void repl(b_vm *vm) {
   int current_line = 0;
   int brace_count = 0, paren_count = 0, bracket_count = 0, single_quote_count = 0, double_quote_count = 0;
 
+  b_obj_module *module = new_module(vm, "", "<repl>");
+  add_module(vm, module);
+
   for (;;) {
     while (sigsetjmp(ctrlc_buf, 1) != 0);
 
@@ -141,7 +144,7 @@ static void repl(b_vm *vm) {
 
     if (bracket_count == 0 && paren_count == 0 && brace_count == 0 && single_quote_count == 0 && double_quote_count == 0) {
 
-      interpret(vm, source, "<repl>");
+      interpret(vm, module, source);
 
       fflush(stdout); // flush all outputs
 
@@ -158,7 +161,10 @@ static void run_file(b_vm *vm, const char *file) {
     exit(EXIT_FAILURE);
   }
 
-  b_ptr_result result = interpret(vm, source, file);
+  b_obj_module *module = new_module(vm, "", file);
+  add_module(vm, module);
+
+  b_ptr_result result = interpret(vm, module, source);
   free(source);
 
   fflush(stdout);
@@ -226,8 +232,7 @@ int main(int argc, char *argv[]) {
 
     if (argc == 1 || argc <= optind) {
       repl(vm);
-    }
-    else {
+    } else {
       run_file(vm, argv[optind]);
     }
 

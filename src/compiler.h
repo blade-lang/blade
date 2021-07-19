@@ -67,13 +67,13 @@ typedef struct {
   bool panic_mode;
   bool in_block;
   bool is_returning;
-  b_compiler *compiler;
   b_class_compiler *current_class;
   const char *current_file;
 
   // used for tracking loops for the continue statement...
   int innermost_loop_start;
   int innermost_loop_scope_depth;
+  b_obj_module *module;
 } b_parser;
 
 typedef void (*b_parse_prefix_fn)(b_parser *, bool);
@@ -85,8 +85,7 @@ typedef struct {
   b_precedence precedence;
 } b_parse_rule;
 
-b_obj_func *compile(b_vm *vm, const char *source, const char *file,
-                    b_blob *blob);
+b_obj_func *compile(b_vm *vm, b_obj_module *module, const char *source, b_blob *blob);
 
 void mark_compiler_roots(b_vm *vm);
 

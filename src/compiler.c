@@ -19,7 +19,7 @@
 #include "debug.h"
 
 static b_blob *current_blob(b_parser *p) {
-  return &p->compiler->function->blob;
+  return &p->vm->compiler->function->blob;
 }
 
 static void error_at(b_parser *p, b_token *t, const char *message,
@@ -34,7 +34,7 @@ static void error_at(b_parser *p, b_token *t, const char *message,
   p->panic_mode = true;
 
   fprintf(stderr, "SyntaxError:\n");
-  fprintf(stderr, "    File: %s, Line: %d\n", p->current_file, t->line);
+  fprintf(stderr, "    File: %s, Line: %d\n", p->module->file, t->line);
 
   fprintf(stderr, "    Error");
 
@@ -217,7 +217,7 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_LIST:
   case OP_DICT:
   case OP_CALL_IMPORT:
-  case OP_FINISH_MODULE:
+  case OP_NATIVE_MODULE:
   case OP_SWITCH:
   case OP_METHOD:
     return 2;
@@ -284,7 +284,7 @@ static void emit_loop(b_parser *p, int loop_start) {
 }
 
 static void emit_return(b_parser *p) {
-  if (p->compiler->type == TYPE_INITIALIZER) {
+  if (p->vm->compiler->type == TYPE_INITIALIZER) {
     emit_byte_and_short(p, OP_GET_LOCAL, 0);
   } else {
     emit_byte(p, OP_NIL);
@@ -373,24 +373,23 @@ static void patch_jump(b_parser *p, int offset) {
 }
 
 static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
-  compiler->enclosing = p->compiler;
+  compiler->enclosing = p->vm->compiler;
   compiler->function = NULL;
   compiler->type = type;
   compiler->local_count = 0;
   compiler->scope_depth = 0;
   compiler->handler_count = 0;
 
-  compiler->function = new_function(p->vm, type);
-  compiler->function->file = p->current_file;
-  p->compiler = compiler;
+  compiler->function = new_function(p->vm, p->module, type);
+  p->vm->compiler = compiler;
 
   if (type != TYPE_SCRIPT) {
-    p->compiler->function->name =
+    p->vm->compiler->function->name =
         copy_string(p->vm, p->previous.start, p->previous.length);
   }
 
   // claiming slot zero for use in class methods
-  b_local *local = &p->compiler->locals[p->compiler->local_count++];
+  b_local *local = &p->vm->compiler->locals[p->vm->compiler->local_count++];
   local->depth = 0;
   local->is_captured = false;
 
@@ -465,29 +464,29 @@ static int resolve_up_value(b_parser *p, b_compiler *compiler, b_token *name) {
 }
 
 static int add_local(b_parser *p, b_token name) {
-  if (p->compiler->local_count == UINT8_COUNT) {
+  if (p->vm->compiler->local_count == UINT8_COUNT) {
     // we've reached maximum local variables per scope
     error(p, "too many local variables in scope");
     return -1;
   }
 
-  b_local *local = &p->compiler->locals[p->compiler->local_count++];
+  b_local *local = &p->vm->compiler->locals[p->vm->compiler->local_count++];
   local->name = name;
   local->depth = -1;
   local->is_captured = false;
-  return p->compiler->local_count;
+  return p->vm->compiler->local_count;
 }
 
 static void declare_variable(b_parser *p) {
   // global variables are implicitly declared...
-  if (p->compiler->scope_depth == 0)
+  if (p->vm->compiler->scope_depth == 0)
     return;
 
   b_token *name = &p->previous;
 
-  for (int i = p->compiler->local_count - 1; i >= 0; i--) {
-    b_local *local = &p->compiler->locals[i];
-    if (local->depth != -1 && local->depth < p->compiler->scope_depth) {
+  for (int i = p->vm->compiler->local_count - 1; i >= 0; i--) {
+    b_local *local = &p->vm->compiler->locals[i];
+    if (local->depth != -1 && local->depth < p->vm->compiler->scope_depth) {
       break;
     }
 
@@ -504,22 +503,22 @@ static int parse_variable(b_parser *p, const char *message) {
   consume(p, IDENTIFIER_TOKEN, message);
 
   declare_variable(p);
-  if (p->compiler->scope_depth > 0) // we are in a local scope...
+  if (p->vm->compiler->scope_depth > 0) // we are in a local scope...
     return 0;
 
   return identifier_constant(p, &p->previous);
 }
 
 static void mark_initialized(b_parser *p) {
-  if (p->compiler->scope_depth == 0)
+  if (p->vm->compiler->scope_depth == 0)
     return;
 
-  p->compiler->locals[p->compiler->local_count - 1].depth =
-      p->compiler->scope_depth;
+  p->vm->compiler->locals[p->vm->compiler->local_count - 1].depth =
+      p->vm->compiler->scope_depth;
 }
 
 static void define_variable(b_parser *p, int global) {
-  if (p->compiler->scope_depth > 0) { // we are in a local scope...
+  if (p->vm->compiler->scope_depth > 0) { // we are in a local scope...
     mark_initialized(p);
     return;
   }
@@ -536,43 +535,43 @@ static b_token synthetic_token(const char *name) {
 
 static b_obj_func *end_compiler(b_parser *p) {
   emit_return(p);
-  b_obj_func *function = p->compiler->function;
+  b_obj_func *function = p->vm->compiler->function;
 
   if (!p->had_error && p->vm->should_print_bytecode) {
     disassemble_blob(current_blob(p), function->name == NULL
-                                          ? p->current_file
+                                          ? p->module->file
                                           : function->name->chars);
   }
 
-  p->compiler = p->compiler->enclosing;
+  p->vm->compiler = p->vm->compiler->enclosing;
   return function;
 }
 
-static void begin_scope(b_parser *p) { p->compiler->scope_depth++; }
+static void begin_scope(b_parser *p) { p->vm->compiler->scope_depth++; }
 
 static void end_scope(b_parser *p) {
-  p->compiler->scope_depth--;
+  p->vm->compiler->scope_depth--;
 
   // remove all variables declared in scope while exiting...
-  while (p->compiler->local_count > 0 &&
-         p->compiler->locals[p->compiler->local_count - 1].depth >
-             p->compiler->scope_depth) {
-    if (p->compiler->locals[p->compiler->local_count - 1].is_captured) {
+  while (p->vm->compiler->local_count > 0 &&
+         p->vm->compiler->locals[p->vm->compiler->local_count - 1].depth >
+             p->vm->compiler->scope_depth) {
+    if (p->vm->compiler->locals[p->vm->compiler->local_count - 1].is_captured) {
       emit_byte(p, OP_CLOSE_UP_VALUE);
     } else {
       emit_byte(p, OP_POP);
     }
-    p->compiler->local_count--;
+    p->vm->compiler->local_count--;
   }
 }
 
 static void discard_local(b_parser *p, int depth) {
-  if (p->compiler->scope_depth == -1) {
+  if (p->vm->compiler->scope_depth == -1) {
     error(p, "cannot exit top-level scope");
   }
-  for (int i = p->compiler->local_count - 1;
-       i >= 0 && p->compiler->locals[i].depth > depth; i--) {
-    if (p->compiler->locals[i].is_captured) {
+  for (int i = p->vm->compiler->local_count - 1;
+       i >= 0 && p->vm->compiler->locals[i].depth > depth; i--) {
+    if (p->vm->compiler->locals[i].is_captured) {
       emit_byte(p, OP_CLOSE_UP_VALUE);
     } else {
       emit_byte(p, OP_POP);
@@ -585,13 +584,13 @@ static void end_loop(b_parser *p) {
   // ropriate jump...
   int i = p->innermost_loop_start;
 
-  while (i < p->compiler->function->blob.count) {
-    if (p->compiler->function->blob.code[i] == OP_BREAK_PL) {
-      p->compiler->function->blob.code[i] = OP_JUMP;
+  while (i < p->vm->compiler->function->blob.count) {
+    if (p->vm->compiler->function->blob.code[i] == OP_BREAK_PL) {
+      p->vm->compiler->function->blob.code[i] = OP_JUMP;
       patch_jump(p, i + 1);
     } else {
-      i += 1 + get_code_args_count(p->compiler->function->blob.code,
-                                   p->compiler->function->blob.constants.values,
+      i += 1 + get_code_args_count(p->vm->compiler->function->blob.code,
+                                   p->vm->compiler->function->blob.constants.values,
                                    i);
     }
   }
@@ -855,11 +854,11 @@ static void dot(b_parser *p, b_token previous, bool can_assign) {
 
 static void named_variable(b_parser *p, b_token name, bool can_assign) {
   uint8_t get_op, set_op;
-  int arg = resolve_local(p, p->compiler, &name);
+  int arg = resolve_local(p, p->vm->compiler, &name);
   if (arg != -1) {
     get_op = OP_GET_LOCAL;
     set_op = OP_SET_LOCAL;
-  } else if ((arg = resolve_up_value(p, p->compiler, &name)) != -1) {
+  } else if ((arg = resolve_up_value(p, p->vm->compiler, &name)) != -1) {
     get_op = OP_GET_UP_VALUE;
     set_op = OP_SET_UP_VALUE;
   } else {
@@ -1383,14 +1382,14 @@ static void function_args(b_parser *p) {
   // compile argument list...
   do {
     ignore_whitespace(p);
-    p->compiler->function->arity++;
-    if (p->compiler->function->arity > MAX_FUNCTION_PARAMETERS) {
+    p->vm->compiler->function->arity++;
+    if (p->vm->compiler->function->arity > MAX_FUNCTION_PARAMETERS) {
       error_at_current(p, "cannot have more than %d function parameters",
                        MAX_FUNCTION_PARAMETERS);
     }
 
     if (match(p, TRI_DOT_TOKEN)) {
-      p->compiler->function->is_variadic = true;
+      p->vm->compiler->function->is_variadic = true;
       add_local(p, synthetic_token("__args__"));
       define_variable(p, 0);
       break;
@@ -1629,7 +1628,7 @@ static void iter_statement(b_parser *p) {
 
   // update the parser's loop start and depth to the current
   p->innermost_loop_start = current_blob(p)->count;
-  p->innermost_loop_scope_depth = p->compiler->scope_depth;
+  p->innermost_loop_scope_depth = p->vm->compiler->scope_depth;
 
   int exit_jump = -1;
   if (!match(p, SEMICOLON_TOKEN)) { // the condition is optional
@@ -1752,7 +1751,7 @@ static void for_statement(b_parser *p) {
   // Evaluate the sequence expression and store it in a hidden local variable.
   expression(p);
 
-  if (p->compiler->local_count + 3 > UINT8_COUNT) {
+  if (p->vm->compiler->local_count + 3 > UINT8_COUNT) {
     error(p, "cannot declare more than %d variables in one scope", UINT8_COUNT);
     return;
   }
@@ -1777,7 +1776,7 @@ static void for_statement(b_parser *p) {
   // we'll be jumping back to right before the
   // expression after the loop body
   p->innermost_loop_start = current_blob(p)->count;
-  p->innermost_loop_scope_depth = p->compiler->scope_depth;
+  p->innermost_loop_scope_depth = p->vm->compiler->scope_depth;
 
   // key = iterable.iter_n__(key)
   emit_byte_and_short(p, OP_GET_LOCAL, iterator_slot);
@@ -1937,11 +1936,52 @@ static void die_statement(b_parser *p) {
 }
 
 static void import_statement(b_parser *p) {
-  consume(p, LITERAL_TOKEN, "expected module name");
-  int module_name_length;
-  char *module_name = compile_string(p, &module_name_length);
+//  consume(p, LITERAL_TOKEN, "expected module name");
+//  int module_name_length;
+//  char *module_name = compile_string(p, &module_name_length);
 
-  char *module_path = resolve_import_path(module_name, p->current_file);
+  char *module_name = NULL;
+  char *module_file = NULL;
+
+  bool consume_name = true;
+  if(match(p, DOT_TOKEN)) {
+    advance(p); // take the next token as is an interpret name out of it
+    consume_name = false;
+  }
+
+  int part_count = 0;
+
+  do {
+    if(consume_name) {
+      consume(p, IDENTIFIER_TOKEN, "module name expected");
+    }
+
+    char *name = (char*)calloc(p->previous.length + 1, sizeof(char));
+    memcpy(name, p->previous.start, p->previous.length);
+
+    // handle native modules
+    if(part_count == 0 && name[0] == '_') {
+      int module = make_constant(p, OBJ_VAL(copy_string(p->vm, name, (int)strlen(name))));
+      emit_byte_and_short(p, OP_NATIVE_MODULE, module);
+      return;
+    }
+
+    if(module_name != NULL)
+      free(module_name);
+
+    module_name = name;
+
+    if(module_file == NULL) {
+      module_file = strdup(name);
+    } else {
+      module_file = append_strings(module_file, "/");
+      module_file = append_strings(module_file, name);
+    }
+
+    part_count++;
+  } while(match(p, DOT_TOKEN));
+
+  char *module_path = resolve_import_path(module_file, p->module->file);
   if (module_path == NULL) {
     error(p, "module not found");
     return;
@@ -1956,18 +1996,20 @@ static void import_statement(b_parser *p) {
     return;
   }
 
-  b_obj_func *function = compile(p->vm, source, module_path, &p->compiler->function->blob);
+  b_blob blob;
+  init_blob(&blob);
+  b_obj_module *module = new_module(p->vm, module_name, module_path);
+  b_obj_func *function = compile(p->vm, module, source, &blob);
 
   if (function == NULL) {
     error(p, "failed to import %s", module_name);
     return;
   }
 
-  function->name = copy_string(p->vm, module_name, module_name_length);
+  function->name = copy_string(p->vm, module_name, (int)strlen(module_name));
 
   int import_constant = make_constant(p, OBJ_VAL(function));
   emit_byte_and_short(p, OP_CALL_IMPORT, import_constant);
-  emit_byte_and_short(p, OP_FINISH_MODULE, import_constant);
 }
 
 static void assert_statement(b_parser *p) {
@@ -1985,10 +2027,10 @@ static void assert_statement(b_parser *p) {
 
 static void try_statement(b_parser *p) {
 
-  if(p->compiler->handler_count == MAX_EXCEPTION_HANDLERS) {
+  if(p->vm->compiler->handler_count == MAX_EXCEPTION_HANDLERS) {
     error(p, "maximum exception handler in scope exceeded");
   }
-  p->compiler->handler_count++;
+  p->vm->compiler->handler_count++;
 
   consume(p, LBRACE_TOKEN, "expected '{' after try");
   ignore_whitespace(p);
@@ -2017,7 +2059,7 @@ static void try_statement(b_parser *p) {
     if (match(p, IDENTIFIER_TOKEN)) {
       add_local(p, p->previous);
       mark_initialized(p);
-      uint16_t var = resolve_local(p, p->compiler, &p->previous);
+      uint16_t var = resolve_local(p, p->vm->compiler, &p->previous);
       emit_byte_and_short(p, OP_SET_LOCAL, var);
       emit_byte(p, OP_POP);
     }
@@ -2057,14 +2099,14 @@ static void try_statement(b_parser *p) {
 
 static void return_statement(b_parser *p) {
   p->is_returning = true;
-  if (p->compiler->type == TYPE_SCRIPT) {
+  if (p->vm->compiler->type == TYPE_SCRIPT) {
     error(p, "cannot return from top-level code");
   }
 
   if (match(p, SEMICOLON_TOKEN) || match(p, NEWLINE_TOKEN)) {
     emit_return(p);
   } else {
-    if (p->compiler->type == TYPE_INITIALIZER) {
+    if (p->vm->compiler->type == TYPE_INITIALIZER) {
       error(p, "cannot return value from constructor");
     }
 
@@ -2223,8 +2265,7 @@ static void statement(b_parser *p) {
   ignore_whitespace(p);
 }
 
-b_obj_func *compile(b_vm *vm, const char *source, const char *file,
-                    b_blob *blob) {
+b_obj_func *compile(b_vm *vm, b_obj_module *module, const char *source, b_blob *blob) {
   b_scanner scanner;
   init_scanner(&scanner, source);
 
@@ -2239,9 +2280,8 @@ b_obj_func *compile(b_vm *vm, const char *source, const char *file,
   parser.is_returning = false;
   parser.innermost_loop_start = -1;
   parser.innermost_loop_scope_depth = 0;
-  parser.compiler = NULL;
   parser.current_class = NULL;
-  parser.current_file = file;
+  parser.module = module;
 
   b_compiler compiler;
   init_compiler(&parser, &compiler, TYPE_SCRIPT);
@@ -2253,7 +2293,6 @@ b_obj_func *compile(b_vm *vm, const char *source, const char *file,
   }
 
   b_obj_func *function = end_compiler(&parser);
-  vm->compiler = &compiler;
 
   return parser.had_error ? NULL : function;
 }

@@ -552,7 +552,7 @@ HANDLE getHandle() { return com.hComm; }
 
 #endif
 
-struct termios orig_termios;
+static struct termios orig_termios;
 void disable_raw_mode(void) {
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
 }
@@ -572,12 +572,10 @@ DECLARE_MODULE_METHOD(io_tty__tcgetattr) {
     RETURN_ERROR("can only use tty on std objects");
   }
 
-  struct termios raw_attr = orig_termios;
-  int status;
-  if ((status = tcgetattr(fileno(file->file), &orig_termios)) != 0) {
-    RETURN_ERROR(strerror(status));
+  struct termios raw_attr;
+  if (tcgetattr(fileno(file->file), &raw_attr) != 0) {
+    RETURN_ERROR(strerror(errno));
   }
-  atexit(disable_raw_mode);
 
   // we have our attributes already
   b_obj_dict *dict = new_dict(vm);
@@ -635,6 +633,9 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
       ispeed = NIL_VAL, ospeed = NIL_VAL;
 
 
+  tcgetattr(STDIN_FILENO, &orig_termios);
+  atexit(disable_raw_mode);
+
   struct termios raw = orig_termios;
 
   if (dict_get_entry(dict, NUMBER_VAL(0), &iflag)) {
@@ -656,10 +657,8 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
     raw.c_ospeed = (long) AS_NUMBER(ospeed);
   }
 
-  bool is_set = tcsetattr(fileno(file->file), type, &raw) != -1;
-//  atexit(disable_raw_mode);
-
-  RETURN_BOOL(is_set);
+  int result = tcsetattr(fileno(file->file), type, &raw);
+  RETURN_BOOL( result != -1);
 }
 
 /**
@@ -675,6 +674,33 @@ DECLARE_MODULE_METHOD(io_tty__flush) {
 }
 
 /**
+ * flush()
+ * flushes the given file handle
+ * @return nil
+ */
+DECLARE_MODULE_METHOD(io_flush) {
+  ENFORCE_ARG_COUNT(flush, 1);
+  ENFORCE_ARG_TYPE(flush, 0, IS_FILE);
+  b_obj_file *file = AS_FILE(args[0]);
+
+  if(file->is_open) {
+    fflush(file->file);
+  }
+  RETURN;
+}
+
+/**
+ * TTY.flush()
+ * flushes the standard output and standard error interface
+ * @return nil
+ */
+DECLARE_MODULE_METHOD(io_tty__exit_raw) {
+  ENFORCE_ARG_COUNT(TTY.exit_raw,  0);
+  tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+  RETURN;
+}
+
+/**
  * getc()
  *
  * reads character(s) from standard input
@@ -683,7 +709,7 @@ DECLARE_MODULE_METHOD(io_tty__flush) {
  * else, gets a single character
  * @returns char
  */
-DECLARE_NATIVE(io_getc) {
+DECLARE_MODULE_METHOD(io_getc) {
   ENFORCE_ARG_RANGE(getc, 0, 1);
 
   int length = 1;
@@ -692,22 +718,9 @@ DECLARE_NATIVE(io_getc) {
     length = AS_NUMBER(args[0]);
   }
 
-  int n_read;
-  char *c = ALLOCATE(char, (size_t)length + 1);
-  while ((n_read = (int)read(STDIN_FILENO, c, length)) != 1) {
-    if (n_read == -1 && errno != EAGAIN) {
-      RETURN_ERROR("error reading character from stdin");
-    }
-  }
-
-  if (length == 1) {
-    char *ch = utf8_encode(c[0]);
-    RETURN_STRING(ch);
-  } else {
-    char *result = ALLOCATE(char, (size_t)length + 2);
-    length = read_line(result, length + 1);
-    RETURN_L_STRING(result, length);
-  }
+  char *result = ALLOCATE(char, (size_t)length + 2);
+  read_line(result, length + 1);
+  RETURN_L_STRING(result, length);
 }
 
 /**
@@ -715,7 +728,7 @@ DECLARE_NATIVE(io_getc) {
  * writes character c to the screen
  * @return nil
  */
-DECLARE_NATIVE(io_putc) {
+DECLARE_MODULE_METHOD(io_putc) {
   ENFORCE_ARG_COUNT(putc, 1);
   ENFORCE_ARG_TYPE(putc, 0, IS_STRING);
 
@@ -743,13 +756,13 @@ DECLARE_NATIVE(io_putc) {
  *
  * returns the standard input
  */
-DECLARE_NATIVE(io_stdin) {
-  ENFORCE_ARG_COUNT(stdin, 0);
+b_value io_module_stdin(b_vm *vm) {
   b_obj_file *file =
       new_file(vm, copy_string(vm, "<stdin>", 7), copy_string(vm, "", 0));
   file->file = stdin;
   file->is_open = true;
-  RETURN_OBJ(file);
+  file->mode = copy_string(vm, "", 0);
+  return OBJ_VAL(file);
 }
 
 /**
@@ -757,13 +770,13 @@ DECLARE_NATIVE(io_stdin) {
  *
  * returns the standard output interface
  */
-DECLARE_NATIVE(io_stdout) {
-  ENFORCE_ARG_COUNT(stdout, 0);
+b_value io_module_stdout(b_vm *vm) {
   b_obj_file *file =
       new_file(vm, copy_string(vm, "<stdout>", 8), copy_string(vm, "", 0));
   file->file = stdout;
   file->is_open = true;
-  RETURN_OBJ(file);
+  file->mode = copy_string(vm, "", 0);
+  return OBJ_VAL(file);
 }
 
 /**
@@ -771,22 +784,27 @@ DECLARE_NATIVE(io_stdout) {
  *
  * returns the standard error interface
  */
-DECLARE_NATIVE(io_stderr) {
-  ENFORCE_ARG_COUNT(stderr, 0);
+b_value io_module_stderr(b_vm *vm) {
   b_obj_file *file =
-      new_file(vm, copy_string(vm, "<stderr>", 8), copy_string(vm, "", 0));
+      new_file(vm, copy_string(vm, "<stdout>", 8), copy_string(vm, "", 0));
   file->file = stderr;
   file->is_open = true;
-  RETURN_OBJ(file);
+  file->mode = copy_string(vm, "", 0);
+  return OBJ_VAL(file);
 }
 
 CREATE_MODULE_LOADER(io) {
+  static b_field_reg io_module_fields[] = {
+      {"stdin",       false, io_module_stdin},
+      {"stdout",       false, io_module_stdout},
+      {"stderr",       false, io_module_stderr},
+      {NULL,       false, NULL},
+  };
+
   static b_func_reg io_functions[] = {
-      {"getc",   false, GET_NATIVE(io_getc)},
-      {"putc",   false, GET_NATIVE(io_putc)},
-      {"stdin",  false, GET_NATIVE(io_stdin)},
-      {"stdout", false, GET_NATIVE(io_stdout)},
-      {"stderr", false, GET_NATIVE(io_stderr)},
+      {"getc",   false, GET_MODULE_METHOD(io_getc)},
+      {"putc",   false, GET_MODULE_METHOD(io_putc)},
+      {"flush",   false, GET_MODULE_METHOD(io_flush)},
       {NULL,     false, NULL},
   };
 
@@ -794,6 +812,7 @@ CREATE_MODULE_LOADER(io) {
       {"_tcgetattr", false, GET_MODULE_METHOD(io_tty__tcgetattr)},
       {"_tcsetattr", false, GET_MODULE_METHOD(io_tty__tcsetattr)},
       {"_flush",     false, GET_MODULE_METHOD(io_tty__flush)},
+      {"_exit_raw",     false, GET_MODULE_METHOD(io_tty__exit_raw)},
       {NULL,         false, NULL},
   };
 
@@ -802,7 +821,7 @@ CREATE_MODULE_LOADER(io) {
       {NULL,  NULL, NULL},
   };
 
-  static b_module_reg module = {io_functions, classes};
+  static b_module_reg module = {"_io", io_module_fields, io_functions, classes};
 
   return module;
 }

@@ -184,7 +184,7 @@ DECLARE_MODULE_METHOD(os_setenv) {
 }
 
 CREATE_MODULE_LOADER(os) {
-  static b_func_reg os_class_functions[] = {
+  static b_func_reg os_module_functions[] = {
       {"info",  true,  GET_MODULE_METHOD(os_info)},
       {"exec",  true,  GET_MODULE_METHOD(os_exec)},
       {"sleep", true,  GET_MODULE_METHOD(os_sleep)},
@@ -193,17 +193,12 @@ CREATE_MODULE_LOADER(os) {
       {NULL,    false, NULL},
   };
 
-  static b_field_reg os_class_fields[] = {
+  static b_field_reg os_module_fields[] = {
       {"platform", true, get_os_platform},
       {NULL,       false, NULL},
   };
 
-  static b_class_reg classes[] = {
-      {"Os", os_class_fields, os_class_functions},
-      {NULL, NULL, NULL},
-  };
-
-  static b_module_reg module = {NULL, classes};
+  static b_module_reg module = {"_os", os_module_fields, os_module_functions, NULL};
 
   return module;
 }

@@ -5,10 +5,13 @@
  * @copyright 2021, Ore Richard Muyiwa 
  */
 
+import _io
+
  # for file seek
 var SEEK_SET = 0
 var SEEK_CUR = 1
 var SEEK_END = 2
+
 
 /**
  * an interface to TTY terminals
@@ -90,91 +93,66 @@ class TTY {
   static var VMIN       = 16      # !ICANON 
   static var VTIME      = 17      # !ICANON
 
-  /*
-  The constructor of the TTY class. 
-  */
+  /**
+   * The constructor of the TTY class. 
+   */
   TTY(std) {
     if !is_file(std) {
       die Exception('TTY expects a standard file as argument, ${typeof(std)} given')
     }
 
     self.std = std
-
-    # retain a copy of TTY's default attr as at when TTY() was first called
-    self.default_attr = self.get_attr()
   }
 
-  # stub method for native declared _tcsetattr, _tcgetattr and _flush
-
-  /*
-  _tcsetattr(file, attrs: dict)
-  sets the attributes of a tty file
-  @return true if succeed or false otherwise
-  TODO: support the c_cc flag 
-  */
-  _tcsetattr(file, attrs) {}
-
-  /*
-  _tcgetattr(file)
-  returns the configuration of the current tty file
-  */
-  _tcgetattr(file) {}
-
-  /*
-  _flush(file)
-  flushes the standard file
-  */
-  _flush(file) {}
-
-  /*
-  get_attr()
-  Returns the attribute of the current tty session
-  The returned a attributes is a dict containing the TTY_ flags 
-  */
+  /**
+   * get_attr()
+   * Returns the attribute of the current tty session
+   * The returned a attributes is a dict containing the TTY_ flags 
+   */
   get_attr() {
-    return self._tcgetattr(self.std)
+    return _io.tcgetattr(self.std)
   }
 
-  /* 
-  set_attr(option: number, attrs: dict)
-  sets the attributes of the current tty session
-  - option: one ot the TCSA options above (see their description above)
-  - attrs a dictionary of the TTY_ flags listed above
-
-  one can safely omit any of the TTY_ flags listed above and
-  Blade will fill in the default values as it exists.
-  - Note that this flags will be merged and not overwritten
-  */
+  /**
+   * set_attr(option: number, attrs: dict)
+   * sets the attributes of the current tty session
+   * - option: one ot the TCSA options above (see their description above)
+   * - attrs a dictionary of the TTY_ flags listed above
+   * 
+   * one can safely omit any of the TTY_ flags listed above and
+   * Blade will fill in the default values as it exists.
+   * - @note this flags will be merged and not overwritten
+   */
   set_attr(option, attrs) {
     if !is_int(option) 
       die Exception('integer expected as first argument, ${typeof(option)} given')
     if !is_dict(attrs) 
       die Exception('dictionary expected as second argument, ${typeof(attrs)} given')
-    return self._tcsetattr(self.std, option, attrs)
+    return _io.tcsetattr(self.std, option, attrs)
   }
 
-  /*
-  set_raw()
-  sets the current tty to raw mode
-  */
+  /**
+   * set_raw()
+   * sets the current tty to raw mode
+   */
   set_raw() {
-    var new_attr = self.default_attr
+    var new_attr = _io.tcgetattr(self.std)
 
-    new_attr[TTY.TTY_IFLAG] = new_attr[TTY.TTY_IFLAG] & ~(TTY.IGNBRK | TTY.BRKINT | TTY.PARMRK | TTY.ISTRIP | TTY.INLCR | TTY.IGNCR | TTY.ICRNL | TTY.IXON)
-    new_attr[TTY.TTY_OFLAG] = new_attr[TTY.TTY_OFLAG] & ~TTY.OPOST
-    new_attr[TTY.TTY_LFLAG] = new_attr[TTY.TTY_LFLAG] & ~(TTY.ECHO | TTY.ECHONL | TTY.ICANON | TTY.ISIG | TTY.IEXTEN)
-    new_attr[TTY.TTY_CFLAG] = new_attr[TTY.TTY_CFLAG] & ~(TTY.CSIZE | TTY.PARENB)
-    new_attr[TTY.TTY_CFLAG] = new_attr[TTY.TTY_CFLAG] | (TTY.CS8)
+    new_attr[TTY.TTY_IFLAG] &= ~(TTY.IGNBRK | TTY.BRKINT | TTY.PARMRK | TTY.ISTRIP | TTY.INLCR | TTY.IGNCR | TTY.ICRNL | TTY.IXON)
+    new_attr[TTY.TTY_OFLAG] &= ~TTY.OPOST
+    new_attr[TTY.TTY_LFLAG] &= ~(TTY.ECHO | TTY.ECHONL | TTY.ICANON | TTY.ISIG | TTY.IEXTEN)
+    new_attr[TTY.TTY_CFLAG] &= ~(TTY.CSIZE | TTY.PARENB)
+    new_attr[TTY.TTY_CFLAG] |= TTY.CS8
     
     return self.set_attr(TTY.TCSAFLUSH, new_attr)
   }
 
-  /*
-  exit_raw()
-  disables the raw mode flags on the current tty
-  */
+  /**
+   * exit_raw()
+   * disables the raw mode flags on the current tty
+   */
   exit_raw() {
-    return self.set_attr(TTY.TCSAFLUSH, self.default_attr)
+    return _io.exit_raw()
   }
 
   /**
@@ -183,46 +161,58 @@ class TTY {
    * @return nil
    */
   flush() {
-    self._flush(self.std);
+    _io.flush(self.std);
   }
 }
 
-/* 
-stdin()
-returns an handle to the standard input file of the system
+/** 
+ * stdin
+ * returns an handle to the standard input file of the system
+ * 
+ * This method is a stub for stdin() method which was declared in
+ * native C.
+ * @return file<std>
+ */
+var stdin = _io.stdin
 
-This method is a stub for stdin() method which was declared in
-native C.
-@return file<std>
-*/
-def stdin() {}
+/**
+ * stdout
+ * returns an handle to the standard output file of the system
+ * 
+ * This method is a stub for stdout() method which was declared in
+ * native C.
+ * @return file<std>
+ */
+var stdout = _io.stdout
 
-/* 
-stdout()
-returns an handle to the standard output file of the system
+/**
+ * stderr
+ * returns an handle to the standard error file of the system
+ * 
+ * This method is a stub for stderr() method which was declared in
+ * native C.
+ * @return file<std>
+ */
+var stderr = _io.stderr
 
-This method is a stub for stdout() method which was declared in
-native C.
-@return file<std>
-*/
-def stdout() {}
-
-/*
-stderr()
-returns an handle to the standard error file of the system
-
-This method is a stub for stderr() method which was declared in
-native C.
-@return file<std>
-*/
-def stderr() {}
+/**
+ * flush(file: file)
+ *
+ * flushes the content of the given file handle
+ * @returns nil
+ */
+def flush(file) {
+  return _io.flush(file)
+}
 
 /**
  * putc(c: char)
  * writes character c to the screen
  * @return nil
  */
-def putc(c) {}
+def putc(c) {
+  return _io.putc(c)
+}
 
 /**
  * getc()
@@ -231,9 +221,11 @@ def putc(c) {}
  *
  * when length is given, gets `length` number of characters
  * else, gets a single character
- * @returns char or string
+ * @returns char | string
  */
-def getc() {}
+def getc() {
+  return _io.getc()
+}
 
 /**
  * readline()
@@ -245,7 +237,7 @@ def readline() {
   var result = ''
   var input
 
-  while (input = stdin().read()) and input != '\n' and input != '\0'
+  while (input = stdin.read()) and input != '\n' and input != '\0'
     result += input
 
   return result

@@ -1,88 +1,59 @@
-import 'socket'
-import 'io'
+import socket
 
-# # Server
-# var server = Socket()
-# server.set_option(Socket.SO_REUSEADDR, true)
-# server.bind(Socket.IP_ANY, 3000)
-# server.listen()
-# echo 'Listening on port ${Socket.IP_ANY}:3000'
+def serve(port, on_client_receive) {
+  if !is_number(port)
+    die Exception('number expected at parameter 1')
+  if on_client_receive and !is_function(on_client_receive)
+    die Exception('function expected at parameter 2')
 
-# while true {
-#   var client = server.accept()
-#   # client.set_option(Socket.SO_RCVTIMEO, 100);
-#   echo 'Client connected: ${client.host}'
+  var id = 1
 
-#   while true {
-#     try {
-#       var data = client.receive()
-#       if data {
-#         echo data.trim()
-#         if data.trim() == '.bye' {
-#           client.close()
-#           echo 'Client disconnected!'
-#           break
-#         }
-#       }
-#     } catch e {
-#       echo 'Client disconnected with error -> ${e.message}'
-#       break
-#     }
-#   }
-# }
+  var soc = socket.Socket()
+  soc.set_option(socket.SO_REUSEADDR, true)
+  soc.bind(socket.IP_ANY, port)
+  print('Listening on ${socket.IP_ANY}:${port}...')
+  soc.listen(1)
 
+  while true {
+    var client = soc.accept()
+    print('Client connected...')
 
+    # timeout if nothing is received after 10 second
+    client.set_option(socket.SO_RCVTIMEO, 2000)
+    # timeout if we can't send after 10 second
+    client.set_option(socket.SO_SNDTIMEO, 2000)
 
-
-
-# # Client
-# var client = Socket()
-# client.connect(nil, 3000, 1000) # 1 seconds
-# # client.set_option(Socket.SO_SNDTIMEO, 100) # 100 milliseconds
-
-# while true {
-#   var message = ''
-#   var input
-#   while (input = stdin().read()) != '\n' {
-#     message += input
-#   }
-
-#   try {
-#     client.send('${message}\n')
-#   } catch e {
-#     echo 'Connection closed ${e.message}'
-#     break
-#   }
-
-#   if message.trim() == '.bye' {
-#     client.close()
-#     break
-#   }
-# }
-
-
-var start = time()
-var total = 100000
-
-for i in 1..total {
-  echo 'Attempt ${i}'
-  var client = Socket()
-  client.connect(nil, 3000, 1000)
-  client.send('GET / HTTP/1.1\r\n\r\n')
-  var data = client.receive()
-
-  if data.index_of('Content-Length') {
-    var m = data.matches('/Content\-Length:\s*\d+/')
-    if m {
-      var length = to_number(m[0].replace('/[^0-9]/', ''))
-      while data.length() < length {
-        data += client.receive()
+    try {
+      var data = client.receive()
+      if data {
+        print('Request received:\n${data}\n')
+        on_client_receive(client, id, data)
       }
+    } catch Exception e {
+      print('Client error: ${e.message}')
     }
-  }
 
-  echo data
-  client.close()
+    id++
+    client.close()
+    print('Client disconnected...')
+  }
 }
 
-echo 'Made ${total} http get calls in ${time() - start} seconds'
+serve(3000, |client, id, data| {
+
+  var message = 'Hello to client ${id} from simple multi-client server implemented with Blade socket module'
+
+  var response = 'HTTP/1.1 200 OK
+X-Powered-By: Blade
+Access-Control-Allow-Origin: *
+Content-Type: application/json; charset=utf-8
+Content-Length: ${message.length()}
+ETag: W/"20-kpKo63uv4n6XEGgQeIwK7WAi6Ls"
+Date: Sun, 18 Apr 2021 03:52:16 GMT
+
+${message}'
+
+  print('Response sent:\n${response}\n')
+
+  client.send(response)
+})

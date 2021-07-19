@@ -4,8 +4,10 @@
  * Provides interfaces for working with Http client requests.
  * @copyright 2021, Ore Richard Muyiwa
  */
-import 'url'
-import 'socket'
+
+import _http
+import url
+import socket
 
 
 /**

@@ -340,69 +340,66 @@ DECLARE_STRING_METHOD(join) {
   ENFORCE_ARG_COUNT(join, 1);
   ENFORCE_ARG_TYPE(join, 0, IS_OBJ);
 
+  b_obj_string *method_obj = AS_STRING(METHOD_OBJECT);
   b_value argument = args[0];
   int length = 0;
   char **array = NULL;
 
   if (IS_STRING(argument)) {
     // empty argument
-    if (AS_STRING(argument)->length == 0) {
+    if (method_obj->length == 0) {
+      RETURN_VALUE(argument);
+    } else if(AS_STRING(argument)->length == 0) {
       RETURN_VALUE(argument);
     }
 
-    char *string = (char *)AS_C_STRING(argument);
-    length = AS_STRING(argument)->length;
-    array = (char **)calloc(length, sizeof(char **));
+    b_obj_string *string = AS_STRING(argument);
 
-    if (array != NULL) {
-      for (int i = 0; i < length; i++) {
-        array[i] = (char*)calloc(2, sizeof(char*));
-        char str[2] = { string[i], '\0' };
-        if (array[i] != NULL) {
-          strcpy(array[i], str);
-        }
-      }
+    char *result = (char*) calloc(2, sizeof(char));
+    result[0] = string->chars[0];
+    result[1] = '\0';
+
+    for (int i = 1; i < string->length; i++) {
+      result = append_strings(result, method_obj->chars);
+
+      char *chr = (char*) calloc(2, sizeof(char));
+      chr[0] = string->chars[i];
+      chr[1] = '\0';
+
+      result = append_strings(result, chr);
+      free(chr);
     }
-  } else if (IS_LIST(argument) || IS_DICT(argument)) {
 
-    length = IS_LIST(argument) ? AS_LIST(argument)->items.count
-                               : AS_DICT(argument)->names.count;
-    b_value *values = IS_LIST(argument) ? AS_LIST(argument)->items.values
-                                        : AS_DICT(argument)->names.values;
-
-    if (length == 0)
-      RETURN_L_STRING("", 0);
-
-    array = (char **)calloc(length, sizeof(char **));
-
-    if (array != NULL) {
-      for (int i = 0; i < length; i++) {
-        // get interpreted string here
-        array[i] = value_to_string(vm, values[i]);
-      }
+    RETURN_TT_STRING(result);
+  } else if(IS_LIST(argument) || IS_DICT(argument)) {
+    b_value *list;
+    int count = 0;
+    if(IS_DICT(argument)) {
+      list = AS_DICT(argument)->names.values;
+      count = AS_DICT(argument)->names.count;
+    } else {
+      list = AS_LIST(argument)->items.values;
+      count = AS_LIST(argument)->items.count;
     }
-  } else {
-    RETURN_ERROR("join() does not support object of type %s",
-                 value_type(argument))
+
+    if(count == 0 || method_obj->length == 0) {
+      RETURN_STRING("");
+    }
+
+    char *result = value_to_string(vm, list[0]);
+
+    for (int i = 1; i < count; i++) {
+      result = append_strings(result, method_obj->chars);
+      char *str = value_to_string(vm, list[i]);
+      result = append_strings(result, str);
+      free(str);
+    }
+
+    RETURN_TT_STRING(result);
   }
 
-  for (int i = 0; i < length; i++) {
-    if (array != NULL) {
-      if (i != 0) {
-        array[0] = append_strings(array[0], array[i]);
-        free(array[i]);
-      } else if (i != length - 1) {
-        array[0] = append_strings(array[0], AS_C_STRING(METHOD_OBJECT));
-      }
-    }
-  }
-
-  if(array != NULL && array[0] != NULL) {
-    RETURN_TT_STRING(array[0]);
-  }
-
-  char *result = strdup(AS_C_STRING(argument));
-  RETURN_TT_STRING(result);
+  RETURN_ERROR("join() does not support object of type %s",
+               value_type(argument));
 }
 
 DECLARE_STRING_METHOD(split) {
