@@ -156,7 +156,7 @@ def function(value) {
  * returns true if the value is a class or false otherwise
  * @return bool
  */
-def class() {
+def is_a_class() {
   return is_class(value)
 }
 
