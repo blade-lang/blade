@@ -5,6 +5,8 @@
  * @copyright 2021, Ore Richard Muyiwa 
  */
 
+import _io
+
  # for file seek
 var SEEK_SET = 0
 var SEEK_CUR = 1
@@ -102,34 +104,13 @@ class TTY {
     self.std = std
   }
 
-  # stub method for native declared _tcsetattr, _tcgetattr and _flush
-  /**
-   * _tcsetattr(file, attrs: dict)
-   * sets the attributes of a tty file
-   * @return true if succeed or false otherwise
-   * TODO: support the c_cc flag 
-   */
-  _tcsetattr(file, attrs) {}
-
-  /**
-   * _tcgetattr(file)
-   * returns the configuration of the current tty file
-   */
-  _tcgetattr(file) {}
-
-  /**
-   * _flush(file)
-   * flushes the standard file
-   */
-  _flush(file) {}
-
   /**
    * get_attr()
    * Returns the attribute of the current tty session
    * The returned a attributes is a dict containing the TTY_ flags 
    */
   get_attr() {
-    return self._tcgetattr(self.std)
+    return _io.tcgetattr(self.std)
   }
 
   /**
@@ -147,7 +128,7 @@ class TTY {
       die Exception('integer expected as first argument, ${typeof(option)} given')
     if !is_dict(attrs) 
       die Exception('dictionary expected as second argument, ${typeof(attrs)} given')
-    return self._tcsetattr(self.std, option, attrs)
+    return _io.tcsetattr(self.std, option, attrs)
   }
 
   /**
@@ -155,7 +136,7 @@ class TTY {
    * sets the current tty to raw mode
    */
   set_raw() {
-    var new_attr = self._tcgetattr(self.std)
+    var new_attr = _io.tcgetattr(self.std)
 
     new_attr[TTY.TTY_IFLAG] &= ~(TTY.IGNBRK | TTY.BRKINT | TTY.PARMRK | TTY.ISTRIP | TTY.INLCR | TTY.IGNCR | TTY.ICRNL | TTY.IXON)
     new_attr[TTY.TTY_OFLAG] &= ~TTY.OPOST
@@ -171,7 +152,7 @@ class TTY {
    * disables the raw mode flags on the current tty
    */
   exit_raw() {
-    return self._exit_raw()
+    return _io.exit_raw()
   }
 
   /**
@@ -180,39 +161,39 @@ class TTY {
    * @return nil
    */
   flush() {
-    self._flush(self.std);
+    _io.flush(self.std);
   }
 }
 
 /** 
- * stdin()
+ * stdin
  * returns an handle to the standard input file of the system
  * 
  * This method is a stub for stdin() method which was declared in
  * native C.
  * @return file<std>
  */
-def stdin() {}
+var stdin = _io.stdin
 
 /**
- * stdout()
+ * stdout
  * returns an handle to the standard output file of the system
  * 
  * This method is a stub for stdout() method which was declared in
  * native C.
  * @return file<std>
  */
-def stdout() {}
+var stdout = _io.stdout
 
 /**
- * stderr()
+ * stderr
  * returns an handle to the standard error file of the system
  * 
  * This method is a stub for stderr() method which was declared in
  * native C.
  * @return file<std>
  */
-def stderr() {}
+var stderr = _io.stderr
 
 /**
  * flush(file: file)
@@ -220,14 +201,18 @@ def stderr() {}
  * flushes the content of the given file handle
  * @returns nil
  */
-def flush(file) {}
+def flush(file) {
+  return _io.flush(file)
+}
 
 /**
  * putc(c: char)
  * writes character c to the screen
  * @return nil
  */
-def putc(c) {}
+def putc(c) {
+  return _io.putc(c)
+}
 
 /**
  * getc()
@@ -238,7 +223,9 @@ def putc(c) {}
  * else, gets a single character
  * @returns char | string
  */
-def getc() {}
+def getc() {
+  return _io.getc()
+}
 
 /**
  * readline()

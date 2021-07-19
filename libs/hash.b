@@ -5,6 +5,7 @@
 # @copyright 2021, Ore Richard Muyiwa
 #
 
+import _hash
 import convert
 
 /**

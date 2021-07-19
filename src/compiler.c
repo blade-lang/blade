@@ -217,7 +217,7 @@ static int get_code_args_count(const uint8_t *bytecode,
   case OP_LIST:
   case OP_DICT:
   case OP_CALL_IMPORT:
-  case OP_FINISH_MODULE:
+  case OP_NATIVE_MODULE:
   case OP_SWITCH:
   case OP_METHOD:
     return 2;
@@ -1949,6 +1949,8 @@ static void import_statement(b_parser *p) {
     consume_name = false;
   }
 
+  int part_count = 0;
+
   do {
     if(consume_name) {
       consume(p, IDENTIFIER_TOKEN, "module name expected");
@@ -1956,6 +1958,13 @@ static void import_statement(b_parser *p) {
 
     char *name = (char*)calloc(p->previous.length + 1, sizeof(char));
     memcpy(name, p->previous.start, p->previous.length);
+
+    // handle native modules
+    if(part_count == 0 && name[0] == '_') {
+      int module = make_constant(p, OBJ_VAL(copy_string(p->vm, name, (int)strlen(name))));
+      emit_byte_and_short(p, OP_NATIVE_MODULE, module);
+      return;
+    }
 
     if(module_name != NULL)
       free(module_name);
@@ -1968,6 +1977,8 @@ static void import_statement(b_parser *p) {
       module_file = append_strings(module_file, "/");
       module_file = append_strings(module_file, name);
     }
+
+    part_count++;
   } while(match(p, DOT_TOKEN));
 
   char *module_path = resolve_import_path(module_file, p->module->file);
@@ -1999,7 +2010,6 @@ static void import_statement(b_parser *p) {
 
   int import_constant = make_constant(p, OBJ_VAL(function));
   emit_byte_and_short(p, OP_CALL_IMPORT, import_constant);
-  emit_byte_and_short(p, OP_FINISH_MODULE, import_constant);
 }
 
 static void assert_statement(b_parser *p) {

@@ -5,6 +5,8 @@
 # @copyright 2021, Ore Richard Muyiwa
 #
 
+import _base64
+
 /**
  * encode(data: bytes)
  *

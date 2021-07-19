@@ -82,6 +82,7 @@ b_value pop_n(b_vm *vm, int n);
 b_value peek(b_vm *vm, int distance);
 
 void add_module(b_vm *vm, b_obj_module *module);
+void add_native_module(b_vm *vm, b_obj_module *module);
 
 bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name, int arg_count);
 bool is_false(b_value value);

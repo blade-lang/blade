@@ -6,103 +6,94 @@
 
 typedef b_module_reg (*b_module_func)(b_vm *);
 
-typedef struct {
-  const char *name;
-  b_module_func module_func;
-} b_module_registry;
-
-b_module_registry modules[] = {
-    {"os",     GET_MODULE_LOADER(os)},         //
-    {"io",     GET_MODULE_LOADER(io)},         //
-    {"base64", GET_MODULE_LOADER(base64)}, //
-    {"math",   GET_MODULE_LOADER(math)},     //
-    {"date",   GET_MODULE_LOADER(date)},     //
-    {"socket", GET_MODULE_LOADER(socket)},     //
-    {"hash", GET_MODULE_LOADER(hash)},     //
-    {NULL,     NULL},
+b_module_func modules[] = {
+    GET_MODULE_LOADER(os),         //
+    GET_MODULE_LOADER(io),         //
+    GET_MODULE_LOADER(base64), //
+    GET_MODULE_LOADER(math),     //
+    GET_MODULE_LOADER(date),     //
+    GET_MODULE_LOADER(socket),     //
+    GET_MODULE_LOADER(hash),     //
+    NULL,
 };
 
-void bind_native_modules(b_vm *vm, b_obj_module *the_module, b_obj_string *module_name,
-                         const char *module_path) {
+void bind_native_modules(b_vm *vm) {
 
-  if (is_core_library_file((char *) module_path, module_name->chars)) {
-    for (int i = 0; modules[i].name != NULL; i++) {
-      int _module_name_length = (int)strlen(modules[i].name);
-      if (_module_name_length == module_name->length &&
-        memcmp(modules[i].name, module_name->chars, _module_name_length) ==
-          0) {
-        b_module_reg module = modules[i].module_func(vm);
+  for (int i = 0; modules[i] != NULL; i++) {
+    b_module_reg module = modules[i](vm);
 
-        if (module.fields != NULL) {
-          for (int j = 0; module.fields[j].name != NULL; j++) {
-            b_field_reg field = module.fields[j];
-            b_value field_name =
-                OBJ_VAL(copy_string(vm, field.name, (int) strlen(field.name)));
+    b_obj_module *the_module = new_module(vm, strdup(module.name), "<native>");
 
-            table_set(vm, &the_module->values, field_name, field.field_value(vm));
-          }
-        }
+    if (module.fields != NULL) {
+      for (int j = 0; module.fields[j].name != NULL; j++) {
+        b_field_reg field = module.fields[j];
+        b_value field_name =
+            OBJ_VAL(copy_string(vm, field.name, (int) strlen(field.name)));
 
-        if (module.functions != NULL) {
-          for (int j = 0; module.functions[j].name != NULL; j++) {
-            b_func_reg func = module.functions[j];
-            b_value func_name =
-                OBJ_VAL(copy_string(vm, func.name, (int) strlen(func.name)));
+        table_set(vm, &the_module->values, field_name, field.field_value(vm));
+      }
+    }
 
-            b_value func_real_value =
-                OBJ_VAL(new_native(vm, func.function, func.name));
+    if (module.functions != NULL) {
+      for (int j = 0; module.functions[j].name != NULL; j++) {
+        b_func_reg func = module.functions[j];
+        b_value func_name =
+            OBJ_VAL(copy_string(vm, func.name, (int) strlen(func.name)));
 
-            table_set(vm, &the_module->values, func_name, func_real_value);
-          }
-        }
+        b_value func_real_value =
+            OBJ_VAL(new_native(vm, func.function, func.name));
 
-        if (module.classes != NULL) {
-          for (int j = 0; module.classes[j].name != NULL; j++) {
-            b_class_reg klass_reg = module.classes[j];
+        table_set(vm, &the_module->values, func_name, func_real_value);
+      }
+    }
 
-            b_value class_key = OBJ_VAL(
-                copy_string(vm, klass_reg.name, (int) strlen(klass_reg.name)));
+    if (module.classes != NULL) {
+      for (int j = 0; module.classes[j].name != NULL; j++) {
+        b_class_reg klass_reg = module.classes[j];
 
-            b_value class_value;
-            if (table_get(&the_module->values, class_key, &class_value)) {
-              b_obj_class *klass = AS_CLASS(class_value);
+        b_value class_key = OBJ_VAL(
+            copy_string(vm, klass_reg.name, (int) strlen(klass_reg.name)));
 
-              if (klass_reg.functions != NULL) {
-                for (int k = 0; klass_reg.functions[k].name != NULL; k++) {
+        b_value class_value;
+        if (table_get(&the_module->values, class_key, &class_value)) {
+          b_obj_class *klass = AS_CLASS(class_value);
 
-                  b_func_reg func = klass_reg.functions[k];
+          if (klass_reg.functions != NULL) {
+            for (int k = 0; klass_reg.functions[k].name != NULL; k++) {
 
-                  b_value func_name = OBJ_VAL(
-                      copy_string(vm, func.name, (int) strlen(func.name)));
+              b_func_reg func = klass_reg.functions[k];
 
-                  b_obj_native *native = new_native(vm, func.function, func.name);
+              b_value func_name = OBJ_VAL(
+                  copy_string(vm, func.name, (int) strlen(func.name)));
 
-                  if(func.is_static) {
-                    native->type = TYPE_STATIC;
-                  } else if(strlen(func.name) > 0 && func.name[0] == '_') {
-                    native->type = TYPE_PRIVATE;
-                  }
+              b_obj_native *native = new_native(vm, func.function, func.name);
 
-                  table_set(vm, &klass->methods, func_name, OBJ_VAL(native));
-                }
+              if(func.is_static) {
+                native->type = TYPE_STATIC;
+              } else if(strlen(func.name) > 0 && func.name[0] == '_') {
+                native->type = TYPE_PRIVATE;
               }
 
-              if (klass_reg.fields != NULL) {
-                for (int k = 0; klass_reg.fields[k].name != NULL; k++) {
-                  b_field_reg field = klass_reg.fields[k];
-                  b_value field_name = OBJ_VAL(
-                      copy_string(vm, field.name, (int) strlen(field.name)));
+              table_set(vm, &klass->methods, func_name, OBJ_VAL(native));
+            }
+          }
 
-                  table_set(vm,
-                            field.is_static ? &klass->static_properties
-                                            : &klass->properties,
-                            field_name, field.field_value(vm));
-                }
-              }
+          if (klass_reg.fields != NULL) {
+            for (int k = 0; klass_reg.fields[k].name != NULL; k++) {
+              b_field_reg field = klass_reg.fields[k];
+              b_value field_name = OBJ_VAL(
+                  copy_string(vm, field.name, (int) strlen(field.name)));
+
+              table_set(vm,
+                        field.is_static ? &klass->static_properties
+                                        : &klass->properties,
+                        field_name, field.field_value(vm));
             }
           }
         }
       }
     }
+
+    add_native_module(vm, the_module);
   }
 }

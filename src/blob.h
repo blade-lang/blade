@@ -76,7 +76,7 @@ typedef enum {
   OP_SET_INDEX,
 
   OP_CALL_IMPORT,
-  OP_FINISH_MODULE,
+  OP_NATIVE_MODULE,
 
   OP_TRY,
   OP_POP_TRY,

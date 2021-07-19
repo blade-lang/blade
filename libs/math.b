@@ -5,6 +5,8 @@
 # @copyright 2021, Ore Richard Muyiwa
 #
 
+import _math
+
 /**
  * PI
  *
@@ -114,7 +116,9 @@ def factorial(n) {
  * represents the sine of the angle given in radians
  * @return number
  */
-def sin(n) {}
+def sin(n) {
+  return _math.sin(n)
+}
 
 /**
  * cos(n: number)
@@ -123,7 +127,9 @@ def sin(n) {}
  * represents the cosine of the angle
  * @return number
  */
-def cos(n) {}
+def cos(n) {
+  return _math.cos(n)
+}
 
 /**
  * tan(n: number)
@@ -132,7 +138,9 @@ def cos(n) {}
  * of the angle given
  * @return number
  */
-def tan(n) {}
+def tan(n) {
+  return _math.tan(n)
+}
 
 /**
  * sinh(n: number)
@@ -140,7 +148,9 @@ def tan(n) {}
  * returns the hyperbolic sine (in radians) of number n
  * @return number
  */
-def sinh(n) {}
+def sinh(n) {
+  return _math.sinh(n)
+}
 
 /**
  * cosh(n: number)
@@ -148,7 +158,9 @@ def sinh(n) {}
  * returns the hyperbolic cosine (in radians) of number n
  * @return number
  */
-def cosh(n) {}
+def cosh(n) {
+  return _math.cosh(n)
+}
 
 /**
  * tanh(n: number)
@@ -156,7 +168,9 @@ def cosh(n) {}
  * returns the hyperbolic tangent (in radians) of number n
  * @return number
  */
-def tanh(n) {}
+def tanh(n) {
+  return _math.tanh(n)
+}
 
 /**
  * returns a numeric value between -(π/2) and π/2 radians 
@@ -164,7 +178,9 @@ def tanh(n) {}
  * If the value of x is outside this range, it returns NaN
  * @return number
  */
-def asin(n) {}
+def asin(n) {
+  return _math.asin(n)
+}
 
 /**
  * acos(n: number)
@@ -174,13 +190,17 @@ def asin(n) {}
  * If the value of x is outside this range, it returns NaN
  * @return number
  */
-def acos(n) {}
+def acos(n) {
+  return _math.acos(n)
+}
 
 /**
  * returns a numeric value between -(π/2) and π/2 radians.
  * @return number
  */
-def atan(n) {}
+def atan(n) {
+  return _math.atan(n)
+}
 
 /**
  * atan2(n: number)
@@ -193,7 +213,9 @@ def atan(n) {}
  * first and the x-coordinate second
  * @return number
  */
-def atan2(x, y) {}
+def atan2(x, y) {
+  return _math.atan2(x, y)
+}
 
 /**
  * asinh(n: number)
@@ -201,7 +223,9 @@ def atan2(x, y) {}
  * returns the hyperbolic arcsine (in radians) of number n
  * @return number
  */
-def asinh(n) {}
+def asinh(n) {
+  return _math.asinh(n)
+}
 
 /**
  * acosh(n: number)
@@ -209,7 +233,9 @@ def asinh(n) {}
  * returns the hyperbolic arccosine (in radians) of number n
  * @return number
  */
-def acosh(n) {}
+def acosh(n) {
+  return _math.acosh(n)
+}
 
 /**
  * atanh(n: number)
@@ -217,7 +243,9 @@ def acosh(n) {}
  * returns the hyperbolic arctangent (in radians) of number n
  * @return number
  */
-def atanh(n) {}
+def atanh(n) {
+  return _math.atanh(n)
+}
 
 /**
  * exp(n: number)
@@ -227,7 +255,9 @@ def atanh(n) {}
  * natural logarithms
  * @return number
  */
-def exp(n) {}
+def exp(n) {
+  return _math.exp(n)
+}
 
 /**
  * expm1(n: number)
@@ -236,7 +266,9 @@ def exp(n) {}
  * the natural logarithms
  * @return number
  */
-def expm1(n) {}
+def expm1(n) {
+  return _math.expm1(n)
+}
 
 /**
  * ceil(n: number)
@@ -244,7 +276,9 @@ def expm1(n) {}
  * returns number n rounded up to the next largest integer
  * @return number
  */
-def ceil(n) {}
+def ceil(n) {
+  return _math.ceil(n)
+}
 
 /**
  * round(n: number)
@@ -252,7 +286,9 @@ def ceil(n) {}
  * returns the value of a number rounded to the nearest integer
  * @return number
  */
-def round(n) {}
+def round(n) {
+  return _math.round(n)
+}
 
 /**
  * log(n: number)
@@ -263,7 +299,9 @@ def round(n) {}
  * - If the value of x is negative, the return value is always NaN
  * @return number
  */
-def log(n) {}
+def log(n) {
+  return _math.log(n)
+}
 
 /**
  * log2(n: number)
@@ -272,7 +310,9 @@ def log(n) {}
  * If the number is negative, NaN is returned
  * @return number
  */
-def log2(n) {}
+def log2(n) {
+  return _math.log2(n)
+}
 
 /**
  * log10(n: number)
@@ -281,7 +321,9 @@ def log2(n) {}
  * If the number is negative, NaN is returned
  * @return number
  */
-def log10(n) {}
+def log10(n) {
+  return _math.log10(n)
+}
 
 /**
  * log1p(n: number)
@@ -306,7 +348,9 @@ def log10(n) {}
  * If the value of x is less than -1, the return value is always NaN.
  * @return number
  */
-def log1p(n) {}
+def log1p(n) {
+  return _math.log1p(n)
+}
 
 /**
  * cbrt(n: number)
@@ -347,7 +391,9 @@ def sign(n) {
  * equal to the specified number
  * @return number
  */
-def floor(n) {}
+def floor(n) {
+  return _math.floor(n)
+}
 
 /**
  * is_nan(n: number)

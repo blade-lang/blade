@@ -208,7 +208,7 @@ DECLARE_MODULE_METHOD(socket__accept) {
 
   b_obj_list *response = new_list(vm);
   write_list(vm, response, NUMBER_VAL(new_sock));
-  write_list(vm, response, OBJ_VAL(take_string(vm, ip, (int)strlen(ip))));
+  write_list(vm, response, OBJ_VAL(copy_string(vm, ip, (int)strlen(ip))));
   write_list(vm, response, NUMBER_VAL(port));
 
   RETURN_OBJ(response);
@@ -251,7 +251,7 @@ DECLARE_MODULE_METHOD(socket__recv) {
   int flags = AS_NUMBER(args[2]);
 
   struct timeval timeout;
-  int option_length = 0;
+  int option_length = sizeof(timeout);
 
 #ifndef _WIN32
   int rc = getsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, (socklen_t*)&option_length);
@@ -259,7 +259,7 @@ DECLARE_MODULE_METHOD(socket__recv) {
   int rc = getsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, (socklen_t*)&option_length);
 #endif // !_WIN32
 
-  if(rc != 0 || option_length != sizeof timeout || (timeout.tv_sec == 0 && timeout.tv_usec == 0)) {
+  if(rc != 0 || sizeof(timeout) != option_length || (timeout.tv_sec == 0 && timeout.tv_usec == 0)) {
     // set default timeout to 5 minutes
     timeout.tv_sec = 300;
     timeout.tv_usec = 0;
@@ -274,7 +274,8 @@ DECLARE_MODULE_METHOD(socket__recv) {
     FD_SET(sock, &read_set);//tcp socket
   }
 
-  if(select(sock + 1, &read_set, NULL, NULL, &timeout)) {
+  int status;
+  if((status = select(sock + 1, &read_set, NULL, NULL, &timeout)) > 0) {
     int content_length;
     ioctl(sock, FIONREAD, &content_length);
 
@@ -288,11 +289,11 @@ DECLARE_MODULE_METHOD(socket__recv) {
 
       RETURN_T_STRING(response, total_length);
     }
-  } else {
+  } else if(status == 0) {
     errno = ETIMEDOUT;
-    RETURN_NUMBER(-1);
   }
-  RETURN;
+
+  RETURN_NUMBER(-1);
 }
 
 DECLARE_MODULE_METHOD(socket__setsockopt) {
@@ -317,7 +318,7 @@ DECLARE_MODULE_METHOD(socket__setsockopt) {
       struct timeval tv = {(long)(milliseconds /  1000),
                            (int)((milliseconds % 1000) * 1000)};
 
-      RETURN_NUMBER(setsockopt(sock, SOL_SOCKET, option, (const char*)&tv, sizeof tv));
+      RETURN_NUMBER(setsockopt(sock, SOL_SOCKET, option, &tv, sizeof(tv)));
 #endif
     }
     default: {
@@ -486,49 +487,44 @@ DECLARE_MODULE_METHOD(socket__getaddrinfo) {
 }
 
 DECLARE_MODULE_METHOD(socket__close) {
-  ENFORCE_ARG_COUNT(_error, 1);
-  ENFORCE_ARG_TYPE(_error, 0, IS_NUMBER);
+  ENFORCE_ARG_COUNT(_close, 1);
+  ENFORCE_ARG_TYPE(_close, 0, IS_NUMBER);
+#ifndef _WIN32
+  int result = close((int)AS_NUMBER(args[0]));
+#else
   int result = closesocket((int)AS_NUMBER(args[0]));
+#endif
   RETURN_NUMBER(result);
 }
 
 DECLARE_MODULE_METHOD(socket__shutdown) {
-  ENFORCE_ARG_COUNT(_error, 2);
-  ENFORCE_ARG_TYPE(_error, 0, IS_NUMBER);
-  ENFORCE_ARG_TYPE(_error, 0, IS_NUMBER);
+  ENFORCE_ARG_COUNT(_shutdown, 2);
+  ENFORCE_ARG_TYPE(_shutdown, 0, IS_NUMBER);
+  ENFORCE_ARG_TYPE(_shutdown, 0, IS_NUMBER);
   RETURN_NUMBER(shutdown((int) AS_NUMBER(args[0]), (int) AS_NUMBER(args[1])));
 }
 
 CREATE_MODULE_LOADER(socket) {
 
-  static b_func_reg http_class_functions[] = {
-      {"_create", false, GET_MODULE_METHOD(socket__create)},
-      {"_connect", false, GET_MODULE_METHOD(socket__connect)},
-      {"_send", false, GET_MODULE_METHOD(socket__send)},
-      {"_recv", false, GET_MODULE_METHOD(socket__recv)},
-      {"_setsockopt", false, GET_MODULE_METHOD(socket__setsockopt)},
-      {"_getsockopt", false, GET_MODULE_METHOD(socket__getsockopt)},
-      {"_bind", false, GET_MODULE_METHOD(socket__bind)},
-      {"_listen", false, GET_MODULE_METHOD(socket__listen)},
-      {"_accept", false, GET_MODULE_METHOD(socket__accept)},
-      {"_error", false, GET_MODULE_METHOD(socket__error)},
-      {"_close", false, GET_MODULE_METHOD(socket__close)},
-      {"_shutdown", false, GET_MODULE_METHOD(socket__shutdown)},
-      {"_getsockinfo", false, GET_MODULE_METHOD(socket__getsockinfo)},
-      {"_getaddrinfo", false, GET_MODULE_METHOD(socket__getaddrinfo)},
+  static b_func_reg module_functions[] = {
+      {"create", false, GET_MODULE_METHOD(socket__create)},
+      {"connect", false, GET_MODULE_METHOD(socket__connect)},
+      {"send", false, GET_MODULE_METHOD(socket__send)},
+      {"recv", false, GET_MODULE_METHOD(socket__recv)},
+      {"setsockopt", false, GET_MODULE_METHOD(socket__setsockopt)},
+      {"getsockopt", false, GET_MODULE_METHOD(socket__getsockopt)},
+      {"bind", false, GET_MODULE_METHOD(socket__bind)},
+      {"listen", false, GET_MODULE_METHOD(socket__listen)},
+      {"accept", false, GET_MODULE_METHOD(socket__accept)},
+      {"error", false, GET_MODULE_METHOD(socket__error)},
+      {"close", false, GET_MODULE_METHOD(socket__close)},
+      {"shutdown", false, GET_MODULE_METHOD(socket__shutdown)},
+      {"getsockinfo", false, GET_MODULE_METHOD(socket__getsockinfo)},
+      {"getaddrinfo", false, GET_MODULE_METHOD(socket__getaddrinfo)},
       {NULL, false, NULL},
   };
 
-  static b_field_reg http_class_fields[] = {
-      {NULL, false, NULL},
-  };
-
-  static b_class_reg classes[] = {
-      {"Socket", http_class_fields, http_class_functions},
-      {NULL, NULL, NULL},
-  };
-
-  static b_module_reg module = {NULL,NULL, classes};
+  static b_module_reg module = {"_socket", NULL,module_functions, NULL};
 
   // @TODO: WSACleanup() on module cleanup function when implemented.
 

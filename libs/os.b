@@ -5,20 +5,13 @@
 # @copyright 2021, Ore Richard Muyiwa
 # 
 
+import _os
+
 
 /**
  * stores the name of the current platform in string
  */
-var platform
-
-
-/**
- * platform()
- *
- * returns the name of the current platform/OS
- * @return string
- */
-def platform(){}
+var platform = _os.platform
 
 
 /**
@@ -27,7 +20,9 @@ def platform(){}
  * exec executes the given shell commands
  * @return string
  */
-def exec(cmd){}
+def exec(cmd){
+  return _os.exec(cmd)
+}
 
 /**
  * info()
@@ -35,7 +30,9 @@ def exec(cmd){}
  * returns information about the current os
  * @return dict
  */
-def info(){}
+def info(){
+  return _os.info()
+}
 
 /**
  * sleep(duration: number)
@@ -43,7 +40,9 @@ def info(){}
  * causes the current thread to sleep for the specified number of seconds
  * @return nil
  */
-def sleep(duration){}
+def sleep(duration){
+  return _os.sleep(duration)
+}
 
 /**
  * getenv(name: string)
@@ -51,7 +50,9 @@ def sleep(duration){}
  * returns the given environment variable if exists or nil otherwise
  * @return string
  */
-def getenv(name){}
+def getenv(name){
+  return _os.getenv(name)
+}
 
 /**
  * setenv(name: string, value: string, overwrite: bool = true)
@@ -62,5 +63,7 @@ def getenv(name){}
  * exists before.
  * @return string
  */
-def setenv(name, value, overwrite){}
+def setenv(name, value, overwrite){
+  return _os.setenv(name, value, overwrite)
+}
 

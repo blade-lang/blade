@@ -26,6 +26,7 @@ typedef struct {
 } b_class_reg;
 
 typedef struct {
+  const char* name;
   b_field_reg *fields;
   b_func_reg *functions;
   b_class_reg *classes;
@@ -35,7 +36,6 @@ typedef struct {
   b_module_reg blade_module_loader_##module(b_vm *vm)
 #define GET_MODULE_LOADER(module) &blade_module_loader_##module
 
-void bind_native_modules(b_vm *vm, b_obj_module *the_module, b_obj_string *module_name,
-                         const char *module_path);
+void bind_native_modules(b_vm *vm);
 
 #endif

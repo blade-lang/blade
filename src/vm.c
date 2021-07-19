@@ -464,6 +464,9 @@ void init_vm(b_vm *vm) {
   init_builtin_functions(vm);
   init_builtin_methods(vm);
   initialize_exceptions(vm);
+
+  // always do this last so that we can have access to everything else
+  bind_native_modules(vm);
 }
 
 void free_vm(b_vm *vm) {
@@ -486,6 +489,13 @@ void add_module(b_vm *vm, b_obj_module *module) {
             OBJ_VAL(module)
   );
   table_set(vm, &vm->globals,
+            OBJ_VAL(copy_string(vm, module->name, (int)strlen(module->name))),
+            OBJ_VAL(module)
+  );
+}
+
+void add_native_module(b_vm *vm, b_obj_module *module) {
+  table_set(vm, &vm->modules,
             OBJ_VAL(copy_string(vm, module->name, (int)strlen(module->name))),
             OBJ_VAL(module)
   );
@@ -2107,10 +2117,14 @@ b_ptr_result run(b_vm *vm) {
       break;
     }
 
-    case OP_FINISH_MODULE: {
-      b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
-      // if it is a native module, attach c codes to cask methods
-      bind_native_modules(vm, function->module, function->name, function->module->file);
+    case OP_NATIVE_MODULE: {
+      b_obj_string *module_name = READ_STRING();
+      b_value value;
+      if(table_get(&vm->modules, OBJ_VAL(module_name), &value)) {
+        table_set(vm, &vm->globals, OBJ_VAL(module_name), value);
+        break;
+      }
+      runtime_error("module '%s' not found", module_name->chars);
       break;
     }
 

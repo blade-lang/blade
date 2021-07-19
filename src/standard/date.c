@@ -168,7 +168,7 @@ CREATE_MODULE_LOADER(date) {
       {NULL,   NULL, NULL},
   };
 
-  static b_module_reg module = {NULL, NULL, klasses};
+  static b_module_reg module = {"_date", NULL, NULL, klasses};
 
   return module;
 }

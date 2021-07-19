@@ -8,6 +8,8 @@
  * @copyright 2021, Ore Richard Muyiwa
  */
 
+import _date
+
 /*
  * Blade's implementation of date
  * 
