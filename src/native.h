@@ -119,7 +119,7 @@
     if (IS_INSTANCE(args[0])) {                                                \
       b_obj_instance *instance = AS_INSTANCE(args[0]);                         \
       if (invoke_from_class(vm, instance->klass,                               \
-                            copy_string(vm, #override, i), 0)) {               \
+                            copy_string(vm, "@" #override, (i) + 1), 0)) {               \
         args[-1] = TRUE_VAL;                                                   \
         return false; \
       }                                                                        \

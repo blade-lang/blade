@@ -5,7 +5,6 @@
  * @copyright 2021, Ore Richard Muyiwa
  */
 
-import _http
 import url
 import socket
 
