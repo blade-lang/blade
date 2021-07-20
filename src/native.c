@@ -96,21 +96,6 @@ DECLARE_NATIVE(id) {
 }
 
 /**
- * hash(value: any)
- *
- * returns the hash of a value as used in a dictionary underlying
- * implementation.
- *
- * a class may override the result of this function by implementing the
- * __hash__() method
- */
-DECLARE_NATIVE(hash) {
-  ENFORCE_ARG_COUNT(hash, 1);
-  METHOD_OVERRIDE(__hash__, 8);
-  RETURN_NUMBER((double)hash_value(args[0]));
-}
-
-/**
  * hasprop(object: instance, name: string)
  *
  * returns true if object has the property name or not

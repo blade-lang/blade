@@ -216,7 +216,7 @@ class HttpClient {
         var start = time()
 
         # connect to the url host on the specified port and send the request message
-        client.connect(host, port, self.connect_timeout)
+        client.connect(host, port ? port : 80, self.connect_timeout)
         client.send(message)
 
         # receive the response...

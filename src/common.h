@@ -72,10 +72,6 @@
 
 #define DEFAULT_GC_START (1024 * 1024)
 
-#define BLADE_EXTENSION ".b"
-#define BLADE_VERSION_STRING "0.0.5"
-#define BVM_VERSION "0.0.5"
-
 
 #define EXIT_COMPILE 10
 #define EXIT_RUNTIME 10

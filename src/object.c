@@ -32,7 +32,7 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   return object;
 }
 
-b_obj_module *new_module(b_vm *vm, char *name, const char *file) {
+b_obj_module *new_module(b_vm *vm, char *name, char *file) {
   b_obj_module *module = ALLOCATE_OBJ(b_obj_module, OBJ_MODULE);
   init_table(&module->values);
   module->name = name;
@@ -278,8 +278,7 @@ void print_object(b_value value, bool fix_string) {
       break;
     }
     case OBJ_MODULE: {
-      printf("<module %s at %p>", AS_MODULE(value)->name,
-             (void *) AS_MODULE(value));
+      printf("<module %s at %s>", AS_MODULE(value)->name, AS_MODULE(value)->file);
       break;
     }
     case OBJ_CLASS: {

@@ -13,14 +13,16 @@ import _base64
  * Encodes a bytes into a base64 string
  * @return string
  */
-def encode(data) {}
+def encode(data) {
+  return _base64.encode(data)
+}
 
-# 
-# @return bytes
 /**
  * decode(data: string)
  *
  * Decodes a base64 string into it's corresponding bytes
- * @return string
+ * @return bytes
  */
-def decode(data) {}
+def decode(data) {
+  return _base64.decode(data)
+}

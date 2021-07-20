@@ -1,7 +1,7 @@
 #
 # @module convert
 #
-# Blade's data conversion library
+# provides extra data conversion features
 # @copyright 2021, Ore Richard Muyiwa
 #
 

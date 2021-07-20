@@ -22,7 +22,7 @@ void bind_native_modules(b_vm *vm) {
   for (int i = 0; modules[i] != NULL; i++) {
     b_module_reg module = modules[i](vm);
 
-    b_obj_module *the_module = new_module(vm, strdup(module.name), "<native>");
+    b_obj_module *the_module = new_module(vm, strdup(module.name), strdup("<__native__>"));
 
     if (module.fields != NULL) {
       for (int j = 0; module.fields[j].name != NULL; j++) {

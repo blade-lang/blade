@@ -385,10 +385,20 @@ DECLARE_MODULE_METHOD(hash__gost) {
   RETURN_TT_STRING(result);
 }
 
+
+
+
+DECLARE_MODULE_METHOD(hash__hash) {
+  ENFORCE_ARG_COUNT(hash, 1);
+  METHOD_OVERRIDE(hash, 4);
+  RETURN_NUMBER((double)hash_value(args[0]));
+}
+
 CREATE_MODULE_LOADER(hash) {
   static b_func_reg module_functions[] = {
-      {"_adler32", true, GET_MODULE_METHOD(hash__adler32)},
-      {"_crc32", true, GET_MODULE_METHOD(hash__crc32)},
+      {"hash", true, GET_MODULE_METHOD(hash__hash)},
+      {"adler32", true, GET_MODULE_METHOD(hash__adler32)},
+      {"crc32", true, GET_MODULE_METHOD(hash__crc32)},
       {"md2", true, GET_MODULE_METHOD(hash__md2)},
       {"md4", true, GET_MODULE_METHOD(hash__md4)},
       {"md5", true, GET_MODULE_METHOD(hash__md5)},
@@ -404,7 +414,7 @@ CREATE_MODULE_LOADER(hash) {
       {"fnv1a_64", true, GET_MODULE_METHOD(hash__fnv1a_64)},
       {"whirlpool", true, GET_MODULE_METHOD(hash__whirlpool)},
       {"snefru", true, GET_MODULE_METHOD(hash__snefru)},
-      {"_siphash", true, GET_MODULE_METHOD(hash__siphash)},
+      {"siphash", true, GET_MODULE_METHOD(hash__siphash)},
       {"gost", true, GET_MODULE_METHOD(hash__gost)},
       {NULL,      false, NULL},
   };

@@ -252,7 +252,6 @@ static void init_builtin_functions(b_vm *vm) {
   DEFINE_NATIVE(delprop);
   DEFINE_NATIVE(file);
   DEFINE_NATIVE(getprop);
-  DEFINE_NATIVE(hash);
   DEFINE_NATIVE(hasprop);
   DEFINE_NATIVE(hex);
   DEFINE_NATIVE(id);
@@ -471,7 +470,7 @@ void init_vm(b_vm *vm) {
 
 void free_vm(b_vm *vm) {
   // @TODO: Fix free_objects() bug.
-//  free_objects(vm);
+  free_objects(vm);
   free_table(vm, &vm->strings);
   free_table(vm, &vm->globals);
   free_table(vm, &vm->modules);

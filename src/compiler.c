@@ -1981,6 +1981,13 @@ static void import_statement(b_parser *p) {
     part_count++;
   } while(match(p, DOT_TOKEN));
 
+  if(match(p, AS_TOKEN)) {
+    consume(p, IDENTIFIER_TOKEN, "module name expected");
+    free(module_name);
+    module_name = (char*)calloc(p->previous.length + 1, sizeof(char));
+    memcpy(module_name, p->previous.start, p->previous.length);
+  }
+
   char *module_path = resolve_import_path(module_file, p->module->file);
   if (module_path == NULL) {
     error(p, "module not found");

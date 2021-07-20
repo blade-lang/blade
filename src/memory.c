@@ -176,6 +176,8 @@ static void free_object(b_vm *vm, b_obj *object) {
     case OBJ_MODULE: {
       b_obj_module *module = (b_obj_module*)object;
       free_table(vm, &module->values);
+      free(module->name);
+      free(module->file);
       FREE(b_obj_module, object);
       break;
     }

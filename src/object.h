@@ -106,7 +106,7 @@ typedef struct b_obj_up_value {
 typedef struct {
   b_obj obj;
   char *name;
-  const char *file;
+  char *file;
   b_table values;
 } b_obj_module;
 
@@ -190,7 +190,7 @@ typedef struct {
 } b_obj_switch;
 
 // non-user objects...
-b_obj_module *new_module(b_vm *vm, char *name, const char *file);
+b_obj_module *new_module(b_vm *vm, char *name, char *file);
 b_obj_switch *new_switch(b_vm *vm);
 
 // data containers

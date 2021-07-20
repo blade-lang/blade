@@ -175,6 +175,20 @@ char *resolve_import_path(char *module_name, const char *current_file) {
     }
   }
 
+  char *relative_index_file = merge_paths(merge_paths(file_directory, module_name),
+                                          get_blade_filename(LIBRARY_DIRECTORY_INDEX));
+
+  if (file_exists(relative_index_file)) {
+    // stop a user module from importing itself
+    char *path1 = realpath(relative_index_file, NULL);
+    char *path2 = realpath(current_file, NULL);
+
+    if (path1 != NULL) {
+      if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
+        return relative_index_file;
+    }
+  }
+
   // check in blade's default location
   char *blade_directory = merge_paths(get_exe_dir(), LIBRARY_DIRECTORY);
   char *library_file = merge_paths(blade_directory, blade_file_name);
@@ -187,6 +201,21 @@ char *resolve_import_path(char *module_name, const char *current_file) {
     if (path1 != NULL) {
       if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
         return library_file;
+    }
+  }
+
+
+  char *library_index_file = merge_paths(merge_paths(blade_directory, module_name),
+                                          get_blade_filename(LIBRARY_DIRECTORY_INDEX));
+
+  if (file_exists(library_index_file)) {
+    // stop a core library from importing itself
+    char *path1 = realpath(library_index_file, NULL);
+    char *path2 = realpath(current_file, NULL);
+
+    if (path1 != NULL) {
+      if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
+        return library_index_file;
     }
   }
 

@@ -809,10 +809,10 @@ CREATE_MODULE_LOADER(io) {
   };
 
   static b_func_reg tty_class_functions[] = {
-      {"_tcgetattr", false, GET_MODULE_METHOD(io_tty__tcgetattr)},
-      {"_tcsetattr", false, GET_MODULE_METHOD(io_tty__tcsetattr)},
-      {"_flush",     false, GET_MODULE_METHOD(io_tty__flush)},
-      {"_exit_raw",     false, GET_MODULE_METHOD(io_tty__exit_raw)},
+      {"tcgetattr", false, GET_MODULE_METHOD(io_tty__tcgetattr)},
+      {"tcsetattr", false, GET_MODULE_METHOD(io_tty__tcsetattr)},
+      {"flush",     false, GET_MODULE_METHOD(io_tty__flush)},
+      {"exit_raw",     false, GET_MODULE_METHOD(io_tty__exit_raw)},
       {NULL,         false, NULL},
   };
 

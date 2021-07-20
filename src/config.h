@@ -1,6 +1,12 @@
 #ifndef BLADE_CONFIG_H
 #define BLADE_CONFIG_H
 
+#define BLADE_EXTENSION ".b"
+#define BLADE_VERSION_STRING "0.0.5"
+#define BVM_VERSION "0.0.5"
+#define LIBRARY_DIRECTORY "libs"
+#define LIBRARY_DIRECTORY_INDEX "index"
+
 // global debug mode flag
 #define DEBUG_MODE 0
 
@@ -20,7 +26,5 @@
 #define USE_NAN_BOXING 1
 #define PCRE2_STATIC
 #define PCRE2_CODE_UNIT_WIDTH 8
-
-#define LIBRARY_DIRECTORY "libs"
 
 #endif

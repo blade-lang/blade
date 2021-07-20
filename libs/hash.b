@@ -9,14 +9,29 @@ import _hash
 import convert
 
 /**
+ * hash(value: any)
+ *
+ * returns the hash of a value as used in a dictionary underlying
+ * implementation.
+ *
+ * a class may override the result of this function by implementing the
+ * @hash() method
+ * @return number
+ */
+def hash(value) {
+  return _hash.hash(value)
+}
+
+/**
  * adler32(str: string | bytes, [value: number])
  * returns the adler32 value of the given string or bytes
  *
  * if value is given, it is used as the base value of the adler32
  * computation. Else, 1 is used.
+ * @return number
  */
 def adler32(str, value) {
-  return _adler32(str, value)
+  return _hash.adler32(str, value)
 }
 
 /**
@@ -25,104 +40,167 @@ def adler32(str, value) {
  *
  * if value is given, it is used as the base value of the crc32
  * computation. Else, 0 is used.
+ * @return number
  */
 def crc32(str, value) {
-  return _crc32(str, value)
+  return _hash.crc32(str, value)
 }
 
 /**
  * md2(str: string | bytes)
+ * 
  * returns the md2 hash of the given string or bytes
+ * @return string
  */
-def md2(str) {}
+def md2(str) {
+  return _hash.md2(str)
+}
 
 /**
  * md4(str: string | bytes)
+ * 
  * returns the md4 hash of the given string or bytes
+ * @return string
  */
-def md4(str) {}
+def md4(str) {
+  return _hash.md4(str)
+}
 
 /**
  * md5(str: string | bytes)
+ * 
  * returns the md5 hash of the given string or bytes
+ * @return string
  */
-def md5(str) {}
+def md5(str) {
+  return _hash.md5(str)
+}
 
 /**
  * md5_file(str: file)
+ * 
  * returns the md5 hash of the given file
+ * @return string
  */
-def md5_file(file) {}
+def md5_file(file) {
+  return _hash.md5_file(file)
+}
 
 /**
  * sha1(str: string | bytes)
+ * 
  * returns the sha1 hash of the given string or bytes
+ * @return string
  */
-def sha1(str) {}
+def sha1(str) {
+  return _hash.sha1(str)
+}
 
 /**
  * sha224(str: string | bytes)
+ * 
  * returns the sha224 hash of the given string or bytes
+ * @return string
  */
-def sha224(str) {}
+def sha224(str) {
+  return _hash.sha224(str)
+}
 
 /**
  * sha256(str: string | bytes)
+ * 
  * returns the sha256 hash of the given string or bytes
+ * @return string
  */
-def sha256(str) {}
+def sha256(str) {
+  return _hash.sha256(str)
+}
 
 /**
  * sha384(str: string | bytes)
+ * 
  * returns the sha384 hash of the given string or bytes
+ * @return string
  */
-def sha384(str) {}
+def sha384(str) {
+  return _hash.sha384(str)
+}
 
 /**
  * sha512(str: string | bytes)
+ * 
  * returns the sha512 hash of the given string or bytes
+ * @return string
  */
-def sha512(str) {}
+def sha512(str) {
+  return _hash.sha512(str)
+}
 
 /**
  * fnv1(str: string | bytes)
+ * 
  * returns the 32 bit fnv1 hash of the given string or bytes
+ * @return string
  */
-def fnv1(str) {}
+def fnv1(str) {
+  return _hash.fnv1(str)
+}
 
 /**
  * fnv1_64(str: string | bytes)
+ * 
  * returns the 64 bit fnv1 hash of the given string or bytes
+ * @return string
  */
-def fnv1_64(str) {}
+def fnv1_64(str) {
+  return _hash.fnv1_64(str)
+}
 
 /**
  * fnv1a(str: string | bytes)
+ * 
  * returns the 32 bit fnv1a hash of the given string or bytes
+ * @return string
  */
-def fnv1a(str) {}
+def fnv1a(str) {
+  return _hash.fnv1a(str)
+}
 
 /**
  * fnv1a_64(str: string | bytes)
+ * 
  * returns the 64 bit fnv1a hash of the given string or bytes
+ * @return string
  */
-def fnv1a_64(str) {}
+def fnv1a_64(str) {
+  return _hash.fnv1a_64(str)
+}
 
 /**
  * whirlpool(str: string | bytes)
+ * 
  * returns the whirlpool hash of the given string or bytes
+ * @return string
  */
-def whirlpool(str) {}
+def whirlpool(str) {
+  return _hash.whirlpool(str)
+}
 
 /**
  * snefru(str: string | bytes)
+ * 
  * returns the snefru cyrptographic hash of the given string or bytes
+ * @return string
  */
-def snefru(str) {}
+def snefru(str) {
+  return _hash.snefru(str)
+}
 
 /**
  * siphash(key: string | bytes, str: string | bytes)
+ * 
  * returns the siphash cyrptographic hash of the given string or bytes
+ * @return string
  */
 def siphash(key, str) {
   if !is_string(key) and !is_bytes(key) {
@@ -141,33 +219,37 @@ def siphash(key, str) {
   if is_string(key) key = key.to_bytes()
   if is_string(str) str = str.to_bytes()
 
-  return _siphash(key, str)
+  return _hash.siphash(key, str)
 }
 
 /**
  * gost(str: string | bytes)
+ * 
  * returns the gost cyrptographic hash of the given string or bytes
+ * @return string
  */
-def gost(str) {}
+def gost(str) {
+  return _hash.gost(str)
+}
+
+/**
+ * list of allowed hash functions allowed for computing hmac hash
+ */
+var _hmac_allowed = [ 
+  _hash.md2, _hash.md4, _hash.md5, _hash.sha1, 
+  _hash.sha224, _hash.sha256, _hash.sha384, 
+  _hash.sha512, _hash.whirlpool, _hash.snefru, 
+  _hash.gost 
+]
 
 /**
  * hmac(method: function, key: string | bytes, str: string | bytes)
+ * 
  * computes an HMAC with the key and str using the given method
+ * @return string
  */
 def hmac(method, key, str) {
-  if ![
-        md2,
-        md4,
-        md5,
-        sha1,
-        sha224,
-        sha256,
-        sha384,
-        sha512,
-        whirlpool,
-        snefru,
-        gost
-      ].contains(method)
+  if !_hmac_allowed.contains(method)
     die Exception('invalid HMAC method')
 
   # convert key and str to array of bytes.
@@ -203,7 +285,9 @@ def hmac(method, key, str) {
 
 /**
  * hmac_md2(key: string | bytes, str: string | bytes)
+ * 
  * returns the HMAC-MD2 cyrptographic hash of the given string or bytes
+ * @return string
  */
 def hmac_md2(key, str) {
   return hmac(md2, key, str)
@@ -211,7 +295,9 @@ def hmac_md2(key, str) {
 
 /**
  * hmac_md4(key: string | bytes, str: string | bytes)
+ * 
  * returns the HMAC-MD4 cyrptographic hash of the given string or bytes
+ * @return string
  */
 def hmac_md4(key, str) {
   return hmac(md4, key, str)
@@ -219,7 +305,9 @@ def hmac_md4(key, str) {
 
 /**
  * hmac_md5(key: string | bytes, str: string | bytes)
+ * 
  * returns the HMAC-MD5 cyrptographic hash of the given string or bytes
+ * @return string
  */
 def hmac_md5(key, str) {
   return hmac(md5, key, str)
@@ -227,7 +315,9 @@ def hmac_md5(key, str) {
 
 /**
  * hmac_sha1(key: string | bytes, str: string | bytes)
+ * 
  * returns the HMAC-SHA1 cyrptographic hash of the given string or bytes
+ * @return string
  */
 def hmac_sha1(key, str) {
   return hmac(sha1, key, str)
@@ -235,7 +325,9 @@ def hmac_sha1(key, str) {
 
 /**
  * hmac_sha224(key: string | bytes, str: string | bytes)
+ * 
  * returns the HMAC-SHA224 cyrptographic hash of the given string or bytes
+ * @return string
  */
 def hmac_sha224(key, str) {
   return hmac(sha224, key, str)
@@ -243,7 +335,9 @@ def hmac_sha224(key, str) {
 
 /**
  * hmac_sha256(key: string | bytes, str: string | bytes)
+ * 
  * returns the HMAC-SHA256 cyrptographic hash of the given string or bytes
+ * @return string
  */
 def hmac_sha256(key, str) {
   return hmac(sha256, key, str)
@@ -251,7 +345,9 @@ def hmac_sha256(key, str) {
 
 /**
  * hmac_sha384(key: string | bytes, str: string | bytes)
+ * 
  * returns the HMAC-SHA384 cyrptographic hash of the given string or bytes
+ * @return string
  */
 def hmac_sha384(key, str) {
   return hmac(sha384, key, str)
@@ -259,7 +355,9 @@ def hmac_sha384(key, str) {
 
 /**
  * hmac_sha512(key: string | bytes, str: string | bytes)
+ * 
  * returns the HMAC-SHA512 cyrptographic hash of the given string or bytes
+ * @return string
  */
 def hmac_sha512(key, str) {
   return hmac(sha512, key, str)
@@ -267,7 +365,9 @@ def hmac_sha512(key, str) {
 
 /**
  * hmac_whirlpool(key: string | bytes, str: string | bytes)
+ * 
  * returns the HMAC-WHIRLPOOL cyrptographic hash of the given string or bytes
+ * @return string
  */
 def hmac_whirlpool(key, str) {
   return hmac(whirlpool, key, str)
@@ -275,7 +375,9 @@ def hmac_whirlpool(key, str) {
 
 /**
  * hmac_snefru(key: string | bytes, str: string | bytes)
+ * 
  * returns the HMAC-SNEFRU cyrptographic hash of the given string or bytes
+ * @return string
  */
 def hmac_snefru(key, str) {
   return hmac(snefru, key, str)
@@ -283,7 +385,9 @@ def hmac_snefru(key, str) {
 
 /**
  * hmac_gost(key: string | bytes, str: string | bytes)
+ * 
  * returns the HMAC-GOST cyrptographic hash of the given string or bytes
+ * @return string
  */
 def hmac_gost(key, str) {
   return hmac(gost, key, str)
