@@ -1943,18 +1943,21 @@ static void import_statement(b_parser *p) {
   char *module_name = NULL;
   char *module_file = NULL;
 
-  bool consume_name = true;
-  if(match(p, DOT_TOKEN)) {
-    advance(p); // take the next token as is an interpret name out of it
-    consume_name = false;
-  }
-
   int part_count = 0;
 
+  // allow for import starting with ..
+  if(match(p, RANGE_TOKEN)){}
+
   do {
-    if(consume_name) {
-      consume(p, IDENTIFIER_TOKEN, "module name expected");
+    if(p->previous.type == RANGE_TOKEN) {
+      if(module_file == NULL) {
+        module_file = strdup("../");
+      } else {
+        module_file = append_strings(module_file, "/../");
+      }
     }
+
+    consume(p, IDENTIFIER_TOKEN, "module name expected");
 
     char *name = (char*)calloc(p->previous.length + 1, sizeof(char));
     memcpy(name, p->previous.start, p->previous.length);
@@ -1974,12 +1977,14 @@ static void import_statement(b_parser *p) {
     if(module_file == NULL) {
       module_file = strdup(name);
     } else {
-      module_file = append_strings(module_file, "/");
+      if(module_file[strlen(module_file) - 1] != '/') {
+        module_file = append_strings(module_file, "/");
+      }
       module_file = append_strings(module_file, name);
     }
 
     part_count++;
-  } while(match(p, DOT_TOKEN));
+  } while(match(p, DOT_TOKEN) || match(p, RANGE_TOKEN));
 
   if(match(p, AS_TOKEN)) {
     consume(p, IDENTIFIER_TOKEN, "module name expected");
@@ -1989,6 +1994,7 @@ static void import_statement(b_parser *p) {
   }
 
   char *module_path = resolve_import_path(module_file, p->module->file);
+
   if (module_path == NULL) {
     error(p, "module not found");
     return;

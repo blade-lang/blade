@@ -2121,9 +2121,15 @@ b_ptr_result run(b_vm *vm) {
 
     case OP_CALL_IMPORT: {
       b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
-      add_module(vm, function->module);
-      call_function(vm, function, 0);
-      frame = &vm->frames[vm->frame_count - 1];
+      b_value dummy;
+      if(!table_get(&vm->modules, STRING_VAL(function->module->file), &dummy)) {
+        add_module(vm, function->module);
+        call_function(vm, function, 0);
+        frame = &vm->frames[vm->frame_count - 1];
+      } else {
+        // just duplicate it
+        table_set(vm, &get_frame_function(frame)->module->values, STRING_VAL(function->module->name), dummy);
+      }
       break;
     }
 
