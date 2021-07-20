@@ -469,7 +469,6 @@ void init_vm(b_vm *vm) {
 }
 
 void free_vm(b_vm *vm) {
-  // @TODO: Fix free_objects() bug.
   free_objects(vm);
   free_table(vm, &vm->strings);
   free_table(vm, &vm->globals);
@@ -1814,19 +1813,30 @@ b_ptr_result run(b_vm *vm) {
                       AS_INSTANCE(peek(vm, 0))->klass->name->chars, name->chars);
         break;
       } else if(IS_CLASS(peek(vm, 0))) {
-        if(table_get(&AS_CLASS(peek(vm, 0))->methods, OBJ_VAL(name), &value)) {
+        b_obj_class *klass = AS_CLASS(peek(vm, 0));
+        if(table_get(&klass->methods, OBJ_VAL(name), &value)) {
           if(get_method_type(value) == TYPE_STATIC) {
             pop(vm); // pop the class...
             push(vm, value);
             break;
           }
-        } else if(table_get(&AS_CLASS(peek(vm, 0))->static_properties, OBJ_VAL(name), &value)) {
+        } else if(table_get(&klass->static_properties, OBJ_VAL(name), &value)) {
           pop(vm); // pop the class...
           push(vm, value);
           break;
         }
         runtime_error("class %s does not have a static property or method named '%s'",
-                      AS_CLASS(peek(vm, 0))->name->chars, name->chars);
+                      klass->name->chars, name->chars);
+        break;
+      } else if(IS_MODULE(peek(vm, 0))) {
+        b_obj_module *module = AS_MODULE(peek(vm, 0));
+        if(table_get(&module->values, OBJ_VAL(name), &value)) {
+          pop(vm); // pop the class...
+          push(vm, value);
+          break;
+        }
+
+        runtime_error("module %s does not define '%s'", module->name, name->chars);
         break;
       }
 

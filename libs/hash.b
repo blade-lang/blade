@@ -236,10 +236,10 @@ def gost(str) {
  * list of allowed hash functions allowed for computing hmac hash
  */
 var _hmac_allowed = [ 
-  _hash.md2, _hash.md4, _hash.md5, _hash.sha1, 
-  _hash.sha224, _hash.sha256, _hash.sha384, 
-  _hash.sha512, _hash.whirlpool, _hash.snefru, 
-  _hash.gost 
+  md2, md4, md5, sha1, 
+  sha224, sha256, sha384, 
+  sha512, whirlpool, snefru, 
+  gost 
 ]
 
 /**

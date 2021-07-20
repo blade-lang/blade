@@ -110,7 +110,7 @@ class TTY {
    * The returned a attributes is a dict containing the TTY_ flags 
    */
   get_attr() {
-    return _io.tcgetattr(self.std)
+    return _io.TTY.tcgetattr(self.std)
   }
 
   /**
@@ -128,7 +128,7 @@ class TTY {
       die Exception('integer expected as first argument, ${typeof(option)} given')
     if !is_dict(attrs) 
       die Exception('dictionary expected as second argument, ${typeof(attrs)} given')
-    return _io.tcsetattr(self.std, option, attrs)
+    return _io.TTY.tcsetattr(self.std, option, attrs)
   }
 
   /**
@@ -136,7 +136,7 @@ class TTY {
    * sets the current tty to raw mode
    */
   set_raw() {
-    var new_attr = _io.tcgetattr(self.std)
+    var new_attr = _io.TTY.tcgetattr(self.std)
 
     new_attr[TTY.TTY_IFLAG] &= ~(TTY.IGNBRK | TTY.BRKINT | TTY.PARMRK | TTY.ISTRIP | TTY.INLCR | TTY.IGNCR | TTY.ICRNL | TTY.IXON)
     new_attr[TTY.TTY_OFLAG] &= ~TTY.OPOST
@@ -152,7 +152,7 @@ class TTY {
    * disables the raw mode flags on the current tty
    */
   exit_raw() {
-    return _io.exit_raw()
+    return _io.TTY.exit_raw()
   }
 
   /**
@@ -161,7 +161,7 @@ class TTY {
    * @return nil
    */
   flush() {
-    _io.flush(self.std);
+    _io.TTY.flush(self.std);
   }
 }
 
