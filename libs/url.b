@@ -21,7 +21,7 @@ class UrlMalformedException < Exception {
  * a list of schemes that does not conform to the standard ://
  * after the scheme name in their urls
  */
-var ALTERNATE_SCHEMES = ['mailto', 'tel']
+var SIMPLE_SCHEMES = ['mailto', 'tel']
 
 
 /**
@@ -110,6 +110,7 @@ class Url {
 
   /**
    * host_is_ipv4()
+   * 
    * returns true if the host of the url is a valid ipv4 address
    * and false otherwise
    * @return bool
@@ -123,6 +124,7 @@ class Url {
 
   /**
    * host_is_ipv6()
+   * 
    * returns true if the host of the url is a valid ipv6 address
    * and false otherwise
    * @return bool
@@ -132,6 +134,50 @@ class Url {
       return self.host.match('/(?:^|(?<=\s))(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))(?=\s|$)/')
     }
     return false
+  }
+
+  /**
+   * absolute_url()
+   * 
+   * returns absolute url string of the url object
+   * @return string
+   */
+  absolute_url() {
+    var url = '${self.scheme}:'
+
+    if !SIMPLE_SCHEMES.contains(self.scheme) {
+      url += '//'
+    }
+
+    # build the username:password symbol
+    if self.username {
+      url += '${self.username}:'
+      if self.password {
+        url += self.password
+      }
+      url += '@'
+    }
+
+    url += self.host
+
+    if self.port {
+      url += ':${self.port}'
+    }
+    if self.path {
+      if self.path == '/' and SIMPLE_SCHEMES.contains(self.scheme) {
+        # do nothing...
+      } else {
+        url += self.path
+      }
+    }
+    if self.hash {
+      url += '#${self.hash}'
+    }
+    if self.query {
+      url += '?${self.query}'
+    }
+
+    return url
   }
 }
 
@@ -231,7 +277,7 @@ def parse(url) {
   # do not do this only when the scheme is mailto:
   if url.index_of('://') < 0 {
     var match_found = false
-    for sc in ALTERNATE_SCHEMES {
+    for sc in SIMPLE_SCHEMES {
       if url.starts_with(sc) {
         match_found = true
         break
@@ -390,14 +436,14 @@ def parse(url) {
     }
   }
 
-  # the default public port scheme if not given
-  if !port {
-    using scheme {
-      when 'http'   port = 80
-      when 'https'  port = 443
-      default port = 0
-    }
-  }
+  # # the default public port scheme if not given
+  # if !port {
+  #   using scheme {
+  #     when 'http'   port = 80
+  #     when 'https'  port = 443
+  #     default port = 0
+  #   }
+  # }
 
   # build a new Url instance and return
   return Url(scheme, host, port, path, hash, query, username, password)

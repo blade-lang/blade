@@ -9,113 +9,115 @@ import url
 import socket
 
 
+
 /**
- * HttpResponse
+ * standard response codes to an Http request
+ */
+# Informational
+var CONTINUE = 100
+var SWITCHING_PROTOCOLS = 101
+var PROCESSING = 102
+
+# Succcess
+var OK = 200
+var CREATED = 201
+var ACCEPTED = 202
+var NON_AUTHORITATIVE_INFORMATION = 203
+var NO_CONTENT = 204
+var RESET_CONTENT = 205
+var PARTIAL_CONTENT = 206
+var MULTI_STATUS = 207
+var ALREADY_REPORTED = 208
+var IM_USED = 226
+
+# Redirection
+var MULTIPLE_CHOICES = 300
+var MOVED_PERMANENTLY = 301
+var FOUND = 302
+var SEE_OTHER = 303
+var NOT_MODIFIED = 304
+var USE_PROXY = 305
+var TEMPORARY_REDIRECT = 307
+var PERMANENT_REDIRECT = 308
+
+# Client Error
+var BAD_REQUEST = 400
+var UNAUTHORIZED = 401
+var PAYMENT_REQUIRED = 402
+var FORBIDDEN = 403
+var NOT_FOUND = 404
+var METHOD_NOT_ALLOWED = 405
+var NOT_ACCEPTABLE = 406
+var PROXY_AUTHENTICATION_REQUIRED = 407
+var REQUEST_TIMEOUT = 408
+var CONFLICT = 409
+var GONE = 410
+var LENGTH_REQUIRED = 411
+var PRECONDITION_FAILED = 412
+var PAYLOAD_TOO_LARGE = 413
+var REQUEST_URI_TOO_LONG = 414
+var UNSUPPORTED_MEDIA_TYPE = 415
+var REQUESTED_RANGE_NOT_SATISFIABLE = 416
+var EXPECTATION_FAILED = 417
+var TEAPOT = 418
+var MISDIRECTED_REQUEST = 421
+var UNPROCESSABLE_ENTITY = 422
+var LOCKED = 423
+var FAILED_DEPENDENCY = 424
+var UPGRADE_REQUIRED = 426
+var PRECONDITION_REQUIRED = 428
+var TOO_MANY_REQUESTS = 429
+var REQUEST_HEADER_FIELDS_TOO_LARGE = 431
+var CONNECTION_CLOSED_WITHOUT_RESPONSE = 444
+var UNAVAILABLE_FOR_LEGAL_REASONS = 451
+var CLIENT_CLOSED_REQUEST = 499
+
+# Server Error
+var INTERNAL_SERVER_ERROR = 500
+var NOT_IMPLEMENTED = 501
+var BAD_GATEWAY = 502
+var SERVICE_UNAVAILABLE = 503
+var GATEWAY_TIMEOUT = 504
+var HTTP_VERSION_NOT_SUPPORTED = 505
+var VARIANT_ALSO_NEGOTIATES = 506
+var INSUFFICIENT_STORAGE = 507
+var LOOP_DETECTED = 508
+var NOT_EXTENDED = 510
+var NETWORK_AUTHENTICATION_REQUIRED = 511
+var NETWORK_CONNECT_TIMEOUT_ERROR = 599
+
+
+/**
+ * class HttpResponse
  * represents the response to an Http request
  */
 class HttpResponse {
-  var status_code = 0
-  var http_version = '1.0'
-  var time_taken = 0
-  var redirects = 0
-  var responder
-  var headers = {}
-  var error # Exception instance
-  var body
+  /**
+   * HttpResponse(body, status, headers, version, time_taken, redirects, responder)
+   * @constructor
+   */
+  HttpResponse(body, status, headers, version, 
+    time_taken, redirects, responder) {
+      self.status = status ? status : 200
+      self.body = body
+      self.headers = headers ? headers : {}
+      self.version = version ? version : '1.0'
+      self.time_taken = time_taken ? time_taken : 0
+      self.redirects = redirects
+      self.responder = responder
+  }
 
-  to_string() {
+  @to_string() {
     return to_string({
-      status_code: self.status_code,
-      http_version: self.http_version,
+      status: self.status,
+      version: self.version,
       time_taken: self.time_taken,
       redirects: self.redirects,
       responder: self.responder,
       headers: self.headers,
-      error: self.error,
       body: self.body
     })
   }
-}
-
-
-
-/**
- * HttpStatus
- * represents the standard response codes to an Http request
- */
-class HttpStatus {
-  # Informational
-  static var CONTINUE = 100
-  static var SWITCHING_PROTOCOLS = 101
-  static var PROCESSING = 102
-
-  # Succcess
-  static var OK = 200
-  static var CREATED = 201
-  static var ACCEPTED = 202
-  static var NON_AUTHORITATIVE_INFORMATION = 203
-  static var NO_CONTENT = 204
-  static var RESET_CONTENT = 205
-  static var PARTIAL_CONTENT = 206
-  static var MULTI_STATUS = 207
-  static var ALREADY_REPORTED = 208
-  static var IM_USED = 226
-
-  # Redirection
-  static var MULTIPLE_CHOICES = 300
-  static var MOVED_PERMANENTLY = 301
-  static var FOUND = 302
-  static var SEE_OTHER = 303
-  static var NOT_MODIFIED = 304
-  static var USE_PROXY = 305
-  static var TEMPORARY_REDIRECT = 307
-  static var PERMANENT_REDIRECT = 308
-
-  # Client Error
-  static var BAD_REQUEST = 400
-  static var UNAUTHORIZED = 401
-  static var PAYMENT_REQUIRED = 402
-  static var FORBIDDEN = 403
-  static var NOT_FOUND = 404
-  static var METHOD_NOT_ALLOWED = 405
-  static var NOT_ACCEPTABLE = 406
-  static var PROXY_AUTHENTICATION_REQUIRED = 407
-  static var REQUEST_TIMEOUT = 408
-  static var CONFLICT = 409
-  static var GONE = 410
-  static var LENGTH_REQUIRED = 411
-  static var PRECONDITION_FAILED = 412
-  static var PAYLOAD_TOO_LARGE = 413
-  static var REQUEST_URI_TOO_LONG = 414
-  static var UNSUPPORTED_MEDIA_TYPE = 415
-  static var REQUESTED_RANGE_NOT_SATISFIABLE = 416
-  static var EXPECTATION_FAILED = 417
-  static var TEAPOT = 418
-  static var MISDIRECTED_REQUEST = 421
-  static var UNPROCESSABLE_ENTITY = 422
-  static var LOCKED = 423
-  static var FAILED_DEPENDENCY = 424
-  static var UPGRADE_REQUIRED = 426
-  static var PRECONDITION_REQUIRED = 428
-  static var TOO_MANY_REQUESTS = 429
-  static var REQUEST_HEADER_FIELDS_TOO_LARGE = 431
-  static var CONNECTION_CLOSED_WITHOUT_RESPONSE = 444
-  static var UNAVAILABLE_FOR_LEGAL_REASONS = 451
-  static var CLIENT_CLOSED_REQUEST = 499
-
-  # Server Error
-  static var INTERNAL_SERVER_ERROR = 500
-  static var NOT_IMPLEMENTED = 501
-  static var BAD_GATEWAY = 502
-  static var SERVICE_UNAVAILABLE = 503
-  static var GATEWAY_TIMEOUT = 504
-  static var HTTP_VERSION_NOT_SUPPORTED = 505
-  static var VARIANT_ALSO_NEGOTIATES = 506
-  static var INSUFFICIENT_STORAGE = 507
-  static var LOOP_DETECTED = 508
-  static var NOT_EXTENDED = 510
-  static var NETWORK_AUTHENTICATION_REQUIRED = 511
-  static var NETWORK_CONNECT_TIMEOUT_ERROR = 599
 }
 
 
@@ -171,23 +173,23 @@ class HttpClient {
   var no_expect = false
 
   # the main http request method
-  _do_http(url, method, data){
+  _do_http(uri, method, data){
 
-    var responder = url.absolute_uri, headers, body, time_taken, error
+    var responder = uri.absolute_url(), headers, body, time_taken = 0, error
     var should_connect = true, redirect_count = 0, http_version = '1.0', status_code = 0
 
     while should_connect {
 
-      var resolved_host = Socket.get_address_info(url.host)
+      var resolved_host = socket.get_address_info(uri.host)
 
       if resolved_host {
         var host = resolved_host.ip
-        var port = url.port
+        var port = uri.port
 
         # construct message
-        var message = '${method} ${url.path} HTTP/1.1'
+        var message = '${method} ${uri.path} HTTP/1.1'
         if !self.headers.contains('Host') {
-          message += '\r\nHost: ${url.host}'
+          message += '\r\nHost: ${uri.host}'
         }
 
         # handle no_expect
@@ -209,7 +211,7 @@ class HttpClient {
         message += '\r\n\r\n${data}'
 
         # do real request here...
-        var client = Socket()
+        var client = socket.Socket()
 
         var start = time()
 
@@ -235,7 +237,7 @@ class HttpClient {
           }
         }
 
-        time_taken = time() - start
+        time_taken += time() - start
 
         # close client
         client.close()
@@ -256,7 +258,7 @@ class HttpClient {
         })
 
         if self.follow_redirect and headers.contains('Location') {
-          url = Url.parse(headers['Location'])
+          uri = url.parse(headers['Location'])
           self.referer = headers['Location']
         } else {
           should_connect = false
@@ -268,17 +270,8 @@ class HttpClient {
     }
 
     # return a valid HttpResponse
-    var result = HttpResponse()
-    
-    result.headers = headers
-    result.http_version = http_version
-    result.status_code = status_code
-    result.body  = body
-    result.time_taken = time_taken
-    result.redirects = redirect_count
-    result.responder = responder
-
-    return result
+    return HttpResponse(body, status_code, headers, http_version, 
+      time_taken, redirect_count, responder)
   }
 
   _process_header(header, meta_callback) {
@@ -318,18 +311,18 @@ class HttpClient {
   }
 
   /**
-   * _send(url: string, [method: string = 'GET', data: string])
+   * send_request(url: string, [method: string = 'GET', data: string])
    *
    * sends an Http request and returns an HttpResponse
    * or throws one of SocketException or Exception if it fails
    */
-  _send(url, method, data) {
+  send_request(uri, method, data) {
 
-    if !url or !is_string(url) 
+    if !uri or !is_string(uri) 
       die Exception('invalid url')
 
     # parse the url into component parts
-    url = Url.parse(url)
+    uri = url.parse(uri)
 
     if !method {
       # the request method
@@ -340,27 +333,28 @@ class HttpClient {
     if data != nil and !is_string(data)
       die Exception('string expected, ${typeof(data)} give')
 
-    return self._do_http(url, method.upper(), data)
+    return self._do_http(uri, method.upper(), data)
   }
+}
 
-  /**
-   * get(url: string)
-   *
-   * sends an Http GET request and returns an HttpResponse
-   * or throws one of SocketException or Exception if it fails
-   */
-  get(url) {
-    return self._send(url, 'GET')
-  }
 
-  /**
-   * post(url: string, [data: string])
-   *
-   * sends an Http POST request and returns an HttpResponse
-   * or throws one of SocketException or Exception if it fails
-   */
-  post(url, data) {
-    return self._send(url, 'POST', data)
-  }
+/**
+ * get(url: string)
+ *
+ * sends an Http GET request and returns an HttpResponse
+ * or throws one of SocketException or Exception if it fails
+ */
+def get(url) {
+  return HttpClient().send_request(url, 'GET')
+}
+
+/**
+ * post(url: string, [data: string])
+ *
+ * sends an Http POST request and returns an HttpResponse
+ * or throws one of SocketException or Exception if it fails
+ */
+def post(url, data) {
+  return HttpClient().send_request(url, 'POST', data)
 }
 

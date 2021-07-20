@@ -399,20 +399,22 @@ class Socket {
   info() {
     return _socket.getsockinfo(self.id)
   }
+}
 
-  get_address(address, type, family) {
-    if !is_string(address)
-      die SocketException('string expected for address, ${typeof(address)} given')
-    if type != nil and !is_string(type)
-      die SocketException('string expected for type, ${typeof(type)} given')
+/**
+ * get_address_info(address: number, type: number, family: number)
+ * 
+ * returns ip and name information of a given address
+ * @return dictionary
+ */
+def get_address_info(address, type, family) {
+  if !is_string(address)
+    die SocketException('string expected for address, ${typeof(address)} given')
+  if type != nil and !is_string(type)
+    die SocketException('string expected for type, ${typeof(type)} given')
 
-    if !type type = 'http'
-    if !family family = AF_INET
+  if !type type = 'http'
+  if !family family = AF_INET
 
-    return _socket.getaddrinfo(address, type, family)
-  }
-
-  static get_address_info(address, type, family) {
-    return Socket().get_address(address, type, family)
-  }
+  return _socket.getaddrinfo(address, type, family)
 }
