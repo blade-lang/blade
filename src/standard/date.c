@@ -156,20 +156,14 @@ DECLARE_MODULE_METHOD(date__gmtime) {
 }
 
 CREATE_MODULE_LOADER(date) {
-  static b_func_reg date_class_functions[] = {
+  static b_func_reg module_functions[] = {
       {"localtime", true,  GET_MODULE_METHOD(date__localtime)},
       {"gmtime",    true,  GET_MODULE_METHOD(date__gmtime)},
-      {"__mktime",  false, GET_MODULE_METHOD(date____mktime)},
+      {"mktime",  false, GET_MODULE_METHOD(date____mktime)},
       {NULL,        false, NULL},
   };
 
-  static b_class_reg klasses[] = {
-      {"Date", NULL, date_class_functions},
-      {NULL,   NULL, NULL},
-  };
-
-  static b_module_reg module = {"_date", NULL, NULL, klasses};
-
+  static b_module_reg module = {"_date", NULL, module_functions, NULL};
   return module;
 }
 

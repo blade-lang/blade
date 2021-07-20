@@ -469,7 +469,8 @@ void init_vm(b_vm *vm) {
 }
 
 void free_vm(b_vm *vm) {
-  free_objects(vm);
+  //@TODO: Fix segfault from enabling this...
+//  free_objects(vm);
   free_table(vm, &vm->strings);
   free_table(vm, &vm->globals);
   free_table(vm, &vm->modules);
