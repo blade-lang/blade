@@ -2037,7 +2037,48 @@ b_ptr_result run(b_vm *vm) {
     case OP_GET_INDEX: {
       uint8_t will_assign = READ_BYTE();
 
-      if (!IS_STRING(peek(vm, 2)) && !IS_LIST(peek(vm, 2)) &&
+      bool is_gotten = true;
+      if(IS_OBJ(peek(vm, 2))) {
+        switch(AS_OBJ(peek(vm, 2))->type) {
+          case OBJ_STRING: {
+            if (!string_get_index(vm, AS_STRING(peek(vm, 2)), will_assign == (uint8_t)1)) {
+              EXIT_VM();
+            }
+            break;
+          }
+          case OBJ_LIST: {
+            if (!list_get_index(vm, AS_LIST(peek(vm, 2)), will_assign == (uint8_t)1)) {
+              EXIT_VM();
+            }
+            break;
+          }
+          case OBJ_DICT: {
+            if (!dict_get_index(vm, AS_DICT(peek(vm, 2)), will_assign == (uint8_t)1)) {
+              EXIT_VM();
+            }
+            break;
+          }
+          case OBJ_BYTES: {
+            if (!bytes_get_index(vm, AS_BYTES(peek(vm, 2)), will_assign == (uint8_t)1)) {
+              EXIT_VM();
+            }
+            break;
+          }
+          default: {
+            is_gotten = false;
+            break;
+          }
+        }
+      } else {
+        is_gotten = false;
+      }
+
+      if(!is_gotten) {
+        runtime_error("type of %s is not a valid iterable", value_type(peek(vm, 2)));
+      }
+      break;
+
+      /*if (!IS_STRING(peek(vm, 2)) && !IS_LIST(peek(vm, 2)) &&
           !IS_DICT(peek(vm, 2)) && !IS_BYTES(peek(vm, 2))) {
         runtime_error("type of %s is not a valid iterable", value_type(peek(vm, 2)));
         break;
@@ -2070,10 +2111,53 @@ b_ptr_result run(b_vm *vm) {
       }
 
       runtime_error("invalid index %s", value_to_string(vm, peek(vm, 0)));
-      break;
+      break;*/
     }
     case OP_SET_INDEX: {
-      if (!IS_LIST(peek(vm, 3)) && !IS_DICT(peek(vm, 3)) &&
+      bool is_set = true;
+      if(IS_OBJ(peek(vm, 3))) {
+
+        b_value value = peek(vm, 0);
+        b_value index = peek(vm, 2); // since peek 1 will be nil
+
+        switch(AS_OBJ(peek(vm, 3))->type) {
+          case OBJ_LIST: {
+            if (!list_set_index(vm, AS_LIST(peek(vm, 3)), index, value)) {
+              EXIT_VM();
+            }
+            break;
+          }
+          case OBJ_STRING: {
+            runtime_error("strings do not support object assignment");
+            break;
+          }
+          case OBJ_DICT: {
+            dict_set_index(vm, AS_DICT(peek(vm, 3)), index, value);
+            break;
+          }
+          case OBJ_BYTES: {
+            if (!bytes_set_index(vm, AS_BYTES(peek(vm, 3)), index, value)) {
+              EXIT_VM();
+            }
+            break;
+          }
+          default: {
+            is_set = false;
+            break;
+          }
+        }
+      } else {
+        is_set = false;
+      }
+
+      if(!is_set) {
+        runtime_error("type of %s is not a valid iterable", value_type(peek(vm, 3)));
+      }
+      break;
+
+
+
+      /*if (!IS_LIST(peek(vm, 3)) && !IS_DICT(peek(vm, 3)) &&
           !IS_BYTES(peek(vm, 3))) {
         if (!IS_STRING(peek(vm, 3))) {
           runtime_error("type of %s is not a valid iterable", value_type(peek(vm, 3)));
@@ -2098,7 +2182,7 @@ b_ptr_result run(b_vm *vm) {
         dict_set_index(vm, AS_DICT(peek(vm, 3)), index, value);
         break;
       }
-      break;
+      break;*/
     }
 
     case OP_RETURN: {
