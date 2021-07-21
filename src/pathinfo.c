@@ -225,20 +225,4 @@ char *resolve_import_path(char *module_name, const char *current_file, bool is_r
   return NULL;
 }
 
-#include <stdio.h>
-
-bool is_core_library_file(char *filepath, char *file_name) {
-  char *blade_file_name = get_blade_filename(file_name);
-  char *blade_directory = merge_paths(get_exe_dir(), LIBRARY_DIRECTORY);
-  char *library_file = merge_paths(blade_directory, blade_file_name);
-
-  if (file_exists(library_file)) {
-    int filepath_length = (int) strlen(filepath);
-    int library_file_length = (int) strlen(library_file);
-    return library_file_length == filepath_length
-           && memcmp(library_file, filepath, filepath_length) == 0;
-  }
-  return false;
-}
-
 char *get_real_file_name(char *path) { return basename(path); }
