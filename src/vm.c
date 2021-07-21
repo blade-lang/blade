@@ -483,21 +483,19 @@ void free_vm(b_vm *vm) {
 }
 
 void add_module(b_vm *vm, b_obj_module *module) {
-  table_set(vm, &vm->modules,
-            OBJ_VAL(copy_string(vm, module->file, (int)strlen(module->file))),
-            OBJ_VAL(module)
-  );
-  table_set(vm, &vm->globals,
-            OBJ_VAL(copy_string(vm, module->name, (int)strlen(module->name))),
-            OBJ_VAL(module)
-  );
+  table_set(vm, &vm->modules, STRING_VAL(module->file), OBJ_VAL(module));
+  if(vm->frame_count == 0) {
+    table_set(vm, &vm->globals, STRING_VAL(module->name), OBJ_VAL(module));
+  } else {
+    table_set(vm,
+              &get_frame_function(&vm->frames[vm->frame_count - 1])->module->values,
+              STRING_VAL(module->name), OBJ_VAL(module)
+    );
+  }
 }
 
 void add_native_module(b_vm *vm, b_obj_module *module) {
-  table_set(vm, &vm->modules,
-            OBJ_VAL(copy_string(vm, module->name, (int)strlen(module->name))),
-            OBJ_VAL(module)
-  );
+  table_set(vm, &vm->modules, STRING_VAL(module->name), OBJ_VAL(module));
 }
 
 static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
@@ -2208,12 +2206,12 @@ b_ptr_result run(b_vm *vm) {
       b_value dummy;
       if(!table_get(&vm->modules, STRING_VAL(function->module->file), &dummy)) {
         add_module(vm, function->module);
-        call_function(vm, function, 0);
-        frame = &vm->frames[vm->frame_count - 1];
       } else {
         // just duplicate it
         table_set(vm, &get_frame_function(frame)->module->values, STRING_VAL(function->module->name), dummy);
       }
+      call_function(vm, function, 0);
+      frame = &vm->frames[vm->frame_count - 1];
       break;
     }
 
@@ -2225,6 +2223,30 @@ b_ptr_result run(b_vm *vm) {
         break;
       }
       runtime_error("module '%s' not found", module_name->chars);
+      break;
+    }
+
+    case OP_SELECT_IMPORT: {
+      b_obj_string *module_name = READ_STRING();
+      b_obj_func *function = AS_FUNCTION(peek(vm, 0));
+      b_value value;
+      if(table_get(&function->module->values, OBJ_VAL(module_name), &value)) {
+        table_set(vm, &get_frame_function(frame)->module->values, OBJ_VAL(module_name), value);
+      } else {
+        runtime_error("module %s does not define '%s'", function->module->name, module_name->chars);
+      }
+      break;
+    }
+
+    case OP_IMPORT_ALL: {
+      table_add_all(vm, &AS_FUNCTION(peek(vm, 0))->module->values, &get_frame_function(frame)->module->values);
+      break;
+    }
+
+    case OP_EJECT_IMPORT: {
+      b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
+      table_delete(&get_frame_function(frame)->module->values,
+                OBJ_VAL(copy_string(vm, function->module->name, (int)strlen(function->module->name))));
       break;
     }
 

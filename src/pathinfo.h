@@ -32,7 +32,7 @@ char *get_blade_filename(char *filename);
 
 char *get_filename(char *filepath);
 
-char *resolve_import_path(char *module_name, const char *current_file);
+char *resolve_import_path(char *module_name, const char *current_file, bool is_relative);
 
 bool is_core_library_file(char *filepath, char *file_name);
 

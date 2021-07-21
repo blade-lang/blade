@@ -150,7 +150,7 @@ char *get_blade_filename(char *filename) {
   return merge_paths(filename, BLADE_EXTENSION);
 }
 
-char *resolve_import_path(char *module_name, const char *current_file) {
+char *resolve_import_path(char *module_name, const char *current_file, bool is_relative) {
   char *blade_file_name = get_blade_filename(module_name);
 
   // check relative to the current file...
@@ -162,30 +162,32 @@ char *resolve_import_path(char *module_name, const char *current_file) {
     file_directory[file_directory_length - 1] = '\0';
   }
 
-  char *relative_file = merge_paths(file_directory, blade_file_name);
+  if(is_relative) {
+    char *relative_file = merge_paths(file_directory, blade_file_name);
 
-  if (file_exists(relative_file)) {
-    // stop a user module from importing itself
-    char *path1 = realpath(relative_file, NULL);
-    char *path2 = realpath(current_file, NULL);
+    if (file_exists(relative_file)) {
+      // stop a user module from importing itself
+      char *path1 = realpath(relative_file, NULL);
+      char *path2 = realpath(current_file, NULL);
 
-    if (path1 != NULL) {
-      if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
-        return relative_file;
+      if (path1 != NULL) {
+        if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
+          return relative_file;
+      }
     }
-  }
 
-  char *relative_index_file = merge_paths(merge_paths(file_directory, module_name),
-                                          get_blade_filename(LIBRARY_DIRECTORY_INDEX));
+    char *relative_index_file = merge_paths(merge_paths(file_directory, module_name),
+                                            get_blade_filename(LIBRARY_DIRECTORY_INDEX));
 
-  if (file_exists(relative_index_file)) {
-    // stop a user module from importing itself
-    char *path1 = realpath(relative_index_file, NULL);
-    char *path2 = realpath(current_file, NULL);
+    if (file_exists(relative_index_file)) {
+      // stop a user module from importing itself
+      char *path1 = realpath(relative_index_file, NULL);
+      char *path2 = realpath(current_file, NULL);
 
-    if (path1 != NULL) {
-      if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
-        return relative_index_file;
+      if (path1 != NULL) {
+        if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
+          return relative_index_file;
+      }
     }
   }
 

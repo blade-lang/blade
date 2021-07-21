@@ -1945,8 +1945,17 @@ static void import_statement(b_parser *p) {
 
   int part_count = 0;
 
+  bool is_relative = match(p, DOT_TOKEN);
+
   // allow for import starting with ..
-  if(match(p, RANGE_TOKEN)){}
+  if(!is_relative){
+    if(match(p, RANGE_TOKEN)) {}
+  } else {
+    if(match(p, RANGE_TOKEN)) {
+      error(p, "conflicting module path. Parent or current directory?");
+      return;
+    }
+  }
 
   do {
     if(p->previous.type == RANGE_TOKEN) {
@@ -1986,21 +1995,26 @@ static void import_statement(b_parser *p) {
     part_count++;
   } while(match(p, DOT_TOKEN) || match(p, RANGE_TOKEN));
 
+  bool was_renamed = false;
+
   if(match(p, AS_TOKEN)) {
     consume(p, IDENTIFIER_TOKEN, "module name expected");
     free(module_name);
     module_name = (char*)calloc(p->previous.length + 1, sizeof(char));
     memcpy(module_name, p->previous.start, p->previous.length);
+    was_renamed = true;
   }
 
-  char *module_path = resolve_import_path(module_file, p->module->file);
+  char *module_path = resolve_import_path(module_file, p->module->file, is_relative);
 
   if (module_path == NULL) {
     error(p, "module not found");
     return;
   }
 
-  consume_statement_end(p);
+  if(!check(p, LBRACE_TOKEN)) {
+    consume_statement_end(p);
+  }
 
   // do the import here...
   char *source = read_file(module_path);
@@ -2023,6 +2037,35 @@ static void import_statement(b_parser *p) {
 
   int import_constant = make_constant(p, OBJ_VAL(function));
   emit_byte_and_short(p, OP_CALL_IMPORT, import_constant);
+
+  if(match(p, LBRACE_TOKEN)) {
+    if(was_renamed) {
+      error(p, "selective import on renamed module");
+      return;
+    }
+
+    emit_byte_and_short(p, OP_CONSTANT, import_constant);
+
+    do {
+      ignore_whitespace(p);
+
+      // terminate on all (*)
+      if(match(p, MULTIPLY_TOKEN)) {
+        emit_byte(p, OP_IMPORT_ALL);
+        break;
+      }
+
+      int name = parse_variable(p, "module object name expected");
+      emit_byte_and_short(p, OP_SELECT_IMPORT, name);
+    } while(match(p, COMMA_TOKEN));
+    ignore_whitespace(p);
+
+    consume(p, RBRACE_TOKEN, "expected '}' at end of selective import");
+    consume_statement_end(p);
+
+    emit_byte_and_short(p, OP_EJECT_IMPORT, import_constant);
+    emit_byte(p, OP_POP); // pop the module constant from stack
+  }
 }
 
 static void assert_statement(b_parser *p) {
