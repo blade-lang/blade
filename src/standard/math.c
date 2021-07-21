@@ -165,7 +165,7 @@ CREATE_MODULE_LOADER(math) {
       {NULL,    false, NULL},
   };
 
-  static b_module_reg module = {"_math", NULL, module_functions, NULL};
+  static b_module_reg module = {"_math", NULL, module_functions, NULL, NULL};
 
   return module;
 }

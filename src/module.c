@@ -4,9 +4,7 @@
 
 #include "standard/standard.h"
 
-typedef b_module_reg (*b_module_func)(b_vm *);
-
-b_module_func modules[] = {
+b_module_loader modules[] = {
     GET_MODULE_LOADER(os),         //
     GET_MODULE_LOADER(io),         //
     GET_MODULE_LOADER(base64), //
@@ -23,6 +21,7 @@ void bind_native_modules(b_vm *vm) {
     b_module_reg module = modules[i](vm);
 
     b_obj_module *the_module = new_module(vm, strdup(module.name), strdup("<__native__>"));
+    the_module->unloader = module.unloader;
 
     if (module.fields != NULL) {
       for (int j = 0; module.fields[j].name != NULL; j++) {

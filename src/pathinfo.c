@@ -175,7 +175,7 @@ char *resolve_import_path(char *module_name, const char *current_file, bool is_r
 
       if (path1 != NULL) {
         if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
-          return library_file;
+          return path1;
       }
     }
 
@@ -189,7 +189,7 @@ char *resolve_import_path(char *module_name, const char *current_file, bool is_r
 
       if (path1 != NULL) {
         if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
-          return library_index_file;
+          return path1;
       }
     }
   } else {
@@ -203,7 +203,7 @@ char *resolve_import_path(char *module_name, const char *current_file, bool is_r
 
       if (path1 != NULL) {
         if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
-          return relative_file;
+          return path1;
       }
     }
 
@@ -217,7 +217,7 @@ char *resolve_import_path(char *module_name, const char *current_file, bool is_r
 
       if (path1 != NULL) {
         if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
-          return relative_index_file;
+          return path1;
       }
     }
   }

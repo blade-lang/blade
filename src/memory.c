@@ -3,6 +3,7 @@
 #include "config.h"
 #include "object.h"
 #include "blade_file.h"
+#include "module.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -178,6 +179,10 @@ static void free_object(b_vm *vm, b_obj *object) {
       free_table(vm, &module->values);
       free(module->name);
       free(module->file);
+      if(module->unloader != NULL) {
+        b_module_unloader *unloader = (b_module_unloader*)module->unloader;
+        (*unloader)(vm);
+      }
       FREE(b_obj_module, object);
       break;
     }

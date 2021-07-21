@@ -507,6 +507,12 @@ DECLARE_MODULE_METHOD(socket__shutdown) {
   RETURN_NUMBER(shutdown((int) AS_NUMBER(args[0]), (int) AS_NUMBER(args[1])));
 }
 
+void __socket_module_unload(b_vm *vm) {
+#ifdef _WIN32
+  WSACleanup();
+#endif
+}
+
 CREATE_MODULE_LOADER(socket) {
 
   static b_func_reg module_functions[] = {
@@ -527,9 +533,7 @@ CREATE_MODULE_LOADER(socket) {
       {NULL, false, NULL},
   };
 
-  static b_module_reg module = {"_socket", NULL,module_functions, NULL};
-
-  // @TODO: WSACleanup() on module cleanup function when implemented.
+  static b_module_reg module = {"_socket", NULL,module_functions, NULL, &__socket_module_unload};
 
   return module;
 }

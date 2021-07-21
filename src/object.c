@@ -37,6 +37,7 @@ b_obj_module *new_module(b_vm *vm, char *name, char *file) {
   init_table(&module->values);
   module->name = name;
   module->file = file;
+  module->unloader = NULL;
   return module;
 }
 

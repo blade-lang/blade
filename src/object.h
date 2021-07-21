@@ -108,6 +108,7 @@ typedef struct {
   char *name;
   char *file;
   b_table values;
+  void *unloader;
 } b_obj_module;
 
 typedef struct {

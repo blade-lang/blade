@@ -793,6 +793,10 @@ b_value io_module_stderr(b_vm *vm) {
   return OBJ_VAL(file);
 }
 
+void __io_module_unload(b_vm *vm) {
+  disable_raw_mode();
+}
+
 CREATE_MODULE_LOADER(io) {
   static b_field_reg io_module_fields[] = {
       {"stdin",       false, io_module_stdin},
@@ -821,7 +825,7 @@ CREATE_MODULE_LOADER(io) {
       {NULL,  NULL, NULL},
   };
 
-  static b_module_reg module = {"_io", io_module_fields, io_functions, classes};
+  static b_module_reg module = {"_io", io_module_fields, io_functions, classes, &__io_module_unload};
 
   return module;
 }

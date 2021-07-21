@@ -153,7 +153,7 @@ CREATE_MODULE_LOADER(base64) {
       {NULL,      false, NULL},
   };
 
-  static b_module_reg module = {"_base64", NULL, module_functions, NULL};
+  static b_module_reg module = {"_base64", NULL, module_functions, NULL, NULL};
 
   return module;
 }

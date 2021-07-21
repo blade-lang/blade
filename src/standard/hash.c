@@ -419,7 +419,7 @@ CREATE_MODULE_LOADER(hash) {
       {NULL,      false, NULL},
   };
 
-  static b_module_reg module = {"_hash", NULL, module_functions, NULL};
+  static b_module_reg module = {"_hash", NULL, module_functions, NULL, NULL};
 
   return module;
 }

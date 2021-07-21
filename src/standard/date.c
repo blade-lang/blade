@@ -163,7 +163,7 @@ CREATE_MODULE_LOADER(date) {
       {NULL,        false, NULL},
   };
 
-  static b_module_reg module = {"_date", NULL, module_functions, NULL};
+  static b_module_reg module = {"_date", NULL, module_functions, NULL, NULL};
   return module;
 }
 
