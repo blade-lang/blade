@@ -1959,6 +1959,7 @@ static void import_statement(b_parser *p) {
 
   do {
     if(p->previous.type == RANGE_TOKEN) {
+      is_relative = true;
       if(module_file == NULL) {
         module_file = strdup("../");
       } else {
