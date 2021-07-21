@@ -177,8 +177,8 @@ static void free_object(b_vm *vm, b_obj *object) {
     case OBJ_MODULE: {
       b_obj_module *module = (b_obj_module*)object;
       free_table(vm, &module->values);
-      free(module->name);
-      free(module->file);
+      FREE(char, module->name);
+      FREE(char, module->file);
       if(module->unloader != NULL) {
         b_module_unloader *unloader = (b_module_unloader*)module->unloader;
         (*unloader)(vm);
@@ -246,9 +246,9 @@ static void free_object(b_vm *vm, b_obj *object) {
     case OBJ_FUNCTION: {
       b_obj_func *function = (b_obj_func *)object;
       free_blob(vm, &function->blob);
-      if(function->name != NULL) {
+      /*if(function->name != NULL) {
         free_object(vm, (b_obj *) function->name);
-      }
+      }*/
       FREE(b_obj_func, object);
       break;
     }

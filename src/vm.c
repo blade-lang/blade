@@ -2203,13 +2203,7 @@ b_ptr_result run(b_vm *vm) {
 
     case OP_CALL_IMPORT: {
       b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
-      b_value dummy;
-      if(!table_get(&vm->modules, STRING_VAL(function->module->file), &dummy)) {
-        add_module(vm, function->module);
-      } else {
-        // just duplicate it
-        table_set(vm, &get_frame_function(frame)->module->values, STRING_VAL(function->module->name), dummy);
-      }
+      add_module(vm, function->module);
       call_function(vm, function, 0);
       frame = &vm->frames[vm->frame_count - 1];
       break;
@@ -2219,7 +2213,7 @@ b_ptr_result run(b_vm *vm) {
       b_obj_string *module_name = READ_STRING();
       b_value value;
       if(table_get(&vm->modules, OBJ_VAL(module_name), &value)) {
-        table_set(vm, &vm->globals, OBJ_VAL(module_name), value);
+        table_set(vm, &get_frame_function(frame)->module->values, OBJ_VAL(module_name), value);
         break;
       }
       runtime_error("module '%s' not found", module_name->chars);
