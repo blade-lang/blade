@@ -11,5 +11,5 @@ def log(n) {
 echo log(21)
 
 # Compare against the Math library
-import 'math'
-echo Math.log(21)
+import math
+echo math.log(21)
