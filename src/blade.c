@@ -87,11 +87,14 @@ static void repl(b_vm *vm) {
     line[line_length] = 0;
 #else
     char *line = readline(cursor);
-    int line_length = (int) strlen(line);
+    int line_length = 0;
+    if(line != NULL) {
+      line_length = (int) strlen(line);
+    }
 #endif // _WIN32
 
     // terminate early if we receive a terminating command such as exit()
-    if (strcmp(line, "exit()") == 0) {
+    if (line == NULL || strcmp(line, "exit()") == 0) {
       exit(EXIT_SUCCESS);
     }
 
