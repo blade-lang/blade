@@ -1181,8 +1181,7 @@ static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
   }
 }
 
-static void dict_set_index(b_vm *vm, b_obj_dict *dict, b_value index,
-                           b_value value) {
+static void dict_set_index(b_vm *vm, b_obj_dict *dict, b_value index, b_value value) {
   dict_set_entry(vm, dict, index, value);
   pop_n(vm, 4); // pop the value, nil, index and dict out
 
@@ -1191,8 +1190,7 @@ static void dict_set_index(b_vm *vm, b_obj_dict *dict, b_value index,
   push(vm, value);
 }
 
-static bool list_set_index(b_vm *vm, b_obj_list *list, b_value index,
-                           b_value value) {
+static bool list_set_index(b_vm *vm, b_obj_list *list, b_value index, b_value value) {
   if (!IS_NUMBER(index)) {
     pop_n(vm, 4); // pop the value, nil, index and list out
     return throw_exception(vm, "list are numerically indexed");
@@ -1215,8 +1213,7 @@ static bool list_set_index(b_vm *vm, b_obj_list *list, b_value index,
   return throw_exception(vm, "lists index %d out of range", _position);
 }
 
-static bool bytes_set_index(b_vm *vm, b_obj_bytes *bytes, b_value index,
-                            b_value value) {
+static bool bytes_set_index(b_vm *vm, b_obj_bytes *bytes, b_value index, b_value value) {
   if (!IS_NUMBER(index)) {
     pop_n(vm, 4); // pop the value, nil, index and bytes out
     return throw_exception(vm, "bytes are numerically indexed");
