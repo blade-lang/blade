@@ -83,18 +83,29 @@ static void repl(b_vm *vm) {
     char buffer[1024];
     printf(cursor);
     char *line = fgets(buffer, 1024, stdin);
+
+    // terminate early if we receive a terminating command such as exit() or Ctrl+D
+    if(line == NULL || strcmp(line, "exit()") == 0) {
+      free(source);
+      return;
+    }
+
     int line_length = strcspn(line, "\r\n");
     line[line_length] = 0;
 #else
     char *line = readline(cursor);
-    int line_length = 0;
-    if(line != NULL) {
-      line_length = (int) strlen(line);
+
+
+    // terminate early if we receive a terminating command such as exit() or Ctrl+D
+    if(line == NULL || strcmp(line, "exit()") == 0) {
+      free(source);
+      return;
     }
+
+    int line_length = (int) strlen(line);
 #endif // _WIN32
 
-    // terminate early if we receive a terminating command such as exit()
-    if (line == NULL || strcmp(line, "exit()") == 0) {
+    if (strcmp(line, "exit()") == 0) {
       exit(EXIT_SUCCESS);
     }
 
