@@ -2252,6 +2252,8 @@ static void synchronize(b_parser *p) {
     case PARENT_TOKEN:
     case FINALLY_TOKEN:
     case IN_TOKEN:
+    case IMPORT_TOKEN:
+    case AS_TOKEN:
       return;
 
     default:; // do nothing
