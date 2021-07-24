@@ -126,5 +126,6 @@ typedef struct {
 void init_scanner(b_scanner *s, const char *source);
 
 b_token scan_token(b_scanner *s);
+bool is_at_end(b_scanner *s);
 
 #endif

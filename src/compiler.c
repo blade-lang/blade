@@ -1338,7 +1338,14 @@ b_parse_rule parse_rules[] = {
 };
 
 static void parse_precedence(b_parser *p, b_precedence precedence) {
+  if(is_at_end(p->scanner) && p->vm->is_repl)
+    return;
+
   ignore_whitespace(p);
+
+  if(is_at_end(p->scanner) && p->vm->is_repl)
+    return;
+
   advance(p);
 
   b_parse_prefix_fn prefix_rule = get_rule(p->previous.type)->prefix;

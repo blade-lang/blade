@@ -13,7 +13,7 @@ void init_scanner(b_scanner *s, const char *source) {
   s->interpolating_count = -1;
 }
 
-static bool is_at_end(b_scanner *s) { return *s->current == '\0'; }
+bool is_at_end(b_scanner *s) { return *s->current == '\0'; }
 
 static b_token make_token(b_scanner *s, b_tkn_type type) {
   b_token t;
