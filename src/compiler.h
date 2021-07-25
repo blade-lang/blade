@@ -67,6 +67,7 @@ typedef struct {
   bool panic_mode;
   bool in_block;
   bool is_returning;
+  bool repl_can_echo;
   b_class_compiler *current_class;
   const char *current_file;
 

@@ -731,8 +731,8 @@ static void literal(b_parser *p, bool can_assign) {
   }
 }
 
-static void parse_assignment(b_parser *p, uint8_t real_op, uint8_t get_op,
-                             uint8_t set_op, int arg) {
+static void parse_assignment(b_parser *p, uint8_t real_op, uint8_t get_op, uint8_t set_op, int arg) {
+  p->repl_can_echo = false;
   if(get_op == OP_GET_PROPERTY || get_op == OP_GET_SELF_PROPERTY) {
     emit_byte(p, OP_DUP);
   }
@@ -755,6 +755,7 @@ static void parse_assignment(b_parser *p, uint8_t real_op, uint8_t get_op,
 static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg, bool can_assign) {
 
   if (can_assign && match(p, EQUAL_TOKEN)) {
+    p->repl_can_echo = false;
     expression(p);
     if (arg != -1) {
       emit_byte_and_short(p, set_op, (uint16_t)arg);
@@ -788,6 +789,7 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg, boo
   } else if (can_assign && match(p, RSHIFT_EQ_TOKEN)) {
     parse_assignment(p, OP_RSHIFT, get_op, set_op, arg);
   } else if (can_assign && match(p, INCREMENT_TOKEN)) {
+    p->repl_can_echo = false;
     if(get_op == OP_GET_PROPERTY || get_op == OP_GET_SELF_PROPERTY) {
       emit_byte(p, OP_DUP);
     }
@@ -801,6 +803,7 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg, boo
     emit_bytes(p, OP_ONE, OP_ADD);
     emit_byte_and_short(p, set_op, (uint16_t)arg);
   } else if (can_assign && match(p, DECREMENT_TOKEN)) {
+    p->repl_can_echo = false;
     if(get_op == OP_GET_PROPERTY || get_op == OP_GET_SELF_PROPERTY) {
       emit_byte(p, OP_DUP);
     }
@@ -1585,14 +1588,23 @@ static void compile_var_declaration(b_parser *p, bool is_initializer) {
 static void var_declaration(b_parser *p) { compile_var_declaration(p, false); }
 
 static void compile_expression_statement(b_parser *p, bool is_initializer) {
+  if(p->vm->is_repl) {
+    p->repl_can_echo = true;
+  }
   expression(p);
   if (!is_initializer) {
     consume_statement_end(p);
+    if(p->repl_can_echo && p->vm->is_repl) {
+      emit_byte(p, OP_ECHO);
+      p->repl_can_echo = false;
+    } else {
+      emit_byte(p, OP_POP);
+    }
   } else {
     consume(p, SEMICOLON_TOKEN, "expected ';' after initializer");
     ignore_whitespace(p);
+    emit_byte(p, OP_POP);
   }
-  emit_byte(p, OP_POP);
 }
 
 static void expression_statement(b_parser *p) {
@@ -2343,6 +2355,7 @@ b_obj_func *compile(b_vm *vm, b_obj_module *module, const char *source, b_blob *
   parser.had_error = false;
   parser.panic_mode = false;
   parser.in_block = false;
+  parser.repl_can_echo = false;
   parser.is_returning = false;
   parser.innermost_loop_start = -1;
   parser.innermost_loop_scope_depth = 0;
