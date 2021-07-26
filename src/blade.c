@@ -126,31 +126,29 @@ static void repl(b_vm *vm) {
       // scope openers...
       if (line[i] == '{')
         brace_count++;
-      else if (line[i] == '(')
+      if(line[i] == '(')
         paren_count++;
-      else if (line[i] == '[')
+      if (line[i] == '[')
         bracket_count++;
 
       // quotes
-      else if(((i == 0 && line[i] == '\'') || (line[i] == '\'' && line[i - 1] != '\\')) && double_quote_count == 0) {
-        if(single_quote_count == 0) 
-          single_quote_count = 1; 
-        else 
-          single_quote_count = 0;
+      if(line[i] == '\'') {
+        if(single_quote_count == 0) single_quote_count++;
+        else single_quote_count--;
       }
-      else if(((i == 0 && line[i] == '"') || (line[i] == '"' && line[i - 1] != '\\')) && single_quote_count == 0){
-        if(double_quote_count == 0) 
-          double_quote_count = 1; 
-        else 
-          double_quote_count = 0;
+      if(line[i] == '"') {
+        if(double_quote_count == 0)double_quote_count++;
+        else double_quote_count--;
       }
 
+      if(line[i] == '\\' && (single_quote_count > 0 || double_quote_count > 0)) i++;
+
         // scope closers...
-      else if (line[i] == '}' && brace_count > 0)
+      if (line[i] == '}' && brace_count > 0)
         brace_count--;
-      else if (line[i] == ')' && paren_count > 0)
+      if (line[i] == ')' && paren_count > 0)
         paren_count--;
-      else if (line[i] == ']' && bracket_count > 0)
+      if (line[i] == ']' && bracket_count > 0)
         bracket_count--;
     }
 

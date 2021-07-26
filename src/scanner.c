@@ -179,7 +179,7 @@ static b_token string(b_scanner *s, char quote) {
           MAX_INTERPOLATION_NESTING,
           MAX_INTERPOLATION_NESTING - s->interpolating_count + 1);
     }
-    if (current(s) == '\\' && next(s) == quote && previous(s) != '\\') {
+    if (current(s) == '\\') {
       advance(s);
     }
     advance(s);
