@@ -1255,7 +1255,7 @@ b_parse_rule parse_rules[] = {
     [DOT_TOKEN] = {NULL, dot, PREC_CALL},                     // .
     [RANGE_TOKEN] = {NULL, binary, PREC_RANGE},               // ..
     [TRI_DOT_TOKEN] = {NULL, NULL, PREC_NONE},                // ...
-    [PLUS_TOKEN] = {NULL, binary, PREC_TERM},                 // +
+    [PLUS_TOKEN] = {unary, binary, PREC_TERM},                 // +
     [PLUS_EQ_TOKEN] = {NULL, NULL, PREC_NONE},                // +=
     [INCREMENT_TOKEN] = {NULL, NULL, PREC_NONE},              // ++
     [MINUS_TOKEN] = {unary, binary, PREC_TERM},               // -
