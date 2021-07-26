@@ -152,8 +152,6 @@ static void repl(b_vm *vm) {
         bracket_count--;
     }
 
-    printf("a = %d, b = %d\n", single_quote_count, double_quote_count);
-
     source = append_strings(source, line);
     if (line_length > 0) {
       source = append_strings(source, "\n");
