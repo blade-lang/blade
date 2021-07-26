@@ -79,23 +79,22 @@ cmake --build ./build --config Debug
 
 ## How to contribute
 
+Along with Blade's goal to be simplicity, flexibility and expressiveness is a strong desire to make the community around it as friendly and welcoming as possible. Therefore, all forms of contributions from pull requests, suggestions, typo fixes in documentation, feature request, bug reports and any contribution at all is greatly welcomed and appreciated.
+
+> WE NEED HELP! From review of this documentation, to suggestions on the core features of Blade,
+testing of Blade features, writing more comprehensive tests, bug detection, code fixes and more.
+PLEASE CONTRIBUTE!
+
+### Contributing code, fixes and features
+
 The standard. The general workflow is as follows.
 
 1. Find/file an issue on the Issues tab.
-2. Fork the repo.
-3. Push your changes to a branch in your forked repo. For coding guidelines, see below.
+2. Fork the repo and make your changes.
+3. Push your changes to a branch in your forked repo. For coding guidelines, see the project [README](https://github.com/blade-lang/blade/blob/main/README.md) file.
 4. Submit a pull request to Blade from your forked repo.
 
-You can also contribute by finding bugs but not fixing them.
-To simply submit a bug from your own repo, simply modify the
-`BUGS.md` file in a new branch a submit a PR. Kindly ensure
-what is being reported as a bug is not already captured in
-`TODO.md`
-
-> NOTE: Bugs submitted via the `BUGS.md` file take priority.
-
-You can also just mail your issues to [me](mailto:eqliqandfriends@gmail.com) directly.
-
+You can also just mail your issues to [Ore Richard Muyiwa](mailto:eqliqandfriends@gmail.com) directly.
 
 
 ## Coding Standard
@@ -119,4 +118,6 @@ That simple!
 
 ## Sponsors
 
-![JetBrains Logo](jetbrains.png)
+[comment]: <> (![JetBrains Logo]&#40;jetbrains.png&#41;)
+
+<img src="./jetbrains.png" width="64" height="64" alt="JetBrains Logo"/>
