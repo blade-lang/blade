@@ -711,6 +711,7 @@ static uint8_t argument_list(b_parser *p) {
 }
 
 static void call(b_parser *p, b_token previous, bool can_assign) {
+  p->repl_can_echo = false;
   uint8_t arg_count = argument_list(p);
   emit_bytes(p, OP_CALL, arg_count);
 }
