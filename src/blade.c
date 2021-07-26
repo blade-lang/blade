@@ -132,11 +132,11 @@ static void repl(b_vm *vm) {
         bracket_count++;
 
       // quotes
-      if(line[i] == '\'') {
+      if(line[i] == '\'' && double_quote_count == 0) {
         if(single_quote_count == 0) single_quote_count++;
         else single_quote_count--;
       }
-      if(line[i] == '"') {
+      if(line[i] == '"' && single_quote_count == 0) {
         if(double_quote_count == 0)double_quote_count++;
         else double_quote_count--;
       }
@@ -151,6 +151,8 @@ static void repl(b_vm *vm) {
       if (line[i] == ']' && bracket_count > 0)
         bracket_count--;
     }
+
+    printf("a = %d, b = %d\n", single_quote_count, double_quote_count);
 
     source = append_strings(source, line);
     if (line_length > 0) {
