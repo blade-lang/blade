@@ -468,8 +468,7 @@ DECLARE_NATIVE(ord) {
   int max_length = string->length > 1 && (int)string->chars[0] < 1 ? 3 : 1;
 
   if (string->length > max_length) {
-    RETURN_ERROR("ord() expects single character as argument, %d given",
-                 string->length / max_length);
+    RETURN_ERROR("ord() expects character as argument, string given");
   }
 
   const uint8_t *bytes = (uint8_t *)string->chars;
