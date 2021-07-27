@@ -1,12 +1,14 @@
-/*
- * This modules provides Blade's implementation of date and time
- * manipulation methods.
- * 
- * Time is stored internally as the number of seconds 
- * with fraction since the Epoch, January 1, 1970 00:00 UTC.
- * 
- * @copyright 2021, Ore Richard Muyiwa
- */
+#
+# @module date
+# 
+# This modules provides Blade's implementation of date and time
+# manipulation methods.
+# 
+# Time is stored internally as the number of seconds 
+# with fraction since the Epoch, January 1, 1970 00:00 UTC.
+# 
+# @copyright 2021, Ore Richard Muyiwa
+#
 
 import _date
 
@@ -24,8 +26,8 @@ var MAX_HOUR = 23
 var MAX_MINUTE = 59
 var MAX_SECONDS = 59
 
-  # the number of days in each month of the year
-  # the -1 is a placeholder for proper indexing
+# the number of days in each month of the year
+# the -1 is a placeholder for proper indexing
 var _days_in_month = [-1, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 31, 31]
 
 

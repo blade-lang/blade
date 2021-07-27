@@ -114,10 +114,10 @@ class Socket {
   var port = 0
 
   # the default family for the socket is AF_INET
-  var family = 2
+  var family = AF_UNIX
 
   # the default socket type is SOCK_STREAM
-  var type = 1
+  var type = SOCK_STREAM
 
   # initialize flags for default behavior...
   var flags = 0
