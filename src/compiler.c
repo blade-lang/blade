@@ -945,7 +945,7 @@ static void indexing(b_parser *p, b_token previous, bool can_assign) {
     }
     assignable = false;
   } else {
-    emit_byte(p, OP_EMPTY);
+    emit_byte(p, comma_match ? OP_NIL : OP_EMPTY);
   }
 
   assignment(p, OP_GET_INDEX, OP_SET_INDEX, -1, assignable);
