@@ -1012,12 +1012,12 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
       return throw_exception(vm, "string index %d out of range", real_index);
     }
   } else {
-    if (!IS_NUMBER(lower) || !(IS_NUMBER(upper) || IS_NIL(upper))) {
+    if (!(IS_NIL(lower) || IS_NUMBER(lower)) || !(IS_NUMBER(upper) || IS_NIL(upper))) {
       pop_n(vm, 2);
       return throw_exception(vm, "string are numerically indexed");
     }
 
-    int lower_index = AS_NUMBER(lower);
+    int lower_index = IS_NUMBER(lower) ? AS_NUMBER(lower) : 0;
     int upper_index = IS_NIL(upper) ? string->utf8_length : AS_NUMBER(upper);
 
     if (lower_index < 0 ||
@@ -1079,12 +1079,12 @@ static bool bytes_get_index(b_vm *vm, b_obj_bytes *bytes, bool will_assign) {
       return throw_exception(vm, "bytes index %d out of range", real_index);
     }
   } else {
-    if (!IS_NUMBER(lower) || !(IS_NUMBER(upper) || IS_NIL(upper))) {
+    if (!(IS_NIL(lower) || IS_NUMBER(lower)) || !(IS_NUMBER(upper) || IS_NIL(upper))) {
       pop_n(vm, 2);
       return throw_exception(vm, "bytes are numerically indexed");
     }
 
-    int lower_index = AS_NUMBER(lower);
+    int lower_index = IS_NUMBER(lower) ? AS_NUMBER(lower) : 0;
     int upper_index = IS_NIL(upper) ? bytes->bytes.count : AS_NUMBER(upper);
 
     if (lower_index < 0 ||
@@ -1143,12 +1143,12 @@ static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
       return throw_exception(vm, "list index %d out of range", real_index);
     }
   } else {
-    if (!IS_NUMBER(lower) || !(IS_NUMBER(upper) || IS_NIL(upper))) {
+    if (!(IS_NIL(lower) || IS_NUMBER(lower)) || !(IS_NUMBER(upper) || IS_NIL(upper))) {
       pop_n(vm, 2);
       return throw_exception(vm, "list are numerically indexed");
     }
 
-    int lower_index = AS_NUMBER(lower);
+    int lower_index = IS_NUMBER(lower) ? AS_NUMBER(lower) : 0;
     int upper_index = IS_NIL(upper) ? list->items.count : AS_NUMBER(upper);
 
     if (lower_index < 0 ||

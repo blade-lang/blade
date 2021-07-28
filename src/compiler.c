@@ -925,11 +925,18 @@ static void dictionary(b_parser *p, bool can_assign) {
 }
 
 static void indexing(b_parser *p, b_token previous, bool can_assign) {
-  expression(p);
-  bool assignable = true;
+  bool assignable = true, comma_match = false;
+  if(match(p, COMMA_TOKEN)) {
+    emit_byte(p, OP_NIL);
+    comma_match = true;
+  } else {
+    expression(p);
+  }
 
   if (!match(p, RBRACKET_TOKEN)) {
-    consume(p, COMMA_TOKEN, "expecting ',' or ']'");
+    if(!comma_match) {
+      consume(p, COMMA_TOKEN, "expecting ',' or ']'");
+    }
     if(match(p, RBRACKET_TOKEN)) {
       emit_byte(p, OP_NIL);
     } else {
