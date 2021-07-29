@@ -195,23 +195,33 @@ DECLARE_STRING_METHOD(is_number) {
 DECLARE_STRING_METHOD(is_lower) {
   ENFORCE_ARG_COUNT(is_lower, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
+  bool has_alpha;
   for (int i = 0; i < string->length; i++) {
-    if (!islower((unsigned char)string->chars[i])) {
+    bool is_alpha = isalpha((unsigned char)string->chars[i]);
+    if(!has_alpha){
+      has_alpha = is_alpha;
+    }
+    if (is_alpha && !islower((unsigned char)string->chars[i])) {
       RETURN_FALSE;
     }
   }
-  RETURN_BOOL(string->length != 0);
+  RETURN_BOOL(string->length != 0 && has_alpha);
 }
 
 DECLARE_STRING_METHOD(is_upper) {
   ENFORCE_ARG_COUNT(is_upper, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
+  bool has_alpha;
   for (int i = 0; i < string->length; i++) {
-    if (!isupper((unsigned char)string->chars[i])) {
+    bool is_alpha = isalpha((unsigned char)string->chars[i]);
+    if(!has_alpha){
+      has_alpha = is_alpha;
+    }
+    if (is_alpha && !isupper((unsigned char)string->chars[i])) {
       RETURN_FALSE;
     }
   }
-  RETURN_BOOL(string->length != 0);
+  RETURN_BOOL(string->length != 0 && has_alpha);
 }
 
 DECLARE_STRING_METHOD(is_space) {
