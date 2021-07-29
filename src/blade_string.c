@@ -167,7 +167,7 @@ DECLARE_STRING_METHOD(is_alpha) {
       RETURN_FALSE;
     }
   }
-  RETURN_TRUE;
+  RETURN_BOOL(string->length != 0);
 }
 
 DECLARE_STRING_METHOD(is_alnum) {
@@ -178,7 +178,7 @@ DECLARE_STRING_METHOD(is_alnum) {
       RETURN_FALSE;
     }
   }
-  RETURN_TRUE;
+  RETURN_BOOL(string->length != 0);
 }
 
 DECLARE_STRING_METHOD(is_number) {
@@ -189,7 +189,7 @@ DECLARE_STRING_METHOD(is_number) {
       RETURN_FALSE;
     }
   }
-  RETURN_TRUE;
+  RETURN_BOOL(string->length != 0);
 }
 
 DECLARE_STRING_METHOD(is_lower) {
@@ -200,7 +200,7 @@ DECLARE_STRING_METHOD(is_lower) {
       RETURN_FALSE;
     }
   }
-  RETURN_TRUE;
+  RETURN_BOOL(string->length != 0);
 }
 
 DECLARE_STRING_METHOD(is_upper) {
@@ -211,7 +211,7 @@ DECLARE_STRING_METHOD(is_upper) {
       RETURN_FALSE;
     }
   }
-  RETURN_TRUE;
+  RETURN_BOOL(string->length != 0);
 }
 
 DECLARE_STRING_METHOD(is_space) {
@@ -222,7 +222,7 @@ DECLARE_STRING_METHOD(is_space) {
       RETURN_FALSE;
     }
   }
-  RETURN_TRUE;
+  RETURN_BOOL(string->length != 0);
 }
 
 DECLARE_STRING_METHOD(trim) {
