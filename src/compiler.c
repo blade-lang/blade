@@ -711,7 +711,6 @@ static uint8_t argument_list(b_parser *p) {
 }
 
 static void call(b_parser *p, b_token previous, bool can_assign) {
-  p->repl_can_echo = false;
   uint8_t arg_count = argument_list(p);
   emit_bytes(p, OP_CALL, arg_count);
 }
@@ -1596,7 +1595,7 @@ static void compile_var_declaration(b_parser *p, bool is_initializer) {
 static void var_declaration(b_parser *p) { compile_var_declaration(p, false); }
 
 static void compile_expression_statement(b_parser *p, bool is_initializer) {
-  if(p->vm->is_repl) {
+  if(p->vm->is_repl && p->vm->compiler->scope_depth == 0) {
     p->repl_can_echo = true;
   }
   expression(p);
@@ -2312,6 +2311,7 @@ static void declaration(b_parser *p) {
 }
 
 static void statement(b_parser *p) {
+  p->repl_can_echo = false;
   ignore_whitespace(p);
 
   if (match(p, ECHO_TOKEN)) {
