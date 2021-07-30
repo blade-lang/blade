@@ -370,7 +370,9 @@ DECLARE_STRING_METHOD(join) {
     result[1] = '\0';
 
     for (int i = 1; i < string->length; i++) {
-      result = append_strings(result, method_obj->chars);
+      if(method_obj->length > 0) {
+        result = append_strings(result, method_obj->chars);
+      }
 
       char *chr = (char*) calloc(2, sizeof(char));
       chr[0] = string->chars[i];
@@ -392,14 +394,17 @@ DECLARE_STRING_METHOD(join) {
       count = AS_LIST(argument)->items.count;
     }
 
-    if(count == 0 || method_obj->length == 0) {
+    if(count == 0) {
       RETURN_STRING("");
     }
 
     char *result = value_to_string(vm, list[0]);
 
     for (int i = 1; i < count; i++) {
-      result = append_strings(result, method_obj->chars);
+      if(method_obj->length > 0) {
+        result = append_strings(result, method_obj->chars);
+      }
+
       char *str = value_to_string(vm, list[i]);
       result = append_strings(result, str);
       free(str);
