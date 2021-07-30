@@ -72,9 +72,9 @@ static void repl(b_vm *vm) {
 
     current_line++;
 
-    const char *cursor = "> ";
+    const char *cursor = "%> ";
     if (brace_count > 0 || bracket_count > 0 || paren_count > 0) {
-      cursor = "| ";
+      cursor = " | ";
     } else if (single_quote_count == 1 || double_quote_count == 1) {
       cursor = "  ";
     }
