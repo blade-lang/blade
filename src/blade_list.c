@@ -179,7 +179,9 @@ DECLARE_LIST_METHOD(reverse) {
   ENFORCE_ARG_COUNT(reverse, 0);
 
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
+  b_obj_list *nlist = (b_obj_list*)GC(new_list(vm));
 
+  /*// in-place reversal
   int start = 0, end = list->items.count - 1;
   while (start < end) {
     b_value temp = list->items.values[start];
@@ -187,9 +189,13 @@ DECLARE_LIST_METHOD(reverse) {
     list->items.values[end] = temp;
     start++;
     end--;
+  }*/
+
+  for(int i = list->items.count - 1; i >= 0; i--) {
+    write_list(vm, nlist, list->items.values[i]);
   }
 
-  RETURN;
+  RETURN_OBJ(nlist);
 }
 
 DECLARE_LIST_METHOD(sort) {
