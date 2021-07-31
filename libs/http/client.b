@@ -109,7 +109,7 @@ class HttpClient {
         if response_data.index_of('Content-Length') {
           var m = response_data.matches('/Content\-Length:\s*\d+/')
           if m {
-            var length = to_number(m[0].replace('/[^0-9]/', ''))
+            var length = to_number(m[0][0].replace('/[^0-9]/', ''))
             while response_data.length() < length {
               # append the new data in the stream
               response_data += client.receive()

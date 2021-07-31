@@ -55,18 +55,52 @@ DECLARE_MODULE_METHOD(socket__create) {
   ENFORCE_ARG_COUNT(_create, 3);
   ENFORCE_ARG_TYPE(_create, 0, IS_NUMBER); // family
   ENFORCE_ARG_TYPE(_create, 1, IS_NUMBER); // type
-  ENFORCE_ARG_TYPE(_create, 2, IS_NUMBER); // flags
+  ENFORCE_ARG_TYPE(_create, 2, IS_NUMBER); // protocol
 
 #ifdef _WIN32
   WSADATA wsa_data;
-  int i_result = WSAStartup(MAKEWORD(1, 1), &wsa_data);
+//  int i_result = WSAStartup(MAKEWORD(1, 1), &wsa_data);
+  int i_result = WSAStartup(MAKEWORD(2, 2), &wsa_data);
   if (i_result != NO_ERROR) {
       errno = i_result;
       RETURN_NUMBER(-1);
   }
 #endif
 
-  RETURN_NUMBER(socket((int)AS_NUMBER(args[0]), (int)AS_NUMBER(args[1]), (int)AS_NUMBER(args[2])));
+  int family = (int)AS_NUMBER(args[0]);
+  int type = (int)AS_NUMBER(args[1]);
+
+#ifdef SOCK_CLOEXEC
+  type |= SOCK_CLOEXEC;
+#endif
+
+  int protocol = (int)AS_NUMBER(args[2]);
+
+  int sock;
+  if((sock = socket(family, type, protocol)) < 0) {
+    RETURN_NUMBER(-1);
+  }
+
+  int flags = 0;
+#ifndef _WIN32
+  flags = fcntl (sock, F_GETFD, 0);
+
+  if ((flags != -1 && (flags & FD_CLOEXEC) == 0)) {
+    flags |= FD_CLOEXEC;
+
+    if ((fcntl(sock, F_SETFD, flags) < 0)){
+      // do nothing for now...
+    }
+  }
+
+#ifdef SO_NOSIGPIPE
+  if(setsockopt (sock, SOL_SOCKET, SO_NOSIGPIPE, &flags, sizeof (flags)) < 0){
+    // do nothing. this are just optimizations.
+  }
+#endif
+#endif
+
+  RETURN_NUMBER(sock);
 }
 
 // @TODO: Support IPv6 connect...
@@ -111,7 +145,19 @@ DECLARE_MODULE_METHOD(socket__connect) {
   bool non_blocking = ioctl(sock, FIONBIO, &arg) == 0;
 #endif
 
-  if (connect(sock, (struct sockaddr*) & remote, sizeof(remote)) < 0) {
+  int con_result = -1;
+
+#if !defined(_WIN32) && defined(EINTR)
+  for(;;) {
+    con_result = connect(sock, (struct sockaddr*) & remote, sizeof(remote));
+    if(con_result >= 0 || errno != EINTR)
+      break;
+  }
+#else
+  con_result = connect(sock, (struct sockaddr*) & remote, sizeof(remote));
+#endif
+
+  if (con_result < 0) {
 #ifndef _WIN32
     if (errno != EINPROGRESS) {
 #else
@@ -139,7 +185,7 @@ DECLARE_MODULE_METHOD(socket__connect) {
         arg &= (~O_NONBLOCK);
         fcntl(sock, F_SETFL, arg);
 #else
-        arg = 0;
+        unsigned long arg = 0;
         ioctl(sock, FIONBIO, &arg);
 #endif
       }
@@ -236,6 +282,12 @@ DECLARE_MODULE_METHOD(socket__send) {
     content = value_to_string(vm, data);
     length = (int)strlen(content);
   }
+
+#ifdef __linux__
+#ifdef MSG_NOSIGNAL
+  flags |= MSG_NOSIGNAL;
+#endif
+#endif
 
   RETURN_NUMBER(send(sock, content, length, flags));
 }
@@ -424,7 +476,7 @@ DECLARE_MODULE_METHOD(socket__getaddrinfo) {
   ENFORCE_ARG_TYPE(_getaddrinfo, 2, IS_NUMBER);
 
   b_obj_string *addr = AS_STRING(args[0]);
-  char *type = "http";
+  char *type = "80";
   if(!IS_NIL(args[1])){
     ENFORCE_ARG_TYPE(_getaddrinfo, 1, IS_STRING);
     type = AS_C_STRING(args[1]);

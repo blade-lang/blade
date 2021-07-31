@@ -72,6 +72,37 @@ var AF_HYLINK    = 15 # NSC Hyperchannel
 var AF_APPLETALK = 16 # AppleTalk
 var AF_INET6     = 30 # ipv6
 
+/** 
+ * Standard well-defined IP protocols.
+ */
+
+var IPPROTO_IP = 0            #  Dummy protocol for TCP.  
+var IPPROTO_ICMP = 1          #  Internet Control Message Protocol.  
+var IPPROTO_IGMP = 2          #  Internet Group Management Protocol. 
+var IPPROTO_IPIP = 4          #  IPIP tunnels (older KA9Q tunnels use 94).  
+var IPPROTO_TCP = 6           #  Transmission Control Protocol.  
+var IPPROTO_EGP = 8           #  Exterior Gateway Protocol.  
+var IPPROTO_PUP = 12          #  PUP protocol.  
+var IPPROTO_UDP = 17          #  User Datagram Protocol.  
+var IPPROTO_IDP = 22          #  XNS IDP protocol.  
+var IPPROTO_TP = 29           #  SO Transport Protocol Class 4.  
+var IPPROTO_DCCP = 33         #  Datagram Congestion Control Protocol.  
+var IPPROTO_IPV6 = 41         #  IPv6 header.  
+var IPPROTO_RSVP = 46         #  Reservation Protocol.  
+var IPPROTO_GRE = 47          #  General Routing Encapsulation.  
+var IPPROTO_ESP = 50          #  encapsulating security payload.  
+var IPPROTO_AH = 51           #  authentication header.  
+var IPPROTO_MTP = 92          #  Multicast Transport Protocol.  
+var IPPROTO_BEETPH = 94       #  IP option pseudo header for BEET.  
+var IPPROTO_ENCAP = 98        #  Encapsulation Header.  
+var IPPROTO_PIM = 103         #  Protocol Independent Multicast.  
+var IPPROTO_COMP = 108        #  Compression Header Protocol.  
+var IPPROTO_SCTP = 132        #  Stream Control Transmission Protocol.  
+var IPPROTO_UDPLITE = 136     #  UDP-Lite protocol.  
+var IPPROTO_MPLS = 137        #  MPLS in IP.  
+var IPPROTO_RAW = 255         #  Raw IP packets.  
+var IPPROTO_MAX = 256 
+
 /**
  * howto arguments for shutdown(2), specified by Posix.1g.
  */
@@ -114,13 +145,13 @@ class Socket {
   var port = 0
 
   # the default family for the socket is AF_INET
-  var family = AF_UNIX
+  var family = AF_INET
 
   # the default socket type is SOCK_STREAM
   var type = SOCK_STREAM
 
-  # initialize flags for default behavior...
-  var flags = 0
+  # initialize protocol for default behavior...
+  var protocol = IPPROTO_TCP
 
   # this variable holds the id of the socket on
   # the host machine. This value will be passed
@@ -150,25 +181,25 @@ class Socket {
   var is_blocking = false
 
   /**
-   * Socket(family: number [, type: number, flags: number [, id: number]])
+   * Socket(family: number [, type: number, protocol: number [, id: number]])
    * @constructor
    * @example
    * Socket(AF_INET, SOCK_STREAM, 0)
    */
-  Socket(family, type, flags, id) {
+  Socket(family, type, protocol, id) {
     if !id {
       if family self.family = family
       if type self.type = type
-      if flags self.flags = flags
+      if protocol self.protocol = protocol
 
       if !is_int(self.family) 
         die SocketException('AF_* expected for family, ${typeof(self.family)} given')
       if !is_int(self.type) 
         die SocketException('SOCK_* expected for type, ${typeof(self.type)} given')
-      if !is_int(self.flags) 
-        die SocketException('integer expected for flags, ${typeof(self.flags)} given')
+      if !is_int(self.protocol) 
+        die SocketException('integer expected for protocol, ${typeof(self.protocol)} given')
 
-      var id = _socket.create(self.family, self.type, self.flags)
+      var id = _socket.create(self.family, self.type, self.protocol)
       if id == -1 die SocketException('could not create socket')
       self.id = id
     } else {
@@ -299,7 +330,7 @@ class Socket {
       var result = _socket.accept(self.id)
 
       if result and result != -1  {
-        var socket = Socket(self.family, self.type, self.flags, result[0])
+        var socket = Socket(self.family, self.type, self.protocol, result[0])
         socket.host = result[1]
         socket.port = result[2]
         socket.is_client = true

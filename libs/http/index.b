@@ -9,6 +9,9 @@ import .response { HttpResponse }
 import .status { * }
 import .client { HttpClient }
 
+# single HttpClient for all requests lifetime
+var _client = HttpClient()
+
 /**
  * get(url: string)
  *
@@ -16,7 +19,7 @@ import .client { HttpClient }
  * or throws one of SocketException or Exception if it fails
  */
 def get(url) {
-  return HttpClient().send_request(url, 'GET')
+  return _client.send_request(url, 'GET')
 }
 
 /**
@@ -26,7 +29,7 @@ def get(url) {
  * or throws one of SocketException or Exception if it fails
  */
 def post(url, data) {
-  return HttpClient().send_request(url, 'POST', data)
+  return _client.send_request(url, 'POST', data)
 }
 
 /**
@@ -36,6 +39,6 @@ def post(url, data) {
  * or throws one of SocketException or Exception if it fails
  */
 def put(url, data) {
-  return HttpClient().send_request(url, 'PUT', data)
+  return _client.send_request(url, 'PUT', data)
 }
 
