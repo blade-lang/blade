@@ -156,13 +156,12 @@
 
 #define REGEX_RC_ERROR() REGEX_ERR("%d", rc);
 
-#define GET_REGEX_COMPILE_OPTIONS(name, string, regex_show_error)              \
+#define GET_REGEX_COMPILE_OPTIONS(string, regex_show_error)              \
   uint32_t compile_options = is_regex(string);                                 \
   if ((regex_show_error) && (int)compile_options == -1) {                        \
-    RETURN_ERROR("invalid regular expression passed to " #name "()");          \
+    RETURN_ERROR("RegexError: Invalid regex");          \
   } else if ((regex_show_error) && (int)compile_options > 1000000) {                  \
-    RETURN_ERROR("invalid regular expression modifier '%c' "       \
-                 "in " #name "()",                                    \
+    RETURN_ERROR("RegexError: invalid modifier '%c' ",       \
                  (char)abs(1000000 - (int)compile_options));                             \
   }
 

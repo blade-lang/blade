@@ -82,10 +82,6 @@ uint32_t is_regex(b_obj_string *string) {
         case 'D':
           c_options |= PCRE2_DOLLAR_ENDONLY;
           break;
-        case 'S': /* Pass. */
-          break;
-        case 'X': /* Pass. */
-          break;
         case 'U':
           c_options |= PCRE2_UNGREEDY;
           break;
@@ -621,7 +617,7 @@ DECLARE_STRING_METHOD(match) {
     RETURN_FALSE;
   }
 
-  GET_REGEX_COMPILE_OPTIONS(match, substr, false);
+  GET_REGEX_COMPILE_OPTIONS(substr, false);
 
   if ((int) compile_options < 0) {
     RETURN_BOOL(strstr(string->chars, substr->chars) - string->chars > -1);
@@ -639,12 +635,13 @@ DECLARE_STRING_METHOD(match) {
   pcre2_code *re =
       pcre2_compile(pattern, PCRE2_ZERO_TERMINATED, compile_options,
                     &error_number, &error_offset, NULL);
+  free((void*)pattern);
 
   REGEX_COMPILATION_ERROR(re, error_number, error_offset);
 
   pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(re, NULL);
 
-  int rc = pcre2_match(re, subject, subject_length, 0, compile_options, match_data, NULL);
+  int rc = pcre2_match(re, subject, subject_length, 0, 0, match_data, NULL);
 
   if (rc < 0) {
     switch (rc) {
@@ -720,7 +717,7 @@ DECLARE_STRING_METHOD(matches) {
     RETURN_FALSE; // if either string or str is empty, return false
   }
 
-  GET_REGEX_COMPILE_OPTIONS(matches, substr, true);
+  GET_REGEX_COMPILE_OPTIONS(substr, true);
 
   char *real_regex = remove_regex_delimiter(vm, substr);
 
@@ -738,12 +735,13 @@ DECLARE_STRING_METHOD(matches) {
 
   pcre2_code *re = pcre2_compile(pattern, PCRE2_ZERO_TERMINATED, compile_options,
                                  &error_number, &error_offset, NULL);
+  free((void*)pattern);
 
   REGEX_COMPILATION_ERROR(re, error_number, error_offset);
 
   pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(re, NULL);
 
-  int rc = pcre2_match(re, subject, subject_length, 0, compile_options, match_data, NULL);
+  int rc = pcre2_match(re, subject, subject_length, 0, 0, match_data, NULL);
 
   if (rc < 0) {
     switch (rc) {
@@ -822,17 +820,15 @@ DECLARE_STRING_METHOD(matches) {
                         newline == PCRE2_NEWLINE_ANYCRLF;
 
   // find the other matches
-  uint32_t options = option_bits;
   for (;;) {
+    uint32_t options = 0;
     PCRE2_SIZE start_offset = o_vector[1];
 
     // if the previous match was for an empty string
     if (o_vector[0] == o_vector[1]) {
       if (o_vector[0] == subject_length)
         break;
-      if ((options & PCRE2_ANCHORED) != 0)
-        options |= PCRE2_ANCHORED;
-      options |= PCRE2_NOTEMPTY_ATSTART;
+      options = PCRE2_NOTEMPTY_ATSTART | PCRE2_ANCHORED;
     } else {
       PCRE2_SIZE start_char = pcre2_get_startchar(match_data);
       if (start_offset > subject_length - 1) {
@@ -955,7 +951,7 @@ DECLARE_STRING_METHOD(replace) {
     RETURN_FALSE;
   }
 
-  GET_REGEX_COMPILE_OPTIONS(replace, substr, false);
+  GET_REGEX_COMPILE_OPTIONS(substr, false);
   char *real_regex = substr->chars;
   if ((int) compile_options > -1) {
     real_regex = remove_regex_delimiter(vm, substr);
@@ -971,6 +967,7 @@ DECLARE_STRING_METHOD(replace) {
   pcre2_code *re = pcre2_compile(pattern, PCRE2_ZERO_TERMINATED,
                                  compile_options & PCRE2_MULTILINE,
                                  &error_number, &error_offset, 0);
+  free((void*)pattern);
 
   REGEX_COMPILATION_ERROR(re, error_number, error_offset);
 
