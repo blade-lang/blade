@@ -1073,6 +1073,7 @@ static void SNEFRUFinal(unsigned char digest[32], SNEFRU_CTX *context) {
 
   memset(context, 0, sizeof(*context));
 }
+
 static char *SnefruString(void *data, unsigned int data_len) {
   unsigned char digest[32];
 
@@ -1081,7 +1082,7 @@ static char *SnefruString(void *data, unsigned int data_len) {
   SNEFRUUpdate(&ctx, data, data_len);
   SNEFRUFinal(digest, &ctx);
 
-  char *result = (char*)calloc(65, sizeof(char));
+  char *result = (char *) calloc(65, sizeof(char));
   for (int i = 0; i < 32; i++)
     sprintf (result + (i * 2), "%02x", digest[i]);
 

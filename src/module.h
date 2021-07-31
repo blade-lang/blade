@@ -12,6 +12,7 @@ typedef struct {
 } b_func_reg;
 
 typedef b_value (*b_class_field)(b_vm *);
+
 typedef void (*b_module_unloader)(b_vm *);
 
 typedef struct {
@@ -27,7 +28,7 @@ typedef struct {
 } b_class_reg;
 
 typedef struct {
-  const char* name;
+  const char *name;
   b_field_reg *fields;
   b_func_reg *functions;
   b_class_reg *classes;

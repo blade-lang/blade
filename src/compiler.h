@@ -78,6 +78,7 @@ typedef struct {
 } b_parser;
 
 typedef void (*b_parse_prefix_fn)(b_parser *, bool);
+
 typedef void (*b_parse_infix_fn)(b_parser *, b_token, bool);
 
 typedef struct {

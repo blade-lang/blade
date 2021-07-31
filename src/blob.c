@@ -26,10 +26,10 @@ void write_blob(b_vm *vm, b_blob *blob, uint8_t byte, int line) {
 }
 
 void free_blob(b_vm *vm, b_blob *blob) {
-  if(blob->code != NULL) {
+  if (blob->code != NULL) {
     FREE_ARRAY(uint8_t, blob->code, blob->capacity);
   }
-  if(blob->lines != NULL) {
+  if (blob->lines != NULL) {
     FREE_ARRAY(int, blob->lines, blob->capacity);
   }
   free_value_arr(vm, &blob->constants);

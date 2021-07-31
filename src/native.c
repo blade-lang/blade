@@ -17,7 +17,7 @@ static b_obj_string *bin_to_string(b_vm *vm, int n) {
   int cnt = 0;
   while (n != 0) {
     int rem = n % 2;
-    long long c = (long long)pow(10, cnt);
+    long long c = (long long) pow(10, cnt);
     number += rem * c;
     n /= 2;
 
@@ -56,7 +56,7 @@ DECLARE_NATIVE(time) {
   struct timeval tv;
   gettimeofday(&tv, NULL);
 #ifndef _WIN32
-  RETURN_NUMBER((double)(1000000 * (double)tv.tv_sec + (double)tv.tv_usec) /
+  RETURN_NUMBER((double) (1000000 * (double) tv.tv_sec + (double) tv.tv_usec) /
                 1000000);
 #else
   RETURN_NUMBER((double)tv.tv_sec + ((double)tv.tv_usec / 10000000));
@@ -91,7 +91,7 @@ DECLARE_NATIVE(id) {
 #ifdef _WIN32
   RETURN_NUMBER(PtrToLong(&args[0]));
 #else
-  RETURN_NUMBER((long)&args[0]);
+  RETURN_NUMBER((long) &args[0]);
 #endif
 }
 
@@ -260,7 +260,7 @@ DECLARE_NATIVE(int) {
   METHOD_OVERRIDE(to_number, 9);
 
   ENFORCE_ARG_TYPE(int, 0, IS_NUMBER);
-  RETURN_NUMBER((double)((int)AS_NUMBER(args[0])));
+  RETURN_NUMBER((double) ((int) AS_NUMBER(args[0])));
 }
 
 /**
@@ -365,7 +365,7 @@ DECLARE_NATIVE(to_number) {
   } else if (IS_NIL(args[0])) {
     RETURN_NUMBER(-1);
   }
-  RETURN_NUMBER(strtod((const char *)value_to_string(vm, args[0]), NULL));
+  RETURN_NUMBER(strtod((const char *) value_to_string(vm, args[0]), NULL));
 }
 
 /**
@@ -380,7 +380,7 @@ DECLARE_NATIVE(to_int) {
   ENFORCE_ARG_COUNT(to_int, 1);
   METHOD_OVERRIDE(to_int, 6);
   ENFORCE_ARG_TYPE(to_int, 0, IS_NUMBER);
-  RETURN_NUMBER((int)AS_NUMBER(args[0]));
+  RETURN_NUMBER((int) AS_NUMBER(args[0]));
 }
 
 /**
@@ -399,12 +399,12 @@ DECLARE_NATIVE(to_list) {
     RETURN_VALUE(args[0]);
   }
 
-  b_obj_list *list = (b_obj_list *)GC(new_list(vm));
+  b_obj_list *list = (b_obj_list *) GC(new_list(vm));
 
   if (IS_DICT(args[0])) {
     b_obj_dict *dict = AS_DICT(args[0]);
     for (int i = 0; i < dict->names.count; i++) {
-      b_obj_list *n_list = (b_obj_list *)GC(new_list(vm));
+      b_obj_list *n_list = (b_obj_list *) GC(new_list(vm));
       write_value_arr(vm, &n_list->items, dict->names.values[i]);
 
       b_value value;
@@ -436,7 +436,7 @@ DECLARE_NATIVE(to_dict) {
     RETURN_VALUE(args[0]);
   }
 
-  b_obj_dict *dict = (b_obj_dict *)GC(new_dict(vm));
+  b_obj_dict *dict = (b_obj_dict *) GC(new_dict(vm));
   dict_set_entry(vm, dict, NUMBER_VAL(0), args[0]);
 
   RETURN_OBJ(dict);
@@ -451,7 +451,7 @@ DECLARE_NATIVE(to_dict) {
 DECLARE_NATIVE(chr) {
   ENFORCE_ARG_COUNT(chr, 1);
   ENFORCE_ARG_TYPE(chr, 0, IS_NUMBER);
-  char *string = utf8_encode((int)AS_NUMBER(args[0]));
+  char *string = utf8_encode((int) AS_NUMBER(args[0]));
   RETURN_STRING(string);
 }
 
@@ -465,19 +465,19 @@ DECLARE_NATIVE(ord) {
   ENFORCE_ARG_TYPE(ord, 0, IS_STRING);
   b_obj_string *string = AS_STRING(args[0]);
 
-  int max_length = string->length > 1 && (int)string->chars[0] < 1 ? 3 : 1;
+  int max_length = string->length > 1 && (int) string->chars[0] < 1 ? 3 : 1;
 
   if (string->length > max_length) {
     RETURN_ERROR("ord() expects character as argument, string given");
   }
 
-  const uint8_t *bytes = (uint8_t *)string->chars;
+  const uint8_t *bytes = (uint8_t *) string->chars;
   if ((bytes[0] & 0xc0) == 0x80) {
     RETURN_NUMBER(-1);
   }
 
   // Decode the UTF-8 sequence.
-  RETURN_NUMBER(utf8_decode((uint8_t *)string->chars, string->length));
+  RETURN_NUMBER(utf8_decode((uint8_t *) string->chars, string->length));
 }
 
 /**
@@ -514,12 +514,12 @@ DECLARE_NATIVE(rand) {
 
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  srand((unsigned int)(1000000 * tv.tv_sec + tv.tv_usec));
+  srand((unsigned int) (1000000 * tv.tv_sec + tv.tv_usec));
   do {
     x = rand();
   } while (x >= RAND_MAX - remainder);
 
-  RETURN_NUMBER((double)lower_limit + x % n);
+  RETURN_NUMBER((double) lower_limit + x % n);
 }
 
 /**
@@ -529,7 +529,7 @@ DECLARE_NATIVE(rand) {
  */
 DECLARE_NATIVE(typeof) {
   ENFORCE_ARG_COUNT(typeof, 1);
-  char *result = (char*)value_type(args[0]);
+  char *result = (char *) value_type(args[0]);
   RETURN_STRING(result);
 }
 
@@ -572,7 +572,7 @@ DECLARE_NATIVE(is_number) {
 DECLARE_NATIVE(is_int) {
   ENFORCE_ARG_COUNT(is_int, 1);
   RETURN_BOOL(IS_NUMBER(args[0]) &&
-              (((int)AS_NUMBER(args[0])) == AS_NUMBER(args[0])));
+              (((int) AS_NUMBER(args[0])) == AS_NUMBER(args[0])));
 }
 
 /**

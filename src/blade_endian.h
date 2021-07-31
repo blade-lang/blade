@@ -3,7 +3,9 @@
 
 #ifndef BYTE_ORDER
 #if (BSD >= 199103) || defined(__MACH__) || defined(__APPLE__)
+
 # include <machine/endian.h>
+
 #elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 #include <sys/endian.h>
 #elif defined(linux) || defined(__linux__)
@@ -46,10 +48,10 @@
     (BYTE_ORDER != BIG_ENDIAN && BYTE_ORDER != LITTLE_ENDIAN && \
     BYTE_ORDER != PDP_ENDIAN)
 /* you must determine what the correct bit order is for
-	 * your compiler - the next line is an intentional error
-	 * which will force your compiles to bomb until you fix
-	 * the above macros.
-	 */
+   * your compiler - the next line is an intentional error
+   * which will force your compiles to bomb until you fix
+   * the above macros.
+   */
 #error "Undefined or invalid BYTE_ORDER"
 #endif
 

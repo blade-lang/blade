@@ -64,9 +64,9 @@ void bind_native_modules(b_vm *vm) {
 
             b_obj_native *native = new_native(vm, func.function, func.name);
 
-            if(func.is_static) {
+            if (func.is_static) {
               native->type = TYPE_STATIC;
-            } else if(strlen(func.name) > 0 && func.name[0] == '_') {
+            } else if (strlen(func.name) > 0 && func.name[0] == '_') {
               native->type = TYPE_PRIVATE;
             }
 

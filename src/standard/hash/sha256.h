@@ -20,9 +20,11 @@ typedef struct {
 extern "C" {
 #endif
 
-void sha256_init (SHA256_CTX *sc);
-void sha256_update (SHA256_CTX *sc, const void *data, uint32_t len);
-void sha256_final (SHA256_CTX *sc, uint8_t hash[SHA256_HASH_SIZE]);
+void sha256_init(SHA256_CTX *sc);
+
+void sha256_update(SHA256_CTX *sc, const void *data, uint32_t len);
+
+void sha256_final(SHA256_CTX *sc, uint8_t hash[SHA256_HASH_SIZE]);
 
 #ifdef __cplusplus
 }
@@ -80,7 +82,7 @@ static const uint32_t K[64] = {
 #else /* IS_BIG_ENDIAN */
 
 #define BYTESWAP(x) ((ROTR((x), 8) & 0xff00ff00L) | \
-		     (ROTL((x), 8) & 0x00ff00ffL))
+         (ROTL((x), 8) & 0x00ff00ffL))
 #define BYTESWAP64(x) _byteswap64(x)
 
 static inline uint64_t _byteswap64(uint64_t x) {
@@ -97,7 +99,7 @@ static inline uint64_t _byteswap64(uint64_t x) {
 #define BYTESWAP64(x) _byteswap64(sc->littleEndian, x)
 
 #define _BYTESWAP(x) ((ROTR((x), 8) & 0xff00ff00L) | \
-		      (ROTL((x), 8) & 0x00ff00ffL))
+          (ROTL((x), 8) & 0x00ff00ffL))
 #define _BYTESWAP64(x) __byteswap64(x)
 
 static inline uint64_t __byteswap64(uint64_t x) {
@@ -143,7 +145,7 @@ static const uint8_t padding[64] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-void sha256_init (SHA256_CTX *sc) {
+void sha256_init(SHA256_CTX *sc) {
 #ifdef RUNTIME_ENDIAN
   setEndian (&sc->littleEndian);
 #endif /* RUNTIME_ENDIAN */
@@ -160,7 +162,7 @@ void sha256_init (SHA256_CTX *sc) {
   sc->bufferLength = 0L;
 }
 
-void sha224_init (SHA256_CTX *sc) {
+void sha224_init(SHA256_CTX *sc) {
 #ifdef RUNTIME_ENDIAN
   setEndian (&sc->littleEndian);
 #endif /* RUNTIME_ENDIAN */
@@ -177,16 +179,16 @@ void sha224_init (SHA256_CTX *sc) {
   sc->bufferLength = 0L;
 }
 
-static void burnStack (int size) {
+static void burnStack(int size) {
   char buf[128];
 
-  memset (buf, 0, sizeof (buf));
-  size -= sizeof (buf);
+  memset (buf, 0, sizeof(buf));
+  size -= sizeof(buf);
   if (size > 0)
-    burnStack (size);
+    burnStack(size);
 }
 
-static void SHA256Guts (SHA256_CTX *sc, const uint32_t *cbuf) {
+static void SHA256Guts(SHA256_CTX *sc, const uint32_t *cbuf) {
   uint32_t buf[64];
   uint32_t *W, *W2, *W7, *W15, *W16;
   uint32_t a, b, c, d, e, f, g, h;
@@ -263,22 +265,70 @@ static void SHA256Guts (SHA256_CTX *sc, const uint32_t *cbuf) {
     DO_ROUND(); DO_ROUND(); DO_ROUND(); DO_ROUND();
   }
 #elif SHA256_UNROLL == 64
-  DO_ROUND(); DO_ROUND(); DO_ROUND(); DO_ROUND();
-  DO_ROUND(); DO_ROUND(); DO_ROUND(); DO_ROUND();
-  DO_ROUND(); DO_ROUND(); DO_ROUND(); DO_ROUND();
-  DO_ROUND(); DO_ROUND(); DO_ROUND(); DO_ROUND();
-  DO_ROUND(); DO_ROUND(); DO_ROUND(); DO_ROUND();
-  DO_ROUND(); DO_ROUND(); DO_ROUND(); DO_ROUND();
-  DO_ROUND(); DO_ROUND(); DO_ROUND(); DO_ROUND();
-  DO_ROUND(); DO_ROUND(); DO_ROUND(); DO_ROUND();
-  DO_ROUND(); DO_ROUND(); DO_ROUND(); DO_ROUND();
-  DO_ROUND(); DO_ROUND(); DO_ROUND(); DO_ROUND();
-  DO_ROUND(); DO_ROUND(); DO_ROUND(); DO_ROUND();
-  DO_ROUND(); DO_ROUND(); DO_ROUND(); DO_ROUND();
-  DO_ROUND(); DO_ROUND(); DO_ROUND(); DO_ROUND();
-  DO_ROUND(); DO_ROUND(); DO_ROUND(); DO_ROUND();
-  DO_ROUND(); DO_ROUND(); DO_ROUND(); DO_ROUND();
-  DO_ROUND(); DO_ROUND(); DO_ROUND(); DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
+  DO_ROUND();
 #else
 #error "SHA256_UNROLL must be 1, 2, 4, 8, 16, 32, or 64!"
 #endif
@@ -355,7 +405,7 @@ void sha256_update(SHA256_CTX *sc, const void *vdata, uint32_t len) {
     len -= bytesToCopy;
 
     if (sc->bufferLength == 64L) {
-      SHA256Guts (sc, sc->buffer.words);
+      SHA256Guts(sc, sc->buffer.words);
       needBurn = 1;
       sc->bufferLength = 0L;
     }
@@ -363,10 +413,10 @@ void sha256_update(SHA256_CTX *sc, const void *vdata, uint32_t len) {
 #endif /* SHA256_FAST_COPY */
 
   if (needBurn)
-    burnStack (sizeof (uint32_t[74]) + sizeof (uint32_t *[6]) + sizeof (int));
+    burnStack(sizeof(uint32_t[74]) + sizeof(uint32_t *[6]) + sizeof(int));
 }
 
-void sha256_final (SHA256_CTX *sc, uint8_t hash[SHA256_HASH_SIZE]) {
+void sha256_final(SHA256_CTX *sc, uint8_t hash[SHA256_HASH_SIZE]) {
   uint32_t bytesToPad;
   uint64_t lengthPad;
   int i;
@@ -377,8 +427,8 @@ void sha256_final (SHA256_CTX *sc, uint8_t hash[SHA256_HASH_SIZE]) {
 
   lengthPad = BYTESWAP64(sc->totalLength);
 
-  sha256_update (sc, padding, bytesToPad);
-  sha256_update (sc, &lengthPad, 8L);
+  sha256_update(sc, padding, bytesToPad);
+  sha256_update(sc, &lengthPad, 8L);
 
   if (hash) {
     for (i = 0; i < SHA256_HASH_WORDS; i++) {
@@ -403,7 +453,7 @@ static char *sha256_string(unsigned char *string, int length) {
   sha256_update(&ctx, string, length);
   sha256_final(&ctx, digest);
 
-  char *result = (char*)calloc(65, sizeof(char));
+  char *result = (char *) calloc(65, sizeof(char));
   for (int i = 0; i < 32; i++)
     sprintf (result + (i * 2), "%02x", digest[i]);
 
@@ -418,7 +468,7 @@ static char *sha224_string(unsigned char *string, int length) {
   sha256_update(&ctx, string, length);
   sha256_final(&ctx, digest);
 
-  char *result = (char*)calloc(57, sizeof(char));
+  char *result = (char *) calloc(57, sizeof(char));
   for (int i = 0; i < 28; i++)
     sprintf (result + (i * 2), "%02x", digest[i]);
 

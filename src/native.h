@@ -88,7 +88,7 @@
   }
 
 #define ENFORCE_ARG_RANGE(name, low, up)                                       \
-  if (arg_count < low || arg_count > up) {                                     \
+  if (arg_count < (low) || arg_count > (up)) {                                     \
     RETURN_ERROR(#name "() expects between %d and %d arguments, %d given",     \
                  low, up, arg_count);                                          \
   }
@@ -97,7 +97,7 @@
   if (!type(args[i])) {                                                        \
     RETURN_ERROR(#name                                                         \
                  "() expects argument %d as " NORMALIZE(type) ", %s given",    \
-                 i + 1, value_type(args[i]));                                  \
+                 (i) + 1, value_type(args[i]));                                  \
   }
 
 #define ENFORCE_CONSTRUCTOR_ARG_TYPE(name, i, type)                            \
@@ -105,13 +105,13 @@
     RETURN_ERROR(#name                                                         \
                  "() expects argument %d to class constructor as " NORMALIZE(  \
                      type) ", %s given",                                       \
-                 i + 1, value_type(args[i]));                                  \
+                 (i) + 1, value_type(args[i]));                                  \
   }
 
 #define EXCLUDE_ARG_TYPE(method_name, arg_type, index)                         \
   if (arg_type(args[index])) {                                                 \
     RETURN_ERROR("invalid type %s() as argument %d in %s()",                   \
-                 value_type(args[index]), index + 1, #method_name);            \
+                 value_type(args[index]), (index) + 1, #method_name);            \
   }
 
 #define METHOD_OVERRIDE(override, i)                                           \
@@ -127,19 +127,19 @@
   } while (0);
 
 #define REGEX_COMPILATION_ERROR(re, error_number, error_offset)                \
-  if (re == NULL) {                                                            \
+  if ((re) == NULL) {                                                            \
     PCRE2_UCHAR8 buffer[256];                                                  \
     pcre2_get_error_message_8(error_number, buffer, sizeof(buffer));           \
     RETURN_ERROR("regular expression compilation failed at offset %d: %s",     \
-                 (int)error_offset, buffer);                                   \
+                 (int)(error_offset), buffer);                                   \
   }
 
 #define REGEX_ASSERTION_ERROR(re, match_data, ovector)                         \
-  if (ovector[0] > ovector[1]) {                                               \
+  if ((ovector)[0] > (ovector)[1]) {                                               \
     RETURN_ERROR(                                                            \
         "match aborted: regular expression used \\K in an assertion %.*s to "  \
         "set match start after its end.",                                      \
-        (int)(ovector[0] - ovector[1]), (char *)(subject + ovector[1]));       \
+        (int)((ovector)[0] - (ovector)[1]), (char *)(subject + (ovector)[1]));       \
     pcre2_match_data_free(match_data);                                         \
     pcre2_code_free(re);                                                       \
     RETURN_EMPTY;                                                          \
@@ -158,20 +158,21 @@
 
 #define GET_REGEX_COMPILE_OPTIONS(name, string, regex_show_error)              \
   uint32_t compile_options = is_regex(string);                                 \
-  if (regex_show_error && (int)compile_options == -1) {                        \
+  if ((regex_show_error) && (int)compile_options == -1) {                        \
     RETURN_ERROR("invalid regular expression passed to " #name "()");          \
-  } else if (regex_show_error && (int)compile_options < -1) {                  \
-    RETURN_ERROR("invalid regular expression delimiter or character %c "       \
-                 "supplied to " #name "()",                                    \
-                 (char)abs((int)compile_options));                             \
+  } else if ((regex_show_error) && (int)compile_options > 1000000) {                  \
+    RETURN_ERROR("invalid regular expression modifier '%c' "       \
+                 "in " #name "()",                                    \
+                 (char)abs(1000000 - (int)compile_options));                             \
   }
+
 
 #define GC_STRING(o) OBJ_VAL(GC(copy_string(vm, (o), (int)strlen(o))))
 #define GC_L_STRING(o, l) OBJ_VAL(GC(copy_string(vm, (o), (l))))
 #define GC_T_STRING(o, l) OBJ_VAL(GC(take_string(vm, (o), (l))))
 #define GC_TT_STRING(o) OBJ_VAL(GC(take_string(vm, (o), (int)strlen(o))))
 
-extern int is_regex(b_obj_string *string);
+extern uint32_t is_regex(b_obj_string *string);
 
 extern char *remove_regex_delimiter(b_vm *vm, b_obj_string *string);
 

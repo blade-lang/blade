@@ -27,8 +27,7 @@ DECLARE_MODULE_METHOD(os_exec) {
   }
 
   FILE *fd = popen(string->chars, "r");
-  if (!fd)
-    RETURN;
+  if (!fd) RETURN;
 
   char buffer[256];
   size_t n_read;
@@ -40,18 +39,17 @@ DECLARE_MODULE_METHOD(os_exec) {
     while ((n_read = fread(buffer, 1, sizeof(buffer), fd)) != 0) {
       if (length + n_read >= output_size) {
         output_size *= 2;
-        void* temp = realloc(output, output_size);
+        void *temp = realloc(output, output_size);
         if (temp == NULL) {
           RETURN_ERROR("device out of memory");
-        }
-        else {
+        } else {
           output = temp;
         }
       }
       if ((output + length) != NULL) {
         strncat(output + length, buffer, n_read);
       }
-      length += (int)n_read;
+      length += (int) n_read;
     }
 
     if (length == 0) {
@@ -145,7 +143,7 @@ b_value get_os_platform(b_vm *vm) {
 #define PLATFORM_NAME "unknown"
 #endif
 
-  return OBJ_VAL(copy_string(vm, PLATFORM_NAME, (int)strlen(PLATFORM_NAME)));
+  return OBJ_VAL(copy_string(vm, PLATFORM_NAME, (int) strlen(PLATFORM_NAME)));
 
 #undef PLATFORM_NAME
 }
@@ -155,7 +153,7 @@ DECLARE_MODULE_METHOD(os_getenv) {
   ENFORCE_ARG_TYPE(getenv, 0, IS_STRING);
 
   char *env = getenv(AS_C_STRING(args[0]));
-  if(env != NULL) {
+  if (env != NULL) {
     RETURN_STRING(env);
   } else {
     RETURN;
@@ -168,7 +166,7 @@ DECLARE_MODULE_METHOD(os_setenv) {
   ENFORCE_ARG_TYPE(setenv, 1, IS_STRING);
 
   int overwrite = 1;
-  if(arg_count == 3) {
+  if (arg_count == 3) {
     ENFORCE_ARG_TYPE(setenv, 2, IS_BOOL);
     overwrite = AS_BOOL(args[2]) ? 1 : 0;
   }
@@ -177,7 +175,7 @@ DECLARE_MODULE_METHOD(os_setenv) {
 #define setenv(e, v, i) _putenv_s(e, v)
 #endif
 
-  if(setenv(AS_C_STRING(args[0]), AS_C_STRING(args[1]), overwrite) == 0) {
+  if (setenv(AS_C_STRING(args[0]), AS_C_STRING(args[1]), overwrite) == 0) {
     RETURN_TRUE;
   }
   RETURN_FALSE;
@@ -185,12 +183,12 @@ DECLARE_MODULE_METHOD(os_setenv) {
 
 CREATE_MODULE_LOADER(os) {
   static b_func_reg os_module_functions[] = {
-      {"info",  true,  GET_MODULE_METHOD(os_info)},
-      {"exec",  true,  GET_MODULE_METHOD(os_exec)},
-      {"sleep", true,  GET_MODULE_METHOD(os_sleep)},
+      {"info",   true,  GET_MODULE_METHOD(os_info)},
+      {"exec",   true,  GET_MODULE_METHOD(os_exec)},
+      {"sleep",  true,  GET_MODULE_METHOD(os_sleep)},
       {"getenv", true,  GET_MODULE_METHOD(os_getenv)},
       {"setenv", true,  GET_MODULE_METHOD(os_setenv)},
-      {NULL,    false, NULL},
+      {NULL,     false, NULL},
   };
 
   static b_field_reg os_module_fields[] = {

@@ -61,7 +61,7 @@ DECLARE_BYTES_METHOD(append) {
       b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
       bytes->bytes.bytes =
           reallocate(vm, bytes->bytes.bytes, bytes->bytes.count,
-                     (size_t)bytes->bytes.count + (size_t)list->items.count);
+                     (size_t) bytes->bytes.count + (size_t) list->items.count);
 
       for (int i = 0; i < list->items.count; i++) {
         if (!IS_NUMBER(list->items.values[i])) {
@@ -101,7 +101,7 @@ DECLARE_BYTES_METHOD(extend) {
   b_obj_bytes *n_bytes = AS_BYTES(args[0]);
 
   bytes->bytes.bytes = reallocate(vm, bytes->bytes.bytes, bytes->bytes.count,
-    (size_t)bytes->bytes.count + (size_t)n_bytes->bytes.count);
+                                  (size_t) bytes->bytes.count + (size_t) n_bytes->bytes.count);
 
   memcpy(bytes->bytes.bytes + bytes->bytes.count, n_bytes->bytes.bytes,
          n_bytes->bytes.count);
@@ -250,7 +250,7 @@ DECLARE_BYTES_METHOD(is_space) {
 DECLARE_BYTES_METHOD(to_list) {
   ENFORCE_ARG_COUNT(to_list, 0);
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
-  b_obj_list *list = (b_obj_list *)GC(new_list(vm));
+  b_obj_list *list = (b_obj_list *) GC(new_list(vm));
 
   for (int i = 0; i < bytes->bytes.count; i++) {
     write_list(vm, list, NUMBER_VAL((double) ((int) bytes->bytes.bytes[i])));
@@ -287,8 +287,7 @@ DECLARE_BYTES_METHOD(__itern__) {
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
 
   if (IS_NIL(args[0])) {
-    if (bytes->bytes.count == 0)
-      RETURN_FALSE;
+    if (bytes->bytes.count == 0) RETURN_FALSE;
     RETURN_NUMBER(0);
   }
 
@@ -298,7 +297,7 @@ DECLARE_BYTES_METHOD(__itern__) {
 
   int index = AS_NUMBER(args[0]);
   if (index < bytes->bytes.count - 1) {
-    RETURN_NUMBER((double)index + 1);
+    RETURN_NUMBER((double) index + 1);
   }
 
   RETURN;

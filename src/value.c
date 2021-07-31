@@ -117,7 +117,7 @@ void echo_value(b_value value) { do_print_value(value, true); }
 
 static inline char *number_to_string(double number) {
   int length = snprintf(NULL, 0, NUMBER_FORMAT, number);
-  char *num_str = (char *) calloc((size_t)length + 1, sizeof(char));
+  char *num_str = (char *) calloc((size_t) length + 1, sizeof(char));
   if (num_str != NULL) {
     sprintf(num_str, NUMBER_FORMAT, number);
     return num_str;
@@ -322,9 +322,10 @@ static uint64_t siphash24(uint64_t k0, uint64_t k1, const char *src,
 } */
 
 #ifndef _WIN32
+
 inline uint32_t hash_string(const char *key, int length) {
 #else
-uint32_t hash_string(const char *key, int length) {
+  uint32_t hash_string(const char *key, int length) {
 #endif // !_WIN32
 
   uint32_t hash = 2166136261u;

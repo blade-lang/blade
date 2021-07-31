@@ -35,11 +35,11 @@ typedef struct {
   unsigned char buffer[64];                         /* input buffer */
 } MD5_CTX;
 
-void MD5Init (MD5_CTX * );
+void MD5Init(MD5_CTX *);
 
-void MD5Update(MD5_CTX * , unsigned char *, unsigned int);
+void MD5Update(MD5_CTX *, unsigned char *, unsigned int);
 
-void MD5Final (unsigned char*, MD5_CTX *);
+void MD5Final(unsigned char *, MD5_CTX *);
 
 /*
  * Constants for MD5Transform routine.
@@ -65,7 +65,7 @@ static void MD5Transform(uint32_t[4], unsigned char[64]);
 
 static void MD5Encode(unsigned char *, uint32_t *, unsigned int);
 
-static void MD5Decode (uint32_t * , unsigned char *, unsigned int);
+static void MD5Decode(uint32_t *, unsigned char *, unsigned int);
 
 static void MD5_memcpy(b_md5_ptr, b_md5_ptr, unsigned int);
 
@@ -329,7 +329,7 @@ static void MD5_memset(b_md5_ptr output, int value, unsigned int len) {
 }
 
 static char *MD5DigestToString(unsigned char digest[16]) {
-  char *result = (char*)calloc(33, sizeof(char));
+  char *result = (char *) calloc(33, sizeof(char));
   for (int i = 0; i < 16; i++)
     sprintf (result + (i * 2), "%02x", digest[i]);
 
@@ -351,19 +351,19 @@ static char *MD5File(char *filename) {
   FILE *file;
   MD5_CTX context;
 
-  if ((file = fopen (filename, "rb")) == NULL)
+  if ((file = fopen(filename, "rb")) == NULL)
     return NULL;
 
   int len;
   unsigned char buffer[1024];
   unsigned char digest[16];
 
-  MD5Init (&context);
-  while ((len = (int)fread(buffer, 1, 1024, file)))
-    MD5Update (&context, buffer, len);
-  MD5Final (digest, &context);
+  MD5Init(&context);
+  while ((len = (int) fread(buffer, 1, 1024, file)))
+    MD5Update(&context, buffer, len);
+  MD5Final(digest, &context);
 
-  fclose (file);
+  fclose(file);
 
   return MD5DigestToString(digest);
 }

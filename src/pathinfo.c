@@ -77,7 +77,7 @@ char *get_exe_path() {
 
 char *get_exe_path() {
   char raw_path[PATH_MAX];
-  char *real_path = (char *)malloc(PATH_MAX * sizeof(char));
+  char *real_path = (char *) malloc(PATH_MAX * sizeof(char));
   uint32_t raw_size = (uint32_t) sizeof(raw_path);
 
   if (!_NSGetExecutablePath(raw_path, &raw_size)) {
@@ -97,7 +97,7 @@ char *get_exe_dir() {
 #endif
 
 char *merge_paths(char *a, char *b) {
-  char *final_path = (char*)calloc(1, sizeof(char));
+  char *final_path = (char *) calloc(1, sizeof(char));
 
   // edge cases
   // 1. a itself is a file
@@ -123,13 +123,13 @@ bool file_exists(char *filepath) { return access(filepath, F_OK) == 0; }
 char *get_calling_dir() { return getenv("PWD"); }
 
 char *get_filename(char *filepath) {
-  int start = 0, length = (int)strlen(filepath);
+  int start = 0, length = (int) strlen(filepath);
   for (int i = 0; i < length; i++) {
     if (filepath[i] == BLADE_PATH_SEPARATOR[0])
       start = i;
   }
   length = length - start;
-  char *string = (char*)calloc(1, sizeof(char));
+  char *string = (char *) calloc(1, sizeof(char));
 
   strncat(string, filepath + start, length);
   return string;
@@ -157,13 +157,13 @@ char *resolve_import_path(char *module_name, const char *current_file, bool is_r
   char *file_directory = dirname((char *) strdup(current_file));
 
   // fixing last path / if exists (looking at windows)...
-  int file_directory_length = (int)strlen(file_directory);
+  int file_directory_length = (int) strlen(file_directory);
   if (file_directory[file_directory_length - 1] == '\\') {
     file_directory[file_directory_length - 1] = '\0';
   }
 
   // search system library if we are not looking for a relative module.
-  if(!is_relative) {
+  if (!is_relative) {
     // check in blade's default location
     char *blade_directory = merge_paths(get_exe_dir(), LIBRARY_DIRECTORY);
     char *library_file = merge_paths(blade_directory, blade_file_name);
@@ -174,7 +174,7 @@ char *resolve_import_path(char *module_name, const char *current_file, bool is_r
       char *path2 = realpath(current_file, NULL);
 
       if (path1 != NULL) {
-        if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
+        if (path2 == NULL || memcmp(path1, path2, (int) strlen(path2)) != 0)
           return path1;
       }
     }
@@ -188,7 +188,7 @@ char *resolve_import_path(char *module_name, const char *current_file, bool is_r
       char *path2 = realpath(current_file, NULL);
 
       if (path1 != NULL) {
-        if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
+        if (path2 == NULL || memcmp(path1, path2, (int) strlen(path2)) != 0)
           return path1;
       }
     }
@@ -202,7 +202,7 @@ char *resolve_import_path(char *module_name, const char *current_file, bool is_r
       char *path2 = realpath(current_file, NULL);
 
       if (path1 != NULL) {
-        if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
+        if (path2 == NULL || memcmp(path1, path2, (int) strlen(path2)) != 0)
           return path1;
       }
     }
@@ -216,7 +216,7 @@ char *resolve_import_path(char *module_name, const char *current_file, bool is_r
       char *path2 = realpath(current_file, NULL);
 
       if (path1 != NULL) {
-        if (path2 == NULL || memcmp(path1, path2, (int)strlen(path2)) != 0)
+        if (path2 == NULL || memcmp(path1, path2, (int) strlen(path2)) != 0)
           return path1;
       }
     }

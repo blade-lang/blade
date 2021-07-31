@@ -6,6 +6,7 @@
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__MINGW32_MAJOR_VERSION) || defined(__CYGWIN__)
 
 #include <unistd.h>
+
 #define closesocket close
 
 #else

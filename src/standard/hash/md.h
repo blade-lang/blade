@@ -297,7 +297,7 @@ static void MD2Final(unsigned char output[16], MD2_CTX *context) {
 }
 
 static char *MDDigestToString(unsigned char digest[16]) {
-  char *result = (char*)calloc(33, sizeof(char));
+  char *result = (char *) calloc(33, sizeof(char));
   for (int i = 0; i < 16; i++)
     sprintf (result + (i * 2), "%02x", digest[i]);
 

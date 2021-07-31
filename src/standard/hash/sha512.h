@@ -46,48 +46,48 @@
  */
 
 #include <stdint.h>
-#include <string.h>	/* memcpy()/memset() or bcopy()/bzero() */
-#include <assert.h>	/* assert() */
+#include <string.h>  /* memcpy()/memset() or bcopy()/bzero() */
+#include <assert.h>  /* assert() */
 
 /* do we have sha512 header defs */
 #ifndef SHA512_DIGEST_LENGTH
-#define SHA512_BLOCK_LENGTH		128
-#define SHA512_DIGEST_LENGTH		64
-#define SHA512_DIGEST_STRING_LENGTH	(SHA512_DIGEST_LENGTH * 2 + 1)
+#define SHA512_BLOCK_LENGTH    128
+#define SHA512_DIGEST_LENGTH    64
+#define SHA512_DIGEST_STRING_LENGTH  (SHA512_DIGEST_LENGTH * 2 + 1)
 typedef struct _SHA512_CTX {
-  uint64_t	state[8];
-  uint64_t	bitcount[2];
-  uint8_t	buffer[SHA512_BLOCK_LENGTH];
+  uint64_t state[8];
+  uint64_t bitcount[2];
+  uint8_t buffer[SHA512_BLOCK_LENGTH];
 } SHA512_CTX;
 #endif /* do we have sha512 header defs */
 
-typedef uint8_t  sha2_byte;	/* Exactly 1 byte */
-typedef uint32_t sha2_word32;	/* Exactly 4 bytes */
+typedef uint8_t sha2_byte;  /* Exactly 1 byte */
+typedef uint32_t sha2_word32;  /* Exactly 4 bytes */
 #ifdef S_SPLINT_S
 typedef unsigned long long sha2_word64; /* lint 8 bytes */
 #else
-typedef uint64_t sha2_word64;	/* Exactly 8 bytes */
+typedef uint64_t sha2_word64;  /* Exactly 8 bytes */
 #endif
 
 /*** SHA-256/384/512 Various Length Definitions ***********************/
-#define SHA512_SHORT_BLOCK_LENGTH	(SHA512_BLOCK_LENGTH - 16)
+#define SHA512_SHORT_BLOCK_LENGTH  (SHA512_BLOCK_LENGTH - 16)
 
 
 /*** ENDIAN REVERSAL MACROS *******************************************/
 #if IS_LITTLE_ENDIAN
-#define SHA512_REVERSE32(w,x)	{ \
-	sha2_word32 tmp = (w); \
-	tmp = (tmp >> 16) | (tmp << 16); \
-	(x) = ((tmp & 0xff00ff00UL) >> 8) | ((tmp & 0x00ff00ffUL) << 8); \
+#define SHA512_REVERSE32(w, x)  { \
+  sha2_word32 tmp = (w); \
+  tmp = (tmp >> 16) | (tmp << 16); \
+  (x) = ((tmp & 0xff00ff00UL) >> 8) | ((tmp & 0x00ff00ffUL) << 8); \
 }
 #ifndef S_SPLINT_S
-#define SHA512_REVERSE64(w,x)	{ \
-	sha2_word64 tmp = (w); \
-	tmp = (tmp >> 32) | (tmp << 32); \
-	tmp = ((tmp & 0xff00ff00ff00ff00ULL) >> 8) | \
-	      ((tmp & 0x00ff00ff00ff00ffULL) << 8); \
-	(x) = ((tmp & 0xffff0000ffff0000ULL) >> 16) | \
-	      ((tmp & 0x0000ffff0000ffffULL) << 16); \
+#define SHA512_REVERSE64(w, x)  { \
+  sha2_word64 tmp = (w); \
+  tmp = (tmp >> 32) | (tmp << 32); \
+  tmp = ((tmp & 0xff00ff00ff00ff00ULL) >> 8) | \
+        ((tmp & 0x00ff00ff00ff00ffULL) << 8); \
+  (x) = ((tmp & 0xffff0000ffff0000ULL) >> 16) | \
+        ((tmp & 0x0000ffff0000ffffULL) << 16); \
 }
 #else /* splint */
 #define SHA512_REVERSE64(w,x) /* splint */
@@ -99,11 +99,11 @@ typedef uint64_t sha2_word64;	/* Exactly 8 bytes */
  * unsigned 128-bit integer (represented using a two-element array of
  * 64-bit words):
  */
-#define SHA512_ADDINC128(w,n)	{ \
-	(w)[0] += (sha2_word64)(n); \
-	if ((w)[0] < (n)) { \
-		(w)[1]++; \
-	} \
+#define SHA512_ADDINC128(w, n)  { \
+  (w)[0] += (sha2_word64)(n); \
+  if ((w)[0] < (n)) { \
+    (w)[1]++; \
+  } \
 }
 #ifdef S_SPLINT_S
 #define SHA512_ADDINC128(w,n) /* splint */
@@ -120,7 +120,7 @@ typedef uint64_t sha2_word64;	/* Exactly 8 bytes */
  */
 #if !defined(SHA2_USE_MEMSET_MEMCPY) && !defined(SHA2_USE_BZERO_BCOPY)
 /* Default to memset()/memcpy() if no option is specified */
-#define	SHA2_USE_MEMSET_MEMCPY	1
+#define  SHA2_USE_MEMSET_MEMCPY  1
 #endif
 #if defined(SHA2_USE_MEMSET_MEMCPY) && defined(SHA2_USE_BZERO_BCOPY)
 /* Abort with an error if BOTH options are defined */
@@ -128,8 +128,8 @@ typedef uint64_t sha2_word64;	/* Exactly 8 bytes */
 #endif
 
 #ifdef SHA2_USE_MEMSET_MEMCPY
-#define SHA512_MEMSET_BZERO(p,l)	memset((p), 0, (l))
-#define SHA512_MEMCPY_BCOPY(d,s,l)	memcpy((d), (s), (l))
+#define SHA512_MEMSET_BZERO(p, l)  memset((p), 0, (l))
+#define SHA512_MEMCPY_BCOPY(d, s, l)  memcpy((d), (s), (l))
 #endif
 #ifdef SHA2_USE_BZERO_BCOPY
 #define SHA512_MEMSET_BZERO(p,l)	bzero((p), (l))
@@ -147,19 +147,19 @@ typedef uint64_t sha2_word64;	/* Exactly 8 bytes */
  *   same "backwards" definition.
  */
 /* Shift-right (used in SHA-256, SHA-384, and SHA-512): */
-#define SHA512_R(b,x) 		((x) >> (b))
+#define SHA512_R(b, x)    ((x) >> (b))
 /* 64-bit Rotate-right (used in SHA-384 and SHA-512): */
-#define SHA512_S64(b,x)	(((x) >> (b)) | ((x) << (64 - (b))))
+#define SHA512_S64(b, x)  (((x) >> (b)) | ((x) << (64 - (b))))
 
 /* Two of six logical functions used in SHA-256, SHA-384, and SHA-512: */
-#define SHA512_Ch(x,y,z)	(((x) & (y)) ^ ((~(x)) & (z)))
-#define SHA512_Maj(x,y,z)	(((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z)))
+#define SHA512_Ch(x, y, z)  (((x) & (y)) ^ ((~(x)) & (z)))
+#define SHA512_Maj(x, y, z)  (((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z)))
 
 /* Four of six logical functions used in SHA-384 and SHA-512: */
-#define SHA512_Sigma0_512(x)	(SHA512_S64(28, (x)) ^ SHA512_S64(34, (x)) ^ SHA512_S64(39, (x)))
-#define SHA512_Sigma1_512(x)	(SHA512_S64(14, (x)) ^ SHA512_S64(18, (x)) ^ SHA512_S64(41, (x)))
-#define SHA512_sigma0_512(x)	(SHA512_S64( 1, (x)) ^ SHA512_S64( 8, (x)) ^ SHA512_R( 7,   (x)))
-#define SHA512_sigma1_512(x)	(SHA512_S64(19, (x)) ^ SHA512_S64(61, (x)) ^ SHA512_R( 6,   (x)))
+#define SHA512_Sigma0_512(x)  (SHA512_S64(28, (x)) ^ SHA512_S64(34, (x)) ^ SHA512_S64(39, (x)))
+#define SHA512_Sigma1_512(x)  (SHA512_S64(14, (x)) ^ SHA512_S64(18, (x)) ^ SHA512_S64(41, (x)))
+#define SHA512_sigma0_512(x)  (SHA512_S64( 1, (x)) ^ SHA512_S64( 8, (x)) ^ SHA512_R( 7,   (x)))
+#define SHA512_sigma1_512(x)  (SHA512_S64(19, (x)) ^ SHA512_S64(61, (x)) ^ SHA512_R( 6,   (x)))
 
 /*** SHA-XYZ INITIAL HASH VALUES AND CONSTANTS ************************/
 /* Hash constant words K for SHA-384 and SHA-512: */
@@ -231,34 +231,34 @@ static const sha2_word64 sha512_initial_hash_value[8] = {
 };
 
 typedef union {
-  uint8_t*  theChars;
-  uint64_t* theLongs;
+  uint8_t *theChars;
+  uint64_t *theLongs;
 } ldns_sha2_buffer_union;
 
-static void SHA384_Init(SHA512_CTX* context) {
-  if (context == (SHA512_CTX*)0) {
+static void SHA384_Init(SHA512_CTX *context) {
+  if (context == (SHA512_CTX *) 0) {
     return;
   }
   SHA512_MEMCPY_BCOPY(context->state, sha384_initial_hash_value, SHA512_DIGEST_LENGTH);
   SHA512_MEMSET_BZERO(context->buffer, SHA512_BLOCK_LENGTH);
-  context->bitcount[0] = context->bitcount[1] =  0;
+  context->bitcount[0] = context->bitcount[1] = 0;
 }
 
 /*** SHA-512: *********************************************************/
-static void SHA512_Init(SHA512_CTX* context) {
-  if (context == (SHA512_CTX*)0) {
+static void SHA512_Init(SHA512_CTX *context) {
+  if (context == (SHA512_CTX *) 0) {
     return;
   }
   SHA512_MEMCPY_BCOPY(context->state, sha512_initial_hash_value, SHA512_DIGEST_LENGTH);
   SHA512_MEMSET_BZERO(context->buffer, SHA512_BLOCK_LENGTH);
-  context->bitcount[0] = context->bitcount[1] =  0;
+  context->bitcount[0] = context->bitcount[1] = 0;
 }
 
-static void SHA512_Transform(SHA512_CTX* context,
-                             const sha2_word64* data) {
-  sha2_word64	a, b, c, d, e, f, g, h, s0, s1;
-  sha2_word64	T1, T2, *W512 = (sha2_word64*)context->buffer;
-  int		j;
+static void SHA512_Transform(SHA512_CTX *context,
+                             const sha2_word64 *data) {
+  sha2_word64 a, b, c, d, e, f, g, h, s0, s1;
+  sha2_word64 T1, T2, *W512 = (sha2_word64 *) context->buffer;
+  int j;
 
   /* initialize registers with the prev. intermediate value */
   a = context->state[0];
@@ -279,7 +279,7 @@ static void SHA512_Transform(SHA512_CTX* context,
     T1 = h + SHA512_Sigma1_512(e) + Ch(e, f, g) + K512[j] + W512[j];
 #else /* IS_LITTLE_ENDIAN */
     /* Apply the SHA-512 compression function to update a..h with copy */
-		T1 = h + Sigma1_512(e) + Ch(e, f, g) + K512[j] + (W512[j] = *data++);
+    T1 = h + Sigma1_512(e) + Ch(e, f, g) + K512[j] + (W512[j] = *data++);
 #endif /* IS_LITTLE_ENDIAN */
     T2 = SHA512_Sigma0_512(a) + Maj(a, b, c);
     h = g;
@@ -296,14 +296,14 @@ static void SHA512_Transform(SHA512_CTX* context,
 
   do {
     /* Part of the message block expansion: */
-    s0 = W512[(j+1)&0x0f];
+    s0 = W512[(j + 1) & 0x0f];
     s0 = SHA512_sigma0_512(s0);
-    s1 = W512[(j+14)&0x0f];
-    s1 =  SHA512_sigma1_512(s1);
+    s1 = W512[(j + 14) & 0x0f];
+    s1 = SHA512_sigma1_512(s1);
 
     /* Apply the SHA-512 compression function to update a..h */
     T1 = h + SHA512_Sigma1_512(e) + Ch(e, f, g) + K512[j] +
-         (W512[j&0x0f] += s1 + W512[(j+9)&0x0f] + s0);
+         (W512[j & 0x0f] += s1 + W512[(j + 9) & 0x0f] + s0);
     T2 = SHA512_Sigma0_512(a) + Maj(a, b, c);
     h = g;
     g = f;
@@ -331,9 +331,9 @@ static void SHA512_Transform(SHA512_CTX* context,
   a = b = c = d = e = f = g = h = T1 = T2 = 0;
 }
 
-static void SHA512_Update(SHA512_CTX* context, void *datain, size_t len) {
+static void SHA512_Update(SHA512_CTX *context, void *datain, size_t len) {
   size_t freespace, usedspace;
-  const sha2_byte* data = (const sha2_byte*)datain;
+  const sha2_byte *data = (const sha2_byte *) datain;
 
   if (len == 0) {
     /* Calling with no data is valid - we do nothing */
@@ -341,7 +341,7 @@ static void SHA512_Update(SHA512_CTX* context, void *datain, size_t len) {
   }
 
   /* Sanity check: */
-  assert(context != (SHA512_CTX*)0 && data != (sha2_byte*)0);
+  assert(context != (SHA512_CTX *) 0 && data != (sha2_byte *) 0);
 
   usedspace = (context->bitcount[0] >> 3) % SHA512_BLOCK_LENGTH;
   if (usedspace > 0) {
@@ -354,7 +354,7 @@ static void SHA512_Update(SHA512_CTX* context, void *datain, size_t len) {
       SHA512_ADDINC128(context->bitcount, freespace << 3);
       len -= freespace;
       data += freespace;
-      SHA512_Transform(context, (sha2_word64*)context->buffer);
+      SHA512_Transform(context, (sha2_word64 *) context->buffer);
     } else {
       /* The buffer is not yet full */
       SHA512_MEMCPY_BCOPY(&context->buffer[usedspace], data, len);
@@ -366,7 +366,7 @@ static void SHA512_Update(SHA512_CTX* context, void *datain, size_t len) {
   }
   while (len >= SHA512_BLOCK_LENGTH) {
     /* Process as many complete blocks as we can */
-    SHA512_Transform(context, (sha2_word64*)data);
+    SHA512_Transform(context, (sha2_word64 *) data);
     SHA512_ADDINC128(context->bitcount, SHA512_BLOCK_LENGTH << 3);
     len -= SHA512_BLOCK_LENGTH;
     data += SHA512_BLOCK_LENGTH;
@@ -380,15 +380,15 @@ static void SHA512_Update(SHA512_CTX* context, void *datain, size_t len) {
   usedspace = freespace = 0;
 }
 
-static void SHA512_Last(SHA512_CTX* context) {
+static void SHA512_Last(SHA512_CTX *context) {
   size_t usedspace;
   ldns_sha2_buffer_union cast_var;
 
   usedspace = (context->bitcount[0] >> 3) % SHA512_BLOCK_LENGTH;
 #if IS_LITTLE_ENDIAN
   /* Convert FROM host byte order */
-  SHA512_REVERSE64(context->bitcount[0],context->bitcount[0]);
-  SHA512_REVERSE64(context->bitcount[1],context->bitcount[1]);
+  SHA512_REVERSE64(context->bitcount[0], context->bitcount[0]);
+  SHA512_REVERSE64(context->bitcount[1], context->bitcount[1]);
 #endif
   if (usedspace > 0) {
     /* Begin padding with a 1 bit: */
@@ -402,7 +402,7 @@ static void SHA512_Last(SHA512_CTX* context) {
         SHA512_MEMSET_BZERO(&context->buffer[usedspace], SHA512_BLOCK_LENGTH - usedspace);
       }
       /* Do second-to-last transform: */
-      SHA512_Transform(context, (sha2_word64*)context->buffer);
+      SHA512_Transform(context, (sha2_word64 *) context->buffer);
 
       /* And set-up for the last transform: */
       SHA512_MEMSET_BZERO(context->buffer, SHA512_BLOCK_LENGTH - 2);
@@ -420,26 +420,26 @@ static void SHA512_Last(SHA512_CTX* context) {
   cast_var.theLongs[SHA512_SHORT_BLOCK_LENGTH / 8 + 1] = context->bitcount[0];
 
   /* final transform: */
-  SHA512_Transform(context, (sha2_word64*)context->buffer);
+  SHA512_Transform(context, (sha2_word64 *) context->buffer);
 }
 
-static void SHA512_Final(sha2_byte digest[], SHA512_CTX* context) {
-  sha2_word64	*d = (sha2_word64*)digest;
+static void SHA512_Final(sha2_byte digest[], SHA512_CTX *context) {
+  sha2_word64 *d = (sha2_word64 *) digest;
 
   /* Sanity check: */
-  assert(context != (SHA512_CTX*)0);
+  assert(context != (SHA512_CTX *) 0);
 
   /* If no digest buffer is passed, we don't bother doing this: */
-  if (digest != (sha2_byte*)0) {
+  if (digest != (sha2_byte *) 0) {
     SHA512_Last(context);
 
     /* Save the hash data for output: */
 #if IS_LITTLE_ENDIAN
     {
       /* Convert TO host byte order */
-      int	j;
+      int j;
       for (j = 0; j < 8; j++) {
-        SHA512_REVERSE64(context->state[j],context->state[j]);
+        SHA512_REVERSE64(context->state[j], context->state[j]);
         *d++ = context->state[j];
       }
     }
@@ -460,7 +460,7 @@ static char *SHA384String(void *data, unsigned int data_len) {
   SHA512_Update(&ctx, data, data_len);
   SHA512_Final(digest, &ctx);
 
-  char *result = (char*)calloc(97, sizeof(char));
+  char *result = (char *) calloc(97, sizeof(char));
   for (int i = 0; i < 48; i++)
     sprintf (result + (i * 2), "%02x", digest[i]);
 
@@ -475,7 +475,7 @@ static char *SHA512String(void *data, unsigned int data_len) {
   SHA512_Update(&ctx, data, data_len);
   SHA512_Final(digest, &ctx);
 
-  char *result = (char*)calloc(129, sizeof(char));
+  char *result = (char *) calloc(129, sizeof(char));
   for (int i = 0; i < 64; i++)
     sprintf (result + (i * 2), "%02x", digest[i]);
 

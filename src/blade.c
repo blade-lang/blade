@@ -41,7 +41,7 @@ static void repl(b_vm *vm) {
   vm->is_repl = true;
 
   printf("Blade %s (running on BladeVM %s), REPL/Interactive mode = ON\n",
-          BLADE_VERSION_STRING, BVM_VERSION);
+         BLADE_VERSION_STRING, BVM_VERSION);
   printf("%s, (Build time = %s, %s)\n", COMPILER, __DATE__, __TIME__);
   printf("Type \"exit()\" to quit, \"help()\" or \"credits()\" for more information\n");
 
@@ -97,7 +97,7 @@ static void repl(b_vm *vm) {
 
 
     // terminate early if we receive a terminating command such as exit() or Ctrl+D
-    if(line == NULL || strcmp(line, "exit()") == 0) {
+    if (line == NULL || strcmp(line, "exit()") == 0) {
       free(source);
       return;
     }
@@ -126,24 +126,24 @@ static void repl(b_vm *vm) {
       // scope openers...
       if (line[i] == '{')
         brace_count++;
-      if(line[i] == '(')
+      if (line[i] == '(')
         paren_count++;
       if (line[i] == '[')
         bracket_count++;
 
       // quotes
-      if(line[i] == '\'' && double_quote_count == 0) {
-        if(single_quote_count == 0) single_quote_count++;
+      if (line[i] == '\'' && double_quote_count == 0) {
+        if (single_quote_count == 0) single_quote_count++;
         else single_quote_count--;
       }
-      if(line[i] == '"' && single_quote_count == 0) {
-        if(double_quote_count == 0)double_quote_count++;
+      if (line[i] == '"' && single_quote_count == 0) {
+        if (double_quote_count == 0)double_quote_count++;
         else double_quote_count--;
       }
 
-      if(line[i] == '\\' && (single_quote_count > 0 || double_quote_count > 0)) i++;
+      if (line[i] == '\\' && (single_quote_count > 0 || double_quote_count > 0)) i++;
 
-        // scope closers...
+      // scope closers...
       if (line[i] == '}' && brace_count > 0)
         brace_count--;
       if (line[i] == ')' && paren_count > 0)
@@ -161,7 +161,8 @@ static void repl(b_vm *vm) {
     free(line);
 #endif // !_WIN32
 
-    if (bracket_count == 0 && paren_count == 0 && brace_count == 0 && single_quote_count == 0 && double_quote_count == 0) {
+    if (bracket_count == 0 && paren_count == 0 && brace_count == 0 && single_quote_count == 0 &&
+        double_quote_count == 0) {
 
       interpret(vm, module, source);
 
@@ -204,7 +205,7 @@ void show_usage(char *argv[], bool fail) {
   fprintf(stderr, "   -j    Show stack objects during execution.\n");
   fprintf(stderr, "   -g    Sets the minimum heap size in kilobytes before the GC\n"
                   "         can start. [Default = %d (%dmb)]\n", DEFAULT_GC_START / 1024,
-                  DEFAULT_GC_START / (1024 * 1024));
+          DEFAULT_GC_START / (1024 * 1024));
   exit(fail ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 
@@ -215,7 +216,7 @@ int main(int argc, char *argv[]) {
   bool should_buffer_stdout = false;
   int next_gc_start = DEFAULT_GC_START;
 
-  if(argc > 1) {
+  if (argc > 1) {
     int opt;
     while ((opt = getopt(argc, argv, "hdbjvg:")) != -1) {
       switch (opt) {
@@ -223,16 +224,22 @@ int main(int argc, char *argv[]) {
           show_usage(argv, false);
           return 0;
         }
-        case 'd': should_print_bytecode = true; break;
-        case 'b': should_buffer_stdout = true; break;
-        case 'j': should_debug_stack = true; break;
+        case 'd':
+          should_print_bytecode = true;
+          break;
+        case 'b':
+          should_buffer_stdout = true;
+          break;
+        case 'j':
+          should_debug_stack = true;
+          break;
         case 'v': {
           printf("Blade " BLADE_VERSION_STRING " (running on BladeVM " BVM_VERSION ")\n");
           return EXIT_SUCCESS;
         }
         case 'g': {
-          int next = (int)strtol(optarg, NULL, 10);
-          if(next > 0) {
+          int next = (int) strtol(optarg, NULL, 10);
+          if (next > 0) {
             next_gc_start = next * 1024; // expected value is in kilobytes
           }
           break;
@@ -255,7 +262,7 @@ int main(int argc, char *argv[]) {
     vm->should_print_bytecode = should_print_bytecode;
     vm->next_gc = next_gc_start;
 
-    if(should_buffer_stdout) {
+    if (should_buffer_stdout) {
       // forcing printf buffering for TTYs and terminals
       if (isatty(fileno(stdout))) {
         char buffer[1024];

@@ -574,7 +574,7 @@ static char *GOSTString(unsigned char *data, unsigned int data_len) {
   GOSTUpdate(&ctx, data, data_len);
   GOSTFinal(digest, &ctx);
 
-  char *result = (char*)calloc(65, sizeof(char));
+  char *result = (char *) calloc(65, sizeof(char));
   for (int i = 0; i < 32; i++)
     sprintf (result + (i * 2), "%02x", digest[i]);
 

@@ -74,7 +74,7 @@ DECLARE_NATIVE(file) {
     ENFORCE_ARG_TYPE(file, 1, IS_STRING);
     mode = AS_STRING(args[1]);
   } else {
-    mode = (b_obj_string *)GC(copy_string(vm, "r", 1));
+    mode = (b_obj_string *) GC(copy_string(vm, "r", 1));
   }
 
   b_obj_file *file = new_file(vm, path, mode);
@@ -276,7 +276,7 @@ DECLARE_FILE_METHOD(number) {
 DECLARE_FILE_METHOD(is_tty) {
   ENFORCE_ARG_COUNT(is_tty, 0);
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
-  if(is_std_file(file)) {
+  if (is_std_file(file)) {
     RETURN_BOOL(isatty(fileno(file->file)) && fileno(file->file) == fileno(stdout));
   }
   RETURN_FALSE;
@@ -307,7 +307,7 @@ DECLARE_FILE_METHOD(stats) {
   ENFORCE_ARG_COUNT(stats, 0);
 
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
-  b_obj_dict *dict = (b_obj_dict *)GC(new_dict(vm));
+  b_obj_dict *dict = (b_obj_dict *) GC(new_dict(vm));
 
   if (!is_std_file(file)) {
     if (file_exists(file->path->chars)) {
@@ -480,7 +480,7 @@ DECLARE_FILE_METHOD(abs_path) {
   DENY_STD();
 
   char *abs_path = realpath(file->path->chars, NULL);
-  if(abs_path != NULL) RETURN_STRING(abs_path);
+  if (abs_path != NULL) RETURN_STRING(abs_path);
   RETURN_STRING("");
 }
 
@@ -566,7 +566,7 @@ DECLARE_FILE_METHOD(chmod) {
     int mode = AS_NUMBER(args[0]);
 
 #ifndef _WIN32
-    RETURN_STATUS(chmod(file->path->chars, (mode_t)mode));
+    RETURN_STATUS(chmod(file->path->chars, (mode_t) mode));
 #else
     RETURN_STATUS(_chmod(file->path->chars, (mode_t)mode));
 #endif // !_WIN32

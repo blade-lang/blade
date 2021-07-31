@@ -582,8 +582,7 @@ static void Whirlpool_memset(uint64_t output[], int value, unsigned int len) {
     ((char *) output)[i] = (char) value;
 }
 
-static void WhirlpoolTransform(WHIRLPOOL_CTX *context)
-{
+static void WhirlpoolTransform(WHIRLPOOL_CTX *context) {
   int i, r;
   uint64_t K[8];        /* the round key */
   uint64_t block[8];    /* mu(buffer) */
@@ -596,14 +595,14 @@ static void WhirlpoolTransform(WHIRLPOOL_CTX *context)
    */
   for (i = 0; i < 8; i++, buffer += 8) {
     block[i] =
-        (((uint64_t)buffer[0]        ) << 56) ^
-        (((uint64_t)buffer[1] & 0xffL) << 48) ^
-        (((uint64_t)buffer[2] & 0xffL) << 40) ^
-        (((uint64_t)buffer[3] & 0xffL) << 32) ^
-        (((uint64_t)buffer[4] & 0xffL) << 24) ^
-        (((uint64_t)buffer[5] & 0xffL) << 16) ^
-        (((uint64_t)buffer[6] & 0xffL) <<  8) ^
-        (((uint64_t)buffer[7] & 0xffL)      );
+        (((uint64_t) buffer[0]) << 56) ^
+        (((uint64_t) buffer[1] & 0xffL) << 48) ^
+        (((uint64_t) buffer[2] & 0xffL) << 40) ^
+        (((uint64_t) buffer[3] & 0xffL) << 32) ^
+        (((uint64_t) buffer[4] & 0xffL) << 24) ^
+        (((uint64_t) buffer[5] & 0xffL) << 16) ^
+        (((uint64_t) buffer[6] & 0xffL) << 8) ^
+        (((uint64_t) buffer[7] & 0xffL));
   }
   /*
    * compute and apply K^0 to the cipher state:
@@ -624,78 +623,78 @@ static void WhirlpoolTransform(WHIRLPOOL_CTX *context)
      * compute K^r from K^{r-1}:
      */
     L[0] =
-        C0[(int)(K[0] >> 56)       ] ^
-        C1[(int)(K[7] >> 48) & 0xff] ^
-        C2[(int)(K[6] >> 40) & 0xff] ^
-        C3[(int)(K[5] >> 32) & 0xff] ^
-        C4[(int)(K[4] >> 24) & 0xff] ^
-        C5[(int)(K[3] >> 16) & 0xff] ^
-        C6[(int)(K[2] >>  8) & 0xff] ^
-        C7[(int)(K[1]      ) & 0xff] ^
+        C0[(int) (K[0] >> 56)] ^
+        C1[(int) (K[7] >> 48) & 0xff] ^
+        C2[(int) (K[6] >> 40) & 0xff] ^
+        C3[(int) (K[5] >> 32) & 0xff] ^
+        C4[(int) (K[4] >> 24) & 0xff] ^
+        C5[(int) (K[3] >> 16) & 0xff] ^
+        C6[(int) (K[2] >> 8) & 0xff] ^
+        C7[(int) (K[1]) & 0xff] ^
         rc[r];
     L[1] =
-        C0[(int)(K[1] >> 56)       ] ^
-        C1[(int)(K[0] >> 48) & 0xff] ^
-        C2[(int)(K[7] >> 40) & 0xff] ^
-        C3[(int)(K[6] >> 32) & 0xff] ^
-        C4[(int)(K[5] >> 24) & 0xff] ^
-        C5[(int)(K[4] >> 16) & 0xff] ^
-        C6[(int)(K[3] >>  8) & 0xff] ^
-        C7[(int)(K[2]      ) & 0xff];
+        C0[(int) (K[1] >> 56)] ^
+        C1[(int) (K[0] >> 48) & 0xff] ^
+        C2[(int) (K[7] >> 40) & 0xff] ^
+        C3[(int) (K[6] >> 32) & 0xff] ^
+        C4[(int) (K[5] >> 24) & 0xff] ^
+        C5[(int) (K[4] >> 16) & 0xff] ^
+        C6[(int) (K[3] >> 8) & 0xff] ^
+        C7[(int) (K[2]) & 0xff];
     L[2] =
-        C0[(int)(K[2] >> 56)       ] ^
-        C1[(int)(K[1] >> 48) & 0xff] ^
-        C2[(int)(K[0] >> 40) & 0xff] ^
-        C3[(int)(K[7] >> 32) & 0xff] ^
-        C4[(int)(K[6] >> 24) & 0xff] ^
-        C5[(int)(K[5] >> 16) & 0xff] ^
-        C6[(int)(K[4] >>  8) & 0xff] ^
-        C7[(int)(K[3]      ) & 0xff];
+        C0[(int) (K[2] >> 56)] ^
+        C1[(int) (K[1] >> 48) & 0xff] ^
+        C2[(int) (K[0] >> 40) & 0xff] ^
+        C3[(int) (K[7] >> 32) & 0xff] ^
+        C4[(int) (K[6] >> 24) & 0xff] ^
+        C5[(int) (K[5] >> 16) & 0xff] ^
+        C6[(int) (K[4] >> 8) & 0xff] ^
+        C7[(int) (K[3]) & 0xff];
     L[3] =
-        C0[(int)(K[3] >> 56)       ] ^
-        C1[(int)(K[2] >> 48) & 0xff] ^
-        C2[(int)(K[1] >> 40) & 0xff] ^
-        C3[(int)(K[0] >> 32) & 0xff] ^
-        C4[(int)(K[7] >> 24) & 0xff] ^
-        C5[(int)(K[6] >> 16) & 0xff] ^
-        C6[(int)(K[5] >>  8) & 0xff] ^
-        C7[(int)(K[4]      ) & 0xff];
+        C0[(int) (K[3] >> 56)] ^
+        C1[(int) (K[2] >> 48) & 0xff] ^
+        C2[(int) (K[1] >> 40) & 0xff] ^
+        C3[(int) (K[0] >> 32) & 0xff] ^
+        C4[(int) (K[7] >> 24) & 0xff] ^
+        C5[(int) (K[6] >> 16) & 0xff] ^
+        C6[(int) (K[5] >> 8) & 0xff] ^
+        C7[(int) (K[4]) & 0xff];
     L[4] =
-        C0[(int)(K[4] >> 56)       ] ^
-        C1[(int)(K[3] >> 48) & 0xff] ^
-        C2[(int)(K[2] >> 40) & 0xff] ^
-        C3[(int)(K[1] >> 32) & 0xff] ^
-        C4[(int)(K[0] >> 24) & 0xff] ^
-        C5[(int)(K[7] >> 16) & 0xff] ^
-        C6[(int)(K[6] >>  8) & 0xff] ^
-        C7[(int)(K[5]      ) & 0xff];
+        C0[(int) (K[4] >> 56)] ^
+        C1[(int) (K[3] >> 48) & 0xff] ^
+        C2[(int) (K[2] >> 40) & 0xff] ^
+        C3[(int) (K[1] >> 32) & 0xff] ^
+        C4[(int) (K[0] >> 24) & 0xff] ^
+        C5[(int) (K[7] >> 16) & 0xff] ^
+        C6[(int) (K[6] >> 8) & 0xff] ^
+        C7[(int) (K[5]) & 0xff];
     L[5] =
-        C0[(int)(K[5] >> 56)       ] ^
-        C1[(int)(K[4] >> 48) & 0xff] ^
-        C2[(int)(K[3] >> 40) & 0xff] ^
-        C3[(int)(K[2] >> 32) & 0xff] ^
-        C4[(int)(K[1] >> 24) & 0xff] ^
-        C5[(int)(K[0] >> 16) & 0xff] ^
-        C6[(int)(K[7] >>  8) & 0xff] ^
-        C7[(int)(K[6]      ) & 0xff];
+        C0[(int) (K[5] >> 56)] ^
+        C1[(int) (K[4] >> 48) & 0xff] ^
+        C2[(int) (K[3] >> 40) & 0xff] ^
+        C3[(int) (K[2] >> 32) & 0xff] ^
+        C4[(int) (K[1] >> 24) & 0xff] ^
+        C5[(int) (K[0] >> 16) & 0xff] ^
+        C6[(int) (K[7] >> 8) & 0xff] ^
+        C7[(int) (K[6]) & 0xff];
     L[6] =
-        C0[(int)(K[6] >> 56)       ] ^
-        C1[(int)(K[5] >> 48) & 0xff] ^
-        C2[(int)(K[4] >> 40) & 0xff] ^
-        C3[(int)(K[3] >> 32) & 0xff] ^
-        C4[(int)(K[2] >> 24) & 0xff] ^
-        C5[(int)(K[1] >> 16) & 0xff] ^
-        C6[(int)(K[0] >>  8) & 0xff] ^
-        C7[(int)(K[7]      ) & 0xff];
+        C0[(int) (K[6] >> 56)] ^
+        C1[(int) (K[5] >> 48) & 0xff] ^
+        C2[(int) (K[4] >> 40) & 0xff] ^
+        C3[(int) (K[3] >> 32) & 0xff] ^
+        C4[(int) (K[2] >> 24) & 0xff] ^
+        C5[(int) (K[1] >> 16) & 0xff] ^
+        C6[(int) (K[0] >> 8) & 0xff] ^
+        C7[(int) (K[7]) & 0xff];
     L[7] =
-        C0[(int)(K[7] >> 56)       ] ^
-        C1[(int)(K[6] >> 48) & 0xff] ^
-        C2[(int)(K[5] >> 40) & 0xff] ^
-        C3[(int)(K[4] >> 32) & 0xff] ^
-        C4[(int)(K[3] >> 24) & 0xff] ^
-        C5[(int)(K[2] >> 16) & 0xff] ^
-        C6[(int)(K[1] >>  8) & 0xff] ^
-        C7[(int)(K[0]      ) & 0xff];
+        C0[(int) (K[7] >> 56)] ^
+        C1[(int) (K[6] >> 48) & 0xff] ^
+        C2[(int) (K[5] >> 40) & 0xff] ^
+        C3[(int) (K[4] >> 32) & 0xff] ^
+        C4[(int) (K[3] >> 24) & 0xff] ^
+        C5[(int) (K[2] >> 16) & 0xff] ^
+        C6[(int) (K[1] >> 8) & 0xff] ^
+        C7[(int) (K[0]) & 0xff];
     K[0] = L[0];
     K[1] = L[1];
     K[2] = L[2];
@@ -708,84 +707,84 @@ static void WhirlpoolTransform(WHIRLPOOL_CTX *context)
      * apply the r-th round transformation:
      */
     L[0] =
-        C0[(int)(state[0] >> 56)       ] ^
-        C1[(int)(state[7] >> 48) & 0xff] ^
-        C2[(int)(state[6] >> 40) & 0xff] ^
-        C3[(int)(state[5] >> 32) & 0xff] ^
-        C4[(int)(state[4] >> 24) & 0xff] ^
-        C5[(int)(state[3] >> 16) & 0xff] ^
-        C6[(int)(state[2] >>  8) & 0xff] ^
-        C7[(int)(state[1]      ) & 0xff] ^
+        C0[(int) (state[0] >> 56)] ^
+        C1[(int) (state[7] >> 48) & 0xff] ^
+        C2[(int) (state[6] >> 40) & 0xff] ^
+        C3[(int) (state[5] >> 32) & 0xff] ^
+        C4[(int) (state[4] >> 24) & 0xff] ^
+        C5[(int) (state[3] >> 16) & 0xff] ^
+        C6[(int) (state[2] >> 8) & 0xff] ^
+        C7[(int) (state[1]) & 0xff] ^
         K[0];
     L[1] =
-        C0[(int)(state[1] >> 56)       ] ^
-        C1[(int)(state[0] >> 48) & 0xff] ^
-        C2[(int)(state[7] >> 40) & 0xff] ^
-        C3[(int)(state[6] >> 32) & 0xff] ^
-        C4[(int)(state[5] >> 24) & 0xff] ^
-        C5[(int)(state[4] >> 16) & 0xff] ^
-        C6[(int)(state[3] >>  8) & 0xff] ^
-        C7[(int)(state[2]      ) & 0xff] ^
+        C0[(int) (state[1] >> 56)] ^
+        C1[(int) (state[0] >> 48) & 0xff] ^
+        C2[(int) (state[7] >> 40) & 0xff] ^
+        C3[(int) (state[6] >> 32) & 0xff] ^
+        C4[(int) (state[5] >> 24) & 0xff] ^
+        C5[(int) (state[4] >> 16) & 0xff] ^
+        C6[(int) (state[3] >> 8) & 0xff] ^
+        C7[(int) (state[2]) & 0xff] ^
         K[1];
     L[2] =
-        C0[(int)(state[2] >> 56)       ] ^
-        C1[(int)(state[1] >> 48) & 0xff] ^
-        C2[(int)(state[0] >> 40) & 0xff] ^
-        C3[(int)(state[7] >> 32) & 0xff] ^
-        C4[(int)(state[6] >> 24) & 0xff] ^
-        C5[(int)(state[5] >> 16) & 0xff] ^
-        C6[(int)(state[4] >>  8) & 0xff] ^
-        C7[(int)(state[3]      ) & 0xff] ^
+        C0[(int) (state[2] >> 56)] ^
+        C1[(int) (state[1] >> 48) & 0xff] ^
+        C2[(int) (state[0] >> 40) & 0xff] ^
+        C3[(int) (state[7] >> 32) & 0xff] ^
+        C4[(int) (state[6] >> 24) & 0xff] ^
+        C5[(int) (state[5] >> 16) & 0xff] ^
+        C6[(int) (state[4] >> 8) & 0xff] ^
+        C7[(int) (state[3]) & 0xff] ^
         K[2];
     L[3] =
-        C0[(int)(state[3] >> 56)       ] ^
-        C1[(int)(state[2] >> 48) & 0xff] ^
-        C2[(int)(state[1] >> 40) & 0xff] ^
-        C3[(int)(state[0] >> 32) & 0xff] ^
-        C4[(int)(state[7] >> 24) & 0xff] ^
-        C5[(int)(state[6] >> 16) & 0xff] ^
-        C6[(int)(state[5] >>  8) & 0xff] ^
-        C7[(int)(state[4]      ) & 0xff] ^
+        C0[(int) (state[3] >> 56)] ^
+        C1[(int) (state[2] >> 48) & 0xff] ^
+        C2[(int) (state[1] >> 40) & 0xff] ^
+        C3[(int) (state[0] >> 32) & 0xff] ^
+        C4[(int) (state[7] >> 24) & 0xff] ^
+        C5[(int) (state[6] >> 16) & 0xff] ^
+        C6[(int) (state[5] >> 8) & 0xff] ^
+        C7[(int) (state[4]) & 0xff] ^
         K[3];
     L[4] =
-        C0[(int)(state[4] >> 56)       ] ^
-        C1[(int)(state[3] >> 48) & 0xff] ^
-        C2[(int)(state[2] >> 40) & 0xff] ^
-        C3[(int)(state[1] >> 32) & 0xff] ^
-        C4[(int)(state[0] >> 24) & 0xff] ^
-        C5[(int)(state[7] >> 16) & 0xff] ^
-        C6[(int)(state[6] >>  8) & 0xff] ^
-        C7[(int)(state[5]      ) & 0xff] ^
+        C0[(int) (state[4] >> 56)] ^
+        C1[(int) (state[3] >> 48) & 0xff] ^
+        C2[(int) (state[2] >> 40) & 0xff] ^
+        C3[(int) (state[1] >> 32) & 0xff] ^
+        C4[(int) (state[0] >> 24) & 0xff] ^
+        C5[(int) (state[7] >> 16) & 0xff] ^
+        C6[(int) (state[6] >> 8) & 0xff] ^
+        C7[(int) (state[5]) & 0xff] ^
         K[4];
     L[5] =
-        C0[(int)(state[5] >> 56)       ] ^
-        C1[(int)(state[4] >> 48) & 0xff] ^
-        C2[(int)(state[3] >> 40) & 0xff] ^
-        C3[(int)(state[2] >> 32) & 0xff] ^
-        C4[(int)(state[1] >> 24) & 0xff] ^
-        C5[(int)(state[0] >> 16) & 0xff] ^
-        C6[(int)(state[7] >>  8) & 0xff] ^
-        C7[(int)(state[6]      ) & 0xff] ^
+        C0[(int) (state[5] >> 56)] ^
+        C1[(int) (state[4] >> 48) & 0xff] ^
+        C2[(int) (state[3] >> 40) & 0xff] ^
+        C3[(int) (state[2] >> 32) & 0xff] ^
+        C4[(int) (state[1] >> 24) & 0xff] ^
+        C5[(int) (state[0] >> 16) & 0xff] ^
+        C6[(int) (state[7] >> 8) & 0xff] ^
+        C7[(int) (state[6]) & 0xff] ^
         K[5];
     L[6] =
-        C0[(int)(state[6] >> 56)       ] ^
-        C1[(int)(state[5] >> 48) & 0xff] ^
-        C2[(int)(state[4] >> 40) & 0xff] ^
-        C3[(int)(state[3] >> 32) & 0xff] ^
-        C4[(int)(state[2] >> 24) & 0xff] ^
-        C5[(int)(state[1] >> 16) & 0xff] ^
-        C6[(int)(state[0] >>  8) & 0xff] ^
-        C7[(int)(state[7]      ) & 0xff] ^
+        C0[(int) (state[6] >> 56)] ^
+        C1[(int) (state[5] >> 48) & 0xff] ^
+        C2[(int) (state[4] >> 40) & 0xff] ^
+        C3[(int) (state[3] >> 32) & 0xff] ^
+        C4[(int) (state[2] >> 24) & 0xff] ^
+        C5[(int) (state[1] >> 16) & 0xff] ^
+        C6[(int) (state[0] >> 8) & 0xff] ^
+        C7[(int) (state[7]) & 0xff] ^
         K[6];
     L[7] =
-        C0[(int)(state[7] >> 56)       ] ^
-        C1[(int)(state[6] >> 48) & 0xff] ^
-        C2[(int)(state[5] >> 40) & 0xff] ^
-        C3[(int)(state[4] >> 32) & 0xff] ^
-        C4[(int)(state[3] >> 24) & 0xff] ^
-        C5[(int)(state[2] >> 16) & 0xff] ^
-        C6[(int)(state[1] >>  8) & 0xff] ^
-        C7[(int)(state[0]      ) & 0xff] ^
+        C0[(int) (state[7] >> 56)] ^
+        C1[(int) (state[6] >> 48) & 0xff] ^
+        C2[(int) (state[5] >> 40) & 0xff] ^
+        C3[(int) (state[4] >> 32) & 0xff] ^
+        C4[(int) (state[3] >> 24) & 0xff] ^
+        C5[(int) (state[2] >> 16) & 0xff] ^
+        C6[(int) (state[1] >> 8) & 0xff] ^
+        C7[(int) (state[0]) & 0xff] ^
         K[7];
     state[0] = L[0];
     state[1] = L[1];
@@ -811,22 +810,20 @@ static void WhirlpoolTransform(WHIRLPOOL_CTX *context)
   Whirlpool_memset(state, 0, sizeof(state));
 }
 
-void WHIRLPOOLInit(WHIRLPOOL_CTX *context)
-{
+void WHIRLPOOLInit(WHIRLPOOL_CTX *context) {
   memset(context, 0, sizeof(*context));
 }
 
-void WHIRLPOOLUpdate(WHIRLPOOL_CTX *context, const unsigned char *input, size_t len)
-{
+void WHIRLPOOLUpdate(WHIRLPOOL_CTX *context, const unsigned char *input, size_t len) {
   uint64_t sourceBits = len * 8;
-  int sourcePos    = 0; /* index of leftmost source unsigned char containing data (1 to 8 bits). */
-  int sourceGap    = (8 - ((int)sourceBits & 7)) & 7; /* space on source[sourcePos]. */
-  int bufferRem    = context->buffer.bits & 7; /* occupied bits on buffer[bufferPos]. */
+  int sourcePos = 0; /* index of leftmost source unsigned char containing data (1 to 8 bits). */
+  int sourceGap = (8 - ((int) sourceBits & 7)) & 7; /* space on source[sourcePos]. */
+  int bufferRem = context->buffer.bits & 7; /* occupied bits on buffer[bufferPos]. */
   const unsigned char *source = input;
-  unsigned char *buffer       = context->buffer.data;
-  unsigned char *bitLength    = context->bitlength;
-  int bufferBits   = context->buffer.bits;
-  int bufferPos    = context->buffer.pos;
+  unsigned char *buffer = context->buffer.data;
+  unsigned char *bitLength = context->bitlength;
+  int bufferBits = context->buffer.bits;
+  int bufferPos = context->buffer.pos;
   uint32_t b, carry;
   int i;
 
@@ -835,8 +832,8 @@ void WHIRLPOOLUpdate(WHIRLPOOL_CTX *context, const unsigned char *input, size_t 
    */
   uint64_t value = sourceBits;
   for (i = 31, carry = 0; i >= 0 && (carry != 0 || value != L64(0)); i--) {
-    carry += bitLength[i] + ((uint32_t)value & 0xff);
-    bitLength[i] = (unsigned char)carry;
+    carry += bitLength[i] + ((uint32_t) value & 0xff);
+    bitLength[i] = (unsigned char) carry;
     carry >>= 8;
     value >>= 8;
   }
@@ -853,7 +850,7 @@ void WHIRLPOOLUpdate(WHIRLPOOL_CTX *context, const unsigned char *input, size_t 
     /*
      * process this byte:
      */
-    buffer[bufferPos++] |= (unsigned char)(b >> bufferRem);
+    buffer[bufferPos++] |= (unsigned char) (b >> bufferRem);
     bufferBits += 8 - bufferRem; /* bufferBits = 8*bufferPos; */
     if (bufferBits == WDIGESTBITS) {
       /*
@@ -912,19 +909,18 @@ void WHIRLPOOLUpdate(WHIRLPOOL_CTX *context, const unsigned char *input, size_t 
       bufferBits = bufferPos = 0;
     }
     buffer[bufferPos] = (unsigned char) (b << (8 - bufferRem));
-    bufferBits += (int)sourceBits;
+    bufferBits += (int) sourceBits;
   }
-  context->buffer.bits   = bufferBits;
-  context->buffer.pos    = bufferPos;
+  context->buffer.bits = bufferBits;
+  context->buffer.pos = bufferPos;
 }
 
-void WHIRLPOOLFinal(unsigned char digest[64], WHIRLPOOL_CTX *context)
-{
+void WHIRLPOOLFinal(unsigned char digest[64], WHIRLPOOL_CTX *context) {
   int i;
-  unsigned char *buffer      = context->buffer.data;
-  unsigned char *bitLength   = context->bitlength;
-  int bufferBits  = context->buffer.bits;
-  int bufferPos   = context->buffer.pos;
+  unsigned char *buffer = context->buffer.data;
+  unsigned char *bitLength = context->bitlength;
+  int bufferBits = context->buffer.bits;
+  int bufferPos = context->buffer.pos;
 
   /*
    * append a '1'-bit:
@@ -962,15 +958,15 @@ void WHIRLPOOLFinal(unsigned char digest[64], WHIRLPOOL_CTX *context)
   /*
    * return the completed message digest:
    */
-  for (i = 0; i < WDIGESTBYTES/8; i++) {
-    digest[0] = (unsigned char)(context->state[i] >> 56);
-    digest[1] = (unsigned char)(context->state[i] >> 48);
-    digest[2] = (unsigned char)(context->state[i] >> 40);
-    digest[3] = (unsigned char)(context->state[i] >> 32);
-    digest[4] = (unsigned char)(context->state[i] >> 24);
-    digest[5] = (unsigned char)(context->state[i] >> 16);
-    digest[6] = (unsigned char)(context->state[i] >>  8);
-    digest[7] = (unsigned char)(context->state[i]      );
+  for (i = 0; i < WDIGESTBYTES / 8; i++) {
+    digest[0] = (unsigned char) (context->state[i] >> 56);
+    digest[1] = (unsigned char) (context->state[i] >> 48);
+    digest[2] = (unsigned char) (context->state[i] >> 40);
+    digest[3] = (unsigned char) (context->state[i] >> 32);
+    digest[4] = (unsigned char) (context->state[i] >> 24);
+    digest[5] = (unsigned char) (context->state[i] >> 16);
+    digest[6] = (unsigned char) (context->state[i] >> 8);
+    digest[7] = (unsigned char) (context->state[i]);
     digest += 8;
   }
 
@@ -985,7 +981,7 @@ static char *WhirlpoolString(void *data, unsigned int data_len) {
   WHIRLPOOLUpdate(&ctx, data, data_len);
   WHIRLPOOLFinal(digest, &ctx);
 
-  char *result = (char*)calloc(129, sizeof(char));
+  char *result = (char *) calloc(129, sizeof(char));
   for (int i = 0; i < 64; i++)
     sprintf (result + (i * 2), "%02x", digest[i]);
 

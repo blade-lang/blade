@@ -22,39 +22,39 @@ int utf8_number_bytes(int value) {
 }
 
 char *utf8_encode(unsigned int code) {
-  int count = utf8_number_bytes((int)code);
+  int count = utf8_number_bytes((int) code);
   if (count > 0) {
-    char *chars = (char *) calloc((size_t)count + 1, sizeof(char));
+    char *chars = (char *) calloc((size_t) count + 1, sizeof(char));
     if (chars != NULL) {
       if (code <= 0x7F) {
-        chars[0] = (char)(code & 0x7F);
+        chars[0] = (char) (code & 0x7F);
         chars[1] = '\0';
       } else if (code <= 0x7FF) {
         // one continuation byte
-        chars[1] = (char)(0x80 | (code & 0x3F));
+        chars[1] = (char) (0x80 | (code & 0x3F));
         code = (code >> 6);
-        chars[0] = (char)(0xC0 | (code & 0x1F));
+        chars[0] = (char) (0xC0 | (code & 0x1F));
       } else if (code <= 0xFFFF) {
         // two continuation bytes
-        chars[2] = (char)(0x80 | (code & 0x3F));
+        chars[2] = (char) (0x80 | (code & 0x3F));
         code = (code >> 6);
-        chars[1] = (char)(0x80 | (code & 0x3F));
+        chars[1] = (char) (0x80 | (code & 0x3F));
         code = (code >> 6);
-        chars[0] = (char)(0xE0 | (code & 0xF));
+        chars[0] = (char) (0xE0 | (code & 0xF));
       } else if (code <= 0x10FFFF) {
         // three continuation bytes
-        chars[3] = (char)(0x80 | (code & 0x3F));
+        chars[3] = (char) (0x80 | (code & 0x3F));
         code = (code >> 6);
-        chars[2] = (char)(0x80 | (code & 0x3F));
+        chars[2] = (char) (0x80 | (code & 0x3F));
         code = (code >> 6);
-        chars[1] = (char)(0x80 | (code & 0x3F));
+        chars[1] = (char) (0x80 | (code & 0x3F));
         code = (code >> 6);
-        chars[0] = (char)(0xF0 | (code & 0x7));
+        chars[0] = (char) (0xF0 | (code & 0x7));
       } else {
         // unicode replacement character
-        chars[2] = (char)0xEF;
-        chars[1] = (char)0xBF;
-        chars[0] = (char)0xBD;
+        chars[2] = (char) 0xEF;
+        chars[1] = (char) 0xBF;
+        chars[0] = (char) 0xBD;
       }
       return chars;
     }
@@ -128,7 +128,7 @@ char *append_strings(char *old, char *new_str) {
   const size_t out_len = old_len + new_len;
 
   // allocate a pointer to the new string
-  char *out = (char*)realloc((void*)old, out_len + 1);
+  char *out = (char *) realloc((void *) old, out_len + 1);
 
   // concat both strings and return
   if (out != NULL) {
@@ -197,9 +197,9 @@ char *utf8index(char *s, int pos) {
 // converts codepoint indexes start and end to byte offsets in the buffer at s
 void utf8slice(char *s, int *start, int *end) {
   char *p = utf8index(s, *start);
-  *start = p != NULL ? (int)(p - s) : -1;
+  *start = p != NULL ? (int) (p - s) : -1;
   p = utf8index(s, *end);
-  *end = p != NULL ? (int)(p - s) : (int) strlen(s);
+  *end = p != NULL ? (int) (p - s) : (int) strlen(s);
 }
 
 char *read_file(const char *path) {
@@ -214,7 +214,7 @@ char *read_file(const char *path) {
   size_t file_size = ftell(fp);
   rewind(fp);
 
-  char *buffer = (char *)malloc(file_size + 1);
+  char *buffer = (char *) malloc(file_size + 1);
 
   // the system might not have enough memory to read the file.
   if (buffer == NULL) {

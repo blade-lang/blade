@@ -201,7 +201,7 @@ void table_print(b_table *table) {
       print_value(entry->key);
       printf(": ");
       print_value(entry->value);
-      if(i != table->capacity - 1) {
+      if (i != table->capacity - 1) {
         printf(",");
       }
     }
@@ -214,9 +214,9 @@ void mark_table(b_vm *vm, b_table *table) {
     b_entry *entry = &table->entries[i];
 
 #if defined(USE_NAN_BOXING) && USE_NAN_BOXING
-    if(entry && entry->key) {
+    if (entry && entry->key) {
 #else
-    if(entry != NULL) {
+      if(entry != NULL) {
 #endif
       mark_value(vm, entry->key);
       mark_value(vm, entry->value);

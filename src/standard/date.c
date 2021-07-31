@@ -83,7 +83,7 @@ DECLARE_MODULE_METHOD(date__localtime) {
   struct tm now;
   localtime_r(&raw_time.tv_sec, &now);
 
-  b_obj_dict *dict = (b_obj_dict *)GC(new_dict(vm));
+  b_obj_dict *dict = (b_obj_dict *) GC(new_dict(vm));
 
   ADD_TIME("year", 4, (double) now.tm_year + 1900);
   ADD_TIME("month", 5, (double) now.tm_mon + 1);
@@ -122,7 +122,7 @@ DECLARE_MODULE_METHOD(date__gmtime) {
   struct tm now;
   gmtime_r(&raw_time.tv_sec, &now);
 
-  b_obj_dict *dict = (b_obj_dict *)GC(new_dict(vm));
+  b_obj_dict *dict = (b_obj_dict *) GC(new_dict(vm));
 
   ADD_TIME("year", 4, (double) now.tm_year + 1900);
   ADD_TIME("month", 5, (double) now.tm_mon + 1);
@@ -159,7 +159,7 @@ CREATE_MODULE_LOADER(date) {
   static b_func_reg module_functions[] = {
       {"localtime", true,  GET_MODULE_METHOD(date__localtime)},
       {"gmtime",    true,  GET_MODULE_METHOD(date__gmtime)},
-      {"mktime",  false, GET_MODULE_METHOD(date____mktime)},
+      {"mktime",    false, GET_MODULE_METHOD(date____mktime)},
       {NULL,        false, NULL},
   };
 

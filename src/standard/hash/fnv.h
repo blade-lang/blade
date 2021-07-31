@@ -35,8 +35,8 @@ typedef struct {
  *  32 bit hash as a static hash type
  */
 static uint32_t fnv_32_buf(uint32_t fnv, void *buf, size_t len, int alternate) {
-  unsigned char *bp = (unsigned char *)buf;   /* start of buffer */
-  unsigned char *be = bp + len;	   /* beyond end of buffer */
+  unsigned char *bp = (unsigned char *) buf;   /* start of buffer */
+  unsigned char *be = bp + len;     /* beyond end of buffer */
 
   /*
    * FNV-1 hash each octet in the buffer
@@ -47,12 +47,12 @@ static uint32_t fnv_32_buf(uint32_t fnv, void *buf, size_t len, int alternate) {
       fnv *= FNV_32_PRIME;
 
       /* xor the bottom with the current octet */
-      fnv ^= (uint32_t)*bp++;
+      fnv ^= (uint32_t) *bp++;
     }
   } else {
     while (bp < be) {
       /* xor the bottom with the current octet */
-      fnv ^= (uint32_t)*bp++;
+      fnv ^= (uint32_t) *bp++;
 
       /* multiply by the 32 bit FNV magic prime mod 2^32 */
       fnv *= FNV_32_PRIME;
@@ -76,8 +76,8 @@ static uint32_t fnv_32_buf(uint32_t fnv, void *buf, size_t len, int alternate) {
  *  64 bit hash as a static hash type
  */
 static uint64_t fnv_64_buf(uint64_t fnv, void *buf, size_t len, int alternate) {
-  unsigned char *bp = (unsigned char *)buf;   /* start of buffer */
-  unsigned char *be = bp + len;	   /* beyond end of buffer */
+  unsigned char *bp = (unsigned char *) buf;   /* start of buffer */
+  unsigned char *be = bp + len;     /* beyond end of buffer */
 
   /*
    * FNV-1 hash each octet of the buffer
@@ -89,12 +89,12 @@ static uint64_t fnv_64_buf(uint64_t fnv, void *buf, size_t len, int alternate) {
       fnv *= FNV_64_PRIME;
 
       /* xor the bottom with the current octet */
-      fnv ^= (uint64_t)*bp++;
+      fnv ^= (uint64_t) *bp++;
     }
   } else {
     while (bp < be) {
       /* xor the bottom with the current octet */
-      fnv ^= (uint64_t)*bp++;
+      fnv ^= (uint64_t) *bp++;
 
       /* multiply by the 64 bit FNV magic prime mod 2^64 */
       fnv *= FNV_64_PRIME;
@@ -112,14 +112,14 @@ static void FNV132Init(FNV132_CTX *context) {
 }
 
 static void FNV132Update(FNV132_CTX *context, const unsigned char *input, size_t inputLen) {
-  context->state = fnv_32_buf(context->state, (void *)input, inputLen, 0);
+  context->state = fnv_32_buf(context->state, (void *) input, inputLen, 0);
 }
 
 static void FNV1a32Update(FNV132_CTX *context, const unsigned char *input, size_t inputLen) {
-  context->state = fnv_32_buf(context->state, (void *)input, inputLen, 1);
+  context->state = fnv_32_buf(context->state, (void *) input, inputLen, 1);
 }
 
-static void FNV132Final(FNV132_CTX * context, unsigned char digest[4]) {
+static void FNV132Final(FNV132_CTX *context, unsigned char digest[4]) {
 #ifdef IS_BIG_ENDIAN
   memcpy(digest, &context->state, 4);
 #else
@@ -137,14 +137,14 @@ static void FNV164Init(FNV164_CTX *context) {
 }
 
 static void FNV164Update(FNV164_CTX *context, const unsigned char *input, size_t inputLen) {
-  context->state = fnv_64_buf(context->state, (void *)input, inputLen, 0);
+  context->state = fnv_64_buf(context->state, (void *) input, inputLen, 0);
 }
 
 static void FNV1a64Update(FNV164_CTX *context, const unsigned char *input, size_t inputLen) {
-  context->state = fnv_64_buf(context->state, (void *)input, inputLen, 1);
+  context->state = fnv_64_buf(context->state, (void *) input, inputLen, 1);
 }
 
-static void FNV164Final(FNV164_CTX * context, unsigned char digest[8]) {
+static void FNV164Final(FNV164_CTX *context, unsigned char digest[8]) {
 #ifdef IS_BIG_ENDIAN
   memcpy(digest, &context->state, 8);
 #else
@@ -156,7 +156,7 @@ static void FNV164Final(FNV164_CTX * context, unsigned char digest[8]) {
 }
 
 static char *FNV132String(unsigned char digest[4]) {
-  char *result = (char*)calloc(9, sizeof(char));
+  char *result = (char *) calloc(9, sizeof(char));
   for (int i = 0; i < 4; i++)
     sprintf (result + (i * 2), "%02x", digest[i]);
 
@@ -164,14 +164,14 @@ static char *FNV132String(unsigned char digest[4]) {
 }
 
 static char *FNV164String(unsigned char digest[8]) {
-  char *result = (char*)calloc(17, sizeof(char));
+  char *result = (char *) calloc(17, sizeof(char));
   for (int i = 0; i < 8; i++)
     sprintf (result + (i * 2), "%02x", digest[i]);
 
   return result;
 }
 
-static char* FNV1(unsigned char *data, int length) {
+static char *FNV1(unsigned char *data, int length) {
   FNV132_CTX ctx;
   unsigned char digest[4];
 
@@ -182,7 +182,7 @@ static char* FNV1(unsigned char *data, int length) {
   return FNV132String(digest);
 }
 
-static char* FNV1a(unsigned char *data, int length) {
+static char *FNV1a(unsigned char *data, int length) {
   FNV132_CTX ctx;
   unsigned char digest[4];
 
@@ -193,7 +193,7 @@ static char* FNV1a(unsigned char *data, int length) {
   return FNV132String(digest);
 }
 
-static char* FNV164(unsigned char *data, int length) {
+static char *FNV164(unsigned char *data, int length) {
   FNV164_CTX ctx;
   unsigned char digest[8];
 
@@ -204,7 +204,7 @@ static char* FNV164(unsigned char *data, int length) {
   return FNV164String(digest);
 }
 
-static char* FNV1a64(unsigned char *data, int length) {
+static char *FNV1a64(unsigned char *data, int length) {
   FNV164_CTX ctx;
   unsigned char digest[8];
 

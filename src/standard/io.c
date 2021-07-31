@@ -553,6 +553,7 @@ HANDLE getHandle() { return com.hComm; }
 #endif
 
 static struct termios orig_termios;
+
 void disable_raw_mode(void) {
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
 }
@@ -658,7 +659,7 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
   }
 
   int result = tcsetattr(fileno(file->file), type, &raw);
-  RETURN_BOOL( result != -1);
+  RETURN_BOOL(result != -1);
 }
 
 /**
@@ -683,7 +684,7 @@ DECLARE_MODULE_METHOD(io_flush) {
   ENFORCE_ARG_TYPE(flush, 0, IS_FILE);
   b_obj_file *file = AS_FILE(args[0]);
 
-  if(file->is_open) {
+  if (file->is_open) {
     fflush(file->file);
   }
   RETURN;
@@ -695,7 +696,7 @@ DECLARE_MODULE_METHOD(io_flush) {
  * @return nil
  */
 DECLARE_MODULE_METHOD(io_tty__exit_raw) {
-  ENFORCE_ARG_COUNT(TTY.exit_raw,  0);
+  ENFORCE_ARG_COUNT(TTY.exit_raw, 0);
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
   RETURN;
 }
@@ -718,7 +719,7 @@ DECLARE_MODULE_METHOD(io_getc) {
     length = AS_NUMBER(args[0]);
   }
 
-  char *result = ALLOCATE(char, (size_t)length + 2);
+  char *result = ALLOCATE(char, (size_t) length + 2);
   read_line(result, length + 1);
   RETURN_L_STRING(result, length);
 }
@@ -745,7 +746,7 @@ DECLARE_MODULE_METHOD(io_putc) {
   }
 #endif
 
-  if(write(STDOUT_FILENO, string->chars, count) != -1) {
+  if (write(STDOUT_FILENO, string->chars, count) != -1) {
     fflush(stdout);
   }
   RETURN;
@@ -799,25 +800,25 @@ void __io_module_unload(b_vm *vm) {
 
 CREATE_MODULE_LOADER(io) {
   static b_field_reg io_module_fields[] = {
-      {"stdin",       false, io_module_stdin},
-      {"stdout",       false, io_module_stdout},
-      {"stderr",       false, io_module_stderr},
-      {NULL,       false, NULL},
+      {"stdin",  false, io_module_stdin},
+      {"stdout", false, io_module_stdout},
+      {"stderr", false, io_module_stderr},
+      {NULL,     false, NULL},
   };
 
   static b_func_reg io_functions[] = {
-      {"getc",   false, GET_MODULE_METHOD(io_getc)},
-      {"putc",   false, GET_MODULE_METHOD(io_putc)},
-      {"flush",   false, GET_MODULE_METHOD(io_flush)},
-      {NULL,     false, NULL},
+      {"getc",  false, GET_MODULE_METHOD(io_getc)},
+      {"putc",  false, GET_MODULE_METHOD(io_putc)},
+      {"flush", false, GET_MODULE_METHOD(io_flush)},
+      {NULL,    false, NULL},
   };
 
   static b_func_reg tty_class_functions[] = {
       {"tcgetattr", false, GET_MODULE_METHOD(io_tty__tcgetattr)},
       {"tcsetattr", false, GET_MODULE_METHOD(io_tty__tcsetattr)},
       {"flush",     false, GET_MODULE_METHOD(io_tty__flush)},
-      {"exit_raw",     false, GET_MODULE_METHOD(io_tty__exit_raw)},
-      {NULL,         false, NULL},
+      {"exit_raw",  false, GET_MODULE_METHOD(io_tty__exit_raw)},
+      {NULL,        false, NULL},
   };
 
   static b_class_reg classes[] = {

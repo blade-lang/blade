@@ -192,6 +192,7 @@ typedef struct {
 
 // non-user objects...
 b_obj_module *new_module(b_vm *vm, char *name, char *file);
+
 b_obj_switch *new_switch(b_vm *vm);
 
 // data containers
