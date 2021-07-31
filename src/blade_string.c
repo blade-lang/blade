@@ -668,33 +668,19 @@ DECLARE_STRING_METHOD(match) {
   uint32_t name_entry_size;
   PCRE2_SPTR name_table;
 
-  b_obj_list *result = (b_obj_list *)GC(new_list(vm));
+  b_obj_dict *result = (b_obj_dict *)GC(new_dict(vm));
   (void)pcre2_pattern_info(re, PCRE2_INFO_NAMECOUNT, &name_count);
 
-  if (name_count == 0) {
-    for (int i = 0; i < rc; i++) {
-      PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
-      if (substring_length > 0) {
-        PCRE2_SPTR substring_start = subject + o_vector[2 * i];
-        write_list(vm, result, GC_L_STRING((char *)substring_start, (int)substring_length));
-      }
+  for (int i = 0; i < rc; i++) {
+    PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
+    if (substring_length > 0) {
+      PCRE2_SPTR substring_start = subject + o_vector[2 * i];
+      dict_set_entry(vm, result, NUMBER_VAL(0), GC_L_STRING((char *)substring_start, (int)substring_length));
     }
-  } else {
+  }
 
-    b_obj_list *match_list = (b_obj_list *)GC(new_list(vm));
-    b_obj_dict *match_dict = (b_obj_dict *)GC(new_dict(vm));
-
-    for (int i = 0; i < rc; i++) {
-      PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
-      if (substring_length > 0) {
-        PCRE2_SPTR substring_start = subject + o_vector[2 * i];
-        write_value_arr(vm, &match_list->items,
-                        GC_L_STRING((char *)substring_start, (int)substring_length));
-      }
-    }
-
+  if (name_count > 0) {
     PCRE2_SPTR tab_ptr;
-
     (void)pcre2_pattern_info(re, PCRE2_INFO_NAMETABLE, &name_table);
     (void)pcre2_pattern_info(re, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
 
@@ -703,26 +689,23 @@ DECLARE_STRING_METHOD(match) {
     for (int i = 0; i < (int)name_count; i++) {
       int n = (tab_ptr[0] << 8) | tab_ptr[1];
 
-      char *_key = malloc(0);
-      char *_val = malloc(0);
+      int value_length = (int)(o_vector[2 * n + 1] - o_vector[2 * n]);
+      int key_length = (int)name_entry_size - 3;
 
-      sprintf(_key, "%*s", name_entry_size - 3, tab_ptr + 2);
-      sprintf(_val, "%*s", (int)(o_vector[2 * n + 1] - o_vector[2 * n]),
-              subject + o_vector[2 * n]);
+      char *_key = calloc(key_length + 1, sizeof(char));
+      char *_val = calloc(value_length + 1, sizeof(char));
+
+      sprintf(_key, "%*s", key_length, tab_ptr + 2);
+      sprintf(_val, "%*s", value_length, subject + o_vector[2 * n]);
 
       while (isspace((unsigned char)*_key))
         _key++;
 
-      dict_add_entry(
-          vm, match_dict, OBJ_VAL(GC(take_string(vm, _key, name_entry_size - 3))),
-          OBJ_VAL(GC(take_string(vm, _val,
-                              (int)(o_vector[2 * n + 1] - o_vector[2 * n])))));
+      dict_set_entry(vm, result, OBJ_VAL(GC(take_string(vm, _key, key_length))),
+          OBJ_VAL(GC(take_string(vm, _val, value_length))));
 
       tab_ptr += name_entry_size;
     }
-
-    write_value_arr(vm, &match_list->items, OBJ_VAL(match_dict));
-    write_list(vm, result, OBJ_VAL(match_list));
   }
 
   pcre2_match_data_free(match_data);
@@ -752,7 +735,7 @@ DECLARE_STRING_METHOD(matches) {
   PCRE2_SIZE error_offset;
   uint32_t option_bits;
   uint32_t newline;
-  uint32_t name_count;
+  uint32_t name_count, group_count;
   uint32_t name_entry_size;
   PCRE2_SPTR name_table;
 
@@ -781,70 +764,60 @@ DECLARE_STRING_METHOD(matches) {
 
   PCRE2_SIZE *o_vector = pcre2_get_ovector_pointer(match_data);
 
-  // REGEX_VECTOR_SIZE_WARNING();
+//   REGEX_VECTOR_SIZE_WARNING();
 
   // handle edge cases such as /(?=.\K)/
   REGEX_ASSERTION_ERROR(re, match_data, o_vector);
 
   (void)pcre2_pattern_info(re, PCRE2_INFO_NAMECOUNT, &name_count);
+  (void)pcre2_pattern_info(re, PCRE2_INFO_CAPTURECOUNT, &group_count);
 
-  b_obj_list *result = (b_obj_list *)GC(new_list(vm));
+//  b_obj_list *result = (b_obj_list *)GC(new_list(vm));
+  b_obj_dict *result = (b_obj_dict *)GC(new_dict(vm));
+
+  for(int i = 0; i < rc; i++) {
+    dict_set_entry(vm, result, NUMBER_VAL(0), NIL_VAL);
+  }
 
   // add first set of matches to response
-  if (name_count == 0) {
-    int i;
-    for (i = 0; i < rc; i++) {
-      PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
-      if (substring_length > 0) {
-        PCRE2_SPTR substring_start = subject + o_vector[2 * i];
-        write_list(vm, result, GC_L_STRING((char *)substring_start, (int)substring_length));
-      }
-    }
-  } else {
+  for (int i = 0; i < rc; i++) {
+    b_obj_list *list = (b_obj_list*)GC(new_list(vm));
+    PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
+    PCRE2_SPTR substring_start = subject + o_vector[2 * i];
+    write_list(vm, list, GC_L_STRING((char *) substring_start, (int) substring_length));
+    dict_set_entry(vm, result, NUMBER_VAL(i), OBJ_VAL(list));
+  }
 
-    b_obj_list *match_list = (b_obj_list *)GC(new_list(vm));
-    b_obj_dict *match_dict = (b_obj_dict *)GC(new_dict(vm));
-
-    int i;
-    for (i = 0; i < rc; i++) {
-      PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
-      if (substring_length > 0) {
-        PCRE2_SPTR substring_start = subject + o_vector[2 * i];
-        write_value_arr(vm, &match_list->items,
-                        GC_L_STRING((char *)substring_start, (int)substring_length));
-      }
-    }
+  if (name_count > 0) {
 
     PCRE2_SPTR tab_ptr;
-
     (void)pcre2_pattern_info(re, PCRE2_INFO_NAMETABLE, &name_table);
     (void)pcre2_pattern_info(re, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
 
     tab_ptr = name_table;
 
-    for (i = 0; i < (int)name_count; i++) {
+    for (int i = 0; i < (int)name_count; i++) {
       int n = (tab_ptr[0] << 8) | tab_ptr[1];
 
-      char *_key = malloc(0);
-      char *_val = malloc(0);
+      int value_length = (int)(o_vector[2 * n + 1] - o_vector[2 * n]);
+      int key_length = (int)name_entry_size - 3;
 
-      sprintf(_key, "%*s", name_entry_size - 3, tab_ptr + 2);
-      sprintf(_val, "%*s", (int)(o_vector[2 * n + 1] - o_vector[2 * n]),
-              subject + o_vector[2 * n]);
+      char *_key = calloc(key_length + 1, sizeof(char));
+      char *_val = calloc(value_length + 1, sizeof(char));
+
+      sprintf(_key, "%*s", key_length, tab_ptr + 2);
+      sprintf(_val, "%*s", value_length, subject + o_vector[2 * n]);
 
       while (isspace((unsigned char)*_key))
         _key++;
 
-      dict_add_entry(
-          vm, match_dict, OBJ_VAL(GC(take_string(vm, _key, name_entry_size - 3))),
-          OBJ_VAL(GC(take_string(vm, _val,
-                              (int)(o_vector[2 * n + 1] - o_vector[2 * n])))));
+      b_obj_list *list = (b_obj_list*)GC(new_list(vm));
+      write_list(vm, list, OBJ_VAL(GC(take_string(vm, _val, value_length))));
+
+      dict_add_entry(vm, result, OBJ_VAL(GC(take_string(vm, _key, key_length))),OBJ_VAL(list));
 
       tab_ptr += name_entry_size;
     }
-
-    write_value_arr(vm, &match_list->items, OBJ_VAL(match_dict));
-    write_list(vm, result, OBJ_VAL(match_list));
   }
 
   (void)pcre2_pattern_info(re, PCRE2_INFO_ALLOPTIONS, &option_bits);
@@ -908,60 +881,57 @@ DECLARE_STRING_METHOD(matches) {
     // REGEX_VECTOR_SIZE_WARNING();
     REGEX_ASSERTION_ERROR(re, match_data, o_vector);
 
-    if (name_count == 0) {
-      int i;
-      for (i = 0; i < rc; i++) {
-        PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
-        if (substring_length > 0) {
-          PCRE2_SPTR substring_start = subject + o_vector[2 * i];
-          write_list(vm, result, GC_L_STRING((char *)substring_start, (int)substring_length));
-        }
-      }
-    } else {
+    for (int i = 0; i < rc; i++) {
+      PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
+      PCRE2_SPTR substring_start = subject + o_vector[2 * i];
 
-      b_obj_list *match_list = (b_obj_list *)GC(new_list(vm));
-      b_obj_dict *match_dict = (b_obj_dict *)GC(new_dict(vm));
-
-      int i;
-      for (i = 0; i < rc; i++) {
-        PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
-        if (substring_length > 0) {
-          PCRE2_SPTR substring_start = subject + o_vector[2 * i];
-          write_value_arr(vm, &match_list->items,
-              GC_L_STRING((char *)substring_start, (int)substring_length));
-        }
+      b_value vlist;
+      if(dict_get_entry(result, NUMBER_VAL(i), &vlist)) {
+        write_list(vm, AS_LIST(vlist), GC_L_STRING((char *)substring_start, (int)substring_length));
+      } else {
+        b_obj_list *list = (b_obj_list*)GC(new_list(vm));
+        write_list(vm, list, GC_L_STRING((char *)substring_start, (int)substring_length));
+        dict_set_entry(vm, result, NUMBER_VAL(i), OBJ_VAL(list));
       }
+    }
+
+    if (name_count > 0) {
 
       PCRE2_SPTR tab_ptr;
-
       (void)pcre2_pattern_info(re, PCRE2_INFO_NAMETABLE, &name_table);
       (void)pcre2_pattern_info(re, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
 
       tab_ptr = name_table;
 
-      for (i = 0; i < (int)name_count; i++) {
+      for (int i = 0; i < (int)name_count; i++) {
         int n = (tab_ptr[0] << 8) | tab_ptr[1];
 
-        char *_key = malloc(0);
-        char *_val = malloc(0);
+        int value_length = (int)(o_vector[2 * n + 1] - o_vector[2 * n]);
+        int key_length = (int)name_entry_size - 3;
 
-        sprintf(_key, "%*s", name_entry_size - 3, tab_ptr + 2);
-        sprintf(_val, "%*s", (int)(o_vector[2 * n + 1] - o_vector[2 * n]),
-                subject + o_vector[2 * n]);
+        char *_key = calloc(key_length + 1, sizeof(char));
+        char *_val = calloc(value_length + 1, sizeof(char));
+
+        sprintf(_key, "%*s", key_length, tab_ptr + 2);
+        sprintf(_val, "%*s", value_length, subject + o_vector[2 * n]);
 
         while (isspace((unsigned char)*_key))
           _key++;
 
-        dict_add_entry(
-            vm, match_dict, OBJ_VAL(GC(take_string(vm, _key, name_entry_size - 3))),
-            OBJ_VAL(GC(take_string(vm, _val,
-                                (int)(o_vector[2 * n + 1] - o_vector[2 * n])))));
+        b_obj_string *name = (b_obj_string*)GC(take_string(vm, _key, key_length));
+        b_obj_string *value = (b_obj_string*)GC(take_string(vm, _val, value_length));
+
+        b_value nlist;
+        if(dict_get_entry(result, OBJ_VAL(name), &nlist)) {
+          write_list(vm, AS_LIST(nlist), OBJ_VAL(value));
+        } else {
+          b_obj_list *list = (b_obj_list*)GC(new_list(vm));
+          write_list(vm, list, OBJ_VAL(value));
+          dict_set_entry(vm, result, OBJ_VAL(name), OBJ_VAL(list));
+        }
 
         tab_ptr += name_entry_size;
       }
-
-      write_value_arr(vm, &match_list->items, OBJ_VAL(match_dict));
-      write_list(vm, result, OBJ_VAL(match_list));
     }
   }
 

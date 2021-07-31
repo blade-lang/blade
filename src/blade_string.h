@@ -181,14 +181,14 @@ DECLARE_STRING_METHOD(rpad);
  *  - returns false otherwise
  * else:
  *  - returns boolean false if there is no match
- *  - returns the first matching data in a list
+ *  - returns the matching data in a dictionary
  */
 DECLARE_STRING_METHOD(match);
 
 /**
  * string.matches(str: regex)
  *
- * returns a list of matches of str in string
+ * returns a dictionary of all matches of str in string
  * NOTE: str must be a regular expression
  */
 DECLARE_STRING_METHOD(matches);

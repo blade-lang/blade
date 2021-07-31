@@ -139,7 +139,7 @@ DECLARE_MODULE_METHOD(socket__connect) {
         arg &= (~O_NONBLOCK);
         fcntl(sock, F_SETFL, arg);
 #else
-        unsigned long arg = 0;
+        arg = 0;
         ioctl(sock, FIONBIO, &arg);
 #endif
       }
@@ -460,14 +460,16 @@ DECLARE_MODULE_METHOD(socket__getaddrinfo) {
         switch(family) {
           case AF_INET: {
             void *ptr = &((struct sockaddr_in*) res->ai_addr)->sin_addr;
-            result = ALLOCATE(char, 16); // INET_ADDRSTRLEN
+            result = ALLOCATE(char, 17); // INET_ADDRSTRLEN
             inet_ntop(res->ai_family, ptr, result, 16);
+            result[16] = '\0';
             break;
           }
           case AF_INET6: {
             void *ptr = &((struct sockaddr_in6*) res->ai_addr)->sin6_addr;
-            result = ALLOCATE(char, 46); // INET6_ADDRSTRLEN
+            result = ALLOCATE(char, 47); // INET6_ADDRSTRLEN
             inet_ntop(res->ai_family, ptr, result, 46);
+            result[46] = '\0';
             break;
           }
           default: {
