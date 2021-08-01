@@ -644,32 +644,28 @@ DECLARE_STRING_METHOD(match) {
   int rc = pcre2_match(re, subject, subject_length, 0, 0, match_data, NULL);
 
   if (rc < 0) {
-    switch (rc) {
-      case PCRE2_ERROR_NOMATCH: RETURN_FALSE;
-
-      default:
-        REGEX_RC_ERROR();
+    if (rc == PCRE2_ERROR_NOMATCH) {
+      RETURN_FALSE;
+    } else {
+      REGEX_RC_ERROR();
     }
-    error_number = rc;
   }
 
   PCRE2_SIZE *o_vector = pcre2_get_ovector_pointer(match_data);
   uint32_t name_count;
-  uint32_t name_entry_size;
-  PCRE2_SPTR name_table;
 
   b_obj_dict *result = (b_obj_dict *) GC(new_dict(vm));
   (void) pcre2_pattern_info(re, PCRE2_INFO_NAMECOUNT, &name_count);
 
   for (int i = 0; i < rc; i++) {
     PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
-    if (substring_length > 0) {
-      PCRE2_SPTR substring_start = subject + o_vector[2 * i];
-      dict_set_entry(vm, result, NUMBER_VAL(0), GC_L_STRING((char *) substring_start, (int) substring_length));
-    }
+    PCRE2_SPTR substring_start = subject + o_vector[2 * i];
+    dict_set_entry(vm, result, NUMBER_VAL(i), GC_L_STRING((char *) substring_start, (int) substring_length));
   }
 
   if (name_count > 0) {
+    uint32_t name_entry_size;
+    PCRE2_SPTR name_table;
     PCRE2_SPTR tab_ptr;
     (void) pcre2_pattern_info(re, PCRE2_INFO_NAMETABLE, &name_table);
     (void) pcre2_pattern_info(re, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
@@ -744,12 +740,10 @@ DECLARE_STRING_METHOD(matches) {
   int rc = pcre2_match(re, subject, subject_length, 0, 0, match_data, NULL);
 
   if (rc < 0) {
-    switch (rc) {
-      case PCRE2_ERROR_NOMATCH: RETURN_FALSE;
-        break;
-
-      default:
-        REGEX_RC_ERROR();
+    if (rc == PCRE2_ERROR_NOMATCH) {
+      RETURN_FALSE;
+    } else {
+      REGEX_RC_ERROR();
     }
   }
 
@@ -763,7 +757,6 @@ DECLARE_STRING_METHOD(matches) {
   (void) pcre2_pattern_info(re, PCRE2_INFO_NAMECOUNT, &name_count);
   (void) pcre2_pattern_info(re, PCRE2_INFO_CAPTURECOUNT, &group_count);
 
-//  b_obj_list *result = (b_obj_list *)GC(new_list(vm));
   b_obj_dict *result = (b_obj_dict *) GC(new_dict(vm));
 
   for (int i = 0; i < rc; i++) {
@@ -932,6 +925,17 @@ DECLARE_STRING_METHOD(matches) {
 
   pcre2_match_data_free(match_data);
   pcre2_code_free(re);
+
+  /*// @TODO: Consider this...
+  if(name_count == 0) {
+    b_obj_list *new_result = (b_obj_list*)GC(new_list(vm));
+    for(int i = 0; i < result->names.count; i++) {
+      b_value value;
+      dict_get_entry(result, result->names.values[i], &value);
+      write_list(vm, new_result, value);
+    }
+    RETURN_OBJ(new_result);
+  }*/
 
   RETURN_OBJ(result);
 }
