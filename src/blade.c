@@ -73,10 +73,8 @@ static void repl(b_vm *vm) {
     current_line++;
 
     const char *cursor = "%> ";
-    if (brace_count > 0 || bracket_count > 0 || paren_count > 0) {
-      cursor = " | ";
-    } else if (single_quote_count == 1 || double_quote_count == 1) {
-      cursor = "  ";
+    if (brace_count > 0 || bracket_count > 0 || paren_count > 0 || single_quote_count == 1 || double_quote_count == 1) {
+      cursor = ".. ";
     }
 
 #if defined(_WIN32) || defined(__CYGWIN__)
