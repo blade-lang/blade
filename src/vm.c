@@ -2314,10 +2314,11 @@ b_ptr_result run(b_vm *vm) {
         b_value value;
         if (table_get(&sw->table, expr, &value)) {
           frame->ip += (int) AS_NUMBER(value);
-        } else if (sw->default_ip != -1) {
-          frame->ip += sw->default_ip;
+        } else if (sw->default_jump != -1) {
+          frame->ip += sw->default_jump;
+        } else {
+          frame->ip += sw->exit_jump;
         }
-        //      pop_n(vm, 2);
         pop(vm);
         break;
       }

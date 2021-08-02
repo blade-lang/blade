@@ -44,7 +44,8 @@ b_obj_module *new_module(b_vm *vm, char *name, char *file) {
 b_obj_switch *new_switch(b_vm *vm) {
   b_obj_switch *sw = ALLOCATE_OBJ(b_obj_switch, OBJ_SWITCH);
   init_table(&sw->table);
-  sw->default_ip = -1;
+  sw->default_jump = -1;
+  sw->exit_jump = -1;
   return sw;
 }
 

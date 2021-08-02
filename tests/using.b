@@ -16,3 +16,12 @@ using i {
   }
 }
 echo 'after'
+
+
+i = 'Hello'
+
+using i {
+  when 'No' {
+    echo 'Wrong'
+  }
+}

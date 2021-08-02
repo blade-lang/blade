@@ -1903,7 +1903,7 @@ static void using_statement(b_parser *p) {
         }
       } else {
         state = 2;
-        sw->default_ip = current_blob(p)->count - start_offset;
+        sw->default_jump = current_blob(p)->count - start_offset;
       }
     } else {
       // otherwise, it's a statement inside the current case
@@ -1923,6 +1923,8 @@ static void using_statement(b_parser *p) {
   for (int i = 0; i < case_count; i++) {
     patch_jump(p, case_ends[i]);
   }
+
+  sw->exit_jump = current_blob(p)->count - start_offset;
 
   patch_switch(p, switch_code, make_constant(p, OBJ_VAL(sw)));
 }

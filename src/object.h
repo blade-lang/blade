@@ -187,7 +187,8 @@ typedef struct {
 typedef struct {
   b_obj obj;
   b_table table;
-  int default_ip;
+  int default_jump;
+  int exit_jump;
 } b_obj_switch;
 
 // non-user objects...
