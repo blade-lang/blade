@@ -31,7 +31,10 @@ do anything.
 
 
 
-### Documentation
+## Documentation
+
+Documentation is currently in-progress in the [blade-docs](https://github.com/blade-lang/blade-docs) repo.
+You can read the [Blade language documentation](https://bladelang.com) online at [bladelang.com](https://bladelang.com).
 
 
 
