@@ -455,7 +455,31 @@ def sqrt(n) {
 }
 
 /**
- * product(n: number)
+ * sum(arg: iterable)
+ *
+ * calculate the sum of all the elements in the input iterable
+ * the default start value for the product is 1.
+ * when the iterable is empty, it returns 1
+ * @return number
+ */
+def sum(arg) {
+  if !is_iterable(arg) {
+    die Exception('iterable expected')
+  }
+
+  var result = 0
+
+  for i in arg {
+    if is_list(i) or is_dict(i) 
+      result += product(i)
+    else result += i
+  }
+
+  return result
+}
+
+/**
+ * product(arg: iterable)
  *
  * calculate the product of all the elements in the input iterable
  * the default start value for the product is 1.
@@ -470,7 +494,8 @@ def product(arg) {
   var result = 1
 
   for i in arg {
-    if is_list(i) or is_dict(i) result *= product(i)
+    if is_list(i) or is_dict(i) 
+      result *= product(i)
     else result *= i
   }
 

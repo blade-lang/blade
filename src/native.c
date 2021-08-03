@@ -225,7 +225,7 @@ DECLARE_NATIVE(sum) {
  *
  * returns the absolute value of a number.
  *
- * if x is not a number but it's class defines a method to_abs(),
+ * if x is not a number but it's class defines a method @to_abs(),
  * returns the result of calling x.to_abs()
  */
 DECLARE_NATIVE(abs) {
@@ -246,7 +246,7 @@ DECLARE_NATIVE(abs) {
  *
  * returns the integer of a number or 0 if no number is given.
  *
- * if i is not a number but it's class defines to_number(), it
+ * if i is not a number but it's class defines @to_number(), it
  * returns the result of calling to_number()
  */
 DECLARE_NATIVE(int) {
@@ -268,7 +268,7 @@ DECLARE_NATIVE(int) {
  *
  * converts a number to it's binary string.
  *
- * if i is not a number but it's class defines to_bin(), it
+ * if i is not a number but it's class defines @to_bin(), it
  * returns the result of calling bin(x.to_bin())
  */
 DECLARE_NATIVE(bin) {
@@ -286,7 +286,7 @@ DECLARE_NATIVE(bin) {
  *
  * converts a number to it's octal string.
  *
- * if i is not a number but it's class defines to_oct(), it
+ * if i is not a number but it's class defines @to_oct(), it
  * returns the result of calling oct(x.to_oct())
  */
 DECLARE_NATIVE(oct) {
@@ -304,7 +304,7 @@ DECLARE_NATIVE(oct) {
  *
  * converts a number to it's hexadecimal string.
  *
- * if i is not a number but it's class defines to_hex(), it
+ * if i is not a number but it's class defines @to_hex(), it
  * returns the result of calling hex(x.to_hex())
  */
 DECLARE_NATIVE(hex) {
@@ -322,7 +322,7 @@ DECLARE_NATIVE(hex) {
  *
  * converts a value into a boolean.
  *
- * classes may override the return value by declaring a to_bool()
+ * classes may override the return value by declaring a @to_bool()
  * function.
  */
 DECLARE_NATIVE(to_bool) {
@@ -336,7 +336,7 @@ DECLARE_NATIVE(to_bool) {
  *
  * convert a value into a string.
  *
- * native classes may override the return value by declaring a to_string()
+ * native classes may override the return value by declaring a @to_string()
  * function.
  */
 DECLARE_NATIVE(to_string) {
@@ -351,7 +351,7 @@ DECLARE_NATIVE(to_string) {
  *
  * convert a value into a number.
  *
- * native classes may override the return value by declaring a to_number()
+ * native classes may override the return value by declaring a @to_number()
  * function.
  */
 DECLARE_NATIVE(to_number) {
@@ -373,7 +373,7 @@ DECLARE_NATIVE(to_number) {
  *
  * convert a value into an integer.
  *
- * native classes may override the return value by declaring a to_int()
+ * native classes may override the return value by declaring a @to_int()
  * function.
  */
 DECLARE_NATIVE(to_int) {
@@ -388,7 +388,7 @@ DECLARE_NATIVE(to_int) {
  *
  * convert a value into a list.
  *
- * native classes may override the return value by declaring a to_list()
+ * native classes may override the return value by declaring a @to_list()
  * function.
  */
 DECLARE_NATIVE(to_list) {
@@ -425,7 +425,7 @@ DECLARE_NATIVE(to_list) {
  *
  * convert a value into a dictionary.
  *
- * native classes may override the return value by declaring a to_dict()
+ * native classes may override the return value by declaring a @to_dict()
  * function.
  */
 DECLARE_NATIVE(to_dict) {
