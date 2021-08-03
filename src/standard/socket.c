@@ -59,16 +59,6 @@ DECLARE_MODULE_METHOD(socket__create) {
   ENFORCE_ARG_TYPE(_create, 1, IS_NUMBER); // type
   ENFORCE_ARG_TYPE(_create, 2, IS_NUMBER); // protocol
 
-#ifdef _WIN32
-  WSADATA wsa_data;
-//  int i_result = WSAStartup(MAKEWORD(1, 1), &wsa_data);
-  int i_result = WSAStartup(MAKEWORD(2, 2), &wsa_data);
-  if (i_result != NO_ERROR) {
-      errno = i_result;
-      RETURN_NUMBER(-1);
-  }
-#endif
-
   int family = (int) AS_NUMBER(args[0]);
   int type = (int) AS_NUMBER(args[1]);
 
@@ -569,8 +559,27 @@ void __socket_module_unload(b_vm *vm) {
 #endif
 }
 
-CREATE_MODULE_LOADER(socket) {
+void __socket_module_preloader(b_vm *vm) {
+#ifdef _WIN32
+  WSADATA wsa_data;
+  int i_result = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+  if (i_result != NO_ERROR) {
+    errno = i_result;
+    return NULL;
+  }
 
+  if(LOBYTE(wsa_data.wVersion) != 2 || HIBYTE(wsa_data.wVersion) != 2) {
+    WSACleanup();
+    return NULL;
+  }
+#else
+#  ifdef SIGPIPE
+  signal(SIGPIPE, SIG_IGN);
+#  endif
+#endif
+}
+
+CREATE_MODULE_LOADER(socket) {
   static b_func_reg module_functions[] = {
       {"create",      false, GET_MODULE_METHOD(socket__create)},
       {"connect",     false, GET_MODULE_METHOD(socket__connect)},
@@ -589,9 +598,9 @@ CREATE_MODULE_LOADER(socket) {
       {NULL,          false, NULL},
   };
 
-  static b_module_reg module = {"_socket", NULL, module_functions, NULL, &__socket_module_unload};
-
-  return module;
+  static b_module_reg module = {"_socket", NULL, module_functions, NULL, &__socket_module_preloader,
+                                &__socket_module_unload};
+  return &module;
 }
 
 #undef BIGSIZ

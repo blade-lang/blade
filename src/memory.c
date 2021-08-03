@@ -159,6 +159,11 @@ void blacken_object(b_vm *vm, b_obj *object) {
       break;
     }
 
+    case OBJ_PTR: {
+      mark_object(vm, object);
+      break;
+    }
+
     case OBJ_NATIVE: {
       mark_object(vm, object);
       break;
@@ -168,7 +173,7 @@ void blacken_object(b_vm *vm, b_obj *object) {
   }
 }
 
-static void free_object(b_vm *vm, b_obj *object) {
+void free_object(b_vm *vm, b_obj *object) {
 #if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
   printf("%p free type %d\n", (void *)object, object->type);
 #endif
@@ -180,16 +185,9 @@ static void free_object(b_vm *vm, b_obj *object) {
       FREE(char, module->name);
       FREE(char, module->file);
       if (module->unloader != NULL) {
-        b_module_unloader *unloader = (b_module_unloader *) module->unloader;
-        (*unloader)(vm);
+        ((b_module_loader)module->unloader)(vm);
       }
       FREE(b_obj_module, object);
-      break;
-    }
-    case OBJ_SWITCH: {
-      b_obj_switch *sw = (b_obj_switch *) object;
-      free_table(vm, &sw->table);
-      FREE(b_obj_switch, object);
       break;
     }
     case OBJ_BYTES: {
@@ -270,6 +268,19 @@ static void free_object(b_vm *vm, b_obj *object) {
       b_obj_string *string = (b_obj_string *) object;
       FREE_ARRAY(char, string->chars, (size_t) string->length + 1);
       FREE(b_obj_string, object);
+      break;
+    }
+
+    case OBJ_PTR: {
+      b_obj_ptr *ptr = (b_obj_ptr *) object;
+      free(ptr->ptr);
+      FREE(b_obj_ptr, object);
+      break;
+    }
+    case OBJ_SWITCH: {
+      b_obj_switch *sw = (b_obj_switch *) object;
+      free_table(vm, &sw->table);
+      FREE(b_obj_switch, object);
       break;
     }
 

@@ -13,7 +13,7 @@ typedef struct {
 
 typedef b_value (*b_class_field)(b_vm *);
 
-typedef void (*b_module_unloader)(b_vm *);
+typedef void (*b_module_loader)(b_vm *);
 
 typedef struct {
   const char *name;
@@ -32,13 +32,14 @@ typedef struct {
   b_field_reg *fields;
   b_func_reg *functions;
   b_class_reg *classes;
-  b_module_unloader unloader;
+  b_module_loader preloader;
+  b_module_loader unloader;
 } b_module_reg;
 
-typedef b_module_reg (*b_module_loader)(b_vm *);
+typedef b_module_reg* (*b_module_init)(b_vm *);
 
 #define CREATE_MODULE_LOADER(module)                                           \
-  b_module_reg blade_module_loader_##module(b_vm *vm)
+  b_module_reg* blade_module_loader_##module(b_vm *vm)
 #define GET_MODULE_LOADER(module) &blade_module_loader_##module
 
 void bind_native_modules(b_vm *vm);

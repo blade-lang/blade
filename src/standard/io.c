@@ -826,7 +826,7 @@ CREATE_MODULE_LOADER(io) {
       {NULL,  NULL, NULL},
   };
 
-  static b_module_reg module = {"_io", io_module_fields, io_functions, classes, &__io_module_unload};
+  static b_module_reg module = {"_io", io_module_fields, io_functions, classes, NULL, &__io_module_unload};
 
-  return module;
+  return &module;
 }

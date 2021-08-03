@@ -163,8 +163,8 @@ CREATE_MODULE_LOADER(date) {
       {NULL,        false, NULL},
   };
 
-  static b_module_reg module = {"_date", NULL, module_functions, NULL, NULL};
-  return module;
+  static b_module_reg module = {"_date", NULL, module_functions, NULL, NULL, NULL};
+  return &module;
 }
 
 #undef ADD_TIME

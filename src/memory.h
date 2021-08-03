@@ -20,6 +20,7 @@
 
 void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size);
 
+void free_object(b_vm *vm, b_obj *object);
 void free_objects(b_vm *vm);
 
 void mark_object(b_vm *vm, b_obj *object);

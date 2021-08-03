@@ -475,7 +475,9 @@ void free_vm(b_vm *vm) {
 //  free_objects(vm);
   free_table(vm, &vm->strings);
   free_table(vm, &vm->globals);
-  free_table(vm, &vm->modules);
+  // since object in module can exist in globals
+  // it must come after
+  clean_free_table(vm, &vm->modules);
 
   free_table(vm, &vm->methods_string);
   free_table(vm, &vm->methods_list);
@@ -2212,6 +2214,10 @@ b_ptr_result run(b_vm *vm) {
         b_obj_string *module_name = READ_STRING();
         b_value value;
         if (table_get(&vm->modules, OBJ_VAL(module_name), &value)) {
+          b_obj_module *module = AS_MODULE(value);
+          if(module->preloader != NULL) {
+            ((b_module_loader)module->preloader)(vm);
+          }
           table_set(vm, &get_frame_function(frame)->module->values, OBJ_VAL(module_name), value);
           break;
         }
