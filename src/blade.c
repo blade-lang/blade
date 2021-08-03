@@ -114,13 +114,6 @@ static void repl(b_vm *vm) {
     add_history(line);
 #endif // !_WIN32
 
-/*    if(line_length > 0 && line[0] == '#') { // single line comment
-#ifndef _WIN32
-      free(line);
-#endif // !_WIN32
-      continue;
-    }*/
-
     // find count of { and }, ( and ), [ and ]
     for (int i = 0; i < line_length; i++) {
       // scope openers...

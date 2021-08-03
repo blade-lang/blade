@@ -2218,6 +2218,7 @@ b_ptr_result run(b_vm *vm) {
           if(module->preloader != NULL) {
             ((b_module_loader)module->preloader)(vm);
           }
+          module->imported = true;
           table_set(vm, &get_frame_function(frame)->module->values, OBJ_VAL(module_name), value);
           break;
         }

@@ -39,6 +39,7 @@ b_obj_module *new_module(b_vm *vm, char *name, char *file) {
   module->file = file;
   module->unloader = NULL;
   module->preloader = NULL;
+  module->imported = false;
   return module;
 }
 

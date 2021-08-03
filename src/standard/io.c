@@ -553,6 +553,7 @@ HANDLE getHandle() { return com.hComm; }
 #endif
 
 static struct termios orig_termios;
+static bool set_attr_was_called = false;
 
 void disable_raw_mode(void) {
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
@@ -657,6 +658,8 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
   if (dict_get_entry(dict, NUMBER_VAL(5), &iflag)) {
     raw.c_ospeed = (long) AS_NUMBER(ospeed);
   }
+
+  set_attr_was_called = true;
 
   int result = tcsetattr(fileno(file->file), type, &raw);
   RETURN_BOOL(result != -1);
@@ -795,7 +798,9 @@ b_value io_module_stderr(b_vm *vm) {
 }
 
 void __io_module_unload(b_vm *vm) {
-  disable_raw_mode();
+  if(set_attr_was_called) {
+    disable_raw_mode();
+  }
 }
 
 CREATE_MODULE_LOADER(io) {

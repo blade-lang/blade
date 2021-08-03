@@ -574,7 +574,7 @@ void __socket_module_preloader(b_vm *vm) {
   }
 #else
 #  ifdef SIGPIPE
-//  signal(SIGPIPE, SIG_IGN);
+  signal(SIGPIPE, SIG_IGN);
 #  endif
 #endif
 }

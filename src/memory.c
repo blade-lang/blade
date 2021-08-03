@@ -175,7 +175,7 @@ void free_object(b_vm *vm, b_obj *object) {
       free_table(vm, &module->values);
       FREE(char, module->name);
       FREE(char, module->file);
-      if (module->unloader != NULL) {
+      if (module->unloader != NULL && module->imported) {
         ((b_module_loader)module->unloader)(vm);
       }
       FREE(b_obj_module, object);

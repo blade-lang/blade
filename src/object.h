@@ -107,6 +107,7 @@ typedef struct {
   b_obj obj;
   char *name;
   char *file;
+  bool imported;
   b_table values;
   void *preloader;
   void *unloader;
