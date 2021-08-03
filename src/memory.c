@@ -154,16 +154,7 @@ void blacken_object(b_vm *vm, b_obj *object) {
       break;
     }
 
-    case OBJ_BYTES: {
-      mark_object(vm, object);
-      break;
-    }
-
-    case OBJ_PTR: {
-      mark_object(vm, object);
-      break;
-    }
-
+    case OBJ_BYTES:
     case OBJ_NATIVE: {
       mark_object(vm, object);
       break;
@@ -271,12 +262,6 @@ void free_object(b_vm *vm, b_obj *object) {
       break;
     }
 
-    case OBJ_PTR: {
-      b_obj_ptr *ptr = (b_obj_ptr *) object;
-      free(ptr->ptr);
-      FREE(b_obj_ptr, object);
-      break;
-    }
     case OBJ_SWITCH: {
       b_obj_switch *sw = (b_obj_switch *) object;
       free_table(vm, &sw->table);

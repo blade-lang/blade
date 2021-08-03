@@ -47,9 +47,7 @@ typedef enum {
 #define AS_SWITCH(v) ((b_obj_switch *)AS_OBJ(v))
 #define IS_SWITCH(v) is_obj_type(v, OBJ_SWITCH)
 #define AS_MODULE(v) ((b_obj_module *)AS_OBJ(v))
-#define AS_PTR(v) ((b_obj_ptr *)AS_OBJ(v))
 #define IS_MODULE(v) is_obj_type(v, OBJ_MODULE)
-#define IS_PTR(v) is_obj_type(v, OBJ_PTR)
 
 // containers
 #define AS_BYTES(v) ((b_obj_bytes *)AS_OBJ(v))
@@ -82,7 +80,6 @@ typedef enum {
   // non-user objects
   OBJ_MODULE,
   OBJ_SWITCH,
-  OBJ_PTR,
 } b_obj_type;
 
 struct s_obj {
@@ -195,14 +192,7 @@ typedef struct {
   int exit_jump;
 } b_obj_switch;
 
-typedef struct {
-  b_obj obj;
-  void *ptr;
-} b_obj_ptr;
-
 // non-user objects...
-b_obj_ptr *new_ptr(b_vm *vm, void *ptr);
-
 b_obj_module *new_module(b_vm *vm, char *name, char *file);
 
 b_obj_switch *new_switch(b_vm *vm);
