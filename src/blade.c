@@ -54,6 +54,11 @@ static void repl(b_vm *vm) {
   b_obj_module *module = new_module(vm, strdup(""), strdup("<repl>"));
   add_module(vm, module);
 
+#if !defined(_WIN32) && !defined(__CYGWIN__)
+  // allow user to navigate through past input in terminal...
+  add_history("exit()");
+#endif // !_WIN32
+
   for (;;) {
     while (sigsetjmp(ctrlc_buf, 1) != 0);
 
