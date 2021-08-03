@@ -34,6 +34,8 @@ void clean_free_table(b_vm *vm, b_table *table) {
         free_object(vm, AS_OBJ(entry->value));
     }
   }
+  FREE_ARRAY(b_entry, table->entries, table->capacity);
+  init_table(table);
 }
 
 static b_entry *find_entry(b_entry *entries, int capacity, b_value key) {
