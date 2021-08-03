@@ -32,12 +32,19 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   return object;
 }
 
+b_obj_ptr *new_ptr(b_vm *vm, void *ptr) {
+  b_obj_ptr *pointer = ALLOCATE_OBJ(b_obj_ptr, OBJ_PTR);
+  pointer->ptr = ptr;
+  return pointer;
+}
+
 b_obj_module *new_module(b_vm *vm, char *name, char *file) {
   b_obj_module *module = ALLOCATE_OBJ(b_obj_module, OBJ_MODULE);
   init_table(&module->values);
   module->name = name;
   module->file = file;
   module->unloader = NULL;
+  module->preloader = NULL;
   return module;
 }
 
@@ -312,6 +319,10 @@ void print_object(b_value value, bool fix_string) {
       printf("up value");
       break;
     }
+    case OBJ_PTR: {
+      printf("<ptr at %p>", (void *) AS_PTR(value));
+      break;
+    }
     case OBJ_STRING: {
       char *string = AS_C_STRING(value);
       if (fix_string) {
@@ -445,6 +456,9 @@ char *object_to_string(b_vm *vm, b_value value) {
     case OBJ_MODULE:
       sprintf(str, "<module %s>", AS_MODULE(value)->name);
       break;
+    case OBJ_PTR:
+      sprintf(str, "<ptr %p>", AS_PTR(value));
+      break;
     case OBJ_STRING:
       return strdup(AS_C_STRING(value));
     case OBJ_UP_VALUE:
@@ -470,8 +484,6 @@ const char *object_type(b_obj *object) {
   switch (object->type) {
     case OBJ_MODULE:
       return "module";
-    case OBJ_SWITCH:
-      return "switch";
     case OBJ_BYTES:
       return "bytes";
     case OBJ_FILE:
@@ -495,6 +507,12 @@ const char *object_type(b_obj *object) {
 
     case OBJ_STRING:
       return "string";
+
+      //
+    case OBJ_SWITCH:
+      return "switch";
+    case OBJ_PTR:
+      return "pointer";
 
     default:
       return "unknown";

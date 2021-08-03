@@ -196,7 +196,7 @@ CREATE_MODULE_LOADER(os) {
       {NULL,       false, NULL},
   };
 
-  static b_module_reg module = {"_os", os_module_fields, os_module_functions, NULL, NULL};
+  static b_module_reg module = {"_os", os_module_fields, os_module_functions, NULL, NULL, NULL};
 
-  return module;
+  return &module;
 }
