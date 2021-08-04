@@ -155,6 +155,7 @@ void blacken_object(b_vm *vm, b_obj *object) {
     }
 
     case OBJ_BYTES:
+    case OBJ_RANGE:
     case OBJ_NATIVE: {
       mark_object(vm, object);
       break;
@@ -255,6 +256,10 @@ void free_object(b_vm *vm, b_obj *object) {
       FREE(b_obj_up_value, object);
       break;
     }
+    case OBJ_RANGE: {
+      FREE(b_obj_range, object);
+      break;
+    }
     case OBJ_STRING: {
       b_obj_string *string = (b_obj_string *) object;
       FREE_ARRAY(char, string->chars, (size_t) string->length + 1);
@@ -293,6 +298,7 @@ static void mark_roots(b_vm *vm) {
   mark_table(vm, &vm->methods_file);
   mark_table(vm, &vm->methods_list);
   mark_table(vm, &vm->methods_dict);
+  mark_table(vm, &vm->methods_range);
 
   mark_compiler_roots(vm);
 }

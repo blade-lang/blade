@@ -46,6 +46,7 @@ set(BLADE_SOURCES
 		src/blade_getopt.c
 		src/blade_list.c
 		src/blade_string.c
+		src/blade_range.c
 		src/blob.c
 		src/bytes.c
 		src/compiler.c
