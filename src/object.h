@@ -33,6 +33,7 @@ typedef enum {
 #define IS_LIST(v) is_obj_type(v, OBJ_LIST)
 #define IS_DICT(v) is_obj_type(v, OBJ_DICT)
 #define IS_FILE(v) is_obj_type(v, OBJ_FILE)
+#define IS_RANGE(v) is_obj_type(v, OBJ_RANGE)
 
 // promote b_value to object
 #define AS_STRING(v) ((b_obj_string *)AS_OBJ(v))
@@ -54,6 +55,7 @@ typedef enum {
 #define AS_LIST(v) ((b_obj_list *)AS_OBJ(v))
 #define AS_DICT(v) ((b_obj_dict *)AS_OBJ(v))
 #define AS_FILE(v) ((b_obj_file *)AS_OBJ(v))
+#define AS_RANGE(v) ((b_obj_range *)AS_OBJ(v))
 
 // demote blade value to c string
 #define AS_C_STRING(v) (((b_obj_string *)AS_OBJ(v))->chars)
@@ -74,6 +76,7 @@ typedef enum {
   // containers
   OBJ_BYTES,
   OBJ_LIST,
+  OBJ_RANGE,
   OBJ_DICT,
   OBJ_FILE,
 
@@ -169,6 +172,13 @@ typedef struct {
 
 typedef struct {
   b_obj obj;
+  int lower;
+  int upper;
+  int range;
+} b_obj_range;
+
+typedef struct {
+  b_obj obj;
   b_byte_arr bytes;
 } b_obj_bytes;
 
@@ -200,6 +210,7 @@ b_obj_switch *new_switch(b_vm *vm);
 
 // data containers
 b_obj_list *new_list(b_vm *vm);
+b_obj_range *new_range(b_vm *vm, int lower, int upper);
 
 b_obj_bytes *new_bytes(b_vm *vm, int length);
 

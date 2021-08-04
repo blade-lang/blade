@@ -12,6 +12,7 @@
 #include "blade_file.h"
 #include "blade_list.h"
 #include "blade_string.h"
+#include "blade_range.h"
 #include "util.h"
 
 #include <math.h>
@@ -297,6 +298,7 @@ static void init_builtin_methods(b_vm *vm) {
 #define DEFINE_DICT_METHOD(name) DEFINE_METHOD(dict, name)
 #define DEFINE_FILE_METHOD(name) DEFINE_METHOD(file, name)
 #define DEFINE_BYTES_METHOD(name) DEFINE_METHOD(bytes, name)
+#define DEFINE_RANGE_METHOD(name) DEFINE_METHOD(range, name)
 
   // string methods
   DEFINE_STRING_METHOD(length);
@@ -426,11 +428,18 @@ static void init_builtin_methods(b_vm *vm) {
   define_native_method(vm, &vm->methods_bytes, "@iter", native_method_bytes__iter__);
   define_native_method(vm, &vm->methods_bytes, "@itern", native_method_bytes__itern__);
 
+  // range
+  DEFINE_RANGE_METHOD(lower);
+  DEFINE_RANGE_METHOD(upper);
+  define_native_method(vm, &vm->methods_range, "@iter", native_method_range__iter__);
+  define_native_method(vm, &vm->methods_range, "@itern", native_method_range__itern__);
+
 #undef DEFINE_STRING_METHOD
 #undef DEFINE_LIST_METHOD
 #undef DEFINE_DICT_METHOD
 #undef DEFINE_FILE_METHOD
 #undef DEFINE_BYTES_METHOD
+#undef DEFINE_RANGE_METHOD
 }
 
 void init_vm(b_vm *vm) {
@@ -461,6 +470,7 @@ void init_vm(b_vm *vm) {
   init_table(&vm->methods_dict);
   init_table(&vm->methods_file);
   init_table(&vm->methods_bytes);
+  init_table(&vm->methods_range);
 
   init_builtin_functions(vm);
   init_builtin_methods(vm);
@@ -725,6 +735,12 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
           return call_native_method(vm, AS_NATIVE(value), arg_count);
         }
         return throw_exception(vm, "List has no method %s()", name->chars);
+      }
+      case OBJ_RANGE: {
+        if (table_get(&vm->methods_range, OBJ_VAL(name), &value)) {
+          return call_native_method(vm, AS_NATIVE(value), arg_count);
+        }
+        return throw_exception(vm, "Range has no method %s()", name->chars);
       }
       case OBJ_DICT: {
         if (table_get(&vm->methods_dict, OBJ_VAL(name), &value)) {
@@ -1748,6 +1764,16 @@ b_ptr_result run(b_vm *vm) {
               runtime_error("class List has no named property '%s'", name->chars);
               break;
             }
+            case OBJ_RANGE: {
+              if (table_get(&vm->methods_range, OBJ_VAL(name), &value)) {
+                pop(vm); // pop the list...
+                push(vm, value);
+                break;
+              }
+
+              runtime_error("class Range has no named property '%s'", name->chars);
+              break;
+            }
             case OBJ_DICT: {
               if (table_get(&AS_DICT(peek(vm, 0))->items, OBJ_VAL(name), &value) ||
                   table_get(&vm->methods_dict, OBJ_VAL(name), &value)) {
@@ -2006,18 +2032,7 @@ b_ptr_result run(b_vm *vm) {
 
         double lower = AS_NUMBER(_lower), upper = AS_NUMBER(_upper);
         pop_n(vm, 2);
-        b_obj_list *list = new_list(vm);
-        push(vm, OBJ_VAL(list));
-
-        if (upper > lower) {
-          for (int i = (int) lower; i < upper; i++) {
-            write_list(vm, list, NUMBER_VAL(i));
-          }
-        } else if (lower > upper) {
-          for (int i = (int) lower; i > upper; i--) {
-            write_list(vm, list, NUMBER_VAL(i));
-          }
-        }
+        push(vm, OBJ_VAL(new_range(vm, lower, upper)));
         break;
       }
       case OP_DICT: {

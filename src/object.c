@@ -63,6 +63,18 @@ b_obj_list *new_list(b_vm *vm) {
   return list;
 }
 
+b_obj_range *new_range(b_vm *vm, int lower, int upper) {
+  b_obj_range *range = ALLOCATE_OBJ(b_obj_range, OBJ_RANGE);
+  range->lower = lower;
+  range->upper = upper;
+  if(upper > lower) {
+    range->range = upper - lower;
+  } else {
+    range->range = lower - upper;
+  }
+  return range;
+}
+
 b_obj_dict *new_dict(b_vm *vm) {
   b_obj_dict *dict = ALLOCATE_OBJ(b_obj_dict, OBJ_DICT);
   init_value_arr(&dict->names);
@@ -255,6 +267,11 @@ void print_object(b_value value, bool fix_string) {
     case OBJ_SWITCH: {
       break;
     }
+    case OBJ_RANGE: {
+      b_obj_range *range = AS_RANGE(value);
+      printf("<range %d-%d>", range->lower, range->upper);
+      break;
+    }
     case OBJ_FILE: {
       print_file(AS_FILE(value));
       break;
@@ -444,6 +461,11 @@ char *object_to_string(b_vm *vm, b_value value) {
     case OBJ_NATIVE:
       sprintf(str, "<native-function %s>", AS_NATIVE(value)->name);
       break;
+    case OBJ_RANGE: {
+      b_obj_range *range = AS_RANGE(value);
+      sprintf(str, "<range %d-%d>", range->lower, range->upper);
+      break;
+    }
     case OBJ_MODULE:
       sprintf(str, "<module %s>", AS_MODULE(value)->name);
       break;
@@ -474,6 +496,8 @@ const char *object_type(b_obj *object) {
       return "module";
     case OBJ_BYTES:
       return "bytes";
+    case OBJ_RANGE:
+      return "range";
     case OBJ_FILE:
       return "file";
     case OBJ_DICT:

@@ -481,11 +481,11 @@ DECLARE_NATIVE(ord) {
 }
 
 /**
- * rand([limit: number, [upper_limit: number]])
+ * rand([limit: number, [upper: number]])
  *
  * - returns a random number between 0 and 1 if no argument is given
  * - returns a random number between 0 and limit if one argument is given
- * - returns a random number between limit and upper_limit if two arguments is
+ * - returns a random number between limit and upper if two arguments is
  * given
  */
 DECLARE_NATIVE(rand) {

@@ -120,10 +120,10 @@ DECLARE_LIST_METHOD(sort);
 DECLARE_LIST_METHOD(contains);
 
 /**
- * list.delete(lower_limit: number, upper_limit: number)
+ * list.delete(lower: number, upper: number)
  *
- * deletes a range of items from a list starting from lower_limit to
- * upper_limit.
+ * deletes a range of items from a list starting from lower to
+ * upper.
  * upper limit must be greater than lower limit
  */
 DECLARE_LIST_METHOD(delete);
