@@ -428,16 +428,26 @@ static b_value find_max_value(b_value a, b_value b) {
   } else if (IS_OBJ(a)) {
     if (IS_STRING(a) && IS_STRING(b)) {
       return strcmp(AS_C_STRING(a), AS_C_STRING(b)) >= 0 ? a : b;
+    } else if (IS_FUNCTION(a) && IS_FUNCTION(b)) {
+      return AS_FUNCTION(a)->arity >= AS_FUNCTION(b)->arity
+             ? a
+             : b;
     } else if (IS_CLOSURE(a) && IS_CLOSURE(b)) {
       return AS_CLOSURE(a)->function->arity >= AS_CLOSURE(b)->function->arity
              ? a
              : b;
+    } else if (IS_RANGE(a) && IS_RANGE(b)) {
+      return AS_RANGE(a)->lower >= AS_RANGE(b)->lower ? a : b;
     } else if (IS_CLASS(a) && IS_CLASS(b)) {
       return AS_CLASS(a)->methods.count >= AS_CLASS(b)->methods.count ? a : b;
     } else if (IS_LIST(a) && IS_LIST(b)) {
       return AS_LIST(a)->items.count >= AS_LIST(b)->items.count ? a : b;
     } else if (IS_DICT(a) && IS_DICT(b)) {
       return AS_DICT(a)->names.count >= AS_DICT(b)->names.count ? a : b;
+    } else if (IS_BYTES(a) && IS_BYTES(b)) {
+      return AS_BYTES(a)->bytes.count >= AS_BYTES(b)->bytes.count ? a : b;
+    } else if (IS_FILE(a) && IS_FILE(b)) {
+      return strcmp(AS_FILE(a)->path->chars, AS_FILE(b)->path->chars) >= 0 ? a : b;
     } else if (IS_OBJ(b)) {
       return AS_OBJ(a)->type >= AS_OBJ(b)->type ? a : b;
     } else {
@@ -452,10 +462,8 @@ static b_value find_max_value(b_value a, b_value b) {
  * sorts values in an array using the bubble-sort algorithm
  */
 void sort_values(b_value *values, int count) {
-  int i;
-  for (i = 0; i < count; i++) {
-    int j;
-    for (j = 0; j < count; j++) {
+  for (int i = 0; i < count; i++) {
+    for (int j = 0; j < count; j++) {
       if (values_equal(values[j], find_max_value(values[i], values[j]))) {
         b_value temp = values[i];
         values[i] = values[j];

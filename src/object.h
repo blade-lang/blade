@@ -63,22 +63,22 @@ typedef enum {
 #define IS_CHAR(v) (IS_STRING(v) && (AS_STRING(v)->length == 1 || AS_STRING(v)->length == 0))
 
 typedef enum {
+  // containers
+  OBJ_STRING,
+  OBJ_RANGE,
+  OBJ_LIST,
+  OBJ_DICT,
+  OBJ_FILE,
+  OBJ_BYTES,
+
   // base object types
+  OBJ_UP_VALUE,
   OBJ_BOUND_METHOD,
-  OBJ_CLASS,
   OBJ_CLOSURE,
   OBJ_FUNCTION,
   OBJ_INSTANCE,
   OBJ_NATIVE,
-  OBJ_STRING,
-  OBJ_UP_VALUE,
-
-  // containers
-  OBJ_BYTES,
-  OBJ_LIST,
-  OBJ_RANGE,
-  OBJ_DICT,
-  OBJ_FILE,
+  OBJ_CLASS,
 
   // non-user objects
   OBJ_MODULE,

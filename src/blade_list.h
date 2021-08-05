@@ -101,7 +101,7 @@ DECLARE_LIST_METHOD(remove);
 /**
  * list.reverse()
  *
- * reverses the items in a list
+ * returns a list containing the reverse of the  the items in the list
  */
 DECLARE_LIST_METHOD(reverse);
 
