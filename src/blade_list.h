@@ -181,7 +181,7 @@ DECLARE_LIST_METHOD(unique);
 
 /**
  * list.zip(items... : list...)
- * Converts any arguments to lists, then merges elements of itself with
+ * merges elements of all arguments itself with
  * corresponding elements from each argument.
  *
  * This generates a sequence of list.length n-element lists, where n is one
