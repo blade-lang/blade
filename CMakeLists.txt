@@ -183,8 +183,8 @@ enable_testing()
 # define a function to simplify adding tests
 function(add_blade_test target arg index result)
 	#  message(STATUS "setting up test ${CMAKE_CURRENT_BINARY_DIR}/bin/${PROJECT_NAME} tests/${arg}.b")
-	add_test(NAME ${arg}_test_${index} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/bin/${PROJECT_NAME} bin/tests/${arg}.b)
-	set_tests_properties(${arg}_test_${index}
+	add_test(NAME ${arg}_${index} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/bin/${PROJECT_NAME} bin/tests/${arg}.b)
+	set_tests_properties(${arg}_${index}
 			PROPERTIES PASS_REGULAR_EXPRESSION ${result}
 			)
 endfunction(add_blade_test)

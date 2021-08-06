@@ -496,7 +496,7 @@ void free_vm(b_vm *vm) {
   free_table(vm, &vm->methods_bytes);
 }
 
-void add_module(b_vm *vm, b_obj_module *module) {
+void inline add_module(b_vm *vm, b_obj_module *module) {
   table_set(vm, &vm->modules, STRING_VAL(module->file), OBJ_VAL(module));
   if (vm->frame_count == 0) {
     table_set(vm, &vm->globals, STRING_VAL(module->name), OBJ_VAL(module));
@@ -508,11 +508,16 @@ void add_module(b_vm *vm, b_obj_module *module) {
   }
 }
 
-void add_native_module(b_vm *vm, b_obj_module *module) {
+void inline add_native_module(b_vm *vm, b_obj_module *module) {
   table_set(vm, &vm->modules, STRING_VAL(module->name), OBJ_VAL(module));
 }
 
 static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
+  // fill empty parameters if not variadic
+  for (; !function->is_variadic && arg_count < function->arity; arg_count++) {
+    push(vm, NIL_VAL);
+  }
+
   // handle variadic arguments...
   if (function->is_variadic && arg_count >= function->arity - 1) {
     int va_args_start = arg_count - function->arity;
@@ -524,10 +529,6 @@ static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
     arg_count -= va_args_start;
     pop_n(vm, va_args_start + 1);
     push(vm, OBJ_VAL(args_list));
-  } else if (!function->is_variadic && arg_count < function->arity) {
-    for (; arg_count < function->arity; arg_count++) {
-      push(vm, NIL_VAL);
-    }
   }
 
   if (arg_count != function->arity) {
@@ -595,13 +596,27 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
         b_obj_class *klass = AS_CLASS(callee);
         vm->stack_top[-arg_count - 1] = OBJ_VAL(new_instance(vm, klass));
         if (!IS_EMPTY(klass->initializer)) {
-          if (IS_CLOSURE(klass->initializer)) {
+          switch(OBJ_TYPE(klass->initializer)) {
+            case OBJ_CLOSURE: {
+              return call_closure(vm, AS_CLOSURE(klass->initializer), arg_count);
+            }
+            case OBJ_NATIVE: {
+              return call_native_method(vm, AS_NATIVE(klass->initializer), arg_count);
+            }
+            case OBJ_FUNCTION: {
+              return call_function(vm, AS_FUNCTION(klass->initializer), arg_count);
+            }
+            default:return false;
+          }
+          /*if (IS_CLOSURE(klass->initializer)) {
             return call_closure(vm, AS_CLOSURE(klass->initializer), arg_count);
           } else if (IS_NATIVE(klass->initializer)) {
-            return call_value(vm, klass->initializer, arg_count);
+//            return call_value(vm, klass->initializer, arg_count);
+            return call_native_method(vm, AS_NATIVE(klass->initializer), arg_count);
           } else {
             return call_function(vm, AS_FUNCTION(klass->initializer), arg_count);
-          }
+          }*/
+//          call_value(vm, klass->initializer, arg_count);
         } else if (arg_count != 0) {
           return throw_exception(vm, "%s constructor expects 0 arguments, %d given",
                                  klass->name->chars, arg_count);
@@ -628,11 +643,17 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
   return throw_exception(vm, "only functions and classes can be called");
 }
 
-static b_func_type get_method_type(b_value method) {
-  if (IS_NATIVE(method)) return AS_NATIVE(method)->type;
+static inline b_func_type get_method_type(b_value method) {
+  switch (OBJ_TYPE(method)) {
+    case OBJ_NATIVE: return AS_NATIVE(method)->type;
+    case OBJ_CLOSURE: return AS_CLOSURE(method)->function->type;
+    case OBJ_FUNCTION: return AS_FUNCTION(method)->type;
+    default: return TYPE_FUNCTION;
+  }
+  /*if (IS_NATIVE(method)) return AS_NATIVE(method)->type;
   if (IS_CLOSURE(method)) return AS_CLOSURE(method)->function->type;
   if (IS_FUNCTION(method)) return AS_FUNCTION(method)->type;
-  return TYPE_FUNCTION;
+  return TYPE_FUNCTION;*/
 }
 
 bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
