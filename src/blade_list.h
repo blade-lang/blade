@@ -153,7 +153,7 @@ DECLARE_LIST_METHOD(is_empty);
  * list.take(n: number)
  *
  * returns the first n number of items in the list,
- * or a copy of the list if n < list.length
+ * or a copy of the list if n >= list.length
  * - if n is a negative number, returns list.take(list.length - n)
  */
 DECLARE_LIST_METHOD(take);
@@ -175,19 +175,19 @@ DECLARE_LIST_METHOD(compact);
 /**
  * list.unique()
  *
- * removes all nil values from a list
+ * removes all new list containing unique values
  */
 DECLARE_LIST_METHOD(unique);
 
 /**
  * list.zip(items... : list...)
- * Converts any arguments to arrays, then merges elements of self with
+ * Converts any arguments to lists, then merges elements of itself with
  * corresponding elements from each argument.
  *
- * This generates a sequence of ary.size n-element arrays, where n is one
+ * This generates a sequence of list.length n-element lists, where n is one
  * more than the count of arguments.
  *
- * If the size of any argument is less than the size of the initial array,
+ * If the size of any argument is less than the size of the initial list,
  * nil values are supplied.
  */
 DECLARE_LIST_METHOD(zip);

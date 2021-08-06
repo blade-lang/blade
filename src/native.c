@@ -413,6 +413,25 @@ DECLARE_NATIVE(to_list) {
 
       write_value_arr(vm, &list->items, OBJ_VAL(n_list));
     }
+  } else if(IS_STRING(args[0])) {
+    b_obj_string *str = AS_STRING(args[0]);
+    for(int i = 0; i < str->utf8_length; i++) {
+      int start = i, end = i + 1;
+      utf8slice(str->chars, &start, &end);
+
+      write_list(vm, list, STRING_L_VAL(str->chars + start, (int) (end - start)));
+    }
+  } else if(IS_RANGE(args[0])) {
+    b_obj_range *range = AS_RANGE(args[0]);
+    if(range->upper > range->lower) {
+      for(int i = range->lower; i < range->upper; i++) {
+        write_list(vm, list, NUMBER_VAL(i));
+      }
+    } else {
+      for(int i = range->lower; i > range->upper; i--) {
+        write_list(vm, list, NUMBER_VAL(i));
+      }
+    }
   } else {
     write_value_arr(vm, &list->items, args[0]);
   }

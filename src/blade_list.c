@@ -344,6 +344,7 @@ DECLARE_LIST_METHOD(zip) {
   b_obj_list *n_list = (b_obj_list *) GC(new_list(vm));
 
   b_obj_list **arg_list = ALLOCATE(b_obj_list *, arg_count);
+
   for (int i = 0; i < arg_count; i++) {
     ENFORCE_ARG_TYPE(zip, i, IS_LIST);
     arg_list[i] = AS_LIST(args[i]);
