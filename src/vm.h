@@ -23,7 +23,7 @@ typedef struct {
 } b_exception_frame;
 
 typedef struct {
-  b_obj *function;
+  b_obj_closure *closure;
   uint8_t *ip;
   b_value *slots;
   int handlers_count;

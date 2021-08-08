@@ -95,8 +95,8 @@ struct s_obj_string {
   b_obj obj;
   int length;
   int utf8_length;
-  char *chars;
   uint32_t hash;
+  char *chars;
 };
 
 typedef struct b_obj_up_value {
@@ -108,12 +108,12 @@ typedef struct b_obj_up_value {
 
 typedef struct {
   b_obj obj;
+  bool imported;
   char *name;
   char *file;
-  bool imported;
-  b_table values;
   void *preloader;
   void *unloader;
+  b_table values;
 } b_obj_module;
 
 typedef struct {
@@ -129,18 +129,18 @@ typedef struct {
 
 typedef struct {
   b_obj obj;
+  int up_value_count;
   b_obj_func *function;
   b_obj_up_value **up_values;
-  int up_value_count;
 } b_obj_closure;
 
 typedef struct b_obj_class {
   b_obj obj;
+  b_value initializer;
   b_obj_string *name;
   b_table properties;
   b_table static_properties;
   b_table methods;
-  b_value initializer;
   struct b_obj_class *superclass;
 } b_obj_class;
 
@@ -153,16 +153,16 @@ typedef struct {
 typedef struct {
   b_obj obj;
   b_value receiver;
-  b_obj *method;
+  b_obj_closure *method;
 } b_obj_bound; // a bound method
 
 typedef bool (*b_native_fn)(b_vm *, int, b_value *);
 
 typedef struct b_obj_native {
   b_obj obj;
+  b_func_type type;
   const char *name;
   b_native_fn function;
-  b_func_type type;
 } b_obj_native;
 
 typedef struct {
@@ -191,16 +191,16 @@ typedef struct {
 typedef struct {
   b_obj obj;
   bool is_open;
+  FILE *file;
   b_obj_string *mode;
   b_obj_string *path;
-  FILE *file;
 } b_obj_file;
 
 typedef struct {
   b_obj obj;
-  b_table table;
   int default_jump;
   int exit_jump;
+  b_table table;
 } b_obj_switch;
 
 // non-user objects...
@@ -219,7 +219,7 @@ b_obj_dict *new_dict(b_vm *vm);
 b_obj_file *new_file(b_vm *vm, b_obj_string *path, b_obj_string *mode);
 
 // base objects
-b_obj_bound *new_bound_method(b_vm *vm, b_value receiver, b_obj *method);
+b_obj_bound *new_bound_method(b_vm *vm, b_value receiver, b_obj_closure *method);
 
 b_obj_class *new_class(b_vm *vm, b_obj_string *name);
 

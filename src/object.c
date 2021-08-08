@@ -91,7 +91,7 @@ b_obj_file *new_file(b_vm *vm, b_obj_string *path, b_obj_string *mode) {
   return file;
 }
 
-b_obj_bound *new_bound_method(b_vm *vm, b_value receiver, b_obj *method) {
+b_obj_bound *new_bound_method(b_vm *vm, b_value receiver, b_obj_closure *method) {
   b_obj_bound *bound = ALLOCATE_OBJ(b_obj_bound, OBJ_BOUND_METHOD);
   bound->receiver = receiver;
   bound->method = method;
@@ -290,12 +290,7 @@ void print_object(b_value value, bool fix_string) {
     }
 
     case OBJ_BOUND_METHOD: {
-      b_obj *method = AS_BOUND(value)->method;
-      if (method->type == OBJ_CLOSURE) {
-        print_function(((b_obj_closure *) method)->function);
-      } else {
-        print_function((b_obj_func *) method);
-      }
+      print_function(AS_BOUND(value)->method->function);
       break;
     }
     case OBJ_MODULE: {
@@ -450,11 +445,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     case OBJ_CLOSURE:
       return function_to_string(AS_CLOSURE(value)->function);
     case OBJ_BOUND_METHOD: {
-      b_obj *method = AS_BOUND(value)->method;
-      if (method->type == OBJ_CLOSURE) {
-        return function_to_string(((b_obj_closure *) method)->function);
-      }
-      return function_to_string((b_obj_func *) method);
+      return function_to_string(AS_BOUND(value)->method->function);
     }
     case OBJ_FUNCTION:
       return function_to_string(AS_FUNCTION(value));
