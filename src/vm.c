@@ -30,7 +30,7 @@
 // for debugging...
 #include "debug.h"
 
-static void reset_stack(b_vm *vm) {
+static inline void reset_stack(b_vm *vm) {
   vm->stack_top = vm->stack;
   vm->frame_count = 0;
   vm->open_up_values = NULL;
@@ -169,7 +169,7 @@ static void initialize_exceptions(b_vm *vm) {
   vm->exception_class = klass;
 }
 
-b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
+inline b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
   b_obj_instance *instance = (b_obj_instance *) GC(new_instance(vm, vm->exception_class));
   table_set(vm, &instance->properties, GC_L_STRING("message", 7), OBJ_VAL(message));
   CLEAR_GC();
@@ -215,24 +215,24 @@ void _runtime_error(b_vm *vm, const char *format, ...) {
   reset_stack(vm);
 }
 
-void push(b_vm *vm, b_value value) {
+inline void push(b_vm *vm, b_value value) {
   *vm->stack_top = value;
   vm->stack_top++;
 }
 
-b_value pop(b_vm *vm) {
+inline b_value pop(b_vm *vm) {
   vm->stack_top--;
   return *vm->stack_top;
 }
 
-b_value pop_n(b_vm *vm, int n) {
+inline b_value pop_n(b_vm *vm, int n) {
   vm->stack_top -= n;
   return *vm->stack_top;
 }
 
-b_value peek(b_vm *vm, int distance) { return vm->stack_top[-1 - distance]; }
+inline b_value peek(b_vm *vm, int distance) { return vm->stack_top[-1 - distance]; }
 
-static void define_native(b_vm *vm, const char *name, b_native_fn function) {
+static inline void define_native(b_vm *vm, const char *name, b_native_fn function) {
   push(vm, OBJ_VAL(copy_string(vm, name, (int) strlen(name))));
   push(vm, OBJ_VAL(new_native(vm, function, name)));
   table_set(vm, &vm->globals, vm->stack[0], vm->stack[1]);
@@ -656,7 +656,7 @@ static inline b_func_type get_method_type(b_value method) {
   return TYPE_FUNCTION;*/
 }
 
-bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
+inline bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
                        int arg_count) {
   b_value method;
   if (table_get(&klass->methods, OBJ_VAL(name), &method)) {
@@ -789,7 +789,7 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
   }
 }
 
-static bool bind_method(b_vm *vm, b_obj_class *klass, b_obj_string *name) {
+static inline bool bind_method(b_vm *vm, b_obj_class *klass, b_obj_string *name) {
   b_value method;
   if (table_get(&klass->methods, OBJ_VAL(name), &method)) {
     if (get_method_type(method) == TYPE_PRIVATE) {
@@ -829,7 +829,7 @@ static b_obj_up_value *capture_up_value(b_vm *vm, b_value *local) {
   return created_up_value;
 }
 
-static void close_up_values(b_vm *vm, const b_value *last) {
+static inline void close_up_values(b_vm *vm, const b_value *last) {
   while (vm->open_up_values != NULL && vm->open_up_values->location >= last) {
     b_obj_up_value *up_value = vm->open_up_values;
     up_value->closed = *up_value->location;
@@ -838,7 +838,7 @@ static void close_up_values(b_vm *vm, const b_value *last) {
   }
 }
 
-static void define_method(b_vm *vm, b_obj_string *name) {
+static inline void define_method(b_vm *vm, b_obj_string *name) {
   b_value method = peek(vm, 0);
   b_obj_class *klass = AS_CLASS(peek(vm, 1));
 
@@ -849,7 +849,7 @@ static void define_method(b_vm *vm, b_obj_string *name) {
   pop(vm);
 }
 
-static void define_property(b_vm *vm, b_obj_string *name, bool is_static) {
+static inline void define_property(b_vm *vm, b_obj_string *name, bool is_static) {
   b_value property = peek(vm, 0);
   b_obj_class *klass = AS_CLASS(peek(vm, 1));
 
@@ -861,7 +861,7 @@ static void define_property(b_vm *vm, b_obj_string *name, bool is_static) {
   pop(vm);
 }
 
-bool is_false(b_value value) {
+inline bool is_false(b_value value) {
   if (IS_BOOL(value))
     return IS_BOOL(value) && !AS_BOOL(value);
   if (IS_NIL(value) || IS_EMPTY(value))
@@ -903,12 +903,12 @@ bool is_instance_of(b_obj_class *klass1, char *klass2_name) {
   return false;
 }
 
-void dict_add_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value) {
+inline void dict_add_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value) {
   write_value_arr(vm, &dict->names, key);
   table_set(vm, &dict->items, key, value);
 }
 
-bool dict_get_entry(b_obj_dict *dict, b_value key, b_value *value) {
+inline bool dict_get_entry(b_obj_dict *dict, b_value key, b_value *value) {
   /* // this will be easier to search than the entire tables
   // if the key doesn't exist.
   if (dict->names.count < (int)sizeof(uint8_t)) {
@@ -927,7 +927,7 @@ bool dict_get_entry(b_obj_dict *dict, b_value key, b_value *value) {
   return table_get(&dict->items, key, value);
 }
 
-bool dict_set_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value) {
+inline bool dict_set_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value) {
 #if defined(USE_NAN_BOXING) && USE_NAN_BOXING
   bool found = false;
   for (int i = 0; i < dict->names.count; i++) {
@@ -977,7 +977,7 @@ static b_obj_list *add_list(b_vm *vm, b_obj_list *a, b_obj_list *b) {
   return list;
 }
 
-static b_obj_bytes *add_bytes(b_vm *vm, b_obj_bytes *a, b_obj_bytes *b) {
+static inline b_obj_bytes *add_bytes(b_vm *vm, b_obj_bytes *a, b_obj_bytes *b) {
   b_obj_bytes *bytes = new_bytes(vm, a->bytes.count + b->bytes.count);
 
   memcpy(bytes->bytes.bytes, a->bytes.bytes, a->bytes.count);
@@ -986,7 +986,7 @@ static b_obj_bytes *add_bytes(b_vm *vm, b_obj_bytes *a, b_obj_bytes *b) {
   return bytes;
 }
 
-static b_obj_list *multiply_list(b_vm *vm, b_obj_list *a, b_obj_list *new_list, int times) {
+static inline b_obj_list *multiply_list(b_vm *vm, b_obj_list *a, b_obj_list *new_list, int times) {
   for (int i = 0; i < times; i++) {
     for (int j = 0; j < a->items.count; j++) {
       write_value_arr(vm, &new_list->items, a->items.values[j]);
@@ -1222,7 +1222,7 @@ static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
   }
 }
 
-static void dict_set_index(b_vm *vm, b_obj_dict *dict, b_value index, b_value value) {
+static inline void dict_set_index(b_vm *vm, b_obj_dict *dict, b_value index, b_value value) {
   dict_set_entry(vm, dict, index, value);
   pop_n(vm, 4); // pop the value, nil, index and dict out
 
@@ -1350,7 +1350,7 @@ static bool concatenate(b_vm *vm) {
   return true;
 }
 
-static int floor_div(double a, double b) {
+static inline int floor_div(double a, double b) {
   int d = (int) a / (int) b;
   return d - ((d * b == a) & ((a < 0) ^ (b < 0)));
 }
@@ -2109,7 +2109,7 @@ b_ptr_result run(b_vm *vm) {
         }
 
         if (!is_gotten) {
-          runtime_error("type of %s is not a valid iterable", value_type(peek(vm, 2)));
+          runtime_error("cannot index object of type %s", value_type(peek(vm, 2)));
         }
         break;
 

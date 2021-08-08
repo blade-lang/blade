@@ -19,14 +19,9 @@ DECLARE_RANGE_METHOD(__iter__) {
   int index = AS_NUMBER(args[0]);
 
   if (index >= 0 && index < range->range) {
+    range->range--;
     if(index == 0) RETURN_NUMBER(range->lower);
-
-    if(range->lower > range->upper) {
-      range->lower--;
-    } else {
-      range->lower++;
-    }
-    RETURN_NUMBER(range->lower);
+    RETURN_NUMBER(range->lower > range->upper ? --range->lower : ++range->lower);
   }
 
   RETURN;
@@ -38,7 +33,7 @@ DECLARE_RANGE_METHOD(__itern__) {
 
   if (IS_NIL(args[0])) {
     if (range->range == 0) {
-      RETURN_FALSE;
+      RETURN;
     }
     RETURN_NUMBER(0);
   }
@@ -47,9 +42,9 @@ DECLARE_RANGE_METHOD(__itern__) {
     RETURN_ERROR("ranges are numerically indexed");
   }
 
-  int index = AS_NUMBER(args[0]);
-  if (index < range->range - 1) {
-    RETURN_NUMBER(index + 1);
+  int index = (int)AS_NUMBER(args[0]) + 1;
+  if (index < range->range) {
+    RETURN_NUMBER(index);
   }
 
   RETURN;
