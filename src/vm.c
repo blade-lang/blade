@@ -500,10 +500,6 @@ void inline add_module(b_vm *vm, b_obj_module *module) {
   }
 }
 
-void inline add_native_module(b_vm *vm, b_obj_module *module) {
-  table_set(vm, &vm->modules, STRING_VAL(module->name), OBJ_VAL(module));
-}
-
 static bool call(b_vm *vm, b_obj_closure *closure, int arg_count) {
   // fill empty parameters if not variadic
   for (; !closure->function->is_variadic && arg_count < closure->function->arity; arg_count++) {
