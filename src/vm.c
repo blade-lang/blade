@@ -36,20 +36,12 @@ static inline void reset_stack(b_vm *vm) {
   vm->open_up_values = NULL;
 }
 
-static inline b_obj_func *get_frame_function(b_call_frame *frame) {
-  if (frame->function->type == OBJ_FUNCTION) {
-    return (b_obj_func *) frame->function;
-  } else {
-    return ((b_obj_closure *) frame->function)->function;
-  }
-}
-
 static b_value get_stack_trace(b_vm *vm) {
   char *trace = (char *) calloc(1, sizeof(char));
 
   for (int i = 0; i < vm->frame_count; i++) {
     b_call_frame *frame = &vm->frames[i];
-    b_obj_func *function = get_frame_function(frame);
+    b_obj_func *function = frame->closure->function;
 
     // -1 because the IP is sitting on the next instruction to be executed
     size_t instruction = frame->ip - function->blob.code - 1;
@@ -89,7 +81,7 @@ bool propagate_exception(b_vm *vm) {
     b_call_frame *frame = &vm->frames[vm->frame_count - 1];
     for (int i = frame->handlers_count; i > 0; i--) {
       b_exception_frame handler = frame->handlers[i - 1];
-      b_obj_func *function = get_frame_function(frame);
+      b_obj_func *function = frame->closure->function;
 
       if (handler.address != 0 && is_instance_of(exception->klass, handler.klass->name->chars)) {
         frame->ip = &function->blob.code[handler.address];
@@ -180,7 +172,7 @@ void _runtime_error(b_vm *vm, const char *format, ...) {
   fflush(stdout); // flush out anything on stdout first
 
   b_call_frame *frame = &vm->frames[vm->frame_count - 1];
-  b_obj_func *function = get_frame_function(frame);
+  b_obj_func *function = frame->closure->function;
 
   size_t instruction = frame->ip - function->blob.code - 1;
   int line = function->blob.lines[instruction];
@@ -198,7 +190,7 @@ void _runtime_error(b_vm *vm, const char *format, ...) {
     fprintf(stderr, "StackTrace:\n");
     for (int i = vm->frame_count - 1; i >= 0; i--) {
       frame = &vm->frames[i];
-      function = get_frame_function(frame);
+      function = frame->closure->function;
 
       // -1 because the IP is sitting on the next instruction to be executed
       instruction = frame->ip - function->blob.code - 1;
@@ -502,25 +494,21 @@ void inline add_module(b_vm *vm, b_obj_module *module) {
     table_set(vm, &vm->globals, STRING_VAL(module->name), OBJ_VAL(module));
   } else {
     table_set(vm,
-              &get_frame_function(&vm->frames[vm->frame_count - 1])->module->values,
+              &vm->frames[vm->frame_count - 1].closure->function->module->values,
               STRING_VAL(module->name), OBJ_VAL(module)
     );
   }
 }
 
-void inline add_native_module(b_vm *vm, b_obj_module *module) {
-  table_set(vm, &vm->modules, STRING_VAL(module->name), OBJ_VAL(module));
-}
-
-static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
+static bool call(b_vm *vm, b_obj_closure *closure, int arg_count) {
   // fill empty parameters if not variadic
-  for (; !function->is_variadic && arg_count < function->arity; arg_count++) {
+  for (; !closure->function->is_variadic && arg_count < closure->function->arity; arg_count++) {
     push(vm, NIL_VAL);
   }
 
   // handle variadic arguments...
-  if (function->is_variadic && arg_count >= function->arity - 1) {
-    int va_args_start = arg_count - function->arity;
+  if (closure->function->is_variadic && arg_count >= closure->function->arity - 1) {
+    int va_args_start = arg_count - closure->function->arity;
     b_obj_list *args_list = new_list(vm);
 
     for (int i = va_args_start; i >= 0; i--) {
@@ -531,14 +519,14 @@ static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
     push(vm, OBJ_VAL(args_list));
   }
 
-  if (arg_count != function->arity) {
+  if (arg_count != closure->function->arity) {
     pop_n(vm, arg_count);
-    if (function->is_variadic) {
+    if (closure->function->is_variadic) {
       return throw_exception(vm, "expected at least %d arguments but got %d",
-                             function->arity - 1, arg_count);
+                             closure->function->arity - 1, arg_count);
     } else {
       return throw_exception(vm, "expected %d arguments but got %d",
-                             function->arity, arg_count);
+                             closure->function->arity, arg_count);
     }
   }
 
@@ -548,19 +536,11 @@ static bool call(b_vm *vm, b_obj *callee, b_obj_func *function, int arg_count) {
   }
 
   b_call_frame *frame = &vm->frames[vm->frame_count++];
-  frame->function = callee;
-  frame->ip = function->blob.code;
+  frame->closure = closure;
+  frame->ip = closure->function->blob.code;
 
   frame->slots = vm->stack_top - arg_count - 1;
   return true;
-}
-
-static inline bool call_closure(b_vm *vm, b_obj_closure *closure, int arg_count) {
-  return call(vm, (b_obj *) closure, closure->function, arg_count);
-}
-
-static inline bool call_function(b_vm *vm, b_obj_func *function, int arg_count) {
-  return call(vm, (b_obj *) function, function, arg_count);
 }
 
 static inline bool call_native_method(b_vm *vm, b_obj_native *native, int arg_count) {
@@ -585,38 +565,14 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
       case OBJ_BOUND_METHOD: {
         b_obj_bound *bound = AS_BOUND(callee);
         vm->stack_top[-arg_count - 1] = bound->receiver;
-        if (bound->method->type == OBJ_CLOSURE) {
-          return call_closure(vm, (b_obj_closure *) bound->method, arg_count);
-        } else {
-          return call_function(vm, (b_obj_func *) bound->method, arg_count);
-        }
+        return call(vm, bound->method, arg_count);
       }
 
       case OBJ_CLASS: {
         b_obj_class *klass = AS_CLASS(callee);
         vm->stack_top[-arg_count - 1] = OBJ_VAL(new_instance(vm, klass));
         if (!IS_EMPTY(klass->initializer)) {
-          switch(OBJ_TYPE(klass->initializer)) {
-            case OBJ_CLOSURE: {
-              return call_closure(vm, AS_CLOSURE(klass->initializer), arg_count);
-            }
-            case OBJ_NATIVE: {
-              return call_native_method(vm, AS_NATIVE(klass->initializer), arg_count);
-            }
-            case OBJ_FUNCTION: {
-              return call_function(vm, AS_FUNCTION(klass->initializer), arg_count);
-            }
-            default:return false;
-          }
-          /*if (IS_CLOSURE(klass->initializer)) {
-            return call_closure(vm, AS_CLOSURE(klass->initializer), arg_count);
-          } else if (IS_NATIVE(klass->initializer)) {
-//            return call_value(vm, klass->initializer, arg_count);
-            return call_native_method(vm, AS_NATIVE(klass->initializer), arg_count);
-          } else {
-            return call_function(vm, AS_FUNCTION(klass->initializer), arg_count);
-          }*/
-//          call_value(vm, klass->initializer, arg_count);
+          call(vm, AS_CLOSURE(klass->initializer), arg_count);
         } else if (arg_count != 0) {
           return throw_exception(vm, "%s constructor expects 0 arguments, %d given",
                                  klass->name->chars, arg_count);
@@ -625,11 +581,7 @@ static bool call_value(b_vm *vm, b_value callee, int arg_count) {
       }
 
       case OBJ_CLOSURE: {
-        return call_closure(vm, AS_CLOSURE(callee), arg_count);
-      }
-
-      case OBJ_FUNCTION: {
-        return call_function(vm, AS_FUNCTION(callee), arg_count);
+        return call(vm, AS_CLOSURE(callee), arg_count);
       }
 
       case OBJ_NATIVE: {
@@ -647,13 +599,8 @@ static inline b_func_type get_method_type(b_value method) {
   switch (OBJ_TYPE(method)) {
     case OBJ_NATIVE: return AS_NATIVE(method)->type;
     case OBJ_CLOSURE: return AS_CLOSURE(method)->function->type;
-    case OBJ_FUNCTION: return AS_FUNCTION(method)->type;
     default: return TYPE_FUNCTION;
   }
-  /*if (IS_NATIVE(method)) return AS_NATIVE(method)->type;
-  if (IS_CLOSURE(method)) return AS_CLOSURE(method)->function->type;
-  if (IS_FUNCTION(method)) return AS_FUNCTION(method)->type;
-  return TYPE_FUNCTION;*/
 }
 
 inline bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
@@ -796,7 +743,7 @@ static inline bool bind_method(b_vm *vm, b_obj_class *klass, b_obj_string *name)
       return throw_exception(vm, "cannot get private property '%s' from instance", name->chars);
     }
 
-    b_obj_bound *bound = new_bound_method(vm, peek(vm, 0), AS_OBJ(method));
+    b_obj_bound *bound = new_bound_method(vm, peek(vm, 0), AS_CLOSURE(method));
     pop(vm);
     push(vm, OBJ_VAL(bound));
     return true;
@@ -1364,7 +1311,7 @@ b_ptr_result run(b_vm *vm) {
   (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
 
 #define READ_CONSTANT()                                                        \
-  (get_frame_function(frame)->blob.constants.values[READ_SHORT()])
+  (frame->closure->function->blob.constants.values[READ_SHORT()])
 
 #define READ_STRING() (AS_STRING(READ_CONSTANT()))
 
@@ -1430,8 +1377,8 @@ b_ptr_result run(b_vm *vm) {
       }
       printf("\n");
       disassemble_instruction(
-          &get_frame_function(frame)->blob,
-          (int) (frame->ip - get_frame_function(frame)->blob.code));
+          &frame->closure->function->blob,
+          (int) (frame->ip - frame->closure->function->blob.code));
     }
 
     uint8_t instruction;
@@ -1640,7 +1587,7 @@ b_ptr_result run(b_vm *vm) {
 
       case OP_DEFINE_GLOBAL: {
         b_obj_string *name = READ_STRING();
-        table_set(vm, &get_frame_function(frame)->module->values, OBJ_VAL(name), peek(vm, 0));
+        table_set(vm, &frame->closure->function->module->values, OBJ_VAL(name), peek(vm, 0));
 //      table_set(vm, &vm->globals, OBJ_VAL(name), peek(vm, 0));
         pop(vm);
 
@@ -1653,7 +1600,7 @@ b_ptr_result run(b_vm *vm) {
       case OP_GET_GLOBAL: {
         b_obj_string *name = READ_STRING();
         b_value value;
-        if (!table_get(&get_frame_function(frame)->module->values, OBJ_VAL(name), &value)) {
+        if (!table_get(&frame->closure->function->module->values, OBJ_VAL(name), &value)) {
           if (!table_get(&vm->globals, OBJ_VAL(name), &value)) {
             runtime_error("'%s' is undefined in this scope", name->chars);
             break;
@@ -1665,7 +1612,7 @@ b_ptr_result run(b_vm *vm) {
 
       case OP_SET_GLOBAL: {
         b_obj_string *name = READ_STRING();
-        b_table *table = &get_frame_function(frame)->module->values;
+        b_table *table = &frame->closure->function->module->values;
 //      b_table *table = &vm->globals;
         if (table_set(vm, table, OBJ_VAL(name), peek(vm, 0))) {
           table_delete(table, OBJ_VAL(name));
@@ -1929,7 +1876,7 @@ b_ptr_result run(b_vm *vm) {
             closure->up_values[i] = capture_up_value(vm, frame->slots + index);
           } else {
             closure->up_values[i] =
-                ((b_obj_closure *) frame->function)->up_values[index];
+                ((b_obj_closure *) frame->closure)->up_values[index];
           }
         }
 
@@ -1937,12 +1884,12 @@ b_ptr_result run(b_vm *vm) {
       }
       case OP_GET_UP_VALUE: {
         int index = READ_SHORT();
-        push(vm, *((b_obj_closure *) frame->function)->up_values[index]->location);
+        push(vm, *((b_obj_closure *) frame->closure)->up_values[index]->location);
         break;
       }
       case OP_SET_UP_VALUE: {
         int index = READ_SHORT();
-        *((b_obj_closure *) frame->function)->up_values[index]->location =
+        *((b_obj_closure *) frame->closure)->up_values[index]->location =
             peek(vm, 0);
         break;
       }
@@ -2239,9 +2186,9 @@ b_ptr_result run(b_vm *vm) {
       }
 
       case OP_CALL_IMPORT: {
-        b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
-        add_module(vm, function->module);
-        call_function(vm, function, 0);
+        b_obj_closure *closure = AS_CLOSURE(READ_CONSTANT());
+        add_module(vm, closure->function->module);
+        call(vm, closure, 0);
         frame = &vm->frames[vm->frame_count - 1];
         break;
       }
@@ -2255,7 +2202,7 @@ b_ptr_result run(b_vm *vm) {
             ((b_module_loader)module->preloader)(vm);
           }
           module->imported = true;
-          table_set(vm, &get_frame_function(frame)->module->values, OBJ_VAL(module_name), value);
+          table_set(vm, &frame->closure->function->module->values, OBJ_VAL(module_name), value);
           break;
         }
         runtime_error("module '%s' not found", module_name->chars);
@@ -2267,7 +2214,7 @@ b_ptr_result run(b_vm *vm) {
         b_obj_func *function = AS_FUNCTION(peek(vm, 0));
         b_value value;
         if (table_get(&function->module->values, OBJ_VAL(module_name), &value)) {
-          table_set(vm, &get_frame_function(frame)->module->values, OBJ_VAL(module_name), value);
+          table_set(vm, &frame->closure->function->module->values, OBJ_VAL(module_name), value);
         } else {
           runtime_error("module %s does not define '%s'", function->module->name, module_name->chars);
         }
@@ -2275,13 +2222,13 @@ b_ptr_result run(b_vm *vm) {
       }
 
       case OP_IMPORT_ALL: {
-        table_add_all(vm, &AS_FUNCTION(peek(vm, 0))->module->values, &get_frame_function(frame)->module->values);
+        table_add_all(vm, &AS_FUNCTION(peek(vm, 0))->module->values, &frame->closure->function->module->values);
         break;
       }
 
       case OP_EJECT_IMPORT: {
         b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
-        table_delete(&get_frame_function(frame)->module->values,
+        table_delete(&frame->closure->function->module->values,
                      OBJ_VAL(copy_string(vm, function->module->name, (int) strlen(function->module->name))));
         break;
       }
@@ -2410,8 +2357,12 @@ b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
     return PTR_COMPILE_ERR;
   }
 
+
   push(vm, OBJ_VAL(function));
-  call_function(vm, function, 0);
+  b_obj_closure *closure = new_closure(vm, function);
+  pop(vm);
+  push(vm, OBJ_VAL(closure));
+  call(vm, closure, 0);
 
   b_ptr_result result = run(vm);
 

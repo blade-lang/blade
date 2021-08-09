@@ -1424,17 +1424,11 @@ static void function_body(b_parser *p, b_compiler *compiler) {
   // create the function object
   b_obj_func *function = end_compiler(p);
 
-  int function_constant = make_constant(p, OBJ_VAL(function));
+  emit_byte_and_short(p, OP_CLOSURE, make_constant(p, OBJ_VAL(function)));
 
-  if (function->up_value_count > 0) {
-    emit_byte_and_short(p, OP_CLOSURE, function_constant);
-
-    for (int i = 0; i < function->up_value_count; i++) {
-      emit_byte(p, compiler->up_values[i].is_local ? 1 : 0);
-      emit_short(p, compiler->up_values[i].index);
-    }
-  } else {
-    emit_byte_and_short(p, OP_CONSTANT, function_constant);
+  for (int i = 0; i < function->up_value_count; i++) {
+    emit_byte(p, compiler->up_values[i].is_local ? 1 : 0);
+    emit_short(p, compiler->up_values[i].index);
   }
 }
 
@@ -2061,7 +2055,11 @@ static void import_statement(b_parser *p) {
 
   function->name = copy_string(p->vm, module_name, (int) strlen(module_name));
 
-  int import_constant = make_constant(p, OBJ_VAL(function));
+  push(p->vm, OBJ_VAL(function));
+  b_obj_closure *closure = new_closure(p->vm, function);
+  pop(p->vm);
+
+  int import_constant = make_constant(p, OBJ_VAL(closure));
   emit_byte_and_short(p, OP_CALL_IMPORT, import_constant);
 
   if (match(p, LBRACE_TOKEN)) {

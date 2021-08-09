@@ -116,7 +116,7 @@ void blacken_object(b_vm *vm, b_obj *object) {
     case OBJ_BOUND_METHOD: {
       b_obj_bound *bound = (b_obj_bound *) object;
       mark_value(vm, bound->receiver);
-      mark_object(vm, bound->method);
+      mark_object(vm, (b_obj*)bound->method);
       break;
     }
     case OBJ_CLASS: {
@@ -284,7 +284,7 @@ static void mark_roots(b_vm *vm) {
     mark_value(vm, *slot);
   }
   for (int i = 0; i < vm->frame_count; i++) {
-    mark_object(vm, (b_obj *) vm->frames[i].function);
+    mark_object(vm, (b_obj *) vm->frames[i].closure);
   }
   for (b_obj_up_value *up_value = vm->open_up_values; up_value != NULL;
        up_value = up_value->next) {
