@@ -5,7 +5,7 @@
 # https://github.com/oracle/graal/blob/master/vm/benchmarks/interpreter/sieve.js
 
 def run(number) {
-  var primes = 0..(number + 1)
+  var primes = to_list(0..(number + 1))
 
   var i = 2
   while i ** 2 <= number {
