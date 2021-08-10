@@ -65,7 +65,7 @@ typedef struct {
   b_token previous;
   bool had_error;
   bool panic_mode;
-  bool in_block;
+  int block_count;
   bool is_returning;
   bool repl_can_echo;
   b_class_compiler *current_class;

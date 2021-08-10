@@ -125,7 +125,7 @@ static bool match(b_parser *p, b_tkn_type t) {
 static void consume_statement_end(b_parser *p) {
 
   // allow block last statement to omit statement end
-  if (p->in_block && check(p, RBRACE_TOKEN))
+  if (p->block_count > 0 && check(p, RBRACE_TOKEN))
     return;
 
   if (match(p, SEMICOLON_TOKEN)) {
@@ -1383,12 +1383,12 @@ static b_parse_rule *get_rule(b_tkn_type type) { return &parse_rules[type]; }
 static void expression(b_parser *p) { parse_precedence(p, PREC_ASSIGNMENT); }
 
 static void block(b_parser *p) {
-  p->in_block = true;
+  p->block_count++;
   ignore_whitespace(p);
   while (!check(p, RBRACE_TOKEN) && !check(p, EOF_TOKEN)) {
     declaration(p);
   }
-  p->in_block = false;
+  p->block_count--;
   consume(p, RBRACE_TOKEN, "expected '}' after block");
 }
 
@@ -2359,7 +2359,7 @@ b_obj_func *compile(b_vm *vm, b_obj_module *module, const char *source, b_blob *
 
   parser.had_error = false;
   parser.panic_mode = false;
-  parser.in_block = false;
+  parser.block_count = 0;
   parser.repl_can_echo = false;
   parser.is_returning = false;
   parser.innermost_loop_start = -1;
