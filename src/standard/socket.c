@@ -231,7 +231,7 @@ DECLARE_MODULE_METHOD(socket__listen) {
 
 DECLARE_MODULE_METHOD(socket__accept) {
   ENFORCE_ARG_COUNT(_accept, 1);
-  ENFORCE_ARG_TYPE(_bind, 0, IS_NUMBER); // the socket id
+  ENFORCE_ARG_TYPE(_accept, 0, IS_NUMBER); // the socket id
 
   int sock = AS_NUMBER(args[0]);
 
