@@ -488,18 +488,6 @@ void free_vm(b_vm *vm) {
   free_table(vm, &vm->methods_bytes);
 }
 
-void inline add_module(b_vm *vm, b_obj_module *module) {
-  table_set(vm, &vm->modules, STRING_VAL(module->file), OBJ_VAL(module));
-  if (vm->frame_count == 0) {
-    table_set(vm, &vm->globals, STRING_VAL(module->name), OBJ_VAL(module));
-  } else {
-    table_set(vm,
-              &vm->frames[vm->frame_count - 1].closure->function->module->values,
-              STRING_VAL(module->name), OBJ_VAL(module)
-    );
-  }
-}
-
 static bool call(b_vm *vm, b_obj_closure *closure, int arg_count) {
   // fill empty parameters if not variadic
   for (; !closure->function->is_variadic && arg_count < closure->function->arity; arg_count++) {
@@ -2211,7 +2199,7 @@ b_ptr_result run(b_vm *vm) {
 
       case OP_SELECT_IMPORT: {
         b_obj_string *module_name = READ_STRING();
-        b_obj_func *function = AS_FUNCTION(peek(vm, 0));
+        b_obj_func *function = AS_CLOSURE(peek(vm, 0))->function;
         b_value value;
         if (table_get(&function->module->values, OBJ_VAL(module_name), &value)) {
           table_set(vm, &frame->closure->function->module->values, OBJ_VAL(module_name), value);
@@ -2222,12 +2210,12 @@ b_ptr_result run(b_vm *vm) {
       }
 
       case OP_IMPORT_ALL: {
-        table_add_all(vm, &AS_FUNCTION(peek(vm, 0))->module->values, &frame->closure->function->module->values);
+        table_add_all(vm, &AS_CLOSURE(peek(vm, 0))->function->module->values, &frame->closure->function->module->values);
         break;
       }
 
       case OP_EJECT_IMPORT: {
-        b_obj_func *function = AS_FUNCTION(READ_CONSTANT());
+        b_obj_func *function = AS_CLOSURE(READ_CONSTANT())->function;
         table_delete(&frame->closure->function->module->values,
                      OBJ_VAL(copy_string(vm, function->module->name, (int) strlen(function->module->name))));
         break;

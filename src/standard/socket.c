@@ -73,9 +73,9 @@ DECLARE_MODULE_METHOD(socket__create) {
     RETURN_NUMBER(-1);
   }
 
-  int flags = 0;
+//  int flags = 0;
 #ifndef _WIN32
-  flags = fcntl(sock, F_GETFD, 0);
+  /*flags = fcntl(sock, F_GETFD, 0);
 
   if ((flags != -1 && (flags & FD_CLOEXEC) == 0)) {
     flags |= FD_CLOEXEC;
@@ -83,10 +83,11 @@ DECLARE_MODULE_METHOD(socket__create) {
     if ((fcntl(sock, F_SETFD, flags) < 0)) {
       // do nothing for now...
     }
-  }
+  }*/
 
 #ifdef SO_NOSIGPIPE
-  if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &flags, sizeof(flags)) < 0) {
+  int set = 1;
+  if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &set, sizeof(int)) < 0) {
     // do nothing. this are just optimizations.
   }
 #endif

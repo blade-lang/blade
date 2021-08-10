@@ -88,9 +88,19 @@ b_value pop_n(b_vm *vm, int n);
 
 b_value peek(b_vm *vm, int distance);
 
-void add_module(b_vm *vm, b_obj_module *module);
+static inline void add_module(b_vm *vm, b_obj_module *module) {
+  table_set(vm, &vm->modules, STRING_VAL(module->file), OBJ_VAL(module));
+  if (vm->frame_count == 0) {
+    table_set(vm, &vm->globals, STRING_VAL(module->name), OBJ_VAL(module));
+  } else {
+    table_set(vm,
+              &vm->frames[vm->frame_count - 1].closure->function->module->values,
+              STRING_VAL(module->name), OBJ_VAL(module)
+    );
+  }
+}
 
-inline void add_native_module(b_vm *vm, b_obj_module *module) {
+static inline void add_native_module(b_vm *vm, b_obj_module *module) {
   table_set(vm, &vm->modules, STRING_VAL(module->name), OBJ_VAL(module));
 }
 

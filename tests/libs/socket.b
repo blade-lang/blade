@@ -1,4 +1,4 @@
-import socket
+import socket { * }
 
 def serve(port, on_client_receive) {
   if !is_number(port)
@@ -8,10 +8,10 @@ def serve(port, on_client_receive) {
 
   var id = 1
 
-  var soc = socket.Socket()
-  soc.set_option(socket.SO_REUSEADDR, true)
-  soc.bind(socket.IP_ANY, port)
-  print('Listening on ${socket.IP_ANY}:${port}...')
+  var soc = Socket()
+  soc.set_option(SO_REUSEADDR, true)
+  soc.bind(IP_ANY, port)
+  print('Listening on ${IP_ANY}:${port}...')
   soc.listen(1)
 
   while true {
@@ -19,9 +19,9 @@ def serve(port, on_client_receive) {
     print('Client connected...')
 
     # timeout if nothing is received after 10 second
-    client.set_option(socket.SO_RCVTIMEO, 2000)
+    client.set_option(SO_RCVTIMEO, 2000)
     # timeout if we can't send after 10 second
-    client.set_option(socket.SO_SNDTIMEO, 2000)
+    client.set_option(SO_SNDTIMEO, 2000)
 
     try {
       var data = client.receive()

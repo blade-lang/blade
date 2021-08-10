@@ -187,11 +187,11 @@ class Socket {
    * Socket(AF_INET, SOCK_STREAM, 0)
    */
   Socket(family, type, protocol, id) {
-    if !id {
-      if family self.family = family
-      if type self.type = type
-      if protocol self.protocol = protocol
+    if family self.family = family
+    if type self.type = type
+    if protocol self.protocol = protocol
 
+    if !id {
       if !is_int(self.family) 
         die SocketException('AF_* expected for family, ${typeof(self.family)} given')
       if !is_int(self.type) 
@@ -316,7 +316,8 @@ class Socket {
     if queue_length > SOMAXCONN 
       die SocketException('maximum queue length exceeded')
 
-    if !self.is_bound or self.is_listening or self.is_closed die SocketException('socket is in an illegal state')
+    if !self.is_bound or self.is_listening or self.is_closed 
+      die SocketException('socket is in an illegal state')
 
     var result = self._check_error(_socket.listen(self.id, queue_length))
     if result {
