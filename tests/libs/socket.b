@@ -12,7 +12,7 @@ def serve(port, on_client_receive) {
   soc.set_option(SO_REUSEADDR, true)
   soc.bind(IP_ANY, port)
   print('Listening on ${IP_ANY}:${port}...')
-  soc.listen(1)
+  soc.listen()
 
   while true {
     var client = soc.accept()
