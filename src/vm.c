@@ -1574,7 +1574,6 @@ b_ptr_result run(b_vm *vm) {
       case OP_DEFINE_GLOBAL: {
         b_obj_string *name = READ_STRING();
         table_set(vm, &frame->closure->function->module->values, OBJ_VAL(name), peek(vm, 0));
-//      table_set(vm, &vm->globals, OBJ_VAL(name), peek(vm, 0));
         pop(vm);
 
 #if defined(DEBUG_TABLE) && DEBUG_TABLE
@@ -1599,7 +1598,6 @@ b_ptr_result run(b_vm *vm) {
       case OP_SET_GLOBAL: {
         b_obj_string *name = READ_STRING();
         b_table *table = &frame->closure->function->module->values;
-//      b_table *table = &vm->globals;
         if (table_set(vm, table, OBJ_VAL(name), peek(vm, 0))) {
           table_delete(table, OBJ_VAL(name));
           runtime_error("%s is undefined in this scope", name->chars);
