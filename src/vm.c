@@ -622,7 +622,6 @@ static bool invoke_self(b_vm *vm, b_obj_string *name, int arg_count) {
       return call_value(vm, value, arg_count);
     }
   } else if (IS_CLASS(receiver)) {
-    // @TODO: Add support for class methods. e.g. __str__, __methods__ etc...
     if (table_get(&AS_CLASS(receiver)->methods, OBJ_VAL(name), &value)) {
       if (get_method_type(value) == TYPE_STATIC) {
         return call_value(vm, value, arg_count);
@@ -657,7 +656,6 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
         break;
       }
       case OBJ_CLASS: {
-        // @TODO: Add support for class methods. e.g. __str__, __methods__ etc...
         if (table_get(&AS_CLASS(receiver)->methods, OBJ_VAL(name), &value)) {
           if (get_method_type(value) == TYPE_PRIVATE) {
             return throw_exception(vm, "cannot call private method %s() on %s",
@@ -1539,7 +1537,7 @@ b_ptr_result run(b_vm *vm) {
           print_value(peek(vm, 0));
         }
         pop(vm);
-        printf("\n"); // @TODO: remove when library function print is ready
+        printf("\n");
         break;
       }
 

@@ -130,8 +130,6 @@ class HttpClient {
           body = response_data[body_starts + 2, response_data.length()].trim()
         }
 
-        # @TODO: if there was a redirect, update the host and port
-        # and change will connect to true
         headers = self._process_header(headers, |version, status|{
           http_version = version
           status_code  = status

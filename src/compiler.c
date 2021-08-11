@@ -148,7 +148,6 @@ static int get_code_args_count(const uint8_t *bytecode,
                                const b_value *constants, int ip) {
   b_code code = (b_code) bytecode[ip];
 
-  // @TODO: handle up values gracefully...
   switch (code) {
     case OP_EQUAL:
     case OP_GREATER:
