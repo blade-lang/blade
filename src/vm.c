@@ -39,36 +39,36 @@ static inline void reset_stack(b_vm *vm) {
 static b_value get_stack_trace(b_vm *vm) {
   char *trace = (char *) calloc(1, sizeof(char));
 
-  for (int i = 0; i < vm->frame_count; i++) {
-    b_call_frame *frame = &vm->frames[i];
-    b_obj_func *function = frame->closure->function;
-
-    // -1 because the IP is sitting on the next instruction to be executed
-    size_t instruction = frame->ip - function->blob.code - 1;
-    int line = function->blob.lines[instruction];
-
-    const char *trace_start = "    File: %s, Line: %d, In: ";
-    size_t trace_start_length = snprintf(NULL, 0, trace_start, function->module->file, line);
-
-    char *trace_part = (char *) calloc(trace_start_length + 1, sizeof(char));
-    if (trace_part != NULL) {
-      sprintf(trace_part, trace_start, function->module->file, line);
-      trace_part[(int) trace_start_length] = '\0';
-    }
-
-    if (function->name == NULL) {
-      trace_part = append_strings(
-          trace_part, i < vm->frame_count - 1 ? "<script>\n" : "<script>");
-    } else {
-      trace_part = append_strings(trace_part, function->name->chars);
-      trace_part = append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" : "()");
-    }
-
-    trace = append_strings(trace, trace_part);
-    free(trace_part);
-  }
-
   if (trace != NULL) {
+
+    for (int i = 0; i < vm->frame_count; i++) {
+      b_call_frame *frame = &vm->frames[i];
+      b_obj_func *function = frame->closure->function;
+
+      // -1 because the IP is sitting on the next instruction to be executed
+      size_t instruction = frame->ip - function->blob.code - 1;
+      int line = function->blob.lines[instruction];
+
+      const char *trace_start = "    File: %s, Line: %d, In: ";
+      size_t trace_start_length = snprintf(NULL, 0, trace_start, function->module->file, line);
+
+      char *trace_part = (char *) calloc(trace_start_length + 1, sizeof(char));
+      if (trace_part != NULL) {
+        sprintf(trace_part, trace_start, function->module->file, line);
+        trace_part[(int) trace_start_length] = '\0';
+      }
+
+      if (function->name == NULL) {
+        trace_part = append_strings(
+            trace_part, i < vm->frame_count - 1 ? "<script>\n" : "<script>");
+      } else {
+        trace_part = append_strings(trace_part, function->name->chars);
+        trace_part = append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" : "()");
+      }
+
+      trace = append_strings(trace, trace_part);
+      free(trace_part);
+    }
     return OBJ_VAL(take_string(vm, trace, (int) strlen(trace)));
   }
   return OBJ_VAL(copy_string(vm, "", 0));
@@ -142,16 +142,47 @@ bool throw_exception(b_vm *vm, const char *format, ...) {
   return propagate_exception(vm);
 }
 
-static void initialize_exceptions(b_vm *vm) {
+static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
   b_obj_string *class_name = copy_string(vm, "Exception", 9);
   b_obj_class *klass = new_class(vm, class_name);
 
-  b_value initializer =
-      OBJ_VAL(new_native(vm, GET_NATIVE(__Exception__), class_name->chars));
+  b_obj_func *function = new_function(vm, module, TYPE_METHOD);
+
+  // g_loc 0
+  write_blob(vm, &function->blob, OP_GET_LOCAL, 0);
+  write_blob(vm, &function->blob, (0 >> 8) & 0xff, 0);
+  write_blob(vm, &function->blob, 0 & 0xff, 0);
+
+  // g_loc 1
+  write_blob(vm, &function->blob, OP_GET_LOCAL, 0);
+  write_blob(vm, &function->blob, (1 >> 8) & 0xff, 0);
+  write_blob(vm, &function->blob, 1 & 0xff, 0);
+
+  int message_const = add_constant(vm, &function->blob, OBJ_VAL(copy_string(vm, "message", 7)));
+
+  // s_prop 1
+  write_blob(vm, &function->blob, OP_SET_PROPERTY, 0);
+  write_blob(vm, &function->blob, (message_const >> 8) & 0xff, 0);
+  write_blob(vm, &function->blob, message_const & 0xff, 0);
+
+  // pop
+  write_blob(vm, &function->blob, OP_POP, 0);
+
+  // g_loc 0
+  write_blob(vm, &function->blob, OP_GET_LOCAL, 0);
+  write_blob(vm, &function->blob, (0 >> 8) & 0xff, 0);
+  write_blob(vm, &function->blob, 0 & 0xff, 0);
+
+  // ret
+  write_blob(vm, &function->blob, OP_RETURN, 0);
+
+  push(vm, OBJ_VAL(function));
+  b_obj_closure *closure = new_closure(vm, function);
+  pop(vm);
 
   // set class constructor
-  table_set(vm, &klass->methods, OBJ_VAL(class_name), initializer);
-  klass->initializer = initializer;
+  table_set(vm, &klass->methods, OBJ_VAL(class_name), OBJ_VAL(closure));
+  klass->initializer = OBJ_VAL(closure);
 
   // set class properties
   table_set(vm, &klass->properties, STRING_L_VAL("message", 7), NIL_VAL);
@@ -162,9 +193,10 @@ static void initialize_exceptions(b_vm *vm) {
 }
 
 inline b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
-  b_obj_instance *instance = (b_obj_instance *) GC(new_instance(vm, vm->exception_class));
+  b_obj_instance *instance = new_instance(vm, vm->exception_class);
+  push(vm, OBJ_VAL(instance));
   table_set(vm, &instance->properties, GC_L_STRING("message", 7), OBJ_VAL(message));
-  CLEAR_GC();
+  pop(vm);
   return instance;
 }
 
@@ -466,7 +498,6 @@ void init_vm(b_vm *vm) {
 
   init_builtin_functions(vm);
   init_builtin_methods(vm);
-  initialize_exceptions(vm);
 
   // always do this last so that we can have access to everything else
   bind_native_modules(vm);
@@ -2330,6 +2361,8 @@ b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
   b_blob blob;
   init_blob(&blob);
 
+  initialize_exceptions(vm, module);
+
   b_obj_func *function = compile(vm, module, source, &blob);
 
   if (vm->should_print_bytecode) {
@@ -2340,7 +2373,6 @@ b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
     free_blob(vm, &blob);
     return PTR_COMPILE_ERR;
   }
-
 
   push(vm, OBJ_VAL(function));
   b_obj_closure *closure = new_closure(vm, function);

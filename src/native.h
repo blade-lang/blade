@@ -259,6 +259,4 @@ DECLARE_NATIVE(is_iterable);
 
 DECLARE_NATIVE(print);
 
-DECLARE_NATIVE(__Exception__);
-
 #endif

@@ -1343,17 +1343,7 @@ b_parse_rule parse_rules[] = {
     [UNDEFINED_TOKEN] = {NULL, NULL, PREC_NONE},
 };
 
-static void parse_precedence(b_parser *p, b_precedence precedence) {
-  if (is_at_end(p->scanner) && p->vm->is_repl)
-    return;
-
-  ignore_whitespace(p);
-
-  if (is_at_end(p->scanner) && p->vm->is_repl)
-    return;
-
-  advance(p);
-
+static void _parse_precedence(b_parser *p, b_precedence precedence) {
   b_parse_prefix_fn prefix_rule = get_rule(p->previous.type)->prefix;
 
   if (prefix_rule == NULL) {
@@ -1375,6 +1365,32 @@ static void parse_precedence(b_parser *p, b_precedence precedence) {
   if (can_assign && match(p, EQUAL_TOKEN)) {
     error(p, "invalid assignment target");
   }
+}
+
+static void parse_precedence(b_parser *p, b_precedence precedence) {
+  if (is_at_end(p->scanner) && p->vm->is_repl)
+    return;
+
+  ignore_whitespace(p);
+
+  if (is_at_end(p->scanner) && p->vm->is_repl)
+    return;
+
+  advance(p);
+
+  _parse_precedence(p, precedence);
+}
+
+static void parse_precedence_no_advance(b_parser *p, b_precedence precedence) {
+  if (is_at_end(p->scanner) && p->vm->is_repl)
+    return;
+
+  ignore_whitespace(p);
+
+  if (is_at_end(p->scanner) && p->vm->is_repl)
+    return;
+
+  _parse_precedence(p, precedence);
 }
 
 static b_parse_rule *get_rule(b_tkn_type type) { return &parse_rules[type]; }
@@ -1584,11 +1600,15 @@ static void compile_var_declaration(b_parser *p, bool is_initializer) {
 
 static void var_declaration(b_parser *p) { compile_var_declaration(p, false); }
 
-static void compile_expression_statement(b_parser *p, bool is_initializer) {
+static void expression_statement(b_parser *p, bool is_initializer, bool semi) {
   if (p->vm->is_repl && p->vm->compiler->scope_depth == 0) {
     p->repl_can_echo = true;
   }
-  expression(p);
+  if(!semi) {
+    expression(p);
+  } else {
+    parse_precedence_no_advance(p, PREC_ASSIGNMENT);
+  }
   if (!is_initializer) {
     consume_statement_end(p);
     if (p->repl_can_echo && p->vm->is_repl) {
@@ -1602,10 +1622,6 @@ static void compile_expression_statement(b_parser *p, bool is_initializer) {
     ignore_whitespace(p);
     emit_byte(p, OP_POP);
   }
-}
-
-static void expression_statement(b_parser *p) {
-  compile_expression_statement(p, false);
 }
 
 /**
@@ -1635,7 +1651,7 @@ static void iter_statement(b_parser *p) {
   } else if (match(p, VAR_TOKEN)) {
     compile_var_declaration(p, true);
   } else {
-    compile_expression_statement(p, true);
+    expression_statement(p, true, false);
   }
 
   // keep a copy of the surrounding loop's start and depth
@@ -2294,6 +2310,14 @@ static void declaration(b_parser *p) {
     function_declaration(p);
   } else if (match(p, VAR_TOKEN)) {
     var_declaration(p);
+  } else if(match(p, LBRACE_TOKEN)) {
+    if(!check(p, NEWLINE_TOKEN) && p->vm->compiler->scope_depth == 0) {
+      expression_statement(p, false, true);
+    } else {
+      begin_scope(p);
+      block(p);
+      end_scope(p);
+    }
   } else {
     statement(p);
   }
@@ -2341,7 +2365,7 @@ static void statement(b_parser *p) {
   } else if (match(p, TRY_TOKEN)) {
     try_statement(p);
   } else {
-    expression_statement(p);
+    expression_statement(p, false, false);
   }
 
   ignore_whitespace(p);

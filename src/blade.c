@@ -43,7 +43,7 @@ static void repl(b_vm *vm) {
   printf("Blade %s (running on BladeVM %s), REPL/Interactive mode = ON\n",
          BLADE_VERSION_STRING, BVM_VERSION);
   printf("%s, (Build time = %s, %s)\n", COMPILER, __DATE__, __TIME__);
-  printf("Type \"exit()\" to quit, \"help()\" or \"credits()\" for more information\n");
+  printf("Type \"exit()\" to quit or \"credits()\" for more information\n");
 
   char *source = (char *) malloc(sizeof(char));
   memset(source, 0, sizeof(char));
@@ -110,8 +110,10 @@ static void repl(b_vm *vm) {
     int line_length = (int) strlen(line);
 #endif // _WIN32
 
-    if (strcmp(line, "exit()") == 0) {
-      exit(EXIT_SUCCESS);
+    if(strcmp(line, "credits()") == 0) {
+      printf("\n" BLADE_COPYRIGHT "\n\n");
+      memset(source, 0, sizeof(char));
+      continue;
     }
 
 #if !defined(_WIN32) && !defined(__CYGWIN__)

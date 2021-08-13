@@ -300,6 +300,8 @@ static void mark_roots(b_vm *vm) {
   mark_table(vm, &vm->methods_dict);
   mark_table(vm, &vm->methods_range);
 
+  mark_object(vm, (b_obj*)vm->exception_class);
+
   mark_compiler_roots(vm);
 }
 

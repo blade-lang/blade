@@ -77,4 +77,6 @@
 #define EXIT_RUNTIME 10
 #define EXIT_TERMINAL 12
 
+#define BLADE_COPYRIGHT "Copyright (c) 2021 Ore Richard Muyiwa"
+
 #endif
