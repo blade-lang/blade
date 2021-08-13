@@ -837,7 +837,7 @@ inline bool is_false(b_value value) {
 
   // Non-empty strings are true, empty strings are false.
   if (IS_STRING(value))
-    return strlen(AS_STRING(value)->chars) < 1;
+    return AS_STRING(value)->length < 1;
 
   // Non-empty lists are true, empty lists are false.
   if (IS_LIST(value))

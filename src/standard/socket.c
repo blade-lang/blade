@@ -336,9 +336,10 @@ DECLARE_MODULE_METHOD(socket__recv) {
     }
   } else if (status == 0) {
     errno = ETIMEDOUT;
+    RETURN_NUMBER(-1);
   }
 
-  RETURN_NUMBER(-1);
+  RETURN;
 }
 
 DECLARE_MODULE_METHOD(socket__setsockopt) {
