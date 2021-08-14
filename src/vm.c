@@ -2025,6 +2025,9 @@ b_ptr_result run(b_vm *vm) {
 
         for (int i = 0; i < count; i += 2) {
           b_value name = vm->stack_top[-count + i];
+          if(!IS_STRING(name) && !IS_NUMBER(name) && !IS_BOOL(name)) {
+            runtime_error("dictionary key must be one of string, number or boolean");
+          }
           b_value value = vm->stack_top[-count + i + 1];
           dict_add_entry(vm, dict, name, value);
         }
