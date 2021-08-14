@@ -4,6 +4,7 @@ var total = 10000
 var start = time()
 
 for i in 1..total {
+  echo 'Attempt ${i}...\n\n'
   echo to_string(http.get('localhost:3000'))
 }
 

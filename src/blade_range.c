@@ -19,7 +19,6 @@ DECLARE_RANGE_METHOD(__iter__) {
   int index = AS_NUMBER(args[0]);
 
   if (index >= 0 && index < range->range) {
-    range->range--;
     if(index == 0) RETURN_NUMBER(range->lower);
     RETURN_NUMBER(range->lower > range->upper ? --range->lower : ++range->lower);
   }
