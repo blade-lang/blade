@@ -209,17 +209,6 @@ DECLARE_DICT_METHOD(to_list) {
   RETURN_OBJ(list);
 }
 
-DECLARE_DICT_METHOD(has_attr) {
-  ENFORCE_ARG_COUNT(has_attr, 1);
-  b_obj_dict *dict = AS_DICT(METHOD_OBJECT);
-  for (int i = 0; i < dict->names.count; i++) {
-    if (values_equal(dict->names.values[i], args[0])) {
-      RETURN_TRUE;
-    }
-  }
-  RETURN_FALSE;
-}
-
 DECLARE_DICT_METHOD(__iter__) {
   ENFORCE_ARG_COUNT(__iter__, 1);
   b_obj_dict *dict = AS_DICT(METHOD_OBJECT);

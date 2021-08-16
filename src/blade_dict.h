@@ -130,13 +130,6 @@ DECLARE_DICT_METHOD(find_key);
 DECLARE_DICT_METHOD(to_list);
 
 /**
- * dict.has_attr(attr: any)
- *
- * returns true if a dict has an attribute or false otherwise
- */
-DECLARE_DICT_METHOD(has_attr);
-
-/**
  * dict.@iter()
  *
  * implementing the iterable interface
