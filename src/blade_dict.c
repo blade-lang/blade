@@ -106,7 +106,7 @@ DECLARE_DICT_METHOD(get) {
   b_value value;
   if (!dict_get_entry(dict, args[0], &value)) {
     if (arg_count == 1) {
-      RETURN_ERROR("invalid key %s in get()", value_to_string(vm, args[0]));
+      RETURN;
     } else {
       RETURN_VALUE(args[1]); // return default
     }

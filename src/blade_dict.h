@@ -72,9 +72,9 @@ DECLARE_DICT_METHOD(extend);
  *
  * this is one thing that separates dict[invalid_key] from
  * dict.get(invalid_key) when using get(), if the default options
- * is not set, invalid keys throw errors instead of returning nil.
+ * is not set, nil is returned.
  *
- * so if you want to that dict MUST contain the key, use get()
+ * so if you want to that dict may contain the key or not, use get()
  */
 DECLARE_DICT_METHOD(get);
 
