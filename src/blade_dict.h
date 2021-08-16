@@ -101,14 +101,6 @@ DECLARE_DICT_METHOD(values);
 DECLARE_DICT_METHOD(remove);
 
 /**
- * dict.assign(key: any, value: any)
- *
- * sets the value of a key in a dictionary or adds a new key-value
- * pair if the key doesn't exist
- */
-DECLARE_DICT_METHOD(assign);
-
-/**
  * dict.is_empty()
  *
  * returns true if the dict is empty or false otherwise

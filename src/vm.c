@@ -396,7 +396,6 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_DICT_METHOD(keys);
   DEFINE_DICT_METHOD(values);
   DEFINE_DICT_METHOD(remove);
-  DEFINE_DICT_METHOD(assign);
   DEFINE_DICT_METHOD(is_empty);
   DEFINE_DICT_METHOD(find_key);
   DEFINE_DICT_METHOD(to_list);

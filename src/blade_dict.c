@@ -28,12 +28,17 @@ DECLARE_DICT_METHOD(add) {
 }
 
 DECLARE_DICT_METHOD(set) {
-  ENFORCE_ARG_COUNT(set, 2);
-  ENFORCE_VALID_DICT_KEY(set, 0);
+    ENFORCE_ARG_COUNT(set, 2);
+    ENFORCE_VALID_DICT_KEY(set, 0);
 
-  b_obj_dict *dict = AS_DICT(METHOD_OBJECT);
-  dict_set_entry(vm, dict, args[0], args[1]);
-  RETURN;
+    b_obj_dict *dict = AS_DICT(METHOD_OBJECT);
+    b_value value;
+    if (!table_get(&dict->items, args[0], &value)) {
+        dict_add_entry(vm, dict, args[0], args[1]);
+    } else {
+        dict_set_entry(vm, dict, args[0], args[1]);
+    }
+    RETURN;
 }
 
 DECLARE_DICT_METHOD(clear) {
@@ -158,20 +163,6 @@ DECLARE_DICT_METHOD(remove) {
     }
     dict->names.count--;
     RETURN_VALUE(value);
-  }
-  RETURN;
-}
-
-DECLARE_DICT_METHOD(assign) {
-  ENFORCE_ARG_COUNT(assign, 2);
-  ENFORCE_VALID_DICT_KEY(assign, 0);
-
-  b_obj_dict *dict = AS_DICT(METHOD_OBJECT);
-  b_value value;
-  if (!table_get(&dict->items, args[0], &value)) {
-    dict_add_entry(vm, dict, args[0], args[1]);
-  } else {
-    dict_set_entry(vm, dict, args[0], args[1]);
   }
   RETURN;
 }
