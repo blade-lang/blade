@@ -7,6 +7,9 @@
 # 
 
 import _socket
+import _os
+
+var _platform = _os.platform
 
 /**
  * Types
@@ -20,33 +23,81 @@ var SOCK_SEQPACKET = 5 # sequenced packet stream
 /**
  * Option flags per-
  */
-var SO_DEBUG         = 0x0001 # turn on debugging info recording
-var SO_ACCEPTCONN    = 0x0002 # socket has had listen()
-var SO_REUSEADDR     = 0x0004 # allow local address reuse
-var SO_KEEPALIVE     = 0x0008 # keep connections alive
-var SO_DONTROUTE     = 0x0010 # just use interface addresses
-var SO_BROADCAST     = 0x0020 # permit sending of broadcast msgs
-var SO_USELOOPBACK   = 0x0040 # bypass hardware when possible
-var SO_LINGER        = 0x0080 # linger on close if data present (in ticks)
-var SO_OOBINLINE     = 0x0100 # leave received OOB data in line
-var SO_REUSEPORT     = 0x0200 # allow local address & port reuse
+var SO_DEBUG         = 1 # turn on debugging info recording
+var SO_ACCEPTCONN # socket has had listen()
+var SO_REUSEADDR  # allow local address reuse
+var SO_KEEPALIVE  # keep connections alive
+var SO_DONTROUTE  # just use interface addresses
+var SO_BROADCAST  # permit sending of broadcast msgs
+var SO_USELOOPBACK   = 40 # bypass hardware when possible
+var SO_LINGER     # linger on close if data present (in ticks)
+var SO_OOBINLINE  # leave received OOB data in line
+var SO_REUSEPORT  # allow local address & port reuse
+var SO_TIMESTAMP
 
 /**
  * Additional options, not kept in so_options.
  */
-var SO_SNDBUF    = 0x1001 # send buffer size
-var SO_RCVBUF    = 0x1002 # receive buffer size
-var SO_SNDLOWAT  = 0x1003 # send low-water mark
-var SO_RCVLOWAT  = 0x1004 # receive low-water mark
-var SO_SNDTIMEO  = 0x1005 # send timeout
-var SO_RCVTIMEO  = 0x1006 # receive timeout
-var SO_ERROR     = 0x1007 # get error status and clear
-var SO_TYPE      = 0x1008 # get socket type
+var SO_SNDBUF    # send buffer size
+var SO_RCVBUF    # receive buffer size
+var SO_SNDLOWAT  # send low-water mark
+var SO_RCVLOWAT  # receive low-water mark
+var SO_SNDTIMEO  # send timeout
+var SO_RCVTIMEO  # receive timeout
+var SO_ERROR     # get error status and clear
+var SO_TYPE      # get socket type
 
 /**
  * Level number for (get/set)sockopt() to apply to socket itself.
  */
 var SOL_SOCKET = 0xffff # options for socket level
+
+using _platform {
+  when 'linux' {
+    SO_REUSEADDR     = 2
+    SO_KEEPALIVE     = 9
+    SO_DONTROUTE     = 5
+    SO_BROADCAST     = 6
+    SO_LINGER        = 13
+    SO_OOBINLINE     = 10
+    SO_REUSEPORT     = 14
+    SO_TIMESTAMP     = 29
+    SO_ACCEPTCONN    = 30
+    #...
+    SO_TYPE      = 3
+    SO_ERROR     = 4
+    SO_SNDBUF    = 7
+    SO_RCVBUF    = 8
+    SO_RCVLOWAT  = 18
+    SO_SNDLOWAT  = 19
+    SO_RCVTIMEO  = 20
+    SO_SNDTIMEO  = 21
+    #...
+    SOL_SOCKET = 1
+  }
+  default {
+    SO_ACCEPTCONN    = 2
+    SO_REUSEADDR     = 4
+    SO_KEEPALIVE     = 8
+    SO_DONTROUTE     = 10
+    SO_BROADCAST     = 20
+    SO_LINGER        = 80
+    SO_OOBINLINE     = 100
+    SO_REUSEPORT     = 200
+    SO_TIMESTAMP     = 400
+    #...
+    SO_TYPE      = 1008
+    SO_ERROR     = 1007
+    SO_SNDBUF    = 1001
+    SO_RCVBUF    = 1002
+    SO_SNDLOWAT  = 1003
+    SO_RCVLOWAT  = 1004
+    SO_SNDTIMEO  = 0x1005
+    SO_RCVTIMEO  = 0x1006
+    #...
+    SOL_SOCKET = 0xffff
+  }
+}
 
 /**
  * Address families.
@@ -389,8 +440,8 @@ class Socket {
       die SocketException('both option and value are required')
     if !is_int(option) 
       die SocketException('integer expected for option, ${typeof(option)} given')
-    if option < SO_DEBUG or option > SO_TYPE # @TODO: update SO_TYPE as options increase
-      die SocketException('expected one of SO_* options')
+    # if option < SO_DEBUG or option > SO_TYPE # @TODO: update SO_TYPE as options increase
+    #   die SocketException('expected one of SO_* options')
 
     if option == SO_TYPE or option == SO_ERROR
       die Exception('the given option is read-only')
@@ -412,8 +463,8 @@ class Socket {
 
     if !is_int(option) 
       die SocketException('integer expected for option, ${typeof(option)} given')
-    if option < SO_DEBUG or option > SO_TYPE # @TODO: update SO_TYPE as options increase
-      die SocketException('expected one of SO_* options')
+    # if option < SO_DEBUG or option > SO_TYPE # @TODO: update SO_TYPE as options increase
+    #   die SocketException('expected one of SO_* options')
 
     # we have a local copy of SO_RCVTIMEO and SO_SNDTIMEO
     # we can simply return them when required
