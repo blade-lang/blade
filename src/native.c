@@ -662,9 +662,14 @@ DECLARE_NATIVE(is_function) {
  */
 DECLARE_NATIVE(is_iterable) {
   ENFORCE_ARG_COUNT(is_iterable, 1);
-  RETURN_BOOL(IS_LIST(args[0]) || IS_DICT(args[0]) || IS_BYTES(args[0]) ||
-              (IS_INSTANCE(args[0]) &&
-               is_instance_of(AS_INSTANCE(args[0])->klass, "Iterable")));
+  bool is_iterable = IS_LIST(args[0]) || IS_DICT(args[0]) || IS_BYTES(args[0]);
+  if(!is_iterable && IS_INSTANCE(args[0])) {
+      b_obj_class *klass = AS_INSTANCE(args[0])->klass;
+      b_value dummy;
+      is_iterable = table_get(&klass->methods, STRING_VAL("@iter"), &dummy)
+              && table_get(&klass->methods, STRING_VAL("@itern"), &dummy);
+  }
+  RETURN_BOOL( is_iterable);
 }
 
 /**
