@@ -662,7 +662,7 @@ DECLARE_NATIVE(is_function) {
  */
 DECLARE_NATIVE(is_iterable) {
   ENFORCE_ARG_COUNT(is_iterable, 1);
-  bool is_iterable = IS_LIST(args[0]) || IS_DICT(args[0]) || IS_BYTES(args[0]);
+  bool is_iterable = IS_LIST(args[0]) || IS_DICT(args[0]) || IS_STRING(args[0]) || IS_BYTES(args[0]);
   if(!is_iterable && IS_INSTANCE(args[0])) {
       b_obj_class *klass = AS_INSTANCE(args[0])->klass;
       b_value dummy;
