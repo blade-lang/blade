@@ -6,12 +6,20 @@
 class Encoder {
   var _max_depth = 1024
   var _depth = 0
+  var _item_spacing = ' '
+  var _merge_strip_start = 2
 
-  Encoder(max_depth) {
+  Encoder(compact, max_depth) {
     if max_depth {
       if !is_number(max_depth)
         die Exception('max_depth must be number. ${typeof(max_depth)} given')
       self._max_depth = max_depth
+    }
+
+    if compact {
+      if !is_bool(compact) die Exception('compact expects boolean. ${typeof(max_depth)} given')
+      self._item_spacing = ''
+      self._merge_strip_start = 1
     }
   }
 
@@ -30,17 +38,17 @@ class Encoder {
       when 'list' {
         var result = ''
         for val in value {
-          result += ', ${self.encode(val)}'
+          result += ',' + self._item_spacing + '${self.encode(val)}'
         }
-        if result return '[${result[2,]}]'
+        if result return '[${result[self._merge_strip_start,]}]'
         return '[]'
       }
       when 'dictionary' {
         var result = ''
         for key, val in value {
-          result += ', "${to_string(key)}": ${self.encode(val)}'
+          result += ', "${to_string(key)}":' + self._item_spacing + '${self.encode(val)}'
         }
-        if result return '{${result[2,]}}'
+        if result return '{${result[self._merge_strip_start,]}}'
         return '{}'
       }
       default {
