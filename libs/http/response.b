@@ -1,5 +1,6 @@
 /**
  * class HttpResponse
+ * 
  * represents the response to an Http request
  */
 class HttpResponse {

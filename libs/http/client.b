@@ -3,7 +3,7 @@ import socket
 import .response { HttpResponse }
 
 /**
- * HttpClient
+ * class HttpClient
  *
  * handles http requests.
  */

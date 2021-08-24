@@ -17,7 +17,7 @@ class Encoder {
     }
 
     if compact {
-      if !is_bool(compact) die Exception('compact expects boolean. ${typeof(max_depth)} given')
+      if !is_bool(compact) die Exception('compact expects boolean. ${typeof(compact)} given')
       self._item_spacing = ''
       self._merge_strip_start = 1
     }
@@ -34,7 +34,10 @@ class Encoder {
       when 'nil' return 'null'
       when 'boolean' return to_string(value)
       when 'number' return to_string(value)
-      when 'string' return '"${value.replace('"', '\\"')}"'
+      when 'string' {
+        if value.index_of('"') > -1 return '"${value.replace('"', '\\"')}"'
+        return '"${value}"'
+      }
       when 'list' {
         var result = ''
         for val in value {
