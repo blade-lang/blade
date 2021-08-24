@@ -147,6 +147,8 @@ static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
   b_obj_class *klass = new_class(vm, class_name);
 
   b_obj_func *function = new_function(vm, module, TYPE_METHOD);
+  function->arity = 1;
+  function->is_variadic = false;
 
   // g_loc 0
   write_blob(vm, &function->blob, OP_GET_LOCAL, 0);
