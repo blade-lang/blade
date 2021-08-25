@@ -89,14 +89,17 @@ static void repl(b_vm *vm) {
     printf(cursor);
     char *line = fgets(buffer, 1024, stdin);
 
+	int line_length = 0;
+    if(line != NULL) {
+	  line_length = strcspn(line, "\r\n");
+	  line[line_length] = 0;
+	}
+
     // terminate early if we receive a terminating command such as exit() or Ctrl+D
     if(line == NULL || strcmp(line, "exit()") == 0) {
       free(source);
       return;
     }
-
-    int line_length = strcspn(line, "\r\n");
-    line[line_length] = 0;
 #else
     char *line = readline(cursor);
 
@@ -121,7 +124,7 @@ static void repl(b_vm *vm) {
     add_history(line);
 #endif // !_WIN32
 
-    // find count of { and }, ( and ), [ and ]
+    // find count of { and }, ( and ), [ and ], " and '
     for (int i = 0; i < line_length; i++) {
       // scope openers...
       if (line[i] == '{')
