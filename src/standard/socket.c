@@ -567,12 +567,12 @@ void __socket_module_preloader(b_vm *vm) {
   int i_result = WSAStartup(MAKEWORD(2, 2), &wsa_data);
   if (i_result != NO_ERROR) {
     errno = i_result;
-    return NULL;
+    return;
   }
 
   if(LOBYTE(wsa_data.wVersion) != 2 || HIBYTE(wsa_data.wVersion) != 2) {
     WSACleanup();
-    return NULL;
+    return;
   }
 #else
 #  ifdef SIGPIPE

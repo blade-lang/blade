@@ -89,11 +89,11 @@ static void repl(b_vm *vm) {
     printf(cursor);
     char *line = fgets(buffer, 1024, stdin);
 
-	int line_length = 0;
+    int line_length = 0;
     if(line != NULL) {
-	  line_length = strcspn(line, "\r\n");
-	  line[line_length] = 0;
-	}
+      line_length = strcspn(line, "\r\n");
+      line[line_length] = 0;
+    }
 
     // terminate early if we receive a terminating command such as exit() or Ctrl+D
     if(line == NULL || strcmp(line, "exit()") == 0) {
