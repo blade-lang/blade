@@ -10,6 +10,10 @@
 
 #include "pcre2.h"
 
+#define N__(x, y) 200##y
+#define N___(x, y) N__(x, y)
+#define NEW_OBJ_TYPE N___(__LINE__, __COUNTER__)
+
 #define DECLARE_NATIVE(name)                                                   \
   bool native_fn_##name(b_vm *vm, int arg_count, b_value *args)
 

@@ -7,17 +7,19 @@
 
 
 /**
- * Internal helper class to help
- * Mime class represent and organize it's mimes better.
- *
- * @note, This class is not intended for calling outside of this library
- * unless it provides you with the exact mechanism you need to solve
- * your problem.
+ * @class _MimeFormat
+ * 
+ * Internal helper class to help Mime class represent and 
+ * organize it's mimes better.
  */
 class _MimeFormat {
+  /**
+   * @constructor _MimeFormat
+   * _MimeFormat(mimetype: string [, header: list | bytes])
+   */
   _MimeFormat(mimetype, header) {
     if header and !is_list(header) {
-      die Exception('Mime type definition must set header to nil or list of byte (numbers)')
+      die Exception('Mime type definition must set header to nil, list of numbers or bytes')
     }
 
     self.mimetype = mimetype

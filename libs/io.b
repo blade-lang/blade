@@ -14,8 +14,10 @@ var SEEK_END = 2
 
 
 /**
- * an interface to TTY terminals
- * this class contains definitions to control TTY terminals
+ * @class TTY
+ * 
+ * an interface to TTY terminals this class contains definitions 
+ * to control TTY terminals
  */
 class TTY {
 
@@ -94,7 +96,10 @@ class TTY {
   static var VTIME      = 17      # !ICANON
 
   /**
-   * The constructor of the TTY class. 
+   * @constructor TTY
+   * 
+   * TTY(std: file)
+   * @note file must be one of stdout and stderr
    */
   TTY(std) {
     if !is_file(std) {

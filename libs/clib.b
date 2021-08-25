@@ -6,7 +6,8 @@
  */
 
 /**
- * CTypes
+ * @class CTypes
+ * 
  * enumeration of C standard/basic data types and their pointers
  */
 class CType {
@@ -58,7 +59,7 @@ class CType {
 }
 
 /**
- * CDeclaration
+ * @class CDeclaration
  * representation class for a C variable declaration (non-assignment) 
  */
 class CDeclaration {
@@ -74,7 +75,7 @@ class CDeclaration {
 }
 
 /**
- * CValue
+ * @class CValue
  * representation class for static typed C value
  */
 class CValue {
@@ -89,7 +90,7 @@ class CValue {
 
 
 /**
- * CUnion
+ * @class CUnion
  * representation class for a C union
  */
 class CUnion {
@@ -104,7 +105,7 @@ class CUnion {
 }
 
 /**
- * CStruct
+ * @class CStruct
  * representation class for a C struct object
  */
 class CStruct {
@@ -119,14 +120,18 @@ class CStruct {
 }
 
 /**
- * Main library class
- * this class is responsible for interacting with C shared libraries
+ * @class CLib
+ * 
+ * Main library class this class is responsible for interacting 
+ * with C shared libraries
  * 
  * it provides interfaces for loading libraries, calling functions, 
  * returning value, declarating types between C and Blade
  */
 class CLib {
   /**
+   * @constructor CLib
+   * 
    * CLib(library_file)
    *
    * this constructor accepts a file object pointing

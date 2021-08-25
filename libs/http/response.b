@@ -1,11 +1,16 @@
+#!-- part of the http module
+
 /**
- * class HttpResponse
+ * @class HttpResponse
+ * 
  * represents the response to an Http request
  */
 class HttpResponse {
+
   /**
+   * @constructor HttpResponse
+   * 
    * HttpResponse(body, status, headers, version, time_taken, redirects, responder)
-   * @constructor
    */
   HttpResponse(body, status, headers, version, 
     time_taken, redirects, responder) {
@@ -19,14 +24,19 @@ class HttpResponse {
   }
 
   @to_string() {
-    return to_string({
-      status: self.status,
-      version: self.version,
-      time_taken: self.time_taken,
-      redirects: self.redirects,
-      responder: self.responder,
-      headers: self.headers,
-      body: self.body
-    })
+    return '<HttpResponse status: ${self.status}, version: ${self.version}, time_taken:' +
+        ' ${self.time_taken}, redirects: ${self.redirects}, responder: ${self.responder}>'
+    
+    # # old version.
+    # # kept here simply for reference and debugging purposes.
+    # return to_string({
+    #   status: self.status,
+    #   version: self.version,
+    #   time_taken: self.time_taken,
+    #   redirects: self.redirects,
+    #   responder: self.responder,
+    #   headers: self.headers,
+    #   body: self.body
+    # })
   }
 }

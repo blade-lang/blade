@@ -167,11 +167,11 @@ def mktime(year, month, day, hour, minute, seconds, is_dst) {
   return _date.mktime(year, month, day, hour, minute, seconds, is_dst)
 }
 
-/*
- * Blade's implementation of date
+/**
+ * @class Date
  * 
- * A date here refers to a calendar day consisting of
- * year, month and day
+ * A date here refers to a calendar datetime consisting of
+ * year, month, day, hour, minute and seconds
  * 
  * Julian date conversion is based on the C implementation at:
  * http://www.lsc-group.phys.uwm.edu/lal/slug/nightly/doxygen.old/html/Julian_8c-source.html
@@ -181,10 +181,13 @@ def mktime(year, month, day, hour, minute, seconds, is_dst) {
 class Date {
 
   /*
-   * Constructor
+   * @constructor Date
+   * 
+   * Date([year: number [, month: number [, day: number [, hour: number 
+   *    [, minute: number [, seconds: number]]]]]])
    *
-   * - All arguments are optional
-   * - When no argument is give, the date will be set to the current system date
+   * @note all arguments are optional
+   * @note when no argument is give, the date will be set to the current system date
    */
   Date(year, month, day, hour, minute, seconds) {
 
@@ -576,6 +579,11 @@ class Date {
   unix_time() {
     return _mktime(self.year, self.month, self.day, self.hour, 
               self.minute, self.seconds, self.is_dst)
+  }
+
+  @to_string() {
+    return '<Date year: ${self.year}, month: ${self.month}, day: ${self.day}, hour: ' +
+        '${self.hour}, minute: ${self.minute}, seconds: ${self.seconds}>'
   }
 }
 

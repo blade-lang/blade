@@ -180,10 +180,14 @@ class SocketException < Exception {
   SocketException(message) {
     self.message = message
   }
+
+  @to_string() {
+    return '<SocketException: ${self.message}>'
+  }
 }
 
 /**
- * class Socket
+ * @class Socket
  *
  * Provides interface for working with Socket clients
  * and servers.
@@ -232,8 +236,9 @@ class Socket {
   var is_blocking = false
 
   /**
+   * @constructor Socket
+   * 
    * Socket(family: number [, type: number, protocol: number [, id: number]])
-   * @constructor
    * @example
    * Socket(AF_INET, SOCK_STREAM, 0)
    */
@@ -481,6 +486,11 @@ class Socket {
 
   info() {
     return _socket.getsockinfo(self.id)
+  }
+
+  @to_string() {
+    return '<Socket id: ${self.id}, closed: ${self.is_closed}, listening: ' +
+        '${self.is_listening}, connected: ${self.is_connected}, bound: ${self.is_bound}>'
   }
 }
 
