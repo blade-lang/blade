@@ -1154,10 +1154,12 @@ static void string_interpolation(b_parser *p, bool can_assign) {
   int count = 0;
   do {
     bool do_add = false;
+    bool string_matched = false;
 
     if (p->previous.length - 2 > 0) {
       string(p, can_assign);
       do_add = true;
+      string_matched = true;
 
       if (count > 0) {
         emit_byte(p, OP_ADD);
@@ -1167,7 +1169,7 @@ static void string_interpolation(b_parser *p, bool can_assign) {
     expression(p);
     emit_byte(p, OP_STRINGIFY);
 
-    if (do_add) {
+    if (do_add || (count >= 1 && string_matched == false)) {
       emit_byte(p, OP_ADD);
     }
     count++;
