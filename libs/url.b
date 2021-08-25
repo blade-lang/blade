@@ -8,7 +8,8 @@
 import types
 
 /**
- * class UrlMalformedException
+ * @class UrlMalformedException
+ * 
  * Excpetion thrown when the url is malformed
  */
 class UrlMalformedException < Exception {
@@ -25,7 +26,8 @@ var SIMPLE_SCHEMES = ['mailto', 'tel']
 
 
 /**
- * class Url
+ * @class Url
+ * 
  * provides functionalities for parsing and processing URLs
  */
 class Url {
@@ -62,6 +64,11 @@ class Url {
   var username
   var password
 
+  /**
+   * @constructor Url
+   * 
+   * Url(scheme, host, port, path, query, hash, username, password)
+   */
   Url(scheme, host, port, path, query, hash, username, password) {
     self.scheme = scheme
     self.host = host

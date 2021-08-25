@@ -205,13 +205,16 @@ def instance(value, type) {
 
 
 /**
- * class Convert
- * Handles conversion from one type to another
+ * @class Convert
+ * 
+ * handles conversion from one type to another
  */
 class Convert {
 
   /**
-   * class Convert(value: any)
+   * @constructor Convert
+   *  
+   * Convert(value: any)
    * set's the value to be converted.
    * @return Convert
    */
