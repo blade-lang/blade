@@ -1,7 +1,9 @@
+#!-- part of the json module
+
 /**
  * class Encoder
  * 
- * JSON encoding class
+ * Blade to JSON encoding class
  */
 class Encoder {
   var _max_depth = 1024
