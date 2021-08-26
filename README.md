@@ -1,10 +1,19 @@
-What's Blade
-============
-Blade is an interpreted high-level general-purpose multi-paradigm 
-programming language with an emphasis on simplicity, flexibility 
-and expressiveness (the core pillars). It aims to maintain the 
-core pillars of the language while still being powerful enough to
-do anything.
+<div align="center">
+<p>
+    <img width="80" src="./blade-icon.png?sanitize=true">
+</p>
+<h1>The Blade Programming Language</h1>
+
+[Blade Language Website](https://bladelang.com) |
+[Documentation](https://bladelang.com)
+</div>
+
+
+## What's Blade
+
+Blade is a simple, fast, clean and dynamic language that allows you to develop complex applications 
+quickly. Blade emphasises algorithm over syntax and for this reason, it has a very small but powerful 
+syntax set with a very natural feel.
 
 ![code analysis](https://github.com/blade-lang/blade/actions/workflows/codeql.yml/badge.svg)
 ![linux build](https://github.com/blade-lang/blade/actions/workflows/linux-build.yml/badge.svg)
@@ -12,12 +21,20 @@ do anything.
 ![windows build](https://github.com/blade-lang/blade/actions/workflows/windows-build.yml/badge.svg)
 
 
+> ### HELP IS URGENTLY NEEDED TO TEST BLADE WELL ON WINDOWS OS.
+> I currently lack a Windows device to test Blade on Windows OS.
+> While I expect most features to work, I cannot guarantee that they do
+> and therefore solicit the help of fellow and willing contributors who
+> can actively test Blade on Windows devices.
+> 
+> Thanks!
 
 
 ## Features
 
 - Simple syntax and minimal keywords.
 - Dynamically typed.
+- Fast.
 - Comprehensive builtin functions.
 - Object-oriented (only supports single inheritance for now.
   Multiple inheritance is open for discussion).
@@ -26,9 +43,9 @@ do anything.
 - Custom iterable classes.
 - Garbage collection.
 - Stack-based VM.
+- REPL
 - Lightweight.
 - Highly portable.
-
 
 
 ## Documentation
@@ -43,9 +60,7 @@ You can read the [Blade language documentation](https://bladelang.com) online at
 | Directory | Contents 
 |-----------|----------
 | `benchmarks` | Contains the sample benchmarks for Blade (some are based on the Benchmark games).
-| `bladey-vscode-ext` | The visual studio code extension for Blade that enables syntax highlighting for the language.
 | `deps` | Contains static libraries to be used for compiling when matching libraries are not found on the system.
-| `docs` | Contains the source code Sphinx documentation for Blade.
 | `libs` | Contains the Blade standard library.
 | `src` | The source code of the Blade language including the native implementation of some Blade library classes and functions in the modules directory.
 | `tests` | A few test cases that Blade implementation must pass.
@@ -76,8 +91,6 @@ cmake --build ./build --config Debug
 > NOTE: For Windows, MSVC (Visual Studio) is the supported compiler.
 > Other compilers such as MingW or Cygwin may work, but are not
 > guaranteed to work.
-
-
 
 
 ## How to contribute
@@ -116,7 +129,6 @@ You can also just mail your issues to [Ore Richard Muyiwa](mailto:eqliqandfriend
     IDE(s) to format your code before submitting for PR.
     
 That simple!
-
 
 
 ## Sponsors
