@@ -1,13 +1,24 @@
 <div align="center">
 <p>
-    <img width="80" src="./blade-icon.png?sanitize=true">
+    <img width="120" src="./blade-icon.png?sanitize=true">
 </p>
 <h1>The Blade Programming Language</h1>
 
 [Blade Language Website](https://bladelang.com) |
 [Documentation](https://bladelang.com)
+
+<div>
+
+![code analysis](https://github.com/blade-lang/blade/actions/workflows/codeql.yml/badge.svg)
+![linux build](https://github.com/blade-lang/blade/actions/workflows/linux-build.yml/badge.svg)
+![osx build](https://github.com/blade-lang/blade/actions/workflows/osx-build.yml/badge.svg)
+![windows build](https://github.com/blade-lang/blade/actions/workflows/windows-build.yml/badge.svg)
+
 </div>
 
+</div>
+
+<br>
 
 ## What's Blade
 
@@ -15,11 +26,7 @@ Blade is a simple, fast, clean and dynamic language that allows you to develop c
 quickly. Blade emphasises algorithm over syntax and for this reason, it has a very small but powerful 
 syntax set with a very natural feel.
 
-![code analysis](https://github.com/blade-lang/blade/actions/workflows/codeql.yml/badge.svg)
-![linux build](https://github.com/blade-lang/blade/actions/workflows/linux-build.yml/badge.svg)
-![osx build](https://github.com/blade-lang/blade/actions/workflows/osx-build.yml/badge.svg)
-![windows build](https://github.com/blade-lang/blade/actions/workflows/windows-build.yml/badge.svg)
-
+<br>
 
 > ### HELP IS URGENTLY NEEDED TO TEST BLADE WELL ON WINDOWS OS.
 > I currently lack a Windows device to test Blade on Windows OS.
