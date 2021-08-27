@@ -724,3 +724,19 @@ DECLARE_NATIVE(print) {
 //  printf("\n");
   RETURN;
 }
+
+/**
+ * println(...)
+ *
+ * Prints to stdout with a newline
+ */
+DECLARE_NATIVE(println) {
+  for (int i = 0; i < arg_count; i++) {
+    print_value(args[i]);
+    if (i != arg_count - 1) {
+      printf(" ");
+    }
+  }
+  printf("\n");
+  RETURN;
+}
