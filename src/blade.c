@@ -48,7 +48,6 @@ static void repl(b_vm *vm) {
   char *source = (char *) malloc(sizeof(char));
   memset(source, 0, sizeof(char));
 
-  int current_line = 0;
   int brace_count = 0, paren_count = 0, bracket_count = 0, single_quote_count = 0, double_quote_count = 0;
 
   b_obj_module *module = new_module(vm, strdup(""), strdup("<repl>"));
@@ -63,7 +62,6 @@ static void repl(b_vm *vm) {
     while (sigsetjmp(ctrlc_buf, 1) != 0);
 
     if (!continue_repl) {
-      current_line = 0;
       brace_count = 0;
       paren_count = 0;
       bracket_count = 0;
@@ -74,8 +72,6 @@ static void repl(b_vm *vm) {
       memset(source, 0, strlen(source));
       continue_repl = true;
     }
-
-    current_line++;
 
     const char *cursor = "%> ";
     if (brace_count > 0 || bracket_count > 0 || paren_count > 0) {
@@ -123,6 +119,10 @@ static void repl(b_vm *vm) {
     // allow user to navigate through past input in terminal...
     add_history(line);
 #endif // !_WIN32
+
+    if(line_length > 0 && line[0] == '#') {
+      continue;
+    }
 
     // find count of { and }, ( and ), [ and ], " and '
     for (int i = 0; i < line_length; i++) {
