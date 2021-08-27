@@ -1,10 +1,10 @@
-/* 
-This program solves the (English) peg solitaire board game.
-http://en.wikipedia.org/wiki/Peg_solitaire 
-
-Adapted from the Golang playground solution
-at https://play.golang.org/p/njnvlXVIrRd
-*/
+/**
+ * This program solves the (English) peg solitaire board game.
+ * http://en.wikipedia.org/wiki/Peg_solitaire 
+ * 
+ * Adapted from the Golang playground solution
+ * at https://play.golang.org/p/njnvlXVIrRd
+ */
 
 var N = 11 + 1 # length of a row (+1 for \n)
 
@@ -44,9 +44,7 @@ def init() {
     }
   }
 
-  if n != 1 {
-    center = -1 # no single hole
-  }
+  if n != 1 center = -1 # no single hole
 }
 
 /* 
@@ -128,7 +126,7 @@ def solve() {
 var start = time()
 
 init()
-if !solve() {
-  echo 'No solution found!'
-}
+
+if !solve() echo 'No solution found!'
+
 echo '${moves} moves tried in ${time() - start}s'

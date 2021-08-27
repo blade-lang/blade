@@ -721,6 +721,6 @@ DECLARE_NATIVE(print) {
       printf(" ");
     }
   }
-  printf("\n");
+//  printf("\n");
   RETURN;
 }
