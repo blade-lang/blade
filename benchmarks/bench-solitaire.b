@@ -37,9 +37,7 @@ var center = -1, moves = 0
 def init() {
   var n = 0
 
-  iter var pos = 0; pos < board.length(); pos++ {
-    var field = board[pos]
-  # for pos, field in board {
+  for pos, field in board {
     if field == '○' {
       center = pos
       n++
@@ -86,18 +84,14 @@ board position is printed first, all the way back to
 the starting board position). */
 def solve() {
   var last = 0, n = 0
-  
-  iter var pos = 0; pos < board.length(); pos++ {
-    var field = board[pos]
-  # for pos, field in board {
+
+  for pos, field in board {
 
     # try each board position
     if field == '●' {
 
       # found a peg
-      iter var i = 0; i < dirs.length(); i++ {
-        var dir = dirs[i]
-      # for dir in dirs {
+      for dir in dirs {
         
         # try each direction
         if move(pos, dir) {
