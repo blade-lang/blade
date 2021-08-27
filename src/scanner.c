@@ -148,7 +148,11 @@ b_token skip_whitespace(b_scanner *s) {
         if (next(s) == '*') {
           advance(s);
           advance(s);
-          return skip_block_comments(s);
+          b_token result = skip_block_comments(s);
+          if(result.type != UNDEFINED_TOKEN) {
+            return result;
+          }
+          break;
         } else {
           return make_token(s, UNDEFINED_TOKEN);
         }
