@@ -54,7 +54,7 @@ uint32_t is_regex(b_obj_string *string) {
 
   for (int i = 1; i < string->length; i++) {
     if (string->chars[i] == start) {
-      match_found = true;
+      match_found = i > 0 && string->chars[i - 1] == '\\' ? false : true;
       continue;
     }
 
