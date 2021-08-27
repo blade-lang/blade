@@ -1573,7 +1573,7 @@ b_ptr_result run(b_vm *vm) {
       }
 
       case OP_STRINGIFY: {
-        if (!IS_STRING(peek(vm, 0))) {
+        if (!IS_STRING(peek(vm, 0)) && !IS_NIL(peek(vm, 0))) {
           char *value = value_to_string(vm, pop(vm));
           if ((int) strlen(value) != 0) {
             push(vm, OBJ_VAL(take_string(vm, value, (int) strlen(value))));
