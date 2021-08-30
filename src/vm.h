@@ -66,6 +66,9 @@ struct s_vm {
   b_table methods_bytes;
   b_table methods_range;
 
+  char **std_args;
+  int std_args_count;
+
   // boolean flags
   bool is_repl;
   bool mark_value;

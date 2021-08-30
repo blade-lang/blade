@@ -484,6 +484,9 @@ void init_vm(b_vm *vm) {
   vm->gray_capacity = 0;
   vm->gray_stack = NULL;
 
+  vm->std_args = NULL;
+  vm->std_args_count = 0;
+
   init_table(&vm->modules);
   init_table(&vm->strings);
   init_table(&vm->globals);
@@ -498,9 +501,6 @@ void init_vm(b_vm *vm) {
 
   init_builtin_functions(vm);
   init_builtin_methods(vm);
-
-  // always do this last so that we can have access to everything else
-  bind_native_modules(vm);
 }
 
 void free_vm(b_vm *vm) {
