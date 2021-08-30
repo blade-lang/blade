@@ -1995,14 +1995,9 @@ b_ptr_result run(b_vm *vm) {
       }
 
       case OP_LIST: {
-        int count = READ_SHORT();
-        b_obj_list *list = new_list(vm);
-        vm->stack_top[-count - 1] = OBJ_VAL(list);
-
-        for (int i = count - 1; i >= 0; i--) {
-          write_list(vm, list, peek(vm, i));
-        }
-        pop_n(vm, count);
+        b_obj_list *list = AS_LIST(READ_CONSTANT());
+        write_list(vm, list, peek(vm, 0));
+        pop(vm);
         break;
       }
       case OP_RANGE: {
@@ -2019,19 +2014,14 @@ b_ptr_result run(b_vm *vm) {
         break;
       }
       case OP_DICT: {
-        int count = READ_SHORT() * 2; // 1 for key, 1 for value
-        b_obj_dict *dict = new_dict(vm);
-        vm->stack_top[-count - 1] = OBJ_VAL(dict);
-
-        for (int i = 0; i < count; i += 2) {
-          b_value name = vm->stack_top[-count + i];
-          if(!IS_STRING(name) && !IS_NUMBER(name) && !IS_BOOL(name)) {
-            runtime_error("dictionary key must be one of string, number or boolean");
-          }
-          b_value value = vm->stack_top[-count + i + 1];
-          dict_add_entry(vm, dict, name, value);
+        b_obj_dict *dict = AS_DICT(READ_CONSTANT());
+        b_value name = peek(vm, 1);
+        if(!IS_STRING(name) && !IS_NUMBER(name) && !IS_BOOL(name)) {
+          runtime_error("dictionary key must be one of string, number or boolean");
         }
-        pop_n(vm, count);
+        b_value value = peek(vm, 0);
+        dict_add_entry(vm, dict, name, value);
+        pop_n(vm, 2);
         break;
       }
       case OP_GET_INDEX: {
@@ -2077,41 +2067,6 @@ b_ptr_result run(b_vm *vm) {
           runtime_error("cannot index object of type %s", value_type(peek(vm, 2)));
         }
         break;
-
-        /*if (!IS_STRING(peek(vm, 2)) && !IS_LIST(peek(vm, 2)) &&
-            !IS_DICT(peek(vm, 2)) && !IS_BYTES(peek(vm, 2))) {
-          runtime_error("type of %s is not a valid iterable", value_type(peek(vm, 2)));
-          break;
-        }
-
-        if (IS_STRING(peek(vm, 2))) {
-          if (!string_get_index(vm, AS_STRING(peek(vm, 2)), will_assign == (uint8_t)1)) {
-            EXIT_VM();
-          } else {
-            break;
-          }
-        } else if (IS_LIST(peek(vm, 2))) {
-          if (!list_get_index(vm, AS_LIST(peek(vm, 2)), will_assign == (uint8_t)1)) {
-            EXIT_VM();
-          } else {
-            break;
-          }
-        } else if (IS_BYTES(peek(vm, 2))) {
-          if (!bytes_get_index(vm, AS_BYTES(peek(vm, 2)), will_assign == (uint8_t)1)) {
-            EXIT_VM();
-          } else {
-            break;
-          }
-        } else if (IS_DICT(peek(vm, 2)) && IS_EMPTY(peek(vm, 0))) {
-          if (!dict_get_index(vm, AS_DICT(peek(vm, 2)), will_assign == (uint8_t)1)) {
-            EXIT_VM();
-          } else {
-            break;
-          }
-        }
-
-        runtime_error("invalid index %s", value_to_string(vm, peek(vm, 0)));
-        break;*/
       }
       case OP_SET_INDEX: {
         bool is_set = true;

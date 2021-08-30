@@ -870,27 +870,24 @@ static void named_variable(b_parser *p, b_token name, bool can_assign) {
 }
 
 static void list(b_parser *p, bool can_assign) {
-  emit_byte(p, OP_NIL); // placeholder for the list
+  int list = make_constant(p, OBJ_VAL(new_list(p->vm)));
 
-  int count = 0;
   if (!check(p, RBRACKET_TOKEN)) {
     do {
       ignore_whitespace(p);
       expression(p);
+      emit_byte_and_short(p, OP_LIST, list);
       ignore_whitespace(p);
-      count++;
     } while (match(p, COMMA_TOKEN));
   }
   ignore_whitespace(p);
   consume(p, RBRACKET_TOKEN, "expected ']' at end of list");
-
-  emit_byte_and_short(p, OP_LIST, count);
+  emit_byte_and_short(p, OP_CONSTANT, list);
 }
 
 static void dictionary(b_parser *p, bool can_assign) {
-  emit_byte(p, OP_NIL); // placeholder for the dictionary
+  int dict = make_constant(p, OBJ_VAL(new_dict(p->vm)));
 
-  int item_count = 0;
   if (!check(p, RBRACE_TOKEN)) {
     do {
       ignore_whitespace(p);
@@ -898,8 +895,7 @@ static void dictionary(b_parser *p, bool can_assign) {
       if (!check(p, RBRACE_TOKEN)) { // allow last pair to end with a comma
         if (check(p, IDENTIFIER_TOKEN)) {
           consume(p, IDENTIFIER_TOKEN, "");
-          emit_constant(p, OBJ_VAL(copy_string(p->vm, p->previous.start,
-                                               p->previous.length)));
+          emit_constant(p, OBJ_VAL(copy_string(p->vm, p->previous.start, p->previous.length)));
         } else {
           expression(p);
         }
@@ -909,14 +905,13 @@ static void dictionary(b_parser *p, bool can_assign) {
         ignore_whitespace(p);
 
         expression(p);
-        item_count++;
+        emit_byte_and_short(p, OP_DICT, dict);
       }
     } while (match(p, COMMA_TOKEN));
   }
   ignore_whitespace(p);
   consume(p, RBRACE_TOKEN, "expected '}' after dictionary");
-
-  emit_byte_and_short(p, OP_DICT, item_count);
+  emit_byte_and_short(p, OP_CONSTANT, dict);
 }
 
 static void indexing(b_parser *p, b_token previous, bool can_assign) {
