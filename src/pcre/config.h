@@ -1,4 +1,8 @@
+#ifndef _WIN32
 #define HAVE_ATTRIBUTE_UNINITIALIZED 1
+#else
+#define HAVE_ATTRIBUTE_UNINITIALIZED 0
+#endif
 
 #define PCRE2_STATIC 1
 
