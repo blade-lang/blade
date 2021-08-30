@@ -73,6 +73,7 @@ typedef enum {
   OP_LIST,
   OP_DICT,
   OP_GET_INDEX,
+  OP_GET_RANGED_INDEX,
   OP_SET_INDEX,
 
   OP_CALL_IMPORT,

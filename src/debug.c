@@ -211,6 +211,8 @@ int disassemble_instruction(b_blob *blob, int offset) {
       return short_instruction("dict", blob, offset);
     case OP_GET_INDEX:
       return byte_instruction("g_ind", blob, offset);
+      case OP_GET_RANGED_INDEX:
+      return byte_instruction("gr_ind", blob, offset);
     case OP_SET_INDEX:
       return simple_instruction("s_ind", offset);
 
