@@ -28,6 +28,7 @@ set(BLADE_SOURCES
 		src/blade_list.c
 		src/blade_string.c
 		src/blade_range.c
+		src/blade_getopt.c
 		src/blob.c
 		src/bytes.c
 		src/compiler.c
@@ -42,6 +43,7 @@ set(BLADE_SOURCES
 		src/util.c
 		src/value.c
         src/vm.c
+		src/win32.c
 		# standard module
 		src/standard/base64.c
 		src/standard/date.c
