@@ -28,8 +28,8 @@ syntax set with a very natural feel.
 
 <br>
 
-> ### HELP IS URGENTLY NEEDED TO TEST BLADE WELL ON WINDOWS OS.
-> I currently lack a Windows device to test Blade on Windows OS.
+> ### HELP IS URGENTLY NEEDED TO TEST BLADE WELL ON WINDOWS.
+> I currently lack a Windows device to test Blade on Windows.
 > While I expect most features to work, I cannot guarantee that they do
 > and therefore solicit the help of fellow and willing contributors who
 > can actively test Blade on Windows devices.
@@ -93,11 +93,6 @@ For debug builds,
 cmake -B ./build -DCMAKE_BUILD_TYPE=Debug
 cmake --build ./build --config Debug
 ```
-
-> NOTE: For Windows, MSVC (Visual Studio) is the supported compiler.
-> Other compilers such as MingW or Cygwin may work, but are not
-> guaranteed to work.
-
 
 ## How to contribute
 

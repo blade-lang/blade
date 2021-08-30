@@ -1,6 +1,9 @@
 #include "blade_file.h"
-#include "blade_time.h"
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#else
 #include "blade_unistd.h"
+#endif /* HAVE_UNISTD_H */
 #include "pathinfo.h"
 
 #include <errno.h>
@@ -8,15 +11,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif /* HAVE_SYS_TIME_H */
 #include <time.h>
 
-#if defined(_MSC_VER) || defined(_WIN32)
-#include "win32.h"
-#else
+#ifdef _WIN32
 
+#ifndef _MSC_VER
 #include <utime.h>
+#endif /* _MSC_VER */
 
-#endif // _WIN32
+/* Symbolic links aren't really a 'thing' on Windows, so just use plain-old
+ * stat() instead of lstat(). */
+#define lstat stat
+
+#endif /* _WIN32 */
 
 #define FILE_ERROR(type, message)                                              \
   file_close(file);                                                            \
@@ -568,7 +579,7 @@ DECLARE_FILE_METHOD(chmod) {
 #ifndef _WIN32
     RETURN_STATUS(chmod(file->path->chars, (mode_t) mode));
 #else
-    RETURN_STATUS(_chmod(file->path->chars, (mode_t)mode));
+    RETURN_STATUS(_chmod(file->path->chars, mode));
 #endif // !_WIN32
   } else {
     RETURN_ERROR("file not found");
@@ -580,6 +591,7 @@ DECLARE_FILE_METHOD(set_times) {
   ENFORCE_ARG_TYPE(set_times, 0, IS_NUMBER);
   ENFORCE_ARG_TYPE(set_times, 1, IS_NUMBER);
 
+#ifdef HAVE_UTIME
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
   DENY_STD();
 
@@ -625,6 +637,9 @@ DECLARE_FILE_METHOD(set_times) {
   } else {
     FILE_ERROR(Access, "file not found");
   }
+#else
+  RETURN_ERROR("not available: OS does not support utime");
+#endif /* ifdef HAVE_UTIME */
 }
 
 DECLARE_FILE_METHOD(seek) {

@@ -20,13 +20,6 @@
 #include <stdio.h>
 #include <string.h>
 
-// fix MSVC redefinition issue...
-#ifndef _WIN32
-
-#include "blade_sprintf.h"
-
-#endif
-
 // for debugging...
 #include "debug.h"
 

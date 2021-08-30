@@ -7,10 +7,6 @@
 #include "scanner.h"
 #include "util.h"
 
-#ifdef _WIN32
-#include "win32.h"
-#endif
-
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>

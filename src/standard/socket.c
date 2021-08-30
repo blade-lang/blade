@@ -3,10 +3,43 @@
 #endif
 
 #include "socket.h"
-#include "blade_unistd.h"
 #include "pathinfo.h"
 
-#ifndef _WIN32
+#ifdef HAVE_GETOPT_H
+#include <getopt.h>
+#else
+#include "blade_getopt.h"
+#endif /* HAVE_GETOPT_H */
+
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <fcntl.h>
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#else
+#include "blade_unistd.h"
+#endif /* HAVE_UNISTD_H */
+
+#ifdef _WIN32
+
+#define _WINSOCK_DEPRECATED_NO_WARNINGS 1
+#include <sdkddkver.h>
+#include <ws2tcpip.h>
+#include <winsock2.h>
+#include <blade_unistd.h>
+
+#define sleep			_sleep
+#ifndef strcasecmp
+#define strcasecmp		strcmpi
+#endif
+#define ioctl ioctlsocket
+#ifndef STDIN_FILENO
+#define STDIN_FILENO _fileno(stdin)
+#endif
+
+#else
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -17,25 +50,6 @@
 #include <netdb.h> //hostent
 #include <sys/ioctl.h>
 
-#endif
-
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <fcntl.h>
-
-#ifdef _WIN32
-
-#define _WINSOCK_DEPRECATED_NO_WARNINGS 1
-
-#include <ws2tcpip.h>
-#include "win32.h"
-#include <winsock2.h>
-#pragma comment (lib, "ws2_32") /* winsock support */
-#include "blade_getopt.h"
-#define sleep			_sleep
-#define strcasecmp		strcmpi
-#define ioctl ioctlsocket
 #endif
 
 #define BIGSIZ 8192    /* big buffers */

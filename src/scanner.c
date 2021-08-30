@@ -1,10 +1,13 @@
 #include "scanner.h"
 #include "common.h"
-#include "blade_sprintf.h"
 
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifndef HAVE_ASPRINTF
+#include <asprintf.h>
+#endif
 
 void init_scanner(b_scanner *s, const char *source) {
   s->current = source;

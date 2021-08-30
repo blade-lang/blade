@@ -5,12 +5,13 @@ project(blade C)
 # required modules for our task
 include(CheckIncludeFile)
 include(CheckIncludeFiles)
+include(CheckFunctionExists)
 include(ExternalProject)
+
+subdirs(thirdparty)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
-
-set(CMAKE_VERBOSE_MAKEFILE on)
 
 set(cfsp " ")
 set(SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/..)
@@ -28,7 +29,6 @@ set(BLADE_SOURCES
 		src/blade_list.c
 		src/blade_string.c
 		src/blade_range.c
-		src/blade_getopt.c
 		src/blob.c
 		src/bytes.c
 		src/compiler.c
@@ -42,8 +42,7 @@ set(BLADE_SOURCES
 		src/table.c
 		src/util.c
 		src/value.c
-        src/vm.c
-		src/win32.c
+		src/vm.c
 		# standard module
 		src/standard/base64.c
 		src/standard/date.c
@@ -98,15 +97,19 @@ set_target_properties(libpcre PROPERTIES
 		VERSION 10
 		SOVERSION 10)
 
-if(MSVC)
-	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-		set(CMAKE_DEBUG_POSTFIX "d")
+if(WIN32)
+	target_link_libraries(libblade PRIVATE wsock32 ws2_32)
+
+	if(MSVC)
+		if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+			set(CMAKE_DEBUG_POSTFIX "d")
+		else()
+			set(CMAKE_DEBUG_POSTFIX "")
+		endif()
 	else()
 		set(CMAKE_DEBUG_POSTFIX "")
-	endif()
-else()
-	set(CMAKE_DEBUG_POSTFIX "")
-endif(MSVC)
+	endif(MSVC)
+endif()
 
 set(LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_STATIC_LIBRARY_SUFFIX}")
 set(SHARED_LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX}")
@@ -137,7 +140,7 @@ set_target_properties(libblade
 #  set_target_properties(libblade PROPERTIES LINK_FLAGS "/LTCG")
 #endif(MSVC)
 
-target_link_libraries(libblade libpcre)
+target_link_libraries(libblade PRIVATE libpcre)
 
 if(UNIX)
 	target_link_libraries(libblade readline)
@@ -150,7 +153,6 @@ add_custom_command(TARGET blade_files POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/libs ${CMAKE_CURRENT_BINARY_DIR}/bin/libs
 		COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/tests ${CMAKE_CURRENT_BINARY_DIR}/bin/tests
 		COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/benchmarks ${CMAKE_CURRENT_BINARY_DIR}/bin/benchmarks
-
 )
 
 string(TOUPPER "${CMAKE_BUILD_TYPE}" buildtype)
@@ -171,6 +173,32 @@ if(supported)
 else()
 	message(STATUS "  IPO/LTO ......................... : not supported: <${error}>")
 endif()
+
+check_include_file("getopt.h" HAVE_GETOPT_H)
+if(NOT "${HAVE_GETOPT_H}")
+	target_sources(libblade PRIVATE src/blade_getopt.c)
+endif()
+check_include_file("termios.h" HAVE_TERMIOS_H)
+check_include_file("unistd.h" HAVE_UNISTD_H)
+check_include_file("sys/time.h" HAVE_SYS_TIME_H)
+check_include_file("sys/utsname.h" HAVE_SYS_UTSNAME_H)
+
+check_function_exists("asprintf" HAVE_ASPRINTF)
+if(NOT "${HAVE_ASPRINTF}")
+	target_link_libraries(libblade PRIVATE asprintf)
+endif()
+check_function_exists("strsep" HAVE_STRSEP)
+if(NOT "${HAVE_STRSEP}")
+	target_link_libraries(libblade PRIVATE openbsd-strsep)
+endif()
+check_function_exists("gettimeofday" HAVE_GETTIMEOFDAY)
+if(NOT "${HAVE_GETTIMEOFDAY}")
+	target_link_libraries(libblade PRIVATE gettimeofday)
+endif()
+check_function_exists("utime" HAVE_UTIME)
+
+# Create src/config.h
+configure_file(src/config.h.in "${CMAKE_CURRENT_SOURCE_DIR}/src/config.h")
 
 enable_testing()
 

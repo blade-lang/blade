@@ -1,13 +1,13 @@
 #include "os.h"
-#include "blade_unistd.h"
-
-#ifdef _WIN32
-#include "win32.h"
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
 #else
+#include "blade_unistd.h"
+#endif /* HAVE_UNISTD_H */
 
+#ifdef HAVE_SYS_UTSNAME_H
 #include <sys/utsname.h>
-
-#endif
+#endif /* HAVE_SYS_UTSNAME_H */
 
 #include <ctype.h>
 #include <stdio.h>
@@ -15,8 +15,16 @@
 #ifdef _WIN32
 #define popen _popen
 #define pclose _pclose
+
+#include <sdkddkver.h>
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
+#ifndef sleep
 #define sleep(s) Sleep((DWORD)s)
-#endif // _WIN32
+#endif /* ifndef sleep */
+
+#endif /* ifdef _WIN32 */
 
 DECLARE_MODULE_METHOD(os_exec) {
   ENFORCE_ARG_COUNT(exec, 1);
@@ -69,6 +77,8 @@ DECLARE_MODULE_METHOD(os_exec) {
 
 DECLARE_MODULE_METHOD(os_info) {
   ENFORCE_ARG_COUNT(info, 0);
+
+#ifdef HAVE_SYS_UTSNAME_H
   struct utsname os;
   if (uname(&os) != 0) {
     RETURN_ERROR("could not access os information");
@@ -90,6 +100,9 @@ DECLARE_MODULE_METHOD(os_info) {
 
   pop(vm);
   RETURN_OBJ(dict);
+#else
+  RETURN_ERROR("not available: OS does not have uname()")
+#endif /* HAVE_SYS_UTSNAME_H */
 }
 
 DECLARE_MODULE_METHOD(os_sleep) {

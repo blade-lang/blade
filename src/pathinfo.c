@@ -4,16 +4,23 @@
 
 #include "pathinfo.h"
 #include "common.h"
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#else
 #include "blade_unistd.h"
+#endif /* HAVE_UNISTD_H */
 #include "util.h"
 
 #include <stdlib.h>
 #include <string.h>
 
 #if defined(_WIN32)
-#include <io.h>
-#include <shlwapi.h>
-#include <windows.h>
+#include "io.h"
+#include <sdkddkver.h>
+
+#define WIN32_LEAN_AND_MEAN
+#include <Shlwapi.h>
+#include <Windows.h>
 
 // #define access _access_s
 #endif
@@ -40,8 +47,6 @@
 
 #if defined(_WIN32)
 
-#include "win32.h"
-
 char *get_exe_dir() {
   char *exe_path = (char *)malloc(sizeof(char) * MAX_PATH);
   if (exe_path != NULL) {
@@ -50,7 +55,6 @@ char *get_exe_dir() {
       char *path = dirname(exe_path);
       path[(int)strlen(path) - 1] = '\0';
       return path;
-
     } else {
       return NULL;
     }
@@ -139,9 +143,9 @@ char *get_filename(char *filepath) {
 char *get_calling_dir() { return _fullpath(NULL, "", 0); }
 
 char *get_filename(char *filepath) {
-  char *file = (char *)malloc(sizeof(char));
-  char *ext = (char *)malloc(sizeof(char));
-  _splitpath((const char *)filepath, NULL, NULL, file, ext);
+  char *file = (char *)calloc(MAX_PATH, sizeof(char));
+  char *ext = (char *)calloc(MAX_PATH, sizeof(char));
+  _splitpath_s((const char *)filepath, NULL, 0, NULL, 0, file, MAX_PATH, ext, MAX_PATH);
   return merge_paths(file, ext);
 }
 #endif // !_WIN32

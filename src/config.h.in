@@ -27,4 +27,14 @@
 #define PCRE2_STATIC
 #define PCRE2_CODE_UNIT_WIDTH 8
 
+#cmakedefine HAVE_GETOPT_H
+#cmakedefine HAVE_TERMIOS_H
+#cmakedefine HAVE_UNISTD_H
+#cmakedefine HAVE_SYS_TIME_H
+#cmakedefine HAVE_SYS_UTSNAME_H
+#cmakedefine HAVE_ASPRINTF
+#cmakedefine HAVE_STRSEP
+#cmakedefine HAVE_GETTIMEOFDAY
+#cmakedefine HAVE_UTIME
+
 #endif

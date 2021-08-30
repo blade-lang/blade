@@ -1,6 +1,11 @@
 #include "util.h"
 #include "vm.h"
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#else
 #include "blade_unistd.h"
+#endif /* ifdef HAVE_UNISTD_H */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,21 +13,17 @@
 #include <errno.h>
 
 #if !defined(_WIN32) && !defined(__CYGWIN__)
-
 #include <readline/history.h>
 #include <readline/readline.h>
-
 #endif
 
 #include <setjmp.h>
 #include <signal.h>
 #include <fcntl.h>
 
-#ifdef _WIN32
-#include "win32.h"
-#endif
-
 static bool continue_repl = true;
+
+#ifndef _WIN32
 sigjmp_buf ctrlc_buf;
 
 void handle_signals(int sig_no) {
@@ -32,11 +33,14 @@ void handle_signals(int sig_no) {
     siglongjmp(ctrlc_buf, 1);
   }
 }
+#endif /* ifndef _WIN32 */
 
 static void repl(b_vm *vm) {
+#ifndef _WIN32
   if (signal(SIGINT, handle_signals) == SIG_ERR) {
     printf("failed to register interrupts with kernel\n");
   }
+#endif /* ifndef _WIN32 */
 
   vm->is_repl = true;
 
@@ -59,7 +63,9 @@ static void repl(b_vm *vm) {
 #endif // !_WIN32
 
   for (;;) {
+#ifndef _WIN32
     while (sigsetjmp(ctrlc_buf, 1) != 0);
+#endif
 
     if (!continue_repl) {
       brace_count = 0;
