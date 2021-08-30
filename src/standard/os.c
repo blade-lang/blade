@@ -148,6 +148,17 @@ b_value get_os_platform(b_vm *vm) {
 #undef PLATFORM_NAME
 }
 
+b_value get_blade_os_args(b_vm *vm) {
+  b_obj_list *list = (b_obj_list*)GC(new_list(vm));
+  if(vm->std_args != NULL) {
+    for(int i = 0; i < vm->std_args_count; i++) {
+      write_list(vm, list, STRING_VAL(vm->std_args[i]));
+    }
+  }
+  CLEAR_GC();
+  return OBJ_VAL(list);
+}
+
 DECLARE_MODULE_METHOD(os_getenv) {
   ENFORCE_ARG_COUNT(getenv, 1);
   ENFORCE_ARG_TYPE(getenv, 0, IS_STRING);
@@ -193,6 +204,7 @@ CREATE_MODULE_LOADER(os) {
 
   static b_field_reg os_module_fields[] = {
       {"platform", true, get_os_platform},
+      {"args", true, get_blade_os_args},
       {NULL,       false, NULL},
   };
 
