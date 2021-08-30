@@ -191,6 +191,7 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_CALL:
     case OP_SUPER_INVOKE_SELF:
     case OP_GET_INDEX:
+    case OP_GET_RANGED_INDEX:
       return 1;
 
     case OP_DEFINE_GLOBAL:
@@ -814,7 +815,7 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg, boo
     emit_byte_and_short(p, set_op, (uint16_t) arg);
   } else {
     if (arg != -1) {
-      if (get_op == OP_GET_INDEX) {
+      if (get_op == OP_GET_INDEX || get_op == OP_GET_RANGED_INDEX) {
         emit_bytes(p, get_op, (uint8_t) 0);
       } else {
         emit_byte_and_short(p, get_op, (uint16_t) arg);
@@ -916,14 +917,17 @@ static void dictionary(b_parser *p, bool can_assign) {
 
 static void indexing(b_parser *p, b_token previous, bool can_assign) {
   bool assignable = true, comma_match = false;
+  uint8_t get_op = OP_GET_INDEX;
   if (match(p, COMMA_TOKEN)) {
     emit_byte(p, OP_NIL);
     comma_match = true;
+    get_op = OP_GET_RANGED_INDEX;
   } else {
     expression(p);
   }
 
   if (!match(p, RBRACKET_TOKEN)) {
+    get_op = OP_GET_RANGED_INDEX;
     if (!comma_match) {
       consume(p, COMMA_TOKEN, "expecting ',' or ']'");
     }
@@ -935,10 +939,12 @@ static void indexing(b_parser *p, b_token previous, bool can_assign) {
     }
     assignable = false;
   } else {
-    emit_byte(p, comma_match ? OP_NIL : OP_EMPTY);
+    if(comma_match) {
+      emit_byte(p, OP_NIL);
+    }
   }
 
-  assignment(p, OP_GET_INDEX, OP_SET_INDEX, -1, assignable);
+  assignment(p, get_op, OP_SET_INDEX, -1, assignable);
 }
 
 static void variable(b_parser *p, bool can_assign) {
