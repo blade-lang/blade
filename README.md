@@ -10,9 +10,10 @@
 <div>
 
 ![code analysis](https://github.com/blade-lang/blade/actions/workflows/codeql.yml/badge.svg)
-![linux build](https://github.com/blade-lang/blade/actions/workflows/linux-build.yml/badge.svg)
-![osx build](https://github.com/blade-lang/blade/actions/workflows/osx-build.yml/badge.svg)
-![windows build](https://github.com/blade-lang/blade/actions/workflows/windows-build.yml/badge.svg)
+![Linux build](https://github.com/blade-lang/blade/actions/workflows/linux-build.yml/badge.svg)
+![macOS build](https://github.com/blade-lang/blade/actions/workflows/osx-build.yml/badge.svg)
+![Windows (MSVC) build](https://github.com/blade-lang/blade/actions/workflows/windows-msvc-build.yml/badge.svg)
+![Windows (MinGW64) build](https://github.com/blade-lang/blade/actions/workflows/windows-mingw64-build.yml/badge.svg)
 
 [![Gitter](https://badges.gitter.im/blade-lang/community.svg)](https://gitter.im/blade-lang/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
