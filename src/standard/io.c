@@ -59,7 +59,7 @@ DECLARE_MODULE_METHOD(io_tty__tcgetattr) {
 
   RETURN_OBJ(dict);
 #else
-  RETURN_ERROR("not available: OS does not support termios");
+  RETURN_ERROR("tcgetattr() is not supported on this platform");
 #endif /* HAVE_TERMIOS_H */
 }
 
@@ -137,8 +137,23 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
   int result = tcsetattr(fileno(file->file), type, &raw);
   RETURN_BOOL(result != -1);
 #else
-  RETURN_ERROR("not available: OS does not support termios");
+  RETURN_ERROR("tcsetattr() is not supported on this platform");
 #endif /* HAVE_TERMIOS_H */
+}
+
+/**
+ * TTY.exit_raw()
+ * exits raw mode
+ * @return nil
+ */
+DECLARE_MODULE_METHOD(io_tty__exit_raw) {
+#if HAVE_TERMIOS
+  ENFORCE_ARG_COUNT(TTY.exit_raw, 0);
+  tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+  RETURN;
+#else
+  RETURN_ERROR("exit_raw() is not supported on this platform");
+#endif
 }
 
 /**
@@ -167,21 +182,6 @@ DECLARE_MODULE_METHOD(io_flush) {
     fflush(file->file);
   }
   RETURN;
-}
-
-/**
- * TTY.flush()
- * flushes the standard output and standard error interface
- * @return nil
- */
-DECLARE_MODULE_METHOD(io_tty__exit_raw) {
-  ENFORCE_ARG_COUNT(TTY.exit_raw, 0);
-#ifdef HAVE_TERMIOS_H
-  tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
-  RETURN;
-#else
-  RETURN_ERROR("not available: OS does not support termios");
-#endif /* HAVE_TERMIOS_H */
 }
 
 /**
@@ -282,7 +282,7 @@ void __io_module_unload(b_vm *vm) {
   if (set_attr_was_called) {
     disable_raw_mode();
   }
-#endif /* HAVE_TERMIOS_H */
+#endif /* ifdef HAVE_TERMIOS_H */
 }
 
 CREATE_MODULE_LOADER(io) {

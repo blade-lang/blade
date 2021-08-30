@@ -13,6 +13,11 @@ import _os
  */
 var platform = _os.platform
 
+/**
+ * stores the command line arguments passed to the startup script
+ */
+var args = _os.args
+
 
 /**
  * exec(cmd: string)

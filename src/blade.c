@@ -6,6 +6,7 @@
 #else
 #include "blade_unistd.h"
 #endif /* ifdef HAVE_UNISTD_H */
+#include "module.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -278,6 +279,18 @@ int main(int argc, char *argv[]) {
         setvbuf(stdout, buffer, _IOFBF, sizeof(buffer));
       }
     }
+
+    char **std_args = (char**)calloc(argc, sizeof(char *));
+    if(std_args != NULL) {
+      for(int i = 0; i < argc; i++) {
+        std_args[i] = strdup(argv[i]);
+      }
+      vm->std_args = std_args;
+      vm->std_args_count = argc;
+    }
+
+    // always do this last so that we can have access to everything else
+    bind_native_modules(vm);
 
     if (argc == 1 || argc <= optind) {
       repl(vm);

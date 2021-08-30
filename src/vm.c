@@ -477,6 +477,9 @@ void init_vm(b_vm *vm) {
   vm->gray_capacity = 0;
   vm->gray_stack = NULL;
 
+  vm->std_args = NULL;
+  vm->std_args_count = 0;
+
   init_table(&vm->modules);
   init_table(&vm->strings);
   init_table(&vm->globals);
@@ -491,9 +494,6 @@ void init_vm(b_vm *vm) {
 
   init_builtin_functions(vm);
   init_builtin_methods(vm);
-
-  // always do this last so that we can have access to everything else
-  bind_native_modules(vm);
 }
 
 void free_vm(b_vm *vm) {
@@ -1979,9 +1979,14 @@ b_ptr_result run(b_vm *vm) {
       }
 
       case OP_LIST: {
-        b_obj_list *list = AS_LIST(READ_CONSTANT());
-        write_list(vm, list, peek(vm, 0));
-        pop(vm);
+        int count = READ_SHORT();
+        b_obj_list *list = new_list(vm);
+        vm->stack_top[-count - 1] = OBJ_VAL(list);
+
+        for (int i = count - 1; i >= 0; i--) {
+          write_list(vm, list, peek(vm, i));
+        }
+        pop_n(vm, count);
         break;
       }
       case OP_RANGE: {
@@ -1998,14 +2003,19 @@ b_ptr_result run(b_vm *vm) {
         break;
       }
       case OP_DICT: {
-        b_obj_dict *dict = AS_DICT(READ_CONSTANT());
-        b_value name = peek(vm, 1);
-        if(!IS_STRING(name) && !IS_NUMBER(name) && !IS_BOOL(name)) {
-          runtime_error("dictionary key must be one of string, number or boolean");
+        int count = READ_SHORT() * 2; // 1 for key, 1 for value
+        b_obj_dict *dict = new_dict(vm);
+        vm->stack_top[-count - 1] = OBJ_VAL(dict);
+
+        for (int i = 0; i < count; i += 2) {
+          b_value name = vm->stack_top[-count + i];
+          if(!IS_STRING(name) && !IS_NUMBER(name) && !IS_BOOL(name)) {
+            runtime_error("dictionary key must be one of string, number or boolean");
+          }
+          b_value value = vm->stack_top[-count + i + 1];
+          dict_add_entry(vm, dict, name, value);
         }
-        b_value value = peek(vm, 0);
-        dict_add_entry(vm, dict, name, value);
-        pop_n(vm, 2);
+        pop_n(vm, count);
         break;
       }
 
