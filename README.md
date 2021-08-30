@@ -67,7 +67,6 @@ You can read the [Blade language documentation](https://bladelang.com) online at
 | Directory | Contents 
 |-----------|----------
 | `benchmarks` | Contains the sample benchmarks for Blade (some are based on the Benchmark games).
-| `deps` | Contains static libraries to be used for compiling when matching libraries are not found on the system.
 | `libs` | Contains the Blade standard library.
 | `src` | The source code of the Blade language including the native implementation of some Blade library classes and functions in the modules directory.
 | `tests` | A few test cases that Blade implementation must pass.

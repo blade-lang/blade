@@ -10,7 +10,7 @@ include(ExternalProject)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
-#set(CMAKE_VERBOSE_MAKEFILE on)
+set(CMAKE_VERBOSE_MAKEFILE on)
 
 set(cfsp " ")
 set(SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/..)
@@ -22,28 +22,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBU
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG})
 
-# set dependency directories
-set(PCRE2_DIR ${CMAKE_CURRENT_BINARY_DIR}/pcre2-build)
-set(ZLIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/zlib-build)
-
-message(STATUS "Adding external library: pcre2...")
-ExternalProject_Add(pcre
-		SOURCE_DIR ${SRC_DIR}/deps/pcre2-8
-		PREFIX ${PCRE2_DIR}
-		CMAKE_ARGS -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:PATH=${PCRE2_DIR}/build
-		)
-
-message(STATUS "Adding external library: zlib...")
-ExternalProject_Add(zlib
-		SOURCE_DIR ${SRC_DIR}/deps/zlib
-		PREFIX ${ZLIB_DIR}
-		CMAKE_ARGS -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:PATH=${ZLIB_DIR}/build -DCMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE:PATH=${ZLIB_DIR}
-		)
-
 set(BLADE_SOURCES
 		src/blade_dict.c
 		src/blade_file.c
-		src/blade_getopt.c
 		src/blade_list.c
 		src/blade_string.c
 		src/blade_range.c
@@ -60,8 +41,7 @@ set(BLADE_SOURCES
 		src/table.c
 		src/util.c
 		src/value.c
-		src/win32.c
-		src/vm.c
+        src/vm.c
 		# standard module
 		src/standard/base64.c
 		src/standard/date.c
@@ -69,11 +49,52 @@ set(BLADE_SOURCES
 		src/standard/math.c
 		src/standard/os.c
 		src/standard/socket.c
-		src/standard/hash.c
+		src/standard/hash.c)
+
+set(PCRE2_SOURCES
+		src/pcre/pcre2_auto_possess.c
+		src/pcre/pcre2_chartables.c
+		src/pcre/pcre2_compile.c
+		src/pcre/pcre2_config.c
+		src/pcre/pcre2_context.c
+		src/pcre/pcre2_convert.c
+		src/pcre/pcre2_dfa_match.c
+		src/pcre/pcre2_error.c
+		src/pcre/pcre2_extuni.c
+		src/pcre/pcre2_find_bracket.c
+		src/pcre/pcre2_jit_compile.c
+		src/pcre/pcre2_maketables.c
+		src/pcre/pcre2_match.c
+		src/pcre/pcre2_match_data.c
+		src/pcre/pcre2_newline.c
+		src/pcre/pcre2_ord2utf.c
+		src/pcre/pcre2_pattern_info.c
+		src/pcre/pcre2_script_run.c
+		src/pcre/pcre2_serialize.c
+		src/pcre/pcre2_string_utils.c
+		src/pcre/pcre2_study.c
+		src/pcre/pcre2_substitute.c
+		src/pcre/pcre2_substring.c
+		src/pcre/pcre2_tables.c
+		src/pcre/pcre2_ucd.c
+		src/pcre/pcre2_valid_utf.c
+		src/pcre/pcre2_xclass.c
 )
 
+add_definitions(-DHAVE_CONFIG_H)
+
+include_directories(src)
+
 add_library(libblade ${BLADE_SOURCES})
+add_library(libpcre src/pcre/pcre2.h ${PCRE2_SOURCES} src/pcre/config.h)
 add_executable(blade src/blade.c)
+
+set_target_properties(libpcre PROPERTIES
+		COMPILE_DEFINITIONS PCRE2_CODE_UNIT_WIDTH=8
+		MACHO_COMPATIBILITY_VERSION "10:0:10"
+		MACHO_CURRENT_VERSION "10:0:10"
+		VERSION 10
+		SOVERSION 10)
 
 if(MSVC)
 	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -88,24 +109,10 @@ endif(MSVC)
 set(LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_STATIC_LIBRARY_SUFFIX}")
 set(SHARED_LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
-# set dependency shared lib path
-set(PCRE2_LIB_FILE ${PCRE2_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}pcre2-8${LIBRARY_NAME_END})
-message(STATUS ${PCRE2_LIB_FILE})
-
-if(UNIX)
-	set(ZLIB_LIB_FILE ${ZLIB_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}z${LIBRARY_NAME_END})
-else()
-	set(ZLIB_LIB_FILE ${ZLIB_DIR}/build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}zlib${LIBRARY_NAME_END})
-endif(UNIX)
-message(STATUS ${ZLIB_LIB_FILE})
-
-# add dependency includes
-include_directories(src ${PCRE2_DIR}/build/include ${ZLIB_DIR}/build/include)
-
 add_custom_target(blade_files)
 
 # add dependencies
-add_dependencies(libblade pcre zlib blade_files)
+add_dependencies(libblade libpcre blade_files)
 
 set_target_properties(blade
 		PROPERTIES
@@ -128,8 +135,7 @@ set_target_properties(libblade
 #  set_target_properties(libblade PROPERTIES LINK_FLAGS "/LTCG")
 #endif(MSVC)
 
-target_link_libraries(libblade ${PCRE2_LIB_FILE})
-target_link_libraries(libblade ${ZLIB_LIB_FILE})
+target_link_libraries(libblade libpcre)
 
 if(UNIX)
 	target_link_libraries(libblade readline)
@@ -138,26 +144,12 @@ endif(UNIX)
 
 target_link_libraries(blade libblade)
 
-if(MSVC)
-	add_custom_command(TARGET blade_files POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/libs ${CMAKE_CURRENT_BINARY_DIR}/bin/libs
-			COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/tests ${CMAKE_CURRENT_BINARY_DIR}/bin/tests
-			COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/benchmarks ${CMAKE_CURRENT_BINARY_DIR}/bin/benchmarks
-			COMMAND ${CMAKE_COMMAND} -E copy ${ZLIB_DIR}/build/bin/zlib.dll ${CMAKE_CURRENT_BINARY_DIR}/bin/zlib.dll
-			)
-else()
-	add_custom_command(TARGET blade_files POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/libs ${CMAKE_CURRENT_BINARY_DIR}/bin/libs
-			COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/tests ${CMAKE_CURRENT_BINARY_DIR}/bin/tests
-			COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/benchmarks ${CMAKE_CURRENT_BINARY_DIR}/bin/benchmarks
-			)
-endif(MSVC)
+add_custom_command(TARGET blade_files POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/libs ${CMAKE_CURRENT_BINARY_DIR}/bin/libs
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/tests ${CMAKE_CURRENT_BINARY_DIR}/bin/tests
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/benchmarks ${CMAKE_CURRENT_BINARY_DIR}/bin/benchmarks
 
-# add_custom_command(TARGET blade_files POST_BUILD
-# COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/libs ${CMAKE_CURRENT_BINARY_DIR}/bin/libs
-# COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/tests ${CMAKE_CURRENT_BINARY_DIR}/bin/tests
-# COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_DIR}/benchmarks ${CMAKE_CURRENT_BINARY_DIR}/bin/benchmarks
-# )
+)
 
 string(TOUPPER "${CMAKE_BUILD_TYPE}" buildtype)
 
@@ -246,7 +238,7 @@ add_blade_test(blade native 6 "1548008755920\nTime taken")
 add_blade_test(blade pi 0 "3.141592653589734")
 add_blade_test(blade scope 1 "inner\nouter")
 add_blade_test(blade string 0 "25, This is john's LAST 20")
-add_blade_test(blade try 0 "string index 10 out of range")
+add_blade_test(blade try 0 "list index 10 out of range")
 add_blade_test(blade using 0 "ten\nafter")
 add_blade_test(blade var 0 "it works\n20\ntrue")
 add_blade_test(blade while 0 "x = 51")
