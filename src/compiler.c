@@ -871,24 +871,27 @@ static void named_variable(b_parser *p, b_token name, bool can_assign) {
 }
 
 static void list(b_parser *p, bool can_assign) {
-  int list = make_constant(p, OBJ_VAL(new_list(p->vm)));
+  emit_byte(p, OP_NIL); // placeholder for the list
 
+  int count = 0;
   if (!check(p, RBRACKET_TOKEN)) {
     do {
       ignore_whitespace(p);
       expression(p);
-      emit_byte_and_short(p, OP_LIST, list);
       ignore_whitespace(p);
+      count++;
     } while (match(p, COMMA_TOKEN));
   }
   ignore_whitespace(p);
   consume(p, RBRACKET_TOKEN, "expected ']' at end of list");
-  emit_byte_and_short(p, OP_CONSTANT, list);
+
+  emit_byte_and_short(p, OP_LIST, count);
 }
 
 static void dictionary(b_parser *p, bool can_assign) {
-  int dict = make_constant(p, OBJ_VAL(new_dict(p->vm)));
+  emit_byte(p, OP_NIL); // placeholder for the dictionary
 
+  int item_count = 0;
   if (!check(p, RBRACE_TOKEN)) {
     do {
       ignore_whitespace(p);
@@ -900,19 +903,19 @@ static void dictionary(b_parser *p, bool can_assign) {
         } else {
           expression(p);
         }
-
         ignore_whitespace(p);
         consume(p, COLON_TOKEN, "expected ':' after dictionary key");
         ignore_whitespace(p);
 
         expression(p);
-        emit_byte_and_short(p, OP_DICT, dict);
+        item_count++;
       }
     } while (match(p, COMMA_TOKEN));
   }
   ignore_whitespace(p);
   consume(p, RBRACE_TOKEN, "expected '}' after dictionary");
-  emit_byte_and_short(p, OP_CONSTANT, dict);
+
+  emit_byte_and_short(p, OP_DICT, item_count);
 }
 
 static void indexing(b_parser *p, b_token previous, bool can_assign) {
