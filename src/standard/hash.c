@@ -9,7 +9,8 @@
 #include "hash/fnv.h"
 #include "hash/siphash.h"
 #include "hash/gost.h"
-#include "zlib.h"
+#include "hash/crc32.h"
+#include "hash/adler32.h"
 #include "pathinfo.h"
 
 #ifdef _MSC_VER

@@ -8,7 +8,7 @@
 #include "util.h"
 #include "value.h"
 
-#include "pcre2.h"
+#include "pcre/pcre2.h"
 
 #define N__(x, y) 200##y
 #define N___(x, y) N__(x, y)
