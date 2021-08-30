@@ -14,6 +14,8 @@
 ![osx build](https://github.com/blade-lang/blade/actions/workflows/osx-build.yml/badge.svg)
 ![windows build](https://github.com/blade-lang/blade/actions/workflows/windows-build.yml/badge.svg)
 
+[![Gitter](https://badges.gitter.im/blade-lang/community.svg)](https://gitter.im/blade-lang/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
 </div>
 
 </div>
