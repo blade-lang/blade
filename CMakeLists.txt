@@ -177,7 +177,8 @@ set_target_properties(libblade
 target_link_libraries(libblade PRIVATE libpcre)
 
 if(UNIX)
-	target_link_libraries(libblade PRIVATE readline)
+	find_library(READLINE_LIBRARY readline REQUIRED)
+	target_link_libraries(libblade PRIVATE "${READLINE_LIBRARY}")
 	target_link_libraries(libblade PRIVATE m)
 endif(UNIX)
 
