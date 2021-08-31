@@ -7,10 +7,6 @@
 #include "scanner.h"
 #include "util.h"
 
-#ifdef _WIN32
-#include "win32.h"
-#endif
-
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -2027,8 +2023,8 @@ static void import_statement(b_parser *p) {
     if (module_file == NULL) {
       module_file = strdup(name);
     } else {
-      if (module_file[strlen(module_file) - 1] != '/') {
-        module_file = append_strings(module_file, "/");
+      if (module_file[strlen(module_file) - 1] != BLADE_PATH_SEPARATOR[0]) {
+        module_file = append_strings(module_file, BLADE_PATH_SEPARATOR);
       }
       module_file = append_strings(module_file, name);
     }
@@ -2042,6 +2038,10 @@ static void import_statement(b_parser *p) {
     consume(p, IDENTIFIER_TOKEN, "module name expected");
     free(module_name);
     module_name = (char *) calloc(p->previous.length + 1, sizeof(char));
+    if (module_name == NULL) {
+      error(p, "could not calloc memory for module_name");
+      return;
+    }
     memcpy(module_name, p->previous.start, p->previous.length);
     was_renamed = true;
   }

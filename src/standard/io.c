@@ -5,15 +5,19 @@
 #endif
 
 #include "io.h"
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#else
 #include "blade_unistd.h"
+#endif /* HAVE_UNISTD_H */
 #include "util.h"
 
 #include <errno.h>
 #include <stdio.h>
-#include <stdlib.h>
 
-#if HAVE_TERMIOS
+#ifdef HAVE_TERMIOS_H
 #include <termios.h>
+#include <stdlib.h>
 
 static struct termios orig_termios;
 static bool set_attr_was_called = false;
@@ -21,7 +25,7 @@ static bool set_attr_was_called = false;
 void disable_raw_mode(void) {
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
 }
-#endif
+#endif /* HAVE_TERMIOS_H */
 
 /**
  * tty._tcgetattr()
@@ -29,10 +33,10 @@ void disable_raw_mode(void) {
  * returns the configuration of the current tty input
  */
 DECLARE_MODULE_METHOD(io_tty__tcgetattr) {
-#if HAVE_TERMIOS
   ENFORCE_ARG_COUNT(_tcgetattr, 1);
   ENFORCE_ARG_TYPE(_tcsetattr, 0, IS_FILE);
 
+#ifdef HAVE_TERMIOS_H
   b_obj_file *file = AS_FILE(args[0]);
 
   if (!is_std_file(file)) {
@@ -56,7 +60,7 @@ DECLARE_MODULE_METHOD(io_tty__tcgetattr) {
   RETURN_OBJ(dict);
 #else
   RETURN_ERROR("tcgetattr() is not supported on this platform");
-#endif
+#endif /* HAVE_TERMIOS_H */
 }
 
 /**
@@ -67,12 +71,12 @@ DECLARE_MODULE_METHOD(io_tty__tcgetattr) {
  * TODO: support the c_cc flag
  */
 DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
-#if HAVE_TERMIOS
   ENFORCE_ARG_COUNT(_tcsetattr, 3);
   ENFORCE_ARG_TYPE(_tcsetattr, 0, IS_FILE);
   ENFORCE_ARG_TYPE(_tcsetattr, 1, IS_NUMBER);
   ENFORCE_ARG_TYPE(_tcsetattr, 2, IS_DICT);
 
+#ifdef HAVE_TERMIOS_H
   b_obj_file *file = AS_FILE(args[0]);
   int type = AS_NUMBER(args[1]);
   b_obj_dict *dict = AS_DICT(args[2]);
@@ -134,12 +138,12 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
   RETURN_BOOL(result != -1);
 #else
   RETURN_ERROR("tcsetattr() is not supported on this platform");
-#endif
+#endif /* HAVE_TERMIOS_H */
 }
 
 /**
- * TTY.flush()
- * flushes the standard output and standard error interface
+ * TTY.exit_raw()
+ * exits raw mode
  * @return nil
  */
 DECLARE_MODULE_METHOD(io_tty__exit_raw) {
@@ -274,11 +278,11 @@ b_value io_module_stderr(b_vm *vm) {
 }
 
 void __io_module_unload(b_vm *vm) {
-#if HAVE_TERMIOS
-  if(set_attr_was_called) {
+#ifdef HAVE_TERMIOS_H
+  if (set_attr_was_called) {
     disable_raw_mode();
   }
-#endif
+#endif /* ifdef HAVE_TERMIOS_H */
 }
 
 CREATE_MODULE_LOADER(io) {

@@ -1,24 +1,31 @@
-#ifdef _MSC_VER
-#pragma warning (disable : 5105)
+#if defined(_MSC_VER)
+#pragma warning(disable : 5105)
 #endif
 
 #include "pathinfo.h"
 #include "common.h"
+#if defined(HAVE_UNISTD_H)
+#include <unistd.h>
+#else
 #include "blade_unistd.h"
+#endif /* HAVE_UNISTD_H */
 #include "util.h"
 
 #include <stdlib.h>
 #include <string.h>
 
 #if defined(_WIN32)
-#include <io.h>
-#include <shlwapi.h>
-#include <windows.h>
+#include "io.h"
+#include <sdkddkver.h>
+
+#define WIN32_LEAN_AND_MEAN
+#include <Shlwapi.h>
+#include <Windows.h>
 
 // #define access _access_s
 #endif
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
 
 #include <libgen.h>
 #include <limits.h>
@@ -26,7 +33,8 @@
 
 #endif
 
-#if defined(__linux__) || defined(__CYGWIN__) || defined(__MINGW32_MAJOR_VERSION)
+#if defined(__linux__) || defined(__CYGWIN__) ||                               \
+    defined(__MINGW32_MAJOR_VERSION)
 #include <libgen.h>
 #include <limits.h>
 
@@ -38,19 +46,72 @@
 
 #endif
 
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(HAVE_DIRNAME)
 
-#include "win32.h"
+char *dirname(const char *path) {
+  char drive[_MAX_DRIVE];
+  char dir[_MAX_DIR];
+
+  errno_t err =
+      _splitpath_s(path, drive, _MAX_DRIVE, dir, _MAX_DIR, NULL, 0, NULL, 0);
+  if (err != 0)
+    return NULL;
+
+  char *buf = NULL;
+  size_t sz = (strlen(drive) + strlen(dir) + 2) * sizeof(*buf);
+  buf = malloc(sz);
+  if (buf == NULL)
+    return NULL;
+
+  if (strlen(drive) == 0) {
+    strcpy_s(buf, sz, dir);
+  } else {
+    strcpy_s(buf, sz, drive);
+    strcat_s(buf, sz, "\\");
+    strcat_s(buf, sz, dir);
+  }
+
+  return buf;
+}
+
+#endif /* defined(_WIN32) && !defined(HAVE_DIRNAME) */
+#if defined(_WIN32) && !defined(HAVE_BASENAME)
+
+char *basename(const char *path) {
+  char fname[_MAX_FNAME];
+  char ext[_MAX_EXT];
+
+  errno_t err =
+      _splitpath_s(path, NULL, 0, NULL, 0, fname, _MAX_FNAME, ext, _MAX_EXT);
+  if (err != 0)
+    return NULL;
+
+  char *buf = NULL;
+  size_t sz = (strlen(fname) + strlen(ext) + 2) * sizeof(*buf);
+  buf = malloc(sz);
+  if (buf == NULL)
+    return NULL;
+
+  strcpy_s(buf, sz, fname);
+  if (strlen(ext) != 0) {
+    strcat_s(buf, sz, ".");
+    strcat_s(buf, sz, ext);
+  }
+
+  return buf;
+}
+
+#endif
+
+#ifdef _WIN32
 
 char *get_exe_dir() {
-  char *exe_path = (char *)malloc(sizeof(char) * MAX_PATH);
+  char *exe_path = (char *) malloc(sizeof(char) * MAX_PATH);
   if (exe_path != NULL) {
-    int length = (int)GetModuleFileNameA(NULL, exe_path, MAX_PATH);
+    int length = (int) GetModuleFileNameA(NULL, exe_path, MAX_PATH);
     if (length > 0) {
       char *path = dirname(exe_path);
-      path[(int)strlen(path) - 1] = '\0';
       return path;
-
     } else {
       return NULL;
     }
@@ -58,22 +119,20 @@ char *get_exe_dir() {
   return NULL;
 }
 
-#endif
-
-#if defined(__linux__) || defined(__CYGWIN__)
+#elif defined(__linux__) || defined(__CYGWIN__)
 
 char *get_exe_path() {
   char raw_path[PATH_MAX];
   ssize_t read_length;
-  if((read_length = readlink(PROC_SELF_EXE, raw_path, sizeof(raw_path))) > -1 && read_length < PATH_MAX){
+  if ((read_length = readlink(PROC_SELF_EXE, raw_path, sizeof(raw_path))) >
+          -1 &&
+      read_length < PATH_MAX) {
     return strdup(raw_path);
   }
   return "";
 }
 
-#endif
-
-#ifdef __APPLE__
+#elif defined(__APPLE__)
 
 char *get_exe_path() {
   char raw_path[PATH_MAX];
@@ -90,9 +149,7 @@ char *get_exe_path() {
 
 #if defined(__CYGWIN__) || defined(__linux__) || defined(__APPLE__)
 
-char *get_exe_dir() {
-  return dirname(get_exe_path());
-}
+char *get_exe_dir() { return dirname(get_exe_path()); }
 
 #endif
 
@@ -118,39 +175,12 @@ char *merge_paths(char *a, char *b) {
 
 bool file_exists(char *filepath) { return access(filepath, F_OK) == 0; }
 
-#ifndef _WIN32
-
-char *get_calling_dir() { return getenv("PWD"); }
-
-char *get_filename(char *filepath) {
-  int start = 0, length = (int) strlen(filepath);
-  for (int i = 0; i < length; i++) {
-    if (filepath[i] == BLADE_PATH_SEPARATOR[0])
-      start = i;
-  }
-  length = length - start;
-  char *string = (char *) calloc(1, sizeof(char));
-
-  strncat(string, filepath + start, length);
-  return string;
-}
-
-#else
-char *get_calling_dir() { return _fullpath(NULL, "", 0); }
-
-char *get_filename(char *filepath) {
-  char *file = (char *)malloc(sizeof(char));
-  char *ext = (char *)malloc(sizeof(char));
-  _splitpath((const char *)filepath, NULL, NULL, file, ext);
-  return merge_paths(file, ext);
-}
-#endif // !_WIN32
-
 char *get_blade_filename(char *filename) {
   return merge_paths(filename, BLADE_EXTENSION);
 }
 
-char *resolve_import_path(char *module_name, const char *current_file, bool is_relative) {
+char *resolve_import_path(char *module_name, const char *current_file,
+                          bool is_relative) {
   char *blade_file_name = get_blade_filename(module_name);
 
   // check relative to the current file...
@@ -179,8 +209,9 @@ char *resolve_import_path(char *module_name, const char *current_file, bool is_r
       }
     }
 
-    char *library_index_file = merge_paths(merge_paths(blade_directory, module_name),
-                                           get_blade_filename(LIBRARY_DIRECTORY_INDEX));
+    char *library_index_file =
+        merge_paths(merge_paths(blade_directory, module_name),
+                    get_blade_filename(LIBRARY_DIRECTORY_INDEX));
 
     if (file_exists(library_index_file)) {
       // stop a core library from importing itself
@@ -207,8 +238,9 @@ char *resolve_import_path(char *module_name, const char *current_file, bool is_r
       }
     }
 
-    char *relative_index_file = merge_paths(merge_paths(file_directory, module_name),
-                                            get_blade_filename(LIBRARY_DIRECTORY_INDEX));
+    char *relative_index_file =
+        merge_paths(merge_paths(file_directory, module_name),
+                    get_blade_filename(LIBRARY_DIRECTORY_INDEX));
 
     if (file_exists(relative_index_file)) {
       // stop a user module from importing itself

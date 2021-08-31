@@ -1,26 +1,18 @@
 #include "date.h"
-#include "blade_time.h"
 
 #ifdef _WIN32
-#include "win32.h"
-//struct tm* gmtime_r(const time_t* _clock, struct tm* _result) {
-//  struct tm* p = gmtime(_clock);
-//  if (p)
-//    *(_result) = *p;
-//  return p;
-//}
-//
-//struct tm* localtime_r(const time_t* _clock, struct tm* _result) {
-//  struct tm* p = _localtime32(_clock);
-//  if (p)
-//    *(_result) = *p;
-//  return p;
-//}
 #define localtime_r(o, e) _localtime32_s(e, o)
 #define gmtime_r(o, e) _gmtime32_s(e, o)
 #endif
 
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif /* ifdef HAVE_SYS_TIME_H */
 #include <time.h>
+
+#ifndef HAVE_GETTIMEOFDAY
+#include <gettimeofday.h>
+#endif /* ifndef HAVE_GETTIMEOFDAY */
 
 #define ADD_TIME(n, l, v)                                                      \
   dict_add_entry(vm, dict, STRING_L_VAL(n, l), NUMBER_VAL(v))

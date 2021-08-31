@@ -1,11 +1,21 @@
-.vscode
-.vs
-.idea
-build
 .DS_Store
+
+# CLion
+/.idea/
+/cmake-build-*/
+
+# Visual Studio
+/.vs/
+/out/
+
+# Visual Studio Code
+/.vscode/
+
+# NetBeans
+/nbproject/
+
+# General
 *.stackdump
-tmp
-nbproject
-cmake-build-debug
-cmake-build-release
-venv
+/build/
+/tmp/
+/venv/

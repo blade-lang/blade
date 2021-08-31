@@ -1,15 +1,24 @@
 #include "native.h"
-#include "blade_time.h"
 #include "vm.h"
-
-#ifdef _WIN32
-#include "win32.h"
-#endif
 
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif /* HAVE_SYS_TIME_H */
+#include <time.h>
+
+#ifndef HAVE_GETTIMEOFDAY
+#include <gettimeofday.h>
+#endif
+
+#ifdef _WIN32
+#include <sdkddkver.h>
+#include <basetsd.h>
+#endif
 
 static b_obj_string *bin_to_string(b_vm *vm, int n) {
   // To store the binary number

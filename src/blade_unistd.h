@@ -3,18 +3,8 @@
 
 #include "common.h"
 
-#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__MINGW32_MAJOR_VERSION) || defined(__CYGWIN__)
-
-#include <unistd.h>
-
-#define closesocket close
-
-#else
-
 #ifndef _UNISTD_H
 #define _UNISTD_H 1
-
-#include "blade_getopt.h"
 
 /* This is intended as a drop-in replacement for unistd.h on Windows.
  * Please add functionality as neeeded.
@@ -22,7 +12,13 @@
  */
 
 #include <direct.h> /* for _getcwd() and _chdir() */
-#include "blade_getopt.h" /* getopt at: https://gist.github.com/ashelly/7776712 */
+
+#ifdef HAVE_GETOPT_H
+#include <getopt.h>
+#else
+#include "blade_getopt.h"
+#endif /* HAVE_GETOPT_H */
+
 #include <io.h>
 #include <process.h> /* for getpid() and the exec..() family */
 #include <stdlib.h>
@@ -79,9 +75,5 @@ typedef unsigned __int64 uint64_t;
 #define ftruncate _chsize
 #define fileno _fileno
 #endif
-
-#endif
-
-#include "blade_getopt.h"
 
 #endif

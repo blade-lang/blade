@@ -4,17 +4,17 @@
 </p>
 <h1>The Blade Programming Language</h1>
 
-[Blade Language Website](https://bladelang.com) |
-[Documentation](https://bladelang.com)
+**Quick links**: [BUILDING](./BUILDING.md) | [CONTRIBUTING](./CONTRIBUTING.md) | [DOCS](https://bladelang.com) | 
+[LICENSE](./LICENSE) | 
+[![Chat on Gitter](https://badges.gitter.im/blade-lang/community.svg)](https://gitter.im/blade-lang/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 <div>
 
 ![code analysis](https://github.com/blade-lang/blade/actions/workflows/codeql.yml/badge.svg)
-![linux build](https://github.com/blade-lang/blade/actions/workflows/linux-build.yml/badge.svg)
-![osx build](https://github.com/blade-lang/blade/actions/workflows/osx-build.yml/badge.svg)
-![windows build](https://github.com/blade-lang/blade/actions/workflows/windows-build.yml/badge.svg)
-
-[![Gitter](https://badges.gitter.im/blade-lang/community.svg)](https://gitter.im/blade-lang/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+![Linux build](https://github.com/blade-lang/blade/actions/workflows/linux-build.yml/badge.svg)
+![macOS build](https://github.com/blade-lang/blade/actions/workflows/osx-build.yml/badge.svg)
+![Windows (MSVC) build](https://github.com/blade-lang/blade/actions/workflows/windows-msvc-build.yml/badge.svg)
+![Windows (MinGW64) build](https://github.com/blade-lang/blade/actions/workflows/windows-mingw64-build.yml/badge.svg)
 
 </div>
 
@@ -22,7 +22,7 @@
 
 <br>
 
-## What's Blade
+## tl;dr
 
 Blade is a simple, fast, clean and dynamic language that allows you to develop complex applications 
 quickly. Blade emphasises algorithm over syntax and for this reason, it has a very small but powerful 
@@ -30,8 +30,8 @@ syntax set with a very natural feel.
 
 <br>
 
-> ### HELP IS URGENTLY NEEDED TO TEST BLADE WELL ON WINDOWS OS.
-> I currently lack a Windows device to test Blade on Windows OS.
+> ### HELP IS URGENTLY NEEDED TO TEST BLADE WELL ON WINDOWS.
+> I currently lack a Windows device to test Blade on Windows.
 > While I expect most features to work, I cannot guarantee that they do
 > and therefore solicit the help of fellow and willing contributors who
 > can actively test Blade on Windows devices.
@@ -72,33 +72,6 @@ You can read the [Blade language documentation](https://bladelang.com) online at
 | `libs` | Contains the Blade standard library.
 | `src` | The source code of the Blade language including the native implementation of some Blade library classes and functions in the modules directory.
 | `tests` | A few test cases that Blade implementation must pass.
-
-
-
-## How to build
-
-For now, Blade can only build on one of Windows, Linux and Macosx devices.
-
-You'll need `cmake` installed to build Blade. Both `Debug` and `Release` 
-build types are supported.
-For example, to build into the directory `build`, you can run the following 
-commands on all three platforms to create a `Release` build:
-
-```bash
-cmake -B ./build -DCMAKE_BUILD_TYPE=Release
-cmake --build ./build --config Release
-```
-
-For debug builds, 
-
-```bash
-cmake -B ./build -DCMAKE_BUILD_TYPE=Debug
-cmake --build ./build --config Debug
-```
-
-> NOTE: For Windows, MSVC (Visual Studio) is the supported compiler.
-> Other compilers such as MingW or Cygwin may work, but are not
-> guaranteed to work.
 
 
 ## How to contribute

@@ -1,6 +1,9 @@
 #include "blade_file.h"
-#include "blade_time.h"
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#else
 #include "blade_unistd.h"
+#endif /* ifdef HAVE_UNISTD_H */
 #include "pathinfo.h"
 
 #include <errno.h>
@@ -8,33 +11,42 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+
+#ifdef _MSC_VER
+#include <sys/utime.h>
+#else
+#include <utime.h>
+#endif /* ifdef _MSC_VER */
+
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif /* ifdef HAVE_SYS_TIME_H */
 #include <time.h>
 
-#if defined(_MSC_VER) || defined(_WIN32)
-#include "win32.h"
-#else
+#ifdef _WIN32
 
-#include <utime.h>
+/* Symbolic links aren't really a 'thing' on Windows, so just use plain-old
+ * stat() instead of lstat(). */
+#define lstat stat
 
-#endif // _WIN32
+#endif /* ifdef _WIN32 */
 
 #define FILE_ERROR(type, message)                                              \
   file_close(file);                                                            \
   RETURN_ERROR(#type " -> %s", message, file->path->chars);
 
-#define RETURN_STATUS(status) \
-  if((status) == 0) { \
-    RETURN_TRUE;                                            \
-  } else {                                      \
-   FILE_ERROR(, strerror(errno));  \
+#define RETURN_STATUS(status)                                                  \
+  if ((status) == 0) {                                                         \
+    RETURN_TRUE;                                                               \
+  } else {                                                                     \
+    FILE_ERROR(, strerror(errno));                                             \
   }
 
 #define DENY_STD()                                                             \
   if (file->mode->length == 0)                                                 \
     RETURN_ERROR("method not supported for std files");
 
-#define SET_DICT_STRING(d, n, l, v)                                            \
-  dict_add_entry(vm, d, GC_L_STRING(n, l), v)
+#define SET_DICT_STRING(d, n, l, v) dict_add_entry(vm, d, GC_L_STRING(n, l), v)
 
 bool is_std_file(b_obj_file *file) { return file->mode->length == 0; }
 
@@ -131,7 +143,7 @@ DECLARE_FILE_METHOD(read) {
         !file_exists(file->path->chars)) {
       FILE_ERROR(NotFound, "no such file or directory");
     }
-      // file is in write only mode
+    // file is in write only mode
     else if (strstr(file->mode->chars, "w") != NULL &&
              strstr(file->mode->chars, "+") == NULL) {
       FILE_ERROR(Unsupported, "cannot read file in write mode");
@@ -173,7 +185,8 @@ DECLARE_FILE_METHOD(read) {
     }
   }
 
-  char *buffer = (char *) ALLOCATE(char, file_size + 1); // +1 for terminator '\0'
+  char *buffer =
+      (char *) ALLOCATE(char, file_size + 1); // +1 for terminator '\0'
 
   if (buffer == NULL && file_size != 0) {
     FILE_ERROR(Buffer, "not enough memory to read file");
@@ -253,7 +266,8 @@ DECLARE_FILE_METHOD(write) {
   }
 
   // close file
-  if (count == (size_t) (in_binary_mode ? bytes->bytes.count : string->length)) {
+  if (count ==
+      (size_t) (in_binary_mode ? bytes->bytes.count : string->length)) {
     file_close(file);
   }
 
@@ -277,7 +291,8 @@ DECLARE_FILE_METHOD(is_tty) {
   ENFORCE_ARG_COUNT(is_tty, 0);
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
   if (is_std_file(file)) {
-    RETURN_BOOL(isatty(fileno(file->file)) && fileno(file->file) == fileno(stdout));
+    RETURN_BOOL(isatty(fileno(file->file)) &&
+                fileno(file->file) == fileno(stdout));
   }
   RETURN_FALSE;
 }
@@ -290,10 +305,11 @@ DECLARE_FILE_METHOD(flush) {
     FILE_ERROR(Unsupported, "i/o operation on closed file");
   }
 
-#ifdef IS_UNIX
+#if defined(IS_UNIX)
   // using fflush on stdin have undesired effect on unix environments
   if (fileno(stdin) == fileno(file->file)) {
-    while ((getchar()) != '\n');
+    while ((getchar()) != '\n')
+      ;
   } else {
     fflush(file->file);
   }
@@ -345,7 +361,7 @@ DECLARE_FILE_METHOD(stats) {
 
         // is symbolic link
         SET_DICT_STRING(dict, "is_symbolic", 11, BOOL_VAL(false));
-#endif
+#endif /* ifndef _WIN32 */
 
         // file details
         SET_DICT_STRING(dict, "size", 4, NUMBER_VAL(stats.st_size));
@@ -421,7 +437,7 @@ DECLARE_FILE_METHOD(symlink) {
   } else {
     RETURN_ERROR("symlink to file not found");
   }
-#endif
+#endif /* ifdef _WIN32 */
 }
 
 DECLARE_FILE_METHOD(delete) {
@@ -480,7 +496,8 @@ DECLARE_FILE_METHOD(abs_path) {
   DENY_STD();
 
   char *abs_path = realpath(file->path->chars, NULL);
-  if (abs_path != NULL) RETURN_STRING(abs_path);
+  if (abs_path != NULL)
+    RETURN_STRING(abs_path);
   RETURN_STRING("");
 }
 
@@ -535,7 +552,7 @@ DECLARE_FILE_METHOD(copy) {
 
 #ifdef _WIN32
 #define truncate Truncate
-#endif // _WIN32
+#endif /* ifdef _WIN32 */
 
 DECLARE_FILE_METHOD(truncate) {
   ENFORCE_ARG_RANGE(truncate, 0, 1);
@@ -552,7 +569,7 @@ DECLARE_FILE_METHOD(truncate) {
   RETURN_STATUS(truncate(file->path->chars, final_size));
 #else
   RETURN_STATUS(_chsize_s(fileno(file->file), final_size));
-#endif // !_WIN32
+#endif /* ifndef _WIN32 */
 }
 
 DECLARE_FILE_METHOD(chmod) {
@@ -568,7 +585,7 @@ DECLARE_FILE_METHOD(chmod) {
 #ifndef _WIN32
     RETURN_STATUS(chmod(file->path->chars, (mode_t) mode));
 #else
-    RETURN_STATUS(_chmod(file->path->chars, (mode_t)mode));
+    RETURN_STATUS(_chmod(file->path->chars, mode));
 #endif // !_WIN32
   } else {
     RETURN_ERROR("file not found");
@@ -580,6 +597,7 @@ DECLARE_FILE_METHOD(set_times) {
   ENFORCE_ARG_TYPE(set_times, 0, IS_NUMBER);
   ENFORCE_ARG_TYPE(set_times, 1, IS_NUMBER);
 
+#ifdef HAVE_UTIME
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
   DENY_STD();
 
@@ -594,7 +612,6 @@ DECLARE_FILE_METHOD(set_times) {
       struct utimbuf new_times;
 
 #if !defined(_WIN32) && (!defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE))
-
       if (atime == (time_t) -1)
         new_times.actime = stats.st_atimespec.tv_sec;
       else
@@ -605,17 +622,15 @@ DECLARE_FILE_METHOD(set_times) {
       else
         new_times.modtime = mtime;
 #else
-
-      if (atime == (time_t)-1)
+      if (atime == (time_t) -1)
         new_times.actime = stats.st_atime;
       else
         new_times.actime = atime;
 
-      if (mtime == (time_t)-1)
+      if (mtime == (time_t) -1)
         new_times.modtime = stats.st_mtime;
       else
         new_times.modtime = mtime;
-
 #endif
 
       RETURN_STATUS(utime(file->path->chars, &new_times));
@@ -625,6 +640,9 @@ DECLARE_FILE_METHOD(set_times) {
   } else {
     FILE_ERROR(Access, "file not found");
   }
+#else
+  RETURN_ERROR("not available: OS does not support utime");
+#endif /* ifdef HAVE_UTIME */
 }
 
 DECLARE_FILE_METHOD(seek) {
