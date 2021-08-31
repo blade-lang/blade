@@ -10,7 +10,7 @@ any other application built using the same tools.
 Make sure you have the Xcode CLT installed. The [Homebrew package manager](https://brew.sh) is the preferred way to
 install dependencies on macOS.
 
-```asm
+```sh
 sudo xcode-select    # prompt the user to install Xcode CLT if it is not already installed
 sudo brew update
 sudo brew install readline cmake
@@ -24,7 +24,7 @@ Proceed to the [Configure](#configure) section to configure your CMake build.
 
 Install the required dependencies using the `apt` package manager.
 
-```bash
+```sh
 sudo apt update
 sudo apt install build-essential libreadline-dev cmake
 ```
@@ -35,7 +35,7 @@ Proceed to the [Configure](#configure) section to configure your CMake build.
 
 Install the required dependencies using the `pacman` package manager.
 
-```bash
+```sh
 sudo pacman -Sy
 sudo pacman -S --needed --noconfirm base-devel readline cmake
 ```
@@ -64,7 +64,7 @@ You may opt to use ported GCC or Clang compilers provided through the MSYS2 proj
 This has only been tested using the `mingw64` toolchain. Open up a new `mingw64` terminal, and ensure you have the
 required dependencies:
 
-```bash
+```sh
 sudo pacman -Sy
 sudo pacman -S --needed --noconfirm mingw-w64-x86_64-{cmake,ninja,toolchain}
 ```
@@ -76,7 +76,7 @@ using these tools on a UNIX-like system.
 
 Configure CMake by creating an empty `build` directory in the source root directory, and running:
 
-```bash
+```sh
 cmake -B build      # optionally, if you have `ninja-build` installed, you may use '-G Ninja' to speed up compile times.
 ```
 
@@ -88,7 +88,7 @@ Once the build files have been generated, either change to the `build` directory
 or `msbuild` tool (the latter using the 'Developer Tools Command Prompt' on Windows), or ask CMake to call the correct
 tool for you:
 
-```bash
+```sh
 cmake --build build
 ```
 
