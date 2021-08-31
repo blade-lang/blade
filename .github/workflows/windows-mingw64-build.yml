@@ -23,9 +23,11 @@ jobs:
     - uses: msys2/setup-msys2@v2
       with:
         update: true
+        msystem: MINGW64
         install: >-
           base-devel
           mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-ninja
           mingw-w64-x86_64-toolchain
 
     - uses: actions/checkout@v2
