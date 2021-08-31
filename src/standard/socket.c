@@ -50,6 +50,8 @@
 #include <netdb.h> //hostent
 #include <sys/ioctl.h>
 
+#define closesocket close
+
 #endif
 
 #define BIGSIZ 8192    /* big buffers */

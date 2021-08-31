@@ -11,7 +11,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+
+#ifdef _MSC_VER
 #include <sys/utime.h>
+#else
+#include <utime.h>
+#endif /* ifdef _MSC_VER */
 
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
