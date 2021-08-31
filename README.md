@@ -22,9 +22,7 @@
 
 <br>
 
-**Quick links**: 
-
-## What's Blade
+## tl;dr
 
 Blade is a simple, fast, clean and dynamic language that allows you to develop complex applications 
 quickly. Blade emphasises algorithm over syntax and for this reason, it has a very small but powerful 
