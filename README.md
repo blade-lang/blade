@@ -4,8 +4,9 @@
 </p>
 <h1>The Blade Programming Language</h1>
 
-[Blade Language Website](https://bladelang.com) |
-[Documentation](https://bladelang.com)
+**Quick links**: [BUILDING](./BUILDING.md) | [CONTRIBUTING](./CONTRIBUTING.md) | [DOCS](https://bladelang.com) | 
+[LICENSE](./LICENSE) | 
+[![Chat on Gitter](https://badges.gitter.im/blade-lang/community.svg)](https://gitter.im/blade-lang/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 <div>
 
@@ -15,13 +16,13 @@
 ![Windows (MSVC) build](https://github.com/blade-lang/blade/actions/workflows/windows-msvc-build.yml/badge.svg)
 ![Windows (MinGW64) build](https://github.com/blade-lang/blade/actions/workflows/windows-mingw64-build.yml/badge.svg)
 
-[![Gitter](https://badges.gitter.im/blade-lang/community.svg)](https://gitter.im/blade-lang/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-
 </div>
 
 </div>
 
 <br>
+
+**Quick links**: 
 
 ## What's Blade
 
@@ -74,28 +75,6 @@ You can read the [Blade language documentation](https://bladelang.com) online at
 | `src` | The source code of the Blade language including the native implementation of some Blade library classes and functions in the modules directory.
 | `tests` | A few test cases that Blade implementation must pass.
 
-
-
-## How to build
-
-For now, Blade can only build on one of Windows, Linux and Macosx devices.
-
-You'll need `cmake` installed to build Blade. Both `Debug` and `Release` 
-build types are supported.
-For example, to build into the directory `build`, you can run the following 
-commands on all three platforms to create a `Release` build:
-
-```bash
-cmake -B ./build -DCMAKE_BUILD_TYPE=Release
-cmake --build ./build --config Release
-```
-
-For debug builds, 
-
-```bash
-cmake -B ./build -DCMAKE_BUILD_TYPE=Debug
-cmake --build ./build --config Debug
-```
 
 ## How to contribute
 
