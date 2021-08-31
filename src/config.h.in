@@ -36,5 +36,7 @@
 #cmakedefine HAVE_STRSEP
 #cmakedefine HAVE_GETTIMEOFDAY
 #cmakedefine HAVE_UTIME
+#cmakedefine HAVE_BASENAME
+#cmakedefine HAVE_DIRNAME
 
 #endif
