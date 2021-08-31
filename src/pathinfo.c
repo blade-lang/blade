@@ -63,11 +63,13 @@ char *dirname(const char *path) {
   if (buf == NULL)
     return NULL;
 
-  buf[0] = '\0';
-
-  strcat_s(buf, sz, drive);
-  strcat_s(buf, sz, "\\");
-  strcat_s(buf, sz, dir);
+  if (strlen(drive) == 0) {
+    strcpy_s(buf, sz, dir);
+  } else {
+    strcpy_s(buf, sz, drive);
+    strcat_s(buf, sz, "\\");
+    strcat_s(buf, sz, dir);
+  }
 
   return buf;
 }
@@ -90,11 +92,11 @@ char *basename(const char *path) {
   if (buf == NULL)
     return NULL;
 
-  buf[0] = '\0';
-
-  strcat_s(buf, sz, fname);
-  strcat_s(buf, sz, ".");
-  strcat_s(buf, sz, ext);
+  strcpy_s(buf, sz, fname);
+  if (strlen(ext) != 0) {
+    strcat_s(buf, sz, ".");
+    strcat_s(buf, sz, ext);
+  }
 
   return buf;
 }

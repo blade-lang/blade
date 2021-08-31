@@ -139,8 +139,11 @@ check_function_exists("utime" HAVE_UTIME)
 check_function_exists("basename" HAVE_BASENAME)
 check_function_exists("dirname" HAVE_DIRNAME)
 
-# Create src/config.h
-configure_file(src/config.h.in "${CMAKE_CURRENT_SOURCE_DIR}/src/config.h")
+# Generate config.h
+set(INCLUDE_GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/include-gen")
+file(MAKE_DIRECTORY "${INCLUDE_GEN_DIR}")
+configure_file(src/config.h.in "${INCLUDE_GEN_DIR}/config.h")
+target_include_directories(libblade PUBLIC "${INCLUDE_GEN_DIR}")
 
 set(LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_STATIC_LIBRARY_SUFFIX}")
 set(SHARED_LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX}")
