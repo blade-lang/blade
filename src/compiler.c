@@ -182,6 +182,7 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_STRINGIFY:
     case OP_CHOICE:
     case OP_EMPTY:
+    case OP_IMPORT_ALL_NATIVE:
       return 0;
 
     case OP_CALL:
@@ -211,8 +212,11 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_DICT:
     case OP_CALL_IMPORT:
     case OP_NATIVE_MODULE:
+    case OP_SELECT_NATIVE_IMPORT:
     case OP_SWITCH:
     case OP_METHOD:
+    case OP_EJECT_IMPORT:
+    case OP_EJECT_NATIVE_IMPORT:
       return 2;
 
     case OP_INVOKE:
@@ -1971,6 +1975,37 @@ static void die_statement(b_parser *p) {
   emit_byte(p, OP_DIE);
 }
 
+static void parse_specific_import(b_parser *p, int import_constant, bool was_renamed, bool is_native) {
+  if (match(p, LBRACE_TOKEN)) {
+    if (was_renamed) {
+      error(p, "selective import on renamed module");
+      return;
+    }
+
+    emit_byte_and_short(p, OP_CONSTANT, import_constant);
+
+    do {
+      ignore_whitespace(p);
+
+      // terminate on all (*)
+      if (match(p, MULTIPLY_TOKEN)) {
+        emit_byte(p, is_native ? OP_IMPORT_ALL_NATIVE : OP_IMPORT_ALL);
+        break;
+      }
+
+      int name = parse_variable(p, "module object name expected");
+      emit_byte_and_short(p, is_native ? OP_SELECT_NATIVE_IMPORT : OP_SELECT_IMPORT, name);
+    } while (match(p, COMMA_TOKEN));
+    ignore_whitespace(p);
+
+    consume(p, RBRACE_TOKEN, "expected '}' at end of selective import");
+    consume_statement_end(p);
+
+    emit_byte_and_short(p, is_native ? OP_EJECT_NATIVE_IMPORT : OP_EJECT_IMPORT, import_constant);
+    emit_byte(p, OP_POP); // pop the module constant from stack
+  }
+}
+
 static void import_statement(b_parser *p) {
 //  consume(p, LITERAL_TOKEN, "expected module name");
 //  int module_name_length;
@@ -2012,6 +2047,8 @@ static void import_statement(b_parser *p) {
     if (part_count == 0 && name[0] == '_') {
       int module = make_constant(p, OBJ_VAL(copy_string(p->vm, name, (int) strlen(name))));
       emit_byte_and_short(p, OP_NATIVE_MODULE, module);
+
+      parse_specific_import(p, module, false, true);
       return;
     }
 
@@ -2083,34 +2120,7 @@ static void import_statement(b_parser *p) {
   int import_constant = make_constant(p, OBJ_VAL(closure));
   emit_byte_and_short(p, OP_CALL_IMPORT, import_constant);
 
-  if (match(p, LBRACE_TOKEN)) {
-    if (was_renamed) {
-      error(p, "selective import on renamed module");
-      return;
-    }
-
-    emit_byte_and_short(p, OP_CONSTANT, import_constant);
-
-    do {
-      ignore_whitespace(p);
-
-      // terminate on all (*)
-      if (match(p, MULTIPLY_TOKEN)) {
-        emit_byte(p, OP_IMPORT_ALL);
-        break;
-      }
-
-      int name = parse_variable(p, "module object name expected");
-      emit_byte_and_short(p, OP_SELECT_IMPORT, name);
-    } while (match(p, COMMA_TOKEN));
-    ignore_whitespace(p);
-
-    consume(p, RBRACE_TOKEN, "expected '}' at end of selective import");
-    consume_statement_end(p);
-
-    emit_byte_and_short(p, OP_EJECT_IMPORT, import_constant);
-    emit_byte(p, OP_POP); // pop the module constant from stack
-  }
+  parse_specific_import(p, import_constant, was_renamed, false);
 }
 
 static void assert_statement(b_parser *p) {

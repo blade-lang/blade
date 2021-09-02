@@ -313,7 +313,14 @@ CREATE_MODULE_LOADER(io) {
       {NULL,  NULL, NULL},
   };
 
-  static b_module_reg module = {"_io", io_module_fields, io_functions, classes, NULL, &__io_module_unload};
+  static b_module_reg module = {
+      .name = "_io",
+      .fields = io_module_fields,
+      .functions = io_functions,
+      .classes = classes,
+      .preloader = NULL,
+      .unloader = &__io_module_unload
+  };
 
   return &module;
 }

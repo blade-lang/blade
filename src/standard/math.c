@@ -165,7 +165,14 @@ CREATE_MODULE_LOADER(math) {
       {NULL,    false, NULL},
   };
 
-  static b_module_reg module = {"_math", NULL, module_functions, NULL, NULL, NULL};
+  static b_module_reg module = {
+      .name = "_math",
+      .fields = NULL,
+      .functions = module_functions,
+      .classes = NULL,
+      .preloader = NULL,
+      .unloader = NULL
+  };
 
   return &module;
 }

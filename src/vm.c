@@ -2228,8 +2228,35 @@ b_ptr_result run(b_vm *vm) {
         break;
       }
 
+      case OP_SELECT_NATIVE_IMPORT: {
+        b_obj_string *module_name = AS_STRING(peek(vm, 0));
+        b_obj_string *value_name = READ_STRING();
+        b_value mod;
+        if (table_get(&vm->modules, OBJ_VAL(module_name), &mod)) {
+          b_obj_module *module = AS_MODULE(mod);
+          b_value value;
+          if (table_get(&module->values, OBJ_VAL(value_name), &value)) {
+            table_set(vm, &frame->closure->function->module->values, OBJ_VAL(value_name), value);
+          } else {
+            runtime_error("module %s does not define '%s'", module->name, value_name->chars);
+          }
+        } else{
+          runtime_error("module '%s' not found", module_name->chars);
+        }
+        break;
+      }
+
       case OP_IMPORT_ALL: {
         table_add_all(vm, &AS_CLOSURE(peek(vm, 0))->function->module->values, &frame->closure->function->module->values);
+        break;
+      }
+
+      case OP_IMPORT_ALL_NATIVE: {
+        b_obj_string *name = AS_STRING(peek(vm, 0));
+        b_value mod;
+        if (table_get(&vm->modules, OBJ_VAL(name), &mod)) {
+           table_add_all(vm, &AS_MODULE(mod)->values, &frame->closure->function->module->values);
+        }
         break;
       }
 
@@ -2237,6 +2264,16 @@ b_ptr_result run(b_vm *vm) {
         b_obj_func *function = AS_CLOSURE(READ_CONSTANT())->function;
         table_delete(&frame->closure->function->module->values,
                      OBJ_VAL(copy_string(vm, function->module->name, (int) strlen(function->module->name))));
+        break;
+      }
+
+      case OP_EJECT_NATIVE_IMPORT: {
+        b_value mod;
+        b_obj_string *name = READ_STRING();
+        if (table_get(&vm->modules, OBJ_VAL(name), &mod)) {
+          table_add_all(vm, &AS_MODULE(mod)->values, &frame->closure->function->module->values);
+          table_delete(&frame->closure->function->module->values, OBJ_VAL(name));
+        }
         break;
       }
 
