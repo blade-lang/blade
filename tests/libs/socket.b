@@ -11,12 +11,12 @@ def serve(port, on_client_receive) {
   var soc = Socket()
   soc.set_option(SO_REUSEADDR, true)
   soc.bind(IP_ANY, port)
-  print('Listening on ${IP_ANY}:${port}...')
+  echo 'Listening on ${IP_ANY}:${port}...'
   soc.listen()
 
   while true {
     var client = soc.accept()
-    print('Client connected...')
+    echo 'Client connected...'
 
     # timeout if nothing is received after 10 second
     client.set_option(SO_RCVTIMEO, 2000)
@@ -26,15 +26,15 @@ def serve(port, on_client_receive) {
     try {
       var data = client.receive()
       if data {
-        print('Request received:\n${data}\n')
+        echo 'Request received:\n${data}\n'
         on_client_receive(client, id, data)
       }
     } catch Exception e {
-      print('Client error: ${e.message}')
+      echo 'Client error: ${e.message}'
     } finally {
       id++
       client.close()
-      print('Client disconnected...')
+      echo 'Client disconnected...'
     }
   }
 }
@@ -53,7 +53,7 @@ Date: Sun, 18 Apr 2021 03:52:16 GMT
 
 ${message}'
 
-  print('Response sent:\n${response}\n')
+  echo 'Response sent:\n${response}\n'
 
   client.send(response)
 })
