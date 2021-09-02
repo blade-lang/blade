@@ -328,9 +328,6 @@ DECLARE_MODULE_METHOD(socket__recv) {
 
   fd_set read_set;
   FD_ZERO(&read_set);
-  if (!FD_ISSET(STDIN_FILENO, &read_set)) {
-    FD_SET(STDIN_FILENO, &read_set);//tcp socket
-  }
   if (!FD_ISSET(sock, &read_set)) {
     FD_SET(sock, &read_set);//tcp socket
   }
@@ -597,27 +594,781 @@ void __socket_module_preloader(b_vm *vm) {
 #endif
 }
 
+
+/** START SOCKET CONSTANTS */
+
+//  stream socket
+b_value __socket_SOCK_STREAM(b_vm *vm) {
+#ifdef SOCK_STREAM
+  return NUMBER_VAL(SOCK_STREAM);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  datagram socket
+b_value __socket_SOCK_DGRAM(b_vm *vm) {
+#ifdef SOCK_DGRAM
+  return NUMBER_VAL(SOCK_DGRAM);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  raw-protocol interface
+b_value __socket_SOCK_RAW(b_vm *vm) {
+#ifdef SOCK_RAW
+  return NUMBER_VAL(SOCK_RAW);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  reliably-delivered message
+b_value __socket_SOCK_RDM(b_vm *vm) {
+#ifdef SOCK_RDM
+  return NUMBER_VAL(SOCK_RDM);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  sequenced packet stream
+b_value __socket_SOCK_SEQPACKET(b_vm *vm) {
+#ifdef SOCK_SEQPACKET
+  return NUMBER_VAL(SOCK_SEQPACKET);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+
+//  turn on debugging info recording
+b_value __socket_SO_DEBUG(b_vm *vm) {
+#ifdef SO_DEBUG
+  return NUMBER_VAL(SO_DEBUG);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  socket has had listen()
+b_value __socket_SO_ACCEPTCONN(b_vm *vm) {
+#ifdef SO_ACCEPTCONN
+  return NUMBER_VAL(SO_ACCEPTCONN);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  allow local address reuse
+b_value __socket_SO_REUSEADDR(b_vm *vm) {
+#ifdef SO_REUSEADDR
+  return NUMBER_VAL(SO_REUSEADDR);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  keep connections alive
+b_value __socket_SO_KEEPALIVE(b_vm *vm) {
+#ifdef SO_KEEPALIVE
+  return NUMBER_VAL(SO_KEEPALIVE);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  just use interface addresses
+b_value __socket_SO_DONTROUTE(b_vm *vm) {
+#ifdef SO_DONTROUTE
+  return NUMBER_VAL(SO_DONTROUTE);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  permit sending of broadcast msgs
+b_value __socket_SO_BROADCAST(b_vm *vm) {
+#ifdef SO_BROADCAST
+  return NUMBER_VAL(SO_BROADCAST);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  bypass hardware when possible
+b_value __socket_SO_USELOOPBACK(b_vm *vm) {
+#ifdef SO_USELOOPBACK
+  return NUMBER_VAL(SO_USELOOPBACK);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  linger on close if data present (in ticks)
+b_value __socket_SO_LINGER(b_vm *vm) {
+#ifdef SO_LINGER
+  return NUMBER_VAL(SO_LINGER);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  leave received OOB data in line
+b_value __socket_SO_OOBINLINE(b_vm *vm) {
+#ifdef SO_OOBINLINE
+  return NUMBER_VAL(SO_OOBINLINE);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  allow local address & port reuse
+b_value __socket_SO_REUSEPORT(b_vm *vm) {
+#ifdef SO_REUSEPORT
+  return NUMBER_VAL(SO_REUSEPORT);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  timestamp received dgram traffic
+b_value __socket_SO_TIMESTAMP(b_vm *vm) {
+#ifdef SO_TIMESTAMP
+  return NUMBER_VAL(SO_TIMESTAMP);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+
+//  send buffer size
+b_value __socket_SO_SNDBUF(b_vm *vm) {
+#ifdef SO_SNDBUF
+  return NUMBER_VAL(SO_SNDBUF);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  receive buffer size
+b_value __socket_SO_RCVBUF(b_vm *vm) {
+#ifdef SO_RCVBUF
+  return NUMBER_VAL(SO_RCVBUF);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  send low-water mark
+b_value __socket_SO_SNDLOWAT(b_vm *vm) {
+#ifdef SO_SNDLOWAT
+  return NUMBER_VAL(SO_SNDLOWAT);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  receive low-water mark
+b_value __socket_SO_RCVLOWAT(b_vm *vm) {
+#ifdef SO_RCVLOWAT
+  return NUMBER_VAL(SO_RCVLOWAT);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  send timeout
+b_value __socket_SO_SNDTIMEO(b_vm *vm) {
+#ifdef SO_SNDTIMEO
+  return NUMBER_VAL(SO_SNDTIMEO);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  receive timeout
+b_value __socket_SO_RCVTIMEO(b_vm *vm) {
+#ifdef SO_RCVTIMEO
+  return NUMBER_VAL(SO_RCVTIMEO);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  get error status and clear
+b_value __socket_SO_ERROR(b_vm *vm) {
+#ifdef SO_ERROR
+  return NUMBER_VAL(SO_ERROR);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  get socket type
+b_value __socket_SO_TYPE(b_vm *vm) {
+#ifdef SO_TYPE
+  return NUMBER_VAL(SO_TYPE);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+
+
+//  options for socket level
+b_value __socket_SOL_SOCKET(b_vm *vm) {
+#ifdef SOL_SOCKET
+  return NUMBER_VAL(SOL_SOCKET);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+
+//  unspecified
+b_value __socket_AF_UNSPEC(b_vm *vm) {
+#ifdef AF_UNSPEC
+  return NUMBER_VAL(AF_UNSPEC);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  local to host (pipes)
+b_value __socket_AF_UNIX(b_vm *vm) {
+#ifdef AF_UNIX
+  return NUMBER_VAL(AF_UNIX);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  same as AF_UNIX
+b_value __socket_AF_LOCAL(b_vm *vm) {
+#ifdef AF_LOCAL
+  return NUMBER_VAL(AF_LOCAL);
+#else
+  return NUMBER_VAL(AF_UNIX);
+#endif
+}
+
+//  internetwork: UDP, TCP, etc.
+b_value __socket_AF_INET(b_vm *vm) {
+#ifdef AF_INET
+  return NUMBER_VAL(AF_INET);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  arpanet imp addresses
+b_value __socket_AF_IMPLINK(b_vm *vm) {
+#ifdef AF_IMPLINK
+  return NUMBER_VAL(AF_IMPLINK);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  pup protocols: e.g. BSP
+b_value __socket_AF_PUP(b_vm *vm) {
+#ifdef AF_PUP
+  return NUMBER_VAL(AF_PUP);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  mit CHAOS protocols
+b_value __socket_AF_CHAOS(b_vm *vm) {
+#ifdef AF_CHAOS
+  return NUMBER_VAL(AF_CHAOS);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  XEROX NS protocols
+b_value __socket_AF_NS(b_vm *vm) {
+#ifdef AF_NS
+  return NUMBER_VAL(AF_NS);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  ISO protocols
+b_value __socket_AF_ISO(b_vm *vm) {
+#ifdef AF_ISO
+  return NUMBER_VAL(AF_ISO);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  OSI protocols (same as ISO)
+b_value __socket_AF_OSI(b_vm *vm) {
+#ifdef AF_OSI
+  return NUMBER_VAL(AF_OSI);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  European computer manufacturers
+b_value __socket_AF_ECMA(b_vm *vm) {
+#ifdef AF_ECMA
+  return NUMBER_VAL(AF_ECMA);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  datakit protocols
+b_value __socket_AF_DATAKIT(b_vm *vm) {
+#ifdef AF_DATAKIT
+  return NUMBER_VAL(AF_DATAKIT);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  CITT protocols, X.25 etc
+b_value __socket_AF_CCITT(b_vm *vm) {
+#ifdef AF_CCITT
+  return NUMBER_VAL(AF_CCITT);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  IBM SNA
+b_value __socket_AF_SNA(b_vm *vm) {
+#ifdef AF_SNA
+  return NUMBER_VAL(AF_SNA);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  DECnet
+b_value __socket_AF_DECnet(b_vm *vm) {
+#ifdef AF_DECnet
+  return NUMBER_VAL(AF_DECnet);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  DEC Direct data link interface
+b_value __socket_AF_DLI(b_vm *vm) {
+#ifdef AF_DLI
+  return NUMBER_VAL(AF_DLI);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  LAT
+b_value __socket_AF_LAT(b_vm *vm) {
+#ifdef AF_LAT
+  return NUMBER_VAL(AF_LAT);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  NSC Hyperchannel
+b_value __socket_AF_HYLINK(b_vm *vm) {
+#ifdef AF_HYLINK
+  return NUMBER_VAL(AF_HYLINK);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  AppleTalk
+b_value __socket_AF_APPLETALK(b_vm *vm) {
+#ifdef AF_APPLETALK
+  return NUMBER_VAL(AF_APPLETALK);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  ipv6
+b_value __socket_AF_INET6(b_vm *vm) {
+#ifdef AF_INET6
+  return NUMBER_VAL(AF_INET6);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+
+//   Dummy protocol for TCP.
+b_value __socket_IPPROTO_IP(b_vm *vm) {
+#ifdef IPPROTO_IP
+  return NUMBER_VAL(IPPROTO_IP);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//   Internet Control Message Protocol.
+b_value __socket_IPPROTO_ICMP(b_vm *vm) {
+  return NUMBER_VAL(IPPROTO_ICMP);
+}
+
+//   Internet Group Management Protocol.
+b_value __socket_IPPROTO_IGMP(b_vm *vm) {
+  return NUMBER_VAL(IPPROTO_IGMP);
+}
+
+//   IPIP tunnels (older KA9Q tunnels use 94).
+b_value __socket_IPPROTO_IPIP(b_vm *vm) {
+#ifdef IPPROTO_IPIP
+  return NUMBER_VAL(IPPROTO_IPIP);
+#else
+  return NUMBER_VAL(IPPROTO_IPV4);
+#endif
+}
+
+//   Transmission Control Protocol.
+b_value __socket_IPPROTO_TCP(b_vm *vm) {
+  return NUMBER_VAL(IPPROTO_TCP);
+}
+
+//   Exterior Gateway Protocol.
+b_value __socket_IPPROTO_EGP(b_vm *vm) {
+#ifdef IPPROTO_EGP
+  return NUMBER_VAL(IPPROTO_EGP);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//   PUP protocol.
+b_value __socket_IPPROTO_PUP(b_vm *vm) {
+  return NUMBER_VAL(IPPROTO_PUP);
+}
+
+//   User Datagram Protocol.
+b_value __socket_IPPROTO_UDP(b_vm *vm) {
+  return NUMBER_VAL(IPPROTO_UDP);
+}
+
+//   XNS IDP protocol.
+b_value __socket_IPPROTO_IDP(b_vm *vm) {
+  return NUMBER_VAL(IPPROTO_IDP);
+}
+
+//   SO Transport Protocol Class 4.
+b_value __socket_IPPROTO_TP(b_vm *vm) {
+#ifdef IPPROTO_TP
+  return NUMBER_VAL(IPPROTO_TP);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//   Datagram Congestion Control Protocol.
+b_value __socket_IPPROTO_DCCP(b_vm *vm) {
+#ifdef IPPROTO_DCCP
+  return NUMBER_VAL(IPPROTO_DCCP);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//   IPv6 header.
+b_value __socket_IPPROTO_IPV6(b_vm *vm) {
+  return NUMBER_VAL(IPPROTO_IPV6);
+}
+
+//   Reservation Protocol.
+b_value __socket_IPPROTO_RSVP(b_vm *vm) {
+#ifdef IPPROTO_RSVP
+  return NUMBER_VAL(IPPROTO_RSVP);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//   General Routing Encapsulation.
+b_value __socket_IPPROTO_GRE(b_vm *vm) {
+#ifdef IPPROTO_GRE
+  return NUMBER_VAL(IPPROTO_GRE);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//   encapsulating security payload.
+b_value __socket_IPPROTO_ESP(b_vm *vm) {
+  return NUMBER_VAL(IPPROTO_ESP);
+}
+
+//   authentication header.
+b_value __socket_IPPROTO_AH(b_vm *vm) {
+  return NUMBER_VAL(IPPROTO_AH);
+}
+
+//   Multicast Transport Protocol.
+b_value __socket_IPPROTO_MTP(b_vm *vm) {
+#ifdef IPPROTO_MTP
+  return NUMBER_VAL(IPPROTO_MTP);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//   IP option pseudo header for BEET.
+b_value __socket_IPPROTO_BEETPH(b_vm *vm) {
+#ifdef IPPROTO_BEETPH
+  return NUMBER_VAL(IPPROTO_BEETPH);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//   Encapsulation Header.
+b_value __socket_IPPROTO_ENCAP(b_vm *vm) {
+#ifdef IPPROTO_ENCAP
+  return NUMBER_VAL(IPPROTO_ENCAP);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//   Protocol Independent Multicast.
+b_value __socket_IPPROTO_PIM(b_vm *vm) {
+  return NUMBER_VAL(IPPROTO_PIM);
+}
+
+//   Compression Header Protocol.
+b_value __socket_IPPROTO_COMP(b_vm *vm) {
+#ifdef IPPROTO_COMP
+  return NUMBER_VAL(IPPROTO_COMP);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//   Stream Control Transmission Protocol.
+b_value __socket_IPPROTO_SCTP(b_vm *vm) {
+  return NUMBER_VAL(IPPROTO_SCTP);
+}
+
+//   UDP-Lite protocol.
+b_value __socket_IPPROTO_UDPLITE(b_vm *vm) {
+#ifdef IPPROTO_UDPLITE
+  return NUMBER_VAL(IPPROTO_UDPLITE);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//   MPLS in IP.
+b_value __socket_IPPROTO_MPLS(b_vm *vm) {
+#ifdef IPPROTO_MPLS
+  return NUMBER_VAL(IPPROTO_MPLS);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//   Raw IP packets.
+b_value __socket_IPPROTO_RAW(b_vm *vm) {
+  return NUMBER_VAL(IPPROTO_RAW);
+}
+
+//  max IP proto
+b_value __socket_IPPROTO_MAX(b_vm *vm) {
+  return NUMBER_VAL(IPPROTO_MAX);
+}
+
+
+//  shut down the reading side
+b_value __socket_SHUT_RD(b_vm *vm) {
+#ifdef SHUT_RD
+  return NUMBER_VAL(SHUT_RD);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  shut down the writing side
+b_value __socket_SHUT_WR(b_vm *vm) {
+#ifdef SHUT_WR
+  return NUMBER_VAL(SHUT_WR);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+//  shut down both sides
+b_value __socket_SHUT_RDWR(b_vm *vm) {
+#ifdef SHUT_RDWR
+  return NUMBER_VAL(SHUT_RDWR);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+
+//  Maximum queue length specifiable by listen.
+b_value __socket_SOMAXCONN(b_vm *vm) {
+#ifdef SOMAXCONN
+  return NUMBER_VAL(SOMAXCONN);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+/** END SOCKET CONSTANTS */
+
+
+
 CREATE_MODULE_LOADER(socket) {
   static b_func_reg module_functions[] = {
-      {"create",      false, GET_MODULE_METHOD(socket__create)},
-      {"connect",     false, GET_MODULE_METHOD(socket__connect)},
-      {"send",        false, GET_MODULE_METHOD(socket__send)},
-      {"recv",        false, GET_MODULE_METHOD(socket__recv)},
-      {"setsockopt",  false, GET_MODULE_METHOD(socket__setsockopt)},
-      {"getsockopt",  false, GET_MODULE_METHOD(socket__getsockopt)},
-      {"bind",        false, GET_MODULE_METHOD(socket__bind)},
-      {"listen",      false, GET_MODULE_METHOD(socket__listen)},
-      {"accept",      false, GET_MODULE_METHOD(socket__accept)},
-      {"error",       false, GET_MODULE_METHOD(socket__error)},
-      {"close",       false, GET_MODULE_METHOD(socket__close)},
-      {"shutdown",    false, GET_MODULE_METHOD(socket__shutdown)},
-      {"getsockinfo", false, GET_MODULE_METHOD(socket__getsockinfo)},
-      {"getaddrinfo", false, GET_MODULE_METHOD(socket__getaddrinfo)},
+      {"_create",      false, GET_MODULE_METHOD(socket__create)},
+      {"_connect",     false, GET_MODULE_METHOD(socket__connect)},
+      {"_send",        false, GET_MODULE_METHOD(socket__send)},
+      {"_recv",        false, GET_MODULE_METHOD(socket__recv)},
+      {"_setsockopt",  false, GET_MODULE_METHOD(socket__setsockopt)},
+      {"_getsockopt",  false, GET_MODULE_METHOD(socket__getsockopt)},
+      {"_bind",        false, GET_MODULE_METHOD(socket__bind)},
+      {"_listen",      false, GET_MODULE_METHOD(socket__listen)},
+      {"_accept",      false, GET_MODULE_METHOD(socket__accept)},
+      {"_error",       false, GET_MODULE_METHOD(socket__error)},
+      {"_close",       false, GET_MODULE_METHOD(socket__close)},
+      {"_shutdown",    false, GET_MODULE_METHOD(socket__shutdown)},
+      {"_getsockinfo", false, GET_MODULE_METHOD(socket__getsockinfo)},
+      {"_getaddrinfo", false, GET_MODULE_METHOD(socket__getaddrinfo)},
       {NULL,          false, NULL},
   };
 
-  static b_module_reg module = {"_socket", NULL, module_functions, NULL, &__socket_module_preloader,
-                                &__socket_module_unload};
+  static b_field_reg socket_module_fields[] = {
+      /**
+       * Types
+       */
+      {"SOCK_STREAM", true, __socket_SOCK_STREAM},
+      {"SOCK_DGRAM", true, __socket_SOCK_DGRAM},
+      {"SOCK_RAW", true, __socket_SOCK_RAW},
+      {"SOCK_RDM", true, __socket_SOCK_RDM},
+      {"SOCK_SEQPACKET", true, __socket_SOCK_SEQPACKET},
+
+      /**
+       * Option flags per-
+       */
+      {"SO_DEBUG", true, __socket_SO_DEBUG},
+      {"SO_ACCEPTCONN", true, __socket_SO_ACCEPTCONN},
+      {"SO_REUSEADDR", true, __socket_SO_REUSEADDR},
+      {"SO_KEEPALIVE", true, __socket_SO_KEEPALIVE},
+      {"SO_DONTROUTE", true, __socket_SO_DONTROUTE},
+      {"SO_BROADCAST", true, __socket_SO_BROADCAST},
+      {"SO_USELOOPBACK", true, __socket_SO_USELOOPBACK},
+      {"SO_LINGER", true, __socket_SO_LINGER},
+      {"SO_OOBINLINE", true, __socket_SO_OOBINLINE},
+      {"SO_REUSEPORT", true, __socket_SO_REUSEPORT},
+      {"SO_TIMESTAMP", true, __socket_SO_TIMESTAMP},
+
+      /**
+       * Additional options, not kept in so_options.
+       */
+      {"SO_SNDBUF", true, __socket_SO_SNDBUF},
+      {"SO_RCVBUF", true, __socket_SO_RCVBUF},
+      {"SO_SNDLOWAT", true, __socket_SO_SNDLOWAT},
+      {"SO_RCVLOWAT", true, __socket_SO_RCVLOWAT},
+      {"SO_SNDTIMEO", true, __socket_SO_SNDTIMEO},
+      {"SO_RCVTIMEO", true, __socket_SO_RCVTIMEO},
+      {"SO_ERROR", true, __socket_SO_ERROR},
+      {"SO_TYPE", true, __socket_SO_TYPE},
+
+
+      {"SOL_SOCKET", true, __socket_SOL_SOCKET},
+
+      /**
+       * Address families.
+       */
+      {"AF_UNSPEC", true, __socket_AF_UNSPEC},
+      {"AF_UNIX", true, __socket_AF_UNIX},
+      {"AF_LOCAL", true, __socket_AF_LOCAL},
+      {"AF_INET", true, __socket_AF_INET},
+      {"AF_IMPLINK", true, __socket_AF_IMPLINK},
+      {"AF_PUP", true, __socket_AF_PUP},
+      {"AF_CHAOS", true, __socket_AF_CHAOS},
+      {"AF_NS", true, __socket_AF_NS},
+      {"AF_ISO", true, __socket_AF_ISO},
+      {"AF_OSI", true, __socket_AF_OSI},
+      {"AF_ECMA", true, __socket_AF_ECMA},
+      {"AF_DATAKIT", true, __socket_AF_DATAKIT},
+      {"AF_CCITT", true, __socket_AF_CCITT},
+      {"AF_SNA", true, __socket_AF_SNA},
+      {"AF_DECnet", true, __socket_AF_DECnet},
+      {"AF_DLI", true, __socket_AF_DLI},
+      {"AF_LAT", true, __socket_AF_LAT},
+      {"AF_HYLINK", true, __socket_AF_HYLINK},
+      {"AF_APPLETALK", true, __socket_AF_APPLETALK},
+      {"AF_INET6", true, __socket_AF_INET6},
+
+      /**
+       * Standard well-defined IP protocols.
+       */
+
+      {"IPPROTO_IP", true, __socket_IPPROTO_IP},
+      {"IPPROTO_ICMP", true, __socket_IPPROTO_ICMP},
+      {"IPPROTO_IGMP", true, __socket_IPPROTO_IGMP},
+      {"IPPROTO_IPIP", true, __socket_IPPROTO_IPIP},
+      {"IPPROTO_TCP", true, __socket_IPPROTO_TCP},
+      {"IPPROTO_EGP", true, __socket_IPPROTO_EGP},
+      {"IPPROTO_PUP", true, __socket_IPPROTO_PUP},
+      {"IPPROTO_UDP", true, __socket_IPPROTO_UDP},
+      {"IPPROTO_IDP", true, __socket_IPPROTO_IDP},
+      {"IPPROTO_TP", true, __socket_IPPROTO_TP},
+      {"IPPROTO_DCCP", true, __socket_IPPROTO_DCCP},
+      {"IPPROTO_IPV6", true, __socket_IPPROTO_IPV6},
+      {"IPPROTO_RSVP", true, __socket_IPPROTO_RSVP},
+      {"IPPROTO_GRE", true, __socket_IPPROTO_GRE},
+      {"IPPROTO_ESP", true, __socket_IPPROTO_ESP},
+      {"IPPROTO_AH", true, __socket_IPPROTO_AH},
+      {"IPPROTO_MTP", true, __socket_IPPROTO_MTP},
+      {"IPPROTO_BEETPH", true, __socket_IPPROTO_BEETPH},
+      {"IPPROTO_ENCAP", true, __socket_IPPROTO_ENCAP},
+      {"IPPROTO_PIM", true, __socket_IPPROTO_PIM},
+      {"IPPROTO_COMP", true, __socket_IPPROTO_COMP},
+      {"IPPROTO_SCTP", true, __socket_IPPROTO_SCTP},
+      {"IPPROTO_UDPLITE", true, __socket_IPPROTO_UDPLITE},
+      {"IPPROTO_MPLS", true, __socket_IPPROTO_MPLS},
+      {"IPPROTO_RAW", true, __socket_IPPROTO_RAW},
+      {"IPPROTO_MAX", true, __socket_IPPROTO_MAX},
+
+      /**
+       * howto arguments for shutdown(2), specified by Posix.1g.
+       */
+      {"SHUT_RD", true, __socket_SHUT_RD},
+      {"SHUT_WR", true, __socket_SHUT_WR},
+      {"SHUT_RDWR", true, __socket_SHUT_RDWR},
+
+      /**
+       * Maximum queue length specifiable by listen.
+       */
+      {"SOMAXCONN", true, __socket_SOMAXCONN},
+
+      {NULL,       false, NULL},
+  };
+
+  static b_module_reg module = {
+      .name = "_socket",
+      .fields= socket_module_fields,
+      .functions = module_functions,
+      .classes = NULL,
+      .preloader = &__socket_module_preloader,
+      .unloader = &__socket_module_unload
+  };
   return &module;
 }
 

@@ -155,7 +155,14 @@ CREATE_MODULE_LOADER(date) {
       {NULL,        false, NULL},
   };
 
-  static b_module_reg module = {"_date", NULL, module_functions, NULL, NULL, NULL};
+  static b_module_reg module = {
+      .name = "_date",
+      .fields = NULL,
+      .functions = module_functions,
+      .classes = NULL,
+      .preloader = NULL,
+      .unloader = NULL
+  };
   return &module;
 }
 

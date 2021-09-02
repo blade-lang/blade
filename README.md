@@ -72,6 +72,7 @@ You can read the [Blade language documentation](https://bladelang.com) online at
 | `libs` | Contains the Blade standard library.
 | `src` | The source code of the Blade language including the native implementation of some Blade library classes and functions in the modules directory.
 | `tests` | A few test cases that Blade implementation must pass.
+| `thirdparty` | Contains open-source libraries and packages used by Blade
 
 
 ## How to contribute

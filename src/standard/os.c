@@ -221,7 +221,14 @@ CREATE_MODULE_LOADER(os) {
       {NULL,       false, NULL},
   };
 
-  static b_module_reg module = {"_os", os_module_fields, os_module_functions, NULL, NULL, NULL};
+  static b_module_reg module = {
+      .name = "_os",
+      .fields = os_module_fields,
+      .functions = os_module_functions,
+      .classes = NULL,
+      .preloader= NULL,
+      .unloader = NULL
+  };
 
   return &module;
 }
