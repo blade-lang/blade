@@ -13,7 +13,9 @@ import _os {
   DT_WHT,
 
   # functions
-  _mkdir, _readdir
+  _mkdir, 
+  _readdir,
+  _chmod
 }
 
 /**
@@ -89,6 +91,7 @@ class Directory {
    * @note if the directory exists and some or all of the files in the list do not exist, 
    * they will be created.
    * @note permission should be given as octal number.
+   * @return boolean
    */
   create(permission, recursive, files) {
 
@@ -139,6 +142,20 @@ class Directory {
     }
 
     return list
+  }
+
+  /**
+   * chmod(mod: number)
+   * 
+   * changes the permission set on a directory
+   * @note mod should be octal number
+   * @return boolean
+   */
+  chmod(mod) {
+    if !is_number(mod) 
+      die Exception('number expected, ${typeof(mod)} given')
+
+    return _chmod(self.path, mod)
   }
 }
 

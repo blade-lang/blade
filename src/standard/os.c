@@ -240,7 +240,7 @@ DECLARE_MODULE_METHOD(os__mkdir) {
     for (char* p = strchr(path->chars + 1, sep); p; p = strchr(p + 1, sep)) {
       *p = '\0';
 #ifdef _WIN32
-      if (CreateDirectory(path->chars, NULL) == FALSE) {
+      if (!CreateDirectory(path->chars, NULL)) {
         if (errno != ERROR_ALREADY_EXISTS) {
 #else
       if (mkdir(path->chars, mode) == -1) {
@@ -261,7 +261,7 @@ DECLARE_MODULE_METHOD(os__mkdir) {
   } else {
 
 #ifdef _WIN32
-    if (CreateDirectory(path->chars, NULL) == FALSE) {
+    if (!CreateDirectory(path->chars, NULL)) {
       if (errno != ERROR_ALREADY_EXISTS) {
 #else
     if (mkdir(path->chars, mode) == -1) {
@@ -298,6 +298,19 @@ DECLARE_MODULE_METHOD(os__readdir) {
     RETURN_OBJ(list);
   }
   RETURN_ERROR(strerror(errno));
+}
+
+DECLARE_MODULE_METHOD(os__chmod) {
+  ENFORCE_ARG_COUNT(chmod, 2);
+  ENFORCE_ARG_TYPE(chmod, 0, IS_STRING);
+  ENFORCE_ARG_TYPE(chmod, 1, IS_NUMBER);
+
+  b_obj_string *path = AS_STRING(args[0]);
+  int mode = AS_NUMBER(args[1]);
+  if(chmod(path->chars, mode) != 0) {
+    RETURN_ERROR(strerror(errno));
+  }
+  RETURN_TRUE;
 }
 
 /** DIR TYPES BEGIN */
@@ -353,6 +366,7 @@ CREATE_MODULE_LOADER(os) {
       {"setenv", true,  GET_MODULE_METHOD(os_setenv)},
       {"_mkdir", true,  GET_MODULE_METHOD(os__mkdir)},
       {"_readdir", true,  GET_MODULE_METHOD(os__readdir)},
+      {"_chmod", true,  GET_MODULE_METHOD(os__chmod)},
       {NULL,     false, NULL},
   };
 
