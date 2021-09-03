@@ -101,7 +101,3 @@ cmake --build build
 ```
 
 The `blade` executable can be located in the `build` folder.
-
-## Install
-
-TODO: To be completed.
