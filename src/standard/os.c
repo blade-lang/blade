@@ -16,6 +16,7 @@
 #ifdef _WIN32
 #define popen _popen
 #define pclose _pclose
+#define errno GetLastError()
 
 #include <sdkddkver.h>
 #define WIN32_LEAN_AND_MEAN
@@ -236,7 +237,6 @@ DECLARE_MODULE_METHOD(os__mkdir) {
   bool exists = false;
 
   if(is_recursive) {
-
     for (char* p = strchr(path->chars + 1, sep); p; p = strchr(p + 1, sep)) {
       *p = '\0';
 #ifdef _WIN32
