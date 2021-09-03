@@ -11,6 +11,7 @@ import _os {
   DT_REG,
   DT_SOCK,
   DT_WHT,
+  platform
 
   # functions
   _mkdir, 
@@ -78,6 +79,10 @@ class Directory {
     }
     if !self.path.ends_with(path_separator)
       self.path += path_separator
+
+    if platform == 'windows' {
+      self.path = self.path.replace('/', '\\')
+    }
   }
 
   /**
