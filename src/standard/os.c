@@ -11,6 +11,7 @@
 
 #include <ctype.h>
 #include <stdio.h>
+#include <pathinfo.h>
 
 #ifdef _WIN32
 #define popen _popen
@@ -25,6 +26,14 @@
 #endif /* ifndef sleep */
 
 #endif /* ifdef _WIN32 */
+
+#ifndef HAVE_DIRENT_H
+#include "dirent/dirent.h"
+#else
+#include <dirent.h>
+#include <sys/stat.h>
+#include <sys/errno.h>
+#endif /* HAVE_DIRENT_H */
 
 DECLARE_MODULE_METHOD(os_exec) {
   ENFORCE_ARG_COUNT(exec, 1);
@@ -172,6 +181,10 @@ b_value get_blade_os_args(b_vm *vm) {
   return OBJ_VAL(list);
 }
 
+b_value get_blade_os_path_separator(b_vm *vm) {
+  return STRING_L_VAL(BLADE_PATH_SEPARATOR, 1);
+}
+
 DECLARE_MODULE_METHOD(os_getenv) {
   ENFORCE_ARG_COUNT(getenv, 1);
   ENFORCE_ARG_TYPE(getenv, 0, IS_STRING);
@@ -205,6 +218,132 @@ DECLARE_MODULE_METHOD(os_setenv) {
   RETURN_FALSE;
 }
 
+DECLARE_MODULE_METHOD(os_read_dir) {
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(os__mkdir) {
+  ENFORCE_ARG_COUNT(create, 3);
+  ENFORCE_ARG_TYPE(create, 0, IS_STRING);
+  ENFORCE_ARG_TYPE(create, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(create, 2, IS_BOOL);
+
+  b_obj_string *path = AS_STRING(args[0]);
+  int mode = AS_NUMBER(args[1]);
+  bool is_recursive = AS_BOOL(args[2]);
+
+  char sep = BLADE_PATH_SEPARATOR[0];
+  bool exists = false;
+
+  if(is_recursive) {
+
+    for (char* p = strchr(path->chars + 1, sep); p; p = strchr(p + 1, sep)) {
+      *p = '\0';
+#ifdef _WIN32
+      if (CreateDirectory(path->chars, NULL) == FALSE) {
+        if (errno != ERROR_ALREADY_EXISTS) {
+#else
+      if (mkdir(path->chars, mode) == -1) {
+        if (errno != EEXIST) {
+#endif /* _WIN32 */
+          *p = sep;
+          RETURN_ERROR(strerror(errno));
+        } else {
+          exists = true;
+        }
+      } else {
+        exists = false;
+      }
+//      chmod(path->chars, (mode_t) mode);
+      *p = sep;
+    }
+
+  } else {
+
+#ifdef _WIN32
+    if (CreateDirectory(path->chars, NULL) == FALSE) {
+      if (errno != ERROR_ALREADY_EXISTS) {
+#else
+    if (mkdir(path->chars, mode) == -1) {
+      if (errno != EEXIST) {
+#endif /* _WIN32 */
+        RETURN_ERROR(strerror(errno));
+      } else {
+        exists = true;
+      }
+    }
+//    chmod(path->chars, (mode_t) mode);
+
+  }
+
+  RETURN_BOOL(!exists);
+}
+
+DECLARE_MODULE_METHOD(os__readdir) {
+  ENFORCE_ARG_COUNT(read, 1);
+  ENFORCE_ARG_TYPE(read, 0, IS_STRING);
+  b_obj_string *path = AS_STRING(args[0]);
+
+  DIR *dir;
+  if((dir = opendir(path->chars)) != NULL) {
+    b_obj_list *list = (b_obj_list *)GC(new_list(vm));
+    struct dirent *ent;
+    while((ent = readdir(dir)) != NULL) {
+      b_obj_list *d_list = (b_obj_list *)GC(new_list(vm));
+      write_list(vm, d_list, STRING_L_VAL(ent->d_name, ent->d_namlen));
+      write_list(vm, d_list, NUMBER_VAL(ent->d_type));
+      write_list(vm, list, OBJ_VAL(d_list));
+    }
+    closedir(dir);
+    RETURN_OBJ(list);
+  }
+  RETURN_ERROR(strerror(errno));
+}
+
+/** DIR TYPES BEGIN */
+
+b_value __os_dir_DT_UNKNOWN(b_vm *vm){
+  return NUMBER_VAL(DT_UNKNOWN);
+}
+
+b_value __os_dir_DT_REG(b_vm *vm){
+  return NUMBER_VAL(DT_REG);
+}
+
+b_value __os_dir_DT_DIR(b_vm *vm){
+  return NUMBER_VAL(DT_DIR);
+}
+
+b_value __os_dir_DT_FIFO(b_vm *vm){
+  return NUMBER_VAL(DT_FIFO);
+}
+
+b_value __os_dir_DT_SOCK(b_vm *vm){
+  return NUMBER_VAL(DT_SOCK);
+}
+
+b_value __os_dir_DT_CHR(b_vm *vm){
+  return NUMBER_VAL(DT_CHR);
+}
+
+b_value __os_dir_DT_BLK(b_vm *vm) {
+  return NUMBER_VAL(DT_BLK);
+}
+
+b_value __os_dir_DT_LNK(b_vm *vm) {
+  return NUMBER_VAL(DT_LNK);
+}
+
+b_value __os_dir_DT_WHT(b_vm *vm) {
+#ifdef DT_WHT
+  return NUMBER_VAL(DT_WHT);
+#else
+  return NUMBER_VAL(-1);
+#endif
+}
+
+/** DIR TYPES ENDS */
+
 CREATE_MODULE_LOADER(os) {
   static b_func_reg os_module_functions[] = {
       {"info",   true,  GET_MODULE_METHOD(os_info)},
@@ -212,12 +351,24 @@ CREATE_MODULE_LOADER(os) {
       {"sleep",  true,  GET_MODULE_METHOD(os_sleep)},
       {"getenv", true,  GET_MODULE_METHOD(os_getenv)},
       {"setenv", true,  GET_MODULE_METHOD(os_setenv)},
+      {"_mkdir", true,  GET_MODULE_METHOD(os__mkdir)},
+      {"_readdir", true,  GET_MODULE_METHOD(os__readdir)},
       {NULL,     false, NULL},
   };
 
   static b_field_reg os_module_fields[] = {
       {"platform", true, get_os_platform},
       {"args", true, get_blade_os_args},
+      {"path_separator", true, get_blade_os_path_separator},
+      {"DT_UNKNOWN", true, __os_dir_DT_UNKNOWN},
+      {"DT_BLK", true, __os_dir_DT_BLK},
+      {"DT_CHR", true, __os_dir_DT_CHR},
+      {"DT_DIR", true, __os_dir_DT_DIR},
+      {"DT_FIFO", true, __os_dir_DT_FIFO},
+      {"DT_LNK", true, __os_dir_DT_LNK},
+      {"DT_REG", true, __os_dir_DT_REG},
+      {"DT_SOCK", true, __os_dir_DT_SOCK},
+      {"DT_WHT", true, __os_dir_DT_WHT},
       {NULL,       false, NULL},
   };
 

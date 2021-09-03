@@ -147,13 +147,13 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
  * @return nil
  */
 DECLARE_MODULE_METHOD(io_tty__exit_raw) {
-#if HAVE_TERMIOS
+#ifdef HAVE_TERMIOS_H
   ENFORCE_ARG_COUNT(TTY.exit_raw, 0);
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
   RETURN;
 #else
   RETURN_ERROR("exit_raw() is not supported on this platform");
-#endif
+#endif /* HAVE_TERMIOS_H */
 }
 
 /**

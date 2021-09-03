@@ -6,7 +6,7 @@
 # 
 
 import _os
-
+import .dir { * }
 
 /**
  * stores the name of the current platform in string
@@ -70,5 +70,15 @@ def getenv(name){
  */
 def setenv(name, value, overwrite){
   return _os.setenv(name, value, overwrite)
+}
+
+/**
+ * dir(path: string)
+ * 
+ * creates a new directory object
+ * @return Directory
+ */
+def dir(path) {
+  return Directory(path)
 }
 
