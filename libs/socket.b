@@ -202,9 +202,7 @@ class Socket {
       if !is_int(self.protocol) 
         die SocketException('integer expected for protocol, ${typeof(self.protocol)} given')
 
-      var id = _create(self.family, self.type, self.protocol)
-      if id == -1 die SocketException('could not create socket')
-      self.id = id
+      self.id = self._check_error(_create(self.family, self.type, self.protocol))
     } else {
       self.id = id
     }

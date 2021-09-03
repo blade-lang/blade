@@ -328,9 +328,6 @@ DECLARE_MODULE_METHOD(socket__recv) {
 
   fd_set read_set;
   FD_ZERO(&read_set);
-  if (!FD_ISSET(STDIN_FILENO, &read_set)) {
-    FD_SET(STDIN_FILENO, &read_set);//tcp socket
-  }
   if (!FD_ISSET(sock, &read_set)) {
     FD_SET(sock, &read_set);//tcp socket
   }
@@ -853,7 +850,7 @@ b_value __socket_AF_LOCAL(b_vm *vm) {
 #ifdef AF_LOCAL
   return NUMBER_VAL(AF_LOCAL);
 #else
-  return NUMBER_VAL(-1);
+  return NUMBER_VAL(AF_UNIX);
 #endif
 }
 
@@ -1022,20 +1019,12 @@ b_value __socket_IPPROTO_IP(b_vm *vm) {
 
 //   Internet Control Message Protocol.
 b_value __socket_IPPROTO_ICMP(b_vm *vm) {
-#ifdef IPPROTO_ICMP
   return NUMBER_VAL(IPPROTO_ICMP);
-#else
-  return NUMBER_VAL(-1);
-#endif
 }
 
 //   Internet Group Management Protocol.
 b_value __socket_IPPROTO_IGMP(b_vm *vm) {
-#ifdef IPPROTO_IGMP
   return NUMBER_VAL(IPPROTO_IGMP);
-#else
-  return NUMBER_VAL(-1);
-#endif
 }
 
 //   IPIP tunnels (older KA9Q tunnels use 94).
@@ -1043,17 +1032,13 @@ b_value __socket_IPPROTO_IPIP(b_vm *vm) {
 #ifdef IPPROTO_IPIP
   return NUMBER_VAL(IPPROTO_IPIP);
 #else
-  return NUMBER_VAL(-1);
+  return NUMBER_VAL(IPPROTO_IPV4);
 #endif
 }
 
 //   Transmission Control Protocol.
 b_value __socket_IPPROTO_TCP(b_vm *vm) {
-#ifdef IPPROTO_TCP
   return NUMBER_VAL(IPPROTO_TCP);
-#else
-  return NUMBER_VAL(-1);
-#endif
 }
 
 //   Exterior Gateway Protocol.
@@ -1067,29 +1052,17 @@ b_value __socket_IPPROTO_EGP(b_vm *vm) {
 
 //   PUP protocol.
 b_value __socket_IPPROTO_PUP(b_vm *vm) {
-#ifdef IPPROTO_PUP
   return NUMBER_VAL(IPPROTO_PUP);
-#else
-  return NUMBER_VAL(-1);
-#endif
 }
 
 //   User Datagram Protocol.
 b_value __socket_IPPROTO_UDP(b_vm *vm) {
-#ifdef IPPROTO_UDP
   return NUMBER_VAL(IPPROTO_UDP);
-#else
-  return NUMBER_VAL(-1);
-#endif
 }
 
 //   XNS IDP protocol.
 b_value __socket_IPPROTO_IDP(b_vm *vm) {
-#ifdef IPPROTO_IDP
   return NUMBER_VAL(IPPROTO_IDP);
-#else
-  return NUMBER_VAL(-1);
-#endif
 }
 
 //   SO Transport Protocol Class 4.
@@ -1112,11 +1085,7 @@ b_value __socket_IPPROTO_DCCP(b_vm *vm) {
 
 //   IPv6 header.
 b_value __socket_IPPROTO_IPV6(b_vm *vm) {
-#ifdef IPPROTO_IPV6
   return NUMBER_VAL(IPPROTO_IPV6);
-#else
-  return NUMBER_VAL(-1);
-#endif
 }
 
 //   Reservation Protocol.
@@ -1139,20 +1108,12 @@ b_value __socket_IPPROTO_GRE(b_vm *vm) {
 
 //   encapsulating security payload.
 b_value __socket_IPPROTO_ESP(b_vm *vm) {
-#ifdef IPPROTO_ESP
   return NUMBER_VAL(IPPROTO_ESP);
-#else
-  return NUMBER_VAL(-1);
-#endif
 }
 
 //   authentication header.
 b_value __socket_IPPROTO_AH(b_vm *vm) {
-#ifdef IPPROTO_AH
   return NUMBER_VAL(IPPROTO_AH);
-#else
-  return NUMBER_VAL(-1);
-#endif
 }
 
 //   Multicast Transport Protocol.
@@ -1184,11 +1145,7 @@ b_value __socket_IPPROTO_ENCAP(b_vm *vm) {
 
 //   Protocol Independent Multicast.
 b_value __socket_IPPROTO_PIM(b_vm *vm) {
-#ifdef IPPROTO_PIM
   return NUMBER_VAL(IPPROTO_PIM);
-#else
-  return NUMBER_VAL(-1);
-#endif
 }
 
 //   Compression Header Protocol.
@@ -1202,11 +1159,7 @@ b_value __socket_IPPROTO_COMP(b_vm *vm) {
 
 //   Stream Control Transmission Protocol.
 b_value __socket_IPPROTO_SCTP(b_vm *vm) {
-#ifdef IPPROTO_SCTP
   return NUMBER_VAL(IPPROTO_SCTP);
-#else
-  return NUMBER_VAL(-1);
-#endif
 }
 
 //   UDP-Lite protocol.
@@ -1229,20 +1182,12 @@ b_value __socket_IPPROTO_MPLS(b_vm *vm) {
 
 //   Raw IP packets.
 b_value __socket_IPPROTO_RAW(b_vm *vm) {
-#ifdef IPPROTO_RAW
   return NUMBER_VAL(IPPROTO_RAW);
-#else
-  return NUMBER_VAL(-1);
-#endif
 }
 
 //  max IP proto
 b_value __socket_IPPROTO_MAX(b_vm *vm) {
-#ifdef IPPROTO_MAX
   return NUMBER_VAL(IPPROTO_MAX);
-#else
-  return NUMBER_VAL(-1);
-#endif
 }
 
 
