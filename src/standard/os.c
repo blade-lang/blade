@@ -16,6 +16,8 @@
 #ifdef _WIN32
 #define popen _popen
 #define pclose _pclose
+
+#undef errno
 #define errno GetLastError()
 
 #include <sdkddkver.h>

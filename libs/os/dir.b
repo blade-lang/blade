@@ -81,7 +81,7 @@ class Directory {
       self.path += path_separator
 
     if platform == 'windows' {
-      self.path = self.path.replace('/', '\\')
+      self.path = self.path.replace('@\/@', '\\\\')
     }
   }
 
