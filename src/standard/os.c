@@ -12,6 +12,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <pathinfo.h>
+#include <sys/stat.h>
 
 #ifdef _WIN32
 #define popen _popen
@@ -28,13 +29,16 @@
 #define sleep(s) Sleep((DWORD)s)
 #endif /* ifndef sleep */
 
+/* Symbolic links aren't really a 'thing' on Windows, so just use plain-old
+ * stat() instead of lstat(). */
+#define lstat stat
+
 #endif /* ifdef _WIN32 */
 
 #ifndef HAVE_DIRENT_H
 #include "dirent/dirent.h"
 #else
 #include <dirent.h>
-#include <sys/stat.h>
 #include <sys/errno.h>
 #endif /* HAVE_DIRENT_H */
 
@@ -315,6 +319,17 @@ DECLARE_MODULE_METHOD(os__chmod) {
   RETURN_TRUE;
 }
 
+DECLARE_MODULE_METHOD(os__is_directory) {
+  ENFORCE_ARG_COUNT(is_directory, 1);
+  ENFORCE_ARG_TYPE(is_directory, 0, IS_STRING);
+  b_obj_string *path = AS_STRING(args[0]);
+  struct stat sb;
+  if(stat(path->chars, &sb) == 0) {
+    RETURN_BOOL(S_ISDIR(sb.st_mode) > 0);
+  }
+  RETURN_FALSE;
+}
+
 /** DIR TYPES BEGIN */
 
 b_value __os_dir_DT_UNKNOWN(b_vm *vm){
@@ -369,6 +384,7 @@ CREATE_MODULE_LOADER(os) {
       {"_mkdir", true,  GET_MODULE_METHOD(os__mkdir)},
       {"_readdir", true,  GET_MODULE_METHOD(os__readdir)},
       {"_chmod", true,  GET_MODULE_METHOD(os__chmod)},
+      {"_is_directory", true,  GET_MODULE_METHOD(os__is_directory)},
       {NULL,     false, NULL},
   };
 

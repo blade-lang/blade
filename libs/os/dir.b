@@ -16,7 +16,8 @@ import _os {
   # functions
   _mkdir, 
   _readdir,
-  _chmod
+  _chmod,
+  _is_directory
 }
 
 /**
@@ -44,6 +45,15 @@ class DirectoryEntry {
 
     self.path = path
     self.type = type
+  }
+
+  /**
+   * is_directory()
+   * 
+   * returns `true` if this entry is a directory or `false` otherwise.
+   */
+  is_directory() {
+    return _is_directory(self.path)
   }
 }
 
