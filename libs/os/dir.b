@@ -11,7 +11,7 @@ import _os {
   DT_REG,
   DT_SOCK,
   DT_WHT,
-  platform
+  platform,
 
   # functions
   _mkdir, 
