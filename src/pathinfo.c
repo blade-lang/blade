@@ -156,20 +156,23 @@ char *get_exe_dir() { return dirname(get_exe_path()); }
 char *merge_paths(char *a, char *b) {
   char *final_path = (char *) calloc(1, sizeof(char));
 
-  // edge cases
-  // 1. a itself is a file
-  // 2. b is a blade runtime constant such as <repl>, <script> and <module>
+  // by checking b first, we guarantee that b is neither NULL nor
+  // empty by the time we are checking a so that we can return a
+  // duplicate of b
+  if(b == NULL || strlen(b) == 0) {
+    free(final_path);
+    return strdup(a); // just in case a is const char*
+  } if(a == NULL || strlen(a) == 0) {
+    free(final_path);
+    return strdup(b); // just in case b is const char*
+  }
 
-  if (strstr(a, ".") == NULL && strstr(b, "<") == NULL && strlen(a) > 0) {
-    final_path = append_strings(final_path, a);
-  }
-  if (strlen(a) > 0 && b[0] != '.' && strstr(a, ".") == NULL &&
-      strstr(b, "<") == NULL) {
+  final_path = append_strings(final_path, a);
+
+  if(b[0] != '.') {
     final_path = append_strings(final_path, BLADE_PATH_SEPARATOR);
-    final_path = append_strings(final_path, b);
-  } else {
-    final_path = append_strings(final_path, b);
   }
+  final_path = append_strings(final_path, b);
   return final_path;
 }
 
