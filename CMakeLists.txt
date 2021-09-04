@@ -83,10 +83,6 @@ set(PCRE2_SOURCES
 
 add_definitions(-DHAVE_CONFIG_H)
 
-if(HAVE_TERMIOS)
-	add_definitions(-DHAVE_TERMIOS)
-endif()
-
 include_directories(src)
 
 add_library(libblade ${BLADE_SOURCES})
@@ -114,6 +110,7 @@ if(WIN32)
 	endif(MSVC)
 endif()
 
+# Header checks
 check_include_file("getopt.h" HAVE_GETOPT_H)
 if(NOT "${HAVE_GETOPT_H}")
 	target_sources(libblade PRIVATE src/blade_getopt.c)
@@ -122,7 +119,10 @@ check_include_file("termios.h" HAVE_TERMIOS_H)
 check_include_file("unistd.h" HAVE_UNISTD_H)
 check_include_file("sys/time.h" HAVE_SYS_TIME_H)
 check_include_file("sys/utsname.h" HAVE_SYS_UTSNAME_H)
+check_include_file("sys/errno.h" HAVE_SYS_ERRNO_H)
+check_include_file("dirent.h" HAVE_DIRENT_H)
 
+# Function checks
 check_function_exists("asprintf" HAVE_ASPRINTF)
 if(NOT "${HAVE_ASPRINTF}")
 	target_link_libraries(libblade PRIVATE asprintf)

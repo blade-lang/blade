@@ -120,7 +120,7 @@ var IP_ANY     = '0.0.0.0'
 var IP_LOCAL   = '127.0.0.1'
 
 /**
- * class SocketException
+ * @class SocketException
  * exception class thrown from sockets
  */
 class SocketException < Exception {
