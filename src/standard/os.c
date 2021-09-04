@@ -193,8 +193,8 @@ b_value get_blade_os_path_separator(b_vm *vm) {
 }
 
 DECLARE_MODULE_METHOD(os_getenv) {
-  ENFORCE_ARG_COUNT(getenv, 1);
-  ENFORCE_ARG_TYPE(getenv, 0, IS_STRING);
+  ENFORCE_ARG_COUNT(get_env, 1);
+  ENFORCE_ARG_TYPE(get_env, 0, IS_STRING);
 
   char *env = getenv(AS_C_STRING(args[0]));
   if (env != NULL) {
@@ -205,9 +205,9 @@ DECLARE_MODULE_METHOD(os_getenv) {
 }
 
 DECLARE_MODULE_METHOD(os_setenv) {
-  ENFORCE_ARG_RANGE(setenv, 2, 3);
-  ENFORCE_ARG_TYPE(setenv, 0, IS_STRING);
-  ENFORCE_ARG_TYPE(setenv, 1, IS_STRING);
+  ENFORCE_ARG_RANGE(set_env, 2, 3);
+  ENFORCE_ARG_TYPE(set_env, 0, IS_STRING);
+  ENFORCE_ARG_TYPE(set_env, 1, IS_STRING);
 
   int overwrite = 1;
   if (arg_count == 3) {
@@ -225,15 +225,11 @@ DECLARE_MODULE_METHOD(os_setenv) {
   RETURN_FALSE;
 }
 
-DECLARE_MODULE_METHOD(os_read_dir) {
-  RETURN;
-}
-
-DECLARE_MODULE_METHOD(os__mkdir) {
-  ENFORCE_ARG_COUNT(create, 3);
-  ENFORCE_ARG_TYPE(create, 0, IS_STRING);
-  ENFORCE_ARG_TYPE(create, 1, IS_NUMBER);
-  ENFORCE_ARG_TYPE(create, 2, IS_BOOL);
+DECLARE_MODULE_METHOD(os__createdir) {
+  ENFORCE_ARG_COUNT(create_dir, 3);
+  ENFORCE_ARG_TYPE(create_dir, 0, IS_STRING);
+  ENFORCE_ARG_TYPE(create_dir, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(create_dir, 2, IS_BOOL);
 
   b_obj_string *path = AS_STRING(args[0]);
   int mode = AS_NUMBER(args[1]);
@@ -286,8 +282,8 @@ DECLARE_MODULE_METHOD(os__mkdir) {
 }
 
 DECLARE_MODULE_METHOD(os__readdir) {
-  ENFORCE_ARG_COUNT(read, 1);
-  ENFORCE_ARG_TYPE(read, 0, IS_STRING);
+  ENFORCE_ARG_COUNT(read_dir, 1);
+  ENFORCE_ARG_TYPE(read_dir, 0, IS_STRING);
   b_obj_string *path = AS_STRING(args[0]);
 
   DIR *dir;
@@ -295,13 +291,66 @@ DECLARE_MODULE_METHOD(os__readdir) {
     b_obj_list *list = (b_obj_list *)GC(new_list(vm));
     struct dirent *ent;
     while((ent = readdir(dir)) != NULL) {
-      b_obj_list *d_list = (b_obj_list *)GC(new_list(vm));
-      write_list(vm, d_list, STRING_L_VAL(ent->d_name, ent->d_namlen));
-      write_list(vm, d_list, NUMBER_VAL(ent->d_type));
-      write_list(vm, list, OBJ_VAL(d_list));
+      write_list(vm, list, STRING_L_VAL(ent->d_name, ent->d_namlen));
     }
     closedir(dir);
     RETURN_OBJ(list);
+  }
+  RETURN_ERROR(strerror(errno));
+}
+
+static int remove_directory(char *path, int path_length, bool recursive) {
+  DIR *dir;
+  if((dir = opendir(path)) != NULL) {
+    struct dirent *ent;
+    while((ent = readdir(dir)) != NULL) {
+
+      // skip . and .. in path
+      if (memcmp(ent->d_name, ".", ent->d_namlen) == 0
+      || memcmp(ent->d_name, "..", ent->d_namlen) == 0) {
+        continue;
+      }
+
+      int path_string_length = path_length + ent->d_namlen + 2;
+      char *path_string = (char*) calloc(path_string_length, sizeof(char));
+      if(path_string == NULL) return -1;
+
+      snprintf(path_string, path_string_length, "%s" BLADE_PATH_SEPARATOR "%s", path, ent->d_name);
+
+      struct stat sb;
+      if(stat(path_string, &sb) == 0) {
+        if(S_ISDIR(sb.st_mode) > 0 && recursive) {
+          // recurse
+          if(remove_directory(path_string, path_string_length, recursive) == -1) {
+            free(path_string);
+            return -1;
+          }
+        } else if(unlink(path_string) == -1) {
+          free(path_string);
+          return -1;
+        } else {
+          free(path_string);
+        }
+      } else {
+        free(path_string);
+        return -1;
+      }
+    }
+    closedir(dir);
+    return rmdir(path);
+  }
+  return -1;
+}
+
+DECLARE_MODULE_METHOD(os__removedir){
+  ENFORCE_ARG_COUNT(remove_dir, 2);
+  ENFORCE_ARG_TYPE(remove_dir, 0, IS_STRING);
+  ENFORCE_ARG_TYPE(remove_dir, 1, IS_BOOL);
+
+  b_obj_string *path = AS_STRING(args[0]);
+  bool recursive = AS_BOOL(args[1]);
+  if(remove_directory(path->chars, path->length, recursive) >= 0) {
+    RETURN_TRUE;
   }
   RETURN_ERROR(strerror(errno));
 }
@@ -319,13 +368,45 @@ DECLARE_MODULE_METHOD(os__chmod) {
   RETURN_TRUE;
 }
 
-DECLARE_MODULE_METHOD(os__is_directory) {
-  ENFORCE_ARG_COUNT(is_directory, 1);
-  ENFORCE_ARG_TYPE(is_directory, 0, IS_STRING);
+DECLARE_MODULE_METHOD(os__is_dir) {
+  ENFORCE_ARG_COUNT(is_dir, 1);
+  ENFORCE_ARG_TYPE(is_dir, 0, IS_STRING);
   b_obj_string *path = AS_STRING(args[0]);
   struct stat sb;
   if(stat(path->chars, &sb) == 0) {
     RETURN_BOOL(S_ISDIR(sb.st_mode) > 0);
+  }
+  RETURN_FALSE;
+}
+
+DECLARE_MODULE_METHOD(os__exit) {
+  ENFORCE_ARG_COUNT(exit, 1);
+  ENFORCE_ARG_TYPE(exit, 0, IS_NUMBER);
+  exit((int)AS_NUMBER(args[0]));
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(os__cwd) {
+  ENFORCE_ARG_COUNT(cwd, 0);
+  char *cwd = getcwd(NULL, 0);
+  if(cwd != NULL) {
+    RETURN_TT_STRING(cwd);
+  }
+  RETURN_L_STRING("",1);
+}
+
+DECLARE_MODULE_METHOD(os__chdir) {
+  ENFORCE_ARG_COUNT(chdir, 1);
+  ENFORCE_ARG_TYPE(chdir, 0, IS_STRING);
+  RETURN_BOOL(chdir(AS_STRING(args[0])->chars) == 0);
+}
+
+DECLARE_MODULE_METHOD(os__exists) {
+  ENFORCE_ARG_COUNT(exists, 1);
+  ENFORCE_ARG_TYPE(exists, 0, IS_STRING);
+  struct stat sb;
+  if(stat(AS_STRING(args[0])->chars, &sb) == 0 && sb.st_mode & S_IFDIR) {
+    RETURN_TRUE;
   }
   RETURN_FALSE;
 }
@@ -376,31 +457,36 @@ b_value __os_dir_DT_WHT(b_vm *vm) {
 
 CREATE_MODULE_LOADER(os) {
   static b_func_reg os_module_functions[] = {
-      {"info",   true,  GET_MODULE_METHOD(os_info)},
-      {"exec",   true,  GET_MODULE_METHOD(os_exec)},
-      {"sleep",  true,  GET_MODULE_METHOD(os_sleep)},
-      {"getenv", true,  GET_MODULE_METHOD(os_getenv)},
-      {"setenv", true,  GET_MODULE_METHOD(os_setenv)},
-      {"_mkdir", true,  GET_MODULE_METHOD(os__mkdir)},
+      {"_info",   true,  GET_MODULE_METHOD(os_info)},
+      {"_exec",   true,  GET_MODULE_METHOD(os_exec)},
+      {"_sleep",  true,  GET_MODULE_METHOD(os_sleep)},
+      {"_getenv", true,  GET_MODULE_METHOD(os_getenv)},
+      {"_setenv", true,  GET_MODULE_METHOD(os_setenv)},
+      {"_createdir", true,  GET_MODULE_METHOD(os__createdir)},
       {"_readdir", true,  GET_MODULE_METHOD(os__readdir)},
       {"_chmod", true,  GET_MODULE_METHOD(os__chmod)},
-      {"_is_directory", true,  GET_MODULE_METHOD(os__is_directory)},
+      {"_isdir", true,  GET_MODULE_METHOD(os__is_dir)},
+      {"_exit", true,  GET_MODULE_METHOD(os__exit)},
+      {"_cwd", true,  GET_MODULE_METHOD(os__cwd)},
+      {"_removedir", true,  GET_MODULE_METHOD(os__removedir)},
+      {"_chdir", true,  GET_MODULE_METHOD(os__chdir)},
+      {"_exists", true,  GET_MODULE_METHOD(os__exists)},
       {NULL,     false, NULL},
   };
 
   static b_field_reg os_module_fields[] = {
-      {"platform", true, get_os_platform},
-      {"args", true, get_blade_os_args},
-      {"path_separator", true, get_blade_os_path_separator},
-      {"DT_UNKNOWN", true, __os_dir_DT_UNKNOWN},
-      {"DT_BLK", true, __os_dir_DT_BLK},
-      {"DT_CHR", true, __os_dir_DT_CHR},
-      {"DT_DIR", true, __os_dir_DT_DIR},
-      {"DT_FIFO", true, __os_dir_DT_FIFO},
-      {"DT_LNK", true, __os_dir_DT_LNK},
-      {"DT_REG", true, __os_dir_DT_REG},
-      {"DT_SOCK", true, __os_dir_DT_SOCK},
-      {"DT_WHT", true, __os_dir_DT_WHT},
+      {"_platform", true, get_os_platform},
+      {"_args", true, get_blade_os_args},
+      {"_path_separator", true, get_blade_os_path_separator},
+      {"_DT_UNKNOWN", true, __os_dir_DT_UNKNOWN},
+      {"_DT_BLK", true, __os_dir_DT_BLK},
+      {"_DT_CHR", true, __os_dir_DT_CHR},
+      {"_DT_DIR", true, __os_dir_DT_DIR},
+      {"_DT_FIFO", true, __os_dir_DT_FIFO},
+      {"_DT_LNK", true, __os_dir_DT_LNK},
+      {"_DT_REG", true, __os_dir_DT_REG},
+      {"_DT_SOCK", true, __os_dir_DT_SOCK},
+      {"_DT_WHT", true, __os_dir_DT_WHT},
       {NULL,       false, NULL},
   };
 
