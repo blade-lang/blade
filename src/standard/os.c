@@ -291,7 +291,7 @@ DECLARE_MODULE_METHOD(os__readdir) {
     b_obj_list *list = (b_obj_list *)GC(new_list(vm));
     struct dirent *ent;
     while((ent = readdir(dir)) != NULL) {
-      write_list(vm, list, STRING_L_VAL(ent->d_name, ent->d_namlen));
+      write_list(vm, list, STRING_VAL(ent->d_name));
     }
     closedir(dir);
     RETURN_OBJ(list);
@@ -306,12 +306,12 @@ static int remove_directory(char *path, int path_length, bool recursive) {
     while((ent = readdir(dir)) != NULL) {
 
       // skip . and .. in path
-      if (memcmp(ent->d_name, ".", ent->d_namlen) == 0
-      || memcmp(ent->d_name, "..", ent->d_namlen) == 0) {
+      if (memcmp(ent->d_name, ".", (int)strlen(ent->d_name)) == 0
+      || memcmp(ent->d_name, "..", (int)strlen(ent->d_name)) == 0) {
         continue;
       }
 
-      int path_string_length = path_length + ent->d_namlen + 2;
+      int path_string_length = path_length + (int)strlen(ent->d_name) + 2;
       char *path_string = (char*) calloc(path_string_length, sizeof(char));
       if(path_string == NULL) return -1;
 
