@@ -71,6 +71,7 @@ You can read the [Blade language documentation](https://bladelang.com) online at
 | `benchmarks` | Contains the sample benchmarks for Blade (some are based on the Benchmark games).
 | `libs` | Contains the Blade standard library.
 | `src` | The source code of the Blade language including the native implementation of some Blade library classes and functions in the modules directory.
+| `scripts` | Helper scripts for various uses such as automated installation.
 | `tests` | A few test cases that Blade implementation must pass.
 | `thirdparty` | Contains open-source libraries and packages used by Blade
 
