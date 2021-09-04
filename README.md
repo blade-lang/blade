@@ -6,7 +6,7 @@
 
 **Quick links**: [BUILDING](./BUILDING.md) | [CONTRIBUTING](./CONTRIBUTING.md) | [DOCS](https://bladelang.com) | 
 [LICENSE](./LICENSE) | 
-[![Chat on Gitter](https://badges.gitter.im/blade-lang/community.svg)](https://gitter.im/blade-lang/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Chat on Gitter](https://badges.gitter.im/blade-lang/community.svg)](https://gitter.im/blade-lang/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) [![Join the chat at https://gitter.im/blade-lang/main](https://badges.gitter.im/blade-lang/main.svg)](https://gitter.im/blade-lang/main?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 <div>
 
