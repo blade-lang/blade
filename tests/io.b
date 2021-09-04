@@ -111,6 +111,6 @@ while s = io.stdin.read() {
 }
 
 # Clear the terminal (classic Nano and Vim style)
-# io.stdout.write("\x1b[2J");
-# io.stdout.write("\x1b[H");
-# io.stdout.flush()
+io.stdout.write("\x1b[2J");
+io.stdout.write("\x1b[H");
+io.stdout.flush()
