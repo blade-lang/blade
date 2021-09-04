@@ -2,6 +2,19 @@
 BLADE_DIR=~/.blade
 TMP_PWD="$( pwd )"
 
+__b_get_profile () {
+	read -p "Please introduce your profile (default=~/.bashrc): "
+
+	READ_REPLY=`echo $REPLY | sed 's/ *$//g'`
+
+	if [[ -z "$READ_REPLY" ]]
+	then
+		B_PROFILE_VARS=~/.bashrc
+	else
+		B_PROFILE_VARS="$READ_REPLY"
+	fi
+}
+
 autoinstall () {
 	if [[ "$(whoami)" == "root" ]]; then
 		echo "error: Running as root"
@@ -30,7 +43,17 @@ autoinstall () {
 
 	printf "\nBlade downloaded. Installing...\n"
 
-	echo "Done. Please add \"$BLADE_DIR/build/bin/\" to your PATH."
+	__b_get_profile
+
+	echo "$B_PROFILE_VARS"
+
+	if [[ ! -w "$B_PROFILE_VARS" ]]; then
+		sudo echo "export PATH=\"$BLADE_DIR/build/bin/:\$PATH\"" >> "$B_PROFILE_VARS"
+	else
+		echo "export PATH=\"$BLADE_DIR/build/bin/:\$PATH\"" >> "$B_PROFILE_VARS"
+	fi
+
+	echo "Done."
 	export PATH="$BLADE_DIR/build/bin/:$PATH"
 }
 
