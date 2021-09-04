@@ -3,10 +3,11 @@ BLADE_DIR=~/.blade
 TMP_PWD="$( pwd )"
 
 __b_check_versions () {
-	[[ cmake --version ]] || {
-		echo "Error: cmake not installed"
-		exit 1
-	}
+	if ! command -v cmake &> /dev/null
+	then
+		echo "cmake could not be found"
+		exit
+	fi
 }
 
 __b_get_profile () {
