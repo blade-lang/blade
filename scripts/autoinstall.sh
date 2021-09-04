@@ -56,13 +56,13 @@ __b_autoinstall () {
 	__b_get_profile
 
 	if [[ ! -w "$B_PROFILE_VARS" ]]; then
-		sudo echo "export PATH=\"$BLADE_DIR/build/bin/:\$PATH\"" >> "$B_PROFILE_VARS"
+		sudo echo "export PATH=\"$BLADE_DIR/build/bin:\$PATH\"" >> "$B_PROFILE_VARS"
 	else
-		echo "export PATH=\"$BLADE_DIR/build/bin/:\$PATH\"" >> "$B_PROFILE_VARS"
+		echo "export PATH=\"$BLADE_DIR/build/bin:\$PATH\"" >> "$B_PROFILE_VARS"
 	fi
 
 	echo "Done."
-	export PATH="$BLADE_DIR/build/bin/:$PATH"
+	export PATH="$BLADE_DIR/build/bin:$PATH"
 }
 
 __b_autoinstall
