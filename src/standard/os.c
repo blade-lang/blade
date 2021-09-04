@@ -18,9 +18,6 @@
 #define popen _popen
 #define pclose _pclose
 
-#undef errno
-#define errno GetLastError()
-
 #include <sdkddkver.h>
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -35,7 +32,7 @@
 
 #endif /* ifdef _WIN32 */
 
-#ifndef HAVE_DIRENT_H
+#if !defined(HAVE_DIRENT_H) || defined(_WIN32)
 #include "dirent/dirent.h"
 #else
 #include <dirent.h>
@@ -249,13 +246,15 @@ DECLARE_MODULE_METHOD(os__createdir) {
       *p = '\0';
 #ifdef _WIN32
       if (!CreateDirectory(path->chars, NULL)) {
-        if (errno != ERROR_ALREADY_EXISTS) {
+        if (GetLastError() != ERROR_ALREADY_EXISTS) {
+          *p = sep;
+          RETURN_ERROR(strerror(GetLastError()));
 #else
       if (mkdir(path->chars, mode) == -1) {
         if (errno != EEXIST) {
-#endif /* _WIN32 */
           *p = sep;
           RETURN_ERROR(strerror(errno));
+#endif /* _WIN32 */
         } else {
           exists = true;
         }
@@ -270,12 +269,13 @@ DECLARE_MODULE_METHOD(os__createdir) {
 
 #ifdef _WIN32
     if (!CreateDirectory(path->chars, NULL)) {
-      if (errno != ERROR_ALREADY_EXISTS) {
+      if (GetLastError() != ERROR_ALREADY_EXISTS) {
+        RETURN_ERROR(strerror(GetLastError()));
 #else
     if (mkdir(path->chars, mode) == -1) {
       if (errno != EEXIST) {
-#endif /* _WIN32 */
         RETURN_ERROR(strerror(errno));
+#endif /* _WIN32 */
       } else {
         exists = true;
       }
