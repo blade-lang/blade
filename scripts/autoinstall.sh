@@ -1,5 +1,6 @@
 #!/bin/bash
 BLADE_DIR=~/.blade
+TMP_PWD="$( pwd )"
 
 autoinstall () {
 	if [[ "$(whoami)" == "root" ]]; then
@@ -21,24 +22,17 @@ autoinstall () {
   fi
 
 	mkdir -p "$BLADE_DIR"
+	cd "$BLADE_DIR"
 
-	git clone https://github.com/blade-lang/blade "$BLADE_DIR"
-	cmake -B "$BLADE_DIR/build" -DCMAKE_BUILD_TYPE=Release
-	cmake --build "$BLADE_DIR/build" --config Release
+	git clone https://github.com/blade-lang/blade .
+	cmake -B build -DCMAKE_BUILD_TYPE=Release
+	cmake --build build --config Release
 
 	printf "\nBlade downloaded. Installing...\n"
 
-	if [[ "$SHELL" == *zsh ]]; then
-		B_PROFILE_VARS=~/.bash_profile
-	elif [[ "$SHELL" == *bash ]]; then
-		B_PROFILE_VARS=~/.zshrc
-	else
-		echo "Unsupported terminal. Please manually add \"$BLADE_DIR/build/bin/\" to your PATH."
-		exit 1
-	fi
-
-	echo "export PATH=\"$BLADE_DIR/build/bin/:\$PATH\"" >> "$B_PROFILE_VARS"
-	echo "Done. Restart your terminal or run \`. $B_PROFILE_VARS\` to reload PATH."
+	echo "Done. Please add \"$BLADE_DIR/build/bin/\" to your PATH."
+	export PATH="$BLADE_DIR/build/bin/:$PATH"
 }
 
 autoinstall
+cd "$TMP_PWD"

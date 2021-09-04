@@ -72,7 +72,7 @@ sudo pacman -S --needed --noconfirm mingw-w64-x86_64-{cmake,ninja,toolchain}
 Proceed to the [Configure](#configure) section to configure your CMake build, and follow the instructions as if you were
 using these tools on a UNIX-like system.
 
-## Autoinstall (Linux only)
+## Autoinstall (Works on all OSX and Linux)
 
 Run the following command:
 
