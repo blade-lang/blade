@@ -72,6 +72,14 @@ sudo pacman -S --needed --noconfirm mingw-w64-x86_64-{cmake,ninja,toolchain}
 Proceed to the [Configure](#configure) section to configure your CMake build, and follow the instructions as if you were
 using these tools on a UNIX-like system.
 
+## Autoinstall (Works on all OSX and Linux)
+
+Run the following command:
+
+```sh
+bash <(curl -s https://raw.githubusercontent.com/blade-lang/blade/main/scripts/autoinstall.sh)
+```
+
 ## Configure
 
 Configure CMake by creating an empty `build` directory in the source root directory, and running:
@@ -93,7 +101,3 @@ cmake --build build
 ```
 
 The `blade` executable can be located in the `build` folder.
-
-## Install
-
-TODO: To be completed.
