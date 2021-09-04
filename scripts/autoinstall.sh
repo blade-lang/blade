@@ -3,7 +3,7 @@ BLADE_DIR=~/.blade
 TMP_PWD="$( pwd )"
 
 __b_get_profile () {
-	read -p "Please introduce your profile (default=~/.bashrc): "
+	read -p "Please introduce the full path to your profile (default=~/.bashrc): "
 
 	READ_REPLY=`echo $REPLY | sed 's/ *$//g'`
 
@@ -44,8 +44,6 @@ autoinstall () {
 	printf "\nBlade downloaded. Installing...\n"
 
 	__b_get_profile
-
-	echo "$B_PROFILE_VARS"
 
 	if [[ ! -w "$B_PROFILE_VARS" ]]; then
 		sudo echo "export PATH=\"$BLADE_DIR/build/bin/:\$PATH\"" >> "$B_PROFILE_VARS"
