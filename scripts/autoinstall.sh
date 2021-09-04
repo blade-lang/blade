@@ -2,6 +2,13 @@
 BLADE_DIR=~/.blade
 TMP_PWD="$( pwd )"
 
+__b_check_versions () {
+	[[ cmake --version ]] || {
+		echo "Error: cmake not installed"
+		exit 1
+	}
+}
+
 __b_get_profile () {
 	read -p "Please introduce the full path to your profile (default=~/.bashrc): "
 
@@ -15,11 +22,13 @@ __b_get_profile () {
 	fi
 }
 
-autoinstall () {
+__b_autoinstall () {
 	if [[ "$(whoami)" == "root" ]]; then
 		echo "error: Running as root"
 		exit 1
 	fi
+
+	__b_check_versions
 
 	if [[ -d "$BLADE_DIR" ]] || [[ -f "$BLADE_DIR" ]]; then
 		read -p "$BLADE_DIR already exists. Do you want to remove it? [Yn] " -r
@@ -55,5 +64,5 @@ autoinstall () {
 	export PATH="$BLADE_DIR/build/bin/:$PATH"
 }
 
-autoinstall
+__b_autoinstall
 cd "$TMP_PWD"
