@@ -32,6 +32,7 @@
 #cmakedefine HAVE_UNISTD_H
 #cmakedefine HAVE_SYS_TIME_H
 #cmakedefine HAVE_SYS_UTSNAME_H
+#cmakedefine HAVE_SYS_ERRNO_H
 #cmakedefine HAVE_DIRENT_H
 #cmakedefine HAVE_ASPRINTF
 #cmakedefine HAVE_STRSEP

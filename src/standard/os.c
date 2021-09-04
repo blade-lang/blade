@@ -39,8 +39,14 @@
 #include "dirent/dirent.h"
 #else
 #include <dirent.h>
-#include <sys/errno.h>
+#include <errno.h>
 #endif /* HAVE_DIRENT_H */
+
+#ifdef HAVE_SYS_ERRNO_H
+#include <sys/errno.h>
+#else
+#include <errno.h>
+#endif /* HAVE_SYS_ERRNO_H */
 
 DECLARE_MODULE_METHOD(os_exec) {
   ENFORCE_ARG_COUNT(exec, 1);

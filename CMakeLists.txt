@@ -119,6 +119,7 @@ check_include_file("termios.h" HAVE_TERMIOS_H)
 check_include_file("unistd.h" HAVE_UNISTD_H)
 check_include_file("sys/time.h" HAVE_SYS_TIME_H)
 check_include_file("sys/utsname.h" HAVE_SYS_UTSNAME_H)
+check_include_file("sys/errno.h" HAVE_SYS_ERRNO_H)
 check_include_file("dirent.h" HAVE_DIRENT_H)
 
 # Function checks
