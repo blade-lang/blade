@@ -14,12 +14,12 @@ void init_value_arr(b_value_arr *array) {
   array->values = NULL;
 }
 
-inline void init_byte_arr(b_byte_arr *array, int length) {
+void init_byte_arr(b_byte_arr *array, int length) {
   array->count = length;
   array->bytes = (unsigned char *) calloc(length, sizeof(unsigned char));
 }
 
-inline void write_value_arr(b_vm *vm, b_value_arr *array, b_value value) {
+void write_value_arr(b_vm *vm, b_value_arr *array, b_value value) {
   if (array->capacity < array->count + 1) {
     int old_capacity = array->capacity;
     array->capacity = GROW_CAPACITY(old_capacity);
@@ -59,12 +59,12 @@ void insert_value_arr(b_vm *vm, b_value_arr *array, b_value value, int index) {
   array->count++;
 }
 
-inline void free_value_arr(b_vm *vm, b_value_arr *array) {
+void free_value_arr(b_vm *vm, b_value_arr *array) {
   FREE_ARRAY(b_value, array->values, array->capacity);
   init_value_arr(array);
 }
 
-inline void free_byte_arr(b_vm *vm, b_byte_arr *array) {
+void free_byte_arr(b_vm *vm, b_byte_arr *array) {
   FREE_ARRAY(unsigned char, array->bytes, array->count);
 }
 
