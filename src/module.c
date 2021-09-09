@@ -21,7 +21,7 @@ void bind_native_modules(b_vm *vm) {
     b_module_reg *module = modules[i](vm);
 
     if(module != NULL) {
-      b_obj_module *the_module = new_module(vm, strdup(module->name), strdup("<__native__>"));
+      b_obj_module *the_module = (b_obj_module*)GC(new_module(vm, strdup(module->name), strdup("<__native__>")));
       the_module->preloader = module->preloader;
       the_module->unloader = module->unloader;
 
@@ -98,4 +98,6 @@ void bind_native_modules(b_vm *vm) {
       // @TODO: Warn about module loading error...
     }
   }
+
+  CLEAR_GC();
 }

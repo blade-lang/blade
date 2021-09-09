@@ -125,6 +125,7 @@ void blacken_object(b_vm *vm, b_obj *object) {
       mark_table(vm, &klass->methods);
       mark_table(vm, &klass->properties);
       mark_table(vm, &klass->static_properties);
+      mark_value(vm, klass->initializer);
       break;
     }
     case OBJ_CLOSURE: {
@@ -222,6 +223,9 @@ void free_object(b_vm *vm, b_obj *object) {
       free_table(vm, &klass->methods);
       free_table(vm, &klass->properties);
       free_table(vm, &klass->static_properties);
+      if(!IS_EMPTY(klass->initializer)) {
+        free_object(vm, AS_OBJ(klass->initializer));
+      }
       FREE(b_obj_class, object);
       break;
     }
@@ -236,9 +240,9 @@ void free_object(b_vm *vm, b_obj *object) {
     case OBJ_FUNCTION: {
       b_obj_func *function = (b_obj_func *) object;
       free_blob(vm, &function->blob);
-      /*if(function->name != NULL) {
+      if(function->name != NULL) {
         free_object(vm, (b_obj *) function->name);
-      }*/
+      }
       FREE(b_obj_func, object);
       break;
     }

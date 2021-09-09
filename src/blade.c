@@ -182,6 +182,7 @@ static void repl(b_vm *vm) {
       memset(source, 0, strlen(source));
     }
   }
+  free(source);
 }
 
 static void run_file(b_vm *vm, const char *file) {
