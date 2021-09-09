@@ -89,7 +89,7 @@ DECLARE_NATIVE(file) {
     mode = (b_obj_string *) GC(copy_string(vm, "r", 1));
   }
 
-  b_obj_file *file = new_file(vm, path, mode);
+  b_obj_file *file = (b_obj_file*)GC(new_file(vm, path, mode));
   file_open(file);
 
   RETURN_OBJ(file);

@@ -21,7 +21,7 @@
 // see: https://engineering.fb.com/2019/04/25/developer-tools/f14/
 #define TABLE_MAX_LOAD 0.85714286
 
-#define GC_HEAP_GROWTH_FACTOR 2
+#define GC_HEAP_GROWTH_FACTOR 1.5
 
 #define USE_NAN_BOXING 1
 #define PCRE2_STATIC

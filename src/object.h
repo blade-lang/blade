@@ -101,19 +101,19 @@ struct s_obj_string {
 
 typedef struct b_obj_up_value {
   b_obj obj;
-  b_value *location;
   b_value closed;
+  b_value *location;
   struct b_obj_up_value *next;
 } b_obj_up_value;
 
 typedef struct {
   b_obj obj;
   bool imported;
+  b_table values;
   char *name;
   char *file;
   void *preloader;
   void *unloader;
-  b_table values;
 } b_obj_module;
 
 typedef struct {
@@ -137,17 +137,17 @@ typedef struct {
 typedef struct b_obj_class {
   b_obj obj;
   b_value initializer;
-  b_obj_string *name;
   b_table properties;
   b_table static_properties;
   b_table methods;
+  b_obj_string *name;
   struct b_obj_class *superclass;
 } b_obj_class;
 
 typedef struct {
   b_obj obj;
-  b_obj_class *klass;
   b_table properties;
+  b_obj_class *klass;
 } b_obj_instance;
 
 typedef struct {
