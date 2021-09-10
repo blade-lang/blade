@@ -133,8 +133,11 @@ DECLARE_NATIVE(getprop) {
 
   b_obj_instance *instance = AS_INSTANCE(args[0]);
   b_value value;
-  table_get(&instance->properties, args[1], &value);
-  RETURN_VALUE(value);
+  if(table_get(&instance->properties, args[1], &value) ||
+      table_get(&instance->klass->methods, args[1], &value)) {
+    RETURN_VALUE(value);
+  }
+  RETURN;
 }
 
 /**
