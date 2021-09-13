@@ -107,9 +107,6 @@ import _socket {
   _getsockinfo,
   _getsockopt
 }
-import _os
-
-var _platform = _os.platform
 
 
 
