@@ -418,26 +418,28 @@ static char *dict_to_string(b_vm *vm, b_obj_dict *dict) {
 }
 
 char *object_to_string(b_vm *vm, b_value value) {
-  char *str = (char *) calloc(1, sizeof(char));
-
   switch (OBJ_TYPE(value)) {
     case OBJ_SWITCH: {
       return "<switch>";
     }
-    case OBJ_CLASS:
-      if (str != NULL) {
-        sprintf(str, "<class %s>", AS_CLASS(value)->name->chars);
-      } else {
-        str = strdup(AS_CLASS(value)->name->chars);
+    case OBJ_CLASS: {
+      const char *format = "<class %s>";
+      char *data = AS_CLASS(value)->name->chars;
+      char *str = (char*) calloc(snprintf(NULL, 0, format, data), sizeof(char));
+      if(str != NULL) {
+        sprintf(str, format, data);
       }
-      break;
-    case OBJ_INSTANCE:
-      if (str != NULL) {
-        sprintf(str, "<instance of %s>", AS_INSTANCE(value)->klass->name->chars);
-      } else {
-        str = strdup(AS_INSTANCE(value)->klass->name->chars);
+      return str;
+    }
+    case OBJ_INSTANCE: {
+      const char *format = "<instance of %s>";
+      char *data = AS_INSTANCE(value)->klass->name->chars;
+      char *str = (char*) calloc(snprintf(NULL, 0, format, data), sizeof(char));
+      if(str != NULL) {
+        sprintf(str, format, data);
       }
-      break;
+      return str;
+    }
     case OBJ_CLOSURE:
       return function_to_string(AS_CLOSURE(value)->function);
     case OBJ_BOUND_METHOD: {
@@ -445,17 +447,33 @@ char *object_to_string(b_vm *vm, b_value value) {
     }
     case OBJ_FUNCTION:
       return function_to_string(AS_FUNCTION(value));
-    case OBJ_NATIVE:
-      sprintf(str, "<native-function %s>", AS_NATIVE(value)->name);
-      break;
+    case OBJ_NATIVE:{
+      const char *format = "<native-function %s>";
+      const char *data = AS_NATIVE(value)->name;
+      char *str = (char*) calloc(snprintf(NULL, 0, format, data), sizeof(char));
+      if(str != NULL) {
+        sprintf(str, format, data);
+      }
+      return str;
+    }
     case OBJ_RANGE: {
       b_obj_range *range = AS_RANGE(value);
-      sprintf(str, "<range %d-%d>", range->lower, range->upper);
-      break;
+      const char *format = "<range %d-%d>";
+      char *str = (char*) calloc(snprintf(NULL, 0, format, range->lower, range->upper), sizeof(char));
+      if(str != NULL) {
+        sprintf(str, format, range->lower, range->upper);
+      }
+      return str;
     }
-    case OBJ_MODULE:
-      sprintf(str, "<module %s>", AS_MODULE(value)->name);
-      break;
+    case OBJ_MODULE: {
+      const char *format = "<module %s>";
+      const char *data = AS_MODULE(value)->name;
+      char *str = (char*) calloc(snprintf(NULL, 0, format, data), sizeof(char));
+      if(str != NULL) {
+        sprintf(str, format, data);
+      }
+      return str;
+    }
     case OBJ_STRING:
       return strdup(AS_C_STRING(value));
     case OBJ_UP_VALUE:
@@ -468,13 +486,16 @@ char *object_to_string(b_vm *vm, b_value value) {
       return dict_to_string(vm, AS_DICT(value));
     case OBJ_FILE: {
       b_obj_file *file = AS_FILE(value);
-      sprintf(str, "<file at %s in mode %s>", file->path->chars,
-              file->mode->chars);
-      break;
+      const char *format = "<file at %s in mode %s>";
+      char *str = (char*) calloc(snprintf(NULL, 0, format, file->path->chars, file->mode->chars), sizeof(char));
+      if(str != NULL) {
+        sprintf(str, format, file->path->chars, file->mode->chars);
+      }
+      return str;
     }
   }
 
-  return str;
+  return NULL;
 }
 
 const char *object_type(b_obj *object) {

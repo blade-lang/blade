@@ -1231,10 +1231,20 @@ static void or_(b_parser *p, b_token previous, bool can_assign) {
 }
 
 static void conditional(b_parser *p, b_token previous, bool can_assign) {
+  int then_jump = emit_jump(p, OP_JUMP_IF_FALSE);
+  emit_byte(p, OP_POP);
+
   ignore_whitespace(p);
   // compile the then expression
   parse_precedence(p, PREC_CONDITIONAL);
   ignore_whitespace(p);
+
+  int else_jump = emit_jump(p, OP_JUMP);
+
+  patch_jump(p, then_jump);
+  emit_byte(p, OP_POP);
+
+
   consume(p, COLON_TOKEN, "expected matching ':' after '?' conditional");
   ignore_whitespace(p);
   // compile the else expression
@@ -1242,7 +1252,7 @@ static void conditional(b_parser *p, b_token previous, bool can_assign) {
   // linear conditionals can be nested.
   parse_precedence(p, PREC_ASSIGNMENT);
 
-  emit_byte(p, OP_CHOICE);
+  patch_jump(p, else_jump);
 }
 
 b_parse_rule parse_rules[] = {
