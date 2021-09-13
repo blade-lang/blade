@@ -401,6 +401,13 @@ DECLARE_MODULE_METHOD(os__cwd) {
   RETURN_L_STRING("",1);
 }
 
+DECLARE_MODULE_METHOD(os__realpath) {
+  ENFORCE_ARG_COUNT(_realpath, 1);
+  ENFORCE_ARG_TYPE(_realpath, 0, IS_STRING);
+  char *path = realpath(AS_C_STRING(args[0]), NULL);
+  RETURN_T_STRING(path,(int) strlen(path));
+}
+
 DECLARE_MODULE_METHOD(os__chdir) {
   ENFORCE_ARG_COUNT(chdir, 1);
   ENFORCE_ARG_TYPE(chdir, 0, IS_STRING);
@@ -477,6 +484,7 @@ CREATE_MODULE_LOADER(os) {
       {"_removedir", true,  GET_MODULE_METHOD(os__removedir)},
       {"_chdir", true,  GET_MODULE_METHOD(os__chdir)},
       {"_exists", true,  GET_MODULE_METHOD(os__exists)},
+      {"_realpath", true,  GET_MODULE_METHOD(os__realpath)},
       {NULL,     false, NULL},
   };
 

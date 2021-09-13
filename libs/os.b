@@ -235,3 +235,12 @@ def join_paths(...) {
   if result result = result[1,]
   return result
 }
+
+/**
+ * real_path(path: string)
+ * 
+ * returns the original path to a relative path
+ */
+def real_path(path) {
+  return _realpath(path)
+}
