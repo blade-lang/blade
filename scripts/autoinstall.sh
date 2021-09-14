@@ -40,7 +40,7 @@ __b_autoinstall () {
 
 	BLADE_BIN="$BLADE_DIR/build/bin"
 
-	B_CONFIG=""
+	B_CONFIG="\n"
 	B_CONFIG+="export PATH=\"$BLADE_BIN:\$PATH\"\n"
 	B_CONFIG+="BLADE_DIR=\"$BLADE_DIR\"\n"
 	B_CONFIG+="BLADE=\"$BLADE_BIN/blade\"\n"
@@ -49,14 +49,18 @@ __b_autoinstall () {
 
 	echo "$B_CONFIG" > "$BLADE_ENV"
 
-	if [ -f ~/.bash_profile ]; then
-    echo ". \"$BLADE_ENV\"" >> ~/.bash_profile
+	B_LOAD_BLADE_ENV=". \"$BLADE_ENV\""
+
+	if [[ "$( cat ~/.profile )" != *"$B_LOAD_BLADE_ENV" ]]; then
+		if [ -f ~/.bash_profile ]; then
+			echo "$B_LOAD_BLADE_ENV" >> ~/.bash_profile
+		fi
+	
+		echo "$B_LOAD_BLADE_ENV" >> ~/.profile
 	fi
 
-	echo ". \"$BLADE_ENV\"" >> ~/.profile
-
 	echo "Done."
-	. "$BLADE_ENV"
+	$B_LOAD_BLADE_ENV
 }
 
 __b_autoinstall
