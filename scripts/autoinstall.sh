@@ -60,7 +60,7 @@ __b_autoinstall () {
 	fi
 
 	echo "Done."
-	$B_LOAD_BLADE_ENV
+	. "$BLADE_ENV"
 }
 
 __b_autoinstall
