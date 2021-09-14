@@ -5,21 +5,8 @@ TMP_PWD="$( pwd )"
 __b_check_versions () {
 	if ! command -v cmake &> /dev/null
 	then
-		echo "cmake could not be found"
+		echo "CMake could not be found"
 		exit
-	fi
-}
-
-__b_get_profile () {
-	read -p "Please introduce the full path to your profile (default=~/.bashrc): "
-
-	READ_REPLY=`echo $REPLY | sed 's/ *$//g'`
-
-	if [[ -z "$READ_REPLY" ]]
-	then
-		B_PROFILE_VARS=~/.bashrc
-	else
-		B_PROFILE_VARS="$READ_REPLY"
 	fi
 }
 
@@ -51,18 +38,25 @@ __b_autoinstall () {
 	cmake -B build -DCMAKE_BUILD_TYPE=Release
 	cmake --build build --config Release
 
-	printf "\nBlade downloaded. Installing...\n"
+	BLADE_BIN="$BLADE_DIR/build/bin"
 
-	__b_get_profile
+	B_CONFIG=""
+	B_CONFIG+="export PATH=\"$BLADE_BIN:\$PATH\"\n"
+	B_CONFIG+="BLADE_DIR=\"$BLADE_DIR\"\n"
+	B_CONFIG+="BLADE=\"$BLADE_BIN/blade\"\n"
 
-	if [[ ! -w "$B_PROFILE_VARS" ]]; then
-		sudo echo "export PATH=\"$BLADE_DIR/build/bin:\$PATH\"" >> "$B_PROFILE_VARS"
-	else
-		echo "export PATH=\"$BLADE_DIR/build/bin:\$PATH\"" >> "$B_PROFILE_VARS"
+	BLADE_ENV="$BLADE_DIR/env"
+
+	echo "$B_CONFIG" > "$BLADE_ENV"
+
+	if [ -f ~/.bash_profile ]; then
+    echo ". \"$BLADE_ENV\"" >> ~/.bash_profile
 	fi
 
+	echo ". \"$BLADE_ENV\"" >> ~/.profile
+
 	echo "Done."
-	export PATH="$BLADE_DIR/build/bin:$PATH"
+	. "$BLADE_ENV"
 }
 
 __b_autoinstall
