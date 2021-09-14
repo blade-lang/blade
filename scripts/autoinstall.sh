@@ -42,8 +42,8 @@ __b_autoinstall () {
 	BLADE_ENV="$BLADE_DIR/env"
 
 	printf "export PATH=\"$BLADE_BIN:\$PATH\"\n" >> "$BLADE_ENV"
-	printf "BLADE_DIR=\"$BLADE_DIR\"\n" >> "$BLADE_ENV"
-	printf "BLADE=\"$BLADE_BIN/blade\"\n" >> "$BLADE_ENV"
+	printf "export BLADE_DIR=\"$BLADE_DIR\"\n" >> "$BLADE_ENV"
+	printf "export BLADE=\"$BLADE_BIN/blade\"\n" >> "$BLADE_ENV"
 
 	B_LOAD_BLADE_ENV=". \"$BLADE_ENV\""
 
