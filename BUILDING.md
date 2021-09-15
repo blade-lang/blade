@@ -74,10 +74,16 @@ using these tools on a UNIX-like system.
 
 ## Autoinstall (Works on all OSX and Linux)
 
-Run the following command:
+Run the following command (OSX):
 
 ```sh
-bash <(curl -s https://raw.githubusercontent.com/blade-lang/blade/main/scripts/autoinstall.sh)
+bash <(curl -s https://raw.githubusercontent.com/blade-lang/blade/main/scripts/autoinstall-osx.sh)
+```
+
+Or in Linux:
+
+```sh
+bash <(curl -s https://raw.githubusercontent.com/blade-lang/blade/main/scripts/autoinstall-linux.sh)
 ```
 
 ## Configure

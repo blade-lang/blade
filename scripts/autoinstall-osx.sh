@@ -5,7 +5,7 @@ TMP_PWD="$( pwd )"
 __b_check_versions () {
 	if ! command -v cmake &> /dev/null
 	then
-		echo "cmake could not be found"
+		echo "CMake could not be found"
 		exit
 	fi
 }
