@@ -18,6 +18,7 @@ import _json { _decode }
  * @param compact indicates whether the resulting json string will be tightly
  * packed. i.e. spaces will be trimed from objects and arrays.
  * @param max_depth is the maximum recursive depth for encoding, default = 1024.
+ * @return string
  */
 def encode(value, compact, max_depth) {
   return Encoder(compact, max_depth).encode(value)
@@ -31,9 +32,27 @@ def encode(value, compact, max_depth) {
  * @param value is the string to decode
  * @param allow_comments can be set to enable/disable C-style comments in json
  * [default = true]
+ * @return object
  */
 def decode(value, allow_comments) {
   if allow_comments == nil allow_comments = true
   return _decode(value, allow_comments)
+}
+
+/**
+ * parse(path: string)
+ * 
+ * parses a file containing json data.
+ * @return object
+ */
+def parse(path) {
+  if !is_string(path)
+    die Exception('file path expected, ${typeof(path)} given')
+
+  var f = file(path)
+  if !f.exists()
+    die Exception('could not open file ${path}')
+
+  return decode(f.read())
 }
 
