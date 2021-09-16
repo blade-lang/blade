@@ -23,6 +23,8 @@
 // for debugging...
 #include "debug.h"
 
+#define ERR_CANT_ASSIGN_EMPTY "empty cannot be assigned."
+
 static inline void reset_stack(b_vm *vm) {
   vm->stack_top = vm->stack;
   vm->frame_count = 0;
@@ -1591,6 +1593,10 @@ b_ptr_result run(b_vm *vm) {
 
       case OP_DEFINE_GLOBAL: {
         b_obj_string *name = READ_STRING();
+        if(IS_EMPTY(peek(vm, 0))) {
+          runtime_error(ERR_CANT_ASSIGN_EMPTY);
+          break;
+        }
         table_set(vm, &frame->closure->function->module->values, OBJ_VAL(name), peek(vm, 0));
         pop(vm);
 
@@ -1614,6 +1620,11 @@ b_ptr_result run(b_vm *vm) {
       }
 
       case OP_SET_GLOBAL: {
+        if(IS_EMPTY(peek(vm, 0))) {
+          runtime_error(ERR_CANT_ASSIGN_EMPTY);
+          break;
+        }
+
         b_obj_string *name = READ_STRING();
         b_table *table = &frame->closure->function->module->values;
         if (table_set(vm, table, OBJ_VAL(name), peek(vm, 0))) {
@@ -1631,6 +1642,10 @@ b_ptr_result run(b_vm *vm) {
       }
       case OP_SET_LOCAL: {
         uint16_t slot = READ_SHORT();
+        if(IS_EMPTY(peek(vm, 0))) {
+          runtime_error(ERR_CANT_ASSIGN_EMPTY);
+          break;
+        }
         frame->slots[slot] = peek(vm, 0);
         break;
       }
@@ -1844,7 +1859,11 @@ b_ptr_result run(b_vm *vm) {
         if (!IS_INSTANCE(peek(vm, 1)) && !IS_DICT(peek(vm, 1))) {
           runtime_error("object of type %s can not carry properties", value_type(peek(vm, 1)));
           break;
+        } else  if(IS_EMPTY(peek(vm, 0))) {
+          runtime_error(ERR_CANT_ASSIGN_EMPTY);
+          break;
         }
+
         b_obj_string *name = READ_STRING();
 
         if (IS_INSTANCE(peek(vm, 1))) {
@@ -1891,6 +1910,10 @@ b_ptr_result run(b_vm *vm) {
       }
       case OP_SET_UP_VALUE: {
         int index = READ_SHORT();
+        if(IS_EMPTY(peek(vm, 0))) {
+          runtime_error(ERR_CANT_ASSIGN_EMPTY);
+          break;
+        }
         *((b_obj_closure *) frame->closure)->up_values[index]->location =
             peek(vm, 0);
         break;
@@ -2111,6 +2134,11 @@ b_ptr_result run(b_vm *vm) {
 
           b_value value = peek(vm, 0);
           b_value index = peek(vm, 1);
+
+          if(IS_EMPTY(value)) {
+            runtime_error(ERR_CANT_ASSIGN_EMPTY);
+            break;
+          }
 
           switch (AS_OBJ(peek(vm, 2))->type) {
             case OBJ_LIST: {
@@ -2416,3 +2444,5 @@ b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
 
   return result;
 }
+
+#undef ERR_CANT_ASSIGN_EMPTY

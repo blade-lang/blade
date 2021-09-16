@@ -137,7 +137,7 @@ DECLARE_NATIVE(getprop) {
       table_get(&instance->klass->methods, args[1], &value)) {
     RETURN_VALUE(value);
   }
-  RETURN;
+  RETURN_NIL;
 }
 
 /**
