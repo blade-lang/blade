@@ -68,10 +68,10 @@ def sum(numbers) {
         result += num
     }
 
-    print(result)
+    echo 'the sum is ${result}'
 }
 
-sum([1, 2, 3, 4]) # this will print "10"
+sum([1, 2, 3, 4]) # this prints "the sum is 10"
 ```
 
 
