@@ -57,6 +57,24 @@ syntax set with a very natural feel.
 - Highly portable.
 
 
+## Example
+
+The following code prints the sum of all numbers in an array.
+```py
+def sum(numbers) {
+    var result = 0
+
+    for num in numbers {
+        result += num
+    }
+
+    echo 'the sum is ${result}'
+}
+
+sum([1, 2, 3, 4]) # this prints "the sum is 10"
+```
+
+
 ## Documentation
 
 Documentation is currently in-progress in the [blade-docs](https://github.com/blade-lang/blade-docs) repo.
