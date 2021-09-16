@@ -284,7 +284,7 @@ static void emit_return(b_parser *p) {
   if (p->vm->compiler->type == TYPE_INITIALIZER) {
     emit_byte_and_short(p, OP_GET_LOCAL, 0);
   } else {
-    emit_byte(p, OP_NIL);
+    emit_byte(p, OP_EMPTY);
   }
   emit_byte(p, OP_RETURN);
 }

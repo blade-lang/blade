@@ -66,7 +66,7 @@ DECLARE_MODULE_METHOD(socket__error) {
     char *error = strerror(errno);
     RETURN_STRING(error);
   }
-  RETURN;
+  RETURN_NIL;
 }
 
 DECLARE_MODULE_METHOD(socket__create) {
@@ -352,7 +352,7 @@ DECLARE_MODULE_METHOD(socket__recv) {
     RETURN_NUMBER(-1);
   }
 
-  RETURN;
+  RETURN_NIL;
 }
 
 DECLARE_MODULE_METHOD(socket__setsockopt) {
@@ -407,7 +407,7 @@ DECLARE_MODULE_METHOD(socket__getsockopt) {
       getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&so_error, &len);
 #endif // !_WIN32
 
-      if (so_error == 0) RETURN;
+      if (so_error == 0) RETURN_NIL;
       char *error = strerror(so_error);
       RETURN_STRING(error);
     }
@@ -499,7 +499,7 @@ DECLARE_MODULE_METHOD(socket__getaddrinfo) {
   WSADATA wsa_data;
   int i_result = WSAStartup(MAKEWORD(1, 1), &wsa_data);
   if (i_result != NO_ERROR) {
-    RETURN;
+    RETURN_NIL;
   }
 #endif
 
@@ -544,7 +544,7 @@ DECLARE_MODULE_METHOD(socket__getaddrinfo) {
     }
   }
 
-  RETURN;
+  RETURN_NIL;
 }
 
 DECLARE_MODULE_METHOD(socket__close) {
