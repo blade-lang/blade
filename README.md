@@ -57,6 +57,23 @@ syntax set with a very natural feel.
 - Highly portable.
 
 
+## Example
+
+```py
+def sum(numbers) {
+    var result = 0
+
+    for num in number {
+        result += num
+    }
+
+    print(result)
+}
+
+sum([1, 2, 3, 4]) # this will print "10"
+```
+
+
 ## Documentation
 
 Documentation is currently in-progress in the [blade-docs](https://github.com/blade-lang/blade-docs) repo.
