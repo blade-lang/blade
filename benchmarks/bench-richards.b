@@ -313,7 +313,7 @@ class DeviceTask < Task {
 
   fn(pkt,r) {
     var d = r
-    assert is_instance(d, DeviceTaskRec)
+    assert instance_of(d, DeviceTaskRec)
     if pkt == nil {
       pkt = d.pending
       if pkt == nil return self.waitTask()
@@ -336,7 +336,7 @@ class HandlerTask < Task {
 
   fn(pkt,r) {
     var h = r
-    assert is_instance(h, HandlerTaskRec)
+    assert instance_of(h, HandlerTaskRec)
     if pkt != nil {
       if pkt.kind == K_WORK h.workInAdd(pkt)
       else h.deviceInAdd(pkt)
@@ -369,7 +369,7 @@ class IdleTask < Task {
 
   fn(pkt,r) {
     var i = r
-    assert is_instance(i, IdleTaskRec)
+    assert instance_of(i, IdleTaskRec)
     i.count -= 1
     if i.count == 0 return self.hold()
     else if i.control & 1 == 0 {
@@ -393,7 +393,7 @@ class WorkTask < Task {
 
   fn(pkt,r) {
     var w = r
-    assert is_instance(w, WorkerTaskRec)
+    assert instance_of(w, WorkerTaskRec)
     if pkt == nil return self.waitTask()
 
     var dest
