@@ -59,11 +59,12 @@ syntax set with a very natural feel.
 
 ## Example
 
+The following code prints the sum of all numbers in an array.
 ```py
 def sum(numbers) {
     var result = 0
 
-    for num in number {
+    for num in numbers {
         result += num
     }
 
