@@ -8,5 +8,6 @@
 #include "standard/os.h"
 #include "standard/socket.h"
 #include "standard/hash.h"
+#include "standard/_json.h"
 
 #endif // BLADE_STANDARD_H
