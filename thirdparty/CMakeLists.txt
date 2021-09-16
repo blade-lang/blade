@@ -7,3 +7,5 @@ endif()
 if(NOT "${HAVE_STRSEP}")
     add_subdirectory(strsep)
 endif()
+
+add_subdirectory(json-parser)
