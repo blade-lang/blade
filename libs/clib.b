@@ -96,7 +96,7 @@ class CValue {
 class CUnion {
   CUnion(...) {
     for x in __args__ {
-      if !is_instance(x, CDeclaration)
+      if !instance_of(x, CDeclaration)
         die Exception('expected 0 or more CDeclaration')
     }
 
@@ -111,7 +111,7 @@ class CUnion {
 class CStruct {
   CStruct(...) {
     for x in __args__ {
-      if !is_instance(x, CDeclaration)
+      if !instance_of(x, CDeclaration)
         die Exception('expected 0 or more CDeclaration')
     }
 
@@ -154,7 +154,7 @@ class CLib {
       die Exception('method name must be string')
     if __args__.length() > 0 {
       for x in __args__ {
-        if !is_instance(x, CValue) 
+        if !instance_of(x, CValue)
           die Exception('call parameters must be CValue instance(s)')
       }
     }

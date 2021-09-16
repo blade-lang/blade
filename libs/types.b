@@ -200,7 +200,7 @@ def callable() {
 def instance(value, type) {
   if !is_class(type)
     die Exception('class expected')
-  return is_instance(value, type)
+  return instance_of(value, type)
 }
 
 

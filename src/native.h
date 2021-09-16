@@ -262,6 +262,8 @@ DECLARE_NATIVE(is_instance);
 
 DECLARE_NATIVE(is_iterable);
 
+DECLARE_NATIVE(instance_of);
+
 DECLARE_NATIVE(print);
 
 #endif

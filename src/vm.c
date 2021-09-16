@@ -294,6 +294,7 @@ static void init_builtin_functions(b_vm *vm) {
   DEFINE_NATIVE(is_bytes);
   DEFINE_NATIVE(is_file);
   DEFINE_NATIVE(is_iterable);
+  DEFINE_NATIVE(instance_of);
   DEFINE_NATIVE(max);
   DEFINE_NATIVE(microtime);
   DEFINE_NATIVE(min);

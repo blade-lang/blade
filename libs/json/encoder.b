@@ -44,7 +44,11 @@ class Encoder {
       when 'boolean' return to_string(value)
       when 'number' return to_string(value)
       when 'string' {
-        if value.index_of('"') > -1 return '"${value.replace('"', '\\"')}"'
+        if value.index_of('"') > -1 or value.index_of('\\') > -1 {
+          var esc_value = value.replace('"', '\\\\"').  # replace " with \"
+              replace('\\\\', '\\\\\\\\')   # replace \ with \\
+          return '"${esc_value}"'
+        }
         return '"${value}"'
       }
       when 'list' {
@@ -74,12 +78,14 @@ class Encoder {
         return '{}'
       }
       default {
-        /* 
-        if is_instance(value) && hasprop(value, '@to_json') {
-          # @TODO: when native method `call` is implemented, simply call the @to_json()
-          # method on the instance.
+        
+        if is_instance(value) {
+          var fn = getprop(value, '@to_json')   # get the @to_json decorator
+          if fn {
+            return self.encode(fn())
+          }
         } 
-        */
+       
         die Exception('object of type ${typeof(value)} is not a JSON serializable')
       }
     }

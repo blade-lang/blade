@@ -705,15 +705,25 @@ DECLARE_NATIVE(is_file) {
 }
 
 /**
- * is_instance(value: any, name: class)
+ * is_instance(value: any)
+ *
+ * returns true if the value is an instance of a class
+ */
+DECLARE_NATIVE(is_instance) {
+  ENFORCE_ARG_COUNT(is_instance, 1);
+  RETURN_BOOL(IS_INSTANCE(args[0]));
+}
+
+/**
+ * instance_of(value: any, name: class)
  *
  * returns true if the value is an instance the given class, false
  * otherwise
  */
-DECLARE_NATIVE(is_instance) {
-  ENFORCE_ARG_COUNT(is_instance, 2);
-  ENFORCE_ARG_TYPE(is_instance, 0, IS_INSTANCE);
-  ENFORCE_ARG_TYPE(is_instance, 1, IS_CLASS);
+DECLARE_NATIVE(instance_of) {
+  ENFORCE_ARG_COUNT(instance_of, 2);
+  ENFORCE_ARG_TYPE(instance_of, 0, IS_INSTANCE);
+  ENFORCE_ARG_TYPE(instance_of, 1, IS_CLASS);
 
   RETURN_BOOL(is_instance_of(AS_INSTANCE(args[0])->klass,
                              AS_CLASS(args[1])->name->chars));
