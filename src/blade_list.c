@@ -101,7 +101,7 @@ DECLARE_LIST_METHOD(pop) {
     list->items.count--;
     RETURN_VALUE(value);
   }
-  RETURN;
+  RETURN_NIL;
 }
 
 DECLARE_LIST_METHOD(shift) {
@@ -116,7 +116,7 @@ DECLARE_LIST_METHOD(shift) {
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
   if (count >= list->items.count || list->items.count == 1) {
     list->items.count = 0;
-    RETURN;
+    RETURN_NIL;
   } else if (count > 0) {
     b_obj_list *n_list = (b_obj_list *) GC(new_list(vm));
     for (int i = 0; i < count; i++) {
@@ -133,7 +133,7 @@ DECLARE_LIST_METHOD(shift) {
       RETURN_OBJ(n_list);
     }
   }
-  RETURN;
+  RETURN_NIL;
 }
 
 DECLARE_LIST_METHOD(remove_at) {
@@ -253,7 +253,7 @@ DECLARE_LIST_METHOD(first) {
   if (list->items.count > 0) {
     RETURN_VALUE(list->items.values[0]);
   } else {
-    RETURN;
+    RETURN_NIL;
   }
 }
 
@@ -263,7 +263,7 @@ DECLARE_LIST_METHOD(last) {
   if (list->items.count > 0) {
     RETURN_VALUE(list->items.values[list->items.count - 1]);
   } else {
-    RETURN;
+    RETURN_NIL;
   }
 }
 
@@ -391,7 +391,7 @@ DECLARE_LIST_METHOD(__iter__) {
     RETURN_VALUE(list->items.values[index]);
   }
 
-  RETURN;
+  RETURN_NIL;
 }
 
 DECLARE_LIST_METHOD(__itern__) {
@@ -414,5 +414,5 @@ DECLARE_LIST_METHOD(__itern__) {
     RETURN_NUMBER((double) index + 1);
   }
 
-  RETURN;
+  RETURN_NIL;
 }

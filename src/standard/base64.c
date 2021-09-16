@@ -120,7 +120,7 @@ DECLARE_MODULE_METHOD(base64__decode) {
   unsigned char *data = base64_decode((const char *) string->chars,
                                       string->length, &output_length);
 
-  if (data == NULL) RETURN;
+  if (data == NULL) RETURN_NIL;
 
   b_obj_bytes *bytes = new_bytes(vm, output_length);
   memcpy(bytes->bytes.bytes, data, output_length);
@@ -139,7 +139,7 @@ DECLARE_MODULE_METHOD(base64__encode) {
   char *data = base64_encode((const unsigned char *) bytes->bytes.bytes,
                              bytes->bytes.count, &output_length);
 
-  if (data == NULL) RETURN;
+  if (data == NULL) RETURN_NIL;
 
   RETURN_T_STRING(data, output_length);
 }

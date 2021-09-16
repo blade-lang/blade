@@ -54,7 +54,8 @@
 
 #define NORMALIZE(token) NORMALIZE_##token
 
-#define RETURN { args[-1] = NIL_VAL; return true; }
+#define RETURN { args[-1] = EMPTY_VAL; return true; }
+#define RETURN_NIL { args[-1] = NIL_VAL; return true; }
 #define RETURN_EMPTY { args[-1] = NIL_VAL; return false; }
 #define RETURN_ERROR(...)                                                      \
   {                                                                            \

@@ -50,11 +50,11 @@ DECLARE_MODULE_METHOD(os_exec) {
   ENFORCE_ARG_TYPE(exec, 0, IS_STRING);
   b_obj_string *string = AS_STRING(args[0]);
   if (string->length == 0) {
-    RETURN;
+    RETURN_NIL;
   }
 
   FILE *fd = popen(string->chars, "r");
-  if (!fd) RETURN;
+  if (!fd) RETURN_NIL;
 
   char buffer[256];
   size_t n_read;
@@ -81,7 +81,7 @@ DECLARE_MODULE_METHOD(os_exec) {
 
     if (length == 0) {
       pclose(fd);
-      RETURN;
+      RETURN_NIL;
     }
 
     output[length - 1] = '\0';
@@ -203,7 +203,7 @@ DECLARE_MODULE_METHOD(os_getenv) {
   if (env != NULL) {
     RETURN_STRING(env);
   } else {
-    RETURN;
+    RETURN_NIL;
   }
 }
 

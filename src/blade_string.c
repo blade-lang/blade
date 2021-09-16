@@ -1010,7 +1010,7 @@ DECLARE_STRING_METHOD(__iter__) {
     RETURN_L_STRING(string->chars + start, (int) (end - start));
   }
 
-  RETURN;
+  RETURN_NIL;
 }
 
 DECLARE_STRING_METHOD(__itern__) {
@@ -1033,5 +1033,5 @@ DECLARE_STRING_METHOD(__itern__) {
     RETURN_NUMBER((double) index + 1);
   }
 
-  RETURN;
+  RETURN_NIL;
 }

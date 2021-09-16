@@ -70,8 +70,7 @@ void free_byte_arr(b_vm *vm, b_byte_arr *array) {
 
 static inline void do_print_value(b_value value, bool fix_string) {
 #if defined(USE_NAN_BOXING) && USE_NAN_BOXING
-  if (IS_EMPTY(value))
-    printf("%s", "");
+  if (IS_EMPTY(value)) return;
   else if (IS_NIL(value))
     printf("nil");
   else if (IS_BOOL(value))
@@ -83,7 +82,6 @@ static inline void do_print_value(b_value value, bool fix_string) {
 #else
   switch (value.type) {
   case VAL_EMPTY:
-    printf("%s", "");
     break;
   case VAL_NIL:
     printf("nil");
@@ -180,6 +178,7 @@ bool values_equal(b_value a, b_value b) {
 
   switch (a.type) {
   case VAL_NIL:
+  case VAL_EMPTY:
     return true;
   case VAL_BOOL:
     return AS_BOOL(a) == AS_BOOL(b);

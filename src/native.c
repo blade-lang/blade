@@ -137,7 +137,7 @@ DECLARE_NATIVE(getprop) {
       table_get(&instance->klass->methods, args[1], &value)) {
     RETURN_VALUE(value);
   }
-  RETURN;
+  RETURN_NIL;
 }
 
 /**
@@ -733,6 +733,8 @@ DECLARE_NATIVE(print) {
       printf(" ");
     }
   }
-//  printf("\n");
+  if(vm->is_repl) {
+    printf("\n");
+  }
   RETURN;
 }

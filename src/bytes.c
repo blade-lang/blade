@@ -279,7 +279,7 @@ DECLARE_BYTES_METHOD(__iter__) {
     RETURN_NUMBER((int) bytes->bytes.bytes[index]);
   }
 
-  RETURN;
+  RETURN_NIL;
 }
 
 DECLARE_BYTES_METHOD(__itern__) {
@@ -300,5 +300,5 @@ DECLARE_BYTES_METHOD(__itern__) {
     RETURN_NUMBER((double) index + 1);
   }
 
-  RETURN;
+  RETURN_NIL;
 }

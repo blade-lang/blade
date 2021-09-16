@@ -111,7 +111,7 @@ DECLARE_DICT_METHOD(get) {
   b_value value;
   if (!dict_get_entry(dict, args[0], &value)) {
     if (arg_count == 1) {
-      RETURN;
+      RETURN_NIL;
     } else {
       RETURN_VALUE(args[1]); // return default
     }
@@ -164,7 +164,7 @@ DECLARE_DICT_METHOD(remove) {
     dict->names.count--;
     RETURN_VALUE(value);
   }
-  RETURN;
+  RETURN_NIL;
 }
 
 DECLARE_DICT_METHOD(is_empty) {
@@ -209,7 +209,7 @@ DECLARE_DICT_METHOD(__iter__) {
     RETURN_VALUE(result);
   }
 
-  RETURN;
+  RETURN_NIL;
 }
 
 DECLARE_DICT_METHOD(__itern__) {
@@ -227,7 +227,7 @@ DECLARE_DICT_METHOD(__itern__) {
     }
   }
 
-  RETURN;
+  RETURN_NIL;
 }
 
 #undef ENFORCE_VALID_DICT_KEY

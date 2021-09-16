@@ -23,7 +23,7 @@ DECLARE_RANGE_METHOD(__iter__) {
     RETURN_NUMBER(range->lower > range->upper ? --range->lower : ++range->lower);
   }
 
-  RETURN;
+  RETURN_NIL;
 }
 
 DECLARE_RANGE_METHOD(__itern__) {
@@ -32,7 +32,7 @@ DECLARE_RANGE_METHOD(__itern__) {
 
   if (IS_NIL(args[0])) {
     if (range->range == 0) {
-      RETURN;
+      RETURN_NIL;
     }
     RETURN_NUMBER(0);
   }
@@ -46,5 +46,5 @@ DECLARE_RANGE_METHOD(__itern__) {
     RETURN_NUMBER(index);
   }
 
-  RETURN;
+  RETURN_NIL;
 }
