@@ -1546,13 +1546,16 @@ b_ptr_result run(b_vm *vm) {
       }
 
       case OP_ECHO: {
+        b_value val = peek(vm, 0);
         if (vm->is_repl) {
-          echo_value(peek(vm, 0));
+          echo_value(val);
         } else {
-          print_value(peek(vm, 0));
+          print_value(val);
+        }
+        if(!IS_EMPTY(val)) {
+          printf("\n");
         }
         pop(vm);
-        printf("\n");
         break;
       }
 

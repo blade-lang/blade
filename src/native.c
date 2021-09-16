@@ -733,6 +733,8 @@ DECLARE_NATIVE(print) {
       printf(" ");
     }
   }
-//  printf("\n");
+  if(vm->is_repl) {
+    printf("\n");
+  }
   RETURN;
 }
