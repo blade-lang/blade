@@ -92,11 +92,13 @@ class Scanner {
   }
 
   _is_digit(c) {
+    if !c return false
     var _ = ord(c)
     return _ >= 48 and _ <= 57  # 0 - 9
   }
 
   _is_alpha(c) {
+    if !c return false
     var _ = ord(c)
     return (_ >= 97 and _ <= 122) or  # a - z
           (_ >= 65 and _ <= 90) or _ == 95  # A - Z or _
@@ -107,17 +109,20 @@ class Scanner {
   }
 
   _is_binary(c) {
+    if !c return false
     return c == '0' or c == '1'
   }
 
   _is_octal(c) {
+    if !c return false
     var _ = ord(c)
     return _ >= 48 and _ <= 55  # 0 - 7
   }
 
   _is_hexadecimal(c) {
+    if !c return false
     var _ = ord(c)
-    return self._is_digit() or  # 0 - 9
+    return self._is_digit(c) or  # 0 - 9
         (_ >= 97 and _ <= 102) or # a - f
         (_ >= 65 and _ <= 70)   # A - F
   }
@@ -238,6 +243,7 @@ class Scanner {
             self._advance()
             self._skip_block_comment()
             self._add_token(DOC)
+            self._start = self._current
           }
         }
 
