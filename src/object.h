@@ -47,6 +47,8 @@ typedef enum {
 // non-user objects
 #define AS_SWITCH(v) ((b_obj_switch *)AS_OBJ(v))
 #define IS_SWITCH(v) is_obj_type(v, OBJ_SWITCH)
+#define AS_PTR(v) ((b_obj_ptr *)AS_OBJ(v))
+#define IS_PTR(v) is_obj_type(v, OBJ_PTR)
 #define AS_MODULE(v) ((b_obj_module *)AS_OBJ(v))
 #define IS_MODULE(v) is_obj_type(v, OBJ_MODULE)
 
@@ -83,6 +85,7 @@ typedef enum {
   // non-user objects
   OBJ_MODULE,
   OBJ_SWITCH,
+  OBJ_PTR,  // object type that can hold any C pointer
 } b_obj_type;
 
 struct s_obj {
@@ -203,10 +206,17 @@ typedef struct {
   b_table table;
 } b_obj_switch;
 
+typedef struct {
+  b_obj obj;
+  void *pointer;
+  const char *name;
+} b_obj_ptr;
+
 // non-user objects...
 b_obj_module *new_module(b_vm *vm, char *name, char *file);
 
 b_obj_switch *new_switch(b_vm *vm);
+b_obj_ptr *new_ptr(b_vm *vm, void *pointer);
 
 // data containers
 b_obj_list *new_list(b_vm *vm);

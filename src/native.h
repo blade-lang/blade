@@ -51,6 +51,7 @@
 #define NORMALIZE_IS_DICT "dict"
 #define NORMALIZE_IS_OBJ "object"
 #define NORMALIZE_IS_FILE "file"
+#define NORMALIZE_IS_PTR "ptr"
 
 #define NORMALIZE(token) NORMALIZE_##token
 
