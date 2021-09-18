@@ -28,6 +28,14 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   return object;
 }
 
+
+b_obj_ptr *new_ptr(b_vm *vm, void *pointer) {
+  b_obj_ptr *ptr = ALLOCATE_OBJ(b_obj_ptr, OBJ_PTR);
+  ptr->pointer = pointer;
+  ptr->name = "<void *>";
+  return ptr;
+}
+
 b_obj_module *new_module(b_vm *vm, char *name, char *file) {
   b_obj_module *module = ALLOCATE_OBJ(b_obj_module, OBJ_MODULE);
   init_table(&module->values);
@@ -263,6 +271,10 @@ void print_object(b_value value, bool fix_string) {
     case OBJ_SWITCH: {
       break;
     }
+    case OBJ_PTR: {
+      printf("%s", AS_PTR(value)->name);
+      break;
+    }
     case OBJ_RANGE: {
       b_obj_range *range = AS_RANGE(value);
       printf("<range %d-%d>", range->lower, range->upper);
@@ -419,8 +431,11 @@ static char *dict_to_string(b_vm *vm, b_obj_dict *dict) {
 
 char *object_to_string(b_vm *vm, b_value value) {
   switch (OBJ_TYPE(value)) {
+    case OBJ_PTR: {
+      return strdup(AS_PTR(value)->name);
+    }
     case OBJ_SWITCH: {
-      return "<switch>";
+      return strdup("<switch>");
     }
     case OBJ_CLASS: {
       const char *format = "<class %s>";
@@ -529,6 +544,8 @@ const char *object_type(b_obj *object) {
       return "string";
 
       //
+    case OBJ_PTR:
+      return "pointer";
     case OBJ_SWITCH:
       return "switch";
 

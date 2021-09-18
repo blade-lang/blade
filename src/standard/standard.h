@@ -9,5 +9,6 @@
 #include "standard/socket.h"
 #include "standard/hash.h"
 #include "standard/_json.h"
+#include "standard/_sqlite.h"
 
 #endif // BLADE_STANDARD_H

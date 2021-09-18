@@ -50,7 +50,8 @@ set(BLADE_SOURCES
 		src/standard/os.c
 		src/standard/socket.c
 		src/standard/hash.c
-		src/standard/json.c)
+		src/standard/json.c
+		src/standard/sqlite.c)
 
 set(PCRE2_SOURCES
 		src/pcre/pcre2_auto_possess.c
@@ -122,6 +123,7 @@ check_include_file("sys/time.h" HAVE_SYS_TIME_H)
 check_include_file("sys/utsname.h" HAVE_SYS_UTSNAME_H)
 check_include_file("sys/errno.h" HAVE_SYS_ERRNO_H)
 check_include_file("dirent.h" HAVE_DIRENT_H)
+check_include_file("sqlite3.h" HAVE_SQLITE3_H)
 
 # Function checks
 check_function_exists("asprintf" HAVE_ASPRINTF)
@@ -142,6 +144,13 @@ check_function_exists("dirname" HAVE_DIRNAME)
 
 # Link to json-parser
 target_link_libraries(libblade PRIVATE json-parser)
+
+# Link to sqlite
+if(NOT "${HAVE_SQLITE3_H}")
+	target_link_libraries(libblade PRIVATE sqlite)
+else()
+	target_link_libraries(libblade PRIVATE sqlite3)
+endif()
 
 # Generate config.h
 set(INCLUDE_GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/include-gen")

@@ -32,7 +32,7 @@ def digit(value) {
   if !is_string(value) or !value.length() == 1
     die Exception('char expected')
   var _ = ord(value)
-  return _ >= 48 and _ <= 56
+  return _ >= 48 and _ <= 57
 }
 
 /**
@@ -46,7 +46,7 @@ def alpha(value) {
   if !is_string(value) or !value.length() == 1
     die Exception('char expected')
   var _ = ord(value)
-  return (_ >= 65 and _ <= 90) or (_ >= 97 and _ <= 121)
+  return (_ >= 65 and _ <= 90) or (_ >= 97 and _ <= 122)
 }
 
 /**
