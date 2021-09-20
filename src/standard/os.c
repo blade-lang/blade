@@ -1,4 +1,4 @@
-#include "os.h"
+#include "module.h"
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #else
@@ -318,10 +318,8 @@ static int remove_directory(char *path, int path_length, bool recursive) {
       }
 
       int path_string_length = path_length + (int)strlen(ent->d_name) + 2;
-      char *path_string = (char*) calloc(path_string_length, sizeof(char));
+      char *path_string = merge_paths(path, ent->d_name);
       if(path_string == NULL) return -1;
-
-      snprintf(path_string, path_string_length, "%s" BLADE_PATH_SEPARATOR "%s", path, ent->d_name);
 
       struct stat sb;
       if(stat(path_string, &sb) == 0) {

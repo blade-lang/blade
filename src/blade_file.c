@@ -48,8 +48,6 @@
 
 #define SET_DICT_STRING(d, n, l, v) dict_add_entry(vm, d, GC_L_STRING(n, l), v)
 
-bool is_std_file(b_obj_file *file) { return file->mode->length == 0; }
-
 static void file_close(b_obj_file *file) {
   if (file->file != NULL && !is_std_file(file)) {
     fflush(file->file);

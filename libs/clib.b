@@ -1,9 +1,11 @@
-/**
- * CLib
- *
- * Provides interface for interacting with the C libraries
- * @copyright 2021, Ore Richard Muyiwa
- */
+#
+# @module clib
+#
+# Provides interface for interacting with the C libraries
+# @copyright 2021, Ore Richard Muyiwa
+#
+
+import _os { _platform }
 
 /**
  * @class CTypes
@@ -160,3 +162,4 @@ class CLib {
     }
   }
 }
+

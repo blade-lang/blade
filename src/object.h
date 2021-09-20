@@ -117,6 +117,7 @@ typedef struct {
   char *file;
   void *preloader;
   void *unloader;
+  void *handle;
 } b_obj_module;
 
 typedef struct {
@@ -260,5 +261,7 @@ b_obj_bytes *take_bytes(b_vm *vm, unsigned char *b, int length);
 static inline bool is_obj_type(b_value v, b_obj_type t) {
   return IS_OBJ(v) && AS_OBJ(v)->type == t;
 }
+
+static inline bool is_std_file(b_obj_file *file) { return file->mode->length == 0; }
 
 #endif

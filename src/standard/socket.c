@@ -2,7 +2,7 @@
 #pragma warning (disable : 5105)
 #endif
 
-#include "socket.h"
+#include "module.h"
 #include "pathinfo.h"
 
 #ifdef HAVE_GETOPT_H

@@ -1,4 +1,4 @@
-#include "hash.h"
+#include "module.h"
 #include "hash/md.h"
 #include "hash/md5.h"
 #include "hash/sha1.h"

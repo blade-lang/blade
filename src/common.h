@@ -70,6 +70,14 @@
 
 #endif
 
+#if defined(__APPLE__) && defined(__MACH__) // Apple OSX and iOS (Darwin)
+#define LIBRARY_FILE_EXTENSION ".dylib"
+#elif defined(_WIN32)
+#define LIBRARY_FILE_EXTENSION ".dll"
+#else
+#define LIBRARY_FILE_EXTENSION ".so"
+#endif
+
 #define DEFAULT_GC_START (1024 * 1024)
 
 

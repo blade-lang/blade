@@ -5,6 +5,12 @@
 #include "blade_file.h"
 #include "module.h"
 
+#ifdef HAVE_DLFCN_H
+#include <dlfcn.h>
+#else
+#include "blade_dlfcn.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -180,6 +186,9 @@ void free_object(b_vm *vm, b_obj *object) {
       FREE(char, module->file);
       if (module->unloader != NULL && module->imported) {
         ((b_module_loader)module->unloader)(vm);
+      }
+      if(module->handle != NULL) {
+        dlclose(module->handle);  // free the shared library...
       }
       FREE(b_obj_module, object);
       break;
