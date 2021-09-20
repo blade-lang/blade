@@ -2094,8 +2094,20 @@ static void import_statement(b_parser *p) {
   }
 
   char *module_path = resolve_import_path(module_file, p->module->file, is_relative);
+  b_obj_string *final_module_name = copy_string(p->vm, module_name, (int) strlen(module_name));
 
   if (module_path == NULL) {
+    // check if there is one in the vm's registry
+    // handle native modules
+    b_value md;
+    if (table_get(&p->vm->modules, OBJ_VAL(final_module_name), &md)) {
+      int module = make_constant(p, OBJ_VAL(final_module_name));
+      emit_byte_and_short(p, OP_NATIVE_MODULE, module);
+
+      parse_specific_import(p, module, false, true);
+      return;
+    }
+
     error(p, "module not found");
     return;
   }
@@ -2121,7 +2133,7 @@ static void import_statement(b_parser *p) {
     return;
   }
 
-  function->name = copy_string(p->vm, module_name, (int) strlen(module_name));
+  function->name = final_module_name;
 
   push(p->vm, OBJ_VAL(function));
   b_obj_closure *closure = new_closure(p->vm, function);

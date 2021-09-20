@@ -4,7 +4,7 @@
 #pragma warning (disable : 5105)
 #endif
 
-#include "io.h"
+#include "module.h"
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #else

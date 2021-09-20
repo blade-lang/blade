@@ -15,12 +15,13 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 
 set(cfsp " ")
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_BINARY_DIR}/bin")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG})
+set(OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/bin")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIR}")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${OUTPUT_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${OUTPUT_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${OUTPUT_DIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${OUTPUT_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${OUTPUT_DIR})
 
 set(BLADE_SOURCES
 		src/blade_dict.c
@@ -87,7 +88,7 @@ add_definitions(-DHAVE_CONFIG_H)
 
 include_directories(src)
 
-add_library(libblade ${BLADE_SOURCES})
+add_library(libblade SHARED ${BLADE_SOURCES})
 add_library(libpcre src/pcre/pcre2.h ${PCRE2_SOURCES} src/pcre/config.h)
 add_executable(blade src/blade.c)
 
@@ -124,6 +125,7 @@ check_include_file("sys/utsname.h" HAVE_SYS_UTSNAME_H)
 check_include_file("sys/errno.h" HAVE_SYS_ERRNO_H)
 check_include_file("dirent.h" HAVE_DIRENT_H)
 check_include_file("sqlite3.h" HAVE_SQLITE3_H)
+check_include_file("dlfcn.h" HAVE_DLFCN_H)
 
 # Function checks
 check_function_exists("asprintf" HAVE_ASPRINTF)
@@ -168,31 +170,24 @@ add_dependencies(libblade libpcre blade_files)
 
 set_target_properties(blade
 		PROPERTIES
-		RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}
-		ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}
-		LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}
+		RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}
+		ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_DIR}
+		LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_DIR}
 		)
 
 set_target_properties(libblade
 		PROPERTIES
 		OUTPUT_NAME blade
-		ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}
-		LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}
+		ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_DIR}
+		LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_DIR}
 		)
-
-#if(MSVC)
-#  set_target_properties(blade PROPERTIES COMPILE_FLAGS "/GL")
-#  set_target_properties(libblade PROPERTIES COMPILE_FLAGS "/GL")
-#  set_target_properties(blade PROPERTIES LINK_FLAGS "/LTCG")
-#  set_target_properties(libblade PROPERTIES LINK_FLAGS "/LTCG")
-#endif(MSVC)
 
 target_link_libraries(libblade PRIVATE libpcre)
 
 if(UNIX)
 	find_library(READLINE_LIBRARY readline REQUIRED)
-	target_link_libraries(libblade PRIVATE "${READLINE_LIBRARY}")
-	target_link_libraries(libblade PRIVATE m)
+	target_link_libraries(blade PRIVATE "${READLINE_LIBRARY}")
+	target_link_libraries(blade PRIVATE m)
 endif(UNIX)
 
 target_link_libraries(blade PRIVATE libblade)
@@ -201,6 +196,14 @@ add_custom_command(TARGET blade_files POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/libs ${CMAKE_CURRENT_BINARY_DIR}/bin/libs
 		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/tests ${CMAKE_CURRENT_BINARY_DIR}/bin/tests
 		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/benchmarks ${CMAKE_CURRENT_BINARY_DIR}/bin/benchmarks
+		COMMENT "Exporting libs, tests, and benchmark scripts..."
+)
+
+set(EXE_FILE "${OUTPUT_DIR}/blade${CMAKE_EXECUTABLE_SUFFIX}")
+
+add_custom_command(TARGET blade POST_BUILD
+		COMMAND	${EXE_FILE} "${PROJECT_SOURCE_DIR}/scripts/make_blade.b" "${PROJECT_SOURCE_DIR}"
+		COMMENT "Generating Blade header and folders..."
 )
 
 string(TOUPPER "${CMAKE_BUILD_TYPE}" buildtype)
@@ -225,6 +228,14 @@ endif()
 
 message(STATUS "")
 
+
+# Generating single header file...
+include (GenerateExportHeader)
+GENERATE_EXPORT_HEADER(libblade           # generates the export header shared_EXPORTS.h automatically
+		EXPORT_MACRO_NAME EXPORT
+		EXPORT_FILE_NAME export.h
+		STATIC_DEFINE SHARED_EXPORTS_BUILT_AS_STATIC
+)
 
 enable_testing()
 

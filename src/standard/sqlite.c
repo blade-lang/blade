@@ -1,4 +1,4 @@
-#include "_sqlite.h"
+#include "module.h"
 #include <sqlite3.h>
 
 DECLARE_MODULE_METHOD(sqlite__open) {
