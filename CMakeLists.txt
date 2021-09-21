@@ -191,6 +191,9 @@ set_target_properties(libblade
 		LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_DIR}
 		)
 
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC"  )
+endif()
 target_link_libraries(libblade PRIVATE libpcre)
 
 if(UNIX)
