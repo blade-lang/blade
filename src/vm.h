@@ -4,7 +4,6 @@
 typedef struct s_compiler b_compiler;
 
 #include "blob.h"
-#include "compiler.h"
 #include "config.h"
 #include "object.h"
 #include "table.h"
@@ -101,10 +100,6 @@ static inline void add_module(b_vm *vm, b_obj_module *module) {
               STRING_VAL(module->name), OBJ_VAL(module)
     );
   }
-}
-
-static inline void add_native_module(b_vm *vm, b_obj_module *module) {
-  table_set(vm, &vm->modules, STRING_VAL(module->name), OBJ_VAL(module));
 }
 
 bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name, int arg_count);

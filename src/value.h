@@ -5,6 +5,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 typedef struct s_obj b_obj;
 typedef struct s_obj_string b_obj_string;
 typedef struct s_vm b_vm;
@@ -155,5 +159,9 @@ void sort_values(b_value *values, int count);
 #define STRING_L_VAL(val, l) OBJ_VAL(copy_string(vm, val, l))
 #define STRING_T_VAL(val, l) OBJ_VAL(take_string(vm, val, l))
 #define STRING_TT_VAL(val) OBJ_VAL(take_string(vm, val, (int)strlen(val)))
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif

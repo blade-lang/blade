@@ -181,6 +181,9 @@ void free_object(b_vm *vm, b_obj *object) {
       if (module->unloader != NULL && module->imported) {
         ((b_module_loader)module->unloader)(vm);
       }
+      if(module->handle != NULL) {
+        close_dl_module(module->handle);  // free the shared library...
+      }
       FREE(b_obj_module, object);
       break;
     }
