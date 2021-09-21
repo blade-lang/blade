@@ -87,7 +87,7 @@ You can read the [Blade language documentation](https://bladelang.com) online at
 ## C Extensions to Blade
 ---
 
-Blade external supports extensions built in C. While the website is yet to include documentation on writing C 
+Blade supports external extensions built in C. While the website is yet to include documentation on writing C 
 extensions, there is an easy-to-pick-up example in the [blade-ext-demo](https://github.com/blade-lang/blade-ext-demo) repository.
 
 ### GOTCHAS!
