@@ -23,6 +23,7 @@
 <br>
 
 ## tl;dr
+---
 
 Blade is a simple, fast, clean and dynamic language that allows you to develop complex applications 
 quickly. Blade emphasises algorithm over syntax and for this reason, it has a very small but powerful 
@@ -40,6 +41,7 @@ syntax set with a very natural feel.
 
 
 ## Features
+---
 
 - Simple syntax and minimal keywords.
 - Dynamically typed.
@@ -58,6 +60,7 @@ syntax set with a very natural feel.
 
 
 ## Example
+---
 
 The following code prints the sum of all numbers in an array.
 ```py
@@ -76,13 +79,26 @@ sum([1, 2, 3, 4]) # this prints "the sum is 10"
 
 
 ## Documentation
+---
 
 Documentation is currently in-progress in the [blade-docs](https://github.com/blade-lang/blade-docs) repo.
 You can read the [Blade language documentation](https://bladelang.com) online at [bladelang.com](https://bladelang.com).
 
+## C Extensions to Blade
+---
+
+Blade external supports extensions built in C. While the website is yet to include documentation on writing C 
+extensions, there is an easy-to-pick-up example in the [blade-ext-demo](https://github.com/blade-lang/blade-ext-demo) repository.
+
+### GOTCHAS!
+
+For some weird reasons yet unknown, thirdparty C modules for Blade don't work correctly on Blade installations
+built with MSVC (Visual Studio). To be able to use external C modules on Windows, build or use a Blade installation 
+built with either TDM-GCC or MinGW64.
 
 
 ## Directory Structure
+---
 
 | Directory | Contents 
 |-----------|----------
@@ -95,6 +111,7 @@ You can read the [Blade language documentation](https://bladelang.com) online at
 
 
 ## How to contribute
+---
 
 Along with Blade's goal to be simplicity, flexibility and expressiveness is a strong desire to make the community around it as friendly and welcoming as possible. Therefore, all forms of contributions from pull requests, suggestions, typo fixes in documentation, feature request, bug reports and any contribution at all is greatly welcomed and appreciated.
 
@@ -103,6 +120,7 @@ testing of Blade features, writing more comprehensive tests, bug detection, code
 PLEASE CONTRIBUTE!
 
 ### Contributing code, fixes and features
+---
 
 The standard. The general workflow is as follows.
 
@@ -115,6 +133,7 @@ You can also just mail your issues to [Ore Richard Muyiwa](mailto:eqliqandfriend
 
 
 ## Coding Standard
+---
 
 -   I decided to break from the popular camel case common to C style
     languages and went with snake cases. Honestly speaking, the only
@@ -133,6 +152,7 @@ That simple!
 
 
 ## Sponsors
+---
 
 [comment]: <> (![JetBrains Logo]&#40;jetbrains.png&#41;)
 
