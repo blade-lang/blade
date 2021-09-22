@@ -2,7 +2,9 @@ name: Linux build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, dev ]
+    tags:
+      - 'v*.*.*'
   pull_request:
     branches: [ main ]
 
@@ -34,6 +36,15 @@ jobs:
     - name: Build
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Set environment variables
+      run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
+    - name: Generate Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: blade-ubuntu-${{ env.RELEASE_VERSION }}
+        path: ${{github.workspace}}/build/bin
 
 #    - name: Test
 #      working-directory: ${{github.workspace}}/build
