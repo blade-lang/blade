@@ -44,5 +44,5 @@ jobs:
     - name: Generate Artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: blade-win-mingw64-${{ github.ref }}
+        name: blade-win-mingw64-${{ github.run_id }}
         path: ${{github.workspace}}/build/bin

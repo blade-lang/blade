@@ -40,7 +40,7 @@ jobs:
     - name: Generate Artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: blade-ubuntu-${{ github.ref }}
+        name: blade-ubuntu-${{ github.run_id }}
         path: ${{github.workspace}}/build/bin
 
 #    - name: Test

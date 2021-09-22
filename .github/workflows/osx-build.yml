@@ -40,7 +40,7 @@ jobs:
     - name: Generate Artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: blade-macos-${{ github.ref }}
+        name: blade-macos-${{ github.run_id }}
         path: ${{github.workspace}}/build/bin
 
 #    - name: Test
