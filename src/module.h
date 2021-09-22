@@ -45,6 +45,7 @@ typedef b_module_reg* (*b_module_init)(b_vm *);
 void bind_native_modules(b_vm *vm);
 void add_native_module(b_vm *vm, b_obj_module *module, const char *as);
 bool load_module(b_vm *vm, b_module_init init_fn, char *name, char *source, void *handle);
-char* load_user_module(b_vm *vm, const char *path, char *name) ;
+char* load_user_module(b_vm *vm, const char *path, char *name);
+void close_dl_module(void* handle);
 
 #endif

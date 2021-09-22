@@ -153,7 +153,8 @@ void bind_user_modules(b_vm *vm) {
       if(stat(path, &sb) == 0) {
         // it's not a directory
         if(S_ISDIR(sb.st_mode) < 1) {
-          if(memcmp(path + (path_length - ext_length), LIBRARY_FILE_EXTENSION, ext_length) == 0) { // .so file
+          if(memcmp(path + (path_length - ext_length), LIBRARY_FILE_EXTENSION, ext_length) == 0) { // library file
+
             char *filename = get_real_file_name(path);
 
             int name_length = (int)strlen(filename) - ext_length;
@@ -214,4 +215,8 @@ char* load_user_module(b_vm *vm, const char *path, char *name) {
   }
 
   return NULL;
+}
+
+void close_dl_module(void* handle) {
+    dlclose(handle);
 }

@@ -192,13 +192,13 @@ DECLARE_FILE_METHOD(read) {
 
   size_t bytes_read = fread(buffer, sizeof(char), file_size, file->file);
 
-  if (bytes_read < file_size && file_size == file_size_real) {
+  if (bytes_read == 0 && file_size == file_size_real) {
     FILE_ERROR(Read, "could not read file contents");
   }
 
   // we made use of +1 so we can terminate the string.
   if (buffer != NULL)
-    buffer[file_size] = '\0';
+    buffer[bytes_read] = '\0';
 
   // close file
   if (bytes_read == file_size) {

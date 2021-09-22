@@ -7,6 +7,7 @@ include(CheckIncludeFile)
 include(CheckIncludeFiles)
 include(CheckFunctionExists)
 include(ExternalProject)
+include(GenerateExportHeader)
 
 subdirs(thirdparty)
 
@@ -85,11 +86,19 @@ set(PCRE2_SOURCES
 )
 
 add_definitions(-DHAVE_CONFIG_H)
+add_definitions(-DEXPORT_LIBS)
 
 include_directories(src)
 
-add_library(libblade SHARED ${BLADE_SOURCES})
-add_library(libpcre src/pcre/pcre2.h ${PCRE2_SOURCES} src/pcre/config.h)
+if(WIN32)
+	add_library(libblade ${BLADE_SOURCES})
+else()
+	add_library(libblade SHARED ${BLADE_SOURCES})
+endif()
+
+
+add_library(libpcre OBJECT src/pcre/pcre2.h ${PCRE2_SOURCES} src/pcre/config.h)
+
 add_executable(blade src/blade.c)
 
 set_target_properties(libpcre PROPERTIES
@@ -206,7 +215,7 @@ add_custom_command(TARGET blade_files POST_BUILD
 set(EXE_FILE "${OUTPUT_DIR}/blade${CMAKE_EXECUTABLE_SUFFIX}")
 
 add_custom_command(TARGET blade POST_BUILD
-		COMMAND	${EXE_FILE} "${PROJECT_SOURCE_DIR}/scripts/make_blade.b" "${PROJECT_SOURCE_DIR}"
+		COMMAND	"${EXE_FILE}" "${PROJECT_SOURCE_DIR}/scripts/make_blade.b" "${PROJECT_SOURCE_DIR}"
 		COMMENT "Generating Blade header and folders..."
 )
 
@@ -232,10 +241,8 @@ endif()
 
 message(STATUS "")
 
-
 # Generating single header file...
-include (GenerateExportHeader)
-GENERATE_EXPORT_HEADER(libblade           # generates the export header shared_EXPORTS.h automatically
+generate_export_header(libblade           # generates the export header shared_EXPORTS.h automatically
 		EXPORT_MACRO_NAME EXPORT
 		EXPORT_FILE_NAME export.h
 		STATIC_DEFINE SHARED_EXPORTS_BUILT_AS_STATIC
