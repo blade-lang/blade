@@ -2,7 +2,7 @@
 # @module convert
 #
 # provides extra data conversion features
-# @copyright 2021, Ore Richard Muyiwa
+# @ copyright 2021, Ore Richard Muyiwa and Blade contributors
 #
 
 

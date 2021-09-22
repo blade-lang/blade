@@ -3,7 +3,7 @@
 #
 # Provides interface for working with Socket clients
 # and servers.
-# @copyright 2021, Ore Richard Muyiwa
+# @ copyright 2021, Ore Richard Muyiwa and Blade contributors
 # 
 
 import _socket {

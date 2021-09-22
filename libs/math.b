@@ -2,7 +2,7 @@
 # @module math
 #
 # Blade's mathematical library
-# @copyright 2021, Ore Richard Muyiwa
+# @ copyright 2021, Ore Richard Muyiwa and Blade contributors
 #
 
 import _math

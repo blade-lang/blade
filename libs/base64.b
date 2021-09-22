@@ -2,7 +2,7 @@
 # @module base64 (RFC1341)
 #
 # Provides interface for encoding and decoding base64 data
-# @copyright 2021, Ore Richard Muyiwa
+# @ copyright 2021, Ore Richard Muyiwa and Blade contributors
 #
 
 import _base64

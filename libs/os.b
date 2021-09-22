@@ -2,7 +2,7 @@
 # @module os
 # 
 # provides functionalities for interfacing with the underlying operating system
-# @copyright 2021, Ore Richard Muyiwa
+# @ copyright 2021, Ore Richard Muyiwa and Blade contributors
 # 
 
 import _os { * }

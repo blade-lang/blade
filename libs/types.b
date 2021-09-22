@@ -7,7 +7,7 @@
 # where applicable and does and return the same thing as the builtin
 # alternative.
 # 
-# @copyright 2021, Ore Richard Muyiwa
+# @ copyright 2021, Ore Richard Muyiwa and Blade contributors
 # 
 
 
