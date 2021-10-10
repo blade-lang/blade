@@ -8,6 +8,15 @@
  * @copyright Ore Richard Muyiwa
  */
 
+import os
+
+if os.args.length() < 3 {
+    os.stderr.write('Missing argument: output directory\n')
+    os.exit(1)
+}
+
+var output_dir = os.args[2]
+
 var asts = {
   Expr: {
     file: 'expr.b',
@@ -15,7 +24,8 @@ var asts = {
       Binary: ['left', 'op', 'right'],
       Group: ['expression'],
       Literal: ['value'],
-      Unary: ['op', 'right']
+      Unary: ['op', 'right'],
+      Condition: ['expr', 'truth', 'falsy']
     }
   },
   Stmt: {
@@ -29,7 +39,7 @@ var asts = {
 }
 
 for ast, members in asts {
-  var f = file(members.file, 'w+')
+  var f = file('${output_dir}${os.path_separator}${members.file}', 'w+')
   if f.exists() f.delete()
 
   f.write('/**\n * @class ${ast}\n * base ${ast} class\n */\n')

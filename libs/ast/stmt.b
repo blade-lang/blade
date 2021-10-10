@@ -1,2 +1,6 @@
-#!-- part of the ast module
+/**
+ * @class Stmt
+ * base Stmt class
+ */
+class Stmt {}
 

@@ -80,7 +80,7 @@ class Scanner {
   Scanner(source) {
     if !is_string(source)
       die Exception('Blade source code expected')
-
+    
     self.source = source
   }
 
@@ -481,7 +481,7 @@ class Scanner {
       self._scan()
     }
 
-    self._tokens.append(Token(EOF, "", self._line))
+    self._tokens.append(Token(EOF, 'end of file', self._line))
     return self._tokens
   }
 

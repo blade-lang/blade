@@ -132,7 +132,9 @@ b_obj_instance *new_instance(b_vm *vm, b_obj_class *klass) {
 
   instance->klass = klass;
   init_table(&instance->properties);
-  table_add_all(vm, &klass->properties, &instance->properties);
+  if(klass->properties.count > 0) {
+    table_copy(vm, &klass->properties, &instance->properties);
+  }
 
   pop(vm); // gc fix
   return instance;
