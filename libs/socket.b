@@ -387,8 +387,6 @@ class Socket {
       die SocketException('both option and value are required')
     if !is_int(option) 
       die SocketException('integer expected for option, ${typeof(option)} given')
-    # if option < SO_DEBUG or option > SO_TYPE # @TODO: update SO_TYPE as options increase
-    #   die SocketException('expected one of SO_* options')
 
     if option == SO_TYPE or option == SO_ERROR
       die Exception('the given option is read-only')
@@ -410,8 +408,6 @@ class Socket {
 
     if !is_int(option) 
       die SocketException('integer expected for option, ${typeof(option)} given')
-    # if option < SO_DEBUG or option > SO_TYPE # @TODO: update SO_TYPE as options increase
-    #   die SocketException('expected one of SO_* options')
 
     # we have a local copy of SO_RCVTIMEO and SO_SNDTIMEO
     # we can simply return them when required

@@ -420,7 +420,6 @@ DECLARE_MODULE_METHOD(socket__getsockopt) {
   }
 }
 
-// @TODO: Add IPv6 support...
 DECLARE_MODULE_METHOD(socket__getsockinfo) {
   ENFORCE_ARG_COUNT(_getsockinfo, 1);
   ENFORCE_ARG_TYPE(_getsockinfo, 0, IS_NUMBER);

@@ -908,17 +908,6 @@ DECLARE_STRING_METHOD(matches) {
   pcre2_match_data_free(match_data);
   pcre2_code_free(re);
 
-  /*// @TODO: Consider this...
-  if(name_count == 0) {
-    b_obj_list *new_result = (b_obj_list*)GC(new_list(vm));
-    for(int i = 0; i < result->names.count; i++) {
-      b_value value;
-      dict_get_entry(result, result->names.values[i], &value);
-      write_list(vm, new_result, value);
-    }
-    RETURN_OBJ(new_result);
-  }*/
-
   RETURN_OBJ(result);
 }
 
