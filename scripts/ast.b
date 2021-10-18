@@ -24,13 +24,18 @@ var asts = {
       Binary: ['left', 'op', 'right'],
       Group: ['expression'],
       Literal: ['value'],
+      Identifier: ['value'],
       Unary: ['op', 'right'],
       Condition: ['expr', 'truth', 'falsy']
     }
   },
   Stmt: {
     file: 'stmt.b',
-    tree: {}
+    tree: {
+      Echo: ['value'],
+      Expr: ['expr'],
+      If: ['condition', 'truth', 'falsy']
+    }
   },
   Decl: {
     file: 'decl.b',
@@ -46,7 +51,7 @@ for ast, members in asts {
   f.write('class ${ast} {}\n\n')
   for cl, attr in members.tree {
     f.write('/**\n * @class ${cl}\n */\n')
-    f.write('class ${cl} < ${ast} {\n\n')
+    f.write('class ${cl}${ast} < ${ast} {\n\n')
     var setter
     for k in attr {
       setter += '    self.${k} = ${k}\n'
@@ -54,7 +59,7 @@ for ast, members in asts {
     if setter {
       var params = ', '.join(attr)
       f.write('  /**\n   * @constructor ${cl}\n   */\n')
-      f.write('  ${cl}(${params}) {\n')
+      f.write('  ${cl}${ast}(${params}) {\n')
       f.write(setter)
       f.write('  }\n')
     }

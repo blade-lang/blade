@@ -7,12 +7,12 @@ class Expr {}
 /**
  * @class Binary
  */
-class Binary < Expr {
+class BinaryExpr < Expr {
 
   /**
    * @constructor Binary
    */
-  Binary(left, op, right) {
+  BinaryExpr(left, op, right) {
     self.left = left
     self.op = op
     self.right = right
@@ -22,12 +22,12 @@ class Binary < Expr {
 /**
  * @class Group
  */
-class Group < Expr {
+class GroupExpr < Expr {
 
   /**
    * @constructor Group
    */
-  Group(expression) {
+  GroupExpr(expression) {
     self.expression = expression
   }
 }
@@ -35,12 +35,25 @@ class Group < Expr {
 /**
  * @class Literal
  */
-class Literal < Expr {
+class LiteralExpr < Expr {
 
   /**
    * @constructor Literal
    */
-  Literal(value) {
+  LiteralExpr(value) {
+    self.value = value
+  }
+}
+
+/**
+ * @class Identifier
+ */
+class IdentifierExpr < Expr {
+
+  /**
+   * @constructor Identifier
+   */
+  IdentifierExpr(value) {
     self.value = value
   }
 }
@@ -48,12 +61,12 @@ class Literal < Expr {
 /**
  * @class Unary
  */
-class Unary < Expr {
+class UnaryExpr < Expr {
 
   /**
    * @constructor Unary
    */
-  Unary(op, right) {
+  UnaryExpr(op, right) {
     self.op = op
     self.right = right
   }
@@ -62,12 +75,12 @@ class Unary < Expr {
 /**
  * @class Condition
  */
-class Condition < Expr {
+class ConditionExpr < Expr {
 
   /**
    * @constructor Condition
    */
-  Condition(expr, truth, falsy) {
+  ConditionExpr(expr, truth, falsy) {
     self.expr = expr
     self.truth = truth
     self.falsy = falsy

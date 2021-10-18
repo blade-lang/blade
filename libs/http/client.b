@@ -3,6 +3,7 @@
 import url
 import socket
 import .response { HttpResponse }
+import .util
 
 /**
  * @class HttpClient
@@ -10,51 +11,84 @@ import .response { HttpResponse }
  * handles http requests.
  */
 class HttpClient {
-  # the user agent of the client used to make the request
-  var user_agent = 'Mozilla/4.0'
+  
+  /**
+   * The user agent of the client used to make the request
+   * @default `Blade HTTP Client/1.0`
+   */
+  var user_agent = 'Blade HTTP Client/1.0'
 
-  # if we receive a redirect from a server,
-  # this flag tells us whether we should follow it or not.
+  /**
+   * Indicates if we receive a redirect from a server, this flag tells us whether 
+   * we should follow it or not.
+   * @default `true`
+   */
   var follow_redirect = true
 
-  # if the site you're connecting to uses a different host name that what
-  # they have mentioned in their server certificate's commonName (or
-  # subjectAltName) fields, connection will fail. You can skip
-  # this check by setting to true, but this will make the connection less secure.
+  /**
+   * Indicates if the site you're connecting to uses a different host name that what
+   * they have mentioned in their server certificate's commonName (or subjectAltName) 
+   * fields, connection will fail. You can skip this check by setting to true, but this 
+   * will make the connection less secure.
+   * @default `false`
+   */
   var skip_hostname_verification = false
 
-  # if you want to connect to a site who isn't using a certificate that is
-  # signed by one of the certs in the CA bundle you have, you can skip the
-  # verification of the server's certificate. This makes the connection
-  # A LOT LESS SECURE.
+  /**
+   * Indicates if you want to connect to a site who isn't using a certificate that is
+   * signed by one of the certs in the CA bundle you have, you can skip the verification 
+   * of the server's certificate. This makes the connection A LOT LESS SECURE.
+   * @default `false`
+   */
   var skip_peer_verification = false
 
   # ...
   var cookie_file
 
-  # the site that refers us to the current site
-  var referer = ''
+  /**
+   * the site that refers us to the current site
+   * @default `nil`
+   */
+  var referer
 
-  # if you have a CA cert for the server stored someplace else 
-  # than in the default bundle
+  /**
+   * If you have a CA cert for the server stored someplace else than in the default bundle
+   */
   var ca_cert
 
-  # set timeouts to -1 to set no timeout limit
-  # The connect timeout duration in milliseconds (default to 60 seconds)
+  /**
+   * The connect timeout duration in milliseconds
+   * @default 60s
+   */
   var connect_timeout = 60000
-  # The send timeout duration in milliseconds
-  var send_timeout = -1
-  # The receive timeout duration in milliseconds
-  var receive_timeout = -1
 
-  # request headers
+  /**
+   * The send timeout duration in milliseconds
+   * @default 300s
+   */
+  var send_timeout = 300000
+
+  /**
+   * The receive timeout duration in milliseconds
+   * @default 300s
+   */
+  var receive_timeout = 300000
+
+  /**
+   * A dictionary of headers sent along with the request
+   */
   var headers = {}
 
-  # whether to remove the expect header or not
-  # only applies to requests with files in the body
+  /**
+   * Indicates whether to remove the expect header or not only applies to requests with 
+   * files in the body
+   * @default `false`
+   */
   var no_expect = false
 
-  # the main http request method
+  /**
+   * the main http request method
+   */
   _do_http(uri, method, data){
 
     var responder = uri.absolute_url(), headers, body, time_taken = 0, error
@@ -84,6 +118,10 @@ class HttpClient {
           }
         }
 
+        if self.referer and !self.headers.contains('Referer') {
+          message += '\r\nReferer: ${self.referer}'
+        }
+
         if data {
           # append the correct content length to the message
           message += '\r\nContent-Length: ${data.length()}'
@@ -94,11 +132,13 @@ class HttpClient {
 
         # do real request here...
         var client = socket.Socket()
+        client.set_option(socket.SO_SNDTIMEO, self.send_timeout)
+        client.set_option(socket.SO_RCVTIMEO, self.receive_timeout)
 
         var start = time()
 
         # connect to the url host on the specified port and send the request message
-        client.connect(host, port ? port : 80, self.connect_timeout)
+        client.connect(host, port ? port : (uri.scheme == 'https' ? 443 : 80), self.connect_timeout)
         client.send(message)
 
         # receive the response...
@@ -116,6 +156,14 @@ class HttpClient {
               # append the new data in the stream
               response_data += client.receive()
             }
+          }
+        } else if response_data.matches('/Transfer\-Encoding:\s*chunked/') {
+          # gracefully handle chuncked data transfer
+          var do_fetch = true
+          while do_fetch {
+            var response = client.receive()
+            response_data += response
+            if response.ends_with('\r\n\r\n') do_fetch = false
           }
         }
 
@@ -149,11 +197,22 @@ class HttpClient {
       }
     }
 
+    if headers.contains('Content-Type') {
+      # remove unnecessary gibberish around the string.
+      if headers['Content-Type'].index_of('ISO-8859-1') {
+        body = util.iso_8859_1_clean(body)
+      }
+    }
+
     # return a valid HttpResponse
     return HttpResponse(body, status_code, headers, http_version, 
       time_taken, redirect_count, responder)
   }
 
+  /**
+   * processes raw http headers into a dictionary and calls the meta_callback
+   * function if given with the argument list [version, status]
+   */
   _process_header(header, meta_callback) {
     var result = {}
 
@@ -193,9 +252,10 @@ class HttpClient {
   /**
    * send_request(url: string, [method: string = 'GET', data: string])
    *
-   * sends an Http request and returns an HttpResponse
-   * or throws one of SocketException or Exception if it fails
+   * Sends an Http request and returns a HttpResponse.
+   * 
    * @return HttpResponse
+   * @throws SocketException, Exception
    */
   send_request(uri, method, data) {
 
