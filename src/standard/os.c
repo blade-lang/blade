@@ -60,7 +60,7 @@ DECLARE_MODULE_METHOD(os_exec) {
   size_t n_read;
   size_t output_size = 256;
   int length = 0;
-  char *output = ALLOCATE(char, output_size);
+  char *output = (char *)calloc(output_size, sizeof(char));
 
   if (output != NULL) {
     while ((n_read = fread(buffer, 1, sizeof(buffer), fd)) != 0) {
