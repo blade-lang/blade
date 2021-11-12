@@ -10880,7 +10880,7 @@ SQLITE_API int sqlite3changeset_finalize(sqlite3_changeset_iter *pIter);
 ** on the *ppOut pointer to free the buffer allocation following a successful
 ** call to this function.
 **
-** WARNING/TODO: This function currently assumes that the input is a valid
+** WARNING: This function currently assumes that the input is a valid
 ** changeset. If it is not, the results are undefined.
 */
 SQLITE_API int sqlite3changeset_invert(

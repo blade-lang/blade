@@ -223,7 +223,6 @@ def exit(code) {
  * qualified on the current os
  */
 def join_paths(...) {
-  # @TODO: remove invalid path characters before return
   var result = ''
   for arg in __args__ {
     if !is_string(arg)

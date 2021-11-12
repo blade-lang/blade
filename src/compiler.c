@@ -129,7 +129,7 @@ static void consume_statement_end(b_parser *p) {
     return;
   }
 
-  if (match(p, EOF_TOKEN))
+  if (match(p, EOF_TOKEN) || p->previous.type == EOF_TOKEN)
     return;
 
   consume(p, NEWLINE_TOKEN, "end of statement expected");
@@ -577,8 +577,7 @@ static void discard_local(b_parser *p, int depth) {
 }
 
 static void end_loop(b_parser *p) {
-  // find all OP_BREAK_PL placeholder and replace with the app
-  // ropriate jump...
+  // find all OP_BREAK_PL placeholder and replace with the appropriate jump...
   int i = p->innermost_loop_start;
 
   while (i < p->vm->compiler->function->blob.count) {

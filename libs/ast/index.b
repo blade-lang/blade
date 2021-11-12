@@ -1,23 +1,24 @@
 #
 # @module ast
 #
-# Provides interface for parse Blade code into ASTs
+# Provides interface for parse Blade code into Abstract Syntax Trees
 # @ copyright 2021, Ore Richard Muyiwa and Blade contributors
 #
 
 import .scanner { Scanner }
+import .parser { Parser, ParseException }
 
 
 def parse(source) {
   if !is_string(source)
     die Exception('source code expected')
 
-  # do parsing here...
+  # scan the source...
   var scanner = Scanner(source)
   var tokens = scanner.scan()
   
-  for token in tokens {
-    echo to_string(token)
-  }
+  # parse the scanned tokens
+  var parser = Parser(tokens)
+  return parser.parse()
 }
 

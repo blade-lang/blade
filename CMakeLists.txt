@@ -16,13 +16,31 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 
 set(cfsp " ")
 
+# set build type to release if not specified.
+if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
+	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
+endif()
+
 set(OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/bin")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIR}")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${OUTPUT_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${OUTPUT_DIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${OUTPUT_DIR})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${OUTPUT_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${OUTPUT_DIR})
+
+if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG OR CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG STREQUAL "")
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIR}")
+endif()
+if(NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG OR CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG STREQUAL "")
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${OUTPUT_DIR})
+endif()
+if(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG OR CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG STREQUAL "")
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${OUTPUT_DIR})
+endif()
+if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE OR CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE STREQUAL "")
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${OUTPUT_DIR})
+endif()
+if(NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE OR CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE STREQUAL "")
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${OUTPUT_DIR})
+endif()
+if(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE OR CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE STREQUAL "")
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${OUTPUT_DIR})
+endif()
 
 set(BLADE_SOURCES
 		src/blade_dict.c
@@ -55,40 +73,9 @@ set(BLADE_SOURCES
 		src/standard/json.c
 		src/standard/sqlite.c)
 
-set(PCRE2_SOURCES
-		src/pcre/pcre2_auto_possess.c
-		src/pcre/pcre2_chartables.c
-		src/pcre/pcre2_compile.c
-		src/pcre/pcre2_config.c
-		src/pcre/pcre2_context.c
-		src/pcre/pcre2_convert.c
-		src/pcre/pcre2_dfa_match.c
-		src/pcre/pcre2_error.c
-		src/pcre/pcre2_extuni.c
-		src/pcre/pcre2_find_bracket.c
-		src/pcre/pcre2_jit_compile.c
-		src/pcre/pcre2_maketables.c
-		src/pcre/pcre2_match.c
-		src/pcre/pcre2_match_data.c
-		src/pcre/pcre2_newline.c
-		src/pcre/pcre2_ord2utf.c
-		src/pcre/pcre2_pattern_info.c
-		src/pcre/pcre2_script_run.c
-		src/pcre/pcre2_serialize.c
-		src/pcre/pcre2_string_utils.c
-		src/pcre/pcre2_study.c
-		src/pcre/pcre2_substitute.c
-		src/pcre/pcre2_substring.c
-		src/pcre/pcre2_tables.c
-		src/pcre/pcre2_ucd.c
-		src/pcre/pcre2_valid_utf.c
-		src/pcre/pcre2_xclass.c
-)
-
-add_definitions(-DHAVE_CONFIG_H)
 add_definitions(-DEXPORT_LIBS)
 
-include_directories(src)
+include_directories(src thirdparty)
 
 if(WIN32)
 	add_library(libblade ${BLADE_SOURCES})
@@ -96,17 +83,7 @@ else()
 	add_library(libblade SHARED ${BLADE_SOURCES})
 endif()
 
-
-add_library(libpcre OBJECT src/pcre/pcre2.h ${PCRE2_SOURCES} src/pcre/config.h)
-
 add_executable(blade src/blade.c)
-
-set_target_properties(libpcre PROPERTIES
-		COMPILE_DEFINITIONS PCRE2_CODE_UNIT_WIDTH=8
-		MACHO_COMPATIBILITY_VERSION "10:0:10"
-		MACHO_CURRENT_VERSION "10:0:10"
-		VERSION 10
-		SOVERSION 10)
 
 if(WIN32)
 	target_link_libraries(libblade PRIVATE wsock32 ws2_32)
@@ -194,6 +171,8 @@ set_target_properties(libblade
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC"  )
 endif()
+
+# link libpcre
 target_link_libraries(libblade PRIVATE libpcre)
 
 if(UNIX)
@@ -259,7 +238,7 @@ function(add_blade_test target arg index result)
 	add_test(NAME ${arg}_${index} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/bin/${PROJECT_NAME} bin/tests/${arg}.b)
 	set_tests_properties(${arg}_${index}
 			PROPERTIES PASS_REGULAR_EXPRESSION ${result}
-			)
+	)
 endfunction(add_blade_test)
 
 # do a bunch of result based tests

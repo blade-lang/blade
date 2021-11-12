@@ -1,15 +1,9 @@
 #ifdef _MSC_VER
-#pragma warning (disable : 5105)
+# pragma warning (disable : 5105)
 #endif
 
 #include "module.h"
 #include "pathinfo.h"
-
-#ifdef HAVE_GETOPT_H
-#include <getopt.h>
-#else
-#include "blade_getopt.h"
-#endif /* HAVE_GETOPT_H */
 
 #include <stdlib.h>
 #include <string.h>
@@ -17,41 +11,32 @@
 #include <fcntl.h>
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+# include <unistd.h>
 #else
-#include "blade_unistd.h"
+# include "blade_unistd.h"
 #endif /* HAVE_UNISTD_H */
 
 #ifdef _WIN32
+# define _WINSOCK_DEPRECATED_NO_WARNINGS 1
+# include <sdkddkver.h>
+# include <ws2tcpip.h>
+# include <winsock2.h>
+# include <blade_unistd.h>
 
-#define _WINSOCK_DEPRECATED_NO_WARNINGS 1
-#include <sdkddkver.h>
-#include <ws2tcpip.h>
-#include <winsock2.h>
-#include <blade_unistd.h>
-
-#define sleep			_sleep
-#ifndef strcasecmp
-#define strcasecmp		strcmpi
-#endif
-#define ioctl ioctlsocket
-#ifndef STDIN_FILENO
-#define STDIN_FILENO _fileno(stdin)
-#endif
-
+# define sleep			_sleep
+# ifndef strcasecmp
+#   define strcasecmp		strcmpi
+# endif
+# define ioctl ioctlsocket
+# ifndef STDIN_FILENO
+#   define STDIN_FILENO _fileno(stdin)
+# endif
 #else
-
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <arpa/telnet.h>
-//#include <arpa/ftp.h>
-//#include <arpa/tftp.h>
-//#include <arpa/nameser.h>
-#include <netdb.h> //hostent
-#include <sys/ioctl.h>
-
-#define closesocket close
-
+# include <sys/socket.h>
+# include <arpa/inet.h>
+# include <netdb.h> //hostent
+# include <sys/ioctl.h>
+# define closesocket close
 #endif
 
 #define BIGSIZ 8192    /* big buffers */
@@ -89,30 +74,18 @@ DECLARE_MODULE_METHOD(socket__create) {
     RETURN_NUMBER(-1);
   }
 
-//  int flags = 0;
 #ifndef _WIN32
-  /*flags = fcntl(sock, F_GETFD, 0);
-
-  if ((flags != -1 && (flags & FD_CLOEXEC) == 0)) {
-    flags |= FD_CLOEXEC;
-
-    if ((fcntl(sock, F_SETFD, flags) < 0)) {
-      // do nothing for now...
-    }
-  }*/
-
-#ifdef SO_NOSIGPIPE
+# ifdef SO_NOSIGPIPE
   int set = 1;
   if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &set, sizeof(int)) < 0) {
-    // do nothing. this are just optimizations.
+    // do nothing. this is just an optimization.
   }
-#endif
+# endif
 #endif
 
   RETURN_NUMBER(sock);
 }
 
-// @TODO: Support IPv6 connect...
 DECLARE_MODULE_METHOD(socket__connect) {
   ENFORCE_ARG_COUNT(_connect, 6);
   ENFORCE_ARG_TYPE(_connect, 0, IS_NUMBER); // the socket id
@@ -208,7 +181,6 @@ DECLARE_MODULE_METHOD(socket__connect) {
   RETURN_NUMBER(-1);
 }
 
-// @TODO: Support IPv6 bind...
 DECLARE_MODULE_METHOD(socket__bind) {
   ENFORCE_ARG_COUNT(_bind, 4);
   ENFORCE_ARG_TYPE(_bind, 0, IS_NUMBER); // the socket id
@@ -448,7 +420,6 @@ DECLARE_MODULE_METHOD(socket__getsockopt) {
   }
 }
 
-// @TODO: Add IPv6 support...
 DECLARE_MODULE_METHOD(socket__getsockinfo) {
   ENFORCE_ARG_COUNT(_getsockinfo, 1);
   ENFORCE_ARG_TYPE(_getsockinfo, 0, IS_NUMBER);
@@ -476,7 +447,6 @@ DECLARE_MODULE_METHOD(socket__getsockinfo) {
   RETURN_NUMBER(-1);
 }
 
-// @TODO: Add IPv6 support...
 DECLARE_MODULE_METHOD(socket__getaddrinfo) {
   ENFORCE_ARG_COUNT(_getaddrinfo, 3);
   ENFORCE_ARG_TYPE(_getaddrinfo, 0, IS_STRING);
