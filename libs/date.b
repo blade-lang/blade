@@ -7,7 +7,7 @@
 # Time is stored internally as the number of seconds 
 # with fraction since the Epoch, January 1, 1970 00:00 UTC.
 # 
-# @ copyright 2021, Ore Richard Muyiwa and Blade contributors
+# @copyright 2021, Ore Richard Muyiwa and Blade contributors
 #
 
 import _date

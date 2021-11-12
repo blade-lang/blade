@@ -13,8 +13,8 @@ import types
  * Excpetion thrown when the url is malformed
  */
 class UrlMalformedException < Exception {
-  UrlMalformedException(s) {
-    self.message = s
+  UrlMalformedException(message) {
+    parent(message)
   }
 }
 
