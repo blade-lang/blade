@@ -155,7 +155,7 @@
 #define REGEX_ERR(message, result) do { \
     PCRE2_UCHAR error[255]; \
     if(pcre2_get_error_message(result, error, 255)) { \
-      RETURN_ERROR("RegexError: %s", (char*)error); \
+      RETURN_ERROR("RegexError: (%d) %s", result, (char*)error); \
     } \
     RETURN_ERROR("RegexError: %s", message);                \
   } while(0)

@@ -45,8 +45,8 @@ class Encoder {
       when 'number' return to_string(value)
       when 'string' {
         if value.index_of('"') > -1 or value.index_of('\\') > -1 {
-          var esc_value = value.replace('"', '\\\\"').  # replace " with \"
-              replace('\\\\', '\\\\\\\\')   # replace \ with \\
+          var esc_value = value.replace('/"/', '\\\\"').  # replace " with \"
+              replace('/\\\\/', '\\\\\\\\')   # replace \ with \\
           return '"${esc_value}"'
         }
         return '"${value}"'

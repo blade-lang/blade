@@ -238,7 +238,7 @@ class HttpClient {
           }
         } else if(data[i].lower().starts_with('http/')){
           var split = data[i].split(' ')
-          var http_version = split[0].replace('http/', '')
+          var http_version = split[0].replace('~http/~', '')
 
           # call back with (version, status code)
           if meta_callback meta_callback(http_version, to_number(split[1]))

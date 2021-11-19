@@ -927,14 +927,13 @@ DECLARE_STRING_METHOD(replace) {
   }
 
   GET_REGEX_COMPILE_OPTIONS(substr, false);
-  char *real_regex = substr->chars;
-  if ((int) compile_options > -1) {
-    real_regex = remove_regex_delimiter(vm, substr);
-  }
+  char *real_regex = remove_regex_delimiter(vm, substr);
 
   PCRE2_SPTR input = (PCRE2_SPTR) string->chars;
   PCRE2_SPTR pattern = (PCRE2_SPTR) real_regex;
   PCRE2_SPTR replacement = (PCRE2_SPTR) rep_substr->chars;
+
+  printf("PCRE: Real = %s, regex = %s, replacement = %s\n", substr->chars, pattern, replacement);
 
   int result, error_number;
   PCRE2_SIZE error_offset;
@@ -950,11 +949,10 @@ DECLARE_STRING_METHOD(replace) {
   PCRE2_SIZE output_length = 0;
   result = pcre2_substitute(
       re, input, PCRE2_ZERO_TERMINATED, 0,
-      PCRE2_SUBSTITUTE_GLOBAL | PCRE2_SUBSTITUTE_OVERFLOW_LENGTH |
-      PCRE2_SUBSTITUTE_EXTENDED,
+      PCRE2_SUBSTITUTE_GLOBAL | PCRE2_SUBSTITUTE_OVERFLOW_LENGTH,
       0, match_context, replacement, PCRE2_ZERO_TERMINATED, 0, &output_length);
 
-  if (result != PCRE2_ERROR_NOMEMORY) {
+  if (result < 0 && result != PCRE2_ERROR_NOMEMORY) {
     REGEX_ERR("regular expression post-compilation failed for replacement",
               result);
   }
@@ -963,10 +961,10 @@ DECLARE_STRING_METHOD(replace) {
 
   result = pcre2_substitute(
       re, input, PCRE2_ZERO_TERMINATED, 0,
-      PCRE2_SUBSTITUTE_GLOBAL | PCRE2_SUBSTITUTE_EXTENDED, 0, match_context,
+      PCRE2_SUBSTITUTE_GLOBAL | PCRE2_SUBSTITUTE_UNSET_EMPTY, 0, match_context,
       replacement, PCRE2_ZERO_TERMINATED, output_buffer, &output_length);
 
-  if (result < 0) {
+  if (result < 0 && result != PCRE2_ERROR_NOMEMORY) {
     REGEX_ERR("regular expression error at replacement time", result);
   }
 
