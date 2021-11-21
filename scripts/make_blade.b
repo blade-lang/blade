@@ -80,7 +80,7 @@ for f in header_list {
 }
 
 var license = file('${root}/LICENSE').read().
-    replace('\n', '\n * ')
+    replace('/\\n/', '\n * ')
 license = '/**\n * ${license}\n */\n'
 
 var output = '/**
