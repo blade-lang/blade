@@ -109,7 +109,7 @@ def create_dir(path, permission, recursive) {
     path += path_separator
 
   if platform == 'windows' {
-    path = path.replace('@\/@', '\\\\')
+    path = path.replace('@\/@', '\\')
   }
 
   if permission {

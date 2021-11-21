@@ -933,8 +933,6 @@ DECLARE_STRING_METHOD(replace) {
   PCRE2_SPTR pattern = (PCRE2_SPTR) real_regex;
   PCRE2_SPTR replacement = (PCRE2_SPTR) rep_substr->chars;
 
-  printf("PCRE: Real = %s, regex = %s, replacement = %s\n", substr->chars, pattern, replacement);
-
   int result, error_number;
   PCRE2_SIZE error_offset;
 
