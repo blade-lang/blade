@@ -364,9 +364,9 @@ class Parser {
     return EchoStmt(val)
   }
 
-  _expr_stmt() {
+  _expr_stmt(is_iter) {
     var val = self._expression()
-    self._end_statement()
+    if !is_iter self._end_statement()
     return ExprStmt(val)
   }
 
@@ -397,6 +397,125 @@ class Parser {
     return IfStmt(expr, body, nil)
   }
 
+  _while() {
+    return WhileStmt(self._expression(), self._statement())
+  }
+
+  _for() {
+    var vars = []
+    while self._match(IDENTIFIER) {
+      vars.append(self._previous())
+    }
+
+    self._consume(IN, "expected 'in' after for statement variables")
+
+    return ForStmt(vars, self._expression(), self._statement())
+  }
+
+  _assert() {
+    var message
+    var expr = self._expression()
+
+    if self._match(COMMA) message = self._expression()
+    return AssertStmt(expr, message)
+  }
+
+  _using() {
+    var expr = self._expression()
+    var cases = {}
+    var default_case
+
+    self._consume(LBRACE, 'expected { after using expression')
+    self._ignore_newline()
+
+    var state = 0
+
+    while !self._match(RBRACE) and !self._check(EOF) {
+      if self._match(WHEN) or self._match(DEFAULT) {
+        if state == 1 
+          die ParseException('cannot have another case after a default case')
+
+        if self._previous().type == WHEN {
+          cases[self._expression()] = self._statement()
+        } else {
+          state = 1
+          default_case = self._statement()
+        }
+      } else {
+        die ParseException('Invalid switch statement')
+      }
+    }
+
+    return UsingStmt(expr, cases, default_case)
+  }
+
+  _import() {
+    var path = []
+
+    while !self._match(NEWLINE, EOF) {
+      self._advance()
+      path.append(self._previous().literal)
+    }
+
+    return ImportStmt(''.join(path))
+  }
+
+  _try() {
+    self._consume(LBRACE, 'expected { after try')
+    var body = self._block()
+    var exception_type, exception_var, catch_body, finally_body
+    var has_catch = false, has_finally = false
+
+    if self._match(CATCH) {
+      self._consume(IDENTIFIER, 'expected exception name')
+      exception_type = self._previous().literal
+
+      if self._match(AS) {
+        self._consume(IDENTIFIER, 'expected exception variable')
+        exception_var = self._previous().literal
+      }
+
+      self._consume(LBRACE, 'expected { after catch expression')
+      catch_body = self._block()
+      has_catch = true
+    }
+    
+    if self._match(FINALLY) {
+      has_finally = true
+      self._consume(LBRACE, 'expected { after finally')
+      finally_body = self._block()
+    }
+
+    if !has_catch and !has_finally
+      die ParseException('invalid try statement')
+
+    var catch_stmt, finally_stmt
+    if has_catch catch_stmt = CatchStmt(exception_type, exception_var, catch_body)
+    if has_finally finally_stmt = FinallyStmt(finally_body)
+
+    return TryStmt(body, catch_stmt, finally_stmt)
+  }
+
+  _iter() {
+    var decl
+    if !self._check(SEMICOLON) {
+      self._consume(VAR, 'expected variable declaration')
+      decl = self._var()
+    }
+    self._consume(SEMICOLON, 'expected ;')
+
+    var condition
+    if !self._check(SEMICOLON) condition = self._expression()
+    self._consume(SEMICOLON, 'expected ;')
+
+    var iterator
+    if !self._check(LBRACE) iterator = self._expr_stmt(true)
+    self._consume(LBRACE, 'expected {')
+
+    var body = self._block()
+    return IterStmt(decl, condition, iterator, body)
+  }
+
   /**
    * parse Blade statements
    */
@@ -410,31 +529,31 @@ class Parser {
     } else if self._match(IF) {
       result = self._if()
     } else if self._match(WHILE) {
-      
+      result = self._while()
     } else if self._match(ITER) {
-      
+      result = self._iter()
     } else if self._match(FOR) {
-      
+      result = self._for()
     } else if self._match(USING) {
-      
+      result = self._using()
     } else if self._match(CONTINUE) {
-      
+      result = ContinueStmt()
     } else if self._match(BREAK) {
-      
+      result = BreakStmt()
     } else if self._match(RETURN) {
-      
+      result = ReturnStmt(self._expression())
     } else if self._match(ASSERT) {
-      
+      result = self._assert()
     } else if self._match(DIE) {
-      
+      result = DieStmt(self._expression())
     } else if self._match(LBRACE) {
       result = self._block()
     } else if self._match(IMPORT) {
-      
-    } else if self._match(TRUE) {
-      
+      result = self._import()
+    } else if self._match(TRY) {
+      result = self._try()
     } else {
-      result = self._expr_stmt()
+      result = self._expr_stmt(false)
     }
 
     self._ignore_newline()
@@ -442,25 +561,82 @@ class Parser {
     return result
   }
 
-  _declaration() {
-    if self._match(CLASS) {
-
-    } else if self._match(VAR) {
-
-    }
-
-    # TODO: Remove this when method is implemented correctly
-    self._advance()
-  }
-
   ### STATEMENTS END
 
+  ### DECLARATIONS START
+
+  _var() {
+    self._consume(IDENTIFIER, 'expected variable name')
+    var result = self._previous().literal
+
+    if self._match(EQUAL)
+      result = VarDecl(result, self._expression())
+    else result = VarDecl(result, nil)
+
+    if self._check(COMMA) {
+      result = [result] # we want to return an array of declarations
+
+      while self._match(COMMA) {
+        self._consume(IDENTIFIER, 'expected variable name')
+        var r = self._previous().literal
+
+        if self._match(EQUAL)
+          r = VarDecl(r, self._expression())
+        else r = VarDecl(r, nil)
+
+        result.append(r)
+      }
+    }
+
+    return result
+  }
+
+  _def() {
+    self._consume(IDENTIFIER, 'expected function name')
+    var name = self._previous().literal
+    var params = []
+
+    self._consume(LPAREN, 'expected ( after function name')
+    while self._match(IDENTIFIER) {
+      params.append(self._previous().literal)
+
+      if !self._check(RPAREN)
+        self._consume(COMMA, 'expected , between function params')
+    }
+    self._consume(RPAREN, 'expected ) after function args')
+    self._consume(LBRACE, 'expected { after function declaration')
+    var body = self._block()
+
+    return FunctionDecl(name, params, body)
+  }
+
+  _declaration() {
+    self._ignore_newline()
+    
+    var result
+
+    if self._match(VAR) {
+      result = self._var()
+    } else if self._match(DEF) {
+      result = self._def()
+    } else if self._match(CLASS) {
+
+    } else {
+      result = self._statement()
+    }
+
+    self._ignore_newline()
+    return result
+  }
+
+  ### DECLARATIONS END
+
   parse() {
-    var statements = []
+    var declarations = []
 
     while !self._is_at_end()
-      statements.append(self._statement())
+    declarations.append(self._declaration())
 
-    return statements
+    return declarations
   }
 }

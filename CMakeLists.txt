@@ -152,7 +152,7 @@ set(SHARED_LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX
 add_custom_target(blade_files)
 
 # add dependencies
-add_dependencies(libblade libpcre blade_files)
+add_dependencies(libblade pcre2 blade_files)
 
 set_target_properties(blade
 		PROPERTIES
@@ -172,8 +172,8 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC"  )
 endif()
 
-# link libpcre
-target_link_libraries(libblade PRIVATE libpcre)
+# link pcre2
+target_link_libraries(libblade PRIVATE pcre2)
 
 if(UNIX)
 	find_library(READLINE_LIBRARY readline REQUIRED)
@@ -198,7 +198,8 @@ set(EXE_FILE "${OUTPUT_DIR}/blade${CMAKE_EXECUTABLE_SUFFIX}")
 
 add_custom_command(TARGET blade POST_BUILD
 		COMMAND	"${EXE_FILE}" "${PROJECT_SOURCE_DIR}/scripts/make_blade.b" "${PROJECT_SOURCE_DIR}"
-		COMMENT "Generating Blade header and folders..."
+		COMMAND	"${EXE_FILE}" "${PROJECT_SOURCE_DIR}/scripts/ast.b" "${OUTPUT_DIR}/libs"
+		COMMENT "Generating Blade header and folders and package dependencies..."
 )
 
 string(TOUPPER "${CMAKE_BUILD_TYPE}" buildtype)

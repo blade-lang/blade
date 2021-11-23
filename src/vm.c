@@ -925,6 +925,7 @@ static b_obj_string *multiply_string(b_vm *vm, b_obj_string *str, double number)
 
 static b_obj_list *add_list(b_vm *vm, b_obj_list *a, b_obj_list *b) {
   b_obj_list *list = new_list(vm);
+  push(vm, OBJ_VAL(list));
 
   for (int i = 0; i < a->items.count; i++) {
     write_value_arr(vm, &list->items, a->items.values[i]);
@@ -934,6 +935,7 @@ static b_obj_list *add_list(b_vm *vm, b_obj_list *a, b_obj_list *b) {
     write_value_arr(vm, &list->items, b->items.values[i]);
   }
 
+  pop(vm);
   return list;
 }
 
