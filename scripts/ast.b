@@ -34,12 +34,28 @@ var asts = {
     tree: {
       Echo: ['value'],
       Expr: ['expr'],
-      If: ['condition', 'truth', 'falsy']
+      If: ['condition', 'truth', 'falsy'],
+      Iter: ['declaration', 'condition', 'iterator', 'body'],
+      While: ['condition', 'body'],
+      For: ['vars', 'iterable', 'body'],
+      Continue: [],
+      Break: [],
+      Die: ['exception'],
+      Return: ['value'],
+      Assert: ['expr', 'message'],
+      Using: ['expr', 'cases', 'default_case'],
+      Import: ['path'],
+      Catch: ['type', 'var_name', 'body'],
+      Finally: ['body'],
+      Try: ['body', 'catch_stmt', 'finally_stmt']
     }
   },
   Decl: {
     file: 'decl.b',
-    tree: {}
+    tree: {
+      Var: ['name', 'value'],
+      Function: ['name', 'params', 'body']
+    }
   }
 }
 

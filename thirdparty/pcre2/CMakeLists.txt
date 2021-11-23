@@ -1,4 +1,4 @@
-add_library(libpcre OBJECT
+add_library(pcre2 OBJECT
         config.h
         pcre2.h
         pcre2_auto_possess.c
@@ -36,11 +36,11 @@ add_library(libpcre OBJECT
 add_definitions(-DHAVE_CONFIG_H)
 add_definitions(-DLINK_SIZE=4)
 
-set_target_properties(libpcre PROPERTIES
+set_target_properties(pcre2 PROPERTIES
         COMPILE_DEFINITIONS PCRE2_CODE_UNIT_WIDTH=8
         MACHO_COMPATIBILITY_VERSION "10:0:10"
         MACHO_CURRENT_VERSION "10:0:10"
         VERSION 10
         SOVERSION 10)
 
-target_include_directories(libpcre INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_include_directories(pcre2 INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
