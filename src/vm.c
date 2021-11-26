@@ -525,12 +525,13 @@ static bool call(b_vm *vm, b_obj_closure *closure, int arg_count) {
   if (closure->function->is_variadic && arg_count >= closure->function->arity - 1) {
     int va_args_start = arg_count - closure->function->arity;
     b_obj_list *args_list = new_list(vm);
+    push(vm, OBJ_VAL(args_list));
 
     for (int i = va_args_start; i >= 0; i--) {
-      write_value_arr(vm, &args_list->items, peek(vm, i));
+      write_value_arr(vm, &args_list->items, peek(vm, i + 1));
     }
     arg_count -= va_args_start;
-    pop_n(vm, va_args_start + 1);
+    pop_n(vm, va_args_start + 2); // +1 for the gc protection push above
     push(vm, OBJ_VAL(args_list));
   }
 

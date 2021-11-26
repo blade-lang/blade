@@ -1510,7 +1510,7 @@ static void anonymous(b_parser *p, bool can_assign) {
 }
 
 static void field(b_parser *p, bool is_static) {
-  consume(p, IDENTIFIER_TOKEN, "method name expected");
+  consume(p, IDENTIFIER_TOKEN, "class property name expected");
   int field_constant = identifier_constant(p, &p->previous);
 
   if (match(p, EQUAL_TOKEN)) {

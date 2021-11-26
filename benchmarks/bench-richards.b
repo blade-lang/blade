@@ -198,7 +198,7 @@ def trace(a) {
     echo ''
     layout = 50
   }
-  echo '${a} '
+  #echo '${a} '
 }
 
 var TASKTABSIZE = 10

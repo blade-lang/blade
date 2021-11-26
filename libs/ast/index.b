@@ -9,6 +9,11 @@ import .scanner { Scanner }
 import .parser { Parser, ParseException }
 
 
+/**
+ * parse(source: string)
+ * 
+ * parses a given source code and outputs Blade AST objects.
+ */
 def parse(source) {
   if !is_string(source)
     die Exception('source code expected')

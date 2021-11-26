@@ -5,6 +5,10 @@ import .expr { * }
 import .stmt { * }
 import .decl { * }
 
+var _assigners_ = [EQUAL, PLUS_EQ, MINUS_EQ, PERCENT_EQ, DIVIDE_EQ,
+  MULTIPLY_EQ, FLOOR_EQ, POW_EQ, AMP_EQ, BAR_EQ, TILDE_EQ, XOR_EQ,
+  LSHIFT_EQ, RSHIFT_EQ]
+
 /**
  * @class ParseException
  */
@@ -50,6 +54,20 @@ class Parser {
    */
   _match(...) {
     for t in __args__ {
+      if self._check(t) {
+        self._advance()
+        return true
+      }
+    }
+    return false
+  }
+
+  /**
+   * checks to see if the current token has any of the given types
+   * _A list alternative to the default._
+   */
+  _match_in(args) {
+    for t in args {
       if self._check(t) {
         self._advance()
         return true
@@ -105,13 +123,24 @@ class Parser {
     die ParseException(self._peek(), message)
   }
 
+  /**
+   * continues only if the next token is one of the given type.
+   * Otherwise, it reports the given message as a ParseException
+   */
+  _consume_any(message, ...) {
+    for t in __args__ {
+      if self._check(t) return self._advance()
+    }
+    die ParseException(self._peek(), message)
+  }
+
   _end_statement() {
     if self._match(EOF) or self._is_at_end() return
 
     if self._block_count > 0 and self._check(RBRACE) return
 
-    if self._match(SEMICOLON) {
-      while self._match(NEWLINE, SEMICOLON) {}
+    if self._match(SEMICOLON, COMMENT) {
+      while self._match(NEWLINE, SEMICOLON, COMMENT) {}
       return
     }
 
@@ -124,7 +153,7 @@ class Parser {
    * ignores consecutive newlines
    */
   _ignore_newline() {
-    while self._match(NEWLINE) {}
+    while self._match(NEWLINE, COMMENT) {}
   }
 
   ### EXPRESSIONS START
@@ -133,9 +162,81 @@ class Parser {
    * grouped expressions
    */
   _grouping() {
+    self._ignore_newline()
     var expr = self._expression()
+    self._ignore_newline()
     self._consume(RPAREN, "Expected ')' after expression")
-    return GroupingExpr(expr)
+    return GroupExpr(expr)
+  }
+
+  /**
+   * completes a method call expression
+   */
+  _finish_call(callee) {
+    self._ignore_newline()
+    var args = []
+
+    if !self._check(RPAREN) {
+      args.append(self._expression())
+
+      while self._match(COMMA) {
+        self._ignore_newline()
+        args.append(self._expression())
+      }
+    }
+
+    self._ignore_newline()
+    self._consume(RPAREN, 'expected ) after args')
+    return CallExpr(callee, args)
+  }
+
+  /**
+   * completes index access expressions
+   */
+  _finish_index(callee) {
+    var args = [self._expression()]
+
+    if self._match(COMMA) {
+      self._ignore_newline()
+      args.append(self._expression())
+    }
+
+    self._consume(RBRACKET, 'expected ] at end of indexer')
+    return IndexExpr(args)
+  }
+
+  /**
+   * completes a getter or setter call
+   */
+  _finish_dot(expr) {
+    self._ignore_newline()
+    var prop = self._consume(IDENTIFIER, 'expected property name').literal
+
+    if self._match_in(_assigners_) {
+      expr = SetExpr(expr, prop, self._expression())
+    } else {
+      expr = GetExpr(expr, prop)
+    }
+
+    return expr
+  }
+
+  /**
+   * string interpolations
+   */
+  _interpolation() {
+    var data = []
+    while self._match(INTERPOLATION, LITERAL) {
+      if self._previous().literal.length() > 0
+        data.append(LiteralExpr(self._previous().literal))
+
+      data.append(self._expression())
+    }
+
+    if self._previous().literal.length() > 0
+      data.append(LiteralExpr(self._previous().literal))
+
+    return InterpolationExpr(data)
   }
 
   /**
@@ -145,13 +246,58 @@ class Parser {
     if self._match(FALSE) return LiteralExpr(false)
     if self._match(TRUE) return LiteralExpr(true)
     if self._match(NIL) return LiteralExpr(nil)
+    if self._match(SELF) return LiteralExpr('::self::')
+    if self._match(PARENT) return LiteralExpr('::parent::')
 
     if self._match(BIN_NUMBER, HEX_NUMBER, OCT_NUMBER, REG_NUMBER, LITERAL)
       return LiteralExpr(self._previous().literal)
 
+    if self._check(INTERPOLATION) return self._interpolation()
+
     if self._match(IDENTIFIER) return IdentifierExpr(self._previous().literal)
 
     if self._match(LPAREN) return self._grouping()
+    if self._match(LBRACE) return self._dict()
+    if self._match(LBRACKET) return self._list()
+    if self._match(BAR) return self._anonymous()
+
+    return nil
+  }
+
+  /**
+   * method, property and index calls
+   */
+  _call() {
+    var expr = self._primary()
+
+    while true {
+      if self._match(DOT) {
+        expr = self._finish_dot(expr)
+      } else if self._match(LPAREN) {
+        expr = self._finish_call(expr)
+      } else if self._match(LBRACKET) {
+        expr = self._finish_index(expr)
+      } else {
+        break
+      }
+    }
+
+    return expr
+  }
+
+  /**
+   * expressions that assign value (++, --)
+   */
+  _assign_expr() {
+    var expr = self._call()
+
+    if self._match(INCREMENT) {
+      expr = AssignStmt(expr, '++', nil)
+    } else if self._match(DECREMENT) {
+      expr = AssignStmt(expr, '--', nil)
+    }
+
+    return expr
   }
 
   /**
@@ -159,12 +305,13 @@ class Parser {
    */
   _unary() {
     if self._match(BANG, MINUS, TILDE) {
-      var op = self._previous()
-      var right = self._primary()
+      var op = self._previous().literal
+      self._ignore_newline()
+      var right = self._assign_expr()
       return UnaryExpr(op, right)
     }
 
-    return self._primary()
+    return self._assign_expr()
   }
 
   /**
@@ -174,7 +321,8 @@ class Parser {
     var expr = self._unary()
 
     while self._match(MULTIPLY, DIVIDE, PERCENT, POW, FLOOR) {
-      var op = self._previous()
+      var op = self._previous().literal
+      self._ignore_newline()
       var right = self._unary()
       expr = BinaryExpr(expr, op, right)
     }
@@ -189,7 +337,8 @@ class Parser {
     var expr = self._factor()
 
     while self._match(PLUS, MINUS) {
-      var op = self._previous()
+      var op = self._previous().literal
+      self._ignore_newline()
       var right = self._factor()
       expr = BinaryExpr(expr, op, right)
     }
@@ -204,7 +353,8 @@ class Parser {
     var expr = self._term()
 
     while self._match(RANGE) {
-      var op = RANGE
+      self._ignore_newline()
+      var op = '..'
       var right = self._term()
       expr = BinaryExpr(expr, op, right)
     }
@@ -219,7 +369,8 @@ class Parser {
     var expr = self._range()
 
     while self._match(LSHIFT, RSHIFT) {
-      var op = self._previous()
+      var op = self._previous().literal
+      self._ignore_newline()
       var right = self._range()
       expr = BinaryExpr(expr, op, right)
     }
@@ -234,7 +385,8 @@ class Parser {
     var expr = self._shift()
 
     while self._match(AMP) {
-      var op = AMP
+      self._ignore_newline()
+      var op = '&'
       var right = self._shift()
       expr = BinaryExpr(expr, op, right)
     }
@@ -249,7 +401,8 @@ class Parser {
     var expr = self._bit_and()
 
     while self._match(XOR) {
-      var op = XOR
+      self._ignore_newline()
+      var op = '^'
       var right = self._bit_and()
       expr = BinaryExpr(expr, op, right)
     }
@@ -264,7 +417,8 @@ class Parser {
     var expr = self._bit_xor()
 
     while self._match(BAR) {
-      var op = BAR
+      self._ignore_newline()
+      var op = '|'
       var right = self._bit_xor()
       expr = BinaryExpr(expr, op, right)
     }
@@ -279,7 +433,8 @@ class Parser {
     var expr = self._bit_or()
 
     while self._match(GREATER, GREATER_EQ, LESS, LESS_EQ) {
-      var op = self._previous()
+      var op = self._previous().literal
+      self._ignore_newline()
       var right = self._bit_or()
       expr = BinaryExpr(expr, op, right)
     }
@@ -294,7 +449,8 @@ class Parser {
     var expr = self._comparison()
 
     while self._match(BANG_EQ, EQUAL_EQ) {
-      var op = self._previous()
+      var op = self._previous().literal
+      self._ignore_newline()
       var right = self._comparison()
       expr = BinaryExpr(expr, op, right)
     }
@@ -309,7 +465,8 @@ class Parser {
     var expr = self._equality()
 
     while self._match(AND) {
-      var op = AND
+      self._ignore_newline()
+      var op = 'and'
       var right = self._equality()
       expr = BinaryExpr(expr, op, right)
     }
@@ -324,7 +481,8 @@ class Parser {
     var expr = self._and()
 
     while self._match(OR) {
-      var op = OR
+      self._ignore_newline()
+      var op = 'or'
       var right = self._and()
       expr = BinaryExpr(expr, op, right)
     }
@@ -339,6 +497,7 @@ class Parser {
     var expr = self._or()
 
     if self._match(QUESTION) {
+      self._ignore_newline()
       var truth = self._or()
       self._consume(COLON, ': expected in tenary operation')
       expr = ConditionExpr(expr, truth, self._or())
@@ -348,70 +507,145 @@ class Parser {
   }
 
   /**
+   * assignment to existing vars
+   */
+  _assignment() {
+    var expr = self._conditional()
+
+    if self._match_in(_assigners_) {
+      var type = self._previous().literal
+      self._ignore_newline()
+
+      expr = AssignStmt(expr, type, self._assignment())
+    }
+
+    return expr
+  }
+
+  /**
    * parses an expression
    */
   _expression() {
-    return self._conditional()
+    return self._assignment()
+  }
+
+  /**
+   * parses a dictionary
+   */
+  _dict() {
+    self._ignore_newline()
+    var keys = [], values = []
+
+    while !self._check(RBRACE) {
+      keys.append(self._expression())
+      self._consume(COLON, 'expected : separator between dict key and value')
+      values.append(self._expression())
+
+      self._ignore_newline()
+
+      if !self._check(RBRACE)
+        self._consume(COMMA, 'expected , between dict key/value pairs')
+      
+      self._ignore_newline()
+    }
+
+    self._consume(RBRACE, 'expected } after dictionary')
+    return DictExpr(keys, values)
+  }
+
+  /**
+   * parses a list
+   */
+  _list() {
+    self._ignore_newline()
+    var items = [self._expression()]
+
+    while self._match(COMMA) {
+      self._ignore_newline()
+      items.append(self._expression())
+    }
+
+    self._ignore_newline()
+    self._consume(RBRACKET, 'expected ] after list')
+    return ListExpr(items)
   }
 
   ### EXPRESSIONS END
 
   ### STATEMENTS START
 
+  /**
+   * echo statement
+   */
   _echo() {
     var val = self._expression()
     self._end_statement()
     return EchoStmt(val)
   }
 
+  /**
+   * expression statement
+   */
   _expr_stmt(is_iter) {
     var val = self._expression()
     if !is_iter self._end_statement()
     return ExprStmt(val)
   }
 
+  /**
+   * block scopes
+   */
   _block() {
     self._block_count++
 
     var val = []
     self._ignore_newline()
 
-    while !self._check(RBRACE) and !self._is_at_end() {
+    while !self._check(RBRACE) and !self._is_at_end()
       val.append(self._declaration())
-    }
 
     self._consume(RBRACE, 'expected } after block')
     self._block_count--
 
-    return val
+    return BlockStmt(val)
   }
 
+  /**
+   * if statements
+   */
   _if() {
     var expr = self._expression()
     var body = self._statement()
     
-    if self._match(ELSE) {
-      return IfStmt(expr, body, self._statement())
-    }
+    if self._match(ELSE) return IfStmt(expr, body, self._statement())
 
     return IfStmt(expr, body, nil)
   }
 
+  /**
+   * while loops
+   */
   _while() {
     return WhileStmt(self._expression(), self._statement())
   }
 
+  /**
+   * for loops
+   */
   _for() {
-    var vars = []
-    while self._match(IDENTIFIER) {
-      vars.append(self._previous())
-    }
+    var vars = [self._consume(IDENTIFIER, 'expected variable name')]
+
+    if self._match(COMMA)
+      vars.append(self._consume(IDENTIFIER, 'expected variable name'))
 
     self._consume(IN, "expected 'in' after for statement variables")
 
     return ForStmt(vars, self._expression(), self._statement())
   }
 
+  /**
+   * assert statements
+   */
   _assert() {
     var message
     var expr = self._expression()
@@ -420,6 +654,9 @@ class Parser {
     return AssertStmt(expr, message)
   }
 
+  /**
+   * using statements
+   */
   _using() {
     var expr = self._expression()
     var cases = {}
@@ -431,35 +668,56 @@ class Parser {
     var state = 0
 
     while !self._match(RBRACE) and !self._check(EOF) {
-      if self._match(WHEN) or self._match(DEFAULT) {
+      if self._match(WHEN, DEFAULT, COMMENT, DOC, NEWLINE) {
         if state == 1 
-          die ParseException('cannot have another case after a default case')
+          die ParseException(self._previous(), 'cannot have another case after a default case')
 
-        if self._previous().type == WHEN {
+        if [DOC, COMMENT, NEWLINE].contains(self._previous().type) {}
+        else if self._previous().type == WHEN {
           cases[self._expression()] = self._statement()
         } else {
           state = 1
           default_case = self._statement()
         }
       } else {
-        die ParseException('Invalid switch statement')
+        die ParseException(self._previous(), 'Invalid switch statement')
       }
     }
 
     return UsingStmt(expr, cases, default_case)
   }
 
+  /**
+   * import statements
+   */
   _import() {
     var path = []
+    var elements = []
 
-    while !self._match(NEWLINE, EOF) {
+    while !self._match(NEWLINE, EOF, LBRACE) {
       self._advance()
       path.append(self._previous().literal)
     }
 
-    return ImportStmt(''.join(path))
+    if self._previous().type == LBRACE {
+      var scan = true
+      while !self._check(RBRACE) and scan {
+        self._ignore_newline()
+        elements.append(self._consume_any('identifier expected', IDENTIFIER, MULTIPLY).literal)
+        if !self._match(COMMA)
+          scan = false
+        self._ignore_newline()
+      }
+
+      self._consume(RBRACE, 'expected } at end of selective import')
+    }
+
+    return ImportStmt(''.join(path), elements)
   }
 
+  /**
+   * try...catch...finally... blocks
+   */
   _try() {
     self._consume(LBRACE, 'expected { after try')
     var body = self._block()
@@ -470,7 +728,7 @@ class Parser {
       self._consume(IDENTIFIER, 'expected exception name')
       exception_type = self._previous().literal
 
-      if self._match(AS) {
+      if self._check(IDENTIFIER) {
         self._consume(IDENTIFIER, 'expected exception variable')
         exception_var = self._previous().literal
       }
@@ -487,7 +745,7 @@ class Parser {
     }
 
     if !has_catch and !has_finally
-      die ParseException('invalid try statement')
+      die ParseException(self._previous(), 'invalid try statement')
 
     var catch_stmt, finally_stmt
     if has_catch catch_stmt = CatchStmt(exception_type, exception_var, catch_body)
@@ -496,6 +754,9 @@ class Parser {
     return TryStmt(body, catch_stmt, finally_stmt)
   }
 
+  /**
+   * iter loops
+   */
   _iter() {
     var decl
     if !self._check(SEMICOLON) {
@@ -503,16 +764,18 @@ class Parser {
       decl = self._var()
     }
     self._consume(SEMICOLON, 'expected ;')
+    self._ignore_newline()
 
     var condition
     if !self._check(SEMICOLON) condition = self._expression()
     self._consume(SEMICOLON, 'expected ;')
+    self._ignore_newline()
 
     var iterator
     if !self._check(LBRACE) iterator = self._expr_stmt(true)
-    self._consume(LBRACE, 'expected {')
+    self._ignore_newline()
 
-    var body = self._block()
+    var body = self._statement()
     return IterStmt(decl, condition, iterator, body)
   }
 
@@ -552,6 +815,10 @@ class Parser {
       result = self._import()
     } else if self._match(TRY) {
       result = self._try()
+    } else if self._match(COMMENT) {
+      result = CommentStmt(self._previous().literal[1,].trim())
+    } else if self._match(DOC) {
+      result = DocDecl(self._previous().literal[2,-2].trim())
     } else {
       result = self._expr_stmt(false)
     }
@@ -565,6 +832,9 @@ class Parser {
 
   ### DECLARATIONS START
 
+  /**
+   * variable declarations
+   */
   _var() {
     self._consume(IDENTIFIER, 'expected variable name')
     var result = self._previous().literal
@@ -591,17 +861,42 @@ class Parser {
     return result
   }
 
+  /**
+   * anonymous functions
+   */
+  _anonymous() {
+    var params = []
+
+    while !self._check(BAR) {
+      params.append(self._consume_any('expected param name', IDENTIFIER, TRI_DOT).literal)
+
+      if !self._check(BAR)
+        self._consume(COMMA, 'expected , between function params')
+    }
+
+    self._consume(BAR, 'expected | after anonymous function args')
+    self._consume(LBRACE, 'expected { after function declaration')
+    var body = self._block()
+
+    return FunctionDecl('', params, body)
+  }
+
+  /**
+   * function definitions
+   */
   _def() {
     self._consume(IDENTIFIER, 'expected function name')
     var name = self._previous().literal
     var params = []
 
     self._consume(LPAREN, 'expected ( after function name')
-    while self._match(IDENTIFIER) {
+    while self._match(IDENTIFIER, TRI_DOT) {
       params.append(self._previous().literal)
 
-      if !self._check(RPAREN)
+      if !self._check(RPAREN) {
         self._consume(COMMA, 'expected , between function params')
+        self._ignore_newline()
+      }
     }
     self._consume(RPAREN, 'expected ) after function args')
     self._consume(LBRACE, 'expected { after function declaration')
@@ -610,6 +905,93 @@ class Parser {
     return FunctionDecl(name, params, body)
   }
 
+  /**
+   * class fields
+   */
+  _class_field(is_static) {
+    self._consume(IDENTIFIER, 'expected class property name')
+    var name = self._previous().literal, value
+
+    if self._match(EQUAL) value = self._expression()
+    self._end_statement()
+    self._ignore_newline()
+
+    return PropertyDecl(name, value, is_static)
+  }
+
+  /**
+   * class methods
+   */
+  _method(is_static) {
+    self._consume_any('expected method name', IDENTIFIER, DECORATOR)
+    var name = self._previous().literal
+    var params = []
+
+    self._consume(LPAREN, 'expected ( after method name')
+    while self._match(IDENTIFIER, TRI_DOT) {
+      params.append(self._previous().literal)
+
+      if !self._check(RPAREN) {
+        self._consume(COMMA, 'expected , between method params')
+        self._ignore_newline()
+      }
+    }
+    self._consume(RPAREN, 'expected ) after method args')
+    self._consume(LBRACE, 'expected { after method declaration')
+    var body = self._block()
+
+    return MethodDecl(name, params, body, is_static)
+  }
+
+  /**
+   * classes
+   */
+  _class() {
+    var properties = [], methods = []
+
+    self._consume(IDENTIFIER, 'expected class name')
+    var name = self._previous().literal, superclass
+
+    if self._match(LESS) {
+      self._consume(IDENTIFIER, 'expected super class name')
+      superclass = self._previous().literal
+    }
+
+    self._ignore_newline()
+    self._consume(LBRACE, 'expected { after class declaration')
+    self._ignore_newline()
+
+    while !self._check(RBRACE) and !self._check(EOF) {
+      var is_static = false
+      var doc
+
+      self._ignore_newline()
+      while self._match(COMMENT) {}
+      self._ignore_newline()
+
+      if self._match(DOC)
+        doc = DocDecl(self._previous().literal[2,-2].trim())
+
+      self._ignore_newline()
+
+      if self._match(STATIC) is_static = true
+
+      if self._match(VAR) {
+        properties.append(self._class_field(is_static))
+      } else {
+        methods.append(self._method())
+        self._ignore_newline()
+      }
+    }
+
+    self._consume(RBRACE, 'expected } at end of class definition')
+
+    return ClassDecl(name, superclass, properties, methods)
+  }
+
+  /**
+   * Blade's declarations
+   */
   _declaration() {
     self._ignore_newline()
     
@@ -620,8 +1002,16 @@ class Parser {
     } else if self._match(DEF) {
       result = self._def()
     } else if self._match(CLASS) {
-
-    } else {
+      result = self._class()
+    } else if self._match(COMMENT) {
+      result = CommentStmt(self._previous().literal[1,].trim())
+    } else if self._match(DOC) {
+      result = DocDecl(self._previous().literal[2,-2].trim())
+    } else if self._match(LBRACE) {
+      if !self._check(NEWLINE) and self._block_count == 0 
+        result = self._dict()
+      else result = self._block()
+    }  else {
       result = self._statement()
     }
 
@@ -631,11 +1021,18 @@ class Parser {
 
   ### DECLARATIONS END
 
+  /**
+   * parse()
+   * 
+   * parses the raw source tokens passed into relevant class and
+   * outputs a stream of AST objects that can be one of
+   * Expr (expressions), Stmt (statements) or Decl (declarations)
+   */
   parse() {
     var declarations = []
 
     while !self._is_at_end()
-    declarations.append(self._declaration())
+      declarations.append(self._declaration())
 
     return declarations
   }

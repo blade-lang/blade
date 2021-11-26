@@ -233,18 +233,8 @@ class Scanner {
           while self._peek() != '\n' and !self._is_at_end()
             self._advance()
           self._add_token(COMMENT)
-          self._start = self._current
-        }
-
-        when '/' {
           self._advance()
-          if self._peek() == '*' {
-            self._advance()
-            self._advance()
-            self._skip_block_comment()
-            self._add_token(DOC)
-            self._start = self._current
-          }
+          self._start = self._current
         }
 
         default return
@@ -288,7 +278,7 @@ class Scanner {
     }
 
     if self._is_at_end() 
-      die Exception('unterminated string')
+      die Exception('unterminated string on line ${self._line}')
 
     self._match(c)
     self._add_token(LITERAL, self.source[self._start + 1, self._current - 1])
@@ -420,6 +410,11 @@ class Scanner {
       when '/' {
         if self._match('/') {
           self._add_token(self._match('=') ? FLOOR_EQ : FLOOR)
+        } else if self._match('*') {
+          self._advance()
+          self._skip_block_comment()
+          self._add_token(DOC)
+          self._start = self._current
         } else {
           self._add_token(self._match('=') ? DIVIDE_EQ : DIVIDE)
         }
