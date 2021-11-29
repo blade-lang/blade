@@ -7,6 +7,10 @@
 
 import .scanner { Scanner }
 import .parser { Parser, ParseException }
+import .expr { * }
+import .stmt { * }
+import .decl { * }
+import .token { * }
 
 
 /**

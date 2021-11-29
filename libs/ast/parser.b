@@ -1027,6 +1027,7 @@ class Parser {
    * parses the raw source tokens passed into relevant class and
    * outputs a stream of AST objects that can be one of
    * Expr (expressions), Stmt (statements) or Decl (declarations)
+   * @return List[AST]
    */
   parse() {
     var declarations = []

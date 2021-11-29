@@ -29,7 +29,6 @@ class Scanner {
   /**
    * interpolation tracking
    */
-  var _interpolation_count = -1
   var _max_interpolation_nest = 8
 
   # to track the quote that started an interpolation
@@ -259,8 +258,7 @@ class Scanner {
       if self._peek() == '$' and self._next() == '{' and
         self._previous() != '\\' {  # interpolation started
 
-        if self._interpolation_count - 1 < self._max_interpolation_nest {
-          self._interpolation_count++
+        if self._interpolating.length() < self._max_interpolation_nest {
           self._interpolating.append(c)
           self._current++
           self._add_token(INTERPOLATION)
@@ -365,9 +363,8 @@ class Scanner {
       when ']' self._add_token(RBRACKET)
       when '{' self._add_token(LBRACE)
       when '}' {
-        if self._interpolation_count > -1 {
-          self._string(self._interpolating[self._interpolation_count])
-          self._interpolation_count--
+        if self._interpolating.length() > 0 {
+          self._string(self._interpolating.pop())
         } else {
           self._add_token(RBRACE)
         }
