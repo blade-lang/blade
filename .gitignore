@@ -20,6 +20,5 @@
 /tmp/
 /venv/
 
-CMakeSettings.json
-
 /.ccls-cache/
+win-test.b
