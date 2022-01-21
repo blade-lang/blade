@@ -16,6 +16,12 @@ class EchoStmt < Stmt {
   EchoStmt(value) {
     self.value = value
   }
+
+  @to_json() {
+    return {
+      value: self.value,
+    }
+  }
 }
 
 /**
@@ -28,6 +34,12 @@ class ExprStmt < Stmt {
    */
   ExprStmt(expr) {
     self.expr = expr
+  }
+
+  @to_json() {
+    return {
+      expr: self.expr,
+    }
   }
 }
 
@@ -43,6 +55,14 @@ class IfStmt < Stmt {
     self.condition = condition
     self.truth = truth
     self.falsy = falsy
+  }
+
+  @to_json() {
+    return {
+      condition: self.condition,
+      truth: self.truth,
+      falsy: self.falsy,
+    }
   }
 }
 
@@ -60,6 +80,15 @@ class IterStmt < Stmt {
     self.iterator = iterator
     self.body = body
   }
+
+  @to_json() {
+    return {
+      declaration: self.declaration,
+      condition: self.condition,
+      iterator: self.iterator,
+      body: self.body,
+    }
+  }
 }
 
 /**
@@ -73,6 +102,13 @@ class WhileStmt < Stmt {
   WhileStmt(condition, body) {
     self.condition = condition
     self.body = body
+  }
+
+  @to_json() {
+    return {
+      condition: self.condition,
+      body: self.body,
+    }
   }
 }
 
@@ -89,6 +125,14 @@ class ForStmt < Stmt {
     self.iterable = iterable
     self.body = body
   }
+
+  @to_json() {
+    return {
+      vars: self.vars,
+      iterable: self.iterable,
+      body: self.body,
+    }
+  }
 }
 
 /**
@@ -96,6 +140,10 @@ class ForStmt < Stmt {
  */
 class ContinueStmt < Stmt {
 
+  @to_json() {
+    return {
+     }
+  }
 }
 
 /**
@@ -103,6 +151,10 @@ class ContinueStmt < Stmt {
  */
 class BreakStmt < Stmt {
 
+  @to_json() {
+    return {
+     }
+  }
 }
 
 /**
@@ -115,6 +167,12 @@ class DieStmt < Stmt {
    */
   DieStmt(exception) {
     self.exception = exception
+  }
+
+  @to_json() {
+    return {
+      exception: self.exception,
+    }
   }
 }
 
@@ -129,6 +187,12 @@ class ReturnStmt < Stmt {
   ReturnStmt(value) {
     self.value = value
   }
+
+  @to_json() {
+    return {
+      value: self.value,
+    }
+  }
 }
 
 /**
@@ -142,6 +206,13 @@ class AssertStmt < Stmt {
   AssertStmt(expr, message) {
     self.expr = expr
     self.message = message
+  }
+
+  @to_json() {
+    return {
+      expr: self.expr,
+      message: self.message,
+    }
   }
 }
 
@@ -158,6 +229,14 @@ class UsingStmt < Stmt {
     self.cases = cases
     self.default_case = default_case
   }
+
+  @to_json() {
+    return {
+      expr: self.expr,
+      cases: self.cases,
+      default_case: self.default_case,
+    }
+  }
 }
 
 /**
@@ -171,6 +250,13 @@ class ImportStmt < Stmt {
   ImportStmt(path, elements) {
     self.path = path
     self.elements = elements
+  }
+
+  @to_json() {
+    return {
+      path: self.path,
+      elements: self.elements,
+    }
   }
 }
 
@@ -187,6 +273,14 @@ class CatchStmt < Stmt {
     self.var_name = var_name
     self.body = body
   }
+
+  @to_json() {
+    return {
+      type: self.type,
+      var_name: self.var_name,
+      body: self.body,
+    }
+  }
 }
 
 /**
@@ -199,6 +293,12 @@ class FinallyStmt < Stmt {
    */
   FinallyStmt(body) {
     self.body = body
+  }
+
+  @to_json() {
+    return {
+      body: self.body,
+    }
   }
 }
 
@@ -215,6 +315,14 @@ class TryStmt < Stmt {
     self.catch_stmt = catch_stmt
     self.finally_stmt = finally_stmt
   }
+
+  @to_json() {
+    return {
+      body: self.body,
+      catch_stmt: self.catch_stmt,
+      finally_stmt: self.finally_stmt,
+    }
+  }
 }
 
 /**
@@ -228,6 +336,12 @@ class CommentStmt < Stmt {
   CommentStmt(data) {
     self.data = data
   }
+
+  @to_json() {
+    return {
+      data: self.data,
+    }
+  }
 }
 
 /**
@@ -240,6 +354,12 @@ class BlockStmt < Stmt {
    */
   BlockStmt(body) {
     self.body = body
+  }
+
+  @to_json() {
+    return {
+      body: self.body,
+    }
   }
 }
 
@@ -255,6 +375,14 @@ class AssignStmt < Stmt {
     self.expr = expr
     self.type = type
     self.value = value
+  }
+
+  @to_json() {
+    return {
+      expr: self.expr,
+      type: self.type,
+      value: self.value,
+    }
   }
 }
 

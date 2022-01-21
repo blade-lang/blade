@@ -18,6 +18,14 @@ class BinaryExpr < Expr {
     self.op = op
     self.right = right
   }
+
+  @to_json() {
+    return {
+      left: self.left,
+      op: self.op,
+      right: self.right,
+    }
+  }
 }
 
 /**
@@ -30,6 +38,12 @@ class GroupExpr < Expr {
    */
   GroupExpr(expression) {
     self.expression = expression
+  }
+
+  @to_json() {
+    return {
+      expression: self.expression,
+    }
   }
 }
 
@@ -44,6 +58,12 @@ class LiteralExpr < Expr {
   LiteralExpr(value) {
     self.value = value
   }
+
+  @to_json() {
+    return {
+      value: self.value,
+    }
+  }
 }
 
 /**
@@ -56,6 +76,12 @@ class IdentifierExpr < Expr {
    */
   IdentifierExpr(value) {
     self.value = value
+  }
+
+  @to_json() {
+    return {
+      value: self.value,
+    }
   }
 }
 
@@ -70,6 +96,13 @@ class UnaryExpr < Expr {
   UnaryExpr(op, right) {
     self.op = op
     self.right = right
+  }
+
+  @to_json() {
+    return {
+      op: self.op,
+      right: self.right,
+    }
   }
 }
 
@@ -86,6 +119,14 @@ class ConditionExpr < Expr {
     self.truth = truth
     self.falsy = falsy
   }
+
+  @to_json() {
+    return {
+      expr: self.expr,
+      truth: self.truth,
+      falsy: self.falsy,
+    }
+  }
 }
 
 /**
@@ -100,6 +141,13 @@ class CallExpr < Expr {
     self.callee = callee
     self.args = args
   }
+
+  @to_json() {
+    return {
+      callee: self.callee,
+      args: self.args,
+    }
+  }
 }
 
 /**
@@ -113,6 +161,13 @@ class GetExpr < Expr {
   GetExpr(expr, name) {
     self.expr = expr
     self.name = name
+  }
+
+  @to_json() {
+    return {
+      expr: self.expr,
+      name: self.name,
+    }
   }
 }
 
@@ -129,6 +184,14 @@ class SetExpr < Expr {
     self.name = name
     self.value = value
   }
+
+  @to_json() {
+    return {
+      expr: self.expr,
+      name: self.name,
+      value: self.value,
+    }
+  }
 }
 
 /**
@@ -142,6 +205,12 @@ class IndexExpr < Expr {
   IndexExpr(args) {
     self.args = args
   }
+
+  @to_json() {
+    return {
+      args: self.args,
+    }
+  }
 }
 
 /**
@@ -154,6 +223,12 @@ class ListExpr < Expr {
    */
   ListExpr(items) {
     self.items = items
+  }
+
+  @to_json() {
+    return {
+      items: self.items,
+    }
   }
 }
 
@@ -169,6 +244,13 @@ class DictExpr < Expr {
     self.keys = keys
     self.values = values
   }
+
+  @to_json() {
+    return {
+      keys: self.keys,
+      values: self.values,
+    }
+  }
 }
 
 /**
@@ -181,6 +263,12 @@ class InterpolationExpr < Expr {
    */
   InterpolationExpr(data) {
     self.data = data
+  }
+
+  @to_json() {
+    return {
+      data: self.data,
+    }
   }
 }
 

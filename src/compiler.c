@@ -2431,6 +2431,7 @@ b_obj_func *compile(b_vm *vm, b_obj_module *module, const char *source, b_blob *
   init_compiler(&parser, &compiler, TYPE_SCRIPT);
 
   advance(&parser);
+  ignore_whitespace(&parser);
 
   while (!match(&parser, EOF_TOKEN)) {
     declaration(&parser);

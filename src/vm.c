@@ -1800,7 +1800,7 @@ b_ptr_result run(b_vm *vm) {
             }
           }
         } else {
-          runtime_error("non-object type %s does not have properties", value_type(peek(vm, 0)));
+          runtime_error("type %s does not have properties", value_type(peek(vm, 0)));
           break;
         }
         break;
@@ -1855,7 +1855,7 @@ b_ptr_result run(b_vm *vm) {
           break;
         }
 
-        runtime_error("non-object type %s does not have properties", value_type(peek(vm, 0)));
+        runtime_error("type %s does not have properties", value_type(peek(vm, 0)));
         break;
       }
 

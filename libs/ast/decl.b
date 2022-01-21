@@ -17,6 +17,13 @@ class VarDecl < Decl {
     self.name = name
     self.value = value
   }
+
+  @to_json() {
+    return {
+      name: self.name,
+      value: self.value,
+    }
+  }
 }
 
 /**
@@ -31,6 +38,14 @@ class FunctionDecl < Decl {
     self.name = name
     self.params = params
     self.body = body
+  }
+
+  @to_json() {
+    return {
+      name: self.name,
+      params: self.params,
+      body: self.body,
+    }
   }
 }
 
@@ -48,6 +63,15 @@ class MethodDecl < Decl {
     self.body = body
     self.is_static = is_static
   }
+
+  @to_json() {
+    return {
+      name: self.name,
+      params: self.params,
+      body: self.body,
+      is_static: self.is_static,
+    }
+  }
 }
 
 /**
@@ -62,6 +86,14 @@ class PropertyDecl < Decl {
     self.name = name
     self.value = value
     self.is_static = is_static
+  }
+
+  @to_json() {
+    return {
+      name: self.name,
+      value: self.value,
+      is_static: self.is_static,
+    }
   }
 }
 
@@ -79,6 +111,15 @@ class ClassDecl < Decl {
     self.properties = properties
     self.methods = methods
   }
+
+  @to_json() {
+    return {
+      name: self.name,
+      superclass: self.superclass,
+      properties: self.properties,
+      methods: self.methods,
+    }
+  }
 }
 
 /**
@@ -91,6 +132,12 @@ class DocDecl < Decl {
    */
   DocDecl(data) {
     self.data = data
+  }
+
+  @to_json() {
+    return {
+      data: self.data,
+    }
   }
 }
 

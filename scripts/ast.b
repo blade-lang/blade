@@ -82,17 +82,25 @@ for ast, members in asts {
   for cl, attr in members.tree {
     f.write('/**\n * @class ${cl}${ast}\n */\n')
     f.write('class ${cl}${ast} < ${ast} {\n\n')
-    var setter
+    var setter, json_body
     for k in attr {
       setter += '    self.${k} = ${k}\n'
+      json_body += '      ${k}: self.${k},\n'
     }
     if setter {
       var params = ', '.join(attr)
       f.write('  /**\n   * @constructor ${cl}\n   */\n')
       f.write('  ${cl}${ast}(${params}) {\n')
       f.write(setter)
-      f.write('  }\n')
+      f.write('  }\n\n')
     }
+
+    f.write('  @to_json() {\n')
+    f.write('    return {\n')
+    f.write(json_body ? json_body : ' ')
+    f.write('    }\n')
+    f.write('  }\n')
+
     f.write('}\n\n')
   }
 }
