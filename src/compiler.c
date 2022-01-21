@@ -2202,6 +2202,9 @@ static void try_statement(b_parser *p) {
 
     end_scope(p);
   }
+  else {
+      type = make_constant(p, OBJ_VAL(copy_string(p->vm, "Exception", 9)));
+  }
 
   patch_jump(p, exit_jump);
 
