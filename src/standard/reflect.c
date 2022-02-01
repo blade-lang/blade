@@ -116,14 +116,9 @@ DECLARE_MODULE_METHOD(reflect__call_method) {
 
   pop_n(vm, 2); // removed the args list and the string name...
 
-  if(list->items.count > 0) {
-    args[2] = OBJ_VAL(instance);
-    // convert the list into function args
-    for(int i = 0; i < list->items.count; i++) {
-        push(vm, list->items.values[i]);
-    }
-  } else {
-    push(vm, OBJ_VAL(instance));
+  // convert the list into function args
+  for(int i = 0; i < list->items.count; i++) {
+    push(vm, list->items.values[i]);
   }
 
   if (invoke_from_class(vm, instance->klass, name, list->items.count)) {
