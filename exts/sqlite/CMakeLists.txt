@@ -10,7 +10,7 @@ set(BLADE_ROOT "${CMAKE_CURRENT_BINARY_DIR}/../../bin")
 
 message(STATUS "Building SQLite module to ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE}")
 
-include_directories("${BLADE_ROOT}/includes")
+include_directories("${BLADE_ROOT}/includes" ${CMAKE_CURRENT_SOURCE_DIR})
 #link_directories("${BLADE_ROOT}")
 
 add_library(sqlite SHARED sqlite3.c sqlite3.h sqlite.c)
