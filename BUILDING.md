@@ -44,6 +44,29 @@ Proceed to the [Configure](#configure) section to configure your CMake build.
 
 ## Windows
 
+> Starting from the 3rd of February 2021, Blade's officially supported compiler for the Windows environment is now the 
+> TDM-GCC compiler. The decision to change the official compiler from Visual Studio and MSYS2 to TDM-GCC is to allow a minial 
+> configuration effort while installing Blade as well as to allow us to develop Blade faster as trying to be cross-compatible with 
+> Visual Studio has proven to slow down the growth of the language and the ecosystem and setting up MSYS2 environment to compile 
+> Blade is more work than required for TDM-GCC.
+> 
+> This also allows us to build valid Blade C extensions on Windows with less hassle. 
+> Check out the [blade-ext-demo](https://github.com/blade-lang/blade-ext-demo) or any of the extension in the 
+> [ext](https://github.com/blade-lang/blade/ext) directory for more info on how to write a valid C extension for Blade.
+
+### Using TDM-GCC
+
+To install Blade with TDM-GCC, install TDM-GCC via [this link](https://github.com/jmeubank/tdm-gcc/releases/download/v10.3.0-tdm64-2/tdm64-gcc-10.3.0-2.exe).
+Enable add to path during the installation or add TDM-GCC to path if you already have it installed then run the following commands:
+
+```terminal
+cmake -B build -DCMAKE_MAKE_PROGRAM=mingw32-make -G "Unix Makefiles"
+cmake --build build
+```
+
+The `blade` executable can be located in the `build/bin` folder. Simply add that folder to your system path to make it available
+system-wide.
+
 ### Using Visual Studio
 
 Install the 'Desktop Development with C++' workload using the Visual Studio installer. In the 'Installation Details'
