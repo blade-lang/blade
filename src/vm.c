@@ -525,12 +525,13 @@ static bool call(b_vm *vm, b_obj_closure *closure, int arg_count) {
   if (closure->function->is_variadic && arg_count >= closure->function->arity - 1) {
     int va_args_start = arg_count - closure->function->arity;
     b_obj_list *args_list = new_list(vm);
+    push(vm, OBJ_VAL(args_list));
 
     for (int i = va_args_start; i >= 0; i--) {
-      write_value_arr(vm, &args_list->items, peek(vm, i));
+      write_value_arr(vm, &args_list->items, peek(vm, i + 1));
     }
     arg_count -= va_args_start;
-    pop_n(vm, va_args_start + 1);
+    pop_n(vm, va_args_start + 2); // +1 for the gc protection push above
     push(vm, OBJ_VAL(args_list));
   }
 
@@ -1799,7 +1800,7 @@ b_ptr_result run(b_vm *vm) {
             }
           }
         } else {
-          runtime_error("non-object type %s does not have properties", value_type(peek(vm, 0)));
+          runtime_error("%s of type %s does not have properties", value_to_string(vm, peek(vm, 0)), value_type(peek(vm, 0)));
           break;
         }
         break;
@@ -1854,7 +1855,7 @@ b_ptr_result run(b_vm *vm) {
           break;
         }
 
-        runtime_error("non-object type %s does not have properties", value_type(peek(vm, 0)));
+        runtime_error("%s of type %s does not have properties", value_to_string(vm, peek(vm, 0)), value_type(peek(vm, 0)));
         break;
       }
 

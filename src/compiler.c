@@ -1510,7 +1510,7 @@ static void anonymous(b_parser *p, bool can_assign) {
 }
 
 static void field(b_parser *p, bool is_static) {
-  consume(p, IDENTIFIER_TOKEN, "method name expected");
+  consume(p, IDENTIFIER_TOKEN, "class property name expected");
   int field_constant = identifier_constant(p, &p->previous);
 
   if (match(p, EQUAL_TOKEN)) {
@@ -2434,6 +2434,7 @@ b_obj_func *compile(b_vm *vm, b_obj_module *module, const char *source, b_blob *
   init_compiler(&parser, &compiler, TYPE_SCRIPT);
 
   advance(&parser);
+  ignore_whitespace(&parser);
 
   while (!match(&parser, EOF_TOKEN)) {
     declaration(&parser);

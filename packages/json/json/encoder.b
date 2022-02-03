@@ -1,5 +1,7 @@
 #!-- part of the json module
 
+import reflect
+
 /**
  * @class Encoder
  * 
@@ -80,9 +82,8 @@ class Encoder {
       default {
         
         if is_instance(value) {
-          var fn = getprop(value, '@to_json')   # get the @to_json decorator
-          if fn {
-            return self.encode(fn())
+          if reflect.has_method(value, '@to_json')  { # get the @to_json decorator
+            return self.encode(reflect.call_method(value, '@to_json'))
           }
         } 
        

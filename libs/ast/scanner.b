@@ -29,7 +29,6 @@ class Scanner {
   /**
    * interpolation tracking
    */
-  var _interpolation_count = -1
   var _max_interpolation_nest = 8
 
   # to track the quote that started an interpolation
@@ -233,18 +232,8 @@ class Scanner {
           while self._peek() != '\n' and !self._is_at_end()
             self._advance()
           self._add_token(COMMENT)
-          self._start = self._current
-        }
-
-        when '/' {
           self._advance()
-          if self._peek() == '*' {
-            self._advance()
-            self._advance()
-            self._skip_block_comment()
-            self._add_token(DOC)
-            self._start = self._current
-          }
+          self._start = self._current
         }
 
         default return
@@ -269,8 +258,7 @@ class Scanner {
       if self._peek() == '$' and self._next() == '{' and
         self._previous() != '\\' {  # interpolation started
 
-        if self._interpolation_count - 1 < self._max_interpolation_nest {
-          self._interpolation_count++
+        if self._interpolating.length() < self._max_interpolation_nest {
           self._interpolating.append(c)
           self._current++
           self._add_token(INTERPOLATION)
@@ -288,7 +276,7 @@ class Scanner {
     }
 
     if self._is_at_end() 
-      die Exception('unterminated string')
+      die Exception('unterminated string on line ${self._line}')
 
     self._match(c)
     self._add_token(LITERAL, self.source[self._start + 1, self._current - 1])
@@ -375,9 +363,8 @@ class Scanner {
       when ']' self._add_token(RBRACKET)
       when '{' self._add_token(LBRACE)
       when '}' {
-        if self._interpolation_count > -1 {
-          self._string(self._interpolating[self._interpolation_count])
-          self._interpolation_count--
+        if self._interpolating.length() > 0 {
+          self._string(self._interpolating.pop())
         } else {
           self._add_token(RBRACE)
         }
@@ -420,6 +407,11 @@ class Scanner {
       when '/' {
         if self._match('/') {
           self._add_token(self._match('=') ? FLOOR_EQ : FLOOR)
+        } else if self._match('*') {
+          self._advance()
+          self._skip_block_comment()
+          self._add_token(DOC)
+          self._start = self._current
         } else {
           self._add_token(self._match('=') ? DIVIDE_EQ : DIVIDE)
         }
