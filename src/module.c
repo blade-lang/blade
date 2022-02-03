@@ -29,7 +29,6 @@ b_module_init modules[] = {
     GET_MODULE_LOADER(socket),     //
     GET_MODULE_LOADER(hash),     //
     GET_MODULE_LOADER(json),     //
-    GET_MODULE_LOADER(sqlite),     //
     NULL,
 };
 
@@ -107,7 +106,7 @@ bool load_module(b_vm *vm, b_module_init init_fn, char *import_name, char *sourc
     if(handle != NULL) {
       the_module->handle = handle;  // set handle for shared library modules
     }
-    add_native_module(vm, the_module, import_name);
+    add_native_module(vm, the_module, the_module->name);
 
     CLEAR_GC();
     return true;

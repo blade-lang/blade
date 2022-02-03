@@ -9,5 +9,4 @@ if(NOT "${HAVE_STRSEP}")
 endif()
 
 add_subdirectory(json-parser)
-add_subdirectory(sqlite)
 add_subdirectory(pcre2)
