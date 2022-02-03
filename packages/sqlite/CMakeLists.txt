@@ -19,6 +19,7 @@ add_dependencies(sqlite blade)
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+    target_link_libraries(sqlite pthread)
 endif()
 
 if(WIN32)
