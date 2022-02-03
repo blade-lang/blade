@@ -70,7 +70,6 @@ set(BLADE_SOURCES
 		src/standard/os.c
 		src/standard/socket.c
 		src/standard/hash.c
-		src/standard/json.c
 		)
 
 add_definitions(-DEXPORT_LIBS)
@@ -128,9 +127,6 @@ endif()
 check_function_exists("utime" HAVE_UTIME)
 check_function_exists("basename" HAVE_BASENAME)
 check_function_exists("dirname" HAVE_DIRNAME)
-
-# Link to json-parser
-target_link_libraries(libblade PRIVATE json-parser)
 
 # Generate config.h
 set(INCLUDE_GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/include-gen")

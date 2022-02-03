@@ -1,5 +1,5 @@
-#include "module.h"
-#include <json.h>
+#include <blade.h>
+#include "json.h"
 
 
 b_value get_blade_value(b_vm *vm, json_value * data) {

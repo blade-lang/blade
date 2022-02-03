@@ -8,5 +8,4 @@ if(NOT "${HAVE_STRSEP}")
     add_subdirectory(strsep)
 endif()
 
-add_subdirectory(json-parser)
 add_subdirectory(pcre2)
