@@ -42,5 +42,6 @@ def parse(source) {
  * @return string
  */
 def json(source) {
-  return js.encode(parse(source))
+  return Exception('not yet implemented')
+  # return js.encode(parse(source))
 }

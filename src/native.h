@@ -66,8 +66,8 @@
     return false;                                                          \
   }
 #define RETURN_BOOL(v) { args[-1] = BOOL_VAL(v); return true; }
-#define RETURN_TRUE { args[-1] = BOOL_VAL(true); return true; }
-#define RETURN_FALSE { args[-1] = BOOL_VAL(false); return true; }
+#define RETURN_TRUE { args[-1] = TRUE_VAL; return true; }
+#define RETURN_FALSE { args[-1] = FALSE_VAL; return true; }
 #define RETURN_NUMBER(v) { args[-1] = NUMBER_VAL(v); return true; }
 #define RETURN_OBJ(v) { args[-1] = OBJ_VAL(v); return true; }
 #define RETURN_STRING(v) { args[-1] = OBJ_VAL(copy_string(vm, v, (int)strlen(v))); return true; }
