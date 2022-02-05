@@ -1,4 +1,4 @@
-name: "Windows (MinGW64) build"
+name: "Windows (WinLibs) build"
 
 on:
   push:
@@ -20,6 +20,7 @@ jobs:
     - uses: bwoodsend/setup-winlibs-action@v1
       with:
         add_to_path: true
+        tag: 11.2.0-9.0.0-msvcrt-r5
 
     - uses: actions/checkout@v2
     - name: Configure CMake
