@@ -16,7 +16,7 @@ jobs:
   build:
 
     name: Build on ubuntu-latest
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     steps:
     - name: Setup cmake
@@ -40,7 +40,7 @@ jobs:
     - name: Generate Artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: blade-ubuntu-${{ github.run_id }}
+        name: blade-linux-${{ github.run_id }}
         path: ${{github.workspace}}/build/bin
 
 #    - name: Test

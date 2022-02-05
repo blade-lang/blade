@@ -122,6 +122,7 @@ DECLARE_MODULE_METHOD(reflect__call_method) {
   }
 
   if (invoke_from_class(vm, instance->klass, name, list->items.count)) {
+    pop_n(vm, 3);
     RETURN_TRUE;
   }
   RETURN_FALSE;

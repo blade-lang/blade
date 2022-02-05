@@ -42,7 +42,7 @@ jobs:
     - name: Generate Artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: blade-windows-${{ github.run_id }}
+        name: blade-windows-msvc-${{ github.run_id }}
         path: ${{github.workspace}}/build/bin
 
 #    - name: Test

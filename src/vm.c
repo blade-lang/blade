@@ -1800,7 +1800,7 @@ b_ptr_result run(b_vm *vm) {
             }
           }
         } else {
-          runtime_error("%s of type %s does not have properties", value_to_string(vm, peek(vm, 0)), value_type(peek(vm, 0)));
+          runtime_error("'%s' of type %s does not have properties", value_to_string(vm, peek(vm, 0)), value_type(peek(vm, 0)));
           break;
         }
         break;
@@ -1855,7 +1855,7 @@ b_ptr_result run(b_vm *vm) {
           break;
         }
 
-        runtime_error("%s of type %s does not have properties", value_to_string(vm, peek(vm, 0)), value_type(peek(vm, 0)));
+        runtime_error("'%s' of type %s does not have properties", value_to_string(vm, peek(vm, 0)), value_type(peek(vm, 0)));
         break;
       }
 

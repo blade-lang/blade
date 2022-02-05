@@ -28,6 +28,7 @@ b_module_init modules[] = {
     GET_MODULE_LOADER(date),     //
     GET_MODULE_LOADER(socket),     //
     GET_MODULE_LOADER(hash),     //
+    GET_MODULE_LOADER(reflect), //
     NULL,
 };
 

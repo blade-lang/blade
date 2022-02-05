@@ -70,6 +70,7 @@ set(BLADE_SOURCES
 		src/standard/os.c
 		src/standard/socket.c
 		src/standard/hash.c
+		src/standard/reflect.c
 		)
 
 add_definitions(-DEXPORT_LIBS)
