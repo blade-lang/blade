@@ -98,6 +98,7 @@ built with either TDM-GCC or MinGW64.
 |-----------|----------
 | `benchmarks` | Contains the sample benchmarks for Blade (some are based on the Benchmark games).
 | `libs` | Contains the Blade standard library.
+| `packages` | Contains the Blade standard library members built as packages because they depend on other open-source tools.
 | `src` | The source code of the Blade language including the native implementation of some Blade library classes and functions in the modules directory.
 | `scripts` | Helper scripts for various uses such as automated installation.
 | `tests` | A few test cases that Blade implementation must pass.

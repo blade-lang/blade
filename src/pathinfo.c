@@ -198,7 +198,11 @@ char *resolve_import_path(char *module_name, const char *current_file,
   // search system library if we are not looking for a relative module.
   if (!is_relative) {
     // check in blade's default location
-    char *blade_directory = merge_paths(get_exe_dir(), LIBRARY_DIRECTORY);
+    char *exe_dir = get_exe_dir();
+
+    // check the libs directory...
+
+    char *blade_directory = merge_paths(exe_dir, LIBRARY_DIRECTORY);
     char *library_file = merge_paths(blade_directory, blade_file_name);
 
     if (file_exists(library_file)) {
@@ -219,6 +223,37 @@ char *resolve_import_path(char *module_name, const char *current_file,
     if (file_exists(library_index_file)) {
       // stop a core library from importing itself
       char *path1 = realpath(library_index_file, NULL);
+      char *path2 = realpath(current_file, NULL);
+
+      if (path1 != NULL) {
+        if (path2 == NULL || memcmp(path1, path2, (int) strlen(path2)) != 0)
+          return path1;
+      }
+    }
+
+    // check installed packages...
+
+    char *blade_package_directory = merge_paths(exe_dir, PACKAGES_DIRECTORY);
+    char *package_file = merge_paths(blade_package_directory, blade_file_name);
+
+    if (file_exists(package_file)) {
+      // stop a core library from importing itself
+      char *path1 = realpath(package_file, NULL);
+      char *path2 = realpath(current_file, NULL);
+
+      if (path1 != NULL) {
+        if (path2 == NULL || memcmp(path1, path2, (int) strlen(path2)) != 0)
+          return path1;
+      }
+    }
+
+    char *package_index_file =
+        merge_paths(merge_paths(blade_package_directory, module_name),
+                    get_blade_filename(LIBRARY_DIRECTORY_INDEX));
+
+    if (file_exists(package_index_file)) {
+      // stop a core library from importing itself
+      char *path1 = realpath(package_index_file, NULL);
       char *path2 = realpath(current_file, NULL);
 
       if (path1 != NULL) {
