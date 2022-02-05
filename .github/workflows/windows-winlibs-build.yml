@@ -1,0 +1,35 @@
+name: "Windows (MinGW64) build"
+
+on:
+  push:
+    branches: [ main, dev ]
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches: [ main ]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    name: Build on windows-latest
+    runs-on: windows-latest
+
+    steps:
+    - uses: bwoodsend/setup-winlibs-action@v1
+      with:
+        add_to_path: true
+
+    - uses: actions/checkout@v2
+    - name: Configure CMake
+      run: cmake -B '${{github.workspace}}\build' -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Build
+      run: cmake --build '${{github.workspace}}\build'
+
+    - name: Generate Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: blade-windows-default-${{ github.run_id }}
+        path: ${{github.workspace}}/build/bin
