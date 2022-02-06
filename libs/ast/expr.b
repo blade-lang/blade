@@ -3,7 +3,8 @@
  * @class Expr
  * base Expr class
  */
-class Expr {}
+class Expr {
+}
 
 /**
  * @class BinaryExpr

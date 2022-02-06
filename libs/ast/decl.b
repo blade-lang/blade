@@ -3,7 +3,9 @@
  * @class Decl
  * base Decl class
  */
-class Decl {}
+class Decl {
+  var doc
+}
 
 /**
  * @class VarDecl
@@ -118,25 +120,6 @@ class ClassDecl < Decl {
       superclass: self.superclass,
       properties: self.properties,
       methods: self.methods,
-    }
-  }
-}
-
-/**
- * @class DocDecl
- */
-class DocDecl < Decl {
-
-  /**
-   * @constructor Doc
-   */
-  DocDecl(data) {
-    self.data = data
-  }
-
-  @to_json() {
-    return {
-      data: self.data,
     }
   }
 }

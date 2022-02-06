@@ -4,6 +4,7 @@ import .token { * }
 import .expr { * }
 import .stmt { * }
 import .decl { * }
+import .defn { * }
 
 var _assigners_ = [EQUAL, PLUS_EQ, MINUS_EQ, PERCENT_EQ, DIVIDE_EQ,
   MULTIPLY_EQ, FLOOR_EQ, POW_EQ, AMP_EQ, BAR_EQ, TILDE_EQ, XOR_EQ,
@@ -818,7 +819,7 @@ class Parser {
     } else if self._match(COMMENT) {
       result = CommentStmt(self._previous().literal[1,].trim())
     } else if self._match(DOC) {
-      result = DocDecl(self._previous().literal[2,-2].trim())
+      result = DocDefn(self._previous().literal[2,-2].trim())
     } else {
       result = self._expr_stmt(false)
     }
@@ -970,7 +971,7 @@ class Parser {
       self._ignore_newline()
 
       if self._match(DOC)
-        doc = DocDecl(self._previous().literal[2,-2].trim())
+        doc = DocDefn(self._previous().literal[2,-2].trim())
 
       self._ignore_newline()
 
@@ -1006,7 +1007,7 @@ class Parser {
     } else if self._match(COMMENT) {
       result = CommentStmt(self._previous().literal[1,].trim())
     } else if self._match(DOC) {
-      result = DocDecl(self._previous().literal[2,-2].trim())
+      result = DocDefn(self._previous().literal[2,-2].trim())
     } else if self._match(LBRACE) {
       if !self._check(NEWLINE) and self._block_count == 0 
         result = self._dict()

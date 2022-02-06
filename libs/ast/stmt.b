@@ -3,7 +3,8 @@
  * @class Stmt
  * base Stmt class
  */
-class Stmt {}
+class Stmt {
+}
 
 /**
  * @class EchoStmt
