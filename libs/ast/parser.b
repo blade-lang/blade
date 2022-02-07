@@ -5,28 +5,15 @@ import .expr { * }
 import .stmt { * }
 import .decl { * }
 import .defn { * }
+import .interface { * }
+import .exception { * }
 
 var _assigners_ = [EQUAL, PLUS_EQ, MINUS_EQ, PERCENT_EQ, DIVIDE_EQ,
   MULTIPLY_EQ, FLOOR_EQ, POW_EQ, AMP_EQ, BAR_EQ, TILDE_EQ, XOR_EQ,
   LSHIFT_EQ, RSHIFT_EQ]
 
-/**
- * @class ParseException
- */
-class ParseException < Exception {
-  /**
-   * @constructor ParseException
-   * ParseException(token: Token, message: string)
-   */
-  ParseException(token, message) {
-    parent('Error at ${token.literal} on line ${token.line}: ${message}')
-  }
-}
-
 
 /**
- * @class Parser
- * 
  * Parses raw Blade tokens and produces an Abstract Syntax Tree
  */
 class Parser {
@@ -42,8 +29,8 @@ class Parser {
   var _block_count = 0
 
   /**
-   * @constructor Parser
    * Parser(tokens: []Token)
+   * @constructor
    */
   Parser(tokens) {
     # set instance variable token
@@ -1028,10 +1015,10 @@ class Parser {
    * parses the raw source tokens passed into relevant class and
    * outputs a stream of AST objects that can be one of
    * Expr (expressions), Stmt (statements) or Decl (declarations)
-   * @return List[AST]
+   * @return ParseResult
    */
   parse() {
-    var declarations = []
+    var declarations = ParseResult()
 
     while !self._is_at_end()
       declarations.append(self._declaration())

@@ -575,7 +575,7 @@ static inline bool call_native_method(b_vm *vm, b_obj_native *native, int arg_co
   return true;
 }
 
-static bool call_value(b_vm *vm, b_value callee, int arg_count) {
+bool call_value(b_vm *vm, b_value callee, int arg_count) {
   if (IS_OBJ(callee)) {
     switch (OBJ_TYPE(callee)) {
       case OBJ_BOUND_METHOD: {
@@ -2252,13 +2252,13 @@ b_ptr_result run(b_vm *vm) {
       }
 
       case OP_SELECT_IMPORT: {
-        b_obj_string *module_name = READ_STRING();
+        b_obj_string *entry_name = READ_STRING();
         b_obj_func *function = AS_CLOSURE(peek(vm, 0))->function;
         b_value value;
-        if (table_get(&function->module->values, OBJ_VAL(module_name), &value)) {
-          table_set(vm, &frame->closure->function->module->values, OBJ_VAL(module_name), value);
+        if (table_get(&function->module->values, OBJ_VAL(entry_name), &value)) {
+          table_set(vm, &frame->closure->function->module->values, OBJ_VAL(entry_name), value);
         } else {
-          runtime_error("module %s does not define '%s'", function->module->name, module_name->chars);
+          runtime_error("module %s does not define '%s'", function->module->name, entry_name->chars);
         }
         break;
       }

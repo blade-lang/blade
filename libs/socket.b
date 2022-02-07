@@ -3,7 +3,7 @@
 #
 # Provides interface for working with Socket clients
 # and servers.
-# @ copyright 2021, Ore Richard Muyiwa and Blade contributors
+# @copyright 2021, Ore Richard Muyiwa and Blade contributors
 # 
 
 import _socket {
@@ -111,16 +111,25 @@ import _socket {
 
 
 /**
- * address helpers
+ * The non-designated address used to represent "no particular address"
+ * (also referred to as "any address")
  */
 var IP_ANY     = '0.0.0.0'
+
+/**
+ * The loopback address (also known as localhost)
+ */
 var IP_LOCAL   = '127.0.0.1'
 
 /**
- * @class SocketException
- * exception class thrown from sockets
+ * The SocketExceptio class is the general Exception type thrown from sockets
  */
 class SocketException < Exception {
+
+  /**
+   * SocketException(message: string)
+   * @constructor
+   */
   SocketException(message) {
     self.message = message
   }
@@ -131,60 +140,104 @@ class SocketException < Exception {
 }
 
 /**
- * @class Socket
- *
- * Provides interface for working with Socket clients
+ * The Socket class provides interface for working with Socket clients
  * and servers.
  */
 class Socket {
 
-  # Whenever a host is not given, the host will default
-  # to localhost.
+  /**
+   * This property holds the host bound, to be bound to or connected to by the current socket.
+   * Whenever a host is not given, the host will default to localhost.
+   */
   var host = 'localhost'
+
+  /**
+   * The port currently bound or connected to by the socket
+   */
   var port = 0
 
-  # the default family for the socket is AF_INET
+  /**
+   * The socket family (which must be one of the `AF_` variables).
+   * The default family for the socket is AF_INET
+   */
   var family = AF_INET
 
-  # the default socket type is SOCK_STREAM
+  /**
+   * The type of socket stream used by the socket.
+   * The default socket type is `SOCK_STREAM`
+   */
   var type = SOCK_STREAM
 
-  # initialize protocol for default behavior...
+  /**
+   * The current operating protocol of the socket that controls the 
+   * underlying behavior of the socket. The default is `IPPROTO_TCP`.
+   */
   var protocol = IPPROTO_TCP
 
-  # this variable holds the id of the socket on
-  # the host machine. This value will be passed
-  # to the backend whenever the socket id is required.
+  /**
+   * The file descriptor id of the current socket on the host machine.
+   */
   var id = -1
 
-  # tracking the kind of socket we have...
-  # i.e. client or server!
+  /**
+   * `true` when the socket is a client to a server socket, `false` otherwise.
+   */
   var is_client = false
 
-  # we want to know when the server is bound, listening or connected
+  /**
+   * `true` when the socket is bound to a given port on the device, `false` 
+   * otherwise.
+   */
   var is_bound = false
+
+  /**
+   * `true` when the socket is connected to a server socket, `false` otherwise.
+   */
   var is_connected = false
+
+  /**
+   * `true` when the socket is currently listening on a host device port as a 
+   * server, `false` otherwise.
+   */
   var is_listening = false
-  # as well as closed or shutdown
+  
+  /**
+   * `true` when the socket is closed, `false` otherwise.
+   */
   var is_closed = false
+
+  /**
+   * `true` when the socket is shutdown, `false` otherwise.
+   */
   var is_shutdown = false
 
-  # and why we shutdown
+  /**
+   * The property holds the reason for which the last `shutdown` operation 
+   * was called or `-1` if `shutdown` was never requested.
+   */
   var shutdown_reason = -1
 
-  # and get an update on SO_SNDTIMEO and SO_RCVTIMEO
+  /**
+   * The amount of time in milliseconds that the socket waits before it 
+   * terminates a `send` operation. This is equal to the `SO_SNDTIMEO`.
+   */
   var send_timeout = -1
+
+  /**
+   * The amount of time in milliseconds that the socket waits before it 
+   * terminates a `receive` operation. This is equal to the `SO_RCVTIMEO`.
+   */
   var receive_timeout = -1
 
-  # as well as when we are running in blocking mode
+  /**
+   * `true` when the socket is running in a blocking mode, `false` otherwise.
+   */
   var is_blocking = false
 
   /**
-   * @constructor Socket
-   * 
    * Socket(family: number [, type: number, protocol: number [, id: number]])
-   * @example
-   * Socket(AF_INET, SOCK_STREAM, 0)
+   * @constructor
+   * @example Socket(AF_INET, SOCK_STREAM, 0)
    */
   Socket(family, type, protocol, id) {
     if family self.family = family
@@ -213,6 +266,9 @@ class Socket {
     return code
   }
 
+  /**
+   * connect(host: string, port: int [, timeout: int])
+   */
   connect(host, port, timeout) {
     if !host host = self.host
     if !timeout timeout = 300000 # default timeout is 300 seconds
@@ -239,7 +295,10 @@ class Socket {
     return result
   }
   
-  bind(host, port) {
+  /**
+   * bind(port: int [, host: string])
+   */
+  bind(port, host) {
     if !host host = self.host
 
     if !port die SocketException('port not specified')
@@ -263,6 +322,9 @@ class Socket {
     return result
   }
 
+  /**
+   * send(message: string, flags: int)
+   */
   send(message, flags) {
     if !message message = ''
     if !flags flags = 0
@@ -283,6 +345,9 @@ class Socket {
     return self._check_error(_send(self.id, message, flags))
   }
 
+  /**
+   * receive([length: int [, flags: int]])
+   */
   receive(length, flags) {
     if !length length = -1
     if !flags flags = 0
@@ -306,6 +371,9 @@ class Socket {
     return self._check_error(result)
   }
 
+  /**
+   * listen([queue_length: int])
+   */
   listen(queue_length) {
     if !queue_length queue_length = SOMAXCONN # default to 128 simulataneous clients...
 
@@ -324,6 +392,10 @@ class Socket {
     return result
   }
 
+  /**
+   * accept()
+   * @return Socket
+   */
   accept() {
     if self.is_bound and self.is_listening and !self.is_closed {
       var result = _accept(self.id)
@@ -340,6 +412,10 @@ class Socket {
     die SocketException('socket not bound/listening')
   }
 
+  /**
+   * close()
+   * @return bool
+   */
   close() {
     # silently ignore multiple calls to close()
     if self.is_closed return true
@@ -356,6 +432,9 @@ class Socket {
     return false
   }
 
+  /**
+   * shutdown([how: int])
+   */
   shutdown(how) {
     if !how how = SHUT_RD
     
@@ -382,6 +461,9 @@ class Socket {
     return result
   }
 
+  /**
+   * set_option(option: int, value: any)
+   */
   set_option(option, value) {
     if !option or !value 
       die SocketException('both option and value are required')
@@ -402,6 +484,9 @@ class Socket {
     return result
   }
 
+  /**
+   * get_option(option: int)
+   */
   get_option(option) {
     if !option
       return nil
@@ -417,11 +502,18 @@ class Socket {
     return _getsockopt(self.id, option)
   }
 
+  /**
+   * set_blocking(mode: bool)
+   */
   set_blocking(mode) {
     if !is_bool(mode) die SocketException('boolean expected')
     self.is_blocking = mode
   }
 
+  /**
+   * info()
+   * @return dictionary
+   */
   info() {
     return _getsockinfo(self.id)
   }
@@ -433,7 +525,7 @@ class Socket {
 }
 
 /**
- * get_address_info(address: number, type: number, family: number)
+ * get_address_info(address: number [, type: string [, family: int]])
  * 
  * returns ip and name information of a given address
  * @return dictionary

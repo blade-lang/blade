@@ -6,9 +6,7 @@ import .response { HttpResponse }
 import .util
 
 /**
- * @class HttpClient
- *
- * handles http requests.
+ * Handles http requests.
  */
 class HttpClient {
   

@@ -7,7 +7,7 @@
 # where applicable and does and return the same thing as the builtin
 # alternative.
 # 
-# @ copyright 2021, Ore Richard Muyiwa and Blade contributors
+# @copyright 2021, Ore Richard Muyiwa and Blade contributors
 # 
 
 
@@ -205,16 +205,13 @@ def instance(value, type) {
 
 
 /**
- * @class Convert
- * 
- * handles conversion from one type to another
+ * The Convert class handles conversion from one type to another
  */
 class Convert {
 
   /**
-   * @constructor Convert
-   *  
    * Convert(value: any)
+   * 
    * set's the value to be converted.
    * @return Convert
    */

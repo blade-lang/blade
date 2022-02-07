@@ -2,15 +2,13 @@
 # @module clib
 #
 # Provides interface for interacting with the C libraries
-# @ copyright 2021, Ore Richard Muyiwa and Blade contributors
+# @copyright 2021, Ore Richard Muyiwa and Blade contributors
 #
 
 import _os { _platform }
 
 /**
- * @class CTypes
- * 
- * enumeration of C standard/basic data types and their pointers
+ * Enumeration of C standard/basic data types and their pointers
  */
 class CType {
   # basic types
@@ -61,8 +59,7 @@ class CType {
 }
 
 /**
- * @class CDeclaration
- * representation class for a C variable declaration (non-assignment) 
+ * Representation class for a C variable declaration (non-assignment) 
  */
 class CDeclaration {
   CDeclaration(name, type) {
@@ -77,8 +74,7 @@ class CDeclaration {
 }
 
 /**
- * @class CValue
- * representation class for static typed C value
+ * Representation class for static typed C value
  */
 class CValue {
   CValue(type, value) {
@@ -92,8 +88,7 @@ class CValue {
 
 
 /**
- * @class CUnion
- * representation class for a C union
+ * Representation class for a C union
  */
 class CUnion {
   CUnion(...) {
@@ -107,8 +102,7 @@ class CUnion {
 }
 
 /**
- * @class CStruct
- * representation class for a C struct object
+ * Representation class for a C struct object
  */
 class CStruct {
   CStruct(...) {
@@ -122,8 +116,6 @@ class CStruct {
 }
 
 /**
- * @class CLib
- * 
  * Main library class this class is responsible for interacting 
  * with C shared libraries
  * 
@@ -132,10 +124,9 @@ class CStruct {
  */
 class CLib {
   /**
-   * @constructor CLib
-   * 
    * CLib(library_file)
    *
+   * @constructor
    * this constructor accepts a file object pointing
    * to the shared C library.
    */

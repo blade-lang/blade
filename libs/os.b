@@ -2,7 +2,7 @@
 # @module os
 # 
 # provides functionalities for interfacing with the underlying operating system
-# @ copyright 2021, Ore Richard Muyiwa and Blade contributors
+# @copyright 2021, Ore Richard Muyiwa and Blade contributors
 # 
 
 import _os { * }
@@ -76,18 +76,16 @@ def set_env(name, value, overwrite) {
   return _setenv(name, value, overwrite)
 }
 
-/**
- * File types
- */
-var DT_UNKNOWN = _DT_UNKNOWN
-var DT_BLK = _DT_BLK
-var DT_CHR = _DT_CHR
-var DT_DIR = _DT_DIR
-var DT_FIFO = _DT_FIFO
-var DT_LNK = _DT_LNK
-var DT_REG = _DT_REG
-var DT_SOCK = _DT_SOCK
-var DT_WHT = _DT_WHT
+# File types
+var DT_UNKNOWN = _DT_UNKNOWN  # unknown
+var DT_BLK = _DT_BLK  # block device
+var DT_CHR = _DT_CHR  # character device
+var DT_DIR = _DT_DIR  # directory
+var DT_FIFO = _DT_FIFO  # named pipe
+var DT_LNK = _DT_LNK  # symbolic link
+var DT_REG = _DT_REG  # regular file
+var DT_SOCK = _DT_SOCK  # local-domain socket
+var DT_WHT = _DT_WHT  
 
 /**
  * create_dir(path: string, [permission: number = 0c777 [, recursive: boolean = true]])

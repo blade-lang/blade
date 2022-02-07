@@ -14,16 +14,48 @@ import _date
 
 
 /**
- * Date interpretations
+ * Minimum year supported
  */
 var MIN_YEAR = 1
+
+/**
+ * Maximum year supported
+ */
 var MAX_YEAR = 9999
+
+/**
+ * Minimum day supported
+ */
 var MIN_DAY = 1
+
+/**
+ * Maximum day supported
+ */
 var MAX_DAY = 31
+
+/**
+ * Minimum month supported
+ */
 var MIN_MONTH = 1
+
+/**
+ * Maximum year supported
+ */
 var MAX_MONTH = 12
+
+/**
+ * Maximum hour supported
+ */
 var MAX_HOUR = 23
+
+/**
+ * Maximum minute supported
+ */
 var MAX_MINUTE = 59
+
+/**
+ * Maximum seconds supported
+ */
 var MAX_SECONDS = 59
 
 # the number of days in each month of the year
@@ -155,8 +187,7 @@ def localtime() {
 }
 
 /**
- * mktime(year: number, month: number, day: number, hour: number, 
- *  minute: number, seconds: number, is_dst: bool)
+ * mktime(year: number, month: number, day: number, hour: number, minute: number, seconds: number, is_dst: bool)
  * 
  * convert the broken-out time into a time value with the same encoding as 
  * that of the values returned by the time() function (that is, seconds
@@ -168,7 +199,7 @@ def mktime(year, month, day, hour, minute, seconds, is_dst) {
 }
 
 /**
- * @class Date
+ * Date and Time manipulation class
  * 
  * A date here refers to a calendar datetime consisting of
  * year, month, day, hour, minute and seconds
@@ -181,11 +212,10 @@ def mktime(year, month, day, hour, minute, seconds, is_dst) {
 class Date {
 
   /*
-   * @constructor Date
-   * 
    * Date([year: number [, month: number [, day: number [, hour: number 
    *    [, minute: number [, seconds: number]]]]]])
    *
+   * @constructor
    * @note all arguments are optional
    * @note when no argument is give, the date will be set to the current system date
    */

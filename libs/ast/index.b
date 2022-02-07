@@ -8,10 +8,12 @@
 import json as js
 
 import .scanner { Scanner }
-import .parser { Parser, ParseException }
+import .parser { Parser }
 import .expr { * }
 import .stmt { * }
 import .decl { * }
+import .defn { * }
+import .exception { * }
 import .token { * }
 
 
@@ -42,6 +44,6 @@ def parse(source) {
  * @return string
  */
 def json(source) {
-  return Exception('not yet implemented')
-  # return js.encode(parse(source))
+  # return Exception('not yet implemented')
+  return js.Encoder(true, 0).encode(parse(source))
 }

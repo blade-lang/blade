@@ -1,5 +1,7 @@
 #include "module.h"
 
+extern bool call_value(b_vm *vm, b_value callee, int arg_count);
+
 /**
  * hasprop(object: instance, name: string)
  *
@@ -48,6 +50,7 @@ DECLARE_MODULE_METHOD(reflect__setprop) {
   ENFORCE_ARG_COUNT(set_prop, 3);
   ENFORCE_ARG_TYPE(set_prop, 0, IS_INSTANCE);
   ENFORCE_ARG_TYPE(set_prop, 1, IS_STRING);
+  ENFORCE_ARG_TYPE(set_prop, 2, IS_STRING);
 
   b_obj_instance *instance = AS_INSTANCE(args[0]);
   RETURN_BOOL(table_set(vm, &instance->properties, args[1], args[2]));
@@ -110,22 +113,49 @@ DECLARE_MODULE_METHOD(reflect__call_method) {
   ENFORCE_ARG_TYPE(call_method, 1, IS_STRING);
   ENFORCE_ARG_TYPE(call_method, 2, IS_LIST);
 
-  b_obj_instance *instance = AS_INSTANCE(args[0]);
-  b_obj_string *name = AS_STRING(args[1]);
-  b_obj_list *list = AS_LIST(args[2]);
+  b_value value;
+  if (table_get(&AS_INSTANCE(args[0])->klass->methods, args[1], &value)) {
+    b_obj_bound *bound = (b_obj_bound*)GC(new_bound_method(vm, args[0], AS_CLOSURE(value)));
 
-  pop_n(vm, 2); // removed the args list and the string name...
+    b_obj_list *list = AS_LIST(args[2]);
 
-  // convert the list into function args
-  for(int i = 0; i < list->items.count; i++) {
-    push(vm, list->items.values[i]);
-  }
-
-  if (invoke_from_class(vm, instance->klass, name, list->items.count)) {
+    // remove the args list, the string name and the instance
+    // then push the bound method
     pop_n(vm, 3);
-    RETURN_TRUE;
+    push(vm, OBJ_VAL(bound));
+
+    // convert the list into function args
+    for(int i = 0; i < list->items.count; i++) {
+      push(vm, list->items.values[i]);
+    }
+
+    return call_value(vm, OBJ_VAL(bound), list->items.count);
   }
-  RETURN_FALSE;
+
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(reflect__bindmethod) {
+  ENFORCE_ARG_COUNT(delist, 2);
+  ENFORCE_ARG_TYPE(delist, 0, IS_INSTANCE);
+  ENFORCE_ARG_TYPE(delist, 1, IS_CLOSURE);
+
+  b_obj_bound *bound = (b_obj_bound*)GC(new_bound_method(vm, args[0], AS_CLOSURE(args[1])));
+  RETURN_OBJ(bound);
+}
+
+DECLARE_MODULE_METHOD(reflect__getboundmethod) {
+  ENFORCE_ARG_COUNT(get_method, 2);
+  ENFORCE_ARG_TYPE(get_method, 0, IS_INSTANCE);
+  ENFORCE_ARG_TYPE(get_method, 1, IS_STRING);
+
+  b_obj_instance *instance = AS_INSTANCE(args[0]);
+  b_value value;
+  if (table_get(&instance->klass->methods, args[1], &value)) {
+    b_obj_bound *bound = (b_obj_bound*)GC(new_bound_method(vm, args[0], AS_CLOSURE(value)));
+    RETURN_OBJ(bound);
+  }
+  RETURN_NIL;
 }
 
 CREATE_MODULE_LOADER(reflect) {
@@ -136,7 +166,9 @@ CREATE_MODULE_LOADER(reflect) {
       {"delprop",   true,  GET_MODULE_METHOD(reflect__delprop)},
       {"hasmethod", true,  GET_MODULE_METHOD(reflect__hasmethod)},
       {"getmethod", true,  GET_MODULE_METHOD(reflect__getmethod)},
+      {"getboundmethod", true,  GET_MODULE_METHOD(reflect__getboundmethod)},
       {"callmethod", true,  GET_MODULE_METHOD(reflect__call_method)},
+      {"bindmethod", true,  GET_MODULE_METHOD(reflect__bindmethod)},
       {NULL,        false, NULL},
   };
 

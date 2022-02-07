@@ -2,15 +2,13 @@
 # @module url
 #  
 # provides functionalities for parsing and processing URLs
-# @ copyright 2021, Ore Richard Muyiwa and Blade contributors
+# @copyright 2021, Ore Richard Muyiwa and Blade contributors
 # 
 
 import types
 
 /**
- * @class UrlMalformedException
- * 
- * Excpetion thrown when the url is malformed
+ * Excpetion class thrown when the url is malformed
  */
 class UrlMalformedException < Exception {
   UrlMalformedException(message) {
@@ -22,52 +20,65 @@ class UrlMalformedException < Exception {
  * a list of schemes that does not conform to the standard ://
  * after the scheme name in their urls
  */
-var SIMPLE_SCHEMES = ['mailto', 'tel']
+var _SIMPLE_SCHEMES = ['mailto', 'tel']
 
 
 /**
- * @class Url
- * 
- * provides functionalities for parsing and processing URLs
+ * The Url class provides functionalities for parsing and processing URLs
  */
 class Url {
 
-  # the url scheme e.g. http, https, ftp, tcp etc...
+  /**
+   * The url scheme e.g. http, https, ftp, tcp etc...
+   */
   var scheme
 
-  # the host information contained in the url
+  /**
+   * The host information contained in the url
+   */
   var host
 
-  # the port information contained in the url
-  # whenever the url doesn't indicate,
-  # we try to make a best guess based on the scheme.
+  /**
+   * The port information contained in the url whenever the url doesn't 
+   * indicate, we try to make a best guess based on the scheme.
+   */
   var port
 
-  # the path of the URL. default = /
+  /**
+   * The path of the URL. default = /
+   */
   var path = '/'
 
-  # hash information contained in the url and it's beginning
-  # indicated by and hash (#) sign
-  # this value is especially relevant to some http/https urls
-  # and are usually references to the content of the document
-  # at the given url
+  /**
+   * Hash information contained in the url and it's beginning is indicated by the 
+   * hash (#) sign. This value is especially relevant to some http/https urls 
+   * and are usually references to the content of the document 
+   * at the given url
+   */
   var hash
 
-  # query/search information contained in the url and it's beginning
-  # indicated by and question (?) sign
-  # this value is especially relevant to some http/https urls
-  # and are usually used to convey data to endpoint based on the
-  # GET method.
+  /**
+   * Query/Search information contained in the url and it's beginning is indicated by the 
+   * question (?) sign. This value is especially relevant to some http/https urls and are 
+   * usually used to convey data to endpoint based on the GET method.
+   */
   var query
 
-  # username and password information are sometimes embeded in urls
+  /**
+   * Username information for authentication are sometimes embeded in urls. When such information 
+   * exist, this property holds the information
+   */
   var username
+
+  /**
+   * Password information for authentication are sometimes embeded in urls. When such information 
+   * exist, this property holds the information
+   */
   var password
 
   /**
-   * @constructor Url
-   * 
    * Url(scheme, host, port, path, query, hash, username, password)
+   * @constructor
    */
   Url(scheme, host, port, path, query, hash, username, password) {
     self.scheme = scheme
@@ -88,8 +99,7 @@ class Url {
    * terminated by the next slash ("/"), question mark ("?"), or number
    * sign ("#") character, or by the end of the URI.
    *
-   * @note: mailto scheme does not have an authority. For this reason,
-   * mailto schemes return an empty string as authority.
+   * @note: mailto scheme does not have an authority. For this reason, mailto schemes return an empty string as authority.
    * @return string
    */
   authority() {
@@ -152,7 +162,7 @@ class Url {
   absolute_url() {
     var url = '${self.scheme}:'
 
-    if !SIMPLE_SCHEMES.contains(self.scheme) {
+    if !_SIMPLE_SCHEMES.contains(self.scheme) {
       url += '//'
     }
 
@@ -171,7 +181,7 @@ class Url {
       url += ':${self.port}'
     }
     if self.path {
-      if self.path == '/' and SIMPLE_SCHEMES.contains(self.scheme) {
+      if self.path == '/' and _SIMPLE_SCHEMES.contains(self.scheme) {
         # do nothing...
       } else {
         url += self.path
@@ -284,7 +294,7 @@ def parse(url) {
   # do not do this only when the scheme is mailto:
   if url.index_of('://') < 0 {
     var match_found = false
-    for sc in SIMPLE_SCHEMES {
+    for sc in _SIMPLE_SCHEMES {
       if url.starts_with(sc) {
         match_found = true
         break

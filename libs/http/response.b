@@ -1,16 +1,13 @@
 #!-- part of the http module
 
 /**
- * @class HttpResponse
- * 
- * represents the response to an Http request
+ * Represents the response to an Http request
  */
 class HttpResponse {
 
   /**
-   * @constructor HttpResponse
-   * 
    * HttpResponse(body, status, headers, version, time_taken, redirects, responder)
+   * @constructor
    */
   HttpResponse(body, status, headers, version, 
     time_taken, redirects, responder) {

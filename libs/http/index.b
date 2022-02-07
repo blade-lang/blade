@@ -2,7 +2,7 @@
 # @module http
 #
 # Provides interfaces for working with Http client requests.
-# @ copyright 2021, Ore Richard Muyiwa and Blade contributors
+# @copyright 2021, Ore Richard Muyiwa and Blade contributors
 #
 
 import .response { HttpResponse }

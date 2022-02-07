@@ -10,7 +10,7 @@ def serve(port, on_client_receive) {
 
   var soc = Socket()
   soc.set_option(SO_REUSEADDR, true)
-  soc.bind(IP_ANY, port)
+  soc.bind(port, IP_ANY)
   echo 'Listening on ${IP_ANY}:${port}...'
   soc.listen()
 

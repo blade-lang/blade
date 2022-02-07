@@ -7,8 +7,6 @@
 
 
 /**
- * @class _MimeFormat
- * 
  * Internal helper class to help Mime class represent and 
  * organize it's mimes better.
  */

@@ -3,8 +3,6 @@
 import .token { * }
 
 /**
- * @class Scanner
- * 
  * Blade source code scanner
  */
 class Scanner {
@@ -72,9 +70,8 @@ class Scanner {
   }
 
   /**
-   * @constructor Scanner
-   * 
    * Scanner(source: string)
+   * @constructor
    */
   Scanner(source) {
     if !is_string(source)

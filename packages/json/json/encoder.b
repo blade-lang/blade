@@ -18,6 +18,7 @@ class Encoder {
    * 
    * Encoder([compact: boolean = false, [max_depth: number = 1024]])
    * @note that depth starts from zero
+   * @note set max_depth to `0` to disable max depth
    */
   Encoder(compact, max_depth) {
     if max_depth {
@@ -82,8 +83,8 @@ class Encoder {
       default {
         
         if is_instance(value) {
-          if reflect.has_method(value, '@to_json')  { # get the @to_json decorator
-            return self.encode(reflect.call_method(value, '@to_json'))
+          if reflect.has_decorator(value, 'to_json')  { # check the @to_json decorator
+            return self._encode(reflect.get_decorator(value, 'to_json')())
           }
         } 
        
@@ -99,7 +100,7 @@ class Encoder {
    */
   encode(value) {
 
-    if self._depth > self._max_depth {
+    if self._depth > self._max_depth and self._max_depth != 0 {
       die Exception('maximum recursive depth of ${self._max_depth} exceeded')
     }
     

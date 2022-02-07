@@ -1,8 +1,6 @@
 #!-- part of the ast module
 
-/**
- * symbols
- */
+# symbols
 var NEWLINE = 0   # \n
 var LPAREN = 1   # (
 var RPAREN = 2   # )
@@ -56,9 +54,7 @@ var XOR = 49   # ^
 var XOR_EQ = 50   # ^=
 var QUESTION = 51   # ??
 
-/**
- * keywords
- */
+# keywords
 var AND = 60
 var AS = 61
 var ASSERT = 62
@@ -91,9 +87,7 @@ var VAR = 87
 var WHEN = 88
 var WHILE = 89
 
-/**
- * types token
- */
+# types token
 var LITERAL = 100
 var REG_NUMBER = 101   # regular numbers (inclusive of doubles)
 var BIN_NUMBER = 102   # binary numbers
@@ -103,9 +97,7 @@ var IDENTIFIER = 105
 var DECORATOR = 106
 var INTERPOLATION = 107
 
-/**
- * comments
- */
+# comments
 var COMMENT = 150
 var DOC = 160
 
@@ -115,21 +107,17 @@ var DOC = 160
 var EOF = 200
 
 
-/**
- * error
- */
+# errors
 var ERROR = 400
 var EMPTY = 500
 
 /**
- * @class Token
- * 
  * Blade source code token
  */
 class Token {
   /**
-   * @constructor Token
    * Token(type: number, literal: string, line: number)
+   * @constructor
    */
   Token(type, literal, line) {
     self.type = type

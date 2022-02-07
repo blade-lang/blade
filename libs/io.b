@@ -1,9 +1,9 @@
-/**
- * I/O
- *
- * provides Bladey's interface to I/O stream handling and operations
- * @ copyright 2021, Ore Richard Muyiwa and Blade contributors
- */
+#
+# @module io
+# 
+# provides Bladey's interface to I/O stream handling and operations
+# @copyright 2021, Ore Richard Muyiwa and Blade contributors
+# 
 
 import _io
 
@@ -14,9 +14,7 @@ var SEEK_END = 2
 
 
 /**
- * @class TTY
- * 
- * an interface to TTY terminals this class contains definitions 
+ * class TTY is an interface to TTY terminals this class contains definitions 
  * to control TTY terminals
  */
 class TTY {
@@ -96,9 +94,8 @@ class TTY {
   static var VTIME      = 17      # !ICANON
 
   /**
-   * @constructor TTY
-   * 
    * TTY(std: file)
+   * @constructor
    * @note file must be one of stdout and stderr
    */
   TTY(std) {
@@ -172,7 +169,7 @@ class TTY {
 
 /** 
  * stdin
- * returns an handle to the standard input file of the system
+ * stdin is an handle to the standard input file of the system
  * 
  * This method is a stub for stdin() method which was declared in
  * native C.
@@ -182,7 +179,7 @@ var stdin = _io.stdin
 
 /**
  * stdout
- * returns an handle to the standard output file of the system
+ * stdout is an handle to the standard output file of the system
  * 
  * This method is a stub for stdout() method which was declared in
  * native C.
@@ -192,7 +189,7 @@ var stdout = _io.stdout
 
 /**
  * stderr
- * returns an handle to the standard error file of the system
+ * stderr is an handle to the standard error file of the system
  * 
  * This method is a stub for stderr() method which was declared in
  * native C.
