@@ -211,6 +211,14 @@ generate_export_header(libblade           # generates the export header shared_E
 		STATIC_DEFINE SHARED_EXPORTS_BUILT_AS_STATIC
 )
 
+if(APPLE)
+	set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH};@rpath")
+elseif(UNIX)
+	set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH}:$ORIGIN")
+endif()
+
+install(TARGETS blade DESTINATION ${OUTPUT_DIR})
+
 enable_testing()
 
 # define a function to simplify adding tests
