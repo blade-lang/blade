@@ -1,7 +1,7 @@
 #
 # @module io
 # 
-# provides Bladey's interface to I/O stream handling and operations
+# Provides Blade's interface to I/O stream handling and operations
 # @copyright 2021, Ore Richard Muyiwa and Blade contributors
 # 
 
@@ -95,7 +95,7 @@ class TTY {
 
   /**
    * TTY(std: file)
-   * @constructor
+   * @constructor 
    * @note file must be one of stdout and stderr
    */
   TTY(std) {
@@ -168,32 +168,17 @@ class TTY {
 }
 
 /** 
- * stdin
- * stdin is an handle to the standard input file of the system
- * 
- * This method is a stub for stdin() method which was declared in
- * native C.
- * @return file<std>
+ * stdin is a file handle to the standard input file of the system
  */
 var stdin = _io.stdin
 
 /**
- * stdout
- * stdout is an handle to the standard output file of the system
- * 
- * This method is a stub for stdout() method which was declared in
- * native C.
- * @return file<std>
+ * stdout is a file handle to the standard output file of the system
  */
 var stdout = _io.stdout
 
 /**
- * stderr
- * stderr is an handle to the standard error file of the system
- * 
- * This method is a stub for stderr() method which was declared in
- * native C.
- * @return file<std>
+ * stderr is a file handle to the standard error file of the system
  */
 var stderr = _io.stderr
 

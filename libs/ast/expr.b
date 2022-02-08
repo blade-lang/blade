@@ -11,7 +11,8 @@ class Expr {
 class BinaryExpr < Expr {
 
   /**
-   * @constructor
+   * BinaryExpr(left, op, right)
+   * @constructor 
    */
   BinaryExpr(left, op, right) {
     self.left = left
@@ -35,7 +36,8 @@ class BinaryExpr < Expr {
 class GroupExpr < Expr {
 
   /**
-   * @constructor
+   * GroupExpr(expression)
+   * @constructor 
    */
   GroupExpr(expression) {
     self.expression = expression
@@ -55,7 +57,8 @@ class GroupExpr < Expr {
 class LiteralExpr < Expr {
 
   /**
-   * @constructor
+   * LiteralExpr(value)
+   * @constructor 
    */
   LiteralExpr(value) {
     self.value = value
@@ -75,7 +78,8 @@ class LiteralExpr < Expr {
 class IdentifierExpr < Expr {
 
   /**
-   * @constructor
+   * IdentifierExpr(value)
+   * @constructor 
    */
   IdentifierExpr(value) {
     self.value = value
@@ -95,7 +99,8 @@ class IdentifierExpr < Expr {
 class UnaryExpr < Expr {
 
   /**
-   * @constructor
+   * UnaryExpr(op, right)
+   * @constructor 
    */
   UnaryExpr(op, right) {
     self.op = op
@@ -117,7 +122,8 @@ class UnaryExpr < Expr {
 class ConditionExpr < Expr {
 
   /**
-   * @constructor
+   * ConditionExpr(expr, truth, falsy)
+   * @constructor 
    */
   ConditionExpr(expr, truth, falsy) {
     self.expr = expr
@@ -141,7 +147,8 @@ class ConditionExpr < Expr {
 class CallExpr < Expr {
 
   /**
-   * @constructor
+   * CallExpr(callee, args)
+   * @constructor 
    */
   CallExpr(callee, args) {
     self.callee = callee
@@ -163,7 +170,8 @@ class CallExpr < Expr {
 class GetExpr < Expr {
 
   /**
-   * @constructor
+   * GetExpr(expr, name)
+   * @constructor 
    */
   GetExpr(expr, name) {
     self.expr = expr
@@ -185,7 +193,8 @@ class GetExpr < Expr {
 class SetExpr < Expr {
 
   /**
-   * @constructor
+   * SetExpr(expr, name, value)
+   * @constructor 
    */
   SetExpr(expr, name, value) {
     self.expr = expr
@@ -209,7 +218,8 @@ class SetExpr < Expr {
 class IndexExpr < Expr {
 
   /**
-   * @constructor
+   * IndexExpr(args)
+   * @constructor 
    */
   IndexExpr(args) {
     self.args = args
@@ -229,7 +239,8 @@ class IndexExpr < Expr {
 class ListExpr < Expr {
 
   /**
-   * @constructor
+   * ListExpr(items)
+   * @constructor 
    */
   ListExpr(items) {
     self.items = items
@@ -249,7 +260,8 @@ class ListExpr < Expr {
 class DictExpr < Expr {
 
   /**
-   * @constructor
+   * DictExpr(keys, values)
+   * @constructor 
    */
   DictExpr(keys, values) {
     self.keys = keys
@@ -271,7 +283,8 @@ class DictExpr < Expr {
 class InterpolationExpr < Expr {
 
   /**
-   * @constructor
+   * InterpolationExpr(data)
+   * @constructor 
    */
   InterpolationExpr(data) {
     self.data = data

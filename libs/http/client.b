@@ -12,14 +12,14 @@ class HttpClient {
   
   /**
    * The user agent of the client used to make the request
-   * @default `Blade HTTP Client/1.0`
+   * @default Blade HTTP Client/1.0
    */
   var user_agent = 'Blade HTTP Client/1.0'
 
   /**
    * Indicates if we receive a redirect from a server, this flag tells us whether 
    * we should follow it or not.
-   * @default `true`
+   * @default true
    */
   var follow_redirect = true
 
@@ -28,7 +28,7 @@ class HttpClient {
    * they have mentioned in their server certificate's commonName (or subjectAltName) 
    * fields, connection will fail. You can skip this check by setting to true, but this 
    * will make the connection less secure.
-   * @default `false`
+   * @default false
    */
   var skip_hostname_verification = false
 
@@ -36,7 +36,7 @@ class HttpClient {
    * Indicates if you want to connect to a site who isn't using a certificate that is
    * signed by one of the certs in the CA bundle you have, you can skip the verification 
    * of the server's certificate. This makes the connection A LOT LESS SECURE.
-   * @default `false`
+   * @default false
    */
   var skip_peer_verification = false
 
@@ -45,7 +45,7 @@ class HttpClient {
 
   /**
    * the site that refers us to the current site
-   * @default `nil`
+   * @default nil
    */
   var referer
 
@@ -80,7 +80,7 @@ class HttpClient {
   /**
    * Indicates whether to remove the expect header or not only applies to requests with 
    * files in the body
-   * @default `false`
+   * @default false
    */
   var no_expect = false
 

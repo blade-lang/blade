@@ -1,7 +1,7 @@
 #
 # @module url
 #  
-# provides functionalities for parsing and processing URLs
+# Provides functionalities for parsing and processing URLs
 # @copyright 2021, Ore Richard Muyiwa and Blade contributors
 # 
 
@@ -78,7 +78,7 @@ class Url {
 
   /**
    * Url(scheme, host, port, path, query, hash, username, password)
-   * @constructor
+   * @constructor 
    */
   Url(scheme, host, port, path, query, hash, username, password) {
     self.scheme = scheme

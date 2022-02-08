@@ -3,7 +3,7 @@
 #
 # This module provides interface for encoding binary data into strings and 
 # decoding such encoded strings back into binary data based on the base64 
-# encoding specified in RFC4648 (https://datatracker.ietf.org/doc/html/rfc4648)
+# encoding specified in [RFC4648](https://datatracker.ietf.org/doc/html/rfc4648)
 # 
 # @copyright 2021, Ore Richard Muyiwa and Blade contributors
 #

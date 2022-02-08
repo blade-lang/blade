@@ -11,9 +11,7 @@ import _sqlite {
 }
 
 /**
- * @class SQLite
- * 
- * SQLite3 class
+ * SQLite3 management class
  */
 class SQLite3 {
 
@@ -34,10 +32,9 @@ class SQLite3 {
   var _is_open = false
 
   /**
-   * @constructor SQLite3
-   * 
    * SQLite3(path: string)
    * @note the database doesn't need to exist.
+   * @constructor
    */
   SQLite3(path) {
     if path != nil {
@@ -125,18 +122,17 @@ class SQLite3 {
    * executes and sql query and returns the result of the execution
    * @note pass a list as _params_ if you have unnamed parameterized queries.
    * 
-   * For example,
-   * 
-   * sqlite.query('SELECT * FROM users WHERE id = ? AND name = ?', [3, 'James'])
-   * 
+   * @example `sqlite.query('SELECT * FROM users WHERE id = ? AND name = ?', [3, 'James'])`
+
    * @note pass a dictionary as _params_ if you use named paramters
    * 
-   * For example,
-   * 
+   * @example
+   * <pre>
    * sqlite.query(
    *   'SELECT * FROM user WHERE id = :id AND name = :name', 
    *   {':id': 1, ':name': 'James'}
    * )
+   * </pre>
    */
   query(sql, params) {
     if params != nil {
@@ -160,8 +156,7 @@ class SQLite3 {
    * 
    * runs an SQL query and returns the result as a list of dictionaries.
    * 
-   * @note if the result is empty or the query is not a SELECT, 
-   * it returns an empty list
+   * @note if the result is empty or the query is not a SELECT, it returns an empty list
    */
   fetch(sql, params) {
     var cursor = self.query(sql, params)

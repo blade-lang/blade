@@ -1,7 +1,7 @@
 #
 # @module reflect
 # 
-# provides functionalities for interacting with and modifying modules, 
+# Provides functionalities for interacting with and modifying modules, 
 # classes and functions.
 # @copyright 2021, Ore Richard Muyiwa and Blade contributors
 # 

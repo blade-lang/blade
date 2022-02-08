@@ -1,7 +1,7 @@
 # 
 # @module type
 # 
-# provides type validation and conversion capabilities
+# Provides type validation and conversion capabilities
 # 
 # this module is wrapper around the builtin functions
 # where applicable and does and return the same thing as the builtin
@@ -211,9 +211,7 @@ class Convert {
 
   /**
    * Convert(value: any)
-   * 
-   * set's the value to be converted.
-   * @return Convert
+   * @constructor 
    */
   Convert(value) {
     self.value = value

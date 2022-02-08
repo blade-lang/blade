@@ -429,22 +429,21 @@ DECLARE_MODULE_METHOD(socket__getsockinfo) {
   struct sockaddr_in address;
   memset(&address, 0, sizeof(address));
 
+  b_obj_dict *dict = (b_obj_dict *) GC(new_dict(vm));
+
   int length = sizeof address;
   if (getsockname(sock, (struct sockaddr *) &address, (socklen_t *) &length) >= 0) {
     char *ip = inet_ntoa(address.sin_addr);
     int port = ntohs(address.sin_port);
 
-    b_obj_dict *dict = (b_obj_dict *) GC(new_dict(vm));
 
     dict_add_entry(vm, dict, GC_L_STRING("address", 7), GC_STRING(ip));
     dict_add_entry(vm, dict, GC_L_STRING("port", 4), NUMBER_VAL(port));
     dict_add_entry(vm, dict, GC_L_STRING("family", 6),
                    NUMBER_VAL(ntohs(address.sin_family)));
-
-    RETURN_OBJ(dict);
   }
 
-  RETURN_NUMBER(-1);
+  RETURN_OBJ(dict);
 }
 
 DECLARE_MODULE_METHOD(socket__getaddrinfo) {

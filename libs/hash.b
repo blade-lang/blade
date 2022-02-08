@@ -15,7 +15,7 @@ import convert
  * implementation.
  *
  * a class may override the result of this function by implementing the
- * @hash() method
+ * `hash` decorator
  * @return number
  */
 def hash(value) {

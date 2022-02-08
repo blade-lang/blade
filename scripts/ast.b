@@ -102,7 +102,7 @@ for ast, members in asts {
     }
     if setter {
       var params = ', '.join(attr)
-      f.write('  /**\n   * @constructor\n   */\n')
+      f.write('  /**\n   * ${cl}${ast}(${params})\n   * @constructor\n   */\n')
       f.write('  ${cl}${ast}(${params}) {\n')
       f.write(setter)
       f.write('  }\n\n')

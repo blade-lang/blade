@@ -7,7 +7,7 @@ class HttpResponse {
 
   /**
    * HttpResponse(body, status, headers, version, time_taken, redirects, responder)
-   * @constructor
+   * @constructor 
    */
   HttpResponse(body, status, headers, version, 
     time_taken, redirects, responder) {

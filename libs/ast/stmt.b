@@ -11,7 +11,8 @@ class Stmt {
 class EchoStmt < Stmt {
 
   /**
-   * @constructor
+   * EchoStmt(value)
+   * @constructor 
    */
   EchoStmt(value) {
     self.value = value
@@ -31,7 +32,8 @@ class EchoStmt < Stmt {
 class ExprStmt < Stmt {
 
   /**
-   * @constructor
+   * ExprStmt(expr)
+   * @constructor 
    */
   ExprStmt(expr) {
     self.expr = expr
@@ -51,7 +53,8 @@ class ExprStmt < Stmt {
 class IfStmt < Stmt {
 
   /**
-   * @constructor
+   * IfStmt(condition, truth, falsy)
+   * @constructor 
    */
   IfStmt(condition, truth, falsy) {
     self.condition = condition
@@ -75,7 +78,8 @@ class IfStmt < Stmt {
 class IterStmt < Stmt {
 
   /**
-   * @constructor
+   * IterStmt(declaration, condition, iterator, body)
+   * @constructor 
    */
   IterStmt(declaration, condition, iterator, body) {
     self.declaration = declaration
@@ -101,7 +105,8 @@ class IterStmt < Stmt {
 class WhileStmt < Stmt {
 
   /**
-   * @constructor
+   * WhileStmt(condition, body)
+   * @constructor 
    */
   WhileStmt(condition, body) {
     self.condition = condition
@@ -123,7 +128,8 @@ class WhileStmt < Stmt {
 class ForStmt < Stmt {
 
   /**
-   * @constructor
+   * ForStmt(vars, iterable, body)
+   * @constructor 
    */
   ForStmt(vars, iterable, body) {
     self.vars = vars
@@ -171,7 +177,8 @@ class BreakStmt < Stmt {
 class DieStmt < Stmt {
 
   /**
-   * @constructor
+   * DieStmt(exception)
+   * @constructor 
    */
   DieStmt(exception) {
     self.exception = exception
@@ -191,7 +198,8 @@ class DieStmt < Stmt {
 class ReturnStmt < Stmt {
 
   /**
-   * @constructor
+   * ReturnStmt(value)
+   * @constructor 
    */
   ReturnStmt(value) {
     self.value = value
@@ -211,7 +219,8 @@ class ReturnStmt < Stmt {
 class AssertStmt < Stmt {
 
   /**
-   * @constructor
+   * AssertStmt(expr, message)
+   * @constructor 
    */
   AssertStmt(expr, message) {
     self.expr = expr
@@ -233,7 +242,8 @@ class AssertStmt < Stmt {
 class UsingStmt < Stmt {
 
   /**
-   * @constructor
+   * UsingStmt(expr, cases, default_case)
+   * @constructor 
    */
   UsingStmt(expr, cases, default_case) {
     self.expr = expr
@@ -257,7 +267,8 @@ class UsingStmt < Stmt {
 class ImportStmt < Stmt {
 
   /**
-   * @constructor
+   * ImportStmt(path, elements)
+   * @constructor 
    */
   ImportStmt(path, elements) {
     self.path = path
@@ -279,7 +290,8 @@ class ImportStmt < Stmt {
 class CatchStmt < Stmt {
 
   /**
-   * @constructor
+   * CatchStmt(type, var_name, body)
+   * @constructor 
    */
   CatchStmt(type, var_name, body) {
     self.type = type
@@ -303,7 +315,8 @@ class CatchStmt < Stmt {
 class FinallyStmt < Stmt {
 
   /**
-   * @constructor
+   * FinallyStmt(body)
+   * @constructor 
    */
   FinallyStmt(body) {
     self.body = body
@@ -323,7 +336,8 @@ class FinallyStmt < Stmt {
 class TryStmt < Stmt {
 
   /**
-   * @constructor
+   * TryStmt(body, catch_stmt, finally_stmt)
+   * @constructor 
    */
   TryStmt(body, catch_stmt, finally_stmt) {
     self.body = body
@@ -347,7 +361,8 @@ class TryStmt < Stmt {
 class CommentStmt < Stmt {
 
   /**
-   * @constructor
+   * CommentStmt(data)
+   * @constructor 
    */
   CommentStmt(data) {
     self.data = data
@@ -367,7 +382,8 @@ class CommentStmt < Stmt {
 class BlockStmt < Stmt {
 
   /**
-   * @constructor
+   * BlockStmt(body)
+   * @constructor 
    */
   BlockStmt(body) {
     self.body = body
@@ -387,7 +403,8 @@ class BlockStmt < Stmt {
 class AssignStmt < Stmt {
 
   /**
-   * @constructor
+   * AssignStmt(expr, type, value)
+   * @constructor 
    */
   AssignStmt(expr, type, value) {
     self.expr = expr

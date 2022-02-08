@@ -12,6 +12,11 @@ var _assigners_ = [EQUAL, PLUS_EQ, MINUS_EQ, PERCENT_EQ, DIVIDE_EQ,
   MULTIPLY_EQ, FLOOR_EQ, POW_EQ, AMP_EQ, BAR_EQ, TILDE_EQ, XOR_EQ,
   LSHIFT_EQ, RSHIFT_EQ]
 
+# Helper function to get documentation string
+def _get_doc_string(data) {
+  return '${data}\n'.replace('/\\s*\\*(.*)\n/', '$1\n ').trim()
+}
+
 
 /**
  * Parses raw Blade tokens and produces an Abstract Syntax Tree
@@ -30,7 +35,7 @@ class Parser {
 
   /**
    * Parser(tokens: []Token)
-   * @constructor
+   * @constructor 
    */
   Parser(tokens) {
     # set instance variable token
@@ -965,9 +970,15 @@ class Parser {
       if self._match(STATIC) is_static = true
 
       if self._match(VAR) {
-        properties.append(self._class_field(is_static))
+        var prop = self._class_field(is_static)
+        if doc and !prop.name.starts_with('_') 
+          prop.doc = _get_doc_string(doc.data)
+        properties.append(prop)
       } else {
-        methods.append(self._method())
+        var method = self._method()
+        if doc and !method.name.starts_with('_') and !method.name.starts_with('@') 
+          method.doc = _get_doc_string(doc.data)
+        methods.append(method)
         self._ignore_newline()
       }
     }

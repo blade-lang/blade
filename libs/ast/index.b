@@ -1,8 +1,8 @@
 #
 # @module ast
 #
-# Provides interface for parse Blade code into Abstract Syntax Trees
-# @ copyright 2021, Ore Richard Muyiwa and Blade contributors
+# Provides interface for parsing Blade code into Abstract Syntax Trees
+# @copyright 2021, Ore Richard Muyiwa and Blade contributors
 #
 
 import json as js
@@ -21,7 +21,7 @@ import .token { * }
  * parse(source: string)
  * 
  * parses a given source code and outputs Blade AST objects.
- * @return List[AST]
+ * @return ParseResult
  */
 def parse(source) {
   if !is_string(source)

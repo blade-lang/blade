@@ -204,20 +204,18 @@ def mktime(year, month, day, hour, minute, seconds, is_dst) {
  * A date here refers to a calendar datetime consisting of
  * year, month, day, hour, minute and seconds
  * 
- * Julian date conversion is based on the C implementation at:
- * http://www.lsc-group.phys.uwm.edu/lal/slug/nightly/doxygen.old/html/Julian_8c-source.html
- * and
- * https://stackoverflow.com/questions/29627533/conversion-of-julian-date-number-to-normal-date-utc-in-javascript
+ * Julian date conversion is based on the C implementation
+ * [here](http://www.lsc-group.phys.uwm.edu/lal/slug/nightly/doxygen.old/html/Julian_8c-source.html) and
+ * [here](https://stackoverflow.com/questions/29627533/conversion-of-julian-date-number-to-normal-date-utc-in-javascript)
  */
 class Date {
 
   /*
-   * Date([year: number [, month: number [, day: number [, hour: number 
-   *    [, minute: number [, seconds: number]]]]]])
+   * Date([year: number [, month: number [, day: number [, hour: number [, minute: number [, seconds: number]]]]]])
    *
-   * @constructor
+   * @constructor 
    * @note all arguments are optional
-   * @note when no argument is give, the date will be set to the current system date
+   * @note when no argument is given, the date will be set to the current system date
    */
   Date(year, month, day, hour, minute, seconds) {
 
@@ -427,6 +425,8 @@ class Date {
    *   Z         | timezone offset in seconds                                | -43200 - 50400
    *   c         | ISO 8601 date                                             | e.g. 2020-03-04T15:19:21+00:00
    *   r         | RFC 2822 formatted date                                   | e.g. Thu, 21 Dec 2000 16:01:07 +0200
+   * 
+   * @return string
    */
   format(format) {
     var result = ''

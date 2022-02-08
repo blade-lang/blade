@@ -6,7 +6,7 @@
 class ParseException < Exception {
   /**
    * ParseException(token: Token, message: string)
-   * @constructor
+   * @constructor 
    */
   ParseException(token, message) {
     parent('Error at ${token.literal} on line ${token.line}: ${message}')

@@ -3,8 +3,6 @@
 import reflect
 
 /**
- * @class Encoder
- * 
  * Blade to JSON encoding class
  */
 class Encoder {
@@ -14,9 +12,8 @@ class Encoder {
   var _merge_strip_start = 2
 
   /**
-   * @constructor Encoder
-   * 
    * Encoder([compact: boolean = false, [max_depth: number = 1024]])
+   * @constructor
    * @note that depth starts from zero
    * @note set max_depth to `0` to disable max depth
    */
@@ -38,8 +35,7 @@ class Encoder {
    * _encode(value: any)
    * 
    * encode helper method.
-   * @note this function calls the parent encode() method whenever
-   * the depth of the encoding increases
+   * @note this function calls the parent encode() method whenever the depth of the encoding increases
    */
   _encode(value) {
     using typeof(value) {

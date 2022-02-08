@@ -128,7 +128,7 @@ class SocketException < Exception {
 
   /**
    * SocketException(message: string)
-   * @constructor
+   * @constructor 
    */
   SocketException(message) {
     self.message = message
@@ -236,8 +236,8 @@ class Socket {
 
   /**
    * Socket(family: number [, type: number, protocol: number [, id: number]])
-   * @constructor
    * @example Socket(AF_INET, SOCK_STREAM, 0)
+   * @constructor  
    */
   Socket(family, type, protocol, id) {
     if family self.family = family
@@ -268,6 +268,12 @@ class Socket {
 
   /**
    * connect(host: string, port: int [, timeout: int])
+   * 
+   * Initiates a connection to the given host on the specified port. If host is `nil`, it will 
+   * connect on to the current hostn specified on the socket.
+   * 
+   * @default timeout = 300,000ms (i.e. 300 seconds)
+   * @return bool
    */
   connect(host, port, timeout) {
     if !host host = self.host
@@ -292,11 +298,15 @@ class Socket {
       self.is_listening = false
       self.is_bound = false
     }
-    return result
+    return result == 0
   }
   
   /**
    * bind(port: int [, host: string])
+   * 
+   * Binds this socket to the given port on the given host. If host is `nil` or not specified, it will connect 
+   * on to the current hostn specified on the socket. 
+   * @return bool
    */
   bind(port, host) {
     if !host host = self.host
@@ -319,11 +329,17 @@ class Socket {
       self.is_connected = false # a bound socket can't be connected ass well
       self.is_client = false # a bound socket cannot be a client
     }
-    return result
+    return result == 0
   }
 
   /**
-   * send(message: string, flags: int)
+   * send(message: string | file | bytes, flags: int)
+   * 
+   * Sends the specified message to the socket. When this methods accepts a file as a message, 
+   * the file is read and the resultant bytes of the file content is streamed to the socket.
+   * 
+   * @note the flags parameter is currently redundant and is kept only to remanin compatible with future plans for this method.
+   * @return number greater than -1 if successful indicating the total number of bytes sent or -1 if it fails.
    */
   send(message, flags) {
     if !message message = ''
@@ -347,6 +363,15 @@ class Socket {
 
   /**
    * receive([length: int [, flags: int]])
+   * 
+   * Receives bytes of the given length from the socket. If the length is not given, it default length of 
+   * -1 indicating that the total available data on the socket stream will be read. 
+   * If no data is available for read on the socket, the socket will wait to receive data or until the 
+   * `receive_timeout` which is also equal to the `SO_RCVTIMEO` setting of the socket has elapsed before or 
+   * until it has received the total number of bytes required (whichever comes first).
+   * 
+   * @note the flags parameter is currently redundant and is kept only to remanin compatible with future plans for this method.
+   * @return string
    */
   receive(length, flags) {
     if !length length = -1
@@ -373,6 +398,20 @@ class Socket {
 
   /**
    * listen([queue_length: int])
+   * 
+   * Listen for connections on a socket
+   * 
+   * This method puts the socket in a state where it is willing to accept incoming connections and creates 
+   * a queue limit of `queue_length` for incoming connections. If a connection request arrives with 
+   * the queue full, the client may receive an error with an indication of `ECONNREFUSED`. 
+   * Alternatively, if the underlying protocol supports retransmission, the request may be ignored 
+   * so that retries may succeed.
+   * 
+   * When the `queue_length` is ommited or set to -1, the method will use the default queue limit of 
+   * the current platform which is usually equal to `SOMAXCONN`.
+   * 
+   * @note listen() call applies only to sockets of type `SOCK_STREAM` (which is the default)
+   * @return bool
    */
   listen(queue_length) {
     if !queue_length queue_length = SOMAXCONN # default to 128 simulataneous clients...
@@ -389,11 +428,21 @@ class Socket {
     if result {
       self.is_listening = true
     }
-    return result
+    return result == 0
   }
 
   /**
    * accept()
+   * 
+   * Accepts a connection on a socket
+   * 
+   * This method extracts the first connection request on the queue of pending connections, creates a new socket 
+   * with the same properties of the current socket, and allocates a new file descriptor for the socket.  If no 
+   * pending connections are present on the queue, and the socket is not marked as non-blocking, accept() blocks 
+   * the caller until a connection is present.  If the socket is marked non-blocking and no pending connections 
+   * are present on the queue, accept() returns an error as described below.  
+   * 
+   * The accepted socket may not be used to accept more connections.  The original socket socket, remains open.
    * @return Socket
    */
   accept() {
@@ -414,6 +463,8 @@ class Socket {
 
   /**
    * close()
+   * 
+   * Closes the socket
    * @return bool
    */
   close() {
@@ -434,6 +485,14 @@ class Socket {
 
   /**
    * shutdown([how: int])
+   * 
+   * The shutdown() call causes all or part of a full-duplex connection on the socket associated with 
+   * socket to be shut down.  If how is `SHUT_RD`, further receives will be disallowed.  If how is `SHUT_WR`, 
+   * further sends will be disallowed.  If how is `SHUT_RDWR`, further sends and receives will be disallowed.
+   * 
+   * When _how_ is not specified, it defaults to `SHUT_RD`.
+   * 
+   * @return bool
    */
   shutdown(how) {
     if !how how = SHUT_RD
@@ -458,11 +517,15 @@ class Socket {
       self.is_shutdown = true
       self.shutdown_reason = how
     }
-    return result
+    return result == 0
   }
 
   /**
    * set_option(option: int, value: any)
+   * 
+   * Sets the options of the current socket.
+   * @note Only `SO_` variables are valid option types
+   * @return bool
    */
   set_option(option, value) {
     if !option or !value 
@@ -481,11 +544,14 @@ class Socket {
       else if option == SO_RCVTIMEO self.receive_timeout = value
     }
 
-    return result
+    return result == 0
   }
 
   /**
    * get_option(option: int)
+   * 
+   * Gets the options set on the current socket
+   * @return any
    */
   get_option(option) {
     if !option
@@ -504,6 +570,9 @@ class Socket {
 
   /**
    * set_blocking(mode: bool)
+   * 
+   * Sets if the socket should operate in blocking or non-blocking mode. `true` for blocking 
+   * (default) and `false` for non-blocking.
    */
   set_blocking(mode) {
     if !is_bool(mode) die SocketException('boolean expected')
@@ -512,6 +581,9 @@ class Socket {
 
   /**
    * info()
+   * 
+   * Returns a dictionary containing the address, port and family of the current socket or an 
+   * empty dictionary if the socket information could not be retrieved.
    * @return dictionary
    */
   info() {

@@ -71,7 +71,7 @@ class Scanner {
 
   /**
    * Scanner(source: string)
-   * @constructor
+   * @constructor 
    */
   Scanner(source) {
     if !is_string(source)

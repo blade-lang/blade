@@ -10,8 +10,6 @@ import _sqlite {
 }
 
 /**
- * @class SQLite3Cursor
- * 
  * A cursor for navigation through sql results
  */
 class SQLite3Cursor {
@@ -27,12 +25,12 @@ class SQLite3Cursor {
   var _is_closed
 
   /**
-   * the SQLite3 connection that owns this cursor
+   * The SQLite3 connection that owns this cursor
    */
   var connection
 
   /**
-   * the number of rows in the cursor
+   * The number of rows in the cursor
    * @readonly
    */
   var row_count = 0
@@ -50,9 +48,7 @@ class SQLite3Cursor {
    * The value returned by `modified_count` immediately after an INSERT, UPDATE or DELETE 
    * statement run on a view is always zero. Only changes made to real tables are counted.
    * 
-   * @note If a separate thread makes changes on the same database connection at the exact time 
-   * the original query was also making a change, the result of this value will become 
-   * undependable.
+   * @note If a separate thread makes changes on the same database connection at the exact time the original query was also making a change, the result of this value will become undependable.
    * 
    * @readonly
    */
@@ -65,9 +61,8 @@ class SQLite3Cursor {
   var columns = []
 
   /**
-   * @constructor SQLite3Cursor
-   * 
    * SQLite3Cursor(db: SQLite3, cursor: pointer)
+   * @constructor
    */
   SQLite3Cursor(db, cursor) {
     self.connection = db
@@ -107,7 +102,7 @@ class SQLite3Cursor {
    * result set.
    * 
    * @note if index is a number, it returns the value in the column at the given index. 
-   * Note that index must be lower than columns.length() in this case.
+   * @note that index must be lower than columns.length() in this case.
    * @note if index is a string, it returns the value in the column with the given name.
    * @throws SQLiteException if no matching column can be found.
    */

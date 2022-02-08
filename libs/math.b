@@ -187,8 +187,7 @@ def atan(n) {
  * angle theta of an (x, y) point. 
  * This is the counterclockwise angle, measured in radians, 
  * between the positive X axis, and the point (x, y). 
- * @note the arguments to this function pass the y-coordinate 
- * first and the x-coordinate second
+ * @note the arguments to this function pass the y-coordinate first and the x-coordinate second
  * @return number
  */
 def atan2(x, y) {

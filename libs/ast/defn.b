@@ -11,7 +11,8 @@ class Defn {
 class DocDefn < Defn {
 
   /**
-   * @constructor
+   * DocDefn(data)
+   * @constructor 
    */
   DocDefn(data) {
     self.data = data

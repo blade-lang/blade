@@ -12,7 +12,8 @@ class Decl {
 class VarDecl < Decl {
 
   /**
-   * @constructor
+   * VarDecl(name, value)
+   * @constructor 
    */
   VarDecl(name, value) {
     self.name = name
@@ -34,7 +35,8 @@ class VarDecl < Decl {
 class FunctionDecl < Decl {
 
   /**
-   * @constructor
+   * FunctionDecl(name, params, body)
+   * @constructor 
    */
   FunctionDecl(name, params, body) {
     self.name = name
@@ -58,7 +60,8 @@ class FunctionDecl < Decl {
 class MethodDecl < Decl {
 
   /**
-   * @constructor
+   * MethodDecl(name, params, body, is_static)
+   * @constructor 
    */
   MethodDecl(name, params, body, is_static) {
     self.name = name
@@ -84,7 +87,8 @@ class MethodDecl < Decl {
 class PropertyDecl < Decl {
 
   /**
-   * @constructor
+   * PropertyDecl(name, value, is_static)
+   * @constructor 
    */
   PropertyDecl(name, value, is_static) {
     self.name = name
@@ -108,7 +112,8 @@ class PropertyDecl < Decl {
 class ClassDecl < Decl {
 
   /**
-   * @constructor
+   * ClassDecl(name, superclass, properties, methods)
+   * @constructor 
    */
   ClassDecl(name, superclass, properties, methods) {
     self.name = name
