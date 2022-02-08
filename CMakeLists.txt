@@ -21,7 +21,7 @@ if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
 	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
 endif()
 
-set(OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/bin")
+set(OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/blade")
 
 if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG OR CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG STREQUAL "")
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIR}")
@@ -168,9 +168,9 @@ endif(UNIX)
 target_link_libraries(blade PRIVATE libblade)
 
 add_custom_command(TARGET blade_files POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/libs ${CMAKE_CURRENT_BINARY_DIR}/bin/libs
-		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/tests ${CMAKE_CURRENT_BINARY_DIR}/bin/tests
-		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/benchmarks ${CMAKE_CURRENT_BINARY_DIR}/bin/benchmarks
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/libs ${CMAKE_CURRENT_BINARY_DIR}/blade/libs
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/tests ${CMAKE_CURRENT_BINARY_DIR}/blade/tests
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/benchmarks ${CMAKE_CURRENT_BINARY_DIR}/blade/benchmarks
 		COMMENT "Exporting libs, tests, and benchmark scripts..."
 )
 
@@ -215,8 +215,8 @@ enable_testing()
 
 # define a function to simplify adding tests
 function(add_blade_test target arg index result)
-	#  message(STATUS "setting up test ${CMAKE_CURRENT_BINARY_DIR}/bin/${PROJECT_NAME} tests/${arg}.b")
-	add_test(NAME ${arg}_${index} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/bin/${PROJECT_NAME} bin/tests/${arg}.b)
+	#  message(STATUS "setting up test ${CMAKE_CURRENT_BINARY_DIR}/blade/${PROJECT_NAME} tests/${arg}.b")
+	add_test(NAME ${arg}_${index} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/blade/${PROJECT_NAME} blade/tests/${arg}.b)
 	set_tests_properties(${arg}_${index}
 			PROPERTIES PASS_REGULAR_EXPRESSION ${result}
 	)

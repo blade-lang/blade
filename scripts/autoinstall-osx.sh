@@ -48,21 +48,21 @@ __b_autoinstall () {
 	cd "$BLADE_DIR"
 
 	git clone https://github.com/blade-lang/blade .
-	cmake -B build -DCMAKE_BUILD_TYPE=Release
-	cmake --build build --config Release
+	cmake -B .
+	cmake --build .
 
 	printf "\nBlade downloaded. Installing...\n"
 
 	__b_get_profile
 
 	if [[ ! -w "$B_PROFILE_VARS" ]]; then
-		sudo echo "export PATH=\"$BLADE_DIR/build/bin:\$PATH\"" >> "$B_PROFILE_VARS"
+		sudo echo "export PATH=\"$BLADE_DIR/blade:\$PATH\"" >> "$B_PROFILE_VARS"
 	else
-		echo "export PATH=\"$BLADE_DIR/build/bin:\$PATH\"" >> "$B_PROFILE_VARS"
+		echo "export PATH=\"$BLADE_DIR/blade:\$PATH\"" >> "$B_PROFILE_VARS"
 	fi
 
 	echo "Done."
-	export PATH="$BLADE_DIR/build/bin:$PATH"
+	export PATH="$BLADE_DIR/blade:$PATH"
 }
 
 __b_autoinstall
