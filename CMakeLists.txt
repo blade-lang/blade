@@ -42,6 +42,16 @@ if(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE OR CMAKE_LIBRARY_OUTPUT_DIRECTORY_
 	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${OUTPUT_DIR})
 endif()
 
+if(UNIX)
+	if(APPLE)
+		set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH};@loader_path")
+	else()
+		set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH}:$ORIGIN")
+	endif()
+	set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+	set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+endif()
+
 set(BLADE_SOURCES
 		src/blade_dict.c
 		src/blade_file.c
@@ -163,13 +173,6 @@ if(UNIX)
 		target_link_libraries(libblade PRIVATE pthread)
 		target_link_libraries(libblade PRIVATE dl)
 	endif()
-
-	if(APPLE)
-		set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH};@loader_path")
-	else()
-		set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH}:$ORIGIN")
-	endif()
-	set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 endif(UNIX)
 
 target_link_libraries(blade PRIVATE libblade)
