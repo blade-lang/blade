@@ -1,20 +1,18 @@
 #
 # @module mime
 #
-# provides mimetype detection capabilities.
+# Provides mimetype detection capabilities.
 # @copyright O2021, Ore Richard Muyiwa
 # 
 
 
 /**
- * @class _MimeFormat
- * 
  * Internal helper class to help Mime class represent and 
  * organize it's mimes better.
  */
 class _MimeFormat {
   /**
-   * @constructor _MimeFormat
+   * @constructor  _MimeFormat
    * _MimeFormat(mimetype: string [, header: list | bytes])
    */
   _MimeFormat(mimetype, header) {
@@ -386,9 +384,7 @@ var _mimes = {
  * Detects the mimetype of a file based on the
  * extension defined in it's path.
  *
- * @note, For popular files such as Jpeg and Pngs,
- * calling this method directly is more efficient and
- * provides a faster lookup
+ * @note For popular files such as Jpeg and Pngs, calling this method directly is more efficient and provides a faster lookup
  */
 def detect_from_name(name) {
   if !is_string(name)
@@ -408,10 +404,9 @@ def detect_from_name(name) {
  * file headers (such as the relationship between Zip files and Docx files),
  * this method will perform an extension before returning it's result.
  *
- * @note, For dealing with files without extension, or where the accuracy of the 
- * file extension cannot be trusted, this method provides a more efficient lookup.
- * @note, This method may produce slightly more rigorous results
- * @note, This method requires that the file must be opened in binary mode
+ * @note For dealing with files without extension, or where the accuracy of the file extension cannot be trusted, this method provides a more efficient lookup.
+ * @note This method may produce slightly more rigorous results
+ * @note This method requires that the file must be opened in binary mode
  */
 def detect_from_header(file) {
   if !is_file(file)
@@ -463,11 +458,11 @@ def detect_from_header(file) {
  * accurate header check. If the header check returns a generic result 
  * (i.e. application/octet-stream), it performs an extension lookup.
  *
- * @note, this method gives the best result, but slightly slower than
- * a direct lookup of name or header.
+ * @note this method gives the best result, but slightly slower than a direct lookup of name or header.
  * 
- * @example
+ * @example 
  * 
+ * <pre>
  * var f = file('myfile', 'rb')
  * 
  * # using 'rb' here for two reasons: 
@@ -475,6 +470,7 @@ def detect_from_header(file) {
  * # 2. We want more accuracy by having Mime check file headers
  * 
  * echo mime.detect(f)
+ * </pre>
  */
 def detect(file) {
   if !is_file(file)

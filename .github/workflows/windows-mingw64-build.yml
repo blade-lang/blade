@@ -3,13 +3,10 @@ name: "Windows (MinGW64) build"
 on:
   push:
     branches: [ main, dev ]
-    tags:
-      - 'v*.*.*'
   pull_request:
     branches: [ main ]
 
 env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
 
 defaults:
@@ -33,16 +30,13 @@ jobs:
 
     - uses: actions/checkout@v2
     - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B '${{github.workspace}}\build' -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_SYSTEM_VERSION=10.0.18362
+      run: cmake -B '${{github.workspace}}' -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_SYSTEM_VERSION=10.0.18362
 
     - name: Build
-      # Build your program with the given configuration
-      run: cmake --build '${{github.workspace}}\build' --config ${{env.BUILD_TYPE}}
+      run: cmake --build '${{github.workspace}}' --config ${{env.BUILD_TYPE}}
 
     - name: Generate Artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: blade-win-mingw64-${{ github.run_id }}
-        path: ${{github.workspace}}/build/bin
+        name: blade-windows-mingw64-${{ github.run_id }}
+        path: ${{github.workspace}}/blade

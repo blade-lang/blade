@@ -35,10 +35,10 @@ __b_autoinstall () {
 	cd "$BLADE_DIR"
 
 	git clone https://github.com/blade-lang/blade . > /dev/null
-	cmake -B build -DCMAKE_BUILD_TYPE=Release > /dev/null
-	cmake --build build --config Release
+	cmake -B . > /dev/null
+	cmake --build .
 
-	BLADE_BIN="$BLADE_DIR/build/bin"
+	BLADE_BIN="$BLADE_DIR/blade"
 	BLADE_ENV="$BLADE_DIR/env"
 
 	printf "export PATH=\"$BLADE_BIN:\$PATH\"\n" >> "$BLADE_ENV"

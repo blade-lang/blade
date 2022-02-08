@@ -1,0 +1,34 @@
+name: "Windows (WinLibs) build"
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    name: Build on windows-latest
+    runs-on: windows-latest
+
+    steps:
+    - uses: bwoodsend/setup-winlibs-action@v1
+      with:
+        add_to_path: true
+        tag: 11.2.0-9.0.0-msvcrt-r5
+
+    - uses: actions/checkout@v2
+    - name: Configure CMake
+      run: cmake -B '${{github.workspace}}' -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Build
+      run: cmake --build '${{github.workspace}}'
+
+    - name: Generate Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: blade-windows-default-${{ github.run_id }}
+        path: ${{github.workspace}}/blade

@@ -4,7 +4,7 @@
 # This module provides extra data conversion features between non-standard 
 # object types as well as different number bases.
 # 
-# @ copyright 2021, Ore Richard Muyiwa and Blade contributors
+# @copyright 2021, Ore Richard Muyiwa and Blade contributors
 #
 
 
@@ -54,8 +54,7 @@ def decimal_to_hex(n) {
  * hex_to_decimal(str: string)
  * 
  * converts the given hexadecimal string to a decimal base 10 number
- * @note string must either contain the plain hexadecimal string or
- * be in the format 0x[hex string].
+ * @note string must either contain the plain hexadecimal string or be in the format 0x[hex string].
  * @return number
  */
 def hex_to_decimal(str) {

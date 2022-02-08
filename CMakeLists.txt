@@ -9,7 +9,7 @@ include(CheckFunctionExists)
 include(ExternalProject)
 include(GenerateExportHeader)
 
-subdirs(thirdparty)
+subdirs(thirdparty packages)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
@@ -21,7 +21,7 @@ if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
 	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
 endif()
 
-set(OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/bin")
+set(OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/blade")
 
 if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG OR CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG STREQUAL "")
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIR}")
@@ -70,8 +70,8 @@ set(BLADE_SOURCES
 		src/standard/os.c
 		src/standard/socket.c
 		src/standard/hash.c
-		src/standard/json.c
-		src/standard/sqlite.c)
+		src/standard/reflect.c
+		)
 
 add_definitions(-DEXPORT_LIBS)
 
@@ -110,7 +110,6 @@ check_include_file("sys/time.h" HAVE_SYS_TIME_H)
 check_include_file("sys/utsname.h" HAVE_SYS_UTSNAME_H)
 check_include_file("sys/errno.h" HAVE_SYS_ERRNO_H)
 check_include_file("dirent.h" HAVE_DIRENT_H)
-check_include_file("sqlite3.h" HAVE_SQLITE3_H)
 check_include_file("dlfcn.h" HAVE_DLFCN_H)
 
 # Function checks
@@ -130,16 +129,6 @@ check_function_exists("utime" HAVE_UTIME)
 check_function_exists("basename" HAVE_BASENAME)
 check_function_exists("dirname" HAVE_DIRNAME)
 
-# Link to json-parser
-target_link_libraries(libblade PRIVATE json-parser)
-
-# Link to sqlite
-if(NOT "${HAVE_SQLITE3_H}")
-	target_link_libraries(libblade PRIVATE sqlite)
-else()
-	target_link_libraries(libblade PRIVATE sqlite3)
-endif()
-
 # Generate config.h
 set(INCLUDE_GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/include-gen")
 file(MAKE_DIRECTORY "${INCLUDE_GEN_DIR}")
@@ -154,18 +143,9 @@ add_custom_target(blade_files)
 # add dependencies
 add_dependencies(libblade pcre2 blade_files)
 
-set_target_properties(blade
-		PROPERTIES
-		RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}
-		ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_DIR}
-		LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_DIR}
-		)
-
 set_target_properties(libblade
 		PROPERTIES
 		OUTPUT_NAME blade
-		ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_DIR}
-		LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_DIR}
 		)
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
@@ -188,9 +168,9 @@ endif(UNIX)
 target_link_libraries(blade PRIVATE libblade)
 
 add_custom_command(TARGET blade_files POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/libs ${CMAKE_CURRENT_BINARY_DIR}/bin/libs
-		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/tests ${CMAKE_CURRENT_BINARY_DIR}/bin/tests
-		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/benchmarks ${CMAKE_CURRENT_BINARY_DIR}/bin/benchmarks
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/libs ${CMAKE_CURRENT_BINARY_DIR}/blade/libs
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/tests ${CMAKE_CURRENT_BINARY_DIR}/blade/tests
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/benchmarks ${CMAKE_CURRENT_BINARY_DIR}/blade/benchmarks
 		COMMENT "Exporting libs, tests, and benchmark scripts..."
 )
 
@@ -198,7 +178,7 @@ set(EXE_FILE "${OUTPUT_DIR}/blade${CMAKE_EXECUTABLE_SUFFIX}")
 
 add_custom_command(TARGET blade POST_BUILD
 		COMMAND	"${EXE_FILE}" "${PROJECT_SOURCE_DIR}/scripts/make_blade.b" "${PROJECT_SOURCE_DIR}"
-		COMMAND	"${EXE_FILE}" "${PROJECT_SOURCE_DIR}/scripts/ast.b" "${OUTPUT_DIR}/libs"
+		COMMAND	"${EXE_FILE}" "${PROJECT_SOURCE_DIR}/scripts/ast.b" "${OUTPUT_DIR}/libs/ast"
 		COMMENT "Generating Blade header and folders and package dependencies..."
 )
 
@@ -235,8 +215,8 @@ enable_testing()
 
 # define a function to simplify adding tests
 function(add_blade_test target arg index result)
-	#  message(STATUS "setting up test ${CMAKE_CURRENT_BINARY_DIR}/bin/${PROJECT_NAME} tests/${arg}.b")
-	add_test(NAME ${arg}_${index} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/bin/${PROJECT_NAME} bin/tests/${arg}.b)
+	#  message(STATUS "setting up test ${CMAKE_CURRENT_BINARY_DIR}/blade/${PROJECT_NAME} tests/${arg}.b")
+	add_test(NAME ${arg}_${index} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/blade/${PROJECT_NAME} blade/tests/${arg}.b)
 	set_tests_properties(${arg}_${index}
 			PROPERTIES PASS_REGULAR_EXPRESSION ${result}
 	)

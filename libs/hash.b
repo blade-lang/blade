@@ -2,7 +2,7 @@
 # @module hash
 #
 # Provides interface for cryptographic and non-cryptographic encryption
-# @ copyright 2021, Ore Richard Muyiwa and Blade contributors
+# @copyright 2021, Ore Richard Muyiwa and Blade contributors
 #
 
 import _hash
@@ -15,7 +15,7 @@ import convert
  * implementation.
  *
  * a class may override the result of this function by implementing the
- * @hash() method
+ * `hash` decorator
  * @return number
  */
 def hash(value) {

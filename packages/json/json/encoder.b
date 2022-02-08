@@ -1,8 +1,8 @@
 #!-- part of the json module
 
+import reflect
+
 /**
- * @class Encoder
- * 
  * Blade to JSON encoding class
  */
 class Encoder {
@@ -12,10 +12,10 @@ class Encoder {
   var _merge_strip_start = 2
 
   /**
-   * @constructor Encoder
-   * 
    * Encoder([compact: boolean = false, [max_depth: number = 1024]])
+   * @constructor
    * @note that depth starts from zero
+   * @note set max_depth to `0` to disable max depth
    */
   Encoder(compact, max_depth) {
     if max_depth {
@@ -35,8 +35,7 @@ class Encoder {
    * _encode(value: any)
    * 
    * encode helper method.
-   * @note this function calls the parent encode() method whenever
-   * the depth of the encoding increases
+   * @note this function calls the parent encode() method whenever the depth of the encoding increases
    */
   _encode(value) {
     using typeof(value) {
@@ -80,9 +79,8 @@ class Encoder {
       default {
         
         if is_instance(value) {
-          var fn = getprop(value, '@to_json')   # get the @to_json decorator
-          if fn {
-            return self.encode(fn())
+          if reflect.has_decorator(value, 'to_json')  { # check the @to_json decorator
+            return self._encode(reflect.get_decorator(value, 'to_json')())
           }
         } 
        
@@ -98,7 +96,7 @@ class Encoder {
    */
   encode(value) {
 
-    if self._depth > self._max_depth {
+    if self._depth > self._max_depth and self._max_depth != 0 {
       die Exception('maximum recursive depth of ${self._max_depth} exceeded')
     }
     

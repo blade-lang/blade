@@ -23,13 +23,13 @@ if os.args.length() < 2 {
 var root = os.args[2]
 
 # create IMPORTANT directories
-if !os.dir_exists('bin/includes')
-  os.create_dir('bin/includes')
-if !os.dir_exists('bin/dist')
-  os.create_dir('bin/dist')
+if !os.dir_exists('blade/includes')
+  os.create_dir('blade/includes')
+if !os.dir_exists('blade/dist')
+  os.create_dir('blade/dist')
 
 
-var output_file = 'bin/includes/blade.h'
+var output_file = 'blade/includes/blade.h'
 
 var header_list = [
   'common',

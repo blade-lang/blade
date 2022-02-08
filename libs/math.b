@@ -2,85 +2,63 @@
 # @module math
 #
 # Blade's mathematical library
-# @ copyright 2021, Ore Richard Muyiwa and Blade contributors
+# @copyright 2021, Ore Richard Muyiwa and Blade contributors
 #
 
 import _math
 
 /**
- * PI
- *
  * represents the ratio of the circumference of a circle 
  * to its diameter
  */
 var PI = 3.141592653589793
 
 /**
- * E
- *
  * represents Euler's number, the base of natural logarithms
  */
 var E = 2.718281828459045
 
 /**
- * LOG_10
- *
  * represents the natural logarithm of 10
  */
 var LOG_10 = 2.302585092994046
 
 /**
- * LOG_10_E
- *
  * represents the base 10 logarithm of e
  */
 var LOG_10_E = 0.4342944819032518
 
 /**
- * LOG_2
- *
  * represents the natural logarithm of 2
  */
 var LOG_2 = 0.6931471805599453
 
 /**
- * LOG_2_E
- *
  * represents the base 2 logarithm of e
  */
 var LOG_2_E = 1.4426950408889634
 
 /**
- * ROOT_2
- *
  * represents the square root of 2
  */
 var ROOT_2 = 1.4142135623730951
 
 /**
- * ROOT_3
- *
  * represents the square root of 3
  */
 var ROOT_3 = 1.732050807568877
 
 /**
- * ROOT_HALF
- *
  * represents the square root of 1/2
  */
 var ROOT_HALF = 0.7071067811865476
 
 /**
- * Infinity
- *
  * Mathematical infinity
  */
 var Infinity = 1/0
 
 /**
- * NaN
- *
  * Mathematical NaN
  */
 var NaN = 0/0
@@ -209,8 +187,7 @@ def atan(n) {
  * angle theta of an (x, y) point. 
  * This is the counterclockwise angle, measured in radians, 
  * between the positive X axis, and the point (x, y). 
- * @note the arguments to this function pass the y-coordinate 
- * first and the x-coordinate second
+ * @note the arguments to this function pass the y-coordinate first and the x-coordinate second
  * @return number
  */
 def atan2(x, y) {

@@ -5,6 +5,7 @@
 #define BLADE_VERSION_STRING "0.0.6"
 #define BVM_VERSION "0.0.6"
 #define LIBRARY_DIRECTORY "libs"
+#define PACKAGES_DIRECTORY "packages"
 #define LIBRARY_DIRECTORY_INDEX "index"
 
 // global debug mode flag

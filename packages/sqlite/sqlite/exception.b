@@ -2,14 +2,12 @@
 
 
 /**
- * @class SQLiteException
- * 
  * General Exception for SQLite
  */
 class SQLiteException < Exception {
 
   /**
-   * @constructor SQLiteException
+   * @constructor
    */
   SQLiteException(message) {
     parent(message)
