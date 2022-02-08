@@ -163,6 +163,13 @@ if(UNIX)
 		target_link_libraries(libblade PRIVATE pthread)
 		target_link_libraries(libblade PRIVATE dl)
 	endif()
+
+	if(APPLE)
+		set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH};@loader_path")
+	else()
+		set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH}:$ORIGIN")
+	endif()
+	set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 endif(UNIX)
 
 target_link_libraries(blade PRIVATE libblade)
@@ -210,17 +217,6 @@ generate_export_header(libblade           # generates the export header shared_E
 		EXPORT_FILE_NAME export.h
 		STATIC_DEFINE SHARED_EXPORTS_BUILT_AS_STATIC
 )
-
-if(UNIX OR APPLE)
-	if(APPLE)
-		set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH};@loader_path")
-	else()
-		set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH}:$ORIGIN")
-	endif()
-	set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-endif()
-
-install(TARGETS blade DESTINATION ${OUTPUT_DIR})
 
 enable_testing()
 

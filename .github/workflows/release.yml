@@ -21,6 +21,7 @@ jobs:
           cmake --build .
       - name: Create ZIP Archive
         run: |
+          chmod +x blade/blade
           zip -r9 --symlinks blade_linux.zip blade/
       - name: Generate Artifacts
         uses: actions/upload-artifact@v2
@@ -42,6 +43,7 @@ jobs:
           cmake --build .
       - name: Create ZIP Archive
         run: |
+          chmod 755 blade/blade
           zip -r9 --symlinks blade_macos.zip blade/
       - name: Generate Artifacts
         uses: actions/upload-artifact@v2
