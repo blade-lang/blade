@@ -1,0 +1,124 @@
+name: Create Release with artifacts
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+
+  build-linux:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Setup cmake
+        uses: jwlawson/actions-setup-cmake@v1.9
+        with:
+          cmake-version: '3.18.x'
+      - uses: actions/checkout@v2
+      - name: Compile
+        run: |
+          cmake -B .
+          cmake --build .
+      - name: Create ZIP Archive
+        run: |
+          zip -r9 --symlinks blade_linux.zip blade/
+      - name: Generate Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: linux
+          path: blade_linux.zip
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Setup cmake
+        uses: jwlawson/actions-setup-cmake@v1.9
+        with:
+          cmake-version: '3.18.x'
+      - uses: actions/checkout@v2
+      - name: Compile
+        run: |
+          cmake -B .
+          cmake --build .
+      - name: Create ZIP Archive
+        run: |
+          zip -r9 --symlinks blade_macos.zip blade/
+      - name: Generate Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos
+          path: blade_macos.zip
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Setup cmake
+        uses: jwlawson/actions-setup-cmake@v1.9
+        with:
+          cmake-version: '3.18.x'
+      - name: Setup WinLibs
+        uses: bwoodsend/setup-winlibs-action@v1
+        with:
+          add_to_path: true
+          tag: 11.2.0-9.0.0-msvcrt-r5
+      - uses: actions/checkout@v2
+      - name: Compile
+        run: |
+          cmake -B .
+          cmake --build .
+      - name: Create ZIP Archive
+        shell: cmd
+        run: |
+          powershell Compress-Archive blade blade_windows.zip
+      - name: Generate Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows
+          path: blade_windows.zip
+
+  release:
+    name: Create Github Release
+    needs: [build-linux, build-macos, build-windows]
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          commit: ${{ github.sha }}
+          draft: false
+          prerelease: false
+
+  publish:
+    needs: [release]
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        version: [linux, macos, windows]
+    steps:
+      - uses: actions/checkout@v1
+      - name: Fetch artifacts
+        uses: actions/download-artifact@v1
+        with:
+          name: ${{ matrix.version }}
+          path: ./${{ matrix.version }}
+      - name: Get release
+        id: get_release_info
+        uses: leahlundqvist/get-release@v1.3.1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          tag_name: ${{ github.ref_name }}
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release_info.outputs.upload_url }}
+          asset_path: ${{ matrix.version }}/blade_${{ matrix.version }}.zip
+          asset_name: blade-${{ matrix.version }}-${{ github.ref_name }}.zip
+          asset_content_type: application/zip

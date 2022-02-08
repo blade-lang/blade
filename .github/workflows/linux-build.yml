@@ -3,8 +3,6 @@ name: Linux build
 on:
   push:
     branches: [ main, dev ]
-    tags:
-      - 'v*.*.*'
   pull_request:
     branches: [ main ]
 
@@ -14,7 +12,7 @@ env:
 jobs:
   build:
 
-    name: Build on ubuntu-latest
+    name: Build on ubuntu-20.04
     runs-on: ubuntu-20.04
 
     steps:
