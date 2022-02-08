@@ -213,7 +213,7 @@ generate_export_header(libblade           # generates the export header shared_E
 
 if(UNIX OR APPLE)
 	if(APPLE)
-		set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH};@executable_path")
+		set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH};@loader_path")
 	else()
 		set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH}:$ORIGIN")
 	endif()
