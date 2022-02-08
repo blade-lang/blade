@@ -178,7 +178,7 @@ set(EXE_FILE "${OUTPUT_DIR}/blade${CMAKE_EXECUTABLE_SUFFIX}")
 
 add_custom_command(TARGET blade POST_BUILD
 		COMMAND	"${EXE_FILE}" "${PROJECT_SOURCE_DIR}/scripts/make_blade.b" "${PROJECT_SOURCE_DIR}"
-		COMMAND	"${EXE_FILE}" "${PROJECT_SOURCE_DIR}/scripts/ast.b" "${OUTPUT_DIR}/libs"
+		COMMAND	"${EXE_FILE}" "${PROJECT_SOURCE_DIR}/scripts/ast.b" "${OUTPUT_DIR}/libs/ast"
 		COMMENT "Generating Blade header and folders and package dependencies..."
 )
 
