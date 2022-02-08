@@ -58,7 +58,7 @@ Proceed to the [Configure](#configure) section to configure your CMake build.
 
 To install Blade with TDM-GCC or WinLibs, install [TDM-GCC](https://github.com/jmeubank/tdm-gcc/releases/download/v10.3.0-tdm64-2/tdm64-gcc-10.3.0-2.exe)
 or [WinLibs](https://github.com/brechtsanders/winlibs_mingw/releases/download/11.2.0-9.0.0-msvcrt-r5/winlibs-x86_64-posix-seh-gcc-11.2.0-mingw-w64-9.0.0-r5.zip) 
-via the given links. Add TDM-GCC or WinLibs `bin` directory to your environment path. TDM-GCC also allows you to path during its installation. 
+via the given links. Add TDM-GCC or WinLibs `bin` directory to your environment path. TDM-GCC also allows you to add to path during its installation. 
 After this, run the following commands from the root of your Blade clone:
 
 ```terminal
