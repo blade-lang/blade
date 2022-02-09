@@ -13,6 +13,7 @@
 ![code analysis](https://github.com/blade-lang/blade/actions/workflows/codeql.yml/badge.svg)
 ![Linux build](https://github.com/blade-lang/blade/actions/workflows/linux-build.yml/badge.svg)
 ![macOS build](https://github.com/blade-lang/blade/actions/workflows/osx-build.yml/badge.svg)
+![Windows (WinLibs) build](https://github.com/blade-lang/blade/actions/workflows/windows-winlibs-build.yml/badge.svg)
 ![Windows (MSVC) build](https://github.com/blade-lang/blade/actions/workflows/windows-msvc-build.yml/badge.svg)
 ![Windows (MinGW64) build](https://github.com/blade-lang/blade/actions/workflows/windows-mingw64-build.yml/badge.svg)
 
@@ -27,16 +28,6 @@
 Blade is a simple, fast, clean and dynamic language that allows you to develop complex applications 
 quickly. Blade emphasises algorithm over syntax and for this reason, it has a very small but powerful 
 syntax set with a very natural feel.
-
-<br>
-
-> ### HELP IS URGENTLY NEEDED TO TEST BLADE WELL ON WINDOWS.
-> I currently lack a Windows device to test Blade on Windows.
-> While I expect most features to work, I cannot guarantee that they do
-> and therefore solicit the help of fellow and willing contributors who
-> can actively test Blade on Windows devices.
-> 
-> Thanks!
 
 
 ## Features
