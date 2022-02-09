@@ -42,6 +42,16 @@ if(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE OR CMAKE_LIBRARY_OUTPUT_DIRECTORY_
 	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${OUTPUT_DIR})
 endif()
 
+if(UNIX)
+	if(APPLE)
+		set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH};@loader_path")
+	else()
+		set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH}:$ORIGIN")
+	endif()
+	set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+	set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+endif()
+
 set(BLADE_SOURCES
 		src/blade_dict.c
 		src/blade_file.c
@@ -210,17 +220,6 @@ generate_export_header(libblade           # generates the export header shared_E
 		EXPORT_FILE_NAME export.h
 		STATIC_DEFINE SHARED_EXPORTS_BUILT_AS_STATIC
 )
-
-if(UNIX OR APPLE)
-	if(APPLE)
-		set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH};@rpath")
-	else()
-		set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH}:$ORIGIN")
-	endif()
-	set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-endif()
-
-install(TARGETS blade DESTINATION ${OUTPUT_DIR})
 
 enable_testing()
 
