@@ -142,3 +142,13 @@ def bind_method(instance, method) {
 
   return _reflect.bindmethod(instance, method)
 }
+
+/**
+ * is_ptr(value: any)
+ * 
+ * returns `true` if the value is a pointer to a system object or `false` otherwise.
+ * @return bool
+ */
+def is_ptr(value) {
+  return _reflect.isptr(value)
+}

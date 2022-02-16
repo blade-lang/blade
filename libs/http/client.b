@@ -4,6 +4,7 @@ import url
 import socket
 import .response { HttpResponse }
 import .util
+import ssl
 
 /**
  * Handles http requests.
@@ -99,9 +100,14 @@ class HttpClient {
       if resolved_host {
         var host = resolved_host.ip
         var port = uri.port
+        var is_secure = uri.scheme == 'https'
 
         # construct message
-        var message = '${method} ${uri.path} HTTP/1.1'
+        var message = '${method} ${uri.path}'
+        if uri.query message += '?${uri.query}'
+        if uri.hash message += '#${uri.hash}'
+        message += ' HTTP/1.1'
+
         if !self.headers.contains('Host') {
           message += '\r\nHost: ${uri.host}'
         }
@@ -129,65 +135,71 @@ class HttpClient {
         message += '\r\n\r\n${data}'
 
         # do real request here...
-        var client = socket.Socket()
-        client.set_option(socket.SO_SNDTIMEO, self.send_timeout)
-        client.set_option(socket.SO_RCVTIMEO, self.receive_timeout)
+        var client = /* !is_secure ? */ socket.Socket() /* : ssl.TLSSocket() */
+
+        # if !is_secure {
+          client.set_option(socket.SO_SNDTIMEO, self.send_timeout)
+          client.set_option(socket.SO_RCVTIMEO, self.receive_timeout)
+        # }
 
         var start = time()
 
         # connect to the url host on the specified port and send the request message
-        client.connect(host, port ? port : (uri.scheme == 'https' ? 443 : 80), self.connect_timeout)
-        client.send(message)
+        if client.connect(host, port ? port : (is_secure ? 443 : 80), self.connect_timeout) {
+          client.send(message)
 
-        # receive the response...
-        var response_data = client.receive()
+          # receive the response...
+          var response_data = client.receive()
 
-        # gracefully handle responses being sent in multiple packets
-        # if the request header contains the Content-Length,
-        # get that length and keep reading until we have read the total
-        # length of the response
-        if response_data.index_of('Content-Length') {
-          var m = response_data.matches('/Content\-Length:\s*\d+/')
-          if m {
-            var length = to_number(m[0][0].replace('/[^0-9]/', ''))
-            while response_data.length() < length {
-              # append the new data in the stream
-              response_data += client.receive()
+          # gracefully handle responses being sent in multiple packets
+          # if the request header contains the Content-Length,
+          # get that length and keep reading until we have read the total
+          # length of the response
+          if response_data.index_of('Content-Length') {
+            var m = response_data.matches('/Content\-Length:\s*\d+/')
+            if m {
+              var length = to_number(m[0][0].replace('/[^0-9]/', ''))
+              while response_data.length() < length {
+                # append the new data in the stream
+                response_data += client.receive()
+              }
+            }
+          } else if response_data.matches('/Transfer\-Encoding:\s*chunked/') {
+            # gracefully handle chuncked data transfer
+            var do_fetch = true
+            while do_fetch {
+              var response = client.receive()
+              response_data += response
+              if response.ends_with('\r\n\r\n') do_fetch = false
             }
           }
-        } else if response_data.matches('/Transfer\-Encoding:\s*chunked/') {
-          # gracefully handle chuncked data transfer
-          var do_fetch = true
-          while do_fetch {
-            var response = client.receive()
-            response_data += response
-            if response.ends_with('\r\n\r\n') do_fetch = false
+
+          time_taken += time() - start
+
+          # close client
+          client.close()
+
+          # separate the headers and the body
+          var body_starts = response_data.index_of('\r\n\r\n')
+
+          if body_starts {
+            headers = response_data[0,body_starts].trim()
+            body = response_data[body_starts + 2, response_data.length()].trim()
           }
-        }
 
-        time_taken += time() - start
+          headers = self._process_header(headers, |version, status|{
+            http_version = version
+            status_code  = status
+          })
 
-        # close client
-        client.close()
-
-        # separate the headers and the body
-        var body_starts = response_data.index_of('\r\n\r\n')
-
-        if body_starts {
-          headers = response_data[0,body_starts].trim()
-          body = response_data[body_starts + 2, response_data.length()].trim()
-        }
-
-        headers = self._process_header(headers, |version, status|{
-          http_version = version
-          status_code  = status
-        })
-
-        if self.follow_redirect and headers.contains('Location') {
-          uri = url.parse(headers['Location'])
-          self.referer = headers['Location']
+          if self.follow_redirect and headers.contains('Location') {
+            uri = url.parse(headers['Location'])
+            self.referer = headers['Location']
+          } else {
+            should_connect = false
+          }
         } else {
-          should_connect = false
+          die Exception('connection failed')
         }
       } else {
         should_connect = false

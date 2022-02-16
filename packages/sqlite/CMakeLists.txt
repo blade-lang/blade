@@ -26,7 +26,7 @@ if(WIN32)
     target_link_libraries(sqlite wsock32 ws2_32)
 endif()
 
-add_custom_command(TARGET sqlite POST_BUILD
+add_custom_target(copy-sqlite-to-libs ALL
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/sqlite ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE}/../libs/sqlite
         COMMENT "Exporting sqlite source files to libs folder..."
         )

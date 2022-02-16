@@ -70,6 +70,7 @@
 #define RETURN_FALSE { args[-1] = FALSE_VAL; return true; }
 #define RETURN_NUMBER(v) { args[-1] = NUMBER_VAL(v); return true; }
 #define RETURN_OBJ(v) { args[-1] = OBJ_VAL(v); return true; }
+#define RETURN_PTR(v) { args[-1] = OBJ_VAL(new_ptr(vm, (void*)v)); return true; }
 #define RETURN_STRING(v) { args[-1] = OBJ_VAL(copy_string(vm, v, (int)strlen(v))); return true; }
 #define RETURN_L_STRING(v, l) { args[-1] = OBJ_VAL(copy_string(vm, v, l)); return true; }
 #define RETURN_T_STRING(v, l) { args[-1] = OBJ_VAL(take_string(vm, v, l)); return true; }

@@ -23,7 +23,7 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
   if (new_size == 0) {
     free(pointer);
     return NULL;
-    // return malloc(sizeof pointer);
+//     return malloc(sizeof pointer);
   }
   void *result = realloc(pointer, new_size);
 

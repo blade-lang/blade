@@ -23,17 +23,17 @@ class HttpResponse {
   @to_string() {
     return '<HttpResponse status: ${self.status}, version: ${self.version}, time_taken:' +
         ' ${self.time_taken}, redirects: ${self.redirects}, responder: ${self.responder}>'
-    
-    # # old version.
-    # # kept here simply for reference and debugging purposes.
-    # return to_string({
-    #   status: self.status,
-    #   version: self.version,
-    #   time_taken: self.time_taken,
-    #   redirects: self.redirects,
-    #   responder: self.responder,
-    #   headers: self.headers,
-    #   body: self.body
-    # })
+  }
+
+  @to_json() {
+    return {
+      status: self.status,
+      version: self.version,
+      time_taken: self.time_taken,
+      redirects: self.redirects,
+      responder: self.responder,
+      headers: self.headers,
+      body: self.body
+    }
   }
 }
