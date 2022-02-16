@@ -135,12 +135,12 @@ class HttpClient {
         message += '\r\n\r\n${data}'
 
         # do real request here...
-        var client = /* !is_secure ? */ socket.Socket() /* : ssl.TLSSocket() */
+        var client = !is_secure ? socket.Socket() : ssl.TLSSocket()
 
-        # if !is_secure {
+        if !is_secure {
           client.set_option(socket.SO_SNDTIMEO, self.send_timeout)
           client.set_option(socket.SO_RCVTIMEO, self.receive_timeout)
-        # }
+        }
 
         var start = time()
 

@@ -148,6 +148,8 @@ target_include_directories(libblade PUBLIC "${INCLUDE_GEN_DIR}")
 set(LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_STATIC_LIBRARY_SUFFIX}")
 set(SHARED_LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
+add_dependencies(libblade pcre2)
+
 set_target_properties(libblade
 		PROPERTIES
 		OUTPUT_NAME blade

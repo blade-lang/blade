@@ -1037,11 +1037,13 @@ static bool string_get_ranged_index(b_vm *vm, b_obj_string *string, bool will_as
   int start = lower_index, end = upper_index;
   utf8slice(string->chars, &start, &end);
 
+  b_obj_string *str = copy_string(vm, string->chars + start, (int) (end - start));
+
   if (!will_assign) {
     pop_n(vm, 3); // +1 for the string itself
   }
 
-  push(vm, STRING_L_VAL(string->chars + start, (int) (end - start)));
+  push(vm, OBJ_VAL(str));
   return true;
 }
 

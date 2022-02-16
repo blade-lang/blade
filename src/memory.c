@@ -283,8 +283,8 @@ void free_object(b_vm *vm, b_obj *object) {
     }
 
     case OBJ_PTR: {
-      b_obj_ptr *ptr = (b_obj_ptr*)object;
-      free(ptr->pointer);
+//      b_obj_ptr *ptr = (b_obj_ptr*)object;
+//      free(ptr->pointer);
       FREE(b_obj_ptr, object);
       break;
     }
