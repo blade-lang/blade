@@ -2041,7 +2041,7 @@ static void import_statement(b_parser *p) {
     if (p->previous.type == RANGE_TOKEN) {
       is_relative = true;
       if (module_file == NULL) {
-        module_file = strdup("../");
+        module_file = strdup("/../");
       } else {
         module_file = append_strings(module_file, "/../");
       }
