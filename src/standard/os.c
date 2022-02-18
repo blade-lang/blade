@@ -403,7 +403,10 @@ DECLARE_MODULE_METHOD(os__realpath) {
   ENFORCE_ARG_COUNT(_realpath, 1);
   ENFORCE_ARG_TYPE(_realpath, 0, IS_STRING);
   char *path = realpath(AS_C_STRING(args[0]), NULL);
-  RETURN_T_STRING(path,(int) strlen(path));
+  if(path != NULL) {
+    RETURN_TT_STRING(path);
+  }
+  RETURN_VALUE(args[0]);
 }
 
 DECLARE_MODULE_METHOD(os__chdir) {
@@ -464,6 +467,23 @@ b_value __os_dir_DT_WHT(b_vm *vm) {
 #endif
 }
 
+void __os_module_preloader(b_vm *vm) {
+#if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
+  HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+  DWORD dwMode = 0;
+  GetConsoleMode(hOut, &dwMode);
+  dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+  SetConsoleMode(hOut, dwMode);
+
+  // References:
+  //SetConsoleMode() and ENABLE_VIRTUAL_TERMINAL_PROCESSING?
+  //https://stackoverflow.com/questions/38772468/setconsolemode-and-enable-virtual-terminal-processing
+
+  // Windows console with ANSI colors handling
+  // https://superuser.com/questions/413073/windows-console-with-ansi-colors-handling
+#endif
+}
+
 /** DIR TYPES ENDS */
 
 CREATE_MODULE_LOADER(os) {
@@ -507,7 +527,7 @@ CREATE_MODULE_LOADER(os) {
       .fields = os_module_fields,
       .functions = os_module_functions,
       .classes = NULL,
-      .preloader= NULL,
+      .preloader= &__os_module_preloader,
       .unloader = NULL
   };
 
