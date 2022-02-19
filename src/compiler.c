@@ -1592,8 +1592,12 @@ static void class_declaration(b_parser *p) {
 }
 
 static void compile_var_declaration(b_parser *p, bool is_initializer) {
+  int total_parsed = 0;
 
   do {
+    if(total_parsed > 0) {
+      ignore_whitespace(p);
+    }
     int global = parse_variable(p, "variable name expected");
 
     if (match(p, EQUAL_TOKEN)) {
@@ -1603,6 +1607,7 @@ static void compile_var_declaration(b_parser *p, bool is_initializer) {
     }
 
     define_variable(p, global);
+    total_parsed++;
   } while (match(p, COMMA_TOKEN));
 
   if (!is_initializer) {
