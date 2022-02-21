@@ -1347,8 +1347,8 @@ b_ptr_result run(b_vm *vm) {
                      value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
                      break;       \
     }                                                                          \
-    int b = AS_NUMBER(pop(vm));                                                \
-    int a = AS_NUMBER(pop(vm));                                                \
+    unsigned int b = AS_NUMBER(pop(vm));                                       \
+    unsigned int a = AS_NUMBER(pop(vm));                                       \
     push(vm, type((double)(a op b)));                                          \
   } while (false)
 
