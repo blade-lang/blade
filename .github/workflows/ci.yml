@@ -60,7 +60,7 @@ jobs:
           name: blade-macos-${{ github.run_id }}
           path: ${{github.workspace}}/blade
 
-  build-windows-with-winlibs:
+  build-windows:
     runs-on: windows-latest
     steps:
       - name: Setup cmake
@@ -82,26 +82,3 @@ jobs:
         with:
           name: blade-windows-default-${{ github.run_id }}
           path: ${{github.workspace}}/blade
-
-  build-windows-with-msys2:
-    runs-on: windows-latest
-    steps:
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          install: >-
-            base-devel
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-ninja
-            mingw-w64-x86_64-toolchain
-      - uses: actions/checkout@v2
-      - name: Compile
-        run: |
-          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make
-          cmake --build . -- -j 12
-      - name: Generate Artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: blade-windows-msys2-${{ github.run_id }}
-          path: ${{github.workspace}}/blade
-
