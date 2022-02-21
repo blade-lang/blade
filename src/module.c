@@ -20,6 +20,12 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#else
+#include "blade_unistd.h"
+#endif /* HAVE_UNISTD_H */
+
 b_module_init modules[] = {
     GET_MODULE_LOADER(os),         //
     GET_MODULE_LOADER(io),         //
@@ -124,10 +130,8 @@ void add_native_module(b_vm *vm, b_obj_module *module, const char *as) {
   table_set(vm, &vm->modules, STRING_VAL(module->name), OBJ_VAL(module));
 }
 
-void bind_user_modules(b_vm *vm) {
-  char *pkg_root = getenv(BLADE_PACKAGE_ROOT_ENV);
-  if(pkg_root == NULL)
-    pkg_root = merge_paths(get_exe_dir(), "dist");
+void bind_user_modules(b_vm *vm, char *pkg_root) {
+  if(pkg_root == NULL) return;
 
   DIR *dir;
   if((dir = opendir(pkg_root)) != NULL) {
@@ -177,7 +181,8 @@ void bind_native_modules(b_vm *vm) {
   for (int i = 0; modules[i] != NULL; i++) {
     load_module(vm, modules[i], NULL, strdup("<__native__>"), NULL);
   }
-  bind_user_modules(vm);
+  bind_user_modules(vm, merge_paths(get_exe_dir(), "dist"));
+  bind_user_modules(vm, merge_paths(getcwd(NULL, 0), LOCAL_PACKAGES_DIRECTORY LOCAL_EXT_DIRECTORY));
 }
 
 char* load_user_module(b_vm *vm, const char *path, char *name) {

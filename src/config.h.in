@@ -5,8 +5,11 @@
 #define BLADE_VERSION_STRING "0.0.7"
 #define BVM_VERSION "0.0.6"
 #define LIBRARY_DIRECTORY "libs"
-#define PACKAGES_DIRECTORY "packages"
 #define LIBRARY_DIRECTORY_INDEX "index"
+#define PACKAGES_DIRECTORY "vendor"
+#define LOCAL_PACKAGES_DIRECTORY ".blade"
+#define LOCAL_EXT_DIRECTORY "/bin"
+#define LOCAL_SRC_DIRECTORY "/libs"
 
 // global debug mode flag
 #define DEBUG_MODE 0

@@ -7,6 +7,7 @@ import .util
 
 /**
  * Handles http requests.
+ * @note This client do not currently support the compress, deflate and gzip transfer encoding.
  */
 class HttpClient {
   
@@ -101,7 +102,15 @@ class HttpClient {
         var port = uri.port
 
         # construct message
-        var message = '${method} ${uri.path} HTTP/1.1'
+        var message = '${method} ${uri.path}'
+        if uri.query message += '?${uri.query}'
+        if uri.hash message += '#${uri.hash}'
+        message += ' HTTP/1.1'
+
+        if self.user_agent {
+          message += '\r\nUser-Agent: ${self.user_agent}'
+        }
+
         if !self.headers.contains('Host') {
           message += '\r\nHost: ${uri.host}'
         }
@@ -142,34 +151,6 @@ class HttpClient {
         # receive the response...
         var response_data = client.receive()
 
-        # gracefully handle responses being sent in multiple packets
-        # if the request header contains the Content-Length,
-        # get that length and keep reading until we have read the total
-        # length of the response
-        if response_data.index_of('Content-Length') {
-          var m = response_data.matches('/Content\-Length:\s*\d+/')
-          if m {
-            var length = to_number(m[0][0].replace('/[^0-9]/', ''))
-            while response_data.length() < length {
-              # append the new data in the stream
-              response_data += client.receive()
-            }
-          }
-        } else if response_data.matches('/Transfer\-Encoding:\s*chunked/') {
-          # gracefully handle chuncked data transfer
-          var do_fetch = true
-          while do_fetch {
-            var response = client.receive()
-            response_data += response
-            if response.ends_with('\r\n\r\n') do_fetch = false
-          }
-        }
-
-        time_taken += time() - start
-
-        # close client
-        client.close()
-
         # separate the headers and the body
         var body_starts = response_data.index_of('\r\n\r\n')
 
@@ -183,6 +164,69 @@ class HttpClient {
           status_code  = status
         })
 
+        # According to https://datatracker.ietf.org/doc/html/rfc7230#section-3.3
+        # 
+        # Responses to the HEAD request method (Section 4.3.2
+        # of [RFC7231]) never include a message body because the associated
+        # response header fields (e.g., Transfer-Encoding, Content-Length,
+        # etc.), if present, indicate only what their values would have been if
+        # the request method had been GET
+        if method.upper() != 'HEAD' {
+
+          # gracefully handle responses being sent in multiple packets
+          # if the request header contains the Content-Length,
+          # get that length and keep reading until we have read the total
+          # length of the response.
+          if headers.contains('Content-Length') {
+            var length = to_number(headers['Content-Length']) - 2
+
+            # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-3.4
+            # A client that receives an incomplete response message, which can
+            # occur when a connection is closed prematurely or when decoding a
+            # supposedly chunked transfer coding fails, MUST record the message as
+            # incomplete.
+            var data = body
+            while body.length() < length and data {
+              data = client.receive()
+              # append the new data in the stream
+              body += data
+            }
+          } else if headers.contains('Transfer-Encoding') and headers['Transfer-Encoding'].trim() == 'chunked'  {
+            # gracefully handle chuncked data transfer
+            # 
+            # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-4.1
+            # 
+            # chunked-body   = *chunk
+            #           last-chunk
+            #           trailer-part
+            #           CRLF
+            # 
+            # chunk          = chunk-size [ chunk-ext ] CRLF
+            #                   chunk-data CRLF
+            # chunk-size     = 1*HEXDIG
+            # last-chunk     = 1*("0") [ chunk-ext ] CRLF
+
+            var tmp_body = body.split('\n'), do_read = true
+            var chunk_size = to_number('0x'+tmp_body[0].trim())
+            body = '\n'.join(tmp_body[1,])
+            
+            var do_fetch = true
+            while do_fetch {
+              var response = client.receive()
+              body += response
+              if response.ends_with('\r\n\r\n') do_fetch = false
+            }
+
+            # remove the last chunck-size marking.
+            body = body.replace('/0\\s+$/', '')
+          }
+        }
+
+        time_taken += time() - start
+
+        # close client
+        client.close()
+
         if self.follow_redirect and headers.contains('Location') {
           uri = url.parse(headers['Location'])
           self.referer = headers['Location']
@@ -192,13 +236,6 @@ class HttpClient {
       } else {
         should_connect = false
         die Exception('could not resolve ip address')
-      }
-    }
-
-    if headers.contains('Content-Type') {
-      # remove unnecessary gibberish around the string.
-      if headers['Content-Type'].index_of('ISO-8859-1') {
-        body = util.iso_8859_1_clean(body)
       }
     }
 
@@ -223,6 +260,12 @@ class HttpClient {
         if d > -1 {
           var key = data[i][0,d]
           var value = data[i][d + 1,data[i].length()]
+
+          # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-3.2.6
+          # A string of text is parsed as a single value if it is quoted using
+          # double-quote marks
+          if value.starts_with('"') and value.ends_with('"')
+            value = value[1,-1]
 
           # handle cookies in header
           if key == 'Set-Cookie' {
