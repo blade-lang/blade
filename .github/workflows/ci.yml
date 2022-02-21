@@ -27,7 +27,7 @@ jobs:
       - name: Compile
         run: |
           cmake -B .
-          cmake --build .
+          cmake --build . -- -j 12
       - name: Make blade executable
         run: |
           chmod +x blade/blade
@@ -50,7 +50,7 @@ jobs:
       - name: Compile
         run: |
           cmake -B . -DOPENSSL_ROOT_DIR=/usr/local/Cellar/openssl/
-          cmake --build .
+          cmake --build . -- -j 12
       - name: Make blade executable
         run: |
           chmod 755 blade/blade
@@ -76,7 +76,7 @@ jobs:
       - name: Compile
         run: |
           cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make
-          cmake --build .
+          cmake --build . -- -j 12
       - name: Generate Artifacts
         uses: actions/upload-artifact@v2
         with:
@@ -98,7 +98,7 @@ jobs:
       - name: Compile
         run: |
           cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make
-          cmake --build .
+          cmake --build . -- -j 12
       - name: Generate Artifacts
         uses: actions/upload-artifact@v2
         with:
