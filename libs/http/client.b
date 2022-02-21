@@ -4,6 +4,7 @@ import url
 import socket
 import .response { HttpResponse }
 import .util
+import ._process
 
 /**
  * Handles http requests.
@@ -149,7 +150,7 @@ class HttpClient {
         client.send(message)
 
         # receive the response...
-        var response_data = client.receive()
+        var response_data = client.receive() or ''
 
         # separate the headers and the body
         var body_starts = response_data.index_of('\r\n\r\n')
@@ -159,7 +160,7 @@ class HttpClient {
           body = response_data[body_starts + 2, response_data.length()].trim()
         }
 
-        headers = self._process_header(headers, |version, status|{
+        headers = _process.process_header(headers, |version, status|{
           http_version = version
           status_code  = status
         })
@@ -242,52 +243,6 @@ class HttpClient {
     # return a valid HttpResponse
     return HttpResponse(body, status_code, headers, http_version, 
       time_taken, redirect_count, responder)
-  }
-
-  /**
-   * processes raw http headers into a dictionary and calls the meta_callback
-   * function if given with the argument list [version, status]
-   */
-  _process_header(header, meta_callback) {
-    var result = {}
-
-    if header {
-      # Follow redirect headers...
-      var data = header.trim().split('\r\n')
-
-      iter var i = 0; i < data.length(); i++ {
-        var d = data[i].index_of(':')
-        if d > -1 {
-          var key = data[i][0,d]
-          var value = data[i][d + 1,data[i].length()]
-
-          # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-3.2.6
-          # A string of text is parsed as a single value if it is quoted using
-          # double-quote marks
-          if value.starts_with('"') and value.ends_with('"')
-            value = value[1,-1]
-
-          # handle cookies in header
-          if key == 'Set-Cookie' {
-            if result.contains(key) {
-              result[key].append(value)
-            } else {
-              result[key] = [value]
-            }
-          } else {
-            result.set(key, value)
-          }
-        } else if(data[i].lower().starts_with('http/')){
-          var split = data[i].split(' ')
-          var http_version = split[0].replace('~http/~', '')
-
-          # call back with (version, status code)
-          if meta_callback meta_callback(http_version, to_number(split[1]))
-        }
-      }
-    }
-
-    return result
   }
 
   /**

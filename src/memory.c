@@ -317,6 +317,17 @@ static void mark_roots(b_vm *vm) {
 
   mark_object(vm, (b_obj*)vm->exception_class);
 
+  // mark active exception frames.
+//  for(int i = 0; i < vm->frame_count; i++) {
+//    b_call_frame frame = vm->frames[vm->frame_count];
+//    for(int j = 0; j < frame.handlers_count; j++) {
+//      b_exception_frame f = frame.handlers[j];
+//      if(f.klass != NULL && f.address != 0) {
+//        mark_object(vm, (b_obj*)f.klass);
+//      }
+//    }
+//  }
+
   mark_compiler_roots(vm);
 }
 

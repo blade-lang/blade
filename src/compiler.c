@@ -2058,7 +2058,7 @@ static void import_statement(b_parser *p) {
     memcpy(name, p->previous.start, p->previous.length);
 
     // handle native modules
-    if (part_count == 0 && name[0] == '_') {
+    if (part_count == 0 && name[0] == '_' && !is_relative) {
       int module = make_constant(p, OBJ_VAL(copy_string(p->vm, name, (int) strlen(name))));
       emit_byte_and_short(p, OP_NATIVE_MODULE, module);
 
@@ -2183,7 +2183,7 @@ static void try_statement(b_parser *p) {
 
   bool catch_exists = false, final_exists = false;
 
-  // catch body must maintain it's own scope
+  // catch body must maintain its own scope
   if (match(p, CATCH_TOKEN)) {
     catch_exists = true;
     begin_scope(p);
@@ -2194,9 +2194,8 @@ static void try_statement(b_parser *p) {
     // patch_try(p, try_begins, type);
 
     if (match(p, IDENTIFIER_TOKEN)) {
-      add_local(p, p->previous);
-      mark_initialized(p);
-      uint16_t var = resolve_local(p, p->vm->compiler, &p->previous);
+      int var = add_local(p, p->previous) - 1;
+      define_variable(p, var);
       emit_byte_and_short(p, OP_SET_LOCAL, var);
       emit_byte(p, OP_POP);
     }
@@ -2206,8 +2205,7 @@ static void try_statement(b_parser *p) {
     block(p);
 
     end_scope(p);
-  }
-  else {
+  } else {
       type = make_constant(p, OBJ_VAL(copy_string(p->vm, "Exception", 9)));
   }
 
@@ -2216,7 +2214,7 @@ static void try_statement(b_parser *p) {
   if (match(p, FINALLY_TOKEN)) {
     final_exists = true;
     // if we arrived here from either the try or handler block,
-    // we dont want to continue propagating the exception
+    // we don't want to continue propagating the exception
     emit_byte(p, OP_FALSE);
     finally = current_blob(p)->count;
 

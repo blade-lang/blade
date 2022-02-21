@@ -139,9 +139,15 @@ bool throw_exception(b_vm *vm, const char *format, ...) {
 
 static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
   b_obj_string *class_name = copy_string(vm, "Exception", 9);
-  b_obj_class *klass = new_class(vm, class_name);
 
+  push(vm, OBJ_VAL(class_name));
+  b_obj_class *klass = new_class(vm, class_name);
+  pop(vm);
+
+  push(vm, OBJ_VAL(klass));
   b_obj_func *function = new_function(vm, module, TYPE_METHOD);
+  pop(vm);
+
   function->arity = 1;
   function->is_variadic = false;
 
