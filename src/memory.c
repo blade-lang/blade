@@ -373,7 +373,7 @@ void collect_garbage(b_vm *vm) {
   table_remove_whites(vm, &vm->strings);
   sweep(vm);
 
-  vm->next_gc = vm->bytes_allocated * GC_HEAP_GROWTH_FACTOR;
+  vm->next_gc = vm->bytes_allocated * (size_t)GC_HEAP_GROWTH_FACTOR;
   vm->mark_value = !vm->mark_value;
 
 #if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
