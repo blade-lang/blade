@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build-linux-and-analyze:
+    runs-on: ubuntu-20.04
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup cmake
+        uses: jwlawson/actions-setup-cmake@v1.9
+        with:
+          cmake-version: '3.18.x'
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v1
+        with:
+          languages: c
+      - name: Compile
+        run: |
+          cmake -B .
+          cmake --build . -- -j 12
+      - name: Make blade executable
+        run: |
+          chmod +x blade/blade
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v1
+      - name: Generate Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: blade-linux-${{ github.run_id }}
+          path: ${{github.workspace}}/blade
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Setup cmake
+        uses: jwlawson/actions-setup-cmake@v1.9
+        with:
+          cmake-version: '3.18.x'
+      - uses: actions/checkout@v2
+      - name: Compile
+        run: |
+          cmake -B . -DOPENSSL_ROOT_DIR=/usr/local/Cellar/openssl/
+          cmake --build . -- -j 12
+      - name: Make blade executable
+        run: |
+          chmod 755 blade/blade
+      - name: Generate Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: blade-macos-${{ github.run_id }}
+          path: ${{github.workspace}}/blade
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Setup cmake
+        uses: jwlawson/actions-setup-cmake@v1.9
+        with:
+          cmake-version: '3.18.x'
+      - name: Setup WinLibs
+        uses: bwoodsend/setup-winlibs-action@v1
+        with:
+          add_to_path: true
+          tag: 11.2.0-9.0.0-msvcrt-r5
+      - uses: actions/checkout@v2
+      - name: Compile
+        run: |
+          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make
+          cmake --build . -- -j 12
+      - name: Generate Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: blade-windows-default-${{ github.run_id }}
+          path: ${{github.workspace}}/blade
