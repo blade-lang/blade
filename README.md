@@ -1,4 +1,4 @@
-<div style="text-align: center">
+<div align="center">
 <p>
     <img width="128" alt="Blade Logo" src="./blade-icon.png?sanitize=true">
 </p>
