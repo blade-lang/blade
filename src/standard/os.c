@@ -30,6 +30,10 @@
  * stat() instead of lstat(). */
 #define lstat stat
 
+#ifndef ENABLE_VIRTUAL_TERMINAL_INPUT
+#define ENABLE_VIRTUAL_TERMINAL_INPUT 0x0200
+#endif /* ENABLE_VIRTUAL_TERMINAL_INPUT */
+
 #endif /* ifdef _WIN32 */
 
 #if !defined(HAVE_DIRENT_H) || defined(_WIN32)
