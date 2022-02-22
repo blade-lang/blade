@@ -1,23 +1,13 @@
 <div align="center">
 <p>
-    <img width="120" src="./blade-icon.png?sanitize=true">
+    <img width="128" alt="Blade Logo" src="./blade-icon.png?sanitize=true">
 </p>
 <h1>The Blade Programming Language</h1>
 
-**Quick links**: [BUILDING](./BUILDING.md) | [CONTRIBUTING](./CONTRIBUTING.md) | [DOCS](https://bladelang.com) | 
-[LICENSE](./LICENSE) | 
-[![Chat on Gitter](https://badges.gitter.im/blade-lang/community.svg)](https://gitter.im/blade-lang/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+**Quick links**: ![CI](https://github.com/blade-lang/blade/actions/workflows/ci.yml/badge.svg)  | 
+[Building](./BUILDING.md)  |  [Contributing](./CONTRIBUTING.md)  |  [Documentation](https://bladelang.com)  |  [License](./LICENSE)
 
-<div>
-
-![code analysis](https://github.com/blade-lang/blade/actions/workflows/codeql.yml/badge.svg)
-![Linux build](https://github.com/blade-lang/blade/actions/workflows/linux-build.yml/badge.svg)
-![macOS build](https://github.com/blade-lang/blade/actions/workflows/osx-build.yml/badge.svg)
-![Windows (WinLibs) build](https://github.com/blade-lang/blade/actions/workflows/windows-winlibs-build.yml/badge.svg)
-![Windows (MSVC) build](https://github.com/blade-lang/blade/actions/workflows/windows-msvc-build.yml/badge.svg)
-![Windows (MinGW64) build](https://github.com/blade-lang/blade/actions/workflows/windows-mingw64-build.yml/badge.svg)
-
-</div>
+[comment]: <> ([![Chat on Gitter]&#40;https://badges.gitter.im/blade-lang/community.svg&#41;]&#40;https://gitter.im/blade-lang/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&#41; |)
 
 </div>
 
@@ -51,7 +41,7 @@ syntax set with a very natural feel.
 ## Example
 
 The following code prints the sum of all numbers in an array.
-```py
+```js
 def sum(numbers) {
     var result = 0
 
@@ -78,7 +68,7 @@ extensions, there is an easy-to-pick-up example in the [blade-ext-demo](https://
 
 ### GOTCHAS!
 
-For some weird reasons yet unknown, thirdparty C modules for Blade don't work correctly on Blade installations
+For some weird reasons yet unknown, third-party C modules for Blade don't work correctly on Blade installations
 built with MSVC (Visual Studio). To be able to use external C modules on Windows, build or use a Blade installation 
 built with either TDM-GCC or MinGW64.
 
@@ -110,7 +100,7 @@ The standard. The general workflow is as follows.
 
 1. Find/file an issue on the Issues tab.
 2. Fork the repo and make your changes.
-3. Push your changes to a branch in your forked repo. For coding guidelines, see the project [README](https://github.com/blade-lang/blade/blob/main/README.md) file.
+3. Push your changes to a branch in your forked repo.
 4. Submit a pull request to Blade from your forked repo.
 
 You can also just mail your issues to [Ore Richard Muyiwa](mailto:eqliqandfriends@gmail.com) directly.
@@ -128,14 +118,14 @@ You can also just mail your issues to [Ore Richard Muyiwa](mailto:eqliqandfriend
     
 -   For formatting, simply follow the LLVM guide minus the whole
     braces `{`/`}` on separate line thing. It looks really ugly.
-    I advice you use the JetBrains CLion or Visual Studio Code
+    I advise you use the JetBrains CLion or Visual Studio Code
     IDE(s) to format your code before submitting for PR.
     
 That simple!
 
 
-## Sponsors
+[comment]: <> (## Sponsors)
 
 [comment]: <> (![JetBrains Logo]&#40;jetbrains.png&#41;)
 
-<img src="./jetbrains.png" width="64" height="64" alt="JetBrains Logo"/>
+[comment]: <> (<img src="./jetbrains.png" width="64" height="64" alt="JetBrains Logo"/>)
