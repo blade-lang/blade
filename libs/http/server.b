@@ -47,12 +47,10 @@ class HttpServer {
     response)
   }]
 
-  var _sent_listeners = [| message, client | {
+  var _sent_listeners = []
 
-  }]
-
-  var _error_listeners = [| error, client | {
-
+  var _error_listeners = [| e, client | {
+    echo 'Error occured: ${e.message}'
   }]
 
   /**
@@ -196,8 +194,7 @@ class HttpServer {
           # call the disconnect listeners.
           if self._disconnect_listeners {
             for l in self._disconnect_listeners {
-              echo l
-              l(nil)
+              l(client_info)
             }
           }
         }

@@ -1810,7 +1810,7 @@ static void for_statement(b_parser *p) {
 
   // add the iterator to the local scope
   int iterator_slot = add_local(p, iterator_token) - 1;
-  define_variable(p, 0);
+  define_variable(p, iterator_slot);
 
   // Create the key local variable.
   emit_byte(p, OP_NIL);
@@ -1820,7 +1820,7 @@ static void for_statement(b_parser *p) {
   // create the local value slot
   emit_byte(p, OP_NIL);
   int value_slot = add_local(p, value_token) - 1;
-  define_variable(p, 0);
+  define_variable(p, value_slot);
 
   int surrounding_loop_start = p->innermost_loop_start;
   int surrounding_scope_depth = p->innermost_loop_scope_depth;
@@ -2130,7 +2130,10 @@ static void import_statement(b_parser *p) {
   b_blob blob;
   init_blob(&blob);
   b_obj_module *module = new_module(p->vm, module_name, module_path);
+
+  push(p->vm, OBJ_VAL(module));
   b_obj_func *function = compile(p->vm, module, source, &blob);
+  pop(p->vm);
 
   if (function == NULL) {
     error(p, "failed to import %s", module_name);
@@ -2169,11 +2172,10 @@ static void try_statement(b_parser *p) {
   }
   p->vm->compiler->handler_count++;
 
-  consume(p, LBRACE_TOKEN, "expected '{' after try");
   ignore_whitespace(p);
   int try_begins = emit_try(p);
 
-  block(p); // compile the try body
+  statement(p); // compile the try body
   emit_byte(p, OP_POP_TRY);
   int exit_jump = emit_jump(p, OP_JUMP);
 
@@ -2191,18 +2193,16 @@ static void try_statement(b_parser *p) {
     consume(p, IDENTIFIER_TOKEN, "missing exception class name");
     type = identifier_constant(p, &p->previous);
     address = current_blob(p)->count;
-    // patch_try(p, try_begins, type);
 
     if (match(p, IDENTIFIER_TOKEN)) {
       int var = add_local(p, p->previous) - 1;
       define_variable(p, var);
       emit_byte_and_short(p, OP_SET_LOCAL, var);
-      emit_byte(p, OP_POP);
+//      emit_byte(p, OP_POP);
     }
 
     emit_byte(p, OP_POP_TRY);
-    consume(p, LBRACE_TOKEN, "expected '{' after catch expression");
-    block(p);
+    statement(p);
 
     end_scope(p);
   } else {
@@ -2218,8 +2218,7 @@ static void try_statement(b_parser *p) {
     emit_byte(p, OP_FALSE);
     finally = current_blob(p)->count;
 
-    consume(p, LBRACE_TOKEN, "expected '{' after finally");
-    block(p);
+    statement(p);
 
     int continue_execution_address = emit_jump(p, OP_JUMP_IF_FALSE);
     emit_byte(p, OP_POP); // pop the bool off the stack
