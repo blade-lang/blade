@@ -78,11 +78,11 @@ bool propagate_exception(b_vm *vm) {
       b_exception_frame handler = frame->handlers[i - 1];
       b_obj_func *function = frame->closure->function;
 
-      if (handler.address != 0 && is_instance_of(exception->klass, handler.klass->name->chars)) {
+      if (handler.address != 0 && is_instance_of(handler.klass, exception->klass->name->chars)) {
         frame->ip = &function->blob.code[handler.address];
         return true;
       } else if (handler.finally_address != 0) {
-        push(vm, TRUE_VAL); // continue propagating once the finally block completes
+        push(vm, TRUE_VAL); // continue propagating once the 'finally' block completes
         frame->ip = &function->blob.code[handler.finally_address];
         return true;
       }
@@ -139,9 +139,15 @@ bool throw_exception(b_vm *vm, const char *format, ...) {
 
 static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
   b_obj_string *class_name = copy_string(vm, "Exception", 9);
-  b_obj_class *klass = new_class(vm, class_name);
 
+  push(vm, OBJ_VAL(class_name));
+  b_obj_class *klass = new_class(vm, class_name);
+  pop(vm);
+
+  push(vm, OBJ_VAL(klass));
   b_obj_func *function = new_function(vm, module, TYPE_METHOD);
+  pop(vm);
+
   function->arity = 1;
   function->is_variadic = false;
 
@@ -2180,35 +2186,6 @@ b_ptr_result run(b_vm *vm) {
           runtime_error("type of %s is not a valid iterable", value_type(peek(vm, 3)));
         }
         break;
-
-
-
-        /*if (!IS_LIST(peek(vm, 3)) && !IS_DICT(peek(vm, 3)) &&
-            !IS_BYTES(peek(vm, 3))) {
-          if (!IS_STRING(peek(vm, 3))) {
-            runtime_error("type of %s is not a valid iterable", value_type(peek(vm, 3)));
-          } else {
-            runtime_error("strings do not support object assignment");
-          }
-          break;
-        }
-
-        b_value value = peek(vm, 0);
-        b_value index = peek(vm, 2); // since peek 1 will be nil
-
-        if (IS_LIST(peek(vm, 3))) {
-          if (!list_set_index(vm, AS_LIST(peek(vm, 3)), index, value)) {
-            EXIT_VM();
-          }
-        } else if (IS_BYTES(peek(vm, 3))) {
-          if (!bytes_set_index(vm, AS_BYTES(peek(vm, 3)), index, value)) {
-            EXIT_VM();
-          }
-        } else if (IS_DICT(peek(vm, 3))) {
-          dict_set_index(vm, AS_DICT(peek(vm, 3)), index, value);
-          break;
-        }
-        break;*/
       }
 
       case OP_RETURN: {
@@ -2374,13 +2351,13 @@ b_ptr_result run(b_vm *vm) {
           frame = &vm->frames[vm->frame_count - 1];
           break;
         }
+
         EXIT_VM();
       }
 
       case OP_SWITCH: {
         b_obj_switch *sw = AS_SWITCH(READ_CONSTANT());
         b_value expr = peek(vm, 0);
-        //      push(vm, OBJ_VAL(sw));
 
         b_value value;
         if (table_get(&sw->table, expr, &value)) {

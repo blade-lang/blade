@@ -4,6 +4,7 @@ import url
 import socket
 import .response { HttpResponse }
 import .util
+import ._process
 import ssl
 
 /**
@@ -101,7 +102,6 @@ class HttpClient {
       if resolved_host {
         var host = resolved_host.ip
         var port = uri.port
-        var is_secure = uri.scheme == 'https'
 
         # construct message
         var message = '${method} ${uri.path}'
@@ -150,99 +150,93 @@ class HttpClient {
         var start = time()
 
         # connect to the url host on the specified port and send the request message
-        if client.connect(host, port ? port : (is_secure ? 443 : 80), self.connect_timeout) {
-          client.send(message)
+        client.connect(host, port ? port : (uri.scheme == 'https' ? 443 : 80), self.connect_timeout)
+        client.send(message)
 
           # receive the response...
-          var response_data = client.receive()
+          var response_data = client.receive() or ''
 
-          # separate the headers and the body
-          var body_starts = response_data.index_of('\r\n\r\n')
+        # separate the headers and the body
+        var body_starts = response_data.index_of('\r\n\r\n')
 
-          if body_starts {
-            headers = response_data[0,body_starts].trim()
-            body = response_data[body_starts + 2, response_data.length()].trim()
-          }
+        if body_starts {
+          headers = response_data[0,body_starts].trim()
+          body = response_data[body_starts + 2, response_data.length()].trim()
+        }
 
-          headers = self._process_header(headers, |version, status|{
-            http_version = version
-            status_code  = status
-          })
+        headers = _process.process_header(headers, |version, status|{
+          http_version = version
+          status_code  = status
+        })
 
-          # According to https://datatracker.ietf.org/doc/html/rfc7230#section-3.3
-          #
-          # Responses to the HEAD request method (Section 4.3.2
-          # of [RFC7231]) never include a message body because the associated
-          # response header fields (e.g., Transfer-Encoding, Content-Length,
-          # etc.), if present, indicate only what their values would have been if
-          # the request method had been GET
-          if method.upper() != 'HEAD' {
+        # According to https://datatracker.ietf.org/doc/html/rfc7230#section-3.3
+        # 
+        # Responses to the HEAD request method (Section 4.3.2
+        # of [RFC7231]) never include a message body because the associated
+        # response header fields (e.g., Transfer-Encoding, Content-Length,
+        # etc.), if present, indicate only what their values would have been if
+        # the request method had been GET
+        if method.upper() != 'HEAD' {
 
-            #gracefully handle responses being sent in multiple packets
-            # if the request header contains the Content-Length,
-            # get that length and keep reading until we have read the total
-            # length of the response.
-            if headers.contains('Content-Length') {
-              var length = to_number(headers['Content-Length']) - 2
+          # gracefully handle responses being sent in multiple packets
+          # if the request header contains the Content-Length,
+          # get that length and keep reading until we have read the total
+          # length of the response.
+          if headers.contains('Content-Length') {
+            var length = to_number(headers['Content-Length']) - 2
 
-              # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-3.4
-              # A client that receives an incomplete response message, which can
-              # occur when a connection is closed prematurely or when decoding a
-              # supposedly chunked transfer coding fails, MUST record the message as
-              # incomplete.
-              var data = body
-              while body.length() < length and data {
-                data = client.receive()
-                # append the new data in the stream
-                body += data
-              }
-            } else if headers.contains('Transfer-Encoding') and headers['Transfer-Encoding'].trim() == 'chunked'  {
-              
-              # gracefully handle chuncked data transfer
-              #
-              # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-4.1
-              #
-              # chunked-body   = *chunk
-              #           last-chunk
-              #           trailer-part
-              #           CRLF
-              #
-              # chunk          = chunk-size [ chunk-ext ] CRLF
-              #                   chunk-data CRLF
-              # chunk-size     = 1*HEXDIG
-              # last-chunk     = 1*("0") [ chunk-ext ] CRLF
-
-              var tmp_body = body.split('\n'), do_read = true
-              var chunk_size = to_number('0x'+tmp_body[0].trim())
-              body = '\n'.join(tmp_body[1,])
-              
-              var do_fetch = true
-              while do_fetch {
-                var response = client.receive()
-                body += response
-                if response.ends_with('\r\n\r\n') do_fetch = false
-              }
-              
-              # remove the last chunck-size marking.
-              body = body.replace('/0\\s+$/', '')
+            # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-3.4
+            # A client that receives an incomplete response message, which can
+            # occur when a connection is closed prematurely or when decoding a
+            # supposedly chunked transfer coding fails, MUST record the message as
+            # incomplete.
+            var data = body
+            while body.length() < length and data {
+              data = client.receive()
+              # append the new data in the stream
+              body += data
             }
+          } else if headers.contains('Transfer-Encoding') and headers['Transfer-Encoding'].trim() == 'chunked'  {
+            # gracefully handle chuncked data transfer
+            # 
+            # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-4.1
+            # 
+            # chunked-body   = *chunk
+            #           last-chunk
+            #           trailer-part
+            #           CRLF
+            # 
+            # chunk          = chunk-size [ chunk-ext ] CRLF
+            #                   chunk-data CRLF
+            # chunk-size     = 1*HEXDIG
+            # last-chunk     = 1*("0") [ chunk-ext ] CRLF
+
+            var tmp_body = body.split('\n'), do_read = true
+            var chunk_size = to_number('0x'+tmp_body[0].trim())
+            body = '\n'.join(tmp_body[1,])
+            
+            var do_fetch = true
+            while do_fetch {
+              var response = client.receive()
+              body += response
+              if response.ends_with('\r\n\r\n') do_fetch = false
+            }
+
+            # remove the last chunck-size marking.
+            body = body.replace('/0\\s+$/', '')
           }
+        }
 
-          time_taken += time() - start
+        time_taken += time() - start
 
-          # close client
-          client.close()
+        # close client
+        client.close()
 
-
-
-          if self.follow_redirect and headers.contains('Location') {
-            uri = url.parse(headers['Location'])
-            self.referer = headers['Location']
-          } else {
-            should_connect = false
-          }
+        if self.follow_redirect and headers.contains('Location') {
+          uri = url.parse(headers['Location'])
+          self.referer = headers['Location']
         } else {
-          die Exception('connection failed')
+          should_connect = false
         }
       } else {
         should_connect = false
@@ -253,52 +247,6 @@ class HttpClient {
     # return a valid HttpResponse
     return HttpResponse(body, status_code, headers, http_version, 
       time_taken, redirect_count, responder)
-  }
-
-  /**
-   * processes raw http headers into a dictionary and calls the meta_callback
-   * function if given with the argument list [version, status]
-   */
-  _process_header(header, meta_callback) {
-    var result = {}
-
-    if header {
-      # Follow redirect headers...
-      var data = header.trim().split('\r\n')
-
-      iter var i = 0; i < data.length(); i++ {
-        var d = data[i].index_of(':')
-        if d > -1 {
-          var key = data[i][0,d]
-          var value = data[i][d + 1,data[i].length()]
-
-          # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-3.2.6
-          # A string of text is parsed as a single value if it is quoted using
-          # double-quote marks
-          if value.starts_with('"') and value.ends_with('"')
-            value = value[1,-1]
-
-          # handle cookies in header
-          if key == 'Set-Cookie' {
-            if result.contains(key) {
-              result[key].append(value)
-            } else {
-              result[key] = [value]
-            }
-          } else {
-            result.set(key, value)
-          }
-        } else if(data[i].lower().starts_with('http/')){
-          var split = data[i].split(' ')
-          var http_version = split[0].replace('~http/~', '')
-
-          # call back with (version, status code)
-          if meta_callback meta_callback(http_version, to_number(split[1]))
-        }
-      }
-    }
-
-    return result
   }
 
   /**
