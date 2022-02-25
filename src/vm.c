@@ -82,7 +82,7 @@ bool propagate_exception(b_vm *vm) {
         frame->ip = &function->blob.code[handler.address];
         return true;
       } else if (handler.finally_address != 0) {
-        push(vm, TRUE_VAL); // continue propagating once the finally block completes
+        push(vm, TRUE_VAL); // continue propagating once the 'finally' block completes
         frame->ip = &function->blob.code[handler.finally_address];
         return true;
       }
