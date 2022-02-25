@@ -183,6 +183,8 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_CHOICE:
     case OP_EMPTY:
     case OP_IMPORT_ALL_NATIVE:
+    case OP_IMPORT_ALL:
+    case OP_PUBLISH_TRY:
       return 0;
 
     case OP_CALL:
@@ -217,6 +219,7 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_METHOD:
     case OP_EJECT_IMPORT:
     case OP_EJECT_NATIVE_IMPORT:
+    case OP_SELECT_IMPORT:
       return 2;
 
     case OP_INVOKE:
@@ -236,8 +239,8 @@ static int get_code_args_count(const uint8_t *bytecode,
       return 2 + (fn->up_value_count * 3);
     }
 
-    default:
-      return 0;
+//    default:
+//      return 0;
   }
   return 0;
 }
@@ -1358,7 +1361,7 @@ b_parse_rule parse_rules[] = {
     [UNDEFINED_TOKEN] = {NULL, NULL, PREC_NONE},
 };
 
-static void _parse_precedence(b_parser *p, b_precedence precedence) {
+static void do_parse_precedence(b_parser *p, b_precedence precedence) {
   b_parse_prefix_fn prefix_rule = get_rule(p->previous.type)->prefix;
 
   if (prefix_rule == NULL) {
@@ -1393,7 +1396,7 @@ static void parse_precedence(b_parser *p, b_precedence precedence) {
 
   advance(p);
 
-  _parse_precedence(p, precedence);
+  do_parse_precedence(p, precedence);
 }
 
 static void parse_precedence_no_advance(b_parser *p, b_precedence precedence) {
@@ -1405,7 +1408,7 @@ static void parse_precedence_no_advance(b_parser *p, b_precedence precedence) {
   if (is_at_end(p->scanner) && p->vm->is_repl)
     return;
 
-  _parse_precedence(p, precedence);
+  do_parse_precedence(p, precedence);
 }
 
 static b_parse_rule *get_rule(b_tkn_type type) { return &parse_rules[type]; }
@@ -1810,7 +1813,7 @@ static void for_statement(b_parser *p) {
 
   // add the iterator to the local scope
   int iterator_slot = add_local(p, iterator_token) - 1;
-  define_variable(p, iterator_slot);
+  define_variable(p, 0);
 
   // Create the key local variable.
   emit_byte(p, OP_NIL);
@@ -1820,7 +1823,7 @@ static void for_statement(b_parser *p) {
   // create the local value slot
   emit_byte(p, OP_NIL);
   int value_slot = add_local(p, value_token) - 1;
-  define_variable(p, value_slot);
+  define_variable(p, 0);
 
   int surrounding_loop_start = p->innermost_loop_start;
   int surrounding_scope_depth = p->innermost_loop_scope_depth;
@@ -2058,7 +2061,7 @@ static void import_statement(b_parser *p) {
     memcpy(name, p->previous.start, p->previous.length);
 
     // handle native modules
-    if (part_count == 0 && name[0] == '_' && !is_relative) {
+    if (part_count == 0 && name[0] == '_') {
       int module = make_constant(p, OBJ_VAL(copy_string(p->vm, name, (int) strlen(name))));
       emit_byte_and_short(p, OP_NATIVE_MODULE, module);
 
@@ -2130,10 +2133,7 @@ static void import_statement(b_parser *p) {
   b_blob blob;
   init_blob(&blob);
   b_obj_module *module = new_module(p->vm, module_name, module_path);
-
-  push(p->vm, OBJ_VAL(module));
   b_obj_func *function = compile(p->vm, module, source, &blob);
-  pop(p->vm);
 
   if (function == NULL) {
     error(p, "failed to import %s", module_name);
@@ -2196,12 +2196,14 @@ static void try_statement(b_parser *p) {
 
     if (match(p, IDENTIFIER_TOKEN)) {
       int var = add_local(p, p->previous) - 1;
-      define_variable(p, var);
+      mark_initialized(p);
       emit_byte_and_short(p, OP_SET_LOCAL, var);
-//      emit_byte(p, OP_POP);
+      emit_byte(p, OP_POP);
     }
 
     emit_byte(p, OP_POP_TRY);
+
+    ignore_whitespace(p);
     statement(p);
 
     end_scope(p);
@@ -2218,6 +2220,7 @@ static void try_statement(b_parser *p) {
     emit_byte(p, OP_FALSE);
     finally = current_blob(p)->count;
 
+    ignore_whitespace(p);
     statement(p);
 
     int continue_execution_address = emit_jump(p, OP_JUMP_IF_FALSE);
