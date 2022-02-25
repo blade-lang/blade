@@ -102,6 +102,7 @@ class HttpClient {
       if resolved_host {
         var host = resolved_host.ip
         var port = uri.port
+        var is_secure = uri.scheme == 'https'
 
         # construct message
         var message = '${method} ${uri.path}'
@@ -190,11 +191,13 @@ class HttpClient {
             # occur when a connection is closed prematurely or when decoding a
             # supposedly chunked transfer coding fails, MUST record the message as
             # incomplete.
-            var data = body
-            while body.length() < length and data {
-              data = client.receive()
-              # append the new data in the stream
-              body += data
+            if length > 0 {
+              var data = body
+              while body.length() < length and data {
+                data = client.receive()
+                # append the new data in the stream
+                body += data
+              }
             }
           } else if headers.contains('Transfer-Encoding') and headers['Transfer-Encoding'].trim() == 'chunked'  {
             # gracefully handle chuncked data transfer
@@ -215,11 +218,10 @@ class HttpClient {
             var chunk_size = to_number('0x'+tmp_body[0].trim())
             body = '\n'.join(tmp_body[1,])
             
-            var do_fetch = true
-            while do_fetch {
+            while do_read {
               var response = client.receive()
               body += response
-              if response.ends_with('\r\n\r\n') do_fetch = false
+              if response.ends_with('\r\n\r\n') do_read = false
             }
 
             # remove the last chunck-size marking.
