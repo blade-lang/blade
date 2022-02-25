@@ -14,11 +14,11 @@ import _reflect
  * returns true if instance has the property name or false if not
  * @return bool
  */
-def has_prop(instance, name) {
-  if !is_instance(instance) or !is_string(name)
+def has_prop(object, name) {
+  if !is_instance(object) or !is_string(name)
     die Exception('arg1 must be instance and arg2 must be string')
 
-  return _reflect.hasprop(instance, name)
+  return _reflect.hasprop(object, name)
 }
 
 /**
@@ -29,11 +29,11 @@ def has_prop(instance, name) {
  * name
  * @return any
  */
-def get_prop(instance, name) {
-  if !is_instance(instance) or !is_string(name)
+def get_prop(object, name) {
+  if !is_instance(object) or !is_string(name)
     die Exception('arg1 must be instance and arg2 must be string')
 
-  return _reflect.getprop(instance, name)
+  return _reflect.getprop(object, name)
 }
 
 /**
@@ -45,11 +45,11 @@ def get_prop(instance, name) {
  * @return bool: true if a new property was set, false if a property was
  * updated
  */
-def set_prop(instance, name, value) {
-  if !is_instance(instance) or !is_string(name)
+def set_prop(object, name, value) {
+  if !is_instance(object) or !is_string(name)
     die Exception('arg1 must be instance and arg2 must be string')
 
-  return _reflect.setprop(instance, name, value)
+  return _reflect.setprop(object, name, value)
 }
 
 /**
@@ -58,11 +58,11 @@ def set_prop(instance, name, value) {
  * deletes the named property from the instance
  * @return bool
  */
-def del_prop(instance, name) {
-  if !is_instance(instance) or !is_string(name)
+def del_prop(object, name) {
+  if !is_instance(object) or !is_string(name)
     die Exception('arg1 must be instance and arg2 must be string')
 
-  return _reflect.delprop(instance, name)
+  return _reflect.delprop(object, name)
 }
 
 /**
@@ -72,11 +72,11 @@ def del_prop(instance, name) {
  * false if not.
  * @return bool
  */
-def has_method(instance, name) {
-  if !is_instance(instance) or !is_string(name)
+def has_method(object, name) {
+  if !is_instance(object) or !is_string(name)
     die Exception('arg1 must be instance and arg2 must be string')
 
-  return _reflect.hasmethod(instance, name)
+  return _reflect.hasmethod(object, name)
 }
 
 /**
@@ -86,11 +86,11 @@ def has_method(instance, name) {
  * false if not.
  * @return bool
  */
-def has_decorator(instance, name) {
-  if !is_instance(instance) or !is_string(name)
+def has_decorator(object, name) {
+  if !is_instance(object) or !is_string(name)
     die Exception('arg1 must be instance and arg2 must be string')
 
-  return _reflect.hasmethod(instance, '@${name}')
+  return _reflect.hasmethod(object, '@${name}')
 }
 
 /**
@@ -101,11 +101,11 @@ def has_decorator(instance, name) {
  * a matching name.
  * @return function
  */
-def get_method(instance, name) {
-  if !is_instance(instance) or !is_string(name)
+def get_method(object, name) {
+  if !is_instance(object) or !is_string(name)
     die Exception('arg1 must be instance and arg2 must be string')
 
-  return _reflect.getmethod(instance, name)
+  return _reflect.getmethod(object, name)
 }
 
 /**
@@ -116,14 +116,14 @@ def get_method(instance, name) {
  * @note the name of a decorator excludes the `@` character.
  * @return function
  */
-def get_decorator(instance, name) {
-  if !is_instance(instance) or !is_string(name)
+def get_decorator(object, name) {
+  if !is_instance(object) or !is_string(name)
     die Exception('arg1 must be instance and arg2 must be string')
 
-  if _reflect.hasmethod(instance, '@${name}') {
-    return _reflect.getboundmethod(instance, '@${name}')
+  if _reflect.hasmethod(object, '@${name}') {
+    return _reflect.getboundmethod(object, '@${name}')
   } else {
-    die Exception("class ${typeof(instance)} does not implement decorator '${name}'")
+    die Exception("class ${typeof(object)} does not implement decorator '${name}'")
   }
 }
 
@@ -136,9 +136,22 @@ def get_decorator(instance, name) {
  * the function.
  * @return function
  */
-def bind_method(instance, method) {
-  if !is_instance(instance) or !is_string(method)
+def bind_method(object, method) {
+  if !is_instance(object) or !is_string(method)
     die Exception('arg1 must be instance and arg2 must be string')
 
-  return _reflect.bindmethod(instance, method)
+  return _reflect.bindmethod(object, method)
+}
+
+/**
+ * get_type(object: instance)
+ * 
+ * returns the type of an instance as string
+ * @return string
+ */
+def get_type(object) {
+  if !is_instance(object)
+    die Exception('instance expected')
+
+  return _reflect.gettype(object)
 }
