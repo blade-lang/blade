@@ -5,6 +5,7 @@ import socket
 import .response { HttpResponse }
 import .util
 import ._process
+import .exception { HttpException }
 
 /**
  * Handles http requests.
@@ -146,97 +147,100 @@ class HttpClient {
         var start = time()
 
         # connect to the url host on the specified port and send the request message
-        client.connect(host, port ? port : (uri.scheme == 'https' ? 443 : 80), self.connect_timeout)
-        client.send(message)
+        if client.connect(host, port ? port : (uri.scheme == 'https' ? 443 : 80), self.connect_timeout) {
+          client.send(message)
 
-        # receive the response...
-        var response_data = client.receive() or ''
+          # receive the response...
+          var response_data = client.receive() or ''
 
-        # separate the headers and the body
-        var body_starts = response_data.index_of('\r\n\r\n')
+          # separate the headers and the body
+          var body_starts = response_data.index_of('\r\n\r\n')
 
-        if body_starts {
-          headers = response_data[0,body_starts].trim()
-          body = response_data[body_starts + 2, response_data.length()].trim()
-        }
-
-        headers = _process.process_header(headers, |version, status|{
-          http_version = version
-          status_code  = status
-        })
-
-        # According to https://datatracker.ietf.org/doc/html/rfc7230#section-3.3
-        # 
-        # Responses to the HEAD request method (Section 4.3.2
-        # of [RFC7231]) never include a message body because the associated
-        # response header fields (e.g., Transfer-Encoding, Content-Length,
-        # etc.), if present, indicate only what their values would have been if
-        # the request method had been GET
-        if method.upper() != 'HEAD' {
-
-          # gracefully handle responses being sent in multiple packets
-          # if the request header contains the Content-Length,
-          # get that length and keep reading until we have read the total
-          # length of the response.
-          if headers.contains('Content-Length') {
-            var length = to_number(headers['Content-Length']) - 2
-
-            # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-3.4
-            # A client that receives an incomplete response message, which can
-            # occur when a connection is closed prematurely or when decoding a
-            # supposedly chunked transfer coding fails, MUST record the message as
-            # incomplete.
-            var data = body
-            while body.length() < length and data {
-              data = client.receive()
-              # append the new data in the stream
-              body += data
-            }
-          } else if headers.contains('Transfer-Encoding') and headers['Transfer-Encoding'].trim() == 'chunked'  {
-            # gracefully handle chuncked data transfer
-            # 
-            # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-4.1
-            # 
-            # chunked-body   = *chunk
-            #           last-chunk
-            #           trailer-part
-            #           CRLF
-            # 
-            # chunk          = chunk-size [ chunk-ext ] CRLF
-            #                   chunk-data CRLF
-            # chunk-size     = 1*HEXDIG
-            # last-chunk     = 1*("0") [ chunk-ext ] CRLF
-
-            var tmp_body = body.split('\n'), do_read = true
-            var chunk_size = to_number('0x'+tmp_body[0].trim())
-            body = '\n'.join(tmp_body[1,])
-            
-            var do_fetch = true
-            while do_fetch {
-              var response = client.receive()
-              body += response
-              if response.ends_with('\r\n\r\n') do_fetch = false
-            }
-
-            # remove the last chunck-size marking.
-            body = body.replace('/0\\s+$/', '')
+          if body_starts {
+            headers = response_data[0,body_starts].trim()
+            body = response_data[body_starts + 2, response_data.length()].trim()
           }
-        }
 
-        time_taken += time() - start
+          headers = _process.process_header(headers, |version, status|{
+            http_version = version
+            status_code  = status
+          })
 
-        # close client
-        client.close()
+          # According to https://datatracker.ietf.org/doc/html/rfc7230#section-3.3
+          # 
+          # Responses to the HEAD request method (Section 4.3.2
+          # of [RFC7231]) never include a message body because the associated
+          # response header fields (e.g., Transfer-Encoding, Content-Length,
+          # etc.), if present, indicate only what their values would have been if
+          # the request method had been GET
+          if method.upper() != 'HEAD' {
 
-        if self.follow_redirect and headers.contains('Location') {
-          uri = url.parse(headers['Location'])
-          self.referer = headers['Location']
+            # gracefully handle responses being sent in multiple packets
+            # if the request header contains the Content-Length,
+            # get that length and keep reading until we have read the total
+            # length of the response.
+            if headers.contains('Content-Length') {
+              var length = to_number(headers['Content-Length']) - 2
+
+              # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-3.4
+              # A client that receives an incomplete response message, which can
+              # occur when a connection is closed prematurely or when decoding a
+              # supposedly chunked transfer coding fails, MUST record the message as
+              # incomplete.
+              var data = body
+              while body.length() < length and data {
+                data = client.receive()
+                # append the new data in the stream
+                body += data
+              }
+            } else if headers.contains('Transfer-Encoding') and headers['Transfer-Encoding'].trim() == 'chunked'  {
+              # gracefully handle chuncked data transfer
+              # 
+              # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-4.1
+              # 
+              # chunked-body   = *chunk
+              #           last-chunk
+              #           trailer-part
+              #           CRLF
+              # 
+              # chunk          = chunk-size [ chunk-ext ] CRLF
+              #                   chunk-data CRLF
+              # chunk-size     = 1*HEXDIG
+              # last-chunk     = 1*("0") [ chunk-ext ] CRLF
+
+              var tmp_body = body.split('\n')
+              var chunk_size = to_number('0x'+tmp_body[0].trim())
+              body = '\n'.join(tmp_body[1,])
+              
+              while true {
+                var response = client.receive()
+                body += response
+                if response.ends_with('\r\n\r\n')
+                  break
+              }
+
+              # remove the last chunck-size marking.
+              body = body.replace('/0\\s+$/', '')
+            }
+          }
+
+          time_taken += time() - start
+
+          # close client
+          client.close()
+
+          if self.follow_redirect and headers.contains('Location') {
+            uri = url.parse(headers['Location'])
+            self.referer = headers['Location']
+          } else {
+            should_connect = false
+          }
         } else {
-          should_connect = false
+          die HttpException('could not connect')
         }
       } else {
         should_connect = false
-        die Exception('could not resolve ip address')
+        die HttpException('could not resolve ip address')
       }
     }
 

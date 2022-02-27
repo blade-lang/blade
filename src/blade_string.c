@@ -119,7 +119,8 @@ char *remove_regex_delimiter(b_vm *vm, b_obj_string *string) {
 
 DECLARE_STRING_METHOD(length) {
   ENFORCE_ARG_COUNT(length, 0);
-  RETURN_NUMBER(AS_STRING(METHOD_OBJECT)->utf8_length);
+  b_obj_string* string = AS_STRING(METHOD_OBJECT);
+  RETURN_NUMBER(string->is_ascii ? string->length : string->utf8_length);
 }
 
 DECLARE_STRING_METHOD(upper) {
@@ -499,6 +500,13 @@ DECLARE_STRING_METHOD(count) {
 DECLARE_STRING_METHOD(to_number) {
   ENFORCE_ARG_COUNT(to_number, 0);
   RETURN_NUMBER(strtod(AS_C_STRING(METHOD_OBJECT), NULL));
+}
+
+DECLARE_STRING_METHOD(ascii) {
+  ENFORCE_ARG_COUNT(ascii, 0);
+  b_obj_string *string = AS_STRING(METHOD_OBJECT);
+  string->is_ascii = true;
+  RETURN_OBJ(string);
 }
 
 DECLARE_STRING_METHOD(to_list) {

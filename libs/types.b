@@ -65,7 +65,7 @@ def int(value) {
  * returns true if the value is a boolean or false otherwise
  * @return bool
  */
-def bool() {
+def bool(value) {
   return is_bool(value)
 }
 
@@ -156,7 +156,7 @@ def function(value) {
  * returns true if the value is a class or false otherwise
  * @return bool
  */
-def is_a_class() {
+def is_a_class(value) {
   return is_class(value)
 }
 
@@ -176,7 +176,7 @@ def file(value) {
  * returns true if the value is an iterable or false otherwise
  * @return bool
  */
-def iterable() {
+def iterable(value) {
   return is_iterable(value)
 }
 
@@ -186,7 +186,7 @@ def iterable() {
  * returns true if the value is a callable function or class and false otherwise
  * @return bool
  */
-def callable() {
+def callable(value) {
   return is_callable(value)
 }
 

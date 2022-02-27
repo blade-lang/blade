@@ -114,14 +114,14 @@ var _months_in_year_short = [
 # the short name of days in a week
 # the nil is meant for proper indexing
 var _weekdays_short = [
-  nil,
+  'Sun',
   'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'
 ]
 
 # the long name of days in a week
 # the nil is meant for proper indexing
 var _weekdays_long = [
-  nil,
+  'Sunday',
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
 ]
 
@@ -415,9 +415,9 @@ class Date {
    *   g         | 12 hour format of an hour without leading zeros           | 1 - 12
    *   G         | 24 hour format of an hour without leading zeros           | 1 - 24
    *   i         | minutes with leading zero                                 | 00 - 59
-   *   s         | seconds with leading zero                                  | 00 - 59
-   *   u         | microseconds                                               | e.g. 987654
-   *   v         | milliseconds                                               | e.g. 987
+   *   s         | seconds with leading zero                                 | 00 - 59
+   *   u         | microseconds                                              | e.g. 987654
+   *   v         | milliseconds                                              | e.g. 987
    *   e         | timezone identifier                                       | e.g. GMT, UTC, WAT
    *   I         | whether or not the date is in daylight saving time        | 1 for true, 0 otherwise
    *   O         | difference to GMT without colon between hours and minutes | e.g. +0100

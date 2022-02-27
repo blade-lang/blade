@@ -327,6 +327,29 @@ DECLARE_MODULE_METHOD(socket__recv) {
   RETURN_NIL;
 }
 
+DECLARE_MODULE_METHOD(socket__read) {
+  ENFORCE_ARG_COUNT(_read, 3);
+  ENFORCE_ARG_TYPE(_read, 0, IS_NUMBER); // the socket id
+  ENFORCE_ARG_TYPE(_read, 1, IS_NUMBER); // length to read
+  ENFORCE_ARG_TYPE(_read, 2, IS_NUMBER); // flags
+
+  int sock = AS_NUMBER(args[0]);
+  int length = AS_NUMBER(args[1]);
+  int flags = AS_NUMBER(args[2]);
+  int total_length = 0;
+
+  char *response = (char *) ALLOCATE(char, (size_t) length + 1);
+
+  char buf[4096];
+  ssize_t bytes_received;
+
+  while((bytes_received = recv(sock, buf, 4096, flags)) > 0 && total_length < length){
+    memcpy(response + total_length, buf, bytes_received);
+    total_length += (int)bytes_received;
+  }
+  RETURN_T_STRING(response, length);
+}
+
 DECLARE_MODULE_METHOD(socket__setsockopt) {
   ENFORCE_ARG_COUNT(_setsockopt, 3);
   ENFORCE_ARG_TYPE(_setsockopt, 0, IS_NUMBER); // the socket id
@@ -1207,6 +1230,7 @@ CREATE_MODULE_LOADER(socket) {
       {"_connect",     false, GET_MODULE_METHOD(socket__connect)},
       {"_send",        false, GET_MODULE_METHOD(socket__send)},
       {"_recv",        false, GET_MODULE_METHOD(socket__recv)},
+      {"_read",        false, GET_MODULE_METHOD(socket__read)},
       {"_setsockopt",  false, GET_MODULE_METHOD(socket__setsockopt)},
       {"_getsockopt",  false, GET_MODULE_METHOD(socket__getsockopt)},
       {"_bind",        false, GET_MODULE_METHOD(socket__bind)},
