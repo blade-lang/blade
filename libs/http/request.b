@@ -54,8 +54,13 @@ class HttpRequest {
    */
   var body = {}
 
+  /**
+   * A dictionary containing the data of all files uploaded in the request.
+   */
+  var files = {}
+
   # Private fields.
-  var _status = OK
+  var _body_type = 'application/x-www-form-urlencoded'
 
   /**
    * The HTTP version used for the request.
@@ -129,17 +134,92 @@ class HttpRequest {
   }
 
   _decode_multipart(body, boundary) {
-    for bound in body.split(boundary) {
+
+    var boundaries = body.split('--${boundary}')
+    var contents = []
+
+    for bound in boundaries {
+      bound = bound.ltrim('\r').ltrim('\n')
+
       # We don't want to treat empty bounds.
       var content_start = bound.index_of('\r\n\r\n')
       if content_start != -1 {
         var content_header = bound[,content_start],
             content_body = bound.ascii()[content_start + 4,]
             
-        
+        var content_headers = _process.process_header(content_header),
+            dispositions = content_headers.get('Content-Disposition', nil)
+
+        if dispositions {
+
+          # Expand the content-disposition header content to get the correct mapping.
+          # disposition := "Content-Disposition" ":"
+          #              disposition-type
+          #              *(";" disposition-parm)
+
+          # disposition-type := "inline"
+          #                   / "attachment"
+          #                   / extension-token
+          #                   ; values are not case-sensitive
+
+          # disposition-parm := filename-parm / parameter
+
+          # filename-parm := "filename" "=" value;
+
+          dispositions = dispositions.split(';')
+
+          # The first directive is always form-data.
+          if dispositions.length() < 2 or dispositions[0] != 'form-data' 
+            return false
+
+          var disposition = {}
+
+          iter var i = 1; i < dispositions.length(); i++ {
+
+            # Directives are case-insensitive and have arguments that use 
+            # quoted-string syntax after the '=' sign
+            var d = dispositions[i].split('=')
+            var dname = d[0].trim().lower()
+
+            if d.length() == 2 {
+
+              var dvalue = d[1].trim()
+              if dvalue.starts_with('"') and dvalue.ends_with('"')
+                dvalue = dvalue[1,-1]
+
+              disposition[dname] = dvalue
+            } else {
+              disposition.set(dname, nil)
+            }
+          }
+
+          # and the header must also include a name parameter to identify the 
+          # relevant field. 
+          if !disposition.contains('name') 
+            return false
+
+          var content_type = content_headers.get('Content-Type', nil),
+              name = disposition.name,
+              value = content_body.rtrim('\n').rtrim('\r')
+            
+          if content_type {
+
+            # We are dealing with an uploaded file.
+            self.files[name] = {
+              mime: content_type.trim(),
+              content: value.ascii(),
+            }
+
+            self.files[name].extend(disposition)
+          } else {
+            self.body[name] = value
+          }
+          contents.append(disposition)
+        }
       }
     }
-    return body
+
+    return true
   }
 
   _decode_body(body) {
@@ -151,7 +231,10 @@ class HttpRequest {
       content_type = content_type.split(';')
     }
 
-    using content_type[0].trim().lower() {
+    var type = content_type[0].trim().lower()
+    self._body_type = type
+
+    using type {
       when 'application/x-www-form-urlencoded' {
         self.body = self._get_url_encoded_parts(body)
       }
@@ -165,7 +248,8 @@ class HttpRequest {
         if bound_spec.length() != 2 or bound_spec[0].lower() != 'boundary' 
           return false
 
-        self.body = self._decode_multipart(body.trim(), bound_spec[1])
+        if !self._decode_multipart(body.trim(), bound_spec[1])
+          return false
       }
       default {
         self.body = body
