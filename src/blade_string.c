@@ -410,22 +410,22 @@ DECLARE_STRING_METHOD(split) {
 
   // main work here...
   if (delimeter->length > 0) {
-    /* char *token = (char*)malloc(sizeof(char));
-    char *string = strdup(object->chars);
-
-    while((token = strtok_r(string, delimeter->chars, &string))) {
-      if (token != NULL) {
-        if (strlen(token) != 0)
-          write_list(vm, list, STRING_VAL(token));
+    int start = 0;
+    for(int i = 0; i <= object->length; i++) {
+      // match found.
+      if(memcmp(object->chars + i, delimeter->chars, delimeter->length) == 0 || i == object->length) {
+        write_list(vm, list, GC_L_STRING(object->chars + start, i - start));
+        i += delimeter->length - 1;
+        start = i + 1;
       }
     }
-    free(string); */
 
-    char *token, *str, *tofree;
-    tofree = str = strdup(object->chars); // We own str's memory now.
-    while ((token = strsep(&str, delimeter->chars)))
+    /*char *token, *str, *to_free;
+    to_free = str = strdup(object->chars); // We own str memory now.
+    while ((token = strsep(&str, delimeter->chars))) {
       write_list(vm, list, GC_STRING(token));
-    free(tofree);
+    }
+    free(to_free);*/
   } else {
     for (int i = 0; i < object->utf8_length; i++) {
 
