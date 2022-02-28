@@ -134,18 +134,30 @@ class HttpServer {
   _process_received(message, client) {
     var request = HttpRequest(),
         response = HttpResponse()
-    request.parse(message, client)
+    if !request.parse(message, client)
+      response.status = status.BAD_REQUEST
 
-    # call the received listeners on the request object.
-    iters.each(self._received_listeners, | fn, _ | {
-      fn(request, response)
-    })
+    var feedback = 'HTTP/${response.version} ${response.status} ${status.map.get(response.status, 'UNKNOWN')}\r\n'
+
+    # If we have an error in the request message itself, we don't even want to 
+    # forward processing to callers. 
+    # This is a server level error and should terminate immediately.
+    if response.status == status.OK {
+
+      # call the received listeners on the request object.
+      iters.each(self._received_listeners, | fn, _ | {
+        fn(request, response)
+      })
+
+      if response.body {
+        feedback += 'Content-Length: ${response.body.length()}\r\n'
+      }
+    }
+
+    feedback += self._get_response_header_string(response.headers)
+    feedback += '\r\n${response.body}' 
     
-    client.send('HTTP/${response.version} ${response.status} ${status.map.get(response.status, 'UNKNOWN')}\r\n' +
-    self._get_response_header_string(response.headers) +
-    'Content-Length: ${response.body.length()}\r\n' +
-    '\r\n' +
-    response.body)
+    client.send(feedback)
   }
 
   /**

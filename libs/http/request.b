@@ -2,6 +2,7 @@
 
 import ._process
 import .exception { HttpException }
+import .status { * }
 import url
 import socket { Socket }
 
@@ -53,6 +54,9 @@ class HttpRequest {
    */
   var body = {}
 
+  # Private fields.
+  var _status = OK
+
   /**
    * The HTTP version used for the request.
    */
@@ -102,23 +106,40 @@ class HttpRequest {
   _decode_line1(line1) {
     var parts = line1.split(' ')
 
-    if parts.length() != 3
-      die HttpException('invalid request')
+    if parts.length() == 3 {
+      self.method = parts[0]
+      self.request_uri = parts[1]
+      self.http_version = parts[2].replace('~http\\/~', '')
+  
+      var uri_parts = parts[1].split('?')
+  
+      # The request path must exist before both a query and an hash.
+      self.path = uri_parts[0].split('#')[0]
+  
+      if uri_parts.length() > 1 {
+        # A query exists and it must do so before any hash.
+        var query = uri_parts[1].split('#')[0]
+        self.queries = self._get_url_encoded_parts(query)
+      }
 
-    self.method = parts[0]
-    self.request_uri = parts[1]
-    self.http_version = parts[2].replace('~http\\/~', '')
-
-    var uri_parts = parts[1].split('?')
-
-    # The request path must exist before both a query and an hash.
-    self.path = uri_parts[0].split('#')[0]
-
-    if uri_parts.length() > 1 {
-      # A query exists and it must do so before any hash.
-      var query = uri_parts[1].split('#')[0]
-      self.queries = self._get_url_encoded_parts(query)
+      return true
     }
+
+    return false
+  }
+
+  _decode_multipart(body, boundary) {
+    for bound in body.split(boundary) {
+      # We don't want to treat empty bounds.
+      var content_start = bound.index_of('\r\n\r\n')
+      if content_start != -1 {
+        var content_header = bound[,content_start],
+            content_body = bound.ascii()[content_start + 4,]
+            
+        
+      }
+    }
+    return body
   }
 
   _decode_body(body) {
@@ -127,26 +148,38 @@ class HttpRequest {
     # specifying boundaries right in the content-type header.
     var content_type = self.headers.get('Content-Type', nil)
     if content_type {
-      content_type = content_type.split(';')[0].trim().lower()
+      content_type = content_type.split(';')
     }
 
-    using content_type {
+    using content_type[0].trim().lower() {
       when 'application/x-www-form-urlencoded' {
         self.body = self._get_url_encoded_parts(body)
       }
       when 'multipart/form-data' {
-        # @TODO: Parse multipart/form-data body.
+        # Content type should declare a boundary but nothing else.
+        if content_type.length() != 2 return false
+
+        var bound_spec = content_type[1].trim().split('=')
+
+        # Make sure we have a valid boundary=xyz label.
+        if bound_spec.length() != 2 or bound_spec[0].lower() != 'boundary' 
+          return false
+
+        self.body = self._decode_multipart(body.trim(), bound_spec[1])
       }
       default {
         self.body = body
       }
     }
+
+    return true
   }
 
   /**
    * parse(raw_data: string [, client: Socket])
    * 
    * Parses a raw HTTP request string into a correct HttpRequest
+   * @return boolean
    */
   parse(raw_data, client) {
 
@@ -166,12 +199,12 @@ class HttpRequest {
       # Remember that body_start returns the position of the first \r in the '\r\n\r\n '
       # sequence.
       # +3 to remove the '\r\n\r\n' which is basically 4 characters.
-      body = raw_data.ascii()[body_starts + 4, raw_data.length()]
+      body = raw_data.ascii()[body_starts + 4,]
     }
 
     if headers {
       var line1 = headers[0]
-      self._decode_line1(line1)
+      if !self._decode_line1(line1) return false
 
       self.headers = _process.process_header('\r\n'.join(headers[1,]))
 
@@ -193,13 +226,10 @@ class HttpRequest {
         }
       }
 
-      # Remove the last '\r\n\r\n' sequence from the body.
-      # body = body.to_bytes()[,-4].to_string()
-
-      self._decode_body(body)
-    } else {
-      die HttpException('Invalid request')
+      return self._decode_body(body)
     }
+
+    return false
   }
 
   @to_string() {
