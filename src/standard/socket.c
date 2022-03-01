@@ -313,10 +313,9 @@ DECLARE_MODULE_METHOD(socket__recv) {
       if (length != -1 && length < content_length)
         content_length = length;
 
-      char *response = (char *) ALLOCATE(char, (size_t) content_length + 1);
+      char *response = ALLOCATE(char, (size_t) content_length + 1);
       ssize_t total_length = recv(sock, response, content_length, flags);
       response[total_length] = '\0';
-
       RETURN_T_STRING(response, total_length);
     }
   } else if (status == 0) {
@@ -336,18 +335,18 @@ DECLARE_MODULE_METHOD(socket__read) {
   int sock = AS_NUMBER(args[0]);
   int length = AS_NUMBER(args[1]);
   int flags = AS_NUMBER(args[2]);
-  int total_length = 0;
+  ssize_t total_length = 0;
 
-  char *response = (char *) ALLOCATE(char, (size_t) length + 1);
+  char *response = ALLOCATE(char, (size_t) length + 1);
 
   char buf[4096];
   ssize_t bytes_received;
 
-  while((bytes_received = recv(sock, buf, 4096, flags)) > 0 && total_length < length){
+  while((bytes_received = recv(sock, buf, 4096, flags)) > 0 && total_length < (ssize_t)length) {
     memcpy(response + total_length, buf, bytes_received);
-    total_length += (int)bytes_received;
+    total_length += bytes_received;
   }
-  RETURN_T_STRING(response, length);
+  RETURN_T_STRING(response, (int)total_length);
 }
 
 DECLARE_MODULE_METHOD(socket__setsockopt) {

@@ -398,7 +398,7 @@ class Socket {
   }
 
   /**
-   * read([length: int [, flags: int]])
+   * read([length: int])
    * 
    * Reads bytes of the given length from the socket. If the length is not given, it default length of 
    * -1 indicating that the total available data on the socket stream will be read. 

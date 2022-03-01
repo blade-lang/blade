@@ -1,10 +1,11 @@
 #!-- part of the http module
 
-import socket as so
-import iters
 import .request { HttpRequest }
 import .response { HttpResponse }
 import .status
+
+import socket as so
+import iters
 
 /**
  * HTTP server
@@ -65,7 +66,7 @@ class HttpServer {
    * on_connect(fn: function)
    * 
    * Adds a function to be called when a new client connects.
-   * @note Function _fn_ must accept at one parameter which will be passed the client socket object.
+   * @note Function _fn_ MUST accept at one parameter which will be passed the client Socket object.
    * @note multiple `on_connect()` may be set on a single instance.
    */
   on_connect(fn) {
@@ -76,7 +77,7 @@ class HttpServer {
    * on_disconnect(fn: function)
    * 
    * Adds a function to be called when a new client disconnects.
-   * @note Function _fn_ must accept at one parameter which will be passed the client information.
+   * @note Function _fn_ MUST accept at one parameter which will be passed the client information.
    * @note multiple `on_disconnect()` may be set on a single instance.
    */
   on_disconnect(fn) {
@@ -88,7 +89,7 @@ class HttpServer {
    * 
    * Adds a function to be called when the server receives a message from a client.
    * 
-   * > Function _fn_ MUST accept TWO parameter. First parameter will accept the HttpRequest 
+   * > Function _fn_ MUST accept TWO parameters. First parameter will accept the HttpRequest 
    * > object and the second will accept the HttpResponse object.
    * 
    * @note multiple `on_receive()` may be set on a single instance.
@@ -98,15 +99,15 @@ class HttpServer {
   }
 
   /**
-   * on_sent(fn: function)
+   * on_reply(fn: function)
    * 
-   * Adds a function to be called when the server sends a message to a client.
+   * Adds a function to be called when the server sends a reply to a client.
    * 
-   * @note Function _fn_ must accept at least one parameter which will be passed the message received as a string.
-   * @note If _fn_ accepts a second parameter, it will be passed the client socket object.
+   * > Function _fn_ MUST accept one parameter which will be passed the HttpResponse object.
+   * 
    * @note multiple `on_sent()` may be set on a single instance.
    */
-  on_sent(fn) {
+  on_reply(fn) {
     self._sent_listeners.append(fn)
   }
 
@@ -115,8 +116,9 @@ class HttpServer {
    * 
    * Adds a function to be called when the server encounters an error with a client.
    * 
-   * @note Function _fn_ must accept at least one parameter which will be passed the Exception object.
-   * @note If _fn_ accepts a second parameter, it will be passed the client socket object.
+   * > Function _fn_ MUST accept at two parameters. The first argument will be passed the 
+   * > Exception object and the second will be passed the client `Socket` object.
+   * 
    * @note multiple `on_error()` may be set on a single instance.
    */
   on_error(fn) {
@@ -158,6 +160,10 @@ class HttpServer {
     feedback += '\r\n${response.body}' 
     
     client.send(feedback)
+    # call the reply listeners.
+    iters.each(self._sent_listeners, | fn | {
+      fn(response)
+    })
   }
 
   /**
@@ -186,18 +192,18 @@ class HttpServer {
         if is_number(self.write_timeout)
           client.set_option(so.SO_SNDTIMEO, self.write_timeout)
 
-        /* try { */
+        try {
           var data = client.receive()
 
           if data {
             self._process_received(data, client)
           }
-        /* } catch Exception e {
+        } catch Exception e {
           # call the error listeners.
           iters.each(self._error_listeners, | fn | {
             fn(e, client)
           })
-        } finally { */
+        } finally {
           var client_info = client.info()
           client.close()
 
@@ -205,7 +211,7 @@ class HttpServer {
           iters.each(self._disconnect_listeners, | fn | {
             fn(client_info)
           })
-        /* } */
+        }
       }
     }
   }

@@ -1,10 +1,14 @@
 #!-- part of the http module
 
 import ._process
+
 import .exception { HttpException }
 import .status { * }
+import .response { HttpResponse }
+
 import url
-import socket { Socket }
+import socket
+import url
 
 class HttpRequest {
 
@@ -269,7 +273,7 @@ class HttpRequest {
 
     if !is_string(raw_data)
       die Exception('raw_data must be string')
-    if !instance_of(client, Socket) 
+    if !instance_of(client, socket.Socket) 
       die Exception('invalid Socket')
 
     self.ip = client.info().address
@@ -314,6 +318,192 @@ class HttpRequest {
     }
 
     return false
+  }
+
+  /**
+   * send(uri: Url, method: string [, data: string | bytes [, options: dict]])
+   * @default follow_redirect: true
+   */
+  send(uri, method, data, options) {
+
+    # arguments validation.
+    if !instance_of(uri, url.Url)
+      die Exception('uri must be an instance of Url')
+    if !is_string(method)
+      die Exception('method must be string')
+    if data != nil and !is_string(data) and !is_byte(data)
+      die Exception('data must be string or bytes')
+    if options != nil and !is_dict(options)
+      die Exception('options must be a dictionary')
+
+    if options == nil options = {}
+
+    var responder = uri.absolute_url(), 
+        headers, body, error, referer
+
+    var should_connect = true, 
+        time_taken = 0, 
+        redirect_count = 0, 
+        http_version = '1.0', 
+        status_code = 0
+
+    var follow_redirect = options.get('follow_redirect', true),
+        connect_timeout = options.get('connect_timeout', 2000),
+        send_timeout = options.get('send_timeout', 2000),
+        receive_timeout = options.get('receive_timeout', 2000)
+
+    while should_connect {
+
+      var resolved_host = socket.get_address_info(uri.host)
+
+      if resolved_host {
+        var host = resolved_host.ip
+        var port = uri.port
+
+        # construct message
+        var message = '${method} ${uri.path}'
+        if uri.query message += '?${uri.query}'
+        if uri.hash message += '#${uri.hash}'
+        message += ' HTTP/1.1\r\n'
+
+        if !self.headers.contains('Host') {
+          message += 'Host: ${uri.host}\r\n'
+        }
+
+        # add custom headers
+        for key, value in self.headers {
+
+          # Make sure to always override user set Content-Length header 
+          # to avoid unexpected behavior.
+          if key != 'Content-Length' {
+            message += '${key}: ${value}\r\n'
+          }
+        }
+
+        if referer and !self.headers.contains('Referer') {
+          message += 'Referer: ${referer}\r\n'
+        }
+
+        if data {
+          # append the correct content length to the message
+          message += 'Content-Length: ${data.length()}\r\n'
+        }
+
+        # append the body
+        message += '\r\n${data}'
+
+        # do real request here...
+        var client = socket.Socket()
+        client.set_option(socket.SO_SNDTIMEO, send_timeout)
+        client.set_option(socket.SO_RCVTIMEO, receive_timeout)
+
+        var start = time()
+
+        # connect to the url host on the specified port and send the request message
+        if client.connect(host, port ? port : (uri.scheme == 'https' ? 443 : 80), connect_timeout) {
+          client.send(message)
+
+          # receive the response...
+          var response_data = client.receive() or ''
+
+          # separate the headers and the body
+          var body_starts = response_data.index_of('\r\n\r\n')
+
+          if body_starts {
+            headers = response_data[0,body_starts].trim()
+            body = response_data[body_starts + 2, response_data.length()].trim()
+          } else {
+            # Clear the headers here. It may currently be a dictionary.
+            headers = ''
+          }
+
+          headers = _process.process_header(headers, |version, status|{
+            http_version = version
+            status_code  = status
+          })
+
+          # According to https://datatracker.ietf.org/doc/html/rfc7230#section-3.3
+          # 
+          # Responses to the HEAD request method (Section 4.3.2
+          # of [RFC7231]) never include a message body because the associated
+          # response header fields (e.g., Transfer-Encoding, Content-Length,
+          # etc.), if present, indicate only what their values would have been if
+          # the request method had been GET
+          if method.upper() != 'HEAD' {
+
+            # gracefully handle responses being sent in multiple packets
+            # if the request header contains the Content-Length,
+            # get that length and keep reading until we have read the total
+            # length of the response.
+            if headers.contains('Content-Length') {
+              var length = to_number(headers['Content-Length']) - 2
+
+              # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-3.4
+              # A client that receives an incomplete response message, which can
+              # occur when a connection is closed prematurely or when decoding a
+              # supposedly chunked transfer coding fails, MUST record the message as
+              # incomplete.
+              var data = body
+              while body.length() < length and data {
+                data = client.receive()
+                # append the new data in the stream
+                body += data
+              }
+              # body += client.read(length - body.ascii().length())
+            } else if headers.contains('Transfer-Encoding') and headers['Transfer-Encoding'].trim() == 'chunked'  {
+              # gracefully handle chuncked data transfer
+              # 
+              # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-4.1
+              # 
+              # chunked-body   = *chunk
+              #           last-chunk
+              #           trailer-part
+              #           CRLF
+              # 
+              # chunk          = chunk-size [ chunk-ext ] CRLF
+              #                   chunk-data CRLF
+              # chunk-size     = 1*HEXDIG
+              # last-chunk     = 1*("0") [ chunk-ext ] CRLF
+
+              var tmp_body = body.split('\n')
+              var chunk_size = to_number('0x'+tmp_body[0].trim())
+              body = '\n'.join(tmp_body[1,])
+              
+              while true and chunk_size > 0 {
+                var response = client.receive()
+                body += response
+                if response.ends_with('\r\n\r\n')
+                  break
+              }
+
+              # remove the last chunck-size marking.
+              body = body.replace('/0\\s+$/', '')
+            }
+          }
+
+          time_taken += time() - start
+
+          # close client
+          client.close()
+
+          if follow_redirect and headers.contains('Location') {
+            uri = url.parse(headers['Location'])
+            referer = headers['Location']
+          } else {
+            should_connect = false
+          }
+        } else {
+          die HttpException('could not connect')
+        }
+      } else {
+        should_connect = false
+        die HttpException('could not resolve ip address')
+      }
+    }
+
+    # return a valid HttpResponse
+    return HttpResponse(body, status_code, headers, http_version, 
+      time_taken, redirect_count, responder)
   }
 
   @to_string() {

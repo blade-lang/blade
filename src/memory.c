@@ -23,7 +23,6 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
   if (new_size == 0) {
     free(pointer);
     return NULL;
-    // return malloc(sizeof pointer);
   }
   void *result = realloc(pointer, new_size);
 
@@ -52,16 +51,13 @@ void mark_object(b_vm *vm, b_obj *object) {
 
   if (vm->gray_capacity < vm->gray_count + 1) {
     vm->gray_capacity = GROW_CAPACITY(vm->gray_capacity);
-    b_obj **result =
-        (b_obj **) realloc(vm->gray_stack, sizeof(b_obj *) * vm->gray_capacity);
+    vm->gray_stack = (b_obj **) realloc(vm->gray_stack, sizeof(b_obj *) * vm->gray_capacity);
 
-    if (result == NULL) {
+    if (vm->gray_stack == NULL) {
       fflush(stdout); // flush out anything on stdout first
       fprintf(stderr, "GC encountered an error");
       exit(1);
     }
-
-    vm->gray_stack = result;
   }
   vm->gray_stack[vm->gray_count++] = object;
 }
@@ -176,8 +172,8 @@ void free_object(b_vm *vm, b_obj *object) {
     case OBJ_MODULE: {
       b_obj_module *module = (b_obj_module *) object;
       free_table(vm, &module->values);
-      FREE(char, module->name);
-      FREE(char, module->file);
+//      FREE(char, module->name);
+//      FREE(char, module->file);
       if (module->unloader != NULL && module->imported) {
         ((b_module_loader)module->unloader)(vm);
       }
@@ -283,8 +279,6 @@ void free_object(b_vm *vm, b_obj *object) {
     }
 
     case OBJ_PTR: {
-      b_obj_ptr *ptr = (b_obj_ptr*)object;
-      free(ptr->pointer);
       FREE(b_obj_ptr, object);
       break;
     }
@@ -316,18 +310,6 @@ static void mark_roots(b_vm *vm) {
   mark_table(vm, &vm->methods_range);
 
   mark_object(vm, (b_obj*)vm->exception_class);
-
-  // mark active exception frames.
-//  for(int i = 0; i < vm->frame_count; i++) {
-//    b_call_frame frame = vm->frames[vm->frame_count];
-//    for(int j = 0; j < frame.handlers_count; j++) {
-//      b_exception_frame f = frame.handlers[j];
-//      if(f.klass != NULL && f.address != 0) {
-//        mark_object(vm, (b_obj*)f.klass);
-//      }
-//    }
-//  }
-
   mark_compiler_roots(vm);
 }
 

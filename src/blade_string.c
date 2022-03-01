@@ -125,7 +125,7 @@ DECLARE_STRING_METHOD(length) {
 
 DECLARE_STRING_METHOD(upper) {
   ENFORCE_ARG_COUNT(upper, 0);
-  char *string = (char *) AS_C_STRING(METHOD_OBJECT);
+  char *string = (char *) strdup(AS_C_STRING(METHOD_OBJECT));
   for (char *p = string; *p; p++)
     *p = toupper(*p);
   RETURN_L_STRING(string, AS_STRING(METHOD_OBJECT)->length);
@@ -133,7 +133,7 @@ DECLARE_STRING_METHOD(upper) {
 
 DECLARE_STRING_METHOD(lower) {
   ENFORCE_ARG_COUNT(lower, 0);
-  char *string = (char *) AS_C_STRING(METHOD_OBJECT);
+  char *string = (char *) strdup(AS_C_STRING(METHOD_OBJECT));
   for (char *p = string; *p; p++)
     *p = tolower(*p);
   RETURN_L_STRING(string, AS_STRING(METHOD_OBJECT)->length);
@@ -432,7 +432,7 @@ DECLARE_STRING_METHOD(split) {
       int start = i, end = i + 1;
       utf8slice(object->chars, &start, &end);
 
-      write_list(vm, list, STRING_L_VAL(object->chars + start, (int) (end - start)));
+      write_list(vm, list, GC_L_STRING(object->chars + start, (int) (end - start)));
     }
   }
 
