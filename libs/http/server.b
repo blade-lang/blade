@@ -116,8 +116,8 @@ class HttpServer {
    * 
    * Adds a function to be called when the server encounters an error with a client.
    * 
-   * > Function _fn_ MUST accept at two parameters. The first argument will be passed the 
-   * > Exception object and the second will be passed the client `Socket` object.
+   * > Function _fn_ MUST accept two parameters. The first argument will be passed the 
+   * > `Exception` object and the second will be passed the client `Socket` object.
    * 
    * @note multiple `on_error()` may be set on a single instance.
    */

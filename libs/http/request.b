@@ -230,7 +230,7 @@ class HttpRequest {
 
     # We need to capture multipart/form-data here since it allows 
     # specifying boundaries right in the content-type header.
-    var content_type = self.headers.get('Content-Type', nil)
+    var content_type = self.headers.get('Content-Type', ' ')
     if content_type {
       content_type = content_type.split(';')
     }
@@ -405,7 +405,7 @@ class HttpRequest {
           client.send(message)
 
           # receive the response...
-          var response_data = client.receive()
+          var response_data = client.receive() or ''
 
           # separate the headers and the body
           var body_starts = response_data.index_of('\r\n\r\n')
@@ -413,10 +413,10 @@ class HttpRequest {
           if body_starts {
             headers = response_data[0,body_starts].trim()
             body = response_data[body_starts + 2, response_data.length()].trim()
-          }/*  else {
+          } else {
             # Clear the headers here. It may currently be a dictionary.
             headers = ''
-          } */
+          }
 
           headers = _process.process_header(headers, |version, status|{
             http_version = version
@@ -445,7 +445,7 @@ class HttpRequest {
               # supposedly chunked transfer coding fails, MUST record the message as
               # incomplete.
               var data = body
-              while body.length() < length and data {
+              while body.ascii().length() < length and data {
                 data = client.receive()
                 # append the new data in the stream
                 body += data

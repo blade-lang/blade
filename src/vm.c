@@ -1299,7 +1299,7 @@ static bool concatenate(b_vm *vm) {
     b_obj_string *a = AS_STRING(_a);
 
     int length = a->length + b->length;
-    char *chars = ALLOCATE(char, (size_t) length + 1);
+    char *chars = (char*)calloc(length + 1, sizeof(char));
     memcpy(chars, a->chars, a->length);
     memcpy(chars + a->length, b->chars, b->length);
     chars[length] = '\0';
