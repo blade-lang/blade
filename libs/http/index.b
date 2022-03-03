@@ -8,6 +8,7 @@
 import .response { HttpResponse }
 import .status { * }
 import .client { HttpClient }
+import .server { HttpServer }
 
 # single HttpClient for all requests lifetime
 var _client = HttpClient()
@@ -42,3 +43,7 @@ def put(url, data) {
   return _client.send_request(url, 'PUT', data)
 }
 
+
+def server(port, address) {
+  return HttpServer(port, address)
+}

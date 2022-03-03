@@ -2061,7 +2061,7 @@ static void import_statement(b_parser *p) {
     memcpy(name, p->previous.start, p->previous.length);
 
     // handle native modules
-    if (part_count == 0 && name[0] == '_') {
+    if (part_count == 0 && name[0] == '_' && !is_relative) {
       int module = make_constant(p, OBJ_VAL(copy_string(p->vm, name, (int) strlen(name))));
       emit_byte_and_short(p, OP_NATIVE_MODULE, module);
 
@@ -2303,7 +2303,7 @@ static void break_statement(b_parser *p) {
   consume_statement_end(p);
 
   // discard local variables created in the loop
-  discard_local(p, p->innermost_loop_scope_depth);
+//  discard_local(p, p->innermost_loop_scope_depth);
   emit_jump(p, OP_BREAK_PL);
 }
 
