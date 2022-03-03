@@ -196,6 +196,19 @@ class Url {
 
     return url
   }
+
+  @to_json() {
+    return {
+      scheme: self.scheme,
+      host: self.host,
+      port: self.port,
+      path: self.path,
+      query: self.query,
+      hash: self.hash,
+      username: self.username,
+      password: self.password,
+    }
+  }
 }
 
 
@@ -453,15 +466,6 @@ def parse(url) {
     }
   }
 
-  # # the default public port scheme if not given
-  # if !port {
-  #   using scheme {
-  #     when 'http'   port = 80
-  #     when 'https'  port = 443
-  #     default port = 0
-  #   }
-  # }
-
   # build a new Url instance and return
-  return Url(scheme, host, port, path, hash, query, username, password)
+  return Url(scheme, host, port, path, query, hash, username, password)
 }

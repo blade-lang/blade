@@ -214,6 +214,13 @@ DECLARE_STRING_METHOD(replace);
 DECLARE_STRING_METHOD(to_bytes);
 
 /**
+ * string.ascii()
+ *
+ * Converts the string to ASCII encoding.
+ */
+DECLARE_STRING_METHOD(ascii);
+
+/**
  * string.@iter()
  *
  * implementing the iterable interface

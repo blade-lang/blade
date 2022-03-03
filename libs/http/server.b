@@ -1,6 +1,11 @@
 #!-- part of the http module
 
+import .request { HttpRequest }
+import .response { HttpResponse }
+import .status
+
 import socket as so
+import iters
 
 /**
  * HTTP server
@@ -24,34 +29,12 @@ class HttpServer {
   # status trackers.
   var _is_listening = false
 
-  # event handlers.
-
-  var _connect_listeners = [| client | {
-
-  }]
-
-  var _disconnect_listeners = [| client | {
-
-  }]
-
-  var _received_listeners = [| message, client | {
-    var response = 'It works!'
-    client.send('HTTP/1.1 200 OK\r\n' +
-    'X-Powered-By: Blade\r\n' +
-    'Access-Control-Allow-Origin: *\r\n' +
-    'Content-Type: application/json; charset=utf-8\r\n' +
-    'Content-Length: ${response.length()}\r\n' +
-    'ETag: W/"20-kpKo63uv4n6XEGgQeIwK7WAi6Ls"\r\n' +
-    'Date: Sun, 18 Apr 2021 03:52:16 GMT\r\n' +
-    '\r\n' +
-    response)
-  }]
-
+  # event handler lists.
+  var _connect_listeners = []
+  var _disconnect_listeners = []
+  var _received_listeners = []
   var _sent_listeners = []
-
-  var _error_listeners = [| e, client | {
-    echo 'Error occured: ${e.message}'
-  }]
+  var _error_listeners = []
 
   /**
    * HttpServer(port: int [, address: string])
@@ -83,7 +66,7 @@ class HttpServer {
    * on_connect(fn: function)
    * 
    * Adds a function to be called when a new client connects.
-   * @note Function _fn_ must accept at one parameter which will be passed the client socket object.
+   * @note Function _fn_ MUST accept at one parameter which will be passed the client Socket object.
    * @note multiple `on_connect()` may be set on a single instance.
    */
   on_connect(fn) {
@@ -94,7 +77,7 @@ class HttpServer {
    * on_disconnect(fn: function)
    * 
    * Adds a function to be called when a new client disconnects.
-   * @note Function _fn_ must accept at one parameter which will be passed the client information.
+   * @note Function _fn_ MUST accept at one parameter which will be passed the client information.
    * @note multiple `on_disconnect()` may be set on a single instance.
    */
   on_disconnect(fn) {
@@ -106,8 +89,9 @@ class HttpServer {
    * 
    * Adds a function to be called when the server receives a message from a client.
    * 
-   * @note Function _fn_ must accept at least one parameter which will be passed the message received as a string.
-   * @note If _fn_ accepts a second parameter, it will be passed the client socket object.
+   * > Function _fn_ MUST accept TWO parameters. First parameter will accept the HttpRequest 
+   * > object and the second will accept the HttpResponse object.
+   * 
    * @note multiple `on_receive()` may be set on a single instance.
    */
   on_receive(fn) {
@@ -115,15 +99,15 @@ class HttpServer {
   }
 
   /**
-   * on_sent(fn: function)
+   * on_reply(fn: function)
    * 
-   * Adds a function to be called when the server sends a message to a client.
+   * Adds a function to be called when the server sends a reply to a client.
    * 
-   * @note Function _fn_ must accept at least one parameter which will be passed the message received as a string.
-   * @note If _fn_ accepts a second parameter, it will be passed the client socket object.
+   * > Function _fn_ MUST accept one parameter which will be passed the HttpResponse object.
+   * 
    * @note multiple `on_sent()` may be set on a single instance.
    */
-  on_sent(fn) {
+  on_reply(fn) {
     self._sent_listeners.append(fn)
   }
 
@@ -132,12 +116,54 @@ class HttpServer {
    * 
    * Adds a function to be called when the server encounters an error with a client.
    * 
-   * @note Function _fn_ must accept at least one parameter which will be passed the Exception object.
-   * @note If _fn_ accepts a second parameter, it will be passed the client socket object.
+   * > Function _fn_ MUST accept two parameters. The first argument will be passed the 
+   * > `Exception` object and the second will be passed the client `Socket` object.
+   * 
    * @note multiple `on_error()` may be set on a single instance.
    */
   on_error(fn) {
     self._error_listeners.append(fn)
+  }
+
+  _get_response_header_string(headers) {
+    var result
+    for x, y in headers {
+      result += '${x}: ${y}\r\n'
+    }
+    return result
+  }
+
+  _process_received(message, client) {
+    var request = HttpRequest(),
+        response = HttpResponse()
+    if !request.parse(message, client)
+      response.status = status.BAD_REQUEST
+
+    var feedback = 'HTTP/${response.version} ${response.status} ${status.map.get(response.status, 'UNKNOWN')}\r\n'
+
+    # If we have an error in the request message itself, we don't even want to 
+    # forward processing to callers. 
+    # This is a server level error and should terminate immediately.
+    if response.status == status.OK {
+
+      # call the received listeners on the request object.
+      iters.each(self._received_listeners, | fn, _ | {
+        fn(request, response)
+      })
+
+      if response.body {
+        feedback += 'Content-Length: ${response.body.length()}\r\n'
+      }
+    }
+
+    feedback += self._get_response_header_string(response.headers)
+    feedback += '\r\n${response.body}' 
+    
+    client.send(feedback)
+    # call the reply listeners.
+    iters.each(self._sent_listeners, | fn | {
+      fn(response)
+    })
   }
 
   /**
@@ -157,11 +183,9 @@ class HttpServer {
         var client = self.socket.accept()
 
         # call the connect listeners.
-        if self._connect_listeners {
-          for l in self._connect_listeners {
-            l(client)
-          }
-        }
+        iters.each(self._connect_listeners, | fn | {
+          fn(client)
+        })
 
         if is_number(self.read_timeout)
           client.set_option(so.SO_RCVTIMEO, self.read_timeout)
@@ -172,31 +196,21 @@ class HttpServer {
           var data = client.receive()
 
           if data {
-
-            # call the received listeners.
-            if self._received_listeners {
-              for l in self._received_listeners {
-                l(data, client)
-              }
-            }
+            self._process_received(data, client)
           }
         } catch Exception e {
           # call the error listeners.
-          if self._error_listeners {
-            for l in self._error_listeners {
-              l(e, client)
-            }
-          }
+          iters.each(self._error_listeners, | fn | {
+            fn(e, client)
+          })
         } finally {
           var client_info = client.info()
           client.close()
 
           # call the disconnect listeners.
-          if self._disconnect_listeners {
-            for l in self._disconnect_listeners {
-              l(client_info)
-            }
-          }
+          iters.each(self._disconnect_listeners, | fn | {
+            fn(client_info)
+          })
         }
       }
     }

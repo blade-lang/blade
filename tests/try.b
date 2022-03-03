@@ -40,7 +40,7 @@ try {
 }
 
 try {
-  echo 'name'[10]
+  echo [][10]
 } finally {
   echo 'Error occurred, but I will still run'
 }

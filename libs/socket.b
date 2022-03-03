@@ -99,6 +99,7 @@ import _socket {
   _bind,
   _listen,
   _recv,
+  _read,
   _send,
   _setsockopt,
   _shutdown,
@@ -122,7 +123,7 @@ var IP_ANY     = '0.0.0.0'
 var IP_LOCAL   = '127.0.0.1'
 
 /**
- * The SocketExceptio class is the general Exception type thrown from sockets
+ * The SocketException class is the general Exception type thrown from sockets
  */
 class SocketException < Exception {
 
@@ -391,6 +392,39 @@ class Socket {
       die SocketException('socket not listening or connected')
     
     var result = _recv(self.id, length, flags)
+    if is_string(result) or result == nil return result
+
+    return self._check_error(result)
+  }
+
+  /**
+   * read([length: int])
+   * 
+   * Reads bytes of the given length from the socket. If the length is not given, it default length of 
+   * -1 indicating that the total available data on the socket stream will be read. 
+   * 
+   * > This method differs from `receive()` in that it does not check for a socket having data to 
+   * > read or not and will block until data of _length_ have been read or no more data is available for 
+   * > reading.
+   * @note Only use this function after a call to `receive()` has succeeded.
+   * @default Length = 1024
+   * @return string
+   */
+  read(length) {
+    if !length length = 1024
+
+    if !is_int(length) 
+      die SocketException('integer expected for length, ${typeof(length)} given')
+
+    if self.id == -1 or self.is_closed or (self.is_shutdown and 
+      (self.shutdown_reason == SHUT_RD or 
+        self.shutdown_reason == SHUT_RDWR)) 
+      die SocketException('socket is in an illegal state')
+
+    if !self.is_listening and !self.is_connected
+      die SocketException('socket not listening or connected')
+    
+    var result = _read(self.id, length, 0)
     if is_string(result) or result == nil return result
 
     return self._check_error(result)

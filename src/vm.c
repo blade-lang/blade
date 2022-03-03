@@ -78,7 +78,7 @@ bool propagate_exception(b_vm *vm) {
       b_exception_frame handler = frame->handlers[i - 1];
       b_obj_func *function = frame->closure->function;
 
-      if (handler.address != 0 && is_instance_of(handler.klass, exception->klass->name->chars)) {
+      if (handler.address != 0 && is_instance_of(exception->klass, handler.klass->name->chars)) {
         frame->ip = &function->blob.code[handler.address];
         return true;
       } else if (handler.finally_address != 0) {
@@ -198,7 +198,7 @@ static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
 inline b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
   b_obj_instance *instance = new_instance(vm, vm->exception_class);
   push(vm, OBJ_VAL(instance));
-  table_set(vm, &instance->properties, GC_L_STRING("message", 7), OBJ_VAL(message));
+  table_set(vm, &instance->properties, STRING_L_VAL("message", 7), OBJ_VAL(message));
   pop(vm);
   return instance;
 }
@@ -355,6 +355,7 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_STRING_METHOD(match);
   DEFINE_STRING_METHOD(matches);
   DEFINE_STRING_METHOD(replace);
+  DEFINE_STRING_METHOD(ascii);
   define_native_method(vm, &vm->methods_string, "@iter", native_method_string__iter__);
   define_native_method(vm, &vm->methods_string, "@itern", native_method_string__itern__);
 
@@ -990,21 +991,24 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
   }
 
   int index = AS_NUMBER(lower);
+  int length = string->is_ascii ? string->length : string->utf8_length;
   int real_index = index;
   if (index < 0)
-    index = string->utf8_length + index;
+    index = length + index;
 
-  if (index < string->utf8_length && index >= 0) {
+  if (index < length && index >= 0) {
 
     int start = index, end = index + 1;
-    utf8slice(string->chars, &start, &end);
+    if(!string->is_ascii){
+      utf8slice(string->chars, &start, &end);
+    }
 
     if (!will_assign) {
       // we can safely get rid of the index from the stack
       pop_n(vm, 2); // +1 for the string itself
     }
 
-    push(vm, STRING_L_VAL(string->chars + start, (int) (end - start)));
+    push(vm, STRING_L_VAL(string->chars + start, end - start));
     return true;
   } else {
     pop_n(vm, 1);
@@ -1020,12 +1024,12 @@ static bool string_get_ranged_index(b_vm *vm, b_obj_string *string, bool will_as
     pop_n(vm, 2);
     return throw_exception(vm, "string are numerically indexed");
   }
+  int length = string->is_ascii ? string->length : string->utf8_length;
 
   int lower_index = IS_NUMBER(lower) ? AS_NUMBER(lower) : 0;
-  int upper_index = IS_NIL(upper) ? string->utf8_length : AS_NUMBER(upper);
+  int upper_index = IS_NIL(upper) ? length : AS_NUMBER(upper);
 
-  if (lower_index < 0 ||
-      (upper_index < 0 && ((string->utf8_length + upper_index) < 0))) {
+  if (lower_index < 0 || (upper_index < 0 && ((length + upper_index) < 0))) {
     // always return an empty string...
     if (!will_assign) {
       pop_n(vm, 3); // +1 for the string itself
@@ -1035,21 +1039,21 @@ static bool string_get_ranged_index(b_vm *vm, b_obj_string *string, bool will_as
   }
 
   if (upper_index < 0)
-    upper_index = string->utf8_length + upper_index;
+    upper_index = length + upper_index;
 
-  if (upper_index > string->utf8_length)
-    upper_index = string->utf8_length;
+  if (upper_index > length)
+    upper_index = length;
 
   int start = lower_index, end = upper_index;
-  utf8slice(string->chars, &start, &end);
-
-  b_obj_string *str = copy_string(vm, string->chars + start, (int) (end - start));
+  if(!string->is_ascii) {
+    utf8slice(string->chars, &start, &end);
+  }
 
   if (!will_assign) {
     pop_n(vm, 3); // +1 for the string itself
   }
 
-  push(vm, OBJ_VAL(str));
+  push(vm, STRING_L_VAL(string->chars + start, end - start));
   return true;
 }
 
@@ -1295,7 +1299,7 @@ static bool concatenate(b_vm *vm) {
     b_obj_string *a = AS_STRING(_a);
 
     int length = a->length + b->length;
-    char *chars = ALLOCATE(char, (size_t) length + 1);
+    char *chars = (char*)calloc(length + 1, sizeof(char));
     memcpy(chars, a->chars, a->length);
     memcpy(chars + a->length, b->chars, b->length);
     chars[length] = '\0';
