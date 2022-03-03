@@ -18,7 +18,7 @@ def process_header(header, meta_callback) {
      var d = data[i].index_of(':')
      if d > -1 {
        var key = data[i][0,d]
-       var value = data[i][d + 1,data[i].length()].trim()
+       var value = data[i][d + 1,].trim()
 
        # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-3.2.6
        # A string of text is parsed as a single value if it is quoted using

@@ -107,21 +107,14 @@ DECLARE_MODULE_METHOD(os_info) {
     RETURN_ERROR("could not access os information");
   }
 
-  b_obj_dict *dict = new_dict(vm);
-  push(vm, OBJ_VAL(dict));
+  b_obj_dict *dict = (b_obj_dict*)GC(new_dict(vm));
 
-  dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, "sysname", 7)),
-                 OBJ_VAL(copy_string(vm, os.sysname, strlen(os.sysname))));
-  dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, "nodename", 8)),
-                 OBJ_VAL(copy_string(vm, os.nodename, strlen(os.nodename))));
-  dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, "version", 7)),
-                 OBJ_VAL(copy_string(vm, os.version, strlen(os.version))));
-  dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, "release", 7)),
-                 OBJ_VAL(copy_string(vm, os.release, strlen(os.release))));
-  dict_add_entry(vm, dict, OBJ_VAL(copy_string(vm, "machine", 7)),
-                 OBJ_VAL(copy_string(vm, os.machine, strlen(os.machine))));
+  dict_add_entry(vm, dict, GC_L_STRING("sysname", 7), GC_STRING(os.sysname));
+  dict_add_entry(vm, dict, GC_L_STRING("nodename", 8), GC_STRING(os.nodename));
+  dict_add_entry(vm, dict, GC_L_STRING("version", 7), GC_STRING(os.version));
+  dict_add_entry(vm, dict, GC_L_STRING("release", 7), GC_STRING(os.release));
+  dict_add_entry(vm, dict, GC_L_STRING("machine", 7), GC_STRING(os.machine));
 
-  pop(vm);
   RETURN_OBJ(dict);
 #else
   RETURN_ERROR("not available: OS does not have uname()")
@@ -188,7 +181,7 @@ b_value get_blade_os_args(b_vm *vm) {
   b_obj_list *list = (b_obj_list*)GC(new_list(vm));
   if(vm->std_args != NULL) {
     for(int i = 0; i < vm->std_args_count; i++) {
-      write_list(vm, list, STRING_VAL(vm->std_args[i]));
+      write_list(vm, list, GC_STRING(vm->std_args[i]));
     }
   }
   CLEAR_GC();
@@ -301,7 +294,7 @@ DECLARE_MODULE_METHOD(os__readdir) {
     b_obj_list *list = (b_obj_list *)GC(new_list(vm));
     struct dirent *ent;
     while((ent = readdir(dir)) != NULL) {
-      write_list(vm, list, STRING_VAL(ent->d_name));
+      write_list(vm, list, GC_STRING(ent->d_name));
     }
     closedir(dir);
     RETURN_OBJ(list);

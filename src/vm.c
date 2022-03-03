@@ -78,7 +78,7 @@ bool propagate_exception(b_vm *vm) {
       b_exception_frame handler = frame->handlers[i - 1];
       b_obj_func *function = frame->closure->function;
 
-      if (handler.address != 0 && is_instance_of(handler.klass, exception->klass->name->chars)) {
+      if (handler.address != 0 && is_instance_of(exception->klass, handler.klass->name->chars)) {
         frame->ip = &function->blob.code[handler.address];
         return true;
       } else if (handler.finally_address != 0) {
@@ -998,18 +998,17 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
 
   if (index < length && index >= 0) {
 
+    int start = index, end = index + 1;
+    if(!string->is_ascii){
+      utf8slice(string->chars, &start, &end);
+    }
+
     if (!will_assign) {
       // we can safely get rid of the index from the stack
       pop_n(vm, 2); // +1 for the string itself
     }
 
-    if(!string->is_ascii) {
-      int start = index, end = index + 1;
-      utf8slice(string->chars, &start, &end);
-      push(vm, STRING_L_VAL(string->chars + start, end - start));
-    } else {
-      push(vm, STRING_L_VAL(string->chars + index, 1));
-    }
+    push(vm, STRING_L_VAL(string->chars + start, end - start));
     return true;
   } else {
     pop_n(vm, 1);
@@ -1045,17 +1044,16 @@ static bool string_get_ranged_index(b_vm *vm, b_obj_string *string, bool will_as
   if (upper_index > length)
     upper_index = length;
 
+  int start = lower_index, end = upper_index;
+  if(!string->is_ascii) {
+    utf8slice(string->chars, &start, &end);
+  }
+
   if (!will_assign) {
     pop_n(vm, 3); // +1 for the string itself
   }
 
-  if(!string->is_ascii) {
-    int start = lower_index, end = upper_index;
-    utf8slice(string->chars, &start, &end);
-    push(vm, STRING_L_VAL(string->chars + start, end - start));
-  } else {
-    push(vm, STRING_L_VAL(string->chars + lower_index, upper_index - lower_index));
-  }
+  push(vm, STRING_L_VAL(string->chars + start, end - start));
   return true;
 }
 
@@ -2353,7 +2351,7 @@ b_ptr_result run(b_vm *vm) {
 
       case OP_PUBLISH_TRY: {
         frame->handlers_count--;
-        if (propagate_exception(vm)) {
+        if (!propagate_exception(vm)) {
           frame = &vm->frames[vm->frame_count - 1];
           break;
         }

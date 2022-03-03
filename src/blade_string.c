@@ -427,10 +427,13 @@ DECLARE_STRING_METHOD(split) {
     }
     free(to_free);*/
   } else {
-    for (int i = 0; i < object->utf8_length; i++) {
+    int length = object->is_ascii ? object->length : object->utf8_length;
+    for (int i = 0; i < length; i++) {
 
       int start = i, end = i + 1;
-      utf8slice(object->chars, &start, &end);
+      if(!object->is_ascii) {
+        utf8slice(object->chars, &start, &end);
+      }
 
       write_list(vm, list, GC_L_STRING(object->chars + start, (int) (end - start)));
     }
@@ -513,12 +516,15 @@ DECLARE_STRING_METHOD(to_list) {
   ENFORCE_ARG_COUNT(to_list, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   b_obj_list *list = (b_obj_list *) GC(new_list(vm));
+  int length = string->is_ascii ? string->length : string->utf8_length;
 
-  if (string->utf8_length > 0) {
+  if (length > 0) {
 
-    for (int i = 0; i < string->utf8_length; i++) {
+    for (int i = 0; i < length; i++) {
       int start = i, end = i + 1;
-      utf8slice(string->chars, &start, &end);
+      if(!string->is_ascii) {
+        utf8slice(string->chars, &start, &end);
+      }
       write_list(vm, list, GC_L_STRING(string->chars + start, (int) (end - start)));
     }
   }
@@ -994,11 +1000,14 @@ DECLARE_STRING_METHOD(__iter__) {
   ENFORCE_ARG_TYPE(__iter__, 0, IS_NUMBER);
 
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
+  int length = string->is_ascii ? string->length : string->utf8_length;
   int index = AS_NUMBER(args[0]);
 
-  if (index > -1 && index < string->utf8_length) {
+  if (index > -1 && index < length) {
     int start = index, end = index + 1;
-    utf8slice(string->chars, &start, &end);
+    if(!string->is_ascii) {
+      utf8slice(string->chars, &start, &end);
+    }
 
     RETURN_L_STRING(string->chars + start, (int) (end - start));
   }
@@ -1009,9 +1018,10 @@ DECLARE_STRING_METHOD(__iter__) {
 DECLARE_STRING_METHOD(__itern__) {
   ENFORCE_ARG_COUNT(__itern__, 1);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
+  int length = string->is_ascii ? string->length : string->utf8_length;
 
   if (IS_NIL(args[0])) {
-    if (string->utf8_length == 0) {
+    if (length == 0) {
       RETURN_FALSE;
     }
     RETURN_NUMBER(0);
@@ -1022,7 +1032,7 @@ DECLARE_STRING_METHOD(__itern__) {
   }
 
   int index = AS_NUMBER(args[0]);
-  if (index < string->utf8_length - 1) {
+  if (index < length - 1) {
     RETURN_NUMBER((double) index + 1);
   }
 

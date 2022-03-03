@@ -357,8 +357,9 @@ class HttpRequest {
       var resolved_host = socket.get_address_info(uri.host)
 
       if resolved_host {
-        var host = resolved_host.ip
-        var port = uri.port
+        var host = resolved_host.ip,
+            port = uri.port,
+            is_secure = uri.scheme == 'https'
 
         # construct message
         var message = '${method} ${uri.path}'
@@ -375,7 +376,7 @@ class HttpRequest {
 
           # Make sure to always override user set Content-Length header 
           # to avoid unexpected behavior.
-          if key != 'Content-Length' {
+          if key.lower() != 'content-length' {
             message += '${key}: ${value}\r\n'
           }
         }
@@ -400,11 +401,11 @@ class HttpRequest {
         var start = time()
 
         # connect to the url host on the specified port and send the request message
-        if client.connect(host, port ? port : (uri.scheme == 'https' ? 443 : 80), connect_timeout) {
+        if client.connect(host, port ? port : (is_secure ? 443 : 80), connect_timeout) {
           client.send(message)
 
           # receive the response...
-          var response_data = client.receive() or ''
+          var response_data = client.receive()
 
           # separate the headers and the body
           var body_starts = response_data.index_of('\r\n\r\n')
@@ -412,10 +413,10 @@ class HttpRequest {
           if body_starts {
             headers = response_data[0,body_starts].trim()
             body = response_data[body_starts + 2, response_data.length()].trim()
-          } else {
+          }/*  else {
             # Clear the headers here. It may currently be a dictionary.
             headers = ''
-          }
+          } */
 
           headers = _process.process_header(headers, |version, status|{
             http_version = version
@@ -469,7 +470,7 @@ class HttpRequest {
               var chunk_size = to_number('0x'+tmp_body[0].trim())
               body = '\n'.join(tmp_body[1,])
               
-              while true and chunk_size > 0 {
+              while true {
                 var response = client.receive()
                 body += response
                 if response.ends_with('\r\n\r\n')
@@ -493,6 +494,7 @@ class HttpRequest {
             should_connect = false
           }
         } else {
+          should_connect = false
           die HttpException('could not connect')
         }
       } else {

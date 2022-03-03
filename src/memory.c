@@ -172,8 +172,8 @@ void free_object(b_vm *vm, b_obj *object) {
     case OBJ_MODULE: {
       b_obj_module *module = (b_obj_module *) object;
       free_table(vm, &module->values);
-//      FREE(char, module->name);
-//      FREE(char, module->file);
+      free(module->name);
+      free(module->file);
       if (module->unloader != NULL && module->imported) {
         ((b_module_loader)module->unloader)(vm);
       }
