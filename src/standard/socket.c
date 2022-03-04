@@ -235,7 +235,7 @@ DECLARE_MODULE_METHOD(socket__accept) {
 
   b_obj_list *response = new_list(vm);
   write_list(vm, response, NUMBER_VAL(new_sock));
-  write_list(vm, response, OBJ_VAL(copy_string(vm, ip, (int) strlen(ip))));
+  write_list(vm, response, GC_STRING(ip));
   write_list(vm, response, NUMBER_VAL(port));
 
   RETURN_OBJ(response);
@@ -313,10 +313,9 @@ DECLARE_MODULE_METHOD(socket__recv) {
       if (length != -1 && length < content_length)
         content_length = length;
 
-      char *response = (char *) ALLOCATE(char, (size_t) content_length + 1);
-      ssize_t total_length = recv(sock, response, content_length, flags);
+      char *response = ALLOCATE(char, content_length + 1);
+      int total_length = (int)recv(sock, response, content_length, flags);
       response[total_length] = '\0';
-
       RETURN_T_STRING(response, total_length);
     }
   } else if (status == 0) {
@@ -325,6 +324,31 @@ DECLARE_MODULE_METHOD(socket__recv) {
   }
 
   RETURN_NIL;
+}
+
+DECLARE_MODULE_METHOD(socket__read) {
+  ENFORCE_ARG_COUNT(_read, 3);
+  ENFORCE_ARG_TYPE(_read, 0, IS_NUMBER); // the socket id
+  ENFORCE_ARG_TYPE(_read, 1, IS_NUMBER); // length to read
+  ENFORCE_ARG_TYPE(_read, 2, IS_NUMBER); // flags
+
+  int sock = AS_NUMBER(args[0]);
+  int length = AS_NUMBER(args[1]);
+  int flags = AS_NUMBER(args[2]);
+  int total_length = 0;
+
+  char *response = ALLOCATE(char, length + 1);
+
+  char buf[4096];
+  int bytes_received;
+
+  while((bytes_received = (int)recv(sock, buf, 4096, flags)) > 0 && total_length < length) {
+    if(bytes_received > 0) {
+      memcpy(response + total_length, buf, bytes_received);
+    }
+    total_length += bytes_received;
+  }
+  RETURN_T_STRING(response, (int)total_length);
 }
 
 DECLARE_MODULE_METHOD(socket__setsockopt) {
@@ -439,6 +463,11 @@ DECLARE_MODULE_METHOD(socket__getsockinfo) {
 
     dict_add_entry(vm, dict, GC_L_STRING("address", 7), GC_STRING(ip));
     dict_add_entry(vm, dict, GC_L_STRING("port", 4), NUMBER_VAL(port));
+    dict_add_entry(vm, dict, GC_L_STRING("family", 6),
+                   NUMBER_VAL(ntohs(address.sin_family)));
+  } else {
+    dict_add_entry(vm, dict, GC_L_STRING("address", 7), NIL_VAL);
+    dict_add_entry(vm, dict, GC_L_STRING("port", 4), NUMBER_VAL(-1));
     dict_add_entry(vm, dict, GC_L_STRING("family", 6),
                    NUMBER_VAL(ntohs(address.sin_family)));
   }
@@ -1207,6 +1236,7 @@ CREATE_MODULE_LOADER(socket) {
       {"_connect",     false, GET_MODULE_METHOD(socket__connect)},
       {"_send",        false, GET_MODULE_METHOD(socket__send)},
       {"_recv",        false, GET_MODULE_METHOD(socket__recv)},
+      {"_read",        false, GET_MODULE_METHOD(socket__read)},
       {"_setsockopt",  false, GET_MODULE_METHOD(socket__setsockopt)},
       {"_getsockopt",  false, GET_MODULE_METHOD(socket__getsockopt)},
       {"_bind",        false, GET_MODULE_METHOD(socket__bind)},

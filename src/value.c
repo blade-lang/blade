@@ -66,6 +66,8 @@ void free_value_arr(b_vm *vm, b_value_arr *array) {
 
 void free_byte_arr(b_vm *vm, b_byte_arr *array) {
   FREE_ARRAY(unsigned char, array->bytes, array->count);
+  array->count = 0;
+  array->bytes = NULL;
 }
 
 static inline void do_print_value(b_value value, bool fix_string) {

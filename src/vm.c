@@ -82,7 +82,7 @@ bool propagate_exception(b_vm *vm) {
         frame->ip = &function->blob.code[handler.address];
         return true;
       } else if (handler.finally_address != 0) {
-        push(vm, TRUE_VAL); // continue propagating once the finally block completes
+        push(vm, TRUE_VAL); // continue propagating once the 'finally' block completes
         frame->ip = &function->blob.code[handler.finally_address];
         return true;
       }
@@ -139,9 +139,15 @@ bool throw_exception(b_vm *vm, const char *format, ...) {
 
 static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
   b_obj_string *class_name = copy_string(vm, "Exception", 9);
-  b_obj_class *klass = new_class(vm, class_name);
 
+  push(vm, OBJ_VAL(class_name));
+  b_obj_class *klass = new_class(vm, class_name);
+  pop(vm);
+
+  push(vm, OBJ_VAL(klass));
   b_obj_func *function = new_function(vm, module, TYPE_METHOD);
+  pop(vm);
+
   function->arity = 1;
   function->is_variadic = false;
 
@@ -192,7 +198,7 @@ static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
 inline b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
   b_obj_instance *instance = new_instance(vm, vm->exception_class);
   push(vm, OBJ_VAL(instance));
-  table_set(vm, &instance->properties, GC_L_STRING("message", 7), OBJ_VAL(message));
+  table_set(vm, &instance->properties, STRING_L_VAL("message", 7), OBJ_VAL(message));
   pop(vm);
   return instance;
 }
@@ -349,6 +355,7 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_STRING_METHOD(match);
   DEFINE_STRING_METHOD(matches);
   DEFINE_STRING_METHOD(replace);
+  DEFINE_STRING_METHOD(ascii);
   define_native_method(vm, &vm->methods_string, "@iter", native_method_string__iter__);
   define_native_method(vm, &vm->methods_string, "@itern", native_method_string__itern__);
 
@@ -984,21 +991,24 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
   }
 
   int index = AS_NUMBER(lower);
+  int length = string->is_ascii ? string->length : string->utf8_length;
   int real_index = index;
   if (index < 0)
-    index = string->utf8_length + index;
+    index = length + index;
 
-  if (index < string->utf8_length && index >= 0) {
+  if (index < length && index >= 0) {
 
     int start = index, end = index + 1;
-    utf8slice(string->chars, &start, &end);
+    if(!string->is_ascii){
+      utf8slice(string->chars, &start, &end);
+    }
 
     if (!will_assign) {
       // we can safely get rid of the index from the stack
       pop_n(vm, 2); // +1 for the string itself
     }
 
-    push(vm, STRING_L_VAL(string->chars + start, (int) (end - start)));
+    push(vm, STRING_L_VAL(string->chars + start, end - start));
     return true;
   } else {
     pop_n(vm, 1);
@@ -1014,12 +1024,12 @@ static bool string_get_ranged_index(b_vm *vm, b_obj_string *string, bool will_as
     pop_n(vm, 2);
     return throw_exception(vm, "string are numerically indexed");
   }
+  int length = string->is_ascii ? string->length : string->utf8_length;
 
   int lower_index = IS_NUMBER(lower) ? AS_NUMBER(lower) : 0;
-  int upper_index = IS_NIL(upper) ? string->utf8_length : AS_NUMBER(upper);
+  int upper_index = IS_NIL(upper) ? length : AS_NUMBER(upper);
 
-  if (lower_index < 0 ||
-      (upper_index < 0 && ((string->utf8_length + upper_index) < 0))) {
+  if (lower_index < 0 || (upper_index < 0 && ((length + upper_index) < 0))) {
     // always return an empty string...
     if (!will_assign) {
       pop_n(vm, 3); // +1 for the string itself
@@ -1029,19 +1039,21 @@ static bool string_get_ranged_index(b_vm *vm, b_obj_string *string, bool will_as
   }
 
   if (upper_index < 0)
-    upper_index = string->utf8_length + upper_index;
+    upper_index = length + upper_index;
 
-  if (upper_index > string->utf8_length)
-    upper_index = string->utf8_length;
+  if (upper_index > length)
+    upper_index = length;
 
   int start = lower_index, end = upper_index;
-  utf8slice(string->chars, &start, &end);
+  if(!string->is_ascii) {
+    utf8slice(string->chars, &start, &end);
+  }
 
   if (!will_assign) {
     pop_n(vm, 3); // +1 for the string itself
   }
 
-  push(vm, STRING_L_VAL(string->chars + start, (int) (end - start)));
+  push(vm, STRING_L_VAL(string->chars + start, end - start));
   return true;
 }
 
@@ -1287,7 +1299,7 @@ static bool concatenate(b_vm *vm) {
     b_obj_string *a = AS_STRING(_a);
 
     int length = a->length + b->length;
-    char *chars = ALLOCATE(char, (size_t) length + 1);
+    char *chars = (char*)calloc(length + 1, sizeof(char));
     memcpy(chars, a->chars, a->length);
     memcpy(chars + a->length, b->chars, b->length);
     chars[length] = '\0';
@@ -2178,35 +2190,6 @@ b_ptr_result run(b_vm *vm) {
           runtime_error("type of %s is not a valid iterable", value_type(peek(vm, 3)));
         }
         break;
-
-
-
-        /*if (!IS_LIST(peek(vm, 3)) && !IS_DICT(peek(vm, 3)) &&
-            !IS_BYTES(peek(vm, 3))) {
-          if (!IS_STRING(peek(vm, 3))) {
-            runtime_error("type of %s is not a valid iterable", value_type(peek(vm, 3)));
-          } else {
-            runtime_error("strings do not support object assignment");
-          }
-          break;
-        }
-
-        b_value value = peek(vm, 0);
-        b_value index = peek(vm, 2); // since peek 1 will be nil
-
-        if (IS_LIST(peek(vm, 3))) {
-          if (!list_set_index(vm, AS_LIST(peek(vm, 3)), index, value)) {
-            EXIT_VM();
-          }
-        } else if (IS_BYTES(peek(vm, 3))) {
-          if (!bytes_set_index(vm, AS_BYTES(peek(vm, 3)), index, value)) {
-            EXIT_VM();
-          }
-        } else if (IS_DICT(peek(vm, 3))) {
-          dict_set_index(vm, AS_DICT(peek(vm, 3)), index, value);
-          break;
-        }
-        break;*/
       }
 
       case OP_RETURN: {
@@ -2372,13 +2355,13 @@ b_ptr_result run(b_vm *vm) {
           frame = &vm->frames[vm->frame_count - 1];
           break;
         }
+
         EXIT_VM();
       }
 
       case OP_SWITCH: {
         b_obj_switch *sw = AS_SWITCH(READ_CONSTANT());
         b_value expr = peek(vm, 0);
-        //      push(vm, OBJ_VAL(sw));
 
         b_value value;
         if (table_get(&sw->table, expr, &value)) {

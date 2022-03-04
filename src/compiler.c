@@ -183,6 +183,8 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_CHOICE:
     case OP_EMPTY:
     case OP_IMPORT_ALL_NATIVE:
+    case OP_IMPORT_ALL:
+    case OP_PUBLISH_TRY:
       return 0;
 
     case OP_CALL:
@@ -217,6 +219,7 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_METHOD:
     case OP_EJECT_IMPORT:
     case OP_EJECT_NATIVE_IMPORT:
+    case OP_SELECT_IMPORT:
       return 2;
 
     case OP_INVOKE:
@@ -236,8 +239,8 @@ static int get_code_args_count(const uint8_t *bytecode,
       return 2 + (fn->up_value_count * 3);
     }
 
-    default:
-      return 0;
+//    default:
+//      return 0;
   }
   return 0;
 }
@@ -1358,7 +1361,7 @@ b_parse_rule parse_rules[] = {
     [UNDEFINED_TOKEN] = {NULL, NULL, PREC_NONE},
 };
 
-static void _parse_precedence(b_parser *p, b_precedence precedence) {
+static void do_parse_precedence(b_parser *p, b_precedence precedence) {
   b_parse_prefix_fn prefix_rule = get_rule(p->previous.type)->prefix;
 
   if (prefix_rule == NULL) {
@@ -1393,7 +1396,7 @@ static void parse_precedence(b_parser *p, b_precedence precedence) {
 
   advance(p);
 
-  _parse_precedence(p, precedence);
+  do_parse_precedence(p, precedence);
 }
 
 static void parse_precedence_no_advance(b_parser *p, b_precedence precedence) {
@@ -1405,7 +1408,7 @@ static void parse_precedence_no_advance(b_parser *p, b_precedence precedence) {
   if (is_at_end(p->scanner) && p->vm->is_repl)
     return;
 
-  _parse_precedence(p, precedence);
+  do_parse_precedence(p, precedence);
 }
 
 static b_parse_rule *get_rule(b_tkn_type type) { return &parse_rules[type]; }
@@ -2058,7 +2061,7 @@ static void import_statement(b_parser *p) {
     memcpy(name, p->previous.start, p->previous.length);
 
     // handle native modules
-    if (part_count == 0 && name[0] == '_') {
+    if (part_count == 0 && name[0] == '_' && !is_relative) {
       int module = make_constant(p, OBJ_VAL(copy_string(p->vm, name, (int) strlen(name))));
       emit_byte_and_short(p, OP_NATIVE_MODULE, module);
 
@@ -2169,11 +2172,10 @@ static void try_statement(b_parser *p) {
   }
   p->vm->compiler->handler_count++;
 
-  consume(p, LBRACE_TOKEN, "expected '{' after try");
   ignore_whitespace(p);
   int try_begins = emit_try(p);
 
-  block(p); // compile the try body
+  statement(p); // compile the try body
   emit_byte(p, OP_POP_TRY);
   int exit_jump = emit_jump(p, OP_JUMP);
 
@@ -2183,7 +2185,7 @@ static void try_statement(b_parser *p) {
 
   bool catch_exists = false, final_exists = false;
 
-  // catch body must maintain it's own scope
+  // catch body must maintain its own scope
   if (match(p, CATCH_TOKEN)) {
     catch_exists = true;
     begin_scope(p);
@@ -2191,23 +2193,21 @@ static void try_statement(b_parser *p) {
     consume(p, IDENTIFIER_TOKEN, "missing exception class name");
     type = identifier_constant(p, &p->previous);
     address = current_blob(p)->count;
-    // patch_try(p, try_begins, type);
 
     if (match(p, IDENTIFIER_TOKEN)) {
-      add_local(p, p->previous);
+      int var = add_local(p, p->previous) - 1;
       mark_initialized(p);
-      uint16_t var = resolve_local(p, p->vm->compiler, &p->previous);
       emit_byte_and_short(p, OP_SET_LOCAL, var);
       emit_byte(p, OP_POP);
     }
 
     emit_byte(p, OP_POP_TRY);
-    consume(p, LBRACE_TOKEN, "expected '{' after catch expression");
-    block(p);
+
+    ignore_whitespace(p);
+    statement(p);
 
     end_scope(p);
-  }
-  else {
+  } else {
       type = make_constant(p, OBJ_VAL(copy_string(p->vm, "Exception", 9)));
   }
 
@@ -2216,12 +2216,12 @@ static void try_statement(b_parser *p) {
   if (match(p, FINALLY_TOKEN)) {
     final_exists = true;
     // if we arrived here from either the try or handler block,
-    // we dont want to continue propagating the exception
+    // we don't want to continue propagating the exception
     emit_byte(p, OP_FALSE);
     finally = current_blob(p)->count;
 
-    consume(p, LBRACE_TOKEN, "expected '{' after finally");
-    block(p);
+    ignore_whitespace(p);
+    statement(p);
 
     int continue_execution_address = emit_jump(p, OP_JUMP_IF_FALSE);
     emit_byte(p, OP_POP); // pop the bool off the stack
@@ -2303,7 +2303,7 @@ static void break_statement(b_parser *p) {
   consume_statement_end(p);
 
   // discard local variables created in the loop
-  discard_local(p, p->innermost_loop_scope_depth);
+//  discard_local(p, p->innermost_loop_scope_depth);
   emit_jump(p, OP_BREAK_PL);
 }
 

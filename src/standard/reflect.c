@@ -158,6 +158,17 @@ DECLARE_MODULE_METHOD(reflect__getboundmethod) {
   RETURN_NIL;
 }
 
+DECLARE_MODULE_METHOD(reflect__gettype) {
+  ENFORCE_ARG_COUNT(get_type, 1);
+  ENFORCE_ARG_TYPE(get_type, 0, IS_INSTANCE);
+  RETURN_OBJ(AS_INSTANCE(args[0])->klass->name);
+}
+
+DECLARE_MODULE_METHOD(reflect__isptr) {
+  ENFORCE_ARG_COUNT(is_ptr, 1);
+  RETURN_BOOL(IS_PTR(args[0]));
+}
+
 CREATE_MODULE_LOADER(reflect) {
   static b_func_reg module_functions[] = {
       {"hasprop",   true,  GET_MODULE_METHOD(reflect__hasprop)},
@@ -169,6 +180,8 @@ CREATE_MODULE_LOADER(reflect) {
       {"getboundmethod", true,  GET_MODULE_METHOD(reflect__getboundmethod)},
       {"callmethod", true,  GET_MODULE_METHOD(reflect__call_method)},
       {"bindmethod", true,  GET_MODULE_METHOD(reflect__bindmethod)},
+      {"gettype", true,  GET_MODULE_METHOD(reflect__gettype)},
+      {"isptr", true,  GET_MODULE_METHOD(reflect__isptr)},
       {NULL,        false, NULL},
   };
 

@@ -23,7 +23,6 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
   if (new_size == 0) {
     free(pointer);
     return NULL;
-    // return malloc(sizeof pointer);
   }
   void *result = realloc(pointer, new_size);
 
@@ -52,16 +51,13 @@ void mark_object(b_vm *vm, b_obj *object) {
 
   if (vm->gray_capacity < vm->gray_count + 1) {
     vm->gray_capacity = GROW_CAPACITY(vm->gray_capacity);
-    b_obj **result =
-        (b_obj **) realloc(vm->gray_stack, sizeof(b_obj *) * vm->gray_capacity);
+    vm->gray_stack = (b_obj **) realloc(vm->gray_stack, sizeof(b_obj *) * vm->gray_capacity);
 
-    if (result == NULL) {
+    if (vm->gray_stack == NULL) {
       fflush(stdout); // flush out anything on stdout first
       fprintf(stderr, "GC encountered an error");
       exit(1);
     }
-
-    vm->gray_stack = result;
   }
   vm->gray_stack[vm->gray_count++] = object;
 }
@@ -126,6 +122,9 @@ void blacken_object(b_vm *vm, b_obj *object) {
       mark_table(vm, &klass->properties);
       mark_table(vm, &klass->static_properties);
       mark_value(vm, klass->initializer);
+      if(klass->superclass != NULL) {
+        mark_object(vm, (b_obj *)klass->superclass);
+      }
       break;
     }
     case OBJ_CLOSURE: {
@@ -140,6 +139,7 @@ void blacken_object(b_vm *vm, b_obj *object) {
     case OBJ_FUNCTION: {
       b_obj_func *function = (b_obj_func *) object;
       mark_object(vm, (b_obj *) function->name);
+      mark_object(vm, (b_obj *) function->module);
       mark_array(vm, &function->blob.constants);
       break;
     }
@@ -176,8 +176,8 @@ void free_object(b_vm *vm, b_obj *object) {
     case OBJ_MODULE: {
       b_obj_module *module = (b_obj_module *) object;
       free_table(vm, &module->values);
-      FREE(char, module->name);
-      FREE(char, module->file);
+      free(module->name);
+      free(module->file);
       if (module->unloader != NULL && module->imported) {
         ((b_module_loader)module->unloader)(vm);
       }
@@ -283,8 +283,6 @@ void free_object(b_vm *vm, b_obj *object) {
     }
 
     case OBJ_PTR: {
-      b_obj_ptr *ptr = (b_obj_ptr*)object;
-      free(ptr->pointer);
       FREE(b_obj_ptr, object);
       break;
     }
@@ -300,6 +298,10 @@ static void mark_roots(b_vm *vm) {
   }
   for (int i = 0; i < vm->frame_count; i++) {
     mark_object(vm, (b_obj *) vm->frames[i].closure);
+    for(int j = 0; j < vm->frames[i].handlers_count; j++) {
+      b_exception_frame handler = vm->frames[i].handlers[j];
+      mark_object(vm, (b_obj *)handler.klass);
+    }
   }
   for (b_obj_up_value *up_value = vm->open_up_values; up_value != NULL;
        up_value = up_value->next) {
@@ -316,7 +318,6 @@ static void mark_roots(b_vm *vm) {
   mark_table(vm, &vm->methods_range);
 
   mark_object(vm, (b_obj*)vm->exception_class);
-
   mark_compiler_roots(vm);
 }
 
@@ -371,6 +372,7 @@ void collect_garbage(b_vm *vm) {
   mark_roots(vm);
   trace_references(vm);
   table_remove_whites(vm, &vm->strings);
+  table_remove_whites(vm, &vm->bytes);
   sweep(vm);
 
   vm->next_gc = vm->bytes_allocated * GC_HEAP_GROWTH_FACTOR;

@@ -98,6 +98,7 @@ struct s_obj_string {
   b_obj obj;
   int length;
   int utf8_length;
+  bool is_ascii;
   uint32_t hash;
   char *chars;
 };

@@ -99,6 +99,7 @@ import _socket {
   _bind,
   _listen,
   _recv,
+  _read,
   _send,
   _setsockopt,
   _shutdown,
@@ -122,7 +123,7 @@ var IP_ANY     = '0.0.0.0'
 var IP_LOCAL   = '127.0.0.1'
 
 /**
- * The SocketExceptio class is the general Exception type thrown from sockets
+ * The SocketException class is the general Exception type thrown from sockets
  */
 class SocketException < Exception {
 
@@ -212,6 +213,11 @@ class Socket {
   var is_shutdown = false
 
   /**
+   * `true` when the socket is running in a blocking mode, `false` otherwise.
+   */
+  var is_blocking = false
+
+  /**
    * The property holds the reason for which the last `shutdown` operation 
    * was called or `-1` if `shutdown` was never requested.
    */
@@ -230,16 +236,14 @@ class Socket {
   var receive_timeout = -1
 
   /**
-   * `true` when the socket is running in a blocking mode, `false` otherwise.
-   */
-  var is_blocking = false
-
-  /**
-   * Socket(family: number [, type: number, protocol: number [, id: number]])
-   * @example Socket(AF_INET, SOCK_STREAM, 0)
+   * Socket(family: number [, type: number [, protocol: number]])
+   * @example Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
    * @constructor  
    */
   Socket(family, type, protocol, id) {
+    # NOTE: NEVER EVER SET `id` YOURSELF.
+    # The parameter is meant to make `accept()`.
+
     if family self.family = family
     if type self.type = type
     if protocol self.protocol = protocol
@@ -391,6 +395,39 @@ class Socket {
       die SocketException('socket not listening or connected')
     
     var result = _recv(self.id, length, flags)
+    if is_string(result) or result == nil return result
+
+    return self._check_error(result)
+  }
+
+  /**
+   * read([length: int])
+   * 
+   * Reads bytes of the given length from the socket. If the length is not given, it default length of 
+   * -1 indicating that the total available data on the socket stream will be read. 
+   * 
+   * > This method differs from `receive()` in that it does not check for a socket having data to 
+   * > read or not and will block until data of _length_ have been read or no more data is available for 
+   * > reading.
+   * @note Only use this function after a call to `receive()` has succeeded.
+   * @default Length = 1024
+   * @return string
+   */
+  read(length) {
+    if !length length = 1024
+
+    if !is_int(length) 
+      die SocketException('integer expected for length, ${typeof(length)} given')
+
+    if self.id == -1 or self.is_closed or (self.is_shutdown and 
+      (self.shutdown_reason == SHUT_RD or 
+        self.shutdown_reason == SHUT_RDWR)) 
+      die SocketException('socket is in an illegal state')
+
+    if !self.is_listening and !self.is_connected
+      die SocketException('socket not listening or connected')
+    
+    var result = _read(self.id, length, 0)
     if is_string(result) or result == nil return result
 
     return self._check_error(result)
@@ -554,9 +591,6 @@ class Socket {
    * @return any
    */
   get_option(option) {
-    if !option
-      return nil
-
     if !is_int(option) 
       die SocketException('integer expected for option, ${typeof(option)} given')
 
