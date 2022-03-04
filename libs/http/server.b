@@ -14,24 +14,65 @@ import ssl
  */
 class HttpServer {
 
+  /**
+   * A boolean value indicating if the server should/will be TLS/SSL secured or not.
+   * @default false
+   */
   var is_secure = false
 
-  var address = so.IP_LOCAL
+  /**
+   * The host address to which this server will be bound
+   * @default socket.IP_LOCAL (127.0.0.1)
+   */
+  var host = so.IP_LOCAL
 
+  /**
+   * The port to which this server will be bound to on the host.
+   */
   var port = 0
 
+  /**
+   * The working Socket instance for the HttpServer.
+   */
   var socket
 
-  var headers = {}
-
+  /**
+   * A boolean value indicating whether to reuse socket addresses or not.
+   * @default true
+   */
   var resuse_address = true
 
+  /**
+   * The timeout in milliseconds after which an attempt to read clients 
+   * request data will be terminated.
+   * @default 2000 (2 seconds)
+   */
   var read_timeout = 2000
 
+  /**
+   * The timeout in milliseconds after which an attempt to write response data to 
+   * clients will be terminated. 
+   * 
+   * If we cannot send response to a client after the stipulated time, it will be 
+   * assumed such clients have disconnected and existing connections for that 
+   * client will be closed and their respective sockets will be discarded.
+   * 
+   * @default 2000 (2 seconds)
+   */
   var write_timeout = 2000
 
+  /**
+   * The SSL/TLS ceritificate file that will be used be used by a secured server for 
+   * serving requests.
+   * @note do not set a value to it directly. Use `load_certs()` instead.
+   */
   var cert_file
 
+  /**
+   * The SSL/TLS private key file that will be used be used by a secured server for 
+   * serving requests.
+   * @note do not set a value to it directly. Use `load_certs()` instead.
+   */
   var private_key_file
 
   # status trackers.
@@ -45,18 +86,18 @@ class HttpServer {
   var _error_listeners = []
 
   /**
-   * HttpServer(port: int [, address: string [, is_secure: bool]])
+   * HttpServer(port: int [, host: string [, is_secure: bool]])
    * @constructor
    */
-  HttpServer(port, address, is_secure) {
+  HttpServer(port, host, is_secure) {
 
     if !is_int(port) or port <= 0
       die Exception('invalid port number')
     else self.port = port
 
-    if address != nil and !is_string(address)
-      die Exception('invalid address')
-    else if address != nil self.address = address
+    if host != nil and !is_string(host)
+      die Exception('invalid host')
+    else if host != nil self.host = host
 
     if is_secure != nil and !is_bool(is_secure)
       die Exception('is_secure must be boolean')
@@ -202,7 +243,7 @@ class HttpServer {
   /**
    * listen()
    * 
-   * Binds to the instance port and address and starts listening for incoming 
+   * Binds to the instance port and host and starts listening for incoming 
    * connection from HTTP clients.
    */
   listen() {
@@ -215,7 +256,7 @@ class HttpServer {
 
     if !self.socket.is_listening {
       self.socket.set_option(so.SO_REUSEADDR, is_bool(self.resuse_address) ? self.resuse_address : true)
-      self.socket.bind(self.port, self.address)
+      self.socket.bind(self.port, self.host)
       self.socket.listen()
 
       self._is_listening = true
@@ -232,18 +273,18 @@ class HttpServer {
         if is_number(self.write_timeout)
           client.set_option(so.SO_SNDTIMEO, self.write_timeout)
 
-        /* try { */
+        try {
           var data = client.receive()
 
           if data {
             self._process_received(data, client)
           }
-        /* } catch Exception e {
+        } catch Exception e {
           # call the error listeners.
           iters.each(self._error_listeners, | fn | {
             fn(e, client)
           })
-        } finally { */
+        } finally {
           var client_info = client.info()
           client.close()
 
@@ -251,7 +292,7 @@ class HttpServer {
           iters.each(self._disconnect_listeners, | fn | {
             fn(client_info)
           })
-        /* } */
+        }
       }
     }
   }
