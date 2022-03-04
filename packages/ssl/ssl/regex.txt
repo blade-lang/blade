@@ -1,0 +1,2 @@
+Search: GET_SSL_CONSTANT\(([^)]+)\),
+Replace: /**\n * $1\n */\nvar $1 = _ssl.$1\n

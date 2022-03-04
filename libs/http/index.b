@@ -43,7 +43,11 @@ def put(url, data) {
   return _client.send_request(url, 'PUT', data)
 }
 
-
-def server(port, address) {
-  return HttpServer(port, address)
+/**
+ * server(port: int, address: string, is_secure: bool)
+ * 
+ * Creates an new HttpServer instance.
+ */
+def server(port, address, is_secure) {
+  return HttpServer(port, address, is_secure)
 }

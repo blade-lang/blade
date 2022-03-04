@@ -155,3 +155,13 @@ def get_type(object) {
 
   return _reflect.gettype(object)
 }
+
+/**
+ * is_ptr(value: any)
+ * 
+ * Returns `true` if _value_ is a pointer, `false` otherwise.
+ * @return bool
+ */
+def is_ptr(value) {
+  return _reflect.isptr(value)
+}

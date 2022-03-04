@@ -9,6 +9,7 @@ import .response { HttpResponse }
 import url
 import socket
 import url
+import ssl
 
 class HttpRequest {
 
@@ -394,7 +395,7 @@ class HttpRequest {
         message += '\r\n${data}'
 
         # do real request here...
-        var client = socket.Socket()
+        var client = !is_secure ? socket.Socket() : ssl.SSLSocket(ssl.TLS_client_method)
         client.set_option(socket.SO_SNDTIMEO, send_timeout)
         client.set_option(socket.SO_RCVTIMEO, receive_timeout)
 
@@ -470,7 +471,7 @@ class HttpRequest {
               var chunk_size = to_number('0x'+tmp_body[0].trim())
               body = '\n'.join(tmp_body[1,])
               
-              while true {
+              while true and body.ascii().length() < chunk_size {
                 var response = client.receive()
                 body += response
                 if response.ends_with('\r\n\r\n')
@@ -488,8 +489,9 @@ class HttpRequest {
           client.close()
 
           if follow_redirect and headers.contains('Location') {
+            referer = uri.absolute_url()
             uri = url.parse(headers['Location'])
-            referer = headers['Location']
+            responder = referer
           } else {
             should_connect = false
           }

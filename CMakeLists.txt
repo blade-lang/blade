@@ -148,10 +148,7 @@ target_include_directories(libblade PUBLIC "${INCLUDE_GEN_DIR}")
 set(LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_STATIC_LIBRARY_SUFFIX}")
 set(SHARED_LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
-add_custom_target(blade_files)
-
-# add dependencies
-add_dependencies(libblade pcre2 blade_files)
+add_dependencies(libblade pcre2)
 
 set_target_properties(libblade
 		PROPERTIES
@@ -177,7 +174,7 @@ endif(UNIX)
 
 target_link_libraries(blade PRIVATE libblade)
 
-add_custom_command(TARGET blade_files POST_BUILD
+add_custom_target(blade_lib_files ALL
 		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/libs ${CMAKE_CURRENT_BINARY_DIR}/blade/libs
 		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/tests ${CMAKE_CURRENT_BINARY_DIR}/blade/tests
 		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/benchmarks ${CMAKE_CURRENT_BINARY_DIR}/blade/benchmarks

@@ -25,7 +25,7 @@ if(WIN32)
     target_link_libraries(json wsock32 ws2_32)
 endif()
 
-add_custom_command(TARGET json POST_BUILD
+add_custom_target(copy-json-to-libs ALL
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/json ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE}/../libs/json
         COMMENT "Exporting json source files to libs folder..."
         )

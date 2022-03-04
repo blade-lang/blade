@@ -465,6 +465,11 @@ DECLARE_MODULE_METHOD(socket__getsockinfo) {
     dict_add_entry(vm, dict, GC_L_STRING("port", 4), NUMBER_VAL(port));
     dict_add_entry(vm, dict, GC_L_STRING("family", 6),
                    NUMBER_VAL(ntohs(address.sin_family)));
+  } else {
+    dict_add_entry(vm, dict, GC_L_STRING("address", 7), NIL_VAL);
+    dict_add_entry(vm, dict, GC_L_STRING("port", 4), NUMBER_VAL(-1));
+    dict_add_entry(vm, dict, GC_L_STRING("family", 6),
+                   NUMBER_VAL(ntohs(address.sin_family)));
   }
 
   RETURN_OBJ(dict);
