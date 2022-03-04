@@ -213,6 +213,11 @@ class Socket {
   var is_shutdown = false
 
   /**
+   * `true` when the socket is running in a blocking mode, `false` otherwise.
+   */
+  var is_blocking = false
+
+  /**
    * The property holds the reason for which the last `shutdown` operation 
    * was called or `-1` if `shutdown` was never requested.
    */
@@ -231,16 +236,14 @@ class Socket {
   var receive_timeout = -1
 
   /**
-   * `true` when the socket is running in a blocking mode, `false` otherwise.
-   */
-  var is_blocking = false
-
-  /**
-   * Socket(family: number [, type: number, protocol: number [, id: number]])
-   * @example Socket(AF_INET, SOCK_STREAM, 0)
+   * Socket(family: number [, type: number [, protocol: number]])
+   * @example Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
    * @constructor  
    */
   Socket(family, type, protocol, id) {
+    # NOTE: NEVER EVER SET `id` YOURSELF.
+    # The parameter is meant to make `accept()`.
+
     if family self.family = family
     if type self.type = type
     if protocol self.protocol = protocol
@@ -588,9 +591,6 @@ class Socket {
    * @return any
    */
   get_option(option) {
-    if !option
-      return nil
-
     if !is_int(option) 
       die SocketException('integer expected for option, ${typeof(option)} given')
 

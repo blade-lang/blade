@@ -45,6 +45,24 @@ class SSLContext {
   }
 
   /**
+   * load_certs(cert_file: string | file, private_key_file: string | file)
+   * 
+   * loads the given SSL/TLS certificate pairs for the given SSL/TLS context.
+   * @return bool
+   */
+  load_certs(cert_file, private_key_file) {
+    if !is_string(cert_file) and !is_file(cert_file)
+      die Exception('cert_file must be a string or file')
+    if !is_string(private_key_file) and !is_file(private_key_file)
+      die Exception('private_key_file must be a string or file')
+
+    if is_file(cert_file) cert_file = cert_file.abs_path()
+    if is_file(private_key_file) private_key_file = private_key_file.abs_path()
+
+    return _ssl.load_certs(self._ptr, cert_file, private_key_file)
+  }
+
+  /**
    * free()
    * 
    * frees this Context and all associated resources

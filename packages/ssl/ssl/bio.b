@@ -5,6 +5,8 @@ import reflect
 import .ssl { SSL }
 import .constants
 
+var _close_opts = [constants.BIO_NOCLOSE, constants.BIO_CLOSE]
+
 /**
  * SSL Binary Input/Output
  */
@@ -199,6 +201,34 @@ class BIO {
   }
 
   /**
+   * get_fd()
+   * 
+   * returns the current socket file descriptor.
+   * It returns `-1` on failure or a positive integer on success.
+   * @return number
+   */
+  get_fd() {
+    return _ssl.bio_get_fd(self._ptr)
+  }
+
+  /**
+   * set_fd(fd: int [, opt: int])
+   * 
+   * sets the socket file descriptor for this BIO
+   * @default opt = BIO_NOCLOSE
+   */
+  set_fd(fd, opt) {
+    if !is_int(fd)
+      die Exception('fd must be an integer')
+    if opt != nil and !_close_opts.contains(fd)
+      die Exception('opt must be one of BIO_CLOSE or BIO_NOCLOSE')
+
+    if !opt opt = constants.BIO_NOCLOSE
+
+    return _ssl.bio_set_fd(self._ptr, fd, opt)
+  }
+
+  /**
    * set_non_blocking([b: bool])
    * 
    * converts the BIO into a non-blocking I/O stream if b is `true`, otherwise 
@@ -293,6 +323,15 @@ class BIO {
    */
   do_connect() {
     return _ssl.do_connect(self._ptr)
+  }
+
+  /**
+   * do_accept()
+   * 
+   * attempts to accept the connected socket.
+   */
+  do_accept() {
+    return _ssl.do_accept(self._ptr)
   }
 
   /**

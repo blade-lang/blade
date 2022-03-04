@@ -2,21 +2,25 @@
 
 import .request { HttpRequest }
 import .response { HttpResponse }
+import .exception { HttpException }
 import .status
 
 import socket as so
 import iters
+import ssl
 
 /**
  * HTTP server
  */
 class HttpServer {
 
+  var is_secure = false
+
   var address = so.IP_LOCAL
 
   var port = 0
 
-  var socket = so.Socket()
+  var socket
 
   var headers = {}
 
@@ -25,6 +29,10 @@ class HttpServer {
   var read_timeout = 2000
 
   var write_timeout = 2000
+
+  var cert_file
+
+  var private_key_file
 
   # status trackers.
   var _is_listening = false
@@ -37,10 +45,10 @@ class HttpServer {
   var _error_listeners = []
 
   /**
-   * HttpServer(port: int [, address: string])
+   * HttpServer(port: int [, address: string [, is_secure: bool]])
    * @constructor
    */
-  HttpServer(port, address) {
+  HttpServer(port, address, is_secure) {
 
     if !is_int(port) or port <= 0
       die Exception('invalid port number')
@@ -49,6 +57,31 @@ class HttpServer {
     if address != nil and !is_string(address)
       die Exception('invalid address')
     else if address != nil self.address = address
+
+    if is_secure != nil and !is_bool(is_secure)
+      die Exception('is_secure must be boolean')
+    if !is_secure is_secure = false
+
+    # self.socket = !is_secure ? so.Socket() : ssl.SSLSocket(ssl.TLS_server_method)
+    self.socket = so.Socket()
+    self.is_secure = is_secure
+  }
+
+  /**
+   * load_certs(cert_file: string | file, private_key_file: string | file)
+   * 
+   * loads the given SSL/TLS certificate pairs for the given SSL/TLS context.
+   * @note certificates can only be loaded for secure servers.
+   * @return bool
+   */
+  load_certs(cert_file, private_key_file) {
+    if !self.is_secure
+      die HttpException('certificates can only be loaded for secure servers')
+
+    if self.socket.get_context().load_certs(cert_file, private_key_file) {
+      self.cert_file = cert_file
+      self.private_key_file = private_key_file
+    }
   }
 
   /**
@@ -173,6 +206,13 @@ class HttpServer {
    * connection from HTTP clients.
    */
   listen() {
+    if self.is_secure {
+      if !self.cert_file
+        die Exception('no certificate loaded for secure server')
+      if !self.private_key_file 
+        die Exception('no private key loaded for secure server')
+    }
+
     if !self.socket.is_listening {
       self.socket.set_option(so.SO_REUSEADDR, is_bool(self.resuse_address) ? self.resuse_address : true)
       self.socket.bind(self.port, self.address)
@@ -192,18 +232,18 @@ class HttpServer {
         if is_number(self.write_timeout)
           client.set_option(so.SO_SNDTIMEO, self.write_timeout)
 
-        try {
+        /* try { */
           var data = client.receive()
 
           if data {
             self._process_received(data, client)
           }
-        } catch Exception e {
+        /* } catch Exception e {
           # call the error listeners.
           iters.each(self._error_listeners, | fn | {
             fn(e, client)
           })
-        } finally {
+        } finally { */
           var client_info = client.info()
           client.close()
 
@@ -211,7 +251,7 @@ class HttpServer {
           iters.each(self._disconnect_listeners, | fn | {
             fn(client_info)
           })
-        }
+        /* } */
       }
     }
   }

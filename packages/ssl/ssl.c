@@ -38,6 +38,26 @@ DECLARE_MODULE_METHOD(ssl_ctx_free) {
   RETURN;
 }
 
+DECLARE_MODULE_METHOD(ssl_ctx_load_certs) {
+  ENFORCE_ARG_COUNT(load_certs, 3);
+  ENFORCE_ARG_TYPE(load_certs, 0, IS_PTR); // the pointer
+  ENFORCE_ARG_TYPE(load_certs, 1, IS_STRING); // cert file
+  ENFORCE_ARG_TYPE(load_certs, 2, IS_STRING); // private key file
+
+  SSL_CTX *ctx = (SSL_CTX*)AS_PTR(args[0])->pointer;
+  b_obj_string *cert_file = AS_STRING(args[1]);
+  b_obj_string *key_file = AS_STRING(args[2]);
+
+  if(SSL_CTX_use_certificate_file(ctx, cert_file->chars, SSL_FILETYPE_PEM) <= 0) {
+    RETURN_FALSE;
+  }
+  if(SSL_CTX_use_PrivateKey_file(ctx, key_file->chars, SSL_FILETYPE_PEM) <= 0) {
+    RETURN_FALSE;
+  }
+
+  RETURN_TRUE;
+}
+
 // @TODO: Treat the callback in the client code
 DECLARE_MODULE_METHOD(ssl_ctx_set_verify) {
   ENFORCE_ARG_COUNT(ctx_set_verify, 2);
@@ -82,6 +102,15 @@ DECLARE_MODULE_METHOD(ssl_set_connect_state) {
 
   SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
   SSL_set_connect_state(ssl);
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(ssl_set_accept_state) {
+  ENFORCE_ARG_COUNT(set_accept_state, 1);
+  ENFORCE_ARG_TYPE(set_accept_state, 0, IS_PTR);
+
+  SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
+  SSL_set_accept_state(ssl);
   RETURN;
 }
 
@@ -296,7 +325,7 @@ DECLARE_MODULE_METHOD(ssl_read) {
         sleep(1);
         continue;
       }
-      RETURN_NIL; // error...
+      RETURN_STRING(""); // error...
     }
 
     data = (char*) realloc(data, sizeof(char) * (total + i + 1));
@@ -354,10 +383,59 @@ DECLARE_MODULE_METHOD(ssl_error_string) {
   }
 }
 
+DECLARE_MODULE_METHOD(ssl_accept) {
+  ENFORCE_ARG_COUNT(accept, 1);
+  ENFORCE_ARG_TYPE(accept, 0, IS_PTR);
+  RETURN_BOOL(SSL_accept((SSL*)AS_PTR(args[0])->pointer) > 0);
+}
+
+DECLARE_MODULE_METHOD(ssl_do_accept) {
+  ENFORCE_ARG_COUNT(do_accept, 1);
+  ENFORCE_ARG_TYPE(do_accept, 0, IS_PTR);
+  RETURN_BOOL(BIO_do_accept((BIO*)AS_PTR(args[0])->pointer));
+}
+
 DECLARE_MODULE_METHOD(ssl_free) {
   ENFORCE_ARG_COUNT(free, 1);
   ENFORCE_ARG_TYPE(free, 0, IS_PTR);
   BIO_free_all((BIO*)AS_PTR(args[0])->pointer);
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(ssl_bio_get_fd) {
+  ENFORCE_ARG_COUNT(bio_get_fd, 1);
+  ENFORCE_ARG_TYPE(bio_get_fd, 0, IS_PTR);
+  BIO *bio = (BIO*)AS_PTR(args[0])->pointer;
+  int fd;
+  BIO_get_fd(bio, &fd);
+  RETURN_NUMBER(fd);
+}
+
+DECLARE_MODULE_METHOD(ssl_bio_set_fd) {
+  ENFORCE_ARG_COUNT(bio_set_fd, 3);
+  ENFORCE_ARG_TYPE(bio_set_fd, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(bio_set_fd, 1, IS_NUMBER); // fd
+  ENFORCE_ARG_TYPE(bio_set_fd, 2, IS_NUMBER); // opt
+
+  BIO *bio = (BIO*)AS_PTR(args[0])->pointer;
+  BIO_set_fd(bio, AS_NUMBER(args[1]), AS_NUMBER(args[2]));
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(ssl_get_fd) {
+  ENFORCE_ARG_COUNT(get_fd, 1);
+  ENFORCE_ARG_TYPE(get_fd, 0, IS_PTR);
+  SSL *bio = (SSL*)AS_PTR(args[0])->pointer;
+  RETURN_NUMBER(SSL_get_fd(bio));
+}
+
+DECLARE_MODULE_METHOD(ssl_set_fd) {
+  ENFORCE_ARG_COUNT(set_fd, 2);
+  ENFORCE_ARG_TYPE(set_fd, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(set_fd, 1, IS_NUMBER); // fd
+
+  SSL *bio = (SSL*)AS_PTR(args[0])->pointer;
+  SSL_set_fd(bio, AS_NUMBER(args[1]));
   RETURN;
 }
 
@@ -415,9 +493,11 @@ CREATE_MODULE_LOADER(ssl) {
       {"ctx_free",   true,  GET_MODULE_METHOD(ssl_ctx_free)},
       {"ctx_set_verify",   true,  GET_MODULE_METHOD(ssl_ctx_set_verify)},
       {"ctx_set_verify_locations",   true,  GET_MODULE_METHOD(ssl_ctx_set_verify_locations)},
+      {"load_certs",   true,  GET_MODULE_METHOD(ssl_ctx_load_certs)},
       {"new",   true,  GET_MODULE_METHOD(ssl_new)},
       {"ssl_free",   true,  GET_MODULE_METHOD(ssl_ssl_free)},
       {"set_connect_state",   true,  GET_MODULE_METHOD(ssl_set_connect_state)},
+      {"set_accept_state",   true,  GET_MODULE_METHOD(ssl_set_accept_state)},
       {"new_bio",   true,  GET_MODULE_METHOD(ssl_new_bio)},
       {"set_ssl",   true,  GET_MODULE_METHOD(ssl_bio_set_ssl)},
       {"set_conn_hostname",   true,  GET_MODULE_METHOD(ssl_set_conn_hostname)},
@@ -434,7 +514,13 @@ CREATE_MODULE_LOADER(ssl) {
       {"get_accept_port",   true,  GET_MODULE_METHOD(ssl_get_accept_port)},
       {"get_conn_family",   true,  GET_MODULE_METHOD(ssl_get_conn_family)},
       {"get_accept_family",   true,  GET_MODULE_METHOD(ssl_get_accept_family)},
+      {"get_fd",   true,  GET_MODULE_METHOD(ssl_get_fd)},
+      {"bio_get_fd",   true,  GET_MODULE_METHOD(ssl_bio_get_fd)},
       {"set_nbio",   true,  GET_MODULE_METHOD(ssl_set_nbio)},
+      {"set_fd",   true,  GET_MODULE_METHOD(ssl_set_fd)},
+      {"bio_set_fd",   true,  GET_MODULE_METHOD(ssl_bio_set_fd)},
+      {"accept",   true,  GET_MODULE_METHOD(ssl_accept)},
+      {"do_accept",   true,  GET_MODULE_METHOD(ssl_do_accept)},
       {"push",   true,  GET_MODULE_METHOD(ssl_bio_push)},
       {"pop",   true,  GET_MODULE_METHOD(ssl_bio_pop)},
       {"write",   true,  GET_MODULE_METHOD(ssl_write)},

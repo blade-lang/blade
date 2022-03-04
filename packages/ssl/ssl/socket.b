@@ -4,35 +4,64 @@ import .context { SSLContext }
 import .ssl { SSL }
 import .bio { SSLBIO, ConnectBIO }
 import .constants { TLS_method }
+import _socket { _create, _accept }
+import socket { Socket, SOCK_STREAM, IPPROTO_TCP, AF_INET }
 
 
 /**
- * SSLSocket class provides socket module's Socket class emulation 
- * for SSL for easy interoperability from clients supporting client, 
- * allowing a plug-and-play support for secured connections.
+ * SSLSocket is an SSL/TLS enabled socket.
+ * @extends Socket
  */
-class SSLSocket {
+class SSLSocket < Socket {
 
   # BIO tracker.
   var _bio
-
-  # client/server toggle
-  var _is_client = true
 
   /**
    * SSLSocket(method: ptr)
    * @constructor
    * @note method must be a valid method pointer defined in the <em>ssl</em> module
    */
-  SSLSocket(method) {
-    self._ctx = SSLContext(method)
+  SSLSocket(method, id, ctx) {
+    # NOTE: NEVER EVER SET `id` and `ctx` YOURSELF.
+    # The parameter is meant to make `accept()`.
 
-    # initialize the SSL.
-    self._ssl = SSL(self._ctx)
+    if method {
+      self.id = _create(AF_INET, SOCK_STREAM, IPPROTO_TCP)
+      self._ctx = SSLContext(method)
 
-    # use the ssl inside an SSL BIO.
-    self._ssl_bio = SSLBIO()
-    self._ssl_bio.set_ssl(self._ssl)
+      # initialize the SSL.
+      self._ssl = SSL(self._ctx)
+  
+      # use the ssl inside an SSL BIO.
+      self._ssl_bio = SSLBIO()
+      self._ssl_bio.set_fd(self.id)
+      self._ssl_bio.set_ssl(self._ssl)
+    } else {
+
+      if id != nil and !is_int(id)
+        die Exception('id must be an integer')
+      if ctx != nil and !instance_of(ctx, SSLContext)
+        die Exception('ssl must be an instance of SSLContext')
+
+      self.id = id
+      self._ctx = ctx
+
+      # initialize the SSL.
+      self._ssl = SSL(self._ctx)
+      # if !self._ssl.accept()
+      #   die Exception('failed to accept connection')
+  
+      # use the ssl inside an SSL BIO.
+      self._ssl_bio = SSLBIO()
+      self._ssl_bio.set_fd(self.id)
+      self._ssl_bio.set_ssl(self._ssl)
+
+      if !self._ssl_bio.do_accept()
+        die Exception('failed to accept connection')
+        
+      self._bio = self._ssl_bio
+    }
   }
 
   /**
@@ -55,7 +84,42 @@ class SSLSocket {
     bio.set_non_blocking(true)
     self._bio = self._ssl_bio.push(bio)
 
-    return self._bio.do_connect() == 1
+    self.is_client = self.is_connected = self._bio.do_connect() == 1
+    if self.is_connected {
+      self.is_listening = false
+      self.is_bound = false
+    }
+    return self.is_connected
+  }
+
+  /**
+   * accept()
+   * 
+   * Accepts a connection on a socket
+   * 
+   * This method extracts the first connection request on the queue of pending connections, creates a new socket 
+   * with the same properties of the current socket, and allocates a new file descriptor for the socket.  If no 
+   * pending connections are present on the queue, and the socket is not marked as non-blocking, accept() blocks 
+   * the caller until a connection is present.  If the socket is marked non-blocking and no pending connections 
+   * are present on the queue, accept() returns an error as described below.  
+   * 
+   * @note The accepted socket may not be used to accept more connections.  
+   * @note The original socket socket, remains open.
+   * @return Socket
+   */
+  accept() {
+    self._ssl.set_accept_state()
+    if self.is_bound and self.is_listening and !self.is_closed {
+      var result = _accept(self.id)
+
+      if result and result != -1  {
+        var socket = SSLSocket(nil, result[0], self._ctx)
+        socket.is_client = true
+        socket.is_connected = true
+        return socket
+      }
+    }
+    die SocketException('socket not bound/listening')
   }
 
   /**
@@ -87,11 +151,22 @@ class SSLSocket {
     if length != nil and !is_int(length)
       die Exception('integer expected')
 
-    var data = self._bio.read(10240)
-    if length and data.length() > length {
-      return data[,length]
-    }
-    return data
+    if !length length = 1024
+    return self._bio.read(length)
+  }
+
+  /**
+   * read([length: int])
+   * 
+   * Reads bytes of the given length from the socket. If the length is not given, it default length of 
+   * -1 indicating that the total available data on the socket stream will be read. 
+   * 
+   * > Unlike with plain `Socket`, this is basically a wrapper for the `receive()` method.
+   * @default Length = 1024
+   * @return string
+   */
+  read(length) {
+    return self.receive(length, 0)
   }
 
   /**
@@ -101,6 +176,7 @@ class SSLSocket {
    * @return bool
    */
   close() {
+    parent.close()
     self._bio.free()
     self._ctx.free()
   }
