@@ -1,4 +1,2 @@
-*.b linguist-detectable
 *.c linguist-language=C
 *.h linguist-language=C
-*.b linguist-language=Dart
