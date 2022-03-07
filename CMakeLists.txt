@@ -181,6 +181,8 @@ add_custom_target(blade_lib_files ALL
 		COMMENT "Exporting libs, tests, and benchmark scripts..."
 )
 
+add_dependencies(blade blade_lib_files)
+
 set(EXE_FILE "${OUTPUT_DIR}/blade${CMAKE_EXECUTABLE_SUFFIX}")
 
 add_custom_command(TARGET blade POST_BUILD
