@@ -1,113 +1,482 @@
 #
 # @module socket
 #
-# Provides interface for working with Socket clients
-# and servers.
+# This module provides access to the underlying system socket management 
+# implementations. It is meant to be used to provide more controlled and 
+# specific operating system features and for implementing various standard 
+# and custom network protocols and specifications for which Blade does not 
+# provide a built-in implementation for.
+# 
+# This module defines a lot of constant that whose value complies with the 
+# operating system specification and they should be used instead of a finite 
+# value wherever available as values for these constants can change across 
+# different OS implementations.
+# 
+# ### What's a Socket
+# 
+# Sockets are bidrectional communication medias for information exchange between 
+# various processes within the same machine or different machines.
+# 
+# There are three important concepts that must important to know when working with 
+# sockets.
+# 
+# 1. `Family`: This refer to the general group of sockets that a specific 
+# protocol handled by a socket belongs to. This is any of the `AF_` constants.
+# 2. `Types`: The type of communication between the two processes involved. And can 
+# only be one of `SOCK_STREAM` or `SOCK_DGRAM`.
+# 3. `Protocol`: This is to identify the variant protocol on which one or more 
+# network protocols are based on. Typically `0` or any of the `IP_` constants.
+# 
+# A simple socket may be instanciated as follows:
+# 
+# ```blade
+# import socket { Socket }
+# var sock = Socket()
+# ```
+# > The `{ Socket }` in the import statement means we are only importing the `Socket` 
+# > class and not the entire `socket` module. Other examples here will skip the assume 
+# > you are importing just what you need out of the package but will not show the import 
+# > statement.
+# 
+# The example above instantiates a socket without any arguments, and it is equivalent to:
+# 
+# ```blade
+# Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
+# ```
+# 
+# You can establish a connection with another socket with a known address and port 
+# as follows:
+# 
+# ```blade
+# var socket = Socket()
+# socket.connect('127.0.0.1', 4000)
+# ```
+# 
+# The above example connects to the process listening at port 4000 on host with IP 
+# address 127.0.0.1. A connection is a pre-requisite to writing or reading from a socket.
+# 
+# After connecting to a socket, you can read and write data as follows:
+# 
+# ```blade
+# var socket = Socket()
+# socket.connect('127.0.0.1', 4000)
+# 
+# var message_from_client = socket.receive()
+# socket.send('You sent: ' + message_from_client)
+# ```
+# 
+# The above example simply replies the client with `You sent: ` + whatever the client 
+# acutally sent.
+# 
+# Due to resource limitations, its good practice to always ensure to close sockets when 
+# done with it. Doing this is pretty simple.
+# 
+# ```blade
+# socket.close()
+# ```
+# 
 # @copyright 2021, Ore Richard Muyiwa and Blade contributors
 # 
 
-import _socket {
-  SOCK_STREAM,
-  SOCK_DGRAM,
-  SOCK_RAW,
-  SOCK_RDM,
-  SOCK_SEQPACKET,
+import _socket
 
-  SO_DEBUG,
-  SO_ACCEPTCONN,
-  SO_REUSEADDR,
-  SO_KEEPALIVE,
-  SO_DONTROUTE,
-  SO_BROADCAST,
-  SO_USELOOPBACK,
-  SO_LINGER,
-  SO_OOBINLINE,
-  SO_REUSEPORT,
-  SO_TIMESTAMP,
+# Types
 
-  SO_SNDBUF,
-  SO_RCVBUF,
-  SO_SNDLOWAT,
-  SO_RCVLOWAT,
-  SO_SNDTIMEO,
-  SO_RCVTIMEO,
-  SO_ERROR,
-  SO_TYPE,
+/**
+ * stream socket
+ */
+var SOCK_STREAM = _socket.SOCK_STREAM
 
+/**
+ * datagram socket
+ */
+var SOCK_DGRAM = _socket.SOCK_DGRAM
 
-  SOL_SOCKET,
+/**
+ * raw-protocol interface
+ */
+var SOCK_RAW = _socket.SOCK_RAW
 
-  AF_UNSPEC,
-  AF_UNIX,
-  AF_LOCAL,
-  AF_INET,
-  AF_IMPLINK,
-  AF_PUP,
-  AF_CHAOS,
-  AF_NS,
-  AF_ISO,
-  AF_OSI,
-  AF_ECMA,
-  AF_DATAKIT,
-  AF_CCITT,
-  AF_SNA,
-  AF_DECnet,
-  AF_DLI,
-  AF_LAT,
-  AF_HYLINK,
-  AF_APPLETALK,
-  AF_INET6,
+/**
+ * reliably-delivered message
+ */
+var SOCK_RDM = _socket.SOCK_RDM
 
-  IPPROTO_IP,
-  IPPROTO_ICMP,
-  IPPROTO_IGMP,
-  IPPROTO_IPIP,
-  IPPROTO_TCP,
-  IPPROTO_EGP,
-  IPPROTO_PUP,
-  IPPROTO_UDP,
-  IPPROTO_IDP,
-  IPPROTO_TP,
-  IPPROTO_DCCP,
-  IPPROTO_IPV6,
-  IPPROTO_RSVP,
-  IPPROTO_GRE,
-  IPPROTO_ESP,
-  IPPROTO_AH,
-  IPPROTO_MTP,
-  IPPROTO_BEETPH,
-  IPPROTO_ENCAP,
-  IPPROTO_PIM,
-  IPPROTO_COMP,
-  IPPROTO_SCTP,
-  IPPROTO_UDPLITE,
-  IPPROTO_MPLS,
-  IPPROTO_RAW,
-  IPPROTO_MAX,
-
-  SHUT_RD,
-  SHUT_WR,
-  SHUT_RDWR,
-
-  SOMAXCONN,
+/**
+ * sequenced packet stream
+ */
+var SOCK_SEQPACKET = _socket.SOCK_SEQPACKET
 
 
-  _create,
-  _connect,
-  _error,
-  _accept,
-  _bind,
-  _listen,
-  _recv,
-  _read,
-  _send,
-  _setsockopt,
-  _shutdown,
-  _close,
-  _getaddrinfo,
-  _getsockinfo,
-  _getsockopt
-}
+# Option flags per-socket.
+
+/**
+ * Turn on debugging info recording
+ */
+var SO_DEBUG = _socket.SO_DEBUG
+
+/**
+ * Socket has had listen()
+ */
+var SO_ACCEPTCONN = _socket.SO_ACCEPTCONN
+
+/**
+ * Allow local address reuse
+ */
+var SO_REUSEADDR = _socket.SO_REUSEADDR
+
+/**
+ * Keep connections alive
+ */
+var SO_KEEPALIVE = _socket.SO_KEEPALIVE
+
+/**
+ * Just use interface addresses
+ */
+var SO_DONTROUTE = _socket.SO_DONTROUTE
+
+/**
+ * Permit sending of broadcast msgs
+ */
+var SO_BROADCAST = _socket.SO_BROADCAST
+
+/**
+ * Bypass hardware when possible
+ */
+var SO_USELOOPBACK = _socket.SO_USELOOPBACK
+
+/**
+ * Linger on close if data present (in ticks)
+ */
+var SO_LINGER = _socket.SO_LINGER
+
+/**
+ * Leave received OOB data in line
+ */
+var SO_OOBINLINE = _socket.SO_OOBINLINE
+
+/**
+ * Allow local address & port reuse
+ */
+var SO_REUSEPORT = _socket.SO_REUSEPORT
+
+/**
+ * Timestamp received dgram traffic
+ */
+var SO_TIMESTAMP = _socket.SO_TIMESTAMP
+
+
+# Additional options, not kept in so_options.
+
+/**
+ * Send buffer size
+ */
+var SO_SNDBUF = _socket.SO_SNDBUF
+
+/**
+ * Receive buffer size
+ */
+var SO_RCVBUF = _socket.SO_RCVBUF
+
+/**
+ * Send low-water mark
+ */
+var SO_SNDLOWAT = _socket.SO_SNDLOWAT
+
+/**
+ * Receive low-water mark
+ */
+var SO_RCVLOWAT = _socket.SO_RCVLOWAT
+
+/**
+ * Send timeout
+ */
+var SO_SNDTIMEO = _socket.SO_SNDTIMEO
+
+/**
+ * Receive timeout
+ */
+var SO_RCVTIMEO = _socket.SO_RCVTIMEO
+
+/**
+ * Get error status and clear
+ */
+var SO_ERROR = _socket.SO_ERROR
+
+/**
+ * Get socket type
+ */
+var SO_TYPE = _socket.SO_TYPE
+
+
+# Level number for (get/set)sockopt() to apply to socket itself.
+
+/**
+ * Options for socket level
+ */
+var SOL_SOCKET = _socket.SOL_SOCKET
+
+
+# Address families.
+
+/**
+ * Unspecified
+ */
+var AF_UNSPEC = _socket.AF_UNSPEC
+
+/**
+ * Local to host (pipes)
+ */
+var AF_UNIX = _socket.AF_UNIX
+
+/**
+ * Backward compatibility with AF_UNIX
+ */
+var AF_LOCAL = _socket.AF_LOCAL
+
+/**
+ * Internetwork: UDP, TCP, etc.
+ */
+var AF_INET = _socket.AF_INET
+
+/**
+ * Arpanet imp addresses
+ */
+var AF_IMPLINK = _socket.AF_IMPLINK
+
+/**
+ * PUP protocols: e.g. BSP
+ */
+var AF_PUP = _socket.AF_PUP
+
+/**
+ * MIT CHAOS protocols
+ */
+var AF_CHAOS = _socket.AF_CHAOS
+
+/**
+ * XEROX NS protocols
+ */
+var AF_NS = _socket.AF_NS
+
+/**
+ * ISO protocols
+ */
+var AF_ISO = _socket.AF_ISO
+
+/**
+ * ISO protocols (same as AF_ISO)
+ */
+var AF_OSI = _socket.AF_OSI
+
+/**
+ * European computer manufacturers
+ */
+var AF_ECMA = _socket.AF_ECMA
+
+/**
+ * Datakit protocols
+ */
+var AF_DATAKIT = _socket.AF_DATAKIT
+
+/**
+ * CCITT protocols, X.25 etc
+ */
+var AF_CCITT = _socket.AF_CCITT
+
+/**
+ * IBM SNA
+ */
+var AF_SNA = _socket.AF_SNA
+
+/**
+ * DECnet
+ */
+var AF_DECnet = _socket.AF_DECnet
+
+/**
+ * DEC Direct data link interface
+ */
+var AF_DLI = _socket.AF_DLI
+
+/**
+ * LAT
+ */
+var AF_LAT = _socket.AF_LAT
+
+/**
+ * NSC Hyperchannel
+ */
+var AF_HYLINK = _socket.AF_HYLINK
+
+/**
+ * Apple Talk
+ */
+var AF_APPLETALK = _socket.AF_APPLETALK
+
+/**
+ * IPv6
+ */
+var AF_INET6 = _socket.AF_INET6
+
+
+# Protocol families, same as address families on most platforms.
+
+/**
+ * IPPROTO_IP
+ */
+var IPPROTO_IP = _socket.IPPROTO_IP
+
+/**
+ * IPPROTO_ICMP
+ */
+var IPPROTO_ICMP = _socket.IPPROTO_ICMP
+
+/**
+ * IPPROTO_IGMP
+ */
+var IPPROTO_IGMP = _socket.IPPROTO_IGMP
+
+/**
+ * IPPROTO_IPIP
+ */
+var IPPROTO_IPIP = _socket.IPPROTO_IPIP
+
+/**
+ * IPPROTO_TCP
+ */
+var IPPROTO_TCP = _socket.IPPROTO_TCP
+
+/**
+ * IPPROTO_EGP
+ */
+var IPPROTO_EGP = _socket.IPPROTO_EGP
+
+/**
+ * IPPROTO_PUP
+ */
+var IPPROTO_PUP = _socket.IPPROTO_PUP
+
+/**
+ * IPPROTO_UDP
+ */
+var IPPROTO_UDP = _socket.IPPROTO_UDP
+
+/**
+ * IPPROTO_IDP
+ */
+var IPPROTO_IDP = _socket.IPPROTO_IDP
+
+/**
+ * IPPROTO_TP
+ */
+var IPPROTO_TP = _socket.IPPROTO_TP
+
+/**
+ * IPPROTO_DCCP
+ */
+var IPPROTO_DCCP = _socket.IPPROTO_DCCP
+
+/**
+ * IPPROTO_IPV6
+ */
+var IPPROTO_IPV6 = _socket.IPPROTO_IPV6
+
+/**
+ * IPPROTO_RSVP
+ */
+var IPPROTO_RSVP = _socket.IPPROTO_RSVP
+
+/**
+ * IPPROTO_GRE
+ */
+var IPPROTO_GRE = _socket.IPPROTO_GRE
+
+/**
+ * IPPROTO_ESP
+ */
+var IPPROTO_ESP = _socket.IPPROTO_ESP
+
+/**
+ * IPPROTO_AH
+ */
+var IPPROTO_AH = _socket.IPPROTO_AH
+
+/**
+ * IPPROTO_MTP
+ */
+var IPPROTO_MTP = _socket.IPPROTO_MTP
+
+/**
+ * IPPROTO_BEETPH
+ */
+var IPPROTO_BEETPH = _socket.IPPROTO_BEETPH
+
+/**
+ * IPPROTO_ENCAP
+ */
+var IPPROTO_ENCAP = _socket.IPPROTO_ENCAP
+
+/**
+ * IPPROTO_PIM
+ */
+var IPPROTO_PIM = _socket.IPPROTO_PIM
+
+/**
+ * IPPROTO_COMP
+ */
+var IPPROTO_COMP = _socket.IPPROTO_COMP
+
+/**
+ * IPPROTO_SCTP
+ */
+var IPPROTO_SCTP = _socket.IPPROTO_SCTP
+
+/**
+ * IPPROTO_UDPLITE
+ */
+var IPPROTO_UDPLITE = _socket.IPPROTO_UDPLITE
+
+/**
+ * IPPROTO_MPLS
+ */
+var IPPROTO_MPLS = _socket.IPPROTO_MPLS
+
+/**
+ * IPPROTO_RAW
+ */
+var IPPROTO_RAW = _socket.IPPROTO_RAW
+
+/**
+ * IPPROTO_MAX
+ */
+var IPPROTO_MAX = _socket.IPPROTO_MAX
+
+
+# howto arguments for shutdown(2), specified by Posix.1g.
+
+/**
+ * Shut down the reading side
+ */
+var SHUT_RD = _socket.SHUT_RD
+
+/**
+ * Shut down the writing side
+ */
+var SHUT_WR = _socket.SHUT_WR
+
+/**
+ * Shut down both sides
+ */
+var SHUT_RDWR = _socket.SHUT_RDWR
+
+
+/**
+ * Maximum queue length specifiable by listen.
+ */
+var SOMAXCONN = _socket.SOMAXCONN
+
+
 
 
 
@@ -143,6 +512,7 @@ class SocketException < Exception {
 /**
  * The Socket class provides interface for working with Socket clients
  * and servers.
+ * @printable
  */
 class Socket {
 
@@ -150,7 +520,7 @@ class Socket {
    * This property holds the host bound, to be bound to or connected to by the current socket.
    * Whenever a host is not given, the host will default to localhost.
    */
-  var host = 'localhost'
+  var host = IP_LOCAL
 
   /**
    * The port currently bound or connected to by the socket
@@ -256,7 +626,7 @@ class Socket {
       if !is_int(self.protocol) 
         die SocketException('integer expected for protocol, ${typeof(self.protocol)} given')
 
-      self.id = self._check_error(_create(self.family, self.type, self.protocol))
+      self.id = self._check_error(_socket.create(self.family, self.type, self.protocol))
     } else {
       self.id = id
     }
@@ -265,7 +635,7 @@ class Socket {
   # checks if a response code is valid
   # returns the code if it is or throws an SocketException otherwise
   _check_error(code) {
-    var err = _error(code)
+    var err = _socket.error(code)
     if err die SocketException(err)
     return code
   }
@@ -295,7 +665,7 @@ class Socket {
 
     if self.is_connected die SocketException('socket has existing connection')
 
-    var result = self._check_error(_connect(self.id, host, port, self.family, timeout, self.is_blocking))
+    var result = self._check_error(_socket.connect(self.id, host, port, self.family, timeout, self.is_blocking))
     if result {
       self.is_client = true
       self.is_connected = true
@@ -326,7 +696,7 @@ class Socket {
 
     if self.is_bound die SocketException('socket previously bound')
 
-    var result = self._check_error(_bind(self.id, host, port, self.family))
+    var result = self._check_error(_socket.bind(self.id, host, port, self.family))
     if result {
       self.is_bound = true
       self.is_listening = false # it's freshly bound
@@ -362,7 +732,7 @@ class Socket {
     if !self.is_listening and !self.is_connected
       die SocketException('socket not listening or connected')
 
-    return self._check_error(_send(self.id, message, flags))
+    return self._check_error(_socket.send(self.id, message, flags))
   }
 
   /**
@@ -394,7 +764,7 @@ class Socket {
     if !self.is_listening and !self.is_connected
       die SocketException('socket not listening or connected')
     
-    var result = _recv(self.id, length, flags)
+    var result = _socket.recv(self.id, length, flags)
     if is_string(result) or result == nil return result
 
     return self._check_error(result)
@@ -427,7 +797,7 @@ class Socket {
     if !self.is_listening and !self.is_connected
       die SocketException('socket not listening or connected')
     
-    var result = _read(self.id, length, 0)
+    var result = _socket.read(self.id, length, 0)
     if is_string(result) or result == nil return result
 
     return self._check_error(result)
@@ -461,7 +831,7 @@ class Socket {
     if !self.is_bound or self.is_listening or self.is_closed 
       die SocketException('socket is in an illegal state')
 
-    var result = self._check_error(_listen(self.id, queue_length))
+    var result = self._check_error(_socket.listen(self.id, queue_length))
     if result {
       self.is_listening = true
     }
@@ -484,7 +854,7 @@ class Socket {
    */
   accept() {
     if self.is_bound and self.is_listening and !self.is_closed {
-      var result = _accept(self.id)
+      var result = _socket.accept(self.id)
 
       if result and result != -1  {
         var socket = Socket(self.family, self.type, self.protocol, result[0])
@@ -508,7 +878,7 @@ class Socket {
     # silently ignore multiple calls to close()
     if self.is_closed return true
 
-    if self._check_error(_close(self.id)) == 0 {
+    if self._check_error(_socket.close(self.id)) == 0 {
       self.is_connected = false
       self.is_listening = false
       self.is_bound = false
@@ -545,7 +915,7 @@ class Socket {
 
     if self.is_closed die SocketException('socket is in an illegal state')
 
-    var result = self._check_error(_shutdown(self.id, how)) >= 0
+    var result = self._check_error(_socket.shutdown(self.id, how)) >= 0
     if result {
       self.is_connected = false
       self.is_listening = false
@@ -573,7 +943,7 @@ class Socket {
     if option == SO_TYPE or option == SO_ERROR
       die Exception('the given option is read-only')
 
-    var result = self._check_error(_setsockopt(self.id, option, value)) >= 0
+    var result = self._check_error(_socket.setsockopt(self.id, option, value)) >= 0
 
     if result {
       # get an update on SO_SNDTIMEO and SO_RCVTIMEO
@@ -599,7 +969,7 @@ class Socket {
     if option == SO_RCVTIMEO return self.receive_timeout
     else if option == SO_SNDTIMEO return self.send_timeout
 
-    return _getsockopt(self.id, option)
+    return _socket.getsockopt(self.id, option)
   }
 
   /**
@@ -621,7 +991,7 @@ class Socket {
    * @return dictionary
    */
   info() {
-    return _getsockinfo(self.id)
+    return _socket.getsockinfo(self.id)
   }
 
   @to_string() {
@@ -645,5 +1015,5 @@ def get_address_info(address, type, family) {
   if !type type = 'http'
   if !family family = AF_INET
 
-  return _getaddrinfo(address, type, family)
+  return _socket.getaddrinfo(address, type, family)
 }

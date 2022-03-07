@@ -840,6 +840,7 @@ class Parser {
       result = [result] # we want to return an array of declarations
 
       while self._match(COMMA) {
+        self._ignore_newline()
         self._consume(IDENTIFIER, 'expected variable name')
         var r = self._previous().literal
 

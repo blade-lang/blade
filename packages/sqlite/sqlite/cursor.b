@@ -11,6 +11,7 @@ import _sqlite {
 
 /**
  * A cursor for navigation through sql results
+ * @iterable
  */
 class SQLite3Cursor {
 
@@ -26,6 +27,7 @@ class SQLite3Cursor {
 
   /**
    * The SQLite3 connection that owns this cursor
+   * @readonly
    */
   var connection
 
@@ -48,14 +50,16 @@ class SQLite3Cursor {
    * The value returned by `modified_count` immediately after an INSERT, UPDATE or DELETE 
    * statement run on a view is always zero. Only changes made to real tables are counted.
    * 
-   * @note If a separate thread makes changes on the same database connection at the exact time the original query was also making a change, the result of this value will become undependable.
-   * 
    * @readonly
+   * 
+   * > If a separate thread makes changes on the same database connection at the exact time 
+   * > the original query was also making a change, the result of this value will become 
+   * > undependable.
    */
   var modified_count = 0
 
   /**
-   * the columns in the result set
+   * A list of the columns available in the result set.
    * @readonly
    */
   var columns = []
@@ -63,6 +67,7 @@ class SQLite3Cursor {
   /**
    * SQLite3Cursor(db: SQLite3, cursor: pointer)
    * @constructor
+   * @note SQLite3Cursor should NEVER be maually instantiated.
    */
   SQLite3Cursor(db, cursor) {
     self.connection = db
@@ -74,7 +79,8 @@ class SQLite3Cursor {
   /**
    * close()
    * 
-   * closes the cursor and prevents further reading
+   * Closes the cursor and prevents further reading
+   * @return bool
    */
   close() {
     return _cursor_close(self._cursor)
@@ -83,7 +89,9 @@ class SQLite3Cursor {
   /**
    * has_next()
    * 
-   * returns true if there are more rows in the result set not yet retrieved.
+   * Returns `true` if there are more rows in the result set not yet retrieved, 
+   * otherwise it returns `false`.
+   * 
    * @return boolean
    */
   has_next() {
@@ -98,8 +106,7 @@ class SQLite3Cursor {
   /**
    * get(index: number | string)
    * 
-   * returns the value of the column matching the index in the current 
-   * result set.
+   * Returns the value of the column matching the index in the current result set.
    * 
    * @note if index is a number, it returns the value in the column at the given index. 
    * @note that index must be lower than columns.length() in this case.

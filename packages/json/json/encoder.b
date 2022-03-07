@@ -24,11 +24,23 @@ class Encoder {
       self._max_depth = max_depth
     }
 
-    if compact {
-      if !is_bool(compact) die Exception('compact expects boolean. ${typeof(compact)} given')
-      self._item_spacing = ''
-      self._merge_strip_start = 1
+    if compact != nil {
+      if !is_bool(compact) 
+        die Exception('compact expects boolean. ${typeof(compact)} given')
+      self._item_spacing = compact ? '' : ' '
+      self._merge_strip_start = compact ? 1 : 2
     }
+    self.compact = compact
+  }
+
+  _start_alignment() {
+    if !self.compact return '${self._item_spacing}\n${''.lpad(self._depth * 2)}'
+    return self._item_spacing
+  }
+
+  _end_alignment() {
+    if !self.compact return '\n${''.lpad((self._depth - 1) * 2)}'
+    return ''
   }
 
   /**
@@ -38,6 +50,7 @@ class Encoder {
    * @note this function calls the parent encode() method whenever the depth of the encoding increases
    */
   _encode(value) {
+    var spacing = self._item_spacing
     using typeof(value) {
       when 'nil' return 'null'
       when 'boolean' return to_string(value)
@@ -55,12 +68,13 @@ class Encoder {
         for val in value {
           # inner lists will increase the depth
           if is_list(val) or is_dict(val) {
-            result += ',${self._item_spacing}${self.encode(val)}'
+            result += ',${self._start_alignment()}${self.encode(val)}'
+            self._depth--
           } else {
-            result += ',${self._item_spacing}${self._encode(val)}'
+            result += ',${self._start_alignment()}${self._encode(val)}'
           }
         }
-        if result return '[${result[self._merge_strip_start,]}]'
+        if result return '[${result[self._merge_strip_start,]}${self._end_alignment()}]'
         return '[]'
       }
       when 'dictionary' {
@@ -68,12 +82,13 @@ class Encoder {
         for key, val in value {
           # inner dictionaries will increase the depth
           if is_dict(val) or is_list(val) {
-            result += ',${self._item_spacing}"${to_string(key)}":${self._item_spacing}${self.encode(val)}'
+            result += ',${self._start_alignment()}"${to_string(key)}":${spacing}${self.encode(val)}'
+            self._depth--
           } else {
-            result += ',${self._item_spacing}"${to_string(key)}":${self._item_spacing}${self._encode(val)}'
+            result += ',${self._start_alignment()}"${to_string(key)}":${spacing}${self._encode(val)}'
           }
         }
-        if result return '{${result[self._merge_strip_start,]}}'
+        if result return '{${result[self._merge_strip_start,]}${self._end_alignment()}}'
         return '{}'
       }
       default {

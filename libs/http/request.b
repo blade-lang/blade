@@ -11,6 +11,11 @@ import socket
 import url
 import ssl
 
+/**
+ * Http request handler and object.
+ * @serializable
+ * @printable
+ */
 class HttpRequest {
 
   /**

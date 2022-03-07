@@ -2,6 +2,7 @@
 
 /**
  * HTTP related Exceptions
+ * @printable
  */
 class HttpException < Exception {
 

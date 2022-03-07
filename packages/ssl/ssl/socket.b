@@ -4,7 +4,7 @@ import .context { SSLContext }
 import .ssl { SSL }
 import .bio { SSLBIO, ConnectBIO }
 import .constants { TLS_method }
-import _socket { _create, _accept }
+import _socket
 import socket { Socket, SOCK_STREAM, IPPROTO_TCP, AF_INET }
 
 
@@ -27,7 +27,7 @@ class SSLSocket < Socket {
     # The parameter is meant to make `accept()`.
 
     if method {
-      self.id = _create(AF_INET, SOCK_STREAM, IPPROTO_TCP)
+      self.id = _socket.create(AF_INET, SOCK_STREAM, IPPROTO_TCP)
       self._ctx = SSLContext(method)
 
       # initialize the SSL.
@@ -110,7 +110,7 @@ class SSLSocket < Socket {
   accept() {
     self._ssl.set_accept_state()
     if self.is_bound and self.is_listening and !self.is_closed {
-      var result = _accept(self.id)
+      var result = _socket.accept(self.id)
 
       if result and result != -1  {
         var socket = SSLSocket(nil, result[0], self._ctx)

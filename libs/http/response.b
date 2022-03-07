@@ -4,6 +4,8 @@ import date { Date }
 
 /**
  * Represents the response to an Http request
+ * @serializable
+ * @printable
  */
 class HttpResponse {
 
