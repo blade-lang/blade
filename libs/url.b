@@ -1,35 +1,84 @@
 #
 # @module url
 #  
-# Provides functionalities for parsing and processing URLs
+# This module provides classes and functions for parsing and processing URLs.
+# This module supports username and passwords in URLs in order to support an 
+# arbitrary number of RFC combinations but this does not strictly conform to 
+# RFC1738.
+# 
+# The scope of URL in this module have not been limited to HTTP or any protocol 
+# for that matter. However, where deducable, the module tries to conform to the 
+# most appropriate URL for the specified scheme.
+# 
+# Constructing a URL is vey simple. Here is an example.
+# 
+# ### Example,
+# 
+# ```blade-repl
+# %> import url
+# %> var link = url.Url('https', 'example.com', 9000)
+# %> link.absolute_url()
+# 'https://example.com:9000'
+# ```
+# 
+# What each function and class method does are easy to deduce from their names.
+# 
+# For example, we can use the `parse()` function to convert a URL string into a URL 
+# instance like below.
+# 
+# ```blade-repl
+# %> link = url.parse('https://example.com:9000')
+# %> link.scheme
+# 'https'
+# %> link.port
+# '9000'
+# ```
+# 
 # @copyright 2021, Ore Richard Muyiwa and Blade contributors
 # 
 
 import types
 
+
 /**
- * Excpetion class thrown when the url is malformed
+ * Excpetion thrown when a url is malformed
  */
 class UrlMalformedException < Exception {
+  /**
+   * UrlMalformedException(message: string)
+   * @constructor
+   */
   UrlMalformedException(message) {
     parent(message)
   }
 }
 
-/**
- * a list of schemes that does not conform to the standard ://
- * after the scheme name in their urls
- */
+
+# a list of schemes that does not conform to the standard ://
+# after the scheme name in their urls
 var _SIMPLE_SCHEMES = ['mailto', 'tel']
+
+var _ipv6_regex = '/(?:^|(?<=\\s))(([0-9a-fA-F]{1,4}:)' +
+  '{7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]' +
+  '{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]' + 
+  '{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]' + 
+  '{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]' +
+  '{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4})' +
+  '{1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:)' +
+  '{0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}' +
+  '[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}' +
+  '[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))(?=\\s|$)/'
 
 
 /**
  * The Url class provides functionalities for parsing and processing URLs
+ * @serializable
+ * @printable
  */
 class Url {
 
   /**
-   * The url scheme e.g. http, https, ftp, tcp etc...
+   * The url scheme e.g. http, https, ftp, tcp etc.
    */
   var scheme
 
@@ -45,7 +94,8 @@ class Url {
   var port
 
   /**
-   * The path of the URL. default = /
+   * The path of the URL.
+   * @default /
    */
   var path = '/'
 
@@ -77,10 +127,29 @@ class Url {
   var password
 
   /**
-   * Url(scheme, host, port, path, query, hash, username, password)
+   * Url(scheme: string, host: string [, port: string [, path: string [, query: string [, hash: string [, username: string [, password: string]]]]]])
    * @constructor 
    */
   Url(scheme, host, port, path, query, hash, username, password) {
+    if !is_string(scheme)
+      die Exception('scheme must be string')
+    if !is_string(host)
+      die Exception('host must be string')
+    if port != nil and !is_string(port) and !is_int(port)
+      die Exception('port must be string or integer')
+    if path != nil and !is_string(path)
+      die Exception('path must be string')
+    if query != nil and !is_string(query)
+      die Exception('query must be string')
+    if hash != nil and !is_string(hash)
+      die Exception('hash must be string')
+    if username != nil and !is_string(username)
+      die Exception('username must be string')
+    if password != nil and !is_string(password)
+      die Exception('password must be string')
+
+    if is_number(port) port = to_string(port)
+
     self.scheme = scheme
     self.host = host
     self.port = port
@@ -99,7 +168,7 @@ class Url {
    * terminated by the next slash ("/"), question mark ("?"), or number
    * sign ("#") character, or by the end of the URI.
    *
-   * @note: mailto scheme does not have an authority. For this reason, mailto schemes return an empty string as authority.
+   * @note mailto scheme does not have an authority. For this reason, mailto schemes return an empty string as authority.
    * @return string
    */
   authority() {
@@ -118,7 +187,7 @@ class Url {
 
       # URI producers and normalizers should omit the ":" delimiter that
       # separates host from port if the port component is empty
-      if self.port > 0 authority += ':${self.port}'
+      if self.port and self.port > 0 authority += ':${self.port}'
 
       return authority
     }
@@ -134,7 +203,7 @@ class Url {
    */
   host_is_ipv4() {
     if self.host {
-      return self.host.match('/^((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])(\.(?!$)|$)){4}$/')
+      return self.host.match('/^((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])(\\.(?!$)|$)){4}$/')
     }
     return false
   }
@@ -148,7 +217,8 @@ class Url {
    */
   host_is_ipv6() {
     if self.host {
-      return self.host.match('/(?:^|(?<=\s))(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))(?=\s|$)/')
+      var matched = self.host.match(_ipv6_regex)
+      return matched and matched.length() > 0
     }
     return false
   }
@@ -197,6 +267,10 @@ class Url {
     return url
   }
 
+  @to_string() {
+    return '<Url href=${self.absolute_url()}>'
+  }
+
   @to_json() {
     return {
       scheme: self.scheme,
@@ -214,7 +288,7 @@ class Url {
 
 
 /**
- * encode(url: string, strict: boolean [default = false])
+ * encode(url: string, strict: boolean)
  * 
  * URL-encodes string
  * 
@@ -226,8 +300,9 @@ class Url {
  * percent (%) sign in order to conform with RFC 3986. Otherwise,
  * is is encoded with the plus (+) sign in order to align with
  * the default encoding used by modern browsers.
- * @note strict mode is disabled by default
  * @return string
+ * @defualt strict: false
+ * @note strict mode is disabled by default
  */
 def encode(url, strict) {
   if !is_string(url)

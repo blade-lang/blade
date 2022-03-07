@@ -1,7 +1,10 @@
 # 
 # @module math
 #
-# Blade's mathematical library
+# This module contains functions and constants to make trigonometric and 
+# non-trignonometric mathematics a breeze. The module also defines a couple 
+# of commonly used scientific and mathematical constants such as `PI`.
+# 
 # @copyright 2021, Ore Richard Muyiwa and Blade contributors
 #
 
@@ -69,6 +72,14 @@ var NaN = 0/0
  * calculates the product of all positive 
  * numbers less than or equal to a given positive number n
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> import math
+ * %> math.factorial(60)
+ * 8.320987112741392e+81
+ * ```
  */
 def factorial(n) {
   if !is_number(n) {
@@ -84,8 +95,7 @@ def factorial(n) {
 
 
 # Core trigonometric functions
-# implemented internally in C to leverage precision
-# and machine level instructions
+# implemented internally in C to leverage precision, machine instructions and speed.
 
 /**
  * sin(n: number)
@@ -93,6 +103,13 @@ def factorial(n) {
  * returns a numeric value between -1 and 1, which 
  * represents the sine of the angle given in radians
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.sin(46)
+ * 0.9017883476488092
+ * ```
  */
 def sin(n) {
   return _math.sin(n)
@@ -104,6 +121,13 @@ def sin(n) {
  * returns a numeric value between -1 and 1, which 
  * represents the cosine of the angle
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.cos(93)
+ * 0.3174287015197017
+ * ```
  */
 def cos(n) {
   return _math.cos(n)
@@ -115,6 +139,13 @@ def cos(n) {
  * returns a numeric value that represents the tangent 
  * of the angle given
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.tan(11.43)
+ * -2.155225644164932
+ * ```
  */
 def tan(n) {
   return _math.tan(n)
@@ -125,6 +156,13 @@ def tan(n) {
  * 
  * returns the hyperbolic sine (in radians) of number n
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.sinh(1.4)
+ * 1.904301501451534
+ * ```
  */
 def sinh(n) {
   return _math.sinh(n)
@@ -135,6 +173,13 @@ def sinh(n) {
  * 
  * returns the hyperbolic cosine (in radians) of number n
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.cosh(1.91)
+ * 3.450584592563374
+ * ```
  */
 def cosh(n) {
   return _math.cosh(n)
@@ -145,6 +190,13 @@ def cosh(n) {
  * 
  * returns the hyperbolic tangent (in radians) of number n
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.tanh(2.19)
+ * 0.9752591705196751
+ * ```
  */
 def tanh(n) {
   return _math.tanh(n)
@@ -155,6 +207,13 @@ def tanh(n) {
  * for x between -1 and 1. 
  * If the value of x is outside this range, it returns NaN
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.asin(0.123)
+ * 0.123312275191872
+ * ```
  */
 def asin(n) {
   return _math.asin(n)
@@ -165,8 +224,16 @@ def asin(n) {
  * 
  * returns a numeric value between 0 and π radians for x 
  * between -1 and 1. 
- * If the value of x is outside this range, it returns NaN
+ * 
+ * @note If the value of x is outside this range, it returns NaN
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.acos(0.471)
+ * 1.080372275769021
+ * ```
  */
 def acos(n) {
   return _math.acos(n)
@@ -175,6 +242,13 @@ def acos(n) {
 /**
  * returns a numeric value between -(π/2) and π/2 radians.
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.atan(math.Infinity)
+ * 1.570796326794897
+ * ```
  */
 def atan(n) {
   return _math.atan(n)
@@ -184,11 +258,22 @@ def atan(n) {
  * atan2(n: number)
  * 
  * returns a numeric value between -π and π representing the 
- * angle theta of an (x, y) point. 
- * This is the counterclockwise angle, measured in radians, 
- * between the positive X axis, and the point (x, y). 
+ * angle theta of an (x, y) point. This is the counterclockwise angle, 
+ * measured in radians, between the positive X axis, and the point (x, y). 
+ * 
  * @note the arguments to this function pass the y-coordinate first and the x-coordinate second
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.atan2(math.Infinity, -math.Infinity)
+ * 2.356194490192345
+ * %> math.atan2(1, 2)
+ * 0.4636476090008061
+ * %> math.atan2(-1.5, 2.4)
+ * -0.5585993153435624
+ * ```
  */
 def atan2(x, y) {
   return _math.atan2(x, y)
@@ -199,6 +284,13 @@ def atan2(x, y) {
  * 
  * returns the hyperbolic arcsine (in radians) of number n
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.asinh(3.42)
+ * 1.943507380182802
+ * ```
  */
 def asinh(n) {
   return _math.asinh(n)
@@ -209,6 +301,13 @@ def asinh(n) {
  * 
  * returns the hyperbolic arccosine (in radians) of number n
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.acosh(1.21)
+ * 0.637237379754108
+ * ```
  */
 def acosh(n) {
   return _math.acosh(n)
@@ -219,6 +318,13 @@ def acosh(n) {
  * 
  * returns the hyperbolic arctangent (in radians) of number n
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.atanh(0.11)
+ * 0.1104469157900971
+ * ```
  */
 def atanh(n) {
   return _math.atanh(n)
@@ -230,7 +336,15 @@ def atanh(n) {
  * returns e ** x, where x is the argument, and e is Euler's 
  * number (also known as Napier's constant), the base of the 
  * natural logarithms
+ * 
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.exp(4)
+ * 54.59815003314424
+ * ```
  */
 def exp(n) {
   return _math.exp(n)
@@ -241,7 +355,15 @@ def exp(n) {
  * 
  * returns (e ** x) - 1, where x is the argument, and e the base of 
  * the natural logarithms
+ * 
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.expm1(1)
+ * 1.718281828459045
+ * ```
  */
 def expm1(n) {
   return _math.expm1(n)
@@ -252,6 +374,15 @@ def expm1(n) {
  * 
  * returns number n rounded up to the next largest integer
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.ceil(1.65)
+ * 2
+ * %> math.ceil(1.01)
+ * 2
+ * ```
  */
 def ceil(n) {
   return _math.ceil(n)
@@ -262,6 +393,15 @@ def ceil(n) {
  * 
  * returns the value of a number rounded to the nearest integer
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.round(103.51)
+ * 104
+ * %> math.round(103.49)
+ * 103
+ * ```
  */
 def round(n) {
   return _math.round(n)
@@ -271,10 +411,16 @@ def round(n) {
  * log(n: number)
  * 
  * returns the natural logarithm (base e) of a number (mathematical ln(x))
- * @note
- * - If the value of x is 0, the return value is always -inf
- * - If the value of x is negative, the return value is always NaN
+ * @note If the value of x is 0, the return value is always -inf
+ * @note If the value of x is negative, the return value is always NaN
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.log(45)
+ * 3.80666248977032
+ * ```
  */
 def log(n) {
   return _math.log(n)
@@ -286,6 +432,13 @@ def log(n) {
  * returns the base 2 logarithm of the given number. 
  * If the number is negative, NaN is returned
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.log2(45)
+ * 5.491853096329675
+ * ```
  */
 def log2(n) {
   return _math.log2(n)
@@ -297,6 +450,13 @@ def log2(n) {
  * returns the base 10 logarithm of the given number. 
  * If the number is negative, NaN is returned
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.log10(45)
+ * 1.653212513775344
+ * ```
  */
 def log10(n) {
   return _math.log10(n)
@@ -324,6 +484,13 @@ def log10(n) {
  * returns the natural logarithm (base e) of 1 + a number
  * If the value of x is less than -1, the return value is always NaN.
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.log1p(45)
+ * 3.828641396489095
+ * ```
  */
 def log1p(n) {
   return _math.log1p(n)
@@ -334,6 +501,13 @@ def log1p(n) {
  * 
  * returns the cube root of a number n
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.cbrt(64)
+ * 4
+ * ```
  */
 def cbrt(n) {
   if !is_number(n) {
@@ -352,6 +526,19 @@ def cbrt(n) {
  * a number passed into the argument. 
  * If the number passed into sign() is 0, it will return a 0.
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.sign(10)
+ * 1
+ * %> math.sign(-20)
+ * -1
+ * %> math.sign(-0)
+ * -0
+ * %> math.sign(0)
+ * 0
+ * ```
  */
 def sign(n) {
   if !is_number(n) n = to_number(n)
@@ -367,6 +554,13 @@ def sign(n) {
  * A number representing the largest integer less than or 
  * equal to the specified number
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.floor(1.92)
+ * 1
+ * ```
  */
 def floor(n) {
   return _math.floor(n)
@@ -388,6 +582,17 @@ def is_nan(n) {
  * returns true if the given number is equal to Infinity or -Infinity 
  * or false otherwise
  * @return bool
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.is_inf(math.Infinity)
+ * true
+ * %> math.is_inf(-math.Infinity)
+ * true
+ * %> math.is_inf(0)
+ * false
+ * ```
  */
 def is_inf(n) {
   return n == Infinity or n == -Infinity
@@ -398,6 +603,17 @@ def is_inf(n) {
  * 
  * return true if x is neither an Infinity nor a NaN, and false otherwise
  * @return bool
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.is_finite(0)
+ * true
+ * %> math.is_finite(math.NaN)
+ * true
+ * %> math.is_finite(-math.Infinity)
+ * false
+ * ```
  */
 def is_finite(n) {
   return !is_inf(n) and !is_nan(n)
@@ -408,6 +624,19 @@ def is_finite(n) {
  * 
  * returns the integer part of a number by removing any fractional
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.trunc(1.92)
+ * 1
+ * %> math.trunc(1.0)
+ * 1
+ * %> math.trunc(1.01)
+ * 1
+ * %> math.trunc(-1.01)
+ * -1
+ * ```
  */
 def trunc(n) {
   if !is_number(n) {
@@ -422,6 +651,13 @@ def trunc(n) {
  * 
  * returns the square root of a nunmber
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.sqrt(100)
+ * 10
+ * ```
  */
 def sqrt(n) {
   if !is_number(n) {
@@ -438,6 +674,13 @@ def sqrt(n) {
  * the default start value for the product is 1.
  * when the iterable is empty, it returns 1
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.sum([1, 2, [3, 4, [5, 6]]])
+ * 21
+ * ```
  */
 def sum(arg) {
   if !is_iterable(arg) {
@@ -447,8 +690,11 @@ def sum(arg) {
   var result = 0
 
   for i in arg {
+    if !is_number(i) and !is_list(i) and !is_dict(i)
+      die Exception('invalid item in sumation iterable')
+
     if is_list(i) or is_dict(i) 
-      result += product(i)
+      result += sum(i)
     else result += i
   }
 
@@ -462,6 +708,13 @@ def sum(arg) {
  * the default start value for the product is 1.
  * when the iterable is empty, it returns 1
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.product([1, 2, [3, 4, [5, 6]]])
+ * 720
+ * ```
  */
 def product(arg) {
   if !is_iterable(arg) {
@@ -471,6 +724,9 @@ def product(arg) {
   var result = 1
 
   for i in arg {
+    if !is_number(i) and !is_list(i) and !is_dict(i)
+      die Exception('invalid item in product iterable')
+
     if is_list(i) or is_dict(i) 
       result *= product(i)
     else result *= i
@@ -486,6 +742,13 @@ def product(arg) {
  * returns the fractional part of a number as a whole number 
  * by removing any integer
  * @return number
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> math.fraction(1.92)
+ * 92
+ * ```
  */
 def fraction(n) {
   if !is_number(n) {

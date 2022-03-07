@@ -190,9 +190,9 @@ DECLARE_MODULE_METHOD(sqlite__cursor_close) {
   ENFORCE_ARG_TYPE(_cursor_close, 0, IS_PTR);
   sqlite3_stmt *stmt = AS_PTR(args[0])->pointer;
   if(stmt != NULL) {
-    RETURN_NUMBER(sqlite3_finalize(stmt));
+    RETURN_BOOL(sqlite3_finalize(stmt) == SQLITE_OK);
   }
-  RETURN_NUMBER(-1);
+  RETURN_BOOL(false);
 }
 
 DECLARE_MODULE_METHOD(sqlite__cursor_get) {

@@ -11,6 +11,7 @@ import ssl
 
 /**
  * HTTP server
+ * @printable
  */
 class HttpServer {
 
@@ -295,6 +296,10 @@ class HttpServer {
         }
       }
     }
+  }
+
+  @to_string() {
+    return '<HttpServer ${self.host}:${self.port}>'
   }
 }
 

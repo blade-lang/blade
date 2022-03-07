@@ -1,15 +1,47 @@
 #
 # @module io
 # 
-# Provides Blade's interface to I/O stream handling and operations
+# This module provides interfaces for working with to I/O stream and TTYs 
+# as well as expose the operating system standard I/O for easy access.
+# 
+# Some I/O operations that should belong to this module have been merged as 
+# core features and offered as built-in functions for Blade. Specifically 
+# file I/O features that can be accessed via the built-in `file()` function. 
+# 
+# The standard I/O streams are also files and you can call almost all file 
+# methods on them. Whenever a file method is not supported, you'll get an error 
+# message telling you that such operation is not supported for standard streams.
+# 
+# ### Example
+# 
+# The following example shows how to use the `io` module for accepting user name 
+# and printing the result.
+# 
+# ```blade
+# import io
+# 
+# var name = io.readline('What is your name?')
+# echo name
+# ```
+# 
 # @copyright 2021, Ore Richard Muyiwa and Blade contributors
 # 
 
 import _io
 
- # for file seek
+/**
+ * Set I/O position from the beginning
+ */
 var SEEK_SET = 0
+
+/**
+ * Set I/O position from the current position
+ */
 var SEEK_CUR = 1
+
+/**
+ * Set I/O position from the end
+ */
 var SEEK_END = 2
 
 
@@ -20,78 +52,291 @@ var SEEK_END = 2
 class TTY {
 
   # TTY flags
+  /**
+   * TTY attribute for input flags
+   */
   static var TTY_IFLAG = 0
+
+  /**
+   * TTY attribute for output flags
+   */
   static var TTY_OFLAG = 1
+
+  /**
+   * TTY attribute for control flags
+   */
   static var TTY_CFLAG = 2
+
+  /**
+   * TTY attribute for local flags
+   */
   static var TTY_LFLAG = 3
+
+  /**
+   * TTY attribute for input speed
+   */
   static var TTY_ISPEED = 4
+
+  /**
+   * TTY attribute for output speed
+   */
   static var TTY_OSPEED = 5
 
   # input flags for input processing
-  static var IGNBRK   = 0x00000001      # ignore BREAK condition 
-  static var BRKINT   = 0x00000002      # map BREAK to SIGINTR 
-  static var IGNPAR   = 0x00000004      # ignore (discard) parity errors 
-  static var PARMRK   = 0x00000008      # mark parity and framing errors 
-  static var INPCK    = 0x00000010      # enable checking of parity errors 
-  static var ISTRIP   = 0x00000020      # strip 8th bit off chars 
-  static var INLCR    = 0x00000040      # map NL into CR 
-  static var IGNCR    = 0x00000080      # ignore CR 
-  static var ICRNL    = 0x00000100      # map CR to NL (ala CRMOD) 
-  static var IXON     = 0x00000200      # enable output flow control 
-  static var IXOFF    = 0x00000400      # enable input flow control 
-  static var IXANY    = 0x00000800      # any char will restart after stop 
-  static var IUTF8    = 0x00004000      # maintain state for UTF-8 VERASE
+  /**
+   * ignore BREAK condition
+   */
+  static var IGNBRK   = 0x00000001
+  
+  /**
+   * map BREAK to SIGINTR 
+   */
+  static var BRKINT   = 0x00000002      
+
+  /**
+   * ignore (discard) parity errors
+   */
+  static var IGNPAR   = 0x00000004      
+
+  /**
+   * mark parity and framing errors 
+   */
+  static var PARMRK   = 0x00000008      
+
+  /**
+   * enable checking of parity errors
+   */
+  static var INPCK    = 0x00000010
+
+  /**
+   * strip 8th bit off chars 
+   */
+  static var ISTRIP   = 0x00000020
+
+  /**
+   * map NL into CR
+   */
+  static var INLCR    = 0x00000040
+
+  /**
+   * ignore CR 
+   */
+  static var IGNCR    = 0x00000080
+
+  /**
+   * map CR to NL (ala CRMOD)
+   */
+  static var ICRNL    = 0x00000100
+
+  /**
+   * enable output flow control 
+   */
+  static var IXON     = 0x00000200
+
+  /**
+   * enable input flow control
+   */
+  static var IXOFF    = 0x00000400
+
+  /**
+   * any char will restart after stop 
+   */
+  static var IXANY    = 0x00000800
+
+  /**
+   * maintain state for UTF-8 VERASE
+   */
+  static var IUTF8    = 0x00004000
 
   # output flags
-  static var OPOST    = 0x00000001      # enable following output processing
-  static var ONLCR    = 0x00000002      # map NL to CR-NL (ala CRMOD)
+  /**
+   * enable following output processing
+   */
+  static var OPOST    = 0x00000001
+
+  /**
+   * map NL to CR-NL (ala CRMOD)
+   */
+  static var ONLCR    = 0x00000002
 
   # control flags
-  static var CSIZE    = 0x00000300      # character size mask 
-  static var CS5      = 0x00000000      # 5 bits (pseudo) 
-  static var CS6      = 0x00000100      # 6 bits 
-  static var CS7      = 0x00000200      # 7 bits 
-  static var CS8      = 0x00000300      # 8 bits 
-  static var CSTOPB   = 0x00000400      # send 2 stop bits 
-  static var CREAD    = 0x00000800      # enable receiver 
-  static var PARENB   = 0x00001000      # parity enable 
-  static var PARODD   = 0x00002000      # odd parity, else even 
-  static var HUPCL    = 0x00004000      # hang up on last close 
-  static var CLOCAL   = 0x00008000      # ignore modem status lines 
+  /**
+   * character size mask 
+   */
+  static var CSIZE    = 0x00000300
+
+  /**
+   * 5 bits (pseudo)
+   */
+  static var CS5      = 0x00000000
+
+  /**
+   * 6 bits 
+   */
+  static var CS6      = 0x00000100
+
+  /**
+   * 7 bits 
+   */
+  static var CS7      = 0x00000200
+
+  /**
+   * 8 bits
+   */
+  static var CS8      = 0x00000300
+
+  /**
+   * send 2 stop bits 
+   */
+  static var CSTOPB   = 0x00000400
+
+  /**
+   * enable receiver 
+   */
+  static var CREAD    = 0x00000800
+
+  /**
+   * parity enable 
+   */
+  static var PARENB   = 0x00001000
+
+  /**
+   * odd parity, else even 
+   */
+  static var PARODD   = 0x00002000
+
+  /**
+   * hang up on last close 
+   */
+  static var HUPCL    = 0x00004000
+
+  /**
+   * ignore modem status lines 
+   */
+  static var CLOCAL   = 0x00008000
 
   # "Local" flags - dumping ground for other state
   # Warning: some flags in this structure begin with
   # the letter "I" and look like they belong in the
   # input flag.
-  static var ECHOE    = 0x00000002      # visually erase chars 
-  static var ECHOK    = 0x00000004      # echo NL after line kill 
-  static var ECHO     = 0x00000008      # enable echoing 
-  static var ECHONL   = 0x00000010      # echo NL even if ECHO is off 
-  static var ISIG     = 0x00000080      # enable signals INTR, QUIT, [D]SUSP 
-  static var ICANON   = 0x00000100      # canonicalize input lines 
-  static var IEXTEN   = 0x00000400      # enable DISCARD and LNEXT 
-  static var TOSTOP   = 0x00400000      # stop background jobs from output 
-  static var NOFLSH   = 0x80000000      # don't flush after interrupt 
+  /**
+   * visually erase chars 
+   */
+  static var ECHOE    = 0x00000002
+
+  /**
+   * echo NL after line kill 
+   */
+  static var ECHOK    = 0x00000004
+
+  /**
+   * enable echoing 
+   */
+  static var ECHO     = 0x00000008
+
+  /**
+   * echo NL even if ECHO is off 
+   */
+  static var ECHONL   = 0x00000010
+
+  /**
+   * enable signals INTR, QUIT, [D]SUSP 
+   */
+  static var ISIG     = 0x00000080
+
+  /**
+   * canonicalize input lines 
+   */
+  static var ICANON   = 0x00000100
+
+  /**
+   * enable DISCARD and LNEXT 
+   */
+  static var IEXTEN   = 0x00000400
+
+  /**
+   * stop background jobs from output 
+   */
+  static var TOSTOP   = 0x00400000
+
+  /**
+   * don't flush after interrupt 
+   */
+  static var NOFLSH   = 0x80000000
 
   #-----------------------------------------------------------------------
 
   # Commands passed to set_attr() for setting the TTY attributes.
-  static var TCSANOW    = 0               # make change immediate 
-  static var TCSADRAIN  = 1               # drain output, then change 
-  static var TCSAFLUSH  = 2               # drain output, flush input 
+  /**
+   * make change immediate 
+   */
+  static var TCSANOW    = 0
+
+  /**
+   * drain output, then change 
+   */
+  static var TCSADRAIN  = 1
+
+  /**
+   * drain output, flush input 
+   */
+  static var TCSAFLUSH  = 2
 
   # Special Control Characters
-  static var VEOF       = 0       # ICANON 
-  static var VEOL       = 1       # ICANON 
-  static var VERASE     = 3       # ICANON 
-  static var VKILL      = 5       # ICANON 
-  static var VINTR      = 8       # ISIG 
-  static var VQUIT      = 9       # ISIG 
-  static var VSUSP      = 10      # ISIG 
-  static var VSTART     = 12      # IXON, IXOFF 
-  static var VSTOP      = 13      # IXON, IXOFF 
-  static var VMIN       = 16      # !ICANON 
-  static var VTIME      = 17      # !ICANON
+  /**
+   * ICANON
+   */
+  static var VEOF       = 0
+
+  /**
+   * ICANON
+   */
+  static var VEOL       = 1
+
+  /**
+   * ICANON
+   */
+  static var VERASE     = 3
+
+  /**
+   * ICANON
+   */
+  static var VKILL      = 5
+
+  /**
+   * ISIG
+   */
+  static var VINTR      = 8
+
+  /**
+   * ISIG
+   */
+  static var VQUIT      = 9
+
+  /**
+   * ISIG
+   */
+  static var VSUSP      = 10
+
+  /**
+   * IXON, IXOFF 
+   */
+  static var VSTART     = 12
+
+  /**
+   * IXON, IXOFF 
+   */
+  static var VSTOP      = 13
+
+  /**
+   * !ICANON 
+   */
+  static var VMIN       = 16
+
+  /**
+   * !ICANON
+   */
+  static var VTIME      = 17
 
   /**
    * TTY(std: file)
@@ -117,13 +362,13 @@ class TTY {
 
   /**
    * set_attr(option: number, attrs: dict)
+   * 
    * sets the attributes of the current tty session
+   * 
    * - option: one ot the TCSA options above (see their description above)
    * - attrs a dictionary of the TTY_ flags listed above
-   * 
-   * one can safely omit any of the TTY_ flags listed above and
-   * Blade will fill in the default values as it exists.
-   * - @note this flags will be merged and not overwritten
+   * - one can safely omit any of the TTY_ flags listed above and Blade will fill in the default values as it exists.
+   * @note this flags will be merged and not overwritten
    */
   set_attr(option, attrs) {
     if !is_int(option) 
@@ -135,7 +380,9 @@ class TTY {
 
   /**
    * set_raw()
+   * 
    * sets the current tty to raw mode
+   * @return bool
    */
   set_raw() {
     var new_attr = _io.TTY.tcgetattr(self.std)
@@ -152,15 +399,15 @@ class TTY {
   /**
    * exit_raw()
    * disables the raw mode flags on the current tty
+   * @return bool
    */
   exit_raw() {
-    return _io.TTY.exit_raw()
+    _io.TTY.exit_raw()
   }
 
   /**
    * flush()
    * flushes the standard output and standard error interface
-   * @return nil
    */
   flush() {
     _io.TTY.flush(self.std);
@@ -186,10 +433,9 @@ var stderr = _io.stderr
  * flush(file: file)
  *
  * flushes the content of the given file handle
- * @returns nil
  */
 def flush(file) {
-  return _io.flush(file)
+  _io.flush(file)
 }
 
 /**
@@ -198,7 +444,7 @@ def flush(file) {
  * @return nil
  */
 def putc(c) {
-  return _io.putc(c)
+  _io.putc(c)
 }
 
 /**
@@ -215,12 +461,22 @@ def getc() {
 }
 
 /**
- * readline()
+ * readline([message: string])
  *
- * reads an entire line from standard input
+ * reads an entire line from standard input. If a _messagge_ is given, the 
+ * message will be printed before it begins to wait for a user input.
+ * 
+ * @note newlines will not be added automatically for messages.
  * @returns string
  */
-def readline() {
+def readline(message) {
+
+  if message != nil and !is_string(message)
+    die Exception('string expected')
+
+  if message
+    stdout.write('${message} ')
+
   var result = ''
   var input
 

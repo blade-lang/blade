@@ -3,7 +3,7 @@
 # 
 # Provides type validation and conversion capabilities
 # 
-# this module is wrapper around the builtin functions
+# This module is wrapper around the builtin functions
 # where applicable and does and return the same thing as the builtin
 # alternative.
 # 

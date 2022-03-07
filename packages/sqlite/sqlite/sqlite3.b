@@ -16,7 +16,7 @@ import _sqlite {
 class SQLite3 {
 
   /**
-   * the path to the SQLite3 file
+   * The path to the SQLite3 file
    * @default = :memory:
    */
   var path = ':memory:'
@@ -48,7 +48,7 @@ class SQLite3 {
   /**
    * open()
    * 
-   * opens the handle to a database file 
+   * Opens the handle to a database file 
    */
   open() {
     self._db = _open(self.path)
@@ -62,7 +62,7 @@ class SQLite3 {
   /**
    * close()
    * 
-   * closes the handle to the database and return `true` if successfully
+   * Closes the handle to the database and return `true` if successfully
    * closed or `false` otherwise.
    * @return boolean
    */
@@ -78,11 +78,12 @@ class SQLite3 {
   /**
    * exec(query: string)
    * 
-   * executes a query string without and returns `true` if the
+   * Executes a query string as is and returns `true` if the
    * query was executed or `false` otherwise.
    * 
    * @note this method does not return a query result
    * @return boolean
+   * @throws SQLiteException if an error occured
    */
   exec(query) {
     if !is_string(query)
@@ -101,12 +102,15 @@ class SQLite3 {
   /**
    * last_insert_id()
    * 
-   * the id of the last insert operation.
-   * returns: 
-   * * -1 if the last insert failed, 
-   * * 0 if no insert statement has been executed or 
-   * * a number greater than 0 if it succeeded
+   * The id of the last insert operation.
+   * 
+   * Returns: 
+   * * `-1` if the last insert failed, 
+   * * `0` if no insert statement has been executed or 
+   * * A number greater than 0 if it succeeded
+   * 
    * @returns number
+   * @throws SQLiteException if database is not opened
    */
   last_insert_id() {
 
@@ -119,20 +123,28 @@ class SQLite3 {
   /**
    * query(sql: string [, params: list | dict])
    * 
-   * executes and sql query and returns the result of the execution
-   * @note pass a list as _params_ if you have unnamed parameterized queries.
+   * Executes and sql query and returns the result of the execution.
+   * @return SQLite3Cursor
+   * @throws SQLiteException if an error occured.
    * 
-   * @example `sqlite.query('SELECT * FROM users WHERE id = ? AND name = ?', [3, 'James'])`
+   * 1. Pass a list as _params_ if you have unnamed parameterized queries.
+   * 
+   * For example,
+   * 
+   * ```blade
+   * sqlite.query('SELECT * FROM users WHERE id = ? AND name = ?', [3, 'James'])
+   * ```
 
-   * @note pass a dictionary as _params_ if you use named paramters
+   * 2. Or pass a dictionary as _params_ if you use named paramters
    * 
-   * @example
-   * <pre>
+   * For Example,
+   * 
+   * ```blade
    * sqlite.query(
    *   'SELECT * FROM user WHERE id = :id AND name = :name', 
    *   {':id': 1, ':name': 'James'}
    * )
-   * </pre>
+   * ```
    */
   query(sql, params) {
     if params != nil {
@@ -154,7 +166,7 @@ class SQLite3 {
   /**
    * fetch(sql: string [, params: list | dict])
    * 
-   * runs an SQL query and returns the result as a list of dictionaries.
+   * Runs an SQL query and returns the result as a list of dictionaries.
    * 
    * @note if the result is empty or the query is not a SELECT, it returns an empty list
    */

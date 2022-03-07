@@ -10,6 +10,40 @@
 # to allow users get absolute precision since its really easy for callers to do a `math.round()` 
 # on the components of the resulting list.
 # 
+# ### Example
+# 
+# The example below uses this module to create a success message that will print correctly 
+# on almost all terminals (Only Windows 10 version 1901+ supported. All linux and OSX 
+# terminals are supported). Try it out!
+# 
+# ```blade
+# import colors
+# colors.text('Successful!', colors.text_color.green)
+# ```
+# 
+# The `text()` function can be nested. For example,
+# 
+# ```blade
+# colors.text(colors.text('Successful!', colors.style.bold), colors.text_color.green)
+# ```
+# 
+# The module also features multiple functions for color conversion. For example,
+# 
+# ```blade-repl
+# %> import colors
+# %> colors.rgb_to_cmyk(103, 13, 69)
+# [0, 87.37864077669903, 33.00970873786409, 59.6078431372549]
+# ```
+# 
+# The terminal colors also have simple wrappers that allow supplied colors to `text()` 
+# from various color formats. For example, we can specify the color from the HTML 
+# hexadecimal color.
+# 
+# ```blade
+# import colors
+# colors.text('Colored text!', colors.hex('#fc0'))
+# ```
+# 
 # @copyright 2022, Ore Richard Muyiwa and Blade contributors
 #
 
@@ -27,7 +61,7 @@ var _hex = hex
 /**
  * ANSI font styles available for console applications
  */
-var styles = {
+var style = {
   reset: 0,
   bold: 1,
   disable: 2,
@@ -348,7 +382,7 @@ def rgb_to_hex(r, g, b, a) {
  * rgb_to_hsl(r: int, g: int, b: int)
  * 
  * Converts a RGB color into its corresponding HSL components.
- * @return list<float>
+ * @return list[float]
  */
 def rgb_to_hsl(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
@@ -386,7 +420,7 @@ def rgb_to_hsl(r, g, b) {
  * rgb_to_hsv(r: int, g: int, b: int)
  * 
  * Converts a RGB color into its corresponding HSV components.
- * @return list<float>
+ * @return list[float]
  */
 def rgb_to_hsv(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
@@ -417,7 +451,7 @@ def rgb_to_hsv(r, g, b) {
  * rgb_to_hwb(r: int, g: int, b: int)
  * 
  * Converts a RGB color into its corresponding HWB components.
- * @return list<float>
+ * @return list[float]
  */
 def rgb_to_hwb(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
@@ -433,7 +467,7 @@ def rgb_to_hwb(r, g, b) {
  * rgb_to_cmyk(r: int, g: int, b: int)
  * 
  * Converts a RGB color into its corresponding CMYK components.
- * @return list<float>
+ * @return list[float]
  */
 def rgb_to_cmyk(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
@@ -455,7 +489,7 @@ def rgb_to_cmyk(r, g, b) {
  * rgb_to_xyz(r: int, g: int, b: int)
  * 
  * Converts a RGB color into its corresponding XYZ color space components.
- * @return list<float>
+ * @return list[float]
  */
 def rgb_to_xyz(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
@@ -480,7 +514,7 @@ def rgb_to_xyz(r, g, b) {
  * rgb_to_lab(r: int, g: int, b: int)
  * 
  * Converts a RGB color into its corresponding LAB color components.
- * @return list<float>
+ * @return list[float]
  */
 def rgb_to_lab(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
@@ -509,7 +543,7 @@ def rgb_to_lab(r, g, b) {
  * hsl_to_rgb(h: number, s: number, l: number)
  * 
  * Converts a HSL color into its corresponding RGB color components.
- * @return list<float>
+ * @return list[float]
  */
 def hsl_to_rgb(h, s, l) {
   if !is_number(h) or !is_number(s) or !is_number(l)
@@ -562,7 +596,7 @@ def hsl_to_rgb(h, s, l) {
  * hsl_to_hsv(h: number, s: number, l: number)
  * 
  * Converts a HSL color into its corresponding HSV color components.
- * @return list<float>
+ * @return list[float]
  */
 def hsl_to_hsv(h, s, l) {
   if !is_number(h) or !is_number(s) or !is_number(l)
@@ -579,7 +613,7 @@ def hsl_to_hsv(h, s, l) {
  * hsv_to_rgb(h: number, s: number, v: number)
  * 
  * Converts a HSV color into its corresponding RGB color components.
- * @return list<float>
+ * @return list[float]
  */
 def hsv_to_rgb(h, s, v) {
   if !is_number(h) or !is_number(s) or !is_number(v)
@@ -611,7 +645,7 @@ def hsv_to_rgb(h, s, v) {
  * hsv_to_hsl(h: number, s: number, v: number)
  * 
  * Converts a HSV color into its corresponding HSL color components.
- * @return list<float>
+ * @return list[float]
  */
 def hsv_to_hsl(h, s, v) {
   if !is_number(h) or !is_number(s) or !is_number(v)
@@ -636,7 +670,7 @@ def hsv_to_hsl(h, s, v) {
  * hwb_to_rgb(h: number, w: number, b: number)
  * 
  * Converts a HWB color into its corresponding RGB color components.
- * @return list<float>
+ * @return list[float]
  */
 def hwb_to_rgb(h, w, b) {
   if !is_number(h) or !is_number(w) or !is_number(b)
@@ -679,7 +713,7 @@ def hwb_to_rgb(h, w, b) {
  * cmyk_to_rgb(c: number, m: number, y: number, k: number)
  * 
  * Converts a CMYK color into its corresponding RGB color components.
- * @return list<float>
+ * @return list[float]
  */
 def cmyk_to_rgb(c, m, y, k) {
   if !is_number(c) or !is_number(m) or !is_number(y) or !is_number(k)
@@ -701,7 +735,7 @@ def cmyk_to_rgb(c, m, y, k) {
  * xyz_to_rgb(x: number, y: number, z: number)
  * 
  * Converts a XYZ color into its corresponding RGB color components.
- * @return list<float>
+ * @return list[float]
  */
 def xyz_to_rgb(x, y, z) {
   if !is_number(x) or !is_number(y) or !is_number(z)

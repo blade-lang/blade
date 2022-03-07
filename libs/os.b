@@ -1,24 +1,34 @@
 #
 # @module os
 # 
-# Provides functionalities for interfacing with the underlying operating system
+# This module provides functions for interfacing with the underlying operating system and directories.
+# 
 # @copyright 2021, Ore Richard Muyiwa and Blade contributors
 # 
 
 import _os { * }
 
 /**
- * stores the name of the current platform in string
+ * The name of the current platform in string or `unknown` if 
+ * the platform name could not be determined.
+ * 
+ * Example,
+ * 
+ * ```blade-repl
+ * %> import os
+ * %> os.platform
+ * 'osx'
+ * ```
  */
 var platform = _platform
 
 /**
- * stores the command line arguments passed to the startup script
+ * A list containing the command line arguments passed to the startup script.
  */
 var args = _args
 
 /**
- * the standard path separator for the current os
+ * The standard path separator for the current operating system.
  */
 var path_separator = _path_separator
 
@@ -26,8 +36,19 @@ var path_separator = _path_separator
 /**
  * exec(cmd: string)
  *
- * exec executes the given shell commands
+ * Executes the given shell (or command prompt for Windows) commands and 
+ * returns the output as string.
+ * 
  * @return string
+ * 
+ * Example,
+ * 
+ * ```blade-repl
+ * %> os.exec('ls -l')
+ * 'total 48
+ * -rw-r--r--@ 1 username  staff  705 Aug 27  2021 buggy.b
+ * -rw-r--r--  1 username  staff  197 Mar  5 05:13 myprogram.b'
+ * ```
  */
 def exec(cmd) {
   return _exec(cmd)
@@ -36,8 +57,25 @@ def exec(cmd) {
 /**
  * info()
  *
- * returns information about the current os
+ * Returns information about the current operation system and machine as a dictionary.
+ * The returned dictionary will contain:
+ * 
+ * - `sysname`: The name of the operating system
+ * - `nodename` The name of the current machine
+ * - `version`: The operating system version
+ * - `release`: The release level/version
+ * - `machine`: The hardware/processor type.
+ * 
  * @return dict
+ * 
+ * Example,
+ * 
+ * ```blade-repl
+ * %> os.info()
+ * {sysname: Darwin, nodename: MacBook-Pro.local, version: Darwin Kernel Version 
+ * 21.1.0: Wed Oct 13 17:33:24 PDT 2021; root:xnu-8019.41.5~1/RELEASE_ARM64_T8101, 
+ * release: 21.1.0, machine: arm64}
+ * ```
  */
 def info() {
   return _info()
@@ -46,18 +84,25 @@ def info() {
 /**
  * sleep(duration: number)
  *
- * causes the current thread to sleep for the specified number of seconds
- * @return nil
+ * Causes the current thread to sleep for the specified number of seconds.
  */
 def sleep(duration) {
-  return _sleep(duration)
+  _sleep(duration)
 }
 
 /**
  * get_env(name: string)
  *
- * returns the given environment variable if exists or nil otherwise
+ * Returns the given environment variable if exists or nil otherwise
  * @return string
+ * 
+ * Example,
+ * 
+ * ```blade-repl
+ * %> import os
+ * %> os.get_env('ENV1')
+ * '20'
+ * ```
  */
 def get_env(name) {
   return _getenv(name)
@@ -66,13 +111,36 @@ def get_env(name) {
 /**
  * set_env(name: string, value: string, overwrite: bool = true)
  *
- * sets the named environment variable to the given value.
- *
- * on Unix, if overwrite is false, it doesn't set a value if the variable
- * exists before.
+ * Sets the named environment variable to the given value.
  * @return string
+ * 
+ * Example,
+ * 
+ * ```blade-repl
+ * %> os.set_env('ENV1', 'New value')
+ * true
+ * %> os.get_env('ENV1')
+ * 'New value'
+ * ```
+ * 
+ * If you are in the REPL and have tried the last example in `get_env()`, 
+ * you may notice that the value of `ENV1` doesn't change. This is because 
+ * unless you specify, `set_env()` will not overwrite existing environment variables. 
+ * For that, you will need to specify `true` as the third parameter to `set_env()`.
+ * 
+ * For example,
+ * 
+ * ```blade-repl
+ * %> os.set_env('ENV1', 'New value again', true)
+ * true
+ * %> os.get_env('ENV1')
+ * 'New value again'
+ * ```
+ * 
+ * @note Environment variables set will not persist after application exists.
  */
 def set_env(name, value, overwrite) {
+  if overwrite == nil overwrite = false
   return _setenv(name, value, overwrite)
 }
 
@@ -90,7 +158,7 @@ var DT_WHT = _DT_WHT
 /**
  * create_dir(path: string, [permission: number = 0c777 [, recursive: boolean = true]])
  * 
- * creates the given directory with the specified permission and optionaly 
+ * Creates the given directory with the specified permission and optionaly 
  * add new files into it if any is given.
  * 
  * @note if the directory already exists, it returns `false` otherwise, it returns `true`.
@@ -130,8 +198,18 @@ def create_dir(path, permission, recursive) {
 /**
  * read_dir(path: string)
  * 
- * scans the given directory returns a list of all matched files
- * @return DirectoryEntry[]
+ * Scans the given directory and returns a list of all matched files
+ * @return list[string]
+ * 
+ * Example,
+ * 
+ * ```blade-repl
+ * %> os.read_dir('./tests')
+ * [., .., myprogram.b, single_thread.b, test.b, buggy.b]
+ * ```
+ * 
+ * @note `.` indicates current directory and can be used as argument to _path_ as well.
+ * @note `..` indicates parent directory and can be used as argument to _path_ as well.
  */
 def read_dir(path) {
   return _readdir(path)
@@ -140,8 +218,9 @@ def read_dir(path) {
 /**
  * chmod(path: string, mod: number)
  * 
- * changes the permission set on a directory
- * @note mod should be octal number
+ * Changes the permission set on a directory
+ * 
+ * @note mod should be octal number (e.g. 0c777)
  * @return boolean
  */
 def chmod(path, mod) {
@@ -151,7 +230,7 @@ def chmod(path, mod) {
 /**
  * is_dir(path: string)
  * 
- * returns `true` if the path is a directory or `false` otherwise.
+ * Returns `true` if the path is a directory or `false` otherwise.
  * @return bool
  */
 def is_dir(path) {
@@ -161,7 +240,8 @@ def is_dir(path) {
 /**
  * remove_dir(path: string [, recursive: boolean = false])
  * 
- * deletes a non-empty directory
+ * Deletes a non-empty directory. If recursive is `true`, non-empty directories 
+ * will have their contents deleted first.
  * @return bool
  */
 def remove_dir(path, recursive) {
@@ -177,7 +257,7 @@ def remove_dir(path, recursive) {
 /**
  * cwd()
  * 
- * returns the current working directory
+ * Returns the current working directory
  * @return string
  */
 def cwd() {
@@ -187,7 +267,7 @@ def cwd() {
 /**
  * change_dir(path: string)
  * 
- * navigates the working directory into the specified path
+ * Navigates the working directory into the specified path.
  * @return bool
  */
 def change_dir(path) {
@@ -197,7 +277,7 @@ def change_dir(path) {
 /**
  * exists(path: string)
  * 
- * returns `true` if the directory exists or `false` otherwise.
+ * Returns `true` if the directory exists or `false` otherwise.
  * @return bool
  */
 def dir_exists(path) {
@@ -207,7 +287,7 @@ def dir_exists(path) {
 /**
  * exit(code: number)
  * 
- * exit the current process and quits the Blade runtime.
+ * Exit the current process and quits the Blade runtime.
  * @return
  */
 def exit(code) {
@@ -217,8 +297,16 @@ def exit(code) {
 /**
  * join_paths(paths...)
  * 
- * concatenates the given paths together into a format
- * qualified on the current os
+ * Concatenates the given paths together into a format that is valied on the 
+ * current operating system.
+ * @return string
+ * 
+ * Example,
+ * 
+ * ```blade-repl
+ * %> os.join_paths('/home/user', '/path/to/myfile.ext')
+ * '/home/user//path/to/myfile.ext'
+ * ```
  */
 def join_paths(...) {
   var result = ''
@@ -237,6 +325,7 @@ def join_paths(...) {
  * real_path(path: string)
  * 
  * returns the original path to a relative path
+ * @return string
  */
 def real_path(path) {
   return _realpath(path)

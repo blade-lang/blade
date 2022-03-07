@@ -2,10 +2,15 @@
 # @module date
 # 
 # This modules provides Blade's implementation of date and time
-# manipulation methods.
+# manipulation methods. This module implements civil dates as well as julian dates.
 # 
-# Time is stored internally as the number of seconds 
-# with fraction since the Epoch, January 1, 1970 00:00 UTC.
+# ### Definitions
+# 
+# - The calendar date (`class Date`) is a particular day of a calendar year, 
+# identified by its ordinal number within a calendar month within that year.
+# 
+# - The Julian date number (`jd`) is in elapsed days and time since noon 
+# (Greenwich Mean Time) on January 1, 4713 BCE (in the Julian calendar).
 # 
 # @copyright 2021, Ore Richard Muyiwa and Blade contributors
 #
@@ -61,6 +66,8 @@ var MAX_SECONDS = 59
 # the number of days in each month of the year
 # the -1 is a placeholder for proper indexing
 var _days_in_month = [-1, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 31, 31]
+
+var _date_ends = ['th', 'st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th', 'th']
 
 
 def _check_int_field(field, name) {
@@ -170,6 +177,14 @@ def _dim(year, month) {
  * returns a dictionary representing the current time without
  * timezone adjustment
  * @returns dictionary
+ * 
+ * Example,
+ * 
+ * ```blade-repl
+ * %> echo date.gmtime()
+ * {year: 2022, month: 3, day: 5, week_day: 6, year_day: 63, hour: 17, minute: 30, 
+ * seconds: 55, microseconds: 620290, is_dst: false, zone: UTC, gmt_offset: 0}
+ * ```
  */
 def gmtime() {
   return _date.gmtime()
@@ -181,6 +196,14 @@ def gmtime() {
  * returns a dictionary representing the current time after
  * adjusting for the current timezone
  * @returns dictionary
+ * 
+ * Example:
+ * 
+ * ```blade-repl
+ * %> echo date.localtime()
+ * {year: 2022, month: 3, day: 5, week_day: 6, year_day: 63, hour: 18, minute: 18, 
+ * seconds: 35, microseconds: 598166, is_dst: false, zone: WAT, gmt_offset: 3600}
+ * ```
  */
 def localtime() {
   return _date.localtime()
@@ -193,6 +216,15 @@ def localtime() {
  * that of the values returned by the time() function (that is, seconds
  *  from the Epoch, UTC) according to the timezone settings.
  * @return number
+ * 
+ * <br>
+ * Example:
+ * 
+ * ```blade-repl
+ * %> import date
+ * %> echo date.mktime(2021, 2, 12, 13, 43, 11, false)
+ * 1613133791
+ * ```
  */
 def mktime(year, month, day, hour, minute, seconds, is_dst) {
   return _date.mktime(year, month, day, hour, minute, seconds, is_dst)
@@ -201,12 +233,27 @@ def mktime(year, month, day, hour, minute, seconds, is_dst) {
 /**
  * Date and Time manipulation class
  * 
- * A date here refers to a calendar datetime consisting of
- * year, month, day, hour, minute and seconds
+ * A date here refers to a calendar datetime consisting of year, month, day, hour, 
+ * minute and seconds. 
  * 
- * Julian date conversion is based on the C implementation
- * [here](http://www.lsc-group.phys.uwm.edu/lal/slug/nightly/doxygen.old/html/Julian_8c-source.html) and
- * [here](https://stackoverflow.com/questions/29627533/conversion-of-julian-date-number-to-normal-date-utc-in-javascript)
+ * The `Date` class manages both Date and DateTime and this 
+ * module does not make any distinction between the two as Date is a subset of 
+ * DateTime.
+ * 
+ * Example,
+ * 
+ * ```blade-repl
+ * %> import date
+ * %> var d = date.Date(2021)
+ * %> to_string(d)
+ * '<Date year: 2021, month: 1, day: 1, hour: 0, minute: 0, seconds: 0>'
+ * %> d = date.Date()
+ * %> to_string(d)
+ * '<Date year: 2022, month: 3, day: 5, hour: 19, minute: 25, seconds: 58>'
+ * ```
+ * 
+ * @serializable
+ * @printable
  */
 class Date {
 
@@ -272,6 +319,15 @@ class Date {
    * 
    * returns true if the year is a leap year or false otherwise
    * @return bool
+   * 
+   * Example,
+   * 
+   * ```blade-repl
+   * %> date.Date(2018).is_leap()
+   * false
+   * %> date.Date(2020).is_leap()
+   * true
+   * ```
    */
   is_leap() {
     return _is_leap(self.year)
@@ -283,7 +339,14 @@ class Date {
    * returns the number of days in the year preceeding the first 
    * day of the month
    * @return number
-  */
+   * 
+   * Example,
+   * 
+   * ```blade-repl
+   * %> date.Date(2021, 5, 11).days_before_month(7)
+   * 142
+   * ```
+   */
   days_before_month(month) {
     assert month >= 1 and month <= 12, 'month must be in 1..12'
 
@@ -308,12 +371,20 @@ class Date {
   }
 
   /** 
-   * days_before_year()
+   * days_before_year(year: int)
    * 
    * returns the number of days before January 1st of year
    * @return number
+   * 
+   * Example,
+   * 
+   * ```blade-repl
+   * %> date.Date(2021, 5, 11).days_before_year(2024)
+   * 811
+   * ```
    */
   days_before_year(year) {
+    assert is_int(year), 'integer expected'
     assert year >= MIN_YEAR and year <= MAX_YEAR,
       'year must be in 1..' + MAX_YEAR
     assert year > self.year, 'year must be greater than current year'
@@ -339,15 +410,30 @@ class Date {
    * 
    * returns the number of days in month for the specified year
    * @return number
+   * 
+   * Example,
+   * 
+   * ```blade-repl
+   * %> date.Date(2021, 6).days_in_month()
+   * 30
+   * ```
    */
-  days_in_month(year, month) {
-    return _dim(year, month)
+  days_in_month() {
+    return _dim(self.year, self.month)
   }
+
   /** 
    * weekday()
    * 
    * returns the numbered day of the week
    * @return number
+   * 
+   * Example,
+   * 
+   * ```blade-repl
+   * %> date.Date(2021, 5, 11).weekday()
+   * 2
+   * ```
    */
   weekday() {
     var day = self.day, month = self.month, year = self.year
@@ -364,6 +450,13 @@ class Date {
    * 
    * returns the number of the current week in the year
    * @return number
+   * 
+   * Example,
+   * 
+   * ```blade-repl
+   * %> date.Date(2021, 5, 11).week_number()
+   * 19
+   * ```
    */
   week_number() {
     var year = self.year
@@ -427,6 +520,13 @@ class Date {
    *   r         | RFC 2822 formatted date                                   | e.g. Thu, 21 Dec 2000 16:01:07 +0200
    * 
    * @return string
+   * 
+   * Example,
+   * 
+   * ```blade-repl
+   * %> date.Date().format('F d, Y g:i A')
+   * 'March 05, 2022 6:24 PM'
+   * ```
    */
   format(format) {
     var result = ''
@@ -514,11 +614,10 @@ class Date {
           result += int(self.microseconds / 1000)
         }
         when 'S' {
-          var ends = ['th', 'st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th', 'th']
           if (self.day % 100) >= 11 and (self.day % 100) <= 13 {
             result += 'th'
           } else {
-            result += ends[self.day % 10]
+            result += _date_ends[self.day % 10]
           }
         }
         when 'y' {
@@ -580,10 +679,34 @@ class Date {
   }
 
   /**
+   * http()
+   * 
+   * returns the HTTP date representation of the current date.
+   * @return string
+   * 
+   * For example,
+   * 
+   * ```blade-repl
+   * %> date.Date().http()
+   * 'Sat, 05 Mar 2022 06:23:32 GMT'
+   * ```
+   */
+  http() {
+    return self.format('D, d M Y h:i:s') + ' GMT'
+  }
+
+  /**
    * jd()
    * 
-   * converts the current date to a julian day
+   * converts the current date to a julian day and time.
    * @return number
+   * 
+   * Example,
+   * 
+   * ```blade-repl
+   * %> date.Date(2021, 5, 11).jd()
+   * 2459345
+   * ```
    */
   jd() {
     # calculate the julian day i.e. Y-m-d value
@@ -615,14 +738,33 @@ class Date {
     return '<Date year: ${self.year}, month: ${self.month}, day: ${self.day}, hour: ' +
         '${self.hour}, minute: ${self.minute}, seconds: ${self.seconds}>'
   }
+
+  @to_json() {
+    return {
+      year: self.year,
+      month: self.month,
+      day: self.day,
+      hour: self.hour,
+      minute: self.minute,
+      seconds: self.seconds,
+    }
+  }
 }
 
 
 /** 
- * from_time(time: number(seconds))
+ * from_time(time: number)
  * 
  * returns a date object from a unix timestamp
+ * @note number must be in seconds.
  * @return Date
+ * 
+ * Example,
+ * 
+ * ```blade-repl
+ * %> to_string(date.from_time(time()))
+ * '<Date year: 2022, month: 3, day: 5, hour: 18, minute: 34, seconds: 1>'
+ * ```
  */
 def from_time(time) {
 
@@ -732,6 +874,13 @@ def from_time(time) {
  * 
  * returns a date instance representing the julian date
  * @return number
+ * 
+ * Example,
+ * 
+ * ```blade-repl
+ * %> to_string(date.from_jd(22063))
+ * '<Date year: 2022, month: 3, day: 5, hour: 18, minute: 35, seconds: 0>'
+ * ```
  */
 def from_jd(jdate) {
   if jdate < 0 die Exception('Invalid julian date')

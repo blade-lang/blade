@@ -496,6 +496,8 @@ var EMPTY = 500
 
 /**
  * Blade source code token
+ * @serializable
+ * @printable
  */
 class Token {
   /**

@@ -5,8 +5,8 @@
  * General Exception for SQLite
  */
 class SQLiteException < Exception {
-
   /**
+   * SQLiteException(message: string)
    * @constructor
    */
   SQLiteException(message) {

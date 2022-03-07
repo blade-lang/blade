@@ -8,6 +8,8 @@ import .defn
 
 /**
  * Represents the result of an ast parse operation
+ * @serializable
+ * @iterable
  */
 class ParseResult {
   /**
