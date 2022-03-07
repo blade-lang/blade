@@ -10,15 +10,15 @@ jobs:
   build-linux:
     runs-on: ubuntu-20.04
     steps:
+      - uses: actions/checkout@v2
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v1.9
         with:
           cmake-version: '3.18.x'
-      - uses: actions/checkout@v2
       - name: Compile
         run: |
           cmake -B .
-          cmake --build .
+          cmake --build . -- -j 12
       - name: Create ZIP Archive
         run: |
           chmod +x blade/blade
