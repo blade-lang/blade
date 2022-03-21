@@ -326,6 +326,13 @@ class HttpRequest {
     return false
   }
 
+  _strip_chunk_size(body) {
+    # remove the last chunk-size marking.
+    body = body.replace('/0\\r\\n\\r\\n$/', '')
+
+    return body
+  }
+
   /**
    * send(uri: Url, method: string [, data: string | bytes [, options: dict]])
    * @default follow_redirect: true
@@ -474,17 +481,23 @@ class HttpRequest {
 
               var tmp_body = body.split('\n')
               var chunk_size = to_number('0x'+tmp_body[0].trim())
-              body = '\n'.join(tmp_body[1,])
-              
-              while true and body.ascii().length() < chunk_size {
-                var response = client.receive()
+              body = '\n'.join(tmp_body[1,]).ascii()
+
+              # Keeping the original chunk size so that we can use it to process requests
+              # that are fully read with the chunk size marks in-between.
+              var original_chunk_size = chunk_size
+
+              while true and chunk_size != 0 and body.length() < chunk_size {
+                var response = client.read(chunk_size - body.length()).ascii()
+
+                tmp_body = response.split('\n')
+                chunk_size = to_number('0x'+tmp_body[0].trim())
+                response = '\n'.join(tmp_body[1,]).ascii()
+
                 body += response
-                if response.ends_with('\r\n\r\n')
-                  break
               }
 
-              # remove the last chunck-size marking.
-              body = body.replace('/0\\s+$/', '')
+              body = self._strip_chunk_size(body)
             }
           }
 
