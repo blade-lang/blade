@@ -11,6 +11,8 @@ import socket
 import url
 import ssl
 
+var _chunk_terminator = '0\r\n\r\n'
+
 /**
  * Http request handler and object.
  * @serializable
@@ -326,11 +328,30 @@ class HttpRequest {
     return false
   }
 
-  _strip_chunk_size(body) {
-    # remove the last chunk-size marking.
-    body = body.replace('/0\\r\\n\\r\\n$/', '')
+  _strip_chunk_size(body, chunk_size) {
+    var length = body.length()
+    # chunk_size += 2 # allocating for the \r\n that lead to it.
 
-    return body
+    if length > chunk_size {
+      # inital processed body is up to the chunk size
+      var processed = body[,chunk_size],
+          # We start striping from the end of the first chunk size
+          start = chunk_size
+
+      while chunk_size > 0 {
+        var tmp_body = body[start,].split('\n')
+        chunk_size = to_number('0x'+tmp_body[1].trim())
+        processed += '\n'.join(tmp_body[2,]).ascii()[,chunk_size]
+        start += chunk_size
+      }
+
+      return processed
+    } else {
+
+      # remove the last chunk-size marking.
+      body = body.replace('/0\\r\\n\\r\\n$/', '')
+      return body
+    }
   }
 
   /**
@@ -481,23 +502,23 @@ class HttpRequest {
 
               var tmp_body = body.split('\n')
               var chunk_size = to_number('0x'+tmp_body[0].trim())
+              var has_chunks = chunk_size != 0 and 
+                !body.ascii().ends_with(_chunk_terminator) and
+                !body.ascii().ends_with('\r\n0')
               body = '\n'.join(tmp_body[1,]).ascii()
 
               # Keeping the original chunk size so that we can use it to process requests
               # that are fully read with the chunk size marks in-between.
               var original_chunk_size = chunk_size
 
-              while true and chunk_size != 0 and body.length() < chunk_size {
-                var response = client.read(chunk_size - body.length()).ascii()
-
-                tmp_body = response.split('\n')
-                chunk_size = to_number('0x'+tmp_body[0].trim())
-                response = '\n'.join(tmp_body[1,]).ascii()
-
+              while true and has_chunks {
+                var response = client.receive()
                 body += response
+                if response.ends_with(_chunk_terminator) or response.ends_with('\r\n0')
+                  break
               }
 
-              body = self._strip_chunk_size(body)
+              body = self._strip_chunk_size(body, original_chunk_size)
             }
           }
 
