@@ -70,6 +70,7 @@ install_blade() {
 	# We are copying to .blade here instead of just moving it to
 	# blade directly in case the user runs this script from the
 	# home directory.
+	mkdir -p $@/.blade
 	cp -r blade $@/.blade
 
 	cd ..
