@@ -44,11 +44,6 @@ class Option {
    static var RANGE = _curl.CURLOPT_RANGE
 
    /**
-    * not used 
-    * @static
-    */
-
-   /**
     * Buffer to receive error messages in, must be at least CURL_ERROR_SIZE
     * bytes big. 
     * @static
@@ -98,14 +93,6 @@ class Option {
     * @static
     */
    static var USERAGENT = _curl.CURLOPT_USERAGENT
-
-   /**
-    * If the download receives less than "low speed limit" bytes/second
-    * during "low speed time" seconds, the operations is aborted.
-    * You could i.e if you have a pretty high speed connection, abort if
-    * it is less than 2000 bytes/sec during 20 seconds.
-    * @static
-    */
 
    /**
     * Set the "low speed limit" 
@@ -212,11 +199,6 @@ class Option {
     * @static
     */
    static var STDERR = _curl.CURLOPT_STDERR
-
-   /**
-    * 38 is not used 
-    * @static
-    */
 
    /**
     * send linked-list of post-transfer QUOTE commands 
@@ -489,11 +471,6 @@ class Option {
     * @static
     */
    static var SSLENGINE_DEFAULT = _curl.CURLOPT_SSLENGINE_DEFAULT
-
-   /**
-    * Non-zero value means to use the global dns cache 
-    * @static
-    */
 
    /**
     * DEPRECATED, do not use! 
@@ -770,11 +747,6 @@ class Option {
    static var CONNECT_ONLY = _curl.CURLOPT_CONNECT_ONLY
 
    /**
-    * if the connection proceeds too quickly then need to slow it down 
-    * @static
-    */
-
-   /**
     * limit-rate: maximum number of bytes per second to send 
     * @static
     */
@@ -954,11 +926,6 @@ class Option {
     * @static
     */
    static var TFTP_BLKSIZE = _curl.CURLOPT_TFTP_BLKSIZE
-
-   /**
-    * Socks Service 
-    * @static
-    */
 
    /**
     * Socks Service 
