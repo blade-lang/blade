@@ -54,164 +54,199 @@ class TTY {
   # TTY flags
   /**
    * TTY attribute for input flags
+   * @static
    */
   static var TTY_IFLAG = 0
 
   /**
    * TTY attribute for output flags
+   * @static
    */
   static var TTY_OFLAG = 1
 
   /**
    * TTY attribute for control flags
+   * @static
    */
   static var TTY_CFLAG = 2
 
   /**
    * TTY attribute for local flags
+   * @static
    */
   static var TTY_LFLAG = 3
 
   /**
    * TTY attribute for input speed
+   * @static
    */
   static var TTY_ISPEED = 4
 
   /**
    * TTY attribute for output speed
+   * @static
    */
   static var TTY_OSPEED = 5
 
   # input flags for input processing
+
   /**
    * ignore BREAK condition
+   * @static
    */
   static var IGNBRK   = 0x00000001
   
   /**
    * map BREAK to SIGINTR 
+   * @static
    */
   static var BRKINT   = 0x00000002      
 
   /**
    * ignore (discard) parity errors
+   * @static
    */
   static var IGNPAR   = 0x00000004      
 
   /**
    * mark parity and framing errors 
+   * @static
    */
   static var PARMRK   = 0x00000008      
 
   /**
    * enable checking of parity errors
+   * @static
    */
   static var INPCK    = 0x00000010
 
   /**
    * strip 8th bit off chars 
+   * @static
    */
   static var ISTRIP   = 0x00000020
 
   /**
    * map NL into CR
+   * @static
    */
   static var INLCR    = 0x00000040
 
   /**
    * ignore CR 
+   * @static
    */
   static var IGNCR    = 0x00000080
 
   /**
    * map CR to NL (ala CRMOD)
+   * @static
    */
   static var ICRNL    = 0x00000100
 
   /**
    * enable output flow control 
+   * @static
    */
   static var IXON     = 0x00000200
 
   /**
    * enable input flow control
+   * @static
    */
   static var IXOFF    = 0x00000400
 
   /**
    * any char will restart after stop 
+   * @static
    */
   static var IXANY    = 0x00000800
 
   /**
    * maintain state for UTF-8 VERASE
+   * @static
    */
   static var IUTF8    = 0x00004000
 
   # output flags
+
   /**
    * enable following output processing
+   * @static
    */
   static var OPOST    = 0x00000001
 
   /**
    * map NL to CR-NL (ala CRMOD)
+   * @static
    */
   static var ONLCR    = 0x00000002
 
   # control flags
+
   /**
    * character size mask 
+   * @static
    */
   static var CSIZE    = 0x00000300
 
   /**
    * 5 bits (pseudo)
+   * @static
    */
   static var CS5      = 0x00000000
 
   /**
    * 6 bits 
+   * @static
    */
   static var CS6      = 0x00000100
 
   /**
    * 7 bits 
+   * @static
    */
   static var CS7      = 0x00000200
 
   /**
    * 8 bits
+   * @static
    */
   static var CS8      = 0x00000300
 
   /**
    * send 2 stop bits 
+   * @static
    */
   static var CSTOPB   = 0x00000400
 
   /**
    * enable receiver 
+   * @static
    */
   static var CREAD    = 0x00000800
 
   /**
    * parity enable 
+   * @static
    */
   static var PARENB   = 0x00001000
 
   /**
    * odd parity, else even 
+   * @static
    */
   static var PARODD   = 0x00002000
 
   /**
    * hang up on last close 
+   * @static
    */
   static var HUPCL    = 0x00004000
 
   /**
    * ignore modem status lines 
+   * @static
    */
   static var CLOCAL   = 0x00008000
 
@@ -219,122 +254,148 @@ class TTY {
   # Warning: some flags in this structure begin with
   # the letter "I" and look like they belong in the
   # input flag.
+
   /**
    * visually erase chars 
+   * @static
    */
   static var ECHOE    = 0x00000002
 
   /**
    * echo NL after line kill 
+   * @static
    */
   static var ECHOK    = 0x00000004
 
   /**
    * enable echoing 
+   * @static
    */
   static var ECHO     = 0x00000008
 
   /**
    * echo NL even if ECHO is off 
+   * @static
    */
   static var ECHONL   = 0x00000010
 
   /**
    * enable signals INTR, QUIT, [D]SUSP 
+   * @static
    */
   static var ISIG     = 0x00000080
 
   /**
    * canonicalize input lines 
+   * @static
    */
   static var ICANON   = 0x00000100
 
   /**
    * enable DISCARD and LNEXT 
+   * @static
    */
   static var IEXTEN   = 0x00000400
 
   /**
    * stop background jobs from output 
+   * @static
    */
   static var TOSTOP   = 0x00400000
 
   /**
    * don't flush after interrupt 
+   * @static
    */
   static var NOFLSH   = 0x80000000
 
   #-----------------------------------------------------------------------
 
   # Commands passed to set_attr() for setting the TTY attributes.
+
   /**
    * make change immediate 
+   * @static
    */
   static var TCSANOW    = 0
 
   /**
    * drain output, then change 
+   * @static
    */
   static var TCSADRAIN  = 1
 
   /**
    * drain output, flush input 
+   * @static
    */
   static var TCSAFLUSH  = 2
 
   # Special Control Characters
+
   /**
    * ICANON
+   * @static
    */
   static var VEOF       = 0
 
   /**
    * ICANON
+   * @static
    */
   static var VEOL       = 1
 
   /**
    * ICANON
+   * @static
    */
   static var VERASE     = 3
 
   /**
    * ICANON
+   * @static
    */
   static var VKILL      = 5
 
   /**
    * ISIG
+   * @static
    */
   static var VINTR      = 8
 
   /**
    * ISIG
+   * @static
    */
   static var VQUIT      = 9
 
   /**
    * ISIG
+   * @static
    */
   static var VSUSP      = 10
 
   /**
    * IXON, IXOFF 
+   * @static
    */
   static var VSTART     = 12
 
   /**
    * IXON, IXOFF 
+   * @static
    */
   static var VSTOP      = 13
 
   /**
    * !ICANON 
+   * @static
    */
   static var VMIN       = 16
 
   /**
    * !ICANON
+   * @static
    */
   static var VTIME      = 17
 

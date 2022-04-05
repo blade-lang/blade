@@ -25,6 +25,10 @@ else()
     message(FATAL_ERROR "cURL not found!")
 endif()
 
+if(UNIX)
+    target_link_libraries(curl m)
+endif()
+
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 endif()

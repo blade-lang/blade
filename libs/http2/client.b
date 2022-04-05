@@ -66,6 +66,12 @@ class HttpClient {
   var connect_timeout = 60000
 
   /**
+   * The send timeout duration in milliseconds
+   * @default 300s
+   */
+  var send_timeout = 300000
+
+  /**
    * The receive timeout duration in milliseconds
    * @default 300s
    */
@@ -107,21 +113,18 @@ class HttpClient {
 
     var request = HttpRequest()
     request.headers = self.headers
-    if !self.headers.contains('User-Agent') {
-      request.headers.extend({
-        'User-Agent': self.user_agent,
-      })
-    }
+    request.headers.extend({
+      'User-Agent': self.user_agent,
+    })
 
-    if self.referer and !self.headers.contains('Referer') {
-      request.headers.extend({
-        'Referer': self.referer,
-      })
-    }
+    if self.referer request.headers.extend({
+      'Referer': self.referer,
+    })
 
     return request.send(uri, method.upper(), data, {
       follow_redirect: self.follow_redirect,
       connect_timeout: self.connect_timeout,
+      send_timeout: self.send_timeout,
       receive_timeout: self.receive_timeout,
     })
   }
