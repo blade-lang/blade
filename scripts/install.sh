@@ -59,7 +59,12 @@ install_blade() {
 	cd blade
 
 	# building
-	cmake -B .
+	if [[ "${OS}" == "Darwin" ]]
+  then
+	  cmake -B . -DOPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl/
+  else
+	  cmake -B .
+  fi
 	cmake --build . -- -j 16
 
 	# We are copying to .blade here instead of just moving it to
