@@ -66,7 +66,7 @@ jobs:
           tag: 11.2.0-9.0.0-msvcrt-r5
       - uses: actions/checkout@v2
       - uses: friendlyanon/setup-vcpkg@v1
-        with: { committish: 63aa65e65b9d2c08772ea15d25fb8fdb0d32e557 }
+        with: { committish: 01d6f6ff1e5332b926099f0c23bda996940ad4e8 }
       - name: Install Dependencies
         run: |
           ${{ env.VCPKG_ROOT }}/vcpkg version
