@@ -68,11 +68,11 @@ jobs:
         with: { committish: 63aa65e65b9d2c08772ea15d25fb8fdb0d32e557 }
       - uses: actions/checkout@v2
       - name: Compile
-        shell: cmd
+        shell: bash
         run: |
-          .\vcpkg\vcpkg.exe version
-          .\vcpkg\vcpkg.exe install curl
-          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE=".\vcpkg\scripts\buildsystems\vcpkg.cmake"
+          $VCPKG_ROOT/vcpkg version
+          $VCPKG_ROOT/vcpkg install curl
+          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
           cmake --build .
       - name: Create ZIP Archive
         shell: cmd
