@@ -99,7 +99,7 @@ static void repl(b_vm *vm) {
     }
 
     // terminate early if we receive a terminating command such as exit() or Ctrl+D
-    if(line == NULL || strcmp(line, "exit()") == 0) {
+    if(line == NULL || strcmp(line, ".exit") == 0) {
       free(source);
       return;
     }
