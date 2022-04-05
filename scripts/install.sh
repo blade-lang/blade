@@ -81,7 +81,7 @@ if [[ -z "${IS_LINUX-}" ]]
 then
 
   #Install Homebrew if not installed...
-  if [[ $(command -v 'brew') != "" ]]
+  if [[ $(command -v 'brew') == "" ]]
   then
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   fi
