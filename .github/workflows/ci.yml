@@ -79,7 +79,7 @@ jobs:
       - name: Compile
         shell: bash
         run: |
-          ls $VCPKG_ROOT
+          dir $VCPKG_ROOT
           $VCPKG_ROOT/vcpkg version
           $VCPKG_ROOT/vcpkg install curl
           cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
