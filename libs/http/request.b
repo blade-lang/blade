@@ -7,6 +7,7 @@ import .status { * }
 import .response { HttpResponse }
 
 import url
+import socket
 import curl { Option, Info, Curl, CurlList }
 
 /**
