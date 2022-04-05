@@ -24,6 +24,7 @@ syntax set with a very natural feel.
 
 - Simple syntax and minimal keywords.
 - Dynamically typed.
+- First-class package management (Package management is built into the language module system).
 - Fast.
 - Comprehensive builtin functions.
 - Object-oriented (only supports single inheritance for now.
