@@ -26,6 +26,7 @@ jobs:
           languages: c
       - name: Compile
         run: |
+          sudo apt-get install curl libcurl4-openssl-dev
           cmake -B .
           cmake --build . -- -j 12
       - name: Make blade executable

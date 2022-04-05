@@ -17,6 +17,7 @@ jobs:
           cmake-version: '3.18.x'
       - name: Compile
         run: |
+          sudo apt-get install curl libcurl4-openssl-dev
           cmake -B .
           cmake --build . -- -j 12
       - name: Create ZIP Archive
