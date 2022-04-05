@@ -67,11 +67,12 @@ jobs:
       - uses: actions/checkout@v2
       - uses: friendlyanon/setup-vcpkg@v1
         with: { committish: 63aa65e65b9d2c08772ea15d25fb8fdb0d32e557 }
+      - name: Install Dependencies
+        run: |
+          ${{ env.VCPKG_ROOT }}/vcpkg version
+          ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows
       - name: Compile
         run: |
-          dir ${{ env.VCPKG_ROOT }}
-          ${{ env.VCPKG_ROOT }}/vcpkg version
-          ${{ env.VCPKG_ROOT }}/vcpkg install curl
           cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake"
           cmake --build .
       - name: Create ZIP Archive
