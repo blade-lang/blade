@@ -118,6 +118,7 @@ bool load_module(b_vm *vm, b_module_init init_fn, char *import_name, char *sourc
     return true;
   } else {
     // @TODO: Warn about module loading error...
+    printf("Error loading module: _%s\n", import_name);
   }
 
   return false;
@@ -198,12 +199,12 @@ char* load_user_module(b_vm *vm, const char *path, char *name) {
 
   void *handle;
   if((handle = dlopen(path, RTLD_LAZY)) == NULL) {
-    return dlerror();
+    return (char *)dlerror();
   }
 
   b_module_init fn = dlsym(handle, fn_name);
   if(fn == NULL) {
-    return dlerror();
+    return (char *)dlerror();
   }
 
   int path_length = (int)strlen(path);

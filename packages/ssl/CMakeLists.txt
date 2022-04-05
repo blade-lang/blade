@@ -21,12 +21,12 @@ if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(OPENSSL_USE_STATIC_LIBS TRUE)
 endif()
 include(FindOpenSSL)
-include_directories(${OPENSSL_INCLUDE_DIR})
-target_link_libraries(ssl ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
-
 if(NOT OPENSSL_FOUND)
     message(FATAL_ERROR "OpenSSL not found!")
 endif()
+
+include_directories(${OPENSSL_INCLUDE_DIR})
+target_link_libraries(ssl ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")

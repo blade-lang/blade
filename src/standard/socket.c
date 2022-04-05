@@ -307,7 +307,12 @@ DECLARE_MODULE_METHOD(socket__recv) {
   int status;
   if ((status = select(sock + 1, &read_set, NULL, NULL, &timeout)) > 0) {
     int content_length;
+
+#ifndef _WIN32
     ioctl(sock, FIONREAD, &content_length);
+#else
+    ioctl(sock, FIONREAD, (long unsigned int *)&content_length);
+#endif
 
     if (content_length > 0) {
       if (length != -1 && length < content_length)
