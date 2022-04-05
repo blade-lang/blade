@@ -79,6 +79,7 @@ install_blade() {
 	mv $@/.blade $@/blade
 
 	# Now link the blade executable to path
+	echo "Linking Blade..."
 	sudo ln -s $@/blade/blade /usr/local/bin/blade
 }
 
