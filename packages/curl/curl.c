@@ -33,7 +33,7 @@ void b__curl_module_unloader(b_vm *vm) {
   curl_global_cleanup();
 }
 
-static int CurlInfoTypes[61] = {
+static int CurlInfoTypes[58] = {
     CURLINFO_EFFECTIVE_URL,
     CURLINFO_RESPONSE_CODE,
     CURLINFO_TOTAL_TIME,
@@ -714,7 +714,7 @@ DECLARE_MODULE_METHOD(curl__easy_getinfo) {
   int info = AS_NUMBER(args[1]);
 
   bool found = false;
-  for(int i = 0; i < 67; i++) {
+  for(int i = 0; i < 58; i++) {
     if(CurlInfoTypes[i] == info)
       found = true;
   }
