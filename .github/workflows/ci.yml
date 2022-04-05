@@ -26,6 +26,7 @@ jobs:
           languages: c
       - name: Compile
         run: |
+          sudo apt-get install curl libcurl4-openssl-dev
           cmake -B .
           cmake --build . -- -j 12
       - name: Make blade executable
@@ -72,10 +73,14 @@ jobs:
         with:
           add_to_path: true
           tag: 11.2.0-9.0.0-msvcrt-r5
+      - uses: friendlyanon/setup-vcpkg@v1
+        with: { committish: 63aa65e65b9d2c08772ea15d25fb8fdb0d32e557 }
       - uses: actions/checkout@v2
       - name: Compile
         run: |
-          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make
+          $VCPKG_ROOT/vcpkg version
+          $VCPKG_ROOT/vcpkg install curl
+          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
           cmake --build . -- -j 12
       - name: Generate Artifacts
         uses: actions/upload-artifact@v2
