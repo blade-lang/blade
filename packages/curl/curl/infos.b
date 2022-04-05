@@ -479,24 +479,4 @@ class Info {
    * > header couldn't be parsed.
    */
   static var RETRY_AFTER = _curl.CURLINFO_RETRY_AFTER
-
-  /**
-   * The last used effective HTTP method. In cases when you've asked `curl` to follow 
-   * redirects, the method may very well not be the same method the first request 
-   * would use.
-   * @static
-   */
-  static var EFFECTIVE_METHOD = _curl.CURLINFO_EFFECTIVE_METHOD
-
-  /**
-   * Proxy Error
-   * @static
-   */
-  static var PROXY_ERROR = _curl.CURLINFO_PROXY_ERROR
-
-  /**
-   * The referrer header.
-   * @static
-   */
-  static var REFERER = _curl.CURLINFO_REFERER
 }
