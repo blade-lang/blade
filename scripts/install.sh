@@ -70,7 +70,6 @@ install_blade() {
 	# We are copying to .blade here instead of just moving it to
 	# blade directly in case the user runs this script from the
 	# home directory.
-	mkdir -p $@/.blade
 	cp -r blade $@/.blade
 
 	cd ..
@@ -110,4 +109,9 @@ fi
 #Install cmake dependency.
 install_if_missing 'cmake'
 
-install_blade "/home/$USER"
+if [[ "${OS}" == "Darwin" ]]
+then
+  install_blade "/Users/$USER"
+else
+  install_blade "/home/$USER"
+fi
