@@ -85,6 +85,8 @@ then
   then
     echo "Homebrew not installed. Installing..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  else
+    echo "Brew is installed. Using brew!"
   fi
 
   install_if_missing 'openssl'
