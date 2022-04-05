@@ -17,7 +17,7 @@ add_library(ssl SHARED ssl.h ssl.c)
 target_link_libraries(ssl libblade)
 add_dependencies(ssl blade)
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(OPENSSL_USE_STATIC_LIBS TRUE)
 endif()
 include(FindOpenSSL)

@@ -577,7 +577,7 @@ const char *get_error_message(int result) {
 }
 
 struct b_curl_string {
-  char *ptr;
+  unsigned char *ptr;
   size_t len;
 };
 
@@ -692,9 +692,10 @@ DECLARE_MODULE_METHOD(curl__easy_perform) {
   if(result == CURLE_OK) {
 
     b_obj_dict *dict = (b_obj_dict*)GC(new_dict(vm));
+    b_obj_bytes *data = (b_obj_bytes*)GC(copy_bytes(vm, body.ptr, body.len));
 
-    dict_add_entry(vm, dict, GC_L_STRING("headers", 7), GC_STRING(headers.ptr));
-    dict_add_entry(vm, dict, GC_L_STRING("body", 4), GC_STRING(body.ptr));
+    dict_add_entry(vm, dict, GC_L_STRING("headers", 7), GC_STRING((char *)headers.ptr));
+    dict_add_entry(vm, dict, GC_L_STRING("body", 4), OBJ_VAL(data));
 
     free(body.ptr);
     free(headers.ptr);
