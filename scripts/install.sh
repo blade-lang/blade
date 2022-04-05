@@ -25,7 +25,7 @@ then
   abort "Blade autoinstall is only supported on macOS and Linux."
 fi
 
-install_if_missing() {`
+install_if_missing() {
   if [[ "$(command -v $@)" == "" ]]
   then
     echo "$@ is not installed. Attempting to install it!"
