@@ -41,7 +41,7 @@ class HttpResponse {
   var responder
 
   /**
-   * The content of the HTTP response as bytes
+   * The content of the HTTP response
    */
   var body
 

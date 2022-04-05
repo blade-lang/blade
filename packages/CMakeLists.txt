@@ -8,3 +8,4 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_RUNTIME_OUTPUT_DIRECTORY_REL
 add_subdirectory(json)
 add_subdirectory(sqlite)
 add_subdirectory(ssl)
+add_subdirectory(curl)

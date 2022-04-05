@@ -7,7 +7,11 @@ import .status { * }
 import .response { HttpResponse }
 
 import url
-import curl { Option, Info, Curl, CurlList }
+import socket
+import url
+import ssl
+
+var _chunk_terminator = '0\r\n\r\n'
 
 /**
  * Http request handler and object.
@@ -33,8 +37,7 @@ class HttpRequest {
   var method
 
   /**
-   * The hostname derived from the `Host` header or the first instance of 
-   * `X-Forwarded-Host` if set.
+   * The hostname derived from the `Host` header or the first instance of `X-Forwarded-Host` if set.
    */
   var host
 
@@ -325,6 +328,32 @@ class HttpRequest {
     return false
   }
 
+  _strip_chunk_size(body, chunk_size) {
+    var length = body.length()
+    # chunk_size += 2 # allocating for the \r\n that lead to it.
+
+    if length > chunk_size {
+      # inital processed body is up to the chunk size
+      var processed = body[,chunk_size],
+          # We start striping from the end of the first chunk size
+          start = chunk_size
+
+      while chunk_size > 0 {
+        var tmp_body = body[start,].split('\n')
+        chunk_size = to_number('0x'+tmp_body[1].trim())
+        processed += '\n'.join(tmp_body[2,]).ascii()[,chunk_size]
+        start += chunk_size
+      }
+
+      return processed
+    } else {
+
+      # remove the last chunk-size marking.
+      body = body.replace('/0\\r\\n\\r\\n$/', '')
+      return body
+    }
+  }
+
   /**
    * send(uri: Url, method: string [, data: string | bytes [, options: dict]])
    * @default follow_redirect: true
@@ -343,69 +372,181 @@ class HttpRequest {
 
     if options == nil options = {}
 
-    var responder = uri.absolute_url(), error, referer
+    var responder = uri.absolute_url(), 
+        headers, body, error, referer
 
-    var time_taken = 0, 
+    var should_connect = true, 
+        time_taken = 0, 
         redirect_count = 0, 
         http_version = '1.0', 
         status_code = 0
 
-    var curl = Curl()
-    curl.set_option(Option.URL, responder)
-    if method.upper() != 'GET' {
-      curl.set_option(Option.CUSTOMREQUEST, method.upper())
-    }
-    curl.set_option(Option.FOLLOWLOCATION, options.get('follow_redirect', true))
-    curl.set_option(Option.CONNECTTIMEOUT_MS, options.get('connect_timeout', 2000))
-    curl.set_option(Option.TIMEOUT_MS, options.get('receive_timeout', 2000))
+    var follow_redirect = options.get('follow_redirect', true),
+        connect_timeout = options.get('connect_timeout', 2000),
+        send_timeout = options.get('send_timeout', 2000),
+        receive_timeout = options.get('receive_timeout', 2000)
 
-    # Just trying to get a little performance boost.
-    if uri.scheme.lower() == 'https' {
-      curl.set_option(Option.DEFAULT_PROTOCOL, 'https')
-    }
+    while should_connect {
 
-    # Set request headers
-    var headers = []
-    for key, value in self.headers {
+      var resolved_host = socket.get_address_info(uri.host)
 
-      # Make sure to always override user set Content-Length header 
-      # to avoid unexpected behavior.
-      if key.lower() != 'content-length' {
-        headers.append('${key}: ${value}')
+      if resolved_host {
+        var host = resolved_host.ip,
+            port = uri.port,
+            is_secure = uri.scheme == 'https'
+
+        # construct message
+        var message = '${method} ${uri.path}'
+        if uri.query message += '?${uri.query}'
+        if uri.hash message += '#${uri.hash}'
+        message += ' HTTP/1.1\r\n'
+
+        if !self.headers.contains('Host') {
+          message += 'Host: ${uri.host}\r\n'
+        }
+
+        # add custom headers
+        for key, value in self.headers {
+
+          # Make sure to always override user set Content-Length header 
+          # to avoid unexpected behavior.
+          if key.lower() != 'content-length' {
+            message += '${key}: ${value}\r\n'
+          }
+        }
+
+        if referer and !self.headers.contains('Referer') {
+          message += 'Referer: ${referer}\r\n'
+        }
+
+        if data {
+          # append the correct content length to the message
+          message += 'Content-Length: ${data.length()}\r\n'
+        }
+
+        # append the body
+        message += '\r\n${data}'
+
+        # do real request here...
+        var client = !is_secure ? socket.Socket() : ssl.SSLSocket(ssl.TLS_client_method)
+        client.set_option(socket.SO_SNDTIMEO, send_timeout)
+        client.set_option(socket.SO_RCVTIMEO, receive_timeout)
+
+        var start = time()
+
+        # connect to the url host on the specified port and send the request message
+        if client.connect(host, port ? port : (is_secure ? 443 : 80), connect_timeout) {
+          client.send(message)
+
+          # receive the response...
+          var response_data = client.receive() or ''
+
+          # separate the headers and the body
+          var body_starts = response_data.index_of('\r\n\r\n')
+
+          if body_starts {
+            headers = response_data[0,body_starts].trim()
+            body = response_data[body_starts + 2, response_data.length()].trim()
+          } else {
+            # Clear the headers here. It may currently be a dictionary.
+            headers = ''
+          }
+
+          headers = _process.process_header(headers, |version, status|{
+            http_version = version
+            status_code  = status
+          })
+
+          # According to https://datatracker.ietf.org/doc/html/rfc7230#section-3.3
+          # 
+          # Responses to the HEAD request method (Section 4.3.2
+          # of [RFC7231]) never include a message body because the associated
+          # response header fields (e.g., Transfer-Encoding, Content-Length,
+          # etc.), if present, indicate only what their values would have been if
+          # the request method had been GET
+          if method.upper() != 'HEAD' {
+
+            # gracefully handle responses being sent in multiple packets
+            # if the request header contains the Content-Length,
+            # get that length and keep reading until we have read the total
+            # length of the response.
+            if headers.contains('Content-Length') {
+              var length = to_number(headers['Content-Length']) - 2
+
+              # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-3.4
+              # A client that receives an incomplete response message, which can
+              # occur when a connection is closed prematurely or when decoding a
+              # supposedly chunked transfer coding fails, MUST record the message as
+              # incomplete.
+              var data = body
+              while body.ascii().length() < length and data {
+                data = client.receive()
+                # append the new data in the stream
+                body += data
+              }
+              # body += client.read(length - body.ascii().length())
+            } else if headers.contains('Transfer-Encoding') and headers['Transfer-Encoding'].trim() == 'chunked'  {
+              # gracefully handle chuncked data transfer
+              # 
+              # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-4.1
+              # 
+              # chunked-body   = *chunk
+              #           last-chunk
+              #           trailer-part
+              #           CRLF
+              # 
+              # chunk          = chunk-size [ chunk-ext ] CRLF
+              #                   chunk-data CRLF
+              # chunk-size     = 1*HEXDIG
+              # last-chunk     = 1*("0") [ chunk-ext ] CRLF
+
+              var tmp_body = body.split('\n')
+              var chunk_size = to_number('0x'+tmp_body[0].trim())
+              var has_chunks = chunk_size != 0 and 
+                !body.ascii().ends_with(_chunk_terminator) and
+                !body.ascii().ends_with('\r\n0')
+              body = '\n'.join(tmp_body[1,]).ascii()
+
+              # Keeping the original chunk size so that we can use it to process requests
+              # that are fully read with the chunk size marks in-between.
+              var original_chunk_size = chunk_size
+
+              while true and has_chunks {
+                var response = client.receive()
+                body += response
+                if response.ends_with(_chunk_terminator) or response.ends_with('\r\n0')
+                  break
+              }
+
+              body = self._strip_chunk_size(body, original_chunk_size)
+            }
+          }
+
+          time_taken += time() - start
+
+          # close client
+          client.close()
+
+          if follow_redirect and headers.contains('Location') {
+            referer = uri.absolute_url()
+            uri = url.parse(headers['Location'])
+            responder = referer
+          } else {
+            should_connect = false
+          }
+        } else {
+          should_connect = false
+          die HttpException('could not connect')
+        }
+      } else {
+        should_connect = false
+        die HttpException('could not resolve ip address')
       }
     }
-    curl.set_option(Option.HTTPHEADER, CurlList(headers))
-
-    if data {
-      curl.set_option(Option.POSTFIELDS, data)
-    }
-
-    var result = curl.send()
-
-    # Convert raw headers into a dictionary.
-    var response_headers = result.headers.trim().split('\r\n\r\n')
-    if response_headers.length() > 1 {
-      response_headers = response_headers[-1]
-    } else {
-      response_headers = response_headers[0]
-    }
-    response_headers = _process.process_header(response_headers)
 
     # return a valid HttpResponse
-    var response =  HttpResponse(
-      result.body, 
-      curl.get_info(Info.RESPONSE_CODE), 
-      response_headers,
-      curl.get_info(Info.HTTP_VERSION), 
-      curl.get_info(Info.TOTAL_TIME), 
-      curl.get_info(Info.REDIRECT_COUNT), 
-      curl.get_info(Info.EFFECTIVE_URL)
-    )
-
-    # Free curl.
-    curl.close()
-
-    return response
+    return HttpResponse(body, status_code, headers, http_version, 
+      time_taken, redirect_count, responder)
   }
 
   @to_string() {

@@ -55,6 +55,7 @@ class Encoder {
       when 'nil' return 'null'
       when 'boolean' return to_string(value)
       when 'number' return to_string(value)
+      when 'bytes' return value.to_string()
       when 'string' {
         if value.index_of('"') > -1 or value.index_of('\\') > -1 {
           var esc_value = value.replace('/"/', '\\"').  # replace " with \"
