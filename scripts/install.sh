@@ -77,6 +77,8 @@ install_blade() {
 	sudo ln -s $@/blade/blade /usr/local/bin/blade
 }
 
+echo "Beginning installation of Blade..."
+
 if [[ -z "${IS_LINUX-}" ]]
 then
 
