@@ -83,6 +83,7 @@ then
   #Install Homebrew if not installed...
   if [[ $(command -v 'brew') == "" ]]
   then
+    echo "Homebrew not installed. Installing..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   fi
 
