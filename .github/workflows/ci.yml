@@ -77,12 +77,11 @@ jobs:
         with: { committish: 63aa65e65b9d2c08772ea15d25fb8fdb0d32e557 }
       - uses: actions/checkout@v2
       - name: Compile
-        shell: bash
         run: |
-          dir $VCPKG_ROOT
-          $VCPKG_ROOT/vcpkg version
-          $VCPKG_ROOT/vcpkg install curl
-          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+          dir ${{ env.VCPKG_ROOT }}
+          ${{ env.VCPKG_ROOT }}/vcpkg version
+          ${{ env.VCPKG_ROOT }}/vcpkg install curl
+          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake"
           cmake --build . -- -j 12
       - name: Generate Artifacts
         uses: actions/upload-artifact@v2
