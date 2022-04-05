@@ -49,8 +49,16 @@ install_if_missing() {
 }
 
 install_blade() {
+	# removing old/stale/partial objects
+	echo "Removing old/stale/partial objects..."
+	sudo rm /usr/local/bin/blade
+	sudo rm -rf `pwd`/blade
+
+	# cloning
 	git clone https://github.com/blade-lang/blade.git
 	cd blade
+
+	# building
 	cmake -B .
 	cmake --build . -- -j 16
 
@@ -85,6 +93,7 @@ else
   install_if_missing 'curl'
   install_if_missing 'libssl-dev'
   install_if_missing 'libreadline-dev'
+  install_if_missing 'libcurl4-openssl-dev'
 fi
 
 #Install cmake dependency.
