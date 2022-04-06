@@ -9,3 +9,6 @@ if(NOT "${HAVE_STRSEP}")
 endif()
 
 add_subdirectory(pcre2)
+if(UNIX)
+    add_subdirectory(linenoise)
+endif()
