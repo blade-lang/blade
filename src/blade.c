@@ -14,8 +14,8 @@
 #include <errno.h>
 
 #if !defined(_WIN32) && !defined(__CYGWIN__)
-#include <readline/history.h>
-#include <readline/readline.h>
+#include "linenoise/utf8.h"
+#include "linenoise/linenoise.h"
 #endif
 
 #include <setjmp.h>
@@ -24,25 +24,7 @@
 
 static bool continue_repl = true;
 
-#ifndef _WIN32
-sigjmp_buf ctrlc_buf;
-
-void handle_signals(int sig_no) {
-  if (sig_no == SIGINT) {
-    printf("\n<KeyboardInterrupt>\n");
-    continue_repl = false;
-    siglongjmp(ctrlc_buf, 1);
-  }
-}
-#endif /* ifndef _WIN32 */
-
 static void repl(b_vm *vm) {
-#ifndef _WIN32
-  if (signal(SIGINT, handle_signals) == SIG_ERR) {
-    printf("failed to register interrupts with kernel\n");
-  }
-#endif /* ifndef _WIN32 */
-
   vm->is_repl = true;
 
   printf("Blade %s (running on BladeVM %s), REPL/Interactive mode = ON\n",
@@ -59,14 +41,19 @@ static void repl(b_vm *vm) {
   add_module(vm, module);
 
 #if !defined(_WIN32) && !defined(__CYGWIN__)
+
+  linenoiseSetEncodingFunctions(
+      linenoiseUtf8PrevCharLen,
+      linenoiseUtf8NextCharLen,
+      linenoiseUtf8ReadCode
+  );
+  linenoiseSetMultiLine(0);
+
   // allow user to navigate through past input in terminal...
-  add_history(".exit");
+  linenoiseHistoryAdd(".exit");
 #endif // !_WIN32
 
   for (;;) {
-#ifndef _WIN32
-    while (sigsetjmp(ctrlc_buf, 1) != 0);
-#endif
 
     if (!continue_repl) {
       brace_count = 0;
@@ -104,8 +91,7 @@ static void repl(b_vm *vm) {
       return;
     }
 #else
-    char *line = readline(cursor);
-
+    char *line = linenoise(cursor);
 
     // terminate early if we receive a terminating command such as exit() or Ctrl+D
     if (line == NULL || strcmp(line, ".exit") == 0) {
@@ -124,7 +110,7 @@ static void repl(b_vm *vm) {
 
 #if !defined(_WIN32) && !defined(__CYGWIN__)
     // allow user to navigate through past input in terminal...
-    add_history(line);
+    linenoiseHistoryAdd(line);
 #endif // !_WIN32
 
     if(line_length > 0 && line[0] == '#') {
@@ -168,7 +154,7 @@ static void repl(b_vm *vm) {
     }
 
 #ifndef _WIN32
-    free(line);
+    linenoiseFree(line);
 #endif // !_WIN32
 
     if (bracket_count == 0 && paren_count == 0 && brace_count == 0 && single_quote_count == 0 &&

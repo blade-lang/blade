@@ -163,8 +163,10 @@ endif()
 target_link_libraries(libblade PRIVATE pcre2)
 
 if(UNIX)
-	find_library(READLINE_LIBRARY readline REQUIRED)
-	target_link_libraries(blade PRIVATE "${READLINE_LIBRARY}")
+	#	Add linenoise as dependency and link it.
+	add_dependencies(libblade linenoise)
+	target_link_libraries(libblade PRIVATE linenoise)
+
 	target_link_libraries(libblade PRIVATE m)
 	if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 		target_link_libraries(libblade PRIVATE pthread)
