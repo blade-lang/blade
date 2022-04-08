@@ -284,6 +284,10 @@ static void emit_loop(b_parser *p, int loop_start) {
 }
 
 static void emit_return(b_parser *p) {
+  if(p->is_trying) {
+    emit_byte(p, OP_POP_TRY);
+  }
+
   if (p->vm->compiler->type == TYPE_INITIALIZER) {
     emit_byte_and_short(p, OP_GET_LOCAL, 0);
   } else {
@@ -2171,6 +2175,7 @@ static void try_statement(b_parser *p) {
     error(p, "maximum exception handler in scope exceeded");
   }
   p->vm->compiler->handler_count++;
+  p->is_trying = true;
 
   ignore_whitespace(p);
   int try_begins = emit_try(p);
@@ -2178,6 +2183,7 @@ static void try_statement(b_parser *p) {
   statement(p); // compile the try body
   emit_byte(p, OP_POP_TRY);
   int exit_jump = emit_jump(p, OP_JUMP);
+  p->is_trying = false;
 
   // we can safely use 0 because a program cannot start with a
   // catch or finally block
@@ -2248,6 +2254,10 @@ static void return_statement(b_parser *p) {
   } else {
     if (p->vm->compiler->type == TYPE_INITIALIZER) {
       error(p, "cannot return value from constructor");
+    }
+
+    if(p->is_trying) {
+      emit_byte(p, OP_POP_TRY);
     }
 
     expression(p);
@@ -2430,6 +2440,7 @@ b_obj_func *compile(b_vm *vm, b_obj_module *module, const char *source, b_blob *
   parser.block_count = 0;
   parser.repl_can_echo = false;
   parser.is_returning = false;
+  parser.is_trying = false;
   parser.innermost_loop_start = -1;
   parser.innermost_loop_scope_depth = 0;
   parser.current_class = NULL;

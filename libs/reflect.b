@@ -163,8 +163,8 @@ def get_decorator(object, name) {
  * @return function
  */
 def bind_method(object, method) {
-  if !is_instance(object) or !is_string(method)
-    die Exception('arg1 must be instance and arg2 must be string')
+  if !is_instance(object) or !is_function(method)
+    die Exception('arg1 must be instance and arg2 must be function')
 
   return _reflect.bindmethod(object, method)
 }
