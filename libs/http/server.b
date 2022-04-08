@@ -214,7 +214,7 @@ class HttpServer {
     if !request.parse(message, client)
       response.status = status.BAD_REQUEST
 
-    var feedback = 'HTTP/${response.version} ${response.status} ${status.map.get(response.status, 'UNKNOWN')}\r\n'
+    var feedback = ''
 
     # If we have an error in the request message itself, we don't even want to 
     # forward processing to callers. 
@@ -233,6 +233,10 @@ class HttpServer {
 
     feedback += self._get_response_header_string(response.headers)
     feedback += '\r\n${response.body}' 
+
+    feedback =  'HTTP/${response.version} ${response.status} ' +
+                '${status.map.get(response.status, 'UNKNOWN')}\r\n' + 
+                feedback
     
     client.send(feedback)
     # call the reply listeners.
@@ -265,7 +269,7 @@ class HttpServer {
         var client = self.socket.accept()
 
         # call the connect listeners.
-        iters.each(self._connect_listeners, | fn | {
+        iters.each(self._connect_listeners, | fn, _ | {
           fn(client)
         })
 
@@ -282,7 +286,7 @@ class HttpServer {
           }
         } catch Exception e {
           # call the error listeners.
-          iters.each(self._error_listeners, | fn | {
+          iters.each(self._error_listeners, | fn, _ | {
             fn(e, client)
           })
         } finally {
@@ -290,7 +294,7 @@ class HttpServer {
           client.close()
 
           # call the disconnect listeners.
-          iters.each(self._disconnect_listeners, | fn | {
+          iters.each(self._disconnect_listeners, | fn, _ | {
             fn(client_info)
           })
         }

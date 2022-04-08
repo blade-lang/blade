@@ -107,11 +107,6 @@ class HttpClient {
 
     var request = HttpRequest()
     request.headers = self.headers
-    if !self.headers.contains('User-Agent') {
-      request.headers.extend({
-        'User-Agent': self.user_agent,
-      })
-    }
 
     if self.referer and !self.headers.contains('Referer') {
       request.headers.extend({
@@ -123,6 +118,10 @@ class HttpClient {
       follow_redirect: self.follow_redirect,
       connect_timeout: self.connect_timeout,
       receive_timeout: self.receive_timeout,
+      skip_hostname_verification: self.skip_hostname_verification,
+      skip_peer_verification: self.skip_peer_verification,
+      user_agent: self.user_agent,
+      cookie_file: self.cookie_file,
     })
   }
 }

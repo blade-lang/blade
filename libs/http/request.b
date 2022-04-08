@@ -356,9 +356,18 @@ class HttpRequest {
     if method.upper() != 'GET' {
       curl.set_option(Option.CUSTOMREQUEST, method.upper())
     }
+
+    var user_agent = options.get('user_agent', nil)
+    if user_agent curl.set_option(Option.USERAGENT, user_agent)
+
     curl.set_option(Option.FOLLOWLOCATION, options.get('follow_redirect', true))
     curl.set_option(Option.CONNECTTIMEOUT_MS, options.get('connect_timeout', 2000))
     curl.set_option(Option.TIMEOUT_MS, options.get('receive_timeout', 2000))
+    curl.set_option(Option.SSL_VERIFYPEER, !options.get('skip_peer_verification', false))
+    curl.set_option(Option.SSL_VERIFYHOST, !options.get('skip_hostname_verification', false))
+
+    var cookie_file = options.get('cookie_file', nil)
+    if cookie_file curl.set_option(Option.COOKIEFILE, cookie_file)
 
     # Just trying to get a little performance boost.
     if uri.scheme.lower() == 'https' {
