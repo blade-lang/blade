@@ -375,7 +375,7 @@ class HttpRequest {
     }
 
     # Set request headers
-    var headers = []
+    var headers = ['']
     for key, value in self.headers {
 
       # Make sure to always override user set Content-Length header 
