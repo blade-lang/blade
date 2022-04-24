@@ -849,7 +849,7 @@ class Socket {
    * the caller until a connection is present.  If the socket is marked non-blocking and no pending connections 
    * are present on the queue, accept() returns an error as described below.  
    * 
-   * The accepted socket may not be used to accept more connections.  The original socket socket, remains open.
+   * The accepted socket may not be used to accept more connections.  The original socket remains open.
    * @return Socket
    */
   accept() {

@@ -7,7 +7,7 @@ import .status
 
 import socket as so
 import iters
-# import ssl
+import ssl
 
 /**
  * HTTP server
@@ -104,27 +104,31 @@ class HttpServer {
       die Exception('is_secure must be boolean')
     if !is_secure is_secure = false
 
-    # self.socket = !is_secure ? so.Socket() : ssl.SSLSocket(ssl.TLS_server_method)
-    self.socket = so.Socket()
+    self.socket = !is_secure ? so.Socket() : ssl.TLSSocket()
+    # self.socket = so.Socket()
     self.is_secure = is_secure
   }
 
-  # /**
-  #  * load_certs(cert_file: string | file, private_key_file: string | file)
-  #  * 
-  #  * loads the given SSL/TLS certificate pairs for the given SSL/TLS context.
-  #  * @note certificates can only be loaded for secure servers.
-  #  * @return bool
-  #  */
-  # load_certs(cert_file, private_key_file) {
-  #   if !self.is_secure
-  #     die HttpException('certificates can only be loaded for secure servers')
+  /**
+   * load_certs(cert_file: string | file [, private_key_file: string | file])
+   * 
+   * loads the given SSL/TLS certificate pairs for the given SSL/TLS context.
+   * @note certificates can only be loaded for secure servers.
+   * @return bool
+   */
+  load_certs(cert_file, private_key_file) {
+    if !self.is_secure
+      die HttpException('certificates can only be loaded for secure servers')
 
-  #   if self.socket.get_context().load_certs(cert_file, private_key_file) {
-  #     self.cert_file = cert_file
-  #     self.private_key_file = private_key_file
-  #   }
-  # }
+    if !private_key_file private_key_file = cert_file
+
+    if self.socket.get_context().load_certs(cert_file, private_key_file) {
+      self.cert_file = cert_file
+      self.private_key_file = private_key_file
+    } else {
+      die Exception('could not load certificate(s)')
+    }
+  }
 
   /**
    * close()
@@ -252,12 +256,12 @@ class HttpServer {
    * connection from HTTP clients.
    */
   listen() {
-    # if self.is_secure {
-    #   if !self.cert_file
-    #     die Exception('no certificate loaded for secure server')
-    #   if !self.private_key_file 
-    #     die Exception('no private key loaded for secure server')
-    # }
+    if self.is_secure {
+      if !self.cert_file
+        die Exception('no certificate loaded for secure server')
+      if !self.private_key_file 
+        die Exception('no private key loaded for secure server')
+    }
 
     if !self.socket.is_listening {
       self.socket.set_option(so.SO_REUSEADDR, is_bool(self.resuse_address) ? self.resuse_address : true)

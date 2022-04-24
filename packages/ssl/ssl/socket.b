@@ -22,8 +22,8 @@ class SSLSocket < Socket {
    * @constructor
    * @note method must be a valid method pointer defined in the <em>ssl</em> module
    */
-  SSLSocket(method, id, ctx) {
-    # NOTE: NEVER EVER SET `id` and `ctx` YOURSELF.
+  SSLSocket(method, _id, _ctx) {
+    # NOTE: NEVER EVER SET `_id` and `_ctx` YOURSELF.
     # The parameter is meant to make `accept()`.
 
     if method {
@@ -39,13 +39,13 @@ class SSLSocket < Socket {
       self._ssl_bio.set_ssl(self._ssl)
     } else {
 
-      if id != nil and !is_int(id)
-        die Exception('id must be an integer')
-      if ctx != nil and !instance_of(ctx, SSLContext)
-        die Exception('ssl must be an instance of SSLContext')
+      if _id != nil and !is_int(_id)
+        die Exception('_id must be an integer')
+      if _ctx != nil and !instance_of(_ctx, SSLContext)
+        die Exception('_ctx must be an instance of SSLContext')
 
-      self.id = id
-      self._ctx = ctx
+      self.id = _id
+      self._ctx = _ctx
 
       # initialize the SSL.
       self._ssl = SSL(self._ctx)
