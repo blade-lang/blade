@@ -341,6 +341,9 @@ class BIO {
    * @return int
    */
   error(code) {
+    if code != nil and !is_number(code) and !is_int(code)
+      die Exception('integer expected')
+      
     if !code code = -1
     return _ssl.error(self._ptr, code)
   }

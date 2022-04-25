@@ -76,8 +76,17 @@ class HttpServer {
    */
   var private_key_file
 
+  /**
+   * This value controls whether the client certificate should be verified 
+   * or not.
+   * @boolean
+   */
+  var verify_certs = true
+
   # status trackers.
   var _is_listening = false
+
+  var _ciphers = 'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS'
 
   # event handler lists.
   var _connect_listeners = []
@@ -122,11 +131,16 @@ class HttpServer {
 
     if !private_key_file private_key_file = cert_file
 
+    self.socket.get_context().set_verify(self.verify_certs ? ssl.SSL_VERIFY_PEER : ssl.SSL_VERIFY_NONE)
+
     if self.socket.get_context().load_certs(cert_file, private_key_file) {
       self.cert_file = cert_file
       self.private_key_file = private_key_file
+
+      return self.socket.get_context().set_ciphers(self._ciphers)
     } else {
-      die Exception('could not load certificate(s)')
+      # die Exception('could not load certificate(s)')
+      return false
     }
   }
 
@@ -139,6 +153,8 @@ class HttpServer {
     self._is_listening = false
     if !self.socket.is_closed
       self.socket.close()
+    if self.is_secure
+      self.socket.get_context().free()  # close the TLS socket context.
   }
 
   /**

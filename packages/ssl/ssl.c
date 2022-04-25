@@ -55,6 +55,10 @@ DECLARE_MODULE_METHOD(ssl_ctx_load_certs) {
     RETURN_FALSE;
   }
 
+  if(!SSL_CTX_check_private_key(ctx)) {
+    RETURN_FALSE;
+  }
+
   RETURN_TRUE;
 }
 
@@ -77,6 +81,17 @@ DECLARE_MODULE_METHOD(ssl_ctx_set_verify_locations) {
 
   SSL_CTX *ctx = (SSL_CTX*)AS_PTR(args[0])->pointer;
   RETURN_BOOL(SSL_CTX_load_verify_locations(ctx, AS_C_STRING(args[1]), NULL) == 1);
+}
+
+DECLARE_MODULE_METHOD(ssl_set_ciphers) {
+  ENFORCE_ARG_COUNT(set_ciphers, 2);
+  ENFORCE_ARG_TYPE(set_ciphers, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(set_ciphers, 1, IS_STRING);
+
+  SSL_CTX *ctx = (SSL_CTX*)AS_PTR(args[0])->pointer;
+  b_obj_string *string = AS_STRING(args[1]);
+
+  RETURN_BOOL(SSL_CTX_set_cipher_list(ctx, (const char*)string->chars) > 0);
 }
 
 DECLARE_MODULE_METHOD(ssl_new) {
@@ -604,6 +619,7 @@ CREATE_MODULE_LOADER(ssl) {
       {"error_string",   true,  GET_MODULE_METHOD(ssl_error_string)},
       {"free",   true,  GET_MODULE_METHOD(ssl_free)},
       {"shutdown",   true,  GET_MODULE_METHOD(ssl_shutdown)},
+      {"set_ciphers",   true,  GET_MODULE_METHOD(ssl_set_ciphers)},
       {NULL,    false, NULL},
   };
 

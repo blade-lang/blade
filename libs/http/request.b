@@ -9,6 +9,7 @@ import .response { HttpResponse }
 import url
 import socket
 import curl { Option, Info, Curl, CurlList }
+import ssl
 
 /**
  * Http request handler and object.
@@ -270,17 +271,17 @@ class HttpRequest {
   }
 
   /**
-   * parse(raw_data: string [, client: Socket])
+   * parse(raw_data: string [, client: Socket | TLSSocket])
    * 
    * Parses a raw HTTP request string into a correct HttpRequest
    * @return boolean
    */
   parse(raw_data, client) {
-
+    
     if !is_string(raw_data)
       die Exception('raw_data must be string')
-    if !instance_of(client, socket.Socket) 
-      die Exception('invalid Socket')
+    if !instance_of(client, socket.Socket) and !instance_of(client, ssl.TLSSocket) 
+      die Exception('invalid Socket or TLSSocket')
 
     self.ip = client.info().address
 

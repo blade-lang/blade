@@ -63,6 +63,18 @@ class SSLContext {
   }
 
   /**
+   * set_ciphers(ciphers: string)
+   * 
+   * sets the list of allowed ciphers. This list must be colon (:) separated.
+   * @return bool
+   */
+  set_ciphers(ciphers) {
+    if !is_string(ciphers)
+      die Exception('string expected')
+    return _ssl.set_ciphers(self._ptr, ciphers)
+  }
+
+  /**
    * free()
    * 
    * frees this Context and all associated resources
