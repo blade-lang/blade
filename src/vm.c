@@ -1349,7 +1349,7 @@ b_ptr_result run(b_vm *vm) {
     push(vm, type(a op b));                                                    \
   } while (false)
 
-#define BINARY_BIT_OP(type, op)                                                \
+#define BINARY_BIT_OP(op)                                                \
   do {                                                                         \
     if ((!IS_NUMBER(peek(vm, 0)) && !IS_BOOL(peek(vm, 0))) ||                  \
         (!IS_NUMBER(peek(vm, 1)) && !IS_BOOL(peek(vm, 1)))) {                  \
@@ -1357,9 +1357,9 @@ b_ptr_result run(b_vm *vm) {
                      value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
                      break;       \
     }                                                                          \
-    unsigned int b = AS_NUMBER(pop(vm));                                       \
-    unsigned int a = AS_NUMBER(pop(vm));                                       \
-    push(vm, type((double)(a op b)));                                          \
+    long b = AS_NUMBER(pop(vm));                                       \
+    long a = AS_NUMBER(pop(vm));                        \
+    push(vm, INTEGER_VAL(a op b));                                          \
   } while (false)
 
 #define BINARY_MOD_OP(type, op)                                                \
@@ -1378,7 +1378,6 @@ b_ptr_result run(b_vm *vm) {
   } while (false)
 
   for (;;) {
-
     // try...finally... (i.e. try without a catch but a finally
     // but whose try body raises an exception)
     // can cause us to go into an invalid mode where frame count == 0
@@ -1489,23 +1488,23 @@ b_ptr_result run(b_vm *vm) {
         break;
       }
       case OP_AND: {
-        BINARY_BIT_OP(NUMBER_VAL, &);
+        BINARY_BIT_OP(&);
         break;
       }
       case OP_OR: {
-        BINARY_BIT_OP(NUMBER_VAL, |);
+        BINARY_BIT_OP(|);
         break;
       }
       case OP_XOR: {
-        BINARY_BIT_OP(NUMBER_VAL, ^);
+        BINARY_BIT_OP(^);
         break;
       }
       case OP_LSHIFT: {
-        BINARY_BIT_OP(NUMBER_VAL, <<);
+        BINARY_BIT_OP(<<);
         break;
       }
       case OP_RSHIFT: {
-        BINARY_BIT_OP(NUMBER_VAL, >>);
+        BINARY_BIT_OP(>>);
         break;
       }
       case OP_ONE: {
