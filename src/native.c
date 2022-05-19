@@ -20,24 +20,55 @@
 #include <basetsd.h>
 #endif
 
-static b_obj_string *bin_to_string(b_vm *vm, int n) {
-  // To store the binary number
-  long long number = 0;
-  int cnt = 0;
-  while (n != 0) {
-    int rem = n % 2;
-    long long c = (long long) pow(10, cnt);
-    number += rem * c;
-    n /= 2;
+static b_obj_string *bin_to_string(b_vm *vm, long n) {
 
-    // Count used to store exponent value
-    cnt++;
+  char str[1024]; // assume maximum of 1024 bits
+  int count = 0;
+  long j = n;
+
+  if(j == 0) {
+    str[count++] = '0';
   }
 
-  char str[66]; // assume maximum of 64 bits + 2 binary indicators (0b)
-  int length = sprintf(str, "0b%lld", number);
+  while(j != 0) {
+    int rem = abs((int)(j % 2));
+    j /= 2;
+    str[count++] = rem == 1 ? '1' : '0';
+  }
 
-  return copy_string(vm, str, length);
+  char new_str[1027]; // assume maximum of 1024 bits + 0b (indicator) + sign (-).
+  int length = 0;
+
+  if(n < 0) new_str[length++] = '-';
+
+  new_str[length++] = '0';
+  new_str[length++] = 'b';
+
+  for(int i = count - 1; i >= 0; i--) {
+    new_str[length++] = str[i];
+  }
+
+  new_str[length++] = 0;
+
+  return copy_string(vm, new_str, length);
+
+//  // To store the binary number
+//  long long number = 0;
+//  int cnt = 0;
+//  while (n != 0) {
+//    long long rem = n % 2;
+//    long long c = (long long) pow(10, cnt);
+//    number += rem * c;
+//    n /= 2;
+//
+//    // Count used to store exponent value
+//    cnt++;
+//  }
+//
+//  char str[67]; // assume maximum of 64 bits + 2 binary indicators (0b)
+//  int length = sprintf(str, "0b%lld", number);
+//
+//  return copy_string(vm, str, length);
 }
 
 static b_obj_string *number_to_oct(b_vm *vm, long long n, bool numeric) {
@@ -377,7 +408,24 @@ DECLARE_NATIVE(to_number) {
   } else if (IS_NIL(args[0])) {
     RETURN_NUMBER(-1);
   }
-  RETURN_NUMBER(strtod((const char *) value_to_string(vm, args[0]), NULL));
+
+  const char *v = (const char *) value_to_string(vm, args[0]);
+  int length = (int)strlen(v);
+
+  if(length > 2 && v[0] == '0') {
+    char *t = (char*)calloc(length - 2, sizeof(char));
+    memcpy(t, v + 2, length - 2);
+
+    if(v[1] == 'b') {
+      RETURN_NUMBER(strtoll(t, NULL, 2));
+    } else if(v[1] == 'x') {
+      RETURN_NUMBER(strtol(t, NULL, 16));
+    } else if(v[1] == 'c') {
+      RETURN_NUMBER(strtol(t, NULL, 8));
+    }
+  }
+
+  RETURN_NUMBER(strtod(v, NULL));
 }
 
 /**

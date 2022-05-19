@@ -271,7 +271,7 @@ class BIO {
    * write(data: string | bytes)
    * 
    * writes data to the current I/O stream.
-   * @return int representing the total bytes read
+   * @return int representing the total bytes written
    */
   write(data) {
     if !is_string(data) and !is_bytes(data)
@@ -279,7 +279,7 @@ class BIO {
 
     if is_bytes(data) data = to_string(data)
 
-    var result = _ssl.write(self._ptr, data)
+    var result = _ssl.bio_write(self._ptr, data)
     if result == -1
       die Exception(self.error_string())
     
@@ -298,7 +298,7 @@ class BIO {
     if !is_int(length)
       die Exception('integer expected')
     
-    var result = _ssl.read(self._ptr, length)
+    var result = _ssl.bio_read(self._ptr, length)
     if result == nil {
       die Exception(self.error_string())
     }
@@ -335,23 +335,28 @@ class BIO {
   }
 
   /**
-   * error()
+   * error([code: int])
    * 
    * returns the last SSL error number
    * @return int
    */
-  error() {
-    return _ssl.error(self._ptr)
+  error(code) {
+    if code != nil and !is_number(code) and !is_int(code)
+      die Exception('integer expected')
+      
+    if !code code = -1
+    return _ssl.error(self._ptr, code)
   }
 
   /**
-   * error_string()
+   * error_string([code: int])
    * 
    * returns the last SSL error as string
    * @return string
    */
   error_string() {
-    return _ssl.error_string(self._ptr)
+    if !code code = -1
+    return _ssl.error_string(self._ptr, code)
   }
 
   /**

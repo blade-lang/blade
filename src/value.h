@@ -42,6 +42,7 @@ typedef uint64_t b_value;
 #define BOOL_VAL(v) ((v) ? TRUE_VAL : FALSE_VAL)
 #define NUMBER_VAL(v) number_to_value(v)
 #define INTEGER_VAL(v) integer_to_value(v)
+#define LONG_VAL(v) long_to_value(v)
 #define OBJ_VAL(obj) (b_value)(SIGN_BIT | QNAN | (uint64_t)(uintptr_t)(obj))
 
 #define AS_BOOL(v) ((v) == TRUE_VAL)
@@ -61,6 +62,12 @@ static inline b_value number_to_value(double v) {
 }
 
 static inline b_value integer_to_value(int v) {
+  b_double_union data;
+  data.num = (double) v;
+  return data.bits;
+}
+
+static inline b_value long_to_value(long v) {
   b_double_union data;
   data.num = (double) v;
   return data.bits;
@@ -99,6 +106,7 @@ typedef struct {
 #define BOOL_VAL(v) ((b_value){VAL_BOOL, {.boolean = v}})
 #define NUMBER_VAL(v) ((b_value){VAL_NUMBER, {.number = v}})
 #define INTEGER_VAL(v) ((b_value){VAL_NUMBER, {.number = v}})
+#define LONG_VAL(v) ((b_value){VAL_NUMBER, {.number = v}})
 #define OBJ_VAL(v) ((b_value){VAL_OBJ, {.obj = (b_obj *)v}})
 
 // demote blade values to C value

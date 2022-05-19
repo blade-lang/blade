@@ -71,6 +71,74 @@ class SSL {
   }
 
   /**
+   * connect()
+   * 
+   * connects to an SSL server instance
+   */
+  accept() {
+    return _ssl.connect(self._ptr)
+  }
+
+  /**
+   * write(data: string | bytes)
+   * 
+   * writes data to the current I/O stream.
+   * @return int representing the total bytes written
+   */
+  write(data) {
+    if !is_string(data) and !is_bytes(data)
+      die Exception('string or bytes expected')
+
+    if is_bytes(data) data = to_string(data)
+
+    var result = _ssl.write(self._ptr, data)
+    if result == -1
+      die Exception(self.error())
+    
+    return result
+  }
+
+  /**
+   * read([length: int])
+   * 
+   * reads data off the I/O and returns it
+   * @default length = -1
+   * @return string
+   */
+  read(length) {
+    if !length length = -1
+    if !is_int(length)
+      die Exception('integer expected')
+    
+    var result = _ssl.read(self._ptr, length)
+    if result == nil {
+      die Exception(self.error())
+    }
+
+    return result
+  }
+
+  /**
+   * error([code: int])
+   * 
+   * returns the last SSL error number
+   * @return int
+   */
+  error(code) {
+    if !code code = -1
+    return _ssl.error_string(self._ptr, code)
+  }
+
+  /**
+   * shutdown()
+   * 
+   * shutdown the SSL object
+   */
+  shutdown() {
+    _ssl.shutdown(self._ptr)
+  }
+
+  /**
    * free()
    * 
    * frees this SSL and all associated resources

@@ -55,6 +55,10 @@ DECLARE_MODULE_METHOD(ssl_ctx_load_certs) {
     RETURN_FALSE;
   }
 
+  if(!SSL_CTX_check_private_key(ctx)) {
+    RETURN_FALSE;
+  }
+
   RETURN_TRUE;
 }
 
@@ -77,6 +81,17 @@ DECLARE_MODULE_METHOD(ssl_ctx_set_verify_locations) {
 
   SSL_CTX *ctx = (SSL_CTX*)AS_PTR(args[0])->pointer;
   RETURN_BOOL(SSL_CTX_load_verify_locations(ctx, AS_C_STRING(args[1]), NULL) == 1);
+}
+
+DECLARE_MODULE_METHOD(ssl_set_ciphers) {
+  ENFORCE_ARG_COUNT(set_ciphers, 2);
+  ENFORCE_ARG_TYPE(set_ciphers, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(set_ciphers, 1, IS_STRING);
+
+  SSL_CTX *ctx = (SSL_CTX*)AS_PTR(args[0])->pointer;
+  b_obj_string *string = AS_STRING(args[1]);
+
+  RETURN_BOOL(SSL_CTX_set_cipher_list(ctx, (const char*)string->chars) > 0);
 }
 
 DECLARE_MODULE_METHOD(ssl_new) {
@@ -275,10 +290,10 @@ DECLARE_MODULE_METHOD(ssl_bio_pop) {
   RETURN_PTR(BIO_pop(in));
 }
 
-DECLARE_MODULE_METHOD(ssl_write) {
-  ENFORCE_ARG_COUNT(write, 2);
-  ENFORCE_ARG_TYPE(write, 0, IS_PTR);
-  ENFORCE_ARG_TYPE(write, 1, IS_STRING); // data
+DECLARE_MODULE_METHOD(ssl_bio_write) {
+  ENFORCE_ARG_COUNT(bio_write, 2);
+  ENFORCE_ARG_TYPE(bio_write, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(bio_write, 1, IS_STRING); // data
 
   BIO *bio = (BIO*)AS_PTR(args[0])->pointer;
   b_obj_string *string = AS_STRING(args[1]);
@@ -305,10 +320,53 @@ DECLARE_MODULE_METHOD(ssl_write) {
   RETURN_NUMBER(total);
 }
 
+DECLARE_MODULE_METHOD(ssl_write) {
+  ENFORCE_ARG_COUNT(write, 2);
+  ENFORCE_ARG_TYPE(write, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(write, 1, IS_STRING); // data
+
+  SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
+  b_obj_string *string = AS_STRING(args[1]);
+
+  RETURN_NUMBER(SSL_write(ssl, string->chars, string->length));
+}
+
 DECLARE_MODULE_METHOD(ssl_read) {
   ENFORCE_ARG_COUNT(read, 2);
   ENFORCE_ARG_TYPE(read, 0, IS_PTR);
   ENFORCE_ARG_TYPE(read, 1, IS_NUMBER);
+
+  SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
+  int length = AS_NUMBER(args[1]);
+
+  char *data = (char*)malloc(sizeof(char));
+  memset(data, 0, sizeof(char));
+  int total = 0;
+  char buffer[1025];
+
+  do {
+    int bytes = SSL_read(ssl, buffer, 1024);
+    if(bytes > 0) {
+      data = realloc(data, sizeof(char) * (total + bytes));
+      if(data == NULL) {
+        fprintf(stderr, "device out of memory.");
+        exit(EXIT_RUNTIME);
+      }
+      memcpy(data + total, buffer, bytes);
+      total += bytes;
+
+      if(total > length && length != -1) break;
+    }
+    if(bytes <= 0) break;
+  } while (1);
+
+  RETURN_T_STRING(data, total > length && length != -1 ? length : total);
+}
+
+DECLARE_MODULE_METHOD(ssl_bio_read) {
+  ENFORCE_ARG_COUNT(bio_read, 2);
+  ENFORCE_ARG_TYPE(bio_read, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(bio_read, 1, IS_NUMBER);
   BIO *bio = (BIO*)AS_PTR(args[0])->pointer;
   int buffer_length = AS_NUMBER(args[1]);
 
@@ -363,17 +421,27 @@ DECLARE_MODULE_METHOD(ssl_do_connect) {
 }
 
 DECLARE_MODULE_METHOD(ssl_error) {
-  ENFORCE_ARG_COUNT(error, 1);
+  ENFORCE_ARG_RANGE(error, 1, 2);
   ENFORCE_ARG_TYPE(error, 0, IS_PTR);
   SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
-  RETURN_NUMBER(SSL_get_error(ssl, -1));
+  int ret = -1;
+  if(arg_count == 2) {
+    ENFORCE_ARG_TYPE(error_string, 1, IS_NUMBER);
+    ret = AS_NUMBER(args[1]);
+  }
+  RETURN_NUMBER(SSL_get_error(ssl, ret));
 }
 
 DECLARE_MODULE_METHOD(ssl_error_string) {
-  ENFORCE_ARG_COUNT(error_string, 1);
+  ENFORCE_ARG_RANGE(error_string, 1, 2);
   ENFORCE_ARG_TYPE(error_string, 0, IS_PTR);
+  int ret = -1;
+  if(arg_count == 2) {
+    ENFORCE_ARG_TYPE(error_string, 1, IS_NUMBER);
+    ret = AS_NUMBER(args[1]);
+  }
   SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
-  int code = SSL_get_error(ssl, -1);
+  int code = SSL_get_error(ssl, ret);
   if(code != SSL_ERROR_SYSCALL) {
     char *err = ERR_error_string(code, NULL);
     RETURN_STRING(err);
@@ -386,7 +454,13 @@ DECLARE_MODULE_METHOD(ssl_error_string) {
 DECLARE_MODULE_METHOD(ssl_accept) {
   ENFORCE_ARG_COUNT(accept, 1);
   ENFORCE_ARG_TYPE(accept, 0, IS_PTR);
-  RETURN_BOOL(SSL_accept((SSL*)AS_PTR(args[0])->pointer) > 0);
+  RETURN_NUMBER(SSL_accept((SSL*)AS_PTR(args[0])->pointer));
+}
+
+DECLARE_MODULE_METHOD(ssl_connect) {
+  ENFORCE_ARG_COUNT(connect, 1);
+  ENFORCE_ARG_TYPE(connect, 0, IS_PTR);
+  RETURN_BOOL(SSL_connect((SSL*)AS_PTR(args[0])->pointer) > 0);
 }
 
 DECLARE_MODULE_METHOD(ssl_do_accept) {
@@ -439,12 +513,23 @@ DECLARE_MODULE_METHOD(ssl_set_fd) {
   RETURN;
 }
 
+DECLARE_MODULE_METHOD(ssl_shutdown) {
+  ENFORCE_ARG_COUNT(shutdown, 1);
+  ENFORCE_ARG_TYPE(shutdown, 0, IS_PTR);
+
+  SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
+  RETURN_BOOL(SSL_shutdown(ssl) >= 0);
+}
+
 
 void __ssl_module_preloader(b_vm *vm) {
 #ifdef WATT32
   dbug_init();
   sock_init();
 #endif
+  SSL_library_init();
+  SSL_load_error_strings();
+  OpenSSL_add_all_algorithms();
 }
 
 
@@ -519,17 +604,22 @@ CREATE_MODULE_LOADER(ssl) {
       {"set_nbio",   true,  GET_MODULE_METHOD(ssl_set_nbio)},
       {"set_fd",   true,  GET_MODULE_METHOD(ssl_set_fd)},
       {"bio_set_fd",   true,  GET_MODULE_METHOD(ssl_bio_set_fd)},
+      {"connect",   true,  GET_MODULE_METHOD(ssl_connect)},
       {"accept",   true,  GET_MODULE_METHOD(ssl_accept)},
       {"do_accept",   true,  GET_MODULE_METHOD(ssl_do_accept)},
       {"push",   true,  GET_MODULE_METHOD(ssl_bio_push)},
       {"pop",   true,  GET_MODULE_METHOD(ssl_bio_pop)},
       {"write",   true,  GET_MODULE_METHOD(ssl_write)},
       {"read",   true,  GET_MODULE_METHOD(ssl_read)},
+      {"bio_write",   true,  GET_MODULE_METHOD(ssl_bio_write)},
+      {"bio_read",   true,  GET_MODULE_METHOD(ssl_bio_read)},
       {"do_connect",   true,  GET_MODULE_METHOD(ssl_do_connect)},
       {"should_retry",   true,  GET_MODULE_METHOD(ssl_should_retry)},
       {"error",   true,  GET_MODULE_METHOD(ssl_error)},
       {"error_string",   true,  GET_MODULE_METHOD(ssl_error_string)},
       {"free",   true,  GET_MODULE_METHOD(ssl_free)},
+      {"shutdown",   true,  GET_MODULE_METHOD(ssl_shutdown)},
+      {"set_ciphers",   true,  GET_MODULE_METHOD(ssl_set_ciphers)},
       {NULL,    false, NULL},
   };
 
