@@ -1918,25 +1918,27 @@ static void using_statement(b_parser *p) {
 
       if (case_type == WHEN_TOKEN) {
         state = 1;
-        advance(p);
+        do {
+          advance(p);
 
-        b_value jump = NUMBER_VAL((double) current_blob(p)->count - (double) start_offset);
+          b_value jump = NUMBER_VAL((double) current_blob(p)->count - (double) start_offset);
 
-        if (p->previous.type == TRUE_TOKEN) {
-          table_set(p->vm, &sw->table, TRUE_VAL, jump);
-        } else if (p->previous.type == FALSE_TOKEN) {
-          table_set(p->vm, &sw->table, FALSE_VAL, jump);
-        } else if (p->previous.type == LITERAL_TOKEN) {
-          int length;
-          char *str = compile_string(p, &length);
-          b_obj_string *string = copy_string(p->vm, str, length);
-          table_set(p->vm, &sw->table, OBJ_VAL(string), jump);
-        } else if (check_number(p)) {
-          table_set(p->vm, &sw->table, compile_number(p), jump);
-        } else {
-          error(p, "only constants can be used in when expressions");
-          return;
-        }
+          if (p->previous.type == TRUE_TOKEN) {
+            table_set(p->vm, &sw->table, TRUE_VAL, jump);
+          } else if (p->previous.type == FALSE_TOKEN) {
+            table_set(p->vm, &sw->table, FALSE_VAL, jump);
+          } else if (p->previous.type == LITERAL_TOKEN) {
+            int length;
+            char *str = compile_string(p, &length);
+            b_obj_string *string = copy_string(p->vm, str, length);
+            table_set(p->vm, &sw->table, OBJ_VAL(string), jump);
+          } else if (check_number(p)) {
+            table_set(p->vm, &sw->table, compile_number(p), jump);
+          } else {
+            error(p, "only constants can be used in when expressions");
+            return;
+          }
+        } while(match(p, COMMA_TOKEN));
       } else {
         state = 2;
         sw->default_jump = current_blob(p)->count - start_offset;
