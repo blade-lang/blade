@@ -412,16 +412,23 @@ DECLARE_NATIVE(to_number) {
   const char *v = (const char *) value_to_string(vm, args[0]);
   int length = (int)strlen(v);
 
-  if(length > 2 && v[0] == '0') {
-    char *t = (char*)calloc(length - 2, sizeof(char));
-    memcpy(t, v + 2, length - 2);
+  int start = 0, end = 1, multiplier = 1;
+  if(v[0] == '-') {
+    start++;
+    end++;
+    multiplier = -1;
+  }
 
-    if(v[1] == 'b') {
-      RETURN_NUMBER(strtoll(t, NULL, 2));
-    } else if(v[1] == 'x') {
-      RETURN_NUMBER(strtol(t, NULL, 16));
-    } else if(v[1] == 'c') {
-      RETURN_NUMBER(strtol(t, NULL, 8));
+  if(length > (end + 1) && v[start] == '0') {
+    char *t = (char*)calloc(length - 2, sizeof(char));
+    memcpy(t, v + (end + 1), length - 2);
+
+    if(v[end] == 'b') {
+      RETURN_NUMBER(multiplier * strtoll(t, NULL, 2));
+    } else if(v[end] == 'x') {
+      RETURN_NUMBER(multiplier * strtol(t, NULL, 16));
+    } else if(v[end] == 'c') {
+      RETURN_NUMBER(multiplier * strtol(t, NULL, 8));
     }
   }
 
