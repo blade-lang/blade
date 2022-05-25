@@ -120,8 +120,3 @@ def filter(list, callback) {
 
   return result
 }
-
-var words = ['spray', 'limit', 'elite', 'exuberant', 'destruction', 'present']
-echo filter(words, |x| {
-  return x.length() > 6
-})
