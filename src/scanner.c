@@ -300,6 +300,8 @@ static b_tkn_type identifier_type(b_scanner *s) {
             break;
           case 'i':
             return check_keyword(s, 2, 1, "e", DIE_TOKEN);
+          case 'o':
+            return check_keyword(s, 2, 0, "", DO_TOKEN);
         }
       }
       break;

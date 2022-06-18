@@ -69,6 +69,7 @@ typedef enum {
   DEF_TOKEN,
   DEFAULT_TOKEN,
   DIE_TOKEN,
+  DO_TOKEN,
   ECHO_TOKEN,
   ELSE_TOKEN,
   FALSE_TOKEN,

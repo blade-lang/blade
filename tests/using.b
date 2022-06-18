@@ -7,7 +7,7 @@ using i {
   when 5 {
     echo 'five'
   }
-  when 10 {
+  when 10, 3 {
     var result = 'ten'
     echo result
   }

@@ -338,11 +338,11 @@ void print_object(b_value value, bool fix_string) {
       break;
     }
     case OBJ_STRING: {
-      char *string = AS_C_STRING(value);
+      b_obj_string *string = AS_STRING(value);
       if (fix_string) {
-        printf(strchr(string, '\'') != NULL ? "\"%s\"" : "'%s'", string);
+        printf(strchr(string->chars, '\'') != NULL ? "\"%.*s\"" : "'%.*s'", string->length, string->chars);
       } else {
-        printf("%s", string);
+        printf("%.*s", string->length, string->chars);
       }
       break;
     }
