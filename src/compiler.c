@@ -1326,6 +1326,7 @@ b_parse_rule parse_rules[] = {
     [DEF_TOKEN] = {NULL, NULL, PREC_NONE},
     [DEFAULT_TOKEN] = {NULL, NULL, PREC_NONE},
     [DIE_TOKEN] = {NULL, NULL, PREC_NONE},
+    [DO_TOKEN] = {NULL, NULL, PREC_NONE},
     [ECHO_TOKEN] = {NULL, NULL, PREC_NONE},
     [ELSE_TOKEN] = {NULL, NULL, PREC_NONE},
     [FALSE_TOKEN] = {literal, NULL, PREC_NONE},
@@ -2295,6 +2296,34 @@ static void while_statement(b_parser *p) {
   p->innermost_loop_scope_depth = surrounding_scope_depth;
 }
 
+static void do_while_statement(b_parser *p) {
+  int surrounding_loop_start = p->innermost_loop_start;
+  int surrounding_scope_depth = p->innermost_loop_scope_depth;
+
+  // we'll be jumping back to right before the
+  // statements after the loop body
+  p->innermost_loop_start = current_blob(p)->count;
+
+  statement(p);
+
+  consume(p, WHILE_TOKEN, "expecting 'while' statement");
+
+  expression(p);
+
+  int exit_jump = emit_jump(p, OP_JUMP_IF_FALSE);
+  emit_byte(p, OP_POP);
+
+  emit_loop(p, p->innermost_loop_start);
+
+  patch_jump(p, exit_jump);
+  emit_byte(p, OP_POP);
+
+  end_loop(p);
+
+  p->innermost_loop_start = surrounding_loop_start;
+  p->innermost_loop_scope_depth = surrounding_scope_depth;
+}
+
 static void continue_statement(b_parser *p) {
   if (p->innermost_loop_start == -1) {
     error(p, "'continue' can only be used in a loop");
@@ -2335,6 +2364,7 @@ static void synchronize(b_parser *p) {
       case USING_TOKEN:
       case WHEN_TOKEN:
       case ITER_TOKEN:
+      case DO_TOKEN:
       case WHILE_TOKEN:
       case ECHO_TOKEN:
       case ASSERT_TOKEN:
@@ -2395,6 +2425,8 @@ static void statement(b_parser *p) {
     echo_statement(p);
   } else if (match(p, IF_TOKEN)) {
     if_statement(p);
+  } else if (match(p, DO_TOKEN)) {
+    do_while_statement(p);
   } else if (match(p, WHILE_TOKEN)) {
     while_statement(p);
   } else if (match(p, ITER_TOKEN)) {
