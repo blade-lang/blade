@@ -9,10 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define ALLOCATE_OBJ(type, obj_type)                                           \
-  (type *)allocate_object(vm, sizeof(type), obj_type)
-
-static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
+b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   b_obj *object = (b_obj *) reallocate(vm, NULL, 0, size);
 
   object->type = type;
@@ -33,6 +30,7 @@ b_obj_ptr *new_ptr(b_vm *vm, void *pointer) {
   b_obj_ptr *ptr = ALLOCATE_OBJ(b_obj_ptr, OBJ_PTR);
   ptr->pointer = pointer;
   ptr->name = "<void *>";
+  ptr->free_fn = NULL;
   return ptr;
 }
 

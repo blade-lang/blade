@@ -13,23 +13,17 @@ DECLARE_NATIVE(bytes) {
     b_obj_bytes *bytes = new_bytes(vm, list->items.count);
 
     for (int i = 0; i < list->items.count; i++) {
-      if (!IS_NUMBER(list->items.values[i])) {
-        RETURN_ERROR("bytes() expects a list of valid bytes");
+      if (IS_NUMBER(list->items.values[i])) {
+        bytes->bytes.bytes[i] = (unsigned char) AS_NUMBER(list->items.values[i]);
+      } else {
+        bytes->bytes.bytes[i] = 0;
       }
-
-      int byte = AS_NUMBER(list->items.values[i]);
-
-      if (byte < 0 || byte > 255) {
-        RETURN_ERROR("invalid byte. bytes range from 0 to 255");
-      }
-
-      bytes->bytes.bytes[i] = (unsigned char) byte;
     }
 
     RETURN_OBJ(bytes);
   }
 
-  RETURN_ERROR("expected array size of bytes list as argument");
+  RETURN_ERROR("expected bytes size or bytes list as argument");
 }
 
 DECLARE_BYTES_METHOD(length) {
@@ -144,8 +138,8 @@ DECLARE_BYTES_METHOD(reverse) {
 
   b_obj_bytes *n_bytes = new_bytes(vm, bytes->bytes.count);
 
-  for (int i = 0; i < bytes->bytes.count; i++) {
-    n_bytes->bytes.bytes[i] = bytes->bytes.bytes[bytes->bytes.count - i - 1];
+  for (int i = bytes->bytes.count - 1; i >= 0; i--) {
+    n_bytes->bytes.bytes[i] = bytes->bytes.bytes[i];
   }
 
   RETURN_OBJ(n_bytes);
