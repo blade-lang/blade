@@ -982,6 +982,22 @@ static bool dict_get_index(b_vm *vm, b_obj_dict *dict, bool will_assign) {
   return throw_exception(vm, "invalid index %s", value_to_string(vm, index));
 }
 
+static bool module_get_index(b_vm *vm, b_obj_module *module, bool will_assign) {
+  b_value index = peek(vm, 0);
+
+  b_value result;
+  if (table_get(&module->values, index, &result)) {
+    if (!will_assign) {
+      pop_n(vm, 2); // we can safely get rid of the index from the stack
+    }
+    push(vm, result);
+    return true;
+  }
+
+  pop_n(vm, 1);
+  return throw_exception(vm, "%s is undefined in module %s", value_to_string(vm, index), module->name);
+}
+
 static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
   b_value lower = peek(vm, 0);
 
@@ -1190,6 +1206,15 @@ static bool list_get_ranged_index(b_vm *vm, b_obj_list *list, bool will_assign) 
 
 static inline void dict_set_index(b_vm *vm, b_obj_dict *dict, b_value index, b_value value) {
   dict_set_entry(vm, dict, index, value);
+  pop_n(vm, 3); // pop the value, index and dict out
+
+  // leave the value on the stack for consumption
+  // e.g. variable = dict[index] = 10
+  push(vm, value);
+}
+
+static inline void module_set_index(b_vm *vm, b_obj_module *module, b_value index, b_value value) {
+  table_set(vm, &module->values, index, value);
   pop_n(vm, 3); // pop the value, index and dict out
 
   // leave the value on the stack for consumption
@@ -2122,6 +2147,12 @@ b_ptr_result run(b_vm *vm) {
               }
               break;
             }
+            case OBJ_MODULE: {
+              if (!module_get_index(vm, AS_MODULE(peek(vm, 1)), will_assign == (uint8_t) 1)) {
+                EXIT_VM();
+              }
+              break;
+            }
             case OBJ_BYTES: {
               if (!bytes_get_index(vm, AS_BYTES(peek(vm, 1)), will_assign == (uint8_t) 1)) {
                 EXIT_VM();
@@ -2168,6 +2199,10 @@ b_ptr_result run(b_vm *vm) {
             }
             case OBJ_DICT: {
               dict_set_index(vm, AS_DICT(peek(vm, 2)), index, value);
+              break;
+            }
+            case OBJ_MODULE: {
+              module_set_index(vm, AS_MODULE(peek(vm, 2)), index, value);
               break;
             }
             case OBJ_BYTES: {
