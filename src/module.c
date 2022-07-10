@@ -36,6 +36,7 @@ b_module_init modules[] = {
     GET_MODULE_LOADER(hash),     //
     GET_MODULE_LOADER(reflect), //
     GET_MODULE_LOADER(array), //
+    GET_MODULE_LOADER(struct), //
     NULL,
 };
 
