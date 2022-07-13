@@ -44,7 +44,7 @@ DECLARE_BYTES_METHOD(append) {
     b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
     int old_count = bytes->bytes.count;
     bytes->bytes.count++;
-    bytes->bytes.bytes = reallocate(vm, bytes->bytes.bytes, old_count,
+    bytes->bytes.bytes = GROW_ARRAY(unsigned char, bytes->bytes.bytes, old_count,
                                     bytes->bytes.count);
     bytes->bytes.bytes[bytes->bytes.count - 1] = (unsigned char) byte;
     RETURN;
@@ -54,8 +54,11 @@ DECLARE_BYTES_METHOD(append) {
       // append here...
       b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
       bytes->bytes.bytes =
-          reallocate(vm, bytes->bytes.bytes, bytes->bytes.count,
+          GROW_ARRAY(unsigned char, bytes->bytes.bytes, bytes->bytes.count,
                      (size_t) bytes->bytes.count + (size_t) list->items.count);
+      if(bytes->bytes.bytes == NULL) {
+        RETURN_ERROR("out of memory");
+      }
 
       for (int i = 0; i < list->items.count; i++) {
         if (!IS_NUMBER(list->items.values[i])) {
@@ -94,8 +97,12 @@ DECLARE_BYTES_METHOD(extend) {
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
   b_obj_bytes *n_bytes = AS_BYTES(args[0]);
 
-  bytes->bytes.bytes = reallocate(vm, bytes->bytes.bytes, bytes->bytes.count,
-                                  (size_t) bytes->bytes.count + (size_t) n_bytes->bytes.count);
+  bytes->bytes.bytes = GROW_ARRAY(unsigned char, bytes->bytes.bytes, bytes->bytes.count,
+                                  bytes->bytes.count + n_bytes->bytes.count);
+//  bytes->bytes.bytes = (unsigned char *) realloc(bytes->bytes.bytes, bytes->bytes.count + n_bytes->bytes.count);
+  if(bytes->bytes.bytes == NULL) {
+    RETURN_ERROR("out of memory");
+  }
 
   memcpy(bytes->bytes.bytes + bytes->bytes.count, n_bytes->bytes.bytes,
          n_bytes->bytes.count);
@@ -143,6 +150,42 @@ DECLARE_BYTES_METHOD(reverse) {
   }
 
   RETURN_OBJ(n_bytes);
+}
+
+DECLARE_BYTES_METHOD(split) {
+  ENFORCE_ARG_COUNT(split, 1);
+  ENFORCE_ARG_TYPE(split, 0, IS_BYTES);
+
+  b_byte_arr object = AS_BYTES(METHOD_OBJECT)->bytes;
+  b_byte_arr delimeter = AS_BYTES(args[0])->bytes;
+
+  if (object.count == 0 || delimeter.count > object.count) RETURN_OBJ(new_list(vm));
+
+  b_obj_list *list = (b_obj_list *) GC(new_list(vm));
+
+  // main work here...
+  if (delimeter.count > 0) {
+    int start = 0;
+    for(int i = 0; i <= object.count; i++) {
+      // match found.
+      if(memcmp(object.bytes + i, delimeter.bytes, delimeter.count) == 0 || i == object.count) {
+        b_obj_bytes *bytes = (b_obj_bytes *)GC(new_bytes(vm, i - start));
+        memcpy(bytes->bytes.bytes, object.bytes + start, i - start);
+        write_list(vm, list, OBJ_VAL(bytes));
+        i += delimeter.count - 1;
+        start = i + 1;
+      }
+    }
+  } else {
+    int length = object.count;
+    for (int i = 0; i < length; i++) {
+      b_obj_bytes *bytes = (b_obj_bytes *)GC(new_bytes(vm, 1));
+      memcpy(bytes->bytes.bytes, object.bytes + i, 1);
+      write_list(vm, list, OBJ_VAL(bytes));
+    }
+  }
+
+  RETURN_OBJ(list);
 }
 
 DECLARE_BYTES_METHOD(first) {
@@ -239,6 +282,14 @@ DECLARE_BYTES_METHOD(is_space) {
     }
   }
   RETURN_TRUE;
+}
+
+DECLARE_BYTES_METHOD(dispose) {
+  ENFORCE_ARG_COUNT(dispose, 0);
+  b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
+  FREE_ARRAY(unsigned char, bytes->bytes.bytes, bytes->bytes.count);
+  init_byte_arr(vm, &bytes->bytes, 0);
+  RETURN;
 }
 
 DECLARE_BYTES_METHOD(to_list) {

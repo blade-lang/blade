@@ -109,7 +109,7 @@ var MAX_WBITS = _zlib.MAX_WBITS
 
 
 /**
- * adler32(value: bytes | string [, initial: number])
+ * adler32(data: bytes | string [, initial: number])
  * 
  * Updates a running Adler-32 checksum with the bytes buf[0..len-1] and
  * return the updated checksum.
@@ -117,35 +117,35 @@ var MAX_WBITS = _zlib.MAX_WBITS
  * @note An Adler-32 checksum is almost as reliable as a CRC-32 but can be computed much faster.
  * @return number
  */
-def adler32(value, initial) {
-  if !is_string(value) and !is_bytes(value)
-    die Exception('string or bytes expected in arg 1 (value)')
+def adler32(data, initial) {
+  if !is_string(data) and !is_bytes(data)
+    die Exception('string or bytes expected in arg 1 (data)')
   if initial != nil and !is_number(initial)
     die Exception('number expected in arg 2 (initial)')
 
   if is_string(data) data = data.to_bytes()
   if initial == nil initial = 0
 
-  return _zlib.adler32(value, initial)
+  return _zlib.adler32(data, initial)
 }
 
 /**
- * crc32(value: bytes | string [, initial: number])
+ * crc32(data: bytes | string [, initial: number])
  * 
  * Update a running CRC-32 cheksum with the bytes buf[0..len-1] and return the
  * updated CRC-32 checksum.
  * @return number
  */
-def crc32(value, initial) {
-  if !is_string(value) and !is_bytes(value)
-    die Exception('string or bytes expected in arg 1 (value)')
+def crc32(data, initial) {
+  if !is_string(data) and !is_bytes(data)
+    die Exception('string or bytes expected in arg 1 (data)')
   if initial != nil and !is_number(initial)
     die Exception('number expected in arg 2 (initial)')
 
   if is_string(data) data = data.to_bytes()
   if initial == nil initial = 0
 
-  return _zlib.crc32(value, initial)
+  return _zlib.crc32(data, initial)
 }
 
 /**

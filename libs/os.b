@@ -6,7 +6,7 @@
 # @copyright 2021, Ore Richard Muyiwa and Blade contributors
 # 
 
-import _os { * }
+import _os
 
 /**
  * The name of the current platform in string or `unknown` if 
@@ -20,17 +20,17 @@ import _os { * }
  * 'osx'
  * ```
  */
-var platform = _platform
+var platform = _os.platform
 
 /**
  * A list containing the command line arguments passed to the startup script.
  */
-var args = _args
+var args = _os.args
 
 /**
  * The standard path separator for the current operating system.
  */
-var path_separator = _path_separator
+var path_separator = _os.path_separator
 
 
 /**
@@ -51,7 +51,7 @@ var path_separator = _path_separator
  * ```
  */
 def exec(cmd) {
-  return _exec(cmd)
+  return _os.exec(cmd)
 }
 
 /**
@@ -78,7 +78,7 @@ def exec(cmd) {
  * ```
  */
 def info() {
-  return _info()
+  return _os.info()
 }
 
 /**
@@ -87,7 +87,7 @@ def info() {
  * Causes the current thread to sleep for the specified number of seconds.
  */
 def sleep(duration) {
-  _sleep(duration)
+  _os.sleep(duration)
 }
 
 /**
@@ -105,7 +105,7 @@ def sleep(duration) {
  * ```
  */
 def get_env(name) {
-  return _getenv(name)
+  return _os.getenv(name)
 }
 
 /**
@@ -141,19 +141,19 @@ def get_env(name) {
  */
 def set_env(name, value, overwrite) {
   if overwrite == nil overwrite = false
-  return _setenv(name, value, overwrite)
+  return _os.setenv(name, value, overwrite)
 }
 
 # File types
-var DT_UNKNOWN = _DT_UNKNOWN  # unknown
-var DT_BLK = _DT_BLK  # block device
-var DT_CHR = _DT_CHR  # character device
-var DT_DIR = _DT_DIR  # directory
-var DT_FIFO = _DT_FIFO  # named pipe
-var DT_LNK = _DT_LNK  # symbolic link
-var DT_REG = _DT_REG  # regular file
-var DT_SOCK = _DT_SOCK  # local-domain socket
-var DT_WHT = _DT_WHT  
+var DT_UNKNOWN = _os.DT_UNKNOWN  # unknown
+var DT_BLK = _os.DT_BLK  # block device
+var DT_CHR = _os.DT_CHR  # character device
+var DT_DIR = _os.DT_DIR  # directory
+var DT_FIFO = _os.DT_FIFO  # named pipe
+var DT_LNK = _os.DT_LNK  # symbolic link
+var DT_REG = _os.DT_REG  # regular file
+var DT_SOCK = _os.DT_SOCK  # local-domain socket
+var DT_WHT = _os.DT_WHT  
 
 /**
  * create_dir(path: string, [permission: number = 0c777 [, recursive: boolean = true]])
@@ -192,7 +192,7 @@ def create_dir(path, permission, recursive) {
     recursive = true
   }
 
-  return _createdir(path, permission, recursive)
+  return _os.createdir(path, permission, recursive)
 }
 
 /**
@@ -208,11 +208,11 @@ def create_dir(path, permission, recursive) {
  * [., .., myprogram.b, single_thread.b, test.b, buggy.b]
  * ```
  * 
- * @note `.` indicates current directory and can be used as argument to _path_ as well.
- * @note `..` indicates parent directory and can be used as argument to _path_ as well.
+ * @note `.` indicates current directory and can be used as argument to _os.path_ as well.
+ * @note `..` indicates parent directory and can be used as argument to _os.path_ as well.
  */
 def read_dir(path) {
-  return _readdir(path)
+  return _os.readdir(path)
 }
 
 /**
@@ -224,7 +224,7 @@ def read_dir(path) {
  * @return boolean
  */
 def chmod(path, mod) {
-  return _chmod(path, mod)
+  return _os.chmod(path, mod)
 }
 
 /**
@@ -234,7 +234,7 @@ def chmod(path, mod) {
  * @return bool
  */
 def is_dir(path) {
-  return _isdir(path)
+  return _os.isdir(path)
 }
 
 /**
@@ -251,7 +251,7 @@ def remove_dir(path, recursive) {
   } else {
     recursive = false
   }
-  return _removedir(path, recursive)
+  return _os.removedir(path, recursive)
 }
 
 /**
@@ -261,7 +261,7 @@ def remove_dir(path, recursive) {
  * @return string
  */
 def cwd() {
-  return _cwd()
+  return _os.cwd()
 }
 
 /**
@@ -271,7 +271,7 @@ def cwd() {
  * @return bool
  */
 def change_dir(path) {
-  return _chdir(path)
+  return _os.chdir(path)
 }
 
 /**
@@ -281,7 +281,7 @@ def change_dir(path) {
  * @return bool
  */
 def dir_exists(path) {
-  return _exists(path)
+  return _os.exists(path)
 }
 
 /**
@@ -291,7 +291,7 @@ def dir_exists(path) {
  * @return
  */
 def exit(code) {
-  _exit(code)
+  _os.exit(code)
 }
 
 /**
@@ -305,7 +305,7 @@ def exit(code) {
  * 
  * ```blade-repl
  * %> os.join_paths('/home/user', '/path/to/myfile.ext')
- * '/home/user//path/to/myfile.ext'
+ * '/home/user/path/to/myfile.ext'
  * ```
  */
 def join_paths(...) {
@@ -314,10 +314,14 @@ def join_paths(...) {
     if !is_string(arg)
       die Exception('string expected, ${typeof(arg)} given')
     
+    result = result.rtrim(path_separator)
+    if result != '' arg = arg.ltrim(path_separator)
+    
     result += '${path_separator}${arg}'
   }
   
   if result result = result[1,]
+  
   return result
 }
 
@@ -328,5 +332,31 @@ def join_paths(...) {
  * @return string
  */
 def real_path(path) {
-  return _realpath(path)
+  return _os.realpath(path)
+}
+
+/**
+ * dir_name(path: string)
+ * 
+ * Returns the parent directory of the pathname pointed to by `path`.  Any trailing
+ * `/` characters are not counted as part of the directory name.  If `path` is an
+ * empty string, or contains no `/` characters, dir_name() returns the string ".", 
+ * signifying the current directory.
+ * @return string
+ */
+def dir_name(path) {
+  return _os.dirname(path)
+} 
+
+/**
+ * base_name(path: string)
+ * 
+ * The base_name() function returns the last component from the pathname pointed to by 
+ * `path`, deleting any trailing `/` characters.  If path consists entirely of `/` 
+ * characters, the string '/' is returned.  If path is an empty string, the string '.' 
+ * is returned.
+ * @return string
+ */
+def base_name(path) {
+  return _os.basename(path)
 }

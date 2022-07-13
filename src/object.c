@@ -18,9 +18,9 @@ b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   object->next = vm->objects;
   vm->objects = object;
 
-#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
-  printf("%p allocate %ld for %d\n", (void *)object, size, type);
-#endif
+//#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
+//  printf("%p allocate %ld for %d\n", (void *)object, size, type);
+//#endif
 
   return object;
 }
@@ -56,7 +56,7 @@ b_obj_switch *new_switch(b_vm *vm) {
 
 b_obj_bytes *new_bytes(b_vm *vm, int length) {
   b_obj_bytes *bytes = ALLOCATE_OBJ(b_obj_bytes, OBJ_BYTES);
-  init_byte_arr(&bytes->bytes, length);
+  init_byte_arr(vm, &bytes->bytes, length);
   return bytes;
 }
 
@@ -390,7 +390,7 @@ static inline char *list_to_string(b_vm *vm, b_value_arr *array) {
 static inline char *bytes_to_string(b_vm *vm, b_byte_arr *array) {
   char *str = strdup("(");
   for (int i = 0; i < array->count; i++) {
-    char *chars = (char *) malloc(sizeof(char) * (snprintf(NULL, 0, "0x%x", array->bytes[i])));
+    char *chars = ALLOCATE(char, snprintf(NULL, 0, "0x%x", array->bytes[i]));
     if (chars != NULL) {
       sprintf(chars, "0x%x", array->bytes[i]);
       str = append_strings(str, chars);
@@ -441,7 +441,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     case OBJ_CLASS: {
       const char *format = "<class %s>";
       char *data = AS_CLASS(value)->name->chars;
-      char *str = (char*) calloc(snprintf(NULL, 0, format, data), sizeof(char));
+      char *str = ALLOCATE(char, snprintf(NULL, 0, format, data));
       if(str != NULL) {
         sprintf(str, format, data);
       }
@@ -450,7 +450,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     case OBJ_INSTANCE: {
       const char *format = "<instance of %s>";
       char *data = AS_INSTANCE(value)->klass->name->chars;
-      char *str = (char*) calloc(snprintf(NULL, 0, format, data), sizeof(char));
+      char *str = ALLOCATE(char, snprintf(NULL, 0, format, data));
       if(str != NULL) {
         sprintf(str, format, data);
       }
@@ -466,7 +466,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     case OBJ_NATIVE:{
       const char *format = "<native-function %s>";
       const char *data = AS_NATIVE(value)->name;
-      char *str = (char*) calloc(snprintf(NULL, 0, format, data), sizeof(char));
+      char *str = ALLOCATE(char, snprintf(NULL, 0, format, data));
       if(str != NULL) {
         sprintf(str, format, data);
       }
@@ -475,7 +475,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     case OBJ_RANGE: {
       b_obj_range *range = AS_RANGE(value);
       const char *format = "<range %d-%d>";
-      char *str = (char*) calloc(snprintf(NULL, 0, format, range->lower, range->upper), sizeof(char));
+      char *str = ALLOCATE(char, snprintf(NULL, 0, format, range->lower, range->upper));
       if(str != NULL) {
         sprintf(str, format, range->lower, range->upper);
       }
@@ -484,7 +484,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     case OBJ_MODULE: {
       const char *format = "<module %s>";
       const char *data = AS_MODULE(value)->name;
-      char *str = (char*) calloc(snprintf(NULL, 0, format, data), sizeof(char));
+      char *str = ALLOCATE(char, snprintf(NULL, 0, format, data));
       if(str != NULL) {
         sprintf(str, format, data);
       }
@@ -503,7 +503,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     case OBJ_FILE: {
       b_obj_file *file = AS_FILE(value);
       const char *format = "<file at %s in mode %s>";
-      char *str = (char*) calloc(snprintf(NULL, 0, format, file->path->chars, file->mode->chars), sizeof(char));
+      char *str = ALLOCATE(char, snprintf(NULL, 0, format, file->path->chars, file->mode->chars));
       if(str != NULL) {
         sprintf(str, format, file->path->chars, file->mode->chars);
       }

@@ -134,10 +134,7 @@ DECLARE_MODULE_METHOD(zlib_deflate) {
 
   ZLIB_CHECK_RET_ERROR(deflate, deflateEnd)
 
-  Bytef *output = (Byte *)calloc(0, sizeof(Bytef *));
-  if(output == NULL) {
-    RETURN_ERROR("deflate(): out of memory");
-  }
+  Bytef *output = ALLOCATE(Bytef, 0);
   size_t output_length = 0;
 
   do {
@@ -159,10 +156,12 @@ DECLARE_MODULE_METHOD(zlib_deflate) {
 
       if(have > 0) {
         size_t len = sizeof(Bytef) * have;
-        output = (Bytef *) realloc(output, len + output_length);
+        output = GROW_ARRAY(Bytef, output, len, len + output_length);
         if(output == NULL) {
           RETURN_ERROR("deflate(): out of memory");
         }
+
+        vm->bytes_allocated += output_length;
         memcpy(output + output_length, out, have);
         output_length += len;
       }
@@ -210,10 +209,7 @@ DECLARE_MODULE_METHOD(zlib_inflate) {
 
   ZLIB_CHECK_RET_ERROR(inflate, inflateEnd)
 
-  Bytef *output = (Byte *)calloc(0, sizeof(Bytef *));
-  if(output == NULL) {
-    RETURN_ERROR("inflate(): out of memory");
-  }
+  Bytef *output = ALLOCATE(Bytef, 0);
   size_t output_length = 0;
 
   do {
@@ -247,10 +243,11 @@ DECLARE_MODULE_METHOD(zlib_inflate) {
 
       if(have > 0) {
         size_t len = sizeof(Bytef) * have;
-        output = (Bytef *) realloc(output, len + output_length);
+        output = GROW_ARRAY(Bytef, output, len, len + output_length);
         if(output == NULL) {
           RETURN_ERROR("inflate(): out of memory");
         }
+
         memcpy(output + output_length, out, have);
         output_length += len;
       }

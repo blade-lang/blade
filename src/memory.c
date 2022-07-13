@@ -13,6 +13,27 @@
 #include <stdio.h>
 #endif
 
+void *allocate(b_vm *vm, size_t size, size_t length) {
+  vm->bytes_allocated += size;
+
+  if (vm->bytes_allocated > vm->next_gc) {
+    collect_garbage(vm);
+  }
+
+  if (size == 0) {
+    return NULL;
+  }
+  void *result = calloc(length, size);
+
+  // just in case reallocation fails... computers ain't infinite!
+  if (result == NULL) {
+    fflush(stdout); // flush out anything on stdout first
+    fprintf(stderr, "Exit: device out of memory\n");
+    exit(EXIT_TERMINAL);
+  }
+  return result;
+}
+
 void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
   vm->bytes_allocated += new_size - old_size;
 
@@ -41,11 +62,11 @@ void mark_object(b_vm *vm, b_obj *object) {
   if (object->mark == vm->mark_value)
     return;
 
-#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
-  printf("%p mark ", (void *)object);
-  print_object(OBJ_VAL(object), false);
-  printf("\n");
-#endif
+//#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
+//  printf("%p mark ", (void *)object);
+//  print_object(OBJ_VAL(object), false);
+//  printf("\n");
+//#endif
 
   object->mark = vm->mark_value;
 
@@ -74,11 +95,11 @@ static void mark_array(b_vm *vm, b_value_arr *array) {
 }
 
 void blacken_object(b_vm *vm, b_obj *object) {
-#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
-  printf("%p blacken ", (void *)object);
-  print_object(OBJ_VAL(object), false);
-  printf("\n");
-#endif
+//#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
+//  printf("%p blacken ", (void *)object);
+//  print_object(OBJ_VAL(object), false);
+//  printf("\n");
+//#endif
 
   switch (object->type) {
     case OBJ_MODULE: {
@@ -168,9 +189,9 @@ void blacken_object(b_vm *vm, b_obj *object) {
 }
 
 void free_object(b_vm *vm, b_obj *object) {
-#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
-  printf("%p free type %d\n", (void *)object, object->type);
-#endif
+//#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
+//  printf("%p free type %d\n", (void *)object, object->type);
+//#endif
 
   switch (object->type) {
     case OBJ_MODULE: {

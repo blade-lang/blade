@@ -345,7 +345,7 @@ DECLARE_STRING_METHOD(join) {
 
     b_obj_string *string = AS_STRING(argument);
 
-    char *result = (char *) calloc(2, sizeof(char));
+    char *result = ALLOCATE(char, 2);
     result[0] = string->chars[0];
     result[1] = '\0';
 
@@ -419,13 +419,6 @@ DECLARE_STRING_METHOD(split) {
         start = i + 1;
       }
     }
-
-    /*char *token, *str, *to_free;
-    to_free = str = strdup(object->chars); // We own str memory now.
-    while ((token = strsep(&str, delimeter->chars))) {
-      write_list(vm, list, GC_STRING(token));
-    }
-    free(to_free);*/
   } else {
     int length = object->is_ascii ? object->length : object->utf8_length;
     for (int i = 0; i < length; i++) {
@@ -675,8 +668,8 @@ DECLARE_STRING_METHOD(match) {
       int value_length = (int) (o_vector[2 * n + 1] - o_vector[2 * n]);
       int key_length = (int) name_entry_size - 3;
 
-      char *_key = calloc(key_length + 1, sizeof(char));
-      char *_val = calloc(value_length + 1, sizeof(char));
+      char *_key = ALLOCATE(char, key_length + 1);
+      char *_val = ALLOCATE(char, value_length + 1);
 
       sprintf(_key, "%*s", key_length, tab_ptr + 2);
       sprintf(_val, "%*s", value_length, subject + o_vector[2 * n]);
@@ -782,8 +775,8 @@ DECLARE_STRING_METHOD(matches) {
       int value_length = (int) (o_vector[2 * n + 1] - o_vector[2 * n]);
       int key_length = (int) name_entry_size - 3;
 
-      char *_key = calloc(key_length + 1, sizeof(char));
-      char *_val = calloc(value_length + 1, sizeof(char));
+      char *_key = ALLOCATE(char, key_length + 1);
+      char *_val = ALLOCATE(char, value_length + 1);
 
       sprintf(_key, "%*s", key_length, tab_ptr + 2);
       sprintf(_val, "%*s", value_length, subject + o_vector[2 * n]);
@@ -893,8 +886,8 @@ DECLARE_STRING_METHOD(matches) {
         int value_length = (int) (o_vector[2 * n + 1] - o_vector[2 * n]);
         int key_length = (int) name_entry_size - 3;
 
-        char *_key = calloc(key_length + 1, sizeof(char));
-        char *_val = calloc(value_length + 1, sizeof(char));
+        char *_key = ALLOCATE(char, key_length + 1);
+        char *_val = ALLOCATE(char, value_length + 1);
 
         sprintf(_key, "%*s", key_length, tab_ptr + 2);
         sprintf(_val, "%*s", value_length, subject + o_vector[2 * n]);
@@ -969,7 +962,7 @@ DECLARE_STRING_METHOD(replace) {
               result);
   }
 
-  PCRE2_UCHAR *output_buffer = malloc(output_length * sizeof(PCRE2_UCHAR));
+  PCRE2_UCHAR *output_buffer = ALLOCATE(PCRE2_UCHAR, output_length);
 
   result = pcre2_substitute(
       re, input, PCRE2_ZERO_TERMINATED, 0,

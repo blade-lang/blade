@@ -21,7 +21,7 @@ b_obj_ptr *new_array(b_vm *vm, b_array *array) {
 b_array *new_int16_array(b_vm *vm, int length) {
   b_array *array = ALLOCATE_OBJ(b_array, OBJ_BYTES);
   array->length = length;
-  array->buffer = (void *) calloc(length, sizeof(int16_t));
+  array->buffer = ALLOCATE(int16_t, length);
   return array;
 }
 
@@ -55,7 +55,8 @@ DECLARE_MODULE_METHOD(array_int16_append) {
 
   if (IS_NUMBER(args[1])) {
 
-    array->buffer = reallocate(vm, array->buffer, array->length, array->length++);
+    array->buffer = GROW_ARRAY(int16_t, array->buffer, array->length, array->length++);
+
     int16_t *values = (int16_t *)array->buffer;
     values[array->length - 1] = (int16_t) AS_NUMBER(args[1]);
 
@@ -63,7 +64,8 @@ DECLARE_MODULE_METHOD(array_int16_append) {
     b_obj_list *list = AS_LIST(args[1]);
     if (list->items.count > 0) {
 
-      array->buffer = reallocate(vm, array->buffer, array->length, array->length + list->items.count);
+      array->buffer = GROW_ARRAY(int16_t, array->buffer, array->length, array->length + list->items.count);
+
       int16_t *values = (int16_t *)array->buffer;
 
       for (int i = 0; i < list->items.count; i++) {
@@ -213,7 +215,7 @@ DECLARE_MODULE_METHOD(array_int16___iter__) {
 b_array *new_int32_array(b_vm *vm, int length) {
   b_array *array = ALLOCATE_OBJ(b_array, OBJ_BYTES);
   array->length = length;
-  array->buffer = (void *) calloc(length, sizeof(int32_t));
+  array->buffer = ALLOCATE(int32_t, length);
   return array;
 }
 
@@ -247,7 +249,8 @@ DECLARE_MODULE_METHOD(array_int32_append) {
 
   if (IS_NUMBER(args[1])) {
 
-    array->buffer = reallocate(vm, array->buffer, array->length, array->length++);
+    array->buffer = GROW_ARRAY(int32_t, array->buffer, array->length, array->length++);
+
     int32_t *values = (int32_t *)array->buffer;
     values[array->length - 1] = (int32_t) AS_NUMBER(args[1]);
 
@@ -255,7 +258,8 @@ DECLARE_MODULE_METHOD(array_int32_append) {
     b_obj_list *list = AS_LIST(args[1]);
     if (list->items.count > 0) {
 
-      array->buffer = reallocate(vm, array->buffer, array->length, array->length + list->items.count);
+      array->buffer = GROW_ARRAY(int32_t, array->buffer, array->length, array->length + list->items.count);
+
       int32_t *values = (int32_t *)array->buffer;
 
       for (int i = 0; i < list->items.count; i++) {
@@ -405,7 +409,7 @@ DECLARE_MODULE_METHOD(array_int32___iter__) {
 b_array *new_int64_array(b_vm *vm, int length) {
   b_array *array = ALLOCATE_OBJ(b_array, OBJ_BYTES);
   array->length = length;
-  array->buffer = (void *) calloc(length, sizeof(int64_t));
+  array->buffer = ALLOCATE(int64_t, length);
   return array;
 }
 
@@ -439,7 +443,8 @@ DECLARE_MODULE_METHOD(array_int64_append) {
 
   if (IS_NUMBER(args[1])) {
 
-    array->buffer = reallocate(vm, array->buffer, array->length, array->length++);
+    array->buffer = GROW_ARRAY(int64_t, array->buffer, array->length, array->length++);
+
     int64_t *values = (int64_t *)array->buffer;
     values[array->length - 1] = (int64_t) AS_NUMBER(args[1]);
 
@@ -447,7 +452,8 @@ DECLARE_MODULE_METHOD(array_int64_append) {
     b_obj_list *list = AS_LIST(args[1]);
     if (list->items.count > 0) {
 
-      array->buffer = reallocate(vm, array->buffer, array->length, array->length + list->items.count);
+      array->buffer = GROW_ARRAY(int64_t, array->buffer, array->length, array->length + list->items.count);
+
       int64_t *values = (int64_t *)array->buffer;
 
       for (int i = 0; i < list->items.count; i++) {
@@ -597,7 +603,7 @@ DECLARE_MODULE_METHOD(array_int64___iter__) {
 b_array *new_uint16_array(b_vm *vm, int length) {
   b_array *array = ALLOCATE_OBJ(b_array, OBJ_BYTES);
   array->length = length;
-  array->buffer = (void *) calloc(length, sizeof(uint16_t));
+  array->buffer = ALLOCATE(uint16_t, length);
   return array;
 }
 
@@ -631,7 +637,8 @@ DECLARE_MODULE_METHOD(array_uint16_append) {
 
   if (IS_NUMBER(args[1])) {
 
-    array->buffer = reallocate(vm, array->buffer, array->length, array->length++);
+    array->buffer = GROW_ARRAY(uint16_t, array->buffer, array->length, array->length++);
+
     uint16_t *values = (uint16_t *)array->buffer;
     values[array->length - 1] = (uint16_t) AS_NUMBER(args[1]);
 
@@ -639,7 +646,8 @@ DECLARE_MODULE_METHOD(array_uint16_append) {
     b_obj_list *list = AS_LIST(args[1]);
     if (list->items.count > 0) {
 
-      array->buffer = reallocate(vm, array->buffer, array->length, array->length + list->items.count);
+      array->buffer = GROW_ARRAY(uint16_t, array->buffer, array->length, array->length + list->items.count);
+
       uint16_t *values = (uint16_t *)array->buffer;
 
       for (int i = 0; i < list->items.count; i++) {
@@ -789,7 +797,7 @@ DECLARE_MODULE_METHOD(array_uint16___iter__) {
 b_array *new_uint32_array(b_vm *vm, int length) {
   b_array *array = ALLOCATE_OBJ(b_array, OBJ_BYTES);
   array->length = length;
-  array->buffer = (void *) calloc(length, sizeof(uint32_t));
+  array->buffer = ALLOCATE(uint32_t, length);
   return array;
 }
 
@@ -823,7 +831,8 @@ DECLARE_MODULE_METHOD(array_uint32_append) {
 
   if (IS_NUMBER(args[1])) {
 
-    array->buffer = reallocate(vm, array->buffer, array->length, array->length++);
+    array->buffer = GROW_ARRAY(uint32_t, array->buffer, array->length, array->length++);
+
     uint32_t *values = (uint32_t *)array->buffer;
     values[array->length - 1] = (uint32_t) AS_NUMBER(args[1]);
 
@@ -831,7 +840,8 @@ DECLARE_MODULE_METHOD(array_uint32_append) {
     b_obj_list *list = AS_LIST(args[1]);
     if (list->items.count > 0) {
 
-      array->buffer = reallocate(vm, array->buffer, array->length, array->length + list->items.count);
+      array->buffer = GROW_ARRAY(uint32_t, array->buffer, array->length, array->length + list->items.count);
+
       uint32_t *values = (uint32_t *)array->buffer;
 
       for (int i = 0; i < list->items.count; i++) {
@@ -981,7 +991,7 @@ DECLARE_MODULE_METHOD(array_uint32___iter__) {
 b_array *new_uint64_array(b_vm *vm, int length) {
   b_array *array = ALLOCATE_OBJ(b_array, OBJ_BYTES);
   array->length = length;
-  array->buffer = (void *) calloc(length, sizeof(int64_t));
+  array->buffer = ALLOCATE(int64_t, length);
   return array;
 }
 
@@ -1015,7 +1025,8 @@ DECLARE_MODULE_METHOD(array_uint64_append) {
 
   if (IS_NUMBER(args[1])) {
 
-    array->buffer = reallocate(vm, array->buffer, array->length, array->length++);
+    array->buffer = GROW_ARRAY(uint64_t, array->buffer, array->length, array->length++);
+
     uint64_t *values = (uint64_t *)array->buffer;
     values[array->length - 1] = (uint64_t) AS_NUMBER(args[1]);
 
@@ -1023,7 +1034,8 @@ DECLARE_MODULE_METHOD(array_uint64_append) {
     b_obj_list *list = AS_LIST(args[1]);
     if (list->items.count > 0) {
 
-      array->buffer = reallocate(vm, array->buffer, array->length, array->length + list->items.count);
+      array->buffer = GROW_ARRAY(uint64_t , array->buffer, array->length, array->length + list->items.count);
+
       uint64_t *values = (uint64_t *)array->buffer;
 
       for (int i = 0; i < list->items.count; i++) {
@@ -1199,7 +1211,7 @@ DECLARE_MODULE_METHOD(array_extend) {
   b_array  *array = (b_array *) AS_PTR(args[0])->pointer;
   b_array  *array2 = (b_array *) AS_PTR(args[1])->pointer;
 
-  array->buffer = reallocate(vm, array->buffer, array->length, array->length + array2->length);
+  array->buffer = GROW_ARRAY(void, array->buffer, array->length, array->length + array2->length);
 
   memcpy(array->buffer + array->length, array2->buffer, array2->length);
   array->length += array2->length;

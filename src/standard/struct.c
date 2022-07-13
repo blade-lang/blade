@@ -85,7 +85,7 @@ static long to_long(b_vm *vm, b_value value) {
   }
 
   if(length > (end + 1) && v[start] == '0') {
-    char *t = (char*)calloc(length - 2, sizeof(char));
+    char *t = ALLOCATE(char, length - 2);
     memcpy(t, v + (end + 1), length - 2);
 
     if(v[end] == 'b') {
@@ -120,7 +120,7 @@ static double to_double(b_vm *vm, b_value value) {
   }
 
   if(length > (end + 1) && v[start] == '0') {
-    char *t = (char*)calloc(length - 2, sizeof(char));
+    char *t = ALLOCATE(char, length - 2);
     memcpy(t, v + (end + 1), length - 2);
 
     if(v[end] == 'b') {
@@ -267,14 +267,12 @@ DECLARE_MODULE_METHOD(struct_pack) {
   int currentarg;
   char *format = string->chars;
   size_t formatlen = string->length;
-  char *formatcodes;
-  int *formatargs;
   size_t formatcount = 0;
   int outputpos = 0, outputsize = 0;
 
   /* We have a maximum of <formatlen> format codes to deal with */
-  formatcodes = (char *) calloc(formatlen, sizeof(char));
-  formatargs = (int *) calloc(formatlen, sizeof(int));
+  char *formatcodes = ALLOCATE(char, formatlen);
+  int *formatargs = ALLOCATE(int, formatlen);
   currentarg = 0;
 
   for (i = 0; i < formatlen; formatcount++) {
@@ -878,20 +876,21 @@ DECLARE_MODULE_METHOD(struct_unpack) {
 
         if (repetitions == 1 && namelen > 0) {
           /* Use a part of the formatarg argument directly as the name. */
-          real_name = (char *) calloc(namelen, sizeof(char));
+          real_name = ALLOCATE(char, namelen);
           memcpy(real_name, name, namelen);
 
         } else {
           /* Need to add the 1-based element number to the name */
-          real_name = (char *) calloc(0, sizeof(char));
-          if(real_name == NULL) {
-            RETURN_ERROR("out of memory");
-          }
 
           char buf[MAX_LENGTH_OF_LONG + 1];
           char *res = ulong_to_buffer(buf + sizeof(buf) - 1, i + 1);
           size_t digits = buf + sizeof(buf) - 1 - res;
-          real_name = (char *) calloc(namelen + digits, sizeof(char));
+
+          real_name = ALLOCATE(char, namelen + digits);
+          if(real_name == NULL) {
+            RETURN_ERROR("out of memory");
+          }
+
           memcpy(real_name, name, namelen);
           memcpy(real_name + namelen, res, digits);
         }
@@ -983,7 +982,7 @@ DECLARE_MODULE_METHOD(struct_unpack) {
               len -= argb % 2;
             }
 
-            char *buf = (char *) calloc(len, sizeof(char));
+            char *buf = ALLOCATE(char, len);
 
             for (ipos = opos = 0; opos < len; opos++) {
               char cc = (input[inputpos + ipos] >> nibbleshift) & 0xf;

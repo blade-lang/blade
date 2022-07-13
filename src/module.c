@@ -164,7 +164,7 @@ void bind_user_modules(b_vm *vm, char *pkg_root) {
             char *filename = get_real_file_name(path);
 
             int name_length = (int)strlen(filename) - ext_length;
-            char *name = (char*) calloc(name_length + 1, sizeof(char));
+            char *name = ALLOCATE(char, name_length + 1);
             memcpy(name, filename, name_length);
             name[name_length] = '\0';
 

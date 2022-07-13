@@ -14,9 +14,10 @@ void init_value_arr(b_value_arr *array) {
   array->values = NULL;
 }
 
-void init_byte_arr(b_byte_arr *array, int length) {
+void init_byte_arr(b_vm *vm, b_byte_arr *array, int length) {
   array->count = length;
-  array->bytes = (unsigned char *) calloc(length, sizeof(unsigned char));
+//  array->bytes = (unsigned char *) calloc(length, sizeof(unsigned char));
+  array->bytes = N_ALLOCATE(unsigned char, length);
 }
 
 void write_value_arr(b_vm *vm, b_value_arr *array, b_value value) {

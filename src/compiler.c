@@ -2100,7 +2100,7 @@ static void import_statement(b_parser *p) {
     free(module_name);
     module_name = (char *) calloc(p->previous.length + 1, sizeof(char));
     if (module_name == NULL) {
-      error(p, "could not calloc memory for module_name");
+      error(p, "could not allocate memory for module_name");
       return;
     }
     memcpy(module_name, p->previous.start, p->previous.length);

@@ -32,7 +32,7 @@ static inline void reset_stack(b_vm *vm) {
 }
 
 static b_value get_stack_trace(b_vm *vm) {
-  char *trace = (char *) calloc(1, sizeof(char));
+  char *trace = ALLOCATE(char, 1);
 
   if (trace != NULL) {
 
@@ -47,7 +47,7 @@ static b_value get_stack_trace(b_vm *vm) {
       const char *trace_start = "    File: %s, Line: %d, In: ";
       size_t trace_start_length = snprintf(NULL, 0, trace_start, function->module->file, line);
 
-      char *trace_part = (char *) calloc(trace_start_length + 1, sizeof(char));
+      char *trace_part = ALLOCATE(char, trace_start_length + 1);
       if (trace_part != NULL) {
         sprintf(trace_part, trace_start, function->module->file, line);
         trace_part[(int) trace_start_length] = '\0';
@@ -412,7 +412,9 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_FILE_METHOD(close);
   DEFINE_FILE_METHOD(open);
   DEFINE_FILE_METHOD(read);
+  DEFINE_FILE_METHOD(gets);
   DEFINE_FILE_METHOD(write);
+  DEFINE_FILE_METHOD(puts);
   DEFINE_FILE_METHOD(number);
   DEFINE_FILE_METHOD(is_tty);
   DEFINE_FILE_METHOD(is_open);
@@ -444,6 +446,8 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_BYTES_METHOD(first);
   DEFINE_BYTES_METHOD(last);
   DEFINE_BYTES_METHOD(get);
+  DEFINE_BYTES_METHOD(split);
+  DEFINE_BYTES_METHOD(dispose);
   DEFINE_BYTES_METHOD(is_alpha);
   DEFINE_BYTES_METHOD(is_alnum);
   DEFINE_BYTES_METHOD(is_number);
@@ -1324,7 +1328,7 @@ static bool concatenate(b_vm *vm) {
     b_obj_string *a = AS_STRING(_a);
 
     int length = a->length + b->length;
-    char *chars = (char*)calloc(length + 1, sizeof(char));
+    char *chars = ALLOCATE(char, length + 1);
     memcpy(chars, a->chars, a->length);
     memcpy(chars + a->length, b->chars, b->length);
     chars[length] = '\0';
