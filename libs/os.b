@@ -332,11 +332,31 @@ def join_paths(...) {
 /**
  * real_path(path: string)
  * 
- * returns the original path to a relative path
+ * returns the original path to a relative path.
+ * @note if the path is a file, see `abs_path()`
  * @return string
  */
 def real_path(path) {
   return _os.realpath(path)
+}
+
+/**
+ * abs_path(path: string)
+ * 
+ * returns the original path to a relative path.
+ * @note unlike real_path(), this function returns full path for a file
+ * @return string
+ */
+def abs_path(path) {
+  var p = _os.realpath(path)
+  if p == path {
+    var np = _os.realpath('.')
+
+    if np != path {
+      p = join_paths(np, p)
+    }
+  }
+  return p
 }
 
 /**

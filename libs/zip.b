@@ -752,7 +752,9 @@ def compress(path, destination) {
   if destination != nil and !is_string(destination)
     die Exception('string expected in argument 2 (destination)')
 
-  if !destination destination = os.join_paths(os.cwd(), os.base_name(path)) + _ZIP_EXT
+  if !destination 
+    destination = os.join_paths(os.cwd(), os.base_name(path)) + _ZIP_EXT
+  destination = os.abs_path(destination)
 
   var zip = ZipArchive(destination)
 
