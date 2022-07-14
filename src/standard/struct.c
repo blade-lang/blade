@@ -41,6 +41,10 @@
     (GC_STRING(real_name)) \
     )
 
+#ifndef MAX
+#define MAX(a,b) (a > b ? a : b)
+#endif
+
 static inline uint16_t reverse_int16(uint16_t arg) {
   return ((arg & 0xFF) << 8) | ((arg >> 8) & 0xFF);
 }
@@ -89,7 +93,7 @@ static long to_long(b_vm *vm, b_value value) {
     memcpy(t, v + (end + 1), length - 2);
 
     if(v[end] == 'b') {
-      return multiplier * strtoll(t, NULL, 2);
+      return (long)(multiplier * strtoll(t, NULL, 2));
     } else if(v[end] == 'x') {
       return multiplier * strtol(t, NULL, 16);
     } else if(v[end] == 'c') {
@@ -135,7 +139,7 @@ static double to_double(b_vm *vm, b_value value) {
   return strtod(v, NULL);
 }
 
-static void do_pack(b_vm *vm, b_value val, size_t size, int *map, unsigned char *output) {
+static void do_pack(b_vm *vm, b_value val, size_t size, const int *map, unsigned char *output) {
   size_t i;
 
   long as_long = to_long(vm, val);
@@ -185,7 +189,7 @@ static void copy_double(int is_little_endian, void * dst, double d) {
 static inline char *ulong_to_buffer(char *buf, long num) {
   *buf = '\0';
   do {
-    *--buf = (char) (num % 10) + '0';
+    *--buf = (char)((char) (num % 10) + '0');
     num /= 10;
   } while (num > 0);
   return buf;
@@ -271,8 +275,8 @@ DECLARE_MODULE_METHOD(struct_pack) {
   int outputpos = 0, outputsize = 0;
 
   /* We have a maximum of <formatlen> format codes to deal with */
-  char *formatcodes = ALLOCATE(char, formatlen);
-  int *formatargs = ALLOCATE(int, formatlen);
+  char *formatcodes = N_ALLOCATE(char, formatlen);
+  int *formatargs = N_ALLOCATE(int, formatlen);
   currentarg = 0;
 
   for (i = 0; i < formatlen; formatcount++) {
@@ -876,7 +880,7 @@ DECLARE_MODULE_METHOD(struct_unpack) {
 
         if (repetitions == 1 && namelen > 0) {
           /* Use a part of the formatarg argument directly as the name. */
-          real_name = ALLOCATE(char, namelen);
+          real_name = N_ALLOCATE(char, namelen);
           memcpy(real_name, name, namelen);
 
         } else {
@@ -886,7 +890,7 @@ DECLARE_MODULE_METHOD(struct_unpack) {
           char *res = ulong_to_buffer(buf + sizeof(buf) - 1, i + 1);
           size_t digits = buf + sizeof(buf) - 1 - res;
 
-          real_name = ALLOCATE(char, namelen + digits);
+          real_name = N_ALLOCATE(char, namelen + digits);
           if(real_name == NULL) {
             RETURN_ERROR("out of memory");
           }

@@ -32,7 +32,7 @@ static inline void reset_stack(b_vm *vm) {
 }
 
 static b_value get_stack_trace(b_vm *vm) {
-  char *trace = ALLOCATE(char, 1);
+  char *trace = N_ALLOCATE(char, 0);
 
   if (trace != NULL) {
 
@@ -47,7 +47,7 @@ static b_value get_stack_trace(b_vm *vm) {
       const char *trace_start = "    File: %s, Line: %d, In: ";
       size_t trace_start_length = snprintf(NULL, 0, trace_start, function->module->file, line);
 
-      char *trace_part = ALLOCATE(char, trace_start_length + 1);
+      char *trace_part = N_ALLOCATE(char, trace_start_length + 1);
       if (trace_part != NULL) {
         sprintf(trace_part, trace_start, function->module->file, line);
         trace_part[(int) trace_start_length] = '\0';

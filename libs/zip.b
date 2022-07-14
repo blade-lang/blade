@@ -569,7 +569,7 @@ class ZipArchive {
 		var filedata = fh.read()
 
 		# Break into sections
-	  var filesecta = filedata.split(_central_end_sign)
+	  var filesecta = filedata.split(_central_end_sign.to_bytes())
 
 		# ZIP Comment
 		var unpackeda = unpack('x16/v1length', filesecta[1])
@@ -775,14 +775,3 @@ def compress(path, destination) {
   return true
 }
 
-# var start = time()
-# echo compress('/Users/mcfriendsy/Desktop/G', '/Users/mcfriendsy/Desktop/123.zip')
-# echo 'Time taken = ${time() - start}s'
-
-# var start = time()
-# echo compress('/Users/mcfriendsy/Movies/NARUTO/naruto', '/Users/mcfriendsy/Desktop/Naruto.zip')
-# echo 'Time taken = ${time() - start}s'
-
-var start = time()
-echo compress('/Users/mcfriendsy/Desktop/A', '/Users/mcfriendsy/Desktop/A.zip')
-echo 'Time taken = ${time() - start}s'

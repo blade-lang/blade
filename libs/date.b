@@ -855,14 +855,14 @@ def from_time(time) {
   var hour = to_int(today / 3600) - MAX_HOUR # where 3600 is number of seconds in hour
   
   if hour == MAX_HOUR + 1 hour = 0
-  else if hour < 1 hour += MAX_HOUR + 1
-  # else if hour < 1 {
-  #   if hour + MAX_HOUR == MAX_HOUR {
-  #     hour = 0
-  #     day++
-  #   }
-  #   else hour += MAX_HOUR + 1
-  # }
+  # else if hour < 1 hour += MAX_HOUR + 1
+  else if hour < 1 {
+    if hour + MAX_HOUR == MAX_HOUR {
+      hour = 0
+      day++
+    }
+    else hour += MAX_HOUR + 1
+  }
 
   var now = today % 3600
 

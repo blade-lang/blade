@@ -313,11 +313,15 @@ def join_paths(...) {
   for arg in __args__ {
     if !is_string(arg)
       die Exception('string expected, ${typeof(arg)} given')
+
+    arg = arg.trim()
     
-    result = result.rtrim(path_separator)
-    if result != '' arg = arg.ltrim(path_separator)
-    
-    result += '${path_separator}${arg}'
+    if arg {
+      result = result.rtrim(path_separator)
+      if result != '' arg = arg.ltrim(path_separator)
+      
+      result += '${path_separator}${arg}'
+    }
   }
   
   if result result = result[1,]

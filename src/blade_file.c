@@ -64,6 +64,7 @@ static void file_open(b_obj_file *file) {
         strstr(file->mode->chars, "+") != NULL) {
       mode = (char *) "a+";
     }
+
     file->file = fopen(file->path->chars, mode);
     file->is_open = true;
   }
@@ -328,7 +329,7 @@ DECLARE_FILE_METHOD(write) {
       FILE_ERROR(Write, "cannot write empty buffer to file");
     }
 
-    if (!file->is_open) { // open the file if it isn't open
+    if (file->file == NULL || !file->is_open) { // open the file if it isn't open
       file_open(file);
     }
 

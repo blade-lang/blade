@@ -2,6 +2,10 @@
 #include <zlib.h>
 #include <assert.h>
 
+#if defined(_WIN32) && defined(_DEBUG)
+#define ZLIB_WINAPI
+#endif
+
 #if defined(MSDOS) || defined(OS2) || defined(WIN32) || defined(__CYGWIN__)
 #  include <fcntl.h>
 #  include <io.h>
@@ -266,7 +270,7 @@ DECLARE_MODULE_METHOD(zlib_inflate) {
   RETURN_ERROR("inflate(): Error %d while finishing inflation", ret);
 }
 
-CREATE_MODULE_LOADER(zlib) {
+CREATE_MODULE_LOADER(zlib2) {
   static b_field_reg fields[] = {
       GET_ZLIB_CONSTANT(Z_NO_COMPRESSION),
       GET_ZLIB_CONSTANT(Z_BEST_SPEED),

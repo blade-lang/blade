@@ -6,9 +6,9 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
-set(BLADE_ROOT "${CMAKE_CURRENT_BINARY_DIR}/../../blade")
+set(BLADE_ROOT "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/blade")
 
-message(STATUS "Building JSON module to ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE}")
+message(STATUS "Building JSON module to ${BLADE_ROOT}/dist")
 
 include_directories("${BLADE_ROOT}/includes" ${CMAKE_CURRENT_SOURCE_DIR})
 #link_directories("${BLADE_ROOT}")
@@ -26,6 +26,9 @@ if(WIN32)
 endif()
 
 add_custom_target(copy-json-to-libs ALL
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/json ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE}/../libs/json
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/json ${BLADE_ROOT}/libs/json
         COMMENT "Exporting json source files to libs folder..."
         )
+
+add_custom_command(TARGET json POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:json> ${BLADE_ROOT}/dist)

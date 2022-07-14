@@ -6,9 +6,9 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
-set(BLADE_ROOT "${CMAKE_CURRENT_BINARY_DIR}/../../blade")
+set(BLADE_ROOT "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/blade")
 
-message(STATUS "Building ssl module to ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE}")
+message(STATUS "Building ssl module to ${BLADE_ROOT}/dist")
 
 include_directories("${BLADE_ROOT}/includes" ${CMAKE_CURRENT_SOURCE_DIR})
 #link_directories("${BLADE_ROOT}")
@@ -37,6 +37,9 @@ if(WIN32)
 endif()
 
 add_custom_target(copy-ssl-to-libs ALL
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/ssl ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE}/../libs/ssl
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/ssl ${BLADE_ROOT}/libs/ssl
         COMMENT "Exporting ssl source files to libs folder..."
         )
+
+add_custom_command(TARGET ssl POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:ssl> ${BLADE_ROOT}/dist)
