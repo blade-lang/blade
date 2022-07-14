@@ -174,7 +174,7 @@ add_custom_target(blade_lib_files ALL
 add_dependencies(blade blade_lib_files)
 
 set(EXE_FILE "${OUTPUT_DIR}/$<TARGET_NAME:blade>${CMAKE_EXECUTABLE_SUFFIX}")
-set(LIBRARY_FILE "${OUTPUT_DIR}/$<TARGET_NAME:libblade>${CMAKE_SHARED_MODULE_SUFFIX}")
+set(LIBRARY_FILE "${OUTPUT_DIR}/$<TARGET_NAME:libblade>${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
 add_custom_command(TARGET blade POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:blade> ${EXE_FILE}
