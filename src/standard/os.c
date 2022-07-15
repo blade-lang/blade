@@ -58,6 +58,7 @@ DECLARE_MODULE_METHOD(os_exec) {
     RETURN_NIL;
   }
 
+  fflush(stdout);
   FILE *fd = popen(string->chars, "r");
   if (!fd) RETURN_NIL;
 
