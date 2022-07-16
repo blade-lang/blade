@@ -44,15 +44,21 @@ var Z_64_VERSION = 45
 var _path_replace_regex = '/\\\\/'
 
 # Signatures.
-var _file_head_sig = '\x50\x4b\x03\x04'
-var _central_head_sign = '\x50\x4b\x01\x02'
-var _central_end_sign = '\x50\x4b\x05\x06'
+var _file_head_sig = 'PK\x03\x04'
+var _central_head_sign = 'PK\x01\x02'
+var _central_end_sign = 'PK\x05\x06'
 var _disk_record_sign = '\x00\x00\x00\x00'
+
+var _central_end_sign64 = 'PK\x06\x06'
+var _disk_record_sign64 = '\x00\x00\x00\x00\x00\x00\x00\x00'
+var _locator_end_sign64 = 'PK\x06\x07'
 
 # Unpack formats.
 var _file_size_unpack = 'V1crc/V1size_compressed/V1size_uncompressed'
 var _file_head_unpack = 'v1version/v1general_purpose/v1compress_method/v1file_time/' +
     'v1file_date/${_file_size_unpack}/v1filename_length/v1extra_field_length'
+
+var _file_size_unpack64 = 'P1crc/P1size_compressed/P1size_uncompressed'
 
 # Error messages...
 var _64_required = 'Zip64 compression required'
@@ -62,18 +68,66 @@ var _64_required = 'Zip64 compression required'
  * ZipItem represents a single file or directory in a zip archive.
  */
 class ZipItem {
+
+  /**
+   * Name of the file or directory
+   * @type string
+   */
   var name
+
+  /**
+   * The directory in which the file or subdirectory belongs
+   * @type string
+   */
   var directory
 
+  /**
+   * The compression method for this file
+   * @type string
+   */
   var compression_method
+
+  /**
+   * The crc32 checksum for the file
+   * @type string
+   */
   var crc
+
+  /**
+   * The last modified date for the file
+   * @type Date
+   */
   var last_modified
+
+  /**
+   * The size of the file as compressed in the archive
+   * @note The value is not often dependable
+   * @type number
+   */
   var compressed_size
+
+  /**
+   * The size of the file when extracted from the archive
+   * @type number
+   */
   var uncompressed_size
+
+  /**
+   * If this file is encrypted or not.
+   * @type bool
+   */
   var is_encrypted
 
+  /**
+   * Error encountered when attempting to read/extract the file
+   * @type string
+   */
   var error
 
+  /**
+   * The decompressed value of the zip item
+   * @type bytes
+   */
   var data
 
   /**
@@ -146,11 +200,41 @@ class ZipItem {
  * ZipFile represents an instance of zip file.
  */
 class ZipFile {
+
+  /**
+   * The name of the zip file
+   * @type string
+   */
   var name
+
+  /**
+   * The last modified date for the zip file
+   * @type Date
+   */
   var last_modified
+
+  /**
+   * The time when the zip file was created
+   * @type Date
+   */
   var time_created
+
+  /**
+   * The size of the zip file
+   * @type number
+   */
   var size
+
+  /**
+   * The file handle for this zip file
+   * @type file
+   */
   var handle
+
+  /**
+   * A list of the ZipItems in the zip file
+   * @type List<ZipItem>
+   */
   var files = []
 
   /**
@@ -195,15 +279,19 @@ class ZipArchive {
 
   var _ctrl_dir_length = 0
 	var _old_offset = 0
+  var _is_64 = false
 
   /**
-   * ZipArchive(file: string)
+   * ZipArchive(file: string [, use_zip_64: bool = false])
    * @constructor
    */
-  ZipArchive(file) {
+  ZipArchive(file, use_zip_64) {
     if !is_string(file)
       die Exception('string expected in argument 1 (file)')
+    if use_zip_64 != nil and !is_bool(use_zip_64)
+      die Exception('boolean expected in argument 2 (use_zip_64)')
     self._file = file
+    self._is_64 = use_zip_64 == nil ? false : use_zip_64
   }
 
   _get_new_offset() {
@@ -223,6 +311,9 @@ class ZipArchive {
   }
 
   _is_within_bound(data) {
+    # zip64 is always within bound.
+    if self._is_64 return true
+
     var min_size = self._ctrl_dir.length() + 
           (self._handle ? self._handle.stats().size : 0) + 
             _ZIP_META_SIZE
@@ -266,8 +357,8 @@ class ZipArchive {
     var fr = _file_head_sig.to_bytes()
 
     fr.extend(pack(
-      'vvvvv', 
-      Z_DEFAULT_VERSION,  # version needed to extract
+      'v5', 
+      self._is_64 ? Z_64_VERSION : Z_DEFAULT_VERSION,  # version needed to extract
       0,                  # general purpose bit flag
       Z_DEFLATE,          # compression method
       mod_date[0],        # last mod time
@@ -275,7 +366,7 @@ class ZipArchive {
     ))
 
     fr.extend(pack(
-      'VVVvv', 
+      'V3v2', 
       0,                # crc32
       0,                # compressed filesize
       0,                # uncompressed filesize
@@ -290,7 +381,7 @@ class ZipArchive {
 
 		# 'data descriptor' segment (optional but necessary if archive is not served as file)
 		fr.extend(pack(
-      'VVV', 
+      self._is_64 ? 'P3' : 'V3', 
       0,                # crc32
       0,              # compressed filesize
       0             # uncompressed filesize
@@ -308,9 +399,9 @@ class ZipArchive {
     # now add to central record
     self._ctrl_dir.extend(_central_head_sign.to_bytes())
     self._ctrl_dir.extend(pack(
-      'vvvvvvVVVvvvvvVV',           
+      'v6V3v5V2',           
       0,                  # version made by
-      Z_DEFAULT_VERSION,  # version needed to extract
+      self._is_64 ? Z_64_VERSION : Z_DEFAULT_VERSION,  # version needed to extract
       0,                  # general purpose bit flag
       Z_DEFLATE,          # compression method
       mod_date[0],        # last mod time
@@ -358,8 +449,8 @@ class ZipArchive {
 		var fr = _file_head_sig.to_bytes()
 
     fr.extend(pack(
-      'vvvvv', 
-      Z_DEFAULT_VERSION,  # version needed to extract
+      'v5', 
+      self._is_64 ? Z_64_VERSION : Z_DEFAULT_VERSION,  # version needed to extract
       0,                  # general purpose bit flag
       Z_DEFLATE,          # compression method
       mod_date[0],        # last mod time
@@ -375,7 +466,7 @@ class ZipArchive {
 		var c_len = uzdata.length()
 
     fr.extend(pack(
-      'VVVvv', 
+      'V3v2', 
       crc,                # crc32
       c_len,              # compressed filesize
       unc_len,            # uncompressed filesize
@@ -393,7 +484,7 @@ class ZipArchive {
 
 		# 'data descriptor' segment (optional but necessary if archive is not served as file)
     fr.extend(pack(
-      'VVV', 
+      self._is_64 ? 'P3' : 'V3', 
       crc,                # crc32
       c_len,              # compressed filesize
       unc_len             # uncompressed filesize
@@ -408,9 +499,9 @@ class ZipArchive {
 		# now add to central directory record
 		self._ctrl_dir.extend(_central_head_sign.to_bytes())
     self._ctrl_dir.extend(pack(
-      'vvvvvvVVVvvvvvVV',           
+      'v6V3v5V2',           
       0,                  # version made by
-      Z_DEFAULT_VERSION,  # version needed to extract
+      self._is_64 ? Z_64_VERSION : Z_DEFAULT_VERSION,  # version needed to extract
       0,                  # general purpose bit flag
       Z_DEFLATE,          # compression method
       mod_date[0],        # last mod time
@@ -569,7 +660,9 @@ class ZipArchive {
 		var filedata = fh.read()
 
 		# Break into sections
-	  var filesecta = filedata.split(_central_end_sign.to_bytes())
+	  var filesecta = filedata.split(
+      (self._is_64 ? _central_end_sign64 : _central_end_sign).to_bytes()
+    )
 
 		# ZIP Comment
 		var unpackeda = unpack('x16/v1length', filesecta[1])
@@ -577,7 +670,9 @@ class ZipArchive {
     # self.comment = self.comment.replace('~\\r(\\n)?~', '\n')  # CR + LF and CR -> LF
 
 		# Cut entries from the central directory
-		filesecta = filedata.split(_central_head_sign.to_bytes())
+		filesecta = filedata.split(
+      (self._is_64 ? _central_end_sign64 : _central_end_sign).to_bytes()
+    )
 		filesecta = filesecta[0].split(_file_head_sig.to_bytes())
 		filesecta = filesecta[1,] # Removes empty entry/signature
 
@@ -593,7 +688,10 @@ class ZipArchive {
 
 			# Check for value block after compressed data
 			if unpackeda['general_purpose'] & 0x0008 > 0 {
-				var unpackeda2 = unpack(_file_size_unpack, filedata[filedata.length() - 12,])
+				var unpackeda2 = unpack(
+          self._is_64 ? _file_size_unpack64 : _file_size_unpack, 
+          filedata[filedata.length() - 12,]
+        )
 
 				unpackeda['crc'] = unpackeda2['crc']
 				unpackeda['size_compressed'] = unpackeda2['size_uncompressed']
@@ -684,20 +782,29 @@ class ZipArchive {
       self._handle.puts(self._ctrl_dir)
 
       # end of Central directory record
-      var ending = _central_end_sign.to_bytes().extend(_disk_record_sign.to_bytes()).extend(pack(
-        'vvVVv', 
+      var ending = (self._is_64 ? _central_end_sign64 : _central_end_sign).to_bytes()
+
+      if self._is_64 {
+        ending.extend(pack(
+          'Pvv',
+          44,                 # size of zip64 end of central directory record
+          0,                  # version made by
+          Z_64_VERSION        # version needed to extract
+        ))
+      }
+
+      ending.extend(
+        (self._is_64 ? _disk_record_sign64 : _disk_record_sign).to_bytes()
+      )
+
+      ending.extend(pack(
+        self._is_64 ? 'PPPPv' : 'vvVVv', 
         self._ctrl_dir_length,      # total number of entries 'on this disk'
         self._ctrl_dir_length,      # total number of entries overall
         self._ctrl_dir.length(),    # size of central dir
         self._handle.tell(),        # offset to start of central dir
         0                           # .zip file comment length
       ))
-
-      # ending.extend(pack('v', self._ctrl_dir_length))  # total number of entries 'on this disk'
-      # ending.extend(pack('v', self._ctrl_dir_length))  # total number of entries overall
-      # ending.extend(pack('V', self._ctrl_dir.length())) # size of central dir
-      # ending.extend(pack('V', self._handle.tell())) # offset to start of central dir
-      # ending.extend(bytes([0x00, 0x00])) # .zip file comment length
 
       self._handle.puts(ending)
       self._handle.close()
@@ -729,7 +836,7 @@ def extract(file, destination) {
   if destination != nil and !is_string(destination)
     die Exception('string expected in argument 2 (destination)')
 
-  var zip = ZipArchive(file)
+  var zip = ZipArchive(file, true)
   var zip_file = zip.read()
   return zip_file.export(destination)
 }
@@ -756,7 +863,7 @@ def compress(path, destination) {
     destination = os.join_paths(os.cwd(), os.base_name(path)) + _ZIP_EXT
   destination = os.abs_path(destination)
 
-  var zip = ZipArchive(destination)
+  var zip = ZipArchive(destination, true)
 
   var completed = false
   

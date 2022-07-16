@@ -348,6 +348,12 @@ def real_path(path) {
  * @return string
  */
 def abs_path(path) {
+
+  # Return early if we already have an absolute path.
+  var regex = platform == 'windows' ? '~^[a-zA-Z][:]\\~' : '~^\\/~'
+  if path.match(regex)
+    return path
+
   var p = _os.realpath(path)
   if p == path {
     var np = _os.realpath('.')

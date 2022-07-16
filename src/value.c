@@ -16,8 +16,8 @@ void init_value_arr(b_value_arr *array) {
 
 void init_byte_arr(b_vm *vm, b_byte_arr *array, int length) {
   array->count = length;
-//  array->bytes = (unsigned char *) calloc(length, sizeof(unsigned char));
-  array->bytes = N_ALLOCATE(unsigned char, length);
+  array->bytes = (unsigned char *) calloc(length, sizeof(unsigned char));
+  vm->bytes_allocated += sizeof(unsigned char) * length;
 }
 
 void write_value_arr(b_vm *vm, b_value_arr *array, b_value value) {
@@ -66,9 +66,11 @@ void free_value_arr(b_vm *vm, b_value_arr *array) {
 }
 
 void free_byte_arr(b_vm *vm, b_byte_arr *array) {
-  FREE_ARRAY(unsigned char, array->bytes, array->count);
-  array->count = 0;
-  array->bytes = NULL;
+  if(array && array->count > 0) {
+    FREE_ARRAY(unsigned char, array->bytes, array->count);
+    array->count = 0;
+    array->bytes = NULL;
+  }
 }
 
 static inline void do_print_value(b_value value, bool fix_string) {
@@ -116,9 +118,9 @@ void print_value(b_value value) { do_print_value(value, false); }
 void echo_value(b_value value) { do_print_value(value, true); }
 #endif // !_WIN32
 
-static inline char *number_to_string(double number) {
+static inline char *number_to_string(b_vm *vm, double number) {
   int length = snprintf(NULL, 0, NUMBER_FORMAT, number);
-  char *num_str = (char *) calloc((size_t) length + 1, sizeof(char));
+  char *num_str = ALLOCATE(char, length + 1);
   if (num_str != NULL) {
     sprintf(num_str, NUMBER_FORMAT, number);
     return num_str;
@@ -135,7 +137,7 @@ char *value_to_string(b_vm *vm, b_value value) {
   else if (IS_BOOL(value))
     return strdup(AS_BOOL(value) ? "true" : "false");
   else if (IS_NUMBER(value))
-    return number_to_string(AS_NUMBER(value));
+    return number_to_string(vm, AS_NUMBER(value));
   else
     return object_to_string(vm, value);
 #else
@@ -145,7 +147,7 @@ char *value_to_string(b_vm *vm, b_value value) {
   case VAL_BOOL:
     return AS_BOOL(value) ? "true" : "false";
   case VAL_NUMBER:
-    return number_to_string(AS_NUMBER(value));
+    return number_to_string(vm, AS_NUMBER(value));
   case VAL_OBJ:
     return object_to_string(vm, value);
 

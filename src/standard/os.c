@@ -298,7 +298,7 @@ DECLARE_MODULE_METHOD(os__readdir) {
     b_obj_list *list = (b_obj_list *)GC(new_list(vm));
     struct dirent *ent;
     while((ent = readdir(dir)) != NULL) {
-      write_list(vm, list, GC_STRING(ent->d_name));
+      write_list(vm, list, GC_L_STRING(ent->d_name, ent->d_namlen));
     }
     closedir(dir);
     RETURN_OBJ(list);

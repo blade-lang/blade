@@ -10,7 +10,7 @@ DECLARE_NATIVE(bytes) {
     RETURN_OBJ(new_bytes(vm, (int) AS_NUMBER(args[0])));
   } else if (IS_LIST(args[0])) {
     b_obj_list *list = AS_LIST(args[0]);
-    b_obj_bytes *bytes = new_bytes(vm, list->items.count);
+    b_obj_bytes *bytes = (b_obj_bytes *) GC(new_bytes(vm, list->items.count));
 
     for (int i = 0; i < list->items.count; i++) {
       if (IS_NUMBER(list->items.values[i])) {
@@ -84,7 +84,7 @@ DECLARE_BYTES_METHOD(append) {
 DECLARE_BYTES_METHOD(clone) {
   ENFORCE_ARG_COUNT(clone, 0);
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
-  b_obj_bytes *n_bytes = new_bytes(vm, bytes->bytes.count);
+  b_obj_bytes *n_bytes = (b_obj_bytes *)GC(new_bytes(vm, bytes->bytes.count));
 
   memcpy(n_bytes->bytes.bytes, bytes->bytes.bytes, bytes->bytes.count);
 
@@ -99,7 +99,6 @@ DECLARE_BYTES_METHOD(extend) {
 
   bytes->bytes.bytes = GROW_ARRAY(unsigned char, bytes->bytes.bytes, bytes->bytes.count,
                                   bytes->bytes.count + n_bytes->bytes.count);
-//  bytes->bytes.bytes = (unsigned char *) realloc(bytes->bytes.bytes, bytes->bytes.count + n_bytes->bytes.count);
   if(bytes->bytes.bytes == NULL) {
     RETURN_ERROR("out of memory");
   }
@@ -143,7 +142,7 @@ DECLARE_BYTES_METHOD(reverse) {
   ENFORCE_ARG_COUNT(reverse, 0);
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
 
-  b_obj_bytes *n_bytes = new_bytes(vm, bytes->bytes.count);
+  b_obj_bytes *n_bytes = (b_obj_bytes *)GC(new_bytes(vm, bytes->bytes.count));
 
   for (int i = bytes->bytes.count - 1; i >= 0; i--) {
     n_bytes->bytes.bytes[i] = bytes->bytes.bytes[i];
@@ -287,8 +286,7 @@ DECLARE_BYTES_METHOD(is_space) {
 DECLARE_BYTES_METHOD(dispose) {
   ENFORCE_ARG_COUNT(dispose, 0);
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
-  FREE_ARRAY(unsigned char, bytes->bytes.bytes, bytes->bytes.count);
-  init_byte_arr(vm, &bytes->bytes, 0);
+  free_byte_arr(vm, &bytes->bytes);
   RETURN;
 }
 

@@ -275,8 +275,8 @@ DECLARE_MODULE_METHOD(struct_pack) {
   int outputpos = 0, outputsize = 0;
 
   /* We have a maximum of <formatlen> format codes to deal with */
-  char *formatcodes = N_ALLOCATE(char, formatlen);
-  int *formatargs = N_ALLOCATE(int, formatlen);
+  char *formatcodes = ALLOCATE(char, formatlen);
+  int *formatargs = ALLOCATE(int, formatlen);
   currentarg = 0;
 
   for (i = 0; i < formatlen; formatcount++) {
@@ -477,7 +477,7 @@ too_few_args:
     }
   }
 
-  b_obj_bytes *output = (b_obj_bytes *)GC(new_bytes(vm, outputsize));
+  unsigned char *output = ALLOCATE(unsigned char, outputsize + 1);
   outputpos = 0;
   currentarg = 0;
 
@@ -492,8 +492,8 @@ too_few_args:
         size_t arg_cp = (code != 'Z') ? arg : MAX(0, arg - 1);
         char *str = value_to_string(vm, args_list[currentarg++]);
 
-        memset(&output->bytes.bytes[outputpos], (code == 'a' || code == 'Z') ? '\0' : ' ', arg);
-        memcpy(&output->bytes.bytes[outputpos], str, (strlen(str) < arg_cp) ? strlen(str) : arg_cp);
+        memset(&output[outputpos], (code == 'a' || code == 'Z') ? '\0' : ' ', arg);
+        memcpy(&output[outputpos], str, (strlen(str) < arg_cp) ? strlen(str) : arg_cp);
 
         outputpos += arg;
         break;
@@ -528,12 +528,12 @@ too_few_args:
           }
 
           if (first--) {
-            output->bytes.bytes[++outputpos] = 0;
+            output[++outputpos] = 0;
           } else {
             first = 1;
           }
 
-          output->bytes.bytes[outputpos] |= (n << nibbleshift);
+          output[outputpos] |= (n << nibbleshift);
           nibbleshift = (nibbleshift + 4) & 7;
         }
 
@@ -544,7 +544,7 @@ too_few_args:
       case 'c':
       case 'C':
         while (arg-- > 0) {
-          do_pack(vm, args_list[currentarg++], 1, byte_map, &output->bytes.bytes[outputpos]);
+          do_pack(vm, args_list[currentarg++], 1, byte_map, &output[outputpos]);
           outputpos++;
         }
         break;
@@ -562,7 +562,7 @@ too_few_args:
         }
 
         while (arg-- > 0) {
-          do_pack(vm, args_list[currentarg++], 2, map, &output->bytes.bytes[outputpos]);
+          do_pack(vm, args_list[currentarg++], 2, map, &output[outputpos]);
           outputpos += 2;
         }
         break;
@@ -571,7 +571,7 @@ too_few_args:
       case 'i':
       case 'I':
         while (arg-- > 0) {
-          do_pack(vm, args_list[currentarg++], sizeof(int), int_map, &output->bytes.bytes[outputpos]);
+          do_pack(vm, args_list[currentarg++], sizeof(int), int_map, &output[outputpos]);
           outputpos += sizeof(int);
         }
         break;
@@ -589,7 +589,7 @@ too_few_args:
         }
 
         while (arg-- > 0) {
-          do_pack(vm, args_list[currentarg++], 4, map, &output->bytes.bytes[outputpos]);
+          do_pack(vm, args_list[currentarg++], 4, map, &output[outputpos]);
           outputpos += 4;
         }
         break;
@@ -609,7 +609,7 @@ too_few_args:
           }
 
           while (arg-- > 0) {
-            do_pack(vm, args_list[currentarg++], 8, map, &output->bytes.bytes[outputpos]);
+            do_pack(vm, args_list[currentarg++], 8, map, &output[outputpos]);
             outputpos += 8;
           }
           break;
@@ -621,7 +621,7 @@ too_few_args:
       case 'f': {
         while (arg-- > 0) {
           float v = (float) to_double(vm, args_list[currentarg++]);
-          memcpy(&output->bytes.bytes[outputpos], &v, sizeof(v));
+          memcpy(&output[outputpos], &v, sizeof(v));
           outputpos += sizeof(v);
         }
         break;
@@ -631,7 +631,7 @@ too_few_args:
         /* pack little endian float */
         while (arg-- > 0) {
           float v = (float) to_double(vm, args_list[currentarg++]);
-          copy_float(1, &output->bytes.bytes[outputpos], v);
+          copy_float(1, &output[outputpos], v);
           outputpos += sizeof(v);
         }
 
@@ -641,7 +641,7 @@ too_few_args:
         /* pack big endian float */
         while (arg-- > 0) {
           float v = (float) to_double(vm, args_list[currentarg++]);
-          copy_float(0, &output->bytes.bytes[outputpos], v);
+          copy_float(0, &output[outputpos], v);
           outputpos += sizeof(v);
         }
         break;
@@ -650,7 +650,7 @@ too_few_args:
       case 'd': {
         while (arg-- > 0) {
           double v = to_double(vm, args_list[currentarg++]);
-          memcpy(&output->bytes.bytes[outputpos], &v, sizeof(v));
+          memcpy(&output[outputpos], &v, sizeof(v));
           outputpos += sizeof(v);
         }
         break;
@@ -660,7 +660,7 @@ too_few_args:
         /* pack little endian double */
         while (arg-- > 0) {
           double v = to_double(vm, args_list[currentarg++]);
-          copy_double(1, &output->bytes.bytes[outputpos], v);
+          copy_double(1, &output[outputpos], v);
           outputpos += sizeof(v);
         }
         break;
@@ -670,14 +670,14 @@ too_few_args:
         /* pack big endian double */
         while (arg-- > 0) {
           double v = to_double(vm, args_list[currentarg++]);
-          copy_double(0, &output->bytes.bytes[outputpos], v);
+          copy_double(0, &output[outputpos], v);
           outputpos += sizeof(v);
         }
         break;
       }
 
       case 'x':
-        memset(&output->bytes.bytes[outputpos], '\0', arg);
+        memset(&output[outputpos], '\0', arg);
         outputpos += arg;
         break;
 
@@ -691,7 +691,7 @@ too_few_args:
 
       case '@':
         if (arg > outputpos) {
-          memset(&output->bytes.bytes[outputpos], '\0', arg - outputpos);
+          memset(&output[outputpos], '\0', arg - outputpos);
         }
         outputpos = arg;
         break;
@@ -700,9 +700,10 @@ too_few_args:
 
   free(formatcodes);
   free(formatargs);
-  output->bytes.bytes[outputpos] = '\0';
-  output->bytes.count = outputpos;
-  RETURN_OBJ(output);
+  output[outputpos] = '\0';
+
+  b_obj_bytes *bytes = (b_obj_bytes *)GC(take_bytes(vm, output, outputpos));
+  RETURN_OBJ(bytes);
 }
 
 DECLARE_MODULE_METHOD(struct_unpack) {
@@ -880,8 +881,9 @@ DECLARE_MODULE_METHOD(struct_unpack) {
 
         if (repetitions == 1 && namelen > 0) {
           /* Use a part of the formatarg argument directly as the name. */
-          real_name = N_ALLOCATE(char, namelen);
+          real_name = ALLOCATE(char, namelen);
           memcpy(real_name, name, namelen);
+          real_name[namelen] = '\0';
 
         } else {
           /* Need to add the 1-based element number to the name */
@@ -890,13 +892,14 @@ DECLARE_MODULE_METHOD(struct_unpack) {
           char *res = ulong_to_buffer(buf + sizeof(buf) - 1, i + 1);
           size_t digits = buf + sizeof(buf) - 1 - res;
 
-          real_name = N_ALLOCATE(char, namelen + digits);
+          real_name = ALLOCATE(char, namelen + digits);
           if(real_name == NULL) {
             RETURN_ERROR("out of memory");
           }
 
           memcpy(real_name, name, namelen);
           memcpy(real_name + namelen, res, digits);
+          real_name[namelen + digits] = '\0';
         }
 
         switch ((int) type) {

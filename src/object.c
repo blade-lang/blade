@@ -354,7 +354,8 @@ b_obj_bytes *copy_bytes(b_vm *vm, unsigned char *b, int length) {
 }
 
 b_obj_bytes *take_bytes(b_vm *vm, unsigned char *b, int length) {
-  b_obj_bytes *bytes = new_bytes(vm, length);
+  b_obj_bytes *bytes = ALLOCATE_OBJ(b_obj_bytes, OBJ_BYTES);
+  bytes->bytes.count = length;
   bytes->bytes.bytes = b;
   return bytes;
 }
