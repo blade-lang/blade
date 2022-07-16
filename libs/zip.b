@@ -4,8 +4,8 @@
 # The `zip` module contains classes and functions to make working with zip archives easy.
 # 
 # > **NOTE**
-# > This module isn't suitable for archiving large (over 5gb) files as it keeps 
-# > streams in memory.
+# > This module defaults to Zip64 for the `compress()` and `extract()`. For non-Zip64,
+# > you will need to use the ZipArchive.
 #
 # @copyright 2022, Ore Richard Muyiwa and Blade contributors
 #
