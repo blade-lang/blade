@@ -2,10 +2,6 @@
 # @module zip
 # 
 # The `zip` module contains classes and functions to make working with zip archives easy.
-# 
-# > **NOTE**
-# > This module defaults to Zip64 for the `compress()` and `extract()`. For non-Zip64,
-# > you will need to use the ZipArchive.
 #
 # @copyright 2022, Ore Richard Muyiwa and Blade contributors
 #
@@ -16,29 +12,39 @@ import os
 import io
 import date
 
-# max size of single file in the archive
-# = 2 ** 31 + 1
-var _ZIP_FILE_MAX = 2147483649
+/**
+ * The maximum size of a single file in a zip archive when zip64 is not used
+ * @type number
+ */
+var ZIP_FILE_MAX = 2147483649   # = 2 ** 31 + 1
 
-# max number of files in a zip
-# = 2 ** 16 - 1
-var _ZIP_FILE_COUNT_LIMIT = 65535
+/**
+ * The maximum number of files in a zip archive when zip64 is not used
+ * @type number
+ */
+var ZIP_FILE_COUNT_LIMIT = 65535  # = 2 ** 16 - 1
 
-# max size of zip archive
-var _ZIP_MAX = _ZIP_FILE_MAX
+/**
+ * The maximum size of a zip archive when zip64 is not used
+ * @type number
+ */
+var ZIP_MAX = ZIP_FILE_MAX
+
+/**
+ * The default zip file extension
+ * @type string
+ */
+var ZIP_EXT = '.zip'
 
 # length of End of central directory records
 var _ZIP_META_SIZE = 22
 
-# zip file extension
-var _ZIP_EXT = '.zip'
-
 # compression methods...
-var Z_DEFLATE = 8 # deflate compression version
+var _Z_DEFLATE = 8 # deflate compression version
 
 # Versions...
-var Z_DEFAULT_VERSION = 20
-var Z_64_VERSION = 45
+var _Z_DEFAULT_VERSION = 20
+var _Z_64_VERSION = 45
 
 ## Constants.
 var _path_replace_regex = '/\\\\/'
@@ -320,9 +326,9 @@ class ZipArchive {
 
     var data_size = data ? data.length() : 0
 
-    if min_size + data_size < _ZIP_MAX and
-          data_size < _ZIP_FILE_MAX and
-            self._ctrl_dir_length < _ZIP_FILE_COUNT_LIMIT {
+    if min_size + data_size < ZIP_MAX and
+          data_size < ZIP_FILE_MAX and
+            self._ctrl_dir_length < ZIP_FILE_COUNT_LIMIT {
       return true
     }
 
@@ -358,9 +364,9 @@ class ZipArchive {
 
     fr.extend(pack(
       'v5', 
-      self._is_64 ? Z_64_VERSION : Z_DEFAULT_VERSION,  # version needed to extract
+      self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION,  # version needed to extract
       0,                  # general purpose bit flag
-      Z_DEFLATE,          # compression method
+      _Z_DEFLATE,          # compression method
       mod_date[0],        # last mod time
       mod_date[1]         # last mod date
     ))
@@ -401,9 +407,9 @@ class ZipArchive {
     self._ctrl_dir.extend(pack(
       'v6V3v5V2',           
       0,                  # version made by
-      self._is_64 ? Z_64_VERSION : Z_DEFAULT_VERSION,  # version needed to extract
+      self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION,  # version needed to extract
       0,                  # general purpose bit flag
-      Z_DEFLATE,          # compression method
+      _Z_DEFLATE,          # compression method
       mod_date[0],        # last mod time
       mod_date[1],        # last mod date
       0,                  # crc32
@@ -450,9 +456,9 @@ class ZipArchive {
 
     fr.extend(pack(
       'v5', 
-      self._is_64 ? Z_64_VERSION : Z_DEFAULT_VERSION,  # version needed to extract
+      self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION,  # version needed to extract
       0,                  # general purpose bit flag
-      Z_DEFLATE,          # compression method
+      _Z_DEFLATE,          # compression method
       mod_date[0],        # last mod time
       mod_date[1]         # last mod date
     ))
@@ -501,9 +507,9 @@ class ZipArchive {
     self._ctrl_dir.extend(pack(
       'v6V3v5V2',           
       0,                  # version made by
-      self._is_64 ? Z_64_VERSION : Z_DEFAULT_VERSION,  # version needed to extract
+      self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION,  # version needed to extract
       0,                  # general purpose bit flag
-      Z_DEFLATE,          # compression method
+      _Z_DEFLATE,          # compression method
       mod_date[0],        # last mod time
       mod_date[1],        # last mod date
       crc,                # crc32
@@ -644,7 +650,7 @@ class ZipArchive {
     var fh = file(self._file, 'rb')
     var zip_stats = fh.stats()
 
-    if zip_stats.size > _ZIP_FILE_MAX
+    if zip_stats.size > ZIP_FILE_MAX
       die Exception(_64_required)
 
     var zip_file = ZipFile()
@@ -789,7 +795,7 @@ class ZipArchive {
           'Pvv',
           44,                 # size of zip64 end of central directory record
           0,                  # version made by
-          Z_64_VERSION        # version needed to extract
+          _Z_64_VERSION        # version needed to extract
         ))
       }
 
@@ -821,28 +827,36 @@ class ZipArchive {
 
 
 /**
- * extract(file: string [, destination: string = os.cwd()])
+ * extract(file: string [, destination: string = os.cwd() [, is_zip64: bool = false]])
  * 
  * Extracts the zip archive at the _file_ path to the given _destination_ directory. 
  * If _destination_ is not given, the file will be extracted into the current working 
  * directory.
  * 
  * This function returns `true` if the extraction was successful and `false` otherwise.
+ * 
+ * > **NOTE:**
+ * > Set `is_zip64` to true if the size of the zip file exceeds ZIP_MAX
+ * 
  * @return bool
  */
-def extract(file, destination) {
+def extract(file, destination, is_zip64) {
   if !is_string(file)
     die Exception('string expected in argument 1 (file)')
   if destination != nil and !is_string(destination)
     die Exception('string expected in argument 2 (destination)')
+  if is_zip64 != nil and !is_bool(is_zip64)
+    die Exception('string expected in argument 3 (use_zip64)')
 
-  var zip = ZipArchive(file, true)
+  if is_zip64 == nil is_zip64 = false
+
+  var zip = ZipArchive(file, is_zip64)
   var zip_file = zip.read()
   return zip_file.export(destination)
 }
 
 /**
- * compress(path: string [, destination: string])
+ * compress(path: string [, destination: string [, use_zip64: bool = false]])
  * 
  * Compresses the given path (file or directory) into the destination zip archive.
  * @throws Exception if file could not be written of zip max size exceeded.
@@ -851,19 +865,26 @@ def extract(file, destination) {
  * > have already been compressed. In this case, the zip archive will should still 
  * > be usable but not all desired files will be contained in it.
  * 
+ * > **NOTE:**
+ * > Set `use_zip64` to true when compressing files exceeding ZIP_FILE_MAX or 
+ * > ZIP_FILE_COUNT_LIMIT
+ * 
  * @return bool
  */
-def compress(path, destination) {
+def compress(path, destination, use_zip64) {
   if !is_string(path)
     die Exception('string expected in argument 1 (path)')
   if destination != nil and !is_string(destination)
     die Exception('string expected in argument 2 (destination)')
+  if use_zip64 != nil and !is_bool(use_zip64)
+    die Exception('string expected in argument 3 (use_zip64)')
 
   if !destination 
-    destination = os.join_paths(os.cwd(), os.base_name(path)) + _ZIP_EXT
+    destination = os.join_paths(os.cwd(), os.base_name(path)) + ZIP_EXT
   destination = os.abs_path(destination)
+  if use_zip64 == nil use_zip64 = false
 
-  var zip = ZipArchive(destination, true)
+  var zip = ZipArchive(destination, use_zip64)
 
   var completed = false
   
