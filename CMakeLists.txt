@@ -196,15 +196,13 @@ message(STATUS "  C compiler flags ................ : ${${CMAKE_C_FLAGS}${cfsp}}
 
 # for LTO
 include(CheckIPOSupported)
-check_ipo_supported(RESULT supported OUTPUT error)
-if(supported)
+check_ipo_supported(RESULT LTOSupported OUTPUT LTOSupportError)
+if(LTOSupported)
 	message(STATUS "  IPO/LTO ......................... : enabled")
 	set_property(TARGET libblade PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 else()
-	message(STATUS "  IPO/LTO ......................... : not supported: <${error}>")
+	message(STATUS "  IPO/LTO ......................... : not supported: <${LTOSupportError}>")
 endif()
-
-message(STATUS "")
 
 # Generating single header file...
 generate_export_header(libblade           # generates the export header shared_EXPORTS.h automatically

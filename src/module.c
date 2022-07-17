@@ -144,9 +144,9 @@ void bind_user_modules(b_vm *vm, char *pkg_root) {
       int ext_length = (int) strlen(LIBRARY_FILE_EXTENSION);
 
       // skip . and .. in path
-      if (memcmp(ent->d_name, ".", (int)strlen(ent->d_name)) == 0
-        || memcmp(ent->d_name, "..", (int)strlen(ent->d_name)) == 0
-        || (int) strlen(ent->d_name) < ext_length + 1) {
+      if ((strlen(ent->d_name) == 1 && ent->d_name[0] == '.') // .
+        || (strlen(ent->d_name) == 2 && ent->d_name[0] == '.' && ent->d_name[1] == '.') // ..
+        || strlen(ent->d_name) < ext_length + 1) {
         continue;
       }
 
