@@ -289,7 +289,6 @@ int main(int argc, char *argv[]) {
       run_file(vm, argv[optind]);
     }
 
-    free(std_args);
     free_vm(vm);
     return EXIT_SUCCESS;
   }

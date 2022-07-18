@@ -626,7 +626,6 @@ DECLARE_STRING_METHOD(match) {
   pcre2_code *re =
       pcre2_compile(pattern, PCRE2_ZERO_TERMINATED, compile_options,
                     &error_number, &error_offset, NULL);
-  free(real_regex);
 
   REGEX_COMPILATION_ERROR(re, error_number, error_offset);
 
@@ -722,7 +721,6 @@ DECLARE_STRING_METHOD(matches) {
 
   pcre2_code *re = pcre2_compile(pattern, PCRE2_ZERO_TERMINATED, compile_options,
                                  &error_number, &error_offset, NULL);
-  free(real_regex);
 
   REGEX_COMPILATION_ERROR(re, error_number, error_offset);
 
@@ -948,7 +946,6 @@ DECLARE_STRING_METHOD(replace) {
   pcre2_code *re = pcre2_compile(pattern, PCRE2_ZERO_TERMINATED,
                                  compile_options & PCRE2_MULTILINE,
                                  &error_number, &error_offset, 0);
-  free(real_regex);
 
   REGEX_COMPILATION_ERROR(re, error_number, error_offset);
 

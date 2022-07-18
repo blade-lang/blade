@@ -2109,7 +2109,6 @@ static void import_statement(b_parser *p) {
 
   char *module_path = resolve_import_path(module_file, p->module->file, is_relative);
   b_obj_string *final_module_name = copy_string(p->vm, module_name, (int) strlen(module_name));
-  free(module_file);
 
   if (module_path == NULL) {
     // check if there is one in the vm's registry
@@ -2142,7 +2141,6 @@ static void import_statement(b_parser *p) {
   init_blob(&blob);
   b_obj_module *module = new_module(p->vm, module_name, module_path);
   b_obj_func *function = compile(p->vm, module, source, &blob);
-  free(source);
 
   if (function == NULL) {
     error(p, "failed to import %s", module_name);
