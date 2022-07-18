@@ -178,9 +178,7 @@ DECLARE_MODULE_METHOD(zlib_deflate) {
 
   ret = deflateEnd(&strm);
   if(ret == Z_OK) {
-    b_obj_bytes *bytes = new_bytes(vm, (int)output_length);
-    bytes->bytes.bytes = (unsigned char *)output;
-    RETURN_OBJ(bytes);
+    RETURN_OBJ(take_bytes(vm, output, output_length));
   }
 
   RETURN_ERROR("deflate(): Error %d while finishing deflation", ret);
@@ -262,9 +260,7 @@ DECLARE_MODULE_METHOD(zlib_inflate) {
 
   ret = inflateEnd(&strm);
   if(ret == Z_OK) {
-    b_obj_bytes *bytes = new_bytes(vm, (int)output_length);
-    bytes->bytes.bytes = (unsigned char *)output;
-    RETURN_OBJ(bytes);
+    RETURN_OBJ(take_bytes(vm,output, output_length));
   }
 
   RETURN_ERROR("inflate(): Error %d while finishing inflation", ret);

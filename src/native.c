@@ -386,7 +386,7 @@ DECLARE_NATIVE(to_string) {
   ENFORCE_ARG_COUNT(to_string, 1);
   METHOD_OVERRIDE(to_string, 9);
   char *result = value_to_string(vm, args[0]);
-  RETURN_STRING(result);
+  RETURN_TT_STRING(result);
 }
 
 /**
