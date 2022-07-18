@@ -517,13 +517,16 @@ void free_vm(b_vm *vm) {
   free_table(vm, &vm->globals);
   // since object in module can exist in globals
   // it must come after
-  clean_free_table(vm, &vm->modules);
+  free_table(vm, &vm->modules);
 
   free_table(vm, &vm->methods_string);
   free_table(vm, &vm->methods_list);
   free_table(vm, &vm->methods_dict);
   free_table(vm, &vm->methods_file);
   free_table(vm, &vm->methods_bytes);
+  free_table(vm, &vm->methods_range);
+
+  free_object(vm, (b_obj *)vm->exception_class);
 }
 
 static bool call(b_vm *vm, b_obj_closure *closure, int arg_count) {

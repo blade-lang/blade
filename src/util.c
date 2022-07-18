@@ -203,7 +203,7 @@ void utf8slice(char *s, int *start, int *end) {
 }
 
 char *read_file(const char *path) {
-  FILE *fp = fopen(path, "rb");
+  FILE *fp = fopen(path, "r");
 
   // file not readable (maybe due to permission)
   if (fp == NULL) {

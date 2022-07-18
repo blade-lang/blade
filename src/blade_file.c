@@ -194,6 +194,7 @@ DECLARE_FILE_METHOD(read) {
   size_t bytes_read = fread(buffer, sizeof(char), file_size, file->file);
 
   if (bytes_read == 0 && file_size != 0 && file_size == file_size_real) {
+    FREE_ARRAY(char, buffer, file_size + 1);
     FILE_ERROR(Read, "could not read file contents");
   }
 

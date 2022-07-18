@@ -184,8 +184,18 @@ void bind_native_modules(b_vm *vm) {
   for (int i = 0; modules[i] != NULL; i++) {
     load_module(vm, modules[i], NULL, strdup("<__native__>"), NULL);
   }
-  bind_user_modules(vm, merge_paths(get_exe_dir(), "dist"));
-  bind_user_modules(vm, merge_paths(getcwd(NULL, 0), LOCAL_PACKAGES_DIRECTORY LOCAL_EXT_DIRECTORY));
+
+  char *dist_dir = get_exe_dir();
+  char *dist_path = merge_paths(dist_dir, "dist");
+  bind_user_modules(vm, dist_path);
+  free(dist_dir);
+  free(dist_path);
+
+  char *current_dir = getcwd(NULL, 0);
+  char *cur_path = merge_paths(current_dir, LOCAL_PACKAGES_DIRECTORY LOCAL_EXT_DIRECTORY);
+  bind_user_modules(vm, cur_path);
+  free(current_dir);
+  free(cur_path);
 }
 
 char* load_user_module(b_vm *vm, const char *path, char *name) {
@@ -206,6 +216,7 @@ char* load_user_module(b_vm *vm, const char *path, char *name) {
 
   b_module_init fn = dlsym(handle, fn_name);
   if(fn == NULL) {
+    FREE_ARRAY(char, fn_name, length + 1);
     return (char *)dlerror();
   }
 
