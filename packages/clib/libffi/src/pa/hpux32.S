@@ -259,7 +259,7 @@ L$done
 L$FE1
 
 	/* void ffi_closure_pa32(void);
-	   Called with closure argument in %r19 */
+	   Called with closure argument in %r21 */
 
 	.SPACE $TEXT$
 	.SUBSPA $CODE$
@@ -285,9 +285,7 @@ L$CFI22
 	stw	%arg2, -44(%r3)
 	stw	%arg3, -48(%r3)
 
-	/* Retrieve closure pointer and real gp.  */
-	copy	%r19, %arg0
-	ldw	8(%r19), %r19
+	copy	%r21, %arg0
 	bl	ffi_closure_inner_pa32, %r2
 	copy    %r3, %arg1
 	ldwm	-64(%sp), %r3

@@ -42,7 +42,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 	EXPORT	ffi_go_closure_SYSV
 #endif
 
-	TEXTAREA, ALIGN=8
+	TEXTAREA, ALLIGN=8
 
 /* ffi_call_SYSV
    extern void ffi_call_SYSV (void *stack, void *frame,

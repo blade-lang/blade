@@ -27,10 +27,9 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #include <ffi.h>
 #include <ffi_common.h>
 #include "internal.h"
-#ifdef _WIN32
+#ifdef _M_ARM64
 #include <windows.h> /* FlushInstructionCache */
 #endif
-#include <tramp.h>
 
 /* Force FFI_TYPE_LONGDOUBLE to be different than FFI_TYPE_DOUBLE;
    all further uses in this file will refer to the 128-bit type.  */
@@ -63,9 +62,6 @@ struct call_context
 #if FFI_EXEC_TRAMPOLINE_TABLE
 
 #ifdef __MACH__
-#ifdef HAVE_PTRAUTH
-#include <ptrauth.h>
-#endif
 #include <mach/vm_param.h>
 #endif
 
@@ -82,7 +78,7 @@ ffi_clear_cache (void *start, void *end)
   sys_icache_invalidate (start, (char *)end - (char *)start);
 #elif defined (__GNUC__)
   __builtin___clear_cache (start, end);
-#elif defined (_WIN32)
+#elif defined (_M_ARM64)
   FlushInstructionCache(GetCurrentProcess(), start, (char*)end - (char*)start);
 #else
 #error "Missing builtin to flush instruction cache"
@@ -565,14 +561,6 @@ ffi_prep_cif_machdep_var(ffi_cif *cif, unsigned int nfixedargs,
   cif->aarch64_nfixedargs = nfixedargs;
   return status;
 }
-#else
-ffi_status FFI_HIDDEN
-ffi_prep_cif_machdep_var(ffi_cif *cif, unsigned int nfixedargs, unsigned int ntotalargs)
-{
-  ffi_status status = ffi_prep_cif_machdep (cif);
-  cif->flags |= AARCH64_FLAG_VARARG;
-  return status;
-}
 #endif /* __APPLE__ */
 
 extern void ffi_call_SYSV (struct call_context *context, void *frame,
@@ -589,19 +577,13 @@ ffi_call_int (ffi_cif *cif, void (*fn)(void), void *orig_rvalue,
   void *stack, *frame, *rvalue;
   struct arg_state state;
   size_t stack_bytes, rtype_size, rsize;
-  int i, nargs, flags, isvariadic = 0;
+  int i, nargs, flags;
   ffi_type *rtype;
 
   flags = cif->flags;
   rtype = cif->rtype;
   rtype_size = rtype->size;
   stack_bytes = cif->bytes;
-
-  if (flags & AARCH64_FLAG_VARARG)
-  {
-    isvariadic = 1;
-    flags &= ~AARCH64_FLAG_VARARG;
-  }
 
   /* If the target function returns a structure via hidden pointer,
      then we cannot allow a null rvalue.  Otherwise, mash a null
@@ -617,12 +599,11 @@ ffi_call_int (ffi_cif *cif, void (*fn)(void), void *orig_rvalue,
   else if (flags & AARCH64_RET_NEED_COPY)
     rsize = 16;
 
-  /* Allocate consectutive stack for everything we'll need.
-     The frame uses 40 bytes for: lr, fp, rvalue, flags, sp */
-  context = alloca (sizeof(struct call_context) + stack_bytes + 40 + rsize);
+  /* Allocate consectutive stack for everything we'll need.  */
+  context = alloca (sizeof(struct call_context) + stack_bytes + 32 + rsize);
   stack = context + 1;
   frame = (void*)((uintptr_t)stack + (uintptr_t)stack_bytes);
-  rvalue = (rsize ? (void*)((uintptr_t)frame + 40) : orig_rvalue);
+  rvalue = (rsize ? (void*)((uintptr_t)frame + 32) : orig_rvalue);
 
   arg_init (&state);
   for (i = 0, nargs = cif->nargs; i < nargs; i++)
@@ -683,31 +664,35 @@ ffi_call_int (ffi_cif *cif, void (*fn)(void), void *orig_rvalue,
 	    h = is_vfp_type (ty);
 	    if (h)
 	      {
-              int elems = 4 - (h & 3);
-              if (cif->abi == FFI_WIN64 && isvariadic)
-              {
-                if (state.ngrn + elems <= N_X_ARG_REG)
-                {
-                  dest = &context->x[state.ngrn];
-                  state.ngrn += elems;
-                  extend_hfa_type(dest, a, h);
-                  break;
-                }
-                state.nsrn = N_X_ARG_REG;
-                dest = allocate_to_stack(&state, stack, ty->alignment, s);
-              }
-              else
-              {
-                if (state.nsrn + elems <= N_V_ARG_REG)
-                {
-                  dest = &context->v[state.nsrn];
-                  state.nsrn += elems;
-                  extend_hfa_type (dest, a, h);
-                  break;
-                }
-                state.nsrn = N_V_ARG_REG;
-                dest = allocate_to_stack (&state, stack, ty->alignment, s);
-              }
+		int elems = 4 - (h & 3);
+#ifdef _M_ARM64 /* for handling armasm calling convention */
+                if (cif->is_variadic)
+                  {
+                    if (state.ngrn + elems <= N_X_ARG_REG)
+                      {
+                        dest = &context->x[state.ngrn];
+                        state.ngrn += elems;
+                        extend_hfa_type(dest, a, h);
+                        break;
+                      }
+                    state.nsrn = N_X_ARG_REG;
+                    dest = allocate_to_stack(&state, stack, ty->alignment, s);
+                  }
+                else
+                  {
+#endif /* for handling armasm calling convention */
+	        if (state.nsrn + elems <= N_V_ARG_REG)
+		  {
+		    dest = &context->v[state.nsrn];
+		    state.nsrn += elems;
+		    extend_hfa_type (dest, a, h);
+		    break;
+		  }
+		state.nsrn = N_V_ARG_REG;
+		dest = allocate_to_stack (&state, stack, ty->alignment, s);
+#ifdef _M_ARM64 /* for handling armasm calling convention */
+	      }
+#endif /* for handling armasm calling convention */
 	      }
 	    else if (s > 16)
 	      {
@@ -771,8 +756,6 @@ ffi_call (ffi_cif *cif, void (*fn) (void), void *rvalue, void **avalue)
   ffi_call_int (cif, fn, rvalue, avalue, NULL);
 }
 
-#if FFI_CLOSURES
-
 #ifdef FFI_GO_CLOSURES
 void
 ffi_call_go (ffi_cif *cif, void (*fn) (void), void *rvalue,
@@ -786,10 +769,6 @@ ffi_call_go (ffi_cif *cif, void (*fn) (void), void *rvalue,
 
 extern void ffi_closure_SYSV (void) FFI_HIDDEN;
 extern void ffi_closure_SYSV_V (void) FFI_HIDDEN;
-#if defined(FFI_EXEC_STATIC_TRAMP)
-extern void ffi_closure_SYSV_alt (void) FFI_HIDDEN;
-extern void ffi_closure_SYSV_V_alt (void) FFI_HIDDEN;
-#endif
 
 ffi_status
 ffi_prep_closure_loc (ffi_closure *closure,
@@ -798,7 +777,7 @@ ffi_prep_closure_loc (ffi_closure *closure,
                       void *user_data,
                       void *codeloc)
 {
-  if (cif->abi != FFI_SYSV && cif->abi != FFI_WIN64)
+  if (cif->abi != FFI_SYSV)
     return FFI_BAD_ABI;
 
   void (*start)(void);
@@ -810,9 +789,6 @@ ffi_prep_closure_loc (ffi_closure *closure,
 
 #if FFI_EXEC_TRAMPOLINE_TABLE
 #ifdef __MACH__
-#ifdef HAVE_PTRAUTH
-  codeloc = ptrauth_auth_data(codeloc, ptrauth_key_function_pointer, 0);
-#endif
   void **config = (void **)((uint8_t *)codeloc - PAGE_MAX_SIZE);
   config[0] = closure;
   config[1] = start;
@@ -824,21 +800,7 @@ ffi_prep_closure_loc (ffi_closure *closure,
     0x00, 0x02, 0x1f, 0xd6	/* br	x16		*/
   };
   char *tramp = closure->tramp;
-
-#if defined(FFI_EXEC_STATIC_TRAMP)
-  if (ffi_tramp_is_present(closure))
-    {
-      /* Initialize the static trampoline's parameters. */
-      if (start == ffi_closure_SYSV_V)
-          start = ffi_closure_SYSV_V_alt;
-      else
-          start = ffi_closure_SYSV_alt;
-      ffi_tramp_set_parms (closure->ftramp, start, closure);
-      goto out;
-    }
-#endif
-
-  /* Initialize the dynamic trampoline. */
+  
   memcpy (tramp, trampoline, sizeof(trampoline));
   
   *(UINT64 *)(tramp + 16) = (uintptr_t)start;
@@ -846,7 +808,7 @@ ffi_prep_closure_loc (ffi_closure *closure,
   ffi_clear_cache(tramp, tramp + FFI_TRAMPOLINE_SIZE);
 
   /* Also flush the cache for code mapping.  */
-#ifdef _WIN32
+#ifdef _M_ARM64
   // Not using dlmalloc.c for Windows ARM64 builds
   // so calling ffi_data_to_code_pointer() isn't necessary
   unsigned char *tramp_code = tramp;
@@ -854,7 +816,6 @@ ffi_prep_closure_loc (ffi_closure *closure,
   unsigned char *tramp_code = ffi_data_to_code_pointer (tramp);
   #endif
   ffi_clear_cache (tramp_code, tramp_code + FFI_TRAMPOLINE_SIZE);
-out:
 #endif
 
   closure->cif = cif;
@@ -874,7 +835,7 @@ ffi_prep_go_closure (ffi_go_closure *closure, ffi_cif* cif,
 {
   void (*start)(void);
 
-  if (cif->abi != FFI_SYSV && cif->abi != FFI_WIN64)
+  if (cif->abi != FFI_SYSV)
     return FFI_BAD_ABI;
 
   if (cif->flags & AARCH64_FLAG_ARG_V)
@@ -914,17 +875,10 @@ ffi_closure_SYSV_inner (ffi_cif *cif,
 			void *stack, void *rvalue, void *struct_rvalue)
 {
   void **avalue = (void**) alloca (cif->nargs * sizeof (void*));
-  int i, h, nargs, flags, isvariadic = 0;
+  int i, h, nargs, flags;
   struct arg_state state;
 
   arg_init (&state);
-
-  flags = cif->flags;
-  if (flags & AARCH64_FLAG_VARARG)
-  {
-    isvariadic = 1;
-    flags &= ~AARCH64_FLAG_VARARG;
-  }
 
   for (i = 0, nargs = cif->nargs; i < nargs; i++)
     {
@@ -960,7 +914,8 @@ ffi_closure_SYSV_inner (ffi_cif *cif,
 	  if (h)
 	    {
 	      n = 4 - (h & 3);
-              if (cif->abi == FFI_WIN64 && isvariadic)
+#ifdef _M_ARM64  /* for handling armasm calling convention */
+              if (cif->is_variadic)
                 {
                   if (state.ngrn + n <= N_X_ARG_REG)
                     {
@@ -986,6 +941,7 @@ ffi_closure_SYSV_inner (ffi_cif *cif,
                 }
               else
                 {
+#endif  /* for handling armasm calling convention */
                   if (state.nsrn + n <= N_V_ARG_REG)
                     {
                       void *reg = &context->v[state.nsrn];
@@ -998,7 +954,9 @@ ffi_closure_SYSV_inner (ffi_cif *cif,
                       avalue[i] = allocate_to_stack(&state, stack,
                                                    ty->alignment, s);
                     }
+#ifdef _M_ARM64  /* for handling armasm calling convention */
                 }
+#endif  /* for handling armasm calling convention */
             }
           else if (s > 16)
             {
@@ -1039,6 +997,7 @@ ffi_closure_SYSV_inner (ffi_cif *cif,
 #endif
     }
 
+  flags = cif->flags;
   if (flags & AARCH64_RET_IN_MEM)
     rvalue = struct_rvalue;
 
@@ -1046,19 +1005,5 @@ ffi_closure_SYSV_inner (ffi_cif *cif,
 
   return flags;
 }
-
-#if defined(FFI_EXEC_STATIC_TRAMP)
-void *
-ffi_tramp_arch (size_t *tramp_size, size_t *map_size)
-{
-  extern void *trampoline_code_table;
-
-  *tramp_size = AARCH64_TRAMP_SIZE;
-  *map_size = AARCH64_TRAMP_MAP_SIZE;
-  return &trampoline_code_table;
-}
-#endif
-
-#endif /* FFI_CLOSURES */
 
 #endif /* (__aarch64__) || defined(__arm64__)|| defined (_M_ARM64)*/

@@ -33,7 +33,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdint.h>
-#include <tramp.h>
 #include "internal64.h"
 
 #ifdef __x86_64__
@@ -218,8 +217,7 @@ classify_argument (ffi_type *type, enum x86_64_reg_class classes[],
     case FFI_TYPE_STRUCT:
       {
 	const size_t UNITS_PER_WORD = 8;
-        size_t words = (type->size + byte_offset + UNITS_PER_WORD - 1)
-                       / UNITS_PER_WORD;
+	size_t words = (type->size + UNITS_PER_WORD - 1) / UNITS_PER_WORD;
 	ffi_type **ptr;
 	unsigned int i;
 	enum x86_64_reg_class subclasses[MAX_CLASSES];
@@ -243,15 +241,14 @@ classify_argument (ffi_type *type, enum x86_64_reg_class classes[],
 	/* Merge the fields of structure.  */
 	for (ptr = type->elements; *ptr != NULL; ptr++)
 	  {
-	    size_t num, pos;
+	    size_t num;
 
 	    byte_offset = FFI_ALIGN (byte_offset, (*ptr)->alignment);
 
 	    num = classify_argument (*ptr, subclasses, byte_offset % 8);
 	    if (num == 0)
 	      return 0;
-            pos = byte_offset / 8;
-            for (i = 0; i < num && (i + pos) < words; i++)
+	    for (i = 0; i < num; i++)
 	      {
 		size_t pos = byte_offset / 8;
 		classes[i + pos] =
@@ -691,8 +688,6 @@ ffi_call (ffi_cif *cif, void (*fn)(void), void *rvalue, void **avalue)
   ffi_call_int (cif, fn, rvalue, avalue, NULL);
 }
 
-#ifdef FFI_GO_CLOSURES
-
 #ifndef __ILP32__
 extern void
 ffi_call_go_efi64(ffi_cif *cif, void (*fn)(void), void *rvalue,
@@ -713,14 +708,9 @@ ffi_call_go (ffi_cif *cif, void (*fn)(void), void *rvalue,
   ffi_call_int (cif, fn, rvalue, avalue, closure);
 }
 
-#endif /* FFI_GO_CLOSURES */
 
 extern void ffi_closure_unix64(void) FFI_HIDDEN;
 extern void ffi_closure_unix64_sse(void) FFI_HIDDEN;
-#if defined(FFI_EXEC_STATIC_TRAMP)
-extern void ffi_closure_unix64_alt(void) FFI_HIDDEN;
-extern void ffi_closure_unix64_sse_alt(void) FFI_HIDDEN;
-#endif
 
 #ifndef __ILP32__
 extern ffi_status
@@ -738,15 +728,13 @@ ffi_prep_closure_loc (ffi_closure* closure,
 		      void *user_data,
 		      void *codeloc)
 {
-  static const unsigned char trampoline[24] = {
-    /* endbr64 */
-    0xf3, 0x0f, 0x1e, 0xfa,
-    /* leaq  -0xb(%rip),%r10   # 0x0  */
-    0x4c, 0x8d, 0x15, 0xf5, 0xff, 0xff, 0xff,
-    /* jmpq  *0x7(%rip)        # 0x18 */
-    0xff, 0x25, 0x07, 0x00, 0x00, 0x00,
-    /* nopl  0(%rax) */
-    0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00
+  static const unsigned char trampoline[16] = {
+    /* leaq  -0x7(%rip),%r10   # 0x0  */
+    0x4c, 0x8d, 0x15, 0xf9, 0xff, 0xff, 0xff,
+    /* jmpq  *0x3(%rip)        # 0x10 */
+    0xff, 0x25, 0x03, 0x00, 0x00, 0x00,
+    /* nopl  (%rax) */
+    0x0f, 0x1f, 0x00
   };
   void (*dest)(void);
   char *tramp = closure->tramp;
@@ -763,24 +751,9 @@ ffi_prep_closure_loc (ffi_closure* closure,
   else
     dest = ffi_closure_unix64;
 
-#if defined(FFI_EXEC_STATIC_TRAMP)
-  if (ffi_tramp_is_present(closure))
-    {
-      /* Initialize the static trampoline's parameters. */
-      if (dest == ffi_closure_unix64_sse)
-        dest = ffi_closure_unix64_sse_alt;
-      else
-        dest = ffi_closure_unix64_alt;
-      ffi_tramp_set_parms (closure->ftramp, dest, closure);
-      goto out;
-    }
-#endif
-
-  /* Initialize the dynamic trampoline. */
   memcpy (tramp, trampoline, sizeof(trampoline));
-  *(UINT64 *)(tramp + sizeof (trampoline)) = (uintptr_t)dest;
+  *(UINT64 *)(tramp + 16) = (uintptr_t)dest;
 
-out:
   closure->cif = cif;
   closure->fun = fun;
   closure->user_data = user_data;
@@ -881,8 +854,6 @@ ffi_closure_unix64_inner(ffi_cif *cif,
   return flags;
 }
 
-#ifdef FFI_GO_CLOSURES
-
 extern void ffi_go_closure_unix64(void) FFI_HIDDEN;
 extern void ffi_go_closure_unix64_sse(void) FFI_HIDDEN;
 
@@ -911,19 +882,5 @@ ffi_prep_go_closure (ffi_go_closure* closure, ffi_cif* cif,
 
   return FFI_OK;
 }
-
-#endif /* FFI_GO_CLOSURES */
-
-#if defined(FFI_EXEC_STATIC_TRAMP)
-void *
-ffi_tramp_arch (size_t *tramp_size, size_t *map_size)
-{
-  extern void *trampoline_code_table;
-
-  *map_size = UNIX64_TRAMP_MAP_SIZE;
-  *tramp_size = UNIX64_TRAMP_SIZE;
-  return &trampoline_code_table;
-}
-#endif
 
 #endif /* __x86_64__ */

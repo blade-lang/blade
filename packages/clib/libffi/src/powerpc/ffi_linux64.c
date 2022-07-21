@@ -547,9 +547,9 @@ ffi_prep_args64 (extended_cif *ecif, unsigned long *const stack)
               if (next_arg.ul == gpr_end.ul)
                 next_arg.ul = rest.ul;
               if (vecarg_count < NUM_VEC_ARG_REGISTERS64 && i < nfixedargs)
-		memcpy (vec_base.f128++, *p_argv.f128, sizeof (float128));
+                *vec_base.f128++ = **p_argv.f128;
               else
-		memcpy (next_arg.f128, *p_argv.f128, sizeof (float128));
+                *next_arg.f128 = **p_argv.f128;
               if (++next_arg.f128 == gpr_end.f128)
                 next_arg.f128 = rest.f128;
               vecarg_count++;
@@ -680,9 +680,9 @@ ffi_prep_args64 (extended_cif *ecif, unsigned long *const stack)
                     {
                       if (vecarg_count < NUM_VEC_ARG_REGISTERS64
                           && i < nfixedargs)
-		        memcpy (vec_base.f128++, arg.f128, sizeof (float128));
+                        *vec_base.f128++ = *arg.f128++;
                       else
-		        memcpy (next_arg.f128, arg.f128++, sizeof (float128));
+                        *next_arg.f128 = *arg.f128++;
                       if (++next_arg.f128 == gpr_end.f128)
                         next_arg.f128 = rest.f128;
                       vecarg_count++;
@@ -986,9 +986,9 @@ ffi_closure_helper_LINUX64 (ffi_cif *cif,
                   do
                     {
                       if (pvec < end_pvec && i < nfixedargs)
-		        memcpy (to.f128, pvec++, sizeof (float128));
+                        *to.f128 = *pvec++;
                       else
-		        memcpy (to.f128, from.f128, sizeof (float128));
+                        *to.f128 = *from.f128;
                       to.f128++;
                       from.f128++;
                     }
