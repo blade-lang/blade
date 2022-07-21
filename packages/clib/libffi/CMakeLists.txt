@@ -24,6 +24,10 @@ if(NOT INSTALL_DIRECTORY)
     set(INSTALL_DIRECTORY ${CMAKE_BINARY_DIR}/out)
 endif()
 
+if(WIN32)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
+endif()
+
 
 # Create pkgconfig file
 set(PACKAGE_VERSION ${VERSION})
