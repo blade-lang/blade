@@ -832,7 +832,7 @@ class ZipArchive {
  * Extracts the zip archive at the _file_ path to the given _destination_ directory. 
  * If _destination_ is not given, the file will be extracted into the current working 
  * directory.
- * 
+ *
  * This function returns `true` if the extraction was successful and `false` otherwise.
  * 
  * > **NOTE:**
@@ -846,7 +846,7 @@ def extract(file, destination, is_zip64) {
   if destination != nil and !is_string(destination)
     die Exception('string expected in argument 2 (destination)')
   if is_zip64 != nil and !is_bool(is_zip64)
-    die Exception('string expected in argument 3 (use_zip64)')
+    die Exception('bool expected in argument 3 (use_zip64)')
 
   if is_zip64 == nil is_zip64 = false
 
@@ -877,11 +877,12 @@ def compress(path, destination, use_zip64) {
   if destination != nil and !is_string(destination)
     die Exception('string expected in argument 2 (destination)')
   if use_zip64 != nil and !is_bool(use_zip64)
-    die Exception('string expected in argument 3 (use_zip64)')
+    die Exception('boolean expected in argument 3 (use_zip64)')
 
   if !destination 
     destination = os.join_paths(os.cwd(), os.base_name(path)) + ZIP_EXT
   destination = os.abs_path(destination)
+
   if use_zip64 == nil use_zip64 = false
 
   var zip = ZipArchive(destination, use_zip64)

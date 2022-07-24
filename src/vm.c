@@ -607,6 +607,14 @@ bool call_value(b_vm *vm, b_value callee, int arg_count) {
         return true;
       }
 
+      case OBJ_MODULE: {
+        b_obj_module *module = AS_MODULE(callee);
+        b_value callable;
+        if(table_get(&module->values, STRING_VAL(module->name), &callable)) {
+          return call_value(vm, callable, arg_count);
+        }
+      }
+
       case OBJ_CLOSURE: {
         return call(vm, AS_CLOSURE(callee), arg_count);
       }
