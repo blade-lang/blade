@@ -100,9 +100,14 @@ var BOOL = 3
 var STRING = 4
 
 /**
- * value type enumeration choices.
+ * value type for list
  */
-var CHOICE = 5
+var LIST = 5
+
+# /**
+#  * value type enumeration choices.
+#  */
+# var CHOICE = 6
 
 var _type_name = {
   0: '',
@@ -110,18 +115,32 @@ var _type_name = {
   2: 'number',
   3: 'boolean',
   4: 'value',
-  5: 'choice',
+  5: 'list',
+  # 6: 'choice',
 }
 
 def _muted_text(text) {
-  return colors.text(colors.text(text, colors.text_color.dark_grey), colors.styles.italic)
+  return colors.text(colors.text(text, colors.text_color.dark_grey), colors.style.italic)
+}
+
+def _bold_text(text) {
+  return colors.text(colors.text(text), colors.style.bold)
+}
+
+def _main_headings(text) {
+  return colors.text(colors.text(text, colors.text_color.green), colors.style.bold)
+}
+
+def _yellow(text) {
+  return colors.text(colors.text(text, colors.text_color.yellow), colors.style.bold)
 }
 
 def _get_real_value(type, value) {
   if type == INT return to_int(to_number(value))
   else if type == NUMBER return to_number(value)
   else if type == BOOL return value == 'true' or value == '1'
-  else if type == STRING return value
+  else if type == STRING return to_string(value)
+  else if type == LIST return [value]
   return nil
 }
 
@@ -145,6 +164,7 @@ class _Option {
     self.short_name = short_name
     self.type = type ? type : NONE
     self.required = required
+    self.options = nil # required for _Option and subclasses
 
     if type < 0 or type > 5
       die ArgsException('invalid value type')
@@ -179,6 +199,9 @@ class _Optionable {
       die ArgsException('required must be boolean')
 
     self.options.append(_Option(name, help, short_name, type, required))
+
+    if instance_of(self, _Command)
+      return self
   }
 }
 
@@ -205,15 +228,21 @@ class Parser < _Optionable {
    * A list of commands supported by the parser.
    */
   var commands = []
+  var _default_help = true
 
   /**
-   * Parser(name: string)
-   * @param name refers to the name of the cli program.
+   * Parser(name: string [, default_help: bool = true])
+   * @param `name` refers to the name of the cli program.
+   * @param `default_help` whether to show help when no command or option is matched or not.
    * @constructor
    */
-  Parser(name) {
+  Parser(name, default_help) {
     if !is_string(name)
       die Exception('missing program name')
+    if default_help != nil and !is_bool(default_help)
+      die Exception('bool expected in argument 2 (default_help)')
+
+    self.default_help = default_help
 
     self.name = name
     self._command = nil
@@ -229,12 +258,21 @@ class Parser < _Optionable {
     )
   }
 
-  _get_option(name) {
-    for opt in self.options {
-      if '--${opt.long_name}' == name or '-${opt.short_name}' == name
-        return opt
+  _get_option(source, name) {
+    var result = []
+    for opt in source {
+      if '--${opt.long_name}' == name {
+        result.append(opt)
+      } else if name.starts_with('-') and name.length() > 1 {
+        if name[1] != '-' {  # we are not matching -- here...
+          for n in name {
+            if opt.short_name == n
+              result.append(opt)
+          }
+        }
+      }
     }
-    return nil
+    return result
   }
 
   _get_command(name) {
@@ -245,8 +283,33 @@ class Parser < _Optionable {
     return nil
   }
 
-  _get_help(help) {
-    return help or _muted_text('<no help message>')
+  _get_help(opt) {
+    var response = opt.help or _muted_text('<no help message>')
+    if opt.options {
+      var options_width = self._get_options_text_width(),
+        commands_width = self._get_commands_text_width(),
+        width = options_width > commands_width ? options_width : commands_width
+      
+      for op in opt.options {
+
+        var line = '\n'
+        if op.short_name {
+          line += '-${op.short_name},'.lpad(op.short_name.length() + 8) + ' --${op.long_name}'
+        } else {
+          line += '--${op.long_name}'.lpad(op.long_name.length() + 8)
+        }
+
+        if op.type != NONE
+          line += ' <' + _type_name[op.type] + '>'
+
+        # We want to separate the longtest option names at least 12
+        # characters away from the help texts.
+        line = line.rpad(width + 6)
+
+        response += _muted_text(line + self._get_help(op))
+      }
+    }
+    return response
   }
 
   _get_hint_line(opt) {
@@ -303,24 +366,24 @@ class Parser < _Optionable {
     if !command {
       var flags_hint = self._get_flags_hint()
 
-      echo 'Usage: ${self.name} ' + 
+      echo _main_headings('Usage:') + _yellow(' ${self.name} ' + 
         (flags_hint ? '[ ${flags_hint} ]' : '') + 
-        (self.commands.length() > 0 ? ' [COMMAND]' : '')
+        (self.commands.length() > 0 ? ' [COMMAND]' : ''))
     } else {
-      echo 'Usage: ${self.name} ${command.name}' + 
-          (command.type != NONE ? ' <${_type_name[command.type]}>' : '')
+      echo _main_headings('Usage:') + _yellow(' ${self.name} ${command.name}' + 
+          (command.type != NONE ? ' <${_type_name[command.type]}>' : ''))
     }
   }
 
   _command_error(name, message) {
     io.stderr.write(colors.text('error: ${message}\n', colors.text_color.red))
-    echo ''
     self._help_action(name)
     os.exit(1)
   }
 
   _option_error(name, message) {
     io.stderr.write(colors.text('error: ${message}\n', colors.text_color.red))
+    self._print_help()
     os.exit(1)
   }
 
@@ -330,7 +393,7 @@ class Parser < _Optionable {
         width = options_width > commands_width ? options_width : commands_width
     
     echo ''
-    echo 'OPTIONS:'
+    echo _main_headings('OPTIONS:')
     for opt in self.options {
       var line = ''
       if opt.short_name {
@@ -344,24 +407,25 @@ class Parser < _Optionable {
 
       # We want to separate the longtest option names at least 12
       # characters away from the help texts.
-      line = line.rpad(width + 12)
+      line = line.rpad(width + 5)
 
-      echo line + self._get_help(opt.help)
+      echo line + self._get_help(opt)
     }
     echo ''
-    echo 'COMMANDS:'
+    echo _main_headings('COMMANDS:')
     for opt in self.commands {
-      var line = opt.name.lpad(opt.name.length() + 2)
+      var line = '  ' + _bold_text(opt.name)
 
       if opt.type != NONE
         line += ' <' + _type_name[opt.type] + '>'
 
       # We want to separate the longtest option names at least 12
       # characters away from the help texts.
-      line = line.rpad(width + 12)
+      line = line.rpad(width + 20)
 
-      echo line + self._get_help(opt.help)
+      echo line + self._get_help(opt)
     }
+    echo ''
   }
 
   # This method should ever be called directly.
@@ -377,7 +441,7 @@ class Parser < _Optionable {
       if command {
         self._usage_hint(command)
         echo ''
-        echo '  ${self._get_help(command.help)}'
+        echo '  ${self._get_help(command)}'
         echo ''
       } else {
         self._usage_hint(command)
@@ -433,7 +497,9 @@ class Parser < _Optionable {
     var type = to_int(to_number(opts.get('type', NONE))),
         action = opts.get('action')
 
-    self.commands.append(_Command(name, help, type, action))
+    var command = _Command(name, help, type, action)
+    self.commands.append(command)
+    return command
   }
 
   /**
@@ -463,68 +529,100 @@ class Parser < _Optionable {
       # Commands can only occur in the first index of the argument list. 
       # Every other occurrence will be treated as a value.
       # if i == 0 {
-        # Then treat commands.
-        var command = self._get_command(arg)
-        if command {
-          self._command = command.name
-          if command.type != NONE {
-            if i < cli_args.length() - 1 {
-              i++
-              var value = cli_args[i]
-              parsed_args.command = {
-                name: command.name,
-                value: _get_real_value(command.type, value)
+      # Then treat commands.
+      var command = self._get_command(arg)
+
+      def parse_options(source, arg, fail) {
+        var options = self._get_option(source, arg)
+        if options and (options.length() == arg.length() - 1 or arg.starts_with('--')) {
+          i++
+
+          # ...
+
+          for option in options {
+            # We only automatically trigger actions for options during parsing 
+            # if the option is the very first item in the argument list and == 'help'.
+            # This is because this action is library bound and are meant to be triggered
+            # automatically.
+            if option.long_name == 'help' {
+              self._help_action(i < cli_args.length() - 1 ? cli_args[i + 1] : nil)
+            } else if option.type != NONE {
+              if i < cli_args.length() - 1 {
+                var value = cli_args[i]
+                parsed_args.options.set(
+                  '${option.long_name}', 
+                  _get_real_value(option.type, value)
+                )
+              } else {
+                self._option_error(option.long_name, 'Option "${option.long_name}" expects a ${_type_name[option.type]}')
               }
             } else {
-              self._command_error(command.name, 'Command "${command.name}" expects a ${_type_name[command.type]}')
-            }
-          } else {
-            parsed_args.command = {
-              name: command.name,
-              value: nil
+              parsed_args.options.set('${option.long_name}', true)
             }
           }
-          command_found = true
+        } else if options and (arg.length() - 1 != options.length() or !arg.starts_with('--')) {
+          if command_found {
+            self._command_error(command.name, 'Unsupported argument encountered at ${arg}')
+          } else {
+            self._option_error(arg, 'Unsupported argument: ${arg}')
+          }
+        } else if fail or arg.starts_with('-') {
+          if command_found {
+            self._command_error(command.name, 'Unknown argument ${arg} for ${command.name}')
+          } else {
+            self._option_error(arg, 'Unknown argument: ${arg}')
+          }
         }
+      }
+
+      if command {
+        command_found = true
+        self._command = command.name
+
+        # If options exist, we must parse them here... before 
+        # we parse value.
+        while i < cli_args.length() - 1 and cli_args[i + 1].starts_with('-') {
+          parse_options(command.options, cli_args[i + 1])
+        }
+
+        if command.type != NONE {
+          i++
+          if i < cli_args.length() - 1 {
+            var value = cli_args[i]
+            parsed_args.command = {
+              name: command.name,
+              value: _get_real_value(command.type, value)
+            }
+
+            if command.type == LIST {
+              while i < cli_args.length() - 1 {
+                i++
+                parsed_args.command.value.append(cli_args[i])
+              }
+            }
+          } else {
+            self._command_error(command.name, 'Command "${command.name}" expects a ${_type_name[command.type]}')
+          }
+        } else {
+          parsed_args.command = {
+            name: command.name,
+            value: nil
+          }
+        }
+      }
       # }
 
       if !command_found {
         # Treat options next.
-        var option = self._get_option(arg)
-        if option {
-
-          # ...
-
-          # We only automatically trigger actions for options during parsing 
-          # if the option is the very first item in the argument list and == 'help'.
-          # This is because this action is library bound and are meant to be triggered
-          # automatically.
-          if option.long_name == 'help' {
-            self._help_action(i < cli_args.length() - 1 ? cli_args[i + 1] : nil)
-          } else if option.type != NONE {
-            if i < cli_args.length() - 1 {
-              i++
-              var value = cli_args[i]
-              parsed_args.options.extend({
-                '${option.long_name}': _get_real_value(option.type, value)
-              })
-            } else {
-              self._option_error(option.long_name, 'Option "${option.long_name}" expects a ${_type_name[option.type]}')
-            }
-          } else {
-            parsed_args.options.extend({
-              '${option.long_name}': true
-            })
-          }
-        } else {
-          if arg.starts_with('-') or i != 0 {
-            self._option_error(arg, 'Unknown argument: ${arg}')
-          } else {
-            self._command_error(arg, 'Unknown command: ${arg}')
-          }
-        }
+        parse_options(self.options, arg, true)
       }
     }
+
+    if !parsed_args.command and !parsed_args.options and self._default_help {
+      self._usage_hint()
+      self._print_help()
+    }
+
     return parsed_args
   }
 }

@@ -1,3 +1,8 @@
+#ifdef _WIN32
+#undef HAVE_DIRNAME
+#undef HAVE_BASENAME
+#endif
+
 #include "module.h"
 #include "pathinfo.h"
 #include "value.h"
