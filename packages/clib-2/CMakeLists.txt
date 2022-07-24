@@ -19,7 +19,7 @@ message(STATUS "Building clib module to ${BLADE_ROOT}/dist")
 include_directories("${BLADE_ROOT}/includes" ${CMAKE_CURRENT_SOURCE_DIR})
 #link_directories("${BLADE_ROOT}")
 
-add_library(clib SHARED clib.c)
+add_library(clib SHARED php_ffi.h ffi_parser.c clib.c)
 target_link_libraries(clib libblade)
 add_dependencies(clib blade)
 
