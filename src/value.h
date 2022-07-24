@@ -169,6 +169,8 @@ b_value copy_value(b_vm *vm, b_value value);
 #define STRING_L_VAL(val, l) OBJ_VAL(copy_string(vm, val, l))
 #define STRING_T_VAL(val, l) OBJ_VAL(take_string(vm, val, l))
 #define STRING_TT_VAL(val) OBJ_VAL(take_string(vm, val, (int)strlen(val)))
+#define BYTES_VAL(val) OBJ_VAL(take_bytes(vm, (unsigned char *)(val), (int)strlen((char *)(val))))
+#define PTR_VAL(val) OBJ_VAL(new_ptr(vm, val))
 
 #ifdef __cplusplus
 }
