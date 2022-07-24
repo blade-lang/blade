@@ -178,6 +178,8 @@ void bind_user_modules(b_vm *vm, char *pkg_root) {
     }
     closedir(dir);
   }
+
+  CLEAR_GC();
 }
 
 void bind_native_modules(b_vm *vm) {

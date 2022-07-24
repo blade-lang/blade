@@ -209,11 +209,12 @@ b_obj_up_value *new_up_value(b_vm *vm, b_value *slot) {
   return up_value;
 }
 
-static void print_function(b_obj_func *function) {
-  if (function->name == NULL) {
-    printf("<script at %p>", (void *) function);
+static void print_function(b_obj_func *func) {
+  if (func->name == NULL) {
+    printf("<script at %p>", (void *) func);
   } else {
-    printf("<function %s at %p>", function->name->chars, (void *) function);
+    printf(func->is_variadic ? "<function %s(%d...) at %p>" : "<function %s(%d) at %p>",
+           func->name->chars, func->arity, (void *) func);
   }
 }
 
@@ -328,7 +329,7 @@ void print_object(b_value value, bool fix_string) {
     }
     case OBJ_NATIVE: {
       b_obj_native *native = AS_NATIVE(value);
-      printf("<function(native) %s at %p>", native->name, (void *) native);
+      printf("<function %s(native) at %p>", native->name, (void *) native);
       break;
     }
     case OBJ_UP_VALUE: {
@@ -364,9 +365,12 @@ static inline char *function_to_string(b_obj_func *func) {
   if (func->name == NULL) {
     return strdup("<script 0x00>");
   }
-  char *str = (char *) malloc(sizeof(char) * (snprintf(NULL, 0, "<function %s>", func->name->chars)));
+
+  const char* format = func->is_variadic ? "<function %s(%d...)>" : "<function %s(%d)>";
+  char *str = (char *) malloc(sizeof(char) *
+      (snprintf(NULL, 0, format, func->name->chars, func->arity)));
   if (str != NULL) {
-    sprintf(str, "<function %s>", func->name->chars);
+    sprintf(str, format, func->name->chars, func->arity);
     return str;
   }
   return strdup(func->name->chars);
@@ -465,7 +469,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     case OBJ_FUNCTION:
       return function_to_string(AS_FUNCTION(value));
     case OBJ_NATIVE:{
-      const char *format = "<native-function %s>";
+      const char *format = "<function %s(native)>";
       const char *data = AS_NATIVE(value)->name;
       char *str = ALLOCATE(char, snprintf(NULL, 0, format, data));
       if(str != NULL) {
@@ -475,7 +479,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     }
     case OBJ_RANGE: {
       b_obj_range *range = AS_RANGE(value);
-      const char *format = "<range %d-%d>";
+      const char *format = "<range %d..%d>";
       char *str = ALLOCATE(char, snprintf(NULL, 0, format, range->lower, range->upper));
       if(str != NULL) {
         sprintf(str, format, range->lower, range->upper);
@@ -494,7 +498,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     case OBJ_STRING:
       return strdup(AS_C_STRING(value));
     case OBJ_UP_VALUE:
-      return strdup("<up value>");
+      return strdup("<up-value>");
     case OBJ_BYTES:
       return bytes_to_string(vm, &AS_BYTES(value)->bytes);
     case OBJ_LIST:

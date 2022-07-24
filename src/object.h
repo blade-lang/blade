@@ -212,7 +212,7 @@ typedef struct {
 typedef struct {
   b_obj obj;
   void *pointer;
-  const char *name;
+  char *name;
   b_ptr_free_fn free_fn;
 } b_obj_ptr;
 

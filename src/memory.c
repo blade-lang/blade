@@ -13,7 +13,7 @@
 #include <stdio.h>
 #endif
 
-void *allocate(b_vm *vm, size_t size, size_t length) {
+void *allocate(b_vm *vm, size_t size) {
   vm->bytes_allocated += size;
 
   if (vm->bytes_allocated > vm->next_gc) {
@@ -23,7 +23,7 @@ void *allocate(b_vm *vm, size_t size, size_t length) {
   if (size == 0) {
     return NULL;
   }
-  void *result = calloc(length, size);
+  void *result = malloc(size);
 
   // just in case reallocation fails... computers ain't infinite!
   if (result == NULL) {

@@ -48,5 +48,4 @@ add_custom_target(copy-zlib2-to-libs ALL
         )
 
 add_custom_command(TARGET zlib2 POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:zlib2> ${BLADE_ROOT}/dist
-        COMMENT "ZLib copy")
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:zlib2> ${BLADE_ROOT}/dist)
