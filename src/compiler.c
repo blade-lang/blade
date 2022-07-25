@@ -2140,8 +2140,13 @@ static void import_statement(b_parser *p) {
 
   b_blob blob;
   init_blob(&blob);
+
   b_obj_module *module = new_module(p->vm, module_name, module_path);
+
+  push(p->vm, OBJ_VAL(module));
   b_obj_func *function = compile(p->vm, module, source, &blob);
+  pop(p->vm);
+
   free(source);
 
   if (function == NULL) {

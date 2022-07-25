@@ -137,8 +137,8 @@ def _main_headings(text) {
   return colors.text(colors.text(text, colors.text_color.green), colors.style.bold)
 }
 
-def _yellow(text) {
-  return colors.text(colors.text(text, colors.text_color.yellow), colors.style.bold)
+def _cyan_text(text) {
+  return colors.text(colors.text(text, colors.text_color.cyan), colors.style.bold)
 }
 
 def _get_real_value(type, value) {
@@ -372,11 +372,11 @@ class Parser < _Optionable {
     if !command {
       var flags_hint = self._get_flags_hint()
 
-      echo _main_headings('Usage:') + _yellow(' ${self.name} ' + 
+      echo _main_headings('Usage:') + _cyan_text(' ${self.name} ' + 
         (flags_hint ? '[ ${flags_hint} ]' : '') + 
         (self.commands.length() > 0 ? ' [COMMAND]' : ''))
     } else {
-      echo _main_headings('Usage:') + _yellow(' ${self.name} ${command.name}' + 
+      echo _main_headings('Usage:') + _cyan_text(' ${self.name} ${command.name}' + 
           (command.type != NONE ? ' <${_type_name[command.type]}>' : ''))
     }
   }
@@ -527,6 +527,7 @@ class Parser < _Optionable {
       options: {},
       command: nil,
     }
+    var help_shown = false
 
     iter var i = 0; i < cli_args.length(); i++ {
       var arg = cli_args[i]
@@ -549,7 +550,8 @@ class Parser < _Optionable {
             # if the option is the very first item in the argument list and == 'help'.
             # This is because this action is library bound and are meant to be triggered
             # automatically.
-            if option.long_name == 'help' {
+            if option.long_name == 'help' and !command_found {
+              help_shown = true
               self._help_action(i < cli_args.length() - 1 ? cli_args[i + 1] : nil)
             } else if option.type == OPTIONAL {
               if i < cli_args.length() {
@@ -636,7 +638,7 @@ class Parser < _Optionable {
       }
     }
 
-    if !parsed_args.command and !parsed_args.options and self._default_help {
+    if !parsed_args.command and !parsed_args.options and self._default_help and !help_shown {
       self._usage_hint()
       self._print_help()
     }
