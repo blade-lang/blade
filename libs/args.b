@@ -109,6 +109,11 @@ var LIST = 5
 #  */
 # var CHOICE = 6
 
+# /**
+#  * value type optional.
+#  */
+var OPTIONAL = 7
+
 var _type_name = {
   0: '',
   1: 'number',
@@ -117,6 +122,7 @@ var _type_name = {
   4: 'value',
   5: 'list',
   # 6: 'choice',
+  7: 'value',
 }
 
 def _muted_text(text) {
@@ -141,7 +147,7 @@ def _get_real_value(type, value) {
   else if type == BOOL return value == 'true' or value == '1'
   else if type == STRING return to_string(value)
   else if type == LIST return [value]
-  return nil
+  return value
 }
 
 /**
@@ -166,7 +172,7 @@ class _Option {
     self.required = required
     self.options = nil # required for _Option and subclasses
 
-    if type < 0 or type > 5
+    if type < NONE or type > OPTIONAL
       die ArgsException('invalid value type')
   }
 }
@@ -538,7 +544,6 @@ class Parser < _Optionable {
           i++
 
           # ...
-
           for option in options {
             # We only automatically trigger actions for options during parsing 
             # if the option is the very first item in the argument list and == 'help'.
@@ -546,6 +551,19 @@ class Parser < _Optionable {
             # automatically.
             if option.long_name == 'help' {
               self._help_action(i < cli_args.length() - 1 ? cli_args[i + 1] : nil)
+            } else if option.type == OPTIONAL {
+              if i < cli_args.length() {
+                i++
+                if i < cli_args.length() {
+                  var value = cli_args[i]
+                  parsed_args.options.set(
+                    '${option.long_name}', 
+                    _get_real_value(option.type, value)
+                  )
+                } else {
+                  self._command_error(command.name, 'Option "${option.long_name}" expects a ${_type_name[option.type]}')
+                }
+              }
             } else if option.type != NONE {
               if i < cli_args.length() - 1 {
                 var value = cli_args[i]
@@ -585,9 +603,9 @@ class Parser < _Optionable {
           parse_options(command.options, cli_args[i + 1])
         }
 
-        if command.type != NONE {
-          i++
+        if command.type != NONE or command.type == OPTIONAL {
           if i < cli_args.length() - 1 {
+            i++
             var value = cli_args[i]
             parsed_args.command = {
               name: command.name,
@@ -600,7 +618,7 @@ class Parser < _Optionable {
                 parsed_args.command.value.append(cli_args[i])
               }
             }
-          } else {
+          } else if command.type != OPTIONAL {
             self._command_error(command.name, 'Command "${command.name}" expects a ${_type_name[command.type]}')
           }
         } else {
