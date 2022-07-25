@@ -896,6 +896,18 @@ DECLARE_MODULE_METHOD(curl__mime_data) {
   RETURN_ERROR(get_error_message(result));
 }
 
+DECLARE_MODULE_METHOD(curl__mime_filedata) {
+  ENFORCE_ARG_COUNT(mime_data, 2);
+  ENFORCE_ARG_TYPE(mime_data, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(mime_data, 1, IS_STRING);
+  curl_mimepart *part = (curl_mimepart*)AS_PTR(args[0])->pointer;
+  CURLcode result = curl_mime_filedata(part, AS_C_STRING(args[1]));
+  if(result == CURLE_OK) {
+    RETURN_TRUE;
+  }
+  RETURN_ERROR(get_error_message(result));
+}
+
 DECLARE_MODULE_METHOD(curl__slist_create) {
   ENFORCE_ARG_COUNT(slist_create, 1);
   ENFORCE_ARG_TYPE(slist_create, 0, IS_LIST);
@@ -1274,6 +1286,7 @@ CREATE_MODULE_LOADER(curl) {
       {"mime_addpart",   true,  GET_MODULE_METHOD(curl__mime_addpart)},
       {"mime_name",   true,  GET_MODULE_METHOD(curl__mime_name)},
       {"mime_data",   true,  GET_MODULE_METHOD(curl__mime_data)},
+      {"mime_filedata",   true,  GET_MODULE_METHOD(curl__mime_filedata)},
       {"slist_create",   true,  GET_MODULE_METHOD(curl__slist_create)},
       {"slist_free",   true,  GET_MODULE_METHOD(curl__slist_free)},
       {NULL,    false, NULL},

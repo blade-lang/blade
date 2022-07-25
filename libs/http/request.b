@@ -2,13 +2,24 @@
 
 import ._process
 
-import .exception { HttpException }
+import .exception { 
+  HttpException 
+}
 import .status { * }
-import .response { HttpResponse }
+import .response { 
+  HttpResponse 
+}
 
 import url
 import socket
-import curl { Option, Info, Curl, CurlList }
+import curl { 
+  Option, 
+  Info, 
+  Curl, 
+  CurlList, 
+  CurlMime, 
+  Auth 
+}
 import ssl
 
 /**
@@ -20,63 +31,82 @@ class HttpRequest {
 
   /**
    * The original request URL as sent in the raw request.
+   * @type string
    */
   var request_uri
 
   /**
    * The requested path or file. E.g. if the Request URI is `/users?sort=desc`, 
    * then the path is `/users`.
+   * @type string
    */
   var path
 
   /**
-   * A string corresponding to the HTTP method of the request: GET, POST, PUT, etc.
+   * The HTTP method of the request: GET, POST, PUT, etc.
+   * @type string
+   * @default GET
    */
   var method
 
   /**
    * The hostname derived from the `Host` header or the first instance of 
    * `X-Forwarded-Host` if set.
+   * @type string
    */
   var host
 
   /**
    * The IP address of the remote client that initiated the request.
+   * @type string
    */
   var ip
 
   /**
    * A dictionary containing the headers sent with the request.
+   * @type dictionary
    */
   var headers
 
   /**
    * A dictionary containing the entries of the URI query string.
+   * @type dictionary
    */
   var queries = {}
 
   /**
    * A dictionary containing the cookies sent with the request.
+   * @type dictionary
    */
   var cookies = {}
 
   /**
    * A dictionary containing all data submitted in the request body.
+   * @type dictionary
    */
   var body = {}
 
   /**
    * A dictionary containing the data of all files uploaded in the request.
+   * @type dictionary
    */
   var files = {}
 
-  # Private fields.
-  var _body_type = 'application/x-www-form-urlencoded'
-
   /**
    * The HTTP version used for the request.
+   * @type string
    */
-  var http_version = '1.0'
+  var http_version = '1.1'
+
+  /**
+   * The HTTP authentication method to use when the uri contains a credential.
+   * @type Auth
+   * @default Auth.ANY
+   */
+  var auth_method = Auth.ANY
+
+  # Private fields.
+  var _body_type = 'application/x-www-form-urlencoded'
 
   _read_cookies() {
     var cookies = self.headers.get('Cookie', nil)
@@ -327,6 +357,38 @@ class HttpRequest {
     return false
   }
 
+  _create_send_request_body(curl, data) {
+    if data {
+      if !is_dict(data) and self.files {
+        die Exception('data must be a dictionary when files are not empty')
+      } else if !is_dict(data) and !self.fields {
+        curl.set_option(Option.POSTFIELDS, data)
+      } else {
+        var mime = CurlMime()
+
+        for k, v in data {
+          mime.add(k, v)
+        }
+  
+        if self.files {
+          for k, v in files {
+            mime.add_file(k, v)
+          }
+        }
+  
+        curl.set_option(Option.MIMEPOST, mime)
+      }
+    } else {
+      var mime = CurlMime()
+
+      for k, v in data {
+        mime.add(k, v)
+      }
+
+      curl.set_option(Option.MIMEPOST, mime)
+    }
+  }
+
   /**
    * send(uri: Url, method: string [, data: string | bytes [, options: dict]])
    * @default follow_redirect: true
@@ -338,8 +400,8 @@ class HttpRequest {
       die Exception('uri must be an instance of Url')
     if !is_string(method)
       die Exception('method must be string')
-    if data != nil and !is_string(data) and !is_byte(data)
-      die Exception('data must be string or bytes')
+    if data != nil and !is_string(data) and !is_byte(data) and !is_dict(data)
+      die Exception('data must be string, bytes or dictionary')
     if options != nil and !is_dict(options)
       die Exception('options must be a dictionary')
 
@@ -367,8 +429,24 @@ class HttpRequest {
     curl.set_option(Option.SSL_VERIFYPEER, !options.get('skip_peer_verification', false))
     curl.set_option(Option.SSL_VERIFYHOST, !options.get('skip_hostname_verification', false))
 
+    if uri.username {
+      curl.set_option(Option.USERNAME, uri.username)
+      curl.set_option(Option.PASSWORD, uri.password)
+
+      # Set the authentication method
+      curl.set_option(Option.HTTPAUTH, self.auth_method)
+    }
+
+    # Handle cookies.
     var cookie_file = options.get('cookie_file', nil)
     if cookie_file curl.set_option(Option.COOKIEFILE, cookie_file)
+    if self.cookies {
+      var cookie = ''
+      for k, v in self.cookies {
+        cookie += '${k}=${v};'
+      }
+      curl.set_option(Option.COOKIE, cookie)
+    }
 
     # Just trying to get a little performance boost.
     if uri.scheme.lower() == 'https' {
@@ -386,10 +464,9 @@ class HttpRequest {
       }
     }
     curl.set_option(Option.HTTPHEADER, CurlList(headers))
-
-    if data {
-      curl.set_option(Option.POSTFIELDS, data)
-    }
+    
+    # handle files and data here...
+    self._create_send_request_body(curl, data)
 
     var result = curl.send()
 
