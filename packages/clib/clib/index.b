@@ -22,7 +22,7 @@
 # 
 # # 2. Declare the functions
 # var dirname = lib.define('dirname', clib.char_ptr, clib.char_ptr)
-# var cos = lib.define('cos', clib.double, clib.double)
+# var cos = lib.define('cos', clib.double, clib.double)     # this may not work on linux
 # 
 # # 3. Call the functions
 # echo dirname('/path/to/my/file.ext')
@@ -73,8 +73,6 @@ class Clib {
       die Exception('string expected in argument 1 (name)')
 
     if name {
-      if !name.ends_with(_EXT)
-        name += _EXT
       self.load(name)
     }
   }
@@ -90,13 +88,13 @@ class Clib {
    * Loads a new C shared library pointed to by name. Name must be a 
    * relative path, absolute path or the name of a system library. 
    * If the system shared library extension is omitted in the name, 
-   * it will be automatically added.
+   * it will be automatically added except on Linux machines.
    * @return CLib
    */
   load(name) {
     if !is_string(name)
       die Exception('string expected in argument 1 (name)')
-    if !name.ends_with(_EXT)
+    if !name.ends_with(_EXT) and os.platform != 'linux'
       name += _EXT
 
     if self._ptr
