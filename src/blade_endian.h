@@ -1,6 +1,13 @@
 #ifndef BLADE_ENDIAN_H
 #define BLADE_ENDIAN_H
 
+#ifndef _WIN32
+#include <sys/param.h>
+#endif
+
+#include <inttypes.h>
+#include <stdint.h>
+
 #ifndef BYTE_ORDER
 #if (BSD >= 199103) || defined(__MACH__) || defined(__APPLE__)
 
@@ -55,7 +62,20 @@
 #error "Undefined or invalid BYTE_ORDER"
 #endif
 
-#define IS_LITTLE_ENDIAN BYTE_ORDER == LITTLE_ENDIAN
-#define IS_BIG_ENDIAN BYTE_ORDER == BIG_ENDIAN
+#if BYTE_ORDER == LITTLE_ENDIAN
+#define IS_LITTLE_ENDIAN 1
+#define IS_BIG_ENDIAN 0
+#elif BYTE_ORDER == BIG_ENDIAN
+#define IS_LITTLE_ENDIAN 0
+#define IS_BIG_ENDIAN 1
+#else
+#error "Cannot determine machine endianess."
+#endif
+
+#if defined(__x86_64__) || defined(__LP64__) || defined(_LP64) || defined(_WIN64) || defined(__aarch64__)
+# define IS_64_BIT 1
+#else
+#define IS_64_BIT 0
+#endif
 
 #endif //BLADE_ENDIAN_H

@@ -1999,7 +1999,7 @@ static void die_statement(b_parser *p) {
   emit_byte(p, OP_DIE);
 }
 
-static void parse_specific_import(b_parser *p, int import_constant, bool was_renamed, bool is_native) {
+static void parse_specific_import(b_parser *p, char *module_name, int import_constant, bool was_renamed, bool is_native) {
   if (match(p, LBRACE_TOKEN)) {
     if (was_renamed) {
       error(p, "selective import on renamed module");
@@ -2007,6 +2007,7 @@ static void parse_specific_import(b_parser *p, int import_constant, bool was_ren
     }
 
     emit_byte_and_short(p, OP_CONSTANT, import_constant);
+    bool same_name_selective_exist = false;
 
     do {
       ignore_whitespace(p);
@@ -2018,6 +2019,12 @@ static void parse_specific_import(b_parser *p, int import_constant, bool was_ren
       }
 
       int name = parse_variable(p, "module object name expected");
+
+      if(module_name != NULL && p->previous.length == (int)strlen(module_name) &&
+          memcmp(module_name, p->previous.start, p->previous.length) == 0) {
+        same_name_selective_exist = true;
+      }
+
       emit_byte_and_short(p, is_native ? OP_SELECT_NATIVE_IMPORT : OP_SELECT_IMPORT, name);
     } while (match(p, COMMA_TOKEN));
     ignore_whitespace(p);
@@ -2025,7 +2032,9 @@ static void parse_specific_import(b_parser *p, int import_constant, bool was_ren
     consume(p, RBRACE_TOKEN, "expected '}' at end of selective import");
     consume_statement_end(p);
 
-    emit_byte_and_short(p, is_native ? OP_EJECT_NATIVE_IMPORT : OP_EJECT_IMPORT, import_constant);
+    if(!same_name_selective_exist) {
+      emit_byte_and_short(p, is_native ? OP_EJECT_NATIVE_IMPORT : OP_EJECT_IMPORT, import_constant);
+    }
     emit_byte(p, OP_POP); // pop the module constant from stack
   }
 }
@@ -2062,32 +2071,32 @@ static void import_statement(b_parser *p) {
       }
     }
 
+    if(module_name != NULL) {
+      free(module_name);
+    }
+
     consume(p, IDENTIFIER_TOKEN, "module name expected");
 
-    char *name = (char *) calloc(p->previous.length + 1, sizeof(char));
-    memcpy(name, p->previous.start, p->previous.length);
+    module_name = (char *) calloc(p->previous.length + 1, sizeof(char));
+    memcpy(module_name, p->previous.start, p->previous.length);
+    module_name[p->previous.length] = '\0';
 
     // handle native modules
-    if (part_count == 0 && name[0] == '_' && !is_relative) {
-      int module = make_constant(p, OBJ_VAL(copy_string(p->vm, name, (int) strlen(name))));
+    if (part_count == 0 && module_name[0] == '_' && !is_relative) {
+      int module = make_constant(p, OBJ_VAL(copy_string(p->vm, module_name, (int) strlen(module_name))));
       emit_byte_and_short(p, OP_NATIVE_MODULE, module);
 
-      parse_specific_import(p, module, false, true);
+      parse_specific_import(p, module_name, module, false, true);
       return;
     }
 
-    if (module_name != NULL)
-      free(module_name);
-
-    module_name = name;
-
     if (module_file == NULL) {
-      module_file = strdup(name);
+      module_file = strdup(module_name);
     } else {
       if (module_file[strlen(module_file) - 1] != BLADE_PATH_SEPARATOR[0]) {
         module_file = append_strings(module_file, BLADE_PATH_SEPARATOR);
       }
-      module_file = append_strings(module_file, name);
+      module_file = append_strings(module_file, module_name);
     }
 
     part_count++;
@@ -2100,28 +2109,30 @@ static void import_statement(b_parser *p) {
     free(module_name);
     module_name = (char *) calloc(p->previous.length + 1, sizeof(char));
     if (module_name == NULL) {
-      error(p, "could not calloc memory for module_name");
+      error(p, "could not allocate memory for module name");
       return;
     }
     memcpy(module_name, p->previous.start, p->previous.length);
+    module_name[p->previous.length] = '\0';
     was_renamed = true;
   }
 
   char *module_path = resolve_import_path(module_file, p->module->file, is_relative);
-  b_obj_string *final_module_name = copy_string(p->vm, module_name, (int) strlen(module_name));
 
   if (module_path == NULL) {
     // check if there is one in the vm's registry
     // handle native modules
     b_value md;
+    b_obj_string *final_module_name = copy_string(p->vm, module_name, (int) strlen(module_name));
     if (table_get(&p->vm->modules, OBJ_VAL(final_module_name), &md)) {
       int module = make_constant(p, OBJ_VAL(final_module_name));
       emit_byte_and_short(p, OP_NATIVE_MODULE, module);
 
-      parse_specific_import(p, module, false, true);
+      parse_specific_import(p, module_name, module, false, true);
       return;
     }
 
+    free(module_path);
     error(p, "module not found");
     return;
   }
@@ -2139,15 +2150,21 @@ static void import_statement(b_parser *p) {
 
   b_blob blob;
   init_blob(&blob);
+
   b_obj_module *module = new_module(p->vm, module_name, module_path);
+
+  push(p->vm, OBJ_VAL(module));
   b_obj_func *function = compile(p->vm, module, source, &blob);
+  pop(p->vm);
+
+  free(source);
 
   if (function == NULL) {
     error(p, "failed to import %s", module_name);
     return;
   }
 
-  function->name = final_module_name;
+  function->name = NULL;
 
   push(p->vm, OBJ_VAL(function));
   b_obj_closure *closure = new_closure(p->vm, function);
@@ -2156,7 +2173,7 @@ static void import_statement(b_parser *p) {
   int import_constant = make_constant(p, OBJ_VAL(closure));
   emit_byte_and_short(p, OP_CALL_IMPORT, import_constant);
 
-  parse_specific_import(p, import_constant, was_renamed, false);
+  parse_specific_import(p, module_name, import_constant, was_renamed, false);
 }
 
 static void assert_statement(b_parser *p) {

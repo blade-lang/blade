@@ -1,4 +1,5 @@
 #include "module.h"
+#include "pathinfo.h"
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #else
@@ -57,6 +58,7 @@ DECLARE_MODULE_METHOD(os_exec) {
     RETURN_NIL;
   }
 
+  fflush(stdout);
   FILE *fd = popen(string->chars, "r");
   if (!fd) RETURN_NIL;
 
@@ -64,16 +66,18 @@ DECLARE_MODULE_METHOD(os_exec) {
   size_t n_read;
   size_t output_size = 256;
   int length = 0;
-  char *output = (char *)calloc(output_size, sizeof(char));
+  char *output = ALLOCATE(char, output_size);
 
   if (output != NULL) {
     while ((n_read = fread(buffer, 1, sizeof(buffer), fd)) != 0) {
       if (length + n_read >= output_size) {
+        size_t old = output_size;
         output_size *= 2;
-        void *temp = realloc(output, output_size);
+        char *temp = GROW_ARRAY(char, output, old, output_size);
         if (temp == NULL) {
           RETURN_ERROR("device out of memory");
         } else {
+          vm->bytes_allocated += output_size / 2;
           output = temp;
         }
       }
@@ -422,6 +426,40 @@ DECLARE_MODULE_METHOD(os__exists) {
   RETURN_FALSE;
 }
 
+DECLARE_MODULE_METHOD(os__dirname) {
+  ENFORCE_ARG_COUNT(dirname, 1);
+  ENFORCE_ARG_TYPE(dirname, 0, IS_STRING);
+#ifndef _WIN32
+  char *dir = dirname(AS_STRING(args[0])->chars);
+#else // looking at Windows MingW64 dirname overwritten original string
+  char *str = strdup(AS_STRING(args[0])->chars);
+  char *dir = dirname(str);
+  // we are not freeing str because dirname will modify str.
+  // therefore, dir == str
+#endif
+  if(!dir) {
+    RETURN_VALUE(args[0]);
+  }
+  RETURN_STRING(dir);
+}
+
+DECLARE_MODULE_METHOD(os__basename) {
+  ENFORCE_ARG_COUNT(basename, 1);
+  ENFORCE_ARG_TYPE(basename, 0, IS_STRING);
+#ifndef _WIN32
+  char *dir = basename(AS_STRING(args[0])->chars);
+#else // looking at Windows MingW64 basename overwritten original string
+  char *str = strdup(AS_STRING(args[0])->chars);
+  char *dir = basename(str);
+  // we are not freeing str because basename will modify str.
+  // therefore, dir == str
+#endif
+  if(!dir) {
+    RETURN_VALUE(args[0]);
+  }
+  RETURN_STRING(dir);
+}
+
 /** DIR TYPES BEGIN */
 
 b_value __os_dir_DT_UNKNOWN(b_vm *vm){
@@ -485,37 +523,39 @@ void __os_module_preloader(b_vm *vm) {
 
 CREATE_MODULE_LOADER(os) {
   static b_func_reg os_module_functions[] = {
-      {"_info",   true,  GET_MODULE_METHOD(os_info)},
-      {"_exec",   true,  GET_MODULE_METHOD(os_exec)},
-      {"_sleep",  true,  GET_MODULE_METHOD(os_sleep)},
-      {"_getenv", true,  GET_MODULE_METHOD(os_getenv)},
-      {"_setenv", true,  GET_MODULE_METHOD(os_setenv)},
-      {"_createdir", true,  GET_MODULE_METHOD(os__createdir)},
-      {"_readdir", true,  GET_MODULE_METHOD(os__readdir)},
-      {"_chmod", true,  GET_MODULE_METHOD(os__chmod)},
-      {"_isdir", true,  GET_MODULE_METHOD(os__is_dir)},
-      {"_exit", true,  GET_MODULE_METHOD(os__exit)},
-      {"_cwd", true,  GET_MODULE_METHOD(os__cwd)},
-      {"_removedir", true,  GET_MODULE_METHOD(os__removedir)},
-      {"_chdir", true,  GET_MODULE_METHOD(os__chdir)},
-      {"_exists", true,  GET_MODULE_METHOD(os__exists)},
-      {"_realpath", true,  GET_MODULE_METHOD(os__realpath)},
+      {"info",   true,  GET_MODULE_METHOD(os_info)},
+      {"exec",   true,  GET_MODULE_METHOD(os_exec)},
+      {"sleep",  true,  GET_MODULE_METHOD(os_sleep)},
+      {"getenv", true,  GET_MODULE_METHOD(os_getenv)},
+      {"setenv", true,  GET_MODULE_METHOD(os_setenv)},
+      {"createdir", true,  GET_MODULE_METHOD(os__createdir)},
+      {"readdir", true,  GET_MODULE_METHOD(os__readdir)},
+      {"chmod", true,  GET_MODULE_METHOD(os__chmod)},
+      {"isdir", true,  GET_MODULE_METHOD(os__is_dir)},
+      {"exit", true,  GET_MODULE_METHOD(os__exit)},
+      {"cwd", true,  GET_MODULE_METHOD(os__cwd)},
+      {"removedir", true,  GET_MODULE_METHOD(os__removedir)},
+      {"chdir", true,  GET_MODULE_METHOD(os__chdir)},
+      {"exists", true,  GET_MODULE_METHOD(os__exists)},
+      {"realpath", true,  GET_MODULE_METHOD(os__realpath)},
+      {"dirname", true,  GET_MODULE_METHOD(os__dirname)},
+      {"basename", true,  GET_MODULE_METHOD(os__basename)},
       {NULL,     false, NULL},
   };
 
   static b_field_reg os_module_fields[] = {
-      {"_platform", true, get_os_platform},
-      {"_args", true, get_blade_os_args},
-      {"_path_separator", true, get_blade_os_path_separator},
-      {"_DT_UNKNOWN", true, __os_dir_DT_UNKNOWN},
-      {"_DT_BLK", true, __os_dir_DT_BLK},
-      {"_DT_CHR", true, __os_dir_DT_CHR},
-      {"_DT_DIR", true, __os_dir_DT_DIR},
-      {"_DT_FIFO", true, __os_dir_DT_FIFO},
-      {"_DT_LNK", true, __os_dir_DT_LNK},
-      {"_DT_REG", true, __os_dir_DT_REG},
-      {"_DT_SOCK", true, __os_dir_DT_SOCK},
-      {"_DT_WHT", true, __os_dir_DT_WHT},
+      {"platform", true, get_os_platform},
+      {"args", true, get_blade_os_args},
+      {"path_separator", true, get_blade_os_path_separator},
+      {"DT_UNKNOWN", true, __os_dir_DT_UNKNOWN},
+      {"DT_BLK", true, __os_dir_DT_BLK},
+      {"DT_CHR", true, __os_dir_DT_CHR},
+      {"DT_DIR", true, __os_dir_DT_DIR},
+      {"DT_FIFO", true, __os_dir_DT_FIFO},
+      {"DT_LNK", true, __os_dir_DT_LNK},
+      {"DT_REG", true, __os_dir_DT_REG},
+      {"DT_SOCK", true, __os_dir_DT_SOCK},
+      {"DT_WHT", true, __os_dir_DT_WHT},
       {NULL,       false, NULL},
   };
 

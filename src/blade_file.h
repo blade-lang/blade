@@ -72,6 +72,13 @@ DECLARE_FILE_METHOD(is_closed);
 DECLARE_FILE_METHOD(read);
 
 /**
+ * file.gets([size: number])
+ *
+ * same as read but doesn't open or close file for you
+ */
+DECLARE_FILE_METHOD(gets);
+
+/**
  * file.write(data: string)
  *
  * writes a string or bytes to an opened file.
@@ -79,6 +86,13 @@ DECLARE_FILE_METHOD(read);
  * - when writing binary (mode 'b'), you will have to close it yourself if you
  */
 DECLARE_FILE_METHOD(write);
+
+/**
+ * file.puts(data: string)
+ *
+ * same as write but doesn't open or close file for you
+ */
+DECLARE_FILE_METHOD(puts);
 
 /**
  * file.number()

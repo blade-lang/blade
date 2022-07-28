@@ -9,10 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define ALLOCATE_OBJ(type, obj_type)                                           \
-  (type *)allocate_object(vm, sizeof(type), obj_type)
-
-static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
+b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   b_obj *object = (b_obj *) reallocate(vm, NULL, 0, size);
 
   object->type = type;
@@ -21,9 +18,9 @@ static b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   object->next = vm->objects;
   vm->objects = object;
 
-#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
-  printf("%p allocate %ld for %d\n", (void *)object, size, type);
-#endif
+//#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
+//  printf("%p allocate %ld for %d\n", (void *)object, size, type);
+//#endif
 
   return object;
 }
@@ -33,6 +30,7 @@ b_obj_ptr *new_ptr(b_vm *vm, void *pointer) {
   b_obj_ptr *ptr = ALLOCATE_OBJ(b_obj_ptr, OBJ_PTR);
   ptr->pointer = pointer;
   ptr->name = "<void *>";
+  ptr->free_fn = NULL;
   return ptr;
 }
 
@@ -58,7 +56,7 @@ b_obj_switch *new_switch(b_vm *vm) {
 
 b_obj_bytes *new_bytes(b_vm *vm, int length) {
   b_obj_bytes *bytes = ALLOCATE_OBJ(b_obj_bytes, OBJ_BYTES);
-  init_byte_arr(&bytes->bytes, length);
+  init_byte_arr(vm, &bytes->bytes, length);
   return bytes;
 }
 
@@ -211,11 +209,12 @@ b_obj_up_value *new_up_value(b_vm *vm, b_value *slot) {
   return up_value;
 }
 
-static void print_function(b_obj_func *function) {
-  if (function->name == NULL) {
-    printf("<script at %p>", (void *) function);
+static void print_function(b_obj_func *func) {
+  if (func->name == NULL) {
+    printf("<script at %p>", (void *) func);
   } else {
-    printf("<function %s at %p>", function->name->chars, (void *) function);
+    printf(func->is_variadic ? "<function %s(%d...) at %p>" : "<function %s(%d) at %p>",
+           func->name->chars, func->arity, (void *) func);
   }
 }
 
@@ -330,7 +329,7 @@ void print_object(b_value value, bool fix_string) {
     }
     case OBJ_NATIVE: {
       b_obj_native *native = AS_NATIVE(value);
-      printf("<function(native) %s at %p>", native->name, (void *) native);
+      printf("<function %s(native) at %p>", native->name, (void *) native);
       break;
     }
     case OBJ_UP_VALUE: {
@@ -356,7 +355,8 @@ b_obj_bytes *copy_bytes(b_vm *vm, unsigned char *b, int length) {
 }
 
 b_obj_bytes *take_bytes(b_vm *vm, unsigned char *b, int length) {
-  b_obj_bytes *bytes = new_bytes(vm, length);
+  b_obj_bytes *bytes = ALLOCATE_OBJ(b_obj_bytes, OBJ_BYTES);
+  bytes->bytes.count = length;
   bytes->bytes.bytes = b;
   return bytes;
 }
@@ -365,9 +365,12 @@ static inline char *function_to_string(b_obj_func *func) {
   if (func->name == NULL) {
     return strdup("<script 0x00>");
   }
-  char *str = (char *) malloc(sizeof(char) * (snprintf(NULL, 0, "<function %s>", func->name->chars)));
+
+  const char* format = func->is_variadic ? "<function %s(%d...)>" : "<function %s(%d)>";
+  char *str = (char *) malloc(sizeof(char) *
+      (snprintf(NULL, 0, format, func->name->chars, func->arity)));
   if (str != NULL) {
-    sprintf(str, "<function %s>", func->name->chars);
+    sprintf(str, format, func->name->chars, func->arity);
     return str;
   }
   return strdup(func->name->chars);
@@ -392,7 +395,7 @@ static inline char *list_to_string(b_vm *vm, b_value_arr *array) {
 static inline char *bytes_to_string(b_vm *vm, b_byte_arr *array) {
   char *str = strdup("(");
   for (int i = 0; i < array->count; i++) {
-    char *chars = (char *) malloc(sizeof(char) * (snprintf(NULL, 0, "0x%x", array->bytes[i])));
+    char *chars = ALLOCATE(char, snprintf(NULL, 0, "0x%x", array->bytes[i]));
     if (chars != NULL) {
       sprintf(chars, "0x%x", array->bytes[i]);
       str = append_strings(str, chars);
@@ -443,7 +446,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     case OBJ_CLASS: {
       const char *format = "<class %s>";
       char *data = AS_CLASS(value)->name->chars;
-      char *str = (char*) calloc(snprintf(NULL, 0, format, data), sizeof(char));
+      char *str = ALLOCATE(char, snprintf(NULL, 0, format, data));
       if(str != NULL) {
         sprintf(str, format, data);
       }
@@ -452,7 +455,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     case OBJ_INSTANCE: {
       const char *format = "<instance of %s>";
       char *data = AS_INSTANCE(value)->klass->name->chars;
-      char *str = (char*) calloc(snprintf(NULL, 0, format, data), sizeof(char));
+      char *str = ALLOCATE(char, snprintf(NULL, 0, format, data));
       if(str != NULL) {
         sprintf(str, format, data);
       }
@@ -466,9 +469,9 @@ char *object_to_string(b_vm *vm, b_value value) {
     case OBJ_FUNCTION:
       return function_to_string(AS_FUNCTION(value));
     case OBJ_NATIVE:{
-      const char *format = "<native-function %s>";
+      const char *format = "<function %s(native)>";
       const char *data = AS_NATIVE(value)->name;
-      char *str = (char*) calloc(snprintf(NULL, 0, format, data), sizeof(char));
+      char *str = ALLOCATE(char, snprintf(NULL, 0, format, data));
       if(str != NULL) {
         sprintf(str, format, data);
       }
@@ -476,8 +479,8 @@ char *object_to_string(b_vm *vm, b_value value) {
     }
     case OBJ_RANGE: {
       b_obj_range *range = AS_RANGE(value);
-      const char *format = "<range %d-%d>";
-      char *str = (char*) calloc(snprintf(NULL, 0, format, range->lower, range->upper), sizeof(char));
+      const char *format = "<range %d..%d>";
+      char *str = ALLOCATE(char, snprintf(NULL, 0, format, range->lower, range->upper));
       if(str != NULL) {
         sprintf(str, format, range->lower, range->upper);
       }
@@ -486,7 +489,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     case OBJ_MODULE: {
       const char *format = "<module %s>";
       const char *data = AS_MODULE(value)->name;
-      char *str = (char*) calloc(snprintf(NULL, 0, format, data), sizeof(char));
+      char *str = ALLOCATE(char, snprintf(NULL, 0, format, data));
       if(str != NULL) {
         sprintf(str, format, data);
       }
@@ -495,7 +498,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     case OBJ_STRING:
       return strdup(AS_C_STRING(value));
     case OBJ_UP_VALUE:
-      return strdup("<up value>");
+      return strdup("<up-value>");
     case OBJ_BYTES:
       return bytes_to_string(vm, &AS_BYTES(value)->bytes);
     case OBJ_LIST:
@@ -505,7 +508,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     case OBJ_FILE: {
       b_obj_file *file = AS_FILE(value);
       const char *format = "<file at %s in mode %s>";
-      char *str = (char*) calloc(snprintf(NULL, 0, format, file->path->chars, file->mode->chars), sizeof(char));
+      char *str = ALLOCATE(char, snprintf(NULL, 0, format, file->path->chars, file->mode->chars));
       if(str != NULL) {
         sprintf(str, format, file->path->chars, file->mode->chars);
       }

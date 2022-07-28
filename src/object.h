@@ -162,6 +162,7 @@ typedef struct {
 } b_obj_bound; // a bound method
 
 typedef bool (*b_native_fn)(b_vm *, int, b_value *);
+typedef void (*b_ptr_free_fn)(void *);
 
 typedef struct b_obj_native {
   b_obj obj;
@@ -211,7 +212,8 @@ typedef struct {
 typedef struct {
   b_obj obj;
   void *pointer;
-  const char *name;
+  char *name;
+  b_ptr_free_fn free_fn;
 } b_obj_ptr;
 
 // non-user objects...
@@ -264,5 +266,10 @@ static inline bool is_obj_type(b_value v, b_obj_type t) {
 }
 
 static inline bool is_std_file(b_obj_file *file) { return file->mode->length == 0; }
+
+#define ALLOCATE_OBJ(type, obj_type)                                           \
+  (type *)allocate_object(vm, sizeof(type), obj_type)
+
+b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type);
 
 #endif

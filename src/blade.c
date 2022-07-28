@@ -171,11 +171,18 @@ static void repl(b_vm *vm) {
   free(source);
 }
 
-static void run_file(b_vm *vm, const char *file) {
+static void run_file(b_vm *vm, char *file) {
   char *source = read_file(file);
   if (source == NULL) {
-    fprintf(stderr, "(Blade):\n  Launch aborted for %s\n  Reason: %s\n", file, strerror(errno));
-    exit(EXIT_FAILURE);
+    // check if it's a Blade library directory by attempting to read the index file.
+    char *old_file = file;
+    file = append_strings((char *)strdup(file), "/" LIBRARY_DIRECTORY_INDEX BLADE_EXTENSION);
+    source = read_file(file);
+
+    if(source == NULL) {
+      fprintf(stderr, "(Blade):\n  Launch aborted for %s\n  Reason: %s\n", old_file, strerror(errno));
+      exit(EXIT_FAILURE);
+    }
   }
 
   b_obj_module *module = new_module(vm, strdup(""), strdup(file));
@@ -282,6 +289,7 @@ int main(int argc, char *argv[]) {
       run_file(vm, argv[optind]);
     }
 
+    free(std_args);
     free_vm(vm);
     return EXIT_SUCCESS;
   }

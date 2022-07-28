@@ -89,46 +89,71 @@ DECLARE_BYTES_METHOD(last);
 DECLARE_BYTES_METHOD(get);
 
 /**
+ * bytes.split(delimiter: bytes)
+ *
+ * splits the content of a bytes based on the specified delimiter
+ *
+ * Notice
+ * =======
+ * bytes(0).split(bytes(0)) == []
+ * # Result = true
+ * echo 'test'.to_bytes().split(bytes(0))
+ * # Result = [(74), (65), (73), (74)]
+ */
+DECLARE_BYTES_METHOD(split);
+
+/**
  * bytes.is_alpha()
  *
- * returns true if the string contains only alphabets
+ * returns true if the bytes contains only alphabets
  */
 DECLARE_BYTES_METHOD(is_alpha);
 
 /**
  * bytes.is_alnum()
  *
- * returns true if the string contains only number and alphabets
+ * returns true if the bytes contains only number and alphabets
  */
 DECLARE_BYTES_METHOD(is_alnum);
 
 /**
  * bytes.is_number()
  *
- * returns true if the string contains only number
+ * returns true if the bytes contains only number
  */
 DECLARE_BYTES_METHOD(is_number);
 
 /**
  * bytes.is_lower()
  *
- * returns true if all the text in the string are lower case.
+ * returns true if all the text in the bytes are lower case.
  */
 DECLARE_BYTES_METHOD(is_lower);
 
 /**
  * bytes.is_upper()
  *
- * returns true if all the text in the string are capital case.
+ * returns true if all the text in the bytes are capital case.
  */
 DECLARE_BYTES_METHOD(is_upper);
 
 /**
  * bytes.is_space()
  *
- * returns true is the string contains only white space
+ * returns true is the bytes contains only white space
  */
 DECLARE_BYTES_METHOD(is_space);
+
+/**
+ * bytes.dispose()
+ *
+ * Due to the nature of bytes and their use-case (especially streaming data),
+ * it is easy for the system memory to get filled up with data in the bytes.
+ * The method allows users to reset a byte stream and empty it.
+ *
+ * This allows manual memory management of bytes.
+ */
+DECLARE_BYTES_METHOD(dispose);
 
 /**
  * bytes.to_list()

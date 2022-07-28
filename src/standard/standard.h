@@ -1,7 +1,6 @@
 #ifndef BLADE_STANDARD_H
 #define BLADE_STANDARD_H
 
-
 extern CREATE_MODULE_LOADER(base64);
 extern CREATE_MODULE_LOADER(date);
 extern CREATE_MODULE_LOADER(io);
@@ -12,4 +11,7 @@ extern CREATE_MODULE_LOADER(hash);
 extern CREATE_MODULE_LOADER(json);
 extern CREATE_MODULE_LOADER(sqlite);
 extern CREATE_MODULE_LOADER(reflect);
+extern CREATE_MODULE_LOADER(array);
+extern CREATE_MODULE_LOADER(struct);
+
 #endif // BLADE_STANDARD_H

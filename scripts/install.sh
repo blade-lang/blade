@@ -98,12 +98,10 @@ then
   fi
 
   install_if_missing 'openssl'
-  install_if_missing 'readline'
 else
   install_if_missing 'git'
   install_if_missing 'curl'
   install_if_missing 'libssl-dev'
-  install_if_missing 'libreadline-dev'
   install_if_missing 'libcurl4-openssl-dev'
 fi
 

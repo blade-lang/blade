@@ -64,6 +64,7 @@ static void file_open(b_obj_file *file) {
         strstr(file->mode->chars, "+") != NULL) {
       mode = (char *) "a+";
     }
+
     file->file = fopen(file->path->chars, mode);
     file->is_open = true;
   }
@@ -192,7 +193,7 @@ DECLARE_FILE_METHOD(read) {
 
   size_t bytes_read = fread(buffer, sizeof(char), file_size, file->file);
 
-  if (bytes_read == 0 && file_size == file_size_real) {
+  if (bytes_read == 0 && file_size != 0 && file_size == file_size_real) {
     FILE_ERROR(Read, "could not read file contents");
   }
 
@@ -201,9 +202,90 @@ DECLARE_FILE_METHOD(read) {
     buffer[bytes_read] = '\0';
 
   // close file
-  if (bytes_read == file_size) {
+  /*if (bytes_read == file_size) {
     file_close(file);
+  }*/
+  file_close(file);
+
+  if (!in_binary_mode) {
+    RETURN_T_STRING(buffer, bytes_read);
   }
+
+  RETURN_OBJ(take_bytes(vm, (unsigned char *) buffer, bytes_read));
+}
+
+DECLARE_FILE_METHOD(gets) {
+  ENFORCE_ARG_RANGE(gets, 0, 1);
+  size_t length = -1;
+  if (arg_count == 1) {
+    ENFORCE_ARG_TYPE(read, 0, IS_NUMBER);
+    length = (size_t) AS_NUMBER(args[0]);
+  }
+
+  b_obj_file *file = AS_FILE(METHOD_OBJECT);
+
+  bool in_binary_mode = strstr(file->mode->chars, "b") != NULL;
+
+  if (!is_std_file(file)) {
+    // file is in read mode and file does not exist
+    if (strstr(file->mode->chars, "r") != NULL &&
+        !file_exists(file->path->chars)) {
+      FILE_ERROR(NotFound, "no such file or directory");
+    }
+    // file is in write only mode
+    else if (strstr(file->mode->chars, "w") != NULL &&
+             strstr(file->mode->chars, "+") == NULL) {
+      FILE_ERROR(Unsupported, "cannot read file in write mode");
+    }
+
+    if (!file->is_open) { // open the file if it isn't open
+      FILE_ERROR(Read, "file not open");
+    }
+
+    if (file->file == NULL) {
+      FILE_ERROR(Read, "could not read file");
+    }
+
+    if(length == -1) {
+      long current_pos = ftell(file->file);
+      fseek(file->file, 0L, SEEK_END);
+      long end = ftell(file->file);
+
+      // go back to where we were before.
+      fseek(file->file, current_pos, SEEK_SET);
+
+      length = end - current_pos;
+    }
+  } else {
+    // stdout should not read
+    if (fileno(stdout) == fileno(file->file) ||
+        fileno(stderr) == fileno(file->file)) {
+      FILE_ERROR(Unsupported, "cannot read from output file");
+    }
+
+    // for non-file objects such as stdin
+    // minimum read bytes should be 1
+    if (length == (size_t) -1) {
+      length = 1;
+    }
+  }
+
+  char *buffer =
+      (char *) ALLOCATE(char, length + 1); // +1 for terminator '\0'
+
+  if (buffer == NULL && length != 0) {
+    FILE_ERROR(Buffer, "not enough memory to read file");
+  }
+
+  size_t bytes_read = fread(buffer, sizeof(char), length, file->file);
+
+  if (bytes_read == 0 && length != 0) {
+    FILE_ERROR(Read, "could not read file contents");
+  }
+
+  // we made use of +1, so we can terminate the string.
+  if (buffer != NULL)
+    buffer[bytes_read] = '\0';
 
   if (!in_binary_mode) {
     RETURN_T_STRING(buffer, bytes_read);
@@ -221,26 +303,33 @@ DECLARE_FILE_METHOD(write) {
 
   bool in_binary_mode = strstr(file->mode->chars, "b") != NULL;
 
+  unsigned char *data;
+  int length;
+
   if (!in_binary_mode) {
     ENFORCE_ARG_TYPE(write, 0, IS_STRING);
     string = AS_STRING(args[0]);
+    data = (unsigned char *)string->chars;
+    length = string->length;
   } else {
     ENFORCE_ARG_TYPE(write, 0, IS_BYTES);
     bytes = AS_BYTES(args[0]);
+    data = bytes->bytes.bytes;
+    length = bytes->bytes.count;
   }
 
   // file is in read only mode
   if (!is_std_file(file)) {
     if (strstr(file->mode->chars, "r") != NULL &&
         strstr(file->mode->chars, "+") == NULL) {
-      FILE_ERROR(Unsupported, "cannot read file in write mode");
+      FILE_ERROR(Unsupported, "cannot write into non-writable file");
     }
 
-    if ((!in_binary_mode ? string->length : bytes->bytes.count) == 0) {
+    if (length == 0) {
       FILE_ERROR(Write, "cannot write empty buffer to file");
     }
 
-    if (!file->is_open) { // open the file if it isn't open
+    if (file->file == NULL || !file->is_open) { // open the file if it isn't open
       file_open(file);
     }
 
@@ -254,22 +343,69 @@ DECLARE_FILE_METHOD(write) {
     }
   }
 
-  size_t count;
-
-  if (!in_binary_mode) {
-    count = fwrite(string->chars, sizeof(char), string->length, file->file);
-  } else {
-    count = fwrite(bytes->bytes.bytes, sizeof(unsigned char),
-                   bytes->bytes.count, file->file);
-  }
+  size_t count = fwrite(data, sizeof(unsigned char), length, file->file);
 
   // close file
-  if (count ==
-      (size_t) (in_binary_mode ? bytes->bytes.count : string->length)) {
-    file_close(file);
-  }
+  file_close(file);
 
   if (count > (size_t) 0) {
+    RETURN_TRUE;
+  }
+  RETURN_FALSE;
+}
+
+DECLARE_FILE_METHOD(puts) {
+  ENFORCE_ARG_COUNT(puts, 1);
+
+  b_obj_file *file = AS_FILE(METHOD_OBJECT);
+  b_obj_string *string = NULL;
+  b_obj_bytes *bytes = NULL;
+
+  bool in_binary_mode = strstr(file->mode->chars, "b") != NULL;
+
+  unsigned char *data;
+  int length;
+
+  if (!in_binary_mode) {
+    ENFORCE_ARG_TYPE(write, 0, IS_STRING);
+    string = AS_STRING(args[0]);
+    data = (unsigned char *)string->chars;
+    length = string->length;
+  } else {
+    ENFORCE_ARG_TYPE(write, 0, IS_BYTES);
+    bytes = AS_BYTES(args[0]);
+    data = bytes->bytes.bytes;
+    length = bytes->bytes.count;
+  }
+
+  // file is in read only mode
+  if (!is_std_file(file)) {
+    if (strstr(file->mode->chars, "r") != NULL &&
+        strstr(file->mode->chars, "+") == NULL) {
+      FILE_ERROR(Unsupported, "cannot write into non-writable file");
+    }
+
+    if (length == 0) {
+      FILE_ERROR(Write, "cannot write empty buffer to file");
+    }
+
+    if (!file->is_open) { // open the file if it isn't open
+      FILE_ERROR(Write, "file not open");
+    }
+
+    if (file->file == NULL) {
+      FILE_ERROR(Write, "could not write to file");
+    }
+  } else {
+    // stdin should not write
+    if (fileno(stdin) == fileno(file->file)) {
+      FILE_ERROR(Unsupported, "cannot write to input file");
+    }
+  }
+
+  size_t count = fwrite(data, sizeof(unsigned char), length, file->file);
+
+  if (count > (size_t) 0 || length == 0) {
     RETURN_TRUE;
   }
   RETURN_FALSE;

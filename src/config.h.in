@@ -2,7 +2,7 @@
 #define BLADE_CONFIG_H
 
 #define BLADE_EXTENSION ".b"
-#define BLADE_VERSION_STRING "0.0.72"
+#define BLADE_VERSION_STRING "0.0.73"
 #define BVM_VERSION "0.0.6"
 #define LIBRARY_DIRECTORY "libs"
 #define LIBRARY_DIRECTORY_INDEX "index"
@@ -25,7 +25,7 @@
 // see: https://engineering.fb.com/2019/04/25/developer-tools/f14/
 #define TABLE_MAX_LOAD 0.85714286
 
-#define GC_HEAP_GROWTH_FACTOR 1.5
+#define GC_HEAP_GROWTH_FACTOR 1.25
 
 #define USE_NAN_BOXING 1
 #define PCRE2_STATIC

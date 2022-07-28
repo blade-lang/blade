@@ -23,23 +23,9 @@ endif()
 
 set(OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/blade")
 
-if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG OR CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG STREQUAL "")
-	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIR}")
-endif()
-if(NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG OR CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG STREQUAL "")
-	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${OUTPUT_DIR})
-endif()
-if(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG OR CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG STREQUAL "")
-	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${OUTPUT_DIR})
-endif()
-if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE OR CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE STREQUAL "")
-	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${OUTPUT_DIR})
-endif()
-if(NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE OR CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE STREQUAL "")
-	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${OUTPUT_DIR})
-endif()
-if(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE OR CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE STREQUAL "")
-	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${OUTPUT_DIR})
+# Just for debugging availability in tools like CLion
+if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY OR CMAKE_RUNTIME_OUTPUT_DIRECTORY STREQUAL "")
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR})
 endif()
 
 if(UNIX)
@@ -73,6 +59,7 @@ set(BLADE_SOURCES
 		src/value.c
 		src/vm.c
 		# standard module
+		src/standard/array.c
 		src/standard/base64.c
 		src/standard/date.c
 		src/standard/io.c
@@ -81,6 +68,7 @@ set(BLADE_SOURCES
 		src/standard/socket.c
 		src/standard/hash.c
 		src/standard/reflect.c
+		src/standard/struct.c
 		)
 
 add_definitions(-DEXPORT_LIBS)
@@ -177,20 +165,23 @@ endif(UNIX)
 target_link_libraries(blade PRIVATE libblade)
 
 add_custom_target(blade_lib_files ALL
-		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/libs ${CMAKE_CURRENT_BINARY_DIR}/blade/libs
-		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/tests ${CMAKE_CURRENT_BINARY_DIR}/blade/tests
-		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/benchmarks ${CMAKE_CURRENT_BINARY_DIR}/blade/benchmarks
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/libs ${OUTPUT_DIR}/libs
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/tests ${OUTPUT_DIR}/tests
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/benchmarks ${OUTPUT_DIR}/benchmarks
 		COMMENT "Exporting libs, tests, and benchmark scripts..."
 )
 
 add_dependencies(blade blade_lib_files)
 
-set(EXE_FILE "${OUTPUT_DIR}/blade${CMAKE_EXECUTABLE_SUFFIX}")
+set(EXE_FILE "${OUTPUT_DIR}/$<TARGET_NAME:blade>${CMAKE_EXECUTABLE_SUFFIX}")
+set(LIBRARY_FILE "${OUTPUT_DIR}/$<TARGET_NAME:libblade>${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
 add_custom_command(TARGET blade POST_BUILD
-		COMMAND	"${EXE_FILE}" "${PROJECT_SOURCE_DIR}/scripts/make_blade.b" "${PROJECT_SOURCE_DIR}"
-		COMMAND	"${EXE_FILE}" "${PROJECT_SOURCE_DIR}/scripts/ast.b" "${OUTPUT_DIR}/libs/ast"
-		COMMENT "Generating Blade header and folders and package dependencies..."
+		COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:blade> ${EXE_FILE}
+		COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:libblade> ${LIBRARY_FILE}
+		COMMAND ${EXE_FILE} "${PROJECT_SOURCE_DIR}/scripts/make_blade.b" "${PROJECT_SOURCE_DIR}"
+		COMMAND ${EXE_FILE} "${PROJECT_SOURCE_DIR}/scripts/ast.b" "${OUTPUT_DIR}/libs/ast"
+		COMMENT "Generating Blade header and copy output..."
 )
 
 string(TOUPPER "${CMAKE_BUILD_TYPE}" buildtype)
@@ -205,15 +196,13 @@ message(STATUS "  C compiler flags ................ : ${${CMAKE_C_FLAGS}${cfsp}}
 
 # for LTO
 include(CheckIPOSupported)
-check_ipo_supported(RESULT supported OUTPUT error)
-if(supported)
+check_ipo_supported(RESULT LTOSupported OUTPUT LTOSupportError)
+if(LTOSupported)
 	message(STATUS "  IPO/LTO ......................... : enabled")
 	set_property(TARGET libblade PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 else()
-	message(STATUS "  IPO/LTO ......................... : not supported: <${error}>")
+	message(STATUS "  IPO/LTO ......................... : not supported: <${LTOSupportError}>")
 endif()
-
-message(STATUS "")
 
 # Generating single header file...
 generate_export_header(libblade           # generates the export header shared_EXPORTS.h automatically

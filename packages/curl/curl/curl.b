@@ -33,6 +33,24 @@ class CurlMime {
   }
 
   /**
+   * add_file(name: string, file: string)
+   * 
+   * Adds a new mime part with the given name and file.
+   */
+  add_file(name, value) {
+    if !is_string(name)
+      die Exception('name must be string')
+
+    # This allows us to benefit from to_string decorators.
+    if !is_string(value) value = to_string(value)
+
+    var part = _curl.mime_addpart(self._ptr)
+    if _curl.mime_name(part, name)
+      return _curl.mime_filedata(part, value)
+    return false
+  }
+
+  /**
    * get_pointer()
    * 
    * Returns the raw pointer object to the underlying libcurl mime implementation.

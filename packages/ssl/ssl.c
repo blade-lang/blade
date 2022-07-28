@@ -347,11 +347,12 @@ DECLARE_MODULE_METHOD(ssl_read) {
   do {
     int bytes = SSL_read(ssl, buffer, 1024);
     if(bytes > 0) {
-      data = realloc(data, sizeof(char) * (total + bytes));
+      data = GROW_ARRAY(char, data,total, total + bytes);
       if(data == NULL) {
-        fprintf(stderr, "device out of memory.");
-        exit(EXIT_RUNTIME);
+        RETURN_ERROR("device out of memory.");
       }
+
+      vm->bytes_allocated += bytes;
       memcpy(data + total, buffer, bytes);
       total += bytes;
 
@@ -370,7 +371,7 @@ DECLARE_MODULE_METHOD(ssl_bio_read) {
   BIO *bio = (BIO*)AS_PTR(args[0])->pointer;
   int buffer_length = AS_NUMBER(args[1]);
 
-  char *data = (char*)calloc(0, sizeof(char));
+  char *data = ALLOCATE(char, 0);
   int total = 0;
 
   for (;;) {
@@ -386,7 +387,8 @@ DECLARE_MODULE_METHOD(ssl_bio_read) {
       RETURN_STRING(""); // error...
     }
 
-    data = (char*) realloc(data, sizeof(char) * (total + i + 1));
+    data = GROW_ARRAY(char, data, total, total + i + 1);
+
     memcpy(data + total, buf, i);
     total += i;
   }

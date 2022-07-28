@@ -6,9 +6,9 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
-set(BLADE_ROOT "${CMAKE_CURRENT_BINARY_DIR}/../../blade")
+set(BLADE_ROOT "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/blade")
 
-message(STATUS "Building SQLite module to ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE}")
+message(STATUS "Building SQLite module to ${BLADE_ROOT}/dist")
 
 include_directories("${BLADE_ROOT}/includes" ${CMAKE_CURRENT_SOURCE_DIR})
 #link_directories("${BLADE_ROOT}")
@@ -27,6 +27,9 @@ if(WIN32)
 endif()
 
 add_custom_target(copy-sqlite-to-libs ALL
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/sqlite ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE}/../libs/sqlite
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/sqlite ${BLADE_ROOT}/libs/sqlite
         COMMENT "Exporting sqlite source files to libs folder..."
         )
+
+add_custom_command(TARGET sqlite POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:sqlite> ${BLADE_ROOT}/dist)

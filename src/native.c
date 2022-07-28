@@ -386,7 +386,7 @@ DECLARE_NATIVE(to_string) {
   ENFORCE_ARG_COUNT(to_string, 1);
   METHOD_OVERRIDE(to_string, 9);
   char *result = value_to_string(vm, args[0]);
-  RETURN_STRING(result);
+  RETURN_TT_STRING(result);
 }
 
 /**
@@ -420,7 +420,7 @@ DECLARE_NATIVE(to_number) {
   }
 
   if(length > (end + 1) && v[start] == '0') {
-    char *t = (char*)calloc(length - 2, sizeof(char));
+    char *t = ALLOCATE(char, length - 2);
     memcpy(t, v + (end + 1), length - 2);
 
     if(v[end] == 'b') {

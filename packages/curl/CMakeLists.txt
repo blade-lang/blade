@@ -6,9 +6,15 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
-set(BLADE_ROOT "${CMAKE_CURRENT_BINARY_DIR}/../../blade")
 
-message(STATUS "Building curl module to ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE}")
+if(WIN32 OR MINGW)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/blade)
+    set(BLADE_ROOT "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+else()
+    set(BLADE_ROOT "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/blade")
+endif()
+
+message(STATUS "Building curl module to ${BLADE_ROOT}/dist")
 
 include_directories("${BLADE_ROOT}/includes" ${CMAKE_CURRENT_SOURCE_DIR})
 #link_directories("${BLADE_ROOT}")
@@ -38,6 +44,9 @@ if(WIN32)
 endif()
 
 add_custom_target(copy-curl-to-libs ALL
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/curl ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE}/../libs/curl
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/curl ${BLADE_ROOT}/libs/curl
         COMMENT "Exporting curl source files to libs folder..."
         )
+
+add_custom_command(TARGET curl POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:curl> ${BLADE_ROOT}/dist)
