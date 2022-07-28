@@ -123,6 +123,11 @@ int utf8_decode(const uint8_t *bytes, uint32_t length) {
 }
 
 char *append_strings(char *old, char *new_str) {
+  // quick exit...
+  if(new_str == NULL) {
+    return old;
+  }
+
   // find the size of the string to allocate
   const size_t old_len = strlen(old), new_len = strlen(new_str);
   const size_t out_len = old_len + new_len;

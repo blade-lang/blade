@@ -7,4 +7,4 @@ add_subdirectory(curl)
 add_subdirectory(zlib)
 
 # Still in clib branch.
-#add_subdirectory(clib)
+add_subdirectory(clib)

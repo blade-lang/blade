@@ -1,3 +1,51 @@
+# 
+# @module clib
+# 
+# The `clib` module exposes Blade capabilites to interact with C 
+# shared libraries. The workflow follows a simple approach.
+# 
+# - Load the library
+# - Define the function schematics
+# - Call the function.
+# 
+# That simple!
+# 
+# For example, the following code `dirname()` and `cos()` function from the 
+# standard C library on a Unix machine (Linux, OSX, FreeBSD etc).
+# 
+# ```blade
+# # Import clib
+# import clib
+# 
+# # 1. Load 'libc' shared module available on Unix systems
+# var lib = clib.load('libc')
+# 
+# # 2. Declare the functions
+# var dirname = lib.define('dirname', clib.char_ptr, clib.char_ptr)
+# var cos = lib.define('cos', clib.double, clib.double)
+# 
+# # 3. Call the functions
+# echo dirname('/path/to/my/file.ext')
+# echo cos(23)
+# 
+# # Close the library (this is a good practice, but not required)
+# lib.close()
+# ```
+# 
+# The first argument to a definiton is the name of the function. 
+# The second is its return type. If the function takes parameters, 
+# the parameter types follow immediately. (See below for a list of the 
+# available types.)
+# 
+# > **NOT YET SUPPORTED:**
+# > - Variadic functions
+# > - Arrays
+# > - Structs and Unions
+# > - Enums
+# 
+# @copyright 2021, Ore Richard Muyiwa and Blade contributors
+# 
+
 import .types { * }
 
 import _clib
@@ -8,14 +56,19 @@ var _EXT = os.platform == 'windows' ? '.dll' : (
   os.platform == 'linux' ? '.so' : '.dylib'
 )
 
-class _CLib {
+/**
+ * class CLib provides an interface for interacting with C shared modules.
+ */
+class Clib {
   var _ptr
 
   /**
    * CLib([name: string])
+   * 
+   * The name should follow the same practice outlined in `load()`.
    * @constructor
    */
-  _CLib(name) {
+  Clib(name) {
     if name != nil and !is_string(name)
       die Exception('string expected in argument 1 (name)')
 
@@ -31,6 +84,15 @@ class _CLib {
       die Exception('no library loaded')
   }
 
+  /**
+   * load(name: string)
+   * 
+   * Loads a new C shared library pointed to by name. Name must be a 
+   * relative path, absolute path or the name of a system library. 
+   * If the system shared library extension is omitted in the name, 
+   * it will be automatically added.
+   * @return CLib
+   */
   load(name) {
     if !is_string(name)
       die Exception('string expected in argument 1 (name)')
@@ -42,12 +104,20 @@ class _CLib {
     self._ptr = _clib.load(name)
   }
 
+  /**
+   * close()
+   * 
+   * Closes the handle to the shared library.
+   */
   close() {
     self._ensure_lib_loaded()
     _clib.close(self._ptr)
   }
 
   /**
+   * function(name: string)
+   * 
+   * Retrieves the handle to a specific function in the shared library.
    * @return ptr
    */
   function(name) {
@@ -99,6 +169,9 @@ class _CLib {
   }
 
   /**
+   * get_pointer()
+   * 
+   * Returns a pointer to the underlying module
    * @return ptr
    */
   get_pointer() {
@@ -106,10 +179,20 @@ class _CLib {
   }
 }
 
+/**
+ * load(name: string)
+ * 
+ * Loads a new C shared library pointed to by name. Name must be a 
+ * relative path, absolute path or the name of a system library. 
+ * If the system shared library extension is omitted in the name, 
+ * it will be automatically added.
+ * @return CLib
+ */
 def load(name) {
-  return _CLib(name)
+  return Clib(name)
 }
 
+/*
 def struct_value(type, ptr) {
   if !reflect.is_ptr(type) or !to_string(type).match('/clib/')
     die Exception('clib pointer expected in argument 1 (type)')
@@ -118,3 +201,4 @@ def struct_value(type, ptr) {
 
   return _clib.struct_value(type, ptr)
 }
+*/

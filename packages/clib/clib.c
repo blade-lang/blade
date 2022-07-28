@@ -220,14 +220,14 @@ static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size)
       }
       return 0;
     }
-    case b_clib_type_struct: {
+    /*case b_clib_type_struct: {
       if(IS_PTR(value)) {
         void **v = N_ALLOCATE(void *, size);
         v[0] = AS_PTR(value)->pointer;
         return v;
       }
       return 0;
-    }
+    }*/
     default: {
       break;
     }
@@ -526,14 +526,14 @@ DECLARE_MODULE_METHOD(clib_call) {
         RETURN_OBJ(copy_bytes(vm, rc, (int)handle->cif->bytes));
       }
       case b_clib_type_pointer: CLIB_CALL(void *, PTR);
-      case b_clib_type_struct: {
+      /*case b_clib_type_struct: {
         void *data = malloc(handle->return_type->as_ffi->size);
         ffi_call(handle->cif, handle->function, &data, values->values);
         extract_struct_value(vm, data, handle->return_type);
         b_obj_ptr *ptr = (b_obj_ptr *)GC(new_ptr(vm, data));
         ptr->name = "<void *clib::struct::returnvalue>";
         RETURN_OBJ(ptr);
-      }
+      }*/
       default: RETURN;
     }
   }
@@ -592,9 +592,9 @@ CREATE_MODULE_LOADER(clib) {
       {"close",   true,  GET_MODULE_METHOD(clib_close_library)},
       {"define",   true,  GET_MODULE_METHOD(clib_define)},
       {"call",   true,  GET_MODULE_METHOD(clib_call)},
-      {"new_struct",   true,  GET_MODULE_METHOD(clib_new_struct)},
-      {"create_struct",   true,  GET_MODULE_METHOD(clib_create_struct)},
-      {"struct_value",   true,  GET_MODULE_METHOD(clib_struct_value)},
+//      {"new_struct",   true,  GET_MODULE_METHOD(clib_new_struct)},
+//      {"create_struct",   true,  GET_MODULE_METHOD(clib_create_struct)},
+//      {"struct_value",   true,  GET_MODULE_METHOD(clib_struct_value)},
       {NULL,    false, NULL},
   };
 
