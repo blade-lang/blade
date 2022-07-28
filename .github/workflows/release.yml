@@ -71,7 +71,7 @@ jobs:
       - name: Install Dependencies
         run: |
           ${{ env.VCPKG_ROOT }}/vcpkg version
-          ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows
+          ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows libffi:x64-windows
       - name: Compile
         run: |
           cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake"
