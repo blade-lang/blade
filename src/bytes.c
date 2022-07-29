@@ -144,8 +144,8 @@ DECLARE_BYTES_METHOD(reverse) {
 
   b_obj_bytes *n_bytes = (b_obj_bytes *)GC(new_bytes(vm, bytes->bytes.count));
 
-  for (int i = bytes->bytes.count - 1; i >= 0; i--) {
-    n_bytes->bytes.bytes[i] = bytes->bytes.bytes[i];
+  for (int i = 0; i < bytes->bytes.count; i++) {
+    n_bytes->bytes.bytes[i] = bytes->bytes.bytes[bytes->bytes.count - i - 1];
   }
 
   RETURN_OBJ(n_bytes);
