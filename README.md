@@ -25,36 +25,49 @@ syntax set with a very natural feel.
 - Simple syntax and minimal keywords.
 - Dynamically typed.
 - First-class package management (Package management is built into the language module system).
-- Fast.
-- Comprehensive builtin functions.
 - Object-oriented (only supports single inheritance for now.
   Multiple inheritance is open for discussion).
 - Exceptions.
 - Closures.
-- Custom iterable classes.
-- Garbage collection.
-- Stack-based VM.
+- Iterable classes.
 - REPL
 - Lightweight.
-- Highly portable.
+- Easy to extend with C modules.
 
 
 ## Example
 
 The following code prints the sum of all numbers in an array.
 ```js
-def sum(numbers) {
-    var result = 0
+import http
+import json
 
-    for num in numbers {
-        result += num
-    }
+var server = http.server(3000)
+server.on_receive(|request, response| {
+  echo 'Request from ${request.ip} to ${request.path}.'
 
-    echo 'the sum is ${result}'
-}
+  response.headers['Content-Type'] = 'application/json'
+  response.write(json.encode(request))
+})
 
-sum([1, 2, 3, 4]) # this prints "the sum is 10"
+echo 'Listening on Port 3000...'
+server.listen()
 ```
+
+
+## Why should I use Blade?
+
+If you fall into one of more of this categories or have one of the following needs, then Blade is the right language for you.
+
+- You want Python's simplicity but love coding with braces and other things C-like.
+- You want a language with first-class support for package management.
+- You need a quick script for automating mundane tasks on your device.
+- You need a language that allows fast prototyping.
+- You want to do backend development without needing to depend on a framework.
+- You want a scripting language you can easily port your existing C99 codes to with less hassle (Work in progress).
+- You want a familiar language that can be embedded into your application that's more extensive than Lua.
+
+There are many more use-cases where Blade is a great fit. This is just the bare minimal.
 
 
 ## Documentation
@@ -89,7 +102,7 @@ built with either TDM-GCC or MinGW64.
 
 ## How to contribute
 
-Along with Blade's goal to be simplicity, flexibility and expressiveness is a strong desire to make the community around it as friendly and welcoming as possible. Therefore, all forms of contributions from pull requests, suggestions, typo fixes in documentation, feature request, bug reports and any contribution at all is greatly welcomed and appreciated.
+Along with Blade's goal to be simple, flexibile and expressive is a strong desire to make the community around it as friendly and welcoming as possible. Therefore, all forms of contributions from pull requests, suggestions, typo fixes in documentation, feature request, bug reports and any contribution at all is greatly welcomed and appreciated.
 
 > WE NEED HELP! From review of this documentation, to suggestions on the core features of Blade,
 testing of Blade features, writing more comprehensive tests, bug detection, code fixes and more.
