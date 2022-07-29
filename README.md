@@ -37,7 +37,7 @@ syntax set with a very natural feel.
 
 ## Example
 
-The following code prints the sum of all numbers in an array.
+The following implements a simple HTTP server that listens on port 3000.
 ```js
 import http
 import json
