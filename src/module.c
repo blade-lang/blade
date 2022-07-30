@@ -58,7 +58,10 @@ bool load_module(b_vm *vm, b_module_init init_fn, char *import_name, char *sourc
         b_field_reg field = module->fields[j];
         b_value field_name = GC_STRING(field.name);
 
-        table_set(vm, &the_module->values, field_name, field.field_value(vm));
+        b_value v = field.field_value(vm);
+        push(vm, v);
+        table_set(vm, &the_module->values, field_name, v);
+        pop(vm);
       }
     }
 
@@ -68,8 +71,9 @@ bool load_module(b_vm *vm, b_module_init init_fn, char *import_name, char *sourc
         b_value func_name = GC_STRING(func.name);
 
         b_value func_real_value = OBJ_VAL(GC(new_native(vm, func.function, func.name)));
-
+        push(vm, func_real_value);
         table_set(vm, &the_module->values, func_name, func_real_value);
+        pop(vm);
       }
     }
 
@@ -105,10 +109,13 @@ bool load_module(b_vm *vm, b_module_init init_fn, char *import_name, char *sourc
             b_field_reg field = klass_reg.fields[k];
             b_value field_name = GC_STRING(field.name);
 
+            b_value v = field.field_value(vm);
+            push(vm, v);
             table_set(vm,
                       field.is_static ? &klass->static_properties
                       : &klass->properties,
-                      field_name, field.field_value(vm));
+                      field_name, v);
+            pop(vm);
           }
         }
 
@@ -135,7 +142,11 @@ void add_native_module(b_vm *vm, b_obj_module *module, const char *as) {
   if(as != NULL) {
     module->name = strdup(as);
   }
-  table_set(vm, &vm->modules, STRING_VAL(module->name), OBJ_VAL(module));
+  b_value name = STRING_VAL(module->name);
+  push(vm, name);
+  push(vm, OBJ_VAL(module));
+  table_set(vm, &vm->modules, name, OBJ_VAL(module));
+  pop_n(vm, 2);
 }
 
 void bind_user_modules(b_vm *vm, char *pkg_root) {

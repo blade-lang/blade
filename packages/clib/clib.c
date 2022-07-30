@@ -14,7 +14,7 @@
   const char *format = #cf; \
   int length = snprintf(NULL, 0, format, ##__VA_ARGS__); \
   ptr->name = ALLOCATE(char, length); \
-  sprintf(ptr->name, format, ##__VA_ARGS__); \
+  sprintf((char *)ptr->name, format, ##__VA_ARGS__); \
   RETURN_OBJ(ptr);
 
 typedef struct {
@@ -28,12 +28,14 @@ typedef struct {
     b_ffi_type *f = ALLOCATE(b_ffi_type, 1); \
     f->as_ffi = &ffi_type_##v;        \
     f->as_int = b_clib_type_##v;      \
+    f->types = NULL;                         \
     b_obj_ptr *ptr = (b_obj_ptr *)GC(new_ptr(vm, (void *)f)); \
     const char *format = "%s";        \
     const char *str = "<void *clib::type::" #v ">"; \
     int length = snprintf(NULL, 0, format, str); \
-    ptr->name = ALLOCATE(char, length); \
-    sprintf(ptr->name, format, str); \
+    ptr->name = ALLOCATE(char, length + 1); \
+    sprintf((char *)ptr->name, format, str); \
+    ptr->name[length] = '\0';   \
     return OBJ_VAL(ptr); \
   }
 
@@ -41,13 +43,15 @@ typedef struct {
   b_value __clib_type_##v(b_vm *vm) { \
     b_ffi_type *f = ALLOCATE(b_ffi_type, 1); \
     f->as_ffi = &ffi_type_pointer;        \
-    f->as_int = b_clib_type_##v; \
+    f->as_int = b_clib_type_##v;      \
+    f->types = NULL;                         \
     b_obj_ptr *ptr = (b_obj_ptr *)GC(new_ptr(vm, (void *)f)); \
     const char *format = "%s";        \
     const char *str = "<void *clib::type::" #v ">"; \
     int length = snprintf(NULL, 0, format, str); \
-    ptr->name = ALLOCATE(char, length); \
-    sprintf(ptr->name, format, str); \
+    ptr->name = ALLOCATE(char, length + 1); \
+    sprintf((char *)ptr->name, format, str); \
+    ptr->name[length] = '\0';   \
     return OBJ_VAL(ptr); \
   }
 
@@ -116,14 +120,14 @@ DEFINE_CLIB_CTYPE(uchar_ptr);
 
 b_value __clib_type_bool(b_vm *vm) {
   b_ffi_type *f = ALLOCATE(b_ffi_type, 1);
-  f->as_ffi = &ffi_type_sint;
+  f->as_ffi = &ffi_type_uint8;
   f->as_int = b_clib_type_bool;
   b_obj_ptr *ptr = (b_obj_ptr *)GC(new_ptr(vm, (void *)f));
   const char *format = "%s";
   const char *str = "<void *clib::type::bool>";
-  int length = snprintf(NULL, 0, format, str);
-  ptr->name = ALLOCATE(char, length);
-  sprintf(ptr->name, format, str);
+  ptr->name = ALLOCATE(char, 25);
+  sprintf((char *)ptr->name, format, str);
+  ptr->name[24] = '\0';
   return OBJ_VAL(ptr);
 }
 
