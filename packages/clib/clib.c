@@ -13,8 +13,9 @@
   b_obj_ptr *ptr = (b_obj_ptr *)GC(new_ptr(vm, (handle))); \
   const char *format = #cf; \
   int length = snprintf(NULL, 0, format, ##__VA_ARGS__); \
-  ptr->name = ALLOCATE(char, length); \
+  ptr->name = ALLOCATE(char, length + 1); \
   sprintf((char *)ptr->name, format, ##__VA_ARGS__); \
+  ptr->name[length] = '\0';   \
   RETURN_OBJ(ptr);
 
 typedef struct {
