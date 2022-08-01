@@ -7,11 +7,11 @@ inline void write_list(b_vm *vm, b_obj_list *list, b_value value) {
 }
 
 b_obj_list *copy_list(b_vm *vm, b_obj_list *list, int start, int length) {
-  b_obj_list *_list = new_list(vm);
+  b_obj_list *_list = (b_obj_list *)GC(new_list(vm));
 
-  _list->items.values = &list->items.values[start];
-  _list->items.count = length;
-  _list->items.capacity = length;
+  for(int i = 0; i < list->items.count; i++) {
+    write_list(vm, _list, list->items.values[i]);
+  }
 
   return _list;
 }

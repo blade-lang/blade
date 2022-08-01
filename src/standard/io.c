@@ -49,7 +49,7 @@ DECLARE_MODULE_METHOD(io_tty__tcgetattr) {
   }
 
   // we have our attributes already
-  b_obj_dict *dict = new_dict(vm);
+  b_obj_dict *dict = (b_obj_dict *)GC(new_dict(vm));
   dict_add_entry(vm, dict, NUMBER_VAL(0), NUMBER_VAL(raw_attr.c_iflag));
   dict_add_entry(vm, dict, NUMBER_VAL(1), NUMBER_VAL(raw_attr.c_oflag));
   dict_add_entry(vm, dict, NUMBER_VAL(2), NUMBER_VAL(raw_attr.c_cflag));
