@@ -89,20 +89,20 @@ def offsetMomentum() {
 def advance(dt) {
     var size = bodies.length()
 
-    iter var i = 0; i < size; i++ {
+    for i in 0..size {
         var bodyi = bodies[i]
         var vxi = bodyi.vx
         var vyi = bodyi.vy
         var vzi = bodyi.vz
 
-        iter var j = i + 1; j < size; j++ {
+        for j in (i + 1)..size {
             var bodyj = bodies[j]
 
             var dx = bodyi.x - bodyj.x
             var dy = bodyi.y - bodyj.y
             var dz = bodyi.z - bodyj.z
 
-            var d2 = dx * dx + dy * dy + dz * dz
+            var d2 = dx**2 + dy**2 + dz**2
 
             var mag = dt / (d2 * (d2 ** 0.5)) # d2 ** 0.5 = sqrt(d2)
 
@@ -112,9 +112,9 @@ def advance(dt) {
             vzi -= dz * massj * mag
 
             var massi = bodyi.mass
-            bodyj.vx = bodyj.vx + dx * massi * mag
-            bodyj.vy = bodyj.vy + dy * massi * mag
-            bodyj.vz = bodyj.vz + dz * massi * mag
+            bodyj.vx += dx * massi * mag
+            bodyj.vy += dy * massi * mag
+            bodyj.vz += dz * massi * mag
         }
 
         bodyi.vx = vxi
@@ -122,11 +122,11 @@ def advance(dt) {
         bodyi.vz = vzi
     }
 
-    iter var i = 0; i < size; i++ {
+    for i in 0..size {
         var body = bodies[i]
-        body.x = body.x + dt * body.vx
-        body.y = body.y + dt * body.vy
-        body.z = body.z + dt * body.vz
+        body.x += dt * body.vx
+        body.y += dt * body.vy
+        body.z += dt * body.vz
     }
 }
 
@@ -134,18 +134,18 @@ def energy() {
     var e = 0
     var size = bodies.length()
 
-    iter var i = 0; i < size; i++ {
+    for i in 0..size {
         var bodyi = bodies[i]
 
-        e += 0.5 * bodyi.mass * ( bodyi.vx * bodyi.vx + bodyi.vy * bodyi.vy + bodyi.vz * bodyi.vz )
+        e += 0.5 * bodyi.mass * (bodyi.vx**2 + bodyi.vy**2 + bodyi.vz**2)
 
-        iter var j = i + 1; j < size; j++ {
+        for j in (i + 1)..size {
             var bodyj = bodies[j]
             var dx = bodyi.x - bodyj.x
             var dy = bodyi.y - bodyj.y
             var dz = bodyi.z - bodyj.z
 
-            var distance = (dx * dx + dy * dy + dz * dz) ** 0.5
+            var distance = (dx**2 + dy**2 + dz**2) ** 0.5
             e -= (bodyi.mass * bodyj.mass) / distance
         }
     }
@@ -159,7 +159,7 @@ var start = time()
 offsetMomentum()
 
 echo energy()
-iter var i = 0; i < n; i++ {
+for i in 0..n {
     advance(0.01)
 }
 echo energy()
