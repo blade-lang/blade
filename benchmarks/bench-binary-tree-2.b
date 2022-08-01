@@ -1,6 +1,6 @@
-import os
-
 var start = time()
+
+var N = 21
 
 def make_tree(depth) {
   if depth <= 0 return [nil, nil]
@@ -15,7 +15,7 @@ def check_tree(node) {
 }
 
 var min_depth = 4
-var max_depth = max(min_depth + 2, int(to_number(os.args[2])))
+var max_depth = max(min_depth + 2, N)
 var stretch_depth = max_depth + 1
 
 echo 'stretch tree of depth ${stretch_depth}\t check: ${check_tree(make_tree(stretch_depth))}'

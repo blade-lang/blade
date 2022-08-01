@@ -61,8 +61,6 @@ var K_WORK = 1001
 
 var BUFSIZE = 4
 
-var BUFSIZE_RANGE = 0..BUFSIZE
-
 class Packet {
   Packet(l,i,k) {
     self.link = l
@@ -406,7 +404,7 @@ class WorkTask < Task {
     pkt.ident = dest
     pkt.datum = 0
 
-    for i in BUFSIZE_RANGE {
+    for i in 0..BUFSIZE {
       w.count += 1
       if w.count > 26 w.count = 1
       pkt.data[i] = A + w.count - 1

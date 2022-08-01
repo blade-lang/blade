@@ -32,7 +32,7 @@ static inline void reset_stack(b_vm *vm) {
 }
 
 static b_value get_stack_trace(b_vm *vm) {
-  char *trace = ALLOCATE(char, 1);
+  char *trace = calloc(0, sizeof(char));
 
   if (trace != NULL) {
 
@@ -44,26 +44,22 @@ static b_value get_stack_trace(b_vm *vm) {
       size_t instruction = frame->ip - function->blob.code - 1;
       int line = function->blob.lines[instruction];
 
-      const char *trace_start = "    File: %s, Line: %d, In: ";
-      size_t trace_start_length = snprintf(NULL, 0, trace_start, function->module->file, line);
+      const char *trace_start = i < vm->frame_count - 1
+          ? "    File: %s, Line: %d, In: %s()\n"
+          : "    File: %s, Line: %d, In: %s()";
+      char *fn_name = function->name == NULL ? "<script>": function->name->chars;
+      size_t trace_start_length = snprintf(NULL, 0, trace_start, function->module->file, line, fn_name);
 
       char *trace_part = ALLOCATE(char, trace_start_length + 1);
       if (trace_part != NULL) {
-        sprintf(trace_part, trace_start, function->module->file, line);
+        sprintf(trace_part, trace_start, function->module->file, line, fn_name);
         trace_part[(int) trace_start_length] = '\0';
-      }
-
-      if (function->name == NULL) {
-        trace_part = append_strings(
-            trace_part, i < vm->frame_count - 1 ? "<script>\n" : "<script>");
-      } else {
-        trace_part = append_strings(trace_part, function->name->chars);
-        trace_part = append_strings(trace_part, i < vm->frame_count - 1 ? "()\n" : "()");
       }
 
       trace = append_strings(trace, trace_part);
       free(trace_part);
     }
+
     return OBJ_VAL(take_string(vm, trace, (int) strlen(trace)));
   }
   return OBJ_VAL(copy_string(vm, "", 0));
@@ -102,7 +98,9 @@ bool propagate_exception(b_vm *vm) {
   }
 
   if (table_get(&exception->properties, STRING_L_VAL("stacktrace", 10), &trace)) {
-    fprintf(stderr, "  StackTrace:\n%s\n", value_to_string(vm, trace));
+    char *trace_str = value_to_string(vm, trace);
+    fprintf(stderr, "  StackTrace:\n%s\n", trace_str);
+    free(trace_str);
   }
 
   return false;
