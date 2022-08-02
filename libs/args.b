@@ -116,7 +116,7 @@ var OPTIONAL = 7
 
 var _type_name = {
   0: '',
-  1: 'number',
+  1: 'integer',
   2: 'number',
   3: 'boolean',
   4: 'value',
@@ -248,7 +248,7 @@ class Parser < _Optionable {
     if default_help != nil and !is_bool(default_help)
       die Exception('bool expected in argument 2 (default_help)')
 
-    self.default_help = default_help
+    self._default_help = default_help
 
     self.name = name
     self._command = nil
@@ -563,11 +563,11 @@ class Parser < _Optionable {
                     _get_real_value(option.type, value)
                   )
                 } else {
-                  self._command_error(command.name, 'Option "${option.long_name}" expects a ${_type_name[option.type]}')
+                  self._option_error(option.long_name, 'Option "${option.long_name}" expects a ${_type_name[option.type]}')
                 }
               }
             } else if option.type != NONE {
-              if i < cli_args.length() - 1 {
+              if i < cli_args.length() {
                 var value = cli_args[i]
                 parsed_args.options.set(
                   '${option.long_name}', 
