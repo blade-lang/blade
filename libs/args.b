@@ -247,6 +247,7 @@ class Parser < _Optionable {
       die Exception('missing program name')
     if default_help != nil and !is_bool(default_help)
       die Exception('bool expected in argument 2 (default_help)')
+    if default_help == nil default_help = true
 
     self._default_help = default_help
 
