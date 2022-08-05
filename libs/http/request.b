@@ -376,10 +376,14 @@ class HttpRequest {
       } else if !is_dict(data) and !self.fields {
         curl.set_option(Option.POSTFIELDS, data)
       } else {
-        var mime = CurlMime()
+        var mime = CurlMime(curl)
 
         for k, v in data {
-          mime.add(k, v)
+          if !is_file(v) {
+            mime.add(k, v)
+          } else {
+            mime.add_file(k, v)
+          }
         }
   
         if self.files {
@@ -390,14 +394,6 @@ class HttpRequest {
   
         curl.set_option(Option.MIMEPOST, mime)
       }
-    } else {
-      var mime = CurlMime()
-
-      for k, v in data {
-        mime.add(k, v)
-      }
-
-      curl.set_option(Option.MIMEPOST, mime)
     }
   }
 
@@ -412,7 +408,7 @@ class HttpRequest {
       die Exception('uri must be an instance of Url')
     if !is_string(method)
       die Exception('method must be string')
-    if data != nil and !is_string(data) and !is_byte(data) and !is_dict(data)
+    if data != nil and !is_string(data) and !is_bytes(data) and !is_dict(data)
       die Exception('data must be string, bytes or dictionary')
     if options != nil and !is_dict(options)
       die Exception('options must be a dictionary')
