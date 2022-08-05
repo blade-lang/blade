@@ -68,25 +68,29 @@ class Encoder {
       }
       when 'list' {
         var result = ''
-        if self._is_list self._depth++
+        self._depth++
         for val in value {
           # inner lists will increase the depth
             result += ',${self._start_alignment()}${self._encode(val)}'
         }
-        if self._is_list self._depth--
-        if result return '[${result[self._merge_strip_start,]}${self._end_alignment()}]'
-        return '[]'
+        if result {
+          result = '[${result[self._merge_strip_start,]}${self._end_alignment()}]'
+        } else result = '[]'
+        self._depth--
+        return result
       }
       when 'dictionary' {
         var result = ''
-        if self._is_object self._depth++
+        self._depth++
         for key, val in value {
           # inner dictionaries will increase the depth
           result += ',${self._start_alignment()}"${to_string(key)}":${spacing}${self._encode(val)}'
         }
-        if self._is_object self._depth--
-        if result return '{${result[self._merge_strip_start,]}${self._end_alignment()}}'
-        return '{}'
+        if result {
+          result = '{${result[self._merge_strip_start,]}${self._end_alignment()}}'
+        } else result = '{}'
+        self._depth--
+        return result
       }
       default {
 
@@ -95,7 +99,7 @@ class Encoder {
             return self._encode(reflect.get_decorator(value, 'to_json')())
           }
         }
-
+ 
         die Exception('object of type ${typeof(value)} is not a JSON serializable')
       }
     }
@@ -114,10 +118,6 @@ class Encoder {
     if self._depth > self._max_depth and self._max_depth != 0 {
       die Exception('maximum recursive depth of ${self._max_depth} exceeded')
     }
-    
-    # depth increment is done here so that we only
-    # increment depths when needed
-    self._depth++
 
     return self._encode(value)
   }

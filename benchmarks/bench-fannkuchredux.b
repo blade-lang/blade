@@ -131,5 +131,5 @@ def fannkuchredux(n) {
 }
 
 var start = time()
-fannkuchredux(11)
+fannkuchredux(12)
 echo '\nTime taken = ${time() - start}s'

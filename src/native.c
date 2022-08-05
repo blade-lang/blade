@@ -600,12 +600,17 @@ DECLARE_NATIVE(rand) {
 
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  srand((unsigned int) (1000000 * tv.tv_sec + tv.tv_usec));
-  do {
-    x = rand();
-  } while (x >= RAND_MAX - remainder);
+  srand((unsigned int) (1000000 * tv.tv_sec + tv.tv_usec + time(NULL)));
 
-  RETURN_NUMBER((double) lower_limit + x % n);
+  if(lower_limit == 0 && upper_limit == 1) {
+    RETURN_NUMBER((double)rand() / RAND_MAX);
+  } else {
+    do {
+      x = rand();
+    } while (x >= RAND_MAX - remainder);
+
+    RETURN_NUMBER((double) lower_limit + x % n);
+  }
 }
 
 /**

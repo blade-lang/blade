@@ -15,7 +15,7 @@
 
 ## tl;dr
 
-Blade is a simple, fast, clean and dynamic language that allows you to develop complex applications 
+Blade is a simple, fast, clean and dynamic language that allows you to develop applications 
 quickly. Blade emphasises algorithm over syntax and for this reason, it has a very small but powerful 
 syntax set with a very natural feel.
 

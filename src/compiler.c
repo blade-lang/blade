@@ -1900,6 +1900,8 @@ static void using_statement(b_parser *p) {
   int case_count = 0;
 
   b_obj_switch *sw = new_switch(p->vm);
+  push(p->vm, OBJ_VAL(sw));
+
   int switch_code = emit_switch(p);
   // emit_byte_and_short(p, OP_SWITCH, make_constant(p, OBJ_VAL(sw)));
   int start_offset = current_blob(p)->count;
@@ -1932,10 +1934,13 @@ static void using_statement(b_parser *p) {
             int length;
             char *str = compile_string(p, &length);
             b_obj_string *string = copy_string(p->vm, str, length);
+            push(p->vm, OBJ_VAL(string)); // gc fix
             table_set(p->vm, &sw->table, OBJ_VAL(string), jump);
+            pop(p->vm); // gc fix
           } else if (check_number(p)) {
             table_set(p->vm, &sw->table, compile_number(p), jump);
           } else {
+            pop(p->vm); // pop the switch
             error(p, "only constants can be used in when expressions");
             return;
           }
@@ -1966,6 +1971,7 @@ static void using_statement(b_parser *p) {
   sw->exit_jump = current_blob(p)->count - start_offset;
 
   patch_switch(p, switch_code, make_constant(p, OBJ_VAL(sw)));
+  pop(p->vm); // pop the switch
 }
 
 static void if_statement(b_parser *p) {

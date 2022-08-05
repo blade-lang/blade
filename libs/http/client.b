@@ -102,8 +102,8 @@ class HttpClient {
 
     if !method method = 'GET'
 
-    if data != nil and !is_string(data)
-      die Exception('string expected, ${typeof(data)} give')
+    if data != nil and !is_string(data) and !is_dict(data)
+      die Exception('string expected, ${typeof(data)} given')
 
     var request = HttpRequest()
     request.headers = self.headers

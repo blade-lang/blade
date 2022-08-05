@@ -251,6 +251,13 @@ class HttpServer {
       }
     }
 
+    # clear file buffers...
+    if request.files {
+      for _, f in request.files  {
+        f.content.dispose()
+      }
+    }
+
     feedback += self._get_response_header_string(response.headers)
     feedback += '\r\n${response.body}' 
 

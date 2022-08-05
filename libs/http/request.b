@@ -176,17 +176,17 @@ class HttpRequest {
 
   _decode_multipart(body, boundary) {
 
-    var boundaries = body.split('--${boundary}')
+    var boundaries = body.split('--${boundary}'.to_bytes())
     var contents = []
 
     for bound in boundaries {
-      bound = bound.ltrim('\r').ltrim('\n')
+      # bound = bound.ltrim('\r').ltrim('\n')
 
       # We don't want to treat empty bounds.
-      var content_start = bound.index_of('\r\n\r\n')
+      var content_start = bound.to_string().index_of('\r\n\r\n')
       if content_start != -1 {
-        var content_header = bound[,content_start],
-            content_body = bound.ascii()[content_start + 4,]
+        var content_header = bound[,content_start].to_string(),
+            content_body = bound[content_start + 4,]
             
         var content_headers = _process.process_header(content_header),
             dispositions = content_headers.get('Content-Disposition', nil)
@@ -240,24 +240,27 @@ class HttpRequest {
             return false
 
           var content_type = content_headers.get('Content-Type', nil),
-              name = disposition.name,
-              value = content_body.rtrim('\n').rtrim('\r')
+              name = disposition.name
+              # value = content_body.rtrim('\n').rtrim('\r')
             
           if content_type {
 
             # We are dealing with an uploaded file.
             self.files[name] = {
               mime: content_type.trim(),
-              content: value.ascii(),
+              content: content_body,
+              size: content_body.length(),
             }
 
             self.files[name].extend(disposition)
           } else {
-            self.body[name] = value
+            self.body[name] = content_body.to_string().trim()
           }
           contents.append(disposition)
         }
       }
+
+      bound.dispose()   # free the binary data
     }
 
     return true
@@ -277,7 +280,8 @@ class HttpRequest {
 
     using type {
       when 'application/x-www-form-urlencoded' {
-        self.body = self._get_url_encoded_parts(body)
+        self.body = self._get_url_encoded_parts(body.to_string())  
+        body.dispose()  # free body binary data
       }
       when 'multipart/form-data' {
         # Content type should declare a boundary but nothing else.
@@ -286,11 +290,17 @@ class HttpRequest {
         var bound_spec = content_type[1].trim().split('=')
 
         # Make sure we have a valid boundary=xyz label.
-        if bound_spec.length() != 2 or bound_spec[0].lower() != 'boundary' 
+        if bound_spec.length() != 2 or bound_spec[0].lower() != 'boundary' {
+          body.dispose()   # free body binary data
           return false
+        }
 
-        if !self._decode_multipart(body.trim(), bound_spec[1])
+        if !self._decode_multipart(body, bound_spec[1]) {
+          body.dispose()   # free body binary data
           return false
+        }
+
+        body.dispose()   # free body binary data
       }
       default {
         self.body = body
@@ -342,12 +352,14 @@ class HttpRequest {
       self._read_cookies()
 
       # Make sure we have all body contents.
+      body = body.to_bytes()
       if self.headers.contains('Content-Length') {
         var content_length = to_number(self.headers['Content-Length'])
-        var byte_length = body.to_bytes().length()
+        var byte_length = body.length()
         if byte_length < content_length {
-          body += client.read(content_length - byte_length)
-          body.ascii()
+          var remaining_data = client.read(content_length - byte_length).to_bytes()
+          body.extend(remaining_data)
+          remaining_data.dispose()
         }
       }
 
@@ -364,10 +376,14 @@ class HttpRequest {
       } else if !is_dict(data) and !self.fields {
         curl.set_option(Option.POSTFIELDS, data)
       } else {
-        var mime = CurlMime()
+        var mime = CurlMime(curl)
 
         for k, v in data {
-          mime.add(k, v)
+          if !is_file(v) {
+            mime.add(k, v)
+          } else {
+            mime.add_file(k, v)
+          }
         }
   
         if self.files {
@@ -378,14 +394,6 @@ class HttpRequest {
   
         curl.set_option(Option.MIMEPOST, mime)
       }
-    } else {
-      var mime = CurlMime()
-
-      for k, v in data {
-        mime.add(k, v)
-      }
-
-      curl.set_option(Option.MIMEPOST, mime)
     }
   }
 
@@ -400,7 +408,7 @@ class HttpRequest {
       die Exception('uri must be an instance of Url')
     if !is_string(method)
       die Exception('method must be string')
-    if data != nil and !is_string(data) and !is_byte(data) and !is_dict(data)
+    if data != nil and !is_string(data) and !is_bytes(data) and !is_dict(data)
       die Exception('data must be string, bytes or dictionary')
     if options != nil and !is_dict(options)
       die Exception('options must be a dictionary')
