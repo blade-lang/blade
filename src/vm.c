@@ -36,7 +36,7 @@ static b_value get_stack_trace(b_vm *vm) {
 
   if (trace != NULL) {
 
-    for (int i = 0; i < vm->frame_count; i++) {
+    for (int i = vm->frame_count; i >= 0; i--) {
       b_call_frame *frame = &vm->frames[i];
       b_obj_func *function = frame->closure->function;
 
@@ -44,7 +44,7 @@ static b_value get_stack_trace(b_vm *vm) {
       size_t instruction = frame->ip - function->blob.code - 1;
       int line = function->blob.lines[instruction];
 
-      const char *trace_start = i < vm->frame_count - 1
+      const char *trace_start = i != 0
           ? "    File: %s, Line: %d, In: %s()\n"
           : "    File: %s, Line: %d, In: %s()";
       char *fn_name = function->name == NULL ? "<script>": function->name->chars;
@@ -60,9 +60,10 @@ static b_value get_stack_trace(b_vm *vm) {
       free(trace_part);
     }
 
-    return OBJ_VAL(take_string(vm, trace, (int) strlen(trace)));
+    return STRING_TT_VAL(trace);
   }
-  return OBJ_VAL(copy_string(vm, "", 0));
+
+  return STRING_L_VAL("", 0);
 }
 
 bool propagate_exception(b_vm *vm) {
@@ -159,7 +160,7 @@ static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
   write_blob(vm, &function->blob, (1 >> 8) & 0xff, 0);
   write_blob(vm, &function->blob, 1 & 0xff, 0);
 
-  int message_const = add_constant(vm, &function->blob, OBJ_VAL(copy_string(vm, "message", 7)));
+  int message_const = add_constant(vm, &function->blob, STRING_L_VAL("message", 7));
 
   // s_prop 1
   write_blob(vm, &function->blob, OP_SET_PROPERTY, 0);
@@ -182,6 +183,7 @@ static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
   pop(vm);
 
   // set class constructor
+  push(vm, OBJ_VAL(closure));
   table_set(vm, &klass->methods, OBJ_VAL(class_name), OBJ_VAL(closure));
   klass->initializer = OBJ_VAL(closure);
 
@@ -190,6 +192,7 @@ static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
   table_set(vm, &klass->properties, STRING_L_VAL("stacktrace", 10), NIL_VAL);
 
   table_set(vm, &vm->globals, OBJ_VAL(class_name), OBJ_VAL(klass));
+  pop(vm);
   vm->exception_class = klass;
 }
 
@@ -258,7 +261,7 @@ inline b_value pop_n(b_vm *vm, int n) {
 inline b_value peek(b_vm *vm, int distance) { return vm->stack_top[-1 - distance]; }
 
 static inline void define_native(b_vm *vm, const char *name, b_native_fn function) {
-  push(vm, OBJ_VAL(copy_string(vm, name, (int) strlen(name))));
+  push(vm, STRING_VAL(name));
   push(vm, OBJ_VAL(new_native(vm, function, name)));
   table_set(vm, &vm->globals, vm->stack[0], vm->stack[1]);
   pop_n(vm, 2);
@@ -266,7 +269,7 @@ static inline void define_native(b_vm *vm, const char *name, b_native_fn functio
 
 void define_native_method(b_vm *vm, b_table *table, const char *name,
                           b_native_fn function) {
-  push(vm, OBJ_VAL(copy_string(vm, name, (int) strlen(name))));
+  push(vm, STRING_VAL(name));
   push(vm, OBJ_VAL(new_native(vm, function, name)));
   table_set(vm, table, vm->stack[0], vm->stack[1]);
   pop_n(vm, 2);
@@ -487,6 +490,7 @@ void init_vm(b_vm *vm) {
 
   vm->gray_count = 0;
   vm->gray_capacity = 0;
+  vm->frame_count = 0;
   vm->gray_stack = NULL;
 
   vm->std_args = NULL;
@@ -853,6 +857,10 @@ inline bool is_false(b_value value) {
   if (IS_STRING(value))
     return AS_STRING(value)->length < 1;
 
+  // Non-empty bytes are true, empty strings are false.
+  if (IS_BYTES(value))
+    return AS_BYTES(value)->bytes.count < 1;
+
   // Non-empty lists are true, empty lists are false.
   if (IS_LIST(value))
     return AS_LIST(value)->items.count == 0;
@@ -966,14 +974,12 @@ static inline b_obj_bytes *add_bytes(b_vm *vm, b_obj_bytes *a, b_obj_bytes *b) {
   return bytes;
 }
 
-static inline b_obj_list *multiply_list(b_vm *vm, b_obj_list *a, b_obj_list *new_list, int times) {
+static inline void multiply_list(b_vm *vm, b_obj_list *a, b_obj_list *new_list, int times) {
   for (int i = 0; i < times; i++) {
     for (int j = 0; j < a->items.count; j++) {
       write_value_arr(vm, &new_list->items, a->items.values[j]);
     }
   }
-
-  return new_list;
 }
 
 static bool dict_get_index(b_vm *vm, b_obj_dict *dict, bool will_assign) {
@@ -1202,10 +1208,12 @@ static bool list_get_ranged_index(b_vm *vm, b_obj_list *list, bool will_assign) 
     upper_index = list->items.count;
 
   b_obj_list *n_list = new_list(vm);
+  push(vm, OBJ_VAL(n_list)); // gc protect
 
   for (int i = lower_index; i < upper_index; i++) {
     write_value_arr(vm, &n_list->items, list->items.values[i]);
   }
+  pop(vm);  // clear gc protect
 
   if (!will_assign) {
     pop_n(vm, 3); // +1 for the list itself
@@ -1482,9 +1490,9 @@ b_ptr_result run(b_vm *vm) {
           b_obj_list *list = AS_LIST(peek(vm, 0));
           b_obj_list *n_list = new_list(vm);
           push(vm, OBJ_VAL(n_list));
-          b_value result = OBJ_VAL(multiply_list(vm, list, n_list, number));
+          multiply_list(vm, list, n_list, number);
           pop_n(vm, 2);
-          push(vm, result);
+          push(vm, OBJ_VAL(n_list));
           break;
         }
         BINARY_OP(NUMBER_VAL, *);
@@ -1615,7 +1623,7 @@ b_ptr_result run(b_vm *vm) {
         if (!IS_STRING(peek(vm, 0)) && !IS_NIL(peek(vm, 0))) {
           char *value = value_to_string(vm, pop(vm));
           if ((int) strlen(value) != 0) {
-            push(vm, OBJ_VAL(take_string(vm, value, (int) strlen(value))));
+            push(vm, STRING_TT_VAL(value));
           } else {
             push(vm, NIL_VAL);
           }
@@ -1769,9 +1777,7 @@ b_ptr_result run(b_vm *vm) {
                 break;
               }
 
-              if (!bind_method(vm, instance->klass, name)) {
-                EXIT_VM();
-              } else {
+              if (bind_method(vm, instance->klass, name)) {
                 break;
               }
 
@@ -1864,9 +1870,7 @@ b_ptr_result run(b_vm *vm) {
             break;
           }
 
-          if (!bind_method(vm, instance->klass, name)) {
-            EXIT_VM();
-          } else {
+          if (bind_method(vm, instance->klass, name)) {
             break;
           }
 
@@ -1972,7 +1976,7 @@ b_ptr_result run(b_vm *vm) {
       case OP_CALL: {
         int arg_count = READ_BYTE();
         if (!call_value(vm, peek(vm, arg_count), arg_count)) {
-          EXIT_VM();
+          runtime_error("invalid call to object");
         }
         frame = &vm->frames[vm->frame_count - 1];
         break;
@@ -1981,7 +1985,7 @@ b_ptr_result run(b_vm *vm) {
         b_obj_string *method = READ_STRING();
         int arg_count = READ_BYTE();
         if (!invoke(vm, method, arg_count)) {
-          EXIT_VM();
+          runtime_error("failed to invoke method %s on object of type %s", method->chars, value_type(peek(vm, arg_count)));
         }
         frame = &vm->frames[vm->frame_count - 1];
         break;
@@ -1990,7 +1994,7 @@ b_ptr_result run(b_vm *vm) {
         b_obj_string *method = READ_STRING();
         int arg_count = READ_BYTE();
         if (!invoke_self(vm, method, arg_count)) {
-          EXIT_VM();
+          runtime_error("failed to invoke method %s on instance of %s", method->chars, value_type(peek(vm, arg_count)));
         }
         frame = &vm->frames[vm->frame_count - 1];
         break;
@@ -2030,7 +2034,7 @@ b_ptr_result run(b_vm *vm) {
         b_obj_string *name = READ_STRING();
         b_obj_class *klass = AS_CLASS(peek(vm, 0));
         if (!bind_method(vm, klass->superclass, name)) {
-          EXIT_VM();
+          runtime_error("class %s does not define a function %s", klass->name->chars, name->chars);
         }
         break;
       }
@@ -2039,7 +2043,7 @@ b_ptr_result run(b_vm *vm) {
         int arg_count = READ_BYTE();
         b_obj_class *klass = AS_CLASS(pop(vm));
         if (!invoke_from_class(vm, klass, method, arg_count)) {
-          EXIT_VM();
+          runtime_error("could not invoke %s from %s", method->chars, klass->name->chars);
         }
         frame = &vm->frames[vm->frame_count - 1];
         break;
@@ -2048,7 +2052,7 @@ b_ptr_result run(b_vm *vm) {
         int arg_count = READ_BYTE();
         b_obj_class *klass = AS_CLASS(pop(vm));
         if (!invoke_from_class(vm, klass, klass->name, arg_count)) {
-          EXIT_VM();
+          runtime_error("could not invoke constructor of %s", klass->name->chars);
         }
         frame = &vm->frames[vm->frame_count - 1];
         break;
@@ -2103,19 +2107,19 @@ b_ptr_result run(b_vm *vm) {
           switch (AS_OBJ(peek(vm, 2))->type) {
             case OBJ_STRING: {
               if (!string_get_ranged_index(vm, AS_STRING(peek(vm, 2)), will_assign == (uint8_t) 1)) {
-                EXIT_VM();
+                runtime_error("range is invalid for object of type string");
               }
               break;
             }
             case OBJ_LIST: {
               if (!list_get_ranged_index(vm, AS_LIST(peek(vm, 2)), will_assign == (uint8_t) 1)) {
-                EXIT_VM();
+                runtime_error("range is invalid for object of type list");
               }
               break;
             }
             case OBJ_BYTES: {
               if (!bytes_get_ranged_index(vm, AS_BYTES(peek(vm, 2)), will_assign == (uint8_t) 1)) {
-                EXIT_VM();
+                runtime_error("range is invalid for object of type bytes");
               }
               break;
             }
@@ -2141,31 +2145,31 @@ b_ptr_result run(b_vm *vm) {
           switch (AS_OBJ(peek(vm, 1))->type) {
             case OBJ_STRING: {
               if (!string_get_index(vm, AS_STRING(peek(vm, 1)), will_assign == (uint8_t) 1)) {
-                EXIT_VM();
+                runtime_error("index is invalid for object of type string");
               }
               break;
             }
             case OBJ_LIST: {
               if (!list_get_index(vm, AS_LIST(peek(vm, 1)), will_assign == (uint8_t) 1)) {
-                EXIT_VM();
+                runtime_error("index is invalid for object of type list");
               }
               break;
             }
             case OBJ_DICT: {
               if (!dict_get_index(vm, AS_DICT(peek(vm, 1)), will_assign == (uint8_t) 1)) {
-                EXIT_VM();
+                runtime_error("index is invalid for object of type dictionary");
               }
               break;
             }
             case OBJ_MODULE: {
               if (!module_get_index(vm, AS_MODULE(peek(vm, 1)), will_assign == (uint8_t) 1)) {
-                EXIT_VM();
+                runtime_error("index is invalid for object of type module");
               }
               break;
             }
             case OBJ_BYTES: {
               if (!bytes_get_index(vm, AS_BYTES(peek(vm, 1)), will_assign == (uint8_t) 1)) {
-                EXIT_VM();
+                runtime_error("index is invalid for object of type bytes");
               }
               break;
             }
@@ -2199,7 +2203,7 @@ b_ptr_result run(b_vm *vm) {
           switch (AS_OBJ(peek(vm, 2))->type) {
             case OBJ_LIST: {
               if (!list_set_index(vm, AS_LIST(peek(vm, 2)), index, value)) {
-                EXIT_VM();
+                runtime_error("index is invalid for object of type list");
               }
               break;
             }
@@ -2217,7 +2221,7 @@ b_ptr_result run(b_vm *vm) {
             }
             case OBJ_BYTES: {
               if (!bytes_set_index(vm, AS_BYTES(peek(vm, 2)), index, value)) {
-                EXIT_VM();
+                runtime_error("index is invalid for object of type bytes");
               }
               break;
             }
@@ -2324,8 +2328,7 @@ b_ptr_result run(b_vm *vm) {
 
       case OP_EJECT_IMPORT: {
         b_obj_func *function = AS_CLOSURE(READ_CONSTANT())->function;
-        table_delete(&frame->closure->function->module->values,
-                     OBJ_VAL(copy_string(vm, function->module->name, (int) strlen(function->module->name))));
+        table_delete(&frame->closure->function->module->values, STRING_VAL(function->module->name));
         break;
       }
 
@@ -2367,6 +2370,7 @@ b_ptr_result run(b_vm *vm) {
           frame = &vm->frames[vm->frame_count - 1];
           break;
         }
+
         EXIT_VM();
       }
 

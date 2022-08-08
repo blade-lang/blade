@@ -36,8 +36,7 @@ DECLARE_LIST_METHOD(clear) {
 DECLARE_LIST_METHOD(clone) {
   ENFORCE_ARG_COUNT(clone, 0);
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
-  b_obj_list *new_list = copy_list(vm, list, 0, list->items.count);
-  RETURN_OBJ(new_list);
+  RETURN_OBJ(copy_list(vm, list, 0, list->items.count));
 }
 
 DECLARE_LIST_METHOD(count) {
