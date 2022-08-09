@@ -253,7 +253,7 @@ class HttpServer {
 
     # clear file buffers...
     if request.files {
-      for _, f in request.files  {
+      for f in request.files  {
         f.content.dispose()
       }
     }

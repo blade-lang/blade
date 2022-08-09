@@ -1,6 +1,27 @@
 #include <blade.h>
 #include <sqlite3.h>
 
+void sqlite_bind_params(sqlite3_stmt *stmt, int index, b_value value, int *error) {
+  if(IS_NUMBER(value)) {
+    double number = AS_NUMBER(value);
+    if((int)number == number) {
+      sqlite3_bind_int(stmt, index, (int)number);
+    } else {
+      sqlite3_bind_double(stmt, index, number);
+    }
+  } else if(IS_STRING(value)) {
+    b_obj_string *str = AS_STRING(value);
+    sqlite3_bind_text(stmt, index, str->chars, str->length, 0);
+  } else if(IS_BYTES(value)) {
+    b_obj_bytes *blob = AS_BYTES(value);
+    sqlite3_bind_blob(stmt, index, blob->bytes.bytes, blob->bytes.count, SQLITE_STATIC);
+  } else if(IS_NIL(value)) {
+    sqlite3_bind_null(stmt, index);
+  } else {
+    *error = -1;
+  }
+}
+
 DECLARE_MODULE_METHOD(sqlite__open) {
   ENFORCE_ARG_COUNT(_open, 1);
   ENFORCE_ARG_TYPE(_open, 0, IS_STRING);
@@ -31,18 +52,77 @@ DECLARE_MODULE_METHOD(sqlite__close) {
 // this function doesn't return a result...
 // it's similar to Android's SQLiteDatabase db.execSQL (or something like that. Can't remember!)
 DECLARE_MODULE_METHOD(sqlite__exec) {
-  ENFORCE_ARG_COUNT(_exec, 2);
+  ENFORCE_ARG_COUNT(_exec, 3);
   ENFORCE_ARG_TYPE(_exec, 0, IS_PTR);
   ENFORCE_ARG_TYPE(_exec, 1, IS_STRING);
   sqlite3 *db = AS_PTR(args[0])->pointer;
   b_obj_string *query = AS_STRING(args[1]);
 
   if(db != NULL) {
-    char *err_msg = 0;
-    if(sqlite3_exec(db, query->chars, 0, 0, &err_msg) != SQLITE_OK) {
-      RETURN_TT_STRING(err_msg);
+    if(IS_NIL(args[2])) {
+      char *err_msg = 0;
+      if (sqlite3_exec(db, query->chars, 0, 0, &err_msg) != SQLITE_OK) {
+        RETURN_TT_STRING(err_msg);
+      }
+      RETURN_TRUE;
+    } else {
+      if(!IS_LIST(args[2]) && !IS_DICT(args[2])) {
+        RETURN_ERROR("params must be a list or dictionary");
+      }
+
+      sqlite3_stmt *stmt;
+      if(sqlite3_prepare_v2(db, query->chars, query->length, &stmt, 0) == SQLITE_OK) {
+        int total_params_bindable = sqlite3_bind_parameter_count(stmt);
+        if(IS_LIST(args[2])) {
+          b_obj_list *params = AS_LIST(args[2]);
+
+          if(params->items.count != total_params_bindable) {
+            RETURN_ERROR("expected %d params, %d given", total_params_bindable, params->items.count);
+          }
+
+          for(int i = 0; i < params->items.count; i++) {
+            int error = 0;
+            sqlite_bind_params(stmt, i + 1, params->items.values[i], &error);
+            if(error == -1) {
+              RETURN_ERROR("could not bind invalid value at index %d", i + 1);
+            }
+          }
+        } else if(IS_DICT(args[2])) {
+          b_obj_dict *params = AS_DICT(args[2]);
+
+          if(params->names.count != total_params_bindable) {
+            RETURN_ERROR("expected %d params, %d given", total_params_bindable, params->names.count);
+          }
+
+          for(int i = 0; i < params->names.count; i++) {
+            if(!IS_STRING(params->names.values[i])) {
+              RETURN_ERROR("SQL params dictionary key must be a string");
+            }
+            int index = sqlite3_bind_parameter_index(stmt, AS_C_STRING(params->names.values[i]));
+            b_value value;
+            int error = 0;
+            table_get(&params->items, params->names.values[i], &value);
+            sqlite_bind_params(stmt, index, value, &error);
+            if(error == -1) {
+              RETURN_ERROR("could not bind invalid value at index '%s'", AS_C_STRING(params->names.values[i]));
+            }
+          }
+        } else if(total_params_bindable != 0) {
+          RETURN_ERROR("expected %d params, 0 given", total_params_bindable);
+        }
+
+        if(sqlite3_step(stmt) != SQLITE_DONE) {
+          RETURN_STRING("exec failed!")
+        }
+
+        sqlite3_finalize(stmt);
+
+        RETURN_TRUE;
+      } else {
+        const char *error = sqlite3_errmsg(db);
+        RETURN_STRING(error);
+      }
     }
-    RETURN_TRUE;
   }
   RETURN_FALSE;
 }
@@ -55,27 +135,6 @@ DECLARE_MODULE_METHOD(sqlite__last_insert_id) {
     RETURN_NUMBER(sqlite3_last_insert_rowid(db));
   }
   RETURN_NUMBER(-1);
-}
-
-void sqlite_bind_params(sqlite3_stmt *stmt, int index, b_value value, int *error) {
-  if(IS_NUMBER(value)) {
-    double number = AS_NUMBER(value);
-    if((int)number == number) {
-      sqlite3_bind_int(stmt, index, (int)number);
-    } else {
-      sqlite3_bind_double(stmt, index, number);
-    }
-  } else if(IS_STRING(value)) {
-    b_obj_string *str = AS_STRING(value);
-    sqlite3_bind_text(stmt, index, str->chars, str->length, 0);
-  } else if(IS_BYTES(value)) {
-    b_obj_bytes *blob = AS_BYTES(value);
-    sqlite3_bind_blob(stmt, index, blob->bytes.bytes, blob->bytes.count, SQLITE_STATIC);
-  } else if(IS_NIL(value)) {
-    sqlite3_bind_null(stmt, index);
-  } else {
-    *error = -1;
-  }
 }
 
 DECLARE_MODULE_METHOD(sqlite__query) {

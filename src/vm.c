@@ -36,7 +36,7 @@ static b_value get_stack_trace(b_vm *vm) {
 
   if (trace != NULL) {
 
-    for (int i = vm->frame_count; i >= 0; i--) {
+    for (int i = vm->frame_count - 1; i >= 0; i--) {
       b_call_frame *frame = &vm->frames[i];
       b_obj_func *function = frame->closure->function;
 
