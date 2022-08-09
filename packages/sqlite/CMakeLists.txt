@@ -14,6 +14,7 @@ include_directories("${BLADE_ROOT}/includes" ${CMAKE_CURRENT_SOURCE_DIR})
 #link_directories("${BLADE_ROOT}")
 
 add_library(sqlite SHARED sqlite3.c sqlite3.h sqlite.c)
+add_definitions(-DSQLITE_ENABLE_JSON1)
 target_link_libraries(sqlite libblade)
 add_dependencies(sqlite blade)
 

@@ -388,8 +388,10 @@ static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
   p->vm->compiler = compiler;
 
   if (type != TYPE_SCRIPT) {
+    push(p->vm, OBJ_VAL(compiler->function));
     p->vm->compiler->function->name =
         copy_string(p->vm, p->previous.start, p->previous.length);
+    pop(p->vm);
   }
 
   // claiming slot zero for use in class methods

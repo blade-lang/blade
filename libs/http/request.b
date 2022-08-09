@@ -66,7 +66,7 @@ class HttpRequest {
    * A dictionary containing the headers sent with the request.
    * @type dictionary
    */
-  var headers
+  var headers = {}
 
   /**
    * A dictionary containing the entries of the URI query string.
@@ -317,6 +317,12 @@ class HttpRequest {
    * @return boolean
    */
   parse(raw_data, client) {
+    # reset files...
+    self.body = {}
+    self.files = {}
+    self.headers = {}
+    self.queries = {}
+    self.cookies = {}
     
     if !is_string(raw_data)
       die Exception('raw_data must be string')

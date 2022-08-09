@@ -499,11 +499,13 @@ b_value copy_value(b_vm *vm, b_value value) {
       case OBJ_LIST: {
         b_obj_list *list = AS_LIST(value);
         b_obj_list *n_list = new_list(vm);
+        push(vm, OBJ_VAL(n_list));
 
         for (int i = 0; i < list->items.count; i++) {
           write_value_arr(vm, &n_list->items, list->items.values[i]);
         }
 
+        pop(vm);
         return OBJ_VAL(n_list);
       }
       /*case OBJ_DICT: {

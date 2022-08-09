@@ -76,23 +76,24 @@ class SQLite3 {
   }
 
   /**
-   * exec(query: string)
+   * exec(query: string [, params: list | dict])
    * 
    * Executes a query string as is and returns `true` if the
    * query was executed or `false` otherwise.
    * 
    * @note this method does not return a query result
+   * @note this method takes optional params like `query()` (see below).
    * @return boolean
    * @throws SQLiteException if an error occured
    */
-  exec(query) {
+  exec(query, params) {
     if !is_string(query)
       die SQLiteException('string expected, ${typeof(query)} given')
 
     if !self._is_open
       die SQLiteException('database not open for exec')
 
-    var result = _exec(self._db, query)
+    var result = _exec(self._db, query, params)
     if is_string(result)
       die SQLiteException('SQL error ${result}')
 

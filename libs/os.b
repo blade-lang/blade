@@ -304,7 +304,7 @@ def exit(code) {
  * Example,
  * 
  * ```blade-repl
- * %> os.join_paths('/home/user', '/path/to/myfile.ext')
+ * %> os.join_paths('/home/user', 'path/to/myfile.ext')
  * '/home/user/path/to/myfile.ext'
  * ```
  */
