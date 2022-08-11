@@ -629,7 +629,8 @@ bool call_value(b_vm *vm, b_value callee, int arg_count) {
         break;
     }
   }
-  return throw_exception(vm, "only functions and classes can be called");
+
+  return throw_exception(vm, "object of type %s is not callable", value_type(callee));
 }
 
 static inline b_func_type get_method_type(b_value method) {
@@ -1364,6 +1365,14 @@ static inline int floor_div(double a, double b) {
   return d - ((d * b == a) & ((a < 0) ^ (b < 0)));
 }
 
+static inline double modulo(double a, double b) {
+  double r = fmod(a, b);
+  if (r!=0 && ((r<0) != (b<0))) {
+    r += b;
+  }
+  return r;
+}
+
 b_ptr_result run(b_vm *vm) {
   b_call_frame *frame = &vm->frames[vm->frame_count - 1];
 
@@ -1503,7 +1512,7 @@ b_ptr_result run(b_vm *vm) {
         break;
       }
       case OP_REMINDER: {
-        BINARY_MOD_OP(NUMBER_VAL, fmod);
+        BINARY_MOD_OP(NUMBER_VAL, modulo);
         break;
       }
       case OP_POW: {
