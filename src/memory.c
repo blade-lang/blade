@@ -398,6 +398,7 @@ void collect_garbage(b_vm *vm) {
   trace_references(vm);
   table_remove_whites(vm, &vm->strings);
   table_remove_whites(vm, &vm->bytes);
+  table_remove_whites(vm, &vm->modules);
   sweep(vm);
 
   vm->next_gc = vm->bytes_allocated * GC_HEAP_GROWTH_FACTOR;
