@@ -577,14 +577,14 @@ static inline bool call_native_method(b_vm *vm, b_obj_native *native, int arg_co
     CLEAR_GC();
     vm->stack_top -= arg_count;
     return true;
-  } else {
+  }/* else {
     CLEAR_GC();
     bool overridden = AS_BOOL(vm->stack_top[-arg_count - 1]);
-    if (!overridden) {
+    *//*if (!overridden) {
       vm->stack_top -= arg_count + 1;
-    }
+    }*//*
     return overridden;
-  }
+  }*/
   return true;
 }
 
@@ -601,7 +601,7 @@ bool call_value(b_vm *vm, b_value callee, int arg_count) {
         b_obj_class *klass = AS_CLASS(callee);
         vm->stack_top[-arg_count - 1] = OBJ_VAL(new_instance(vm, klass));
         if (!IS_EMPTY(klass->initializer)) {
-          call(vm, AS_CLOSURE(klass->initializer), arg_count);
+          return call(vm, AS_CLOSURE(klass->initializer), arg_count);
         } else if (arg_count != 0) {
           return throw_exception(vm, "%s constructor expects 0 arguments, %d given",
                                  klass->name->chars, arg_count);
@@ -1985,7 +1985,8 @@ b_ptr_result run(b_vm *vm) {
       case OP_CALL: {
         int arg_count = READ_BYTE();
         if (!call_value(vm, peek(vm, arg_count), arg_count)) {
-          runtime_error("invalid call to object");
+          EXIT_VM();
+//          runtime_error("invalid call to object");
         }
         frame = &vm->frames[vm->frame_count - 1];
         break;
@@ -1994,7 +1995,8 @@ b_ptr_result run(b_vm *vm) {
         b_obj_string *method = READ_STRING();
         int arg_count = READ_BYTE();
         if (!invoke(vm, method, arg_count)) {
-          runtime_error("failed to invoke method %s on object of type %s", method->chars, value_type(peek(vm, arg_count)));
+          EXIT_VM();
+//          runtime_error("failed to invoke method %s on object of type %s", method->chars, value_type(peek(vm, arg_count)));
         }
         frame = &vm->frames[vm->frame_count - 1];
         break;
@@ -2003,7 +2005,8 @@ b_ptr_result run(b_vm *vm) {
         b_obj_string *method = READ_STRING();
         int arg_count = READ_BYTE();
         if (!invoke_self(vm, method, arg_count)) {
-          runtime_error("failed to invoke method %s on instance of %s", method->chars, value_type(peek(vm, arg_count)));
+          EXIT_VM();
+//          runtime_error("failed to invoke method %s on instance of %s", method->chars, value_type(peek(vm, arg_count)));
         }
         frame = &vm->frames[vm->frame_count - 1];
         break;
@@ -2052,7 +2055,8 @@ b_ptr_result run(b_vm *vm) {
         int arg_count = READ_BYTE();
         b_obj_class *klass = AS_CLASS(pop(vm));
         if (!invoke_from_class(vm, klass, method, arg_count)) {
-          runtime_error("could not invoke %s from %s", method->chars, klass->name->chars);
+          EXIT_VM();
+//          runtime_error("could not invoke %s from %s", method->chars, klass->name->chars);
         }
         frame = &vm->frames[vm->frame_count - 1];
         break;
@@ -2061,7 +2065,8 @@ b_ptr_result run(b_vm *vm) {
         int arg_count = READ_BYTE();
         b_obj_class *klass = AS_CLASS(pop(vm));
         if (!invoke_from_class(vm, klass, klass->name, arg_count)) {
-          runtime_error("could not invoke constructor of %s", klass->name->chars);
+          EXIT_VM();
+//          runtime_error("could not invoke constructor of %s", klass->name->chars);
         }
         frame = &vm->frames[vm->frame_count - 1];
         break;
@@ -2408,7 +2413,7 @@ b_ptr_result run(b_vm *vm) {
 
       case OP_PUBLISH_TRY: {
         frame->handlers_count--;
-        if (!propagate_exception(vm)) {
+        if (propagate_exception(vm)) {
           frame = &vm->frames[vm->frame_count - 1];
           break;
         }
