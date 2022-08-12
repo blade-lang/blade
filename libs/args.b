@@ -212,8 +212,7 @@ class _Optionable {
     if !is_list(choices) and !is_dict(choices)
       die ArgsException('choices must be a list or dictionary')
 
-    self.options.append(_Option(name, help, short_name, type, required))
-    self.choices = choices
+    self.options.append(_Option(name, help, short_name, type, required, choices))
 
     if instance_of(self, _Command)
       return self
