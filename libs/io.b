@@ -522,18 +522,40 @@ def getc() {
 }
 
 /**
- * readline([message: string])
+ * getch()
+ *
+ * reads character(s) from standard input without printing to standard output
+ *
+ * when length is given, gets `length` number of characters
+ * else, gets a single character
+ * @returns char | string
+ */
+def getch() {
+  return _io.getch()
+}
+
+/**
+ * readline([message: string [, secure: bool = false [, obscure_text = '*']]])
  *
  * reads an entire line from standard input. If a _messagge_ is given, the 
- * message will be printed before it begins to wait for a user input.
+ * message will be printed before it begins to wait for a user input. If 
+ * _secure_ is `true`, the user's input will not be printing and _obscure_text_ 
+ * will be printed instead.
  * 
  * @note newlines will not be added automatically for messages.
  * @returns string
  */
-def readline(message) {
+def readline(message, secure, obscure_text) {
 
   if message != nil and !is_string(message)
-    die Exception('string expected')
+    die Exception('string expected in argument 1 (message)')
+  if secure != nil and !is_bool(secure)
+    die Exception('boolean expected in argument 2 (secure)')
+  if obscure_text != nil and !is_bool(obscure_text)
+    die Exception('string expected in argument 3 (obscure_text)')
+
+  if secure == nil secure = false
+  if obscure_text == nil obscure_text = '*'
 
   if message
     stdout.write('${message} ')
@@ -541,8 +563,15 @@ def readline(message) {
   var result = ''
   var input
 
-  while (input = stdin.read()) and input != '\n' and input != '\0'
-    result += input
+  if !secure {
+    while (input = stdin.read()) and input != '\n' and input != '\0'
+      result += input
+  } else {
+    while (input = getch()) and input != '\n' and input != '\0' {
+      result += input
+      stdout.write(obscure_text)
+    }
+  }
 
   return result
 }

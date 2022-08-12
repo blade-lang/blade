@@ -25,7 +25,59 @@ static bool set_attr_was_called = false;
 void disable_raw_mode(void) {
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
 }
+
+static struct termios n_term;
+static struct termios o_term;
+
+static int cbreak(int fd) {
+  if((tcgetattr(fd, &o_term)) == -1)
+    return -1;
+  n_term = o_term;
+  n_term.c_lflag = n_term.c_lflag & ~(ECHO|ICANON);
+  n_term.c_cc[VMIN] = 1;
+  n_term.c_cc[VTIME]= 0;
+  if((tcsetattr(fd, TCSAFLUSH, &n_term)) == -1)
+    return -1;
+  return 1;
+}
+
+int getch() {
+  int cinput;
+
+  if(cbreak(STDIN_FILENO) == -1) {
+    fprintf(stderr, "cbreak failure, exiting \n");
+    exit(EXIT_FAILURE);
+  }
+  cinput = getchar();
+  tcsetattr(STDIN_FILENO, TCSANOW, &o_term);
+
+  return cinput;
+}
+#elif _MSC_VER  || __WIN32__ || __MS_DOS__
+#include <conio.h>  // for getch and cbreak support
 #endif /* HAVE_TERMIOS_H */
+
+static int read_line(char line[], int max, bool secure) {
+  int nch = 0;
+  int c;
+  max = max - 1; // leave room for '\0'
+
+  while ((c = secure ? getch() : getchar()) != EOF && c != '\0' && c != '\n') {
+    if (nch < max) {
+      line[nch] = *utf8_encode(c);
+      nch = nch + 1;
+    } else {
+      break;
+    }
+  }
+
+  if (c == EOF && nch == 0)
+    return EOF;
+
+  line[nch] = '\0';
+
+  return nch;
+}
 
 /**
  * tty._tcgetattr()
@@ -203,7 +255,30 @@ DECLARE_MODULE_METHOD(io_getc) {
   }
 
   char *result = ALLOCATE(char, (size_t) length + 2);
-  read_line(result, length + 1);
+  read_line(result, length + 1, false);
+  RETURN_L_STRING(result, length);
+}
+
+/**
+ * getch()
+ *
+ * reads character(s) from standard input without printing to standard output
+ *
+ * when length is given, gets `length` number of characters
+ * else, gets a single character
+ * @returns char
+ */
+DECLARE_MODULE_METHOD(io_getch) {
+  ENFORCE_ARG_RANGE(getch, 0, 1);
+
+  int length = 1;
+  if (arg_count == 1) {
+    ENFORCE_ARG_TYPE(getch, 0, IS_NUMBER);
+    length = AS_NUMBER(args[0]);
+  }
+
+  char *result = ALLOCATE(char, (size_t) length + 2);
+  read_line(result, length + 1, true);
   RETURN_L_STRING(result, length);
 }
 
@@ -295,6 +370,7 @@ CREATE_MODULE_LOADER(io) {
 
   static b_func_reg io_functions[] = {
       {"getc",  false, GET_MODULE_METHOD(io_getc)},
+      {"getch",  false, GET_MODULE_METHOD(io_getch)},
       {"putc",  false, GET_MODULE_METHOD(io_putc)},
       {"flush", false, GET_MODULE_METHOD(io_flush)},
       {NULL,    false, NULL},
