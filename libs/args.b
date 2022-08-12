@@ -121,7 +121,7 @@ var _type_name = {
   3: 'boolean',
   4: 'value',
   5: 'list',
-  6: 'option',
+  6: 'choice',
   7: 'value',
 }
 
@@ -334,18 +334,22 @@ class Parser < _Optionable {
       commands_width = self._get_commands_text_width(),
       width = options_width > commands_width ? options_width : commands_width
 
-    var response = !opt ? _muted_text('<no help message>') : ''
-    for k, v in opt {
-      var line = '* ${k}'.lpad(k.length() + 6)
+    if is_dict(opt) {
+      var response = !opt ? _muted_text('<no help message>') : ''
+      for k, v in opt {
+        var line = '* ${k}'.lpad(k.length() + 6)
 
-      # We want to separate the longtest option names at least 12
-      # characters away from the help texts.
-      line = line.rpad(width + 5)
+        # We want to separate the longtest option names at least 12
+        # characters away from the help texts.
+        line = line.rpad(width + 5)
 
-      response += _muted_text(line + v) + '\n'
+        response += _muted_text(line + v) + '\n'
+      }
+
+      return response.rtrim('\n')
+    } else {
+      return _muted_text(('[' + ', '.join(opt) + ']').lpad(self._get_commands_text_width() + 6))
     }
-
-    return response.rtrim('\n')
   }
 
   _get_hint_line(opt) {
@@ -467,14 +471,9 @@ class Parser < _Optionable {
       echo line + self._get_help(opt)
 
       if opt.type == CHOICE {
-        if is_list(opt.choices) {
-          echo _muted_text(('[' + ', '.join(opt.choices) + ']').lpad(self._get_commands_text_width() + 6))
-        } else {
-          echo self._get_choice_help(opt.choices)
-        }
+        echo self._get_choice_help(opt.choices)
       }
     }
-    echo ''
   }
 
   # This method should ever be called directly.
@@ -489,9 +488,9 @@ class Parser < _Optionable {
       command = self._get_command(command)
       if command {
         self._usage_hint(command)
-        echo ''
         echo '  ${self._get_help(command)}'
-        echo ''
+        if command.type == CHOICE
+          echo self._get_choice_help(command.choices)
       } else {
         self._usage_hint(command)
         self._print_help()
