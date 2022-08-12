@@ -1023,7 +1023,7 @@ static b_value compile_number(b_parser *p) {
     long value = strtol(p->previous.start, NULL, 16);
     return NUMBER_VAL(value);
   } else {
-    double value = strtod(p->previous.start, NULL);
+    b_number value = strtod(p->previous.start, NULL);
     return NUMBER_VAL(value);
   }
 }
@@ -1926,7 +1926,7 @@ static void using_statement(b_parser *p) {
         do {
           advance(p);
 
-          b_value jump = NUMBER_VAL((double) current_blob(p)->count - (double) start_offset);
+          b_value jump = NUMBER_VAL((b_number) current_blob(p)->count - (b_number) start_offset);
 
           if (p->previous.type == TRUE_TOKEN) {
             table_set(p->vm, &sw->table, TRUE_VAL, jump);

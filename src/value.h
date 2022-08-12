@@ -9,6 +9,7 @@
 extern "C" {
 #endif // __cplusplus
 
+typedef double b_number;
 typedef struct s_obj b_obj;
 typedef struct s_obj_string b_obj_string;
 typedef struct s_vm b_vm;
@@ -124,13 +125,13 @@ typedef struct {
 #endif
 
 typedef struct {
-  int capacity;
-  int count;
+  uint32_t capacity;
+  uint32_t count;
   b_value *values;
 } b_value_arr;
 
 typedef struct {
-  int count;
+  uint32_t count;
   unsigned char *bytes;
 } b_byte_arr;
 

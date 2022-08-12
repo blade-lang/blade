@@ -5,7 +5,7 @@
 
 #define DEFINE_CURL_CONSTANT(v) \
   b_value __curl_##v(b_vm *vm) { \
-    return NUMBER_VAL((double)(v)); \
+    return NUMBER_VAL((b_number)(v)); \
   }
 
 #define DEFINE_CURL_STR_CONSTANT(v) \
@@ -752,7 +752,7 @@ DECLARE_MODULE_METHOD(curl__easy_getinfo) {
       break;
     }
     case CURLINFO_DOUBLE: {
-      double data = 0.0;
+      b_number data = 0.0;
       result = curl_easy_getinfo(curl, info, &data);
       if(result == CURLE_OK) {
         RETURN_NUMBER(data);

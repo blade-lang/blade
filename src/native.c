@@ -96,10 +96,10 @@ DECLARE_NATIVE(time) {
   struct timeval tv;
   gettimeofday(&tv, NULL);
 #ifndef _WIN32
-  RETURN_NUMBER((double) (1000000 * (double) tv.tv_sec + (double) tv.tv_usec) /
+  RETURN_NUMBER((b_number) (1000000 * (b_number) tv.tv_sec + (b_number) tv.tv_usec) /
                 1000000);
 #else
-  RETURN_NUMBER((double)tv.tv_sec + ((double)tv.tv_usec / 10000000));
+  RETURN_NUMBER((b_number)tv.tv_sec + ((b_number)tv.tv_usec / 10000000));
 #endif // !_WIN32
 }
 
@@ -116,7 +116,7 @@ DECLARE_NATIVE(microtime) {
 #ifndef _WIN32
   RETURN_NUMBER(1000000 * tv.tv_sec + tv.tv_usec);
 #else
-  RETURN_NUMBER((1000000 * (double)tv.tv_sec) + ((double)tv.tv_usec / 10));
+  RETURN_NUMBER((1000000 * (b_number)tv.tv_sec) + ((b_number)tv.tv_usec / 10));
 #endif // !_WIN32
 }
 
@@ -213,11 +213,11 @@ DECLARE_NATIVE(max) {
   ENFORCE_MIN_ARG(max, 2);
   ENFORCE_ARG_TYPE(max, 0, IS_NUMBER);
 
-  double max = AS_NUMBER(args[0]);
+  b_number max = AS_NUMBER(args[0]);
 
   for (int i = 1; i < arg_count; i++) {
     ENFORCE_ARG_TYPE(max, i, IS_NUMBER);
-    double number = AS_NUMBER(args[i]);
+    b_number number = AS_NUMBER(args[i]);
     if (number > max)
       max = number;
   }
@@ -234,11 +234,11 @@ DECLARE_NATIVE(min) {
   ENFORCE_MIN_ARG(min, 2);
   ENFORCE_ARG_TYPE(min, 0, IS_NUMBER);
 
-  double min = AS_NUMBER(args[0]);
+  b_number min = AS_NUMBER(args[0]);
 
   for (int i = 1; i < arg_count; i++) {
     ENFORCE_ARG_TYPE(min, i, IS_NUMBER);
-    double number = AS_NUMBER(args[i]);
+    b_number number = AS_NUMBER(args[i]);
     if (number < min)
       min = number;
   }
@@ -254,7 +254,7 @@ DECLARE_NATIVE(min) {
 DECLARE_NATIVE(sum) {
   ENFORCE_MIN_ARG(sum, 2);
 
-  double sum = 0;
+  b_number sum = 0;
   for (int i = 0; i < arg_count; i++) {
     ENFORCE_ARG_TYPE(sum, i, IS_NUMBER);
     sum += AS_NUMBER(args[i]);
@@ -278,7 +278,7 @@ DECLARE_NATIVE(abs) {
   METHOD_OVERRIDE(to_abs, 6);
 
   ENFORCE_ARG_TYPE(abs, 0, IS_NUMBER);
-  double value = AS_NUMBER(args[0]);
+  b_number value = AS_NUMBER(args[0]);
 
   if (value > -1) RETURN_VALUE(args[0]);
   RETURN_NUMBER(-value);
@@ -303,7 +303,7 @@ DECLARE_NATIVE(int) {
   METHOD_OVERRIDE(to_number, 9);
 
   ENFORCE_ARG_TYPE(int, 0, IS_NUMBER);
-  RETURN_NUMBER((double) ((int) AS_NUMBER(args[0])));
+  RETURN_NUMBER((b_number) ((int) AS_NUMBER(args[0])));
 }
 
 /**
@@ -603,13 +603,13 @@ DECLARE_NATIVE(rand) {
   srand((unsigned int) (1000000 * tv.tv_sec + tv.tv_usec + time(NULL)));
 
   if(lower_limit == 0 && upper_limit == 1) {
-    RETURN_NUMBER((double)rand() / RAND_MAX);
+    RETURN_NUMBER((b_number)rand() / RAND_MAX);
   } else {
     do {
       x = rand();
     } while (x >= RAND_MAX - remainder);
 
-    RETURN_NUMBER((double) lower_limit + x % n);
+    RETURN_NUMBER((b_number) lower_limit + x % n);
   }
 }
 
