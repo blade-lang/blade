@@ -694,7 +694,7 @@ def compare(str, known_hash) {
   if known_length != 60
     return false
     
-  var unknown_hash = hash(str, known_hash[,known_length - 31]),
+  var unknown_hash = _hash(str, known_hash[,known_length - 31]),
       unknown_length = unknown_hash.length()
 
   if unknown_length != known_length
