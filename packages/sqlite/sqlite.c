@@ -3,7 +3,7 @@
 
 void sqlite_bind_params(sqlite3_stmt *stmt, int index, b_value value, int *error) {
   if(IS_NUMBER(value)) {
-    double number = AS_NUMBER(value);
+    b_number number = AS_NUMBER(value);
     if((int)number == number) {
       sqlite3_bind_int(stmt, index, (int)number);
     } else {

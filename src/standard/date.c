@@ -77,8 +77,8 @@ DECLARE_MODULE_METHOD(date__localtime) {
 
   b_obj_dict *dict = (b_obj_dict *) GC(new_dict(vm));
 
-  ADD_TIME("year", 4, (double) now.tm_year + 1900);
-  ADD_TIME("month", 5, (double) now.tm_mon + 1);
+  ADD_TIME("year", 4, (b_number) now.tm_year + 1900);
+  ADD_TIME("month", 5, (b_number) now.tm_mon + 1);
   ADD_TIME("day", 3, now.tm_mday);
   ADD_TIME("week_day", 8, now.tm_wday);
   ADD_TIME("year_day", 8, now.tm_yday);
@@ -89,7 +89,7 @@ DECLARE_MODULE_METHOD(date__localtime) {
   } else {
     ADD_TIME("seconds", 7, 59);
   }
-  ADD_TIME("microseconds", 12, (double) raw_time.tv_usec);
+  ADD_TIME("microseconds", 12, (b_number) raw_time.tv_usec);
 
   ADD_B_TIME("is_dst", 6, now.tm_isdst == 1 ? true : false);
 
@@ -116,8 +116,8 @@ DECLARE_MODULE_METHOD(date__gmtime) {
 
   b_obj_dict *dict = (b_obj_dict *) GC(new_dict(vm));
 
-  ADD_TIME("year", 4, (double) now.tm_year + 1900);
-  ADD_TIME("month", 5, (double) now.tm_mon + 1);
+  ADD_TIME("year", 4, (b_number) now.tm_year + 1900);
+  ADD_TIME("month", 5, (b_number) now.tm_mon + 1);
   ADD_TIME("day", 3, now.tm_mday);
   ADD_TIME("week_day", 8, now.tm_wday);
   ADD_TIME("year_day", 8, now.tm_yday);
@@ -128,7 +128,7 @@ DECLARE_MODULE_METHOD(date__gmtime) {
   } else {
     ADD_TIME("seconds", 7, 59);
   }
-  ADD_TIME("microseconds", 12, (double) raw_time.tv_usec);
+  ADD_TIME("microseconds", 12, (b_number) raw_time.tv_usec);
 
   ADD_B_TIME("is_dst", 6, now.tm_isdst == 1 ? true : false);
 

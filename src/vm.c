@@ -932,7 +932,7 @@ inline bool dict_set_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value valu
   return table_set(vm, &dict->items, key, value);
 }
 
-static b_obj_string *multiply_string(b_vm *vm, b_obj_string *str, double number) {
+static b_obj_string *multiply_string(b_vm *vm, b_obj_string *str, b_number number) {
   int times = (int) number;
 
   if (times <= 0) // 'str' * 0 == '', 'str' * -1 == ''
@@ -1302,7 +1302,7 @@ static bool concatenate(b_vm *vm) {
   } else if (IS_NIL(_b)) {
     pop(vm);
   } else if (IS_NUMBER(_a)) {
-    double a = AS_NUMBER(_a);
+    b_number a = AS_NUMBER(_a);
 
     char num_str[27]; // + 1 for null terminator
     int num_length = sprintf(num_str, NUMBER_FORMAT, a);
@@ -1322,7 +1322,7 @@ static bool concatenate(b_vm *vm) {
     push(vm, OBJ_VAL(result));
   } else if (IS_NUMBER(_b)) {
     b_obj_string *a = AS_STRING(_a);
-    double b = AS_NUMBER(_b);
+    b_number b = AS_NUMBER(_b);
 
     char num_str[27]; // + 1 for null terminator
     int num_length = sprintf(num_str, NUMBER_FORMAT, b);
@@ -1360,13 +1360,13 @@ static bool concatenate(b_vm *vm) {
   return true;
 }
 
-static inline int floor_div(double a, double b) {
+static inline int floor_div(b_number a, b_number b) {
   int d = (int) a / (int) b;
   return d - ((d * b == a) & ((a < 0) ^ (b < 0)));
 }
 
-static inline double modulo(double a, double b) {
-  double r = fmod(a, b);
+static inline b_number modulo(b_number a, b_number b) {
+  b_number r = fmod(a, b);
   if (r!=0 && ((r<0) != (b<0))) {
     r += b;
   }
@@ -1395,9 +1395,9 @@ b_ptr_result run(b_vm *vm) {
                      break;        \
     }                                                                          \
     b_value _b = pop(vm);                                                      \
-    double b = IS_BOOL(_b) ? (AS_BOOL(_b) ? 1 : 0) : AS_NUMBER(_b);            \
+    b_number b = IS_BOOL(_b) ? (AS_BOOL(_b) ? 1 : 0) : AS_NUMBER(_b);            \
     b_value _a = pop(vm);                                                      \
-    double a = IS_BOOL(_a) ? (AS_BOOL(_a) ? 1 : 0) : AS_NUMBER(_a);            \
+    b_number a = IS_BOOL(_a) ? (AS_BOOL(_a) ? 1 : 0) : AS_NUMBER(_a);            \
     push(vm, type(a op b));                                                    \
   } while (false)
 
@@ -1423,9 +1423,9 @@ b_ptr_result run(b_vm *vm) {
                      break;        \
     }                                                                          \
     b_value _b = pop(vm);                                                      \
-    double b = IS_BOOL(_b) ? (AS_BOOL(_b) ? 1 : 0) : AS_NUMBER(_b);            \
+    b_number b = IS_BOOL(_b) ? (AS_BOOL(_b) ? 1 : 0) : AS_NUMBER(_b);            \
     b_value _a = pop(vm);                                                      \
-    double a = IS_BOOL(_a) ? (AS_BOOL(_a) ? 1 : 0) : AS_NUMBER(_a);            \
+    b_number a = IS_BOOL(_a) ? (AS_BOOL(_a) ? 1 : 0) : AS_NUMBER(_a);            \
     push(vm, type(op(a, b)));                                                  \
   } while (false)
 
@@ -1488,7 +1488,7 @@ b_ptr_result run(b_vm *vm) {
       }
       case OP_MULTIPLY: {
         if (IS_STRING(peek(vm, 1)) && IS_NUMBER(peek(vm, 0))) {
-          double number = AS_NUMBER(peek(vm, 0));
+          b_number number = AS_NUMBER(peek(vm, 0));
           b_obj_string *string = AS_STRING(peek(vm, 1));
           b_value result = OBJ_VAL(multiply_string(vm, string, number));
           pop_n(vm, 2);
@@ -2091,7 +2091,7 @@ b_ptr_result run(b_vm *vm) {
           break;
         }
 
-        double lower = AS_NUMBER(_lower), upper = AS_NUMBER(_upper);
+        b_number lower = AS_NUMBER(_lower), upper = AS_NUMBER(_upper);
         pop_n(vm, 2);
         push(vm, OBJ_VAL(new_range(vm, lower, upper)));
         break;

@@ -1029,7 +1029,7 @@ DECLARE_STRING_METHOD(__itern__) {
 
   int index = AS_NUMBER(args[0]);
   if (index < length - 1) {
-    RETURN_NUMBER((double) index + 1);
+    RETURN_NUMBER((b_number) index + 1);
   }
 
   RETURN_NIL;
