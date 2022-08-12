@@ -114,7 +114,7 @@ DECLARE_BYTES_METHOD(pop) {
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
   unsigned char c = bytes->bytes.bytes[bytes->bytes.count - 1];
   bytes->bytes.count--;
-  RETURN_NUMBER((b_number) ((int) c));
+  RETURN_NUMBER((double) ((int) c));
 }
 
 DECLARE_BYTES_METHOD(remove) {
@@ -135,7 +135,7 @@ DECLARE_BYTES_METHOD(remove) {
   }
   bytes->bytes.count--;
 
-  RETURN_NUMBER((b_number) ((int) val));
+  RETURN_NUMBER((double) ((int) val));
 }
 
 DECLARE_BYTES_METHOD(reverse) {
@@ -189,13 +189,13 @@ DECLARE_BYTES_METHOD(split) {
 
 DECLARE_BYTES_METHOD(first) {
   ENFORCE_ARG_COUNT(first, 0);
-  RETURN_NUMBER((b_number) ((int) AS_BYTES(METHOD_OBJECT)->bytes.bytes[0]));
+  RETURN_NUMBER((double) ((int) AS_BYTES(METHOD_OBJECT)->bytes.bytes[0]));
 }
 
 DECLARE_BYTES_METHOD(last) {
   ENFORCE_ARG_COUNT(first, 0);
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
-  RETURN_NUMBER((b_number) ((int) bytes->bytes.bytes[bytes->bytes.count - 1]));
+  RETURN_NUMBER((double) ((int) bytes->bytes.bytes[bytes->bytes.count - 1]));
 }
 
 DECLARE_BYTES_METHOD(get) {
@@ -208,7 +208,7 @@ DECLARE_BYTES_METHOD(get) {
     RETURN_ERROR("bytes index %d out of range", index);
   }
 
-  RETURN_NUMBER((b_number) ((int) bytes->bytes.bytes[index]));
+  RETURN_NUMBER((double) ((int) bytes->bytes.bytes[index]));
 }
 
 DECLARE_BYTES_METHOD(is_alpha) {
@@ -296,7 +296,7 @@ DECLARE_BYTES_METHOD(to_list) {
   b_obj_list *list = (b_obj_list *) GC(new_list(vm));
 
   for (int i = 0; i < bytes->bytes.count; i++) {
-    write_list(vm, list, NUMBER_VAL((b_number) ((int) bytes->bytes.bytes[i])));
+    write_list(vm, list, NUMBER_VAL((double) ((int) bytes->bytes.bytes[i])));
   }
 
   RETURN_OBJ(list);
@@ -340,7 +340,7 @@ DECLARE_BYTES_METHOD(__itern__) {
 
   int index = AS_NUMBER(args[0]);
   if (index < bytes->bytes.count - 1) {
-    RETURN_NUMBER((b_number) index + 1);
+    RETURN_NUMBER((double) index + 1);
   }
 
   RETURN_NIL;

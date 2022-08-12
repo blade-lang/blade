@@ -98,7 +98,7 @@ DECLARE_MODULE_METHOD(array_int16_get) {
     RETURN_ERROR("Int16Array index %d out of range", index);
   }
 
-  RETURN_NUMBER((b_number) data[index]);
+  RETURN_NUMBER((double) data[index]);
 }
 
 DECLARE_MODULE_METHOD(array_int16_reverse) {
@@ -174,7 +174,7 @@ DECLARE_MODULE_METHOD(array_int16_to_list) {
   b_obj_list *list = (b_obj_list *)GC(new_list(vm));
 
   for (int i = 0; i < array->length; i++) {
-    write_list(vm, list, NUMBER_VAL((b_number)values[i]));
+    write_list(vm, list, NUMBER_VAL((double)values[i]));
   }
 
   RETURN_OBJ(list);
@@ -292,7 +292,7 @@ DECLARE_MODULE_METHOD(array_int32_get) {
     RETURN_ERROR("Int32Array index %d out of range", index);
   }
 
-  RETURN_NUMBER((b_number) data[index]);
+  RETURN_NUMBER((double) data[index]);
 }
 
 DECLARE_MODULE_METHOD(array_int32_reverse) {
@@ -368,7 +368,7 @@ DECLARE_MODULE_METHOD(array_int32_to_list) {
   b_obj_list *list = (b_obj_list *)GC(new_list(vm));
 
   for (int i = 0; i < array->length; i++) {
-    write_list(vm, list, NUMBER_VAL((b_number)values[i]));
+    write_list(vm, list, NUMBER_VAL((double)values[i]));
   }
 
   RETURN_OBJ(list);
@@ -486,7 +486,7 @@ DECLARE_MODULE_METHOD(array_int64_get) {
     RETURN_ERROR("Int64Array index %d out of range", index);
   }
 
-  RETURN_NUMBER((b_number) data[index]);
+  RETURN_NUMBER((double) data[index]);
 }
 
 DECLARE_MODULE_METHOD(array_int64_reverse) {
@@ -562,7 +562,7 @@ DECLARE_MODULE_METHOD(array_int64_to_list) {
   b_obj_list *list = (b_obj_list *)GC(new_list(vm));
 
   for (int i = 0; i < array->length; i++) {
-    write_list(vm, list, NUMBER_VAL((b_number)values[i]));
+    write_list(vm, list, NUMBER_VAL((double)values[i]));
   }
 
   RETURN_OBJ(list);
@@ -680,7 +680,7 @@ DECLARE_MODULE_METHOD(array_uint16_get) {
     RETURN_ERROR("UInt16Array index %d out of range", index);
   }
 
-  RETURN_NUMBER((b_number) data[index]);
+  RETURN_NUMBER((double) data[index]);
 }
 
 DECLARE_MODULE_METHOD(array_uint16_reverse) {
@@ -756,7 +756,7 @@ DECLARE_MODULE_METHOD(array_uint16_to_list) {
   b_obj_list *list = (b_obj_list *)GC(new_list(vm));
 
   for (int i = 0; i < array->length; i++) {
-    write_list(vm, list, NUMBER_VAL((b_number)values[i]));
+    write_list(vm, list, NUMBER_VAL((double)values[i]));
   }
 
   RETURN_OBJ(list);
@@ -874,7 +874,7 @@ DECLARE_MODULE_METHOD(array_uint32_get) {
     RETURN_ERROR("UInt32Array index %d out of range", index);
   }
 
-  RETURN_NUMBER((b_number) data[index]);
+  RETURN_NUMBER((double) data[index]);
 }
 
 DECLARE_MODULE_METHOD(array_uint32_reverse) {
@@ -950,7 +950,7 @@ DECLARE_MODULE_METHOD(array_uint32_to_list) {
   b_obj_list *list = (b_obj_list *)GC(new_list(vm));
 
   for (int i = 0; i < array->length; i++) {
-    write_list(vm, list, NUMBER_VAL((b_number)values[i]));
+    write_list(vm, list, NUMBER_VAL((double)values[i]));
   }
 
   RETURN_OBJ(list);
@@ -1068,7 +1068,7 @@ DECLARE_MODULE_METHOD(array_uint64_get) {
     RETURN_ERROR("UInt64Array index %d out of range", index);
   }
 
-  RETURN_NUMBER((b_number) data[index]);
+  RETURN_NUMBER((double) data[index]);
 }
 
 DECLARE_MODULE_METHOD(array_uint64_reverse) {
@@ -1144,7 +1144,7 @@ DECLARE_MODULE_METHOD(array_uint64_to_list) {
   b_obj_list *list = (b_obj_list *)GC(new_list(vm));
 
   for (int i = 0; i < array->length; i++) {
-    write_list(vm, list, NUMBER_VAL((b_number)values[i]));
+    write_list(vm, list, NUMBER_VAL((double)values[i]));
   }
 
   RETURN_OBJ(list);
@@ -1193,14 +1193,14 @@ DECLARE_MODULE_METHOD(array_length) {
 DECLARE_MODULE_METHOD(array_first) {
   ENFORCE_ARG_COUNT(first, 1);
   ENFORCE_ARG_TYPE(first, 0, IS_PTR);
-  RETURN_NUMBER(((b_number *)((b_array *) AS_PTR(args[0])->pointer)->buffer)[0]);
+  RETURN_NUMBER(((double *)((b_array *) AS_PTR(args[0])->pointer)->buffer)[0]);
 }
 
 DECLARE_MODULE_METHOD(array_last) {
   ENFORCE_ARG_COUNT(first, 1);
   ENFORCE_ARG_TYPE(first, 0, IS_PTR);
   b_array *array = (b_array *) AS_PTR(args[0])->pointer;
-  RETURN_NUMBER(((b_number *)array->buffer)[array->length - 1]);
+  RETURN_NUMBER(((double *)array->buffer)[array->length - 1]);
 }
 
 DECLARE_MODULE_METHOD(array_extend) {
@@ -1243,7 +1243,7 @@ DECLARE_MODULE_METHOD(array___itern__) {
 
   int index = AS_NUMBER(args[0]);
   if (index < array->length - 1) {
-    RETURN_NUMBER((b_number) index + 1);
+    RETURN_NUMBER((double) index + 1);
   }
 
   RETURN_NIL;

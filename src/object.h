@@ -96,8 +96,8 @@ struct s_obj {
 
 struct s_obj_string {
   b_obj obj;
-  uint32_t length;
-  uint32_t utf8_length;
+  int length;
+  int utf8_length;
   bool is_ascii;
   uint32_t hash;
   char *chars;
@@ -125,7 +125,7 @@ typedef struct {
   b_obj obj;
   b_func_type type;
   int arity;
-  unsigned int up_value_count;
+  int up_value_count;
   bool is_variadic;
   b_blob blob;
   b_obj_string *name;
@@ -178,9 +178,9 @@ typedef struct {
 
 typedef struct {
   b_obj obj;
-  uint32_t lower;
-  uint32_t upper;
-  uint32_t range;
+  int lower;
+  int upper;
+  int range;
 } b_obj_range;
 
 typedef struct {
@@ -204,8 +204,8 @@ typedef struct {
 
 typedef struct {
   b_obj obj;
-  uint32_t default_jump;
-  uint32_t exit_jump;
+  int default_jump;
+  int exit_jump;
   b_table table;
 } b_obj_switch;
 

@@ -427,7 +427,7 @@ DECLARE_MODULE_METHOD(socket__getsockopt) {
       socklen_t len = sizeof tv;
       getsockopt(sock, SOL_SOCKET, option, &tv, &len);
       if (len == sizeof tv) {
-        RETURN_NUMBER((tv.tv_sec * 1000) + ((b_number) tv.tv_usec / 1000));
+        RETURN_NUMBER((tv.tv_sec * 1000) + ((double) tv.tv_usec / 1000));
       }
 #endif
       RETURN_NUMBER(-1);

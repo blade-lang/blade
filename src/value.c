@@ -118,7 +118,7 @@ void print_value(b_value value) { do_print_value(value, false); }
 void echo_value(b_value value) { do_print_value(value, true); }
 #endif // !_WIN32
 
-static inline char *number_to_string(b_vm *vm, b_number number) {
+static inline char *number_to_string(b_vm *vm, double number) {
   int length = snprintf(NULL, 0, NUMBER_FORMAT, number);
   char *num_str = ALLOCATE(char, length + 1);
   if (num_str != NULL) {
@@ -211,7 +211,7 @@ static inline uint32_t hash_bits(uint64_t hash) {
   return (uint32_t) (hash & 0x3fffffff);
 }
 
-uint32_t hash_double(b_number value) {
+uint32_t hash_double(double value) {
   b_double_union bits;
   bits.num = value;
   return hash_bits(bits.bits);
