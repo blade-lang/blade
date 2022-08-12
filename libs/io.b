@@ -551,7 +551,7 @@ def readline(message, secure, obscure_text) {
     die Exception('string expected in argument 1 (message)')
   if secure != nil and !is_bool(secure)
     die Exception('boolean expected in argument 2 (secure)')
-  if obscure_text != nil and !is_bool(obscure_text)
+  if obscure_text != nil and !is_string(obscure_text)
     die Exception('string expected in argument 3 (obscure_text)')
 
   if secure == nil secure = false
