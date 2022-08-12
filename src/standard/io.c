@@ -57,12 +57,12 @@ int getch() {
 #include <conio.h>  // for getch and cbreak support
 #endif /* HAVE_TERMIOS_H */
 
-static int read_line(char line[], int max, bool secure) {
+static int read_line(char line[], int max) {
   int nch = 0;
   int c;
   max = max - 1; // leave room for '\0'
 
-  while ((c = secure ? getch() : getchar()) != EOF && c != '\0' && c != '\n') {
+  while ((c = getchar()) != EOF && c != '\0' && c != '\n') {
     if (nch < max) {
       line[nch] = *utf8_encode(c);
       nch = nch + 1;
@@ -255,7 +255,7 @@ DECLARE_MODULE_METHOD(io_getc) {
   }
 
   char *result = ALLOCATE(char, (size_t) length + 2);
-  read_line(result, length + 1, false);
+  read_line(result, length + 1);
   RETURN_L_STRING(result, length);
 }
 
@@ -269,17 +269,11 @@ DECLARE_MODULE_METHOD(io_getc) {
  * @returns char
  */
 DECLARE_MODULE_METHOD(io_getch) {
-  ENFORCE_ARG_RANGE(getch, 0, 1);
-
-  int length = 1;
-  if (arg_count == 1) {
-    ENFORCE_ARG_TYPE(getch, 0, IS_NUMBER);
-    length = AS_NUMBER(args[0]);
-  }
-
-  char *result = ALLOCATE(char, (size_t) length + 2);
-  read_line(result, length + 1, true);
-  RETURN_L_STRING(result, length);
+  ENFORCE_ARG_COUNT(getch, 0);
+  char *result = ALLOCATE(char, 2);
+  result[0] = (char)getch();
+  result[1] = '\0';
+  RETURN_L_STRING(result, 1);
 }
 
 /**
