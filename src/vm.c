@@ -1986,7 +1986,6 @@ b_ptr_result run(b_vm *vm) {
         int arg_count = READ_BYTE();
         if (!call_value(vm, peek(vm, arg_count), arg_count)) {
           EXIT_VM();
-//          runtime_error("invalid call to object");
         }
         frame = &vm->frames[vm->frame_count - 1];
         break;
@@ -1996,7 +1995,6 @@ b_ptr_result run(b_vm *vm) {
         int arg_count = READ_BYTE();
         if (!invoke(vm, method, arg_count)) {
           EXIT_VM();
-//          runtime_error("failed to invoke method %s on object of type %s", method->chars, value_type(peek(vm, arg_count)));
         }
         frame = &vm->frames[vm->frame_count - 1];
         break;
@@ -2006,7 +2004,6 @@ b_ptr_result run(b_vm *vm) {
         int arg_count = READ_BYTE();
         if (!invoke_self(vm, method, arg_count)) {
           EXIT_VM();
-//          runtime_error("failed to invoke method %s on instance of %s", method->chars, value_type(peek(vm, arg_count)));
         }
         frame = &vm->frames[vm->frame_count - 1];
         break;
@@ -2056,7 +2053,6 @@ b_ptr_result run(b_vm *vm) {
         b_obj_class *klass = AS_CLASS(pop(vm));
         if (!invoke_from_class(vm, klass, method, arg_count)) {
           EXIT_VM();
-//          runtime_error("could not invoke %s from %s", method->chars, klass->name->chars);
         }
         frame = &vm->frames[vm->frame_count - 1];
         break;
@@ -2066,7 +2062,6 @@ b_ptr_result run(b_vm *vm) {
         b_obj_class *klass = AS_CLASS(pop(vm));
         if (!invoke_from_class(vm, klass, klass->name, arg_count)) {
           EXIT_VM();
-//          runtime_error("could not invoke constructor of %s", klass->name->chars);
         }
         frame = &vm->frames[vm->frame_count - 1];
         break;
@@ -2121,19 +2116,19 @@ b_ptr_result run(b_vm *vm) {
           switch (AS_OBJ(peek(vm, 2))->type) {
             case OBJ_STRING: {
               if (!string_get_ranged_index(vm, AS_STRING(peek(vm, 2)), will_assign == (uint8_t) 1)) {
-                runtime_error("range is invalid for object of type string");
+                EXIT_VM();
               }
               break;
             }
             case OBJ_LIST: {
               if (!list_get_ranged_index(vm, AS_LIST(peek(vm, 2)), will_assign == (uint8_t) 1)) {
-                runtime_error("range is invalid for object of type list");
+                EXIT_VM();
               }
               break;
             }
             case OBJ_BYTES: {
               if (!bytes_get_ranged_index(vm, AS_BYTES(peek(vm, 2)), will_assign == (uint8_t) 1)) {
-                runtime_error("range is invalid for object of type bytes");
+                EXIT_VM();
               }
               break;
             }
@@ -2159,31 +2154,31 @@ b_ptr_result run(b_vm *vm) {
           switch (AS_OBJ(peek(vm, 1))->type) {
             case OBJ_STRING: {
               if (!string_get_index(vm, AS_STRING(peek(vm, 1)), will_assign == (uint8_t) 1)) {
-                runtime_error("index is invalid for object of type string");
+                EXIT_VM();
               }
               break;
             }
             case OBJ_LIST: {
               if (!list_get_index(vm, AS_LIST(peek(vm, 1)), will_assign == (uint8_t) 1)) {
-                runtime_error("index is invalid for object of type list");
+                EXIT_VM();
               }
               break;
             }
             case OBJ_DICT: {
               if (!dict_get_index(vm, AS_DICT(peek(vm, 1)), will_assign == (uint8_t) 1)) {
-                runtime_error("index is invalid for object of type dictionary");
+                EXIT_VM();
               }
               break;
             }
             case OBJ_MODULE: {
               if (!module_get_index(vm, AS_MODULE(peek(vm, 1)), will_assign == (uint8_t) 1)) {
-                runtime_error("index is invalid for object of type module");
+                EXIT_VM();
               }
               break;
             }
             case OBJ_BYTES: {
               if (!bytes_get_index(vm, AS_BYTES(peek(vm, 1)), will_assign == (uint8_t) 1)) {
-                runtime_error("index is invalid for object of type bytes");
+                EXIT_VM();
               }
               break;
             }
@@ -2217,7 +2212,7 @@ b_ptr_result run(b_vm *vm) {
           switch (AS_OBJ(peek(vm, 2))->type) {
             case OBJ_LIST: {
               if (!list_set_index(vm, AS_LIST(peek(vm, 2)), index, value)) {
-                runtime_error("index is invalid for object of type list");
+                EXIT_VM();
               }
               break;
             }
@@ -2235,7 +2230,7 @@ b_ptr_result run(b_vm *vm) {
             }
             case OBJ_BYTES: {
               if (!bytes_set_index(vm, AS_BYTES(peek(vm, 2)), index, value)) {
-                runtime_error("index is invalid for object of type bytes");
+                EXIT_VM();
               }
               break;
             }

@@ -670,6 +670,8 @@ class ZipArchive {
       (self._is_64 ? _central_end_sign64 : _central_end_sign).to_bytes()
     )
 
+    if filesecta.length() < 2 return zip_file
+
 		# ZIP Comment
 		var unpackeda = unpack('x16/v1length', filesecta[1])
 		self.comment = filesecta[1][18, 18 + unpackeda['length']]
