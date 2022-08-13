@@ -388,7 +388,7 @@ class HttpRequest {
           if !is_file(v) {
             mime.add(k, v)
           } else {
-            mime.add_file(k, v)
+            mime.add_file(k, v.abs_path())
           }
         }
   
