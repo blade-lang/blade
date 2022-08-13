@@ -124,7 +124,7 @@ char *resolve_import_path(char *module_name, const char *current_file,
 
     // or a matching package
     char *vendor_index_file = merge_paths(merge_paths(merge_paths(root_dir,
-          LOCAL_PACKAGES_DIRECTORY LOCAL_SRC_DIRECTORY), module_name), blade_file_name);
+          LOCAL_PACKAGES_DIRECTORY LOCAL_SRC_DIRECTORY), module_name), LIBRARY_DIRECTORY_INDEX BLADE_EXTENSION);
     if (file_exists(vendor_index_file)) {
       // stop a core library from importing itself
       char *path1 = realpath(vendor_index_file, NULL);
@@ -181,7 +181,7 @@ char *resolve_import_path(char *module_name, const char *current_file,
 
     // check blade vendor directory installed package...
     char *package_index_file = merge_paths(merge_paths(blade_package_directory, module_name),
-          get_blade_filename(LIBRARY_DIRECTORY_INDEX));
+                                           LIBRARY_DIRECTORY_INDEX BLADE_EXTENSION);
     if (file_exists(package_index_file)) {
       char *path1 = realpath(package_index_file, NULL);
       char *path2 = realpath(current_file, NULL);

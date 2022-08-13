@@ -256,6 +256,9 @@ DECLARE_MODULE_METHOD(socket__send) {
   if (IS_STRING(data)) {
     content = AS_STRING(data)->chars;
     length = AS_STRING(data)->length;
+  } else if (IS_BYTES(data)) {
+    content = (char *)AS_BYTES(data)->bytes.bytes;
+    length = AS_BYTES(data)->bytes.count;
   } else if (IS_FILE(data)) {
     content = read_file(realpath(AS_FILE(data)->path->chars, NULL));
     length = (int) strlen(content);
@@ -353,6 +356,7 @@ DECLARE_MODULE_METHOD(socket__read) {
     }
     total_length += bytes_received;
   }
+  response[total_length > length ? length : total_length] = '\0';
   RETURN_T_STRING(response, (int)total_length);
 }
 

@@ -197,7 +197,9 @@ class ZipItem {
 
     var path = final_dir ? os.join_paths(final_dir, self.name) : self.name
 
-    return file(path, 'wb').write(self.data)
+    if self.data
+      return file(path, 'wb').write(self.data)
+    return true
   }
 }
 

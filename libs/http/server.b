@@ -234,7 +234,7 @@ class HttpServer {
     if !request.parse(message, client)
       response.status = status.BAD_REQUEST
 
-    var feedback = ''
+    var feedback = bytes(0)
 
     # If we have an error in the request message itself, we don't even want to 
     # forward processing to callers. 
@@ -247,7 +247,7 @@ class HttpServer {
       })
 
       if response.body {
-        feedback += 'Content-Length: ${response.body.length()}\r\n'
+        feedback += 'Content-Length: ${response.body.length()}\r\n'.to_bytes()
       }
     }
 
@@ -258,18 +258,27 @@ class HttpServer {
       }
     }
 
-    feedback += self._get_response_header_string(response.headers)
-    feedback += '\r\n${response.body}' 
-
-    feedback =  'HTTP/${response.version} ${response.status} ' +
-                '${status.map.get(response.status, 'UNKNOWN')}\r\n' + 
-                feedback
+    var hdrs = self._get_response_header_string(response.headers).to_bytes()
+    feedback += hdrs
+    hdrs.dispose()
     
+    feedback += '\r\n'.to_bytes()
+    feedback += response.body
+
+    var hdrv = ('HTTP/${response.version} ${response.status} ' +
+    '${status.map.get(response.status, 'UNKNOWN')}\r\n').to_bytes()
+    feedback =  hdrv + feedback
+    hdrv.dispose()
+                
     client.send(feedback)
+
     # call the reply listeners.
     iters.each(self._sent_listeners, | fn | {
       fn(response)
     })
+
+    feedback.dispose()
+    response.body.dispose()
   }
 
   /**
