@@ -569,7 +569,7 @@ def readline(message, secure, obscure_text) {
       result += input
   } else {
     while (input = getch()) and input != '\n' and input != '\r' and input != '\0' {
-      if ord(input) != 0x7f {
+    if ord(input) != 0x7f and input != '\b' {
         result += input
         stdout.write(obscure_text)
       } else {
