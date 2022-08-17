@@ -578,7 +578,6 @@ def readline(message, secure, obscure_text) {
         result = result[,result.length() - 1]
       }
     }
-    echo result
   }
 
   return result
