@@ -567,10 +567,18 @@ def readline(message, secure, obscure_text) {
     while (input = stdin.read()) and input != '\n' and input != '\0'
       result += input
   } else {
-    while (input = getch()) and input != '\n' and input != '\0' {
-      result += input
-      stdout.write(obscure_text)
+    while (input = getch()) and input != '\n' and input != '\r' and input != '\0' {
+      if input != '\b' {
+        result += input
+        stdout.write(obscure_text)
+      } else {
+        # @TODO: remove last character
+        if result.length() > 0
+          stdout.write('\b \b')
+        result = result[,result.length() - 1]
+      }
     }
+    echo result
   }
 
   return result
