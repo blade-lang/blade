@@ -48,5 +48,8 @@
 #cmakedefine HAVE_UTIME
 #cmakedefine HAVE_BASENAME
 #cmakedefine HAVE_DIRNAME
+#cmakedefine HAVE_SYSCONF
+#cmakedefine HAVE_SYSCTLBYNAME
+#cmakedefine HAVE_SETJMP
 
 #endif
