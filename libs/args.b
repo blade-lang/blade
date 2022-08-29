@@ -126,7 +126,7 @@ var _type_name = {
 }
 
 def _muted_text(text) {
-  return colors.text(colors.text(text, colors.text_color.dark_grey), colors.style.italic)
+  return colors.text(text, colors.text_color.dark_grey)
 }
 
 def _bold_text(text) {
@@ -312,16 +312,22 @@ class Parser < _Optionable {
 
         var line = '\n'
         if op.short_name {
-          line += '-${op.short_name},'.lpad(op.short_name.length() + 8) + ' --${op.long_name}'
+          line += '-${op.short_name},'.lpad(op.short_name.length() + 6) + ' --${op.long_name}'
         } else {
-          line += '--${op.long_name}'.lpad(op.long_name.length() + 8)
+          line += '--${op.long_name}'.lpad(op.long_name.length() + 6)
         }
 
         line += self._opt_line(op)
 
         # We want to separate the longtest option names at least 12
         # characters away from the help texts.
-        line = line.rpad(width + 6)
+        line = line.rpad(width + 8)
+
+
+
+        if opt.type == CHOICE {
+          response += '\n' + self._get_choice_help(opt.choices)
+        }
 
         response += _muted_text(line + self._get_help(op))
       }
@@ -337,13 +343,13 @@ class Parser < _Optionable {
     if is_dict(opt) {
       var response = !opt ? _muted_text('<no help message>') : ''
       for k, v in opt {
-        var line = '* ${k}'.lpad(k.length() + 6)
+        var line = '${k}'.lpad(k.length() + 4)
 
         # We want to separate the longtest option names at least 12
         # characters away from the help texts.
-        line = line.rpad(width + 5)
+        line = colors.text(line, colors.style.italic).rpad(width + 17)
 
-        response += _muted_text(line + v) + '\n'
+        response += line + v + '\n'
       }
 
       return response.rtrim('\n')
@@ -469,10 +475,6 @@ class Parser < _Optionable {
       line = line.rpad(width + 20)
 
       echo line + self._get_help(opt)
-
-      if opt.type == CHOICE {
-        echo self._get_choice_help(opt.choices)
-      }
     }
   }
 
@@ -489,8 +491,6 @@ class Parser < _Optionable {
       if command {
         self._usage_hint(command)
         echo '  ${self._get_help(command)}'
-        if command.type == CHOICE
-          echo self._get_choice_help(command.choices)
       } else {
         self._usage_hint(command)
         self._print_help()
