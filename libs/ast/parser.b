@@ -663,17 +663,25 @@ class Parser {
     while !self._match(RBRACE) and !self._check(EOF) {
       if self._match(WHEN, DEFAULT, COMMENT, DOC, NEWLINE) {
         if state == 1 
-          die ParseException(self._previous(), 'cannot have another case after a default case')
+          die ParseException(self._previous(), 'when cannot exist after a default')
 
         if [DOC, COMMENT, NEWLINE].contains(self._previous().type) {}
         else if self._previous().type == WHEN {
-          cases[self._expression()] = self._statement()
+          var tmp_cases = []
+          do {
+            tmp_cases.append(self._expression())
+          } while self._match(COMMA)
+          var stmt = self._statement()
+
+          for tmp in tmp_cases {
+            cases[tmp] = stmt
+          }
         } else {
           state = 1
           default_case = self._statement()
         }
       } else {
-        die ParseException(self._previous(), 'Invalid switch statement')
+        die ParseException(self._previous(), 'Invalid using statement')
       }
     }
 

@@ -345,8 +345,6 @@ class Scanner {
    * the private scanning helper
    */
   _scan() {
-    self._skip_whitespace()
-
     if self._is_at_end() {
       return
     }
@@ -465,6 +463,8 @@ class Scanner {
   scan() {
 
     while !self._is_at_end() {
+      self._skip_whitespace()
+      
       # scan tokens here...
       self._start = self._current
       self._scan()
