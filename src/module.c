@@ -12,7 +12,7 @@
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
 #else
-#include "blade_dlfcn.h"
+#include "bdlfcn.h"
 #endif
 
 #if !defined(HAVE_DIRENT_H) || defined(_WIN32)
