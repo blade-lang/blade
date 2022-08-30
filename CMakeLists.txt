@@ -39,11 +39,11 @@ if(UNIX)
 endif()
 
 set(BLADE_SOURCES
-		src/blade_dict.c
-		src/blade_file.c
-		src/blade_list.c
-		src/blade_string.c
-		src/blade_range.c
+		src/dict.c
+		src/file.c
+		src/list.c
+		src/bstring.c
+		src/range.c
 		src/blob.c
 		src/bytes.c
 		src/compiler.c
@@ -101,7 +101,7 @@ endif()
 # Header checks
 check_include_file("getopt.h" HAVE_GETOPT_H)
 if(NOT "${HAVE_GETOPT_H}")
-	target_sources(libblade PRIVATE src/blade_getopt.c)
+	target_sources(libblade PRIVATE src/bgetopt.c)
 endif()
 check_include_file("termios.h" HAVE_TERMIOS_H)
 check_include_file("unistd.h" HAVE_UNISTD_H)

@@ -2,7 +2,6 @@
 
 import ._process
 
-import .exception { HttpException }
 import .request { HttpRequest }
 
 import url

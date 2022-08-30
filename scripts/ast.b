@@ -45,6 +45,7 @@ var asts = {
       If: ['condition', 'truth', 'falsy'],
       Iter: ['declaration', 'condition', 'iterator', 'body'],
       While: ['condition', 'body'],
+      DoWhile: ['body', 'condition'],
       For: ['vars', 'iterable', 'body'],
       Continue: [],
       Break: [],

@@ -325,9 +325,9 @@ class HttpRequest {
     self.cookies = {}
     
     if !is_string(raw_data)
-      die Exception('raw_data must be string')
+      die HttpException('raw_data must be string')
     if !instance_of(client, socket.Socket) and !instance_of(client, ssl.TLSSocket) 
-      die Exception('invalid Socket or TLSSocket')
+      die HttpException('invalid Socket or TLSSocket')
 
     self.ip = client.info().address
 
@@ -378,7 +378,7 @@ class HttpRequest {
   _create_send_request_body(curl, data) {
     if data {
       if !is_dict(data) and self.files {
-        die Exception('data must be a dictionary when files are not empty')
+        die HttpException('data must be a dictionary when files are not empty')
       } else if !is_dict(data) and !self.fields {
         curl.set_option(Option.POSTFIELDS, data)
       } else {
@@ -411,11 +411,11 @@ class HttpRequest {
 
     # arguments validation.
     if !instance_of(uri, url.Url)
-      die Exception('uri must be an instance of Url')
+      die HttpException('uri must be an instance of Url')
     if !is_string(method)
-      die Exception('method must be string')
+      die HttpException('method must be string')
     if data != nil and !is_string(data) and !is_bytes(data) and !is_dict(data)
-      die Exception('data must be string, bytes or dictionary')
+      die HttpException('data must be string, bytes or dictionary')
     if options != nil and !is_dict(options)
       die Exception('options must be a dictionary')
 

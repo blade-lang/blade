@@ -1,4 +1,4 @@
-#include "blade_string.h"
+#include "bstring.h"
 #include "util.h"
 #include "native.h"
 

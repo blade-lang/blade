@@ -1,5 +1,5 @@
-#ifndef BLADE_BLADE_STRING_H
-#define BLADE_BLADE_STRING_H
+#ifndef BLADE_BSTRING_H
+#define BLADE_BSTRING_H
 
 #include "common.h"
 #include "native.h"

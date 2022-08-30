@@ -102,11 +102,11 @@ class HttpServer {
   HttpServer(port, host, is_secure) {
 
     if !is_int(port) or port <= 0
-      die Exception('invalid port number')
+      die HttpException('invalid port number')
     else self.port = port
 
     if host != nil and !is_string(host)
-      die Exception('invalid host')
+      die HttpException('invalid host')
     else if host != nil self.host = host
 
     if is_secure != nil and !is_bool(is_secure)
@@ -290,9 +290,9 @@ class HttpServer {
   listen() {
     if self.is_secure {
       if !self.cert_file
-        die Exception('no certificate loaded for secure server')
+        die HttpException('no certificate loaded for secure server')
       if !self.private_key_file 
-        die Exception('no private key loaded for secure server')
+        die HttpException('no private key loaded for secure server')
     }
 
     if !self.socket.is_listening {

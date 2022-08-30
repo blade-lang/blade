@@ -2,7 +2,7 @@
 #include "compiler.h"
 #include "config.h"
 #include "object.h"
-#include "blade_file.h"
+#include "file.h"
 #include "module.h"
 
 #include <stdio.h>

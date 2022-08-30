@@ -8,11 +8,11 @@
 #include "object.h"
 
 #include "bytes.h"
-#include "blade_dict.h"
-#include "blade_file.h"
-#include "blade_list.h"
-#include "blade_string.h"
-#include "blade_range.h"
+#include "dict.h"
+#include "file.h"
+#include "list.h"
+#include "bstring.h"
+#include "range.h"
 #include "util.h"
 
 #include <math.h>

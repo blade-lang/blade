@@ -11,7 +11,7 @@
 #include <stdint.h>
 
 #include "config.h"
-#include "blade_endian.h"
+#include "bendian.h"
 
 // --> debug mode options starts here...
 #if DEBUG_MODE == 1

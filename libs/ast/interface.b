@@ -60,4 +60,8 @@ class ParseResult {
   @to_json() {
     return self._results
   }
+
+  @to_string() {
+    return '<ast::ParseResult>'
+  }
 }
