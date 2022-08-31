@@ -96,9 +96,6 @@ class HttpClient {
     if !uri or !is_string(uri) 
       die Exception('invalid url')
 
-    # parse the url into component parts
-    uri = url.parse(uri)
-
     if !method method = 'GET'
 
     if data != nil and !is_string(data) and !is_dict(data)
@@ -113,6 +110,14 @@ class HttpClient {
       })
     }
 
+    var hst = request.headers.get('Host', nil)
+    if hst and !uri.starts_with(hst) and !uri.starts_with('http://${hst}') and !uri.starts_with('https://${hst}') {
+      uri = hst + uri
+    }
+
+    # parse the url into component parts
+    uri = url.parse(uri)
+
     return request.send(uri, method.upper(), data, {
       follow_redirect: self.follow_redirect,
       connect_timeout: self.connect_timeout,
@@ -122,5 +127,49 @@ class HttpClient {
       user_agent: self.user_agent,
       cookie_file: self.cookie_file,
     })
+  }
+
+  /**
+   * get(url: string)
+   *
+   * sends an Http GET request and returns an HttpResponse.
+   * @returns HttpResponse
+   * @throws Exception, SocketExcepion, HttpException
+   */
+  get(url) {
+    return self.send_request(url, 'GET')
+  }
+
+  /**
+   * post(url: string, [data: string | bytes])
+   *
+   * sends an Http POST request and returns an HttpResponse.
+   * @returns HttpResponse
+   * @throws Exception, SocketExcepion, HttpException
+   */
+  post(url, data) {
+    return self.send_request(url, 'POST', data)
+  }
+
+  /**
+   * put(url: string, [data: string | bytes])
+   *
+   * sends an Http PUT request and returns an HttpResponse.
+   * @returns HttpResponse
+   * @throws Exception, SocketExcepion, HttpException
+   */
+  put(url, data) {
+    return self.send_request(url, 'PUT', data)
+  }
+
+  /**
+   * delete(url: string)
+   *
+   * sends an Http DELETE request and returns an HttpResponse.
+   * @returns HttpResponse
+   * @throws Exception, SocketExcepion, HttpException
+   */
+  delete(url) {
+    return self.send_request(url, 'DELETE', nil)
   }
 }

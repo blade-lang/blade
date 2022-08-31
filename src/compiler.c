@@ -30,7 +30,7 @@ static void error_at(b_parser *p, b_token *t, const char *message,
   p->panic_mode = true;
 
   fprintf(stderr, "SyntaxError:\n");
-  fprintf(stderr, "    File: %s, Line: %d\n", p->module->file, t->line);
+  fprintf(stderr, "    %s:%d\n", p->module->file, t->line);
 
   fprintf(stderr, "    Error");
 
