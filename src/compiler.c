@@ -29,10 +29,7 @@ static void error_at(b_parser *p, b_token *t, const char *message,
 
   p->panic_mode = true;
 
-  fprintf(stderr, "SyntaxError:\n");
-  fprintf(stderr, "    %s:%d\n", p->module->file, t->line);
-
-  fprintf(stderr, "    Error");
+  fprintf(stderr, "SyntaxError");
 
   if (t->type == EOF_TOKEN) {
     fprintf(stderr, " at end");
@@ -49,6 +46,7 @@ static void error_at(b_parser *p, b_token *t, const char *message,
   fprintf(stderr, ": ");
   vfprintf(stderr, message, args);
   fputs("\n", stderr);
+  fprintf(stderr, "    %s:%d\n", p->module->file, t->line);
 
   p->had_error = true;
 }

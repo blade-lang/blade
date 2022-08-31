@@ -36,7 +36,7 @@ static b_value get_stack_trace(b_vm *vm) {
 
   if (trace != NULL) {
 
-    for (int i = vm->frame_count - 1; i >= 0; i--) {
+    for (int i = 0; i < vm->frame_count; i++) {
       b_call_frame *frame = &vm->frames[i];
       b_obj_func *function = frame->closure->function;
 
@@ -44,15 +44,15 @@ static b_value get_stack_trace(b_vm *vm) {
       size_t instruction = frame->ip - function->blob.code - 1;
       int line = function->blob.lines[instruction];
 
-      const char *trace_format = i != 0
-          ? "    %s() -> %s:%d\n"
-          : "    %s() -> %s:%d";
+      const char *trace_format = i != vm->frame_count - 1
+          ? "    %s:%d -> %s()\n"
+          : "    %s:%d -> %s()";
       char *fn_name = function->name == NULL ? "@.script": function->name->chars;
-      size_t trace_line_length = snprintf(NULL, 0, trace_format, fn_name, function->module->file, line);
+      size_t trace_line_length = snprintf(NULL, 0, trace_format, function->module->file, line, fn_name);
 
       char *trace_line = ALLOCATE(char, trace_line_length + 1);
       if (trace_line != NULL) {
-        sprintf(trace_line, trace_format, fn_name, function->module->file, line);
+        sprintf(trace_line, trace_format, function->module->file, line, fn_name);
         trace_line[(int) trace_line_length] = '\0';
       }
 
@@ -232,14 +232,13 @@ void _runtime_error(b_vm *vm, const char *format, ...) {
       // -1 because the IP is sitting on the next instruction to be executed
       instruction = frame->ip - function->blob.code - 1;
 
-      fprintf(stderr, "%s", "    ");
+      fprintf(stderr, "    %s:%d -> ", function->module->file, function->blob.lines[instruction]);
       if (function->name == NULL) {
         fprintf(stderr, "@.script()");
       } else {
         fprintf(stderr, "%s()", function->name->chars);
       }
-
-      fprintf(stderr, " -> %s:%d\n", function->module->file, function->blob.lines[instruction]);
+      fprintf(stderr, "\n");
     }
   }
 
