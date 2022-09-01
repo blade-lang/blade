@@ -46,7 +46,7 @@ static void error_at(b_parser *p, b_token *t, const char *message,
   fprintf(stderr, ": ");
   vfprintf(stderr, message, args);
   fputs("\n", stderr);
-  fprintf(stderr, "    %s:%d\n", p->module->file, t->line);
+  fprintf(stderr, "  %s:%d\n", p->module->file, t->line);
 
   p->had_error = true;
 }

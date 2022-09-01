@@ -66,7 +66,7 @@ static b_value get_stack_trace(b_vm *vm) {
   return STRING_L_VAL("", 0);
 }
 
-bool propagate_exception(b_vm *vm) {
+bool propagate_exception(b_vm *vm, bool is_assert) {
   b_obj_instance *exception = AS_INSTANCE(peek(vm, 0));
 
   while (vm->frame_count > 0) {
@@ -91,9 +91,19 @@ bool propagate_exception(b_vm *vm) {
   fflush(stdout); // flush out anything on stdout first
 
   b_value message, trace;
-  fprintf(stderr, "Unhandled %s: ", exception->klass->name->chars);
+  if(!is_assert) {
+    fprintf(stderr, "Unhandled %s", exception->klass->name->chars);
+  } else {
+    fprintf(stderr, "Illegal State");
+  }
   if (table_get(&exception->properties, STRING_L_VAL("message", 7), &message)) {
-    fprintf(stderr, "%s\n", value_to_string(vm, message));
+    char *error_message = value_to_string(vm, message);
+    if(strlen(error_message) > 0) {
+      fprintf(stderr, ": %s", error_message);
+    } else {
+      fprintf(stderr, ":");
+    }
+    fprintf(stderr, "\n");
   } else {
     fprintf(stderr, "\n");
   }
@@ -120,7 +130,7 @@ bool push_exception_handler(b_vm *vm, b_obj_class *type, int address, int finall
   return true;
 }
 
-bool throw_exception(b_vm *vm, const char *format, ...) {
+bool do_throw_exception(b_vm *vm, bool is_assert, const char *format, ...) {
 
   va_list args;
   va_start(args, format);
@@ -133,7 +143,7 @@ bool throw_exception(b_vm *vm, const char *format, ...) {
 
   b_value stacktrace = get_stack_trace(vm);
   table_set(vm, &instance->properties, STRING_L_VAL("stacktrace", 10), stacktrace);
-  return propagate_exception(vm);
+  return propagate_exception(vm, is_assert);
 }
 
 static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
@@ -192,7 +202,10 @@ static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
   table_set(vm, &klass->properties, STRING_L_VAL("stacktrace", 10), NIL_VAL);
 
   table_set(vm, &vm->globals, OBJ_VAL(class_name), OBJ_VAL(klass));
+
   pop(vm);
+  pop(vm); // assert error name
+
   vm->exception_class = klass;
 }
 
@@ -2360,9 +2373,9 @@ b_ptr_result run(b_vm *vm) {
         b_value expression = pop(vm);
         if (is_false(expression)) {
           if (!IS_NIL(message)) {
-            throw_exception(vm, "AssertionError: %s", value_to_string(vm, message));
+            do_throw_exception(vm, true, value_to_string(vm, message));
           } else {
-            throw_exception(vm, "AssertionError");
+            do_throw_exception(vm, true, "");
           }
         }
         break;
@@ -2379,7 +2392,7 @@ b_ptr_result run(b_vm *vm) {
         b_value stacktrace = get_stack_trace(vm);
         b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
         table_set(vm, &instance->properties, STRING_L_VAL("stacktrace", 10), stacktrace);
-        if (propagate_exception(vm)) {
+        if (propagate_exception(vm, false)) {
           frame = &vm->frames[vm->frame_count - 1];
           break;
         }
@@ -2412,7 +2425,7 @@ b_ptr_result run(b_vm *vm) {
 
       case OP_PUBLISH_TRY: {
         frame->handlers_count--;
-        if (propagate_exception(vm)) {
+        if (propagate_exception(vm, false)) {
           frame = &vm->frames[vm->frame_count - 1];
           break;
         }
