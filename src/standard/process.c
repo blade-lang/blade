@@ -2,31 +2,30 @@
 
 #ifdef HAVE_SYSCONF
 #include <unistd.h>
-#include <sys/mman.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #endif
 #ifdef HAVE_SYSCTLBYNAME
-#include <sys/types.h>
 #include <sys/sysctl.h>
 #endif
 
-#if defined(__MACOSX__) && (defined(__ppc__) || defined(__ppc64__))
-#include <sys/sysctl.h>         /* For AltiVec check */
-#elif defined(__OpenBSD__) && defined(__powerpc__)
+#ifdef _WIN32
+#include "mman-win32/mman.h"
+#else
+#include <sys/mman.h>
+#endif
+
+#if defined(__OpenBSD__) && defined(__powerpc__)
 #include <sys/param.h>
-#include <sys/sysctl.h> /* For AltiVec check */
 #include <machine/cpu.h>
 #elif defined(_WIN32)
 #include <windows.h>
 #endif
 #ifdef HAVE_SETJMP
 #include <signal.h>
-#include <setjmp.h>
 #endif
 
 #include <errno.h>
-#include <sys/stat.h>
 
 b_value __process_cpu_count(b_vm *vm) {
 #if defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_ONLN)

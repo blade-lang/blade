@@ -166,7 +166,8 @@ if(UNIX)
 	endif()
 endif(UNIX)
 
-if(WIN32 OR MINGW)
+if(WIN32)
+	add_dependencies(libblade mman)
 	target_link_libraries(libblade PRIVATE mman)
 endif()
 
