@@ -168,7 +168,6 @@ endif(UNIX)
 
 if(WIN32 OR MINGW)
 	target_link_libraries(libblade PRIVATE mman)
-	target_include_directories(libblade thirdparty/mman-win32)
 endif()
 
 target_link_libraries(blade PRIVATE libblade)
