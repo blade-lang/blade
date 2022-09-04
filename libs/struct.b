@@ -87,7 +87,7 @@ def pack(format, ...) {
  */
 def unpack(format, data, offset) {
   if !is_string(format)
-    die Exception('format string expected')
+    die Exception('format string expected in argument 1')
   if !is_string(data) and !is_bytes(data)
     die Exception('data must be string or bytes')
   if offset != nil and !is_number(offset)
@@ -97,4 +97,20 @@ def unpack(format, data, offset) {
   if !offset offset = 0
   
   return _struct.unpack(format, data, offset)
+}
+
+/**
+ * pack_from(format: string, args: list)
+ * 
+ * Same as `pack()` except that instead of accepting arbitrary values after 
+ * format, it expects the values to be in a list.
+ * @return bytes
+ */
+def pack_from(format, args) {
+  if !is_string(format)
+    die Exception('format string expected in argument 1')
+  if !is_list(args)
+    die Exception('list expected in argument 2 (args)')
+
+  return _struct.pack(format, args)
 }
