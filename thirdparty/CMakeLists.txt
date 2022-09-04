@@ -12,3 +12,7 @@ add_subdirectory(pcre2)
 if(UNIX)
     add_subdirectory(linenoise)
 endif()
+
+if(WIN32 OR MINGW)
+    add_subdirectory(mman-win32)
+endif()

@@ -148,7 +148,7 @@ set_target_properties(libblade
 		)
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC"  )
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 endif()
 
 # link pcre2
@@ -165,6 +165,11 @@ if(UNIX)
 		target_link_libraries(libblade PRIVATE dl)
 	endif()
 endif(UNIX)
+
+if(WIN32 OR MINGW)
+	target_link_libraries(libblade PRIVATE mman)
+	target_include_directories(libblade thirdparty/mman-win32)
+endif()
 
 target_link_libraries(blade PRIVATE libblade)
 
