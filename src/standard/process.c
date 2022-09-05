@@ -1,7 +1,6 @@
 #include "module.h"
 
 #ifdef HAVE_SYSCONF
-#include <unistd.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #endif
@@ -15,6 +14,13 @@
 #include <sys/mman.h>
 #endif
 
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#else
+#include "bunistd.h"
+#endif /* HAVE_UNISTD_H */
+
 #if defined(__OpenBSD__) && defined(__powerpc__)
 #include <sys/param.h>
 #include <machine/cpu.h>
@@ -26,6 +32,21 @@
 #endif
 
 #include <errno.h>
+
+// windows build stubs...
+#ifdef _WIN32
+#define WNOHANG 1
+#define SIGKILL 1
+
+static int fork() {
+  errno = ENODEV;
+  return -1;
+}
+
+static int waitpid(int i, void *j, int k) {
+  return -1;
+}
+#endif
 
 b_value __process_cpu_count(b_vm *vm) {
 #if defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_ONLN)
