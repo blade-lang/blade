@@ -13,6 +13,6 @@ if(UNIX)
     add_subdirectory(linenoise)
 endif()
 
-#if(WIN32)
+if(WIN32)
     add_subdirectory(mman-win32)
-#endif()
+endif()
