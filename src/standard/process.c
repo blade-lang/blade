@@ -46,6 +46,10 @@ static int fork() {
 static int waitpid(int i, void *j, int k) {
   return -1;
 }
+
+static int kill(int i, int j) {
+  return -1;
+}
 #endif
 
 b_value __process_cpu_count(b_vm *vm) {

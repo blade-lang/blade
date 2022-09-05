@@ -303,6 +303,11 @@ class Process {
     if shared != nil and !instance_of(shared, SharedValue)
       die Exception('instance of SharedValue expected in argument 2 (shared)')
 
+    # No windows support yet.
+    if os.platform == 'windows' {
+      die Exception('Process is not yet supported on this OS')
+    }
+
     self._fn = fn
     self._shared = shared
     self._ptr = _process.Process()
