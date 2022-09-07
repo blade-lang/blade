@@ -17,6 +17,7 @@
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#include <sys/wait.h>
 #else
 #include "bunistd.h"
 #endif /* HAVE_UNISTD_H */
