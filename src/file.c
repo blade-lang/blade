@@ -39,7 +39,7 @@
   if ((status) == 0) {                                                         \
     RETURN_TRUE;                                                               \
   } else {                                                                     \
-    FILE_ERROR(, strerror(errno));                                             \
+    FILE_ERROR(File, strerror(errno));                                             \
   }
 
 #define DENY_STD()                                                             \
@@ -48,13 +48,15 @@
 
 #define SET_DICT_STRING(d, n, l, v) dict_add_entry(vm, d, GC_L_STRING(n, l), v)
 
-static void file_close(b_obj_file *file) {
+static int file_close(b_obj_file *file) {
   if (file->file != NULL && !is_std_file(file)) {
     fflush(file->file);
-    fclose(file->file);
+    int result = fclose(file->file);
     file->file = NULL;
     file->is_open = false;
+    return result;
   }
+  return -1;
 }
 
 static void file_open(b_obj_file *file) {
@@ -579,7 +581,9 @@ DECLARE_FILE_METHOD(delete) {
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
   DENY_STD();
 
-  file_close(file);
+  if(file_close(file) != 0) {
+    RETURN_ERROR("error closing file.");
+  }
   RETURN_STATUS(unlink(file->path->chars));
 }
 
