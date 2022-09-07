@@ -770,7 +770,9 @@ class Parser {
   _iter() {
     var decl
     if !self._check(SEMICOLON) {
-      self._consume(VAR, 'variable declaration expected')
+      if self._check(VAR) {
+        self._consume(VAR, 'variable declaration expected')
+      }
       decl = self._var()
     }
     self._consume(SEMICOLON, "';' expected")

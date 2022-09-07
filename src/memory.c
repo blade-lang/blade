@@ -397,7 +397,6 @@ void collect_garbage(b_vm *vm) {
   mark_roots(vm);
   trace_references(vm);
   table_remove_whites(vm, &vm->strings);
-  table_remove_whites(vm, &vm->bytes);
   table_remove_whites(vm, &vm->modules);
   sweep(vm);
 

@@ -54,7 +54,6 @@ struct s_vm {
   // objects tracker
   b_table modules;
   b_table strings;
-  b_table bytes;
   b_table globals;
 
   // object public methods

@@ -154,6 +154,8 @@ char *value_to_string(b_vm *vm, b_value value);
 
 void init_byte_arr(b_vm *vm, b_byte_arr *array, int length);
 
+void take_byte_arr(b_vm *vm, b_byte_arr *array, unsigned char data, int length);
+
 void free_byte_arr(b_vm *vm, b_byte_arr *array);
 
 // hash

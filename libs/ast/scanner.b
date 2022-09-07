@@ -29,9 +29,6 @@ class Scanner {
    */
   var _max_interpolation_nest = 8
 
-  # to track the quote that started an interpolation
-  var _interpolating = []
-
   /**
    * a keyword to token map
    */
@@ -46,6 +43,7 @@ class Scanner {
     'def': DEF,
     'default': DEFAULT,
     'die': DIE,
+    'do': DO,
     'echo': ECHO,
     'else': ELSE,
     'false': FALSE,
@@ -76,6 +74,9 @@ class Scanner {
   Scanner(source) {
     if !is_string(source)
       die Exception('Blade source code expected')
+    
+    # to track the quote that started an interpolation
+    self._interpolating = []
     
     self.source = source
   }
@@ -194,18 +195,16 @@ class Scanner {
         self._advance()
         self._advance()
         nesting++
-        continue
       }
 
       # comment close
-      if self._peek() == '*' and self._next() == '/' {
+      else if self._peek() == '*' and self._next() == '/' {
         self._advance()
         self._advance()
         nesting--
-        continue
       }
 
-      self._advance()
+      else self._advance()
     }
   }
 
