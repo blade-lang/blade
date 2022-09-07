@@ -422,7 +422,6 @@ class HttpRequest {
     if options == nil options = {}
 
     var responder = uri.absolute_url(), error, referer
-    echo responder
 
     var time_taken = 0, 
         redirect_count = 0, 
