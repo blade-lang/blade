@@ -702,6 +702,8 @@ DECLARE_MODULE_METHOD(curl__easy_perform) {
 
     RETURN_OBJ(dict);
   } else {
+    free(body.ptr);
+    free(headers.ptr);
     RETURN_ERROR(get_error_message(result));
   }
 }

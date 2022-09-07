@@ -89,8 +89,8 @@ var INT = 1
 var NUMBER = 2
 
 /**
- * value type boolean (accepts `1` and `0` as well as `true` and 
- * `false` as valid values).
+ * value type boolean (accepts `1` and `0` as well as `true` 
+ * and `false` as valid values).
  */
 var BOOL = 3
 
@@ -104,10 +104,10 @@ var STRING = 4
  */
 var LIST = 5
 
-# /**
-#  * value type enumeration choices.
-#  */
-# var CHOICE = 6
+/**
+ * value type enumeration choices.
+ */
+var CHOICE = 6
 
 # /**
 #  * value type optional.
@@ -121,12 +121,12 @@ var _type_name = {
   3: 'boolean',
   4: 'value',
   5: 'list',
-  # 6: 'choice',
+  6: 'choice',
   7: 'value',
 }
 
 def _muted_text(text) {
-  return colors.text(colors.text(text, colors.text_color.dark_grey), colors.style.italic)
+  return colors.text(text, colors.text_color.dark_grey)
 }
 
 def _bold_text(text) {
@@ -141,12 +141,15 @@ def _cyan_text(text) {
   return colors.text(colors.text(text, colors.text_color.cyan), colors.style.bold)
 }
 
-def _get_real_value(type, value) {
-  if type == INT return to_int(to_number(value))
-  else if type == NUMBER return to_number(value)
-  else if type == BOOL return value == 'true' or value == '1'
-  else if type == STRING return to_string(value)
-  else if type == LIST return [value]
+def _get_real_value(item, value) {
+  if item.type == INT return to_int(to_number(value))
+  else if item.type == NUMBER return to_number(value)
+  else if item.type == BOOL return value == 'true' or value == '1'
+  else if item.type == STRING return to_string(value)
+  else if item.type == LIST return [value]
+  else if item.type == CHOICE {
+    return item.choices.contains(value) ? value : nil
+  }
   return value
 }
 
@@ -164,12 +167,13 @@ class ArgsException < Exception {
 }
 
 class _Option {
-  _Option(long_name, help, short_name, type, required) {
+  _Option(long_name, help, short_name, type, required, choices) {
     self.long_name = long_name
     self.help = help ? help : ''
     self.short_name = short_name
     self.type = type ? type : NONE
     self.required = required
+    self.choices = choices
     self.options = nil # required for _Option and subclasses
 
     if type < NONE or type > OPTIONAL
@@ -179,6 +183,7 @@ class _Option {
 
 class _Optionable {
   var options = []
+  var choices = []
   
   add_option(name, help, opts) {
     if !is_string(name)
@@ -197,14 +202,17 @@ class _Optionable {
 
     var short_name = opts.get('short_name'),
         type = to_int(to_number(opts.get('type', NONE))),
-        required = opts.get('required', false)
+        required = opts.get('required', false),
+        choices = opts.get('choices', [])
 
     if short_name != nil and !is_string(short_name)
       die ArgsException('short_name must be string')
     if required != nil and !is_bool(required)
       die ArgsException('required must be boolean')
+    if !is_list(choices) and !is_dict(choices)
+      die ArgsException('choices must be a list or dictionary')
 
-    self.options.append(_Option(name, help, short_name, type, required))
+    self.options.append(_Option(name, help, short_name, type, required, choices))
 
     if instance_of(self, _Command)
       return self
@@ -212,17 +220,20 @@ class _Optionable {
 }
 
 class _Command < _Optionable {
-  _Command(name, help, type, action) {
+  _Command(name, help, type, action, choices) {
     if !is_string(name)
       die ArgsException('name expected')
     if help != nil and !is_string(help)
       die ArgsException('help message must be string')
     if action != nil and !is_function(action)
       die ArgsException('action must be of type function(options: dict)')
+    if choices != nil and !is_list(choices) and !is_dict(choices)
+      die ArgsException('choices must be of type list')
 
     self.name = name
     self.help = help
     self.type = type
+    self.choices = choices or []
   }
 }
 
@@ -301,22 +312,50 @@ class Parser < _Optionable {
 
         var line = '\n'
         if op.short_name {
-          line += '-${op.short_name},'.lpad(op.short_name.length() + 8) + ' --${op.long_name}'
+          line += '-${op.short_name},'.lpad(op.short_name.length() + 6) + ' --${op.long_name}'
         } else {
-          line += '--${op.long_name}'.lpad(op.long_name.length() + 8)
+          line += '--${op.long_name}'.lpad(op.long_name.length() + 6)
         }
 
-        if op.type != NONE
-          line += ' <' + _type_name[op.type] + '>'
+        line += self._opt_line(op)
 
         # We want to separate the longtest option names at least 12
         # characters away from the help texts.
-        line = line.rpad(width + 6)
+        line = line.rpad(width + 8)
+
+
+
+        if opt.type == CHOICE {
+          response += '\n' + self._get_choice_help(opt.choices)
+        }
 
         response += _muted_text(line + self._get_help(op))
       }
     }
     return response
+  }
+
+  _get_choice_help(opt) {
+    var options_width = self._get_options_text_width(),
+      commands_width = self._get_commands_text_width(),
+      width = options_width > commands_width ? options_width : commands_width
+
+    if is_dict(opt) {
+      var response = !opt ? _muted_text('<no help message>') : ''
+      for k, v in opt {
+        var line = '${k}'.lpad(k.length() + 4)
+
+        # We want to separate the longtest option names at least 12
+        # characters away from the help texts.
+        line = colors.text(line, colors.style.italic).rpad(width + 17)
+
+        response += line + v + '\n'
+      }
+
+      return response.rtrim('\n')
+    } else {
+      return _muted_text(('[' + ', '.join(opt) + ']').lpad(self._get_commands_text_width() + 6))
+    }
   }
 
   _get_hint_line(opt) {
@@ -375,10 +414,10 @@ class Parser < _Optionable {
 
       echo _main_headings('Usage:') + _cyan_text(' ${self.name} ' + 
         (flags_hint ? '[ ${flags_hint} ]' : '') + 
-        (self.commands.length() > 0 ? ' [COMMAND]' : ''))
+        (self.commands.length() > 0 ? ' [COMMAND]' : ""))
     } else {
       echo _main_headings('Usage:') + _cyan_text(' ${self.name} ${command.name}' + 
-          (command.type != NONE ? ' <${_type_name[command.type]}>' : ''))
+          (command.type != NONE ? ' <${_type_name[command.type]}>' : ""))
     }
   }
 
@@ -392,6 +431,13 @@ class Parser < _Optionable {
     io.stderr.write(colors.text('error: ${message}\n', colors.text_color.red))
     self._print_help()
     os.exit(1)
+  }
+
+  _opt_line(opt) {
+    if opt.type != NONE {
+      return " <" + _type_name[opt.type] + '>'
+    }
+    return ''
   }
 
   _print_help() {
@@ -409,8 +455,7 @@ class Parser < _Optionable {
         line += '--${opt.long_name}'.lpad(opt.long_name.length() + 8)
       }
 
-      if opt.type != NONE
-        line += ' <' + _type_name[opt.type] + '>'
+      line += self._opt_line(opt)
 
       # We want to separate the longtest option names at least 12
       # characters away from the help texts.
@@ -423,8 +468,7 @@ class Parser < _Optionable {
     for opt in self.commands {
       var line = '  ' + _bold_text(opt.name)
 
-      if opt.type != NONE
-        line += ' <' + _type_name[opt.type] + '>'
+      line += self._opt_line(opt)
 
       # We want to separate the longtest option names at least 12
       # characters away from the help texts.
@@ -432,7 +476,6 @@ class Parser < _Optionable {
 
       echo line + self._get_help(opt)
     }
-    echo ''
   }
 
   # This method should ever be called directly.
@@ -447,9 +490,7 @@ class Parser < _Optionable {
       command = self._get_command(command)
       if command {
         self._usage_hint(command)
-        echo ''
         echo '  ${self._get_help(command)}'
-        echo ''
       } else {
         self._usage_hint(command)
         self._print_help()
@@ -470,6 +511,10 @@ class Parser < _Optionable {
    * - `type`: type must be one of the args types and will indicate 
    * how the parsed data should be interpreted in the final result.
    * - `required`: tells the parser if a value is compulsory for this option.
+   * - `choices`: a list of allowed options or a dictionary of allowed 
+   * options with their respective descriptions.
+   * 
+   * @note the `choices` option only works for type `CHOICE`.
    */
   add_option(name, help, opts) {
     parent.add_option(name, help, opts)
@@ -484,7 +529,17 @@ class Parser < _Optionable {
    * 
    * - The `type` property a must be one of the args types and will indicate 
    * how the parsed data should be interpreted in the final result.
-   * - The action property must be a function.
+   * - The `action` property must be a function.
+   * 
+   * The `opts` dictionary can contain one or more of:
+   * 
+   * - `type`: type must be one of the args types and will indicate 
+   * how the parsed data should be interpreted in the final result.
+   * - `required`: tells the parser if a value is compulsory for this option.
+   * - `choices`: a list of allowed options or a dictionary of allowed 
+   * options with their respective descriptions.
+   * 
+   * @note the `choices` option only works for type `CHOICE`.
    */
   add_command(name, help, opts) {
     if !is_string(name)
@@ -502,9 +557,10 @@ class Parser < _Optionable {
     }
 
     var type = to_int(to_number(opts.get('type', NONE))),
-        action = opts.get('action')
+        action = opts.get('action'),
+        choices = opts.get('choices', [])
 
-    var command = _Command(name, help, type, action)
+    var command = _Command(name, help, type, action, choices)
     self.commands.append(command)
     return command
   }
@@ -561,22 +617,27 @@ class Parser < _Optionable {
                   var value = cli_args[i]
                   parsed_args.options.set(
                     '${option.long_name}', 
-                    _get_real_value(option.type, value)
+                    _get_real_value(option, value)
                   )
-                } else {
-                  self._option_error(option.long_name, 'Option "${option.long_name}" expects a ${_type_name[option.type]}')
+                  continue
                 }
+                
+                self._option_error(option.long_name, 'Option "${option.long_name}" expects a ${_type_name[option.type]}')
               }
             } else if option.type != NONE {
               if i < cli_args.length() {
                 var value = cli_args[i]
-                parsed_args.options.set(
-                  '${option.long_name}', 
-                  _get_real_value(option.type, value)
-                )
-              } else {
-                self._option_error(option.long_name, 'Option "${option.long_name}" expects a ${_type_name[option.type]}')
+                var v = _get_real_value(option, value)
+                if v {
+                  parsed_args.options.set('${option.long_name}', v)
+                  continue
+                }
               }
+
+              var msg = 'Option "${option.long_name}" expects a ${_type_name[option.type]}'
+              if option.type == CHOICE and option.choices 
+                msg += " as one of \'${"', '".join(option.choices)}\'"
+              self._option_error(option.long_name, msg)
             } else {
               parsed_args.options.set('${option.long_name}', true)
             }
@@ -610,16 +671,22 @@ class Parser < _Optionable {
           if i < cli_args.length() - 1 {
             i++
             var value = cli_args[i]
-            parsed_args.command = {
-              name: command.name,
-              value: _get_real_value(command.type, value)
-            }
+            var v = _get_real_value(command, value)
 
-            if command.type == LIST {
-              while i < cli_args.length() - 1 {
-                i++
-                parsed_args.command.value.append(cli_args[i])
+            if v or command.type != CHOICE or !command.choices {
+              parsed_args.command = {
+                name: command.name,
+                value: v
               }
+
+              if command.type == LIST {
+                while i < cli_args.length() - 1 {
+                  i++
+                  parsed_args.command.value.append(cli_args[i])
+                }
+              }
+            } else {
+              self._command_error(command.name, 'Command "${command.name}" expects a ${_type_name[command.type]} as one of \'${"', '".join(command.choices)}\'')
             }
           } else if command.type != OPTIONAL {
             self._command_error(command.name, 'Command "${command.name}" expects a ${_type_name[command.type]}')

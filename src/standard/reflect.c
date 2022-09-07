@@ -169,6 +169,22 @@ DECLARE_MODULE_METHOD(reflect__isptr) {
   RETURN_BOOL(IS_PTR(args[0]));
 }
 
+DECLARE_MODULE_METHOD(reflect__get_function_metadata) {
+  ENFORCE_ARG_COUNT(get_function_metadata, 1);
+  ENFORCE_ARG_TYPE(get_function_metadata, 0, IS_CLOSURE);
+  b_obj_closure *closure = AS_CLOSURE(args[0]);
+
+  b_obj_dict *result = (b_obj_dict *)GC(new_dict(vm));
+  dict_set_entry(vm, result, GC_STRING("name"), OBJ_VAL(closure->function->name));
+  dict_set_entry(vm, result, GC_STRING("arity"), NUMBER_VAL(closure->function->arity));
+  dict_set_entry(vm, result, GC_STRING("is_variadic"), NUMBER_VAL(closure->function->is_variadic));
+  dict_set_entry(vm, result, GC_STRING("captured_vars"), NUMBER_VAL(closure->up_value_count));
+  dict_set_entry(vm, result, GC_STRING("module"), STRING_VAL(closure->function->module->name));
+  dict_set_entry(vm, result, GC_STRING("file"), STRING_VAL(closure->function->module->file));
+
+  RETURN_OBJ(result);
+}
+
 CREATE_MODULE_LOADER(reflect) {
   static b_func_reg module_functions[] = {
       {"hasprop",   true,  GET_MODULE_METHOD(reflect__hasprop)},
@@ -182,6 +198,7 @@ CREATE_MODULE_LOADER(reflect) {
       {"bindmethod", true,  GET_MODULE_METHOD(reflect__bindmethod)},
       {"gettype", true,  GET_MODULE_METHOD(reflect__gettype)},
       {"isptr", true,  GET_MODULE_METHOD(reflect__isptr)},
+      {"getfunctionmetadata", true,  GET_MODULE_METHOD(reflect__get_function_metadata)},
       {NULL,        false, NULL},
   };
 

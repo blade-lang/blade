@@ -17,22 +17,17 @@
 
 Blade is a simple, fast, clean and dynamic language that allows you to develop applications 
 quickly. Blade emphasises algorithm over syntax and for this reason, it has a very small but powerful 
-syntax set with a very natural feel.
+syntax set with a very natural feel. Blade builds upon the best features of JavaScript, Python and Ruby 
+to give developers a familiar and powerful system that feels native for developers coming from any of 
+these languages and an easy way to leverage the strength of any.
 
 
-## Features
+## Distinguishing Features
 
 - Simple syntax and minimal keywords.
-- Dynamically typed.
 - First-class package management (Package management is built into the language module system).
-- Object-oriented (only supports single inheritance for now.
-  Multiple inheritance is open for discussion).
-- Exceptions.
-- Closures.
 - Iterable classes.
-- REPL
-- Lightweight.
-- Easy to extend with C modules.
+- Easy to extend with C modules with a familiar API to Wren.
 
 
 ## Example
@@ -44,8 +39,6 @@ import json
 
 var server = http.server(3000)
 server.on_receive(|request, response| {
-  echo 'Request from ${request.ip} to ${request.path}.'
-
   response.headers['Content-Type'] = 'application/json'
   response.write(json.encode(request))
 })
@@ -57,14 +50,14 @@ server.listen()
 
 ## Why should I use Blade?
 
-If you fall into one of more of this categories or have one of the following needs, then Blade is the right language for you.
+If you fall into one of more of these categories or have one of the following needs, then Blade is the right language for you.
 
+- You want a language with a very minimal learning curve (easier to learn than Python).
 - You want Python's simplicity but love coding with braces and other things C-like.
 - You want a language with first-class support for package management.
 - You need a quick script for automating mundane tasks on your device.
 - You need a language that allows fast prototyping.
 - You want to do backend development without needing to depend on a framework.
-- You want a scripting language you can easily port your existing C99 codes to with less hassle (Work in progress).
 - You want a familiar language that can be embedded into your application that's more extensive than Lua.
 
 There are many more use-cases where Blade is a great fit. This is just the bare minimal.
@@ -78,31 +71,26 @@ You can read the [Blade language documentation](https://bladelang.com) online at
 ## C Extensions to Blade
 
 Blade supports external extensions built in C. While the website is yet to include documentation on writing C 
-extensions, there is an easy-to-pick-up example in the [blade-ext-demo](https://github.com/blade-lang/blade-ext-demo) repository.
-
-### GOTCHAS!
-
-For some weird reasons yet unknown, third-party C modules for Blade don't work correctly on Blade installations
-built with MSVC (Visual Studio). To be able to use external C modules on Windows, build or use a Blade installation 
-built with either TDM-GCC or MinGW64.
+extensions, there is an easy-to-pick-up example in the [blade-ext-demo](https://github.com/blade-lang/blade-ext-demo) repository
+and many more in the `packages` directory.
 
 
 ## Directory Structure
 
-| Directory | Contents 
-|-----------|----------
-| `benchmarks` | Contains the sample benchmarks for Blade (some are based on the Benchmark games).
-| `libs` | Contains the Blade standard library.
-| `packages` | Contains the Blade standard library members built as packages because they depend on other open-source tools.
-| `src` | The source code of the Blade language including the native implementation of some Blade library classes and functions in the modules directory.
-| `scripts` | Helper scripts for various uses such as automated installation.
-| `tests` | A few test cases that Blade implementation must pass.
-| `thirdparty` | Contains open-source libraries and packages used by Blade
+| Directory | Contents |
+|-----------|----------|
+| `benchmarks` | Contains the sample benchmarks for Blade (some are based on the Benchmark games). |
+| `libs` | Contains the Blade standard library. |
+| `packages` | Contains the Blade standard library members built as packages because they depend on other open-source tools. |
+| `src` | The source code of the Blade language including the native implementation of some Blade library classes and functions in the modules directory. |
+| `scripts` | Helper scripts for various uses such as automated installation. |
+| `tests` | A few test cases that Blade implementation must pass. |
+| `thirdparty` | Contains open-source libraries and packages used by Blade. |
 
 
 ## How to contribute
 
-Along with Blade's goal to be simple, flexibile and expressive is a strong desire to make the community around it as friendly and welcoming as possible. Therefore, all forms of contributions from pull requests, suggestions, typo fixes in documentation, feature request, bug reports and any contribution at all is greatly welcomed and appreciated.
+Along with Blade's goal to be simple, flexible and expressive is a strong desire to make the community around it as friendly and welcoming as possible. Therefore, all forms of contributions from pull requests, suggestions, typo fixes in documentation, feature request, bug reports and any contribution at all is greatly welcomed and appreciated.
 
 > WE NEED HELP! From review of this documentation, to suggestions on the core features of Blade,
 testing of Blade features, writing more comprehensive tests, bug detection, code fixes and more.
@@ -135,11 +123,4 @@ You can also just mail your issues to [Ore Richard Muyiwa](mailto:eqliqandfriend
     I advise you use the JetBrains CLion or Visual Studio Code
     IDE(s) to format your code before submitting for PR.
     
-That simple!
-
-
-[comment]: <> (## Sponsors)
-
-[comment]: <> (![JetBrains Logo]&#40;jetbrains.png&#41;)
-
-[comment]: <> (<img src="./jetbrains.png" width="64" height="64" alt="JetBrains Logo"/>)
+It's that simple!

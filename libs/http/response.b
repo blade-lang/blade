@@ -50,29 +50,30 @@ class HttpResponse {
    * @constructor 
    */
   HttpResponse(body, status, headers, version, time_taken, redirects, responder) {
-      self.status = status ? status : 200
-      self.body = body ? body : ''
-      self.headers = headers ? headers : {
-        'Content-Type': 'text/html; charset=utf-8',
-        'X-Powered-By': 'Blade',
-        'Date': Date().format('r')
-      }
-      self.version = version ? version : '1.0'
-      self.time_taken = time_taken ? time_taken : 0
-      self.redirects = redirects
-      self.responder = responder
+    self.status = status ? status : 200
+    self.body = body ? body : bytes(0)
+    self.headers = headers ? headers : {
+      'Content-Type': 'text/html; charset=utf-8',
+      'X-Powered-By': 'Blade',
+      'Date': Date().format('r')
+    }
+    self.version = version ? version : '1.0'
+    self.time_taken = time_taken ? time_taken : 0
+    self.redirects = redirects
+    self.responder = responder
   }
 
   /**
-   * write(data: string)
+   * write(data: string | bytes)
    * 
-   * Writes data to the request response. 
+   * Writes data to the response response. 
    * 
    * > This method should be prefered over writing directly to the body 
    * > property to prevent unexpected behaviors.
    */
   write(data) {
-    self.body += data
+    if is_string(data) self.body += data.to_bytes()
+    else self.body += data
   }
 
   @to_string() {

@@ -12,6 +12,7 @@ extern CREATE_MODULE_LOADER(json);
 extern CREATE_MODULE_LOADER(sqlite);
 extern CREATE_MODULE_LOADER(reflect);
 extern CREATE_MODULE_LOADER(array);
+extern CREATE_MODULE_LOADER(process);
 extern CREATE_MODULE_LOADER(struct);
 
 #endif // BLADE_STANDARD_H

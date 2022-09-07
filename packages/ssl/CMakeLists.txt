@@ -11,7 +11,6 @@ set(BLADE_ROOT "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/blade")
 message(STATUS "Building ssl module to ${BLADE_ROOT}/dist")
 
 include_directories("${BLADE_ROOT}/includes" ${CMAKE_CURRENT_SOURCE_DIR})
-#link_directories("${BLADE_ROOT}")
 
 add_library(ssl SHARED ssl.h ssl.c)
 target_link_libraries(ssl libblade)
@@ -30,10 +29,6 @@ endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-endif()
-
-if(WIN32)
-    target_link_libraries(ssl wsock32 ws2_32)
 endif()
 
 add_custom_target(copy-ssl-to-libs ALL

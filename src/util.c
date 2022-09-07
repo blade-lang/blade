@@ -158,26 +158,6 @@ char *append_strings(char *old, char *new_str) {
   return result;
 }*/
 
-int read_line(char line[], int max) {
-  int nch = 0;
-  int c;
-  max = max - 1; // leave room for '\0'
-
-  while ((c = getchar()) != EOF && c != '\0' && c != '\n') {
-    if (nch < max) {
-      line[nch] = *utf8_encode(c);
-      nch = nch + 1;
-    }
-  }
-
-  if (c == EOF && nch == 0)
-    return EOF;
-
-  line[nch] = '\0';
-
-  return nch;
-}
-
 int utf8len(char *s) {
   int len = 0;
   for (; *s; ++s)

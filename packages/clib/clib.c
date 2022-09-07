@@ -6,7 +6,7 @@
 #include <stdlib.h>
 
 #else
-#include "blade_dlfcn.h"
+#include "bdlfcn.h"
 #endif
 
 #define CLIB_RETURN_PTR(handle, cf, ...) \

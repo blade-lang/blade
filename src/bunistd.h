@@ -44,6 +44,9 @@
 #define isatty _isatty
 #define lseek _lseek
 #define rmdir _rmdir
+#define ftruncate _chsize
+#define fileno _fileno
+#define getpid _getpid
 //#define truncate _truncate
 /* read, write, and close are NOT being #defined here, because while there are
  * file handle specific versions for Windows, they probably don't work for
@@ -70,10 +73,5 @@ typedef unsigned __int32 uint32_t;
 typedef unsigned __int64 uint64_t;
 
 #endif /* unistd.h  */
-
-#ifdef _WIN32
-#define ftruncate _chsize
-#define fileno _fileno
-#endif
 
 #endif

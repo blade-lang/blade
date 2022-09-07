@@ -29,10 +29,7 @@ static void error_at(b_parser *p, b_token *t, const char *message,
 
   p->panic_mode = true;
 
-  fprintf(stderr, "SyntaxError:\n");
-  fprintf(stderr, "    File: %s, Line: %d\n", p->module->file, t->line);
-
-  fprintf(stderr, "    Error");
+  fprintf(stderr, "SyntaxError");
 
   if (t->type == EOF_TOKEN) {
     fprintf(stderr, " at end");
@@ -49,6 +46,7 @@ static void error_at(b_parser *p, b_token *t, const char *message,
   fprintf(stderr, ": ");
   vfprintf(stderr, message, args);
   fputs("\n", stderr);
+  fprintf(stderr, "  %s:%d\n", p->module->file, t->line);
 
   p->had_error = true;
 }
@@ -1528,11 +1526,12 @@ static void field(b_parser *p, bool is_static) {
   } else {
     emit_byte(p, OP_NIL);
   }
-  consume_statement_end(p);
-  ignore_whitespace(p);
 
   emit_byte_and_short(p, OP_CLASS_PROPERTY, field_constant);
   emit_byte(p, is_static ? 1 : 0);
+
+  consume_statement_end(p);
+  ignore_whitespace(p);
 }
 
 static void function_declaration(b_parser *p) {
@@ -1640,13 +1639,13 @@ static void expression_statement(b_parser *p, bool is_initializer, bool semi) {
     parse_precedence_no_advance(p, PREC_ASSIGNMENT);
   }
   if (!is_initializer) {
-    consume_statement_end(p);
     if (p->repl_can_echo && p->vm->is_repl) {
       emit_byte(p, OP_ECHO);
       p->repl_can_echo = false;
     } else {
       emit_byte(p, OP_POP);
     }
+    consume_statement_end(p);
   } else {
     consume(p, SEMICOLON_TOKEN, "expected ';' after initializer");
     ignore_whitespace(p);
@@ -1997,14 +1996,14 @@ static void if_statement(b_parser *p) {
 
 static void echo_statement(b_parser *p) {
   expression(p);
-  consume_statement_end(p);
   emit_byte(p, OP_ECHO);
+  consume_statement_end(p);
 }
 
 static void die_statement(b_parser *p) {
   expression(p);
-  consume_statement_end(p);
   emit_byte(p, OP_DIE);
+  consume_statement_end(p);
 }
 
 static void parse_specific_import(b_parser *p, char *module_name, int import_constant, bool was_renamed, bool is_native) {
@@ -2038,12 +2037,12 @@ static void parse_specific_import(b_parser *p, char *module_name, int import_con
     ignore_whitespace(p);
 
     consume(p, RBRACE_TOKEN, "expected '}' at end of selective import");
-    consume_statement_end(p);
 
     if(!same_name_selective_exist) {
       emit_byte_and_short(p, is_native ? OP_EJECT_NATIVE_IMPORT : OP_EJECT_IMPORT, import_constant);
     }
     emit_byte(p, OP_POP); // pop the module constant from stack
+    consume_statement_end(p);
   }
 }
 
@@ -2192,9 +2191,9 @@ static void assert_statement(b_parser *p) {
   } else {
     emit_byte(p, OP_NIL);
   }
-  consume_statement_end(p);
 
   emit_byte(p, OP_ASSERT);
+  consume_statement_end(p);
 }
 
 static void try_statement(b_parser *p) {
@@ -2289,8 +2288,8 @@ static void return_statement(b_parser *p) {
     }
 
     expression(p);
-    consume_statement_end(p);
     emit_byte(p, OP_RETURN);
+    consume_statement_end(p);
   }
   p->is_returning = false;
 }
@@ -2353,24 +2352,24 @@ static void continue_statement(b_parser *p) {
   if (p->innermost_loop_start == -1) {
     error(p, "'continue' can only be used in a loop");
   }
-  consume_statement_end(p);
 
   // discard local variables created in the loop
   discard_local(p, p->innermost_loop_scope_depth);
 
   // go back to the top of the loop
   emit_loop(p, p->innermost_loop_start);
+  consume_statement_end(p);
 }
 
 static void break_statement(b_parser *p) {
   if (p->innermost_loop_start == -1) {
     error(p, "'break' can only be used in a loop");
   }
-  consume_statement_end(p);
 
   // discard local variables created in the loop
 //  discard_local(p, p->innermost_loop_scope_depth);
   emit_jump(p, OP_BREAK_PL);
+  consume_statement_end(p);
 }
 
 static void synchronize(b_parser *p) {

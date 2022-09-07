@@ -306,7 +306,7 @@ DECLARE_MODULE_METHOD(struct_pack) {
       case 'X':
       case '@':
         if (arg < 0) {
-          // @TODO: Give warning...
+          // TODO: Give warning...
 //          RETURN_ERROR("Type %c: '*' ignored", code);
           arg = 1;
         }
@@ -393,7 +393,7 @@ too_few_args:
   }
 
   if (currentarg < param_count) {
-    // @TODO: Give warning...
+    // TODO: Give warning...
 //    RETURN_ERROR("%d arguments unused", (param_count - currentarg));
   }
 
@@ -461,7 +461,7 @@ too_few_args:
         outputpos -= arg;
 
         if (outputpos < 0) {
-          // @TODO: Give warning...
+          // TODO: Give warning...
 //          RETURN_ERROR("Type %c: outside of string", code);
           outputpos = 0;
         }
@@ -507,7 +507,7 @@ too_few_args:
 
         outputpos--;
         if ((size_t) arg > strlen(str)) {
-          // @TODO: Give warning...
+          // TODO: Give warning...
 //          RETURN_ERROR("Type %c: not enough characters in string", code);
           arg = (int)strlen(str);
         }
@@ -522,7 +522,7 @@ too_few_args:
           } else if (n >= 'a' && n <= 'f') {
             n -= ('a' - 10);
           } else {
-            // @TODO: Give warning...
+            // TODO: Give warning...
 //            RETURN_ERROR("Type %c: illegal hex digit %c", code, n);
             n = 0;
           }
@@ -777,7 +777,7 @@ DECLARE_MODULE_METHOD(struct_unpack) {
       case 'X':
         size = -1;
         if (repetitions < 0) {
-          // @TODO: Give warning...
+          // TODO: Give warning...
 //          RETURN_ERROR("Type %c: '*' ignored", type);
           repetitions = 1;
         }
@@ -860,7 +860,7 @@ DECLARE_MODULE_METHOD(struct_unpack) {
     }
 
     if (size != 0 && size != -1 && size < 0) {
-      // @TODO: Give warning...
+      // TODO: Give warning...
 //      RETURN_ERROR("Type %c: integer overflow", type);
       RETURN_FALSE;
     }
@@ -870,7 +870,7 @@ DECLARE_MODULE_METHOD(struct_unpack) {
     for (i = 0; i != repetitions; i++) {
 
       if (size != 0 && size != -1 && INT_MAX - size + 1 < inputpos) {
-        // @TODO: Give warning...
+        // TODO: Give warning...
 //        RETURN_ERROR("Type %c: integer overflow", type);
         RETURN_FALSE;
       }
@@ -1146,7 +1146,7 @@ DECLARE_MODULE_METHOD(struct_unpack) {
               i = repetitions - 1;    /* Break out of for loop */
 
               if (repetitions >= 0) {
-                // @TODO: Give warning...
+                // TODO: Give warning...
 //                RETURN_ERROR("Type %c: outside of string", type);
               }
             }
@@ -1156,7 +1156,7 @@ DECLARE_MODULE_METHOD(struct_unpack) {
             if (repetitions <= inputlen) {
               inputpos = repetitions;
             } else {
-              // @TODO: Give warning...
+              // TODO: Give warning...
               // RETURN_ERROR("Type %c: outside of string", type);
             }
 
@@ -1167,7 +1167,7 @@ DECLARE_MODULE_METHOD(struct_unpack) {
         inputpos += size;
         if (inputpos < 0) {
           if (size != -1) { /* only print warning if not working with * */
-            // @TODO: Give warning...
+            // TODO: Give warning...
             // RETURN_ERROR("Type %c: outside of string", type);
           }
           inputpos = 0;
@@ -1176,7 +1176,7 @@ DECLARE_MODULE_METHOD(struct_unpack) {
         /* Reached end of input for '*' repeater */
         break;
       } else {
-        // @TODO: Give warning...
+        // TODO: Give warning...
         // RETURN_ERROR("Type %c: not enough input, need %d, have " LONG_FMT, type, size, inputlen - inputpos);
         RETURN_FALSE;
       }

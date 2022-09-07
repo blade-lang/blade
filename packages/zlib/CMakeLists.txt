@@ -17,7 +17,6 @@ endif()
 message(STATUS "Building zlib2 module to ${BLADE_ROOT}/dist")
 
 include_directories("${BLADE_ROOT}/includes" ${CMAKE_CURRENT_SOURCE_DIR})
-#link_directories("${BLADE_ROOT}")
 
 add_library(zlib2 SHARED zlib.c)
 target_link_libraries(zlib2 libblade)
@@ -36,10 +35,6 @@ endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-endif()
-
-if(WIN32)
-    target_link_libraries(zlib2 wsock32 ws2_32)
 endif()
 
 add_custom_target(copy-zlib2-to-libs ALL

@@ -43,8 +43,10 @@ import _reflect
  * @return bool
  */
 def has_prop(object, name) {
-  if !is_instance(object) or !is_string(name)
-    die Exception('arg1 must be instance and arg2 must be string')
+  if !is_instance(object)
+    die Exception('object instance expected in argument 1 (object)')
+  if !is_string(name)
+    die Exception('string expected in argument 2 (name)')
 
   return _reflect.hasprop(object, name)
 }
@@ -57,8 +59,10 @@ def has_prop(object, name) {
  * @return any
  */
 def get_prop(object, name) {
-  if !is_instance(object) or !is_string(name)
-    die Exception('arg1 must be instance and arg2 must be string')
+  if !is_instance(object)
+    die Exception('object instance expected in argument 1 (object)')
+  if !is_string(name)
+    die Exception('string expected in argument 2 (name)')
 
   return _reflect.getprop(object, name)
 }
@@ -72,8 +76,10 @@ def get_prop(object, name) {
  * @return bool: `true` if a new property was set, `false` if a property was updated
  */
 def set_prop(object, name, value) {
-  if !is_instance(object) or !is_string(name)
-    die Exception('arg1 must be instance and arg2 must be string')
+  if !is_instance(object)
+    die Exception('object instance expected in argument 1 (object)')
+  if !is_string(name)
+    die Exception('string expected in argument 2 (name)')
 
   return _reflect.setprop(object, name, value)
 }
@@ -85,8 +91,10 @@ def set_prop(object, name, value) {
  * @return bool
  */
 def del_prop(object, name) {
-  if !is_instance(object) or !is_string(name)
-    die Exception('arg1 must be instance and arg2 must be string')
+  if !is_instance(object)
+    die Exception('object instance expected in argument 1 (object)')
+  if !is_string(name)
+    die Exception('string expected in argument 2 (name)')
 
   return _reflect.delprop(object, name)
 }
@@ -99,8 +107,10 @@ def del_prop(object, name) {
  * @return bool
  */
 def has_method(object, name) {
-  if !is_instance(object) or !is_string(name)
-    die Exception('arg1 must be instance and arg2 must be string')
+  if !is_instance(object)
+    die Exception('object instance expected in argument 1 (object)')
+  if !is_string(name)
+    die Exception('string expected in argument 2 (name)')
 
   return _reflect.hasmethod(object, name)
 }
@@ -113,8 +123,10 @@ def has_method(object, name) {
  * @return bool
  */
 def has_decorator(object, name) {
-  if !is_instance(object) or !is_string(name)
-    die Exception('arg1 must be instance and arg2 must be string')
+  if !is_instance(object)
+    die Exception('object instance expected in argument 1 (object)')
+  if !is_string(name)
+    die Exception('string expected in argument 2 (name)')
 
   return _reflect.hasmethod(object, '@${name}')
 }
@@ -128,8 +140,10 @@ def has_decorator(object, name) {
  * @return function
  */
 def get_method(object, name) {
-  if !is_instance(object) or !is_string(name)
-    die Exception('arg1 must be instance and arg2 must be string')
+  if !is_instance(object)
+    die Exception('object instance expected in argument 1 (object)')
+  if !is_string(name)
+    die Exception('string expected in argument 2 (name)')
 
   return _reflect.getmethod(object, name)
 }
@@ -143,8 +157,10 @@ def get_method(object, name) {
  * @return function
  */
 def get_decorator(object, name) {
-  if !is_instance(object) or !is_string(name)
-    die Exception('arg1 must be instance and arg2 must be string')
+  if !is_instance(object)
+    die Exception('object instance expected in argument 1 (object)')
+  if !is_string(name)
+    die Exception('string expected in argument 2 (name)')
 
   if _reflect.hasmethod(object, '@${name}') {
     return _reflect.getboundmethod(object, '@${name}')
@@ -163,8 +179,10 @@ def get_decorator(object, name) {
  * @return function
  */
 def bind_method(object, method) {
-  if !is_instance(object) or !is_function(method)
-    die Exception('arg1 must be instance and arg2 must be function')
+  if !is_instance(object)
+    die Exception('object instance expected in argument 1 (object)')
+  if !is_function(method)
+    die Exception('function expected in argument 2 (method)')
 
   return _reflect.bindmethod(object, method)
 }
@@ -177,9 +195,22 @@ def bind_method(object, method) {
  */
 def get_type(object) {
   if !is_instance(object)
-    die Exception('instance expected')
+    die Exception('instance expected in argument 1 (object)')
 
   return _reflect.gettype(object)
+}
+
+/**
+ * get_type(object: instance)
+ * 
+ * Returns the type of an instance as string
+ * @return string
+ */
+def get_function_metadata(function) {
+  if !is_function(function)
+    die Exception('function expected in argument 1 (function)')
+
+  return _reflect.getfunctionmetadata(function)
 }
 
 /**

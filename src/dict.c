@@ -1,4 +1,4 @@
-#include "blade_dict.h"
+#include "dict.h"
 
 #include <stdlib.h>
 

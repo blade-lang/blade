@@ -4,7 +4,7 @@
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #else
-#include "blade_unistd.h"
+#include "bunistd.h"
 #endif /* ifdef HAVE_UNISTD_H */
 #include "module.h"
 
@@ -21,6 +21,10 @@
 #include <setjmp.h>
 #include <signal.h>
 #include <fcntl.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 static bool continue_repl = true;
 
@@ -270,6 +274,10 @@ int main(int argc, char *argv[]) {
         setvbuf(stdout, buffer, _IOFBF, sizeof(buffer));
       }
     }
+
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
 
     char **std_args = (char**)calloc(argc, sizeof(char *));
     if(std_args != NULL) {

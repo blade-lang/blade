@@ -12,7 +12,7 @@
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
 #else
-#include "blade_dlfcn.h"
+#include "bdlfcn.h"
 #endif
 
 #if !defined(HAVE_DIRENT_H) || defined(_WIN32)
@@ -28,7 +28,7 @@
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #else
-#include "blade_unistd.h"
+#include "bunistd.h"
 #endif /* HAVE_UNISTD_H */
 
 b_module_init modules[] = {
@@ -41,6 +41,7 @@ b_module_init modules[] = {
     GET_MODULE_LOADER(hash),     //
     GET_MODULE_LOADER(reflect), //
     GET_MODULE_LOADER(array), //
+    GET_MODULE_LOADER(process), //
     GET_MODULE_LOADER(struct), //
     NULL,
 };

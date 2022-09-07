@@ -102,11 +102,11 @@ class HttpServer {
   HttpServer(port, host, is_secure) {
 
     if !is_int(port) or port <= 0
-      die Exception('invalid port number')
+      die HttpException('invalid port number')
     else self.port = port
 
     if host != nil and !is_string(host)
-      die Exception('invalid host')
+      die HttpException('invalid host')
     else if host != nil self.host = host
 
     if is_secure != nil and !is_bool(is_secure)
@@ -234,7 +234,7 @@ class HttpServer {
     if !request.parse(message, client)
       response.status = status.BAD_REQUEST
 
-    var feedback = ''
+    var feedback = bytes(0)
 
     # If we have an error in the request message itself, we don't even want to 
     # forward processing to callers. 
@@ -247,7 +247,7 @@ class HttpServer {
       })
 
       if response.body {
-        feedback += 'Content-Length: ${response.body.length()}\r\n'
+        feedback += 'Content-Length: ${response.body.length()}\r\n'.to_bytes()
       }
     }
 
@@ -258,18 +258,27 @@ class HttpServer {
       }
     }
 
-    feedback += self._get_response_header_string(response.headers)
-    feedback += '\r\n${response.body}' 
-
-    feedback =  'HTTP/${response.version} ${response.status} ' +
-                '${status.map.get(response.status, 'UNKNOWN')}\r\n' + 
-                feedback
+    var hdrs = self._get_response_header_string(response.headers).to_bytes()
+    feedback += hdrs
+    hdrs.dispose()
     
+    feedback += '\r\n'.to_bytes()
+    feedback += response.body
+
+    var hdrv = ('HTTP/${response.version} ${response.status} ' +
+    '${status.map.get(response.status, 'UNKNOWN')}\r\n').to_bytes()
+    feedback =  hdrv + feedback
+    hdrv.dispose()
+                
     client.send(feedback)
+
     # call the reply listeners.
     iters.each(self._sent_listeners, | fn | {
       fn(response)
     })
+
+    feedback.dispose()
+    response.body.dispose()
   }
 
   /**
@@ -281,9 +290,9 @@ class HttpServer {
   listen() {
     if self.is_secure {
       if !self.cert_file
-        die Exception('no certificate loaded for secure server')
+        die HttpException('no certificate loaded for secure server')
       if !self.private_key_file 
-        die Exception('no private key loaded for secure server')
+        die HttpException('no private key loaded for secure server')
     }
 
     if !self.socket.is_listening {

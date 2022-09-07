@@ -39,11 +39,11 @@ if(UNIX)
 endif()
 
 set(BLADE_SOURCES
-		src/blade_dict.c
-		src/blade_file.c
-		src/blade_list.c
-		src/blade_string.c
-		src/blade_range.c
+		src/dict.c
+		src/file.c
+		src/list.c
+		src/bstring.c
+		src/range.c
 		src/blob.c
 		src/bytes.c
 		src/compiler.c
@@ -67,6 +67,7 @@ set(BLADE_SOURCES
 		src/standard/os.c
 		src/standard/socket.c
 		src/standard/hash.c
+		src/standard/process.c
 		src/standard/reflect.c
 		src/standard/struct.c
 		)
@@ -100,7 +101,7 @@ endif()
 # Header checks
 check_include_file("getopt.h" HAVE_GETOPT_H)
 if(NOT "${HAVE_GETOPT_H}")
-	target_sources(libblade PRIVATE src/blade_getopt.c)
+	target_sources(libblade PRIVATE src/bgetopt.c)
 endif()
 check_include_file("termios.h" HAVE_TERMIOS_H)
 check_include_file("unistd.h" HAVE_UNISTD_H)
@@ -126,6 +127,9 @@ endif()
 check_function_exists("utime" HAVE_UTIME)
 check_function_exists("basename" HAVE_BASENAME)
 check_function_exists("dirname" HAVE_DIRNAME)
+check_function_exists("sysconf" HAVE_SYSCONF)
+check_function_exists("sysctlbyname" HAVE_SYSCTLBYNAME)
+check_function_exists("setjmp" HAVE_SETJMP)
 
 # Generate config.h
 set(INCLUDE_GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/include-gen")
@@ -144,7 +148,7 @@ set_target_properties(libblade
 		)
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC"  )
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 endif()
 
 # link pcre2
@@ -161,6 +165,11 @@ if(UNIX)
 		target_link_libraries(libblade PRIVATE dl)
 	endif()
 endif(UNIX)
+
+if(WIN32)
+	add_dependencies(libblade mman)
+	target_link_libraries(libblade PRIVATE mman)
+endif()
 
 target_link_libraries(blade PRIVATE libblade)
 

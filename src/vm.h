@@ -117,7 +117,7 @@ void define_native_method(b_vm *vm, b_table *table, const char *name,
 
 bool is_instance_of(b_obj_class *klass1, char *klass2_name);
 
-bool throw_exception(b_vm *vm, const char *format, ...);
+bool do_throw_exception(b_vm *vm, bool is_assert, const char *format, ...);
 
 void _runtime_error(b_vm *vm, const char *format, ...);
 
@@ -130,6 +130,7 @@ b_obj_instance *create_exception(b_vm *vm, b_obj_string *message);
     EXIT_VM(); \
   }
 
+#define throw_exception(v, ...) do_throw_exception(v, false, ##__VA_ARGS__)
 
 static inline b_obj *gc_protect(b_vm *vm, b_obj *object) {
   push(vm, OBJ_VAL(object));

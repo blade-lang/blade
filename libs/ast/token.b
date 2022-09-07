@@ -314,109 +314,114 @@ var DEFAULT = 68
 var DIE = 68
 
 /**
+ * do token
+ */
+var DO = 69
+
+/**
  * echo token
  */
-var ECHO = 69
+var ECHO = 70
 
 /**
  * else token
  */
-var ELSE = 70
+var ELSE = 71
 
 /**
  * false token
  */
-var FALSE = 71
+var FALSE = 72
 
 /**
  * finally token
  */
-var FINALLY = 72
+var FINALLY = 73
 
 /**
  * for token
  */
-var FOR = 73
+var FOR = 74
 
 /**
  * if token
  */
-var IF = 74
+var IF = 75
 
 /**
  * import token
  */
-var IMPORT = 75
+var IMPORT = 76
 
 /**
  * in token
  */
-var IN = 76
+var IN = 77
 
 /**
  * iter token
  */
-var ITER = 77
+var ITER = 78
 
 /**
  * nil token
  */
-var NIL = 78
+var NIL = 79
 
 /**
  * or token
  */
-var OR = 79
+var OR = 80
 
 /**
  * parent token
  */
-var PARENT = 80
+var PARENT = 81
 
 /**
  * return token
  */
-var RETURN = 81
+var RETURN = 82
 
 /**
  * self token
  */
-var SELF = 82
+var SELF = 83
 
 /**
  * static token
  */
-var STATIC = 83
+var STATIC = 84
 
 /**
  * true token
  */
-var TRUE = 84
+var TRUE = 85
 
 /**
  * try token
  */
-var TRY = 85
+var TRY = 86
 
 /**
  * using token
  */
-var USING = 86
+var USING = 87
 
 /**
  * var token
  */
-var VAR = 87
+var VAR = 88
 
 /**
  * when token
  */
-var WHEN = 88
+var WHEN = 89
 
 /**
  * while token
  */
-var WHILE = 89
+var WHILE = 90
 
 
 # types token

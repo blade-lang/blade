@@ -11,7 +11,6 @@ set(BLADE_ROOT "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/blade")
 message(STATUS "Building SQLite module to ${BLADE_ROOT}/dist")
 
 include_directories("${BLADE_ROOT}/includes" ${CMAKE_CURRENT_SOURCE_DIR})
-#link_directories("${BLADE_ROOT}")
 
 add_library(sqlite SHARED sqlite3.c sqlite3.h sqlite.c)
 add_definitions(-DSQLITE_ENABLE_JSON1)
@@ -21,10 +20,6 @@ add_dependencies(sqlite blade)
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
     target_link_libraries(sqlite pthread)
-endif()
-
-if(WIN32)
-    target_link_libraries(sqlite wsock32 ws2_32)
 endif()
 
 add_custom_target(copy-sqlite-to-libs ALL

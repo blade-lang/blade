@@ -366,7 +366,7 @@ static uint32_t hash_object(b_obj *object) {
   switch (object->type) {
     case OBJ_CLASS:
       // Classes just use their name.
-      return hash_object((b_obj *) ((b_obj_class *) object)->name);
+      return ((b_obj_class *) object)->name->hash;
 
       // Allow bare (non-closure) functions so that we can use a map to find
       // existing constants in a function's constant table. This is only used
@@ -379,6 +379,11 @@ static uint32_t hash_object(b_obj *object) {
 
     case OBJ_STRING:
       return ((b_obj_string *) object)->hash;
+
+    case OBJ_BYTES: {
+      b_obj_bytes *bytes = ((b_obj_bytes *) object);
+      return hash_string((const char *)bytes->bytes.bytes, bytes->bytes.count);
+    }
 
     default:
       return 0;

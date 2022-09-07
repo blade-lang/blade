@@ -158,7 +158,7 @@ class Parser {
     self._ignore_newline()
     var expr = self._expression()
     self._ignore_newline()
-    self._consume(RPAREN, "Expected ')' after expression")
+    self._consume(RPAREN, "')' Expected after expression")
     return GroupExpr(expr)
   }
 
@@ -179,7 +179,7 @@ class Parser {
     }
 
     self._ignore_newline()
-    self._consume(RPAREN, 'expected ) after args')
+    self._consume(RPAREN, "')' expected after args")
     return CallExpr(callee, args)
   }
 
@@ -194,7 +194,7 @@ class Parser {
       args.append(self._expression())
     }
 
-    self._consume(RBRACKET, 'expected ] at end of indexer')
+    self._consume(RBRACKET, "']' expected at end of indexer")
     return IndexExpr(args)
   }
 
@@ -203,7 +203,7 @@ class Parser {
    */
   _finish_dot(expr) {
     self._ignore_newline()
-    var prop = self._consume(IDENTIFIER, 'expected property name').literal
+    var prop = self._consume(IDENTIFIER, 'property name expected').literal
 
     if self._match_in(_assigners_) {
       expr = SetExpr(expr, prop, self._expression())
@@ -492,7 +492,7 @@ class Parser {
     if self._match(QUESTION) {
       self._ignore_newline()
       var truth = self._or()
-      self._consume(COLON, ': expected in tenary operation')
+      self._consume(COLON, "':' expected in tenary operation")
       expr = ConditionExpr(expr, truth, self._or())
     }
 
@@ -531,18 +531,18 @@ class Parser {
 
     while !self._check(RBRACE) {
       keys.append(self._expression())
-      self._consume(COLON, 'expected : separator between dict key and value')
+      self._consume(COLON, "':' expected separator between dict key and value")
       values.append(self._expression())
 
       self._ignore_newline()
 
       if !self._check(RBRACE)
-        self._consume(COMMA, 'expected , between dict key/value pairs')
+        self._consume(COMMA, "',' expected between dict key/value pairs")
       
       self._ignore_newline()
     }
 
-    self._consume(RBRACE, 'expected } after dictionary')
+    self._consume(RBRACE, "'}' expected after dictionary")
     return DictExpr(keys, values)
   }
 
@@ -559,7 +559,7 @@ class Parser {
     }
 
     self._ignore_newline()
-    self._consume(RBRACKET, 'expected ] after list')
+    self._consume(RBRACKET, "']' expected after list")
     return ListExpr(items)
   }
 
@@ -597,7 +597,7 @@ class Parser {
     while !self._check(RBRACE) and !self._is_at_end()
       val.append(self._declaration())
 
-    self._consume(RBRACE, 'expected } after block')
+    self._consume(RBRACE, "'{' expected after block")
     self._block_count--
 
     return BlockStmt(val)
@@ -623,15 +623,24 @@ class Parser {
   }
 
   /**
+   * while loops
+   */
+  _do_while() {
+    var body = self._statement()
+    self._consume(WHILE, "'while' expected after do body")
+    return DoWhileStmt(body, self._expression())
+  }
+
+  /**
    * for loops
    */
   _for() {
-    var vars = [self._consume(IDENTIFIER, 'expected variable name')]
+    var vars = [self._consume(IDENTIFIER, 'variable name expected')]
 
     if self._match(COMMA)
-      vars.append(self._consume(IDENTIFIER, 'expected variable name'))
+      vars.append(self._consume(IDENTIFIER, 'variable name expected'))
 
-    self._consume(IN, "expected 'in' after for statement variables")
+    self._consume(IN, "'in' expected after for statement variables")
 
     return ForStmt(vars, self._expression(), self._statement())
   }
@@ -655,7 +664,7 @@ class Parser {
     var cases = {}
     var default_case
 
-    self._consume(LBRACE, 'expected { after using expression')
+    self._consume(LBRACE, "'{' expected after using expression")
     self._ignore_newline()
 
     var state = 0
@@ -663,17 +672,25 @@ class Parser {
     while !self._match(RBRACE) and !self._check(EOF) {
       if self._match(WHEN, DEFAULT, COMMENT, DOC, NEWLINE) {
         if state == 1 
-          die ParseException(self._previous(), 'cannot have another case after a default case')
+          die ParseException(self._previous(), "'when' cannot exist after a default")
 
         if [DOC, COMMENT, NEWLINE].contains(self._previous().type) {}
         else if self._previous().type == WHEN {
-          cases[self._expression()] = self._statement()
+          var tmp_cases = []
+          do {
+            tmp_cases.append(self._expression())
+          } while self._match(COMMA)
+          var stmt = self._statement()
+
+          for tmp in tmp_cases {
+            cases[tmp] = stmt
+          }
         } else {
           state = 1
           default_case = self._statement()
         }
       } else {
-        die ParseException(self._previous(), 'Invalid switch statement')
+        die ParseException(self._previous(), 'Invalid using statement')
       }
     }
 
@@ -702,7 +719,7 @@ class Parser {
         self._ignore_newline()
       }
 
-      self._consume(RBRACE, 'expected } at end of selective import')
+      self._consume(RBRACE, "'}' expected at end of selective import")
     }
 
     return ImportStmt(''.join(path), elements)
@@ -712,28 +729,28 @@ class Parser {
    * try...catch...finally... blocks
    */
   _try() {
-    self._consume(LBRACE, 'expected { after try')
+    self._consume(LBRACE, "'{' expected after try")
     var body = self._block()
     var exception_type, exception_var, catch_body, finally_body
     var has_catch = false, has_finally = false
 
     if self._match(CATCH) {
-      self._consume(IDENTIFIER, 'expected exception name')
+      self._consume(IDENTIFIER, 'exception name expected')
       exception_type = self._previous().literal
 
       if self._check(IDENTIFIER) {
-        self._consume(IDENTIFIER, 'expected exception variable')
+        self._consume(IDENTIFIER, 'exception variable expected')
         exception_var = self._previous().literal
       }
 
-      self._consume(LBRACE, 'expected { after catch expression')
+      self._consume(LBRACE, "'{' expected after catch expression")
       catch_body = self._block()
       has_catch = true
     }
     
     if self._match(FINALLY) {
       has_finally = true
-      self._consume(LBRACE, 'expected { after finally')
+      self._consume(LBRACE, "'{' expected after finally")
       finally_body = self._block()
     }
 
@@ -753,15 +770,15 @@ class Parser {
   _iter() {
     var decl
     if !self._check(SEMICOLON) {
-      self._consume(VAR, 'expected variable declaration')
+      self._consume(VAR, 'variable declaration expected')
       decl = self._var()
     }
-    self._consume(SEMICOLON, 'expected ;')
+    self._consume(SEMICOLON, "';' expected")
     self._ignore_newline()
 
     var condition
     if !self._check(SEMICOLON) condition = self._expression()
-    self._consume(SEMICOLON, 'expected ;')
+    self._consume(SEMICOLON, "';' expected")
     self._ignore_newline()
 
     var iterator
@@ -786,6 +803,8 @@ class Parser {
       result = self._if()
     } else if self._match(WHILE) {
       result = self._while()
+    } else if self._match(DO) {
+      result = self._do_while()
     } else if self._match(ITER) {
       result = self._iter()
     } else if self._match(FOR) {
@@ -829,7 +848,7 @@ class Parser {
    * variable declarations
    */
   _var() {
-    self._consume(IDENTIFIER, 'expected variable name')
+    self._consume(IDENTIFIER, 'variable name expected')
     var result = self._previous().literal
 
     if self._match(EQUAL)
@@ -841,7 +860,7 @@ class Parser {
 
       while self._match(COMMA) {
         self._ignore_newline()
-        self._consume(IDENTIFIER, 'expected variable name')
+        self._consume(IDENTIFIER, 'variable name expected')
         var r = self._previous().literal
 
         if self._match(EQUAL)
@@ -862,14 +881,14 @@ class Parser {
     var params = []
 
     while !self._check(BAR) {
-      params.append(self._consume_any('expected param name', IDENTIFIER, TRI_DOT).literal)
+      params.append(self._consume_any('parameter name expected', IDENTIFIER, TRI_DOT).literal)
 
       if !self._check(BAR)
-        self._consume(COMMA, 'expected , between function params')
+        self._consume(COMMA, "',' expected between function params")
     }
 
-    self._consume(BAR, 'expected | after anonymous function args')
-    self._consume(LBRACE, 'expected { after function declaration')
+    self._consume(BAR, "'|' expected after anonymous function args")
+    self._consume(LBRACE, "'{' expected after function declaration")
     var body = self._block()
 
     return FunctionDecl('', params, body)
@@ -879,21 +898,21 @@ class Parser {
    * function definitions
    */
   _def() {
-    self._consume(IDENTIFIER, 'expected function name')
+    self._consume(IDENTIFIER, 'function name expected')
     var name = self._previous().literal
     var params = []
 
-    self._consume(LPAREN, 'expected ( after function name')
+    self._consume(LPAREN, "'(' expected after function name")
     while self._match(IDENTIFIER, TRI_DOT) {
       params.append(self._previous().literal)
 
       if !self._check(RPAREN) {
-        self._consume(COMMA, 'expected , between function params')
+        self._consume(COMMA, "',' expected between function arguments")
         self._ignore_newline()
       }
     }
-    self._consume(RPAREN, 'expected ) after function args')
-    self._consume(LBRACE, 'expected { after function declaration')
+    self._consume(RPAREN, "')' expected after function arguments")
+    self._consume(LBRACE, "'{' expected after function declaration")
     var body = self._block()
 
     return FunctionDecl(name, params, body)
@@ -903,7 +922,7 @@ class Parser {
    * class fields
    */
   _class_field(is_static) {
-    self._consume(IDENTIFIER, 'expected class property name')
+    self._consume(IDENTIFIER, 'class property name expected')
     var name = self._previous().literal, value
 
     if self._match(EQUAL) value = self._expression()
@@ -917,21 +936,21 @@ class Parser {
    * class methods
    */
   _method(is_static) {
-    self._consume_any('expected method name', IDENTIFIER, DECORATOR)
+    self._consume_any('method name expected', IDENTIFIER, DECORATOR)
     var name = self._previous().literal
     var params = []
 
-    self._consume(LPAREN, 'expected ( after method name')
+    self._consume(LPAREN, "'(' expected after method name")
     while self._match(IDENTIFIER, TRI_DOT) {
       params.append(self._previous().literal)
 
       if !self._check(RPAREN) {
-        self._consume(COMMA, 'expected , between method params')
+        self._consume(COMMA, "',' expected between method arguments")
         self._ignore_newline()
       }
     }
-    self._consume(RPAREN, 'expected ) after method args')
-    self._consume(LBRACE, 'expected { after method declaration')
+    self._consume(RPAREN, "'(' expected after method arguments")
+    self._consume(LBRACE, "'{' expected after method declaration")
     var body = self._block()
 
     return MethodDecl(name, params, body, is_static)
@@ -943,16 +962,16 @@ class Parser {
   _class() {
     var properties = [], methods = []
 
-    self._consume(IDENTIFIER, 'expected class name')
+    self._consume(IDENTIFIER, 'class name expected')
     var name = self._previous().literal, superclass
 
     if self._match(LESS) {
-      self._consume(IDENTIFIER, 'expected super class name')
+      self._consume(IDENTIFIER, 'super class name expected')
       superclass = self._previous().literal
     }
 
     self._ignore_newline()
-    self._consume(LBRACE, 'expected { after class declaration')
+    self._consume(LBRACE, "'{' expected after class declaration")
     self._ignore_newline()
 
     while !self._check(RBRACE) and !self._check(EOF) {
@@ -984,7 +1003,7 @@ class Parser {
       }
     }
 
-    self._consume(RBRACE, 'expected } at end of class definition')
+    self._consume(RBRACE, "'{' expected at end of class definition")
 
     return ClassDecl(name, superclass, properties, methods)
   }
@@ -1036,5 +1055,9 @@ class Parser {
       declarations.append(self._declaration())
 
     return declarations
+  }
+
+  @to_string() {
+    return '<ast::Parser>'
   }
 }

@@ -122,7 +122,7 @@ def _get_sequence(v, bg) {
     if v v = to_string(v).lpad(2, '0')
     if bg bg = to_string(bg).lpad(2, '0')
 
-    return '\x1b[${v ? v : ''}${bg ? ';${bg ? bg : ''}' : ''}m'
+    return '\x1b[${v ? v : ''}${bg ? ";${bg ? bg : ''}" : ''}m'
   }
   return nil
 }

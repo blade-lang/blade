@@ -68,39 +68,83 @@ import .server { HttpServer }
 var _client = HttpClient()
 
 /**
+ * set_headers(headers: dict)
+ * 
+ * Sets the request headers for the current module instance.
+ *  
+ * This function returns HttpClient in order to allow for idiomatic 
+ * chaining such as:
+ * 
+ * ```blade
+ * import http
+ * var client = http.set_headers({
+ *   'Authorization': 'Bearer SomeAPIBearerToken',
+ *   'Host': 'example.com',
+ * })
+ * 
+ * echo client.get('/current-user').body.to_string()
+ * ```
+ * @returns HttpClient
+ * @throws Exception
+ */
+def set_headers(headers) {
+  if !is_dict(headers)
+    die Exception('headers must be a dictionary')
+  _client.headers = headers
+  return _client
+}
+
+/**
  * get(url: string)
  *
  * sends an Http GET request and returns an HttpResponse
- * or throws one of SocketException or Exception if it fails
+ * or throws one of SocketException or Exception if it fails.
+ * @returns HttpResponse
+ * @throws Exception, SocketExcepion, HttpException
  */
 def get(url) {
-  return _client.send_request(url, 'GET')
+  return _client.get(url)
 }
 
 /**
- * post(url: string, [data: string])
+ * post(url: string, [data: string | bytes])
  *
- * sends an Http POST request and returns an HttpResponse
- * or throws one of SocketException or Exception if it fails
+ * sends an Http POST request and returns an HttpResponse.
+ * @returns HttpResponse
+ * @throws Exception, SocketExcepion, HttpException
  */
 def post(url, data) {
-  return _client.send_request(url, 'POST', data)
+  return _client.post(url, data)
 }
 
 /**
- * put(url: string, [data: string])
+ * put(url: string, [data: string | bytes])
  *
- * sends an Http PUT request and returns an HttpResponse
- * or throws one of SocketException or Exception if it fails
+ * sends an Http PUT request and returns an HttpResponse.
+ * @returns HttpResponse
+ * @throws Exception, SocketExcepion, HttpException
  */
 def put(url, data) {
-  return _client.send_request(url, 'PUT', data)
+  return _client.put(url, data)
+}
+
+/**
+ * delete(url: string)
+ *
+ * sends an Http DELETE request and returns an HttpResponse.
+ * @returns HttpResponse
+ * @throws Exception, SocketExcepion, HttpException
+ */
+def delete(url) {
+  return _client.send_request(url, 'DELETE', nil)
 }
 
 /**
  * server(port: int, address: string, is_secure: bool)
  * 
  * Creates an new HttpServer instance.
+ * @returns HttpServer
+ * @throws Exception, SocketExcepion, HttpException
  */
 def server(port, address, is_secure) {
   return HttpServer(port, address, is_secure)
