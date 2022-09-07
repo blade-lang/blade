@@ -17,7 +17,6 @@ endif()
 message(STATUS "Building curl module to ${BLADE_ROOT}/dist")
 
 include_directories("${BLADE_ROOT}/includes" ${CMAKE_CURRENT_SOURCE_DIR})
-#link_directories("${BLADE_ROOT}")
 
 add_library(curl SHARED curl.c)
 target_link_libraries(curl libblade)
@@ -37,10 +36,6 @@ endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-endif()
-
-if(WIN32)
-    target_link_libraries(curl wsock32 ws2_32)
 endif()
 
 add_custom_target(copy-curl-to-libs ALL

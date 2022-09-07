@@ -11,7 +11,6 @@ set(BLADE_ROOT "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/blade")
 message(STATUS "Building JSON module to ${BLADE_ROOT}/dist")
 
 include_directories("${BLADE_ROOT}/includes" ${CMAKE_CURRENT_SOURCE_DIR})
-#link_directories("${BLADE_ROOT}")
 
 add_library(json SHARED json-parser.c json.h json.c)
 target_link_libraries(json libblade)
@@ -23,9 +22,6 @@ endif()
 
 if(WIN32 OR MINGW)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-pointer-to-int-cast")
-endif()
-if(WIN32)
-    target_link_libraries(json wsock32 ws2_32)
 endif()
 
 add_custom_target(copy-json-to-libs ALL
