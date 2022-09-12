@@ -505,7 +505,6 @@ void init_vm(b_vm *vm) {
 
   vm->gray_count = 0;
   vm->gray_capacity = 0;
-  vm->frame_count = 0;
   vm->gray_stack = NULL;
 
   vm->std_args = NULL;
@@ -2482,7 +2481,9 @@ b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
   b_blob blob;
   init_blob(&blob);
 
-  initialize_exceptions(vm, module);
+  if(vm->exception_class == NULL) {
+    initialize_exceptions(vm, module);
+  }
 
   b_obj_func *function = compile(vm, module, source, &blob);
 
