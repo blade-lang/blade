@@ -185,6 +185,12 @@ DECLARE_MODULE_METHOD(reflect__get_function_metadata) {
   RETURN_OBJ(result);
 }
 
+DECLARE_MODULE_METHOD(reflect__getclass) {
+  ENFORCE_ARG_COUNT(get_type, 1);
+  ENFORCE_ARG_TYPE(get_type, 0, IS_INSTANCE);
+  RETURN_OBJ(AS_INSTANCE(args[0])->klass);
+}
+
 CREATE_MODULE_LOADER(reflect) {
   static b_func_reg module_functions[] = {
       {"hasprop",   true,  GET_MODULE_METHOD(reflect__hasprop)},
@@ -199,6 +205,7 @@ CREATE_MODULE_LOADER(reflect) {
       {"gettype", true,  GET_MODULE_METHOD(reflect__gettype)},
       {"isptr", true,  GET_MODULE_METHOD(reflect__isptr)},
       {"getfunctionmetadata", true,  GET_MODULE_METHOD(reflect__get_function_metadata)},
+      {"getclass", true,  GET_MODULE_METHOD(reflect__getclass)},
       {NULL,        false, NULL},
   };
 
