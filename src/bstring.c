@@ -784,22 +784,10 @@ DECLARE_STRING_METHOD(matches) {
       int value_length = (int) (o_vector[2 * n + 1] - o_vector[2 * n]);
       int key_length = (int) name_entry_size - 3;
 
-      char *_key = ALLOCATE(char, key_length + 1);
-      char *_val = ALLOCATE(char, value_length + 1);
-
-      memcpy(_key, tab_ptr + 2, key_length);
-      memcpy(_val, subject + o_vector[2 * n], value_length);
-
-      while (isspace((unsigned char) *_key)) {
-        _key++;
-        key_length--;
-      }
-
       b_obj_list *list = (b_obj_list *) GC(new_list(vm));
-      write_list(vm, list, OBJ_VAL(GC(take_string(vm, _val, value_length))));
+      write_list(vm, list, GC_L_STRING((char *)(subject + o_vector[2 * n]), value_length));
 
-      dict_add_entry(vm, result, OBJ_VAL(GC(take_string(vm, _key, key_length))), OBJ_VAL(list));
-
+      dict_add_entry(vm, result, GC_L_STRING((char *)(tab_ptr + 2), key_length), OBJ_VAL(list));
       tab_ptr += name_entry_size;
     }
   }
@@ -897,19 +885,8 @@ DECLARE_STRING_METHOD(matches) {
         int value_length = (int) (o_vector[2 * n + 1] - o_vector[2 * n]);
         int key_length = (int) name_entry_size - 3;
 
-        char *_key = ALLOCATE(char, key_length + 1);
-        char *_val = ALLOCATE(char, value_length + 1);
-
-        memcpy(_key, tab_ptr + 2, key_length);
-        memcpy(_val, subject + o_vector[2 * n], value_length);
-
-        while (isspace((unsigned char) *_key)) {
-          _key++;
-          key_length--;
-        }
-
-        b_obj_string *name = (b_obj_string *) GC(take_string(vm, _key, key_length));
-        b_obj_string *value = (b_obj_string *) GC(take_string(vm, _val, value_length));
+        b_obj_string *name = (b_obj_string *) GC_L_STRING((char *)(tab_ptr + 2), key_length);
+        b_obj_string *value = (b_obj_string *) GC_L_STRING((char *)(subject + o_vector[2 * n]), value_length);
 
         b_value nlist;
         if (dict_get_entry(result, OBJ_VAL(name), &nlist)) {

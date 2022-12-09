@@ -31,6 +31,7 @@ typedef struct {
 
 struct s_vm {
   b_call_frame frames[FRAMES_MAX];
+  b_call_frame *current_frame;
   int frame_count;
 
   b_blob *blob;

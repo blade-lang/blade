@@ -309,12 +309,12 @@ class HttpServer {
           fn(client)
         })
 
-        if is_number(self.read_timeout)
-          client.set_option(so.SO_RCVTIMEO, self.read_timeout)
-        if is_number(self.write_timeout)
-          client.set_option(so.SO_SNDTIMEO, self.write_timeout)
-
         try {
+          if is_number(self.read_timeout)
+            client.set_option(so.SO_RCVTIMEO, self.read_timeout)
+          if is_number(self.write_timeout)
+            client.set_option(so.SO_SNDTIMEO, self.write_timeout)
+
           var data = client.receive()
 
           if data {

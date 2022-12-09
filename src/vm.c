@@ -36,7 +36,7 @@ static b_value get_stack_trace(b_vm *vm) {
 
   if (trace != NULL) {
 
-    for (int i = 0; i < vm->frame_count; i++) {
+    for (int i = vm->frame_count - 1; i >= 0; i--) {
       b_call_frame *frame = &vm->frames[i];
       b_obj_func *function = frame->closure->function;
 
@@ -44,7 +44,7 @@ static b_value get_stack_trace(b_vm *vm) {
       size_t instruction = frame->ip - function->blob.code - 1;
       int line = function->blob.lines[instruction];
 
-      const char *trace_format = i != vm->frame_count - 1
+      const char *trace_format = i != 0
           ? "    %s:%d -> %s()\n"
           : "    %s:%d -> %s()";
       char *fn_name = function->name == NULL ? "@.script": function->name->chars;
@@ -70,17 +70,17 @@ bool propagate_exception(b_vm *vm, bool is_assert) {
   b_obj_instance *exception = AS_INSTANCE(peek(vm, 0));
 
   while (vm->frame_count > 0) {
-    b_call_frame *frame = &vm->frames[vm->frame_count - 1];
-    for (int i = frame->handlers_count; i > 0; i--) {
-      b_exception_frame handler = frame->handlers[i - 1];
-      b_obj_func *function = frame->closure->function;
+    vm->current_frame = &vm->frames[vm->frame_count - 1];
+    for (int i = vm->current_frame->handlers_count; i > 0; i--) {
+      b_exception_frame handler = vm->current_frame->handlers[i - 1];
+      b_obj_func *function = vm->current_frame->closure->function;
 
       if (handler.address != 0 && is_instance_of(exception->klass, handler.klass->name->chars)) {
-        frame->ip = &function->blob.code[handler.address];
+        vm->current_frame->ip = &function->blob.code[handler.address];
         return true;
       } else if (handler.finally_address != 0) {
         push(vm, TRUE_VAL); // continue propagating once the 'finally' block completes
-        frame->ip = &function->blob.code[handler.finally_address];
+        vm->current_frame->ip = &function->blob.code[handler.finally_address];
         return true;
       }
     }
@@ -142,7 +142,10 @@ bool do_throw_exception(b_vm *vm, bool is_assert, const char *format, ...) {
   push(vm, OBJ_VAL(instance));
 
   b_value stacktrace = get_stack_trace(vm);
+  push(vm, stacktrace);
   table_set(vm, &instance->properties, STRING_L_VAL("stacktrace", 10), stacktrace);
+  pop(vm);
+
   return propagate_exception(vm, is_assert);
 }
 
@@ -495,6 +498,7 @@ void init_vm(b_vm *vm) {
   vm->compiler = NULL;
   vm->objects = NULL;
   vm->exception_class = NULL;
+  vm->current_frame = NULL;
   vm->bytes_allocated = 0;
   vm->gc_protected = 0;
   vm->next_gc = DEFAULT_GC_START; // default is 1mb. Can be modified via the -g flag.
@@ -1390,15 +1394,15 @@ static inline double modulo(double a, double b) {
 }
 
 b_ptr_result run(b_vm *vm) {
-  b_call_frame *frame = &vm->frames[vm->frame_count - 1];
+  vm->current_frame = &vm->frames[vm->frame_count - 1];
 
-#define READ_BYTE() (*frame->ip++)
+#define READ_BYTE() (*vm->current_frame->ip++)
 
 #define READ_SHORT()                                                           \
-  (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
+  (vm->current_frame->ip += 2, (uint16_t)((vm->current_frame->ip[-2] << 8) | vm->current_frame->ip[-1]))
 
 #define READ_CONSTANT()                                                        \
-  (frame->closure->function->blob.constants.values[READ_SHORT()])
+  (vm->current_frame->closure->function->blob.constants.values[READ_SHORT()])
 
 #define READ_STRING() (AS_STRING(READ_CONSTANT()))
 
@@ -1463,8 +1467,8 @@ b_ptr_result run(b_vm *vm) {
       }
       printf("\n");
       disassemble_instruction(
-          &frame->closure->function->blob,
-          (int) (frame->ip - frame->closure->function->blob.code));
+          &vm->current_frame->closure->function->blob,
+          (int) (vm->current_frame->ip - vm->current_frame->closure->function->blob.code));
     }
 
     uint8_t instruction;
@@ -1614,19 +1618,19 @@ b_ptr_result run(b_vm *vm) {
 
       case OP_JUMP: {
         uint16_t offset = READ_SHORT();
-        frame->ip += offset;
+        vm->current_frame->ip += offset;
         break;
       }
       case OP_JUMP_IF_FALSE: {
         uint16_t offset = READ_SHORT();
         if (is_false(peek(vm, 0))) {
-          frame->ip += offset;
+          vm->current_frame->ip += offset;
         }
         break;
       }
       case OP_LOOP: {
         uint16_t offset = READ_SHORT();
-        frame->ip -= offset;
+        vm->current_frame->ip -= offset;
         break;
       }
 
@@ -1680,7 +1684,7 @@ b_ptr_result run(b_vm *vm) {
           runtime_error(ERR_CANT_ASSIGN_EMPTY);
           break;
         }
-        table_set(vm, &frame->closure->function->module->values, OBJ_VAL(name), peek(vm, 0));
+        table_set(vm, &vm->current_frame->closure->function->module->values, OBJ_VAL(name), peek(vm, 0));
         pop(vm);
 
 #if defined(DEBUG_TABLE) && DEBUG_TABLE
@@ -1692,7 +1696,7 @@ b_ptr_result run(b_vm *vm) {
       case OP_GET_GLOBAL: {
         b_obj_string *name = READ_STRING();
         b_value value;
-        if (!table_get(&frame->closure->function->module->values, OBJ_VAL(name), &value)) {
+        if (!table_get(&vm->current_frame->closure->function->module->values, OBJ_VAL(name), &value)) {
           if (!table_get(&vm->globals, OBJ_VAL(name), &value)) {
             runtime_error("'%s' is undefined in this scope", name->chars);
             break;
@@ -1709,7 +1713,7 @@ b_ptr_result run(b_vm *vm) {
         }
 
         b_obj_string *name = READ_STRING();
-        b_table *table = &frame->closure->function->module->values;
+        b_table *table = &vm->current_frame->closure->function->module->values;
         if (table_set(vm, table, OBJ_VAL(name), peek(vm, 0))) {
           table_delete(table, OBJ_VAL(name));
           runtime_error("%s is undefined in this scope", name->chars);
@@ -1720,7 +1724,7 @@ b_ptr_result run(b_vm *vm) {
 
       case OP_GET_LOCAL: {
         uint16_t slot = READ_SHORT();
-        push(vm, frame->slots[slot]);
+        push(vm, vm->current_frame->slots[slot]);
         break;
       }
       case OP_SET_LOCAL: {
@@ -1729,7 +1733,7 @@ b_ptr_result run(b_vm *vm) {
           runtime_error(ERR_CANT_ASSIGN_EMPTY);
           break;
         }
-        frame->slots[slot] = peek(vm, 0);
+        vm->current_frame->slots[slot] = peek(vm, 0);
         break;
       }
 
@@ -1973,10 +1977,10 @@ b_ptr_result run(b_vm *vm) {
           int index = READ_SHORT();
 
           if (is_local) {
-            closure->up_values[i] = capture_up_value(vm, frame->slots + index);
+            closure->up_values[i] = capture_up_value(vm, vm->current_frame->slots + index);
           } else {
             closure->up_values[i] =
-                ((b_obj_closure *) frame->closure)->up_values[index];
+                ((b_obj_closure *) vm->current_frame->closure)->up_values[index];
           }
         }
 
@@ -1984,7 +1988,7 @@ b_ptr_result run(b_vm *vm) {
       }
       case OP_GET_UP_VALUE: {
         int index = READ_SHORT();
-        push(vm, *((b_obj_closure *) frame->closure)->up_values[index]->location);
+        push(vm, *((b_obj_closure *) vm->current_frame->closure)->up_values[index]->location);
         break;
       }
       case OP_SET_UP_VALUE: {
@@ -1993,7 +1997,7 @@ b_ptr_result run(b_vm *vm) {
           runtime_error(ERR_CANT_ASSIGN_EMPTY);
           break;
         }
-        *((b_obj_closure *) frame->closure)->up_values[index]->location =
+        *((b_obj_closure *) vm->current_frame->closure)->up_values[index]->location =
             peek(vm, 0);
         break;
       }
@@ -2003,7 +2007,7 @@ b_ptr_result run(b_vm *vm) {
         if (!call_value(vm, peek(vm, arg_count), arg_count)) {
           EXIT_VM();
         }
-        frame = &vm->frames[vm->frame_count - 1];
+        vm->current_frame = &vm->frames[vm->frame_count - 1];
         break;
       }
       case OP_INVOKE: {
@@ -2012,7 +2016,7 @@ b_ptr_result run(b_vm *vm) {
         if (!invoke(vm, method, arg_count)) {
           EXIT_VM();
         }
-        frame = &vm->frames[vm->frame_count - 1];
+        vm->current_frame = &vm->frames[vm->frame_count - 1];
         break;
       }
       case OP_INVOKE_SELF: {
@@ -2021,7 +2025,7 @@ b_ptr_result run(b_vm *vm) {
         if (!invoke_self(vm, method, arg_count)) {
           EXIT_VM();
         }
-        frame = &vm->frames[vm->frame_count - 1];
+        vm->current_frame = &vm->frames[vm->frame_count - 1];
         break;
       }
 
@@ -2070,7 +2074,7 @@ b_ptr_result run(b_vm *vm) {
         if (!invoke_from_class(vm, klass, method, arg_count)) {
           EXIT_VM();
         }
-        frame = &vm->frames[vm->frame_count - 1];
+        vm->current_frame = &vm->frames[vm->frame_count - 1];
         break;
       }
       case OP_SUPER_INVOKE_SELF: {
@@ -2079,7 +2083,7 @@ b_ptr_result run(b_vm *vm) {
         if (!invoke_from_class(vm, klass, klass->name, arg_count)) {
           EXIT_VM();
         }
-        frame = &vm->frames[vm->frame_count - 1];
+        vm->current_frame = &vm->frames[vm->frame_count - 1];
         break;
       }
 
@@ -2268,7 +2272,7 @@ b_ptr_result run(b_vm *vm) {
       case OP_RETURN: {
         b_value result = pop(vm);
 
-        close_up_values(vm, frame->slots);
+        close_up_values(vm, vm->current_frame->slots);
 
         vm->frame_count--;
         if (vm->frame_count == 0) {
@@ -2276,10 +2280,10 @@ b_ptr_result run(b_vm *vm) {
           return PTR_OK;
         }
 
-        vm->stack_top = frame->slots;
+        vm->stack_top = vm->current_frame->slots;
         push(vm, result);
 
-        frame = &vm->frames[vm->frame_count - 1];
+        vm->current_frame = &vm->frames[vm->frame_count - 1];
         break;
       }
 
@@ -2287,7 +2291,7 @@ b_ptr_result run(b_vm *vm) {
         b_obj_closure *closure = AS_CLOSURE(READ_CONSTANT());
         add_module(vm, closure->function->module);
         call(vm, closure, 0);
-        frame = &vm->frames[vm->frame_count - 1];
+        vm->current_frame = &vm->frames[vm->frame_count - 1];
         break;
       }
 
@@ -2300,7 +2304,7 @@ b_ptr_result run(b_vm *vm) {
             ((b_module_loader)module->preloader)(vm);
           }
           module->imported = true;
-          table_set(vm, &frame->closure->function->module->values, OBJ_VAL(module_name), value);
+          table_set(vm, &vm->current_frame->closure->function->module->values, OBJ_VAL(module_name), value);
           break;
         }
         runtime_error("module '%s' not found", module_name->chars);
@@ -2312,7 +2316,7 @@ b_ptr_result run(b_vm *vm) {
         b_obj_func *function = AS_CLOSURE(peek(vm, 0))->function;
         b_value value;
         if (table_get(&function->module->values, OBJ_VAL(entry_name), &value)) {
-          table_set(vm, &frame->closure->function->module->values, OBJ_VAL(entry_name), value);
+          table_set(vm, &vm->current_frame->closure->function->module->values, OBJ_VAL(entry_name), value);
         } else {
           runtime_error("module %s does not define '%s'", function->module->name, entry_name->chars);
         }
@@ -2327,7 +2331,7 @@ b_ptr_result run(b_vm *vm) {
           b_obj_module *module = AS_MODULE(mod);
           b_value value;
           if (table_get(&module->values, OBJ_VAL(value_name), &value)) {
-            table_set(vm, &frame->closure->function->module->values, OBJ_VAL(value_name), value);
+            table_set(vm, &vm->current_frame->closure->function->module->values, OBJ_VAL(value_name), value);
           } else {
             runtime_error("module %s does not define '%s'", module->name, value_name->chars);
           }
@@ -2338,7 +2342,7 @@ b_ptr_result run(b_vm *vm) {
       }
 
       case OP_IMPORT_ALL: {
-        table_add_all(vm, &AS_CLOSURE(peek(vm, 0))->function->module->values, &frame->closure->function->module->values);
+        table_add_all(vm, &AS_CLOSURE(peek(vm, 0))->function->module->values, &vm->current_frame->closure->function->module->values);
         break;
       }
 
@@ -2346,14 +2350,14 @@ b_ptr_result run(b_vm *vm) {
         b_obj_string *name = AS_STRING(peek(vm, 0));
         b_value mod;
         if (table_get(&vm->modules, OBJ_VAL(name), &mod)) {
-           table_add_all(vm, &AS_MODULE(mod)->values, &frame->closure->function->module->values);
+           table_add_all(vm, &AS_MODULE(mod)->values, &vm->current_frame->closure->function->module->values);
         }
         break;
       }
 
       case OP_EJECT_IMPORT: {
         b_obj_func *function = AS_CLOSURE(READ_CONSTANT())->function;
-        table_delete(&frame->closure->function->module->values, STRING_VAL(function->module->name));
+        table_delete(&vm->current_frame->closure->function->module->values, STRING_VAL(function->module->name));
         break;
       }
 
@@ -2361,8 +2365,8 @@ b_ptr_result run(b_vm *vm) {
         b_value mod;
         b_obj_string *name = READ_STRING();
         if (table_get(&vm->modules, OBJ_VAL(name), &mod)) {
-          table_add_all(vm, &AS_MODULE(mod)->values, &frame->closure->function->module->values);
-          table_delete(&frame->closure->function->module->values, OBJ_VAL(name));
+          table_add_all(vm, &AS_MODULE(mod)->values, &vm->current_frame->closure->function->module->values);
+          table_delete(&vm->current_frame->closure->function->module->values, OBJ_VAL(name));
         }
         break;
       }
@@ -2392,7 +2396,7 @@ b_ptr_result run(b_vm *vm) {
         b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
         table_set(vm, &instance->properties, STRING_L_VAL("stacktrace", 10), stacktrace);
         if (propagate_exception(vm, false)) {
-          frame = &vm->frames[vm->frame_count - 1];
+          vm->current_frame = &vm->frames[vm->frame_count - 1];
           break;
         }
 
@@ -2418,14 +2422,14 @@ b_ptr_result run(b_vm *vm) {
       }
 
       case OP_POP_TRY: {
-        frame->handlers_count--;
+        vm->current_frame->handlers_count--;
         break;
       }
 
       case OP_PUBLISH_TRY: {
-        frame->handlers_count--;
+        vm->current_frame->handlers_count--;
         if (propagate_exception(vm, false)) {
-          frame = &vm->frames[vm->frame_count - 1];
+          vm->current_frame = &vm->frames[vm->frame_count - 1];
           break;
         }
 
@@ -2438,11 +2442,11 @@ b_ptr_result run(b_vm *vm) {
 
         b_value value;
         if (table_get(&sw->table, expr, &value)) {
-          frame->ip += (int) AS_NUMBER(value);
+          vm->current_frame->ip += (int) AS_NUMBER(value);
         } else if (sw->default_jump != -1) {
-          frame->ip += sw->default_jump;
+          vm->current_frame->ip += sw->default_jump;
         } else {
-          frame->ip += sw->exit_jump;
+          vm->current_frame->ip += sw->exit_jump;
         }
         pop(vm);
         break;
