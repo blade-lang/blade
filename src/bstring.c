@@ -32,6 +32,13 @@
  */
 uint32_t is_regex(b_obj_string *string) {
   char start = string->chars[0];
+
+  // must be a valid delimiter
+  if(isalnum(start) || isspace(start) || start == '\\')
+    return -1;
+
+  printf("%c, %s\n", start, string->chars);
+
   bool match_found = false;
 
   uint32_t c_options = 0; // pcre2 options
@@ -941,7 +948,34 @@ DECLARE_STRING_METHOD(replace) {
     RETURN_FALSE;
   }
 
-  GET_REGEX_COMPILE_OPTIONS(substr, false);
+//  GET_REGEX_COMPILE_OPTIONS(substr, false);
+  uint32_t compile_options = is_regex(string);
+  if ((int)compile_options == -1) {
+    // not a regex, do a regular replace
+    char *result = ALLOCATE(char, 1);
+    int length = 0;
+
+    for(int i = 0; i < string->length; i++) {
+      if(memcmp(string->chars + i, substr->chars, substr->length) == 0) {
+        if(substr->length > 0) {
+          result = GROW_ARRAY(char, result, length + 1, length + substr->length + 1);
+          memcpy(result + length, rep_substr->chars, rep_substr->length);
+        }
+        i += substr->length - 1;
+        length += rep_substr->length;
+      } else {
+        if(substr->length > 0) {
+          result = GROW_ARRAY(char, result, length + 1, length + 2);
+          memcpy(result + length, &string->chars[i], 1);
+        }
+        length++;
+      }
+    }
+
+    result[length] = '\0';
+    RETURN_STRING(result);
+  }
+
   char *real_regex = remove_regex_delimiter(vm, substr);
 
   PCRE2_SPTR input = (PCRE2_SPTR) string->chars;
