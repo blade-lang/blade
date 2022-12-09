@@ -685,8 +685,7 @@ DECLARE_STRING_METHOD(match) {
         key_length--;
       }
 
-      dict_set_entry(vm, result, OBJ_VAL(GC(take_string(vm, _key, key_length))),
-                     OBJ_VAL(GC(take_string(vm, _val, value_length))));
+      dict_set_entry(vm, result, GC_T_STRING(_key, key_length), GC_T_STRING(_val, value_length));
 
       tab_ptr += name_entry_size;
     }
@@ -787,7 +786,7 @@ DECLARE_STRING_METHOD(matches) {
       b_obj_list *list = (b_obj_list *) GC(new_list(vm));
       write_list(vm, list, GC_L_STRING((char *)(subject + o_vector[2 * n]), value_length));
 
-      dict_add_entry(vm, result, GC_L_STRING((char *)(tab_ptr + 2), key_length), OBJ_VAL(list));
+      dict_set_entry(vm, result, GC_L_STRING((char *)(tab_ptr + 2), key_length), OBJ_VAL(list));
       tab_ptr += name_entry_size;
     }
   }
@@ -917,10 +916,8 @@ DECLARE_STRING_METHOD(replace) {
   b_obj_string *substr = AS_STRING(args[0]);
   b_obj_string *rep_substr = AS_STRING(args[1]);
 
-  if (string->length == 0 && substr->length == 0) {
-    RETURN_TRUE;
-  } else if (string->length == 0 || substr->length == 0) {
-    RETURN_FALSE;
+  if ((string->length == 0 && substr->length == 0) || string->length == 0 || substr->length == 0) {
+    RETURN_L_STRING(string->chars, string->length);
   }
 
 //  GET_REGEX_COMPILE_OPTIONS(substr, false);
