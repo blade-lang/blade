@@ -37,8 +37,6 @@ uint32_t is_regex(b_obj_string *string) {
   if(isalnum(start) || isspace(start) || start == '\\')
     return -1;
 
-  printf("%c, %s\n", start, string->chars);
-
   bool match_found = false;
 
   uint32_t c_options = 0; // pcre2 options
@@ -949,7 +947,7 @@ DECLARE_STRING_METHOD(replace) {
   }
 
 //  GET_REGEX_COMPILE_OPTIONS(substr, false);
-  uint32_t compile_options = is_regex(string);
+  uint32_t compile_options = is_regex(substr);
   if ((int)compile_options == -1) {
     // not a regex, do a regular replace
     char *result = ALLOCATE(char, 1);
