@@ -672,11 +672,13 @@ DECLARE_STRING_METHOD(match) {
       char *_key = ALLOCATE(char, key_length + 1);
       char *_val = ALLOCATE(char, value_length + 1);
 
-      sprintf(_key, "%*s", key_length, tab_ptr + 2);
-      sprintf(_val, "%*s", value_length, subject + o_vector[2 * n]);
+      memcpy(_key, tab_ptr + 2, key_length);
+      memcpy(_val, subject + o_vector[2 * n], value_length);
 
-      while (isspace((unsigned char) *_key))
+      while (isspace((unsigned char) *_key)) {
         _key++;
+        key_length--;
+      }
 
       dict_set_entry(vm, result, OBJ_VAL(GC(take_string(vm, _key, key_length))),
                      OBJ_VAL(GC(take_string(vm, _val, value_length))));
@@ -780,11 +782,13 @@ DECLARE_STRING_METHOD(matches) {
       char *_key = ALLOCATE(char, key_length + 1);
       char *_val = ALLOCATE(char, value_length + 1);
 
-      sprintf(_key, "%*s", key_length, tab_ptr + 2);
-      sprintf(_val, "%*s", value_length, subject + o_vector[2 * n]);
+      memcpy(_key, tab_ptr + 2, key_length);
+      memcpy(_val, subject + o_vector[2 * n], value_length);
 
-      while (isspace((unsigned char) *_key))
+      while (isspace((unsigned char) *_key)) {
         _key++;
+        key_length--;
+      }
 
       b_obj_list *list = (b_obj_list *) GC(new_list(vm));
       write_list(vm, list, OBJ_VAL(GC(take_string(vm, _val, value_length))));
@@ -891,11 +895,13 @@ DECLARE_STRING_METHOD(matches) {
         char *_key = ALLOCATE(char, key_length + 1);
         char *_val = ALLOCATE(char, value_length + 1);
 
-        sprintf(_key, "%*s", key_length, tab_ptr + 2);
-        sprintf(_val, "%*s", value_length, subject + o_vector[2 * n]);
+        memcpy(_key, tab_ptr + 2, key_length);
+        memcpy(_val, subject + o_vector[2 * n], value_length);
 
-        while (isspace((unsigned char) *_key))
+        while (isspace((unsigned char) *_key)) {
           _key++;
+          key_length--;
+        }
 
         b_obj_string *name = (b_obj_string *) GC(take_string(vm, _key, key_length));
         b_obj_string *value = (b_obj_string *) GC(take_string(vm, _val, value_length));
