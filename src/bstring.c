@@ -908,20 +908,25 @@ DECLARE_STRING_METHOD(matches) {
 }
 
 DECLARE_STRING_METHOD(replace) {
-  ENFORCE_ARG_COUNT(replace, 2);
+  ENFORCE_ARG_RANGE(replace, 2, 3);
   ENFORCE_ARG_TYPE(replace, 0, IS_STRING);
   ENFORCE_ARG_TYPE(replace, 1, IS_STRING);
 
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   b_obj_string *substr = AS_STRING(args[0]);
   b_obj_string *rep_substr = AS_STRING(args[1]);
+  bool use_regex = true;
+
+  if(arg_count == 3) {
+    ENFORCE_ARG_TYPE(replace, 2, IS_BOOL);
+    use_regex = AS_BOOL(args[2]);
+  }
 
   if ((string->length == 0 && substr->length == 0) || string->length == 0 || substr->length == 0) {
     RETURN_L_STRING(string->chars, string->length);
   }
 
-//  GET_REGEX_COMPILE_OPTIONS(substr, false);
-  uint32_t compile_options = is_regex(substr);
+  uint32_t compile_options = use_regex ? is_regex(substr) : -1;
   if ((int)compile_options == -1) {
     // not a regex, do a regular replace
     char *result = ALLOCATE(char, 1);
