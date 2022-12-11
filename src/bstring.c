@@ -929,27 +929,23 @@ DECLARE_STRING_METHOD(replace) {
   uint32_t compile_options = use_regex ? is_regex(substr) : -1;
   if ((int)compile_options == -1) {
     // not a regex, do a regular replace
-    char *result = ALLOCATE(char, 1);
-    int length = 0;
+    char *result = strdup("");
 
     for(int i = 0; i < string->length; i++) {
       if(memcmp(string->chars + i, substr->chars, substr->length) == 0) {
         if(substr->length > 0) {
-          result = GROW_ARRAY(char, result, length + 1, length + substr->length + 1);
-          memcpy(result + length, rep_substr->chars, rep_substr->length);
+          result = append_strings(result, rep_substr->chars);
         }
         i += substr->length - 1;
-        length += rep_substr->length;
       } else {
-        if(substr->length > 0) {
-          result = GROW_ARRAY(char, result, length + 1, length + 2);
-          memcpy(result + length, &string->chars[i], 1);
-        }
-        length++;
+        char *mc = calloc(2, sizeof(char));
+        memcpy(mc, &string->chars[i], 1);
+        mc[1] = '\0';
+        result = append_strings(result, mc);
+        free(mc); // free wasted memory
       }
     }
 
-    result[length] = '\0';
     RETURN_STRING(result);
   }
 
