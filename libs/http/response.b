@@ -1,6 +1,7 @@
 #!-- part of the http module
 
 import date { Date }
+import .exception { HttpException }
 
 /**
  * Represents the response to an Http request
@@ -78,11 +79,24 @@ class HttpResponse {
     else self.body += data
   }
 
+  /**
+   * redirect(location: string [, status: string])
+   * 
+   * Redirects the client to a new location. This function simultaneously sets 
+   * the `Location` header and returns a 30x status code. If the `status` 
+   * parameter is not given, the function defaults to `302`.
+   * 
+   * @note when supplying a status, it must be a 30x
+   */
   redirect(location, status) {
     if !is_string(location)
       die Exception('location must be a string')
     if status != nil and !is_number(status) and !is_int(status)
       die Exception('status must be an integer if present')
+
+    if status != nil and status < 300 or status > 399
+      die HttpException('redirect status code must be a 30x')
+
     self.headers.set('Location', location)
     self.status = status ? status : 302
     self.body = bytes(0)
