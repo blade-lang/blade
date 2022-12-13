@@ -26,10 +26,9 @@
 #include <windows.h>
 #endif
 
-static bool continue_repl = true;
-
 static void repl(b_vm *vm) {
   vm->is_repl = true;
+  bool continue_repl = true;
 
   printf("Blade %s (running on BladeVM %s), REPL/Interactive mode = ON\n",
          BLADE_VERSION_STRING, BVM_VERSION);

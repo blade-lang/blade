@@ -32,6 +32,11 @@
  */
 uint32_t is_regex(b_obj_string *string) {
   char start = string->chars[0];
+
+  // must be a valid delimiter
+  if(isalnum(start) || isspace(start) || start == '\\')
+    return -1;
+
   bool match_found = false;
 
   uint32_t c_options = 0; // pcre2 options
@@ -672,14 +677,15 @@ DECLARE_STRING_METHOD(match) {
       char *_key = ALLOCATE(char, key_length + 1);
       char *_val = ALLOCATE(char, value_length + 1);
 
-      sprintf(_key, "%*s", key_length, tab_ptr + 2);
-      sprintf(_val, "%*s", value_length, subject + o_vector[2 * n]);
+      memcpy(_key, tab_ptr + 2, key_length);
+      memcpy(_val, subject + o_vector[2 * n], value_length);
 
-      while (isspace((unsigned char) *_key))
+      while (isspace((unsigned char) *_key)) {
         _key++;
+        key_length--;
+      }
 
-      dict_set_entry(vm, result, OBJ_VAL(GC(take_string(vm, _key, key_length))),
-                     OBJ_VAL(GC(take_string(vm, _val, value_length))));
+      dict_set_entry(vm, result, GC_T_STRING(_key, key_length), GC_T_STRING(_val, value_length));
 
       tab_ptr += name_entry_size;
     }
@@ -777,20 +783,10 @@ DECLARE_STRING_METHOD(matches) {
       int value_length = (int) (o_vector[2 * n + 1] - o_vector[2 * n]);
       int key_length = (int) name_entry_size - 3;
 
-      char *_key = ALLOCATE(char, key_length + 1);
-      char *_val = ALLOCATE(char, value_length + 1);
-
-      sprintf(_key, "%*s", key_length, tab_ptr + 2);
-      sprintf(_val, "%*s", value_length, subject + o_vector[2 * n]);
-
-      while (isspace((unsigned char) *_key))
-        _key++;
-
       b_obj_list *list = (b_obj_list *) GC(new_list(vm));
-      write_list(vm, list, OBJ_VAL(GC(take_string(vm, _val, value_length))));
+      write_list(vm, list, GC_L_STRING((char *)(subject + o_vector[2 * n]), value_length));
 
-      dict_add_entry(vm, result, OBJ_VAL(GC(take_string(vm, _key, key_length))), OBJ_VAL(list));
-
+      dict_set_entry(vm, result, GC_L_STRING((char *)(tab_ptr + 2), key_length), OBJ_VAL(list));
       tab_ptr += name_entry_size;
     }
   }
@@ -888,17 +884,8 @@ DECLARE_STRING_METHOD(matches) {
         int value_length = (int) (o_vector[2 * n + 1] - o_vector[2 * n]);
         int key_length = (int) name_entry_size - 3;
 
-        char *_key = ALLOCATE(char, key_length + 1);
-        char *_val = ALLOCATE(char, value_length + 1);
-
-        sprintf(_key, "%*s", key_length, tab_ptr + 2);
-        sprintf(_val, "%*s", value_length, subject + o_vector[2 * n]);
-
-        while (isspace((unsigned char) *_key))
-          _key++;
-
-        b_obj_string *name = (b_obj_string *) GC(take_string(vm, _key, key_length));
-        b_obj_string *value = (b_obj_string *) GC(take_string(vm, _val, value_length));
+        b_obj_string *name = (b_obj_string *) GC_L_STRING((char *)(tab_ptr + 2), key_length);
+        b_obj_string *value = (b_obj_string *) GC_L_STRING((char *)(subject + o_vector[2 * n]), value_length);
 
         b_value nlist;
         if (dict_get_entry(result, OBJ_VAL(name), &nlist)) {
@@ -921,21 +908,47 @@ DECLARE_STRING_METHOD(matches) {
 }
 
 DECLARE_STRING_METHOD(replace) {
-  ENFORCE_ARG_COUNT(replace, 2);
+  ENFORCE_ARG_RANGE(replace, 2, 3);
   ENFORCE_ARG_TYPE(replace, 0, IS_STRING);
   ENFORCE_ARG_TYPE(replace, 1, IS_STRING);
 
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   b_obj_string *substr = AS_STRING(args[0]);
   b_obj_string *rep_substr = AS_STRING(args[1]);
+  bool use_regex = true;
 
-  if (string->length == 0 && substr->length == 0) {
-    RETURN_TRUE;
-  } else if (string->length == 0 || substr->length == 0) {
-    RETURN_FALSE;
+  if(arg_count == 3) {
+    ENFORCE_ARG_TYPE(replace, 2, IS_BOOL);
+    use_regex = AS_BOOL(args[2]);
   }
 
-  GET_REGEX_COMPILE_OPTIONS(substr, false);
+  if ((string->length == 0 && substr->length == 0) || string->length == 0 || substr->length == 0) {
+    RETURN_L_STRING(string->chars, string->length);
+  }
+
+  uint32_t compile_options = use_regex ? is_regex(substr) : -1;
+  if ((int)compile_options == -1) {
+    // not a regex, do a regular replace
+    char *result = strdup("");
+
+    for(int i = 0; i < string->length; i++) {
+      if(memcmp(string->chars + i, substr->chars, substr->length) == 0) {
+        if(substr->length > 0) {
+          result = append_strings(result, rep_substr->chars);
+        }
+        i += substr->length - 1;
+      } else {
+        char *mc = calloc(2, sizeof(char));
+        memcpy(mc, &string->chars[i], 1);
+        mc[1] = '\0';
+        result = append_strings(result, mc);
+        free(mc); // free wasted memory
+      }
+    }
+
+    RETURN_STRING(result);
+  }
+
   char *real_regex = remove_regex_delimiter(vm, substr);
 
   PCRE2_SPTR input = (PCRE2_SPTR) string->chars;

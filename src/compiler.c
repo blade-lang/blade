@@ -2232,6 +2232,8 @@ static void try_statement(b_parser *p) {
       mark_initialized(p);
       emit_byte_and_short(p, OP_SET_LOCAL, var);
       emit_byte(p, OP_POP);
+    } else {
+      emit_byte(p, OP_POP);
     }
 
     emit_byte(p, OP_POP_TRY);

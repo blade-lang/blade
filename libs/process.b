@@ -7,7 +7,7 @@
 # 
 # Example Usage:
 # 
-# ```
+# ```blade
 # var shared = SharedValue()
 # 
 # var pr = Process(|p, s| {

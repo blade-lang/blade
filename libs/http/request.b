@@ -162,7 +162,7 @@ class HttpRequest {
       # The request path must exist before both a query and an hash.
       self.path = uri_parts[0].split('#')[0]
   
-      if uri_parts.length() > 1 {
+      if uri_parts.length() > 1 and uri_parts[1] {
         # A query exists and it must do so before any hash.
         var query = uri_parts[1].split('#')[0]
         self.queries = self._get_url_encoded_parts(query)

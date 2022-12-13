@@ -214,6 +214,20 @@ def get_function_metadata(function) {
 }
 
 /**
+ * get_class(object: instance)
+ * 
+ * Returns the class value of an instance as an object that can be 
+ * used to create a new instance of that same class.
+ * @return class
+ */
+def get_class(object) {
+  if !is_instance(object)
+    die Exception('instance expected in argument 1 (object)')
+
+  return _reflect.getclass(object)
+}
+
+/**
  * is_ptr(value: any)
  * 
  * Returns `true` if _value_ is a pointer, `false` otherwise.

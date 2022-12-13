@@ -72,8 +72,20 @@ class HttpResponse {
    * > property to prevent unexpected behaviors.
    */
   write(data) {
+    if !is_string(data) and !is_bytes(data)
+      die Exception('data must be bytes or string')
     if is_string(data) self.body += data.to_bytes()
     else self.body += data
+  }
+
+  redirect(location, status) {
+    if !is_string(location)
+      die Exception('location must be a string')
+    if status != nil and !is_number(status) and !is_int(status)
+      die Exception('status must be an integer if present')
+    self.headers.set('Location', location)
+    self.status = status ? status : 302
+    self.body = bytes(0)
   }
 
   @to_string() {

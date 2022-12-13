@@ -997,7 +997,7 @@ class Parser {
           prop.doc = _get_doc_string(doc.data)
         properties.append(prop)
       } else {
-        var method = self._method()
+        var method = self._method(is_static)
         if doc and !method.name.starts_with('_') and !method.name.starts_with('@') 
           method.doc = _get_doc_string(doc.data)
         methods.append(method)
