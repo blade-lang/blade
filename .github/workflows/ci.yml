@@ -31,7 +31,8 @@ jobs:
           sudo apt-get install curl libcurl4-openssl-dev -y
           cmake -B .
           cmake --build . -- -j 12
-          ctest
+      - name: Test
+        run: ctest
       - name: Make blade executable
         run: |
           chmod +x blade/blade
@@ -55,7 +56,8 @@ jobs:
         run: |
           cmake -B . -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl
           cmake --build . -- -j 12
-          ctest
+      - name: Test
+        run: ctest
       - name: Make blade executable
         run: |
           chmod 755 blade/blade
@@ -89,7 +91,8 @@ jobs:
         run: |
           cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake"
           cmake --build . -- -j 12
-          ctest
+      - name: Test
+        run: ctest
       - name: Generate Artifacts
         uses: actions/upload-artifact@v2
         with:
