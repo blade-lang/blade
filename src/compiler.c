@@ -583,6 +583,24 @@ static void discard_local(b_parser *p, int depth) {
   }
 }
 
+static int discard_locals(b_parser *p, int depth) {
+  if (p->vm->compiler->scope_depth == -1) {
+    error(p, "cannot exit top-level scope");
+  }
+
+  int local = p->vm->compiler->local_count - 1;
+  while (local >= 0 && p->vm->compiler->locals[local].depth >= depth) {
+    if (p->vm->compiler->locals[local].is_captured) {
+      emit_byte(p, OP_CLOSE_UP_VALUE);
+    } else {
+      emit_byte(p, OP_POP);
+    }
+    local--;
+  }
+
+  return p->vm->compiler->local_count - local - 1;
+}
+
 static void end_loop(b_parser *p) {
   // find all OP_BREAK_PL placeholder and replace with the appropriate jump...
   int i = p->innermost_loop_start;
@@ -591,6 +609,7 @@ static void end_loop(b_parser *p) {
     if (p->vm->compiler->function->blob.code[i] == OP_BREAK_PL) {
       p->vm->compiler->function->blob.code[i] = OP_JUMP;
       patch_jump(p, i + 1);
+      i += 3;
     } else {
       i += 1 + get_code_args_count(p->vm->compiler->function->blob.code,
                                    p->vm->compiler->function->blob.constants.values,
@@ -2303,6 +2322,7 @@ static void while_statement(b_parser *p) {
   // we'll be jumping back to right before the
   // expression after the loop body
   p->innermost_loop_start = current_blob(p)->count;
+  p->innermost_loop_scope_depth = p->vm->compiler->scope_depth;
 
   expression(p);
 
@@ -2329,6 +2349,7 @@ static void do_while_statement(b_parser *p) {
   // we'll be jumping back to right before the
   // statements after the loop body
   p->innermost_loop_start = current_blob(p)->count;
+  p->innermost_loop_scope_depth = p->vm->compiler->scope_depth;
 
   statement(p);
 
@@ -2356,7 +2377,8 @@ static void continue_statement(b_parser *p) {
   }
 
   // discard local variables created in the loop
-  discard_local(p, p->innermost_loop_scope_depth);
+//  discard_local(p, p->innermost_loop_scope_depth);
+  discard_locals(p, p->innermost_loop_scope_depth + 1);
 
   // go back to the top of the loop
   emit_loop(p, p->innermost_loop_start);
@@ -2369,7 +2391,15 @@ static void break_statement(b_parser *p) {
   }
 
   // discard local variables created in the loop
-//  discard_local(p, p->innermost_loop_scope_depth);
+  /*for(int i = p->vm->compiler->local_count - 1; i >= 0 &&
+    p->vm->compiler->locals[i].depth >= p->vm->compiler->scope_depth; i--) {
+    if (p->vm->compiler->locals[i].is_captured) {
+      emit_byte(p, OP_CLOSE_UP_VALUE);
+    } else {
+      emit_byte(p, OP_POP);
+    }
+  }*/
+  discard_locals(p, p->innermost_loop_scope_depth + 1);
   emit_jump(p, OP_BREAK_PL);
   consume_statement_end(p);
 }

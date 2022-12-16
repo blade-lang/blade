@@ -234,7 +234,7 @@ endfunction(add_blade_test)
 # do a bunch of result based tests
 add_blade_test(blade anonymous 0 "works")
 add_blade_test(blade anonymous 1 "is the best")
-add_blade_test(blade assert 0 "AssertionError")
+add_blade_test(blade assert 0 "Illegal State:")
 add_blade_test(blade assert 1 "empty list expected")
 add_blade_test(blade bytes 0 "\\(0 0 0 0 0\\)")
 add_blade_test(blade bytes 1 "HELLO")

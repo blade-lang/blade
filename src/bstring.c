@@ -441,13 +441,21 @@ DECLARE_STRING_METHOD(split) {
 }
 
 DECLARE_STRING_METHOD(index_of) {
-  ENFORCE_ARG_COUNT(index_of, 1);
+  ENFORCE_ARG_RANGE(index_of, 1, 2);
   ENFORCE_ARG_TYPE(index_of, 0, IS_STRING);
 
   char *str = AS_C_STRING(METHOD_OBJECT);
-  char *result = strstr(str, AS_C_STRING(args[0]));
 
-  if (result != NULL) RETURN_NUMBER((int) (result - str));
+  if(arg_count == 2) {
+    ENFORCE_ARG_TYPE(index_of, 1, IS_NUMBER);
+    int start = AS_NUMBER(args[1]);
+    char *result = strstr(str + start, AS_C_STRING(args[0]));
+    if (result != NULL) RETURN_NUMBER((int) (result - str));
+  } else {
+    char *result = strstr(str, AS_C_STRING(args[0]));
+    if (result != NULL) RETURN_NUMBER((int) (result - str));
+  }
+
   RETURN_NUMBER(-1);
 }
 
