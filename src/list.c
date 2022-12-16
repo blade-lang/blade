@@ -67,11 +67,17 @@ DECLARE_LIST_METHOD(extend) {
 }
 
 DECLARE_LIST_METHOD(index_of) {
-  ENFORCE_ARG_COUNT(index_of, 1);
+  ENFORCE_ARG_RANGE(index_of, 1, 2);
 
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
+  int i = 0;
 
-  for (int i = 0; i < list->items.count; i++) {
+  if(arg_count == 2) {
+    ENFORCE_ARG_TYPE(index_of, 1, IS_NUMBER);
+    i = AS_NUMBER(args[1]);
+  }
+
+  for (;i < list->items.count; i++) {
     if (values_equal(list->items.values[i], args[0])) {
       RETURN_NUMBER(i);
     }
