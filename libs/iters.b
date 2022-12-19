@@ -4,6 +4,7 @@
 # Provides functions for simplifying the usage of iterables.
 # @copyright 2022, Ore Richard Muyiwa and Blade contributors
 # 
+import reflect
 
 
 /**
@@ -21,8 +22,11 @@ def each(object, callback) {
   if !is_function(callback)
     die Exception('arg2 must be a function')
 
+  var callback_arity = reflect.get_function_metadata(callback).arity
+
   for index, item in object {
-    callback(item, index)
+    if callback_arity == 1 callback(item)
+    else callback(item, index)
   }
 }
 
@@ -69,9 +73,11 @@ def map(list, callback) {
     die Exception('arg2 must be a function')
 
   var result = []
+  var callback_arity = reflect.get_function_metadata(callback).arity
 
-  for item in list 
-    result.append(callback(item))
+  for index, item in list {
+    result.append(callback_arity == 1 ? callback(item) : callback(item, index))
+  }
 
   return result
 }
@@ -85,8 +91,9 @@ def map(list, callback) {
  * otherwise it returns false.
  */
 def some(list, callback) {
-  for item in list {
-    if callback(item) return true
+  var callback_arity = reflect.get_function_metadata(callback).arity
+  for index, item in list {
+    if (callback_arity == 1 ? callback(item) : callback(item, index)) return true
   }
   return false
 }
@@ -99,8 +106,9 @@ def some(list, callback) {
  * element for which the provided function returns false.
  */
 def every(list, callback) {
-  for item in list {
-    if !callback(item) return false
+  var callback_arity = reflect.get_function_metadata(callback).arity
+  for index, item in list {
+    if !(callback_arity == 1 ? callback(item) : callback(item, index)) return false
   }
   return true
 }
@@ -113,9 +121,10 @@ def every(list, callback) {
  */
 def filter(list, callback) {
   var result = []
+  var callback_arity = reflect.get_function_metadata(callback).arity
 
-  for item in list {
-    if callback(item) result.append(item)
+  for index, item in list {
+    if (callback_arity == 1 ? callback(item) : callback(item, index)) result.append(item)
   }
 
   return result
