@@ -94,11 +94,11 @@ class HttpResponse {
     if status != nil and !is_number(status) and !is_int(status)
       die Exception('status must be an integer if present')
 
-    if status != nil and status < 300 or status > 399
-      die HttpException('redirect status code must be a 30x')
-
     self.headers.set('Location', location)
     self.status = status ? status : 302
+
+    if self.status < 300 or self.status > 399
+      die HttpException('redirect status code must be a 30x')
     self.body = bytes(0)
   }
 
