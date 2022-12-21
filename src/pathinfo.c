@@ -85,8 +85,7 @@ char *get_blade_filename(char *filename) {
   return merge_paths(filename, BLADE_EXTENSION);
 }
 
-char *resolve_import_path(char *module_name, const char *current_file,
-                          bool is_relative) {
+char *resolve_import_path(char *module_name, const char *current_file, char *root_file, bool is_relative) {
   char *blade_file_name = get_blade_filename(module_name);
 
   // check relative to the current file...
@@ -102,7 +101,7 @@ char *resolve_import_path(char *module_name, const char *current_file,
   if (!is_relative) {
 
     // firstly, search the local vendor directory for a matching module
-    char *root_dir = getcwd(NULL, 0);
+    char *root_dir = root_file == NULL ? getcwd(NULL, 0) : dirname(root_file);
     // fixing last path / if exists (looking at windows)...
     int root_dir_length = (int) strlen(root_dir);
     if (root_dir[root_dir_length - 1] == '\\') {

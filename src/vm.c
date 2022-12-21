@@ -499,6 +499,7 @@ void init_vm(b_vm *vm) {
   vm->objects = NULL;
   vm->exception_class = NULL;
   vm->current_frame = NULL;
+  vm->root_file = NULL;
   vm->bytes_allocated = 0;
   vm->gc_protected = 0;
   vm->next_gc = DEFAULT_GC_START; // default is 1mb. Can be modified via the -g flag.

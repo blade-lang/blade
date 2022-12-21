@@ -188,6 +188,9 @@ static void run_file(b_vm *vm, char *file) {
     }
   }
 
+  // set root file...
+  vm->root_file = file;
+
   b_obj_module *module = new_module(vm, strdup(""), strdup(file));
   add_module(vm, module);
 

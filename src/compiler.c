@@ -2143,7 +2143,7 @@ static void import_statement(b_parser *p) {
     was_renamed = true;
   }
 
-  char *module_path = resolve_import_path(module_file, p->module->file, is_relative);
+  char *module_path = resolve_import_path(module_file, p->module->file, p->vm->root_file, is_relative);
 
   if (module_path == NULL) {
     // check if there is one in the vm's registry

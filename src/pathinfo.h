@@ -20,7 +20,7 @@ bool file_exists(char *filepath);
 
 char *get_blade_filename(char *filename);
 
-char *resolve_import_path(char *module_name, const char *current_file, bool is_relative);
+char *resolve_import_path(char *module_name, const char *current_file, char *root_file, bool is_relative);
 
 char *get_real_file_name(char *path);
 
