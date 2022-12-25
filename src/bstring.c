@@ -928,10 +928,8 @@ DECLARE_STRING_METHOD(split) {
     use_regex = AS_BOOL(args[1]);
   }
 
-  if (string->length == 0 && delimeter->length == 0) {
+  if (string->length == 0 && delimeter->length == 0 || string->length == 0 || delimeter->length == 0) {
     RETURN_OBJ(new_list(vm)); // empty string matches empty string to empty list
-  } else if (string->length == 0 || delimeter->length == 0) {
-    RETURN_FALSE; // if either string or str is empty, return false
   }
 
   b_obj_list *list = (b_obj_list *) GC(new_list(vm));
@@ -982,7 +980,8 @@ DECLARE_STRING_METHOD(split) {
 
     if (rc < 0) {
       if (rc == PCRE2_ERROR_NOMATCH) {
-        RETURN_FALSE;
+        write_list(vm, list, GC_L_STRING(string->chars, string->length));
+        RETURN_OBJ(list);
       } else {
         REGEX_RC_ERROR();
       }
