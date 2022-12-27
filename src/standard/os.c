@@ -429,14 +429,10 @@ DECLARE_MODULE_METHOD(os__exists) {
 DECLARE_MODULE_METHOD(os__dirname) {
   ENFORCE_ARG_COUNT(dirname, 1);
   ENFORCE_ARG_TYPE(dirname, 0, IS_STRING);
-#ifndef _WIN32
-  char *dir = dirname(AS_STRING(args[0])->chars);
-#else // looking at Windows MingW64 dirname overwritten original string
   char *str = strdup(AS_STRING(args[0])->chars);
   char *dir = dirname(str);
   // we are not freeing str because dirname will modify str.
   // therefore, dir == str
-#endif
   if(!dir) {
     RETURN_VALUE(args[0]);
   }
@@ -446,14 +442,10 @@ DECLARE_MODULE_METHOD(os__dirname) {
 DECLARE_MODULE_METHOD(os__basename) {
   ENFORCE_ARG_COUNT(basename, 1);
   ENFORCE_ARG_TYPE(basename, 0, IS_STRING);
-#ifndef _WIN32
-  char *dir = basename(AS_STRING(args[0])->chars);
-#else // looking at Windows MingW64 basename overwritten original string
   char *str = strdup(AS_STRING(args[0])->chars);
   char *dir = basename(str);
   // we are not freeing str because basename will modify str.
   // therefore, dir == str
-#endif
   if(!dir) {
     RETURN_VALUE(args[0]);
   }
