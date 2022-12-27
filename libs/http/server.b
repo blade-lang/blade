@@ -220,10 +220,13 @@ class HttpServer {
     self._error_listeners.append(fn)
   }
 
-  _get_response_header_string(headers) {
+  _get_response_header_string(headers, cookies) {
     var result
     for x, y in headers {
       result += '${x}: ${y}\r\n'
+    }
+    for x in cookies {
+      result += 'Set-Cookie: ${x}\r\n'
     }
     return result
   }
@@ -258,7 +261,7 @@ class HttpServer {
       }
     }
 
-    var hdrs = self._get_response_header_string(response.headers).to_bytes()
+    var hdrs = self._get_response_header_string(response.headers, response.cookies).to_bytes()
     feedback += hdrs
     hdrs.dispose()
     

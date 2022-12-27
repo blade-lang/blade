@@ -8,7 +8,10 @@
  * function if given with the argument list [version, status]
  */
 def process_header(header, meta_callback) {
-  var result = {}
+  var result = {
+    headers: {},
+    cookies: []
+  }
 
   if header {
     # Follow redirect headers...
@@ -28,13 +31,13 @@ def process_header(header, meta_callback) {
 
         # handle cookies in header
         if key.lower() == 'set-cookie' {
-          if result.contains(key) {
-            result[key].append(value)
+          if result.cookies.contains(key) {
+            result.cookies.append(value)
           } else {
-            result[key] = [value]
+            result.cookies = [value]
           }
         } else {
-          result.set(key, value)
+          result.headers.set(key, value)
         }
       } else if(data[i].lower().starts_with('http/')){
         var split = data[i].split(' ')

@@ -188,7 +188,7 @@ class HttpRequest {
         var content_header = bound[,content_start].to_string(),
             content_body = bound[content_start + 4,]
             
-        var content_headers = _process.process_header(content_header),
+        var content_headers = _process.process_header(content_header).headers,
             dispositions = content_headers.get('Content-Disposition', nil)
 
         if dispositions {
@@ -347,7 +347,7 @@ class HttpRequest {
       var line1 = headers[0]
       if !self._decode_line1(line1) return false
 
-      self.headers = _process.process_header('\r\n'.join(headers[1,]))
+      self.headers = _process.process_header('\r\n'.join(headers[1,])).headers
 
       # To parse the host, first we try to retrieve the `X-Forwarded-Host` header 
       # is it exists. If it does, we simply set our host to whatever value it has. 
@@ -497,7 +497,8 @@ class HttpRequest {
     var response =  HttpResponse(
       result.body, 
       curl.get_info(Info.RESPONSE_CODE), 
-      response_headers,
+      response_headers.headers,
+      response_headers.cookies,
       curl.get_info(Info.HTTP_VERSION), 
       curl.get_info(Info.TOTAL_TIME), 
       curl.get_info(Info.REDIRECT_COUNT), 

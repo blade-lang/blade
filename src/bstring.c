@@ -402,7 +402,7 @@ DECLARE_STRING_METHOD(join) {
                value_type(argument));
 }
 
-DECLARE_STRING_METHOD(split) {
+/*DECLARE_STRING_METHOD(split) {
   ENFORCE_ARG_COUNT(split, 1);
   ENFORCE_ARG_TYPE(split, 0, IS_STRING);
 
@@ -438,7 +438,7 @@ DECLARE_STRING_METHOD(split) {
   }
 
   RETURN_OBJ(list);
-}
+}*/
 
 DECLARE_STRING_METHOD(index_of) {
   ENFORCE_ARG_RANGE(index_of, 1, 2);
@@ -913,6 +913,142 @@ DECLARE_STRING_METHOD(matches) {
   pcre2_code_free(re);
 
   RETURN_OBJ(result);
+}
+
+DECLARE_STRING_METHOD(split) {
+  ENFORCE_ARG_RANGE(split, 1, 2);
+  ENFORCE_ARG_TYPE(split, 0, IS_STRING);
+
+  b_obj_string *string = AS_STRING(METHOD_OBJECT);
+  b_obj_string *delimeter = AS_STRING(args[0]);
+  bool use_regex = true;
+
+  if(arg_count == 2) {
+    ENFORCE_ARG_TYPE(split, 1, IS_BOOL);
+    use_regex = AS_BOOL(args[1]);
+  }
+
+  if (string->length == 0 && delimeter->length == 0 || string->length == 0 || delimeter->length == 0) {
+    RETURN_OBJ(new_list(vm)); // empty string matches empty string to empty list
+  }
+
+  b_obj_list *list = (b_obj_list *) GC(new_list(vm));
+
+  uint32_t compile_options = use_regex ? is_regex(delimeter) : -1;
+  if ((int)compile_options == -1) {
+    // not a regex, do a regular split
+    if (delimeter->length > 0) {
+      int start = 0;
+      for(int i = 0; i <= string->length; i++) {
+        // match found.
+        if(memcmp(string->chars + i, delimeter->chars, delimeter->length) == 0 || i == string->length) {
+          write_list(vm, list, GC_L_STRING(string->chars + start, i - start));
+          i += delimeter->length - 1;
+          start = i + 1;
+        }
+      }
+    } else {
+      int length = string->is_ascii ? string->length : string->utf8_length;
+      for (int i = 0; i < length; i++) {
+
+        int start = i, end = i + 1;
+        if(!string->is_ascii) {
+          utf8slice(string->chars, &start, &end);
+        }
+
+        write_list(vm, list, GC_L_STRING(string->chars + start, (int) (end - start)));
+      }
+    }
+  } else {
+    char *real_regex = remove_regex_delimiter(vm, delimeter);
+
+    int error_number;
+    PCRE2_SIZE error_offset;
+
+    PCRE2_SPTR pattern = (PCRE2_SPTR) real_regex;
+    PCRE2_SPTR subject = (PCRE2_SPTR) string->chars;
+    PCRE2_SIZE subject_length = (PCRE2_SIZE) string->length;
+
+    pcre2_code *re = pcre2_compile(pattern, PCRE2_ZERO_TERMINATED, compile_options, &error_number, &error_offset, NULL);
+    free(real_regex);
+
+    REGEX_COMPILATION_ERROR(re, error_number, error_offset);
+
+    pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(re, NULL);
+
+    int rc = pcre2_match(re, subject, subject_length, 0, 0, match_data, NULL);
+
+    if (rc < 0) {
+      if (rc == PCRE2_ERROR_NOMATCH) {
+        write_list(vm, list, GC_L_STRING(string->chars, string->length));
+        RETURN_OBJ(list);
+      } else {
+        REGEX_RC_ERROR();
+      }
+    }
+
+    PCRE2_SIZE *o_vector = pcre2_get_ovector_pointer(match_data);
+
+    // handle edge cases such as /(?=.\K)/
+    REGEX_ASSERTION_ERROR(re, match_data, o_vector);
+    size_t total_length = (size_t) string->length;
+
+    // add first set of matches to response
+    for (int i = 0; i < rc; i++) {
+      PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
+      PCRE2_SIZE subject_end = o_vector[2 * i];
+      write_list(vm, list, GC_L_STRING((char *) subject, subject_end));
+      subject += subject_end + substring_length; // skip the match
+      total_length -= subject_end + substring_length; // decrement total length
+
+      // exit on end
+      if(total_length == 0) {
+        write_list(vm, list, GC_L_STRING("", 0));
+        break;
+      }
+    }
+
+    // find the other matches
+    for (;;) {
+      rc = pcre2_match(re, subject, total_length, 0, 0, match_data, NULL);
+
+      if (rc == PCRE2_ERROR_NOMATCH) {
+        break;
+      }
+
+      if (rc < 0 && rc != PCRE2_ERROR_PARTIAL) {
+        pcre2_match_data_free(match_data);
+        pcre2_code_free(re);
+        REGEX_ERR("regular expression error %d", rc);
+      }
+
+      // REGEX_VECTOR_SIZE_WARNING();
+      REGEX_ASSERTION_ERROR(re, match_data, o_vector);
+
+      for (int i = 0; i < rc; i++) {
+        PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
+        PCRE2_SIZE subject_end = o_vector[2 * i];
+        write_list(vm, list, GC_L_STRING((char *) subject, subject_end));
+        subject += subject_end + substring_length; // skip the match
+        total_length -= subject_end + substring_length; // decrement total length
+
+        // exit on end
+        if(total_length == 0) {
+          write_list(vm, list, GC_L_STRING("", 0));
+          break;
+        }
+      }
+    }
+
+    if(total_length > 0) {
+      write_list(vm, list, GC_L_STRING((char *) subject, total_length));
+    }
+
+    pcre2_match_data_free(match_data);
+    pcre2_code_free(re);
+  }
+
+  RETURN_OBJ(list);
 }
 
 DECLARE_STRING_METHOD(replace) {
