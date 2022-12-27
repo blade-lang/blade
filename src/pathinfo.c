@@ -101,7 +101,7 @@ char *resolve_import_path(char *module_name, const char *current_file, char *roo
   if (!is_relative) {
 
     // firstly, search the local vendor directory for a matching module
-    char *root_dir = root_file == NULL ? getcwd(NULL, 0) : dirname(root_file);
+    char *root_dir = root_file == NULL ? getcwd(NULL, 0) : dirname(strdup(root_file));
     // fixing last path / if exists (looking at windows)...
     int root_dir_length = (int) strlen(root_dir);
     if (root_dir[root_dir_length - 1] == '\\') {
