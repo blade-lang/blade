@@ -86,6 +86,7 @@ char *get_blade_filename(char *filename) {
 }
 
 char *resolve_import_path(char *module_name, const char *current_file, char *root_file, bool is_relative) {
+  printf("Importing %s at root %s\n", module_name, root_file);
   char *blade_file_name = get_blade_filename(module_name);
 
   // check relative to the current file...
