@@ -379,7 +379,7 @@ class HttpRequest {
     if data {
       if !is_dict(data) and self.files {
         die HttpException('data must be a dictionary when files are not empty')
-      } else if !is_dict(data) and !self.fields {
+      } else if !is_dict(data) and !self.files {
         curl.set_option(Option.POSTFIELDS, data)
       } else {
         var mime = CurlMime(curl)
