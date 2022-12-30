@@ -6,7 +6,8 @@
 import .options { Option }
 import .filetypes { FileType }
 import .infos { Info }
-import .auth { * }
+import .auth { Auth }
+import .usessl { UseSSL }
 import .curl { * }
 import _curl
 

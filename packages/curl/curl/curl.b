@@ -33,8 +33,39 @@ class CurlMime {
   }
 
   /**
+   * add_as(value: any, type: string)
+   *
+   * Adds a new mime part with the given data and type.
+   */
+  add_as(value, type) {
+    if !is_string(type)
+      die Exception('type must be string')
+
+    # This allows us to benefit from to_string decorators.
+    if !is_string(value) value = to_string(value)
+
+    var part = _curl.mime_addpart(self._ptr)
+    if _curl.mime_type(part, type)
+      return _curl.mime_data(part, value)
+    return false
+  }
+
+  /**
+   * add_data(data: any)
+   *
+   * Adds a new mime part with the given data.
+   */
+  add_data(data) {
+    # This allows us to benefit from to_string decorators.
+    if !is_string(data) data = to_string(data)
+
+    var part = _curl.mime_addpart(self._ptr)
+    return _curl.mime_data(part, data)
+  }
+
+  /**
    * add_file(name: string, file: string)
-   * 
+   *
    * Adds a new mime part with the given name and file.
    */
   add_file(name, value) {
@@ -48,6 +79,34 @@ class CurlMime {
     if _curl.mime_name(part, name)
       return _curl.mime_filedata(part, value)
     return false
+  }
+
+  /**
+   * add_mime(mime: CurlMime, type: string)
+   *
+   * Adds a new mime subpart with the given mime.
+   */
+  add_mime(mime, type) {
+    if !instance_of(mime, CurlMime)
+      die Exception('mime must be an instance of CurlMime')
+    if !is_string(type)
+      die Exception('type must be string')
+
+    var part = _curl.mime_addpart(self._ptr)
+    if _curl.mime_subparts(part, mime.get_pointer())
+      return _curl.mime_type(part, type)
+    return false
+  }
+
+  /**
+   * set_encoding(encoding: string)
+   *
+   * Sets the encoding with which the mime will be transfered.
+   */
+  set_encoding(encoding) {
+    if !is_string(encoding)
+      die Exception('encoding must be string')
+    _curl.mime_encoding(self._ptr)
   }
 
   /**

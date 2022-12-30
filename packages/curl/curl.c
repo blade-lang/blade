@@ -493,6 +493,12 @@ DEFINE_CURL_CONSTANT(CURLSSH_AUTH_AGENT)
 DEFINE_CURL_CONSTANT(CURLSSH_AUTH_GSSAPI)
 DEFINE_CURL_CONSTANT(CURLSSH_AUTH_DEFAULT)
 
+// usessl
+DEFINE_CURL_CONSTANT(CURLUSESSL_NONE)
+DEFINE_CURL_CONSTANT(CURLUSESSL_TRY)
+DEFINE_CURL_CONSTANT(CURLUSESSL_CONTROL)
+DEFINE_CURL_CONSTANT(CURLUSESSL_ALL)
+
 const char *get_error_message(int result) {
   switch(result) {
     case CURLE_UNSUPPORTED_PROTOCOL: return "unsupported protocol";
@@ -658,11 +664,13 @@ DECLARE_MODULE_METHOD(curl__easy_setopt) {
 
     result = curl_easy_setopt(curl, opt, bytes->bytes.bytes);
   } else if(IS_NUMBER(args[2])) {
-    result = curl_easy_setopt(curl, opt, AS_NUMBER(args[2]));
+    result = curl_easy_setopt(curl, opt, (long)AS_NUMBER(args[2]));
   } else if(IS_BOOL(args[2])) {
     result = curl_easy_setopt(curl, opt, AS_BOOL(args[2]) ? 1L : 0L);
   } else if(IS_PTR(args[2])) {
     result = curl_easy_setopt(curl, opt, AS_PTR(args[2])->pointer);
+  } else if(IS_NIL(args[2])) {
+    result = curl_easy_setopt(curl, opt, NULL);
   }
 
   if(result == CURLE_OK) {
@@ -874,12 +882,36 @@ DECLARE_MODULE_METHOD(curl__mime_addpart) {
   RETURN_PTR(part);
 }
 
+DECLARE_MODULE_METHOD(curl__mime_encoding) {
+  ENFORCE_ARG_COUNT(mime_encoding, 2);
+  ENFORCE_ARG_TYPE(mime_encoding, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(mime_encoding, 1, IS_STRING);
+  curl_mimepart *part = (curl_mimepart*)AS_PTR(args[0])->pointer;
+  CURLcode result = curl_mime_encoder(part, AS_C_STRING(args[1]));
+  if(result == CURLE_OK) {
+    RETURN_TRUE;
+  }
+  RETURN_ERROR(get_error_message(result));
+}
+
 DECLARE_MODULE_METHOD(curl__mime_name) {
   ENFORCE_ARG_COUNT(mime_name, 2);
   ENFORCE_ARG_TYPE(mime_name, 0, IS_PTR);
   ENFORCE_ARG_TYPE(mime_name, 1, IS_STRING);
   curl_mimepart *part = (curl_mimepart*)AS_PTR(args[0])->pointer;
   CURLcode result = curl_mime_name(part, AS_C_STRING(args[1]));
+  if(result == CURLE_OK) {
+    RETURN_TRUE;
+  }
+  RETURN_ERROR(get_error_message(result));
+}
+
+DECLARE_MODULE_METHOD(curl__mime_type) {
+  ENFORCE_ARG_COUNT(mime_type, 2);
+  ENFORCE_ARG_TYPE(mime_type, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(mime_type, 1, IS_STRING);
+  curl_mimepart *part = (curl_mimepart*)AS_PTR(args[0])->pointer;
+  CURLcode result = curl_mime_type(part, AS_C_STRING(args[1]));
   if(result == CURLE_OK) {
     RETURN_TRUE;
   }
@@ -904,6 +936,19 @@ DECLARE_MODULE_METHOD(curl__mime_filedata) {
   ENFORCE_ARG_TYPE(mime_data, 1, IS_STRING);
   curl_mimepart *part = (curl_mimepart*)AS_PTR(args[0])->pointer;
   CURLcode result = curl_mime_filedata(part, AS_C_STRING(args[1]));
+  if(result == CURLE_OK) {
+    RETURN_TRUE;
+  }
+  RETURN_ERROR(get_error_message(result));
+}
+
+DECLARE_MODULE_METHOD(curl__mime_subparts) {
+  ENFORCE_ARG_COUNT(mime_subparts, 2);
+  ENFORCE_ARG_TYPE(mime_subparts, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(mime_subparts, 1, IS_PTR);
+  curl_mimepart *part = (curl_mimepart*)AS_PTR(args[0])->pointer;
+  curl_mime *subpart = (curl_mime *)AS_PTR(args[1])->pointer;
+  CURLcode result = curl_mime_subparts(part, subpart);
   if(result == CURLE_OK) {
     RETURN_TRUE;
   }
@@ -1268,6 +1313,11 @@ CREATE_MODULE_LOADER(curl) {
       GET_CURL_CONSTANT(CURLSSH_AUTH_AGENT),
       GET_CURL_CONSTANT(CURLSSH_AUTH_GSSAPI),
       GET_CURL_CONSTANT(CURLSSH_AUTH_DEFAULT),
+      // usessl
+      GET_CURL_CONSTANT(CURLUSESSL_NONE),
+      GET_CURL_CONSTANT(CURLUSESSL_TRY),
+      GET_CURL_CONSTANT(CURLUSESSL_CONTROL),
+      GET_CURL_CONSTANT(CURLUSESSL_ALL),
 
       {"version",    false, __curl_version},
 
@@ -1288,7 +1338,10 @@ CREATE_MODULE_LOADER(curl) {
       {"mime_addpart",   true,  GET_MODULE_METHOD(curl__mime_addpart)},
       {"mime_name",   true,  GET_MODULE_METHOD(curl__mime_name)},
       {"mime_data",   true,  GET_MODULE_METHOD(curl__mime_data)},
+      {"mime_type",   true,  GET_MODULE_METHOD(curl__mime_type)},
+      {"mime_encoding",   true,  GET_MODULE_METHOD(curl__mime_encoding)},
       {"mime_filedata",   true,  GET_MODULE_METHOD(curl__mime_filedata)},
+      {"mime_subparts",   true,  GET_MODULE_METHOD(curl__mime_subparts)},
       {"slist_create",   true,  GET_MODULE_METHOD(curl__slist_create)},
       {"slist_free",   true,  GET_MODULE_METHOD(curl__slist_free)},
       {NULL,    false, NULL},
