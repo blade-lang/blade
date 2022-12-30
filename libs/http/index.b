@@ -140,12 +140,12 @@ def delete(url) {
 }
 
 /**
- * server(port: int, address: string, is_secure: bool)
+ * server(port: int, address: string)
  * 
  * Creates an new HttpServer instance.
  * @returns HttpServer
  * @throws Exception, SocketExcepion, HttpException
  */
-def server(port, address, is_secure) {
-  return HttpServer(port, address, is_secure)
+def server(port, address) {
+  return HttpServer(port, address)
 }
