@@ -605,9 +605,13 @@ DECLARE_NATIVE(rand) {
   if(lower_limit == 0 && upper_limit == 1) {
     RETURN_NUMBER((double)rand() / RAND_MAX);
   } else {
+#ifndef _WIN32
     do {
       x = rand();
     } while (x >= RAND_MAX - remainder);
+#else
+    x = rand();
+#endif
 
     RETURN_NUMBER((double) lower_limit + x % n);
   }
