@@ -27,6 +27,13 @@ these languages and an easy way to leverage the strength of any.
 - Simple syntax and minimal keywords.
 - First-class package management (Package management is built into the language module system).
 - Iterable classes.
+- Backend development without any external dependencies.
+- [Function promotion](https://bladelang.com/tutorial/modules.html#function-promotion).
+- Default exports and imports.
+- Anonymous functions.
+- Access modifiers for variables, properties, function, class, modules, etc.
+- Decorator functions.
+- Function overrides in classes &mdash; A class can chose the result to return for a function if the function allows it.
 - Easy to extend with C modules with a familiar API to Wren.
 
 
