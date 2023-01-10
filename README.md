@@ -11,6 +11,8 @@
 
 </div>
 
+> Introducing [Nyssa Package Manager](https://nyssa.bladelang.com). The official package manager for the Blade programming language.
+
 <br>
 
 ## tl;dr
