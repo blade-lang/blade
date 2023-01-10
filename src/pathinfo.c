@@ -101,7 +101,8 @@ char *resolve_import_path(char *module_name, const char *current_file, char *roo
   if (!is_relative) {
 
     // firstly, search the local vendor directory for a matching module
-    char *root_dir = root_file == NULL ? getcwd(NULL, 0) : dirname(strdup(root_file));
+    char *root_dir = dirname(strdup(root_file));
+    char *current_dir = getcwd(NULL, 0);
     // fixing last path / if exists (looking at windows)...
     int root_dir_length = (int) strlen(root_dir);
     if (root_dir[root_dir_length - 1] == '\\') {
@@ -127,6 +128,33 @@ char *resolve_import_path(char *module_name, const char *current_file, char *roo
     if (file_exists(vendor_index_file)) {
       // stop a core library from importing itself
       char *path1 = realpath(vendor_index_file, NULL);
+      char *path2 = realpath(current_file, NULL);
+
+      if (path1 != NULL) {
+        if (path2 == NULL || memcmp(path1, path2, (int) strlen(path2)) != 0)
+          return path1;
+      }
+    }
+
+    char *current_vendor_file = merge_paths(merge_paths(current_dir,
+          LOCAL_PACKAGES_DIRECTORY LOCAL_SRC_DIRECTORY), blade_file_name);
+    if (file_exists(current_vendor_file)) {
+      // stop a core library from importing itself
+      char *path1 = realpath(current_vendor_file, NULL);
+      char *path2 = realpath(current_file, NULL);
+
+      if (path1 != NULL) {
+        if (path2 == NULL || memcmp(path1, path2, (int) strlen(path2)) != 0)
+          return path1;
+      }
+    }
+
+    // or a matching package
+    char *current_vendor_index_file = merge_paths(merge_paths(merge_paths(current_dir,
+          LOCAL_PACKAGES_DIRECTORY LOCAL_SRC_DIRECTORY), module_name), LIBRARY_DIRECTORY_INDEX BLADE_EXTENSION);
+    if (file_exists(current_vendor_index_file)) {
+      // stop a core library from importing itself
+      char *path1 = realpath(current_vendor_index_file, NULL);
       char *path2 = realpath(current_file, NULL);
 
       if (path1 != NULL) {
