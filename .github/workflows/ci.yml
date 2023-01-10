@@ -75,7 +75,7 @@ jobs:
         with:
           cmake-version: '3.18.x'
       - name: Setup WinLibs
-        uses: bwoodsend/setup-winlibs-action@v1.7
+        uses: bwoodsend/setup-winlibs-action@v1.8
         with:
           add_to_path: true
           tag: 12.2.0-15.0.6-10.0.0-msvcrt-r3
