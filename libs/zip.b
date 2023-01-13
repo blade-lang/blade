@@ -732,8 +732,16 @@ class ZipArchive {
 						# Not compressed, continue
           }
 					when 8 { # Deflated
-						decoded = zlib.undeflate(filedata)
-            filedata.dispose()
+            try {
+              decoded = zlib.undeflate(filedata)
+              filedata.dispose()
+            } catch Exception {
+              ## continue
+              # TODO: Decide if we want to continue (hence skiping the file)
+              # or return empty bytes (hence truncate the file).
+              # for now we are truncating it.
+              decoded = bytes(0)
+            }
           }
 					when 12 { # BZIP2
             entrya['error'] = 'bzip2 encoded data is not yet supported.'
@@ -773,7 +781,7 @@ class ZipArchive {
 			}
 
       entrya.extend(unpackeda)
-      entrya.add('encrypted', isencrypted)
+      entrya.set('encrypted', isencrypted)
       
       zip_file.files.append(ZipItem.from_dict(entrya))
 		}
@@ -831,7 +839,7 @@ class ZipArchive {
 
 
 /**
- * extract(file: string [, destination: string = os.cwd() [, is_zip64: bool = false]])
+ * extract(file: string [, destination: string = cwd [, is_zip64: bool = false]])
  * 
  * Extracts the zip archive at the _file_ path to the given _destination_ directory. 
  * If _destination_ is not given, the file will be extracted into the current working 

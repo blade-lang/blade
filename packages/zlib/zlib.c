@@ -237,7 +237,7 @@ DECLARE_MODULE_METHOD(zlib_inflate) {
         }
         default: {
           (void)inflateEnd(&strm);
-          RETURN_ERROR("inflate(): error while inflating data: %s (%d)", strm.msg, ret);
+          RETURN_ERROR("inflate(): %s (%d)", strm.msg, ret);
         }
       }
 
@@ -256,7 +256,7 @@ DECLARE_MODULE_METHOD(zlib_inflate) {
 
     } while (strm.avail_out == 0);
 
-  } while (ret != Z_STREAM_END);
+  } while (ret != Z_STREAM_END && ret != Z_BUF_ERROR);
 
   ret = inflateEnd(&strm);
   if(ret == Z_OK) {
