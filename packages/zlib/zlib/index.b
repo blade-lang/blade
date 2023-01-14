@@ -38,6 +38,12 @@
 # 
 
 import _zlib
+import reflect
+import io {
+  SEEK_SET,
+  SEEK_CUR,
+  SEEK_END
+}
 
 
 # version
@@ -324,4 +330,276 @@ def gzip(data) {
  */
 def ungzip(data) {
   return uncompress(data, MAX_WBITS | 16)
+}
+
+
+/**
+ * class GZ
+ */
+class GZ {
+
+  /**
+   * GZ(path: string [, mode: string = 'rb'])
+   * @see `gzopen()`
+   * @constructor
+   */
+  GZ(path, mode) {
+    if !is_string(path)
+      die Exception('string expected in arg 1 (path)')
+    if mode != nil and !is_string(mode)
+      die Exception('string expected in arg 2 (mode)')
+    if !mode mode = 'rb'
+
+    self._ptr = _zlib.gzopen(path, mode)
+  }
+
+  /**
+   * read(length: number)
+   * 
+   * Reads the given number of uncompressed bytes from the compressed file.  If
+   * the input file is not in gzip format, `read()` copies the given number of
+   * bytes into the buffer directly from the file.
+   * 
+   * After reaching the end of a gzip stream in the input, _read_ will continue
+   * to read, looking for another gzip stream.  Any number of gzip streams may be
+   * concatenated in the input file, and will all be decompressed by `read()`.
+   * If something other than a gzip stream is encountered after a gzip stream,
+   * that remaining trailing garbage is ignored (and no error is returned).
+   * 
+   * read can be used to read a gzip file that is being concurrently written.
+   * Upon reaching the end of the input, read will return with the available
+   * data. Note that read does not return -1 in the event of an incomplete gzip stream.  
+   * This error is deferred until `close()`, which will return false if the last read 
+   * ended in the middle of a gzip stream.  Alternatively, gzerror can be used before 
+   * close to detect this case.
+   * 
+   * read returns the number of uncompressed bytes actually read, less than
+   * length for end of file, or -1 for error.  If len is too large to fit in an integer,
+   * then nothing is read, -1 is returned.
+   * 
+   * @return bytes
+   */
+  read(length) {
+    if length != nil and !is_number(length)
+      die Exception('number expected in arg 2 (length)')
+    if !length length = 1
+    return _zlib.gzread(self._ptr, length)
+  }
+
+  /**
+   * write(data: bytes | string)
+   * 
+   * Writes the given number of uncompressed bytes into the compressed file.
+   * write returns the number of uncompressed bytes written or 0 in case of
+   * error.
+   * 
+   * @return number
+   */
+  write(data) {
+    if !is_bytes(data) and !is_string(data)
+      die Exception('bytes or string expected in arg 2 (data)')
+  
+    if is_string(data) data = data.to_bytes()
+    return _zlib.gzwrite(self._ptr, data)
+  }
+
+  /**
+   * eof()
+   * 
+   * Returns `true` if the end-of-file indicator has been set while reading,
+   * `false` otherwise.  Note that the end-of-file indicator is set only if the
+   * read tried to go past the end of the input, but came up short.  Therefore,
+   * `eof()` may return `false` even if there is no more data to read, in the event 
+   * that the last read request was for the exact number of bytes remaining in the 
+   * input file.  This will happen if the input file size is an exact multiple of 
+   * the buffer size.
+   *
+   * If eof() returns true, then the read functions will return no more data,
+   * unless the end-of-file indicator is reset by gzclearerr() and the input file
+   * has grown since the previous end of file was detected.
+   * 
+   * @return bool
+   */
+  eof() {
+    return _zlib.gzeof(self._ptr)
+  }
+
+  /**
+   * direct()
+   * 
+   * Returns `true` if file is being copied directly while reading, or `false`
+   * if file is a gzip stream being decompressed.
+   * 
+   * If the input file is empty, direct() will return true, since the input
+   * does not contain a gzip stream.
+   * 
+   * If direct() is used immediately after gzopen() it will cause buffers to be 
+   * allocated to allow reading the file to determine if it is a gzip file.
+   * 
+   * When writing, direct() returns true if transparent writing was requested 
+   * ("wT" for the gzopen() mode), or false otherwise.
+   * 
+   * > Note: direct() is not needed when writing.  Transparent writing must be 
+   * explicitly requested, so the application already knows the answer.
+   * 
+   * @return bool
+   */
+  direct() {
+    return _zlib.gzdirect(self._ptr)
+  }
+
+  /**
+   * close()
+   * 
+   * Flushes all pending output if necessary, closes the compressed file and
+   * deallocates the (de)compression state.  Note that once file is closed, you
+   * cannot call gzerror with file, since its structures have been deallocated.
+   * close must not be called more than once on the same file, just as free
+   * must not be called more than once on the same allocation.
+   * 
+   * close will return `true` on success or `false` otherwise.
+   * 
+   * @return bool
+   */
+  close() {
+    return _zlib.gzclose(self._ptr)
+  }
+
+  /**
+   * set_params(level: number, strategy: number)
+   * 
+   * Dynamically update the compression level or strategy.  See the description
+   * of `compress()` for the meaning of these parameters.  Previously provided
+   * data is flushed before the parameter change.
+   * 
+   * @return bool
+  */
+  set_params(level, strategy) {
+    if !is_number(level) and !is_int(level)
+      die Exception('integer expected in arg 2 (level)')
+    if !is_number(strategy) and !is_int(strategy)
+      die Exception('integer expected in arg 3 (strategy)')
+    return _zlib.gzsetparams(self._ptr, level, strategy)
+  }
+
+  /**
+   * seek(offset: int [, whence: int = SEEK_SET])
+   * 
+   * Sets the starting position for the next read or write on the given
+   * compressed file.  The offset represents a number of bytes in the
+   * uncompressed data stream. The whence parameter is defined as in `io` 
+   * module; the value SEEK_END is not supported.
+   * 
+   * If the file is opened for reading, this function is emulated but can be
+   * extremely slow.  If the file is opened for writing, only forward seeks are
+   * supported; `seek()` then compresses a sequence of zeroes up to the new
+   * starting position.
+   * 
+   * seek returns the resulting offset location as measured in bytes from
+   * the beginning of the uncompressed stream, or -1 in case of error, in
+   * particular if the file is opened for writing and the new starting position
+   * would be before the current position.
+   * 
+   * @return number
+   */
+  seek(offset, whence) {
+    if !is_number(offset) and !is_int(offset)
+      die Exception('integer expected in arg 2 (offset)')
+    if whence != nil and !is_number(whence) and !is_int(whence)
+      die Exception('integer expected in arg 3 (whence)')
+
+    if !whence whence = SEEK_SET
+    return _zlib.gzseek(self._ptr, offset, whence)
+  }
+
+  /**
+   * rewind()
+   * 
+   * Rewinds the given file. This function is supported only for reading.
+   * 
+   * @note `rewind()` is equivalent to `seek(0, SEEK_SET)`.
+   * @return number
+   */
+  rewind() {
+    return _zlib.gzrewind(self._ptr)
+  }
+
+  /**
+   * tell()
+   * 
+   * Returns the starting position for the next read or write on the given
+   * compressed file.  This position represents a number of bytes in the
+   * uncompressed data stream, and is zero when starting.
+   * 
+   * @note `tell()` is equivalent to `seek(0, SEEK_CUR)`.
+   * @return number
+   */
+  tell() {
+    return _zlib.gztell(self._ptr)
+  }
+
+  /**
+   * offset()
+   * 
+   * Returns the current offset in the file being read or written.  This offset
+   * includes the count of bytes that precede the gzip stream, for example when
+   * appending.  When reading, the offset does not include as yet unused buffered 
+   * input.  This information can be used for a progress indicator.  On error, 
+   * offset() returns -1.
+   * 
+   * @return number
+   */
+  offset() {
+    return _zlib.gzoffset(self._ptr)
+  }
+
+  /**
+   * clear_error()
+   * 
+   * Clears the error and end-of-file flags for file. This is useful for continuing 
+   * to read a gzip file that is being written concurrently.
+   */
+  clear_error() {
+    _zlib.gzclearerr(self._ptr)
+  }
+}
+
+/**
+ * gzopen(path: string [, mode: string = 'rb'])
+ * 
+ * Opens a gzip (.gz) file for reading or writing.  The mode parameter is as
+ * in `file` ("rb" or "wb") but can also include a compression level ("wb9") or
+ * a strategy: 'f' for filtered data as in "wb6f", 'h' for Huffman-only
+ * compression as in "wb1h", 'R' for run-length encoding as in "wb1R", or 'F'
+ * for fixed code compression as in "wb9F".  (See the description of
+ * `compress()` for more information about the strategy parameter.)  'T' will
+ * request transparent writing or appending with no compression and not using
+ * the gzip format.
+ * 
+ * "a" can be used instead of "w" to request that the gzip stream that will
+ * be written be appended to the file.  "+" will result in an error, since
+ * reading and writing to the same gzip file is not supported.  The addition of
+ * "x" when writing will create the file exclusively, which fails if the file
+ * already exists.  On systems that support it, the addition of "e" when
+ * reading or writing will set the flag to close the file on an execve() call.
+ * 
+ * These functions, as well as gzip, will read and decode a sequence of gzip
+ * streams in a file.  The append function of gzopen() can be used to create
+ * such a file. When appending, gzopen does not test whether the file begins with 
+ * a gzip stream, nor does it look for the end of the gzip streams to begin 
+ * appending.  gzopen will simply append a gzip stream to the existing file.
+ * 
+ * gzopen can be used to read a file which is not in gzip format; in this
+ * case read will directly read from the file without decompression.  When
+ * reading, this will be detected automatically by looking for the magic two-byte 
+ * gzip header.
+ * 
+ * gzopen throws an error if the file could not be opened, if there was insufficient 
+ * memory to allocate the gzFile state, or if an invalid mode was specified (an 'r', 
+ * 'w', or 'a' was not provided, or '+' was provided).
+ * 
+ * @return ptr
+ */
+def gzopen(path, mode) {
+  return GZ(path, mode)
 }

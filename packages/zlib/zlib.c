@@ -1,6 +1,7 @@
 #include "module.h"
 #include <zlib.h>
 #include <assert.h>
+#include <errno.h>
 
 #if defined(_WIN32) && defined(_DEBUG)
 #define ZLIB_WINAPI
@@ -266,6 +267,148 @@ DECLARE_MODULE_METHOD(zlib_inflate) {
   RETURN_ERROR("inflate(): Error %d while finishing inflation", ret);
 }
 
+DECLARE_MODULE_METHOD(zlib_gzopen) {
+  ENFORCE_ARG_COUNT(gzopen, 2);
+  ENFORCE_ARG_TYPE(gzopen, 0, IS_STRING);
+  ENFORCE_ARG_TYPE(gzopen, 1, IS_STRING);
+
+  char *mode = AS_C_STRING(args[1]);
+
+  gzFile *file = ALLOCATE(gzFile, 1);
+  file[0] = gzopen(AS_C_STRING(args[0]), mode);
+
+  if(file[0] == NULL) {
+    FREE(gzFile, file);
+    RETURN_ERROR(strerror(errno));
+  }
+
+  RETURN_PTR(file);
+}
+
+DECLARE_MODULE_METHOD(zlib_gzread) {
+  ENFORCE_ARG_COUNT(gzread, 2);
+  ENFORCE_ARG_TYPE(gzread, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(gzread, 1, IS_NUMBER);
+  int err;
+
+  gzFile *file = (gzFile *) AS_PTR(args[0])->pointer;
+  unsigned int length = (unsigned int) AS_NUMBER(args[1]);
+
+  if(file != NULL) {
+    unsigned char *buffer = ALLOCATE(unsigned char, length);
+    int bytes_read = gzread(file[0], buffer, length);
+    if(bytes_read >= 0) {
+      RETURN_OBJ(take_bytes(vm, buffer, bytes_read));
+    } else {
+      RETURN_ERROR("%s", gzerror(file[0], &err));
+    }
+  } else {
+    RETURN_ERROR("invalid GZ handle");
+  }
+}
+
+DECLARE_MODULE_METHOD(zlib_gzwrite) {
+  ENFORCE_ARG_COUNT(gzwrite, 2);
+  ENFORCE_ARG_TYPE(gzwrite, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(gzwrite, 1, IS_BYTES);
+
+  gzFile *file = (gzFile *) AS_PTR(args[0])->pointer;
+  b_obj_bytes *bytes = AS_BYTES(args[1]);
+
+  RETURN_NUMBER(gzwrite(file[0], bytes->bytes.bytes, bytes->bytes.count));
+}
+
+DECLARE_MODULE_METHOD(zlib_gzeof) {
+  ENFORCE_ARG_COUNT(gzeof, 1);
+  ENFORCE_ARG_TYPE(gzeof, 0, IS_PTR);
+
+  gzFile *file = (gzFile *) AS_PTR(args[0])->pointer;
+
+  RETURN_BOOL(gzeof(file[0]) == 1);
+}
+
+DECLARE_MODULE_METHOD(zlib_gzdirect) {
+  ENFORCE_ARG_COUNT(gzdirect, 1);
+  ENFORCE_ARG_TYPE(gzdirect, 0, IS_PTR);
+
+  gzFile *file = (gzFile *) AS_PTR(args[0])->pointer;
+
+  RETURN_BOOL(gzdirect(file[0]) == 1);
+}
+
+DECLARE_MODULE_METHOD(zlib_gzclose) {
+  ENFORCE_ARG_COUNT(gzclose, 1);
+  ENFORCE_ARG_TYPE(gzclose, 0, IS_PTR);
+
+  gzFile *file = (gzFile *) AS_PTR(args[0])->pointer;
+
+  RETURN_NUMBER(gzclose(file[0]) == Z_OK);
+}
+
+DECLARE_MODULE_METHOD(zlib_gzrewind) {
+  ENFORCE_ARG_COUNT(gzrewind, 1);
+  ENFORCE_ARG_TYPE(gzrewind, 0, IS_PTR);
+
+  gzFile *file = (gzFile *) AS_PTR(args[0])->pointer;
+
+  RETURN_NUMBER(gzrewind(file[0]));
+}
+
+DECLARE_MODULE_METHOD(zlib_gztell) {
+  ENFORCE_ARG_COUNT(gztell, 1);
+  ENFORCE_ARG_TYPE(gztell, 0, IS_PTR);
+
+  gzFile *file = (gzFile *) AS_PTR(args[0])->pointer;
+
+  RETURN_NUMBER(gztell(file[0]));
+}
+
+DECLARE_MODULE_METHOD(zlib_gzoffset) {
+  ENFORCE_ARG_COUNT(gzoffset, 1);
+  ENFORCE_ARG_TYPE(gzoffset, 0, IS_PTR);
+
+  gzFile *file = (gzFile *) AS_PTR(args[0])->pointer;
+
+  RETURN_NUMBER(gzoffset(file[0]));
+}
+
+DECLARE_MODULE_METHOD(zlib_gzclearerr) {
+  ENFORCE_ARG_COUNT(gzclearerr, 1);
+  ENFORCE_ARG_TYPE(gzclearerr, 0, IS_PTR);
+  gzclearerr(((gzFile *) AS_PTR(args[0])->pointer)[0]);
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(zlib_gzsetparams) {
+  ENFORCE_ARG_COUNT(gzsetparams, 3);
+  ENFORCE_ARG_TYPE(gzsetparams, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(gzsetparams, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(gzsetparams, 2, IS_NUMBER);
+
+  gzFile *file = (gzFile *) AS_PTR(args[0])->pointer;
+  int ret = gzsetparams(file[0], AS_NUMBER(args[1]), AS_NUMBER(args[1]));
+
+  switch (ret) {
+    case Z_OK: RETURN_TRUE;
+    case Z_STREAM_ERROR: RETURN_ERROR("stream not open for writing");
+    case Z_MEM_ERROR: RETURN_ERROR("memory access failed");
+    default: RETURN_ERROR("%s", strerror(errno));
+  }
+}
+
+DECLARE_MODULE_METHOD(zlib_gzseek) {
+  ENFORCE_ARG_COUNT(gzseek, 3);
+  ENFORCE_ARG_TYPE(gzseek, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(gzseek, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(gzseek, 2, IS_NUMBER);
+
+  gzFile *file = (gzFile *) AS_PTR(args[0])->pointer;
+  z_off_t offset = (z_off_t) AS_NUMBER(args[1]);
+  int whence = AS_NUMBER(args[2]);
+
+  RETURN_NUMBER(gzseek(file[0], offset, whence));
+}
+
 CREATE_MODULE_LOADER(zlib2) {
   static b_field_reg fields[] = {
       GET_ZLIB_CONSTANT(Z_NO_COMPRESSION),
@@ -294,6 +437,18 @@ CREATE_MODULE_LOADER(zlib2) {
       {"crc32", false, GET_MODULE_METHOD(zlib_crc32)},
       {"deflate", false, GET_MODULE_METHOD(zlib_deflate)},
       {"inflate", false, GET_MODULE_METHOD(zlib_inflate)},
+      {"gzopen", false, GET_MODULE_METHOD(zlib_gzopen)},
+      {"gzread", false, GET_MODULE_METHOD(zlib_gzread)},
+      {"gzwrite", false, GET_MODULE_METHOD(zlib_gzwrite)},
+      {"gzeof", false, GET_MODULE_METHOD(zlib_gzeof)},
+      {"gzdirect", false, GET_MODULE_METHOD(zlib_gzdirect)},
+      {"gzclose", false, GET_MODULE_METHOD(zlib_gzclose)},
+      {"gzsetparams", false, GET_MODULE_METHOD(zlib_gzsetparams)},
+      {"gzseek", false, GET_MODULE_METHOD(zlib_gzseek)},
+      {"gzrewind", false, GET_MODULE_METHOD(zlib_gzrewind)},
+      {"gztell", false, GET_MODULE_METHOD(zlib_gztell)},
+      {"gzoffset", false, GET_MODULE_METHOD(zlib_gzoffset)},
+      {"gzclearerr", false, GET_MODULE_METHOD(zlib_gzclearerr)},
       {NULL,     false, NULL},
   };
 
