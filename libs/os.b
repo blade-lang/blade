@@ -11,6 +11,7 @@ import _os
 /**
  * The name of the current platform in string or `unknown` if 
  * the platform name could not be determined.
+ * @type string
  * 
  * Example,
  * 
@@ -24,13 +25,71 @@ var platform = _os.platform
 
 /**
  * A list containing the command line arguments passed to the startup script.
+ * @type list
  */
 var args = _os.args
 
 /**
  * The standard path separator for the current operating system.
+ * @type string
  */
 var path_separator = _os.path_separator
+
+# File types
+/**
+ * Unknown file type
+ * @type number
+ */
+var DT_UNKNOWN = _os.DT_UNKNOWN  # unknown
+
+/**
+ * Block device file type
+ * @type number
+ */
+var DT_BLK = _os.DT_BLK  # block device
+
+/**
+ * Character device file type
+ * @type number
+ */
+var DT_CHR = _os.DT_CHR  # character device
+
+/**
+ * Directory file type
+ * @type number
+ */
+var DT_DIR = _os.DT_DIR  # directory
+
+/**
+ * Named pipe file type
+ * @type number
+ */
+var DT_FIFO = _os.DT_FIFO  # named pipe
+
+/**
+ * Symbolic link file type
+ * @type number
+ */
+var DT_LNK = _os.DT_LNK  # symbolic link
+
+/**
+ * Regular file type
+ * @type number
+ */
+var DT_REG = _os.DT_REG  # regular file
+
+/**
+ * Local-domain socket file type
+ * @type number
+ */
+var DT_SOCK = _os.DT_SOCK  # local-domain socket
+
+/**
+ * Whiteout file type (only meaningful on UNIX and some unofficial Linux versions).
+ * @type number
+ * @note value is `-1` on systems where it is not supported.
+ */
+var DT_WHT = _os.DT_WHT  
 
 
 /**
@@ -143,17 +202,6 @@ def set_env(name, value, overwrite) {
   if overwrite == nil overwrite = false
   return _os.setenv(name, value, overwrite)
 }
-
-# File types
-var DT_UNKNOWN = _os.DT_UNKNOWN  # unknown
-var DT_BLK = _os.DT_BLK  # block device
-var DT_CHR = _os.DT_CHR  # character device
-var DT_DIR = _os.DT_DIR  # directory
-var DT_FIFO = _os.DT_FIFO  # named pipe
-var DT_LNK = _os.DT_LNK  # symbolic link
-var DT_REG = _os.DT_REG  # regular file
-var DT_SOCK = _os.DT_SOCK  # local-domain socket
-var DT_WHT = _os.DT_WHT  
 
 /**
  * create_dir(path: string, [permission: number = 0c777 [, recursive: boolean = true]])
@@ -391,3 +439,11 @@ def dir_name(path) {
 def base_name(path) {
   return _os.basename(path)
 }
+
+/**
+ * current_file()
+ * 
+ * A string containing the path to the current file from which the value is accessed.
+ * @type string
+ */
+var current_file = _os.FILE

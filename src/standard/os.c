@@ -176,7 +176,7 @@ b_value get_os_platform(b_vm *vm) {
 #define PLATFORM_NAME "unknown"
 #endif
 
-  return OBJ_VAL(copy_string(vm, PLATFORM_NAME, (int) strlen(PLATFORM_NAME)));
+  return STRING_VAL(PLATFORM_NAME);
 
 #undef PLATFORM_NAME
 }
@@ -206,6 +206,22 @@ DECLARE_MODULE_METHOD(os_getenv) {
   } else {
     RETURN_NIL;
   }
+}
+
+DECLARE_MODULE_METHOD(os__FILE) {
+  ENFORCE_ARG_COUNT(FILE, 0);
+
+  char *file = vm->current_frame->closure->function->module->file;
+  if(file == NULL || memcmp(file, "<repl>", strlen(file)) == 0) {
+    RETURN_STRING("<repl>");
+  }
+
+  char *path = realpath(file, NULL);
+  if(path != NULL) {
+    RETURN_TT_STRING(path);
+  }
+
+  RETURN_STRING(file);
 }
 
 DECLARE_MODULE_METHOD(os_setenv) {
@@ -532,6 +548,7 @@ CREATE_MODULE_LOADER(os) {
       {"realpath", true,  GET_MODULE_METHOD(os__realpath)},
       {"dirname", true,  GET_MODULE_METHOD(os__dirname)},
       {"basename", true,  GET_MODULE_METHOD(os__basename)},
+      {"FILE", true,  GET_MODULE_METHOD(os__FILE)},
       {NULL,     false, NULL},
   };
 
