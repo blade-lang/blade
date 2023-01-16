@@ -61,7 +61,14 @@ class Encoder {
       when 'string' {
         if value.index_of('"') > -1 or value.index_of('\\') > -1 {
           var esc_value = value.replace('\\', '\\\\', false).   # replace \ with \\
-            replace('"', '\\"', false)  # replace " with \"
+            replace('"', '\\"', false).  # replace " with \"
+            replace('\r', '\\r'). # replace \r
+            replace('\n', '\\n'). # replace \n
+            replace('\t', '\\t'). # replace \t
+            replace('\0', '\\0'). # replace \0
+            replace('\a', '\\a'). # replace \a
+            replace('\b', '\\b'). # replace \b
+            replace('\f', '\\f') # replace \f
 
           return '"${esc_value}"'
         }
