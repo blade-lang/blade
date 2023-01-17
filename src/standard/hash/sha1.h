@@ -44,7 +44,7 @@ typedef struct {
 
 /* Hash a single 512-bit block. This is the core of the algorithm. */
 
-static void SHA1Transform(uint32_t state[5], const unsigned char buffer[64]) {
+static void SHA1Transform(uint32_t state[5], const uint8_t *buffer) {
   uint32_t a, b, c, d, e;
   typedef union {
     unsigned char c[64];
@@ -177,10 +177,9 @@ static void SHA1Init(SHA1_CTX *context) {
 
 /* Run your data through this. */
 
-static void SHA1Update(SHA1_CTX *context, const void *datain, uint32_t len) {
+static void SHA1Update(SHA1_CTX *context, const uint8_t data[64], uint32_t len) {
   uint32_t i;
   uint32_t j;
-  const uint8_t *data = (const uint8_t *) datain;
 
   j = context->count[0];
   if ((context->count[0] += len << 3) < j)
