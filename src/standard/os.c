@@ -10,9 +10,7 @@
 #include <sys/utsname.h>
 #endif /* HAVE_SYS_UTSNAME_H */
 
-#include <ctype.h>
 #include <stdio.h>
-#include <pathinfo.h>
 #include <sys/stat.h>
 
 #ifdef _WIN32

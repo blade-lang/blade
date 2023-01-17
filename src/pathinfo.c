@@ -7,16 +7,20 @@
 
 #ifdef _WIN32
 
-char *get_exe_dir() {
+char *get_exe_path() {
   char *exe_path = (char *) malloc(sizeof(char) * MAX_PATH);
   if (exe_path != NULL) {
-    int length = (int) GetModuleFileNameA(NULL, exe_path, MAX_PATH);
-    if (length > 0) {
-      char *path = dirname(exe_path);
-      return path;
-    } else {
-      return NULL;
+    if ((int) GetModuleFileNameA(NULL, exe_path, MAX_PATH) > 0) {
+      return exe_path;
     }
+  }
+  return NULL;
+}
+
+char *get_exe_dir() {
+  char *exe_path = get_exe_path();
+  if (exe_path != NULL) {
+    return dirname(exe_path);
   }
   return NULL;
 }

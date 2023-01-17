@@ -177,9 +177,10 @@ static void SHA1Init(SHA1_CTX *context) {
 
 /* Run your data through this. */
 
-static void SHA1Update(SHA1_CTX *context, const unsigned char *data, uint32_t len) {
+static void SHA1Update(SHA1_CTX *context, const void *datain, uint32_t len) {
   uint32_t i;
   uint32_t j;
+  const uint8_t *data = (const uint8_t *) datain;
 
   j = context->count[0];
   if ((context->count[0] += len << 3) < j)
