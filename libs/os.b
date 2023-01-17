@@ -35,6 +35,12 @@ var args = _os.args
  */
 var path_separator = _os.path_separator
 
+/**
+ * The full path to the running Blade executable.
+ * @type string
+ */
+var exe_path = _os.exe_path
+
 # File types
 /**
  * Unknown file type

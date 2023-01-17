@@ -196,6 +196,11 @@ b_value get_blade_os_path_separator(b_vm *vm) {
   return STRING_L_VAL(BLADE_PATH_SEPARATOR, 1);
 }
 
+b_value get_blade_os_exe_path(b_vm *vm) {
+  char *path = get_exe_path();
+  return STRING_VAL(path);
+}
+
 DECLARE_MODULE_METHOD(os_getenv) {
   ENFORCE_ARG_COUNT(get_env, 1);
   ENFORCE_ARG_TYPE(get_env, 0, IS_STRING);
@@ -556,6 +561,7 @@ CREATE_MODULE_LOADER(os) {
       {"platform", true, get_os_platform},
       {"args", true, get_blade_os_args},
       {"path_separator", true, get_blade_os_path_separator},
+      {"exe_path", true, get_blade_os_exe_path},
       {"DT_UNKNOWN", true, __os_dir_DT_UNKNOWN},
       {"DT_BLK", true, __os_dir_DT_BLK},
       {"DT_CHR", true, __os_dir_DT_CHR},
