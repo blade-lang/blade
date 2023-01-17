@@ -150,6 +150,9 @@ set_target_properties(libblade
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 endif()
+if(MINGW)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-stringop-overread")
+endif()
 
 # link pcre2
 target_link_libraries(libblade PRIVATE pcre2)
