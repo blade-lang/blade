@@ -27,7 +27,6 @@ of any.
 
 ## How does it differ from Python and Ruby?
 
-- Simple syntax and minimal keywords.
 - First-class package management (Package management is built into the language module system).
 - Iterable classes.
 - Backend development without any external dependencies.
