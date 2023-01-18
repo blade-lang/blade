@@ -16,7 +16,7 @@
 ## tl;dr
 
 Blade is a simple, clean and embeddable dynamic programming language created to be simple enough for beginners, 
-powerful and expressive for professionals and for this reason it has a very small syntax set with a very low 
+yet powerful and expressive for professionals and for this reason it has a very small syntax set with a very low 
 learning curve. 
 
 Blade improves upon the best features of JavaScript, Python and Ruby to give developers a familiar and powerful 
