@@ -73,6 +73,9 @@ set(BLADE_SOURCES
 		)
 
 add_definitions(-DEXPORT_LIBS)
+if(UNIX AND NOT APPLE AND BSD_SOURCE)
+	add_definitions(-D_BSD_SOURCE)
+endif()
 
 include_directories(src thirdparty)
 

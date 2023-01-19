@@ -495,7 +495,17 @@ DECLARE_FILE_METHOD(stats) {
         SET_DICT_STRING(dict, "uid", 3, NUMBER_VAL(stats.st_uid));
         SET_DICT_STRING(dict, "gid", 3, NUMBER_VAL(stats.st_gid));
 
-#if !defined(_WIN32) && (!defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE)) && !defined(__MUSL__)
+#if defined(_BSD_SOURCE) || defined(__MUSL__)
+        // last modified time in milliseconds
+        SET_DICT_STRING(dict, "mtime", 5, NUMBER_VAL(stats.st_mtim));
+        // last accessed time in milliseconds
+        SET_DICT_STRING(dict, "atime", 5, NUMBER_VAL(stats.st_atim));
+        // last c time in milliseconds
+        SET_DICT_STRING(dict, "ctime", 5, NUMBER_VAL(stats.st_ctim));
+        // blocks
+        SET_DICT_STRING(dict, "blocks", 6, NUMBER_VAL(0));
+        SET_DICT_STRING(dict, "blksize", 7, NUMBER_VAL(0));
+#elif !defined(_WIN32) && (!defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE))
         // last modified time in milliseconds
         SET_DICT_STRING(dict, "mtime", 5, NUMBER_VAL(stats.st_mtimespec.tv_sec));
         // last accessed time in milliseconds
@@ -509,7 +519,7 @@ DECLARE_FILE_METHOD(stats) {
         // last modified time in milliseconds
         SET_DICT_STRING(dict, "mtime", 5, NUMBER_VAL(stats.st_mtime));
         // last accessed time in milliseconds
-        SET_DICT_STRING(dict, "mtime", 5, NUMBER_VAL(stats.st_mtime));
+        SET_DICT_STRING(dict, "atime", 5, NUMBER_VAL(stats.st_atime));
         // last c time in milliseconds
         SET_DICT_STRING(dict, "ctime", 5, NUMBER_VAL(stats.st_ctime));
         // blocks
