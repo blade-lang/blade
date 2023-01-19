@@ -153,7 +153,7 @@ set_target_properties(libblade
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 endif()
-if(MINGW)
+if(MINGW OR MUSL)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-stringop-overread")
 endif()
 
