@@ -727,7 +727,7 @@ DECLARE_FILE_METHOD(set_times) {
     if (status == 0) {
       struct utimbuf new_times;
 
-#if !defined(_WIN32) && (!defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE))
+#if !defined(_WIN32) && (!defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE)) && !defined(_BSD_SOURCE) && !defined(__MUSL__)
       if (atime == (time_t) -1)
         new_times.actime = stats.st_atimespec.tv_sec;
       else
