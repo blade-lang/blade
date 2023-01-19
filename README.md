@@ -84,7 +84,7 @@ To start using Blade, please refer to the [Tutorial](https://bladelang.com/tutor
 
 ## API Documentaion
 
-API documentation for Blade which is under active development can be found at [bladelang.com](https://bladelang.com/docs/).
+API documentation for Blade which is under active development can be found at [bladelang.com](https://bladelang.com/standard/index.html).
 
 ## Community
 
