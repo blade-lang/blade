@@ -23,7 +23,7 @@ target_link_libraries(clib libblade)
 add_dependencies(clib blade)
 
 set(FFI_ROOT ${CMAKE_CURRENT_LIST_DIR}/libffi)
-if(NOT WIN32)
+if(NOT WIN32 AND NOT MUSL)
     include(libffi/CMakeLists.txt)
     message(STATUS "FFI Version -- ${FFI_VERSION}")
     include_directories(${FFI_INCLUDE_DIRS})
