@@ -80,7 +80,7 @@ To install Blade, please follow the instructions in the [Building](./BUILDING.md
 
 ## Usage
 
-To start using Blade, please refer to the [Getting Started](https://bladelang.com/tutorial/getting-started.html) guide in the documentation.
+To start using Blade, please refer to the [Tutorial](https://bladelang.com/tutorial/index.html) guide in the documentation.
 
 ## API Documentaion
 
