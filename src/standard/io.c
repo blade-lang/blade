@@ -106,7 +106,7 @@ DECLARE_MODULE_METHOD(io_tty__tcgetattr) {
   dict_add_entry(vm, dict, NUMBER_VAL(1), NUMBER_VAL(raw_attr.c_oflag));
   dict_add_entry(vm, dict, NUMBER_VAL(2), NUMBER_VAL(raw_attr.c_cflag));
   dict_add_entry(vm, dict, NUMBER_VAL(3), NUMBER_VAL(raw_attr.c_lflag));
-#if !defined(_BSD_SOURCE) && !defined(__MUSL__)
+#if !defined(__MUSL__)
   dict_add_entry(vm, dict, NUMBER_VAL(4), NUMBER_VAL(raw_attr.c_ispeed));
   dict_add_entry(vm, dict, NUMBER_VAL(5), NUMBER_VAL(raw_attr.c_ospeed));
 #else
@@ -182,7 +182,7 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
   if (dict_get_entry(dict, NUMBER_VAL(3), &iflag)) {
     raw.c_lflag = (long) AS_NUMBER(lflag);
   }
-#if !defined(_BSD_SOURCE) && !defined(__MUSL__)
+#if !defined(__MUSL__)
   if (dict_get_entry(dict, NUMBER_VAL(4), &iflag)) {
     raw.c_ispeed = (long) AS_NUMBER(ispeed);
   }
