@@ -12,7 +12,7 @@
 
 Blade is a simple, clean, and embeddable dynamic programming language created to be simple enough for beginners, yet powerful and expressive for professionals. It has a very small syntax set with a very low learning curve. Blade improves upon the best features of JavaScript, Python, and Ruby to give developers a familiar and powerful system that feels native for developers coming from any of these languages and an easy way to leverage the strength of any.
 
-Blade also comes with [Nyssa](https://nyssa.bladelang.com), the official package manager, which makes it easy to install and manage packages and modules.
+Blade also comes with [Nyssa](https://github.com/blade-lang/nyssa), the official package manager, which makes it easy to install and manage packages and modules.
 
 ## Features
 
