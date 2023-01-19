@@ -98,4 +98,4 @@ Blade desire to make the community around it as friendly and welcoming as possib
 
 ## License
 
-Blade is licensed under the [MIT License](https://github.com/blade-lang/blade/blob/master/LICENSE).
+Blade is licensed under the [2-clause BSDL License](https://github.com/blade-lang/blade/blob/master/LICENSE).
