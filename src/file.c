@@ -468,33 +468,20 @@ DECLARE_FILE_METHOD(stats) {
 
 #ifndef _WIN32
         // read mode
-        SET_DICT_STRING(dict, "is_readable", 11,
-                        BOOL_VAL(((stats.st_mode & S_IRUSR) != 0)));
-
+        SET_DICT_STRING(dict, "is_readable", 11, BOOL_VAL(((stats.st_mode & S_IRUSR) != 0)));
         // write mode
-        SET_DICT_STRING(dict, "is_writable", 11,
-                        BOOL_VAL(((stats.st_mode & S_IWUSR) != 0)));
-
+        SET_DICT_STRING(dict, "is_writable", 11, BOOL_VAL(((stats.st_mode & S_IWUSR) != 0)));
         // execute mode
-        SET_DICT_STRING(dict, "is_executable", 13,
-                        BOOL_VAL(((stats.st_mode & S_IXUSR) != 0)));
-
+        SET_DICT_STRING(dict, "is_executable", 13, BOOL_VAL(((stats.st_mode & S_IXUSR) != 0)));
         // is symbolic link
-        SET_DICT_STRING(dict, "is_symbolic", 11,
-                        BOOL_VAL((S_ISLNK(stats.st_mode) != 0)));
+        SET_DICT_STRING(dict, "is_symbolic", 11, BOOL_VAL((S_ISLNK(stats.st_mode) != 0)));
 #else
         // read mode
-        SET_DICT_STRING(dict, "is_readable", 11,
-                        BOOL_VAL(((stats.st_mode & S_IREAD) != 0)));
-
+        SET_DICT_STRING(dict, "is_readable", 11, BOOL_VAL(((stats.st_mode & S_IREAD) != 0)));
         // write mode
-        SET_DICT_STRING(dict, "is_writable", 11,
-                        BOOL_VAL(((stats.st_mode & S_IWRITE) != 0)));
-
+        SET_DICT_STRING(dict, "is_writable", 11, BOOL_VAL(((stats.st_mode & S_IWRITE) != 0)));
         // execute mode
-        SET_DICT_STRING(dict, "is_executable", 13,
-                        BOOL_VAL(((stats.st_mode & S_IEXEC) != 0)));
-
+        SET_DICT_STRING(dict, "is_executable", 13, BOOL_VAL(((stats.st_mode & S_IEXEC) != 0)));
         // is symbolic link
         SET_DICT_STRING(dict, "is_symbolic", 11, BOOL_VAL(false));
 #endif /* ifndef _WIN32 */
@@ -508,35 +495,26 @@ DECLARE_FILE_METHOD(stats) {
         SET_DICT_STRING(dict, "uid", 3, NUMBER_VAL(stats.st_uid));
         SET_DICT_STRING(dict, "gid", 3, NUMBER_VAL(stats.st_gid));
 
-#if !defined(_WIN32) && (!defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE))
-
+#if !defined(_WIN32) && (!defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE)) && !defined(__MUSL__)
         // last modified time in milliseconds
-        SET_DICT_STRING(dict, "mtime", 5,
-                        NUMBER_VAL(stats.st_mtimespec.tv_sec));
-
+        SET_DICT_STRING(dict, "mtime", 5, NUMBER_VAL(stats.st_mtimespec.tv_sec));
         // last accessed time in milliseconds
-        SET_DICT_STRING(dict, "atime", 5,
-                        NUMBER_VAL(stats.st_atimespec.tv_sec));
-
+        SET_DICT_STRING(dict, "atime", 5, NUMBER_VAL(stats.st_atimespec.tv_sec));
         // last c time in milliseconds
-        SET_DICT_STRING(dict, "ctime", 5,
-                        NUMBER_VAL(stats.st_ctimespec.tv_sec));
-
+        SET_DICT_STRING(dict, "ctime", 5, NUMBER_VAL(stats.st_ctimespec.tv_sec));
         // blocks
         SET_DICT_STRING(dict, "blocks", 6, NUMBER_VAL(stats.st_blocks));
         SET_DICT_STRING(dict, "blksize", 7, NUMBER_VAL(stats.st_blksize));
-
 #else
-
         // last modified time in milliseconds
         SET_DICT_STRING(dict, "mtime", 5, NUMBER_VAL(stats.st_mtime));
-
         // last accessed time in milliseconds
         SET_DICT_STRING(dict, "mtime", 5, NUMBER_VAL(stats.st_mtime));
-
         // last c time in milliseconds
         SET_DICT_STRING(dict, "ctime", 5, NUMBER_VAL(stats.st_ctime));
-
+        // blocks
+        SET_DICT_STRING(dict, "blocks", 6, NUMBER_VAL(0));
+        SET_DICT_STRING(dict, "blksize", 7, NUMBER_VAL(0));
 #endif
       }
     } else {

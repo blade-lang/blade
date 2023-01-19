@@ -32,7 +32,7 @@ install_if_missing() {
 
     # On Ubuntu with snap, snap is the correct way to get an up-to-date cmake version.
     if [[ "$@" == "cmake" && -x "$(command -v snap)" ]]; then snap install cmake --classic
-    elif [ -x "$(command -v apk)" ]; then sudo apk add --no-cache $@ -y
+    elif [ -x "$(command -v apk)" ]; then sudo apk add --no-cache $@
     elif [ -x "$(command -v apt-get)" ]; then sudo apt-get install $@ -y
     elif [ -x "$(command -v dnf)" ]; then sudo dnf install $@ -y
     elif [ -x "$(command -v zypper)" ]; then sudo zypper install $@ -y
