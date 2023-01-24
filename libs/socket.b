@@ -1008,3 +1008,14 @@ def get_address_info(address, type, family) {
 
   return _socket.getaddrinfo(address, type, family)
 }
+
+/**
+ * socket(family: number [, type: number [, protocol: number]])
+ * 
+ * Returns a new instance of a Socket.
+ * @example socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
+ * @see class Socket
+ */
+def socket(family, type, protocol) {
+  return Socket(family, type, protocol)
+}

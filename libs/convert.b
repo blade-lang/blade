@@ -22,14 +22,17 @@ def hex_to_bytes(str) {
   if !is_string(str)
     die Exception('string expected, ${typeof(str)} given')
 
+  # str = ''.join(str.to_list().reverse())
+
   var length = str.length()
-  var b = bytes(length / 2)
+  var b = [0] * (length / 2)
 
   iter var i = 0; i < length - 1; i += 2 {
     b[i / 2] = to_number('0x${str[i,i+2]}')
   }
+  if length % 2 != 0 b.append(_reverse_hex_table.index_of(str[-1].upper()))
 
-  return b
+  return bytes(b.reverse())
 }
 
 /**
