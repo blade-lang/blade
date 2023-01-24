@@ -363,6 +363,8 @@ DECLARE_MODULE_METHOD(ssl_read) {
       int error = SSL_get_error(ssl, bytes);
       if(error == SSL_ERROR_WANT_READ) {
         continue;
+      } else if(error == SSL_ERROR_ZERO_RETURN) {
+        break;
       } else {
         char *err = ERR_error_string(error, NULL);
         RETURN_ERROR(err);
