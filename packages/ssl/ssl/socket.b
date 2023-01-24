@@ -1,6 +1,6 @@
 #!-- part of the ssl module
 
-import .constants { TLS_server_method }
+import .constants { TLS_server_method, TLS_method }
 import .context { SSLContext }
 import .ssl { SSL }
 
@@ -114,7 +114,7 @@ class TLSSocket {
     if !socket self._socket = Socket()
     else self._socket = socket
 
-    if !context self._context = SSLContext(TLS_server_method)
+    if !context self._context = SSLContext(TLS_method)
     else self._context = context
 
     self._ssl = ssl
@@ -131,11 +131,10 @@ class TLSSocket {
    */
   connect(host, port, timeout) {
     if self._socket.connect(host, port, timeout) {
-      if self._ssl {
-        self._ssl = SSL(self._context)
-        self._ssl.set_fd(self._socket.id)
+      self._ssl = SSL(self._context)
+      if self._ssl.set_fd(self._socket.id) {
+        return self._ssl.connect()
       }
-      return self._ssl.connect()
     }
     return false
   }
@@ -341,6 +340,12 @@ class TLSSocket {
    */
   get_context() {
     return self._context
+  }
+
+  set_context(context) {
+    if !instance_of(content, SSLContext)
+      die Exception('instance of SSLContext expected')
+    self._context = context
   }
 
   @to_string() {

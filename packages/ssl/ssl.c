@@ -328,6 +328,7 @@ DECLARE_MODULE_METHOD(ssl_write) {
   SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
   b_obj_bytes *bytes = AS_BYTES(args[1]);
 
+  ERR_clear_error();
   RETURN_NUMBER(SSL_write(ssl, bytes->bytes.bytes, bytes->bytes.count));
 }
 
@@ -343,6 +344,7 @@ DECLARE_MODULE_METHOD(ssl_read) {
   memset(data, 0, sizeof(char));
   int total = 0;
   char buffer[1025];
+  ERR_clear_error();
 
   do {
     int bytes = SSL_read(ssl, buffer, 1024);
@@ -357,8 +359,17 @@ DECLARE_MODULE_METHOD(ssl_read) {
       total += bytes;
 
       if(total > length && length != -1) break;
+    } else {
+      int error = SSL_get_error(ssl, bytes);
+      if(error == SSL_ERROR_WANT_READ) {
+        continue;
+      } else {
+        char *err = ERR_error_string(error, NULL);
+        RETURN_ERROR(err);
+      }
     }
-    if(bytes <= 0) break;
+
+    break;
   } while (1);
 
   RETURN_T_STRING(data, total > length && length != -1 ? length : total);
@@ -456,18 +467,33 @@ DECLARE_MODULE_METHOD(ssl_error_string) {
 DECLARE_MODULE_METHOD(ssl_accept) {
   ENFORCE_ARG_COUNT(accept, 1);
   ENFORCE_ARG_TYPE(accept, 0, IS_PTR);
+  ERR_clear_error();
   RETURN_NUMBER(SSL_accept((SSL*)AS_PTR(args[0])->pointer));
 }
 
 DECLARE_MODULE_METHOD(ssl_connect) {
   ENFORCE_ARG_COUNT(connect, 1);
   ENFORCE_ARG_TYPE(connect, 0, IS_PTR);
-  RETURN_BOOL(SSL_connect((SSL*)AS_PTR(args[0])->pointer) > 0);
+
+  SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
+  ERR_clear_error();
+
+  int res;
+  do {
+    res = SSL_connect(ssl);
+    int error = SSL_get_error(ssl, res);
+    if(error != SSL_ERROR_WANT_READ && error != SSL_ERROR_WANT_WRITE && error != SSL_ERROR_WANT_CONNECT) {
+      break;
+    }
+  } while(res == -1);
+
+  RETURN_BOOL(res > 0);
 }
 
 DECLARE_MODULE_METHOD(ssl_do_accept) {
   ENFORCE_ARG_COUNT(do_accept, 1);
   ENFORCE_ARG_TYPE(do_accept, 0, IS_PTR);
+  ERR_clear_error();
   RETURN_BOOL(BIO_do_accept((BIO*)AS_PTR(args[0])->pointer));
 }
 
@@ -510,9 +536,8 @@ DECLARE_MODULE_METHOD(ssl_set_fd) {
   ENFORCE_ARG_TYPE(set_fd, 0, IS_PTR);
   ENFORCE_ARG_TYPE(set_fd, 1, IS_NUMBER); // fd
 
-  SSL *bio = (SSL*)AS_PTR(args[0])->pointer;
-  SSL_set_fd(bio, AS_NUMBER(args[1]));
-  RETURN;
+  SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
+  RETURN_BOOL(SSL_set_fd(ssl, AS_NUMBER(args[1])) == 1);
 }
 
 DECLARE_MODULE_METHOD(ssl_shutdown) {

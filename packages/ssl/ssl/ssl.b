@@ -75,7 +75,7 @@ class SSL {
    * 
    * connects to an SSL server instance
    */
-  accept() {
+  connect() {
     return _ssl.connect(self._ptr)
   }
 
