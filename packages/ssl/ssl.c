@@ -366,8 +366,7 @@ DECLARE_MODULE_METHOD(ssl_read) {
       } else if(error == SSL_ERROR_ZERO_RETURN) {
         break;
       } else {
-        char *err = ERR_error_string(error, NULL);
-        RETURN_ERROR(err);
+        RETURN_SSL_ERROR();
       }
     }
 
@@ -458,7 +457,7 @@ DECLARE_MODULE_METHOD(ssl_error_string) {
   SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
   int code = SSL_get_error(ssl, ret);
   if(code != SSL_ERROR_SYSCALL) {
-    char *err = ERR_error_string(code, NULL);
+    char *err = ERR_reason_error_string(ERR_get_error());
     RETURN_STRING(err);
   } else {
     char *error = strerror(errno);
