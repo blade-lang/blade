@@ -14,16 +14,16 @@ DEFINE_SSL_CONSTANT(SSL_VERIFY_POST_HANDSHAKE)
 DEFINE_SSL_CONSTANT(BIO_CLOSE)
 DEFINE_SSL_CONSTANT(BIO_NOCLOSE)
 
-DEFINE_SSL_PTR_CONSTANT(TLS_method,())
-DEFINE_SSL_PTR_CONSTANT(TLS_client_method,())
-DEFINE_SSL_PTR_CONSTANT(TLS_server_method,())
-DEFINE_SSL_PTR_CONSTANT(SSLv23_method,())
-DEFINE_SSL_PTR_CONSTANT(SSLv23_client_method,())
-DEFINE_SSL_PTR_CONSTANT(SSLv23_server_method,())
+DEFINE_SSL_PTR_CONSTANT(TLS_method)
+DEFINE_SSL_PTR_CONSTANT(TLS_client_method)
+DEFINE_SSL_PTR_CONSTANT(TLS_server_method)
+DEFINE_SSL_PTR_CONSTANT(SSLv23_method)
+DEFINE_SSL_PTR_CONSTANT(SSLv23_client_method)
+DEFINE_SSL_PTR_CONSTANT(SSLv23_server_method)
 
-DEFINE_SSL_PTR_CONSTANT(BIO_f_ssl,())
-DEFINE_SSL_PTR_CONSTANT(BIO_s_connect,())
-DEFINE_SSL_PTR_CONSTANT(BIO_s_accept,())
+DEFINE_SSL_PTR_CONSTANT(BIO_f_ssl)
+DEFINE_SSL_PTR_CONSTANT(BIO_s_connect)
+DEFINE_SSL_PTR_CONSTANT(BIO_s_accept)
 
 DECLARE_MODULE_METHOD(ssl_ctx) {
   ENFORCE_ARG_COUNT(ctx, 1);
@@ -323,12 +323,13 @@ DECLARE_MODULE_METHOD(ssl_bio_write) {
 DECLARE_MODULE_METHOD(ssl_write) {
   ENFORCE_ARG_COUNT(write, 2);
   ENFORCE_ARG_TYPE(write, 0, IS_PTR);
-  ENFORCE_ARG_TYPE(write, 1, IS_STRING); // data
+  ENFORCE_ARG_TYPE(write, 1, IS_BYTES); // data
 
   SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
-  b_obj_string *string = AS_STRING(args[1]);
+  b_obj_bytes *bytes = AS_BYTES(args[1]);
 
-  RETURN_NUMBER(SSL_write(ssl, string->chars, string->length));
+  ERR_clear_error();
+  RETURN_NUMBER(SSL_write(ssl, bytes->bytes.bytes, bytes->bytes.count));
 }
 
 DECLARE_MODULE_METHOD(ssl_read) {
@@ -343,6 +344,7 @@ DECLARE_MODULE_METHOD(ssl_read) {
   memset(data, 0, sizeof(char));
   int total = 0;
   char buffer[1025];
+  ERR_clear_error();
 
   do {
     int bytes = SSL_read(ssl, buffer, 1024);
@@ -357,8 +359,17 @@ DECLARE_MODULE_METHOD(ssl_read) {
       total += bytes;
 
       if(total > length && length != -1) break;
+    } else {
+      int error = SSL_get_error(ssl, bytes);
+      if(error == SSL_ERROR_WANT_READ) {
+        continue;
+      } else {
+        char *err = ERR_error_string(error, NULL);
+        RETURN_ERROR(err);
+      }
     }
-    if(bytes <= 0) break;
+
+    break;
   } while (1);
 
   RETURN_T_STRING(data, total > length && length != -1 ? length : total);
@@ -456,18 +467,33 @@ DECLARE_MODULE_METHOD(ssl_error_string) {
 DECLARE_MODULE_METHOD(ssl_accept) {
   ENFORCE_ARG_COUNT(accept, 1);
   ENFORCE_ARG_TYPE(accept, 0, IS_PTR);
+  ERR_clear_error();
   RETURN_NUMBER(SSL_accept((SSL*)AS_PTR(args[0])->pointer));
 }
 
 DECLARE_MODULE_METHOD(ssl_connect) {
   ENFORCE_ARG_COUNT(connect, 1);
   ENFORCE_ARG_TYPE(connect, 0, IS_PTR);
-  RETURN_BOOL(SSL_connect((SSL*)AS_PTR(args[0])->pointer) > 0);
+
+  SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
+  ERR_clear_error();
+
+  int res;
+  do {
+    res = SSL_connect(ssl);
+    int error = SSL_get_error(ssl, res);
+    if(error != SSL_ERROR_WANT_READ && error != SSL_ERROR_WANT_WRITE && error != SSL_ERROR_WANT_CONNECT) {
+      break;
+    }
+  } while(res == -1);
+
+  RETURN_BOOL(res > 0);
 }
 
 DECLARE_MODULE_METHOD(ssl_do_accept) {
   ENFORCE_ARG_COUNT(do_accept, 1);
   ENFORCE_ARG_TYPE(do_accept, 0, IS_PTR);
+  ERR_clear_error();
   RETURN_BOOL(BIO_do_accept((BIO*)AS_PTR(args[0])->pointer));
 }
 
@@ -510,9 +536,8 @@ DECLARE_MODULE_METHOD(ssl_set_fd) {
   ENFORCE_ARG_TYPE(set_fd, 0, IS_PTR);
   ENFORCE_ARG_TYPE(set_fd, 1, IS_NUMBER); // fd
 
-  SSL *bio = (SSL*)AS_PTR(args[0])->pointer;
-  SSL_set_fd(bio, AS_NUMBER(args[1]));
-  RETURN;
+  SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
+  RETURN_BOOL(SSL_set_fd(ssl, AS_NUMBER(args[1])) == 1);
 }
 
 DECLARE_MODULE_METHOD(ssl_shutdown) {
@@ -538,6 +563,10 @@ void __ssl_module_preloader(b_vm *vm) {
 CREATE_MODULE_LOADER(ssl) {
 
   static b_field_reg module_fields[] = {
+      {NULL,       false, NULL},
+  };
+
+  static b_func_reg module_functions[] = {
       /**
        * constants
        */
@@ -572,10 +601,9 @@ CREATE_MODULE_LOADER(ssl) {
       GET_SSL_CONSTANT(BIO_s_connect),
       GET_SSL_CONSTANT(BIO_s_accept),
 
-      {NULL,       false, NULL},
-  };
-
-  static b_func_reg module_functions[] = {
+      /**
+       * methods
+       */
       {"ctx",   true,  GET_MODULE_METHOD(ssl_ctx)},
       {"ctx_free",   true,  GET_MODULE_METHOD(ssl_ctx_free)},
       {"ctx_set_verify",   true,  GET_MODULE_METHOD(ssl_ctx_set_verify)},

@@ -7,12 +7,19 @@ import .status
 
 import socket as so
 import iters
+import ssl
 
 /**
  * HTTP server
  * @printable
  */
 class HttpServer {
+
+  /**
+   * A boolean value indicating if the server should/will be TLS/SSL secured or not.
+   * @default false
+   */
+  var is_secure = false
 
   /**
    * The host address to which this server will be bound
@@ -56,6 +63,20 @@ class HttpServer {
   var write_timeout = 2000
 
   /**
+   * The SSL/TLS ceritificate file that will be used be used by a secured server for 
+   * serving requests.
+   * @note do not set a value to it directly. Use `load_certs()` instead.
+   */
+  var cert_file
+
+  /**
+   * The SSL/TLS private key file that will be used be used by a secured server for 
+   * serving requests.
+   * @note do not set a value to it directly. Use `load_certs()` instead.
+   */
+  var private_key_file
+
+  /**
    * This value controls whether the client certificate should be verified 
    * or not.
    * @boolean
@@ -75,10 +96,10 @@ class HttpServer {
   var _error_listeners = []
 
   /**
-   * HttpServer(port: int [, host: string])
+   * HttpServer(port: int [, host: string [, is_secure: bool]])
    * @constructor
    */
-  HttpServer(port, host) {
+  HttpServer(port, host, is_secure) {
 
     if !is_int(port) or port <= 0
       die HttpException('invalid port number')
@@ -88,7 +109,39 @@ class HttpServer {
       die HttpException('invalid host')
     else if host != nil self.host = host
 
-    self.socket = so.Socket()
+    if is_secure != nil and !is_bool(is_secure)
+      die Exception('is_secure must be boolean')
+    if !is_secure is_secure = false
+
+    self.socket = !is_secure ? so.Socket() : ssl.TLSSocket()
+    # self.socket = so.Socket()
+    self.is_secure = is_secure
+  }
+
+  /**
+   * load_certs(cert_file: string | file [, private_key_file: string | file])
+   * 
+   * loads the given SSL/TLS certificate pairs for the given SSL/TLS context.
+   * @note certificates can only be loaded for secure servers.
+   * @return bool
+   */
+  load_certs(cert_file, private_key_file) {
+    if !self.is_secure
+      die HttpException('certificates can only be loaded for secure servers')
+
+    if !private_key_file private_key_file = cert_file
+
+    self.socket.get_context().set_verify(self.verify_certs ? ssl.SSL_VERIFY_PEER : ssl.SSL_VERIFY_NONE)
+
+    if self.socket.get_context().load_certs(cert_file, private_key_file) {
+      self.cert_file = cert_file
+      self.private_key_file = private_key_file
+
+      return self.socket.get_context().set_ciphers(self._ciphers)
+    } else {
+      # die Exception('could not load certificate(s)')
+      return false
+    }
   }
 
   /**
@@ -100,6 +153,8 @@ class HttpServer {
     self._is_listening = false
     if !self.socket.is_closed
       self.socket.close()
+    if self.is_secure
+      self.socket.get_context().free()  # close the TLS socket context.
   }
 
   /**
@@ -236,6 +291,13 @@ class HttpServer {
    * connection from HTTP clients.
    */
   listen() {
+    if self.is_secure {
+      if !self.cert_file
+        die HttpException('no certificate loaded for secure server')
+      if !self.private_key_file 
+        die HttpException('no private key loaded for secure server')
+    }
+
     if !self.socket.is_listening {
       self.socket.set_option(so.SO_REUSEADDR, is_bool(self.resuse_address) ? self.resuse_address : true)
       self.socket.bind(self.port, self.host)
@@ -259,6 +321,7 @@ class HttpServer {
           var data = client.receive()
 
           if data {
+            if self.is_secure data = to_string(data)
             self._process_received(data, client)
           }
         } catch Exception e {

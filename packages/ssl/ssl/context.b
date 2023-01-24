@@ -53,8 +53,9 @@ class SSLContext {
   load_certs(cert_file, private_key_file) {
     if !is_string(cert_file) and !is_file(cert_file)
       die Exception('cert_file must be a string or file')
-    if !is_string(private_key_file) and !is_file(private_key_file)
+    if private_key_file != nil and !is_string(private_key_file) and !is_file(private_key_file)
       die Exception('private_key_file must be a string or file')
+    if !private_key_file private_key_file = cert_file
 
     if is_file(cert_file) cert_file = cert_file.abs_path()
     if is_file(private_key_file) private_key_file = private_key_file.abs_path()
