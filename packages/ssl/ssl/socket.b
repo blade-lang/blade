@@ -342,6 +342,10 @@ class TLSSocket {
     return self._context
   }
 
+  get_ssl() {
+    return self._ssl
+  }
+
   set_context(context) {
     if !instance_of(content, SSLContext)
       die Exception('instance of SSLContext expected')

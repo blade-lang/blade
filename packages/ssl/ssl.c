@@ -457,7 +457,7 @@ DECLARE_MODULE_METHOD(ssl_error_string) {
   SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
   int code = SSL_get_error(ssl, ret);
   if(code != SSL_ERROR_SYSCALL) {
-    char *err = ERR_reason_error_string(ERR_get_error());
+    const char *err = ERR_reason_error_string(ERR_get_error());
     RETURN_STRING(err);
   } else {
     char *error = strerror(errno);
