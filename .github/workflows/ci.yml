@@ -76,20 +76,20 @@ jobs:
           cmake-version: '3.18.x'
       - name: Setup WinLibs cache
         uses: actions/cache@v2
-          id: cache-winlibs
-          with:
-            path: ..\..\_actions\bwoodsend
-            key: windows-winlibs-cache
-            restore-keys: |
-              windows-winlibs-cache
+        id: cache-winlibs
+        with:
+          path: ..\..\_actions\bwoodsend
+          key: windows-winlibs-cache
+          restore-keys: |
+            windows-winlibs-cache
       - name: Setup vcpkg cache
         uses: actions/cache@v2
-          id: cache-vcpkg
-          with:
-            path: .\vcpkg\
-            key: windows-vcpkg-cache
-            restore-keys: |
-              windows-vcpkg-cache
+        id: cache-vcpkg
+        with:
+          path: .\vcpkg\
+          key: windows-vcpkg-cache
+          restore-keys: |
+            windows-vcpkg-cache
       - name: Setup WinLibs
         if: steps.cache-winlibs.outputs.cache-hit != 'true'
         uses: bwoodsend/setup-winlibs-action@v1.8
