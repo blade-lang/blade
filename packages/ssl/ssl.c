@@ -14,16 +14,16 @@ DEFINE_SSL_CONSTANT(SSL_VERIFY_POST_HANDSHAKE)
 DEFINE_SSL_CONSTANT(BIO_CLOSE)
 DEFINE_SSL_CONSTANT(BIO_NOCLOSE)
 
-DEFINE_SSL_PTR_CONSTANT(TLS_method,())
-DEFINE_SSL_PTR_CONSTANT(TLS_client_method,())
-DEFINE_SSL_PTR_CONSTANT(TLS_server_method,())
-DEFINE_SSL_PTR_CONSTANT(SSLv23_method,())
-DEFINE_SSL_PTR_CONSTANT(SSLv23_client_method,())
-DEFINE_SSL_PTR_CONSTANT(SSLv23_server_method,())
+DEFINE_SSL_PTR_CONSTANT(TLS_method)
+DEFINE_SSL_PTR_CONSTANT(TLS_client_method)
+DEFINE_SSL_PTR_CONSTANT(TLS_server_method)
+DEFINE_SSL_PTR_CONSTANT(SSLv23_method)
+DEFINE_SSL_PTR_CONSTANT(SSLv23_client_method)
+DEFINE_SSL_PTR_CONSTANT(SSLv23_server_method)
 
-DEFINE_SSL_PTR_CONSTANT(BIO_f_ssl,())
-DEFINE_SSL_PTR_CONSTANT(BIO_s_connect,())
-DEFINE_SSL_PTR_CONSTANT(BIO_s_accept,())
+DEFINE_SSL_PTR_CONSTANT(BIO_f_ssl)
+DEFINE_SSL_PTR_CONSTANT(BIO_s_connect)
+DEFINE_SSL_PTR_CONSTANT(BIO_s_accept)
 
 DECLARE_MODULE_METHOD(ssl_ctx) {
   ENFORCE_ARG_COUNT(ctx, 1);
@@ -323,12 +323,12 @@ DECLARE_MODULE_METHOD(ssl_bio_write) {
 DECLARE_MODULE_METHOD(ssl_write) {
   ENFORCE_ARG_COUNT(write, 2);
   ENFORCE_ARG_TYPE(write, 0, IS_PTR);
-  ENFORCE_ARG_TYPE(write, 1, IS_STRING); // data
+  ENFORCE_ARG_TYPE(write, 1, IS_BYTES); // data
 
   SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
-  b_obj_string *string = AS_STRING(args[1]);
+  b_obj_bytes *bytes = AS_BYTES(args[1]);
 
-  RETURN_NUMBER(SSL_write(ssl, string->chars, string->length));
+  RETURN_NUMBER(SSL_write(ssl, bytes->bytes.bytes, bytes->bytes.count));
 }
 
 DECLARE_MODULE_METHOD(ssl_read) {
@@ -538,6 +538,10 @@ void __ssl_module_preloader(b_vm *vm) {
 CREATE_MODULE_LOADER(ssl) {
 
   static b_field_reg module_fields[] = {
+      {NULL,       false, NULL},
+  };
+
+  static b_func_reg module_functions[] = {
       /**
        * constants
        */
@@ -572,10 +576,9 @@ CREATE_MODULE_LOADER(ssl) {
       GET_SSL_CONSTANT(BIO_s_connect),
       GET_SSL_CONSTANT(BIO_s_accept),
 
-      {NULL,       false, NULL},
-  };
-
-  static b_func_reg module_functions[] = {
+      /**
+       * methods
+       */
       {"ctx",   true,  GET_MODULE_METHOD(ssl_ctx)},
       {"ctx_free",   true,  GET_MODULE_METHOD(ssl_ctx_free)},
       {"ctx_set_verify",   true,  GET_MODULE_METHOD(ssl_ctx_set_verify)},

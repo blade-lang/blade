@@ -2,22 +2,22 @@
 #define BLADE_SSL_MODULE_H
 
 #define DEFINE_SSL_CONSTANT(v) \
-  b_value __ssl_##v(b_vm *vm) { \
-    return NUMBER_VAL(v); \
+  DECLARE_MODULE_METHOD(ssl_const_##v) { \
+    RETURN_NUMBER(v); \
   }
 
 #define DEFINE_SSL_STR_CONSTANT(v) \
-  b_value __ssl_##v(b_vm *vm) { \
-    return STRING_VAL(v); \
+  DECLARE_MODULE_METHOD(ssl_const_##v) { \
+    RETURN_STRING(v); \
   }
 
-#define DEFINE_SSL_PTR_CONSTANT(v, j) \
-  b_value __ssl_##v(b_vm *vm) { \
-    return OBJ_VAL(new_ptr(vm, (void*)v j)); \
+#define DEFINE_SSL_PTR_CONSTANT(v) \
+  DECLARE_MODULE_METHOD(ssl_const_##v) { \
+    RETURN_PTR(v()); \
   }
 
 #define GET_SSL_CONSTANT(v) \
-  {#v, true, __ssl_##v}
+  {#v, true, GET_MODULE_METHOD(ssl_const_##v)}
 
 #include <openssl/bio.h>
 #include <openssl/err.h>

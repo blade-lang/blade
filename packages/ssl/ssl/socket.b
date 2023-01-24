@@ -258,8 +258,8 @@ class TLSSocket {
    */
   close() {
     if self._ssl {
-      self._ssl.shutdown()
-      self._ssl.free()
+      # self._ssl.shutdown()
+      # self._ssl.free()
     }
     var result = self._socket.close()
     return result

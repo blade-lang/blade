@@ -7,12 +7,12 @@ import _ssl
 /**
  * SSL_FILETYPE_PEM
  */
-var SSL_FILETYPE_PEM = _ssl.SSL_FILETYPE_PEM
+var SSL_FILETYPE_PEM = _ssl.SSL_FILETYPE_PEM()
 
 /**
  * SSL_FILETYPE_ASN1
  */
-var SSL_FILETYPE_ASN1 = _ssl.SSL_FILETYPE_ASN1
+var SSL_FILETYPE_ASN1 = _ssl.SSL_FILETYPE_ASN1()
 
 
 
@@ -24,7 +24,7 @@ var SSL_FILETYPE_ASN1 = _ssl.SSL_FILETYPE_ASN1
  * the server will send a certificate which will be checked. The handshake 
  * will be continued regardless of the verification result.
  */
-var SSL_VERIFY_NONE = _ssl.SSL_VERIFY_NONE
+var SSL_VERIFY_NONE = _ssl.SSL_VERIFY_NONE()
 
 /**
  * - `Server mode`: the server sends a client certificate request to the client. 
@@ -39,7 +39,7 @@ var SSL_VERIFY_NONE = _ssl.SSL_VERIFY_NONE
  * containing the reason for the verification failure. If no server certificate is sent, 
  * because an anonymous cipher is used, SSL_VERIFY_PEER is ignored.
  */
-var SSL_VERIFY_PEER = _ssl.SSL_VERIFY_PEER
+var SSL_VERIFY_PEER = _ssl.SSL_VERIFY_PEER()
 
 /**
  * - `Server mode`: if the client did not return a certificate, the TLS/SSL handshake is 
@@ -48,7 +48,7 @@ var SSL_VERIFY_PEER = _ssl.SSL_VERIFY_PEER
  * 
  * - `Client mode`: ignored
  */
-var SSL_VERIFY_FAIL_IF_NO_PEER_CERT = _ssl.SSL_VERIFY_FAIL_IF_NO_PEER_CERT
+var SSL_VERIFY_FAIL_IF_NO_PEER_CERT = _ssl.SSL_VERIFY_FAIL_IF_NO_PEER_CERT()
 
 /**
  * - `Server mode`: only request a client certificate once during the connection. Do not 
@@ -58,7 +58,7 @@ var SSL_VERIFY_FAIL_IF_NO_PEER_CERT = _ssl.SSL_VERIFY_FAIL_IF_NO_PEER_CERT
  * 
  * - `Client mode`: ignored
  */
-var SSL_VERIFY_CLIENT_ONCE = _ssl.SSL_VERIFY_CLIENT_ONCE
+var SSL_VERIFY_CLIENT_ONCE = _ssl.SSL_VERIFY_CLIENT_ONCE()
 
 /**
  * - `Server mode`: the server will not send a client certificate request during the initial 
@@ -69,51 +69,51 @@ var SSL_VERIFY_CLIENT_ONCE = _ssl.SSL_VERIFY_CLIENT_ONCE
  * 
  * - `Client mode`: ignored
  */
-var SSL_VERIFY_POST_HANDSHAKE = _ssl.SSL_VERIFY_POST_HANDSHAKE
+var SSL_VERIFY_POST_HANDSHAKE = _ssl.SSL_VERIFY_POST_HANDSHAKE()
 
 
 
 /**
  * TLS method
  */
-var TLS_method = _ssl.TLS_method
+var TLS_method = _ssl.TLS_method()
 
 /**
  * TLS client method
  */
-var TLS_client_method = _ssl.TLS_client_method
+var TLS_client_method = _ssl.TLS_client_method()
 
 /**
  * TLS server method
  */
-var TLS_server_method = _ssl.TLS_server_method
+var TLS_server_method = _ssl.TLS_server_method()
 
 /**
  * SSLv23 method
  */
-var SSLv23_method = _ssl.SSLv23_method
+var SSLv23_method = _ssl.SSLv23_method()
 
 /**
  * SSLv23 client method
  */
-var SSLv23_client_method = _ssl.SSLv23_client_method
+var SSLv23_client_method = _ssl.SSLv23_client_method()
 
 /**
  * SSLv23 server method
  */
-var SSLv23_server_method = _ssl.SSLv23_server_method
+var SSLv23_server_method = _ssl.SSLv23_server_method()
 
 
 
 /**
  * BIO_CLOSE
  */
-var BIO_CLOSE = _ssl.BIO_CLOSE
+var BIO_CLOSE = _ssl.BIO_CLOSE()
 
 /**
  * BIO_NOCLOSE
  */
-var BIO_NOCLOSE = _ssl.BIO_NOCLOSE
+var BIO_NOCLOSE = _ssl.BIO_NOCLOSE()
 
 /**
  * SSL BIO method f_ssl
@@ -123,7 +123,7 @@ var BIO_NOCLOSE = _ssl.BIO_NOCLOSE
  * > established then an attempt is made to establish one on the first 
  * > I/O call.
  */
-var BIO_f_ssl = _ssl.BIO_f_ssl
+var BIO_f_ssl = _ssl.BIO_f_ssl()
 
 /**
  * SSL BIO method connect
@@ -132,7 +132,7 @@ var BIO_f_ssl = _ssl.BIO_f_ssl
  * > transferred using only BIO routines. In this way any platform 
  * > specific operations are hidden by the BIO abstraction.
  */
-var BIO_s_connect = _ssl.BIO_s_connect
+var BIO_s_connect = _ssl.BIO_s_connect()
 
 /**
  * SSL BIO method accept
@@ -141,4 +141,4 @@ var BIO_s_connect = _ssl.BIO_s_connect
  * > transferred using only BIO routines. In this way any platform specific 
  * > operations are hidden by the BIO abstraction.
  */
-var BIO_s_accept = _ssl.BIO_s_accept
+var BIO_s_accept = _ssl.BIO_s_accept()

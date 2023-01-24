@@ -89,7 +89,7 @@ class SSL {
     if !is_string(data) and !is_bytes(data)
       die Exception('string or bytes expected')
 
-    if is_bytes(data) data = to_string(data)
+    if is_string(data) data = data.to_bytes()
 
     var result = _ssl.write(self._ptr, data)
     if result == -1
