@@ -21,10 +21,10 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v1.9
         with:
           cmake-version: '3.18.x'
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v1
-        with:
-          languages: c
+#      - name: Initialize CodeQL
+#        uses: github/codeql-action/init@v1
+#        with:
+#          languages: c
       - name: Compile
         run: |
           sudo apt-get update
@@ -74,15 +74,34 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v1.9
         with:
           cmake-version: '3.18.x'
+      - name: Setup WinLibs cache
+        uses: actions/cache@v2
+          id: cache-winlibs
+          with:
+            path: ..\..\_actions\bwoodsend
+            key: windows-winlibs-cache
+            restore-keys: |
+              windows-winlibs-cache
+      - name: Setup vcpkg cache
+        uses: actions/cache@v2
+          id: cache-vcpkg
+          with:
+            path: .\vcpkg\
+            key: windows-vcpkg-cache
+            restore-keys: |
+              windows-vcpkg-cache
       - name: Setup WinLibs
+        if: steps.cache-winlibs.outputs.cache-hit != 'true'
         uses: bwoodsend/setup-winlibs-action@v1.8
         with:
           add_to_path: true
           tag: 12.2.0-15.0.6-10.0.0-msvcrt-r3
       - uses: actions/checkout@v2
       - uses: friendlyanon/setup-vcpkg@v1
+        if: steps.cache-vcpkg.outputs.cache-hit != 'true'
         with: { committish: 934a99dc13cabb330824ae1a5ab4a53a9acc5a49 }
       - name: Install Dependencies
+        if: steps.cache-vcpkg.outputs.cache-hit != 'true'
         run: |
           ${{ env.VCPKG_ROOT }}/vcpkg update
           ${{ env.VCPKG_ROOT }}/vcpkg version
