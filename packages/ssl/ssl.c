@@ -366,7 +366,7 @@ DECLARE_MODULE_METHOD(ssl_read) {
       } else if(error == SSL_ERROR_ZERO_RETURN) {
         break;
       } else {
-        RETURN_SSL_ERROR();
+        RETURN_SSL_ERROR(error);
       }
     }
 
@@ -558,6 +558,7 @@ void __ssl_module_preloader(b_vm *vm) {
   SSL_library_init();
   SSL_load_error_strings();
   OpenSSL_add_all_algorithms();
+  OpenSSL_add_all_ciphers();
 }
 
 

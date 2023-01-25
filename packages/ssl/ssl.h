@@ -19,8 +19,7 @@
 #define GET_SSL_CONSTANT(v) \
   {#v, true, GET_MODULE_METHOD(ssl_const_##v)}
 
-#define RETURN_SSL_ERROR() \
-  unsigned long e = ERR_get_error(); \
+#define RETURN_SSL_ERROR(e) \
   char *err = ERR_error_string(e, NULL); \
   RETURN_ERROR("%s: %s", err, ERR_reason_error_string(e))
 
