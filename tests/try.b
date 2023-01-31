@@ -14,7 +14,7 @@ try {
   echo i
 
   try {
-    echo [1,2,3][10]
+    echo [1,2,3][8]
   } catch Exception e {
     echo '\nMessage: ${e.message}'
   } finally {
@@ -24,14 +24,17 @@ try {
   echo e
 }
 
-try {
-  die Exception('I am a thrown exception')
-  die Exception('Second exception we will never reach')
-} catch Exception e {
-  echo '\nCatching exception...'
-  echo 'Exception message: ${e.message}'
-  echo 'Exception trace: ${e.stacktrace}'
+def run() {
+  try {
+    die Exception('I am a thrown exception')
+    die Exception('Second exception we will never reach')
+  } catch Exception e {
+    echo '\nCatching exception...'
+    echo 'Exception message: ${e.message}'
+    echo 'Exception trace: ${e.stacktrace}'
+  }
 }
+run()
 
 try {
   echo '\nTry block called'

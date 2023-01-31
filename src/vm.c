@@ -507,6 +507,7 @@ void init_vm(b_vm *vm) {
   vm->mark_value = true;
   vm->should_debug_stack = false;
   vm->should_print_bytecode = false;
+  vm->should_exit_after_bytecode = false;
 
   vm->gray_count = 0;
   vm->gray_capacity = 0;
@@ -2412,8 +2413,10 @@ b_ptr_result run(b_vm *vm) {
         if (address != 0) {
           b_value value;
           if (!table_get(&vm->globals, OBJ_VAL(type), &value) || !IS_CLASS(value)) {
-            runtime_error("object of type '%s' is not an exception", type->chars);
-            break;
+            if(!table_get(&vm->current_frame->closure->function->module->values, OBJ_VAL(type), &value) || !IS_CLASS(value)) {
+              runtime_error("object of type '%s' is not an exception", type->chars);
+              break;
+            }
           }
           push_exception_handler(vm, AS_CLASS(value), address, finally_address);
         } else {
@@ -2492,7 +2495,7 @@ b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
 
   b_obj_func *function = compile(vm, module, source, &blob);
 
-  if (vm->should_print_bytecode) {
+  if (vm->should_exit_after_bytecode) {
     return PTR_OK;
   }
 
