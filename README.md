@@ -8,7 +8,7 @@
 [![Gitter](https://badges.gitter.im/blade-lang/community.svg)](https://gitter.im/blade-lang/community)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/blade-lang/blade/blob/master/LICENSE)
 [![Coverage Status](https://coveralls.io/repos/github/blade-lang/blade/badge.svg?branch=main)](https://coveralls.io/github/blade-lang/blade?branch=main)
-[![Version](https://img.shields.io/badge/version-0.0.8-green)](https://github.com/blade-lang/blade)
+[![Version](https://img.shields.io/badge/version-0.0.81-green)](https://github.com/blade-lang/blade)
 
 Blade is a simple, clean, and embeddable dynamic programming language created to be simple enough for beginners, yet powerful and expressive for professionals. It has a very small syntax set with a very low learning curve. Blade improves upon the best features of JavaScript, Python, and Ruby to give developers a familiar and powerful system that feels native for developers coming from any of these languages and an easy way to leverage the strength of any.
 
