@@ -217,6 +217,8 @@ DECLARE_MODULE_METHOD(os__FILE) {
   char *file = vm->current_frame->closure->function->module->file;
   if(file == NULL || memcmp(file, "<repl>", strlen(file)) == 0) {
     RETURN_STRING("<repl>");
+  } else if(memcmp(file, "<script>", strlen(file)) == 0) {
+    RETURN_STRING("<script>");
   }
 
   char *path = realpath(file, NULL);

@@ -895,6 +895,18 @@ static void named_variable(b_parser *p, b_token name, bool can_assign) {
   assignment(p, get_op, set_op, arg, can_assign);
 }
 
+static void created_variable(b_parser *p, b_token name) {
+  uint8_t get_op, set_op;
+  int arg;
+  if (p->vm->compiler->function->name != NULL) {
+    int local = add_local(p, name) - 1;
+    mark_initialized(p);
+    emit_byte_and_short(p, OP_SET_LOCAL, (uint16_t)local);
+  } else {
+    emit_byte_and_short(p, OP_DEFINE_GLOBAL, (uint16_t) identifier_constant(p, &name));
+  }
+}
+
 static void list(b_parser *p, bool can_assign) {
   emit_byte(p, OP_NIL); // placeholder for the list
 
@@ -2020,6 +2032,7 @@ static void echo_statement(b_parser *p) {
 }
 
 static void die_statement(b_parser *p) {
+  discard_locals(p, p->vm->compiler->scope_depth - 1);
   expression(p);
   emit_byte(p, OP_DIE);
   consume_statement_end(p);
@@ -2247,10 +2260,7 @@ static void try_statement(b_parser *p) {
     address = current_blob(p)->count;
 
     if (match(p, IDENTIFIER_TOKEN)) {
-      int var = add_local(p, p->previous) - 1;
-      mark_initialized(p);
-      emit_byte_and_short(p, OP_SET_LOCAL, var);
-      emit_byte(p, OP_POP);
+      created_variable(p, p->previous);
     } else {
       emit_byte(p, OP_POP);
     }
