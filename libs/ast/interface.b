@@ -33,10 +33,42 @@ class ParseResult {
   }
 
   /**
+   * length()
+   * 
+   * Returns the length of items in the parsed result.
+   * @returns number
+   */
+  length() {
+    return self._results.length()
+  }
+
+  /**
+   * get(index: int)
+   * 
+   * Returns the item at the given ParseResult index or throws exception if out of range.
+   * @returns Ast
+   */
+  get(index) {
+    if index >= 0 and index < self.length()
+      return self._results[index]
+    die Exception('ParseResult index ${index} out of range')
+  }
+
+  /**
+   * to_list()
+   * 
+   * Returns the items in the ParseResult as a list object.
+   * @returns List<Ast>
+   */
+  to_list() {
+    return self._results
+  }
+
+  /**
    * to_list() override decorator
    */
   @to_list() {
-    return self._results
+    return self.to_list()
   }
 
   /**
