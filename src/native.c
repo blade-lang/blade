@@ -460,7 +460,7 @@ DECLARE_NATIVE(to_int) {
  */
 DECLARE_NATIVE(to_list) {
   ENFORCE_ARG_COUNT(to_list, 1);
-  METHOD_OVERRIDE(to_list, 0);
+  METHOD_OVERRIDE(to_list, 7);
 
   if (IS_LIST(args[0])) {
     RETURN_VALUE(args[0]);
