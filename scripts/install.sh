@@ -53,6 +53,7 @@ install_blade() {
 	echo "Removing old/stale/partial objects..."
 	sudo rm /usr/local/bin/blade
 	sudo rm -rf `pwd`/blade
+	sudo rm -rf "$@/blade"
 
 	# cloning
 	git clone https://github.com/blade-lang/blade.git
