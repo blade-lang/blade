@@ -158,7 +158,7 @@ char *append_strings(char *old, char *new_str) {
   return result;
 }*/
 
-int utf8len(char *s) {
+int utf8length(char *s) {
   int len = 0;
   for (; *s; ++s)
     if ((*s & 0xC0) != 0x80)

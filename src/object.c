@@ -164,7 +164,7 @@ b_obj_string *allocate_string(b_vm *vm, char *chars, int length, uint32_t hash) 
   b_obj_string *string = ALLOCATE_OBJ(b_obj_string, OBJ_STRING);
   string->chars = chars;
   string->length = length;
-  string->utf8_length = utf8len(chars);
+  string->utf8_length = utf8length(chars);
   string->is_ascii = false;
   string->hash = hash;
 

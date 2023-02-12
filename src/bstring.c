@@ -1,6 +1,7 @@
 #include "bstring.h"
 #include "util.h"
 #include "native.h"
+#include "utf8.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -131,17 +132,19 @@ DECLARE_STRING_METHOD(length) {
 DECLARE_STRING_METHOD(upper) {
   ENFORCE_ARG_COUNT(upper, 0);
   char *string = (char *) strdup(AS_C_STRING(METHOD_OBJECT));
-  for (char *p = string; *p; p++)
-    *p = toupper(*p);
-  RETURN_L_STRING(string, AS_STRING(METHOD_OBJECT)->length);
+//  for (char *p = string; *p; p++)
+//    *p = toupper(*p);
+  utf8upr(string);
+  RETURN_STRING(string);
 }
 
 DECLARE_STRING_METHOD(lower) {
   ENFORCE_ARG_COUNT(lower, 0);
   char *string = (char *) strdup(AS_C_STRING(METHOD_OBJECT));
-  for (char *p = string; *p; p++)
-    *p = tolower(*p);
-  RETURN_L_STRING(string, AS_STRING(METHOD_OBJECT)->length);
+//  for (char *p = string; *p; p++)
+//    *p = tolower(*p);
+  utf8lwr(string);
+  RETURN_STRING(string);
 }
 
 DECLARE_STRING_METHOD(is_alpha) {
@@ -186,7 +189,7 @@ DECLARE_STRING_METHOD(is_lower) {
     if (!has_alpha) {
       has_alpha = is_alpha;
     }
-    if (is_alpha && !islower((unsigned char) string->chars[i])) {
+    if (is_alpha && !utf8islower((unsigned char) string->chars[i])) {
       RETURN_FALSE;
     }
   }
@@ -202,7 +205,7 @@ DECLARE_STRING_METHOD(is_upper) {
     if (!has_alpha) {
       has_alpha = is_alpha;
     }
-    if (is_alpha && !isupper((unsigned char) string->chars[i])) {
+    if (is_alpha && !utf8isupper((unsigned char) string->chars[i])) {
       RETURN_FALSE;
     }
   }

@@ -13,7 +13,7 @@ int utf8_decode(const uint8_t *bytes, uint32_t length);
 
 char *append_strings(char *old, char *new_str);
 
-int utf8len(char *s);
+int utf8length(char *s);
 
 char *utf8index(char *s, int pos);
 
