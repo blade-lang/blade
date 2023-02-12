@@ -452,10 +452,10 @@ DECLARE_STRING_METHOD(index_of) {
   if(arg_count == 2) {
     ENFORCE_ARG_TYPE(index_of, 1, IS_NUMBER);
     int start = AS_NUMBER(args[1]);
-    char *result = strstr(str + start, AS_C_STRING(args[0]));
+    char *result = utf8str(str + start, AS_C_STRING(args[0]));
     if (result != NULL) RETURN_NUMBER((int) (result - str));
   } else {
-    char *result = strstr(str, AS_C_STRING(args[0]));
+    char *result = utf8str(str, AS_C_STRING(args[0]));
     if (result != NULL) RETURN_NUMBER((int) (result - str));
   }
 
@@ -501,7 +501,7 @@ DECLARE_STRING_METHOD(count) {
 
   int count = 0;
   const char *tmp = string->chars;
-  while ((tmp = strstr(tmp, substr->chars))) {
+  while ((tmp = utf8str(tmp, substr->chars))) {
     count++;
     tmp++;
   }
@@ -515,9 +515,14 @@ DECLARE_STRING_METHOD(to_number) {
 }
 
 DECLARE_STRING_METHOD(ascii) {
-  ENFORCE_ARG_COUNT(ascii, 0);
+  ENFORCE_ARG_RANGE(ascii, 0, 1);
+  bool is_ascii = true;
+  if(arg_count == 1) {
+    ENFORCE_ARG_TYPE(ascii, 0, IS_BOOL);
+    is_ascii = AS_BOOL(args[0]);
+  }
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
-  string->is_ascii = true;
+  string->is_ascii = is_ascii;
   RETURN_OBJ(string);
 }
 
