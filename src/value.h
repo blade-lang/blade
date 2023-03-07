@@ -11,6 +11,7 @@ extern "C" {
 
 typedef struct s_obj b_obj;
 typedef struct s_obj_string b_obj_string;
+typedef struct s_obj_list b_obj_list;
 typedef struct s_vm b_vm;
 
 typedef union {

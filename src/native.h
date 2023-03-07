@@ -47,6 +47,7 @@
 #define NORMALIZE_IS_CLOSURE "function"
 #define NORMALIZE_IS_INSTANCE "instance"
 #define NORMALIZE_IS_CLASS "class"
+#define NORMALIZE_IS_MODULE "module"
 #define NORMALIZE_IS_LIST "list"
 #define NORMALIZE_IS_DICT "dict"
 #define NORMALIZE_IS_OBJ "object"

@@ -171,10 +171,10 @@ typedef struct b_obj_native {
   b_native_fn function;
 } b_obj_native;
 
-typedef struct {
+struct s_obj_list {
   b_obj obj;
   b_value_arr items;
-} b_obj_list;
+};
 
 typedef struct {
   b_obj obj;

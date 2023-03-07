@@ -201,16 +201,65 @@ def get_type(object) {
 }
 
 /**
- * get_type(object: instance)
+ * get_function_metadata(object: function)
  * 
- * Returns the type of an instance as string
- * @return string
+ * Returns the metadata of a function as a dictionary. 
+ * This dictionary contains the following keys:
+ * 
+ * - `name`: The name of the function
+ * - `arity`: The number of none variable (...) arguments the function defines.
+ * - `is_variadic`: If the function accepts variable arguments
+ * - `captured_vars`: The number of variables captured (only greater than zero for captures).
+ * - `module`: The name of the module from where the function was defined.
+ * - `file`: The file in which the function was defined.
+ * 
+ * @note This function does not work for built-in functions
+ * @return dictionary
  */
 def get_function_metadata(function) {
   if !is_function(function)
     die Exception('function expected in argument 1 (function)')
 
   return _reflect.getfunctionmetadata(function)
+}
+
+/**
+ * get_class_metadata(klass: class)
+ * 
+ * Returns the metadata of a class as a dictionary. 
+ * This dictionary contains the following keys:
+ * 
+ * - `name`: The name of the class.
+ * - `properties`: a list of the name of non-static properties defined in the class
+ * - `static_properties`: a list of the name of static properties defined in the class
+ * - `methods`: a list of the name of methods defined in the class
+ * - `superclass`: The name of the class it inherits from.
+ * 
+ * @return dictionary
+ */
+def get_class_metadata(klass) {
+  if !is_class(klass)
+    die Exception('class expected in argument 1 (klass)')
+
+  return _reflect.getclassmetadata(klass)
+}
+
+/**
+ * get_module_metadata(module: imported module)
+ * 
+ * Returns the metadata of an imported module as a dictionary. 
+ * This dictionary contains the following keys:
+ * 
+ * - `name`: The name of the module.
+ * - `file`: The file from which the module was imported.
+ * - `has_preloader`: `true` if the module is a C extension with a preloader and `false` otherwise.
+ * - `has_unloader`: `true` if the module is a C extension with a unloader and `false` otherwise.
+ * - `definitions`: A list of the name of objects defined in the module.
+ * 
+ * @return dictionary
+ */
+def get_module_metadata(module) {
+  return _reflect.getmodulemetadata(module)
 }
 
 /**
@@ -236,3 +285,44 @@ def get_class(object) {
 def is_ptr(value) {
   return _reflect.isptr(value)
 }
+
+/**
+ * set_global(fn: function [, name: string])
+ * 
+ * Sets a function as globally accessible in all modules, function and scopes.
+ */
+def set_global(fn, name) {
+  if !is_function(fn)
+    die Exception('function expected in argument 1 (fn)')
+  if name != nil and !is_string(name)
+    die Exception('string expected in argument 2 (name)')
+  _reflect.setglobal(fn, name)
+}
+
+/**
+ * run_script(path: string)
+ * 
+ * Runs the content of a given script in-place as if it were part of the current module.
+ */
+def run_script(path) {
+  if !is_string(path)
+    die Exception('string expected in argument 1 (path)')
+
+  var fh = file(path)
+  if !fh.exists()
+    die Exception('cannot find script at "${path}"')
+
+  var content = fh.read()
+  _reflect.runscript(content)
+}
+
+/* def call_method(instance, name, ...) {
+  if !is_instance(instance)
+    die Exception('instance of object expected in argument 1 (instance)')
+  if !is_string(name)
+    die Exception('string of object expected in argument 2 (name)')
+
+  var length = __args__.length() + 3
+  _reflect.callmethod(instance, name, __args__)
+  return _reflect.valueatdistance(-(length))
+} */
