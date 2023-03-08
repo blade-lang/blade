@@ -287,13 +287,13 @@ def is_ptr(value) {
 }
 
 /**
- * set_global(fn: function [, name: string])
+ * set_global(fn: function | class [, name: string])
  * 
- * Sets a function as globally accessible in all modules, function and scopes.
+ * Sets a function or class as globally accessible in all modules, function and scopes.
  */
 def set_global(fn, name) {
-  if !is_function(fn)
-    die Exception('function expected in argument 1 (fn)')
+  if !is_function(fn) and !is_class(fn)
+    die Exception('function or class expected in argument 1 (fn)')
   if name != nil and !is_string(name)
     die Exception('string expected in argument 2 (name)')
   _reflect.setglobal(fn, name)

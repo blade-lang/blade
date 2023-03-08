@@ -234,19 +234,21 @@ DECLARE_MODULE_METHOD(reflect__getclass) {
 }
 
 DECLARE_MODULE_METHOD(reflect__setglobal) {
-  ENFORCE_ARG_RANGE(set_global, 1, 2);
-  ENFORCE_ARG_TYPE(set_global, 0, IS_CLOSURE);
-  b_obj_closure *cls = AS_CLOSURE(args[0]);
-  b_obj_string *name;
+  ENFORCE_ARG_COUNT(set_global, 2);
 
-  if(arg_count == 2 && !IS_NIL(args[2])) {
-    ENFORCE_ARG_TYPE(set_global, 1, IS_STRING);
-    name = AS_STRING(args[1]);
+  b_obj_string *name;
+  if(IS_NIL(args[1])) {
+    if(IS_CLASS(args[0])) {
+      name = AS_CLASS(args[0])->name;
+    } else {
+      name = AS_CLOSURE(args[0])->function->name;
+    }
   } else {
-    name = cls->function->name;
+    ENFORCE_ARG_TYPE(set_global, 0, IS_STRING);
+    name = AS_STRING(args[1]);
   }
 
-  table_set(vm, &vm->globals, OBJ_VAL(name), OBJ_VAL(cls));
+  table_set(vm, &vm->globals, OBJ_VAL(name), args[0]);
   RETURN;
 }
 
