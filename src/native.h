@@ -128,13 +128,15 @@
       b_obj_instance *instance = AS_INSTANCE(args[0]);                         \
       b_value _tmp;                                                            \
       b_obj_string *name = (b_obj_string *)GC(copy_string(vm, "@" #override, (i) + 1)); \
-      if(table_get(&instance->klass->methods, OBJ_VAL(name), &_tmp)) {  \
+      if(table_get(&instance->klass->methods, OBJ_VAL(name), &_tmp)) {         \
+        CLEAR_GC(); \
         if (invoke_from_class(vm, instance->klass, name, 0)) {               \
           args[-1] = TRUE_VAL;                                                   \
           return false; \
         }                                                                        \
       } \
     }                                                                          \
+    CLEAR_GC(); \
   } while (0);
 
 #define REGEX_COMPILATION_ERROR(re, error_number, error_offset)                \
