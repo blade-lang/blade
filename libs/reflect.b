@@ -313,7 +313,7 @@ def run_script(path) {
     die Exception('cannot find script at "${path}"')
 
   var content = fh.read()
-  _reflect.runscript(content)
+  _reflect.runscript(path, content)
 }
 
 /* def call_method(instance, name, ...) {

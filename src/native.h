@@ -126,11 +126,14 @@
   do {                                                                         \
     if (IS_INSTANCE(args[0])) {                                                \
       b_obj_instance *instance = AS_INSTANCE(args[0]);                         \
-      if (invoke_from_class(vm, instance->klass,                               \
-                            copy_string(vm, "@" #override, (i) + 1), 0)) {               \
-        args[-1] = TRUE_VAL;                                                   \
-        return false; \
-      }                                                                        \
+      b_value _tmp;                                                            \
+      b_obj_string *name = (b_obj_string *)GC(copy_string(vm, "@" #override, (i) + 1)); \
+      if(table_get(&instance->klass->methods, OBJ_VAL(name), &_tmp)) {  \
+        if (invoke_from_class(vm, instance->klass, name, 0)) {               \
+          args[-1] = TRUE_VAL;                                                   \
+          return false; \
+        }                                                                        \
+      } \
     }                                                                          \
   } while (0);
 

@@ -253,13 +253,22 @@ DECLARE_MODULE_METHOD(reflect__setglobal) {
 }
 
 DECLARE_MODULE_METHOD(reflect__runscript) {
-  ENFORCE_ARG_COUNT(run_script, 1);
+  ENFORCE_ARG_COUNT(run_script, 2);
   ENFORCE_ARG_TYPE(run_script, 0, IS_STRING);
-  char *source = AS_C_STRING(args[0]);
+  ENFORCE_ARG_TYPE(run_script, 1, IS_STRING);
+  char *path = AS_C_STRING(args[0]);
+  char *source = AS_C_STRING(args[1]);
 
   b_blob  blob;
   init_blob(&blob);
-  b_obj_func *fn = compile(vm, vm->current_frame->closure->function->module, source, &blob);
+
+  b_obj_module *module = vm->current_frame->closure->function->module;
+  char *module_file = module->file;
+
+  module->file = path;
+  b_obj_func *fn = compile(vm, module, source, &blob);
+  module->file = module_file;
+
   if(fn != NULL) {
     push(vm, OBJ_VAL(fn));
     b_obj_closure *cls = new_closure(vm, fn);
