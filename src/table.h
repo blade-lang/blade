@@ -34,6 +34,7 @@ b_obj_string *table_find_string(b_table *table, const char *chars, int length,
                                 uint32_t hash);
 
 b_value table_find_key(b_table *table, b_value value);
+b_obj_list *table_get_keys(b_vm *vm, b_table *table);
 
 void table_print(b_table *table);
 

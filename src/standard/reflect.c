@@ -1,4 +1,5 @@
 #include "module.h"
+#include "compiler.h"
 
 extern bool call_value(b_vm *vm, b_value callee, int arg_count);
 
@@ -118,6 +119,7 @@ DECLARE_MODULE_METHOD(reflect__call_method) {
     b_obj_bound *bound = (b_obj_bound*)GC(new_bound_method(vm, args[0], AS_CLOSURE(value)));
 
     b_obj_list *list = AS_LIST(args[2]);
+    int items_count = list->items.count;
 
     // remove the args list, the string name and the instance
     // then push the bound method
@@ -125,11 +127,16 @@ DECLARE_MODULE_METHOD(reflect__call_method) {
     push(vm, OBJ_VAL(bound));
 
     // convert the list into function args
-    for(int i = 0; i < list->items.count; i++) {
+    for(int i = 0; i < items_count; i++) {
       push(vm, list->items.values[i]);
     }
 
-    return call_value(vm, OBJ_VAL(bound), list->items.count);
+    b_call_frame *frame = &vm->frames[vm->frame_count++];
+    frame->closure = bound->method;
+    frame->ip = bound->method->function->blob.code;
+
+    frame->slots = vm->stack_top - items_count - 1;
+    vm->current_frame = frame;
   }
 
   RETURN;
@@ -169,6 +176,26 @@ DECLARE_MODULE_METHOD(reflect__isptr) {
   RETURN_BOOL(IS_PTR(args[0]));
 }
 
+DECLARE_MODULE_METHOD(reflect__valueatdistance) {
+  ENFORCE_ARG_COUNT(valueatdist, 1);
+  RETURN_VALUE(vm->stack_top[(int)AS_NUMBER(args[0])]);
+}
+
+DECLARE_MODULE_METHOD(reflect__get_class_metadata) {
+  ENFORCE_ARG_COUNT(get_class_metadata, 1);
+  ENFORCE_ARG_TYPE(get_class_metadata, 0, IS_CLASS);
+  b_obj_class *class = AS_CLASS(args[0]);
+
+  b_obj_dict *result = (b_obj_dict *)GC(new_dict(vm));
+  dict_set_entry(vm, result, GC_STRING("name"), OBJ_VAL(class->name));
+  dict_set_entry(vm, result, GC_STRING("properties"), OBJ_VAL(table_get_keys(vm, &class->properties)));
+  dict_set_entry(vm, result, GC_STRING("static_properties"), OBJ_VAL(table_get_keys(vm, &class->static_properties)));
+  dict_set_entry(vm, result, GC_STRING("methods"), OBJ_VAL(table_get_keys(vm, &class->methods)));
+  dict_set_entry(vm, result, GC_STRING("superclass"), class->superclass != NULL ? OBJ_VAL(class->superclass) : NIL_VAL);
+
+  RETURN_OBJ(result);
+}
+
 DECLARE_MODULE_METHOD(reflect__get_function_metadata) {
   ENFORCE_ARG_COUNT(get_function_metadata, 1);
   ENFORCE_ARG_TYPE(get_function_metadata, 0, IS_CLOSURE);
@@ -185,10 +212,77 @@ DECLARE_MODULE_METHOD(reflect__get_function_metadata) {
   RETURN_OBJ(result);
 }
 
+DECLARE_MODULE_METHOD(reflect__get_module_metadata) {
+  ENFORCE_ARG_COUNT(get_module_metadata, 1);
+  ENFORCE_ARG_TYPE(get_module_metadata, 0, IS_MODULE);
+  b_obj_module *module = AS_MODULE(args[0]);
+
+  b_obj_dict *result = (b_obj_dict *)GC(new_dict(vm));
+  dict_set_entry(vm, result, GC_STRING("name"), STRING_VAL(module->name));
+  dict_set_entry(vm, result, GC_STRING("file"), STRING_VAL(module->file));
+  dict_set_entry(vm, result, GC_STRING("has_preloader"), BOOL_VAL(module->preloader != NULL));
+  dict_set_entry(vm, result, GC_STRING("has_unloader"), BOOL_VAL(module->unloader != NULL));
+  dict_set_entry(vm, result, GC_STRING("definitions"), OBJ_VAL(table_get_keys(vm, &module->values)));
+
+  RETURN_OBJ(result);
+}
+
 DECLARE_MODULE_METHOD(reflect__getclass) {
   ENFORCE_ARG_COUNT(get_type, 1);
   ENFORCE_ARG_TYPE(get_type, 0, IS_INSTANCE);
   RETURN_OBJ(AS_INSTANCE(args[0])->klass);
+}
+
+DECLARE_MODULE_METHOD(reflect__setglobal) {
+  ENFORCE_ARG_COUNT(set_global, 2);
+
+  b_obj_string *name;
+  if(IS_NIL(args[1])) {
+    if(IS_CLASS(args[0])) {
+      name = AS_CLASS(args[0])->name;
+    } else {
+      name = AS_CLOSURE(args[0])->function->name;
+    }
+  } else {
+    ENFORCE_ARG_TYPE(set_global, 0, IS_STRING);
+    name = AS_STRING(args[1]);
+  }
+
+  table_set(vm, &vm->globals, OBJ_VAL(name), args[0]);
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(reflect__runscript) {
+  ENFORCE_ARG_COUNT(run_script, 2);
+  ENFORCE_ARG_TYPE(run_script, 0, IS_STRING);
+  ENFORCE_ARG_TYPE(run_script, 1, IS_STRING);
+  char *path = AS_C_STRING(args[0]);
+  char *source = AS_C_STRING(args[1]);
+
+  b_blob  blob;
+  init_blob(&blob);
+
+  b_obj_module *module = vm->current_frame->closure->function->module;
+  char *module_file = module->file;
+
+  module->file = path;
+  b_obj_func *fn = compile(vm, module, source, &blob);
+  module->file = module_file;
+
+  if(fn != NULL) {
+    push(vm, OBJ_VAL(fn));
+    b_obj_closure *cls = new_closure(vm, fn);
+    pop(vm);
+
+    b_call_frame *frame = &vm->frames[vm->frame_count++];
+    frame->closure = cls;
+    frame->ip = fn->blob.code;
+
+    frame->slots = vm->stack_top - 1;
+    vm->current_frame = frame;
+  }
+
+  RETURN;
 }
 
 CREATE_MODULE_LOADER(reflect) {
@@ -205,7 +299,12 @@ CREATE_MODULE_LOADER(reflect) {
       {"gettype", true,  GET_MODULE_METHOD(reflect__gettype)},
       {"isptr", true,  GET_MODULE_METHOD(reflect__isptr)},
       {"getfunctionmetadata", true,  GET_MODULE_METHOD(reflect__get_function_metadata)},
+      {"getclassmetadata", true,  GET_MODULE_METHOD(reflect__get_class_metadata)},
+      {"getmodulemetadata", true,  GET_MODULE_METHOD(reflect__get_module_metadata)},
       {"getclass", true,  GET_MODULE_METHOD(reflect__getclass)},
+      {"setglobal", true,  GET_MODULE_METHOD(reflect__setglobal)},
+      {"runscript", true,  GET_MODULE_METHOD(reflect__runscript)},
+      {"valueatdistance", true,  GET_MODULE_METHOD(reflect__valueatdistance)},
       {NULL,        false, NULL},
   };
 

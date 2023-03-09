@@ -220,6 +220,19 @@ b_value table_find_key(b_table *table, b_value value) {
   return NIL_VAL;
 }
 
+b_obj_list *table_get_keys(b_vm *vm, b_table *table) {
+  b_obj_list *list = (b_obj_list *)GC(new_list(vm));
+
+  for (int i = 0; i < table->capacity; i++) {
+    b_entry *entry = &table->entries[i];
+    if (!IS_NIL(entry->key) && !IS_EMPTY(entry->key)) {
+      write_value_arr(vm, &list->items, entry->key);
+    }
+  }
+
+  return list;
+}
+
 void table_print(b_table *table) {
   printf("<HashTable: {");
   for (int i = 0; i < table->capacity; i++) {
