@@ -1,18 +1,20 @@
-#!-- part of the http module
+#!-- part of the ssl module
 
-import .request { HttpRequest }
-import .response { HttpResponse }
-import .exception { HttpException }
-import .status
+import http.request { HttpRequest }
+import http.response { HttpResponse }
+import http.exception { HttpException }
+import http.status
 
 import socket as so
 import iters
+import .constants
+import .socket { TLSSocket }
 
 /**
- * HTTP server
+ * TLS server
  * @printable
  */
-class HttpServer {
+class TLSServer {
 
   /**
    * The host address to which this server will be bound
@@ -26,7 +28,7 @@ class HttpServer {
   var port = 0
 
   /**
-   * The working Socket instance for the HttpServer.
+   * The working TLSSocket instance for the TLSServer.
    */
   var socket
 
@@ -55,6 +57,27 @@ class HttpServer {
    */
   var write_timeout = 2000
 
+  /**
+   * The SSL/TLS ceritificate file that will be used be used by a secured server for 
+   * serving requests.
+   * @note do not set a value to it directly. Use `load_certs()` instead.
+   */
+  var cert_file
+
+  /**
+   * The SSL/TLS private key file that will be used be used by a secured server for 
+   * serving requests.
+   * @note do not set a value to it directly. Use `load_certs()` instead.
+   */
+  var private_key_file
+
+  /**
+   * This value controls whether the client certificate should be verified 
+   * or not.
+   * @boolean
+   */
+  var verify_certs = true
+
   # status trackers.
   var _is_listening = false
 
@@ -68,10 +91,10 @@ class HttpServer {
   var _error_listeners = []
 
   /**
-   * HttpServer(port: int [, host: string])
+   * TLSServer(port: int [, host: string])
    * @constructor
    */
-  HttpServer(port, host) {
+  TLSServer(port, host) {
 
     if !is_int(port) or port <= 0
       die HttpException('invalid port number')
@@ -81,7 +104,29 @@ class HttpServer {
       die HttpException('invalid host')
     else if host != nil self.host = host
 
-    self.socket = so.Socket()
+    self.socket = TLSSocket()
+  }
+
+  /**
+   * load_certs(cert_file: string | file [, private_key_file: string | file])
+   * 
+   * loads the given SSL/TLS certificate pairs for the given SSL/TLS context.
+   * @return bool
+   */
+  load_certs(cert_file, private_key_file) {
+    if !private_key_file private_key_file = cert_file
+
+    self.socket.get_context().set_verify(self.verify_certs ? constants.SSL_VERIFY_PEER : constants.SSL_VERIFY_NONE)
+
+    if self.socket.get_context().load_certs(cert_file, private_key_file) {
+      self.cert_file = cert_file
+      self.private_key_file = private_key_file
+
+      return self.socket.get_context().set_ciphers(self._ciphers)
+    } else {
+      # die Exception('could not load certificate(s)')
+      return false
+    }
   }
 
   /**
@@ -93,13 +138,14 @@ class HttpServer {
     self._is_listening = false
     if !self.socket.is_closed
       self.socket.close()
+    self.socket.get_context().free()  # close the TLS socket context.
   }
 
   /**
    * on_connect(fn: function)
    * 
    * Adds a function to be called when a new client connects.
-   * @note Function _fn_ MUST accept at one parameter which will be passed the client Socket object.
+   * @note Function _fn_ MUST accept at one parameter which will be passed the client TLSSocket object.
    * @note multiple `on_connect()` may be set on a single instance.
    */
   on_connect(fn) {
@@ -150,7 +196,7 @@ class HttpServer {
    * Adds a function to be called when the server encounters an error with a client.
    * 
    * > Function _fn_ MUST accept two parameters. The first argument will be passed the 
-   * > `Exception` object and the second will be passed the client `Socket` object.
+   * > `Exception` object and the second will be passed the client `TLSSocket` object.
    * 
    * @note multiple `on_error()` may be set on a single instance.
    */
@@ -226,9 +272,14 @@ class HttpServer {
    * listen()
    * 
    * Binds to the instance port and host and starts listening for incoming 
-   * connection from HTTP clients.
+   * connection from HTTPS clients.
    */
   listen() {
+    if !self.cert_file
+      die HttpException('no certificate loaded for secure server')
+    if !self.private_key_file 
+      die HttpException('no private key loaded for secure server')
+
     if !self.socket.is_listening {
       self.socket.set_option(so.SO_REUSEADDR, is_bool(self.resuse_address) ? self.resuse_address : true)
       self.socket.bind(self.port, self.host)
@@ -252,6 +303,7 @@ class HttpServer {
           var data = client.receive()
 
           if data {
+            data = to_string(data)
             self._process_received(data, client)
           }
         } catch Exception e {
@@ -273,7 +325,7 @@ class HttpServer {
   }
 
   @to_string() {
-    return '<HttpServer ${self.host}:${self.port}>'
+    return '<TLSServer ${self.host}:${self.port}>'
   }
 }
 

@@ -626,6 +626,7 @@ static void statement(b_parser *p);
 static void declaration(b_parser *p);
 
 static void anonymous(b_parser *p, bool can_assign);
+static void anonymous_compat(b_parser *p, bool can_assign);
 
 static b_parse_rule *get_rule(b_tkn_type type);
 
@@ -1307,7 +1308,7 @@ b_parse_rule parse_rules[] = {
     [BANG_TOKEN] = {unary, NULL, PREC_NONE},                  // !
     [BANG_EQ_TOKEN] = {NULL, binary, PREC_EQUALITY},          // !=
     [COLON_TOKEN] = {NULL, NULL, PREC_NONE},                  // :
-    [AT_TOKEN] = {NULL, NULL, PREC_NONE},                     // @
+    [AT_TOKEN] = {anonymous, NULL, PREC_NONE},                     // @
     [DOT_TOKEN] = {NULL, dot, PREC_CALL},                     // .
     [RANGE_TOKEN] = {NULL, binary, PREC_RANGE},               // ..
     [TRI_DOT_TOKEN] = {NULL, NULL, PREC_NONE},                // ...
@@ -1339,7 +1340,7 @@ b_parse_rule parse_rules[] = {
     [PERCENT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},             // %=
     [AMP_TOKEN] = {NULL, binary, PREC_BIT_AND},               // &
     [AMP_EQ_TOKEN] = {NULL, NULL, PREC_NONE},                 // &=
-    [BAR_TOKEN] = {anonymous, binary, PREC_BIT_OR},           // |
+    [BAR_TOKEN] = {anonymous_compat, binary, PREC_BIT_OR},           // |
     [BAR_EQ_TOKEN] = {NULL, NULL, PREC_NONE},                 // |=
     [TILDE_TOKEN] = {unary, NULL, PREC_UNARY},                // ~
     [TILDE_EQ_TOKEN] = {NULL, NULL, PREC_NONE},               // ~=
@@ -1535,6 +1536,21 @@ static void method(b_parser *p, b_token class_name, bool is_static) {
 }
 
 static void anonymous(b_parser *p, bool can_assign) {
+  b_compiler compiler;
+  init_compiler(p, &compiler, TYPE_FUNCTION);
+  begin_scope(p);
+
+  // compile parameter list
+  consume(p, LPAREN_TOKEN, "expected '(' at start of anonymous function");
+  if (!check(p, RPAREN_TOKEN)) {
+    function_args(p);
+  }
+  consume(p, RPAREN_TOKEN, "expected ')' after anonymous function parameters");
+
+  function_body(p, &compiler);
+}
+
+static void anonymous_compat(b_parser *p, bool can_assign) {
   b_compiler compiler;
   init_compiler(p, &compiler, TYPE_FUNCTION);
   begin_scope(p);

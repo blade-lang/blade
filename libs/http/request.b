@@ -20,7 +20,7 @@ import curl {
   CurlMime, 
   Auth 
 }
-import ssl
+# import ssl
 
 /**
  * Http request handler and object.
@@ -326,8 +326,8 @@ class HttpRequest {
     
     if !is_string(raw_data)
       die HttpException('raw_data must be string')
-    if !instance_of(client, socket.Socket) and !instance_of(client, ssl.TLSSocket)
-      die HttpException('invalid Socket')
+    # if !instance_of(client, socket.Socket)
+    #   die HttpException('invalid Socket')
 
     self.ip = client.info().address
 

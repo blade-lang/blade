@@ -10,3 +10,15 @@ import .context { * }
 import .ssl { * }
 import .bio { * }
 import .socket { * }
+import .server { * }
+
+/**
+ * server(port: int, address: string)
+ * 
+ * Creates an new TLSServer instance.
+ * @returns TLSServer
+ * @throws Exception, SocketExcepion, HttpException
+ */
+def server(port, address) {
+  return TLSServer(port, address)
+}
