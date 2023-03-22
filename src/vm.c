@@ -326,6 +326,7 @@ static void init_builtin_functions(b_vm *vm) {
   DEFINE_NATIVE(oct);
   DEFINE_NATIVE(ord);
   DEFINE_NATIVE(print);
+  DEFINE_NATIVE(println);
   DEFINE_NATIVE(rand);
   DEFINE_NATIVE(setprop);
   DEFINE_NATIVE(sum);

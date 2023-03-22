@@ -274,4 +274,6 @@ DECLARE_NATIVE(instance_of);
 
 DECLARE_NATIVE(print);
 
+DECLARE_NATIVE(println);
+
 #endif

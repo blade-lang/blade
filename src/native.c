@@ -812,3 +812,19 @@ DECLARE_NATIVE(print) {
   }
   RETURN;
 }
+
+/**
+ * println(...)
+ *
+ * prints values to the standard output followed by a newline
+ */
+DECLARE_NATIVE(println) {
+  for (int i = 0; i < arg_count; i++) {
+    print_value(args[i]);
+    if (i != arg_count - 1) {
+      printf(" ");
+    }
+  }
+  printf("\n");
+  RETURN;
+}
