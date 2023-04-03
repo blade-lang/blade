@@ -584,7 +584,7 @@ class ZipArchive {
             npath = npath[cur_dir.length(),]
 
             # Just in case...
-            if npath.starts_with('/')
+            if npath.starts_with(os.path_separator)
               npath = npath[1,]
           }
 
