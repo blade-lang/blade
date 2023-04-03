@@ -1005,6 +1005,8 @@ DECLARE_STRING_METHOD(split) {
     for (int i = 0; i < rc; i++) {
       PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
       PCRE2_SIZE subject_end = o_vector[2 * i];
+      if(substring_length == 0) break;
+
       write_list(vm, list, GC_L_STRING((char *) subject, subject_end));
       subject += subject_end + substring_length; // skip the match
       total_length -= subject_end + substring_length; // decrement total length
@@ -1033,9 +1035,15 @@ DECLARE_STRING_METHOD(split) {
       // REGEX_VECTOR_SIZE_WARNING();
       REGEX_ASSERTION_ERROR(re, match_data, o_vector);
 
+      bool broke_out_of_loop;
       for (int i = 0; i < rc; i++) {
         PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
+
         PCRE2_SIZE subject_end = o_vector[2 * i];
+        if(subject_end == 0) {
+          broke_out_of_loop = true;
+          break;
+        }
         write_list(vm, list, GC_L_STRING((char *) subject, subject_end));
         subject += subject_end + substring_length; // skip the match
         total_length -= subject_end + substring_length; // decrement total length
@@ -1046,6 +1054,8 @@ DECLARE_STRING_METHOD(split) {
           break;
         }
       }
+
+      if(broke_out_of_loop) break;
     }
 
     if(total_length > 0) {
