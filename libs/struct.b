@@ -64,7 +64,13 @@ def pack(format, ...) {
   if !is_string(format)
     die Exception('format string expected')
 
-  return _struct.pack(format, __args__)
+  var items = []
+  for arg in __args__ {
+    if is_list(arg) items.extend(arg)
+    else if is_bytes(arg) items.extend(arg.to_list())
+    else items.append(arg)
+  }
+  return _struct.pack(format, items)
 }
 
 /**

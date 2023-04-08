@@ -285,6 +285,80 @@ DECLARE_MODULE_METHOD(reflect__runscript) {
   RETURN;
 }
 
+DECLARE_MODULE_METHOD(reflect__getptr) {
+  ENFORCE_ARG_COUNT(get_ptr, 1);
+  if(IS_OBJ(args[0])) {
+    switch (AS_OBJ(args[0])->type) {
+      case OBJ_STRING: {
+        RETURN_PTR(AS_STRING(args[0])->chars);
+      }
+      case OBJ_BYTES: {
+        RETURN_PTR(AS_BYTES(args[0])->bytes.bytes);
+      }
+      case OBJ_FILE: {
+        RETURN_PTR(AS_FILE(args[0])->file);
+      }
+      case OBJ_NATIVE: {
+        RETURN_PTR(AS_NATIVE(args[0])->function);
+      }
+      case OBJ_CLOSURE: {
+        RETURN_PTR(AS_CLOSURE(args[0])->function);
+      }
+      case OBJ_BOUND_METHOD: {
+        RETURN_PTR(AS_BOUND(args[0])->method->function);
+      }
+      case OBJ_PTR: {
+        RETURN_VALUE(args[0]);
+      }
+      default: {
+        RETURN_PTR(AS_OBJ(args[0]));
+      }
+    }
+  } else {
+    RETURN_PTR(NULL);
+  }
+}
+
+DECLARE_MODULE_METHOD(reflect__getaddress) {
+  ENFORCE_ARG_COUNT(get_address, 1);
+  if(IS_OBJ(args[0])) {
+    switch (AS_OBJ(args[0])->type) {
+      case OBJ_STRING: {
+        RETURN_NUMBER((uintptr_t)AS_STRING(args[0])->chars);
+      }
+      case OBJ_BYTES: {
+        RETURN_NUMBER((uintptr_t)AS_BYTES(args[0])->bytes.bytes);
+      }
+      case OBJ_LIST: {
+        RETURN_NUMBER((uintptr_t)AS_LIST(args[0])->items.values);
+      }
+      case OBJ_DICT: {
+        RETURN_NUMBER((uintptr_t)AS_DICT(args[0])->items.entries);
+      }
+      case OBJ_FILE: {
+        RETURN_NUMBER((uintptr_t)AS_FILE(args[0])->file);
+      }
+      case OBJ_NATIVE: {
+        RETURN_NUMBER((uintptr_t)AS_NATIVE(args[0])->function);
+      }
+      case OBJ_CLOSURE: {
+        RETURN_NUMBER((uintptr_t)AS_CLOSURE(args[0])->function);
+      }
+      case OBJ_BOUND_METHOD: {
+        RETURN_NUMBER((uintptr_t)AS_BOUND(args[0])->method->function);
+      }
+      case OBJ_PTR: {
+        RETURN_NUMBER((uintptr_t)AS_PTR(args[0])->pointer);
+      }
+      default: {
+        RETURN_PTR((uintptr_t)AS_OBJ(args[0]));
+      }
+    }
+  } else {
+    RETURN_NUMBER(0);
+  }
+}
+
 CREATE_MODULE_LOADER(reflect) {
   static b_func_reg module_functions[] = {
       {"hasprop",   true,  GET_MODULE_METHOD(reflect__hasprop)},
@@ -298,6 +372,7 @@ CREATE_MODULE_LOADER(reflect) {
       {"bindmethod", true,  GET_MODULE_METHOD(reflect__bindmethod)},
       {"gettype", true,  GET_MODULE_METHOD(reflect__gettype)},
       {"isptr", true,  GET_MODULE_METHOD(reflect__isptr)},
+      {"getptr", true,  GET_MODULE_METHOD(reflect__getptr)},
       {"getfunctionmetadata", true,  GET_MODULE_METHOD(reflect__get_function_metadata)},
       {"getclassmetadata", true,  GET_MODULE_METHOD(reflect__get_class_metadata)},
       {"getmodulemetadata", true,  GET_MODULE_METHOD(reflect__get_module_metadata)},
@@ -305,6 +380,7 @@ CREATE_MODULE_LOADER(reflect) {
       {"setglobal", true,  GET_MODULE_METHOD(reflect__setglobal)},
       {"runscript", true,  GET_MODULE_METHOD(reflect__runscript)},
       {"valueatdistance", true,  GET_MODULE_METHOD(reflect__valueatdistance)},
+      {"getaddress", true,  GET_MODULE_METHOD(reflect__getaddress)},
       {NULL,        false, NULL},
   };
 

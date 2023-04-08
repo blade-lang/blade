@@ -19,6 +19,7 @@
   RETURN_OBJ(ptr);
 
 typedef struct {
+  int length;
   int as_int;
   int *types;
   ffi_type *as_ffi;
@@ -29,7 +30,8 @@ typedef struct {
     b_ffi_type *f = ALLOCATE(b_ffi_type, 1); \
     f->as_ffi = &ffi_type_##v;        \
     f->as_int = b_clib_type_##v;      \
-    f->types = NULL;                         \
+    f->types = NULL;        \
+    f->length = 0; \
     b_obj_ptr *ptr = (b_obj_ptr *)GC(new_ptr(vm, (void *)f)); \
     const char *format = "%s";        \
     const char *str = "<void *clib::type::" #v ">"; \
@@ -45,7 +47,8 @@ typedef struct {
     b_ffi_type *f = ALLOCATE(b_ffi_type, 1); \
     f->as_ffi = &ffi_type_pointer;        \
     f->as_int = b_clib_type_##v;      \
-    f->types = NULL;                         \
+    f->types = NULL;         \
+    f->length = 0;\
     b_obj_ptr *ptr = (b_obj_ptr *)GC(new_ptr(vm, (void *)f)); \
     const char *format = "%s";        \
     const char *str = "<void *clib::type::" #v ">"; \
@@ -225,14 +228,15 @@ static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size)
       }
       return 0;
     }
-    /*case b_clib_type_struct: {
-      if(IS_PTR(value)) {
-        void **v = N_ALLOCATE(void *, size);
-        v[0] = AS_PTR(value)->pointer;
+    case b_clib_type_struct: {
+      if(IS_BYTES(value)) {
+        b_obj_bytes *bytes = AS_BYTES(value);
+        void *v = N_ALLOCATE(void *, bytes->bytes.count);
+        memcpy(v, bytes->bytes.bytes, bytes->bytes.count);
         return v;
       }
       return 0;
-    }*/
+    }
     default: {
       break;
     }
@@ -307,11 +311,12 @@ DECLARE_MODULE_METHOD(clib_close_library) {
 }
 
 DECLARE_MODULE_METHOD(clib_new_struct) {
-  ENFORCE_ARG_COUNT(define, 1);
-  ENFORCE_ARG_TYPE(define, 0, IS_LIST);
+  ENFORCE_ARG_COUNT(new_struct, 1);
+  ENFORCE_ARG_TYPE(new_struct, 0, IS_LIST);
 
   b_obj_list *args_list = AS_LIST(args[0]);
-  ffi_type *types = ALLOCATE(ffi_type, 1);
+
+  ffi_type *type = ALLOCATE(ffi_type, 1);
   ffi_type **elements = ALLOCATE(ffi_type *, args_list->items.count + 1);
   int *clib_types = ALLOCATE(int, args_list->items.count);
 
@@ -322,47 +327,17 @@ DECLARE_MODULE_METHOD(clib_new_struct) {
   }
   elements[args_list->items.count] = NULL;
 
-  types->size = types->alignment = 0;
-  types->type = FFI_TYPE_STRUCT;
-  types->elements = elements;
+  type->size = type->alignment = 0;
+  type->type = FFI_TYPE_STRUCT;
+  type->elements = elements;
 
   b_ffi_type *struct_type = ALLOCATE(b_ffi_type, 1);
   struct_type->as_int = b_clib_type_struct;
-  struct_type->as_ffi = types;
+  struct_type->as_ffi = type;
   struct_type->types = clib_types;
+  struct_type->length = args_list->items.count;
 
   CLIB_RETURN_PTR(struct_type, <void *clib::struct(%d)>, args_list->items.count);
-}
-
-DECLARE_MODULE_METHOD(clib_create_struct) {
-  ENFORCE_ARG_COUNT(define, 2);
-  ENFORCE_ARG_TYPE(define, 0, IS_PTR);
-  ENFORCE_ARG_TYPE(define, 1, IS_LIST);
-
-  b_ffi_type *type_ptr = (b_ffi_type *)AS_PTR(args[0])->pointer;
-  b_obj_list *list = AS_LIST(args[1]);
-
-  if(type_ptr->as_int != b_clib_type_struct) {
-    RETURN_ERROR("invalid struct definition");
-  }
-
-  ffi_type **types = type_ptr->as_ffi->elements;
-  b_ffi_values *values = ALLOCATE(b_ffi_values, 1);
-  values->values = NULL;
-
-  for(int i = 0; types[i] != NULL; i++) {
-
-    void *v;
-    if(list->items.count - 1 > i) {
-      v = switch_c_values(vm, type_ptr->types[i], list->items.values[i], types[i]->size);
-    } else {
-      // set default...
-      v = malloc(types[i]->size);
-    }
-    add_value(values, v);
-  }
-
-  CLIB_RETURN_PTR(values, <void *clib::structvalue(%d)>, list->items.count);
 }
 
 DECLARE_MODULE_METHOD(clib_define) {
@@ -423,60 +398,6 @@ DECLARE_MODULE_METHOD(clib_define) {
     break; \
   }
 
-
-static b_obj_list *extract_struct_value(b_vm *vm, void *data, b_ffi_type *type) {
-  b_obj_list *list = (b_obj_list *)GC(new_list(vm));
-  if(data != NULL && type != NULL && type->as_ffi != NULL) {
-
-    size_t total_size = 0;
-    for(int i = 0; type->as_ffi->elements[i] != NULL; i++) {
-      ffi_type *el = type->as_ffi->elements[i];
-
-      switch(type->types[i]) {
-        case b_clib_type_bool: CLIB_STRUCT_VALUE(uint8_t, BOOL_VAL);
-        case b_clib_type_uint8: CLIB_STRUCT_VALUE(uint8_t, NUMBER_VAL);
-        case b_clib_type_sint8: CLIB_STRUCT_VALUE(int8_t, NUMBER_VAL);
-        case b_clib_type_uint16: CLIB_STRUCT_VALUE(uint16_t, NUMBER_VAL);
-        case b_clib_type_sint16: CLIB_STRUCT_VALUE(int16_t, NUMBER_VAL);
-        case b_clib_type_uint32: CLIB_STRUCT_VALUE(uint32_t, NUMBER_VAL);
-        case b_clib_type_sint32: CLIB_STRUCT_VALUE(int32_t, NUMBER_VAL);
-        case b_clib_type_uint64: CLIB_STRUCT_VALUE(uint64_t, NUMBER_VAL);
-        case b_clib_type_sint64: CLIB_STRUCT_VALUE(int64_t, NUMBER_VAL);
-        case b_clib_type_float: CLIB_STRUCT_VALUE(float, NUMBER_VAL);
-        case b_clib_type_double: CLIB_STRUCT_VALUE(double, NUMBER_VAL);
-        case b_clib_type_uchar: CLIB_STRUCT_VALUE(unsigned char, NUMBER_VAL);
-        case b_clib_type_schar: CLIB_STRUCT_VALUE(char, NUMBER_VAL);
-        case b_clib_type_ushort: CLIB_STRUCT_VALUE(unsigned short, NUMBER_VAL);
-        case b_clib_type_sshort: CLIB_STRUCT_VALUE(short, NUMBER_VAL);
-        case b_clib_type_uint: CLIB_STRUCT_VALUE(unsigned int, NUMBER_VAL);
-        case b_clib_type_sint: CLIB_STRUCT_VALUE(int, NUMBER_VAL);
-        case b_clib_type_ulong: CLIB_STRUCT_VALUE(unsigned long, NUMBER_VAL);
-        case b_clib_type_slong: CLIB_STRUCT_VALUE(long, NUMBER_VAL);
-#ifdef LONG_LONG_MAX
-        case b_clib_type_longdouble: CLIB_STRUCT_VALUE(long long, NUMBER_VAL);
-#else
-        case b_clib_type_longdouble: CLIB_STRUCT_VALUE(long, NUMBER_VAL);
-#endif
-        case b_clib_type_char_ptr: CLIB_STRUCT_VALUE(char *, STRING_TT_VAL);
-        case b_clib_type_uchar_ptr: CLIB_STRUCT_VALUE(unsigned char *, BYTES_VAL);
-        case b_clib_type_pointer: CLIB_STRUCT_VALUE(void *, PTR_VAL);
-        case b_clib_type_struct: {
-          b_ffi_type *t = ALLOCATE(b_ffi_type, 1);
-          t->as_ffi = *el->elements;
-          t->as_int = FFI_TYPE_STRUCT;
-          t->types = NULL; // TODO: support nested structs...
-          write_list(vm, list, OBJ_VAL(extract_struct_value(vm, NULL, t)));
-          break;
-        }
-        default: {
-          break;
-        }
-      }
-    }
-  }
-  return list;
-}
-
 DECLARE_MODULE_METHOD(clib_call) {
   ENFORCE_ARG_COUNT(call, 2);
   ENFORCE_ARG_TYPE(call, 0, IS_PTR);
@@ -525,41 +446,20 @@ DECLARE_MODULE_METHOD(clib_call) {
       case b_clib_type_longdouble: CLIB_CALL(long, NUMBER)
 #endif
       case b_clib_type_char_ptr: CLIB_CALL(char *, STRING);
-      case b_clib_type_uchar_ptr: {
-        unsigned char *rc;
-        ffi_call(handle->cif, handle->function, &rc, values->values);
-        RETURN_OBJ(copy_bytes(vm, rc, (int)handle->cif->bytes));
+      case b_clib_type_uchar_ptr:
+      case b_clib_type_struct: {
+        ffi_arg result;
+        ffi_call(handle->cif, handle->function, &result, values->values);
+        b_obj_bytes *bytes = (b_obj_bytes *)GC(new_bytes(vm, handle->cif->rtype->size));
+        memcpy(bytes->bytes.bytes, &result, handle->cif->rtype->size);
+        RETURN_OBJ(bytes);
       }
       case b_clib_type_pointer: CLIB_CALL(void *, PTR);
-      /*case b_clib_type_struct: {
-        void *data = malloc(handle->return_type->as_ffi->size);
-        ffi_call(handle->cif, handle->function, &data, values->values);
-        extract_struct_value(vm, data, handle->return_type);
-        b_obj_ptr *ptr = (b_obj_ptr *)GC(new_ptr(vm, data));
-        ptr->name = "<void *clib::struct::returnvalue>";
-        RETURN_OBJ(ptr);
-      }*/
       default: RETURN;
     }
   }
 
   RETURN_ERROR("function handle not initialized");
-}
-
-DECLARE_MODULE_METHOD(clib_struct_value) {
-  ENFORCE_ARG_COUNT(struct_value, 2);
-  ENFORCE_ARG_TYPE(struct_value, 0, IS_PTR);
-  ENFORCE_ARG_TYPE(struct_value, 1, IS_PTR);
-
-  b_ffi_type *types = (b_ffi_type *) AS_PTR(args[0])->pointer;
-  b_ffi_values *values = (b_ffi_values *) AS_PTR(args[1])->pointer;
-
-  if(values->values != NULL && types->as_ffi != NULL) {
-    b_obj_list *list = extract_struct_value(vm, values->values, types);
-    RETURN_OBJ(list);
-  }
-
-  RETURN_NIL;
 }
 
 CREATE_MODULE_LOADER(clib) {
@@ -597,9 +497,7 @@ CREATE_MODULE_LOADER(clib) {
       {"close",   true,  GET_MODULE_METHOD(clib_close_library)},
       {"define",   true,  GET_MODULE_METHOD(clib_define)},
       {"call",   true,  GET_MODULE_METHOD(clib_call)},
-//      {"new_struct",   true,  GET_MODULE_METHOD(clib_new_struct)},
-//      {"create_struct",   true,  GET_MODULE_METHOD(clib_create_struct)},
-//      {"struct_value",   true,  GET_MODULE_METHOD(clib_struct_value)},
+      {"new_struct",   true,  GET_MODULE_METHOD(clib_new_struct)},
       {NULL,    false, NULL},
   };
 

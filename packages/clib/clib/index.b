@@ -189,14 +189,3 @@ class Clib {
 def load(name) {
   return Clib(name)
 }
-
-/*
-def struct_value(type, ptr) {
-  if !reflect.is_ptr(type) or !to_string(type).match('/clib/')
-    die Exception('clib pointer expected in argument 1 (type)')
-  if !reflect.is_ptr(ptr) or !to_string(ptr).match('/clib/')
-    die Exception('clib pointer expected in argument 2 (ptr)')
-
-  return _clib.struct_value(type, ptr)
-}
-*/
