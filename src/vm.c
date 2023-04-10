@@ -596,15 +596,7 @@ static inline bool call_native_method(b_vm *vm, b_obj_native *native, int arg_co
   if (native->function(vm, arg_count, vm->stack_top - arg_count)) {
     CLEAR_GC();
     vm->stack_top -= arg_count;
-    return true;
-  }/* else {
-    CLEAR_GC();
-    bool overridden = AS_BOOL(vm->stack_top[-arg_count - 1]);
-    *//*if (!overridden) {
-      vm->stack_top -= arg_count + 1;
-    }*//*
-    return overridden;
-  }*/
+  }
   return true;
 }
 
@@ -1453,8 +1445,8 @@ b_ptr_result run(b_vm *vm) {
   } while (false)
 
   for (;;) {
-    // try...finally... (i.e. try without a catch but a finally
-    // but whose try body raises an exception)
+    // try...finally... (i.e. try without a catch but finally
+    // whose try body raises an exception)
     // can cause us to go into an invalid mode where frame count == 0
     // to fix this, we need to exit with an appropriate mode here.
     if (vm->frame_count == 0) {

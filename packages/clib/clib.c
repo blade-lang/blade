@@ -218,7 +218,9 @@ static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size)
       return 0;
     }
     case b_clib_type_pointer: {
-      if(IS_PTR(value)) {
+      if(IS_NIL(value)) {
+        return NULL;
+      } else if(IS_PTR(value)) {
         void **v = N_ALLOCATE(void *, size);
         v[0] = AS_PTR(value)->pointer;
         return v;
@@ -231,7 +233,7 @@ static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size)
     case b_clib_type_struct: {
       if(IS_BYTES(value)) {
         b_obj_bytes *bytes = AS_BYTES(value);
-        void *v = N_ALLOCATE(void *, bytes->bytes.count);
+        void *v = N_ALLOCATE(void, bytes->bytes.count);
         memcpy(v, bytes->bytes.bytes, bytes->bytes.count);
         return v;
       }
@@ -443,7 +445,7 @@ DECLARE_MODULE_METHOD(clib_call) {
 #ifdef LONG_LONG_MAX
       case b_clib_type_longdouble: CLIB_CALL(long long, NUMBER);
 #else
-      case b_clib_type_longdouble: CLIB_CALL(long, NUMBER)
+      case b_clib_type_longdouble: CLIB_CALL(long, NUMBER);
 #endif
       case b_clib_type_char_ptr: CLIB_CALL(char *, STRING);
       case b_clib_type_uchar_ptr:

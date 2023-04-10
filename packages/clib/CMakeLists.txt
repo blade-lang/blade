@@ -22,6 +22,14 @@ add_library(clib SHARED clib.c)
 target_link_libraries(clib libblade)
 add_dependencies(clib blade)
 
+# TEMPORARY WORKAROUND FOR THE OCCASIONAL CRASH WHEN RETURNING STRUCT
+# FROM C LIBRARIES WHEN RUNNING IN RELEASE MODE.
+#
+# @TODO: IDENTIFY AND FIX THE REAL BUG.
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    target_compile_options(clib PRIVATE -O0)
+endif()
+
 set(FFI_ROOT ${CMAKE_CURRENT_LIST_DIR}/libffi)
 if(NOT WIN32)
     include(libffi/CMakeLists.txt)
