@@ -132,8 +132,7 @@ bool load_module(b_vm *vm, b_module_init init_fn, char *import_name, char *sourc
     CLEAR_GC();
     return true;
   } else {
-    // @TODO: Warn about module loading error...
-    printf("Error loading module: _%s\n", import_name);
+    WARN("Error loading module: %s\n", import_name);
   }
 
   return false;
@@ -187,7 +186,7 @@ void bind_user_modules(b_vm *vm, char *pkg_root) {
 
             char* error = load_user_module(vm, path, name);
             if(error != NULL) {
-              // @TODO: handle appropriately
+              WARN("Failed not load module %s from %s. Error: %s.", name, path, error);
             }
           }
         }

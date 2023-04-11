@@ -62,7 +62,6 @@ DECLARE_MODULE_METHOD(ssl_ctx_load_certs) {
   RETURN_TRUE;
 }
 
-// @TODO: Treat the callback in the client code
 DECLARE_MODULE_METHOD(ssl_ctx_set_verify) {
   ENFORCE_ARG_COUNT(ctx_set_verify, 2);
   ENFORCE_ARG_TYPE(ctx_set_verify, 0, IS_PTR);
@@ -73,7 +72,6 @@ DECLARE_MODULE_METHOD(ssl_ctx_set_verify) {
   RETURN;
 }
 
-// @TODO: Treat the callback in the client code
 DECLARE_MODULE_METHOD(ssl_ctx_set_verify_locations) {
   ENFORCE_ARG_COUNT(ctx_set_verify_locations, 2);
   ENFORCE_ARG_TYPE(ctx_set_verify_locations, 0, IS_PTR);

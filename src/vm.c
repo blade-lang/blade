@@ -505,6 +505,7 @@ void init_vm(b_vm *vm) {
   vm->next_gc = DEFAULT_GC_START; // default is 1mb. Can be modified via the -g flag.
   vm->is_repl = false;
   vm->mark_value = true;
+  vm->show_warnings = false;
   vm->should_debug_stack = false;
   vm->should_print_bytecode = false;
   vm->should_exit_after_bytecode = false;
