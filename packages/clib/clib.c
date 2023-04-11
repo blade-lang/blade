@@ -148,18 +148,19 @@ b_value __clib_type_bool(b_vm *vm) {
   }
 
 typedef struct {
-  int count;
-  int capacity;
+  size_t count;
+  size_t capacity;
   void **values;
 } b_ffi_values;
 
-static inline void add_value(b_ffi_values *values, void *object) {
+static inline void add_value(b_vm *vm, b_ffi_values *values, void *object) {
   if (object == NULL)
     return;
 
   if (values->capacity < values->count + 1) {
+    size_t old_capacity = values->capacity;
     values->capacity = GROW_CAPACITY(values->capacity);
-    values->values = (void **) realloc(values->values, sizeof(void *) * values->capacity);
+    values->values = GROW_ARRAY(void *, values->values, old_capacity, values->capacity);
 
     if (values->values == NULL) {
       fflush(stdout); // flush out anything on stdout first
@@ -203,7 +204,7 @@ static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size)
 #endif
     case b_clib_type_char_ptr: {
       if(IS_STRING(value)) {
-        char **v = ALLOCATE(char *, 1);
+        char **v = N_ALLOCATE(char *, 1);
         v[0] = AS_C_STRING(value);
         return v;
       }
@@ -249,6 +250,8 @@ static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size)
 
 static inline b_ffi_values *get_c_values(b_vm *vm, b_ffi_cif *cif, b_obj_list *list) {
   b_ffi_values *values = ALLOCATE(b_ffi_values, 1);
+  values->count = 0;
+  values->capacity = 0;
   values->values = NULL;
 
   for(int i = 0; i < list->items.count; i++) {
@@ -256,7 +259,7 @@ static inline b_ffi_values *get_c_values(b_vm *vm, b_ffi_cif *cif, b_obj_list *l
     b_value value = list->items.values[i];
 
     void *v = switch_c_values(vm, type->as_int, value, type->as_ffi->size);
-    add_value(values, v);
+    add_value(vm, values, v);
   }
 
   return values;
