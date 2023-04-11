@@ -237,8 +237,8 @@ static int get_code_args_count(const uint8_t *bytecode,
       return 2 + (fn->up_value_count * 3);
     }
 
-//    default:
-//      return 0;
+    default:
+      return 0;
   }
   return 0;
 }
@@ -566,20 +566,6 @@ static void end_scope(b_parser *p) {
       emit_byte(p, OP_POP);
     }
     p->vm->compiler->local_count--;
-  }
-}
-
-static void discard_local(b_parser *p, int depth) {
-  if (p->vm->compiler->scope_depth == -1) {
-    error(p, "cannot exit top-level scope");
-  }
-  for (int i = p->vm->compiler->local_count - 1;
-       i >= 0 && p->vm->compiler->locals[i].depth > depth; i--) {
-    if (p->vm->compiler->locals[i].is_captured) {
-      emit_byte(p, OP_CLOSE_UP_VALUE);
-    } else {
-      emit_byte(p, OP_POP);
-    }
   }
 }
 

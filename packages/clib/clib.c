@@ -122,7 +122,7 @@ DEFINE_CLIB_TYPE(pointer);
 DEFINE_CLIB_CTYPE(char_ptr);
 DEFINE_CLIB_CTYPE(uchar_ptr);
 
-b_value __clib_type_bool(b_vm *vm) {
+UNUSED b_value __clib_type_bool(b_vm *vm) {
   b_ffi_type *f = ALLOCATE(b_ffi_type, 1);
   f->as_ffi = &ffi_type_uint8;
   f->as_int = b_clib_type_bool;

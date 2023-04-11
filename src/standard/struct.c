@@ -25,7 +25,7 @@
 #include <stdlib.h>
 
 #define INC_OUTPUTPOS(a,b) \
-  if ((a) < 0 || ((INT_MAX - outputpos)/((int)b)) < (a)) { \
+  if ((a) < 0 || ((INT_MAX - outputpos)/((int)(b))) < (a)) { \
     free(formatcodes);	\
     free(formatargs);	\
     RETURN_ERROR("Type %c: integer overflow in format string", code); \
