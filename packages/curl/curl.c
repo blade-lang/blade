@@ -685,7 +685,7 @@ DECLARE_MODULE_METHOD(curl__easy_perform) {
   ENFORCE_ARG_TYPE(easy_perform, 0, IS_PTR);
   CURL *curl = (CURL*)AS_PTR(args[0])->pointer;
 
-  // @TODO: set write, header and debug functions here...
+  // @TODO: set debug functions here...
   struct b_curl_string body;
   init_string(&body);
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, b_CurlWriteFunc);

@@ -574,6 +574,53 @@ DECLARE_NATIVE(ord) {
  * - returns a random number between limit and upper if two arguments is
  * given
  */
+#define MT_STATE_SIZE 624
+
+static void mt_seed(uint32_t seed, uint32_t* state, uint32_t* index) {
+  state[0] = seed;
+  for (uint32_t i = 1; i < MT_STATE_SIZE; i++) {
+    state[i] = (uint32_t)(1812433253UL * (state[i - 1] ^ (state[i - 1] >> 30)) + i);
+  }
+  *index = MT_STATE_SIZE;
+}
+
+static uint32_t mt_generate(uint32_t* state, uint32_t* index) {
+  if (*index >= MT_STATE_SIZE) {
+    uint32_t i;
+    for (i = 0; i < MT_STATE_SIZE - 397; i++) {
+      uint32_t y = (state[i] & 0x80000000) | (state[i + 1] & 0x7fffffff);
+      state[i] = state[i + 397] ^ (y >> 1) ^ ((y & 1) * 0x9908b0df);
+    }
+    for (; i < MT_STATE_SIZE - 1; i++) {
+      uint32_t y = (state[i] & 0x80000000) | (state[i + 1] & 0x7fffffff);
+      state[i] = state[i + (397 - MT_STATE_SIZE)] ^ (y >> 1) ^ ((y & 1) * 0x9908b0df);
+    }
+    uint32_t y = (state[MT_STATE_SIZE - 1] & 0x80000000) | (state[0] & 0x7fffffff);
+    state[MT_STATE_SIZE - 1] = state[396] ^ (y >> 1) ^ ((y & 1) * 0x9908b0df);
+    *index = 0;
+  }
+  uint32_t y = state[*index];
+  *index = *index + 1;
+  y = y ^ (y >> 11);
+  y = y ^ ((y << 7) & 0x9d2c5680);
+  y = y ^ ((y << 15) & 0xefc60000);
+  y = y ^ (y >> 18);
+  return y;
+}
+
+double mt_rand(double lower_limit, double upper_limit) {
+  static uint32_t mt_state[MT_STATE_SIZE];
+  static uint32_t mt_index = MT_STATE_SIZE + 1;
+  if (mt_index >= MT_STATE_SIZE) {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    mt_seed((uint32_t)(1000000 * tv.tv_sec + tv.tv_usec), mt_state, &mt_index);
+  }
+  uint32_t rand_val = mt_generate(mt_state, &mt_index);
+  double rand_num = lower_limit + ((double)rand_val / UINT32_MAX) * (upper_limit - lower_limit);
+  return rand_num;
+}
+
 DECLARE_NATIVE(rand) {
   ENFORCE_ARG_RANGE(rand, 0, 2);
   int lower_limit = 0;
@@ -594,27 +641,7 @@ DECLARE_NATIVE(rand) {
     lower_limit = tmp;
   }
 
-  int n = upper_limit - lower_limit + 1;
-  int remainder = RAND_MAX % n;
-  int x;
-
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  srand((unsigned int) (10000000 * tv.tv_sec + tv.tv_usec + time(NULL)));
-
-  if(lower_limit == 0 && upper_limit == 1) {
-    RETURN_NUMBER((double)rand() / RAND_MAX);
-  } else {
-#ifndef _WIN32
-    do {
-      x = rand();
-    } while (x >= RAND_MAX - remainder);
-#else
-    x = rand();
-#endif
-
-    RETURN_NUMBER((double) lower_limit + x % n);
-  }
+  RETURN_NUMBER(mt_rand(lower_limit, upper_limit));
 }
 
 /**

@@ -9,7 +9,10 @@ inline void write_list(b_vm *vm, b_obj_list *list, b_value value) {
 b_obj_list *copy_list(b_vm *vm, b_obj_list *list, int start, int length) {
   b_obj_list *_list = (b_obj_list *)GC(new_list(vm));
 
-  for(int i = 0; i < list->items.count; i++) {
+  if(start == -1) start = 0;
+  if(length == -1) length = list->items.count - start;
+
+  for(int i = start; i < start + length; i++) {
     write_list(vm, _list, list->items.values[i]);
   }
 

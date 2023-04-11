@@ -183,11 +183,14 @@ var uchar_ptr = _clib.uchar_ptr
 var ptr = _clib.pointer
 
 
-/*
 /**
  * struct(...type)
  * 
- * Returns a type that can be used to declare structs.
+ * Returns a type that can be used to declare structs. 
+ * To create or read value for the struct, you need to use the `pack()` 
+ * and `unpack()` function in the `struct` module respectively.
+ * 
+ * @note This function can also be used to define a C union or array.
  * @return type
  */
 def struct(...) {
@@ -202,49 +205,3 @@ def struct(...) {
 
   return _clib.new_struct(__args__)
 }
-
-/**
- * create_struct(type: type, ...values: type)
- * 
- * Creates a new struct instance based on the given previously 
- * declared struct type and sets it's value based on the given 
- * values. When no value is set, a new instance of the struct is 
- * created without any initialized fields.
- * 
- * For example,
- * 
- * ```blade
- * var my_struct = create_struct(mytype.tm)
- * ```
- * 
- * The following call to `create_struct()` translates into C code.
- * 
- * ```c
- * struct tm my_struct;
- * ```
- * 
- * While this the following,
- * 
- * ```blade
- * var my_struct = create_struct(mytype.tm, 0, 1.5)
- * ```
- * 
- * translates into the following C code.
- * 
- * ```c
- * struct tm my_struct = {
- *    .sec = 0,
- *    .usec = 1.5
- * };
- * ```
- * @return ptr
- */
-def create_struct(type, ...) {
-  if !(reflect.is_ptr(type) and to_string(type).match('/clib/'))
-    die Exception('canot have an empty struct')
-
-  return _clib.create_struct(type, __args__)
-}
-
-var array = struct
-*/

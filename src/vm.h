@@ -73,6 +73,7 @@ struct s_vm {
   bool is_repl;
   bool mark_value;
   // for switching through the command line args...
+  bool show_warnings;
   bool should_debug_stack;
   bool should_print_bytecode;
   bool should_exit_after_bytecode;

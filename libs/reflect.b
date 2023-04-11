@@ -287,6 +287,26 @@ def is_ptr(value) {
 }
 
 /**
+ * get_ptr(value: any)
+ * 
+ * Returns a pointer to the given value.
+ * @return ptr
+ */
+def get_ptr(value) {
+  return _reflect.getptr(value)
+}
+
+/**
+ * get_address(value: any)
+ * 
+ * Returns a the address of the pointer to the value in memory.
+ * @return ptr
+ */
+def get_address(value) {
+  return _reflect.getaddress(value)
+}
+
+/**
  * set_global(fn: function | class [, name: string])
  * 
  * Sets a function or class as globally accessible in all modules, function and scopes.

@@ -10,6 +10,30 @@
 #include <stddef.h>
 #include <stdint.h>
 
+
+
+#ifdef __GNUC__
+#define UNUSED __attribute__((unused))
+#elif defined(_MSC_VER)
+#define UNUSED __pragma(warning(suppress: 4100 4101 4189))
+#else
+    #define UNUSED
+#endif
+
+#ifdef __GNUC__
+#define DISABLE_WARNING_PUSH _Pragma("GCC diagnostic push")
+#define DISABLE_WARNING_POP _Pragma("GCC diagnostic pop")
+#define DISABLE_WARNING(w) _Pragma(GCC diagnostic ignored #w)
+#elif defined(_MSC_VER)
+#define DISABLE_WARNING_PUSH __pragma(warning(push))
+    #define DISABLE_WARNING_POP __pragma(warning(pop))
+    #define DISABLE_WARNING(w) __pragma(warning(disable:w))
+#else
+    #define DISABLE_WARNING_PUSH
+    #define DISABLE_WARNING_POP
+    #define DISABLE_WARNING(w)
+#endif
+
 #include "config.h"
 #include "bendian.h"
 
@@ -85,6 +109,6 @@
 #define EXIT_RUNTIME 11
 #define EXIT_TERMINAL 12
 
-#define BLADE_COPYRIGHT "Copyright (c) 2021 Ore Richard Muyiwa"
+#define BLADE_COPYRIGHT "Copyright (c) 2021 - 2023 Ore Richard Muyiwa"
 
 #endif

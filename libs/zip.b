@@ -736,10 +736,6 @@ class ZipArchive {
               decoded = zlib.undeflate(filedata)
               filedata.dispose()
             } catch Exception {
-              ## continue
-              # TODO: Decide if we want to continue (hence skiping the file)
-              # or return empty bytes (hence truncate the file).
-              # for now we are truncating it.
               decoded = bytes(0)
             }
           }

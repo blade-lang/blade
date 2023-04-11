@@ -223,7 +223,7 @@ static void run_code(b_vm *vm, char *source) {
 
 void show_usage(char *argv[], bool fail) {
   FILE *out = fail ? stderr : stdout;
-  fprintf(out, "Usage: %s [-[h | c | d | e | j | v | g]] [filename]\n", argv[0]);
+  fprintf(out, "Usage: %s [-[h | c | d | e | j | v | g | w]] [filename]\n", argv[0]);
   fprintf(out, "   -h       Show this help message.\n");
   fprintf(out, "   -v       Show version string.\n");
   fprintf(out, "   -b       Buffer terminal outputs.\n");
@@ -235,11 +235,13 @@ void show_usage(char *argv[], bool fail) {
                "            can start. [Default = %d (%dmb)]\n", DEFAULT_GC_START / 1024,
           DEFAULT_GC_START / (1024 * 1024));
   fprintf(out, "   -c arg   Runs the give code.\n");
+  fprintf(out, "   -w       Show runtime warnings.\n");
   exit(fail ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {
 
+  bool show_warnings = false;
   bool should_debug_stack = false;
   bool should_print_bytecode = false;
   bool should_buffer_stdout = false;
@@ -249,7 +251,7 @@ int main(int argc, char *argv[]) {
 
   if (argc > 1) {
     int opt;
-    while ((opt = getopt(argc, argv, "hdebjvgc:")) != -1) {
+    while ((opt = getopt(argc, argv, "hdebjvgcw:")) != -1) {
       switch (opt) {
         case 'h':
           show_usage(argv, false); // exits
@@ -281,6 +283,10 @@ int main(int argc, char *argv[]) {
           source = optarg;
           break;
         }
+        case 'w': {
+          show_warnings = true;
+          break;
+        }
         default:
           show_usage(argv, true); // exits
       }
@@ -293,6 +299,7 @@ int main(int argc, char *argv[]) {
     init_vm(vm);
 
     // set vm options...
+    vm->show_warnings = show_warnings;
     vm->should_debug_stack = should_debug_stack;
     vm->should_print_bytecode = should_print_bytecode;
     vm->should_exit_after_bytecode = should_exit_after_bytecode;

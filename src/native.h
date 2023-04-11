@@ -10,10 +10,6 @@
 
 #include "pcre2/pcre2.h"
 
-#define N__(x, y) 200##y
-#define N___(x, y) N__(x, y)
-#define NEW_OBJ_TYPE N___(__LINE__, __COUNTER__)
-
 #define DECLARE_NATIVE(name)                                                   \
   bool native_fn_##name(b_vm *vm, int arg_count, b_value *args)
 
@@ -56,41 +52,49 @@
 
 #define NORMALIZE(token) NORMALIZE_##token
 
-#define RETURN { args[-1] = EMPTY_VAL; return true; }
-#define RETURN_NIL { args[-1] = NIL_VAL; return true; }
-#define RETURN_EMPTY { args[-1] = NIL_VAL; return false; }
+#define RETURN do { args[-1] = EMPTY_VAL; return true; } while(0)
+#define RETURN_NIL do { args[-1] = NIL_VAL; return true; } while(0)
+#define RETURN_EMPTY do  { args[-1] = NIL_VAL; return false; } while(0)
 #define RETURN_ERROR(...)                                                      \
-  {                                                                            \
+  do {                                                                            \
     pop_n(vm, arg_count); \
     throw_exception(vm, ##__VA_ARGS__);                                        \
     args[-1] = FALSE_VAL; \
     return false;                                                          \
-  }
-#define RETURN_BOOL(v) { args[-1] = BOOL_VAL(v); return true; }
-#define RETURN_TRUE { args[-1] = TRUE_VAL; return true; }
-#define RETURN_FALSE { args[-1] = FALSE_VAL; return true; }
-#define RETURN_NUMBER(v) { args[-1] = NUMBER_VAL(v); return true; }
-#define RETURN_OBJ(v) { args[-1] = OBJ_VAL(v); return true; }
-#define RETURN_PTR(v) { args[-1] = OBJ_VAL(new_ptr(vm, (void*)v)); return true; }
-#define RETURN_STRING(v) { args[-1] = OBJ_VAL(copy_string(vm, v, (int)strlen(v))); return true; }
-#define RETURN_L_STRING(v, l) { args[-1] = OBJ_VAL(copy_string(vm, v, l)); return true; }
-#define RETURN_T_STRING(v, l) { args[-1] = OBJ_VAL(take_string(vm, v, l)); return true; }
-#define RETURN_TT_STRING(v) { args[-1] = OBJ_VAL(take_string(vm, v, (int)strlen(v))); return true; }
-#define RETURN_VALUE(v) { args[-1] = v; return true; }
+  } while(0)
+#define RETURN_BOOL(v) do { args[-1] = BOOL_VAL(v); return true; } while(0)
+#define RETURN_TRUE do { args[-1] = TRUE_VAL; return true; } while(0)
+#define RETURN_FALSE do { args[-1] = FALSE_VAL; return true; } while(0)
+#define RETURN_NUMBER(v) do { args[-1] = NUMBER_VAL(v); return true; } while(0)
+#define RETURN_OBJ(v) do { args[-1] = OBJ_VAL(v); return true; } while(0)
+#define RETURN_PTR(v) do { args[-1] = OBJ_VAL(new_ptr(vm, (void*)(v))); return true; } while(0)
+#define RETURN_STRING(v) do { args[-1] = OBJ_VAL(copy_string(vm, v, (int)strlen(v))); return true; } while(0)
+#define RETURN_L_STRING(v, l) do { args[-1] = OBJ_VAL(copy_string(vm, v, l)); return true; } while(0)
+#define RETURN_T_STRING(v, l) do { args[-1] = OBJ_VAL(take_string(vm, v, l)); return true; } while(0)
+#define RETURN_TT_STRING(v) do { args[-1] = OBJ_VAL(take_string(vm, v, (int)strlen(v))); return true; } while(0)
+#define RETURN_VALUE(v) do { args[-1] = v; return true; } while(0)
+
+#define WARN(...) do { \
+    if(vm->show_warnings) { \
+      fprintf(stderr, "WARNING: ");                  \
+      fprintf(stderr, ##__VA_ARGS__);                  \
+      fprintf(stderr, "\n");                  \
+    }                   \
+  }  while(0)
 
 #define ENFORCE_ARG_COUNT(name, d)                                             \
-  if (arg_count != d) {                                                        \
+  if (arg_count != (d)) {                                                        \
     RETURN_ERROR(#name "() expects %d arguments, %d given", d, arg_count);     \
   }
 
 #define ENFORCE_MIN_ARG(name, d)                                               \
-  if (arg_count < d) {                                                         \
+  if (arg_count < (d)) {                                                         \
     RETURN_ERROR(#name "() expects minimum of %d arguments, %d given", d,      \
                  arg_count);                                                   \
   }
 
 #define ENFORCE_MAX_ARG(name, d)                                               \
-  if (arg_count < d) {                                                         \
+  if (arg_count < (d)) {                                                         \
     RETURN_ERROR(#name "() expects maximum of %d arguments, %d given", d,      \
                  arg_count);                                                   \
   }
