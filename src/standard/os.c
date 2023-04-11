@@ -119,7 +119,7 @@ DECLARE_MODULE_METHOD(os_info) {
 
   RETURN_OBJ(dict);
 #else
-  RETURN_ERROR("not available: OS does not have uname()")
+  RETURN_ERROR("not available: OS does not have uname()");
 #endif /* HAVE_SYS_UTSNAME_H */
 }
 
