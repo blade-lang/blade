@@ -127,6 +127,7 @@ check_function_exists("gettimeofday" HAVE_GETTIMEOFDAY)
 if(NOT "${HAVE_GETTIMEOFDAY}")
 	target_link_libraries(libblade PRIVATE gettimeofday)
 endif()
+
 check_function_exists("utime" HAVE_UTIME)
 check_function_exists("basename" HAVE_BASENAME)
 check_function_exists("dirname" HAVE_DIRNAME)

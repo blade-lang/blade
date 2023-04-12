@@ -168,10 +168,9 @@ static void repl(b_vm *vm) {
       fflush(stdout); // flush all outputs
 
       // reset source...
-      memset(source, 0, strlen(source));
+      continue_repl = false;
     }
   }
-  free(source);
 }
 
 static void run_file(b_vm *vm, char *file) {
