@@ -219,17 +219,15 @@ static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size)
       return 0;
     }
     case b_clib_type_pointer: {
-      if(IS_NIL(value)) {
-        return NULL;
-      } else if(IS_PTR(value)) {
-        void **v = N_ALLOCATE(void *, size);
+      void **v = N_ALLOCATE(void *, size);
+      if(IS_PTR(value)) {
         v[0] = AS_PTR(value)->pointer;
-        return v;
       } else if(IS_FILE(value)) {
-        // pass as is...
-        return AS_FILE(value)->file;
+        v[0] = AS_FILE(value)->file;
+      } else {
+        v[0] = NULL;
       }
-      return 0;
+      return v;
     }
     case b_clib_type_struct: {
       if(IS_BYTES(value)) {
@@ -373,7 +371,7 @@ DECLARE_MODULE_METHOD(clib_define) {
     ffi_type **types = ALLOCATE(ffi_type *, args_list->items.count + 1);
 
     // extract types out of b_ffi_type to ffi_type and into ci
-    for (int i = 0; i < args_list->items.count; ++i) {
+    for (int i = 0; i < args_list->items.count; i++) {
       b_ffi_type *type = (b_ffi_type *) AS_PTR(args_list->items.values[i])->pointer;
       ci->arg_types[i] = type;
       types[i] = type->as_ffi;
