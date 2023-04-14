@@ -926,17 +926,27 @@ static void dictionary(b_parser *p, bool can_assign) {
       ignore_whitespace(p);
 
       if (!check(p, RBRACE_TOKEN)) { // allow last pair to end with a comma
+        bool used_expression = false;
         if (check(p, IDENTIFIER_TOKEN)) {
           consume(p, IDENTIFIER_TOKEN, "");
           emit_constant(p, OBJ_VAL(copy_string(p->vm, p->previous.start, p->previous.length)));
         } else {
           expression(p);
+          used_expression = true;
         }
         ignore_whitespace(p);
-        consume(p, COLON_TOKEN, "expected ':' after dictionary key");
-        ignore_whitespace(p);
+        if(!check(p, COMMA_TOKEN) && !check(p, RBRACE_TOKEN)) {
+          consume(p, COLON_TOKEN, "expected ':' after dictionary key");
+          ignore_whitespace(p);
 
-        expression(p);
+          expression(p);
+        } else {
+          if(used_expression) {
+            error(p, "cannot infer dictionary values from expressions");
+          } else {
+            named_variable(p, p->previous, false);
+          }
+        }
         item_count++;
       }
     } while (match(p, COMMA_TOKEN));
