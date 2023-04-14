@@ -765,6 +765,13 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
         if (table_get(&vm->methods_dict, OBJ_VAL(name), &value)) {
           return call_native_method(vm, AS_NATIVE(value), arg_count);
         }
+
+        // NEW in v0.0.84, dictionaries can declare extra methods as part of their entries.
+        else if(table_get(&AS_DICT(receiver)->items, OBJ_VAL(name), &value)) {
+          if(IS_CLOSURE(value)) {
+            return call_value(vm, value, arg_count);
+          }
+        }
         return throw_exception(vm, "Dict has no method %s()", name->chars);
       }
       case OBJ_FILE: {
