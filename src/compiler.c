@@ -898,12 +898,16 @@ static void list(b_parser *p, bool can_assign) {
   emit_byte(p, OP_NIL); // placeholder for the list
 
   int count = 0;
+  ignore_whitespace(p);
   if (!check(p, RBRACKET_TOKEN)) {
     do {
       ignore_whitespace(p);
-      expression(p);
-      ignore_whitespace(p);
-      count++;
+
+      if(!check(p, RBRACKET_TOKEN)) { // allow comma to end lists
+        expression(p);
+        ignore_whitespace(p);
+        count++;
+      }
     } while (match(p, COMMA_TOKEN));
   }
   ignore_whitespace(p);
@@ -916,6 +920,7 @@ static void dictionary(b_parser *p, bool can_assign) {
   emit_byte(p, OP_NIL); // placeholder for the dictionary
 
   int item_count = 0;
+  ignore_whitespace(p);
   if (!check(p, RBRACE_TOKEN)) {
     do {
       ignore_whitespace(p);
