@@ -297,6 +297,15 @@ def get_ptr(value) {
 }
 
 /**
+ * set_ptr(pointer: ptr, value: any)
+ * 
+ * Sets the value at the given pointer's address to the given value.
+ */
+def set_ptr(pointer, value) {
+  return _reflect.setptrvalue(pointer, value)
+}
+
+/**
  * get_address(value: any)
  * 
  * Returns a the address of the pointer to the value in memory.
@@ -304,6 +313,16 @@ def get_ptr(value) {
  */
 def get_address(value) {
   return _reflect.getaddress(value)
+}
+
+/**
+ * ptr_from_address(address: number)
+ * 
+ * Returns a pointer to the given memory address.
+ * @returns ptr
+ */
+def ptr_from_address(address) {
+  return _reflect.ptrfromaddress(address)
 }
 
 /**

@@ -203,20 +203,22 @@ static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size)
     case b_clib_type_longdouble: CLIB_GET_C_VALUE(long);
 #endif
     case b_clib_type_char_ptr: {
+      char **v = N_ALLOCATE(char *, 1);
       if(IS_STRING(value)) {
-        char **v = N_ALLOCATE(char *, 1);
         v[0] = AS_C_STRING(value);
-        return v;
+      } else {
+          v[0] = NULL;
       }
-      return 0;
+      return v;
     }
     case b_clib_type_uchar_ptr: {
+      unsigned char **v = N_ALLOCATE(unsigned char *, size);
       if(IS_BYTES(value)) {
-        unsigned char **v = N_ALLOCATE(unsigned char *, size);
         v[0] = AS_BYTES(value)->bytes.bytes;
-        return v;
+      } else {
+        v[0] = NULL;
       }
-      return 0;
+      return v;
     }
     case b_clib_type_pointer: {
       void **v = N_ALLOCATE(void *, size);
