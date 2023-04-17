@@ -27,7 +27,7 @@
 #ifdef _WIN32
 typedef uint64_t unaligned_uint64_t __attribute__((__aligned__(1)));
 #else
-typedef uint64_t unaligned_uint64_t
+typedef uint64_t unaligned_uint64_t;
 #endif
 
 #define INC_OUTPUTPOS(a,b) \
