@@ -207,7 +207,7 @@ static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size)
       if(IS_STRING(value)) {
         v[0] = AS_C_STRING(value);
       } else {
-          v[0] = NULL;
+        v[0] = NULL;
       }
       return v;
     }

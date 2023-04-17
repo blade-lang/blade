@@ -360,13 +360,20 @@ DECLARE_MODULE_METHOD(reflect__getaddress) {
 }
 
 DECLARE_MODULE_METHOD(reflect__ptr_from_address) {
-    ENFORCE_ARG_COUNT(ptr_from_address, 1);
-    ENFORCE_ARG_TYPE(ptr_from_address, 0, IS_NUMBER);
+  ENFORCE_ARG_COUNT(ptr_from_address, 1);
+  ENFORCE_ARG_TYPE(ptr_from_address, 0, IS_NUMBER);
 
-    uintptr_t address = AS_NUMBER(args[0]);
-    void *ptr = (void *) address;
+  uintptr_t address = AS_NUMBER(args[0]);
 
-    RETURN_PTR(ptr);
+  typedef union {
+    uintptr_t address;
+    void *ptr;
+  } b_reflect_ptr_union;
+
+  b_reflect_ptr_union ptr_union;
+  ptr_union.address = address;
+
+  RETURN_PTR(ptr_union.ptr);
 }
 
 DECLARE_MODULE_METHOD(reflect__set_ptr_value) {
