@@ -535,11 +535,11 @@ void init_vm(b_vm *vm) {
 
 void free_vm(b_vm *vm) {
   free_objects(vm);
-  free_table(vm, &vm->strings);
-  free_table(vm, &vm->globals);
   // since object in module can exist in globals
-  // it must come after
+  // it must come before
   free_table(vm, &vm->modules);
+  free_table(vm, &vm->globals);
+  free_table(vm, &vm->strings);
 
   free_table(vm, &vm->methods_string);
   free_table(vm, &vm->methods_list);

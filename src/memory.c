@@ -192,7 +192,6 @@ void free_object(b_vm *vm, b_obj *object) {
 //#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
 //  printf("%p free type %d\n", (void *)object, object->type);
 //#endif
-
   switch (object->type) {
     case OBJ_MODULE: {
       b_obj_module *module = (b_obj_module *) object;
@@ -247,9 +246,7 @@ void free_object(b_vm *vm, b_obj *object) {
       free_table(vm, &klass->methods);
       free_table(vm, &klass->properties);
       free_table(vm, &klass->static_properties);
-      if(!IS_EMPTY(klass->initializer)) {
-        free_object(vm, AS_OBJ(klass->initializer));
-      }
+      // We are not freeing the initializer because it's a closure and will still be freed accordingly later.
       FREE(b_obj_class, object);
       break;
     }
@@ -287,7 +284,7 @@ void free_object(b_vm *vm, b_obj *object) {
     }
     case OBJ_STRING: {
       b_obj_string *string = (b_obj_string *) object;
-      FREE_ARRAY(char, string->chars, (size_t) string->length + 1);
+      FREE_ARRAY(char, string->chars, string->length + 1);
       FREE(b_obj_string, object);
       break;
     }
