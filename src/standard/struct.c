@@ -24,6 +24,12 @@
 #include "module.h"
 #include <stdlib.h>
 
+#ifdef _WIN32
+typedef uint64_t unaligned_uint64_t __attribute__((__aligned__(1)));
+#else
+typedef uint64_t unaligned_uint64_t;
+#endif
+
 #define INC_OUTPUTPOS(a,b) \
   if ((a) < 0 || ((INT_MAX - outputpos)/((int)(b))) < (a)) { \
     free(formatcodes);	\
@@ -1074,8 +1080,8 @@ DECLARE_MODULE_METHOD(struct_unpack) {
             case 'J':   /* unsigned big endian     */
             case 'P': { /* unsigned little endian  */
 #if IS_64_BIT
-              long v = 0;
-              uint64_t x = *((uint64_t*) &input[inputpos]);
+              int64_t v = 0;
+              uint64_t x = *((unaligned_uint64_t *) &input[inputpos]);
 
               if (type == 'q') {
                 v = (int64_t) x;
@@ -1085,7 +1091,7 @@ DECLARE_MODULE_METHOD(struct_unpack) {
                 v = x;
               }
 
-              dict_set_entry(vm, return_value, UNPACK_REAL_NAME(), NUMBER_VAL(v));
+              dict_set_entry(vm, return_value, UNPACK_REAL_NAME(), NUMBER_VAL((double)v));
               break;
 #else
               RETURN_ERROR("q, Q, J and P are only valid on 64 bit build of Blade");

@@ -28,9 +28,9 @@ void clean_free_table(b_vm *vm, b_table *table) {
 #else
       if(entry != NULL) {
 #endif
-      if(IS_OBJ(entry->key))
+      if(IS_OBJ(entry->key) && !IS_STRING(entry->key))
         free_object(vm, AS_OBJ(entry->key));
-      if(IS_OBJ(entry->value))
+      if(IS_OBJ(entry->value) && !IS_STRING(entry->key))
         free_object(vm, AS_OBJ(entry->value));
     }
   }

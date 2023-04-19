@@ -328,7 +328,6 @@ b_value io_module_stdin(b_vm *vm) {
       new_file(vm, copy_string(vm, "<stdin>", 7), copy_string(vm, "", 0));
   file->file = stdin;
   file->is_open = true;
-  file->mode = copy_string(vm, "", 0);
   return OBJ_VAL(file);
 }
 
@@ -342,7 +341,6 @@ b_value io_module_stdout(b_vm *vm) {
       new_file(vm, copy_string(vm, "<stdout>", 8), copy_string(vm, "", 0));
   file->file = stdout;
   file->is_open = true;
-  file->mode = copy_string(vm, "", 0);
   return OBJ_VAL(file);
 }
 
