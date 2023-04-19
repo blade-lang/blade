@@ -1,5 +1,6 @@
 #include <blade.h>
 #include <ffi.h>
+#include <math.h>
 
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
@@ -477,10 +478,10 @@ DECLARE_MODULE_METHOD(clib_get_ptr_index) {
 
   void *ptr = AS_PTR(args[0])->pointer;
   b_ffi_type *type = (b_ffi_type *) AS_PTR(args[1])->pointer;
-  int index = AS_NUMBER(args[2]);
+  unsigned int index = AS_NUMBER(args[2]);
 
   b_obj_bytes *bytes = (b_obj_bytes *)GC(new_bytes(vm, type->as_ffi->size));
-  memcpy(bytes->bytes.bytes, &ptr[index], type->as_ffi->size);
+  memcpy(bytes->bytes.bytes, ptr + (type->as_ffi->size * index), type->as_ffi->size);
   RETURN_OBJ(bytes);
 }
 
@@ -492,7 +493,7 @@ DECLARE_MODULE_METHOD(clib_set_ptr_index) {
 
   void *ptr = AS_PTR(args[0])->pointer;
   b_ffi_type *type = (b_ffi_type *) AS_PTR(args[1])->pointer;
-  int index = AS_NUMBER(args[2]);
+  unsigned int index = AS_NUMBER(args[2]);
 
   void *v = switch_c_values(vm, type->as_int, args[3], type->as_ffi->size);
   memcpy(ptr + (type->as_ffi->size * index), v, type->as_ffi->size);

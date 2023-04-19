@@ -314,6 +314,8 @@ DECLARE_MODULE_METHOD(reflect__getptr) {
         RETURN_PTR(AS_OBJ(args[0]));
       }
     }
+  } else if(IS_NUMBER(args[0])) {
+    RETURN_PTR(args);
   } else {
     RETURN_PTR(NULL);
   }
