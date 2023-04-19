@@ -226,8 +226,10 @@ static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size)
         v[0] = AS_PTR(value)->pointer;
       } else if(IS_FILE(value)) {
         v[0] = AS_FILE(value)->file;
-      } else {
+      } else if(IS_NIL(value)) {
         v[0] = NULL;
+      } else {
+        v[0] = &value;
       }
       return v;
     }
@@ -467,6 +469,36 @@ DECLARE_MODULE_METHOD(clib_call) {
   RETURN_ERROR("function handle not initialized");
 }
 
+DECLARE_MODULE_METHOD(clib_get_ptr_index) {
+  ENFORCE_ARG_COUNT(get_ptr_index, 3);
+  ENFORCE_ARG_TYPE(get_ptr_index, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(get_ptr_index, 1, IS_PTR);
+  ENFORCE_ARG_TYPE(get_ptr_index, 2, IS_NUMBER);
+
+  void *ptr = AS_PTR(args[0])->pointer;
+  b_ffi_type *type = (b_ffi_type *) AS_PTR(args[1])->pointer;
+  int index = AS_NUMBER(args[2]);
+
+  b_obj_bytes *bytes = (b_obj_bytes *)GC(new_bytes(vm, type->as_ffi->size));
+  memcpy(bytes->bytes.bytes, &ptr[index], type->as_ffi->size);
+  RETURN_OBJ(bytes);
+}
+
+DECLARE_MODULE_METHOD(clib_set_ptr_index) {
+  ENFORCE_ARG_COUNT(set_ptr_index, 4);
+  ENFORCE_ARG_TYPE(set_ptr_index, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(set_ptr_index, 1, IS_PTR);
+  ENFORCE_ARG_TYPE(set_ptr_index, 2, IS_NUMBER);
+
+  void *ptr = AS_PTR(args[0])->pointer;
+  b_ffi_type *type = (b_ffi_type *) AS_PTR(args[1])->pointer;
+  int index = AS_NUMBER(args[2]);
+
+  void *v = switch_c_values(vm, type->as_int, args[3], type->as_ffi->size);
+  memcpy(ptr + (type->as_ffi->size * index), v, type->as_ffi->size);
+  RETURN;
+}
+
 CREATE_MODULE_LOADER(clib) {
   static b_field_reg module_fields[] = {
       GET_CLIB_TYPE(void),
@@ -503,6 +535,8 @@ CREATE_MODULE_LOADER(clib) {
       {"define",   true,  GET_MODULE_METHOD(clib_define)},
       {"call",   true,  GET_MODULE_METHOD(clib_call)},
       {"new_struct",   true,  GET_MODULE_METHOD(clib_new_struct)},
+      {"get_ptr_index",   true,  GET_MODULE_METHOD(clib_get_ptr_index)},
+      {"set_ptr_index",   true,  GET_MODULE_METHOD(clib_set_ptr_index)},
       {NULL,    false, NULL},
   };
 

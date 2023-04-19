@@ -189,3 +189,27 @@ class Clib {
 def load(name) {
   return Clib(name)
 }
+
+/**
+ * get_ptr_index(pointer: ptr, type: clib_type, index: number)
+ * 
+ * Get the value at the given index of a pointer based 
+ * on the given CLib type.
+ * 
+ * @return any
+ */
+def get_ptr_index(pointer, type, index) {
+  return _clib.get_ptr_index(pointer, type, index)
+}
+
+/**
+ * get_ptr_index(pointer: ptr, type: clib_type, index: number, value: any)
+ * 
+ * Sets the value at the given index of a pointer based 
+ * on the given CLib type to the given value.
+ * 
+ * @return any
+ */
+def set_ptr_index(pointer, type, index, value) {
+  return _clib.set_ptr_index(pointer, type, index, value)
+}

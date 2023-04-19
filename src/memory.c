@@ -244,7 +244,6 @@ void free_object(b_vm *vm, b_obj *object) {
     }
     case OBJ_CLASS: {
       b_obj_class *klass = (b_obj_class *) object;
-      free_object(vm, (b_obj *) klass->name);
       free_table(vm, &klass->methods);
       free_table(vm, &klass->properties);
       free_table(vm, &klass->static_properties);
@@ -265,9 +264,6 @@ void free_object(b_vm *vm, b_obj *object) {
     case OBJ_FUNCTION: {
       b_obj_func *function = (b_obj_func *) object;
       free_blob(vm, &function->blob);
-      if(function->name != NULL) {
-        free_object(vm, (b_obj *) function->name);
-      }
       FREE(b_obj_func, object);
       break;
     }
