@@ -377,47 +377,47 @@ DECLARE_MODULE_METHOD(reflect__ptr_from_address) {
 }
 
 DECLARE_MODULE_METHOD(reflect__set_ptr_value) {
-    ENFORCE_ARG_COUNT(set_ptr, 2);
-    ENFORCE_ARG_TYPE(set_ptr, 0, IS_PTR);
+  ENFORCE_ARG_COUNT(set_ptr, 2);
+  ENFORCE_ARG_TYPE(set_ptr, 0, IS_PTR);
 
-    if(IS_OBJ(args[1])) {
-        switch (AS_OBJ(args[1])->type) {
-            case OBJ_STRING: {
-                AS_PTR(args[0])->pointer = AS_STRING(args[1])->chars;
-            }
-            case OBJ_BYTES: {
-                AS_PTR(args[0])->pointer = AS_BYTES(args[1])->bytes.bytes;
-            }
-            case OBJ_FILE: {
-                AS_PTR(args[0])->pointer = AS_FILE(args[1])->file;
-            }
-            case OBJ_NATIVE: {
-                AS_PTR(args[0])->pointer = AS_NATIVE(args[1])->function;
-            }
-            case OBJ_CLOSURE: {
-                AS_PTR(args[0])->pointer = AS_CLOSURE(args[1])->function;
-            }
-            case OBJ_BOUND_METHOD: {
-                AS_PTR(args[0])->pointer = AS_BOUND(args[1])->method->function;
-            }
-            case OBJ_PTR: {
-                AS_PTR(args[0])->pointer = AS_PTR(args[1])->pointer;
-            }
-            default: {
-                AS_PTR(args[0])->pointer = AS_OBJ(args[1]);
-            }
-        }
-    } else if(IS_NUMBER(args[1])) {
-        double v = AS_NUMBER(args[1]);
-        AS_PTR(args[0])->pointer = &v;
-    } else if(IS_BOOL(args[1])) {
-        bool v = AS_BOOL(args[1]);
-        AS_PTR(args[0])->pointer = &v;
-    } else {
-        AS_PTR(args[0])->pointer = NULL;
+  if (IS_OBJ(args[1])) {
+    switch (AS_OBJ(args[1])->type) {
+      case OBJ_STRING: {
+        AS_PTR(args[0])->pointer = AS_STRING(args[1])->chars;
+      }
+      case OBJ_BYTES: {
+        AS_PTR(args[0])->pointer = AS_BYTES(args[1])->bytes.bytes;
+      }
+      case OBJ_FILE: {
+        AS_PTR(args[0])->pointer = AS_FILE(args[1])->file;
+      }
+      case OBJ_NATIVE: {
+        AS_PTR(args[0])->pointer = AS_NATIVE(args[1])->function;
+      }
+      case OBJ_CLOSURE: {
+        AS_PTR(args[0])->pointer = AS_CLOSURE(args[1])->function;
+      }
+      case OBJ_BOUND_METHOD: {
+        AS_PTR(args[0])->pointer = AS_BOUND(args[1])->method->function;
+      }
+      case OBJ_PTR: {
+        AS_PTR(args[0])->pointer = AS_PTR(args[1])->pointer;
+      }
+      default: {
+        AS_PTR(args[0])->pointer = AS_OBJ(args[1]);
+      }
     }
+  } else if (IS_NUMBER(args[1])) {
+    double v = AS_NUMBER(args[1]);
+    AS_PTR(args[0])->pointer = &v;
+  } else if (IS_BOOL(args[1])) {
+    bool v = AS_BOOL(args[1]);
+    AS_PTR(args[0])->pointer = &v;
+  } else {
+    AS_PTR(args[0])->pointer = NULL;
+  }
 
-    RETURN;
+  RETURN;
 }
 
 CREATE_MODULE_LOADER(reflect) {
