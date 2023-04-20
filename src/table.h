@@ -42,4 +42,6 @@ void mark_table(b_vm *vm, b_table *table);
 
 void table_remove_whites(b_vm *vm, b_table *table);
 
+void table_import_all(b_vm *vm, b_table *from, b_table *to);
+
 #endif

@@ -2344,7 +2344,7 @@ b_ptr_result run(b_vm *vm) {
       }
 
       case OP_IMPORT_ALL: {
-        table_add_all(vm, &AS_CLOSURE(peek(vm, 0))->function->module->values, &vm->current_frame->closure->function->module->values);
+        table_import_all(vm, &AS_CLOSURE(peek(vm, 0))->function->module->values, &vm->current_frame->closure->function->module->values);
         break;
       }
 
@@ -2352,7 +2352,7 @@ b_ptr_result run(b_vm *vm) {
         b_obj_string *name = AS_STRING(peek(vm, 0));
         b_value mod;
         if (table_get(&vm->modules, OBJ_VAL(name), &mod)) {
-           table_add_all(vm, &AS_MODULE(mod)->values, &vm->current_frame->closure->function->module->values);
+          table_import_all(vm, &AS_MODULE(mod)->values, &vm->current_frame->closure->function->module->values);
         }
         break;
       }
@@ -2367,7 +2367,7 @@ b_ptr_result run(b_vm *vm) {
         b_value mod;
         b_obj_string *name = READ_STRING();
         if (table_get(&vm->modules, OBJ_VAL(name), &mod)) {
-          table_add_all(vm, &AS_MODULE(mod)->values, &vm->current_frame->closure->function->module->values);
+          table_import_all(vm, &AS_MODULE(mod)->values, &vm->current_frame->closure->function->module->values);
           table_delete(&vm->current_frame->closure->function->module->values, OBJ_VAL(name));
         }
         break;

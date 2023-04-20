@@ -99,7 +99,7 @@ static inline void add_module(b_vm *vm, b_obj_module *module) {
     table_set(vm, &vm->globals, STRING_VAL(module->name), OBJ_VAL(module));
   } else {
     table_set(vm,
-              &vm->frames[vm->frame_count - 1].closure->function->module->values,
+              &vm->current_frame->closure->function->module->values,
               STRING_VAL(module->name), OBJ_VAL(module)
     );
   }
