@@ -50,7 +50,7 @@ bool load_module(b_vm *vm, b_module_init init_fn, char *import_name, char *sourc
   b_module_reg *module = init_fn(vm);
 
   if(module != NULL) {
-    b_obj_module *the_module = (b_obj_module*)GC(new_module(vm, strdup(module->name), source));
+    b_obj_module *the_module = (b_obj_module*)GC(new_module(vm, (char *)module->name, source));
     the_module->preloader = module->preloader;
     the_module->unloader = module->unloader;
 
