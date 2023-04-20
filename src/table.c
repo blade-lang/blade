@@ -172,6 +172,15 @@ void table_add_all(b_vm *vm, b_table *from, b_table *to) {
   }
 }
 
+void table_import_all(b_vm *vm, b_table *from, b_table *to) {
+  for (int i = 0; i < from->capacity; i++) {
+    b_entry *entry = &from->entries[i];
+    if (!IS_EMPTY(entry->key) && !IS_MODULE(entry->value)) {
+      table_set(vm, to, entry->key, entry->value);
+    }
+  }
+}
+
 void table_copy(b_vm *vm, b_table *from, b_table *to) {
   for (int i = 0; i < from->capacity; i++) {
     b_entry *entry = &from->entries[i];
