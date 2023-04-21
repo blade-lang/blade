@@ -456,10 +456,16 @@ DECLARE_MODULE_METHOD(clib_call) {
       case b_clib_type_char_ptr: CLIB_CALL(char *, STRING);
       case b_clib_type_uchar_ptr:
       case b_clib_type_struct: {
+#ifndef __linux__
         ffi_arg result;
         ffi_call(handle->cif, handle->function, &result, values->values);
         b_obj_bytes *bytes = (b_obj_bytes *)GC(new_bytes(vm, handle->cif->rtype->size));
         memcpy(bytes->bytes.bytes, &result, handle->cif->rtype->size);
+#else
+        unsigned char * result = ALLOCATE(unsigned char, handle->cif->rtype->size);
+        ffi_call(handle->cif, handle->function, result, values->values);
+        b_obj_bytes *bytes = (b_obj_bytes *)GC(take_bytes(vm, result, handle->cif->rtype->size));
+#endif
         RETURN_OBJ(bytes);
       }
       case b_clib_type_pointer: CLIB_CALL(void *, PTR);

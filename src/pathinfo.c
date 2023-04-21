@@ -33,6 +33,7 @@ char *get_exe_path() {
   if ((read_length = readlink(PROC_SELF_EXE, raw_path, sizeof(raw_path))) >
           -1 &&
       read_length < PATH_MAX) {
+    raw_path[read_length] = '\0';
     return strdup(raw_path);
   }
   return "";
