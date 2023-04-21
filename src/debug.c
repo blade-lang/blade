@@ -25,6 +25,15 @@ int constant_instruction(const char *name, b_blob *blob, int offset) {
   return offset + 3;
 }
 
+int property_instruction(const char *name, b_blob *blob, int offset) {
+  uint16_t constant = (blob->code[offset + 1] << 8) | blob->code[offset + 2];
+  printf("%-16s %8d '", name, constant);
+  print_value(blob->constants.values[constant]);
+  printf(" (%s)", blob->code[offset + 3] == 1 ? "static" : "");
+  printf("'\n");
+  return offset + 4;
+}
+
 int short_instruction(const char *name, b_blob *blob, int offset) {
   uint16_t slot = (blob->code[offset + 1] << 8) | blob->code[offset + 2];
   printf("%-16s %8d\n", name, slot);
@@ -255,7 +264,7 @@ int disassemble_instruction(b_blob *blob, int offset) {
     case OP_METHOD:
       return constant_instruction("meth", blob, offset);
     case OP_CLASS_PROPERTY:
-      return constant_instruction("cl_prop", blob, offset);
+      return property_instruction("cl_prop", blob, offset);
     case OP_GET_SUPER:
       return constant_instruction("g_sup", blob, offset);
     case OP_INHERIT:
