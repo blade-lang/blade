@@ -120,7 +120,7 @@ bool propagate_exception(b_vm *vm, bool is_assert) {
 bool push_exception_handler(b_vm *vm, b_obj_class *type, int address, int finally_address) {
   b_call_frame *frame = &vm->frames[vm->frame_count - 1];
   if (frame->handlers_count == MAX_EXCEPTION_HANDLERS) {
-    _runtime_error(vm, "too many nested exception handlers in one function");
+    do_runtime_error(vm, "too many nested exception handlers in one function");
     return false;
   }
   frame->handlers[frame->handlers_count].address = address;
@@ -220,7 +220,7 @@ inline b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
   return instance;
 }
 
-void _runtime_error(b_vm *vm, const char *format, ...) {
+void do_runtime_error(b_vm *vm, const char *format, ...) {
   fflush(stdout); // flush out anything on stdout first
 
   b_call_frame *frame = &vm->frames[vm->frame_count - 1];

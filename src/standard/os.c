@@ -183,7 +183,7 @@ b_value get_blade_os_args(b_vm *vm) {
   b_obj_list *list = (b_obj_list*)GC(new_list(vm));
   if(vm->std_args != NULL) {
     for(int i = 0; i < vm->std_args_count; i++) {
-      write_list(vm, list, GC_STRING(vm->std_args[i]));
+      write_list(vm, list, STRING_VAL(vm->std_args[i]));
     }
   }
   CLEAR_GC();
@@ -319,7 +319,7 @@ DECLARE_MODULE_METHOD(os__readdir) {
     b_obj_list *list = (b_obj_list *)GC(new_list(vm));
     struct dirent *ent;
     while((ent = readdir(dir)) != NULL) {
-      write_list(vm, list, GC_STRING(ent->d_name));
+      write_list(vm, list, STRING_VAL(ent->d_name));
     }
     closedir(dir);
     RETURN_OBJ(list);

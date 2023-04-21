@@ -122,7 +122,7 @@ bool is_instance_of(b_obj_class *klass1, char *klass2_name);
 
 bool do_throw_exception(b_vm *vm, bool is_assert, const char *format, ...);
 
-void _runtime_error(b_vm *vm, const char *format, ...);
+void do_runtime_error(b_vm *vm, const char *format, ...);
 
 b_obj_instance *create_exception(b_vm *vm, b_obj_string *message);
 
@@ -149,7 +149,7 @@ static inline void gc_clear_protection(b_vm *vm) {
 }
 
 // NOTE:
-// any call to GC() within a function/block must accompanied by
+// any call to GC() within a function/block must be accompanied by
 // at least one call to CLEAR_GC() before exiting the function/block
 // otherwise, expected unexpected behavior
 // NOTE as well that the call to CLEAR_GC() will be automatic for

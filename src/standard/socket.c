@@ -235,7 +235,7 @@ DECLARE_MODULE_METHOD(socket__accept) {
 
   b_obj_list *response = new_list(vm);
   write_list(vm, response, NUMBER_VAL(new_sock));
-  write_list(vm, response, GC_STRING(ip));
+  write_list(vm, response, STRING_VAL(ip));
   write_list(vm, response, NUMBER_VAL(port));
 
   RETURN_OBJ(response);

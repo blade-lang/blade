@@ -220,7 +220,7 @@ DECLARE_MODULE_METHOD(process_shared_read) {
 
     // return [format, bytes]
     b_obj_list *list = (b_obj_list *)GC(new_list(vm));
-    write_list(vm, list, GC_L_STRING(shared->get_format, shared->get_format_length));
+    write_list(vm, list, STRING_L_VAL(shared->get_format, shared->get_format_length));
     write_list(vm, list, OBJ_VAL(bytes));
 
     RETURN_OBJ(list);

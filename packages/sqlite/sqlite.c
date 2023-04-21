@@ -219,7 +219,7 @@ DECLARE_MODULE_METHOD(sqlite__cursor_columns) {
     int count = sqlite3_column_count(stmt);
     for(int i = 0; i < count; i++) {
       const char *name = sqlite3_column_name(stmt, i);
-      write_list(vm, list, GC_STRING(name));
+      write_list(vm, list, STRING_VAL(name));
     }
   }
   RETURN_OBJ(list);
