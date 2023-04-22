@@ -517,6 +517,8 @@ void init_vm(b_vm *vm) {
   vm->std_args = NULL;
   vm->std_args_count = 0;
 
+  vm->stdout_buffer_size = 0L;
+
   init_table(&vm->modules);
   init_table(&vm->strings);
   init_table(&vm->globals);

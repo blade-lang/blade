@@ -225,7 +225,7 @@ void show_usage(char *argv[], bool fail) {
   fprintf(out, "Usage: %s [-[h | c | d | e | j | v | g | w]] [filename]\n", argv[0]);
   fprintf(out, "   -h       Show this help message.\n");
   fprintf(out, "   -v       Show version string.\n");
-  fprintf(out, "   -b       Buffer terminal outputs.\n");
+  fprintf(out, "   -b arg   Buffer terminal outputs.\n");
   fprintf(out, "            [This will cause the output to be buffered with 1kb]\n");
   fprintf(out, "   -d       Print bytecode.\n");
   fprintf(out, "   -e       Print bytecode and exit.\n");
@@ -243,14 +243,14 @@ int main(int argc, char *argv[]) {
   bool show_warnings = false;
   bool should_debug_stack = false;
   bool should_print_bytecode = false;
-  bool should_buffer_stdout = false;
+  long stdout_buffer_size = 0L;
   bool should_exit_after_bytecode = false;
   char *source = NULL;
   int next_gc_start = DEFAULT_GC_START;
 
   if (argc > 1) {
     int opt;
-    while ((opt = getopt(argc, argv, "hdebjvgcw:")) != -1) {
+    while ((opt = getopt(argc, argv, "hdeb:jvg:wc:--")) != -1) {
       switch (opt) {
         case 'h':
           show_usage(argv, false); // exits
@@ -262,7 +262,10 @@ int main(int argc, char *argv[]) {
           should_exit_after_bytecode = true;
           break;
         case 'b':
-          should_buffer_stdout = true;
+          stdout_buffer_size = strtol(optarg, NULL, 10);
+          if (stdout_buffer_size < 0) {
+            stdout_buffer_size = 0;
+          }
           break;
         case 'j':
           should_debug_stack = true;
@@ -303,12 +306,12 @@ int main(int argc, char *argv[]) {
     vm->should_print_bytecode = should_print_bytecode;
     vm->should_exit_after_bytecode = should_exit_after_bytecode;
     vm->next_gc = next_gc_start;
+    vm->stdout_buffer_size = stdout_buffer_size;
 
-    if (should_buffer_stdout) {
+    if (stdout_buffer_size) {
       // forcing printf buffering for TTYs and terminals
       if (isatty(fileno(stdout))) {
-        char buffer[1024];
-        setvbuf(stdout, buffer, _IOFBF, sizeof(buffer));
+        setvbuf(stdout, NULL, _IOFBF, stdout_buffer_size);
       }
     }
 
