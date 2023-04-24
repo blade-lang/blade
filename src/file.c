@@ -24,10 +24,27 @@
 #include <time.h>
 
 #ifdef _WIN32
+#include <windows.h>
 
 /* Symbolic links aren't really a 'thing' on Windows, so just use plain-old
  * stat() instead of lstat(). */
 #define lstat stat
+
+char *ttyname(int fd) {
+    static char buf[MAX_PATH] = {0};
+
+    HANDLE handle = (HANDLE)_get_osfhandle(fd);
+    if (handle == INVALID_HANDLE_VALUE) {
+        return "";
+    }
+
+    DWORD file_type = GetFileType(handle);
+    if (file_type != FILE_TYPE_CHAR && !GetConsoleMode(handle, &file_type) && !GetConsoleTitleA(buf, MAX_PATH)) {
+        return "";
+    }
+
+    return buf;
+}
 
 #endif /* ifdef _WIN32 */
 
