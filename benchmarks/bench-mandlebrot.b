@@ -1,5 +1,4 @@
-import struct
-import io { stdout }
+import io { putc }
 
 def mandlebrot(h, w) {
   if !w w = h
@@ -9,17 +8,16 @@ def mandlebrot(h, w) {
   var bit_num = 128, bytes_acc = 0,
       yfac = 2/h, xfac = 2/w
 
-  for y in 0..h {
-    var result = []
+  iter var y = 0; y < h; y++ {
     var ci = y * yfac - 1
 
-    for x in 0..w {
+    iter var x = 0; x < w; x++ {
       var zr = 0, zi = 0, tr = 0, ti = 0
       var cr = x * xfac - 1.5
 
       var should_break = false
       do {
-        for i in 0..50 {
+        iter var i = 0; i < 50; i++ {
           zi = 2 * zr * zi + ci
           zr = tr - ti + cr
           tr = zr * zr
@@ -33,7 +31,7 @@ def mandlebrot(h, w) {
       } while false
 
       if bit_num == 1 {
-        result.append(bytes_acc)
+        putc(bytes_acc)
         bit_num = 128
         bytes_acc = 0
       } else {
@@ -42,12 +40,10 @@ def mandlebrot(h, w) {
     }
 
     if bit_num != 128 {
-      result.append(bytes_acc)
+      putc(bytes_acc)
       bit_num = 128
       bytes_acc = 0
     }
-    
-    stdout.write(struct.pack('c*', result).to_string().ascii())
   }
 }
 

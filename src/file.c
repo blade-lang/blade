@@ -43,32 +43,30 @@
   }
 
 #define DENY_STD()                                                             \
-  if (file->mode->length == 0)                                                 \
+  if (file->is_std)                                                 \
     RETURN_ERROR("method not supported for std files");
 
 #define SET_DICT_STRING(d, n, l, v) dict_add_entry(vm, d, GC_L_STRING(n, l), v)
 
 static int file_close(b_obj_file *file) {
-  if (file->file != NULL && !is_std_file(file)) {
+  if (file->file != NULL && !file->is_std) {
     fflush(file->file);
     int result = fclose(file->file);
     file->file = NULL;
     file->is_open = false;
+    file->number = -1;
+    file->is_tty = false;
     return result;
   }
   return -1;
 }
 
 static void file_open(b_obj_file *file) {
-  if ((file->file == NULL || !file->is_open) && !is_std_file(file)) {
-    char *mode = file->mode->chars;
-    if (strstr(file->mode->chars, "w") != NULL &&
-        strstr(file->mode->chars, "+") != NULL) {
-      mode = (char *) "a+";
-    }
-
-    file->file = fopen(file->path->chars, mode);
+  if (file->file == NULL && !file->is_std) {
+    file->file = fopen(file->path->chars, file->mode->chars);
     file->is_open = true;
+    file->number = fileno(file->file);
+    file->is_tty = isatty(file->number);
   }
 }
 
@@ -117,12 +115,12 @@ DECLARE_FILE_METHOD(open) {
 
 DECLARE_FILE_METHOD(is_open) {
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
-  RETURN_BOOL(is_std_file(file) || (file->is_open && file->file != NULL));
+  RETURN_BOOL(file->is_std || file->is_open);
 }
 
 DECLARE_FILE_METHOD(is_closed) {
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
-  RETURN_BOOL(!is_std_file(file) && !file->is_open && file->file == NULL);
+  RETURN_BOOL(!file->is_std && !file->is_open);
 }
 
 DECLARE_FILE_METHOD(read) {
@@ -138,10 +136,9 @@ DECLARE_FILE_METHOD(read) {
 
   bool in_binary_mode = strstr(file->mode->chars, "b") != NULL;
 
-  if (!is_std_file(file)) {
-    // file is in read mode and file does not exist
-    if (strstr(file->mode->chars, "r") != NULL &&
-        !file_exists(file->path->chars)) {
+  if (!file->is_std) {
+    // file does not exist
+    if (!file_exists(file->path->chars)) {
       FILE_ERROR(NotFound, "no such file or directory");
     }
     // file is in write only mode
@@ -152,9 +149,7 @@ DECLARE_FILE_METHOD(read) {
 
     if (!file->is_open) { // open the file if it isn't open
       file_open(file);
-    }
-
-    if (file->file == NULL) {
+    } else if (file->file == NULL) {
       FILE_ERROR(Read, "could not read file");
     }
 
@@ -174,8 +169,7 @@ DECLARE_FILE_METHOD(read) {
     }
   } else {
     // stdout should not read
-    if (fileno(stdout) == fileno(file->file) ||
-        fileno(stderr) == fileno(file->file)) {
+    if (fileno(stdout) == file->number || fileno(stderr) == file->number) {
       FILE_ERROR(Unsupported, "cannot read from output file");
     }
 
@@ -204,9 +198,6 @@ DECLARE_FILE_METHOD(read) {
     buffer[bytes_read] = '\0';
 
   // close file
-  /*if (bytes_read == file_size) {
-    file_close(file);
-  }*/
   file_close(file);
 
   if (!in_binary_mode) {
@@ -228,10 +219,9 @@ DECLARE_FILE_METHOD(gets) {
 
   bool in_binary_mode = strstr(file->mode->chars, "b") != NULL;
 
-  if (!is_std_file(file)) {
-    // file is in read mode and file does not exist
-    if (strstr(file->mode->chars, "r") != NULL &&
-        !file_exists(file->path->chars)) {
+  if (!file->is_std) {
+    // file does not exist
+    if (!file_exists(file->path->chars)) {
       FILE_ERROR(NotFound, "no such file or directory");
     }
     // file is in write only mode
@@ -242,9 +232,7 @@ DECLARE_FILE_METHOD(gets) {
 
     if (!file->is_open) { // open the file if it isn't open
       FILE_ERROR(Read, "file not open");
-    }
-
-    if (file->file == NULL) {
+    } else if (file->file == NULL) {
       FILE_ERROR(Read, "could not read file");
     }
 
@@ -260,8 +248,7 @@ DECLARE_FILE_METHOD(gets) {
     }
   } else {
     // stdout should not read
-    if (fileno(stdout) == fileno(file->file) ||
-        fileno(stderr) == fileno(file->file)) {
+    if (fileno(stdout) == file->number || fileno(stderr) == file->number) {
       FILE_ERROR(Unsupported, "cannot read from output file");
     }
 
@@ -300,59 +287,48 @@ DECLARE_FILE_METHOD(write) {
   ENFORCE_ARG_COUNT(write, 1);
 
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
-  b_obj_string *string = NULL;
-  b_obj_bytes *bytes = NULL;
-
   bool in_binary_mode = strstr(file->mode->chars, "b") != NULL;
-
   unsigned char *data;
   int length;
 
-  if (!in_binary_mode) {
+  if (!in_binary_mode || IS_STRING(args[0])) {
     ENFORCE_ARG_TYPE(write, 0, IS_STRING);
-    string = AS_STRING(args[0]);
+    b_obj_string *string = AS_STRING(args[0]);
     data = (unsigned char *)string->chars;
     length = string->length;
   } else {
     ENFORCE_ARG_TYPE(write, 0, IS_BYTES);
-    bytes = AS_BYTES(args[0]);
+    b_obj_bytes *bytes = AS_BYTES(args[0]);
     data = bytes->bytes.bytes;
     length = bytes->bytes.count;
   }
 
   // file is in read only mode
-  if (!is_std_file(file)) {
+  if (!file->is_std) {
     if (strstr(file->mode->chars, "r") != NULL &&
         strstr(file->mode->chars, "+") == NULL) {
       FILE_ERROR(Unsupported, "cannot write into non-writable file");
-    }
-
-    if (length == 0) {
+    } else if (length == 0) {
       FILE_ERROR(Write, "cannot write empty buffer to file");
-    }
-
-    if (file->file == NULL || !file->is_open) { // open the file if it isn't open
+    } else if (file->file == NULL || !file->is_open) { // open the file if it isn't open
       file_open(file);
-    }
-
-    if (file->file == NULL) {
+    } else if (file->file == NULL) {
       FILE_ERROR(Write, "could not write to file");
     }
   } else {
     // stdin should not write
-    if (fileno(stdin) == fileno(file->file)) {
+    if (fileno(stdin) == file->number) {
       FILE_ERROR(Unsupported, "cannot write to input file");
     }
   }
 
   size_t count = fwrite(data, sizeof(unsigned char), length, file->file);
-
   // close file
   file_close(file);
-
   if (count > (size_t) 0) {
     RETURN_TRUE;
   }
+
   RETURN_FALSE;
 }
 
@@ -360,77 +336,58 @@ DECLARE_FILE_METHOD(puts) {
   ENFORCE_ARG_COUNT(puts, 1);
 
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
-  b_obj_string *string = NULL;
-  b_obj_bytes *bytes = NULL;
-
   bool in_binary_mode = strstr(file->mode->chars, "b") != NULL;
-
   unsigned char *data;
   int length;
 
-  if (!in_binary_mode) {
+  if (!in_binary_mode || IS_STRING(args[0])) {
     ENFORCE_ARG_TYPE(write, 0, IS_STRING);
-    string = AS_STRING(args[0]);
+    b_obj_string *string = AS_STRING(args[0]);
     data = (unsigned char *)string->chars;
     length = string->length;
   } else {
     ENFORCE_ARG_TYPE(write, 0, IS_BYTES);
-    bytes = AS_BYTES(args[0]);
+    b_obj_bytes *bytes = AS_BYTES(args[0]);
     data = bytes->bytes.bytes;
     length = bytes->bytes.count;
   }
 
   // file is in read only mode
-  if (!is_std_file(file)) {
+  if (!file->is_std) {
     if (strstr(file->mode->chars, "r") != NULL &&
         strstr(file->mode->chars, "+") == NULL) {
       FILE_ERROR(Unsupported, "cannot write into non-writable file");
-    }
-
-    if (length == 0) {
+    } else if (length == 0) {
       FILE_ERROR(Write, "cannot write empty buffer to file");
-    }
-
-    if (!file->is_open) { // open the file if it isn't open
+    } else if (!file->is_open) { // open the file if it isn't open
       FILE_ERROR(Write, "file not open");
-    }
-
-    if (file->file == NULL) {
+    } else if (file->file == NULL) {
       FILE_ERROR(Write, "could not write to file");
     }
   } else {
     // stdin should not write
-    if (fileno(stdin) == fileno(file->file)) {
+    if (fileno(stdin) == file->number) {
       FILE_ERROR(Unsupported, "cannot write to input file");
     }
   }
 
   size_t count = fwrite(data, sizeof(unsigned char), length, file->file);
-
   if (count > (size_t) 0 || length == 0) {
     RETURN_TRUE;
   }
+
   RETURN_FALSE;
 }
 
 DECLARE_FILE_METHOD(number) {
   ENFORCE_ARG_COUNT(number, 0);
-  b_obj_file *file = AS_FILE(METHOD_OBJECT);
-  if (file->file == NULL) {
-    RETURN_NUMBER(-1);
-  } else {
-    RETURN_NUMBER(fileno(file->file));
-  }
+  RETURN_NUMBER(AS_FILE(METHOD_OBJECT)->number);
 }
 
 DECLARE_FILE_METHOD(is_tty) {
   ENFORCE_ARG_COUNT(is_tty, 0);
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
-  if (is_std_file(file)) {
-    RETURN_BOOL(isatty(fileno(file->file)) &&
-                fileno(file->file) == fileno(stdout));
-  }
-  RETURN_FALSE;
+  RETURN_BOOL(file->is_tty);
 }
 
 DECLARE_FILE_METHOD(flush) {
@@ -438,12 +395,12 @@ DECLARE_FILE_METHOD(flush) {
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
 
   if (!file->is_open) {
-    FILE_ERROR(Unsupported, "i/o operation on closed file");
+    FILE_ERROR(Unsupported, "I/O operation on closed file");
   }
 
 #if defined(IS_UNIX)
   // using fflush on stdin have undesired effect on unix environments
-  if (fileno(stdin) == fileno(file->file)) {
+  if (fileno(stdin) == file->number) {
     while ((getchar()) != '\n')
       ;
   } else {
@@ -461,7 +418,7 @@ DECLARE_FILE_METHOD(stats) {
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
   b_obj_dict *dict = (b_obj_dict *) GC(new_dict(vm));
 
-  if (!is_std_file(file)) {
+  if (!file->is_std) {
     if (file_exists(file->path->chars)) {
       struct stat stats;
       if (lstat(file->path->chars, &stats) == 0) {
@@ -522,11 +479,10 @@ DECLARE_FILE_METHOD(stats) {
     }
   } else {
     // we are dealing with an std
-    if (fileno(stdin) == fileno(file->file)) {
+    if (fileno(stdin) == file->number) {
       SET_DICT_STRING(dict, "is_readable", 11, TRUE_VAL);
       SET_DICT_STRING(dict, "is_writable", 11, FALSE_VAL);
-    } else if (fileno(stdout) == fileno(file->file) ||
-               fileno(stderr) == fileno(file->file)) {
+    } else {
       SET_DICT_STRING(dict, "is_readable", 11, FALSE_VAL);
       SET_DICT_STRING(dict, "is_writable", 11, TRUE_VAL);
     }
@@ -594,16 +550,22 @@ DECLARE_FILE_METHOD(path) {
 DECLARE_FILE_METHOD(mode) {
   ENFORCE_ARG_COUNT(mode, 0);
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
-  DENY_STD();
   RETURN_OBJ(file->mode);
 }
 
 DECLARE_FILE_METHOD(name) {
   ENFORCE_ARG_COUNT(name, 0);
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
-  DENY_STD();
-  char *name = get_real_file_name(file->path->chars);
-  RETURN_STRING(name);
+  if(!file->is_std) {
+    char *name = get_real_file_name(file->path->chars);
+    RETURN_STRING(name);
+  } else if(file->is_tty) {
+    char *name = ttyname(file->number);
+    if(name) {
+      RETURN_STRING(name);
+    }
+  }
+  RETURN_NIL;
 }
 
 DECLARE_FILE_METHOD(abs_path) {

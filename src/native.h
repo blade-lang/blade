@@ -112,6 +112,13 @@
                  (i) + 1, value_type(args[i]));                                  \
   }
 
+#define ENFORCE_ARG_TYPES(name, i, type1, type2)                                        \
+  if (!type1(args[i]) && !type2(args[i])) {                                                        \
+    RETURN_ERROR(#name                                                         \
+                 "() expects argument %d as " NORMALIZE(type1) " or " NORMALIZE(type2) ", %s given",    \
+                 (i) + 1, value_type(args[i]));                                  \
+  }
+
 #define ENFORCE_CONSTRUCTOR_ARG_TYPE(name, i, type)                            \
   if (!type(args[i])) {                                                        \
     RETURN_ERROR(#name                                                         \

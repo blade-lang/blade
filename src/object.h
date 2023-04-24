@@ -197,6 +197,9 @@ typedef struct {
 typedef struct {
   b_obj obj;
   bool is_open;
+  bool is_std;
+  bool is_tty;
+  int number;
   FILE *file;
   b_obj_string *mode;
   b_obj_string *path;

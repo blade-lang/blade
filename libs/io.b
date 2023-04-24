@@ -501,7 +501,7 @@ def flush(file) {
 }
 
 /**
- * putc(c: char)
+ * putc(c: char | number)
  * writes character c to the screen
  * @return nil
  */

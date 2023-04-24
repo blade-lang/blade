@@ -90,7 +90,10 @@ b_obj_file *new_file(b_vm *vm, b_obj_string *path, b_obj_string *mode) {
   file->is_open = true;
   file->mode = mode;
   file->path = path;
+  file->is_std = false;
   file->file = NULL;
+  file->is_tty = false;
+  file->number = -1;
   return file;
 }
 

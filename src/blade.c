@@ -311,7 +311,8 @@ int main(int argc, char *argv[]) {
     if (stdout_buffer_size) {
       // forcing printf buffering for TTYs and terminals
       if (isatty(fileno(stdout))) {
-        setvbuf(stdout, NULL, _IOFBF, stdout_buffer_size);
+        char buffer[stdout_buffer_size];
+        setvbuf(stdout, buffer, _IOFBF, stdout_buffer_size);
       }
     }
 

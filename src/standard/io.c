@@ -291,29 +291,32 @@ DECLARE_MODULE_METHOD(io_getch) {
 }
 
 /**
- * putc(c: char)
+ * putc(c: char | number)
  * writes character c to the screen
  * @return nil
  */
 DECLARE_MODULE_METHOD(io_putc) {
   ENFORCE_ARG_COUNT(putc, 1);
-  ENFORCE_ARG_TYPE(putc, 0, IS_STRING);
+  ENFORCE_ARG_TYPES(putc, 0, IS_STRING, IS_NUMBER);
 
-  b_obj_string *string = AS_STRING(args[0]);
-
-  int count = string->length;
+  if(IS_STRING(args[0])) {
+    b_obj_string *string = AS_STRING(args[0]);
+    int count = string->length;
 #ifdef _WIN32
-  if (count > 32767 && isatty(STDIN_FILENO)) {
-    /* Issue #11395: the Windows console returns an error (12: not
-       enough space error) on writing into stdout if stdout mode is
-       binary and the length is greater than 66,000 bytes (or less,
-       depending on heap usage). */
-    count = 32767;
-  }
+    if (count > 32767 && isatty(STDIN_FILENO)) {
+      /* Issue #11395: the Windows console returns an error (12: not
+         enough space error) on writing into stdout if stdout mode is
+         binary and the length is greater than 66,000 bytes (or less,
+         depending on heap usage). */
+      count = 32767;
+    }
 #endif
 
-  if (write(STDOUT_FILENO, string->chars, count) != -1) {
-    fflush(stdout);
+    if (write(STDOUT_FILENO, string->chars, count) != -1) {
+      fflush(stdout);
+    }
+  } else {
+    putc(AS_NUMBER(args[0]), stdout);
   }
   RETURN;
 }
@@ -325,9 +328,12 @@ DECLARE_MODULE_METHOD(io_putc) {
  */
 b_value io_module_stdin(b_vm *vm) {
   b_obj_file *file =
-      new_file(vm, copy_string(vm, "<stdin>", 7), copy_string(vm, "", 0));
+      new_file(vm, copy_string(vm, "<stdin>", 7), copy_string(vm, "r", 1));
   file->file = stdin;
   file->is_open = true;
+  file->is_std = true;
+  file->number = STDIN_FILENO;
+  file->is_tty = isatty(STDIN_FILENO);
   return OBJ_VAL(file);
 }
 
@@ -338,9 +344,12 @@ b_value io_module_stdin(b_vm *vm) {
  */
 b_value io_module_stdout(b_vm *vm) {
   b_obj_file *file =
-      new_file(vm, copy_string(vm, "<stdout>", 8), copy_string(vm, "", 0));
+      new_file(vm, copy_string(vm, "<stdout>", 8), copy_string(vm, "wb", 2));
   file->file = stdout;
   file->is_open = true;
+  file->is_std = true;
+  file->number = STDOUT_FILENO;
+  file->is_tty = isatty(STDOUT_FILENO);
   return OBJ_VAL(file);
 }
 
@@ -351,10 +360,12 @@ b_value io_module_stdout(b_vm *vm) {
  */
 b_value io_module_stderr(b_vm *vm) {
   b_obj_file *file =
-      new_file(vm, copy_string(vm, "<stdout>", 8), copy_string(vm, "", 0));
+      new_file(vm, copy_string(vm, "<stderr>", 8), copy_string(vm, "wb", 2));
   file->file = stderr;
   file->is_open = true;
-  file->mode = copy_string(vm, "", 0);
+  file->is_std = true;
+  file->number = STDERR_FILENO;
+  file->is_tty = isatty(STDERR_FILENO);
   return OBJ_VAL(file);
 }
 

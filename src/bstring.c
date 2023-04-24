@@ -907,8 +907,8 @@ DECLARE_STRING_METHOD(matches) {
           if(_key[j] == 0) key_length--;
         }
 
-        b_obj_string *name = (b_obj_string *) GC_L_STRING(_key, key_length);
-        b_obj_string *value = (b_obj_string *) GC_L_STRING(_value, value_length);
+        b_obj_string *name = (b_obj_string *) AS_OBJ(GC_L_STRING(_key, key_length));
+        b_obj_string *value = (b_obj_string *) AS_OBJ(GC_L_STRING(_value, value_length));
 
         b_value nlist;
         if (dict_get_entry(result, OBJ_VAL(name), &nlist)) {
