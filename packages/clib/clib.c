@@ -142,6 +142,14 @@ UNUSED b_value __clib_type_bool(b_vm *vm) {
     return g; \
   }
 
+#define CLIB_GET_BLADE_VALUE(t, g) { \
+    t v; \
+    memcpy(&v, data + read_len, sizeof(t)); \
+    read_len += sizeof(t); \
+    write_list(vm, list, g(v));      \
+    break; \
+  }
+
 #define CLIB_GET_C_CH_VALUE(t) {\
     t* g = N_ALLOCATE(t, size);                          \
     *(t *)g = (t) AS_C_STRING(value)[0]; \
@@ -227,6 +235,8 @@ static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size)
         v[0] = AS_PTR(value)->pointer;
       } else if(IS_FILE(value)) {
         v[0] = AS_FILE(value)->file;
+      } else if(IS_BYTES(value)) {
+        v[0] = AS_BYTES(value)->bytes.bytes;
       } else if(IS_NIL(value)) {
         v[0] = NULL;
       } else {
@@ -339,6 +349,9 @@ DECLARE_MODULE_METHOD(clib_new_struct) {
   type->type = FFI_TYPE_STRUCT;
   type->elements = elements;
 
+  size_t sizes[args_list->items.count];
+  ffi_get_struct_offsets(FFI_DEFAULT_ABI, type, sizes);
+
   b_ffi_type *struct_type = ALLOCATE(b_ffi_type, 1);
   struct_type->as_int = b_clib_type_struct;
   struct_type->as_ffi = type;
@@ -346,6 +359,103 @@ DECLARE_MODULE_METHOD(clib_new_struct) {
   struct_type->length = args_list->items.count;
 
   CLIB_RETURN_PTR(struct_type, <void *clib::struct(%d)>, args_list->items.count);
+}
+
+DECLARE_MODULE_METHOD(clib_new) {
+  ENFORCE_ARG_COUNT(new, 2);
+  ENFORCE_ARG_TYPE(new, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(new, 1, IS_LIST);
+
+  b_ffi_type *type = (b_ffi_type *)AS_PTR(args[0])->pointer;
+  b_obj_list *values = AS_LIST(args[1]);
+
+  unsigned char* data = ALLOCATE(unsigned char, type->as_ffi->size);
+  size_t write_length = 0;
+  if(type->as_ffi->elements != NULL) {
+    for (int i = 0; i < type->length; i++) {
+      void *ret = switch_c_values(vm, type->types[i], values->items.values[i], type->as_ffi->elements[i]->size);
+      memcpy(data + write_length, ret, type->as_ffi->elements[i]->size);
+      write_length += type->as_ffi->elements[i]->size;
+    }
+  } else {
+    void *ret = switch_c_values(vm, type->as_int, values->items.values[0], type->as_ffi->size);
+    memcpy(data + write_length, ret, type->as_ffi->size);
+  }
+
+  RETURN_OBJ(take_bytes(vm, data, type->as_ffi->size));
+}
+
+DECLARE_MODULE_METHOD(clib_get) {
+  ENFORCE_ARG_COUNT(new, 2);
+  ENFORCE_ARG_TYPE(new, 0, IS_PTR);
+  ENFORCE_ARG_TYPES(new, 1, IS_BYTES, IS_PTR);
+
+  b_ffi_type *type = (b_ffi_type *)AS_PTR(args[0])->pointer;
+  if(type->as_ffi->elements == NULL) {
+    RETURN_ERROR("get can only be used on derived types such as struct, union and arrays.");
+  }
+
+  unsigned char *data;
+  if(IS_PTR(args[1])) {
+    data = (unsigned char *)AS_PTR(args[1])->pointer;
+  } else {
+    data = AS_BYTES(args[1])->bytes.bytes;
+  }
+
+  b_obj_list *list = (b_obj_list *)GC(new_list(vm));
+
+  size_t read_len = 0;
+  for(int i = 0; i < type->length; i++) {
+    switch(type->types[i]) {
+      case b_clib_type_bool: CLIB_GET_BLADE_VALUE(bool, BOOL_VAL);
+      case b_clib_type_uint8: CLIB_GET_BLADE_VALUE(uint8_t, NUMBER_VAL);
+      case b_clib_type_sint8: CLIB_GET_BLADE_VALUE(int8_t, NUMBER_VAL);
+      case b_clib_type_uint16: CLIB_GET_BLADE_VALUE(uint16_t, NUMBER_VAL);
+      case b_clib_type_sint16: CLIB_GET_BLADE_VALUE(int16_t, NUMBER_VAL);
+      case b_clib_type_uint32: CLIB_GET_BLADE_VALUE(uint32_t, NUMBER_VAL);
+      case b_clib_type_sint32: CLIB_GET_BLADE_VALUE(int32_t, NUMBER_VAL);
+      case b_clib_type_uint64: CLIB_GET_BLADE_VALUE(uint64_t, NUMBER_VAL);
+      case b_clib_type_sint64: CLIB_GET_BLADE_VALUE(int64_t, NUMBER_VAL);
+      case b_clib_type_float: CLIB_GET_BLADE_VALUE(float, NUMBER_VAL);
+      case b_clib_type_double: CLIB_GET_BLADE_VALUE(double, NUMBER_VAL);
+      case b_clib_type_uchar: CLIB_GET_BLADE_VALUE(unsigned char, NUMBER_VAL);
+      case b_clib_type_schar: CLIB_GET_BLADE_VALUE(char, NUMBER_VAL);
+      case b_clib_type_ushort: CLIB_GET_BLADE_VALUE(unsigned short, NUMBER_VAL);
+      case b_clib_type_sshort: CLIB_GET_BLADE_VALUE(short, NUMBER_VAL);
+      case b_clib_type_uint: CLIB_GET_BLADE_VALUE(unsigned int, NUMBER_VAL);
+      case b_clib_type_sint: CLIB_GET_BLADE_VALUE(int, NUMBER_VAL);
+      case b_clib_type_ulong: CLIB_GET_BLADE_VALUE(unsigned long, NUMBER_VAL);
+      case b_clib_type_slong: CLIB_GET_BLADE_VALUE(long, NUMBER_VAL);
+#ifdef LONG_LONG_MAX
+      case b_clib_type_longdouble: CLIB_GET_BLADE_VALUE(long long, NUMBER_VAL);
+#else
+      case b_clib_type_longdouble: CLIB_GET_BLADE_VALUE(long, NUMBER_VAL);
+#endif
+      case b_clib_type_char_ptr: {
+        char *rc = (char *)(data + read_len);
+        size_t length = strlen(rc);
+        read_len += length;
+        write_list(vm, list, STRING_L_VAL(rc, length));
+        break;
+      }
+      case b_clib_type_pointer: CLIB_GET_BLADE_VALUE(void *, PTR_VAL);
+      case b_clib_type_uchar_ptr:
+      case b_clib_type_struct: {
+        unsigned char * result = ALLOCATE(unsigned char, type->as_ffi->size);
+        memcpy(result, data + read_len, type->as_ffi->size);
+        read_len += type->as_ffi->size;
+        write_list(vm, list, OBJ_VAL(take_bytes(vm, result, type->as_ffi->size)));
+        break;
+      }
+      default: {
+        write_list(vm, list, NIL_VAL);
+        read_len += type->as_ffi->size;
+        break;
+      }
+    }
+  }
+
+  RETURN_OBJ(list);
 }
 
 DECLARE_MODULE_METHOD(clib_define) {
@@ -536,6 +646,8 @@ CREATE_MODULE_LOADER(clib) {
   };
 
   static b_func_reg module_functions[] = {
+      {"new",   true,  GET_MODULE_METHOD(clib_new)},
+      {"get",   true,  GET_MODULE_METHOD(clib_get)},
       {"load",   true,  GET_MODULE_METHOD(clib_load_library)},
       {"function",   true,  GET_MODULE_METHOD(clib_get_function)},
       {"close",   true,  GET_MODULE_METHOD(clib_close_library)},

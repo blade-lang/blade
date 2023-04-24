@@ -236,11 +236,6 @@ static void print_bytes(b_obj_bytes *bytes) {
   printf("(");
   for (int i = 0; i < bytes->bytes.count; i++) {
     printf("%x", bytes->bytes.bytes[i]);
-    if (i > 100) { // as bytes can get really heavy
-      printf("...");
-      break;
-    }
-
     if (i != bytes->bytes.count - 1) {
       printf(" ");
     }
