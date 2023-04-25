@@ -151,10 +151,14 @@ UNUSED b_value __clib_type_bool(b_vm *vm) {
     break; \
   }
 
-#define CLIB_GET_C_CH_VALUE(t) {\
-    t* g = N_ALLOCATE(t, size);                          \
-    *(t *)g = (t) AS_C_STRING(value)[0]; \
-    return g; \
+#define CLIB_GET_C_CH_VALUE(t) { \
+    if(IS_STRING(value)) {\
+      t* g = N_ALLOCATE(t, size);                          \
+      *(t *)g = (t) AS_C_STRING(value)[0]; \
+      return g;                    \
+    } else {                     \
+      CLIB_GET_C_VALUE(t);                             \
+    }\
   }
 
 typedef struct {
