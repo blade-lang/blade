@@ -192,6 +192,10 @@ void free_object(b_vm *vm, b_obj *object) {
 //#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
 //  printf("%p free type %d\n", (void *)object, object->type);
 //#endif
+
+  // Do not free stale objects.
+  if(object->stale) return;
+
   switch (object->type) {
     case OBJ_MODULE: {
       b_obj_module *module = (b_obj_module *) object;

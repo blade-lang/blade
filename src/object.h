@@ -91,6 +91,13 @@ typedef enum {
 struct s_obj {
   b_obj_type type;
   bool mark;
+
+  // when an object is marked as stale, it means that the
+  // GC will never collect this object. This can be useful
+  // for library/package objects that want to reuse native
+  // objects in their types/pointers. The GC cannot reach
+  // them yet, so it's best for them to be kept stale.
+  bool stale;
   struct s_obj *next;
 };
 

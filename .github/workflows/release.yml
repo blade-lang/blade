@@ -1,9 +1,8 @@
 name: Create Release with artifacts
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  release:
+    types: [published]
 
 jobs:
 
@@ -30,6 +29,15 @@ jobs:
         with:
           name: linux
           path: blade_linux.zip
+      - name: Upload Artifact to Release
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: blade_linux.zip
+          asset_name: blade-linux-${{ github.event.release.tag_name }}.zip
+          asset_content_type: application/zip
 
   build-macos:
     runs-on: macos-latest
@@ -52,6 +60,15 @@ jobs:
         with:
           name: macos
           path: blade_macos.zip
+      - name: Upload Artifact to Release
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: blade_macos.zip
+          asset_name: blade-macos-${{ github.event.release.tag_name }}.zip
+          asset_content_type: application/zip
 
   build-windows:
     runs-on: windows-latest
@@ -85,50 +102,12 @@ jobs:
         with:
           name: windows
           path: blade_windows.zip
-
-  release:
-    name: Create Github Release
-    needs: [build-linux, build-macos, build-windows]
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Create Release
-        id: create_release
-        uses: ncipollo/release-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
-          commit: ${{ github.sha }}
-          draft: false
-          prerelease: false
-
-  publish:
-    needs: [release]
-    runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        version: [linux, macos, windows]
-    steps:
-      - uses: actions/checkout@v1
-      - name: Fetch artifacts
-        uses: actions/download-artifact@v1
-        with:
-          name: ${{ matrix.version }}
-          path: ./${{ matrix.version }}
-      - name: Get release
-        id: get_release_info
-        uses: leahlundqvist/get-release@v1.3.1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          tag_name: ${{ github.ref_name }}
-      - name: Upload Release Asset
-        id: upload-release-asset
+      - name: Upload Artifact to Release
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.get_release_info.outputs.upload_url }}
-          asset_path: ${{ matrix.version }}/blade_${{ matrix.version }}.zip
-          asset_name: blade-${{ matrix.version }}-${{ github.ref_name }}.zip
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: blade_windows.zip
+          asset_name: blade-windows-${{ github.event.release.tag_name }}.zip
           asset_content_type: application/zip

@@ -24,6 +24,7 @@ typedef struct {
   int as_int;
   int *types;
   ffi_type *as_ffi;
+  b_obj_list *names;
 } b_ffi_type;
 
 #define DEFINE_CLIB_TYPE(v) \
@@ -329,10 +330,16 @@ DECLARE_MODULE_METHOD(clib_close_library) {
 }
 
 DECLARE_MODULE_METHOD(clib_new_struct) {
-  ENFORCE_ARG_COUNT(new_struct, 1);
+  ENFORCE_ARG_RANGE(new_struct, 1, 2);
   ENFORCE_ARG_TYPE(new_struct, 0, IS_LIST);
 
   b_obj_list *args_list = AS_LIST(args[0]);
+  b_obj_list *names = NULL;
+  if(arg_count == 2) {
+    ENFORCE_ARG_TYPE(new_struct, 1, IS_LIST);
+    names = AS_LIST(args[1]);
+    names->obj.stale = true;
+  }
 
   ffi_type *type = ALLOCATE(ffi_type, 1);
   ffi_type **elements = ALLOCATE(ffi_type *, args_list->items.count + 1);
@@ -357,6 +364,7 @@ DECLARE_MODULE_METHOD(clib_new_struct) {
   struct_type->as_ffi = type;
   struct_type->types = clib_types;
   struct_type->length = args_list->items.count;
+  struct_type->names = names;
 
   CLIB_RETURN_PTR(struct_type, <void *clib::struct(%d)>, args_list->items.count);
 }
@@ -453,6 +461,15 @@ DECLARE_MODULE_METHOD(clib_get) {
         break;
       }
     }
+  }
+
+  if(type->names != NULL) {
+    b_obj_dict *dict = (b_obj_dict *)GC(new_dict(vm));
+    for(int i = 0; i < type->length; i++) {
+      dict_add_entry(vm, dict, type->names->items.values[i], list->items.values[i]);
+    }
+
+    RETURN_OBJ(dict);
   }
 
   RETURN_OBJ(list);

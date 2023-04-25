@@ -39,9 +39,6 @@
 # 
 # > **NOT YET SUPPORTED:**
 # > - Variadic functions
-# > - Arrays
-# > - Structs and Unions
-# > - Enums
 # 
 # @copyright 2021, Ore Richard Muyiwa and Blade contributors
 # 
@@ -188,6 +185,45 @@ class Clib {
  */
 def load(name) {
   return Clib(name)
+}
+
+/**
+ * new(type: type, ...any)
+ * 
+ * Creates a new C value for the specified clib type with the given values.
+ * @returns bytes
+ */
+def new(type, ...) {
+  if __args__.length() == 0
+    die Exception('canot have an empty struct')
+
+  # Ensure a valid and non void clib pointer.
+  if !(reflect.is_ptr(type) and to_string(type).match('/clib/')) and type != void
+    die Exception('invalid type for new')
+
+  return _clib.new(type, __args__)
+}
+
+/**
+ * get(type: type, data: string | bytes)
+ * 
+ * Returns the data contained in a C type _type_ encoded in the data.
+ * The data should either be an output of `clib.new()` or a call to a 
+ * function returning one of struct, union or array.
+ * 
+ * For structures created with `named_struct()`, a dictionary will 
+ * automatically be returned with the values mapped to the names of the 
+ * structure elements.
+ * 
+ * @returns list | dictionary
+ */
+def get(type, data) {
+  # Ensure a valid and non void clib pointer.
+  if !(reflect.is_ptr(type) and to_string(type).match('/clib/')) and type != void
+    die Exception('invalid type for new')
+  if is_string(data) data = data.to_bytes()
+
+  return _clib.get(type, data)
 }
 
 /**

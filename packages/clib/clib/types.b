@@ -187,8 +187,10 @@ var ptr = _clib.pointer
  * struct(...type)
  * 
  * Returns a type that can be used to declare structs. 
- * To create or read value for the struct, you need to use the `pack()` 
- * and `unpack()` function in the `struct` module respectively.
+ * To create or read value for the struct you need to use the `new()` 
+ * and `get()` functions respectively.
+ * Alternatively, you may use the `pack()` and `unpack()` 
+ * function in the `struct` module respectively.
  * 
  * @note This function can also be used to define a C union or array.
  * @return type
@@ -203,39 +205,37 @@ def struct(...) {
       die Exception('invalid type in struct delaration')
   }
 
-  return _clib.new_struct(__args__)
+  return _clib.new_struct(__args__, [])
 }
 
 /**
- * new(type: type, ...any)
+ * named_struct(types: dictionary)
  * 
- * Creates a new C value for the specified clib type with the given values.
- * @returns bytes
+ * Returns a type that can be used to declare structs based on the named 
+ * types. The function works well with the `get()` function because it 
+ * automatically assigns the name of the struct elements when getting the 
+ * value. 
+ * 
+ * To create or read value for the struct you need to use the `new()` 
+ * and `get()` functions respectively.
+ * Alternatively, you may use the `pack()` and `unpack()` 
+ * function in the `struct` module respectively.
+ * 
+ * @note This function can also be used to define a C union or array.
+ * @return type
  */
-def new(type, ...) {
-  if __args__.length() == 0
+def named_struct(types) {
+  if !is_dict(types)
+    die Exception('dictionary expected, ${typeof(types)} given')
+  if types.length() == 0
     die Exception('canot have an empty struct')
 
-  # Ensure a valid and non void clib pointer.
-  if !(reflect.is_ptr(type) and to_string(type).match('/clib/')) and type != void
-    die Exception('invalid type for new')
+  for key, value in types {
+    # Ensure a valid clib pointer.
+    if !(reflect.is_ptr(value) and to_string(value).match('/clib/'))
+      die Exception('invalid type in struct delaration')
+  }
 
-  return _clib.new(type, __args__)
-}
-
-/**
- * get(type: type, data: string | bytes)
- * 
- * Returns the data contained in a C type _type_ encoded in the data.
- * The data should either be an output of `clib.new()` or a call to a 
- * function returning one of struct, union or array.
- * @returns any
- */
-def get(type, data) {
-  # Ensure a valid and non void clib pointer.
-  if !(reflect.is_ptr(type) and to_string(type).match('/clib/')) and type != void
-    die Exception('invalid type for new')
-  if is_string(data) data = data.to_bytes()
-
-  return _clib.get(type, data)
+  var items = types.to_list()
+  return _clib.new_struct(items[1], items[0])
 }
