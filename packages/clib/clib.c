@@ -449,15 +449,16 @@ DECLARE_MODULE_METHOD(clib_get) {
       case b_clib_type_pointer: CLIB_GET_BLADE_VALUE(void *, PTR_VAL);
       case b_clib_type_uchar_ptr:
       case b_clib_type_struct: {
-        unsigned char * result = ALLOCATE(unsigned char, type->as_ffi->size);
-        memcpy(result, data + read_len, type->as_ffi->size);
-        read_len += type->as_ffi->size;
-        write_list(vm, list, OBJ_VAL(take_bytes(vm, result, type->as_ffi->size)));
+        size_t size = type->as_ffi->elements[i]->size;
+        unsigned char * result = ALLOCATE(unsigned char, size);
+        memcpy(result, data + read_len, size);
+        write_list(vm, list, OBJ_VAL(take_bytes(vm, result, size)));
+        read_len += size;
         break;
       }
       default: {
         write_list(vm, list, NIL_VAL);
-        read_len += type->as_ffi->size;
+        read_len += type->as_ffi->elements[i]->size;
         break;
       }
     }
