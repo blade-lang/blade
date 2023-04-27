@@ -56,6 +56,7 @@ set(BLADE_SOURCES
 		src/scanner.c
 		src/table.c
 		src/util.c
+		src/utf8.c
 		src/value.c
 		src/vm.c
 		# standard module

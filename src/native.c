@@ -1,5 +1,6 @@
 #include "native.h"
 #include "vm.h"
+#include "utf8.h"
 
 #include <math.h>
 #include <stdio.h>

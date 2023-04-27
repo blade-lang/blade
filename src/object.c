@@ -1,7 +1,7 @@
 #include "object.h"
 #include "memory.h"
 #include "table.h"
-#include "util.h"
+#include "utf8.h"
 #include "value.h"
 #include "vm.h"
 

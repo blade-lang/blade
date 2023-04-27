@@ -1,7 +1,6 @@
 #include "bstring.h"
-#include "util.h"
-#include "native.h"
 #include "utf8.h"
+#include "native.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -131,19 +130,15 @@ DECLARE_STRING_METHOD(length) {
 
 DECLARE_STRING_METHOD(upper) {
   ENFORCE_ARG_COUNT(upper, 0);
-  char *string = (char *) strdup(AS_C_STRING(METHOD_OBJECT));
-//  for (char *p = string; *p; p++)
-//    *p = toupper(*p);
-  utf8upr(string);
+  b_obj_string *str = AS_STRING(METHOD_OBJECT);
+  char *string = utf8_toupper(str->chars, str->utf8_length);
   RETURN_STRING(string);
 }
 
 DECLARE_STRING_METHOD(lower) {
   ENFORCE_ARG_COUNT(lower, 0);
-  char *string = (char *) strdup(AS_C_STRING(METHOD_OBJECT));
-//  for (char *p = string; *p; p++)
-//    *p = tolower(*p);
-  utf8lwr(string);
+  b_obj_string *str = AS_STRING(METHOD_OBJECT);
+  char *string = utf8_tolower(str->chars, str->utf8_length);
   RETURN_STRING(string);
 }
 
@@ -183,33 +178,57 @@ DECLARE_STRING_METHOD(is_number) {
 DECLARE_STRING_METHOD(is_lower) {
   ENFORCE_ARG_COUNT(is_lower, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
-  bool has_alpha;
-  for (int i = 0; i < string->length; i++) {
-    bool is_alpha = isalpha((unsigned char) string->chars[i]);
-    if (!has_alpha) {
-      has_alpha = is_alpha;
+  bool alpha_found = false;
+
+  if(!string->is_ascii) {
+    for (int i = 0; i < string->utf8_length; i++) {
+      int start = i, end = i + 1;
+      utf8slice(string->chars, &start, &end);
+      int as_num = utf8_decode((uint8_t *)(string->chars + start), end - start);
+      if(!alpha_found && !isdigit(as_num)) alpha_found = true;
+
+      if(utf8_isupper(as_num)) {
+        RETURN_FALSE;
+      }
     }
-    if (is_alpha && !utf8islower((unsigned char) string->chars[i])) {
-      RETURN_FALSE;
+  } else {
+    for (int i = 0; i < string->length; i++) {
+      if(!alpha_found && !isdigit(string->chars[0])) alpha_found = true;
+      if(isupper(string->chars[0])) {
+        RETURN_FALSE;
+      }
     }
   }
-  RETURN_BOOL(string->length != 0 && has_alpha);
+
+  RETURN_BOOL(alpha_found);
 }
 
 DECLARE_STRING_METHOD(is_upper) {
   ENFORCE_ARG_COUNT(is_upper, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
-  bool has_alpha;
-  for (int i = 0; i < string->length; i++) {
-    bool is_alpha = isalpha((unsigned char) string->chars[i]);
-    if (!has_alpha) {
-      has_alpha = is_alpha;
+  bool alpha_found = false;
+
+  if(!string->is_ascii) {
+    for (int i = 0; i < string->utf8_length; i++) {
+      int start = i, end = i + 1;
+      utf8slice(string->chars, &start, &end);
+      int as_num = utf8_decode((uint8_t *)(string->chars + start), end - start);
+      if(!alpha_found && !isdigit(as_num)) alpha_found = true;
+
+      if(utf8_islower(as_num)) {
+        RETURN_FALSE;
+      }
     }
-    if (is_alpha && !utf8isupper((unsigned char) string->chars[i])) {
-      RETURN_FALSE;
+  } else {
+    for (int i = 0; i < string->length; i++) {
+      if(!alpha_found && !isdigit(string->chars[0])) alpha_found = true;
+      if(islower(string->chars[0])) {
+        RETURN_FALSE;
+      }
     }
   }
-  RETURN_BOOL(string->length != 0 && has_alpha);
+
+  RETURN_BOOL(alpha_found);
 }
 
 DECLARE_STRING_METHOD(is_space) {
@@ -446,17 +465,27 @@ DECLARE_STRING_METHOD(join) {
 DECLARE_STRING_METHOD(index_of) {
   ENFORCE_ARG_RANGE(index_of, 1, 2);
   ENFORCE_ARG_TYPE(index_of, 0, IS_STRING);
-
-  char *str = AS_C_STRING(METHOD_OBJECT);
-
+  b_obj_string *string = AS_STRING(METHOD_OBJECT);
+  b_obj_string *needle = AS_STRING(args[0]);
+  int start_index = 0;
   if(arg_count == 2) {
     ENFORCE_ARG_TYPE(index_of, 1, IS_NUMBER);
-    int start = AS_NUMBER(args[1]);
-    char *result = utf8str(str + start, AS_C_STRING(args[0]));
-    if (result != NULL) RETURN_NUMBER((int) (result - str));
+    start_index = AS_NUMBER(args[1]);
+  }
+
+  char *haystack = string->chars + start_index;
+  if(!string->is_ascii) {
+    for(int i = 0; i < string->utf8_length; i++) {
+      int start = i, end = i + 1;
+      utf8slice(haystack, &start, &end);
+
+      if(memcmp(haystack + start, needle->chars, needle->length) == 0) {
+        RETURN_NUMBER(i);
+      }
+    }
   } else {
-    char *result = utf8str(str, AS_C_STRING(args[0]));
-    if (result != NULL) RETURN_NUMBER((int) (result - str));
+    char *result = strstr(haystack, needle->chars);
+    if (result != NULL) RETURN_NUMBER((int) (result - haystack));
   }
 
   RETURN_NUMBER(-1);
@@ -501,7 +530,7 @@ DECLARE_STRING_METHOD(count) {
 
   int count = 0;
   const char *tmp = string->chars;
-  while ((tmp = utf8str(tmp, substr->chars))) {
+  while ((tmp = utf8_strstr(tmp, substr->chars))) {
     count++;
     tmp++;
   }

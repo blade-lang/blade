@@ -5,7 +5,7 @@
 #include "object.h"
 #include "pathinfo.h"
 #include "scanner.h"
-#include "util.h"
+#include "utf8.h"
 
 #include <stdarg.h>
 #include <stdio.h>

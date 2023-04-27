@@ -6,6 +6,7 @@
 #include "module.h"
 #include "native.h"
 #include "object.h"
+#include "utf8.h"
 
 #include "bytes.h"
 #include "dict.h"
@@ -13,7 +14,6 @@
 #include "list.h"
 #include "bstring.h"
 #include "range.h"
-#include "util.h"
 
 #include <math.h>
 #include <stdarg.h>
