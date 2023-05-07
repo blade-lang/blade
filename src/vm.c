@@ -2126,7 +2126,7 @@ b_ptr_result run(b_vm *vm) {
             runtime_error("dictionary key must be one of string, number or boolean");
           }
           b_value value = vm->stack_top[-count + i + 1];
-          dict_add_entry(vm, dict, name, value);
+          dict_set_entry(vm, dict, name, value);
         }
         pop_n(vm, count);
         break;
