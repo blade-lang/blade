@@ -529,19 +529,32 @@ class Parser {
     self._ignore_newline()
     var keys = [], values = []
 
-    while !self._check(RBRACE) {
-      keys.append(self._expression())
-      self._consume(COLON, "':' expected separator between dict key and value")
-      values.append(self._expression())
+    if !self._check(RBRACE) {
+      do {
+        self._ignore_newline()
 
-      self._ignore_newline()
+        if !self._check(RBRACE) {
+          var auto_value
+          if self._match(IDENTIFIER) {
+            keys.append(self._previous().literal)
+          } else {
+            keys.append(self._expression())
+          }
+          self._ignore_newline()
 
-      if !self._check(RBRACE)
-        self._consume(COMMA, "',' expected between dict key/value pairs")
-      
-      self._ignore_newline()
+          if !self._match(COLON) {
+            auto_value = self._previous().literal
+          } else {
+            self._ignore_newline()
+            values.append(self._expression())
+          }
+
+          self._ignore_newline()
+        }
+      } while(self._match(COMMA))
     }
 
+    self._ignore_newline()
     self._consume(RBRACE, "'}' expected after dictionary")
     return DictExpr(keys, values)
   }
@@ -551,15 +564,21 @@ class Parser {
    */
   _list() {
     self._ignore_newline()
-    var items = [self._expression()]
+    var items = []
 
-    while self._match(COMMA) {
-      self._ignore_newline()
-      items.append(self._expression())
+    if !self._check(RBRACKET) {
+      do {
+        self._ignore_newline()
+  
+        if !self._check(RBRACKET) {
+          items.append(self._expression())
+          self._ignore_newline()
+        }
+      } while(self._match(COMMA))
     }
 
     self._ignore_newline()
-    self._consume(RBRACKET, "']' expected after list")
+    self._consume(RBRACKET, "expected ']' at the end of list")
     return ListExpr(items)
   }
 

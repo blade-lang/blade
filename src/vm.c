@@ -598,6 +598,8 @@ static inline bool call_native_method(b_vm *vm, b_obj_native *native, int arg_co
   if (native->function(vm, arg_count, vm->stack_top - arg_count)) {
     CLEAR_GC();
     vm->stack_top -= arg_count;
+  } else {
+    CLEAR_GC();
   }
   return true;
 }
