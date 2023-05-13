@@ -1182,7 +1182,7 @@ static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
   b_value lower = peek(vm, 0);
 
   if (!IS_NUMBER(lower)) {
-    pop_n(vm, 1);
+    pop(vm);
     return throw_exception(vm, "list are numerically indexed");
   }
 
@@ -1200,7 +1200,7 @@ static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
     push(vm, list->items.values[index]);
     return true;
   } else {
-    pop_n(vm, 1);
+    pop(vm);
     return throw_exception(vm, "list index %d out of range", real_index);
   }
 }
@@ -2392,8 +2392,7 @@ b_ptr_result run(b_vm *vm) {
 
       case OP_DIE: {
         if (!IS_INSTANCE(peek(vm, 0)) ||
-            !is_instance_of(AS_INSTANCE(peek(vm, 0))->klass,
-                            vm->exception_class->name->chars)) {
+            !is_instance_of(AS_INSTANCE(peek(vm, 0))->klass, vm->exception_class->name->chars)) {
           runtime_error("instance of Exception expected");
           break;
         }

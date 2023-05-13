@@ -829,7 +829,7 @@ DECLARE_MODULE_METHOD(curl__easy_escape) {
   char *result = curl_easy_escape(curl, string->chars, string->length);
 
   if(result != NULL) {
-    b_obj_string *n_string = (b_obj_string*)GC(copy_string(vm, result, (int)strlen(result)));
+    b_obj_string *n_string = copy_string(vm, result, (int)strlen(result));
     curl_free(result);
     RETURN_OBJ(n_string);
   }
@@ -847,7 +847,7 @@ DECLARE_MODULE_METHOD(curl__easy_unescape) {
   char *result = curl_easy_unescape(curl, string->chars, string->length, &out_length);
 
   if(result != NULL) {
-    b_obj_string *n_string = (b_obj_string*)GC(copy_string(vm, result, (int)strlen(result)));
+    b_obj_string *n_string = copy_string(vm, result, (int)strlen(result));
     curl_free(result);
     RETURN_OBJ(n_string);
   }

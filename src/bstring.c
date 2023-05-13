@@ -473,19 +473,21 @@ DECLARE_STRING_METHOD(index_of) {
     start_index = AS_NUMBER(args[1]);
   }
 
-  char *haystack = string->chars + start_index;
-  if(!string->is_ascii) {
-    for(int i = 0; i < string->utf8_length; i++) {
-      int start = i, end = i + 1;
-      utf8slice(haystack, &start, &end);
+  if(string->length > 0 && needle->length > 0) {
+    char *haystack = string->chars;
+    if(!string->is_ascii && string->length != string->utf8_length) {
+      for (int i = start_index; i < string->utf8_length; i++) {
+        int start = i, end = i + 1;
+        utf8slice(haystack, &start, &end);
 
-      if(memcmp(haystack + start, needle->chars, needle->length) == 0) {
-        RETURN_NUMBER(i);
+        if (memcmp(haystack + start, needle->chars, needle->length) == 0) {
+          RETURN_NUMBER(i);
+        }
       }
+    } else {
+      char *result = strstr(haystack + start_index, needle->chars);
+      if (result != NULL) RETURN_NUMBER((int) (result - haystack));
     }
-  } else {
-    char *result = strstr(haystack, needle->chars);
-    if (result != NULL) RETURN_NUMBER((int) (result - haystack));
   }
 
   RETURN_NUMBER(-1);
