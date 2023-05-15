@@ -144,11 +144,13 @@ def _cyan_text(text) {
 def _get_real_value(item, value) {
   if item.type == INT return to_int(to_number(value))
   else if item.type == NUMBER return to_number(value)
-  else if item.type == BOOL return value == 'true' or value == '1'
+  else if item.type == BOOL return is_bool(value) ? value : (value == 'true' or value == '1')
   else if item.type == STRING return to_string(value)
-  else if item.type == LIST return [value]
+  else if item.type == LIST return is_list(value) ? value : [value]
   else if item.type == CHOICE {
-    return item.choices.contains(value) ? value : nil
+    if is_list(item.choices)
+      return item.choices.contains(value) ? value : item.value
+    else return item.choices.contains(value) ? item.choices[value] : item.value
   }
   return value
 }
@@ -167,12 +169,12 @@ class ArgsException < Exception {
 }
 
 class _Option {
-  _Option(long_name, help, short_name, type, required, choices) {
+  _Option(long_name, help, short_name, type, value, choices) {
     self.long_name = long_name
     self.help = help ? help : ''
     self.short_name = short_name
     self.type = type ? type : NONE
-    self.required = required
+    self.value = value
     self.choices = choices
     self.options = nil # required for _Option and subclasses
 
@@ -202,17 +204,15 @@ class _Optionable {
 
     var short_name = opts.get('short_name'),
         type = to_int(to_number(opts.get('type', NONE))),
-        required = opts.get('required', false),
+        value = opts.get('value', nil),
         choices = opts.get('choices', [])
 
     if short_name != nil and !is_string(short_name)
       die ArgsException('short_name must be string')
-    if required != nil and !is_bool(required)
-      die ArgsException('required must be boolean')
     if !is_list(choices) and !is_dict(choices)
       die ArgsException('choices must be a list or dictionary')
 
-    self.options.append(_Option(name, help, short_name, type, required, choices))
+    self.options.append(_Option(name, help, short_name, type, value, choices))
 
     if instance_of(self, _Command)
       return self
@@ -237,14 +237,38 @@ class _Command < _Optionable {
   }
 }
 
+class _Positional < _Optionable {
+  _Positional(name, help, type, choices, value) {
+    if !is_string(name)
+      die ArgsException('name expected')
+    if help != nil and !is_string(help)
+      die ArgsException('help message must be string')
+    if choices != nil and !is_list(choices) and !is_dict(choices)
+      die ArgsException('choices must be of type list')
+
+    self.name = name
+    self.help = help
+    self.type = type
+    self.choices = choices or []
+    self.value = value
+  }
+}
+
 /**
  * A configurable commandline parser.
  */
 class Parser < _Optionable {
+
   /**
    * A list of commands supported by the parser.
    */
   var commands = []
+
+  /**
+   * A list of positional values supported by the parser.
+   */
+  var indexes = []
+
   var _default_help = true
 
   /**
@@ -271,7 +295,6 @@ class Parser < _Optionable {
       'Show this help message and exit', 
       {
         short_name: 'h',
-        required: false,
       }
     )
   }
@@ -377,6 +400,14 @@ class Parser < _Optionable {
     return ' | '.join(list)
   }
 
+  _get_index_hint() {
+    var list = []
+    for index in self.indexes {
+      list.append('[${index.name}]')
+    }
+    return ' '.join(list)
+  }
+
   _get_options_text_width() {
     var width = 0
     for opt in self.options {
@@ -411,13 +442,15 @@ class Parser < _Optionable {
   _usage_hint(command) {
     if !command {
       var flags_hint = self._get_flags_hint()
+      var index_hint = self._get_index_hint()
 
       echo _main_headings('Usage:') + _cyan_text(' ${self.name} ' + 
         (flags_hint ? '[ ${flags_hint} ]' : '') + 
-        (self.commands.length() > 0 ? ' [COMMAND]' : ""))
+        (self.commands.length() > 0 ? ' [COMMAND]' : '') + 
+        (index_hint ? ' ${index_hint}' : ''))
     } else {
       echo _main_headings('Usage:') + _cyan_text(' ${self.name} ${command.name}' + 
-          (command.type != NONE ? ' <${_type_name[command.type]}>' : ""))
+          (command.type != NONE ? ' <${_type_name[command.type]}>' : ''))
     }
   }
 
@@ -437,7 +470,7 @@ class Parser < _Optionable {
     if opt.type != NONE {
       return " <" + _type_name[opt.type] + '>'
     }
-    return ''
+    return ' '
   }
 
   _print_help() {
@@ -445,40 +478,59 @@ class Parser < _Optionable {
         commands_width = self._get_commands_text_width(),
         width = options_width > commands_width ? options_width : commands_width
     
-    echo ''
-    echo _main_headings('OPTIONS:')
-    for opt in self.options {
-      var line = ''
-      if opt.short_name {
-        line += '-${opt.short_name},'.lpad(opt.short_name.length() + 4) + ' --${opt.long_name}'
-      } else {
-        line += '--${opt.long_name}'.lpad(opt.long_name.length() + 8)
+    if self.indexes {
+      echo ''
+      echo _main_headings('POSITIONAL ARGUMENTS:')
+      for index in self.indexes {
+        var line = '  ' + _bold_text(index.name)
+
+        line += self._opt_line(index)
+
+        # We want to separate the longtest option names at least 12
+        # characters away from the help texts.
+        line = line.rpad(width + 20)
+
+        echo line + self._get_help(index)
       }
-
-      line += self._opt_line(opt)
-
-      # We want to separate the longtest option names at least 12
-      # characters away from the help texts.
-      line = line.rpad(width + 5)
-
-      echo line + self._get_help(opt)
     }
-    echo ''
-    echo _main_headings('COMMANDS:')
-    for opt in self.commands {
-      var line = '  ' + _bold_text(opt.name)
+    if self.options {
+      echo ''
+      echo _main_headings('OPTIONS:')
+      for opt in self.options {
+        var line = ''
+        if opt.short_name {
+          line += '-${opt.short_name},'.lpad(opt.short_name.length() + 4) + ' --${opt.long_name}'
+        } else {
+          line += '--${opt.long_name}'.lpad(opt.long_name.length() + 8)
+        }
 
-      line += self._opt_line(opt)
+        line += self._opt_line(opt)
 
-      # We want to separate the longtest option names at least 12
-      # characters away from the help texts.
-      line = line.rpad(width + 20)
+        # We want to separate the longtest option names at least 12
+        # characters away from the help texts.
+        line = line.rpad(width + 5)
 
-      echo line + self._get_help(opt)
+        echo line + self._get_help(opt)
+      }
+    }
+    if self.commands {
+      echo ''
+      echo _main_headings('COMMANDS:')
+      for cmd in self.commands {
+        var line = '  ' + _bold_text(cmd.name)
+
+        line += self._opt_line(cmd)
+
+        # We want to separate the longtest option names at least 12
+        # characters away from the help texts.
+        line = line.rpad(width + 20)
+
+        echo line + self._get_help(cmd)
+      }
     }
   }
 
-  # This method should ever be called directly.
+  # This method should never be called directly.
   _help_action(command) {
     command = command or self._command
     var original_command = command
@@ -496,6 +548,7 @@ class Parser < _Optionable {
         self._print_help()
       }
     }
+    os.exit(0)
   }
 
   /**
@@ -510,7 +563,7 @@ class Parser < _Optionable {
    * will match `-v` in the commandline.
    * - `type`: type must be one of the args types and will indicate 
    * how the parsed data should be interpreted in the final result.
-   * - `required`: tells the parser if a value is compulsory for this option.
+   * - `value`: tells the parser the default value for this option.
    * - `choices`: a list of allowed options or a dictionary of allowed 
    * options with their respective descriptions.
    * 
@@ -535,7 +588,6 @@ class Parser < _Optionable {
    * 
    * - `type`: type must be one of the args types and will indicate 
    * how the parsed data should be interpreted in the final result.
-   * - `required`: tells the parser if a value is compulsory for this option.
    * - `choices`: a list of allowed options or a dictionary of allowed 
    * options with their respective descriptions.
    * 
@@ -566,6 +618,42 @@ class Parser < _Optionable {
   }
 
   /**
+   * add_index(name: string [, help: string [, opts: dict]])
+   * 
+   * adds a support for a new positional argument to the parser.
+   * 
+   * The `opts` dictionary can contain property `type` and `action`.
+   * 
+   * - The `type` property a must be one of the args types and will indicate 
+   * how the parsed data should be interpreted in the final result.
+   * 
+   * The `opts` dictionary can contain one or more of:
+   * 
+   * - `type`: type must be one of the args types and will indicate 
+   * how the parsed data should be interpreted in the final result.
+   * - `value`: tells the parser the default value for this index.
+   * - `choices`: a list of allowed options or a dictionary of allowed 
+   * values with their respective descriptions.
+   * 
+   * @note the `choices` option only works for type `CHOICE`.
+   */
+  add_index(name, help, opts) {
+    if !is_string(name)
+      die ArgsException('name expected')
+    if help != nil and !is_string(help)
+      die ArgsException('help message must be string')
+    if opts == nil opts = {}
+    else if !is_dict(opts)
+      die ArgsException('opts must be a dict')
+
+    var type = to_int(to_number(opts.get('type', NONE))),
+      choices = opts.get('choices', []),
+      value = opts.get('value', nil)
+
+    self.indexes.append(_Positional(name, help, type, choices, value))
+  }
+
+  /**
    * parse()
    * 
    * Parses the commandline arguments and returns a dictionary of command 
@@ -583,22 +671,22 @@ class Parser < _Optionable {
     var parsed_args = {
       options: {},
       command: nil,
+      indexes: []
     }
     var help_shown = false
 
+    var index_start = -1
     iter var i = 0; i < cli_args.length(); i++ {
       var arg = cli_args[i]
       var command_found = false
 
       # Commands can only occur in the first index of the argument list. 
       # Every other occurrence will be treated as a value.
-      # if i == 0 {
-      # Then treat commands.
       var command = self._get_command(arg)
 
       def parse_options(source, arg, fail) {
         var options = self._get_option(source, arg)
-        if options and (options.length() == arg.length() - 1 or arg.starts_with('--')) {
+        if options and (options.length() == arg.length() - 1 or arg.starts_with('-')) {
           i++
 
           # ...
@@ -642,13 +730,15 @@ class Parser < _Optionable {
               parsed_args.options.set('${option.long_name}', true)
             }
           }
-        } else if options and (arg.length() - 1 != options.length() or !arg.starts_with('--')) {
+        } else if options and (arg.length() - 1 != options.length() or !arg.starts_with('-')) {
+          echo arg.length()
+          echo options.length()
           if command_found {
             self._command_error(command.name, 'Unsupported argument encountered at ${arg}')
           } else {
             self._option_error(arg, 'Unsupported argument: ${arg}')
           }
-        } else if fail or arg.starts_with('-') {
+        } else if (fail or arg.starts_with('-')) and !self.indexes {
           if command_found {
             self._command_error(command.name, 'Unknown argument ${arg} for ${command.name}')
           } else {
@@ -698,15 +788,36 @@ class Parser < _Optionable {
           }
         }
       }
-      # }
 
       if !command_found {
         # Treat options next.
         parse_options(self.options, arg, true)
       }
+
+      # positional arguments can only come after command and options.
+      if self.indexes and i < cli_args.length() - 1 {
+        # if index has never been parsed, let's mark the
+        # index starting positing in args list now.
+        if index_start == -1 index_start = i
+
+        var index_pos = i - index_start
+        if index_pos < self.indexes.length() {
+          parsed_args.indexes.append(_get_real_value(self.indexes[index_pos], arg))
+        }
+      }
     }
 
-    if !parsed_args.command and !parsed_args.options and self._default_help and !help_shown {
+    # fill default values if missing
+    for opt in self.options {
+      if opt.value and !parsed_args.options.contains(opt.long_name) {
+        parsed_args.options.add(opt.long_name, _get_real_value(opt, opt.value))
+      }
+    }
+    iter var i = parsed_args.indexes.length(); i < self.indexes.length(); i++ {
+      parsed_args.indexes.append(_get_real_value(self.indexes[i], self.indexes[i].value))
+    }
+
+    if !parsed_args.command and !parsed_args.options and !parsed_args.indexes and self._default_help and !help_shown {
       self._usage_hint()
       self._print_help()
     }
