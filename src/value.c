@@ -125,7 +125,7 @@ static inline char *number_to_string(b_vm *vm, double number) {
     sprintf(num_str, NUMBER_FORMAT, number);
     return num_str;
   }
-  return "";
+  return strdup("");
 }
 
 char *value_to_string(b_vm *vm, b_value value) {

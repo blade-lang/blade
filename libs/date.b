@@ -925,14 +925,12 @@ def from_jd(jdate) {
   return Date(year, month, day, hour, minute, seconds)
 }
 
-/**
- * /*
-   * date([year: number [, month: number [, day: number [, hour: number [, minute: number [, seconds: number]]]]]])
-   *
-   * Returns a new `Date` instance representing the given system date or the current date if no argument is specified.
-   * @return Date
-   * @note all arguments are optional
-   */
+/*
+ * date([year: number [, month: number [, day: number [, hour: number [, minute: number [, seconds: number]]]]]])
+ *
+ * Returns a new `Date` instance representing the given system date or the current date if no argument is specified.
+ * @return Date
+ * @note all arguments are optional
  */
 def date(year, month, day, hour, minute, seconds) {
   return Date(year, month, day, hour, minute, seconds)

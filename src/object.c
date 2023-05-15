@@ -515,7 +515,7 @@ char *object_to_string(b_vm *vm, b_value value) {
     }
   }
 
-  return NULL;
+  return strdup("");
 }
 
 const char *object_type(b_obj *object) {
