@@ -963,7 +963,7 @@ DECLARE_MODULE_METHOD(curl__slist_create) {
   struct curl_slist *s_list = NULL;
 
   for(int i = 0; i < b_list->items.count; i++) {
-    s_list = curl_slist_append(s_list, value_to_string(vm, b_list->items.values[i]));
+    s_list = curl_slist_append(s_list, value_to_string(vm, b_list->items.values[i])->chars);
   }
 
   if(s_list != NULL) {

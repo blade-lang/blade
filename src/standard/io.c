@@ -64,8 +64,10 @@ static int read_line(char line[], int max) {
 
   while ((c = getchar()) != EOF && c != '\0' && c != '\n') {
     if (nch < max) {
-      line[nch] = *utf8_encode(c);
+      char *cc = utf8_encode(c);
+      line[nch] = *cc;
       nch = nch + 1;
+      free(cc);
     } else {
       break;
     }

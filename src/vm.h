@@ -74,12 +74,10 @@ struct s_vm {
   bool mark_value;
   // for switching through the command line args...
   bool show_warnings;
-  bool should_debug_stack;
   bool should_print_bytecode;
   bool should_exit_after_bytecode;
 
   // miscellaneous
-  long stdout_buffer_size;
 };
 
 void init_vm(b_vm *vm);

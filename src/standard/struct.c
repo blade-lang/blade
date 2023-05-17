@@ -84,8 +84,9 @@ static long to_long(b_vm *vm, b_value value) {
     return -1L;
   }
 
-  const char *v = (const char *) value_to_string(vm, value);
-  int length = (int)strlen(v);
+  b_obj_string *v_str = value_to_string(vm, value);
+  const char *v = (const char *) v_str->chars;
+  int length = v_str->length;
 
   int start = 0, end = 1, multiplier = 1;
   if(v[0] == '-') {
@@ -119,8 +120,9 @@ static double to_double(b_vm *vm, b_value value) {
     return -1;
   }
 
-  const char *v = (const char *) value_to_string(vm, value);
-  int length = (int)strlen(v);
+  b_obj_string *v_str = value_to_string(vm, value);
+  const char *v = (const char *) v_str->chars;
+  int length = v_str->length;
 
   int start = 0, end = 1, multiplier = 1;
   if(v[0] == '-') {
@@ -330,8 +332,8 @@ DECLARE_MODULE_METHOD(struct_pack) {
         }
 
         if (arg < 0) {
-          char *as_string = value_to_string(vm, args_list[currentarg]);
-          arg = (int) strlen(as_string);
+          b_obj_string *as_string = value_to_string(vm, args_list[currentarg]);
+          arg = as_string->length;
           if (code == 'Z') {
             /* add one because Z is always NUL-terminated:
              * pack("Z*", "aa") === "aa\0"
@@ -493,7 +495,7 @@ too_few_args:
       case 'A':
       case 'Z': {
         size_t arg_cp = (code != 'Z') ? arg : MAX(0, arg - 1);
-        char *str = value_to_string(vm, args_list[currentarg++]);
+        char *str = value_to_string(vm, args_list[currentarg++])->chars;
 
         memset(&output[outputpos], (code == 'a' || code == 'Z') ? '\0' : ' ', arg);
         memcpy(&output[outputpos], str, (strlen(str) < arg_cp) ? strlen(str) : arg_cp);
@@ -506,12 +508,13 @@ too_few_args:
       case 'H': {
         int nibbleshift = (code == 'h') ? 0 : 4;
         int first = 1;
-        char *str = value_to_string(vm, args_list[currentarg++]);
+        b_obj_string *the_str = value_to_string(vm, args_list[currentarg++]);
+        char *str = the_str->chars;
 
         outputpos--;
         if ((size_t) arg > strlen(str)) {
           WARN("Type %c: not enough characters in string", code);
-          arg = (int)strlen(str);
+          arg = the_str->length;
         }
 
         while (arg-- > 0) {

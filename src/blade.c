@@ -225,11 +225,9 @@ void show_usage(char *argv[], bool fail) {
   fprintf(out, "Usage: %s [-[h | c | d | e | j | v | g | w]] [filename]\n", argv[0]);
   fprintf(out, "   -h       Show this help message.\n");
   fprintf(out, "   -v       Show version string.\n");
-  fprintf(out, "   -b arg   Buffer terminal outputs.\n");
-  fprintf(out, "            [This will cause the output to be buffered with 1kb]\n");
+  fprintf(out, "   -b arg   Buffer terminal outputs with the given size.\n");
   fprintf(out, "   -d       Print bytecode.\n");
   fprintf(out, "   -e       Print bytecode and exit.\n");
-  fprintf(out, "   -j       Show stack objects during execution.\n");
   fprintf(out, "   -g arg   Sets the minimum heap size in kilobytes before the GC\n"
                "            can start. [Default = %d (%dmb)]\n", DEFAULT_GC_START / 1024,
           DEFAULT_GC_START / (1024 * 1024));
@@ -241,7 +239,6 @@ void show_usage(char *argv[], bool fail) {
 int main(int argc, char *argv[]) {
 
   bool show_warnings = false;
-  bool should_debug_stack = false;
   bool should_print_bytecode = false;
   long stdout_buffer_size = 0L;
   bool should_exit_after_bytecode = false;
@@ -250,7 +247,7 @@ int main(int argc, char *argv[]) {
 
   if (argc > 1) {
     int opt;
-    while ((opt = getopt(argc, argv, "hdeb:jvg:wc:--")) != -1) {
+    while ((opt = getopt(argc, argv, "hdeb:vg:wc:--")) != -1) {
       switch (opt) {
         case 'h':
           show_usage(argv, false); // exits
@@ -266,9 +263,6 @@ int main(int argc, char *argv[]) {
           if (stdout_buffer_size < 0) {
             stdout_buffer_size = 0;
           }
-          break;
-        case 'j':
-          should_debug_stack = true;
           break;
         case 'v': {
           printf("Blade " BLADE_VERSION_STRING " (running on BladeVM " BVM_VERSION ")\n");
@@ -302,11 +296,9 @@ int main(int argc, char *argv[]) {
 
     // set vm options...
     vm->show_warnings = show_warnings;
-    vm->should_debug_stack = should_debug_stack;
     vm->should_print_bytecode = should_print_bytecode;
     vm->should_exit_after_bytecode = should_exit_after_bytecode;
     vm->next_gc = next_gc_start;
-    vm->stdout_buffer_size = stdout_buffer_size;
 
     if (stdout_buffer_size) {
       // forcing printf buffering for TTYs and terminals
