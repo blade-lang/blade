@@ -31,14 +31,13 @@ jobs:
           sudo apt-get install curl libcurl4-openssl-dev -y
           cmake -B .
           cmake --build . -- -j 12
+          chmod +x blade/blade
       - name: Test
         run: ctest
-      - name: Make blade executable
-        run: |
-          chmod +x blade/blade
 #      - name: Perform CodeQL Analysis
 #        uses: github/codeql-action/analyze@v1
       - name: Generate Artifacts
+        if: '!cancelled()'
         uses: actions/upload-artifact@v2
         with:
           name: blade-linux-${{ github.run_id }}
@@ -56,12 +55,11 @@ jobs:
         run: |
           cmake -B . -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl
           cmake --build . -- -j 12
+          chmod 755 blade/blade
       - name: Test
         run: ctest
-      - name: Make blade executable
-        run: |
-          chmod 755 blade/blade
       - name: Generate Artifacts
+        if: '!cancelled()'
         uses: actions/upload-artifact@v2
         with:
           name: blade-macos-${{ github.run_id }}
@@ -94,6 +92,7 @@ jobs:
       - name: Test
         run: ctest
       - name: Generate Artifacts
+        if: '!cancelled()'
         uses: actions/upload-artifact@v2
         with:
           name: blade-windows-default-${{ github.run_id }}

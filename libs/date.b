@@ -583,6 +583,9 @@ class Date {
           if self.is_leap() result += 1
           else result += 0
         }
+        when 'H' {
+          result += self.hour <= 9 ? '0${self.hour}' : self.hour
+        }
         when 'h' {
           var hour = self.hour
           if hour > 12 hour -= 12
