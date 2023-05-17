@@ -977,7 +977,7 @@ class Socket {
   /**
    * info()
    * 
-   * Returns a dictionary containing the address, port and family of the current socket or an 
+   * Returns a dictionary containing the address, ipv6, port and family of the current socket or an 
    * empty dictionary if the socket information could not be retrieved.
    * @return dictionary
    */

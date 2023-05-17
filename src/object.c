@@ -19,9 +19,9 @@ b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   object->next = vm->objects;
   vm->objects = object;
 
-//#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
-//  printf("%p allocate %ld for %d\n", (void *)object, size, type);
-//#endif
+#if defined(DEBUG_GC) && DEBUG_GC
+  printf("%p allocate %ld for %d\n", (void *)object, size, type);
+#endif
 
   return object;
 }

@@ -244,10 +244,10 @@ def mktime(year, month, day, hour, minute, seconds, is_dst) {
  * 
  * ```blade-repl
  * %> import date
- * %> var d = date.Date(2021)
+ * %> var d = date(2021)
  * %> to_string(d)
  * '<Date year: 2021, month: 1, day: 1, hour: 0, minute: 0, seconds: 0>'
- * %> d = date.Date()
+ * %> d = date()
  * %> to_string(d)
  * '<Date year: 2022, month: 3, day: 5, hour: 19, minute: 25, seconds: 58>'
  * ```
@@ -323,9 +323,9 @@ class Date {
    * Example,
    * 
    * ```blade-repl
-   * %> date.Date(2018).is_leap()
+   * %> date(2018).is_leap()
    * false
-   * %> date.Date(2020).is_leap()
+   * %> date(2020).is_leap()
    * true
    * ```
    */
@@ -343,7 +343,7 @@ class Date {
    * Example,
    * 
    * ```blade-repl
-   * %> date.Date(2021, 5, 11).days_before_month(7)
+   * %> date(2021, 5, 11).days_before_month(7)
    * 142
    * ```
    */
@@ -379,7 +379,7 @@ class Date {
    * Example,
    * 
    * ```blade-repl
-   * %> date.Date(2021, 5, 11).days_before_year(2024)
+   * %> date(2021, 5, 11).days_before_year(2024)
    * 811
    * ```
    */
@@ -414,7 +414,7 @@ class Date {
    * Example,
    * 
    * ```blade-repl
-   * %> date.Date(2021, 6).days_in_month()
+   * %> date(2021, 6).days_in_month()
    * 30
    * ```
    */
@@ -431,7 +431,7 @@ class Date {
    * Example,
    * 
    * ```blade-repl
-   * %> date.Date(2021, 5, 11).weekday()
+   * %> date(2021, 5, 11).weekday()
    * 2
    * ```
    */
@@ -454,7 +454,7 @@ class Date {
    * Example,
    * 
    * ```blade-repl
-   * %> date.Date(2021, 5, 11).week_number()
+   * %> date(2021, 5, 11).week_number()
    * 19
    * ```
    */
@@ -524,8 +524,19 @@ class Date {
    * Example,
    * 
    * ```blade-repl
-   * %> date.Date().format('F d, Y g:i A')
+   * %> date().format('F d, Y g:i A')
    * 'March 05, 2022 6:24 PM'
+   * ```
+   * 
+   * You can prevent a format character in the format string from being expanded by escaping it with a 
+   * preceding backslash. If the character with a backslash is already a special sequence, you may need 
+   * to also escape the backslash.
+   * 
+   * For example:
+   * 
+   * ```blade-repl
+   * %> date().format('l jS \o\\f F Y h:i:s A')
+   * 'Wednesday 17th of May 2021 01:39:08 PM'
    * ```
    */
   format(format) {
@@ -690,7 +701,7 @@ class Date {
    * For example,
    * 
    * ```blade-repl
-   * %> date.Date().http()
+   * %> date().http()
    * 'Sat, 05 Mar 2022 06:23:32 GMT'
    * ```
    */
@@ -707,7 +718,7 @@ class Date {
    * Example,
    * 
    * ```blade-repl
-   * %> date.Date(2021, 5, 11).jd()
+   * %> date(2021, 5, 11).jd()
    * 2459345
    * ```
    */
@@ -733,7 +744,7 @@ class Date {
    * @return number
    */
   unix_time() {
-    return _mktime(self.year, self.month, self.day, self.hour, 
+    return _date.mktime(self.year, self.month, self.day, self.hour, 
               self.minute, self.seconds, self.is_dst)
   }
 

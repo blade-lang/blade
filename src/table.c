@@ -205,14 +205,12 @@ b_obj_string *table_find_string(b_table *table, const char *chars, int length, u
       return NULL;
     }
 
-    // if (IS_STRING(entry->key)) {
     b_obj_string *string = AS_STRING(entry->key);
     if (string->length == length && string->hash == hash &&
         memcmp(string->chars, chars, length) == 0) {
       // we found it
       return string;
     }
-    // }
 
     index = (index + 1) & (table->capacity - 1);
   }
