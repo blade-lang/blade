@@ -13,7 +13,7 @@
 
 // global debug mode flag
 #define DEBUG_MODE 0
-#define DEBUG_LOG_GC 1
+#define DEBUG_GC 0
 #define DEBUG_STACK 0
 
 #define MAX_USING_CASES 256
