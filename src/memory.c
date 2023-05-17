@@ -77,7 +77,7 @@ void mark_object(b_vm *vm, b_obj *object) {
     if (vm->gray_stack == NULL) {
       fflush(stdout); // flush out anything on stdout first
       fprintf(stderr, "GC encountered an error");
-      exit(1);
+      exit(EXIT_TERMINAL);
     }
   }
   vm->gray_stack[vm->gray_count++] = object;

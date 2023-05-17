@@ -20,7 +20,7 @@ DECLARE_DICT_METHOD(add) {
 
   b_value temp_value;
   if (table_get(&dict->items, args[0], &temp_value)) {
-    RETURN_ERROR("duplicate key %s at add()", value_to_string(vm, args[0]));
+    RETURN_ERROR("duplicate key %s at add()", value_to_string(vm, args[0])->chars);
   }
 
   dict_add_entry(vm, dict, args[0], args[1]);

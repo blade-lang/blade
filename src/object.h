@@ -265,7 +265,7 @@ void print_object(b_value value, bool fix_string);
 
 const char *object_type(b_obj *object);
 
-char *object_to_string(b_vm *vm, b_value value);
+b_obj_string *object_to_string(b_vm *vm, b_value value);
 
 b_obj_bytes *copy_bytes(b_vm *vm, unsigned char *b, int length);
 

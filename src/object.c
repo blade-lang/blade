@@ -360,144 +360,158 @@ b_obj_bytes *take_bytes(b_vm *vm, unsigned char *b, int length) {
   return bytes;
 }
 
-static inline char *function_to_string(b_obj_func *func) {
+static inline b_obj_string *function_to_string(b_vm *vm, b_obj_func *func) {
   if (func->name == NULL) {
-    return strdup("<script 0x00>");
+    return copy_string(vm, "<script 0x00>", 13);
   }
 
   const char* format = func->is_variadic ? "<function %s(%d...)>" : "<function %s(%d)>";
-  char *str = (char *) malloc(sizeof(char) *
-      (snprintf(NULL, 0, format, func->name->chars, func->arity)));
+  int length = (int)snprintf(NULL, 0, format, func->name->chars, func->arity);
+  char *str = (char *) calloc(length + 1, sizeof(char));
   if (str != NULL) {
     sprintf(str, format, func->name->chars, func->arity);
-    return str;
+    str[length] = 0;
+    return take_string(vm, str, length);
   }
-  return strdup(func->name->chars);
+  return copy_string(vm, func->name->chars, (int)strlen(func->name->chars));
 }
 
-static inline char *list_to_string(b_vm *vm, b_value_arr *array) {
+static inline b_obj_string *list_to_string(b_vm *vm, b_value_arr *array) {
   char *str = strdup("[");
+  int length = 1;
   for (int i = 0; i < array->count; i++) {
-    char *val = value_to_string(vm, array->values[i]);
+    b_obj_string *val = value_to_string(vm, array->values[i]);
     if (val != NULL) {
-      str = append_strings(str, val);
-      free(val);
+      str = append_strings(str, val->chars);
+      length += val->length;
     }
     if (i != array->count - 1) {
       str = append_strings(str, ", ");
+      length += 2;
     }
   }
   str = append_strings(str, "]");
-  return str;
+  length++;
+  return take_string(vm, str, length);
 }
 
-static inline char *bytes_to_string(b_vm *vm, b_byte_arr *array) {
+static inline b_obj_string *bytes_to_string(b_vm *vm, b_byte_arr *array) {
   char *str = strdup("(");
+  int length = 1;
   for (int i = 0; i < array->count; i++) {
-    char *chars = ALLOCATE(char, snprintf(NULL, 0, "0x%x", array->bytes[i]));
+    int len = (int)snprintf(NULL, 0, "0x%x", array->bytes[i]);
+    char *chars = ALLOCATE(char, len);
     if (chars != NULL) {
       sprintf(chars, "0x%x", array->bytes[i]);
       str = append_strings(str, chars);
+      free(chars);
+      length += len;
     }
 
     if (i != array->count - 1) {
       str = append_strings(str, " ");
+      length++;
     }
   }
   str = append_strings(str, ")");
-  return str;
+  length++;
+  return take_string(vm, str, length);
 }
 
-static char *dict_to_string(b_vm *vm, b_obj_dict *dict) {
+static b_obj_string *dict_to_string(b_vm *vm, b_obj_dict *dict) {
   char *str = strdup("{");
+  int length = 1;
   for (int i = 0; i < dict->names.count; i++) {
     // print_value(dict->names.values[i]);
     b_value key = dict->names.values[i];
-    char *_key = value_to_string(vm, key);
+    b_obj_string *_key = value_to_string(vm, key);
     if (_key != NULL) {
-      str = append_strings(str, _key);
+      str = append_strings(str, _key->chars);
+      length += _key->length;
     }
     str = append_strings(str, ": ");
+    length += 2;
 
     b_value value;
     table_get(&dict->items, key, &value);
-    char *val = value_to_string(vm, value);
+    b_obj_string *val = value_to_string(vm, value);
     if (val != NULL) {
-      str = append_strings(str, val);
+      str = append_strings(str, val->chars);
+      length += val->length;
     }
 
     if (i != dict->names.count - 1) {
       str = append_strings(str, ", ");
+      length += 2;
     }
   }
   str = append_strings(str, "}");
-  return str;
+  length++;
+  return take_string(vm, str, length);
 }
 
-char *object_to_string(b_vm *vm, b_value value) {
+b_obj_string *object_to_string(b_vm *vm, b_value value) {
   switch (OBJ_TYPE(value)) {
     case OBJ_PTR: {
-      return strdup(AS_PTR(value)->name);
+      int length = (int)strlen(AS_PTR(value)->name);
+      return copy_string(vm, AS_PTR(value)->name, length);
     }
     case OBJ_SWITCH: {
-      return strdup("<switch>");
+      return copy_string(vm, "<switch>", 7);
     }
     case OBJ_CLASS: {
       const char *format = "<class %s>";
       char *data = AS_CLASS(value)->name->chars;
-      char *str = ALLOCATE(char, snprintf(NULL, 0, format, data));
-      if(str != NULL) {
-        sprintf(str, format, data);
-      }
-      return str;
+      int length = snprintf(NULL, 0, format, data);
+      char *str = ALLOCATE(char, length + 1);
+      sprintf(str, format, data);
+      return take_string(vm, str, length);
     }
     case OBJ_INSTANCE: {
       const char *format = "<instance of %s>";
       char *data = AS_INSTANCE(value)->klass->name->chars;
-      char *str = ALLOCATE(char, snprintf(NULL, 0, format, data));
-      if(str != NULL) {
-        sprintf(str, format, data);
-      }
-      return str;
+      int length = snprintf(NULL, 0, format, data);
+      char *str = ALLOCATE(char, length + 1);
+      sprintf(str, format, data);
+      return take_string(vm, str, length);
     }
     case OBJ_CLOSURE:
-      return function_to_string(AS_CLOSURE(value)->function);
+      return function_to_string(vm, AS_CLOSURE(value)->function);
     case OBJ_BOUND_METHOD: {
-      return function_to_string(AS_BOUND(value)->method->function);
+      return function_to_string(vm, AS_BOUND(value)->method->function);
     }
     case OBJ_FUNCTION:
-      return function_to_string(AS_FUNCTION(value));
+      return function_to_string(vm, AS_FUNCTION(value));
     case OBJ_NATIVE:{
       const char *format = "<function %s(native)>";
       const char *data = AS_NATIVE(value)->name;
-      char *str = ALLOCATE(char, snprintf(NULL, 0, format, data));
-      if(str != NULL) {
-        sprintf(str, format, data);
-      }
-      return str;
+      int length = snprintf(NULL, 0, format, data);
+      char *str = ALLOCATE(char, length + 1);
+      sprintf(str, format, data);
+      return take_string(vm, str, length);
     }
     case OBJ_RANGE: {
       b_obj_range *range = AS_RANGE(value);
       const char *format = "<range %d..%d>";
-      char *str = ALLOCATE(char, snprintf(NULL, 0, format, range->lower, range->upper));
-      if(str != NULL) {
-        sprintf(str, format, range->lower, range->upper);
-      }
-      return str;
+      int length = snprintf(NULL, 0, format, range->lower, range->upper);
+      char *str = ALLOCATE(char, length + 1);
+      sprintf(str, format, range->lower, range->upper);
+      return take_string(vm, str, length);
     }
     case OBJ_MODULE: {
       const char *format = "<module %s>";
       const char *data = AS_MODULE(value)->name;
-      char *str = ALLOCATE(char, snprintf(NULL, 0, format, data));
-      if(str != NULL) {
-        sprintf(str, format, data);
-      }
-      return str;
+      int length = snprintf(NULL, 0, format, data);
+      char *str = ALLOCATE(char, length + 1);
+      sprintf(str, format, data);
+      return take_string(vm, str, length);
     }
-    case OBJ_STRING:
-      return strdup(AS_C_STRING(value));
+    case OBJ_STRING: {
+      b_obj_string *str = AS_STRING(value);
+      return copy_string(vm, str->chars, str->length);
+    }
     case OBJ_UP_VALUE:
-      return strdup("<up-value>");
+      return copy_string(vm, "<up-value>", 10);
     case OBJ_BYTES:
       return bytes_to_string(vm, &AS_BYTES(value)->bytes);
     case OBJ_LIST:
@@ -507,15 +521,14 @@ char *object_to_string(b_vm *vm, b_value value) {
     case OBJ_FILE: {
       b_obj_file *file = AS_FILE(value);
       const char *format = "<file at %s in mode %s>";
-      char *str = ALLOCATE(char, snprintf(NULL, 0, format, file->path->chars, file->mode->chars));
-      if(str != NULL) {
-        sprintf(str, format, file->path->chars, file->mode->chars);
-      }
-      return str;
+      int length = snprintf(NULL, 0, format, file->path->chars, file->mode->chars);
+      char *str = ALLOCATE(char, length + 1);
+      sprintf(str, format, file->path->chars, file->mode->chars);
+      return take_string(vm, str, length);
     }
   }
 
-  return strdup("");
+  return copy_string(vm, "", 0);
 }
 
 const char *object_type(b_obj *object) {

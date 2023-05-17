@@ -260,11 +260,14 @@ DECLARE_MODULE_METHOD(socket__send) {
     content = (char *)AS_BYTES(data)->bytes.bytes;
     length = AS_BYTES(data)->bytes.count;
   } else if (IS_FILE(data)) {
-    content = read_file(realpath(AS_FILE(data)->path->chars, NULL));
+    char *path = realpath(AS_FILE(data)->path->chars, NULL);
+    content = read_file(path);
     length = (int) strlen(content);
+    free(path);
   } else {
-    content = value_to_string(vm, data);
-    length = (int) strlen(content);
+    b_obj_string *data_str = value_to_string(vm, data);
+    content = data_str->chars;
+    length = data_str->length;
   }
 
 #ifdef __linux__

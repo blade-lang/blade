@@ -364,9 +364,7 @@ DECLARE_STRING_METHOD(join) {
 
   if (IS_STRING(argument)) {
     // empty argument
-    if (method_obj->length == 0) {
-      RETURN_VALUE(argument);
-    } else if (AS_STRING(argument)->length == 0) {
+    if (method_obj->length == 0 || AS_STRING(argument)->length == 0) {
       RETURN_VALUE(argument);
     }
 
@@ -405,23 +403,25 @@ DECLARE_STRING_METHOD(join) {
       RETURN_STRING("");
     }
 
-    char *result = value_to_string(vm, list[0]);
+    b_obj_string *_str = value_to_string(vm, list[0]);
+    char *result = strdup(_str->chars);
+    int result_length = _str->length;
 
     for (int i = 1; i < count; i++) {
       if (method_obj->length > 0) {
         result = append_strings(result, method_obj->chars);
+        result_length += method_obj->length;
       }
 
-      char *str = value_to_string(vm, list[i]);
-      result = append_strings(result, str);
-      free(str);
+      b_obj_string *str = value_to_string(vm, list[i]);
+      result = append_strings(result, str->chars);
+      result_length += str->length;
     }
 
-    RETURN_TT_STRING(result);
+    RETURN_T_STRING(result, result_length);
   }
 
-  RETURN_ERROR("join() does not support object of type %s",
-               value_type(argument));
+  RETURN_ERROR("join() does not support object of type %s", value_type(argument));
 }
 
 /*DECLARE_STRING_METHOD(split) {

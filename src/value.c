@@ -118,9 +118,9 @@ void print_value(b_value value) { do_print_value(value, false); }
 void echo_value(b_value value) { do_print_value(value, true); }
 #endif // !_WIN32
 
-static inline char *number_to_string(b_vm *vm, double number) {
-  int length = snprintf(NULL, 0, NUMBER_FORMAT, number);
-  char *num_str = ALLOCATE(char, length + 1);
+static inline char *number_to_string(b_vm *vm, double number, int *length) {
+  *length = snprintf(NULL, 0, NUMBER_FORMAT, number);
+  char *num_str = ALLOCATE(char, *length + 1);
   if (num_str != NULL) {
     sprintf(num_str, NUMBER_FORMAT, number);
     return num_str;
@@ -128,17 +128,19 @@ static inline char *number_to_string(b_vm *vm, double number) {
   return strdup("");
 }
 
-char *value_to_string(b_vm *vm, b_value value) {
+b_obj_string *value_to_string(b_vm *vm, b_value value) {
 #if defined(USE_NAN_BOXING) && USE_NAN_BOXING
   if (IS_EMPTY(value))
-    return strdup("");
+    return copy_string(vm, "", 0);
   if (IS_NIL(value))
-    return strdup("nil");
+    return copy_string(vm, "nil", 3);
   else if (IS_BOOL(value))
-    return strdup(AS_BOOL(value) ? "true" : "false");
-  else if (IS_NUMBER(value))
-    return number_to_string(vm, AS_NUMBER(value));
-  else
+    return copy_string(vm, AS_BOOL(value) ? "true" : "false", AS_BOOL(value) ? 4 : 5);
+  else if (IS_NUMBER(value)) {
+    int length = 0;
+    char *num_str = number_to_string(vm, AS_NUMBER(value), &length);
+    return take_string(vm, num_str, length);
+  } else
     return object_to_string(vm, value);
 #else
   switch (value.type) {
