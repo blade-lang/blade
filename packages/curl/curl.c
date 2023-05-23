@@ -190,6 +190,7 @@ DEFINE_CURL_CONSTANT(CURLOPT_KEYPASSWD)
 DEFINE_CURL_CONSTANT(CURLOPT_CRLF)
 DEFINE_CURL_CONSTANT(CURLOPT_QUOTE)
 DEFINE_CURL_CONSTANT(CURLOPT_HEADERDATA)
+DEFINE_CURL_CONSTANT(CURLOPT_READDATA)
 DEFINE_CURL_CONSTANT(CURLOPT_COOKIEFILE)
 DEFINE_CURL_CONSTANT(CURLOPT_SSLVERSION)
 DEFINE_CURL_CONSTANT(CURLOPT_TIMECONDITION)
@@ -641,6 +642,14 @@ DECLARE_MODULE_METHOD(curl__easy_reset) {
   RETURN;
 }
 
+size_t bCurl_ReadFunction(void* ptr, size_t size, size_t nmemb, void* user_data) {
+  size_t total_size = size * nmemb;
+  unsigned char* buffer = (unsigned char*)ptr;
+  unsigned char* data = (unsigned char*)user_data;
+  memcpy(buffer, data, total_size);
+  return total_size;
+}
+
 DECLARE_MODULE_METHOD(curl__easy_setopt) {
   ENFORCE_ARG_COUNT(easy_setopt, 3);
   ENFORCE_ARG_TYPE(easy_setopt, 0, IS_PTR);
@@ -674,6 +683,9 @@ DECLARE_MODULE_METHOD(curl__easy_setopt) {
   }
 
   if(result == CURLE_OK) {
+    if(opt == CURLOPT_READDATA) {
+      RETURN_BOOL(curl_easy_setopt(curl, CURLOPT_READFUNCTION, bCurl_ReadFunction) == CURLE_OK);
+    }
     RETURN_TRUE;
   }
 
@@ -685,7 +697,6 @@ DECLARE_MODULE_METHOD(curl__easy_perform) {
   ENFORCE_ARG_TYPE(easy_perform, 0, IS_PTR);
   CURL *curl = (CURL*)AS_PTR(args[0])->pointer;
 
-  // @TODO: set debug functions here...
   struct b_curl_string body;
   init_string(&body);
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, b_CurlWriteFunc);
@@ -1011,6 +1022,7 @@ CREATE_MODULE_LOADER(curl) {
       GET_CURL_CONSTANT(CURLOPT_CRLF),
       GET_CURL_CONSTANT(CURLOPT_QUOTE),
       GET_CURL_CONSTANT(CURLOPT_HEADERDATA),
+      GET_CURL_CONSTANT(CURLOPT_READDATA),
       GET_CURL_CONSTANT(CURLOPT_COOKIEFILE),
       GET_CURL_CONSTANT(CURLOPT_SSLVERSION),
       GET_CURL_CONSTANT(CURLOPT_TIMECONDITION),

@@ -239,7 +239,7 @@ class HttpServer {
         var client = self.socket.accept()
 
         # call the connect listeners.
-        iters.each(self._connect_listeners, @( fn, _ ) {
+        iters.each(self._connect_listeners, @(fn, _) {
           fn(client)
         })
 
@@ -256,7 +256,7 @@ class HttpServer {
           }
         } catch Exception e {
           # call the error listeners.
-          iters.each(self._error_listeners, @( fn, _ ) {
+          iters.each(self._error_listeners, @(fn, _) {
             fn(e, client)
           })
         } finally {
@@ -264,7 +264,7 @@ class HttpServer {
           client.close()
 
           # call the disconnect listeners.
-          iters.each(self._disconnect_listeners, @( fn, _ ) {
+          iters.each(self._disconnect_listeners, @(fn, _) {
             fn(client_info)
           })
         }

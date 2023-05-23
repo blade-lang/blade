@@ -711,7 +711,7 @@ class Socket {
     if !flags flags = 0
 
     if !is_string(message) and !is_bytes(message) and !is_file(message) 
-      die SocketException('message must string, bytes or file')
+      die SocketException('message must string, bytes or file; ${typeof(message)} given')
     if !is_int(flags) 
       die SocketException('integer expected for flags, ${typeof(flags)} given')
 

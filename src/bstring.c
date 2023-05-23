@@ -132,14 +132,14 @@ DECLARE_STRING_METHOD(upper) {
   ENFORCE_ARG_COUNT(upper, 0);
   b_obj_string *str = AS_STRING(METHOD_OBJECT);
   char *string = utf8_toupper(str->chars, str->utf8_length);
-  RETURN_STRING(string);
+  RETURN_TT_STRING(string);
 }
 
 DECLARE_STRING_METHOD(lower) {
   ENFORCE_ARG_COUNT(lower, 0);
   b_obj_string *str = AS_STRING(METHOD_OBJECT);
   char *string = utf8_tolower(str->chars, str->utf8_length);
-  RETURN_STRING(string);
+  RETURN_TT_STRING(string);
 }
 
 DECLARE_STRING_METHOD(is_alpha) {
@@ -605,6 +605,7 @@ DECLARE_STRING_METHOD(lpad) {
   memcpy(str, fill, fill_size);
   memcpy(str + fill_size, string->chars, string->length);
   str[final_size] = '\0';
+  FREE_ARRAY(char, fill, fill_size + 1);
 
   b_obj_string *result = take_string(vm, str, final_size);
   result->utf8_length = final_utf8_size;
@@ -640,6 +641,7 @@ DECLARE_STRING_METHOD(rpad) {
   memcpy(str, string->chars, string->length);
   memcpy(str + string->length, fill, fill_size);
   str[final_size] = '\0';
+  FREE_ARRAY(char, fill, fill_size + 1);
 
   b_obj_string *result = take_string(vm, str, final_size);
   result->utf8_length = final_utf8_size;
@@ -687,6 +689,8 @@ DECLARE_STRING_METHOD(match) {
   int rc = pcre2_match(re, subject, subject_length, 0, 0, match_data, NULL);
 
   if (rc < 0) {
+    pcre2_match_data_free(match_data);
+    pcre2_code_free(re);
     if (rc == PCRE2_ERROR_NOMATCH) {
       RETURN_FALSE;
     } else {
@@ -779,6 +783,8 @@ DECLARE_STRING_METHOD(matches) {
   int rc = pcre2_match(re, subject, subject_length, 0, 0, match_data, NULL);
 
   if (rc < 0) {
+    pcre2_match_data_free(match_data);
+    pcre2_code_free(re);
     if (rc == PCRE2_ERROR_NOMATCH) {
       RETURN_FALSE;
     } else {
@@ -1025,6 +1031,8 @@ DECLARE_STRING_METHOD(split) {
     int rc = pcre2_match(re, subject, subject_length, 0, 0, match_data, NULL);
 
     if (rc < 0) {
+      pcre2_match_data_free(match_data);
+      pcre2_code_free(re);
       if (rc == PCRE2_ERROR_NOMATCH) {
         write_list(vm, list, STRING_L_VAL(string->chars, string->length));
         RETURN_OBJ(list);
@@ -1073,7 +1081,7 @@ DECLARE_STRING_METHOD(split) {
       // REGEX_VECTOR_SIZE_WARNING();
       REGEX_ASSERTION_ERROR(re, match_data, o_vector);
 
-      bool broke_out_of_loop;
+      bool broke_out_of_loop = false;
       for (int i = 0; i < rc; i++) {
         PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
 
@@ -1146,7 +1154,7 @@ DECLARE_STRING_METHOD(replace) {
       }
     }
 
-    RETURN_STRING(result);
+    RETURN_TT_STRING(result);
   }
 
   char *real_regex = remove_regex_delimiter(vm, substr);
@@ -1174,6 +1182,8 @@ DECLARE_STRING_METHOD(replace) {
       0, match_context, replacement, PCRE2_ZERO_TERMINATED, 0, &output_length);
 
   if (result < 0 && result != PCRE2_ERROR_NOMEMORY) {
+    pcre2_code_free(re);
+    pcre2_match_context_free(match_context);
     REGEX_ERR("regular expression post-compilation failed for replacement",
               result);
   }
@@ -1186,6 +1196,8 @@ DECLARE_STRING_METHOD(replace) {
       replacement, PCRE2_ZERO_TERMINATED, output_buffer, &output_length);
 
   if (result < 0 && result != PCRE2_ERROR_NOMEMORY) {
+    pcre2_code_free(re);
+    pcre2_match_context_free(match_context);
     REGEX_ERR("regular expression error at replacement time", result);
   }
 
@@ -1201,6 +1213,11 @@ DECLARE_STRING_METHOD(replace) {
 DECLARE_STRING_METHOD(to_bytes) {
   ENFORCE_ARG_COUNT(to_bytes, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
+//  unsigned char* bytes = (unsigned char*) malloc(sizeof(unsigned char) * string->length);
+//  for(int i = 0; i < string->length; i++) {
+//    bytes[i] = (unsigned char)string->chars[i];
+//  }
+//  RETURN_OBJ(take_bytes(vm, bytes, string->length));
   RETURN_OBJ(copy_bytes(vm, (unsigned char *) string->chars, string->length));
 }
 

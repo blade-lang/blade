@@ -123,14 +123,14 @@ class Option {
    static var COOKIE = _curl.CURLOPT_COOKIE
 
    /**
-    * This points to a linked list of headers, struct curl_slist kind. This
+    * This points to a list of HTTP header strings. This
     * list is also used for RTSP (in spite of its name) 
     * @static
     */
    static var HTTPHEADER = _curl.CURLOPT_HTTPHEADER
 
    /**
-    * This points to a linked list of post entries, struct curl_httppost 
+    * This points to a linked list of post entries. 
     * @static
     */
    static var HTTPPOST = _curl.CURLOPT_HTTPPOST
@@ -720,7 +720,7 @@ class Option {
    static var FTP_SKIP_PASV_IP = _curl.CURLOPT_FTP_SKIP_PASV_IP
 
    /**
-    * Select "file method" to use when doing FTP, see the curl_ftpmethod
+    * Select "file method" to use when doing FTP, see the curl ftpmethod
     * above. 
     * @static
     */
@@ -1162,8 +1162,7 @@ class Option {
    static var EXPECT_100_TIMEOUT_MS = _curl.CURLOPT_EXPECT_100_TIMEOUT_MS
 
    /**
-    * This points to a linked list of headers used for proxy requests only,
-    * struct curl_slist kind 
+    * This points to a list of headers used for proxy requests only.
     * @static
     */
    static var PROXYHEADER = _curl.CURLOPT_PROXYHEADER
@@ -1426,6 +1425,12 @@ class Option {
     * @static
     */
    static var MIMEPOST = _curl.CURLOPT_MIMEPOST
+
+   /**
+    * The data that will be used as the body of the request.
+    * @static
+    */
+   static var READDATA = _curl.CURLOPT_READDATA
 
    /**
     * Time to use with the CURLOPT_TIMECONDITION. Specified in number of

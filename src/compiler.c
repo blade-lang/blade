@@ -1987,7 +1987,7 @@ static void using_statement(b_parser *p) {
           } else if (p->previous.type == LITERAL_TOKEN) {
             int length;
             char *str = compile_string(p, &length);
-            b_obj_string *string = copy_string(p->vm, str, length);
+            b_obj_string *string = take_string(p->vm, str, length);
             push(p->vm, OBJ_VAL(string)); // gc fix
             table_set(p->vm, &sw->table, OBJ_VAL(string), jump);
             pop(p->vm); // gc fix

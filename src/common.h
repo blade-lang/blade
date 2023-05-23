@@ -43,7 +43,7 @@
 #define DEBUG_PRINT_CODE 1
 #define DEBUG_TABLE 1
 #define DEBUG_GC 1
-#define DEBUG_STACK 1
+#define DEBUG_STACK 0
 
 #endif
 // --> debug mode options ends here...

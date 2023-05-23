@@ -56,8 +56,11 @@ b_obj_switch *new_switch(b_vm *vm) {
 }
 
 b_obj_bytes *new_bytes(b_vm *vm, int length) {
+  unsigned char* data = C_ALLOCATE(unsigned char, length);
+
   b_obj_bytes *bytes = ALLOCATE_OBJ(b_obj_bytes, OBJ_BYTES);
   init_byte_arr(vm, &bytes->bytes, length);
+  bytes->bytes.bytes = data;
   return bytes;
 }
 

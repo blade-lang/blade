@@ -13,6 +13,27 @@
 #include <stdio.h>
 #endif
 
+void *c_allocate(b_vm *vm, size_t size, size_t length) {
+  vm->bytes_allocated += length;
+
+  if (vm->bytes_allocated > vm->next_gc) {
+    collect_garbage(vm);
+  }
+
+  if (size == 0) {
+    return NULL;
+  }
+  void *result = calloc(size, length);
+
+  // just in case reallocation fails... computers ain't infinite!
+  if (result == NULL) {
+    fflush(stdout); // flush out anything on stdout first
+    fprintf(stderr, "Exit: device out of memory\n");
+    exit(EXIT_TERMINAL);
+  }
+  return result;
+}
+
 void *allocate(b_vm *vm, size_t size) {
   vm->bytes_allocated += size;
 
@@ -179,10 +200,7 @@ void blacken_object(b_vm *vm, b_obj *object) {
     case OBJ_BYTES:
     case OBJ_RANGE:
     case OBJ_NATIVE:
-    case OBJ_PTR: {
-      mark_object(vm, object);
-      break;
-    }
+    case OBJ_PTR:
     case OBJ_STRING:
       break;
   }

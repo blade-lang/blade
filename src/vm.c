@@ -617,8 +617,7 @@ bool call_value(b_vm *vm, b_value callee, int arg_count) {
         } else if (klass->superclass != NULL && !IS_EMPTY(klass->superclass->initializer)) {
           return call(vm, AS_CLOSURE(klass->superclass->initializer), arg_count);
         } else if (arg_count != 0) {
-          return throw_exception(vm, "%s constructor expects 0 arguments, %d given",
-                                 klass->name->chars, arg_count);
+          return throw_exception(vm, "%s constructor expects 0 arguments, %d given", klass->name->chars, arg_count);
         }
         return true;
       }
