@@ -409,12 +409,12 @@ DECLARE_STRING_METHOD(join) {
 
     for (int i = 1; i < count; i++) {
       if (method_obj->length > 0) {
-        result = append_strings(result, method_obj->chars);
+        result = append_strings_n(result, method_obj->chars, method_obj->length);
         result_length += method_obj->length;
       }
 
       b_obj_string *str = value_to_string(vm, list[i]);
-      result = append_strings(result, str->chars);
+      result = append_strings_n(result, str->chars, str->length);
       result_length += str->length;
     }
 
