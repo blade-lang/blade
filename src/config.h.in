@@ -2,7 +2,7 @@
 #define BLADE_CONFIG_H
 
 #define BLADE_EXTENSION ".b"
-#define BLADE_VERSION_STRING "0.0.84"
+#define BLADE_VERSION_STRING "0.0.85"
 #define BVM_VERSION "0.1.0"
 #define LIBRARY_DIRECTORY "libs"
 #define LIBRARY_DIRECTORY_INDEX "index"
