@@ -74,12 +74,10 @@ struct s_vm {
   bool mark_value;
   // for switching through the command line args...
   bool show_warnings;
-  bool should_debug_stack;
   bool should_print_bytecode;
   bool should_exit_after_bytecode;
 
   // miscellaneous
-  long stdout_buffer_size;
 };
 
 void init_vm(b_vm *vm);
@@ -152,13 +150,12 @@ static inline void gc_clear_protection(b_vm *vm) {
 }
 
 // NOTE:
-// any call to GC() within a function/block must be accompanied by
+// 1. Any call to GC() within a function/block must be accompanied by
 // at least one call to CLEAR_GC() before exiting the function/block
 // otherwise, expected unexpected behavior
-// NOTE as well that the call to CLEAR_GC() will be automatic for
-// native functions.
-// NOTE as well that METHOD_OBJECT must be retrieved before any call
-// to GC() in a native function.
+// 2. The call to CLEAR_GC() will be automatic for native functions.
+// 3. METHOD_OBJECT must be retrieved before any call to GC() in a
+// native function.
 #define GC(o) gc_protect(vm, (b_obj*)(o))
 #define CLEAR_GC() gc_clear_protection(vm)
 

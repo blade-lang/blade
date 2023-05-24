@@ -8,10 +8,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
+#if defined(DEBUG_GC) && DEBUG_GC
 #include "debug.h"
 #include <stdio.h>
 #endif
+
+void *c_allocate(b_vm *vm, size_t size, size_t length) {
+  vm->bytes_allocated += length;
+
+  if (vm->bytes_allocated > vm->next_gc) {
+    collect_garbage(vm);
+  }
+
+  if (size == 0) {
+    return NULL;
+  }
+  void *result = calloc(size, length);
+
+  // just in case reallocation fails... computers ain't infinite!
+  if (result == NULL) {
+    fflush(stdout); // flush out anything on stdout first
+    fprintf(stderr, "Exit: device out of memory\n");
+    exit(EXIT_TERMINAL);
+  }
+  return result;
+}
 
 void *allocate(b_vm *vm, size_t size) {
   vm->bytes_allocated += size;
@@ -62,11 +83,11 @@ void mark_object(b_vm *vm, b_obj *object) {
   if (object->mark == vm->mark_value)
     return;
 
-//#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
-//  printf("%p mark ", (void *)object);
-//  print_object(OBJ_VAL(object), false);
-//  printf("\n");
-//#endif
+#if defined(DEBUG_GC) && DEBUG_GC
+  printf("%p mark ", (void *)object);
+  print_object(OBJ_VAL(object), false);
+  printf("\n");
+#endif
 
   object->mark = vm->mark_value;
 
@@ -77,7 +98,7 @@ void mark_object(b_vm *vm, b_obj *object) {
     if (vm->gray_stack == NULL) {
       fflush(stdout); // flush out anything on stdout first
       fprintf(stderr, "GC encountered an error");
-      exit(1);
+      exit(EXIT_TERMINAL);
     }
   }
   vm->gray_stack[vm->gray_count++] = object;
@@ -95,11 +116,11 @@ static void mark_array(b_vm *vm, b_value_arr *array) {
 }
 
 void blacken_object(b_vm *vm, b_obj *object) {
-//#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
-//  printf("%p blacken ", (void *)object);
-//  print_object(OBJ_VAL(object), false);
-//  printf("\n");
-//#endif
+#if defined(DEBUG_GC) && DEBUG_GC
+  printf("%p blacken ", (void *)object);
+  print_object(OBJ_VAL(object), false);
+  printf("\n");
+#endif
 
   switch (object->type) {
     case OBJ_MODULE: {
@@ -179,19 +200,16 @@ void blacken_object(b_vm *vm, b_obj *object) {
     case OBJ_BYTES:
     case OBJ_RANGE:
     case OBJ_NATIVE:
-    case OBJ_PTR: {
-      mark_object(vm, object);
-      break;
-    }
+    case OBJ_PTR:
     case OBJ_STRING:
       break;
   }
 }
 
 void free_object(b_vm *vm, b_obj *object) {
-//#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
-//  printf("%p free type %d\n", (void *)object, object->type);
-//#endif
+#if defined(DEBUG_GC) && DEBUG_GC
+  printf("%p free type %d\n", (void *)object, object->type);
+#endif
 
   // Do not free stale objects.
   if(object->stale) return;
@@ -386,7 +404,7 @@ void free_objects(b_vm *vm) {
 }
 
 void collect_garbage(b_vm *vm) {
-#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
+#if defined(DEBUG_GC) && DEBUG_GC
   printf("-- gc begins\n");
   size_t before = vm->bytes_allocated;
 #endif
@@ -400,7 +418,7 @@ void collect_garbage(b_vm *vm) {
   vm->next_gc = vm->bytes_allocated * GC_HEAP_GROWTH_FACTOR;
   vm->mark_value = !vm->mark_value;
 
-#if defined(DEBUG_LOG_GC) && DEBUG_LOG_GC
+#if defined(DEBUG_GC) && DEBUG_GC
   printf("-- gc ends\n");
   printf("   collected %zu bytes (from %zu to %zu), next at %zu\n",
          before - vm->bytes_allocated, before, vm->bytes_allocated,

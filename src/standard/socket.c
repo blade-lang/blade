@@ -230,13 +230,16 @@ DECLARE_MODULE_METHOD(socket__accept) {
     RETURN_ERROR("client accept failed");
   }
 
-  char *ip = inet_ntoa(client.sin_addr);
-  int port = (int) ntohs(client.sin_port);
+  b_obj_list *response = (b_obj_list *)GC(new_list(vm));
 
-  b_obj_list *response = new_list(vm);
-  write_list(vm, response, NUMBER_VAL(new_sock));
-  write_list(vm, response, STRING_VAL(ip));
-  write_list(vm, response, NUMBER_VAL(port));
+  char *ip = ALLOCATE(char, INET_ADDRSTRLEN);
+  if(inet_ntop(AF_INET, &client.sin_addr, ip, sizeof(ip) * INET_ADDRSTRLEN) != NULL) {
+    int port = (int) ntohs(client.sin_port);
+
+    write_list(vm, response, NUMBER_VAL(new_sock));
+    write_list(vm, response, STRING_TT_VAL(ip));
+    write_list(vm, response, NUMBER_VAL(port));
+  }
 
   RETURN_OBJ(response);
 }
@@ -260,11 +263,14 @@ DECLARE_MODULE_METHOD(socket__send) {
     content = (char *)AS_BYTES(data)->bytes.bytes;
     length = AS_BYTES(data)->bytes.count;
   } else if (IS_FILE(data)) {
-    content = read_file(realpath(AS_FILE(data)->path->chars, NULL));
+    char *path = realpath(AS_FILE(data)->path->chars, NULL);
+    content = read_file(path);
     length = (int) strlen(content);
+    free(path);
   } else {
-    content = value_to_string(vm, data);
-    length = (int) strlen(content);
+    b_obj_string *data_str = value_to_string(vm, data);
+    content = data_str->chars;
+    length = data_str->length;
   }
 
 #ifdef __linux__
@@ -460,27 +466,34 @@ DECLARE_MODULE_METHOD(socket__getsockinfo) {
   int sock = AS_NUMBER(args[0]);
 
   struct sockaddr_in address;
+  struct sockaddr_in6 address6;
   memset(&address, 0, sizeof(address));
+  memset(&address6, 0, sizeof(address6));
 
   b_obj_dict *dict = (b_obj_dict *) GC(new_dict(vm));
 
   int length = sizeof address;
-  if (getsockname(sock, (struct sockaddr *) &address, (socklen_t *) &length) >= 0) {
-    char *ip = inet_ntoa(address.sin_addr);
-    int port = ntohs(address.sin_port);
+  if (getsockname(sock, (struct sockaddr *) &address, (socklen_t *) &length) >= 0 &&
+      getsockname(sock, (struct sockaddr *) &address6, (socklen_t *) &length) >= 0) {
+    char *ip = ALLOCATE(char, INET_ADDRSTRLEN);
+    char *ip6 = ALLOCATE(char, INET6_ADDRSTRLEN);
+    if(inet_ntop(AF_INET, &address.sin_addr, ip, sizeof(ip) * INET_ADDRSTRLEN) != NULL &&
+        inet_ntop(AF_INET6, &address6.sin6_addr, ip6, sizeof(ip6) * INET6_ADDRSTRLEN) != NULL) {
+      int port = ntohs(address.sin_port);
 
+      dict_add_entry(vm, dict, GC_L_STRING("address", 7), GC_TT_STRING(ip));
+      dict_add_entry(vm, dict, GC_L_STRING("ipv6", 4), GC_TT_STRING(ip6));
+      dict_add_entry(vm, dict, GC_L_STRING("port", 4), NUMBER_VAL(port));
+      dict_add_entry(vm, dict, GC_L_STRING("family", 6), NUMBER_VAL(ntohs(address.sin_family)));
 
-    dict_add_entry(vm, dict, GC_L_STRING("address", 7), GC_STRING(ip));
-    dict_add_entry(vm, dict, GC_L_STRING("port", 4), NUMBER_VAL(port));
-    dict_add_entry(vm, dict, GC_L_STRING("family", 6),
-                   NUMBER_VAL(ntohs(address.sin_family)));
-  } else {
-    dict_add_entry(vm, dict, GC_L_STRING("address", 7), NIL_VAL);
-    dict_add_entry(vm, dict, GC_L_STRING("port", 4), NUMBER_VAL(-1));
-    dict_add_entry(vm, dict, GC_L_STRING("family", 6),
-                   NUMBER_VAL(ntohs(address.sin_family)));
+      RETURN_OBJ(dict);
+    }
   }
 
+  dict_add_entry(vm, dict, GC_L_STRING("address", 7), NIL_VAL);
+  dict_add_entry(vm, dict, GC_L_STRING("ipv6", 4), NIL_VAL);
+  dict_add_entry(vm, dict, GC_L_STRING("port", 4), NUMBER_VAL(-1));
+  dict_add_entry(vm, dict, GC_L_STRING("family", 6), NUMBER_VAL(ntohs(address.sin_family)));
   RETURN_OBJ(dict);
 }
 
@@ -526,16 +539,14 @@ DECLARE_MODULE_METHOD(socket__getaddrinfo) {
         switch (family) {
           case AF_INET: {
             void *ptr = &((struct sockaddr_in *) res->ai_addr)->sin_addr;
-            result = ALLOCATE(char, 17); // INET_ADDRSTRLEN
+            result = ALLOCATE(char, INET_ADDRSTRLEN);
             inet_ntop(res->ai_family, ptr, result, 16);
-            result[16] = '\0';
             break;
           }
           case AF_INET6: {
             void *ptr = &((struct sockaddr_in6 *) res->ai_addr)->sin6_addr;
-            result = ALLOCATE(char, 47); // INET6_ADDRSTRLEN
+            result = ALLOCATE(char, INET6_ADDRSTRLEN);
             inet_ntop(res->ai_family, ptr, result, 46);
-            result[46] = '\0';
             break;
           }
           default: {
@@ -546,11 +557,13 @@ DECLARE_MODULE_METHOD(socket__getaddrinfo) {
         }
 
         dict_add_entry(vm, dict, GC_L_STRING("ip", 2), GC_TT_STRING(result));
+        freeaddrinfo(res);
         RETURN_OBJ(dict);
       }
     }
   }
 
+  freeaddrinfo(res);
   RETURN_NIL;
 }
 

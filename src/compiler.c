@@ -5,7 +5,7 @@
 #include "object.h"
 #include "pathinfo.h"
 #include "scanner.h"
-#include "util.h"
+#include "utf8.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -1103,7 +1103,9 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
   if (value > 65535) // check for greater that \uffff
     count++;
   if (count != 0) {
-    memcpy(string + index, utf8_encode(value), (size_t) count + 1);
+    char *chr = utf8_encode(value);
+    memcpy(string + index, chr, (size_t) count + 1);
+    free(chr);
   }
   /* if (value > 65535) // but greater than \uffff doesn't occupy any extra byte
     count--; */
@@ -1486,13 +1488,16 @@ static void function_args(b_parser *p) {
   } while (match(p, COMMA_TOKEN));
 }
 
-static void function_body(b_parser *p, b_compiler *compiler) {
+static void function_body(b_parser *p, b_compiler *compiler, bool close_scope) {
   // compile the body
   ignore_whitespace(p);
   consume(p, LBRACE_TOKEN, "expected '{' before function body");
   block(p);
 
   // create the function object
+  if(close_scope) {
+      end_scope(p);
+  }
   b_obj_func *function = end_compiler(p);
 
   emit_byte_and_short(p, OP_CLOSURE, make_constant(p, OBJ_VAL(function)));
@@ -1515,7 +1520,7 @@ static void function(b_parser *p, b_func_type type) {
   }
   consume(p, RPAREN_TOKEN, "expected ')' after function parameters");
 
-  function_body(p, &compiler);
+  function_body(p, &compiler, false);
 }
 
 static void method(b_parser *p, b_token class_name, bool is_static) {
@@ -1548,7 +1553,7 @@ static void anonymous(b_parser *p, bool can_assign) {
   }
   consume(p, RPAREN_TOKEN, "expected ')' after anonymous function parameters");
 
-  function_body(p, &compiler);
+  function_body(p, &compiler, true);
 }
 
 static void anonymous_compat(b_parser *p, bool can_assign) {
@@ -1562,7 +1567,7 @@ static void anonymous_compat(b_parser *p, bool can_assign) {
   }
   consume(p, BAR_TOKEN, "expected '|' after anonymous function parameters");
 
-  function_body(p, &compiler);
+  function_body(p, &compiler, true);
 }
 
 static void field(b_parser *p, bool is_static) {
@@ -1982,7 +1987,7 @@ static void using_statement(b_parser *p) {
           } else if (p->previous.type == LITERAL_TOKEN) {
             int length;
             char *str = compile_string(p, &length);
-            b_obj_string *string = copy_string(p->vm, str, length);
+            b_obj_string *string = take_string(p->vm, str, length);
             push(p->vm, OBJ_VAL(string)); // gc fix
             table_set(p->vm, &sw->table, OBJ_VAL(string), jump);
             pop(p->vm); // gc fix

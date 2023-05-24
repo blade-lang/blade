@@ -63,6 +63,12 @@ class HttpRequest {
   var ip
 
   /**
+   * The IPv6 address of the remote client that initiated the request.
+   * @type string
+   */
+  var ipv6
+
+  /**
    * A dictionary containing the headers sent with the request.
    * @type dictionary
    */
@@ -329,7 +335,9 @@ class HttpRequest {
     # if !instance_of(client, socket.Socket)
     #   die HttpException('invalid Socket')
 
-    self.ip = client.info().address
+    var socket_info = client.info()
+    self.ip = socket_info.address
+    self.ipv6 = socket_info.ipv6
 
     # separate the headers and the body
     var body_starts = raw_data.index_of('\r\n\r\n'), headers, body
@@ -522,6 +530,7 @@ class HttpRequest {
       method: self.method,
       host: self.host,
       ip: self.ip,
+      ipv6: self.ipv6,
       headers: self.headers,
       queries: self.queries,
       cookies: self.cookies,

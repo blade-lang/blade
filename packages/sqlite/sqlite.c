@@ -33,7 +33,7 @@ DECLARE_MODULE_METHOD(sqlite__open) {
     sqlite3_close(db);
     RETURN_STRING(error);
   }
-  b_obj_ptr *ptr = (b_obj_ptr*)GC(new_ptr(vm, (void*)db));
+  b_obj_ptr *ptr = new_ptr(vm, (void*)db);
   ptr->name = "<SQLite3 *>";
   RETURN_OBJ(ptr);
 }
@@ -189,7 +189,7 @@ DECLARE_MODULE_METHOD(sqlite__query) {
         RETURN_ERROR("expected %d params, 0 given", total_params_bindable);
       }
 
-      b_obj_ptr *ptr = (b_obj_ptr*)GC(new_ptr(vm, (void*)stmt));
+      b_obj_ptr *ptr = new_ptr(vm, (void*)stmt);
       ptr->name = "<SQLiteCursor *>";
       RETURN_OBJ(ptr);
     } else {
@@ -278,7 +278,7 @@ DECLARE_MODULE_METHOD(sqlite__cursor_get) {
       }
       case SQLITE_BLOB: {
         unsigned char *data = (unsigned char *)sqlite3_column_blob(stmt, index);
-        b_obj_bytes *bytes = (b_obj_bytes*)GC(new_bytes(vm, sizeof(data)));
+        b_obj_bytes *bytes = new_bytes(vm, sizeof(data));
         bytes->bytes.bytes = data;
         RETURN_OBJ(bytes);
       }

@@ -452,8 +452,12 @@ DECLARE_MODULE_METHOD(os__dirname) {
   ENFORCE_ARG_TYPE(dirname, 0, IS_STRING);
   char *str = strdup(AS_STRING(args[0])->chars);
   char *dir = dirname(str);
+#if __APPLE__
+  free(str);
+#else
   // we are not freeing str because dirname will modify str.
   // therefore, dir == str
+#endif
   if(!dir) {
     RETURN_VALUE(args[0]);
   }
@@ -465,8 +469,12 @@ DECLARE_MODULE_METHOD(os__basename) {
   ENFORCE_ARG_TYPE(basename, 0, IS_STRING);
   char *str = strdup(AS_STRING(args[0])->chars);
   char *dir = basename(str);
+#if __APPLE__
+  free(str);
+#else
   // we are not freeing str because basename will modify str.
   // therefore, dir == str
+#endif
   if(!dir) {
     RETURN_VALUE(args[0]);
   }

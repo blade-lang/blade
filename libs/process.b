@@ -10,7 +10,7 @@
 # ```blade
 # var shared = SharedValue()
 # 
-# var pr = Process(|p, s| {
+# var pr = Process(@(p, s) {
 #   echo 'It works!'
 #   echo p.id()
 #   s.set({name: 'Richard', age: 3.142})
@@ -367,7 +367,7 @@ class Process {
         }
 
         # call the complete listeners
-        iters.each(self._on_complete_listeners, |fn, _| {
+        iters.each(self._on_complete_listeners, @(fn, _) {
           fn()
         })
 

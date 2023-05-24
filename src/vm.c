@@ -6,6 +6,7 @@
 #include "module.h"
 #include "native.h"
 #include "object.h"
+#include "utf8.h"
 
 #include "bytes.h"
 #include "dict.h"
@@ -13,7 +14,6 @@
 #include "list.h"
 #include "bstring.h"
 #include "range.h"
-#include "util.h"
 
 #include <math.h>
 #include <stdarg.h>
@@ -97,7 +97,7 @@ bool propagate_exception(b_vm *vm, bool is_assert) {
     fprintf(stderr, "Illegal State");
   }
   if (table_get(&exception->properties, STRING_L_VAL("message", 7), &message)) {
-    char *error_message = value_to_string(vm, message);
+    char *error_message = value_to_string(vm, message)->chars;
     if(strlen(error_message) > 0) {
       fprintf(stderr, ": %s", error_message);
     } else {
@@ -109,9 +109,8 @@ bool propagate_exception(b_vm *vm, bool is_assert) {
   }
 
   if (table_get(&exception->properties, STRING_L_VAL("stacktrace", 10), &trace)) {
-    char *trace_str = value_to_string(vm, trace);
+    char *trace_str = value_to_string(vm, trace)->chars;
     fprintf(stderr, "  StackTrace:\n%s\n", trace_str);
-    free(trace_str);
   }
 
   return false;
@@ -506,7 +505,6 @@ void init_vm(b_vm *vm) {
   vm->is_repl = false;
   vm->mark_value = true;
   vm->show_warnings = false;
-  vm->should_debug_stack = false;
   vm->should_print_bytecode = false;
   vm->should_exit_after_bytecode = false;
 
@@ -516,8 +514,6 @@ void init_vm(b_vm *vm) {
 
   vm->std_args = NULL;
   vm->std_args_count = 0;
-
-  vm->stdout_buffer_size = 0L;
 
   init_table(&vm->modules);
   init_table(&vm->strings);
@@ -598,6 +594,8 @@ static inline bool call_native_method(b_vm *vm, b_obj_native *native, int arg_co
   if (native->function(vm, arg_count, vm->stack_top - arg_count)) {
     CLEAR_GC();
     vm->stack_top -= arg_count;
+  } else {
+    CLEAR_GC();
   }
   return true;
 }
@@ -619,8 +617,7 @@ bool call_value(b_vm *vm, b_value callee, int arg_count) {
         } else if (klass->superclass != NULL && !IS_EMPTY(klass->superclass->initializer)) {
           return call(vm, AS_CLOSURE(klass->superclass->initializer), arg_count);
         } else if (arg_count != 0) {
-          return throw_exception(vm, "%s constructor expects 0 arguments, %d given",
-                                 klass->name->chars, arg_count);
+          return throw_exception(vm, "%s constructor expects 0 arguments, %d given", klass->name->chars, arg_count);
         }
         return true;
       }
@@ -913,46 +910,20 @@ bool is_instance_of(b_obj_class *klass1, char *klass2_name) {
   return false;
 }
 
-inline void dict_add_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value) {
-  write_value_arr(vm, &dict->names, key);
-  table_set(vm, &dict->items, key, value);
-}
-
-inline bool dict_get_entry(b_obj_dict *dict, b_value key, b_value *value) {
-  /* // this will be easier to search than the entire tables
-  // if the key doesn't exist.
-  if (dict->names.count < (int)sizeof(uint8_t)) {
-    int i;
-    bool found = false;
-    for (i = 0; i < dict->names.count; i++) {
-      if (values_equal(dict->names.values[i], key)) {
-        found = true;
-        break;
-      }
-    }
-
-    if (!found)
-      return false;
-  } */
-  return table_get(&dict->items, key, value);
-}
-
 inline bool dict_set_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value) {
-#if defined(USE_NAN_BOXING) && USE_NAN_BOXING
-  bool found = false;
-  for (int i = 0; i < dict->names.count; i++) {
-    if (values_equal(dict->names.values[i], key))
-      found = true;
-  }
-  if (!found)
-    write_value_arr(vm, &dict->names, key); // add key if it doesn't exist.
-#else
   b_value temp_value;
   if (!table_get(&dict->items, key, &temp_value)) {
     write_value_arr(vm, &dict->names, key); // add key if it doesn't exist.
   }
-#endif
   return table_set(vm, &dict->items, key, value);
+}
+
+inline void dict_add_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value) {
+  dict_set_entry(vm, dict, key, value);
+}
+
+inline bool dict_get_entry(b_obj_dict *dict, b_value key, b_value *value) {
+  return table_get(&dict->items, key, value);
 }
 
 static b_obj_string *multiply_string(b_vm *vm, b_obj_string *str, double number) {
@@ -1019,7 +990,7 @@ static bool dict_get_index(b_vm *vm, b_obj_dict *dict, bool will_assign) {
   }
 
   pop_n(vm, 1);
-  return throw_exception(vm, "invalid index %s", value_to_string(vm, index));
+  return throw_exception(vm, "invalid index %s", value_to_string(vm, index)->chars);
 }
 
 static bool module_get_index(b_vm *vm, b_obj_module *module, bool will_assign) {
@@ -1035,7 +1006,7 @@ static bool module_get_index(b_vm *vm, b_obj_module *module, bool will_assign) {
   }
 
   pop_n(vm, 1);
-  return throw_exception(vm, "%s is undefined in module %s", value_to_string(vm, index), module->name);
+  return throw_exception(vm, "%s is undefined in module %s", value_to_string(vm, index)->chars, module->name);
 }
 
 static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
@@ -1180,7 +1151,7 @@ static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
   b_value lower = peek(vm, 0);
 
   if (!IS_NUMBER(lower)) {
-    pop_n(vm, 1);
+    pop(vm);
     return throw_exception(vm, "list are numerically indexed");
   }
 
@@ -1198,7 +1169,7 @@ static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
     push(vm, list->items.values[index]);
     return true;
   } else {
-    pop_n(vm, 1);
+    pop(vm);
     return throw_exception(vm, "list index %d out of range", real_index);
   }
 }
@@ -1371,9 +1342,8 @@ static bool concatenate(b_vm *vm) {
     memcpy(chars + a->length, b->chars, b->length);
     chars[length] = '\0';
 
-    b_obj_string *result = copy_string(vm, chars, length);
+    b_obj_string *result = take_string(vm, chars, length);
     result->utf8_length = a->utf8_length + b->utf8_length;
-    FREE(char, chars);
 
     pop_n(vm, 2);
     push(vm, OBJ_VAL(result));
@@ -1462,7 +1432,7 @@ b_ptr_result run(b_vm *vm) {
       return PTR_RUNTIME_ERR;
     }
 
-    if (vm->should_debug_stack) {
+#if defined(DEBUG_STACK) && DEBUG_STACK
       printf("          ");
       for (b_value *slot = vm->stack; slot < vm->stack_top; slot++) {
         printf("[ ");
@@ -1473,7 +1443,7 @@ b_ptr_result run(b_vm *vm) {
       disassemble_instruction(
           &vm->current_frame->closure->function->blob,
           (int) (vm->current_frame->ip - vm->current_frame->closure->function->blob.code));
-    }
+#endif
 
     uint8_t instruction;
 
@@ -1654,9 +1624,9 @@ b_ptr_result run(b_vm *vm) {
 
       case OP_STRINGIFY: {
         if (!IS_STRING(peek(vm, 0)) && !IS_NIL(peek(vm, 0))) {
-          char *value = value_to_string(vm, pop(vm));
-          if ((int) strlen(value) != 0) {
-            push(vm, STRING_TT_VAL(value));
+          b_obj_string *value = value_to_string(vm, pop(vm));
+          if (value->length != 0) {
+            push(vm, OBJ_VAL(value));
           } else {
             push(vm, NIL_VAL);
           }
@@ -1885,7 +1855,7 @@ b_ptr_result run(b_vm *vm) {
             }
           }
         } else {
-          runtime_error("'%s' of type %s does not have properties", value_to_string(vm, peek(vm, 0)), value_type(peek(vm, 0)));
+          runtime_error("'%s' of type %s does not have properties", value_to_string(vm, peek(vm, 0))->chars, value_type(peek(vm, 0)));
           break;
         }
         break;
@@ -1938,7 +1908,7 @@ b_ptr_result run(b_vm *vm) {
           break;
         }
 
-        runtime_error("'%s' of type %s does not have properties", value_to_string(vm, peek(vm, 0)), value_type(peek(vm, 0)));
+        runtime_error("'%s' of type %s does not have properties", value_to_string(vm, peek(vm, 0))->chars, value_type(peek(vm, 0)));
         break;
       }
 
@@ -2126,7 +2096,7 @@ b_ptr_result run(b_vm *vm) {
             runtime_error("dictionary key must be one of string, number or boolean");
           }
           b_value value = vm->stack_top[-count + i + 1];
-          dict_add_entry(vm, dict, name, value);
+          dict_set_entry(vm, dict, name, value);
         }
         pop_n(vm, count);
         break;
@@ -2380,7 +2350,7 @@ b_ptr_result run(b_vm *vm) {
         b_value expression = pop(vm);
         if (is_false(expression)) {
           if (!IS_NIL(message)) {
-            do_throw_exception(vm, true, value_to_string(vm, message));
+            do_throw_exception(vm, true, value_to_string(vm, message)->chars);
           } else {
             do_throw_exception(vm, true, "");
           }
@@ -2390,8 +2360,7 @@ b_ptr_result run(b_vm *vm) {
 
       case OP_DIE: {
         if (!IS_INSTANCE(peek(vm, 0)) ||
-            !is_instance_of(AS_INSTANCE(peek(vm, 0))->klass,
-                            vm->exception_class->name->chars)) {
+            !is_instance_of(AS_INSTANCE(peek(vm, 0))->klass, vm->exception_class->name->chars)) {
           runtime_error("instance of Exception expected");
           break;
         }

@@ -1,5 +1,6 @@
 #include "native.h"
 #include "vm.h"
+#include "utf8.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -385,8 +386,7 @@ DECLARE_NATIVE(to_bool) {
 DECLARE_NATIVE(to_string) {
   ENFORCE_ARG_COUNT(to_string, 1);
   METHOD_OVERRIDE(to_string, 9);
-  char *result = value_to_string(vm, args[0]);
-  RETURN_TT_STRING(result);
+  RETURN_OBJ(value_to_string(vm, args[0]));
 }
 
 /**
@@ -409,8 +409,9 @@ DECLARE_NATIVE(to_number) {
     RETURN_NUMBER(-1);
   }
 
-  const char *v = (const char *) value_to_string(vm, args[0]);
-  int length = (int)strlen(v);
+  b_obj_string *v_string = value_to_string(vm, args[0]);
+  const char *v = (const char *) v_string->chars;
+  int length = v_string->length;
 
   int start = 0, end = 1, multiplier = 1;
   if(v[0] == '-') {
@@ -538,7 +539,7 @@ DECLARE_NATIVE(chr) {
   ENFORCE_ARG_COUNT(chr, 1);
   ENFORCE_ARG_TYPE(chr, 0, IS_NUMBER);
   char *string = utf8_encode((int) AS_NUMBER(args[0]));
-  RETURN_STRING(string);
+  RETURN_TT_STRING(string);
 }
 
 /**

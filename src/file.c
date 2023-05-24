@@ -82,8 +82,13 @@ static void file_open(b_obj_file *file) {
   if (file->file == NULL && !file->is_std) {
     file->file = fopen(file->path->chars, file->mode->chars);
     file->is_open = true;
-    file->number = fileno(file->file);
-    file->is_tty = isatty(file->number);
+    if(file->file != NULL) {
+      file->number = fileno(file->file);
+      file->is_tty = isatty(file->number);
+    } else {
+      file->number = -1;
+      file->is_tty = false;
+    }
   }
 }
 

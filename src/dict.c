@@ -20,7 +20,7 @@ DECLARE_DICT_METHOD(add) {
 
   b_value temp_value;
   if (table_get(&dict->items, args[0], &temp_value)) {
-    RETURN_ERROR("duplicate key %s at add()", value_to_string(vm, args[0]));
+    RETURN_ERROR("duplicate key %s at add()", value_to_string(vm, args[0])->chars);
   }
 
   dict_add_entry(vm, dict, args[0], args[1]);
@@ -97,7 +97,10 @@ DECLARE_DICT_METHOD(extend) {
   b_obj_dict *dict_cpy = AS_DICT(args[0]);
 
   for (int i = 0; i < dict_cpy->names.count; i++) {
-    write_value_arr(vm, &dict->names, dict_cpy->names.values[i]);
+    b_value tmp;
+    if(!table_get(&dict->items, dict_cpy->names.values[i], &tmp)) {
+      write_value_arr(vm, &dict->names, dict_cpy->names.values[i]);
+    }
   }
   table_add_all(vm, &dict_cpy->items, &dict->items);
   RETURN;

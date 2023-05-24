@@ -188,6 +188,7 @@ void bind_user_modules(b_vm *vm, char *pkg_root) {
             if(error != NULL) {
               WARN("Failed not load module %s from %s. Error: %s.", name, path, error);
             }
+            FREE_ARRAY(char, name, name_length + 1);
           }
         }
       }
@@ -219,11 +220,13 @@ char* load_user_module(b_vm *vm, const char *path, char *name) {
 
   void *handle;
   if((handle = dlopen(path, RTLD_LAZY)) == NULL) {
+    FREE_ARRAY(char, fn_name, length + 1);
     return (char *)dlerror();
   }
 
   b_module_init fn = dlsym(handle, fn_name);
   if(fn == NULL) {
+    FREE_ARRAY(char, fn_name, length + 1);
     return (char *)dlerror();
   }
 
@@ -239,6 +242,7 @@ char* load_user_module(b_vm *vm, const char *path, char *name) {
     return "failed to call module loader";
   }
 
+  FREE_ARRAY(char, fn_name, length + 1);
   return NULL;
 }
 

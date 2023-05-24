@@ -1,7 +1,6 @@
 #include "bstring.h"
-#include "util.h"
-#include "native.h"
 #include "utf8.h"
+#include "native.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -131,20 +130,16 @@ DECLARE_STRING_METHOD(length) {
 
 DECLARE_STRING_METHOD(upper) {
   ENFORCE_ARG_COUNT(upper, 0);
-  char *string = (char *) strdup(AS_C_STRING(METHOD_OBJECT));
-//  for (char *p = string; *p; p++)
-//    *p = toupper(*p);
-  utf8upr(string);
-  RETURN_STRING(string);
+  b_obj_string *str = AS_STRING(METHOD_OBJECT);
+  char *string = utf8_toupper(str->chars, str->utf8_length);
+  RETURN_TT_STRING(string);
 }
 
 DECLARE_STRING_METHOD(lower) {
   ENFORCE_ARG_COUNT(lower, 0);
-  char *string = (char *) strdup(AS_C_STRING(METHOD_OBJECT));
-//  for (char *p = string; *p; p++)
-//    *p = tolower(*p);
-  utf8lwr(string);
-  RETURN_STRING(string);
+  b_obj_string *str = AS_STRING(METHOD_OBJECT);
+  char *string = utf8_tolower(str->chars, str->utf8_length);
+  RETURN_TT_STRING(string);
 }
 
 DECLARE_STRING_METHOD(is_alpha) {
@@ -183,33 +178,57 @@ DECLARE_STRING_METHOD(is_number) {
 DECLARE_STRING_METHOD(is_lower) {
   ENFORCE_ARG_COUNT(is_lower, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
-  bool has_alpha;
-  for (int i = 0; i < string->length; i++) {
-    bool is_alpha = isalpha((unsigned char) string->chars[i]);
-    if (!has_alpha) {
-      has_alpha = is_alpha;
+  bool alpha_found = false;
+
+  if(!string->is_ascii) {
+    for (int i = 0; i < string->utf8_length; i++) {
+      int start = i, end = i + 1;
+      utf8slice(string->chars, &start, &end);
+      int as_num = utf8_decode((uint8_t *)(string->chars + start), end - start);
+      if(!alpha_found && !isdigit(as_num)) alpha_found = true;
+
+      if(utf8_isupper(as_num)) {
+        RETURN_FALSE;
+      }
     }
-    if (is_alpha && !utf8islower((unsigned char) string->chars[i])) {
-      RETURN_FALSE;
+  } else {
+    for (int i = 0; i < string->length; i++) {
+      if(!alpha_found && !isdigit(string->chars[0])) alpha_found = true;
+      if(isupper(string->chars[0])) {
+        RETURN_FALSE;
+      }
     }
   }
-  RETURN_BOOL(string->length != 0 && has_alpha);
+
+  RETURN_BOOL(alpha_found);
 }
 
 DECLARE_STRING_METHOD(is_upper) {
   ENFORCE_ARG_COUNT(is_upper, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
-  bool has_alpha;
-  for (int i = 0; i < string->length; i++) {
-    bool is_alpha = isalpha((unsigned char) string->chars[i]);
-    if (!has_alpha) {
-      has_alpha = is_alpha;
+  bool alpha_found = false;
+
+  if(!string->is_ascii) {
+    for (int i = 0; i < string->utf8_length; i++) {
+      int start = i, end = i + 1;
+      utf8slice(string->chars, &start, &end);
+      int as_num = utf8_decode((uint8_t *)(string->chars + start), end - start);
+      if(!alpha_found && !isdigit(as_num)) alpha_found = true;
+
+      if(utf8_islower(as_num)) {
+        RETURN_FALSE;
+      }
     }
-    if (is_alpha && !utf8isupper((unsigned char) string->chars[i])) {
-      RETURN_FALSE;
+  } else {
+    for (int i = 0; i < string->length; i++) {
+      if(!alpha_found && !isdigit(string->chars[0])) alpha_found = true;
+      if(islower(string->chars[0])) {
+        RETURN_FALSE;
+      }
     }
   }
-  RETURN_BOOL(string->length != 0 && has_alpha);
+
+  RETURN_BOOL(alpha_found);
 }
 
 DECLARE_STRING_METHOD(is_space) {
@@ -345,9 +364,7 @@ DECLARE_STRING_METHOD(join) {
 
   if (IS_STRING(argument)) {
     // empty argument
-    if (method_obj->length == 0) {
-      RETURN_VALUE(argument);
-    } else if (AS_STRING(argument)->length == 0) {
+    if (method_obj->length == 0 || AS_STRING(argument)->length == 0) {
       RETURN_VALUE(argument);
     }
 
@@ -386,23 +403,25 @@ DECLARE_STRING_METHOD(join) {
       RETURN_STRING("");
     }
 
-    char *result = value_to_string(vm, list[0]);
+    b_obj_string *_str = value_to_string(vm, list[0]);
+    char *result = strdup(_str->chars);
+    int result_length = _str->length;
 
     for (int i = 1; i < count; i++) {
       if (method_obj->length > 0) {
-        result = append_strings(result, method_obj->chars);
+        result = append_strings_n(result, method_obj->chars, method_obj->length);
+        result_length += method_obj->length;
       }
 
-      char *str = value_to_string(vm, list[i]);
-      result = append_strings(result, str);
-      free(str);
+      b_obj_string *str = value_to_string(vm, list[i]);
+      result = append_strings_n(result, str->chars, str->length);
+      result_length += str->length;
     }
 
-    RETURN_TT_STRING(result);
+    RETURN_T_STRING(result, result_length);
   }
 
-  RETURN_ERROR("join() does not support object of type %s",
-               value_type(argument));
+  RETURN_ERROR("join() does not support object of type %s", value_type(argument));
 }
 
 /*DECLARE_STRING_METHOD(split) {
@@ -446,17 +465,29 @@ DECLARE_STRING_METHOD(join) {
 DECLARE_STRING_METHOD(index_of) {
   ENFORCE_ARG_RANGE(index_of, 1, 2);
   ENFORCE_ARG_TYPE(index_of, 0, IS_STRING);
-
-  char *str = AS_C_STRING(METHOD_OBJECT);
-
+  b_obj_string *string = AS_STRING(METHOD_OBJECT);
+  b_obj_string *needle = AS_STRING(args[0]);
+  int start_index = 0;
   if(arg_count == 2) {
     ENFORCE_ARG_TYPE(index_of, 1, IS_NUMBER);
-    int start = AS_NUMBER(args[1]);
-    char *result = utf8str(str + start, AS_C_STRING(args[0]));
-    if (result != NULL) RETURN_NUMBER((int) (result - str));
-  } else {
-    char *result = utf8str(str, AS_C_STRING(args[0]));
-    if (result != NULL) RETURN_NUMBER((int) (result - str));
+    start_index = AS_NUMBER(args[1]);
+  }
+
+  if(string->length > 0 && needle->length > 0) {
+    char *haystack = string->chars;
+    if(!string->is_ascii && string->length != string->utf8_length) {
+      for (int i = start_index; i < string->utf8_length; i++) {
+        int start = i, end = i + 1;
+        utf8slice(haystack, &start, &end);
+
+        if (memcmp(haystack + start, needle->chars, needle->length) == 0) {
+          RETURN_NUMBER(i);
+        }
+      }
+    } else {
+      char *result = strstr(haystack + start_index, needle->chars);
+      if (result != NULL) RETURN_NUMBER((int) (result - haystack));
+    }
   }
 
   RETURN_NUMBER(-1);
@@ -501,7 +532,7 @@ DECLARE_STRING_METHOD(count) {
 
   int count = 0;
   const char *tmp = string->chars;
-  while ((tmp = utf8str(tmp, substr->chars))) {
+  while ((tmp = utf8_strstr(tmp, substr->chars))) {
     count++;
     tmp++;
   }
@@ -574,6 +605,7 @@ DECLARE_STRING_METHOD(lpad) {
   memcpy(str, fill, fill_size);
   memcpy(str + fill_size, string->chars, string->length);
   str[final_size] = '\0';
+  FREE_ARRAY(char, fill, fill_size + 1);
 
   b_obj_string *result = take_string(vm, str, final_size);
   result->utf8_length = final_utf8_size;
@@ -609,6 +641,7 @@ DECLARE_STRING_METHOD(rpad) {
   memcpy(str, string->chars, string->length);
   memcpy(str + string->length, fill, fill_size);
   str[final_size] = '\0';
+  FREE_ARRAY(char, fill, fill_size + 1);
 
   b_obj_string *result = take_string(vm, str, final_size);
   result->utf8_length = final_utf8_size;
@@ -656,6 +689,8 @@ DECLARE_STRING_METHOD(match) {
   int rc = pcre2_match(re, subject, subject_length, 0, 0, match_data, NULL);
 
   if (rc < 0) {
+    pcre2_match_data_free(match_data);
+    pcre2_code_free(re);
     if (rc == PCRE2_ERROR_NOMATCH) {
       RETURN_FALSE;
     } else {
@@ -748,6 +783,8 @@ DECLARE_STRING_METHOD(matches) {
   int rc = pcre2_match(re, subject, subject_length, 0, 0, match_data, NULL);
 
   if (rc < 0) {
+    pcre2_match_data_free(match_data);
+    pcre2_code_free(re);
     if (rc == PCRE2_ERROR_NOMATCH) {
       RETURN_FALSE;
     } else {
@@ -994,6 +1031,8 @@ DECLARE_STRING_METHOD(split) {
     int rc = pcre2_match(re, subject, subject_length, 0, 0, match_data, NULL);
 
     if (rc < 0) {
+      pcre2_match_data_free(match_data);
+      pcre2_code_free(re);
       if (rc == PCRE2_ERROR_NOMATCH) {
         write_list(vm, list, STRING_L_VAL(string->chars, string->length));
         RETURN_OBJ(list);
@@ -1042,7 +1081,7 @@ DECLARE_STRING_METHOD(split) {
       // REGEX_VECTOR_SIZE_WARNING();
       REGEX_ASSERTION_ERROR(re, match_data, o_vector);
 
-      bool broke_out_of_loop;
+      bool broke_out_of_loop = false;
       for (int i = 0; i < rc; i++) {
         PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
 
@@ -1115,7 +1154,7 @@ DECLARE_STRING_METHOD(replace) {
       }
     }
 
-    RETURN_STRING(result);
+    RETURN_TT_STRING(result);
   }
 
   char *real_regex = remove_regex_delimiter(vm, substr);
@@ -1143,6 +1182,8 @@ DECLARE_STRING_METHOD(replace) {
       0, match_context, replacement, PCRE2_ZERO_TERMINATED, 0, &output_length);
 
   if (result < 0 && result != PCRE2_ERROR_NOMEMORY) {
+    pcre2_code_free(re);
+    pcre2_match_context_free(match_context);
     REGEX_ERR("regular expression post-compilation failed for replacement",
               result);
   }
@@ -1155,6 +1196,8 @@ DECLARE_STRING_METHOD(replace) {
       replacement, PCRE2_ZERO_TERMINATED, output_buffer, &output_length);
 
   if (result < 0 && result != PCRE2_ERROR_NOMEMORY) {
+    pcre2_code_free(re);
+    pcre2_match_context_free(match_context);
     REGEX_ERR("regular expression error at replacement time", result);
   }
 
@@ -1170,6 +1213,11 @@ DECLARE_STRING_METHOD(replace) {
 DECLARE_STRING_METHOD(to_bytes) {
   ENFORCE_ARG_COUNT(to_bytes, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
+//  unsigned char* bytes = (unsigned char*) malloc(sizeof(unsigned char) * string->length);
+//  for(int i = 0; i < string->length; i++) {
+//    bytes[i] = (unsigned char)string->chars[i];
+//  }
+//  RETURN_OBJ(take_bytes(vm, bytes, string->length));
   RETURN_OBJ(copy_bytes(vm, (unsigned char *) string->chars, string->length));
 }
 
