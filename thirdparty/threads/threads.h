@@ -515,7 +515,9 @@ Configuration macro:
 */
 #if !defined(__CYGWIN__) && !defined(__APPLE__) && !defined(__NetBSD__)
 #define EMULATED_THREADS_USE_NATIVE_TIMEDLOCK
+#ifndef HAVE_TIMESPEC_GET
 #define HAVE_TIMESPEC_GET
+#endif
 #endif
 
 
