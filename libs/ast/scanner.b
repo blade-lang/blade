@@ -365,7 +365,13 @@ class Scanner {
       }
       when ',' self._add_token(COMMA)
       when ';' self._add_token(SEMICOLON)
-      when '@' self._decorator()
+      when '@' {
+        if !self._is_alpha(self._peek()) {
+          self._add_token(AT)
+        } else {
+          self._decorator()
+        }
+      }
       when '.' {
         if self._match('.') {
           self._add_token(self._match('.') ? TRI_DOT : RANGE)
