@@ -94,7 +94,7 @@ API documentation for Blade which is under active development can be found at [b
 
 ## Contributing
 
-Blade desire to make the community around it as friendly and welcoming as possible. Therefore, all forms of contributions from pull requests, suggestions, typo fixes in documentation, feature request, bug reports and any contribution at all is highly appreciated. Please refer to the [Contributing](./CONTRIBUTING.md) guide for more information.
+Blade desires to make the community around it as friendly and welcoming as possible. Therefore, all forms of contributions from pull requests, suggestions, typo fixes in documentation, feature request, bug reports and any contribution at all is highly appreciated. Please refer to the [Contributing](./CONTRIBUTING.md) guide for more information.
 
 ## License
 
