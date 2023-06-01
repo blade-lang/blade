@@ -30,7 +30,7 @@
  * negative value -> invalid delimiter where abs(value) is the character
  * positive value > 0 ? for compiled delimiters
  */
-uint32_t is_regex(b_obj_string *string) {
+int32_t is_regex(b_obj_string *string) {
   char start = string->chars[0];
 
   // must be a valid delimiter
@@ -39,7 +39,7 @@ uint32_t is_regex(b_obj_string *string) {
 
   bool match_found = false;
 
-  uint32_t c_options = 0; // pcre2 options
+  int32_t c_options = 0; // pcre2 options
 
   for (int i = 1; i < string->length; i++) {
     if (string->chars[i] == start) {
@@ -379,12 +379,7 @@ DECLARE_STRING_METHOD(join) {
         result = append_strings(result, method_obj->chars);
       }
 
-      char *chr = (char *) calloc(2, sizeof(char));
-      chr[0] = string->chars[i];
-      chr[1] = '\0';
-
-      result = append_strings(result, chr);
-      free(chr);
+      result = append_strings_n(result, &string->chars[i], 1);
     }
 
     RETURN_TT_STRING(result);
@@ -650,8 +645,13 @@ DECLARE_STRING_METHOD(rpad) {
 }
 
 DECLARE_STRING_METHOD(match) {
-  ENFORCE_ARG_COUNT(match, 1);
+  ENFORCE_ARG_RANGE(match, 1, 2);
   ENFORCE_ARG_TYPE(match, 0, IS_STRING);
+  PCRE2_SIZE start_offset = 0;
+  if(arg_count == 2) {
+    ENFORCE_ARG_TYPE(match, 1, IS_NUMBER);
+    start_offset = AS_NUMBER(args[1]);
+  }
 
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   b_obj_string *substr = AS_STRING(args[0]);
@@ -686,7 +686,7 @@ DECLARE_STRING_METHOD(match) {
 
   pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(re, NULL);
 
-  int rc = pcre2_match(re, subject, subject_length, 0, 0, match_data, NULL);
+  int rc = pcre2_match(re, subject, subject_length, start_offset, 0, match_data, NULL);
 
   if (rc < 0) {
     pcre2_match_data_free(match_data);
@@ -707,7 +707,7 @@ DECLARE_STRING_METHOD(match) {
   for (int i = 0; i < rc; i++) {
     PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
     PCRE2_SPTR substring_start = subject + o_vector[2 * i];
-    dict_set_entry(vm, result, NUMBER_VAL(i), GC_L_STRING((char *) substring_start, (int) substring_length));
+    dict_set_entry(vm, result, NUMBER_VAL(i), STRING_L_VAL((char *) substring_start, (int) substring_length));
   }
 
   if (name_count > 0) {
@@ -744,8 +744,13 @@ DECLARE_STRING_METHOD(match) {
 }
 
 DECLARE_STRING_METHOD(matches) {
-  ENFORCE_ARG_COUNT(matches, 1);
+  ENFORCE_ARG_RANGE(matches, 1, 2);
   ENFORCE_ARG_TYPE(matches, 0, IS_STRING);
+  PCRE2_SIZE start_offset = 0;
+  if(arg_count == 2) {
+    ENFORCE_ARG_TYPE(matches, 1, IS_NUMBER);
+    start_offset = AS_NUMBER(args[1]);
+  }
 
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
   b_obj_string *substr = AS_STRING(args[0]);
@@ -780,7 +785,7 @@ DECLARE_STRING_METHOD(matches) {
 
   pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(re, NULL);
 
-  int rc = pcre2_match(re, subject, subject_length, 0, 0, match_data, NULL);
+  int rc = pcre2_match(re, subject, subject_length, start_offset, 0, match_data, NULL);
 
   if (rc < 0) {
     pcre2_match_data_free(match_data);
@@ -804,16 +809,16 @@ DECLARE_STRING_METHOD(matches) {
 
   b_obj_dict *result = (b_obj_dict *) GC(new_dict(vm));
 
-  for (int i = 0; i < rc; i++) {
-    dict_set_entry(vm, result, NUMBER_VAL(0), NIL_VAL);
-  }
+  /*for (int i = 0; i < rc; i++) {
+    dict_set_entry(vm, result, NUMBER_VAL(i), NIL_VAL);
+  }*/
 
   // add first set of matches to response
   for (int i = 0; i < rc; i++) {
     b_obj_list *list = (b_obj_list *) GC(new_list(vm));
     PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
     PCRE2_SPTR substring_start = subject + o_vector[2 * i];
-    write_list(vm, list, STRING_L_VAL((char *) substring_start, (int) substring_length));
+    write_list(vm, list, GC_L_STRING((char *) substring_start, (int) substring_length));
     dict_set_entry(vm, result, NUMBER_VAL(i), OBJ_VAL(list));
   }
 
@@ -838,8 +843,8 @@ DECLARE_STRING_METHOD(matches) {
       }
 
       b_obj_list *list = (b_obj_list *) GC(new_list(vm));
-      write_list(vm, list, STRING_L_VAL(_value, value_length));
-      dict_set_entry(vm, result, STRING_L_VAL(_key, key_length), OBJ_VAL(list));
+      write_list(vm, list, GC_L_STRING(_value, value_length));
+      dict_set_entry(vm, result, GC_L_STRING(_key, key_length), OBJ_VAL(list));
 
       tab_ptr += name_entry_size;
     }
@@ -856,7 +861,7 @@ DECLARE_STRING_METHOD(matches) {
   // find the other matches
   for (;;) {
     uint32_t options = 0;
-    PCRE2_SIZE start_offset = o_vector[1];
+    start_offset = o_vector[1];
 
     // if the previous match was for an empty string
     if (o_vector[0] == o_vector[1]) {
@@ -916,10 +921,10 @@ DECLARE_STRING_METHOD(matches) {
 
       b_value vlist;
       if (dict_get_entry(result, NUMBER_VAL(i), &vlist)) {
-        write_list(vm, AS_LIST(vlist), STRING_L_VAL((char *) substring_start, (int) substring_length));
+        write_list(vm, AS_LIST(vlist), GC_L_STRING((char *) substring_start, (int) substring_length));
       } else {
         b_obj_list *list = (b_obj_list *) GC(new_list(vm));
-        write_list(vm, list, STRING_L_VAL((char *) substring_start, (int) substring_length));
+        write_list(vm, list, GC_L_STRING((char *) substring_start, (int) substring_length));
         dict_set_entry(vm, result, NUMBER_VAL(i), OBJ_VAL(list));
       }
     }
@@ -986,7 +991,7 @@ DECLARE_STRING_METHOD(split) {
 
   b_obj_list *list = (b_obj_list *) GC(new_list(vm));
 
-  uint32_t compile_options = use_regex ? is_regex(delimeter) : -1;
+  int32_t compile_options = use_regex ? is_regex(delimeter) : -1;
   if ((int)compile_options == -1) {
     // not a regex, do a regular split
     if (delimeter->length > 0) {
@@ -1034,7 +1039,7 @@ DECLARE_STRING_METHOD(split) {
       pcre2_match_data_free(match_data);
       pcre2_code_free(re);
       if (rc == PCRE2_ERROR_NOMATCH) {
-        write_list(vm, list, STRING_L_VAL(string->chars, string->length));
+        write_list(vm, list, GC_L_STRING(string->chars, string->length));
         RETURN_OBJ(list);
       } else {
         REGEX_RC_ERROR();
@@ -1053,13 +1058,13 @@ DECLARE_STRING_METHOD(split) {
       PCRE2_SIZE subject_end = o_vector[2 * i];
       if(substring_length == 0) break;
 
-      write_list(vm, list, STRING_L_VAL((char *) subject, subject_end));
+      write_list(vm, list, GC_L_STRING((char *) subject, subject_end));
       subject += subject_end + substring_length; // skip the match
       total_length -= subject_end + substring_length; // decrement total length
 
       // exit on end
       if(total_length == 0) {
-        write_list(vm, list, STRING_L_VAL("", 0));
+        write_list(vm, list, GC_L_STRING("", 0));
         break;
       }
     }
@@ -1090,13 +1095,13 @@ DECLARE_STRING_METHOD(split) {
           broke_out_of_loop = true;
           break;
         }
-        write_list(vm, list, STRING_L_VAL((char *) subject, subject_end));
+        write_list(vm, list, GC_L_STRING((char *) subject, subject_end));
         subject += subject_end + substring_length; // skip the match
         total_length -= subject_end + substring_length; // decrement total length
 
         // exit on end
         if(total_length == 0) {
-          write_list(vm, list, STRING_L_VAL("", 0));
+          write_list(vm, list, GC_L_STRING("", 0));
           break;
         }
       }
@@ -1105,7 +1110,7 @@ DECLARE_STRING_METHOD(split) {
     }
 
     if(total_length > 0) {
-      write_list(vm, list, STRING_L_VAL((char *) subject, total_length));
+      write_list(vm, list, GC_L_STRING((char *) subject, total_length));
     }
 
     pcre2_match_data_free(match_data);
@@ -1134,27 +1139,26 @@ DECLARE_STRING_METHOD(replace) {
     RETURN_L_STRING(string->chars, string->length);
   }
 
-  uint32_t compile_options = use_regex ? is_regex(substr) : -1;
-  if ((int)compile_options == -1) {
+  int32_t compile_options = use_regex ? is_regex(substr) : -1;
+  if (compile_options == -1) {
     // not a regex, do a regular replace
     char *result = strdup("");
 
+    int total_length = 0;
     for(int i = 0; i < string->length; i++) {
       if(memcmp(string->chars + i, substr->chars, substr->length) == 0) {
         if(substr->length > 0) {
-          result = append_strings(result, rep_substr->chars);
+          result = append_strings_n(result, rep_substr->chars, rep_substr->length);
         }
         i += substr->length - 1;
+        total_length += rep_substr->length;
       } else {
-        char *mc = calloc(2, sizeof(char));
-        memcpy(mc, &string->chars[i], 1);
-        mc[1] = '\0';
-        result = append_strings(result, mc);
-        free(mc); // free wasted memory
+        result = append_strings_n(result, &string->chars[i], 1);
+        total_length++;
       }
     }
 
-    RETURN_TT_STRING(result);
+    RETURN_T_STRING(result, total_length);
   }
 
   char *real_regex = remove_regex_delimiter(vm, substr);

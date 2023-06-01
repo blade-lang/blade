@@ -237,7 +237,7 @@ void free_object(b_vm *vm, b_obj *object) {
     }
     case OBJ_FILE: {
       b_obj_file *file = (b_obj_file *) object;
-      if (file->mode->length != 0 && !is_std_file(file) && file->file != NULL) {
+      if (!file->is_std && file->file != NULL) {
         fclose(file->file);
       }
       FREE(b_obj_file, object);

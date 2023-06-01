@@ -174,7 +174,7 @@ DECLARE_STRING_METHOD(lpad);
 DECLARE_STRING_METHOD(rpad);
 
 /**
- * string.match(str: string|regex)
+ * string.match(str: string|regex [, offset: int])
  *
  * if str is not regex:
  *  - returns true if string contains str
@@ -186,7 +186,7 @@ DECLARE_STRING_METHOD(rpad);
 DECLARE_STRING_METHOD(match);
 
 /**
- * string.matches(str: regex)
+ * string.matches(str: regex [, offset: int])
  *
  * returns a dictionary of all matches of str in string
  * NOTE: str must be a regular expression

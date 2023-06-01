@@ -1976,6 +1976,8 @@ static void using_statement(b_parser *p) {
       if (case_type == WHEN_TOKEN) {
         state = 1;
         do {
+          ignore_whitespace(p);
+
           advance(p);
 
           b_value jump = NUMBER_VAL((double) current_blob(p)->count - (double) start_offset);
@@ -2283,6 +2285,7 @@ static void try_statement(b_parser *p) {
 
     if (match(p, IDENTIFIER_TOKEN)) {
       created_variable(p, p->previous);
+      emit_byte(p, OP_POP);
     } else {
       emit_byte(p, OP_POP);
     }

@@ -155,7 +155,7 @@ DECLARE_LIST_METHOD(remove_at) {
   }
 
   b_value value = list->items.values[index];
-  for (int i = index; i < list->items.count; i++) {
+  for (int i = index; i < list->items.count - 1; i++) {
     list->items.values[i] = list->items.values[i + 1];
   }
   list->items.count--;
@@ -365,6 +365,39 @@ DECLARE_LIST_METHOD(zip) {
     for (int j = 0; j < arg_count; j++) { // item of argument lists
       if (i < arg_list[j]->items.count) {
         write_list(vm, a_list, arg_list[j]->items.values[i]);
+      } else {
+        write_list(vm, a_list, NIL_VAL);
+      }
+    }
+
+    write_list(vm, n_list, OBJ_VAL(a_list));
+  }
+
+  RETURN_OBJ(n_list);
+}
+
+DECLARE_LIST_METHOD(zip_from) {
+  ENFORCE_ARG_COUNT(zip_from, 1);
+  ENFORCE_ARG_TYPE(zip_from, 0, IS_LIST);
+
+  b_obj_list *list = AS_LIST(METHOD_OBJECT);
+  b_obj_list *n_list = (b_obj_list *) GC(new_list(vm));
+
+  b_obj_list *arg_list = AS_LIST(args[0]);
+
+  for (int i = 0; i < arg_list->items.count; i++) {
+    if(!IS_LIST(arg_list->items.values[i])) {
+      RETURN_ERROR("invalid list in zip entries");
+    }
+  }
+
+  for (int i = 0; i < list->items.count; i++) {
+    b_obj_list *a_list = (b_obj_list *) GC(new_list(vm));
+    write_list(vm, a_list, list->items.values[i]); // item of main list
+
+    for (int j = 0; j < arg_list->items.count; j++) { // item of argument lists
+      if (i < AS_LIST(arg_list->items.values[j])->items.count) {
+        write_list(vm, a_list, AS_LIST(arg_list->items.values[j])->items.values[i]);
       } else {
         write_list(vm, a_list, NIL_VAL);
       }

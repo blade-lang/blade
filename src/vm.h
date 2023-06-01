@@ -159,4 +159,6 @@ static inline void gc_clear_protection(b_vm *vm) {
 #define GC(o) gc_protect(vm, (b_obj*)(o))
 #define CLEAR_GC() gc_clear_protection(vm)
 
+bool call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args);
+
 #endif
