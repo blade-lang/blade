@@ -4,22 +4,27 @@
 extern bool call_value(b_vm *vm, b_value callee, int arg_count);
 
 /**
- * hasprop(object: instance, name: string)
+ * hasprop(object: instance | module, name: string)
  *
  * returns true if object has the property name or false if not
  */
 DECLARE_MODULE_METHOD(reflect__hasprop) {
   ENFORCE_ARG_COUNT(has_prop, 2);
-  ENFORCE_ARG_TYPE(has_prop, 0, IS_INSTANCE);
+  ENFORCE_ARG_TYPES(has_prop, 0, IS_INSTANCE, IS_MODULE);
   ENFORCE_ARG_TYPE(has_prop, 1, IS_STRING);
 
-  b_obj_instance *instance = AS_INSTANCE(args[0]);
+  b_table *table;
+  if(IS_INSTANCE(args[0])) {
+    table = &AS_INSTANCE(args[0])->properties;
+  } else {
+    table = &AS_MODULE(args[0])->values;
+  }
   b_value dummy;
-  RETURN_BOOL(table_get(&instance->properties, args[1], &dummy));
+  RETURN_BOOL(table_get(table, args[1], &dummy));
 }
 
 /**
- * getprop(object: instance, name: string)
+ * getprop(object: instance | module, name: string)
  *
  * returns the property of the object matching the given name
  * or nil if the object contains no property with a matching
@@ -27,12 +32,17 @@ DECLARE_MODULE_METHOD(reflect__hasprop) {
  */
 DECLARE_MODULE_METHOD(reflect__getprop) {
   ENFORCE_ARG_COUNT(get_prop, 2);
-  ENFORCE_ARG_TYPE(get_prop, 0, IS_INSTANCE);
+  ENFORCE_ARG_TYPES(has_prop, 0, IS_INSTANCE, IS_MODULE);
   ENFORCE_ARG_TYPE(get_prop, 1, IS_STRING);
 
-  b_obj_instance *instance = AS_INSTANCE(args[0]);
+  b_table *table;
+  if(IS_INSTANCE(args[0])) {
+    table = &AS_INSTANCE(args[0])->properties;
+  } else {
+    table = &AS_MODULE(args[0])->values;
+  }
   b_value value;
-  if (table_get(&instance->properties, args[1], &value)) {
+  if (table_get(table, args[1], &value)) {
     RETURN_VALUE(value);
   }
   RETURN_NIL;
@@ -142,6 +152,20 @@ DECLARE_MODULE_METHOD(reflect__call_method) {
   RETURN;
 }
 
+DECLARE_MODULE_METHOD(reflect__call_function) {
+  ENFORCE_MIN_ARG(call_function, 2);
+  ENFORCE_ARG_TYPE(call_function, 0, IS_CLOSURE);
+  ENFORCE_ARG_TYPE(call_function, 1, IS_LIST);
+
+  b_obj_closure *closure = AS_CLOSURE(args[0]);
+  b_obj_list *list = AS_LIST(args[1]);
+
+  // remove our own args
+  pop_n(vm, 2);
+  call_closure(vm, closure, list);
+  RETURN;
+}
+
 DECLARE_MODULE_METHOD(reflect__bindmethod) {
   ENFORCE_ARG_COUNT(delist, 2);
   ENFORCE_ARG_TYPE(delist, 0, IS_INSTANCE);
@@ -206,8 +230,8 @@ DECLARE_MODULE_METHOD(reflect__get_function_metadata) {
   dict_set_entry(vm, result, GC_STRING("arity"), NUMBER_VAL(closure->function->arity));
   dict_set_entry(vm, result, GC_STRING("is_variadic"), NUMBER_VAL(closure->function->is_variadic));
   dict_set_entry(vm, result, GC_STRING("captured_vars"), NUMBER_VAL(closure->up_value_count));
-  dict_set_entry(vm, result, GC_STRING("module"), STRING_VAL(closure->function->module->name));
-  dict_set_entry(vm, result, GC_STRING("file"), STRING_VAL(closure->function->module->file));
+  dict_set_entry(vm, result, GC_STRING("module"), GC_STRING(closure->function->module->name));
+  dict_set_entry(vm, result, GC_STRING("file"), GC_STRING(closure->function->module->file));
 
   RETURN_OBJ(result);
 }
@@ -218,8 +242,8 @@ DECLARE_MODULE_METHOD(reflect__get_module_metadata) {
   b_obj_module *module = AS_MODULE(args[0]);
 
   b_obj_dict *result = (b_obj_dict *)GC(new_dict(vm));
-  dict_set_entry(vm, result, GC_STRING("name"), STRING_VAL(module->name));
-  dict_set_entry(vm, result, GC_STRING("file"), STRING_VAL(module->file));
+  dict_set_entry(vm, result, GC_STRING("name"), GC_STRING(module->name));
+  dict_set_entry(vm, result, GC_STRING("file"), GC_STRING(module->file));
   dict_set_entry(vm, result, GC_STRING("has_preloader"), BOOL_VAL(module->preloader != NULL));
   dict_set_entry(vm, result, GC_STRING("has_unloader"), BOOL_VAL(module->unloader != NULL));
   dict_set_entry(vm, result, GC_STRING("definitions"), OBJ_VAL(table_get_keys(vm, &module->values)));
@@ -274,12 +298,8 @@ DECLARE_MODULE_METHOD(reflect__runscript) {
     b_obj_closure *cls = new_closure(vm, fn);
     pop(vm);
 
-    b_call_frame *frame = &vm->frames[vm->frame_count++];
-    frame->closure = cls;
-    frame->ip = fn->blob.code;
-
-    frame->slots = vm->stack_top - 1;
-    vm->current_frame = frame;
+    call_closure(vm, cls, 0);
+    run(vm);
   }
 
   RETURN;
@@ -446,6 +466,7 @@ CREATE_MODULE_LOADER(reflect) {
       {"getaddress", true,  GET_MODULE_METHOD(reflect__getaddress)},
       {"ptrfromaddress", true,  GET_MODULE_METHOD(reflect__ptr_from_address)},
       {"setptrvalue", true,  GET_MODULE_METHOD(reflect__set_ptr_value)},
+      {"callfunction", true,  GET_MODULE_METHOD(reflect__call_function)},
       {NULL,        false, NULL},
   };
 

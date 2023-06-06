@@ -193,6 +193,17 @@ DECLARE_LIST_METHOD(unique);
 DECLARE_LIST_METHOD(zip);
 
 /**
+ * list.zip_from(items: list)
+ *
+ * Same as list.zip() except that it accepts a parent list instead of arbitrary items.
+ * @param vm
+ * @param arg_count
+ * @param args
+ * @return
+ */
+DECLARE_LIST_METHOD(zip_from);
+
+/**
  * list.to_dict()
  *
  * converts a list into a dictionary

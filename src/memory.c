@@ -27,9 +27,7 @@ void *c_allocate(b_vm *vm, size_t size, size_t length) {
 
   // just in case reallocation fails... computers ain't infinite!
   if (result == NULL) {
-    fflush(stdout); // flush out anything on stdout first
-    fprintf(stderr, "Exit: device out of memory\n");
-    exit(EXIT_TERMINAL);
+    OUT_OF_MEMORY();
   }
   return result;
 }
@@ -48,9 +46,7 @@ void *allocate(b_vm *vm, size_t size) {
 
   // just in case reallocation fails... computers ain't infinite!
   if (result == NULL) {
-    fflush(stdout); // flush out anything on stdout first
-    fprintf(stderr, "Exit: device out of memory\n");
-    exit(EXIT_TERMINAL);
+    OUT_OF_MEMORY();
   }
   return result;
 }
@@ -70,9 +66,7 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
 
   // just in case reallocation fails... computers ain't infinite!
   if (result == NULL) {
-    fflush(stdout); // flush out anything on stdout first
-    fprintf(stderr, "Exit: device out of memory\n");
-    exit(EXIT_TERMINAL);
+    OUT_OF_MEMORY();
   }
   return result;
 }
@@ -237,7 +231,7 @@ void free_object(b_vm *vm, b_obj *object) {
     }
     case OBJ_FILE: {
       b_obj_file *file = (b_obj_file *) object;
-      if (file->mode->length != 0 && !is_std_file(file) && file->file != NULL) {
+      if (!file->is_std && file->file != NULL) {
         fclose(file->file);
       }
       FREE(b_obj_file, object);

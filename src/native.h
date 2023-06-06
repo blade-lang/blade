@@ -181,7 +181,7 @@
 #define REGEX_RC_ERROR() REGEX_ERR("%d", rc);
 
 #define GET_REGEX_COMPILE_OPTIONS(string, regex_show_error)              \
-  uint32_t compile_options = is_regex(string);                                 \
+  int32_t compile_options = is_regex(string);                                 \
   if ((regex_show_error) && (int)compile_options == -1) {                        \
     RETURN_ERROR("RegexError: Invalid regex");          \
   } else if ((regex_show_error) && (int)compile_options > 1000000) {                  \
@@ -195,7 +195,7 @@
 #define GC_T_STRING(o, l) OBJ_VAL(GC(take_string(vm, (o), (l))))
 #define GC_TT_STRING(o) OBJ_VAL(GC(take_string(vm, (o), (int)strlen(o))))
 
-extern uint32_t is_regex(b_obj_string *string);
+extern int32_t is_regex(b_obj_string *string);
 
 extern char *remove_regex_delimiter(b_vm *vm, b_obj_string *string);
 

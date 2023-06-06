@@ -176,6 +176,11 @@ void table_import_all(b_vm *vm, b_table *from, b_table *to) {
   for (int i = 0; i < from->capacity; i++) {
     b_entry *entry = &from->entries[i];
     if (!IS_EMPTY(entry->key) && !IS_MODULE(entry->value)) {
+      // Don't import private values
+      if(IS_STRING(entry->key) && AS_STRING(entry->key)->chars[0] == '_') {
+        continue;
+      }
+
       table_set(vm, to, entry->key, entry->value);
     }
   }

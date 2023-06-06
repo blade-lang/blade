@@ -127,26 +127,33 @@ class Url {
   var password
 
   /**
+   * `true` if the url contains the :// section. `false` otherwise.
+   */
+  var has_slash = false
+
+  /**
    * Url(scheme: string, host: string [, port: string [, path: string [, query: string [, hash: string [, username: string [, password: string]]]]]])
    * @constructor 
    */
-  Url(scheme, host, port, path, query, hash, username, password) {
-    if !is_string(scheme)
-      die Exception('scheme must be string')
-    if !is_string(host)
-      die Exception('host must be string')
+  Url(scheme, host, port, path, query, hash, username, password, has_slash) {
+    if scheme != nil and !is_string(scheme)
+      die Exception('scheme must be a string')
+    if host != nil and !is_string(host)
+      die Exception('host must be a string')
     if port != nil and !is_string(port) and !is_int(port)
-      die Exception('port must be string or integer')
+      die Exception('port must be a string or an integer')
     if path != nil and !is_string(path)
-      die Exception('path must be string')
+      die Exception('path must be a string')
     if query != nil and !is_string(query)
-      die Exception('query must be string')
+      die Exception('query must be a string')
     if hash != nil and !is_string(hash)
-      die Exception('hash must be string')
+      die Exception('hash must be a string')
     if username != nil and !is_string(username)
-      die Exception('username must be string')
+      die Exception('username must be a string')
     if password != nil and !is_string(password)
-      die Exception('password must be string')
+      die Exception('password must be a string')
+    if has_slash != nil and !is_bool(has_slash)
+      die Exception('has_slash must be a boolean')
 
     if is_number(port) port = to_string(port)
 
@@ -158,6 +165,7 @@ class Url {
     self.hash = hash
     self.username = username
     self.password = password
+    self.has_slash = has_slash
   }
 
   /**
@@ -172,7 +180,7 @@ class Url {
    * @return string
    */
   authority() {
-    if self.scheme != 'mailto' {
+    if !_SIMPLE_SCHEMES.contains(self.scheme) {
       var authority = ''
 
       # some schemes do not allow the userinfo and/or port subcomponents
@@ -230,17 +238,19 @@ class Url {
    * @return string
    */
   absolute_url() {
-    var url = '${self.scheme}:'
+    var url = ''
 
     if !_SIMPLE_SCHEMES.contains(self.scheme) {
-      url += '//'
+      url += self.scheme ? '${self.scheme}://' : (self.has_slash ? '://' : '/')
+    } else {
+      url += '${self.scheme}:'
     }
 
     # build the username:password symbol
     if self.username {
-      url += '${self.username}:'
+      url += self.username
       if self.password {
-        url += self.password
+        url += ':${self.password}'
       }
       url += '@'
     }
@@ -264,6 +274,9 @@ class Url {
       url += '?${self.query}'
     }
 
+    if self.host and self.path {
+      return url.rtrim('/')
+    } 
     return url
   }
 
@@ -376,6 +389,7 @@ def parse(url) {
   url = url.trim() # support urls surrounded by whitespaces
 
   var scheme, host, port, path = '/', query, hash, username, password
+  var skip_scheme = false, has_slash = false
 
   # following that most urls written without indicating the scheme
   # are usually http urls, default url scheme to http if none was given
@@ -390,7 +404,8 @@ def parse(url) {
     }
 
     if !match_found {
-      url = 'http://${url}'
+      url = 'http://${url.ltrim("/")}'
+      skip_scheme = true
     }
   }
 
@@ -401,7 +416,7 @@ def parse(url) {
   iter var i = 0; i < url.length(); i++ {
 
     # simple anonymous function to scan port
-    var _scan_port = || {
+    var _scan_port = @() {
         var _port = ''
         i++
         while i < url.length() and types.digit(url[i]) { # id_digit
@@ -416,12 +431,13 @@ def parse(url) {
         # scan the scheme
         scheme = url[0, i]
 
-        # skipping // if scheme is not mailto as mailto that does not use the //
-        if scheme != 'mailto' {
+        # skipping // if scheme is nota simple scheme that does not use the //
+        if !_SIMPLE_SCHEMES.contains(scheme) {
           # if the // is missing, it's a malformed url
           if url[i,i+3] != '://' 
             die UrlMalformedException('expected // at index ${i}')
           i += 2
+          if !skip_scheme has_slash = true
         }
 
         # Scheme names consist of a sequence of characters beginning with a
@@ -432,7 +448,7 @@ def parse(url) {
         # should accept uppercase letters as equivalent to lowercase in scheme
         # names (e.g., allow "HTTP" as well as "http") for the sake of robustness.
         # https://tools.ietf.org/html/rfc3986#section-3.1
-        if !scheme.match('/^[a-z][a-z0-9+.]+$/i')
+        if !scheme.match('/(?:^|[^a-z0-9.+-])([a-z][a-z0-9.+-]*)$/i')
           die UrlMalformedException('invalid scheme')
       } else if !port {
         # scan the port number
@@ -486,6 +502,10 @@ def parse(url) {
         var _ = host.split('@')
         username = _[0]
         host = _[1]
+      }
+
+      if i == url.length() - 1 and url[i] != '?' and url[i] != '#' {
+        host += url[i]
       }
     } else if path == '/' and host {
       # scan the address
@@ -541,6 +561,9 @@ def parse(url) {
     }
   }
 
+  # reset scheme if it never existed in the original link
+  if skip_scheme scheme = nil
+
   # build a new Url instance and return
-  return Url(scheme, host, port, path, query, hash, username, password)
+  return Url(scheme, host, port, path, query, hash, username, password, has_slash)
 }
