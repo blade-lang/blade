@@ -354,7 +354,11 @@ def run_script(path) {
     die Exception('cannot find script at "${path}"')
 
   var content = fh.read()
-  _reflect.runscript(path, content)
+
+  # for now, returing the call without assigning to a variable is failing.
+  # TODO: Fix this...
+  var res = _reflect.runscript(path, content)
+  return res
 }
 
 /**

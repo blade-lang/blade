@@ -298,12 +298,8 @@ DECLARE_MODULE_METHOD(reflect__runscript) {
     b_obj_closure *cls = new_closure(vm, fn);
     pop(vm);
 
-    b_call_frame *frame = &vm->frames[vm->frame_count++];
-    frame->closure = cls;
-    frame->ip = fn->blob.code;
-
-    frame->slots = vm->stack_top - 1;
-    vm->current_frame = frame;
+    call_closure(vm, cls, 0);
+    run(vm);
   }
 
   RETURN;

@@ -596,7 +596,7 @@ DECLARE_STRING_METHOD(lpad) {
   for (int i = 0; i < fill_size; i++)
     fill[i] = fill_char;
 
-  char *str = ALLOCATE(char, (size_t) string->length + (size_t) fill_size + 1);
+  char *str = ALLOCATE(char, (size_t) final_size + 1);
   memcpy(str, fill, fill_size);
   memcpy(str + fill_size, string->chars, string->length);
   str[final_size] = '\0';
@@ -632,7 +632,7 @@ DECLARE_STRING_METHOD(rpad) {
   for (int i = 0; i < fill_size; i++)
     fill[i] = fill_char;
 
-  char *str = ALLOCATE(char, (size_t) string->length + (size_t) fill_size + 1);
+  char *str = ALLOCATE(char, (size_t) final_size + 1);
   memcpy(str, string->chars, string->length);
   memcpy(str + string->length, fill, fill_size);
   str[final_size] = '\0';
@@ -777,8 +777,7 @@ DECLARE_STRING_METHOD(matches) {
   PCRE2_SPTR subject = (PCRE2_SPTR) string->chars;
   PCRE2_SIZE subject_length = (PCRE2_SIZE) string->length;
 
-  pcre2_code *re = pcre2_compile(pattern, PCRE2_ZERO_TERMINATED, compile_options,
-                                 &error_number, &error_offset, NULL);
+  pcre2_code *re = pcre2_compile(pattern, PCRE2_ZERO_TERMINATED, compile_options, &error_number, &error_offset, NULL);
   free(real_regex);
 
   REGEX_COMPILATION_ERROR(re, error_number, error_offset);
@@ -836,8 +835,8 @@ DECLARE_STRING_METHOD(matches) {
       int value_length = (int) (o_vector[2 * n + 1] - o_vector[2 * n]);
       int key_length = (int) name_entry_size - 3;
 
-      char *_key = (char *)(tab_ptr + 2);
-      char *_value = (char *)(subject + o_vector[2 * n]);
+      char* _key = (char *)(tab_ptr + 2);
+      char* _value = (char *)(subject + o_vector[2 * n]);
       for(int j = key_length - 1; j >= 0; j--) {
         if(_key[j] == 0) key_length--;
       }
@@ -886,8 +885,7 @@ DECLARE_STRING_METHOD(matches) {
       }
     }
 
-    rc = pcre2_match(re, subject, subject_length, start_offset, options,
-                     match_data, NULL);
+    rc = pcre2_match(re, subject, subject_length, start_offset, options, match_data, NULL);
 
     if (rc == PCRE2_ERROR_NOMATCH) {
       if (options == 0)
@@ -1109,7 +1107,7 @@ DECLARE_STRING_METHOD(split) {
       if(broke_out_of_loop) break;
     }
 
-    if(total_length > 0) {
+    if(total_length > 0 && rc != PCRE2_ERROR_NOMATCH) {
       write_list(vm, list, GC_L_STRING((char *) subject, total_length));
     }
 
@@ -1192,7 +1190,7 @@ DECLARE_STRING_METHOD(replace) {
               result);
   }
 
-  PCRE2_UCHAR *output_buffer = ALLOCATE(PCRE2_UCHAR, output_length);
+  PCRE2_UCHAR *output_buffer = ALLOCATE(PCRE2_UCHAR, output_length + 1);
 
   result = pcre2_substitute(
       re, input, PCRE2_ZERO_TERMINATED, 0,
@@ -1205,6 +1203,7 @@ DECLARE_STRING_METHOD(replace) {
     REGEX_ERR("regular expression error at replacement time", result);
   }
 
+  output_buffer[output_length] = 0;
   b_obj_string *response =
       take_string(vm, (char *) output_buffer, (int) output_length);
 
