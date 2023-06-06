@@ -707,7 +707,7 @@ DECLARE_STRING_METHOD(match) {
   for (int i = 0; i < rc; i++) {
     PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
     PCRE2_SPTR substring_start = subject + o_vector[2 * i];
-    dict_set_entry(vm, result, NUMBER_VAL(i), STRING_L_VAL((char *) substring_start, (int) substring_length));
+    dict_set_entry(vm, result, NUMBER_VAL(i), GC_L_STRING((char *) substring_start, (int) substring_length));
   }
 
   if (name_count > 0) {
@@ -817,7 +817,7 @@ DECLARE_STRING_METHOD(matches) {
     b_obj_list *list = (b_obj_list *) GC(new_list(vm));
     PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
     PCRE2_SPTR substring_start = subject + o_vector[2 * i];
-    write_list(vm, list, GC_L_STRING((char *) substring_start, (int) substring_length));
+    write_list(vm, list, STRING_L_VAL((char *) substring_start, (int) substring_length));
     dict_set_entry(vm, result, NUMBER_VAL(i), OBJ_VAL(list));
   }
 
@@ -842,7 +842,7 @@ DECLARE_STRING_METHOD(matches) {
       }
 
       b_obj_list *list = (b_obj_list *) GC(new_list(vm));
-      write_list(vm, list, GC_L_STRING(_value, value_length));
+      write_list(vm, list, STRING_L_VAL(_value, value_length));
       dict_set_entry(vm, result, GC_L_STRING(_key, key_length), OBJ_VAL(list));
 
       tab_ptr += name_entry_size;
@@ -919,10 +919,10 @@ DECLARE_STRING_METHOD(matches) {
 
       b_value vlist;
       if (dict_get_entry(result, NUMBER_VAL(i), &vlist)) {
-        write_list(vm, AS_LIST(vlist), GC_L_STRING((char *) substring_start, (int) substring_length));
+        write_list(vm, AS_LIST(vlist), STRING_L_VAL((char *) substring_start, (int) substring_length));
       } else {
         b_obj_list *list = (b_obj_list *) GC(new_list(vm));
-        write_list(vm, list, GC_L_STRING((char *) substring_start, (int) substring_length));
+        write_list(vm, list, STRING_L_VAL((char *) substring_start, (int) substring_length));
         dict_set_entry(vm, result, NUMBER_VAL(i), OBJ_VAL(list));
       }
     }
@@ -1037,7 +1037,7 @@ DECLARE_STRING_METHOD(split) {
       pcre2_match_data_free(match_data);
       pcre2_code_free(re);
       if (rc == PCRE2_ERROR_NOMATCH) {
-        write_list(vm, list, GC_L_STRING(string->chars, string->length));
+        write_list(vm, list, STRING_L_VAL(string->chars, string->length));
         RETURN_OBJ(list);
       } else {
         REGEX_RC_ERROR();
@@ -1056,13 +1056,13 @@ DECLARE_STRING_METHOD(split) {
       PCRE2_SIZE subject_end = o_vector[2 * i];
       if(substring_length == 0) break;
 
-      write_list(vm, list, GC_L_STRING((char *) subject, subject_end));
+      write_list(vm, list, STRING_L_VAL((char *) subject, subject_end));
       subject += subject_end + substring_length; // skip the match
       total_length -= subject_end + substring_length; // decrement total length
 
       // exit on end
       if(total_length == 0) {
-        write_list(vm, list, GC_L_STRING("", 0));
+        write_list(vm, list, STRING_L_VAL("", 0));
         break;
       }
     }
@@ -1093,13 +1093,13 @@ DECLARE_STRING_METHOD(split) {
           broke_out_of_loop = true;
           break;
         }
-        write_list(vm, list, GC_L_STRING((char *) subject, subject_end));
+        write_list(vm, list, STRING_L_VAL((char *) subject, subject_end));
         subject += subject_end + substring_length; // skip the match
         total_length -= subject_end + substring_length; // decrement total length
 
         // exit on end
         if(total_length == 0) {
-          write_list(vm, list, GC_L_STRING("", 0));
+          write_list(vm, list, STRING_L_VAL("", 0));
           break;
         }
       }
@@ -1108,7 +1108,7 @@ DECLARE_STRING_METHOD(split) {
     }
 
     if(total_length > 0 && rc != PCRE2_ERROR_NOMATCH) {
-      write_list(vm, list, GC_L_STRING((char *) subject, total_length));
+      write_list(vm, list, STRING_L_VAL((char *) subject, total_length));
     }
 
     pcre2_match_data_free(match_data);
