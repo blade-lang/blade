@@ -650,7 +650,7 @@ DECLARE_STRING_METHOD(match) {
   PCRE2_SIZE start_offset = 0;
   if(arg_count == 2) {
     ENFORCE_ARG_TYPE(match, 1, IS_NUMBER);
-    start_offset = AS_NUMBER(args[1]);
+    start_offset = (PCRE2_SIZE)AS_NUMBER(args[1]);
   }
 
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
@@ -658,7 +658,7 @@ DECLARE_STRING_METHOD(match) {
 
   if (string->length == 0 && substr->length == 0) {
     RETURN_TRUE;
-  } else if (string->length == 0 || substr->length == 0) {
+  } else if (string->length == 0 || substr->length == 0 || start_offset >= (PCRE2_SIZE)string->length) {
     RETURN_FALSE;
   }
 
@@ -727,9 +727,7 @@ DECLARE_STRING_METHOD(match) {
 
       char* _key = (char *)(tab_ptr + 2);
       char* _value = (char *)(subject + o_vector[2 * n]);
-      for(int j = key_length - 1; j >= 0; j--) {
-        if(_key[j] == 0) key_length--;
-      }
+      while(_key[key_length - 1] == 0) key_length--;
 
       dict_set_entry(vm, result, GC_L_STRING(_key, key_length), GC_L_STRING(_value, value_length));
 
@@ -749,7 +747,7 @@ DECLARE_STRING_METHOD(matches) {
   PCRE2_SIZE start_offset = 0;
   if(arg_count == 2) {
     ENFORCE_ARG_TYPE(matches, 1, IS_NUMBER);
-    start_offset = AS_NUMBER(args[1]);
+    start_offset = (PCRE2_SIZE)AS_NUMBER(args[1]);
   }
 
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
@@ -757,7 +755,7 @@ DECLARE_STRING_METHOD(matches) {
 
   if (string->length == 0 && substr->length == 0) {
     RETURN_OBJ(new_list(vm)); // empty string matches empty string to empty list
-  } else if (string->length == 0 || substr->length == 0) {
+  } else if (string->length == 0 || substr->length == 0 || start_offset >= (PCRE2_SIZE)string->length) {
     RETURN_FALSE; // if either string or str is empty, return false
   }
 
@@ -837,9 +835,7 @@ DECLARE_STRING_METHOD(matches) {
 
       char* _key = (char *)(tab_ptr + 2);
       char* _value = (char *)(subject + o_vector[2 * n]);
-      for(int j = key_length - 1; j >= 0; j--) {
-        if(_key[j] == 0) key_length--;
-      }
+      while(_key[key_length - 1] == 0) key_length--;
 
       b_obj_list *list = (b_obj_list *) GC(new_list(vm));
       write_list(vm, list, STRING_L_VAL(_value, value_length));
@@ -1155,6 +1151,7 @@ DECLARE_STRING_METHOD(replace) {
         total_length++;
       }
     }
+    result[total_length] = 0;
 
     RETURN_T_STRING(result, total_length);
   }

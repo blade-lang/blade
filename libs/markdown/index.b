@@ -42,10 +42,13 @@ var RECODE_HOSTNAME_FOR = [ 'http', 'https', 'mailto' ]
 
 def _md_format(url) {
   var result = ''
+
+  var clean_part = url.path and !url.path.match('/@/')
+
   result += url.scheme ? '${url.scheme}:' : ''
   if !url.has_slash {
     if !url.scheme and url.host and !url.username {
-      result += url.port or !url.path ? '' : '/'
+      result += url.port or !url.path ? '' : (clean_part ? '/' : '')
     }
   } else {
     result += '//'
@@ -61,6 +64,9 @@ def _md_format(url) {
   }
   
   result += url.port and url.port != '0' ? ':' + url.port : ''
+  if !clean_part {
+    url.path = url.path.replace('/^\//', '+')
+  }
   result += !url.path or url.path == '/' ? '' : url.path
   result += url.query ? '?${url.query}' : ''
   result += url.hash ? '#${url.hash}' : ''

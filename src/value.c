@@ -14,7 +14,7 @@ void init_value_arr(b_value_arr *array) {
   array->values = NULL;
 }
 
-void init_byte_arr(b_vm *vm, b_byte_arr *array, int length) {
+void init_byte_arr(b_byte_arr *array, int length) {
   array->count = length;
   array->bytes = NULL;
 }
@@ -66,7 +66,7 @@ void free_value_arr(b_vm *vm, b_value_arr *array) {
 
 void free_byte_arr(b_vm *vm, b_byte_arr *array) {
   FREE_ARRAY(unsigned char, array->bytes, array->count);
-  init_byte_arr(vm, array, 0);
+  init_byte_arr(array, 0);
 }
 
 static inline void do_print_value(b_value value, bool fix_string) {

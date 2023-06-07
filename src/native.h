@@ -148,7 +148,7 @@
       } \
     }                                                                          \
     CLEAR_GC(); \
-  } while (0);
+  } while (0)
 
 #define REGEX_COMPILATION_ERROR(re, error_number, error_offset)                \
   if ((re) == NULL) {                                                            \
