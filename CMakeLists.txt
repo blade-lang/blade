@@ -198,7 +198,7 @@ add_custom_command(TARGET blade POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:blade> ${EXE_FILE}
 		COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:libblade> ${LIBRARY_FILE}
 		COMMAND ${EXE_FILE} "${PROJECT_SOURCE_DIR}/scripts/make_blade.b" "${PROJECT_SOURCE_DIR}"
-		COMMAND ${EXE_FILE} "${PROJECT_SOURCE_DIR}/scripts/ast.b" "${OUTPUT_DIR}/libs/ast"
+		COMMAND ${EXE_FILE} "${PROJECT_SOURCE_DIR}/scripts/ast.b" "${PROJECT_SOURCE_DIR}/libs/ast"
 		COMMENT "Generating Blade header and copy output..."
 )
 
