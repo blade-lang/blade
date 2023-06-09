@@ -185,7 +185,7 @@ def normalize_link_text(uri) {
 
 
 /**
- * Main parser/renderer class.
+ * Markdown parsing and rendering class.
  *
  * ##### Usage
  *
@@ -526,7 +526,7 @@ class Markdown {
     var missed = iters.filter(list, @(name) { return result.index_of(name) < 0 })
 
     if missed.length() and !ignore_invalid {
-      die Exception('Markdown. Failed to enable unknown rule(s): ' + missed)
+      die Exception('Failed to enable unknown rule(s): ' + missed)
     }
 
     return self
@@ -553,7 +553,7 @@ class Markdown {
     var missed = iters.filter(list, @(name) { return result.index_of(name) < 0 })
 
     if missed.length() and !ignore_invalid {
-      die Exception('Markdown. Failed to disable unknown rule(s): ' + missed)
+      die Exception('Failed to disable unknown rule(s): ' + missed)
     }
 
     return self
