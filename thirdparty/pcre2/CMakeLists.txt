@@ -11,7 +11,6 @@ add_library(pcre2 OBJECT
         pcre2_error.c
         pcre2_extuni.c
         pcre2_find_bracket.c
-        pcre2_fuzzsupport.c
         pcre2_internal.h
         pcre2_intmodedep.h
         pcre2_jit_compile.c

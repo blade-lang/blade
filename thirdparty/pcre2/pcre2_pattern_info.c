@@ -38,28 +38,15 @@ POSSIBILITY OF SUCH DAMAGE.
 -----------------------------------------------------------------------------
 */
 
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
 #include "pcre2_internal.h"
 
-
 /*************************************************
 *        Return info about compiled pattern      *
 *************************************************/
-
-/*
-Arguments:
-  code          points to compiled code
-  what          what information is required
-  where         where to put the information; if NULL, return length
-
-Returns:        0 when data returned
-                > 0 when length requested
-                < 0 on error or unset value
-*/
 
 PCRE2_EXP_DEFN int PCRE2_CALL_CONVENTION
 pcre2_pattern_info(const pcre2_code *code, uint32_t what, void *where)
@@ -109,12 +96,7 @@ if (where == NULL)   /* Requests field length */
 
 if (re == NULL) return PCRE2_ERROR_NULL;
 
-/* Check that the first field in the block is the magic number. If it is not,
-return with PCRE2_ERROR_BADMAGIC. */
-
 if (re->magic_number != MAGIC_NUMBER) return PCRE2_ERROR_BADMAGIC;
-
-/* Check that this pattern was compiled in the correct bit mode */
 
 if ((re->flags & (PCRE2_CODE_UNIT_WIDTH/8)) == 0) return PCRE2_ERROR_BADMODE;
 
@@ -247,22 +229,9 @@ switch(what)
 return 0;
 }
 
-
-
 /*************************************************
 *              Callout enumerator                *
 *************************************************/
-
-/*
-Arguments:
-  code          points to compiled code
-  callback      function called for each callout block
-  callout_data  user data passed to the callback
-
-Returns:        0 when successfully completed
-                < 0 on local error
-               != 0 for callback error
-*/
 
 PCRE2_EXP_DEFN int PCRE2_CALL_CONVENTION
 pcre2_callout_enumerate(const pcre2_code *code,
@@ -280,9 +249,6 @@ if (re == NULL) return PCRE2_ERROR_NULL;
 #ifdef SUPPORT_UNICODE
 utf = (re->overall_options & PCRE2_UTF) != 0;
 #endif
-
-/* Check that the first field in the block is the magic number. If it is not,
-return with PCRE2_ERROR_BADMAGIC. */
 
 if (re->magic_number != MAGIC_NUMBER) return PCRE2_ERROR_BADMAGIC;
 

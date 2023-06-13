@@ -51,24 +51,6 @@ POSSIBILITY OF SUCH DAMAGE.
 *   Copy named captured string to given buffer   *
 *************************************************/
 
-/* This function copies a single captured substring into a given buffer,
-identifying it by name. If the regex permits duplicate names, the first
-substring that is set is chosen.
-
-Arguments:
-  match_data     points to the match data
-  stringname     the name of the required substring
-  buffer         where to put the substring
-  sizeptr        the size of the buffer, updated to the size of the substring
-
-Returns:         if successful: zero
-                 if not successful, a negative error code:
-                   (1) an error from nametable_scan()
-                   (2) an error from copy_bynumber()
-                   (3) PCRE2_ERROR_UNAVAILABLE: no group is in ovector
-                   (4) PCRE2_ERROR_UNSET: all named groups in ovector are unset
-*/
-
 PCRE2_EXP_DEFN int PCRE2_CALL_CONVENTION
 pcre2_substring_copy_byname(pcre2_match_data *match_data, PCRE2_SPTR stringname,
   PCRE2_UCHAR *buffer, PCRE2_SIZE *sizeptr)
@@ -100,23 +82,6 @@ return failrc;
 *  Copy numbered captured string to given buffer *
 *************************************************/
 
-/* This function copies a single captured substring into a given buffer,
-identifying it by number.
-
-Arguments:
-  match_data     points to the match data
-  stringnumber   the number of the required substring
-  buffer         where to put the substring
-  sizeptr        the size of the buffer, updated to the size of the substring
-
-Returns:         if successful: 0
-                 if not successful, a negative error code:
-                   PCRE2_ERROR_NOMEMORY: buffer too small
-                   PCRE2_ERROR_NOSUBSTRING: no such substring
-                   PCRE2_ERROR_UNAVAILABLE: ovector too small
-                   PCRE2_ERROR_UNSET: substring is not set
-*/
-
 PCRE2_EXP_DEFN int PCRE2_CALL_CONVENTION
 pcre2_substring_copy_bynumber(pcre2_match_data *match_data,
   uint32_t stringnumber, PCRE2_UCHAR *buffer, PCRE2_SIZE *sizeptr)
@@ -138,24 +103,6 @@ return 0;
 /*************************************************
 *          Extract named captured string         *
 *************************************************/
-
-/* This function copies a single captured substring, identified by name, into
-new memory. If the regex permits duplicate names, the first substring that is
-set is chosen.
-
-Arguments:
-  match_data     pointer to match_data
-  stringname     the name of the required substring
-  stringptr      where to put the pointer to the new memory
-  sizeptr        where to put the length of the substring
-
-Returns:         if successful: zero
-                 if not successful, a negative value:
-                   (1) an error from nametable_scan()
-                   (2) an error from get_bynumber()
-                   (3) PCRE2_ERROR_UNAVAILABLE: no group is in ovector
-                   (4) PCRE2_ERROR_UNSET: all named groups in ovector are unset
-*/
 
 PCRE2_EXP_DEFN int PCRE2_CALL_CONVENTION
 pcre2_substring_get_byname(pcre2_match_data *match_data,
@@ -182,28 +129,9 @@ for (entry = first; entry <= last; entry += entrysize)
 return failrc;
 }
 
-
-
 /*************************************************
 *      Extract captured string to new memory     *
 *************************************************/
-
-/* This function copies a single captured substring into a piece of new
-memory.
-
-Arguments:
-  match_data     points to match data
-  stringnumber   the number of the required substring
-  stringptr      where to put a pointer to the new memory
-  sizeptr        where to put the size of the substring
-
-Returns:         if successful: 0
-                 if not successful, a negative error code:
-                   PCRE2_ERROR_NOMEMORY: failed to get memory
-                   PCRE2_ERROR_NOSUBSTRING: no such substring
-                   PCRE2_ERROR_UNAVAILABLE: ovector too small
-                   PCRE2_ERROR_UNSET: substring is not set
-*/
 
 PCRE2_EXP_DEFN int PCRE2_CALL_CONVENTION
 pcre2_substring_get_bynumber(pcre2_match_data *match_data,
@@ -226,16 +154,9 @@ yield[size] = 0;
 return 0;
 }
 
-
-
 /*************************************************
 *       Free memory obtained by get_substring    *
 *************************************************/
-
-/*
-Argument:     the result of a previous pcre2_substring_get_byxxx()
-Returns:      nothing
-*/
 
 PCRE2_EXP_DEFN void PCRE2_CALL_CONVENTION
 pcre2_substring_free(PCRE2_UCHAR *string)
@@ -247,22 +168,9 @@ if (string != NULL)
   }
 }
 
-
-
 /*************************************************
 *         Get length of a named substring        *
 *************************************************/
-
-/* This function returns the length of a named captured substring. If the regex
-permits duplicate names, the first substring that is set is chosen.
-
-Arguments:
-  match_data      pointer to match data
-  stringname      the name of the required substring
-  sizeptr         where to put the length
-
-Returns:          0 if successful, else a negative error number
-*/
 
 PCRE2_EXP_DEFN int PCRE2_CALL_CONVENTION
 pcre2_substring_length_byname(pcre2_match_data *match_data,
@@ -289,27 +197,9 @@ for (entry = first; entry <= last; entry += entrysize)
 return failrc;
 }
 
-
-
 /*************************************************
 *        Get length of a numbered substring      *
 *************************************************/
-
-/* This function returns the length of a captured substring. If the start is
-beyond the end (which can happen when \K is used in an assertion), it sets the
-length to zero.
-
-Arguments:
-  match_data      pointer to match data
-  stringnumber    the number of the required substring
-  sizeptr         where to put the length, if not NULL
-
-Returns:         if successful: 0
-                 if not successful, a negative error code:
-                   PCRE2_ERROR_NOSUBSTRING: no such substring
-                   PCRE2_ERROR_UNAVAILABLE: ovector is too small
-                   PCRE2_ERROR_UNSET: substring is not set
-*/
 
 PCRE2_EXP_DEFN int PCRE2_CALL_CONVENTION
 pcre2_substring_length_bynumber(pcre2_match_data *match_data,
@@ -345,28 +235,9 @@ if (sizeptr != NULL) *sizeptr = (left > right)? 0 : right - left;
 return 0;
 }
 
-
-
 /*************************************************
 *    Extract all captured strings to new memory  *
 *************************************************/
-
-/* This function gets one chunk of memory and builds a list of pointers and all
-the captured substrings in it. A NULL pointer is put on the end of the list.
-The substrings are zero-terminated, but also, if the final argument is
-non-NULL, a list of lengths is also returned. This allows binary data to be
-handled.
-
-Arguments:
-  match_data     points to the match data
-  listptr        set to point to the list of pointers
-  lengthsptr     set to point to the list of lengths (may be NULL)
-
-Returns:         if successful: 0
-                 if not successful, a negative error code:
-                   PCRE2_ERROR_NOMEMORY: failed to get memory,
-                   or a match failure code
-*/
 
 PCRE2_EXP_DEFN int PCRE2_CALL_CONVENTION
 pcre2_substring_list_get(pcre2_match_data *match_data, PCRE2_UCHAR ***listptr,
@@ -415,10 +286,6 @@ for (i = 0; i < count2; i += 2)
   {
   size = (ovector[i+1] > ovector[i])? (ovector[i+1] - ovector[i]) : 0;
 
-  /* Size == 0 includes the case when the capture is unset. Avoid adding
-  PCRE2_UNSET to match_data->subject because it overflows, even though with
-  zero size calling memcpy() is harmless. */
-
   if (size != 0) memcpy(sp, match_data->subject + ovector[i], CU2BYTES(size));
   *listp++ = sp;
   if (lensp != NULL) *lensp++ = size;
@@ -430,16 +297,9 @@ for (i = 0; i < count2; i += 2)
 return 0;
 }
 
-
-
 /*************************************************
 *   Free memory obtained by substring_list_get   *
 *************************************************/
-
-/*
-Argument:     the result of a previous pcre2_substring_list_get()
-Returns:      nothing
-*/
 
 PCRE2_EXP_DEFN void PCRE2_CALL_CONVENTION
 pcre2_substring_list_free(PCRE2_SPTR *list)
@@ -451,30 +311,9 @@ if (list != NULL)
   }
 }
 
-
-
 /*************************************************
 *     Find (multiple) entries for named string   *
 *************************************************/
-
-/* This function scans the nametable for a given name, using binary chop. It
-returns either two pointers to the entries in the table, or, if no pointers are
-given, the number of a unique group with the given name. If duplicate names are
-permitted, and the name is not unique, an error is generated.
-
-Arguments:
-  code        the compiled regex
-  stringname  the name whose entries required
-  firstptr    where to put the pointer to the first entry
-  lastptr     where to put the pointer to the last entry
-
-Returns:      PCRE2_ERROR_NOSUBSTRING if the name is not found
-              otherwise, if firstptr and lastptr are NULL:
-                a group number for a unique substring
-                else PCRE2_ERROR_NOUNIQUESUBSTRING
-              otherwise:
-                the length of each entry, having set firstptr and lastptr
-*/
 
 PCRE2_EXP_DEFN int PCRE2_CALL_CONVENTION
 pcre2_substring_nametable_scan(const pcre2_code *code, PCRE2_SPTR stringname,
@@ -519,23 +358,9 @@ while (top > bot)
 return PCRE2_ERROR_NOSUBSTRING;
 }
 
-
 /*************************************************
 *           Find number for named string         *
 *************************************************/
-
-/* This function is a convenience wrapper for pcre2_substring_nametable_scan()
-when it is known that names are unique. If there are duplicate names, it is not
-defined which number is returned.
-
-Arguments:
-  code        the compiled regex
-  stringname  the name whose number is required
-
-Returns:      the number of the named parenthesis, or a negative number
-                PCRE2_ERROR_NOSUBSTRING if not found
-                PCRE2_ERROR_NOUNIQUESUBSTRING if not unique
-*/
 
 PCRE2_EXP_DEFN int PCRE2_CALL_CONVENTION
 pcre2_substring_number_from_name(const pcre2_code *code,

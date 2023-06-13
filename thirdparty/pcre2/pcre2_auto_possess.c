@@ -38,34 +38,15 @@ POSSIBILITY OF SUCH DAMAGE.
 -----------------------------------------------------------------------------
 */
 
-/* This module contains functions that scan a compiled pattern and change
-repeats into possessive repeats where possible. */
-
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-
 #include "pcre2_internal.h"
-
 
 /*************************************************
 *        Tables for auto-possessification        *
 *************************************************/
-
-/* This table is used to check whether auto-possessification is possible
-between adjacent character-type opcodes. The left-hand (repeated) opcode is
-used to select the row, and the right-hand opcode is use to select the column.
-A value of 1 means that auto-possessification is OK. For example, the second
-value in the first row means that \D+\d can be turned into \D++\d.
-
-The Unicode property types (\P and \p) have to be present to fill out the table
-because of what their opcode values are, but the table values should always be
-zero because property types are handled separately in the code. The last four
-columns apply to items that cannot be repeated, so there is no need to have
-rows for them. Note that OP_DIGIT etc. are generated only when PCRE_UCP is
-*not* set. When it is set, \d etc. are converted into OP_(NOT_)PROP codes. */
 
 #define APTROWS (LAST_AUTOTAB_LEFT_OP - FIRST_AUTOTAB_OP + 1)
 #define APTCOLS (LAST_AUTOTAB_RIGHT_OP - FIRST_AUTOTAB_OP + 1)
@@ -92,35 +73,6 @@ static const uint8_t autoposstab[APTROWS][APTCOLS] = {
 };
 
 #ifdef SUPPORT_UNICODE
-/* This table is used to check whether auto-possessification is possible
-between adjacent Unicode property opcodes (OP_PROP and OP_NOTPROP). The
-left-hand (repeated) opcode is used to select the row, and the right-hand
-opcode is used to select the column. The values are as follows:
-
-  0   Always return FALSE (never auto-possessify)
-  1   Character groups are distinct (possessify if both are OP_PROP)
-  2   Check character categories in the same group (general or particular)
-  3   TRUE if the two opcodes are not the same (PROP vs NOTPROP)
-
-  4   Check left general category vs right particular category
-  5   Check right general category vs left particular category
-
-  6   Left alphanum vs right general category
-  7   Left space vs right general category
-  8   Left word vs right general category
-
-  9   Right alphanum vs left general category
- 10   Right space vs left general category
- 11   Right word vs left general category
-
- 12   Left alphanum vs right particular category
- 13   Left space vs right particular category
- 14   Left word vs right particular category
-
- 15   Right alphanum vs left particular category
- 16   Right space vs left particular category
- 17   Right word vs left particular category
-*/
 
 static const uint8_t propposstab[PT_TABSIZE][PT_TABSIZE] = {
 /* ANY LAMP GC  PC  SC ALNUM SPACE PXSPACE WORD CLIST UCNC */
@@ -137,13 +89,6 @@ static const uint8_t propposstab[PT_TABSIZE][PT_TABSIZE] = {
   { 0,  0,  0,  0,  0,    0,    0,      0,   0,    0,   3 }   /* PT_UCNC */
 };
 
-/* This table is used to check whether auto-possessification is possible
-between adjacent Unicode property opcodes (OP_PROP and OP_NOTPROP) when one
-specifies a general category and the other specifies a particular category. The
-row is selected by the general category and the column by the particular
-category. The value is 1 if the particular category is not part of the general
-category. */
-
 static const uint8_t catposstab[7][30] = {
 /* Cc Cf Cn Co Cs Ll Lm Lo Lt Lu Mc Me Mn Nd Nl No Pc Pd Pe Pf Pi Po Ps Sc Sk Sm So Zl Zp Zs */
   { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },  /* C */
@@ -155,17 +100,6 @@ static const uint8_t catposstab[7][30] = {
   { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0 }   /* Z */
 };
 
-/* This table is used when checking ALNUM, (PX)SPACE, SPACE, and WORD against
-a general or particular category. The properties in each row are those
-that apply to the character set in question. Duplication means that a little
-unnecessary work is done when checking, but this keeps things much simpler
-because they can all use the same code. For more details see the comment where
-this table is used.
-
-Note: SPACE and PXSPACE used to be different because Perl excluded VT from
-"space", but from Perl 5.18 it's included, so both categories are treated the
-same here. */
-
 static const uint8_t posspropstab[3][4] = {
   { ucp_L, ucp_N, ucp_N, ucp_Nl },  /* ALNUM, 3rd and 4th values redundant */
   { ucp_Z, ucp_Z, ucp_C, ucp_Cc },  /* SPACE and PXSPACE, 2nd value redundant */
@@ -173,24 +107,10 @@ static const uint8_t posspropstab[3][4] = {
 };
 #endif  /* SUPPORT_UNICODE */
 
-
-
 #ifdef SUPPORT_UNICODE
 /*************************************************
 *        Check a character and a property        *
 *************************************************/
-
-/* This function is called by compare_opcodes() when a property item is
-adjacent to a fixed character.
-
-Arguments:
-  c            the character
-  ptype        the property type
-  pdata        the data for the type
-  negated      TRUE if it's a negated property (\P or \p{^)
-
-Returns:       TRUE if auto-possessifying is OK
-*/
 
 static BOOL
 check_char_prop(uint32_t c, unsigned int ptype, unsigned int pdata,
@@ -215,15 +135,9 @@ switch(ptype)
   case PT_SC:
   return (pdata == prop->script) == negated;
 
-  /* These are specials */
-
   case PT_ALNUM:
   return (PRIV(ucp_gentype)[prop->chartype] == ucp_L ||
           PRIV(ucp_gentype)[prop->chartype] == ucp_N) == negated;
-
-  /* Perl space used to exclude VT, but from Perl 5.18 it is included, which
-  means that Perl space and POSIX space are now identical. PCRE was changed
-  at release 8.34. */
 
   case PT_SPACE:    /* Perl space */
   case PT_PXSPACE:  /* POSIX space */
@@ -257,18 +171,9 @@ return FALSE;
 }
 #endif  /* SUPPORT_UNICODE */
 
-
-
 /*************************************************
 *        Base opcode of repeated opcodes         *
 *************************************************/
-
-/* Returns the base opcode for repeated single character type opcodes. If the
-opcode is not a repeated character type, it returns with the original value.
-
-Arguments:  c opcode
-Returns:    base opcode for the type
-*/
 
 static PCRE2_UCHAR
 get_repeat_base(PCRE2_UCHAR c)
@@ -281,28 +186,9 @@ return (c > OP_TYPEPOSUPTO)? c :
                              OP_STAR;
 }
 
-
 /*************************************************
 *        Fill the character property list        *
 *************************************************/
-
-/* Checks whether the code points to an opcode that can take part in auto-
-possessification, and if so, fills a list with its properties.
-
-Arguments:
-  code        points to start of expression
-  utf         TRUE if in UTF mode
-  ucp         TRUE if in UCP mode
-  fcc         points to the case-flipping table
-  list        points to output list
-              list[0] will be filled with the opcode
-              list[1] will be non-zero if this opcode
-                can match an empty character string
-              list[2..7] depends on the opcode
-
-Returns:      points to the start of the next opcode if *code is accepted
-              NULL if *code is not accepted
-*/
 
 static PCRE2_SPTR
 get_chr_property_list(PCRE2_SPTR code, BOOL utf, BOOL ucp, const uint8_t *fcc,
@@ -408,8 +294,6 @@ switch(c)
   list[3] = fcc[chr];
 #endif
 
-  /* The othercase might be the same value. */
-
   if (chr == list[3])
     list[3] = NOTACHAR;
   else
@@ -426,8 +310,6 @@ switch(c)
     return code + 2;
     }
 
-  /* Convert only if we have enough space. */
-
   clist_src = PRIV(ucd_caseless_sets) + code[1];
   clist_dest = list + 2;
   code += 2;
@@ -435,8 +317,6 @@ switch(c)
   do {
      if (clist_dest >= list + 8)
        {
-       /* Early return if there is not enough space. This should never
-       happen, since all clists are shorter than 5 character now. */
        list[2] = code[0];
        list[3] = code[1];
        return code;
@@ -444,9 +324,6 @@ switch(c)
      *clist_dest++ = *clist_src;
      }
   while(*clist_src++ != NOTACHAR);
-
-  /* All characters are stored. The terminating NOTACHAR is copied from the
-  clist itself. */
 
   list[0] = (c == OP_PROP) ? OP_CHAR : OP_NOT;
   return code;
@@ -493,26 +370,9 @@ switch(c)
 return NULL;    /* Opcode not accepted */
 }
 
-
-
 /*************************************************
 *    Scan further character sets for match       *
 *************************************************/
-
-/* Checks whether the base and the current opcode have a common character, in
-which case the base cannot be possessified.
-
-Arguments:
-  code        points to the byte code
-  utf         TRUE in UTF mode
-  ucp         TRUE in UCP mode
-  cb          compile data block
-  base_list   the data list of the base opcode
-  base_end    the end of the base opcode
-  rec_limit   points to recursion depth counter
-
-Returns:      TRUE if the auto-possessification is possible
-*/
 
 static BOOL
 compare_opcodes(PCRE2_SPTR code, BOOL utf, BOOL ucp, const compile_block *cb,
@@ -535,19 +395,10 @@ BOOL entered_a_group = FALSE;
 
 if (--(*rec_limit) <= 0) return FALSE;  /* Recursion has gone too deep */
 
-/* Note: the base_list[1] contains whether the current opcode has a greedy
-(represented by a non-zero value) quantifier. This is a different from
-other character type lists, which store here that the character iterator
-matches to an empty string (also represented by a non-zero value). */
-
 for(;;)
   {
-  /* All operations move the code pointer forward.
-  Therefore infinite recursions are not possible. */
 
   c = *code;
-
-  /* Skip over callouts */
 
   if (c == OP_CALLOUT)
     {
@@ -561,43 +412,23 @@ for(;;)
     continue;
     }
 
-  /* At the end of a branch, skip to the end of the group. */
-
   if (c == OP_ALT)
     {
     do code += GET(code, 1); while (*code == OP_ALT);
     c = *code;
     }
 
-  /* Inspect the next opcode. */
-
   switch(c)
     {
-    /* We can always possessify a greedy iterator at the end of the pattern,
-    which is reached after skipping over the final OP_KET. A non-greedy
-    iterator must never be possessified. */
 
     case OP_END:
     return base_list[1] != 0;
-
-    /* When an iterator is at the end of certain kinds of group we can inspect
-    what follows the group by skipping over the closing ket. Note that this
-    does not apply to OP_KETRMAX or OP_KETRMIN because what follows any given
-    iteration is variable (could be another iteration or could be the next
-    item). As these two opcodes are not listed in the next switch, they will
-    end up as the next code to inspect, and return FALSE by virtue of being
-    unsupported. */
 
     case OP_KET:
     case OP_KETRPOS:
     /* The non-greedy case cannot be converted to a possessive form. */
 
     if (base_list[1] == 0) return FALSE;
-
-    /* If the bracket is capturing it might be referenced by an OP_RECURSE
-    so its last iterator can never be possessified if the pattern contains
-    recursions. (This could be improved by keeping a list of group numbers that
-    are called by recursion.) */
 
     switch(*(code - GET(code, 1)))
       {
@@ -608,18 +439,10 @@ for(;;)
       if (cb->had_recurse) return FALSE;
       break;
 
-      /* A script run might have to backtrack if the iterated item can match
-      characters from more than one script. So give up unless repeating an
-      explicit character. */
-
       case OP_SCRIPT_RUN:
       if (base_list[0] != OP_CHAR && base_list[0] != OP_CHARI)
         return FALSE;
       break;
-
-      /* Atomic sub-patterns and assertions can always auto-possessify their
-      last iterator. However, if the group was entered as a result of checking
-      a previous iterator, this is not possible. */
 
       case OP_ASSERT:
       case OP_ASSERT_NOT:
@@ -628,29 +451,19 @@ for(;;)
       case OP_ONCE:
       return !entered_a_group;
 
-      /* Non-atomic assertions - don't possessify last iterator. This needs
-      more thought. */
-
       case OP_ASSERT_NA:
       case OP_ASSERTBACK_NA:
       return FALSE;
       }
 
-    /* Skip over the bracket and inspect what comes next. */
-
     code += PRIV(OP_lengths)[c];
     continue;
-
-    /* Handle cases where the next item is a group. */
 
     case OP_ONCE:
     case OP_BRA:
     case OP_CBRA:
     next_code = code + GET(code, 1);
     code += PRIV(OP_lengths)[c];
-
-    /* Check each branch. We have to recurse a level for all but the last
-    branch. */
 
     while (*next_code == OP_ALT)
       {
@@ -672,8 +485,6 @@ for(;;)
 
     do next_code += GET(next_code, 1); while (*next_code == OP_ALT);
 
-    /* The bracket content will be checked by the OP_BRA/OP_CBRA case above. */
-
     next_code += 1 + LINK_SIZE;
     if (!compare_opcodes(next_code, utf, ucp, cb, base_list, base_end,
          rec_limit))
@@ -682,21 +493,12 @@ for(;;)
     code += PRIV(OP_lengths)[c];
     continue;
 
-    /* The next opcode does not need special handling; fall through and use it
-    to see if the base can be possessified. */
-
     default:
     break;
     }
 
-  /* We now have the next appropriate opcode to compare with the base. Check
-  for a supported opcode, and load its properties. */
-
   code = get_chr_property_list(code, utf, ucp, cb->fcc, list);
   if (code == NULL) return FALSE;    /* Unsupported */
-
-  /* If either opcode is a small character list, set pointers for comparing
-  characters from that list with another list, or with a property. */
 
   if (base_list[0] == OP_CHAR)
     {
@@ -708,8 +510,6 @@ for(;;)
     chr_ptr = list + 2;
     list_ptr = base_list;
     }
-
-  /* Character bitsets can also be compared to certain opcodes. */
 
   else if (base_list[0] == OP_CLASS || list[0] == OP_CLASS
 #if PCRE2_CODE_UNIT_WIDTH == 8
@@ -782,9 +582,6 @@ for(;;)
       return FALSE;
       }
 
-    /* Because the bit sets are unaligned bytes, we need to perform byte
-    comparison here. */
-
     set_end = set1 + 32;
     if (invert_bits)
       {
@@ -808,9 +605,6 @@ for(;;)
     continue;
     }
 
-  /* Some property combinations also acceptable. Unicode property opcodes are
-  processed specially; the rest can be handled with a lookup table. */
-
   else
     {
     uint32_t leftop, rightop;
@@ -833,15 +627,6 @@ for(;;)
         BOOL risprop = rightop == OP_PROP;
         BOOL bothprop = lisprop && risprop;
 
-        /* There's a table that specifies how each combination is to be
-        processed:
-          0   Always return FALSE (never auto-possessify)
-          1   Character groups are distinct (possessify if both are OP_PROP)
-          2   Check character categories in the same group (general or particular)
-          3   Return TRUE if the two opcodes are not the same
-          ... see comments below
-        */
-
         n = propposstab[base_list[2]][list[2]];
         switch(n)
           {
@@ -857,25 +642,6 @@ for(;;)
           case 5:  /* Right general category, left particular category */
           accepted = lisprop && catposstab[list[3]][base_list[3]] == same;
           break;
-
-          /* This code is logically tricky. Think hard before fiddling with it.
-          The posspropstab table has four entries per row. Each row relates to
-          one of PCRE's special properties such as ALNUM or SPACE or WORD.
-          Only WORD actually needs all four entries, but using repeats for the
-          others means they can all use the same code below.
-
-          The first two entries in each row are Unicode general categories, and
-          apply always, because all the characters they include are part of the
-          PCRE character set. The third and fourth entries are a general and a
-          particular category, respectively, that include one or more relevant
-          characters. One or the other is used, depending on whether the check
-          is for a general or a particular category. However, in both cases the
-          category contains more characters than the specials that are defined
-          for the property being tested against. Therefore, it cannot be used
-          in a NOTPROP case.
-
-          Example: the row for WORD contains ucp_L, ucp_N, ucp_P, ucp_Po.
-          Underscore is covered by ucp_P or ucp_Po. */
 
           case 6:  /* Left alphanum vs right general category */
           case 7:  /* Left space vs right general category */
@@ -934,9 +700,6 @@ for(;;)
     continue;
     }
 
-  /* Control reaches here only if one of the items is a small character list.
-  All characters are checked against the other side. */
-
   do
     {
     chr = *chr_ptr;
@@ -964,9 +727,6 @@ for(;;)
       while(*ochr_ptr != NOTACHAR);
       if (*ochr_ptr == NOTACHAR) return FALSE;   /* Not found */
       break;
-
-      /* Note that OP_DIGIT etc. are generated only when PCRE2_UCP is *not*
-      set. When it is set, \d etc. are converted into OP_(NOT_)PROP codes. */
 
       case OP_DIGIT:
       if (chr < 256 && (cb->ctypes[chr] & ctype_digit) != 0) return FALSE;
@@ -1080,35 +840,13 @@ for(;;)
     }
   while(*chr_ptr != NOTACHAR);
 
-  /* At least one character must be matched from this opcode. */
-
   if (list[1] == 0) return TRUE;
   }
-
-/* Control never reaches here. There used to be a fail-save return FALSE; here,
-but some compilers complain about an unreachable statement. */
 }
-
-
 
 /*************************************************
 *    Scan compiled regex for auto-possession     *
 *************************************************/
-
-/* Replaces single character iterations with their possessive alternatives
-if appropriate. This function modifies the compiled opcode! Hitting a
-non-existent opcode may indicate a bug in PCRE2, but it can also be caused if a
-bad UTF string was compiled with PCRE2_NO_UTF_CHECK. The rec_limit catches
-overly complicated or large patterns. In these cases, the check just stops,
-leaving the remainder of the pattern unpossessified.
-
-Arguments:
-  code        points to start of the byte code
-  cb          compile data block
-
-Returns:      0 for success
-              -1 if a non-existant opcode is encountered
-*/
 
 int
 PRIV(auto_possessify)(PCRE2_UCHAR *code, const compile_block *cb)
@@ -1264,13 +1002,7 @@ for (;;)
     break;
     }
 
-  /* Add in the fixed length from the table */
-
   code += PRIV(OP_lengths)[c];
-
-  /* In UTF-8 and UTF-16 modes, opcodes that are followed by a character may be
-  followed by a multi-byte character. The length in the table is a minimum, so
-  we have to arrange to skip the extra code units. */
 
 #ifdef MAYBE_UTF_MULTI
   if (utf) switch(c)

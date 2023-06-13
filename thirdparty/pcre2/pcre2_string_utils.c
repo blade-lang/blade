@@ -38,11 +38,6 @@ POSSIBILITY OF SUCH DAMAGE.
 -----------------------------------------------------------------------------
 */
 
-/* This module contains internal functions for comparing and finding the length
-of strings. These are used instead of strcmp() etc because the standard
-functions work only on 8-bit data. */
-
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -53,10 +48,6 @@ functions work only on 8-bit data. */
 /*************************************************
 *    Emulated memmove() for systems without it   *
 *************************************************/
-
-/* This function can make use of bcopy() if it is available. Otherwise do it by
-steam, as there some non-Unix environments that lack both memmove() and
-bcopy(). */
 
 #if !defined(VPCOMPAT) && !defined(HAVE_MEMMOVE)
 void *
@@ -85,18 +76,9 @@ else
 }
 #endif   /* not VPCOMPAT && not HAVE_MEMMOVE */
 
-
 /*************************************************
 *    Compare two zero-terminated PCRE2 strings   *
 *************************************************/
-
-/*
-Arguments:
-  str1        first string
-  str2        second string
-
-Returns:      0, 1, or -1
-*/
 
 int
 PRIV(strcmp)(PCRE2_SPTR str1, PCRE2_SPTR str2)
@@ -111,20 +93,9 @@ while (*str1 != '\0' || *str2 != '\0')
 return 0;
 }
 
-
 /*************************************************
 *  Compare zero-terminated PCRE2 & 8-bit strings *
 *************************************************/
-
-/* As the 8-bit string is almost always a literal, its type is specified as
-const char *.
-
-Arguments:
-  str1        first string
-  str2        second string
-
-Returns:      0, 1, or -1
-*/
 
 int
 PRIV(strcmp_c8)(PCRE2_SPTR str1, const char *str2)
@@ -139,19 +110,9 @@ while (*str1 != '\0' || *str2 != '\0')
 return 0;
 }
 
-
 /*************************************************
 *    Compare two PCRE2 strings, given a length   *
 *************************************************/
-
-/*
-Arguments:
-  str1        first string
-  str2        second string
-  len         the length
-
-Returns:      0, 1, or -1
-*/
 
 int
 PRIV(strncmp)(PCRE2_SPTR str1, PCRE2_SPTR str2, size_t len)
@@ -166,21 +127,9 @@ for (; len > 0; len--)
 return 0;
 }
 
-
 /*************************************************
 * Compare PCRE2 string to 8-bit string by length *
 *************************************************/
-
-/* As the 8-bit string is almost always a literal, its type is specified as
-const char *.
-
-Arguments:
-  str1        first string
-  str2        second string
-  len         the length
-
-Returns:      0, 1, or -1
-*/
 
 int
 PRIV(strncmp_c8)(PCRE2_SPTR str1, const char *str2, size_t len)
@@ -195,15 +144,9 @@ for (; len > 0; len--)
 return 0;
 }
 
-
 /*************************************************
 *        Find the length of a PCRE2 string       *
 *************************************************/
-
-/*
-Argument:    the string
-Returns:     the length
-*/
 
 PCRE2_SIZE
 PRIV(strlen)(PCRE2_SPTR str)
@@ -213,17 +156,9 @@ while (*str++ != 0) c++;
 return c;
 }
 
-
 /*************************************************
 * Copy 8-bit 0-terminated string to PCRE2 string *
 *************************************************/
-
-/* Arguments:
-  str1     buffer to receive the string
-  str2     8-bit string to be copied
-
-Returns:   the number of code units used (excluding trailing zero)
-*/
 
 PCRE2_SIZE
 PRIV(strcpy_c8)(PCRE2_UCHAR *str1, const char *str2)

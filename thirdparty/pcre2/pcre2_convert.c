@@ -98,28 +98,9 @@ static const char *posix_meta_escapes =
   STR_LEFT_CURLY_BRACKET STR_RIGHT_CURLY_BRACKET
   STR_1 STR_2 STR_3 STR_4 STR_5 STR_6 STR_7 STR_8 STR_9;
 
-
-
 /*************************************************
 *           Convert a POSIX pattern              *
 *************************************************/
-
-/* This function handles both basic and extended POSIX patterns.
-
-Arguments:
-  pattype        the pattern type
-  pattern        the pattern
-  plength        length in code units
-  utf            TRUE if UTF
-  use_buffer     where to put the output
-  use_length     length of use_buffer
-  bufflenptr     where to put the used length
-  dummyrun       TRUE if a dummy run
-  ccontext       the convert context
-
-Returns:         0 => success
-                !0 => error code
-*/
 
 static int
 convert_posix(uint32_t pattype, PCRE2_SPTR pattern, PCRE2_SIZE plength,
@@ -142,27 +123,17 @@ BOOL nextisliteral = FALSE;
 (void)utf;       /* Not used when Unicode not supported */
 (void)ccontext;  /* Not currently used */
 
-/* Initialize default for error offset as end of input. */
-
 *bufflenptr = plength;
 PUTCHARS(STR_STAR_NUL);
-
-/* Now scan the input. */
 
 while (plength > 0)
   {
   uint32_t c, sc;
   int clength = 1;
 
-  /* Add in the length of the last item, then, if in the dummy run, pull the
-  pointer back to the start of the (temporary) buffer and then remember the
-  start of the next item. */
-
   convlength += p - pp;
   if (dummyrun) p = use_buffer;
   pp = p;
-
-  /* Pick up the next character */
 
 #ifndef SUPPORT_UNICODE
   c = *posix;
@@ -175,8 +146,6 @@ while (plength > 0)
   sc = nextisliteral? 0 : c;
   nextisliteral = FALSE;
 
-  /* Handle a character within a class. */
-
   if (posix_state >= POSIX_CLASS_NOT_STARTED)
     {
     if (c == CHAR_RIGHT_SQUARE_BRACKET)
@@ -184,8 +153,6 @@ while (plength > 0)
       PUTCHARS(STR_RIGHT_SQUARE_BRACKET);
       posix_state = POSIX_NOT_BRACKET;
       }
-
-    /* Not the end of the class */
 
     else
       {
@@ -202,7 +169,6 @@ while (plength > 0)
           posix++;
           continue;    /* With next character after :] */
           }
-        /* Fall through */
 
         case POSIX_CLASS_NOT_STARTED:
         if (c == CHAR_LEFT_SQUARE_BRACKET)
@@ -221,16 +187,12 @@ while (plength > 0)
       }
     }
 
-  /* Handle a character not within a class. */
-
   else switch(sc)
     {
     case CHAR_LEFT_SQUARE_BRACKET:
     PUTCHARS(STR_LEFT_SQUARE_BRACKET);
 
 #ifdef NEVER
-    /* We could handle special cases [[:<:]] and [[:>:]] (which PCRE does
-    support) but they are not part of POSIX 1003.1. */
 
     if (plength >= 6)
       {
@@ -252,11 +214,7 @@ while (plength > 0)
       }
 #endif
 
-    /* Handle start of "normal" character classes */
-
     posix_state = POSIX_CLASS_NOT_STARTED;
-
-    /* Handle ^ and ] as first characters */
 
     if (plength > 0)
       {
@@ -359,12 +317,9 @@ convlength += p - pp;        /* Final segment */
 return 0;
 }
 
-
 /*************************************************
 *           Convert a glob pattern               *
 *************************************************/
-
-/* Context for writing the output into a buffer. */
 
 typedef struct pcre2_output_context {
   PCRE2_UCHAR *output;                  /* current output position */
@@ -372,14 +327,6 @@ typedef struct pcre2_output_context {
   PCRE2_SIZE output_size;               /* size of the output */
   uint8_t out_str[8];                   /* string copied to the output */
 } pcre2_output_context;
-
-
-/* Write a character into the output.
-
-Arguments:
-  out            output context
-  chr            the next character
-*/
 
 static void
 convert_glob_write(pcre2_output_context *out, PCRE2_UCHAR chr)
@@ -389,14 +336,6 @@ out->output_size++;
 if (out->output < out->output_end)
   *out->output++ = chr;
 }
-
-
-/* Write a string into the output.
-
-Arguments:
-  out            output context
-  length         length of out->out_str
-*/
 
 static void
 convert_glob_write_str(pcre2_output_context *out, PCRE2_SIZE length)
@@ -419,15 +358,6 @@ out->output = output;
 out->output_size = output_size;
 }
 
-
-/* Prints the separator into the output.
-
-Arguments:
-  out            output context
-  separator      glob separator
-  with_escape    backslash is needed before separator
-*/
-
 static void
 convert_glob_print_separator(pcre2_output_context *out,
   PCRE2_UCHAR separator, BOOL with_escape)
@@ -437,15 +367,6 @@ if (with_escape)
 
 convert_glob_write(out, separator);
 }
-
-
-/* Prints a wildcard into the output.
-
-Arguments:
-  out            output context
-  separator      glob separator
-  with_escape    backslash is needed before separator
-*/
 
 static void
 convert_glob_print_wildcard(pcre2_output_context *out,
@@ -459,18 +380,6 @@ convert_glob_print_separator(out, separator, with_escape);
 
 convert_glob_write(out, CHAR_RIGHT_SQUARE_BRACKET);
 }
-
-
-/* Parse a posix class.
-
-Arguments:
-  from           starting point of scanning the range
-  pattern_end    end of pattern
-  out            output context
-
-Returns:  >0 => class index
-          0  => malformed class
-*/
 
 static int
 convert_glob_parse_class(PCRE2_SPTR *from, PCRE2_SPTR pattern_end,
@@ -528,16 +437,6 @@ while (TRUE)
   }
 }
 
-/* Checks whether the character is in the class.
-
-Arguments:
-  class_index    class index
-  c              character
-
-Returns:   !0 => character is found in the class
-            0 => otherwise
-*/
-
 static BOOL
 convert_glob_char_in_class(int class_index, PCRE2_UCHAR c)
 {
@@ -559,19 +458,6 @@ switch (class_index)
   default: return isxdigit(c);
   }
 }
-
-/* Parse a range of characters.
-
-Arguments:
-  from           starting point of scanning the range
-  pattern_end    end of pattern
-  out            output context
-  separator      glob separator
-  with_escape    backslash is needed before separator
-
-Returns:         0 => success
-                !0 => error code
-*/
 
 static int
 convert_glob_parse_range(PCRE2_SPTR *from, PCRE2_SPTR pattern_end,
@@ -743,13 +629,6 @@ while (pattern < pattern_end)
 return PCRE2_ERROR_MISSING_SQUARE_BRACKET;
 }
 
-
-/* Prints a (*COMMIT) into the output.
-
-Arguments:
-  out            output context
-*/
-
 static void
 convert_glob_print_commit(pcre2_output_context *out)
 {
@@ -764,24 +643,6 @@ out->out_str[7] = CHAR_T;
 convert_glob_write_str(out, 8);
 convert_glob_write(out, CHAR_RIGHT_PARENTHESIS);
 }
-
-
-/* Bash glob converter.
-
-Arguments:
-  pattype        the pattern type
-  pattern        the pattern
-  plength        length in code units
-  utf            TRUE if UTF
-  use_buffer     where to put the output
-  use_length     length of use_buffer
-  bufflenptr     where to put the used length
-  dummyrun       TRUE if a dummy run
-  ccontext       the convert context
-
-Returns:         0 => success
-                !0 => error code
-*/
 
 static int
 convert_glob(uint32_t options, PCRE2_SPTR pattern, PCRE2_SIZE plength,
@@ -1033,25 +894,9 @@ if (result != 0)
 return 0;
 }
 
-
 /*************************************************
 *                Convert pattern                 *
 *************************************************/
-
-/* This is the external-facing function for converting other forms of pattern
-into PCRE2 regular expression patterns. On error, the bufflenptr argument is
-used to return an offset in the original pattern.
-
-Arguments:
-  pattern     the input pattern
-  plength     length of input, or PCRE2_ZERO_TERMINATED
-  options     options bits
-  buffptr     pointer to pointer to output buffer
-  bufflenptr  pointer to length of output buffer
-  ccontext    convert context or NULL
-
-Returns:      0 for success, else an error code (+ve or -ve)
-*/
 
 PCRE2_EXP_DEFN int PCRE2_CALL_CONVENTION
 pcre2_pattern_convert(PCRE2_SPTR pattern, PCRE2_SIZE plength, uint32_t options,
@@ -1079,8 +924,6 @@ if (plength == PCRE2_ZERO_TERMINATED) plength = PRIV(strlen)(pattern);
 if (ccontext == NULL) ccontext =
   (pcre2_convert_context *)(&PRIV(default_convert_context));
 
-/* Check UTF if required. */
-
 #ifndef SUPPORT_UNICODE
 if (utf)
   {
@@ -1100,17 +943,11 @@ if (utf && (options & PCRE2_CONVERT_NO_UTF_CHECK) == 0)
   }
 #endif
 
-/* If buffptr is not NULL, and what it points to is not NULL, we are being
-provided with a buffer and a length, so set them as the buffer to use. */
-
 if (buffptr != NULL && *buffptr != NULL)
   {
   use_buffer = *buffptr;
   use_length = *bufflenptr;
   }
-
-/* Call an individual converter, either just once (if a buffer was provided or
-just the length is needed), or twice (if a memory allocation is required). */
 
 for (i = 0; i < 2; i++)
   {
@@ -1140,9 +977,6 @@ for (i = 0; i < 2; i++)
       *buffptr != NULL)    /* Buffer was provided or allocated */
     return rc;
 
-  /* Allocate memory for the buffer, with hidden space for an allocator at
-  the start. The next time round the loop runs the conversion for real. */
-
   allocated = PRIV(memctl_malloc)(sizeof(pcre2_memctl) +
     (*bufflenptr + 1)*PCRE2_CODE_UNIT_WIDTH, (pcre2_memctl *)ccontext);
   if (allocated == NULL) return PCRE2_ERROR_NOMEMORY;
@@ -1152,21 +986,12 @@ for (i = 0; i < 2; i++)
   use_length = *bufflenptr + 1;
   }
 
-/* Control should never get here. */
-
 return PCRE2_ERROR_INTERNAL;
 }
-
 
 /*************************************************
 *            Free converted pattern              *
 *************************************************/
-
-/* This frees a converted pattern that was put in newly-allocated memory.
-
-Argument:   the converted pattern
-Returns:    nothing
-*/
 
 PCRE2_EXP_DEFN void PCRE2_CALL_CONVENTION
 pcre2_converted_pattern_free(PCRE2_UCHAR *converted)

@@ -38,13 +38,6 @@ POSSIBILITY OF SUCH DAMAGE.
 -----------------------------------------------------------------------------
 */
 
-
-/* This module contains the external function pcre2_maketables(), which builds
-character tables for PCRE2 in the current locale. The file is compiled on its
-own as part of the PCRE2 library. It is also included in the compilation of
-pcre2_dftables.c as a freestanding program, in which case the macro
-PCRE2_DFTABLES is defined. */
-
 #ifndef PCRE2_DFTABLES    /* Compiling the library */
 #  ifdef HAVE_CONFIG_H
 #  include "config.h"
@@ -52,25 +45,9 @@ PCRE2_DFTABLES is defined. */
 #  include "pcre2_internal.h"
 #endif
 
-
-
 /*************************************************
 *           Create PCRE2 character tables        *
 *************************************************/
-
-/* This function builds a set of character tables for use by PCRE2 and returns
-a pointer to them. They are build using the ctype functions, and consequently
-their contents will depend upon the current locale setting. When compiled as
-part of the library, the store is obtained via a general context malloc, if
-supplied, but when PCRE2_DFTABLES is defined (when compiling the pcre2_dftables
-freestanding auxiliary program) malloc() is used, and the function has a
-different name so as not to clash with the prototype in pcre2.h.
-
-Arguments:   none when PCRE2_DFTABLES is defined
-               else a PCRE2 general context or NULL
-Returns:     pointer to the contiguous block of data
-               else NULL if memory allocation failed
-*/
 
 #ifdef PCRE2_DFTABLES  /* Included in freestanding pcre2_dftables program */
 static const uint8_t *maketables(void)
@@ -92,26 +69,9 @@ uint8_t *p;
 if (yield == NULL) return NULL;
 p = yield;
 
-/* First comes the lower casing table */
-
 for (i = 0; i < 256; i++) *p++ = tolower(i);
 
-/* Next the case-flipping table */
-
 for (i = 0; i < 256; i++) *p++ = islower(i)? toupper(i) : tolower(i);
-
-/* Then the character class tables. Don't try to be clever and save effort on
-exclusive ones - in some locales things may be different.
-
-Note that the table for "space" includes everything "isspace" gives, including
-VT in the default locale. This makes it work for the POSIX class [:space:].
-From PCRE1 release 8.34 and for all PCRE2 releases it is also correct for Perl
-space, because Perl added VT at release 5.18.
-
-Note also that it is possible for a character to be alnum or alpha without
-being lower or upper, such as "male and female ordinals" (\xAA and \xBA) in the
-fr_FR locale (at least under Debian Linux's locales as of 12/2005). So we must
-test for alnum specially. */
 
 memset(p, 0, cbit_length);
 for (i = 0; i < 256; i++)
@@ -129,11 +89,6 @@ for (i = 0; i < 256; i++)
   if (iscntrl(i))  p[cbit_cntrl  + i/8] |= 1u << (i&7);
   }
 p += cbit_length;
-
-/* Finally, the character type table. In this, we used to exclude VT from the
-white space chars, because Perl didn't recognize it as such for \s and for
-comments within regexes. However, Perl changed at release 5.18, so PCRE1
-changed at release 8.34 and it's always been this way for PCRE2. */
 
 for (i = 0; i < 256; i++)
   {

@@ -38,19 +38,6 @@ POSSIBILITY OF SUCH DAMAGE.
 -----------------------------------------------------------------------------
 */
 
-
-/* This module contains mode-dependent macro and structure definitions. The
-file is #included by pcre2_internal.h if PCRE2_CODE_UNIT_WIDTH is defined.
-These mode-dependent items are kept in a separate file so that they can also be
-#included multiple times for different code unit widths by pcre2test in order
-to have access to the hidden structures at all supported widths.
-
-Some of the mode-dependent macros are required at different widths for
-different parts of the pcre2test code (in particular, the included
-pcre_printint.c file). We undefine them here so that they can be re-defined for
-multiple inclusions. Not all of these are used in pcre2test, but it's easier
-just to undefine them all. */
-
 #undef ACROSSCHAR
 #undef BACKCHAR
 #undef BYTES2CU
@@ -80,22 +67,6 @@ just to undefine them all. */
 #undef PUTCHAR
 #undef PUTINC
 #undef TABLE_GET
-
-
-
-/* -------------------------- MACROS ----------------------------- */
-
-/* PCRE keeps offsets in its compiled code as at least 16-bit quantities
-(always stored in big-endian order in 8-bit mode) by default. These are used,
-for example, to link from the start of a subpattern to its alternatives and its
-end. The use of 16 bits per offset limits the size of an 8-bit compiled regex
-to around 64K, which is big enough for almost everybody. However, I received a
-request for an even bigger limit. For this reason, and also to make the code
-easier to maintain, the storing and loading of offsets from the compiled code
-unit string is now handled by the macros that are defined here.
-
-The macros are controlled by the value of LINK_SIZE. This defaults to 2, but
-values of 3 or 4 are also supported. */
 
 /* ------------------- 8-bit support  ------------------ */
 
@@ -131,7 +102,6 @@ values of 3 or 4 are also supported. */
 #else
 #error LINK_SIZE must be 2, 3, or 4
 #endif
-
 
 /* ------------------- 16-bit support  ------------------ */
 
@@ -176,18 +146,7 @@ values of 3 or 4 are also supported. */
 #error Unsupported compiling mode
 #endif
 
-
 /* --------------- Other mode-specific macros ----------------- */
-
-/* PCRE uses some other (at least) 16-bit quantities that do not change when
-the size of offsets changes. There are used for repeat counts and for other
-things such as capturing parenthesis numbers in back references.
-
-Define the number of code units required to hold a 16-bit count/offset, and
-macros to load and store such a value. For reasons that I do not understand,
-the expression in the 8-bit GET2 macro is treated by gcc as a signed
-expression, even when a is declared as unsigned. It seems that any kind of
-arithmetic results in a signed value. Hence the cast. */
 
 #if PCRE2_CODE_UNIT_WIDTH == 8
 #define IMM2_SIZE 2
@@ -199,14 +158,6 @@ arithmetic results in a signed value. Hence the cast. */
 #define GET2(a,n) a[n]
 #define PUT2(a,n,d) a[n] = d
 #endif
-
-/* Other macros that are different for 8-bit mode. The MAX_255 macro checks
-whether its argument, which is assumed to be one code unit, is less than 256.
-The CHMAX_255 macro does not assume one code unit. The maximum length of a MARK
-name must fit in one code unit; currently it is set to 255 or 65535. The
-TABLE_GET macro is used to access elements of tables containing exactly 256
-items. Its argument is a code unit. When code points can be greater than 255, a
-check is needed before accessing these tables. */
 
 #if PCRE2_CODE_UNIT_WIDTH == 8
 #define MAX_255(c) TRUE
@@ -227,30 +178,12 @@ check is needed before accessing these tables. */
 #define TABLE_GET(c, table, default) (MAX_255(c)? ((table)[c]):(default))
 #endif
 
-
 /* ----------------- Character-handling macros ----------------- */
-
-/* There is a proposed future special "UTF-21" mode, in which only the lowest
-21 bits of a 32-bit character are interpreted as UTF, with the remaining 11
-high-order bits available to the application for other uses. In preparation for
-the future implementation of this mode, there are macros that load a data item
-and, if in this special mode, mask it to 21 bits. These macros all have names
-starting with UCHAR21. In all other modes, including the normal 32-bit
-library, the macros all have the same simple definitions. When the new mode is
-implemented, it is expected that these definitions will be varied appropriately
-using #ifdef when compiling the library that supports the special mode. */
 
 #define UCHAR21(eptr)        (*(eptr))
 #define UCHAR21TEST(eptr)    (*(eptr))
 #define UCHAR21INC(eptr)     (*(eptr)++)
 #define UCHAR21INCTEST(eptr) (*(eptr)++)
-
-/* When UTF encoding is being used, a character is no longer just a single
-byte in 8-bit mode or a single short in 16-bit mode. The macros for character
-handling generate simple sequences when used in the basic mode, and more
-complicated ones for UTF characters. GETCHARLENTEST and other macros are not
-used when UTF is not supported. To make sure they can never even appear when
-UTF support is omitted, we don't even define them. */
 
 #ifndef SUPPORT_UNICODE
 
@@ -277,70 +210,37 @@ UTF support is omitted, we don't even define them. */
 #if PCRE2_CODE_UNIT_WIDTH == 8
 #define MAYBE_UTF_MULTI          /* UTF chars may use multiple code units */
 
-/* The largest UTF code point that can be encoded as a single code unit. */
-
 #define MAX_UTF_SINGLE_CU 127
-
-/* Tests whether the code point needs extra characters to decode. */
 
 #define HAS_EXTRALEN(c) HASUTF8EXTRALEN(c)
 
-/* Returns with the additional number of characters if IS_MULTICHAR(c) is TRUE.
-Otherwise it has an undefined behaviour. */
-
 #define GET_EXTRALEN(c) (PRIV(utf8_table4)[(c) & 0x3fu])
 
-/* Returns TRUE, if the given value is not the first code unit of a UTF
-sequence. */
-
 #define NOT_FIRSTCU(c) (((c) & 0xc0u) == 0x80u)
-
-/* Get the next UTF-8 character, not advancing the pointer. This is called when
-we know we are in UTF-8 mode. */
 
 #define GETCHAR(c, eptr) \
   c = *eptr; \
   if (c >= 0xc0u) GETUTF8(c, eptr);
 
-/* Get the next UTF-8 character, testing for UTF-8 mode, and not advancing the
-pointer. */
-
 #define GETCHARTEST(c, eptr) \
   c = *eptr; \
   if (utf && c >= 0xc0u) GETUTF8(c, eptr);
-
-/* Get the next UTF-8 character, advancing the pointer. This is called when we
-know we are in UTF-8 mode. */
 
 #define GETCHARINC(c, eptr) \
   c = *eptr++; \
   if (c >= 0xc0u) GETUTF8INC(c, eptr);
 
-/* Get the next character, testing for UTF-8 mode, and advancing the pointer.
-This is called when we don't know if we are in UTF-8 mode. */
-
 #define GETCHARINCTEST(c, eptr) \
   c = *eptr++; \
   if (utf && c >= 0xc0u) GETUTF8INC(c, eptr);
-
-/* Get the next UTF-8 character, not advancing the pointer, incrementing length
-if there are extra bytes. This is called when we know we are in UTF-8 mode. */
 
 #define GETCHARLEN(c, eptr, len) \
   c = *eptr; \
   if (c >= 0xc0u) GETUTF8LEN(c, eptr, len);
 
-/* Get the next UTF-8 character, testing for UTF-8 mode, not advancing the
-pointer, incrementing length if there are extra bytes. This is called when we
-do not know if we are in UTF-8 mode. */
-
 #define GETCHARLENTEST(c, eptr, len) \
   c = *eptr; \
   if (utf && c >= 0xc0u) GETUTF8LEN(c, eptr, len);
-
-/* If the pointer is not at the start of a character, move it back until
-it is. This is called only in UTF-8 mode - we don't put a test within the macro
-because almost all calls are already within a block of UTF-8 only code. */
 
 #define BACKCHAR(eptr) while((*eptr & 0xc0u) == 0x80u) eptr--
 
@@ -352,11 +252,8 @@ because almost all calls are already within a block of UTF-8 only code. */
 #define ACROSSCHAR(condition, eptr, action) \
   while((condition) && ((*eptr) & 0xc0u) == 0x80u) action
 
-/* Deposit a character into memory, returning the number of code units. */
-
 #define PUTCHAR(c, p) ((utf && c > MAX_UTF_SINGLE_CU)? \
   PRIV(ord2utf)(c,p) : (*p = c, 1))
-
 
 /* ------------------- 16-bit support  ------------------ */
 
@@ -539,7 +436,6 @@ These are all no-ops since all UTF-32 characters fit into one pcre_uchar. */
 #endif  /* UTF-32 character handling */
 #endif  /* SUPPORT_UNICODE */
 
-
 /* Mode-dependent macros that have the same definition in all modes. */
 
 #define CU2BYTES(x)     ((x)*((PCRE2_CODE_UNIT_WIDTH/8)))
@@ -547,20 +443,11 @@ These are all no-ops since all UTF-32 characters fit into one pcre_uchar. */
 #define PUTINC(a,n,d)   PUT(a,n,d), a += LINK_SIZE
 #define PUT2INC(a,n,d)  PUT2(a,n,d), a += IMM2_SIZE
 
-
 /* ----------------------- HIDDEN STRUCTURES ----------------------------- */
-
-/* NOTE: All these structures *must* start with a pcre2_memctl structure. The
-code that uses them is simpler because it assumes this. */
-
-/* The real general context structure. At present it holds only data for custom
-memory control. */
 
 typedef struct pcre2_real_general_context {
   pcre2_memctl memctl;
 } pcre2_real_general_context;
-
-/* The real compile context structure */
 
 typedef struct pcre2_real_compile_context {
   pcre2_memctl memctl;
@@ -573,8 +460,6 @@ typedef struct pcre2_real_compile_context {
   uint32_t parens_nest_limit;
   uint32_t extra_options;
 } pcre2_real_compile_context;
-
-/* The real match context structure. */
 
 typedef struct pcre2_real_match_context {
   pcre2_memctl memctl;
@@ -592,22 +477,11 @@ typedef struct pcre2_real_match_context {
   uint32_t depth_limit;
 } pcre2_real_match_context;
 
-/* The real convert context structure. */
-
 typedef struct pcre2_real_convert_context {
   pcre2_memctl memctl;
   uint32_t glob_separator;
   uint32_t glob_escape;
 } pcre2_real_convert_context;
-
-/* The real compiled code structure. The type for the blocksize field is
-defined specially because it is required in pcre2_serialize_decode() when
-copying the size from possibly unaligned memory into a variable of the same
-type. Use a macro rather than a typedef to avoid compiler warnings when this
-file is included multiple times by pcre2test. LOOKBEHIND_MAX specifies the
-largest lookbehind that is supported. (OP_REVERSE in a pattern has a 16-bit
-argument in 8-bit and 16-bit modes, so we need no more than a 16-bit field
-here.) */
 
 #undef  CODE_BLOCKSIZE_TYPE
 #define CODE_BLOCKSIZE_TYPE size_t
@@ -641,14 +515,6 @@ typedef struct pcre2_real_code {
   uint16_t name_count;            /* Number of name entries in the table */
 } pcre2_real_code;
 
-/* The real match data structure. Define ovector as large as it can ever
-actually be so that array bound checkers don't grumble. Memory for this
-structure is obtained by calling pcre2_match_data_create(), which sets the size
-as the offset of ovector plus a pair of elements for each capturable string, so
-the size varies from call to call. As the maximum number of capturing
-subpatterns is 65535 we must allow for 65536 strings to include the overall
-match. (See also the heapframe structure below.) */
-
 typedef struct pcre2_real_match_data {
   pcre2_memctl     memctl;
   const pcre2_real_code *code;    /* The pattern used for the match */
@@ -664,15 +530,9 @@ typedef struct pcre2_real_match_data {
   PCRE2_SIZE       ovector[131072]; /* Must be last in the structure */
 } pcre2_real_match_data;
 
-
 /* ----------------------- PRIVATE STRUCTURES ----------------------------- */
 
-/* These structures are not needed for pcre2test. */
-
 #ifndef PCRE2_PCRE2TEST
-
-/* Structures for checking for mutual recursion when scanning compiled or
-parsed code. */
 
 typedef struct recurse_check {
   struct recurse_check *prev;
@@ -684,23 +544,15 @@ typedef struct parsed_recurse_check {
   uint32_t *groupptr;
 } parsed_recurse_check;
 
-/* Structure for building a cache when filling in recursion offsets. */
-
 typedef struct recurse_cache {
   PCRE2_SPTR group;
   int groupnumber;
 } recurse_cache;
 
-/* Structure for maintaining a chain of pointers to the currently incomplete
-branches, for testing for left recursion while compiling. */
-
 typedef struct branch_chain {
   struct branch_chain *outer;
   PCRE2_UCHAR *current_branch;
 } branch_chain;
-
-/* Structure for building a list of named groups during the first pass of
-compiling. */
 
 typedef struct named_group {
   PCRE2_SPTR   name;          /* Points to the name in the pattern */
@@ -708,9 +560,6 @@ typedef struct named_group {
   uint16_t     length;        /* Length of the name */
   uint16_t     isdup;         /* TRUE if a duplicate */
 } named_group;
-
-/* Structure for passing "static" information around between the functions
-doing the compiling, so that they are thread-safe. */
 
 typedef struct compile_block {
   pcre2_real_compile_context *cx;  /* Points to the compile context */
@@ -755,16 +604,10 @@ typedef struct compile_block {
   BOOL dupnames;                   /* Duplicate names exist */
 } compile_block;
 
-/* Structure for keeping the properties of the in-memory stack used
-by the JIT matcher. */
-
 typedef struct pcre2_real_jit_stack {
   pcre2_memctl memctl;
   void* stack;
 } pcre2_real_jit_stack;
-
-/* Structure for items in a linked list that represents an explicit recursive
-call within the pattern when running pcre_dfa_match(). */
 
 typedef struct dfa_recursion_info {
   struct dfa_recursion_info *prevrec;
@@ -772,17 +615,7 @@ typedef struct dfa_recursion_info {
   uint32_t group_num;
 } dfa_recursion_info;
 
-/* Structure for "stack" frames that are used for remembering backtracking
-positions during matching. As these are used in a vector, with the ovector item
-being extended, the size of the structure must be a multiple of PCRE2_SIZE. The
-only way to check this at compile time is to force an error by generating an
-array with a negative size. By putting this in a typedef (which is never used),
-we don't generate any code when all is well. */
-
 typedef struct heapframe {
-
-  /* The first set of fields are variables that have to be preserved over calls
-  to RRMATCH(), but which do not need to be copied to new frames. */
 
   PCRE2_SPTR ecode;          /* The current position in the pattern */
   PCRE2_SPTR temp_sptr[2];   /* Used for short-term PCRE_SPTR values */
@@ -795,16 +628,6 @@ typedef struct heapframe {
   uint8_t return_id;         /* Where to go on in internal "return" */
   uint8_t op;                /* Processing opcode */
 
-  /* At this point, the structure is 16-bit aligned. On most architectures
-  the alignment requirement for a pointer will ensure that the eptr field below
-  is 32-bit or 64-bit aligned. However, on m68k it is fine to have a pointer
-  that is 16-bit aligned. We must therefore ensure that what comes between here
-  and eptr is an odd multiple of 16 bits so as to get back into 32-bit
-  alignment. This happens naturally when PCRE2_UCHAR is 8 bits wide, but needs
-  fudges in the other cases. In the 32-bit case the padding comes first so that
-  the occu field itself is 32-bit aligned. Without the padding, this structure
-  is no longer a multiple of PCRE2_SIZE on m68k, and the check below fails. */
-
 #if PCRE2_CODE_UNIT_WIDTH == 8
   PCRE2_UCHAR occu[6];       /* Used for other case code units */
 #elif PCRE2_CODE_UNIT_WIDTH == 16
@@ -814,13 +637,6 @@ typedef struct heapframe {
   uint8_t unused[2];         /* Ensure 32-bit alignment (see above) */
   PCRE2_UCHAR occu[1];       /* Used for other case code units */
 #endif
-
-  /* The rest have to be copied from the previous frame whenever a new frame
-  becomes current. The final field is specified as a large vector so that
-  runtime array bound checks don't catch references to it. However, for any
-  specific call to pcre2_match() the memory allocated for each frame structure
-  allows for exactly the right size ovector for the number of capturing
-  parentheses. (See also the comment for pcre2_real_match_data above.) */
 
   PCRE2_SPTR eptr;           /* MUST BE FIRST */
   PCRE2_SPTR start_match;    /* Can be adjusted by \K */
@@ -832,14 +648,8 @@ typedef struct heapframe {
   PCRE2_SIZE ovector[131072]; /* Must be last in the structure */
 } heapframe;
 
-/* This typedef is a check that the size of the heapframe structure is a
-multiple of PCRE2_SIZE. See various comments above. */
-
 typedef char check_heapframe_size[
   ((sizeof(heapframe) % sizeof(PCRE2_SIZE)) == 0)? (+1):(-1)];
-
-/* Structure for passing "static" information around between the functions
-doing traditional NFA matching (pcre2_match() and friends). */
 
 typedef struct match_block {
   pcre2_memctl memctl;            /* For general use */
@@ -887,9 +697,6 @@ typedef struct match_block {
   void  *callout_data;            /* To pass back to callouts */
   int (*callout)(pcre2_callout_block *,void *);  /* Callout function or NULL */
 } match_block;
-
-/* A similar structure is used for the same purpose by the DFA matching
-functions. */
 
 typedef struct dfa_match_block {
   pcre2_memctl memctl;            /* For general use */

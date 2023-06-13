@@ -61,27 +61,9 @@ return executable_func(arguments);
 
 #endif
 
-
 /*************************************************
 *              Do a JIT pattern match            *
 *************************************************/
-
-/* This function runs a JIT pattern match.
-
-Arguments:
-  code            points to the compiled expression
-  subject         points to the subject string
-  length          length of subject string (may contain binary zeros)
-  start_offset    where to start in the subject string
-  options         option bits
-  match_data      points to a match_data block
-  mcontext        points to a match context
-
-Returns:          > 0 => success; value is the number of ovector pairs filled
-                  = 0 => success, but ovector is not big enough
-                   -1 => failed to match (PCRE_ERROR_NOMATCH)
-                 < -1 => some kind of unexpected problem
-*/
 
 PCRE2_EXP_DEFN int PCRE2_CALL_CONVENTION
 pcre2_jit_match(const pcre2_code *code, PCRE2_SPTR subject, PCRE2_SIZE length,

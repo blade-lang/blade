@@ -38,25 +38,15 @@ POSSIBILITY OF SUCH DAMAGE.
 -----------------------------------------------------------------------------
 */
 
-/* This module contains functions for scanning a compiled pattern and
-collecting data (e.g. minimum matching length). */
-
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
 #include "pcre2_internal.h"
 
-/* The maximum remembered capturing brackets minimum. */
-
 #define MAX_CACHE_BACKREF 128
 
-/* Set a bit in the starting code unit bit map. */
-
 #define SET_BIT(c) re->start_bitmap[(c)/8] |= (1u << ((c)&7))
-
-/* Returns from set_start_bits() */
 
 enum { SSB_FAIL, SSB_DONE, SSB_CONTINUE, SSB_UNKNOWN, SSB_TOODEEP };
 
@@ -64,40 +54,6 @@ enum { SSB_FAIL, SSB_DONE, SSB_CONTINUE, SSB_UNKNOWN, SSB_TOODEEP };
 /*************************************************
 *   Find the minimum subject length for a group  *
 *************************************************/
-
-/* Scan a parenthesized group and compute the minimum length of subject that
-is needed to match it. This is a lower bound; it does not mean there is a
-string of that length that matches. In UTF mode, the result is in characters
-rather than code units. The field in a compiled pattern for storing the minimum
-length is 16-bits long (on the grounds that anything longer than that is
-pathological), so we give up when we reach that amount. This also means that
-integer overflow for really crazy patterns cannot happen.
-
-Backreference minimum lengths are cached to speed up multiple references. This
-function is called only when the highest back reference in the pattern is less
-than or equal to MAX_CACHE_BACKREF, which is one less than the size of the
-caching vector. The zeroth element contains the number of the highest set
-value.
-
-Arguments:
-  re              compiled pattern block
-  code            pointer to start of group (the bracket)
-  startcode       pointer to start of the whole pattern's code
-  utf             UTF flag
-  recurses        chain of recurse_check to catch mutual recursion
-  countptr        pointer to call count (to catch over complexity)
-  backref_cache   vector for caching back references.
-
-This function is no longer called when the pattern contains (*ACCEPT); however,
-the old code for returning -1 is retained, just in case.
-
-Returns:   the minimum length
-           -1 \C in UTF-8 mode
-              or (*ACCEPT)
-              or pattern too complicated
-           -2 internal error (missing capturing bracket)
-           -3 internal error (opcode not listed)
-*/
 
 static int
 find_minlength(const pcre2_real_code *re, PCRE2_SPTR code,
@@ -121,17 +77,9 @@ recurse_check this_recurse;
 
 if (*code >= OP_SBRA && *code <= OP_SCOND) return 0;
 
-/* Skip over capturing bracket number */
-
 if (*code == OP_CBRA || *code == OP_CBRAPOS) cc += IMM2_SIZE;
 
-/* A large and/or complex regex can take too long to process. */
-
 if ((*countptr)++ > 1000) return -1;
-
-/* Scan along the opcodes for this branch. If we get to the end of the branch,
-check the length against that of the other branches. If the accumulated length
-passes 16-bits, reset to that value and skip the rest of the branch. */
 
 for (;;)
   {
@@ -150,11 +98,6 @@ for (;;)
     case OP_COND:
     case OP_SCOND:
 
-    /* If there is only one branch in a condition, the implied branch has zero
-    length, so we don't add anything. This covers the DEFINE "condition"
-    automatically. If there are two branches we can treat it the same as any
-    other non-capturing subpattern. */
-
     cs = cc + GET(cc, 1);
     if (*cs != OP_ALT)
       {
@@ -164,10 +107,6 @@ for (;;)
     goto PROCESS_NON_CAPTURE;
 
     case OP_BRA:
-    /* There's a special case of OP_BRA, when it is wrapped round a repeated
-    OP_RECURSE. We'd like to process the latter at this level so that
-    remembering the value works for repeated cases. So we do nothing, but
-    set a fudge value to skip over the OP_KET after the recurse. */
 
     if (cc[1+LINK_SIZE] == OP_RECURSE && cc[2*(1+LINK_SIZE)] == OP_KET)
       {
@@ -191,11 +130,6 @@ for (;;)
     cc += 1 + LINK_SIZE;
     break;
 
-    /* To save time for repeated capturing subpatterns, we remember the
-    length of the previous one. Unfortunately we can't do the same for
-    the unnumbered ones above. Nor can we do this if (?| is present in the
-    pattern because captures with the same number are not then identical. */
-
     case OP_CBRA:
     case OP_SCBRA:
     case OP_CBRAPOS:
@@ -213,19 +147,9 @@ for (;;)
     cc += 1 + LINK_SIZE;
     break;
 
-    /* ACCEPT makes things far too complicated; we have to give up. In fact,
-    from 10.34 onwards, if a pattern contains (*ACCEPT), this function is not
-    used. However, leave the code in place, just in case. */
-
     case OP_ACCEPT:
     case OP_ASSERT_ACCEPT:
     return -1;
-
-    /* Reached end of a branch; if it's a ket it is the end of a nested
-    call. If it's ALT it is an alternation in a nested call. If it is END it's
-    the end of the outer call. All can be handled by the same code. If the
-    length of any branch is zero, there is no need to scan any subsequent
-    branches. */
 
     case OP_ALT:
     case OP_KET:
@@ -242,8 +166,6 @@ for (;;)
     had_recurse = FALSE;
     break;
 
-    /* Skip over assertive subpatterns */
-
     case OP_ASSERT:
     case OP_ASSERT_NOT:
     case OP_ASSERTBACK:
@@ -251,9 +173,6 @@ for (;;)
     case OP_ASSERT_NA:
     case OP_ASSERTBACK_NA:
     do cc += GET(cc, 1); while (*cc == OP_ALT);
-    /* Fall through */
-
-    /* Skip over things that don't match chars */
 
     case OP_REVERSE:
     case OP_CREF:
@@ -280,8 +199,6 @@ for (;;)
     cc += GET(cc, 1 + 2*LINK_SIZE);
     break;
 
-    /* Skip over a subpattern that has a {0} or {0,x} quantifier */
-
     case OP_BRAZERO:
     case OP_BRAMINZERO:
     case OP_BRAPOSZERO:
@@ -290,8 +207,6 @@ for (;;)
     do cc += GET(cc, 1); while (*cc == OP_ALT);
     cc += 1 + LINK_SIZE;
     break;
-
-    /* Handle literal characters and + repetitions */
 
     case OP_CHAR:
     case OP_CHARI:
@@ -322,9 +237,6 @@ for (;;)
     branchlength++;
     cc += (cc[1] == OP_PROP || cc[1] == OP_NOTPROP)? 4 : 2;
     break;
-
-    /* Handle exact repetitions. The count is already in characters, but we
-    may need to skip over a multibyte character in UTF mode.  */
 
     case OP_EXACT:
     case OP_EXACTI:
@@ -367,17 +279,10 @@ for (;;)
     cc++;
     break;
 
-    /* "Any newline" might match two characters, but it also might match just
-    one. */
-
     case OP_ANYNL:
     branchlength += 1;
     cc++;
     break;
-
-    /* The single-byte matcher means we can't proceed in UTF mode. (In
-    non-UTF mode \C will actually be turned into OP_ALLANY, so won't ever
-    appear, but leave the code, just in case.) */
 
     case OP_ANYBYTE:
 #ifdef SUPPORT_UNICODE
@@ -386,9 +291,6 @@ for (;;)
     branchlength++;
     cc++;
     break;
-
-    /* For repeated character types, we have to test for \p and \P, which have
-    an extra two bytes of parameters. */
 
     case OP_TYPESTAR:
     case OP_TYPEMINSTAR:
@@ -408,14 +310,10 @@ for (;;)
     cc += PRIV(OP_lengths)[op];
     break;
 
-    /* Check a class for variable quantification */
-
     case OP_CLASS:
     case OP_NCLASS:
 #ifdef SUPPORT_WIDE_CHARS
     case OP_XCLASS:
-    /* The original code caused an unsigned overflow in 64 bit systems,
-    so now we use a conditional statement. */
     if (op == OP_XCLASS)
       cc += GET(cc, 1);
     else
@@ -454,23 +352,6 @@ for (;;)
       }
     break;
 
-    /* Backreferences and subroutine calls (OP_RECURSE) are treated in the same
-    way: we find the minimum length for the subpattern. A recursion
-    (backreference or subroutine) causes an a flag to be set that causes the
-    length of this branch to be ignored. The logic is that a recursion can only
-    make sense if there is another alternative that stops the recursing. That
-    will provide the minimum length (when no recursion happens).
-
-    If PCRE2_MATCH_UNSET_BACKREF is set, a backreference to an unset bracket
-    matches an empty string (by default it causes a matching failure), so in
-    that case we must set the minimum length to zero.
-
-    For backreferenes, if duplicate numbers are present in the pattern we check
-    for a reference to a duplicate. If it is, we don't know which version will
-    be referenced, so we have to set the minimum length to zero. */
-
-    /* Duplicate named pattern back reference. */
-
     case OP_DNREF:
     case OP_DNREFI:
     if (!dupcapused && (re->overall_options & PCRE2_MATCH_UNSET_BACKREF) == 0)
@@ -481,8 +362,6 @@ for (;;)
           GET2(cc, 1) * re->name_entry_size;
 
       d = INT_MAX;
-
-      /* Scan all groups with the same name; find the shortest. */
 
       while (count-- > 0)
         {
@@ -538,9 +417,6 @@ for (;;)
     else d = 0;
     cc += 1 + 2*IMM2_SIZE;
     goto REPEAT_BACK_REFERENCE;
-
-    /* Single back reference by number. References by name are converted to by
-    number when there is no duplication. */
 
     case OP_REF:
     case OP_REFI:
@@ -626,18 +502,10 @@ for (;;)
       break;
       }
 
-     /* Take care not to overflow: (1) min and d are ints, so check that their
-     product is not greater than INT_MAX. (2) branchlength is limited to
-     UINT16_MAX (checked at the top of the loop). */
-
     if ((d > 0 && (INT_MAX/d) < min) || UINT16_MAX - branchlength < min*d)
       branchlength = UINT16_MAX;
     else branchlength += min * d;
     break;
-
-    /* Recursion always refers to the first occurrence of a subpattern with a
-    given number. Therefore, we can always make use of caching, even when the
-    pattern contains multiple subpatterns with the same number. */
 
     case OP_RECURSE:
     cs = ce = (PCRE2_UCHAR *)startcode + GET(cc, 1);
@@ -672,14 +540,6 @@ for (;;)
     cc += 1 + LINK_SIZE + once_fudge;
     once_fudge = 0;
     break;
-
-    /* Anything else does not or need not match a character. We can get the
-    item's length from the table, but for those that can match zero occurrences
-    of a character, we must take special action for UTF-8 characters. As it
-    happens, the "NOT" versions of these opcodes are used at present only for
-    ASCII characters, so they could be omitted from this list. However, in
-    future that may change, so we include them here so as not to leave a
-    gotcha for a future maintainer. */
 
     case OP_UPTO:
     case OP_UPTOI:
@@ -726,8 +586,6 @@ for (;;)
 #endif
     break;
 
-    /* Skip these, but we need to add in the name length. */
-
     case OP_MARK:
     case OP_COMMIT_ARG:
     case OP_PRUNE_ARG:
@@ -735,8 +593,6 @@ for (;;)
     case OP_THEN_ARG:
     cc += PRIV(OP_lengths)[op] + cc[1];
     break;
-
-    /* The remaining opcodes are just skipped over. */
 
     case OP_CLOSE:
     case OP_COMMIT:
@@ -748,9 +604,6 @@ for (;;)
     cc += PRIV(OP_lengths)[op];
     break;
 
-    /* This should not occur: we list all opcodes explicitly so that when
-    new ones get added they are properly considered. */
-
     default:
     return -3;
     }
@@ -758,24 +611,9 @@ for (;;)
 /* Control never gets here */
 }
 
-
-
 /*************************************************
 *      Set a bit and maybe its alternate case    *
 *************************************************/
-
-/* Given a character, set its first code unit's bit in the table, and also the
-corresponding bit for the other version of a letter if we are caseless.
-
-Arguments:
-  re            points to the regex block
-  p             points to the first code unit of the character
-  caseless      TRUE if caseless
-  utf           TRUE for UTF mode
-  ucp           TRUE for UCP mode
-
-Returns:        pointer after the character
-*/
 
 static PCRE2_SPTR
 set_table_bit(pcre2_real_code *re, PCRE2_SPTR p, BOOL caseless, BOOL utf,
@@ -786,17 +624,11 @@ uint32_t c = *p++;   /* First code unit */
 (void)utf;           /* Stop compiler warnings when UTF not supported */
 (void)ucp;
 
-/* In 16-bit and 32-bit modes, code units greater than 0xff set the bit for
-0xff. */
-
 #if PCRE2_CODE_UNIT_WIDTH != 8
 if (c > 0xff) SET_BIT(0xff); else
 #endif
 
 SET_BIT(c);
-
-/* In UTF-8 or UTF-16 mode, pick up the remaining code units in order to find
-the end of the character, even when caseless. */
 
 #ifdef SUPPORT_UNICODE
 if (utf)
@@ -808,8 +640,6 @@ if (utf)
 #endif
   }
 #endif  /* SUPPORT_UNICODE */
-
-/* If caseless, handle the other case of the character. */
 
 if (caseless)
   {
@@ -833,34 +663,15 @@ if (caseless)
   else
 #endif  /* SUPPORT_UNICODE */
 
-  /* Not UTF or UCP */
-
   if (MAX_255(c)) SET_BIT(re->tables[fcc_offset + c]);
   }
 
 return p;
 }
 
-
-
 /*************************************************
 *     Set bits for a positive character type     *
 *************************************************/
-
-/* This function sets starting bits for a character type. In UTF-8 mode, we can
-only do a direct setting for bytes less than 128, as otherwise there can be
-confusion with bytes in the middle of UTF-8 characters. In a "traditional"
-environment, the tables will only recognize ASCII characters anyway, but in at
-least one Windows environment, some higher bytes bits were set in the tables.
-So we deal with that case by considering the UTF-8 encoding.
-
-Arguments:
-  re             the regex block
-  cbit type      the type of character wanted
-  table_limit    32 for non-UTF-8; 16 for UTF-8
-
-Returns:         nothing
-*/
 
 static void
 set_type_bits(pcre2_real_code *re, int cbit_type, unsigned int table_limit)
@@ -882,26 +693,9 @@ for (c = 128; c < 256; c++)
 #endif  /* UTF-8 */
 }
 
-
 /*************************************************
 *     Set bits for a negative character type     *
 *************************************************/
-
-/* This function sets starting bits for a negative character type such as \D.
-In UTF-8 mode, we can only do a direct setting for bytes less than 128, as
-otherwise there can be confusion with bytes in the middle of UTF-8 characters.
-Unlike in the positive case, where we can set appropriate starting bits for
-specific high-valued UTF-8 characters, in this case we have to set the bits for
-all high-valued characters. The lowest is 0xc2, but we overkill by starting at
-0xc0 (192) for simplicity.
-
-Arguments:
-  re             the regex block
-  cbit type      the type of character wanted
-  table_limit    32 for non-UTF-8; 16 for UTF-8
-
-Returns:         nothing
-*/
 
 static void
 set_nottype_bits(pcre2_real_code *re, int cbit_type, unsigned int table_limit)
@@ -914,40 +708,9 @@ if (table_limit != 32) for (c = 24; c < 32; c++) re->start_bitmap[c] = 0xff;
 #endif
 }
 
-
-
 /*************************************************
 *      Create bitmap of starting code units      *
 *************************************************/
-
-/* This function scans a compiled unanchored expression recursively and
-attempts to build a bitmap of the set of possible starting code units whose
-values are less than 256. In 16-bit and 32-bit mode, values above 255 all cause
-the 255 bit to be set. When calling set[_not]_type_bits() in UTF-8 (sic) mode
-we pass a value of 16 rather than 32 as the final argument. (See comments in
-those functions for the reason.)
-
-The SSB_CONTINUE return is useful for parenthesized groups in patterns such as
-(a*)b where the group provides some optional starting code units but scanning
-must continue at the outer level to find at least one mandatory code unit. At
-the outermost level, this function fails unless the result is SSB_DONE.
-
-We restrict recursion (for nested groups) to 1000 to avoid stack overflow
-issues.
-
-Arguments:
-  re           points to the compiled regex block
-  code         points to an expression
-  utf          TRUE if in UTF mode
-  ucp          TRUE if in UCP mode
-  depthptr     pointer to recurse depth
-
-Returns:       SSB_FAIL     => Failed to find any starting code units
-               SSB_DONE     => Found mandatory starting code units
-               SSB_CONTINUE => Found optional starting code units
-               SSB_UNKNOWN  => Hit an unrecognized opcode
-               SSB_TOODEEP  => Recursion is too deep
-*/
 
 static int
 set_start_bits(pcre2_real_code *re, PCRE2_SPTR code, BOOL utf, BOOL ucp,
@@ -983,14 +746,9 @@ do
 
     switch(*tcode)
       {
-      /* If we reach something we don't understand, it means a new opcode has
-      been created that hasn't been added to this function. Hopefully this
-      problem will be discovered during testing. */
 
       default:
       return SSB_UNKNOWN;
-
-      /* Fail for a valid opcode that implies no starting bits. */
 
       case OP_ACCEPT:
       case OP_ASSERT_ACCEPT:
@@ -1065,17 +823,9 @@ do
       case OP_THEN_ARG:
       return SSB_FAIL;
 
-      /* OP_CIRC happens only at the start of an anchored branch (multiline ^
-      uses OP_CIRCM). Skip over it. */
-
       case OP_CIRC:
       tcode += PRIV(OP_lengths)[OP_CIRC];
       break;
-
-      /* A "real" property test implies no starting bits, but the fake property
-      PT_CLIST identifies a list of characters. These lists are short, as they
-      are used for characters with more than one "other case", so there is no
-      point in recognizing them for OP_NOTPROP. */
 
       case OP_PROP:
       if (tcode[1] != PT_CLIST) return SSB_FAIL;
@@ -1097,17 +847,10 @@ do
       try_next = FALSE;
       break;
 
-      /* We can ignore word boundary tests. */
-
       case OP_WORD_BOUNDARY:
       case OP_NOT_WORD_BOUNDARY:
       tcode++;
       break;
-
-      /* If we hit a bracket or a positive lookahead assertion, recurse to set
-      bits from within the subpattern. If it can't find anything, we have to
-      give up. If it finds some mandatory character(s), we are done for this
-      branch. Otherwise, carry on scanning after the subpattern. */
 
       case OP_BRA:
       case OP_SBRA:
@@ -1134,13 +877,6 @@ do
       else return rc;   /* FAIL, UNKNOWN, or TOODEEP */
       break;
 
-      /* If we hit ALT or KET, it means we haven't found anything mandatory in
-      this branch, though we might have found something optional. For ALT, we
-      continue with the next alternative, but we have to arrange that the final
-      result from subpattern is SSB_CONTINUE rather than SSB_DONE. For KET,
-      return SSB_CONTINUE: if this is the top level, that indicates failure,
-      but after a nested subpattern, it causes scanning to continue. */
-
       case OP_ALT:
       yield = SSB_CONTINUE;
       try_next = FALSE;
@@ -1152,8 +888,6 @@ do
       case OP_KETRPOS:
       return SSB_CONTINUE;
 
-      /* Skip over callout */
-
       case OP_CALLOUT:
       tcode += PRIV(OP_lengths)[OP_CALLOUT];
       break;
@@ -1162,8 +896,6 @@ do
       tcode += GET(tcode, 1 + 2*LINK_SIZE);
       break;
 
-      /* Skip over lookbehind and negative lookahead assertions */
-
       case OP_ASSERT_NOT:
       case OP_ASSERTBACK:
       case OP_ASSERTBACK_NOT:
@@ -1171,8 +903,6 @@ do
       do tcode += GET(tcode, 1); while (*tcode == OP_ALT);
       tcode += 1 + LINK_SIZE;
       break;
-
-      /* BRAZERO does the bracket, but carries on. */
 
       case OP_BRAZERO:
       case OP_BRAMINZERO:
@@ -1183,15 +913,11 @@ do
       tcode += 1 + LINK_SIZE;
       break;
 
-      /* SKIPZERO skips the bracket. */
-
       case OP_SKIPZERO:
       tcode++;
       do tcode += GET(tcode,1); while (*tcode == OP_ALT);
       tcode += 1 + LINK_SIZE;
       break;
-
-      /* Single-char * or ? sets the bit and tries the next item */
 
       case OP_STAR:
       case OP_MINSTAR:
@@ -1211,8 +937,6 @@ do
       tcode = set_table_bit(re, tcode + 1, TRUE, utf, ucp);
       break;
 
-      /* Single-char upto sets the bit and tries the next */
-
       case OP_UPTO:
       case OP_MINUPTO:
       case OP_POSUPTO:
@@ -1224,8 +948,6 @@ do
       case OP_POSUPTOI:
       tcode = set_table_bit(re, tcode + 1 + IMM2_SIZE, TRUE, utf, ucp);
       break;
-
-      /* At least one single char sets the bit and stops */
 
       case OP_EXACT:
       tcode += IMM2_SIZE;
@@ -1249,25 +971,14 @@ do
       try_next = FALSE;
       break;
 
-      /* Special spacing and line-terminating items. These recognize specific
-      lists of characters. The difference between VSPACE and ANYNL is that the
-      latter can match the two-character CRLF sequence, but that is not
-      relevant for finding the first character, so their code here is
-      identical. */
-
       case OP_HSPACE:
       SET_BIT(CHAR_HT);
       SET_BIT(CHAR_SPACE);
-
-      /* For the 16-bit and 32-bit libraries (which can never be EBCDIC), set
-      the bits for 0xA0 and for code units >= 255, independently of UTF. */
 
 #if PCRE2_CODE_UNIT_WIDTH != 8
       SET_BIT(0xA0);
       SET_BIT(0xFF);
 #else
-      /* For the 8-bit library in UTF-8 mode, set the bits for the first code
-      units of horizontal space characters. */
 
 #ifdef SUPPORT_UNICODE
       if (utf)
@@ -1279,8 +990,6 @@ do
         }
       else
 #endif
-      /* For the 8-bit library not in UTF-8 mode, set the bit for 0xA0, unless
-      the code is EBCDIC. */
         {
 #ifndef EBCDIC
         SET_BIT(0xA0);
@@ -1298,15 +1007,10 @@ do
       SET_BIT(CHAR_FF);
       SET_BIT(CHAR_CR);
 
-      /* For the 16-bit and 32-bit libraries (which can never be EBCDIC), set
-      the bits for NEL and for code units >= 255, independently of UTF. */
-
 #if PCRE2_CODE_UNIT_WIDTH != 8
       SET_BIT(CHAR_NEL);
       SET_BIT(0xFF);
 #else
-      /* For the 8-bit library in UTF-8 mode, set the bits for the first code
-      units of vertical space characters. */
 
 #ifdef SUPPORT_UNICODE
       if (utf)
@@ -1316,7 +1020,6 @@ do
         }
       else
 #endif
-      /* For the 8-bit library not in UTF-8 mode, set the bit for NEL. */
         {
         SET_BIT(CHAR_NEL);
         }
@@ -1324,11 +1027,6 @@ do
 
       try_next = FALSE;
       break;
-
-      /* Single character types set the bits and stop. Note that if PCRE2_UCP
-      is set, we do not see these opcodes because \d etc are converted to
-      properties. Therefore, these apply in the case when only characters less
-      than 256 are recognized to match the types. */
 
       case OP_NOT_DIGIT:
       set_nottype_bits(re, cbit_digit, table_limit);
@@ -1360,9 +1058,6 @@ do
       try_next = FALSE;
       break;
 
-      /* One or more character type fudges the pointer and restarts, knowing
-      it will hit a single character type and stop there. */
-
       case OP_TYPEPLUS:
       case OP_TYPEMINPLUS:
       case OP_TYPEPOSPLUS:
@@ -1372,9 +1067,6 @@ do
       case OP_TYPEEXACT:
       tcode += 1 + IMM2_SIZE;
       break;
-
-      /* Zero or more repeats of character types set the bits and then
-      try again. */
 
       case OP_TYPEUPTO:
       case OP_TYPEMINUPTO:
@@ -1398,15 +1090,10 @@ do
         SET_BIT(CHAR_HT);
         SET_BIT(CHAR_SPACE);
 
-        /* For the 16-bit and 32-bit libraries (which can never be EBCDIC), set
-        the bits for 0xA0 and for code units >= 255, independently of UTF. */
-
 #if PCRE2_CODE_UNIT_WIDTH != 8
         SET_BIT(0xA0);
         SET_BIT(0xFF);
 #else
-        /* For the 8-bit library in UTF-8 mode, set the bits for the first code
-        units of horizontal space characters. */
 
 #ifdef SUPPORT_UNICODE
         if (utf)
@@ -1418,8 +1105,6 @@ do
           }
         else
 #endif
-        /* For the 8-bit library not in UTF-8 mode, set the bit for 0xA0, unless
-        the code is EBCDIC. */
           {
 #ifndef EBCDIC
           SET_BIT(0xA0);
@@ -1435,15 +1120,10 @@ do
         SET_BIT(CHAR_FF);
         SET_BIT(CHAR_CR);
 
-        /* For the 16-bit and 32-bit libraries (which can never be EBCDIC), set
-        the bits for NEL and for code units >= 255, independently of UTF. */
-
 #if PCRE2_CODE_UNIT_WIDTH != 8
         SET_BIT(CHAR_NEL);
         SET_BIT(0xFF);
 #else
-        /* For the 8-bit library in UTF-8 mode, set the bits for the first code
-        units of vertical space characters. */
 
 #ifdef SUPPORT_UNICODE
         if (utf)
@@ -1453,7 +1133,6 @@ do
           }
         else
 #endif
-        /* For the 8-bit library not in UTF-8 mode, set the bit for NEL. */
           {
           SET_BIT(CHAR_NEL);
           }
@@ -1488,13 +1167,6 @@ do
       tcode += 2;
       break;
 
-      /* Extended class: if there are any property checks, or if this is a
-      negative XCLASS without a map, give up. If there are no property checks,
-      there must be wide characters on the XCLASS list, because otherwise an
-      XCLASS would not have been created. This means that code points >= 255
-      are potential starters. In the UTF-8 case we can scan them and set bits
-      for the relevant leading bytes. */
-
 #ifdef SUPPORT_WIDE_CHARS
       case OP_XCLASS:
       xclassflags = tcode[1 + LINK_SIZE];
@@ -1502,14 +1174,8 @@ do
           (xclassflags & (XCL_MAP|XCL_NOT)) == XCL_NOT)
         return SSB_FAIL;
 
-      /* We have a positive XCLASS or a negative one without a map. Set up the
-      map pointer if there is one, and fall through. */
-
       classmap = ((xclassflags & XCL_MAP) == 0)? NULL :
         (uint8_t *)(tcode + 1 + LINK_SIZE + 1);
-
-      /* In UTF-8 mode, scan the character list and set bits for leading bytes,
-      then jump to handle the map. */
 
 #if PCRE2_CODE_UNIT_WIDTH == 8
       if (utf && (xclassflags & XCL_NOT) == 0)
@@ -1545,17 +1211,6 @@ do
 #endif  /* SUPPORT_UNICODE && PCRE2_CODE_UNIT_WIDTH == 8 */
 #endif  /* SUPPORT_WIDE_CHARS */
 
-      /* It seems that the fall through comment must be outside the #ifdef if
-      it is to avoid the gcc compiler warning. */
-
-      /* Fall through */
-
-      /* Enter here for a negative non-XCLASS. In the 8-bit library, if we are
-      in UTF mode, any byte with a value >= 0xc4 is a potentially valid starter
-      because it starts a character with a value > 255. In 8-bit non-UTF mode,
-      there is no difference between CLASS and NCLASS. In all other wide
-      character modes, set the 0xFF bit to indicate code units >= 255. */
-
       case OP_NCLASS:
 #if defined SUPPORT_UNICODE && PCRE2_CODE_UNIT_WIDTH == 8
       if (utf)
@@ -1566,11 +1221,6 @@ do
 #elif PCRE2_CODE_UNIT_WIDTH != 8
       SET_BIT(0xFF);                             /* For characters >= 255 */
 #endif
-      /* Fall through */
-
-      /* Enter here for a positive non-XCLASS. If we have fallen through from
-      an XCLASS, classmap will already be set; just advance the code pointer.
-      Otherwise, set up classmap for a a non-XCLASS and advance past it. */
 
       case OP_CLASS:
       if (*tcode == OP_XCLASS) tcode += GET(tcode, 1); else
@@ -1578,13 +1228,6 @@ do
         classmap = (uint8_t *)(++tcode);
         tcode += 32 / sizeof(PCRE2_UCHAR);
         }
-
-      /* When wide characters are supported, classmap may be NULL. In UTF-8
-      (sic) mode, the bits in a class bit map correspond to character values,
-      not to byte values. However, the bit map we are constructing is for byte
-      values. So we have to do a conversion for characters whose code point is
-      greater than 127. In fact, there are only two possible starting bytes for
-      characters in the range 128 - 255. */
 
 #if defined SUPPORT_WIDE_CHARS && PCRE2_CODE_UNIT_WIDTH == 8
       HANDLE_CLASSMAP:
@@ -1607,15 +1250,11 @@ do
           }
         else
 #endif
-        /* In all modes except UTF-8, the two bit maps are compatible. */
 
           {
           for (c = 0; c < 32; c++) re->start_bitmap[c] |= classmap[c];
           }
         }
-
-      /* Act on what follows the class. For a zero minimum repeat, continue;
-      otherwise stop processing. */
 
       switch (*tcode)
         {
@@ -1650,23 +1289,9 @@ while (*code == OP_ALT);
 return yield;
 }
 
-
-
 /*************************************************
 *          Study a compiled expression           *
 *************************************************/
-
-/* This function is handed a compiled expression that it must study to produce
-information that will speed up the matching.
-
-Argument:
-  re       points to the compiled expression
-
-Returns:   0 normally; non-zero should never normally occur
-           1 unknown opcode in set_start_bits
-           2 missing capturing bracket
-           3 unknown opcode in find_minlength
-*/
 
 int
 PRIV(study)(pcre2_real_code *re)
@@ -1681,23 +1306,11 @@ BOOL ucp = (re->overall_options & PCRE2_UCP) != 0;
 code = (PCRE2_UCHAR *)((uint8_t *)re + sizeof(pcre2_real_code)) +
   re->name_entry_size * re->name_count;
 
-/* For a pattern that has a first code unit, or a multiline pattern that
-matches only at "line start", there is no point in seeking a list of starting
-code units. */
-
 if ((re->flags & (PCRE2_FIRSTSET|PCRE2_STARTLINE)) == 0)
   {
   int depth = 0;
   int rc = set_start_bits(re, code, utf, ucp, &depth);
   if (rc == SSB_UNKNOWN) return 1;
-
-  /* If a list of starting code units was set up, scan the list to see if only
-  one or two were listed. Having only one listed is rare because usually a
-  single starting code unit will have been recognized and PCRE2_FIRSTSET set.
-  If two are listed, see if they are caseless versions of the same character;
-  if so we can replace the list with a caseless first code unit. This gives
-  better performance and is plausibly worth doing for patterns such as [Ww]ord
-  or (word|WORD). */
 
   if (rc == SSB_DONE)
     {
@@ -1716,14 +1329,9 @@ if ((re->flags & (PCRE2_FIRSTSET|PCRE2_STARTLINE)) == 0)
         uint8_t y = x & (~x + 1);   /* Least significant bit */
         if (y != x) goto DONE;      /* More than one bit set */
 
-        /* In the 16-bit and 32-bit libraries, the bit for 0xff means "0xff and
-        all wide characters", so we cannot use it here. */
-
 #if PCRE2_CODE_UNIT_WIDTH != 8
         if (i == 248 && x == 0x80) goto DONE;
 #endif
-
-        /* Compute the character value */
 
         c = i;
         switch (x)
@@ -1734,10 +1342,6 @@ if ((re->flags & (PCRE2_FIRSTSET|PCRE2_STARTLINE)) == 0)
           case 32:  c += 5; break;  case 64: c += 6; break;
           case 128: c += 7; break;
           }
-
-        /* c contains the code unit value, in the range 0-255. In 8-bit UTF
-        mode, only values < 128 can be used. In all the other cases, c is a
-        character value. */
 
 #if PCRE2_CODE_UNIT_WIDTH == 8
         if (utf && c > 127) goto DONE;
@@ -1762,12 +1366,6 @@ if ((re->flags & (PCRE2_FIRSTSET|PCRE2_STARTLINE)) == 0)
         }
       }
 
-    /* Replace the start code unit bits with a first code unit, but only if it
-    is not the same as a required later code unit. This is because a search for
-    a required code unit starts after an explicit first code unit, but at a
-    code unit found from the bitmap. Patterns such as /a*a/ don't work
-    if both the start unit and required unit are the same. */
-
     if (a >= 0 &&
         (
         (re->flags & PCRE2_LASTSET) == 0 ||
@@ -1786,14 +1384,6 @@ if ((re->flags & (PCRE2_FIRSTSET|PCRE2_STARTLINE)) == 0)
     re->flags |= flags;
     }
   }
-
-/* Find the minimum length of subject string. If the pattern can match an empty
-string, the minimum length is already known. If the pattern contains (*ACCEPT)
-all bets are off, and we don't even try to find a minimum length. If there are
-more back references than the size of the vector we are going to cache them in,
-do nothing. A pattern that complicated will probably take a long time to
-analyze and may in any case turn out to be too complicated. Note that back
-reference minima are held as 16-bit numbers. */
 
 if ((re->flags & (PCRE2_MATCH_EMPTY|PCRE2_HASACCEPT)) == 0 &&
      re->top_backref <= MAX_CACHE_BACKREF)

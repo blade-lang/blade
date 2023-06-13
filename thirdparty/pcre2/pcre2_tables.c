@@ -38,12 +38,6 @@ POSSIBILITY OF SUCH DAMAGE.
 -----------------------------------------------------------------------------
 */
 
-/* This module contains some fixed tables that are used by more than one of the
-PCRE2 code modules. The tables are also #included by the pcre2test program,
-which uses macros to change their names from _pcre2_xxx to xxxx, thereby
-avoiding name clashes with the library. In this case, PCRE2_PCRE2TEST is
-defined. */
-
 #ifndef PCRE2_PCRE2TEST           /* We're compiling the library */
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -51,24 +45,12 @@ defined. */
 #include "pcre2_internal.h"
 #endif /* PCRE2_PCRE2TEST */
 
-
-/* Table of sizes for the fixed-length opcodes. It's defined in a macro so that
-the definition is next to the definition of the opcodes in pcre2_internal.h.
-This is mode-dependent, so is skipped when this file is included by pcre2test. */
-
 #ifndef PCRE2_PCRE2TEST
 const uint8_t PRIV(OP_lengths)[] = { OP_LENGTHS };
 #endif
 
-/* Tables of horizontal and vertical whitespace characters, suitable for
-adding to classes. */
-
 const uint32_t PRIV(hspace_list)[] = { HSPACE_LIST };
 const uint32_t PRIV(vspace_list)[] = { VSPACE_LIST };
-
-/* These tables are the pairs of delimiters that are valid for callout string
-arguments. For each starting delimiter there must be a matching ending
-delimiter, which in fact is different only for bracket-like delimiters. */
 
 const uint32_t PRIV(callout_start_delims)[] = {
   CHAR_GRAVE_ACCENT, CHAR_APOSTROPHE, CHAR_QUOTATION_MARK,
@@ -85,31 +67,18 @@ const uint32_t PRIV(callout_end_delims[]) = {
 *           Tables for UTF-8 support             *
 *************************************************/
 
-/* These tables are required by pcre2test in 16- or 32-bit mode, as well
-as for the library in 8-bit mode, because pcre2test uses UTF-8 internally for
-handling wide characters. */
-
 #if defined PCRE2_PCRE2TEST || \
    (defined SUPPORT_UNICODE && \
     defined PCRE2_CODE_UNIT_WIDTH && \
     PCRE2_CODE_UNIT_WIDTH == 8)
-
-/* These are the breakpoints for different numbers of bytes in a UTF-8
-character. */
 
 const int PRIV(utf8_table1)[] =
   { 0x7f, 0x7ff, 0xffff, 0x1fffff, 0x3ffffff, 0x7fffffff};
 
 const int PRIV(utf8_table1_size) = sizeof(PRIV(utf8_table1)) / sizeof(int);
 
-/* These are the indicator bits and the mask for the data bits to set in the
-first byte of a character, indexed by the number of additional bytes. */
-
 const int PRIV(utf8_table2)[] = { 0,    0xc0, 0xe0, 0xf0, 0xf8, 0xfc};
 const int PRIV(utf8_table3)[] = { 0xff, 0x1f, 0x0f, 0x07, 0x03, 0x01};
-
-/* Table of the number of extra bytes, indexed by the first byte masked with
-0x3f. The highest number for a valid UTF-8 first byte is in fact 0x3d. */
 
 const uint8_t PRIV(utf8_table4)[] = {
   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -134,51 +103,6 @@ const uint32_t PRIV(ucp_gentype)[] = {
   ucp_S, ucp_S, ucp_S, ucp_S,         /* Sc, Sk, Sm, So */
   ucp_Z, ucp_Z, ucp_Z                 /* Zl, Zp, Zs */
 };
-
-/* This table encodes the rules for finding the end of an extended grapheme
-cluster. Every code point has a grapheme break property which is one of the
-ucp_gbXX values defined in pcre2_ucp.h. These changed between Unicode versions
-10 and 11. The 2-dimensional table is indexed by the properties of two adjacent
-code points. The left property selects a word from the table, and the right
-property selects a bit from that word like this:
-
-  PRIV(ucp_gbtable)[left-property] & (1u << right-property)
-
-The value is non-zero if a grapheme break is NOT permitted between the relevant
-two code points. The breaking rules are as follows:
-
-1. Break at the start and end of text (pretty obviously).
-
-2. Do not break between a CR and LF; otherwise, break before and after
-   controls.
-
-3. Do not break Hangul syllable sequences, the rules for which are:
-
-    L may be followed by L, V, LV or LVT
-    LV or V may be followed by V or T
-    LVT or T may be followed by T
-
-4. Do not break before extending characters or zero-width-joiner (ZWJ).
-
-The following rules are only for extended grapheme clusters (but that's what we
-are implementing).
-
-5. Do not break before SpacingMarks.
-
-6. Do not break after Prepend characters.
-
-7. Do not break within emoji modifier sequences or emoji zwj sequences. That
-   is, do not break between characters with the Extended_Pictographic property.
-   Extend and ZWJ characters are allowed between the characters; this cannot be
-   represented in this table, the code has to deal with it.
-
-8. Do not break within emoji flag sequences. That is, do not break between
-   regional indicator (RI) symbols if there are an odd number of RI characters
-   before the break point. This table encodes "join RI characters"; the code
-   has to deal with checking for previous adjoining RIs.
-
-9. Otherwise, break everywhere.
-*/
 
 #define ESZ (1<<ucp_gbExtend)|(1<<ucp_gbSpacingMark)|(1<<ucp_gbZWJ)
 
@@ -220,23 +144,6 @@ const int PRIV(ucp_typerange)[] = {
   ucp_Zl, ucp_Zs,
 };
 #endif /* SUPPORT_JIT */
-
-/* The PRIV(utt)[] table below translates Unicode property names into type and
-code values. It is searched by binary chop, so must be in collating sequence of
-name. Originally, the table contained pointers to the name strings in the first
-field of each entry. However, that leads to a large number of relocations when
-a shared library is dynamically loaded. A significant reduction is made by
-putting all the names into a single, large string and then using offsets in the
-table itself. Maintenance is more error-prone, but frequent changes to this
-data are unlikely.
-
-July 2008: There is now a script called maint/GenerateUtt.py that can be used
-to generate this data automatically instead of maintaining it by hand.
-
-The script was updated in March 2009 to generate a new EBCDIC-compliant
-version. Like all other character and string literals that are compared against
-the regular expression pattern, we must use STR_ macros instead of literal
-strings to make sure that UTF-8 support works on EBCDIC platforms. */
 
 #define STRING_Adlam0 STR_A STR_d STR_l STR_a STR_m "\0"
 #define STRING_Ahom0 STR_A STR_h STR_o STR_m "\0"

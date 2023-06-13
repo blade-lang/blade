@@ -45,8 +45,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #error This file must be included from pcre2_jit_compile.c.
 #endif
 
-
-
 /*************************************************
 *           Free JIT read-only data              *
 *************************************************/
@@ -100,7 +98,6 @@ SLJIT_FREE(functions, allocator_data);
 #endif /* SUPPORT_JIT */
 }
 
-
 /*************************************************
 *            Free unused JIT memory              *
 *************************************************/
@@ -115,8 +112,6 @@ SLJIT_UNUSED_ARG(gcontext);
 sljit_free_unused_memory_exec();
 #endif  /* SUPPORT_JIT */
 }
-
-
 
 /*************************************************
 *            Allocate a JIT stack                *
@@ -157,7 +152,6 @@ return jit_stack;
 #endif
 }
 
-
 /*************************************************
 *         Assign a JIT stack to a pattern        *
 *************************************************/
@@ -179,7 +173,6 @@ mcontext->jit_callback_data = callback_data;
 #endif  /* SUPPORT_JIT */
 }
 
-
 /*************************************************
 *               Free a JIT stack                 *
 *************************************************/
@@ -198,7 +191,6 @@ if (jit_stack != NULL)
 #endif  /* SUPPORT_JIT */
 }
 
-
 /*************************************************
 *               Get target CPU type              *
 *************************************************/
@@ -212,7 +204,6 @@ return "JIT is not supported";
 return sljit_get_platform_name();
 #endif  /* SUPPORT_JIT */
 }
-
 
 /*************************************************
 *              Get size of JIT code              *

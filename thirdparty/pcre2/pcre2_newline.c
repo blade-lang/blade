@@ -38,42 +38,15 @@ POSSIBILITY OF SUCH DAMAGE.
 -----------------------------------------------------------------------------
 */
 
-
-/* This module contains internal functions for testing newlines when more than
-one kind of newline is to be recognized. When a newline is found, its length is
-returned. In principle, we could implement several newline "types", each
-referring to a different set of newline characters. At present, PCRE2 supports
-only NLTYPE_FIXED, which gets handled without these functions, NLTYPE_ANYCRLF,
-and NLTYPE_ANY. The full list of Unicode newline characters is taken from
-http://unicode.org/unicode/reports/tr18/. */
-
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
 #include "pcre2_internal.h"
 
-
-
 /*************************************************
 *      Check for newline at given position       *
 *************************************************/
-
-/* This function is called only via the IS_NEWLINE macro, which does so only
-when the newline type is NLTYPE_ANY or NLTYPE_ANYCRLF. The case of a fixed
-newline (NLTYPE_FIXED) is handled inline. It is guaranteed that the code unit
-pointed to by ptr is less than the end of the string.
-
-Arguments:
-  ptr          pointer to possible newline
-  type         the newline type
-  endptr       pointer to the end of the string
-  lenptr       where to return the length
-  utf          TRUE if in utf mode
-
-Returns:       TRUE or FALSE
-*/
 
 BOOL
 PRIV(is_newline)(PCRE2_SPTR ptr, uint32_t type, PCRE2_SPTR endptr,
@@ -144,26 +117,9 @@ else switch(c)
   }
 }
 
-
-
 /*************************************************
 *     Check for newline at previous position     *
 *************************************************/
-
-/* This function is called only via the WAS_NEWLINE macro, which does so only
-when the newline type is NLTYPE_ANY or NLTYPE_ANYCRLF. The case of a fixed
-newline (NLTYPE_FIXED) is handled inline. It is guaranteed that the initial
-value of ptr is greater than the start of the string that is being processed.
-
-Arguments:
-  ptr          pointer to possible newline
-  type         the newline type
-  startptr     pointer to the start of the string
-  lenptr       where to return the length
-  utf          TRUE if in utf mode
-
-Returns:       TRUE or FALSE
-*/
 
 BOOL
 PRIV(was_newline)(PCRE2_SPTR ptr, uint32_t type, PCRE2_SPTR startptr,

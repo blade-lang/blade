@@ -38,33 +38,15 @@ POSSIBILITY OF SUCH DAMAGE.
 -----------------------------------------------------------------------------
 */
 
-
-/* This module contains a single function that scans through a compiled pattern
-until it finds a capturing bracket with the given number, or, if the number is
-negative, an instance of OP_REVERSE for a lookbehind. The function is called
-from pcre2_compile.c and also from pcre2_study.c when finding the minimum
-matching length. */
-
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
 #include "pcre2_internal.h"
 
-
 /*************************************************
 *    Scan compiled regex for specific bracket    *
 *************************************************/
-
-/*
-Arguments:
-  code        points to start of expression
-  utf         TRUE in UTF mode
-  number      the required bracket number or negative to find a lookbehind
-
-Returns:      pointer to the opcode for the bracket, or NULL if not found
-*/
 
 PCRE2_SPTR
 PRIV(find_bracket)(PCRE2_SPTR code, BOOL utf, int number)
@@ -75,23 +57,14 @@ for (;;)
 
   if (c == OP_END) return NULL;
 
-  /* XCLASS is used for classes that cannot be represented just by a bit map.
-  This includes negated single high-valued characters. CALLOUT_STR is used for
-  callouts with string arguments. In both cases the length in the table is
-  zero; the actual length is stored in the compiled code. */
-
   if (c == OP_XCLASS) code += GET(code, 1);
     else if (c == OP_CALLOUT_STR) code += GET(code, 1 + 2*LINK_SIZE);
-
-  /* Handle lookbehind */
 
   else if (c == OP_REVERSE)
     {
     if (number < 0) return (PCRE2_UCHAR *)code;
     code += PRIV(OP_lengths)[c];
     }
-
-  /* Handle capturing bracket */
 
   else if (c == OP_CBRA || c == OP_SCBRA ||
            c == OP_CBRAPOS || c == OP_SCBRAPOS)
@@ -100,11 +73,6 @@ for (;;)
     if (n == number) return (PCRE2_UCHAR *)code;
     code += PRIV(OP_lengths)[c];
     }
-
-  /* Otherwise, we can get the item's length from the table, except that for
-  repeated character types, we have to test for \p and \P, which have an extra
-  two bytes of parameters, and for MARK/PRUNE/SKIP/THEN with an argument, we
-  must add in its length. */
 
   else
     {
@@ -139,13 +107,7 @@ for (;;)
       break;
       }
 
-    /* Add in the fixed length from the table */
-
     code += PRIV(OP_lengths)[c];
-
-  /* In UTF-8 and UTF-16 modes, opcodes that are followed by a character may be
-  followed by a multi-byte character. The length in the table is a minimum, so
-  we have to arrange to skip the extra bytes. */
 
 #ifdef MAYBE_UTF_MULTI
     if (utf) switch(c)
@@ -215,5 +177,3 @@ for (;;)
     }
   }
 }
-
-/* End of pcre2_find_bracket.c */

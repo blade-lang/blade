@@ -17,14 +17,14 @@
  * ```blade
  * import template
  * 
- * var wire = template()
- * echo wire.render('mytemplate')
+ * var tpl = template()
+ * echo tpl.render('mytemplate')
  * ```
  * 
  * Or to render from a string
  * 
  * ```blade
- * echo wire.render_string('<p>{{ name }}</p>', {name: 'Hello World'})
+ * echo tpl.render_string('<p>{{ name }}</p>', {name: 'Hello World'})
  * ```
  * 
  * The last example above will render the following:
@@ -43,20 +43,22 @@
  * For example, the code below should return an empty string.
  * 
  * ```blade
- * wire.render_string('<!-- HTML or Wire comment? -->')
+ * tpl.render_string('<!-- HTML or Wire comment? -->')
  * ```
  * 
- * ### Variables and Expressions
+ * ### Variables
  * 
- * Variables and Expressions in Wire templates are names and/or expressions surrounded by 
- * `{{` and `}}` pair. For example, to print the value of a variable _myvar_ passed into 
- * [[Template.render]] or [[Template.render_string]] in the template, you can do it like this.
+ * Variables in Wire templates are names surrounded by `{{` and `}}` pair. For example, to print 
+ * the value of a variable _myvar_ passed into [[Template.render]] or [[Template.render_string]] 
+ * in the template, you can do it like this.
  * 
  * ```html
  * <div>{{ myvar }}</div>
  * ```
  * 
- * > **NOTE:** The `<div>` and `</div>` surround the variable and are not part of the variable.
+ * > **NOTE:** 
+ * > - The `<div>` and `</div>` surround the variable and are not part of the variable.
+ * > - The spaces around the variable are just formatting and are not required.
  * 
  * The exception to this is when passing a variable to a reserved attribute such as `x-key`. 
  * In this case, you'll need to omit the surrounding braces. 
@@ -67,14 +69,133 @@
  * <div x-for="myvar" x-key="mykey"></div>
  * ```
  * 
- * As shown in the example above, variables and expressions can occur anywhere in a Wire template 
- * including in element attributes.
+ * As shown in the example above, variables can occur anywhere in a Wire template including in 
+ * element attributes.
  * 
- * ### Value Modifiers
+ * To print the exact characters `{{ myvar }}` if that's what you actually mean and stop if from 
+ * being interpreted as a variable, you'll need to escape the first `{` with the percent sign `%`. 
+ * 
+ * For example:
+ * 
+ * ```html
+ * <div>%{{ myvar }}</>
+ * ```
+ * 
+ * The example above will return the following:
+ * 
+ * ```html
+ * <div>{{ myvar }}</div>
+ * ```
+ * 
+ * ### Expressions and Modifiers
+ * 
+ * Expressions in Wire are a feature that allows modification of value directly in the template. 
+ * An __Expression__ is value that has been modified by passing it through a functions called 
+ * __Modifiers__ using the pipe (`|`) character. Wire comes with a lot of built-in functions for 
+ * creating expressions and they are all described at below.
+ * 
+ * For example:
+ * 
+ * ```html
+ * <div>{{ name|length }}</div>
+ * ```
+ * 
+ * In the example above, the name variable was expressed as its length by passing it into through 
+ * the _length_ modifier function. If _name_ contains the value `John Doe`, then the value printed 
+ * will be `8`.
+ * 
+ * The built-in modifiers are:
+ * 
+ * - {{length}}
+ * - {{upper}}
+ * - {{lower}}
+ * - {{is}}
+ * - {{not}}
+ * - {{empty}}
+ * - {{reverse}}
+ * - {{string}}
  * 
  * ### If... and If not...
  * 
+ * Wire implements conditionals via the `x-if` and `x-not` attribute that can be attached to any HTML 
+ * element. This attributes are never returned in the compiled HTML output and decides wether an 
+ * element will be printed or not. The `x-if` attribte evaluates a variable or expression and will only 
+ * print the element to which it is attached and its children if the result of the expression or variable 
+ * evaulation returns a value that is boolean `true` in Blade. The `x-not` attribute does the reverse of 
+ * this (i.e. it only prints if the evaulation returns Blade boolean `false`).
+ * 
+ * ```blade
+ * tpl.render_string('<div x-if="name">Hello</div>')
+ * ```
+ * 
+ * The example above will return an empty string since the variable name was never declared. However, the 
+ * reverse is the case if the attribute was `x-not`. 
+ * 
+ * For example:
+ * 
+ * ```blade
+ * tpl.render_string('<div x-not="name">Hello</div>')
+ * ```
+ * 
+ * The example above will return `<div>Hello</div>`.
+ * 
  * ### Loops
+ * 
+ * Wire templates support for loops is enabled via the `x-for` attribute that can be applied to any 
+ * element. When the `x-for` attribute is present on an element, it must declare a corresponding `x-value` 
+ * attribute that defines the name of the value variable within the loop. An optional `x-key` attribute 
+ * may also be defined to define a variable name that will contain the value of the iteration index/key.
+ * 
+ * The _x-for_ attribute must declare a variable or expression that evaluates into an iterable (such as a 
+ * string, list, dictionary etc.).
+ * 
+ * For example:
+ * 
+ * ```blade
+ * tpl.render_string('<div x-for="data">Ok</div>', {data: 0..3})
+ * ```
+ * 
+ * The code above will return the following:
+ * 
+ * ```html
+ * <div>Ok</div><div>Ok</div><div>Ok</div>
+ * ```
+ * 
+ * > The original `<div>` was replicated three times without the `x-for` attribute. 
+ * > __Wire attributes are applied to an element and their children not the children only.__
+ * 
+ * Here is an example using the `x-value` attribute to print the items in a list.
+ * 
+ * ```blade
+ * tpl.render_string('<div x-for="data" x-value="val">{{ val }}</div>', {data: ['apple', 'mango']})
+ * ```
+ * 
+ * The code above return
+ * 
+ * ```html
+ * <div>apple</div><div>mango</div>
+ * ```
+ * 
+ * We could decide to print the index as well by adding a new variable using the `x-key` attribute.
+ * 
+ * ```blade
+ * tpl.render_string('<div x-for="data" x-value="val" x-key="key">
+ *   <span>{{ key }}</span>
+ *   <span>{{ value }}</span>
+ * </div>', {data: ['apple', 'mango']})
+ * ```
+ * 
+ * Which will output
+ * 
+ * ```html
+ * <div>
+ *   <span>0</span>
+ *   <span>apple</span>
+ * </div><div>
+ *   <span>1</span>
+ *   <span>mango</span>
+ * </div>
+ * ```
  * 
  * ### Custom Modifiers
  * 
@@ -100,15 +221,15 @@ import .constants
  * 
  * ```blade
  * import template
- * var wire = template()
+ * var tpl = template()
  * 
- * wire.render_string('{{ name }}', {name: 'John Doe'})
+ * tpl.render_string('{{ name }}', {name: 'John Doe'})
  * ```
  * 
  * Or from files located in your defined root directory. See [[Template.set_root]]
  * 
  * ```blade
- * wire.render('my_template', {name: 'John Doe'})
+ * tpl.render('my_template', {name: 'John Doe'})
  * ```
  * 
  * You can enable initialize your templates with the auto_init option to allow 
@@ -118,10 +239,10 @@ import .constants
  * For example,
  * 
  * ```blade
- * var wire = template(true)
+ * var tpl = template(true)
  * 
  * # Optionally set the root directory to another directory.
- * wire.set_root('/my/custom/path')
+ * tpl.set_root('/my/custom/path')
  * ```
  * 
  * The root directory will become the root search path for the `<include />` tag.
@@ -136,10 +257,10 @@ import .constants
  * For example,
  * 
  * ```blade
- * wire.set_extension('.wire')
+ * tpl.set_extension('.wire')
  * 
  * # render a template from file
- * wire.render('welcome')
+ * tpl.render('welcome')
  * ```
  * 
  * This will cause [[Template.render]] to look for the file "`welcome.wire`" in the root 
@@ -207,8 +328,10 @@ class Template {
           var final_var = variables[_vars[0]]
           iter var i = 1; i < _vars.length(); i++ {
             if is_dict(final_var) {
-              final_var = final_var[_vars[i].matches(constants.NUMBER_RE) ? to_number(_vars[i]) : _vars[i]]
-            } else if (is_list(final_var) or is_string(final_var)) and _vars[i].matches(constants.NUMBER_RE) {
+              final_var = final_var[_vars[i].matches(constants.NUMBER_RE) ? 
+                to_number(_vars[i]) : _vars[i]]
+            } else if (is_list(final_var) or is_string(final_var)) and 
+              _vars[i].matches(constants.NUMBER_RE) {
               final_var = final_var[to_number(_vars[i])]
             } else {
               error('could not resolve "${_var}" at "${_vars[i]}"')
@@ -236,7 +359,8 @@ class Template {
                   if val == 'nil' vval = nil
                   else if val == 'true' vval = true
                   else if val == 'false' vval = false
-                  else if val.match(constants.NUMBER_WITH_DECIMAL_RE) vval = to_number(val.match(constants.NUMBER_WITH_DECIMAL_RE)[0])
+                  else if val.match(constants.NUMBER_WITH_DECIMAL_RE) 
+                    vval = to_number(val.match(constants.NUMBER_WITH_DECIMAL_RE)[0])
                   else vval = self._extract_var(variables, val, error)
 
                   real_var = self._functions[fn[0]](real_var, vval)
@@ -250,7 +374,14 @@ class Template {
   
         return real_var
       } else {
-        error('could not resolve "${_vars[0]}"')
+        # error('could not resolve "${_vars[0]}"')
+
+        # Instead of returning an error, we'll return an empty string. This allows us to test 
+        # for falsey, allows us to catch non-existing variables without an Exception and still 
+        # allow modifiers to be used with the non existing value. 
+        # 
+        # E.g. x-if="nonexistingvar|length" should still be false.
+        return ''
       }
     } else {
       error('invalid variable "${_var}"')
@@ -292,7 +423,11 @@ class Template {
     if var_vars {
       # var_vars = json.decode(json.encode(var_vars))
       iter var i = 0; i < var_vars.variable.length(); i++ {
-        content = content.replace(var_vars[0][i], to_string(self._extract_var(variables, var_vars.variable[i], error)), false)
+        content = content.replace(
+          var_vars[0][i], 
+          to_string(self._extract_var(variables, var_vars.variable[i], error)), 
+          false
+        )
       }
     }
     
@@ -305,8 +440,8 @@ class Template {
   
     def error(message) {
       if !is_string(element) and !is_list(element) {
-        echo element
-        { die Exception('${message} at ${path}[${element.position.start.line},${element.position.start.column}]') }
+        var start = element.position.start
+        die Exception('${message} at ${path}[${start.line},${start.column}]') 
       } else {
         { die Exception(message) }
       }
@@ -340,7 +475,11 @@ class Template {
           if !include_path.match(constants.EXT_RE) include_path += constants.DEFAULT_EXT
           var fl = file(include_path)
           if fl.exists() {
-            element = self._process(include_path, html.decode(self._strip(fl.read()), {with_position: true}), variables)
+            element = self._process(
+              include_path, 
+              html.decode(self._strip(fl.read()), {with_position: true}), 
+              variables
+            )
           } else {
             error('template "${attrs.path}" not found')
           }
@@ -350,7 +489,11 @@ class Template {
           if processed {
             if !is_string(processed)
               error('invalid return when processing "${element.name}" tag')
-            element = self._process(path, html.decode(self._strip(processed), {with_position: true}), variables)
+            element = self._process(
+              path, 
+              html.decode(self._strip(processed), {with_position: true}), 
+              variables
+            )
           } else {
             element = nil
           }
@@ -378,21 +521,24 @@ class Template {
         }
       } else if attrs.contains(constants.FOR_ATTR) {
         # for tag
-        if !attrs or !attrs.contains(constants.KEY_ATTR)
-          error('missing "${constants.KEY_ATTR}" attribute for `${constants.FOR_ATTR}` attr')
         
         var data = self._extract_var(variables, attrs.get(constants.FOR_ATTR), error),
             key_name = attrs.get(constants.KEY_ATTR),
             value_name = attrs.get(constants.VALUE_ATTR, nil)
   
-        self._strip_attr(element, constants.FOR_ATTR, constants.KEY_ATTR, constants.VALUE_ATTR)
+        self._strip_attr(
+          element, constants.FOR_ATTR, 
+          constants.KEY_ATTR, constants.VALUE_ATTR
+        )
         var for_vars = variables.clone()
   
         var result = []
         for key, value in data {
-          for_vars.set('${key_name}', value_name ? key : value)
           if value_name for_vars.set('${value_name}', value)
-          result.append(self._process(path, json.decode(json.encode(element)), for_vars))
+          if key_name for_vars.set('${key_name}', key)
+          result.append(
+            self._process(path, json.decode(json.encode(element)), for_vars)
+          )
         }
         return result
       }
@@ -467,7 +613,7 @@ class Template {
    *   return value.split(' ')[0]
    * }
    * 
-   * wire.register_function('firstname', firstname_function)
+   * tpl.register_function('firstname', firstname_function)
    * ```
    * 
    * The registered function can be used in the template to process variables.
@@ -503,7 +649,7 @@ class Template {
    *   return ...
    * }
    * 
-   * wire.register_element('inline-input', my_custom_function)
+   * tpl.register_element('inline-input', my_custom_function)
    * ```
    * 
    * The above registered element can then be used in the template. For example,
@@ -543,7 +689,7 @@ class Template {
    * ##### Example
    * 
    * ```blade
-   * wire.render_string('<div>{{ name }}</div>', {name: 'Johnson'})
+   * tpl.render_string('<div>{{ name }}</div>', {name: 'Johnson'})
    * ```
    * 
    * The above template should return
@@ -591,7 +737,7 @@ class Template {
    * ##### Example
    * 
    * ```blade
-   * wire.render('my_template')
+   * tpl.render('my_template')
    * ```
    * 
    * The above example renders the template as is and will die if any variable is found in it. 
@@ -607,7 +753,8 @@ class Template {
 
     # confirm/auto create root directory as configured
     if !os.dir_exists(self._root_dir) {
-      if !_auto_init die Exception('templates directory "${self._root_Dir}" not found.')
+      if !_auto_init 
+        die Exception('templates directory "${self._root_Dir}" not found.')
       else os.create_dir(self._root_dir)
     }
   

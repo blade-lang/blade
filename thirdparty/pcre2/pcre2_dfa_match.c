@@ -38,40 +38,6 @@ POSSIBILITY OF SUCH DAMAGE.
 -----------------------------------------------------------------------------
 */
 
-
-/* This module contains the external function pcre2_dfa_match(), which is an
-alternative matching function that uses a sort of DFA algorithm (not a true
-FSM). This is NOT Perl-compatible, but it has advantages in certain
-applications. */
-
-
-/* NOTE ABOUT PERFORMANCE: A user of this function sent some code that improved
-the performance of his patterns greatly. I could not use it as it stood, as it
-was not thread safe, and made assumptions about pattern sizes. Also, it caused
-test 7 to loop, and test 9 to crash with a segfault.
-
-The issue is the check for duplicate states, which is done by a simple linear
-search up the state list. (Grep for "duplicate" below to find the code.) For
-many patterns, there will never be many states active at one time, so a simple
-linear search is fine. In patterns that have many active states, it might be a
-bottleneck. The suggested code used an indexing scheme to remember which states
-had previously been used for each character, and avoided the linear search when
-it knew there was no chance of a duplicate. This was implemented when adding
-states to the state lists.
-
-I wrote some thread-safe, not-limited code to try something similar at the time
-of checking for duplicates (instead of when adding states), using index vectors
-on the stack. It did give a 13% improvement with one specially constructed
-pattern for certain subject strings, but on other strings and on many of the
-simpler patterns in the test suite it did worse. The major problem, I think,
-was the extra time to initialize the index. This had to be done for each call
-of internal_dfa_match(). (The supplied patch used a static vector, initialized
-only once - I suspect this was the cause of the problems with the tests.)
-
-Overall, I concluded that the gains in some cases did not outweigh the losses
-in others, so I abandoned this code. */
-
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -88,30 +54,15 @@ in others, so I abandoned this code. */
    PCRE2_PARTIAL_SOFT|PCRE2_DFA_SHORTEST|PCRE2_DFA_RESTART| \
    PCRE2_COPY_MATCHED_SUBJECT)
 
-
 /*************************************************
 *      Code parameters and static tables         *
 *************************************************/
-
-/* These are offsets that are used to turn the OP_TYPESTAR and friends opcodes
-into others, under special conditions. A gap of 20 between the blocks should be
-enough. The resulting opcodes don't have to be less than 256 because they are
-never stored, so we push them well clear of the normal opcodes. */
 
 #define OP_PROP_EXTRA       300
 #define OP_EXTUNI_EXTRA     320
 #define OP_ANYNL_EXTRA      340
 #define OP_HSPACE_EXTRA     360
 #define OP_VSPACE_EXTRA     380
-
-
-/* This table identifies those opcodes that are followed immediately by a
-character that is to be tested in some way. This makes it possible to
-centralize the loading of these characters. In the case of Type * etc, the
-"character" is the opcode for \D, \d, \S, \s, \W, or \w, which will always be a
-small value. Non-zero values in the table are the offsets from the opcode where
-the character is to be found. ***NOTE*** If the start of this table is
-modified, the three tables that follow must also be modified. */
 
 static const uint8_t coptable[] = {
   0,                             /* End                                    */
@@ -190,11 +141,6 @@ static const uint8_t coptable[] = {
   0, 0, 0                        /* CLOSE, SKIPZERO, DEFINE                */
 };
 
-/* This table identifies those opcodes that inspect a character. It is used to
-remember the fact that a character could have been inspected when the end of
-the subject is reached. ***NOTE*** If the start of this table is modified, the
-two tables that follow must also be modified. */
-
 static const uint8_t poptable[] = {
   0,                             /* End                                    */
   0, 0, 0, 1, 1,                 /* \A, \G, \K, \B, \b                     */
@@ -267,9 +213,6 @@ static const uint8_t poptable[] = {
   0, 0, 0                        /* CLOSE, SKIPZERO, DEFINE                */
 };
 
-/* These 2 tables allow for compact code for testing for \D, \d, \S, \s, \W,
-and \w */
-
 static const uint8_t toptable1[] = {
   0, 0, 0, 0, 0, 0,
   ctype_digit, ctype_digit,
@@ -286,12 +229,6 @@ static const uint8_t toptable2[] = {
   1, 1                            /* OP_ANY, OP_ALLANY */
 };
 
-
-/* Structure for holding data about a particular state, which is in effect the
-current data for an active path through the match tree. It must consist
-entirely of ints because the working vector we are passed, and which we put
-these structures in, is a vector of ints. */
-
 typedef struct stateblock {
   int offset;                     /* Offset to opcode (-ve has meaning) */
   int count;                      /* Count for repeats */
@@ -300,26 +237,12 @@ typedef struct stateblock {
 
 #define INTS_PER_STATEBLOCK  (int)(sizeof(stateblock)/sizeof(int))
 
-
-/* Before version 10.32 the recursive calls of internal_dfa_match() were passed
-local working space and output vectors that were created on the stack. This has
-caused issues for some patterns, especially in small-stack environments such as
-Windows. A new scheme is now in use which sets up a vector on the stack, but if
-this is too small, heap memory is used, up to the heap_limit. The main
-parameters are all numbers of ints because the workspace is a vector of ints.
-
-The size of the starting stack vector, DFA_START_RWS_SIZE, is in bytes, and is
-defined in pcre2_internal.h so as to be available to pcre2test when it is
-finding the minimum heap requirement for a match. */
-
 #define OVEC_UNIT  (sizeof(PCRE2_SIZE)/sizeof(int))
 
 #define RWS_BASE_SIZE   (DFA_START_RWS_SIZE/sizeof(int))  /* Stack vector */
 #define RWS_RSIZE       1000                    /* Work size for recursion */
 #define RWS_OVEC_RSIZE  (1000*OVEC_UNIT)        /* Ovector for recursion */
 #define RWS_OVEC_OSIZE  (2*OVEC_UNIT)           /* Ovector in other cases */
-
-/* This structure is at the start of each workspace block. */
 
 typedef struct RWS_anchor {
   struct RWS_anchor *next;
@@ -329,25 +252,9 @@ typedef struct RWS_anchor {
 
 #define RWS_ANCHOR_SIZE (sizeof(RWS_anchor)/sizeof(int))
 
-
-
 /*************************************************
 *               Process a callout                *
 *************************************************/
-
-/* This function is called to perform a callout.
-
-Arguments:
-  code              current code pointer
-  offsets           points to current capture offsets
-  current_subject   start of current subject match
-  ptr               current position in subject
-  mb                the match block
-  extracode         extra code offset when called from condition
-  lengthptr         where to return the callout length
-
-Returns:            the return from the callout
-*/
 
 static int
 do_callout(PCRE2_SPTR code, PCRE2_SIZE *offsets, PCRE2_SPTR current_subject,
@@ -361,9 +268,6 @@ pcre2_callout_block *cb = mb->cb;
   (PCRE2_SIZE)GET(code, 1 + 2*LINK_SIZE + extracode);
 
 if (mb->callout == NULL) return 0;    /* No callout provided */
-
-/* Fixed fields in the callout block are set once and for all at the start of
-matching. */
 
 cb->offset_vector    = offsets;
 cb->start_match      = (PCRE2_SIZE)(current_subject - mb->start_subject);
@@ -389,25 +293,9 @@ else
 return (mb->callout)(cb, mb->callout_data);
 }
 
-
-
 /*************************************************
 *         Expand local workspace memory          *
 *************************************************/
-
-/* This function is called when internal_dfa_match() is about to be called
-recursively and there is insufficient working space left in the current
-workspace block. If there's an existing next block, use it; otherwise get a new
-block unless the heap limit is reached.
-
-Arguments:
-  rwsptr     pointer to block pointer (updated)
-  ovecsize   space needed for an ovector
-  mb         the match block
-
-Returns:     0 rwsptr has been updated
-            !0 an error code
-*/
 
 static int
 more_workspace(RWS_anchor **rwsptr, unsigned int ovecsize, dfa_match_block *mb)
@@ -419,10 +307,6 @@ if (rws->next != NULL)
   {
   new = rws->next;
   }
-
-/* Sizes in the RWS_anchor blocks are in units of sizeof(int), but
-mb->heap_limit and mb->heap_used are in kibibytes. Play carefully, to avoid
-overflow. */
 
 else
   {
@@ -448,35 +332,9 @@ new->free = new->size - RWS_ANCHOR_SIZE;
 return 0;
 }
 
-
-
 /*************************************************
 *     Match a Regular Expression - DFA engine    *
 *************************************************/
-
-/* This internal function applies a compiled pattern to a subject string,
-starting at a given point, using a DFA engine. This function is called from the
-external one, possibly multiple times if the pattern is not anchored. The
-function calls itself recursively for some kinds of subpattern.
-
-Arguments:
-  mb                the match_data block with fixed information
-  this_start_code   the opening bracket of this subexpression's code
-  current_subject   where we currently are in the subject string
-  start_offset      start offset in the subject string
-  offsets           vector to contain the matching string offsets
-  offsetcount       size of same
-  workspace         vector of workspace
-  wscount           size of same
-  rlevel            function call recursion level
-
-Returns:            > 0 => number of match offset pairs placed in offsets
-                    = 0 => offsets overflowed; longest matches are present
-                     -1 => failed to match
-                   < -1 => some kind of unexpected problem
-
-The following macros are used for adding states to the two state vectors (one
-for the current character, one for the following character). */
 
 #define ADD_ACTIVE(x,y) \
   if (active_count++ < wscount) \
@@ -516,8 +374,6 @@ for the current character, one for the following character). */
     } \
   else return PCRE2_ERROR_DFA_WSSIZE
 
-/* And now, here is the code */
-
 static int
 internal_dfa_match(
   dfa_match_block *mb,
@@ -538,9 +394,6 @@ PCRE2_SPTR ptr;
 PCRE2_SPTR end_code;
 dfa_recursion_info new_recursive;
 int active_count, new_count, match_count;
-
-/* Some fields in the mb block are frequently referenced, so we load them into
-independent variables in the hope that this will perform better. */
 
 PCRE2_SPTR start_subject = mb->start_subject;
 PCRE2_SPTR end_subject = mb->end_subject;
@@ -573,14 +426,6 @@ active_states = (stateblock *)(workspace + 2);
 next_new_state = new_states = active_states + wscount;
 new_count = 0;
 
-/* The first thing in any (sub) pattern is a bracket of some sort. Push all
-the alternative states onto the list, and find out where the end is. This
-makes is possible to use this function recursively, when we want to stop at a
-matching internal ket rather than at the end.
-
-If we are dealing with a backward assertion we have to find out the maximum
-amount to move back, and set up each alternative appropriately. */
-
 if (*this_start_code == OP_ASSERTBACK || *this_start_code == OP_ASSERTBACK_NOT)
   {
   size_t max_back = 0;
@@ -595,11 +440,7 @@ if (*this_start_code == OP_ASSERTBACK || *this_start_code == OP_ASSERTBACK_NOT)
     }
   while (*end_code == OP_ALT);
 
-  /* If we can't go back the amount required for the longest lookbehind
-  pattern, go back as far as we can; some alternatives may still be viable. */
-
 #ifdef SUPPORT_UNICODE
-  /* In character mode we have to step back character by character */
 
   if (utf)
     {
@@ -614,21 +455,14 @@ if (*this_start_code == OP_ASSERTBACK || *this_start_code == OP_ASSERTBACK_NOT)
   else
 #endif
 
-  /* In byte-mode we can do this quickly. */
-
     {
     size_t current_offset = (size_t)(current_subject - start_subject);
     gone_back = (current_offset < max_back)? current_offset : max_back;
     current_subject -= gone_back;
     }
 
-  /* Save the earliest consulted character */
-
   if (current_subject < mb->start_used_ptr)
     mb->start_used_ptr = current_subject;
-
-  /* Now we can process the individual branches. There will be an OP_REVERSE at
-  the start of each branch, except when the length of the branch is zero. */
 
   end_code = this_start_code;
   do
@@ -645,17 +479,9 @@ if (*this_start_code == OP_ASSERTBACK || *this_start_code == OP_ASSERTBACK_NOT)
   while (*end_code == OP_ALT);
  }
 
-/* This is the code for a "normal" subpattern (not a backward assertion). The
-start of a whole pattern is always one of these. If we are at the top level,
-we may be asked to restart matching from the same point that we reached for a
-previous partial match. We still have to scan through the top-level branches to
-find the end state. */
-
 else
   {
   end_code = this_start_code;
-
-  /* Restarting */
 
   if (rlevel == 1 && (mb->moptions & PCRE2_DFA_RESTART) != 0)
     {
@@ -664,8 +490,6 @@ else
     if (!workspace[0])
       memcpy(new_states, active_states, (size_t)new_count * sizeof(stateblock));
     }
-
-  /* Not restarting */
 
   else
     {
@@ -685,8 +509,6 @@ else
 
 workspace[0] = 0;    /* Bit indicating which vector is current */
 
-/* Loop for scanning the subject */
-
 ptr = current_subject;
 for (;;)
   {
@@ -700,9 +522,6 @@ for (;;)
 
   if (ptr > mb->last_used_ptr) mb->last_used_ptr = ptr;
 
-  /* Make the new state list into the active state list and empty the
-  new state list. */
-
   temp_states = active_states;
   active_states = new_states;
   new_states = temp_states;
@@ -712,14 +531,8 @@ for (;;)
   workspace[0] ^= 1;              /* Remember for the restarting feature */
   workspace[1] = active_count;
 
-  /* Set the pointers for adding new states */
-
   next_active_state = active_states + active_count;
   next_new_state = new_states;
-
-  /* Load the current character from the subject outside the loop, as many
-  different states may want to look at it, and we assume that at least one
-  will. */
 
   if (ptr < end_subject)
     {
@@ -736,11 +549,6 @@ for (;;)
     c = NOTACHAR;    /* This value should never actually be used */
     }
 
-  /* Scan up the active states and act on each one. The result of an action
-  may be to add more states to the currently active list (e.g. on hitting a
-  parenthesis) or it may be to put states on the new list, for considering
-  when we move the character pointer on. */
-
   for (i = 0; i < active_count; i++)
     {
     stateblock *current_state = active_states + i;
@@ -750,11 +558,6 @@ for (;;)
     int state_offset = current_state->offset;
     int rrc;
     int count;
-
-    /* A negative offset is a special case meaning "hold off going to this
-    (negated) state until the number of characters in the data field have
-    been skipped". If the could_continue flag was passed over from a previous
-    state, arrange for it to passed on. */
 
     if (state_offset < 0)
       {
@@ -771,10 +574,6 @@ for (;;)
         }
       }
 
-    /* Check for a duplicate state with the same count, and skip if found.
-    See the note at the head of this module about the possibility of improving
-    performance here. */
-
     for (j = 0; j < i; j++)
       {
       if (active_states[j].offset == state_offset &&
@@ -782,27 +581,11 @@ for (;;)
         goto NEXT_ACTIVE_STATE;
       }
 
-    /* The state offset is the offset to the opcode */
-
     code = start_code + state_offset;
     codevalue = *code;
 
-    /* If this opcode inspects a character, but we are at the end of the
-    subject, remember the fact for use when testing for a partial match. */
-
     if (clen == 0 && poptable[codevalue] != 0)
       could_continue = TRUE;
-
-    /* If this opcode is followed by an inline character, load it. It is
-    tempting to test for the presence of a subject character here, but that
-    is wrong, because sometimes zero repetitions of the subject are
-    permitted.
-
-    We also use this mechanism for opcodes such as OP_TYPEPLUS that take an
-    argument that is not a data character - but is always one byte long because
-    the values are small. We have to take special action to deal with  \P, \p,
-    \H, \h, \V, \v and \X in this case. To keep the other cases fast, convert
-    these ones to new opcodes. */
 
     if (coptable[codevalue] > 0)
       {
@@ -834,35 +617,14 @@ for (;;)
       d = NOTACHAR;     /* if these variables are not set. */
       }
 
-
-    /* Now process the individual opcodes */
-
     switch (codevalue)
       {
-/* ========================================================================== */
-      /* These cases are never obeyed. This is a fudge that causes a compile-
-      time error if the vectors coptable or poptable, which are indexed by
-      opcode, are not the correct length. It seems to be the only way to do
-      such a check at compile time, as the sizeof() operator does not work
-      in the C preprocessor. */
 
       case OP_TABLE_LENGTH:
       case OP_TABLE_LENGTH +
         ((sizeof(coptable) == OP_TABLE_LENGTH) &&
          (sizeof(poptable) == OP_TABLE_LENGTH)):
       return 0;
-
-/* ========================================================================== */
-      /* Reached a closing bracket. If not at the end of the pattern, carry
-      on with the next opcode. For repeating opcodes, also add the repeat
-      state. Note that KETRPOS will always be encountered at the end of the
-      subpattern, because the possessive subpattern repeats are always handled
-      using recursive calls. Thus, it never adds any new states.
-
-      At the end of the (sub)pattern, unless we have an empty string and
-      PCRE2_NOTEMPTY is set, or PCRE2_NOTEMPTY_ATSTART is set and we are at the
-      start of the subject, save the match data, shifting up all previous
-      matches so we always have the longest first. */
 
       case OP_KET:
       case OP_KETRMIN:
@@ -899,11 +661,6 @@ for (;;)
         }
       break;
 
-/* ========================================================================== */
-      /* These opcodes add to the current list of states without looking
-      at the current character. */
-
-      /*-----------------------------------------------------------------*/
       case OP_ALT:
       do { code += GET(code, 1); } while (*code == OP_ALT);
       ADD_ACTIVE((int)(code - start_code), 0);
@@ -981,13 +738,6 @@ for (;;)
       case OP_SOM:
       if (ptr == start_subject + start_offset) { ADD_ACTIVE(state_offset + 1, 0); }
       break;
-
-
-/* ========================================================================== */
-      /* These opcodes inspect the next subject character, and sometimes
-      the previous one as well, but do not have an argument. The variable
-      clen contains the length of the current character and is zero if we are
-      at the end of the subject. */
 
       /*-----------------------------------------------------------------*/
       case OP_ANY:
@@ -1156,12 +906,6 @@ for (;;)
         }
       break;
 
-
-      /*-----------------------------------------------------------------*/
-      /* Check the next character by Unicode property. We will get here only
-      if the support is in the binary; otherwise a compile-time error occurs.
-      */
-
 #ifdef SUPPORT_UNICODE
       case OP_PROP:
       case OP_NOTPROP:
@@ -1193,16 +937,10 @@ for (;;)
           OK = prop->script == code[2];
           break;
 
-          /* These are specials for combination cases. */
-
           case PT_ALNUM:
           OK = PRIV(ucp_gentype)[prop->chartype] == ucp_L ||
                PRIV(ucp_gentype)[prop->chartype] == ucp_N;
           break;
-
-          /* Perl space used to exclude VT, but from Perl 5.18 it is included,
-          which means that Perl space and POSIX space are now identical. PCRE
-          was changed at release 8.34. */
 
           case PT_SPACE:    /* Perl space */
           case PT_PXSPACE:  /* POSIX space */
@@ -1240,8 +978,6 @@ for (;;)
                c >= 0xe000;
           break;
 
-          /* Should never occur, but keep compilers from grumbling. */
-
           default:
           OK = codevalue != OP_PROP;
           break;
@@ -1251,14 +987,6 @@ for (;;)
         }
       break;
 #endif
-
-
-
-/* ========================================================================== */
-      /* These opcodes likewise inspect the subject character, but have an
-      argument that is not a data character. It is one of these opcodes:
-      OP_ANY, OP_ALLANY, OP_DIGIT, OP_NOT_DIGIT, OP_WHITESPACE, OP_NOT_SPACE,
-      OP_WORDCHAR, OP_NOT_WORDCHAR. The value is loaded into d. */
 
       case OP_TYPEPLUS:
       case OP_TYPEMINPLUS:
@@ -1411,12 +1139,6 @@ for (;;)
         }
       break;
 
-/* ========================================================================== */
-      /* These are virtual opcodes that are used when something like
-      OP_TYPEPLUS has OP_PROP, OP_NOTPROP, OP_ANYNL, or OP_EXTUNI as its
-      argument. It keeps the code above fast for the other cases. The argument
-      is in the d variable. */
-
 #ifdef SUPPORT_UNICODE
       case OP_PROP_EXTRA + OP_TYPEPLUS:
       case OP_PROP_EXTRA + OP_TYPEMINPLUS:
@@ -1451,16 +1173,10 @@ for (;;)
           OK = prop->script == code[3];
           break;
 
-          /* These are specials for combination cases. */
-
           case PT_ALNUM:
           OK = PRIV(ucp_gentype)[prop->chartype] == ucp_L ||
                PRIV(ucp_gentype)[prop->chartype] == ucp_N;
           break;
-
-          /* Perl space used to exclude VT, but from Perl 5.18 it is included,
-          which means that Perl space and POSIX space are now identical. PCRE
-          was changed at release 8.34. */
 
           case PT_SPACE:    /* Perl space */
           case PT_PXSPACE:  /* POSIX space */
@@ -1497,8 +1213,6 @@ for (;;)
                c == CHAR_GRAVE_ACCENT || (c >= 0xa0 && c <= 0xd7ff) ||
                c >= 0xe000;
           break;
-
-          /* Should never occur, but keep compilers from grumbling. */
 
           default:
           OK = codevalue != OP_PROP;
@@ -1692,16 +1406,10 @@ for (;;)
           OK = prop->script == code[3];
           break;
 
-          /* These are specials for combination cases. */
-
           case PT_ALNUM:
           OK = PRIV(ucp_gentype)[prop->chartype] == ucp_L ||
                PRIV(ucp_gentype)[prop->chartype] == ucp_N;
           break;
-
-          /* Perl space used to exclude VT, but from Perl 5.18 it is included,
-          which means that Perl space and POSIX space are now identical. PCRE
-          was changed at release 8.34. */
 
           case PT_SPACE:    /* Perl space */
           case PT_PXSPACE:  /* POSIX space */
@@ -1738,8 +1446,6 @@ for (;;)
                c == CHAR_GRAVE_ACCENT || (c >= 0xa0 && c <= 0xd7ff) ||
                c >= 0xe000;
           break;
-
-          /* Should never occur, but keep compilers from grumbling. */
 
           default:
           OK = codevalue != OP_PROP;
@@ -1958,16 +1664,10 @@ for (;;)
           OK = prop->script == code[1 + IMM2_SIZE + 2];
           break;
 
-          /* These are specials for combination cases. */
-
           case PT_ALNUM:
           OK = PRIV(ucp_gentype)[prop->chartype] == ucp_L ||
                PRIV(ucp_gentype)[prop->chartype] == ucp_N;
           break;
-
-          /* Perl space used to exclude VT, but from Perl 5.18 it is included,
-          which means that Perl space and POSIX space are now identical. PCRE
-          was changed at release 8.34. */
 
           case PT_SPACE:    /* Perl space */
           case PT_PXSPACE:  /* POSIX space */
@@ -2004,8 +1704,6 @@ for (;;)
                c == CHAR_GRAVE_ACCENT || (c >= 0xa0 && c <= 0xd7ff) ||
                c >= 0xe000;
           break;
-
-          /* Should never occur, but keep compilers from grumbling. */
 
           default:
           OK = codevalue != OP_PROP;
@@ -2175,12 +1873,6 @@ for (;;)
         }
       break;
 
-/* ========================================================================== */
-      /* These opcodes are followed by a character that is usually compared
-      to the current subject character; it is loaded into d. We still get
-      here even if there is no subject character, because in some cases zero
-      repetitions are permitted. */
-
       /*-----------------------------------------------------------------*/
       case OP_CHAR:
       if (clen > 0 && c == d) { ADD_NEW(state_offset + dlen + 1, 0); }
@@ -2214,10 +1906,6 @@ for (;;)
 
 
 #ifdef SUPPORT_UNICODE
-      /*-----------------------------------------------------------------*/
-      /* This is a tricky one because it can match more than one character.
-      Find out how many characters to skip, and then set up a negative state
-      to wait for them to pass before continuing. */
 
       case OP_EXTUNI:
       if (clen > 0)
@@ -2231,11 +1919,6 @@ for (;;)
         }
       break;
 #endif
-
-      /*-----------------------------------------------------------------*/
-      /* This is a tricky like EXTUNI because it too can match more than one
-      character (when CR is followed by LF). In this case, set up a negative
-      state to wait for one character to pass before continuing. */
 
       case OP_ANYNL:
       if (clen > 0) switch(c)
@@ -2325,15 +2008,9 @@ for (;;)
         }
       break;
 
-      /*-----------------------------------------------------------------*/
-      /* Match a negated single character casefully. */
-
       case OP_NOT:
       if (clen > 0 && c != d) { ADD_NEW(state_offset + dlen + 1, 0); }
       break;
-
-      /*-----------------------------------------------------------------*/
-      /* Match a negated single character caselessly. */
 
       case OP_NOTI:
       if (clen > 0)
@@ -2553,10 +2230,6 @@ for (;;)
         }
       break;
 
-
-/* ========================================================================== */
-      /* These are the class-handling opcodes */
-
       case OP_CLASS:
       case OP_NCLASS:
       case OP_XCLASS:
@@ -2564,9 +2237,6 @@ for (;;)
         BOOL isinclass = FALSE;
         int next_state_offset;
         PCRE2_SPTR ecode;
-
-        /* For a simple class, there is always just a 32-byte table, and we
-        can set isinclass from it. */
 
         if (codevalue != OP_XCLASS)
           {
@@ -2578,19 +2248,11 @@ for (;;)
             }
           }
 
-        /* An extended class may have a table or a list of single characters,
-        ranges, or both, and it may be positive or negative. There's a
-        function that sorts all this out. */
-
         else
          {
          ecode = code + GET(code, 1);
          if (clen > 0) isinclass = PRIV(xclass)(c, code + 1 + LINK_SIZE, utf);
          }
-
-        /* At this point, isinclass is set for all kinds of class, and ecode
-        points to the byte after the end of the class. If there is a
-        quantifier, this is where it will be. */
 
         next_state_offset = (int)(ecode - start_code);
 
@@ -2673,12 +2335,6 @@ for (;;)
         }
       break;
 
-/* ========================================================================== */
-      /* These are the opcodes for fancy brackets of various kinds. We have
-      to use recursion in order to handle them. The "always failing" assertion
-      (?!) is optimised to OP_FAIL when compiling, so we have to support that,
-      though the other "backtracking verbs" are not supported. */
-
       case OP_FAIL:
       forced_fail++;    /* Count FAILs for multiple states */
       break;
@@ -2734,10 +2390,6 @@ for (;;)
         int codelink = (int)GET(code, 1);
         PCRE2_UCHAR condcode;
 
-        /* Because of the way auto-callout works during compile, a callout item
-        is inserted between OP_COND and an assertion condition. This does not
-        happen for the other conditions. */
-
         if (code[LINK_SIZE + 1] == OP_CALLOUT
             || code[LINK_SIZE + 1] == OP_CALLOUT_STR)
           {
@@ -2751,27 +2403,15 @@ for (;;)
 
         condcode = code[LINK_SIZE+1];
 
-        /* Back reference conditions and duplicate named recursion conditions
-        are not supported */
-
         if (condcode == OP_CREF || condcode == OP_DNCREF ||
             condcode == OP_DNRREF)
           return PCRE2_ERROR_DFA_UCOND;
 
-        /* The DEFINE condition is always false, and the assertion (?!) is
-        converted to OP_FAIL. */
-
         if (condcode == OP_FALSE || condcode == OP_FAIL)
           { ADD_ACTIVE(state_offset + codelink + LINK_SIZE + 1, 0); }
 
-        /* There is also an always-true condition */
-
         else if (condcode == OP_TRUE)
           { ADD_ACTIVE(state_offset + LINK_SIZE + 2, 0); }
-
-        /* The only supported version of OP_RREF is for the value RREF_ANY,
-        which means "test if in any recursion". We can't test for specifically
-        recursed groups. */
 
         else if (condcode == OP_RREF)
           {
@@ -2781,8 +2421,6 @@ for (;;)
             { ADD_ACTIVE(state_offset + LINK_SIZE + 2 + IMM2_SIZE, 0); }
           else { ADD_ACTIVE(state_offset + codelink + LINK_SIZE + 1, 0); }
           }
-
-        /* Otherwise, the condition is an assertion */
 
         else
           {
@@ -2853,16 +2491,9 @@ for (;;)
         local_workspace = ((int *)local_offsets) + RWS_OVEC_RSIZE;
         rws->free -= RWS_RSIZE + RWS_OVEC_RSIZE;
 
-        /* Check for repeating a recursion without advancing the subject
-        pointer. This should catch convoluted mutual recursions. (Some simple
-        cases are caught at compile time.) */
-
         for (ri = mb->recursive; ri != NULL; ri = ri->prevrec)
           if (recno == ri->group_num && ptr == ri->subject_position)
             return PCRE2_ERROR_RECURSELOOP;
-
-        /* Remember this recursion and where we started it so as to
-        catch infinite loops. */
 
         new_recursive.group_num = recno;
         new_recursive.subject_position = ptr;
@@ -2884,13 +2515,7 @@ for (;;)
         rws->free += RWS_RSIZE + RWS_OVEC_RSIZE;
         mb->recursive = new_recursive.prevrec;  /* Done this recursion */
 
-        /* Ran out of internal offsets */
-
         if (rc == 0) return PCRE2_ERROR_DFA_RECURSE;
-
-        /* For each successful matched substring, set up the next state with a
-        count of characters to skip before trying it. Note that the count is in
-        characters, not bytes. */
 
         if (rc > 0)
           {
@@ -2953,9 +2578,6 @@ for (;;)
           }
         else allow_zero = FALSE;
 
-        /* Loop to match the subpattern as many times as possible as if it were
-        a complete pattern. */
-
         for (matched_count = 0;; matched_count++)
           {
           rc = internal_dfa_match(
@@ -2970,15 +2592,11 @@ for (;;)
             rlevel,                               /* function recursion level */
             RWS);                                 /* recursion workspace */
 
-          /* Failed to match */
-
           if (rc < 0)
             {
             if (rc != PCRE2_ERROR_NOMATCH) return rc;
             break;
             }
-
-          /* Matched: break the loop if zero characters matched. */
 
           charcount = local_offsets[1] - local_offsets[0];
           if (charcount == 0) break;
@@ -2986,10 +2604,6 @@ for (;;)
           }
 
         rws->free += RWS_RSIZE + RWS_OVEC_OSIZE;
-
-        /* At this point we have matched the subpattern matched_count
-        times, and local_ptr is pointing to the character after the end of the
-        last match. */
 
         if (matched_count > 0 || allow_zero)
           {
@@ -3000,11 +2614,6 @@ for (;;)
             while (*end_subpattern == OP_ALT);
           next_state_offset =
             (int)(end_subpattern - start_code + LINK_SIZE + 1);
-
-          /* Optimization: if there are no more active states, and there
-          are no new states yet set up, then skip over the subject string
-          right here, to save looping. Otherwise, set up the new state to swing
-          into action when the end of the matched substring is reached. */
 
           if (i + 1 >= active_count && new_count == 0)
             {
@@ -3070,39 +2679,20 @@ for (;;)
           next_state_offset =
             (int)(end_subpattern - start_code + LINK_SIZE + 1);
 
-          /* If the end of this subpattern is KETRMAX or KETRMIN, we must
-          arrange for the repeat state also to be added to the relevant list.
-          Calculate the offset, or set -1 for no repeat. */
-
           repeat_state_offset = (*end_subpattern == OP_KETRMAX ||
                                  *end_subpattern == OP_KETRMIN)?
             (int)(end_subpattern - start_code - GET(end_subpattern, 1)) : -1;
-
-          /* If we have matched an empty string, add the next state at the
-          current character pointer. This is important so that the duplicate
-          checking kicks in, which is what breaks infinite loops that match an
-          empty string. */
 
           if (charcount == 0)
             {
             ADD_ACTIVE(next_state_offset, 0);
             }
 
-          /* Optimization: if there are no more active states, and there
-          are no new states yet set up, then skip over the subject string
-          right here, to save looping. Otherwise, set up the new state to swing
-          into action when the end of the matched substring is reached. */
-
           else if (i + 1 >= active_count && new_count == 0)
             {
             ptr += charcount;
             clen = 0;
             ADD_NEW(next_state_offset, 0);
-
-            /* If we are adding a repeat state at the new character position,
-            we must fudge things so that it is the only current state.
-            Otherwise, it might be a duplicate of one we processed before, and
-            that would cause it to be skipped. */
 
             if (repeat_state_offset >= 0)
               {
@@ -3131,10 +2721,6 @@ for (;;)
         }
       break;
 
-
-/* ========================================================================== */
-      /* Handle callouts */
-
       case OP_CALLOUT:
       case OP_CALLOUT_STR:
         {
@@ -3147,8 +2733,6 @@ for (;;)
         }
       break;
 
-
-/* ========================================================================== */
       default:        /* Unsupported opcode */
       return PCRE2_ERROR_DFA_UITEM;
       }
@@ -3156,19 +2740,6 @@ for (;;)
     NEXT_ACTIVE_STATE: continue;
 
     }      /* End of loop scanning active states */
-
-  /* We have finished the processing at the current subject character. If no
-  new states have been set for the next character, we have found all the
-  matches that we are going to find. If partial matching has been requested,
-  check for appropriate conditions.
-
-  The "forced_ fail" variable counts the number of (*F) encountered for the
-  character. If it is equal to the original active_count (saved in
-  workspace[1]) it means that (*F) was found on every active state. In this
-  case we don't want to give a partial match.
-
-  The "could_continue" variable is true if a state could have continued but
-  for the fact that the end of the subject was reached. */
 
   if (new_count <= 0)
     {
@@ -3194,13 +2765,8 @@ for (;;)
     break;  /* Exit from loop along the subject string */
     }
 
-  /* One or more states are active for the next character. */
-
   ptr += clen;    /* Advance to next subject character */
   }               /* Loop to move along the subject string */
-
-/* Control gets here from "break" a few lines above. If we have a match and
-PCRE2_ENDANCHORED is set, the match fails. */
 
 if (match_count >= 0 &&
     ((mb->moptions | mb->poptions) & PCRE2_ENDANCHORED) != 0 &&
@@ -3210,31 +2776,9 @@ if (match_count >= 0 &&
 return match_count;
 }
 
-
-
 /*************************************************
 *     Match a pattern using the DFA algorithm    *
 *************************************************/
-
-/* This function matches a compiled pattern to a subject string, using the
-alternate matching algorithm that finds all matches at once.
-
-Arguments:
-  code          points to the compiled pattern
-  subject       subject string
-  length        length of subject string
-  startoffset   where to start matching in the subject
-  options       option bits
-  match_data    points to a match data structure
-  gcontext      points to a match context
-  workspace     pointer to workspace
-  wscount       size of workspace
-
-Returns:        > 0 => number of match offset pairs placed in offsets
-                = 0 => offsets overflowed; longest matches are present
-                 -1 => failed to match
-               < -1 => some kind of unexpected problem
-*/
 
 PCRE2_EXP_DEFN int PCRE2_CALL_CONVENTION
 pcre2_dfa_match(const pcre2_code *code, PCRE2_SPTR subject, PCRE2_SIZE length,
@@ -3267,17 +2811,9 @@ PCRE2_UCHAR req_cu2 = 0;
 
 const uint8_t *start_bits = NULL;
 
-/* We need to have mb pointing to a match block, because the IS_NEWLINE macro
-is used below, and it expects NLBLOCK to be defined as a pointer. */
-
 pcre2_callout_block cb;
 dfa_match_block actual_match_block;
 dfa_match_block *mb = &actual_match_block;
-
-/* Set up a starting block of memory for use during recursive calls to
-internal_dfa_match(). By putting this on the stack, it minimizes resource use
-in the case when it is not needed. If this is too small, more memory is
-obtained from the heap. At the start of each block is an anchor structure.*/
 
 int base_recursion_workspace[RWS_BASE_SIZE];
 RWS_anchor *rws = (RWS_anchor *)base_recursion_workspace;
@@ -3285,16 +2821,11 @@ rws->next = NULL;
 rws->size = RWS_BASE_SIZE;
 rws->free = RWS_BASE_SIZE - RWS_ANCHOR_SIZE;
 
-/* A length equal to PCRE2_ZERO_TERMINATED implies a zero-terminated
-subject string. */
-
 if (length == PCRE2_ZERO_TERMINATED)
   {
   length = PRIV(strlen)(subject);
   was_zero_terminated = 1;
   }
-
-/* Plausibility checks */
 
 if ((options & ~PUBLIC_DFA_MATCH_OPTIONS) != 0) return PCRE2_ERROR_BADOPTION;
 if (re == NULL || subject == NULL || workspace == NULL || match_data == NULL)
@@ -3302,48 +2833,23 @@ if (re == NULL || subject == NULL || workspace == NULL || match_data == NULL)
 if (wscount < 20) return PCRE2_ERROR_DFA_WSSIZE;
 if (start_offset > length) return PCRE2_ERROR_BADOFFSET;
 
-/* Partial matching and PCRE2_ENDANCHORED are currently not allowed at the same
-time. */
-
 if ((options & (PCRE2_PARTIAL_HARD|PCRE2_PARTIAL_SOFT)) != 0 &&
    ((re->overall_options | options) & PCRE2_ENDANCHORED) != 0)
   return PCRE2_ERROR_BADOPTION;
 
-/* Invalid UTF support is not available for DFA matching. */
-
 if ((re->overall_options & PCRE2_MATCH_INVALID_UTF) != 0)
   return PCRE2_ERROR_DFA_UINVALID_UTF;
 
-/* Check that the first field in the block is the magic number. If it is not,
-return with PCRE2_ERROR_BADMAGIC. */
-
 if (re->magic_number != MAGIC_NUMBER) return PCRE2_ERROR_BADMAGIC;
-
-/* Check the code unit width. */
 
 if ((re->flags & PCRE2_MODE_MASK) != PCRE2_CODE_UNIT_WIDTH/8)
   return PCRE2_ERROR_BADMODE;
-
-/* PCRE2_NOTEMPTY and PCRE2_NOTEMPTY_ATSTART are match-time flags in the
-options variable for this function. Users of PCRE2 who are not calling the
-function directly would like to have a way of setting these flags, in the same
-way that they can set pcre2_compile() flags like PCRE2_NO_AUTOPOSSESS with
-constructions like (*NO_AUTOPOSSESS). To enable this, (*NOTEMPTY) and
-(*NOTEMPTY_ATSTART) set bits in the pattern's "flag" function which can now be
-transferred to the options for this function. The bits are guaranteed to be
-adjacent, but do not have the same values. This bit of Boolean trickery assumes
-that the match-time bits are not more significant than the flag bits. If by
-accident this is not the case, a compile-time division by zero error will
-occur. */
 
 #define FF (PCRE2_NOTEMPTY_SET|PCRE2_NE_ATST_SET)
 #define OO (PCRE2_NOTEMPTY|PCRE2_NOTEMPTY_ATSTART)
 options |= (re->flags & FF) / ((FF & (~FF+1)) / (OO & (~OO+1)));
 #undef FF
 #undef OO
-
-/* If restarting after a partial match, do some sanity checks on the contents
-of the workspace. */
 
 if ((options & PCRE2_DFA_RESTART) != 0)
   {
@@ -3352,8 +2858,6 @@ if ((options & PCRE2_DFA_RESTART) != 0)
       return PCRE2_ERROR_DFA_BADRESTART;
   }
 
-/* Set some local values */
-
 utf = (re->overall_options & PCRE2_UTF) != 0;
 start_match = subject + start_offset;
 end_subject = subject + length;
@@ -3361,15 +2865,9 @@ req_cu_ptr = start_match - 1;
 anchored = (options & (PCRE2_ANCHORED|PCRE2_DFA_RESTART)) != 0 ||
   (re->overall_options & PCRE2_ANCHORED) != 0;
 
-/* The "must be at the start of a line" flags are used in a loop when finding
-where to start. */
-
 startline = (re->flags & PCRE2_STARTLINE) != 0;
 firstline = (re->overall_options & PCRE2_FIRSTLINE) != 0;
 bumpalong_limit = end_subject;
-
-/* Initialize and set up the fixed fields in the callout block, with a pointer
-in the match block. */
 
 mb->cb = &cb;
 cb.version = 2;
@@ -3379,10 +2877,6 @@ cb.callout_flags = 0;
 cb.capture_top      = 1;      /* No capture support */
 cb.capture_last     = 0;
 cb.mark             = NULL;   /* No (*MARK) support */
-
-/* Get data from the match context, if present, and fill in the remaining
-fields in the match block. It is an error to set an offset limit without
-setting the flag at compile time. */
 
 if (mcontext == NULL)
   {
@@ -3430,8 +2924,6 @@ mb->poptions = re->overall_options;
 mb->match_call_count = 0;
 mb->heap_used = 0;
 
-/* Process the \R and newline settings. */
-
 mb->bsr_convention = re->bsr_convention;
 mb->nltype = NLTYPE_FIXED;
 switch(re->newline_convention)
@@ -3468,14 +2960,6 @@ switch(re->newline_convention)
   default: return PCRE2_ERROR_INTERNAL;
   }
 
-/* Check a UTF string for validity if required. For 8-bit and 16-bit strings,
-we must also check that a starting offset does not point into the middle of a
-multiunit character. We check only the portion of the subject that is going to
-be inspected during matching - from the offset minus the maximum back reference
-to the given length. This saves time when a small part of a large subject is
-being matched by the use of a starting offset. Note that the maximum lookbehind
-is a number of characters, not code units. */
-
 #ifdef SUPPORT_UNICODE
 if (utf && (options & PCRE2_NO_UTF_CHECK) == 0)
   {
@@ -3504,9 +2988,6 @@ if (utf && (options & PCRE2_NO_UTF_CHECK) == 0)
 #endif  /* PCRE2_CODE_UNIT_WIDTH != 32 */
     }
 
-  /* Validate the relevant portion of the subject. After an error, adjust the
-  offset to be an absolute offset in the whole string. */
-
   match_data->rc = PRIV(valid_utf)(check_subject,
     length - (PCRE2_SIZE)(check_subject - subject), &(match_data->startchar));
   if (match_data->rc != 0)
@@ -3516,9 +2997,6 @@ if (utf && (options & PCRE2_NO_UTF_CHECK) == 0)
     }
   }
 #endif  /* SUPPORT_UNICODE */
-
-/* Set up the first code unit to match, if available. If there's no first code
-unit there may be a bitmap of possible first characters. */
 
 if ((re->flags & PCRE2_FIRSTSET) != 0)
   {
@@ -3542,8 +3020,6 @@ else
   if (!startline && (re->flags & PCRE2_FIRSTMAPSET) != 0)
     start_bits = re->start_bitmap;
 
-/* There may be a "last known required code unit" set. */
-
 if ((re->flags & PCRE2_LASTSET) != 0)
   {
   has_req_cu = TRUE;
@@ -3563,9 +3039,6 @@ if ((re->flags & PCRE2_LASTSET) != 0)
     }
   }
 
-/* If the match data block was previously used with PCRE2_COPY_MATCHED_SUBJECT,
-free the memory that was obtained. */
-
 if ((match_data->flags & PCRE2_MD_COPIED_SUBJECT) != 0)
   {
   match_data->memctl.free((void *)match_data->subject,
@@ -3573,37 +3046,17 @@ if ((match_data->flags & PCRE2_MD_COPIED_SUBJECT) != 0)
   match_data->flags &= ~PCRE2_MD_COPIED_SUBJECT;
   }
 
-/* Fill in fields that are always returned in the match data. */
-
 match_data->code = re;
 match_data->subject = NULL;  /* Default for no match */
 match_data->mark = NULL;
 match_data->matchedby = PCRE2_MATCHEDBY_DFA_INTERPRETER;
 
-/* Call the main matching function, looping for a non-anchored regex after a
-failed match. If not restarting, perform certain optimizations at the start of
-a match. */
-
 for (;;)
   {
-  /* ----------------- Start of match optimizations ---------------- */
-
-  /* There are some optimizations that avoid running the match if a known
-  starting point is not found, or if a known later code unit is not present.
-  However, there is an option (settable at compile time) that disables
-  these, for testing and for ensuring that all callouts do actually occur.
-  The optimizations must also be avoided when restarting a DFA match. */
 
   if ((re->overall_options & PCRE2_NO_START_OPTIMIZE) == 0 &&
       (options & PCRE2_DFA_RESTART) == 0)
     {
-    /* If firstline is TRUE, the start of the match is constrained to the first
-    line of a multiline string. That is, the match must be before or at the
-    first newline following the start of matching. Temporarily adjust
-    end_subject so that we stop the optimization scans for a first code unit
-    immediately after the first character of a newline (the first code unit can
-    legitimately be a newline). If the match fails at the newline, later code
-    breaks this loop. */
 
     if (firstline)
       {
@@ -3622,10 +3075,6 @@ for (;;)
       while (t < end_subject && !IS_NEWLINE(t)) t++;
       end_subject = t;
       }
-
-    /* Anchored: check the first code unit if one is recorded. This may seem
-    pointless but it can help in detecting a no match case without scanning for
-    the required code unit. */
 
     if (anchored)
       {
@@ -3647,14 +3096,6 @@ for (;;)
         if (!ok) break;
         }
       }
-
-    /* Not anchored. Advance to a unique first code unit if there is one. In
-    8-bit mode, the use of memchr() gives a big speed up, even though we have
-    to call it twice in caseless mode, in order to find the earliest occurrence
-    of the character in either of its cases. If a call to memchr() that
-    searches the rest of the subject fails to find one case, remember that in
-    order not to keep on repeating the search. This can make a huge difference
-    when the strings are very long and only one case is present. */
 
     else
       {
@@ -3680,10 +3121,6 @@ for (;;)
             if (pp1 == NULL) memchr_not_found_first_cu = TRUE;
               else cu2size = pp1 - start_match;
             }
-
-          /* If pp1 is not NULL, we have arranged to search only as far as pp1,
-          to see if the other case is earlier, so we can set "not found" only
-          when both searches have returned NULL. */
 
           if (!memchr_not_found_first_cu2)
             {
@@ -3712,23 +3149,10 @@ for (;;)
 #endif
           }
 
-        /* If we can't find the required code unit, having reached the true end
-        of the subject, break the bumpalong loop, to force a match failure,
-        except when doing partial matching, when we let the next cycle run at
-        the end of the subject. To see why, consider the pattern /(?<=abc)def/,
-        which partially matches "abc", even though the string does not contain
-        the starting character "d". If we have not reached the true end of the
-        subject (PCRE2_FIRSTLINE caused end_subject to be temporarily modified)
-        we also let the cycle run, because the matching string is legitimately
-        allowed to start with the first code unit of a newline. */
-
         if ((mb->moptions & (PCRE2_PARTIAL_HARD|PCRE2_PARTIAL_SOFT)) == 0 &&
             start_match >= mb->end_subject)
           break;
         }
-
-      /* If there's no first code unit, advance to just after a linebreak for a
-      multiline match if required. */
 
       else if (startline)
         {
@@ -3748,10 +3172,6 @@ for (;;)
           while (start_match < end_subject && !WAS_NEWLINE(start_match))
             start_match++;
 
-          /* If we have just passed a CR and the newline option is ANY or
-          ANYCRLF, and we are now at a LF, advance the match position by one
-          more code unit. */
-
           if (start_match[-1] == CHAR_CR &&
                (mb->nltype == NLTYPE_ANY || mb->nltype == NLTYPE_ANYCRLF) &&
                start_match < end_subject &&
@@ -3759,11 +3179,6 @@ for (;;)
             start_match++;
           }
         }
-
-      /* If there's no first code unit or a requirement for a multiline line
-      start, advance to a non-unique first code unit if any have been
-      identified. The bitmap contains only 256 bits. When code units are 16 or
-      32 bits wide, all code units greater than 254 set the 255 bit. */
 
       else if (start_bits != NULL)
         {
@@ -3777,52 +3192,19 @@ for (;;)
           start_match++;
           }
 
-        /* See comment above in first_cu checking about the next line. */
-
         if ((mb->moptions & (PCRE2_PARTIAL_HARD|PCRE2_PARTIAL_SOFT)) == 0 &&
             start_match >= mb->end_subject)
           break;
         }
       }  /* End of first code unit handling */
 
-    /* Restore fudged end_subject */
-
     end_subject = mb->end_subject;
-
-    /* The following two optimizations are disabled for partial matching. */
 
     if ((mb->moptions & (PCRE2_PARTIAL_HARD|PCRE2_PARTIAL_SOFT)) == 0)
       {
       PCRE2_SPTR p;
 
-      /* The minimum matching length is a lower bound; no actual string of that
-      length may actually match the pattern. Although the value is, strictly,
-      in characters, we treat it as code units to avoid spending too much time
-      in this optimization. */
-
       if (end_subject - start_match < re->minlength) goto NOMATCH_EXIT;
-
-      /* If req_cu is set, we know that that code unit must appear in the
-      subject for the match to succeed. If the first code unit is set, req_cu
-      must be later in the subject; otherwise the test starts at the match
-      point. This optimization can save a huge amount of backtracking in
-      patterns with nested unlimited repeats that aren't going to match.
-      Writing separate code for cased/caseless versions makes it go faster, as
-      does using an autoincrement and backing off on a match. As in the case of
-      the first code unit, using memchr() in the 8-bit library gives a big
-      speed up. Unlike the first_cu check above, we do not need to call
-      memchr() twice in the caseless case because we only need to check for the
-      presence of the character in either case, not find the first occurrence.
-
-      The search can be skipped if the code unit was found later than the
-      current starting point in a previous iteration of the bumpalong loop.
-
-      HOWEVER: when the subject string is very, very long, searching to its end
-      can take a long time, and give bad performance on quite ordinary
-      patterns. This showed up when somebody was matching something like
-      /^\d+C/ on a 32-megabyte string... so we don't do this when the string is
-      sufficiently long, but it's worth searching a lot more for unanchored
-      patterns. */
 
       p = start_match + (has_first_cu? 1:0);
       if (has_req_cu && p > req_cu_ptr)
@@ -3867,14 +3249,7 @@ for (;;)
 #endif
             }
 
-          /* If we can't find the required code unit, break the matching loop,
-          forcing a match failure. */
-
           if (p >= end_subject) break;
-
-          /* If we have found the required code unit, save the point where we
-          found it, so that we don't search again next time round the loop if
-          the start hasn't passed this code unit yet. */
 
           req_cu_ptr = p;
           }
@@ -3882,13 +3257,7 @@ for (;;)
       }
     }
 
-  /* ------------ End of start of match optimizations ------------ */
-
-  /* Give no match if we have passed the bumpalong limit. */
-
   if (start_match > bumpalong_limit) break;
-
-  /* OK, now we can do the business */
 
   mb->start_used_ptr = start_match;
   mb->last_used_ptr = start_match;
@@ -3905,9 +3274,6 @@ for (;;)
     (int)wscount,                 /* size of same */
     0,                            /* function recurse level */
     base_recursion_workspace);    /* initial workspace for recursion */
-
-  /* Anything other than "no match" means we are done, always; otherwise, carry
-  on only if not anchored. */
 
   if (rc != PCRE2_ERROR_NOMATCH || anchored)
     {
@@ -3937,9 +3303,6 @@ for (;;)
     goto EXIT;
     }
 
-  /* Advance to the next subject character unless we are at the end of a line
-  and firstline is set. */
-
   if (firstline && IS_NEWLINE(start_match)) break;
   start_match++;
 #ifdef SUPPORT_UNICODE
@@ -3949,10 +3312,6 @@ for (;;)
     }
 #endif
   if (start_match > end_subject) break;
-
-  /* If we have just passed a CR and we are now at a LF, and the pattern does
-  not contain any explicit matches for \r or \n, and the newline option is CRLF
-  or ANY or ANYCRLF, advance the match position by one more character. */
 
   if (UCHAR21TEST(start_match - 1) == CHAR_CR &&
       start_match < end_subject &&

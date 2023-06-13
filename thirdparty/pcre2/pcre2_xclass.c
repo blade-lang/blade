@@ -38,32 +38,15 @@ POSSIBILITY OF SUCH DAMAGE.
 -----------------------------------------------------------------------------
 */
 
-/* This module contains an internal function that is used to match an extended
-class. It is used by pcre2_auto_possessify() and by both pcre2_match() and
-pcre2_def_match(). */
-
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-
 
 #include "pcre2_internal.h"
 
 /*************************************************
 *       Match character against an XCLASS        *
 *************************************************/
-
-/* This function is called to match a character against an extended class that
-might contain codepoints above 255 and/or Unicode properties.
-
-Arguments:
-  c           the character
-  data        points to the flag code unit of the XCLASS data
-  utf         TRUE if in UTF mode
-
-Returns:      TRUE if character matches, else FALSE
-*/
 
 BOOL
 PRIV(xclass)(uint32_t c, PCRE2_SPTR data, BOOL utf)
@@ -76,10 +59,6 @@ BOOL negated = (*data & XCL_NOT) != 0;
 utf = TRUE;
 #endif
 
-/* Code points < 256 are matched against a bitmap, if one is present. If not,
-we still carry on, because there may be ranges that start below 256 in the
-additional data. */
-
 if (c < 256)
   {
   if ((*data & XCL_HASPROP) == 0)
@@ -91,10 +70,6 @@ if (c < 256)
     (((uint8_t *)(data + 1))[c/8] & (1u << (c&7))) != 0)
     return !negated; /* char found */
   }
-
-/* First skip the bit map if present. Then match against the list of Unicode
-properties or large chars or ranges that end with a large char. We won't ever
-encounter XCL_PROP or XCL_NOTPROP when UTF support is not compiled. */
 
 if ((*data++ & XCL_MAP) != 0) data += 32 / sizeof(PCRE2_UCHAR);
 
@@ -166,10 +141,6 @@ while ((t = *data++) != XCL_END)
         return !negated;
       break;
 
-      /* Perl space used to exclude VT, but from Perl 5.18 it is included,
-      which means that Perl space and POSIX space are now identical. PCRE
-      was changed at release 8.34. */
-
       case PT_SPACE:    /* Perl space */
       case PT_PXSPACE:  /* POSIX space */
       switch(c)
@@ -207,18 +178,6 @@ while ((t = *data++) != XCL_END)
         }
       break;
 
-      /* The following three properties can occur only in an XCLASS, as there
-      is no \p or \P coding for them. */
-
-      /* Graphic character. Implement this as not Z (space or separator) and
-      not C (other), except for Cf (format) with a few exceptions. This seems
-      to be what Perl does. The exceptional characters are:
-
-      U+061C           Arabic Letter Mark
-      U+180E           Mongolian Vowel Separator
-      U+2066 - U+2069  Various "isolate"s
-      */
-
       case PT_PXGRAPH:
       if ((PRIV(ucp_gentype)[prop->chartype] != ucp_Z &&
             (PRIV(ucp_gentype)[prop->chartype] != ucp_C ||
@@ -227,9 +186,6 @@ while ((t = *data++) != XCL_END)
          )) == isprop)
         return !negated;
       break;
-
-      /* Printable character: same as graphic, with the addition of Zs, i.e.
-      not Zl and not Zp, and U+180E. */
 
       case PT_PXPRINT:
       if ((prop->chartype != ucp_Zl &&
@@ -241,18 +197,11 @@ while ((t = *data++) != XCL_END)
         return !negated;
       break;
 
-      /* Punctuation: all Unicode punctuation, plus ASCII characters that
-      Unicode treats as symbols rather than punctuation, for Perl
-      compatibility (these are $+<=>^`|~). */
-
       case PT_PXPUNCT:
       if ((PRIV(ucp_gentype)[prop->chartype] == ucp_P ||
             (c < 128 && PRIV(ucp_gentype)[prop->chartype] == ucp_S)) == isprop)
         return !negated;
       break;
-
-      /* This should never occur, but compilers may mutter if there is no
-      default. */
 
       default:
       return FALSE;

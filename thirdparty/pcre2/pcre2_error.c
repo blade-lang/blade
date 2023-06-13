@@ -38,7 +38,6 @@ POSSIBILITY OF SUCH DAMAGE.
 -----------------------------------------------------------------------------
 */
 
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -47,20 +46,6 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #define STRING(a)  # a
 #define XSTRING(s) STRING(s)
-
-/* The texts of compile-time error messages. Compile-time error numbers start
-at COMPILE_ERROR_BASE (100).
-
-This used to be a table of strings, but in order to reduce the number of
-relocations needed when a shared library is loaded dynamically, it is now one
-long string. We cannot use a table of offsets, because the lengths of inserts
-such as XSTRING(MAX_NAME_SIZE) are not known. Instead,
-pcre2_get_error_message() counts through to the one it wants - this isn't a
-performance issue because these strings are used only when there is an error.
-
-Each substring ends with \0 to insert a null character. This includes the final
-substring, so that the whole string ends with \0\0, which can be detected when
-counting through. */
 
 static const unsigned char compile_error_texts[] =
   "no error\0"
@@ -273,24 +258,9 @@ static const unsigned char match_error_texts[] =
   "PCRE2_MATCH_INVALID_UTF is not supported for DFA matching\0"
   ;
 
-
 /*************************************************
 *            Return error message                *
 *************************************************/
-
-/* This function copies an error message into a buffer whose units are of an
-appropriate width. Error numbers are positive for compile-time errors, and
-negative for match-time errors (except for UTF errors), but the numbers are all
-distinct.
-
-Arguments:
-  enumber       error number
-  buffer        where to put the message (zero terminated)
-  size          size of the buffer in code units
-
-Returns:        length of message if all is well
-                negative on error
-*/
 
 PCRE2_EXP_DEFN int PCRE2_CALL_CONVENTION
 pcre2_get_error_message(int enumber, PCRE2_UCHAR *buffer, PCRE2_SIZE size)

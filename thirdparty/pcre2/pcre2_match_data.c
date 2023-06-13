@@ -38,20 +38,15 @@ POSSIBILITY OF SUCH DAMAGE.
 -----------------------------------------------------------------------------
 */
 
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
 #include "pcre2_internal.h"
 
-
-
 /*************************************************
 *  Create a match data block given ovector size  *
 *************************************************/
-
-/* A minimum of 1 is imposed on the number of ovector pairs. */
 
 PCRE2_EXP_DEFN pcre2_match_data * PCRE2_CALL_CONVENTION
 pcre2_match_data_create(uint32_t oveccount, pcre2_general_context *gcontext)
@@ -67,13 +62,9 @@ yield->flags = 0;
 return yield;
 }
 
-
-
 /*************************************************
 *  Create a match data block using pattern data  *
 *************************************************/
-
-/* If no context is supplied, use the memory allocator from the code. */
 
 PCRE2_EXP_DEFN pcre2_match_data * PCRE2_CALL_CONVENTION
 pcre2_match_data_create_from_pattern(const pcre2_code *code,
@@ -83,8 +74,6 @@ if (gcontext == NULL) gcontext = (pcre2_general_context *)code;
 return pcre2_match_data_create(((pcre2_real_code *)code)->top_bracket + 1,
   gcontext);
 }
-
-
 
 /*************************************************
 *            Free a match data block             *
@@ -102,8 +91,6 @@ if (match_data != NULL)
   }
 }
 
-
-
 /*************************************************
 *         Get last mark in match                 *
 *************************************************/
@@ -113,8 +100,6 @@ pcre2_get_mark(pcre2_match_data *match_data)
 {
 return match_data->mark;
 }
-
-
 
 /*************************************************
 *          Get pointer to ovector                *
@@ -126,8 +111,6 @@ pcre2_get_ovector_pointer(pcre2_match_data *match_data)
 return match_data->ovector;
 }
 
-
-
 /*************************************************
 *          Get number of ovector slots           *
 *************************************************/
@@ -138,8 +121,6 @@ pcre2_get_ovector_count(pcre2_match_data *match_data)
 return match_data->oveccount;
 }
 
-
-
 /*************************************************
 *         Get starting code unit in match        *
 *************************************************/
@@ -149,8 +130,6 @@ pcre2_get_startchar(pcre2_match_data *match_data)
 {
 return match_data->startchar;
 }
-
-
 
 /*************************************************
 *         Get size of match data block           *

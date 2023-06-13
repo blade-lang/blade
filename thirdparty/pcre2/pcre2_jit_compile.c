@@ -47,10 +47,6 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef SUPPORT_JIT
 
-/* All-in-one: Since we use the JIT compiler only from here,
-we just include it. This way we don't need to touch the build
-system files. */
-
 #define SLJIT_CONFIG_AUTO 1
 #define SLJIT_CONFIG_STATIC 1
 #define SLJIT_VERBOSE 0
@@ -82,97 +78,14 @@ allocator->free(ptr, allocator->memory_data);
 #error Unsupported architecture
 #endif
 
-/* Defines for debugging purposes. */
-
-/* 1 - Use unoptimized capturing brackets.
-   2 - Enable capture_last_ptr (includes option 1). */
-/* #define DEBUG_FORCE_UNOPTIMIZED_CBRAS 2 */
-
-/* 1 - Always have a control head. */
-/* #define DEBUG_FORCE_CONTROL_HEAD 1 */
-
-/* Allocate memory for the regex stack on the real machine stack.
-Fast, but limited size. */
 #define MACHINE_STACK_SIZE 32768
 
-/* Growth rate for stack allocated by the OS. Should be the multiply
-of page size. */
 #define STACK_GROWTH_RATE 8192
 
-/* Enable to check that the allocation could destroy temporaries. */
 #if defined SLJIT_DEBUG && SLJIT_DEBUG
 #define DESTROY_REGISTERS 1
 #endif
 
-/*
-Short summary about the backtracking mechanism empolyed by the jit code generator:
-
-The code generator follows the recursive nature of the PERL compatible regular
-expressions. The basic blocks of regular expressions are condition checkers
-whose execute different commands depending on the result of the condition check.
-The relationship between the operators can be horizontal (concatenation) and
-vertical (sub-expression) (See struct backtrack_common for more details).
-
-  'ab' - 'a' and 'b' regexps are concatenated
-  'a+' - 'a' is the sub-expression of the '+' operator
-
-The condition checkers are boolean (true/false) checkers. Machine code is generated
-for the checker itself and for the actions depending on the result of the checker.
-The 'true' case is called as the matching path (expected path), and the other is called as
-the 'backtrack' path. Branch instructions are expesive for all CPUs, so we avoid taken
-branches on the matching path.
-
- Greedy star operator (*) :
-   Matching path: match happens.
-   Backtrack path: match failed.
- Non-greedy star operator (*?) :
-   Matching path: no need to perform a match.
-   Backtrack path: match is required.
-
-The following example shows how the code generated for a capturing bracket
-with two alternatives. Let A, B, C, D are arbirary regular expressions, and
-we have the following regular expression:
-
-   A(B|C)D
-
-The generated code will be the following:
-
- A matching path
- '(' matching path (pushing arguments to the stack)
- B matching path
- ')' matching path (pushing arguments to the stack)
- D matching path
- return with successful match
-
- D backtrack path
- ')' backtrack path (If we arrived from "C" jump to the backtrack of "C")
- B backtrack path
- C expected path
- jump to D matching path
- C backtrack path
- A backtrack path
-
- Notice, that the order of backtrack code paths are the opposite of the fast
- code paths. In this way the topmost value on the stack is always belong
- to the current backtrack code path. The backtrack path must check
- whether there is a next alternative. If so, it needs to jump back to
- the matching path eventually. Otherwise it needs to clear out its own stack
- frame and continue the execution on the backtrack code paths.
-*/
-
-/*
-Saved stack frames:
-
-Atomic blocks and asserts require reloading the values of private data
-when the backtrack mechanism performed. Because of OP_RECURSE, the data
-are not necessarly known in compile time, thus we need a dynamic restore
-mechanism.
-
-The stack frames are stored in a chain list, and have the following format:
-([ capturing bracket offset ][ start value ][ end value ])+ ... [ 0 ] [ previous head ]
-
-Thus we can restore the private data to a particular point in the stack.
-*/
 
 typedef struct jit_arguments {
   /* Pointers first. */
@@ -231,10 +144,6 @@ enum  early_fail_types {
 
 typedef int (SLJIT_FUNC *jit_function)(jit_arguments *args);
 
-/* The following structure is the key data type for the recursive
-code generator. It is allocated by compile_matchingpath, and contains
-the arguments for compile_backtrackingpath. Must be the first member
-of its descendants. */
 typedef struct backtrack_common {
   /* Concatenation stack. */
   struct backtrack_common *prev;
@@ -582,10 +491,7 @@ typedef struct compare_context {
 #define POSSESSIVE1      (3 * sizeof(sljit_sw))
 /* Max limit of recursions. */
 #define LIMIT_MATCH      (4 * sizeof(sljit_sw))
-/* The output vector is stored on the stack, and contains pointers
-to characters. The vector data is divided into two groups: the first
-group contains the start / end character pointers, and the second is
-the start pointers when the end of the capturing group has not yet reached. */
+
 #define OVECTOR_START    (common->ovector_start)
 #define OVECTOR(i)       (OVECTOR_START + (i) * (sljit_sw)sizeof(sljit_sw))
 #define OVECTOR_PRIV(i)  (common->cbra_ptr + (i) * (sljit_sw)sizeof(sljit_sw))
@@ -1228,14 +1134,7 @@ return TRUE;
 
 #define EARLY_FAIL_ENHANCE_MAX (1 + 1)
 
-/*
-start:
-  0 - skip / early fail allowed
-  1 - only early fail with range allowed
-  >1 - (start - 1) early fail is processed
 
-return: current number of iterators enhanced with fast fail
-*/
 static int detect_early_fail(compiler_common *common, PCRE2_SPTR cc, int *private_data_start, sljit_s32 depth, int start)
 {
 PCRE2_SPTR next_alt;
@@ -4560,9 +4459,6 @@ OP_SRC(SLJIT_FAST_RETURN, RETURN_ADDR, 0);
 
 static void do_utfreadnewline_invalid(compiler_common *common)
 {
-/* Slow decoding a UTF-8 character, specialized for newlines.
-TMP1 contains the first byte of the character (>= 0xc0). Return
-char value in TMP1. */
 DEFINE_COMPILER;
 struct sljit_label *loop;
 struct sljit_label *skip_start;
@@ -14012,17 +13908,6 @@ return 0;
 *        JIT compile a Regular Expression        *
 *************************************************/
 
-/* This function used JIT to convert a previously-compiled pattern into machine
-code.
-
-Arguments:
-  code          a compiled pattern
-  options       JIT option bits
-
-Returns:        0: success or (*NOJIT) was used
-               <0: an error code
-*/
-
 #define PUBLIC_JIT_COMPILE_OPTIONS \
   (PCRE2_JIT_COMPLETE|PCRE2_JIT_PARTIAL_SOFT|PCRE2_JIT_PARTIAL_HARD|PCRE2_JIT_INVALID_UTF)
 
@@ -14036,32 +13921,6 @@ if (code == NULL)
 
 if ((options & ~PUBLIC_JIT_COMPILE_OPTIONS) != 0)
   return PCRE2_ERROR_JIT_BADOPTION;
-
-/* Support for invalid UTF was first introduced in JIT, with the option
-PCRE2_JIT_INVALID_UTF. Later, support was added to the interpreter, and the
-compile-time option PCRE2_MATCH_INVALID_UTF was created. This is now the
-preferred feature, with the earlier option deprecated. However, for backward
-compatibility, if the earlier option is set, it forces the new option so that
-if JIT matching falls back to the interpreter, there is still support for
-invalid UTF. However, if this function has already been successfully called
-without PCRE2_JIT_INVALID_UTF and without PCRE2_MATCH_INVALID_UTF (meaning that
-non-invalid-supporting JIT code was compiled), give an error.
-
-If in the future support for PCRE2_JIT_INVALID_UTF is withdrawn, the following
-actions are needed:
-
-  1. Remove the definition from pcre2.h.in and from the list in
-     PUBLIC_JIT_COMPILE_OPTIONS above.
-
-  2. Replace PCRE2_JIT_INVALID_UTF with a local flag in this module.
-
-  3. Replace PCRE2_JIT_INVALID_UTF in pcre2_jit_test.c.
-
-  4. Delete the following short block of code. The setting of "re" and
-     "functions" can be moved into the JIT-only block below, but if that is
-     done, (void)re and (void)functions will be needed in the non-JIT case, to
-     avoid compiler warnings.
-*/
 
 #ifdef SUPPORT_JIT
 executable_functions *functions = (executable_functions *)re->executable_jit;
@@ -14079,10 +13938,6 @@ if ((options & PCRE2_JIT_INVALID_UTF) != 0)
     }
   }
 
-/* The above tests are run with and without JIT support. This means that
-PCRE2_JIT_INVALID_UTF propagates back into the regex options (ensuring
-interpreter support) even in the absence of JIT. But now, if there is no JIT
-support, give an error return. */
 
 #ifndef SUPPORT_JIT
 return PCRE2_ERROR_JIT_BADOPTION;
@@ -14142,9 +13997,6 @@ return 0;
 
 #endif  /* SUPPORT_JIT */
 }
-
-/* JIT compiler uses an all-in-one approach. This improves security,
-   since the code generator functions are not exported. */
 
 #define INCLUDED_FROM_PCRE2_JIT_COMPILE
 

@@ -53,27 +53,9 @@ POSSIBILITY OF SUCH DAMAGE.
    PCRE2_SUBSTITUTE_OVERFLOW_LENGTH|PCRE2_SUBSTITUTE_REPLACEMENT_ONLY| \
    PCRE2_SUBSTITUTE_UNKNOWN_UNSET|PCRE2_SUBSTITUTE_UNSET_EMPTY)
 
-
-
 /*************************************************
 *           Find end of substitute text          *
 *************************************************/
-
-/* In extended mode, we recognize ${name:+set text:unset text} and similar
-constructions. This requires the identification of unescaped : and }
-characters. This function scans for such. It must deal with nested ${
-constructions. The pointer to the text is updated, either to the required end
-character, or to where an error was detected.
-
-Arguments:
-  code      points to the compiled expression (for options)
-  ptrptr    points to the pointer to the start of the text (updated)
-  ptrend    end of the whole string
-  last      TRUE if the last expected string (only } recognized)
-
-Returns:    0 on success
-            negative error code on failure
-*/
 
 static int
 find_text_end(const pcre2_code *code, PCRE2_SPTR *ptrptr, PCRE2_SPTR ptrend,
@@ -162,37 +144,9 @@ EXIT:
 return rc;
 }
 
-
-
 /*************************************************
 *              Match and substitute              *
 *************************************************/
-
-/* This function applies a compiled re to a subject string and creates a new
-string with substitutions. The first 7 arguments are the same as for
-pcre2_match(). Either string length may be PCRE2_ZERO_TERMINATED.
-
-Arguments:
-  code            points to the compiled expression
-  subject         points to the subject string
-  length          length of subject string (may contain binary zeros)
-  start_offset    where to start in the subject string
-  options         option bits
-  match_data      points to a match_data block, or is NULL
-  context         points a PCRE2 context
-  replacement     points to the replacement string
-  rlength         length of replacement string
-  buffer          where to put the substituted string
-  blength         points to length of buffer; updated to length of string
-
-Returns:          >= 0 number of substitutions made
-                  < 0 an error code
-                  PCRE2_ERROR_BADREPLACEMENT means invalid use of $
-*/
-
-/* This macro checks for space in the buffer before copying into it. On
-overflow, either give an error immediately, or keep on, accumulating the
-length. */
 
 #define CHECKMEMCPY(from,length) \
   { \
@@ -213,8 +167,6 @@ length. */
     lengthleft -= length; \
     } \
   }
-
-/* Here's the function */
 
 PCRE2_EXP_DEFN int PCRE2_CALL_CONVENTION
 pcre2_substitute(const pcre2_code *code, PCRE2_SPTR subject, PCRE2_SIZE length,
@@ -254,24 +206,11 @@ lengthleft = buff_length = *blength;
 *blength = PCRE2_UNSET;
 ovecsave[0] = ovecsave[1] = ovecsave[2] = PCRE2_UNSET;
 
-/* Partial matching is not valid. This must come after setting *blength to
-PCRE2_UNSET, so as not to imply an offset in the replacement. */
-
 if ((options & (PCRE2_PARTIAL_HARD|PCRE2_PARTIAL_SOFT)) != 0)
   return PCRE2_ERROR_BADOPTION;
 
-/* Check for using a match that has already happened. Note that the subject
-pointer in the match data may be NULL after a no-match. */
-
 use_existing_match = ((options & PCRE2_SUBSTITUTE_MATCHED) != 0);
 replacement_only = ((options & PCRE2_SUBSTITUTE_REPLACEMENT_ONLY) != 0);
-
-/* If starting from an existing match, there must be an externally provided
-match data block. We create an internal match_data block in two cases: (a) an
-external one is not supplied (and we are not starting from an existing match);
-(b) an existing match is to be used for the first substitution. In the latter
-case, we copy the existing match into the internal block. This ensures that no
-changes are made to the existing match data block. */
 
 if (match_data == NULL)
   {
@@ -312,13 +251,9 @@ scb.input = subject;
 scb.output = (PCRE2_SPTR)buffer;
 scb.ovector = ovector;
 
-/* Find lengths of zero-terminated strings and the end of the replacement. */
-
 if (length == PCRE2_ZERO_TERMINATED) length = PRIV(strlen)(subject);
 if (rlength == PCRE2_ZERO_TERMINATED) rlength = PRIV(strlen)(replacement);
 repend = replacement + rlength;
-
-/* Check UTF replacement string if necessary. */
 
 #ifdef SUPPORT_UNICODE
 if (utf && (options & PCRE2_NO_UTF_CHECK) == 0)
@@ -332,12 +267,8 @@ if (utf && (options & PCRE2_NO_UTF_CHECK) == 0)
   }
 #endif  /* SUPPORT_UNICODE */
 
-/* Save the substitute options and remove them from the match options. */
-
 suboptions = options & SUBSTITUTE_OPTIONS;
 options &= ~SUBSTITUTE_OPTIONS;
-
-/* Error if the start match offset is greater than the length of the subject. */
 
 if (start_offset > length)
   {
@@ -346,12 +277,7 @@ if (start_offset > length)
   goto EXIT;
   }
 
-/* Copy up to the start offset, unless only the replacement is required. */
-
 if (!replacement_only) CHECKMEMCPY(subject, start_offset);
-
-/* Loop for global substituting. If PCRE2_SUBSTITUTE_MATCHED is set, the first
-match is taken from the match_data that was passed in. */
 
 subs = 0;
 do
@@ -371,22 +297,12 @@ do
   if (utf) options |= PCRE2_NO_UTF_CHECK;  /* Only need to check once */
 #endif
 
-  /* Any error other than no match returns the error code. No match when not
-  doing the special after-empty-match global rematch, or when at the end of the
-  subject, breaks the global loop. Otherwise, advance the starting point by one
-  character, copying it to the output, and try again. */
-
   if (rc < 0)
     {
     PCRE2_SIZE save_start;
 
     if (rc != PCRE2_ERROR_NOMATCH) goto EXIT;
     if (goptions == 0 || start_offset >= length) break;
-
-    /* Advance by one code point. Then, if CRLF is a valid newline sequence and
-    we have advanced into the middle of it, advance one more code point. In
-    other words, do not start in the middle of CRLF, even if CR and LF on their
-    own are valid newlines. */
 
     save_start = start_offset++;
     if (subject[start_offset-1] == CHAR_CR &&
@@ -395,8 +311,6 @@ do
         start_offset < length &&
         subject[start_offset] == CHAR_LF)
       start_offset++;
-
-    /* Otherwise, in UTF mode, advance past any secondary code points. */
 
     else if ((code->overall_options & PCRE2_UTF) != 0)
       {
@@ -410,31 +324,17 @@ do
 #endif
       }
 
-    /* Copy what we have advanced past (unless not required), reset the special
-    global options, and continue to the next match. */
-
     fraglength = start_offset - save_start;
     if (!replacement_only) CHECKMEMCPY(subject + save_start, fraglength);
     goptions = 0;
     continue;
     }
 
-  /* Handle a successful match. Matches that use \K to end before they start
-  or start before the current point in the subject are not supported. */
-
   if (ovector[1] < ovector[0] || ovector[0] < start_offset)
     {
     rc = PCRE2_ERROR_BADSUBSPATTERN;
     goto EXIT;
     }
-
-  /* Check for the same match as previous. This is legitimate after matching an
-  empty string that starts after the initial match offset. We have tried again
-  at the match point in case the pattern is one like /(?<=\G.)/ which can never
-  match at its starting point, so running the match achieves the bumpalong. If
-  we do get the same (null) match at the original match point, it isn't such a
-  pattern, so we now do the empty string magic. In all other cases, a repeat
-  match should never occur. */
 
   if (ovecsave[0] == ovector[0] && ovecsave[1] == ovector[1])
     {
@@ -448,9 +348,6 @@ do
     goto EXIT;
     }
 
-  /* Count substitutions with a paranoid check for integer overflow; surely no
-  real call to this function would ever hit this! */
-
   if (subs == INT_MAX)
     {
     rc = PCRE2_ERROR_TOOMANYREPLACE;
@@ -458,17 +355,11 @@ do
     }
   subs++;
 
-  /* Copy the text leading up to the match (unless not required), and remember
-  where the insert begins and how many ovector pairs are set. */
-
   if (rc == 0) rc = ovector_count;
   fraglength = ovector[0] - start_offset;
   if (!replacement_only) CHECKMEMCPY(subject + start_offset, fraglength);
   scb.output_offsets[0] = buff_offset;
   scb.oveccount = rc;
-
-  /* Process the replacement string. If the entire replacement is literal, just
-  copy it with length check. */
 
   ptr = replacement;
   if ((suboptions & PCRE2_SUBSTITUTE_LITERAL) != 0)
@@ -476,17 +367,10 @@ do
     CHECKMEMCPY(ptr, rlength);
     }
 
-  /* Within a non-literal replacement, which must be scanned character by
-  character, local literal mode can be set by \Q, but only in extended mode
-  when backslashes are being interpreted. In extended mode we must handle
-  nested substrings that are to be reprocessed. */
-
   else for (;;)
     {
     uint32_t ch;
     unsigned int chlen;
-
-    /* If at the end of a nested substring, pop the stack. */
 
     if (ptr >= repend)
       {
@@ -495,8 +379,6 @@ do
       ptr = ptrstack[--ptrstackptr];
       continue;
       }
-
-    /* Handle the next character */
 
     if (escaped_literal)
       {
@@ -508,8 +390,6 @@ do
         }
       goto LOADLITERAL;
       }
-
-    /* Not in literal mode. */
 
     if (*ptr == CHAR_DOLLAR_SIGN)
       {
@@ -556,11 +436,6 @@ do
           if (next < CHAR_0 || next > CHAR_9) break;
           group = group * 10 + next - CHAR_0;
 
-          /* A check for a number greater than the hightest captured group
-          is sufficient here; no need for a separate overflow check. If unknown
-          groups are to be treated as unset, just skip over any remaining
-          digits and carry on. */
-
           if (group > code->top_bracket)
             {
             if ((suboptions & PCRE2_SUBSTITUTE_UNKNOWN_UNSET) != 0)
@@ -589,9 +464,6 @@ do
         if (n == 0) goto BAD;
         name[n] = 0;
         }
-
-      /* In extended mode we recognize ${name:+set text:unset text} and
-      ${name:-default text}. */
 
       if (inparens)
         {
@@ -629,10 +501,7 @@ do
           }
 
         ptr++;
-        }
-
-      /* Have found a syntactically correct group number or name, or *name.
-      Only *MARK is currently recognized. */
+      }
 
       if (star)
         {
@@ -650,17 +519,9 @@ do
         else goto BAD;
         }
 
-      /* Substitute the contents of a group. We don't use substring_copy
-      functions any more, in order to support case forcing. */
-
       else
         {
         PCRE2_SPTR subptr, subptrend;
-
-        /* Find a number for a named group. In case there are duplicate names,
-        search for the first one that is set. If the name is not found when
-        PCRE2_SUBSTITUTE_UNKNOWN_EMPTY is set, set the group number to a
-        non-existent group. */
 
         if (group < 0)
           {
@@ -688,16 +549,9 @@ do
                 }
               }
 
-            /* If group is still negative, it means we did not find a group
-            that is in the ovector. Just set the first group. */
-
             if (group < 0) group = GET2(first, 0);
             }
           }
-
-        /* We now have a group that is identified by number. Find the length of
-        the captured string. If a group in a non-special substitution is unset
-        when PCRE2_SUBSTITUTE_UNSET_EMPTY is set, substitute nothing. */
 
         rc = pcre2_substring_length_bynumber(match_data, group, &sublength);
         if (rc < 0)
@@ -714,10 +568,6 @@ do
             goto PTREXIT;                             /* Else error */
             }
           }
-
-        /* If special is '+' we have a 'set' and possibly an 'unset' text,
-        both of which are reprocessed when used. If special is '-' we have a
-        default text for when the group is unset; it must be reprocessed. */
 
         if (special != 0)
           {
@@ -745,13 +595,9 @@ do
           continue;
           }
 
-        /* Otherwise we have a literal substitution of a group's contents. */
-
         LITERAL_SUBSTITUTE:
         subptr = subject + ovector[group*2];
         subptrend = subject + ovector[group*2 + 1];
-
-        /* Substitute a literal string, possibly forcing alphabetic case. */
 
         while (subptr < subptrend)
           {
@@ -788,11 +634,6 @@ do
           }
         }
       }
-
-    /* Handle an escape sequence in extended mode. We can use check_escape()
-    to process \Q, \E, \c, \o, \x and \ followed by non-alphanumerics, but
-    the case-forcing escapes are not supported in pcre2_compile() so must be
-    recognized here. */
 
     else if ((suboptions & PCRE2_SUBSTITUTE_EXTENDED) != 0 &&
               *ptr == CHAR_BACKSLASH)
@@ -850,8 +691,6 @@ do
         }
       }
 
-    /* Handle a literal code unit */
-
     else
       {
       LOADLITERAL:
@@ -888,20 +727,13 @@ do
         }
       CHECKMEMCPY(temp, chlen);
       } /* End handling a literal code unit */
-    }   /* End of loop for scanning the replacement. */
-
-  /* The replacement has been copied to the output, or its size has been
-  remembered. Do the callout if there is one and we have done an actual
-  replacement. */
+    }
 
   if (!overflowed && mcontext != NULL && mcontext->substitute_callout != NULL)
     {
     scb.subscount = subs;
     scb.output_offsets[1] = buff_offset;
     rc = mcontext->substitute_callout(&scb, mcontext->substitute_callout_data);
-
-    /* A non-zero return means cancel this substitution. Instead, copy the
-    matched string fragment. */
 
     if (rc != 0)
       {
@@ -918,11 +750,6 @@ do
       }
     }
 
-  /* Save the details of this match. See above for how this data is used. If we
-  matched an empty string, do the magic for global matches. Update the start
-  offset to point to the rest of the subject string. If we re-used an existing
-  match for the first match, switch to the internal match data block. */
-
   ovecsave[0] = ovector[0];
   ovecsave[1] = ovector[1];
   ovecsave[2] = start_offset;
@@ -930,10 +757,7 @@ do
   goptions = (ovector[0] != ovector[1] || ovector[0] > start_offset)? 0 :
     PCRE2_ANCHORED|PCRE2_NOTEMPTY_ATSTART;
   start_offset = ovector[1];
-  } while ((suboptions & PCRE2_SUBSTITUTE_GLOBAL) != 0);  /* Repeat "do" loop */
-
-/* Copy the rest of the subject unless not required, and terminate the output
-with a binary zero. */
+  } while ((suboptions & PCRE2_SUBSTITUTE_GLOBAL) != 0);
 
 if (!replacement_only)
   {
@@ -944,18 +768,11 @@ if (!replacement_only)
 temp[0] = 0;
 CHECKMEMCPY(temp, 1);
 
-/* If overflowed is set it means the PCRE2_SUBSTITUTE_OVERFLOW_LENGTH is set,
-and matching has carried on after a full buffer, in order to compute the length
-needed. Otherwise, an overflow generates an immediate error return. */
-
 if (overflowed)
   {
   rc = PCRE2_ERROR_NOMEMORY;
   *blength = buff_length + extra_needed;
   }
-
-/* After a successful execution, return the number of substitutions and set the
-length of buffer used, excluding the trailing zero. */
 
 else
   {

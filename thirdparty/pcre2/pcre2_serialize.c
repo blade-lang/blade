@@ -38,10 +38,6 @@ POSSIBILITY OF SUCH DAMAGE.
 -----------------------------------------------------------------------------
 */
 
-/* This module contains functions for serializing and deserializing
-a sequence of compiled codes. */
-
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -53,16 +49,11 @@ a sequence of compiled codes. */
 
 #define SERIALIZED_DATA_MAGIC 0x50523253u
 
-/* Deserialization is limited to the current PCRE version and
-character width. */
-
 #define SERIALIZED_DATA_VERSION \
   ((PCRE2_MAJOR) | ((PCRE2_MINOR) << 16))
 
 #define SERIALIZED_DATA_CONFIG \
   (sizeof(PCRE2_UCHAR) | ((sizeof(void*)) << 8) | ((sizeof(PCRE2_SIZE)) << 16))
-
-
 
 /*************************************************
 *           Serialize compiled patterns          *
@@ -129,16 +120,6 @@ for (i = 0; i < number_of_codes; i++)
   re = (const pcre2_real_code *)(codes[i]);
   (void)memcpy(dst_bytes, (char *)re, re->blocksize);
   
-  /* Certain fields in the compiled code block are re-set during 
-  deserialization. In order to ensure that the serialized data stream is always 
-  the same for the same pattern, set them to zero here. We can't assume the 
-  copy of the pattern is correctly aligned for accessing the fields as part of 
-  a structure. Note the use of sizeof(void *) in the second of these, to
-  specify the size of a pointer. If sizeof(uint8_t *) is used (tables is a 
-  pointer to uint8_t), gcc gives a warning because the first argument is also a 
-  pointer to uint8_t. Casting the first argument to (void *) can stop this, but 
-  it didn't stop Coverity giving the same complaint. */
-  
   (void)memset(dst_bytes + offsetof(pcre2_real_code, memctl), 0, 
     sizeof(pcre2_memctl));
   (void)memset(dst_bytes + offsetof(pcre2_real_code, tables), 0, 
@@ -153,7 +134,6 @@ for (i = 0; i < number_of_codes; i++)
 *serialized_size = total_size;
 return number_of_codes;
 }
-
 
 /*************************************************
 *          Deserialize compiled patterns         *
@@ -186,21 +166,12 @@ if (number_of_codes > data->number_of_codes)
 
 src_bytes = bytes + sizeof(pcre2_serialized_data);
 
-/* Decode tables. The reference count for the tables is stored immediately
-following them. */
-
 tables = memctl->malloc(TABLES_LENGTH + sizeof(PCRE2_SIZE), memctl->memory_data);
 if (tables == NULL) return PCRE2_ERROR_NOMEMORY;
 
 memcpy(tables, src_bytes, TABLES_LENGTH);
 *(PCRE2_SIZE *)(tables + TABLES_LENGTH) = number_of_codes;
 src_bytes += TABLES_LENGTH;
-
-/* Decode the byte stream. We must not try to read the size from the compiled
-code block in the stream, because it might be unaligned, which causes errors on
-hardware such as Sparc-64 that doesn't like unaligned memory accesses. The type
-of the blocksize field is given its own name to ensure that it is the same here
-as in the block. */
 
 for (i = 0; i < number_of_codes; i++)
   {
@@ -209,8 +180,6 @@ for (i = 0; i < number_of_codes; i++)
     sizeof(CODE_BLOCKSIZE_TYPE));
   if (blocksize <= sizeof(pcre2_real_code))
     return PCRE2_ERROR_BADSERIALIZEDDATA;
-
-  /* The allocator provided by gcontext replaces the original one. */
 
   dst_re = (pcre2_real_code *)PRIV(memctl_malloc)(blocksize,
     (pcre2_memctl *)gcontext);
@@ -225,8 +194,6 @@ for (i = 0; i < number_of_codes; i++)
     return PCRE2_ERROR_NOMEMORY;
     }
 
-  /* The new allocator must be preserved. */
-
   memcpy(((uint8_t *)dst_re) + sizeof(pcre2_memctl),
     src_bytes + sizeof(pcre2_memctl), blocksize - sizeof(pcre2_memctl));
   if (dst_re->magic_number != MAGIC_NUMBER ||
@@ -235,9 +202,7 @@ for (i = 0; i < number_of_codes; i++)
     {   
     memctl->free(dst_re, memctl->memory_data); 
     return PCRE2_ERROR_BADSERIALIZEDDATA;
-    } 
-
-  /* At the moment only one table is supported. */
+    }
 
   dst_re->tables = tables;
   dst_re->executable_jit = NULL;
@@ -249,7 +214,6 @@ for (i = 0; i < number_of_codes; i++)
 
 return number_of_codes;
 }
-
 
 /*************************************************
 *    Get the number of serialized patterns       *
@@ -267,7 +231,6 @@ if (data->config != SERIALIZED_DATA_CONFIG) return PCRE2_ERROR_BADMODE;
 
 return data->number_of_codes;
 }
-
 
 /*************************************************
 *            Free the allocated stream           *
