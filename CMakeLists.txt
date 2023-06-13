@@ -146,8 +146,6 @@ target_include_directories(libblade PUBLIC "${INCLUDE_GEN_DIR}")
 set(LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_STATIC_LIBRARY_SUFFIX}")
 set(SHARED_LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
-add_dependencies(libblade pcre2)
-
 set_target_properties(libblade
 		PROPERTIES
 		OUTPUT_NAME blade
@@ -160,8 +158,24 @@ if(MINGW OR MUSL)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-stringop-overread")
 endif()
 
+cmake_policy(SET CMP0135 OLD)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(PCRE2_USE_STATIC_LIBS ON)
+include(FetchContent)
+FetchContent_Declare(pcre2
+		URL      https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.42/pcre2-10.42.tar.gz
+		URL_HASH SHA256=c33b418e3b936ee3153de2c61cc638e7e4fe3156022a5c77d0711bcbb9d64f1f
+		)
+FetchContent_MakeAvailable(pcre2)
+
+if(NOT pcre2_POPULATED)
+	FetchContent_Populate(pcre2)
+	add_subdirectory(${pcre2_SOURCE_DIR} ${pcre2_BUILD_DIR})
+endif()
+
 # link pcre2
-target_link_libraries(libblade PRIVATE pcre2)
+target_link_libraries(libblade PRIVATE pcre2-8-static)
+target_include_directories(libblade PUBLIC "${pcre2_BINARY_DIR}")
 
 if(UNIX)
 	#	Add linenoise as dependency and link it.

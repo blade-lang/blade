@@ -8,7 +8,6 @@ if(NOT "${HAVE_STRSEP}")
     add_subdirectory(strsep)
 endif()
 
-add_subdirectory(pcre2)
 if(UNIX)
     add_subdirectory(linenoise)
 endif()
