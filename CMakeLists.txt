@@ -13,7 +13,6 @@ subdirs(thirdparty packages)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
-option(ENABLE_INSTALLATION "Enable Installation" OFF)
 
 # set build type to release if not specified.
 if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
@@ -328,7 +327,5 @@ add_blade_test(blade while 0 "x = 51")
 
 # Replace install() with conditional installation.
 macro(install)
-	if (NOT ENABLE_INSTALLATION)
-		_install(${ARGN})
-	endif()
+	_install(${ARGN})
 endmacro()
