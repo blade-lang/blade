@@ -649,7 +649,7 @@ class Template {
           if !attrs or !attrs.contains(constants.PATH_ATTR)
             error('missing "${constants.PATH_ATTR}" attribute for include tag')
   
-          var include_path = os.join_paths(self._root_dir, attrs.path)
+          var include_path = os.join_paths(self._root_dir, attrs[constants.PATH_ATTR])
           if !include_path.match(constants.EXT_RE) include_path += constants.DEFAULT_EXT
           var fl = file(include_path)
           if fl.exists() {
@@ -659,7 +659,7 @@ class Template {
               variables
             )
           } else {
-            error('template "${attrs.path}" not found')
+            error('template "${attrs[constants.PATH_ATTR]}" not found')
           }
         } else if self._elements.contains(element.name) {
           # process custom elements
@@ -940,8 +940,8 @@ class Template {
 
     # confirm/auto create root directory as configured
     if !os.dir_exists(self._root_dir) {
-      if !_auto_init 
-        die Exception('templates directory "${self._root_Dir}" not found.')
+      if !self._auto_init 
+        die Exception('templates directory "${self._root_dir}" not found.')
       else os.create_dir(self._root_dir)
     }
   

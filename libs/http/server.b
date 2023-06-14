@@ -6,7 +6,6 @@ import .exception { HttpException }
 import .status
 
 import socket as so
-import iters
 
 /**
  * HTTP server
@@ -183,9 +182,9 @@ class HttpServer {
     if response.status == status.OK {
 
       # call the received listeners on the request object.
-      iters.each(self._received_listeners, @( fn, _ ) {
-        fn(request, response)
-      })
+      for listener in self._received_listeners {
+        listener(request, response)
+      }
 
       if response.body {
         feedback += 'Content-Length: ${response.body.length()}\r\n'.to_bytes()
@@ -214,9 +213,9 @@ class HttpServer {
     client.send(feedback)
 
     # call the reply listeners.
-    iters.each(self._sent_listeners, @( fn ) {
-      fn(response)
-    })
+    for listener in self._sent_listeners {
+      listener(response)
+    }
 
     feedback.dispose()
     response.body.dispose()
@@ -239,9 +238,9 @@ class HttpServer {
         var client = self.socket.accept()
 
         # call the connect listeners.
-        iters.each(self._connect_listeners, @(fn, _) {
-          fn(client)
-        })
+        for listener in self._connect_listeners {
+          listener(client)
+        }
 
         try {
           if is_number(self.read_timeout)
@@ -256,17 +255,19 @@ class HttpServer {
           }
         } catch Exception e {
           # call the error listeners.
-          iters.each(self._error_listeners, @(fn, _) {
-            fn(e, client)
-          })
+          for listener in self._error_listeners {
+            listener(e, client)
+          }
         } finally {
           var client_info = client.info()
-          client.close()
 
           # call the disconnect listeners.
-          iters.each(self._disconnect_listeners, @(fn, _) {
-            fn(client_info)
-          })
+          for listener in self._disconnect_listeners {
+            listener(client_info)
+          }
+
+          # close the client
+          client.close()
         }
       }
     }

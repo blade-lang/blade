@@ -1,0 +1,13 @@
+#!/bin/bash
+
+if [[ ! $(command -v blade) ]]; then
+  echo "Blade is not installed or not in path."
+  exit 1
+fi
+
+ROOT=`dirname $0`
+
+NYSSA_DIR="$ROOT/apps/nyssa"
+BLADE_EXE="$ROOT/blade"
+
+exec $BLADE_EXE $NYSSA_DIR "$@"

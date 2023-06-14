@@ -174,18 +174,19 @@ static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
 
   int message_const = add_constant(vm, &function->blob, STRING_L_VAL("message", 7));
 
-  // s_prop 1
+  // s_prop 0
   write_blob(vm, &function->blob, OP_SET_PROPERTY, 0);
   write_blob(vm, &function->blob, (message_const >> 8) & 0xff, 0);
   write_blob(vm, &function->blob, message_const & 0xff, 0);
 
   // pop
   write_blob(vm, &function->blob, OP_POP, 0);
+  write_blob(vm, &function->blob, OP_POP, 0);
 
   // g_loc 0
-  write_blob(vm, &function->blob, OP_GET_LOCAL, 0);
-  write_blob(vm, &function->blob, (0 >> 8) & 0xff, 0);
-  write_blob(vm, &function->blob, 0 & 0xff, 0);
+//  write_blob(vm, &function->blob, OP_GET_LOCAL, 0);
+//  write_blob(vm, &function->blob, (0 >> 8) & 0xff, 0);
+//  write_blob(vm, &function->blob, 0 & 0xff, 0);
 
   // ret
   write_blob(vm, &function->blob, OP_RETURN, 0);

@@ -1,6 +1,7 @@
 #include "bstring.h"
 #include "utf8.h"
 #include "native.h"
+#include "debug.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -1254,7 +1255,17 @@ DECLARE_STRING_METHOD(__itern__) {
   }
 
   if (!IS_NUMBER(args[0])) {
-    RETURN_ERROR("bytes are numerically indexed");
+    printf("          ");
+    for (b_value *slot = vm->current_frame->slots; slot < vm->stack_top; slot++) {
+      printf("[ ");
+      print_value(*slot);
+      printf(" ]");
+    }
+    printf("\n");
+    disassemble_instruction(
+        &vm->current_frame->closure->function->blob,
+        (int) (vm->current_frame->ip - vm->current_frame->closure->function->blob.code));
+    RETURN_ERROR("strings are numerically indexed");
   }
 
   int index = AS_NUMBER(args[0]);

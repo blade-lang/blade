@@ -2290,6 +2290,7 @@ static void try_statement(b_parser *p) {
     type = identifier_constant(p, &p->previous);
     address = current_blob(p)->count;
 
+//    printf("Locals count = %d at %s in %s\n", p->vm->compiler->local_count, p->vm->compiler->function->name->chars, p->vm->compiler->function->module->file);
     if (match(p, IDENTIFIER_TOKEN)) {
       created_variable(p, p->previous);
     } else {
