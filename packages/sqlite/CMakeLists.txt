@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.18...3.26)
 
 project(sqlite C)
 
@@ -12,7 +12,6 @@ message(STATUS "Building SQLite module to ${BLADE_ROOT}/dist")
 
 include_directories("${BLADE_ROOT}/includes" ${CMAKE_CURRENT_SOURCE_DIR})
 
-cmake_policy(SET CMP0135 OLD)
 include(FetchContent)
 FetchContent_Declare(SQLite3
         URL      https://www.sqlite.org/2023/sqlite-amalgamation-3420000.zip

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.18...3.26)
 
 project(blade C)
 
@@ -158,7 +158,6 @@ if(MINGW OR MUSL)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-stringop-overread")
 endif()
 
-cmake_policy(SET CMP0135 OLD)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(PCRE2_USE_STATIC_LIBS ON)
 include(FetchContent)
