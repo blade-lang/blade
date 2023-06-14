@@ -112,7 +112,7 @@ class HttpRequest {
   var auth_method = Auth.ANY
 
   # Private fields.
-  var _body_type = 'application/x-www-form-urlencoded'
+  var _body_type = 'application/x-wwx-form-urlencoded'
 
   _read_cookies() {
     var cookies = self.headers.get('Cookie', nil)
@@ -285,7 +285,7 @@ class HttpRequest {
     self._body_type = type
 
     using type {
-      when 'application/x-www-form-urlencoded' {
+      when 'application/x-wwx-form-urlencoded' {
         self.body = self._get_url_encoded_parts(body.to_string())  
         body.dispose()  # free body binary data
       }

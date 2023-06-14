@@ -403,6 +403,9 @@ void collect_garbage(b_vm *vm) {
   size_t before = vm->bytes_allocated;
 #endif
 
+//  REMOVE THE NEXT LINE TO DISABLE NESTED collect_garbage() POSSIBILITY!
+//  vm->next_gc = vm->bytes_allocated;
+
   mark_roots(vm);
   trace_references(vm);
   table_remove_whites(vm, &vm->strings);

@@ -2059,9 +2059,9 @@ static void echo_statement(b_parser *p) {
 }
 
 static void die_statement(b_parser *p) {
-  discard_locals(p, p->vm->compiler->scope_depth - 1);
   expression(p);
   emit_byte(p, OP_DIE);
+  discard_locals(p, p->vm->compiler->scope_depth - 1);
   consume_statement_end(p);
 }
 

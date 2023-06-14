@@ -8,7 +8,7 @@
 #include "util.h"
 #include "value.h"
 
-#include "pcre2/pcre2.h"
+#include "pcre2.h"
 
 #define DECLARE_NATIVE(name)                                                   \
   bool native_fn_##name(b_vm *vm, int arg_count, b_value *args)
