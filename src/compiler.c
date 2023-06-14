@@ -2292,7 +2292,6 @@ static void try_statement(b_parser *p) {
 
     if (match(p, IDENTIFIER_TOKEN)) {
       created_variable(p, p->previous);
-      emit_byte(p, OP_POP);
     } else {
       emit_byte(p, OP_POP);
     }

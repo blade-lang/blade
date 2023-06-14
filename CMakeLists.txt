@@ -160,6 +160,8 @@ endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(PCRE2_USE_STATIC_LIBS ON)
+set(PCRE2_BUILD_TESTS OFF)
+set(PCRE2_BUILD_PCRE2GREP OFF)
 include(FetchContent)
 FetchContent_Declare(pcre2
 		URL      https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.42/pcre2-10.42.tar.gz
