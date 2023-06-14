@@ -197,11 +197,189 @@
  * </div>
  * ```
  * 
+ * ### Wiring templates
+ * 
+ * While most of the examples here use the `render_string()` function to give a practical approach 
+ * to learning Wire templates, the `render()` function which allows rendering Wire templates from 
+ * files is a more powerful and conventional method of using Wire templates. Not only because they 
+ * allow loading templates from files, but also because they allow including other template files in 
+ * a template file via the builtin `<include />` tag. The `include` tag allows wiring multiple Wires 
+ * together to create a comprehensive UI layout hierarchy and is quite intuitive to use. 
+ * 
+ * Let's consider a simple use case: 
+ * 
+ * In a website for a client all pages UTF-8 enabled and are mobile first. This leaves room for a set 
+ * of `<meta>` tags that will need to be on every page of the website and in practice it will soon 
+ * become burdersome to have to keep repeating the `meta` tags across all page templates. To reduce 
+ * this code duplication, we can have a file located at the template root directory (See 
+ * [[Template.set_root]]) that contains all shared `meta` tags as shown in the sample below and include 
+ * this file in every other template.
+ * 
+ * ```html
+ * <!-- templates/meta.html -->
+ * <meta charset="utf-8">
+ * <meta http-equiv="X-UA-Compatible" content="IE=edge">
+ * <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+ * ```
+ * 
+ * This template can the be imported in another file with the `include` tag.
+ * 
+ * ```html
+ * <!-- templates/layout.html -->
+ * <include path="meta.html" />
+ * ```
+ * 
+ * The `include` tag has only one attribute which is always required and that is the `path` attribute. 
+ * This attribute allows us to specify the path to a Wire template (or any HTML file for that matter) 
+ * that will be rendered in the position the `include` tag currently occupies. Take note that in the 
+ * example above the `path` argument did not start with "templates/". This is because when decoding the 
+ * include path, the library first searches for files in the template root directory and if a matching 
+ * file is found, that file will be rendered. If none is found, it will interpret the path as a relative 
+ * path first then as an absolute path if no match is found. 
+ * 
+ * See [[Tempate.render]] for more information.
+ * 
  * ### Custom Modifiers
+ * 
+ * Apart from the built-in value modifiers, Wire templates allow you to add custom modifiers in a 
+ * simple manner by registering them with the `register_function()` method. The example below 
+ * shows an example custom modifier __reverse__ that reverses the original value as a string.
+ * 
+ * ```blade
+ * tpl.register_function('reverse', @(value) {
+ *   return ''.join(to_list(value).reverse())
+ * })
+ * ```
+ * 
+ * The modifier __reverse__ can then be used in a Wire template like this:
+ * 
+ * ```blade
+ * tpl.render_string('<div>{{ fruit|reverse }}</div>', {fruit: 'mango'})
+ * ```
+ * 
+ * And the output HTML from the above code will be
+ * 
+ * ```html
+ * <div>ognam</div>
+ * ```
+ * 
+ * Modifier functions can also take a second argument which will recieve any argument passed to the 
+ * modifier. This is best expressed with an example.
+ * 
+ * ```blade
+ * tpl.register_function('reverse_weird', @(value, arg) {
+ *   return '${arg}: ' + ''.join(to_list(value).reverse())
+ * })
+ * ```
+ * 
+ * This above modifier expects an argument that will be used to append the return string. While we 
+ * acknowledge that this function/modifier is weird, it shows clearly how to create a modifier that 
+ * takes an argument.
+ * 
+ * The code below shows how to pass an argument into the `reverse_weird` modifier from a template.
+ * 
+ * ```html
+ * <p>{{ fruit|reverse_weird='Reversed' }}</p>
+ * ```
+ * 
+ * Yes I know. It's weird. But if we passed in the same arguemt as the last, the output will be
+ * 
+ * ```html
+ * <p>Reversed: ognam</p>
+ * ```
+ * 
+ * Like regular Blade code, the argument will be `nil` if not passed and this is 
+ * important information if you intend to leverage this for a library that will be used by other 
+ * people. 
+ * 
+ * If we remove the argument to the modifier in the template above and simply call 
+ * `fruit|reverse_weird`, the result will look like this:
+ * 
+ * ```html
+ * <p>: ognam</p>
+ * ```
  * 
  * ### Custom Tags
  * 
+ * As with custom modifiers the template library allows you to create and process custom tags. 
+ * An example of a custom tag is the `<include />` tag previously discussed. To declare a custom 
+ * element and its behavior, you need to create a function that accepts two arguments and 
+ * register it with the `register_element()` method. When your custom element is matched in a 
+ * template, the registered function will be called with an instance of [[Template]] in the first 
+ * argument and the {{html}} decoded template as the second argument. Your function must then 
+ * return a string representing the processed tag or a valid HTML element Blade representation as 
+ * defined by the {{html}} module. 
+ * 
+ * > NOTE: It's more memory efficient to modify and return the same element when returing an HTML 
+ *    representation.
+ * 
+ * The example below defines a custom tag _`link`_ that will always be rendered as an anchor 
+ * (`<a>`) element with the class `link`.
+ * 
+ * ```blade
+ * tpl.register_element('link', @(this, el) {
+ *   return '<a href="${el.attributes[0].value}">${el.attributes[1].value}</a>'
+ * })
+ * ```
+ * 
+ * The simple tag defined above allows us to process the `<link />` tag in a Wire template. 
+ * For example,
+ * 
+ * ```html
+ * <link href="bladelang.com" text="Blade Website" />
+ * ```
+ * 
+ * The Wire template above will cause the following to be rendered.
+ * 
+ * ```html
+ * <a href="bladelang.com">Blade Website</a>
+ * ```
+ * 
+ * Below is a more complex example that returns an HTML representation in Blade instead of a string.
+ * 
+ * ```blade
+ * tpl.register_element('link', @(this, el) {
+ *   return {
+ *     type: 'element',
+ *     name: 'a',
+ *     attributes: [
+ *       { name: 'href', value: el.attributes[0].value }
+ *     ],
+ *     children: [
+ *       { type: 'text', content: el.attributes[1].value }
+ *     ]
+ *   }
+ * })
+ * ```
+ * 
+ * Both code achieve the same thing. However, the later format allows for a more flexible and programmatic 
+ * output that the former and is the recommended approach wherever possible.
+ * 
  * ### Template Functions
+ * 
+ * Template functions in Wire are simply modifiers that do not process any value nor accept any argument 
+ * (i.e. stand-alone modifiers) and are created in the same way as we create modifiers. However, they are 
+ * invoked quite differently. To invoke a template function, you need to wrap them in a `{!` and `!}` pair. 
+ * 
+ * For example, consider the following template function defined to return the base url of a website.
+ * 
+ * ```blade
+ * tpl.register_function('base_url', @() {
+ *   return  'https://localhost:8000'
+ * })
+ * ```
+ * 
+ * The function can be invoked as follows:
+ * 
+ * ```blade
+ * tpl.render_string('{! base_url !}')
+ * ```
+ * 
+ * The example above will return `https://localhost:8000`.
+ * 
+ * Like with the `{{` and `}}` pair for variables, if you really intend to write the `{!` and `!}` pair, 
+ * you'll need to escapte the first `{` with a `%` sign. For example, `%{! name !}` will render as 
+ * `{! name !}` without processing.
  */
 
 import os
@@ -487,13 +665,19 @@ class Template {
           # process custom elements
           var processed = self._elements[element.name](self, element)
           if processed {
-            if !is_string(processed)
-              error('invalid return when processing "${element.name}" tag')
-            element = self._process(
-              path, 
-              html.decode(self._strip(processed), {with_position: true}), 
-              variables
-            )
+            if !is_string(processed) {
+              if is_dict(processed) and processed != element {
+                element = self._process(path, processed, variables)
+              } else if processed != element {
+                error('invalid return when processing "${element.name}" tag')
+              }
+            } else {
+              element = self._process(
+                path, 
+                html.decode(self._strip(processed), {with_position: true}), 
+                variables
+              )
+            }
           } else {
             element = nil
           }
@@ -604,7 +788,8 @@ class Template {
   /**
    * Registers a function that can be used to process variables in the template. 
    * The given function must accept a minimum of one argument which will recieve 
-   * the value of the value to be processed.
+   * the value of the value to be processed and at most two arguments, the second of 
+   * which will recieve arguments passed to the function as a string.
    * 
    * ##### Example
    * 
@@ -631,7 +816,9 @@ class Template {
       die Exception('string expected in argument 1 (name)')
     if !is_function(function)
       die Exception('function expected in argument 1 (function)')
-    if reflect.get_function_metadata(element).arity == 1
+
+    var fn_arity = reflect.get_function_metadata(function).arity
+    if fn_arity > 2
       die Exception('invalid template function')
     
     self._functions.set(name, function)
