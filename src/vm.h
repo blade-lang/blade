@@ -99,10 +99,8 @@ static inline void add_module(b_vm *vm, b_obj_module *module) {
   if (vm->frame_count == 0) {
     table_set(vm, &vm->globals, STRING_VAL(module->name), OBJ_VAL(module));
   } else {
-    table_set(vm,
-              &vm->current_frame->closure->function->module->values,
-              STRING_VAL(module->name), OBJ_VAL(module)
-    );
+    table_set(vm, &vm->current_frame->closure->function->module->values,
+              STRING_VAL(module->name), OBJ_VAL(module));
   }
 }
 
@@ -158,5 +156,8 @@ static inline void gc_clear_protection(b_vm *vm) {
 // native function.
 #define GC(o) gc_protect(vm, (b_obj*)(o))
 #define CLEAR_GC() gc_clear_protection(vm)
+
+bool call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args);
+b_ptr_result run(b_vm *vm);
 
 #endif

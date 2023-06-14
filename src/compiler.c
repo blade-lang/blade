@@ -1500,12 +1500,15 @@ static void function_body(b_parser *p, b_compiler *compiler, bool close_scope) {
   }
   b_obj_func *function = end_compiler(p);
 
+  push(p->vm, OBJ_VAL(function));
   emit_byte_and_short(p, OP_CLOSURE, make_constant(p, OBJ_VAL(function)));
 
   for (int i = 0; i < function->up_value_count; i++) {
     emit_byte(p, compiler->up_values[i].is_local ? 1 : 0);
     emit_short(p, compiler->up_values[i].index);
   }
+
+  pop(p->vm);
 }
 
 static void function(b_parser *p, b_func_type type) {
@@ -1976,6 +1979,8 @@ static void using_statement(b_parser *p) {
       if (case_type == WHEN_TOKEN) {
         state = 1;
         do {
+          ignore_whitespace(p);
+
           advance(p);
 
           b_value jump = NUMBER_VAL((double) current_blob(p)->count - (double) start_offset);
@@ -2054,9 +2059,9 @@ static void echo_statement(b_parser *p) {
 }
 
 static void die_statement(b_parser *p) {
-  discard_locals(p, p->vm->compiler->scope_depth - 1);
   expression(p);
   emit_byte(p, OP_DIE);
+  discard_locals(p, p->vm->compiler->scope_depth - 1);
   consume_statement_end(p);
 }
 
@@ -2187,7 +2192,9 @@ static void import_statement(b_parser *p) {
     b_obj_string *final_module_name = copy_string(p->vm, module_name, (int) strlen(module_name));
     if (table_get(&p->vm->modules, OBJ_VAL(final_module_name), &md)) {
       int module = make_constant(p, OBJ_VAL(final_module_name));
+      push(p->vm, OBJ_VAL(final_module_name));
       emit_byte_and_short(p, OP_NATIVE_MODULE, module);
+      pop(p->vm);
 
       parse_specific_import(p, module_name, module, false, true);
       return;
@@ -2232,7 +2239,9 @@ static void import_statement(b_parser *p) {
   pop(p->vm);
 
   int import_constant = make_constant(p, OBJ_VAL(closure));
+  push(p->vm, OBJ_VAL(closure));
   emit_byte_and_short(p, OP_CALL_IMPORT, import_constant);
+  pop(p->vm);
 
   parse_specific_import(p, module_name, import_constant, was_renamed, false);
 }

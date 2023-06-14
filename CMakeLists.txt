@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.18...3.26)
 
 project(blade C)
 
@@ -13,8 +13,6 @@ subdirs(thirdparty packages)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
-
-set(cfsp " ")
 
 # set build type to release if not specified.
 if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
@@ -146,8 +144,6 @@ target_include_directories(libblade PUBLIC "${INCLUDE_GEN_DIR}")
 set(LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_STATIC_LIBRARY_SUFFIX}")
 set(SHARED_LIBRARY_NAME_END "${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
-add_dependencies(libblade pcre2)
-
 set_target_properties(libblade
 		PROPERTIES
 		OUTPUT_NAME blade
@@ -160,8 +156,26 @@ if(MINGW OR MUSL)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-stringop-overread")
 endif()
 
+set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(PCRE2_USE_STATIC_LIBS ON)
+set(PCRE2_BUILD_TESTS OFF)
+set(PCRE2_BUILD_PCRE2GREP OFF)
+include(FetchContent)
+FetchContent_Declare(pcre2
+		URL      https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.42/pcre2-10.42.tar.gz
+		URL_HASH SHA256=c33b418e3b936ee3153de2c61cc638e7e4fe3156022a5c77d0711bcbb9d64f1f
+		)
+FetchContent_MakeAvailable(pcre2)
+
+if(NOT pcre2_POPULATED)
+	FetchContent_Populate(pcre2)
+	add_subdirectory(${pcre2_SOURCE_DIR} ${pcre2_BUILD_DIR})
+endif()
+
 # link pcre2
-target_link_libraries(libblade PRIVATE pcre2)
+target_link_libraries(libblade PRIVATE pcre2-8-static)
+target_include_directories(libblade PUBLIC "${pcre2_BINARY_DIR}")
 
 if(UNIX)
 	#	Add linenoise as dependency and link it.
@@ -198,6 +212,8 @@ add_custom_command(TARGET blade POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:blade> ${EXE_FILE}
 		COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:libblade> ${LIBRARY_FILE}
 		COMMAND ${EXE_FILE} "${PROJECT_SOURCE_DIR}/scripts/make_blade.b" "${PROJECT_SOURCE_DIR}"
+		# The first one is useful for development purposes but doesn't in any way harm release.
+		COMMAND ${EXE_FILE} "${PROJECT_SOURCE_DIR}/scripts/ast.b" "${PROJECT_SOURCE_DIR}/libs/ast"
 		COMMAND ${EXE_FILE} "${PROJECT_SOURCE_DIR}/scripts/ast.b" "${OUTPUT_DIR}/libs/ast"
 		COMMENT "Generating Blade header and copy output..."
 )
@@ -309,3 +325,8 @@ add_blade_test(blade try 8 "list index 10 out of range")
 add_blade_test(blade using 0 "ten\nafter")
 add_blade_test(blade var 0 "it works\n20\ntrue")
 add_blade_test(blade while 0 "x = 51")
+
+# Replace install() with conditional installation.
+macro(install)
+	_install(${ARGN})
+endmacro()
