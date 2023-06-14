@@ -20,6 +20,7 @@ FetchContent_Declare(SQLite3
 FetchContent_MakeAvailable(SQLite3)
 
 add_library(sqlite SHARED "${sqlite3_SOURCE_DIR}/sqlite3.c" "${sqlite3_SOURCE_DIR}/sqlite3.h" sqlite.c)
+target_include_directories(sqlite PRIVATE "${sqlite3_SOURCE_DIR}")
 add_definitions(-DSQLITE_ENABLE_JSON1)
 target_link_libraries(sqlite libblade)
 add_dependencies(sqlite blade)
