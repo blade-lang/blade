@@ -627,7 +627,10 @@ class Socket {
   # returns the code if it is or throws an SocketException otherwise
   _check_error(code) {
     var err = _socket.error(code)
-    if err die SocketException(err)
+    if err {
+      self.close()
+      die SocketException(err)
+    }
     return code
   }
 
@@ -853,6 +856,10 @@ class Socket {
         socket.port = result[2]
         socket.is_client = true
         socket.is_connected = true
+        socket.is_shutdown = false
+        socket.is_closed = false
+        socket.is_bound = false
+        socket.is_listening = false
         return socket
       }
     }
@@ -868,7 +875,7 @@ class Socket {
   close() {
     # silently ignore multiple calls to close()
     if self.is_closed return true
-
+    
     if self._check_error(_socket.close(self.id)) == 0 {
       self.is_connected = false
       self.is_listening = false
@@ -906,13 +913,14 @@ class Socket {
 
     if self.is_closed die SocketException('socket is in an illegal state')
 
+    self.is_connected = false
+    self.is_listening = false
+    self.is_bound = false
+    self.is_client = false # may be reused as a server...
+    self.is_shutdown = true
+
     var result = self._check_error(_socket.shutdown(self.id, how)) >= 0
     if result {
-      self.is_connected = false
-      self.is_listening = false
-      self.is_bound = false
-      self.is_client = false # may be reused as a server...
-      self.is_shutdown = true
       self.shutdown_reason = how
     }
     return result == 0
@@ -934,15 +942,19 @@ class Socket {
     if option == SO_TYPE or option == SO_ERROR
       die Exception('the given option is read-only')
 
-    var result = self._check_error(_socket.setsockopt(self.id, option, value)) >= 0
+    if !self.is_closed and !self.is_shutdown {
+      var result = self._check_error(_socket.setsockopt(self.id, option, value)) >= 0
 
-    if result {
-      # get an update on SO_SNDTIMEO and SO_RCVTIMEO
-      if option == SO_SNDTIMEO self.send_timeout = value
-      else if option == SO_RCVTIMEO self.receive_timeout = value
+      if result {
+        # get an update on SO_SNDTIMEO and SO_RCVTIMEO
+        if option == SO_SNDTIMEO self.send_timeout = value
+        else if option == SO_RCVTIMEO self.receive_timeout = value
+      }
+
+      return result == 0
     }
 
-    return result == 0
+    return false
   }
 
   /**

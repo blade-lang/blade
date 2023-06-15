@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.18...3.26)
 
 project(clib C)
 
@@ -32,16 +32,22 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     target_compile_options(clib PRIVATE -O0)
 endif()
 
-set(FFI_ROOT ${CMAKE_CURRENT_LIST_DIR}/libffi)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+include(FetchContent)
+FetchContent_Declare(LibFFI
+        URL      https://github.com/blade-lang/ffi/archive/refs/heads/main.zip
+        URL_HASH SHA256=75bd74be525e74112a1c84da6648b9e995d285200ac3354eab59f341bd78dbb8
+        )
+FetchContent_MakeAvailable(LibFFI)
+set(FFI_ROOT ${libffi_BINARY_DIR})
+
 if(NOT WIN32)
-    include(libffi/CMakeLists.txt)
-    message(STATUS "FFI Version -- ${FFI_VERSION}")
-    include_directories(${FFI_INCLUDE_DIRS})
-    target_link_libraries(clib ${FFI_LIBRARIES})
+    target_include_directories(clib PRIVATE "${FFI_ROOT}/include")
+    target_link_libraries(clib libffi)
 else()
     find_package(libffi CONFIG REQUIRED)
     find_path(FFI_INCLUDE_DIR ffi.h)
-    include_directories(${FFI_INCLUDE_DIR})
+    target_include_directories(clib PRIVATE ${FFI_INCLUDE_DIR})
     target_link_libraries(clib libffi)
 endif()
 

@@ -285,7 +285,7 @@ class HttpRequest {
     self._body_type = type
 
     using type {
-      when 'application/x-wwx-form-urlencoded' {
+      when 'application/x-www-form-urlencoded' {
         self.body = self._get_url_encoded_parts(body.to_string())  
         body.dispose()  # free body binary data
       }

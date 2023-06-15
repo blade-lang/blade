@@ -170,8 +170,11 @@ class HttpServer {
   }
 
   _process_received(message, client) {
+    if !message or !client or !client.is_connected return
+
     var request = HttpRequest(),
         response = HttpResponse()
+
     if !request.parse(message, client)
       response.status = status.BAD_REQUEST
 
@@ -210,8 +213,10 @@ class HttpServer {
     '${status.map.get(response.status, 'UNKNOWN')}\r\n').to_bytes()
     feedback =  hdrv + feedback
     hdrv.dispose()
-                
-    client.send(feedback)
+           
+    if client.is_connected {
+      client.send(feedback)
+    }
 
     # call the reply listeners.
     iters.each(self._sent_listeners, @( fn ) {
@@ -235,25 +240,26 @@ class HttpServer {
       self.socket.listen()
 
       self._is_listening = true
-      while self._is_listening {
-        var client = self.socket.accept()
+      var client
 
-        # call the connect listeners.
-        iters.each(self._connect_listeners, @(fn, _) {
-          fn(client)
-        })
+      while self._is_listening {
 
         try {
-          if is_number(self.read_timeout)
-            client.set_option(so.SO_RCVTIMEO, self.read_timeout)
-          if is_number(self.write_timeout)
-            client.set_option(so.SO_SNDTIMEO, self.write_timeout)
+          client = self.socket.accept()
+          
+          # call the connect listeners.
+          iters.each(self._connect_listeners, @(fn, _) {
+            fn(client)
+          })
 
-          var data = client.receive()
-
-          if data {
-            self._process_received(data, client)
+          if client.is_connected {
+            if is_number(self.read_timeout)
+              client.set_option(so.SO_RCVTIMEO, self.read_timeout)
+            if is_number(self.write_timeout)
+              client.set_option(so.SO_SNDTIMEO, self.write_timeout)
           }
+
+          self._process_received(client.receive(), client)
         } catch Exception e {
           # call the error listeners.
           iters.each(self._error_listeners, @(fn, _) {
@@ -261,12 +267,13 @@ class HttpServer {
           })
         } finally {
           var client_info = client.info()
-          client.close()
 
           # call the disconnect listeners.
           iters.each(self._disconnect_listeners, @(fn, _) {
             fn(client_info)
           })
+
+          client.close()
         }
       }
     }
@@ -276,4 +283,3 @@ class HttpServer {
     return '<HttpServer ${self.host}:${self.port}>'
   }
 }
-
