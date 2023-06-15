@@ -1,12 +1,8 @@
 # Installing Nyssa
 
-Setting up Nyssa is a very straight forward process that involves three easy steps.
+Nyssa comes prepackaged with all Blade versions since `v0.0.86` and needs no further installation action. You'll need to upgrade your Blade installation you are on a Blade version lower than `v0.0.86`.
 
-1. Download the Nyssa package manager from [the official Nyssa website](https://nyssa.bladelang.com) or from [the Github repository releases page](https://github.com/blade-lang/nyssa/releases). It is recommended to download from the Nyssa website as the website will only have the most stable release for download.
-2. Extract the downloaded `.zip` file to a choice location on your device.
-3. Add the location of the extracted package to your system environment path to make the `nyssa` command available system-wide.
-
-Various operating systems provides different mechanisms for adding a path to the environment so the steps may vary for your specific operating system.
+The best way to enjoy the power of Nyssa is to add your Blade installation path to your shell/terminal environment. Various operating systems provides different mechanisms for adding a path to the environment so the steps may vary for your specific operating system.
 
 Here's a few links for different operating systems showing how to do this.
 
@@ -18,13 +14,13 @@ Here's a few links for different operating systems showing how to do this.
 
 ### Testing your installation
 
-If you followed all the steps and successfully added the download directory to system path, open a new terminal session (may be required) and run the command `nyssa --version`.
+If you have installed Blade and successfully added Blade installation directory to system path, open a new terminal session (may be required) and run the command `nyssa --version`.
 
 You should see an output similar to the below.
 
 ```
-Nyssa 0.1.0
-Blade 0.0.75 (running on BladeVM 0.0.8)
+Nyssa 0.2.0
+Blade 0.0.86 (running on BladeVM 0.1.1)
 ```
 
 You can also run the `nyssa` command without any arguments to see the full help information.

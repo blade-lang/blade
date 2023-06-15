@@ -39,17 +39,15 @@ import .options.version
 var parser = args.Parser('nyssa', true)
 
 var commands = {
-  account: account,
-  clean: clean,
-  # doc: doc,
-  info: info,
-  init: init,
-  install: install,
-  publish: publish,
-  restore: restore,
-  serve: serve,
-  uninstall: uninstall,
-  # update: update,
+  account,
+  clean,
+  info,
+  init,
+  install,
+  publish,
+  restore,
+  serve,
+  uninstall,
 }
 
 var options = {

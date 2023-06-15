@@ -174,6 +174,7 @@ class HttpServer {
 
     var request = HttpRequest(),
         response = HttpResponse()
+
     if !request.parse(message, client)
       response.status = status.BAD_REQUEST
 

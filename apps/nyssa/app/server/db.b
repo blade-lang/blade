@@ -100,6 +100,16 @@ def delete_publisher(name) {
   return db.exec('DELETE FROM publishers WHERE username = ?;', [name])
 }
 
+def update_publisher_password(name, password) {
+  var res = db.fetch('SELECT * FROM publishers WHERE username = ? ORDER BY id DESC LIMIT 1;', [name])
+  if res {
+    db.exec('UPDATE publishers SET password = ? WHERE username = ?', [password, name])
+    return true
+  }
+
+  return false
+}
+
 def get_publishers_count() {
   var res = db.fetch('SELECT COUNT(*) as count FROM publishers;')
   if res return res[0].count or 0

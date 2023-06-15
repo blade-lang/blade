@@ -20,15 +20,7 @@ var doc_files = [
   'commands.md'
 ]
 
-var nyssa_version = '0.0.0'
 var docs_dir = os.join_paths(os.args[1], setup.DOCS_DIR)
-var config_file = os.join_paths(os.args[1], setup.CONFIG_FILE)
-if (config_file = file(config_file)) and config_file.exists() {
-  var conf = json.decode(config_file.read())
-  if is_dict(conf) {
-    nyssa_version = conf.get('version', '0.0.0')
-  }
-}
 
 def error_page(req, res) {
   res.template('404')
@@ -42,7 +34,7 @@ def home(req, res) {
     top_packages: db.get_top_packages(),
     latest_packages: db.get_top_packages('created_at DESC'),
     show_login: !res.session.contains('user'),
-    nyssa_version: nyssa_version,
+    nyssa_version: setup.NYSSA_VERSION,
   })
 }
 
@@ -146,6 +138,86 @@ def login(req, res) {
     show_login: true,
     error: req.queries.get('error', nil)
   })
+}
+
+def password_recovery(req, res) {
+  if res.session.contains('user') {
+    res.redirect('/account')
+    return
+  }
+
+  res.template('recover', {
+    show_login: true,
+    error: req.queries.get('error', nil)
+  })
+}
+
+def recover(req, res) {
+  if res.session.contains('user') {
+    res.redirect('/account')
+    return
+  }
+
+  if req.body and is_dict(req.body) {
+    var name = req.body.get('username', nil),
+      key = req.body.get('key', nil)
+
+    if name and key {
+      var pub = db.get_publisher(name, key)
+
+      # authenticate
+      if pub {
+        res.session['user'] = pub
+        res.redirect('/change-password')
+        return
+      }
+    }
+  }
+
+  res.redirect('/forgot-password?error=1')
+}
+
+def change_password(req, res) {
+  if !res.session.contains('user') {
+    res.redirect('/login')
+    return
+  }
+
+  res.template('change_password', {
+    user: res.session['user'],
+    error: req.queries.get('error', nil)
+  })
+}
+
+def update_password(req, res) {
+  if !res.session.contains('user') {
+    res.redirect('/login')
+    return
+  }
+
+  if req.body and is_dict(req.body) {
+    var password = req.body.get('password', nil),
+      password_confirm = req.body.get('password-confirm', nil)
+
+    if password and password_confirm {
+      if password == password_confirm {
+        if !db.update_publisher_password(
+          res.session['user'].username, bcrypt.hash(password, 5)
+        ) {
+          res.redirect('/change-password?error=3')
+          return
+        }
+
+        res.redirect('/account')
+        return
+      } else {
+        res.redirect('/change-password?error=2')
+        return
+      }
+    }
+  }
+
+  res.redirect('/change-password?error=1')
 }
 
 def account(req, res) {

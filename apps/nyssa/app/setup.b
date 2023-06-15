@@ -1,7 +1,8 @@
 import os
+import json
 
 # general
-var NYSSA_VERSION = '0.1.0'
+var NYSSA_VERSION = '0.0.0'
 
 # directories
 var APP_DIR = 'app'
@@ -32,3 +33,13 @@ var DEFAULT_REPOSITORY = 'https://nyssa.bladelang.com'
 # frontend
 var PACKAGES_PER_PAGE = 10
 var SESSION_NAME = 'NYSSA-SESSION-ID'
+
+
+var config_file = os.join_paths(os.args[1], CONFIG_FILE)
+if (config_file = file(config_file)) and config_file.exists() {
+  var conf = json.decode(config_file.read())
+  if is_dict(conf) {
+    NYSSA_VERSION = conf.get('version', NYSSA_VERSION)
+  }
+}
+

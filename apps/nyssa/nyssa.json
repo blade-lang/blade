@@ -1,6 +1,6 @@
 {
   "name": "nyssa", 
-  "version": "0.1.9", 
+  "version": "0.2.0", 
   "description": "A package manager and repository for the Blade programming language.", 
   "homepage": "", 
   "tags": [
@@ -13,8 +13,5 @@
   "license": "MIT", 
   "sources": [
     "https://nyssa.bladelang.com"
-  ], 
-  "deps": {
-    "drawdown": "1.0.1"
-  }
+  ]
 }
