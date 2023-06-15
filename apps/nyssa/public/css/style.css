@@ -280,6 +280,7 @@ pre.has-icon .icon {
   border-color: #ffe08a;
   color: #946c00;
   background-color: #fffaeb;
+  padding: 0.05em 1.5em;
 }
 
 .content.doc blockquote strong {

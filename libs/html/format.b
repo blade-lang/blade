@@ -19,7 +19,7 @@ def unquote(str) {
 }
 
 def format(nodes, options) {
-  return iters.map(nodes, | node | {
+  return iters.map(nodes, @( node ) {
     var type = node.type
     var output_node = type == 'element' ? {
         type,
@@ -38,7 +38,7 @@ def format(nodes, options) {
 }
 
 def format_attributes(attributes) {
-  return iters.map(attributes, | attribute | {
+  return iters.map(attributes, @( attribute ) {
     var parts = split_head(attribute.trim(), '=')
     var name = parts[0]
     var value

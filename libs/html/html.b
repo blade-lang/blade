@@ -3,7 +3,7 @@
 import iters
 
 def format_attributes(attributes) {
-  return iters.reduce(attributes, | attrs, attribute | {
+  return iters.reduce(attributes, @( attrs, attribute ) {
     if (attribute.value == nil) {
       return '${attrs} ${attribute.name}'
     }
