@@ -1,7 +1,10 @@
 import markdown
 import .util
 
-var md = markdown()
+var md = markdown({
+  # linkify: true,
+  html: true,
+})
 
 def template_ext() {
   return {

@@ -471,7 +471,7 @@ class Template {
    * @constructor
    */
   Template(auto_init) {
-    if auto_init != nil and !is_boool(auto_init)
+    if auto_init != nil and !is_bool(auto_init)
       die Exception('boolean expected in argument 1 (auto_init)')
     self._auto_init = auto_init == nil ? false : auto_init
   }

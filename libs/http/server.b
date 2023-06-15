@@ -6,6 +6,7 @@ import .exception { HttpException }
 import .status
 
 import socket as so
+import iters
 
 /**
  * HTTP server
@@ -169,6 +170,8 @@ class HttpServer {
   }
 
   _process_received(message, client) {
+    if !message or !client or !client.is_connected return
+
     var request = HttpRequest(),
         response = HttpResponse()
     if !request.parse(message, client)
@@ -182,9 +185,9 @@ class HttpServer {
     if response.status == status.OK {
 
       # call the received listeners on the request object.
-      for listener in self._received_listeners {
-        listener(request, response)
-      }
+      iters.each(self._received_listeners, @( fn, _ ) {
+        fn(request, response)
+      })
 
       if response.body {
         feedback += 'Content-Length: ${response.body.length()}\r\n'.to_bytes()
@@ -209,13 +212,15 @@ class HttpServer {
     '${status.map.get(response.status, 'UNKNOWN')}\r\n').to_bytes()
     feedback =  hdrv + feedback
     hdrv.dispose()
-                
-    client.send(feedback)
+           
+    if client.is_connected {
+      client.send(feedback)
+    }
 
     # call the reply listeners.
-    for listener in self._sent_listeners {
-      listener(response)
-    }
+    iters.each(self._sent_listeners, @( fn ) {
+      fn(response)
+    })
 
     feedback.dispose()
     response.body.dispose()
@@ -234,39 +239,39 @@ class HttpServer {
       self.socket.listen()
 
       self._is_listening = true
-      while self._is_listening {
-        var client = self.socket.accept()
+      var client
 
-        # call the connect listeners.
-        for listener in self._connect_listeners {
-          listener(client)
-        }
+      while self._is_listening {
 
         try {
-          if is_number(self.read_timeout)
-            client.set_option(so.SO_RCVTIMEO, self.read_timeout)
-          if is_number(self.write_timeout)
-            client.set_option(so.SO_SNDTIMEO, self.write_timeout)
+          client = self.socket.accept()
+          
+          # call the connect listeners.
+          iters.each(self._connect_listeners, @(fn, _) {
+            fn(client)
+          })
 
-          var data = client.receive()
-
-          if data {
-            self._process_received(data, client)
+          if client.is_connected {
+            if is_number(self.read_timeout)
+              client.set_option(so.SO_RCVTIMEO, self.read_timeout)
+            if is_number(self.write_timeout)
+              client.set_option(so.SO_SNDTIMEO, self.write_timeout)
           }
+
+          self._process_received(client.receive(), client)
         } catch Exception e {
           # call the error listeners.
-          for listener in self._error_listeners {
-            listener(e, client)
-          }
+          iters.each(self._error_listeners, @(fn, _) {
+            fn(e, client)
+          })
         } finally {
           var client_info = client.info()
 
           # call the disconnect listeners.
-          for listener in self._disconnect_listeners {
-            listener(client_info)
-          }
+          iters.each(self._disconnect_listeners, @(fn, _) {
+            fn(client_info)
+          })
 
-          # close the client
           client.close()
         }
       }
@@ -277,4 +282,3 @@ class HttpServer {
     return '<HttpServer ${self.host}:${self.port}>'
   }
 }
-
