@@ -29,10 +29,8 @@ def run(value, options, success, error) {
   # Declare locations.
   var here = os.cwd(),
       test_dir = os.join_paths(here, setup.TEST_DIR),
-      ex_dir = os.join_paths(here, setup.EXAMPLES_DIR),
       app_dir = os.join_paths(here, setup.APP_DIR)
   var test_ignore = test_dir + os.path_separator + '.gitignore',
-      ex_ignore = ex_dir + os.path_separator + '.gitignore',
       index = here + os.path_separator + setup.INDEX_FILE,
       app_index = app_dir + os.path_separator + setup.INDEX_FILE,
       readme = here + os.path_separator + setup.README_FILE,
@@ -58,15 +56,12 @@ def run(value, options, success, error) {
 
   # Create tests and examples directory
   if !os.dir_exists(test_dir) os.create_dir(test_dir)
-  if !os.dir_exists(ex_dir) os.create_dir(ex_dir)
 
   # Create .gitignore files in tests and examples directory for 
   # git compartibility.
   log.info('Creating required git files')
   var tf = file(test_ignore, 'w+')
   tf.open(); tf.close()
-  var ef = file(ex_ignore, 'w+')
-  ef.open(); ef.close()
 
   # increase Blade visibility by setting the attribute file properties
   # to allow Github identify it as a Blade project.

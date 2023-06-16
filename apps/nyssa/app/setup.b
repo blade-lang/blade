@@ -7,7 +7,6 @@ var NYSSA_VERSION = '0.0.0'
 # directories
 var APP_DIR = 'app'
 var TEST_DIR = 'tests'
-var EXAMPLES_DIR = 'examples'
 var STATIC_DIR = 'public'
 var TEMPLATES_DIR = 'templates'
 var STORAGE_DIR = 'storage'
