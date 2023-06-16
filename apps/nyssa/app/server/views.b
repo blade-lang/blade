@@ -12,12 +12,15 @@ var doc_files = [
   'publishing-packages.md',
   'managing-dependencies.md',
   'package-layout.md',
+  'testing.md',
+  'test-globals.md',
+  'test-assertions.md',
   'install-and-uninstall-actions.md',
   'getting-project-info.md',
   'hosting-a-private-repository.md',
   'publishers-account.md',
   'cleaning-cache-and-logs.md',
-  'commands.md'
+  'commands.md',
 ]
 
 var docs_dir = os.join_paths(os.args[1], setup.DOCS_DIR)

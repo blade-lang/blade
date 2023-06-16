@@ -29,9 +29,9 @@ import .commands.install
 import .commands.restore
 # import .commands.doc
 import .commands.uninstall
-# import .commands.update
 import .commands.publish
 import .commands.serve
+import .commands.test
 
 # Import options...
 import .options.version
@@ -47,6 +47,7 @@ var commands = {
   publish,
   restore,
   serve,
+  test,
   uninstall,
 }
 

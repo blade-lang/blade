@@ -11,8 +11,6 @@ follows:
   installed packages and will only be available when at least one 
   or more package is installed.
 - `app`: The directory contains the main application/package code.
-- `examples`: Examples accompanying your package goes here and _may_
-  be shown to users under the `Examples` section of the Nyssa website.
 - `index.b`: The default Blade package index file.
 - `README.md`: The README.md file will be contain the main documentation 
   for your package.

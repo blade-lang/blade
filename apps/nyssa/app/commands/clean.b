@@ -6,7 +6,7 @@ import ..log
 def parse(parser) {
   parser.add_command(
     'clean', 
-    'Clear Nyssa storage'
+    'Clear Nyssa storage and cache'
   ).add_option(
     'cache',
     'clean packages cache',
