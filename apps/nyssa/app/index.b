@@ -6,17 +6,17 @@ import .setup
 import .log
 
 # initialize storage directory
-var storage_dir = os.join_paths(os.args[1], setup.STORAGE_DIR)
+var storage_dir = os.join_paths(setup.NYSSA_DIR, setup.STORAGE_DIR)
 if !os.dir_exists(storage_dir)
   os.create_dir(storage_dir)
 
 # ensure config file exists...
-var config_file = os.join_paths(os.args[1], setup.CONFIG_FILE)
+var config_file = os.join_paths(setup.NYSSA_DIR, setup.CONFIG_FILE)
 if !file(config_file).exists()
   file(config_file, 'w').write('{}')
 
 # ensure the state file exists
-var state_file = os.join_paths(os.args[1], setup.STATE_FILE)
+var state_file = os.join_paths(setup.NYSSA_DIR, setup.STATE_FILE)
 if !file(state_file).exists()
   file(state_file, 'w').write('{}')
 

@@ -64,6 +64,6 @@ def remove_cli(name, base_path) {
 
 def setup_template() {
   var tpl = template()
-  tpl.set_root(os.join_paths(os.args[1], setup.TEMPLATES_DIR))
+  tpl.set_root(os.join_paths(setup.NYSSA_DIR, setup.TEMPLATES_DIR))
   return tpl.render
 }

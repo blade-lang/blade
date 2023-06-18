@@ -9,7 +9,7 @@ import ..setup
 import ..log
 import ..config { Config }
 
-var storage_dir = os.join_paths(os.args[1], setup.STORAGE_DIR)
+var storage_dir = os.join_paths(setup.NYSSA_DIR, setup.STORAGE_DIR)
 
 def italics(t) {
   return colors.text(t, colors.style.italic)
@@ -61,7 +61,7 @@ def copy_to_tmp(root, dest) {
 
 def run(value, options, success, error) {
   var repo = options.get('repo', setup.DEFAULT_REPOSITORY),
-      state_file = os.join_paths(os.args[1], setup.STATE_FILE),
+      state_file = os.join_paths(setup.NYSSA_DIR, setup.STATE_FILE),
       config_file = os.join_paths(os.cwd(), setup.CONFIG_FILE),
       readme_file = os.join_paths(os.cwd(), setup.README_FILE),
       tmp_dest

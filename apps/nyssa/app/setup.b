@@ -33,8 +33,10 @@ var DEFAULT_REPOSITORY = 'https://nyssa.bladelang.com'
 var PACKAGES_PER_PAGE = 10
 var SESSION_NAME = 'NYSSA-SESSION-ID'
 
+# Nyssa directory
+var NYSSA_DIR = os.dir_name(os.args[1])
 
-var config_file = os.join_paths(os.args[1], CONFIG_FILE)
+var config_file = os.join_paths(NYSSA_DIR, CONFIG_FILE)
 if (config_file = file(config_file)) and config_file.exists() {
   var conf = json.decode(config_file.read())
   if is_dict(conf) {

@@ -23,7 +23,7 @@ var doc_files = [
   'commands.md',
 ]
 
-var docs_dir = os.join_paths(os.args[1], setup.DOCS_DIR)
+var docs_dir = os.join_paths(setup.NYSSA_DIR, setup.DOCS_DIR)
 
 def error_page(req, res) {
   res.template('404')
