@@ -148,6 +148,10 @@ def encode_url(string, exclude, keep_escaped) {
 }
 
 def normalize_link(uri) {
+  if uri.starts_with('#') or uri.starts_with('?') {
+    return encode_url(uri)
+  }
+
   var parsed = url.parse(uri)
 
   if parsed.host {
@@ -407,8 +411,8 @@ class Markdown {
    * })
    * ```
    * 
-   * @param {string|nil} preset_name: `commonmark`, `standard` or `zero` (default: `standard`)
-   * @param {dict|nil} options
+   * @param {string?} preset_name: `commonmark`, `standard` or `zero` (default: `standard`)
+   * @param {dict?} options
    */
   Markdown(preset_name, options) {
     if !instance_of(self, Markdown) {
@@ -620,7 +624,7 @@ class Markdown {
    * in [[Markdown.parse]].
    * 
    * @param {string} src: source string
-   * @param {object|nil} env: environment sandbox
+   * @param {object?} env: environment sandbox
    * @return string
    */
   render(src, env) {
@@ -635,7 +639,7 @@ class Markdown {
    * tokens in `children` property. Also updates `env` object.
    * 
    * @param {string} src: source string
-   * @param {object|nil} env: environment sandbox
+   * @param {object?} env: environment sandbox
    * @return list
    * @internal
    **/
@@ -653,7 +657,7 @@ class Markdown {
    * will NOT be wrapped into `<p>` tags.
    * 
    * @param {string} src: source string
-   * @param {object|nil} env: environment sandbox
+   * @param {object?} env: environment sandbox
    * @return string
    */
   render_inline(src, env) {

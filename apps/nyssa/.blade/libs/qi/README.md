@@ -14,13 +14,7 @@ A testing framework for Blade programming language.
 
 ### Getting started
 
-Qi is a Nyssa package and can be installed using the command:
-
-```
-nyssa install qi
-```
-
-Qi is designed to run tests are out the directory `tests` and for this reason, all tests files must reside inside the `tests` directory.
+Qi is a Nyssa package that ships along with it and is designed to run tests are out the directory `tests` and for this reason, all tests files must reside inside the `tests` directory.
 
 ### Writing a simple test
 
@@ -37,8 +31,8 @@ Now, let's create a test for it by creating a file `prod.test.b` in the `tests` 
 ```py
 import ..prod
 
-describe('Product test suite', || {
-  it('should return 6 for 2 and 3', || {
+describe('Product test suite', @() {
+  it('should return 6 for 2 and 3', @() {
     expect(prod(2, 3)).to_be(6)
   })
 })
@@ -47,7 +41,7 @@ describe('Product test suite', || {
 Now let's run the test. If you have installed Qi using `nyssa` (which is recommended), then you can run the following command at the root directory (the directory that contains the `tests` folder).
 
 ```
-.blade/qi
+nyssa test
 ```
 
 You should get an output similar to this:

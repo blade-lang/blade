@@ -1,9 +1,12 @@
 import markdown
+import highlight { highlight }
 import .util
 
+
+
 var md = markdown({
-  # linkify: true,
   html: true,
+  highlight,
 })
 
 def template_ext() {

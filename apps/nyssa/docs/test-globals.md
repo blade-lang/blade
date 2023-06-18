@@ -2,37 +2,24 @@
 
 Qi exposes a set of global functions for use in your test files by putting each of these methods and objects into the global environment. You don't have to require or import anything to use them from your test files.
 
-## Reference
-
-- [Test Globals](#test-globals)
-  - [Reference](#reference)
-  - [Methods](#methods)
-    - [describe(name, fn)](#describename-fn)
-    - [it(name, fn)](#itname-fn)
-  - [Hooks](#hooks)
-    - [before\_all(fn)](#before_allfn)
-    - [after\_all(fn)](#after_allfn)
-    - [before\_each(fn)](#before_eachfn)
-    - [after\_each(fn)](#after_eachfn)
-
 ## Methods
 
 ### describe(name, fn)
 
 `describe(name, fn)` creates a block that groups together several related tests. It is the Test Suite. For example, if you have a `myBeverage` object that is supposed to be delicious but not sour, you could test it with:
 
-```py
+```blade
 var myBeverage = {
   delicious: true,
   sour: false,
 }
 
-describe('my beverage', || {
-  it('should be delicious', || {
+describe('my beverage', @() {
+  it('should be delicious', @() {
     expect(myBeverage.delicious).to_be_truthy()
   });
 
-  it('should be sour', || {
+  it('should be sour', @() {
     expect(myBeverage.sour).to_be_falsy()
   })
 })
@@ -40,8 +27,8 @@ describe('my beverage', || {
 
 You can also nest `describe` blocks if you have a hierarchy of tests:
 
-```py
-var binay_string_to_number = | bin_string | {
+```blade
+var binay_string_to_number = @( bin_string ) {
   if !bin_string.match('/^[01]+$/') {
     die CustomError('Not a binary number.')
   }
@@ -49,19 +36,19 @@ var binay_string_to_number = | bin_string | {
   return to_number('0b' + bin_string)
 }
 
-describe('binay string to number', || {
-  describe('given an invalid binary string', || {
-    it('throws CustomError when composed of non-numbers', || {
-      expect(|| { binay_string_to_number('abc') }).to_throw(CustomError)
+describe('binay string to number', @() {
+  describe('given an invalid binary string', @() {
+    it('throws CustomError when composed of non-numbers', @() {
+      expect(@() { binay_string_to_number('abc') }).to_throw(CustomError)
     })
 
-    it('throws CustomError when having extra whitespace', || {
-      expect(|| { binay_string_to_number('  100') }).to_throw(CustomError)
+    it('throws CustomError when having extra whitespace', @() {
+      expect(@() { binay_string_to_number('  100') }).to_throw(CustomError)
     })
   })
 
-  describe('given a valid binary string', || {
-    it('returns the correct number', || {
+  describe('given a valid binary string', @() {
+    it('returns the correct number', @() {
       expect(binay_string_to_number('100')).to_be(4)
     })
   })
@@ -70,10 +57,10 @@ describe('binay string to number', || {
 
 ### it(name, fn)
 
-The `it(name, fn)` function is the entry point for tests in a test suite. For example, let's say there's a function `inches_of_rain()` that should be zero. Your whole test could be:
+The `it(name, fn)` function is the entry point for tests in a test suite. For example, let's say there's a function `inches_of_rain()` that should return zero. Your whole test could be:
 
-```py
-it('did not rain', || {
+```blade
+it('did not rain', @() {
   expect(inches_of_rain()).to_be(0)
 })
 ```
@@ -95,21 +82,21 @@ Runs a function before each of the tests in the test suite run. This is often us
 
 For example:
 
-```py
+```blade
 var global_db = make_global_db()
 
-before_all(|| {
+before_all(@() {
   # Clears the database and adds some testing data.
-  return globalDatabase.clear(|| {
+  return globalDatabase.clear(@() {
     return globalDatabase.insert({testData: 'foo'})
   })
 })
 
 # Since we only set up the database once in this example, it's important
 # that our tests don't modify it.
-describe('Before all', || {
-  it('can find things', || {
-    return global_db.find('thing', {}, |results| {
+describe('Before all', @() {
+  it('can find things', @() {
+    return global_db.find('thing', {}, @(results) {
       expect(results.length()).to_be_greater_than(0)
     })
   })
@@ -124,26 +111,26 @@ Runs a function after all the tests in a test suite have completed. This is ofte
 
 For example:
 
-```py
+```blade
 var global_db = make_global_db()
 
 def clean_up_db(db) {
   db.clean_up()
 }
 
-after_all(|| {
+after_all(@() {
   clean_up_db(global_db)
 });
 
-describe('confirming after_all works', || {
-  it('can find things', || {
-    return global_db.find('thing', {}, |results| {
+describe('confirming after_all works', @() {
+  it('can find things', @() {
+    return global_db.find('thing', {}, @(results) {
       expect(results.length()).to_be_greater_than(0)
     })
   })
   
-  it('can insert a thing', || {
-    return global_db.insert('thing', make_thing(), |response| {
+  it('can insert a thing', @() {
+    return global_db.insert('thing', make_thing(), @(response) {
       expect(response.success).to_be_truthy()
     })
   })
@@ -160,24 +147,24 @@ Runs a function before each of the tests in the test suite runs. This is often u
 
 For example:
 
-```py
+```blade
 var global_db = make_global_db()
 
-before_each(|| {
+before_each(@() {
   # Clears the database and adds some testing data.
   global_db.clear()
   global_db.insert({testData: 'foo'});
 })
 
-describe('confirming before_each works', || {
-  it('can find things', || {
-    return global_db.find('thing', {}, |results| {
+describe('confirming before_each works', @() {
+  it('can find things', @() {
+    return global_db.find('thing', {}, @(results) {
       expect(results.length()).to_be_greater_than(0)
     })
   })
   
-  it('can insert a thing', || {
-    return global_db.insert('thing', make_thing(), |response| {
+  it('can insert a thing', @() {
+    return global_db.insert('thing', make_thing(), @(response) {
       expect(response.success).to_be_truthy()
     })
   })
@@ -192,26 +179,26 @@ Runs a function after each one of the tests in this file completes. This is ofte
 
 For example:
 
-```py
+```blade
 var global_db = make_global_db()
 
 def clean_up_db(db) {
   db.clean_up()
 }
 
-after_each(|| {
+after_each(@() {
   clean_up_db(global_db)
 })
 
-describe('confirming after_each works', || {
-  it('can find things', || {
-    return global_db.find('thing', {}, |results| {
+describe('confirming after_each works', @() {
+  it('can find things', @() {
+    return global_db.find('thing', {}, @(results) {
       expect(results.length()).to_be_greater_than(0)
     })
   })
   
-  it('can insert a thing', || {
-    return global_db.insert('thing', make_thing(), |response| {
+  it('can insert a thing', @() {
+    return global_db.insert('thing', make_thing(), @(response) {
       expect(response.success).to_be_truthy()
     })
   })

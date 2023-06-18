@@ -91,7 +91,7 @@ class Ruler {
    * 
    * @param {string} name: rule name to replace.
    * @param {function} fn: new rule function.
-   * @param {dict|nil} options: new rule options (optional).
+   * @param {dict?} options: new rule options (optional).
    */
   at(name, fn, options) {
     var index = self.__find__(name)
@@ -125,7 +125,7 @@ class Ruler {
    * @param {string} before_name: new rule will be added before this one.
    * @param {string} rule_name: name of added rule.
    * @param {function} fn: rule function.
-   * @param {dict|nil} options: rule options (optional).
+   * @param {dict?} options: rule options (optional).
    */
   before(before_name, rule_name, fn, options) {
     var index = self.__find__(before_name)
@@ -165,7 +165,7 @@ class Ruler {
    * @param {string} after_name: new rule will be added after this one.
    * @param {string} rule_name: name of added rule.
    * @param {function} fn: rule function.
-   * @param {dict|nil} options: rule options (optional).
+   * @param {dict?} options: rule options (optional).
    */
   after(after_name, rule_name, fn, options) {
     var index = self.__find__(after_name)
@@ -204,7 +204,7 @@ class Ruler {
    * 
    * @param {string} rule_name: name of added rule.
    * @param {function} fn: rule function.
-   * @param {dict|nil} options: rule options (optional).
+   * @param {dict?} options: rule options (optional).
    */
   push(rule_name, fn, options) {
     var opt = options or {}
