@@ -4,8 +4,8 @@ import .errors
 import ..setup
 import ..log
 
-var static_files_directory = os.join_paths(os.args[1], setup.STATIC_DIR)
-var source_files_directory = os.join_paths(os.args[1], setup.SOURCES_DIR)
+var static_files_directory = os.join_paths(setup.NYSSA_DIR, setup.STATIC_DIR)
+var source_files_directory = os.join_paths(setup.NYSSA_DIR, setup.SOURCES_DIR)
 
 # if static files directory does not exist, create it.
 if !os.dir_exists(static_files_directory)

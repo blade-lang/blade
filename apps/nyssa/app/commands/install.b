@@ -12,7 +12,7 @@ import ..config { Config }
 import ..util { setup_cli }
 
 
-var cache_dir = os.join_paths(os.args[1], setup.CACHE_DIR)
+var cache_dir = os.join_paths(setup.NYSSA_DIR, setup.CACHE_DIR)
 if !os.dir_exists(cache_dir)
   os.create_dir(cache_dir)
 

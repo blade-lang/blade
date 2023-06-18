@@ -13,7 +13,7 @@ import ..log
 import ..package
 import ..publisher
 
-var uploads_dir = os.join_paths(os.args[1], setup.SOURCES_DIR)
+var uploads_dir = os.join_paths(setup.NYSSA_DIR, setup.SOURCES_DIR)
 if !os.dir_exists(uploads_dir)
   os.create_dir(uploads_dir)
 

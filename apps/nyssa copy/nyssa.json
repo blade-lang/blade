@@ -1,0 +1,17 @@
+{
+  "name": "nyssa", 
+  "version": "0.2.0", 
+  "description": "A package manager and repository for the Blade programming language.", 
+  "homepage": "", 
+  "tags": [
+    "nyssa", 
+    "blade", 
+    "package-manager",
+    "tools"
+  ], 
+  "author": "Richard Ore <eqliqandfriends@gmail.com>", 
+  "license": "MIT", 
+  "sources": [
+    "https://nyssa.bladelang.com"
+  ]
+}

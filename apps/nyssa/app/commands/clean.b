@@ -37,13 +37,13 @@ def run(value, options, success, error) {
 
   if is_logs or is_all {
     log.info('Cleaning logs...', true)
-    os.remove_dir(os.join_paths(os.args[1], setup.LOGS_DIR), true)
+    os.remove_dir(os.join_paths(setup.NYSSA_DIR, setup.LOGS_DIR), true)
     log.init()
   }
   if is_cache or is_all {
     log.info('Cleaning cache...', true)
-    os.remove_dir(os.join_paths(os.args[1], setup.CACHE_DIR), true)
-    os.create_dir(os.join_paths(os.args[1], setup.CACHE_DIR))
+    os.remove_dir(os.join_paths(setup.NYSSA_DIR, setup.CACHE_DIR), true)
+    os.create_dir(os.join_paths(setup.NYSSA_DIR, setup.CACHE_DIR))
   }
 
   var cleaned = (is_logs and is_cache) or is_all ? (

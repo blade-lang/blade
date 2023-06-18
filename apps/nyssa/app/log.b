@@ -3,7 +3,7 @@ import date
 import os
 import .setup
 
-var logs_dir = os.join_paths(os.args[1], setup.LOGS_DIR)
+var logs_dir = os.join_paths(setup.NYSSA_DIR, setup.LOGS_DIR)
 
 var _logfile
 def init() {
