@@ -8,7 +8,7 @@ Both Nyssa and `Qi` ship with Blade allowing you write comprehensive tests witho
 
 Let's write a test for a hypothetical function that returns the product of two numbers. First, we'll create a file `prod.b` that contains the following code:
 
-```py
+```blade
 def prod(x, y) {
   return x * y
 }
@@ -16,11 +16,11 @@ def prod(x, y) {
 
 Now, let's create a test for it by creating a file `prod.test.b` in the `tests` directory and add the following code to it.
 
-```py
+```blade
 import ..prod
 
-describe('Product test suite', || {
-  it('should return 6 for 2 and 3', || {
+describe('Product test suite', @() {
+  it('should return 6 for 2 and 3', @() {
     expect(prod(2, 3)).to_be(6)
   })
 })
@@ -31,7 +31,7 @@ describe('Product test suite', || {
 Now let's run the test. If you have installed Qi using `nyssa` (which is recommended), then you can run the following command at the root directory (the directory that contains the `tests` folder).
 
 ```sh
-.blade/qi
+nyssa test
 ```
 
 You should get an output similar to this:

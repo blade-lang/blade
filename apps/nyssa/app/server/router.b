@@ -63,7 +63,7 @@ def _setup_session(req, res) {
   }
 
   # bind '.clear_session()' to response
-  res.clear_session = || {
+  res.clear_session = @() {
     res.session = {}
 
     # just for simplicity

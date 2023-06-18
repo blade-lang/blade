@@ -26,7 +26,7 @@ The `pre_uninstall` configuration is much like the `post_install` configuration,
 
 The `cli` installation hook allows package authors to specify a script that serves as the CLI entry point to the application. When the _CLI_ script is specified, a CLI entry will be created at `.blade` for local installations or at the root of Blade for global installations. This files will be automatically removed during uninstallation.
 
-For example, the testing framework `qi` specifies a CLI entry point. For this reason, when you install `qi` locally, you can run the Qi command by simply running the command `.blade/qi` (or `.blade\qi` for Windows) to run your tests. This is made possible because during installation, Nyssa will automatically create the corresponding command-line entry file for you.
+For example, the testing framework `qi` specifies a CLI entry point. For this reason, when you install `qi` locally, you can run the Qi command by simply running the command `nyssa test` (or `.blade\qi` for Windows) to run your tests. This is made possible because during installation, Nyssa will automatically create the corresponding command-line entry file for you.
 
 For applications installated globally, the application will become available on the user terminal **via the name** of the application provided that Blade has been added to path during installation.
 

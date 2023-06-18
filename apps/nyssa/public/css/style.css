@@ -29,6 +29,9 @@ input:focus {
 pre {
   white-space: pre-wrap;
   border-radius: .25rem;
+  color: hsl(210, 20%, 30%);
+  background: hsl(210, 0%, 99%);
+  border: solid 1px hsl(200, 20%, 88%);
 }
 
 .columns {
@@ -265,13 +268,18 @@ pre.has-icon .icon {
   line-height: 1.5;
 }
 
+.content.doc {
+  font-size: .95em;
+  line-height: 1.65;
+}
+
 .content.doc h2 {
   border-bottom: 1px solid rgba(0, 0, 0, .1);
   padding-bottom: .5em;
 }
 
 .content.doc h1 {
-  border-bottom: 4px solid #0000001a;
+  border-bottom: 2px solid #0000001a;
   padding-bottom: .5rem;
 }
 
@@ -285,6 +293,10 @@ pre.has-icon .icon {
 
 .content.doc blockquote strong {
   color: inherit;
+}
+
+.content.doc blockquote pre {
+  margin-bottom: 1em;
 }
 
 .content.doc p {

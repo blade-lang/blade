@@ -3,8 +3,8 @@ var can = {
   ounces: 12,
 }
 
-describe('the can', || {
-  it('has 12 ounces', || {
+describe('the can', @() {
+  it('has 12 ounces', @() {
     expect(can.ounces).to_be(12)
 
     class A {
@@ -17,7 +17,7 @@ describe('the can', || {
     expect(10.5).to_be_number().to_be_less_than(20)
   })
 
-  it('has a sophisticated name', || {
+  it('has a sophisticated name', @() {
     expect(can.name).to_be('pamplemousse')
 
     expect([1, 2, 3]).to_have_length(3)
@@ -25,7 +25,7 @@ describe('the can', || {
     expect('').not().to_have_length(5)
   })
 
-  it('should pass this tests', || {
+  it('should pass this tests', @() {
     class A {
       testing() {}
       @testing() {}
@@ -46,8 +46,8 @@ describe('the can', || {
 })
 
 def do_something(id) {
-  if id == 1 return || { do_another_thing() }
-  else return || { do_something_else() }
+  if id == 1 return @() { do_another_thing() }
+  else return @() { do_something_else() }
 }
 
 class Set {
@@ -55,8 +55,8 @@ class Set {
   @itern() {}
 }
 
-describe('grapefruits', || {
-  it('should be a grape', || {
+describe('grapefruits', @() {
+  it('should be a grape', @() {
     expect('grapefruits').to_match('grape')
     expect(do_something(1)).to_be_function()
 
@@ -64,12 +64,12 @@ describe('grapefruits', || {
     expect(Exception).to_be_class()
   })
   
-  it('should be valid type', || {
+  it('should be valid type', @() {
     expect({age: 10}).to_be_dict()
     expect(bytes(0)).to_be_bytes()
   })
 
-  it('should be enumerable', || {
+  it('should be enumerable', @() {
     expect([]).to_be_iterable()
     expect({}).to_be_iterable()
     expect(Set()).to_be_iterable()
@@ -85,8 +85,8 @@ def drink_flavor(flavor) {
   # Do some other stuff
 }
 
-describe('testing to throw', || {
-  it('throws on octopus', || {
+describe('testing to throw', @() {
+  it('throws on octopus', @() {
     def drink_octopus() {
       drink_flavor('octopus')
     }

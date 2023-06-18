@@ -32,7 +32,7 @@ default_rules.fence = @(tokens, idx, options, env, slf) {
   }
 
   if options.highlight {
-    highlighted = options.highlight(token.content, lang_name, lang_attrs) or escape_html(token.content)
+    highlighted = options.highlight(token.content, lang_name) or escape_html(token.content)
   } else {
     highlighted = escape_html(token.content)
   }

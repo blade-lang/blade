@@ -56,7 +56,7 @@ class expect {
 
   _run(name, expected, fn) {
     if self._is_not name = 'not ${name}'
-    if !fn fn = |x, y| { return x == y }
+    if !fn fn = @(x, y) { return x == y }
 
     var v = to_string(self.value).replace('\r', '\\r').replace('\n', '\\n')
     var w = expected != nil ? to_string(expected).replace('\r', '\\r').replace('\n', '\\n') : nil
@@ -103,22 +103,22 @@ class expect {
   }
 
   to_be_defined() {
-    self._run('to be defined', nil, |x, y| { return x != nil })
+    self._run('to be defined', nil, @(x, y) { return x != nil })
     return self
   }
 
   to_be_truthy() {
-    self._run('to be truthy', nil, |x, y| { return !!x })
+    self._run('to be truthy', nil, @(x, y) { return !!x })
     return self
   }
 
   to_be_falsy() {
-    self._run('to be falsy', nil, |x, y| { return !x })
+    self._run('to be falsy', nil, @(x, y) { return !x })
     return self
   }
 
   to_be_greater_than(e) {
-    self._run('to be greather than', e, |x, y| { 
+    self._run('to be greather than', e, @(x, y) { 
       if is_string(x) return x.length() > y
       return x > y 
     })
@@ -126,7 +126,7 @@ class expect {
   }
 
   to_be_greater_than_or_equal(e) {
-    self._run('to be greather than or equal to', e, |x, y| { 
+    self._run('to be greather than or equal to', e, @(x, y) { 
       if is_string(x) return x.length() >= y
       return x >= y 
     })
@@ -134,7 +134,7 @@ class expect {
   }
 
   to_be_less_than(e) {
-    self._run('to be less than', e, |x, y| { 
+    self._run('to be less than', e, @(x, y) { 
       if is_string(x) return x.length() < y
       return x < y 
     })
@@ -142,7 +142,7 @@ class expect {
   }
 
   to_be_less_than_or_equal(e) {
-    self._run('to be less than or equal to', e, |x, y| { 
+    self._run('to be less than or equal to', e, @(x, y) { 
       if is_string(x) return x.length() <= y
       return x <= y 
     })
@@ -150,12 +150,12 @@ class expect {
   }
 
   to_match(e) {
-    self._run('to match', e, |x, y| { return x.match(y) })
+    self._run('to match', e, @(x, y) { return x.match(y) })
     return self
   }
 
   to_contain(e) {
-    self._run('to contain', e, |x, y| {
+    self._run('to contain', e, @(x, y) {
       if is_dict(x) return x.contains(y)
       return x.count(y) > 0
     })
@@ -166,7 +166,7 @@ class expect {
     if !e e = Exception
 
     if is_function(self.value) {
-      self._run('to throw', e, |x, y| {
+      self._run('to throw', e, @(x, y) {
         try {
           x()
           return false
@@ -185,12 +185,12 @@ class expect {
   }
 
   to_have_length(e) {
-    self._run('to have length', e, |x, y| { return x.length() == y })
+    self._run('to have length', e, @(x, y) { return x.length() == y })
     return self
   }
 
   to_be_instance_of(e) {
-    self._run('to be an instance of', e, |x, y| { return instance_of(x, y) })
+    self._run('to be an instance of', e, @(x, y) { return instance_of(x, y) })
     return self
   }
 
@@ -198,7 +198,7 @@ class expect {
     var name = 'to have a property'
     if value != nil name = 'to have value "${to_string(value)}" in property'
 
-    self._run(name, e, |x, y| {
+    self._run(name, e, @(x, y) {
       var res = is_instance(x) and reflect.has_prop(x, y)
       if res and value != nil {
         return reflect.get_prop(x, y) == value
@@ -210,66 +210,66 @@ class expect {
   }
 
   to_have_method(e) {
-    self._run('to have a method', e, |x, y| {
+    self._run('to have a method', e, @(x, y) {
       return is_instance(x) and reflect.has_method(x, y)
     })
     return self
   }
 
   to_have_decorator(e) {
-    self._run('to have a decorator', e, |x, y| {
+    self._run('to have a decorator', e, @(x, y) {
       return is_instance(x) and reflect.has_decorator(x, y)
     })
     return self
   }
 
   to_be_boolean() {
-    self._run('to be a boolean', nil, |x, y| { return is_bool(x) })
+    self._run('to be a boolean', nil, @(x, y) { return is_bool(x) })
     return self
   }
 
   to_be_number() {
-    self._run('to be a number', nil, |x, y| { return is_number(x) })
+    self._run('to be a number', nil, @(x, y) { return is_number(x) })
     return self
   }
 
   to_be_string() {
-    self._run('to be a string', nil, |x, y| { return is_string(x) })
+    self._run('to be a string', nil, @(x, y) { return is_string(x) })
     return self
   }
 
   to_be_list() {
-    self._run('to be a list', nil, |x, y| { return is_list(x) })
+    self._run('to be a list', nil, @(x, y) { return is_list(x) })
     return self
   }
 
   to_be_dict() {
-    self._run('to be a dict', nil, |x, y| { return is_dict(x) })
+    self._run('to be a dict', nil, @(x, y) { return is_dict(x) })
     return self
   }
 
   to_be_function() {
-    self._run('to be a function', nil, |x, y| { return is_function(x) })
+    self._run('to be a function', nil, @(x, y) { return is_function(x) })
     return self
   }
 
   to_be_class() {
-    self._run('to be a class', nil, |x, y| { return is_class(x) })
+    self._run('to be a class', nil, @(x, y) { return is_class(x) })
     return self
   }
 
   to_be_iterable() {
-    self._run('to be an iterable', nil, |x, y| { return is_iterable(x) })
+    self._run('to be an iterable', nil, @(x, y) { return is_iterable(x) })
     return self
   }
 
   to_be_file() {
-    self._run('to be a file', nil, |x, y| { return is_file(x) })
+    self._run('to be a file', nil, @(x, y) { return is_file(x) })
     return self
   }
 
   to_be_bytes() {
-    self._run('to be bytes', nil, |x, y| { return is_bytes(x) })
+    self._run('to be bytes', nil, @(x, y) { return is_bytes(x) })
     return self
   }
 }
@@ -381,8 +381,8 @@ def show_tests_results() {
 
     total_time += e.time
 
-    var fails = iters.filter(e.it, |x| {
-      return iters.filter(x.expects, |y|{ return !y.status }).length() > 0
+    var fails = iters.filter(e.it, @(x) {
+      return iters.filter(x.expects, @(y) { return !y.status }).length() > 0
     }).length() > 0
     if fails failed_suites++
 
@@ -396,7 +396,7 @@ def show_tests_results() {
     echo '  ${e.name}'
     iter var i = 0; i < e.it.length(); i++ {
       var _e = e.it[i]
-      var it_fails = iters.filter(_e.expects, |x|{ return !x.status }).length() > 0
+      var it_fails = iters.filter(_e.expects, @(x) { return !x.status }).length() > 0
       if it_fails failed_tests++
 
       echo '    ' + _print('${_e.name} (${_time(_e.time)})', !it_fails)
