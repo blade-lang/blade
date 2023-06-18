@@ -42,6 +42,6 @@ You fully customize your own repository setup by modifying the `apps/nyssa/app/s
 
 ### Production considerations
 
-- While the built-in server can be used as is on production, it is not advisable to do so unless you are not exposing it on the internet (such as internal use on in an organization). Especially if you are trying to run on `https` as the server only supports plain `http`.
+- While the built-in server can be used as is on production, it is not advisable to do so unless you are not exposing it on the internet (such as internal use on in an organization). Especially if you are trying to run on `https`.
 - Consider running behind a reverse-proxy such as `apache` or `lightspeed` or `nginx` or run it behind a `VPN`.
 

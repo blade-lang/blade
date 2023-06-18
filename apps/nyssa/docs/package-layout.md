@@ -58,7 +58,8 @@ package.json files. A typical sample of a complete `nyssa.json` file looks like 
     "dependecny3": "1.0.0"
   },
   "post_install": "post-install-script.b",
-  "pre_uninstall": "pre-uninstall-script.b"
+  "pre_uninstall": "pre-uninstall-script.b",
+  "cli": "cli-entry-script.b"
 }
 ```
 

@@ -10,7 +10,7 @@ A testing framework for Blade programming language.
 - **Tags:** test, blade, testing, tdd, test-driven
 - **Author:** Richard Ore <eqliqandfriends@gmail.com>
 - **License:** MIT
-- **Requires:** Nyssa v0.1.6+
+- **Requires:** Blade v0.0.86+
 
 ### Getting started
 

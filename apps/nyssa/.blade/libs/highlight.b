@@ -9,13 +9,15 @@ var constant_keywords = '|'.join([
   'nil', 'parent', 'self', 'true', 'false', 'and', 'or'
 ])
 
+var _quote_re = '/((\'(?:[^\'\\\\]|\\.)*\')|("(?:[^"\\\\]|\\.)*"))/'
+
 def highlight_blade(text) {
   text = text.
     # operators
     replace('/([+\-*=/%!<>@]|\.\.)/', '<_o>$1</_o>').
     replace('/\\b(and|or)\\b/', '<_o>$1</_o>').
     # quotes
-    replace('/((\'(?:[^\'\\\\]|\\.)*\')|("(?:[^"\\\\]|\\.)*"))/', '<_q>$1</_q>').
+    replace(_quote_re, '<_q>$1</_q>').
     # constant keywords
     replace('/\\b(${constant_keywords})\\b/', '<_c>$1</_c>').
 
@@ -67,9 +69,31 @@ def highlight_blade(text) {
               replace('/<_n>(.*?)<\/_n>/', '<span style="color:#905">$1</span>')
 }
 
+def highlight_html5(text, lang) {
+  var tags = text.matches('/<([^>]+)>/')
+  if tags {
+    iter var i = 0; i < tags[0].length(); i++ {
+      var content = tags[1][i].replace('/([a-zA-Z_\-0-9]+)(?=[=])/', '<^a>$1</^a>').
+                        replace(_quote_re, '<^v>$1</^v>') 
+      text = text.replace(tags[0][i], '<span style="color:#2196f3">&lt;${content}&gt;</span>', false)
+    }
+  }
+
+  var result = text.replace('/<\^a>(.*?)<\/\^a>/', '<span style="color:#9a6e3a">$1</span>').
+              replace('/<\^v>(.*?)<\/\^v>/', '<span style="color:#690">$1</span>')
+
+  if lang == 'wire' {
+    result = result.replace('/(\{\{.+?\}\})/', '<span style="color:#ff9800">$1</span>')
+  }
+
+  return result
+}
+
 def highlight(text, lang) {
   if lang == 'blade' {
     return highlight_blade(text)
+  } else if lang == 'html' or lang == 'html5' or lang == 'wire' {
+    return highlight_html5(text, lang)
   }
   return text
 }
