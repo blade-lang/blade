@@ -34,11 +34,11 @@ OPTIONS:
 
 COMMANDS:
   account <choice>          Manages a Nyssa publisher account
-    create                    creates a new publisher account
-    login                     login to a publisher account
-    logout                    log out of a publisher account
+    create                    Creates a new publisher account
+    login                     Login to a publisher account
+    logout                    Log out of a publisher account
     -r, --repo <value>        the repo where the account is located
-  clean                     Clear Nyssa storage
+  clean                     Clear Nyssa storage and cache
     -c, --cache               clean packages cache
     -l, --logs                clean logs
     -a, --all                 clean everything
@@ -49,13 +49,14 @@ COMMANDS:
     -g, --global              installs the package globally
     -c, --use-cache           enables the cache
     -r, --repo <value>        the repository to install from
-  publish                   Publishes a repository
+  publish                   Publishes a Blade package to a repository
     -r, --repo <value>        repository url
   restore                   Restores all project dependencies
     -x, --no-cache            disables the cache
   serve                     Starts a local Nyssa repository server
     -p, --port <value>        port of the server (default: 3000)
     -n, --host <value>        the host ip (default: 127.0.0.1)
+  test                      Run the tests
   uninstall <value>         Uninstalls a Blade package
     -g, --global              package is a global package
 ```

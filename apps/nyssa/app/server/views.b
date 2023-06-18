@@ -7,17 +7,20 @@ import .util
 import ..setup
 
 var doc_files = [
-  'installing-nyssa.md',
+  'getting-started.md',
   'creating-projects.md',
-  'publishing-packages.md',
-  'managing-dependencies.md',
   'package-layout.md',
+  'managing-dependencies.md',
+  'testing.md',
+  'test-globals.md',
+  'test-assertions.md',
   'install-and-uninstall-actions.md',
+  'publishing-packages.md',
   'getting-project-info.md',
   'hosting-a-private-repository.md',
   'publishers-account.md',
   'cleaning-cache-and-logs.md',
-  'commands.md'
+  'commands.md',
 ]
 
 var docs_dir = os.join_paths(os.args[1], setup.DOCS_DIR)
@@ -311,7 +314,7 @@ def logout(req, res) {
 
 def doc(req, res) {
   var uri = req.path.replace('~^/docs/?~', '').trim('/')
-  if uri == '' uri = 'installing-nyssa'
+  if uri == '' uri = 'getting-started'
   
   var doc_file
   if !doc_files.contains('${uri}.md') or 

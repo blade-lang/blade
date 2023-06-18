@@ -19,9 +19,9 @@ def parse(parser) {
       type: args.CHOICE,
       # choices: ['create', 'login', 'logout'],
       choices: {
-        create: 'creates a new publisher account',
-        login: 'login to a publisher account',
-        logout: 'log out of a publisher account',
+        create: 'Creates a new publisher account',
+        login: 'Login to a publisher account',
+        logout: 'Log out of a publisher account',
       }
     }
   ).add_option(
