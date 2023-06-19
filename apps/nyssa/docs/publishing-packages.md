@@ -51,7 +51,7 @@ cd sample
 - Run the command `nyssa install <package_name>`.
 - Open the file at `app/index.b` and insert code to import your package before every code in the file. E.g.
 
-```
+```blade
 import <package_name>
 echo 'Welcome to Nyssa. Magic begins here!'
 ```

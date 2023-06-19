@@ -13,6 +13,7 @@ var _quote_re = '/((\'(?:[^\'\\\\]|\\.)*\')|("(?:[^"\\\\]|\\.)*"))/'
 
 def highlight_blade(text) {
   text = text.
+    replace('<', '&lt;').replace('>', '&gt;').
     # operators
     replace('/([+\-*=/%!<>@]|\.\.)/', '<_o>$1</_o>').
     replace('/\\b(and|or)\\b/', '<_o>$1</_o>').
@@ -89,12 +90,20 @@ def highlight_html5(text, lang) {
   return result
 }
 
+def highlight_json(text) {
+  return text.replace('/("(?:[^"\\\\]|\\.)*")/', '<span style="color:#9a6e3a">$1</span>')
+}
+
 def highlight(text, lang) {
-  if lang == 'blade' {
-    return highlight_blade(text)
-  } else if lang == 'html' or lang == 'html5' or lang == 'wire' {
-    return highlight_html5(text, lang)
+  using lang {
+    when 'blade' 
+      return highlight_blade(text)
+    when 'html', 'html5', 'wire' 
+      return highlight_html5(text, lang)
+    when 'json', 'json5'
+      return highlight_json(text)
+    default 
+      return text.replace('<', '&lt;').replace('>', '&gt;')
   }
-  return text
 }
 

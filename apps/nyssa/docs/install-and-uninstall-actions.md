@@ -6,7 +6,7 @@ Nyssa provides two installation hook (`post_install` and `cli`) and one uninstal
 
 The `post_install` configuration allows package authors to specify a Blade script that should be run after the package has been extracted into its destination directory. To specify a script to run after installation, add the `post_install` option to the `nyssa.json` file.
 
-```
+```json
 ...
 "post_install": "my_cli_script.b"
 ```
@@ -17,7 +17,7 @@ The _<scirpt_name>_ must be a path or filename relative to the root of the packa
 
 The `pre_uninstall` configuration is much like the `post_install` configuration, except that it runs just before a package is uninstalled. You can add it to the `nyssa.json` file in the same way as the `post_install` option.
 
-```
+```json
 ...
 "pre_uninstall": "my_cli_script.b"
 ```
@@ -32,6 +32,6 @@ For applications installated globally, the application will become available on 
 
 For example,
 
-```
+```json
 "cli": "my_cli_script.b"
 ```

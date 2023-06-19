@@ -37,7 +37,6 @@ def home(req, res) {
     top_packages: db.get_top_packages(),
     latest_packages: db.get_top_packages('created_at DESC'),
     show_login: !res.session.contains('user'),
-    nyssa_version: setup.NYSSA_VERSION,
   })
 }
 
