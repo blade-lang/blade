@@ -2271,6 +2271,7 @@ b_ptr_result run(b_vm *vm) {
       case OP_CALL_IMPORT: {
         b_obj_closure *closure = AS_CLOSURE(READ_CONSTANT());
         add_module(vm, closure->function->module);
+        register_module__FILE__(vm, closure->function->module);
         call(vm, closure, 0);
         vm->current_frame = &vm->frames[vm->frame_count - 1];
         break;
@@ -2475,6 +2476,14 @@ b_ptr_result run(b_vm *vm) {
 #undef BINARY_MOD_OP
 }
 
+void register_module__FILE__(b_vm *vm, b_obj_module *module) {
+  // register module __FILE__
+  push(vm, STRING_L_VAL("__FILE__", 8));
+  push(vm, STRING_VAL(module->file));
+  table_set(vm, &module->values, vm->stack[0], vm->stack[1]);
+  pop_n(vm, 2);
+}
+
 // helper function to access call outside the vm file.
 bool call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
   // set the closure before the args
@@ -2511,6 +2520,9 @@ b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
   b_obj_closure *closure = new_closure(vm, function);
   pop(vm);
   push(vm, OBJ_VAL(closure));
+
+  register_module__FILE__(vm, module);
+
   call(vm, closure, 0);
   return run(vm);
 }

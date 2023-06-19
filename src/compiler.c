@@ -2243,6 +2243,8 @@ static void import_statement(b_parser *p) {
   emit_byte_and_short(p, OP_CALL_IMPORT, import_constant);
   pop(p->vm);
 
+  register_module__FILE__(p->vm, module);
+
   parse_specific_import(p, module_name, import_constant, was_renamed, false);
 }
 

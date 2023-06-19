@@ -95,13 +95,19 @@ b_value pop_n(b_vm *vm, int n);
 b_value peek(b_vm *vm, int distance);
 
 static inline void add_module(b_vm *vm, b_obj_module *module) {
-  table_set(vm, &vm->modules, STRING_VAL(module->file), OBJ_VAL(module));
+  push(vm, STRING_VAL(module->name));
+  push(vm, OBJ_VAL(module));
+  push(vm, STRING_VAL(module->file));
+
+  table_set(vm, &vm->modules, vm->stack[2], vm->stack[1]);
   if (vm->frame_count == 0) {
-    table_set(vm, &vm->globals, STRING_VAL(module->name), OBJ_VAL(module));
+    table_set(vm, &vm->globals, vm->stack[0], vm->stack[1]);
   } else {
     table_set(vm, &vm->current_frame->closure->function->module->values,
-              STRING_VAL(module->name), OBJ_VAL(module));
+              vm->stack[0], vm->stack[1]);
   }
+
+  pop_n(vm, 3);
 }
 
 bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name, int arg_count);
@@ -159,5 +165,6 @@ static inline void gc_clear_protection(b_vm *vm) {
 
 bool call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args);
 b_ptr_result run(b_vm *vm);
+void register_module__FILE__(b_vm *vm, b_obj_module *module);
 
 #endif
