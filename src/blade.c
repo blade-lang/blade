@@ -24,6 +24,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include "pathinfo.h"
 #endif
 
 static void repl(b_vm *vm) {

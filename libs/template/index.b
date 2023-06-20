@@ -638,7 +638,6 @@ class Template {
     if element.type == 'text' {
       # replace variables: {{var_name}}
       element.content = self._process(path, element.content, variables)
-      return element
     } else {
       var attrs = self._get_attrs(element.attributes)
   
@@ -727,7 +726,7 @@ class Template {
         return result
       }
       
-      if element and element.contains('children') and element.children {
+      if is_dict(element) and element.get('children', nil) {
         element.children = self._process(path, element.children, variables)
       }
   
@@ -740,9 +739,9 @@ class Template {
           }
         }
       }
-  
-      return element
     }
+
+    return element
   }
 
   /**
