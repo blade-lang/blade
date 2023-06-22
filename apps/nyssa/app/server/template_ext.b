@@ -6,7 +6,7 @@ import .util
 
 var md = markdown({
   html: true,
-  highlight,
+  highlight: highlight(),
 })
 
 def template_ext() {
