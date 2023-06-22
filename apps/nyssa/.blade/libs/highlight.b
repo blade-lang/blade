@@ -1,14 +1,10 @@
-# highlight.b has been extracted from the highlight package by 
-# Richard Ore <eqliqandfriends@gmail.com>
-# Included here with express permission.
-
 var default_colors = {
   string: '#690',
   interpolation: '#00bcd4',
   constant: '#ff9800',
   method: '#ff5722',
   function: '#ff5722',
-  keyword: '#2196F3',
+  keyword: '#2196f3',
   comment: 'slategray',
   operator: '#9a6e3a',
   number: '#905'
@@ -22,7 +18,7 @@ var blade_keywords = '|'.join([
 ])
 
 var constant_keywords = '|'.join([
-  'nil', 'parent', 'self', 'true', 'false', 'and', 'or'
+  'nil', 'parent', 'self', 'true', 'false',
 ])
 
 var _quote_re = '/((\'(?:[^\'\\\\]|\\.)*\')|("(?:[^"\\\\]|\\.)*"))/'
@@ -31,7 +27,7 @@ def highlight_blade(text, colors) {
   text = text.
     replace('<', '&lt;').replace('>', '&gt;').
     # operators
-    replace('/([+\-*=/%!<>@]|\.\.)/', '<_o>$1</_o>').
+    replace('/([+\-=%!<>@]|\.\.|(?<!\*)\/(?!\*)|(?<!\/)\*(?!\/))/', '<_o>$1</_o>').
     replace('/\\b(and|or)\\b/', '<_o>$1</_o>').
     # quotes
     replace(_quote_re, '<_q>$1</_q>').
@@ -53,7 +49,7 @@ def highlight_blade(text, colors) {
     replace('/(#[^\\n]*|\/(?!\\\\)\*[\s\S]*?\*(?!\\\\)\/)/', '<_w>$1</_w>')
 
   # clean up comments
-  var comments = text.matches('/<_w>(.*?)<\/_w>/')
+  var comments = text.matches('/<_w>((.|\\n)*?)<\/_w>/')
   if comments {
     for comment in comments[1] {
       text = text.replace(comment, comment.replace('/<\/?_([^>]+)>/', ''), false)
@@ -81,7 +77,7 @@ def highlight_blade(text, colors) {
               replace('/<_m>(.*?)<\/_m>/', '<span style="color:${colors.method};font-style:italic">$1</span>').
               replace('/<_f>(.*?)<\/_f>/', '<span style="color:${colors.function}">$1</span>').
               replace('/<_k>(.*?)<\/_k>/', '<span style="color:${colors.keyword}">$1</span>').
-              replace('/<_w>(.*?)<\/_w>/', '<span style="color:${colors.comment}">$1</span>').
+              replace('/<_w>((.|\\n)*?)<\/_w>/', '<span style="color:${colors.comment}">$1</span>').
               replace('/<_o>(.*?)<\/_o>/', '<span style="color:${colors.operator}">$1</span>').
               replace('/<_n>(.*?)<\/_n>/', '<span style="color:${colors.number}">$1</span>')
 }

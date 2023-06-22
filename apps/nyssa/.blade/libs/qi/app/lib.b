@@ -30,6 +30,7 @@ var _curr_desc = {
   it: [],
   file: _file,
   time: 0,
+  skipped: false,
 }
 var _curr_it = {}
 
@@ -59,6 +60,10 @@ def _print(text, state) {
   return state ? 
   colors.text('\u2714 ' + text, colors.text_color.green) :
   colors.text('\u2715 ' + text, colors.text_color.light_red)
+}
+
+def _print_skipped(text) {
+  return colors.text('\u25CB ' + text, colors.text_color.yellow)
 }
 
 def _gray(txt) {
@@ -329,13 +334,19 @@ def it(desc, fn) {
     name: desc,
     expects: [],
     time: 0,
+    skipped: false,
   }
 
+  var pre_run_count = _total_assertions
   try {
     fn()
   } catch Exception e {
     io.stderr.write(e.message + '\r\n')
     io.stderr.write(e.stacktrace + '\r\n')
+  }
+
+  if pre_run_count == _total_assertions {
+    _curr_it.skipped = true
   }
 
   for ae in _after_eachs {
@@ -352,6 +363,7 @@ def describe(desc, fn) {
     it: [],
     file: _file,
     time: 0,
+    skipped: false,
   }
 
   try {
@@ -362,7 +374,13 @@ def describe(desc, fn) {
     }
 
     _curr_desc.name = desc
+    var pre_run_count = _total_assertions
+
     fn()
+
+    if pre_run_count == _total_assertions {
+      _curr_desc.skipped = true
+    }
 
     for aa in _after_alls {
       aa()
@@ -392,6 +410,12 @@ def show_result(e) {
   }).length() > 0
   if fails _failed_suites++
 
+  if e.skipped {
+    echo colors.text(' SKIPPED ', colors.background.yellow) + ' ' + e.file
+    _total_suites--
+    return
+  }
+
   echo colors.text(
     !fails ? ' PASS ' : ' FAIL ', 
     fails ? 
@@ -404,6 +428,12 @@ def show_result(e) {
     var _e = e.it[i]
     var it_fails = iters.filter(_e.expects, @(x) { return !x.status }).length() > 0
     if it_fails _failed_tests++
+
+    if _e.skipped {
+      echo '    ' + _print_skipped('${_e.name} (${_time(_e.time)}) - Skipped')
+      _total_tests--
+      continue
+    }
 
     echo '    ' + _print('${_e.name} (${_time(_e.time)})', !it_fails)
 
