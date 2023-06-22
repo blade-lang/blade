@@ -185,7 +185,7 @@ def filter(object, callback) {
 
   var callback_arity = reflect.get_function_metadata(callback).arity
 
-  for key, value in list {
+  for key, value in object {
     if (callback_arity >= 2 ? callback(value, key) : callback(value)) {
       using typeof(object) {
         when 'list', 'bytes' result.append(value)
