@@ -8,24 +8,27 @@ var _before_eachs = []
 var _before_alls = []
 var _after_eachs = []
 var _after_alls = []
-var _total_tests = 0
+
+var total_time = 0
+
 var _total_suites = 0
+var _total_tests = 0
+var _total_assertions = 0
+
+var _passed_suites = 0
 var _passed_tests = 0
+var _passed_assertions = 0
+
+var _failed_suites = 0
 var _failed_tests = 0
+var _failed_assertions = 0
+
 var _file
-
-def file() {
-  return _file
-}
-
-def set_file(f) {
-  _file = f
-}
 
 var _stats = []
 var _curr_desc = {
   it: [],
-  file: file(),
+  file: _file,
   time: 0,
 }
 var _curr_it = {}
@@ -46,6 +49,46 @@ def after_all(fn) {
   _after_alls.append(fn)
 }
 
+def _get_mark(state) {
+  return state ? 
+  colors.text('\u2714', colors.text_color.green) :
+  colors.text('\u2715', colors.text_color.light_red)
+}
+
+def _print(text, state) {
+  return state ? 
+  colors.text('\u2714 ' + text, colors.text_color.green) :
+  colors.text('\u2715 ' + text, colors.text_color.light_red)
+}
+
+def _gray(txt) {
+  return colors.text(txt, colors.text_color.dark_grey)
+}
+
+def _orange(txt) {
+  return colors.text(txt, colors.text_color.orange)
+}
+
+def _red(txt) {
+  return colors.text(txt, colors.text_color.light_red)
+}
+
+def _report(text, state) {
+  return state ? 
+  colors.text(text, colors.text_color.green) :
+  colors.text(text, colors.text_color.light_red)
+}
+
+def _time(time) {
+  if time < 1000 {
+    return time + 'µs'
+  } else if time < 1000000 {
+    return (time / 1000) + 'ms'
+  }
+
+  return (time / 1000000) + 's'
+}
+
 class expect {
   var value
   var _is_not = false
@@ -60,30 +103,31 @@ class expect {
 
     var v = to_string(self.value).replace('\r', '\\r').replace('\n', '\\n')
     var w = expected != nil ? to_string(expected).replace('\r', '\\r').replace('\n', '\\n') : nil
-    #if v.length() > 20 v = v[,17] + '...'
-    #if w.length() > 20 w = v[,17] + '...'
 
     var state = {
-      name: w != nil ? 'expect "${v}" ${name} "${w}"' : 'expect "${v}" ${name}', 
+      name: w != nil ? 
+        'Expect value ${name}:\n          ${_orange(w)}\n        Got:\n          ${_red(v)}' : 
+        'Expected "${_red(v)}" ${name}', 
       status: false,
     }
     
     try {
       if !self._is_not and fn(self.value, expected) {
-        _passed_tests++
+        _passed_assertions++
         state.status = true
       } else if self._is_not and !fn(self.value, expected) {
-        _passed_tests++
+        _passed_assertions++
         state.status = true
       } else {
-        _failed_tests++
+        _failed_assertions++
       }
     } catch Exception e {
-      _failed_tests++
+      _failed_assertions++
       io.stderr.write(e.message + '\r\n')
       io.stderr.write(e.stacktrace + '\r\n')
     } finally {
       _curr_it.expects.append(state)
+      _total_assertions++
     }
   }
 
@@ -304,13 +348,13 @@ def it(desc, fn) {
 }
 
 def describe(desc, fn) {
-  try {
-    _curr_desc = {
-      it: [],
-      file: file(),
-      time: 0,
-    }
+  _curr_desc = {
+    it: [],
+    file: _file,
+    time: 0,
+  }
 
+  try {
     var start = microtime()
 
     for ba in _before_alls {
@@ -325,100 +369,70 @@ def describe(desc, fn) {
     }
 
     _curr_desc.time = microtime() - start
-    _stats.append(_curr_desc)
   } catch Exception e {
     io.stderr.write(e.message + '\r\n')
     io.stderr.write(e.stacktrace + '\r\n')
-  }
-}
-
-def _get_mark(state) {
-  return state ? 
-  colors.text('\u2714', colors.text_color.green) :
-  colors.text('\u2715', colors.text_color.red)
-}
-
-def _print(text, state) {
-  return state ? 
-  colors.text('\u2714 ' + text, colors.text_color.green) :
-  colors.text('\u2715 ' + text, colors.text_color.red)
-}
-
-def _gray(txt) {
-  return colors.text(txt, colors.text_color.dark_grey)
-}
-
-def _report(text, state) {
-  return state ? 
-  colors.text(text, colors.text_color.green) :
-  colors.text(text, colors.text_color.red)
-}
-
-def _time(time) {
-  if time < 1000 {
-    return time + 'µs'
-  } else if time < 1000000 {
-    return (time / 1000) + 'ms'
+  } finally {
+    _total_suites++
   }
 
-  return (time / 1000000) + 's'
+  show_result(_curr_desc)
 }
 
 def run(f) {
-  set_file(f)
+  _file = f
   reflect.run_script(f)
+}
+
+def show_result(e) {
+  total_time += e.time
+
+  var fails = iters.filter(e.it, @(x) {
+    return iters.filter(x.expects, @(y) { return !y.status }).length() > 0
+  }).length() > 0
+  if fails _failed_suites++
+
+  echo colors.text(
+    !fails ? ' PASS ' : ' FAIL ', 
+    fails ? 
+      colors.background.light_red :
+      colors.background.green
+  ) + ' ' + e.file
+
+  echo '  ${e.name}'
+  iter var i = 0; i < e.it.length(); i++ {
+    var _e = e.it[i]
+    var it_fails = iters.filter(_e.expects, @(x) { return !x.status }).length() > 0
+    if it_fails _failed_tests++
+
+    echo '    ' + _print('${_e.name} (${_time(_e.time)})', !it_fails)
+
+    if it_fails {
+      iter var j = 0; j < _e.expects.length(); j++ {
+        var expect = _e.expects[j]
+        if !expect.status {
+          echo '      ${_get_mark(expect.status)} ${expect.name}'
+        }
+      }
+    }
+  }
+  
+  echo ''
 }
 
 def show_tests_results() {
   echo ''
 
-  var failed_suites = 0
-  var failed_tests = 0
-  var total_time = 0
+  var passed_suites = _report((_total_suites - _failed_suites) + ' passed', true)
+  var passed_tests = _report((_total_tests - _failed_tests) + ' passed', true)
+  var passes = _passed_assertions > 0 ? _report(_passed_assertions + ' passed', true) : '0 passed'
+  var suite_fails = _failed_suites > 0 ? _report(_failed_suites + ' failed', false) : '0 failed'
+  var test_fails = _failed_tests > 0 ? _report(_failed_tests + ' failed', false) : '0 failed'
+  var assert_fails = _failed_assertions > 0 ? _report(_failed_assertions + ' failed', false) : '0 failed'
 
-  iter var index = 0; index < _stats.length(); index++ {
-    var e = _stats[index]
-
-    total_time += e.time
-
-    var fails = iters.filter(e.it, @(x) {
-      return iters.filter(x.expects, @(y) { return !y.status }).length() > 0
-    }).length() > 0
-    if fails failed_suites++
-
-    echo colors.text(
-      !fails ? ' PASS ' : ' FAIL ', 
-      fails ? 
-        colors.background.red :
-        colors.background.green
-    ) + ' ' + e.file
-
-    echo '  ${e.name}'
-    iter var i = 0; i < e.it.length(); i++ {
-      var _e = e.it[i]
-      var it_fails = iters.filter(_e.expects, @(x) { return !x.status }).length() > 0
-      if it_fails failed_tests++
-
-      echo '    ' + _print('${_e.name} (${_time(_e.time)})', !it_fails)
-
-      iter var j = 0; j < _e.expects.length(); j++ {
-        var expect = _e.expects[j]
-        echo '      ${_get_mark(expect.status)} ${_gray(expect.name)}'
-      }
-    }
-    echo ''
-  }
-
-  var passed_suites = _report((_stats.length() - failed_suites) + ' passed', true)
-  var passed_tests = _report((_total_tests - failed_tests) + ' passed', true)
-  var passes = _passed_tests > 0 ? _report(_passed_tests + ' passed', true) : '0 passed'
-  var suite_fails = failed_suites > 0 ? _report(failed_suites + ' failed', false) : '0 failed'
-  var test_fails = failed_tests > 0 ? _report(failed_tests + ' failed', false) : '0 failed'
-  var assert_fails = _failed_tests > 0 ? _report(_failed_tests + ' failed', false) : '0 failed'
-
-  echo colors.text('Test suites:  ${passed_suites}, ${suite_fails}, ${_stats.length()} total', colors.style.bold)
+  echo colors.text('Test suites:  ${passed_suites}, ${suite_fails}, ${_total_suites} total', colors.style.bold)
   echo colors.text('Tests:        ${passed_tests}, ${test_fails}, ${_total_tests} total', colors.style.bold)
-  echo colors.text('Assertions:   ${passes}, ${assert_fails}, ${_passed_tests + _failed_tests} total', colors.style.bold)
+  echo colors.text('Assertions:   ${passes}, ${assert_fails}, ${_total_assertions} total', colors.style.bold)
   echo colors.text('Time:         ${_time(total_time)}', colors.style.bold)
   echo colors.text(_gray('Ran all test suites.'), colors.style.bold)
 

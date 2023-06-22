@@ -35,4 +35,6 @@ def run(value, options, success, error) {
   } else {
     error('"${setup.TEST_DIR}" directory not found.')
   }
+
+  os.exit(0)
 }
