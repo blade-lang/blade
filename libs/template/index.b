@@ -506,8 +506,8 @@ class Template {
           var final_var = variables[_vars[0]]
           iter var i = 1; i < _vars.length(); i++ {
             if is_dict(final_var) {
-              final_var = final_var[_vars[i].matches(constants.NUMBER_RE) ? 
-                to_number(_vars[i]) : _vars[i]]
+              final_var = final_var.get(_vars[i].matches(constants.NUMBER_RE) ? 
+                to_number(_vars[i]) : _vars[i], nil)
             } else if (is_list(final_var) or is_string(final_var)) and 
               _vars[i].matches(constants.NUMBER_RE) {
               final_var = final_var[to_number(_vars[i])]

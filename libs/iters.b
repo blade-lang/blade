@@ -18,113 +18,181 @@ import reflect
  */
 def each(object, callback) {
   if !is_iterable(object)
-    die Exception('arg1 must be an iterable')
+    die Exception('iterable expected in argument 1 (object)')
   if !is_function(callback)
-    die Exception('arg2 must be a function')
+    die Exception('function expected in argument 2 (callback)')
 
   var callback_arity = reflect.get_function_metadata(callback).arity
 
-  for index, item in object {
-    if callback_arity == 1 callback(item)
-    else callback(item, index)
+  for key, value in object {
+    if callback_arity == 1 callback(value)
+    else callback(value, key)
   }
 }
 
 /**
- * reduce(list: list, callback: function [, initial: any])
+ * reduce(iterable: iterable, callback: function [, initial: any])
  * 
  * Executes a user-supplied "reducer" callback function on each element 
- * of the list, in order, passing in the return value from the calculation 
- * on the preceding element. 
- * The final result of running the reducer across all elements of the list 
- * is a single value.
+ * of the iterable, in order, passing in the return value from the 
+ * calculation on the preceding element. The final result of running the 
+ * reducer across all elements of the iterable is a single value.
  * 
  * The first time that the callback is run there is no "return value of the 
  * previous calculation". If supplied, an initial value may be used in its 
- * place. Otherwise the list element at index 0 is used as the initial value 
- * and iteration starts from the next element (index 1 instead of index 0).
+ * place. Otherwise the iterable element at index 0 (or the first key if 
+ * the iterable is a dictionary) is used as the initial value and iteration 
+ * starts from the next element (index 1 or the next key instead of index 0 
+ * or the first key).
+ * 
+ * The call back function must accept two (2) or three (3) arguments. If 
+ * the callback function accepts two arguments, the first argument is passed 
+ * the initial element or the first index in the iterable if an initial 
+ * element is not specified while the second argument will be passed the 
+ * current iterating value from the iterable. If the callback takes three 
+ * arguments, the third will be passed the key or index of the current 
+ * iterating value in the given iterable.
+ * 
+ * > The initial value will be `nil` if not given and the iterable is an 
+ *    instance of a class
+ * 
+ * @return any
  */
-def reduce(list, callback, initial) {
-  if !is_list(list)
-    die Exception('arg1 must be a list')
+def reduce(object, callback, initial) {
+  if !is_iterable(object)
+    die Exception('iterable expected in argument 1 (object)')
   if !is_function(callback)
-    die Exception('arg2 must be a function')
+    die Exception('function expected in argument 2 (callback)')
 
-  if initial == nil and !list.is_empty()
-    initial = list[0]
+  var callback_arity = reflect.get_function_metadata(callback).arity
+  if callback_arity < 2 or callback_arity > 3 
+    die Exception('callback function must take 2 or 3 parameters')
 
-  for item in list {
-    initial = callback(initial, item)
+  if initial == nil and object.length() > 0 {
+    if is_dict(object) {
+      initial = iterable.get(object.key()[0])
+    } else if !is_instance(object) {
+      initial = object[0]
+    }
+  }
+
+  for key, value in object {
+    if callback_arity == 2 initial = callback(initial, value)
+    else callback(initial, value, key)
   }
 
   return initial
 }
 
 /**
- * map(list: list, callback: function)
+ * map(object: iterable, callback: function)
  * 
  * Creates a new list populated with the results of calling the provided 
- * callback on every element in the list.
+ * callback on every element in the iterable.
+ * 
+ * @return list
  */
-def map(list, callback) {
-  if !is_list(list)
-    die Exception('arg1 must be a list')
+def map(object, callback) {
+  if !is_iterable(object)
+    die Exception('iterable expected in argument 1 (object)')
   if !is_function(callback)
-    die Exception('arg2 must be a function')
+    die Exception('function expected in argument 2 (callback)')
 
   var result = []
   var callback_arity = reflect.get_function_metadata(callback).arity
 
-  for index, item in list {
-    result.append(callback_arity == 1 ? callback(item) : callback(item, index))
+  for key, value in object {
+    result.append(callback_arity == 1 ? callback(value) : callback(key, index))
   }
 
   return result
 }
 
 /**
- * some(list: list, callback: function)
+ * some(object: iterable, callback: function)
  * 
- * Tests whether at least one element in the list passes the test 
- * implemented by the provided function. It returns true if, in the list, 
- * it finds an element for which the provided function returns true; 
+ * Tests whether at least one element in the object passes the test 
+ * implemented by the callback function. It returns true if there is an 
+ * element in the list for which the provided function returns true; 
  * otherwise it returns false.
+ * 
+ * @return bool
  */
-def some(list, callback) {
+def some(object, callback) {
+  if !is_iterable(object)
+    die Exception('iterable expected in argument 1 (object)')
+  if !is_function(callback)
+    die Exception('function expected in argument 2 (callback)')
+
   var callback_arity = reflect.get_function_metadata(callback).arity
-  for index, item in list {
-    if (callback_arity == 1 ? callback(item) : callback(item, index)) return true
+
+  for key, value in object {
+    if (callback_arity == 1 ? callback(value) : callback(value, key)) return true
   }
+
   return false
 }
 
 /**
- * every(list: list, callback: function)
+ * every(object: iterable, callback: function)
  * 
- * Tests whether all elements in the list passes the test implemented by 
- * the provided function. It returns false if, in the list, it finds an 
- * element for which the provided function returns false.
+ * Tests whether at all the element in the object passes the test 
+ * implemented by the callback function. It returns true if there all 
+ * elements in the list for which the provided function returns true; 
+ * otherwise it returns false.
+ * 
+ * @return bool
  */
-def every(list, callback) {
+def every(object, callback) {
+  if !is_iterable(object)
+    die Exception('iterable expected in argument 1 (object)')
+  if !is_function(callback)
+    die Exception('function expected in argument 2 (callback)')
+
   var callback_arity = reflect.get_function_metadata(callback).arity
-  for index, item in list {
-    if !(callback_arity == 1 ? callback(item) : callback(item, index)) return false
+
+  for key, value in object {
+    if !(callback_arity == 1 ? callback(value) : callback(value, key)) return false
   }
   return true
 }
 
 /**
- * filter(list: list, callback: function)
+ * filter(object: iterable, callback: function)
  * 
- * Creates a new list with all elements that pass the test implemented by 
- * the provided function.
+ * Creates a new iterable of same type that contains all elements that 
+ * pass the test implemented by the provided function. If the iterable 
+ * is an iterable class, the class MUST implement a method 
+ * `set(key, value)` and its constructor must be able to accept zero 
+ * arguments without dieing else any such Exception will propagate.
+ * 
+ * @return iterable
  */
-def filter(list, callback) {
-  var result = []
+def filter(object, callback) {
+  if !is_iterable(object)
+    die Exception('iterable expected in argument 1 (object)')
+  if !is_function(callback)
+    die Exception('function expected in argument 2 (callback)')
+  
+  var result
+  using typeof(object) {
+    when 'dict' result = {}
+    when 'list' result = []
+    when 'string' result = ''
+    when 'bytes' result = bytes(0)
+    default reflect.get_class(object)()
+  }
+
   var callback_arity = reflect.get_function_metadata(callback).arity
 
-  for index, item in list {
-    if (callback_arity == 1 ? callback(item) : callback(item, index)) result.append(item)
+  for key, value in list {
+    if (callback_arity >= 2 ? callback(value, key) : callback(value)) {
+      using typeof(object) {
+        when 'list', 'bytes' result.append(value)
+        when 'string' result += value
+        default result.set(key, value)
+      }
+    }
   }
 
   return result
