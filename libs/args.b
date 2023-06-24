@@ -149,8 +149,8 @@ def _get_real_value(item, value) {
   else if item.type == LIST return is_list(value) ? value : [value]
   else if item.type == CHOICE {
     if is_list(item.choices)
-      return item.choices.contains(value) ? value : item.value
-    else return item.choices.contains(value) ? item.choices[value] : item.value
+      return item.choices.contains(value) ? value : value
+    else return item.choices.contains(value) ? item.choices[value] : value
   }
   return value
 }
@@ -763,7 +763,7 @@ class Parser < _Optionable {
             var value = cli_args[i]
             var v = _get_real_value(command, value)
 
-            if v or command.type != CHOICE or !command.choices {
+            if command.type != CHOICE or !command.choices or command.choices.contains(v) {
               parsed_args.command = {
                 name: command.name,
                 value: v
@@ -776,7 +776,7 @@ class Parser < _Optionable {
                 }
               }
             } else {
-              self._command_error(command.name, 'Command "${command.name}" expects a ${_type_name[command.type]} as one of \'${"', '".join(command.choices)}\'')
+              self._command_error(command.name, 'Command "${command.name}" expects one of \'${"', '".join(command.choices)}\' as argument')
             }
           } else if command.type != OPTIONAL {
             self._command_error(command.name, 'Command "${command.name}" expects a ${_type_name[command.type]}')

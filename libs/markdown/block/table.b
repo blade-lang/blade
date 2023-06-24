@@ -196,7 +196,7 @@ def table(state, start_line, end_line, silent) {
       }
 
       token          = state.push('inline', '', 0)
-      token.content  = columns[i] ? columns[i].trim() : ''
+      token.content  = columns.get(i) ? columns.get(i).trim() : ''
       token.children = []
 
       token          = state.push('td_close', 'td', -1)

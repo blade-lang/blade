@@ -2477,8 +2477,8 @@ b_ptr_result run(b_vm *vm) {
 }
 
 void register_module__FILE__(b_vm *vm, b_obj_module *module) {
-  // register module __FILE__
-  push(vm, STRING_L_VAL("__FILE__", 8));
+  // register module __file__
+  push(vm, STRING_L_VAL("__file__", 8));
   push(vm, STRING_VAL(module->file));
   table_set(vm, &module->values, vm->stack[0], vm->stack[1]);
   pop_n(vm, 2);

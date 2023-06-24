@@ -305,7 +305,7 @@ DECLARE_LIST_METHOD(get) {
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
   int index = AS_NUMBER(args[0]);
   if (index < 0 || index >= list->items.count) {
-    RETURN_ERROR("list index %d out of range at get()", index);
+    RETURN_NIL;
   }
 
   RETURN_VALUE(list->items.values[index]);
