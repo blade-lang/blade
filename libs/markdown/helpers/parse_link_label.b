@@ -4,7 +4,7 @@
 # returns the end of the label
 
 def parse_link_label(state, start, disable_nested) {
-  var level, found, marker, prev_pos,
+  var level, found = false, marker, prev_pos,
       label_end = -1,
       max = state.pos_max,
       old_pos = state.pos

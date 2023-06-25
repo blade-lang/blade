@@ -43,34 +43,40 @@ var RECODE_HOSTNAME_FOR = [ 'http', 'https', 'mailto' ]
 def _md_format(url) {
   var result = ''
 
-  var clean_part = url.path and !url.path.match('/@/')
+  var has_colon = ['mailto', 'tel'].contains(url.scheme.lower())
 
-  result += url.scheme ? '${url.scheme}:' : ''
-  if !url.has_slash {
-    if !url.scheme and url.host and !url.username {
-      result += url.port or !url.path ? '' : (clean_part ? '/' : '')
+  result += url.scheme or ''
+  result += url.has_slash ? '://' : (has_colon ? ':' : '')
+  
+  if url.username {
+    result += url.username
+    result += url.password ? ':' + url.password : ''
+    if url.host {
+      result += '@'
     }
-  } else {
-    result += '//'
   }
-  result += url.username ? url.username : ''
-  result += url.password ? ':${url.password}' : ''
-  result += url.username ? '@' : ''
+
   if url.host and url.host.index_of(':') != -1 {
     # ipv6 address
     result += '[' + url.host + ']'
   } else {
-    result += url.host ? url.host.ltrim('/') : ''
+    result += url.host or ''
   }
-  
-  result += url.port and url.port != '0' ? ':' + url.port : ''
-  if !clean_part {
-    url.path = url.path.replace('/^\//', '+')
+
+  result += url.port ? ':' + url.port : ''
+  result += url.path and !url.empty_path ? url.path : ''
+
+  if url.query {
+    if !url.empty_path {
+      # result = result.rtrim('/')
+    }
+    result += url.query ? '?' + url.query : ''
   }
-  result += !url.path or url.path == '/' ? '' : url.path
-  result += url.query ? '?${url.query}' : ''
-  result += url.hash ? '#${url.hash}' : ''
+
+  result += url.hash ? '#' + url.hash : ''
+
   return result
+
 }
 
 var encode_cache = {}
@@ -152,7 +158,7 @@ def normalize_link(uri) {
     return encode_url(uri)
   }
 
-  var parsed = url.parse(uri)
+  var parsed = url.parse(uri, false)
 
   if parsed.host {
     # Encode hostnames in urls like:
@@ -170,7 +176,7 @@ def normalize_link(uri) {
 }
 
 def normalize_link_text(uri) {
-  var parsed = url.parse(uri)
+  var parsed = url.parse(uri, false)
 
   if parsed.host {
     # Encode hostnames in urls like:
@@ -179,7 +185,7 @@ def normalize_link_text(uri) {
     # We don't encode unknown schemas, because it's likely that we encode
     # something we shouldn't (e.g. `skype:name` treated as `skype:host`)
     if !parsed.scheme or RECODE_HOSTNAME_FOR.contains(parsed.scheme) {
-      parsed.host.ascii(false)
+      parsed.host.ascii()
     }
   }
 

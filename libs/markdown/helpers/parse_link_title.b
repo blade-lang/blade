@@ -2,11 +2,11 @@
 
 import ..common.utils { unescape_all }
 
-def parse_link_title(str, start, max) {
+def parse_link_title(str, pos, max) {
   var code,
       marker,
       lines = 0,
-      pos = start,
+      start = pos,
       result = {
         ok: false,
         pos: 0,
@@ -35,11 +35,11 @@ def parse_link_title(str, start, max) {
       return result
     } else if code == '(' and marker == ')' {
       return result
-    } else if ord(code) == 0x0A {
+    } else if code == '\n' {
       lines++
     } else if code == '\\' and pos + 1 < max {
       pos++
-      if ord(str[pos]) == 0x0A {
+      if str[pos] == '\n' {
         lines++
       }
     }

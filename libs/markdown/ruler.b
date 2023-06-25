@@ -20,8 +20,8 @@ class Ruler {
   #
   # {
   #   name: XXX,
-  #   enabled: Boolean,
-  #   fn: Function(),
+  #   enabled: bool,
+  #   fn: function(),
   #   alt: [ name2, name3 ]
   # }
   var __rules__ = []

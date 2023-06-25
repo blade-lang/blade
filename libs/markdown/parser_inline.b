@@ -77,7 +77,7 @@ class InlineParser {
         max_nesting = state.md.options.max_nesting,
         cache = state.cache
 
-    if cache.contains(pos) {
+    if cache.get(pos) {
       state.pos = cache[pos]
       return
     }
@@ -109,7 +109,7 @@ class InlineParser {
       #       validation mode)
       state.pos = state.pos_max
     }
-    
+   
     if !ok state.pos++
     cache[pos] = state.pos
   }

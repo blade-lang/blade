@@ -52,7 +52,7 @@ def replace_entity_pattern(match, name) {
   }
 
   if name[0] == '#' and name.match(DIGITAL_ENTITY_TEST_RE) {
-    code = name[1].lower() == 'x' ? name[2,] : name[1,]
+    code = to_number(name[1].lower() == 'x' ? '0' + name[1,] : name[1,])
 
     if is_valid_entity_code(code) {
       return chr(code)
@@ -63,25 +63,34 @@ def replace_entity_pattern(match, name) {
 }
 
 def unescape_md(str) {
-  if str.index_of('\\') < 0 return str
+  if !str.index_of('\\') return str
   return str.replace('/' + UNESCAPE_MD_RE + '/s', '$1')
 }
 
-def unescape_all(str) {
-  if str.index_of('\\') < 0 and str.index_of('&') < 0 return str
+def str_replace_fn(str, pattern, fn) {
+  var result = '', match, next_index = 0
 
-  var matches = str.matches(UNESCAPE_ALL_RE)
-  if matches {
-    iter var i = 0; i < matches[0].length(); i++ {
-      if matches[1].length() > i and matches[1][i] {
-        str = str.replace(matches[0][i], matches[1][i], false)
-      } else if matches[1].length() > i and matches[2].length() > i {
-        str = str.replace(matches[0][i], replace_entity_pattern(matches[0][i], matches[2][i]))
-      }
-    }
+  while match = str.match(pattern, next_index) {
+    var index = str[next_index,].index_of(match[0])
+    result += str[next_index, next_index + index]
+    next_index += index + match[0].length()
+
+    result += fn(match.to_list()[1])
   }
-  
-  return str
+  if next_index < str.length() {
+    result += str[next_index,]
+  }
+
+  return result
+}
+
+def unescape_all(str) {
+  if !str.index_of('\\') and !str.index_of('&') return str
+
+  return str_replace_fn(str, UNESCAPE_ALL_RE, @(match) {
+    if match[1] return match[1]
+    return replace_entity_pattern(match[0], match[2])
+  })
 }
 
 var HTML_ESCAPE_TEST_RE = '/[&<>"]/'
@@ -98,24 +107,15 @@ def replace_unsafe_char(ch) {
 }
 
 def escape_html(str) {
-  if str.match(HTML_ESCAPE_TEST_RE) {
-    var matches = str.matches(HTML_ESCAPE_REPLACE_RE)
-    var match_processed = []
-    if matches {
-      for match in matches[0] {
-        if !match_processed.contains(match) {
-          str = str.replace(match, HTML_REPLACEMENTS[match])
-          match_processed.append(match)
-        }
-      }
-    }
+  for key, value in HTML_REPLACEMENTS {
+    str = str.replace(key, value)
   }
   return str
 }
 
-var REGEXP_ESCAPE_RE = '/[.?*+^$[\]\\\\(){}|-]/'
+var REGEXP_ESCAPE_RE = '/[.?*+^$[\]\\(){}|-]/'
 
-def escape_rE(str) {
+def escape_re(str) {
   return str.replace(REGEXP_ESCAPE_RE, '\\$&')
 }
 
@@ -219,5 +219,50 @@ def is_md_ascii_punct(ch) {
 
 def normalize_reference(str) {
   # Trim and collapse whitespace
-  return str.trim().replace('/\s+/', ' ').upper()
+  #
+  str = str.trim().replace('/\s+/', ' ')
+
+  # In node v10 'ẞ'.toLowerCase() === 'Ṿ', which is presumed to be a bug
+  # fixed in v12 (couldn't find any details).
+  #
+  # So treat this one as a special case
+  # (remove this when node v10 is no longer supported).
+  #
+  # if ('ẞ'.toLowerCase() === 'Ṿ') {
+  #   str = str.replace(/ẞ/g, 'ß')
+  # }
+
+  # .toLowerCase().toUpperCase() should get rid of all differences
+  # between letter variants.
+  #
+  # Simple .toLowerCase() doesn't normalize 125 code points correctly,
+  # and .toUpperCase doesn't normalize 6 of them (list of exceptions:
+  # İ, ϴ, ẞ, Ω, K, Å - those are already uppercased, but have differently
+  # uppercased versions).
+  #
+  # Here's an example showing how it happens. Lets take greek letter omega:
+  # uppercase U+0398 (Θ), U+03f4 (ϴ) and lowercase U+03b8 (θ), U+03d1 (ϑ)
+  #
+  # Unicode entries:
+  # 0398;GREEK CAPITAL LETTER THETA;Lu;0;L;;;;;N;;;;03B8
+  # 03B8;GREEK SMALL LETTER THETA;Ll;0;L;;;;;N;;;0398;;0398
+  # 03D1;GREEK THETA SYMBOL;Ll;0;L;<compat> 03B8;;;;N;GREEK SMALL LETTER SCRIPT THETA;;0398;;0398
+  # 03F4;GREEK CAPITAL THETA SYMBOL;Lu;0;L;<compat> 0398;;;;N;;;;03B8
+  #
+  # Case-insensitive comparison should treat all of them as equivalent.
+  #
+  # But .toLowerCase() doesn't change ϑ (it's already lowercase),
+  # and .toUpperCase() doesn't change ϴ (already uppercase).
+  #
+  # Applying first lower then upper case normalizes any character:
+  # '\u0398\u03f4\u03b8\u03d1'.toLowerCase().toUpperCase() === '\u0398\u0398\u0398\u0398'
+  #
+  # Note: this is equivalent to unicode case folding; unicode normalization
+  # is a different step that is not required here.
+  #
+  # Final result should be uppercased, because it's later stored in an object
+  # (this avoid a conflict with Object.prototype members,
+  # most notably, `__proto__`)
+  #
+  return str.lower().upper()
 }
