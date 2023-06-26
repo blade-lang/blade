@@ -1375,7 +1375,7 @@ static inline double modulo(double a, double b) {
   return r;
 }
 
-b_ptr_result run(b_vm *vm, bool invoked) {
+b_ptr_result run(b_vm *vm, int exit_frame) {
   vm->current_frame = &vm->frames[vm->frame_count - 1];
 
 #define READ_BYTE() (*vm->current_frame->ip++)
@@ -2267,7 +2267,7 @@ b_ptr_result run(b_vm *vm, bool invoked) {
 
         vm->current_frame = &vm->frames[vm->frame_count - 1];
 
-        if (invoked) {
+        if (vm->frame_count == exit_frame) {
           return PTR_OK;
         }
 
@@ -2513,10 +2513,9 @@ b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
   b_call_frame *frame = &vm->frames[vm->frame_count++];
   frame->closure = closure;
   frame->ip = closure->function->blob.code;
-
   frame->slots = vm->stack_top - arg_count - 1;
 
-  run(vm, true);
+  run(vm, vm->frame_count - 1);
   b_value result = vm->stack_top[-1];
 
   vm->stack_top = stack_top;
@@ -2550,7 +2549,7 @@ b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
   register_module__FILE__(vm, module);
 
   call(vm, closure, 0);
-  return run(vm, false);
+  return run(vm, 0);
 }
 
 #undef ERR_CANT_ASSIGN_EMPTY
