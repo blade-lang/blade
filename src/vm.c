@@ -374,6 +374,7 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_STRING_METHOD(match);
   DEFINE_STRING_METHOD(matches);
   DEFINE_STRING_METHOD(replace);
+  DEFINE_STRING_METHOD(replace_with);
   DEFINE_STRING_METHOD(ascii);
   define_native_method(vm, &vm->methods_string, "@iter", native_method_string__iter__);
   define_native_method(vm, &vm->methods_string, "@itern", native_method_string__itern__);
@@ -1374,7 +1375,7 @@ static inline double modulo(double a, double b) {
   return r;
 }
 
-b_ptr_result run(b_vm *vm) {
+b_ptr_result run(b_vm *vm, bool invoked) {
   vm->current_frame = &vm->frames[vm->frame_count - 1];
 
 #define READ_BYTE() (*vm->current_frame->ip++)
@@ -2265,6 +2266,11 @@ b_ptr_result run(b_vm *vm) {
         push(vm, result);
 
         vm->current_frame = &vm->frames[vm->frame_count - 1];
+
+        if (invoked) {
+          return PTR_OK;
+        }
+
         break;
       }
 
@@ -2485,16 +2491,36 @@ void register_module__FILE__(b_vm *vm, b_obj_module *module) {
 }
 
 // helper function to access call outside the vm file.
-bool call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
+b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
+  b_value *stack_top = vm->stack_top;
+
   // set the closure before the args
   push(vm, OBJ_VAL(closure));
+
+  int arg_count = 0;
   if(args) {
     for(int i = 0; i < args->items.count; i++) {
       push(vm, args->items.values[i]);
     }
-    return call(vm, closure, args->items.count);
+    arg_count = args->items.count;
   }
-  return call(vm, closure, 0);
+
+  if (vm->frame_count == FRAMES_MAX) {
+    pop_n(vm, arg_count);
+    return throw_exception(vm, "stack overflow");
+  }
+
+  b_call_frame *frame = &vm->frames[vm->frame_count++];
+  frame->closure = closure;
+  frame->ip = closure->function->blob.code;
+
+  frame->slots = vm->stack_top - arg_count - 1;
+
+  run(vm, true);
+  b_value result = vm->stack_top[-1];
+
+  vm->stack_top = stack_top;
+  return result;
 }
 
 b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
@@ -2524,7 +2550,7 @@ b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
   register_module__FILE__(vm, module);
 
   call(vm, closure, 0);
-  return run(vm);
+  return run(vm, false);
 }
 
 #undef ERR_CANT_ASSIGN_EMPTY

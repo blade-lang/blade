@@ -356,9 +356,7 @@ def run_script(path) {
   var content = fh.read()
 
   # for now, returing the call without assigning to a variable is failing.
-  # TODO: Fix this...
-  var res = _reflect.runscript(path, content)
-  return res
+  _reflect.runscript(path,  content)
 }
 
 /**

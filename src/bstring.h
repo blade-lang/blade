@@ -206,6 +206,8 @@ DECLARE_STRING_METHOD(matches);
  */
 DECLARE_STRING_METHOD(replace);
 
+DECLARE_STRING_METHOD(replace_with);
+
 /**
  * string.to_bytes()
  *

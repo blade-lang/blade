@@ -482,7 +482,7 @@ DECLARE_STRING_METHOD(index_of) {
       }
     } else {
       char *result = strstr(haystack + start_index, needle->chars);
-      if (result != NULL) RETURN_NUMBER((int) (result - haystack));
+      if (result != NULL) RETURN_NUMBER((int) (result - (haystack + start_index)));
     }
   }
 
@@ -1211,6 +1211,140 @@ DECLARE_STRING_METHOD(replace) {
   RETURN_OBJ(response);
 }
 
+DECLARE_STRING_METHOD(replace_with) {
+#define _INVALID_REGEX_ERROR "replace_with() requires a valid regex"
+
+  ENFORCE_ARG_COUNT(replace_with, 2);
+  ENFORCE_ARG_TYPE(replace_with, 0, IS_STRING);
+  ENFORCE_ARG_TYPE(replace_with, 1, IS_CLOSURE);
+  PCRE2_SIZE start_offset = 0;
+
+  b_obj_string *string = AS_STRING(METHOD_OBJECT);
+  b_obj_string *pattern_string = AS_STRING(args[0]);
+  b_obj_closure *replacer = AS_CLOSURE(args[1]);
+
+  if (string->length == 0 && pattern_string->length == 0) {
+    RETURN_VALUE(METHOD_OBJECT);
+  }
+
+  if(pattern_string->length == 0) {
+    RETURN_ERROR(_INVALID_REGEX_ERROR);
+  }
+
+  GET_REGEX_COMPILE_OPTIONS(pattern_string, false);
+
+  if ((int) compile_options < 0) {
+    RETURN_ERROR(_INVALID_REGEX_ERROR);
+  }
+
+  char *real_regex = remove_regex_delimiter(vm, pattern_string);
+
+  int error_number;
+  int rc;
+  PCRE2_SIZE error_offset;
+
+  PCRE2_SPTR pattern = (PCRE2_SPTR) real_regex;
+  PCRE2_SPTR subject = (PCRE2_SPTR) string->chars;
+  PCRE2_SIZE subject_length = (PCRE2_SIZE) string->length;
+
+  pcre2_code *re =
+      pcre2_compile(pattern, PCRE2_ZERO_TERMINATED, compile_options,
+                    &error_number, &error_offset, NULL);
+  free(real_regex);
+
+  REGEX_COMPILATION_ERROR(re, error_number, error_offset);
+
+  pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(re, NULL);
+  char *result = calloc(1, sizeof(char));
+
+  do {
+    rc = pcre2_match(re, subject, subject_length, start_offset, 0, match_data, NULL);
+
+    if (rc < 0) {
+      if (rc == PCRE2_ERROR_NOMATCH) {
+        break;
+      } else {
+        pcre2_match_data_free(match_data);
+        pcre2_code_free(re);
+        REGEX_RC_ERROR();
+      }
+    }
+
+    PCRE2_SIZE *o_vector = pcre2_get_ovector_pointer(match_data);
+
+    uint32_t name_count;
+    (void) pcre2_pattern_info(re, PCRE2_INFO_NAMECOUNT, &name_count);
+
+    b_obj_list *call_args = (b_obj_list *)GC(new_list(vm));
+    int call_args_count = 0;
+
+    size_t index = 0, sub_length = 0;
+    for (int i = 0; i < rc && i < replacer->function->arity; i++) {
+      PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
+      PCRE2_SPTR substring_start = subject + o_vector[2 * i];
+      write_list(vm, call_args, STRING_L_VAL((char *) substring_start, (int) substring_length));
+      call_args_count++;
+
+      // next start index should be based on the entire match length.
+      if(i == 0) {
+        index = substring_start - subject;
+        sub_length = substring_length;
+      }
+    }
+
+    if (name_count > 0) {
+      uint32_t name_entry_size;
+      PCRE2_SPTR name_table;
+      PCRE2_SPTR tab_ptr;
+      (void) pcre2_pattern_info(re, PCRE2_INFO_NAMETABLE, &name_table);
+      (void) pcre2_pattern_info(re, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
+
+      tab_ptr = name_table;
+
+      for (int i = 0; i < (int) name_count && call_args_count < replacer->function->arity; i++) {
+        int n = (tab_ptr[0] << 8) | tab_ptr[1];
+
+        int value_length = (int) (o_vector[2 * n + 1] - o_vector[2 * n]);
+        int key_length = (int) name_entry_size - 3;
+
+        char* _key = (char *)(tab_ptr + 2);
+        char* _value = (char *)(subject + o_vector[2 * n]);
+        while(_key[key_length - 1] == 0) key_length--;
+
+        write_list(vm, call_args, STRING_L_VAL(_value, value_length));
+        tab_ptr += name_entry_size;
+        call_args_count++;
+      }
+    }
+
+    // call the function
+    b_value call_result = call_closure(vm, replacer, call_args);
+
+    if(!IS_STRING(call_result)) {
+      RETURN_ERROR("replace_with() function returned non-string");
+    }
+
+    if(index > start_offset) {
+      result = append_strings_n(result, string->chars + start_offset, index - start_offset);
+    }
+    start_offset = index + sub_length;
+
+    b_obj_string *result_string = AS_STRING(call_result);
+    result = append_strings_n(result, result_string->chars, result_string->length);
+  } while(true);
+
+  if(start_offset < string->length) {
+    result = append_strings_n(result, string->chars + start_offset, string->length - start_offset);
+  }
+
+  pcre2_match_data_free(match_data);
+  pcre2_code_free(re);
+
+  RETURN_TT_STRING(result);
+
+#undef _INVALID_REGEX_ERROR
+}
+
 DECLARE_STRING_METHOD(to_bytes) {
   ENFORCE_ARG_COUNT(to_bytes, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
@@ -1255,16 +1389,6 @@ DECLARE_STRING_METHOD(__itern__) {
   }
 
   if (!IS_NUMBER(args[0])) {
-    printf("          ");
-    for (b_value *slot = vm->current_frame->slots; slot < vm->stack_top; slot++) {
-      printf("[ ");
-      print_value(*slot);
-      printf(" ]");
-    }
-    printf("\n");
-    disassemble_instruction(
-        &vm->current_frame->closure->function->blob,
-        (int) (vm->current_frame->ip - vm->current_frame->closure->function->blob.code));
     RETURN_ERROR("strings are numerically indexed");
   }
 

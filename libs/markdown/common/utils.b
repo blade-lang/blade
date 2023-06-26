@@ -87,9 +87,9 @@ def str_replace_fn(str, pattern, fn) {
 def unescape_all(str) {
   if !str.index_of('\\') and !str.index_of('&') return str
 
-  return str_replace_fn(str, UNESCAPE_ALL_RE, @(match) {
-    if match[1] return match[1]
-    return replace_entity_pattern(match[0], match[2])
+  return str.replace_with(UNESCAPE_ALL_RE, @(match, escaped, entity) {
+    if escaped return escaped
+    return replace_entity_pattern(match, entity)
   })
 }
 

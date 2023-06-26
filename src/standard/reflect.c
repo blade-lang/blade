@@ -160,10 +160,7 @@ DECLARE_MODULE_METHOD(reflect__call_function) {
   b_obj_closure *closure = AS_CLOSURE(args[0]);
   b_obj_list *list = AS_LIST(args[1]);
 
-  // remove our own args
-  pop_n(vm, 2);
-  call_closure(vm, closure, list);
-  RETURN;
+  RETURN_VALUE(call_closure(vm, closure, list));
 }
 
 DECLARE_MODULE_METHOD(reflect__bindmethod) {
@@ -299,7 +296,6 @@ DECLARE_MODULE_METHOD(reflect__runscript) {
     pop(vm);
 
     call_closure(vm, cls, 0);
-    run(vm);
   }
 
   RETURN;
