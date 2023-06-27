@@ -2505,17 +2505,9 @@ b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
     arg_count = args->items.count;
   }
 
-  if (vm->frame_count == FRAMES_MAX) {
-    pop_n(vm, arg_count);
-    return throw_exception(vm, "stack overflow");
-  }
-
-  b_call_frame *frame = &vm->frames[vm->frame_count++];
-  frame->closure = closure;
-  frame->ip = closure->function->blob.code;
-  frame->slots = vm->stack_top - arg_count - 1;
-
+  call(vm, closure, arg_count);
   run(vm, vm->frame_count - 1);
+
   b_value result = vm->stack_top[-1];
 
   vm->stack_top = stack_top;

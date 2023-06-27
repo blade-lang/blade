@@ -482,7 +482,7 @@ DECLARE_STRING_METHOD(index_of) {
       }
     } else {
       char *result = strstr(haystack + start_index, needle->chars);
-      if (result != NULL) RETURN_NUMBER((int) (result - (haystack + start_index)));
+      if (result != NULL) RETURN_NUMBER((int) (result - haystack));
     }
   }
 
@@ -1321,6 +1321,7 @@ DECLARE_STRING_METHOD(replace_with) {
     b_value call_result = call_closure(vm, replacer, call_args);
 
     if(!IS_STRING(call_result)) {
+      printf("returned value = %s\n", value_to_string(vm, call_result)->chars);
       RETURN_ERROR("replace_with() function returned non-string");
     }
 
