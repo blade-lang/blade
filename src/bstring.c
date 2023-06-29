@@ -420,44 +420,6 @@ DECLARE_STRING_METHOD(join) {
   RETURN_ERROR("join() does not support object of type %s", value_type(argument));
 }
 
-/*DECLARE_STRING_METHOD(split) {
-  ENFORCE_ARG_COUNT(split, 1);
-  ENFORCE_ARG_TYPE(split, 0, IS_STRING);
-
-  b_obj_string *object = AS_STRING(METHOD_OBJECT);
-  b_obj_string *delimeter = AS_STRING(args[0]);
-
-  if (object->length == 0 || delimeter->length > object->length) RETURN_OBJ(new_list(vm));
-
-  b_obj_list *list = (b_obj_list *) GC(new_list(vm));
-
-  // main work here...
-  if (delimeter->length > 0) {
-    int start = 0;
-    for(int i = 0; i <= object->length; i++) {
-      // match found.
-      if(memcmp(object->chars + i, delimeter->chars, delimeter->length) == 0 || i == object->length) {
-        write_list(vm, list, STRING_L_VAL(object->chars + start, i - start));
-        i += delimeter->length - 1;
-        start = i + 1;
-      }
-    }
-  } else {
-    int length = object->is_ascii ? object->length : object->utf8_length;
-    for (int i = 0; i < length; i++) {
-
-      int start = i, end = i + 1;
-      if(!object->is_ascii) {
-        utf8slice(object->chars, &start, &end);
-      }
-
-      write_list(vm, list, STRING_L_VAL(object->chars + start, (int) (end - start)));
-    }
-  }
-
-  RETURN_OBJ(list);
-}*/
-
 DECLARE_STRING_METHOD(index_of) {
   ENFORCE_ARG_RANGE(index_of, 1, 2);
   ENFORCE_ARG_TYPE(index_of, 0, IS_STRING);
