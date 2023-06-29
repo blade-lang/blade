@@ -1114,6 +1114,7 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
 
 static char *compile_string(b_parser *p, int *length) {
   char *str = (char *) malloc((((size_t) p->previous.length - 2) + 1) * sizeof(char));
+  char quote = p->previous.start[0];
   char *real = (char *) p->previous.start + 1;
 
   int real_length = p->previous.length - 2, k = 0;
@@ -1129,10 +1130,12 @@ static char *compile_string(b_parser *p, int *length) {
           c = '$';
           break;
         case '\'':
-          c = '\'';
+          if(quote == '\'') c = '\'';
+          else i--;
           break;
         case '"':
-          c = '"';
+          if(quote == '"') c = '"';
+          else i--;
           break;
         case 'a':
           c = '\a';
