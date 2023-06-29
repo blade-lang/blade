@@ -67,7 +67,7 @@ def unescape_md(str) {
   return str.replace('/' + UNESCAPE_MD_RE + '/s', '$1')
 }
 
-def str_replace_fn(str, pattern, fn) {
+/* def str_replace_fn(str, pattern, fn) {
   var result = '', match, next_index = 0
 
   while match = str.match(pattern, next_index) {
@@ -82,7 +82,7 @@ def str_replace_fn(str, pattern, fn) {
   }
 
   return result
-}
+} */
 
 def unescape_all(str) {
   if !str.index_of('\\') and !str.index_of('&') return str

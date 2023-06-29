@@ -78,6 +78,7 @@ struct s_vm {
   bool should_exit_after_bytecode;
 
   // miscellaneous
+  int active_natives;
 };
 
 void init_vm(b_vm *vm);
@@ -141,10 +142,12 @@ static inline b_obj *gc_protect(b_vm *vm, b_obj *object) {
 }
 
 static inline void gc_clear_protection(b_vm *vm) {
-  if (vm->gc_protected > 0) {
-    vm->stack_top -= vm->gc_protected;
+  if(vm->active_natives == 0) {
+    if (vm->gc_protected > 0) {
+      vm->stack_top -= vm->gc_protected;
+    }
+    vm->gc_protected = 0;
   }
-  vm->gc_protected = 0;
 }
 
 // NOTE:
@@ -158,6 +161,7 @@ static inline void gc_clear_protection(b_vm *vm) {
 #define CLEAR_GC() gc_clear_protection(vm)
 
 b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args);
+bool queue_closure(b_vm *vm, b_obj_closure *closure);
 void register_module__FILE__(b_vm *vm, b_obj_module *module);
 
 #endif

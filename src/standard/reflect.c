@@ -295,7 +295,7 @@ DECLARE_MODULE_METHOD(reflect__runscript) {
     b_obj_closure *cls = new_closure(vm, fn);
     pop(vm);
 
-    call_closure(vm, cls, 0);
+    queue_closure(vm, cls);
   }
 
   RETURN;

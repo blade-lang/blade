@@ -518,6 +518,8 @@ void init_vm(b_vm *vm) {
   vm->std_args = NULL;
   vm->std_args_count = 0;
 
+  vm->active_natives = 0;
+
   init_table(&vm->modules);
   init_table(&vm->strings);
   init_table(&vm->globals);
@@ -2505,13 +2507,21 @@ b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
     arg_count = args->items.count;
   }
 
+  vm->active_natives++;
   call(vm, closure, arg_count);
   run(vm, vm->frame_count - 1);
+  vm->active_natives--;
 
   b_value result = vm->stack_top[-1];
+  pop_n(vm, arg_count + 1);
 
   vm->stack_top = stack_top;
   return result;
+}
+
+// helper function to access call outside the vm file.
+bool queue_closure(b_vm *vm, b_obj_closure *closure) {
+  return call(vm, closure, 0);
 }
 
 b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
