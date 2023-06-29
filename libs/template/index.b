@@ -390,6 +390,15 @@ import reflect
 import .functions as fns
 import .constants
 
+# create the default html config
+var void_tags = html.void_tags
+void_tags.append('include')
+
+var _default_html_config = {
+  with_position: true,
+  void_tags,
+}
+
 /**
  * Template string and file processing class.
  * 
@@ -654,7 +663,7 @@ class Template {
           if fl.exists() {
             element = self._process(
               include_path, 
-              html.decode(self._strip(fl.read()), {with_position: true}), 
+              html.decode(self._strip(fl.read()), _default_html_config), 
               variables
             )
           } else {
@@ -673,7 +682,7 @@ class Template {
             } else {
               element = self._process(
                 path, 
-                html.decode(self._strip(processed), {with_position: true}), 
+                html.decode(self._strip(processed), _default_html_config), 
                 variables
               )
             }
@@ -903,7 +912,7 @@ class Template {
     return html.encode(
       self._process(
         path,
-        html.decode(self._strip(source), {with_position: true}),
+        html.decode(self._strip(source), _default_html_config),
         variables
       )
     ).trim()
