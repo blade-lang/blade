@@ -1,7 +1,6 @@
 import args
 import os
 import io
-import iters
 import colors
 import json
 import ..config {
@@ -171,7 +170,7 @@ def get_package_config() {
     version: io.readline('version ${_default("1.0.0")}:').trim() or '1.0.0',
     description: io.readline('description:').trim(),
     homepage: io.readline('homepage:').trim(),
-    tags: iters.map(io.readline('tags:').trim().split(','), @(x) {
+    tags: io.readline('tags:').trim().split(',').map(@(x) {
       return x.trim()
     }),
     author: io.readline('author:').trim(),

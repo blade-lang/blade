@@ -1,9 +1,7 @@
 #!-- part of the html module
 
-import iters
-
 def format_attributes(attributes) {
-  return iters.reduce(attributes, @( attrs, attribute ) {
+  return attributes.reduce(@( attrs, attribute ) {
     if (attribute.value == nil) {
       return '${attrs} ${attribute.name}'
     }

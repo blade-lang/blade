@@ -122,17 +122,14 @@ DECLARE_DICT_METHOD(find_key);
 DECLARE_DICT_METHOD(to_list);
 
 /**
- * dict.@iter()
- *
- * implementing the iterable interface
+ * See list.h
  */
 DECLARE_DICT_METHOD(__iter__);
-
-/**
- * dict.@itern()
- *
- * implementing the iterable interface
- */
 DECLARE_DICT_METHOD(__itern__);
+DECLARE_DICT_METHOD(each);
+DECLARE_DICT_METHOD(filter);
+DECLARE_DICT_METHOD(reduce);
+DECLARE_DICT_METHOD(some);
+DECLARE_DICT_METHOD(every);
 
 #endif

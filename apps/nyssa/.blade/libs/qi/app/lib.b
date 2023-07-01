@@ -1,6 +1,5 @@
 import reflect
 import colors
-import iters
 import io
 
 
@@ -405,8 +404,8 @@ def run(f) {
 def show_result(e) {
   total_time += e.time
 
-  var fails = iters.filter(e.it, @(x) {
-    return iters.filter(x.expects, @(y) { return !y.status }).length() > 0
+  var fails = e.it.filter(@(x) {
+    return x.expects.filter(@(y) { return !y.status }).length() > 0
   }).length() > 0
   if fails _failed_suites++
 
@@ -426,7 +425,7 @@ def show_result(e) {
   echo '  ${e.name}'
   iter var i = 0; i < e.it.length(); i++ {
     var _e = e.it[i]
-    var it_fails = iters.filter(_e.expects, @(x) { return !x.status }).length() > 0
+    var it_fails = _e.expects.filter(@(x) { return !x.status }).length() > 0
     if it_fails _failed_tests++
 
     if _e.skipped {

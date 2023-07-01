@@ -6,7 +6,6 @@ import http.exception { HttpException }
 import http.status
 
 import socket as so
-import iters
 import .constants
 import .socket { TLSSocket }
 
@@ -232,7 +231,7 @@ class TLSServer {
     if response.status == status.OK {
 
       # call the received listeners on the request object.
-      iters.each(self._received_listeners, @( fn, _ ) {
+      self._received_listeners.each(@( fn, _ ) {
         fn(request, response)
       })
 
@@ -265,7 +264,7 @@ class TLSServer {
     }
 
     # call the reply listeners.
-    iters.each(self._sent_listeners, @( fn ) {
+    self._sent_listeners.each(@( fn ) {
       fn(response)
     })
 
@@ -299,7 +298,7 @@ class TLSServer {
           client = self.socket.accept()
           
           # call the connect listeners.
-          iters.each(self._connect_listeners, @(fn, _) {
+          self._connect_listeners.each(@(fn, _) {
             fn(client)
           })
 
@@ -313,14 +312,14 @@ class TLSServer {
           self._process_received(client.receive(), client)
         } catch Exception e {
           # call the error listeners.
-          iters.each(self._error_listeners, @(fn, _) {
+          self._error_listeners.each(@(fn, _) {
             fn(e, client)
           })
         } finally {
           var client_info = client.info()
 
           # call the disconnect listeners.
-          iters.each(self._disconnect_listeners, @(fn, _) {
+          self._disconnect_listeners.each(@(fn, _) {
             fn(client_info)
           })
 

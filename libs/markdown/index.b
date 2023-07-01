@@ -6,7 +6,6 @@ import .parser_block { BlockParser }
 import .parser_inline { InlineParser }
 import .config as presets
 import url
-import iters
 import reflect
 import convert { decimal_to_hex }
 
@@ -491,7 +490,7 @@ class Markdown {
     if presets.options self.set(presets.options)
 
     if presets.components {
-      iters.each(presets.components.keys(), @(name) {
+      presets.components.keys().each(@(name) {
         if presets.components[name].get('rules') {
           reflect.get_prop(self, name).ruler.enable_only(presets.components[name].rules)
         }
@@ -527,13 +526,13 @@ class Markdown {
 
     if !is_list(list) list = [ list ]
 
-    iters.each(_working_rules, @(chain) {
+    _working_rules.each(@(chain) {
       result += reflect.get_props(self, chain).ruler.enable(list, true)
     })
 
     result += self.inline.ruler2.enable(list, true)
 
-    var missed = iters.filter(list, @(name) { return result.index_of(name) < 0 })
+    var missed = list.filter(@(name) { return result.index_of(name) < 0 })
 
     if missed.length() and !ignore_invalid {
       die Exception('Failed to enable unknown rule(s): ' + missed)
@@ -554,13 +553,13 @@ class Markdown {
 
     if !is_list(list) list = [ list ]
 
-    iters.each(_working_rules, @(chain) {
+    _working_rules.each(@(chain) {
       result += reflect.get_prop(self, chain).ruler.disable(list, true)
     })
 
     result += self.inline.ruler2.disable(list, true)
 
-    var missed = iters.filter(list, @(name) { return result.index_of(name) < 0 })
+    var missed = list.filter(@(name) { return result.index_of(name) < 0 })
 
     if missed.length() and !ignore_invalid {
       die Exception('Failed to disable unknown rule(s): ' + missed)

@@ -1,6 +1,5 @@
 import os
 import io
-import iters
 import args
 import qi
 import ..setup
@@ -22,7 +21,7 @@ def run_test_files(files) {
 
 def run(value, options, success, error) {
   if os.dir_exists(setup.TEST_DIR) {
-    var files = iters.filter(os.read_dir(setup.TEST_DIR), @( x ) { 
+    var files = os.read_dir(setup.TEST_DIR).filter(@( x ) { 
       return x != '.' and x != '..' and x.ends_with('.b') 
     })
     if files {

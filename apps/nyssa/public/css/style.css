@@ -49,7 +49,7 @@ pre {
 
 .hero::before, .stats::before {    
   content: "";
-  background-image: url(hero-bg-1.png);
+  background-image: url(../images/hero-bg-1.png);
   position: absolute;
   top: 0px;
   right: 0px;

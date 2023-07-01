@@ -1130,11 +1130,11 @@ static char *compile_string(b_parser *p, int *length) {
           c = '$';
           break;
         case '\'':
-          if(quote == '\'') c = '\'';
+          if(quote == '\'' || quote == '}') c = '\''; // } handle closing of interpolation.
           else i--;
           break;
         case '"':
-          if(quote == '"') c = '"';
+          if(quote == '"' || quote == '}') c = '"';
           else i--;
           break;
         case 'a':

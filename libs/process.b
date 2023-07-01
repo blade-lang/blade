@@ -43,8 +43,6 @@ import _process
 import reflect
 import os
 import struct
-import iters
-
 /**
  * The number of CPU cores available on the current device.
  * @type number
@@ -367,7 +365,7 @@ class Process {
         }
 
         # call the complete listeners
-        iters.each(self._on_complete_listeners, @(fn, _) {
+        self._on_complete_listeners.each(@(fn, _) {
           fn()
         })
 

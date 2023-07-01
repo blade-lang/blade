@@ -1283,7 +1283,6 @@ DECLARE_STRING_METHOD(replace_with) {
     b_value call_result = call_closure(vm, replacer, call_args);
 
     if(!IS_STRING(call_result)) {
-      printf("returned value = %s\n", value_to_string(vm, call_result)->chars);
       RETURN_ERROR("replace_with() function returned non-string");
     }
 
@@ -1361,4 +1360,35 @@ DECLARE_STRING_METHOD(__itern__) {
   }
 
   RETURN_NIL;
+}
+
+DECLARE_STRING_METHOD(each) {
+    ENFORCE_ARG_COUNT(each, 1);
+    ENFORCE_ARG_TYPE(each, 0, IS_CLOSURE);
+
+    b_obj_string *string = AS_STRING(METHOD_OBJECT);
+    b_obj_closure *closure = AS_CLOSURE(args[0]);
+
+    b_obj_list *call_list = new_list(vm);
+    push(vm, OBJ_VAL(call_list));
+
+    ITER_TOOL_PREPARE();
+
+    for(int i = 0; i < string->utf8_length; i++) {
+      if(arity > 0) {
+
+        int start = i, end = i + 1;
+        utf8slice(string->chars, &start, &end);
+        call_list->items.values[0] = STRING_L_VAL(string->chars + start, end - start);
+
+        if(arity > 1) {
+          call_list->items.values[1] = NUMBER_VAL(i);
+        }
+      }
+
+      call_closure(vm, closure, call_list);
+    }
+
+    pop(vm); // pop the argument list
+    RETURN;
 }

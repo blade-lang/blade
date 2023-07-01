@@ -223,17 +223,10 @@ DECLARE_STRING_METHOD(to_bytes);
 DECLARE_STRING_METHOD(ascii);
 
 /**
- * string.@iter()
- *
- * implementing the iterable interface
+ * See list.h
  */
 DECLARE_STRING_METHOD(__iter__);
-
-/**
- * string.@itern()
- *
- * implementing the iterable interface
- */
 DECLARE_STRING_METHOD(__itern__);
+DECLARE_STRING_METHOD(each);
 
 #endif

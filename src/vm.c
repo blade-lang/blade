@@ -376,6 +376,7 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_STRING_METHOD(replace);
   DEFINE_STRING_METHOD(replace_with);
   DEFINE_STRING_METHOD(ascii);
+  DEFINE_STRING_METHOD(each);
   define_native_method(vm, &vm->methods_string, "@iter", native_method_string__iter__);
   define_native_method(vm, &vm->methods_string, "@itern", native_method_string__itern__);
 
@@ -406,6 +407,12 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_LIST_METHOD(zip);
   DEFINE_LIST_METHOD(zip_from);
   DEFINE_LIST_METHOD(to_dict);
+  DEFINE_LIST_METHOD(each);
+  DEFINE_LIST_METHOD(map);
+  DEFINE_LIST_METHOD(filter);
+  DEFINE_LIST_METHOD(some);
+  DEFINE_LIST_METHOD(every);
+  DEFINE_LIST_METHOD(reduce);
   define_native_method(vm, &vm->methods_list, "@iter", native_method_list__iter__);
   define_native_method(vm, &vm->methods_list, "@itern", native_method_list__itern__);
 
@@ -425,6 +432,11 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_DICT_METHOD(is_empty);
   DEFINE_DICT_METHOD(find_key);
   DEFINE_DICT_METHOD(to_list);
+  DEFINE_DICT_METHOD(each);
+  DEFINE_DICT_METHOD(filter);
+  DEFINE_DICT_METHOD(some);
+  DEFINE_DICT_METHOD(every);
+  DEFINE_DICT_METHOD(reduce);
   define_native_method(vm, &vm->methods_dict, "@iter", native_method_dict__iter__);
   define_native_method(vm, &vm->methods_dict, "@itern", native_method_dict__itern__);
 
@@ -477,12 +489,14 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_BYTES_METHOD(is_space);
   DEFINE_BYTES_METHOD(to_list);
   DEFINE_BYTES_METHOD(to_string);
+  DEFINE_BYTES_METHOD(each);
   define_native_method(vm, &vm->methods_bytes, "@iter", native_method_bytes__iter__);
   define_native_method(vm, &vm->methods_bytes, "@itern", native_method_bytes__itern__);
-
   // range
   DEFINE_RANGE_METHOD(lower);
   DEFINE_RANGE_METHOD(upper);
+  DEFINE_RANGE_METHOD(range);
+  DEFINE_RANGE_METHOD(loop);
   define_native_method(vm, &vm->methods_range, "@iter", native_method_range__iter__);
   define_native_method(vm, &vm->methods_range, "@itern", native_method_range__itern__);
 
@@ -517,8 +531,6 @@ void init_vm(b_vm *vm) {
 
   vm->std_args = NULL;
   vm->std_args_count = 0;
-
-  vm->active_natives = 0;
 
   init_table(&vm->modules);
   init_table(&vm->strings);
@@ -2507,10 +2519,12 @@ b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
     arg_count = args->items.count;
   }
 
-  vm->active_natives++;
   call(vm, closure, arg_count);
-  run(vm, vm->frame_count - 1);
-  vm->active_natives--;
+  b_ptr_result vm_result = run(vm, vm->frame_count - 1);
+
+  if(vm_result != PTR_OK) {
+    exit(EXIT_RUNTIME);
+  }
 
   b_value result = vm->stack_top[-1];
   pop_n(vm, arg_count + 1);

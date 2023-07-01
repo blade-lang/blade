@@ -1,5 +1,3 @@
-import iters
-
 /**
  * Helper class, used by [[markdown#core]], [[markdown#block]] and
  * [[markdown#inline]] to manage sequences of functions (rules):
@@ -45,10 +43,10 @@ class Ruler {
     var chains = [ '' ]
   
     # collect unique names
-    iters.each(self.__rules__, @(rule) {
+    self.__rules__.each(@(rule) {
       if !rule.enabled return
   
-      iters.each(rule.alt, @(alt_name) {
+      rule.alt.each(@(alt_name) {
         if chains.index_of(alt_name) < 0 {
           chains.append(alt_name)
         }
@@ -57,9 +55,9 @@ class Ruler {
   
     self.__cache__ = {}
   
-    iters.each(chains, @(chain) {
+    chains.each(@(chain) {
       self.__cache__[chain] = []
-      iters.each(self.__rules__, @(rule) {
+      self.__rules__.each(@(rule) {
         if !rule.enabled return
   
         if chain and rule.alt.index_of(chain) < 0 return
@@ -133,13 +131,13 @@ class Ruler {
   
     if index == -1 die Exception('Parser rule not found: ' + before_name)
   
-    self.__rules__.remove_at(index)
-    self.__rules__.insert(index, {
+    # self.__rules__.remove_at(index)
+    self.__rules__.insert({
       name: rule_name,
       enabled: true,
       fn: fn,
       alt: opt.alt or []
-    })
+    }, index)
   
     self.__cache__ = nil
   }
@@ -174,12 +172,12 @@ class Ruler {
     if index == -1 die Exception('Parser rule not found: ' + after_name)
   
     self.__rules__.remove_at(index + 1)
-    self.__rules__.insert(index + 1, {
+    self.__rules__.insert({
       name: rule_name,
       enabled: true,
       fn: fn,
       alt: opt.alt or []
-    })
+    }, index + 1)
   
     self.__cache__ = nil
   }
@@ -237,7 +235,7 @@ class Ruler {
     var result = []
   
     # Search by name and enable
-    iters.each(list, @(name) {
+    list.each(@(name) {
       var idx = self.__find__(name)
   
       if idx < 0 {
@@ -264,7 +262,7 @@ class Ruler {
   enable_only(list, ignore_invalid) {
     if !is_list(list) list = [ list ]
   
-    iters.each(self.__rules__, @(rule) { rule.enabled = false })
+    self.__rules__.each(@(rule) { rule.enabled = false })
     self.enable(list, ignore_invalid)
   }
 
@@ -286,7 +284,7 @@ class Ruler {
     var result = []
   
     # Search by name and disable
-    iters.each(list, @(name) {
+    list.each(@(name) {
       var idx = self.__find__(name)
   
       if idx < 0 {

@@ -384,7 +384,6 @@
 
 import os
 import json
-import iters
 import html
 import reflect
 import .functions as fns
@@ -486,7 +485,7 @@ class Template {
   }
 
   _get_attrs(attrs) {
-    return iters.reduce(attrs, @(dict, attr) {
+    return attrs.reduce(@(dict, attr) {
       dict.set(attr.name, attr.value)
       return dict
     }, {})
@@ -499,7 +498,7 @@ class Template {
 
   _strip_attr(element, ...) {
     var attrs = __args__
-    element.attributes = iters.filter(element.attributes, @(el) {
+    element.attributes = element.attributes.filter(@(el) {
       return !attrs.contains(el.name)
     })
   }
@@ -639,7 +638,7 @@ class Template {
     }
   
     if is_list(element) {
-      return iters.map(element, @(el) {
+      return element.map(@(el) {
         return self._process(path, el, variables)
       }).compact()
     }

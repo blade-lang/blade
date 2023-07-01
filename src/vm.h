@@ -26,6 +26,7 @@ typedef struct {
   uint8_t *ip;
   b_value *slots;
   int handlers_count;
+  int gc_protected;
   b_exception_frame handlers[MAX_EXCEPTION_HANDLERS];
 } b_call_frame;
 
@@ -78,7 +79,6 @@ struct s_vm {
   bool should_exit_after_bytecode;
 
   // miscellaneous
-  int active_natives;
 };
 
 void init_vm(b_vm *vm);
@@ -137,17 +137,16 @@ b_obj_instance *create_exception(b_vm *vm, b_obj_string *message);
 
 static inline b_obj *gc_protect(b_vm *vm, b_obj *object) {
   push(vm, OBJ_VAL(object));
-  vm->gc_protected++;
+  vm->frames[vm->frame_count - 1].gc_protected++;
   return object;
 }
 
 static inline void gc_clear_protection(b_vm *vm) {
-  if(vm->active_natives == 0) {
-    if (vm->gc_protected > 0) {
-      vm->stack_top -= vm->gc_protected;
-    }
-    vm->gc_protected = 0;
+  b_call_frame *frame = &vm->frames[vm->frame_count - 1];
+  if (frame->gc_protected > 0) {
+    vm->stack_top -= frame->gc_protected;
   }
+  frame->gc_protected = 0;
 }
 
 // NOTE:

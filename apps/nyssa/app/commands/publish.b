@@ -4,7 +4,6 @@ import json
 import http
 import colors
 import zip
-import iters
 import ..setup
 import ..log
 import ..config { Config }
@@ -47,7 +46,7 @@ def get_files(root) {
 }
 
 def copy_to_tmp(root, dest) {
-  var files = iters.filter(get_files(root), @(x) {
+  var files = get_files(root).filter(@(x) {
     return x != '.' and x != '..' and 
       !x.match('/(\\/|\\\\)[.]git\\1/')
   })
