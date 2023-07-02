@@ -1,10 +1,9 @@
 # Process html entity - &#123;, &#xF;, &quot;, ...
 
 import ..common.entities { entities }
-import ..common.utils { is_valid_entity_code }
+import ..common.utils { is_valid_entity_code, NAMED_RE }
 
 var DIGITAL_RE = '/^&#((?:x[a-f0-9]{1,6}|[0-9]{1,7}));/i'
-var NAMED_RE   = '/^&([a-z][a-z0-9]{1,31});/i'
 
 def entity(state, silent) {
   var ch, code, match, token, pos = state.pos, max = state.pos_max

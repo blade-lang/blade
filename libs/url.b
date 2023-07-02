@@ -337,15 +337,18 @@ def encode(url, strict) {
     die Exception('boolean expected at parameter 2')
 
   var result = ''
+  url.ascii(true)
 
   for c in url {
     # keep alphanumeric and other accepted characters intact
-    if c.is_alnum() or c == '-' or c == '_' or c == '.' or c == '~'
+    if ';/?:@&=+$,#ABCDEFGHIJKLMNOPQRSTUVXYZ0123456789*-_.~()%'.index_of(c.upper()) != -1
       result += c
     # when not in strict mode
     else if !strict and c == ' ' result += '+'
     # encode all other characters
-    else result += '%${hex(ord(c))}'.upper()
+    else {
+      result += '%${hex(ord(c))}'.upper()
+    }
   }
 
   return result
@@ -383,7 +386,7 @@ def decode(url) {
     } 
     # + should be converted to space as most browsers
     # will encode space to + (non-strict Url.decode mode)
-    else if url[i] == '+' result += ' '
+    # else if url[i] == '+' result += ' '
     else result += url[i]
   }
 

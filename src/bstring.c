@@ -1327,12 +1327,18 @@ DECLARE_STRING_METHOD(__iter__) {
   int index = AS_NUMBER(args[0]);
 
   if (index > -1 && index < length) {
-    int start = index, end = index + 1;
     if(!string->is_ascii) {
-      utf8slice(string->chars, &start, &end);
-    }
+      int start = index, end = index + 1;
+      if(!string->is_ascii) {
+        utf8slice(string->chars, &start, &end);
+      }
 
-    RETURN_L_STRING(string->chars + start, (int) (end - start));
+      RETURN_L_STRING(string->chars + start, (int) (end - start));
+    } else {
+      b_obj_string *result = copy_string(vm, &string->chars[index], 1);
+      result->is_ascii = true;
+      RETURN_OBJ(result);
+    }
   }
 
   RETURN_NIL;
@@ -1377,9 +1383,13 @@ DECLARE_STRING_METHOD(each) {
     for(int i = 0; i < string->utf8_length; i++) {
       if(arity > 0) {
 
-        int start = i, end = i + 1;
-        utf8slice(string->chars, &start, &end);
-        call_list->items.values[0] = STRING_L_VAL(string->chars + start, end - start);
+        if(!string->is_ascii) {
+          int start = i, end = i + 1;
+          utf8slice(string->chars, &start, &end);
+          call_list->items.values[0] = STRING_L_VAL(string->chars + start, end - start);
+        } else {
+          call_list->items.values[0] = STRING_L_VAL(string->chars + i, 1);
+        }
 
         if(arity > 1) {
           call_list->items.values[1] = NUMBER_VAL(i);

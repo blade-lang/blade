@@ -153,7 +153,7 @@ def encode_url(string, exclude, keep_escaped) {
 }
 
 def normalize_link(uri) {
-  if uri.starts_with('#') or uri.starts_with('?') {
+  /* if uri.starts_with('#') or uri.starts_with('?') {
     return encode_url(uri)
   }
 
@@ -171,7 +171,13 @@ def normalize_link(uri) {
   }
 
   # return encode_url(parsed.absolute_url())
-  return encode_url(_md_format(parsed))
+  return encode_url(_md_format(parsed)) */
+
+  var normalized = utils.replace_entities(uri)
+  try {
+    normalized = url.decode(normalized)
+  } catch Exception {}
+  return url.encode(normalized, true)
 }
 
 def normalize_link_text(uri) {

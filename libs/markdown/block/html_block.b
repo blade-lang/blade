@@ -16,7 +16,7 @@ var HTML_SEQUENCES = [
 ]
 
 def html_block(state, start_line, end_line, silent) {
-  var i, nextLine, token, line_text,
+  var i, next_line, token, line_text,
       pos = state.b_marks[start_line] + state.t_shift[start_line],
       max = state.e_marks[start_line]
 
@@ -40,30 +40,30 @@ def html_block(state, start_line, end_line, silent) {
     return HTML_SEQUENCES[i][2]
   }
 
-  nextLine = start_line + 1
+  next_line = start_line + 1
 
   # If we are here - we detected HTML block.
   # Let's roll down till block end.
   if !line_text.match(HTML_SEQUENCES[i][1]) {
-    iter ; nextLine < end_line; nextLine++ {
-      if state.s_count[nextLine] < state.blk_indent break
+    iter ; next_line < end_line; next_line++ {
+      if state.s_count[next_line] < state.blk_indent break
 
-      pos = state.b_marks[nextLine] + state.t_shift[nextLine]
-      max = state.e_marks[nextLine]
+      pos = state.b_marks[next_line] + state.t_shift[next_line]
+      max = state.e_marks[next_line]
       line_text = state.src[pos, max]
 
       if line_text.match(HTML_SEQUENCES[i][1]) {
-        if line_text.length() != 0 nextLine++
+        if line_text.length() != 0 next_line++
         break
       }
     }
   }
 
-  state.line = nextLine
+  state.line = next_line
 
   token         = state.push('html_block', '', 0)
-  token.map     = [ start_line, nextLine ]
-  token.content = state.get_lines(start_line, nextLine, state.blk_indent, true)
+  token.map     = [ start_line, next_line ]
+  token.content = state.get_lines(start_line, next_line, state.blk_indent, true)
 
   return true
 }
