@@ -496,12 +496,12 @@ class Markdown {
     if presets.options self.set(presets.options)
 
     if presets.components {
-      presets.components.keys().each(@(name) {
-        if presets.components[name].get('rules') {
-          reflect.get_prop(self, name).ruler.enable_only(presets.components[name].rules)
+      presets.components.each(@(component, name) {
+        if component.get('rules') {
+          reflect.get_prop(self, name).ruler.enable_only(component.rules)
         }
-        if presets.components[name].get('rules2') {
-          reflect.get_prop(self, name).ruler2.enable_only(presets.components[name].rules2)
+        if component.get('rules2') {
+          reflect.get_prop(self, name).ruler2.enable_only(component.rules2)
         }
       })
     }
@@ -617,7 +617,7 @@ class Markdown {
    */
   parse(src, env) {
     if !is_string(src) {
-      die Exception('Input data should be a String')
+      die Exception('string expected in argument 1 (src)')
     }
 
     var state = self.core.State(src, self, env)
@@ -655,6 +655,10 @@ class Markdown {
    * @internal
    **/
   parse_inline(src, env) {
+    if !is_string(src) {
+      die Exception('string expected in argument 1 (src)')
+    }
+    
     var state = self.core.State(src, self, env)
 
     state.inline_mode = true

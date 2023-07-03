@@ -4,7 +4,7 @@ import ..common.utils { is_space }
 
 # list mapping of escaped ASCII characters.
 var ESCAPED = [0] * 256
-'\\!"#$%&\'()*+,./:;<=>?@[]^_`{|}~-'.to_list().each(@(ch) { ESCAPED[ord(ch)] = 1 })
+'\\!"#$%&\'()*+,./:;<=>?@[]^_`{|}~-'.each(@(ch) { ESCAPED[ord(ch)] = 1 })
 
 def escape(state, silent) {
   var ch1, ch2, orig_str, escaped_str, token, pos = state.pos, max = state.pos_max

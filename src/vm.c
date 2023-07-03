@@ -2512,11 +2512,10 @@ b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
   push(vm, OBJ_VAL(closure));
 
   int arg_count = 0;
-  if(args) {
+  if(args && (arg_count = args->items.count)) {
     for(int i = 0; i < args->items.count; i++) {
       push(vm, args->items.values[i]);
     }
-    arg_count = args->items.count;
   }
 
   call(vm, closure, arg_count);

@@ -557,12 +557,12 @@ DECLARE_NATIVE(ord) {
     RETURN_ERROR("ord() expects character as argument, string given");
   }
 
-  // Decode the UTF-8 sequence.
   if(string->is_ascii) {
     int ord = (int)string->chars[0];
     if(ord < 0) ord += 256;
     RETURN_NUMBER(ord);
   } else {
+    // Decode the UTF-8 sequence.
     RETURN_NUMBER(utf8_decode((uint8_t *) string->chars, string->length));
   }
 }
