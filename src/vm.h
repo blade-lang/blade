@@ -25,8 +25,8 @@ typedef struct {
   b_obj_closure *closure;
   uint8_t *ip;
   b_value *slots;
-  unsigned int handlers_count;
-  unsigned int gc_protected;
+  int handlers_count;
+  int gc_protected;
   b_exception_frame handlers[MAX_EXCEPTION_HANDLERS];
 } b_call_frame;
 

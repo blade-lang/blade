@@ -1,5 +1,6 @@
 import os
 import mime
+import hash
 import .errors
 import ..setup
 import ..log
@@ -17,7 +18,14 @@ def static_handler(req, res) {
   
   if reader.exists() {
     res.headers['Content-Type'] = mime.detect_from_name(static_path)
-    res.write(reader.read())
+    # cache for 1 year
+    res.headers['Cache-Control'] = 'public, max-age=31536000, s-maxage=31536000, immutable'
+
+    var content = reader.read()
+    res.headers['Etag'] = 'W/"${hash.md5(content)}"'
+
+    res.write(content)
+    content.dispose()
   } else {
     errors.not_found(req, res)
   }
