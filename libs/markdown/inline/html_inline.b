@@ -12,7 +12,7 @@ def _is_link_close(str) {
 
 def _is_letter(ch) {
   var lc = ch | 0x20 # to lower case
-  return (lc >= 0x61/* a */) and (lc <= 0x7a/* z */)
+  return (lc >= 0x61) and (lc <= 0x7a) # a and z
 }
 
 def html_inline(state, silent) {

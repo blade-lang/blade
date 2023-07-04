@@ -25,15 +25,15 @@ typedef struct {
   b_obj_closure *closure;
   uint8_t *ip;
   b_value *slots;
-  int handlers_count;
-  int gc_protected;
+  unsigned int handlers_count;
+  unsigned int gc_protected;
   b_exception_frame handlers[MAX_EXCEPTION_HANDLERS];
 } b_call_frame;
 
 struct s_vm {
   b_call_frame frames[FRAMES_MAX];
   b_call_frame *current_frame;
-  int frame_count;
+  unsigned int frame_count;
 
   b_blob *blob;
   uint8_t *ip;
@@ -137,12 +137,12 @@ b_obj_instance *create_exception(b_vm *vm, b_obj_string *message);
 
 static inline b_obj *gc_protect(b_vm *vm, b_obj *object) {
   push(vm, OBJ_VAL(object));
-  vm->frames[vm->frame_count - 1].gc_protected++;
+  vm->frames[vm->frame_count > 0 ? vm->frame_count - 1 : 0].gc_protected++;
   return object;
 }
 
 static inline void gc_clear_protection(b_vm *vm) {
-  b_call_frame *frame = &vm->frames[vm->frame_count - 1];
+  b_call_frame *frame = &vm->frames[vm->frame_count > 0 ? vm->frame_count - 1 : 0];
   if (frame->gc_protected > 0) {
     vm->stack_top -= frame->gc_protected;
   }
