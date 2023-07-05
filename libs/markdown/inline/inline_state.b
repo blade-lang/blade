@@ -127,13 +127,13 @@ class InlineState {
     while pos < max and self.src[pos] == marker pos++
   
     count = pos - start
-  
+
     # treat end of the line as a whitespace
     nextChar = pos < max ? self.src[pos] : ' '
   
     is_last_punct_char = is_md_ascii_punct(last_char) or is_punct_char(last_char)
     is_next_punct_char = is_md_ascii_punct(nextChar) or is_punct_char(nextChar)
-  
+ 
     is_last_white_space = is_white_space(last_char)
     is_next_white_space = is_white_space(nextChar)
   

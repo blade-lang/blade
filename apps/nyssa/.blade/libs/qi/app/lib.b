@@ -93,6 +93,7 @@ def _time(time) {
   return (time / 1000000) + 's'
 }
 
+import hash
 class expect {
   var value
   var _is_not = false
@@ -116,10 +117,11 @@ class expect {
     }
     
     try {
-      if !self._is_not and fn(self.value, expected) {
+      var test_value = fn(self.value, expected)
+      if !self._is_not and test_value {
         _passed_assertions++
         state.status = true
-      } else if self._is_not and !fn(self.value, expected) {
+      } else if self._is_not and !test_value {
         _passed_assertions++
         state.status = true
       } else {

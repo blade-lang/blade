@@ -290,8 +290,51 @@ class Url {
     return url
   }
 
+  /**
+   * to_string()
+   * 
+   * Returns a string representation of the url object. This will 
+   * only be the same as the absolute url if the original string is 
+   * an absolute url.
+   * 
+   * @return string
+   */
+  to_string() {
+    var result = ''
+    var has_colon = _SIMPLE_SCHEMES.contains(self.scheme.lower())
+
+    result += self.scheme or ''
+    result += self.has_slash ? '://' : (has_colon ? ':' : '')
+    
+    if self.username {
+      result += self.username
+      result += self.password ? ':' + self.password : ''
+      if self.host {
+        result += '@'
+      }
+    }
+
+    if self.host and self.host.index_of(':') != -1 {
+      # ipv6 address
+      result += '[' + self.host + ']'
+    } else {
+      result += self.host or ''
+    }
+
+    result += self.port ? ':' + self.port : ''
+    result += self.path and !self.empty_path ? self.path : ''
+
+    if self.query {
+      result += self.query ? '?' + self.query : ''
+    }
+
+    result += self.hash ? '#' + self.hash : ''
+
+    return result
+  }
+
   @to_string() {
-    return '<Url href=${self.absolute_url()}>'
+    return '<Url href=${self.to_string()}>'
   }
 
   @to_json() {

@@ -143,6 +143,21 @@ DECLARE_STRING_METHOD(lower) {
   RETURN_TT_STRING(string);
 }
 
+DECLARE_STRING_METHOD(case_fold) {
+  ENFORCE_ARG_RANGE(case_fold, 0, 1);
+
+  bool is_full = false;
+  if(arg_count == 1) {
+    ENFORCE_ARG_TYPE(case_fold, 0, IS_BOOL);
+    is_full = AS_BOOL(args[0]);
+  }
+
+  b_obj_string *str = AS_STRING(METHOD_OBJECT);
+  size_t out_length;
+  char *string = utf8_case_fold(str->chars, str->utf8_length, !is_full, &out_length);
+  RETURN_T_STRING(string, out_length);
+}
+
 DECLARE_STRING_METHOD(is_alpha) {
   ENFORCE_ARG_COUNT(is_alpha, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
@@ -621,13 +636,15 @@ DECLARE_STRING_METHOD(match) {
 
   if (string->length == 0 && substr->length == 0) {
     RETURN_TRUE;
-  } else if (string->length == 0 || substr->length == 0 || start_offset >= (PCRE2_SIZE)string->length) {
-    RETURN_FALSE;
   }
 
   GET_REGEX_COMPILE_OPTIONS(substr, false);
 
   if ((int) compile_options < 0) {
+    if (string->length == 0 || substr->length == 0 || start_offset >= (PCRE2_SIZE)string->length) {
+      RETURN_FALSE;
+    }
+
     RETURN_BOOL(strstr(string->chars, substr->chars) - string->chars > -1);
   }
 
@@ -718,11 +735,15 @@ DECLARE_STRING_METHOD(matches) {
 
   if (string->length == 0 && substr->length == 0) {
     RETURN_OBJ(new_list(vm)); // empty string matches empty string to empty list
-  } else if (string->length == 0 || substr->length == 0 || start_offset >= (PCRE2_SIZE)string->length) {
-    RETURN_FALSE; // if either string or str is empty, return false
   }
 
   GET_REGEX_COMPILE_OPTIONS(substr, true);
+
+  if(compile_options == -1) {
+    if (string->length == 0 || substr->length == 0 || start_offset >= (PCRE2_SIZE)string->length) {
+      RETURN_FALSE; // if either string or str is empty, return false
+    }
+  }
 
   char *real_regex = remove_regex_delimiter(vm, substr);
 

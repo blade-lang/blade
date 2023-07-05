@@ -57,12 +57,12 @@ def _post_process(state, delimiters) {
     if start_delim.marker != '_' and start_delim.marker != '*' {
       continue
     }
-
+    
     #Process only opening markers
     if start_delim.end == -1 {
       continue
     }
-
+    
     end_delim = delimiters[start_delim.end]
 
     # If the previous delimiter has the same marker and is adjacent to this one,

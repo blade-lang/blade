@@ -106,10 +106,10 @@ def link(state, silent) {
       pos = label_end + 1
     }
 
-    # covers label == '' and label == undefined
+    # covers label == '' and label == nil
     # (collapsed reference link and shortcut reference link respectively)
     if !label label = state.src[label_start, label_end]
-
+    
     ref = state.env.references.get(normalize_reference(label), nil)
     if !ref {
       state.pos = old_pos

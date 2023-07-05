@@ -19,7 +19,7 @@ def entity(state, silent) {
 
     if match {
       if !silent {
-        code = match[1][0].lower() == 'x' ? to_number('0' + match[1].lower()) : to_number(match[1])
+        code = to_number(match[1][0].lower() == 'x' ? '0' + match[1].lower() : match[1])
 
         token         = state.push('text_special', '', 0)
         token.content = is_valid_entity_code(code) ? chr(code) : chr(0xFFFD)

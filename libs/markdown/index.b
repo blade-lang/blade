@@ -39,140 +39,7 @@ def validate_link(url) {
 
 var RECODE_HOSTNAME_FOR = [ 'http', 'https', 'mailto' ]
 
-def _md_format(url) {
-  var result = ''
-
-  var has_colon = ['mailto', 'tel'].contains(url.scheme.lower())
-
-  result += url.scheme or ''
-  result += url.has_slash ? '://' : (has_colon ? ':' : '')
-  
-  if url.username {
-    result += url.username
-    result += url.password ? ':' + url.password : ''
-    if url.host {
-      result += '@'
-    }
-  }
-
-  if url.host and url.host.index_of(':') != -1 {
-    # ipv6 address
-    result += '[' + url.host + ']'
-  } else {
-    result += url.host or ''
-  }
-
-  result += url.port ? ':' + url.port : ''
-  result += url.path and !url.empty_path ? url.path : ''
-
-  if url.query {
-    if !url.empty_path {
-      # result = result.rtrim('/')
-    }
-    result += url.query ? '?' + url.query : ''
-  }
-
-  result += url.hash ? '#' + url.hash : ''
-
-  return result
-
-}
-
-var encode_cache = {}
-def _get_encode_cache(exclude) {
-  var i, ch, cache = encode_cache.get(exclude)
-  if cache  return cache
-
-  cache = encode_cache[exclude] = []
-
-  iter i = 0; i < 128; i++ {
-    ch = chr(i)
-    if ch.match('/^[0-9a-z]$/i') {
-      #  always allow unencoded alphanumeric characters
-      cache.append(ch)
-    } else {
-      var cache_code = ('0' + decimal_to_hex(i).upper())
-      cache.append('%' + cache_code[cache_code.length() - 2,])
-    }
-  }
-  iter i = 0; i < exclude.length(); i++ {
-    cache[ord(exclude[i])] = exclude[i]
-  }
-  return cache
-}
-
-/**
- * Encode unsafe characters with percent-encoding, skipping already
- * encoded sequences.
- * 
- * @param {string} string: string to encode
- * @param {list|string} exclude: list of characters to ignore (in addition to a-zA-Z0-9)
- * @param {bool} keep_escaped: don't encode '%' in a correct escape sequence (default: true)
- * @return string
- */
-def encode_url(string, exclude, keep_escaped) {
-  var i = 0, l, code, nextCode, cache, result = ''
-  if !is_string(exclude) {
-    # encode(string, keep_escaped)
-    keep_escaped = exclude
-    exclude = ';/?:@&=+$,-_.!~*\'()#'
-  }
-  if keep_escaped == nil keep_escaped = true
-  
-  cache = _get_encode_cache(exclude)
-  
-  iter l = string.length(); i < l; i++ {
-    code = ord(string[i])
-    if keep_escaped and code == '%' and i + 2 < l {
-      if string[i + 1, i + 3].match('/^[0-9a-f]{2}$/i') {
-        result += string[i, i + 3]
-        i += 2
-        continue
-      }
-    }
-    if code < 128 {
-      result += cache[code]
-      continue
-    }
-    if code >= 55296 and code <= 57343 {
-      if code >= 55296 and code <= 56319 and i + 1 < l {
-        nextCode = ord(string[i + 1])
-        if nextCode >= 56320 and nextCode <= 57343 {
-          result += url.encode(string[i] + string[i + 1])
-          i++
-          continue
-        }
-      }
-      result += "%EF%BF%BD"
-      continue
-    }
-    result += url.encode(string[i])
-  }
-  
-  return result
-}
-
 def normalize_link(uri) {
-  /* if uri.starts_with('#') or uri.starts_with('?') {
-    return encode_url(uri)
-  }
-
-  var parsed = url.parse(uri, false)
-
-  if parsed.host {
-    # Encode hostnames in urls like:
-    # `http://host/`, `https://host/`, `mailto:user@host`, `//host/`
-    #
-    # We don't encode unknown schemas, because it's likely that we encode
-    # something we shouldn't (e.g. `skype:name` treated as `skype:host`)
-    if !parsed.scheme or RECODE_HOSTNAME_FOR.contains(parsed.scheme) {
-      parsed.host.ascii()
-    }
-  }
-
-  # return encode_url(parsed.absolute_url())
-  return encode_url(_md_format(parsed)) */
-
   var normalized = utils.replace_entities(uri)
   try {
     normalized = url.decode(normalized)
@@ -195,7 +62,7 @@ def normalize_link_text(uri) {
   }
 
   # return parsed.absolute_url()
-  return _md_format(parsed)
+  return parsed.to_string()
 }
 
 

@@ -12,7 +12,7 @@ var HTML_SEQUENCES = [
   [ '/^<![A-Z]/',     '/>/',     true ],
   [ '/^<!\[CDATA\[/', '/\]\]>/', true ],
   [ '/^</?(' + '|'.join(html_blocks) + ')(?=(\\s|/?>|$))/i', '/^$/', true ],
-  [ '/${HTML_OPEN_CLOSE_TAG_RE}\\s*$/',  '/^$/', false ],
+  [ '/${HTML_OPEN_CLOSE_TAG_RE}\s*$/',  '/^$/', false ],
 ]
 
 def html_block(state, start_line, end_line, silent) {

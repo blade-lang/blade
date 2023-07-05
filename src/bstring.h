@@ -29,6 +29,14 @@ DECLARE_STRING_METHOD(upper);
 DECLARE_STRING_METHOD(lower);
 
 /**
+ * string.case_fold([is_full])
+ *
+ * Does UTF-8 Case folding on the string. If is_bool is set to true, it will do a
+ * full case fold. Otherwise, it will do a simple case fold.
+ */
+DECLARE_STRING_METHOD(case_fold);
+
+/**
  * string.is_alpha()
  *
  * returns true if the string contains only alphabets
