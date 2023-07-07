@@ -143,9 +143,9 @@ class HttpRequest {
     for p in parts {
       p = p.split('=')
       if p {
-        var name = url.decode(p[0])
+        var name = url.decode(p[0].replace('+', ' '))
         if p.length() == 2 {
-          result.set(name, url.decode(p[1]))
+          result.set(name, url.decode(p[1].replace('+', ' ')))
         } else {
           result.set(name, nil)
         }
@@ -413,6 +413,10 @@ class HttpRequest {
 
   /**
    * send(uri: Url, method: string [, data: string | bytes [, options: dict]])
+   * 
+   * Sends the given request to the given uri using the given method and 
+   * optionally passing the data if given.
+   * 
    * @default follow_redirect: true
    */
   send(uri, method, data, options) {
@@ -519,11 +523,13 @@ class HttpRequest {
     return response
   }
 
-  @to_string() {
-    return '<HttpRequest method=${self.method}, path=${self.path}>'
-  }
-
-  @to_json() {
+  /**
+   * to_dict()
+   * 
+   * Returns a dictionary representation of the HttpRequest instance.
+   * @return dict
+   */
+  to_dict() {
     return {
       request_uri: self.request_uri,
       path: self.path,
@@ -536,6 +542,24 @@ class HttpRequest {
       cookies: self.cookies,
       body: self.body,
     }
+  }
+
+  /**
+   * to_string()
+   * 
+   * Returns a string representation of the HttpRequest instance.
+   * @returns string
+   */
+  to_string() {
+    return '<HttpRequest method=${self.method}, path=${self.path}>'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+
+  @to_json() {
+    self.to_dict()
   }
 }
 

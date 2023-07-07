@@ -609,11 +609,13 @@ class Template {
     if var_vars {
       # var_vars = json.decode(json.encode(var_vars))
       iter var i = 0; i < var_vars.variable.length(); i++ {
-        content = content.replace(
-          var_vars[0][i], 
-          to_string(self._extract_var(variables, var_vars.variable[i], error)), 
-          false
-        )
+        if var_vars[0][i] {
+          content = content.replace(
+            var_vars[0][i], 
+            to_string(self._extract_var(variables, var_vars.variable[i], error)), 
+            false
+          )
+        }
       }
     }
     

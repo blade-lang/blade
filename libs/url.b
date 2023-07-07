@@ -411,7 +411,7 @@ def decode(url) {
     die Exception('string expected')
 
   # quick exit strategy
-  if url.index_of('%') > -1 return url
+  if url.index_of('%') == -1 return url
 
   var lookup_table = '0123456789abcdef'
 

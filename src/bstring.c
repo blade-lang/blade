@@ -1150,7 +1150,7 @@ DECLARE_STRING_METHOD(replace) {
   PCRE2_SIZE error_offset;
 
   pcre2_code *re = pcre2_compile(pattern, PCRE2_ZERO_TERMINATED,
-                                 compile_options & PCRE2_MULTILINE,
+                                 compile_options | PCRE2_MULTILINE,
                                  &error_number, &error_offset, 0);
   free(real_regex);
 
