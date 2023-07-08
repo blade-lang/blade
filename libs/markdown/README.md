@@ -2,9 +2,16 @@
 
 This module is based on the [markdown-it](https://github.com/markdown-it/markdown-it) library by Vitaly Puzrin and Alex Kocharin.
 
+It has been extended with support for the following by default:
 
-## License
+- anchors
+- emoji
+- ins
 
+
+## Licenses
+
+Copyright (c) 2023 Ore Richard
 Copyright (c) 2014 Vitaly Puzrin, Alex Kocharin.
 
 Permission is hereby granted, free of charge, to any person

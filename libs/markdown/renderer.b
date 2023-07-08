@@ -103,6 +103,10 @@ default_rules.html_inline = @(tokens, idx , options, env, slf) {
   return tokens[idx].content
 }
 
+default_rules.emoji = @(tokens, idx , options, env, slf) {
+  return tokens[idx].content
+}
+
 /**
  * Generates HTML from parsed token stream. Each instance has independent
  * copy of rules. Those can be rewritten with ease. Also, you can add new

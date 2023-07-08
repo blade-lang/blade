@@ -13,6 +13,7 @@ import .linkify
 import .newline
 import .strikethrough
 import .text
+import .ins
 
 # classes
 import .inline_state

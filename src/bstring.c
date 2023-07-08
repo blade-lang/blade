@@ -1300,6 +1300,18 @@ DECLARE_STRING_METHOD(replace_with) {
       }
     }
 
+    // offset
+    if(call_args_count < replacer->function->arity) {
+      write_list(vm, call_args, NUMBER_VAL(index));
+      call_args_count++;
+    }
+
+    // src
+    if(call_args_count < replacer->function->arity) {
+      write_list(vm, call_args, METHOD_OBJECT);
+      call_args_count++;
+    }
+
     // call the function
     b_value call_result = call_closure(vm, replacer, call_args);
 

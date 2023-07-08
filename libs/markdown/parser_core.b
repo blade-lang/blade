@@ -7,11 +7,13 @@ var _rules = [
   [ 'block',          core.block         ],
   [ 'inline',         core.inline        ],
   [ 'linkify',        core.linkify       ],
+  [ 'emoji',          core.emoji         ],
   [ 'replacements',   core.replacements  ],
   [ 'smartquotes',    core.smartquotes   ],
   # `text_join` finds `text_special` tokens (for escape sequences)
   # and joins them with the rest of the text
-  [ 'text_join',      core.text_join     ]
+  [ 'text_join',      core.text_join     ],
+  [ 'anchor',         core.anchor        ],
 ]
 
 /**
