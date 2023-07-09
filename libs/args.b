@@ -72,6 +72,7 @@
 import os
 import colors
 import io
+import reflect
 
 /**
  * value type none
@@ -234,6 +235,7 @@ class _Command < _Optionable {
     self.help = help
     self.type = type
     self.choices = choices or []
+    self.action = action
   }
 }
 
@@ -346,8 +348,6 @@ class Parser < _Optionable {
         # characters away from the help texts.
         line = line.rpad(width + 8)
 
-
-
         if opt.type == CHOICE {
           response += '\n' + self._get_choice_help(opt.choices)
         }
@@ -411,15 +411,18 @@ class Parser < _Optionable {
   _get_options_text_width() {
     var width = 0
     for opt in self.options {
-      var n
+      var n = 0
       if opt.short_name {
-        n = opt.short_name.length() + opt.long_name.length() + 2 # +2 for ', '
-      } else {
-        n = opt.long_name.length() + 4 # 4 should cover all short names.
+        n += opt.short_name.length()
+      }
+      if opt.long_name {
+        n += opt.long_name.length() + 4 # 4 should cover all short names.
       }
 
+      n += 2
+
       if opt.type != NONE
-        n += opt.long_name.length() + _type_name[opt.type].length()
+        n += opt.long_name.length() + _type_name[opt.type].length() + 2
 
       if n > width width = n
     }
@@ -433,6 +436,19 @@ class Parser < _Optionable {
 
       if opt.type != NONE
         n += opt.name.length() + _type_name[opt.type].length()
+
+      if opt.options {
+        for op in opt.options {
+          var sub_width = 0
+
+          if op.short_name sub_width += op.short_name.length()
+          if op.long_name sub_width += op.long_name.length()
+          if op.type != NONE sub_width += _type_name[op.type].length()
+          sub_width += 11
+
+          if sub_width > n n = sub_width
+        }
+      }
 
       if n > width width = n
     }
@@ -674,15 +690,16 @@ class Parser < _Optionable {
       indexes: []
     }
     var help_shown = false
+    var command_found = false
+    var command
 
     var index_start = -1
     iter var i = 0; i < cli_args.length(); i++ {
       var arg = cli_args[i]
-      var command_found = false
 
       # Commands can only occur in the first index of the argument list. 
       # Every other occurrence will be treated as a value.
-      var command = self._get_command(arg)
+      command = self._get_command(arg)
 
       def parse_options(source, arg, fail) {
         var options = self._get_option(source, arg)
@@ -691,7 +708,6 @@ class Parser < _Optionable {
 
           # ...
           for option in options {
-            # We only automatically trigger actions for options during parsing 
             # if the option is the very first item in the argument list and == 'help'.
             # This is because this action is library bound and are meant to be triggered
             # automatically.
@@ -713,7 +729,9 @@ class Parser < _Optionable {
                 self._option_error(option.long_name, 'Option "${option.long_name}" expects a ${_type_name[option.type]}')
               }
             } else if option.type != NONE {
-              if i < cli_args.length() {
+              if i + 1 < cli_args.length() {
+                i++
+                
                 var value = cli_args[i]
                 var v = _get_real_value(option, value)
                 if v {
@@ -731,8 +749,6 @@ class Parser < _Optionable {
             }
           }
         } else if options and (arg.length() - 1 != options.length() or !arg.starts_with('-')) {
-          echo arg.length()
-          echo options.length()
           if command_found {
             self._command_error(command.name, 'Unsupported argument encountered at ${arg}')
           } else {
@@ -763,10 +779,10 @@ class Parser < _Optionable {
             var value = cli_args[i]
             var v = _get_real_value(command, value)
 
-            if command.type != CHOICE or !command.choices or command.choices.contains(v) {
+            if command.type != CHOICE or !command.choices or command.choices.contains(value) {
               parsed_args.command = {
                 name: command.name,
-                value: v
+                value,
               }
 
               if command.type == LIST {
@@ -785,6 +801,12 @@ class Parser < _Optionable {
           parsed_args.command = {
             name: command.name,
             value: nil
+          }
+        }
+
+        for opt in command.options {
+          if opt.value and !parsed_args.options.contains(opt.long_name) {
+            parsed_args.options.add(opt.long_name, _get_real_value(opt, opt.value))
           }
         }
       }
@@ -815,6 +837,19 @@ class Parser < _Optionable {
     }
     iter var i = parsed_args.indexes.length(); i < self.indexes.length(); i++ {
       parsed_args.indexes.append(_get_real_value(self.indexes[i], self.indexes[i].value))
+    }
+
+    if command_found and command { 
+      # We only automatically trigger actions for options during parsing 
+      if command.action and is_function(command.action) {
+        var command_arity = reflect.get_function_metadata(command.action).arity
+
+        using command_arity {
+          when 0 command.action()
+          when 1 command.action(parsed_args.options)
+          default command.action(parsed_args.options, command.value)
+        }
+      }
     }
 
     if !parsed_args.command and !parsed_args.options and !parsed_args.indexes and self._default_help and !help_shown {
