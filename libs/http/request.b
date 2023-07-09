@@ -161,7 +161,7 @@ class HttpRequest {
     if parts.length() == 3 {
       self.method = parts[0]
       self.request_uri = parts[1]
-      self.http_version = parts[2].replace('~http\\/~', '')
+      self.http_version = parts[2].lower().replace('~http\\/~', '')
   
       var uri_parts = parts[1].split('?')
   

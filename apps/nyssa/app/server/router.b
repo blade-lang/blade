@@ -12,7 +12,7 @@ import ..setup
 
 def _log_request(req, res) {
   log.info('RepositoryAccess: ${req.ip} - "${req.method} ${req.request_uri} ' +
-      '${req.http_version}" ${res.status} ${res.status < 400 ? res.body.length() : '-'}')
+      'HTTP/${req.http_version}" ${res.status} ${res.status < 400 ? res.body.length() : '-'}')
 }
 
 def _get_uri_route_data(route, path) {
