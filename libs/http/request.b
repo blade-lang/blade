@@ -559,7 +559,7 @@ class HttpRequest {
   }
 
   @to_json() {
-    self.to_dict()
+    return self.to_dict()
   }
 }
 

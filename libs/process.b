@@ -365,7 +365,7 @@ class Process {
         }
 
         # call the complete listeners
-        self._on_complete_listeners.each(@(fn, _) {
+        self._on_complete_listeners.each(@(fn) {
           fn()
         })
 

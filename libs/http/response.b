@@ -1,6 +1,7 @@
 #!-- part of the http module
 
 import json
+import mime
 import date { Date }
 import .exception { HttpException }
 
@@ -95,14 +96,42 @@ class HttpResponse {
   }
 
   /**
-   * json(data: any)
+   * json(data: any [, status_code: number])
    * 
    * Writes a json encoded data to the response stream and sets the response 
-   * `Content-Type` to `application/json`.
+   * `Content-Type` to `application/json`. If the status code is given, the
+   * response will be sent with the given status code.
    */
-  json(data) {
-    self.headers.set('Content-Type', 'application/json')
+  json(data, status_code) {
+    if status_code != nil {
+      if !is_number(status_code)
+        die Exception('argument 2 (status_code) expects a number')
+      self.status = status_code
+    }
+    self.content_type('application/json')
     self.write(json.encode(data))
+  }
+
+  /**
+   * file(path: string [, status_code: number])
+   * 
+   * Writes a file into the response stream and sets the `Content-Type` to the 
+   * correct mimetype for the file. If the status code is given, the
+   * response will be sent with the given status code.
+   * 
+   * @throws {Exception}
+   */
+  file(path, status_code) {
+    if status_code != nil {
+      if !is_number(status_code)
+        die Exception('argument 2 (status_code) expects a number')
+      self.status = status_code
+    }
+
+    self.content_type(mime.detect_from_name(path))
+    var file_data = file(path, 'rb').read()
+    self.write(file_data)
+    file_data.dispose()
   }
 
   /**
@@ -128,7 +157,7 @@ class HttpResponse {
       die Exception('argument 7 (extras) must be a string when given')
 
     # fix common prefix support for clients that implement them
-    # NOTE: they have no effect when the client doesn't so...
+    # NOTE: they have no effect when the client do not.
     if !path and !key.starts_with('__Host-') path = '/'
     if !secure and key.starts_with('__Secure-') secure = true
     
@@ -164,6 +193,18 @@ class HttpResponse {
     if self.status < 300 or self.status > 399
       die HttpException('redirect status code must be a 30x')
     self.body = bytes(0)
+  }
+
+  /**
+   * content_type(mimetype: string)
+   * 
+   * Sets the content type of the HTTP response.
+   */
+  content_type(mimetype) {
+    if !is_string(mimetype)
+      die Exception('argument 1 (mimetype) expects string')
+
+    self.headers.set('Content-Type', mimetype)
   }
 
   @to_string() {
