@@ -39,6 +39,8 @@ def is_valid_entity_code(c) {
 var UNESCAPE_MD_RE  = '\\\\([\\\\!"#$%&\'()*+,.\\/:;<=>?@[\\]^_`{|}~-])'
 var ENTITY_RE       = '&([a-z#][a-z0-9]{1,31});'
 var UNESCAPE_ALL_RE = '/' + UNESCAPE_MD_RE + '|' + ENTITY_RE + '/si'
+var UNESCAPE_RE = '/\\\\([ \\\\!"#$%&\'()*+,.\/:;<=>?@[\]^_`{|}~-])/'
+var UNESCAPE_SPACE_RE = '/(^|[^\\\\])(\\\\\\\\)*\s/'
 
 var DIGITAL_ENTITY_TEST_RE = '/^#((?:x[a-f0-9]{1,8}|[0-9]{1,8}))$/i'
 

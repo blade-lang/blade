@@ -10,8 +10,11 @@ var _rules = [
   [ 'escape',          inline.escape ],
   [ 'backticks',       inline.backticks ],
   [ 'strikethrough',   inline.strikethrough.tokenize ],
-  [ 'ins',             inline.ins.tokenize ],
+  [ 'insert',          inline.insert.tokenize ],
+  [ 'mark',            inline.mark.tokenize ],
   [ 'emphasis',        inline.emphasis.tokenize ],
+  [ 'subscript',       inline.subscript ],
+  [ 'superscript',     inline.superscript ],
   [ 'link',            inline.link ],
   [ 'image',           inline.image ],
   [ 'autolink',        inline.autolink ],
@@ -26,7 +29,8 @@ var _rules = [
 var _rules2 = [
   [ 'balance_pairs',   inline.balance_pairs ],
   [ 'strikethrough',   inline.strikethrough.post_process ],
-  [ 'ins',             inline.ins.post_process ],
+  [ 'insert',          inline.insert.post_process ],
+  [ 'mark',            inline.mark.post_process ],
   [ 'emphasis',        inline.emphasis.post_process ],
   # rules for pairs separate '**' into its own text tokens, which may be left unused,
   # rule below merges unused segments back with the rest of the text

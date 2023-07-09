@@ -2,11 +2,14 @@
 
 This module is based on the [markdown-it](https://github.com/markdown-it/markdown-it) library by Vitaly Puzrin and Alex Kocharin.
 
-It has been extended with support for the following by default:
+It has been extended with support for the following by default in the standard (non-commonmark) mode:
 
 - anchors
-- emoji
-- ins
+- emojies
+- insert
+- subscripts
+- superscripts
+- mark
 
 
 ## Licenses
