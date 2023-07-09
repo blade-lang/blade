@@ -6,6 +6,7 @@ import .exception { HttpException }
 import .status
 
 import socket as so
+import reflect
 
 /**
  * HTTP server
@@ -63,8 +64,36 @@ class HttpServer {
   var _connect_listeners = []
   var _disconnect_listeners = []
   var _received_listeners = []
-  var _sent_listeners = []
+  var _reply_listeners = []
   var _error_listeners = []
+
+  # See https://www.rfc-editor.org/rfc/rfc9110.html#methods
+  # for more information regards why these methods were 
+  # implemented by default.
+  var _routes = {
+    # Transfer a current representation of the target resource.
+    'GET': {},
+    # Same as GET, but do not transfer the response content.
+    'HEAD': {},
+    # Perform resource-specific processing on the request content.
+    'POST': {},
+    # Replace all current representations of the target resource with the request content.
+    'PUT': {},
+    # Remove all current representations of the target resource.
+    'DELETE': {},
+    # Establish a tunnel to the server identified by the target resource.
+    'CONNECT': {},
+    # Describe the communication options for the target resource.
+    'OPTIONS': {},
+    # Perform a message loop-back test along the path to the target resource.
+    'TRACE': {},
+  }
+
+  var _none_handler = @(req, res) {
+    res.status = 404
+    res.content_type('text/plain')
+    res.write('404 - Not Found.')
+  }
 
   /**
    * HttpServer(port: int [, host: string])
@@ -95,29 +124,43 @@ class HttpServer {
   }
 
   /**
-   * on_connect(fn: function)
+   * on_connect(function: function)
    * 
    * Adds a function to be called when a new client connects.
-   * @note Function _fn_ MUST accept at one parameter which will be passed the client Socket object.
+   * @note Function _function_ MUST accept at one parameter which will be passed the client Socket object.
    * @note multiple `on_connect()` may be set on a single instance.
    */
-  on_connect(fn) {
-    self._connect_listeners.append(fn)
+  on_connect(function) {
+    if !is_function(function)
+      die Exception('argument 1 (function) must be a function')
+      
+    var fn_arity = reflect.get_function_metadata(function).arity
+    if fn_arity != 1 
+      die Exception('function must accept exactly one argument (client)')
+
+    self._connect_listeners.append(function)
   }
 
   /**
-   * on_disconnect(fn: function)
+   * on_disconnect(function: function)
    * 
    * Adds a function to be called when a new client disconnects.
-   * @note Function _fn_ MUST accept at one parameter which will be passed the client information.
+   * @note Function _function_ MUST accept at one parameter which will be passed the client information.
    * @note multiple `on_disconnect()` may be set on a single instance.
    */
-  on_disconnect(fn) {
-    self._disconnect_listeners.append(fn)
+  on_disconnect(function) {
+    if !is_function(function)
+      die Exception('argument 1 (function) must be a function')
+      
+    var fn_arity = reflect.get_function_metadata(function).arity
+    if fn_arity != 1 
+      die Exception('function must accept exactly one argument (info)')
+
+    self._disconnect_listeners.append(function)
   }
 
   /**
-   * on_receive(fn: function)
+   * on_receive(handler: function)
    * 
    * Adds a function to be called when the server receives a message from a client.
    * 
@@ -126,35 +169,94 @@ class HttpServer {
    * 
    * @note multiple `on_receive()` may be set on a single instance.
    */
-  on_receive(fn) {
+  on_receive(handler) {
+    if !is_function(handler)
+      die Exception('argument 1 (handler) must be a function')
+
+    var fn_arity = reflect.get_function_metadata(handler).arity
+    if fn_arity != 2 
+      die Exception('handler must accept two arguments (request, response)')
+
     self._received_listeners.append(fn)
   }
 
   /**
-   * on_reply(fn: function)
+   * on_reply(function: function)
    * 
    * Adds a function to be called when the server sends a reply to a client.
    * 
-   * > Function _fn_ MUST accept one parameter which will be passed the HttpResponse object.
+   * > Function _function_ MUST accept one parameter which will be passed the HttpResponse object.
    * 
    * @note multiple `on_sent()` may be set on a single instance.
    */
-  on_reply(fn) {
-    self._sent_listeners.append(fn)
+  on_reply(function) {
+    if !is_function(function)
+      die Exception('argument 1 (function) must be a function')
+      
+    var fn_arity = reflect.get_function_metadata(function).arity
+    if fn_arity != 1 
+      die Exception('function must accept exactly one argument (response)')
+
+    self._reply_listeners.append(function)
   }
 
   /**
-   * on_error(fn: function)
+   * on_error(function: function)
    * 
    * Adds a function to be called when the server encounters an error with a client.
    * 
-   * > Function _fn_ MUST accept two parameters. The first argument will be passed the 
+   * > Function _function_ MUST accept two parameters. The first argument will be passed the 
    * > `Exception` object and the second will be passed the client `Socket` object.
    * 
    * @note multiple `on_error()` may be set on a single instance.
    */
-  on_error(fn) {
-    self._error_listeners.append(fn)
+  on_error(function) {
+    if !is_function(function)
+      die Exception('argument 1 (function) must be a function')
+      
+    var fn_arity = reflect.get_function_metadata(function).arity
+    if fn_arity != 2 
+      die Exception('function must accept exactly two arguments (exception, client)')
+
+    self._error_listeners.append(function)
+  }
+
+  /**
+   * handle(method: string, path: string, handler: function(2))
+   * 
+   * Sets up a request handler that will be called when a request with the given method 
+   * has a path that matches the one specified.
+   */
+  handle(method, path, handler) {
+    if !is_string(method)
+      die Exception('argument 1 (method) must be a string')
+    if !is_string(path)
+      die Exception('argument 2 (path) must be a string')
+    if !is_function(handler)
+      die Exception('argument 3 (handler) must be a function')
+
+    var fn_arity = reflect.get_function_metadata(handler).arity
+    if fn_arity != 2 
+      die Exception('handler must accept two arguments (request, response)')
+
+    self._routes[method.upper()].set(path, handler)
+  }
+
+  /**
+   * none_handler(handler: function(2))
+   * 
+   * Sets up the handle to invoke when a request is not processed. That is, when it does 
+   * not match a registered route and no `on_receive()` handler is set.
+   */
+  none_handler(handler) {
+    if !is_function(handler)
+      die Exception('argument 1 (handler) must be a function')
+
+    var fn_arity = reflect.get_function_metadata(handler).arity
+    if fn_arity != 2 
+      die Exception('handler must accept two arguments (request, response)')
+
+    self._none_handler = handler
   }
 
   _get_response_header_string(headers, cookies) {
@@ -183,11 +285,31 @@ class HttpServer {
     # forward processing to callers. 
     # This is a server level error and should terminate immediately.
     if response.status == status.OK {
+      var on_receive_called = false,
+          router_matched = false
 
       # call the received listeners on the request object.
-      self._received_listeners.each(@( fn, _ ) {
+      self._received_listeners.each(@(fn) {
         fn(request, response)
+        on_receive_called = true
       })
+
+      # Call the handler registered against this request if any.
+      var router_method = self._routes.get(request.method)
+      if router_method {
+        var route_handler = router_method.get(request.path)
+        if route_handler {
+          route_handler(request, response)
+          router_matched = true
+        }
+      }
+
+      if !on_receive_called and !router_matched {
+        # the request was not handled by on_receive or a route handler.
+        # we'll need to call the none_handler() to allow the user to 
+        # return any kind of error such as 404, 500 etc.
+        self._none_handler(request, response)
+      }
 
       if response.body {
         feedback += 'Content-Length: ${response.body.length()}\r\n'.to_bytes()
@@ -218,7 +340,7 @@ class HttpServer {
     }
 
     # call the reply listeners.
-    self._sent_listeners.each(@( fn ) {
+    self._reply_listeners.each(@(fn) {
       fn(response)
     })
 
@@ -247,7 +369,7 @@ class HttpServer {
           client = self.socket.accept()
           
           # call the connect listeners.
-          self._connect_listeners.each(@(fn, _) {
+          self._connect_listeners.each(@(fn) {
             fn(client)
           })
 
@@ -261,14 +383,14 @@ class HttpServer {
           self._process_received(client.receive(), client)
         } catch Exception e {
           # call the error listeners.
-          self._error_listeners.each(@(fn, _) {
+          self._error_listeners.each(@(fn) {
             fn(e, client)
           })
         } finally {
           var client_info = client.info()
 
           # call the disconnect listeners.
-          self._disconnect_listeners.each(@(fn, _) {
+          self._disconnect_listeners.each(@(fn) {
             fn(client_info)
           })
 

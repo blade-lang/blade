@@ -2,6 +2,17 @@
 
 import reflect
 
+def _get_string(value) {
+  return '"' + value.replace('"', '\"', false).  # replace " with \"
+#     replace('/', '\/', false). # replace /
+    replace('\b', '\\b', false). # replace \b
+    replace('\f', '\\f', false). # replace \f
+    replace('\n', '\\n', false). # replace \n
+    replace('\r', '\\r', false). # replace \r
+    replace('\t', '\\t', false). # replace \t
+    replace('\\', '\\\\', false) + '"' # replace \
+}
+
 /**
  * Blade to JSON encoding class
  */
@@ -57,17 +68,8 @@ class Encoder {
       when 'nil' return 'null'
       when 'boolean' return to_string(value)
       when 'number' return to_string(value)
-      when 'bytes' return value.to_string()
-      when 'string' {
-        return '"' + value.replace('"', '\"', false).  # replace " with \"
-          replace('/', '\\/', false). # replace /
-          replace('\b', '\\b', false). # replace \b
-          replace('\f', '\\f', false). # replace \f
-          replace('\n', '\\n', false). # replace \n
-          replace('\r', '\\r', false). # replace \r
-          replace('\t', '\\t', false). # replace \t
-          replace('\\', '\\\\', false) + '"' # replace \
-      }
+      when 'bytes' return _get_string(value.to_string())
+      when 'string' return _get_string(value)
       when 'list' {
         var result = ''
         self._depth++
