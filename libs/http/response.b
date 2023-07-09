@@ -1,5 +1,6 @@
 #!-- part of the http module
 
+import json
 import date { Date }
 import .exception { HttpException }
 
@@ -81,7 +82,7 @@ class HttpResponse {
   /**
    * write(data: string | bytes)
    * 
-   * Writes data to the response response. 
+   * Writes data to the response stream. 
    * 
    * > This method should be prefered over writing directly to the body 
    * > property to prevent unexpected behaviors.
@@ -94,6 +95,17 @@ class HttpResponse {
   }
 
   /**
+   * json(data: any)
+   * 
+   * Writes a json encoded data to the response stream and sets the response 
+   * `Content-Type` to `application/json`.
+   */
+  json(data) {
+    self.headers.set('Content-Type', 'application/json')
+    self.write(json.encode(data))
+  }
+
+  /**
    * set_cookie(key: string, value: string [, domain: string [, path: string [, expires: string [, secure: bool [, extras]]]]])
    * 
    * Sets a cookie to be send back to a client with the given _key_ and _value_. 
@@ -103,15 +115,17 @@ class HttpResponse {
    */
   set_cookie(key, value, domain, path, expires, secure, extras) {
     if !is_string(key) or !is_string(value)
-      die Exception('arg1 (key) and arg2 (value) must be string')
+      die Exception('argument 1 (key) and argument 2 (value) must be string')
     if (domain != nil and !is_string(domain)) or
         (path != nil and !is_string(path)) or
         (expires != nil and !is_string(expires))
-      die Exception('arg3 (domain), arg4 (path) and arg5 (expires) must be string when given')
+      die Exception(
+        'argument 3 (domain), argument 4 (path) and argument 5 (expires) must be string when given'
+      )
     if secure != nil and !is_bool(secure)
-      die Exception('arg6 (secure) must be a boolean')
+      die Exception('argument 6 (secure) must be a boolean')
     if extras != nil and !is_string(extras)
-      die Exception('arg7 (extras) must be a string when given')
+      die Exception('argument 7 (extras) must be a string when given')
 
     # fix common prefix support for clients that implement them
     # NOTE: they have no effect when the client doesn't so...

@@ -59,20 +59,14 @@ class Encoder {
       when 'number' return to_string(value)
       when 'bytes' return value.to_string()
       when 'string' {
-        if value.index_of('"') > -1 or value.index_of('\\') > -1 {
-          var esc_value = value.replace('\\', '\\\\', false).   # replace \ with \\
-            replace('"', '\\"', false).  # replace " with \"
-            replace('\r', '\\r'). # replace \r
-            replace('\n', '\\n'). # replace \n
-            replace('\t', '\\t'). # replace \t
-            replace('\0', '\\0'). # replace \0
-            replace('\a', '\\a'). # replace \a
-            replace('\b', '\\b'). # replace \b
-            replace('\f', '\\f') # replace \f
-
-          return '"${esc_value}"'
-        }
-        return '"${value}"'
+        return '"' + value.replace('"', '\"', false).  # replace " with \"
+          replace('/', '\\/', false). # replace /
+          replace('\b', '\\b', false). # replace \b
+          replace('\f', '\\f', false). # replace \f
+          replace('\n', '\\n', false). # replace \n
+          replace('\r', '\\r', false). # replace \r
+          replace('\t', '\\t', false). # replace \t
+          replace('\\', '\\\\', false) + '"' # replace \
       }
       when 'list' {
         var result = ''
