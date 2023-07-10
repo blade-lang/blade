@@ -177,7 +177,7 @@ class HttpServer {
     if fn_arity != 2 
       die Exception('handler must accept two arguments (request, response)')
 
-    self._received_listeners.append(fn)
+    self._received_listeners.append(handler)
   }
 
   /**

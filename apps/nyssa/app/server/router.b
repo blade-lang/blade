@@ -104,14 +104,14 @@ def router(req, res) {
     # setup session
     _setup_session(req, res)
 
-    # bind '.json()' to response
-    res.json = @(v) {
-      res.headers['Content-Type'] = 'application/json'
-      res.write(json.encode(v))
-
-      # just for simplicity
-      return nil
-    }
+#     # bind '.json()' to response
+#     res.json = @(v) {
+#       res.headers['Content-Type'] = 'application/json'
+#       res.write(json.encode(v))
+#
+#       # just for simplicity
+#       return nil
+#     }
 
     # bind the '.fail()' to response
     res.fail = @(code, v) {
