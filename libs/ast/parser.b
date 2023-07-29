@@ -494,6 +494,7 @@ class Parser {
       self._ignore_newline()
       var truth = self._or()
       self._consume(COLON, "':' expected in tenary operation")
+      self._ignore_newline()
       expr = ConditionExpr(expr, truth, self._or())
     }
 
@@ -617,7 +618,7 @@ class Parser {
     while !self._check(RBRACE) and !self._is_at_end()
       val.append(self._declaration())
 
-    self._consume(RBRACE, "'{' expected after block")
+    self._consume(RBRACE, "'}' expected after block")
     self._block_count--
 
     return BlockStmt(val)
