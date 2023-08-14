@@ -206,7 +206,7 @@ DECLARE_MODULE_METHOD(process_new_paged) {
 
 
 #if __APPLE__
-// we are doing this to avoid write protection on apple devices
+// we are doing this to avoid write protection on Apple devices
 // most especially M1 and M2 devices.
 #include <pthread.h>
 #endif
@@ -230,7 +230,7 @@ DECLARE_MODULE_METHOD(process_paged_write) {
     paged->get_format_length = get_format->length;
 
     if(paged->bytes != NULL) {
-      free(paged->bytes);
+      munmap(paged->bytes, paged->length);
       paged->bytes = NULL;
     }
 
@@ -244,7 +244,7 @@ DECLARE_MODULE_METHOD(process_paged_write) {
       data_flags |= MAP_JIT;
     }
 
-    // we are doing this to avoid write protection on apple devices
+    // we are doing this to avoid write protection on Apple devices
     // most especially M1 and M2 devices.
     pthread_jit_write_protect_np(false);
 #endif
@@ -257,7 +257,7 @@ DECLARE_MODULE_METHOD(process_paged_write) {
 
 #if __APPLE__
     if(paged->exectuable) {
-      // we are doing this to avoid write protection on apple devices
+      // we are doing this to avoid write protection on Apple devices
       // most especially M1 and M2 devices.
       pthread_jit_write_protect_np(true);
     }

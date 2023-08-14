@@ -34,8 +34,8 @@ class Message {
   /**
    * Set the sender of the email message.
    * 
-   * @param string from
-   * @returns Message
+   * @param {string} from
+   * @return self
    */
   from(from) {
     if !self._from {
@@ -54,8 +54,8 @@ class Message {
   /**
    * Add one or more recipients to the email message.
    * 
-   * @param list<string> to
-   * @returns Message
+   * @param {string|list[string]} to
+   * @return self
    */
   to(to) {
     if is_string(to) self._to.append(to)
@@ -66,8 +66,8 @@ class Message {
   /**
    * Add one or more Cc recipients to the email message.
    * 
-   * @param list<string> cc
-   * @returns Message
+   * @param {string|list[string]} cc
+   * @return self
    */
   cc(cc) {
     if is_string(cc) self._cc.append(cc)
@@ -78,8 +78,8 @@ class Message {
   /**
    * Add one or more Bcc recipients to the email message.
    * 
-   * @param list<string> bcc
-   * @returns Message
+   * @param {string|list[string]} bcc
+   * @return self
    */
   bcc(bcc) {
     if is_string(bcc) self._bcc.append(bcc)
@@ -90,7 +90,8 @@ class Message {
   /**
    * Add a reply-to address to the email message.
    * 
-   * @param string to
+   * @param {string} to
+   * @return self
    */
   reply_to(to) {
     self._headers.append('Reply-To: ${to}')
@@ -100,8 +101,8 @@ class Message {
   /**
    * Set the subject of the email message.
    * 
-   * @param string subject
-   * @returns Message
+   * @param {string} subject
+   * @return self
    */
   subject(subject) {
     self._subject = subject
@@ -111,8 +112,8 @@ class Message {
   /**
    * Add one or more headers to the email message.
    * 
-   * @param string|list|dict header
-   * @returns Message
+   * @param {string|list|dict} header
+   * @return self
    */
   header(header) {
     if is_string(header) {
@@ -130,9 +131,9 @@ class Message {
   /**
    * Add one or more attachments to the email message.
    * 
-   * @param string path
-   * @param string name (Optional)
-   * @returns Message
+   * @param {string} path
+   * @param {string} name (Optional)
+   * @return self
    */
   attachment(path, name) {
     if !name name = os.base_name(path)
@@ -143,8 +144,8 @@ class Message {
   /**
    * Set the plain text body of the email message. 
    * 
-   * @param string text
-   * @returns Message
+   * @param {string} text
+   * @return self
    */
   text(text) {
     self._text = text
@@ -154,14 +155,15 @@ class Message {
   /**
    * Set the html body of the email.
    * 
-   * @param string html
-   * @returns Message
+   * @param {string} html
+   * @return self
    */
   html(html) {
     self._html = html
     return self
   }
 
+  # leave undocumented since its used internally.
   build(curl) {
     var headers = ['Date: ${date().format("r")}']
     headers.append('From: ${self._from_name}${self._from}')
@@ -211,10 +213,12 @@ class Message {
   }
 }
 
-/* def message(curl, from, to, subject, message, headers) {
-  return Message(curl, from, to, subject, message, headers)
-} */
 
+/**
+ * Returns a new instance of {Message}.
+ * 
+ * @return {Message}
+ */
 def message() {
   return Message()
 }

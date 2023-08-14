@@ -259,7 +259,7 @@ DECLARE_MODULE_METHOD(io_flush) {
  *
  * when length is given, gets `length` number of characters
  * else, gets a single character
- * @returns char
+ * @return char
  */
 DECLARE_MODULE_METHOD(io_getc) {
   ENFORCE_ARG_RANGE(getc, 0, 1);
@@ -282,7 +282,7 @@ DECLARE_MODULE_METHOD(io_getc) {
  *
  * when length is given, gets `length` number of characters
  * else, gets a single character
- * @returns char
+ * @return char
  */
 DECLARE_MODULE_METHOD(io_getch) {
   ENFORCE_ARG_COUNT(getch, 0);
