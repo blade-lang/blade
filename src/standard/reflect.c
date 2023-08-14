@@ -54,7 +54,7 @@ DECLARE_MODULE_METHOD(reflect__getprop) {
  * sets the named property of the object to value.
  *
  * if the property already exist, it overwrites it
- * @returns bool: true if a new property was set, false if a property was
+ * @return bool: true if a new property was set, false if a property was
  * updated
  */
 DECLARE_MODULE_METHOD(reflect__setprop) {
@@ -71,7 +71,7 @@ DECLARE_MODULE_METHOD(reflect__setprop) {
  * delprop(object: instance, name: string)
  *
  * deletes the named property from the object
- * @returns bool
+ * @return bool
  */
 DECLARE_MODULE_METHOD(reflect__delprop) {
   ENFORCE_ARG_COUNT(del_prop, 2);
@@ -160,10 +160,7 @@ DECLARE_MODULE_METHOD(reflect__call_function) {
   b_obj_closure *closure = AS_CLOSURE(args[0]);
   b_obj_list *list = AS_LIST(args[1]);
 
-  // remove our own args
-  pop_n(vm, 2);
-  call_closure(vm, closure, list);
-  RETURN;
+  RETURN_VALUE(call_closure(vm, closure, list));
 }
 
 DECLARE_MODULE_METHOD(reflect__bindmethod) {
@@ -298,8 +295,7 @@ DECLARE_MODULE_METHOD(reflect__runscript) {
     b_obj_closure *cls = new_closure(vm, fn);
     pop(vm);
 
-    call_closure(vm, cls, 0);
-    run(vm);
+    queue_closure(vm, cls);
   }
 
   RETURN;

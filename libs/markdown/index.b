@@ -6,7 +6,6 @@ import .parser_block { BlockParser }
 import .parser_inline { InlineParser }
 import .config as presets
 import url
-import iters
 import reflect
 import convert { decimal_to_hex }
 
@@ -40,133 +39,16 @@ def validate_link(url) {
 
 var RECODE_HOSTNAME_FOR = [ 'http', 'https', 'mailto' ]
 
-def _md_format(url) {
-  var result = ''
-
-  var clean_part = url.path and !url.path.match('/@/')
-
-  result += url.scheme ? '${url.scheme}:' : ''
-  if !url.has_slash {
-    if !url.scheme and url.host and !url.username {
-      result += url.port or !url.path ? '' : (clean_part ? '/' : '')
-    }
-  } else {
-    result += '//'
-  }
-  result += url.username ? url.username : ''
-  result += url.password ? ':${url.password}' : ''
-  result += url.username ? '@' : ''
-  if url.host and url.host.index_of(':') != -1 {
-    # ipv6 address
-    result += '[' + url.host + ']'
-  } else {
-    result += url.host ? url.host.ltrim('/') : ''
-  }
-  
-  result += url.port and url.port != '0' ? ':' + url.port : ''
-  if !clean_part {
-    url.path = url.path.replace('/^\//', '+')
-  }
-  result += !url.path or url.path == '/' ? '' : url.path
-  result += url.query ? '?${url.query}' : ''
-  result += url.hash ? '#${url.hash}' : ''
-  return result
-}
-
-var encode_cache = {}
-def _get_encode_cache(exclude) {
-  var i, ch, cache = encode_cache.get(exclude)
-  if cache  return cache
-
-  cache = encode_cache[exclude] = []
-
-  iter i = 0; i < 128; i++ {
-    ch = chr(i)
-    if ch.match('/^[0-9a-z]$/i') {
-      #  always allow unencoded alphanumeric characters
-      cache.append(ch)
-    } else {
-      var cache_code = ('0' + decimal_to_hex(i).upper())
-      cache.append('%' + cache_code[cache_code.length() - 2,])
-    }
-  }
-  iter i = 0; i < exclude.length(); i++ {
-    cache[ord(exclude[i])] = exclude[i]
-  }
-  return cache
-}
-
-/**
- * Encode unsafe characters with percent-encoding, skipping already
- * encoded sequences.
- * 
- * @param {string} string: string to encode
- * @param {list|string} exclude: list of characters to ignore (in addition to a-zA-Z0-9)
- * @param {bool} keep_escaped: don't encode '%' in a correct escape sequence (default: true)
- * @return string
- */
-def encode_url(string, exclude, keep_escaped) {
-  var i = 0, l, code, nextCode, cache, result = ''
-  if !is_string(exclude) {
-    # encode(string, keep_escaped)
-    keep_escaped = exclude
-    exclude = ';/?:@&=+$,-_.!~*\'()#'
-  }
-  if keep_escaped == nil keep_escaped = true
-  
-  cache = _get_encode_cache(exclude)
-  
-  iter l = string.length(); i < l; i++ {
-    code = ord(string[i])
-    if keep_escaped and code == '%' and i + 2 < l {
-      if string[i + 1, i + 3].match('/^[0-9a-f]{2}$/i') {
-        result += string[i, i + 3]
-        i += 2
-        continue
-      }
-    }
-    if code < 128 {
-      result += cache[code]
-      continue
-    }
-    if code >= 55296 and code <= 57343 {
-      if code >= 55296 and code <= 56319 and i + 1 < l {
-        nextCode = ord(string[i + 1])
-        if nextCode >= 56320 and nextCode <= 57343 {
-          result += url.encode(string[i] + string[i + 1])
-          i++
-          continue
-        }
-      }
-      result += "%EF%BF%BD"
-      continue
-    }
-    result += url.encode(string[i])
-  }
-  
-  return result
-}
-
 def normalize_link(uri) {
-  var parsed = url.parse(uri)
-
-  if parsed.host {
-    # Encode hostnames in urls like:
-    # `http://host/`, `https://host/`, `mailto:user@host`, `//host/`
-    #
-    # We don't encode unknown schemas, because it's likely that we encode
-    # something we shouldn't (e.g. `skype:name` treated as `skype:host`)
-    if !parsed.scheme or RECODE_HOSTNAME_FOR.contains(parsed.scheme) {
-      parsed.host.ascii()
-    }
-  }
-
-  # return encode_url(parsed.absolute_url())
-  return encode_url(_md_format(parsed))
+  var normalized = utils.replace_entities(uri)
+  try {
+    normalized = url.decode(normalized)
+  } catch Exception {}
+  return url.encode(normalized, true)
 }
 
 def normalize_link_text(uri) {
-  var parsed = url.parse(uri)
+  var parsed = url.parse(uri, false)
 
   if parsed.host {
     # Encode hostnames in urls like:
@@ -175,12 +57,12 @@ def normalize_link_text(uri) {
     # We don't encode unknown schemas, because it's likely that we encode
     # something we shouldn't (e.g. `skype:name` treated as `skype:host`)
     if !parsed.scheme or RECODE_HOSTNAME_FOR.contains(parsed.scheme) {
-      parsed.host.ascii(false)
+      parsed.host.ascii()
     }
   }
 
   # return parsed.absolute_url()
-  return _md_format(parsed)
+  return parsed.to_string()
 }
 
 
@@ -407,8 +289,8 @@ class Markdown {
    * })
    * ```
    * 
-   * @param {string|nil} preset_name: `commonmark`, `standard` or `zero` (default: `standard`)
-   * @param {dict|nil} options
+   * @param {string?} preset_name: `commonmark`, `standard` or `zero` (default: `standard`)
+   * @param {dict?} options
    */
   Markdown(preset_name, options) {
     if !instance_of(self, Markdown) {
@@ -481,12 +363,12 @@ class Markdown {
     if presets.options self.set(presets.options)
 
     if presets.components {
-      iters.each(presets.components.keys(), @(name) {
-        if presets.components[name].get('rules') {
-          reflect.get_prop(self, name).ruler.enable_only(presets.components[name].rules)
+      presets.components.each(@(component, name) {
+        if component.get('rules') {
+          reflect.get_prop(self, name).ruler.enable_only(component.rules)
         }
-        if presets.components[name].get('rules2') {
-          reflect.get_prop(self, name).ruler2.enable_only(presets.components[name].rules2)
+        if component.get('rules2') {
+          reflect.get_prop(self, name).ruler2.enable_only(component.rules2)
         }
       })
     }
@@ -517,13 +399,13 @@ class Markdown {
 
     if !is_list(list) list = [ list ]
 
-    iters.each(_working_rules, @(chain) {
+    _working_rules.each(@(chain) {
       result += reflect.get_props(self, chain).ruler.enable(list, true)
     })
 
     result += self.inline.ruler2.enable(list, true)
 
-    var missed = iters.filter(list, @(name) { return result.index_of(name) < 0 })
+    var missed = list.filter(@(name) { return result.index_of(name) < 0 })
 
     if missed.length() and !ignore_invalid {
       die Exception('Failed to enable unknown rule(s): ' + missed)
@@ -544,13 +426,13 @@ class Markdown {
 
     if !is_list(list) list = [ list ]
 
-    iters.each(_working_rules, @(chain) {
+    _working_rules.each(@(chain) {
       result += reflect.get_prop(self, chain).ruler.disable(list, true)
     })
 
     result += self.inline.ruler2.disable(list, true)
 
-    var missed = iters.filter(list, @(name) { return result.index_of(name) < 0 })
+    var missed = list.filter(@(name) { return result.index_of(name) < 0 })
 
     if missed.length() and !ignore_invalid {
       die Exception('Failed to disable unknown rule(s): ' + missed)
@@ -602,7 +484,7 @@ class Markdown {
    */
   parse(src, env) {
     if !is_string(src) {
-      die Exception('Input data should be a String')
+      die Exception('string expected in argument 1 (src)')
     }
 
     var state = self.core.State(src, self, env)
@@ -620,7 +502,7 @@ class Markdown {
    * in [[Markdown.parse]].
    * 
    * @param {string} src: source string
-   * @param {object|nil} env: environment sandbox
+   * @param {object?} env: environment sandbox
    * @return string
    */
   render(src, env) {
@@ -635,11 +517,15 @@ class Markdown {
    * tokens in `children` property. Also updates `env` object.
    * 
    * @param {string} src: source string
-   * @param {object|nil} env: environment sandbox
+   * @param {object?} env: environment sandbox
    * @return list
    * @internal
    **/
   parse_inline(src, env) {
+    if !is_string(src) {
+      die Exception('string expected in argument 1 (src)')
+    }
+    
     var state = self.core.State(src, self, env)
 
     state.inline_mode = true
@@ -653,7 +539,7 @@ class Markdown {
    * will NOT be wrapped into `<p>` tags.
    * 
    * @param {string} src: source string
-   * @param {object|nil} env: environment sandbox
+   * @param {object?} env: environment sandbox
    * @return string
    */
   render_inline(src, env) {

@@ -16,7 +16,7 @@ import .server { * }
  * server(port: int, address: string)
  * 
  * Creates an new TLSServer instance.
- * @returns TLSServer
+ * @return TLSServer
  * @throws Exception, SocketExcepion, HttpException
  */
 def server(port, address) {

@@ -8,7 +8,7 @@ class CoreState {
     self.env = env
     self.tokens = []
     self.inline_mode = false
-    self.md = md; # link to parser instance
+    self.md = md # link to parser instance
   }
 
   # re-export Token class to use in core rules

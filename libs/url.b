@@ -56,7 +56,10 @@ class UrlMalformedException < Exception {
 
 # a list of schemes that does not conform to the standard ://
 # after the scheme name in their urls
-var _SIMPLE_SCHEMES = ['mailto', 'tel']
+var _SIMPLE_SCHEMES = [
+  'mailto', 'tel',  # lowercase
+  'MAILTO', 'TEL',  # uppercase
+]
 
 var _ipv6_regex = '/(?:^|(?<=\\s))(([0-9a-fA-F]{1,4}:)' +
   '{7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]' +
@@ -68,6 +71,8 @@ var _ipv6_regex = '/(?:^|(?<=\\s))(([0-9a-fA-F]{1,4}:)' +
   '{0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}' +
   '[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}' +
   '[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))(?=\\s|$)/'
+
+var _url_punctuations_re = '/^[\-._~:\/?#\[\]@!$&\'()*+,;%=]/'
 
 
 /**
@@ -132,10 +137,17 @@ class Url {
   var has_slash = false
 
   /**
-   * Url(scheme: string, host: string [, port: string [, path: string [, query: string [, hash: string [, username: string [, password: string]]]]]])
+   * `true` if the original url contains a path segement even if its just an `/` and false if the 
+   * path value of `/` was implied.
+   * @type bool
+   */
+  var empty_path = false
+
+  /**
+   * Url(scheme: string, host: string [, port: string [, path: string [, query: string [, hash: string [, username: string [, password: string, [, has_slash: bool [, empty_path: bool]]]]]]]])
    * @constructor 
    */
-  Url(scheme, host, port, path, query, hash, username, password, has_slash) {
+  Url(scheme, host, port, path, query, hash, username, password, has_slash, empty_path) {
     if scheme != nil and !is_string(scheme)
       die Exception('scheme must be a string')
     if host != nil and !is_string(host)
@@ -154,6 +166,8 @@ class Url {
       die Exception('password must be a string')
     if has_slash != nil and !is_bool(has_slash)
       die Exception('has_slash must be a boolean')
+    if empty_path != nil and !is_bool(empty_path)
+      die Exception('empty_path must be a boolean')
 
     if is_number(port) port = to_string(port)
 
@@ -166,6 +180,7 @@ class Url {
     self.username = username
     self.password = password
     self.has_slash = has_slash
+    self.empty_path = empty_path
   }
 
   /**
@@ -238,12 +253,10 @@ class Url {
    * @return string
    */
   absolute_url() {
-    var url = ''
+    var url = '${self.scheme}:'
 
-    if !_SIMPLE_SCHEMES.contains(self.scheme) {
-      url += self.scheme ? '${self.scheme}://' : (self.has_slash ? '://' : '/')
-    } else {
-      url += '${self.scheme}:'
+    if !_SIMPLE_SCHEMES.contains(self.scheme) or self.has_slash {
+      url += '//'
     }
 
     # build the username:password symbol
@@ -274,14 +287,54 @@ class Url {
       url += '?${self.query}'
     }
 
-    if self.host and self.path {
-      return url.rtrim('/')
-    } 
     return url
   }
 
+  /**
+   * to_string()
+   * 
+   * Returns a string representation of the url object. This will 
+   * only be the same as the absolute url if the original string is 
+   * an absolute url.
+   * 
+   * @return string
+   */
+  to_string() {
+    var result = ''
+    var has_colon = _SIMPLE_SCHEMES.contains(self.scheme.lower())
+
+    result += self.scheme or ''
+    result += self.has_slash ? '://' : (has_colon ? ':' : '')
+    
+    if self.username {
+      result += self.username
+      result += self.password ? ':' + self.password : ''
+      if self.host {
+        result += '@'
+      }
+    }
+
+    if self.host and self.host.index_of(':') != -1 {
+      # ipv6 address
+      result += '[' + self.host + ']'
+    } else {
+      result += self.host or ''
+    }
+
+    result += self.port ? ':' + self.port : ''
+    result += self.path and !self.empty_path ? self.path : ''
+
+    if self.query {
+      result += self.query ? '?' + self.query : ''
+    }
+
+    result += self.hash ? '#' + self.hash : ''
+
+    return result
+  }
+
   @to_string() {
-    return '<Url href=${self.absolute_url()}>'
+    return '<Url href=${self.to_string()}>'
   }
 
   @to_json() {
@@ -294,6 +347,8 @@ class Url {
       hash: self.hash,
       username: self.username,
       password: self.password,
+      has_slash: self.has_slash,
+      empty_path: self.empty_path,
     }
   }
 }
@@ -325,15 +380,18 @@ def encode(url, strict) {
     die Exception('boolean expected at parameter 2')
 
   var result = ''
+  url.ascii(true)
 
   for c in url {
     # keep alphanumeric and other accepted characters intact
-    if c.is_alnum() or c == '-' or c == '_' or c == '.' or c == '~'
+    if ';/?:@&=+$,#ABCDEFGHIJKLMNOPQRSTUVXYZ0123456789*-_.~()%'.index_of(c.upper()) != -1
       result += c
     # when not in strict mode
     else if !strict and c == ' ' result += '+'
     # encode all other characters
-    else result += '%${hex(ord(c))}'.upper()
+    else {
+      result += '%${hex(ord(c))}'.upper()
+    }
   }
 
   return result
@@ -353,7 +411,7 @@ def decode(url) {
     die Exception('string expected')
 
   # quick exit strategy
-  if url.index_of('%') > -1 return url
+  if url.index_of('%') == -1 return url
 
   var lookup_table = '0123456789abcdef'
 
@@ -371,7 +429,7 @@ def decode(url) {
     } 
     # + should be converted to space as most browsers
     # will encode space to + (non-strict Url.decode mode)
-    else if url[i] == '+' result += ' '
+    # else if url[i] == '+' result += ' '
     else result += url[i]
   }
 
@@ -379,17 +437,25 @@ def decode(url) {
 }
 
 /**
- * parse(url: string)
+ * parse(url: string [, strict: bool = true])
  *
- * parses given url string into a Url object
+ * Parses given url string into a Url object. If the strict argument is 
+ * set to `true`, the parser will raise an Exception when it encounters 
+ * a malformed url.
+ * 
  * @return Url
  */
-def parse(url) {
-  if !is_string(url) die Exception('string expected')
+def parse(url, strict) {
+  if !is_string(url) 
+    die Exception('string expected in argument 1 (url)')
+  if strict != nil and !is_bool(strict)
+    die Exception('boolean expected in argument 2 (strict)')
+    
+  if strict == nil strict = true
   url = url.trim() # support urls surrounded by whitespaces
 
-  var scheme, host, port, path = '/', query, hash, username, password
-  var skip_scheme = false, has_slash = false
+  var scheme = '', host = '', port, path = '', query, hash, username, password
+  var skip_scheme = false, has_slash = false, empty_path = false
 
   # following that most urls written without indicating the scheme
   # are usually http urls, default url scheme to http if none was given
@@ -404,7 +470,14 @@ def parse(url) {
     }
 
     if !match_found {
-      url = 'http://${url.ltrim("/")}'
+      # set temporary host value so that we don't have to scan for the 
+      # host anymore.
+      if url.trim().starts_with('/') {
+        host = ' '
+      }
+
+      url = url.ltrim('/')
+      scheme = 'http'
       skip_scheme = true
     }
   }
@@ -434,8 +507,10 @@ def parse(url) {
         # skipping // if scheme is nota simple scheme that does not use the //
         if !_SIMPLE_SCHEMES.contains(scheme) {
           # if the // is missing, it's a malformed url
-          if url[i,i+3] != '://' 
-            die UrlMalformedException('expected // at index ${i}')
+          if url[i,i+3] != '://' {
+            if strict die UrlMalformedException('expected // at index ${i}')
+            else break
+          }
           i += 2
           if !skip_scheme has_slash = true
         }
@@ -448,17 +523,23 @@ def parse(url) {
         # should accept uppercase letters as equivalent to lowercase in scheme
         # names (e.g., allow "HTTP" as well as "http") for the sake of robustness.
         # https://tools.ietf.org/html/rfc3986#section-3.1
-        if !scheme.match('/(?:^|[^a-z0-9.+-])([a-z][a-z0-9.+-]*)$/i')
-          die UrlMalformedException('invalid scheme')
+        if !scheme.match('/(?:^|[^a-z0-9.+-])([a-z][a-z0-9.+-]*)$/i') {
+          if strict die UrlMalformedException('invalid scheme')
+          else break
+        }
       } else if !port {
         # scan the port number
         _scan_port()
       }
     } else if !host and scheme {
+      if i < url.length() and url[i] == '/' {
+        path = '/'
+        continue
+      }
+
       # scan the host
-      host = ''
       while i < url.length() and (types.digit(url[i]) or types.alpha(url[i]) or 
-          url[i] == '.' or url[i] == '@' or url[i] == '-') {
+          url[i] == '.' or url[i] == '@' or url[i] == '-' or url[i] == '_' or url[i] == '+') {
         host += url[i]
         i++
       }
@@ -467,7 +548,7 @@ def parse(url) {
         if url.length() - 1 > i and (types.alpha(url[i + 1]) or url[i + 1] == '@') {
           # username password combo encountered...
           username = host
-          host = nil # we'll need to rescan for the host later...
+          host = '' # we'll need to rescan for the host later...
 
           password = ''
 
@@ -484,7 +565,8 @@ def parse(url) {
               # we read the entire url without a terminating @ sign...
               # something is wrong with this url and the url is definitely
               # malformed...
-              die UrlMalformedException('url not complete')
+              if strict die UrlMalformedException('url not complete')
+              else break
             }
 
             # we need to go back to @ to let host be scanned completely
@@ -507,7 +589,16 @@ def parse(url) {
       if i == url.length() - 1 and url[i] != '?' and url[i] != '#' {
         host += url[i]
       }
-    } else if path == '/' and host {
+
+      # we'll need to backtrack a a step to actually detect the next query and hash correctly.
+      if i > 0 and i < url.length() and url[i].match(_url_punctuations_re) {
+        i--
+      }
+
+      if host.ends_with('/') {
+        host = host[,-1]
+      }
+    } else if path == '' and host {
       # scan the address
 
       # the path is terminated by the first question mark ("?") or 
@@ -517,13 +608,30 @@ def parse(url) {
         i++
       }
 
+      if path == '' {
+        path = '/'
+        empty_path = true
+      }
+
       # the path cannot begin with two slash characters
       # https://tools.ietf.org/html/rfc3986#section-3.3
-      if path.starts_with('//') die UrlMalformedException('invalid path')
+      if path.starts_with('//') {
+        if strict die UrlMalformedException('invalid path')
+        else break
+      }
 
       # what should we parse next
       query_starts = i < url.length() and url[i] == '?'
       hash_starts = i < url.length() and url[i] == '#'
+
+      if !path.starts_with('/') and !path.starts_with('.') {
+        # if we haven't scanned everything in which case we'll take our path as is.
+        # path = host.trim() + path
+        # host = ''
+        if !path.matches(_url_punctuations_re) {
+          path = '/' + path
+        }
+      }
     } else if query_starts {
 
       if hash_starts {
@@ -533,7 +641,8 @@ def parse(url) {
         # but RFC 3986 doesn't allow this.
         # for this library, we are going strictly RFC 3986
         # https://tools.ietf.org/html/rfc3986#section-3.4
-        die UrlMalformedException('query not allowed at index ${i}')
+        if strict die UrlMalformedException('query not allowed at index ${i}')
+        else break
       }
 
       # scan the query
@@ -562,8 +671,8 @@ def parse(url) {
   }
 
   # reset scheme if it never existed in the original link
-  if skip_scheme scheme = nil
+  if skip_scheme scheme = ''
 
   # build a new Url instance and return
-  return Url(scheme, host, port, path, query, hash, username, password, has_slash)
+  return Url(scheme, host.trim(), port, path, query, hash, username, password, has_slash, empty_path)
 }

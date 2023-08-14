@@ -1,7 +1,5 @@
 #!-- part of the html module
 
-import iters
-
 def split_head(str, sep) {
   var idx = str.index_of(sep)
   if idx == -1 return [str]
@@ -19,7 +17,7 @@ def unquote(str) {
 }
 
 def format(nodes, options) {
-  return iters.map(nodes, | node | {
+  return nodes.map(@( node ) {
     var type = node.type
     var output_node = type == 'element' ? {
         type,
@@ -38,7 +36,7 @@ def format(nodes, options) {
 }
 
 def format_attributes(attributes) {
-  return iters.map(attributes, | attribute | {
+  return attributes.map(@( attribute ) {
     var parts = split_head(attribute.trim(), '=')
     var name = parts[0]
     var value

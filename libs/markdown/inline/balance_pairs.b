@@ -6,7 +6,7 @@ def _process_delimiters(delimiters) {
       openers_bottom = {},
       max = delimiters.length()
 
-  if !max return
+  if max <= 0 return
 
   # header_idx is the first delimiter of the current (where closer is) delimiter run
   var header_idx = 0

@@ -1104,8 +1104,12 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
     count++;
   if (count != 0) {
     char *chr = utf8_encode(value);
-    memcpy(string + index, chr, (size_t) count + 1);
-    free(chr);
+    if(chr) {
+      memcpy(string + index, chr, (size_t) count + 1);
+      free(chr);
+    } else {
+      error(p, "cannot decode unicode escape at index %d", real_index);
+    }
   }
   /* if (value > 65535) // but greater than \uffff doesn't occupy any extra byte
     count--; */
@@ -1114,6 +1118,7 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
 
 static char *compile_string(b_parser *p, int *length) {
   char *str = (char *) malloc((((size_t) p->previous.length - 2) + 1) * sizeof(char));
+  char quote = p->previous.start[0];
   char *real = (char *) p->previous.start + 1;
 
   int real_length = p->previous.length - 2, k = 0;
@@ -1129,10 +1134,12 @@ static char *compile_string(b_parser *p, int *length) {
           c = '$';
           break;
         case '\'':
-          c = '\'';
+          if(quote == '\'' || quote == '}') c = '\''; // } handle closing of interpolation.
+          else i--;
           break;
         case '"':
-          c = '"';
+          if(quote == '"' || quote == '}') c = '"';
+          else i--;
           break;
         case 'a':
           c = '\a';
@@ -2242,6 +2249,8 @@ static void import_statement(b_parser *p) {
   push(p->vm, OBJ_VAL(closure));
   emit_byte_and_short(p, OP_CALL_IMPORT, import_constant);
   pop(p->vm);
+
+  register_module__FILE__(p->vm, module);
 
   parse_specific_import(p, module_name, import_constant, was_renamed, false);
 }

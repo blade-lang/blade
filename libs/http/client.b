@@ -133,7 +133,7 @@ class HttpClient {
    * get(url: string)
    *
    * sends an Http GET request and returns an HttpResponse.
-   * @returns HttpResponse
+   * @return HttpResponse
    * @throws Exception, SocketExcepion, HttpException
    */
   get(url) {
@@ -144,7 +144,7 @@ class HttpClient {
    * post(url: string, [data: string | bytes])
    *
    * sends an Http POST request and returns an HttpResponse.
-   * @returns HttpResponse
+   * @return HttpResponse
    * @throws Exception, SocketExcepion, HttpException
    */
   post(url, data) {
@@ -155,7 +155,7 @@ class HttpClient {
    * put(url: string, [data: string | bytes])
    *
    * sends an Http PUT request and returns an HttpResponse.
-   * @returns HttpResponse
+   * @return HttpResponse
    * @throws Exception, SocketExcepion, HttpException
    */
   put(url, data) {
@@ -166,7 +166,7 @@ class HttpClient {
    * delete(url: string)
    *
    * sends an Http DELETE request and returns an HttpResponse.
-   * @returns HttpResponse
+   * @return HttpResponse
    * @throws Exception, SocketExcepion, HttpException
    */
   delete(url) {

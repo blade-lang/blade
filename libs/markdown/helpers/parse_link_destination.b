@@ -2,9 +2,10 @@
 
 import ..common.utils { unescape_all }
 
-def parse_link_destination(str, start, max) {
+def parse_link_destination(str, pos, max) {
   var code, level,
-      pos = start,
+      lines = 0,
+      start = pos,
       result = {
         ok: false,
         pos: 0,
@@ -77,3 +78,4 @@ def parse_link_destination(str, start, max) {
   return result
 }
 
+ 

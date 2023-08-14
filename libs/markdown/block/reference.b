@@ -182,7 +182,7 @@ def reference(state, start_line, _end_line, silent) {
   if !state.env.contains('references') {
     state.env.references = {}
   }
-  if !state.env.references.contains('label') {
+  if !state.env.references.contains(label) {
     state.env.references[label] = { title: title, href: href }
   }
 

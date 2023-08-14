@@ -10,7 +10,11 @@ var _rules = [
   [ 'escape',          inline.escape ],
   [ 'backticks',       inline.backticks ],
   [ 'strikethrough',   inline.strikethrough.tokenize ],
+  [ 'insert',          inline.insert.tokenize ],
+  [ 'mark',            inline.mark.tokenize ],
   [ 'emphasis',        inline.emphasis.tokenize ],
+  [ 'subscript',       inline.subscript ],
+  [ 'superscript',     inline.superscript ],
   [ 'link',            inline.link ],
   [ 'image',           inline.image ],
   [ 'autolink',        inline.autolink ],
@@ -25,6 +29,8 @@ var _rules = [
 var _rules2 = [
   [ 'balance_pairs',   inline.balance_pairs ],
   [ 'strikethrough',   inline.strikethrough.post_process ],
+  [ 'insert',          inline.insert.post_process ],
+  [ 'mark',            inline.mark.post_process ],
   [ 'emphasis',        inline.emphasis.post_process ],
   # rules for pairs separate '**' into its own text tokens, which may be left unused,
   # rule below merges unused segments back with the rest of the text
@@ -77,7 +83,7 @@ class InlineParser {
         max_nesting = state.md.options.max_nesting,
         cache = state.cache
 
-    if cache.contains(pos) {
+    if cache.get(pos) {
       state.pos = cache[pos]
       return
     }
@@ -109,7 +115,7 @@ class InlineParser {
       #       validation mode)
       state.pos = state.pos_max
     }
-    
+   
     if !ok state.pos++
     cache[pos] = state.pos
   }

@@ -384,11 +384,19 @@
 
 import os
 import json
-import iters
 import html
 import reflect
 import .functions as fns
 import .constants
+
+# create the default html config
+var void_tags = html.void_tags
+void_tags.append('include')
+
+var _default_html_config = {
+  with_position: true,
+  void_tags,
+}
 
 /**
  * Template string and file processing class.
@@ -471,13 +479,13 @@ class Template {
    * @constructor
    */
   Template(auto_init) {
-    if auto_init != nil and !is_boool(auto_init)
+    if auto_init != nil and !is_bool(auto_init)
       die Exception('boolean expected in argument 1 (auto_init)')
     self._auto_init = auto_init == nil ? false : auto_init
   }
 
   _get_attrs(attrs) {
-    return iters.reduce(attrs, @(dict, attr) {
+    return attrs.reduce(@(dict, attr) {
       dict.set(attr.name, attr.value)
       return dict
     }, {})
@@ -490,7 +498,7 @@ class Template {
 
   _strip_attr(element, ...) {
     var attrs = __args__
-    element.attributes = iters.filter(element.attributes, @(el) {
+    element.attributes = element.attributes.filter(@(el) {
       return !attrs.contains(el.name)
     })
   }
@@ -506,8 +514,8 @@ class Template {
           var final_var = variables[_vars[0]]
           iter var i = 1; i < _vars.length(); i++ {
             if is_dict(final_var) {
-              final_var = final_var[_vars[i].matches(constants.NUMBER_RE) ? 
-                to_number(_vars[i]) : _vars[i]]
+              final_var = final_var.get(_vars[i].matches(constants.NUMBER_RE) ? 
+                to_number(_vars[i]) : _vars[i], nil)
             } else if (is_list(final_var) or is_string(final_var)) and 
               _vars[i].matches(constants.NUMBER_RE) {
               final_var = final_var[to_number(_vars[i])]
@@ -601,11 +609,13 @@ class Template {
     if var_vars {
       # var_vars = json.decode(json.encode(var_vars))
       iter var i = 0; i < var_vars.variable.length(); i++ {
-        content = content.replace(
-          var_vars[0][i], 
-          to_string(self._extract_var(variables, var_vars.variable[i], error)), 
-          false
-        )
+        if var_vars[0][i] {
+          content = content.replace(
+            var_vars[0][i], 
+            to_string(self._extract_var(variables, var_vars.variable[i], error)), 
+            false
+          )
+        }
       }
     }
     
@@ -630,7 +640,7 @@ class Template {
     }
   
     if is_list(element) {
-      return iters.map(element, @(el) {
+      return element.map(@(el) {
         return self._process(path, el, variables)
       }).compact()
     }
@@ -638,7 +648,6 @@ class Template {
     if element.type == 'text' {
       # replace variables: {{var_name}}
       element.content = self._process(path, element.content, variables)
-      return element
     } else {
       var attrs = self._get_attrs(element.attributes)
   
@@ -649,17 +658,17 @@ class Template {
           if !attrs or !attrs.contains(constants.PATH_ATTR)
             error('missing "${constants.PATH_ATTR}" attribute for include tag')
   
-          var include_path = os.join_paths(self._root_dir, attrs.path)
+          var include_path = os.join_paths(self._root_dir, attrs[constants.PATH_ATTR])
           if !include_path.match(constants.EXT_RE) include_path += constants.DEFAULT_EXT
           var fl = file(include_path)
           if fl.exists() {
             element = self._process(
               include_path, 
-              html.decode(self._strip(fl.read()), {with_position: true}), 
+              html.decode(self._strip(fl.read()), _default_html_config), 
               variables
             )
           } else {
-            error('template "${attrs.path}" not found')
+            error('template "${attrs[constants.PATH_ATTR]}" not found')
           }
         } else if self._elements.contains(element.name) {
           # process custom elements
@@ -674,7 +683,7 @@ class Template {
             } else {
               element = self._process(
                 path, 
-                html.decode(self._strip(processed), {with_position: true}), 
+                html.decode(self._strip(processed), _default_html_config), 
                 variables
               )
             }
@@ -727,7 +736,7 @@ class Template {
         return result
       }
       
-      if element and element.contains('children') and element.children {
+      if is_dict(element) and element.get('children', nil) {
         element.children = self._process(path, element.children, variables)
       }
   
@@ -740,9 +749,9 @@ class Template {
           }
         }
       }
-  
-      return element
     }
+
+    return element
   }
 
   /**
@@ -904,7 +913,7 @@ class Template {
     return html.encode(
       self._process(
         path,
-        html.decode(self._strip(source), {with_position: true}),
+        html.decode(self._strip(source), _default_html_config),
         variables
       )
     ).trim()
@@ -940,8 +949,8 @@ class Template {
 
     # confirm/auto create root directory as configured
     if !os.dir_exists(self._root_dir) {
-      if !_auto_init 
-        die Exception('templates directory "${self._root_Dir}" not found.')
+      if !self._auto_init 
+        die Exception('templates directory "${self._root_dir}" not found.')
       else os.create_dir(self._root_dir)
     }
   

@@ -110,7 +110,7 @@ class SQLite3 {
    * * `0` if no insert statement has been executed or 
    * * A number greater than 0 if it succeeded
    * 
-   * @returns number
+   * @return number
    * @throws SQLiteException if database is not opened
    */
   last_insert_id() {

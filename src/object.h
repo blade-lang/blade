@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 typedef enum {
+  TYPE_ANONYMOUS,
   TYPE_FUNCTION,
   TYPE_METHOD,
   TYPE_INITIALIZER,
@@ -281,5 +282,17 @@ static inline bool is_std_file(b_obj_file *file) { return file->mode->length == 
   (type *)allocate_object(vm, sizeof(type), obj_type)
 
 b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type);
+
+#define ITER_TOOL_PREPARE() \
+  int arity = closure->function->arity; \
+  if(arity > 0) { \
+    write_list(vm, call_list, NIL_VAL); \
+    if(arity > 1) { \
+      write_list(vm, call_list, NIL_VAL); \
+      if(arity > 2) { \
+        write_list(vm, call_list, METHOD_OBJECT); \
+      } \
+    } \
+  }
 
 #endif

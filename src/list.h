@@ -55,7 +55,7 @@ DECLARE_LIST_METHOD(extend);
  * list.index_of(item: any)
  *
  * returns the index at which the item first occurred in the list
- * @returns -1 if not found
+ * @return -1 if not found
  */
 DECLARE_LIST_METHOD(index_of);
 
@@ -213,15 +213,63 @@ DECLARE_LIST_METHOD(to_dict);
 /**
  * list.@iter()
  *
- * implementing the iterable interface
+ * implementing the list interface
  */
 DECLARE_LIST_METHOD(__iter__);
 
 /**
  * list.@itern()
  *
- * implementing the iterable interface
+ * implementing the list interface
  */
 DECLARE_LIST_METHOD(__itern__);
+
+/**
+ * list.each()
+ *
+ * calls a callback function for each element in the list.
+ */
+DECLARE_LIST_METHOD(each);
+
+/**
+ * list.map()
+ *
+ * Creates a new list populated with the results of calling the provided
+ * callback on every element in the list.
+ */
+DECLARE_LIST_METHOD(map);
+
+/**
+ * list.filter()
+ *
+ * Creates a new list of same type that contains all elements that
+ * pass the test implemented by the provided function.
+ */
+DECLARE_LIST_METHOD(filter);
+
+/**
+ * list.reduce()
+ * 
+ * Executes a user-supplied "reducer" callback function on each element
+ * of the list in order, passing in the return value from the
+ * calculation on the preceding element.
+ */
+DECLARE_LIST_METHOD(reduce);
+
+/**
+ * list.some()
+ *
+ * Tests whether at least one element in the list passes the test
+ * implemented by the callback function.
+ */
+DECLARE_LIST_METHOD(some);
+
+/**
+ * list.every()
+ *
+ * Tests whether at all the element in the list passes the test
+ * implemented by the callback function.
+ */
+DECLARE_LIST_METHOD(every);
 
 #endif

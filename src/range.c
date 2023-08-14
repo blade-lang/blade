@@ -10,6 +10,11 @@ DECLARE_RANGE_METHOD(upper) {
   RETURN_NUMBER(AS_RANGE(METHOD_OBJECT)->upper);
 }
 
+DECLARE_RANGE_METHOD(range) {
+  ENFORCE_ARG_COUNT(range, 0);
+  RETURN_NUMBER(AS_RANGE(METHOD_OBJECT)->range);
+}
+
 DECLARE_RANGE_METHOD(__iter__) {
   ENFORCE_ARG_COUNT(__iter__, 1);
   ENFORCE_ARG_TYPE(__iter__, 0, IS_NUMBER);
@@ -47,4 +52,31 @@ DECLARE_RANGE_METHOD(__itern__) {
   }
 
   RETURN_NIL;
+}
+
+DECLARE_RANGE_METHOD(loop) {
+    ENFORCE_ARG_COUNT(loop, 1);
+    ENFORCE_ARG_TYPE(loop, 0, IS_CLOSURE);
+
+    b_obj_range *range = AS_RANGE(METHOD_OBJECT);
+    b_obj_closure *closure = AS_CLOSURE(args[0]);
+
+    b_obj_list *call_list = new_list(vm);
+    push(vm, OBJ_VAL(call_list));
+
+    ITER_TOOL_PREPARE();
+
+    for(int i = 0; i < range->range; i++) {
+      if(arity > 0) {
+        call_list->items.values[0] = NUMBER_VAL(i);
+        if(arity > 1) {
+          call_list->items.values[1] = NUMBER_VAL(i);
+        }
+      }
+
+      call_closure(vm, closure, call_list);
+    }
+
+    pop(vm); // pop the argument list
+    RETURN;
 }

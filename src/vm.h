@@ -26,13 +26,14 @@ typedef struct {
   uint8_t *ip;
   b_value *slots;
   int handlers_count;
+  int gc_protected;
   b_exception_frame handlers[MAX_EXCEPTION_HANDLERS];
 } b_call_frame;
 
 struct s_vm {
   b_call_frame frames[FRAMES_MAX];
   b_call_frame *current_frame;
-  int frame_count;
+  unsigned int frame_count;
 
   b_blob *blob;
   uint8_t *ip;
@@ -136,15 +137,16 @@ b_obj_instance *create_exception(b_vm *vm, b_obj_string *message);
 
 static inline b_obj *gc_protect(b_vm *vm, b_obj *object) {
   push(vm, OBJ_VAL(object));
-  vm->gc_protected++;
+  vm->frames[vm->frame_count > 0 ? vm->frame_count - 1 : 0].gc_protected++;
   return object;
 }
 
 static inline void gc_clear_protection(b_vm *vm) {
-  if (vm->gc_protected > 0) {
-    vm->stack_top -= vm->gc_protected;
+  b_call_frame *frame = &vm->frames[vm->frame_count > 0 ? vm->frame_count - 1 : 0];
+  if (frame->gc_protected > 0) {
+    vm->stack_top -= frame->gc_protected;
   }
-  vm->gc_protected = 0;
+  frame->gc_protected = 0;
 }
 
 // NOTE:
@@ -157,7 +159,8 @@ static inline void gc_clear_protection(b_vm *vm) {
 #define GC(o) gc_protect(vm, (b_obj*)(o))
 #define CLEAR_GC() gc_clear_protection(vm)
 
-bool call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args);
-b_ptr_result run(b_vm *vm);
+b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args);
+bool queue_closure(b_vm *vm, b_obj_closure *closure);
+void register_module__FILE__(b_vm *vm, b_obj_module *module);
 
 #endif

@@ -36,9 +36,11 @@ def is_valid_entity_code(c) {
   return true
 }
 
-var UNESCAPE_MD_RE  = '\\\\([!"#$%&\'()*+,\-.\/:;<=>?@[\\\\\]^_`{|}~])'
+var UNESCAPE_MD_RE  = '\\\\([\\\\!"#$%&\'()*+,.\\/:;<=>?@[\\]^_`{|}~-])'
 var ENTITY_RE       = '&([a-z#][a-z0-9]{1,31});'
 var UNESCAPE_ALL_RE = '/' + UNESCAPE_MD_RE + '|' + ENTITY_RE + '/si'
+var UNESCAPE_RE = '/\\\\([ \\\\!"#$%&\'()*+,.\/:;<=>?@[\]^_`{|}~-])/'
+var UNESCAPE_SPACE_RE = '/(^|[^\\\\])(\\\\\\\\)*\s/'
 
 var DIGITAL_ENTITY_TEST_RE = '/^#((?:x[a-f0-9]{1,8}|[0-9]{1,8}))$/i'
 
@@ -52,7 +54,7 @@ def replace_entity_pattern(match, name) {
   }
 
   if name[0] == '#' and name.match(DIGITAL_ENTITY_TEST_RE) {
-    code = name[1].lower() == 'x' ? name[2,] : name[1,]
+    code = to_number(name[1].lower() == 'x' ? '0' + name[1,] : name[1,])
 
     if is_valid_entity_code(code) {
       return chr(code)
@@ -63,25 +65,34 @@ def replace_entity_pattern(match, name) {
 }
 
 def unescape_md(str) {
-  if str.index_of('\\') < 0 return str
+  if !str.index_of('\\') return str
   return str.replace('/' + UNESCAPE_MD_RE + '/s', '$1')
 }
 
-def unescape_all(str) {
-  if str.index_of('\\') < 0 and str.index_of('&') < 0 return str
+/* def str_replace_fn(str, pattern, fn) {
+  var result = '', match, next_index = 0
 
-  var matches = str.matches(UNESCAPE_ALL_RE)
-  if matches {
-    iter var i = 0; i < matches[0].length(); i++ {
-      if matches[1].length() > i and matches[1][i] {
-        str = str.replace(matches[0][i], matches[1][i], false)
-      } else if matches[1].length() > i and matches[2].length() > i {
-        str = str.replace(matches[0][i], replace_entity_pattern(matches[0][i], matches[2][i]))
-      }
-    }
+  while match = str.match(pattern, next_index) {
+    var index = str[next_index,].index_of(match[0])
+    result += str[next_index, next_index + index]
+    next_index += index + match[0].length()
+
+    result += fn(match.to_list()[1])
   }
-  
-  return str
+  if next_index < str.length() {
+    result += str[next_index,]
+  }
+
+  return result
+} */
+
+def unescape_all(str) {
+  if !str.index_of('\\') and !str.index_of('&') return str
+
+  return str.replace_with(UNESCAPE_ALL_RE, @(match, escaped, entity) {
+    if escaped return escaped
+    return replace_entity_pattern(match, entity)
+  })
 }
 
 var HTML_ESCAPE_TEST_RE = '/[&<>"]/'
@@ -99,23 +110,14 @@ def replace_unsafe_char(ch) {
 
 def escape_html(str) {
   if str.match(HTML_ESCAPE_TEST_RE) {
-    var matches = str.matches(HTML_ESCAPE_REPLACE_RE)
-    var match_processed = []
-    if matches {
-      for match in matches[0] {
-        if !match_processed.contains(match) {
-          str = str.replace(match, HTML_REPLACEMENTS[match])
-          match_processed.append(match)
-        }
-      }
-    }
+    return str.replace_with(HTML_ESCAPE_REPLACE_RE, replace_unsafe_char)
   }
   return str
 }
 
 var REGEXP_ESCAPE_RE = '/[.?*+^$[\]\\\\(){}|-]/'
 
-def escape_rE(str) {
+def escape_re(str) {
   return str.replace(REGEXP_ESCAPE_RE, '\\$&')
 }
 
@@ -146,78 +148,66 @@ def is_white_space(code) {
   return false
 }
 
-var UNICODE_PUNCT_RE = '/[!-#%-\*,-\/:;\?@\[-\]_\{\}\xa1\xa7\xab\xb6\xb7' +
-  '\xbb\xbf\u037e\u0387\u055a-\u055f\u0589\u058a\u05be\u05c0\u05c3\u05c6' +
-  '\u05f3\u05f4\u0609\u060a\u060c\u060d\u061b\u061e\u061f\u066a-\u066d\u06d4' +
-  '\u0700-\u070d\u07f7-\u07f9\u0830-\u083e\u085e\u0964\u0965\u0970\u09fd\u0a76' +
-  '\u0af0\u0c84\u0df4\u0e4f\u0e5a\u0e5b\u0f04-\u0f12\u0f14\u0f3a-\u0f3d\u0f85' +
-  '\u0fd0-\u0fd4\u0fd9\u0fda\u104a-\u104f\u10fb\u1360-\u1368\u1400\u166d\u166e' +
-  '\u169b\u169c\u16eb-\u16ed\u1735\u1736\u17d4-\u17d6\u17d8-\u17da\u1800-\u180a' +
-  '\u1944\u1945\u1a1e\u1a1f\u1aa0-\u1aa6\u1aa8-\u1aad\u1b5a-\u1b60\u1bfc-\u1bff' +
-  '\u1c3b-\u1c3f\u1c7e\u1c7f\u1cc0-\u1cc7\u1cd3\u2010-\u2027\u2030-\u2043\u2045-' +
-  '\u2051\u2053-\u205e\u207d\u207e\u208d\u208e\u2308-\u230b\u2329\u232a\u2768-' +
-  '\u2775\u27c5\u27c6\u27e6-\u27ef\u2983-\u2998\u29d8-\u29db\u29fc\u29fd\u2cf9-' +
-  '\u2cfc\u2cfe\u2cff\u2d70\u2e00-\u2e2e\u2e30-\u2e4e\u3001-\u3003\u3008-\u3011' +
-  '\u3014-\u301f\u3030\u303d\u30a0\u30fb\ua4fe\ua4ff\ua60d-\ua60f\ua673\ua67e\ua6f2-' +
-  '\ua6f7\ua874-\ua877\ua8ce\ua8cf\ua8f8-\ua8fa\ua8fc\ua92e\ua92f\ua95f\ua9c1-\ua9cd' +
-  '\ua9de\ua9df\uaa5c-\uaa5f\uaade\uaadf\uaaf0\uaaf1\uabeb\ufd3e\ufd3f\ufe10-\ufe19' +
-  '\ufe30-\ufe52\ufe54-\ufe61\ufe63\ufe68\ufe6a\ufe6b\uff01-\uff03\uff05-\uff0a\uff0c-' +
-  '\uff0f\uff1a\uff1b\uff1f\uff20\uff3b-\uff3d\uff3f\uff5b\uff5d\uff5f-\uff65]|\ud800[' +
-  '\udd00-\udd02\udf9f\udfd0]|\ud801\udd6f|\ud802[\udc57\udd1f\udd3f\ude50-\ude58\ude7f' +
-  '\udef0-\udef6\udf39-\udf3f\udf99-\udf9c]|\ud803[\udf55-\udf59]|\ud804[\udc47-\udc4d' +
-  '\udcbb\udcbc\udcbe-\udcc1\udd40-\udd43\udd74\udd75\uddc5-\uddc8\uddcd\udddb\udddd-' +
-  '\udddf\ude38-\ude3d\udea9]|\ud805[\udc4b-\udc4f\udc5b\udc5d\udcc6\uddc1-\uddd7\ude41-' +
-  '\ude43\ude60-\ude6c\udf3c-\udf3e]|\ud806[\udc3b\ude3f-\ude46\ude9a-\ude9c\ude9e-\udea2]|' +
-  '\ud807[\udc41-\udc45\udc70\udc71\udef7\udef8]|\ud809[\udc70-\udc74]|\ud81a[\ude6e\ude6f' +
-  '\udef5\udf37-\udf3b\udf44]|\ud81b[\ude97-\ude9a]|\ud82f\udc9f|\ud836[\ude87-\ude8b]|' +
-  '\ud83a[\udd5e\udd5f]/'
+# TODO: Make this regex work!
+/* /[!-#%-\*,-\/:;\?@\[-\]_\{\}\xA1\xA7\xAB\xB6\xB7\xBB\xBF\u037E\u0387\u055A-\u055F\u0589\u058A\u05BE\u05C0\u05C3\u05C6\u05F3\u05F4\u0609\u060A\u060C\u060D\u061B\u061E\u061F\u066A-\u066D\u06D4\u0700-\u070D\u07F7-\u07F9\u0830-\u083E\u085E\u0964\u0965\u0970\u09FD\u0A76\u0AF0\u0C84\u0DF4\u0E4F\u0E5A\u0E5B\u0F04-\u0F12\u0F14\u0F3A-\u0F3D\u0F85\u0FD0-\u0FD4\u0FD9\u0FDA\u104A-\u104F\u10FB\u1360-\u1368\u1400\u166D\u166E\u169B\u169C\u16EB-\u16ED\u1735\u1736\u17D4-\u17D6\u17D8-\u17DA\u1800-\u180A\u1944\u1945\u1A1E\u1A1F\u1AA0-\u1AA6\u1AA8-\u1AAD\u1B5A-\u1B60\u1BFC-\u1BFF\u1C3B-\u1C3F\u1C7E\u1C7F\u1CC0-\u1CC7\u1CD3\u2010-\u2027\u2030-\u2043\u2045-\u2051\u2053-\u205E\u207D\u207E\u208D\u208E\u2308-\u230B\u2329\u232A\u2768-\u2775\u27C5\u27C6\u27E6-\u27EF\u2983-\u2998\u29D8-\u29DB\u29FC\u29FD\u2CF9-\u2CFC\u2CFE\u2CFF\u2D70\u2E00-\u2E2E\u2E30-\u2E4E\u3001-\u3003\u3008-\u3011\u3014-\u301F\u3030\u303D\u30A0\u30FB\uA4FE\uA4FF\uA60D-\uA60F\uA673\uA67E\uA6F2-\uA6F7\uA874-\uA877\uA8CE\uA8CF\uA8F8-\uA8FA\uA8FC\uA92E\uA92F\uA95F\uA9C1-\uA9CD\uA9DE\uA9DF\uAA5C-\uAA5F\uAADE\uAADF\uAAF0\uAAF1\uABEB\uFD3E\uFD3F\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE61\uFE63\uFE68\uFE6A\uFE6B\uFF01-\uFF03\uFF05-\uFF0A\uFF0C-\uFF0F\uFF1A\uFF1B\uFF1F\uFF20\uFF3B-\uFF3D\uFF3F\uFF5B\uFF5D\uFF5F-\uFF65]|\uD800[\uDD00-\uDD02\uDF9F\uDFD0]|\uD801\uDD6F|\uD802[\uDC57\uDD1F\uDD3F\uDE50-\uDE58\uDE7F\uDEF0-\uDEF6\uDF39-\uDF3F\uDF99-\uDF9C]|\uD803[\uDF55-\uDF59]|\uD804[\uDC47-\uDC4D\uDCBB\uDCBC\uDCBE-\uDCC1\uDD40-\uDD43\uDD74\uDD75\uDDC5-\uDDC8\uDDCD\uDDDB\uDDDD-\uDDDF\uDE38-\uDE3D\uDEA9]|\uD805[\uDC4B-\uDC4F\uDC5B\uDC5D\uDCC6\uDDC1-\uDDD7\uDE41-\uDE43\uDE60-\uDE6C\uDF3C-\uDF3E]|\uD806[\uDC3B\uDE3F-\uDE46\uDE9A-\uDE9C\uDE9E-\uDEA2]|\uD807[\uDC41-\uDC45\uDC70\uDC71\uDEF7\uDEF8]|\uD809[\uDC70-\uDC74]|\uD81A[\uDE6E\uDE6F\uDEF5\uDF37-\uDF3B\uDF44]|\uD81B[\uDE97-\uDE9A]|\uD82F\uDC9F|\uD836[\uDE87-\uDE8B]|\uD83A[\uDD5E\uDD5F]/ */
+
+# Currently without astral characters support.
+var UNICODE_PUNCT_RE = '/[!-#%-\*,-\/:;\?@\[-\]_\{\}]|\p{P}|\p{Pc}\p{Pd}|\p{Pe}|\p{Pf}|\p{Pi}|\p{Po}|\p{Ps}/u'
 
 # Currently without astral characters support.
 def is_punct_char(ch) {
   return ch.match(UNICODE_PUNCT_RE)
 }
 
+var _md_ascii_punct = [
+  '!', 0x21,
+  '"', 0x22,
+  '#', 0x23,
+  '$', 0x24,
+  '%', 0x25,
+  '&', 0x26,
+  '\'', 0x27,
+  '(', 0x28,
+  ')', 0x29,
+  '*', 0x2a,
+  '+', 0x2b,
+  ',', 0x2c,
+  '-', 0x2d,
+  '.', 0x2e,
+  '/', 0x2f,
+  ':', 0x3a,
+  ';', 0x3b,
+  '<', 0x3c,
+  '=', 0x3d,
+  '>', 0x3e,
+  '?', 0x3f,
+  '@', 0x40,
+  '[', 0x5b,
+  '\\', 0x5c,
+  ']', 0x5d,
+  '^', 0x5e,
+  '_', 0x5f,
+  '`', 0x60,
+  '{', 0x7b,
+  '|', 0x7c,
+  '}', 0x7d,
+  '~', 0x7e,
+]
+
 def is_md_ascii_punct(ch) {
-  if is_string(ch) ch = ord(ch)
-  using ch {
-    when  0x21, # !
-          0x22, # "
-          0x23, # #
-          0x24, # $
-          0x25, # %
-          0x26, # &
-          0x27, # '
-          0x28, # (
-          0x29, # )
-          0x2A, # *
-          0x2B, # +
-          0x2C, # ,
-          0x2D, # -
-          0x2E, # .
-          0x2F, # /
-          0x3A, # :
-          0x3B, # ;
-          0x3C, # <
-          0x3D, # =
-          0x3E, # >
-          0x3F, # ?
-          0x40, # @
-          0x5B, # [
-          0x5C, # \
-          0x5D, # ]
-          0x5E, # ^
-          0x5F, # _
-          0x60, # `
-          0x7B, # {
-          0x7C, # |
-          0x7D, # }
-          0x7E  # ~
-            return true
-    default return false
-  }
+  return _md_ascii_punct.contains(ch)
 }
 
 def normalize_reference(str) {
   # Trim and collapse whitespace
-  return str.trim().replace('/\s+/', ' ').upper()
+  #
+  return str.trim().replace('/\s+/', ' ').case_fold(true).upper()
+}
+
+
+var NAMED_RE   = '/^&([a-z][a-z0-9]{1,31});/i'
+
+def replace_entities(str) {
+  if str.index_of('&') < 0 return str
+  return str.replace_with(NAMED_RE, replace_entity_pattern)
 }

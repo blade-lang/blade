@@ -29,6 +29,14 @@ DECLARE_STRING_METHOD(upper);
 DECLARE_STRING_METHOD(lower);
 
 /**
+ * string.case_fold([is_full])
+ *
+ * Does UTF-8 Case folding on the string. If is_bool is set to true, it will do a
+ * full case fold. Otherwise, it will do a simple case fold.
+ */
+DECLARE_STRING_METHOD(case_fold);
+
+/**
  * string.is_alpha()
  *
  * returns true if the string contains only alphabets
@@ -206,6 +214,8 @@ DECLARE_STRING_METHOD(matches);
  */
 DECLARE_STRING_METHOD(replace);
 
+DECLARE_STRING_METHOD(replace_with);
+
 /**
  * string.to_bytes()
  *
@@ -221,17 +231,10 @@ DECLARE_STRING_METHOD(to_bytes);
 DECLARE_STRING_METHOD(ascii);
 
 /**
- * string.@iter()
- *
- * implementing the iterable interface
+ * See list.h
  */
 DECLARE_STRING_METHOD(__iter__);
-
-/**
- * string.@itern()
- *
- * implementing the iterable interface
- */
 DECLARE_STRING_METHOD(__itern__);
+DECLARE_STRING_METHOD(each);
 
 #endif

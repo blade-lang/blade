@@ -20,18 +20,25 @@ DECLARE_RANGE_METHOD(lower);
  * returns the upper limit of the range
  */
 DECLARE_RANGE_METHOD(upper);
-/**
- * range.@iter()
- *
- * implementing the iterable interface
- */
-DECLARE_RANGE_METHOD(__iter__);
 
 /**
- * range.@itern()
- *
- * implementing the iterable interface
+ * See list.h
  */
+DECLARE_RANGE_METHOD(__iter__);
 DECLARE_RANGE_METHOD(__itern__);
+
+/**
+ * range.loop()
+ *
+ * calls a callback function for the range times.
+ */
+DECLARE_RANGE_METHOD(loop);
+
+/**
+ * range.range()
+ *
+ * returns the range value.
+ */
+DECLARE_RANGE_METHOD(range);
 
 #endif

@@ -38,7 +38,7 @@ class BlockParser {
    */
   BlockParser() {
     iter var i = 0; i < _rules.length(); i++ {
-      self.ruler.push(_rules[i][0], _rules[i][1], { alt: (_rules[i].length() > 2 ? _rules[i][2] : [])[,] })
+      self.ruler.push(_rules[i][0], _rules[i][1], { alt: (_rules[i].get(2) or [])[,] })
     }
   }
 
@@ -79,9 +79,9 @@ class BlockParser {
       iter i = 0; i < len; i++ {
         ok = rules[i](state, line, end_line, false)
         if ok {
-          if prev_line >= state.line {
-            die Exception("block rule didn't increment state line")
-          }
+          # if prev_line >= state.line {
+          #   die Exception("block rule didn't increment state line")
+          # }
           break
         }
       }

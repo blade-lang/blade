@@ -1,6 +1,7 @@
 #include "bstring.h"
 #include "utf8.h"
 #include "native.h"
+#include "debug.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -140,6 +141,21 @@ DECLARE_STRING_METHOD(lower) {
   b_obj_string *str = AS_STRING(METHOD_OBJECT);
   char *string = utf8_tolower(str->chars, str->utf8_length);
   RETURN_TT_STRING(string);
+}
+
+DECLARE_STRING_METHOD(case_fold) {
+  ENFORCE_ARG_RANGE(case_fold, 0, 1);
+
+  bool is_full = false;
+  if(arg_count == 1) {
+    ENFORCE_ARG_TYPE(case_fold, 0, IS_BOOL);
+    is_full = AS_BOOL(args[0]);
+  }
+
+  b_obj_string *str = AS_STRING(METHOD_OBJECT);
+  size_t out_length;
+  char *string = utf8_case_fold(str->chars, str->utf8_length, !is_full, &out_length);
+  RETURN_T_STRING(string, out_length);
 }
 
 DECLARE_STRING_METHOD(is_alpha) {
@@ -419,44 +435,6 @@ DECLARE_STRING_METHOD(join) {
   RETURN_ERROR("join() does not support object of type %s", value_type(argument));
 }
 
-/*DECLARE_STRING_METHOD(split) {
-  ENFORCE_ARG_COUNT(split, 1);
-  ENFORCE_ARG_TYPE(split, 0, IS_STRING);
-
-  b_obj_string *object = AS_STRING(METHOD_OBJECT);
-  b_obj_string *delimeter = AS_STRING(args[0]);
-
-  if (object->length == 0 || delimeter->length > object->length) RETURN_OBJ(new_list(vm));
-
-  b_obj_list *list = (b_obj_list *) GC(new_list(vm));
-
-  // main work here...
-  if (delimeter->length > 0) {
-    int start = 0;
-    for(int i = 0; i <= object->length; i++) {
-      // match found.
-      if(memcmp(object->chars + i, delimeter->chars, delimeter->length) == 0 || i == object->length) {
-        write_list(vm, list, STRING_L_VAL(object->chars + start, i - start));
-        i += delimeter->length - 1;
-        start = i + 1;
-      }
-    }
-  } else {
-    int length = object->is_ascii ? object->length : object->utf8_length;
-    for (int i = 0; i < length; i++) {
-
-      int start = i, end = i + 1;
-      if(!object->is_ascii) {
-        utf8slice(object->chars, &start, &end);
-      }
-
-      write_list(vm, list, STRING_L_VAL(object->chars + start, (int) (end - start)));
-    }
-  }
-
-  RETURN_OBJ(list);
-}*/
-
 DECLARE_STRING_METHOD(index_of) {
   ENFORCE_ARG_RANGE(index_of, 1, 2);
   ENFORCE_ARG_TYPE(index_of, 0, IS_STRING);
@@ -658,13 +636,15 @@ DECLARE_STRING_METHOD(match) {
 
   if (string->length == 0 && substr->length == 0) {
     RETURN_TRUE;
-  } else if (string->length == 0 || substr->length == 0 || start_offset >= (PCRE2_SIZE)string->length) {
-    RETURN_FALSE;
   }
 
   GET_REGEX_COMPILE_OPTIONS(substr, false);
 
   if ((int) compile_options < 0) {
+    if (string->length == 0 || substr->length == 0 || start_offset >= (PCRE2_SIZE)string->length) {
+      RETURN_FALSE;
+    }
+
     RETURN_BOOL(strstr(string->chars, substr->chars) - string->chars > -1);
   }
 
@@ -755,11 +735,15 @@ DECLARE_STRING_METHOD(matches) {
 
   if (string->length == 0 && substr->length == 0) {
     RETURN_OBJ(new_list(vm)); // empty string matches empty string to empty list
-  } else if (string->length == 0 || substr->length == 0 || start_offset >= (PCRE2_SIZE)string->length) {
-    RETURN_FALSE; // if either string or str is empty, return false
   }
 
   GET_REGEX_COMPILE_OPTIONS(substr, true);
+
+  if(compile_options == -1) {
+    if (string->length == 0 || substr->length == 0 || start_offset >= (PCRE2_SIZE)string->length) {
+      RETURN_FALSE; // if either string or str is empty, return false
+    }
+  }
 
   char *real_regex = remove_regex_delimiter(vm, substr);
 
@@ -1166,7 +1150,7 @@ DECLARE_STRING_METHOD(replace) {
   PCRE2_SIZE error_offset;
 
   pcre2_code *re = pcre2_compile(pattern, PCRE2_ZERO_TERMINATED,
-                                 compile_options & PCRE2_MULTILINE,
+                                 compile_options | PCRE2_MULTILINE,
                                  &error_number, &error_offset, 0);
   free(real_regex);
 
@@ -1210,6 +1194,152 @@ DECLARE_STRING_METHOD(replace) {
   RETURN_OBJ(response);
 }
 
+DECLARE_STRING_METHOD(replace_with) {
+#define _INVALID_REGEX_ERROR "replace_with() requires a valid regex"
+
+  ENFORCE_ARG_COUNT(replace_with, 2);
+  ENFORCE_ARG_TYPE(replace_with, 0, IS_STRING);
+  ENFORCE_ARG_TYPE(replace_with, 1, IS_CLOSURE);
+  PCRE2_SIZE start_offset = 0;
+
+  b_obj_string *string = AS_STRING(METHOD_OBJECT);
+  b_obj_string *pattern_string = AS_STRING(args[0]);
+  b_obj_closure *replacer = AS_CLOSURE(args[1]);
+
+  if (string->length == 0 && pattern_string->length == 0) {
+    RETURN_VALUE(METHOD_OBJECT);
+  }
+
+  if(pattern_string->length == 0) {
+    RETURN_ERROR(_INVALID_REGEX_ERROR);
+  }
+
+  GET_REGEX_COMPILE_OPTIONS(pattern_string, false);
+
+  if ((int) compile_options < 0) {
+    RETURN_ERROR(_INVALID_REGEX_ERROR);
+  }
+
+  char *real_regex = remove_regex_delimiter(vm, pattern_string);
+
+  int error_number;
+  int rc;
+  PCRE2_SIZE error_offset;
+
+  PCRE2_SPTR pattern = (PCRE2_SPTR) real_regex;
+  PCRE2_SPTR subject = (PCRE2_SPTR) string->chars;
+  PCRE2_SIZE subject_length = (PCRE2_SIZE) string->length;
+
+  pcre2_code *re =
+      pcre2_compile(pattern, PCRE2_ZERO_TERMINATED, compile_options,
+                    &error_number, &error_offset, NULL);
+  free(real_regex);
+
+  REGEX_COMPILATION_ERROR(re, error_number, error_offset);
+
+  pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(re, NULL);
+  char *result = calloc(1, sizeof(char));
+
+  do {
+    rc = pcre2_match(re, subject, subject_length, start_offset, 0, match_data, NULL);
+
+    if (rc < 0) {
+      if (rc == PCRE2_ERROR_NOMATCH) {
+        break;
+      } else {
+        pcre2_match_data_free(match_data);
+        pcre2_code_free(re);
+        REGEX_RC_ERROR();
+      }
+    }
+
+    PCRE2_SIZE *o_vector = pcre2_get_ovector_pointer(match_data);
+
+    uint32_t name_count;
+    (void) pcre2_pattern_info(re, PCRE2_INFO_NAMECOUNT, &name_count);
+
+    b_obj_list *call_args = (b_obj_list *)GC(new_list(vm));
+    int call_args_count = 0;
+
+    size_t index = 0, sub_length = 0;
+    for (int i = 0; i < rc && i < replacer->function->arity; i++) {
+      PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
+      PCRE2_SPTR substring_start = subject + o_vector[2 * i];
+      write_list(vm, call_args, STRING_L_VAL((char *) substring_start, (int) substring_length));
+      call_args_count++;
+
+      // next start index should be based on the entire match length.
+      if(i == 0) {
+        index = substring_start - subject;
+        sub_length = substring_length;
+      }
+    }
+
+    if (name_count > 0) {
+      uint32_t name_entry_size;
+      PCRE2_SPTR name_table;
+      PCRE2_SPTR tab_ptr;
+      (void) pcre2_pattern_info(re, PCRE2_INFO_NAMETABLE, &name_table);
+      (void) pcre2_pattern_info(re, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
+
+      tab_ptr = name_table;
+
+      for (int i = 0; i < (int) name_count && call_args_count < replacer->function->arity; i++) {
+        int n = (tab_ptr[0] << 8) | tab_ptr[1];
+
+        int value_length = (int) (o_vector[2 * n + 1] - o_vector[2 * n]);
+        int key_length = (int) name_entry_size - 3;
+
+        char* _key = (char *)(tab_ptr + 2);
+        char* _value = (char *)(subject + o_vector[2 * n]);
+        while(_key[key_length - 1] == 0) key_length--;
+
+        write_list(vm, call_args, STRING_L_VAL(_value, value_length));
+        tab_ptr += name_entry_size;
+        call_args_count++;
+      }
+    }
+
+    // offset
+    if(call_args_count < replacer->function->arity) {
+      write_list(vm, call_args, NUMBER_VAL(index));
+      call_args_count++;
+    }
+
+    // src
+    if(call_args_count < replacer->function->arity) {
+      write_list(vm, call_args, METHOD_OBJECT);
+      call_args_count++;
+    }
+
+    // call the function
+    b_value call_result = call_closure(vm, replacer, call_args);
+
+    if(!IS_STRING(call_result)) {
+      RETURN_ERROR("replace_with() function returned non-string");
+    }
+
+    if(index > start_offset) {
+      result = append_strings_n(result, string->chars + start_offset, index - start_offset);
+    }
+    start_offset = index + sub_length;
+
+    b_obj_string *result_string = AS_STRING(call_result);
+    result = append_strings_n(result, result_string->chars, result_string->length);
+  } while(true);
+
+  if(start_offset < string->length) {
+    result = append_strings_n(result, string->chars + start_offset, string->length - start_offset);
+  }
+
+  pcre2_match_data_free(match_data);
+  pcre2_code_free(re);
+
+  RETURN_TT_STRING(result);
+
+#undef _INVALID_REGEX_ERROR
+}
+
 DECLARE_STRING_METHOD(to_bytes) {
   ENFORCE_ARG_COUNT(to_bytes, 0);
   b_obj_string *string = AS_STRING(METHOD_OBJECT);
@@ -1230,12 +1360,18 @@ DECLARE_STRING_METHOD(__iter__) {
   int index = AS_NUMBER(args[0]);
 
   if (index > -1 && index < length) {
-    int start = index, end = index + 1;
     if(!string->is_ascii) {
-      utf8slice(string->chars, &start, &end);
-    }
+      int start = index, end = index + 1;
+      if(!string->is_ascii) {
+        utf8slice(string->chars, &start, &end);
+      }
 
-    RETURN_L_STRING(string->chars + start, (int) (end - start));
+      RETURN_L_STRING(string->chars + start, (int) (end - start));
+    } else {
+      b_obj_string *result = copy_string(vm, &string->chars[index], 1);
+      result->is_ascii = true;
+      RETURN_OBJ(result);
+    }
   }
 
   RETURN_NIL;
@@ -1254,7 +1390,7 @@ DECLARE_STRING_METHOD(__itern__) {
   }
 
   if (!IS_NUMBER(args[0])) {
-    RETURN_ERROR("bytes are numerically indexed");
+    RETURN_ERROR("strings are numerically indexed");
   }
 
   int index = AS_NUMBER(args[0]);
@@ -1263,4 +1399,39 @@ DECLARE_STRING_METHOD(__itern__) {
   }
 
   RETURN_NIL;
+}
+
+DECLARE_STRING_METHOD(each) {
+    ENFORCE_ARG_COUNT(each, 1);
+    ENFORCE_ARG_TYPE(each, 0, IS_CLOSURE);
+
+    b_obj_string *string = AS_STRING(METHOD_OBJECT);
+    b_obj_closure *closure = AS_CLOSURE(args[0]);
+
+    b_obj_list *call_list = new_list(vm);
+    push(vm, OBJ_VAL(call_list));
+
+    ITER_TOOL_PREPARE();
+
+    for(int i = 0; i < string->utf8_length; i++) {
+      if(arity > 0) {
+
+        if(!string->is_ascii) {
+          int start = i, end = i + 1;
+          utf8slice(string->chars, &start, &end);
+          call_list->items.values[0] = STRING_L_VAL(string->chars + start, end - start);
+        } else {
+          call_list->items.values[0] = STRING_L_VAL(string->chars + i, 1);
+        }
+
+        if(arity > 1) {
+          call_list->items.values[1] = NUMBER_VAL(i);
+        }
+      }
+
+      call_closure(vm, closure, call_list);
+    }
+
+    pop(vm); // pop the argument list
+    RETURN;
 }

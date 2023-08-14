@@ -11,20 +11,17 @@ class InlineState {
    * 
    * @type dict
    */
-  var cache = {}
+  var cache
 
   /**
    * List of emphasis-like delimiters for current tag.
    * 
    * @type list
    */
-  var delimiters = []
-
-  # Stack of delimiter lists for upper level tags
-  var _prev_delimiters = []
+  var delimiters
 
   # backtick length => last seen position
-  var backticks = {}
+  var backticks
   var backticks_scanned = false
 
   /**
@@ -36,7 +33,6 @@ class InlineState {
   var link_level = 0
 
   var level = 0
-  var pending = ''
   var pending_level = 0
   var pos = 0
 
@@ -50,6 +46,15 @@ class InlineState {
     self.tokens = out_tokens
     self.tokens_meta = [nil] * out_tokens.length()
     self.pos_max = self.src.length()
+    self.pending = ''
+
+    # Stack of delimiter lists for upper level tags
+    self._prev_delimiters = []
+
+    # needs to be overwritten for every new instance.
+    self.cache = {}
+    self.backticks = {}
+    self.delimiters = []
   }
 
   /**
@@ -110,7 +115,7 @@ class InlineState {
   scan_delims(start, can_split_word) {
     var pos = start, last_char, nextChar, count, can_open, can_close,
         is_last_white_space, is_last_punct_char,
-        is_nextWhite_space, is_nextPunct_char,
+        is_next_white_space, is_next_punct_char,
         left_flanking = true,
         right_flanking = true,
         max = self.pos_max,
@@ -122,19 +127,19 @@ class InlineState {
     while pos < max and self.src[pos] == marker pos++
   
     count = pos - start
-  
+
     # treat end of the line as a whitespace
     nextChar = pos < max ? self.src[pos] : ' '
   
     is_last_punct_char = is_md_ascii_punct(last_char) or is_punct_char(last_char)
-    is_nextPunct_char = is_md_ascii_punct(nextChar) or is_punct_char(nextChar)
-  
+    is_next_punct_char = is_md_ascii_punct(nextChar) or is_punct_char(nextChar)
+ 
     is_last_white_space = is_white_space(last_char)
-    is_nextWhite_space = is_white_space(nextChar)
+    is_next_white_space = is_white_space(nextChar)
   
-    if is_nextWhite_space {
+    if is_next_white_space {
       left_flanking = false
-    } else if is_nextPunct_char {
+    } else if is_next_punct_char {
       if !(is_last_white_space or is_last_punct_char) {
         left_flanking = false
       }
@@ -143,14 +148,14 @@ class InlineState {
     if is_last_white_space {
       right_flanking = false
     } else if is_last_punct_char {
-      if !(is_nextWhite_space or is_nextPunct_char) {
+      if !(is_next_white_space or is_next_punct_char) {
         right_flanking = false
       }
     }
   
     if !can_split_word {
       can_open  = left_flanking  and (!right_flanking or is_last_punct_char)
-      can_close = right_flanking and (!left_flanking  or is_nextPunct_char)
+      can_close = right_flanking and (!left_flanking  or is_next_punct_char)
     } else {
       can_open  = left_flanking
       can_close = right_flanking

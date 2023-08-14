@@ -37,7 +37,7 @@ def _skip_ordered_list_marker(state, start_line) {
 
   ch = state.src[pos++ - 1]
 
-  if ord(ch) < ord('0') or ord(ch) > ord('9') return -1
+  if ord(ch) < 0x30 /* 0 */ or ord(ch) > 0x39 /* 9 */ return -1
 
   iter ;; {
     # EOL -> fail
@@ -45,7 +45,7 @@ def _skip_ordered_list_marker(state, start_line) {
 
     ch = state.src[pos++ - 1]
 
-    if ord(ch) >= ord('0') and ord(ch) <= ord('9') {
+    if ord(ch) >= 0x30 and ord(ch) <= 0x39 {
 
       # List marker should have no more than 9 digits
       # (prevents integer overflow in browsers)

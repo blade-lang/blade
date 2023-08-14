@@ -2053,6 +2053,690 @@ bool utf8_isupper(int c) {
   }
 }
 
+int utf8_simple_case_fold(int c) {
+  switch (c) {
+    case 0x1E9E: return 0x00DF;
+    case 0x1F88: return 0x1F80;
+    case 0x1F89: return 0x1F81;
+    case 0x1F8A: return 0x1F82;
+    case 0x1F8B: return 0x1F83;
+    case 0x1F8C: return 0x1F84;
+    case 0x1F8D: return 0x1F85;
+    case 0x1F8E: return 0x1F86;
+    case 0x1F8F: return 0x1F87;
+    case 0x1F98: return 0x1F90;
+    case 0x1F99: return 0x1F91;
+    case 0x1F9A: return 0x1F92;
+    case 0x1F9B: return 0x1F93;
+    case 0x1F9C: return 0x1F94;
+    case 0x1F9D: return 0x1F95;
+    case 0x1F9E: return 0x1F96;
+    case 0x1F9F: return 0x1F97;
+    case 0x1FA8: return 0x1FA0;
+    case 0x1FA9: return 0x1FA1;
+    case 0x1FAA: return 0x1FA2;
+    case 0x1FAB: return 0x1FA3;
+    case 0x1FAC: return 0x1FA4;
+    case 0x1FAD: return 0x1FA5;
+    case 0x1FAE: return 0x1FA6;
+    case 0x1FAF: return 0x1FA7;
+    case 0x1FBC: return 0x1FB3;
+    case 0x1FCC: return 0x1FC3;
+    case 0x1FFC: return 0x1FF3;
+    default: return c;
+  }
+}
+
+void utf8_full_case_fold(int c, int *data) {
+  switch (c) {
+    case 0x00DF: {
+      data[0] = 0x0073;
+      data[1] = 0x0073;
+      data[2] = 0;
+      break;
+    }
+    case 0x0130: {
+      data[0] = 0x0069;
+      data[1] = 0x0307;
+      data[2] = 0;
+      break;
+    }
+    case 0x0149: {
+      data[0] = 0x02BC;
+      data[1] = 0x006E;
+      data[2] = 0;
+      break;
+    }
+    case 0x01F0: {
+      data[0] = 0x006A;
+      data[1] = 0x030C;
+      data[2] = 0;
+      break;
+    }
+    case 0x0390: {
+      data[0] = 0x03B9;
+      data[1] = 0x0308;
+      data[2] = 0x0301;
+      data[3] = 0;
+      break;
+    }
+    case 0x03B0: {
+      data[0] = 0x03C5;
+      data[1] = 0x0308;
+      data[2] = 0x0301;
+      data[3] = 0;
+      break;
+    }
+    case 0x0587: {
+      data[0] = 0x0565;
+      data[1] = 0x0582;
+      data[2] = 0;
+      break;
+    }
+    case 0x1E96: {
+      data[0] = 0x0068;
+      data[1] = 0x0331;
+      data[2] = 0;
+      break;
+    }
+    case 0x1E97: {
+      data[0] = 0x0074;
+      data[1] = 0x0308;
+      data[2] = 0;
+      break;
+    }
+    case 0x1E98: {
+      data[0] = 0x0077;
+      data[1] = 0x030A;
+      data[2] = 0;
+      break;
+    }
+    case 0x1E99: {
+      data[0] = 0x0079;
+      data[1] = 0x030A;
+      data[2] = 0;
+      break;
+    }
+    case 0x1E9A: {
+      data[0] = 0x0061;
+      data[1] = 0x02BE;
+      data[2] = 0;
+      break;
+    }
+    case 0x1E9E: {
+      data[0] = 0x0073;
+      data[1] = 0x0073;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F50: {
+      data[0] = 0x03C5;
+      data[1] = 0x0313;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F52: {
+      data[0] = 0x03C5;
+      data[1] = 0x0313;
+      data[2] = 0x0300;
+      data[3] = 0;
+      break;
+    }
+    case 0x1F54: {
+      data[0] = 0x03C5;
+      data[1] = 0x0313;
+      data[2] = 0x0301;
+      data[3] = 0;
+      break;
+    }
+    case 0x1F56: {
+      data[0] = 0x03C5;
+      data[1] = 0x0313;
+      data[2] = 0x0342;
+      data[3] = 0;
+      break;
+    }
+    case 0x1F80: {
+      data[0] = 0x1F00;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F81: {
+      data[0] = 0x1F01;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F82: {
+      data[0] = 0x1F02;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F83: {
+      data[0] = 0x1F03;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F84: {
+      data[0] = 0x1F04;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F85: {
+      data[0] = 0x1F05;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F86: {
+      data[0] = 0x1F06;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F87: {
+      data[0] = 0x1F07;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F88: {
+      data[0] = 0x1F00;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F89: {
+      data[0] = 0x1F01;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F8A: {
+      data[0] = 0x1F02;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F8B: {
+      data[0] = 0x1F03;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F8C: {
+      data[0] = 0x1F04;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F8D: {
+      data[0] = 0x1F05;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F8E: {
+      data[0] = 0x1F06;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F8F: {
+      data[0] = 0x1F07;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F90: {
+      data[0] = 0x1F20;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F91: {
+      data[0] = 0x1F21;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F92: {
+      data[0] = 0x1F22;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F93: {
+      data[0] = 0x1F23;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F94: {
+      data[0] = 0x1F24;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F95: {
+      data[0] = 0x1F25;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F96: {
+      data[0] = 0x1F26;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F97: {
+      data[0] = 0x1F27;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F98: {
+      data[0] = 0x1F20;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F99: {
+      data[0] = 0x1F21;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F9A: {
+      data[0] = 0x1F22;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F9B: {
+      data[0] = 0x1F23;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F9C: {
+      data[0] = 0x1F24;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F9D: {
+      data[0] = 0x1F25;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F9E: {
+      data[0] = 0x1F26;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1F9F: {
+      data[0] = 0x1F27;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FA0: {
+      data[0] = 0x1F60;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FA1: {
+      data[0] = 0x1F61;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FA2: {
+      data[0] = 0x1F62;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FA3: {
+      data[0] = 0x1F63;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FA4: {
+      data[0] = 0x1F64;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FA5: {
+      data[0] = 0x1F65;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FA6: {
+      data[0] = 0x1F66;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FA7: {
+      data[0] = 0x1F67;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FA8: {
+      data[0] = 0x1F60;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FA9: {
+      data[0] = 0x1F61;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FAA: {
+      data[0] = 0x1F62;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FAB: {
+      data[0] = 0x1F63;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FAC: {
+      data[0] = 0x1F64;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FAD: {
+      data[0] = 0x1F65;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FAE: {
+      data[0] = 0x1F66;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FAF: {
+      data[0] = 0x1F67;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FB2: {
+      data[0] = 0x1F70;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FB3: {
+      data[0] = 0x03B1;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FB4: {
+      data[0] = 0x03AC;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FB6: {
+      data[0] = 0x03B1;
+      data[1] = 0x0342;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FB7: {
+      data[0] = 0x03B1;
+      data[1] = 0x0342;
+      data[2] = 0x03B9;
+      data[3] = 0;
+      break;
+    }
+    case 0x1FBC: {
+      data[0] = 0x03B1;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FC2: {
+      data[0] = 0x1F74;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FC3: {
+      data[0] = 0x03B7;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FC4: {
+      data[0] = 0x03AE;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FC6: {
+      data[0] = 0x03B7;
+      data[1] = 0x0342;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FC7: {
+      data[0] = 0x03B7;
+      data[1] = 0x0342;
+      data[2] = 0x03B9;
+      data[3] = 0;
+      break;
+    }
+    case 0x1FCC: {
+      data[0] = 0x03B7;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FD2: {
+      data[0] = 0x03B9;
+      data[1] = 0x0308;
+      data[2] = 0x0300;
+      data[3] = 0;
+      break;
+    }
+    case 0x1FD3: {
+      data[0] = 0x03B9;
+      data[1] = 0x0308;
+      data[2] = 0x0301;
+      data[3] = 0;
+      break;
+    }
+    case 0x1FD6: {
+      data[0] = 0x03B9;
+      data[1] = 0x0342;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FD7: {
+      data[0] = 0x03B9;
+      data[1] = 0x0308;
+      data[2] = 0x0342;
+      data[3] = 0;
+      break;
+    }
+    case 0x1FE2: {
+      data[0] = 0x03C5;
+      data[1] = 0x0308;
+      data[2] = 0x0300;
+      data[3] = 0;
+      break;
+    }
+    case 0x1FE3: {
+      data[0] = 0x03C5;
+      data[1] = 0x0308;
+      data[2] = 0x0301;
+      data[3] = 0;
+      break;
+    }
+    case 0x1FE4: {
+      data[0] = 0x03C1;
+      data[1] = 0x0313;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FE6: {
+      data[0] = 0x03C5;
+      data[1] = 0x0342;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FE7: {
+      data[0] = 0x03C5;
+      data[1] = 0x0308;
+      data[2] = 0x0342;
+      data[3] = 0;
+      break;
+    }
+    case 0x1FF2: {
+      data[0] = 0x1F7C;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FF3: {
+      data[0] = 0x03C9;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FF4: {
+      data[0] = 0x03CE;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FF6: {
+      data[0] = 0x03C9;
+      data[1] = 0x0342;
+      data[2] = 0;
+      break;
+    }
+    case 0x1FF7: {
+      data[0] = 0x03C9;
+      data[1] = 0x0342;
+      data[2] = 0x03B9;
+      data[3] = 0;
+      break;
+    }
+    case 0x1FFC: {
+      data[0] = 0x03C9;
+      data[1] = 0x03B9;
+      data[2] = 0;
+      break;
+    }
+    case 0xFB00: {
+      data[0] = 0x0066;
+      data[1] = 0x0066;
+      data[2] = 0;
+      break;
+    }
+    case 0xFB01: {
+      data[0] = 0x0066;
+      data[1] = 0x0069;
+      data[2] = 0;
+      break;
+    }
+    case 0xFB02: {
+      data[0] = 0x0066;
+      data[1] = 0x006C;
+      data[2] = 0;
+      break;
+    }
+    case 0xFB03: {
+      data[0] = 0x0066;
+      data[1] = 0x0066;
+      data[2] = 0x0069;
+      data[3] = 0;
+      break;
+    }
+    case 0xFB04: {
+      data[0] = 0x0066;
+      data[1] = 0x0066;
+      data[2] = 0x006C;
+      data[3] = 0;
+      break;
+    }
+    case 0xFB05: {
+      data[0] = 0x0073;
+      data[1] = 0x0074;
+      data[2] = 0;
+      break;
+    }
+    case 0xFB06: {
+      data[0] = 0x0073;
+      data[1] = 0x0074;
+      data[2] = 0;
+      break;
+    }
+    case 0xFB13: {
+      data[0] = 0x0574;
+      data[1] = 0x0576;
+      data[2] = 0;
+      break;
+    }
+    case 0xFB14: {
+      data[0] = 0x0574;
+      data[1] = 0x0565;
+      data[2] = 0;
+      break;
+    }
+    case 0xFB15: {
+      data[0] = 0x0574;
+      data[1] = 0x056B;
+      data[2] = 0;
+      break;
+    }
+    case 0xFB16: {
+      data[0] = 0x057E;
+      data[1] = 0x0576;
+      data[2] = 0;
+      break;
+    }
+    case 0xFB17: {
+      data[0] = 0x0574;
+      data[1] = 0x056D;
+      data[2] = 0;
+      break;
+    }
+    default: {
+      data[0] = c;
+      data[1] = 0;
+      break;
+    }
+  }
+}
+
 int utf8_get_lower(int c) {
   int g = utf8_upper_to_lower_rules[c].val;
   if(g == 0) return c;
@@ -2285,4 +2969,52 @@ char *utf8_tolower(char *s, int length) {
   }
 
   return result;
+}
+
+char *utf8_case_fold(char *str, int str_len, bool simple, size_t *out_length) {
+  char *s = utf8_tolower(str, str_len);
+  if(s) {
+    size_t length = utf8length(s);
+
+    char *result = calloc(1, sizeof(char));
+    if (result) {
+      if (simple) {
+        for (int i = 0; i < length; i++) {
+          int start = i, end = i + 1;
+          utf8slice(s, &start, &end);
+          int as_num = utf8_decode((uint8_t *) (s + start), end - start);
+
+          int fold_value = utf8_simple_case_fold(as_num);
+
+          char *data = utf8_encode(fold_value);
+          result = append_strings(result, data);
+          free(data);
+        }
+
+        *out_length = strlen(result);
+      } else {
+        int case_fold_data[4] = {0, 0, 0, 0};
+
+        for (int i = 0; i < length; i++) {
+          int start = i, end = i + 1;
+          utf8slice(s, &start, &end);
+          int as_num = utf8_decode((uint8_t *) (s + start), end - start);
+
+          utf8_full_case_fold(as_num, case_fold_data);
+
+          for (int j = 0; case_fold_data[j] != 0; j++) {
+            char *data = utf8_encode(case_fold_data[j]);
+            result = append_strings(result, data);
+            free(data);
+          }
+        }
+
+        *out_length = strlen(result);
+      }
+    }
+
+    return result;
+  }
+
+  return s;
 }

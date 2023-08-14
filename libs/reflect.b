@@ -321,7 +321,7 @@ def get_address(value) {
  * ptr_from_address(address: number)
  * 
  * Returns a pointer to the given memory address.
- * @returns ptr
+ * @return ptr
  */
 def ptr_from_address(address) {
   return _reflect.ptrfromaddress(address)
@@ -356,9 +356,7 @@ def run_script(path) {
   var content = fh.read()
 
   # for now, returing the call without assigning to a variable is failing.
-  # TODO: Fix this...
-  var res = _reflect.runscript(path, content)
-  return res
+  _reflect.runscript(path,  content)
 }
 
 /**
@@ -366,7 +364,7 @@ def run_script(path) {
  * 
  * Calls a function with the given arguments.
  * 
- * @returns any
+ * @return any
  */
 def call_function(function, args) {
   return _reflect.callfunction(function, args)

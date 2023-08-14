@@ -12,7 +12,7 @@
 
 Blade is a modern general-purpose programming language focused on enterprise Web, IoT, and secure application development. Blade offers a comprehensive set of tools and libraries out of the box leading to reduced reliance on third-party packages. 
 
-Blade comes equipped with an integrated package management system, simplifying the management of both internal and external dependencies. Its intuitive syntax and gentle learning curve ensure an accessible experience for developers of all skill levels. Leveraging the best features from JavaScript, Python, and Ruby, Blade provides a familiar and robust ecosystem that enables developers to harness the strengths of these languages effortlessly.
+Blade comes equipped with an integrated package management system, simplifying the management of both internal and external dependencies and a self-hostable repository server making it ideal for private organizational and personal use. Its intuitive syntax and gentle learning curve ensure an accessible experience for developers of all skill levels. Leveraging the best features from JavaScript, Python, Ruby, and Dart, Blade provides a familiar and robust ecosystem that enables developers to harness the strengths of these languages effortlessly.
 
 ## Example
 
@@ -38,19 +38,19 @@ server.listen()
 - **Zero-dependency full-stack web development**: Blade comes with a built-in web server and a rich set of tools and libraries that support it, making it easy to build composable full-stack web applications out of the box:
   - Built-in Model-View-Template (MVT) based HTTP web server.
   - Built-in testing framework.
-  - Built-in Object Relation Mapping support.
+  - Built-in Object Relation Mapping support &mdash; Planned!
   - Built-in support for multiple databases.
   - Built-in web template engine &mdash; `Wire`.
   - Built-in routing library.
   - Built-in mail library with SMTP, IMAP, and POP3 support.
-  - Built-in device integrations (such as support for COM/Ports, USB, etc.).
+  - Built-in device integrations (such as support for COM/Ports, USB, etc.) &mdash; Planned!
   - Built-in cryptography library.
-  - Built-in support for media processing (Image, audio, video, etc.).
+  - Built-in support for media processing (Image, audio, video, etc.) &mdash; Planned!
   - And more.
 - **Function promotion**: A feature of the Blade language that makes it easy to reuse any code from an imported module.
 - **Access modifiers**: Unlike JavaScript and Python, Blade supports access modifiers for variables, properties, functions, classes, modules, etc.
 - **Decorator functions**: Decorator functions are a set of class methods in Blade that makes extending the functionality of existing code super easy.
-- **Easy to extend with C modules**: Blade supports external extensions built in C with a built-in extension compiler. This feature makes it easy to extend language features with C modules.
+- **Easy to extend with C modules**: Blade supports external extensions built in C with a built-in extension compiler via `Nyssa`. This feature makes it easy to extend language features with C modules.
 
 ## Showcase of other uses
 
@@ -79,7 +79,7 @@ API documentation for Blade is under active development and can be found at [bla
 
 ## Contributing
 
-The Blade community is as friendly and welcoming as possible. All kinds of contributions like pull requests, suggestions, typo fixes in documentation, feature request, bug reports, and others are highly appreciated. Please refer to the [Contributing](./CONTRIBUTING.md) guide for more information.
+We need your help to make Blade great! The Blade community is as friendly and welcoming as possible. All kinds of contributions like pull requests, suggestions, typo fixes in documentation, feature request, bug reports, and others are highly appreciated. Please refer to the [Contributing](./CONTRIBUTING.md) guide for more information.
 
 ## License
 

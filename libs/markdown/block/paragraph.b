@@ -19,8 +19,8 @@ def paragraph(state, start_line, end_line, silent) {
 
     # Some tags can terminate paragraph without empty line.
     terminate = false
-    i = 0
-    iter l = terminator_rules.length(); i < l; i++ {
+    l = terminator_rules.length()
+    iter i = 0; i < l; i++ {
       if terminator_rules[i](state, nextLine, end_line, true) {
         terminate = true
         break

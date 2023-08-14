@@ -305,7 +305,7 @@ DECLARE_LIST_METHOD(get) {
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
   int index = AS_NUMBER(args[0]);
   if (index < 0 || index >= list->items.count) {
-    RETURN_ERROR("list index %d out of range at get()", index);
+    RETURN_NIL;
   }
 
   RETURN_VALUE(list->items.values[index]);
@@ -458,4 +458,228 @@ DECLARE_LIST_METHOD(__itern__) {
   }
 
   RETURN_NIL;
+}
+
+DECLARE_LIST_METHOD(each) {
+  ENFORCE_ARG_COUNT(each, 1);
+  ENFORCE_ARG_TYPE(each, 0, IS_CLOSURE);
+
+  b_obj_list *list = AS_LIST(METHOD_OBJECT);
+  b_obj_closure *closure = AS_CLOSURE(args[0]);
+
+  b_obj_list *call_list = new_list(vm);
+  push(vm, OBJ_VAL(call_list));
+
+  ITER_TOOL_PREPARE();
+
+  for(int i = 0; i < list->items.count; i++) {
+    if(arity > 0) {
+      call_list->items.values[0] = list->items.values[i];
+      if(arity > 1) {
+        call_list->items.values[1] = NUMBER_VAL(i);
+      }
+    }
+
+    call_closure(vm, closure, call_list);
+  }
+
+  pop(vm); // pop the argument list
+  RETURN;
+}
+
+DECLARE_LIST_METHOD(map) {
+  ENFORCE_ARG_COUNT(map, 1);
+  ENFORCE_ARG_TYPE(map, 0, IS_CLOSURE);
+
+  b_obj_list *list = AS_LIST(METHOD_OBJECT);
+  b_obj_closure *closure = AS_CLOSURE(args[0]);
+
+  b_obj_list *call_list = new_list(vm);
+  push(vm, OBJ_VAL(call_list));
+
+  ITER_TOOL_PREPARE();
+
+  b_obj_list *result_list = (b_obj_list *)GC(new_list(vm));
+
+  for(int i = 0; i < list->items.count; i++) {
+    // only call map for non-empty values in a list.
+    if(!IS_EMPTY(list->items.values[i])) {
+      if(arity > 0) {
+        call_list->items.values[0] = list->items.values[i];
+        if(arity > 1) {
+          call_list->items.values[1] = NUMBER_VAL(i);
+        }
+      }
+
+      write_list(vm, result_list, call_closure(vm, closure, call_list));
+    } else {
+      write_list(vm, result_list, EMPTY_VAL);
+    }
+  }
+
+  pop(vm); // pop the call list
+  RETURN_OBJ(result_list);
+}
+
+DECLARE_LIST_METHOD(filter) {
+  ENFORCE_ARG_COUNT(filter, 1);
+  ENFORCE_ARG_TYPE(filter, 0, IS_CLOSURE);
+
+  b_obj_list *list = AS_LIST(METHOD_OBJECT);
+  b_obj_closure *closure = AS_CLOSURE(args[0]);
+
+  b_obj_list *call_list = new_list(vm);
+  push(vm, OBJ_VAL(call_list));
+
+  ITER_TOOL_PREPARE();
+
+  b_obj_list *result_list = (b_obj_list *)GC(new_list(vm));
+
+  for(int i = 0; i < list->items.count; i++) {
+    // only call map for non-empty values in a list.
+    if(!IS_EMPTY(list->items.values[i])) {
+      if(arity > 0) {
+        call_list->items.values[0] = list->items.values[i];
+        if(arity > 1) {
+          call_list->items.values[1] = NUMBER_VAL(i);
+        }
+      }
+
+      b_value result = call_closure(vm, closure, call_list);
+      if(!is_false(result)) {
+        write_list(vm, result_list, list->items.values[i]);
+      }
+    }
+  }
+
+  pop(vm); // pop the call list
+  RETURN_OBJ(result_list);
+}
+
+DECLARE_LIST_METHOD(some) {
+  ENFORCE_ARG_COUNT(some, 1);
+  ENFORCE_ARG_TYPE(some, 0, IS_CLOSURE);
+
+  b_obj_list *list = AS_LIST(METHOD_OBJECT);
+  b_obj_closure *closure = AS_CLOSURE(args[0]);
+
+  b_obj_list *call_list = new_list(vm);
+  push(vm, OBJ_VAL(call_list));
+
+  ITER_TOOL_PREPARE();
+
+  for(int i = 0; i < list->items.count; i++) {
+    // only call map for non-empty values in a list.
+    if(!IS_EMPTY(list->items.values[i])) {
+      if(arity > 0) {
+        call_list->items.values[0] = list->items.values[i];
+        if(arity > 1) {
+          call_list->items.values[1] = NUMBER_VAL(i);
+        }
+      }
+
+      b_value result = call_closure(vm, closure, call_list);
+      if(!is_false(result)) {
+        pop(vm); // pop the call list
+        RETURN_TRUE;
+      }
+    }
+  }
+
+  pop(vm); // pop the call list
+  RETURN_FALSE;
+}
+
+DECLARE_LIST_METHOD(every) {
+  ENFORCE_ARG_COUNT(every, 1);
+  ENFORCE_ARG_TYPE(every, 0, IS_CLOSURE);
+
+  b_obj_list *list = AS_LIST(METHOD_OBJECT);
+  b_obj_closure *closure = AS_CLOSURE(args[0]);
+
+  b_obj_list *call_list = new_list(vm);
+  push(vm, OBJ_VAL(call_list));
+
+  ITER_TOOL_PREPARE();
+
+  for(int i = 0; i < list->items.count; i++) {
+    // only call map for non-empty values in a list.
+    if(!IS_EMPTY(list->items.values[i])) {
+      if(arity > 0) {
+        call_list->items.values[0] = list->items.values[i];
+        if(arity > 1) {
+          call_list->items.values[1] = NUMBER_VAL(i);
+        }
+      }
+
+      b_value result = call_closure(vm, closure, call_list);
+      if(is_false(result)) {
+        pop(vm); // pop the call list
+        RETURN_FALSE;
+      }
+    }
+  }
+
+  pop(vm); // pop the call list
+  RETURN_TRUE;
+}
+
+DECLARE_LIST_METHOD(reduce) {
+  ENFORCE_ARG_RANGE(reduce, 1, 2);
+  ENFORCE_ARG_TYPE(reduce, 0, IS_CLOSURE);
+
+  b_obj_list *list = AS_LIST(METHOD_OBJECT);
+  b_obj_closure *closure = AS_CLOSURE(args[0]);
+
+  int start_index = 0;
+
+  b_value accumulator = NIL_VAL;
+  if(arg_count == 2) {
+    accumulator = args[1];
+  }
+
+  if(IS_NIL(accumulator) && list->items.count > 0) {
+    accumulator = list->items.values[0];
+    start_index = 1;
+  }
+
+  b_obj_list *call_list = new_list(vm);
+  push(vm, OBJ_VAL(call_list));
+
+  int arity = closure->function->arity;
+  if(arity > 0) {
+    write_list(vm, call_list, NIL_VAL); // accumulator
+    if(arity > 1) {
+      write_list(vm, call_list, NIL_VAL); // value
+      if(arity > 2) {
+        write_list(vm, call_list, NIL_VAL); // key
+        if(arity > 3) {
+          write_list(vm, call_list, METHOD_OBJECT); // list
+        }
+      }
+    }
+  }
+
+  for(int i = start_index; i < list->items.count; i++) {
+    // only call map for non-empty values in a list.
+    if(!IS_NIL(list->items.values[i]) && !IS_EMPTY(list->items.values[i])) {
+      if(arity > 0) {
+        call_list->items.values[0] = accumulator;
+        if(arity > 1) {
+          call_list->items.values[1] = list->items.values[i];
+          if(arity > 2) {
+            call_list->items.values[2] = NUMBER_VAL(i);
+            if(arity > 4) {
+              call_list->items.values[3] = METHOD_OBJECT;
+            }
+          }
+        }
+      }
+
+      accumulator = call_closure(vm, closure, call_list);
+    }
+  }
+
+  pop(vm); // pop the call list
+  RETURN_VALUE(accumulator);
 }

@@ -161,7 +161,7 @@ class BlockState {
     return pos
   }
   
-  get_lines(begin, end, indent, keep_last_lF) {
+  get_lines(begin, end, indent, keep_last_LF) {
     var i, line_indent, ch, first, last, queue, line_start,
         line = begin
   
@@ -175,7 +175,7 @@ class BlockState {
       line_indent = 0
       line_start = first = self.b_marks[line]
   
-      if line + 1 < end or keep_last_lF {
+      if line + 1 < end or keep_last_LF {
         # No need for bounds check because we have fake entry on tail.
         last = self.e_marks[line] + 1
       } else {

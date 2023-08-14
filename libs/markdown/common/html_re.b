@@ -24,4 +24,4 @@ var LINKS_FULL_RE = '/^${_LINK_RE}\$/i'
 
 var HTML_TAG_RE = '/^(?:' + _open_tag + '|' + _close_tag + '|' + _comment +
                         '|' + _processing + '|' + _declaration + '|' + _cdata + ')/'
-var HTML_OPEN_CLOSE_TAG_RE = '/^(?:' + _open_tag + '|' + _close_tag + ')/'
+var HTML_OPEN_CLOSE_TAG_RE = '^(?:' + _open_tag + '|' + _close_tag + ')'

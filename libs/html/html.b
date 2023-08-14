@@ -1,9 +1,7 @@
 #!-- part of the html module
 
-import iters
-
 def format_attributes(attributes) {
-  return iters.reduce(attributes, | attrs, attribute | {
+  return attributes.reduce(@( attrs, attribute ) {
     if (attribute.value == nil) {
       return '${attrs} ${attribute.name}'
     }
@@ -18,16 +16,18 @@ def html(tree, options) {
   var res = ''
   if tree {
     for node in tree {
-      if is_list(node) {
-        res += html(node, options)
-      } else  if (node.type == 'text') {
-        res += node.content
-      } else if (node.type == 'comment') {
-        res += '<!--${node.content}-->'
-      } else  {  
-      var is_self_closing = options.void_tags.contains(node.name.lower())
-      res += is_self_closing ? '<${node.name}${format_attributes(node.attributes)}>' : 
-        '<${node.name}${format_attributes(node.attributes)}>${html(node.children, options)}</${node.name}>'
+      if node {
+        if is_list(node) {
+          res += html(node, options)
+        } else  if (node.type == 'text') {
+          res += node.content
+        } else if (node.type == 'comment') {
+          res += '<!--${node.content}-->'
+        } else  {  
+          var is_self_closing = options.void_tags.contains(node.name.lower())
+          res += is_self_closing ? '<${node.name}${format_attributes(node.attributes)}>' : 
+            '<${node.name}${format_attributes(node.attributes)}>${html(node.children, options)}</${node.name}>'
+        }
       }
     }
   }

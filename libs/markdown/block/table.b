@@ -37,10 +37,11 @@ def _escaped_split(str) {
     is_escaped = ch == '\\'
     pos++
 
-    if pos < max ch = str[pos]
+    # using a slice so we can avoid error due to unknown index
+    ch = str[pos, pos + 1]
   }
 
-  result.append(current + (last_pos < str.length() ? str[last_pos,] : ''))
+  result.append(current + str[last_pos,])
 
   return result
 }
@@ -196,7 +197,7 @@ def table(state, start_line, end_line, silent) {
       }
 
       token          = state.push('inline', '', 0)
-      token.content  = columns[i] ? columns[i].trim() : ''
+      token.content  = columns.get(i) ? columns.get(i).trim() : ''
       token.children = []
 
       token          = state.push('td_close', 'td', -1)

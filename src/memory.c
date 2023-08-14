@@ -17,7 +17,9 @@ void *c_allocate(b_vm *vm, size_t size, size_t length) {
   vm->bytes_allocated += length;
 
   if (vm->bytes_allocated > vm->next_gc) {
-    collect_garbage(vm);
+    if(vm->current_frame && vm->current_frame->gc_protected == 0) {
+      collect_garbage(vm);
+    }
   }
 
   if (size == 0) {
@@ -36,7 +38,9 @@ void *allocate(b_vm *vm, size_t size) {
   vm->bytes_allocated += size;
 
   if (vm->bytes_allocated > vm->next_gc) {
-    collect_garbage(vm);
+    if(vm->current_frame && vm->current_frame->gc_protected == 0) {
+      collect_garbage(vm);
+    }
   }
 
   if (size == 0) {
@@ -55,7 +59,9 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
   vm->bytes_allocated += new_size - old_size;
 
   if (new_size > old_size && vm->bytes_allocated > vm->next_gc) {
-    collect_garbage(vm);
+    if(vm->current_frame && vm->current_frame->gc_protected == 0) {
+      collect_garbage(vm);
+    }
   }
 
   if (new_size == 0) {
