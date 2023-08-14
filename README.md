@@ -23,9 +23,8 @@ import http
 import json
 
 var server = http.server(3000)
-server.on_receive(@(request, response) {
-  response.headers['Content-Type'] = 'application/json'
-  response.write(json.encode(request))
+server.handle('GET', '/', @(req, res) {
+  res.json(request)
 })
 
 echo 'Listening on Port 3000...'
