@@ -17,7 +17,7 @@ def setup_cli(name, base_path, cli_path) {
       '\n'+ 
       'BLADE_EXE=`which blade`\n' +
       '\n' +
-      'exec $BLADE_EXE "${cli_path}" "$@"\n'
+      'exec "$BLADE_EXE" "${cli_path}" "$@"\n'
   } else {
 
     cmd = '@ECHO OFF\r\n' +
@@ -43,7 +43,7 @@ def setup_cli(name, base_path, cli_path) {
       '\r\n' +
       ':RUN\r\n' +
       '\r\n' +
-      '%BLADE_EXE% "${cli_path}" %*\r\n' +
+      '"%BLADE_EXE%" "${cli_path}" %*\r\n' +
       'EXIT /B 0\r\n'
   }
 
