@@ -20,11 +20,10 @@ The following code implements a simple backend API that runs on port 3000:
 
 ```js
 import http
-import json
 
 var server = http.server(3000)
 server.handle('GET', '/', @(req, res) {
-  res.json(request)
+  res.json(req)
 })
 
 echo 'Listening on Port 3000...'
