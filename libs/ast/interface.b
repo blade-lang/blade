@@ -36,7 +36,7 @@ class ParseResult {
    * length()
    * 
    * Returns the length of items in the parsed result.
-   * @returns number
+   * @return number
    */
   length() {
     return self._results.length()
@@ -46,7 +46,7 @@ class ParseResult {
    * get(index: int)
    * 
    * Returns the item at the given ParseResult index or throws exception if out of range.
-   * @returns Ast
+   * @return Ast
    */
   get(index) {
     if index >= 0 and index < self.length()
@@ -58,7 +58,7 @@ class ParseResult {
    * to_list()
    * 
    * Returns the items in the ParseResult as a list object.
-   * @returns List<Ast>
+   * @return List<Ast>
    */
   to_list() {
     return self._results

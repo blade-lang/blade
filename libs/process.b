@@ -8,16 +8,16 @@
 # Example Usage:
 # 
 # ```blade
-# var shared = SharedValue()
+# var paged = PagedValue()
 # 
 # var pr = Process(@(p, s) {
 #   echo 'It works!'
 #   echo p.id()
 #   s.set({name: 'Richard', age: 3.142})
-# }, shared)
+# }, paged)
 # 
-# pr.on_complete(||{
-#   echo shared.get()
+# pr.on_complete(@(){
+#   echo paged.get()
 # })
 # 
 # pr.start()
@@ -51,10 +51,10 @@ var cpu_count = _process.cpu_count
 
 
 /**
- * The SharedValue object allows the sharing of single value/state between 
+ * The PagedValue object allows the sharing of single value/state between 
  * processes and the main application or one another. 
  * 
- * SharedValue supports the following types:
+ * PagedValue supports the following types:
  * 
  * - Boolean
  * - Number
@@ -62,51 +62,59 @@ var cpu_count = _process.cpu_count
  * - List
  * - Dictionary
  * 
- * @note Lists and Dictionaries cannot be nested in a SharedValue.
+ * @note Lists and Dictionaries cannot be nested in a PagedValue.
  */
-class SharedValue {
+class PagedValue {
 
   /**
-   * SharedValue()
+   * PagedValue()
    * @constructor
    */
-  SharedValue() {
-    self._ptr = _process.new_shared()
+  PagedValue(executable, private) {
+    if executable == nil executable = false
+    if private == nil private = false
+
+    if !is_bool(executable)
+      die Exception('boolean value expected in argument 1 (executable)')
+    if !is_bool(private)
+      die Exception('boolean value expected in argument 2 (private)')
+
+    self._ptr = _process.new_paged(executable, private)
   }
 
   /**
    * lock()
    * 
-   * Locks the SharedValue and disallows updating the value.
+   * Locks the PagedValue and disallows updating the value.
    */
   lock() {
     if self._ptr {
-      _process.shared_lock(self._ptr)
+      _process.paged_lock(self._ptr)
     }
   }
 
   /**
    * unlock()
    * 
-   * Unlocks the SharedValue to allow for updating the value.
+   * Unlocks the PagedValue to allow for updating the value.
    */
   unlock() {
     if self._ptr {
-      _process.shared_unlock(self._ptr)
+      _process.paged_unlock(self._ptr)
     }
   }
 
   /**
    * is_locked()
    * 
-   * Returns `true` if the SharedValue is locked for updating or `false` otherwise.
+   * Returns `true` if the PagedValue is locked for updating or `false` otherwise.
    * 
    * @return boolean
-   * @note a SharedValue is locked if in an invalid state.
+   * @note a PagedValue is locked if in an invalid state.
    */
   is_locked() {
     if self._ptr {
-      return _process.shared_islocked(self._ptr)
+      return _process.paged_islocked(self._ptr)
     }
     return true
   }
@@ -175,8 +183,8 @@ class SharedValue {
   /**
    * set(value: boolean | number | string | list | dictionary)
    * 
-   * Sets the value of the SharedValue to the given value. It returns the number of 
-   * bytes written or `false` if the SharedValue is in an invalid state.
+   * Sets the value of the PagedValue to the given value. It returns the number of 
+   * bytes written or `false` if the PagedValue is in an invalid state.
    * 
    * @return number | boolean
    */
@@ -196,7 +204,7 @@ class SharedValue {
       else if !is_list(value) 
         value = [value]
       
-      return _process.shared_write(self._ptr, format, get_format, struct.pack_from(format, value))
+      return _process.paged_write(self._ptr, format, get_format, struct.pack_from(format, value))
     }
     return false
   }
@@ -204,8 +212,8 @@ class SharedValue {
   /**
    * locked_set(value: boolean | number | string | list | dictionary)
    * 
-   * Locks the SharedValue for writing then sets the value to the given value and unlocks it. 
-   * It returns the number of bytes written or `false` if the SharedValue is in an invalid state.
+   * Locks the PagedValue for writing then sets the value to the given value and unlocks it. 
+   * It returns the number of bytes written or `false` if the PagedValue is in an invalid state.
    * 
    * @return number | boolean
    */
@@ -222,13 +230,13 @@ class SharedValue {
   /**
    * get()
    * 
-   * Returns the value stored in the SharedValue or `nil` if no value has been set.
+   * Returns the value stored in the PagedValue or `nil` if no value has been set.
    * 
    * @return any
    */
   get() {
     if self._ptr {
-      var data = _process.shared_read(self._ptr)
+      var data = _process.paged_read(self._ptr)
       if data {
         var format = data[0]
 
@@ -266,6 +274,16 @@ class SharedValue {
     return nil
   }
 
+  /**
+   * raw_pointer()
+   * 
+   * Returns the pointer to the raw memory paged location pointed to by the object.
+   * @return ptr
+   */
+  raw_pointer() {
+    return _process.raw_pointer(self._ptr)
+  }
+
   # by using a decorator, we hide it from ever getting 
   # called by a user directly.
   @get_pointer() {
@@ -280,26 +298,26 @@ class SharedValue {
  */
 class Process {
   var _fn
-  var _shared
+  var _paged
   var _ptr
   var _on_complete_listeners = []
 
   /**
-   * Process(fn: function [, shared: SharedValue])
+   * Process(fn: function [, paged: PagedValue])
    * 
    * Creates a new instance of Process for the function _`fn`_. This 
-   * constructor accepts an optional SharedValue.
+   * constructor accepts an optional PagedValue.
    * 
    * The function passed to a process must accept at least one parameter which 
    * will be passed the instance of the process itself and at most two parameters 
-   * if the process was intitalized with a SharedValue.
+   * if the process was intitalized with a PagedValue.
    * @constructor
    */
-  Process(fn, shared) {
+  Process(fn, paged) {
     if !is_function(fn)
       die Exception('function expected in argument 1 (fn)')
-    if shared != nil and !instance_of(shared, SharedValue)
-      die Exception('instance of SharedValue expected in argument 2 (shared)')
+    if paged != nil and !instance_of(paged, PagedValue)
+      die Exception('instance of PagedValue expected in argument 2 (paged)')
 
     # No windows support yet.
     if os.platform == 'windows' {
@@ -307,7 +325,7 @@ class Process {
     }
 
     self._fn = fn
-    self._shared = shared
+    self._paged = paged
     self._ptr = _process.Process()
   }
 
@@ -352,13 +370,13 @@ class Process {
         die Exception('failed to start process')
       } else if id == 0 {
         var fn_data = reflect.get_function_metadata(self._fn)
-        var expected_arity = self._shared ? 2 : 1
+        var expected_arity = self._paged ? 2 : 1
 
         if fn_data.arity != expected_arity
           die Exception('process function must take ${expected_arity} arguments')
 
         if expected_arity == 2 {
-          if self._shared self._fn(self, self._shared)
+          if self._paged self._fn(self, self._paged)
           else self._fn(self)
         } else {
           self._fn(self)
@@ -421,16 +439,16 @@ class Process {
 }
 
 /**
- * process(fn: function [, shared: SharedValue])
+ * process(fn: function [, paged: PagedValue])
  * 
  * Creates a new instance of Process for the function _`fn`_. This 
- * constructor accepts an optional SharedValue.
+ * constructor accepts an optional PagedValue.
  * 
  * The function passed to a process must accept at least one parameter which 
  * will be passed the instance of the process itself and at most two parameters 
- * if the process was intitalized with a SharedValue.
+ * if the process was intitalized with a PagedValue.
  */
-def process(fn, shared) {
-  return Process(fn, shared)
+def process(fn, paged) {
+  return Process(fn, paged)
 }
 

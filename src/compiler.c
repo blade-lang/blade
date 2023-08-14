@@ -1104,8 +1104,12 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
     count++;
   if (count != 0) {
     char *chr = utf8_encode(value);
-    memcpy(string + index, chr, (size_t) count + 1);
-    free(chr);
+    if(chr) {
+      memcpy(string + index, chr, (size_t) count + 1);
+      free(chr);
+    } else {
+      error(p, "cannot decode unicode escape at index %d", real_index);
+    }
   }
   /* if (value > 65535) // but greater than \uffff doesn't occupy any extra byte
     count--; */

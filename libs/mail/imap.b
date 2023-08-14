@@ -11,7 +11,7 @@ import .message {
 import .constants
 
 var _flags_regex = '/\((\\\?([^)]+))?\)/'
-var _list_regex = '/^[*] LIST \(\\\?([^)]+)\) "([^"]+)" (.*)$/'
+var _list_regex = '/^[*] LIST \(\\\?([^)]*)\) "([^"]+)" (.*)$/'
 
 /**
  * The Imap class provides an interface for connecting to an IMAP (Internet Mail Access Protocol) 
@@ -25,6 +25,31 @@ class Imap {
   var _curl
   var _base_url
 
+  /**
+   * The Imap class accepts a dictionary that can be used to configure how 
+   * it behaves. The dictionary can contain one or more of the following.
+   * 
+   * - __host__: The host address of the Imap server. (Default: localhost)
+   * - __port__: The port number of the Imap server. (Default: 143)
+   * - __username__: The access username for the Imap user.
+   * - __password__: The password for the connection user.
+   * - __tls__: The TLS mode of the connection. One of {TLS_TRY} (default), {TLS_CONTROL}, 
+   *    {TLS_ALL} or {TLS_NONE}.
+   * - __debug__: Whether to print debug information or not. (Default: false)
+   * - __verify_peer__: If the peer certificate should be verified or not. (Default: false)
+   * - __verify_host__: If the host certificate should be verified or not. (Default: false)
+   * - __proxy__: The address of the proxy server if any.
+   * - __proxy_username__: The username for the proxy connection.
+   * - __proxy_password__: The password for the user of the proxy connection.
+   * - __verify_proxy_peer__: If the peer certificate of the proxy should be verified or 
+   *    not. (Default: The value of __verify_peer__)
+   * - __verify_proxy_host__: If the host certificate of the proxy should be verified or 
+   *    not. (Default: The value of __verify_host__)
+   * - __timeout__: The request timeout in milliseconds. (Default: 30,000)
+   * 
+   * @param {dict?} options
+   * @constructor
+   */
   Imap(options) {
     if options != nil and !is_dict(options)
       die Exception('dictionary expected as argument to constructor')
@@ -155,23 +180,47 @@ class Imap {
     return result
   }
 
+  /**
+   * Executes an IMAP command.
+   * 
+   * @param {string} command The command to execute.
+   * @param {string?} path The path segement of the request url.
+   * @return string The response from the server.
+   */
   exec(command, path) {
+    if command != nil and !is_string(command)
+      die Exception('string expected in argument 1 (command)')
+    if path != nil and !is_string(path)
+      die Exception('string expected in argument 2 (path)')
+
     var curl = self._init(path)
     curl.set_option(Option.CUSTOMREQUEST, command)
     return curl.send().body.to_string()
   }
 
+  /**
+   * Gets a list of the mailbox directories on the server.
+   * 
+   * @param {string?} path
+   * @return list
+   */
   get_dirs(path) {
+    if !is_string(path)
+      die Exception('string expected in argument 1 (path)')
     return self._to_list(self.exec(nil, path), 'list', path)
   }
 
+  /**
+   * Gets a list of mailbox directories subscribed to by the current 
+   * user on the server.
+   * 
+   * @return list
+   */
   get_subscribed_dirs() {
     return self._to_list(self.exec('LSUB "" *'), 'list')
   }
 
   /**
-   * select(name: string)
-   * 
    * Instructs the server that the client now wishes to select a particular mailbox or folder 
    * with the name _name_, and any commands that relate to a folder should assume this folder 
    * as the target of that command. For example, an INBOX or a subfolder such as, 
@@ -179,7 +228,8 @@ class Imap {
    * "Selected".
    * 
    * @see https://www.marshallsoft.com/ImapSearch.htm for more help.
-   * @returns dictionary
+   * @param {string} name
+   * @return dictionary
    */
   select(name) {
     if !name die Exception('name required')
@@ -187,12 +237,11 @@ class Imap {
   }
 
   /**
-   * examine(name: string)
-   * 
    * This function does the exact same thing as `select()`, except that it selects the folder 
    * in read-only mode, meaning that no changes can be effected on the folder.
    * 
-   * @returns dictionary
+   * @param {string} name
+   * @return dictionary
    */
   examine(name) {
     if !name die Exception('name required')
@@ -200,11 +249,10 @@ class Imap {
   }
 
   /**
-   * create(name: string)
-   * 
    * Creates a new mailbox or folder with the given name.
    * 
-   * @returns list
+   * @param {string} name
+   * @return list
    */
   create(name) {
     if !name die Exception('name required')
@@ -212,10 +260,9 @@ class Imap {
   }
 
   /**
-   * delete(name: string)
-   * 
    * Deletes the mailbox or folder with the given name.
    * 
+   * @param {string} name
    * @return list
    */
   delete(name) {
@@ -224,10 +271,10 @@ class Imap {
   }
 
   /**
-   * rename(old_name: string, new_name: string)
-   * 
    * Renames a mailbox or folder with the name `old_name` to a the name `new_name`.
    * 
+   * @param {string} old_name
+   * @param {string} new_name
    * @return list
    */
   rename(old_name, new_name) {
@@ -236,12 +283,11 @@ class Imap {
   }
 
   /**
-   * subscribe(name: string)
-   * 
    * Adds the specified mailbox name to the server's set of "active" or "subscribed" 
    * mailboxes for the current user as returned by `lsub()` and returns `true` if 
    * successful or `false` otherwise.
    * 
+   * @param {string} name
    * @return bool
    */
   subscribe(name) {
@@ -251,12 +297,11 @@ class Imap {
   }
 
   /**
-   * unsubscribe(name: string)
-   * 
    * Removes the specified mailbox name from the server's set of "active" or "subscribed" 
    * mailboxes for the current user as returned by `lsub()` and returns `true` if successful 
    * or `false` otherwise.
    * 
+   * @param {string} name
    * @return bool
    */
   unsubscribe(name) {
@@ -266,8 +311,6 @@ class Imap {
   }
 
   /**
-   * list(name: string, [pattern: string = '%'])
-   * 
    * Returns a subset of names from the complete set of all names available to the client. 
    * Zero or more dictionaries are returned, containing the name attributes, hierarchy delimiter, 
    * and name. 
@@ -291,6 +334,8 @@ class Imap {
    * INBOX is whether `select('INBOX')` will return failure; it is not relevant whether the user's 
    * real INBOX resides on the server or another.
    * 
+   * @param {string} name
+   * @param {string?} pattern
    * @return list
    */
   list(name, pattern) {
@@ -300,10 +345,10 @@ class Imap {
   }
 
   /**
-   * lsub(name: string, [pattern: string = '%'])
-   * 
    * Same as the `list()` function except that it returns a subset of names.
    * 
+   * @param {string} name
+   * @param {string?} pattern
    * @return list
    */
   lsub(name, pattern) {
@@ -313,15 +358,13 @@ class Imap {
   }
 
   /**
-   * status(name: string, attrs: string)
-   * 
    * Requests the status of the indicated mailbox. 
    * 
    * It is important to know that unlike the LIST command, the STATUS command is not 
    * guaranteed to be fast in its response.  Under certain circumstances, it can be 
    * quite slow.
    * 
-   * Possible `attrs` values being:
+   * `attrs` values being one of:
    * 
    * - `MESSAGES`: The number of messages in the mailbox.
    * - `RECENT`: The number of messages with the \Recent flag set.
@@ -331,7 +374,9 @@ class Imap {
    * 
    * `attrs` values may be separated by space. e.g. `status('INBOX', 'UIDNEXT MESSAGES')`.
    * 
-   * @returns bool|string
+   * @param {string} name
+   * @param {string} attrs
+   * @return bool|string
    */
   status(name, attrs) {
     if !name die Exception('name required')
@@ -348,15 +393,26 @@ class Imap {
     return false
   }
 
-  append(name, message) {
+  /**
+   * Appends messages to a mailbox directories such as INBOX or top-level folders 
+   * and returns `true` if it succeeds or `false` otherwise.
+   * 
+   * > NOTE:
+   *    This isn’t a copy/move command, you must supply a full message body to 
+   *    append.
+   * @param {string} folder
+   * @param {Message} message
+   * @return bool
+   */
+  append(folder, message) {
     if !instance_of(message, Message)
       die Exception('instance of Message expected in second argument')
 
-    var examine_result = self.examine(name)
-    # var selection_result = self.select(name)
+    var examine_result = self.examine(folder)
+    # var selection_result = self.select(folder)
     
     if examine_result {
-      var curl = self._init('/' + name)
+      var curl = self._init('/' + folder)
       var mail = message.build(curl)
 
       curl.set_option(Option.HTTPHEADER, CurlList(mail.headers))
@@ -372,42 +428,106 @@ class Imap {
     return false
   }
 
+  /**
+   * Requests a checkpoint of the currently selected mailbox.  A checkpoint refers to 
+   * any implementation-dependent housekeeping associated with the mailbox (e.g., 
+   * resolving the server's in-memory state of the mailbox with the state on its disk) 
+   * that is not normally executed as part of each command.  A checkpoint MAY take a 
+   * non-instantaneous amount of real time to complete.  
+   * 
+   * If a server implementation has no such housekeeping considerations, `check()` is 
+   * equivalent to NOOP.
+   * 
+   * @return bool
+   */
   check() {
     self.exec('CHECK')
     return self._curl.get_info(Info.RESPONSE_CODE) == 250
   }
 
+  /**
+   * Permanently removes all messages that have the `\Deleted` flag set from the currently 
+   * selected mailbox, and returns to the authenticated state from the selected state.
+   * 
+   * No messages are removed, and no error is given, if the mailbox is selected by an 
+   * `examine()` or is otherwise selected read-only.
+   * 
+   * @return bool
+   */
   close() {
     self.exec('CLOSE')
     return self._curl.get_info(Info.RESPONSE_CODE) == 250
   }
 
+  /**
+   * Clears the deleted messages in a mailbox folder and returns `true` on 
+   * success or `false` otherwise.
+   * 
+   * @param {string} path
+   * @return bool
+   */
   expunge(path) {
+    if !is_string(path)
+      die Exception('string expected in argument 1 (path)')
+
     self.exec('EXPUNGE', path)
     return self._curl.get_info(Info.RESPONSE_CODE) == 250
   }
 
   /**
-   * Note that query can contain a message sequence set and a number of search 
+   * Finds all occurrences of the __query__ in the specified __folder__ and 
+   * return a list of message UIDs that matches the search query.
+   * 
+   * The __query__ can contain a message sequence set and a number of search 
    * criteria keywords including flags such as ANSWERED, DELETED, DRAFT, FLAGGED, 
    * NEW, RECENT and SEEN. For more information about the search criteria please
-   * see RFC-3501 section 6.4.4.
+   * see RFC-3501 section 6.4.4 for more details.
    * 
-   * See: https://www.marshallsoft.com/ImapSearch.htm for more
+   * When __query__ is empty, it defaults to `NEW`. __folder__ defaults to `INBOX`
+   *  when empty.
+   * 
+   * @see: https://datatracker.ietf.org/doc/html/rfc9051#section-6.4.4 for more.
+   * @param {string?} query
+   * @param {string?} folder
    */
   search(query, folder) {
+    if query != nil and !is_string(query)
+      die Exception('string expected in argument 1 (query)')
+    if folder != nil and !is_string(folder)
+      die Exception('string expected in argument 2 (folder)')
+
     if !folder folder = 'INBOX'
     if !query query = 'NEW'
 
     return self._to_list(self.exec('SEARCH ${query}', '/${folder}'), 'search')
   }
 
-  fetch(id, path) {
-    if !id id = 1
+  /**
+   * Retrieves a message with the give __uid__ in the specified mailbox __path__. If 
+   * the __uid__ is not given, it attempts to retrieve the message with a UID of 1. If 
+   * __path__ is not given, it will attempt to retrieve the message from the `INBOX` 
+   * folder.
+   * 
+   * @param {number?} uid
+   * @param {string?} path
+   */
+  fetch(uid, path) {
+    if uid != nil and !is_number(uid)
+      die Exception('number expected in argument 1 (uid)')
+    if path != nil and !is_string(path)
+      die Exception('string expected in argument 2 (path)')
+
+    if !uid uid = 1
     if !path path = 'INBOX'
-    return self.exec(nil, '/${path}/;UID=${id}')
+    return self.exec(nil, '/${path}/;UID=${uid}')
   }
 
+  /**
+   * Copies the specified message(s) to the end of the specified destination mailbox.
+   * 
+   * @note COPYUID responses are not yet supported
+   * @return bool
+   */
   copy(id, destination, path) {
     if !id die Exception('id required')
     if !destination die Exception('destination required')
@@ -416,7 +536,12 @@ class Imap {
   }
 
   /**
-   * @note command must be one of `FLAGS`, `+FLAGS`, or `-FLAGS`, optionally with a suffix of `.SILENT`.
+   * Alters data associated with a message in the mailbox.
+   * 
+   * @note command must be one of `FLAGS`, `+FLAGS`, or `-FLAGS`, optionally with a 
+   *    suffix of `.SILENT`.
+   * @see https://datatracker.ietf.org/doc/html/rfc9051#section-6.4.6 for more.
+   * @return bool
    */
   store(id, command, flags) {
     if !id die Exception('id required')
@@ -428,15 +553,30 @@ class Imap {
     return self._curl.get_info(Info.RESPONSE_CODE) == 250
   }
 
-  end() {
-    if self._curl self._curl.close()
+  /**
+   * Closes the current IMAP session and disposes all associated network handles.
+   */
+  quit() {
+    if self._curl {
+      self._curl.close()
+    }
   }
 
+  /**
+   * Returns the raw handle to the underlying networking (curl) client.
+   */
   get_handle() {
     return self._curl
   }
 }
 
+
+/**
+ * Returns a new instance of the Imap class with the given options (if any) passed 
+ * to the constructor.
+ * 
+ * @return {Imap}
+ */
 def imap(options) {
   if options != nil and !is_dict(options)
     die Exception('dictionary expected as argument to constructor')

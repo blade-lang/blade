@@ -548,7 +548,7 @@ class HttpRequest {
    * to_string()
    * 
    * Returns a string representation of the HttpRequest instance.
-   * @returns string
+   * @return string
    */
   to_string() {
     return '<HttpRequest method=${self.method}, path=${self.path}>'

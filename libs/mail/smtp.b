@@ -24,6 +24,28 @@ class Transport {
   var messages = []
 
   /**
+   * The Transport class accepts a dictionary that can be used to configure how 
+   * it behaves. The dictionary can contain one or more of the following.
+   * 
+   * - __host__: The host address of the SMTP server. (Default: localhost)
+   * - __port__: The port number of the SMTP server. (Default: 465)
+   * - __username__: The access username for the SMTP user.
+   * - __password__: The password for the connection user.
+   * - __tls__: The TLS mode of the connection. One of {TLS_TRY} (default), {TLS_CONTROL}, 
+   *    {TLS_ALL} or {TLS_NONE}.
+   * - __debug__: Whether to print debug information or not. (Default: false)
+   * - __verify_peer__: If the peer certificate should be verified or not. (Default: false)
+   * - __verify_host__: If the host certificate should be verified or not. (Default: false)
+   * - __proxy__: The address of the proxy server if any.
+   * - __proxy_username__: The username for the proxy connection.
+   * - __proxy_password__: The password for the user of the proxy connection.
+   * - __verify_proxy_peer__: If the peer certificate of the proxy should be verified or 
+   *    not. (Default: The value of __verify_peer__)
+   * - __verify_proxy_host__: If the host certificate of the proxy should be verified or 
+   *    not. (Default: The value of __verify_host__)
+   * - __timeout__: The request timeout in milliseconds. (Default: 30,000)
+   * 
+   * @param {dict?} options
    * @constructor
    */
   Transport(options) {
@@ -71,7 +93,8 @@ class Transport {
   /**
    * Adds an email message to the list of messages to be sent.
    * 
-   * @param Message message
+   * @param {Message} message
+   * @return {Transport}
    */
   add_message(message) {
     self.messages.append(message)
@@ -81,7 +104,7 @@ class Transport {
   /**
    * Tests the connection to the SMTP server
    * 
-   * @returns bool
+   * @return bool
    */
   test_connection() {
     var curl = self._init()
@@ -96,8 +119,8 @@ class Transport {
   /**
    * Verifys an email address
    * 
-   * @param strng address
-   * @returns bool
+   * @param {string} address
+   * @return bool
    */
   verify(address) {
     var curl = self._init()
@@ -111,9 +134,10 @@ class Transport {
   }
 
   /**
-   * Send the email messages
+   * Send the email messages and returns `true` if the message was successfully 
+   * sent or `false` otherwise.
    * 
-   * @returns bool
+   * @return bool
    */
   send() {
     var response_codes = []
@@ -146,6 +170,13 @@ class Transport {
   }
 }
 
+
+/**
+ * Returns a new instance of SMTP {Transport} with the given __options__.
+ * 
+ * @params {dict?} options See {Transport}
+ * @return {Transport}
+ */
 def smtp(options) {
   if options != nil and !is_dict(options)
     die Exception('dictionary expected as argument to constructor')
