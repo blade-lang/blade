@@ -178,7 +178,7 @@ DECLARE_NATIVE(getprop) {
  * sets the named property of the object to value.
  *
  * if the property already exist, it overwrites it
- * @returns bool: true if a new property was set, false if a property was
+ * @return bool: true if a new property was set, false if a property was
  * updated
  */
 DECLARE_NATIVE(setprop) {
@@ -194,7 +194,7 @@ DECLARE_NATIVE(setprop) {
  * delprop(object: instance, name: string)
  *
  * deletes the named property from the object
- * @returns bool
+ * @return bool
  */
 DECLARE_NATIVE(delprop) {
   ENFORCE_ARG_COUNT(delprop, 2);

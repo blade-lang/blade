@@ -176,7 +176,7 @@ def _dim(year, month) {
  * 
  * returns a dictionary representing the current time without
  * timezone adjustment
- * @returns dictionary
+ * @return dictionary
  * 
  * Example,
  * 
@@ -195,7 +195,7 @@ def gmtime() {
  * 
  * returns a dictionary representing the current time after
  * adjusting for the current timezone
- * @returns dictionary
+ * @return dictionary
  * 
  * Example:
  * 

@@ -55,7 +55,7 @@ DECLARE_LIST_METHOD(extend);
  * list.index_of(item: any)
  *
  * returns the index at which the item first occurred in the list
- * @returns -1 if not found
+ * @return -1 if not found
  */
 DECLARE_LIST_METHOD(index_of);
 

@@ -1,13 +1,14 @@
 import .smtp
 import .message
 import .imap
+import .pop3
 import .constants
 
 var _header_line_rgx = '/^([^ ]+): (([^\\n]|(\\n(?= )))+)\\n/m'
 var _type_rgx = '/^([^;]+)/'
 var _boundary_rgx = '/boundary="?([^\s"]+)"?/'
 
-def parse_headers(header) {
+def _parse_headers(header) {
   if !header.ends_with('\n') header += '\n'
   var headers = {}
 
@@ -36,7 +37,7 @@ def _split_parts(message) {
       message.index_of('\n\n') : -1
 
   return {
-    headers: parse_headers(message.ascii()[,headers_end]), 
+    headers: _parse_headers(message.ascii()[,headers_end]), 
     body: message[headers_end+1,].trim(),
   }
 }
@@ -44,6 +45,9 @@ def _split_parts(message) {
 /**
  * Attachment class is used to hold the information of attachments in the 
  * message.
+ * 
+ * @serializable
+ * @printable
  */
 class Attachment {
   var headers = []
@@ -72,19 +76,35 @@ class Attachment {
   }
 }
 
+/**
+ * The Mail class represents a mail message as a blade object with the following 
+ * properties.
+ * 
+ * - __headers__: A dictionary containing the key/value pair contained in the 
+ *    mail message header.
+ * - __body__: A dictionary containing the different segements of a mail body such 
+ *    as its plain text and html counterpart.
+ * - __attachments__: A list of attachments contained in the Mail message.
+ * 
+ * @serializable
+ * @printable
+ */
 class Mail {
 
-  Mail(headers, body, attachements) {
+  /**
+   * @constructor
+   */
+  Mail(headers, body, attachments) {
     self.headers = headers ? headers : {}
     self.body = body ? body : {}
-    self.attachements = attachements ? attachements : []
+    self.attachments = attachments ? attachments : []
   }
 
   @to_json() {
     return {
       headers: self.headers,
       body: self.body,
-      attachements: self.attachements,
+      attachments: self.attachments,
     }
   }
 
@@ -92,7 +112,7 @@ class Mail {
     return '<Mail>'+
     '  <headers>${self.headers}</headers>' +
     '  <body>${self.body}</body>' +
-    '  <attachements>${self.attachements}</attachements>' +
+    '  <attachments>${self.attachments}</attachments>' +
     '</Mail>'
   }
 }
@@ -101,14 +121,14 @@ class Mail {
  * Parses email messages and return an instance of Mail representing it.
  * 
  * @param string message
- * @return Mail
+ * @return {Mail}
  */
 def parse(message) {
   message = _split_parts(message.trim() + '\n\n')
   var text = message.body,
       headers = message.headers,
       body = {}, 
-      attachements = [],
+      attachments = [],
       content_type
 
   if content_type = message.headers.get('Content-Type') {
@@ -164,10 +184,10 @@ def parse(message) {
               }
             } else {
               # parse the attachments
-              attachements.append(Attachment(message.headers, message.body))
+              attachments.append(Attachment(message.headers, message.body))
             }
           } else {
-            attachements.append(Attachment(message.headers, message.body))
+            attachments.append(Attachment(message.headers, message.body))
           }
         }
       }
@@ -180,6 +200,6 @@ def parse(message) {
     body['text/plain'] = text
   }
 
-  return Mail(headers, body, attachements)
+  return Mail(headers, body, attachments)
 }
 

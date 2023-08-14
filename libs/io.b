@@ -516,7 +516,7 @@ def putc(c) {
  *
  * when length is given, gets `length` number of characters
  * else, gets a single character
- * @returns char | string
+ * @return char | string
  */
 def getc() {
   return _io.getc()
@@ -529,7 +529,7 @@ def getc() {
  *
  * when length is given, gets `length` number of characters
  * else, gets a single character
- * @returns char | string
+ * @return char | string
  */
 def getch() {
   return _io.getch()
@@ -544,7 +544,7 @@ def getch() {
  * will be printed instead.
  * 
  * @note newlines will not be added automatically for messages.
- * @returns string
+ * @return string
  */
 def readline(message, secure, obscure_text) {
 

@@ -191,7 +191,7 @@ def load(name) {
  * new(type: type, ...any)
  * 
  * Creates a new C value for the specified clib type with the given values.
- * @returns bytes
+ * @return bytes
  */
 def new(type, ...) {
   if __args__.length() == 0
@@ -215,7 +215,7 @@ def new(type, ...) {
  * automatically be returned with the values mapped to the names of the 
  * structure elements.
  * 
- * @returns list | dictionary
+ * @return list | dictionary
  */
 def get(type, data) {
   # Ensure a valid and non void clib pointer.
