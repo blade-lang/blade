@@ -37,9 +37,10 @@
 import _reflect
 
 /**
- * has_prop(object: instance, name: string)
+ * has_prop(object: instance | module, name: string)
  *
- * Returns `true` if instance has the property name or `false` if not
+ * Returns `true` if instance has the property or module has a value with 
+ * the given name or `false` if not.
  * @return bool
  */
 def has_prop(object, name) {
@@ -52,10 +53,11 @@ def has_prop(object, name) {
 }
 
 /**
- * get_prop(object: instance, name: string)
+ * get_prop(object: instance | module, name: string)
  *
- * Returns the property of the instance matching the given name
- * or nil if the object contains no property with a matching name.
+ * Returns the property of the instance or value in the module matching the 
+ * given name or nil if the object contains no property with a matching name.
+ * 
  * @return any
  */
 def get_prop(object, name) {
@@ -319,7 +321,7 @@ def get_address(value) {
  * ptr_from_address(address: number)
  * 
  * Returns a pointer to the given memory address.
- * @returns ptr
+ * @return ptr
  */
 def ptr_from_address(address) {
   return _reflect.ptrfromaddress(address)
@@ -352,16 +354,18 @@ def run_script(path) {
     die Exception('cannot find script at "${path}"')
 
   var content = fh.read()
-  _reflect.runscript(path, content)
+
+  # for now, returing the call without assigning to a variable is failing.
+  _reflect.runscript(path,  content)
 }
 
-/* def call_method(instance, name, ...) {
-  if !is_instance(instance)
-    die Exception('instance of object expected in argument 1 (instance)')
-  if !is_string(name)
-    die Exception('string of object expected in argument 2 (name)')
-
-  var length = __args__.length() + 3
-  _reflect.callmethod(instance, name, __args__)
-  return _reflect.valueatdistance(-(length))
-} */
+/**
+ * call_function(function: function, args: list)
+ * 
+ * Calls a function with the given arguments.
+ * 
+ * @return any
+ */
+def call_function(function, args) {
+  return _reflect.callfunction(function, args)
+}

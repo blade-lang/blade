@@ -153,7 +153,7 @@ bool values_equal(b_value a, b_value b);
 
 b_obj_string *value_to_string(b_vm *vm, b_value value);
 
-void init_byte_arr(b_vm *vm, b_byte_arr *array, int length);
+void init_byte_arr(b_byte_arr *array, int length);
 
 void take_byte_arr(b_vm *vm, b_byte_arr *array, unsigned char data, int length);
 

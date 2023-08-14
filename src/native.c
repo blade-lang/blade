@@ -178,7 +178,7 @@ DECLARE_NATIVE(getprop) {
  * sets the named property of the object to value.
  *
  * if the property already exist, it overwrites it
- * @returns bool: true if a new property was set, false if a property was
+ * @return bool: true if a new property was set, false if a property was
  * updated
  */
 DECLARE_NATIVE(setprop) {
@@ -194,7 +194,7 @@ DECLARE_NATIVE(setprop) {
  * delprop(object: instance, name: string)
  *
  * deletes the named property from the object
- * @returns bool
+ * @return bool
  */
 DECLARE_NATIVE(delprop) {
   ENFORCE_ARG_COUNT(delprop, 2);
@@ -552,19 +552,19 @@ DECLARE_NATIVE(ord) {
   ENFORCE_ARG_TYPE(ord, 0, IS_STRING);
   b_obj_string *string = AS_STRING(args[0]);
 
-  int max_length = string->length > 1 && (int) string->chars[0] < 1 ? 3 : 1;
-
-  if (string->length > max_length) {
+  int length = string->is_ascii ? string->length : string->utf8_length;
+  if (length > 1) {
     RETURN_ERROR("ord() expects character as argument, string given");
   }
 
-  const uint8_t *bytes = (uint8_t *) string->chars;
-  if ((bytes[0] & 0xc0) == 0x80) {
-    RETURN_NUMBER(-1);
+  if(string->is_ascii) {
+    int ord = (int)string->chars[0];
+    if(ord < 0) ord += 256;
+    RETURN_NUMBER(ord);
+  } else {
+    // Decode the UTF-8 sequence.
+    RETURN_NUMBER(utf8_decode((uint8_t *) string->chars, string->length));
   }
-
-  // Decode the UTF-8 sequence.
-  RETURN_NUMBER(utf8_decode((uint8_t *) string->chars, string->length));
 }
 
 /**

@@ -2,11 +2,11 @@
 #define BLADE_CONFIG_H
 
 #define BLADE_EXTENSION ".b"
-#define BLADE_VERSION_STRING "0.0.85"
-#define BVM_VERSION "0.1.0"
+#define BLADE_VERSION_STRING "0.0.86"
+#define BVM_VERSION "0.1.1"
 #define LIBRARY_DIRECTORY "libs"
 #define LIBRARY_DIRECTORY_INDEX "index"
-#define PACKAGES_DIRECTORY "vendor"
+#define PACKAGES_DIRECTORY "apps"
 #define LOCAL_PACKAGES_DIRECTORY ".blade"
 #define LOCAL_EXT_DIRECTORY "/bin"
 #define LOCAL_SRC_DIRECTORY "/libs"
@@ -28,7 +28,6 @@
 #define GC_HEAP_GROWTH_FACTOR 1.25
 
 #define USE_NAN_BOXING 1
-#define PCRE2_STATIC
 #define PCRE2_CODE_UNIT_WIDTH 8
 
 #define BLADE_PACKAGE_ROOT_ENV "BLADE_PKG_ROOT"

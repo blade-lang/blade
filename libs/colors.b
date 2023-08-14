@@ -2,48 +2,48 @@
 # @module colors
 #
 # This module provides functionalities for color conversion and manipulation.
-# 
-# This module also provides functionalities that enable cross-platform colored terminal outputs 
+#
+# This module also provides functionalities that enable cross-platform colored terminal outputs
 # that will allow you create beautiful console apps that are user friendly.
-# 
-# RGB conversion to other colors that return a floating point or a list of floating points do so 
-# to allow users get absolute precision since its really easy for callers to do a `math.round()` 
+#
+# RGB conversion to other colors that return a floating point or a list of floating points do so
+# to allow users get absolute precision since its really easy for callers to do a `math.round()`
 # on the components of the resulting list.
-# 
+#
 # ### Example
-# 
-# The example below uses this module to create a success message that will print correctly 
-# on almost all terminals (Only Windows 10 version 1901+ supported. All linux and OSX 
+#
+# The example below uses this module to create a success message that will print correctly
+# on almost all terminals (Only Windows 10 version 1901+ supported. All linux and OSX
 # terminals are supported). Try it out!
-# 
+#
 # ```blade
 # import colors
 # colors.text('Successful!', colors.text_color.green)
 # ```
-# 
+#
 # The `text()` function can be nested. For example,
-# 
+#
 # ```blade
 # colors.text(colors.text('Successful!', colors.style.bold), colors.text_color.green)
 # ```
-# 
+#
 # The module also features multiple functions for color conversion. For example,
-# 
+#
 # ```blade-repl
 # %> import colors
 # %> colors.rgb_to_cmyk(103, 13, 69)
 # [0, 87.37864077669903, 33.00970873786409, 59.6078431372549]
 # ```
-# 
-# The terminal colors also have simple wrappers that allow supplied colors to `text()` 
-# from various color formats. For example, we can specify the color from the HTML 
+#
+# The terminal colors also have simple wrappers that allow supplied colors to `text()`
+# from various color formats. For example, we can specify the color from the HTML
 # hexadecimal color.
-# 
+#
 # ```blade
 # import colors
 # colors.text('Colored text!', colors.hex('#fc0'))
 # ```
-# 
+#
 # @copyright 2022, Ore Richard Muyiwa and Blade contributors
 #
 

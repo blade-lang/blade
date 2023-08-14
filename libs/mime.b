@@ -345,6 +345,7 @@ var _mimes = {
   '.wbmxl': MimeFormat('application/vnd.wap.wbxml', nil),
   '.weba': MimeFormat('audio/webm', nil),
   '.webm': MimeFormat('video/webm', [[0x1A, 0x45, 0xDF, 0xA3, 0x93, 0x42, 0x82, 0x88]]),
+  '.webmanifest': MimeFormat('application/manifest+json', nil),
   '.webp': MimeFormat('image/webp', [[0x52, 0x49, 0x46, 0x46, nil, nil, nil, nil, 0x57, 0x45, 0x42, 0x50]]),
   '.woff': MimeFormat('font/woff', nil),
   '.woff2': MimeFormat('font/woff2', nil),

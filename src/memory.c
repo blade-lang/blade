@@ -17,7 +17,9 @@ void *c_allocate(b_vm *vm, size_t size, size_t length) {
   vm->bytes_allocated += length;
 
   if (vm->bytes_allocated > vm->next_gc) {
-    collect_garbage(vm);
+    if(vm->current_frame && vm->current_frame->gc_protected == 0) {
+      collect_garbage(vm);
+    }
   }
 
   if (size == 0) {
@@ -27,9 +29,7 @@ void *c_allocate(b_vm *vm, size_t size, size_t length) {
 
   // just in case reallocation fails... computers ain't infinite!
   if (result == NULL) {
-    fflush(stdout); // flush out anything on stdout first
-    fprintf(stderr, "Exit: device out of memory\n");
-    exit(EXIT_TERMINAL);
+    OUT_OF_MEMORY();
   }
   return result;
 }
@@ -38,7 +38,9 @@ void *allocate(b_vm *vm, size_t size) {
   vm->bytes_allocated += size;
 
   if (vm->bytes_allocated > vm->next_gc) {
-    collect_garbage(vm);
+    if(vm->current_frame && vm->current_frame->gc_protected == 0) {
+      collect_garbage(vm);
+    }
   }
 
   if (size == 0) {
@@ -48,9 +50,7 @@ void *allocate(b_vm *vm, size_t size) {
 
   // just in case reallocation fails... computers ain't infinite!
   if (result == NULL) {
-    fflush(stdout); // flush out anything on stdout first
-    fprintf(stderr, "Exit: device out of memory\n");
-    exit(EXIT_TERMINAL);
+    OUT_OF_MEMORY();
   }
   return result;
 }
@@ -59,7 +59,9 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
   vm->bytes_allocated += new_size - old_size;
 
   if (new_size > old_size && vm->bytes_allocated > vm->next_gc) {
-    collect_garbage(vm);
+    if(vm->current_frame && vm->current_frame->gc_protected == 0) {
+      collect_garbage(vm);
+    }
   }
 
   if (new_size == 0) {
@@ -70,9 +72,7 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
 
   // just in case reallocation fails... computers ain't infinite!
   if (result == NULL) {
-    fflush(stdout); // flush out anything on stdout first
-    fprintf(stderr, "Exit: device out of memory\n");
-    exit(EXIT_TERMINAL);
+    OUT_OF_MEMORY();
   }
   return result;
 }
@@ -237,7 +237,7 @@ void free_object(b_vm *vm, b_obj *object) {
     }
     case OBJ_FILE: {
       b_obj_file *file = (b_obj_file *) object;
-      if (file->mode->length != 0 && !is_std_file(file) && file->file != NULL) {
+      if (!file->is_std && file->file != NULL) {
         fclose(file->file);
       }
       FREE(b_obj_file, object);
@@ -408,6 +408,9 @@ void collect_garbage(b_vm *vm) {
   printf("-- gc begins\n");
   size_t before = vm->bytes_allocated;
 #endif
+
+//  REMOVE THE NEXT LINE TO DISABLE NESTED collect_garbage() POSSIBILITY!
+//  vm->next_gc = vm->bytes_allocated;
 
   mark_roots(vm);
   trace_references(vm);

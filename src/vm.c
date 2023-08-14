@@ -157,10 +157,10 @@ static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
 
   push(vm, OBJ_VAL(klass));
   b_obj_func *function = new_function(vm, module, TYPE_METHOD);
-  pop(vm);
 
   function->arity = 1;
   function->is_variadic = false;
+  push(vm, OBJ_VAL(function));
 
   // g_loc 0
   write_blob(vm, &function->blob, OP_GET_LOCAL, 0);
@@ -174,23 +174,23 @@ static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
 
   int message_const = add_constant(vm, &function->blob, STRING_L_VAL("message", 7));
 
-  // s_prop 1
+  // s_prop 0
   write_blob(vm, &function->blob, OP_SET_PROPERTY, 0);
   write_blob(vm, &function->blob, (message_const >> 8) & 0xff, 0);
   write_blob(vm, &function->blob, message_const & 0xff, 0);
 
   // pop
   write_blob(vm, &function->blob, OP_POP, 0);
+  write_blob(vm, &function->blob, OP_POP, 0);
 
   // g_loc 0
-  write_blob(vm, &function->blob, OP_GET_LOCAL, 0);
-  write_blob(vm, &function->blob, (0 >> 8) & 0xff, 0);
-  write_blob(vm, &function->blob, 0 & 0xff, 0);
+//  write_blob(vm, &function->blob, OP_GET_LOCAL, 0);
+//  write_blob(vm, &function->blob, (0 >> 8) & 0xff, 0);
+//  write_blob(vm, &function->blob, 0 & 0xff, 0);
 
   // ret
   write_blob(vm, &function->blob, OP_RETURN, 0);
 
-  push(vm, OBJ_VAL(function));
   b_obj_closure *closure = new_closure(vm, function);
   pop(vm);
 
@@ -204,6 +204,7 @@ static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
   table_set(vm, &klass->properties, STRING_L_VAL("stacktrace", 10), NIL_VAL);
 
   table_set(vm, &vm->globals, OBJ_VAL(class_name), OBJ_VAL(klass));
+  pop(vm); // for class
 
   pop(vm);
   pop(vm); // assert error name
@@ -373,7 +374,10 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_STRING_METHOD(match);
   DEFINE_STRING_METHOD(matches);
   DEFINE_STRING_METHOD(replace);
+  DEFINE_STRING_METHOD(replace_with);
   DEFINE_STRING_METHOD(ascii);
+  DEFINE_STRING_METHOD(each);
+  DEFINE_STRING_METHOD(case_fold);
   define_native_method(vm, &vm->methods_string, "@iter", native_method_string__iter__);
   define_native_method(vm, &vm->methods_string, "@itern", native_method_string__itern__);
 
@@ -402,7 +406,14 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_LIST_METHOD(compact);
   DEFINE_LIST_METHOD(unique);
   DEFINE_LIST_METHOD(zip);
+  DEFINE_LIST_METHOD(zip_from);
   DEFINE_LIST_METHOD(to_dict);
+  DEFINE_LIST_METHOD(each);
+  DEFINE_LIST_METHOD(map);
+  DEFINE_LIST_METHOD(filter);
+  DEFINE_LIST_METHOD(some);
+  DEFINE_LIST_METHOD(every);
+  DEFINE_LIST_METHOD(reduce);
   define_native_method(vm, &vm->methods_list, "@iter", native_method_list__iter__);
   define_native_method(vm, &vm->methods_list, "@itern", native_method_list__itern__);
 
@@ -422,6 +433,11 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_DICT_METHOD(is_empty);
   DEFINE_DICT_METHOD(find_key);
   DEFINE_DICT_METHOD(to_list);
+  DEFINE_DICT_METHOD(each);
+  DEFINE_DICT_METHOD(filter);
+  DEFINE_DICT_METHOD(some);
+  DEFINE_DICT_METHOD(every);
+  DEFINE_DICT_METHOD(reduce);
   define_native_method(vm, &vm->methods_dict, "@iter", native_method_dict__iter__);
   define_native_method(vm, &vm->methods_dict, "@itern", native_method_dict__itern__);
 
@@ -474,12 +490,14 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_BYTES_METHOD(is_space);
   DEFINE_BYTES_METHOD(to_list);
   DEFINE_BYTES_METHOD(to_string);
+  DEFINE_BYTES_METHOD(each);
   define_native_method(vm, &vm->methods_bytes, "@iter", native_method_bytes__iter__);
   define_native_method(vm, &vm->methods_bytes, "@itern", native_method_bytes__itern__);
-
   // range
   DEFINE_RANGE_METHOD(lower);
   DEFINE_RANGE_METHOD(upper);
+  DEFINE_RANGE_METHOD(range);
+  DEFINE_RANGE_METHOD(loop);
   define_native_method(vm, &vm->methods_range, "@iter", native_method_range__iter__);
   define_native_method(vm, &vm->methods_range, "@itern", native_method_range__itern__);
 
@@ -544,6 +562,10 @@ void free_vm(b_vm *vm) {
   free_table(vm, &vm->methods_dict);
   free_table(vm, &vm->methods_file);
   free_table(vm, &vm->methods_bytes);
+}
+
+static inline bool is_private(b_obj_string *name) {
+  return name->length > 0 && name->chars[0] == '_';
 }
 
 static bool call(b_vm *vm, b_obj_closure *closure, int arg_count) {
@@ -628,6 +650,8 @@ bool call_value(b_vm *vm, b_value callee, int arg_count) {
         if(table_get(&module->values, STRING_VAL(module->name), &callable)) {
           return call_value(vm, callable, arg_count);
         }
+
+        return throw_exception(vm, "module %s does not export a default function", module->name);
       }
 
       case OBJ_CLOSURE: {
@@ -710,7 +734,7 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
       case OBJ_MODULE: {
         b_obj_module *module = AS_MODULE(receiver);
         if (table_get(&module->values, OBJ_VAL(name), &value)) {
-          if (name->length > 0 && name->chars[0] == '_') {
+          if (is_private(name)) {
             return throw_exception(vm, "cannot call private module method '%s'", name->chars);
           }
           return call_value(vm, value, arg_count);
@@ -1056,7 +1080,7 @@ static bool string_get_ranged_index(b_vm *vm, b_obj_string *string, bool will_as
   int lower_index = IS_NUMBER(lower) ? AS_NUMBER(lower) : 0;
   int upper_index = IS_NIL(upper) ? length : AS_NUMBER(upper);
 
-  if (lower_index < 0 || (upper_index < 0 && ((length + upper_index) < 0))) {
+  if (lower_index < 0 || (upper_index < 0 && ((length + upper_index) < 0)) || lower_index >= length) {
     // always return an empty string...
     if (!will_assign) {
       pop_n(vm, 3); // +1 for the string itself
@@ -1124,7 +1148,7 @@ static bool bytes_get_ranged_index(b_vm *vm, b_obj_bytes *bytes, bool will_assig
   int upper_index = IS_NIL(upper) ? bytes->bytes.count : AS_NUMBER(upper);
 
   if (lower_index < 0 ||
-      (upper_index < 0 && ((bytes->bytes.count + upper_index) < 0))) {
+      (upper_index < 0 && ((bytes->bytes.count + upper_index) < 0)) || lower_index >= bytes->bytes.count) {
     // always return an empty bytes...
     if (!will_assign) {
       pop_n(vm, 3); // +1 for the bytes itself
@@ -1186,8 +1210,7 @@ static bool list_get_ranged_index(b_vm *vm, b_obj_list *list, bool will_assign) 
   int lower_index = IS_NUMBER(lower) ? AS_NUMBER(lower) : 0;
   int upper_index = IS_NIL(upper) ? list->items.count : AS_NUMBER(upper);
 
-  if (lower_index < 0 ||
-      (upper_index < 0 && ((list->items.count + upper_index) < 0))) {
+  if (lower_index < 0 || (upper_index < 0 && ((list->items.count + upper_index) < 0)) || lower_index >= list->items.count) {
     // always return an empty list...
     if (!will_assign) {
       pop_n(vm, 3); // +1 for the list itself
@@ -1309,8 +1332,9 @@ static bool concatenate(b_vm *vm) {
     memcpy(chars + num_length, b->chars, b->length);
     chars[length] = '\0';
 
+    int utf8len = utf8length(chars);
     b_obj_string *result = take_string(vm, chars, length);
-    result->utf8_length = num_length + b->utf8_length;
+    result->utf8_length = utf8len;
 
     pop_n(vm, 2);
     push(vm, OBJ_VAL(result));
@@ -1327,8 +1351,9 @@ static bool concatenate(b_vm *vm) {
     memcpy(chars + a->length, num_str, num_length);
     chars[length] = '\0';
 
+    int utf8len = utf8length(chars);
     b_obj_string *result = take_string(vm, chars, length);
-    result->utf8_length = num_length + a->utf8_length;
+    result->utf8_length = utf8len;
 
     pop_n(vm, 2);
     push(vm, OBJ_VAL(result));
@@ -1367,7 +1392,7 @@ static inline double modulo(double a, double b) {
   return r;
 }
 
-b_ptr_result run(b_vm *vm) {
+b_ptr_result run(b_vm *vm, int exit_frame) {
   vm->current_frame = &vm->frames[vm->frame_count - 1];
 
 #define READ_BYTE() (*vm->current_frame->ip++)
@@ -1721,12 +1746,12 @@ b_ptr_result run(b_vm *vm) {
             case OBJ_MODULE: {
               b_obj_module *module = AS_MODULE(peek(vm, 0));
               if (table_get(&module->values, OBJ_VAL(name), &value)) {
-                if (name->length > 0 && name->chars[0] == '_') {
+                if (is_private(name)) {
                   runtime_error("cannot get private module property '%s'", name->chars);
                   break;
                 }
 
-                pop(vm); // pop the list...
+                pop(vm); // pop the module...
                 push(vm, value);
                 break;
               }
@@ -1737,7 +1762,7 @@ b_ptr_result run(b_vm *vm) {
             case OBJ_CLASS: {
               if (table_get(&AS_CLASS(peek(vm, 0))->methods, OBJ_VAL(name), &value)) {
                 if (get_method_type(value) == TYPE_STATIC) {
-                  if (name->length > 0 && name->chars[0] == '_') {
+                  if (is_private(name)) {
                     runtime_error("cannot call private property '%s' of class %s",
                                   name->chars, AS_CLASS(peek(vm, 0))->name->chars);
                     break;
@@ -1747,7 +1772,7 @@ b_ptr_result run(b_vm *vm) {
                   break;
                 }
               } else if (table_get(&AS_CLASS(peek(vm, 0))->static_properties, OBJ_VAL(name), &value)) {
-                if (name->length > 0 && name->chars[0] == '_') {
+                if (is_private(name)) {
                   runtime_error("cannot call private property '%s' of class %s",
                                 name->chars, AS_CLASS(peek(vm, 0))->name->chars);
                   break;
@@ -1764,7 +1789,7 @@ b_ptr_result run(b_vm *vm) {
             case OBJ_INSTANCE: {
               b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
               if (table_get(&instance->properties, OBJ_VAL(name), &value)) {
-                if (name->length > 0 && name->chars[0] == '_') {
+                if (is_private(name)) {
                   runtime_error("cannot call private property '%s' from instance of %s",
                                 name->chars, instance->klass->name->chars);
                   break;
@@ -1774,7 +1799,7 @@ b_ptr_result run(b_vm *vm) {
                 break;
               }
 
-              if (name->length > 0 && name->chars[0] == '_') {
+              if (is_private(name)) {
                 runtime_error("cannot bind private property '%s' to instance of %s",
                               name->chars, instance->klass->name->chars);
                 break;
@@ -1790,7 +1815,7 @@ b_ptr_result run(b_vm *vm) {
             }
             case OBJ_STRING: {
               if (table_get(&vm->methods_string, OBJ_VAL(name), &value)) {
-                pop(vm); // pop the list...
+                pop(vm); // pop the string...
                 push(vm, value);
                 break;
               }
@@ -1810,7 +1835,7 @@ b_ptr_result run(b_vm *vm) {
             }
             case OBJ_RANGE: {
               if (table_get(&vm->methods_range, OBJ_VAL(name), &value)) {
-                pop(vm); // pop the list...
+                pop(vm); // pop the range...
                 push(vm, value);
                 break;
               }
@@ -1831,7 +1856,7 @@ b_ptr_result run(b_vm *vm) {
             }
             case OBJ_BYTES: {
               if (table_get(&vm->methods_bytes, OBJ_VAL(name), &value)) {
-                pop(vm); // pop the list...
+                pop(vm); // pop the bytes...
                 push(vm, value);
                 break;
               }
@@ -1841,7 +1866,7 @@ b_ptr_result run(b_vm *vm) {
             }
             case OBJ_FILE: {
               if (table_get(&vm->methods_file, OBJ_VAL(name), &value)) {
-                pop(vm); // pop the list...
+                pop(vm); // pop the file...
                 push(vm, value);
                 break;
               }
@@ -1899,7 +1924,7 @@ b_ptr_result run(b_vm *vm) {
         } else if (IS_MODULE(peek(vm, 0))) {
           b_obj_module *module = AS_MODULE(peek(vm, 0));
           if (table_get(&module->values, OBJ_VAL(name), &value)) {
-            pop(vm); // pop the class...
+            pop(vm); // pop the module...
             push(vm, value);
             break;
           }
@@ -2258,12 +2283,18 @@ b_ptr_result run(b_vm *vm) {
         push(vm, result);
 
         vm->current_frame = &vm->frames[vm->frame_count - 1];
+
+        if (vm->frame_count == exit_frame) {
+          return PTR_OK;
+        }
+
         break;
       }
 
       case OP_CALL_IMPORT: {
         b_obj_closure *closure = AS_CLOSURE(READ_CONSTANT());
         add_module(vm, closure->function->module);
+        register_module__FILE__(vm, closure->function->module);
         call(vm, closure, 0);
         vm->current_frame = &vm->frames[vm->frame_count - 1];
         break;
@@ -2331,7 +2362,17 @@ b_ptr_result run(b_vm *vm) {
 
       case OP_EJECT_IMPORT: {
         b_obj_func *function = AS_CLOSURE(READ_CONSTANT())->function;
-        table_delete(&vm->current_frame->closure->function->module->values, STRING_VAL(function->module->name));
+        b_table *current_module = &vm->current_frame->closure->function->module->values;
+        b_value module_name = STRING_VAL(function->module->name);
+
+        b_value tmp;
+        if(table_get(current_module, module_name, &tmp)) {
+          if(!IS_MODULE(tmp)) {
+            break;
+          }
+        }
+
+        table_delete(current_module, module_name);
         break;
       }
 
@@ -2339,8 +2380,10 @@ b_ptr_result run(b_vm *vm) {
         b_value mod;
         b_obj_string *name = READ_STRING();
         if (table_get(&vm->modules, OBJ_VAL(name), &mod)) {
-          table_import_all(vm, &AS_MODULE(mod)->values, &vm->current_frame->closure->function->module->values);
-          table_delete(&vm->current_frame->closure->function->module->values, OBJ_VAL(name));
+          b_table *current_module = &vm->current_frame->closure->function->module->values;
+
+          table_import_all(vm, &AS_MODULE(mod)->values, current_module);
+          table_delete(current_module, OBJ_VAL(name));
         }
         break;
       }
@@ -2456,6 +2499,47 @@ b_ptr_result run(b_vm *vm) {
 #undef BINARY_MOD_OP
 }
 
+void register_module__FILE__(b_vm *vm, b_obj_module *module) {
+  // register module __file__
+  push(vm, STRING_L_VAL("__file__", 8));
+  push(vm, STRING_VAL(module->file));
+  table_set(vm, &module->values, vm->stack[0], vm->stack[1]);
+  pop_n(vm, 2);
+}
+
+// helper function to access call outside the vm file.
+b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
+  b_value *stack_top = vm->stack_top;
+
+  // set the closure before the args
+  push(vm, OBJ_VAL(closure));
+
+  int arg_count = 0;
+  if(args && (arg_count = args->items.count)) {
+    for(int i = 0; i < args->items.count; i++) {
+      push(vm, args->items.values[i]);
+    }
+  }
+
+  call(vm, closure, arg_count);
+  b_ptr_result vm_result = run(vm, vm->frame_count - 1);
+
+  if(vm_result != PTR_OK) {
+    exit(EXIT_RUNTIME);
+  }
+
+  b_value result = vm->stack_top[-1];
+  pop_n(vm, arg_count + 1);
+
+  vm->stack_top = stack_top;
+  return result;
+}
+
+// helper function to access call outside the vm file.
+bool queue_closure(b_vm *vm, b_obj_closure *closure) {
+  return call(vm, closure, 0);
+}
+
 b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
   b_blob blob;
   init_blob(&blob);
@@ -2479,11 +2563,11 @@ b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
   b_obj_closure *closure = new_closure(vm, function);
   pop(vm);
   push(vm, OBJ_VAL(closure));
+
+  register_module__FILE__(vm, module);
+
   call(vm, closure, 0);
-
-  b_ptr_result result = run(vm);
-
-  return result;
+  return run(vm, 0);
 }
 
 #undef ERR_CANT_ASSIGN_EMPTY

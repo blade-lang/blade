@@ -39,4 +39,8 @@ void collect_garbage(b_vm *vm);
 
 void blacken_object(b_vm *vm, b_obj *object);
 
+#define OUT_OF_MEMORY() fflush(stdout); \
+  fprintf(stderr, "Exit: device out of memory\n"); \
+  exit(EXIT_TERMINAL)
+
 #endif

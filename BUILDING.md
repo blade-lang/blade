@@ -13,7 +13,7 @@ install dependencies on macOS.
 ```sh
 sudo xcode-select    # prompt the user to install Xcode CLT if it is not already installed
 sudo brew update
-sudo brew install readline cmake
+sudo brew install openssl cmake
 ```
 
 Proceed to the [Configure](#configure) section to configure your CMake build.
@@ -26,7 +26,7 @@ Install the required dependencies using the `apt` package manager.
 
 ```sh
 sudo apt update
-sudo apt install build-essential libreadline-dev cmake
+sudo apt install build-essential libssl-dev cmake
 ```
 
 Proceed to the [Configure](#configure) section to configure your CMake build.
@@ -37,89 +37,106 @@ Install the required dependencies using the `pacman` package manager.
 
 ```sh
 sudo pacman -Sy
-sudo pacman -S --needed --noconfirm base-devel readline cmake
+sudo pacman -S --needed --noconfirm base-devel openssl cmake
 ```
 
 Proceed to the [Configure](#configure) section to configure your CMake build.
 
-## Windows
+#### RedHat, Fedora, CentOS and their derivatives
+
+Install the required dependencies using the `yum` package manager.
+
+```sh
+sudo yum check-update
+sudo yum groupinstall 'Development Tools'
+sudo yum install -y openssl-devel cmake
+```
+
+Proceed to the [Configure](#configure) section to configure your CMake build.
+
+### Windows
 
 > Starting from the 3rd of February 2021, Blade's officially supported compilers for the Windows environment is now the 
-> TDM-GCC and WinLibs compiler. The decision to change the official compiler from Visual Studio and MSYS2 to TDM-GCC and WinLibs 
-> is to allow a minial configuration effort while installing Blade as well as to allow us to develop Blade faster as trying to 
+> WinLibs and TDM-GCC compiler. The decision to change the official compiler from Visual Studio and MSYS2 to WinLibs and TDM-GCC 
+> is to allow for minial configuration effort while installing Blade as well as to allow us to develop Blade faster as trying to 
 > be cross-compatible with Visual Studio has proven to slow down the growth of the language and the ecosystem and setting up 
-> MSYS2 environment to compile Blade is more work than required for either TDM-GCC or WinLibs.
+> MSYS2 environment to compile Blade is more work than required for either WinLibs or TDM-GCC.
 > 
 > This also allows us to build valid Blade C extensions on Windows with less hassle. 
 > Check out the [blade-ext-demo](https://github.com/blade-lang/blade-ext-demo) or any of the extension in the 
-> [ext](https://github.com/blade-lang/blade/ext) directory for more info on how to write a valid C extension for Blade.
+> [packages](https://github.com/blade-lang/blade/packages) directory for more info on how to write a valid C extension for Blade.
 
-### Using TDM-GCC or WinLibs
+#### Using WinLibs or TDM-GCC with vcpkg
 
-To install Blade with TDM-GCC or WinLibs, install [TDM-GCC](https://github.com/jmeubank/tdm-gcc/releases/download/v10.3.0-tdm64-2/tdm64-gcc-10.3.0-2.exe)
-or [WinLibs](https://github.com/brechtsanders/winlibs_mingw/releases/download/11.2.0-9.0.0-msvcrt-r5/winlibs-x86_64-posix-seh-gcc-11.2.0-mingw-w64-9.0.0-r5.zip) 
-via the given links. Add TDM-GCC or WinLibs `bin` directory to your environment path. TDM-GCC also allows you to add to path during its installation. 
-After this, run the following commands from the root of your Blade clone:
+To install Blade with WinLibs or TDM-GCC, install 
+[WinLibs](https://github.com/brechtsanders/winlibs_mingw/releases/download/11.2.0-9.0.0-msvcrt-r5/winlibs-x86_64-posix-seh-gcc-11.2.0-mingw-w64-9.0.0-r5.zip) 
+or [TDM-GCC](https://github.com/jmeubank/tdm-gcc/releases/download/v10.3.0-tdm64-2/tdm64-gcc-10.3.0-2.exe) 
+via the given links. Add WinLibs or TDM-GCC `bin` directory to your environment path. TDM-GCC also allows you to add to path during its installation. 
 
-```terminal
-cmake -B build -DCMAKE_MAKE_PROGRAM=mingw32-make -G "Unix Makefiles"
-cmake --build build
+Next, install [vcpkg](https://vcpkg.io/en/index.html) following the instruction [here](https://vcpkg.io/en/getting-started.html)
+and add `vcpkg` to your environment. After this, run the commands below to install the required dependencies:
+
+```bat
+vcpkg install curl:x64-windows libffi:x64-windows openssl:x64-windows
 ```
 
-The `blade` executable can be located in the `build/bin` folder. Simply add that folder to your system path to make it available
-system-wide.
+If you are on an `x86` system, you can also install the x86 versions of the dependencies using the command:
 
-### Using Visual Studio
-
-Install the 'Desktop Development with C++' workload using the Visual Studio installer. In the 'Installation Details'
-section, make sure 'C++ CMake tools for Windows' checkbox is selected.
-
-Should you wish to build from the command line, it is recommended to follow the next few steps in the
-'Developer Command Prompt' or 'Developer PowerShell' shell for your version of Visual Studio.
-
-You may instead prefer to open the project within the IDE, either by right-clicking the folder and selecting 'Open in
-Visual Studio' or by choosing the 'Open Folder' option after the splash screen. In this case, you should select the
-appropriate startup executable by choosing `blade.exe` from the 'Select Startup Item...' toolbar option in the bar above
-the code editor.
-
-### Using MSYS2 and MinGW
-
-You may opt to use ported GCC or Clang compilers provided through the MSYS2 project.
-
-This has only been tested using the `mingw64` toolchain. Open up a new `mingw64` terminal, and ensure you have the
-required dependencies:
-
-```sh
-sudo pacman -Sy
-sudo pacman -S --needed --noconfirm mingw-w64-x86_64-{cmake,ninja,toolchain}
+```shell
+vcpkg install curl:x86-windows libffi:x86-windows openssl:x86-windows
 ```
 
-Proceed to the [Configure](#configure) section to configure your CMake build, and follow the instructions as if you were
-using these tools on a UNIX-like system.
+## Automated Build and Install (Works on all OSX and Linux)
 
-## Autoinstall (Works on all OSX and Linux)
-
-```sh
+```shell
 bash <(curl -s https://raw.githubusercontent.com/blade-lang/blade/main/scripts/install.sh)
+```
 
 ## Configure
 
-Configure CMake by creating an empty `build` directory in the source root directory, and running:
+Configure CMake by creating an empty `build` directory in the source root directory, and running the appropriate command.
+
+> During configure, other required dependencies will be downloaded automatically the first time you do a configure so you should ensure you have a good internet connection if you are running configure for the first time.
+
+### Unix (Linux, macOS)
 
 ```sh
-cmake -B build      # optionally, if you have `ninja-build` installed, you may use '-G Ninja' to speed up compile times.
+cmake -B build
 ```
 
-CMake will have generated a Unix Makefiles, Ninja or Visual Studio project in the `build` directory.
+Optionally, if you have `ninja-build` installed, you may use `-G Ninja` to speed up compile times. For example:
+
+```sh
+cmake -B build -G Ninja
+```
+
+CMake will have generated a Unix Makefiles or Ninja build files in the `build` directory.
+
+If you get an error regards missing `OPENSSL_ROOT_DIR` on macOS add the path to `openssl` which should be located at `/usr/local/opt/openssl` or somewhere in `/opt/homebrew/Cellar/` 
+(for example `/opt/homebrew/Cellar/openssl@3/3.0.7`). Your configure command should look like this:
+
+```sh
+cmake -B build -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl
+```
+
+### Windows
+
+If you are configuring on Windows, you'll need to specify the `make` program as well as the `vcpkg` toolchain file.
+
+```shell
+cmake -B build -DCMAKE_MAKE_PROGRAM=mingw32-make -G "Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="${PATH_TO_VCPKG}/scripts/buildsystems/vcpkg.cmake"
+```
+
+On Windows, it is also mostly common to use the `ninja` build system when available. For this, you'll only need to replace the `mingw32-make` with `ninja` in the command.
 
 ## Build
 
-Once the build files have been generated, either change to the `build` directory and run the appropriate `make`, `ninja`
-or `msbuild` tool (the latter using the 'Developer Tools Command Prompt' on Windows), or ask CMake to call the correct
+Once the build files have been generated, either change to the `build` directory and run the appropriate `make` or 
+`ninja` tool (the latter using the 'Developer Tools Command Prompt' on Windows), or ask CMake to call the correct 
 tool for you:
 
 ```sh
 cmake --build build
 ```
 
-The `blade` executable can be located in the `build` folder.
+Blade will be built into a directory called `blade` which will be located in the `build` folder.

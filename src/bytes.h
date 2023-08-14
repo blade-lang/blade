@@ -170,17 +170,10 @@ DECLARE_BYTES_METHOD(to_list);
 DECLARE_BYTES_METHOD(to_string);
 
 /**
- * bytes.@iter()
- *
- * implementing the iterable interface
+ * See list.h
  */
 DECLARE_BYTES_METHOD(__iter__);
-
-/**
- * bytes.@itern()
- *
- * implementing the iterable interface
- */
 DECLARE_BYTES_METHOD(__itern__);
+DECLARE_BYTES_METHOD(each);
 
 #endif

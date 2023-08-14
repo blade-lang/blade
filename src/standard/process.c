@@ -90,14 +90,17 @@ typedef struct {
   int get_format_length;
   int length;
   bool locked;
-} BProcessShared;
+  int flags;
+  int protection;
+  int exectuable;
+} BProcessPaged;
 
-void b__free_shared_memory(void *data) {
-  BProcessShared *shared = (BProcessShared *)data;
-  munmap(shared->format, shared->format_length * sizeof(char));
-  munmap(shared->get_format, shared->get_format_length * sizeof(char));
-  munmap(shared->bytes, shared->length * sizeof(unsigned char));
-  munmap(shared, sizeof(BProcessShared));
+void b__free_paged_memory(void *data) {
+  BProcessPaged *paged = (BProcessPaged *)data;
+  munmap(paged->format, paged->format_length * sizeof(char));
+  munmap(paged->get_format, paged->get_format_length * sizeof(char));
+  munmap(paged->bytes, paged->length * sizeof(unsigned char));
+  munmap(paged, sizeof(BProcessPaged));
 }
 
 DECLARE_MODULE_METHOD(process_Process) {
@@ -168,59 +171,116 @@ DECLARE_MODULE_METHOD(process_id) {
   RETURN_NUMBER(process->pid);
 }
 
-DECLARE_MODULE_METHOD(process_new_shared) {
-  ENFORCE_ARG_COUNT(new_shared, 0);
-  BProcessShared *shared = mmap(NULL, sizeof(BProcessShared), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-  shared->bytes = mmap(NULL, sizeof(unsigned char), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-  shared->format = mmap(NULL, sizeof(char), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-  shared->get_format = mmap(NULL, sizeof(char), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-  shared->length = shared->get_format_length = shared->format_length = 0;
-  b_obj_ptr *ptr = (b_obj_ptr *)GC(new_ptr(vm, shared));
-  ptr->name = "<*Process::SharedValue>";
-  ptr->free_fn = b__free_shared_memory;
-  RETURN_OBJ(ptr);
+DECLARE_MODULE_METHOD(process_new_paged) {
+  ENFORCE_ARG_COUNT(new_paged, 2);
+  ENFORCE_ARG_TYPE(new_paged, 0, IS_BOOL); // executable
+  ENFORCE_ARG_TYPE(new_paged, 1, IS_BOOL); // private
+
+  int protection = PROT_READ | PROT_WRITE;
+  int flags = MAP_ANONYMOUS;
+  if(AS_BOOL(args[1])) {
+    flags |= MAP_PRIVATE;
+  } else {
+    flags |= MAP_SHARED;
+  }
+
+  BProcessPaged *paged = mmap(NULL, sizeof(BProcessPaged), protection, flags, -1, 0);
+
+  if(paged != MAP_FAILED) {
+    paged->protection = protection;
+    paged->exectuable = AS_BOOL(args[0]);
+    paged->flags = flags;
+
+    paged->bytes = NULL;
+    paged->format = mmap(NULL, sizeof(char), protection, flags, -1, 0);
+    paged->get_format = mmap(NULL, sizeof(char), protection, flags, -1, 0);
+    paged->length = paged->get_format_length = paged->format_length = 0;
+    b_obj_ptr *ptr = (b_obj_ptr *)GC(new_ptr(vm, paged));
+    ptr->name = "<*Process::PagedValue>";
+    ptr->free_fn = b__free_paged_memory;
+    RETURN_OBJ(ptr);
+  }
+
+  RETURN_NIL;
 }
 
-DECLARE_MODULE_METHOD(process_shared_write) {
-  ENFORCE_ARG_COUNT(shared_write, 4);
-  ENFORCE_ARG_TYPE(shared_write, 0, IS_PTR);
-  ENFORCE_ARG_TYPE(shared_write, 1, IS_STRING);
-  ENFORCE_ARG_TYPE(shared_write, 2, IS_STRING);
-  ENFORCE_ARG_TYPE(shared_write, 3, IS_BYTES);
 
-  BProcessShared *shared = (BProcessShared *)AS_PTR(args[0])->pointer;
-  if(!shared->locked) {
+#if __APPLE__
+// we are doing this to avoid write protection on Apple devices
+// most especially M1 and M2 devices.
+#include <pthread.h>
+#endif
+DECLARE_MODULE_METHOD(process_paged_write) {
+  ENFORCE_ARG_COUNT(paged_write, 4);
+  ENFORCE_ARG_TYPE(paged_write, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(paged_write, 1, IS_STRING);
+  ENFORCE_ARG_TYPE(paged_write, 2, IS_STRING);
+  ENFORCE_ARG_TYPE(paged_write, 3, IS_BYTES);
+
+  BProcessPaged *paged = (BProcessPaged *)AS_PTR(args[0])->pointer;
+  if(!paged->locked) {
     b_obj_string *format = AS_STRING(args[1]);
     b_obj_string *get_format = AS_STRING(args[2]);
     b_byte_arr bytes = AS_BYTES(args[3])->bytes;
 
-    memcpy(shared->format, format->chars, format->length);
-    shared->format_length = format->length;
+    memcpy(paged->format, format->chars, format->length);
+    paged->format_length = format->length;
 
-    memcpy(shared->get_format, get_format->chars, get_format->length);
-    shared->get_format_length = get_format->length;
+    memcpy(paged->get_format, get_format->chars, get_format->length);
+    paged->get_format_length = get_format->length;
 
-    memcpy(shared->bytes, bytes.bytes, bytes.count);
-    shared->length = bytes.count;
+    if(paged->bytes != NULL) {
+      munmap(paged->bytes, paged->length);
+      paged->bytes = NULL;
+    }
+
+    int data_protection = paged->protection;
+    if(paged->exectuable) {
+      data_protection |= PROT_EXEC;
+    }
+    int data_flags = paged->flags;
+#if __APPLE__
+    if(paged->exectuable) {
+      data_flags |= MAP_JIT;
+    }
+
+    // we are doing this to avoid write protection on Apple devices
+    // most especially M1 and M2 devices.
+    pthread_jit_write_protect_np(false);
+#endif
+
+    size_t data_size = bytes.count * sizeof(unsigned char);
+    paged->bytes = mmap(NULL, data_size, data_protection, data_flags, -1, 0);
+
+    memmove(paged->bytes, bytes.bytes, bytes.count);
+    paged->length = bytes.count;
+
+#if __APPLE__
+    if(paged->exectuable) {
+      // we are doing this to avoid write protection on Apple devices
+      // most especially M1 and M2 devices.
+      pthread_jit_write_protect_np(true);
+    }
+#endif
 
     // return length written
-    RETURN_NUMBER(shared->length);
+    RETURN_NUMBER(paged->length);
   }
 
   RETURN_FALSE;
 }
 
-DECLARE_MODULE_METHOD(process_shared_read) {
-  ENFORCE_ARG_COUNT(shared_read, 1);
-  ENFORCE_ARG_TYPE(shared_read, 0, IS_PTR);
-  BProcessShared *shared = (BProcessShared *)AS_PTR(args[0])->pointer;
+DECLARE_MODULE_METHOD(process_paged_read) {
+  ENFORCE_ARG_COUNT(paged_read, 1);
+  ENFORCE_ARG_TYPE(paged_read, 0, IS_PTR);
+  BProcessPaged *paged = (BProcessPaged *)AS_PTR(args[0])->pointer;
 
-  if(shared->length > 0 || shared->format_length > 0) {
-    b_obj_bytes *bytes = (b_obj_bytes *) GC(copy_bytes(vm, shared->bytes, shared->length));
+  if(paged->length > 0 || paged->format_length > 0) {
+    b_obj_bytes *bytes = (b_obj_bytes *) GC(copy_bytes(vm, paged->bytes, paged->length));
 
     // return [format, bytes]
     b_obj_list *list = (b_obj_list *)GC(new_list(vm));
-    write_list(vm, list, STRING_L_VAL(shared->get_format, shared->get_format_length));
+    write_list(vm, list, STRING_L_VAL(paged->get_format, paged->get_format_length));
     write_list(vm, list, OBJ_VAL(bytes));
 
     RETURN_OBJ(list);
@@ -228,27 +288,34 @@ DECLARE_MODULE_METHOD(process_shared_read) {
   RETURN_NIL;
 }
 
-DECLARE_MODULE_METHOD(process_shared_lock) {
-  ENFORCE_ARG_COUNT(shared_lock, 1);
-  ENFORCE_ARG_TYPE(shared_lock, 0, IS_PTR);
-  BProcessShared *shared = (BProcessShared *)AS_PTR(args[0])->pointer;
-  shared->locked = true;
+DECLARE_MODULE_METHOD(process_paged_lock) {
+  ENFORCE_ARG_COUNT(paged_lock, 1);
+  ENFORCE_ARG_TYPE(paged_lock, 0, IS_PTR);
+  BProcessPaged *paged = (BProcessPaged *)AS_PTR(args[0])->pointer;
+  paged->locked = true;
   RETURN;
 }
 
-DECLARE_MODULE_METHOD(process_shared_unlock) {
-  ENFORCE_ARG_COUNT(shared_unlock, 1);
-  ENFORCE_ARG_TYPE(shared_unlock, 0, IS_PTR);
-  BProcessShared *shared = (BProcessShared *)AS_PTR(args[0])->pointer;
-  shared->locked = false;
+DECLARE_MODULE_METHOD(process_paged_unlock) {
+  ENFORCE_ARG_COUNT(paged_unlock, 1);
+  ENFORCE_ARG_TYPE(paged_unlock, 0, IS_PTR);
+  BProcessPaged *paged = (BProcessPaged *)AS_PTR(args[0])->pointer;
+  paged->locked = false;
   RETURN;
 }
 
-DECLARE_MODULE_METHOD(process_shared_islocked) {
-  ENFORCE_ARG_COUNT(shared_islocked, 1);
-  ENFORCE_ARG_TYPE(shared_islocked, 0, IS_PTR);
-  BProcessShared *shared = (BProcessShared *)AS_PTR(args[0])->pointer;
-  RETURN_BOOL(shared->locked);
+DECLARE_MODULE_METHOD(process_paged_islocked) {
+  ENFORCE_ARG_COUNT(paged_islocked, 1);
+  ENFORCE_ARG_TYPE(paged_islocked, 0, IS_PTR);
+  BProcessPaged *paged = (BProcessPaged *)AS_PTR(args[0])->pointer;
+  RETURN_BOOL(paged->locked);
+}
+
+DECLARE_MODULE_METHOD(process_raw_pointer) {
+  ENFORCE_ARG_COUNT(raw_pointer, 1);
+  ENFORCE_ARG_TYPE(raw_pointer, 0, IS_PTR);
+  BProcessPaged *paged = (BProcessPaged *)AS_PTR(args[0])->pointer;
+  RETURN_PTR(paged->bytes);
 }
 
 CREATE_MODULE_LOADER(process) {
@@ -259,11 +326,12 @@ CREATE_MODULE_LOADER(process) {
       {"wait",     false, GET_MODULE_METHOD(process_wait)},
       {"id",     false, GET_MODULE_METHOD(process_id)},
       {"kill",     false, GET_MODULE_METHOD(process_kill)},
-      {"new_shared",     false, GET_MODULE_METHOD(process_new_shared)},
-      {"shared_write",     false, GET_MODULE_METHOD(process_shared_write)},
-      {"shared_read",     false, GET_MODULE_METHOD(process_shared_read)},
-      {"shared_lock",     false, GET_MODULE_METHOD(process_shared_lock)},
-      {"shared_unlock",     false, GET_MODULE_METHOD(process_shared_unlock)},
+      {"new_paged",     false, GET_MODULE_METHOD(process_new_paged)},
+      {"paged_write",     false, GET_MODULE_METHOD(process_paged_write)},
+      {"paged_read",     false, GET_MODULE_METHOD(process_paged_read)},
+      {"paged_lock",     false, GET_MODULE_METHOD(process_paged_lock)},
+      {"paged_unlock",     false, GET_MODULE_METHOD(process_paged_unlock)},
+      {"raw_pointer",     false, GET_MODULE_METHOD(process_raw_pointer)},
       {NULL,     false, NULL},
   };
 

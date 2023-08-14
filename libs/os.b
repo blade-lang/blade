@@ -445,11 +445,3 @@ def dir_name(path) {
 def base_name(path) {
   return _os.basename(path)
 }
-
-/**
- * current_file()
- * 
- * A string containing the path to the current file from which the value is accessed.
- * @type string
- */
-var current_file = _os.FILE

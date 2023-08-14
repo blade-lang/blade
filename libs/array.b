@@ -41,6 +41,11 @@ var INT64_MAX = 9223372036854775807
 var UINT64_MAX = 18446744073709551615
 
 /**
+ * Maximum value that "should" exist in a list passed to FloatArray.
+ */
+var FLOAT_MAX = 3.402823466E+38
+
+/**
  * Minimum value that "should" exist in a list passed to Int16Array.
  */
 var INT16_MIN = -INT16_MAX - 1
@@ -54,6 +59,11 @@ var INT32_MIN = -INT32_MAX - 1
  * Minimum value that "should" exist in a list passed to Int64Array.
  */
 var INT64_MIN = -INT64_MAX - 1
+
+/**
+ * Minimum value that "should" exist in a list passed to FloatArray.
+ */
+var FLOAT_MIN = 1.175494351E-38
 
 
 /**
@@ -145,6 +155,22 @@ class Int16Array {
   }
 
   /**
+   * set(index: number, value: number)
+   * 
+   * Sets the value at the given index.
+   * 
+   * @return number
+   */
+  set(index, value) {
+    if !is_number(index)
+      die Exception('Arrays are numerically indexed')
+    if !is_number(value) and !is_int(value)
+      die Exception('Int16Array stores integer values')
+    
+    return _array.int16_set(self._ptr, index, value)
+  }
+
+  /**
    * extend(array: Int16Array)
    * 
    * Updates the content of the current array by appending all the contents 
@@ -194,7 +220,7 @@ class Int16Array {
    * @return bytes
    */
   to_bytes() {
-    return _array.int16_to_bytes(self._ptr)
+    return _array.to_bytes(self._ptr, 2)
   }
 
   /**
@@ -292,7 +318,7 @@ class Int32Array {
    * Returns the length of the array if it were to be converted to bytes.
    */
   bytes_length() {
-    return self.length() * 2
+    return self.length() * 4
   }
 
   /**
@@ -340,6 +366,22 @@ class Int32Array {
       die Exception('Arrays are numerically indexed')
     
     return _array.int32_get(self._ptr, index)
+  }
+
+  /**
+   * set(index: number, value: number)
+   * 
+   * Sets the value at the given index.
+   * 
+   * @return number
+   */
+  set(index, value) {
+    if !is_number(index)
+      die Exception('Arrays are numerically indexed')
+    if !is_number(value) and !is_int(value)
+      die Exception('Int32Array stores integer values')
+    
+    return _array.int32_set(self._ptr, index, value)
   }
 
   /**
@@ -392,7 +434,7 @@ class Int32Array {
    * @return bytes
    */
   to_bytes() {
-    return _array.int32_to_bytes(self._ptr)
+    return _array.to_bytes(self._ptr, 4)
   }
 
   /**
@@ -490,7 +532,7 @@ class Int64Array {
    * Returns the length of the array if it were to be converted to bytes.
    */
   bytes_length() {
-    return self.length() * 2
+    return self.length() * 8
   }
 
   /**
@@ -538,6 +580,22 @@ class Int64Array {
       die Exception('Arrays are numerically indexed')
     
     return _array.int64_get(self._ptr, index)
+  }
+
+  /**
+   * set(index: number, value: number)
+   * 
+   * Sets the value at the given index.
+   * 
+   * @return number
+   */
+  set(index, value) {
+    if !is_number(index)
+      die Exception('Arrays are numerically indexed')
+    if !is_number(value)
+      die Exception('Int64Array stores numeric values')
+    
+    return _array.int64_set(self._ptr, index, value)
   }
 
   /**
@@ -590,7 +648,7 @@ class Int64Array {
    * @return bytes
    */
   to_bytes() {
-    return _array.int64_to_bytes(self._ptr)
+    return _array.to_bytes(self._ptr, 8)
   }
 
   /**
@@ -739,6 +797,22 @@ class UInt16Array {
   }
 
   /**
+   * set(index: number, value: number)
+   * 
+   * Sets the value at the given index.
+   * 
+   * @return number
+   */
+  set(index, value) {
+    if !is_number(index)
+      die Exception('Arrays are numerically indexed')
+    if !is_number(value) and !is_int(value)
+      die Exception('UInt16Array stores integer values')
+    
+    return _array.uint16_set(self._ptr, index, value)
+  }
+
+  /**
    * extend(array: UInt16Array)
    * 
    * Updates the content of the current array by appending all the contents 
@@ -788,7 +862,7 @@ class UInt16Array {
    * @return bytes
    */
   to_bytes() {
-    return _array.uint16_to_bytes(self._ptr)
+    return _array.to_bytes(self._ptr, 2)
   }
 
   /**
@@ -886,7 +960,7 @@ class UInt32Array {
    * Returns the length of the array if it were to be converted to bytes.
    */
   bytes_length() {
-    return self.length() * 2
+    return self.length() * 4
   }
 
   /**
@@ -934,6 +1008,22 @@ class UInt32Array {
       die Exception('Arrays are numerically indexed')
     
     return _array.uint32_get(self._ptr, index)
+  }
+
+  /**
+   * set(index: number, value: number)
+   * 
+   * Sets the value at the given index.
+   * 
+   * @return number
+   */
+  set(index, value) {
+    if !is_number(index)
+      die Exception('Arrays are numerically indexed')
+    if !is_number(value) and !is_int(value)
+      die Exception('UInt32Array stores integer values')
+    
+    return _array.uint32_set(self._ptr, index, value)
   }
 
   /**
@@ -986,7 +1076,7 @@ class UInt32Array {
    * @return bytes
    */
   to_bytes() {
-    return _array.uint32_to_bytes(self._ptr)
+    return _array.to_bytes(self._ptr, 4)
   }
 
   /**
@@ -1084,7 +1174,7 @@ class UInt64Array {
    * Returns the length of the array if it were to be converted to bytes.
    */
   bytes_length() {
-    return self.length() * 2
+    return self.length() * 8
   }
 
   /**
@@ -1132,6 +1222,22 @@ class UInt64Array {
       die Exception('Arrays are numerically indexed')
     
     return _array.uint64_get(self._ptr, index)
+  }
+
+  /**
+   * set(index: number, value: number)
+   * 
+   * Sets the value at the given index.
+   * 
+   * @return number
+   */
+  set(index, value) {
+    if !is_number(index)
+      die Exception('Arrays are numerically indexed')
+    if !is_number(value)
+      die Exception('UInt64Array stores numeric values')
+    
+    return _array.uint64_set(self._ptr, index, value)
   }
 
   /**
@@ -1184,7 +1290,7 @@ class UInt64Array {
    * @return bytes
    */
   to_bytes() {
-    return _array.uint64_to_bytes(self._ptr)
+    return _array.to_bytes(self._ptr, 8)
   }
 
   /**
@@ -1195,6 +1301,220 @@ class UInt64Array {
    */
   to_list() {
     return _array.uint64_to_list(self._ptr)
+  }
+
+  /**
+   * to_string()
+   * 
+   * Returns a string representation of the array
+   * @return string
+   */
+  to_string() {
+    return _array.to_string(self._ptr)
+  }
+
+  /**
+   * get_pointer()
+   * 
+   * Returns the raw uint64 array pointer.
+   * @return ptr
+   */
+  get_pointer() {
+    return self._ptr
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+
+  @to_list() {
+    return self.to_list()
+  }
+
+  @to_json() {
+    return self.to_list()
+  }
+
+  @iter(n) {
+    if !is_number(n)
+      die Exception('Arrays are numerically indexed')
+    return _array.uint64___iter__(self._ptr, n)
+  }
+
+  @itern(n) {
+    if !is_number(n)
+      die Exception('Arrays are numerically indexed')
+    return _array.itern(self._ptr, n)
+  }
+}
+
+
+
+/**
+ * class FloatArray represents an array of 32-bit floating point numbers 
+ * corresponding to the C float data type in the platform byte order.
+ * 
+ * @printable
+ * @iterable
+ * @serializable
+ */
+class FloatArray {
+
+  /**
+   * FloatArray(n: number | list)
+   * 
+   * - If n is a number, it creates a new FloatArray that can hold up to n 
+   * number of elements, but with all the elements set to 0. 
+   * - If n is a list, it creates a new FloatArray with its elements set to 
+   * the values in the list.
+   * @constructor
+   */
+  FloatArray(n) {
+    self._ptr = _array.FloatArray(n)
+  }
+
+  /**
+   * length()
+   * 
+   * Returns the number of items in the array. 
+   */
+  length() {
+    return _array.length(self._ptr)
+  }
+
+  /**
+   * bytes_length()
+   * 
+   * Returns the length of the array if it were to be converted to bytes.
+   */
+  bytes_length() {
+    return self.length() * 4
+  }
+
+  /**
+   * first()
+   * 
+   * Returns the first item in the array or nil if the array is empty.
+   */
+  first() {
+    return _array.first(self._ptr)
+  }
+
+  /**
+   * last()
+   * 
+   * Returns the last item in the array or nil if the array is empty.
+   */
+  last() {
+    return _array.last(self._ptr)
+  }
+
+  /**
+   * append(value: int)
+   * 
+   * Adds the given _value_ to the end of the array.
+   */
+  append(value) {
+    if !is_number(value) or !is_int(value)
+      die Exception('integer expected')
+    if value < FLOAT_MIN or value > FLOAT_MAX
+      die Exception('value out of float range')
+
+    _array.append(self._ptr, value)
+  }
+
+  /**
+   * get(index: number)
+   * 
+   * Returns the number at the specified index in the array. If index is 
+   * outside the boundary of the array indexes (0..(array.length() - 1)), 
+   * an exception is thrown.
+   * @return number
+   */
+  get(index) {
+    if !is_number(index)
+      die Exception('Arrays are numerically indexed')
+    
+    return _array.float_get(self._ptr, index)
+  }
+
+  /**
+   * set(index: number, value: number)
+   * 
+   * Sets the value at the given index.
+   * 
+   * @return number
+   */
+  set(index, value) {
+    if !is_number(index)
+      die Exception('Arrays are numerically indexed')
+    if !is_number(value)
+      die Exception('FloatArray stores numeric values')
+    
+    return _array.float_set(self._ptr, index, value)
+  }
+
+  /**
+   * extend(array: FloatArray)
+   * 
+   * Updates the content of the current array by appending all the contents 
+   * of _array_ to the end of the array in exact order.
+   */
+  extend(array) {
+    if !instance_of(array, FloatArray)
+      die Exception('instance of FloatArray expected')
+    _array.extend(self._ptr, array.get_pointer())
+  }
+
+  /**
+   * reverse()
+   * 
+   * Returns a new array containing the elements in the original array 
+   * in reverse order.
+   */
+  reverse() {
+    _array.uint64_reverse(self._ptr)
+  }
+
+  /**
+   * clone()
+   * 
+   * Returns a new FloatArray containing all items from the current array. 
+   * The new array is a shallow copy of the original array.
+   * @return FloatArray
+   */
+  clone() {
+    return FloatArray(_array.float_clone(self._ptr))
+  }
+
+  /**
+   * pop()
+   * 
+   * Removes the last element in the array and returns the value of that item.
+   * @return number
+   */
+  pop() {
+    return _array.float_pop(self._ptr)
+  }
+
+  /**
+   * to_bytes()
+   * 
+   * Returns the array as a bytes object
+   * @return bytes
+   */
+  to_bytes() {
+    return _array.to_bytes(self._ptr, 8)
+  }
+
+  /**
+   * to_list()
+   * 
+   * Returns the elements of the array as a list of numbers
+   * @return list
+   */
+  to_list() {
+    return _array.float_to_list(self._ptr)
   }
 
   /**

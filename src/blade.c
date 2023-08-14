@@ -24,6 +24,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include "pathinfo.h"
 #endif
 
 static void repl(b_vm *vm) {
@@ -42,6 +43,7 @@ static void repl(b_vm *vm) {
 
   b_obj_module *module = new_module(vm, strdup(""), strdup("<repl>"));
   add_module(vm, module);
+  register_module__FILE__(vm, module);
 
 #if !defined(_WIN32) && !defined(__CYGWIN__)
 
@@ -190,8 +192,9 @@ static void run_file(b_vm *vm, char *file) {
   // set root file...
   vm->root_file = file;
 
-  b_obj_module *module = new_module(vm, strdup(""), strdup(file));
+  b_obj_module *module = new_module(vm, strdup(""), realpath(file, NULL));
   add_module(vm, module);
+  register_module__FILE__(vm, module);
 
   b_ptr_result result = interpret(vm, module, source);
   free(source);
@@ -210,6 +213,7 @@ static void run_code(b_vm *vm, char *source) {
 
   b_obj_module *module = new_module(vm, strdup(""), strdup("<script>"));
   add_module(vm, module);
+  register_module__FILE__(vm, module);
 
   b_ptr_result result = interpret(vm, module, source);
   fflush(stdout);

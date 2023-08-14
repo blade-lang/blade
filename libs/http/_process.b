@@ -26,8 +26,8 @@ def process_header(header, meta_callback) {
         # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-3.2.6
         # A string of text is parsed as a single value if it is quoted using
         # double-quote marks
-        if value.starts_with('"') and value.ends_with('"')
-          value = value[1,-1]
+        # if value.starts_with('"') and value.ends_with('"')
+        #   value = value[1,-1]
 
         # handle cookies in header
         if key.lower() == 'set-cookie' {

@@ -8,7 +8,7 @@
 #include "util.h"
 #include "value.h"
 
-#include "pcre2/pcre2.h"
+#include "pcre2.h"
 
 #define DECLARE_NATIVE(name)                                                   \
   bool native_fn_##name(b_vm *vm, int arg_count, b_value *args)
@@ -148,7 +148,7 @@
       } \
     }                                                                          \
     CLEAR_GC(); \
-  } while (0);
+  } while (0)
 
 #define REGEX_COMPILATION_ERROR(re, error_number, error_offset)                \
   if ((re) == NULL) {                                                            \
@@ -181,7 +181,7 @@
 #define REGEX_RC_ERROR() REGEX_ERR("%d", rc);
 
 #define GET_REGEX_COMPILE_OPTIONS(string, regex_show_error)              \
-  uint32_t compile_options = is_regex(string);                                 \
+  int32_t compile_options = is_regex(string);                                 \
   if ((regex_show_error) && (int)compile_options == -1) {                        \
     RETURN_ERROR("RegexError: Invalid regex");          \
   } else if ((regex_show_error) && (int)compile_options > 1000000) {                  \
@@ -195,7 +195,7 @@
 #define GC_T_STRING(o, l) OBJ_VAL(GC(take_string(vm, (o), (l))))
 #define GC_TT_STRING(o) OBJ_VAL(GC(take_string(vm, (o), (int)strlen(o))))
 
-extern uint32_t is_regex(b_obj_string *string);
+extern int32_t is_regex(b_obj_string *string);
 
 extern char *remove_regex_delimiter(b_vm *vm, b_obj_string *string);
 

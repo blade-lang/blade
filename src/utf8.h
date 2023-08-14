@@ -33,5 +33,6 @@ void utf8slice(char *s, int *start, int *end);
 char *utf8_toupper(char *s, int length);
 char *utf8_tolower(char *s, int length);
 char *utf8_strstr(const char *haystack, const char *needle);
+char *utf8_case_fold(char *str, int str_len, bool simple, size_t *out_length);
 
 #endif //BLADE_UTF8_H

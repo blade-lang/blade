@@ -191,7 +191,7 @@ def load(name) {
  * new(type: type, ...any)
  * 
  * Creates a new C value for the specified clib type with the given values.
- * @returns bytes
+ * @return bytes
  */
 def new(type, ...) {
   if __args__.length() == 0
@@ -215,7 +215,7 @@ def new(type, ...) {
  * automatically be returned with the values mapped to the names of the 
  * structure elements.
  * 
- * @returns list | dictionary
+ * @return list | dictionary
  */
 def get(type, data) {
   # Ensure a valid and non void clib pointer.
@@ -248,4 +248,43 @@ def get_ptr_index(pointer, type, index) {
  */
 def set_ptr_index(pointer, type, index, value) {
   return _clib.set_ptr_index(pointer, type, index, value)
+}
+
+/**
+ * function_handle(handle: ptr, return_type: type, ...type)
+ * 
+ * Defines a new C function from an existing handle and return type.
+ * -  When there are no more argument, it is declared that the function
+ *    takes no argument.
+ * -  `define()` expects a list of the argument/parameter types as expected
+ *    by the function.
+ * 
+ * E.g.
+ * 
+ * ```blade
+ * function_handle(my_ptr, int, int, ptr)
+ * ```
+ * 
+ * Corresponds to the C declaration:
+ * 
+ * ```c
+ * int (*my_ptr)(int a, void *b);
+ * ```
+ */
+def function_handle(handle, return_type, ...) {
+  if !reflect.is_ptr(handle)
+    die Exception('pointer expected in argument 1 (handle)')
+
+  # Ensure valid clib pointer.
+  if !(reflect.is_ptr(return_type) and to_string(return_type).match('/clib/')) {
+      die Exception('invalid return type')
+  }
+
+  var ffi_ptr = _clib.define(handle, '@', return_type, __args__)
+
+  def define(...) {
+    return _clib.call(ffi_ptr, __args__)
+  }
+
+  return define
 }

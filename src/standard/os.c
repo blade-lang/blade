@@ -211,24 +211,6 @@ DECLARE_MODULE_METHOD(os_getenv) {
   }
 }
 
-DECLARE_MODULE_METHOD(os__FILE) {
-  ENFORCE_ARG_COUNT(FILE, 0);
-
-  char *file = vm->current_frame->closure->function->module->file;
-  if(file == NULL || memcmp(file, "<repl>", strlen(file)) == 0) {
-    RETURN_STRING("<repl>");
-  } else if(memcmp(file, "<script>", strlen(file)) == 0) {
-    RETURN_STRING("<script>");
-  }
-
-  char *path = realpath(file, NULL);
-  if(path != NULL) {
-    RETURN_TT_STRING(path);
-  }
-
-  RETURN_STRING(file);
-}
-
 DECLARE_MODULE_METHOD(os_setenv) {
   ENFORCE_ARG_RANGE(set_env, 2, 3);
   ENFORCE_ARG_TYPE(set_env, 0, IS_STRING);
@@ -561,7 +543,6 @@ CREATE_MODULE_LOADER(os) {
       {"realpath", true,  GET_MODULE_METHOD(os__realpath)},
       {"dirname", true,  GET_MODULE_METHOD(os__dirname)},
       {"basename", true,  GET_MODULE_METHOD(os__basename)},
-      {"FILE", true,  GET_MODULE_METHOD(os__FILE)},
       {NULL,     false, NULL},
   };
 
