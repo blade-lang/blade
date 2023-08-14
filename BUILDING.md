@@ -3,6 +3,12 @@
 Blade itself is a C11 application using the CMake build system, and therefore, building Blade should be no different to
 any other application built using the same tools.
 
+## Automated Build and Install (Works on all OSX and Linux)
+
+```shell
+bash <(curl -s https://raw.githubusercontent.com/blade-lang/blade/main/scripts/install.sh)
+```
+
 ## Prerequisites
 
 ### macOS
@@ -84,12 +90,6 @@ If you are on an `x86` system, you can also install the x86 versions of the depe
 
 ```shell
 vcpkg install curl:x86-windows libffi:x86-windows openssl:x86-windows
-```
-
-## Automated Build and Install (Works on all OSX and Linux)
-
-```shell
-bash <(curl -s https://raw.githubusercontent.com/blade-lang/blade/main/scripts/install.sh)
 ```
 
 ## Configure
