@@ -413,3 +413,7 @@ pre.has-icon .icon {
   color: #c4c4c4;
 }
 
+[class^=language-] .e {
+  color: #e91e63;
+}
+

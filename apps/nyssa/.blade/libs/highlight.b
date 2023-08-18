@@ -9,6 +9,8 @@ var default_classes = {
   operator: 'o',
   number: 'n',
   prompt: 'p',
+  result: 'r',
+  error: 'e',
 }
 
 var blade_keywords = '|'.join([
@@ -133,8 +135,20 @@ def highlight_blade_repl(text, classes) {
   return '\n'.join(text.split('\n').map(@(line) {
     if line.starts_with('%> ') or line.starts_with('.. ') {
       return '<span class="${classes.prompt}">${line[,3]}</span>' + highlight_blade(line[3,], classes)
+    } else {
+      line = line.replace('<', '&lt;').replace('>', '&gt;')
+      var lower = line.lower()
+
+      if lower.starts_with('unhandled') or
+        lower.starts_with('syntaxerror at') or
+        lower.starts_with('illegal state:') or
+        lower.match('/^\s{2,}stacktrace/') or
+        lower.match('/^\s{2,}&lt;repl&gt;:\d+\s-&gt;\s/') {
+        return '<span class="${classes.error}">${line}</span>'
+      }
+
+      return '<span class="${classes.result}">${line}</span>'
     }
-    return line
   }))
 }
 

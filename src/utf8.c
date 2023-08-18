@@ -2738,12 +2738,14 @@ void utf8_full_case_fold(int c, int *data) {
 }
 
 int utf8_get_lower(int c) {
+  if(c > 0xFF3A) return c;
   int g = utf8_upper_to_lower_rules[c].val;
   if(g == 0) return c;
   return g;
 }
 
 int utf8_get_upper(int c) {
+  if(c > 0xFF5A) return c;
   int g = utf8_lower_to_upper_rules[c].val;
   if(g == 0) return c;
   return g;

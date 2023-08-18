@@ -1,7 +1,7 @@
 import url
 
 def slugify(s) {
-  return url.encode(to_string(s).trim().case_fold().replace('/\s+/', '-'))
+  return url.encode(to_string(s).trim().case_fold().replace('/[^a-zA-Z0-9_\- ]/', '').replace(' ', '-'))
 }
 
 var tokens_filter = ['text', 'code_inline']
