@@ -47,8 +47,8 @@ def highlight_blade(text, classes) {
     # keywords
     replace('/\\b(${blade_keywords})\\b/', '<_k>$1</_k>').
     # comments
-    replace('/(#[^\\n]*)/', '<_w>$1</_w>').
-    replace('/(\/\*(?:(?!\/\*|\*\/).|(?R))*\*\/)/ms', '<_w1>$1</_w1>')
+    replace('/(#(?=[^"\']*(?:"[^"]*"[^"]*|\'[^\']*\'[^\']*)*$)[^\n]*)/', '<_w>$1</_w>'). # line comment
+    replace('/(\/\*(?:(?!\/\*|\*\/).|(?R))*\*\/)/ms', '<_w1>$1</_w1>') # block comment
 
   # clean up comments
   var comments = text.matches('/<_w>((.|\\n)*?)<\/_w>/')
@@ -87,7 +87,8 @@ def highlight_blade(text, classes) {
               replace('/<_k>(.*?)<\/_k>/', '<span class="${classes.keyword}">$1</span>').
               replace('/<_w1?>((.|\\n)*?)<\/_w1?>/', '<span class="${classes.comment}">$1</span>').
               replace('/<_o>(.*?)<\/_o>/', '<span class="${classes.operator}">$1</span>').
-              replace('/<_n>(.*?)<\/_n>/', '<span class="${classes.number}">$1</span>')
+              replace('/<_n>(.*?)<\/_n>/', '<span class="${classes.number}">$1</span>').
+              replace('/<_[^>]+>/', '') # replace all rouge temporary tags.
 }
 
 def highlight_html5(text, lang, classes) {
