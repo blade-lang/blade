@@ -364,3 +364,52 @@ pre.has-icon .icon {
     display:  inline-flex !important;
   }
 }
+
+/**
+ * highlight package.
+ *
+ * Default recommended styles.
+ *
+ * Copy this stylesheet into your project to use te default style.
+ */
+
+[class^=language-] .s {
+  color: #690;
+}
+
+[class^=language-] .i {
+  color: #00bcd4;
+}
+
+[class^=language-] .c {
+  color: #ff9800;
+}
+
+[class^=language-] .m {
+  color: #ff5722;
+}
+
+[class^=language-] .f {
+  color: #ff5722;
+}
+
+[class^=language-] .k {
+  color: #2196f3;
+}
+
+[class^=language-] .c {
+  color: #708090;
+}
+
+[class^=language-] .o {
+  color: #9a6e3a;
+}
+
+[class^=language-] .n {
+  color: #905;
+}
+
+[class^=language-] .p {
+  color: #c4c4c4;
+}
+

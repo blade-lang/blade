@@ -1,19 +1,20 @@
-var default_colors = {
-  string: '#690',
-  interpolation: '#00bcd4',
-  constant: '#ff9800',
-  method: '#ff5722',
-  function: '#ff5722',
-  keyword: '#2196f3',
-  comment: 'slategray',
-  operator: '#9a6e3a',
-  number: '#905'
+var default_classes = {
+  string: 's',
+  interpolation: 'i',
+  constant: 'c',
+  method: 'm',
+  function: 'f',
+  keyword: 'k',
+  comment: 'c',
+  operator: 'o',
+  number: 'n',
+  prompt: 'p',
 }
 
 var blade_keywords = '|'.join([
-  'as', 'assert', 'break', 'catch', 'class', 'continue', 
-  'def', 'default', 'die', 'do', 'echo', 'else', 'finally', 'for', 
-  'if', 'import', 'in', 'iter', 'return', 'static', 'try', 
+  'as', 'assert', 'break', 'catch', 'class', 'continue',
+  'def', 'default', 'die', 'do', 'echo', 'else', 'finally', 'for',
+  'if', 'import', 'in', 'iter', 'return', 'static', 'try',
   'using', 'var', 'when', 'while',
 ])
 
@@ -23,7 +24,7 @@ var constant_keywords = '|'.join([
 
 var _quote_re = '/((\'(?:[^\'\\\\]|\\\\.)*\')|("(?:[^"\\\\]|\\\\.)*"))/'
 
-def highlight_blade(text, colors) {
+def highlight_blade(text, classes) {
   text = text.
     replace('<', '&lt;').replace('>', '&gt;').
     # operators
@@ -46,10 +47,17 @@ def highlight_blade(text, colors) {
     # keywords
     replace('/\\b(${blade_keywords})\\b/', '<_k>$1</_k>').
     # comments
-    replace('/(#[^\\n]*|\/(?!\\\\)\*[\s\S]*?\*(?!\\\\)\/)/', '<_w>$1</_w>')
+    replace('/(#[^\\n]*)/', '<_w>$1</_w>').
+    replace('/(\/\*(?:(?!\/\*|\*\/).|(?R))*\*\/)/ms', '<_w1>$1</_w1>')
 
   # clean up comments
   var comments = text.matches('/<_w>((.|\\n)*?)<\/_w>/')
+  if comments {
+    for comment in comments[1] {
+      text = text.replace(comment, comment.replace('/<\/?_([^>]+)>/', ''), false)
+    }
+  }
+  comments = text.matches('/<_w1>((.|\\n)*?)<\/_w1>/')
   if comments {
     for comment in comments[1] {
       text = text.replace(comment, comment.replace('/<\/?_([^>]+)>/', ''), false)
@@ -61,53 +69,53 @@ def highlight_blade(text, colors) {
   if quotes {
     for quote in quotes[1] {
       text = text.replace(
-        quote, 
+        quote,
         quote.replace('/<\/?_([^>]+)>/', '').
           # interpolation
-          replace('/(\\$\{[^}]+\})/', '<_i>$1</_i>'), 
+          replace('/(\\$\{[^}]+\})/', '<_i>$1</_i>'),
         false
       )
     }
   }
 
   # expand styles.
-  return text.replace('/<_q>(.*?)<\/_q>/', '<span style="color:${colors.string}">$1</span>').
-              replace('/<_i>(.*?)<\/_i>/', '<span style="color:${colors.interpolation}">$1</span>').
-              replace('/<_c>(.*?)<\/_c>/', '<span style="color:${colors.constant}">$1</span>').
-              replace('/<_m>(.*?)<\/_m>/', '<span style="color:${colors.method};font-style:italic">$1</span>').
-              replace('/<_f>(.*?)<\/_f>/', '<span style="color:${colors.function}">$1</span>').
-              replace('/<_k>(.*?)<\/_k>/', '<span style="color:${colors.keyword}">$1</span>').
-              replace('/<_w>((.|\\n)*?)<\/_w>/', '<span style="color:${colors.comment}">$1</span>').
-              replace('/<_o>(.*?)<\/_o>/', '<span style="color:${colors.operator}">$1</span>').
-              replace('/<_n>(.*?)<\/_n>/', '<span style="color:${colors.number}">$1</span>')
+  return text.replace('/<_q>(.*?)<\/_q>/', '<span class="${classes.string}">$1</span>').
+              replace('/<_i>(.*?)<\/_i>/', '<span class="${classes.interpolation}">$1</span>').
+              replace('/<_c>(.*?)<\/_c>/', '<span class="${classes.constant}">$1</span>').
+              replace('/<_m>(.*?)<\/_m>/', '<span class="${classes.method}">$1</span>').
+              replace('/<_f>(.*?)<\/_f>/', '<span class="${classes.function}">$1</span>').
+              replace('/<_k>(.*?)<\/_k>/', '<span class="${classes.keyword}">$1</span>').
+              replace('/<_w1?>((.|\\n)*?)<\/_w1?>/', '<span class="${classes.comment}">$1</span>').
+              replace('/<_o>(.*?)<\/_o>/', '<span class="${classes.operator}">$1</span>').
+              replace('/<_n>(.*?)<\/_n>/', '<span class="${classes.number}">$1</span>')
 }
 
-def highlight_html5(text, lang, colors) {
+def highlight_html5(text, lang, classes) {
   var tags = text.matches('/<((?!(\s|!(?=[-]{2})))([^>]+))>/')
   if tags {
     iter var i = 0; i < tags[0].length(); i++ {
       var content = tags[1][i].replace('/([a-zA-Z_\-0-9]+)(?=[=])/', '<^a>$1</^a>').
                         replace('/((?<=((?<!\=)\=))${_quote_re[1,-1]})/', '<^v>$1</^v>').
-                        replace('/((?<=((?<!\=)\=))[0-9]+\.?[0-9]*)/', '<^n>$1</^n>') 
-      text = text.replace(tags[0][i], '<span style="color:${colors.keyword}">&lt;${content}&gt;</span>', false)
+                        replace('/((?<=((?<!\=)\=))[0-9]+\.?[0-9]*)/', '<^n>$1</^n>')
+      text = text.replace(tags[0][i], '<span class="${classes.keyword}">&lt;${content}&gt;</span>', false)
     }
   }
 
-  var result = text.replace('/<\^a>(.*?)<\/\^a>/', '<span style="color:${colors.operator}">$1</span>').
-              replace('/<\^v>(.*?)<\/\^v>/', '<span style="color:${colors.string}">$1</span>').
-              replace('/<\^n>(.*?)<\/\^n>/', '<span style="color:${colors.number}">$1</span>')
+  var result = text.replace('/<\^a>(.*?)<\/\^a>/', '<span class="${classes.operator}">$1</span>').
+              replace('/<\^v>(.*?)<\/\^v>/', '<span class="${classes.string}">$1</span>').
+              replace('/<\^n>(.*?)<\/\^n>/', '<span class="${classes.number}">$1</span>')
 
   if lang == 'wire' {
-    result = result.replace('/(\{\{.+?\}\})/', '<span style="color:${colors.constant}">$1</span>')
+    result = result.replace('/(\{\{.+?\}\})/', '<span class="${classes.constant}">$1</span>')
   }
 
   # cleanup comments
   var comments = text.matches('/<(!--.*?--)>/')
   if comments {
     iter var i = 0; i < comments[0].length(); i++ {
-      result = result.replace(comments[0][i], 
-        '<span style="color:${colors.comment}">&lt;' + 
-        comments[1][i].replace('<', '&lt;').replace('>', '&gt;') + 
+      result = result.replace(comments[0][i],
+        '<span class="${classes.comment}">&lt;' +
+        comments[1][i].replace('<', '&lt;').replace('>', '&gt;') +
         '&gt;</span>'
       )
     }
@@ -116,30 +124,41 @@ def highlight_html5(text, lang, colors) {
   return result
 }
 
-def highlight_json(text, colors) {
-  return text.replace('/("(?:[^"\\\\]|\\.)*")/', '<span style="color:${colors.operator}">$1</span>')
+def highlight_json(text, classes) {
+  return text.replace('/("(?:[^"\\\\]|\\.)*")/', '<span class="${classes.operator}">$1</span>')
 }
 
-def highlight(colors) {
+def highlight_blade_repl(text, classes) {
+  return '\n'.join(text.split('\n').map(@(line) {
+    if line.starts_with('%> ') or line.starts_with('.. ') {
+      return '<span class="${classes.prompt}">${line[,3]}</span>' + highlight_blade(line[3,], classes)
+    }
+    return line
+  }))
+}
+
+def highlight(classes) {
 
   # configuration
-  if !colors {
-    colors = default_colors
+  if !classes {
+    classes = default_classes
   } else {
-    var colors_passed = colors
-    colors = default_colors.clone()
-    colors.extend(colors_passed)
+    var classes_passed = classes
+    classes = default_classes.clone()
+    classes.extend(classes_passed)
   }
 
   return @(text, lang) {
     using lang {
-      when 'blade' 
-        return highlight_blade(text, colors)
-      when 'html', 'html5', 'wire' 
-        return highlight_html5(text, lang, colors)
+      when 'blade'
+        return highlight_blade(text, classes)
+      when 'blade-repl'
+        return highlight_blade_repl(text, classes)
+      when 'html', 'html5', 'wire'
+        return highlight_html5(text, lang, classes)
       when 'json', 'json5'
-        return highlight_json(text, colors)
-      default 
+        return highlight_json(text, classes)
+      default
         return text.replace('<', '&lt;').replace('>', '&gt;')
     }
   }
