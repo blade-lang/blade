@@ -945,6 +945,7 @@ def from_jd(jdate) {
  * Returns a new `Date` instance representing the given system date or the current date if no argument is specified.
  * @return Date
  * @note all arguments are optional
+ * @default
  */
 def date(year, month, day, hour, minute, seconds) {
   return Date(year, month, day, hour, minute, seconds)

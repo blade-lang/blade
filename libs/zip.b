@@ -106,8 +106,8 @@ class ZipItem {
   var last_modified
 
   /**
-   * The size of the file as compressed in the archive
-   * @note The value is not often dependable
+   * The size of the file as compressed in the archive. You should note 
+   * that this value is not often dependable
    * @type number
    */
   var compressed_size
@@ -137,8 +137,6 @@ class ZipItem {
   var data
 
   /**
-   * from_dict(dict: dictionary)
-   * 
    * Creates a new ZipItem from a dictionary.
    * The dictionary should contain the following keys:
    * - `name`: string
@@ -152,6 +150,7 @@ class ZipItem {
    * - `error`: string &mdash; optional
    * - `data`: bytes
    * 
+   * @param dictionary dict
    * @return ZipItem
    */
   static from_dict(dict) {
@@ -175,13 +174,13 @@ class ZipItem {
   }
 
   /**
-   * export([base_dir: string = os.cwd()])
-   * 
    * Exports the ZipItem to file. If base_dir is given, the file will be 
    * exported into the base_dir and all ZipItem directories will be created 
    * inside of base_dir to reflect the ZipItem's original structure.
    * 
    * This function returns `true` if the operation succeeds or `false` otherwise.
+   * 
+   * @param string? base_dir: Default value is `os.cwd()`.
    * @return bool
    */
   export(base_dir) {
@@ -253,6 +252,8 @@ class ZipFile {
    * created inside of base_dir as is to reflect the ZipFile's original structure.
    * 
    * This function returns `true` if the operation succeeds or `false` otherwise.
+   * 
+   * @param string? base_dir: Default value is `os.cwd()`.
    * @return bool
    */
   export(base_dir) {
@@ -290,15 +291,16 @@ class ZipArchive {
   var _is_64 = false
 
   /**
-   * ZipArchive(file: string [, use_zip_64: bool = false])
+   * @param string path
+   * @param bool? use_zip_64: Default value is `false`.
    * @constructor
    */
-  ZipArchive(file, use_zip_64) {
-    if !is_string(file)
-      die Exception('string expected in argument 1 (file)')
+  ZipArchive(path, use_zip_64) {
+    if !is_string(path)
+      die Exception('string expected in argument 1 (path)')
     if use_zip_64 != nil and !is_bool(use_zip_64)
       die Exception('boolean expected in argument 2 (use_zip_64)')
-    self._file = file
+    self._file = path
     self._is_64 = use_zip_64 == nil ? false : use_zip_64
   }
 
@@ -345,9 +347,9 @@ class ZipArchive {
   }
 
   /**
-   * create_dir(name: string)
+   * Adds a directory to the zip with the given name.
    * 
-   * Adds a directory to the zip with the given name
+   * @param string name
    * @return bool
    */
   create_dir(name) {
@@ -437,9 +439,10 @@ class ZipArchive {
 	}
 
   /**
-   * create_file(path: string, data: bytes | string)
+   * Adds a file to the path specified with the contents given data.
    * 
-   * Adds a file to the path specified with the contents given data
+   * @param string path
+   * @param {bytes|string} data
    * @return bool
    */
   create_file(path, data, stat) {
@@ -538,10 +541,12 @@ class ZipArchive {
 	}
 
   /**
-   * add_file(path: string [, destination: string])
-   * 
    * Adds an existing file to the archive. If destination is given, the 
    * file will be written to the destination path in the archive.
+   * 
+   * @param string path
+   * @param string? destination
+   * @return bool
    */
   add_file(path, destination) {
     if !is_string(path)
@@ -613,12 +618,15 @@ class ZipArchive {
 	}
 
   /**
-   * add_directory(directory: string [, file_blacklist: list = [] [, ext_blacklist: list = []]])
-   * 
    * Adds the specified `directory` recursively to the archive and set's it path in the archive to `dir`.
    * 
    * - If `file_blacklist` is not empty, this function will ignore every file with a matching path.
-   * - If `ext_blacklist` is not empty, this function will ignore every file with a matching 
+   * - If `ext_blacklist` is not empty, this function will ignore every file with a matching.
+   * 
+   * @param string directory
+   * @param list file_blacklist: Default value is `[]`
+   * @param list ext_blacklist: Default value is `[]`
+   * @return bool
    */
   add_directory(directory, file_blacklist, ext_blacklist) {
     if !is_string(directory)
@@ -640,10 +648,10 @@ class ZipArchive {
 	}
 
   /**
-   * read(path: string)
-   * 
    * Reads the zip file in the specified path and returns a list of
    * ZipFile describing it's contents.
+   * 
+   * @param string path
    * @return ZipFile
    */
   read() {
@@ -786,9 +794,10 @@ class ZipArchive {
 	}
 
   /**
-   * save(filename: string)
-   * 
    * Saves the current Zip archive to file.
+   * 
+   * @param string filename
+   * @return bool
    */
   save() {
     if self._handle and self._handle.is_open() {
@@ -835,8 +844,6 @@ class ZipArchive {
 
 
 /**
- * extract(file: string [, destination: string = cwd [, is_zip64: bool = false]])
- * 
  * Extracts the zip archive at the _file_ path to the given _destination_ directory. 
  * If _destination_ is not given, the file will be extracted into the current working 
  * directory.
@@ -844,8 +851,11 @@ class ZipArchive {
  * This function returns `true` if the extraction was successful and `false` otherwise.
  * 
  * > **NOTE:**
- * > Set `is_zip64` to true if the size of the zip file exceeds ZIP_MAX
+ * > Set `is_zip64` to true if the size of the zip file exceeds `ZIP_MAX`.
  * 
+ * @param string file
+ * @param string? destination: Default value is `os.cwd()`.
+ * @param bool? is_zip64: Default value is `false`.
  * @return bool
  */
 def extract(file, destination, is_zip64) {
@@ -864,8 +874,6 @@ def extract(file, destination, is_zip64) {
 }
 
 /**
- * compress(path: string [, destination: string [, use_zip64: bool = false]])
- * 
  * Compresses the given path (file or directory) into the destination zip archive.
  * @throws Exception if file could not be written of zip max size exceeded.
  * 
@@ -874,9 +882,12 @@ def extract(file, destination, is_zip64) {
  * > be usable but not all desired files will be contained in it.
  * 
  * > **NOTE:**
- * > Set `use_zip64` to true when compressing files exceeding ZIP_FILE_MAX or 
- * > ZIP_FILE_COUNT_LIMIT
+ * > Set `use_zip64` to true when compressing files exceeding `ZIP_FILE_MAX` or 
+ * > `ZIP_FILE_COUNT_LIMIT`
  * 
+ * @param string file
+ * @param string? destination: Default value is `os.cwd()`.
+ * @param bool? is_zip64: Default value is `false`.
  * @return bool
  */
 def compress(path, destination, use_zip64) {

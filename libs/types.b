@@ -12,20 +12,22 @@
 
 
 /**
- * of(value: any)
- *
- * returns the name of the type of value
+ * Returns the name of the type of value
+ * 
  * @note method implemented as part of core language features
+ * 
+ * @param any value
+ * @return string
  */
 def of(value) { 
   return typeof(value)
 }
 
 /**
- * digit(value: char)
- *
- * returns true if the value is a character and digit,
- * otherwise returns false
+ * Returns true if the value is a character and digit,
+ * otherwise returns false.
+ * 
+ * @param char value
  * @return bool
  */
 def digit(value) {
@@ -36,10 +38,10 @@ def digit(value) {
 }
 
 /**
- * alpha(value: char)
- *
- * returns true if the value is a character and alphabetic,
- * otherwise returns false
+ * Returns true if the value is a character and alphabetic,
+ * otherwise returns false.
+ * 
+ * @param char value
  * @return bool
  */
 def alpha(value) {
@@ -50,9 +52,9 @@ def alpha(value) {
 }
 
 /**
- * int(value: any)
- *
- * returns true if the value is an integer or false otherwise
+ * Returns true if the value is an integer or false otherwise.
+ * 
+ * @param any value
  * @return bool
  */
 def int(value) {
@@ -60,9 +62,9 @@ def int(value) {
 }
 
 /**
- * bool(value: any)
- *
- * returns true if the value is a boolean or false otherwise
+ * Returns true if the value is a boolean or false otherwise.
+ * 
+ * @param any value
  * @return bool
  */
 def bool(value) {
@@ -70,10 +72,11 @@ def bool(value) {
 }
 
 /**
- * is_number(value: any)
- *
- * returns true if the value is a number or false otherwise
- * @note this method also returns true for integers
+ * Returns true if the value is a number or false otherwise.
+ * 
+ * @note this method also returns true for integers.
+ * 
+ * @param any value
  * @return bool
  */
 def number(value) {
@@ -81,9 +84,9 @@ def number(value) {
 }
 
 /**
- * char(value: any)
- *
- * returns true if the value is a single character or false otherwise
+ * Returns true if the value is a single character or false otherwise.
+ * 
+ * @param any value
  * @return bool
  */
 def char(value) {
@@ -91,9 +94,9 @@ def char(value) {
 }
 
 /**
- * string(value: any)
- *
- * returns true if the value is a string or false otherwise
+ * Returns true if the value is a string or false otherwise.
+ * 
+ * @param any value
  * @return bool
  */
 def string(value) {
@@ -101,9 +104,9 @@ def string(value) {
 }
 
 /**
- * bytes(value: any)
- *
- * returns true if the value is a bytes or false otherwise
+ * Returns true if the value is a bytes or false otherwise.
+ * 
+ * @param any value
  * @return bool
  */
 def bytes(value) {
@@ -111,9 +114,9 @@ def bytes(value) {
 }
 
 /**
- * list(value: any)
- *
- * returns true if the value is a list or false otherwise
+ * Returns true if the value is a list or false otherwise.
+ * 
+ * @param any value
  * @return bool
  */
 def list(value) {
@@ -121,9 +124,9 @@ def list(value) {
 }
 
 /**
- * is_dict(value: any)
- *
- * returns true if the value is a dictionary or false otherwise
+ * Returns true if the value is a dictionary or false otherwise.
+ * 
+ * @param any value
  * @return bool
  */
 def dict(value) {
@@ -131,9 +134,9 @@ def dict(value) {
 }
 
 /**
- * object(value: any)
- *
- * returns true if the value is an object or false otherwise
+ * Returns true if the value is an object or false otherwise.
+ * 
+ * @param any value
  * @return bool
  */
 def object(value) {
@@ -141,9 +144,9 @@ def object(value) {
 }
 
 /**
- * function(value: any)
- *
- * returns true if the value is a function or false otherwise
+ * Returns true if the value is a function or false otherwise.
+ * 
+ * @param any value
  * @return bool
  */
 def function(value) {
@@ -151,9 +154,9 @@ def function(value) {
 }
 
 /**
- * class(value: any)
- *
- * returns true if the value is a class or false otherwise
+ * Returns true if the value is a class or false otherwise.
+ * 
+ * @param any value
  * @return bool
  */
 def is_a_class(value) {
@@ -161,9 +164,9 @@ def is_a_class(value) {
 }
 
 /**
- * file(value: any)
- *
- * returns true if the value is a file or false otherwise
+ * Returns true if the value is a file or false otherwise.
+ * 
+ * @param any value
  * @return bool
  */
 def file(value) {
@@ -171,9 +174,9 @@ def file(value) {
 }
 
 /**
- * iterable(value: any)
- *
- * returns true if the value is an iterable or false otherwise
+ * Returns true if the value is an iterable or false otherwise.
+ * 
+ * @param any value
  * @return bool
  */
 def iterable(value) {
@@ -181,9 +184,10 @@ def iterable(value) {
 }
 
 /**
- * callable(value: any)
- *
- * returns true if the value is a callable function or class and false otherwise
+ * Returns true if the value is a callable function or class and false 
+ * otherwise.
+ * 
+ * @param any value
  * @return bool
  */
 def callable(value) {
@@ -191,10 +195,11 @@ def callable(value) {
 }
 
 /**
- * instance(value: any, type: class)
- *
- * returns true if the value is an instance the given class, false
- * otherwise
+ * Returns true if the value is an instance the given class, false
+ * otherwise.
+ * 
+ * @param any value
+ * @param class type
  * @return bool
  */
 def instance(value, type) {
@@ -210,7 +215,7 @@ def instance(value, type) {
 class Convert {
 
   /**
-   * Convert(value: any)
+   * @param any value
    * @constructor 
    */
   Convert(value) {
@@ -218,11 +223,9 @@ class Convert {
   }
 
   /**
-   * to_int()
-   *
-   * convert the value into an integer.
-   * @note classes may override the return value by declaring a to_int()
-   * function.
+   * Converts the value into an integer.
+   * 
+   * @note classes may override the return value by declaring a `to_int()` function.
    * @return bool
    */
   to_int() {
@@ -230,11 +233,9 @@ class Convert {
   }
 
   /**
-   * to_number()
-   *
-   * convert the value into a number.
-   * @note classes may override the return value by declaring a to_number()
-   * function.
+   * Converts the value into a number.
+   * 
+   * @note classes may override the return value by declaring a `to_number()` function.
    * @return bool
    */
   to_number() {
@@ -242,11 +243,9 @@ class Convert {
   }
 
   /**
-   * to_string()
-   *
-   * convert the value into a string.
-   * @note classes may override the return value by declaring a to_string()
-   * function.
+   * Converts the value into a string.
+   * 
+   * @note classes may override the return value by declaring a `to_string()` function.
    * @return bool
    */
   to_string() {
@@ -254,11 +253,9 @@ class Convert {
   }
 
   /**
-   * to_bool()
-   *
-   * converts the value into a boolean.
-   * @note classes may override the return value by declaring a to_bool()
-   * function.
+   * Convertss the value into a boolean.
+   * 
+   * @note classes may override the return value by declaring a `to_bool()` function.
    * @return bool
    */
   to_bool() {
@@ -266,11 +263,9 @@ class Convert {
   }
 
   /**
-   * to_list()
-   *
-   * convert the value into a list.
-   * @note classes may override the return value by declaring a to_list()
-   * function.
+   * Converts the value into a list.
+   * 
+   * @note classes may override the return value by declaring a `to_list()` function.
    * @return bool
    */
   to_list() {
@@ -278,11 +273,9 @@ class Convert {
   }
 
   /**
-   * to_dict()
-   *
-   * convert the value value into a dictionary.
-   * @note classes may override the return value by declaring a to_dict()
-   * function.
+   * Converts the value value into a dictionary.
+   * 
+   * @note classes may override the return value by declaring a `to_dict()` function.
    * @return bool
    */
   to_dict() {

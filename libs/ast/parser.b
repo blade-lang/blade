@@ -113,6 +113,11 @@ class Parser {
    */
   _consume(type, message) {
     if self._check(type) return self._advance()
+
+    if !self._is_at_end()
+      message += ' on line ${self._peek().line}'
+    else message += ' at end of file'
+
     die ParseException(self._peek(), message)
   }
 
@@ -187,6 +192,7 @@ class Parser {
    * completes index access expressions
    */
   _finish_index(callee) {
+      self._ignore_newline()
     var args = [self._expression()]
 
     if self._match(COMMA) {
@@ -194,6 +200,7 @@ class Parser {
       args.append(self._expression())
     }
 
+    self._ignore_newline()
     self._consume(RBRACKET, "']' expected at end of indexer")
     return IndexExpr(args)
   }
@@ -533,7 +540,9 @@ class Parser {
 
     if !self._check(RBRACE) {
       do {
+        while self._match(DOC) {}
         self._ignore_newline()
+        while self._match(DOC) {}
 
         if !self._check(RBRACE) {
           var auto_value
@@ -570,7 +579,9 @@ class Parser {
 
     if !self._check(RBRACKET) {
       do {
+        while self._match(DOC) {}
         self._ignore_newline()
+        while self._match(DOC) {}
   
         if !self._check(RBRACKET) {
           items.append(self._expression())

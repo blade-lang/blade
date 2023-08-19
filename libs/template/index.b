@@ -978,7 +978,8 @@ class Template {
  * Default function exporting the [[Template]] class that allows function 
  * initialization. See [[Template]].
  * 
- * @param {bool} auto_init
+ * @param bool auto_init
+ * @default
  */
 def template(auto_init) {
   return Template(auto_init)

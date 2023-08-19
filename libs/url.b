@@ -76,7 +76,8 @@ var _url_punctuations_re = '/^[\-._~:\/?#\[\]@!$&\'()*+,;%=]/'
 
 
 /**
- * The Url class provides functionalities for parsing and processing URLs
+ * The Url class provides functionalities for parsing and processing URLs.
+ * 
  * @serializable
  * @printable
  */
@@ -144,7 +145,16 @@ class Url {
   var empty_path = false
 
   /**
-   * Url(scheme: string, host: string [, port: string [, path: string [, query: string [, hash: string [, username: string [, password: string, [, has_slash: bool [, empty_path: bool]]]]]]]])
+   * @param string scheme
+   * @param string host
+   * @param string? port
+   * @param string? path
+   * @param string? query
+   * @param string? hash
+   * @param string? username
+   * @param string? password
+   * @param bool? has_slash
+   * @param bool? empty_path
    * @constructor 
    */
   Url(scheme, host, port, path, query, hash, username, password, has_slash, empty_path) {
@@ -184,8 +194,7 @@ class Url {
   }
 
   /**
-   * authority()
-   * returns the url authority
+   * Returns the url authority.
    * 
    * The authority component is preceded by a double slash ("//") and is
    * terminated by the next slash ("/"), question mark ("?"), or number
@@ -218,10 +227,9 @@ class Url {
   }
 
   /**
-   * host_is_ipv4()
+   * Returns true if the host of the url is a valid ipv4 address
+   * and false otherwise.
    * 
-   * returns true if the host of the url is a valid ipv4 address
-   * and false otherwise
    * @return bool
    */
   host_is_ipv4() {
@@ -232,10 +240,9 @@ class Url {
   }
 
   /**
-   * host_is_ipv6()
+   * Returns true if the host of the url is a valid ipv6 address
+   * and false otherwise.
    * 
-   * returns true if the host of the url is a valid ipv6 address
-   * and false otherwise
    * @return bool
    */
   host_is_ipv6() {
@@ -247,9 +254,8 @@ class Url {
   }
 
   /**
-   * absolute_url()
+   * Returns absolute url string of the url object.
    * 
-   * returns absolute url string of the url object
    * @return string
    */
   absolute_url() {
@@ -291,8 +297,6 @@ class Url {
   }
 
   /**
-   * to_string()
-   * 
    * Returns a string representation of the url object. This will 
    * only be the same as the absolute url if the original string is 
    * an absolute url.
@@ -356,9 +360,7 @@ class Url {
 
 
 /**
- * encode(url: string, strict: boolean)
- * 
- * URL-encodes string
+ * URL-encodes a string
  * 
  * this function is convenient when encoding a string to be used in 
  * a query part of a URL, as a convenient way to pass variables to 
@@ -368,9 +370,10 @@ class Url {
  * percent (%) sign in order to conform with RFC 3986. Otherwise,
  * is is encoded with the plus (+) sign in order to align with
  * the default encoding used by modern browsers.
+ * 
+ * @param string url
+ * @param bool? strict: Default value is `false`
  * @return string
- * @defualt strict: false
- * @note strict mode is disabled by default
  */
 def encode(url, strict) {
   if !is_string(url)
@@ -398,12 +401,10 @@ def encode(url, strict) {
 }
 
 /**
- * decode(url: string)
+ * Decodes URL-encoded string. This function decodes any %## encoding in the given 
+ * string and plus symbols ('+') to a space character.
  * 
- * Decodes URL-encoded string
- * 
- * decodes any %## encoding in the given string. 
- * plus symbols ('+') are decoded to a space character.
+ * @param string url
  * @return string
  */
 def decode(url) {
@@ -437,12 +438,12 @@ def decode(url) {
 }
 
 /**
- * parse(url: string [, strict: bool = true])
- *
  * Parses given url string into a Url object. If the strict argument is 
  * set to `true`, the parser will raise an Exception when it encounters 
  * a malformed url.
  * 
+ * @param string url
+ * @param bool? strict: Default value is `false`
  * @return Url
  */
 def parse(url, strict) {

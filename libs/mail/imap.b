@@ -576,6 +576,7 @@ class Imap {
  * to the constructor.
  * 
  * @return {Imap}
+ * @default
  */
 def imap(options) {
   if options != nil and !is_dict(options)

@@ -597,9 +597,12 @@ class Socket {
   var receive_timeout = -1
 
   /**
-   * Socket(family: number [, type: number [, protocol: number]])
-   * @example Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
+   * @param number family
+   * @param number? type
+   * @param number? protocol
    * @constructor  
+   * 
+   * @example Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
    */
   Socket(family, type, protocol, id) {
     # NOTE: NEVER EVER SET `id` YOURSELF.
@@ -635,12 +638,12 @@ class Socket {
   }
 
   /**
-   * connect(host: string, port: int [, timeout: int])
-   * 
    * Initiates a connection to the given host on the specified port. If host is `nil`, it will 
    * connect on to the current hostn specified on the socket.
    * 
-   * @default timeout = 300,000ms (i.e. 300 seconds)
+   * @param string host
+   * @param int port
+   * @param int? timeout: Defaults to 300,000ms (i.e. 300 seconds)
    * @return bool
    */
   connect(host, port, timeout) {
@@ -670,10 +673,11 @@ class Socket {
   }
   
   /**
-   * bind(port: int [, host: string])
-   * 
    * Binds this socket to the given port on the given host. If host is `nil` or not specified, it will connect 
    * on to the current hostn specified on the socket. 
+   * 
+   * @param int port
+   * @param string? host
    * @return bool
    */
   bind(port, host) {
@@ -701,12 +705,11 @@ class Socket {
   }
 
   /**
-   * send(message: string | file | bytes, flags: int)
-   * 
    * Sends the specified message to the socket. When this methods accepts a file as a message, 
    * the file is read and the resultant bytes of the file content is streamed to the socket.
    * 
-   * @note the flags parameter is currently redundant and is kept only to remanin compatible with future plans for this method.
+   * @param {string|file|bytes|?} message
+   * @param int? flags: Not currently used.
    * @return number greater than -1 if successful indicating the total number of bytes sent or -1 if it fails.
    */
   send(message, flags) {
@@ -730,15 +733,14 @@ class Socket {
   }
 
   /**
-   * receive([length: int [, flags: int]])
-   * 
    * Receives bytes of the given length from the socket. If the length is not given, it default length of 
    * -1 indicating that the total available data on the socket stream will be read. 
    * If no data is available for read on the socket, the socket will wait to receive data or until the 
    * `receive_timeout` which is also equal to the `SO_RCVTIMEO` setting of the socket has elapsed before or 
    * until it has received the total number of bytes required (whichever comes first).
    * 
-   * @note the flags parameter is currently redundant and is kept only to remanin compatible with future plans for this method.
+   * @param int? length
+   * @param int? flags: Not currently used.
    * @return string
    */
   receive(length, flags) {
@@ -765,16 +767,16 @@ class Socket {
   }
 
   /**
-   * read([length: int])
-   * 
    * Reads bytes of the given length from the socket. If the length is not given, it default length of 
    * -1 indicating that the total available data on the socket stream will be read. 
    * 
    * > This method differs from `receive()` in that it does not check for a socket having data to 
    * > read or not and will block until data of _length_ have been read or no more data is available for 
    * > reading.
+   * 
    * @note Only use this function after a call to `receive()` has succeeded.
-   * @default Length = 1024
+   * 
+   * @param int? length: Default value is `1024`
    * @return string
    */
   read(length) {
@@ -798,8 +800,6 @@ class Socket {
   }
 
   /**
-   * listen([queue_length: int])
-   * 
    * Listen for connections on a socket
    * 
    * This method puts the socket in a state where it is willing to accept incoming connections and creates 
@@ -812,6 +812,8 @@ class Socket {
    * the current platform which is usually equal to `SOMAXCONN`.
    * 
    * @note listen() call applies only to sockets of type `SOCK_STREAM` (which is the default)
+   * 
+   * @param int? queue_length
    * @return bool
    */
   listen(queue_length) {
@@ -833,8 +835,6 @@ class Socket {
   }
 
   /**
-   * accept()
-   * 
    * Accepts a connection on a socket
    * 
    * This method extracts the first connection request on the queue of pending connections, creates a new socket 
@@ -843,7 +843,9 @@ class Socket {
    * the caller until a connection is present.  If the socket is marked non-blocking and no pending connections 
    * are present on the queue, accept() returns an error as described below.  
    * 
-   * The accepted socket may not be used to accept more connections.  The original socket remains open.
+   * The accepted socket may not be used to accept more connections.
+   * The original socket remains open.
+   * 
    * @return Socket
    */
   accept() {
@@ -867,9 +869,8 @@ class Socket {
   }
 
   /**
-   * close()
+   * Closes the socket.
    * 
-   * Closes the socket
    * @return bool
    */
   close() {
@@ -889,14 +890,13 @@ class Socket {
   }
 
   /**
-   * shutdown([how: int])
-   * 
    * The shutdown() call causes all or part of a full-duplex connection on the socket associated with 
    * socket to be shut down.  If how is `SHUT_RD`, further receives will be disallowed.  If how is `SHUT_WR`, 
    * further sends will be disallowed.  If how is `SHUT_RDWR`, further sends and receives will be disallowed.
    * 
    * When _how_ is not specified, it defaults to `SHUT_RD`.
    * 
+   * @param int? how
    * @return bool
    */
   shutdown(how) {
@@ -927,10 +927,12 @@ class Socket {
   }
 
   /**
-   * set_option(option: int, value: any)
-   * 
    * Sets the options of the current socket.
-   * @note Only `SO_` variables are valid option types
+   * 
+   * @note Only `SO_` variables are valid option types.
+   * 
+   * @param int option
+   * @param any value
    * @return bool
    */
   set_option(option, value) {
@@ -958,9 +960,9 @@ class Socket {
   }
 
   /**
-   * get_option(option: int)
-   * 
    * Gets the options set on the current socket
+   * 
+   * @param int option
    * @return any
    */
   get_option(option) {
@@ -976,10 +978,10 @@ class Socket {
   }
 
   /**
-   * set_blocking(mode: bool)
-   * 
    * Sets if the socket should operate in blocking or non-blocking mode. `true` for blocking 
    * (default) and `false` for non-blocking.
+   * 
+   * @param bool mode
    */
   set_blocking(mode) {
     if !is_bool(mode) die SocketException('boolean expected')
@@ -987,10 +989,9 @@ class Socket {
   }
 
   /**
-   * info()
+   * Returns a dictionary containing the address, ipv6, port and family of the current 
+   * socket or an empty dictionary if the socket information could not be retrieved.
    * 
-   * Returns a dictionary containing the address, ipv6, port and family of the current socket or an 
-   * empty dictionary if the socket information could not be retrieved.
    * @return dictionary
    */
   info() {
@@ -1004,9 +1005,11 @@ class Socket {
 }
 
 /**
- * get_address_info(address: number [, type: string [, family: int]])
+ * Returns ip and name information of a given address.
  * 
- * returns ip and name information of a given address
+ * @param number address
+ * @param string? type: Default value is `http`
+ * @param int? family: Default value is [AF_INET]
  * @return dictionary
  */
 def get_address_info(address, type, family) {
@@ -1022,11 +1025,15 @@ def get_address_info(address, type, family) {
 }
 
 /**
- * socket(family: number [, type: number [, protocol: number]])
- * 
  * Returns a new instance of a Socket.
+ * 
+ * @param number family
+ * @param number? type
+ * @param number? protocol
+ * @return Socket
+ * 
  * @example socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
- * @see class Socket
+ * @default
  */
 def socket(family, type, protocol) {
   return Socket(family, type, protocol)
