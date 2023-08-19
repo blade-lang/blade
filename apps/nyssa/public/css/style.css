@@ -372,6 +372,9 @@ pre.has-icon .icon {
  *
  * Copy this stylesheet into your project to use te default style.
  */
+[class^=language-] {
+  position: relative;
+}
 
 [class^=language-] .s {
   color: #690;
@@ -381,12 +384,13 @@ pre.has-icon .icon {
   color: #00bcd4;
 }
 
-[class^=language-] .c {
+[class^=language-] .x {
   color: #ff9800;
 }
 
 [class^=language-] .m {
   color: #ff5722;
+  font-style: italic;
 }
 
 [class^=language-] .f {

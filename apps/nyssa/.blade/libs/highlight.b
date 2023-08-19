@@ -1,7 +1,7 @@
 var default_classes = {
   string: 's',
   interpolation: 'i',
-  constant: 'c',
+  constant: 'x',
   method: 'm',
   function: 'f',
   keyword: 'k',
@@ -24,13 +24,13 @@ var constant_keywords = '|'.join([
   'nil', 'parent', 'self', 'true', 'false', '__args__', '__file__'
 ])
 
-var _quote_re = '/((\'(?:[^\'\\\\]|\\\\.)*\')|("(?:[^"\\\\]|\\\\.)*"))/'
+var _quote_re = '/((?<![a-z])(\'(?:[^\'\\\\]|\\\\.)*\')|("(?:[^"\\\\]|\\\\.)*"))/m'
 
 def highlight_blade(text, classes) {
   text = text.
     replace('<', '&lt;').replace('>', '&gt;').
     # operators
-    replace('/([+\-=%!<>@~\^]|\.\.|(?<!\*)\/(?!\*)|(?<!\/)\*(?!\/))/', '<_o>$1</_o>').
+    replace('/([+\-=%!<>@~\^]|(?<!\.)\.\.(?!\.)|(?<!\*)\/(?!\*)|(?<!\/)\*(?!\/))/', '<_o>$1</_o>').
     replace('/\\b(and|or)\\b/', '<_o>$1</_o>').
     # quotes
     replace(_quote_re, '<_q>$1</_q>').
@@ -67,21 +67,21 @@ def highlight_blade(text, classes) {
   }
 
   # clean up quotes
-  var quotes = text.matches('/<_q>(.*?)<\/_q>/')
+  var quotes = text.matches('/<_q>((.|\\n)*?)<\/_q>/m')
   if quotes {
     for quote in quotes[1] {
       text = text.replace(
         quote,
         quote.replace('/<\/?_([^>]+)>/', '').
           # interpolation
-          replace('/(\\$\{[^}]+\})/', '<_i>$1</_i>'),
+          replace('/(\\$\{[^}]+\})/m', '<_i>$1</_i>'),
         false
       )
     }
   }
 
   # expand styles.
-  return text.replace('/<_q>(.*?)<\/_q>/', '<span class="${classes.string}">$1</span>').
+  return text.replace('/<_q>((.|\\n)*?)<\/_q>/m', '<span class="${classes.string}">$1</span>').
               replace('/<_i>(.*?)<\/_i>/', '<span class="${classes.interpolation}">$1</span>').
               replace('/<_c>(.*?)<\/_c>/', '<span class="${classes.constant}">$1</span>').
               replace('/<_m>(.*?)<\/_m>/', '<span class="${classes.method}">$1</span>').
@@ -89,7 +89,7 @@ def highlight_blade(text, classes) {
               replace('/<_k>(.*?)<\/_k>/', '<span class="${classes.keyword}">$1</span>').
               replace('/<_w1?>((.|\\n)*?)<\/_w1?>/', '<span class="${classes.comment}">$1</span>').
               replace('/<_o>(.*?)<\/_o>/', '<span class="${classes.operator}">$1</span>').
-              replace('/<_n>(.*?)<\/_n>/', '<span class="${classes.number}">$1</span>').
+              replace('/<_n>(.*?)<\/_n>/', '<span class="${classes.number}">$1</span>')
               replace('/<_[^>]+>/', '') # replace all rouge temporary tags.
 }
 
@@ -113,7 +113,7 @@ def highlight_html5(text, lang, classes) {
   }
 
   # cleanup comments
-  var comments = text.matches('/<(!--.*?--)>/')
+  var comments = text.matches('/<(!--.*?--)>/sm')
   if comments {
     iter var i = 0; i < comments[0].length(); i++ {
       result = result.replace(comments[0][i],
