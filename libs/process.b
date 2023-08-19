@@ -1,43 +1,43 @@
-# 
-# @module process
-# 
-# This module allows parallel processing by providing classes and functions 
-# that allows for spawning operating system processes thereby leveraging multiple 
-# processors on a machine. 
-# 
-# Example Usage:
-# 
-# ```blade
-# var paged = PagedValue()
-# 
-# var pr = Process(@(p, s) {
-#   echo 'It works!'
-#   echo p.id()
-#   s.set({name: 'Richard', age: 3.142})
-# }, paged)
-# 
-# pr.on_complete(@(){
-#   echo paged.get()
-# })
-# 
-# pr.start()
-# echo 'It works fine!'
-# # pr.await()  # this can be used to wait for completion.
-# echo 'It works fine again!'
-# ```
-# 
-# Output:
-# 
-# ```sh
-# It works fine!
-# It works fine again!
-# It works!
-# 75608
-# {name: Richard, age: 3.142}
-# ```
-# 
-# @copyright 2022, Ore Richard Muyiwa and Blade contributors
-# 
+/** 
+ * @module process
+ * 
+ * This module allows parallel processing by providing classes and functions 
+ * that allows for spawning operating system processes thereby leveraging multiple 
+ * processors on a machine. 
+ * 
+ * Example Usage:
+ * 
+ * ```blade
+ * var paged = PagedValue()
+ * 
+ * var pr = Process(@(p, s) {
+ *   echo 'It works!'
+ *   echo p.id()
+ *   s.set({name: 'Richard', age: 3.142})
+ * }, paged)
+ * 
+ * pr.on_complete(@(){
+ *   echo paged.get()
+ * })
+ * 
+ * pr.start()
+ * echo 'It works fine!'
+ * # pr.await()  # this can be used to wait for completion.
+ * echo 'It works fine again!'
+ * ```
+ * 
+ * Output:
+ * 
+ * ```sh
+ * It works fine!
+ * It works fine again!
+ * It works!
+ * 75608
+ * {name: Richard, age: 3.142}
+ * ```
+ * 
+ * @copyright 2022, Ore Richard Muyiwa and Blade contributors
+ */
 
 import _process
 import reflect

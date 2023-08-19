@@ -1,82 +1,82 @@
-#
-# @module socket
-#
-# This module provides access to the underlying system socket management 
-# implementations. It is meant to be used to provide more controlled and 
-# specific operating system features and for implementing various standard 
-# and custom network protocols and specifications for which Blade does not 
-# provide a built-in implementation for.
-# 
-# This module defines a lot of constant that whose value complies with the 
-# operating system specification and they should be used instead of a finite 
-# value wherever available as values for these constants can change across 
-# different OS implementations.
-# 
-# ### What's a Socket
-# 
-# Sockets are bidrectional communication medias for information exchange between 
-# various processes within the same machine or different machines.
-# 
-# There are three important concepts that must important to know when working with 
-# sockets.
-# 
-# 1. `Family`: This refer to the general group of sockets that a specific 
-# protocol handled by a socket belongs to. This is any of the `AF_` constants.
-# 2. `Types`: The type of communication between the two processes involved. And can 
-# only be one of `SOCK_STREAM` or `SOCK_DGRAM`.
-# 3. `Protocol`: This is to identify the variant protocol on which one or more 
-# network protocols are based on. Typically `0` or any of the `IP_` constants.
-# 
-# A simple socket may be instanciated as follows:
-# 
-# ```blade
-# import socket { Socket }
-# var sock = Socket()
-# ```
-# > The `{ Socket }` in the import statement means we are only importing the `Socket` 
-# > class and not the entire `socket` module. Other examples here will skip the assume 
-# > you are importing just what you need out of the package but will not show the import 
-# > statement.
-# 
-# The example above instantiates a socket without any arguments, and it is equivalent to:
-# 
-# ```blade
-# Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
-# ```
-# 
-# You can establish a connection with another socket with a known address and port 
-# as follows:
-# 
-# ```blade
-# var socket = Socket()
-# socket.connect('127.0.0.1', 4000)
-# ```
-# 
-# The above example connects to the process listening at port 4000 on host with IP 
-# address 127.0.0.1. A connection is a pre-requisite to writing or reading from a socket.
-# 
-# After connecting to a socket, you can read and write data as follows:
-# 
-# ```blade
-# var socket = Socket()
-# socket.connect('127.0.0.1', 4000)
-# 
-# var message_from_client = socket.receive()
-# socket.send('You sent: ' + message_from_client)
-# ```
-# 
-# The above example simply replies the client with `You sent: ` + whatever the client 
-# acutally sent.
-# 
-# Due to resource limitations, its good practice to always ensure to close sockets when 
-# done with it. Doing this is pretty simple.
-# 
-# ```blade
-# socket.close()
-# ```
-# 
-# @copyright 2021, Ore Richard Muyiwa and Blade contributors
-# 
+/**
+ * @module socket
+ *
+ * This module provides access to the underlying system socket management 
+ * implementations. It is meant to be used to provide more controlled and 
+ * specific operating system features and for implementing various standard 
+ * and custom network protocols and specifications for which Blade does not 
+ * provide a built-in implementation for.
+ * 
+ * This module defines a lot of constant that whose value complies with the 
+ * operating system specification and they should be used instead of a finite 
+ * value wherever available as values for these constants can change across 
+ * different OS implementations.
+ * 
+ * ### What's a Socket
+ * 
+ * Sockets are bidrectional communication medias for information exchange between 
+ * various processes within the same machine or different machines.
+ * 
+ * There are three important concepts that must important to know when working with 
+ * sockets.
+ * 
+ * 1. `Family`: This refer to the general group of sockets that a specific 
+ * protocol handled by a socket belongs to. This is any of the `AF_` constants.
+ * 2. `Types`: The type of communication between the two processes involved. And can 
+ * only be one of `SOCK_STREAM` or `SOCK_DGRAM`.
+ * 3. `Protocol`: This is to identify the variant protocol on which one or more 
+ * network protocols are based on. Typically `0` or any of the `IP_` constants.
+ * 
+ * A simple socket may be instanciated as follows:
+ * 
+ * ```blade
+ * import socket { Socket }
+ * var sock = Socket()
+ * ```
+ * > The `{ Socket }` in the import statement means we are only importing the `Socket` 
+ * > class and not the entire `socket` module. Other examples here will skip the assume 
+ * > you are importing just what you need out of the package but will not show the import 
+ * > statement.
+ * 
+ * The example above instantiates a socket without any arguments, and it is equivalent to:
+ * 
+ * ```blade
+ * Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
+ * ```
+ * 
+ * You can establish a connection with another socket with a known address and port 
+ * as follows:
+ * 
+ * ```blade
+ * var socket = Socket()
+ * socket.connect('127.0.0.1', 4000)
+ * ```
+ * 
+ * The above example connects to the process listening at port 4000 on host with IP 
+ * address 127.0.0.1. A connection is a pre-requisite to writing or reading from a socket.
+ * 
+ * After connecting to a socket, you can read and write data as follows:
+ * 
+ * ```blade
+ * var socket = Socket()
+ * socket.connect('127.0.0.1', 4000)
+ * 
+ * var message_from_client = socket.receive()
+ * socket.send('You sent: ' + message_from_client)
+ * ```
+ * 
+ * The above example simply replies the client with `You sent: ` + whatever the client 
+ * acutally sent.
+ * 
+ * Due to resource limitations, its good practice to always ensure to close sockets when 
+ * done with it. Doing this is pretty simple.
+ * 
+ * ```blade
+ * socket.close()
+ * ```
+ * 
+ * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ */
 
 import _socket
 

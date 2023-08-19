@@ -1,11 +1,11 @@
-#
-# @module struct
-# 
-# This moddule provides functions for converting between Blade values and C 
-# structs and vice-versa in the binary format.
-# 
-# @copyright 2022, Ore Richard Muyiwa and Blade contributors
-#
+/**
+ * @module struct
+ * 
+ * This moddule provides functions for converting between Blade values and C 
+ * structs and vice-versa in the binary format.
+ * 
+ * @copyright 2022, Ore Richard Muyiwa and Blade contributors
+ */
 
 import _struct
 

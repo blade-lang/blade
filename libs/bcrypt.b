@@ -1,11 +1,11 @@
-# 
-# @module bcrypt
-#
-# This module provides functions for generating and verifying bcrypt 
-# hashes as well as functions for getting informations from a bcrypt hash.
-# 
-# @copyright 2022, Ore Richard Muyiwa and Blade contributors
-#
+/** 
+ * @module bcrypt
+ *
+ * This module provides functions for generating and verifying bcrypt 
+ * hashes as well as functions for getting informations from a bcrypt hash.
+ * 
+ * @copyright 2022, Ore Richard Muyiwa and Blade contributors
+ */
 
 /**
  * Default log2 rounds (default: 10)

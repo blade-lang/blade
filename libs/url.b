@@ -1,41 +1,41 @@
-#
-# @module url
-#  
-# This module provides classes and functions for parsing and processing URLs.
-# This module supports username and passwords in URLs in order to support an 
-# arbitrary number of RFC combinations but this does not strictly conform to 
-# RFC1738.
-# 
-# The scope of URL in this module have not been limited to HTTP or any protocol 
-# for that matter. However, where deducable, the module tries to conform to the 
-# most appropriate URL for the specified scheme.
-# 
-# Constructing a URL is vey simple. Here is an example.
-# 
-# ### Example,
-# 
-# ```blade-repl
-# %> import url
-# %> var link = url.Url('https', 'example.com', 9000)
-# %> link.absolute_url()
-# 'https://example.com:9000'
-# ```
-# 
-# What each function and class method does are easy to deduce from their names.
-# 
-# For example, we can use the `parse()` function to convert a URL string into a URL 
-# instance like below.
-# 
-# ```blade-repl
-# %> link = url.parse('https://example.com:9000')
-# %> link.scheme
-# 'https'
-# %> link.port
-# '9000'
-# ```
-# 
-# @copyright 2021, Ore Richard Muyiwa and Blade contributors
-# 
+/**
+ * @module url
+ *  
+ * This module provides classes and functions for parsing and processing URLs.
+ * This module supports username and passwords in URLs in order to support an 
+ * arbitrary number of RFC combinations but this does not strictly conform to 
+ * RFC1738.
+ * 
+ * The scope of URL in this module have not been limited to HTTP or any protocol 
+ * for that matter. However, where deducable, the module tries to conform to the 
+ * most appropriate URL for the specified scheme.
+ * 
+ * Constructing a URL is vey simple. Here is an example.
+ * 
+ * ### Example,
+ * 
+ * ```blade-repl
+ * %> import url
+ * %> var link = url.Url('https', 'example.com', 9000)
+ * %> link.absolute_url()
+ * 'https://example.com:9000'
+ * ```
+ * 
+ * What each function and class method does are easy to deduce from their names.
+ * 
+ * For example, we can use the `parse()` function to convert a URL string into a URL 
+ * instance like below.
+ * 
+ * ```blade-repl
+ * %> link = url.parse('https://example.com:9000')
+ * %> link.scheme
+ * 'https'
+ * %> link.port
+ * '9000'
+ * ```
+ * 
+ * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ */
 
 import types
 

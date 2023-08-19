@@ -1,9 +1,10 @@
-#
-# @module ast
-#
-# Provides interface for parsing Blade code into Abstract Syntax Trees
-# @copyright 2021, Ore Richard Muyiwa and Blade contributors
-#
+/**
+ * @module ast
+ *
+ * Provides interface for parsing Blade code into Abstract Syntax Trees.
+ * 
+ * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ */
 
 import json as js
 

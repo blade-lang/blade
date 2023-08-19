@@ -1,3 +1,14 @@
+/**
+ * @module markdown
+ * 
+ * This module provides the required facilities for parsing and rendering markdown. 
+ * By default, the only render target is HTML5 but all features are customizable and 
+ * extendable by plugins.
+ * 
+ * @copyright (c) 2023 Ore Richard
+ * @copyright (c) 2014 Vitaly Puzrin, Alex Kocharin.
+ */
+
 import .common.utils
 import .helpers
 import .renderer { Renderer }

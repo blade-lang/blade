@@ -1,9 +1,10 @@
-#
-# @module ssl
-#
-# Provides OpenSSL bindings for Blade
-# @copyright 2021, Ore Richard Muyiwa and Blade contributors
-#
+/**
+ * @module ssl
+ *
+ * Provides OpenSSL bindings for Blade.
+ *
+ * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ */
 
 import .constants { * }
 import .context { * }

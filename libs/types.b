@@ -1,14 +1,14 @@
-# 
-# @module type
-# 
-# Provides type validation and conversion capabilities
-# 
-# This module is wrapper around the builtin functions
-# where applicable and does and return the same thing as the builtin
-# alternative.
-# 
-# @copyright 2021, Ore Richard Muyiwa and Blade contributors
-# 
+/** 
+ * @module type
+ * 
+ * Provides type validation and conversion capabilities
+ * 
+ * This module is wrapper around the builtin functions
+ * where applicable and does and return the same thing as the builtin
+ * alternative.
+ * 
+ * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ */
 
 
 /**

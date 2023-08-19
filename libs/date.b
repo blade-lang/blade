@@ -1,19 +1,19 @@
-#
-# @module date
-# 
-# This modules provides Blade's implementation of date and time
-# manipulation methods. This module implements civil dates as well as julian dates.
-# 
-# ### Definitions
-# 
-# - The calendar date (`class Date`) is a particular day of a calendar year, 
-# identified by its ordinal number within a calendar month within that year.
-# 
-# - The Julian date number (`jd`) is in elapsed days and time since noon 
-# (Greenwich Mean Time) on January 1, 4713 BCE (in the Julian calendar).
-# 
-# @copyright 2021, Ore Richard Muyiwa and Blade contributors
-#
+/**
+ * @module date
+ * 
+ * This modules provides Blade's implementation of date and time
+ * manipulation methods. This module implements civil dates as well as julian dates.
+ * 
+ * ### Definitions
+ * 
+ * - The calendar date (`class Date`) is a particular day of a calendar year, 
+ * identified by its ordinal number within a calendar month within that year.
+ * 
+ * - The Julian date number (`jd`) is in elapsed days and time since noon 
+ * (Greenwich Mean Time) on January 1, 4713 BCE (in the Julian calendar).
+ * 
+ * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ */
 
 import _date
 

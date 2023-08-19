@@ -1,38 +1,38 @@
-#
-# @module reflect
-# 
-# This module provides many functions that can be used to interact with or modify modules, 
-# classes and functions. It is well suited for many uses cases such as creating a library 
-# that is heavily dependent on decorators (e.g. the `json` module).
-# 
-# ### For example,
-# 
-# We can call a decorator using the `reflect` module like this.
-# 
-# ```blade
-# class A {
-#   @custom_decorator() {
-#     echo 'It works!'
-#   }
-# }
-# 
-# import reflect
-# 
-# var instance_of_a = A()
-# var decorator = reflect.get_decorator(instance_of_a, 'custom_decorator')
-# 
-# # It's always good to check the result first as it will be a good 
-# # practice to make decorators optional to make it easy for users to 
-# # opt-in and opt-out of features your package or library provide.
-# if decorator {
-#   decorator()
-# }
-# ```
-# 
-# Try it out!
-# 
-# @copyright 2021, Ore Richard Muyiwa and Blade contributors
-# 
+/**
+ * @module reflect
+ * 
+ * This module provides many functions that can be used to interact with or modify modules, 
+ * classes and functions. It is well suited for many uses cases such as creating a library 
+ * that is heavily dependent on decorators (e.g. the `json` module).
+ * 
+ * ### For example,
+ * 
+ * We can call a decorator using the `reflect` module like this.
+ * 
+ * ```blade
+ * class A {
+ *   @custom_decorator() {
+ *     echo 'It works!'
+ *   }
+ * }
+ * 
+ * import reflect
+ * 
+ * var instance_of_a = A()
+ * var decorator = reflect.get_decorator(instance_of_a, 'custom_decorator')
+ * 
+ * # It's always good to check the result first as it will be a good 
+ * # practice to make decorators optional to make it easy for users to 
+ * # opt-in and opt-out of features your package or library provide.
+ * if decorator {
+ *   decorator()
+ * }
+ * ```
+ * 
+ * Try it out!
+ * 
+ * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ */
 
 import _reflect
 

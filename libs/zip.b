@@ -1,10 +1,10 @@
-# 
-# @module zip
-# 
-# The `zip` module contains classes and functions to make working with zip archives easy.
-#
-# @copyright 2022, Ore Richard Muyiwa and Blade contributors
-#
+/**
+ * @module zip
+ * 
+ * The `zip` module contains classes and functions to make working with zip archives easy.
+ *
+ * @copyright 2022, Ore Richard Muyiwa and Blade contributors
+ */
 
 import struct { pack, unpack }
 import zlib

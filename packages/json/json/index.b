@@ -1,61 +1,61 @@
-#
-# @module json
-#
-# Provides APIs for encoding and decoding JSON data.
-# 
-# JavaScript Object Notation (JSON) is a lightweight, text-based,
-# language-independent data interchange format.  It was derived from
-# the ECMAScript Programming Language Standard.  JSON defines a small
-# set of formatting rules for the portable representation of structured
-# data.
-# 
-# This implementation complies with [RFC 8259](https://datatracker.ietf.org/doc/html/rfc8259).
-# 
-# ### JSON to Blade value mapping
-# 
-# | JSON | Blade |
-# |------|-------|
-# | Null | Nil |
-# | String | String |
-# | Number | Number |
-# | Boolean | Boolean |
-# | Array | List |
-# | Object | Dict |
-# 
-# 
-# ### Blade to JSON object mapping
-# 
-# | Blade | JSON |
-# |-------|------|
-# | `nil` | Null |
-# | Integer | Number |
-# | Number | Number |
-# | Char | String |
-# | String | String |
-# | List | Array |
-# | Dict | Object |
-# | Instance of class implementing `to_json()` decorator | Any |
-# 
-# 
-# Example,
-# 
-# ```blade-repl
-# %> import json
-# %> json.encode([1, 2, 3])
-# '[1,2,3]'
-# %> 
-# %> json.encode({name: 'Blade', version: '0.0.7'})
-# '{"name":"Blade","version":"0.0.7"}'
-# %> 
-# %> json.encode({name: 'Blade', version: '0.0.7'}, false)
-# '{
-#   "name": "Blade", 
-#   "version": "0.0.7"
-# }'
-# ```
-# 
-# @copyright 2021, Ore Richard Muyiwa and Blade contributors
-#
+/**
+ * @module json
+ *
+ * Provides APIs for encoding and decoding JSON data.
+ *
+ * JavaScript Object Notation (JSON) is a lightweight, text-based,
+ * language-independent data interchange format.  It was derived from
+ * the ECMAScript Programming Language Standard.  JSON defines a small
+ * set of formatting rules for the portable representation of structured
+ * data.
+ *
+ * This implementation complies with [RFC 8259](https://datatracker.ietf.org/doc/html/rfc8259).
+ *
+ * ### JSON to Blade value mapping
+ *
+ * | JSON | Blade |
+ * |------|-------|
+ * | Null | Nil |
+ * | String | String |
+ * | Number | Number |
+ * | Boolean | Boolean |
+ * | Array | List |
+ * | Object | Dict |
+ *
+ *
+ * ### Blade to JSON object mapping
+ *
+ * | Blade | JSON |
+ * |-------|------|
+ * | `nil` | Null |
+ * | Integer | Number |
+ * | Number | Number |
+ * | Char | String |
+ * | String | String |
+ * | List | Array |
+ * | Dict | Object |
+ * | Instance of class implementing `to_json()` decorator | Any |
+ *
+ *
+ * Example,
+ *
+ * ```blade-repl
+ * %> import json
+ * %> json.encode([1, 2, 3])
+ * '[1,2,3]'
+ * %>
+ * %> json.encode({name: 'Blade', version: '0.0.7'})
+ * '{"name":"Blade","version":"0.0.7"}'
+ * %>
+ * %> json.encode({name: 'Blade', version: '0.0.7'}, false)
+ * '{
+ *   "name": "Blade",
+ *   "version": "0.0.7"
+ * }'
+ * ```
+ *
+ * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ */
 
 import .encoder { * }
 import _json { _decode }

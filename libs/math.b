@@ -1,12 +1,12 @@
-# 
-# @module math
-#
-# This module contains functions and constants to make trigonometric and 
-# non-trignonometric mathematics a breeze. The module also defines a couple 
-# of commonly used scientific and mathematical constants such as `PI`.
-# 
-# @copyright 2021, Ore Richard Muyiwa and Blade contributors
-#
+/** 
+ * @module math
+ *
+ * This module contains functions and constants to make trigonometric and 
+ * non-trignonometric mathematics a breeze. The module also defines a couple 
+ * of commonly used scientific and mathematical constants such as `PI`.
+ * 
+ * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ */
 
 import _math
 

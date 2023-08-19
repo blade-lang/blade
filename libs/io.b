@@ -1,31 +1,31 @@
-#
-# @module io
-# 
-# This module provides interfaces for working with to I/O stream and TTYs 
-# as well as expose the operating system standard I/O for easy access.
-# 
-# Some I/O operations that should belong to this module have been merged as 
-# core features and offered as built-in functions for Blade. Specifically 
-# file I/O features that can be accessed via the built-in `file()` function. 
-# 
-# The standard I/O streams are also files and you can call almost all file 
-# methods on them. Whenever a file method is not supported, you'll get an error 
-# message telling you that such operation is not supported for standard streams.
-# 
-# ### Example
-# 
-# The following example shows how to use the `io` module for accepting user name 
-# and printing the result.
-# 
-# ```blade
-# import io
-# 
-# var name = io.readline('What is your name?')
-# echo name
-# ```
-# 
-# @copyright 2021, Ore Richard Muyiwa and Blade contributors
-# 
+/**
+ * @module io
+ * 
+ * This module provides interfaces for working with to I/O stream and TTYs 
+ * as well as expose the operating system standard I/O for easy access.
+ * 
+ * Some I/O operations that should belong to this module have been merged as 
+ * core features and offered as built-in functions for Blade. Specifically 
+ * file I/O features that can be accessed via the built-in `file()` function. 
+ * 
+ * The standard I/O streams are also files and you can call almost all file 
+ * methods on them. Whenever a file method is not supported, you'll get an error 
+ * message telling you that such operation is not supported for standard streams.
+ * 
+ * ### Example
+ * 
+ * The following example shows how to use the `io` module for accepting user name 
+ * and printing the result.
+ * 
+ * ```blade
+ * import io
+ * 
+ * var name = io.readline('What is your name?')
+ * echo name
+ * ```
+ * 
+ * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ */
 
 import _io
 import _os

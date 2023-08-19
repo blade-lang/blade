@@ -1,47 +1,47 @@
-# 
-# @module clib
-# 
-# The `clib` module exposes Blade capabilites to interact with C 
-# shared libraries. The workflow follows a simple approach.
-# 
-# - Load the library
-# - Define the function schematics
-# - Call the function.
-# 
-# That simple!
-# 
-# For example, the following code `dirname()` and `cos()` function from the 
-# standard C library on a Unix machine (Linux, OSX, FreeBSD etc).
-# 
-# ```blade
-# # Import clib
-# import clib
-# 
-# # 1. Load 'libc' shared module available on Unix systems
-# var lib = clib.load('libc')
-# 
-# # 2. Declare the functions
-# var dirname = lib.define('dirname', clib.char_ptr, clib.char_ptr)
-# var cos = lib.define('cos', clib.double, clib.double)     # this may not work on linux
-# 
-# # 3. Call the functions
-# echo dirname('/path/to/my/file.ext')
-# echo cos(23)
-# 
-# # Close the library (this is a good practice, but not required)
-# lib.close()
-# ```
-# 
-# The first argument to a definiton is the name of the function. 
-# The second is its return type. If the function takes parameters, 
-# the parameter types follow immediately. (See below for a list of the 
-# available types.)
-# 
-# > **NOT YET SUPPORTED:**
-# > - Variadic functions
-# 
-# @copyright 2021, Ore Richard Muyiwa and Blade contributors
-# 
+/**
+ * @module clib
+ *
+ * The `clib` module exposes Blade capabilites to interact with C
+ * shared libraries. The workflow follows a simple approach.
+ *
+ * - Load the library
+ * - Define the function schematics
+ * - Call the function.
+ *
+ * That simple!
+ *
+ * For example, the following code `dirname()` and `cos()` function from the
+ * standard C library on a Unix machine (Linux, OSX, FreeBSD etc).
+ *
+ * ```blade
+ * # Import clib
+ * import clib
+ *
+ * # 1. Load 'libc' shared module available on Unix systems
+ * var lib = clib.load('libc')
+ *
+ * # 2. Declare the functions
+ * var dirname = lib.define('dirname', clib.char_ptr, clib.char_ptr)
+ * var cos = lib.define('cos', clib.double, clib.double)     # this may not work on linux
+ *
+ * # 3. Call the functions
+ * echo dirname('/path/to/my/file.ext')
+ * echo cos(23)
+ *
+ * # Close the library (this is a good practice, but not required)
+ * lib.close()
+ * ```
+ *
+ * The first argument to a definiton is the name of the function.
+ * The second is its return type. If the function takes parameters,
+ * the parameter types follow immediately. (See below for a list of the
+ * available types.)
+ *
+ * > **NOT YET SUPPORTED:**
+ * > - Variadic functions
+ *
+ * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ */
 
 import .types { * }
 

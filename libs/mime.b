@@ -1,15 +1,15 @@
-#
-# @module mime
-#
-# This module provides functions that allow easy mime type detection from files. 
-# It offers support for detecting file type based on name or file headers and it 
-# is completely extensible so that you can add declarations for your own custom 
-# file types.
-# 
-# _See defined functions for example._
-# 
-# @copyright O2021, Ore Richard Muyiwa
-# 
+/**
+ * @module mime
+ *
+ * This module provides functions that allow easy mime type detection from files. 
+ * It offers support for detecting file type based on name or file headers and it 
+ * is completely extensible so that you can add declarations for your own custom 
+ * file types.
+ * 
+ * _See defined functions for example._
+ * 
+ * @copyright O2021, Ore Richard Muyiwa
+ */
 
 
 /**

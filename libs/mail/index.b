@@ -1,3 +1,12 @@
+/**
+ * @module mail
+ * 
+ * The module provides interfaces for sending and reading electronic mails and provides 
+ * implementation for the SMTP, IMAP and POP3 mail exchange protocols.
+ * 
+ * @copyright 2023, Ore Richard Muyiwa and Blade contributors
+ */
+
 import .smtp
 import .message
 import .imap

@@ -1,12 +1,12 @@
-#
-# @module array
-# 
-# This moddule provides multiple classes for working with arrays of twos-complement 
-# integers in the platform byte order. The classes provided in this module complement
-# the _bytes()_ object and allow higher other binary data manipulation.
-# 
-# @copyright 2022, Ore Richard Muyiwa and Blade contributors
-#
+/**
+ * @module array
+ * 
+ * This moddule provides multiple classes for working with arrays of twos-complement 
+ * integers in the platform byte order. The classes provided in this module complement
+ * the _bytes()_ object and allow higher other binary data manipulation.
+ * 
+ * @copyright 2022, Ore Richard Muyiwa and Blade contributors
+ */
 
 import _array
 

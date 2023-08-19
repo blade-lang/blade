@@ -1,11 +1,11 @@
-#
-# @module convert
-#
-# This module provides extra data conversion features between non-standard 
-# object types as well as different number bases.
-# 
-# @copyright 2021, Ore Richard Muyiwa and Blade contributors
-#
+/**
+ * @module convert
+ *
+ * This module provides extra data conversion features between non-standard 
+ * object types as well as different number bases.
+ * 
+ * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ */
 
 
 var _hex_table = '0123456789abcdef'

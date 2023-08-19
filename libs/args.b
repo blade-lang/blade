@@ -1,73 +1,73 @@
-#
-# @module args
-#
-# This module provides functionalities that makes writing command-line 
-# interfaces easy. A user can define the options and commands available 
-# in a program and this module can automatically figure out how to parse 
-# those options and commands out of the CLI arguments. It also provides 
-# automatic help and usage messages as well as error/warnings generation 
-# for valid/invalid arguments.
-# 
-# ### Example
-# 
-# The below is a simple program that shows a typical use of the module.
-# 
-# ```blade
-# import args
-# 
-# var parser = args.Parser('myprogram')
-# parser.add_option('name', 'The name of person to call', {type: args.STRING})
-# parser.add_command('call', 'Make a phone call')
-# parser.parse()
-# ```
-# 
-# We can simply print help information for the above program if it were saved 
-# in a file `myprogram.b` as follows.
-# 
-# ```sh
-# $ blade myprogram.b -h 
-# Usage: myprogram [ [-h] | [--name NAME] ] [COMMAND]
-# 
-# OPTIONS:
-#   -h, --help                 Show this help message and exit
-#       --name <value>         The name of person to call
-# 
-# COMMANDS:
-#   call                       Make a phone call
-# ```
-# 
-# if we change the last line of the program to `echo parser.parse()` so that we 
-# can see the result of the parsing, the following CLI call will yield the given result.
-# 
-# ```terminal
-# $ blade myprogram.b --name 25
-# {options: {name: 25}, command: nil}
-# 
-# $ blade myprogram.b call  
-# {options: {}, command: {name: call, value: nil}}
-# 
-# $ blade myprogram.b call --name 25
-# {options: {name: 25}, command: {name: call, value: nil}}
-# ```
-# 
-# Calling name without an option will yield the following result/error.
-# 
-# ```sh
-# $ blade myprogram.b --name   
-# error: Option "name" expects a value
-# ```
-# 
-# You may even get help on a command directly like below:
-# 
-# ```sh
-# $ blade myprogram.b --help call
-# Usage: myprogram call
-# 
-#   Make a phone call
-# ```
-# 
-# @copyright 2021, Ore Richard Muyiwa and Blade contributors
-#
+/**
+ * @module args
+ *
+ * This module provides functionalities that makes writing command-line 
+ * interfaces easy. A user can define the options and commands available 
+ * in a program and this module can automatically figure out how to parse 
+ * those options and commands out of the CLI arguments. It also provides 
+ * automatic help and usage messages as well as error/warnings generation 
+ * for valid/invalid arguments.
+ * 
+ * ### Example
+ * 
+ * The below is a simple program that shows a typical use of the module.
+ * 
+ * ```blade
+ * import args
+ * 
+ * var parser = args.Parser('myprogram')
+ * parser.add_option('name', 'The name of person to call', {type: args.STRING})
+ * parser.add_command('call', 'Make a phone call')
+ * parser.parse()
+ * ```
+ * 
+ * We can simply print help information for the above program if it were saved 
+ * in a file `myprogram.b` as follows.
+ * 
+ * ```sh
+ * $ blade myprogram.b -h 
+ * Usage: myprogram [ [-h] | [--name NAME] ] [COMMAND]
+ * 
+ * OPTIONS:
+ *   -h, --help                 Show this help message and exit
+ *       --name <value>         The name of person to call
+ * 
+ * COMMANDS:
+ *   call                       Make a phone call
+ * ```
+ * 
+ * if we change the last line of the program to `echo parser.parse()` so that we 
+ * can see the result of the parsing, the following CLI call will yield the given result.
+ * 
+ * ```terminal
+ * $ blade myprogram.b --name 25
+ * {options: {name: 25}, command: nil}
+ * 
+ * $ blade myprogram.b call  
+ * {options: {}, command: {name: call, value: nil}}
+ * 
+ * $ blade myprogram.b call --name 25
+ * {options: {name: 25}, command: {name: call, value: nil}}
+ * ```
+ * 
+ * Calling name without an option will yield the following result/error.
+ * 
+ * ```sh
+ * $ blade myprogram.b --name   
+ * error: Option "name" expects a value
+ * ```
+ * 
+ * You may even get help on a command directly like below:
+ * 
+ * ```sh
+ * $ blade myprogram.b --help call
+ * Usage: myprogram call
+ * 
+ *   Make a phone call
+ * ```
+ * 
+ * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ */
 
 import os
 import colors
