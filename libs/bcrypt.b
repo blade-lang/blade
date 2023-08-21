@@ -664,7 +664,7 @@ def _generate_salt(rounds) {
  * 
  * Generates a hash for the given string. If _salt_length_ is not given, 
  * the length of the salt will be equal to `DEFAULT_LOG2_ROUNDS`.
- * @throws Exception
+ * @dies Exception
  * @return string
  */
 def hash(str, salt_length) {
@@ -683,7 +683,7 @@ def hash(str, salt_length) {
  * compare(str: string, known_hash: string)
  * 
  * Tests a string against a known hash.
- * @throws Exception
+ * @dies Exception
  * @return string
  */
 def compare(str, known_hash) {
@@ -712,7 +712,7 @@ def compare(str, known_hash) {
  * get_rounds(hash: string)
  * 
  * Gets the number of rounds used to encrypt the specified hash.
- * @throws Exception
+ * @dies Exception
  * @return number
  */
 def get_rounds(hash) {
@@ -726,7 +726,7 @@ def get_rounds(hash) {
  * 
  * Gets the salt portion from a hash.
  * @note This function does not validate the hash.
- * @throws Exception
+ * @dies Exception
  * @return string
  */
 def get_salt(hash) {

@@ -85,7 +85,7 @@ var _client = HttpClient()
  * echo client.get('/current-user').body.to_string()
  * ```
  * @return HttpClient
- * @throws Exception
+ * @dies Exception
  */
 def set_headers(headers) {
   if !is_dict(headers)
@@ -100,7 +100,7 @@ def set_headers(headers) {
  * sends an Http GET request and returns an HttpResponse
  * or throws one of SocketException or Exception if it fails.
  * @return HttpResponse
- * @throws Exception, SocketExcepion, HttpException
+ * @dies Exception, SocketExcepion, HttpException
  */
 def get(url) {
   return _client.get(url)
@@ -111,7 +111,7 @@ def get(url) {
  *
  * sends an Http POST request and returns an HttpResponse.
  * @return HttpResponse
- * @throws Exception, SocketExcepion, HttpException
+ * @dies Exception, SocketExcepion, HttpException
  */
 def post(url, data) {
   return _client.post(url, data)
@@ -122,7 +122,7 @@ def post(url, data) {
  *
  * sends an Http PUT request and returns an HttpResponse.
  * @return HttpResponse
- * @throws Exception, SocketExcepion, HttpException
+ * @dies Exception, SocketExcepion, HttpException
  */
 def put(url, data) {
   return _client.put(url, data)
@@ -133,7 +133,7 @@ def put(url, data) {
  *
  * sends an Http DELETE request and returns an HttpResponse.
  * @return HttpResponse
- * @throws Exception, SocketExcepion, HttpException
+ * @dies Exception, SocketExcepion, HttpException
  */
 def delete(url) {
   return _client.send_request(url, 'DELETE', nil)
@@ -144,7 +144,7 @@ def delete(url) {
  * 
  * Creates an new HttpServer instance.
  * @return HttpServer
- * @throws Exception, SocketExcepion, HttpException
+ * @dies Exception, SocketExcepion, HttpException
  */
 def server(port, address) {
   return HttpServer(port, address)

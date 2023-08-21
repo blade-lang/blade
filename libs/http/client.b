@@ -89,7 +89,7 @@ class HttpClient {
    * 
    * @default method: GET
    * @return HttpResponse
-   * @throws SocketException, Exception
+   * @dies SocketException, Exception
    */
   send_request(uri, method, data) {
 
@@ -134,7 +134,7 @@ class HttpClient {
    *
    * sends an Http GET request and returns an HttpResponse.
    * @return HttpResponse
-   * @throws Exception, SocketExcepion, HttpException
+   * @dies Exception, SocketExcepion, HttpException
    */
   get(url) {
     return self.send_request(url, 'GET')
@@ -145,7 +145,7 @@ class HttpClient {
    *
    * sends an Http POST request and returns an HttpResponse.
    * @return HttpResponse
-   * @throws Exception, SocketExcepion, HttpException
+   * @dies Exception, SocketExcepion, HttpException
    */
   post(url, data) {
     return self.send_request(url, 'POST', data)
@@ -156,7 +156,7 @@ class HttpClient {
    *
    * sends an Http PUT request and returns an HttpResponse.
    * @return HttpResponse
-   * @throws Exception, SocketExcepion, HttpException
+   * @dies Exception, SocketExcepion, HttpException
    */
   put(url, data) {
     return self.send_request(url, 'PUT', data)
@@ -167,7 +167,7 @@ class HttpClient {
    *
    * sends an Http DELETE request and returns an HttpResponse.
    * @return HttpResponse
-   * @throws Exception, SocketExcepion, HttpException
+   * @dies Exception, SocketExcepion, HttpException
    */
   delete(url) {
     return self.send_request(url, 'DELETE', nil)

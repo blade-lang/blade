@@ -99,12 +99,8 @@ var DT_WHT = _os.DT_WHT
 
 
 /**
- * exec(cmd: string)
- *
  * Executes the given shell (or command prompt for Windows) commands and 
  * returns the output as string.
- * 
- * @return string
  * 
  * Example,
  * 
@@ -114,14 +110,15 @@ var DT_WHT = _os.DT_WHT
  * -rw-r--r--@ 1 username  staff  705 Aug 27  2021 buggy.b
  * -rw-r--r--  1 username  staff  197 Mar  5 05:13 myprogram.b'
  * ```
+ * 
+ * @param string cmd
+ * @return string
  */
 def exec(cmd) {
   return _os.exec(cmd)
 }
 
 /**
- * info()
- *
  * Returns information about the current operation system and machine as a dictionary.
  * The returned dictionary will contain:
  * 
@@ -131,8 +128,6 @@ def exec(cmd) {
  * - `release`: The release level/version
  * - `machine`: The hardware/processor type.
  * 
- * @return dict
- * 
  * Example,
  * 
  * ```blade-repl
@@ -141,23 +136,23 @@ def exec(cmd) {
  * 21.1.0: Wed Oct 13 17:33:24 PDT 2021; root:xnu-8019.41.5~1/RELEASE_ARM64_T8101, 
  * release: 21.1.0, machine: arm64}
  * ```
+ * 
+ * @return dict
  */
 def info() {
   return _os.info()
 }
 
 /**
- * sleep(duration: number)
- *
  * Causes the current thread to sleep for the specified number of seconds.
+ * 
+ * @param number duration
  */
 def sleep(duration) {
   _os.sleep(duration)
 }
 
 /**
- * get_env(name: string)
- *
  * Returns the given environment variable if exists or nil otherwise
  * @return string
  * 
@@ -168,16 +163,16 @@ def sleep(duration) {
  * %> os.get_env('ENV1')
  * '20'
  * ```
+ * 
+ * @param string name
+ * @return {string|nil}
  */
 def get_env(name) {
   return _os.getenv(name)
 }
 
 /**
- * set_env(name: string, value: string, overwrite: bool = true)
- *
  * Sets the named environment variable to the given value.
- * @return string
  * 
  * Example,
  * 
@@ -203,6 +198,10 @@ def get_env(name) {
  * ```
  * 
  * @note Environment variables set will not persist after application exists.
+ * @param string name
+ * @param string value
+ * @param bool? overwrite: Default value is `false`.
+ * @return string
  */
 def set_env(name, value, overwrite) {
   if overwrite == nil overwrite = false
@@ -210,13 +209,14 @@ def set_env(name, value, overwrite) {
 }
 
 /**
- * create_dir(path: string, [permission: number = 0c777 [, recursive: boolean = true]])
- * 
  * Creates the given directory with the specified permission and optionaly 
  * add new files into it if any is given.
  * 
  * @note if the directory already exists, it returns `false` otherwise, it returns `true`.
  * @note permission should be given as octal number.
+ * @param string path
+ * @param number? permission: Default value is `0c777`
+ * @param bool? recursive: Default value is `true`.
  * @return boolean
  */
 def create_dir(path, permission, recursive) {
@@ -250,8 +250,6 @@ def create_dir(path, permission, recursive) {
 }
 
 /**
- * read_dir(path: string)
- * 
  * Scans the given directory and returns a list of all matched files
  * @return list[string]
  * 
@@ -264,27 +262,30 @@ def create_dir(path, permission, recursive) {
  * 
  * @note `.` indicates current directory and can be used as argument to _os.path_ as well.
  * @note `..` indicates parent directory and can be used as argument to _os.path_ as well.
+ * @param string path
+ * @return List[string]
  */
 def read_dir(path) {
   return _os.readdir(path)
 }
 
 /**
- * chmod(path: string, mod: number)
+ * Changes the permission set on a directory to the given mode. It is advisable 
+ * to set the mode with an octal number (e.g. 0c777) as this is consistent with 
+ * operating system values.
  * 
- * Changes the permission set on a directory
- * 
- * @note mod should be octal number (e.g. 0c777)
+ * @param string path
+ * @param number mode
  * @return boolean
  */
-def chmod(path, mod) {
-  return _os.chmod(path, mod)
+def chmod(path, mode) {
+  return _os.chmod(path, mode)
 }
 
 /**
- * is_dir(path: string)
- * 
  * Returns `true` if the path is a directory or `false` otherwise.
+ * 
+ * @param string path
  * @return bool
  */
 def is_dir(path) {
@@ -292,10 +293,11 @@ def is_dir(path) {
 }
 
 /**
- * remove_dir(path: string [, recursive: boolean = false])
- * 
  * Deletes a non-empty directory. If recursive is `true`, non-empty directories 
  * will have their contents deleted first.
+ * 
+ * @param string path
+ * @param bool recursive: Default value is `false`.
  * @return bool
  */
 def remove_dir(path, recursive) {
@@ -309,9 +311,8 @@ def remove_dir(path, recursive) {
 }
 
 /**
- * cwd()
+ * Returns the current working directory.
  * 
- * Returns the current working directory
  * @return string
  */
 def cwd() {
@@ -319,9 +320,9 @@ def cwd() {
 }
 
 /**
- * change_dir(path: string)
- * 
  * Navigates the working directory into the specified path.
+ * 
+ * @param string path
  * @return bool
  */
 def change_dir(path) {
@@ -329,9 +330,9 @@ def change_dir(path) {
 }
 
 /**
- * exists(path: string)
- * 
  * Returns `true` if the directory exists or `false` otherwise.
+ * 
+ * @param string path
  * @return bool
  */
 def dir_exists(path) {
@@ -339,9 +340,9 @@ def dir_exists(path) {
 }
 
 /**
- * exit(code: number)
- * 
  * Exit the current process and quits the Blade runtime.
+ * 
+ * @param number code
  * @return
  */
 def exit(code) {
@@ -349,11 +350,8 @@ def exit(code) {
 }
 
 /**
- * join_paths(paths...)
- * 
  * Concatenates the given paths together into a format that is valied on the 
  * current operating system.
- * @return string
  * 
  * Example,
  * 
@@ -361,6 +359,9 @@ def exit(code) {
  * %> os.join_paths('/home/user', 'path/to/myfile.ext')
  * '/home/user/path/to/myfile.ext'
  * ```
+ * 
+ * @param string... paths
+ * @return string
  */
 def join_paths(...) {
   var result = ''
@@ -384,10 +385,10 @@ def join_paths(...) {
 }
 
 /**
- * real_path(path: string)
+ * Returns the original path to a relative path.
  * 
- * returns the original path to a relative path.
- * @note if the path is a file, see `abs_path()`
+ * @note if the path is a file, see `abs_path()`.
+ * @param string path
  * @return string
  */
 def real_path(path) {
@@ -395,10 +396,10 @@ def real_path(path) {
 }
 
 /**
- * abs_path(path: string)
+ * Returns the original path to a relative path.
  * 
- * returns the original path to a relative path.
- * @note unlike real_path(), this function returns full path for a file
+ * @note unlike real_path(), this function returns full path for a file.
+ * @param string path
  * @return string
  */
 def abs_path(path) {
@@ -421,12 +422,12 @@ def abs_path(path) {
 }
 
 /**
- * dir_name(path: string)
- * 
  * Returns the parent directory of the pathname pointed to by `path`.  Any trailing
  * `/` characters are not counted as part of the directory name.  If `path` is an
  * empty string, or contains no `/` characters, dir_name() returns the string ".", 
  * signifying the current directory.
+ * 
+ * @param string path
  * @return string
  */
 def dir_name(path) {
@@ -434,12 +435,12 @@ def dir_name(path) {
 } 
 
 /**
- * base_name(path: string)
- * 
  * The base_name() function returns the last component from the pathname pointed to by 
  * `path`, deleting any trailing `/` characters.  If path consists entirely of `/` 
  * characters, the string '/' is returned.  If path is an empty string, the string '.' 
  * is returned.
+ * 
+ * @param string path
  * @return string
  */
 def base_name(path) {

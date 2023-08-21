@@ -8,7 +8,7 @@ import .constants
 var _close_opts = [constants.BIO_NOCLOSE, constants.BIO_CLOSE]
 
 /**
- * SSL Binary Input/Output
+ * SSL Binary Input/Output implementation
  */
 class BIO {
 
@@ -16,9 +16,9 @@ class BIO {
   var _ssl
 
   /**
-   * BIO(method: ptr)
+   * @note Method must be a valid SSL BIO_* method
+   * @param ptr method
    * @constructor
-   * @note method must be a valid SSL BIO_* method
    */
   BIO(method) {
     if !reflect.is_ptr(method)
@@ -27,11 +27,11 @@ class BIO {
   }
 
   /**
-   * set_ssl(ssl: SSL [, option: int])
+   * Sets the working SSL instance for this BIO.
    * 
-   * sets the working SSL instance for this BIO
-   * @note option must be one of the BIO constants if given.
-   * @note default option = BIO_NOCLOSE
+   * @note Option must be one of the BIO constants if given.
+   * @param {SSL} ssl
+   * @param int? option: Default value is `BIO_NOCLOSE`
    */
   set_ssl(ssl, option) {
     if !instance_of(ssl, SSL)
@@ -46,9 +46,9 @@ class BIO {
   }
 
   /**
-   * set_conn_hostname(name: string)
+   * Sets the hostname for the current connected BIO socket.
    * 
-   * sets the hostname for the current connected BIO socket
+   * @param string name
    */
   set_conn_hostname(name) {
     if !is_string(name)
@@ -57,9 +57,9 @@ class BIO {
   }
 
   /**
-   * set_accept_name(name: string)
+   * Sets the address name for the current accepted BIO socket.
    * 
-   * sets the address name for the current accepted BIO socket
+   * @param string name
    */
   set_accept_tname(name) {
     if !is_string(name)
@@ -68,9 +68,9 @@ class BIO {
   }
 
   /**
-   * set_conn_address(address: string)
+   * Sets the address for the current connected BIO socket.
    * 
-   * sets the address for the current connected BIO socket
+   * @param string address
    */
   set_conn_address(address) {
     if !is_string(address)
@@ -79,9 +79,9 @@ class BIO {
   }
 
   /**
-   * set_conn_port(port: int | string)
+   * Sets the port for the current connected BIO socket.
    * 
-   * sets the port for the current connected BIO socket
+   * @param {int|string} port
    */
   set_conn_port(port) {
     if is_int(port) port = '${port}'
@@ -93,9 +93,9 @@ class BIO {
   }
 
   /**
-   * set_accept_port(port: int | string)
+   * Sets the port for the current accepted BIO socket.
    * 
-   * sets the port for the current accepted BIO socket
+   * @param {int|string} port
    */
   set_accept_port(port) {
     if is_int(port) port = '${port}'
@@ -107,9 +107,9 @@ class BIO {
   }
 
   /**
-   * set_conn_family(family: int)
+   * Sets the socket family for the current connected BIO socket.
    * 
-   * sets the socket family for the current connected BIO socket
+   * @param int family
    */
   set_conn_family(family) {
     if !is_int(family)
@@ -119,9 +119,9 @@ class BIO {
   }
 
   /**
-   * set_accept_family(family: int)
+   * Sets the socket family for the current accepted BIO socket.
    * 
-   * sets the socket family for the current accepted BIO socket
+   * @param int family
    */
   set_accept_family(family) {
     if !is_int(family)
@@ -131,9 +131,8 @@ class BIO {
   }
 
   /**
-   * get_conn_hostname()
+   * Returns the hostname for the current connected BIO socket.
    * 
-   * returns the hostname for the current connected BIO socket
    * @return string
    */
   get_conn_hostname() {
@@ -141,9 +140,8 @@ class BIO {
   }
 
   /**
-   * get_accept_name()
+   * Returns the hostname for the current accepted BIO socket.
    * 
-   * returns the hostname for the current accepted BIO socket
    * @return string
    */
   get_accept_name() {
@@ -151,9 +149,8 @@ class BIO {
   }
 
   /**
-   * get_conn_address()
+   * Returns the address for the current connected BIO socket.
    * 
-   * returns the address for the current connected BIO socket
    * @return string
    */
   get_conn_address() {
@@ -161,9 +158,8 @@ class BIO {
   }
 
   /**
-   * get_conn_port()
+   * Returns the port for the current connected BIO socket.
    * 
-   * returns the port for the current connected BIO socket
    * @return string
    */
   get_conn_port() {
@@ -171,9 +167,8 @@ class BIO {
   }
 
   /**
-   * get_accept_port()
+   * Returns the port for the current accepted BIO socket.
    * 
-   * returns the port for the current accepted BIO socket
    * @return string
    */
   get_accept_port() {
@@ -181,9 +176,8 @@ class BIO {
   }
 
   /**
-   * get_conn_family()
+   * Returns the family for the current connected BIO socket.
    * 
-   * returns the family for the current connected BIO socket
    * @return int
    */
   get_conn_family() {
@@ -191,9 +185,8 @@ class BIO {
   }
 
   /**
-   * get_accept_family()
+   * Returns the family for the current accepted BIO socket.
    * 
-   * returns the family for the current accepted BIO socket
    * @return int
    */
   get_accept_family() {
@@ -201,10 +194,9 @@ class BIO {
   }
 
   /**
-   * get_fd()
-   * 
-   * returns the current socket file descriptor.
+   * Returns the current socket file descriptor.
    * It returns `-1` on failure or a positive integer on success.
+   * 
    * @return number
    */
   get_fd() {
@@ -212,10 +204,10 @@ class BIO {
   }
 
   /**
-   * set_fd(fd: int [, opt: int])
+   * Sets the socket file descriptor for this BIO
    * 
-   * sets the socket file descriptor for this BIO
-   * @default opt = BIO_NOCLOSE
+   * @param int fd
+   * @param int? opt: Default value is `BIO_NOCLOSE`
    */
   set_fd(fd, opt) {
     if !is_int(fd)
@@ -225,53 +217,53 @@ class BIO {
 
     if !opt opt = constants.BIO_NOCLOSE
 
-    return _ssl.bio_set_fd(self._ptr, fd, opt)
+    _ssl.bio_set_fd(self._ptr, fd, opt)
   }
 
   /**
-   * set_non_blocking([b: bool])
-   * 
-   * converts the BIO into a non-blocking I/O stream if b is `true`, otherwise 
+   * Converts the BIO into a non-blocking I/O stream if b is `true`, otherwise 
    * converts it into a blocking stream.
-   * @default true
+   * 
+   * @param bool? is_blocking: Default value is `true`.
    */
-  set_non_blocking(b) {
-    if !b b = true
+  set_non_blocking(is_blocking) {
+    if !is_blocking is_blocking = true
 
-    if !is_bool(b)
+    if !is_bool(is_blocking)
       die Exception('boolean expected')
 
-    _ssl.set_nbio(self._ptr, b)
+    _ssl.set_nbio(self._ptr, is_blocking)
   }
 
   /**
-   * push(b: BIO)
-   * 
-   * it appends b, which may be a single BIO or a chain of BIOs, 
+   * It appends bio, which may be a single BIO or a chain of BIOs, 
    * to the current BIO stack (unless the current pinter is `nil`). 
-   * It then makes a control call on BIO b and returns it.
+   * It then makes a control call on BIO _bio_ and returns it.
+   * 
+   * @param {BIO} bio
+   * @return self
    */
-  push(b) {
-    if !instance_of(b, BIO)
+  push(bio) {
+    if !instance_of(bio, BIO)
       die Exception('instance of BIO expected')
-    if b {
-      _ssl.push(self._ptr, b.get_pointer())
+    if bio {
+      _ssl.push(self._ptr, bio.get_pointer())
     }
     return self
   }
 
   /**
-   * removes this BIO from any chain is is part of
+   * Removes this BIO from any chain is is part of
    */
   pop() {
     _ssl.pop(self._ptr)
   }
 
   /**
-   * write(data: string | bytes)
+   * Writes data to the current I/O stream and returns the total bytes written.
    * 
-   * writes data to the current I/O stream.
-   * @return int representing the total bytes written
+   * @param {string|bytes} data
+   * @return int
    */
   write(data) {
     if !is_string(data) and !is_bytes(data)
@@ -287,10 +279,9 @@ class BIO {
   }
 
   /**
-   * read([length: int])
+   * Reads data off the I/O and returns it.
    * 
-   * reads data off the I/O and returns it
-   * @default length = 1024
+   * @param int? length: Default value is `1024`
    * @return string
    */
   read(length) {
@@ -307,37 +298,37 @@ class BIO {
   }
 
   /**
-   * should_retry()
-   * 
-   * returns `true` if this BIO needs to retry its last operation. 
+   * Returns `true` if this BIO needs to retry its last operation. 
    * `false` otherwise.
+   * 
+   * @return bool
    */
   should_retry() {
     return _ssl.should_retry(self._ptr)
   }
 
   /**
-   * do_connect()
+   * Attempts to establish a connection to the host.
    * 
-   * attempts to establish a connection to the host.
+   * @return int
    */
   do_connect() {
     return _ssl.do_connect(self._ptr)
   }
 
   /**
-   * do_accept()
+   * Attempts to accept the connected socket.
    * 
-   * attempts to accept the connected socket.
+   * @return int
    */
   do_accept() {
     return _ssl.do_accept(self._ptr)
   }
 
   /**
-   * error([code: int])
+   * Returns the last SSL error number.
    * 
-   * returns the last SSL error number
+   * @param int? code
    * @return int
    */
   error(code) {
@@ -349,9 +340,8 @@ class BIO {
   }
 
   /**
-   * error_string([code: int])
+   * Returns the last SSL error as string.
    * 
-   * returns the last SSL error as string
    * @return string
    */
   error_string() {
@@ -360,18 +350,15 @@ class BIO {
   }
 
   /**
-   * free()
-   * 
-   * frees this BIO and all associated resources
+   * Frees this BIO and all associated resources.
    */
   free() {
     _ssl.free(self._ptr)
   }
 
   /**
-   * get_pointer()
+   * Returns the raw OpenSSl BIO pointer.
    * 
-   * returns the raw OpenSSl BIO pointer
    * @return ptr
    */
   get_pointer() {
@@ -389,7 +376,6 @@ class BIO {
 class SSLBIO < BIO {
 
   /**
-   * ConnectBIO()
    * @constructor
    */
   SSLBIO() {
@@ -405,7 +391,6 @@ class SSLBIO < BIO {
 class ConnectBIO < BIO {
 
   /**
-   * ConnectBIO()
    * @constructor
    */
   ConnectBIO() {
@@ -422,7 +407,6 @@ class ConnectBIO < BIO {
 class AcceptedBIO < BIO {
 
   /**
-   * AcceptedBIO()
    * @constructor
    */
   AcceptedBIO() {

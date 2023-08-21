@@ -246,7 +246,9 @@ class TLSSocket {
     # if accepted <= 0
     #   die Exception(ssl.error(accepted))
 
-    return TLSSocket(s, self._context, ssl)
+    var client = TLSSocket(s, self._context, ssl)
+    client.is_connected = true
+    return client
   }
 
   /**

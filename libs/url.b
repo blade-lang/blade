@@ -12,7 +12,7 @@
  * 
  * Constructing a URL is vey simple. Here is an example.
  * 
- * ### Example,
+ * ### Example
  * 
  * ```blade-repl
  * %> import url

@@ -15,14 +15,10 @@ import _sqlite {
  */
 class SQLite3Cursor {
 
-  /**
-   * the cursor item
-   */
+  #  the cursor item
   var _cursor
 
-  /**
-   * tracks if this cursor is still open or not
-   */
+  # tracks if this cursor is still open or not
   var _is_closed
 
   /**
@@ -65,9 +61,10 @@ class SQLite3Cursor {
   var columns = []
 
   /**
-   * SQLite3Cursor(db: SQLite3, cursor: pointer)
-   * @constructor
+   * @param {SQLite3} db
+   * @param ptr cursor
    * @note SQLite3Cursor should NEVER be maually instantiated.
+   * @constructor
    */
   SQLite3Cursor(db, cursor) {
     self.connection = db
@@ -77,9 +74,8 @@ class SQLite3Cursor {
   }
 
   /**
-   * close()
+   * Closes the cursor and prevents further reading.
    * 
-   * Closes the cursor and prevents further reading
    * @return bool
    */
   close() {
@@ -87,8 +83,6 @@ class SQLite3Cursor {
   }
 
   /**
-   * has_next()
-   * 
    * Returns `true` if there are more rows in the result set not yet retrieved, 
    * otherwise it returns `false`.
    * 
@@ -104,13 +98,13 @@ class SQLite3Cursor {
   }
 
   /**
-   * get(index: number | string)
-   * 
    * Returns the value of the column matching the index in the current result set.
    * 
-   * @note if index is a number, it returns the value in the column at the given index. 
-   * @note that index must be lower than columns.length() in this case.
-   * @note if index is a string, it returns the value in the column with the given name.
+   * @note If index is a number, it returns the value in the column at the given index. 
+   * @note Index must be lower than columns.length() in this case.
+   * @note If index is a string, it returns the value in the column with the given name.
+   * @param {number|string} index
+   * @return string
    * @throws SQLiteException if no matching column can be found.
    */
   get(index) {

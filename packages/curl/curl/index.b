@@ -15,12 +15,11 @@ import _curl
 
 /**
  * The libcurl version.
+ * @type string
  */
 var version = _curl.version
 
 /**
- * time(date_string: string)
- * 
  * Returns the number of seconds since the Epoch, January 1st 1970 00:00:00 in 
  * the UTC time zone, for the date and time that the date_string parameter specifies.
  * 
@@ -91,6 +90,8 @@ var version = _curl.version
  * update in RFC 1123) using time zone name or time zone delta and RFC 850 (obsoleted 
  * by RFC 1036) and ANSI C's asctime() format. These formats are the only ones RFC 7231 
  * says HTTP applications may use.
+ * 
+ * @param string date_string
  * @return number
  * @static
  */

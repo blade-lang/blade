@@ -57,12 +57,12 @@ var _EXT = os.platform == 'windows' ? '.dll' : (
  * class CLib provides an interface for interacting with C shared modules.
  */
 class Clib {
+  
   var _ptr
 
   /**
-   * CLib([name: string])
-   * 
-   * The name should follow the same practice outlined in `load()`.
+   * @note The _name_ should follow the same practice outlined in `load()`.
+   * @param string? name
    * @constructor
    */
   Clib(name) {
@@ -80,13 +80,12 @@ class Clib {
   }
 
   /**
-   * load(name: string)
-   * 
    * Loads a new C shared library pointed to by name. Name must be a 
    * relative path, absolute path or the name of a system library. 
    * If the system shared library extension is omitted in the name, 
    * it will be automatically added except on Linux machines.
-   * @return CLib
+   * 
+   * @param string name
    */
   load(name) {
     if !is_string(name)
@@ -100,8 +99,6 @@ class Clib {
   }
 
   /**
-   * close()
-   * 
    * Closes the handle to the shared library.
    */
   close() {
@@ -110,9 +107,9 @@ class Clib {
   }
 
   /**
-   * function(name: string)
-   * 
    * Retrieves the handle to a specific function in the shared library.
+   * 
+   * @param string name
    * @return ptr
    */
   function(name) {
@@ -124,8 +121,6 @@ class Clib {
   }
 
   /**
-   * define(name: string, return_type: type, ...type)
-   * 
    * Defines a new C function with the given name and return type.
    * -  When there are no more argument, it is declared that the function
    *    takes no argument.
@@ -143,6 +138,11 @@ class Clib {
    * ```c
    * int myfunc(int a, void *b);
    * ```
+   * 
+   * @param string name
+   * @param {type} return_type
+   * @param {type...} types
+   * @return function
    */
   define(name, return_type, ...) {
     if !is_string(name)
@@ -164,9 +164,8 @@ class Clib {
   }
 
   /**
-   * get_pointer()
+   * Returns a pointer to the underlying module.
    * 
-   * Returns a pointer to the underlying module
    * @return ptr
    */
   get_pointer() {
@@ -175,12 +174,12 @@ class Clib {
 }
 
 /**
- * load(name: string)
- * 
  * Loads a new C shared library pointed to by name. Name must be a 
  * relative path, absolute path or the name of a system library. 
  * If the system shared library extension is omitted in the name, 
  * it will be automatically added.
+ * 
+ * @param string name
  * @return CLib
  */
 def load(name) {
@@ -188,9 +187,10 @@ def load(name) {
 }
 
 /**
- * new(type: type, ...any)
- * 
  * Creates a new C value for the specified clib type with the given values.
+ * 
+ * @param {type} type
+ * @param any... values
  * @return bytes
  */
 def new(type, ...) {
@@ -205,8 +205,6 @@ def new(type, ...) {
 }
 
 /**
- * get(type: type, data: string | bytes)
- * 
  * Returns the data contained in a C type _type_ encoded in the data.
  * The data should either be an output of `clib.new()` or a call to a 
  * function returning one of struct, union or array.
@@ -215,7 +213,9 @@ def new(type, ...) {
  * automatically be returned with the values mapped to the names of the 
  * structure elements.
  * 
- * @return list | dictionary
+ * @param {type} type
+ * @param {string|bytes} data
+ * @return {list|dictionary}
  */
 def get(type, data) {
   # Ensure a valid and non void clib pointer.
@@ -232,6 +232,9 @@ def get(type, data) {
  * Get the value at the given index of a pointer based 
  * on the given CLib type.
  * 
+ * @param ptr pointer
+ * @param {type} clib_type
+ * @param number index
  * @return any
  */
 def get_ptr_index(pointer, type, index) {
@@ -239,11 +242,13 @@ def get_ptr_index(pointer, type, index) {
 }
 
 /**
- * get_ptr_index(pointer: ptr, type: clib_type, index: number, value: any)
- * 
  * Sets the value at the given index of a pointer based 
  * on the given CLib type to the given value.
  * 
+ * @param ptr pointer
+ * @param {type} clib_type
+ * @param number index
+ * @param any value
  * @return any
  */
 def set_ptr_index(pointer, type, index, value) {
@@ -251,8 +256,6 @@ def set_ptr_index(pointer, type, index, value) {
 }
 
 /**
- * function_handle(handle: ptr, return_type: type, ...type)
- * 
  * Defines a new C function from an existing handle and return type.
  * -  When there are no more argument, it is declared that the function
  *    takes no argument.
@@ -270,6 +273,11 @@ def set_ptr_index(pointer, type, index, value) {
  * ```c
  * int (*my_ptr)(int a, void *b);
  * ```
+ * 
+ * @param ptr handle
+ * @param {type} return_type
+ * @param {type...} arg_types
+ * @return function
  */
 def function_handle(handle, return_type, ...) {
   if !reflect.is_ptr(handle)

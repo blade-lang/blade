@@ -21,19 +21,15 @@ class SQLite3 {
    */
   var path = ':memory:'
 
-  /**
-   * pointer to sqlite3 C struct
-   */
+  # pointer to sqlite3 C struct
   var _db
 
-  /**
-   * tracks the open/closed state of the sqlite
-   */
+  # tracks the open/closed state of the sqlite
   var _is_open = false
 
   /**
-   * SQLite3(path: string)
-   * @note the database doesn't need to exist.
+   * @param string path
+   * @note The database doesn't need to exist.
    * @constructor
    */
   SQLite3(path) {
@@ -46,8 +42,6 @@ class SQLite3 {
   }
 
   /**
-   * open()
-   * 
    * Opens the handle to a database file 
    */
   open() {
@@ -60,10 +54,9 @@ class SQLite3 {
   }
 
   /**
-   * close()
-   * 
    * Closes the handle to the database and return `true` if successfully
    * closed or `false` otherwise.
+   * 
    * @return boolean
    */
   close() {
@@ -76,13 +69,13 @@ class SQLite3 {
   }
 
   /**
-   * exec(query: string [, params: list | dict])
-   * 
    * Executes a query string as is and returns `true` if the
    * query was executed or `false` otherwise.
    * 
    * @note this method does not return a query result
    * @note this method takes optional params like `query()` (see below).
+   * @param string query
+   * @param {list|dict|nil} params
    * @return boolean
    * @throws SQLiteException if an error occured
    */
@@ -101,8 +94,6 @@ class SQLite3 {
   }
 
   /**
-   * last_insert_id()
-   * 
    * The id of the last insert operation.
    * 
    * Returns: 
@@ -125,8 +116,6 @@ class SQLite3 {
    * query(sql: string [, params: list | dict])
    * 
    * Executes and sql query and returns the result of the execution.
-   * @return SQLite3Cursor
-   * @throws SQLiteException if an error occured.
    * 
    * 1. Pass a list as _params_ if you have unnamed parameterized queries.
    * 
@@ -146,6 +135,11 @@ class SQLite3 {
    *   {':id': 1, ':name': 'James'}
    * )
    * ```
+   * 
+   * @param string sql
+   * @param {list|dict|nil} params
+   * @return SQLite3Cursor
+   * @throws SQLiteException if an error occured.
    */
   query(sql, params) {
     if params != nil {
@@ -165,11 +159,12 @@ class SQLite3 {
   }
 
   /**
-   * fetch(sql: string [, params: list | dict])
-   * 
    * Runs an SQL query and returns the result as a list of dictionaries.
    * 
-   * @note if the result is empty or the query is not a SELECT, it returns an empty list
+   * @note if the result is empty or the query is not a SELECT, it returns an empty list.
+   * @param string sql
+   * @param {list|dict|nil} params
+   * @return list[dictionary]
    */
   fetch(sql, params) {
     var cursor = self.query(sql, params)

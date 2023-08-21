@@ -184,8 +184,6 @@ var ptr = _clib.pointer
 
 
 /**
- * struct(...type)
- * 
  * Returns a type that can be used to declare structs. 
  * To create or read value for the struct you need to use the `new()` 
  * and `get()` functions respectively.
@@ -193,24 +191,23 @@ var ptr = _clib.pointer
  * function in the `struct` module respectively.
  * 
  * @note This function can also be used to define a C union or array.
+ * @param any... type
  * @return type
  */
 def struct(...) {
   if __args__.length() == 0
-    die Exception('canot have an empty struct')
+    die Exception('cannot have an empty struct')
 
   for arg in __args__ {
     # Ensure a valid clib pointer.
     if !(reflect.is_ptr(arg) and to_string(arg).match('/clib/'))
-      die Exception('invalid type in struct delaration')
+      die Exception('invalid type in struct declaration')
   }
 
   return _clib.new_struct(__args__, [])
 }
 
 /**
- * named_struct(types: dictionary)
- * 
  * Returns a type that can be used to declare structs based on the named 
  * types. The function works well with the `get()` function because it 
  * automatically assigns the name of the struct elements when getting the 
@@ -222,18 +219,19 @@ def struct(...) {
  * function in the `struct` module respectively.
  * 
  * @note This function can also be used to define a C union or array.
+ * @param dictionary types
  * @return type
  */
 def named_struct(types) {
   if !is_dict(types)
     die Exception('dictionary expected, ${typeof(types)} given')
   if types.length() == 0
-    die Exception('canot have an empty struct')
+    die Exception('cannot have an empty struct')
 
   for key, value in types {
     # Ensure a valid clib pointer.
     if !(reflect.is_ptr(value) and to_string(value).match('/clib/'))
-      die Exception('invalid type in struct delaration')
+      die Exception('invalid type in struct declaration')
   }
 
   var items = types.to_list()

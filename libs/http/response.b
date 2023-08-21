@@ -119,7 +119,7 @@ class HttpResponse {
    * correct mimetype for the file. If the status code is given, the
    * response will be sent with the given status code.
    * 
-   * @throws {Exception}
+   * @dies {Exception}
    */
   file(path, status_code) {
     if status_code != nil {

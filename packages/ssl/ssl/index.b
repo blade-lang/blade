@@ -14,12 +14,13 @@ import .socket { * }
 import .server { * }
 
 /**
- * server(port: int, address: string)
- * 
  * Creates an new TLSServer instance.
+ * 
+ * @param int port
+ * @param string? host
  * @return TLSServer
  * @throws Exception, SocketExcepion, HttpException
  */
-def server(port, address) {
-  return TLSServer(port, address)
+def server(port, host) {
+  return TLSServer(port, host)
 }
