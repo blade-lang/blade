@@ -483,11 +483,15 @@ var SOMAXCONN = _socket.SOMAXCONN
 /**
  * The non-designated address used to represent "no particular address"
  * (also referred to as "any address")
+ * 
+ * @type string
  */
 var IP_ANY     = '0.0.0.0'
 
 /**
- * The loopback address (also known as localhost)
+ * The loopback address (also known as localhost).
+ * 
+ * @type string
  */
 var IP_LOCAL   = '127.0.0.1'
 
@@ -510,89 +514,121 @@ class Socket {
   /**
    * This property holds the host bound, to be bound to or connected to by the current socket.
    * Whenever a host is not given, the host will default to localhost.
+   * 
+   * @type string
    */
   var host = IP_LOCAL
 
   /**
-   * The port currently bound or connected to by the socket
+   * The port currently bound or connected to by the socket.
+   * 
+   * @type int
    */
   var port = 0
 
   /**
    * The socket family (which must be one of the `AF_` variables).
-   * The default family for the socket is AF_INET
+   * The default family for the socket is AF_INET.
+   * 
+   * @type int
    */
   var family = AF_INET
 
   /**
    * The type of socket stream used by the socket.
-   * The default socket type is `SOCK_STREAM`
+   * The default socket type is `SOCK_STREAM`.
+   * 
+   * @type int
    */
   var type = SOCK_STREAM
 
   /**
    * The current operating protocol of the socket that controls the 
    * underlying behavior of the socket. The default is `IPPROTO_TCP`.
+   * 
+   * @type int
    */
   var protocol = IPPROTO_TCP
 
   /**
    * The file descriptor id of the current socket on the host machine.
+   * 
+   * @type int
    */
   var id = -1
 
   /**
    * `true` when the socket is a client to a server socket, `false` otherwise.
+   * 
+   * @type bool
    */
   var is_client = false
 
   /**
    * `true` when the socket is bound to a given port on the device, `false` 
    * otherwise.
+   * 
+   * @type bool
    */
   var is_bound = false
 
   /**
    * `true` when the socket is connected to a server socket, `false` otherwise.
+   * 
+   * @type bool
    */
   var is_connected = false
 
   /**
    * `true` when the socket is currently listening on a host device port as a 
    * server, `false` otherwise.
+   * 
+   * @type bool
    */
   var is_listening = false
   
   /**
    * `true` when the socket is closed, `false` otherwise.
+   * 
+   * @type bool
    */
   var is_closed = false
 
   /**
    * `true` when the socket is shutdown, `false` otherwise.
+   * 
+   * @type bool
    */
   var is_shutdown = false
 
   /**
    * `true` when the socket is running in a blocking mode, `false` otherwise.
+   * 
+   * @type bool
    */
   var is_blocking = false
 
   /**
    * The property holds the reason for which the last `shutdown` operation 
    * was called or `-1` if `shutdown` was never requested.
+   * 
+   * @type int
    */
   var shutdown_reason = -1
 
   /**
    * The amount of time in milliseconds that the socket waits before it 
    * terminates a `send` operation. This is equal to the `SO_SNDTIMEO`.
+   * 
+   * @type int
    */
   var send_timeout = -1
 
   /**
    * The amount of time in milliseconds that the socket waits before it 
    * terminates a `receive` operation. This is equal to the `SO_RCVTIMEO`.
+   * 
+   * @type int
    */
   var receive_timeout = -1
 

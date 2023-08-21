@@ -31,17 +31,23 @@ import _io
 import _os
 
 /**
- * Set I/O position from the beginning
+ * Set I/O position from the beginning.
+ * 
+ * @type int
  */
 var SEEK_SET = 0
 
 /**
- * Set I/O position from the current position
+ * Set I/O position from the current position.
+ * 
+ * @type int
  */
 var SEEK_CUR = 1
 
 /**
- * Set I/O position from the end
+ * Set I/O position from the end.
+ * 
+ * @type int
  */
 var SEEK_END = 2
 
@@ -53,38 +59,51 @@ var SEEK_END = 2
 class TTY {
 
   # TTY flags
+
   /**
-   * TTY attribute for input flags
+   * TTY attribute for input flags.
+   * 
+   * @type int
    * @static
    */
   static var TTY_IFLAG = 0
 
   /**
-   * TTY attribute for output flags
+   * TTY attribute for output flags.
+   * 
+   * @type int
    * @static
    */
   static var TTY_OFLAG = 1
 
   /**
-   * TTY attribute for control flags
+   * TTY attribute for control flags.
+   * 
+   * @type int
    * @static
    */
   static var TTY_CFLAG = 2
 
   /**
-   * TTY attribute for local flags
+   * TTY attribute for local flags.
+   * 
+   * @type int
    * @static
    */
   static var TTY_LFLAG = 3
 
   /**
-   * TTY attribute for input speed
+   * TTY attribute for input speed.
+   * 
+   * @type int
    * @static
    */
   static var TTY_ISPEED = 4
 
   /**
-   * TTY attribute for output speed
+   * TTY attribute for output speed.
+   * 
+   * @type int
    * @static
    */
   static var TTY_OSPEED = 5
@@ -92,79 +111,105 @@ class TTY {
   # input flags for input processing
 
   /**
-   * ignore BREAK condition
+   * Ignore BREAK condition.
+   * 
+   * @type int
    * @static
    */
   static var IGNBRK   = 0x00000001
   
   /**
-   * map BREAK to SIGINTR 
+   * Map BREAK to SIGINTR.
+   * 
+   * @type int
    * @static
    */
   static var BRKINT   = 0x00000002      
 
   /**
-   * ignore (discard) parity errors
+   * Ignore (discard) parity errors.
+   * 
+   * @type int
    * @static
    */
   static var IGNPAR   = 0x00000004      
 
   /**
-   * mark parity and framing errors 
+   * Mark parity and framing errors.
+   * 
+   * @type int
    * @static
    */
   static var PARMRK   = 0x00000008      
 
   /**
-   * enable checking of parity errors
+   * Enable checking of parity errors.
+   * 
+   * @type int
    * @static
    */
   static var INPCK    = 0x00000010
 
   /**
-   * strip 8th bit off chars 
+   * Strip 8th bit off chars.
+   * 
+   * @type int
    * @static
    */
   static var ISTRIP   = 0x00000020
 
   /**
-   * map NL into CR
+   * Map NL into CR.
+   * 
+   * @type int
    * @static
    */
   static var INLCR    = 0x00000040
 
   /**
-   * ignore CR 
+   * Ignore CR.
+   * 
+   * @type int
    * @static
    */
   static var IGNCR    = 0x00000080
 
   /**
-   * map CR to NL (ala CRMOD)
+   * Map CR to NL (ala CRMOD).
+   * 
+   * @type int
    * @static
    */
   static var ICRNL    = 0x00000100
 
   /**
-   * enable output flow control 
+   * Enable output flow control.
+   * 
+   * @type int
    * @static
    */
   static var IXON     = 0x00000200
 
   /**
-   * enable input flow control
+   * Enable input flow control.
+   * 
+   * @type int
    * @static
    */
   static var IXOFF    = 0x00000400
 
   /**
-   * any char will restart after stop 
+   * Any char will restart after stop.
+   * 
+   * @type int
    * @static
    */
   static var IXANY    = 0x00000800
 
   /**
-   * maintain state for UTF-8 VERASE
+   * Maintain state for UTF-8 VERASE.
+   * 
+   * @type int
    * @static
    */
   static var IUTF8    = 0x00004000
@@ -172,13 +217,17 @@ class TTY {
   # output flags
 
   /**
-   * enable following output processing
+   * Enable following output processing.
+   * 
+   * @type int
    * @static
    */
   static var OPOST    = 0x00000001
 
   /**
-   * map NL to CR-NL (ala CRMOD)
+   * Map NL to CR-NL (ala CRMOD).
+   * 
+   * @type int
    * @static
    */
   static var ONLCR    = 0x00000002
@@ -186,67 +235,89 @@ class TTY {
   # control flags
 
   /**
-   * character size mask 
+   * Character size mask .
+   * 
+   * @type int
    * @static
    */
   static var CSIZE    = 0x00000300
 
   /**
-   * 5 bits (pseudo)
+   * 5 bits (pseudo).
+   * 
+   * @type int
    * @static
    */
   static var CS5      = 0x00000000
 
   /**
-   * 6 bits 
+   * 6 bits.
+   * 
+   * @type int
    * @static
    */
   static var CS6      = 0x00000100
 
   /**
-   * 7 bits 
+   * 7 bits.
+   * 
+   * @type int
    * @static
    */
   static var CS7      = 0x00000200
 
   /**
-   * 8 bits
+   * 8 bits.
+   * 
+   * @type int
    * @static
    */
   static var CS8      = 0x00000300
 
   /**
-   * send 2 stop bits 
+   * Send 2 stop bits.
+   * 
+   * @type int
    * @static
    */
   static var CSTOPB   = 0x00000400
 
   /**
-   * enable receiver 
+   * Enable receiver.
+   * 
+   * @type int
    * @static
    */
   static var CREAD    = 0x00000800
 
   /**
-   * parity enable 
+   * Parity enable.
+   * 
+   * @type int
    * @static
    */
   static var PARENB   = 0x00001000
 
   /**
-   * odd parity, else even 
+   * Odd parity, else even.
+   * 
+   * @type int
    * @static
    */
   static var PARODD   = 0x00002000
 
   /**
-   * hang up on last close 
+   * Hang up on last close.
+   * 
+   * @type int
    * @static
    */
   static var HUPCL    = 0x00004000
 
   /**
-   * ignore modem status lines 
+   * Ignore modem status lines.
+   * 
+   * @type int
    * @static
    */
   static var CLOCAL   = 0x00008000
@@ -257,55 +328,71 @@ class TTY {
   # input flag.
 
   /**
-   * visually erase chars 
+   * Visually erase chars.
+   * 
+   * @type int
    * @static
    */
   static var ECHOE    = 0x00000002
 
   /**
-   * echo NL after line kill 
+   * Echo NL after line kill 
    * @static
    */
   static var ECHOK    = 0x00000004
 
   /**
-   * enable echoing 
+   * Enable echoing.
+   * 
+   * @type int
    * @static
    */
   static var ECHO     = 0x00000008
 
   /**
-   * echo NL even if ECHO is off 
+   * Echo NL even if ECHO is off.
+   * 
+   * @type int
    * @static
    */
   static var ECHONL   = 0x00000010
 
   /**
-   * enable signals INTR, QUIT, [D]SUSP 
+   * Enable signals INTR, QUIT, [D]SUSP.
+   * 
+   * @type int
    * @static
    */
   static var ISIG     = 0x00000080
 
   /**
-   * canonicalize input lines 
+   * Canonicalize input lines.
+   * 
+   * @type int
    * @static
    */
   static var ICANON   = 0x00000100
 
   /**
-   * enable DISCARD and LNEXT 
+   * Enable DISCARD and LNEXT.
+   * 
+   * @type int
    * @static
    */
   static var IEXTEN   = 0x00000400
 
   /**
-   * stop background jobs from output 
+   * Stop background jobs from output.
+   * 
+   * @type int
    * @static
    */
   static var TOSTOP   = 0x00400000
 
   /**
-   * don't flush after interrupt 
+   * Don't flush after interrupt.
+   * 
+   * @type int
    * @static
    */
   static var NOFLSH   = 0x80000000
@@ -315,19 +402,25 @@ class TTY {
   # Commands passed to set_attr() for setting the TTY attributes.
 
   /**
-   * make change immediate 
+   * Make change immediate.
+   * 
+   * @type int
    * @static
    */
   static var TCSANOW    = 0
 
   /**
-   * drain output, then change 
+   * Drain output, then change.
+   * 
+   * @type int
    * @static
    */
   static var TCSADRAIN  = 1
 
   /**
-   * drain output, flush input 
+   * Drain output, flush input.
+   * 
+   * @type int
    * @static
    */
   static var TCSAFLUSH  = 2
@@ -335,75 +428,99 @@ class TTY {
   # Special Control Characters
 
   /**
-   * ICANON
+   * ICANON.
+   * 
+   * @type int
    * @static
    */
   static var VEOF       = 0
 
   /**
-   * ICANON
+   * ICANON.
+   * 
+   * @type int
    * @static
    */
   static var VEOL       = 1
 
   /**
-   * ICANON
+   * ICANON.
+   * 
+   * @type int
    * @static
    */
   static var VERASE     = 3
 
   /**
-   * ICANON
+   * ICANON.
+   * 
+   * @type int
    * @static
    */
   static var VKILL      = 5
 
   /**
-   * ISIG
+   * ISIG.
+   * 
+   * @type int
    * @static
    */
   static var VINTR      = 8
 
   /**
-   * ISIG
+   * ISIG.
+   * 
+   * @type int
    * @static
    */
   static var VQUIT      = 9
 
   /**
-   * ISIG
+   * ISIG.
+   * 
+   * @type int
    * @static
    */
   static var VSUSP      = 10
 
   /**
-   * IXON, IXOFF 
+   * IXON, IXOFF.
+   * 
+   * @type int
    * @static
    */
   static var VSTART     = 12
 
   /**
-   * IXON, IXOFF 
+   * IXON, IXOFF.
+   * 
+   * @type int
    * @static
    */
   static var VSTOP      = 13
 
   /**
-   * !ICANON 
+   * !ICANON.
+   * 
+   * @type int
    * @static
    */
   static var VMIN       = 16
 
   /**
-   * !ICANON
+   * !ICANON.
+   * 
+   * @type int
    * @static
    */
   static var VTIME      = 17
 
   /**
    * TTY(std: file)
+   * 
+   * @note _file_ must be one of stdout and stderr
+   * @param file std
    * @constructor 
-   * @note file must be one of stdout and stderr
    */
   TTY(std) {
     if !is_file(std) {
@@ -414,9 +531,10 @@ class TTY {
   }
 
   /**
-   * get_attr()
    * Returns the attribute of the current tty session
-   * The returned a attributes is a dict containing the TTY_ flags 
+   * The returned attributes is a dict containing the TTY_ flags
+   * 
+   * @return dict
    */
   get_attr() {
     return _io.TTY.tcgetattr(self.std)
@@ -430,7 +548,11 @@ class TTY {
    * - option: one ot the TCSA options above (see their description above)
    * - attrs a dictionary of the TTY_ flags listed above
    * - one can safely omit any of the TTY_ flags listed above and Blade will fill in the default values as it exists.
-   * @note this flags will be merged and not overwritten
+   * 
+   * @note This flags will be merged and not overwritten
+   * @param number option
+   * @param dict attr
+   * @return bool
    */
   set_attr(option, attrs) {
     if !is_int(option) 
@@ -441,9 +563,8 @@ class TTY {
   }
 
   /**
-   * set_raw()
+   * Sets the current tty to raw mode.
    * 
-   * sets the current tty to raw mode
    * @return bool
    */
   set_raw() {
@@ -459,8 +580,8 @@ class TTY {
   }
 
   /**
-   * exit_raw()
-   * disables the raw mode flags on the current tty
+   * Disables the raw mode flags on the current tty.
+   * 
    * @return bool
    */
   exit_raw() {
@@ -468,8 +589,7 @@ class TTY {
   }
 
   /**
-   * flush()
-   * flushes the standard output and standard error interface
+   * Flushes the standard output and standard error interface
    */
   flush() {
     _io.TTY.flush(self.std);
@@ -477,73 +597,73 @@ class TTY {
 }
 
 /** 
- * stdin is a file handle to the standard input file of the system
+ * Stdin is a file handle to the standard input file of the system.
+ * @type file
  */
 var stdin = _io.stdin
 
 /**
- * stdout is a file handle to the standard output file of the system
+ * Stdout is a file handle to the standard output file of the system.
+ * @type file
  */
 var stdout = _io.stdout
 
 /**
- * stderr is a file handle to the standard error file of the system
+ * Stderr is a file handle to the standard error file of the system.
+ * @type file
  */
 var stderr = _io.stderr
 
 /**
- * flush(file: file)
- *
- * flushes the content of the given file handle
+ * Flushes the content of the given file handle
  */
 def flush(file) {
   _io.flush(file)
 }
 
 /**
- * putc(c: char | number)
- * writes character c to the screen
- * @return nil
+ * Writes character c to the screen.
+ * 
+ * @param {char|number} c
  */
 def putc(c) {
   _io.putc(c)
 }
 
 /**
- * getc()
+ * Reads character(s) from standard input
  *
- * reads character(s) from standard input
- *
- * when length is given, gets `length` number of characters
+ * When length is given, gets `length` number of characters
  * else, gets a single character
- * @return char | string
+ * 
+ * @return {char|string}
  */
 def getc() {
   return _io.getc()
 }
 
 /**
- * getch()
+ * Reads character(s) from standard input without printing to standard output
  *
- * reads character(s) from standard input without printing to standard output
- *
- * when length is given, gets `length` number of characters
- * else, gets a single character
- * @return char | string
+ * When length is given, gets `length` number of characters
+ * else, gets a single character.
+ * 
+ * @return {char|string}
  */
 def getch() {
   return _io.getch()
 }
 
 /**
- * readline([message: string [, secure: bool = false [, obscure_text = '*']]])
- *
- * reads an entire line from standard input. If a _messagge_ is given, the 
+ * Reads an entire line from standard input. If a _messagge_ is given, the 
  * message will be printed before it begins to wait for a user input. If 
  * _secure_ is `true`, the user's input will not be printing and _obscure_text_ 
  * will be printed instead.
  * 
- * @note newlines will not be added automatically for messages.
+ * @note Newlines will not be added automatically for messages.
+ * @param string? message
+ * @param bool? secure
+ * @param string? obscure_text: Default value is `*`.
  * @return string
  */
 def readline(message, secure, obscure_text) {

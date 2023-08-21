@@ -11,9 +11,9 @@
 import _base64
 
 /**
- * encode(data: bytes)
- *
  * Encodes a byte array into a base64 string
+ * 
+ * @param bytes data
  * @return string
  */
 def encode(data) {
@@ -21,9 +21,9 @@ def encode(data) {
 }
 
 /**
- * decode(data: string)
- *
- * Decodes a base64 string into it's corresponding bytes
+ * Decodes a base64 string into it's corresponding bytes.
+ * 
+ * @param strinf data
  * @return bytes
  */
 def decode(data) {

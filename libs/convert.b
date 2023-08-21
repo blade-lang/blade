@@ -13,9 +13,9 @@ var _reverse_hex_table = ['0', '1', '2', '3', '4', '5', '6', '7',
     '8', '9', 'A', 'B', 'C', 'D', 'E', 'F']
 
 /**
- * hex_to_bytes(str)
- *
- * converts hexadecimal string of any length to bytes
+ * Converts hexadecimal string of any length to bytes.
+ * 
+ * @param string str
  * @return bytes
  */
 def hex_to_bytes(str) {
@@ -36,9 +36,9 @@ def hex_to_bytes(str) {
 }
 
 /**
- * decimal_to_hex(n: number)
+ * Converts the given decimal based number to an hexadeccimal string.
  * 
- * converts the given decimal based number to an hexadeccimal string
+ * @param number n
  * @return string
  */
 def decimal_to_hex(n) {
@@ -54,10 +54,10 @@ def decimal_to_hex(n) {
 }
 
 /**
- * hex_to_decimal(str: string)
+ * Converts the given hexadecimal string to a decimal base 10 number.
  * 
- * converts the given hexadecimal string to a decimal base 10 number
  * @note string must either contain the plain hexadecimal string or be in the format 0x[hex string].
+ * @param string str
  * @return number
  */
 def hex_to_decimal(str) {
@@ -77,9 +77,9 @@ def hex_to_decimal(str) {
 }
 
 /**
- * unicode_to_hex(chr: char)
+ * Converts a unicode character to it's equivalent hexadecimal string.
  * 
- * converts a unicode character to it's equivalent hexadecimal string.
+ * @param char chr
  * @return string
  */
 def unicode_to_hex(chr) {

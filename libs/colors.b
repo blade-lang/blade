@@ -59,7 +59,9 @@ import math
 var _hex = hex
 
 /**
- * ANSI font styles available for console applications
+ * ANSI font styles available for console applications.
+ * 
+ * @type dictionary
  */
 var style = {
   reset: 0,
@@ -74,7 +76,9 @@ var style = {
 }
 
 /**
- * Standard ANSI text colors available for console applications
+ * Standard ANSI text colors available for console applications.
+ * 
+ * @type dictionary
  */
 var text_color = {
   black: 30,
@@ -96,7 +100,9 @@ var text_color = {
 }
 
 /**
- * Standard ANSI background colors available for console applications
+ * Standard ANSI background colors available for console applications.
+ * 
+ * @type dictionary
  */
 var background = {
   black: 40,

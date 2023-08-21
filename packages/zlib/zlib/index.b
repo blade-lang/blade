@@ -130,8 +130,6 @@ var MAX_WBITS = _zlib.MAX_WBITS
 
 
 /**
- * adler32(data: bytes | string [, initial: number])
- * 
  * Updates a running Adler-32 checksum with the bytes buf[0..len-1] and
  * return the updated checksum.
  * 
