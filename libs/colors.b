@@ -134,9 +134,12 @@ def _get_sequence(v, bg) {
 }
 
 /**
- * text(value: string [, color: int [, bg: int]])
  * Returns a terminal printable text with the given color (or style) and background if given.
+ * 
  * @note The color argument can be replace with a style.
+ * @param string value
+ * @param int? color
+ * @param int? bg
  * @return string
  */
 def text(value, color, bg) {
@@ -144,9 +147,11 @@ def text(value, color, bg) {
 }
 
 /**
- * rgb_to_ansi256(r: int, g: int, b: int)
+ * Converts RGB color to ASI-256 color number.
  * 
- * converts RGB color to ASI-256 color number.
+ * @param int r
+ * @param int g
+ * @param int b
  * @return number
  */
 def rgb_to_ansi256(r, g, b) {
@@ -166,9 +171,10 @@ def rgb_to_ansi256(r, g, b) {
 }
 
 /**
- * ansi256_to_ansi(code: int)
+ * Converts ANSI-256 color number to ANSI-16 color number.
  * 
- * converts ANSI-256 color number to ANSI-16 color number
+ * @param int code
+ * @return number
  */
 def ansi256_to_ansi(code) {
   if !is_int(code)
@@ -203,9 +209,9 @@ def ansi256_to_ansi(code) {
 }
 
 /**
- * hex_to_rgb(h: string)
+ * Converts the hexadecimal string _h_ to its RGBA component
  * 
- * converts the hexadecimal string _h_ to its RGBA component
+ * @param string h
  * @return list
  */
 def hex_to_rgb(h) {
@@ -242,9 +248,9 @@ def hex_to_rgb(h) {
 }
 
 /**
- * hex_to_ansi256(color: string)
+ * Converts the given hexadecimal color to its ANSI-256 number.
  * 
- * Converts the given hexadecimal color to its ANSI-256 number
+ * @param string color
  * @return number
  */
 def hex_to_ansi256(color) {
@@ -256,10 +262,10 @@ def hex_to_ansi256(color) {
 }
 
 /**
- * hex_to_ansi(color: string)
- * 
  * Converts the given hexadecimal color to its ANSI-16 number.
+ * 
  * @note For use with `text()`, this should be prefered over `hex_to_ansi256`
+ * @param string color
  * @return number
  */
 def hex_to_ansi(color) {
@@ -270,11 +276,11 @@ def hex_to_ansi(color) {
 }
 
 /**
- * hex(color: string)
- * 
  * Converts the given hexadecimal color to its terminal compatible color.
+ * 
  * @note For use with `text()`, this should be prefered over `hex_to_ansi256` and `hex_to_ansi`
  * @note _color_ can include the '#' character. E.g. `#ff0`.
+ * @param string color
  * @return number
  */
 def hex(color) {
@@ -286,9 +292,11 @@ def hex(color) {
 }
 
 /**
- * rgb(r: int, g: int, b: int)
- * 
  * Converts the given RGB color to its terminal compatible color.
+ * 
+ * @param number r
+ * @param number g
+ * @param number b
  * @return number
  */
 def rgb(r, g, b) {
@@ -298,9 +306,11 @@ def rgb(r, g, b) {
 }
 
 /**
- * hsl(h: number, s: number, l: number)
- * 
  * Converts the given HSL color to its terminal compatible color.
+ * 
+ * @param number h
+ * @param number s
+ * @param number l
  * @return number
  */
 def hsl(h, s, l) {
@@ -313,9 +323,11 @@ def hsl(h, s, l) {
 }
 
 /**
- * hsv(h: number, s: number, v: number)
- * 
  * Converts the given HSV color to its terminal compatible color.
+ * 
+ * @param number h
+ * @param number s
+ * @param number v
  * @return number
  */
 def hsv(h, s, v) {
@@ -328,9 +340,11 @@ def hsv(h, s, v) {
 }
 
 /**
- * hwb(h: number, s: number, v: number)
- * 
  * Converts the given HWB color to its terminal compatible color.
+ * 
+ * @param number h
+ * @param number w
+ * @param number b
  * @return number
  */
 def hwb(h, w, b) {
@@ -343,9 +357,12 @@ def hwb(h, w, b) {
 }
 
 /**
- * cmyk(c: number, m: number, y: number, k: number)
- * 
  * Converts the given CMYK color to its terminal compatible color.
+ * 
+ * @param number c
+ * @param number m
+ * @param number y
+ * @param number k
  * @return number
  */
 def cmyk(c, m, y, k) {
@@ -358,9 +375,11 @@ def cmyk(c, m, y, k) {
 }
 
 /**
- * xyz(x: number, y: number, z: number)
- * 
  * Converts the given XYZ color to its terminal compatible color.
+ * 
+ * @param number x
+ * @param number y
+ * @param number z
  * @return number
  */
 def xyz(x, y, z) {
@@ -373,8 +392,12 @@ def xyz(x, y, z) {
 }
 
 /**
- * rgb_to_hex(r: int, g: int, b: int [, a: int])
  * Converts a RGB components into its corresponding hexadecimal color.
+ * 
+ * @param int r
+ * @param int g
+ * @param int b
+ * @param int? a
  * @return string
  */
 def rgb_to_hex(r, g, b, a) {
@@ -385,9 +408,11 @@ def rgb_to_hex(r, g, b, a) {
 }
 
 /**
- * rgb_to_hsl(r: int, g: int, b: int)
- * 
  * Converts a RGB color into its corresponding HSL components.
+ * 
+ * @param int r
+ * @param int g
+ * @param int b
  * @return list[float]
  */
 def rgb_to_hsl(r, g, b) {
@@ -423,9 +448,11 @@ def rgb_to_hsl(r, g, b) {
 }
 
 /**
- * rgb_to_hsv(r: int, g: int, b: int)
- * 
  * Converts a RGB color into its corresponding HSV components.
+ * 
+ * @param int r
+ * @param int g
+ * @param int b
  * @return list[float]
  */
 def rgb_to_hsv(r, g, b) {
@@ -454,9 +481,11 @@ def rgb_to_hsv(r, g, b) {
 }
 
 /**
- * rgb_to_hwb(r: int, g: int, b: int)
- * 
  * Converts a RGB color into its corresponding HWB components.
+ * 
+ * @param int r
+ * @param int g
+ * @param int b
  * @return list[float]
  */
 def rgb_to_hwb(r, g, b) {
@@ -470,9 +499,11 @@ def rgb_to_hwb(r, g, b) {
 }
 
 /**
- * rgb_to_cmyk(r: int, g: int, b: int)
- * 
  * Converts a RGB color into its corresponding CMYK components.
+ * 
+ * @param int r
+ * @param int g
+ * @param int b
  * @return list[float]
  */
 def rgb_to_cmyk(r, g, b) {
@@ -492,9 +523,11 @@ def rgb_to_cmyk(r, g, b) {
 }
 
 /**
- * rgb_to_xyz(r: int, g: int, b: int)
- * 
  * Converts a RGB color into its corresponding XYZ color space components.
+ * 
+ * @param int r
+ * @param int g
+ * @param int b
  * @return list[float]
  */
 def rgb_to_xyz(r, g, b) {
@@ -517,9 +550,11 @@ def rgb_to_xyz(r, g, b) {
 }
 
 /**
- * rgb_to_lab(r: int, g: int, b: int)
- * 
  * Converts a RGB color into its corresponding LAB color components.
+ * 
+ * @param int r
+ * @param int g
+ * @param int b
  * @return list[float]
  */
 def rgb_to_lab(r, g, b) {
@@ -546,9 +581,11 @@ def rgb_to_lab(r, g, b) {
 }
 
 /**
- * hsl_to_rgb(h: number, s: number, l: number)
- * 
  * Converts a HSL color into its corresponding RGB color components.
+ * 
+ * @param number h
+ * @param number s
+ * @param number l
  * @return list[float]
  */
 def hsl_to_rgb(h, s, l) {
@@ -599,9 +636,11 @@ def hsl_to_rgb(h, s, l) {
 }
 
 /**
- * hsl_to_hsv(h: number, s: number, l: number)
- * 
  * Converts a HSL color into its corresponding HSV color components.
+ * 
+ * @param number h
+ * @param number s
+ * @param number l
  * @return list[float]
  */
 def hsl_to_hsv(h, s, l) {
@@ -616,9 +655,11 @@ def hsl_to_hsv(h, s, l) {
 }
 
 /**
- * hsv_to_rgb(h: number, s: number, v: number)
- * 
  * Converts a HSV color into its corresponding RGB color components.
+ * 
+ * @param number h
+ * @param number s
+ * @param number v
  * @return list[float]
  */
 def hsv_to_rgb(h, s, v) {
@@ -648,9 +689,11 @@ def hsv_to_rgb(h, s, v) {
 }
 
 /**
- * hsv_to_hsl(h: number, s: number, v: number)
- * 
  * Converts a HSV color into its corresponding HSL color components.
+ * 
+ * @param number h
+ * @param number s
+ * @param number v
  * @return list[float]
  */
 def hsv_to_hsl(h, s, v) {
@@ -673,9 +716,11 @@ def hsv_to_hsl(h, s, v) {
 }
 
 /**
- * hwb_to_rgb(h: number, w: number, b: number)
- * 
  * Converts a HWB color into its corresponding RGB color components.
+ * 
+ * @param number h
+ * @param number w
+ * @param number b
  * @return list[float]
  */
 def hwb_to_rgb(h, w, b) {
@@ -716,9 +761,12 @@ def hwb_to_rgb(h, w, b) {
 }
 
 /**
- * cmyk_to_rgb(c: number, m: number, y: number, k: number)
- * 
  * Converts a CMYK color into its corresponding RGB color components.
+ * 
+ * @param number c
+ * @param number m
+ * @param number y
+ * @param number k
  * @return list[float]
  */
 def cmyk_to_rgb(c, m, y, k) {
@@ -738,9 +786,11 @@ def cmyk_to_rgb(c, m, y, k) {
 }
 
 /**
- * xyz_to_rgb(x: number, y: number, z: number)
- * 
  * Converts a XYZ color into its corresponding RGB color components.
+ * 
+ * @param number x
+ * @param number y
+ * @param number z
  * @return list[float]
  */
 def xyz_to_rgb(x, y, z) {

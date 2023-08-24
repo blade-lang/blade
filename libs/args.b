@@ -159,15 +159,7 @@ def _get_real_value(item, value) {
 /**
  * Commandline argument exception.
  */
-class ArgsException < Exception {
-  /**
-   * ArgsException(message: string)
-   * @constructor
-   */
-  ArgsException(message) {
-    parent(message)
-  }
-}
+class ArgsException < Exception {}
 
 class _Option {
   _Option(long_name, help, short_name, type, value, choices) {
@@ -274,9 +266,8 @@ class Parser < _Optionable {
   var _default_help = true
 
   /**
-   * Parser(name: string [, default_help: bool = true])
-   * @param `name` refers to the name of the cli program.
-   * @param `default_help` whether to show help when no command or option is matched or not.
+   * @param string name: Refers to the name of the cli program.
+   * @param bool? default_help: Whether to show help when no command or option is matched or not &mdash; Default value is `true`.
    * @constructor
    */
   Parser(name, default_help) {
@@ -568,9 +559,7 @@ class Parser < _Optionable {
   }
 
   /**
-   * add_option(name: string [, help: string [, opts: dict]])
-   * 
-   * adds a support for a new command to the parser.
+   * Adds a support for a new command to the parser.
    * 
    * The `opts` dictionary can contain one or more of:
    * 
@@ -584,21 +573,16 @@ class Parser < _Optionable {
    * options with their respective descriptions.
    * 
    * @note the `choices` option only works for type `CHOICE`.
+   * @param string name
+   * @param string? help
+   * @param dict? opts
    */
   add_option(name, help, opts) {
     parent.add_option(name, help, opts)
   }
 
   /**
-   * add_command(name: string [, help: string [, opts: dict]])
-   * 
-   * adds a support for a new command to the parser.
-   * 
-   * The `opts` dictionary can contain property `type` and `action`.
-   * 
-   * - The `type` property a must be one of the args types and will indicate 
-   * how the parsed data should be interpreted in the final result.
-   * - The `action` property must be a function.
+   * Adds a support for a new command to the parser.
    * 
    * The `opts` dictionary can contain one or more of:
    * 
@@ -606,8 +590,12 @@ class Parser < _Optionable {
    * how the parsed data should be interpreted in the final result.
    * - `choices`: a list of allowed options or a dictionary of allowed 
    * options with their respective descriptions.
+   * - The `action` property must be a function.
    * 
    * @note the `choices` option only works for type `CHOICE`.
+   * @param string name
+   * @param string? help
+   * @param dict? opts
    */
   add_command(name, help, opts) {
     if !is_string(name)
@@ -634,14 +622,7 @@ class Parser < _Optionable {
   }
 
   /**
-   * add_index(name: string [, help: string [, opts: dict]])
-   * 
-   * adds a support for a new positional argument to the parser.
-   * 
-   * The `opts` dictionary can contain property `type` and `action`.
-   * 
-   * - The `type` property a must be one of the args types and will indicate 
-   * how the parsed data should be interpreted in the final result.
+   * Adds a support for a new positional argument to the parser.
    * 
    * The `opts` dictionary can contain one or more of:
    * 
@@ -652,6 +633,9 @@ class Parser < _Optionable {
    * values with their respective descriptions.
    * 
    * @note the `choices` option only works for type `CHOICE`.
+   * @param string name
+   * @param string? help
+   * @param dict? opts
    */
   add_index(name, help, opts) {
     if !is_string(name)
@@ -670,14 +654,20 @@ class Parser < _Optionable {
   }
 
   /**
-   * parse()
-   * 
    * Parses the commandline arguments and returns a dictionary of command 
    * and options.
    * 
    * For example, parsing the commandline
-   * `blade test.b install 5 --verbose` may yeild such a result as 
-   * `{options: {verbose: true}, command: {name: install, value: 5}}`.
+   * 
+   * ```
+   * blade test.b install 5 --verbose
+   * ``` 
+   * 
+   * may yeild such a result as similar to the one below.
+   * 
+   * ```
+   * {options: {verbose: true}, command: {name: install, value: 5}}
+   * ```
    * 
    * @return dict
    */
