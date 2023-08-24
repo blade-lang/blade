@@ -7,13 +7,15 @@ class Decl {
 }
 
 /**
- * Var Decl representation
+ * Var Decl representation.
+ * 
  * @serializable
  */
 class VarDecl < Decl {
 
   /**
-   * VarDecl(name, value)
+   * @param {Decl|any|nil} name
+   * @param {Decl|any|nil} value
    * @constructor
    */
   VarDecl(name, value) {
@@ -31,13 +33,16 @@ class VarDecl < Decl {
 }
 
 /**
- * Function Decl representation
+ * Function Decl representation.
+ * 
  * @serializable
  */
 class FunctionDecl < Decl {
 
   /**
-   * FunctionDecl(name, params, body)
+   * @param {Decl|any|nil} name
+   * @param {Decl|any|nil} params
+   * @param {Decl|any|nil} body
    * @constructor
    */
   FunctionDecl(name, params, body) {
@@ -57,13 +62,17 @@ class FunctionDecl < Decl {
 }
 
 /**
- * Method Decl representation
+ * Method Decl representation.
+ * 
  * @serializable
  */
 class MethodDecl < Decl {
 
   /**
-   * MethodDecl(name, params, body, is_static)
+   * @param {Decl|any|nil} name
+   * @param {Decl|any|nil} params
+   * @param {Decl|any|nil} body
+   * @param {Decl|any|nil} is_static
    * @constructor
    */
   MethodDecl(name, params, body, is_static) {
@@ -85,13 +94,16 @@ class MethodDecl < Decl {
 }
 
 /**
- * Property Decl representation
+ * Property Decl representation.
+ * 
  * @serializable
  */
 class PropertyDecl < Decl {
 
   /**
-   * PropertyDecl(name, value, is_static)
+   * @param {Decl|any|nil} name
+   * @param {Decl|any|nil} value
+   * @param {Decl|any|nil} is_static
    * @constructor
    */
   PropertyDecl(name, value, is_static) {
@@ -111,13 +123,17 @@ class PropertyDecl < Decl {
 }
 
 /**
- * Class Decl representation
+ * Class Decl representation.
+ * 
  * @serializable
  */
 class ClassDecl < Decl {
 
   /**
-   * ClassDecl(name, superclass, properties, methods)
+   * @param {Decl|any|nil} name
+   * @param {Decl|any|nil} superclass
+   * @param {Decl|any|nil} properties
+   * @param {Decl|any|nil} methods
    * @constructor
    */
   ClassDecl(name, superclass, properties, methods) {

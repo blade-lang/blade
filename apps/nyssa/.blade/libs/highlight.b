@@ -98,18 +98,18 @@ def highlight_html5(text, lang, classes) {
   if tags {
     iter var i = 0; i < tags[0].length(); i++ {
       var content = tags[1][i].replace('/([a-zA-Z_\-0-9]+)(?=[=])/', '<^a>$1</^a>').
-                        replace('/((?<=((?<!\=)\=))${_quote_re[1,-1]})/', '<^v>$1</^v>').
+                        replace('/((?<=((?<!\=)\=))${_quote_re[1,-2]})/', '<^v>$1</^v>').
                         replace('/((?<=((?<!\=)\=))[0-9]+\.?[0-9]*)/', '<^n>$1</^n>')
       text = text.replace(tags[0][i], '<span class="${classes.keyword}">&lt;${content}&gt;</span>', false)
     }
   }
 
-  var result = text.replace('/<\^a>(.*?)<\/\^a>/', '<span class="${classes.operator}">$1</span>').
+  var result = text.replace('/<\^a>(.*?)<\/\^a>/', '<span class="${classes.function}">$1</span>').
               replace('/<\^v>(.*?)<\/\^v>/', '<span class="${classes.string}">$1</span>').
               replace('/<\^n>(.*?)<\/\^n>/', '<span class="${classes.number}">$1</span>')
 
   if lang == 'wire' {
-    result = result.replace('/(\{\{.+?\}\})/', '<span class="${classes.constant}">$1</span>')
+    result = result.replace('/(?<!%)(\{\{.+?\}\})/', '<span class="${classes.interpolation}">$1</span>')
   }
 
   # cleanup comments

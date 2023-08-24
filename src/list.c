@@ -213,7 +213,7 @@ DECLARE_LIST_METHOD(sort) {
 
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
   sort_values(list->items.values, list->items.count);
-  RETURN;
+  RETURN_VALUE(METHOD_OBJECT);
 }
 
 DECLARE_LIST_METHOD(contains) {

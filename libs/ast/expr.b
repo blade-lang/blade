@@ -6,13 +6,16 @@ class Expr {
 }
 
 /**
- * Binary Expr representation
+ * Binary Expr representation.
+ * 
  * @serializable
  */
 class BinaryExpr < Expr {
 
   /**
-   * BinaryExpr(left, op, right)
+   * @param {Expr|any|nil} left
+   * @param {Expr|any|nil} op
+   * @param {Expr|any|nil} right
    * @constructor
    */
   BinaryExpr(left, op, right) {
@@ -32,13 +35,14 @@ class BinaryExpr < Expr {
 }
 
 /**
- * Group Expr representation
+ * Group Expr representation.
+ * 
  * @serializable
  */
 class GroupExpr < Expr {
 
   /**
-   * GroupExpr(expression)
+   * @param {Expr|any|nil} expression
    * @constructor
    */
   GroupExpr(expression) {
@@ -54,13 +58,14 @@ class GroupExpr < Expr {
 }
 
 /**
- * Literal Expr representation
+ * Literal Expr representation.
+ * 
  * @serializable
  */
 class LiteralExpr < Expr {
 
   /**
-   * LiteralExpr(value)
+   * @param {Expr|any|nil} value
    * @constructor
    */
   LiteralExpr(value) {
@@ -76,13 +81,14 @@ class LiteralExpr < Expr {
 }
 
 /**
- * Identifier Expr representation
+ * Identifier Expr representation.
+ * 
  * @serializable
  */
 class IdentifierExpr < Expr {
 
   /**
-   * IdentifierExpr(value)
+   * @param {Expr|any|nil} value
    * @constructor
    */
   IdentifierExpr(value) {
@@ -98,13 +104,15 @@ class IdentifierExpr < Expr {
 }
 
 /**
- * Unary Expr representation
+ * Unary Expr representation.
+ * 
  * @serializable
  */
 class UnaryExpr < Expr {
 
   /**
-   * UnaryExpr(op, right)
+   * @param {Expr|any|nil} op
+   * @param {Expr|any|nil} right
    * @constructor
    */
   UnaryExpr(op, right) {
@@ -122,13 +130,16 @@ class UnaryExpr < Expr {
 }
 
 /**
- * Condition Expr representation
+ * Condition Expr representation.
+ * 
  * @serializable
  */
 class ConditionExpr < Expr {
 
   /**
-   * ConditionExpr(expr, truth, falsy)
+   * @param {Expr|any|nil} expr
+   * @param {Expr|any|nil} truth
+   * @param {Expr|any|nil} falsy
    * @constructor
    */
   ConditionExpr(expr, truth, falsy) {
@@ -148,13 +159,15 @@ class ConditionExpr < Expr {
 }
 
 /**
- * Call Expr representation
+ * Call Expr representation.
+ * 
  * @serializable
  */
 class CallExpr < Expr {
 
   /**
-   * CallExpr(callee, args)
+   * @param {Expr|any|nil} callee
+   * @param {Expr|any|nil} args
    * @constructor
    */
   CallExpr(callee, args) {
@@ -172,13 +185,15 @@ class CallExpr < Expr {
 }
 
 /**
- * Get Expr representation
+ * Get Expr representation.
+ * 
  * @serializable
  */
 class GetExpr < Expr {
 
   /**
-   * GetExpr(expr, name)
+   * @param {Expr|any|nil} expr
+   * @param {Expr|any|nil} name
    * @constructor
    */
   GetExpr(expr, name) {
@@ -196,13 +211,16 @@ class GetExpr < Expr {
 }
 
 /**
- * Set Expr representation
+ * Set Expr representation.
+ * 
  * @serializable
  */
 class SetExpr < Expr {
 
   /**
-   * SetExpr(expr, name, value)
+   * @param {Expr|any|nil} expr
+   * @param {Expr|any|nil} name
+   * @param {Expr|any|nil} value
    * @constructor
    */
   SetExpr(expr, name, value) {
@@ -222,13 +240,14 @@ class SetExpr < Expr {
 }
 
 /**
- * Index Expr representation
+ * Index Expr representation.
+ * 
  * @serializable
  */
 class IndexExpr < Expr {
 
   /**
-   * IndexExpr(args)
+   * @param {Expr|any|nil} args
    * @constructor
    */
   IndexExpr(args) {
@@ -244,13 +263,14 @@ class IndexExpr < Expr {
 }
 
 /**
- * List Expr representation
+ * List Expr representation.
+ * 
  * @serializable
  */
 class ListExpr < Expr {
 
   /**
-   * ListExpr(items)
+   * @param {Expr|any|nil} items
    * @constructor
    */
   ListExpr(items) {
@@ -266,13 +286,15 @@ class ListExpr < Expr {
 }
 
 /**
- * Dict Expr representation
+ * Dict Expr representation.
+ * 
  * @serializable
  */
 class DictExpr < Expr {
 
   /**
-   * DictExpr(keys, values)
+   * @param {Expr|any|nil} keys
+   * @param {Expr|any|nil} values
    * @constructor
    */
   DictExpr(keys, values) {
@@ -290,13 +312,14 @@ class DictExpr < Expr {
 }
 
 /**
- * Interpolation Expr representation
+ * Interpolation Expr representation.
+ * 
  * @serializable
  */
 class InterpolationExpr < Expr {
 
   /**
-   * InterpolationExpr(data)
+   * @param {Expr|any|nil} data
    * @constructor
    */
   InterpolationExpr(data) {

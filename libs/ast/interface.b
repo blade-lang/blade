@@ -7,7 +7,9 @@ import .decl
 import .defn
 
 /**
- * Represents the result of an ast parse operation
+ * Represents the result of an ast parse operation.
+ * 
+ * @printable
  * @serializable
  * @iterable
  */
@@ -18,24 +20,23 @@ class ParseResult {
   var _results = []
 
   /**
-   * append(item: any)
+   * Adds a new item to the parse result
    * 
-   * adds a new item to the parse result
+   * @param {Expr|Decl|Defn|Stmt} item
    */
   append(item) {
     if self._results.length() > 0 {
       if instance_of(self._results.last(), defn.DocDefn) and
         instance_of(item, decl.Decl) {
-          item.doc = '${self._results.pop().data}\n'.replace('/^\s*[*]\s*(.*)\\n/mU', '$1\n').trim()
+          item.doc = '${self._results.pop().data}\n'.replace('/^[ ]*[*][ ]?([^\\n]*)\\n/m', '$1\n').trim()
       }
     }
     self._results.append(item)
   }
 
   /**
-   * length()
-   * 
    * Returns the length of items in the parsed result.
+   * 
    * @return number
    */
   length() {
@@ -43,10 +44,10 @@ class ParseResult {
   }
 
   /**
-   * get(index: int)
-   * 
    * Returns the item at the given ParseResult index or throws exception if out of range.
-   * @return Ast
+   * 
+   * @param int index
+   * @return {Expr|Decl|Defn|Stmt}
    */
   get(index) {
     if index >= 0 and index < self.length()
@@ -55,10 +56,9 @@ class ParseResult {
   }
 
   /**
-   * to_list()
-   * 
    * Returns the items in the ParseResult as a list object.
-   * @return List<Ast>
+   * 
+   * @return {list[Expr|Decl|Defn|Stmt]}
    */
   to_list() {
     return self._results

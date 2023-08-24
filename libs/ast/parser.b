@@ -19,7 +19,7 @@ def _get_doc_string(data) {
 
 
 /**
- * Parses raw Blade tokens and produces an Abstract Syntax Tree
+ * Parses raw Blade tokens and produces an Abstract Syntax Tree.
  */
 class Parser {
 
@@ -34,7 +34,7 @@ class Parser {
   var _block_count = 0
 
   /**
-   * Parser(tokens: []Token)
+   * @param {list[Token]} tokens
    * @constructor 
    */
   Parser(tokens) {
@@ -1096,11 +1096,10 @@ class Parser {
   ### DECLARATIONS END
 
   /**
-   * parse()
-   * 
-   * parses the raw source tokens passed into relevant class and
+   * Parses the raw source tokens passed into relevant class and
    * outputs a stream of AST objects that can be one of
-   * Expr (expressions), Stmt (statements) or Decl (declarations)
+   * Expr (expressions), Stmt (statements) or Decl (declarations).
+   * 
    * @return ParseResult
    */
   parse() {

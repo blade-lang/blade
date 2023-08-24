@@ -19,9 +19,9 @@ import .token { * }
 
 
 /**
- * parse(source: string)
+ * Parses a given source code and outputs Blade AST objects.
  * 
- * parses a given source code and outputs Blade AST objects.
+ * @param string source
  * @return ParseResult
  */
 def parse(source) {
@@ -38,10 +38,10 @@ def parse(source) {
 }
 
 /**
- * json(source: string)
+ * Parses the give source code and outputs a JSON representation of 
+ * it's AST structure.
  * 
- * parses the give source code and outputs a JSON 
- * representation of it's AST structure.
+ * @param string source
  * @return string
  */
 def json(source) {

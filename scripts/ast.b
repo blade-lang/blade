@@ -94,7 +94,7 @@ for ast, members in asts {
   }
   f.write('}\n\n')
   for cl, attr in members.tree {
-    f.write('/**\n * ${cl} ${ast} representation\n * @serializable\n */\n')
+    f.write('/**\n * ${cl} ${ast} representation.\n * \n * @serializable\n */\n')
     f.write('class ${cl}${ast} < ${ast} {\n\n')
     var setter, json_body
     for k in attr {
@@ -103,7 +103,11 @@ for ast, members in asts {
     }
     if setter {
       var params = ', '.join(attr)
-      f.write('  /**\n   * ${cl}${ast}(${params})\n   * @constructor\n   */\n')
+      f.write('  /**\n')
+      for p in attr {
+        f.write('   * @param {${ast}|any|nil} ${p}\n')
+      }
+      f.write('   * @constructor\n   */\n')
       f.write('  ${cl}${ast}(${params}) {\n')
       f.write(setter)
       f.write('  }\n\n')

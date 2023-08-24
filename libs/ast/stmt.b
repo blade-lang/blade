@@ -6,13 +6,14 @@ class Stmt {
 }
 
 /**
- * Echo Stmt representation
+ * Echo Stmt representation.
+ * 
  * @serializable
  */
 class EchoStmt < Stmt {
 
   /**
-   * EchoStmt(value)
+   * @param {Stmt|any|nil} value
    * @constructor
    */
   EchoStmt(value) {
@@ -28,13 +29,14 @@ class EchoStmt < Stmt {
 }
 
 /**
- * Expr Stmt representation
+ * Expr Stmt representation.
+ * 
  * @serializable
  */
 class ExprStmt < Stmt {
 
   /**
-   * ExprStmt(expr)
+   * @param {Stmt|any|nil} expr
    * @constructor
    */
   ExprStmt(expr) {
@@ -50,13 +52,16 @@ class ExprStmt < Stmt {
 }
 
 /**
- * If Stmt representation
+ * If Stmt representation.
+ * 
  * @serializable
  */
 class IfStmt < Stmt {
 
   /**
-   * IfStmt(condition, truth, falsy)
+   * @param {Stmt|any|nil} condition
+   * @param {Stmt|any|nil} truth
+   * @param {Stmt|any|nil} falsy
    * @constructor
    */
   IfStmt(condition, truth, falsy) {
@@ -76,13 +81,17 @@ class IfStmt < Stmt {
 }
 
 /**
- * Iter Stmt representation
+ * Iter Stmt representation.
+ * 
  * @serializable
  */
 class IterStmt < Stmt {
 
   /**
-   * IterStmt(declaration, condition, iterator, body)
+   * @param {Stmt|any|nil} declaration
+   * @param {Stmt|any|nil} condition
+   * @param {Stmt|any|nil} iterator
+   * @param {Stmt|any|nil} body
    * @constructor
    */
   IterStmt(declaration, condition, iterator, body) {
@@ -104,13 +113,15 @@ class IterStmt < Stmt {
 }
 
 /**
- * While Stmt representation
+ * While Stmt representation.
+ * 
  * @serializable
  */
 class WhileStmt < Stmt {
 
   /**
-   * WhileStmt(condition, body)
+   * @param {Stmt|any|nil} condition
+   * @param {Stmt|any|nil} body
    * @constructor
    */
   WhileStmt(condition, body) {
@@ -128,13 +139,15 @@ class WhileStmt < Stmt {
 }
 
 /**
- * DoWhile Stmt representation
+ * DoWhile Stmt representation.
+ * 
  * @serializable
  */
 class DoWhileStmt < Stmt {
 
   /**
-   * DoWhileStmt(body, condition)
+   * @param {Stmt|any|nil} body
+   * @param {Stmt|any|nil} condition
    * @constructor
    */
   DoWhileStmt(body, condition) {
@@ -152,13 +165,16 @@ class DoWhileStmt < Stmt {
 }
 
 /**
- * For Stmt representation
+ * For Stmt representation.
+ * 
  * @serializable
  */
 class ForStmt < Stmt {
 
   /**
-   * ForStmt(vars, iterable, body)
+   * @param {Stmt|any|nil} vars
+   * @param {Stmt|any|nil} iterable
+   * @param {Stmt|any|nil} body
    * @constructor
    */
   ForStmt(vars, iterable, body) {
@@ -178,7 +194,8 @@ class ForStmt < Stmt {
 }
 
 /**
- * Continue Stmt representation
+ * Continue Stmt representation.
+ * 
  * @serializable
  */
 class ContinueStmt < Stmt {
@@ -191,7 +208,8 @@ class ContinueStmt < Stmt {
 }
 
 /**
- * Break Stmt representation
+ * Break Stmt representation.
+ * 
  * @serializable
  */
 class BreakStmt < Stmt {
@@ -204,13 +222,14 @@ class BreakStmt < Stmt {
 }
 
 /**
- * Die Stmt representation
+ * Die Stmt representation.
+ * 
  * @serializable
  */
 class DieStmt < Stmt {
 
   /**
-   * DieStmt(exception)
+   * @param {Stmt|any|nil} exception
    * @constructor
    */
   DieStmt(exception) {
@@ -226,13 +245,14 @@ class DieStmt < Stmt {
 }
 
 /**
- * Return Stmt representation
+ * Return Stmt representation.
+ * 
  * @serializable
  */
 class ReturnStmt < Stmt {
 
   /**
-   * ReturnStmt(value)
+   * @param {Stmt|any|nil} value
    * @constructor
    */
   ReturnStmt(value) {
@@ -248,13 +268,15 @@ class ReturnStmt < Stmt {
 }
 
 /**
- * Assert Stmt representation
+ * Assert Stmt representation.
+ * 
  * @serializable
  */
 class AssertStmt < Stmt {
 
   /**
-   * AssertStmt(expr, message)
+   * @param {Stmt|any|nil} expr
+   * @param {Stmt|any|nil} message
    * @constructor
    */
   AssertStmt(expr, message) {
@@ -272,13 +294,16 @@ class AssertStmt < Stmt {
 }
 
 /**
- * Using Stmt representation
+ * Using Stmt representation.
+ * 
  * @serializable
  */
 class UsingStmt < Stmt {
 
   /**
-   * UsingStmt(expr, cases, default_case)
+   * @param {Stmt|any|nil} expr
+   * @param {Stmt|any|nil} cases
+   * @param {Stmt|any|nil} default_case
    * @constructor
    */
   UsingStmt(expr, cases, default_case) {
@@ -298,13 +323,15 @@ class UsingStmt < Stmt {
 }
 
 /**
- * Import Stmt representation
+ * Import Stmt representation.
+ * 
  * @serializable
  */
 class ImportStmt < Stmt {
 
   /**
-   * ImportStmt(path, elements)
+   * @param {Stmt|any|nil} path
+   * @param {Stmt|any|nil} elements
    * @constructor
    */
   ImportStmt(path, elements) {
@@ -322,13 +349,16 @@ class ImportStmt < Stmt {
 }
 
 /**
- * Catch Stmt representation
+ * Catch Stmt representation.
+ * 
  * @serializable
  */
 class CatchStmt < Stmt {
 
   /**
-   * CatchStmt(type, var_name, body)
+   * @param {Stmt|any|nil} type
+   * @param {Stmt|any|nil} var_name
+   * @param {Stmt|any|nil} body
    * @constructor
    */
   CatchStmt(type, var_name, body) {
@@ -348,13 +378,14 @@ class CatchStmt < Stmt {
 }
 
 /**
- * Finally Stmt representation
+ * Finally Stmt representation.
+ * 
  * @serializable
  */
 class FinallyStmt < Stmt {
 
   /**
-   * FinallyStmt(body)
+   * @param {Stmt|any|nil} body
    * @constructor
    */
   FinallyStmt(body) {
@@ -370,13 +401,16 @@ class FinallyStmt < Stmt {
 }
 
 /**
- * Try Stmt representation
+ * Try Stmt representation.
+ * 
  * @serializable
  */
 class TryStmt < Stmt {
 
   /**
-   * TryStmt(body, catch_stmt, finally_stmt)
+   * @param {Stmt|any|nil} body
+   * @param {Stmt|any|nil} catch_stmt
+   * @param {Stmt|any|nil} finally_stmt
    * @constructor
    */
   TryStmt(body, catch_stmt, finally_stmt) {
@@ -396,13 +430,14 @@ class TryStmt < Stmt {
 }
 
 /**
- * Comment Stmt representation
+ * Comment Stmt representation.
+ * 
  * @serializable
  */
 class CommentStmt < Stmt {
 
   /**
-   * CommentStmt(data)
+   * @param {Stmt|any|nil} data
    * @constructor
    */
   CommentStmt(data) {
@@ -418,13 +453,14 @@ class CommentStmt < Stmt {
 }
 
 /**
- * Block Stmt representation
+ * Block Stmt representation.
+ * 
  * @serializable
  */
 class BlockStmt < Stmt {
 
   /**
-   * BlockStmt(body)
+   * @param {Stmt|any|nil} body
    * @constructor
    */
   BlockStmt(body) {
@@ -440,13 +476,16 @@ class BlockStmt < Stmt {
 }
 
 /**
- * Assign Stmt representation
+ * Assign Stmt representation.
+ * 
  * @serializable
  */
 class AssignStmt < Stmt {
 
   /**
-   * AssignStmt(expr, type, value)
+   * @param {Stmt|any|nil} expr
+   * @param {Stmt|any|nil} type
+   * @param {Stmt|any|nil} value
    * @constructor
    */
   AssignStmt(expr, type, value) {

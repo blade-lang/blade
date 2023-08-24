@@ -6,7 +6,8 @@ import date { Date }
 import .exception { HttpException }
 
 /**
- * Represents the response to an Http request
+ * Represents the response to an Http request.
+ * 
  * @serializable
  * @printable
  */
@@ -43,9 +44,9 @@ class HttpResponse {
   var redirects
 
   /**
-   * The final URL that provided the HttpResponse
+   * The final URL that provided the HttpResponse. This will sometimes differ from the 
+   * original request URI.
    * @type string
-   * @note This might differ from the original request URI.
    */
   var responder
 
@@ -62,7 +63,14 @@ class HttpResponse {
   var cookies
 
   /**
-   * HttpResponse(body: string, status: int, headers: dict, cookies: list, version: string, time_taken: number, redirects: int, responder: string)
+   * @param string body
+   * @param int status
+   * @param dict headers
+   * @param list[string] cookies
+   * @param string version
+   * @param number time_taken
+   * @param int redirects
+   * @param string responder
    * @constructor 
    */
   HttpResponse(body, status, headers, cookies, version, time_taken, redirects, responder) {
@@ -81,12 +89,12 @@ class HttpResponse {
   }
 
   /**
-   * write(data: string | bytes)
-   * 
    * Writes data to the response stream. 
    * 
    * > This method should be prefered over writing directly to the body 
    * > property to prevent unexpected behaviors.
+   * 
+   * @param {string|bytes} data
    */
   write(data) {
     if !is_string(data) and !is_bytes(data)
@@ -96,11 +104,12 @@ class HttpResponse {
   }
 
   /**
-   * json(data: any [, status_code: number])
-   * 
    * Writes a json encoded data to the response stream and sets the response 
    * `Content-Type` to `application/json`. If the status code is given, the
    * response will be sent with the given status code.
+   * 
+   * @param any data
+   * @param number? status_code
    */
   json(data, status_code) {
     if status_code != nil {
@@ -113,13 +122,12 @@ class HttpResponse {
   }
 
   /**
-   * file(path: string [, status_code: number])
-   * 
    * Writes a file into the response stream and sets the `Content-Type` to the 
    * correct mimetype for the file. If the status code is given, the
    * response will be sent with the given status code.
    * 
-   * @dies {Exception}
+   * @param string path
+   * @param number? status_code
    */
   file(path, status_code) {
     if status_code != nil {
@@ -135,12 +143,17 @@ class HttpResponse {
   }
 
   /**
-   * set_cookie(key: string, value: string [, domain: string [, path: string [, expires: string [, secure: bool [, extras]]]]])
-   * 
    * Sets a cookie to be send back to a client with the given _key_ and _value_. 
    * When other parameters are given, they are used to construct a correct Set-Cookie 
    * header based on their named properties.
-   * @throw HttpException
+   * 
+   * @param string key
+   * @param string value
+   * @param string? domain
+   * @param string? path
+   * @param string? expires
+   * @param bool? secure
+   * @param string? extras
    */
   set_cookie(key, value, domain, path, expires, secure, extras) {
     if !is_string(key) or !is_string(value)
@@ -172,14 +185,14 @@ class HttpResponse {
   }
 
   /**
-   * redirect(location: string [, status: string])
-   * 
    * Redirects the client to a new location. This function simultaneously sets 
    * the `Location` header and returns a 30x status code. If the `status` 
    * parameter is not given, the function defaults to `302`.
-   * @throw HttpException
    * 
-   * @note when supplying a status, it must be a 30x
+   * @param string location
+   * @param string? status
+   * @note When supplying a status, it must be a 30x
+   * @throw HttpException
    */
   redirect(location, status) {
     if !is_string(location)
@@ -196,9 +209,9 @@ class HttpResponse {
   }
 
   /**
-   * content_type(mimetype: string)
-   * 
    * Sets the content type of the HTTP response.
+   * 
+   * @param string mimetype
    */
   content_type(mimetype) {
     if !is_string(mimetype)

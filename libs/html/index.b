@@ -65,8 +65,6 @@ var _parse_defaults = {
 }
 
 /**
- * decode(str [, options])
- * 
  * Decodes an HTML string into a list of nodes (described above) 
  * representing the structure of the HTML document.
  * 
@@ -106,7 +104,7 @@ var _parse_defaults = {
  * ```
  * 
  * @param string str
- * @param dict options
+ * @param dict? options
  * @return list
  */
 def decode(str, options) {
@@ -126,8 +124,6 @@ def decode(str, options) {
 }
 
 /**
- * encode(nodes [, options])
- * 
  * Encodes the list of `elements` into an HTML string.
  * 
  * The _options_ argument is an optional argument that allows the caller 
@@ -136,7 +132,7 @@ def decode(str, options) {
  * declare a custom tag as self-closing.
  * 
  * @param list nodes
- * @param dict options
+ * @param dict? options
  * @return string
  */
 def encode(nodes, options) {

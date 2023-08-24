@@ -29,7 +29,7 @@
  * 
  * The last example above will render the following:
  * 
- * ```html
+ * ```wire
  * <p>Hello World</p>
  * ```
  * 
@@ -52,7 +52,7 @@
  * the value of a variable _myvar_ passed into [[Template.render]] or [[Template.render_string]] 
  * in the template, you can do it like this.
  * 
- * ```html
+ * ```wire
  * <div>{{ myvar }}</div>
  * ```
  * 
@@ -65,7 +65,7 @@
  * 
  * For example:
  * 
- * ```html
+ * ```wire
  * <div x-for="myvar" x-key="mykey"></div>
  * ```
  * 
@@ -77,13 +77,13 @@
  * 
  * For example:
  * 
- * ```html
+ * ```wire
  * <div>%{{ myvar }}</>
  * ```
  * 
  * The example above will return the following:
  * 
- * ```html
+ * ```wire
  * <div>{{ myvar }}</div>
  * ```
  * 
@@ -96,7 +96,7 @@
  * 
  * For example:
  * 
- * ```html
+ * ```wire
  * <div>{{ name|length }}</div>
  * ```
  * 
@@ -104,16 +104,23 @@
  * the _length_ modifier function. If _name_ contains the value `John Doe`, then the value printed 
  * will be `8`.
  * 
- * The built-in modifiers are:
+ * The built-in modifiers are documentated under [Template Functions](#template-functions).
  * 
- * - {{length}}
- * - {{upper}}
- * - {{lower}}
- * - {{is}}
- * - {{not}}
- * - {{empty}}
- * - {{reverse}}
- * - {{string}}
+ * Some expression modifiers require that a value is passed. To pass value to a modifier, use the 
+ * equal (`=`) sign. For example:
+ * 
+ * ```wire
+ * {{ name|is='Jane' }}
+ * ```
+ * 
+ * In this example, `Jane` is a string therefore it is quoted. You can also pass the name of another 
+ * variable, a number or any of the constants `true`, `false`, and `nil` directly without the quotes.
+ * 
+ * For example:
+ * 
+ * ```wire
+ * {{ age|is=30.5 }}
+ * ```
  * 
  * ### If... and If not...
  * 
@@ -157,7 +164,7 @@
  * 
  * The code above will return the following:
  * 
- * ```html
+ * ```wire
  * <div>Ok</div><div>Ok</div><div>Ok</div>
  * ```
  * 
@@ -172,7 +179,7 @@
  * 
  * The code above return
  * 
- * ```html
+ * ```wire
  * <div>apple</div><div>mango</div>
  * ```
  * 
@@ -187,7 +194,7 @@
  * 
  * Which will output
  * 
- * ```html
+ * ```wire
  * <div>
  *   <span>0</span>
  *   <span>apple</span>
@@ -215,7 +222,7 @@
  * [[Template.set_root]]) that contains all shared `meta` tags as shown in the sample below and include 
  * this file in every other template.
  * 
- * ```html
+ * ```wire
  * <!-- templates/meta.html -->
  * <meta charset="utf-8">
  * <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -224,7 +231,7 @@
  * 
  * This template can the be imported in another file with the `include` tag.
  * 
- * ```html
+ * ```wire
  * <!-- templates/layout.html -->
  * <include path="meta.html" />
  * ```
@@ -259,7 +266,7 @@
  * 
  * And the output HTML from the above code will be
  * 
- * ```html
+ * ```wire
  * <div>ognam</div>
  * ```
  * 
@@ -278,13 +285,13 @@
  * 
  * The code below shows how to pass an argument into the `reverse_weird` modifier from a template.
  * 
- * ```html
+ * ```wire
  * <p>{{ fruit|reverse_weird='Reversed' }}</p>
  * ```
  * 
  * Yes I know. It's weird. But if we passed in the same arguemt as the last, the output will be
  * 
- * ```html
+ * ```wire
  * <p>Reversed: ognam</p>
  * ```
  * 
@@ -295,7 +302,7 @@
  * If we remove the argument to the modifier in the template above and simply call 
  * `fruit|reverse_weird`, the result will look like this:
  * 
- * ```html
+ * ```wire
  * <p>: ognam</p>
  * ```
  * 
@@ -325,13 +332,13 @@
  * The simple tag defined above allows us to process the `<link />` tag in a Wire template. 
  * For example,
  * 
- * ```html
+ * ```wire
  * <link href="bladelang.com" text="Blade Website" />
  * ```
  * 
  * The Wire template above will cause the following to be rendered.
  * 
- * ```html
+ * ```wire
  * <a href="bladelang.com">Blade Website</a>
  * ```
  * 
@@ -813,7 +820,7 @@ class Template {
    * The registered function can be used in the template to process variables.
    * For example,
    * 
-   * ```html
+   * ```wire
    * <div>{{ my_user|firstname }}</div>
    * ```
    * 
@@ -850,7 +857,7 @@ class Template {
    * 
    * The above registered element can then be used in the template. For example,
    * 
-   * ```html
+   * ```wire
    * <inline-input value="{{ my_var }}" />
    * ```
    * 
@@ -890,7 +897,7 @@ class Template {
    * 
    * The above template should return
    * 
-   * ```html
+   * ```wire
    * <div>Johnson</div>
    * ```
    * 

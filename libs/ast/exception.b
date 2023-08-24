@@ -1,11 +1,12 @@
 #!-- part of the ast module
 
 /**
- * Exception raised for errors during parsing
+ * Exception raised for errors during parsing.
  */
 class ParseException < Exception {
   /**
-   * ParseException(token: Token, message: string)
+   * @param {Token} token
+   * @param string message
    * @constructor 
    */
   ParseException(token, message) {

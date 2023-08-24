@@ -24,6 +24,7 @@ import curl {
 
 /**
  * Http request handler and object.
+ * 
  * @serializable
  * @printable
  */
@@ -43,9 +44,8 @@ class HttpRequest {
   var path
 
   /**
-   * The HTTP method of the request: GET, POST, PUT, etc.
+   * The HTTP method of the request: GET (the default), POST, PUT, etc.
    * @type string
-   * @default GET
    */
   var method
 
@@ -105,9 +105,9 @@ class HttpRequest {
   var http_version = '1.1'
 
   /**
-   * The HTTP authentication method to use when the uri contains a credential.
+   * The HTTP authentication method to use when the uri contains a credential. 
+   * Default value is `Auth.ANY`.
    * @type Auth
-   * @default Auth.ANY
    */
   var auth_method = Auth.ANY
 
@@ -317,9 +317,10 @@ class HttpRequest {
   }
 
   /**
-   * parse(raw_data: string [, client: Socket | TLSSocket])
+   * Parses a raw HTTP request string into a correct HttpRequest.
    * 
-   * Parses a raw HTTP request string into a correct HttpRequest
+   * @param string raw_data
+   * @param {Socket|TLSSocket|nil} client
    * @return boolean
    */
   parse(raw_data, client) {
@@ -412,12 +413,15 @@ class HttpRequest {
   }
 
   /**
-   * send(uri: Url, method: string [, data: string | bytes [, options: dict]])
-   * 
    * Sends the given request to the given uri using the given method and 
    * optionally passing the data if given.
    * 
-   * @default follow_redirect: true
+   * @param {Url} uri
+   * @param string method
+   * @param {string|bytes|nil} data
+   * @param dict? options
+   * @return HttpResponse
+   * @dies HttpException
    */
   send(uri, method, data, options) {
 
@@ -524,9 +528,8 @@ class HttpRequest {
   }
 
   /**
-   * to_dict()
-   * 
    * Returns a dictionary representation of the HttpRequest instance.
+   * 
    * @return dict
    */
   to_dict() {
@@ -545,9 +548,8 @@ class HttpRequest {
   }
 
   /**
-   * to_string()
-   * 
    * Returns a string representation of the HttpRequest instance.
+   * 
    * @return string
    */
   to_string() {

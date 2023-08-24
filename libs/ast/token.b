@@ -500,13 +500,16 @@ var EMPTY = 500
 
 
 /**
- * Blade source code token
+ * Blade source code token.
+ * 
  * @serializable
  * @printable
  */
 class Token {
   /**
-   * Token(type: number, literal: string, line: number)
+   * @param number type
+   * @param string literal
+   * @param number line
    * @constructor 
    */
   Token(type, literal, line) {

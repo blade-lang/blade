@@ -6,13 +6,14 @@ class Defn {
 }
 
 /**
- * Doc Defn representation
+ * Doc Defn representation.
+ * 
  * @serializable
  */
 class DocDefn < Defn {
 
   /**
-   * DocDefn(data)
+   * @param {Defn|any|nil} data
    * @constructor
    */
   DocDefn(data) {

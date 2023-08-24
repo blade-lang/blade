@@ -10,6 +10,7 @@ import .list
 import .paragraph
 import .reference
 import .table
+import .deflist
 
 # class
 import .block_state

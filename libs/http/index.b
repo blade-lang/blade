@@ -68,8 +68,6 @@ import .server { HttpServer }
 var _client = HttpClient()
 
 /**
- * set_headers(headers: dict)
- * 
  * Sets the request headers for the current module instance.
  *  
  * This function returns HttpClient in order to allow for idiomatic 
@@ -84,6 +82,8 @@ var _client = HttpClient()
  * 
  * echo client.get('/current-user').body.to_string()
  * ```
+ * 
+ * @param dict headers
  * @return HttpClient
  * @dies Exception
  */
@@ -95,56 +95,69 @@ def set_headers(headers) {
 }
 
 /**
- * get(url: string)
- *
- * sends an Http GET request and returns an HttpResponse
+ * Sends an Http GET request and returns an HttpResponse
  * or throws one of SocketException or Exception if it fails.
+ * 
+ * @param string url
  * @return HttpResponse
- * @dies Exception, SocketExcepion, HttpException
+ * @dies Exception
+ * @dies SocketExcepion
+ * @dies HttpException
  */
 def get(url) {
   return _client.get(url)
 }
 
 /**
- * post(url: string, [data: string | bytes])
- *
- * sends an Http POST request and returns an HttpResponse.
+ * Sends an Http POST request and returns an HttpResponse.
+ * 
+ * @param string url
+ * @param {string|bytes|nil} data
  * @return HttpResponse
- * @dies Exception, SocketExcepion, HttpException
+ * @dies Exception
+ * @dies SocketExcepion
+ * @dies HttpException
  */
 def post(url, data) {
   return _client.post(url, data)
 }
 
 /**
- * put(url: string, [data: string | bytes])
- *
- * sends an Http PUT request and returns an HttpResponse.
+ * Sends an Http PUT request and returns an HttpResponse.
+ * 
+ * @param string url
+ * @param {string|bytes|nil} data
  * @return HttpResponse
- * @dies Exception, SocketExcepion, HttpException
+ * @dies Exception
+ * @dies SocketExcepion
+ * @dies HttpException
  */
 def put(url, data) {
   return _client.put(url, data)
 }
 
 /**
- * delete(url: string)
- *
- * sends an Http DELETE request and returns an HttpResponse.
+ * Sends an Http DELETE request and returns an HttpResponse.
+ * 
+ * @param string url
  * @return HttpResponse
- * @dies Exception, SocketExcepion, HttpException
+ * @dies Exception
+ * @dies SocketExcepion
+ * @dies HttpException
  */
 def delete(url) {
   return _client.send_request(url, 'DELETE', nil)
 }
 
 /**
- * server(port: int, address: string)
- * 
  * Creates an new HttpServer instance.
+ * 
+ * @param int port
+ * @param string address
  * @return HttpServer
- * @dies Exception, SocketExcepion, HttpException
+ * @dies Exception
+ * @dies SocketExcepion
+ * @dies HttpException
  */
 def server(port, address) {
   return HttpServer(port, address)

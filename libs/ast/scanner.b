@@ -3,11 +3,15 @@
 import .token { * }
 
 /**
- * Blade source code scanner
+ * Blade source code scanner.
+ * 
+ * @printable
  */
 class Scanner {
   /**
-   * reports if an error was encountered in the scaner
+   * Reports if an error was encountered in the scaner.
+   * 
+   * @type bool
    */
   var has_error = false
 
@@ -68,7 +72,7 @@ class Scanner {
   }
 
   /**
-   * Scanner(source: string)
+   * @param string source
    * @constructor 
    */
   Scanner(source) {
@@ -460,9 +464,8 @@ class Scanner {
   }
 
   /**
-   * scan()
+   * Scans the source and returns a list of tokens.
    * 
-   * scans the source and returns a list of tokens
    * @return list[Token]
    */
   scan() {
