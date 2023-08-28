@@ -416,20 +416,20 @@ DECLARE_STRING_METHOD(join) {
 
     b_obj_string *_str = value_to_string(vm, list[0]);
     char *result = strdup(_str->chars);
-    int result_length = _str->length;
+//    int result_length = _str->length;
 
     for (int i = 1; i < count; i++) {
       if (method_obj->length > 0) {
         result = append_strings_n(result, method_obj->chars, method_obj->length);
-        result_length += method_obj->length;
+//        result_length += method_obj->length;
       }
 
       b_obj_string *str = value_to_string(vm, list[i]);
       result = append_strings_n(result, str->chars, str->length);
-      result_length += str->length;
+//      result_length += str->length;
     }
 
-    RETURN_T_STRING(result, result_length);
+    RETURN_TT_STRING(result);
   }
 
   RETURN_ERROR("join() does not support object of type %s", value_type(argument));
