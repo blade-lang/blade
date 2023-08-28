@@ -802,12 +802,13 @@ class Parser < _Optionable {
       }
 
       if !command_found {
+        i--
         # Treat options next.
         parse_options(self.options, arg, true)
       }
 
       # positional arguments can only come after command and options.
-      if self.indexes and i < cli_args.length() - 1 {
+      if self.indexes and i <= cli_args.length() - 1 {
         # if index has never been parsed, let's mark the
         # index starting positing in args list now.
         if index_start == -1 index_start = i
@@ -821,7 +822,7 @@ class Parser < _Optionable {
 
     # fill default values if missing
     for opt in self.options {
-      if opt.value and !parsed_args.options.contains(opt.long_name) {
+      if opt.value != nil and !parsed_args.options.contains(opt.long_name) {
         parsed_args.options.add(opt.long_name, _get_real_value(opt, opt.value))
       }
     }
@@ -848,6 +849,14 @@ class Parser < _Optionable {
     }
 
     return parsed_args
+  }
+
+  /**
+   * Show the help message.
+   */
+  help() {
+    self._usage_hint()
+    self._print_help()
   }
 }
 

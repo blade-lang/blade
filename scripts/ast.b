@@ -72,14 +72,14 @@ var asts = {
       Property: ['name', 'value', 'is_static'],
       Class: ['name', 'superclass', 'properties', 'methods'],
     },
-    props: ['doc']
+    props: ['doc', 'file',]
   },
   Defn: {
     file: 'defn.b',
     tree: {
       Doc: ['data']
     },
-    props: []
+    props: ['file',]
   }
 }
 

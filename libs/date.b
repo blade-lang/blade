@@ -494,42 +494,42 @@ class Date {
    * 
    * Blade's Date formatting table
    * 
-   *   Character | Description                                               | Example
-   *   ----------|-----------------------------------------------------------|-----------------------------------
-   *   A         | uppercase Ante meridiem and Post meridiem                 | AM or PM
-   *   a         | lowercase Ante meridiem and Post meridiem                 | am or pm
-   *   d         | day of the month with leading zero                        | 01 to 31
-   *   D         | textual representation of a day, three letters            | Mon - Sun
-   *   j         | day of the month without leading zero                     | 1 to 31
-   *   l         | full textual representation of the day of the week        | Monday - Sunday
-   *   N         | ISO-8601 numeric representation of the day of the week    | 1 - 7
-   *   S         | English ordinal suffix for the day of the month           | st, nd, rd or th
-   *   w         | numeric representation of the day of the week             | 0 - 6
-   *   z         | the day of the year (starting from 0)                     | 0 - 365
-   *   W         | ISO-8601 week number of year, weeks starting on Monday    | E.g. 33 (the 33rd week of the year)
-   *   F         | full textual representation of a month                    | January - December
-   *   m         | numeric representation of a month, with leading zeros     | 01 - 12
-   *   n         | numeric representation of a month, without leading zeros  | 1 - 12
-   *   M         | short textual representation of a month, three letters    | Jan - Dec
-   *   t         | number of days in the given month                         | 28 - 31
-   *   L         | whether it's a leap year                                  | 1 if true, 0 otherwise
-   *   y         | two digit representation of a year                        | e.g. 09 or 99
-   *   Y         | full numeric representation of a year using 4 digits      | e.g. 2009 or 1999
-   *   h         | 12 hour format of an hour with leading zeros              | 01 - 12
-   *   H         | 24 hour format of an hour with leading zeros              | 01 - 24
-   *   g         | 12 hour format of an hour without leading zeros           | 1 - 12
-   *   G         | 24 hour format of an hour without leading zeros           | 1 - 24
-   *   i         | minutes with leading zero                                 | 00 - 59
-   *   s         | seconds with leading zero                                 | 00 - 59
-   *   u         | microseconds                                              | e.g. 987654
-   *   v         | milliseconds                                              | e.g. 987
-   *   e         | timezone identifier                                       | e.g. GMT, UTC, WAT
-   *   I         | whether or not the date is in daylight saving time        | 1 for true, 0 otherwise
-   *   O         | difference to GMT without colon between hours and minutes | e.g. +0100
-   *   P         | difference to GMT with colon between hours and minutes    | e.g. +01:00
-   *   Z         | timezone offset in seconds                                | -43200 - 50400
-   *   c         | ISO 8601 date                                             | e.g. 2020-03-04T15:19:21+00:00
-   *   r         | RFC 2822 formatted date                                   | e.g. Thu, 21 Dec 2000 16:01:07 +0200
+   * Character | Description                                               | Example
+   * ----------|-----------------------------------------------------------|-----------------------------------
+   * A         | uppercase Ante meridiem and Post meridiem                 | AM or PM
+   * a         | lowercase Ante meridiem and Post meridiem                 | am or pm
+   * d         | day of the month with leading zero                        | 01 to 31
+   * D         | textual representation of a day, three letters            | Mon - Sun
+   * j         | day of the month without leading zero                     | 1 to 31
+   * l         | full textual representation of the day of the week        | Monday - Sunday
+   * N         | ISO-8601 numeric representation of the day of the week    | 1 - 7
+   * S         | English ordinal suffix for the day of the month           | st, nd, rd or th
+   * w         | numeric representation of the day of the week             | 0 - 6
+   * z         | the day of the year (starting from 0)                     | 0 - 365
+   * W         | ISO-8601 week number of year, weeks starting on Monday    | E.g. 33 (the 33rd week of the year)
+   * F         | full textual representation of a month                    | January - December
+   * m         | numeric representation of a month, with leading zeros     | 01 - 12
+   * n         | numeric representation of a month, without leading zeros  | 1 - 12
+   * M         | short textual representation of a month, three letters    | Jan - Dec
+   * t         | number of days in the given month                         | 28 - 31
+   * L         | whether it's a leap year                                  | 1 if true, 0 otherwise
+   * y         | two digit representation of a year                        | e.g. 09 or 99
+   * Y         | full numeric representation of a year using 4 digits      | e.g. 2009 or 1999
+   * h         | 12 hour format of an hour with leading zeros              | 01 - 12
+   * H         | 24 hour format of an hour with leading zeros              | 01 - 24
+   * g         | 12 hour format of an hour without leading zeros           | 1 - 12
+   * G         | 24 hour format of an hour without leading zeros           | 1 - 24
+   * i         | minutes with leading zero                                 | 00 - 59
+   * s         | seconds with leading zero                                 | 00 - 59
+   * u         | microseconds                                              | e.g. 987654
+   * v         | milliseconds                                              | e.g. 987
+   * e         | timezone identifier                                       | e.g. GMT, UTC, WAT
+   * I         | whether or not the date is in daylight saving time        | 1 for true, 0 otherwise
+   * O         | difference to GMT without colon between hours and minutes | e.g. +0100
+   * P         | difference to GMT with colon between hours and minutes    | e.g. +01:00
+   * Z         | timezone offset in seconds                                | -43200 - 50400
+   * c         | ISO 8601 date                                             | e.g. 2020-03-04T15:19:21+00:00
+   * r         | RFC 2822 formatted date                                   | e.g. Thu, 21 Dec 2000 16:01:07 +0200
    * 
    * 
    * Example,

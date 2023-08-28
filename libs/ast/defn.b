@@ -3,6 +3,7 @@
  * base Defn class
  */
 class Defn {
+  var file
 }
 
 /**

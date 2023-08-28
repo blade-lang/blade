@@ -4,6 +4,7 @@
  */
 class Decl {
   var doc
+  var file
 }
 
 /**

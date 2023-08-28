@@ -105,6 +105,7 @@ def parse(path) {
   if !f.exists()
     die Exception('could not open file ${path}')
 
-  return decode(f.read())
+  var content = f.read().trim()
+  return content ? decode(content) : nil
 }
 

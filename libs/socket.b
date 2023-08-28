@@ -507,6 +507,7 @@ class SocketException < Exception {
 /**
  * The Socket class provides interface for working with Socket clients
  * and servers.
+ * 
  * @printable
  */
 class Socket {

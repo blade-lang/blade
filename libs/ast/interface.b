@@ -28,7 +28,7 @@ class ParseResult {
     if self._results.length() > 0 {
       if instance_of(self._results.last(), defn.DocDefn) and
         instance_of(item, decl.Decl) {
-          item.doc = '${self._results.pop().data}\n'.replace('/^[ ]*[*][ ]?([^\\n]*)\\n/m', '$1\n').trim()
+          item.doc = self._results.pop().data
       }
     }
     self._results.append(item)

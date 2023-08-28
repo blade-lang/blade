@@ -8,14 +8,16 @@
  */
 
 /**
- * Default log2 rounds (default: 10)
+ * Default log2 rounds (default: 10).
+ * 
  * @type number
  */
 var DEFAULT_LOG2_ROUNDS = 10
 
 /**
  * Maximum execution time for each cipher iteration in 
- * milliseconds (default: 100)
+ * milliseconds (default: 100).
+ * 
  * @type number
  */
 var MAX_EXECUTION_TIME = 100

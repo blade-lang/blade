@@ -27,9 +27,9 @@
  * import http
  * 
  * var client = http.HttpClient()
- * client.receive_timeout = 30000
- * var res = client.send_request('http://example/endpoint?query=1', 'GET')
- * echo res.body
+ * client.receive_timeout = 30000 # Optional
+ * var res = client.send_request('http://example.com/endpoint?query=1', 'GET')
+ * echo res.body.to_string()
  * ```
  * 
  * Creating a server with the `http` module is also a breeze. 
@@ -41,13 +41,9 @@
  * import json
  * 
  * var server = http.server(3000)
- * server.on_receive(@(request, response) {
- *   echo 'Request from ${request.ip} to ${request.path}.'
- *   response.headers['Content-Type'] = 'application/json'
- *   response.write(json.encode(request))
+ * server.handle('GET', '/', @(request, response) {
+ *   response.json(request)
  * })
- * 
- * echo 'Listening on Port 3000...'
  * server.listen()
  * ```
  * 
@@ -75,12 +71,10 @@ var _client = HttpClient()
  * 
  * ```blade
  * import http
- * var client = http.set_headers({
+ * echo http.set_headers({
  *   'Authorization': 'Bearer SomeAPIBearerToken',
  *   'Host': 'example.com',
- * })
- * 
- * echo client.get('/current-user').body.to_string()
+ * }).get('http://example.com/current-user').body.to_string()
  * ```
  * 
  * @param dict headers

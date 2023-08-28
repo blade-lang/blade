@@ -512,21 +512,23 @@ class Token {
    * @param number line
    * @constructor 
    */
-  Token(type, literal, line) {
+  Token(type, literal, line, file) {
     self.type = type
     self.literal = literal
     self.line = line
+    self.file = file
   }
 
   @to_string() {
-    return "<ast::Token type=${self.type} literal='${self.literal}' line=${self.line}>"
+    return "<ast::Token type=${self.type} literal='${self.literal}' line=${self.line} file='${self.file}'>"
   }
 
   @to_json() {
     return {
       type: self.type,
       literal: self.literal,
-      line: self.line
+      line: self.line,
+      file: self.file,
     }
   }
 }
