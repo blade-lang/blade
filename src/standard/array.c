@@ -1476,7 +1476,7 @@ DECLARE_MODULE_METHOD(array_to_string) {
 }
 
 DECLARE_MODULE_METHOD(array_to_bytes) {
-  ENFORCE_ARG_COUNT(to_bytes, 1);
+  ENFORCE_ARG_COUNT(to_bytes, 2);
   ENFORCE_ARG_TYPE(to_bytes, 0, IS_PTR);
   ENFORCE_ARG_TYPE(to_bytes, 1, IS_NUMBER);
 

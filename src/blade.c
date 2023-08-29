@@ -18,10 +18,6 @@
 #include "linenoise/linenoise.h"
 #endif
 
-#include <setjmp.h>
-#include <signal.h>
-#include <fcntl.h>
-
 #ifdef _WIN32
 #include <windows.h>
 #include "pathinfo.h"
@@ -52,7 +48,7 @@ static void repl(b_vm *vm) {
       linenoiseUtf8NextCharLen,
       linenoiseUtf8ReadCode
   );
-  linenoiseSetMultiLine(0);
+  linenoiseSetMultiLine(1);
 
   // allow user to navigate through past input in terminal...
   linenoiseHistoryAdd(".exit");
