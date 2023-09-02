@@ -131,7 +131,11 @@ DECLARE_FILE_METHOD(close) {
 
 DECLARE_FILE_METHOD(open) {
   ENFORCE_ARG_COUNT(open, 0);
-  file_open(AS_FILE(METHOD_OBJECT));
+  b_obj_file *file = AS_FILE(METHOD_OBJECT);
+  file_open(file);
+  if(file->file == NULL) {
+    FILE_ERROR(Open, "could not open file.");
+  }
   RETURN;
 }
 
@@ -171,8 +175,11 @@ DECLARE_FILE_METHOD(read) {
 
     if (!file->is_open) { // open the file if it isn't open
       file_open(file);
-    } else if (file->file == NULL) {
-      FILE_ERROR(Read, "could not read file");
+    }
+
+    if (file->file == NULL) {
+
+      RETURN_ERROR("could not read file %s, %s", file->path->chars, strerror(errno));
     }
 
     // Get file size
@@ -334,8 +341,10 @@ DECLARE_FILE_METHOD(write) {
       FILE_ERROR(Write, "cannot write empty buffer to file");
     } else if (file->file == NULL || !file->is_open) { // open the file if it isn't open
       file_open(file);
-    } else if (file->file == NULL) {
-      FILE_ERROR(Write, "could not write to file");
+    }
+
+    if (file->file == NULL) {
+      RETURN_ERROR("could not write to file %s, %s", file->path->chars, strerror(errno));
     }
   } else {
     // stdin should not write
