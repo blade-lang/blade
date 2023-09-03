@@ -324,6 +324,7 @@ class Parser < _Optionable {
         commands_width = self._get_commands_text_width(),
         width = options_width > commands_width ? options_width : commands_width
       
+      var choices_printed = false
       for op in opt.options {
 
         var line = '\n'
@@ -339,7 +340,8 @@ class Parser < _Optionable {
         # characters away from the help texts.
         line = line.rpad(width + 8)
 
-        if opt.type == CHOICE {
+        if opt.type == CHOICE and !choices_printed {
+          choices_printed = true
           response += '\n' + self._get_choice_help(opt.choices)
         }
 
