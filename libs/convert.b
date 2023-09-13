@@ -45,6 +45,8 @@ def decimal_to_hex(n) {
   if !is_number(n)
     die Exception('number expected, ${typeof(n)} given')
 
+  if n == 0 return '0'
+
   var result = []
   while n > 0 {
     result.append(_hex_table[n % 16])

@@ -138,6 +138,28 @@ DECLARE_MODULE_METHOD(math__floor) {
   RETURN_NUMBER(floor(AS_NUMBER(args[0])));
 }
 
+DECLARE_MODULE_METHOD(math__urshift) {
+  ENFORCE_ARG_COUNT(urshift, 2);
+  ENFORCE_ARG_TYPE(urshift, 0, IS_NUMBER);
+  ENFORCE_ARG_TYPE(urshift, 1, IS_NUMBER);
+
+  int left = AS_NUMBER(args[0]);
+  int right = AS_NUMBER(args[1]);
+  int result = (uint32_t)left >> right;
+  RETURN_NUMBER(result);
+}
+
+DECLARE_MODULE_METHOD(math__ulshift) {
+  ENFORCE_ARG_COUNT(urshift, 2);
+  ENFORCE_ARG_TYPE(urshift, 0, IS_NUMBER);
+  ENFORCE_ARG_TYPE(urshift, 1, IS_NUMBER);
+
+  int left = AS_NUMBER(args[0]);
+  int right = AS_NUMBER(args[1]);
+  int result = (uint32_t)left << right;
+  RETURN_NUMBER(result);
+}
+
 CREATE_MODULE_LOADER(math) {
   static b_func_reg module_functions[] = {
       {"sin",   true,  GET_MODULE_METHOD(math__sin)},
@@ -162,6 +184,8 @@ CREATE_MODULE_LOADER(math) {
       {"log10", true,  GET_MODULE_METHOD(math__log10)},
       {"log1p", true,  GET_MODULE_METHOD(math__log1p)},
       {"floor", true,  GET_MODULE_METHOD(math__floor)},
+      {"urshift", true,  GET_MODULE_METHOD(math__urshift)},
+      {"ulshift", true,  GET_MODULE_METHOD(math__ulshift)},
       {NULL,    false, NULL},
   };
 
