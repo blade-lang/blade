@@ -36,26 +36,6 @@ def hex_to_bytes(str) {
 }
 
 /**
- * Converts the given decimal based number to an hexadeccimal string.
- * 
- * @param number n
- * @return string
- */
-def decimal_to_hex(n) {
-  if !is_number(n)
-    die Exception('number expected, ${typeof(n)} given')
-
-  if n == 0 return '0'
-
-  var result = []
-  while n > 0 {
-    result.append(_hex_table[n % 16])
-    n = int(n / 16)
-  }
-  return ''.join(result.reverse())
-}
-
-/**
  * Converts the given hexadecimal string to a decimal base 10 number.
  * 
  * @note string must either contain the plain hexadecimal string or be in the format 0x[hex string].
@@ -88,5 +68,5 @@ def unicode_to_hex(chr) {
   if !is_string(chr) or chr.length() > 1
     die Exception('char expected, ${typeof(chr)} given')
 
-  return decimal_to_hex(ord(chr))
+  return hex(ord(chr))
 }

@@ -18,7 +18,6 @@ import .parser_inline { InlineParser }
 import .config as presets
 import url
 import reflect
-import convert { decimal_to_hex }
 
 var _working_rules = [ 'core', 'block', 'inline' ]
 

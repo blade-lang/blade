@@ -11,6 +11,8 @@
 #include "hash/gost.h"
 #include "hash/crc32.h"
 #include "hash/adler32.h"
+#include "hash/sha3.h"
+#include "hash/blake.h"
 #include "pathinfo.h"
 
 #ifdef _MSC_VER
@@ -393,6 +395,76 @@ DECLARE_MODULE_METHOD(hash__hash) {
   RETURN_NUMBER((double) hash_value(args[0]));
 }
 
+DECLARE_MODULE_METHOD(hash__keccak) {
+  ENFORCE_ARG_RANGE(keccak, 3, 4);
+
+  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
+    RETURN_ERROR("keccak() expects string or bytes");
+  }
+
+  ENFORCE_ARG_TYPE(keccak, 1, IS_NUMBER); // delimiter
+  ENFORCE_ARG_TYPE(keccak, 2, IS_NUMBER); // bit
+  int delimiter = AS_NUMBER(args[1]);
+  int bits = AS_NUMBER(args[2]);
+
+  int outlen;
+  if(arg_count == 4) {
+    ENFORCE_ARG_TYPE(keccak, 3, IS_NUMBER); // outlen
+    outlen = AS_NUMBER(args[3]);
+  } else {
+    outlen = bits / 8;
+  }
+
+  char *result;
+  if (IS_STRING(args[0])) {
+    b_obj_string *string = AS_STRING(args[0]);
+    result = sha3_keccak_bits((unsigned char *) string->chars, string->length, delimiter, bits, outlen);
+  } else {
+    b_obj_bytes *bytes = AS_BYTES(args[0]);
+    result = sha3_keccak_bits(bytes->bytes.bytes, bytes->bytes.count, delimiter, bits, outlen);
+  }
+
+  RETURN_T_STRING(result, outlen * 2);
+}
+
+DECLARE_MODULE_METHOD(hash__blake2b) {
+  ENFORCE_ARG_COUNT(blake2b, 1);
+
+  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
+    RETURN_ERROR("blake2b() expects string or bytes");
+  }
+
+  char *result;
+  if (IS_STRING(args[0])) {
+    b_obj_string *string = AS_STRING(args[0]);
+    result = blake2b((unsigned char *) string->chars, string->length);
+  } else {
+    b_obj_bytes *bytes = AS_BYTES(args[0]);
+    result = blake2b(bytes->bytes.bytes, bytes->bytes.count);
+  }
+
+  RETURN_TT_STRING(result);
+}
+
+DECLARE_MODULE_METHOD(hash__blake2s) {
+  ENFORCE_ARG_COUNT(blake2s, 1);
+
+  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
+    RETURN_ERROR("blake2s() expects string or bytes");
+  }
+
+  char *result;
+  if (IS_STRING(args[0])) {
+    b_obj_string *string = AS_STRING(args[0]);
+    result = blake2s((unsigned char *) string->chars, string->length);
+  } else {
+    b_obj_bytes *bytes = AS_BYTES(args[0]);
+    result = blake2s(bytes->bytes.bytes, bytes->bytes.count);
+  }
+
+  RETURN_TT_STRING(result);
+}
+
 CREATE_MODULE_LOADER(hash) {
   static b_func_reg module_functions[] = {
       {"hash",      true,  GET_MODULE_METHOD(hash__hash)},
@@ -415,6 +487,9 @@ CREATE_MODULE_LOADER(hash) {
       {"snefru",    true,  GET_MODULE_METHOD(hash__snefru)},
       {"siphash",   true,  GET_MODULE_METHOD(hash__siphash)},
       {"gost",      true,  GET_MODULE_METHOD(hash__gost)},
+      {"keccak",      true,  GET_MODULE_METHOD(hash__keccak)},
+      {"blake2b",      true,  GET_MODULE_METHOD(hash__blake2b)},
+      {"blake2s",      true,  GET_MODULE_METHOD(hash__blake2s)},
       {NULL,        false, NULL},
   };
 

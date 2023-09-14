@@ -119,3 +119,10 @@ for i in 1..1000001 {
 }
 
 echo '1 million hmac_sha256 in ${time() - start}s'
+start = time()
+
+for i in 1..1000001 {
+  hash.keccak_256('hello, world')
+}
+
+echo '1 million keccak_256 in ${time() - start}s'
