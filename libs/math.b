@@ -761,3 +761,25 @@ def fraction(n) {
   return str.length() == 1 ? 0 : to_number(str[1])
 }
 
+/**
+ * Returns the unsigned right shift of the number _x_ by _y_.
+ * 
+ * @param number x
+ * @param number y
+ * @return number
+ */
+def urshift(x, y) {
+  return _math.urshift(x, y)
+}
+
+/**
+ * Returns the unsigned left shift of the number _x_ by _y_.
+ * 
+ * @param number x
+ * @param number y
+ * @return number
+ */
+def ulshift(x, y) {
+  return _math.ulshift(x, y)
+}
+

@@ -75,43 +75,43 @@ import io
 import reflect
 
 /**
- * value type none
+ * Value type none
  */
 var NONE = 0
 
 /**
- * value type integer (allows numbers, but floors them to integers)
+ * Value type integer (allows numbers, but floors them to integers)
  */
 var INT = 1
 
 /**
- * value type number
+ * Value type number
  */
 var NUMBER = 2
 
 /**
- * value type boolean (accepts `1` and `0` as well as `true` 
+ * Value type boolean (accepts `1` and `0` as well as `true` 
  * and `false` as valid values).
  */
 var BOOL = 3
 
 /**
- * value type string
+ * Value type string
  */
 var STRING = 4
 
 /**
- * value type for list
+ * Value type for list
  */
 var LIST = 5
 
 /**
- * value type enumeration choices.
+ * Value type enumeration choices.
  */
 var CHOICE = 6
 
 # /**
-#  * value type optional.
+#  * Value type optional.
 #  */
 var OPTIONAL = 7
 
@@ -324,6 +324,7 @@ class Parser < _Optionable {
         commands_width = self._get_commands_text_width(),
         width = options_width > commands_width ? options_width : commands_width
       
+      var choices_printed = false
       for op in opt.options {
 
         var line = '\n'
@@ -339,7 +340,8 @@ class Parser < _Optionable {
         # characters away from the help texts.
         line = line.rpad(width + 8)
 
-        if opt.type == CHOICE {
+        if opt.type == CHOICE and !choices_printed {
+          choices_printed = true
           response += '\n' + self._get_choice_help(opt.choices)
         }
 

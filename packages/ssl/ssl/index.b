@@ -12,6 +12,7 @@ import .ssl { * }
 import .bio { * }
 import .socket { * }
 import .server { * }
+import _ssl
 
 /**
  * Creates an new TLSServer instance.
@@ -24,3 +25,10 @@ import .server { * }
 def server(port, host) {
   return TLSServer(port, host)
 }
+
+/**
+ * The OpenSSL version.
+ *
+ * @type string
+ */
+var version = _ssl.version()

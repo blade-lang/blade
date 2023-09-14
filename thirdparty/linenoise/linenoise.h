@@ -36,8 +36,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __LINENOISE_H
-#define __LINENOISE_H
+#ifndef BLADE_LINENOISE_H
+#define BLADE_LINENOISE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -81,4 +81,4 @@ extern "C" {
 }
 #endif
 
-#endif /* __LINENOISE_H */
+#endif /* BLADE_LINENOISE_H */

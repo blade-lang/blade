@@ -427,9 +427,9 @@ DECLARE_NATIVE(to_number) {
     if(v[end] == 'b') {
       RETURN_NUMBER(multiplier * strtoll(t, NULL, 2));
     } else if(v[end] == 'x') {
-      RETURN_NUMBER(multiplier * strtol(t, NULL, 16));
+      RETURN_NUMBER(multiplier * strtoll(t, NULL, 16));
     } else if(v[end] == 'c') {
-      RETURN_NUMBER(multiplier * strtol(t, NULL, 8));
+      RETURN_NUMBER(multiplier * strtoll(t, NULL, 8));
     }
   }
 

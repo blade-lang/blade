@@ -562,6 +562,11 @@ DECLARE_MODULE_METHOD(ssl_shutdown) {
   RETURN_BOOL(SSL_shutdown(ssl) >= 0);
 }
 
+DECLARE_MODULE_METHOD(ssl_version) {
+  ENFORCE_ARG_COUNT(version, 0);
+  RETURN_STRING(OPENSSL_VERSION_TEXT);
+}
+
 
 void __ssl_module_preloader(b_vm *vm) {
 #ifdef WATT32
@@ -665,6 +670,7 @@ CREATE_MODULE_LOADER(ssl) {
       {"free",   true,  GET_MODULE_METHOD(ssl_free)},
       {"shutdown",   true,  GET_MODULE_METHOD(ssl_shutdown)},
       {"set_ciphers",   true,  GET_MODULE_METHOD(ssl_set_ciphers)},
+      {"version",   true,  GET_MODULE_METHOD(ssl_version)},
       {NULL,    false, NULL},
   };
 
