@@ -16,6 +16,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(__linux__) || defined(_WIN32)
+#define memset_s(W,WL,V,OL) memset(W,V,OL)
+#endif
+
 /******** The Keccak-f[1600] permutation ********/
 
 /*** Constants. ***/
