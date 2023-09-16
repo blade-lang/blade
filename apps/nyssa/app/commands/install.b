@@ -46,6 +46,12 @@ def parse(parser) {
       short_name: 'c',
     }
   ).add_option(
+    'update',
+    'update the package if already installed',
+    {
+      short_name: 'u',
+    }
+  ).add_option(
     'repo', 
     'the repository to install from', 
     {
@@ -189,6 +195,7 @@ def run(value, options, success, error) {
   var repo = options.get('repo', setup.DEFAULT_REPOSITORY),
       is_global = options.get('global', false),
       with_cache = options.get('use-cache', false),
+      auto_update = options.get('update', false),
       progress = {},
       config_exists = file(config_file).exists()
 
@@ -211,7 +218,7 @@ def run(value, options, success, error) {
       full_name = version ? '${name}@${version}' : name
 
   var config_check = config.deps.get(name, nil)
-  if config_check
+  if config_check and !auto_update
     if version == nil or config_check == version
       success('${value} is already installed.')
 

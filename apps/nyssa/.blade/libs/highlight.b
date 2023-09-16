@@ -128,7 +128,7 @@ def highlight_html5(text, lang, classes) {
 }
 
 def highlight_json(text, classes) {
-  return text.replace('/("(?:[^"\\\\]|\\.)*")/', '<span class="${classes.operator}">$1</span>')
+  return text.replace('/((?<![a-z])("(?:[^"\\\\]|\\\\.)*"))/', '<span class="${classes.string}">$1</span>')
 }
 
 def highlight_blade_repl(text, classes) {
