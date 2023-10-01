@@ -36,7 +36,7 @@ def parse(source, path) {
   var tokens = scanner.scan()
   
   # parse the scanned tokens
-  var parser = Parser(tokens, path)
+  var parser = Parser(tokens, path or '<source>')
   return parser.parse()
 }
 

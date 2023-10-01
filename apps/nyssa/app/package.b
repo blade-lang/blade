@@ -31,7 +31,7 @@ class Package {
     return package
   }
 
-  @to_json() {
+  @json() {
     return {
       name: self.name,
       publisher: self.publisher,

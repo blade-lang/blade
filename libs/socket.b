@@ -499,7 +499,7 @@ var IP_LOCAL   = '127.0.0.1'
  * The SocketException class is the general Exception type thrown from sockets
  */
 class SocketException < Exception {
-  @to_string() {
+  @string() {
     return '<SocketException: ${self.message}>'
   }
 }
@@ -1035,7 +1035,7 @@ class Socket {
     return _socket.getsockinfo(self.id)
   }
 
-  @to_string() {
+  @string() {
     return '<Socket id: ${self.id}, closed: ${self.is_closed}, listening: ' +
         '${self.is_listening}, connected: ${self.is_connected}, bound: ${self.is_bound}>'
   }

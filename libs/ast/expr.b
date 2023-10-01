@@ -24,7 +24,7 @@ class BinaryExpr < Expr {
     self.right = right
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'BinaryExpr',
       left: self.left,
@@ -49,7 +49,7 @@ class GroupExpr < Expr {
     self.expression = expression
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'GroupExpr',
       expression: self.expression,
@@ -72,7 +72,7 @@ class LiteralExpr < Expr {
     self.value = value
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'LiteralExpr',
       value: self.value,
@@ -95,7 +95,7 @@ class IdentifierExpr < Expr {
     self.value = value
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'IdentifierExpr',
       value: self.value,
@@ -120,7 +120,7 @@ class UnaryExpr < Expr {
     self.right = right
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'UnaryExpr',
       op: self.op,
@@ -148,7 +148,7 @@ class ConditionExpr < Expr {
     self.falsy = falsy
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'ConditionExpr',
       expr: self.expr,
@@ -175,7 +175,7 @@ class CallExpr < Expr {
     self.args = args
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'CallExpr',
       callee: self.callee,
@@ -201,7 +201,7 @@ class GetExpr < Expr {
     self.name = name
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'GetExpr',
       expr: self.expr,
@@ -229,7 +229,7 @@ class SetExpr < Expr {
     self.value = value
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'SetExpr',
       expr: self.expr,
@@ -254,7 +254,7 @@ class IndexExpr < Expr {
     self.args = args
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'IndexExpr',
       args: self.args,
@@ -277,7 +277,7 @@ class ListExpr < Expr {
     self.items = items
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'ListExpr',
       items: self.items,
@@ -302,7 +302,7 @@ class DictExpr < Expr {
     self.values = values
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'DictExpr',
       keys: self.keys,
@@ -326,7 +326,7 @@ class InterpolationExpr < Expr {
     self.data = data
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'InterpolationExpr',
       data: self.data,

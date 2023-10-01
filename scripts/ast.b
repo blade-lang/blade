@@ -113,7 +113,7 @@ for ast, members in asts {
       f.write('  }\n\n')
     }
 
-    f.write('  @to_json() {\n')
+    f.write('  @json() {\n')
     f.write('    return {\n')
     f.write("      type: '${cl}${ast}',\n")
     f.write(json_body ? json_body : ' ')

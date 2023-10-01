@@ -337,11 +337,11 @@ class Url {
     return result
   }
 
-  @to_string() {
+  @string() {
     return '<Url href=${self.to_string()}>'
   }
 
-  @to_json() {
+  @json() {
     return {
       scheme: self.scheme,
       host: self.host,

@@ -220,12 +220,12 @@ class HttpResponse {
     self.headers.set('Content-Type', mimetype)
   }
 
-  @to_string() {
+  @string() {
     return '<HttpResponse status: ${self.status}, version: ${self.version}, time_taken:' +
         ' ${self.time_taken}, redirects: ${self.redirects}, responder: ${self.responder}>'
   }
 
-  @to_json() {
+  @json() {
     return {
       status: self.status,
       version: self.version,

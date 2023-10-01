@@ -97,7 +97,7 @@ class Encoder {
       default {
 
         if is_instance(value) {
-          if reflect.has_decorator(value, 'to_json')  { # check the @to_json decorator
+          if reflect.has_decorator(value, 'to_json')  { # check the @json decorator
             return self._encode(reflect.get_decorator(value, 'to_json')())
           }
         }

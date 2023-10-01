@@ -97,7 +97,7 @@ class TLSServer < HttpServer {
     parent.listen()
   }
 
-  @to_string() {
+  @string() {
     return '<TLSServer ${self.host}:${self.port}>'
   }
 }

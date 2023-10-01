@@ -402,7 +402,7 @@ class HttpServer {
     }
   }
 
-  @to_string() {
+  @string() {
     return '<HttpServer ${self.host}:${self.port}>'
   }
 }
