@@ -66,6 +66,7 @@ b_obj_bytes *new_bytes(b_vm *vm, int length) {
 
 b_obj_list *new_list(b_vm *vm) {
   b_obj_list *list = ALLOCATE_OBJ(b_obj_list, OBJ_LIST);
+  list->shifted = 0;
   init_value_arr(&list->items);
   return list;
 }
@@ -114,6 +115,7 @@ b_obj_class *new_class(b_vm *vm, b_obj_string *name) {
   init_table(&klass->properties);
   init_table(&klass->static_properties);
   init_table(&klass->methods);
+  init_table(&klass->operators);
   klass->initializer = EMPTY_VAL;
   klass->superclass = NULL;
   return klass;

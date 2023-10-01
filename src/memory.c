@@ -161,6 +161,7 @@ void blacken_object(b_vm *vm, b_obj *object) {
       b_obj_class *klass = (b_obj_class *) object;
       mark_object(vm, (b_obj *) klass->name);
       mark_table(vm, &klass->methods);
+      mark_table(vm, &klass->operators);
       mark_table(vm, &klass->properties);
       mark_table(vm, &klass->static_properties);
       mark_value(vm, klass->initializer);
@@ -252,6 +253,7 @@ void free_object(b_vm *vm, b_obj *object) {
     }
     case OBJ_LIST: {
       b_obj_list *list = (b_obj_list *) object;
+      list->items.values -= list->shifted;
       free_value_arr(vm, &list->items);
       FREE(b_obj_list, object);
       break;
@@ -266,6 +268,7 @@ void free_object(b_vm *vm, b_obj *object) {
     case OBJ_CLASS: {
       b_obj_class *klass = (b_obj_class *) object;
       free_table(vm, &klass->methods);
+      free_table(vm, &klass->operators);
       free_table(vm, &klass->properties);
       free_table(vm, &klass->static_properties);
       // We are not freeing the initializer because it's a closure and will still be freed accordingly later.

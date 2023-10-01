@@ -123,19 +123,24 @@ DECLARE_LIST_METHOD(shift) {
     count = AS_NUMBER(args[0]);
   }
 
+  if(count < 0) {
+    RETURN_ERROR("range out of capacity");
+  }
+
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
   if (count >= list->items.count || list->items.count == 1) {
     list->items.count = 0;
     RETURN_NIL;
   } else if (count > 0) {
     b_obj_list *n_list = (b_obj_list *) GC(new_list(vm));
+
     for (int i = 0; i < count; i++) {
-      write_list(vm, n_list, list->items.values[0]);
-      for (int j = 0; j < list->items.count; j++) {
-        list->items.values[j] = list->items.values[j + 1];
-      }
-      list->items.count -= 1;
+      write_list(vm, n_list, list->items.values[i]);
     }
+
+    list->items.count -= count;
+    list->shifted += count;
+    list->items.values += count;
 
     if (count == 1) {
       RETURN_VALUE(n_list->items.values[0]);
@@ -143,7 +148,32 @@ DECLARE_LIST_METHOD(shift) {
       RETURN_OBJ(n_list);
     }
   }
+
   RETURN_NIL;
+}
+
+DECLARE_LIST_METHOD(unshift) {
+  ENFORCE_ARG_RANGE(unshift, 0, 1);
+
+  int count = 1;
+  if (arg_count == 1) {
+    ENFORCE_ARG_TYPE(unshift, 0, IS_NUMBER);
+    count = AS_NUMBER(args[0]);
+  }
+
+  b_obj_list *list = AS_LIST(METHOD_OBJECT);
+  if(count < 0) {
+    RETURN_ERROR("range out of capacity");
+  }
+
+  if (count > 0 && list->shifted > 0) {
+    int unshift_count = count <= list->shifted ? count : list->shifted;
+    list->items.values -= unshift_count;
+    list->items.count += unshift_count;
+    list->shifted -= unshift_count;
+  }
+
+  RETURN_VALUE(METHOD_OBJECT);
 }
 
 DECLARE_LIST_METHOD(remove_at) {

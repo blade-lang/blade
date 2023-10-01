@@ -45,9 +45,9 @@ static b_value get_stack_trace(b_vm *vm) {
       int line = function->blob.lines[instruction];
 
       const char *trace_format = i != 0
-          ? "    %s:%d -> %s()\n"
-          : "    %s:%d -> %s()";
-      char *fn_name = function->name == NULL ? "@.script": function->name->chars;
+                                 ? "    %s:%d -> %s()\n"
+                                 : "    %s:%d -> %s()";
+      char *fn_name = function->name == NULL ? "@.script" : function->name->chars;
       size_t trace_line_length = snprintf(NULL, 0, trace_format, function->module->file, line, fn_name);
 
       char *trace_line = ALLOCATE(char, trace_line_length + 1);
@@ -75,7 +75,7 @@ bool propagate_exception(b_vm *vm, bool is_assert) {
       b_exception_frame handler = vm->current_frame->handlers[i - 1];
       b_obj_func *function = vm->current_frame->closure->function;
 
-      if (handler.address != 0 && is_instance_of(exception->klass, handler.klass->name->chars)) {
+      if (handler.address != 0 && is_instance_of(exception->klass, handler.klass)) {
         vm->current_frame->ip = &function->blob.code[handler.address];
         return true;
       } else if (handler.finally_address != 0) {
@@ -91,14 +91,14 @@ bool propagate_exception(b_vm *vm, bool is_assert) {
   fflush(stdout); // flush out anything on stdout first
 
   b_value message, trace;
-  if(!is_assert) {
+  if (!is_assert) {
     fprintf(stderr, "Unhandled %s", exception->klass->name->chars);
   } else {
     fprintf(stderr, "Illegal State");
   }
   if (table_get(&exception->properties, STRING_L_VAL("message", 7), &message)) {
     char *error_message = value_to_string(vm, message)->chars;
-    if(strlen(error_message) > 0) {
+    if (strlen(error_message) > 0) {
       fprintf(stderr, ": %s", error_message);
     } else {
       fprintf(stderr, ":");
@@ -392,6 +392,7 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_LIST_METHOD(insert);
   DEFINE_LIST_METHOD(pop);
   DEFINE_LIST_METHOD(shift);
+  DEFINE_LIST_METHOD(unshift);
   DEFINE_LIST_METHOD(remove_at);
   DEFINE_LIST_METHOD(remove);
   DEFINE_LIST_METHOD(reverse);
@@ -647,7 +648,7 @@ bool call_value(b_vm *vm, b_value callee, int arg_count) {
       case OBJ_MODULE: {
         b_obj_module *module = AS_MODULE(callee);
         b_value callable;
-        if(table_get(&module->values, STRING_VAL(module->name), &callable)) {
+        if (table_get(&module->values, STRING_VAL(module->name), &callable)) {
           return call_value(vm, callable, arg_count);
         }
 
@@ -672,14 +673,17 @@ bool call_value(b_vm *vm, b_value callee, int arg_count) {
 
 static inline b_func_type get_method_type(b_value method) {
   switch (OBJ_TYPE(method)) {
-    case OBJ_NATIVE: return AS_NATIVE(method)->type;
-    case OBJ_CLOSURE: return AS_CLOSURE(method)->function->type;
-    default: return TYPE_FUNCTION;
+    case OBJ_NATIVE:
+      return AS_NATIVE(method)->type;
+    case OBJ_CLOSURE:
+      return AS_CLOSURE(method)->function->type;
+    default:
+      return TYPE_FUNCTION;
   }
 }
 
 inline bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
-                       int arg_count) {
+                              int arg_count) {
   b_value method;
   if (table_get(&klass->methods, OBJ_VAL(name), &method)) {
     if (get_method_type(method) == TYPE_PRIVATE) {
@@ -720,6 +724,26 @@ static bool invoke_self(b_vm *vm, b_obj_string *name, int arg_count) {
 
   return throw_exception(vm, "cannot call method %s on object of type %s",
                          name->chars, value_type(receiver));
+}
+
+static bool invoke_operator(b_vm *vm, b_obj_string *name, int arg_count, bool is_binary) {
+  b_value receiver = peek(vm, arg_count);
+  b_value value;
+  b_obj_instance *instance = AS_INSTANCE(receiver);
+  if (table_get(&instance->klass->operators, OBJ_VAL(name), &value)) {
+    if (IS_CLOSURE(value)) {
+      b_obj_func *function = AS_CLOSURE(value)->function;
+      if ((function->arity == arg_count && !function->is_variadic) || (function->arity == 1 && !is_binary)) {
+        return call_value(vm, value, arg_count);
+      }
+    }
+  }
+
+  if(!is_binary) {
+    return throw_exception(vm, "object of type %s does not define unary operation %s", value_type(receiver), name->chars);
+  } else {
+    return throw_exception(vm, "object of type %s does not define binary operation %s", value_type(receiver), name->chars);
+  }
 }
 
 static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
@@ -788,9 +812,9 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
           return call_native_method(vm, AS_NATIVE(value), arg_count);
         }
 
-        // NEW in v0.0.84, dictionaries can declare extra methods as part of their entries.
-        else if(table_get(&AS_DICT(receiver)->items, OBJ_VAL(name), &value)) {
-          if(IS_CLOSURE(value)) {
+          // NEW in v0.0.84, dictionaries can declare extra methods as part of their entries.
+        else if (table_get(&AS_DICT(receiver)->items, OBJ_VAL(name), &value)) {
+          if (IS_CLOSURE(value)) {
             return call_value(vm, value, arg_count);
           }
         }
@@ -876,6 +900,13 @@ static inline void define_method(b_vm *vm, b_obj_string *name) {
   pop(vm);
 }
 
+static inline void define_operator(b_vm *vm, b_obj_string *name) {
+  b_value method = peek(vm, 0);
+  b_obj_class *klass = AS_CLASS(peek(vm, 1));
+  table_set(vm, &klass->operators, OBJ_VAL(name), method);
+  pop(vm);
+}
+
 static inline void define_property(b_vm *vm, b_obj_string *name, bool is_static) {
   b_value property = peek(vm, 0);
   b_obj_class *klass = AS_CLASS(peek(vm, 1));
@@ -922,10 +953,10 @@ inline bool is_false(b_value value) {
   return false;
 }
 
-bool is_instance_of(b_obj_class *klass1, char *klass2_name) {
+bool is_instance_of(b_obj_class *klass1, b_obj_class *klass2) {
   while (klass1 != NULL) {
-    if ((int) strlen(klass2_name) == klass1->name->length
-        && memcmp(klass1->name->chars, klass2_name, klass1->name->length) == 0) {
+    if (klass2->name->length == klass1->name->length
+        && memcmp(klass1->name->chars, klass2->name->chars, klass1->name->length) == 0) {
       return true;
     }
     klass1 = klass1->superclass;
@@ -1050,7 +1081,7 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
   if (index < length && index >= 0) {
 
     int start = index, end = index + 1;
-    if(!string->is_ascii){
+    if (!string->is_ascii) {
       utf8slice(string->chars, &start, &end);
     }
 
@@ -1096,7 +1127,7 @@ static bool string_get_ranged_index(b_vm *vm, b_obj_string *string, bool will_as
     upper_index = length;
 
   int start = lower_index, end = upper_index;
-  if(!string->is_ascii) {
+  if (!string->is_ascii) {
     utf8slice(string->chars, &start, &end);
   }
 
@@ -1210,7 +1241,8 @@ static bool list_get_ranged_index(b_vm *vm, b_obj_list *list, bool will_assign) 
   int lower_index = IS_NUMBER(lower) ? AS_NUMBER(lower) : 0;
   int upper_index = IS_NIL(upper) ? list->items.count : AS_NUMBER(upper);
 
-  if (lower_index < 0 || (upper_index < 0 && ((list->items.count + upper_index) < 0)) || lower_index >= list->items.count) {
+  if (lower_index < 0 || (upper_index < 0 && ((list->items.count + upper_index) < 0)) ||
+      lower_index >= list->items.count) {
     // always return an empty list...
     if (!will_assign) {
       pop_n(vm, 3); // +1 for the list itself
@@ -1386,7 +1418,7 @@ static inline int floor_div(double a, double b) {
 
 static inline double modulo(double a, double b) {
   double r = fmod(a, b);
-  if (r!=0 && ((r<0) != (b<0))) {
+  if (r != 0 && ((r < 0) != (b < 0))) {
     r += b;
   }
   return r;
@@ -1405,13 +1437,47 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
 
 #define READ_STRING() (AS_STRING(READ_CONSTANT()))
 
+#define PRE_BINARY_OP() \
+      b_value __b = peek(vm, 0); \
+      b_value __a = peek(vm, 1);
+
+#define BINARY_ON_NON_NUMBERS() \
+  (!IS_NUMBER(__b) && !IS_BOOL(__b)) || (!IS_NUMBER(__a) && !IS_BOOL(__a))
+
+#define UNSUPPORTED_OPERAND(op) \
+  runtime_error("unsupported operand %s for %s and %s", #op, value_type(__a), value_type(__b)); \
+  break
+
+#define CLASS_BINARY_OPERATION(op) \
+  if(IS_INSTANCE(__a) && IS_INSTANCE(__b)) {                               \
+    b_obj_instance *a_instance = AS_INSTANCE(__a); \
+    b_obj_instance *b_instance = AS_INSTANCE(__b);                         \
+    if(is_instance_of(b_instance->klass, a_instance->klass)) { \
+      if(!invoke_operator(vm, copy_string(vm, (op), strlen((op))), 1, true)) { \
+        EXIT_VM();                                                       \
+      }                                                                    \
+      vm->current_frame = &vm->frames[vm->frame_count - 1];\
+      break; \
+    }\
+  } \
+  UNSUPPORTED_OPERAND(op)
+
+#define CLASS_UNARY_OPERATION(op) \
+  if(IS_INSTANCE(a)) {                               \
+    b_obj_instance *a_instance = AS_INSTANCE(a); \
+    if(!invoke_operator(vm, copy_string(vm, (op), strlen((op))), 0, false)) { \
+      EXIT_VM();                                                       \
+    }                                                                    \
+    vm->current_frame = &vm->frames[vm->frame_count - 1];\
+    break; \
+  } \
+  runtime_error("operator %s not defined for object of type %s", #op, value_type(a))
+
 #define BINARY_OP(type, op)                                                    \
   do {                                                                         \
-    if ((!IS_NUMBER(peek(vm, 0)) && !IS_BOOL(peek(vm, 0))) ||                  \
-        (!IS_NUMBER(peek(vm, 1)) && !IS_BOOL(peek(vm, 1)))) {                  \
-      runtime_error("unsupported operand %s for %s and %s", #op,          \
-                     value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
-                     break;        \
+    PRE_BINARY_OP(); \
+    if (BINARY_ON_NON_NUMBERS()) {                  \
+      CLASS_BINARY_OPERATION(#op); \
     }                                                                          \
     b_value _b = pop(vm);                                                      \
     double b = IS_BOOL(_b) ? (AS_BOOL(_b) ? 1 : 0) : AS_NUMBER(_b);            \
@@ -1422,24 +1488,20 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
 
 #define BINARY_BIT_OP(op)                                                \
   do {                                                                         \
-    if ((!IS_NUMBER(peek(vm, 0)) && !IS_BOOL(peek(vm, 0))) ||                  \
-        (!IS_NUMBER(peek(vm, 1)) && !IS_BOOL(peek(vm, 1)))) {                  \
-      runtime_error("unsupported operand %s for %s and %s", #op,          \
-                     value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
-                     break;       \
+    PRE_BINARY_OP(); \
+    if (BINARY_ON_NON_NUMBERS()) {                  \
+      CLASS_BINARY_OPERATION(#op); \
     }                                                                          \
     long b = AS_NUMBER(pop(vm));                                       \
     long a = AS_NUMBER(pop(vm));                        \
     push(vm, INTEGER_VAL(a op b));                                          \
   } while (false)
 
-#define BINARY_MOD_OP(type, op)                                                \
+#define BINARY_MOD_OP(type, op, original_op)                                                \
   do {                                                                         \
-    if ((!IS_NUMBER(peek(vm, 0)) && !IS_BOOL(peek(vm, 0))) ||                  \
-        (!IS_NUMBER(peek(vm, 1)) && !IS_BOOL(peek(vm, 1)))) {                  \
-      runtime_error("unsupported operand %s for %s and %s", #op,          \
-                     value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
-                     break;        \
+    PRE_BINARY_OP(); \
+    if (BINARY_ON_NON_NUMBERS()) {                  \
+      CLASS_BINARY_OPERATION(original_op); \
     }                                                                          \
     b_value _b = pop(vm);                                                      \
     double b = IS_BOOL(_b) ? (AS_BOOL(_b) ? 1 : 0) : AS_NUMBER(_b);            \
@@ -1458,16 +1520,16 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
     }
 
 #if defined(DEBUG_STACK) && DEBUG_STACK
-      printf("          ");
-      for (b_value *slot = vm->stack; slot < vm->stack_top; slot++) {
-        printf("[ ");
-        print_value(*slot);
-        printf(" ]");
-      }
-      printf("\n");
-      disassemble_instruction(
-          &vm->current_frame->closure->function->blob,
-          (int) (vm->current_frame->ip - vm->current_frame->closure->function->blob.code));
+    printf("          ");
+    for (b_value *slot = vm->stack; slot < vm->stack_top; slot++) {
+      printf("[ ");
+      print_value(*slot);
+      printf(" ]");
+    }
+    printf("\n");
+    disassemble_instruction(
+        &vm->current_frame->closure->function->blob,
+        (int) (vm->current_frame->ip - vm->current_frame->closure->function->blob.code));
 #endif
 
     uint8_t instruction;
@@ -1531,29 +1593,29 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         break;
       }
       case OP_REMINDER: {
-        BINARY_MOD_OP(NUMBER_VAL, modulo);
+        BINARY_MOD_OP(NUMBER_VAL, modulo, "%");
         break;
       }
       case OP_POW: {
-        BINARY_MOD_OP(NUMBER_VAL, pow);
+        BINARY_MOD_OP(NUMBER_VAL, pow, "**");
         break;
       }
       case OP_F_DIVIDE: {
-        BINARY_MOD_OP(NUMBER_VAL, floor_div);
+        BINARY_MOD_OP(NUMBER_VAL, floor_div, "//");
         break;
       }
       case OP_NEGATE: {
-        if (!IS_NUMBER(peek(vm, 0))) {
-          runtime_error("operator - not defined for object of type %s", value_type(peek(vm, 0)));
-          break;
+        b_value a = peek(vm, 0);
+        if (!IS_NUMBER(a)) {
+          CLASS_UNARY_OPERATION("-");
         }
         push(vm, NUMBER_VAL(-AS_NUMBER(pop(vm))));
         break;
       }
       case OP_BIT_NOT: {
-        if (!IS_NUMBER(peek(vm, 0))) {
-          runtime_error("operator ~ not defined for object of type %s", value_type(peek(vm, 0)));
-          break;
+        b_value a = peek(vm, 0);
+        if (!IS_NUMBER(a)) {
+          CLASS_UNARY_OPERATION("~");
         }
         push(vm, INTEGER_VAL(~((int) AS_NUMBER(pop(vm)))));
         break;
@@ -1640,7 +1702,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         } else {
           print_value(val);
         }
-        if(!IS_EMPTY(val)) {
+        if (!IS_EMPTY(val)) {
           printf("\n");
         }
         pop(vm);
@@ -1679,7 +1741,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
 
       case OP_DEFINE_GLOBAL: {
         b_obj_string *name = READ_STRING();
-        if(IS_EMPTY(peek(vm, 0))) {
+        if (IS_EMPTY(peek(vm, 0))) {
           runtime_error(ERR_CANT_ASSIGN_EMPTY);
           break;
         }
@@ -1706,7 +1768,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
       }
 
       case OP_SET_GLOBAL: {
-        if(IS_EMPTY(peek(vm, 0))) {
+        if (IS_EMPTY(peek(vm, 0))) {
           runtime_error(ERR_CANT_ASSIGN_EMPTY);
           break;
         }
@@ -1728,7 +1790,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
       }
       case OP_SET_LOCAL: {
         uint16_t slot = READ_SHORT();
-        if(IS_EMPTY(peek(vm, 0))) {
+        if (IS_EMPTY(peek(vm, 0))) {
           runtime_error(ERR_CANT_ASSIGN_EMPTY);
           break;
         }
@@ -1880,7 +1942,8 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
             }
           }
         } else {
-          runtime_error("'%s' of type %s does not have properties", value_to_string(vm, peek(vm, 0))->chars, value_type(peek(vm, 0)));
+          runtime_error("'%s' of type %s does not have properties", value_to_string(vm, peek(vm, 0))->chars,
+                        value_type(peek(vm, 0)));
           break;
         }
         break;
@@ -1933,7 +1996,8 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
           break;
         }
 
-        runtime_error("'%s' of type %s does not have properties", value_to_string(vm, peek(vm, 0))->chars, value_type(peek(vm, 0)));
+        runtime_error("'%s' of type %s does not have properties", value_to_string(vm, peek(vm, 0))->chars,
+                      value_type(peek(vm, 0)));
         break;
       }
 
@@ -1941,7 +2005,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         if (!IS_INSTANCE(peek(vm, 1)) && !IS_DICT(peek(vm, 1))) {
           runtime_error("object of type %s can not carry properties", value_type(peek(vm, 1)));
           break;
-        } else  if(IS_EMPTY(peek(vm, 0))) {
+        } else if (IS_EMPTY(peek(vm, 0))) {
           runtime_error(ERR_CANT_ASSIGN_EMPTY);
           break;
         }
@@ -1992,7 +2056,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
       }
       case OP_SET_UP_VALUE: {
         int index = READ_SHORT();
-        if(IS_EMPTY(peek(vm, 0))) {
+        if (IS_EMPTY(peek(vm, 0))) {
           runtime_error(ERR_CANT_ASSIGN_EMPTY);
           break;
         }
@@ -2038,6 +2102,11 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         define_method(vm, name);
         break;
       }
+      case OP_OPERATOR: {
+        b_obj_string *name = READ_STRING();
+        define_operator(vm, name);
+        break;
+      }
       case OP_CLASS_PROPERTY: {
         b_obj_string *name = READ_STRING();
         int is_static = READ_BYTE();
@@ -2054,6 +2123,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         b_obj_class *subclass = AS_CLASS(peek(vm, 0));
         table_add_all(vm, &superclass->properties, &subclass->properties);
         table_add_all(vm, &superclass->methods, &subclass->methods);
+        table_add_all(vm, &superclass->operators, &subclass->operators);
         subclass->superclass = superclass;
         pop(vm); // pop the subclass
         break;
@@ -2117,7 +2187,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
 
         for (int i = 0; i < count; i += 2) {
           b_value name = vm->stack_top[-count + i];
-          if(!IS_STRING(name) && !IS_NUMBER(name) && !IS_BOOL(name)) {
+          if (!IS_STRING(name) && !IS_NUMBER(name) && !IS_BOOL(name)) {
             runtime_error("dictionary key must be one of string, number or boolean");
           }
           b_value value = vm->stack_top[-count + i + 1];
@@ -2223,7 +2293,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
           b_value value = peek(vm, 0);
           b_value index = peek(vm, 1);
 
-          if(IS_EMPTY(value)) {
+          if (IS_EMPTY(value)) {
             runtime_error(ERR_CANT_ASSIGN_EMPTY);
             break;
           }
@@ -2305,8 +2375,8 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         b_value value;
         if (table_get(&vm->modules, OBJ_VAL(module_name), &value)) {
           b_obj_module *module = AS_MODULE(value);
-          if(module->preloader != NULL) {
-            ((b_module_loader)module->preloader)(vm);
+          if (module->preloader != NULL) {
+            ((b_module_loader) module->preloader)(vm);
           }
           module->imported = true;
           table_set(vm, &vm->current_frame->closure->function->module->values, OBJ_VAL(module_name), value);
@@ -2340,14 +2410,15 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
           } else {
             runtime_error("module %s does not define '%s'", module->name, value_name->chars);
           }
-        } else{
+        } else {
           runtime_error("module '%s' not found", module_name->chars);
         }
         break;
       }
 
       case OP_IMPORT_ALL: {
-        table_import_all(vm, &AS_CLOSURE(peek(vm, 0))->function->module->values, &vm->current_frame->closure->function->module->values);
+        table_import_all(vm, &AS_CLOSURE(peek(vm, 0))->function->module->values,
+                         &vm->current_frame->closure->function->module->values);
         break;
       }
 
@@ -2366,8 +2437,8 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         b_value module_name = STRING_VAL(function->module->name);
 
         b_value tmp;
-        if(table_get(current_module, module_name, &tmp)) {
-          if(!IS_MODULE(tmp)) {
+        if (table_get(current_module, module_name, &tmp)) {
+          if (!IS_MODULE(tmp)) {
             break;
           }
         }
@@ -2403,7 +2474,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
 
       case OP_DIE: {
         if (!IS_INSTANCE(peek(vm, 0)) ||
-            !is_instance_of(AS_INSTANCE(peek(vm, 0))->klass, vm->exception_class->name->chars)) {
+            !is_instance_of(AS_INSTANCE(peek(vm, 0))->klass, vm->exception_class)) {
           runtime_error("instance of Exception expected");
           break;
         }
@@ -2427,7 +2498,8 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         if (address != 0) {
           b_value value;
           if (!table_get(&vm->globals, OBJ_VAL(type), &value) || !IS_CLASS(value)) {
-            if(!table_get(&vm->current_frame->closure->function->module->values, OBJ_VAL(type), &value) || !IS_CLASS(value)) {
+            if (!table_get(&vm->current_frame->closure->function->module->values, OBJ_VAL(type), &value) ||
+                !IS_CLASS(value)) {
               runtime_error("object of type '%s' is not an exception", type->chars);
               break;
             }
@@ -2495,7 +2567,13 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
 #undef READ_LCONSTANT
 #undef READ_STRING
 #undef READ_LSTRING
+#undef PRE_BINARY_OP
+#undef BINARY_ON_NON_NUMBERS
+#undef UNSUPPORTED_OPERAND
+#undef CLASS_BINARY_OPERATION
+#undef CLASS_UNARY_OPERATION
 #undef BINARY_OP
+#undef BINARY_BIT_OP
 #undef BINARY_MOD_OP
 }
 
@@ -2515,8 +2593,8 @@ b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
   push(vm, OBJ_VAL(closure));
 
   int arg_count = 0;
-  if(args && (arg_count = args->items.count)) {
-    for(int i = 0; i < args->items.count; i++) {
+  if (args && (arg_count = args->items.count)) {
+    for (int i = 0; i < args->items.count; i++) {
       push(vm, args->items.values[i]);
     }
   }
@@ -2524,7 +2602,7 @@ b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
   call(vm, closure, arg_count);
   b_ptr_result vm_result = run(vm, vm->frame_count - 1);
 
-  if(vm_result != PTR_OK) {
+  if (vm_result != PTR_OK) {
     exit(EXIT_RUNTIME);
   }
 
@@ -2544,7 +2622,7 @@ b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
   b_blob blob;
   init_blob(&blob);
 
-  if(vm->exception_class == NULL) {
+  if (vm->exception_class == NULL) {
     initialize_exceptions(vm, module);
   }
 

@@ -153,6 +153,7 @@ typedef struct b_obj_class {
   b_table properties;
   b_table static_properties;
   b_table methods;
+  b_table operators;
   b_obj_string *name;
   struct b_obj_class *superclass;
 } b_obj_class;
@@ -181,6 +182,7 @@ typedef struct b_obj_native {
 
 struct s_obj_list {
   b_obj obj;
+  int shifted;
   b_value_arr items;
 };
 

@@ -215,6 +215,7 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_SELECT_NATIVE_IMPORT:
     case OP_SWITCH:
     case OP_METHOD:
+    case OP_OPERATOR:
     case OP_EJECT_IMPORT:
     case OP_EJECT_NATIVE_IMPORT:
     case OP_SELECT_IMPORT:
@@ -1472,9 +1473,11 @@ static void block(b_parser *p) {
   consume(p, RBRACE_TOKEN, "expected '}' after block");
 }
 
-static void function_args(b_parser *p) {
+static int function_args(b_parser *p) {
   // compile argument list...
+  int count = 0;
   do {
+    count++;
     ignore_whitespace(p);
     p->vm->compiler->function->arity++;
     if (p->vm->compiler->function->arity > MAX_FUNCTION_PARAMETERS) {
@@ -1493,6 +1496,7 @@ static void function_args(b_parser *p) {
     define_variable(p, param_constant);
     ignore_whitespace(p);
   } while (match(p, COMMA_TOKEN));
+  return count;
 }
 
 static void function_body(b_parser *p, b_compiler *compiler, bool close_scope) {
@@ -1518,7 +1522,8 @@ static void function_body(b_parser *p, b_compiler *compiler, bool close_scope) {
   pop(p->vm);
 }
 
-static void function(b_parser *p, b_func_type type) {
+static int function(b_parser *p, b_func_type type) {
+  int count = 0;
   b_compiler compiler;
   init_compiler(p, &compiler, type);
   begin_scope(p);
@@ -1526,11 +1531,12 @@ static void function(b_parser *p, b_func_type type) {
   // compile parameter list
   consume(p, LPAREN_TOKEN, "expected '(' after function name");
   if (!check(p, RPAREN_TOKEN)) {
-    function_args(p);
+    count = function_args(p);
   }
   consume(p, RPAREN_TOKEN, "expected ')' after function parameters");
 
   function_body(p, &compiler, false);
+  return count;
 }
 
 static void method(b_parser *p, b_token class_name, bool is_static) {
@@ -1549,6 +1555,38 @@ static void method(b_parser *p, b_token class_name, bool is_static) {
 
   function(p, type);
   emit_byte_and_short(p, OP_METHOD, constant);
+}
+
+static void operator_definition(b_parser *p, b_token class_name) {
+  b_tkn_type tkns[] = {
+      PLUS_TOKEN,        // +
+      INCREMENT_TOKEN,   // ++
+      MINUS_TOKEN,       // -
+      DECREMENT_TOKEN,   // --
+      MULTIPLY_TOKEN,    // *
+      POW_TOKEN,         // **
+      DIVIDE_TOKEN,      // '/'
+      FLOOR_TOKEN,       // '//'
+      EQUAL_TOKEN,       // =
+      LESS_TOKEN,        // <
+      LSHIFT_TOKEN,      // <<
+      GREATER_TOKEN,     // >
+      RSHIFT_TOKEN,      // >>
+      PERCENT_TOKEN,     // %
+      AMP_TOKEN,         // &
+      BAR_TOKEN,         // |
+      TILDE_TOKEN,       // ~
+      XOR_TOKEN,         // ^
+  };
+
+  consume_or(p, "non-assignment operator expected", tkns, 18);
+  int constant = identifier_constant(p, &p->previous);
+
+  int arg_count = function(p, TYPE_METHOD);
+  if(arg_count > 1) {
+    error(p, "class operator cannot take more than one parameter");
+  }
+  emit_byte_and_short(p, OP_OPERATOR, constant);
 }
 
 static void anonymous(b_parser *p, bool can_assign) {
@@ -1648,6 +1686,9 @@ static void class_declaration(b_parser *p) {
 
     if (match(p, VAR_TOKEN)) {
       field(p, is_static);
+    } else if (match(p, DEF_TOKEN) && !is_static) {
+      operator_definition(p, class_name);
+      ignore_whitespace(p);
     } else {
       method(p, class_name, is_static);
       ignore_whitespace(p);
@@ -2351,7 +2392,7 @@ static void return_statement(b_parser *p) {
     emit_return(p);
   } else {
     if (p->vm->compiler->type == TYPE_INITIALIZER) {
-      error(p, "cannot return value from constructor");
+      error(p, "cannot return value from constructor or operator");
     }
 
     if(p->is_trying) {

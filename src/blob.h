@@ -63,6 +63,7 @@ typedef enum {
 
   OP_CLASS,
   OP_METHOD,
+  OP_OPERATOR,
   OP_CLASS_PROPERTY,
   OP_INHERIT,
   OP_GET_SUPER,

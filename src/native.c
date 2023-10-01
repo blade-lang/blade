@@ -269,14 +269,14 @@ DECLARE_NATIVE(sum) {
  *
  * returns the absolute value of a number.
  *
- * if x is not a number but it's class defines a method @to_abs(),
- * returns the result of calling x.to_abs()
+ * if x is not a number but it's class defines a method @abs(),
+ * returns the result of calling x.@abs()
  */
 DECLARE_NATIVE(abs) {
   ENFORCE_ARG_COUNT(abs, 1);
 
-  // handle classes that define a to_abs() method.
-  METHOD_OVERRIDE(to_abs, 6);
+  // handle classes that defines @abs() decorator.
+  METHOD_OVERRIDE(abs, 3);
 
   ENFORCE_ARG_TYPE(abs, 0, IS_NUMBER);
   double value = AS_NUMBER(args[0]);
@@ -290,8 +290,8 @@ DECLARE_NATIVE(abs) {
  *
  * returns the integer of a number or 0 if no number is given.
  *
- * if i is not a number but it's class defines @to_number(), it
- * returns the result of calling to_number()
+ * if i is not a number but it's class defines @int(), it
+ * returns the result of calling i.@int()
  */
 DECLARE_NATIVE(int) {
   ENFORCE_ARG_RANGE(int, 0, 1);
@@ -300,8 +300,8 @@ DECLARE_NATIVE(int) {
     RETURN_NUMBER(0);
   }
 
-  // handle classes that define a to_number() method.
-  METHOD_OVERRIDE(to_number, 9);
+  // handle classes that defines @int() decorator.
+  METHOD_OVERRIDE(int, 3);
 
   ENFORCE_ARG_TYPE(int, 0, IS_NUMBER);
   RETURN_NUMBER((double) ((int) AS_NUMBER(args[0])));
@@ -312,14 +312,14 @@ DECLARE_NATIVE(int) {
  *
  * converts a number to it's binary string.
  *
- * if i is not a number but it's class defines @to_bin(), it
- * returns the result of calling bin(x.to_bin())
+ * if i is not a number but it's class defines @bin(), it
+ * returns the result of calling x.@bin()
  */
 DECLARE_NATIVE(bin) {
   ENFORCE_ARG_COUNT(bin, 1);
 
-  // handle classes that define a to_bin() method.
-  METHOD_OVERRIDE(to_bin, 6);
+  // handle classes that defines @bin() decorator.
+  METHOD_OVERRIDE(bin, 3);
 
   ENFORCE_ARG_TYPE(bin, 0, IS_NUMBER);
   RETURN_OBJ(bin_to_string(vm, AS_NUMBER(args[0])));
@@ -330,14 +330,14 @@ DECLARE_NATIVE(bin) {
  *
  * converts a number to it's octal string.
  *
- * if i is not a number but it's class defines @to_oct(), it
- * returns the result of calling oct(x.to_oct())
+ * if i is not a number but it's class defines @oct(), it
+ * returns the result of calling x.@oct()
  */
 DECLARE_NATIVE(oct) {
   ENFORCE_ARG_COUNT(oct, 1);
 
-  // handle classes that define a to_oct() method.
-  METHOD_OVERRIDE(to_oct, 6);
+  // handle classes that defines @oct() decorator.
+  METHOD_OVERRIDE(oct, 3);
 
   ENFORCE_ARG_TYPE(oct, 0, IS_NUMBER);
   RETURN_OBJ(number_to_oct(vm, AS_NUMBER(args[0]), false));
@@ -348,14 +348,14 @@ DECLARE_NATIVE(oct) {
  *
  * converts a number to it's hexadecimal string.
  *
- * if i is not a number but it's class defines @to_hex(), it
- * returns the result of calling hex(x.to_hex())
+ * if i is not a number but it's class defines @hex(), it
+ * returns the result of calling x.@hex()
  */
 DECLARE_NATIVE(hex) {
   ENFORCE_ARG_COUNT(hex, 1);
 
-  // handle classes that define a to_hex() method.
-  METHOD_OVERRIDE(to_hex, 6);
+  // handle classes that defines @hex() decorator.
+  METHOD_OVERRIDE(hex, 3);
 
   ENFORCE_ARG_TYPE(hex, 0, IS_NUMBER);
   RETURN_OBJ(number_to_hex(vm, AS_NUMBER(args[0]), false));
@@ -366,12 +366,12 @@ DECLARE_NATIVE(hex) {
  *
  * converts a value into a boolean.
  *
- * classes may override the return value by declaring a @to_bool()
+ * classes may override the return value by declaring a @bool()
  * function.
  */
 DECLARE_NATIVE(to_bool) {
   ENFORCE_ARG_COUNT(to_bool, 1);
-  METHOD_OVERRIDE(to_bool, 7);
+  METHOD_OVERRIDE(bool, 4);
   RETURN_BOOL(!is_false(args[0]));
 }
 
@@ -380,12 +380,12 @@ DECLARE_NATIVE(to_bool) {
  *
  * convert a value into a string.
  *
- * native classes may override the return value by declaring a @to_string()
+ * native classes may override the return value by declaring a @string()
  * function.
  */
 DECLARE_NATIVE(to_string) {
   ENFORCE_ARG_COUNT(to_string, 1);
-  METHOD_OVERRIDE(to_string, 9);
+  METHOD_OVERRIDE(string, 6);
   RETURN_OBJ(value_to_string(vm, args[0]));
 }
 
@@ -394,12 +394,12 @@ DECLARE_NATIVE(to_string) {
  *
  * convert a value into a number.
  *
- * native classes may override the return value by declaring a @to_number()
+ * native classes may override the return value by declaring a @number()
  * function.
  */
 DECLARE_NATIVE(to_number) {
   ENFORCE_ARG_COUNT(to_number, 1);
-  METHOD_OVERRIDE(to_number, 9);
+  METHOD_OVERRIDE(number, 6);
 
   if (IS_NUMBER(args[0])) {
     RETURN_VALUE(args[0]);
@@ -441,12 +441,12 @@ DECLARE_NATIVE(to_number) {
  *
  * convert a value into an integer.
  *
- * native classes may override the return value by declaring a @to_int()
+ * native classes may override the return value by declaring a @int()
  * function.
  */
 DECLARE_NATIVE(to_int) {
   ENFORCE_ARG_COUNT(to_int, 1);
-  METHOD_OVERRIDE(to_int, 6);
+  METHOD_OVERRIDE(int, 3);
   ENFORCE_ARG_TYPE(to_int, 0, IS_NUMBER);
   RETURN_NUMBER((int) AS_NUMBER(args[0]));
 }
@@ -456,12 +456,12 @@ DECLARE_NATIVE(to_int) {
  *
  * convert a value into a list.
  *
- * native classes may override the return value by declaring a @to_list()
+ * native classes may override the return value by declaring a @list()
  * function.
  */
 DECLARE_NATIVE(to_list) {
   ENFORCE_ARG_COUNT(to_list, 1);
-  METHOD_OVERRIDE(to_list, 7);
+  METHOD_OVERRIDE(list, 4);
 
   if (IS_LIST(args[0])) {
     RETURN_VALUE(args[0]);
@@ -512,12 +512,12 @@ DECLARE_NATIVE(to_list) {
  *
  * convert a value into a dictionary.
  *
- * native classes may override the return value by declaring a @to_dict()
+ * native classes may override the return value by declaring a @dict()
  * function.
  */
 DECLARE_NATIVE(to_dict) {
   ENFORCE_ARG_COUNT(to_dict, 1);
-  METHOD_OVERRIDE(to_dict, 7);
+  METHOD_OVERRIDE(dict, 4);
 
   if (IS_DICT(args[0])) {
     RETURN_VALUE(args[0]);
@@ -817,8 +817,7 @@ DECLARE_NATIVE(instance_of) {
   ENFORCE_ARG_TYPE(instance_of, 0, IS_INSTANCE);
   ENFORCE_ARG_TYPE(instance_of, 1, IS_CLASS);
 
-  RETURN_BOOL(is_instance_of(AS_INSTANCE(args[0])->klass,
-                             AS_CLASS(args[1])->name->chars));
+  RETURN_BOOL(is_instance_of(AS_INSTANCE(args[0])->klass, AS_CLASS(args[1])));
 }
 
 //------------------------------------------------------------------------------
