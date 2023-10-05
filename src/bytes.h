@@ -61,6 +61,27 @@ DECLARE_BYTES_METHOD(pop);
 DECLARE_BYTES_METHOD(remove);
 
 /**
+ * bytes.ltrim([num: number])
+ *
+ * removes all occurrences of num or 0 if num is not given from the beginning of a byte stream.
+ */
+DECLARE_BYTES_METHOD(ltrim);
+
+/**
+ * bytes.rtrim([num: number])
+ *
+ * removes all occurrences of num or 0 if num is not given from the end of a byte stream.
+ */
+DECLARE_BYTES_METHOD(rtrim);
+
+/**
+ * bytes.trim([num: number])
+ *
+ * removes all occurrences of num or 0 if num is not given from the beginning and end of a byte stream.
+ */
+DECLARE_BYTES_METHOD(trim);
+
+/**
  * bytes.reverse()
  *
  * reverses the items in a bytes
@@ -175,5 +196,7 @@ DECLARE_BYTES_METHOD(to_string);
 DECLARE_BYTES_METHOD(__iter__);
 DECLARE_BYTES_METHOD(__itern__);
 DECLARE_BYTES_METHOD(each);
+DECLARE_BYTES_METHOD(lpad);
+DECLARE_BYTES_METHOD(rpad);
 
 #endif

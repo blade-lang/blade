@@ -482,6 +482,11 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_BYTES_METHOD(last);
   DEFINE_BYTES_METHOD(get);
   DEFINE_BYTES_METHOD(split);
+  DEFINE_BYTES_METHOD(ltrim);
+  DEFINE_BYTES_METHOD(rtrim);
+  DEFINE_BYTES_METHOD(trim);
+  DEFINE_BYTES_METHOD(lpad);
+  DEFINE_BYTES_METHOD(rpad);
   DEFINE_BYTES_METHOD(dispose);
   DEFINE_BYTES_METHOD(is_alpha);
   DEFINE_BYTES_METHOD(is_alnum);
