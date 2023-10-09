@@ -8,6 +8,8 @@ import _ssl
  */
 class SSLContext {
 
+  var _ciphers = 'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS'
+
   /**
    * @note Method must be a valid SSL method pointer.
    * @param ptr method
@@ -18,6 +20,7 @@ class SSLContext {
       die Exception('SSL method expected')
     self._method = method
     self._ptr = _ssl.ctx(method)
+    self.set_ciphers(self._ciphers)
   }
 
   /**

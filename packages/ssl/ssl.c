@@ -492,14 +492,18 @@ DECLARE_MODULE_METHOD(ssl_connect) {
   SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
   ERR_clear_error();
 
-  int res;
+  int res, error;
   do {
     res = SSL_connect(ssl);
-    int error = SSL_get_error(ssl, res);
+    error = SSL_get_error(ssl, res);
     if(error != SSL_ERROR_WANT_READ && error != SSL_ERROR_WANT_WRITE && error != SSL_ERROR_WANT_CONNECT) {
       break;
     }
   } while(res == -1);
+
+  if(error != SSL_ERROR_NONE) {
+    RETURN_SSL_ERROR();
+  }
 
   RETURN_BOOL(res > 0);
 }

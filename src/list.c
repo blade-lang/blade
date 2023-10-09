@@ -68,7 +68,7 @@ DECLARE_LIST_METHOD(extend) {
     write_list(vm, list, list2->items.values[i]);
   }
 
-  RETURN;
+  RETURN_SELF;
 }
 
 DECLARE_LIST_METHOD(index_of) {
