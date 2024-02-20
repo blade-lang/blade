@@ -163,8 +163,8 @@ set(PCRE2_BUILD_TESTS OFF)
 set(PCRE2_BUILD_PCRE2GREP OFF)
 include(FetchContent)
 FetchContent_Declare(pcre2
-		URL      https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.42/pcre2-10.42.tar.gz
-		URL_HASH SHA256=c33b418e3b936ee3153de2c61cc638e7e4fe3156022a5c77d0711bcbb9d64f1f
+		URL      https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.43/pcre2-10.43.tar.gz
+		URL_HASH SHA256=889d16be5abb8d05400b33c25e151638b8d4bac0e2d9c76e9d6923118ae8a34e
 		)
 FetchContent_MakeAvailable(pcre2)
 

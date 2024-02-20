@@ -726,12 +726,14 @@ class Template {
         var for_vars = variables.clone()
   
         var result = []
-        for key, value in data {
-          if value_name for_vars.set('${value_name}', value)
-          if key_name for_vars.set('${key_name}', key)
-          result.append(
-            self._process(path, json.decode(json.encode(element)), for_vars)
-          )
+        if data {
+          for key, value in data {
+            if value_name for_vars.set('${value_name}', value)
+            if key_name for_vars.set('${key_name}', key)
+            result.append(
+              self._process(path, json.decode(json.encode(element)), for_vars)
+            )
+          }
         }
         return result
       }

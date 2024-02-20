@@ -384,7 +384,7 @@ def encode(url, strict) {
 
   for c in url {
     # keep alphanumeric and other accepted characters intact
-    if ';/?:@&=+$,#ABCDEFGHIJKLMNOPQRSTUVXYZ0123456789*-_.~()%'.index_of(c.upper()) != -1
+    if ';/?:@&=+$,#ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789*-_.~()%'.index_of(c.upper()) != -1
       result += c
     # when not in strict mode
     else if !strict and c == ' ' result += '+'
