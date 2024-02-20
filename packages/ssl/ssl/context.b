@@ -9,9 +9,9 @@ import _ssl
 class SSLContext {
 
   /**
-   * SSLContext(method: ptr)
+   * @note Method must be a valid SSL method pointer.
+   * @param ptr method
    * @constructor
-   * @note method must be a valid SSL method pointer
    */
   SSLContext(method) {
     if !reflect.is_ptr(method)
@@ -21,11 +21,11 @@ class SSLContext {
   }
 
   /**
-   * set_verify(mode: int)
+   * Sets the verification flags for ctx to be the given mode.
    * 
-   * sets the verification flags for ctx to be the given mode.
    * @note The verification of certificates can be controlled by a set of logically or'ed mode flags.
    * @note If the mode is SSL_VERIFY_NONE none of the other flags may be set.
+   * @param int mode
    */
   set_verify(mode) {
     if !is_int(mode)
@@ -34,9 +34,9 @@ class SSLContext {
   }
 
   /**
-   * set_verify_locations(locations: string)
+   * Sets the default locations for trusted CA certificates.
    * 
-   * set default locations for trusted CA certificates
+   * @param string locations
    */
   set_verify_locations(locations) {
     if !is_string(locations)
@@ -45,9 +45,10 @@ class SSLContext {
   }
 
   /**
-   * load_certs(cert_file: string | file, private_key_file: string | file)
+   * Loads the given SSL/TLS certificate pairs for the given SSL/TLS context.
    * 
-   * loads the given SSL/TLS certificate pairs for the given SSL/TLS context.
+   * @param {string|file} cert_file
+   * @param {string|file} private_key_file
    * @return bool
    */
   load_certs(cert_file, private_key_file) {
@@ -64,9 +65,9 @@ class SSLContext {
   }
 
   /**
-   * set_ciphers(ciphers: string)
+   * Sets the list of allowed ciphers. This list must be colon (:) separated.
    * 
-   * sets the list of allowed ciphers. This list must be colon (:) separated.
+   * @param string ciphers
    * @return bool
    */
   set_ciphers(ciphers) {
@@ -76,18 +77,15 @@ class SSLContext {
   }
 
   /**
-   * free()
-   * 
-   * frees this Context and all associated resources
+   * Frees this Context and all associated resources
    */
   free() {
     _ssl.ctx_free(self._ptr)
   }
 
   /**
-   * get_pointer()
+   * Returns the raw OpenSSl SSL_CTX pointer.
    * 
-   * returns the raw OpenSSl SSL_CTX pointer
    * @return ptr
    */
   get_pointer() {
@@ -105,7 +103,6 @@ import .constants
 class TLSContext < SSLContext {
 
   /**
-   * TLSContext()
    * @constructor
    */
   TLSContext() {
@@ -121,7 +118,6 @@ class TLSContext < SSLContext {
 class TLSClientContext < SSLContext {
 
   /**
-   * TLSClientContext()
    * @constructor
    */
   TLSClientContext() {
@@ -137,7 +133,6 @@ class TLSClientContext < SSLContext {
 class TLSServerContext < SSLContext {
 
   /**
-   * TLSServerContext()
    * @constructor
    */
   TLSServerContext() {
@@ -152,7 +147,6 @@ class TLSServerContext < SSLContext {
 class SSLv23Context < SSLContext {
 
   /**
-   * SSLv23Context()
    * @constructor
    */
   SSLv23Context() {
@@ -168,7 +162,6 @@ class SSLv23Context < SSLContext {
 class SSLv23ClientContext < SSLContext {
 
   /**
-   * TLSClientContext()
    * @constructor
    */
   SSLv23ClientContext() {
@@ -184,7 +177,6 @@ class SSLv23ClientContext < SSLContext {
 class SSLv23ServerContext < SSLContext {
 
   /**
-   * SSLv23ServerContext()
    * @constructor
    */
   SSLv23ServerContext() {

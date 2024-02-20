@@ -1,7 +1,8 @@
 #!-- part of the http module
 
 /**
- * HTTP related Exceptions
+ * HTTP related Exceptions.
+ * 
  * @printable
  */
 class HttpException < Exception {

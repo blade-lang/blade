@@ -37,10 +37,11 @@
 import _reflect
 
 /**
- * has_prop(object: instance | module, name: string)
- *
  * Returns `true` if instance has the property or module has a value with 
  * the given name or `false` if not.
+ * 
+ * @param {instance|module} object
+ * @param string name
  * @return bool
  */
 def has_prop(object, name) {
@@ -53,11 +54,11 @@ def has_prop(object, name) {
 }
 
 /**
- * get_prop(object: instance | module, name: string)
- *
  * Returns the property of the instance or value in the module matching the 
  * given name or nil if the object contains no property with a matching name.
  * 
+ * @param {instance|module} object
+ * @param string name
  * @return any
  */
 def get_prop(object, name) {
@@ -70,11 +71,13 @@ def get_prop(object, name) {
 }
 
 /**
- * set_prop(object: instance, name: string, value: any)
- *
  * Sets the named property of the object to value.
  * 
- * @note if the property already exist, it overwrites it
+ * @note if the property already exist, it overwrites it.
+ * 
+ * @param instance object
+ * @param string name
+ * @param any value
  * @return bool: `true` if a new property was set, `false` if a property was updated
  */
 def set_prop(object, name, value) {
@@ -87,9 +90,10 @@ def set_prop(object, name, value) {
 }
 
 /**
- * del_prop(object: instance, name: string)
- *
  * Deletes the named property from the instance
+ * 
+ * @param {instance|module} object
+ * @param string name
  * @return bool
  */
 def del_prop(object, name) {
@@ -102,10 +106,11 @@ def del_prop(object, name) {
 }
 
 /**
- * has_method(object: instance, name: string)
- *
  * Returns true if class of the instance has the method name or
  * false if not.
+ * 
+ * @param instance object
+ * @param string name
  * @return bool
  */
 def has_method(object, name) {
@@ -118,10 +123,11 @@ def has_method(object, name) {
 }
 
 /**
- * has_decorator(object: instance, name: string)
- *
  * Returns true if class of the instance implements the decorator name or
  * false if not.
+ * 
+ * @param instance object
+ * @param string name
  * @return bool
  */
 def has_decorator(object, name) {
@@ -134,11 +140,12 @@ def has_decorator(object, name) {
 }
 
 /**
- * get_method(object: instance, name: string)
- *
  * Returns the method in a class instance matching the given name
  * or nil if the class of the instance contains no method with
  * a matching name.
+ * 
+ * @param instance object
+ * @param string name
  * @return function
  */
 def get_method(object, name) {
@@ -151,11 +158,12 @@ def get_method(object, name) {
 }
 
 /**
- * get_decorator(object: instance, name: string)
- * 
  * Returns the decorator function matching the given name in the class 
  * of the given instance.
  * @note the name of a decorator excludes the `@` character.
+ * 
+ * @param instance object
+ * @param string name
  * @return function
  */
 def get_decorator(object, name) {
@@ -173,11 +181,12 @@ def get_decorator(object, name) {
 
 
 /**
- * bind_method(object: instance, method: function)
- *
  * Binds the given function to the instance, allowing you to access 
  * the instance itself in the function via the `self` keyword in 
  * the function.
+ * 
+ * @param instance object
+ * @param function method
  * @return function
  */
 def bind_method(object, method) {
@@ -190,9 +199,9 @@ def bind_method(object, method) {
 }
 
 /**
- * get_type(object: instance)
- * 
  * Returns the type of an instance as string
+ * 
+ * @param instance object
  * @return string
  */
 def get_type(object) {
@@ -203,8 +212,6 @@ def get_type(object) {
 }
 
 /**
- * get_function_metadata(object: function)
- * 
  * Returns the metadata of a function as a dictionary. 
  * This dictionary contains the following keys:
  * 
@@ -216,6 +223,8 @@ def get_type(object) {
  * - `file`: The file in which the function was defined.
  * 
  * @note This function does not work for built-in functions
+ * 
+ * @param function object
  * @return dictionary
  */
 def get_function_metadata(function) {
@@ -226,8 +235,6 @@ def get_function_metadata(function) {
 }
 
 /**
- * get_class_metadata(klass: class)
- * 
  * Returns the metadata of a class as a dictionary. 
  * This dictionary contains the following keys:
  * 
@@ -237,6 +244,7 @@ def get_function_metadata(function) {
  * - `methods`: a list of the name of methods defined in the class
  * - `superclass`: The name of the class it inherits from.
  * 
+ * @param class klass
  * @return dictionary
  */
 def get_class_metadata(klass) {
@@ -247,8 +255,6 @@ def get_class_metadata(klass) {
 }
 
 /**
- * get_module_metadata(module: imported module)
- * 
  * Returns the metadata of an imported module as a dictionary. 
  * This dictionary contains the following keys:
  * 
@@ -258,6 +264,7 @@ def get_class_metadata(klass) {
  * - `has_unloader`: `true` if the module is a C extension with a unloader and `false` otherwise.
  * - `definitions`: A list of the name of objects defined in the module.
  * 
+ * @param module module
  * @return dictionary
  */
 def get_module_metadata(module) {
@@ -265,10 +272,10 @@ def get_module_metadata(module) {
 }
 
 /**
- * get_class(object: instance)
- * 
  * Returns the class value of an instance as an object that can be 
  * used to create a new instance of that same class.
+ * 
+ * @param instance object
  * @return class
  */
 def get_class(object) {
@@ -279,9 +286,9 @@ def get_class(object) {
 }
 
 /**
- * is_ptr(value: any)
- * 
  * Returns `true` if _value_ is a pointer, `false` otherwise.
+ * 
+ * @param any value
  * @return bool
  */
 def is_ptr(value) {
@@ -289,9 +296,9 @@ def is_ptr(value) {
 }
 
 /**
- * get_ptr(value: any)
- * 
  * Returns a pointer to the given value.
+ * 
+ * @param any value
  * @return ptr
  */
 def get_ptr(value) {
@@ -299,18 +306,19 @@ def get_ptr(value) {
 }
 
 /**
- * set_ptr(pointer: ptr, value: any)
- * 
  * Sets the value at the given pointer's address to the given value.
+ * 
+ * @param ptr pointer
+ * @param any value
  */
 def set_ptr(pointer, value) {
-  return _reflect.setptrvalue(pointer, value)
+  _reflect.setptrvalue(pointer, value)
 }
 
 /**
- * get_address(value: any)
- * 
  * Returns a the address of the pointer to the value in memory.
+ * 
+ * @param any value
  * @return ptr
  */
 def get_address(value) {
@@ -318,9 +326,9 @@ def get_address(value) {
 }
 
 /**
- * ptr_from_address(address: number)
- * 
  * Returns a pointer to the given memory address.
+ * 
+ * @param number address
  * @return ptr
  */
 def ptr_from_address(address) {
@@ -328,9 +336,11 @@ def ptr_from_address(address) {
 }
 
 /**
- * set_global(fn: function | class [, name: string])
+ * Sets a function or class as globally accessible in all modules, function 
+ * and scopes.
  * 
- * Sets a function or class as globally accessible in all modules, function and scopes.
+ * @param {function|class} fn
+ * @param string? name
  */
 def set_global(fn, name) {
   if !is_function(fn) and !is_class(fn)
@@ -341,9 +351,10 @@ def set_global(fn, name) {
 }
 
 /**
- * run_script(path: string)
+ * Runs the content of a given script in-place as if it were part of the 
+ * current module.
  * 
- * Runs the content of a given script in-place as if it were part of the current module.
+ * @param string path
  */
 def run_script(path) {
   if !is_string(path)
@@ -360,10 +371,10 @@ def run_script(path) {
 }
 
 /**
- * call_function(function: function, args: list)
- * 
  * Calls a function with the given arguments.
  * 
+ * @param function function
+ * @param list args
  * @return any
  */
 def call_function(function, args) {

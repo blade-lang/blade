@@ -10,8 +10,6 @@
 import _struct
 
 /**
- * pack(format: string, ...args)
- * 
  * Packs the given arguments into a bytes object according to the specified format. 
  * This function behaves the same as the pack function from Perl and PHP (more similar 
  * to the PHP version) and uses the same formatting rules as the PHP version.
@@ -58,6 +56,8 @@ import _struct
  *  Z     | NUL-padded string 
  *  @     | NUL-fill to absolute position 
  * 
+ * @param string format
+ * @param any... \__args__
  * @return bytes
  */
 def pack(format, ...) {
@@ -74,8 +74,6 @@ def pack(format, ...) {
 }
 
 /**
- * unpack(format: string, data: bytes | string [, offset: number = 0])
- * 
  * Unpacks from bytes or a string into a dictionary based on the given format.
  * 
  * -  You may have to name the different format codes and separate them by a slash `/` 
@@ -90,6 +88,11 @@ def pack(format, ...) {
  * > If you do not name an element, numeric indices starting from 1 are used. Be aware 
  * > that if you have more than one unnamed element, some data is overwritten because the 
  * > numbering restarts from 1 for each element.
+ * 
+ * @param string format
+ * @param {bytes|string} data
+ * @param number? offset: Default value is `0`
+ * @return any
  */
 def unpack(format, data, offset) {
   if !is_string(format)
@@ -106,10 +109,11 @@ def unpack(format, data, offset) {
 }
 
 /**
- * pack_from(format: string, args: list)
- * 
  * Same as `pack()` except that instead of accepting arbitrary values after 
  * format, it expects the values to be in a list.
+ * 
+ * @param string format
+ * @param list args
  * @return bytes
  */
 def pack_from(format, args) {

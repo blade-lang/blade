@@ -9,37 +9,42 @@ import socket as so
 import reflect
 
 /**
- * HTTP server
+ * HTTP server.
+ * 
  * @printable
  */
 class HttpServer {
 
   /**
-   * The host address to which this server will be bound
-   * @default socket.IP_LOCAL (127.0.0.1)
+   * The host address to which this server will be bound. Default value is 
+   * socket.IP_LOCAL (127.0.0.1)
+   * @type string
    */
   var host = so.IP_LOCAL
 
   /**
    * The port to which this server will be bound to on the host.
+   * @type number
    */
   var port = 0
 
   /**
    * The working Socket instance for the HttpServer.
+   * @type {Socket}
    */
   var socket
 
   /**
    * A boolean value indicating whether to reuse socket addresses or not.
-   * @default true
+   * Default value is `true`.
+   * @type bool
    */
   var resuse_address = true
 
   /**
    * The timeout in milliseconds after which an attempt to read clients 
-   * request data will be terminated.
-   * @default 2000 (2 seconds)
+   * request data will be terminated. Default value is 2,000 (2 seconds).
+   * @type number
    */
   var read_timeout = 2000
 
@@ -49,9 +54,10 @@ class HttpServer {
    * 
    * If we cannot send response to a client after the stipulated time, it will be 
    * assumed such clients have disconnected and existing connections for that 
-   * client will be closed and their respective sockets will be discarded.
+   * client will be closed and their respective sockets will be discarded. Default 
+   * value is 2,000 (2 seconds).
    * 
-   * @default 2000 (2 seconds)
+   * @type number
    */
   var write_timeout = 2000
 
@@ -96,7 +102,8 @@ class HttpServer {
   }
 
   /**
-   * HttpServer(port: int [, host: string])
+   * @param int port
+   * @param string? host
    * @constructor
    */
   HttpServer(port, host) {
@@ -113,9 +120,7 @@ class HttpServer {
   }
 
   /**
-   * close()
-   * 
-   * stops the server
+   * Stops the server.
    */
   close() {
     self._is_listening = false
@@ -124,11 +129,11 @@ class HttpServer {
   }
 
   /**
-   * on_connect(function: function)
-   * 
    * Adds a function to be called when a new client connects.
+   * 
    * @note Function _function_ MUST accept at one parameter which will be passed the client Socket object.
-   * @note multiple `on_connect()` may be set on a single instance.
+   * @note Multiple `on_connect()` may be set on a single instance.
+   * @param {function(1)} function
    */
   on_connect(function) {
     if !is_function(function)
@@ -142,11 +147,11 @@ class HttpServer {
   }
 
   /**
-   * on_disconnect(function: function)
-   * 
    * Adds a function to be called when a new client disconnects.
+   * 
    * @note Function _function_ MUST accept at one parameter which will be passed the client information.
-   * @note multiple `on_disconnect()` may be set on a single instance.
+   * @note Multiple `on_disconnect()` may be set on a single instance.
+   * @param {function(1)} function
    */
   on_disconnect(function) {
     if !is_function(function)
@@ -160,14 +165,13 @@ class HttpServer {
   }
 
   /**
-   * on_receive(handler: function)
-   * 
    * Adds a function to be called when the server receives a message from a client.
    * 
    * > Function _fn_ MUST accept TWO parameters. First parameter will accept the HttpRequest 
    * > object and the second will accept the HttpResponse object.
    * 
-   * @note multiple `on_receive()` may be set on a single instance.
+   * @note Multiple `on_receive()` may be set on a single instance.
+   * @param {function(2)} handler
    */
   on_receive(handler) {
     if !is_function(handler)
@@ -181,13 +185,12 @@ class HttpServer {
   }
 
   /**
-   * on_reply(function: function)
-   * 
    * Adds a function to be called when the server sends a reply to a client.
    * 
    * > Function _function_ MUST accept one parameter which will be passed the HttpResponse object.
    * 
-   * @note multiple `on_sent()` may be set on a single instance.
+   * @note Multiple `on_sent()` may be set on a single instance.
+   * @param {function(1)} function
    */
   on_reply(function) {
     if !is_function(function)
@@ -201,14 +204,13 @@ class HttpServer {
   }
 
   /**
-   * on_error(function: function)
-   * 
    * Adds a function to be called when the server encounters an error with a client.
    * 
    * > Function _function_ MUST accept two parameters. The first argument will be passed the 
    * > `Exception` object and the second will be passed the client `Socket` object.
    * 
-   * @note multiple `on_error()` may be set on a single instance.
+   * @note Multiple `on_error()` may be set on a single instance.
+   * @param {function(2)} function
    */
   on_error(function) {
     if !is_function(function)
@@ -222,10 +224,12 @@ class HttpServer {
   }
 
   /**
-   * handle(method: string, path: string, handler: function(2))
-   * 
    * Sets up a request handler that will be called when a request with the given method 
    * has a path that matches the one specified.
+   * 
+   * @param string method
+   * @param string path
+   * @param {function(2)} handler
    */
   handle(method, path, handler) {
     if !is_string(method)
@@ -243,10 +247,10 @@ class HttpServer {
   }
 
   /**
-   * none_handler(handler: function(2))
-   * 
    * Sets up the handle to invoke when a request is not processed. That is, when it does 
    * not match a registered route and no `on_receive()` handler is set.
+   * 
+   * @param {function(2)} handler
    */
   none_handler(handler) {
     if !is_function(handler)
@@ -349,8 +353,6 @@ class HttpServer {
   }
 
   /**
-   * listen()
-   * 
    * Binds to the instance port and host and starts listening for incoming 
    * connection from HTTP clients.
    */

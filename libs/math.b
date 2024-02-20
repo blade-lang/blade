@@ -98,11 +98,8 @@ def factorial(n) {
 # implemented internally in C to leverage precision, machine instructions and speed.
 
 /**
- * sin(n: number)
- *
- * returns a numeric value between -1 and 1, which 
- * represents the sine of the angle given in radians
- * @return number
+ * Returns a numeric value between -1 and 1, which 
+ * represents the sine of the angle given in radians.
  * 
  * Example:
  * 
@@ -110,17 +107,17 @@ def factorial(n) {
  * %> math.sin(46)
  * 0.9017883476488092
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def sin(n) {
   return _math.sin(n)
 }
 
 /**
- * cos(n: number)
- * 
- * returns a numeric value between -1 and 1, which 
- * represents the cosine of the angle
- * @return number
+ * Returns a numeric value between -1 and 1, which 
+ * represents the cosine of the angle.
  * 
  * Example:
  * 
@@ -128,17 +125,17 @@ def sin(n) {
  * %> math.cos(93)
  * 0.3174287015197017
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def cos(n) {
   return _math.cos(n)
 }
 
 /**
- * tan(n: number)
- * 
- * returns a numeric value that represents the tangent 
- * of the angle given
- * @return number
+ * Returns a numeric value that represents the tangent 
+ * of the angle given.
  * 
  * Example:
  * 
@@ -146,16 +143,16 @@ def cos(n) {
  * %> math.tan(11.43)
  * -2.155225644164932
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def tan(n) {
   return _math.tan(n)
 }
 
 /**
- * sinh(n: number)
- * 
- * returns the hyperbolic sine (in radians) of number n
- * @return number
+ * Returns the hyperbolic sine (in radians) of number n.
  * 
  * Example:
  * 
@@ -163,16 +160,16 @@ def tan(n) {
  * %> math.sinh(1.4)
  * 1.904301501451534
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def sinh(n) {
   return _math.sinh(n)
 }
 
 /**
- * cosh(n: number)
- * 
- * returns the hyperbolic cosine (in radians) of number n
- * @return number
+ * Returns the hyperbolic cosine (in radians) of number n.
  * 
  * Example:
  * 
@@ -180,22 +177,25 @@ def sinh(n) {
  * %> math.cosh(1.91)
  * 3.450584592563374
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def cosh(n) {
   return _math.cosh(n)
 }
 
 /**
- * tanh(n: number)
- * 
- * returns the hyperbolic tangent (in radians) of number n
- * @return number
+ * Returns the hyperbolic tangent (in radians) of number n.
  * 
  * Example:
  * 
  * ```blade-repl
  * %> math.tanh(2.19)
- * 0.9752591705196751
+ * 0.975
+ * 
+ * @param number n
+ * @return number2591705196751
  * ```
  */
 def tanh(n) {
@@ -203,10 +203,9 @@ def tanh(n) {
 }
 
 /**
- * returns a numeric value between -(π/2) and π/2 radians 
+ * Returns a numeric value between -(π/2) and π/2 radians 
  * for x between -1 and 1. 
- * If the value of x is outside this range, it returns NaN
- * @return number
+ * If the value of x is outside this range, it returns NaN.
  * 
  * Example:
  * 
@@ -214,19 +213,18 @@ def tanh(n) {
  * %> math.asin(0.123)
  * 0.123312275191872
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def asin(n) {
   return _math.asin(n)
 }
 
 /**
- * acos(n: number)
- * 
- * returns a numeric value between 0 and π radians for x 
- * between -1 and 1. 
- * 
- * @note If the value of x is outside this range, it returns NaN
- * @return number
+ * Returns a numeric value between 0 and π radians for x 
+ * between -1 and 1. If the value of x is outside this range, it 
+ * returns NaN.
  * 
  * Example:
  * 
@@ -234,14 +232,16 @@ def asin(n) {
  * %> math.acos(0.471)
  * 1.080372275769021
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def acos(n) {
   return _math.acos(n)
 }
 
 /**
- * returns a numeric value between -(π/2) and π/2 radians.
- * @return number
+ * Returns a numeric value between -(π/2) and π/2 radians.
  * 
  * Example:
  * 
@@ -249,20 +249,18 @@ def acos(n) {
  * %> math.atan(math.Infinity)
  * 1.570796326794897
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def atan(n) {
   return _math.atan(n)
 }
 
 /**
- * atan2(n: number)
- * 
- * returns a numeric value between -π and π representing the 
+ * Returns a numeric value between -π and π representing the 
  * angle theta of an (x, y) point. This is the counterclockwise angle, 
  * measured in radians, between the positive X axis, and the point (x, y). 
- * 
- * @note the arguments to this function pass the y-coordinate first and the x-coordinate second
- * @return number
  * 
  * Example:
  * 
@@ -274,16 +272,17 @@ def atan(n) {
  * %> math.atan2(-1.5, 2.4)
  * -0.5585993153435624
  * ```
+ * 
+ * @note the arguments to this function pass the y-coordinate first and the x-coordinate second.
+ * @param number n
+ * @return number
  */
 def atan2(x, y) {
   return _math.atan2(x, y)
 }
 
 /**
- * asinh(n: number)
- * 
- * returns the hyperbolic arcsine (in radians) of number n
- * @return number
+ * Returns the hyperbolic arcsine (in radians) of number n.
  * 
  * Example:
  * 
@@ -291,16 +290,16 @@ def atan2(x, y) {
  * %> math.asinh(3.42)
  * 1.943507380182802
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def asinh(n) {
   return _math.asinh(n)
 }
 
 /**
- * acosh(n: number)
- * 
- * returns the hyperbolic arccosine (in radians) of number n
- * @return number
+ * Returns the hyperbolic arccosine (in radians) of number n.
  * 
  * Example:
  * 
@@ -308,16 +307,16 @@ def asinh(n) {
  * %> math.acosh(1.21)
  * 0.637237379754108
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def acosh(n) {
   return _math.acosh(n)
 }
 
 /**
- * atanh(n: number)
- * 
- * returns the hyperbolic arctangent (in radians) of number n
- * @return number
+ * Returns the hyperbolic arctangent (in radians) of number n.
  * 
  * Example:
  * 
@@ -325,19 +324,18 @@ def acosh(n) {
  * %> math.atanh(0.11)
  * 0.1104469157900971
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def atanh(n) {
   return _math.atanh(n)
 }
 
 /**
- * exp(n: number)
- * 
- * returns e ** x, where x is the argument, and e is Euler's 
+ * Returns e ** x, where x is the argument, and e is Euler's 
  * number (also known as Napier's constant), the base of the 
- * natural logarithms
- * 
- * @return number
+ * natural logarithms.
  * 
  * Example:
  * 
@@ -345,18 +343,17 @@ def atanh(n) {
  * %> math.exp(4)
  * 54.59815003314424
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def exp(n) {
   return _math.exp(n)
 }
 
 /**
- * expm1(n: number)
- * 
- * returns (e ** x) - 1, where x is the argument, and e the base of 
- * the natural logarithms
- * 
- * @return number
+ * Returns (e ** x) - 1, where x is the argument, and e the base of 
+ * the natural logarithms.
  * 
  * Example:
  * 
@@ -364,16 +361,16 @@ def exp(n) {
  * %> math.expm1(1)
  * 1.718281828459045
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def expm1(n) {
   return _math.expm1(n)
 }
 
 /**
- * ceil(n: number)
- * 
- * returns number n rounded up to the next largest integer
- * @return number
+ * Returns number n rounded up to the next largest integer.
  * 
  * Example:
  * 
@@ -383,16 +380,16 @@ def expm1(n) {
  * %> math.ceil(1.01)
  * 2
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def ceil(n) {
   return _math.ceil(n)
 }
 
 /**
- * round(n: number)
- * 
- * returns the value of a number rounded to the nearest integer
- * @return number
+ * Returns the value of a number rounded to the nearest integer.
  * 
  * Example:
  * 
@@ -402,18 +399,16 @@ def ceil(n) {
  * %> math.round(103.49)
  * 103
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def round(n) {
   return _math.round(n)
 }
 
 /**
- * log(n: number)
- * 
- * returns the natural logarithm (base e) of a number (mathematical ln(x))
- * @note If the value of x is 0, the return value is always -inf
- * @note If the value of x is negative, the return value is always NaN
- * @return number
+ * Returns the natural logarithm (base e) of a number (mathematical ln(x)).
  * 
  * Example:
  * 
@@ -421,17 +416,19 @@ def round(n) {
  * %> math.log(45)
  * 3.80666248977032
  * ```
+ * 
+ * @note If the value of x is 0, the return value is always -inf.
+ * @note If the value of x is negative, the return value is always NaN.
+ * @param number n
+ * @return number
  */
 def log(n) {
   return _math.log(n)
 }
 
 /**
- * log2(n: number)
- * 
- * returns the base 2 logarithm of the given number. 
+ * Returns the base 2 logarithm of the given number. 
  * If the number is negative, NaN is returned
- * @return number
  * 
  * Example:
  * 
@@ -439,17 +436,17 @@ def log(n) {
  * %> math.log2(45)
  * 5.491853096329675
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def log2(n) {
   return _math.log2(n)
 }
 
 /**
- * log10(n: number)
- * 
- * returns the base 10 logarithm of the given number. 
- * If the number is negative, NaN is returned
- * @return number
+ * Returns the base 10 logarithm of the given number. 
+ * If the number is negative, NaN is returned.
  * 
  * Example:
  * 
@@ -457,14 +454,15 @@ def log2(n) {
  * %> math.log10(45)
  * 1.653212513775344
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def log10(n) {
   return _math.log10(n)
 }
 
 /**
- * log1p(n: number)
- * 
  * For very small values of x, adding 1 can reduce or eliminate precision.  
  * The double floats used in JS give you about 15 digits of precision.  
  * 1 + 1e-15 = 1.000000000000001, but 1 + 1e-16 = 1.000000000000000 and therefore 
@@ -483,7 +481,6 @@ def log10(n) {
  * 
  * returns the natural logarithm (base e) of 1 + a number
  * If the value of x is less than -1, the return value is always NaN.
- * @return number
  * 
  * Example:
  * 
@@ -491,16 +488,16 @@ def log10(n) {
  * %> math.log1p(45)
  * 3.828641396489095
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def log1p(n) {
   return _math.log1p(n)
 }
 
 /**
- * cbrt(n: number)
- * 
- * returns the cube root of a number n
- * @return number
+ * Returns the cube root of a number n.
  * 
  * Example:
  * 
@@ -508,6 +505,9 @@ def log1p(n) {
  * %> math.cbrt(64)
  * 4
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def cbrt(n) {
   if !is_number(n) {
@@ -520,12 +520,9 @@ def cbrt(n) {
 }
 
 /**
- * sign(n: number)
- *
- * returns either a positive or negative +/- 1, indicating the sign of 
+ * Returns either a positive or negative +/- 1, indicating the sign of 
  * a number passed into the argument. 
  * If the number passed into sign() is 0, it will return a 0.
- * @return number
  * 
  * Example:
  * 
@@ -539,6 +536,9 @@ def cbrt(n) {
  * %> math.sign(0)
  * 0
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def sign(n) {
   if !is_number(n) n = to_number(n)
@@ -549,11 +549,8 @@ def sign(n) {
 }
 
 /**
- * floor(n: number)
- * 
  * A number representing the largest integer less than or 
  * equal to the specified number
- * @return number
  * 
  * Example:
  * 
@@ -561,6 +558,9 @@ def sign(n) {
  * %> math.floor(1.92)
  * 1
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def floor(n) {
   return _math.floor(n)
@@ -569,7 +569,9 @@ def floor(n) {
 /**
  * is_nan(n: number)
  * 
- * returns true if the given number is equal to NaN or false otherwise
+ * returns true if the given number is equal to NaN or false otherwise.
+ * 
+ * @param number n
  * @return bool
  */
 def is_nan(n) {
@@ -577,11 +579,8 @@ def is_nan(n) {
 }
 
 /**
- * is_inf(n: number)
- * 
- * returns true if the given number is equal to Infinity or -Infinity 
- * or false otherwise
- * @return bool
+ * Returns `true` if the given number is equal to Infinity or -Infinity 
+ * or `false` otherwise.
  * 
  * Example:
  * 
@@ -593,16 +592,16 @@ def is_nan(n) {
  * %> math.is_inf(0)
  * false
  * ```
+ * 
+ * @param number n
+ * @return bool
  */
 def is_inf(n) {
   return n == Infinity or n == -Infinity
 }
 
 /**
- * is_finite(n: number)
- * 
- * return true if x is neither an Infinity nor a NaN, and false otherwise
- * @return bool
+ * Return `true` if x is neither an Infinity nor a NaN, and `false` otherwise.
  * 
  * Example:
  * 
@@ -614,16 +613,16 @@ def is_inf(n) {
  * %> math.is_finite(-math.Infinity)
  * false
  * ```
+ * 
+ * @param number n
+ * @return bool
  */
 def is_finite(n) {
   return !is_inf(n) and !is_nan(n)
 }
 
 /**
- * trunc(n: number)
- * 
- * returns the integer part of a number by removing any fractional
- * @return number
+ * Returns the integer part of a number by removing any fractional.
  * 
  * Example:
  * 
@@ -637,6 +636,9 @@ def is_finite(n) {
  * %> math.trunc(-1.01)
  * -1
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def trunc(n) {
   if !is_number(n) {
@@ -647,10 +649,7 @@ def trunc(n) {
 }
 
 /**
- * sqrt(n: number)
- * 
- * returns the square root of a nunmber
- * @return number
+ * Returns the square root of a nunmber.
  * 
  * Example:
  * 
@@ -658,6 +657,9 @@ def trunc(n) {
  * %> math.sqrt(100)
  * 10
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def sqrt(n) {
   if !is_number(n) {
@@ -668,12 +670,9 @@ def sqrt(n) {
 }
 
 /**
- * sum(arg: iterable)
- *
- * calculate the sum of all the elements in the input iterable
+ * Calculates the sum of all the elements in the input iterable
  * the default start value for the product is 1.
  * when the iterable is empty, it returns 1
- * @return number
  * 
  * Example:
  * 
@@ -681,6 +680,9 @@ def sqrt(n) {
  * %> math.sum([1, 2, [3, 4, [5, 6]]])
  * 21
  * ```
+ * 
+ * @param iterable arg
+ * @return number
  */
 def sum(arg) {
   if !is_iterable(arg) {
@@ -702,12 +704,9 @@ def sum(arg) {
 }
 
 /**
- * product(arg: iterable)
- *
- * calculate the product of all the elements in the input iterable
+ * Calculates the product of all the elements in the input iterable
  * the default start value for the product is 1.
  * when the iterable is empty, it returns 1
- * @return number
  * 
  * Example:
  * 
@@ -715,6 +714,9 @@ def sum(arg) {
  * %> math.product([1, 2, [3, 4, [5, 6]]])
  * 720
  * ```
+ * 
+ * @param iterable arg
+ * @return number
  */
 def product(arg) {
   if !is_iterable(arg) {
@@ -737,11 +739,8 @@ def product(arg) {
 
 
 /**
- * fraction(n: number)
- *
- * returns the fractional part of a number as a whole number 
+ * Returns the fractional part of a number as a whole number 
  * by removing any integer
- * @return number
  * 
  * Example:
  * 
@@ -749,6 +748,9 @@ def product(arg) {
  * %> math.fraction(1.92)
  * 92
  * ```
+ * 
+ * @param number n
+ * @return number
  */
 def fraction(n) {
   if !is_number(n) {

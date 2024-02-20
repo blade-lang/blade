@@ -3,13 +3,26 @@
 import .token { * }
 
 /**
- * Blade source code scanner
+ * Blade source code scanner.
+ * 
+ * @printable
  */
 class Scanner {
   /**
-   * reports if an error was encountered in the scaner
+   * Reports if an error was encountered in the scaner.
+   * 
+   * @type bool
+   * @readonly
    */
   var has_error = false
+
+  /**
+   * The string to being scanned.
+   * 
+   * @type string
+   * @readonly
+   */
+  var source
 
   /**
    * a list of tokens processed by this scanner
@@ -68,15 +81,16 @@ class Scanner {
   }
 
   /**
-   * Scanner(source: string)
+   * @param string source
    * @constructor 
    */
-  Scanner(source) {
+  Scanner(source, file) {
     if !is_string(source)
       die Exception('Blade source code expected')
     
     # to track the quote that started an interpolation
     self._interpolating = []
+    self._file = file
     
     self.source = source
   }
@@ -179,7 +193,7 @@ class Scanner {
     if !literal {
       literal = self.source[self._start, self._current].trim()
     }
-    self._tokens.append(Token(type, literal, self._line))
+    self._tokens.append(Token(type, literal, self._line, self._file))
   }
 
   /**
@@ -408,10 +422,17 @@ class Scanner {
         if self._match('/') {
           self._add_token(self._match('=') ? FLOOR_EQ : FLOOR)
         } else if self._match('*') {
-          self._advance()
-          self._skip_block_comment()
-          self._add_token(DOC)
-          self._start = self._current
+          if self._match('*') {
+            self._advance()
+            self._skip_block_comment()
+            self._add_token(DOC)
+            self._start = self._current
+          } else {
+            self._advance()
+            self._skip_block_comment()
+            self._add_token(COMMENT)
+            self._start = self._current
+          }
         } else {
           self._add_token(self._match('=') ? DIVIDE_EQ : DIVIDE)
         }
@@ -460,9 +481,8 @@ class Scanner {
   }
 
   /**
-   * scan()
+   * Scans the source and returns a list of tokens.
    * 
-   * scans the source and returns a list of tokens
    * @return list[Token]
    */
   scan() {
@@ -475,7 +495,7 @@ class Scanner {
       self._scan()
     }
 
-    self._tokens.append(Token(EOF, 'end of file', self._line))
+    self._tokens.append(Token(EOF, 'end of file', self._line, self._file))
     return self._tokens
   }
 

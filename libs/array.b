@@ -12,56 +12,67 @@ import _array
 
 /**
  * Maximum value that "should" exist in a list passed to Int16Array.
+ * @type number
  */
 var INT16_MAX = 32767
 
 /**
  * Maximum value that "should" exist in a list passed to UInt16Array.
+ * @type number
  */
 var UINT16_MAX = 65535
 
 /**
  * Maximum value that "should" exist in a list passed to Int32Array.
+ * @type number
  */
 var INT32_MAX = 2147483647
 
 /**
  * Maximum value that "should" exist in a list passed to UInt32Array.
+ * @type number
  */
 var UINT32_MAX = 4294967295
 
 /**
  * Maximum value that "should" exist in a list passed to Int64Array.
+ * @type number
  */
 var INT64_MAX = 9223372036854775807
 
 /**
  * Maximum value that "should" exist in a list passed to UInt64Array.
+ * @type number
  */
 var UINT64_MAX = 18446744073709551615
 
 /**
  * Maximum value that "should" exist in a list passed to FloatArray.
+ * @type number
  */
 var FLOAT_MAX = 3.402823466E+38
 
 /**
  * Minimum value that "should" exist in a list passed to Int16Array.
+ * @type number
  */
 var INT16_MIN = -INT16_MAX - 1
 
 /**
  * Minimum value that "should" exist in a list passed to Int32Array.
+ * @type number
  */
 var INT32_MIN = -INT32_MAX - 1
 
 /**
  * Minimum value that "should" exist in a list passed to Int64Array.
+ * @type number
  */
 var INT64_MIN = -INT64_MAX - 1
 
 /**
  * Minimum value that "should" exist in a list passed to FloatArray.
+ * @type number
  */
 var FLOAT_MIN = 1.175494351E-38
 
@@ -77,12 +88,12 @@ var FLOAT_MIN = 1.175494351E-38
 class Int16Array {
 
   /**
-   * Int16Array(n: number | list)
-   * 
    * - If n is a number, it creates a new Int16Array that can hold up to n 
    * number of elements, but with all the elements set to 0. 
    * - If n is a list, it creates a new Int16Array with its elements set to 
    * the values in the list.
+   * 
+   * @param {number|list} n
    * @constructor
    */
   Int16Array(n) {
@@ -90,45 +101,45 @@ class Int16Array {
   }
 
   /**
-   * length()
-   * 
    * Returns the number of items in the array. 
+   * 
+   * @return number
    */
   length() {
     return _array.length(self._ptr)
   }
 
   /**
-   * bytes_length()
-   * 
    * Returns the length of the array if it were to be converted to bytes.
+   * 
+   * @return number
    */
   bytes_length() {
     return self.length() * 2
   }
 
   /**
-   * first()
-   * 
    * Returns the first item in the array or nil if the array is empty.
+   * 
+   * @return number
    */
   first() {
     return _array.first(self._ptr)
   }
 
   /**
-   * last()
-   * 
    * Returns the last item in the array or nil if the array is empty.
+   * 
+   * @return int
    */
   last() {
     return _array.last(self._ptr)
   }
 
   /**
-   * append(value: int)
-   * 
    * Adds the given _value_ to the end of the array.
+   * 
+   * @param int value
    */
   append(value) {
     if !is_number(value) or !is_int(value)
@@ -140,11 +151,11 @@ class Int16Array {
   }
 
   /**
-   * get(index: number)
-   * 
    * Returns the number at the specified index in the array. If index is 
    * outside the boundary of the array indexes (0..(array.length() - 1)), 
    * an exception is thrown.
+   * 
+   * @param number index
    * @return number
    */
   get(index) {
@@ -155,10 +166,10 @@ class Int16Array {
   }
 
   /**
-   * set(index: number, value: number)
-   * 
    * Sets the value at the given index.
    * 
+   * @param number index
+   * @param number value
    * @return number
    */
   set(index, value) {
@@ -171,10 +182,10 @@ class Int16Array {
   }
 
   /**
-   * extend(array: Int16Array)
-   * 
    * Updates the content of the current array by appending all the contents 
    * of _array_ to the end of the array in exact order.
+   * 
+   * @param {Int16Array} array
    */
   extend(array) {
     if !instance_of(array, Int16Array)
@@ -183,8 +194,6 @@ class Int16Array {
   }
 
   /**
-   * reverse()
-   * 
    * Returns a new array containing the elements in the original array 
    * in reverse order.
    */
@@ -193,10 +202,9 @@ class Int16Array {
   }
 
   /**
-   * clone()
-   * 
    * Returns a new Int16Array containing all items from the current array. 
    * The new array is a shallow copy of the original array.
+   * 
    * @return Int16Array
    */
   clone() {
@@ -204,9 +212,8 @@ class Int16Array {
   }
 
   /**
-   * pop()
-   * 
    * Removes the last element in the array and returns the value of that item.
+   * 
    * @return number
    */
   pop() {
@@ -214,9 +221,8 @@ class Int16Array {
   }
 
   /**
-   * to_bytes()
+   * Returns the array as a bytes object.
    * 
-   * Returns the array as a bytes object
    * @return bytes
    */
   to_bytes() {
@@ -224,9 +230,8 @@ class Int16Array {
   }
 
   /**
-   * to_list()
+   * Returns the elements of the array as a list of numbers.
    * 
-   * Returns the elements of the array as a list of numbers
    * @return list
    */
   to_list() {
@@ -234,9 +239,8 @@ class Int16Array {
   }
 
   /**
-   * to_string()
+   * Returns a string representation of the array.
    * 
-   * Returns a string representation of the array
    * @return string
    */
   to_string() {
@@ -244,9 +248,8 @@ class Int16Array {
   }
 
   /**
-   * get_pointer()
-   * 
    * Returns the raw int16 array pointer.
+   * 
    * @return ptr
    */
   get_pointer() {
@@ -291,12 +294,12 @@ class Int16Array {
 class Int32Array {
 
   /**
-   * Int32Array(n: number | list)
-   * 
    * - If n is a number, it creates a new Int32Array that can hold up to n 
    * number of elements, but with all the elements set to 0. 
    * - If n is a list, it creates a new Int32Array with its elements set to 
    * the values in the list.
+   * 
+   * @param {number|list} n
    * @constructor
    */
   Int32Array(n) {
@@ -304,45 +307,45 @@ class Int32Array {
   }
 
   /**
-   * length()
-   * 
    * Returns the number of items in the array. 
+   * 
+   * @return number
    */
   length() {
     return _array.length(self._ptr)
   }
 
   /**
-   * bytes_length()
-   * 
    * Returns the length of the array if it were to be converted to bytes.
+   * 
+   * @return number
    */
   bytes_length() {
     return self.length() * 4
   }
 
   /**
-   * first()
-   * 
    * Returns the first item in the array or nil if the array is empty.
+   * 
+   * @return int
    */
   first() {
     return _array.first(self._ptr)
   }
 
   /**
-   * last()
-   * 
    * Returns the last item in the array or nil if the array is empty.
+   * 
+   * @return int
    */
   last() {
     return _array.last(self._ptr)
   }
 
   /**
-   * append(value: int)
-   * 
    * Adds the given _value_ to the end of the array.
+   * 
+   * @param int value
    */
   append(value) {
     if !is_number(value) or !is_int(value)
@@ -354,11 +357,11 @@ class Int32Array {
   }
 
   /**
-   * get(index: number)
-   * 
    * Returns the number at the specified index in the array. If index is 
    * outside the boundary of the array indexes (0..(array.length() - 1)), 
    * an exception is thrown.
+   * 
+   * @param number index
    * @return number
    */
   get(index) {
@@ -369,10 +372,10 @@ class Int32Array {
   }
 
   /**
-   * set(index: number, value: number)
-   * 
    * Sets the value at the given index.
    * 
+   * @param number index
+   * @param int value
    * @return number
    */
   set(index, value) {
@@ -385,10 +388,10 @@ class Int32Array {
   }
 
   /**
-   * extend(array: Int32Array)
-   * 
    * Updates the content of the current array by appending all the contents 
    * of _array_ to the end of the array in exact order.
+   * 
+   * @param {Int32Array} array
    */
   extend(array) {
     if !instance_of(array, Int32Array)
@@ -397,8 +400,6 @@ class Int32Array {
   }
 
   /**
-   * reverse()
-   * 
    * Returns a new array containing the elements in the original array 
    * in reverse order.
    */
@@ -407,10 +408,9 @@ class Int32Array {
   }
 
   /**
-   * clone()
-   * 
    * Returns a new Int32Array containing all items from the current array. 
    * The new array is a shallow copy of the original array.
+   * 
    * @return Int32Array
    */
   clone() {
@@ -418,9 +418,8 @@ class Int32Array {
   }
 
   /**
-   * pop()
-   * 
    * Removes the last element in the array and returns the value of that item.
+   * 
    * @return number
    */
   pop() {
@@ -428,9 +427,8 @@ class Int32Array {
   }
 
   /**
-   * to_bytes()
+   * Returns the array as a bytes object.
    * 
-   * Returns the array as a bytes object
    * @return bytes
    */
   to_bytes() {
@@ -438,9 +436,8 @@ class Int32Array {
   }
 
   /**
-   * to_list()
+   * Returns the elements of the array as a list of numbers.
    * 
-   * Returns the elements of the array as a list of numbers
    * @return list
    */
   to_list() {
@@ -448,9 +445,8 @@ class Int32Array {
   }
 
   /**
-   * to_string()
+   * Returns a string representation of the array.
    * 
-   * Returns a string representation of the array
    * @return string
    */
   to_string() {
@@ -458,9 +454,8 @@ class Int32Array {
   }
 
   /**
-   * get_pointer()
-   * 
    * Returns the raw int32 array pointer.
+   * 
    * @return ptr
    */
   get_pointer() {
@@ -505,12 +500,12 @@ class Int32Array {
 class Int64Array {
 
   /**
-   * Int64Array(n: number | list)
-   * 
    * - If n is a number, it creates a new Int64Array that can hold up to n 
    * number of elements, but with all the elements set to 0. 
    * - If n is a list, it creates a new Int64Array with its elements set to 
    * the values in the list.
+   * 
+   * @param {number|list} n
    * @constructor
    */
   Int64Array(n) {
@@ -518,45 +513,45 @@ class Int64Array {
   }
 
   /**
-   * length()
-   * 
    * Returns the number of items in the array. 
+   * 
+   * @return number
    */
   length() {
     return _array.length(self._ptr)
   }
 
   /**
-   * bytes_length()
-   * 
    * Returns the length of the array if it were to be converted to bytes.
+   * 
+   * @return number
    */
   bytes_length() {
     return self.length() * 8
   }
 
   /**
-   * first()
-   * 
    * Returns the first item in the array or nil if the array is empty.
+   * 
+   * @return number
    */
   first() {
     return _array.first(self._ptr)
   }
 
   /**
-   * last()
-   * 
    * Returns the last item in the array or nil if the array is empty.
+   * 
+   * @return number
    */
   last() {
     return _array.last(self._ptr)
   }
 
   /**
-   * append(value: int)
-   * 
    * Adds the given _value_ to the end of the array.
+   * 
+   * @param int value
    */
   append(value) {
     if !is_number(value) or !is_int(value)
@@ -568,11 +563,11 @@ class Int64Array {
   }
 
   /**
-   * get(index: number)
-   * 
    * Returns the number at the specified index in the array. If index is 
    * outside the boundary of the array indexes (0..(array.length() - 1)), 
    * an exception is thrown.
+   * 
+   * @param number index
    * @return number
    */
   get(index) {
@@ -587,6 +582,8 @@ class Int64Array {
    * 
    * Sets the value at the given index.
    * 
+   * @param number index
+   * @param number value
    * @return number
    */
   set(index, value) {
@@ -599,10 +596,10 @@ class Int64Array {
   }
 
   /**
-   * extend(array: Int64Array)
-   * 
    * Updates the content of the current array by appending all the contents 
    * of _array_ to the end of the array in exact order.
+   * 
+   * @param {Int64Array} array
    */
   extend(array) {
     if !instance_of(array, Int64Array)
@@ -611,8 +608,6 @@ class Int64Array {
   }
 
   /**
-   * reverse()
-   * 
    * Returns a new array containing the elements in the original array 
    * in reverse order.
    */
@@ -621,10 +616,9 @@ class Int64Array {
   }
 
   /**
-   * clone()
-   * 
    * Returns a new Int64Array containing all items from the current array. 
    * The new array is a shallow copy of the original array.
+   * 
    * @return Int64Array
    */
   clone() {
@@ -632,9 +626,8 @@ class Int64Array {
   }
 
   /**
-   * pop()
-   * 
    * Removes the last element in the array and returns the value of that item.
+   * 
    * @return number
    */
   pop() {
@@ -642,9 +635,8 @@ class Int64Array {
   }
 
   /**
-   * to_bytes()
+   * Returns the array as a bytes object.
    * 
-   * Returns the array as a bytes object
    * @return bytes
    */
   to_bytes() {
@@ -652,9 +644,8 @@ class Int64Array {
   }
 
   /**
-   * to_list()
+   * Returns the elements of the array as a list of numbers.
    * 
-   * Returns the elements of the array as a list of numbers
    * @return list
    */
   to_list() {
@@ -662,9 +653,8 @@ class Int64Array {
   }
 
   /**
-   * to_string()
+   * Returns a string representation of the array.
    * 
-   * Returns a string representation of the array
    * @return string
    */
   to_string() {
@@ -672,9 +662,8 @@ class Int64Array {
   }
 
   /**
-   * get_pointer()
-   * 
    * Returns the raw int64 array pointer.
+   * 
    * @return ptr
    */
   get_pointer() {
@@ -719,12 +708,12 @@ class Int64Array {
 class UInt16Array {
 
   /**
-   * UInt16Array(n: number | list)
-   * 
    * - If n is a number, it creates a new UInt16Array that can hold up to n 
    * number of elements, but with all the elements set to 0. 
    * - If n is a list, it creates a new UInt16Array with its elements set to 
    * the values in the list.
+   * 
+   * @param {number|list} n
    * @constructor
    */
   UInt16Array(n) {
@@ -732,45 +721,45 @@ class UInt16Array {
   }
 
   /**
-   * length()
-   * 
    * Returns the number of items in the array. 
+   * 
+   * @return number
    */
   length() {
     return _array.length(self._ptr)
   }
 
   /**
-   * bytes_length()
-   * 
    * Returns the length of the array if it were to be converted to bytes.
+   * 
+   * @return number
    */
   bytes_length() {
     return self.length() * 2
   }
 
   /**
-   * first()
-   * 
    * Returns the first item in the array or nil if the array is empty.
+   * 
+   * @return number
    */
   first() {
     return _array.first(self._ptr)
   }
 
   /**
-   * last()
-   * 
    * Returns the last item in the array or nil if the array is empty.
+   * 
+   * @return number
    */
   last() {
     return _array.last(self._ptr)
   }
 
   /**
-   * append(value: int)
-   * 
    * Adds the given _value_ to the end of the array.
+   * 
+   * @param int value
    */
   append(value) {
     if !is_number(value) or !is_int(value)
@@ -782,11 +771,11 @@ class UInt16Array {
   }
 
   /**
-   * get(index: number)
-   * 
    * Returns the number at the specified index in the array. If index is 
    * outside the boundary of the array indexes (0..(array.length() - 1)), 
    * an exception is thrown.
+   * 
+   * @param number index
    * @return number
    */
   get(index) {
@@ -797,10 +786,10 @@ class UInt16Array {
   }
 
   /**
-   * set(index: number, value: number)
-   * 
    * Sets the value at the given index.
    * 
+   * @param number index
+   * @param number value
    * @return number
    */
   set(index, value) {
@@ -813,10 +802,10 @@ class UInt16Array {
   }
 
   /**
-   * extend(array: UInt16Array)
-   * 
    * Updates the content of the current array by appending all the contents 
    * of _array_ to the end of the array in exact order.
+   * 
+   * @param {UInt16Array} array
    */
   extend(array) {
     if !instance_of(array, UInt16Array)
@@ -825,8 +814,6 @@ class UInt16Array {
   }
 
   /**
-   * reverse()
-   * 
    * Returns a new array containing the elements in the original array 
    * in reverse order.
    */
@@ -835,10 +822,9 @@ class UInt16Array {
   }
 
   /**
-   * clone()
-   * 
    * Returns a new UInt16Array containing all items from the current array. 
    * The new array is a shallow copy of the original array.
+   * 
    * @return UInt16Array
    */
   clone() {
@@ -846,9 +832,8 @@ class UInt16Array {
   }
 
   /**
-   * pop()
-   * 
    * Removes the last element in the array and returns the value of that item.
+   * 
    * @return number
    */
   pop() {
@@ -856,9 +841,8 @@ class UInt16Array {
   }
 
   /**
-   * to_bytes()
+   * Returns the array as a bytes object.
    * 
-   * Returns the array as a bytes object
    * @return bytes
    */
   to_bytes() {
@@ -866,9 +850,8 @@ class UInt16Array {
   }
 
   /**
-   * to_list()
+   * Returns the elements of the array as a list of numbers.
    * 
-   * Returns the elements of the array as a list of numbers
    * @return list
    */
   to_list() {
@@ -876,9 +859,8 @@ class UInt16Array {
   }
 
   /**
-   * to_string()
+   * Returns a string representation of the array.
    * 
-   * Returns a string representation of the array
    * @return string
    */
   to_string() {
@@ -886,9 +868,8 @@ class UInt16Array {
   }
 
   /**
-   * get_pointer()
-   * 
    * Returns the raw uint16 array pointer.
+   * 
    * @return ptr
    */
   get_pointer() {
@@ -933,12 +914,12 @@ class UInt16Array {
 class UInt32Array {
 
   /**
-   * UInt32Array(n: number | list)
-   * 
    * - If n is a number, it creates a new UInt32Array that can hold up to n 
    * number of elements, but with all the elements set to 0. 
    * - If n is a list, it creates a new UInt32Array with its elements set to 
    * the values in the list.
+   * 
+   * @param {number|list} n
    * @constructor
    */
   UInt32Array(n) {
@@ -946,45 +927,45 @@ class UInt32Array {
   }
 
   /**
-   * length()
-   * 
    * Returns the number of items in the array. 
+   * 
+   * @return number
    */
   length() {
     return _array.length(self._ptr)
   }
 
   /**
-   * bytes_length()
-   * 
    * Returns the length of the array if it were to be converted to bytes.
+   * 
+   * @return number
    */
   bytes_length() {
     return self.length() * 4
   }
 
   /**
-   * first()
-   * 
    * Returns the first item in the array or nil if the array is empty.
+   * 
+   * @return number
    */
   first() {
     return _array.first(self._ptr)
   }
 
   /**
-   * last()
-   * 
    * Returns the last item in the array or nil if the array is empty.
+   * 
+   * @return number
    */
   last() {
     return _array.last(self._ptr)
   }
 
   /**
-   * append(value: int)
-   * 
    * Adds the given _value_ to the end of the array.
+   * 
+   * @param int value
    */
   append(value) {
     if !is_number(value) or !is_int(value)
@@ -996,11 +977,11 @@ class UInt32Array {
   }
 
   /**
-   * get(index: number)
-   * 
    * Returns the number at the specified index in the array. If index is 
    * outside the boundary of the array indexes (0..(array.length() - 1)), 
    * an exception is thrown.
+   * 
+   * @param number index
    * @return number
    */
   get(index) {
@@ -1011,10 +992,10 @@ class UInt32Array {
   }
 
   /**
-   * set(index: number, value: number)
-   * 
    * Sets the value at the given index.
    * 
+   * @param number index
+   * @param number value
    * @return number
    */
   set(index, value) {
@@ -1027,10 +1008,10 @@ class UInt32Array {
   }
 
   /**
-   * extend(array: UInt32Array)
-   * 
    * Updates the content of the current array by appending all the contents 
    * of _array_ to the end of the array in exact order.
+   * 
+   * @param {UInt32Array} array
    */
   extend(array) {
     if !instance_of(array, UInt32Array)
@@ -1039,8 +1020,6 @@ class UInt32Array {
   }
 
   /**
-   * reverse()
-   * 
    * Returns a new array containing the elements in the original array 
    * in reverse order.
    */
@@ -1049,10 +1028,9 @@ class UInt32Array {
   }
 
   /**
-   * clone()
-   * 
    * Returns a new UInt32Array containing all items from the current array. 
    * The new array is a shallow copy of the original array.
+   * 
    * @return UInt32Array
    */
   clone() {
@@ -1060,9 +1038,8 @@ class UInt32Array {
   }
 
   /**
-   * pop()
-   * 
    * Removes the last element in the array and returns the value of that item.
+   * 
    * @return number
    */
   pop() {
@@ -1070,9 +1047,8 @@ class UInt32Array {
   }
 
   /**
-   * to_bytes()
+   * Returns the array as a bytes object.
    * 
-   * Returns the array as a bytes object
    * @return bytes
    */
   to_bytes() {
@@ -1080,9 +1056,8 @@ class UInt32Array {
   }
 
   /**
-   * to_list()
+   * Returns the elements of the array as a list of numbers.
    * 
-   * Returns the elements of the array as a list of numbers
    * @return list
    */
   to_list() {
@@ -1090,9 +1065,8 @@ class UInt32Array {
   }
 
   /**
-   * to_string()
+   * Returns a string representation of the array.
    * 
-   * Returns a string representation of the array
    * @return string
    */
   to_string() {
@@ -1100,9 +1074,8 @@ class UInt32Array {
   }
 
   /**
-   * get_pointer()
-   * 
    * Returns the raw uint32 array pointer.
+   * 
    * @return ptr
    */
   get_pointer() {
@@ -1147,12 +1120,12 @@ class UInt32Array {
 class UInt64Array {
 
   /**
-   * UInt64Array(n: number | list)
-   * 
    * - If n is a number, it creates a new UInt64Array that can hold up to n 
    * number of elements, but with all the elements set to 0. 
    * - If n is a list, it creates a new UInt64Array with its elements set to 
    * the values in the list.
+   * 
+   * @param {number|list} n
    * @constructor
    */
   UInt64Array(n) {
@@ -1160,45 +1133,45 @@ class UInt64Array {
   }
 
   /**
-   * length()
-   * 
    * Returns the number of items in the array. 
+   * 
+   * @return number
    */
   length() {
     return _array.length(self._ptr)
   }
 
   /**
-   * bytes_length()
-   * 
    * Returns the length of the array if it were to be converted to bytes.
+   * 
+   * @return number
    */
   bytes_length() {
     return self.length() * 8
   }
 
   /**
-   * first()
-   * 
    * Returns the first item in the array or nil if the array is empty.
+   * 
+   * @return number
    */
   first() {
     return _array.first(self._ptr)
   }
 
   /**
-   * last()
-   * 
    * Returns the last item in the array or nil if the array is empty.
+   * 
+   * @return number
    */
   last() {
     return _array.last(self._ptr)
   }
 
   /**
-   * append(value: int)
-   * 
    * Adds the given _value_ to the end of the array.
+   * 
+   * @param int value
    */
   append(value) {
     if !is_number(value) or !is_int(value)
@@ -1210,11 +1183,11 @@ class UInt64Array {
   }
 
   /**
-   * get(index: number)
-   * 
    * Returns the number at the specified index in the array. If index is 
    * outside the boundary of the array indexes (0..(array.length() - 1)), 
    * an exception is thrown.
+   * 
+   * @param number index
    * @return number
    */
   get(index) {
@@ -1225,10 +1198,10 @@ class UInt64Array {
   }
 
   /**
-   * set(index: number, value: number)
-   * 
    * Sets the value at the given index.
    * 
+   * @param number index
+   * @param number value
    * @return number
    */
   set(index, value) {
@@ -1241,10 +1214,10 @@ class UInt64Array {
   }
 
   /**
-   * extend(array: UInt64Array)
-   * 
    * Updates the content of the current array by appending all the contents 
    * of _array_ to the end of the array in exact order.
+   * 
+   * @param {UInt64Array} array
    */
   extend(array) {
     if !instance_of(array, UInt64Array)
@@ -1253,8 +1226,6 @@ class UInt64Array {
   }
 
   /**
-   * reverse()
-   * 
    * Returns a new array containing the elements in the original array 
    * in reverse order.
    */
@@ -1263,10 +1234,9 @@ class UInt64Array {
   }
 
   /**
-   * clone()
-   * 
    * Returns a new UInt64Array containing all items from the current array. 
    * The new array is a shallow copy of the original array.
+   * 
    * @return UInt64Array
    */
   clone() {
@@ -1274,9 +1244,8 @@ class UInt64Array {
   }
 
   /**
-   * pop()
-   * 
    * Removes the last element in the array and returns the value of that item.
+   * 
    * @return number
    */
   pop() {
@@ -1284,9 +1253,8 @@ class UInt64Array {
   }
 
   /**
-   * to_bytes()
+   * Returns the array as a bytes object.
    * 
-   * Returns the array as a bytes object
    * @return bytes
    */
   to_bytes() {
@@ -1294,9 +1262,8 @@ class UInt64Array {
   }
 
   /**
-   * to_list()
+   * Returns the elements of the array as a list of numbers.
    * 
-   * Returns the elements of the array as a list of numbers
    * @return list
    */
   to_list() {
@@ -1304,9 +1271,8 @@ class UInt64Array {
   }
 
   /**
-   * to_string()
+   * Returns a string representation of the array.
    * 
-   * Returns a string representation of the array
    * @return string
    */
   to_string() {
@@ -1314,9 +1280,8 @@ class UInt64Array {
   }
 
   /**
-   * get_pointer()
-   * 
    * Returns the raw uint64 array pointer.
+   * 
    * @return ptr
    */
   get_pointer() {
@@ -1361,12 +1326,12 @@ class UInt64Array {
 class FloatArray {
 
   /**
-   * FloatArray(n: number | list)
-   * 
    * - If n is a number, it creates a new FloatArray that can hold up to n 
    * number of elements, but with all the elements set to 0. 
    * - If n is a list, it creates a new FloatArray with its elements set to 
    * the values in the list.
+   * 
+   * @param {number|list} n
    * @constructor
    */
   FloatArray(n) {
@@ -1374,45 +1339,45 @@ class FloatArray {
   }
 
   /**
-   * length()
-   * 
    * Returns the number of items in the array. 
+   * 
+   * @return number
    */
   length() {
     return _array.length(self._ptr)
   }
 
   /**
-   * bytes_length()
-   * 
    * Returns the length of the array if it were to be converted to bytes.
+   * 
+   * @return number
    */
   bytes_length() {
     return self.length() * 4
   }
 
   /**
-   * first()
-   * 
    * Returns the first item in the array or nil if the array is empty.
+   * 
+   * @return number
    */
   first() {
     return _array.first(self._ptr)
   }
 
   /**
-   * last()
-   * 
    * Returns the last item in the array or nil if the array is empty.
+   * 
+   * @return number
    */
   last() {
     return _array.last(self._ptr)
   }
 
   /**
-   * append(value: int)
-   * 
    * Adds the given _value_ to the end of the array.
+   * 
+   * @param int value
    */
   append(value) {
     if !is_number(value) or !is_int(value)
@@ -1424,11 +1389,11 @@ class FloatArray {
   }
 
   /**
-   * get(index: number)
-   * 
    * Returns the number at the specified index in the array. If index is 
    * outside the boundary of the array indexes (0..(array.length() - 1)), 
    * an exception is thrown.
+   * 
+   * @param number index
    * @return number
    */
   get(index) {
@@ -1439,10 +1404,10 @@ class FloatArray {
   }
 
   /**
-   * set(index: number, value: number)
-   * 
    * Sets the value at the given index.
    * 
+   * @param number index
+   * @param int value
    * @return number
    */
   set(index, value) {
@@ -1455,10 +1420,10 @@ class FloatArray {
   }
 
   /**
-   * extend(array: FloatArray)
-   * 
    * Updates the content of the current array by appending all the contents 
    * of _array_ to the end of the array in exact order.
+   * 
+   * @param {FloatArray} array
    */
   extend(array) {
     if !instance_of(array, FloatArray)
@@ -1467,8 +1432,6 @@ class FloatArray {
   }
 
   /**
-   * reverse()
-   * 
    * Returns a new array containing the elements in the original array 
    * in reverse order.
    */
@@ -1477,10 +1440,9 @@ class FloatArray {
   }
 
   /**
-   * clone()
-   * 
    * Returns a new FloatArray containing all items from the current array. 
    * The new array is a shallow copy of the original array.
+   * 
    * @return FloatArray
    */
   clone() {
@@ -1488,9 +1450,8 @@ class FloatArray {
   }
 
   /**
-   * pop()
-   * 
    * Removes the last element in the array and returns the value of that item.
+   * 
    * @return number
    */
   pop() {
@@ -1498,9 +1459,8 @@ class FloatArray {
   }
 
   /**
-   * to_bytes()
-   * 
    * Returns the array as a bytes object
+   * 
    * @return bytes
    */
   to_bytes() {
@@ -1508,9 +1468,8 @@ class FloatArray {
   }
 
   /**
-   * to_list()
-   * 
    * Returns the elements of the array as a list of numbers
+   * 
    * @return list
    */
   to_list() {
@@ -1518,9 +1477,8 @@ class FloatArray {
   }
 
   /**
-   * to_string()
-   * 
    * Returns a string representation of the array
+   * 
    * @return string
    */
   to_string() {
@@ -1528,9 +1486,8 @@ class FloatArray {
   }
 
   /**
-   * get_pointer()
-   * 
    * Returns the raw uint64 array pointer.
+   * 
    * @return ptr
    */
   get_pointer() {

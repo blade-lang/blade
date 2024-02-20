@@ -1956,7 +1956,7 @@ def split_text_token(text, level, state) {
     if offset > last_pos {
       token         = state.Token('text', '', 0)
       token.content = text[last_pos, offset]
-      nodes.push(token)
+      nodes.append(token)
     }
 
     token         = state.Token('emoji', '', 0)

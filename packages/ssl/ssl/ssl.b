@@ -10,7 +10,7 @@ import .context { SSLContext }
 class SSL {
 
   /**
-   * SSL(context: SSLContext)
+   * @param {SSLContext} context
    * @constructor
    */
   SSL(context) {
@@ -21,28 +21,23 @@ class SSL {
   }
 
   /**
-   * set_connect_state()
-   * 
-   * puts this SSL instance in the connected mode.
+   * Puts this SSL instance in the connected mode.
    */
   set_connect_state() {
     _ssl.set_connect_state(self._ptr)
   }
 
   /**
-   * set_accept_state()
-   * 
-   * puts this SSL instance in the accept mode.
+   * Puts this SSL instance in the accept mode.
    */
   set_accept_state() {
     _ssl.set_accept_state(self._ptr)
   }
 
   /**
-   * get_fd()
-   * 
-   * returns the current socket file descriptor.
+   * Returns the current socket file descriptor.
    * It returns `-1` on failure or a positive integer on success.
+   * 
    * @return number
    */
   get_fd() {
@@ -50,9 +45,10 @@ class SSL {
   }
 
   /**
-   * set_fd(fd: int)
+   * Sets the socket file descriptor for this SSL.
    * 
-   * sets the socket file descriptor for this SSL
+   * @param int fd
+   * @return bool
    */
   set_fd(fd) {
     if !is_int(fd)
@@ -62,28 +58,30 @@ class SSL {
   }
 
   /**
-   * accept()
+   * Begins accepting data on SSL and returns `true` if successful or 
+   * `false` otherwise.
    * 
-   * begins accepting data on SSL
+   * @return bool
    */
   accept() {
-    return _ssl.accept(self._ptr)
+    return _ssl.accept(self._ptr) == 1
   }
 
   /**
-   * connect()
+   * Connects to an SSL server instance.
    * 
-   * connects to an SSL server instance
+   * @return bool
    */
   connect() {
     return _ssl.connect(self._ptr)
   }
 
   /**
-   * write(data: string | bytes)
+   * Writes data to the current I/O stream and return an integer representing 
+   * the total bytes written.
    * 
-   * writes data to the current I/O stream.
-   * @return int representing the total bytes written
+   * @param {string|bytes} data
+   * @return int 
    */
   write(data) {
     if !is_string(data) and !is_bytes(data)
@@ -99,10 +97,10 @@ class SSL {
   }
 
   /**
-   * read([length: int])
+   * Reads data off the I/O and returns it. Set _length_ to -1 to read 
+   * till no data is available in the stream.
    * 
-   * reads data off the I/O and returns it
-   * @default length = -1
+   * @param int? length: Default value is -1
    * @return string
    */
   read(length) {
@@ -119,9 +117,9 @@ class SSL {
   }
 
   /**
-   * error([code: int])
+   * Returns the last SSL error number
    * 
-   * returns the last SSL error number
+   * @param int? code
    * @return int
    */
   error(code) {
@@ -130,27 +128,22 @@ class SSL {
   }
 
   /**
-   * shutdown()
-   * 
-   * shutdown the SSL object
+   * Shutdown the SSL object.
    */
   shutdown() {
     _ssl.shutdown(self._ptr)
   }
 
   /**
-   * free()
-   * 
-   * frees this SSL and all associated resources
+   * Frees this SSL and all associated resources.
    */
   free() {
     _ssl.ssl_free(self._ptr)
   }
 
   /**
-   * get_pointer()
+   * Returns the raw OpenSSl SSL pointer.
    * 
-   * returns the raw OpenSSl SSL pointer
    * @return ptr
    */
   get_pointer() {

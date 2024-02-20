@@ -218,6 +218,7 @@ class Message {
  * Returns a new instance of {Message}.
  * 
  * @return {Message}
+ * @default
  */
 def message() {
   return Message()

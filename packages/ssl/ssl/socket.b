@@ -15,94 +15,128 @@ class TLSSocket {
   /**
    * This property holds the host bound, to be bound to or connected to by the current socket.
    * Whenever a host is not given, the host will default to localhost.
+   * 
+   * @type string
    */
   var host = IP_LOCAL
 
   /**
-   * The port currently bound or connected to by the socket
+   * The port currently bound or connected to by the socket.
+   * 
+   * @type number
    */
   var port = 0
 
   /**
    * The socket family (which must be one of the `AF_` variables).
-   * The default family for the socket is AF_INET
+   * The default family for the socket is AF_INET.
+   * 
+   * @type number
    */
   var family = AF_INET
 
   /**
    * The type of socket stream used by the socket.
-   * The default socket type is `SOCK_STREAM`
+   * The default socket type is `SOCK_STREAM`.
+   * 
+   * @type number
    */
   var type = SOCK_STREAM
 
   /**
    * The current operating protocol of the socket that controls the 
    * underlying behavior of the socket. The default is `IPPROTO_TCP`.
+   * 
+   * @type number
    */
   var protocol = IPPROTO_TCP
 
   /**
    * The file descriptor id of the current socket on the host machine.
+   * 
+   * @type number
    */
   var id = -1
 
   /**
    * `true` when the socket is a client to a server socket, `false` otherwise.
+   * 
+   * @type bool
    */
   var is_client = false
 
   /**
    * `true` when the socket is bound to a given port on the device, `false` 
    * otherwise.
+   * 
+   * @type bool
    */
   var is_bound = false
 
   /**
    * `true` when the socket is connected to a server socket, `false` otherwise.
+   * 
+   * @type bool
    */
   var is_connected = false
 
   /**
    * `true` when the socket is currently listening on a host device port as a 
    * server, `false` otherwise.
+   * 
+   * @type bool
    */
   var is_listening = false
   
   /**
    * `true` when the socket is closed, `false` otherwise.
+   * 
+   * @type bool
    */
   var is_closed = false
 
   /**
    * `true` when the socket is shutdown, `false` otherwise.
+   * 
+   * @type bool
    */
   var is_shutdown = false
 
   /**
    * `true` when the socket is running in a blocking mode, `false` otherwise.
+   * 
+   * @type bool
    */
   var is_blocking = false
 
   /**
    * The property holds the reason for which the last `shutdown` operation 
    * was called or `-1` if `shutdown` was never requested.
+   * 
+   * @type number
    */
   var shutdown_reason = -1
 
   /**
    * The amount of time in milliseconds that the socket waits before it 
    * terminates a `send` operation. This is equal to the `SO_SNDTIMEO`.
+   * 
+   * @type number
    */
   var send_timeout = -1
 
   /**
    * The amount of time in milliseconds that the socket waits before it 
    * terminates a `receive` operation. This is equal to the `SO_RCVTIMEO`.
+   * 
+   * @type number
    */
   var receive_timeout = -1
 
   /**
-   * TLSSocket([socket: Socket [, context: SSLContext [, ssl: SSL]]])
+   * @param {Socket} socket
+   * @param {SSLContext?} context
+   * @param {SSL?} ssl
    * @constructor
    */
   TLSSocket(socket, context, ssl) {
@@ -121,12 +155,12 @@ class TLSSocket {
   }
 
   /**
-   * connect(host: string, port: int [, timeout: int])
-   * 
    * Initiates a connection to the given host on the specified port. If host is `nil`, it will 
    * connect on to the current hostn specified on the socket.
    * 
-   * @default timeout = 300,000ms (i.e. 300 seconds)
+   * @param string host
+   * @param int port
+   * @param int? timeout: Default is 300,000ms (i.e. 300 seconds)
    * @return bool
    */
   connect(host, port, timeout) {
@@ -140,10 +174,11 @@ class TLSSocket {
   }
 
   /**
-   * bind(port: int [, host: string])
-   * 
    * Binds this socket to the given port on the given host. If host is `nil` or not specified, it will connect 
    * on to the current hostn specified on the socket. 
+   * 
+   * @param int port
+   * @param string? host
    * @return bool
    */
   bind(port, host) {
@@ -151,12 +186,12 @@ class TLSSocket {
   }
 
   /**
-   * send(message: string | file | bytes, flags: int)
-   * 
    * Sends the specified message to the socket. When this methods accepts a file as a message, 
    * the file is read and the resultant bytes of the file content is streamed to the socket.
    * 
    * @note the flags parameter is currently redundant and is kept only to remanin compatible with future plans for this method.
+   * @param {string|bytes|file} message
+   * @param int? flags
    * @return number greater than -1 if successful indicating the total number of bytes sent or -1 if it fails.
    */
   send(message, flags) {
@@ -166,8 +201,6 @@ class TLSSocket {
   }
 
   /**
-   * receive([length: int [, flags: int]])
-   * 
    * Receives bytes of the given length from the socket. If the length is not given, it default length of 
    * -1 indicating that the total available data on the socket stream will be read. 
    * If no data is available for read on the socket, the socket will wait to receive data or until the 
@@ -175,6 +208,8 @@ class TLSSocket {
    * until it has received the total number of bytes required (whichever comes first).
    * 
    * @note the flags parameter is currently redundant and is kept only to remanin compatible with future plans for this method.
+   * @param int? length
+   * @param int? flags
    * @return string
    */
   receive(length, flags) {
@@ -184,16 +219,15 @@ class TLSSocket {
   }
 
   /**
-   * read([length: int])
-   * 
    * Reads bytes of the given length from the socket. If the length is not given, it default length of 
    * -1 indicating that the total available data on the socket stream will be read. 
    * 
    * > This method differs from `receive()` in that it does not check for a socket having data to 
    * > read or not and will block until data of _length_ have been read or no more data is available for 
    * > reading.
+   * 
    * @note Only use this function after a call to `receive()` has succeeded.
-   * @default Length = 1024
+   * @param int? length: Default value is 1024.
    * @return string
    */
   read(length) {
@@ -201,8 +235,6 @@ class TLSSocket {
   }
 
   /**
-   * listen([queue_length: int])
-   * 
    * Listen for connections on a socket
    * 
    * This method puts the socket in a state where it is willing to accept incoming connections and creates 
@@ -214,7 +246,8 @@ class TLSSocket {
    * When the `queue_length` is ommited or set to -1, the method will use the default queue limit of 
    * the current platform which is usually equal to `SOMAXCONN`.
    * 
-   * @note listen() call applies only to sockets of type `SOCK_STREAM` (which is the default)
+   * @note listen() call applies only to sockets of type `SOCK_STREAM` (which is the default).
+   * @param int? queue_length: Default value is `SOMAXCONN`.
    * @return bool
    */
   listen(queue_length) {
@@ -222,8 +255,6 @@ class TLSSocket {
   }
 
   /**
-   * accept()
-   * 
    * Accepts a connection on a socket
    * 
    * This method extracts the first connection request on the queue of pending connections, creates a new socket 
@@ -233,6 +264,7 @@ class TLSSocket {
    * are present on the queue, accept() returns an error as described below.  
    * 
    * The accepted socket may not be used to accept more connections.  The original socket remains open.
+   * 
    * @return TLSSocket
    */
   accept() {
@@ -243,16 +275,16 @@ class TLSSocket {
     ssl.set_accept_state()
 
     # var accepted = ssl.accept()
-    # if accepted <= 0
-    #   die Exception(ssl.error(accepted))
+    # if !accepted die Exception(ssl.error(accepted))
 
-    return TLSSocket(s, self._context, ssl)
+    var client = TLSSocket(s, self._context, ssl)
+    client.is_connected = true
+    return client
   }
 
   /**
-   * close()
+   * Closes the socket.
    * 
-   * Closes the socket
    * @return bool
    */
   close() {
@@ -265,8 +297,6 @@ class TLSSocket {
   }
 
   /**
-   * shutdown()
-   * 
    * The shutdown() call causes all or part of a full-duplex connection on the socket associated with 
    * socket to be shut down.
    * 
@@ -281,10 +311,11 @@ class TLSSocket {
   }
 
   /**
-   * set_option(option: int, value: any)
-   * 
    * Sets the options of the current socket.
-   * @note Only `SO_` variables are valid option types
+   * 
+   * @note Only `SO_` variables are valid option types.
+   * @param int option
+   * @param any value
    * @return bool
    */
   set_option(option, value) {
@@ -292,9 +323,9 @@ class TLSSocket {
   }
 
   /**
-   * get_option(option: int)
+   * Gets the options set on the current socket.
    * 
-   * Gets the options set on the current socket
+   * @param int option
    * @return any
    */
   get_option(option) {
@@ -302,20 +333,20 @@ class TLSSocket {
   }
 
   /**
-   * set_blocking(mode: bool)
-   * 
    * Sets if the socket should operate in blocking or non-blocking mode. `true` for blocking 
    * (default) and `false` for non-blocking.
+   * 
+   * @param bool mode
+   * @return bool
    */
   set_blocking(mode) {
     return self._socket.set_blocking(mode)
   }
 
   /**
-   * info()
-   * 
    * Returns a dictionary containing the address, port and family of the current socket or an 
    * empty dictionary if the socket information could not be retrieved.
+   * 
    * @return dictionary
    */
   info() {
@@ -323,29 +354,37 @@ class TLSSocket {
   }
 
   /**
-   * get_socket()
+   * Returns the underlying Socket instance.
    * 
-   * returns the underlying Socket instance
-   * @return Socket
+   * @return {Socket}
    */
   get_socket() {
     return self._socket
   }
 
   /**
-   * get_context()
+   * Returns the underlying SSLContext instance.
    * 
-   * returns the underlying SSLContext instance
-   * @return SSLContext
+   * @return {SSLContext}
    */
   get_context() {
     return self._context
   }
 
+  /**
+   * Returns the underlying SSL instance
+   * 
+   * @return {SSL}
+   */
   get_ssl() {
     return self._ssl
   }
 
+  /**
+   * Sets the underlying SSL context to use.
+   * 
+   * @param {SSLContext} context
+   */
   set_context(context) {
     if !instance_of(content, SSLContext)
       die Exception('instance of SSLContext expected')
@@ -356,4 +395,16 @@ class TLSSocket {
     return '<TLSSocket closed: ${self.is_closed}, listening: ' +
         '${self.is_listening}, connected: ${self.is_connected}, bound: ${self.is_bound}>'
   }
+}
+
+/**
+ * Returns a new instance of a TLSSocket.
+ * 
+ * @param {Socket} socket
+ * @param {SSLContext?} context
+ * @param {SSL?} ssl
+ * @default
+ */
+def socket(socket, context, ssl) {
+  return TLSSocket(socket, context, ssl)
 }

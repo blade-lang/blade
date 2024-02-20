@@ -63,6 +63,8 @@ class Attachment {
   var content
 
   /**
+   * @param dict headers
+   * @param string content
    * @constructor
    */
   Attachment(headers, content) {
@@ -101,6 +103,9 @@ class Attachment {
 class Mail {
 
   /**
+   * @param dict headers
+   * @param dict body
+   * @param list[Attachment] attachments
    * @constructor
    */
   Mail(headers, body, attachments) {

@@ -67,7 +67,8 @@ var cpu_count = _process.cpu_count
 class PagedValue {
 
   /**
-   * PagedValue()
+   * @param bool? executable
+   * @param bool? private
    * @constructor
    */
   PagedValue(executable, private) {
@@ -83,8 +84,6 @@ class PagedValue {
   }
 
   /**
-   * lock()
-   * 
    * Locks the PagedValue and disallows updating the value.
    */
   lock() {
@@ -94,8 +93,6 @@ class PagedValue {
   }
 
   /**
-   * unlock()
-   * 
    * Unlocks the PagedValue to allow for updating the value.
    */
   unlock() {
@@ -105,8 +102,6 @@ class PagedValue {
   }
 
   /**
-   * is_locked()
-   * 
    * Returns `true` if the PagedValue is locked for updating or `false` otherwise.
    * 
    * @return boolean
@@ -181,11 +176,10 @@ class PagedValue {
   }
 
   /**
-   * set(value: boolean | number | string | list | dictionary)
-   * 
    * Sets the value of the PagedValue to the given value. It returns the number of 
    * bytes written or `false` if the PagedValue is in an invalid state.
    * 
+   * @param {boolean|number|string|list|dictionary} value
    * @return number | boolean
    */
   set(value) {
@@ -210,11 +204,10 @@ class PagedValue {
   }
 
   /**
-   * locked_set(value: boolean | number | string | list | dictionary)
-   * 
    * Locks the PagedValue for writing then sets the value to the given value and unlocks it. 
    * It returns the number of bytes written or `false` if the PagedValue is in an invalid state.
    * 
+   * @param {boolean|number|string|list|dictionary} value
    * @return number | boolean
    */
   locked_set(value) {
@@ -228,8 +221,6 @@ class PagedValue {
   }
 
   /**
-   * get()
-   * 
    * Returns the value stored in the PagedValue or `nil` if no value has been set.
    * 
    * @return any
@@ -275,9 +266,8 @@ class PagedValue {
   }
 
   /**
-   * raw_pointer()
-   * 
    * Returns the pointer to the raw memory paged location pointed to by the object.
+   * 
    * @return ptr
    */
   raw_pointer() {
@@ -311,6 +301,9 @@ class Process {
    * The function passed to a process must accept at least one parameter which 
    * will be passed the instance of the process itself and at most two parameters 
    * if the process was intitalized with a PagedValue.
+   * 
+   * @param function fn
+   * @param {PageValue?} paged
    * @constructor
    */
   Process(fn, paged) {
@@ -330,8 +323,6 @@ class Process {
   }
 
   /**
-   * id()
-   * 
    * Returns the ID of the process or `-1` if the process is in an invalid 
    * state or has not been started.
    * 
@@ -345,9 +336,8 @@ class Process {
   }
 
   /**
-   * on_complete(fn: function)
-   * 
    * Adds a new listener to be called when the process finishes execution.
+   * @param function fn
    */
   on_complete(fn) {
     if !is_function(fn)
@@ -356,8 +346,6 @@ class Process {
   }
 
   /**
-   * start()
-   * 
    * Starts/runs the process. This function returns `true` or `false` if the 
    * process is in an invalid state.
    * 
@@ -395,8 +383,6 @@ class Process {
   }
 
   /**
-   * await()
-   * 
    * Awaits for the process to finish running and returns it's exit code or `-1` 
    * if the process is in an invalid state.
    * 
@@ -412,8 +398,6 @@ class Process {
   }
 
   /**
-   * is_alive()
-   * 
    * Returns `true` if the process is running or `false` if not.
    * 
    * @return boolean
@@ -423,8 +407,6 @@ class Process {
   }
 
   /**
-   * kill()
-   * 
    * Kills the running process. Returns `true` if the process was successfully 
    * killed or `false` otherwise.
    * 
@@ -439,14 +421,16 @@ class Process {
 }
 
 /**
- * process(fn: function [, paged: PagedValue])
- * 
  * Creates a new instance of Process for the function _`fn`_. This 
  * constructor accepts an optional PagedValue.
  * 
  * The function passed to a process must accept at least one parameter which 
  * will be passed the instance of the process itself and at most two parameters 
  * if the process was intitalized with a PagedValue.
+ * 
+ * @param function fn
+ * @param {PageValue?} paged
+ * @default
  */
 def process(fn, paged) {
   return Process(fn, paged)

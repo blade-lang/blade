@@ -25,6 +25,21 @@ DEFINE_SSL_PTR_CONSTANT(BIO_f_ssl)
 DEFINE_SSL_PTR_CONSTANT(BIO_s_connect)
 DEFINE_SSL_PTR_CONSTANT(BIO_s_accept)
 
+// Adapted from https://en.wikibooks.org/wiki/OpenSSL/Error_handling
+static char *ossl_err_as_string() {
+  BIO *bio = BIO_new(BIO_s_mem());
+  ERR_print_errors(bio);
+
+  char *buffer = NULL;
+  size_t length = BIO_get_mem_data(bio, &buffer);
+  char *ret = (char *)calloc(1, 1 + length);
+  if(ret) {
+    memcpy(ret, buffer, length);
+  }
+  BIO_free(bio);
+  return ret;
+}
+
 DECLARE_MODULE_METHOD(ssl_ctx) {
   ENFORCE_ARG_COUNT(ctx, 1);
   ENFORCE_ARG_TYPE(ctx, 0, IS_PTR);
@@ -361,10 +376,10 @@ DECLARE_MODULE_METHOD(ssl_read) {
       int error = SSL_get_error(ssl, bytes);
       if(error == SSL_ERROR_WANT_READ) {
         continue;
-      } else if(error == SSL_ERROR_ZERO_RETURN) {
+      } else if(error == SSL_ERROR_ZERO_RETURN || error == SSL_ERROR_NONE) {
         break;
       } else {
-        RETURN_SSL_ERROR(error);
+        RETURN_SSL_ERROR();
       }
     }
 

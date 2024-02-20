@@ -19,47 +19,56 @@ import _date
 
 
 /**
- * Minimum year supported
+ * Minimum year supported.
+ * @type number
  */
 var MIN_YEAR = 1
 
 /**
- * Maximum year supported
+ * Maximum year supported.
+ * @type number
  */
 var MAX_YEAR = 9999
 
 /**
- * Minimum day supported
+ * Minimum day supported.
+ * @type number
  */
 var MIN_DAY = 1
 
 /**
- * Maximum day supported
+ * Maximum day supported.
+ * @type number
  */
 var MAX_DAY = 31
 
 /**
- * Minimum month supported
+ * Minimum month supported.
+ * @type number
  */
 var MIN_MONTH = 1
 
 /**
- * Maximum year supported
+ * Maximum year supported.
+ * @type number
  */
 var MAX_MONTH = 12
 
 /**
- * Maximum hour supported
+ * Maximum hour supported.
+ * @type number
  */
 var MAX_HOUR = 23
 
 /**
- * Maximum minute supported
+ * Maximum minute supported.
+ * @type number
  */
 var MAX_MINUTE = 59
 
 /**
- * Maximum seconds supported
+ * Maximum seconds supported.
+ * @type number
  */
 var MAX_SECONDS = 59
 
@@ -172,11 +181,8 @@ def _dim(year, month) {
 }
 
 /**
- * gmtime()
- * 
- * returns a dictionary representing the current time without
- * timezone adjustment
- * @return dictionary
+ * Returns a dictionary representing the current time without
+ * timezone adjustment.
  * 
  * Example,
  * 
@@ -185,17 +191,16 @@ def _dim(year, month) {
  * {year: 2022, month: 3, day: 5, week_day: 6, year_day: 63, hour: 17, minute: 30, 
  * seconds: 55, microseconds: 620290, is_dst: false, zone: UTC, gmt_offset: 0}
  * ```
+ * 
+ * @return dictionary
  */
 def gmtime() {
   return _date.gmtime()
 }
 
 /**
- * localtime()
- * 
- * returns a dictionary representing the current time after
+ * Returns a dictionary representing the current time after
  * adjusting for the current timezone
- * @return dictionary
  * 
  * Example:
  * 
@@ -204,18 +209,17 @@ def gmtime() {
  * {year: 2022, month: 3, day: 5, week_day: 6, year_day: 63, hour: 18, minute: 18, 
  * seconds: 35, microseconds: 598166, is_dst: false, zone: WAT, gmt_offset: 3600}
  * ```
+ * 
+ * @return dictionary
  */
 def localtime() {
   return _date.localtime()
 }
 
 /**
- * mktime(year: number, month: number, day: number, hour: number, minute: number, seconds: number, is_dst: bool)
- * 
- * convert the broken-out time into a time value with the same encoding as 
+ * Convert the broken-out time into a time value with the same encoding as 
  * that of the values returned by the time() function (that is, seconds
  *  from the Epoch, UTC) according to the timezone settings.
- * @return number
  * 
  * <br>
  * Example:
@@ -225,6 +229,15 @@ def localtime() {
  * %> echo date.mktime(2021, 2, 12, 13, 43, 11, false)
  * 1613133791
  * ```
+ * 
+ * @param number year
+ * @param number month
+ * @param number day
+ * @param number hour
+ * @param number minute
+ * @param number seconds
+ * @param bool is_dst
+ * @return number
  */
 def mktime(year, month, day, hour, minute, seconds, is_dst) {
   return _date.mktime(year, month, day, hour, minute, seconds, is_dst)
@@ -257,12 +270,17 @@ def mktime(year, month, day, hour, minute, seconds, is_dst) {
  */
 class Date {
 
-  /*
-   * Date([year: number [, month: number [, day: number [, hour: number [, minute: number [, seconds: number]]]]]])
-   *
+  /**
+   * @note All arguments are optional
+   * @note When no argument is given, the date will be set to the current system date.
+   * @param number? year
+   * @param number? month
+   * @param number? day
+   * @param number? hour
+   * @param number? minute
+   * @param number? seconds
+   * @param bool? is_dst
    * @constructor 
-   * @note all arguments are optional
-   * @note when no argument is given, the date will be set to the current system date
    */
   Date(year, month, day, hour, minute, seconds) {
 
@@ -315,10 +333,7 @@ class Date {
   }
 
   /** 
-   * is_leap()
-   * 
-   * returns true if the year is a leap year or false otherwise
-   * @return bool
+   * Returns true if the year is a leap year or false otherwise.
    * 
    * Example,
    * 
@@ -328,17 +343,16 @@ class Date {
    * %> date(2020).is_leap()
    * true
    * ```
+   * 
+   * @return bool
    */
   is_leap() {
     return _is_leap(self.year)
   }
 
   /** 
-   * days_before_month()
-   * 
-   * returns the number of days in the year preceeding the first 
-   * day of the month
-   * @return number
+   * Returns the number of days in the year preceeding the first 
+   * day of the month.
    * 
    * Example,
    * 
@@ -346,6 +360,8 @@ class Date {
    * %> date(2021, 5, 11).days_before_month(7)
    * 142
    * ```
+   * 
+   * @return number
    */
   days_before_month(month) {
     assert month >= 1 and month <= 12, 'month must be in 1..12'
@@ -371,10 +387,7 @@ class Date {
   }
 
   /** 
-   * days_before_year(year: int)
-   * 
-   * returns the number of days before January 1st of year
-   * @return number
+   * Returns the number of days before January 1st of year.
    * 
    * Example,
    * 
@@ -382,6 +395,9 @@ class Date {
    * %> date(2021, 5, 11).days_before_year(2024)
    * 811
    * ```
+   * 
+   * @param int year
+   * @return number
    */
   days_before_year(year) {
     assert is_int(year), 'integer expected'
@@ -406,10 +422,7 @@ class Date {
   }
 
   /** 
-   * days_in_month()
-   * 
-   * returns the number of days in month for the specified year
-   * @return number
+   * Returns the number of days in month for the specified year.
    * 
    * Example,
    * 
@@ -417,16 +430,15 @@ class Date {
    * %> date(2021, 6).days_in_month()
    * 30
    * ```
+   * 
+   * @return number
    */
   days_in_month() {
     return _dim(self.year, self.month)
   }
 
   /** 
-   * weekday()
-   * 
-   * returns the numbered day of the week
-   * @return number
+   * Returns the numbered day of the week.
    * 
    * Example,
    * 
@@ -434,6 +446,8 @@ class Date {
    * %> date(2021, 5, 11).weekday()
    * 2
    * ```
+   * 
+   * @return number
    */
   weekday() {
     var day = self.day, month = self.month, year = self.year
@@ -446,10 +460,7 @@ class Date {
   }
 
   /**
-   * week_number()
-   * 
-   * returns the number of the current week in the year
-   * @return number
+   * Returns the number of the current week in the year.
    * 
    * Example,
    * 
@@ -457,6 +468,8 @@ class Date {
    * %> date(2021, 5, 11).week_number()
    * 19
    * ```
+   * 
+   * @return number
    */
   week_number() {
     var year = self.year
@@ -477,49 +490,47 @@ class Date {
   }
 
   /**
-   * format(format: string)
-   * formats the current date based on the specified string
+   * Formats the current date based on the specified string
    * 
    * Blade's Date formatting table
    * 
-   *   Character | Description                                               | Example
-   *   ----------|-----------------------------------------------------------|-----------------------------------
-   *   A         | uppercase Ante meridiem and Post meridiem                 | AM or PM
-   *   a         | lowercase Ante meridiem and Post meridiem                 | am or pm
-   *   d         | day of the month with leading zero                        | 01 to 31
-   *   D         | textual representation of a day, three letters            | Mon - Sun
-   *   j         | day of the month without leading zero                     | 1 to 31
-   *   l         | full textual representation of the day of the week        | Monday - Sunday
-   *   N         | ISO-8601 numeric representation of the day of the week    | 1 - 7
-   *   S         | English ordinal suffix for the day of the month           | st, nd, rd or th
-   *   w         | numeric representation of the day of the week             | 0 - 6
-   *   z         | the day of the year (starting from 0)                     | 0 - 365
-   *   W         | ISO-8601 week number of year, weeks starting on Monday    | E.g. 33 (the 33rd week of the year)
-   *   F         | full textual representation of a month                    | January - December
-   *   m         | numeric representation of a month, with leading zeros     | 01 - 12
-   *   n         | numeric representation of a month, without leading zeros  | 1 - 12
-   *   M         | short textual representation of a month, three letters    | Jan - Dec
-   *   t         | number of days in the given month                         | 28 - 31
-   *   L         | whether it's a leap year                                  | 1 if true, 0 otherwise
-   *   y         | two digit representation of a year                        | e.g. 09 or 99
-   *   Y         | full numeric representation of a year using 4 digits      | e.g. 2009 or 1999
-   *   h         | 12 hour format of an hour with leading zeros              | 01 - 12
-   *   H         | 24 hour format of an hour with leading zeros              | 01 - 24
-   *   g         | 12 hour format of an hour without leading zeros           | 1 - 12
-   *   G         | 24 hour format of an hour without leading zeros           | 1 - 24
-   *   i         | minutes with leading zero                                 | 00 - 59
-   *   s         | seconds with leading zero                                 | 00 - 59
-   *   u         | microseconds                                              | e.g. 987654
-   *   v         | milliseconds                                              | e.g. 987
-   *   e         | timezone identifier                                       | e.g. GMT, UTC, WAT
-   *   I         | whether or not the date is in daylight saving time        | 1 for true, 0 otherwise
-   *   O         | difference to GMT without colon between hours and minutes | e.g. +0100
-   *   P         | difference to GMT with colon between hours and minutes    | e.g. +01:00
-   *   Z         | timezone offset in seconds                                | -43200 - 50400
-   *   c         | ISO 8601 date                                             | e.g. 2020-03-04T15:19:21+00:00
-   *   r         | RFC 2822 formatted date                                   | e.g. Thu, 21 Dec 2000 16:01:07 +0200
+   * Character | Description                                               | Example
+   * ----------|-----------------------------------------------------------|-----------------------------------
+   * A         | uppercase Ante meridiem and Post meridiem                 | AM or PM
+   * a         | lowercase Ante meridiem and Post meridiem                 | am or pm
+   * d         | day of the month with leading zero                        | 01 to 31
+   * D         | textual representation of a day, three letters            | Mon - Sun
+   * j         | day of the month without leading zero                     | 1 to 31
+   * l         | full textual representation of the day of the week        | Monday - Sunday
+   * N         | ISO-8601 numeric representation of the day of the week    | 1 - 7
+   * S         | English ordinal suffix for the day of the month           | st, nd, rd or th
+   * w         | numeric representation of the day of the week             | 0 - 6
+   * z         | the day of the year (starting from 0)                     | 0 - 365
+   * W         | ISO-8601 week number of year, weeks starting on Monday    | E.g. 33 (the 33rd week of the year)
+   * F         | full textual representation of a month                    | January - December
+   * m         | numeric representation of a month, with leading zeros     | 01 - 12
+   * n         | numeric representation of a month, without leading zeros  | 1 - 12
+   * M         | short textual representation of a month, three letters    | Jan - Dec
+   * t         | number of days in the given month                         | 28 - 31
+   * L         | whether it's a leap year                                  | 1 if true, 0 otherwise
+   * y         | two digit representation of a year                        | e.g. 09 or 99
+   * Y         | full numeric representation of a year using 4 digits      | e.g. 2009 or 1999
+   * h         | 12 hour format of an hour with leading zeros              | 01 - 12
+   * H         | 24 hour format of an hour with leading zeros              | 01 - 24
+   * g         | 12 hour format of an hour without leading zeros           | 1 - 12
+   * G         | 24 hour format of an hour without leading zeros           | 1 - 24
+   * i         | minutes with leading zero                                 | 00 - 59
+   * s         | seconds with leading zero                                 | 00 - 59
+   * u         | microseconds                                              | e.g. 987654
+   * v         | milliseconds                                              | e.g. 987
+   * e         | timezone identifier                                       | e.g. GMT, UTC, WAT
+   * I         | whether or not the date is in daylight saving time        | 1 for true, 0 otherwise
+   * O         | difference to GMT without colon between hours and minutes | e.g. +0100
+   * P         | difference to GMT with colon between hours and minutes    | e.g. +01:00
+   * Z         | timezone offset in seconds                                | -43200 - 50400
+   * c         | ISO 8601 date                                             | e.g. 2020-03-04T15:19:21+00:00
+   * r         | RFC 2822 formatted date                                   | e.g. Thu, 21 Dec 2000 16:01:07 +0200
    * 
-   * @return string
    * 
    * Example,
    * 
@@ -538,6 +549,9 @@ class Date {
    * %> date().format('l jS \o\\f F Y h:i:s A')
    * 'Wednesday 17th of May 2021 01:39:08 PM'
    * ```
+   * 
+   * @param string format
+   * @return string
    */
   format(format) {
     var result = ''
@@ -693,10 +707,7 @@ class Date {
   }
 
   /**
-   * http()
-   * 
-   * returns the HTTP date representation of the current date.
-   * @return string
+   * Returns the HTTP date representation of the current date.
    * 
    * For example,
    * 
@@ -704,16 +715,15 @@ class Date {
    * %> date().http()
    * 'Sat, 05 Mar 2022 06:23:32 GMT'
    * ```
+   * 
+   * @return string
    */
   http() {
     return self.format('D, d M Y h:i:s') + ' GMT'
   }
 
   /**
-   * jd()
-   * 
-   * converts the current date to a julian day and time.
-   * @return number
+   * Converts the current date to a julian day and time.
    * 
    * Example,
    * 
@@ -721,6 +731,8 @@ class Date {
    * %> date(2021, 5, 11).jd()
    * 2459345
    * ```
+   * 
+   * @return number
    */
   jd() {
     # calculate the julian day i.e. Y-m-d value
@@ -738,9 +750,8 @@ class Date {
   }
 
   /**
-   * unix_time()
+   * Returns unix `mktime` equivalent of the current date.
    * 
-   * returns unix `mktime` equivalent of the current date
    * @return number
    */
   unix_time() {
@@ -767,11 +778,7 @@ class Date {
 
 
 /** 
- * from_time(time: number)
- * 
- * returns a date object from a unix timestamp
- * @note number must be in seconds.
- * @return Date
+ * Returns a date object from a unix timestamp.
  * 
  * Example,
  * 
@@ -779,6 +786,10 @@ class Date {
  * %> to_string(date.from_time(time()))
  * '<Date year: 2022, month: 3, day: 5, hour: 18, minute: 34, seconds: 1>'
  * ```
+ * 
+ * @note Time must be in seconds.
+ * @param number time
+ * @return Date
  */
 def from_time(time) {
 
@@ -891,10 +902,7 @@ def from_time(time) {
 
 
 /**
- * from_jd(julian_date: number)
- * 
- * returns a date instance representing the julian date
- * @return number
+ * Returns a date instance representing the julian date.
  * 
  * Example,
  * 
@@ -902,6 +910,9 @@ def from_time(time) {
  * %> to_string(date.from_jd(22063))
  * '<Date year: 2022, month: 3, day: 5, hour: 18, minute: 35, seconds: 0>'
  * ```
+ * 
+ * @param number jdate
+ * @return number
  */
 def from_jd(jdate) {
   if jdate < 0 die Exception('Invalid julian date')
@@ -939,12 +950,18 @@ def from_jd(jdate) {
   return Date(year, month, day, hour, minute, seconds)
 }
 
-/*
- * date([year: number [, month: number [, day: number [, hour: number [, minute: number [, seconds: number]]]]]])
- *
+/**
  * Returns a new `Date` instance representing the given system date or the current date if no argument is specified.
+ * 
+ * @param number? year
+ * @param number? month
+ * @param number? day
+ * @param number? hour
+ * @param number? minute
+ * @param number? seconds
+ * @param bool? is_dst
  * @return Date
- * @note all arguments are optional
+ * @default
  */
 def date(year, month, day, hour, minute, seconds) {
   return Date(year, month, day, hour, minute, seconds)

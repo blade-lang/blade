@@ -25,10 +25,11 @@ class Encoder {
   var _is_list = false
 
   /**
-   * Encoder([compact: boolean = false, [max_depth: number = 1024]])
+   * @param bool? compact: Default value is `false`.
+   * @param number? max_depth: Default value is `1024`.
+   * @note Depth starts from zero
+   * @note Set max_depth to `0` to disable max depth
    * @constructor
-   * @note that depth starts from zero
-   * @note set max_depth to `0` to disable max depth
    */
   Encoder(compact, max_depth) {
     if max_depth {
@@ -56,12 +57,9 @@ class Encoder {
     return ''
   }
 
-  /**
-   * _encode(value: any)
-   *
-   * encode helper method.
-   * @note this function calls the parent encode() method whenever the depth of the encoding increases
-   */
+  
+  # Encode helper method.
+  # @note this function calls the parent encode() method whenever the depth of the encoding increases.
   _encode(value) {
     var spacing = self._item_spacing
     using typeof(value) {
@@ -110,9 +108,10 @@ class Encoder {
   }
 
   /**
-   * encode(value: any)
-   *
-   * main encode method
+   * Encodes a value to it's corresponding JSON string.
+   * 
+   * @param any value
+   * @return string
    */
   encode(value) {
 

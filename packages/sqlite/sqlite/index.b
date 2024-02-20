@@ -194,10 +194,10 @@
 import .sqlite3 { * }
 
 /**
- * open([path: string])
- * 
  * Returns an handle to a sqlite3 database. If _path_ is not given, 
  * it will create an in-memory sqlite database.
+ * 
+ * @param string? path
  * @return SQLite3
  */
 def open(path) {

@@ -8,6 +8,11 @@ import .infos { Info }
  * cURL Mime object for multipart-data forms and POST requests.
  */
 class CurlMime {
+
+  /**
+   * @pram {Curl} curl
+   * @constructor
+   */
   CurlMime(curl) {
     if !instance_of(curl, Curl)
       die Exception('instance of Curl expected')
@@ -15,9 +20,11 @@ class CurlMime {
   }
 
   /**
-   * add(name: string, value: any)
-   * 
    * Adds a new mime part with the given name and value.
+   * 
+   * @param string name
+   * @param any value
+   * @return bool
    */
   add(name, value) {
     if !is_string(name)
@@ -33,9 +40,11 @@ class CurlMime {
   }
 
   /**
-   * add_as(value: any, type: string)
-   *
    * Adds a new mime part with the given data and type.
+   * 
+   * @param any value
+   * @param string type
+   * @return bool
    */
   add_as(value, type) {
     if !is_string(type)
@@ -51,9 +60,10 @@ class CurlMime {
   }
 
   /**
-   * add_data(data: any)
-   *
    * Adds a new mime part with the given data.
+   * 
+   * @param any data
+   * @return bool
    */
   add_data(data) {
     # This allows us to benefit from to_string decorators.
@@ -64,9 +74,11 @@ class CurlMime {
   }
 
   /**
-   * add_file(name: string, file: string)
-   *
    * Adds a new mime part with the given name and file.
+   * 
+   * @param string name
+   * @param {string|instance} value
+   * @return bool
    */
   add_file(name, value) {
     if !is_string(name)
@@ -82,9 +94,11 @@ class CurlMime {
   }
 
   /**
-   * add_mime(mime: CurlMime, type: string)
-   *
    * Adds a new mime subpart with the given mime.
+   * 
+   * @param {CurlMime} mime
+   * @param string type
+   * @return bool
    */
   add_mime(mime, type) {
     if !instance_of(mime, CurlMime)
@@ -99,9 +113,9 @@ class CurlMime {
   }
 
   /**
-   * set_encoding(encoding: string)
-   *
    * Sets the encoding with which the mime will be transfered.
+   * 
+   * @param string encoding
    */
   set_encoding(encoding) {
     if !is_string(encoding)
@@ -110,8 +124,6 @@ class CurlMime {
   }
 
   /**
-   * get_pointer()
-   * 
    * Returns the raw pointer object to the underlying libcurl mime implementation.
    */
   get_pointer() {
@@ -126,7 +138,7 @@ class CurlMime {
 class CurlList {
 
   /**
-   * CurlList(items: list)
+   * @param list[string] items
    * @constrctor
    */
   CurlList(items) {
@@ -139,8 +151,6 @@ class CurlList {
   }
 
   /**
-   * close()
-   * 
    * Close and disposes the pointer to the list
    */
   close() {
@@ -148,8 +158,6 @@ class CurlList {
   }
 
   /**
-   * get_pointer()
-   * 
    * Returns the raw pointer object to the underlying libcurl list implementation.
    */
   get_pointer() {
@@ -164,7 +172,6 @@ class CurlList {
 class Curl {
 
   /**
-   * Curl()
    * @constructor
    */
   Curl() {
@@ -172,8 +179,6 @@ class Curl {
   }
 
   /**
-   * set_option(option: Option, value: any)
-   * 
    * This function is used to tell `curl` how to behave. By setting the
    * appropriate options, the application can change `curl`'s behavior.  
    * All options are set with an option followed by a parameter. That parameter
@@ -191,6 +196,8 @@ class Curl {
    * 
    * @note Strings passed to `curl` as arguments, must not exceed 8MB in size.
    * @note The order in which the options are set does not matter.
+   * @param {Option} option
+   * @param any value
    * @return boolean
    */
   set_option(option, value) {
@@ -205,39 +212,38 @@ class Curl {
   }
 
   /**
-   * get_info(info: Info)
-   * 
    * Requests internal information from the `curl` session with this function.
    * Use this function AFTER performing a transfer if you want to get transfer 
    * related data.
-   * @return string | number | list
+   * 
+   * @param {Info} info
+   * @return {string|number|list}
    */
   get_info(info) {
     return _curl.easy_getinfo(self._ptr, info)
   }
 
   /**
-   * escape(str: string)
-   * 
    * This function converts the given input string to a URL encoded string and
    * returns that as a new allocated string. All input characters that are not
    * a-z, A-Z, 0-9, '-', '.', '_' or '~' are converted to their "URL escaped"
    * version (%NN where NN is a two-digit hexadecimal number).
    * 
+   * @note This function does not accept a strings longer than 8MB.
+   * @param string str
    * @return string
-   * @note This function does not accept a strings longer than 8 MB.
    */
   escape(str) {
     return _curl.easy_escape(self._ptr, str)
   }
 
   /**
-   * unescape(str: string)
-   * 
    * This function converts the given URL encoded input string to a "plain
    * string" and returns that in an allocated memory area. All input characters 
    * that are URL encoded (%XX where XX is a two-digit hexadecimal number) are 
    * converted to their decoded versions.
+   * 
+   * @param string str
    * @return string
    */
   unescape(str) {
@@ -245,8 +251,6 @@ class Curl {
   }
 
   /**
-   * send()
-   * 
    * Performs the entire request in a blocking manner and returns when done, or 
    * if it failed. It returns a dictionary containing the `headers` and `body` key.
    * @return dict
@@ -254,14 +258,14 @@ class Curl {
    * > You must never call this function simultaneously from two places using
    * > the same instance. Let the function return first before invoking it
    * > another time.
+   * 
+   * @return dictionary
    */
   send() {
     return _curl.easy_perform(self._ptr)
   }
 
   /**
-   * reset()
-   * 
    * Re-initializes the instace to the default values. This puts back the
    * instance to the same state as it was in when it was just created.
    * 
@@ -273,8 +277,6 @@ class Curl {
   }
 
   /**
-   * close()
-   * 
    * Closes the current Curl instance.
    * 
    * This might close all connections this instance has used and possibly has
@@ -289,8 +291,6 @@ class Curl {
   }
 
   /**
-   * get_pointer()
-   * 
    * Returns the raw pointer object to the underlying libcurl.
    */
   get_pointer() {

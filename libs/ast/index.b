@@ -19,32 +19,36 @@ import .token { * }
 
 
 /**
- * parse(source: string)
+ * Parses a given source code and outputs Blade AST objects.
  * 
- * parses a given source code and outputs Blade AST objects.
+ * @param string source
+ * @param string? path
  * @return ParseResult
  */
-def parse(source) {
+def parse(source, path) {
   if !is_string(source)
-    die Exception('source code expected')
+    die Exception('string expected in argument 1 (source)')
+  if path != nil and !is_string(path)
+    die Exception('string expected in argument 2 (path)') 
 
   # scan the source...
-  var scanner = Scanner(source)
+  var scanner = Scanner(source, path)
   var tokens = scanner.scan()
   
   # parse the scanned tokens
-  var parser = Parser(tokens)
+  var parser = Parser(tokens, path)
   return parser.parse()
 }
 
 /**
- * json(source: string)
+ * Parses the give source code and outputs a JSON representation of 
+ * it's AST structure.
  * 
- * parses the give source code and outputs a JSON 
- * representation of it's AST structure.
+ * @param string source
+ * @param string? path
  * @return string
  */
-def json(source) {
+def json(source, path) {
   # return Exception('not yet implemented')
-  return js.Encoder(true, 0).encode(parse(source))
+  return js.Encoder(true, 0).encode(parse(source, path))
 }

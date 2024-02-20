@@ -15,15 +15,16 @@ import .response { HttpResponse }
 class HttpClient {
   
   /**
-   * The user agent of the client used to make the request
-   * @default Blade HTTP Client/1.0
+   * The user agent of the client used to make the request. 
+   * Default value &mdash; `Blade HTTP Client/1.0`.
+   * @type string
    */
   var user_agent = 'Blade HTTP Client/1.0'
 
   /**
    * Indicates if we receive a redirect from a server, this flag tells us whether 
-   * we should follow it or not.
-   * @default true
+   * we should follow it or not. Default value is `true`.
+   * @type bool
    */
   var follow_redirect = true
 
@@ -32,7 +33,7 @@ class HttpClient {
    * they have mentioned in their server certificate's commonName (or subjectAltName) 
    * fields, connection will fail. You can skip this check by setting to true, but this 
    * will make the connection less secure.
-   * @default false
+   * @type bool
    */
   var skip_hostname_verification = false
 
@@ -40,7 +41,7 @@ class HttpClient {
    * Indicates if you want to connect to a site who isn't using a certificate that is
    * signed by one of the certs in the CA bundle you have, you can skip the verification 
    * of the server's certificate. This makes the connection A LOT LESS SECURE.
-   * @default false
+   * @type bool
    */
   var skip_peer_verification = false
 
@@ -48,48 +49,51 @@ class HttpClient {
   var cookie_file
 
   /**
-   * the site that refers us to the current site
-   * @default nil
+   * The site that refers us to the current site
+   * @type string
    */
   var referer
 
   /**
-   * If you have a CA cert for the server stored someplace else than in the default bundle
+   * If you have a CA cert for the server stored someplace else than in the default bundle.
+   * @type string
    */
   var ca_cert
 
   /**
-   * The connect timeout duration in milliseconds
-   * @default 60s
+   * The connect timeout duration in milliseconds. Default value is 60,000 (1 minute).
+   * @type number
    */
   var connect_timeout = 60000
 
   /**
-   * The receive timeout duration in milliseconds
-   * @default 300s
+   * The receive timeout duration in milliseconds. Default value is 300,000 (5 minutes).
+   * @type number
    */
   var receive_timeout = 300000
 
   /**
-   * A dictionary of headers sent along with the request
+   * A dictionary of headers sent along with the request.
+   * @type dict
    */
   var headers = {}
 
   /**
    * Indicates whether to remove the expect header or not only applies to requests with 
    * files in the body
-   * @default false
+   * @type bool
    */
   var no_expect = false
 
   /**
-   * send_request(url: string, [method: string = 'GET', data: string])
-   *
    * Sends an Http request and returns a HttpResponse.
    * 
-   * @default method: GET
+   * @param string uri
+   * @param string? method: Default value is `GET`.
+   * @param {string|dict|nil} data
    * @return HttpResponse
-   * @throws SocketException, Exception
+   * @dies SocketException
+   * @dies Exception
    */
   send_request(uri, method, data) {
 
@@ -130,44 +134,54 @@ class HttpClient {
   }
 
   /**
-   * get(url: string)
-   *
-   * sends an Http GET request and returns an HttpResponse.
+   * Sends an Http GET request and returns an HttpResponse.
+   * 
+   * @param string url
    * @return HttpResponse
-   * @throws Exception, SocketExcepion, HttpException
+   * @dies Exception
+   * @dies SocketExcepion
+   * @dies HttpException
    */
   get(url) {
     return self.send_request(url, 'GET')
   }
 
   /**
-   * post(url: string, [data: string | bytes])
-   *
-   * sends an Http POST request and returns an HttpResponse.
+   * Sends an Http POST request and returns an HttpResponse.
+   * 
+   * @param string url
+   * @param {string|bytes|nil} data
    * @return HttpResponse
-   * @throws Exception, SocketExcepion, HttpException
+   * @dies Exception
+   * @dies SocketExcepion
+   * @dies HttpException
    */
   post(url, data) {
     return self.send_request(url, 'POST', data)
   }
 
   /**
-   * put(url: string, [data: string | bytes])
-   *
-   * sends an Http PUT request and returns an HttpResponse.
+   * Sends an Http PUT request and returns an HttpResponse.
+   * 
+   * @param string url
+   * @param {string|bytes|nil} data
    * @return HttpResponse
-   * @throws Exception, SocketExcepion, HttpException
+   * @dies Exception
+   * @dies SocketExcepion
+   * @dies HttpException
    */
   put(url, data) {
     return self.send_request(url, 'PUT', data)
   }
 
   /**
-   * delete(url: string)
-   *
-   * sends an Http DELETE request and returns an HttpResponse.
+   * Sends an Http DELETE request and returns an HttpResponse.
+   * 
+   * @param string url
    * @return HttpResponse
-   * @throws Exception, SocketExcepion, HttpException
+   * @dies Exception
+   * @dies SocketExcepion
+   * @dies HttpException
    */
   delete(url) {
     return self.send_request(url, 'DELETE', nil)

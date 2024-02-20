@@ -3,16 +3,18 @@
  * base Defn class
  */
 class Defn {
+  var file
 }
 
 /**
- * Doc Defn representation
+ * Doc Defn representation.
+ * 
  * @serializable
  */
 class DocDefn < Defn {
 
   /**
-   * DocDefn(data)
+   * @param {Defn|any|nil} data
    * @constructor
    */
   DocDefn(data) {

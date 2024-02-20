@@ -27,9 +27,9 @@
  * import http
  * 
  * var client = http.HttpClient()
- * client.receive_timeout = 30000
- * var res = client.send_request('http://example/endpoint?query=1', 'GET')
- * echo res.body
+ * client.receive_timeout = 30000 # Optional
+ * var res = client.send_request('http://example.com/endpoint?query=1', 'GET')
+ * echo res.body.to_string()
  * ```
  * 
  * Creating a server with the `http` module is also a breeze. 
@@ -41,13 +41,9 @@
  * import json
  * 
  * var server = http.server(3000)
- * server.on_receive(@(request, response) {
- *   echo 'Request from ${request.ip} to ${request.path}.'
- *   response.headers['Content-Type'] = 'application/json'
- *   response.write(json.encode(request))
+ * server.handle('GET', '/', @(request, response) {
+ *   response.json(request)
  * })
- * 
- * echo 'Listening on Port 3000...'
  * server.listen()
  * ```
  * 
@@ -68,8 +64,6 @@ import .server { HttpServer }
 var _client = HttpClient()
 
 /**
- * set_headers(headers: dict)
- * 
  * Sets the request headers for the current module instance.
  *  
  * This function returns HttpClient in order to allow for idiomatic 
@@ -77,15 +71,15 @@ var _client = HttpClient()
  * 
  * ```blade
  * import http
- * var client = http.set_headers({
+ * echo http.set_headers({
  *   'Authorization': 'Bearer SomeAPIBearerToken',
  *   'Host': 'example.com',
- * })
- * 
- * echo client.get('/current-user').body.to_string()
+ * }).get('http://example.com/current-user').body.to_string()
  * ```
+ * 
+ * @param dict headers
  * @return HttpClient
- * @throws Exception
+ * @dies Exception
  */
 def set_headers(headers) {
   if !is_dict(headers)
@@ -95,56 +89,69 @@ def set_headers(headers) {
 }
 
 /**
- * get(url: string)
- *
- * sends an Http GET request and returns an HttpResponse
+ * Sends an Http GET request and returns an HttpResponse
  * or throws one of SocketException or Exception if it fails.
+ * 
+ * @param string url
  * @return HttpResponse
- * @throws Exception, SocketExcepion, HttpException
+ * @dies Exception
+ * @dies SocketExcepion
+ * @dies HttpException
  */
 def get(url) {
   return _client.get(url)
 }
 
 /**
- * post(url: string, [data: string | bytes])
- *
- * sends an Http POST request and returns an HttpResponse.
+ * Sends an Http POST request and returns an HttpResponse.
+ * 
+ * @param string url
+ * @param {string|bytes|nil} data
  * @return HttpResponse
- * @throws Exception, SocketExcepion, HttpException
+ * @dies Exception
+ * @dies SocketExcepion
+ * @dies HttpException
  */
 def post(url, data) {
   return _client.post(url, data)
 }
 
 /**
- * put(url: string, [data: string | bytes])
- *
- * sends an Http PUT request and returns an HttpResponse.
+ * Sends an Http PUT request and returns an HttpResponse.
+ * 
+ * @param string url
+ * @param {string|bytes|nil} data
  * @return HttpResponse
- * @throws Exception, SocketExcepion, HttpException
+ * @dies Exception
+ * @dies SocketExcepion
+ * @dies HttpException
  */
 def put(url, data) {
   return _client.put(url, data)
 }
 
 /**
- * delete(url: string)
- *
- * sends an Http DELETE request and returns an HttpResponse.
+ * Sends an Http DELETE request and returns an HttpResponse.
+ * 
+ * @param string url
  * @return HttpResponse
- * @throws Exception, SocketExcepion, HttpException
+ * @dies Exception
+ * @dies SocketExcepion
+ * @dies HttpException
  */
 def delete(url) {
   return _client.send_request(url, 'DELETE', nil)
 }
 
 /**
- * server(port: int, address: string)
- * 
  * Creates an new HttpServer instance.
+ * 
+ * @param int port
+ * @param string address
  * @return HttpServer
- * @throws Exception, SocketExcepion, HttpException
+ * @dies Exception
+ * @dies SocketExcepion
+ * @dies HttpException
  */
 def server(port, address) {
   return HttpServer(port, address)

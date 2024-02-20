@@ -16,11 +16,12 @@
  * Mime format representation class.
  */
 class MimeFormat {
+  
   /**
-   * MimeFormat(mimetype: string [, header: list | bytes])
-   * 
-   * @constructor
+   * @param string mimetype
+   * @param {list|bytes|nil} header
    * @note only the first 16 bytes of a file header will be used.
+   * @constructor
    */
   MimeFormat(mimetype, header) {
     if !is_string(mimetype)
@@ -389,12 +390,8 @@ var _mimes = {
 
 
 /**
- * detect_from_name(name: string)
  * Detects the mimetype of a file based on the
  * extension defined in it's path.
- *
- * @return string
- * @note For popular files such as Jpeg and Pngs, calling this method directly is more efficient and provides a faster lookup.
  * 
  * Example,
  * 
@@ -402,6 +399,10 @@ var _mimes = {
  * import mime
  * echo mime.detect_from_name('myimage.png')
  * ```
+ *
+ * @note For popular files such as Jpeg and Pngs, calling this method directly is more efficient and provides a faster lookup.
+ * @param string name
+ * @return string
  */
 def detect_from_name(name) {
   if !is_string(name)
@@ -414,17 +415,11 @@ def detect_from_name(name) {
 }
 
 /**
- * detect_from_header(file: file) 
  * Detects the mimetype of a file based on it's file header.
  *
  * When multiple file formats share very similar or shadowing
  * file headers (such as the relationship between Zip files and Docx files),
  * this method will perform an extension before returning it's result.
- *
- * @return string
- * @note For dealing with files without extension, or where the accuracy of the file extension cannot be trusted, this method provides a more efficient lookup.
- * @note This method may produce slightly more rigorous results
- * @note This method requires that the file must be opened in binary mode
  * 
  * Example,
  * 
@@ -433,6 +428,12 @@ def detect_from_name(name) {
  * var f = file('my_file.ext', 'rb')
  * echo mime.detect_from_header(f)
  * ```
+ *
+ * @note For dealing with files without extension, or where the accuracy of the file extension cannot be trusted, this method provides a more efficient lookup.
+ * @note This method may produce slightly more rigorous results
+ * @note This method requires that the file must be opened in binary mode.
+ * @param file file
+ * @return string
  */
 def detect_from_header(file) {
   if !is_file(file)
@@ -474,7 +475,6 @@ def detect_from_header(file) {
 }
 
 /**
- * detect(file: file)
  * Performs mimetype detection on a file.
  * 
  * this method is capable of detecting file mimetypes even
@@ -483,9 +483,6 @@ def detect_from_header(file) {
  * If the file is opened in binary mode, it first attempt the more
  * accurate header check. If the header check returns a generic result 
  * (i.e. application/octet-stream), it performs an extension lookup.
- *
- * @return string
- * @note this method gives the best result, but slightly slower than a direct lookup of name or header.
  * 
  * Example,
  * 
@@ -499,6 +496,10 @@ def detect_from_header(file) {
  * 
  * echo mime.detect(f)
  * ```
+ *
+ * @note this method gives the best result, but slightly slower than a direct lookup of name or header.
+ * @param file file
+ * @return string
  */
 def detect(file) {
   if !is_file(file)
@@ -515,13 +516,8 @@ def detect(file) {
 }
 
 /**
- * extend(extension: string, format: MimeFormat)
- * 
  * Extends the mime module with support for files with the given _extension_ as 
  * defined in the given _format_.
- * 
- * @return bool
- * @note the extension MUST start with `.`
  * 
  * Example,
  * 
@@ -534,6 +530,11 @@ def detect(file) {
  * %> mime.detect_from_name('myfile.ppk')
  * 'file/ppk'
  * ```
+ * 
+ * @note the extension MUST start with `.`
+ * @param string extension
+ * @param MimeFormat format
+ * @return bool
  */
 def extend(extension, format) {
   if !is_string(extension) or extension[0] != '.'

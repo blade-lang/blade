@@ -294,6 +294,7 @@ class POP3 {
  * to the constructor.
  * 
  * @return {POP3}
+ * @default
  */
 def pop3(options) {
   if options != nil and !is_dict(options)

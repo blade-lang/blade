@@ -19,27 +19,32 @@ def _get_doc_string(data) {
 
 
 /**
- * Parses raw Blade tokens and produces an Abstract Syntax Tree
+ * Parses raw Blade tokens and produces an Abstract Syntax Tree.
+ * 
+ * @printable
  */
 class Parser {
 
   /**
-   * a pointer to the next token waiting to be parsed
-   */
-  var _current = 0
-
-  /**
-   * the nested scope depth
-   */
-  var _block_count = 0
-
-  /**
-   * Parser(tokens: []Token)
+   * @param {list[Token]} tokens
+   * @param string? path
    * @constructor 
    */
-  Parser(tokens) {
+  Parser(tokens, path) {
+    if !is_list(tokens)
+      die Exception('list expected in argument 1 (tokens)')
+    if !is_string(path)
+      die Exception('string expected in argument 2 (path)')
+
     # set instance variable token
-    self.tokens = tokens
+    self._tokens = tokens
+
+    # the current path of the parser
+    self._path = path
+    # the nested scope depth
+    self._block_count = 0
+    # a pointer to the next token waiting to be parsed
+    self._current = 0
   }
 
   /**
@@ -97,14 +102,14 @@ class Parser {
    * returns the current token we have yet to consume
    */
   _peek() {
-    return self.tokens[self._current]
+    return self._tokens[self._current]
   }
 
   /**
    * returns the most recently consumed token
    */
   _previous() {
-    return self.tokens[self._current - 1]
+    return self._tokens[self._current - 1]
   }
 
   /**
@@ -125,6 +130,10 @@ class Parser {
       if self._check(t) return self._advance()
     }
     die ParseException(self._peek(), message)
+  }
+
+  _get_doc_defn_data() {
+    return self._previous().literal[3,-2].replace('/^\s*\*\s?/m', '').trim()
   }
 
   _end_statement() {
@@ -187,6 +196,7 @@ class Parser {
    * completes index access expressions
    */
   _finish_index(callee) {
+      self._ignore_newline()
     var args = [self._expression()]
 
     if self._match(COMMA) {
@@ -194,6 +204,7 @@ class Parser {
       args.append(self._expression())
     }
 
+    self._ignore_newline()
     self._consume(RBRACKET, "']' expected at end of indexer")
     return IndexExpr(args)
   }
@@ -312,12 +323,18 @@ class Parser {
    * factor expressions
    */
   _factor() {
+    while self._match(DOC){}
     var expr = self._unary()
+    while self._match(DOC){}
 
     while self._match(MULTIPLY, DIVIDE, PERCENT, POW, FLOOR) {
       var op = self._previous().literal
       self._ignore_newline()
+
+      while self._match(DOC){}
       var right = self._unary()
+      while self._match(DOC){}
+
       expr = BinaryExpr(expr, op, right)
     }
 
@@ -533,7 +550,9 @@ class Parser {
 
     if !self._check(RBRACE) {
       do {
+        while self._match(DOC) {}
         self._ignore_newline()
+        while self._match(DOC) {}
 
         if !self._check(RBRACE) {
           var auto_value
@@ -570,7 +589,9 @@ class Parser {
 
     if !self._check(RBRACKET) {
       do {
+        while self._match(DOC) {}
         self._ignore_newline()
+        while self._match(DOC) {}
   
         if !self._check(RBRACKET) {
           items.append(self._expression())
@@ -699,6 +720,8 @@ class Parser {
         else if self._previous().type == WHEN {
           var tmp_cases = []
           do {
+            self._ignore_newline()
+            
             tmp_cases.append(self._expression())
           } while self._match(COMMA)
           var stmt = self._statement()
@@ -853,7 +876,7 @@ class Parser {
     } else if self._match(COMMENT) {
       result = CommentStmt(self._previous().literal[1,].trim())
     } else if self._match(DOC) {
-      result = DocDefn(self._previous().literal[2,-2].trim())
+      result = DocDefn(self._get_doc_defn_data())
     } else {
       result = self._expr_stmt(false)
     }
@@ -1027,7 +1050,7 @@ class Parser {
       self._ignore_newline()
 
       if self._match(DOC)
-        doc = DocDefn(self._previous().literal[2,-2].trim())
+        doc = DocDefn(self._get_doc_defn_data())
 
       self._ignore_newline()
 
@@ -1069,7 +1092,7 @@ class Parser {
     } else if self._match(COMMENT) {
       result = CommentStmt(self._previous().literal[1,].trim())
     } else if self._match(DOC) {
-      result = DocDefn(self._previous().literal[2,-2].trim())
+      result = DocDefn(self._get_doc_defn_data())
     } else if self._match(LBRACE) {
       if !self._check(NEWLINE) and self._block_count == 0 
         result = self._dict()
@@ -1085,23 +1108,25 @@ class Parser {
   ### DECLARATIONS END
 
   /**
-   * parse()
-   * 
-   * parses the raw source tokens passed into relevant class and
+   * Parses the raw source tokens passed into relevant class and
    * outputs a stream of AST objects that can be one of
-   * Expr (expressions), Stmt (statements) or Decl (declarations)
+   * Expr (expressions), Stmt (statements) or Decl (declarations).
+   * 
    * @return ParseResult
    */
   parse() {
-    var declarations = ParseResult()
+    var result = ParseResult()
 
-    while !self._is_at_end()
-      declarations.append(self._declaration())
+    while !self._is_at_end() {
+      var declaration = self._declaration()
+      declaration.file = self._path
+      result.append(declaration)
+    }
 
-    return declarations
+    return result
   }
 
   @to_string() {
-    return '<ast::Parser>'
+    return "<ast::Parser path='${self._path}' tokens=${self._tokens.length()}>"
   }
 }

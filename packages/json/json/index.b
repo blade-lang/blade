@@ -62,15 +62,15 @@ import _json { _decode }
 
 
 /**
- * encode(value: any [, compact: boolean = true [, max_depth: number = 1024]])
- * 
  * JSON encodes the given value with a recursive depth up to `max_depth`.
  * 
  * If _compact_ is `false`, the resulting json string will be 
  * tightly packed. i.e. spaces will be trimmed from objects and arrays. Otherwise, 
  * the JSON output will be pretty formatted.
  * 
- * @param max_depth is the maximum recursive depth for encoding, default = 1024.
+ * @param any value
+ * @param bool? compact: Default value is `true`.
+ * @param number? max_depth: is the maximum recursive depth for encoding, default = 1024.
  * @note pretty formatting use 2 spaces instead of tabs.
  * @return string
  */
@@ -80,12 +80,10 @@ def encode(value, compact, max_depth) {
 }
 
 /**
- * decode(value: string [, allow_comments: boolean = true])
+ * Decodes the input JSON string into Blade objects
  * 
- * decodes the input JSON string into Blade objects
- * 
- * @param value is the string to decode
- * @param allow_comments can be set to enable/disable C-style comments in json [default = true]
+ * @param string value: The string to decode
+ * @param bool? allow_comments: Can be set to enable/disable C-style comments in json [default = true]
  * @return object
  */
 def decode(value, allow_comments) {
@@ -94,9 +92,9 @@ def decode(value, allow_comments) {
 }
 
 /**
- * parse(path: string)
+ * Parses a file containing json data.
  * 
- * parses a file containing json data.
+ * @param string path
  * @return object
  */
 def parse(path) {
@@ -107,6 +105,7 @@ def parse(path) {
   if !f.exists()
     die Exception('could not open file ${path}')
 
-  return decode(f.read())
+  var content = f.read().trim()
+  return content ? decode(content) : nil
 }
 

@@ -4,12 +4,15 @@ This module is based on the [markdown-it](https://github.com/markdown-it/markdow
 
 It has been extended with support for the following by default in the standard (non-commonmark) mode:
 
-- anchors
-- emojies
-- insert
-- subscripts
-- superscripts
-- mark
+- Tables (GFM)
+- Strikethrough (GFM)
+- Anchors
+- Emojies
+- Insert
+- Subscripts
+- Superscripts
+- Mark
+- Definition lists
 
 
 ## Licenses

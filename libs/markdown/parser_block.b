@@ -15,6 +15,7 @@ var _rules = [
   [ 'html_block', block.html_block, [ 'paragraph', 'reference', 'blockquote' ] ],
   [ 'heading',    block.heading,    [ 'paragraph', 'reference', 'blockquote' ] ],
   [ 'lheading',   block.lheading ],
+  [ 'deflist',    block.deflist,    [ 'paragraph', 'reference', 'blockquote' ] ],
   [ 'paragraph',  block.paragraph ]
 ]
 

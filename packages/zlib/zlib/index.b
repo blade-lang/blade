@@ -47,37 +47,46 @@ import io {
 
 
 # version
+
 /**
- * zLib version string 
+ * ZLib version string.
+ * @type number 
  */
 var version = _zlib.Z_VERSION
 
 
 # compression levels
+
 /**
- * no compression level
+ * No compression level.
+ * @type number
  */
 var NO_COMPRESSION = _zlib.Z_NO_COMPRESSION
 
 /**
- * best speed compression
+ * Best speed compression.
+ * @type number
  */
 var BEST_SPEED = _zlib.Z_BEST_SPEED
 
 /**
- * best compression level
+ * Best compression level.
+ * @type number
  */
 var BEST_COMPRESSION = _zlib.Z_BEST_COMPRESSION
 
 /**
- * default compression level
+ * Default compression level.
+ * @type number
  */
 var DEFAULT_COMPRESSION = _zlib.Z_DEFAULT_COMPRESSION
 
 
 # compression strategy; see compress() for details
+
 /**
- * filtered compression strategy
+ * Filtered compression strategy.
+ * @type number
  */
 var FILTERED = _zlib.Z_FILTERED
 
@@ -87,40 +96,46 @@ var FILTERED = _zlib.Z_FILTERED
 var HUFFMAN_ONLY = _zlib.Z_HUFFMAN_ONLY
 
 /**
- * rle compression strategy
+ * Rle compression strategy.
+ * @type number
  */
 var RLE = _zlib.Z_RLE
 
 /**
- * fixed compression strategy
+ * Fixed compression strategy.
+ * @type number
  */
 var FIXED = _zlib.Z_FIXED
 
 /**
- * default compression strategy
+ * Default compression strategy.
+ * @type number
  */
 var DEFAULT_STRATEGY = _zlib.Z_DEFAULT_STRATEGY
 
 
 # others
+
 /**
- * default memory level
+ * Default memory level
+ * @type number
  */
 var DEFAULT_MEMORY_LEVEL = 8
 
 /**
- * maximum windows bit
+ * Maximum windows bit.
+ * @type number
  */
 var MAX_WBITS = _zlib.MAX_WBITS
 
 
 /**
- * adler32(data: bytes | string [, initial: number])
- * 
  * Updates a running Adler-32 checksum with the bytes buf[0..len-1] and
  * return the updated checksum.
  * 
  * @note An Adler-32 checksum is almost as reliable as a CRC-32 but can be computed much faster.
+ * @param {bytes|string} data
+ * @param number? intial
  * @return number
  */
 def adler32(data, initial) {
@@ -136,10 +151,11 @@ def adler32(data, initial) {
 }
 
 /**
- * crc32(data: bytes | string [, initial: number])
- * 
  * Update a running CRC-32 cheksum with the bytes buf[0..len-1] and return the
  * updated CRC-32 checksum.
+ * 
+ * @param {bytes|string} data
+ * @param number? intial
  * @return number
  */
 def crc32(data, initial) {
@@ -155,9 +171,7 @@ def crc32(data, initial) {
 }
 
 /**
- * compress(data: bytes | string [, level: int = Z_DEFAULT_COMPRESSION [, strategy: int = Z_DEFAULT_STRATEGY [, wbits: int = MAX_WBITS [, memory_level: int = Z_DEFAULT_MEMORY_LEVEL]]]])
- * 
- * compress compresses as much data as possible, and stops when the input
+ * Compress compresses as much data as possible, and stops when the input
  * buffer becomes empty or the output buffer becomes full.
  * 
  * -  The compression `level` must be DEFAULT_COMPRESSION, or between 0 and 9:
@@ -210,6 +224,11 @@ def crc32(data, initial) {
  *    slow and reduces compression ratio; memory_level 9 uses maximum memory for
  *    optimal speed.  The default value is 8.
  * 
+ * @param {bytes|string} data
+ * @param int? level: Default value is `DEFAULT_COMPRESSION`.
+ * @param int? strategy: Default value is `DEFAULT_STRATEGY`.
+ * @param int? wbits: Default value is `MAX_WBITS`.
+ * @param int? memory_level: Default value is `DEFAULT_MEMORY_LEVEL`.
  * @return bytes
  */
 def compress(data, level, strategy, wbits, memory_level) {
@@ -238,9 +257,7 @@ def compress(data, level, strategy, wbits, memory_level) {
 }
 
 /**
- * uncompress(data: bytes | string [, wbits: int = MAX_WBITS])
- * 
- * uncompress decompresses as much data as possible, and stops when the input
+ * Uncompress decompresses as much data as possible, and stops when the input
  * buffer becomes empty or the output buffer becomes full.
  * 
  * -  In this implementation, uncompress() always flushes as much output as
@@ -278,6 +295,9 @@ def compress(data, level, strategy, wbits, memory_level) {
  * 
  * -  uncompress() can uncompress either zlib-wrapped or gzip-wrapped compress data.
  *    If the compression uses gzip-wrapper, the correct `wbits` may need to be set.
+ * 
+ * @param {bytes|string} data
+ * @param int? wbits: Default value is `MAX_WBITS`.
  * @return bytes
  */
 def uncompress(data, wbits) {
@@ -293,9 +313,9 @@ def uncompress(data, wbits) {
 }
 
 /**
- * deflate(data: bytes | string)
+ * Compress data using the default options for Deflate.
  * 
- * Compress data using the default options for Deflate
+ * @param {bytes|string} data
  * @return bytes
  */
 def deflate(data) {
@@ -303,9 +323,9 @@ def deflate(data) {
 }
 
 /**
- * undeflate(data: bytes | string)
+ * Uncompress a deflated data using default options.
  * 
- * uncompress a deflated data using default options
+ * @param {bytes|string} data
  * @return bytes
  */
 def undeflate(data) {
@@ -313,9 +333,9 @@ def undeflate(data) {
 }
 
 /**
- * gzip(data: bytes | string)
+ * Compress data using the default options for GZip.
  * 
- * Compress data using the default options for GZip
+ * @param {bytes|string} data
  * @return bytes
  */
 def gzip(data) {
@@ -323,9 +343,9 @@ def gzip(data) {
 }
 
 /**
- * ungzip(data: bytes | string)
+ * Uncompress a GZipped data using default options.
  * 
- * uncompress a GZipped data using default options
+ * @param {bytes|string} data
  * @return bytes
  */
 def ungzip(data) {
@@ -340,6 +360,9 @@ class GZ {
 
   /**
    * GZ(path: string [, mode: string = 'rb'])
+   * 
+   * @param string path
+   * @param string? mode: Default value is `rb`.
    * @see `gzopen()`
    * @constructor
    */
@@ -354,8 +377,6 @@ class GZ {
   }
 
   /**
-   * read(length: number)
-   * 
    * Reads the given number of uncompressed bytes from the compressed file.  If
    * the input file is not in gzip format, `read()` copies the given number of
    * bytes into the buffer directly from the file.
@@ -377,6 +398,7 @@ class GZ {
    * length for end of file, or -1 for error.  If len is too large to fit in an integer,
    * then nothing is read, -1 is returned.
    * 
+   * @param number length
    * @return bytes
    */
   read(length) {
@@ -387,12 +409,11 @@ class GZ {
   }
 
   /**
-   * write(data: bytes | string)
-   * 
    * Writes the given number of uncompressed bytes into the compressed file.
    * write returns the number of uncompressed bytes written or 0 in case of
    * error.
    * 
+   * @param {bytes|string} data
    * @return number
    */
   write(data) {
@@ -404,8 +425,6 @@ class GZ {
   }
 
   /**
-   * eof()
-   * 
    * Returns `true` if the end-of-file indicator has been set while reading,
    * `false` otherwise.  Note that the end-of-file indicator is set only if the
    * read tried to go past the end of the input, but came up short.  Therefore,
@@ -425,8 +444,6 @@ class GZ {
   }
 
   /**
-   * direct()
-   * 
    * Returns `true` if file is being copied directly while reading, or `false`
    * if file is a gzip stream being decompressed.
    * 
@@ -449,8 +466,6 @@ class GZ {
   }
 
   /**
-   * close()
-   * 
    * Flushes all pending output if necessary, closes the compressed file and
    * deallocates the (de)compression state.  Note that once file is closed, you
    * cannot call gzerror with file, since its structures have been deallocated.
@@ -466,12 +481,12 @@ class GZ {
   }
 
   /**
-   * set_params(level: number, strategy: number)
-   * 
    * Dynamically update the compression level or strategy.  See the description
    * of `compress()` for the meaning of these parameters.  Previously provided
    * data is flushed before the parameter change.
    * 
+   * @param number level
+   * @param number strategy
    * @return bool
   */
   set_params(level, strategy) {
@@ -483,8 +498,6 @@ class GZ {
   }
 
   /**
-   * seek(offset: int [, whence: int = SEEK_SET])
-   * 
    * Sets the starting position for the next read or write on the given
    * compressed file.  The offset represents a number of bytes in the
    * uncompressed data stream. The whence parameter is defined as in `io` 
@@ -500,6 +513,8 @@ class GZ {
    * particular if the file is opened for writing and the new starting position
    * would be before the current position.
    * 
+   * @param int offset
+   * @param int? whence: Default value is `SEEK_SET`.
    * @return number
    */
   seek(offset, whence) {
@@ -513,8 +528,6 @@ class GZ {
   }
 
   /**
-   * rewind()
-   * 
    * Rewinds the given file. This function is supported only for reading.
    * 
    * @note `rewind()` is equivalent to `seek(0, SEEK_SET)`.
@@ -525,8 +538,6 @@ class GZ {
   }
 
   /**
-   * tell()
-   * 
    * Returns the starting position for the next read or write on the given
    * compressed file.  This position represents a number of bytes in the
    * uncompressed data stream, and is zero when starting.
@@ -539,8 +550,6 @@ class GZ {
   }
 
   /**
-   * offset()
-   * 
    * Returns the current offset in the file being read or written.  This offset
    * includes the count of bytes that precede the gzip stream, for example when
    * appending.  When reading, the offset does not include as yet unused buffered 
@@ -554,8 +563,6 @@ class GZ {
   }
 
   /**
-   * clear_error()
-   * 
    * Clears the error and end-of-file flags for file. This is useful for continuing 
    * to read a gzip file that is being written concurrently.
    */
@@ -565,8 +572,6 @@ class GZ {
 }
 
 /**
- * gzopen(path: string [, mode: string = 'rb'])
- * 
  * Opens a gzip (.gz) file for reading or writing.  The mode parameter is as
  * in `file` ("rb" or "wb") but can also include a compression level ("wb9") or
  * a strategy: 'f' for filtered data as in "wb6f", 'h' for Huffman-only
@@ -598,6 +603,8 @@ class GZ {
  * memory to allocate the gzFile state, or if an invalid mode was specified (an 'r', 
  * 'w', or 'a' was not provided, or '+' was provided).
  * 
+ * @param string path
+ * @param string? mode: Default value is `rb`.
  * @return ptr
  */
 def gzopen(path, mode) {
