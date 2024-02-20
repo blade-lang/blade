@@ -72,14 +72,14 @@ class Attachment {
     self.content = content
   }
 
-  @to_json() {
+  @json() {
     return {
       headers: self.headers,
       content: self.content,
     }
   }
 
-  @to_string() {
+  @string() {
     return '<Attachment>' +
     '  <headers>${self.headers}</headers>' +
     '  <content>${self.content}</content>' +
@@ -114,7 +114,7 @@ class Mail {
     self.attachments = attachments ? attachments : []
   }
 
-  @to_json() {
+  @json() {
     return {
       headers: self.headers,
       body: self.body,
@@ -122,7 +122,7 @@ class Mail {
     }
   }
 
-  @to_string() {
+  @string() {
     return '<Mail>'+
     '  <headers>${self.headers}</headers>' +
     '  <body>${self.body}</body>' +

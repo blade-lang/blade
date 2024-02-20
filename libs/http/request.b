@@ -556,11 +556,11 @@ class HttpRequest {
     return '<HttpRequest method=${self.method}, path=${self.path}>'
   }
 
-  @to_string() {
+  @string() {
     return self.to_string()
   }
 
-  @to_json() {
+  @json() {
     return self.to_dict()
   }
 }

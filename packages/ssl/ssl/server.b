@@ -43,6 +43,8 @@ class TLSServer < HttpServer {
    */
   var verify_certs = true
 
+  var _ciphers = 'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS'
+
   /**
    * @param int port
    * @param string? host
@@ -77,7 +79,7 @@ class TLSServer < HttpServer {
       self.cert_file = cert_file
       self.private_key_file = private_key_file
 
-      return self.socket.get_context().set_ciphers(self._ciphers)
+      return true
     } else {
       # die Exception('could not load certificate(s)')
       return false
@@ -97,7 +99,7 @@ class TLSServer < HttpServer {
     parent.listen()
   }
 
-  @to_string() {
+  @string() {
     return '<TLSServer ${self.host}:${self.port}>'
   }
 }

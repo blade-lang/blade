@@ -19,11 +19,11 @@ def fib2(n) {
 }
 
 class A {
-  @to_abs() {
+  @abs() {
     return 300
   }
 
-  @to_string() {
+  @string() {
     return 'A class called A'
   }
 }

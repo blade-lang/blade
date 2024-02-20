@@ -256,15 +256,15 @@ class Int16Array {
     return self._ptr
   }
 
-  @to_string() {
+  @string() {
     return self.to_string()
   }
 
-  @to_list() {
+  @list() {
     return self.to_list()
   }
 
-  @to_json() {
+  @json() {
     return self.to_list()
   }
 
@@ -462,15 +462,15 @@ class Int32Array {
     return self._ptr
   }
 
-  @to_string() {
+  @string() {
     return self.to_string()
   }
 
-  @to_list() {
+  @list() {
     return self.to_list()
   }
 
-  @to_json() {
+  @json() {
     return self.to_list()
   }
 
@@ -670,15 +670,15 @@ class Int64Array {
     return self._ptr
   }
 
-  @to_string() {
+  @string() {
     return self.to_string()
   }
 
-  @to_list() {
+  @list() {
     return self.to_list()
   }
 
-  @to_json() {
+  @json() {
     return self.to_list()
   }
 
@@ -876,15 +876,15 @@ class UInt16Array {
     return self._ptr
   }
 
-  @to_string() {
+  @string() {
     return self.to_string()
   }
 
-  @to_list() {
+  @list() {
     return self.to_list()
   }
 
-  @to_json() {
+  @json() {
     return self.to_list()
   }
 
@@ -1082,15 +1082,15 @@ class UInt32Array {
     return self._ptr
   }
 
-  @to_string() {
+  @string() {
     return self.to_string()
   }
 
-  @to_list() {
+  @list() {
     return self.to_list()
   }
 
-  @to_json() {
+  @json() {
     return self.to_list()
   }
 
@@ -1288,15 +1288,15 @@ class UInt64Array {
     return self._ptr
   }
 
-  @to_string() {
+  @string() {
     return self.to_string()
   }
 
-  @to_list() {
+  @list() {
     return self.to_list()
   }
 
-  @to_json() {
+  @json() {
     return self.to_list()
   }
 
@@ -1494,15 +1494,15 @@ class FloatArray {
     return self._ptr
   }
 
-  @to_string() {
+  @string() {
     return self.to_string()
   }
 
-  @to_list() {
+  @list() {
     return self.to_list()
   }
 
-  @to_json() {
+  @json() {
     return self.to_list()
   }
 

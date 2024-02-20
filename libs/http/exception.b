@@ -6,7 +6,7 @@
  * @printable
  */
 class HttpException < Exception {
-  @to_string() {
+  @string() {
     return '<HttpException: ${self.message}>'
   }
 }

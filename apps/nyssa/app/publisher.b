@@ -25,7 +25,7 @@ class Publisher {
     return package
   }
 
-  @to_json() {
+  @json() {
     return {
       username: self.username,
       email: self.email,

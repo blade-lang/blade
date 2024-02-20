@@ -20,7 +20,7 @@ class EchoStmt < Stmt {
     self.value = value
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'EchoStmt',
       value: self.value,
@@ -43,7 +43,7 @@ class ExprStmt < Stmt {
     self.expr = expr
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'ExprStmt',
       expr: self.expr,
@@ -70,7 +70,7 @@ class IfStmt < Stmt {
     self.falsy = falsy
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'IfStmt',
       condition: self.condition,
@@ -101,7 +101,7 @@ class IterStmt < Stmt {
     self.body = body
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'IterStmt',
       declaration: self.declaration,
@@ -129,7 +129,7 @@ class WhileStmt < Stmt {
     self.body = body
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'WhileStmt',
       condition: self.condition,
@@ -155,7 +155,7 @@ class DoWhileStmt < Stmt {
     self.condition = condition
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'DoWhileStmt',
       body: self.body,
@@ -183,7 +183,7 @@ class ForStmt < Stmt {
     self.body = body
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'ForStmt',
       vars: self.vars,
@@ -200,7 +200,7 @@ class ForStmt < Stmt {
  */
 class ContinueStmt < Stmt {
 
-  @to_json() {
+  @json() {
     return {
       type: 'ContinueStmt',
      }
@@ -214,7 +214,7 @@ class ContinueStmt < Stmt {
  */
 class BreakStmt < Stmt {
 
-  @to_json() {
+  @json() {
     return {
       type: 'BreakStmt',
      }
@@ -236,7 +236,7 @@ class DieStmt < Stmt {
     self.exception = exception
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'DieStmt',
       exception: self.exception,
@@ -259,7 +259,7 @@ class ReturnStmt < Stmt {
     self.value = value
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'ReturnStmt',
       value: self.value,
@@ -284,7 +284,7 @@ class AssertStmt < Stmt {
     self.message = message
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'AssertStmt',
       expr: self.expr,
@@ -312,7 +312,7 @@ class UsingStmt < Stmt {
     self.default_case = default_case
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'UsingStmt',
       expr: self.expr,
@@ -339,7 +339,7 @@ class ImportStmt < Stmt {
     self.elements = elements
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'ImportStmt',
       path: self.path,
@@ -367,7 +367,7 @@ class CatchStmt < Stmt {
     self.body = body
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'CatchStmt',
       type: self.type,
@@ -392,7 +392,7 @@ class FinallyStmt < Stmt {
     self.body = body
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'FinallyStmt',
       body: self.body,
@@ -419,7 +419,7 @@ class TryStmt < Stmt {
     self.finally_stmt = finally_stmt
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'TryStmt',
       body: self.body,
@@ -444,7 +444,7 @@ class CommentStmt < Stmt {
     self.data = data
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'CommentStmt',
       data: self.data,
@@ -467,7 +467,7 @@ class BlockStmt < Stmt {
     self.body = body
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'BlockStmt',
       body: self.body,
@@ -494,7 +494,7 @@ class AssignStmt < Stmt {
     self.value = value
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'AssignStmt',
       expr: self.expr,

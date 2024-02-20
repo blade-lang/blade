@@ -36,7 +36,7 @@ class Config {
     return c
   }
 
-  @to_json() {
+  @json() {
     return {
       name: self.name,
       version: self.version,

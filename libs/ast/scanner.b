@@ -499,7 +499,7 @@ class Scanner {
     return self._tokens
   }
 
-  @to_string() {
+  @string() {
     return '<ast::Scanner>'
   }
 }

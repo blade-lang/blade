@@ -118,7 +118,7 @@ bool dict_set_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value);
 void define_native_method(b_vm *vm, b_table *table, const char *name,
                           b_native_fn function);
 
-bool is_instance_of(b_obj_class *klass1, char *klass2_name);
+bool is_instance_of(b_obj_class *klass1, b_obj_class *klass2);
 
 bool do_throw_exception(b_vm *vm, bool is_assert, const char *format, ...);
 

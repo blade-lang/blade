@@ -21,7 +21,7 @@ class DocDefn < Defn {
     self.data = data
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'DocDefn',
       data: self.data,

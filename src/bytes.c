@@ -106,7 +106,8 @@ DECLARE_BYTES_METHOD(extend) {
   memcpy(bytes->bytes.bytes + bytes->bytes.count, n_bytes->bytes.bytes,
          n_bytes->bytes.count);
   bytes->bytes.count += n_bytes->bytes.count;
-  RETURN_OBJ(bytes);
+
+  RETURN_SELF;
 }
 
 DECLARE_BYTES_METHOD(pop) {
@@ -138,6 +139,180 @@ DECLARE_BYTES_METHOD(remove) {
   RETURN_NUMBER((double) ((int) val));
 }
 
+DECLARE_BYTES_METHOD(ltrim) {
+  ENFORCE_ARG_RANGE(ltrim, 0, 1);
+
+  b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
+  int element = 0;
+
+  if(arg_count == 1) {
+    ENFORCE_ARG_TYPE(ltrim, 0, IS_NUMBER);
+    element = AS_NUMBER(args[0]);
+  }
+
+  if (element < 0 || element > 255) {
+    RETURN_ERROR("%d out of byte range", element);
+  }
+
+  int start = 0;
+  for (; bytes->bytes.bytes[start] == element; start++);
+
+  int new_count = bytes->bytes.count - start;
+  unsigned char *new_data = (unsigned char*)calloc(new_count, sizeof(unsigned char));
+  memcpy(new_data, bytes->bytes.bytes + start, new_count);
+  vm->bytes_allocated -= start;
+
+  unsigned char* old_data = bytes->bytes.bytes;
+  bytes->bytes.bytes = new_data;
+  bytes->bytes.count = new_count;
+
+  // release resource
+  free(old_data);
+
+  RETURN_SELF;
+}
+
+DECLARE_BYTES_METHOD(rtrim) {
+  ENFORCE_ARG_RANGE(rtrim, 0, 1);
+
+  b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
+  int element = 0;
+
+  if(arg_count == 1) {
+    ENFORCE_ARG_TYPE(rtrim, 0, IS_NUMBER);
+    element = AS_NUMBER(args[0]);
+  }
+
+  if (element < 0 || element > 255) {
+    RETURN_ERROR("%d out of byte range", element);
+  }
+
+  int end = bytes->bytes.count - 1;
+  for (; bytes->bytes.bytes[end] == element; end--);
+
+  int new_count = end + 1;
+  int old_count = bytes->bytes.count;
+  unsigned char *new_data = (unsigned char*)calloc(new_count, sizeof(unsigned char));
+  memcpy(new_data, bytes->bytes.bytes, new_count);
+  vm->bytes_allocated -= old_count - new_count;
+
+  unsigned char* old_data = bytes->bytes.bytes;
+  bytes->bytes.bytes = new_data;
+  bytes->bytes.count = new_count;
+
+  // release resource
+  free(old_data);
+
+  RETURN_SELF;
+}
+
+DECLARE_BYTES_METHOD(trim) {
+  ENFORCE_ARG_RANGE(trim, 0, 1);
+
+  b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
+  int element = 0;
+
+  if(arg_count == 1) {
+    ENFORCE_ARG_TYPE(trim, 0, IS_NUMBER);
+    element = AS_NUMBER(args[0]);
+  }
+
+  if (element < 0 || element > 255) {
+    RETURN_ERROR("%d out of byte range", element);
+  }
+
+  int start = 0;
+  for (; bytes->bytes.bytes[start] == element; start++);
+
+  int end = bytes->bytes.count - 1;
+  for (; bytes->bytes.bytes[end] == element; end--);
+
+  int new_count = end - start + 1;
+  int old_count = bytes->bytes.count;
+  unsigned char *new_data = (unsigned char*)calloc(new_count, sizeof(unsigned char));
+  memcpy(new_data, bytes->bytes.bytes + start, new_count);
+  vm->bytes_allocated -= old_count - new_count;
+
+  unsigned char* old_data = bytes->bytes.bytes;
+  bytes->bytes.bytes = new_data;
+  bytes->bytes.count = new_count;
+
+  // release resource
+  free(old_data);
+
+  RETURN_SELF;
+}
+
+DECLARE_BYTES_METHOD(lpad) {
+  ENFORCE_ARG_RANGE(lpad, 1, 2);
+  ENFORCE_ARG_TYPE(lpad, 0, IS_NUMBER);
+
+  b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
+  int count = AS_NUMBER(args[0]);
+  int element = 0;
+
+  if(arg_count == 2) {
+    ENFORCE_ARG_TYPE(lpad, 1, IS_NUMBER);
+    element = AS_NUMBER(args[1]);
+  }
+
+  if (element < 0 || element > 255) {
+    RETURN_ERROR("%d out of byte range", element);
+  }
+
+  int new_count = bytes->bytes.count + count;
+  unsigned char *new_data = (unsigned char*)calloc(new_count, sizeof(unsigned char));
+  memcpy(new_data + count, bytes->bytes.bytes, bytes->bytes.count);
+  for(int i = 0; i < count && element != 0; i++) {
+    new_data[i] = element;
+  }
+  vm->bytes_allocated += count;
+
+  unsigned char* old_data = bytes->bytes.bytes;
+  bytes->bytes.bytes = new_data;
+  bytes->bytes.count = new_count;
+
+  // release resource
+  free(old_data);
+
+  RETURN_SELF;
+}
+
+DECLARE_BYTES_METHOD(rpad) {
+  ENFORCE_ARG_RANGE(rpad, 1, 2);
+  ENFORCE_ARG_TYPE(rpad, 0, IS_NUMBER);
+
+  b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
+  int count = AS_NUMBER(args[0]);
+  int element = 0;
+
+  if(arg_count == 2) {
+    ENFORCE_ARG_TYPE(rpad, 1, IS_NUMBER);
+    element = AS_NUMBER(args[1]);
+  }
+
+  if (element < 0 || element > 255) {
+    RETURN_ERROR("%d out of byte range", element);
+  }
+
+  int new_count = bytes->bytes.count + count;
+  unsigned char *new_data = (unsigned char*)calloc(new_count, sizeof(unsigned char));
+  memcpy(new_data, bytes->bytes.bytes, bytes->bytes.count);
+  for(int i = bytes->bytes.count; i < new_count && element != 0; i++) {
+    new_data[i] = element;
+  }
+  vm->bytes_allocated += count;
+
+  unsigned char* old_data = bytes->bytes.bytes;
+  bytes->bytes.bytes = new_data;
+  bytes->bytes.count = new_count;
+
+  // release resource
+  free(old_data);
+
+  RETURN_SELF;
+}
+
 DECLARE_BYTES_METHOD(reverse) {
   ENFORCE_ARG_COUNT(reverse, 0);
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
@@ -156,22 +331,22 @@ DECLARE_BYTES_METHOD(split) {
   ENFORCE_ARG_TYPE(split, 0, IS_BYTES);
 
   b_byte_arr object = AS_BYTES(METHOD_OBJECT)->bytes;
-  b_byte_arr delimeter = AS_BYTES(args[0])->bytes;
+  b_byte_arr delimiter = AS_BYTES(args[0])->bytes;
 
-  if (object.count == 0 || delimeter.count > object.count) RETURN_OBJ(new_list(vm));
+  if (object.count == 0 || delimiter.count > object.count) RETURN_OBJ(new_list(vm));
 
   b_obj_list *list = (b_obj_list *) GC(new_list(vm));
 
   // main work here...
-  if (delimeter.count > 0) {
+  if (delimiter.count > 0) {
     int start = 0;
     for(int i = 0; i <= object.count; i++) {
       // match found.
-      if(memcmp(object.bytes + i, delimeter.bytes, delimeter.count) == 0 || i == object.count) {
+      if(memcmp(object.bytes + i, delimiter.bytes, delimiter.count) == 0 || i == object.count) {
         b_obj_bytes *bytes = (b_obj_bytes *)GC(new_bytes(vm, i - start));
         memcpy(bytes->bytes.bytes, object.bytes + start, i - start);
         write_list(vm, list, OBJ_VAL(bytes));
-        i += delimeter.count - 1;
+        i += delimiter.count - 1;
         start = i + 1;
       }
     }

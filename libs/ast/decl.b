@@ -24,7 +24,7 @@ class VarDecl < Decl {
     self.value = value
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'VarDecl',
       name: self.name,
@@ -52,7 +52,7 @@ class FunctionDecl < Decl {
     self.body = body
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'FunctionDecl',
       name: self.name,
@@ -83,7 +83,7 @@ class MethodDecl < Decl {
     self.is_static = is_static
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'MethodDecl',
       name: self.name,
@@ -113,7 +113,7 @@ class PropertyDecl < Decl {
     self.is_static = is_static
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'PropertyDecl',
       name: self.name,
@@ -144,7 +144,7 @@ class ClassDecl < Decl {
     self.methods = methods
   }
 
-  @to_json() {
+  @json() {
     return {
       type: 'ClassDecl',
       name: self.name,

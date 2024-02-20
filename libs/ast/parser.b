@@ -1126,7 +1126,7 @@ class Parser {
     return result
   }
 
-  @to_string() {
+  @string() {
     return "<ast::Parser path='${self._path}' tokens=${self._tokens.length()}>"
   }
 }

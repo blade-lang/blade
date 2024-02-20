@@ -759,12 +759,12 @@ class Date {
               self.minute, self.seconds, self.is_dst)
   }
 
-  @to_string() {
+  @string() {
     return '<Date year: ${self.year}, month: ${self.month}, day: ${self.day}, hour: ' +
         '${self.hour}, minute: ${self.minute}, seconds: ${self.seconds}>'
   }
 
-  @to_json() {
+  @json() {
     return {
       year: self.year,
       month: self.month,

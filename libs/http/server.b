@@ -64,8 +64,6 @@ class HttpServer {
   # status trackers.
   var _is_listening = false
 
-  var _ciphers = 'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS'
-
   # event handler lists.
   var _connect_listeners = []
   var _disconnect_listeners = []
@@ -402,7 +400,7 @@ class HttpServer {
     }
   }
 
-  @to_string() {
+  @string() {
     return '<HttpServer ${self.host}:${self.port}>'
   }
 }

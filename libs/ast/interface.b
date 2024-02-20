@@ -67,7 +67,7 @@ class ParseResult {
   /**
    * to_list() override decorator
    */
-  @to_list() {
+  @list() {
     return self.to_list()
   }
 
@@ -89,11 +89,11 @@ class ParseResult {
     return nil
   }
 
-  @to_json() {
+  @json() {
     return self._results
   }
 
-  @to_string() {
+  @string() {
     return '<ast::ParseResult>'
   }
 }

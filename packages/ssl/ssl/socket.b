@@ -391,7 +391,7 @@ class TLSSocket {
     self._context = context
   }
 
-  @to_string() {
+  @string() {
     return '<TLSSocket closed: ${self.is_closed}, listening: ' +
         '${self.is_listening}, connected: ${self.is_connected}, bound: ${self.is_bound}>'
   }

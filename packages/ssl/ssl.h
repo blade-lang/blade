@@ -20,7 +20,7 @@
   {#v, true, GET_MODULE_METHOD(ssl_const_##v)}
 
 #define RETURN_SSL_ERROR() \
-  RETURN_ERROR("SSL Error: %s", ossl_err_as_string())
+    RETURN_ERROR("SSL Error: %s", ossl_err_as_string()) \
 
 #include <openssl/bio.h>
 #include <openssl/err.h>

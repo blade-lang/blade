@@ -263,6 +263,8 @@ int disassemble_instruction(b_blob *blob, int offset) {
       return constant_instruction("class", blob, offset);
     case OP_METHOD:
       return constant_instruction("meth", blob, offset);
+    case OP_OPERATOR:
+      return constant_instruction("opr", blob, offset);
     case OP_CLASS_PROPERTY:
       return property_instruction("clprop", blob, offset);
     case OP_GET_SUPER:

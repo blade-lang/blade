@@ -85,6 +85,13 @@ DECLARE_LIST_METHOD(pop);
 DECLARE_LIST_METHOD(shift);
 
 /**
+ * list.shift([count: number])
+ *
+ * Reverse of shift.
+ */
+DECLARE_LIST_METHOD(unshift);
+
+/**
  * list.remove_at(index: number)
  *
  * removes the item at the specified index in the list

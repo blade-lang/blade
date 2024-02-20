@@ -519,11 +519,11 @@ class Token {
     self.file = file
   }
 
-  @to_string() {
+  @string() {
     return "<ast::Token type=${self.type} literal='${self.literal}' line=${self.line} file='${self.file}'>"
   }
 
-  @to_json() {
+  @json() {
     return {
       type: self.type,
       literal: self.literal,
