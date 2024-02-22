@@ -10,6 +10,7 @@ import .response { HttpResponse }
 
 /**
  * Handles http requests.
+ * 
  * @note This client do not currently support the compress, deflate and gzip transfer encoding.
  */
 class HttpClient {

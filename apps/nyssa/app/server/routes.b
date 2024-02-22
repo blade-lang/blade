@@ -27,6 +27,6 @@ var routes = {
   '/revert': ['POST', views.revert],
   '/archive/{name}': ['GET', views.archive],
   '/logout': ['GET', views.logout],
-  '/docs': ['GET', views.doc],
-  '/docs/*': ['GET', views.doc],
+#   '/docs': ['GET', views.doc],
+#   '/docs/*': ['GET', views.doc],
 }
