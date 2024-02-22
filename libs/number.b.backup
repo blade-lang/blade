@@ -1,0 +1,419 @@
+import math
+
+var _reverse_hex_table = ['0', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', 'A', 'B', 'C', 'D', 'E', 'F']
+var _hex_table = '0123456789ABCDEF'
+
+def _compare(xd, yd) {
+
+  var xl = xd.length()
+  var yl = yd.length()
+
+  if xl != yl {
+    return xl > yl ? 1 : -1
+  }
+
+  iter var i = 0; i < xl; i++ {
+    if xd[i] != yd[i] {
+      return xd[i] > yd[i] ? 1 : -1
+    }
+  }
+
+  return 0
+}
+
+def _align(this_digits, other_digits) {
+  var this_length = this_digits.length()
+  var other_length = other_digits.length()
+
+  var length = other_length > this_length ? other_length : this_length
+
+  while other_length < length {
+    other_digits.insert(0, 0)
+    other_length++
+  }
+  while this_length < length {
+    this_digits.insert(0, 0)
+    this_length++
+  }
+
+  return length
+}
+
+def _ltrim(list) {
+  while list.first() == 0 {
+    list.remove_at(0)
+  }
+  return list
+}
+
+def _rtrim(list) {
+  while list.last() == 0 {
+    list.pop()
+  }
+  return list
+}
+
+def _trim(list) {
+  return _ltrim(_rtrim(list))
+}
+
+class BigInteger {
+  var negative = false
+  var base = 10
+  var digits = []
+
+  BigInteger(value, negative, base) {
+
+    if is_instance(value) and instance_of(value, BigInteger) {
+      self.digits = value.digits[,]
+      self.base = value.base
+      self.negative = negative == nil ? value.negative : negative
+      return
+    }
+
+    if negative != nil and !is_bool(negative)
+      die Exception('boolean expected in argument 2 (negative)')
+    if base != nil and !is_number(base)
+      die Exception('number expected in argument 3 (base)')
+
+    # using `or false` to force boolean
+    self.negative = negative or false
+    self.base = base or 10
+    
+    if is_number(value) {
+      self._from_number(value)
+    } else if is_string(value) {
+      self._from_string(value)
+    } else if is_list(value) {
+      self._from_list(value)
+    } else if value != nil {
+      die Exception('Illegal number in argument 1 (value)')
+    }
+  }
+
+  length() {
+    return self.digits.length()
+  }
+
+  def < (other) {
+    return !(self > other)
+  }
+
+  def > (other) {
+    if !other or !other.digits return true
+    if self.negative and !other.negative return false
+    if !self.negative and other.negative return true
+
+    var comp = _compare(self.digits, other.digits)
+    return self.negative ? comp < 0 : comp > 0
+  }
+
+  def + (other) {
+    if !other or !other.digits
+      return BigInteger(self)
+
+    var this_digits = self.digits[,]
+    var other_digits = other.digits[,]
+    var base = self.base
+
+    if self.negative {
+      return other - self
+    } else if other.negative {
+      return self - other
+    }
+
+    var length = _align(this_digits, other_digits)
+
+    var result = []
+    iter var i = length - 1; i >= 0; i-- {
+      var sum = this_digits[i] + other_digits[i]
+      if sum >= base {
+        if i == 0 {
+          result.append(sum - base)
+          result.append(1)
+        } else {
+          this_digits[i - 1]++
+          result.append(sum - base)
+        }
+      } else {
+        result.append(sum)
+      }
+    }
+
+    return BigInteger(result.reverse())
+  }
+
+  def - (other) {
+    if !other {
+      return BigInteger(self.digits, true)
+    }
+    
+    if !other.digits {
+      return BigInteger(self)
+    }
+
+    var comp = _compare(self.digits, other.digits)
+
+    if comp == 0 {
+      return _ZERO
+    }
+  
+    var this_digits = self.digits[,]
+    var other_digits = other.digits[,]
+    var base = self.base
+
+    var length = _align(this_digits, other_digits)
+
+    var result = [], negative = comp < 0
+
+    var numerator = negative ? other_digits : this_digits
+    var denominator = negative ? this_digits : other_digits
+
+    iter var i = length - 1; i >= 0; i-- {
+      var sub = numerator[i] - denominator[i]
+      if sub < 0 {
+        if i == 0 {
+          result.append(sub + base)
+          negative = true
+        } else {
+          numerator[i - 1]--
+          result.append(sub + base)
+        }
+      } else {
+        result.append(sub)
+      }
+    }
+
+    return BigInteger(result.reverse(), negative)
+  }
+
+  def * (other) {
+    if !self.digits or !other.digits
+      return BigInteger([])
+
+    var this_digits = self.digits.reverse()
+    var other_digits = other.digits.reverse()
+    var base = self.base
+
+    var this_len = this_digits.length()
+    var other_len = other_digits.length()
+
+    var result = [0] * (this_len + other_len)
+
+    iter var i = 0; i < this_len; i++ {
+      var this_i = this_digits[i]
+
+      iter var j = 0; j < other_len; j++ {
+        var other_j = other_digits[j]
+
+        var product = this_i * other_j + result[i + j]
+        var carry = product // base
+        result[i + j] = product - carry * base
+        result[i + j + 1] += carry
+      }
+    }
+
+    
+    return BigInteger(_ltrim(result.reverse()), self.negative or other.negative)
+  }
+
+  def / (other) {
+    if !self.digits or !other.digits
+      return BigInteger([])
+
+    if other.is_zero() {
+      die Exception('division by zero')
+    }
+
+    var comp = _compare(self.digits, other.digits)
+    if comp == 0 {
+      return _ONE
+    } else if comp == -1 {
+      return _ZERO
+    }
+
+    var negative = self.negative != other.negative
+
+    var this_digits = self.digits[,]
+    var other_digits = other.digits[,]
+    var base = self.base, sub
+
+    var this_len = this_digits.length()
+    var other_len = other_digits.length()
+
+    if this_len <= 15 and other_len <= 15 and base == 10 {
+      # a normal math will be faster
+      var a = to_number(''.join(this_digits))
+      var b = to_number(''.join(other_digits))
+
+      return BigInteger(a // b, negative)
+    }
+
+    var result = [], part = []
+    var index = -1
+    while index < this_len - 1 {
+      part.append(this_digits[index++])
+      var compare = _compare(part, other_digits)
+      if compare < 0 {
+        result.append(0)
+        continue
+      }
+      
+      var count = 1, 
+          part_number = BigInteger(part)
+          
+      sub = part_number - other
+
+      while sub > other and sub > _MINUS_ONE {
+        count++
+        sub -= other
+      }
+
+      result.append(count)
+      part = sub == _ZERO ? [] : sub.digits
+    }
+
+    return BigInteger(_ltrim(result), negative)
+  }
+
+  def % (other) {
+    if !self.digits or !other or !other.digits or other.is_zero()
+      return BigInteger([])
+
+    if other == _ONE {
+      return _ZERO
+    }
+
+    var negative = self.negative != other.negative
+
+    var this_digits = self.digits[,]
+    var other_digits = other.digits[,]
+    var base = self.base, sub
+
+    var this_len = this_digits.length()
+    var other_len = other_digits.length()
+
+    if this_len <= 15 and other_len <= 15 and base == 10 {
+      # a normal math will be faster
+      var a = to_number(''.join(this_digits))
+      var b = to_number(''.join(other_digits))
+
+      return BigInteger(a % b, negative)
+    }
+
+    var result = [], part = []
+    var index = -1
+    while index < this_len - 1 {
+      part.append(this_digits[index++])
+      var compare = _compare(part, other_digits)
+      if compare < 0 {
+        result.append(0)
+        continue
+      }
+      
+      var count = 1, 
+          part_number = BigInteger(part)
+          
+      sub = part_number - other
+
+      while sub > other and sub > _MINUS_ONE {
+        count++
+        sub -= other
+      }
+
+      result.append(count)
+      part = sub == _ZERO ? [] : sub.digits
+    }
+
+    return BigInteger(sub, negative)
+  }
+
+  def ** (other) {
+    if !self.digits or !other.digits
+      return BigInteger([])
+
+    if other.is_zero() return _ONE
+    if self.is_zero() return _ZERO
+    if self == _ONE return _ONE
+    if other == _ONE return BigInteger(self)
+    if other.negative or self.negative {
+      return _ZERO
+    }
+
+    var y = BigInteger(other)
+    var x = BigInteger(self)
+
+    var two = BigInteger(2)
+    var res = BigInteger(_ONE)
+
+    while y > _ZERO {
+      if _compare((y % two).digits, _ONE.digits) {
+        res *= x
+      }
+
+      y /= two
+      x *= x
+    }
+
+    return res
+  }
+
+  @abs() {
+    return BigInteger(self.digits)
+  }
+
+  to_string(length) {
+    # TODO: convert base
+    if !self.digits return 'NaN'
+    return (self.negative ? '-' : '') + ''.join(self.digits).lpad(length or 0, '0')
+  }
+
+  is_zero() {
+    return self.digits.length() == 1 and self.digits[0] == 0
+  }
+
+  _from_number(value) {
+    self.negative = value < 0
+    self.digits = to_string(abs(value)).ltrim('0').to_list().map(@(x){
+      return to_number(x)
+    })
+  }
+
+  _from_string(value) {
+    self.negative = value.starts_with('-')
+    self.digits = to_string(value).ltrim('0').replace('/^[+-]*/', '').to_list().map(@(x){
+      return to_number(x)
+    })
+  }
+
+  _from_list(value) {
+    self.digits = value[,]
+    while self.digits.first() == 0 and value.length() > 1 {
+      self.digits.remove_at(0)
+    }
+  }
+}
+
+var _MINUS_ONE = BigInteger([1], true)
+var _ZERO = BigInteger([0])
+var _ONE = BigInteger([1])
+
+
+/* # tests
+echo (-BigInteger('334859902988488489921')).to_string()
+echo (-BigInteger('334859902988488489921')).to_string()
+echo (BigInteger('23') - BigInteger('67')).to_string()
+echo (BigInteger('23') + BigInteger('67')).to_string()
+echo (BigInteger('-43') * BigInteger('67')).to_string()
+echo (BigInteger('-43343463847672896493876439647893674634') * BigInteger('67')).to_string()
+
+echo BigInteger('10') > BigInteger(5)
+echo (BigInteger('120') / BigInteger('10')).to_string()
+echo (BigInteger('247394734993434882340') / BigInteger('24739473499343488234')).to_string()
+echo (BigInteger('-43343463847672896493876439647893674634') / BigInteger('24739473499343488234')).to_string()
+echo (BigInteger('-43343463847672896493876439647893674634') % BigInteger('24739473499343488234')).to_string()
+echo (BigInteger('63564563547467568578679689869689') * BigInteger('354357467878569680907087654734567596890778900')).to_string()
+
+echo (BigInteger('9') ** BigInteger('3')).to_string()
+echo (BigInteger('63564563547467568578679689869689') ** BigInteger('454')).to_string() */
