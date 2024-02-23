@@ -136,9 +136,10 @@ install_blade() {
 	sudo echo "export PATH=\$PATH:\"$1/.blade\"" >> "$PROFILE_FILE"
 
 	# make available in current session
+	exec "$SHELL" -l;
 
-	# shellcheck source=./install.sh
-	source "$PROFILE_FILE"
+##	 shellcheck source=./install.sh
+#	source "$PROFILE_FILE"
 
 #	if [[ -f "$1/blade/blade" ]]; then
 #	  sudo rm -rf "$1/blade/blade"
