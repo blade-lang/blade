@@ -151,6 +151,11 @@ then
   install_if_missing 'openssl'
 else
   install_if_missing 'git' 'curl' 'libssl-dev' 'libcurl4-openssl-dev'
+  if [[ $(command -v 'apt') != "" ]]; then
+    install_if_missing 'zlib1g-dev'
+  else
+    install_if_missing 'zlib-devel'
+  fi
 fi
 
 #Install cmake dependency.
