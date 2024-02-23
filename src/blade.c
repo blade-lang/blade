@@ -250,9 +250,9 @@ int main(int argc, char *argv[]) {
   int next_gc_start = DEFAULT_GC_START;
 
   if (argc > 1) {
-    opterr = 0;
-    int opt, total_break = 0;
-    while ((opt = getopt(argc, argv, ":hdeb:vg:wc:")) != -1) {
+    int opt;
+    while ((opt = getopt(argc, argv, "hdeb:vg:wc:--")) != -1) {
+      printf("Opt = %d\n", opt);
       switch (opt) {
         case 'h': {
           show_usage(argv, false);
@@ -290,19 +290,10 @@ int main(int argc, char *argv[]) {
           show_warnings = true;
           break;
         }
-        case ':':
-        case '?': {
-          total_break = 1;
-          break;
-        }
         default: {
           show_usage(argv, true); // exits
           break;
         }
-      }
-
-      if(total_break == 1) {
-        break;
       }
     }
   }
