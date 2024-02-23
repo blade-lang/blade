@@ -250,11 +250,8 @@ int main(int argc, char *argv[]) {
   int next_gc_start = DEFAULT_GC_START;
 
   if (argc > 1) {
-    int opt = getopt(argc, (char **)argv, "hdeb:vg:wc:-");
-    printf("Opt = %d, %d\n", opt, optind);
-
-    /*while ((opt = getopt(argc, (char **)argv, "hdeb:vg:wc:-")) != -1) {
-      printf("Opt = %d, %d\n", opt, optind);
+    int opt;
+    while ((opt = getopt(argc, argv, "hdeb:vg:wc:--")) != -1) {
       switch (opt) {
         case 'h': {
           show_usage(argv, false);
@@ -297,7 +294,7 @@ int main(int argc, char *argv[]) {
           break;
         }
       }
-    }*/
+    }
   }
 
   b_vm *vm = (b_vm *) malloc(sizeof(b_vm));
