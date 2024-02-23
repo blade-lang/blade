@@ -253,7 +253,6 @@ int main(int argc, char *argv[]) {
     opterr = 0;
     int opt, total_break = 0;
     while ((opt = getopt(argc, argv, ":hdeb:vg:wc:")) != -1) {
-      printf("Opt = %d\n", opt);
       switch (opt) {
         case 'h': {
           show_usage(argv, false);
@@ -291,7 +290,8 @@ int main(int argc, char *argv[]) {
           show_warnings = true;
           break;
         }
-        case ':': {
+        case ':':
+        case '?': {
           total_break = 1;
           break;
         }
@@ -301,7 +301,7 @@ int main(int argc, char *argv[]) {
         }
       }
 
-      if(total_break) {
+      if(total_break == 1) {
         break;
       }
     }
