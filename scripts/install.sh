@@ -10,8 +10,7 @@ abort() {
 # Fail fast with a concise message when not using bash
 # Single brackets are needed here for POSIX compatibility
 # shellcheck disable=SC2292
-if [ -z "${BASH_VERSION:-}" ]
-then
+if [ -z "${BASH_VERSION:-}" ]; then
   abort "Bash is required to interpret this script."
 fi
 
@@ -19,19 +18,16 @@ PROFILE_FILE="$HOME/.profile"
 
 # Check OS.
 OS="$(uname)"
-if [[ "${OS}" == "Linux" ]]
-then
+if [[ "${OS}" == "Linux" ]]; then
   IS_LINUX=1
-elif [[ "${OS}" != "Darwin" ]]
-then
+elif [[ "${OS}" != "Darwin" ]]; then
   abort "Blade auto install is only supported on macOS and Linux."
 fi
 
 install_if_missing() {
   for value in "$@"
   do
-    if [[ $(command -v "$value") == "" ]]
-    then
+    if [[ $(command -v "$value") == "" ]]; then
       echo "$value is not installed. Attempting to install it!"
 
       if [[ "$value" == "cmake" && -x "$(command -v snap)" ]]; then
@@ -63,8 +59,7 @@ install_if_missing() {
 
 install_build_env() {
   # shellcheck disable=SC2154
-  if [[ $(command -v "make") == "" ]]
-  then
+  if [[ $(command -v "make") == "" ]]; then
     echo "Build environment is not setup. Setting it up"
 
     if [ -x "$(command -v apt-get)" ]; then
@@ -110,8 +105,7 @@ install_blade() {
 	cd blade || exit
 
 	# building
-	if [[ "${OS}" == "Darwin" ]]
-  then
+	if [[ "${OS}" == "Darwin" ]]; then
 	  cmake -B . -DOPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl/ || exit
   else
 	  cmake -B . || exit
@@ -126,33 +120,27 @@ install_blade() {
 	cd ..
 	sudo rm -rf blade
 
-	# Now we can move blade back to the home directory.
-#  mv "$1/.blade" "$1/blade"
+  ADD_TO_PATH="export PATH=\$PATH:\"$1/.blade\""
 
-	# Now link the blade executable to path
-	echo "Linking Blade..."
+	if ! grep -q "$ADD_TO_PATH" "$PROFILE_FILE"; then
+    # Now add the blade executable to path
+    echo "Adding Blade to path..."
 
-  # export to bash profile
-	sudo echo "export PATH=\$PATH:\"$1/.blade\"" >> "$PROFILE_FILE"
+    # export to bash profile
+    echo "$ADD_TO_PATH" | sudo tee -a "$PROFILE_FILE" > /dev/null
 
-	# make available in current session
-	exec "$SHELL" -l;
+    # make available in current session
+    exec "$SHELL" -l;
+  fi
 
-##	 shellcheck source=./install.sh
-#	source "$PROFILE_FILE"
-
-#	if [[ -f "$1/blade/blade" ]]; then
-#	  sudo rm -rf "$1/blade/blade"
-#  fi
-#	sudo ln -s "$1/blade/blade" /usr/local/bin/blade
+  echo "Blade installed successfully!"
 }
 
 echo "Beginning installation of Blade..."
 
 install_build_env
 
-if [[ -z "${IS_LINUX-}" ]]
-then
+if [[ -z "${IS_LINUX-}" ]]; then
 
   #Install Homebrew if not installed...
   if [[ $(command -v 'brew') == "" ]]
@@ -176,8 +164,7 @@ fi
 #Install cmake dependency.
 install_if_missing 'cmake'
 
-if [[ "${OS}" == "Darwin" ]]
-then
+if [[ "${OS}" == "Darwin" ]]; then
   install_blade "/Users/$USER"
 else
   install_blade "/home/$USER"
