@@ -251,10 +251,12 @@ int main(int argc, char *argv[]) {
 
   if (argc > 1) {
     int opt;
-    while ((opt = getopt(argc, argv, "hdeb:vg:wc:--")) != -1) {
+    while ((opt = getopt(argc, argv, "hdeb:vg:wc:")) != -1) {
       switch (opt) {
-        case 'h':
-          show_usage(argv, false); // exits
+        case 'h': {
+          show_usage(argv, false);
+          break;
+        }// exits
         case 'd':
           should_print_bytecode = true;
           break;
@@ -287,8 +289,10 @@ int main(int argc, char *argv[]) {
           show_warnings = true;
           break;
         }
-        default:
+        default: {
           show_usage(argv, true); // exits
+          break;
+        }
       }
     }
   }
