@@ -15,6 +15,14 @@ then
   abort "Bash is required to interpret this script."
 fi
 
+if [ "/usr/bin/zsh" == "$SHELL" ]; then
+  PROFILE_FILE="$USER/.zshrc"
+elif [ "/usr/bin/bash" == "$SHELL" ]; then
+  PROFILE_FILE="$USER/.bashrc"
+else
+  PROFILE_FILE="$USER/.profile"
+fi
+
 # Check OS.
 OS="$(uname)"
 if [[ "${OS}" == "Linux" ]]
@@ -125,15 +133,23 @@ install_blade() {
 	rm -rf blade
 
 	# Now we can move blade back to the home directory.
-	mv "$1/.blade" "$1/blade"
+#  mv "$1/.blade" "$1/blade"
 
 	# Now link the blade executable to path
 	echo "Linking Blade..."
 
-	if [[ -f "$1/blade/blade" ]]; then
-	  sudo rm -rf "$1/blade/blade"
-  fi
-	sudo ln -s "$1/blade/blade" /usr/local/bin/blade
+  # export to bash profile
+	echo "export PATH=\$PATH:\"$1/.blade\"" >> "$PROFILE_FILE"
+
+	# make available in current session
+
+	# shellcheck source=./install.sh
+	source "$PROFILE_FILE"
+
+#	if [[ -f "$1/blade/blade" ]]; then
+#	  sudo rm -rf "$1/blade/blade"
+#  fi
+#	sudo ln -s "$1/blade/blade" /usr/local/bin/blade
 }
 
 echo "Beginning installation of Blade..."
