@@ -26,10 +26,8 @@ then
 fi
 
 install_if_missing() {
-  # shellcheck disable=SC2034
-  for vaule in "$@"
+  for value in "$@"
   do
-    # shellcheck disable=SC2154
     if [[ $(command -v "$value") == "" ]]
       then
         echo "$value is not installed. Attempting to install it!"
