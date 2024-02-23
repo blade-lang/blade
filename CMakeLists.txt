@@ -72,8 +72,13 @@ set(BLADE_SOURCES
 		)
 
 add_definitions(-DEXPORT_LIBS)
+
 if(UNIX AND NOT APPLE AND MUSL)
 	add_definitions(-D__MUSL__)
+endif()
+
+if(UNIX)
+	add_compile_options(-Wno-deprecated-declarations)
 endif()
 
 include_directories(src thirdparty)
