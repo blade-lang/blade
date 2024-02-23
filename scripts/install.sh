@@ -34,15 +34,23 @@ install_if_missing() {
       then
         echo "$value is not installed. Attempting to install it!"
 
-        # On Ubuntu with snap, snap is the correct way to get an up-to-date cmake version.
-        if [[ "$value" == "cmake" && -x "$(command -v snap)" ]]; then snap install cmake --classic
-        elif [ -x "$(command -v apk)" ]; then sudo apk add --no-cache "$value"
-        elif [ -x "$(command -v apt-get)" ]; then sudo apt-get install "$value"-y
-        elif [ -x "$(command -v dnf)" ]; then sudo dnf install "$value"-y
-        elif [ -x "$(command -v zypper)" ]; then sudo zypper install "$value" -y
-        elif [ -x "$(command -v yum)" ]; then sudo yum install "$value" -y
-        elif [ -x "$(command -v pacman)" ]; then sudo pacman -Sy "$value"
-        elif [ -x "$(command -v brew)" ]; then brew install "$value"
+        if [[ "$value" == "cmake" && -x "$(command -v snap)" ]]; then
+          # On Ubuntu with snap, snap is the correct way to get an up-to-date cmake version.
+          snap install cmake --classic
+        elif [ -x "$(command -v apk)" ]; then
+          sudo apk add --no-cache "$value"
+        elif [ -x "$(command -v apt-get)" ]; then
+          sudo apt-get install "$value" -y
+        elif [ -x "$(command -v dnf)" ]; then
+          sudo dnf install "$value" -y
+        elif [ -x "$(command -v zypper)" ]; then
+          sudo zypper install "$value" -y
+        elif [ -x "$(command -v yum)" ]; then
+          sudo yum install "$value" -y
+        elif [ -x "$(command -v pacman)" ]; then
+          sudo pacman -Sy "$value"
+        elif [ -x "$(command -v brew)" ]; then
+          brew install "$value"
         else
           echo "Failed to install dependencies. Package manager not found."
           abort "You must manually install $value to continue"
@@ -51,6 +59,35 @@ install_if_missing() {
         echo "$value is installed..."
       fi
   done
+}
+
+install_build_env() {
+  # shellcheck disable=SC2154
+  if [[ $(command -v "make") == "" ]]
+  then
+    echo "Build environment is not setup. Setting it up"
+
+    if [ -x "$(command -v apt-get)" ]; then
+      sudo apt-get install build-essential -y
+    elif [ -x "$(command -v apk)" ]; then
+      sudo apk add --no-cache build-base
+    elif [ -x "$(command -v dnf)" ]; then
+      sudo dnf group install "C Development Tools and Libraries" -y
+    elif [ -x "$(command -v zypper)" ]; then
+      sudo zypper install -t pattern devel_basis -y
+    elif [ -x "$(command -v yum)" ]; then
+      sudo yum groups mark install "Development Tools" -y
+      sudo yum groups mark convert "Development Tools" -y
+      sudo yum groupinstall "Development Tools" -y
+    elif [ -x "$(command -v pacman)" ]; then
+      sudo pacman -Sy base-devel
+    else
+      echo "Failed to install dependencies. Package manager not found."
+      abort "You must manually install $value to continue"
+    fi
+  else
+    echo "$value is installed..."
+  fi
 }
 
 install_blade() {
@@ -98,6 +135,8 @@ install_blade() {
 }
 
 echo "Beginning installation of Blade..."
+
+install_build_env
 
 if [[ -z "${IS_LINUX-}" ]]
 then
