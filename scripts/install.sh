@@ -92,7 +92,7 @@ install_build_env() {
 
 install_blade() {
   if [[ -d "$1" ]]; then
-    mkdir -p "$1"
+    sudo mkdir -p "$1"
   fi
 
 	# removing old/stale/partial objects
@@ -124,7 +124,7 @@ install_blade() {
 	cp -r blade "$1/.blade"
 
 	cd ..
-	rm -rf blade
+	sudo rm -rf blade
 
 	# Now we can move blade back to the home directory.
 #  mv "$1/.blade" "$1/blade"
