@@ -334,7 +334,7 @@ class Info {
    * The protocol used in the last request.
    * @static
    */
-  static var PROTOCOL = _curl.CURLINFO_PROTOCOL
+  static var PROTOCOL = _curl.CURLINFO_SCHEME
 
   /**
    * A string holding the URL scheme used for the most recent connection done with 

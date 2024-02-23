@@ -16,11 +16,11 @@ then
 fi
 
 if [ "/usr/bin/zsh" == "$SHELL" ]; then
-  PROFILE_FILE="$USER/.zshrc"
+  PROFILE_FILE="$HOME/.zshrc"
 elif [ "/usr/bin/bash" == "$SHELL" ]; then
-  PROFILE_FILE="$USER/.bashrc"
+  PROFILE_FILE="$HOME/.bashrc"
 else
-  PROFILE_FILE="$USER/.profile"
+  PROFILE_FILE="$HOME/.profile"
 fi
 
 # Check OS.

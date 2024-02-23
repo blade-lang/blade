@@ -133,7 +133,7 @@ class Option {
     * This points to a linked list of post entries. 
     * @static
     */
-   static var HTTPPOST = _curl.CURLOPT_HTTPPOST
+   static var HTTPPOST = _curl.CURLOPT_MIMEPOST
 
    /**
     * name of the file keeping your private SSL-certificate 
@@ -283,7 +283,7 @@ class Option {
     * HTTP PUT 
     * @static
     */
-   static var PUT = _curl.CURLOPT_PUT
+   static var PUT = _curl.CURLOPT_UPLOAD
 
    /**
     * We want the referrer field set automatically when following locations 
@@ -377,19 +377,6 @@ class Option {
     * @static
     */
    static var FORBID_REUSE = _curl.CURLOPT_FORBID_REUSE
-
-   /**
-    * Set to a file name that contains random data for libcurl to use to
-    * seed the random engine when doing SSL connects. 
-    * @static
-    */
-   static var RANDOM_FILE = _curl.CURLOPT_RANDOM_FILE
-
-   /**
-    * Set to the Entropy Gathering Daemon socket pathname 
-    * @static
-    */
-   static var EGDSOCKET = _curl.CURLOPT_EGDSOCKET
 
    /**
     * Time-out connect operations after this amount of seconds, if connects are
