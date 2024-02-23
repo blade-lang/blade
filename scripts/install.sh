@@ -129,6 +129,10 @@ install_blade() {
 
 	# Now link the blade executable to path
 	echo "Linking Blade..."
+
+	if [[ -f "$1/blade/blade" ]]; then
+	  sudo rm -rf "$1/blade/blade"
+  fi
 	sudo ln -s "$1/blade/blade" /usr/local/bin/blade
 }
 

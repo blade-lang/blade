@@ -59,17 +59,10 @@ class Info {
   static var PRETRANSFER_TIME = _curl.CURLINFO_PRETRANSFER_TIME
 
   /**
-   * The total amount of bytes that were  uploaded.
-   * @static
-   * @note `SIZE_UPLOAD_T` might return a more sensible data.
-   */
-  static var SIZE_UPLOAD = _curl.CURLINFO_SIZE_UPLOAD
-
-  /**
    * The total amount of bytes that were uploaded.
    * @static
    */
-  static var SIZE_UPLOAD_T = _curl.CURLINFO_SIZE_UPLOAD_T
+  static var SIZE_UPLOAD = _curl.CURLINFO_SIZE_UPLOAD_T
 
   /**
    * The total amount of bytes that were  downloaded.  The amount is only for the 
@@ -77,46 +70,22 @@ class Info {
    * payload data, what's also commonly called body. All meta and header data are 
    * excluded and will not be counted in this number.
    * @static
-   * @note `SIZE_DOWNLOAD_T` might return a more sensible data.
    */
-  static var SIZE_DOWNLOAD = _curl.CURLINFO_SIZE_DOWNLOAD
-
-  /**
-   * The total amount of bytes that were  downloaded.  The amount is only for the 
-   * latest transfer and will be reset again for each new transfer. This counts actual 
-   * payload data, what's also commonly called body. All meta and header data are 
-   * excluded and will not be counted in this number.
-   */
-  static var SIZE_DOWNLOAD_T = _curl.CURLINFO_SIZE_DOWNLOAD_T
+  static var SIZE_DOWNLOAD = _curl.CURLINFO_SIZE_DOWNLOAD_T
 
   /**
    * The average download speed that curl measured for the complete download. Measured 
    * in bytes/second.
    * @static
-   * @note `SPEED_DOWNLOAD_T` might return a more sensible data.
    */
-  static var SPEED_DOWNLOAD = _curl.CURLINFO_SPEED_DOWNLOAD
-
-  /**
-   * The average download speed that curl measured for the complete download. Measured 
-   * in bytes/second.
-   */
-  static var SPEED_DOWNLOAD_T = _curl.CURLINFO_SPEED_DOWNLOAD_T
-
-  /**
-   * The average upload speed that curl measured for the complete upload. Measured 
-   * in bytes/second.
-   * @static
-   * @note `CURLINFO_SPEED_UPLOAD_T` might return a more sensible data.
-   */
-  static var SPEED_UPLOAD = _curl.CURLINFO_SPEED_UPLOAD
+  static var SPEED_DOWNLOAD = _curl.CURLINFO_SPEED_DOWNLOAD_T
 
   /**
    * The average upload speed that curl measured for the complete upload. Measured 
    * in bytes/second.
    * @static
    */
-  static var SPEED_UPLOAD_T = _curl.CURLINFO_SPEED_UPLOAD_T
+  static var SPEED_UPLOAD = _curl.CURLINFO_SPEED_UPLOAD_T
 
   /**
    * The total size of all the headers received. Measured in number of bytes.
@@ -148,54 +117,21 @@ class Info {
    * You _MUST_ to collect this information before the transfer is made, by using the 
    * `Options.FILETIME` option to `set_option()` or you will unconditionally get a -1 back.
    * @static
-   * 
-   * > Consider using `FILETIME_T` to be able to extract dates beyond the year 2038 on 
-   * > systems using 32 bit longs.
    */
-  static var FILETIME = _curl.CURLINFO_FILETIME
-
-  /**
-   * The remote time of the retrieved document (in number of seconds since 1 jan 1970 
-   * in the GMT/UTC time zone). If you get -1, it can be because of many reasons (it might 
-   * be unknown, the server might hide it or the server doesn't support the command that 
-   * tells document time etc) and the time of the document is unknown.
-   * 
-   * You _MUST_ to collect this information before the transfer is made, by using the 
-   * `Options.FILETIME` option to `set_option()` or you will unconditionally get a -1 back.
-   * @static
-   * 
-   * > This option is an alternative to `FILETIME` to allow systems with 32 bit long 
-   * > variables to extract dates outside of the 32bit timestamp range.
-   */
-  static var FILETIME_T = _curl.CURLINFO_FILETIME_T
-
-  /**
-   * The content-length of the download. This is the value read from the `Content-Length:` 
-   * field. It is -1 if the size isn't known.
-   * @static
-   * @note `CONTENT_LENGTH_DOWNLOAD_T` might return a more sensible data.
-   */
-  static var CONTENT_LENGTH_DOWNLOAD = _curl.CURLINFO_CONTENT_LENGTH_DOWNLOAD
+  static var FILETIME = _curl.CURLINFO_FILETIME_T
 
   /**
    * The content-length of the download. This is the value read from the `Content-Length:` 
    * field. It is -1 if the size isn't known.
    * @static
    */
-  static var CONTENT_LENGTH_DOWNLOAD_T = _curl.CURLINFO_CONTENT_LENGTH_DOWNLOAD_T
-
-  /**
-   * The content-length of the upload. It is -1 if the size isn't known.
-   * @static
-   * @note `CONTENT_LENGTH_UPLOAD_T` might return a more sensible data.
-   */
-  static var CONTENT_LENGTH_UPLOAD = _curl.CURLINFO_CONTENT_LENGTH_UPLOAD
+  static var CONTENT_LENGTH_DOWNLOAD = _curl.CURLINFO_CONTENT_LENGTH_DOWNLOAD_T
 
   /**
    * The content-length of the upload. It is -1 if the size isn't known.
    * @static
    */
-  static var CONTENT_LENGTH_UPLOAD_T = _curl.CURLINFO_CONTENT_LENGTH_UPLOAD_T
+  static var CONTENT_LENGTH_UPLOAD = _curl.CURLINFO_CONTENT_LENGTH_UPLOAD_T
 
   /**
    * The time, in seconds, it took from the start until the first byte is received by 
