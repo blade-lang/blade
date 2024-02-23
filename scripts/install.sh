@@ -29,33 +29,33 @@ install_if_missing() {
   for value in "$@"
   do
     if [[ $(command -v "$value") == "" ]]
-      then
-        echo "$value is not installed. Attempting to install it!"
+    then
+      echo "$value is not installed. Attempting to install it!"
 
-        if [[ "$value" == "cmake" && -x "$(command -v snap)" ]]; then
-          # On Ubuntu with snap, snap is the correct way to get an up-to-date cmake version.
-          snap install cmake --classic
-        elif [ -x "$(command -v apk)" ]; then
-          sudo apk add --no-cache "$value"
-        elif [ -x "$(command -v apt-get)" ]; then
-          sudo apt-get install "$value" -y
-        elif [ -x "$(command -v dnf)" ]; then
-          sudo dnf install "$value" -y
-        elif [ -x "$(command -v zypper)" ]; then
-          sudo zypper install "$value" -y
-        elif [ -x "$(command -v yum)" ]; then
-          sudo yum install "$value" -y
-        elif [ -x "$(command -v pacman)" ]; then
-          sudo pacman -Sy "$value"
-        elif [ -x "$(command -v brew)" ]; then
-          brew install "$value"
-        else
-          echo "Failed to install dependencies. Package manager not found."
-          abort "You must manually install $value to continue"
-        fi
+      if [[ "$value" == "cmake" && -x "$(command -v snap)" ]]; then
+        # On Ubuntu with snap, snap is the correct way to get an up-to-date cmake version.
+        snap install cmake --classic
+      elif [ -x "$(command -v apk)" ]; then
+        sudo apk add --no-cache "$value"
+      elif [ -x "$(command -v apt-get)" ]; then
+        sudo apt-get install "$value" -y
+      elif [ -x "$(command -v dnf)" ]; then
+        sudo dnf install "$value" -y
+      elif [ -x "$(command -v zypper)" ]; then
+        sudo zypper install "$value" -y
+      elif [ -x "$(command -v yum)" ]; then
+        sudo yum install "$value" -y
+      elif [ -x "$(command -v pacman)" ]; then
+        sudo pacman -Sy "$value"
+      elif [ -x "$(command -v brew)" ]; then
+        brew install "$value"
       else
-        echo "$value is already installed. Skipping..."
+        echo "Failed to install dependencies. Package manager not found."
+        abort "You must manually install $value to continue"
       fi
+    else
+      echo "$value is already installed. Skipping..."
+    fi
   done
 }
 
