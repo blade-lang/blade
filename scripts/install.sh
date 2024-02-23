@@ -54,7 +54,7 @@ install_if_missing() {
           abort "You must manually install $value to continue"
         fi
       else
-        echo "$value is installed..."
+        echo "$value is already installed. Skipping..."
       fi
   done
 }
@@ -84,7 +84,7 @@ install_build_env() {
       abort "You must manually install $value to continue"
     fi
   else
-    echo "$value is installed..."
+    echo "Build environment is already setup. Skipping..."
   fi
 }
 
