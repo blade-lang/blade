@@ -102,7 +102,7 @@ install_blade() {
   fi
 
 	# removing old/stale/partial objects
-	STALE_PATHS=("/usr/local/bin/blade" "$(pwd)/blade" "$1/blade")
+	STALE_PATHS=("$(pwd)/blade" "$1/.blade")
 	for path in "${STALE_PATHS[@]}"
 	do
 	  if [[ -d "$path" ]]; then
