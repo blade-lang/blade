@@ -81,7 +81,7 @@ install_build_env() {
       sudo pacman -Sy base-devel
     else
       echo "Failed to install dependencies. Package manager not found."
-      abort "You must manually install $value to continue"
+      abort "You must manually setup your build environment by installing make, c/c++ and related modules to continue"
     fi
   else
     echo "Build environment is already setup. Skipping..."
