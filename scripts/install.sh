@@ -15,13 +15,7 @@ then
   abort "Bash is required to interpret this script."
 fi
 
-if [ "/usr/bin/zsh" == "$SHELL" ]; then
-  PROFILE_FILE="$HOME/.zshrc"
-elif [ "/usr/bin/bash" == "$SHELL" ]; then
-  PROFILE_FILE="$HOME/.bashrc"
-else
-  PROFILE_FILE="$HOME/.profile"
-fi
+PROFILE_FILE="$HOME/.profile"
 
 # Check OS.
 OS="$(uname)"
@@ -139,7 +133,7 @@ install_blade() {
 	echo "Linking Blade..."
 
   # export to bash profile
-	echo "export PATH=\$PATH:\"$1/.blade\"" >> "$PROFILE_FILE"
+	sudo echo "export PATH=\$PATH:\"$1/.blade\"" >> "$PROFILE_FILE"
 
 	# make available in current session
 
