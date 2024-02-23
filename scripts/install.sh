@@ -22,66 +22,79 @@ then
   IS_LINUX=1
 elif [[ "${OS}" != "Darwin" ]]
 then
-  abort "Blade autoinstall is only supported on macOS and Linux."
+  abort "Blade auto install is only supported on macOS and Linux."
 fi
 
 install_if_missing() {
-  if [[ "$(command -v $@)" == "" ]]
-  then
-    echo "$@ is not installed. Attempting to install it!"
+  # shellcheck disable=SC2034
+  for vaule in "$@"
+  do
+    # shellcheck disable=SC2154
+    if [[ $(command -v "$value") == "" ]]
+      then
+        echo "$value is not installed. Attempting to install it!"
 
-    # On Ubuntu with snap, snap is the correct way to get an up-to-date cmake version.
-    if [[ "$@" == "cmake" && -x "$(command -v snap)" ]]; then snap install cmake --classic
-    elif [ -x "$(command -v apk)" ]; then sudo apk add --no-cache $@
-    elif [ -x "$(command -v apt-get)" ]; then sudo apt-get install $@ -y
-    elif [ -x "$(command -v dnf)" ]; then sudo dnf install $@ -y
-    elif [ -x "$(command -v zypper)" ]; then sudo zypper install $@ -y
-    elif [ -x "$(command -v yum)" ]; then sudo yum install $@ -y
-    elif [ -x "$(command -v pacman)" ]; then sudo pacman -Sy $@
-    elif [ -x "$(command -v brew)" ]; then brew install $@
-    else
-      echo "Failed to install dependencies. Package manager not found."
-      abort "You must manually install $@ to continue"
-    fi
-  else
-    echo "$@ is installed..."
-  fi
+        # On Ubuntu with snap, snap is the correct way to get an up-to-date cmake version.
+        if [[ "$value" == "cmake" && -x "$(command -v snap)" ]]; then snap install cmake --classic
+        elif [ -x "$(command -v apk)" ]; then sudo apk add --no-cache "$value"
+        elif [ -x "$(command -v apt-get)" ]; then sudo apt-get install "$value"-y
+        elif [ -x "$(command -v dnf)" ]; then sudo dnf install "$value"-y
+        elif [ -x "$(command -v zypper)" ]; then sudo zypper install "$value" -y
+        elif [ -x "$(command -v yum)" ]; then sudo yum install "$value" -y
+        elif [ -x "$(command -v pacman)" ]; then sudo pacman -Sy "$value"
+        elif [ -x "$(command -v brew)" ]; then brew install "$value"
+        else
+          echo "Failed to install dependencies. Package manager not found."
+          abort "You must manually install $value to continue"
+        fi
+      else
+        echo "$value is installed..."
+      fi
+  done
 }
 
 install_blade() {
+  if [[ -d "$1" ]]; then
+    mkdir "$1" || exit
+  fi
+
 	# removing old/stale/partial objects
-	echo "Removing old/stale/partial objects..."
-	sudo rm /usr/local/bin/blade
-	sudo rm -rf `pwd`/blade
-	sudo rm -rf "$@/blade"
+	STALE_PATHS=("/usr/local/bin/blade" "$(pwd)/blade" "$1/blade")
+	for path in "${STALE_PATHS[@]}"
+	do
+	  if [[ -d "$path" ]]; then
+	    echo "Removing old/stale/partial object '$path'..."
+      sudo rm -rf "$path" || exit
+    fi
+  done
 
 	# cloning
 	git clone https://github.com/blade-lang/blade.git
-	cd blade
+	cd blade || exit
 
 	# building
 	if [[ "${OS}" == "Darwin" ]]
   then
-	  cmake -B . -DOPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl/
+	  cmake -B . -DOPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl/ || exit
   else
-	  cmake -B .
+	  cmake -B . || exit
   fi
-	cmake --build . -- -j 16
+	cmake --build . -- -j 16 || exit
 
 	# We are copying to .blade here instead of just moving it to
 	# blade directly in case the user runs this script from the
 	# home directory.
-	cp -r blade $@/.blade
+	cp -r blade "$1/.blade"
 
 	cd ..
 	rm -rf blade
 
 	# Now we can move blade back to the home directory.
-	mv $@/.blade $@/blade
+	mv "$1/.blade" "$1/blade"
 
 	# Now link the blade executable to path
 	echo "Linking Blade..."
-	sudo ln -s $@/blade/blade /usr/local/bin/blade
+	sudo ln -s "$1/blade/blade" /usr/local/bin/blade
 }
 
 echo "Beginning installation of Blade..."
@@ -100,10 +113,7 @@ then
 
   install_if_missing 'openssl'
 else
-  install_if_missing 'git'
-  install_if_missing 'curl'
-  install_if_missing 'libssl-dev'
-  install_if_missing 'libcurl4-openssl-dev'
+  install_if_missing 'git' 'curl' 'libssl-dev' 'libcurl4-openssl-dev'
 fi
 
 #Install cmake dependency.
