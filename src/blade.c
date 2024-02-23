@@ -251,7 +251,11 @@ int main(int argc, char *argv[]) {
 
   if (argc > 1) {
     int opt;
+#ifdef __linux__
+    while ((opt = getopt(argc, argv, "+hdeb:vg:wc:--")) != -1) {
+#else
     while ((opt = getopt(argc, argv, "hdeb:vg:wc:--")) != -1) {
+#endif
       switch (opt) {
         case 'h': {
           show_usage(argv, false);
