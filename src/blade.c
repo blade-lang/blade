@@ -250,8 +250,9 @@ int main(int argc, char *argv[]) {
   int next_gc_start = DEFAULT_GC_START;
 
   if (argc > 1) {
-    int opt;
-    while ((opt = getopt(argc, argv, "hdeb:vg:wc:-")) != -1) {
+    int opt = opt = getopt(argc, argv, "hdeb:vg:wc:-");
+    printf("first opt = %d\n", opt);
+    while ((opt = getopt(argc, argv, "hdeb:vg:wc:-")) != -1 && opt != EOF) {
       printf("Opt = %d, %d\n", opt, optind);
       switch (opt) {
         case 'h': {
