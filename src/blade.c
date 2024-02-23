@@ -252,6 +252,7 @@ int main(int argc, char *argv[]) {
   if (argc > 1) {
     int opt;
     while ((opt = getopt(argc, argv, "hdeb:vg:wc:")) != -1) {
+      printf("Opt = %d\n", opt);
       switch (opt) {
         case 'h': {
           show_usage(argv, false);
