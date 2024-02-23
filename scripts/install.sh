@@ -90,7 +90,7 @@ install_build_env() {
 
 install_blade() {
   if [[ -d "$1" ]]; then
-    mkdir -p "$1" || exit
+    mkdir -p "$1"
   fi
 
 	# removing old/stale/partial objects
