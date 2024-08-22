@@ -107,7 +107,7 @@ DECLARE_NATIVE(file) {
     ENFORCE_ARG_TYPE(file, 1, IS_STRING);
     mode = AS_STRING(args[1]);
   } else {
-    mode = (b_obj_string *) GC(copy_string(vm, "r", 1));
+    mode = (b_obj_string *) GC(take_string(vm, strdup("r"), 1));
   }
 
   b_obj_file *file = (b_obj_file*)GC(new_file(vm, path, mode));

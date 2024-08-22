@@ -2541,21 +2541,17 @@ bool queue_closure(b_vm *vm, b_obj_closure *closure) {
 }
 
 b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
-  b_blob blob;
-  init_blob(&blob);
-
   if(vm->exception_class == NULL) {
     initialize_exceptions(vm, module);
   }
 
-  b_obj_func *function = compile(vm, module, source, &blob);
+  b_obj_func *function = compile(vm, module, source);
 
   if (vm->should_exit_after_bytecode) {
     return PTR_OK;
   }
 
   if (function == NULL) {
-    free_blob(vm, &blob);
     return PTR_COMPILE_ERR;
   }
 

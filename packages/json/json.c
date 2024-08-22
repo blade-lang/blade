@@ -9,9 +9,9 @@ b_value get_blade_value(b_vm *vm, json_value * data) {
       b_obj_dict *dict = (b_obj_dict*)GC(new_dict(vm));
       value = OBJ_VAL(dict);
       for (int i = 0; i < data->u.object.length; i++) {
-        b_obj_string *name = (b_obj_string *)GC(copy_string(vm, data->u.object.values[i].name, strlen(data->u.object.values[i].name)));
+        b_value name = GC_STRING(data->u.object.values[i].name);
         b_value _value = get_blade_value(vm, data->u.object.values[i].value);
-        dict_set_entry(vm, dict, OBJ_VAL(name), _value);
+        dict_set_entry(vm, dict, name, _value);
       }
       break;
     }

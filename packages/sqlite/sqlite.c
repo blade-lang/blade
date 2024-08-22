@@ -112,7 +112,8 @@ DECLARE_MODULE_METHOD(sqlite__exec) {
         }
 
         if(sqlite3_step(stmt) != SQLITE_DONE) {
-          RETURN_STRING("exec failed!");
+          const char *error = sqlite3_errmsg(db);
+          RETURN_STRING(error);
         }
 
         sqlite3_finalize(stmt);
