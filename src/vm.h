@@ -37,7 +37,7 @@ struct s_vm {
 
   b_blob *blob;
   uint8_t *ip;
-  b_value stack[STACK_MAX];
+  b_value *stack;
   b_value *stack_top;
   b_obj_up_value *open_up_values;
 
@@ -81,7 +81,7 @@ struct s_vm {
   // miscellaneous
 };
 
-void init_vm(b_vm *vm);
+void init_vm(b_vm *vm, size_t stack_size);
 
 void free_vm(b_vm *vm);
 

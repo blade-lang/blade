@@ -509,7 +509,10 @@ static void init_builtin_methods(b_vm *vm) {
 #undef DEFINE_RANGE_METHOD
 }
 
-void init_vm(b_vm *vm) {
+void init_vm(b_vm *vm, size_t stack_size) {
+
+  // must be first thing done.
+  vm->stack = ALLOCATE(b_value, stack_size);
 
   reset_stack(vm);
   vm->compiler = NULL;

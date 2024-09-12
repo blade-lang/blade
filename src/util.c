@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 char *append_strings_n(char *old, char *new_str, size_t new_len) {
   // quick exit...
@@ -65,3 +66,63 @@ char *read_file(const char *path) {
   fclose(fp);
   return buffer;
 }
+
+// --------- START FILE SIZE MANIPULATION ---------------
+
+static char *human_readable_filesize_suffix = "kKmMgGtT";
+static const char     *human_readable_filesize_labels[]   = { "TiB", "GiB", "MiB", "KiB", "B" };
+
+size_t *parse_size(char *input, size_t *target) {
+  char *endp = input;
+  char *match = NULL;
+  size_t shift = 0;
+  errno = 0;
+
+  long double value = strtold(input, &endp);
+  if(errno || endp == input || value < 0) {
+    return NULL;
+  }
+
+  if(!(match = strchr(human_readable_filesize_suffix, *endp))) {
+    return NULL;
+  }
+
+  if(*match) {
+    shift = ((match - human_readable_filesize_suffix) / 2 + 1) * 10;
+  }
+
+  *target = value * (1LU << shift);
+
+  return target;
+}
+
+char *format_size(size_t size) {  
+
+#define DIM(x) (sizeof(x)/sizeof(*(x)))
+#define terabytes (1024UL * 1024UL * 1024UL * 1024UL)
+
+  char     *result = (char *) malloc(sizeof(char) * 20);
+  size_t  multiplier = terabytes;
+  int i;
+
+  for (i = 0; i < DIM(human_readable_filesize_labels); i++, multiplier /= 1024) {   
+    if (size < multiplier) {
+      continue;
+    }
+    
+    if (size % multiplier == 0) {
+      sprintf(result, "%lu %s", size / multiplier, human_readable_filesize_labels[i]);
+    } else {
+      sprintf(result, "%.1f %s", (float) size / multiplier, human_readable_filesize_labels[i]);
+    }
+    return result;
+  }
+  strcpy(result, "0");
+  return result;
+
+#undef terabytes
+#undef DIM
+
+}
+
+// ----------- END FILE SIZE MANIPULATION ---------------

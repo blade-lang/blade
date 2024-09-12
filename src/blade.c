@@ -229,12 +229,12 @@ void show_usage(char *argv[], bool fail) {
   fprintf(out, "Usage: %s [-[h | c | d | e | v | g | w]] [filename]\n", argv[0]);
   fprintf(out, "   -h       Show this help message.\n");
   fprintf(out, "   -v       Show version string.\n");
+  fprintf(out, "   -s arg   Sets the stack size in kilobytes. [Default = %d (%s), Min = %s]\n", DEFAULT_STACK_SIZE / 1024, format_size(DEFAULT_STACK_SIZE), format_size(MIN_STACK_SIZE));
   fprintf(out, "   -b arg   Buffer terminal outputs with the given size.\n");
   fprintf(out, "   -d       Print bytecode.\n");
   fprintf(out, "   -e       Print bytecode and exit.\n");
   fprintf(out, "   -g arg   Sets the minimum heap size in kilobytes before the GC\n"
-               "            can start. [Default = %d (%dmb)]\n", DEFAULT_GC_START / 1024,
-          DEFAULT_GC_START / (1024 * 1024));
+               "            can start. [Default = %d (%s)]\n", DEFAULT_GC_START / 1024, format_size(DEFAULT_GC_START));
   fprintf(out, "   -c arg   Runs the give code.\n");
   fprintf(out, "   -w       Show runtime warnings.\n");
   exit(fail ? EXIT_FAILURE : EXIT_SUCCESS);
@@ -245,6 +245,7 @@ int main(int argc, char *argv[]) {
   bool show_warnings = false;
   bool should_print_bytecode = false;
   long stdout_buffer_size = 0L;
+  size_t vm_stack_size = DEFAULT_STACK_SIZE;
   bool should_exit_after_bytecode = false;
   char *source = NULL;
   int next_gc_start = DEFAULT_GC_START;
@@ -252,9 +253,9 @@ int main(int argc, char *argv[]) {
   if (argc > 1) {
     int opt;
 #ifdef __linux__
-    while ((opt = getopt(argc, argv, "+hdeb:vg:wc:")) != -1) {
+    while ((opt = getopt(argc, argv, "+hdeb:s:vg:wc:")) != -1) {
 #else
-    while ((opt = getopt(argc, argv, "hdeb:vg:wc:")) != -1) {
+    while ((opt = getopt(argc, argv, "hdeb:s:vg:wc:")) != -1) {
 #endif
       switch (opt) {
         case 'h': {
@@ -272,6 +273,12 @@ int main(int argc, char *argv[]) {
           stdout_buffer_size = strtol(optarg, NULL, 10);
           if (stdout_buffer_size < 0) {
             stdout_buffer_size = 0;
+          }
+          break;
+        case 's':
+          parse_size(optarg, &vm_stack_size);
+          if(vm_stack_size <= MIN_STACK_SIZE) {
+            vm_stack_size = MIN_STACK_SIZE;
           }
           break;
         case 'v': {
@@ -304,7 +311,7 @@ int main(int argc, char *argv[]) {
   b_vm *vm = (b_vm *) malloc(sizeof(b_vm));
   if (vm != NULL) {
     memset(vm, 0, sizeof(b_vm));
-    init_vm(vm);
+    init_vm(vm, vm_stack_size);
 
     // set vm options...
     vm->show_warnings = show_warnings;
