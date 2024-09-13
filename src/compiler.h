@@ -88,7 +88,7 @@ typedef struct {
   b_precedence precedence;
 } b_parse_rule;
 
-b_obj_func *compile(b_vm *vm, b_obj_module *module, const char *source);
+b_obj_func *compile(b_vm *vm, b_obj_module *module, const char *source, b_blob *blob);
 
 void mark_compiler_roots(b_vm *vm);
 

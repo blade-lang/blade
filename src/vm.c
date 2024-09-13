@@ -509,10 +509,7 @@ static void init_builtin_methods(b_vm *vm) {
 #undef DEFINE_RANGE_METHOD
 }
 
-void init_vm(b_vm *vm, size_t stack_size) {
-
-  // must be first thing done.
-  vm->stack = ALLOCATE(b_value, stack_size);
+void init_vm(b_vm *vm) {
 
   reset_stack(vm);
   vm->compiler = NULL;
@@ -2544,17 +2541,21 @@ bool queue_closure(b_vm *vm, b_obj_closure *closure) {
 }
 
 b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
+  b_blob blob;
+  init_blob(&blob);
+
   if(vm->exception_class == NULL) {
     initialize_exceptions(vm, module);
   }
 
-  b_obj_func *function = compile(vm, module, source);
+  b_obj_func *function = compile(vm, module, source, &blob);
 
   if (vm->should_exit_after_bytecode) {
     return PTR_OK;
   }
 
   if (function == NULL) {
+    free_blob(vm, &blob);
     return PTR_COMPILE_ERR;
   }
 
