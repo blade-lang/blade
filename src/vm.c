@@ -261,22 +261,71 @@ void do_runtime_error(b_vm *vm, const char *format, ...) {
   reset_stack(vm);
 }
 
+static inline void grow_vm_stack(b_vm *vm, size_t new_capacity) {
+  b_value *new_stack = ALLOCATE(b_value, new_capacity);
+  for(size_t i = 0; i < new_capacity; i++) {
+    new_stack[i] = EMPTY_VAL;
+  }
+
+  size_t old_capacity = vm->stack_capacity;
+  for (size_t i = 0; i < vm->stack_capacity; i++) {
+    new_stack[i] = vm->stack[i];
+  }
+
+  FREE_ARRAY(b_value, vm->stack, vm->stack_capacity);
+
+  vm->stack = new_stack;
+  vm->stack_top = vm->stack + old_capacity;
+  vm->stack_capacity = new_capacity;
+}
+
 inline void push(b_vm *vm, b_value value) {
+  if(vm->stack_top - vm->stack == vm->stack_capacity) {
+    size_t capacity = GROW_CAPACITY(vm->stack_capacity);
+    grow_vm_stack(vm, capacity);
+  }
+
   *vm->stack_top = value;
   vm->stack_top++;
+  
+  // printf("Stack count after push: %zu\n", vm->stack_top - vm->stack);
 }
 
 inline b_value pop(b_vm *vm) {
+  if(vm->stack_top == vm->stack) {
+    fprintf(stderr, "Exit: Stack integrity check failed at %zu.\n", vm->stack_top - vm->stack);
+    exit(EXIT_TERMINAL);
+    // return EMPTY_VAL;
+  }
+
   vm->stack_top--;
+
+  // printf("Stack count after pop: %zu\n", vm->stack_top - vm->stack);
   return *vm->stack_top;
 }
 
 inline b_value pop_n(b_vm *vm, int n) {
+  if(vm->stack_top - vm->stack < n) {
+    fprintf(stderr, "Exit: Stack integrity check failed.\n");
+    exit(EXIT_TERMINAL);
+    // return EMPTY_VAL;
+  }
+
   vm->stack_top -= n;
+
+  // printf("Stack count after pop_n (%d): %zu\n", n, vm->stack_top - vm->stack);
   return *vm->stack_top;
 }
 
-inline b_value peek(b_vm *vm, int distance) { return vm->stack_top[-1 - distance]; }
+inline b_value peek(b_vm *vm, int distance) {
+  if(vm->stack_top - vm->stack < distance + 1) {
+    fprintf(stderr, "Exit: Stack integrity check failed.\n");
+    exit(EXIT_TERMINAL);
+    // return EMPTY_VAL;
+  }
+
+  return vm->stack_top[-1 - distance]; 
+}
 
 static inline void define_native(b_vm *vm, const char *name, b_native_fn function) {
   push(vm, STRING_VAL(name));
@@ -511,6 +560,9 @@ static void init_builtin_methods(b_vm *vm) {
 
 void init_vm(b_vm *vm) {
 
+  vm->stack = ALLOCATE(b_value, STACK_MIN);
+  vm->stack_capacity = STACK_MIN;
+
   reset_stack(vm);
   vm->compiler = NULL;
   vm->objects = NULL;
@@ -562,6 +614,9 @@ void free_vm(b_vm *vm) {
   free_table(vm, &vm->methods_dict);
   free_table(vm, &vm->methods_file);
   free_table(vm, &vm->methods_bytes);
+
+  free(vm->stack);
+  free(vm);
 }
 
 static inline bool is_private(b_obj_string *name) {
@@ -615,7 +670,7 @@ static bool call(b_vm *vm, b_obj_closure *closure, int arg_count) {
 static inline bool call_native_method(b_vm *vm, b_obj_native *native, int arg_count) {
   if (native->function(vm, arg_count, vm->stack_top - arg_count)) {
     CLEAR_GC();
-    vm->stack_top -= arg_count;
+    pop_n(vm, arg_count);
   } else {
     CLEAR_GC();
   }
@@ -2506,7 +2561,7 @@ void register_module__FILE__(b_vm *vm, b_obj_module *module) {
   // register module __file__
   push(vm, STRING_L_VAL("__file__", 8));
   push(vm, STRING_VAL(module->file));
-  table_set(vm, &module->values, vm->stack[0], vm->stack[1]);
+  table_set(vm, &module->values, peek(vm, 1), peek(vm, 0));
   pop_n(vm, 2);
 }
 
@@ -2544,6 +2599,8 @@ bool queue_closure(b_vm *vm, b_obj_closure *closure) {
 }
 
 b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
+  push(vm, OBJ_VAL(module));
+
   if(vm->exception_class == NULL) {
     initialize_exceptions(vm, module);
   }

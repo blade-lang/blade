@@ -37,9 +37,13 @@ struct s_vm {
 
   b_blob *blob;
   uint8_t *ip;
-  b_value stack[STACK_MAX];
-  b_value *stack_top;
   b_obj_up_value *open_up_values;
+
+  size_t stack_capacity;
+  size_t stack_count;
+  b_value *stack;
+  b_value *stack_top;
+
 
   b_obj *objects;
   b_compiler *compiler;
@@ -151,7 +155,7 @@ static inline b_obj *gc_protect(b_vm *vm, b_obj *object) {
 static inline void gc_clear_protection(b_vm *vm) {
   b_call_frame *frame = &vm->frames[vm->frame_count > 0 ? vm->frame_count - 1 : 0];
   if (frame->gc_protected > 0) {
-    vm->stack_top -= frame->gc_protected;
+    pop_n(vm, frame->gc_protected);
   }
   frame->gc_protected = 0;
 }
