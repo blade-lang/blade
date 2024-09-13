@@ -16,7 +16,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v1.9
         with:
@@ -38,7 +38,7 @@ jobs:
 #        uses: github/codeql-action/analyze@v1
       - name: Generate Artifacts
         if: '!cancelled()'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: blade-linux-${{ github.run_id }}
           path: ${{github.workspace}}/blade
@@ -50,7 +50,7 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v1.9
         with:
           cmake-version: '3.25.2'
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Compile
         run: |
           cmake -B . -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl
@@ -60,7 +60,7 @@ jobs:
         run: ctest
       - name: Generate Artifacts
         if: '!cancelled()'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: blade-macos-${{ github.run_id }}
           path: ${{github.workspace}}/blade
@@ -77,7 +77,7 @@ jobs:
         with:
           add_to_path: true
           tag: 12.2.0-15.0.6-10.0.0-msvcrt-r3
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: friendlyanon/setup-vcpkg@v1
         with: { committish: 934a99dc13cabb330824ae1a5ab4a53a9acc5a49 }
       - name: Install Dependencies
@@ -93,7 +93,7 @@ jobs:
         run: ctest
       - name: Generate Artifacts
         if: '!cancelled()'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: blade-windows-default-${{ github.run_id }}
           path: ${{github.workspace}}/blade

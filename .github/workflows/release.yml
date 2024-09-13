@@ -9,7 +9,7 @@ jobs:
   build-linux:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v1.9
         with:
@@ -25,7 +25,7 @@ jobs:
           chmod +x blade/blade
           zip -r9 --symlinks blade_linux.zip blade/
       - name: Generate Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: linux
           path: blade_linux.zip
@@ -46,7 +46,7 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v1.9
         with:
           cmake-version: '3.25.2'
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Compile
         run: |
           cmake -B . -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl
@@ -56,7 +56,7 @@ jobs:
           chmod 755 blade/blade
           zip -r9 --symlinks blade_macos.zip blade/
       - name: Generate Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: macos
           path: blade_macos.zip
@@ -82,7 +82,7 @@ jobs:
         with:
           add_to_path: true
           tag: 12.2.0-15.0.6-10.0.0-msvcrt-r3
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: friendlyanon/setup-vcpkg@v1
         with: { committish: 934a99dc13cabb330824ae1a5ab4a53a9acc5a49 }
       - name: Install Dependencies
@@ -98,7 +98,7 @@ jobs:
         run: |
           powershell Compress-Archive blade blade_windows.zip
       - name: Generate Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: windows
           path: blade_windows.zip
