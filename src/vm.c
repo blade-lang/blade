@@ -1697,6 +1697,9 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         b_value value;
         if (!table_get(&vm->current_frame->closure->function->module->values, OBJ_VAL(name), &value)) {
           if (!table_get(&vm->globals, OBJ_VAL(name), &value)) {
+            dbg(printf("Name requested: '%s' with length %d\n", name->chars, name->length));
+            cond_dbg(vm->current_frame, table_print(&vm->current_frame->closure->function->module->values));
+
             runtime_error("'%s' is undefined in this scope", name->chars);
             break;
           }

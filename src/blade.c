@@ -108,7 +108,7 @@ static void repl(b_vm *vm) {
 #endif // _WIN32
 
     if(strcmp(line, ".credits") == 0) {
-      printf("\n" BLADE_COPYRIGHT "\n\n");
+      printf(BLADE_COPYRIGHT "\n");
       memset(source, 0, sizeof(char));
       continue;
     }

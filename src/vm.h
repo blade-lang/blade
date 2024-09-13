@@ -96,6 +96,13 @@ b_value pop_n(b_vm *vm, int n);
 b_value peek(b_vm *vm, int distance);
 
 static inline void add_module(b_vm *vm, b_obj_module *module) {
+  cond_dbg(vm->current_frame, printf("Adding module %s from %s to %s in %s\n", 
+    module->name, 
+    module->file, 
+    vm->current_frame->closure->function->module->name, 
+    vm->current_frame->closure->function->module->file
+  ));
+
   table_set(vm, &vm->modules, STRING_VAL(module->file), OBJ_VAL(module));
   if (vm->frame_count == 0) {
     table_set(vm, &vm->globals, STRING_VAL(module->name), OBJ_VAL(module));
