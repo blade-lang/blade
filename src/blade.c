@@ -229,7 +229,6 @@ void show_usage(char *argv[], bool fail) {
   fprintf(out, "Usage: %s [-[h | c | d | e | v | g | w]] [filename]\n", argv[0]);
   fprintf(out, "   -h       Show this help message.\n");
   fprintf(out, "   -v       Show version string.\n");
-  fprintf(out, "   -s arg   Sets the stack size in kilobytes. [Default = %d (%s), Min = %s]\n", DEFAULT_STACK_SIZE / 1024, format_size(DEFAULT_STACK_SIZE), format_size(MIN_STACK_SIZE));
   fprintf(out, "   -b arg   Buffer terminal outputs with the given size.\n");
   fprintf(out, "   -d       Print bytecode.\n");
   fprintf(out, "   -e       Print bytecode and exit.\n");
@@ -245,7 +244,6 @@ int main(int argc, char *argv[]) {
   bool show_warnings = false;
   bool should_print_bytecode = false;
   long stdout_buffer_size = 0L;
-  size_t vm_stack_size = DEFAULT_STACK_SIZE;
   bool should_exit_after_bytecode = false;
   char *source = NULL;
   int next_gc_start = DEFAULT_GC_START;
@@ -273,12 +271,6 @@ int main(int argc, char *argv[]) {
           stdout_buffer_size = strtol(optarg, NULL, 10);
           if (stdout_buffer_size < 0) {
             stdout_buffer_size = 0;
-          }
-          break;
-        case 's':
-          parse_size(optarg, &vm_stack_size);
-          if(vm_stack_size <= MIN_STACK_SIZE) {
-            vm_stack_size = MIN_STACK_SIZE;
           }
           break;
         case 'v': {
@@ -311,7 +303,7 @@ int main(int argc, char *argv[]) {
   b_vm *vm = (b_vm *) malloc(sizeof(b_vm));
   if (vm != NULL) {
     memset(vm, 0, sizeof(b_vm));
-    init_vm(vm, vm_stack_size);
+    init_vm(vm);
 
     // set vm options...
     vm->show_warnings = show_warnings;
@@ -331,13 +323,19 @@ int main(int argc, char *argv[]) {
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
-    char **std_args = (char**)calloc(argc, sizeof(char *));
+    int opt_deviation = argc - optind + 1;
+    char **std_args = (char**)calloc(opt_deviation, sizeof(char *));
     if(std_args != NULL) {
-      for(int i = 0; i < argc; i++) {
-        std_args[i] = strdup(argv[i]);
+      if(optind > 0) {
+        std_args[0] = strdup(argv[0]);
       }
+
+      for(int i = optind; i < argc; i++) {
+        std_args[i - optind + 1] = strdup(argv[i]);
+      }
+
       vm->std_args = std_args;
-      vm->std_args_count = argc;
+      vm->std_args_count = opt_deviation;
     }
 
     // always do this last so that we can have access to everything else
