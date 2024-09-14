@@ -463,7 +463,7 @@ class Option {
     * DEPRECATED, do not use! 
     * @static
     */
-   static var DNS_USE_GLOBAL_CACHE = _curl.CURLOPT_DNS_USE_GLOBAL_CACHE
+   static var DNS_USE_GLOBAL_CACHE = _curl.CURLOPT_SHARE
 
    /**
     * DNS cache timeout 
@@ -927,7 +927,9 @@ class Option {
     * with. Defaults to CURLPROTO_ALL. 
     * @static
     */
-   static var PROTOCOLS = _curl.CURLOPT_PROTOCOLS
+   static var PROTOCOLS = _curl.CURLOPT_PROTOCOLS_STR != 0 ? 
+      _curl.CURLOPT_PROTOCOLS_STR : 
+      _curl.CURLOPT_PROTOCOLS
 
    /**
     * set the bitmask for the protocols that libcurl is allowed to follow to,
@@ -935,7 +937,9 @@ class Option {
     * to be set in both bitmasks to be allowed to get redirected to. 
     * @static
     */
-   static var REDIR_PROTOCOLS = _curl.CURLOPT_REDIR_PROTOCOLS
+   static var REDIR_PROTOCOLS = _curl.CURLOPT_REDIR_PROTOCOLS_STR != 0
+      _curl.CURLOPT_REDIR_PROTOCOLS_STR :
+      _curl.CURLOPT_REDIR_PROTOCOLS
 
    /**
     * set the SSH knownhost file name to use 
