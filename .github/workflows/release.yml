@@ -87,7 +87,6 @@ jobs:
         # with: { committish: 63aa65e65b9d2c08772ea15d25fb8fdb0d32e557 }
       - name: Install Dependencies
         run: |
-          git pull
           ${{ env.VCPKG_ROOT }}/vcpkg update
           ${{ env.VCPKG_ROOT }}/vcpkg version
           ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows libffi:x64-windows openssl:x64-windows
