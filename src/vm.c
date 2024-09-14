@@ -287,41 +287,32 @@ inline void push(b_vm *vm, b_value value) {
 
   *vm->stack_top = value;
   vm->stack_top++;
-  
-  // printf("Stack count after push: %zu\n", vm->stack_top - vm->stack);
 }
 
 inline b_value pop(b_vm *vm) {
   if(vm->stack_top == vm->stack) {
-    fprintf(stderr, "Exit: Stack integrity check failed at %zu.\n", vm->stack_top - vm->stack);
+    fprintf(stderr, "Exit: Stack integrity check at end of stack failed.\n");
     exit(EXIT_TERMINAL);
-    // return EMPTY_VAL;
   }
 
   vm->stack_top--;
-
-  // printf("Stack count after pop: %zu\n", vm->stack_top - vm->stack);
   return *vm->stack_top;
 }
 
 inline b_value pop_n(b_vm *vm, int n) {
   if(vm->stack_top - vm->stack < n) {
-    fprintf(stderr, "Exit: Stack integrity check failed.\n");
+    fprintf(stderr, "Exit: Stack integrity check at %d failed.\n", vm->stack_top - vm->stack);
     exit(EXIT_TERMINAL);
-    // return EMPTY_VAL;
   }
 
   vm->stack_top -= n;
-
-  // printf("Stack count after pop_n (%d): %zu\n", n, vm->stack_top - vm->stack);
   return *vm->stack_top;
 }
 
 inline b_value peek(b_vm *vm, int distance) {
   if(vm->stack_top - vm->stack < distance + 1) {
-    fprintf(stderr, "Exit: Stack integrity check failed.\n");
+    fprintf(stderr, "Exit: Stack integrity check at distance %d failed.\n", distance);
     exit(EXIT_TERMINAL);
-    // return EMPTY_VAL;
   }
 
   return vm->stack_top[-1 - distance]; 
