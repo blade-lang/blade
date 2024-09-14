@@ -76,7 +76,7 @@ jobs:
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v1.9
         with:
-          cmake-version: '3.25.2'
+          cmake-version: '3.28.x'
       - name: Setup WinLibs
         uses: bwoodsend/setup-winlibs-action@v1.8
         with:
@@ -87,10 +87,6 @@ jobs:
         with: { committish: 63aa65e65b9d2c08772ea15d25fb8fdb0d32e557 }
       - name: Install Dependencies
         run: |
-          cd ${{ env.VCPKG_ROOT }}
-          git pull
-          cd ${{github.workspace}}
-          ${{ env.VCPKG_ROOT }}/vcpkg update
           ${{ env.VCPKG_ROOT }}/vcpkg version
           ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows libffi:x64-windows openssl:x64-windows
       - name: Compile
