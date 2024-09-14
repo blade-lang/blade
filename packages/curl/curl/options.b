@@ -937,7 +937,7 @@ class Option {
     * to be set in both bitmasks to be allowed to get redirected to. 
     * @static
     */
-   static var REDIR_PROTOCOLS = _curl.CURLOPT_REDIR_PROTOCOLS_STR != 0
+   static var REDIR_PROTOCOLS = _curl.CURLOPT_REDIR_PROTOCOLS_STR != 0 ?
       _curl.CURLOPT_REDIR_PROTOCOLS_STR :
       _curl.CURLOPT_REDIR_PROTOCOLS
 
