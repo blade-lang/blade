@@ -85,6 +85,7 @@ jobs:
           ${{ env.VCPKG_ROOT }}/vcpkg update
           ${{ env.VCPKG_ROOT }}/vcpkg version
           ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows libffi:x64-windows openssl:x64-windows
+          ${{ env.VCPKG_ROOT }}/vcpkg list
       - name: Compile
         run: |
           cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake" -DOPENSSL_ROOT_DIR=${{ env.VCPKG_ROOT }}/installed/x64-windows-static

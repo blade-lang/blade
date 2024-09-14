@@ -87,8 +87,10 @@ jobs:
         with: { committish: 3508985146f1b1d248c67ead13f8f54be5b4f5da, cache-version: "1", cache-key: "vcpkg-windows", cache-restore-keys: "vcpkg-windows" }
       - name: Install Dependencies
         run: |
+          ${{ env.VCPKG_ROOT }}/vcpkg update
           ${{ env.VCPKG_ROOT }}/vcpkg version
           ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows libffi:x64-windows openssl:x64-windows
+          ${{ env.VCPKG_ROOT }}/vcpkg list
       - name: Compile
         run: |
           cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake" -DOPENSSL_ROOT_DIR=${{ env.VCPKG_ROOT }}/installed/x64-windows-static
