@@ -79,7 +79,7 @@ jobs:
           tag: 12.2.0-15.0.6-10.0.0-msvcrt-r3
       - uses: actions/checkout@v4
       - uses: friendlyanon/setup-vcpkg@v1
-        with: { committish: 63aa65e65b9d2c08772ea15d25fb8fdb0d32e557 }
+        with: { committish: 3508985146f1b1d248c67ead13f8f54be5b4f5da }
       - name: Install Dependencies
         run: |
           ${{ env.VCPKG_ROOT }}/vcpkg update
