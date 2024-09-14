@@ -301,7 +301,7 @@ inline b_value pop(b_vm *vm) {
 
 inline b_value pop_n(b_vm *vm, int n) {
   if(vm->stack_top - vm->stack < n) {
-    fprintf(stderr, "Exit: Stack integrity check at %d failed.\n", vm->stack_top - vm->stack);
+    fprintf(stderr, "Exit: Stack integrity check at %ld failed.\n", vm->stack_top - vm->stack);
     exit(EXIT_TERMINAL);
   }
 
