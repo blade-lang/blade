@@ -40,7 +40,6 @@ struct s_vm {
   b_obj_up_value *open_up_values;
 
   size_t stack_capacity;
-  size_t stack_count;
   b_value *stack;
   b_value *stack_top;
 
