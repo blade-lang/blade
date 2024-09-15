@@ -170,14 +170,27 @@ const char *value_type(b_value value) {
     return "unknown";
 }
 
+static inline bool bytes_equal(b_obj_bytes *a, b_obj_bytes *b) {
+  if(a->bytes.count != b->bytes.count) {
+    return false;
+  }
+
+  return memcmp(a->bytes.bytes, b->bytes.bytes, a->bytes.count) == 0;
+}
+
 bool values_equal(b_value a, b_value b) {
 #if defined(USE_NAN_BOXING) && USE_NAN_BOXING
   if (IS_NUMBER(a) && IS_NUMBER(b))
     return AS_NUMBER(a) == AS_NUMBER(b);
+  if (IS_BYTES(a) && IS_BYTES(b))
+    return bytes_equal(AS_BYTES(a), AS_BYTES(b));
   return a == b;
 #else
   if (a.type != b.type)
     return false;
+  
+  if (IS_BYTES(a) && IS_BYTES(b))
+    return bytes_equal(AS_BYTES(a), AS_BYTES(b));
 
   switch (a.type) {
   case VAL_NIL:
