@@ -76,7 +76,7 @@ jobs:
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v1.9
         with:
-          cmake-version: '3.25.2'
+          cmake-version: '3.28.x'
       - name: Setup WinLibs
         uses: bwoodsend/setup-winlibs-action@v1.8
         with:
@@ -84,14 +84,16 @@ jobs:
           tag: 12.2.0-15.0.6-10.0.0-msvcrt-r3
       - uses: actions/checkout@v4
       - uses: friendlyanon/setup-vcpkg@v1
-        with: { committish: 934a99dc13cabb330824ae1a5ab4a53a9acc5a49 }
+        with: { committish: 3508985146f1b1d248c67ead13f8f54be5b4f5da, cache-version: "1", cache-key: "vcpkg-windows", cache-restore-keys: "vcpkg-windows" }
       - name: Install Dependencies
         run: |
+          ${{ env.VCPKG_ROOT }}/vcpkg update
           ${{ env.VCPKG_ROOT }}/vcpkg version
           ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows libffi:x64-windows openssl:x64-windows
+          ${{ env.VCPKG_ROOT }}/vcpkg list
       - name: Compile
         run: |
-          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake"
+          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake" -DOPENSSL_ROOT_DIR=${{ env.VCPKG_ROOT }}/installed/x64-windows-static
           cmake --build .
       - name: Create ZIP Archive
         shell: cmd

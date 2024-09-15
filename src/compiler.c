@@ -2223,13 +2223,10 @@ static void import_statement(b_parser *p) {
     return;
   }
 
-  b_blob blob;
-  init_blob(&blob);
-
   b_obj_module *module = new_module(p->vm, module_name, module_path);
 
   push(p->vm, OBJ_VAL(module));
-  b_obj_func *function = compile(p->vm, module, source, &blob);
+  b_obj_func *function = compile(p->vm, module, source);
   pop(p->vm);
 
   free(source);
@@ -2566,7 +2563,7 @@ static void statement(b_parser *p) {
   ignore_whitespace(p);
 }
 
-b_obj_func *compile(b_vm *vm, b_obj_module *module, const char *source, b_blob *blob) {
+b_obj_func *compile(b_vm *vm, b_obj_module *module, const char *source) {
   b_scanner scanner;
   init_scanner(&scanner, source);
 

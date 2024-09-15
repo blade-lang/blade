@@ -42,15 +42,23 @@
 
 #define DEBUG_PRINT_CODE 1
 #define DEBUG_TABLE 0
-#define DEBUG_GC 1
+#define DEBUG_GC 0
 #define DEBUG_STACK 0
 
+#define dbg(x) do { x; } while(0)
+#define cond_dbg(c, x) do { if((c)) { x; } } while(0)
+
+#else
+#define dbg(x)
+#define cond_dbg(c, x)
 #endif
+
 // --> debug mode options ends here...
 
 #define UINT8_COUNT (UINT8_MAX + 1)
 #define UINT16_COUNT (UINT16_MAX + 1)
-#define STACK_MAX (FRAMES_MAX * UINT16_COUNT)
+// #define STACK_MAX (FRAMES_MAX * UINT16_COUNT)
+#define STACK_MIN (FRAMES_MAX * UINT8_COUNT)
 
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 #define IS_UNIX
@@ -64,9 +72,7 @@
 
 #ifdef __clang__
 
-#define COMPILER                                                               \
-  VERSION_STRING("Clang", __clang_major__, __clang_minor__,                    \
-                 __clang_patchlevel__)
+#define COMPILER  ("Clang " __clang_version__)
 
 #elif defined(_MSC_VER)
 
@@ -109,6 +115,6 @@
 #define EXIT_RUNTIME 11
 #define EXIT_TERMINAL 12
 
-#define BLADE_COPYRIGHT "Copyright (c) 2021 - 2023 Ore Richard Muyiwa"
+#define BLADE_COPYRIGHT "\tCopyright (c) Ore Richard Muyiwa"
 
 #endif

@@ -37,9 +37,12 @@ struct s_vm {
 
   b_blob *blob;
   uint8_t *ip;
-  b_value stack[STACK_MAX];
-  b_value *stack_top;
   b_obj_up_value *open_up_values;
+
+  size_t stack_capacity;
+  b_value *stack;
+  b_value *stack_top;
+
 
   b_obj *objects;
   b_compiler *compiler;
@@ -96,6 +99,13 @@ b_value pop_n(b_vm *vm, int n);
 b_value peek(b_vm *vm, int distance);
 
 static inline void add_module(b_vm *vm, b_obj_module *module) {
+  cond_dbg(vm->current_frame, printf("Adding module %s from %s to %s in %s\n", 
+    module->name, 
+    module->file, 
+    vm->current_frame->closure->function->module->name, 
+    vm->current_frame->closure->function->module->file
+  ));
+
   table_set(vm, &vm->modules, STRING_VAL(module->file), OBJ_VAL(module));
   if (vm->frame_count == 0) {
     table_set(vm, &vm->globals, STRING_VAL(module->name), OBJ_VAL(module));
@@ -144,7 +154,7 @@ static inline b_obj *gc_protect(b_vm *vm, b_obj *object) {
 static inline void gc_clear_protection(b_vm *vm) {
   b_call_frame *frame = &vm->frames[vm->frame_count > 0 ? vm->frame_count - 1 : 0];
   if (frame->gc_protected > 0) {
-    vm->stack_top -= frame->gc_protected;
+    pop_n(vm, frame->gc_protected);
   }
   frame->gc_protected = 0;
 }

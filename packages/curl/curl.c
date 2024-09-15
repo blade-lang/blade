@@ -8,6 +8,11 @@
     return NUMBER_VAL((double)(v)); \
   }
 
+#define DEFINE_CURL_CONSTANT_AS(v, x) \
+  b_value __curl_##v(b_vm *vm) { \
+    return NUMBER_VAL((double)(x)); \
+  }
+
 #define DEFINE_CURL_STR_CONSTANT(v) \
   b_value __curl_##v(b_vm *vm) { \
     return STRING_VAL(v); \
@@ -219,7 +224,6 @@ DEFINE_CURL_CONSTANT(CURLOPT_SSLKEY)
 DEFINE_CURL_CONSTANT(CURLOPT_SSLKEYTYPE)
 DEFINE_CURL_CONSTANT(CURLOPT_SSLENGINE)
 DEFINE_CURL_CONSTANT(CURLOPT_SSLENGINE_DEFAULT)
-DEFINE_CURL_CONSTANT(CURLOPT_DNS_USE_GLOBAL_CACHE)
 DEFINE_CURL_CONSTANT(CURLOPT_DNS_CACHE_TIMEOUT)
 DEFINE_CURL_CONSTANT(CURLOPT_PREQUOTE)
 DEFINE_CURL_CONSTANT(CURLOPT_COOKIESESSION)
@@ -286,8 +290,20 @@ DEFINE_CURL_CONSTANT(CURLOPT_PROXYPASSWORD)
 DEFINE_CURL_CONSTANT(CURLOPT_NOPROXY)
 DEFINE_CURL_CONSTANT(CURLOPT_TFTP_BLKSIZE)
 DEFINE_CURL_CONSTANT(CURLOPT_SOCKS5_GSSAPI_NEC)
+#ifdef CURLOPT_PROTOCOLS_STR
+DEFINE_CURL_CONSTANT(CURLOPT_PROTOCOLS_STR)
+DEFINE_CURL_CONSTANT_AS(CURLOPT_PROTOCOLS, 0)
+#else
 DEFINE_CURL_CONSTANT(CURLOPT_PROTOCOLS)
+DEFINE_CURL_CONSTANT_AS(CURLOPT_PROTOCOLS_STR, 0)
+#endif
+#ifdef CURLOPT_REDIR_PROTOCOLS_STR
+DEFINE_CURL_CONSTANT(CURLOPT_REDIR_PROTOCOLS_STR)
+DEFINE_CURL_CONSTANT_AS(CURLOPT_REDIR_PROTOCOLS, 0)
+#else
 DEFINE_CURL_CONSTANT(CURLOPT_REDIR_PROTOCOLS)
+DEFINE_CURL_CONSTANT_AS(CURLOPT_REDIR_PROTOCOLS_STR, 0)
+#endif
 DEFINE_CURL_CONSTANT(CURLOPT_SSH_KNOWNHOSTS)
 DEFINE_CURL_CONSTANT(CURLOPT_MAIL_FROM)
 DEFINE_CURL_CONSTANT(CURLOPT_MAIL_RCPT)
@@ -570,7 +586,7 @@ void init_string(struct b_curl_string *s) {
   s->ptr[0] = '\0';
 }
 
-size_t b_CurlWriteFunc(void *ptr, size_t size, size_t nmemb, struct b_curl_string *s) {
+size_t b_Curl_WriteFunction(void *ptr, size_t size, size_t nmemb, struct b_curl_string *s) {
   size_t new_len = s->len + size*nmemb;
   s->ptr = realloc(s->ptr, new_len+1);
   if (s->ptr == NULL) {
@@ -614,7 +630,7 @@ DECLARE_MODULE_METHOD(curl__easy_reset) {
   RETURN;
 }
 
-size_t bCurl_ReadFunction(void* ptr, size_t size, size_t nmemb, void* user_data) {
+size_t b_Curl_ReadFunction(void* ptr, size_t size, size_t nmemb, void* user_data) {
   size_t total_size = size * nmemb;
   unsigned char* buffer = (unsigned char*)ptr;
   unsigned char* data = (unsigned char*)user_data;
@@ -656,7 +672,7 @@ DECLARE_MODULE_METHOD(curl__easy_setopt) {
 
   if(result == CURLE_OK) {
     if(opt == CURLOPT_READDATA) {
-      RETURN_BOOL(curl_easy_setopt(curl, CURLOPT_READFUNCTION, bCurl_ReadFunction) == CURLE_OK);
+      RETURN_BOOL(curl_easy_setopt(curl, CURLOPT_READFUNCTION, b_Curl_ReadFunction) == CURLE_OK);
     }
     RETURN_TRUE;
   }
@@ -671,12 +687,12 @@ DECLARE_MODULE_METHOD(curl__easy_perform) {
 
   struct b_curl_string body;
   init_string(&body);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, b_CurlWriteFunc);
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, b_Curl_WriteFunction);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body);
 
   struct b_curl_string headers;
   init_string(&headers);
-  curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, b_CurlWriteFunc);
+  curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, b_Curl_WriteFunction);
   curl_easy_setopt(curl, CURLOPT_HEADERDATA, &headers);
 
   int result = curl_easy_perform(curl);
@@ -732,7 +748,7 @@ DECLARE_MODULE_METHOD(curl__easy_getinfo) {
       result = curl_easy_getinfo(curl, info, &data);
       if(result == CURLE_OK) {
 
-        if(info == CURLINFO_PROTOCOL) {
+        if(info == CURLINFO_SCHEME) {
           if(data != -1) {
             RETURN_STRING(CURLProtoMap[(int)log2(data)]);
           } else {
@@ -1039,7 +1055,6 @@ CREATE_MODULE_LOADER(curl) {
       GET_CURL_CONSTANT(CURLOPT_SSLKEYTYPE),
       GET_CURL_CONSTANT(CURLOPT_SSLENGINE),
       GET_CURL_CONSTANT(CURLOPT_SSLENGINE_DEFAULT),
-      GET_CURL_CONSTANT(CURLOPT_DNS_USE_GLOBAL_CACHE),
       GET_CURL_CONSTANT(CURLOPT_DNS_CACHE_TIMEOUT),
       GET_CURL_CONSTANT(CURLOPT_PREQUOTE),
       GET_CURL_CONSTANT(CURLOPT_COOKIESESSION),
@@ -1107,7 +1122,9 @@ CREATE_MODULE_LOADER(curl) {
       GET_CURL_CONSTANT(CURLOPT_TFTP_BLKSIZE),
       GET_CURL_CONSTANT(CURLOPT_SOCKS5_GSSAPI_NEC),
       GET_CURL_CONSTANT(CURLOPT_PROTOCOLS),
+      GET_CURL_CONSTANT(CURLOPT_PROTOCOLS_STR),
       GET_CURL_CONSTANT(CURLOPT_REDIR_PROTOCOLS),
+      GET_CURL_CONSTANT(CURLOPT_REDIR_PROTOCOLS_STR),
       GET_CURL_CONSTANT(CURLOPT_SSH_KNOWNHOSTS),
       GET_CURL_CONSTANT(CURLOPT_MAIL_FROM),
       GET_CURL_CONSTANT(CURLOPT_MAIL_RCPT),
