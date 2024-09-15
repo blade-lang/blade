@@ -514,6 +514,7 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_BYTES_METHOD(append);
   DEFINE_BYTES_METHOD(clone);
   DEFINE_BYTES_METHOD(extend);
+  DEFINE_BYTES_METHOD(index_of);
   DEFINE_BYTES_METHOD(pop);
   DEFINE_BYTES_METHOD(remove);
   DEFINE_BYTES_METHOD(reverse);

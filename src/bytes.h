@@ -47,6 +47,13 @@ DECLARE_BYTES_METHOD(clone);
 DECLARE_BYTES_METHOD(extend);
 
 /**
+ * bytes.index_of(byte: number)
+ *
+ * returns the position of the first occurrence of byte in the bytes
+ */
+DECLARE_BYTES_METHOD(index_of);
+
+/**
  * bytes.pop()
  *
  * removes the last item in a bytes and returns it

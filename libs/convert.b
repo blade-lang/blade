@@ -36,6 +36,26 @@ def hex_to_bytes(str) {
 }
 
 /**
+ * Converts binary data (byes) of any length to hexadecimal string 
+ * representation.
+ * 
+ * @param bytes data
+ * @return string
+ */
+def bytes_to_hex(data) {
+  if !is_bytes(data)
+    die Exception('bytes expected, ${typeof(data)} given')
+
+  var result = ''
+
+  for b in data {
+    result += hex(b).lpad(2, '0')
+  }
+
+  return result
+}
+
+/**
  * Converts the given decimal based number to an hexadeccimal string.
  * 
  * @param number n
