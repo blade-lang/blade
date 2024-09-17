@@ -1,17 +1,53 @@
 #include <blade.h>
 #include <errno.h>
+
+// gd
 #include <gd.h>
+
+// fonts
+#include <gdfonts.h>
+#include <gdfontl.h>
+#include <gdfontg.h>
+#include <gdfontmb.h>
+#include <gdfontt.h>
 
 #define CHECK_IMAGE_PTR(x) if((x) == NULL) \
     RETURN_ERROR("Invalid image pointer.") \
 
+#define CHECK_FONT_PTR(x) if((x) == NULL) \
+    RETURN_ERROR("Invalid font pointer.") \
+
 #define CHECK_IMAGE(x) if((x) == NULL) \
     RETURN_ERROR(strerror(errno)) \
 
-void imagine_free_image_ptrs(void *data) {
+#define IMAGINE_CONST(v) \
+  b_value __imagine_const_##v(b_vm *vm) { \
+    return NUMBER_VAL(gd##v); \
+  }
+
+#define IMAGINE_PTR(f, v, t) \
+  b_value __imagine_ptr_##f(b_vm *vm) { \
+    b_obj_ptr *ptr = (b_obj_ptr *)GC(new_ptr(vm, (v))); \
+    ptr->name = "<void *imagine::type::" #t ">"; \
+    return OBJ_VAL(ptr); \
+  }
+
+#define GET_IMAGINE_CONST(v) \
+  {#v, true, __imagine_const_##v}
+
+#define GET_IMAGINE_PTR(v) \
+  {#v, true, __imagine_ptr_##v}
+
+static void imagine_free_image_ptrs(void *data) {
   gdImagePtr image = (gdImagePtr)data;
   gdImageDestroy(image);
 }
+
+IMAGINE_PTR(tinyfont, gdFontGetTiny(), font);
+IMAGINE_PTR(smallfont, gdFontGetSmall(), font);
+IMAGINE_PTR(mediumfont, gdFontGetMediumBold(), font);
+IMAGINE_PTR(largefont, gdFontGetLarge(), font);
+IMAGINE_PTR(giantfont, gdFontGetGiant(), font);
 
 DECLARE_MODULE_METHOD(imagine__new) {
   ENFORCE_ARG_COUNT(new, 3);
@@ -329,7 +365,124 @@ DECLARE_MODULE_METHOD(imagine__boundsafe) {
   RETURN;
 }
 
+DECLARE_MODULE_METHOD(imagine__char) {
+  ENFORCE_ARG_COUNT(char, 6);
+  ENFORCE_ARG_TYPE(char, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(char, 1, IS_PTR);
+  ENFORCE_ARG_TYPE(char, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(char, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(char, 4, IS_NUMBER);
+  ENFORCE_ARG_TYPE(char, 5, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdFontPtr font = (gdFontPtr)AS_PTR(args[1])->pointer;
+  CHECK_FONT_PTR(font);
+
+  gdImageChar(
+    image, 
+    font, 
+    AS_NUMBER(args[2]), 
+    AS_NUMBER(args[3]),
+    AS_NUMBER(args[4]),
+    AS_NUMBER(args[5])
+  );
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__charup) {
+  ENFORCE_ARG_COUNT(charup, 6);
+  ENFORCE_ARG_TYPE(charup, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(charup, 1, IS_PTR);
+  ENFORCE_ARG_TYPE(charup, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(charup, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(charup, 4, IS_NUMBER);
+  ENFORCE_ARG_TYPE(charup, 5, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdFontPtr font = (gdFontPtr)AS_PTR(args[1])->pointer;
+  CHECK_FONT_PTR(font);
+
+  gdImageCharUp(
+    image, 
+    font, 
+    AS_NUMBER(args[2]), 
+    AS_NUMBER(args[3]),
+    AS_NUMBER(args[4]),
+    AS_NUMBER(args[5])
+  );
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__string) {
+  ENFORCE_ARG_COUNT(string, 6);
+  ENFORCE_ARG_TYPE(string, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(string, 1, IS_PTR);
+  ENFORCE_ARG_TYPE(string, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(string, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(string, 4, IS_STRING);
+  ENFORCE_ARG_TYPE(string, 5, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdFontPtr font = (gdFontPtr)AS_PTR(args[1])->pointer;
+  CHECK_FONT_PTR(font);
+
+  gdImageString(
+    image, 
+    font, 
+    AS_NUMBER(args[2]), 
+    AS_NUMBER(args[3]),
+    (unsigned char *)AS_C_STRING(args[4]),
+    AS_NUMBER(args[5])
+  );
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__stringup) {
+  ENFORCE_ARG_COUNT(stringup, 6);
+  ENFORCE_ARG_TYPE(stringup, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(stringup, 1, IS_PTR);
+  ENFORCE_ARG_TYPE(stringup, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(stringup, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(stringup, 4, IS_STRING);
+  ENFORCE_ARG_TYPE(stringup, 5, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdFontPtr font = (gdFontPtr)AS_PTR(args[1])->pointer;
+  CHECK_FONT_PTR(font);
+
+  gdImageStringUp(
+    image, 
+    font, 
+    AS_NUMBER(args[2]), 
+    AS_NUMBER(args[3]),
+    (unsigned char *)AS_C_STRING(args[4]),
+    AS_NUMBER(args[5])
+  );
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__ploygon) {
+  RETURN;
+}
+
 CREATE_MODULE_LOADER(imagine) {
+  static b_field_reg module_fields[] = {
+      GET_IMAGINE_PTR(tinyfont),
+      GET_IMAGINE_PTR(smallfont),
+      GET_IMAGINE_PTR(mediumfont),
+      GET_IMAGINE_PTR(largefont),
+      GET_IMAGINE_PTR(giantfont),
+      {NULL, false, NULL}
+  };
+
   static b_func_reg module_functions[] = {
       // create and destroy
       {"new",   true,  GET_MODULE_METHOD(imagine__new)},
@@ -351,6 +504,10 @@ CREATE_MODULE_LOADER(imagine) {
       {"rectangle",   true,  GET_MODULE_METHOD(imagine__rectangle)},
       {"filledrectangle",   true,  GET_MODULE_METHOD(imagine__filledrectangle)},
       {"boundsafe",   true,  GET_MODULE_METHOD(imagine__boundsafe)},
+      {"char",   true,  GET_MODULE_METHOD(imagine__char)},
+      {"charup",   true,  GET_MODULE_METHOD(imagine__charup)},
+      {"string",   true,  GET_MODULE_METHOD(imagine__string)},
+      {"stringup",   true,  GET_MODULE_METHOD(imagine__stringup)},
       // misc
       {"setclip",   true,  GET_MODULE_METHOD(imagine__setclip)},
       {"getclip",   true,  GET_MODULE_METHOD(imagine__getclip)},
@@ -360,7 +517,7 @@ CREATE_MODULE_LOADER(imagine) {
 
   static b_module_reg module = {
       .name = "_imagine",
-      .fields = NULL,
+      .fields = module_fields,
       .functions = module_functions,
       .classes = NULL,
       .preloader = NULL,
@@ -370,5 +527,10 @@ CREATE_MODULE_LOADER(imagine) {
   return &module;
 }
 
+#undef GET_IMAGINE_PTR
+#undef IMAGINE_PTR
+#undef IMAGINE_CONST
+#undef GET_IMAGINE_CONST
 #undef CHECK_IMAGE
+#undef CHECK_FONT_PTR
 #undef CHECK_IMAGE_PTR
