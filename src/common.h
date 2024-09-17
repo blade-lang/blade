@@ -110,6 +110,10 @@
 
 #define DEFAULT_GC_START (1024 * 1024)
 
+#if defined(_WIN32) && !defined(errno) 
+#define errno (GetLastError())
+#endif
+
 
 #define EXIT_COMPILE 10
 #define EXIT_RUNTIME 11

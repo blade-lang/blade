@@ -35,12 +35,7 @@ typedef struct {
     f->types = NULL;        \
     f->length = 0; \
     b_obj_ptr *ptr = (b_obj_ptr *)GC(new_ptr(vm, (void *)f)); \
-    const char *format = "%s";        \
-    const char *str = "<void *clib::type::" #v ">"; \
-    int length = snprintf(NULL, 0, format, str); \
-    ptr->name = ALLOCATE(char, length + 1); \
-    sprintf((char *)ptr->name, format, str); \
-    ptr->name[length] = '\0';   \
+    ptr->name = "<void *clib::type::" #v ">"; \
     return OBJ_VAL(ptr); \
   }
 
@@ -52,12 +47,7 @@ typedef struct {
     f->types = NULL;         \
     f->length = 0;\
     b_obj_ptr *ptr = (b_obj_ptr *)GC(new_ptr(vm, (void *)f)); \
-    const char *format = "%s";        \
-    const char *str = "<void *clib::type::" #v ">"; \
-    int length = snprintf(NULL, 0, format, str); \
-    ptr->name = ALLOCATE(char, length + 1); \
-    sprintf((char *)ptr->name, format, str); \
-    ptr->name[length] = '\0';   \
+    ptr->name = "<void *clib::type::" #v ">"; \
     return OBJ_VAL(ptr); \
   }
 

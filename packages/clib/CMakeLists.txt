@@ -57,9 +57,9 @@ endif()
 
 add_custom_target(copy-clib-to-libs ALL
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/clib ${BLADE_ROOT}/libs/clib
-        COMMENT "Exporting zlib source files to libs folder..."
+        COMMENT "Exporting clib source files to libs folder..."
         )
 
 add_custom_command(TARGET clib POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:clib> ${BLADE_ROOT}/dist
-        COMMENT "ZLib copy")
+        COMMENT "clib copy")

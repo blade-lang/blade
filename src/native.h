@@ -68,6 +68,8 @@
 #define RETURN_NUMBER(v) do { args[-1] = NUMBER_VAL(v); return true; } while(0)
 #define RETURN_OBJ(v) do { args[-1] = OBJ_VAL(v); return true; } while(0)
 #define RETURN_PTR(v) do { args[-1] = OBJ_VAL(new_ptr(vm, (void*)(v))); return true; } while(0)
+#define RETURN_NAMED_PTR(v, g) do { args[-1] = OBJ_VAL(new_named_ptr(vm, (void*)(v), (g))); return true; } while(0)
+#define RETURN_CLOSABLE_NAMED_PTR(v, g, f) do { args[-1] = OBJ_VAL(new_closable_named_ptr(vm, (void*)(v), (g), (f))); return true; } while(0)
 #define RETURN_STRING(v) do { args[-1] = OBJ_VAL(copy_string(vm, v, (int)strlen(v))); return true; } while(0)
 #define RETURN_L_STRING(v, l) do { args[-1] = OBJ_VAL(copy_string(vm, v, l)); return true; } while(0)
 #define RETURN_T_STRING(v, l) do { args[-1] = OBJ_VAL(take_string(vm, v, l)); return true; } while(0)
