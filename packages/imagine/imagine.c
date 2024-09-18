@@ -203,9 +203,9 @@ DECLARE_MODULE_METHOD(imagine__fromwtga) {
 
 DECLARE_MODULE_METHOD(imagine__fromfile) {
   ENFORCE_ARG_COUNT(fromfile, 1);
-  ENFORCE_ARG_TYPE(fromfile, 0, IS_FILE);
+  ENFORCE_ARG_TYPE(fromfile, 0, IS_STRING);
 
-  gdImagePtr image = gdImageCreateFromFile(AS_FILE(args[0])->path->chars);
+  gdImagePtr image = gdImageCreateFromFile(AS_C_STRING(args[0]));
   CHECK_IMAGE(image);
   RETURN_PTR(image);
 }
@@ -947,19 +947,6 @@ DECLARE_MODULE_METHOD(imagine__colorreplace) {
   RETURN_NUMBER(gdImageColorReplace(image, AS_NUMBER(args[1]), AS_NUMBER(args[2])));
 }
 
-DECLARE_MODULE_METHOD(imagine__colorreplacethreshold) {
-  ENFORCE_ARG_COUNT(colorreplacethreshold, 4);
-  ENFORCE_ARG_TYPE(colorreplacethreshold, 0, IS_PTR);
-  ENFORCE_ARG_TYPE(colorreplacethreshold, 1, IS_NUMBER);
-  ENFORCE_ARG_TYPE(colorreplacethreshold, 2, IS_NUMBER);
-  ENFORCE_ARG_TYPE(colorreplacethreshold, 3, IS_NUMBER);
-
-  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
-  CHECK_IMAGE_PTR(image);
-  
-  RETURN_NUMBER(gdImageColorReplaceThreshold(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3])));
-}
-
 DECLARE_MODULE_METHOD(imagine__gif) {
   ENFORCE_ARG_COUNT(gif, 2);
   ENFORCE_ARG_TYPE(gif, 0, IS_PTR);
@@ -1307,12 +1294,16 @@ DECLARE_MODULE_METHOD(imagine__setantialiased) {
   gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
   CHECK_IMAGE_PTR(image);
 
+#ifndef _WIN32
   if(arg_count == 3) {
     ENFORCE_ARG_TYPE(setantialiased, 2, IS_NUMBER);
     gdImageSetAntiAliasedDontBlend(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]));
   } else {
     gdImageSetAntiAliased(image, AS_NUMBER(args[1]));
   }
+#else
+  gdImageSetAntiAliased(image, AS_NUMBER(args[1]));
+#endif
 
   RETURN;
 }
@@ -1539,10 +1530,9 @@ DECLARE_MODULE_METHOD(imagine__meta) {
   dict_set_entry(vm, dict, GC_L_STRING("colors", 6), NUMBER_VAL(color_totals > 0 ? color_totals : true_colors));
   dict_set_entry(vm, dict, GC_L_STRING("res_x", 5), NUMBER_VAL(gdImageResolutionX(image)));
   dict_set_entry(vm, dict, GC_L_STRING("res_y", 5), NUMBER_VAL(gdImageResolutionY(image)));
-  dict_set_entry(vm, dict, GC_L_STRING("interpolation", 13), NUMBER_VAL((int)image->interpolation));
+  dict_set_entry(vm, dict, GC_L_STRING("interpolation", 13), NUMBER_VAL((int)image->interpolation_id));
   dict_set_entry(vm, dict, GC_L_STRING("true_color", 10), BOOL_VAL(true_colors > 0));
   dict_set_entry(vm, dict, GC_L_STRING("interlaced", 10), BOOL_VAL(gdImageGetInterlaced(image) != 0));
-  dict_set_entry(vm, dict, GC_L_STRING("transparent", 11), BOOL_VAL(gdImageGetTransparent(image) > 0));
 
   RETURN_OBJ(dict);
 }
@@ -1598,7 +1588,7 @@ DECLARE_MODULE_METHOD(imagine__crop) {
     .height = AS_NUMBER(args[4]) 
   };
 
-  gdImagePtr *new_image = gdImageCrop(image, &rect);
+  gdImagePtr new_image = gdImageCrop(image, &rect);
   if(NULL == new_image) {
     RETURN_ERROR("Failed to crop image to rectangle.");
   }
@@ -1614,23 +1604,12 @@ DECLARE_MODULE_METHOD(imagine__cropauto) {
   gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
   CHECK_IMAGE_PTR(image);
 
-  gdImagePtr *new_image = gdImageCropAuto(image, AS_NUMBER(args[1]));
+  gdImagePtr new_image = gdImageCropAuto(image, AS_NUMBER(args[1]));
   if(NULL == new_image) {
     RETURN_ERROR("Failed to crop image to rectangle.");
   }
 
   RETURN_CLOSABLE_NAMED_PTR(new_image, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
-}
-
-DECLARE_MODULE_METHOD(imagine__setinterpolationmethod) {
-  ENFORCE_ARG_COUNT(setinterpolationmethod, 2);
-  ENFORCE_ARG_TYPE(setinterpolationmethod, 0, IS_PTR);
-  ENFORCE_ARG_TYPE(setinterpolationmethod, 1, IS_NUMBER);
-
-  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
-  CHECK_IMAGE_PTR(image);
-
-  RETURN_BOOL(gdImageSetInterpolationMethod(image, (gdInterpolationMethod)AS_NUMBER(args[1])) != 0);
 }
 
 DECLARE_MODULE_METHOD(imagine__scale) {
@@ -1642,7 +1621,7 @@ DECLARE_MODULE_METHOD(imagine__scale) {
   gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
   CHECK_IMAGE_PTR(image);
 
-  gdImagePtr *new_image = gdImageScale(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]));
+  gdImagePtr new_image = gdImageScale(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]));
   if(NULL == new_image) {
     RETURN_ERROR("Failed to scale image to (%d, %d).", (int)AS_NUMBER(args[1]), (int)AS_NUMBER(args[2]));
   }
@@ -1659,7 +1638,7 @@ DECLARE_MODULE_METHOD(imagine__rotate) {
   gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
   CHECK_IMAGE_PTR(image);
 
-  gdImagePtr *new_image = gdImageRotateInterpolated(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]));
+  gdImagePtr new_image = gdImageRotateInterpolated(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]));
   if(NULL == new_image) {
     RETURN_ERROR("Failed to rotate image to angle %.16g.", AS_NUMBER(args[1]));
   }
@@ -1683,7 +1662,7 @@ CREATE_MODULE_LOADER(imagine) {
       GET_IMAGINE_CONST(QUANT_LIQ),
 
       // Interpolation Methods
-      GET_IMAGINE_CONST(DEFAULT ),
+      GET_IMAGINE_CONST(DEFAULT),
       GET_IMAGINE_CONST(BELL),
       GET_IMAGINE_CONST(BESSEL),
       GET_IMAGINE_CONST(BILINEAR_FIXED),
@@ -1793,7 +1772,6 @@ CREATE_MODULE_LOADER(imagine) {
       {"colortransparent",   true,  GET_MODULE_METHOD(imagine__colortransparent)},
       {"palettecopy",   true,  GET_MODULE_METHOD(imagine__palettecopy)},
       {"colorreplace",   true,  GET_MODULE_METHOD(imagine__colorreplace)},
-      {"colorreplacethreshold",   true,  GET_MODULE_METHOD(imagine__colorreplacethreshold)},
 
       // export
       {"gif",   true,  GET_MODULE_METHOD(imagine__gif)},
@@ -1848,7 +1826,6 @@ CREATE_MODULE_LOADER(imagine) {
       {"setresolution",   true,  GET_MODULE_METHOD(imagine__setresolution)},
       {"truecolortopalette",   true,  GET_MODULE_METHOD(imagine__truecolortopalette)},
       {"palettetotruecolor",   true,  GET_MODULE_METHOD(imagine__palettetotruecolor)},
-      {"setinterpolationmethod",   true,  GET_MODULE_METHOD(imagine__setinterpolationmethod)},
 
       // Blade extras
       {"meta",   true,  GET_MODULE_METHOD(imagine__meta)},
