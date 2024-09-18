@@ -93,7 +93,7 @@ jobs:
           ${{ env.VCPKG_ROOT }}/vcpkg list
       - name: Compile
         run: |
-          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake" -DOPENSSL_ROOT_DIR=${{ env.VCPKG_ROOT }}/installed/x64-windows-static
+          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake"
           cmake --build .
       - name: Create ZIP Archive
         shell: cmd
