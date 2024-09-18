@@ -42,7 +42,6 @@ static void imagine_free_image_ptrs(void *data) {
   if(data != NULL) {
     gdImagePtr image = (gdImagePtr)data;
     gdImageDestroy(image);
-    gdFree(image);
     data = NULL;
   }
 }
@@ -159,7 +158,6 @@ DECLARE_MODULE_METHOD(imagine__close) {
   CHECK_IMAGE_PTR(image);
 
   gdImageDestroy(image);
-  gdFree(image);
   AS_PTR(args[0])->pointer = NULL;
   
   RETURN;
@@ -461,6 +459,115 @@ DECLARE_MODULE_METHOD(imagine__stringup) {
     AS_NUMBER(args[2]), 
     AS_NUMBER(args[3]),
     (unsigned char *)AS_C_STRING(args[4]),
+    AS_NUMBER(args[5])
+  );
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__filledarc) {
+  ENFORCE_ARG_COUNT(filledarc, 9);
+  ENFORCE_ARG_TYPE(filledarc, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(filledarc, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(filledarc, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(filledarc, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(filledarc, 4, IS_STRING);
+  ENFORCE_ARG_TYPE(filledarc, 5, IS_NUMBER);
+  ENFORCE_ARG_TYPE(filledarc, 6, IS_NUMBER);
+  ENFORCE_ARG_TYPE(filledarc, 7, IS_NUMBER);
+  ENFORCE_ARG_TYPE(filledarc, 8, IS_NUMBER); // style
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  // TODO: Define styles In Blade source
+  // #define gdArc   0
+  // #define gdPie   gdArc
+  // #define gdChord 1
+  // #define gdNoFill 2
+  // #define gdEdged 4
+
+  gdImageFilledArc(
+    image, 
+    AS_NUMBER(args[1]), 
+    AS_NUMBER(args[2]), 
+    AS_NUMBER(args[3]),
+    AS_NUMBER(args[4]),
+    AS_NUMBER(args[5]),
+    AS_NUMBER(args[6]),
+    AS_NUMBER(args[7]),
+    AS_NUMBER(args[8])
+  );
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__arc) {
+  ENFORCE_ARG_COUNT(arc, 8);
+  ENFORCE_ARG_TYPE(arc, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(arc, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(arc, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(arc, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(arc, 4, IS_STRING);
+  ENFORCE_ARG_TYPE(arc, 5, IS_NUMBER);
+  ENFORCE_ARG_TYPE(arc, 6, IS_NUMBER);
+  ENFORCE_ARG_TYPE(arc, 7, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageArc(
+    image, 
+    AS_NUMBER(args[1]), 
+    AS_NUMBER(args[2]), 
+    AS_NUMBER(args[3]),
+    AS_NUMBER(args[4]),
+    AS_NUMBER(args[5]),
+    AS_NUMBER(args[6]),
+    AS_NUMBER(args[7])
+  );
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__ellipse) {
+  ENFORCE_ARG_COUNT(ellipse, 6);
+  ENFORCE_ARG_TYPE(ellipse, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(ellipse, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(ellipse, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(ellipse, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(ellipse, 4, IS_STRING);
+  ENFORCE_ARG_TYPE(ellipse, 5, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageEllipse(
+    image, 
+    AS_NUMBER(args[1]), 
+    AS_NUMBER(args[2]), 
+    AS_NUMBER(args[3]),
+    AS_NUMBER(args[4]),
+    AS_NUMBER(args[5])
+  );
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__filledellipse) {
+  ENFORCE_ARG_COUNT(filledellipse, 6);
+  ENFORCE_ARG_TYPE(filledellipse, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(filledellipse, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(filledellipse, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(filledellipse, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(filledellipse, 4, IS_STRING);
+  ENFORCE_ARG_TYPE(filledellipse, 5, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageFilledEllipse(
+    image, 
+    AS_NUMBER(args[1]), 
+    AS_NUMBER(args[2]), 
+    AS_NUMBER(args[3]),
+    AS_NUMBER(args[4]),
     AS_NUMBER(args[5])
   );
   RETURN;
@@ -848,6 +955,266 @@ DECLARE_MODULE_METHOD(imagine__wbmp) {
   RETURN;
 }
 
+DECLARE_MODULE_METHOD(imagine__filltoborder) {
+  ENFORCE_ARG_COUNT(filltoborder, 5);
+  ENFORCE_ARG_TYPE(filltoborder, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(filltoborder, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(filltoborder, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(filltoborder, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(filltoborder, 4, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageFillToBorder(
+    image, 
+    AS_NUMBER(args[1]),
+    AS_NUMBER(args[2]),
+    AS_NUMBER(args[3]),
+    AS_NUMBER(args[4])
+  );
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__fill) {
+  ENFORCE_ARG_COUNT(fill, 4);
+  ENFORCE_ARG_TYPE(fill, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(fill, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(fill, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(fill, 3, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageFill(
+    image, 
+    AS_NUMBER(args[1]),
+    AS_NUMBER(args[2]),
+    AS_NUMBER(args[3])
+  );
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__copy) {
+  ENFORCE_ARG_COUNT(copy, 8);
+  ENFORCE_ARG_TYPE(copy, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(copy, 1, IS_PTR);
+  ENFORCE_ARG_TYPE(copy, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copy, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copy, 4, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copy, 5, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copy, 6, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copy, 7, IS_NUMBER);
+
+  gdImagePtr dst = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(dst);
+
+  gdImagePtr src = (gdImagePtr)AS_PTR(args[1])->pointer;
+  CHECK_IMAGE_PTR(src);
+
+  gdImageCopy(
+    dst, 
+    src, 
+    AS_NUMBER(args[2]),
+    AS_NUMBER(args[3]),
+    AS_NUMBER(args[4]),
+    AS_NUMBER(args[5]),
+    AS_NUMBER(args[6]),
+    AS_NUMBER(args[7])
+  );
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__copymerge) {
+  ENFORCE_ARG_COUNT(copymerge, 9);
+  ENFORCE_ARG_TYPE(copymerge, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(copymerge, 1, IS_PTR);
+  ENFORCE_ARG_TYPE(copymerge, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copymerge, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copymerge, 4, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copymerge, 5, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copymerge, 6, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copymerge, 7, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copymerge, 8, IS_NUMBER);
+
+  gdImagePtr dst = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(dst);
+
+  gdImagePtr src = (gdImagePtr)AS_PTR(args[1])->pointer;
+  CHECK_IMAGE_PTR(src);
+
+  gdImageCopyMerge(
+    dst, 
+    src, 
+    AS_NUMBER(args[2]),
+    AS_NUMBER(args[3]),
+    AS_NUMBER(args[4]),
+    AS_NUMBER(args[5]),
+    AS_NUMBER(args[6]),
+    AS_NUMBER(args[7]),
+    AS_NUMBER(args[8])
+  );
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__copymergegray) {
+  ENFORCE_ARG_COUNT(copymergegray, 9);
+  ENFORCE_ARG_TYPE(copymergegray, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(copymergegray, 1, IS_PTR);
+  ENFORCE_ARG_TYPE(copymergegray, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copymergegray, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copymergegray, 4, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copymergegray, 5, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copymergegray, 6, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copymergegray, 7, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copymergegray, 8, IS_NUMBER);
+
+  gdImagePtr dst = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(dst);
+
+  gdImagePtr src = (gdImagePtr)AS_PTR(args[1])->pointer;
+  CHECK_IMAGE_PTR(src);
+
+  gdImageCopyMergeGray(
+    dst, 
+    src, 
+    AS_NUMBER(args[2]),
+    AS_NUMBER(args[3]),
+    AS_NUMBER(args[4]),
+    AS_NUMBER(args[5]),
+    AS_NUMBER(args[6]),
+    AS_NUMBER(args[7]),
+    AS_NUMBER(args[8])
+  );
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__copyresized) {
+  ENFORCE_ARG_COUNT(copyresized, 10);
+  ENFORCE_ARG_TYPE(copyresized, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(copyresized, 1, IS_PTR);
+  ENFORCE_ARG_TYPE(copyresized, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyresized, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyresized, 4, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyresized, 5, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyresized, 6, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyresized, 7, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyresized, 8, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyresized, 9, IS_NUMBER);
+
+  gdImagePtr dst = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(dst);
+
+  gdImagePtr src = (gdImagePtr)AS_PTR(args[1])->pointer;
+  CHECK_IMAGE_PTR(src);
+
+  gdImageCopyResized(
+    dst, 
+    src, 
+    AS_NUMBER(args[2]),
+    AS_NUMBER(args[3]),
+    AS_NUMBER(args[4]),
+    AS_NUMBER(args[5]),
+    AS_NUMBER(args[6]),
+    AS_NUMBER(args[7]),
+    AS_NUMBER(args[8]),
+    AS_NUMBER(args[9])
+  );
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__copyresampled) {
+  ENFORCE_ARG_COUNT(copyresampled, 10);
+  ENFORCE_ARG_TYPE(copyresampled, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(copyresampled, 1, IS_PTR);
+  ENFORCE_ARG_TYPE(copyresampled, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyresampled, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyresampled, 4, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyresampled, 5, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyresampled, 6, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyresampled, 7, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyresampled, 8, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyresampled, 9, IS_NUMBER);
+
+  gdImagePtr dst = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(dst);
+
+  gdImagePtr src = (gdImagePtr)AS_PTR(args[1])->pointer;
+  CHECK_IMAGE_PTR(src);
+
+  gdImageCopyResampled(
+    dst, 
+    src, 
+    AS_NUMBER(args[2]),
+    AS_NUMBER(args[3]),
+    AS_NUMBER(args[4]),
+    AS_NUMBER(args[5]),
+    AS_NUMBER(args[6]),
+    AS_NUMBER(args[7]),
+    AS_NUMBER(args[8]),
+    AS_NUMBER(args[9])
+  );
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__copyrotated) {
+  ENFORCE_ARG_COUNT(copyrotated, 9);
+  ENFORCE_ARG_TYPE(copyrotated, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(copyrotated, 1, IS_PTR);
+  ENFORCE_ARG_TYPE(copyrotated, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyrotated, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyrotated, 4, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyrotated, 5, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyrotated, 6, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyrotated, 7, IS_NUMBER);
+  ENFORCE_ARG_TYPE(copyrotated, 8, IS_NUMBER);
+
+  gdImagePtr dst = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(dst);
+
+  gdImagePtr src = (gdImagePtr)AS_PTR(args[1])->pointer;
+  CHECK_IMAGE_PTR(src);
+
+  gdImageCopyRotated(
+    dst, 
+    src, 
+    AS_NUMBER(args[2]),
+    AS_NUMBER(args[3]),
+    AS_NUMBER(args[4]),
+    AS_NUMBER(args[5]),
+    AS_NUMBER(args[6]),
+    AS_NUMBER(args[7]),
+    AS_NUMBER(args[8])
+  );
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__clone) {
+  ENFORCE_ARG_COUNT(clone, 1);
+  ENFORCE_ARG_TYPE(clone, 0, IS_PTR);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageClone(image);
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__setbrush) {
+  ENFORCE_ARG_COUNT(setbrush, 2);
+  ENFORCE_ARG_TYPE(setbrush, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(setbrush, 1, IS_PTR);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImagePtr brush = (gdImagePtr)AS_PTR(args[1])->pointer;
+  CHECK_IMAGE_PTR(brush);
+
+  gdImageSetBrush(image, brush);
+  RETURN;
+}
+
 CREATE_MODULE_LOADER(imagine) {
   static b_field_reg module_fields[] = {
       GET_IMAGINE_PTR(tinyfont),
@@ -886,6 +1253,10 @@ CREATE_MODULE_LOADER(imagine) {
       {"polygon",   true,  GET_MODULE_METHOD(imagine__polygon)},
       {"openpolygon",   true,  GET_MODULE_METHOD(imagine__openpolygon)},
       {"filledpolygon",   true,  GET_MODULE_METHOD(imagine__filledpolygon)},
+      {"arc",   true,  GET_MODULE_METHOD(imagine__arc)},
+      {"filledarc",   true,  GET_MODULE_METHOD(imagine__filledarc)},
+      {"ellipse",   true,  GET_MODULE_METHOD(imagine__ellipse)},
+      {"filledellipse",   true,  GET_MODULE_METHOD(imagine__filledellipse)},
       // color
       {"colorallocate",   true,  GET_MODULE_METHOD(imagine__colorallocate)},
       {"colorallocatealpha",   true,  GET_MODULE_METHOD(imagine__colorallocatealpha)},
@@ -907,6 +1278,17 @@ CREATE_MODULE_LOADER(imagine) {
       {"jpeg",   true,  GET_MODULE_METHOD(imagine__jpeg)},
       {"bmp",   true,  GET_MODULE_METHOD(imagine__bmp)},
       {"wbmp",   true,  GET_MODULE_METHOD(imagine__wbmp)},
+      // processing
+      {"filltoborder",   true,  GET_MODULE_METHOD(imagine__filltoborder)},
+      {"fill",   true,  GET_MODULE_METHOD(imagine__fill)},
+      {"copy",   true,  GET_MODULE_METHOD(imagine__copy)},
+      {"copymerge",   true,  GET_MODULE_METHOD(imagine__copymerge)},
+      {"copymergegray",   true,  GET_MODULE_METHOD(imagine__copymergegray)},
+      {"copyresized",   true,  GET_MODULE_METHOD(imagine__copyresized)},
+      {"copyresampled",   true,  GET_MODULE_METHOD(imagine__copyresampled)},
+      {"copyrotated",   true,  GET_MODULE_METHOD(imagine__copyrotated)},
+      {"clone",   true,  GET_MODULE_METHOD(imagine__clone)},
+      {"setbrush",   true,  GET_MODULE_METHOD(imagine__setbrush)},
       // misc
       {"setclip",   true,  GET_MODULE_METHOD(imagine__setclip)},
       {"getclip",   true,  GET_MODULE_METHOD(imagine__getclip)},

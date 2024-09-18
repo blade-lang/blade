@@ -25,10 +25,12 @@ add_dependencies(imagine blade)
 
 set(BUILD_STATIC_LIBS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(BUILD_TEST, 0)
-set(ENABLE_CPP, 0)
-set(ENABLE_PNG, 1)
-set(ENABLE_JPEG, 1)
+
+set(CMAKE_FIND_FRAMEWORK LAST)
+set(ENABLE_CPP OFF CACHE INTERNAL "Disabled CPP")
+set(ENABLE_PNG ON CACHE INTERNAL "Enabled PNG")
+set(ENABLE_JPEG ON CACHE INTERNAL "Enabled JPEG")
+set(BUILD_TEST OFF CACHE INTERNAL "Disabled building tests")
 include(FetchContent)
 FetchContent_Declare(LibGD
         URL      https://github.com/blade-lang/libgd/archive/refs/heads/master.zip
