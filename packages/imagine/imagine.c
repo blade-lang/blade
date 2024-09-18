@@ -22,7 +22,7 @@
 
 #define IMAGINE_CONST(v) \
   b_value __imagine_const_##v(b_vm *vm) { \
-    return NUMBER_VAL(gd##v); \
+    return NUMBER_VAL(GD_##v); \
   }
 
 #define IMAGINE_PTR(f, v, t) \
@@ -38,6 +38,8 @@
 #define GET_IMAGINE_PTR(v) \
   {#v, true, __imagine_ptr_##v}
 
+#define IMAGINE_IMAGE_PTR_NAME "<void *imagine::type::image>"
+
 static void imagine_free_image_ptrs(void *data) {
   if(data != NULL) {
     gdImagePtr image = (gdImagePtr)data;
@@ -51,6 +53,64 @@ IMAGINE_PTR(smallfont, gdFontGetSmall(), font);
 IMAGINE_PTR(mediumfont, gdFontGetMediumBold(), font);
 IMAGINE_PTR(largefont, gdFontGetLarge(), font);
 IMAGINE_PTR(giantfont, gdFontGetGiant(), font);
+
+IMAGINE_CONST(PIXELATE_UPPERLEFT);
+IMAGINE_CONST(PIXELATE_AVERAGE);
+
+IMAGINE_CONST(QUANT_DEFAULT);
+IMAGINE_CONST(QUANT_JQUANT);
+IMAGINE_CONST(QUANT_NEUQUANT);
+IMAGINE_CONST(QUANT_LIQ);
+
+IMAGINE_CONST(DEFAULT);
+IMAGINE_CONST(BELL);
+IMAGINE_CONST(BESSEL);
+IMAGINE_CONST(BILINEAR_FIXED);
+IMAGINE_CONST(BICUBIC);
+IMAGINE_CONST(BICUBIC_FIXED);
+IMAGINE_CONST(BLACKMAN);
+IMAGINE_CONST(BOX);
+IMAGINE_CONST(BSPLINE);
+IMAGINE_CONST(CATMULLROM);
+IMAGINE_CONST(GAUSSIAN);
+IMAGINE_CONST(GENERALIZED_CUBIC);
+IMAGINE_CONST(HERMITE);
+IMAGINE_CONST(HAMMING);
+IMAGINE_CONST(HANNING);
+IMAGINE_CONST(MITCHELL);
+IMAGINE_CONST(NEAREST_NEIGHBOUR);
+IMAGINE_CONST(POWER);
+IMAGINE_CONST(QUADRATIC);
+IMAGINE_CONST(SINC);
+IMAGINE_CONST(TRIANGLE);
+IMAGINE_CONST(WEIGHTED4);
+IMAGINE_CONST(LINEAR);
+IMAGINE_CONST(LANCZOS3);
+IMAGINE_CONST(LANCZOS8);
+IMAGINE_CONST(BLACKMAN_BESSEL);
+IMAGINE_CONST(BLACKMAN_SINC);
+IMAGINE_CONST(QUADRATIC_BSPLINE);
+IMAGINE_CONST(CUBIC_SPLINE);
+IMAGINE_CONST(COSINE);
+IMAGINE_CONST(WELSH);
+IMAGINE_CONST(METHOD_COUNT);
+
+IMAGINE_CONST(CROP_DEFAULT);
+IMAGINE_CONST(CROP_TRANSPARENT);
+IMAGINE_CONST(CROP_BLACK);
+IMAGINE_CONST(CROP_WHITE);
+IMAGINE_CONST(CROP_SIDES);
+IMAGINE_CONST(CROP_THRESHOLD);
+
+IMAGINE_CONST(CMP_IMAGE);
+IMAGINE_CONST(CMP_NUM_COLORS);
+IMAGINE_CONST(CMP_COLOR);
+IMAGINE_CONST(CMP_SIZE_X);
+IMAGINE_CONST(CMP_SIZE_Y);
+IMAGINE_CONST(CMP_TRANSPARENT);
+IMAGINE_CONST(CMP_BACKGROUND);
+IMAGINE_CONST(CMP_INTERLACE);
+IMAGINE_CONST(CMP_TRUECOLOR);
 
 DECLARE_MODULE_METHOD(imagine__new) {
   ENFORCE_ARG_COUNT(new, 3);
@@ -75,7 +135,7 @@ DECLARE_MODULE_METHOD(imagine__new) {
     }
   }
 
-  RETURN_CLOSABLE_NAMED_PTR(image, "<void *imagine::type::image>", imagine_free_image_ptrs);
+  RETURN_CLOSABLE_NAMED_PTR(image, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
 }
 
 DECLARE_MODULE_METHOD(imagine__frompng) {
@@ -588,16 +648,19 @@ DECLARE_MODULE_METHOD(imagine__polygon) {
 
   for(int i = 0; i < points_given->items.count; i++) {
     if(!IS_LIST(points_given->items.values[i])) {
+      FREE_ARRAY(gdPoint, points, points_given->items.count);
       RETURN_ERROR("invalid points data.");
     }
 
     b_obj_list *point = AS_LIST(points_given->items.values[i]);
     if(point->items.count != 2) {
+      FREE_ARRAY(gdPoint, points, points_given->items.count);
       RETURN_ERROR("invalid points data.");
     }
 
     for(int j = 0; j < point->items.count; j++) {
       if(!IS_NUMBER(point->items.values[j])) {
+        FREE_ARRAY(gdPoint, points, points_given->items.count);
         RETURN_ERROR("invalid points data.");
       }
     }
@@ -625,16 +688,19 @@ DECLARE_MODULE_METHOD(imagine__openpolygon) {
 
   for(int i = 0; i < points_given->items.count; i++) {
     if(!IS_LIST(points_given->items.values[i])) {
+      FREE_ARRAY(gdPoint, points, points_given->items.count);
       RETURN_ERROR("invalid points data.");
     }
 
     b_obj_list *point = AS_LIST(points_given->items.values[i]);
     if(point->items.count != 2) {
+      FREE_ARRAY(gdPoint, points, points_given->items.count);
       RETURN_ERROR("invalid points data.");
     }
 
     for(int j = 0; j < point->items.count; j++) {
       if(!IS_NUMBER(point->items.values[j])) {
+        FREE_ARRAY(gdPoint, points, points_given->items.count);
         RETURN_ERROR("invalid points data.");
       }
     }
@@ -662,16 +728,19 @@ DECLARE_MODULE_METHOD(imagine__filledpolygon) {
 
   for(int i = 0; i < points_given->items.count; i++) {
     if(!IS_LIST(points_given->items.values[i])) {
+      FREE_ARRAY(gdPoint, points, points_given->items.count);
       RETURN_ERROR("invalid points data.");
     }
 
     b_obj_list *point = AS_LIST(points_given->items.values[i]);
     if(point->items.count != 2) {
+      FREE_ARRAY(gdPoint, points, points_given->items.count);
       RETURN_ERROR("invalid points data.");
     }
 
     for(int j = 0; j < point->items.count; j++) {
       if(!IS_NUMBER(point->items.values[j])) {
+        FREE_ARRAY(gdPoint, points, points_given->items.count);
         RETURN_ERROR("invalid points data.");
       }
     }
@@ -1215,13 +1284,462 @@ DECLARE_MODULE_METHOD(imagine__setbrush) {
   RETURN;
 }
 
+DECLARE_MODULE_METHOD(imagine__settile) {
+  ENFORCE_ARG_COUNT(settile, 2);
+  ENFORCE_ARG_TYPE(settile, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(settile, 1, IS_PTR);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImagePtr tile = (gdImagePtr)AS_PTR(args[1])->pointer;
+  CHECK_IMAGE_PTR(tile);
+
+  gdImageSetTile(image, tile);
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__setantialiased) {
+  ENFORCE_ARG_RANGE(setantialiased, 2, 3);
+  ENFORCE_ARG_TYPE(setantialiased, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(setantialiased, 1, IS_NUMBER);
+  
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  if(arg_count == 3) {
+    ENFORCE_ARG_TYPE(setantialiased, 2, IS_NUMBER);
+    gdImageSetAntiAliasedDontBlend(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]));
+  } else {
+    gdImageSetAntiAliased(image, AS_NUMBER(args[1]));
+  }
+
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__setthickness) {
+  ENFORCE_ARG_COUNT(setthickness, 2);
+  ENFORCE_ARG_TYPE(setthickness, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(setthickness, 1, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageSetThickness(image, AS_NUMBER(args[1]));
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__interlace) {
+  ENFORCE_ARG_COUNT(interlace, 2);
+  ENFORCE_ARG_TYPE(interlace, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(interlace, 1, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageInterlace(image, AS_NUMBER(args[1]));
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__alphablending) {
+  ENFORCE_ARG_COUNT(alphablending, 2);
+  ENFORCE_ARG_TYPE(alphablending, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(alphablending, 1, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageAlphaBlending(image, AS_NUMBER(args[1]));
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__savealpha) {
+  ENFORCE_ARG_COUNT(savealpha, 2);
+  ENFORCE_ARG_TYPE(savealpha, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(savealpha, 1, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageSaveAlpha(image, AS_NUMBER(args[1]));
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__pixelate) {
+  ENFORCE_ARG_COUNT(pixelate, 3);
+  ENFORCE_ARG_TYPE(pixelate, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(pixelate, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(pixelate, 2, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  RETURN_NUMBER(gdImagePixelate(image, AS_NUMBER(args[1]), AS_NUMBER(args[2])));
+}
+
+DECLARE_MODULE_METHOD(imagine__scatter) {
+  ENFORCE_ARG_RANGE(scatter, 3, 4);
+  ENFORCE_ARG_TYPE(scatter, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(scatter, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(scatter, 2, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  if(arg_count == 4 && !IS_NIL(args[3])) {
+    ENFORCE_ARG_TYPE(scatter, 3, IS_LIST);
+
+    b_obj_list *color_list = AS_LIST(args[3]);
+    int *colors = ALLOCATE(int, color_list->items.count);
+    for(int i = 0; i < color_list->items.count; i++) {
+      if(!IS_NUMBER(color_list->items.values[i])) {
+        FREE_ARRAY(int, colors, color_list->items.count);
+        RETURN_ERROR("Invalid color in scatter profile.");
+      }
+
+      colors[i] = AS_NUMBER(color_list->items.values[i]);
+    }
+
+    RETURN_NUMBER(gdImageScatterColor(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]), colors, color_list->items.count));
+  } else {
+    RETURN_NUMBER(gdImageScatter(image, AS_NUMBER(args[1]), AS_NUMBER(args[2])));
+  }
+}
+
+DECLARE_MODULE_METHOD(imagine__smooth) {
+  ENFORCE_ARG_COUNT(smooth, 2);
+  ENFORCE_ARG_TYPE(smooth, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(smooth, 1, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  RETURN_NUMBER(gdImageSmooth(image, AS_NUMBER(args[1])));
+}
+
+DECLARE_MODULE_METHOD(imagine__meanremoval) {
+  ENFORCE_ARG_COUNT(meanremoval, 1);
+  ENFORCE_ARG_TYPE(meanremoval, 0, IS_PTR);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  RETURN_NUMBER(gdImageMeanRemoval(image));
+}
+
+DECLARE_MODULE_METHOD(imagine__emboss) {
+  ENFORCE_ARG_COUNT(emboss, 1);
+  ENFORCE_ARG_TYPE(emboss, 0, IS_PTR);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  RETURN_NUMBER(gdImageEmboss(image));
+}
+
+DECLARE_MODULE_METHOD(imagine__gaussianblur) {
+  ENFORCE_ARG_COUNT(gaussianblur, 1);
+  ENFORCE_ARG_TYPE(gaussianblur, 0, IS_PTR);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  RETURN_NUMBER(gdImageGaussianBlur(image));
+}
+
+DECLARE_MODULE_METHOD(imagine__edgedetect) {
+  ENFORCE_ARG_COUNT(edgedetect, 1);
+  ENFORCE_ARG_TYPE(edgedetect, 0, IS_PTR);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  RETURN_NUMBER(gdImageEdgeDetectQuick(image));
+}
+
+DECLARE_MODULE_METHOD(imagine__selectiveblur) {
+  ENFORCE_ARG_COUNT(selectiveblur, 1);
+  ENFORCE_ARG_TYPE(selectiveblur, 0, IS_PTR);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  RETURN_NUMBER(gdImageSelectiveBlur(image));
+}
+
+DECLARE_MODULE_METHOD(imagine__grayscale) {
+  ENFORCE_ARG_COUNT(grayscale, 1);
+  ENFORCE_ARG_TYPE(grayscale, 0, IS_PTR);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  RETURN_NUMBER(gdImageGrayScale(image));
+}
+
+DECLARE_MODULE_METHOD(imagine__negate) {
+  ENFORCE_ARG_COUNT(negate, 1);
+  ENFORCE_ARG_TYPE(negate, 0, IS_PTR);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  RETURN_NUMBER(gdImageNegate(image));
+}
+
+DECLARE_MODULE_METHOD(imagine__color) {
+  ENFORCE_ARG_COUNT(color, 5);
+  ENFORCE_ARG_TYPE(color, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(color, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(color, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(color, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(color, 4, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  RETURN_NUMBER(gdImageColor(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3]), AS_NUMBER(args[4])));
+}
+
+DECLARE_MODULE_METHOD(imagine__contrast) {
+  ENFORCE_ARG_COUNT(contrast, 2);
+  ENFORCE_ARG_TYPE(contrast, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(contrast, 1, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  RETURN_NUMBER(gdImageContrast(image, AS_NUMBER(args[1])));
+}
+
+DECLARE_MODULE_METHOD(imagine__brightness) {
+  ENFORCE_ARG_COUNT(brightness, 2);
+  ENFORCE_ARG_TYPE(brightness, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(brightness, 1, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  RETURN_NUMBER(gdImageBrightness(image, AS_NUMBER(args[1])));
+}
+
+DECLARE_MODULE_METHOD(imagine__meta) {
+  ENFORCE_ARG_COUNT(size, 1);
+  ENFORCE_ARG_TYPE(size, 0, IS_PTR);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  int color_totals = gdImageColorsTotal(image);
+  int true_colors = gdImageTrueColor(image);
+  
+  b_obj_dict *dict = (b_obj_dict*)GC(new_dict(vm));
+  dict_set_entry(vm, dict, GC_L_STRING("width", 5), NUMBER_VAL(gdImageSX(image)));
+  dict_set_entry(vm, dict, GC_L_STRING("height", 6), NUMBER_VAL(gdImageSY(image)));
+  dict_set_entry(vm, dict, GC_L_STRING("colors", 6), NUMBER_VAL(color_totals > 0 ? color_totals : true_colors));
+  dict_set_entry(vm, dict, GC_L_STRING("res_x", 5), NUMBER_VAL(gdImageResolutionX(image)));
+  dict_set_entry(vm, dict, GC_L_STRING("res_y", 5), NUMBER_VAL(gdImageResolutionY(image)));
+  dict_set_entry(vm, dict, GC_L_STRING("interpolation", 13), NUMBER_VAL((int)image->interpolation));
+  dict_set_entry(vm, dict, GC_L_STRING("true_color", 10), BOOL_VAL(true_colors > 0));
+  dict_set_entry(vm, dict, GC_L_STRING("interlaced", 10), BOOL_VAL(gdImageGetInterlaced(image) != 0));
+  dict_set_entry(vm, dict, GC_L_STRING("transparent", 11), BOOL_VAL(gdImageGetTransparent(image) > 0));
+
+  RETURN_OBJ(dict);
+}
+
+DECLARE_MODULE_METHOD(imagine__fliphorizontal) {
+  ENFORCE_ARG_COUNT(fliphorizontal, 1);
+  ENFORCE_ARG_TYPE(fliphorizontal, 0, IS_PTR);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageFlipHorizontal(image);
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__flipvertical) {
+  ENFORCE_ARG_COUNT(flipvertical, 1);
+  ENFORCE_ARG_TYPE(flipvertical, 0, IS_PTR);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageFlipVertical(image);
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__flip) {
+  ENFORCE_ARG_COUNT(flip, 1);
+  ENFORCE_ARG_TYPE(flip, 0, IS_PTR);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageFlipBoth(image);
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__crop) {
+  ENFORCE_ARG_COUNT(crop, 5);
+  ENFORCE_ARG_TYPE(crop, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(crop, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(crop, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(crop, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(crop, 4, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+  
+  gdRect rect = { 
+    .x = AS_NUMBER(args[1]), 
+    .y = AS_NUMBER(args[2]), 
+    .width = AS_NUMBER(args[3]), 
+    .height = AS_NUMBER(args[4]) 
+  };
+
+  gdImagePtr *new_image = gdImageCrop(image, &rect);
+  if(NULL == new_image) {
+    RETURN_ERROR("Failed to crop image to rectangle.");
+  }
+
+  RETURN_CLOSABLE_NAMED_PTR(new_image, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
+}
+
+DECLARE_MODULE_METHOD(imagine__cropauto) {
+  ENFORCE_ARG_COUNT(cropauto, 2);
+  ENFORCE_ARG_TYPE(cropauto, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(cropauto, 1, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImagePtr *new_image = gdImageCropAuto(image, AS_NUMBER(args[1]));
+  if(NULL == new_image) {
+    RETURN_ERROR("Failed to crop image to rectangle.");
+  }
+
+  RETURN_CLOSABLE_NAMED_PTR(new_image, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
+}
+
+DECLARE_MODULE_METHOD(imagine__setinterpolationmethod) {
+  ENFORCE_ARG_COUNT(setinterpolationmethod, 2);
+  ENFORCE_ARG_TYPE(setinterpolationmethod, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(setinterpolationmethod, 1, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  RETURN_BOOL(gdImageSetInterpolationMethod(image, (gdInterpolationMethod)AS_NUMBER(args[1])) != 0);
+}
+
+DECLARE_MODULE_METHOD(imagine__scale) {
+  ENFORCE_ARG_COUNT(scale, 2);
+  ENFORCE_ARG_TYPE(scale, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(scale, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(scale, 2, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImagePtr *new_image = gdImageScale(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]));
+  if(NULL == new_image) {
+    RETURN_ERROR("Failed to scale image to (%d, %d).", (int)AS_NUMBER(args[1]), (int)AS_NUMBER(args[2]));
+  }
+
+  RETURN_CLOSABLE_NAMED_PTR(new_image, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
+}
+
+DECLARE_MODULE_METHOD(imagine__rotate) {
+  ENFORCE_ARG_COUNT(rotate, 2);
+  ENFORCE_ARG_TYPE(rotate, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(rotate, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(rotate, 2, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImagePtr *new_image = gdImageRotateInterpolated(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]));
+  if(NULL == new_image) {
+    RETURN_ERROR("Failed to rotate image to angle %.16g.", AS_NUMBER(args[1]));
+  }
+
+  RETURN_CLOSABLE_NAMED_PTR(new_image, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
+}
+
 CREATE_MODULE_LOADER(imagine) {
   static b_field_reg module_fields[] = {
+      // Fonts
       GET_IMAGINE_PTR(tinyfont),
       GET_IMAGINE_PTR(smallfont),
       GET_IMAGINE_PTR(mediumfont),
       GET_IMAGINE_PTR(largefont),
       GET_IMAGINE_PTR(giantfont),
+
+      // Color Quantization
+      GET_IMAGINE_CONST(QUANT_DEFAULT),
+      GET_IMAGINE_CONST(QUANT_JQUANT),
+      GET_IMAGINE_CONST(QUANT_NEUQUANT),
+      GET_IMAGINE_CONST(QUANT_LIQ),
+
+      // Interpolation Methods
+      GET_IMAGINE_CONST(DEFAULT ),
+      GET_IMAGINE_CONST(BELL),
+      GET_IMAGINE_CONST(BESSEL),
+      GET_IMAGINE_CONST(BILINEAR_FIXED),
+      GET_IMAGINE_CONST(BICUBIC),
+      GET_IMAGINE_CONST(BICUBIC_FIXED),
+      GET_IMAGINE_CONST(BLACKMAN),
+      GET_IMAGINE_CONST(BOX),
+      GET_IMAGINE_CONST(BSPLINE),
+      GET_IMAGINE_CONST(CATMULLROM),
+      GET_IMAGINE_CONST(GAUSSIAN),
+      GET_IMAGINE_CONST(GENERALIZED_CUBIC),
+      GET_IMAGINE_CONST(HERMITE),
+      GET_IMAGINE_CONST(HAMMING),
+      GET_IMAGINE_CONST(HANNING),
+      GET_IMAGINE_CONST(MITCHELL),
+      GET_IMAGINE_CONST(NEAREST_NEIGHBOUR),
+      GET_IMAGINE_CONST(POWER),
+      GET_IMAGINE_CONST(QUADRATIC),
+      GET_IMAGINE_CONST(SINC),
+      GET_IMAGINE_CONST(TRIANGLE),
+      GET_IMAGINE_CONST(WEIGHTED4),
+      GET_IMAGINE_CONST(LINEAR),
+      GET_IMAGINE_CONST(LANCZOS3),
+      GET_IMAGINE_CONST(LANCZOS8),
+      GET_IMAGINE_CONST(BLACKMAN_BESSEL),
+      GET_IMAGINE_CONST(BLACKMAN_SINC),
+      GET_IMAGINE_CONST(QUADRATIC_BSPLINE),
+      GET_IMAGINE_CONST(CUBIC_SPLINE),
+      GET_IMAGINE_CONST(COSINE),
+      GET_IMAGINE_CONST(WELSH),
+      GET_IMAGINE_CONST(METHOD_COUNT),
+
+      // pixelate
+      GET_IMAGINE_CONST(PIXELATE_UPPERLEFT),
+      GET_IMAGINE_CONST(PIXELATE_AVERAGE),
+
+      // Crop
+      GET_IMAGINE_CONST(CROP_DEFAULT),
+      GET_IMAGINE_CONST(CROP_TRANSPARENT),
+      GET_IMAGINE_CONST(CROP_BLACK),
+      GET_IMAGINE_CONST(CROP_WHITE),
+      GET_IMAGINE_CONST(CROP_SIDES),
+      GET_IMAGINE_CONST(CROP_THRESHOLD),
+
+      // Image Comparison
+      GET_IMAGINE_CONST(CMP_IMAGE),
+      GET_IMAGINE_CONST(CMP_NUM_COLORS),
+      GET_IMAGINE_CONST(CMP_COLOR),
+      GET_IMAGINE_CONST(CMP_SIZE_X),
+      GET_IMAGINE_CONST(CMP_SIZE_Y),
+      GET_IMAGINE_CONST(CMP_TRANSPARENT),
+      GET_IMAGINE_CONST(CMP_BACKGROUND),
+      GET_IMAGINE_CONST(CMP_INTERLACE),
+      GET_IMAGINE_CONST(CMP_TRUECOLOR),
+
+      // finalized...
       {NULL, false, NULL}
   };
 
@@ -1236,9 +1754,11 @@ CREATE_MODULE_LOADER(imagine) {
       {"fromwbmp",   true,  GET_MODULE_METHOD(imagine__fromwbmp)},
       {"fromwtga",   true,  GET_MODULE_METHOD(imagine__fromwtga)},
       {"fromfile",   true,  GET_MODULE_METHOD(imagine__fromfile)},
+      
       // pixels
       {"getpixel",   true,  GET_MODULE_METHOD(imagine__getpixel)},
       {"setpixel",   true,  GET_MODULE_METHOD(imagine__setpixel)},
+
       // drawing
       {"line",   true,  GET_MODULE_METHOD(imagine__line)},
       {"dashedline",   true,  GET_MODULE_METHOD(imagine__dashedline)},
@@ -1249,6 +1769,7 @@ CREATE_MODULE_LOADER(imagine) {
       {"charup",   true,  GET_MODULE_METHOD(imagine__charup)},
       {"string",   true,  GET_MODULE_METHOD(imagine__string)},
       {"stringup",   true,  GET_MODULE_METHOD(imagine__stringup)},
+
       // drawing > polygons
       {"polygon",   true,  GET_MODULE_METHOD(imagine__polygon)},
       {"openpolygon",   true,  GET_MODULE_METHOD(imagine__openpolygon)},
@@ -1257,6 +1778,7 @@ CREATE_MODULE_LOADER(imagine) {
       {"filledarc",   true,  GET_MODULE_METHOD(imagine__filledarc)},
       {"ellipse",   true,  GET_MODULE_METHOD(imagine__ellipse)},
       {"filledellipse",   true,  GET_MODULE_METHOD(imagine__filledellipse)},
+
       // color
       {"colorallocate",   true,  GET_MODULE_METHOD(imagine__colorallocate)},
       {"colorallocatealpha",   true,  GET_MODULE_METHOD(imagine__colorallocatealpha)},
@@ -1272,12 +1794,14 @@ CREATE_MODULE_LOADER(imagine) {
       {"palettecopy",   true,  GET_MODULE_METHOD(imagine__palettecopy)},
       {"colorreplace",   true,  GET_MODULE_METHOD(imagine__colorreplace)},
       {"colorreplacethreshold",   true,  GET_MODULE_METHOD(imagine__colorreplacethreshold)},
+
       // export
       {"gif",   true,  GET_MODULE_METHOD(imagine__gif)},
       {"png",   true,  GET_MODULE_METHOD(imagine__png)},
       {"jpeg",   true,  GET_MODULE_METHOD(imagine__jpeg)},
       {"bmp",   true,  GET_MODULE_METHOD(imagine__bmp)},
       {"wbmp",   true,  GET_MODULE_METHOD(imagine__wbmp)},
+
       // processing
       {"filltoborder",   true,  GET_MODULE_METHOD(imagine__filltoborder)},
       {"fill",   true,  GET_MODULE_METHOD(imagine__fill)},
@@ -1289,12 +1813,47 @@ CREATE_MODULE_LOADER(imagine) {
       {"copyrotated",   true,  GET_MODULE_METHOD(imagine__copyrotated)},
       {"clone",   true,  GET_MODULE_METHOD(imagine__clone)},
       {"setbrush",   true,  GET_MODULE_METHOD(imagine__setbrush)},
+      {"settile",   true,  GET_MODULE_METHOD(imagine__settile)},
+      {"setantialiased",   true,  GET_MODULE_METHOD(imagine__setantialiased)},
+      {"setthickness",   true,  GET_MODULE_METHOD(imagine__setthickness)},
+      {"interlace",   true,  GET_MODULE_METHOD(imagine__interlace)},
+      {"alphablending",   true,  GET_MODULE_METHOD(imagine__alphablending)},
+      {"savealpha",   true,  GET_MODULE_METHOD(imagine__savealpha)},
+      {"fliphorizontal",   true,  GET_MODULE_METHOD(imagine__fliphorizontal)},
+      {"flipvertical",   true,  GET_MODULE_METHOD(imagine__flipvertical)},
+      {"flip",   true,  GET_MODULE_METHOD(imagine__flip)},
+      {"crop",   true,  GET_MODULE_METHOD(imagine__crop)},
+      {"cropauto",   true,  GET_MODULE_METHOD(imagine__cropauto)},
+      {"scale",   true,  GET_MODULE_METHOD(imagine__scale)},
+      {"rotate",   true,  GET_MODULE_METHOD(imagine__rotate)},
+
+      // filters
+      {"pixelate",   true,  GET_MODULE_METHOD(imagine__pixelate)},
+      {"scatter",   true,  GET_MODULE_METHOD(imagine__scatter)},
+      {"smooth",   true,  GET_MODULE_METHOD(imagine__smooth)},
+      {"meanremoval",   true,  GET_MODULE_METHOD(imagine__meanremoval)},
+      {"emboss",   true,  GET_MODULE_METHOD(imagine__emboss)},
+      {"gaussianblur",   true,  GET_MODULE_METHOD(imagine__gaussianblur)},
+      {"edgedetect",   true,  GET_MODULE_METHOD(imagine__edgedetect)},
+      {"selectiveblur",   true,  GET_MODULE_METHOD(imagine__selectiveblur)},
+      {"color",   true,  GET_MODULE_METHOD(imagine__color)},
+      {"contrast",   true,  GET_MODULE_METHOD(imagine__contrast)},
+      {"brightness",   true,  GET_MODULE_METHOD(imagine__brightness)},
+      {"grayscale",   true,  GET_MODULE_METHOD(imagine__grayscale)},
+      {"negate",   true,  GET_MODULE_METHOD(imagine__negate)},
+
       // misc
       {"setclip",   true,  GET_MODULE_METHOD(imagine__setclip)},
       {"getclip",   true,  GET_MODULE_METHOD(imagine__getclip)},
       {"setresolution",   true,  GET_MODULE_METHOD(imagine__setresolution)},
       {"truecolortopalette",   true,  GET_MODULE_METHOD(imagine__truecolortopalette)},
       {"palettetotruecolor",   true,  GET_MODULE_METHOD(imagine__palettetotruecolor)},
+      {"setinterpolationmethod",   true,  GET_MODULE_METHOD(imagine__setinterpolationmethod)},
+
+      // Blade extras
+      {"meta",   true,  GET_MODULE_METHOD(imagine__meta)},
+
+      // Finalized...
       {NULL,    false, NULL},
   };
 
@@ -1310,6 +1869,7 @@ CREATE_MODULE_LOADER(imagine) {
   return &module;
 }
 
+#undef IMAGINE_IMAGE_PTR_NAME
 #undef GET_IMAGINE_PTR
 #undef IMAGINE_PTR
 #undef IMAGINE_CONST
