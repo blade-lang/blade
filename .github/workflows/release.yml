@@ -89,11 +89,11 @@ jobs:
         run: |
           ${{ env.VCPKG_ROOT }}/vcpkg update
           ${{ env.VCPKG_ROOT }}/vcpkg version
-          ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows libffi:x64-windows openssl:x64-windows-static libpng:x64-windows libjpeg-turbo:x64-windows
+          ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows libffi:x64-windows openssl:x64-windows libpng:x64-windows libjpeg-turbo:x64-windows
           ${{ env.VCPKG_ROOT }}/vcpkg list
       - name: Compile
         run: |
-          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake"
+          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static
           cmake --build .
       - name: Create ZIP Archive
         shell: cmd
