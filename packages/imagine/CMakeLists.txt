@@ -39,7 +39,11 @@ FetchContent_Declare(LibGD
 FetchContent_MakeAvailable(LibGD)
 
 target_include_directories(imagine PRIVATE "${libgd_SOURCE_DIR}/src")
-target_link_libraries(imagine gd_static)
+if(NOT WIN32)
+    target_link_libraries(imagine gd_static)
+else()
+    target_link_libraries(imagine gd)
+endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
