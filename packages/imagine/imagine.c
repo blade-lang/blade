@@ -39,8 +39,12 @@
   {#v, true, __imagine_ptr_##v}
 
 static void imagine_free_image_ptrs(void *data) {
-  gdImagePtr image = (gdImagePtr)data;
-  gdImageDestroy(image);
+  if(data != NULL) {
+    gdImagePtr image = (gdImagePtr)data;
+    gdImageDestroy(image);
+    gdFree(image);
+    data = NULL;
+  }
 }
 
 IMAGINE_PTR(tinyfont, gdFontGetTiny(), font);
@@ -155,6 +159,9 @@ DECLARE_MODULE_METHOD(imagine__close) {
   CHECK_IMAGE_PTR(image);
 
   gdImageDestroy(image);
+  gdFree(image);
+  AS_PTR(args[0])->pointer = NULL;
+  
   RETURN;
 }
 
@@ -187,16 +194,6 @@ DECLARE_MODULE_METHOD(imagine__getpixel) {
   } else {
     RETURN_NUMBER(gdImageGetPixel(image, AS_NUMBER(args[1]), AS_NUMBER(args[2])));
   }
-}
-
-DECLARE_MODULE_METHOD(imagine__aablend) {
-  ENFORCE_ARG_COUNT(aablend, 1);
-
-  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
-  CHECK_IMAGE_PTR(image);
-
-  gdImageAABlend(image);
-  RETURN;
 }
 
 DECLARE_MODULE_METHOD(imagine__line) {
@@ -469,7 +466,385 @@ DECLARE_MODULE_METHOD(imagine__stringup) {
   RETURN;
 }
 
-DECLARE_MODULE_METHOD(imagine__ploygon) {
+DECLARE_MODULE_METHOD(imagine__polygon) {
+  ENFORCE_ARG_COUNT(polygon, 3);
+  ENFORCE_ARG_TYPE(polygon, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(polygon, 1, IS_LIST);
+  ENFORCE_ARG_TYPE(polygon, 2, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  b_obj_list *points_given = AS_LIST(args[1]);
+
+  gdPointPtr points = ALLOCATE(gdPoint, points_given->items.count);
+
+  for(int i = 0; i < points_given->items.count; i++) {
+    if(!IS_LIST(points_given->items.values[i])) {
+      RETURN_ERROR("invalid points data.");
+    }
+
+    b_obj_list *point = AS_LIST(points_given->items.values[i]);
+    if(point->items.count != 2) {
+      RETURN_ERROR("invalid points data.");
+    }
+
+    for(int j = 0; j < point->items.count; j++) {
+      if(!IS_NUMBER(point->items.values[j])) {
+        RETURN_ERROR("invalid points data.");
+      }
+    }
+
+    points[i] = (gdPoint){ .x = point->items.values[0], .y = point->items.values[1] };
+  }
+
+  gdImagePolygon(image, points, points_given->items.count, AS_NUMBER(args[2]));
+  FREE_ARRAY(gdPoint, points, points_given->items.count);
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__openpolygon) {
+  ENFORCE_ARG_COUNT(openpolygon, 3);
+  ENFORCE_ARG_TYPE(openpolygon, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(openpolygon, 1, IS_LIST);
+  ENFORCE_ARG_TYPE(openpolygon, 2, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  b_obj_list *points_given = AS_LIST(args[1]);
+
+  gdPointPtr points = ALLOCATE(gdPoint, points_given->items.count);
+
+  for(int i = 0; i < points_given->items.count; i++) {
+    if(!IS_LIST(points_given->items.values[i])) {
+      RETURN_ERROR("invalid points data.");
+    }
+
+    b_obj_list *point = AS_LIST(points_given->items.values[i]);
+    if(point->items.count != 2) {
+      RETURN_ERROR("invalid points data.");
+    }
+
+    for(int j = 0; j < point->items.count; j++) {
+      if(!IS_NUMBER(point->items.values[j])) {
+        RETURN_ERROR("invalid points data.");
+      }
+    }
+
+    points[i] = (gdPoint){ .x = point->items.values[0], .y = point->items.values[1] };
+  }
+
+  gdImageOpenPolygon(image, points, points_given->items.count, AS_NUMBER(args[2]));
+  FREE_ARRAY(gdPoint, points, points_given->items.count);
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__filledpolygon) {
+  ENFORCE_ARG_COUNT(filledpolygon, 3);
+  ENFORCE_ARG_TYPE(filledpolygon, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(filledpolygon, 1, IS_LIST);
+  ENFORCE_ARG_TYPE(filledpolygon, 2, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  b_obj_list *points_given = AS_LIST(args[1]);
+
+  gdPointPtr points = ALLOCATE(gdPoint, points_given->items.count);
+
+  for(int i = 0; i < points_given->items.count; i++) {
+    if(!IS_LIST(points_given->items.values[i])) {
+      RETURN_ERROR("invalid points data.");
+    }
+
+    b_obj_list *point = AS_LIST(points_given->items.values[i]);
+    if(point->items.count != 2) {
+      RETURN_ERROR("invalid points data.");
+    }
+
+    for(int j = 0; j < point->items.count; j++) {
+      if(!IS_NUMBER(point->items.values[j])) {
+        RETURN_ERROR("invalid points data.");
+      }
+    }
+
+    points[i] = (gdPoint){ .x = point->items.values[0], .y = point->items.values[1] };
+  }
+
+  gdImageFilledPolygon(image, points, points_given->items.count, AS_NUMBER(args[2]));
+  FREE_ARRAY(gdPoint, points, points_given->items.count);
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__colorallocate) {
+  ENFORCE_ARG_COUNT(colorallocate, 4);
+  ENFORCE_ARG_TYPE(colorallocate, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(colorallocate, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorallocate, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorallocate, 3, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+  
+  RETURN_NUMBER(gdImageColorAllocate(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3])));
+}
+
+DECLARE_MODULE_METHOD(imagine__colorallocatealpha) {
+  ENFORCE_ARG_COUNT(colorallocatealpha, 5);
+  ENFORCE_ARG_TYPE(colorallocatealpha, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(colorallocatealpha, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorallocatealpha, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorallocatealpha, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorallocatealpha, 4, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+  
+  RETURN_NUMBER(gdImageColorAllocateAlpha(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3]), AS_NUMBER(args[4])));
+}
+
+DECLARE_MODULE_METHOD(imagine__colorclosest) {
+  ENFORCE_ARG_COUNT(colorclosest, 4);
+  ENFORCE_ARG_TYPE(colorclosest, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(colorclosest, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorclosest, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorclosest, 3, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+  
+  RETURN_NUMBER(gdImageColorClosest(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3])));
+}
+
+DECLARE_MODULE_METHOD(imagine__colorclosestalpha) {
+  ENFORCE_ARG_COUNT(colorclosestalpha, 5);
+  ENFORCE_ARG_TYPE(colorclosestalpha, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(colorclosestalpha, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorclosestalpha, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorclosestalpha, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorclosestalpha, 4, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+  
+  RETURN_NUMBER(gdImageColorClosestAlpha(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3]), AS_NUMBER(args[4])));
+}
+
+DECLARE_MODULE_METHOD(imagine__colorclosesthwb) {
+  ENFORCE_ARG_COUNT(colorclosesthwb, 4);
+  ENFORCE_ARG_TYPE(colorclosesthwb, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(colorclosesthwb, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorclosesthwb, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorclosesthwb, 3, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+  
+  RETURN_NUMBER(gdImageColorClosestHWB(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3])));
+}
+
+DECLARE_MODULE_METHOD(imagine__colorexact) {
+  ENFORCE_ARG_COUNT(colorexact, 4);
+  ENFORCE_ARG_TYPE(colorexact, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(colorexact, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorexact, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorexact, 3, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+  
+  RETURN_NUMBER(gdImageColorExact(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3])));
+}
+
+DECLARE_MODULE_METHOD(imagine__colorexactalpha) {
+  ENFORCE_ARG_COUNT(colorexactalpha, 5);
+  ENFORCE_ARG_TYPE(colorexactalpha, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(colorexactalpha, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorexactalpha, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorexactalpha, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorexactalpha, 4, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+  
+  RETURN_NUMBER(gdImageColorExactAlpha(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3]), AS_NUMBER(args[4])));
+}
+
+DECLARE_MODULE_METHOD(imagine__colorresolve) {
+  ENFORCE_ARG_COUNT(colorresolve, 4);
+  ENFORCE_ARG_TYPE(colorresolve, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(colorresolve, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorresolve, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorresolve, 3, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+  
+  RETURN_NUMBER(gdImageColorResolve(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3])));
+}
+
+DECLARE_MODULE_METHOD(imagine__colorresolvealpha) {
+  ENFORCE_ARG_COUNT(colorresolvealpha, 5);
+  ENFORCE_ARG_TYPE(colorresolvealpha, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(colorresolvealpha, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorresolvealpha, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorresolvealpha, 3, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorresolvealpha, 4, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+  
+  RETURN_NUMBER(gdImageColorResolveAlpha(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3]), AS_NUMBER(args[4])));
+}
+
+DECLARE_MODULE_METHOD(imagine__colordeallocate) {
+  ENFORCE_ARG_COUNT(colorresolvealpha, 2);
+  ENFORCE_ARG_TYPE(colorresolvealpha, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(colorresolvealpha, 1, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+  
+  gdImageColorDeallocate(image, AS_NUMBER(args[1]));
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__truecolortopalette) {
+  ENFORCE_ARG_COUNT(truecolortopalette, 3);
+  ENFORCE_ARG_TYPE(truecolortopalette, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(truecolortopalette, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(truecolortopalette, 2, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+  
+  RETURN_NUMBER(gdImageTrueColorToPalette(image, AS_NUMBER(args[1]), AS_NUMBER(args[2])));
+}
+
+DECLARE_MODULE_METHOD(imagine__palettetotruecolor) {
+  ENFORCE_ARG_COUNT(palettetotruecolor, 1);
+  ENFORCE_ARG_TYPE(truecolortopalette, 0, IS_PTR);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+  
+  RETURN_NUMBER(gdImagePaletteToTrueColor(image));
+}
+
+DECLARE_MODULE_METHOD(imagine__colortransparent) {
+  ENFORCE_ARG_COUNT(colortransparent, 2);
+  ENFORCE_ARG_TYPE(colortransparent, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(colortransparent, 1, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+  
+  gdImageColorTransparent(image, AS_NUMBER(args[1]));
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__palettecopy) {
+  ENFORCE_ARG_COUNT(palettecopy, 2);
+  ENFORCE_ARG_TYPE(palettecopy, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(palettecopy, 1, IS_PTR);
+
+  gdImagePtr image1 = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image1);
+
+  gdImagePtr image2 = (gdImagePtr)AS_PTR(args[1])->pointer;
+  CHECK_IMAGE_PTR(image2);
+  
+  gdImagePaletteCopy(image1, image2);
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__colorreplace) {
+  ENFORCE_ARG_COUNT(colorreplace, 3);
+  ENFORCE_ARG_TYPE(colorreplace, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(colorreplace, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorreplace, 2, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+  
+  RETURN_NUMBER(gdImageColorReplace(image, AS_NUMBER(args[1]), AS_NUMBER(args[2])));
+}
+
+DECLARE_MODULE_METHOD(imagine__colorreplacethreshold) {
+  ENFORCE_ARG_COUNT(colorreplacethreshold, 4);
+  ENFORCE_ARG_TYPE(colorreplacethreshold, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(colorreplacethreshold, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorreplacethreshold, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(colorreplacethreshold, 3, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+  
+  RETURN_NUMBER(gdImageColorReplaceThreshold(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3])));
+}
+
+DECLARE_MODULE_METHOD(imagine__gif) {
+  ENFORCE_ARG_COUNT(gif, 2);
+  ENFORCE_ARG_TYPE(gif, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(gif, 1, IS_FILE);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageGif(image, AS_FILE(args[1])->file);
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__png) {
+  ENFORCE_ARG_COUNT(png, 3);
+  ENFORCE_ARG_TYPE(png, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(png, 1, IS_FILE);
+  ENFORCE_ARG_TYPE(png, 2, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImagePngEx(image, AS_FILE(args[1])->file, AS_NUMBER(args[2]));
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__jpeg) {
+  ENFORCE_ARG_COUNT(jpeg, 3);
+  ENFORCE_ARG_TYPE(jpeg, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(jpeg, 1, IS_FILE);
+  ENFORCE_ARG_TYPE(jpeg, 2, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageJpeg(image, AS_FILE(args[1])->file, AS_NUMBER(args[2]));
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__bmp) {
+  ENFORCE_ARG_COUNT(bmp, 3);
+  ENFORCE_ARG_TYPE(bmp, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(bmp, 1, IS_FILE);
+  ENFORCE_ARG_TYPE(bmp, 2, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageBmp(image, AS_FILE(args[1])->file, AS_NUMBER(args[2]));
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__wbmp) {
+  ENFORCE_ARG_COUNT(wbmp, 3);
+  ENFORCE_ARG_TYPE(wbmp, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(wbmp, 1, IS_FILE);
+  ENFORCE_ARG_TYPE(wbmp, 2, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageWBMP(image, AS_NUMBER(args[2]), AS_FILE(args[1])->file);
   RETURN;
 }
 
@@ -498,7 +873,6 @@ CREATE_MODULE_LOADER(imagine) {
       {"getpixel",   true,  GET_MODULE_METHOD(imagine__getpixel)},
       {"setpixel",   true,  GET_MODULE_METHOD(imagine__setpixel)},
       // drawing
-      {"aablend",   true,  GET_MODULE_METHOD(imagine__aablend)},
       {"line",   true,  GET_MODULE_METHOD(imagine__line)},
       {"dashedline",   true,  GET_MODULE_METHOD(imagine__dashedline)},
       {"rectangle",   true,  GET_MODULE_METHOD(imagine__rectangle)},
@@ -508,10 +882,37 @@ CREATE_MODULE_LOADER(imagine) {
       {"charup",   true,  GET_MODULE_METHOD(imagine__charup)},
       {"string",   true,  GET_MODULE_METHOD(imagine__string)},
       {"stringup",   true,  GET_MODULE_METHOD(imagine__stringup)},
+      // drawing > polygons
+      {"polygon",   true,  GET_MODULE_METHOD(imagine__polygon)},
+      {"openpolygon",   true,  GET_MODULE_METHOD(imagine__openpolygon)},
+      {"filledpolygon",   true,  GET_MODULE_METHOD(imagine__filledpolygon)},
+      // color
+      {"colorallocate",   true,  GET_MODULE_METHOD(imagine__colorallocate)},
+      {"colorallocatealpha",   true,  GET_MODULE_METHOD(imagine__colorallocatealpha)},
+      {"colorclosest",   true,  GET_MODULE_METHOD(imagine__colorclosest)},
+      {"colorclosestalpha",   true,  GET_MODULE_METHOD(imagine__colorclosestalpha)},
+      {"colorclosesthwb",   true,  GET_MODULE_METHOD(imagine__colorclosesthwb)},
+      {"colorexact",   true,  GET_MODULE_METHOD(imagine__colorexact)},
+      {"colorexactalpha",   true,  GET_MODULE_METHOD(imagine__colorexactalpha)},
+      {"colorresolve",   true,  GET_MODULE_METHOD(imagine__colorresolve)},
+      {"colorresolvealpha",   true,  GET_MODULE_METHOD(imagine__colorresolvealpha)},
+      {"colordeallocate",   true,  GET_MODULE_METHOD(imagine__colordeallocate)},
+      {"colortransparent",   true,  GET_MODULE_METHOD(imagine__colortransparent)},
+      {"palettecopy",   true,  GET_MODULE_METHOD(imagine__palettecopy)},
+      {"colorreplace",   true,  GET_MODULE_METHOD(imagine__colorreplace)},
+      {"colorreplacethreshold",   true,  GET_MODULE_METHOD(imagine__colorreplacethreshold)},
+      // export
+      {"gif",   true,  GET_MODULE_METHOD(imagine__gif)},
+      {"png",   true,  GET_MODULE_METHOD(imagine__png)},
+      {"jpeg",   true,  GET_MODULE_METHOD(imagine__jpeg)},
+      {"bmp",   true,  GET_MODULE_METHOD(imagine__bmp)},
+      {"wbmp",   true,  GET_MODULE_METHOD(imagine__wbmp)},
       // misc
       {"setclip",   true,  GET_MODULE_METHOD(imagine__setclip)},
       {"getclip",   true,  GET_MODULE_METHOD(imagine__getclip)},
       {"setresolution",   true,  GET_MODULE_METHOD(imagine__setresolution)},
+      {"truecolortopalette",   true,  GET_MODULE_METHOD(imagine__truecolortopalette)},
+      {"palettetotruecolor",   true,  GET_MODULE_METHOD(imagine__palettetotruecolor)},
       {NULL,    false, NULL},
   };
 
