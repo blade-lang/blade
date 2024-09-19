@@ -28,6 +28,7 @@ jobs:
       - name: Compile
         run: |
           sudo apt-get update
+          sudo apt-get remove libgd3 
           sudo apt-get install curl libcurl4-openssl-dev libgd-dev -y
           cmake -B .
           cmake --build . -- -j 12
