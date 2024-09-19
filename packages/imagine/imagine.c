@@ -501,7 +501,7 @@ DECLARE_MODULE_METHOD(imagine__filledarc) {
   ENFORCE_ARG_TYPE(filledarc, 1, IS_NUMBER);
   ENFORCE_ARG_TYPE(filledarc, 2, IS_NUMBER);
   ENFORCE_ARG_TYPE(filledarc, 3, IS_NUMBER);
-  ENFORCE_ARG_TYPE(filledarc, 4, IS_STRING);
+  ENFORCE_ARG_TYPE(filledarc, 4, IS_NUMBER);
   ENFORCE_ARG_TYPE(filledarc, 5, IS_NUMBER);
   ENFORCE_ARG_TYPE(filledarc, 6, IS_NUMBER);
   ENFORCE_ARG_TYPE(filledarc, 7, IS_NUMBER);
@@ -509,13 +509,6 @@ DECLARE_MODULE_METHOD(imagine__filledarc) {
 
   gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
   CHECK_IMAGE_PTR(image);
-
-  // TODO: Define styles In Blade source
-  // #define gdArc   0
-  // #define gdPie   gdArc
-  // #define gdChord 1
-  // #define gdNoFill 2
-  // #define gdEdged 4
 
   gdImageFilledArc(
     image, 
@@ -537,7 +530,7 @@ DECLARE_MODULE_METHOD(imagine__arc) {
   ENFORCE_ARG_TYPE(arc, 1, IS_NUMBER);
   ENFORCE_ARG_TYPE(arc, 2, IS_NUMBER);
   ENFORCE_ARG_TYPE(arc, 3, IS_NUMBER);
-  ENFORCE_ARG_TYPE(arc, 4, IS_STRING);
+  ENFORCE_ARG_TYPE(arc, 4, IS_NUMBER);
   ENFORCE_ARG_TYPE(arc, 5, IS_NUMBER);
   ENFORCE_ARG_TYPE(arc, 6, IS_NUMBER);
   ENFORCE_ARG_TYPE(arc, 7, IS_NUMBER);
@@ -587,7 +580,7 @@ DECLARE_MODULE_METHOD(imagine__filledellipse) {
   ENFORCE_ARG_TYPE(filledellipse, 1, IS_NUMBER);
   ENFORCE_ARG_TYPE(filledellipse, 2, IS_NUMBER);
   ENFORCE_ARG_TYPE(filledellipse, 3, IS_NUMBER);
-  ENFORCE_ARG_TYPE(filledellipse, 4, IS_STRING);
+  ENFORCE_ARG_TYPE(filledellipse, 4, IS_NUMBER);
   ENFORCE_ARG_TYPE(filledellipse, 5, IS_NUMBER);
 
   gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
@@ -618,25 +611,8 @@ DECLARE_MODULE_METHOD(imagine__polygon) {
   gdPointPtr points = ALLOCATE(gdPoint, points_given->items.count);
 
   for(int i = 0; i < points_given->items.count; i++) {
-    if(!IS_LIST(points_given->items.values[i])) {
-      FREE_ARRAY(gdPoint, points, points_given->items.count);
-      RETURN_ERROR("invalid points data.");
-    }
-
     b_obj_list *point = AS_LIST(points_given->items.values[i]);
-    if(point->items.count != 2) {
-      FREE_ARRAY(gdPoint, points, points_given->items.count);
-      RETURN_ERROR("invalid points data.");
-    }
-
-    for(int j = 0; j < point->items.count; j++) {
-      if(!IS_NUMBER(point->items.values[j])) {
-        FREE_ARRAY(gdPoint, points, points_given->items.count);
-        RETURN_ERROR("invalid points data.");
-      }
-    }
-
-    points[i] = (gdPoint){ .x = point->items.values[0], .y = point->items.values[1] };
+    points[i] = (gdPoint){ .x = AS_NUMBER(point->items.values[0]), .y = AS_NUMBER(point->items.values[1]) };
   }
 
   gdImagePolygon(image, points, points_given->items.count, AS_NUMBER(args[2]));
@@ -658,25 +634,8 @@ DECLARE_MODULE_METHOD(imagine__openpolygon) {
   gdPointPtr points = ALLOCATE(gdPoint, points_given->items.count);
 
   for(int i = 0; i < points_given->items.count; i++) {
-    if(!IS_LIST(points_given->items.values[i])) {
-      FREE_ARRAY(gdPoint, points, points_given->items.count);
-      RETURN_ERROR("invalid points data.");
-    }
-
     b_obj_list *point = AS_LIST(points_given->items.values[i]);
-    if(point->items.count != 2) {
-      FREE_ARRAY(gdPoint, points, points_given->items.count);
-      RETURN_ERROR("invalid points data.");
-    }
-
-    for(int j = 0; j < point->items.count; j++) {
-      if(!IS_NUMBER(point->items.values[j])) {
-        FREE_ARRAY(gdPoint, points, points_given->items.count);
-        RETURN_ERROR("invalid points data.");
-      }
-    }
-
-    points[i] = (gdPoint){ .x = point->items.values[0], .y = point->items.values[1] };
+    points[i] = (gdPoint){ .x = AS_NUMBER(point->items.values[0]), .y = AS_NUMBER(point->items.values[1]) };
   }
 
   gdImageOpenPolygon(image, points, points_given->items.count, AS_NUMBER(args[2]));
@@ -698,25 +657,8 @@ DECLARE_MODULE_METHOD(imagine__filledpolygon) {
   gdPointPtr points = ALLOCATE(gdPoint, points_given->items.count);
 
   for(int i = 0; i < points_given->items.count; i++) {
-    if(!IS_LIST(points_given->items.values[i])) {
-      FREE_ARRAY(gdPoint, points, points_given->items.count);
-      RETURN_ERROR("invalid points data.");
-    }
-
     b_obj_list *point = AS_LIST(points_given->items.values[i]);
-    if(point->items.count != 2) {
-      FREE_ARRAY(gdPoint, points, points_given->items.count);
-      RETURN_ERROR("invalid points data.");
-    }
-
-    for(int j = 0; j < point->items.count; j++) {
-      if(!IS_NUMBER(point->items.values[j])) {
-        FREE_ARRAY(gdPoint, points, points_given->items.count);
-        RETURN_ERROR("invalid points data.");
-      }
-    }
-
-    points[i] = (gdPoint){ .x = point->items.values[0], .y = point->items.values[1] };
+    points[i] = (gdPoint){ .x = AS_NUMBER(point->items.values[0]), .y = AS_NUMBER(point->items.values[1]) };
   }
 
   gdImageFilledPolygon(image, points, points_given->items.count, AS_NUMBER(args[2]));

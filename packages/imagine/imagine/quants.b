@@ -1,5 +1,3 @@
-import _imagine
-
 /**
  * QUANT_LIQ if libimagequant is available, QUANT_JQUANT otherwise.
  */

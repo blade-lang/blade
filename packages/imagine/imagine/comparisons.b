@@ -1,6 +1,3 @@
-import _imagine
-
-
 /**
  * Actual image IS different
  */

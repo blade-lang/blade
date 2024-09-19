@@ -4,6 +4,7 @@ import _reflect
 import types
 
 import .quants
+import .arcs
 
 class ImageResource {
   # cache for the image meta
@@ -326,6 +327,171 @@ class ImageResource {
     }
 
     _imagine.stringup(self._ptr, font, x, y, text, color)
+  }
+
+  /**
+   * Draws a polygon with the vertices specified by _points_, in the 
+   * specified by _color_. There must be at least three points.
+   * 
+   * Point must be a list of lists where each list contains two numbers 
+   * for the x and y coordinates. It is required that there must be at 
+   * least three points.
+   * 
+   * @param {list[list]} points
+   * @param {number} color
+   */
+  polygon(points, color) {
+    if !is_list(points)
+      die Exception('list expected at points, ${typeof(points)} given')
+    if !is_number(color)
+      die Exception('number expected color, ${typeof(color)} given')
+
+    # validate the point
+    for point in points {
+      if !is_list(point) or point.length() != 2
+        die Exception('invalid points data')
+
+      for item in point {
+        if !is_number(item)
+          die Exception('invalid points data')
+      }
+    }
+
+    if points.length() < 3
+      die Exception('a minimum of three points expected')
+
+    _imagine.polygon(self._ptr, points, color)
+  }
+
+  /**
+   * Draws an open polygon with the vertices specified by _points_, in 
+   * the specified by _color_. There must be at least three points.
+   * 
+   * Point must be a list of lists where each list contains two numbers 
+   * for the x and y coordinates. It is required that there must be at 
+   * least three points.
+   * 
+   * @param {list[list]} points
+   * @param {number} color
+   */
+  open_polygon(points, color) {
+    if !is_list(points)
+      die Exception('list expected at points, ${typeof(points)} given')
+    if !is_number(color)
+      die Exception('number expected color, ${typeof(color)} given')
+
+    # validate the point
+    for point in points {
+      if !is_list(point) or point.length() != 2
+        die Exception('invalid points data')
+
+      for item in point {
+        if !is_number(item)
+          die Exception('invalid points data')
+      }
+    }
+
+    if points.length() < 3
+      die Exception('a minimum of three points expected')
+
+    _imagine.openpolygon(self._ptr, points, color)
+  }
+
+  /**
+   * Fills a polygon with the vertices specified by _points_, in the 
+   * specified by _color_. There must be at least three points.
+   * 
+   * Point must be a list of lists where each list contains two numbers 
+   * for the x and y coordinates. It is required that there must be at 
+   * least three points.
+   * 
+   * @param {list[list]} points
+   * @param {number} color
+   */
+  filled_polygon(points, color) {
+    if !is_list(points)
+      die Exception('list expected at points, ${typeof(points)} given')
+    if !is_number(color)
+      die Exception('number expected color, ${typeof(color)} given')
+
+    # validate the point
+    for point in points {
+      if !is_list(point) or point.length() != 2
+        die Exception('invalid points data')
+
+      for item in point {
+        if !is_number(item)
+          die Exception('invalid points data')
+      }
+    }
+
+    if points.length() < 3
+      die Exception('a minimum of three points expected')
+
+    _imagine.filledpolygon(self._ptr, points, color)
+  }
+
+  /**
+   * Draws a partial ellipse centered at the given point, with the 
+   * specified width and height in pixels. The arc begins at the 
+   * position in degrees specified by _start_ and ends at the 
+   * position specified by _end_. The arc is drawn in the color 
+   * specified by the last argument. A circle can be drawn by 
+   * beginning from 0 degrees and ending at 360 degrees, with width 
+   * and height being equal. `end` must be greater than `start`. 
+   * Values greater than 360 are interpreted modulo 360. 
+   * 
+   * @param {number} x
+   * @param {number} y
+   * @param {number} width
+   * @param {number} height
+   * @param {number} start
+   * @param {number} end
+   * @param {number} color
+   */
+  arc(x, y, width, height, start, end, color) {
+    if !is_number(x) or !is_number(y) or !is_number(width) or 
+      !is_number(height) or !is_number(start) or !is_number(end) or !is_number(color) {
+        die Exception('number expected')
+    }
+
+    _imagine.arc(self._ptr, x, y, width, height, start, end, color)
+  }
+
+  /**
+   * Fills a partial ellipse centered at the given point, with the 
+   * specified width and height in pixels using the specified style. 
+   * The arc begins at the position in degrees specified by _start_ 
+   * and ends at the position specified by _end_. The arc is drawn 
+   * in the color specified by the last argument. A circle can be 
+   * drawn by beginning from 0 degrees and ending at 360 degrees, 
+   * with width and height being equal. `end` must be greater than 
+   * `start`. Values greater than 360 are interpreted modulo 360. 
+   * 
+   * Style must be one or more of ARC_* constants or'ed together.
+   * E.g. `ARC_NO_FILL | ARC_NO_EDGE`.
+   * 
+   * When style is not given, it defaults to `ARC_PIE`.
+   * 
+   * @param {number} x
+   * @param {number} y
+   * @param {number} width
+   * @param {number} height
+   * @param {number} start
+   * @param {number} end
+   * @param {number} color
+   * @param {number} style
+   */
+  filled_arc(x, y, width, height, start, end, color, style) {
+    if !style style = arcs.ARC_PIE
+    
+    if !is_number(x) or !is_number(y) or !is_number(width) or 
+      !is_number(height) or !is_number(start) or !is_number(end) or 
+      !is_number(color) or !is_number(style) {
+        die Exception('number expected')
+    }
+
+    _imagine.filledarc(self._ptr, x, y, width, height, start, end, color, style)
   }
 
   # ------------------------- COLOR ------------------------------

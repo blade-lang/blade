@@ -1,6 +1,3 @@
-import _imagine
-
-
 /**
  * Same as CROP_TRANSPARENT
  */

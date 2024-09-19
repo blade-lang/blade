@@ -10,4 +10,5 @@ import .comparisons { * }
 import .interpolations { * }
 import .quants { * }
 import .crops { * }
+import .arcs { * }
 import .image { * }
