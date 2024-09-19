@@ -80,12 +80,28 @@ jobs:
       - uses: actions/checkout@v4
       - uses: friendlyanon/setup-vcpkg@v1
         with: { committish: 3508985146f1b1d248c67ead13f8f54be5b4f5da, cache-version: "1", cache-key: "vcpkg-windows", cache-restore-keys: "vcpkg-windows" }
+      - name: Restore vcpkg dependencies cache
+        id: vcpkg-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ${{ env.VCPKG_ROOT }}/installed
+            ${{ env.VCPKG_ROOT }}/vcpkg_installed
+          key: ${{ runner.OS }}-vcpkg
       - name: Install Dependencies
         run: |
           ${{ env.VCPKG_ROOT }}/vcpkg update
           ${{ env.VCPKG_ROOT }}/vcpkg version
           ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows-static libffi:x64-windows-static openssl:x64-windows-static libpng:x64-windows-static libjpeg-turbo:x64-windows-static
           ${{ env.VCPKG_ROOT }}/vcpkg list
+      - name: Restore vcpkg dependencies cache
+        id: vcpkg-cache-save
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ env.VCPKG_ROOT }}/installed
+            ${{ env.VCPKG_ROOT }}/vcpkg_installed
+          key: ${{ steps.vcpkg-cache-restore.outputs.cache-primary-key }}
       - name: Compile
         run: |
           cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static
