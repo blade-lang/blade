@@ -23,7 +23,6 @@ add_library(imagine SHARED imagine.c)
 target_link_libraries(imagine libblade)
 add_dependencies(imagine blade)
 
-set(BUILD_STATIC_LIBS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_FIND_FRAMEWORK LAST)
