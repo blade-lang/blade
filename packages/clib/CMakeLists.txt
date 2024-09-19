@@ -48,7 +48,7 @@ else()
     find_package(PkgConfig)
     find_path(FFI_INCLUDE_DIR ffi.h)
     pkg_check_modules(LIBFFI REQUIRED IMPORTED_TARGET libffi)
-    target_link_libraries(main PRIVATE PkgConfig::LIBFFI)
+    target_link_libraries(clib PkgConfig::LIBFFI)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
