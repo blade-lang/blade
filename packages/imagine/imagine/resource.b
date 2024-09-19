@@ -1,5 +1,8 @@
 import _imagine
 import _reflect
+
+import types
+
 import .quants
 
 class ImageResource {
@@ -108,6 +111,160 @@ class ImageResource {
   # ------------------------- DRAWINGS ------------------------------
 
   /**
+   * Draws a line between x1,y1 and x2, y2.The line is drawn using 
+   * the color index specified. Note that color index can be a color 
+   * returned by `allocate_color()` or one of `set_style()`, or
+   * `set_brush()`.
+   * 
+   * @param {number} x1
+   * @param {number} y1
+   * @param {number} x2
+   * @param {number} y2
+   * @param {number} color
+   */
+  line(x1, y1, x2, y2, color) {
+    if !is_number(x1) or !is_number(y1) or !is_number(x2) or !is_number(y2) or !is_number(color) {
+      die Exception('number expected')
+    }
+
+    _imagine.line(self._ptr, x1, y1, x2, y2, color)
+  }
+
+  /**
+   * Draws a dashed line between x1,y1 and x2, y2.The line is drawn using 
+   * the color specified. Note that color index can be a color returned 
+   * by `allocate_color()` or one of `set_style()`, or `set_brush()`.
+   * 
+   * @param {number} x1
+   * @param {number} y1
+   * @param {number} x2
+   * @param {number} y2
+   * @param {number} color
+   */
+  dashed_line(x1, y1, x2, y2, color) {
+    if !is_number(x1) or !is_number(y1) or !is_number(x2) or !is_number(y2) or !is_number(color) {
+      die Exception('number expected')
+    }
+
+    _imagine.dashedline(self._ptr, x1, y1, x2, y2, color)
+  }
+
+  /**
+   * Draws a rectangle with the upper left (x1, y1) then lower right (y1,y2) 
+   * corners specified, using the color specified.
+   * 
+   * @param {number} x1
+   * @param {number} y1
+   * @param {number} x2
+   * @param {number} y2
+   * @param {number} color
+   */
+  rectangle(x1, y1, x2, y2, color) {
+    if !is_number(x1) or !is_number(y1) or !is_number(x2) or !is_number(y2) or !is_number(color) {
+      die Exception('number expected')
+    }
+
+    _imagine.rectangle(self._ptr, x1, y1, x2, y2, color)
+  }
+
+  /**
+   * Draws a solid rectangle with the upper left (x1, y1) then lower 
+   * right (y1,y2) corners specified, using the color specified.
+   * 
+   * @param {number} x1
+   * @param {number} y1
+   * @param {number} x2
+   * @param {number} y2
+   * @param {number} color
+   */
+  filled_rectangle(x1, y1, x2, y2, color) {
+    if !is_number(x1) or !is_number(y1) or !is_number(x2) or !is_number(y2) or !is_number(color) {
+      die Exception('number expected')
+    }
+
+    _imagine.filledrectangle(self._ptr, x1, y1, x2, y2, color)
+  }
+
+  /**
+   * Returns true if the coordinate represented by _x_ and _y_ 
+   * is within the bounds of the image.
+   * 
+   * @param {number} x
+   * @param {number} y
+   */
+  safe_bound(x, y) {
+    if !is_number(x) or !is_number(y) {
+      die Exception('number expected')
+    }
+
+    return _imagine.boundsafe(self._ptr, x, y)
+  }
+
+  /**
+   * Draws a single character.
+   * 
+   * @param {number} x - The x coordinate of the upper left pixel.
+   * @param {number} y - The y coordinate of the upper left pixel.
+   * @param {char} text - The character.
+   * @param {font} font - The raster font.
+   * @param {number} color - The color.
+   */
+  char(x, y, char, font, color) {
+    if !font font = _imagine.smallfont
+    if !color color = self.allocate_color(0, 0, 0, 0)
+
+    if !is_number(x) or !is_number(y) {
+      die Exception('number expected for x and y coordinate')
+    }
+
+    if !types.char(char) {
+      die Exception('char expected for char, ${typeof(char)} given')
+    }
+
+    if !is_number(color) {
+      die Exception('number expected color, ${typeof(color)} given')
+    }
+
+    if !_reflect.isptr(font) or to_string(font).index_of('imagine::type::font') == -1 {
+      die Exception('imagine::font expected font')
+    }
+
+    _imagine.char(self._ptr, font, x, y, ord(char), color)
+  }
+
+  /**
+   * Draws a single character vertically.
+   * 
+   * @param {number} x - The x coordinate of the upper left pixel.
+   * @param {number} y - The y coordinate of the upper left pixel.
+   * @param {char} text - The character.
+   * @param {font} font - The raster font.
+   * @param {number} color - The color.
+   */
+  char_vert(x, y, char, font, color) {
+    if !font font = _imagine.smallfont
+    if !color color = self.allocate_color(0, 0, 0, 0)
+
+    if !is_number(x) or !is_number(y) {
+      die Exception('number expected for x and y coordinate')
+    }
+
+    if !types.char(char) {
+      die Exception('char expected for char, ${typeof(char)} given')
+    }
+
+    if !is_number(color) {
+      die Exception('number expected color, ${typeof(color)} given')
+    }
+
+    if !_reflect.isptr(font) or to_string(font).index_of('imagine::type::font') == -1 {
+      die Exception('imagine::font expected font')
+    }
+
+    _imagine.charup(self._ptr, font, x, y, ord(char), color)
+  }
+
+  /**
    * Draws a character string.
    * 
    * @param {number} x - The x coordinate of the upper left pixel.
@@ -137,6 +294,38 @@ class ImageResource {
     }
 
     _imagine.string(self._ptr, font, x, y, text, color)
+  }
+
+  /**
+   * Draws a character string vertically.
+   * 
+   * @param {number} x - The x coordinate of the upper left pixel.
+   * @param {number} y - The y coordinate of the upper left pixel.
+   * @param {string} text - The character string.
+   * @param {font} font - The raster font.
+   * @param {number} color - The color.
+   */
+  string_vert(x, y, text, font, color) {
+    if !font font = _imagine.smallfont
+    if !color color = self.allocate_color(0, 0, 0, 0)
+
+    if !is_number(x) or !is_number(y) {
+      die Exception('number expected for x and y coordinate')
+    }
+
+    if !is_string(text) {
+      die Exception('string expected for text, ${typeof(text)} given')
+    }
+
+    if !is_number(color) {
+      die Exception('number expected color, ${typeof(color)} given')
+    }
+
+    if !_reflect.isptr(font) or to_string(font).index_of('imagine::type::font') == -1 {
+      die Exception('imagine::font expected font')
+    }
+
+    _imagine.stringup(self._ptr, font, x, y, text, color)
   }
 
   # ------------------------- COLOR ------------------------------

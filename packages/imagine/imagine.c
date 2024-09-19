@@ -384,12 +384,11 @@ DECLARE_MODULE_METHOD(imagine__boundsafe) {
   gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
   CHECK_IMAGE_PTR(image);
 
-  gdImageBoundsSafe(
+  RETURN_BOOL(gdImageBoundsSafe(
     image, 
     AS_NUMBER(args[1]), 
     AS_NUMBER(args[2])
-  );
-  RETURN;
+  ) > 0);
 }
 
 DECLARE_MODULE_METHOD(imagine__char) {
