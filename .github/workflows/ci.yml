@@ -91,7 +91,7 @@ jobs:
             ${{ env.VCPKG_ROOT }}/downloads
             ${{ env.VCPKG_ROOT }}/installed
             ${{ env.VCPKG_ROOT }}/vcpkg_installed
-          key: ${{ runner.OS }}-vcpkg
+          key: ${{ runner.OS }}-vcpkg-cache
       - name: Install Dependencies
         run: |
           ${{ env.VCPKG_ROOT }}/vcpkg update
@@ -103,6 +103,8 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: |
+            ${{ env.VCPKG_ROOT }}/ports
+            ${{ env.VCPKG_ROOT }}/downloads
             ${{ env.VCPKG_ROOT }}/installed
             ${{ env.VCPKG_ROOT }}/vcpkg_installed
           key: ${{ steps.vcpkg-cache-restore.outputs.cache-primary-key }}
