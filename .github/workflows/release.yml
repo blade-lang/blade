@@ -91,7 +91,7 @@ jobs:
         run: |
           ${{ env.VCPKG_ROOT }}/vcpkg update
           ${{ env.VCPKG_ROOT }}/vcpkg version
-          ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows libffi:x64-windows openssl:x64-windows libgd:x64-windows
+          ${{ env.VCPKG_ROOT }}/vcpkg install pkgconf curl:x64-windows libffi:x64-windows openssl:x64-windows libgd:x64-windows
           ${{ env.VCPKG_ROOT }}/vcpkg list
       - name: Compile
         run: |
