@@ -7,7 +7,7 @@ on:
 jobs:
 
   build-linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Setup cmake
@@ -91,7 +91,7 @@ jobs:
         run: |
           ${{ env.VCPKG_ROOT }}/vcpkg update
           ${{ env.VCPKG_ROOT }}/vcpkg version
-          ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows libffi:x64-windows openssl:x64-windows libpng:x64-windows libjpeg-turbo:x64-windows libgd:x64-windows
+          ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows libffi:x64-windows openssl:x64-windows libgd:x64-windows
           ${{ env.VCPKG_ROOT }}/vcpkg list
       - name: Compile
         run: |

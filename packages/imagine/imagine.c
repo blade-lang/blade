@@ -146,6 +146,33 @@ DECLARE_MODULE_METHOD(imagine__fromwtga) {
   RETURN_PTR(image);
 }
 
+DECLARE_MODULE_METHOD(imagine__fromwtiff) {
+  ENFORCE_ARG_COUNT(fromwtiff, 1);
+  ENFORCE_ARG_TYPE(fromwtiff, 0, IS_FILE);
+
+  gdImagePtr image = gdImageCreateFromTiff(AS_FILE(args[0])->file);
+  CHECK_IMAGE(image);
+  RETURN_PTR(image);
+}
+
+DECLARE_MODULE_METHOD(imagine__fromwwebp) {
+  ENFORCE_ARG_COUNT(fromwwebp, 1);
+  ENFORCE_ARG_TYPE(fromwwebp, 0, IS_FILE);
+
+  gdImagePtr image = gdImageCreateFromWebp(AS_FILE(args[0])->file);
+  CHECK_IMAGE(image);
+  RETURN_PTR(image);
+}
+
+DECLARE_MODULE_METHOD(imagine__fromwavif) {
+  ENFORCE_ARG_COUNT(fromwavif, 1);
+  ENFORCE_ARG_TYPE(fromwavif, 0, IS_FILE);
+
+  gdImagePtr image = gdImageCreateFromAvif(AS_FILE(args[0])->file);
+  CHECK_IMAGE(image);
+  RETURN_PTR(image);
+}
+
 DECLARE_MODULE_METHOD(imagine__fromfile) {
   ENFORCE_ARG_COUNT(fromfile, 1);
   ENFORCE_ARG_TYPE(fromfile, 0, IS_STRING);
@@ -956,6 +983,45 @@ DECLARE_MODULE_METHOD(imagine__wbmp) {
   RETURN;
 }
 
+DECLARE_MODULE_METHOD(imagine__tiff) {
+  ENFORCE_ARG_COUNT(tiff, 2);
+  ENFORCE_ARG_TYPE(tiff, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(tiff, 1, IS_FILE);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageTiff(image, AS_FILE(args[1])->file);
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__webp) {
+  ENFORCE_ARG_COUNT(webp, 3);
+  ENFORCE_ARG_TYPE(webp, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(webp, 1, IS_FILE);
+  ENFORCE_ARG_TYPE(webp, 2, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageWebpEx(image, AS_FILE(args[1])->file, AS_NUMBER(args[2]));
+  RETURN;
+}
+
+DECLARE_MODULE_METHOD(imagine__avif) {
+  ENFORCE_ARG_COUNT(avif, 4);
+  ENFORCE_ARG_TYPE(avif, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(avif, 1, IS_FILE);
+  ENFORCE_ARG_TYPE(avif, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(avif, 3, IS_NUMBER);
+
+  gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image);
+
+  gdImageAvifEx(image, AS_FILE(args[1])->file, AS_NUMBER(args[2]), AS_NUMBER(args[3]));
+  RETURN;
+}
+
 DECLARE_MODULE_METHOD(imagine__filltoborder) {
   ENFORCE_ARG_COUNT(filltoborder, 5);
   ENFORCE_ARG_TYPE(filltoborder, 0, IS_PTR);
@@ -1617,7 +1683,10 @@ CREATE_MODULE_LOADER(imagine) {
       {"fromgif",   true,  GET_MODULE_METHOD(imagine__fromgif)},
       {"frombmp",   true,  GET_MODULE_METHOD(imagine__frombmp)},
       {"fromwbmp",   true,  GET_MODULE_METHOD(imagine__fromwbmp)},
-      {"fromwtga",   true,  GET_MODULE_METHOD(imagine__fromwtga)},
+      {"fromtga",   true,  GET_MODULE_METHOD(imagine__fromwtga)},
+      {"fromtiff",   true,  GET_MODULE_METHOD(imagine__fromwtiff)},
+      {"fromwebp",   true,  GET_MODULE_METHOD(imagine__fromwwebp)},
+      {"fromavif",   true,  GET_MODULE_METHOD(imagine__fromwavif)},
       {"fromfile",   true,  GET_MODULE_METHOD(imagine__fromfile)},
       
       // pixels
@@ -1665,6 +1734,9 @@ CREATE_MODULE_LOADER(imagine) {
       {"jpeg",   true,  GET_MODULE_METHOD(imagine__jpeg)},
       {"bmp",   true,  GET_MODULE_METHOD(imagine__bmp)},
       {"wbmp",   true,  GET_MODULE_METHOD(imagine__wbmp)},
+      {"tiff",   true,  GET_MODULE_METHOD(imagine__tiff)},
+      {"webp",   true,  GET_MODULE_METHOD(imagine__webp)},
+      {"avif",   true,  GET_MODULE_METHOD(imagine__avif)},
 
       // processing
       {"filltoborder",   true,  GET_MODULE_METHOD(imagine__filltoborder)},

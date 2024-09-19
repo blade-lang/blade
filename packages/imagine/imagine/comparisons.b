@@ -4,52 +4,52 @@ import _imagine
 /**
  * Actual image IS different
  */
-var CMP_IMAGE = _imagine.CMP_IMAGE
+var CMP_IMAGE = 1
 
 
 /**
  * Number of colors in pallette differ
  */
-var CMP_NUM_COLORS = _imagine.CMP_NUM_COLORS
+var CMP_NUM_COLORS = 2
 
 
 /**
  * Image colors differ
  */
-var CMP_COLOR = _imagine.CMP_COLOR
+var CMP_COLOR = 4
 
 
 /**
  * Image width differs
  */
-var CMP_SIZE_X = _imagine.CMP_SIZE_X
+var CMP_SIZE_X = 8
 
 
 /**
  * Image heights differ
  */
-var CMP_SIZE_Y = _imagine.CMP_SIZE_Y
+var CMP_SIZE_Y = 16
 
 
 /**
  * Transparent color differs
  */
-var CMP_TRANSPARENT = _imagine.CMP_TRANSPARENT
+var CMP_TRANSPARENT = 32
 
 
 /**
  * Background color differs
  */
-var CMP_BACKGROUND = _imagine.CMP_BACKGROUND
+var CMP_BACKGROUND = 64
 
 
 /**
  * Interlaced setting differs
  */
-var CMP_INTERLACE = _imagine.CMP_INTERLACE
+var CMP_INTERLACE = 128
 
 
 /**
  * Truecolor vs palette differs
  */
-var CMP_TRUECOLOR = _imagine.CMP_TRUECOLOR
+var CMP_TRUECOLOR = 256

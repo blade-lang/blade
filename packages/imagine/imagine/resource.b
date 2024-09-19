@@ -1,5 +1,6 @@
 import _imagine
 import _reflect
+import .quants
 
 class ImageResource {
   # cache for the image meta
@@ -245,5 +246,180 @@ class ImageResource {
     }
 
     _imagine.png(self._ptr, dest, 9 - quality)
+  }
+
+  /**
+   * Saves the image to file with the JPEG format.
+   * 
+   * Quality level: 100 is highest quality (there is always 
+   * a little loss with JPEG). 0 is lowest. 10 is about the 
+   * lowest useful setting.
+   * 
+   * @param {string|file} dest
+   * @param {number} quality
+   */
+  export_jpeg(dest, quality) {
+    if quality == nil quality = 100
+
+    if !is_string(dest) and !is_file(dest) 
+      die Exception('string path or file expected, ${typeof(dest)} given')
+    if !is_number(quality)
+      die Exception('number expected at quality, ${typeof(quality)} given')
+
+    if quality < 0 or quality > 100 {
+      die Exception('quality must be between 0 and 100')
+    }
+
+    if is_string(dest) {
+      dest = file(dest, 'wb')
+    }
+
+    if dest.mode().index_of('w') == -1{
+      die Exception('file not writable')
+    }
+
+    _imagine.jpeg(self._ptr, dest, quality)
+  }
+
+  /**
+   * Saves the image to file with the BMP format.
+   * 
+   * Quality level: 100 is highest quality (there is always 
+   * a little loss with BMP). 0 is lowest. 10 is about the 
+   * lowest useful setting.
+   * 
+   * @param {string|file} dest
+   * @param {number} quality
+   */
+  export_bmp(dest, quality) {
+    if quality == nil quality = 100
+
+    if !is_string(dest) and !is_file(dest) 
+      die Exception('string path or file expected, ${typeof(dest)} given')
+    if !is_number(quality)
+      die Exception('number expected at quality, ${typeof(quality)} given')
+
+    if quality < 0 or quality > 100 {
+      die Exception('quality must be between 0 and 100')
+    }
+
+    if is_string(dest) {
+      dest = file(dest, 'wb')
+    }
+
+    if dest.mode().index_of('w') == -1{
+      die Exception('file not writable')
+    }
+
+    _imagine.bmp(self._ptr, dest, 100 - quality)
+  }
+
+  /**
+   * Saves the image to file with the WBMP format using the 
+   * given foreground color.
+   * 
+   * @param {string|file} dest
+   * @param {number} foreground
+   */
+  export_wbmp(dest, foreground) {
+    if foreground == nil foreground = self.allocate_color(0, 0, 0)
+
+    if !is_string(dest) and !is_file(dest) 
+      die Exception('string path or file expected, ${typeof(dest)} given')
+    if !is_number(foreground)
+      die Exception('number expected at quality, ${typeof(foreground)} given')
+
+    if is_string(dest) {
+      dest = file(dest, 'wb')
+    }
+
+    if dest.mode().index_of('w') == -1{
+      die Exception('file not writable')
+    }
+
+    _imagine.wbmp(self._ptr, dest, foreground)
+  }
+
+  /**
+   * Saves the image to file with the WEBP format using the 
+   * given quantization.
+   * 
+   * @param {string|file} dest
+   * @param {number} quantization
+   */
+  export_webp(dest, quantization) {
+    if quantization == nil quantization = quants.QUANT_DEFAULT
+
+    if !is_string(dest) and !is_file(dest) 
+      die Exception('string path or file expected, ${typeof(dest)} given')
+    if !is_number(quantization)
+      die Exception('number expected at quality, ${typeof(quantization)} given')
+
+    if is_string(dest) {
+      dest = file(dest, 'wb')
+    }
+
+    if dest.mode().index_of('w') == -1{
+      die Exception('file not writable')
+    }
+
+    _imagine.webp(self._ptr, dest, quantization)
+  }
+
+  /**
+   * Saves the image to file with the TIFF format.
+   * 
+   * @param {string|file} dest
+   */
+  export_tiff(dest) {
+    if !is_string(dest) and !is_file(dest) 
+      die Exception('string path or file expected, ${typeof(dest)} given')
+
+    if is_string(dest) {
+      dest = file(dest, 'wb')
+    }
+
+    if dest.mode().index_of('w') == -1{
+      die Exception('file not writable')
+    }
+
+    _imagine.tiff(self._ptr, dest)
+  }
+
+  /**
+   * Saves the image to file with the JPEG format.
+   * 
+   * Quality level: 100 is highest quality (there is always 
+   * a little loss with JPEG). 0 is lowest. 10 is about the 
+   * lowest useful setting.
+   * 
+   * @param {string|file} dest
+   * @param {number} quality
+   * @param {number} speed - Default = 1
+   */
+  export_avif(dest, quality, speed) {
+    if quality == nil quality = 100
+    if speed == nil speed = 1
+
+    if !is_string(dest) and !is_file(dest) 
+      die Exception('string path or file expected, ${typeof(dest)} given')
+    if !is_number(quality)
+      die Exception('number expected at quality, ${typeof(quality)} given')
+    if !is_number(speed)
+      die Exception('number expected at speed, ${typeof(speed)} given')
+
+    if quality < 0 or quality > 100 {
+      die Exception('quality must be between 0 and 100')
+    }
+
+    if is_string(dest) {
+      dest = file(dest, 'wb')
+    }
+
+    if dest.mode().index_of('w') == -1{
+      die Exception('file not writable')
+    }
+
+    _imagine.avif(self._ptr, dest, quality, speed)
   }
 }

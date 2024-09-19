@@ -181,6 +181,81 @@ class Image {
   }
 
   /**
+   * Creates an image from a TIFF file.
+   * 
+   * @param {string|file} src
+   * @returns {ImageResource}
+   */
+  static from_tiff(src) {
+    if !is_string(src) and !is_file(src) 
+      die Exception('string path or file expected, ${typeof(src)} given')
+
+    if is_string(src) {
+      src = file(src)
+    }
+
+    if !src.exists() {
+      die Exception('file not found')
+    }
+
+    if src.mode().index_of('r') == -1{
+      die Exception('file not readable')
+    }
+
+    return ImageResource(_imagine.fromtiff(src))
+  }
+
+  /**
+   * Creates an image from a WEBP file.
+   * 
+   * @param {string|file} src
+   * @returns {ImageResource}
+   */
+  static from_webp(src) {
+    if !is_string(src) and !is_file(src) 
+      die Exception('string path or file expected, ${typeof(src)} given')
+
+    if is_string(src) {
+      src = file(src)
+    }
+
+    if !src.exists() {
+      die Exception('file not found')
+    }
+
+    if src.mode().index_of('r') == -1{
+      die Exception('file not readable')
+    }
+
+    return ImageResource(_imagine.fromwebp(src))
+  }
+
+  /**
+   * Creates an image from a AVIF file.
+   * 
+   * @param {string|file} src
+   * @returns {ImageResource}
+   */
+  static from_avif(src) {
+    if !is_string(src) and !is_file(src) 
+      die Exception('string path or file expected, ${typeof(src)} given')
+
+    if is_string(src) {
+      src = file(src)
+    }
+
+    if !src.exists() {
+      die Exception('file not found')
+    }
+
+    if src.mode().index_of('r') == -1{
+      die Exception('file not readable')
+    }
+
+    return ImageResource(_imagine.fromavif(src))
+  }
+
+  /**
    * Creates an image from any supported image file.
    * As long as the file type is supported by Imagine,
    * the file type will automatically be detected.

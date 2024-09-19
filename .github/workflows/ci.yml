@@ -10,7 +10,7 @@ jobs:
 
 #  build-linux-and-analyze:
   build-linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: read
@@ -94,7 +94,7 @@ jobs:
         run: |
           ${{ env.VCPKG_ROOT }}/vcpkg update
           ${{ env.VCPKG_ROOT }}/vcpkg version
-          ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows libffi:x64-windows openssl:x64-windows libpng:x64-windows libjpeg-turbo:x64-windows libgd:x64-windows
+          ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows libffi:x64-windows openssl:x64-windows libgd:x64-windows
           ${{ env.VCPKG_ROOT }}/vcpkg list
       - name: Save vcpkg dependencies cache
         id: vcpkg-cache-save
