@@ -18,7 +18,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get remove libgd3 
-          sudo apt-get install curl libcurl4-openssl-dev libgd-dev -y
+          sudo apt-get install curl libcurl4-openssl-dev libgd-dev libavif-dev -y
           cmake -B .
           cmake --build . -- -j 12
       - name: Create ZIP Archive
