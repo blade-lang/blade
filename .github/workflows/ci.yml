@@ -28,7 +28,7 @@ jobs:
       - name: Compile
         run: |
           sudo apt-get update
-          sudo apt-get install curl libcurl4-openssl-dev -y
+          sudo apt-get install curl libcurl4-openssl-dev libgd-dev -y
           cmake -B .
           cmake --build . -- -j 12
           chmod +x blade/blade
@@ -53,6 +53,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Compile
         run: |
+          brew install gd
           cmake -B . -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl
           cmake --build . -- -j 12
           chmod 755 blade/blade
@@ -92,7 +93,7 @@ jobs:
         run: |
           ${{ env.VCPKG_ROOT }}/vcpkg update
           ${{ env.VCPKG_ROOT }}/vcpkg version
-          ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows libffi:x64-windows openssl:x64-windows libpng:x64-windows libjpeg-turbo:x64-windows
+          ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows libffi:x64-windows openssl:x64-windows libpng:x64-windows libjpeg-turbo:x64-windows libgd:x64-windows
           ${{ env.VCPKG_ROOT }}/vcpkg list
       - name: Save vcpkg dependencies cache
         id: vcpkg-cache-save
