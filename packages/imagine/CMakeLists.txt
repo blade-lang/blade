@@ -34,7 +34,7 @@ set(BUILD_TEST OFF CACHE INTERNAL "Disabled building tests")
 include(FetchContent)
 FetchContent_Declare(LibGD
         URL      https://github.com/blade-lang/libgd/archive/refs/heads/master.zip
-        URL_HASH SHA256=06811e806d8e4056a9c62605f7ba487deb39ffa39f1d88c51b0983468cbb0259
+        URL_HASH SHA256=9f79756057ecff898c1e33749245435cdfd6121e8ec1e1140b00de531010e825
         )
 FetchContent_MakeAvailable(LibGD)
 
