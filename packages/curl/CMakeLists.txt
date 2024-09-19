@@ -38,6 +38,10 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 endif()
 
+if(WIN32)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations -Wno-attribute-warning")
+endif()
+
 add_custom_target(copy-curl-to-libs ALL
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/curl ${BLADE_ROOT}/libs/curl
         COMMENT "Exporting curl source files to libs folder..."
