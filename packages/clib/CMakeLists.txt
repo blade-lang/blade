@@ -48,7 +48,7 @@ else()
     find_package(unofficial-libffi CONFIG REQUIRED)
     find_path(FFI_INCLUDE_DIR ffi.h)
     target_include_directories(clib PRIVATE ${FFI_INCLUDE_DIR})
-    target_link_libraries(clib PRIVATE unofficial::libffi::libffi)
+    target_link_libraries(clib unofficial::libffi::libffi)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
