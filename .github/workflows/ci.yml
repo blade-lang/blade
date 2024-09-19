@@ -94,7 +94,7 @@ jobs:
           ${{ env.VCPKG_ROOT }}/vcpkg version
           ${{ env.VCPKG_ROOT }}/vcpkg install curl:x64-windows-static libffi:x64-windows-static openssl:x64-windows-static libpng:x64-windows-static libjpeg-turbo:x64-windows-static
           ${{ env.VCPKG_ROOT }}/vcpkg list
-      - name: Restore vcpkg dependencies cache
+      - name: Save vcpkg dependencies cache
         id: vcpkg-cache-save
         uses: actions/cache/save@v4
         with:
