@@ -39,6 +39,7 @@
  *
  * > **NOT YET SUPPORTED:**
  * > - Variadic functions
+ * > - Closures
  *
  * @copyright 2021, Ore Richard Muyiwa and Blade contributors
  */

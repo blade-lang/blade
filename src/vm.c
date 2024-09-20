@@ -2598,6 +2598,9 @@ b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
   }
 
   b_obj_func *function = compile(vm, module, source);
+  if(function == NULL) {
+    return PTR_COMPILE_ERR;
+  }
 
   if (vm->should_exit_after_bytecode) {
     return PTR_OK;
