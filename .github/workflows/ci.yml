@@ -55,7 +55,7 @@ jobs:
       - name: Setup dependencies
         run: |
           brew uninstall pkg-config --ignore-dependencies
-          brew install gd libffi
+          brew install pkg-config gd libffi
       - name: Compile
         run: |
           cmake -B . -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl
