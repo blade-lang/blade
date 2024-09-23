@@ -494,6 +494,44 @@ class ImageResource {
     _imagine.filledarc(self._ptr, x, y, width, height, start, end, color, style)
   }
 
+  /**
+   * Draws a full ellipse centered at the given point, with the 
+   * specified width, height, and color.
+   * 
+   * @param {number} x
+   * @param {number} y
+   * @param {number} width
+   * @param {number} height
+   * @param {number} color
+   */
+  ellipse(x, y, width, height, color) {
+    if !is_number(x) or !is_number(y) or !is_number(width) or 
+      !is_number(height) or !is_number(color) {
+        die Exception('number expected')
+    }
+
+    _imagine.ellipse(self._ptr, x, y, width, height, color)
+  }
+
+  /**
+   * Fills a full ellipse centered at the given point, with the 
+   * specified width, height, and color.
+   * 
+   * @param {number} x
+   * @param {number} y
+   * @param {number} width
+   * @param {number} height
+   * @param {number} color
+   */
+  filled_ellipse(x, y, width, height, color) {
+    if !is_number(x) or !is_number(y) or !is_number(width) or 
+      !is_number(height) or !is_number(color) {
+        die Exception('number expected')
+    }
+
+    _imagine.filledellipse(self._ptr, x, y, width, height, color)
+  }
+
   # ------------------------- COLOR ------------------------------
 
   /**
@@ -524,6 +562,170 @@ class ImageResource {
     return _imagine.colorallocate(self._ptr, r, g, b)
   }
 
+  /**
+   * Returns the closes color based on the image to the color specified by 
+   * `r`, `g`, `b`, and `a`. A slightly different color with the same 
+   * transparency beats the exact same color with radically different 
+   * transparency.
+   * 
+   * @param {number} r
+   * @param {number} g
+   * @param {number} b
+   * @param {number} a
+   * @returns {number}
+   */
+  closest_color(r, g, b, a) {
+    if r == nil r = 0
+    if g == nil g = 0
+    if b == nil b = 0
+    if a == nil a = 0
+
+    if !is_number(r) or !is_number(g) or !is_number(b) or !is_number(a) {
+      die Exception('number expected')
+    }
+
+    if self._true_color and a {
+      return _imagine.colorclosestalpha(self._ptr, r, g, b, a)
+    }
+
+    return _imagine.colorclosest(self._ptr, r, g, b)
+  }
+
+  /**
+   * Same as `closes_color()` but uses an alternative algorithm and does 
+   * not account for transparency.
+   * 
+   * @param {number} r
+   * @param {number} g
+   * @param {number} b
+   * @returns {number}
+   */
+  closest_color_hwb(r, g, b) {
+    if r == nil r = 0
+    if g == nil g = 0
+    if b == nil b = 0
+
+    if !is_number(r) or !is_number(g) or !is_number(b) {
+      die Exception('number expected')
+    }
+
+    return _imagine.colorclosesthwb(self._ptr, r, g, b)
+  }
+
+  /**
+   * Returns an exact match only, including alpha when specified.
+   * 
+   * @param {number} r
+   * @param {number} g
+   * @param {number} b
+   * @param {number} a
+   * @returns {number}
+   */
+  exact_color(r, g, b, a) {
+    if r == nil r = 0
+    if g == nil g = 0
+    if b == nil b = 0
+    if a == nil a = 0
+
+    if !is_number(r) or !is_number(g) or !is_number(b) or !is_number(a) {
+      die Exception('number expected')
+    }
+
+    if self._true_color and a {
+      return _imagine.colorexactalpha(self._ptr, r, g, b, a)
+    }
+
+    return _imagine.colorexact(self._ptr, r, g, b)
+  }
+  
+  /**
+   * Resolves color in the image based on `exact_color()` and `closest_color()` 
+   * and return the one that matches the image best.
+   * 
+   * @param {number} r
+   * @param {number} g
+   * @param {number} b
+   * @param {number} a
+   * @returns {number}
+   */
+  resolve_color(r, g, b, a) {
+    if r == nil r = 0
+    if g == nil g = 0
+    if b == nil b = 0
+    if a == nil a = 0
+
+    if !is_number(r) or !is_number(g) or !is_number(b) or !is_number(a) {
+      die Exception('number expected')
+    }
+
+    if self._true_color and a {
+      return _imagine.colorresolvealpha(self._ptr, r, g, b, a)
+    }
+
+    return _imagine.colorresolve(self._ptr, r, g, b)
+  }
+
+  /**
+   * Deallocates a color previously allocated from the image.
+   * 
+   * @param {number} color
+   */
+  deallocate_color(color) {
+    if !is_number(color) {
+      die Exception('number expected')
+    }
+
+    _imagine.colordeallocate(self._ptr, color)
+  }
+
+  /**
+   * Specifies a color index (if a palette image) or an RGB color (if a 
+   * truecolor image) which should be considered 100% transparent. FOR 
+   * TRUECOLOR IMAGES, THIS IS IGNORED IF AN ALPHA CHANNEL IS BEING SAVED. 
+   * Use `save_apha(false)` to turn off the saving of a full alpha 
+   * channel in a truecolor image. Note that this function is usually 
+   * compatible with older browsers that do not understand full alpha 
+   * channels well.
+   * 
+   * @param {number} color
+   */
+  color_transparent(color) {
+    if !is_number(color) {
+      die Exception('number expected')
+    }
+
+    _imagine.colortransparent(self._ptr, color)
+  }
+
+  /**
+   * Copies the palatte from a paletted image to this image.
+   * 
+   * @param {ImageResource} image
+   */
+  palette_copy(image) {
+    if !instance_of(image, ImageResource) {
+      die Exception('ImageResource expected')
+    }
+
+    _imagine.palettecopy(self._ptr, image._ptr)
+  }
+
+  /**
+   * Replaces every occurrence of color _src_ in the image with the 
+   * color _dest_.
+   * 
+   * @param {number} src
+   * @param {number} dest
+   * @returns {bool}
+   */
+  color_replace(src, dest) {
+    if !is_number(src) or !is_number(dest) {
+      die Exception('number expected')
+    }
+
+    return _imagine.colorreplace(self._ptr, src, dest) == 0
+  }
+
   # ------------------------- PROCESSING ------------------------------
 
   /**
@@ -544,6 +746,42 @@ class ImageResource {
     }
 
     _imagine.fill(self._ptr, x, y, color)
+  }
+
+  /**
+   * Flood fills the image with the given _color_ starting are 
+   * the coordinates given by _x_ and _y_ and using the color 
+   * specified by border to fill its borders.
+   * 
+   * @param {number} x
+   * @param {number} y
+   * @param {number} color
+   */
+  fill_to_border(x, y, border, color) {
+    if !is_number(x) or !is_number(y) {
+      die Exception('number expected for x and y coordinate')
+    } else if !is_number(border) {
+      die Exception('number expected border, ${typeof(border)} given')
+    } else if !is_number(color) {
+      die Exception('number expected color, ${typeof(color)} given')
+    }
+
+    _imagine.filltoborder(self._ptr, x, y, border, color)
+  }
+  
+  
+  copy(src, dst_x, dst_y, src_x, src_y, w, h) {
+    _imagine.copy(self._ptr, src, dst_x, dst_y, src_x, src_y, w, h)
+  }
+  
+  
+  copy_merge(src, dst_x, dst_y, src_x, src_y, w, h, pct) {
+    _imagine.copymerge(self._ptr, src, dst_x, dst_y, src_x, src_y, w, h, pct)
+  }
+  
+  
+  copy_merge_gray(src, dst_x, dst_y, src_x, src_y, w, h, pct) {
+    _imagine.copymergegray(self._ptr, src, dst_x, dst_y, src_x, src_y, w, h, pct)
   }
 
   /**

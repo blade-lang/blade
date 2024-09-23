@@ -50,7 +50,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Setup dependencies
         run: |
-          brew uninsall pkg-config --ignore-dependencies
+          brew uninstall pkg-config --ignore-dependencies
           brew install gd libffi
       - name: Compile
         run: |
