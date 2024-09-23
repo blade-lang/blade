@@ -769,19 +769,68 @@ class ImageResource {
     _imagine.filltoborder(self._ptr, x, y, border, color)
   }
   
-  
-  copy(src, dst_x, dst_y, src_x, src_y, w, h) {
-    _imagine.copy(self._ptr, src, dst_x, dst_y, src_x, src_y, w, h)
+  /**
+   * @param {ImageResource} src
+   * @param {number} dst_x
+   * @param {number} dst_y
+   * @param {number} src_x
+   * @param {number} src_y
+   * @param {number} width
+   * @param {number} height
+   */
+  copy(src, dst_x, dst_y, src_x, src_y, width, height) {
+    if !instance_of(src, ImageResource) {
+      die Exception('image resource expected in argument 1, ${typeof(src)} given')
+    } else if !is_number(dst_x) or !is_number(dst_y) or !is_number(src_x) or
+        !is_number(src_y) or !is_number(width) or !is_number(height) {
+      die Exception('number expected')
+    }
+    
+    _imagine.copy(self._ptr, src._ptr, dst_x, dst_y, src_x, src_y, width, height)
   }
   
-  
-  copy_merge(src, dst_x, dst_y, src_x, src_y, w, h, pct) {
-    _imagine.copymerge(self._ptr, src, dst_x, dst_y, src_x, src_y, w, h, pct)
+  /**
+   * @param {ImageResource} src
+   * @param {number} dst_x
+   * @param {number} dst_y
+   * @param {number} src_x
+   * @param {number} src_y
+   * @param {number} width
+   * @param {number} height
+   * @param {number} pct
+   */
+  copy_merge(src, dst_x, dst_y, src_x, src_y, width, height, pct) {
+    if !instance_of(src, ImageResource) {
+      die Exception('image resource expected in argument 1, ${typeof(src)} given')
+    } else if !is_number(dst_x) or !is_number(dst_y) or !is_number(src_x) or
+        !is_number(src_y) or !is_number(width) or !is_number(height) or
+            !is_number(pct) {
+      die Exception('number expected')
+    }
+
+    _imagine.copymerge(self._ptr, src._ptr, dst_x, dst_y, src_x, src_y, width, height, pct)
   }
   
-  
-  copy_merge_gray(src, dst_x, dst_y, src_x, src_y, w, h, pct) {
-    _imagine.copymergegray(self._ptr, src, dst_x, dst_y, src_x, src_y, w, h, pct)
+  /**
+   * @param {ImageResource} src
+   * @param {number} dst_x
+   * @param {number} dst_y
+   * @param {number} src_x
+   * @param {number} src_y
+   * @param {number} width
+   * @param {number} height
+   * @param {number} pct
+   */
+  copy_merge_gray(src, dst_x, dst_y, src_x, src_y, width, height, pct) {
+    if !instance_of(src, ImageResource) {
+      die Exception('image resource expected in argument 1, ${typeof(src)} given')
+    } else if !is_number(dst_x) or !is_number(dst_y) or !is_number(src_x) or
+        !is_number(src_y) or !is_number(width) or !is_number(height) or
+            !is_number(pct) {
+      die Exception('number expected')
+    }
+    
+    _imagine.copymergegray(self._ptr, src._ptr, dst_x, dst_y, src_x, src_y, width, height, pct)
   }
 
   /**
