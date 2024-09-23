@@ -18,7 +18,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get remove libgd3 
-          sudo apt-get install curl libcurl4-openssl-dev libgd-dev libavif-dev -y
+          sudo apt-get install curl libcurl4-openssl-dev libgd-dev libavif-dev libffi-dev -y
           cmake -B .
           cmake --build . -- -j 12
       - name: Create ZIP Archive
@@ -48,9 +48,12 @@ jobs:
         with:
           cmake-version: '3.25.2'
       - uses: actions/checkout@v4
+      - name: Setup dependencies
+        run: |
+          brew uninsall pkg-config --ignore-dependencies
+          brew install gd libffi
       - name: Compile
         run: |
-          brew install gd
           cmake -B . -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl
           cmake --build .
       - name: Create ZIP Archive

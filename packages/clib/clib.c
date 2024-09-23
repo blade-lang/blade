@@ -78,7 +78,7 @@ typedef struct {
 } b_ffi_cif_closure;
 
 // forward declare
-b_value get_blade_value(b_vm *vm, int type, size_t size, unsigned char *data, size_t *read_len);
+b_value get_blade_value(b_vm *vm, int type, size_t size, void *data, size_t *read_len);
 
 #define b_clib_type_void					  (-1)
 #define b_clib_type_bool					  0
@@ -106,7 +106,7 @@ b_value get_blade_value(b_vm *vm, int type, size_t size, unsigned char *data, si
 #define b_clib_type_pointer					22
 #define b_clib_type_struct					23
 #if FFI_CLOSURES
-#define b_clib_type_function				24
+#define b_clib_type_closure				  24
 #endif
 
 DEFINE_CLIB_TYPE(void);
@@ -133,7 +133,7 @@ DEFINE_CLIB_TYPE(pointer);
 DEFINE_CLIB_CTYPE(char_ptr);
 DEFINE_CLIB_CTYPE(uchar_ptr);
 #if FFI_CLOSURES
-DEFINE_CLIB_CTYPE(function);
+DEFINE_CLIB_CTYPE(closure);
 #endif
 
 UNUSED b_value __clib_type_bool(b_vm *vm) {
@@ -157,8 +157,8 @@ UNUSED b_value __clib_type_bool(b_vm *vm) {
 
 #define CLIB_GET_BLADE_VALUE(t, g) { \
     t v; \
-    memcpy(&v, data + (*read_len), sizeof(t)); \
-    *read_len += sizeof(t); \
+    memcpy(&v, data + len, sizeof(t)); \
+    len += sizeof(t); \
     blade_value = g(v);      \
     break; \
   }
@@ -196,6 +196,27 @@ static inline void add_value(b_vm *vm, b_ffi_values *values, void *object) {
   }
 
   values->values[values->count++] = object;
+}
+
+static inline int clib_type_from_blade_value(b_value v) {
+  if(IS_NIL(v)) {
+    return 10000; // out of range -> void
+  } else if(IS_BOOL(v)) {
+    return b_clib_type_bool;
+  } else if(IS_NUMBER(v)) {
+    if(trunc(AS_NUMBER(v)) != AS_NUMBER(v)) {
+      return b_clib_type_double;
+    } else if(AS_NUMBER(v) < 0) {
+      return b_clib_type_sint32;
+    }
+    return b_clib_type_sint32;
+  } else if(IS_STRING(v)) {
+    return b_clib_type_char_ptr;
+  } else if(IS_BYTES(v)) {
+    return b_clib_type_uchar_ptr;
+  } else  {
+    return b_clib_type_pointer;
+  }
 }
 
 static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size) {
@@ -254,6 +275,17 @@ static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size)
         v[0] = AS_FILE(value)->file;
       } else if(IS_BYTES(value)) {
         v[0] = AS_BYTES(value)->bytes.bytes;
+      } else if(IS_LIST(value)) {
+        b_obj_list *list = AS_LIST(value);
+        for(int i = 0; i < list->items.count; i++) {
+          v[i] = switch_c_values(
+            vm, 
+            clib_type_from_blade_value(list->items.values[i]), 
+            list->items.values[i], 
+            size / list->items.count // in C, items in an array have equal sizes
+          );
+        }
+        v[0] = AS_BYTES(value)->bytes.bytes;
       } else if(IS_NIL(value)) {
         v[0] = NULL;
       } else {
@@ -271,14 +303,21 @@ static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size)
       return 0;
     }
 #if FFI_CLOSURES
-    case b_clib_type_function: {
+    case b_clib_type_closure: {
+      void **v = N_ALLOCATE(void *, size);
+
       if(IS_PTR(value)) {
         b_ffi_cif_closure *closure = (b_ffi_cif_closure *)AS_PTR(value)->pointer;
-        if(!closure) return 0;
-        return closure->code;
+        if(!closure || !closure->code) {
+          v[0] = NULL;
+        } else {
+          v[0] = closure->code;
+        }
       } else {
-        return 0;
+        v[0] = NULL;
       }
+
+      return v;
     }
 #endif
     default: {
@@ -396,43 +435,45 @@ DECLARE_MODULE_METHOD(clib_new_struct) {
   CLIB_RETURN_PTR(struct_type, <void *clib::struct(%d)>, args_list->items.count);
 }
 
-void clib_closure_interface_trampoline(ffi_cif* cif, void* ret, void** args, void* data) {
+void clib_closure_interface_trampoline(ffi_cif *cif, void *ret, void *args[], void *data) {
   b_ffi_cif_closure *ci = (b_ffi_cif_closure *)data;
+
   if(ci) {
     b_vm *vm = ci->vm;
 
     int i = 0;
     size_t read_len = 0;
-    b_obj_list *list = (b_obj_list *)GC(new_list(vm));
+    b_obj_list *blade_args = (b_obj_list *)GC(new_list(vm));
     
-    while(args[i] != NULL) {
+    while(i < ci->args_count) {
+      b_ffi_type *type = ci->arg_types[i];
+ 
       b_value blade_value = get_blade_value(
         vm, 
-        ci->arg_types[i]->as_int,
-        ci->arg_types[i]->as_ffi->elements[i]->size,
-        args[i],
+        type->as_int,
+        type->as_ffi->size,
+        args,
         &read_len
       );
 
-      write_list(vm, list, blade_value);
+      write_list(vm, blade_args, blade_value);
       i++;
     }
 
-    b_value return_value = call_closure(vm, ci->blade_closure, list);
-    // *(ffi_arg *)ret = switch_c_values(vm, 0, return_value, ci->return_type->as_ffi->size);
-    ret = switch_c_values(vm, 0, return_value, ci->return_type->as_ffi->size);
+    b_value return_value = call_closure(vm, ci->blade_closure, blade_args);
+    (*(void **)ret) = switch_c_values(vm, 0, return_value, ci->return_type->as_ffi->size);
   }
 }
 
-DECLARE_MODULE_METHOD(clib_closure) {
-  ENFORCE_ARG_COUNT(closure, 3);
-  ENFORCE_ARG_TYPE(closure, 1, IS_PTR);
-  ENFORCE_ARG_TYPE(closure, 2, IS_LIST);
-  ENFORCE_ARG_TYPE(closure, 0, IS_CLOSURE);
+DECLARE_MODULE_METHOD(clib_new_closure) {
+  ENFORCE_ARG_COUNT(new_closure, 3);
+  ENFORCE_ARG_TYPE(new_closure, 0, IS_CLOSURE);
+  ENFORCE_ARG_TYPE(new_closure, 1, IS_PTR);
+  ENFORCE_ARG_TYPE(new_closure, 2, IS_LIST);
   
-  b_ffi_type *return_type = (b_ffi_type *)AS_PTR(args[0])->pointer;
-  b_obj_list *args_list = AS_LIST(args[1]);
-  b_obj_closure *blade_closure = AS_CLOSURE(args[2]);
+  b_obj_closure *blade_closure = AS_CLOSURE(args[0]);
+  b_ffi_type *return_type = (b_ffi_type *)AS_PTR(args[1])->pointer;
+  b_obj_list *args_list = AS_LIST(args[2]);
 
   if(return_type) {
     ffi_cif *cif = ALLOCATE(ffi_cif, 1);
@@ -447,18 +488,18 @@ DECLARE_MODULE_METHOD(clib_closure) {
     }
 
     ci->vm = vm;
-    ci->code = code;
     ci->closure = closure;
     ci->args_count = args_list->items.count;
     ci->abi = FFI_DEFAULT_ABI;
     ci->return_type = return_type;
     ci->is_variadic = false;
     ci->cif = cif;
+    ci->code = code;
     ci->blade_closure = blade_closure;
 
     // populate the argument types...
     ci->arg_types = ALLOCATE(b_ffi_type *, args_list->items.count);
-    ffi_type **types = ALLOCATE(ffi_type *, args_list->items.count + 1);
+    ffi_type **types = ALLOCATE(ffi_type *, args_list->items.count);
 
     // extract types out of b_ffi_type to ffi_type and into ci
     for (int i = 0; i < args_list->items.count; i++) {
@@ -466,11 +507,10 @@ DECLARE_MODULE_METHOD(clib_closure) {
       ci->arg_types[i] = type;
       types[i] = type->as_ffi;
     }
-    types[args_list->items.count] = NULL;
 
     if(ffi_prep_cif(ci->cif, ci->abi, ci->args_count, ci->return_type->as_ffi, types) == FFI_OK) {
 
-      if(ffi_prep_closure_loc(ci->closure, ci->cif, clib_closure_interface_trampoline, ci, code) == FFI_OK) {
+      if(ffi_prep_closure_loc(ci->closure, ci->cif, clib_closure_interface_trampoline, (void *)ci, ci->code) == FFI_OK) {
         CLIB_RETURN_PTR(ci, <void *clib::cif::closure(*%d)(%d)>, ci->return_type->as_int, ci->args_count);
       }
     }
@@ -508,7 +548,9 @@ DECLARE_MODULE_METHOD(clib_new) {
   RETURN_OBJ(take_bytes(vm, data, type->as_ffi->size));
 }
 
-b_value get_blade_value(b_vm *vm, int type, size_t size, unsigned char *data, size_t *read_len) {
+b_value get_blade_value(b_vm *vm, int type, size_t size, void *data, size_t *read_len) {
+  size_t len = *read_len;
+
   b_value blade_value;
   switch(type) {
     case b_clib_type_bool: CLIB_GET_BLADE_VALUE(bool, BOOL_VAL);
@@ -536,37 +578,42 @@ b_value get_blade_value(b_vm *vm, int type, size_t size, unsigned char *data, si
     case b_clib_type_longdouble: CLIB_GET_BLADE_VALUE(long, NUMBER_VAL);
 #endif
     case b_clib_type_char_ptr: {
-      char *rc = (char *)(data + (*read_len));
-      size_t length = strlen(rc);
-      read_len += length;
-      blade_value = STRING_L_VAL(rc, length);
+      char **v;
+      memcpy(&v, data + len, sizeof(char *)); 
+
+      char* string = *v;
+      int length = strlen(string);
+
+      len += size;
+      blade_value = STRING_L_VAL(string, length);
       break;
     }
     case b_clib_type_pointer: CLIB_GET_BLADE_VALUE(void *, PTR_VAL);
     case b_clib_type_uchar_ptr:
     case b_clib_type_struct: {
       unsigned char * result = ALLOCATE(unsigned char, size);
-      memcpy(result, data + (*read_len), size);
+      memcpy(result, data + len, size);
       blade_value = OBJ_VAL(take_bytes(vm, result, size));
-      read_len += size;
+      len += size;
       break;
     }
 #if FFI_CLOSURES
-    case b_clib_type_function: {
+    case b_clib_type_closure: {
       b_ffi_cif_closure *v = ALLOCATE(b_ffi_cif_closure, size);
-      memcpy(v, data + (*read_len), sizeof(b_ffi_cif_closure));
-      read_len += sizeof(b_ffi_cif_closure);
+      memcpy(v, data + len, sizeof(b_ffi_cif_closure));
+      len += sizeof(b_ffi_cif_closure);
       blade_value = OBJ_VAL(v->blade_closure);
       break;
     }
 #endif
     default: {
       blade_value = NIL_VAL;
-      read_len += size;
+      len += size;
       break;
     }
   }
 
+  *read_len = len;
   return blade_value;
 }
 
@@ -801,7 +848,7 @@ CREATE_MODULE_LOADER(clib) {
       GET_CLIB_TYPE(char_ptr),
       GET_CLIB_TYPE(uchar_ptr),
 #if FFI_CLOSURES
-      GET_CLIB_TYPE(function),
+      GET_CLIB_TYPE(closure),
 #endif
       {NULL, false, NULL}
   };
@@ -815,7 +862,7 @@ CREATE_MODULE_LOADER(clib) {
       {"define",   true,  GET_MODULE_METHOD(clib_define)},
       {"call",   true,  GET_MODULE_METHOD(clib_call)},
       {"new_struct",   true,  GET_MODULE_METHOD(clib_new_struct)},
-      {"closure",   true,  GET_MODULE_METHOD(clib_closure)},
+      {"new_closure",   true,  GET_MODULE_METHOD(clib_new_closure)},
       {"get_ptr_index",   true,  GET_MODULE_METHOD(clib_get_ptr_index)},
       {"set_ptr_index",   true,  GET_MODULE_METHOD(clib_set_ptr_index)},
       {NULL,    false, NULL},

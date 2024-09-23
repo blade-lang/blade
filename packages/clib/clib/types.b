@@ -184,6 +184,13 @@ var ptr = _clib.pointer
 
 
 /**
+ * C closure/callback type
+ * @type ptr
+ */
+var function = _clib.closure
+
+
+/**
  * Returns a type that can be used to declare structs. 
  * To create or read value for the struct you need to use the `new()` 
  * and `get()` functions respectively.
