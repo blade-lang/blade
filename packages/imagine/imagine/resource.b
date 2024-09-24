@@ -5,6 +5,9 @@ import types
 
 import .quants
 import .arcs
+import .flips
+import .crops
+import .interpolations
 
 class ImageResource {
   # cache for the image meta
@@ -770,6 +773,11 @@ class ImageResource {
   }
   
   /**
+   * Copy a part of image _src_ onto this image starting at the x,y c
+   * oordinates src_x, src_y with the source width and height. The 
+   * portion defined will be copied onto the x,y coordinates, dst_x 
+   * and dst_y.
+   * 
    * @param {ImageResource} src
    * @param {number} dst_x
    * @param {number} dst_y
@@ -786,10 +794,21 @@ class ImageResource {
       die Exception('number expected')
     }
     
-    _imagine.copy(self._ptr, src._ptr, dst_x, dst_y, src_x, src_y, width, height)
+    _imagine.copy(self._ptr, src.get_pointer(), dst_x, dst_y, src_x, src_y, width, height)
   }
   
   /**
+   * Copy and merge a part of image _src_ onto this image starting 
+   * at the x,y coordinates src_x, src_y with the source width and 
+   * height. The portion defined will be copied onto the x,y 
+   * coordinates, dst_x and dst_y.
+   * 
+   * The two images will be merged according to pct which can range 
+   * from 0 to 100. When pct = 0, no action is taken, when 100 this 
+   * function behaves identically to `copy()` for pallete images, 
+   * except for ignoring alpha components, while it implements 
+   * alpha transparency for true colour images.
+   * 
    * @param {ImageResource} src
    * @param {number} dst_x
    * @param {number} dst_y
@@ -808,10 +827,14 @@ class ImageResource {
       die Exception('number expected')
     }
 
-    _imagine.copymerge(self._ptr, src._ptr, dst_x, dst_y, src_x, src_y, width, height, pct)
+    _imagine.copymerge(self._ptr, src.get_pointer(), dst_x, dst_y, src_x, src_y, width, height, pct)
   }
   
   /**
+   * Same as `copy_merge()` except that when merging it preserves the 
+   * hue of the source by converting the destination pixels to gray scale 
+   * before the copy operation.
+   * 
    * @param {ImageResource} src
    * @param {number} dst_x
    * @param {number} dst_y
@@ -830,7 +853,391 @@ class ImageResource {
       die Exception('number expected')
     }
     
-    _imagine.copymergegray(self._ptr, src._ptr, dst_x, dst_y, src_x, src_y, width, height, pct)
+    _imagine.copymergegray(self._ptr, src.get_pointer(), dst_x, dst_y, src_x, src_y, width, height, pct)
+  }
+
+  /**
+   * Copy a resized area defined by src_x, src_y, src_width, and 
+   * src_height from the image _src_ to the area defined by x, y, 
+   * width, height on this image.
+   * 
+   * If the source and destination coordinates and width and heights 
+   * differ, appropriate stretching or shrinking of the image fragment
+   * will be performed. 
+   * 
+   * The coordinates refer to the upper left corner. 
+   * 
+   * This function can be used to copy regions within the same image 
+   * (if this image is the same as _src_) but if the regions overlap 
+   * the results will be unpredictable.
+   * 
+   * @param {ImageResource} src
+   * @param {number} x
+   * @param {number} y
+   * @param {number} src_x
+   * @param {number} src_y
+   * @param {number} width
+   * @param {number} height
+   * @param {number} src_width
+   * @param {number} src_height
+   */
+  copy_resized(src, x, y, src_x, src_y, width, height, src_width, src_height) {
+    if !instance_of(src, ImageResource) {
+      die Exception('ImageResource expected in argument 1')
+    } else if !is_number(x) or !is_number(y) or !is_number(src_x) or !is_number(src_y) or
+        !is_number(width) or !is_number(height) or !is_number(src_width) or !is_number(src_height) {
+      die Exception('number expected')
+    }
+    
+    _imagine.copyresized(self._ptr, src.get_pointer(), x, y, src_x, src_y, width, height, src_width, src_height)
+  }
+
+  /**
+   * Copy a resized area defined by src_x, src_y, src_width, and 
+   * src_height from the image _src_ to the area defined by x, y, 
+   * width, height on this image. Unlike `copy_resized()`, it 
+   * smoothly interpolates pixel values so that, in particular, 
+   * reducing the size of an image still retains a great deal of 
+   * clarity.
+   * 
+   * If the source and destination coordinates and width and heights 
+   * differ, appropriate stretching or shrinking of the image fragment
+   * will be performed. 
+   * 
+   * The coordinates refer to the upper left corner. 
+   * 
+   * This function can be used to copy regions within the same image 
+   * (if this image is the same as _src_) but if the regions overlap 
+   * the results will be unpredictable.
+   * 
+   * @param {ImageResource} src
+   * @param {number} x
+   * @param {number} y
+   * @param {number} src_x
+   * @param {number} src_y
+   * @param {number} width
+   * @param {number} height
+   * @param {number} src_width
+   * @param {number} src_height
+   */
+  copy_resampled(src, x, y, src_x, src_y, width, height, src_width, src_height) {
+    if !instance_of(src, ImageResource) {
+      die Exception('ImageResource expected in argument 1')
+    } else if !is_number(x) or !is_number(y) or !is_number(src_x) or !is_number(src_y) or
+        !is_number(width) or !is_number(height) or !is_number(src_width) or !is_number(src_height) {
+      die Exception('number expected')
+    }
+    
+    _imagine.copyresampled(self._ptr, src.get_pointer(), x, y, src_x, src_y, width, height, src_width, src_height)
+  }
+
+  /**
+   * Similar to `copy_resized()` with an added rotation to the copied image. 
+   * Destination is the _center_ of the rotated copy. Angle is in degrees, 
+   * same as `arc()`. 
+   * 
+   * Floating point destination center coordinates allow accurate rotation of 
+   * objects of odd-numbered width or height.
+   * 
+   * The rotation angle is interpreted as the number of degrees to rotate the 
+   * image anticlockwise.
+   * 
+   * @param {ImageResource} src
+   * @param {number} x
+   * @param {number} y
+   * @param {number} src_x
+   * @param {number} src_y
+   * @param {number} src_width
+   * @param {number} src_height
+   * @param {number} angle
+   */
+  copy_rotated(src, x, y, src_x, src_y, src_width, src_height, angle) {
+    if !instance_of(src, ImageResource) {
+      die Exception('ImageResource expected in argument 1')
+    } else if !is_number(x) or !is_number(y) or !is_number(src_x) or !is_number(src_y) or
+        !is_number(src_width) or !is_number(src_height) or !is_number(angle) {
+      die Exception('number expected')
+    }
+    
+    _imagine.copyrotated(self._ptr, src.get_pointer(), x, y, src_x, src_y, src_width, src_height, angle)
+  }
+
+  /**
+   * Clones this image resource.
+   * 
+   * @returns {ImageResource}
+   */
+  clone() {
+    return ImageResource(_imagine.clone(self._ptr))
+  }
+
+  /**
+   * Sets the brush image to be used by all line drawing functions for 
+   * this image.
+   * 
+   * A "brush" is an image used to draw wide, shaped strokes in another image. 
+   * Just as a paintbrush is not a single point, a brush image need not be a 
+   * single pixel. Any image resource can be used as a brush, and by setting 
+   * the transparent color index of the brush image with `color_transparent()`, 
+   * a brush of any shape can be created. 
+   * 
+   * All line-drawing functions, such as gdImageLine and `polygon()`, will use 
+   * the current brush if the special "color" `COLOR_BRUSHED` or 
+   * `COLOR_STYLED_BRUSHED` is used when calling them.
+   * 
+   * > **NOTE:** 
+   * > 
+   * > You need not take special action when you are finished with a 
+   * > brush, but if you close the brush image (or let the GC close it), 
+   * > you must not use the `COLOR_BRUSHED` or `COLOR_STYLED_BRUSHED` colors 
+   * > until you have set a new brush image.
+   * 
+   * @param {ImageResource} brush
+   */
+  set_brush(brush) {
+    if !instance_of(brush, ImageResource) {
+      die Exception('ImageResource expected')
+    }
+    
+    _imagine.setbrush(self._ptr, brush.get_pointer())
+  }
+
+  /**
+   * Sets the tile image to be used by all region filling functions.
+   * 
+   * A tile is an image used to fill an area with a repeated pattern. Any image 
+   * resource can be used as a tile, and by setting the transparent color index 
+   * of the tile image with `color_transparent()`, a tile that allows certain 
+   * parts of the underlying area to shine through can be created. All 
+   * region-filling functions, such as `fill()` and `filled_polygon()`, will use 
+   * the current tile if the special "color" `COLOR_TILED` is used when calling 
+   * them.
+   * 
+   * You can set any image resource to be the tile. If the tile image does not have 
+   * the same color map as the first image, any colors missing from the first image 
+   * will be allocated. If not enough colors can be allocated, the closest colors 
+   * already available will be used. This allows arbitrary GIFs to be used as tile 
+   * images. It also means, however, that you should not set a tile unless you will 
+   * actually use it; if you set a rapid succession of different tile images, you can 
+   * quickly fill your color map, and the results will not be optimal.
+   * 
+   * You need not take any special action when you are finished with a tile. As for 
+   * any other image, if you will not be using the tile image for any further purpose, 
+   * you should call `close()`. You must not use the color `COLOR_TILED` if the current 
+   * tile has been closed; you can of course set a new tile to replace it.
+   * 
+   * @param {ImageResource} tile
+   */
+  set_tile(tile) {
+    if !instance_of(tile, ImageResource) {
+      die Exception('ImageResource expected')
+    }
+    
+    _imagine.setbrush(self._ptr, tile.get_pointer())
+  }
+
+  /**
+   * Set the color for subsequent anti-aliased drawing and whether to blend the 
+   * color or not.
+   * 
+   * @param {number} color
+   * @param {bool} dont_blend
+   */
+  set_antialiased(color, dont_blend) {
+    if !is_number(color) {
+      die Exception('color must be a number')
+    }
+
+    if dont_blend == nil dont_blend = false
+    if !is_bool(dont_blend) {
+      die Exception('dont_blend must be boolean')
+    }
+    
+    _imagine.setantialiased(self._ptr, color, dont_blend ? 1 : 0)
+  }
+
+  /**
+   * Sets the thickness in pixels for following lines drawn when drawing lines, 
+   * ellipses, rectangles, polygons and so forth.
+   * 
+   * @param {number} thickness
+   */
+  set_thickness(thickness) {
+    if !is_number(thickness) {
+      die Exception('number expected')
+    }
+
+    _imagine.setthickness(self._ptr, thickness)
+  }
+
+  /**
+   * Sets whether an image is interlaced. If the `enabled` parameter is not 
+   * given, it defaults to true.
+   * 
+   * @param {bool?} enable
+   */
+  interlace(enable) {
+    if enable == nil enable = true
+
+    if !is_bool(enable) {
+      die Exception('boolean expected')
+    }
+
+    _imagine.interlace(self._ptr, enable ? 1 : 0)
+  }
+
+  /**
+   * Toggles between two different blending modes of drawing on truecolor images. 
+   * 
+   * In blending mode, the alpha channel component of the color supplied to all 
+   * drawing function, such as `set_pixel()` determines how much of the underlying 
+   * color should be allowed to shine through. As a result, the module 
+   * automatically blends the existing color at that point with the drawing color, 
+   * and stores the result in the image. The resulting pixel is opaque. 
+   * 
+   * In non-blending mode, the drawing color is copied literally with its alpha 
+   * channel information, replacing the destination pixel. Blending mode is not 
+   * available when drawing on palette images.
+   * 
+   * If the `enabled` parameter is not given, it defaults to true.
+   * 
+   * @param {bool} enable
+   */
+  alpha_blending(enable) {
+    if enable == nil enable = true
+
+    if !is_bool(enable) {
+      die Exception('boolean expected')
+    }
+    
+    _imagine.alphablending(self._ptr, enable ? 1 : 0)
+  }
+
+  /**
+   * Flips the image horizontally, vertically, or in both direction as specified 
+   * in mode. `mode` must be one of the `FLIP_*` constants. When no mode is set, 
+   * mode defaults to `FLIP_BOTH`.
+   * 
+   * @param {number?} mode
+   */
+  flip(mode) {
+    if !mode mode = flips.FLIP_BOTH
+
+    if !is_number(mode) {
+      die Exception('FLIP_* mode constant expected')
+    }
+
+    if mode < flips.FLIP_BOTH or mode > flips.FLIP_VERTICAL {
+      die Exception('invalid flip mode')
+    }
+
+    if mode == flips.FLIP_BOTH {
+      _imagine.flip(self._ptr)
+    } else if mode == flips.FLIP_HORIZONTAL {
+      _imagine.fliphorizontal(self._ptr)
+    } else {
+      _imagine.flipvertical(self._ptr)
+    }
+  }
+
+  /**
+   * Returns a new imaged cropped from the rectangular area specified by x, y, 
+   * width, and height in this image.
+   * 
+   * @param {number} x
+   * @param {number} y
+   * @param {number} width
+   * @param {number} height
+   * @returns {ImageResource}
+   */
+  crop(x, y, width, height) {
+    if !is_number(x) or !is_number(y) or !is_number(width) or !is_number(height) {
+      die Exception('number expected')
+    }
+
+    return ImageResource(_imagine.crop(self._ptr, x, y, width, height))
+  }
+
+  /**
+   * Crop an image automatically using one of the `CROP_*` modes. If `mode` 
+   * is not give, it defaults to `CROP_DEFAULT`.
+   * 
+   * @param {number?} mode
+   * @returns {ImageResource}
+   */
+  auto_crop(mode) {
+    if mode == nil mode = crops.CROP_DEFAULT
+
+    if !is_number(mode) {
+      die Exception('CROP_* mode constant expected')
+    }
+
+    if mode < crops.CROP_DEFAULT or mode > crops.CROP_SIDES {
+      die Exception('invalid crop mode')
+    }
+
+    return ImageResource(_imagine.cropauto(self._ptr, mode))
+  }
+
+  /**
+   * Scale an image using the given new width and height with the 
+   * interpolation algorithm. If height is not given, the height 
+   * will be automatcially calculated from the new width to maitain 
+   * aspect ratio. 
+   * 
+   * If the interpolation method is not given, it defaults to 
+   * `INTERP_BILINEAR_FIXED`.
+   * 
+   * This method returns a new image rather than modify this image.
+   * 
+   * @param {number} width
+   * @param {number?} height
+   * @param {number?} method
+   * @returns {ImageResource}
+   */
+  scale(width, height, method) {
+    if height == nil or height == -1 {
+      # automatically set height based on width to maintain aspect ratio.
+      height = (width / self.meta().width) * self.meta().height
+    }
+
+    if !is_number(width) or !is_number(height) {
+      die Exception('width and height must be numbers')
+    }
+
+    if method == nil method = interpolations.INTERP_BILINEAR_FIXED
+
+    if !is_number(method) or method < interpolations.INTERP_DEFAULT or
+        method > interpolations.WELSH {
+      die Exception('interpolation must be an INTERP_* constant')
+    }
+
+    return ImageResource(_imagine.scale(self._ptr, width, height, method))
+  }
+
+  /**
+   * Creates a new image rotated counter-clockwise by the requested angle using 
+   * the given interpolation method.  Non-square angles will add a border with 
+   * bgcolor.
+   * 
+   * @param {number} angle
+   * @param {number} bg_color
+   * @param {number?} method
+   * @return {ImageResource}
+   */
+  rotate(angle, bg_color, method) {
+    if !is_number(angle) or !is_number(bg_color) {
+      die Exception('angle and bg_color must be numbers')
+    }
+
+    if method == nil method = interpolations.INTERP_BILINEAR_FIXED
+
+    if !is_number(method) or method < interpolations.INTERP_DEFAULT or
+        method > interpolations.WELSH {
+      die Exception('interpolation must be an INTERP_* constant')
+    }
+
+    return ImageResource(_imagine.rotate(self._ptr, angle, bg_color, method))
   }
 
   /**
@@ -1063,5 +1470,16 @@ class ImageResource {
     }
 
     _imagine.avif(self._ptr, dest, quality, speed)
+  }
+
+  # ----------- POINTER ---------------
+
+  /**
+   * Returns the raw image resource pointer.
+   * 
+   * @returns {ptr}
+   */
+  get_pointer() {
+    return self._ptr
   }
 }

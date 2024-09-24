@@ -1204,8 +1204,8 @@ DECLARE_MODULE_METHOD(imagine__clone) {
   gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
   CHECK_IMAGE_PTR(image);
 
-  gdImageClone(image);
-  RETURN;
+  gdImagePtr clone = gdImageClone(image);
+  RETURN_CLOSABLE_NAMED_PTR(clone, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
 }
 
 DECLARE_MODULE_METHOD(imagine__setbrush) {
@@ -1565,15 +1565,22 @@ DECLARE_MODULE_METHOD(imagine__cropauto) {
 }
 
 DECLARE_MODULE_METHOD(imagine__scale) {
-  ENFORCE_ARG_COUNT(scale, 2);
+  ENFORCE_ARG_COUNT(scale, 4);
   ENFORCE_ARG_TYPE(scale, 0, IS_PTR);
   ENFORCE_ARG_TYPE(scale, 1, IS_NUMBER);
   ENFORCE_ARG_TYPE(scale, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(scale, 3, IS_NUMBER);
 
   gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
   CHECK_IMAGE_PTR(image);
 
+  gdInterpolationMethod originalMethod = gdImageGetInterpolationMethod(image); // cache the original method
+  gdImageSetInterpolationMethod(image, AS_NUMBER(args[3])); // use the give method
+
   gdImagePtr new_image = gdImageScale(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]));
+  
+  gdImageSetInterpolationMethod(image, originalMethod); // restore the original the method
+
   if(NULL == new_image) {
     RETURN_ERROR("Failed to scale image to (%d, %d).", (int)AS_NUMBER(args[1]), (int)AS_NUMBER(args[2]));
   }
@@ -1582,15 +1589,22 @@ DECLARE_MODULE_METHOD(imagine__scale) {
 }
 
 DECLARE_MODULE_METHOD(imagine__rotate) {
-  ENFORCE_ARG_COUNT(rotate, 2);
+  ENFORCE_ARG_COUNT(rotate, 4);
   ENFORCE_ARG_TYPE(rotate, 0, IS_PTR);
   ENFORCE_ARG_TYPE(rotate, 1, IS_NUMBER);
   ENFORCE_ARG_TYPE(rotate, 2, IS_NUMBER);
+  ENFORCE_ARG_TYPE(rotate, 3, IS_NUMBER);
 
   gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
   CHECK_IMAGE_PTR(image);
 
+  gdInterpolationMethod originalMethod = gdImageGetInterpolationMethod(image); // cache the original method
+  gdImageSetInterpolationMethod(image, AS_NUMBER(args[3])); // use the give method
+
   gdImagePtr new_image = gdImageRotateInterpolated(image, AS_NUMBER(args[1]), AS_NUMBER(args[2]));
+  
+  gdImageSetInterpolationMethod(image, originalMethod); // restore the original the method
+
   if(NULL == new_image) {
     RETURN_ERROR("Failed to rotate image to angle %.16g.", AS_NUMBER(args[1]));
   }

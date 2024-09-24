@@ -11,4 +11,5 @@ import .interpolations { * }
 import .quants { * }
 import .crops { * }
 import .arcs { * }
+import .colors { * }
 import .image { * }
