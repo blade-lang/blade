@@ -86,7 +86,7 @@ class Animal {
     echo 'Name is set'
   }
 
-  var _print = |g| {
+  var _print = @(g) {
     echo g
   }
 }
