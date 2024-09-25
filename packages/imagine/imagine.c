@@ -811,6 +811,20 @@ DECLARE_MODULE_METHOD(imagine__truecolortopalette) {
   RETURN_NUMBER(gdImageTrueColorToPalette(image, AS_NUMBER(args[1]), AS_NUMBER(args[2])));
 }
 
+DECLARE_MODULE_METHOD(imagine__colormatch) {
+  ENFORCE_ARG_COUNT(colormatch, 3);
+  ENFORCE_ARG_TYPE(colormatch, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(colormatch, 1, IS_PTR);
+
+  gdImagePtr image1 = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(image1);
+
+  gdImagePtr image2 = (gdImagePtr)AS_PTR(args[1])->pointer;
+  CHECK_IMAGE_PTR(image2);
+  
+  RETURN_NUMBER(gdImageColorMatch(image1, image2));
+}
+
 DECLARE_MODULE_METHOD(imagine__palettetotruecolor) {
   ENFORCE_ARG_COUNT(palettetotruecolor, 1);
   ENFORCE_ARG_TYPE(truecolortopalette, 0, IS_PTR);
@@ -1467,8 +1481,8 @@ DECLARE_MODULE_METHOD(imagine__brightness) {
 }
 
 DECLARE_MODULE_METHOD(imagine__meta) {
-  ENFORCE_ARG_COUNT(size, 1);
-  ENFORCE_ARG_TYPE(size, 0, IS_PTR);
+  ENFORCE_ARG_COUNT(meta, 1);
+  ENFORCE_ARG_TYPE(meta, 0, IS_PTR);
 
   gdImagePtr image = (gdImagePtr)AS_PTR(args[0])->pointer;
   CHECK_IMAGE_PTR(image);
@@ -1612,6 +1626,97 @@ DECLARE_MODULE_METHOD(imagine__rotate) {
   RETURN_CLOSABLE_NAMED_PTR(new_image, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
 }
 
+DECLARE_MODULE_METHOD(imagine__imagecompare) {
+  ENFORCE_ARG_COUNT(imagecompare, 2);
+  ENFORCE_ARG_TYPE(imagecompare, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(imagecompare, 1, IS_PTR);
+
+  // I couldn't use GD's version directly as it has disabled the alpha 
+  // channel check leaving it in a severely buggy state.
+
+  gdImagePtr im1 = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(im1);
+
+  gdImagePtr im2 = (gdImagePtr)AS_PTR(args[0])->pointer;
+  CHECK_IMAGE_PTR(im2);
+
+  int x, y;
+	int p1, p2;
+	int cmpStatus = 0;
+	int sx, sy;
+
+	if (im1->interlace != im2->interlace) {
+		cmpStatus |= GD_CMP_INTERLACE;
+	}
+
+	if (im1->transparent != im2->transparent) {
+		cmpStatus |= GD_CMP_TRANSPARENT;
+	}
+
+	if (im1->trueColor != im2->trueColor) {
+		cmpStatus |= GD_CMP_TRUECOLOR;
+	}
+
+	sx = im1->sx;
+	if (im1->sx != im2->sx) {
+		cmpStatus |= GD_CMP_SIZE_X + GD_CMP_IMAGE;
+		if (im2->sx < im1->sx) {
+			sx = im2->sx;
+		}
+	}
+
+	sy = im1->sy;
+	if (im1->sy != im2->sy) {
+		cmpStatus |= GD_CMP_SIZE_Y + GD_CMP_IMAGE;
+		if (im2->sy < im1->sy) {
+			sy = im2->sy;
+		}
+	}
+
+	if (im1->colorsTotal != im2->colorsTotal) {
+		cmpStatus |= GD_CMP_NUM_COLORS;
+	}
+
+	for (y = 0; (y < sy); y++) {
+		for (x = 0; (x < sx); x++) {
+			p1 =
+			    im1->trueColor ? gdImageTrueColorPixel (im1, x,
+			            y) :
+			    gdImagePalettePixel (im1, x, y);
+			p2 =
+			    im2->trueColor ? gdImageTrueColorPixel (im2, x,
+			            y) :
+			    gdImagePalettePixel (im2, x, y);
+      
+			if (gdImageRed (im1, p1) != gdImageRed (im2, p2)) {
+				cmpStatus |= GD_CMP_COLOR + GD_CMP_IMAGE;
+				break;
+			}
+			if (gdImageGreen (im1, p1) != gdImageGreen (im2, p2)) {
+				cmpStatus |= GD_CMP_COLOR + GD_CMP_IMAGE;
+				break;
+			}
+			if (gdImageBlue (im1, p1) != gdImageBlue (im2, p2)) {
+				cmpStatus |= GD_CMP_COLOR + GD_CMP_IMAGE;
+				break;
+			}
+
+      if(im1->trueColor && im2->trueColor) {
+        if (gdImageAlpha (im1, p1) != gdImageAlpha (im2, p2)) {
+          cmpStatus |= GD_CMP_COLOR + GD_CMP_IMAGE;
+          break;
+        }
+      }
+		}
+
+		if (cmpStatus & GD_CMP_COLOR) {
+			break;
+		};
+	}
+
+  RETURN_NUMBER(cmpStatus);
+}
+
 CREATE_MODULE_LOADER(imagine) {
   static b_field_reg module_fields[] = {
       // Fonts
@@ -1737,6 +1842,8 @@ CREATE_MODULE_LOADER(imagine) {
       {"setclip",   true,  GET_MODULE_METHOD(imagine__setclip)},
       {"getclip",   true,  GET_MODULE_METHOD(imagine__getclip)},
       {"setresolution",   true,  GET_MODULE_METHOD(imagine__setresolution)},
+      {"colormatch",   true,  GET_MODULE_METHOD(imagine__colormatch)},
+      {"imagecompare",   true,  GET_MODULE_METHOD(imagine__imagecompare)},
       {"truecolortopalette",   true,  GET_MODULE_METHOD(imagine__truecolortopalette)},
       {"palettetotruecolor",   true,  GET_MODULE_METHOD(imagine__palettetotruecolor)},
 

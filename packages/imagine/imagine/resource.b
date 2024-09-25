@@ -7,6 +7,7 @@ import .quants
 import .arcs
 import .flips
 import .crops
+import .blurs
 import .interpolations
 
 class ImageResource {
@@ -1259,7 +1260,309 @@ class ImageResource {
 
   # ------------------------- FILTERS ------------------------------
 
+  /**
+   * Applies pixelation effect to the image based on the block 
+   * size and given effect mode.
+   * 
+   * @param {number} block_size
+   * @param {number} mode
+   */
+  pixelate(block_size, mode) {
+    if !is_number(block_size) or !is_number(mode)
+      die Exception('number expected')
+
+    _imagine.pixelate(self._ptr, block_size, mode)
+  }
+
+  /**
+   * Applies scatter effect to an image using the _sub_ and _plus_ to 
+   * control the strength of the scatter and colors to indicate the 
+   * colors it should be restricted to.
+   * 
+   * @param {number} sub
+   * @param {number} plus
+   * @param {list<number>} colors
+   */
+  scatter(sub, plus, colors) {
+    if !is_number(sub) or !is_number(plus)
+      die Exception('number expected')
+    
+    if colors != nil {
+      if !is_list(colors)
+        die Exception('list of color expected in argument 3')
+      
+      for color in colors {
+        if !is_number(color)
+          die Exception('invalid color in color list')
+      }
+    }
+
+    _imagine.scatter(self._ptr, sub, plus, colors)
+  }
+
+  /**
+   * Makes an image smooter based on the specified weight. If 
+   * weight is not given, it defaults to `1`.
+   * 
+   * @param {number} weight
+   */
+  smooth(weight) {
+    if weight == nil weight = 1
+    if !is_number(weight)
+      die Exception('number expected')
+
+    _imagine.smooth(self._ptr, weight)
+  }
+
+  /**
+   * Uses mean removal to achieve a "sketchy" effect.
+   */
+  mean_removal() {
+    _imagine.meanremoval(self._ptr)
+  }
+
+  /**
+   * Embosses the image.
+   */
+  emboss() {
+    _imagine.emboss(self._ptr)
+  }
+
+  /**
+   * Applies a blur to the image. If the type is not given, a 
+   * Guassian blur will be applied.
+   * 
+   * @param {number} type
+   */
+  blur(type) {
+    if type == nil type = blurs.BLUR_GAUSSIAN
+    if !is_number(type) or !(type != blurs.BLUR_GAUSSIAN and type != blurs.BLUR_SELECTIVE) {
+      die Exception('BLUR_* constant expected')
+    }
+
+    if type == blurs.BLUR_GAUSSIAN {
+      _imagine.gaussianblur(self._ptr)
+    } else {
+      _imagine.selectiveblur(self._ptr)
+    }
+  }
+
+  /**
+   * Uses edge detection to highlight the edges in the image.
+   */
+  detect_edge() {
+    _imagine.edgedetect(self._ptr)
+  }
+
+  /**
+   * Converts the image into grayscale by changing the red, green 
+   * and blue components to their weighted sum using the same 
+   * coefficients as the REC.601 luma (Y') calculation. The alpha 
+   * components are retained. For palette images the result may 
+   * differ due to palette limitations.
+   */
+  grayscale() {
+    _imagine.grayscale(self._ptr)
+  }
+
+  /**
+   * Reverses all colors of the image to create a negative image.
+   */
+  negate() {
+    _imagine.negate(self._ptr)
+  }
+
+  /**
+   * Same as `grayscale()` except this allows you to specify the 
+   * output color.
+   * 
+   * @param {number} r
+   * @param {number} g
+   * @param {number} b
+   * @param {number} a
+   */
+  color(r, g, b, a) {
+    if !is_number(r) or !is_number(g) or !is_number(b) or !is_number(a) {
+      die Exception('number expected')
+    }
+
+    _imagine.color(self._ptr, r, g, b, a)
+  }
+
+  /**
+   * Changes the contrast of the image based on the level set 
+   * in _contrast_.
+   * 
+   * @param {number} contrast
+   */
+  contrast(contrast) {
+    if !is_number(contrast)
+      die Exception('number expected')
+
+    _imagine.contrast(self._ptr, contrast)
+  }
+
+  /**
+   * Changes the brightness of the image based on the level set 
+   * in _brightness_.
+   * 
+   * @param {number} brightness
+   */
+  brightness(brightness) {
+    if !is_number(brightness)
+      die Exception('number expected')
+
+    _imagine.brightness(self._ptr, brightness)
+  }
+
   # ------------------------- MISC ------------------------------
+
+  /**
+   * Sets the rectangular clipping region beyond which no pixels 
+   * will be drawn in the image.
+   * 
+   * @param {number} x1
+   * @param {number} y1
+   * @param {number} x2
+   * @param {number} y2
+   */
+  set_clip(x1, y1, x2, y2) {
+    if !is_number(x1) or !is_number(y1) or !is_number(x2) or !is_number(y2) {
+      die Exception('number expected')
+    }
+
+    _imagine.setclip(self._ptr, x1, y1, x2, y2)
+  }
+
+  /**
+   * Returns the clipping region in the image. See `set_clip()`.
+   * 
+   * The function returns a list containing four numbers that 
+   * indicates the x1, y1, x2, and y2 of the clipping region in 
+   * the image.
+   * 
+   * @return {list<number>}
+   */
+  get_clip() {
+    return _imagine.getclip(self._ptr)
+  }
+
+  /**
+   * Sets the resolution of the the image across both axis.
+   * 
+   * @param {number} res_x
+   * @param {number} res_y
+   */
+  set_resolution(res_x, res_y) {
+    if !is_number(res_x) or !is_number(res_y)
+      die Exception('number expected')
+    
+    _imagine.setresolution(self._ptr, res_x, res_y)
+
+    # Update the meta here since part of the information in the 
+    # meta includes res_x and res_y. If we do not do this, the 
+    # image metadata will be invalid and out of sync.
+    # 
+    # Why we didn't just update self._meta?
+    # Because it could be nil. Which will essentially make us 
+    # re-implement meta() except that function uses a cache so 
+    # it can't be updated directly without first updating the 
+    # underlying data. So, we opted to just update the 
+    # underlying data.
+    self._meta = _imagine.meta(self._ptr)
+  }
+
+  /**
+   * Convert a true color image to a palette image. 
+   * 
+   * The first parameter `dither` controls whether the image 
+   * should be dithered which results in a more speckled image but 
+   * with better color approximation. 
+   * 
+   * The second argument `colors_wanted` controls the number of 
+   * colors that should be kept in the palette.
+   * 
+   * @param {bool} dither
+   * @param {number} colors_wanted
+   * @returns {bool} - `true` if successful, otherwise `false`.
+   */
+  true_color_to_palette(dither, colors_wanted) {
+    if !is_bool(dither_flag)
+      die Exception('boolean expected as first argument')
+    else if !is_number(colors_wanted)
+      die Exception('number expected as second argument')
+    
+    var result = _imagine.truecolortopalette(self._ptr, dither_flag ? 1 : 0, colors_wanted)
+
+    # Update the meta here since this function affects its true_color status.
+    self._meta = _imagine.meta(self._ptr)
+    return result == 1
+  }
+
+  /**
+   * Converts a palette based image to true color.
+   * 
+   * @returns {bool} - `true` if successful, otherwise `false`.
+   */
+  palette_to_true_color() {
+    var result = _imagine.palettetotruecolor(self._ptr)
+
+    # Update the meta here since this function affects its true_color status.
+    self._meta = _imagine.meta(self._ptr)
+    return result == 1
+  }
+
+  /**
+   * Makes the colors of the palette version of an image more closely 
+   * match the true color version. This function should be given a 
+   * true color image as the function will attempt to make the color 
+   * of the image given if the current image is a paletted image.
+   * 
+   * @param {ImageResource} image
+   * @returns {bool} - `true` if successful, otherwise `false`.
+   */
+  match_color(image) {
+    if !instance_of(image, ImageResource) {
+      die Exception('ImageResource expected')
+    }
+
+    if !image.meta().true_color {
+      die Exception('true color image expected')
+    }
+
+    return _imagine.colormatch(image.get_pointer(), self._ptr) == 1
+  }
+
+  /**
+   * Check whether two images are idential.
+   * 
+   * This check includes a size, transparency, interlace, color profile, 
+   * and a pixel by pixel check.
+   * 
+   * If the images are completely identical, the method returns a zero 
+   * (`0`). Otherwise, it returns a number greater than 0. The number 
+   * returned can be tested againt the various `CMP_*` constants to test 
+   * for any of the conditions.
+   * 
+   * For example,
+   * 
+   * ```blade
+   * var result = image1.compare(image2)
+   * 
+   * var both_transparent = !(result & CMP_TRANSPARENT)
+   * var same_width = !(result & CMP_SIZE_X)
+   * ```
+   * 
+   * @param {ImageResource} image
+   * @returns {number}
+   */
+  compare(image) {
+    if !instance_of(image, ImageResource) {
+      die Exception('ImageResource expected')
+    }
+
+    return _imagine.imagecompare(self._ptr, image.get_pointer())
+  }
 
   # ------------------------- EXPORT ------------------------------
 
