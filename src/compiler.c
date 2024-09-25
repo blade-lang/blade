@@ -612,7 +612,6 @@ static void statement(b_parser *p);
 static void declaration(b_parser *p);
 
 static void anonymous(b_parser *p, bool can_assign);
-static void anonymous_compat(b_parser *p, bool can_assign);
 
 static b_parse_rule *get_rule(b_tkn_type type);
 
@@ -1350,7 +1349,7 @@ b_parse_rule parse_rules[] = {
     [PERCENT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},             // %=
     [AMP_TOKEN] = {NULL, binary, PREC_BIT_AND},               // &
     [AMP_EQ_TOKEN] = {NULL, NULL, PREC_NONE},                 // &=
-    [BAR_TOKEN] = {anonymous_compat, binary, PREC_BIT_OR},           // |
+    [BAR_TOKEN] = {NULL, binary, PREC_BIT_OR},           // |
     [BAR_EQ_TOKEN] = {NULL, NULL, PREC_NONE},                 // |=
     [TILDE_TOKEN] = {unary, NULL, PREC_UNARY},                // ~
     [TILDE_EQ_TOKEN] = {NULL, NULL, PREC_NONE},               // ~=
@@ -1557,25 +1556,13 @@ static void anonymous(b_parser *p, bool can_assign) {
   begin_scope(p);
 
   // compile parameter list
-  consume(p, LPAREN_TOKEN, "expected '(' at start of anonymous function");
-  if (!check(p, RPAREN_TOKEN)) {
-    function_args(p);
+  if(check(p, LPAREN_TOKEN)) {
+    consume(p, LPAREN_TOKEN, "expected '(' at start of anonymous function");
+    if (!check(p, RPAREN_TOKEN)) {
+      function_args(p);
+    }
+    consume(p, RPAREN_TOKEN, "expected ')' after anonymous function parameters");
   }
-  consume(p, RPAREN_TOKEN, "expected ')' after anonymous function parameters");
-
-  function_body(p, &compiler, true);
-}
-
-static void anonymous_compat(b_parser *p, bool can_assign) {
-  b_compiler compiler;
-  init_compiler(p, &compiler, TYPE_FUNCTION);
-  begin_scope(p);
-
-  // compile parameter list
-  if (!check(p, BAR_TOKEN)) {
-    function_args(p);
-  }
-  consume(p, BAR_TOKEN, "expected '|' after anonymous function parameters");
 
   function_body(p, &compiler, true);
 }
