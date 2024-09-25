@@ -12,7 +12,7 @@ def main() {
   var g = 'Coke'
   echo g
 
-  var concat = @() {
+  var concat = @{
     g += ' is the best'
   }
   concat()

@@ -163,7 +163,7 @@ class Markdown {
    * var md = markdown()
    * 
    * # enable everything
-   * md.validate_link = @(){ return true; }
+   * md.validate_link = @{ return true; }
    * ```
    * 
    * @param {string} url

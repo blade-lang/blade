@@ -63,7 +63,7 @@ def _setup_session(req, res) {
   }
 
   # bind '.clear_session()' to response
-  res.clear_session = @() {
+  res.clear_session = @{
     res.session = {}
 
     # just for simplicity
@@ -71,7 +71,7 @@ def _setup_session(req, res) {
   }
 }
 
-var _template_setup = @() {
+var _template_setup = @{
   var tpl = template()
   tpl.set_root(os.join_paths(setup.NYSSA_DIR, setup.TEMPLATES_DIR))
   for name, fn in template_ext() {
