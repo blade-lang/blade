@@ -109,6 +109,29 @@ DECLARE_BYTES_METHOD(extend) {
   RETURN_OBJ(bytes);
 }
 
+DECLARE_BYTES_METHOD(index_of) {
+  ENFORCE_ARG_RANGE(index_of, 1, 2);
+  ENFORCE_ARG_TYPE(index_of, 0, IS_NUMBER);
+  b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
+  uint8_t needle = AS_NUMBER(args[0]);
+  
+  int start_index = 0;
+  if(arg_count == 2) {
+    ENFORCE_ARG_TYPE(index_of, 1, IS_NUMBER);
+    start_index = AS_NUMBER(args[1]);
+  }
+
+  if(bytes->bytes.count > 0 && start_index >= 0 && start_index < bytes->bytes.count - 1) {
+    for (int i = start_index; i < bytes->bytes.count; i++) {
+      if (bytes->bytes.bytes[i] == needle) {
+        RETURN_NUMBER(i);
+      }
+    }
+  }
+
+  RETURN_NUMBER(-1);
+}
+
 DECLARE_BYTES_METHOD(pop) {
   ENFORCE_ARG_COUNT(pop, 0);
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);

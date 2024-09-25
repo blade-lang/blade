@@ -122,8 +122,8 @@ class Renderer {
    * ```blade
    * import markdown as md
    *
-   * md.renderer.rules.strong_open  = @() { return '<b>' }
-   * md.renderer.rules.strong_close = @() { return '</b>' }
+   * md.renderer.rules.strong_open  = @{ return '<b>' }
+   * md.renderer.rules.strong_close = @{ return '</b>' }
    *
    * var result = md.render_inline(...)
    * ```

@@ -3,7 +3,7 @@ var test = @(a) {
 }
 test('It works!')
 
-var test_compat = |a| {
+var test_compat = @(a) {
   echo a
 }
 test_compat('It works still!')
@@ -12,13 +12,13 @@ def main() {
   var g = 'Coke'
   echo g
 
-  var concat = @() {
+  var concat = @{
     g += ' is the best'
   }
   concat()
   echo g
 
-  var concat_compat = || {
+  var concat_compat = @{
     g += ' still!'
   }
   concat_compat()

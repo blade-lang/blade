@@ -35,6 +35,22 @@ b_obj_ptr *new_ptr(b_vm *vm, void *pointer) {
   return ptr;
 }
 
+b_obj_ptr *new_named_ptr(b_vm *vm, void *pointer, char *name) {
+  b_obj_ptr *ptr = ALLOCATE_OBJ(b_obj_ptr, OBJ_PTR);
+  ptr->pointer = pointer;
+  ptr->name = name;
+  ptr->free_fn = NULL;
+  return ptr;
+}
+
+b_obj_ptr *new_closable_named_ptr(b_vm *vm, void *pointer, char *name, b_ptr_free_fn free_fn) {
+  b_obj_ptr *ptr = ALLOCATE_OBJ(b_obj_ptr, OBJ_PTR);
+  ptr->pointer = pointer;
+  ptr->name = name;
+  ptr->free_fn = free_fn;
+  return ptr;
+}
+
 b_obj_module *new_module(b_vm *vm, char *name, char *file) {
   b_obj_module *module = ALLOCATE_OBJ(b_obj_module, OBJ_MODULE);
   init_table(&module->values);

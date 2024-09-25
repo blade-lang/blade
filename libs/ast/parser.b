@@ -263,7 +263,6 @@ class Parser {
     if self._match(LPAREN) return self._grouping()
     if self._match(LBRACE) return self._dict()
     if self._match(LBRACKET) return self._list()
-    if self._match(BAR) return self._anonymous_compat()
     if self._match(AT) return self._anonymous()
 
     return nil
@@ -921,40 +920,24 @@ class Parser {
   }
 
   /**
-   * anonymous compartibility functions
-   */
-  _anonymous_compat() {
-    var params = []
-
-    while !self._check(BAR) {
-      params.append(self._consume_any('parameter name expected', IDENTIFIER, TRI_DOT).literal)
-
-      if !self._check(BAR)
-        self._consume(COMMA, "',' expected between function params")
-    }
-
-    self._consume(BAR, "'|' expected after anonymous function args")
-    self._consume(LBRACE, "'{' expected after function declaration")
-    var body = self._block()
-
-    return FunctionDecl('', params, body)
-  }
-
-  /**
    * anonymous functions
    */
   _anonymous() {
     var params = []
-    self._consume(LPAREN, "expected '(' at start of anonymous function")
 
-    while !self._check(RPAREN) {
-      params.append(self._consume_any('parameter name expected', IDENTIFIER, TRI_DOT).literal)
-
-      if !self._check(RPAREN)
-        self._consume(COMMA, "',' expected between function params")
+    if self._check(LPAREN) {
+      self._consume(LPAREN, "expected '(' at start of anonymous function")
+  
+      while !self._check(RPAREN) {
+        params.append(self._consume_any('parameter name expected', IDENTIFIER, TRI_DOT).literal)
+  
+        if !self._check(RPAREN)
+          self._consume(COMMA, "',' expected between function params")
+      }
+  
+      self._consume(RPAREN, "expected ')' after anonymous function parameters")
     }
 
-    self._consume(RPAREN, "expected ')' after anonymous function parameters")
     self._consume(LBRACE, "'{' expected after function declaration")
     var body = self._block()
 

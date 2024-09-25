@@ -140,8 +140,8 @@ class Clib {
    * ```
    * 
    * @param string name
-   * @param {type} return_type
-   * @param {type...} types
+   * @param {clib_type} return_type
+   * @param {clib_type...} types
    * @return function
    */
   define(name, return_type, ...) {
@@ -150,7 +150,7 @@ class Clib {
 
     # Ensure valid clib pointer.
     if !(reflect.is_ptr(return_type) and to_string(return_type).match('/clib/')) {
-        die Exception('invalid return type')
+      die Exception('invalid return type')
     }
 
     var fn = self.function(name)
@@ -189,8 +189,8 @@ def load(name) {
 /**
  * Creates a new C value for the specified clib type with the given values.
  * 
- * @param {type} type
- * @param any... values
+ * @param {clib_type} type
+ * @param {any...} values
  * @return bytes
  */
 def new(type, ...) {
@@ -213,7 +213,7 @@ def new(type, ...) {
  * automatically be returned with the values mapped to the names of the 
  * structure elements.
  * 
- * @param {type} type
+ * @param {clib_type} type
  * @param {string|bytes} data
  * @return {list|dictionary}
  */
@@ -232,9 +232,9 @@ def get(type, data) {
  * Get the value at the given index of a pointer based 
  * on the given CLib type.
  * 
- * @param ptr pointer
- * @param {type} clib_type
- * @param number index
+ * @param {ptr} pointer
+ * @param {clib_type} type 
+ * @param {number} index
  * @return any
  */
 def get_ptr_index(pointer, type, index) {
@@ -245,10 +245,10 @@ def get_ptr_index(pointer, type, index) {
  * Sets the value at the given index of a pointer based 
  * on the given CLib type to the given value.
  * 
- * @param ptr pointer
- * @param {type} clib_type
- * @param number index
- * @param any value
+ * @param {ptr} pointer
+ * @param {clib_type} type
+ * @param {number} index
+ * @param {any} value
  * @return any
  */
 def set_ptr_index(pointer, type, index, value) {
@@ -275,8 +275,8 @@ def set_ptr_index(pointer, type, index, value) {
  * ```
  * 
  * @param ptr handle
- * @param {type} return_type
- * @param {type...} arg_types
+ * @param {clib_type} return_type
+ * @param {clib_type...} arg_types
  * @return function
  */
 def function_handle(handle, return_type, ...) {
@@ -295,4 +295,54 @@ def function_handle(handle, return_type, ...) {
   }
 
   return define
+}
+
+/**
+ * Creates a callback to be passed to C functions expecting a callback.
+ * 
+ * For example, imagine a C function defined as below:
+ * 
+ * ```c
+ * void ex_puts(const char *name, void (*fn)(char *req, char *res));
+ * ```
+ * 
+ * To pass the callback (second parameter) to this function, you'll need to 
+ * wrap a blade function with `create_callback()` to properly define the 
+ * callback return type and parameters.
+ * 
+ * The above function can be defined as:
+ * 
+ * ```blade
+ * var fn lib.define('ex_puts', clib.void, clib.char_ptr, clib.function)
+ * ```
+ * 
+ * To call this function and pass a Blade function that can be called when C 
+ * triggers the callback, the second argument to the function will need to be 
+ * wrapped in `create_callback()`. Thus, the above function can be called 
+ * like this:
+ * 
+ * ```blade
+ * fn(
+ *    'Blade Callbacks', 
+ *    clib.create_callback(
+ *      @(req, res) {
+ *        echo 'Request is: ' + req
+ *        echo 'Response is: ' + res
+ *      }, 
+ *      clib.void, # The return type of the callback
+ *      clib.char_ptr, clib.char_ptr  # the parameters of the callback
+ *    )
+ * )
+ * ```
+ * 
+ * > **NOTE:** A callback can only be passed to a parameter previously defined 
+ * > as function.
+ * 
+ * @param {function} closure
+ * @param {clib_type} return_type
+ * @param {clib_type...} types
+ * @return {clib_callback}
+ */
+def create_callback(closure, return_type, ...) {
+  return _clib.new_closure(closure, return_type, __args__)
 }

@@ -514,6 +514,7 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_BYTES_METHOD(append);
   DEFINE_BYTES_METHOD(clone);
   DEFINE_BYTES_METHOD(extend);
+  DEFINE_BYTES_METHOD(index_of);
   DEFINE_BYTES_METHOD(pop);
   DEFINE_BYTES_METHOD(remove);
   DEFINE_BYTES_METHOD(reverse);
@@ -2597,6 +2598,9 @@ b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source) {
   }
 
   b_obj_func *function = compile(vm, module, source);
+  if(function == NULL) {
+    return PTR_COMPILE_ERR;
+  }
 
   if (vm->should_exit_after_bytecode) {
     return PTR_OK;

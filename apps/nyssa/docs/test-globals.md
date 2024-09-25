@@ -14,12 +14,12 @@ var myBeverage = {
   sour: false,
 }
 
-describe('my beverage', @() {
-  it('should be delicious', @() {
+describe('my beverage', @{
+  it('should be delicious', @{
     expect(myBeverage.delicious).to_be_truthy()
   });
 
-  it('should be sour', @() {
+  it('should be sour', @{
     expect(myBeverage.sour).to_be_falsy()
   })
 })
@@ -36,19 +36,19 @@ var binay_string_to_number = @( bin_string ) {
   return to_number('0b' + bin_string)
 }
 
-describe('binay string to number', @() {
-  describe('given an invalid binary string', @() {
-    it('throws CustomError when composed of non-numbers', @() {
-      expect(@() { binay_string_to_number('abc') }).to_throw(CustomError)
+describe('binay string to number', @{
+  describe('given an invalid binary string', @{
+    it('throws CustomError when composed of non-numbers', @{
+      expect(@{ binay_string_to_number('abc') }).to_throw(CustomError)
     })
 
-    it('throws CustomError when having extra whitespace', @() {
-      expect(@() { binay_string_to_number('  100') }).to_throw(CustomError)
+    it('throws CustomError when having extra whitespace', @{
+      expect(@{ binay_string_to_number('  100') }).to_throw(CustomError)
     })
   })
 
-  describe('given a valid binary string', @() {
-    it('returns the correct number', @() {
+  describe('given a valid binary string', @{
+    it('returns the correct number', @{
       expect(binay_string_to_number('100')).to_be(4)
     })
   })
@@ -60,7 +60,7 @@ describe('binay string to number', @() {
 The `it(name, fn)` function is the entry point for tests in a test suite. For example, let's say there's a function `inches_of_rain()` that should return zero. Your whole test could be:
 
 ```blade
-it('did not rain', @() {
+it('did not rain', @{
   expect(inches_of_rain()).to_be(0)
 })
 ```
@@ -85,17 +85,17 @@ For example:
 ```blade
 var global_db = make_global_db()
 
-before_all(@() {
+before_all(@{
   # Clears the database and adds some testing data.
-  return globalDatabase.clear(@() {
+  return globalDatabase.clear(@{
     return globalDatabase.insert({testData: 'foo'})
   })
 })
 
 # Since we only set up the database once in this example, it's important
 # that our tests don't modify it.
-describe('Before all', @() {
-  it('can find things', @() {
+describe('Before all', @{
+  it('can find things', @{
     return global_db.find('thing', {}, @(results) {
       expect(results.length()).to_be_greater_than(0)
     })
@@ -118,18 +118,18 @@ def clean_up_db(db) {
   db.clean_up()
 }
 
-after_all(@() {
+after_all(@{
   clean_up_db(global_db)
 });
 
-describe('confirming after_all works', @() {
-  it('can find things', @() {
+describe('confirming after_all works', @{
+  it('can find things', @{
     return global_db.find('thing', {}, @(results) {
       expect(results.length()).to_be_greater_than(0)
     })
   })
   
-  it('can insert a thing', @() {
+  it('can insert a thing', @{
     return global_db.insert('thing', make_thing(), @(response) {
       expect(response.success).to_be_truthy()
     })
@@ -150,20 +150,20 @@ For example:
 ```blade
 var global_db = make_global_db()
 
-before_each(@() {
+before_each(@{
   # Clears the database and adds some testing data.
   global_db.clear()
   global_db.insert({testData: 'foo'});
 })
 
-describe('confirming before_each works', @() {
-  it('can find things', @() {
+describe('confirming before_each works', @{
+  it('can find things', @{
     return global_db.find('thing', {}, @(results) {
       expect(results.length()).to_be_greater_than(0)
     })
   })
   
-  it('can insert a thing', @() {
+  it('can insert a thing', @{
     return global_db.insert('thing', make_thing(), @(response) {
       expect(response.success).to_be_truthy()
     })
@@ -186,18 +186,18 @@ def clean_up_db(db) {
   db.clean_up()
 }
 
-after_each(@() {
+after_each(@{
   clean_up_db(global_db)
 })
 
-describe('confirming after_each works', @() {
-  it('can find things', @() {
+describe('confirming after_each works', @{
+  it('can find things', @{
     return global_db.find('thing', {}, @(results) {
       expect(results.length()).to_be_greater_than(0)
     })
   })
   
-  it('can insert a thing', @() {
+  it('can insert a thing', @{
     return global_db.insert('thing', make_thing(), @(response) {
       expect(response.success).to_be_truthy()
     })

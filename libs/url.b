@@ -493,7 +493,7 @@ def parse(url, strict) {
   iter var i = 0; i < url.length(); i++ {
 
     # simple anonymous function to scan port
-    var _scan_port = @() {
+    var _scan_port = @{
         var _port = ''
         i++
         while i < url.length() and types.digit(url[i]) { # id_digit

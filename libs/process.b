@@ -16,7 +16,7 @@
  *   s.set({name: 'Richard', age: 3.142})
  * }, paged)
  * 
- * pr.on_complete(@(){
+ * pr.on_complete(@{
  *   echo paged.get()
  * })
  * 
