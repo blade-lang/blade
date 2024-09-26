@@ -2,6 +2,17 @@
 #include <unistd.h>
 #include "ssl.h"
 
+#ifdef _WIN32
+# define _WINSOCK_DEPRECATED_NO_WARNINGS 1
+# include <winsock2.h>
+
+# define sleep			_sleep
+# define ioctl ioctlsocket
+#else
+# include <sys/socket.h>
+# include <sys/ioctl.h>
+#endif
+
 DEFINE_SSL_CONSTANT(SSL_FILETYPE_PEM)
 DEFINE_SSL_CONSTANT(SSL_FILETYPE_ASN1)
 
@@ -374,7 +385,22 @@ DECLARE_MODULE_METHOD(ssl_read) {
   FD_ZERO(&read_fds);
   FD_SET(ssl_fd, &read_fds);
 
-  struct timeval timeout = { .tv_sec = 5, .tv_usec = 0 };
+  // struct timeval timeout = { .tv_sec = 0, .tv_usec = 500000 };
+
+   struct timeval timeout;
+  int option_length = sizeof(timeout);
+
+#ifndef _WIN32
+  int rc = getsockopt(ssl_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, (socklen_t *) &option_length);
+#else
+  int rc = getsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, (socklen_t*)&option_length);
+#endif // !_WIN32
+
+  if (rc != 0 || sizeof(timeout) != option_length || (timeout.tv_sec == 0 && timeout.tv_usec == 0)) {
+    // set default timeout to 0.5 seconds
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 500000;
+  }
 
   int ret = select(ssl_fd + 1, &read_fds, NULL, NULL, &timeout);
   if (ret == 0) {

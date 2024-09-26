@@ -71,8 +71,20 @@ class SSL {
    * Connects to an SSL server instance.
    * 
    * @return bool
+   * @throws
    */
   connect() {
+    /* try {
+      var res = _ssl.connect(self._ptr)
+      return res
+    } catch Exception e {
+      if e.message.index_of('eof while reading') {
+        die Exception('timeout')
+      }
+
+      die e
+    } */
+
     # _ssl.set_connect_state(self._ptr)
     return _ssl.connect(self._ptr)
   }

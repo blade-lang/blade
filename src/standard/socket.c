@@ -302,9 +302,9 @@ DECLARE_MODULE_METHOD(socket__recv) {
 #endif // !_WIN32
 
   if (rc != 0 || sizeof(timeout) != option_length || (timeout.tv_sec == 0 && timeout.tv_usec == 0)) {
-    // set default timeout to 5 minutes
-    timeout.tv_sec = 300;
-    timeout.tv_usec = 0;
+    // set default timeout to 0.5 seconds
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 500000;
   }
 
   fd_set read_set;
