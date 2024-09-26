@@ -151,7 +151,7 @@ class TLSSocket {
     if !context self._context = SSLContext(TLS_method)
     else self._context = context
 
-    self._ssl = ssl
+    self._ssl = ssl ? ssl : SSL(self._context)
   }
 
   /**
@@ -165,7 +165,6 @@ class TLSSocket {
    */
   connect(host, port, timeout) {
     if self._socket.connect(host, port, timeout) {
-      self._ssl = SSL(self._context)
       if self._ssl.set_fd(self._socket.id) {
         return self._ssl.connect()
       }

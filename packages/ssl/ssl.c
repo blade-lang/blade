@@ -142,6 +142,15 @@ DECLARE_MODULE_METHOD(ssl_set_accept_state) {
   RETURN;
 }
 
+DECLARE_MODULE_METHOD(ssl_set_tlsext_host_name) {
+  ENFORCE_ARG_COUNT(set_tlsext_host_name, 2);
+  ENFORCE_ARG_TYPE(set_tlsext_host_name, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(set_tlsext_host_name, 1, IS_STRING);
+
+  SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
+  RETURN_BOOL(SSL_set_tlsext_host_name(ssl, AS_C_STRING(args[1])) == 0);
+}
+
 DECLARE_MODULE_METHOD(ssl_new_bio) {
   ENFORCE_ARG_COUNT(new_bio, 1);
   ENFORCE_ARG_TYPE(new_bio, 0, IS_PTR);
@@ -359,19 +368,44 @@ DECLARE_MODULE_METHOD(ssl_read) {
   char buffer[1025];
   ERR_clear_error();
 
+  int ssl_fd = SSL_get_fd(ssl);
+
+  fd_set read_fds;
+  FD_ZERO(&read_fds);
+  FD_SET(ssl_fd, &read_fds);
+
+  struct timeval timeout = { .tv_sec = 5, .tv_usec = 0 };
+
+  int ret = select(ssl_fd + 1, &read_fds, NULL, NULL, &timeout);
+  if (ret == 0) {
+    free(data);
+    RETURN_STRING("");
+  } else if (ret < 0) {
+      // Error
+  }
+
   do {
-    int bytes = SSL_read(ssl, buffer, 1024);
+    int read_count = length == -1 ? 1024 : (
+      (length - total) < 1024 ? (length - total) : 1024
+    );
+
+    int bytes = SSL_read(ssl, buffer, read_count);
+    // printf("READ COUNT = %d, TOTAL: %d, LENGTH = %d, BYTE = %d\n", read_count, total, length, bytes);
+
     if(bytes > 0) {
-      data = GROW_ARRAY(char, data,total, total + bytes);
+      data = GROW_ARRAY(char, data, total, total + bytes + 1);
       if(data == NULL) {
         RETURN_ERROR("device out of memory.");
       }
 
-      vm->bytes_allocated += bytes;
       memcpy(data + total, buffer, bytes);
       total += bytes;
+      data[total] = '\0';
 
-      if(total > length && length != -1) break;
+      if(total >= length && length != -1) break;
+      if((bytes == 1024 && length == -1)) {
+        continue;
+      }
     } else {
       int error = SSL_get_error(ssl, bytes);
       if(error == SSL_ERROR_WANT_READ) {
@@ -470,7 +504,8 @@ DECLARE_MODULE_METHOD(ssl_error_string) {
   SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
   int code = SSL_get_error(ssl, ret);
   if(code != SSL_ERROR_SYSCALL) {
-    const char *err = ERR_reason_error_string(ERR_get_error());
+    // const char *err = ERR_reason_error_string(ERR_get_error());
+    char *err = ossl_err_as_string();
     RETURN_STRING(err);
   } else {
     char *error = strerror(errno);
@@ -497,10 +532,12 @@ DECLARE_MODULE_METHOD(ssl_connect) {
     res = SSL_connect(ssl);
     int error = SSL_get_error(ssl, res);
     if(error != SSL_ERROR_WANT_READ && error != SSL_ERROR_WANT_WRITE && error != SSL_ERROR_WANT_CONNECT) {
+      if(error == SSL_ERROR_SSL || error == SSL_ERROR_SYSCALL) {
+        RETURN_SSL_ERROR();
+      }
       break;
     }
   } while(res == -1);
-
   RETURN_BOOL(res > 0);
 }
 
@@ -628,6 +665,7 @@ CREATE_MODULE_LOADER(ssl) {
       {"ssl_free",   true,  GET_MODULE_METHOD(ssl_ssl_free)},
       {"set_connect_state",   true,  GET_MODULE_METHOD(ssl_set_connect_state)},
       {"set_accept_state",   true,  GET_MODULE_METHOD(ssl_set_accept_state)},
+      {"set_tlsext_host_name",   true,  GET_MODULE_METHOD(ssl_set_tlsext_host_name)},
       {"new_bio",   true,  GET_MODULE_METHOD(ssl_new_bio)},
       {"set_ssl",   true,  GET_MODULE_METHOD(ssl_bio_set_ssl)},
       {"set_conn_hostname",   true,  GET_MODULE_METHOD(ssl_set_conn_hostname)},

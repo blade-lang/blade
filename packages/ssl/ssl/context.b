@@ -106,7 +106,7 @@ class TLSContext < SSLContext {
    * @constructor
    */
   TLSContext() {
-    parent(TLS_method)
+    parent(_ssl.TLS_method())
   }
 }
 
@@ -121,7 +121,7 @@ class TLSClientContext < SSLContext {
    * @constructor
    */
   TLSClientContext() {
-    parent(TLS_client_method)
+    parent(_ssl.TLS_client_method())
   }
 }
 
@@ -136,7 +136,7 @@ class TLSServerContext < SSLContext {
    * @constructor
    */
   TLSServerContext() {
-    parent(TLS_server_method)
+    parent(_ssl.TLS_server_method())
   }
 }
 
@@ -150,7 +150,7 @@ class SSLv23Context < SSLContext {
    * @constructor
    */
   SSLv23Context() {
-    parent(SSLv23_method)
+    parent(_ssl.SSLv23_method())
   }
 }
 
@@ -165,7 +165,7 @@ class SSLv23ClientContext < SSLContext {
    * @constructor
    */
   SSLv23ClientContext() {
-    parent(SSLv23_client_method)
+    parent(_ssl.SSLv23_client_method())
   }
 }
 
@@ -180,6 +180,6 @@ class SSLv23ServerContext < SSLContext {
    * @constructor
    */
   SSLv23ServerContext() {
-    parent(SSLv23_server_method)
+    parent(_ssl.SSLv23_server_method())
   }
 }
