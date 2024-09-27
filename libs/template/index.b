@@ -739,7 +739,7 @@ class Template {
             if key_name for_vars.set('${key_name}', key)
 
             result.append(
-              self._process(path, element, for_vars)
+              self._process(path, element.clone(), for_vars)
             )
           }
         }
