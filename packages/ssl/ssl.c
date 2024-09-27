@@ -1,10 +1,18 @@
 #include <blade.h>
+#ifdef _WIN32 // wrapping to disable annoying messages from getopt.h in ming2
+#define message(ignore)
+#endif
 #include <unistd.h>
+#ifdef _WIN32
+#undef message
+#endif
 #include "ssl.h"
 
 #ifdef _WIN32
 # define _WINSOCK_DEPRECATED_NO_WARNINGS 1
 # include <winsock2.h>
+# include <sdkddkver.h>
+# include <ws2tcpip.h>
 
 # define sleep			_sleep
 # define ioctl ioctlsocket
@@ -393,7 +401,7 @@ DECLARE_MODULE_METHOD(ssl_read) {
 #ifndef _WIN32
   int rc = getsockopt(ssl_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, (socklen_t *) &option_length);
 #else
-  int rc = getsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, (socklen_t*)&option_length);
+  int rc = getsockopt(ssl_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, (socklen_t*)&option_length);
 #endif // !_WIN32
 
   if (rc != 0 || sizeof(timeout) != option_length || (timeout.tv_sec == 0 && timeout.tv_usec == 0)) {
