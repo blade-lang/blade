@@ -148,6 +148,7 @@ char *resolve_import_path(char *module_name, const char *current_file, char *roo
 
       if (path1 != NULL) {
         if (path2 == NULL || memcmp(path1, path2, (int) strlen(path2)) != 0) {
+          free(current_dir);
           free(path2);
           free(vendor_file);
           free(blade_file_name);
@@ -171,6 +172,7 @@ char *resolve_import_path(char *module_name, const char *current_file, char *roo
 
       if (path1 != NULL) {
         if (path2 == NULL || memcmp(path1, path2, (int) strlen(path2)) != 0) {
+          free(current_dir);
           free(path2);
           free(vendor_index_file);
           free(blade_file_name);
@@ -191,6 +193,7 @@ char *resolve_import_path(char *module_name, const char *current_file, char *roo
 
       if (path1 != NULL) {
         if (path2 == NULL || memcmp(path1, path2, (int) strlen(path2)) != 0) {
+          free(current_dir);
           free(path2);
           free(current_vendor_file);
           free(blade_file_name);
@@ -214,6 +217,7 @@ char *resolve_import_path(char *module_name, const char *current_file, char *roo
 
       if (path1 != NULL) {
         if (path2 == NULL || memcmp(path1, path2, (int) strlen(path2)) != 0) {
+          free(current_dir);
           free(path2);
           free(current_vendor_index_file);
           free(blade_file_name);
@@ -222,6 +226,7 @@ char *resolve_import_path(char *module_name, const char *current_file, char *roo
       }
     }
     free(current_vendor_index_file);
+    free(current_dir);
 
     // then, check in blade's default locations
     char *exe_dir = get_exe_dir();
@@ -236,6 +241,7 @@ char *resolve_import_path(char *module_name, const char *current_file, char *roo
 
       if (path1 != NULL) {
         if (path2 == NULL || memcmp(path1, path2, (int) strlen(path2)) != 0) {
+          free(blade_directory);
           free(path2);
           free(library_file);
           free(blade_file_name);
@@ -256,6 +262,7 @@ char *resolve_import_path(char *module_name, const char *current_file, char *roo
 
       if (path1 != NULL) {
         if (path2 == NULL || memcmp(path1, path2, (int) strlen(path2)) != 0) {
+          free(blade_directory);
           free(path2);
           free(library_index_file);
           free(blade_file_name);

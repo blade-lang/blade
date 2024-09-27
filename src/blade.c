@@ -327,11 +327,11 @@ int main(int argc, char *argv[]) {
     char **std_args = (char**)calloc(opt_deviation, sizeof(char *));
     if(std_args != NULL) {
       if(optind > 0) {
-        std_args[0] = strdup(argv[0]);
+        std_args[0] = argv[0];
       }
 
       for(int i = optind; i < argc; i++) {
-        std_args[i - optind + 1] = strdup(argv[i]);
+        std_args[i - optind + 1] = argv[i];
       }
 
       vm->std_args = std_args;

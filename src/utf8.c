@@ -3015,6 +3015,7 @@ char *utf8_case_fold(char *str, int str_len, bool simple, size_t *out_length) {
       }
     }
 
+    free(s);
     return result;
   }
 

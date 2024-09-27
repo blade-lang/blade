@@ -192,6 +192,8 @@ void bind_user_modules(b_vm *vm, char *pkg_root) {
           }
         }
       }
+
+      free(path);
     }
     closedir(dir);
   }
@@ -203,6 +205,7 @@ void bind_native_modules(b_vm *vm) {
   for (int i = 0; modules[i] != NULL; i++) {
     load_module(vm, modules[i], NULL, strdup("<__native__>"), NULL);
   }
+
   bind_user_modules(vm, merge_paths(get_exe_dir(), "dist"));
   bind_user_modules(vm, merge_paths(getcwd(NULL, 0), LOCAL_PACKAGES_DIRECTORY LOCAL_EXT_DIRECTORY));
 }
