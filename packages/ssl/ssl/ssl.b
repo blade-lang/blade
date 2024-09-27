@@ -71,8 +71,21 @@ class SSL {
    * Connects to an SSL server instance.
    * 
    * @return bool
+   * @throws
    */
   connect() {
+    /* try {
+      var res = _ssl.connect(self._ptr)
+      return res
+    } catch Exception e {
+      if e.message.index_of('eof while reading') {
+        die Exception('timeout')
+      }
+
+      die e
+    } */
+
+    # _ssl.set_connect_state(self._ptr)
     return _ssl.connect(self._ptr)
   }
 
@@ -132,6 +145,19 @@ class SSL {
    */
   shutdown() {
     _ssl.shutdown(self._ptr)
+  }
+
+  /**
+   * Sets the Server Name Indication (SNI) for use by Secure Sockets 
+   * Layer (SSL). This function should be called on a client SSL 
+   * session before the TLS handshake for the SNI extension 
+   * to be set properly.
+   * 
+   * @param string name
+   * @return bool
+   */
+  set_tlsext_host_name(name) {
+    return _ssl.set_tlsext_host_name(self._ptr, name)
   }
 
   /**

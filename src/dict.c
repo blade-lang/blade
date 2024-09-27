@@ -55,7 +55,7 @@ DECLARE_DICT_METHOD(clone) {
   b_obj_dict *dict = AS_DICT(METHOD_OBJECT);
   b_obj_dict *n_dict = (b_obj_dict *) GC(new_dict(vm));
 
-  table_add_all(vm, &dict->items, &n_dict->items);
+  table_copy(vm, &dict->items, &n_dict->items);
 
   for (int i = 0; i < dict->names.count; i++) {
     write_value_arr(vm, &n_dict->names, dict->names.values[i]);

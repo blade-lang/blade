@@ -111,9 +111,8 @@ DECLARE_BYTES_METHOD(extend) {
 
 DECLARE_BYTES_METHOD(index_of) {
   ENFORCE_ARG_RANGE(index_of, 1, 2);
-  ENFORCE_ARG_TYPE(index_of, 0, IS_NUMBER);
+  ENFORCE_ARG_TYPES(index_of, 0, IS_NUMBER, IS_BYTES);
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
-  uint8_t needle = AS_NUMBER(args[0]);
   
   int start_index = 0;
   if(arg_count == 2) {
@@ -121,10 +120,23 @@ DECLARE_BYTES_METHOD(index_of) {
     start_index = AS_NUMBER(args[1]);
   }
 
-  if(bytes->bytes.count > 0 && start_index >= 0 && start_index < bytes->bytes.count - 1) {
-    for (int i = start_index; i < bytes->bytes.count; i++) {
-      if (bytes->bytes.bytes[i] == needle) {
-        RETURN_NUMBER(i);
+  if(IS_NUMBER(args[0])) {
+    uint8_t needle = AS_NUMBER(args[0]);
+    if(bytes->bytes.count > 0 && start_index >= 0 && start_index < bytes->bytes.count - 1) {
+      for (int i = start_index; i < bytes->bytes.count; i++) {
+        if (bytes->bytes.bytes[i] == needle) {
+          RETURN_NUMBER(i);
+        }
+      }
+    }
+  } else {
+    b_obj_bytes *needle = AS_BYTES(args[0]);
+
+    if(bytes->bytes.count > 0 && start_index >= 0 && start_index < bytes->bytes.count - 1) {
+      for (int i = start_index; i < bytes->bytes.count; i++) {
+        if (memcmp(bytes->bytes.bytes + i, needle->bytes.bytes, needle->bytes.count) == 0) {
+          RETURN_NUMBER(i);
+        }
       }
     }
   }

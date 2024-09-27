@@ -537,19 +537,28 @@ b_value copy_value(b_vm *vm, b_value value) {
         push(vm, OBJ_VAL(n_list));
 
         for (int i = 0; i < list->items.count; i++) {
-          write_value_arr(vm, &n_list->items, list->items.values[i]);
+          write_value_arr(vm, &n_list->items, copy_value(vm, list->items.values[i]));
         }
 
         pop(vm);
         return OBJ_VAL(n_list);
       }
-      /*case OBJ_DICT: {
+      case OBJ_DICT: {
         b_obj_dict *dict = AS_DICT(value);
         b_obj_dict *n_dict = new_dict(vm);
+        push(vm, OBJ_VAL(n_dict));
 
-        // @TODO: Figure out how to handle dictionary values correctly
-        // remember that copying keys is redundant and unnecessary
-      }*/
+        // copy names
+        for(int i = 0; i < dict->names.count; i++) {
+          write_value_arr(vm, &n_dict->names, copy_value(vm, dict->names.values[i]));
+        }
+
+        // copy values
+        table_copy(vm, &dict->items, &n_dict->items);
+
+        pop(vm);
+        return OBJ_VAL(n_dict);
+      }
       default:
         return value;
     }

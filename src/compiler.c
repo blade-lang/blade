@@ -2147,6 +2147,7 @@ static void import_statement(b_parser *p) {
       emit_byte_and_short(p, OP_NATIVE_MODULE, module);
 
       parse_specific_import(p, module_name, module, false, true);
+      free(module_name);
       return;
     }
 
@@ -2191,10 +2192,13 @@ static void import_statement(b_parser *p) {
       pop(p->vm);
 
       parse_specific_import(p, module_name, module, false, true);
+      free(module_name);
       return;
     }
 
     free(module_path);
+    free(module_file);
+    free(module_name);
     error(p, "module not found");
     return;
   }
@@ -2207,6 +2211,7 @@ static void import_statement(b_parser *p) {
   char *source = read_file(module_path);
   if (source == NULL) {
     error(p, "could not read import file %s", module_path);
+    free(module_file);
     return;
   }
 
@@ -2220,6 +2225,7 @@ static void import_statement(b_parser *p) {
 
   if (function == NULL) {
     error(p, "failed to import %s", module_name);
+    free(module_file);
     return;
   }
 
@@ -2237,6 +2243,7 @@ static void import_statement(b_parser *p) {
   register_module__FILE__(p->vm, module);
 
   parse_specific_import(p, module_name, import_constant, was_renamed, false);
+  free(module_file);
 }
 
 static void assert_statement(b_parser *p) {

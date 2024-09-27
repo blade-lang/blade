@@ -196,7 +196,10 @@ b_value get_blade_os_path_separator(b_vm *vm) {
 
 b_value get_blade_os_exe_path(b_vm *vm) {
   char *path = get_exe_path();
-  return STRING_VAL(path);
+  if(path) {
+    return STRING_TT_VAL(path);
+  }
+  return NIL_VAL;
 }
 
 DECLARE_MODULE_METHOD(os_getenv) {
@@ -336,9 +339,9 @@ static int remove_directory(char *path, int path_length, bool recursive) {
         } else if(unlink(path_string) == -1) {
           free(path_string);
           return -1;
-        } else {
-          free(path_string);
         }
+        
+        free(path_string);
       } else {
         free(path_string);
         return -1;

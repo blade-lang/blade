@@ -15,7 +15,7 @@ b_obj_list *copy_list(b_vm *vm, b_obj_list *list, int start, int length) {
   if(length == -1) length = list->items.count - start;
 
   for(int i = start; i < start + length; i++) {
-    write_list(vm, _list, list->items.values[i]);
+    write_list(vm, _list, copy_value(vm, list->items.values[i]));
   }
 
   return _list;

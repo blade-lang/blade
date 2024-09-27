@@ -973,13 +973,13 @@ DECLARE_STRING_METHOD(split) {
   if ((int)compile_options == -1) {
     // not a regex, do a regular split
     if (delimeter->length > 0) {
-      int start = 0;
-      for(int i = 0; i <= string->length; i++) {
+      // int start = 0;
+      for(int start = 0, i = 0; i <= string->length; i++) {
         // match found.
         if(memcmp(string->chars + i, delimeter->chars, delimeter->length) == 0 || i == string->length) {
           write_list(vm, list, STRING_L_VAL(string->chars + start, i - start));
-          i += delimeter->length - 1;
-          start = i + 1;
+          i += delimeter->length;
+          start = i;
         }
       }
     } else {
