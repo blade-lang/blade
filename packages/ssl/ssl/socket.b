@@ -214,7 +214,7 @@ class TLSSocket {
   receive(length, flags) {
     if !self._ssl
       return self._socket.receive(length, flags)
-    return self._ssl.read(length)
+    return self._ssl.read(length, self._socket.is_blocking)
   }
 
   /**

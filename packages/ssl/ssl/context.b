@@ -21,16 +21,22 @@ class SSLContext {
   }
 
   /**
-   * Sets the verification flags for ctx to be the given mode.
+   * Enables or disables the verification flags for the given mode on the context.
    * 
    * @note The verification of certificates can be controlled by a set of logically or'ed mode flags.
    * @note If the mode is SSL_VERIFY_NONE none of the other flags may be set.
    * @param int mode
+   * @param bool? disable - Default: false
    */
-  set_verify(mode) {
+  set_verify(mode, disable) {
+    if disable == nil disable = false
+
     if !is_int(mode)
-      die Exception('integer expected')
-    _ssl.ctx_set_verify(self._ptr, mode)
+      die Exception('integer expected in argument 1')
+    if !is_bool(disable)
+      die Exception('boolean expected in argument 2')
+
+    _ssl.ctx_set_verify(self._ptr, mode, disable)
   }
 
   /**

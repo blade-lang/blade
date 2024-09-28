@@ -267,6 +267,7 @@ def mktime(year, month, day, hour, minute, seconds, is_dst) {
  * 
  * @serializable
  * @printable
+ * @number
  */
 class Date {
 
@@ -279,10 +280,11 @@ class Date {
    * @param number? hour
    * @param number? minute
    * @param number? seconds
+   * @param number? microseconds
    * @param bool? is_dst
    * @constructor 
    */
-  Date(year, month, day, hour, minute, seconds) {
+  Date(year, month, day, hour, minute, seconds, microseconds) {
 
     if year {
       self.year = year
@@ -301,6 +303,9 @@ class Date {
 
       if seconds self.seconds = seconds
       else self.seconds = 0
+
+      if microseconds self.microseconds = microseconds
+      else self.microseconds = 0
     
       # check for valid input values
       _check_date_fields(self.year, self.month, self.day, 
@@ -312,7 +317,6 @@ class Date {
       self.zone = 'UTC'
       self.is_dst = false
       self.gmt_offset = 0
-      self.microseconds = 0
 
     } else {
       var date = localtime()
@@ -753,18 +757,49 @@ class Date {
    * Returns unix `mktime` equivalent of the current date.
    * 
    * @return number
+   * @deprecated - Use `to_time()` instead as it offers more precision.
    */
   unix_time() {
     return _date.mktime(self.year, self.month, self.day, self.hour, 
               self.minute, self.seconds, self.is_dst)
   }
 
-  @to_string() {
-    return '<Date year: ${self.year}, month: ${self.month}, day: ${self.day}, hour: ' +
-        '${self.hour}, minute: ${self.minute}, seconds: ${self.seconds}>'
+  /**
+   * Returns the Epoch timestamp in seconds for the given date.
+   * 
+   * @return number
+   */
+  to_time() {
+    var years = self.year - 1970
+    
+    var tm = (_days_before_year(self.year) - _days_before_year(1970)) * 86400
+        tm += (_days_before_month(1, self.month) + self.day) * 86400
+        tm += self.hour * 3600
+        tm += self.minute * 60
+        tm += self.seconds
+  
+    tm -= self.gmt_offset
+    tm += self.microseconds == 0 ? 0 : (self.microseconds / 1000000)
+  
+    return tm
   }
 
-  @to_json() {
+  /**
+   * Returns a string representation of the date
+   * 
+   * @returns string
+   */
+  to_string() {
+    return '<Date year: ${self.year}, month: ${self.month}, day: ${self.day}, hour: ' +
+        '${self.hour}, minute: ${self.minute}, seconds: ${self.seconds}, micro_seconds: ${self.microseconds}>'
+  }
+
+  /**
+   * Returns the date object as a dictionary.
+   * 
+   * @returns dict
+   */
+  to_dict() {
     return {
       year: self.year,
       month: self.month,
@@ -772,7 +807,27 @@ class Date {
       hour: self.hour,
       minute: self.minute,
       seconds: self.seconds,
+      microseconds: self.microseconds,
+      gmt_offset: self.gmt_offset,
+      is_dst: self.is_dst,
+      zone: self.zone,
     }
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+
+  @to_json() {
+    return self.to_dict()
+  }
+
+  @to_number() {
+    return self.to_time()
+  }
+
+  @to_abs() {
+    return self.to_time()
   }
 }
 
@@ -792,6 +847,23 @@ class Date {
  * @return Date
  */
 def from_time(time) {
+
+  var microseconds = 0
+  if time > 9999999999 { 
+    if time <= 9999999999999 {
+      # its in milliseconds
+      time /= 1000
+      microseconds = ((time - (time // 1)) * 1000 % 1000 // 1) / 1000
+      time //= 1
+    } else if time <= 9999999999999999 {
+      # its in microseconds
+      time /= 1000000
+      microseconds = ((time - (time // 1)) * 1000000 % 1000000 // 1) / 1000000
+      time //= 1
+    } else {
+      die Exception('time out of range')
+    }
+  }
 
   var _DI400Y = _days_before_year(401) # number of days in 400 years
   var _DI100Y = _days_before_year(101) # number of days in 100 years

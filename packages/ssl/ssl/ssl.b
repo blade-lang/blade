@@ -114,14 +114,19 @@ class SSL {
    * till no data is available in the stream.
    * 
    * @param int? length: Default value is -1
+   * @param bool? is_blocking: Default value is false
    * @return string
    */
-  read(length) {
+  read(length, is_blocking) {
     if !length length = -1
-    if !is_int(length)
-      die Exception('integer expected')
+    if is_blocking == nil is_blocking = false
     
-    var result = _ssl.read(self._ptr, length)
+    if !is_int(length)
+      die Exception('integer expected in argument 1')
+    if !is_bool(is_blocking)
+      die Exception('boolean expected in argument 2')
+    
+    var result = _ssl.read(self._ptr, length, is_blocking)
     if result == nil {
       die Exception(self.error())
     }
@@ -158,6 +163,26 @@ class SSL {
    */
   set_tlsext_host_name(name) {
     return _ssl.set_tlsext_host_name(self._ptr, name)
+  }
+
+  /**
+   * Returns informations about the peer certificate in a dictionary.
+   * 
+   * The returned information includes:
+   * 
+   * - `subject_name`
+   * - `issuer_name`
+   * - `serial_number`
+   * - `not_before`
+   * - `not_after`
+   * - `public_key`
+   * - `extensions`
+   * - `algorithm`
+   * 
+   * @returns dict
+   */
+  get_peer_certificate() {
+    return _ssl.get_peer_certificate(self._ptr)
   }
 
   /**

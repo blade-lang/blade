@@ -59,6 +59,10 @@ static char *ossl_err_as_string() {
   return ret;
 }
 
+int ssl___SSL_verify_true_cb(int preverify_ok, X509_STORE_CTX *x509_ctx) {
+  return 1;
+}
+
 DECLARE_MODULE_METHOD(ssl_ctx) {
   ENFORCE_ARG_COUNT(ctx, 1);
   ENFORCE_ARG_TYPE(ctx, 0, IS_PTR);
@@ -97,12 +101,21 @@ DECLARE_MODULE_METHOD(ssl_ctx_load_certs) {
 }
 
 DECLARE_MODULE_METHOD(ssl_ctx_set_verify) {
-  ENFORCE_ARG_COUNT(ctx_set_verify, 2);
+  ENFORCE_ARG_COUNT(ctx_set_verify, 3);
   ENFORCE_ARG_TYPE(ctx_set_verify, 0, IS_PTR);
   ENFORCE_ARG_TYPE(ctx_set_verify, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(ctx_set_verify, 2, IS_BOOL);
+
 
   SSL_CTX *ctx = (SSL_CTX*)AS_PTR(args[0])->pointer;
-  SSL_CTX_set_verify(ctx, AS_NUMBER(args[1]), NULL);
+  int mode = AS_NUMBER(args[1]);
+  bool disable = AS_BOOL(args[2]);
+
+  if(disable && mode != SSL_VERIFY_NONE) {
+    SSL_CTX_set_verify(ctx, mode, ssl___SSL_verify_true_cb);
+  } else {
+    SSL_CTX_set_verify(ctx, mode, NULL);
+  }
   RETURN;
 }
 
@@ -168,6 +181,169 @@ DECLARE_MODULE_METHOD(ssl_set_tlsext_host_name) {
 
   SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
   RETURN_BOOL(SSL_set_tlsext_host_name(ssl, AS_C_STRING(args[1])) == 0);
+}
+
+static char *ASN1_TIME_to_string(ASN1_TIME *a) {
+  char timebuf[256];
+  BIO *bio = BIO_new(BIO_s_mem());
+
+  ASN1_TIME_print(bio, a);
+  BIO_gets(bio, timebuf, sizeof(timebuf));
+
+  BIO_free(bio);
+
+  size_t len = strlen(timebuf);
+  char *buffer = malloc(sizeof(char) * (len + 1));
+  memcpy(buffer, timebuf, len);
+  buffer[len] = '\0';
+
+  return buffer;
+}
+
+DECLARE_MODULE_METHOD(ssl_get_peer_certificate) {
+  ENFORCE_ARG_COUNT(get_peer_certificate, 1);
+  ENFORCE_ARG_TYPE(get_peer_certificate, 0, IS_PTR);
+
+  SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
+
+  X509 *cert = SSL_get_peer_certificate(ssl);
+  if(!cert) {
+    RETURN_NIL;
+  }
+
+  b_obj_dict *dict = (b_obj_dict *)GC(new_dict(vm));
+
+  // Get certificate subject
+  X509_NAME *subject = X509_get_subject_name(cert);
+  if(subject) {
+    char *subject_name = X509_NAME_oneline(subject, NULL, 0);
+    if(subject_name) {
+      dict_set_entry(vm, dict, GC_L_STRING("subject_name", 12), GC_TT_STRING(subject_name));
+    } else {
+      dict_set_entry(vm, dict, GC_L_STRING("subject_name", 12), EMPTY_STRING_VAL);
+    }
+  } else {
+    dict_set_entry(vm, dict, GC_L_STRING("subject_name", 12), EMPTY_STRING_VAL);
+  }
+
+  // Get certificate issuer
+  X509_NAME *issuer = X509_get_issuer_name(cert);
+  if(issuer) {
+    char *issuer_name = X509_NAME_oneline(issuer, NULL, 0);
+    if(issuer_name) {
+      dict_set_entry(vm, dict, GC_L_STRING("issuer_name", 11), GC_TT_STRING(issuer_name));
+    } else {
+      dict_set_entry(vm, dict, GC_L_STRING("issuer_name", 11), EMPTY_STRING_VAL);
+    }
+  } else {
+    dict_set_entry(vm, dict, GC_L_STRING("issuer_name", 11), EMPTY_STRING_VAL);
+  }
+
+  // Get certificate serial number
+  ASN1_INTEGER *serial = X509_get_serialNumber(cert);
+  if(serial) {
+    BIGNUM *serial_bn = ASN1_INTEGER_to_BN(serial, NULL);
+    if(serial_bn) {
+      char *serial_number = BN_bn2dec(serial_bn);
+      if(serial_number) {
+        dict_set_entry(vm, dict, GC_L_STRING("serial_number", 12), GC_STRING(serial_number));
+        OPENSSL_free(serial_number);
+      } else {
+        dict_set_entry(vm, dict, GC_L_STRING("serial_number", 12), EMPTY_STRING_VAL);
+      }
+      BN_free(serial_bn);
+    } else {
+        dict_set_entry(vm, dict, GC_L_STRING("serial_number", 12), EMPTY_STRING_VAL);
+    }
+  } else {
+    dict_set_entry(vm, dict, GC_L_STRING("serial_number", 12), EMPTY_STRING_VAL);
+  }
+
+  // Get certificate not before and not after dates
+  ASN1_TIME *notBefore = X509_get_notBefore(cert);
+  ASN1_TIME *notAfter = X509_get_notAfter(cert);
+  // char *not_before = ASN1_TIME_to_string(notBefore);
+  // char *not_after = ASN1_TIME_to_string(notAfter);
+  dict_set_entry(vm, dict, GC_L_STRING("not_before", 10), GC_TT_STRING((char *)notBefore->data));
+  dict_set_entry(vm, dict, GC_L_STRING("not_after", 9), GC_TT_STRING((char *)notAfter->data));
+
+
+  // Get certificate signature algorithm
+  int nid = X509_get_signature_nid(cert);
+  const char *algorithm = OBJ_nid2sn(nid);
+  if (algorithm) {
+    dict_set_entry(vm, dict, GC_L_STRING("algorithm", 9), GC_STRING(algorithm));
+  } else {
+    dict_set_entry(vm, dict, GC_L_STRING("algorithm", 9), EMPTY_STRING_VAL);
+  }
+
+  // Get certificate public key
+  EVP_PKEY *pubkey = X509_get_pubkey(cert);
+  if(pubkey) {
+    BIO *bio = BIO_new(BIO_s_mem());
+    if(bio) {
+      PEM_write_bio_PUBKEY(bio, pubkey);
+      BUF_MEM *bptr;
+      BIO_get_mem_ptr(bio, &bptr);
+      if(bptr) {
+        char *pubkey_str = malloc(bptr->length + 1);
+        if(pubkey_str) {
+          memcpy(pubkey_str, bptr->data, bptr->length);
+          pubkey_str[bptr->length] = '\0';
+          dict_set_entry(vm, dict, GC_L_STRING("public_key", 10), GC_TT_STRING(pubkey_str));
+        } else {
+          dict_set_entry(vm, dict, GC_L_STRING("public_key", 10), EMPTY_STRING_VAL);
+        }
+      } else {
+        dict_set_entry(vm, dict, GC_L_STRING("public_key", 10), EMPTY_STRING_VAL);
+      }
+
+      BIO_free(bio);
+    } else {
+      dict_set_entry(vm, dict, GC_L_STRING("public_key", 10), EMPTY_STRING_VAL);
+    }
+  } else {
+    dict_set_entry(vm, dict, GC_L_STRING("public_key", 10), EMPTY_STRING_VAL);
+  }
+
+  // Get certificate extensions
+  b_obj_dict *extensions = (b_obj_dict *)GC(new_dict(vm));
+  const STACK_OF(X509_EXTENSION) *exts = X509_get0_extensions(cert);
+  if(exts) {
+    for (int i = 0; i < sk_X509_EXTENSION_num(exts); i++) {
+      X509_EXTENSION *ext = sk_X509_EXTENSION_value(exts, i);
+      if(ext) {
+        ASN1_OBJECT *obj = X509_EXTENSION_get_object(ext);
+        if(obj) {
+          char *ext_name = (char *)OBJ_nid2sn(OBJ_obj2nid(obj));
+          if(ext_name) {
+            BIO *bio = BIO_new(BIO_s_mem());
+            if(bio) {
+              X509V3_EXT_print(bio, ext, 0, 0);
+              BUF_MEM *bptr;
+              BIO_get_mem_ptr(bio, &bptr);
+              if(bptr) {
+                char *ext_value_str = malloc(bptr->length + 1);
+                if(ext_value_str) {
+                  memcpy(ext_value_str, bptr->data, bptr->length);
+                  ext_value_str[bptr->length] = '\0';
+
+                  dict_set_entry(vm, extensions, GC_STRING(ext_name), GC_TT_STRING(ext_value_str));
+                }
+              }
+              BIO_free(bio);
+            }
+          }
+        }
+      }
+    }
+  }
+  dict_set_entry(vm, dict, GC_L_STRING("extensions", 10), OBJ_VAL(extensions));
+
+  // Free resources
+  X509_free(cert);
+
+  RETURN_OBJ(dict);
 }
 
 DECLARE_MODULE_METHOD(ssl_new_bio) {
@@ -374,12 +550,14 @@ DECLARE_MODULE_METHOD(ssl_write) {
 }
 
 DECLARE_MODULE_METHOD(ssl_read) {
-  ENFORCE_ARG_COUNT(read, 2);
+  ENFORCE_ARG_COUNT(read, 3);
   ENFORCE_ARG_TYPE(read, 0, IS_PTR);
   ENFORCE_ARG_TYPE(read, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(read, 2, IS_BOOL);
 
   SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
   int length = AS_NUMBER(args[1]);
+  bool is_blocking = AS_BOOL(args[2]);
 
   char *data = (char*)malloc(sizeof(char));
   memset(data, 0, sizeof(char));
@@ -395,19 +573,25 @@ DECLARE_MODULE_METHOD(ssl_read) {
 
   // struct timeval timeout = { .tv_sec = 0, .tv_usec = 500000 };
 
-   struct timeval timeout;
-  int option_length = sizeof(timeout);
+  struct timeval timeout;
+  if(is_blocking) {
+    int option_length = sizeof(timeout);
 
-#ifndef _WIN32
-  int rc = getsockopt(ssl_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, (socklen_t *) &option_length);
-#else
-  int rc = getsockopt(ssl_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, (socklen_t*)&option_length);
-#endif // !_WIN32
+  #ifndef _WIN32
+    int rc = getsockopt(ssl_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, (socklen_t *) &option_length);
+  #else
+    int rc = getsockopt(ssl_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, (socklen_t*)&option_length);
+  #endif // !_WIN32
 
-  if (rc != 0 || sizeof(timeout) != option_length || (timeout.tv_sec == 0 && timeout.tv_usec == 0)) {
-    // set default timeout to 0.5 seconds
+    if (rc != 0 || sizeof(timeout) != option_length || (timeout.tv_sec == 0 && timeout.tv_usec == 0)) {
+      // set default timeout to 0 seconds
+      timeout.tv_sec = 0;
+      timeout.tv_usec = 0;
+    }
+  } else {
+    // set default timeout to 0 seconds
     timeout.tv_sec = 0;
-    timeout.tv_usec = 500000;
+    timeout.tv_usec = 0;
   }
 
   int ret = select(ssl_fd + 1, &read_fds, NULL, NULL, &timeout);
@@ -737,6 +921,7 @@ CREATE_MODULE_LOADER(ssl) {
       {"free",   true,  GET_MODULE_METHOD(ssl_free)},
       {"shutdown",   true,  GET_MODULE_METHOD(ssl_shutdown)},
       {"set_ciphers",   true,  GET_MODULE_METHOD(ssl_set_ciphers)},
+      {"get_peer_certificate",   true,  GET_MODULE_METHOD(ssl_get_peer_certificate)},
       {NULL,    false, NULL},
   };
 
