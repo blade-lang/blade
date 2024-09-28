@@ -57,7 +57,7 @@ class SQLite3 {
    * Closes the handle to the database and return `true` if successfully
    * closed or `false` otherwise.
    * 
-   * @return boolean
+   * @returns boolean
    */
   close() {
     if(_close(self._db)) {
@@ -75,8 +75,8 @@ class SQLite3 {
    * @note this method does not return a query result
    * @note this method takes optional params like `query()` (see below).
    * @param string query
-   * @param {list|dict|nil} params
-   * @return boolean
+   * @param list|dict|nil params
+   * @returns boolean
    * @throws SQLiteException if an error occured
    */
   exec(query, params) {
@@ -101,7 +101,7 @@ class SQLite3 {
    * * `0` if no insert statement has been executed or 
    * * A number greater than 0 if it succeeded
    * 
-   * @return number
+   * @returns number
    * @throws SQLiteException if database is not opened
    */
   last_insert_id() {
@@ -137,8 +137,8 @@ class SQLite3 {
    * ```
    * 
    * @param string sql
-   * @param {list|dict|nil} params
-   * @return SQLite3Cursor
+   * @param list|dict|nil params
+   * @returns SQLite3Cursor
    * @throws SQLiteException if an error occured.
    */
   query(sql, params) {
@@ -163,8 +163,8 @@ class SQLite3 {
    * 
    * @note if the result is empty or the query is not a SELECT, it returns an empty list.
    * @param string sql
-   * @param {list|dict|nil} params
-   * @return list[dictionary]
+   * @param list|dict|nil params
+   * @returns list[dictionary]
    */
   fetch(sql, params) {
     var cursor = self.query(sql, params)

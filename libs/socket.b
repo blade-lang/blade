@@ -681,7 +681,7 @@ class Socket {
    * @param string host
    * @param int port
    * @param int? timeout: Defaults to 300,000ms (i.e. 300 seconds)
-   * @return bool
+   * @returns bool
    */
   connect(host, port, timeout) {
     if !host host = self.host
@@ -715,7 +715,7 @@ class Socket {
    * 
    * @param int port
    * @param string? host
-   * @return bool
+   * @returns bool
    */
   bind(port, host) {
     if !host host = self.host
@@ -745,9 +745,9 @@ class Socket {
    * Sends the specified message to the socket. When this methods accepts a file as a message, 
    * the file is read and the resultant bytes of the file content is streamed to the socket.
    * 
-   * @param {string|file|bytes|?} message
+   * @param string|file|bytes|? message
    * @param int? flags: Not currently used.
-   * @return number greater than -1 if successful indicating the total number of bytes sent or -1 if it fails.
+   * @returns number greater than -1 if successful indicating the total number of bytes sent or -1 if it fails.
    */
   send(message, flags) {
     if !message message = ''
@@ -778,7 +778,7 @@ class Socket {
    * 
    * @param int? length
    * @param int? flags: Not currently used.
-   * @return string
+   * @returns string
    */
   receive(length, flags) {
     if !length length = -1
@@ -814,7 +814,7 @@ class Socket {
    * @note Only use this function after a call to `receive()` has succeeded.
    * 
    * @param int? length: Default value is `1024`
-   * @return string
+   * @returns string
    */
   read(length) {
     if !length length = 1024
@@ -851,7 +851,7 @@ class Socket {
    * @note listen() call applies only to sockets of type `SOCK_STREAM` (which is the default)
    * 
    * @param int? queue_length
-   * @return bool
+   * @returns bool
    */
   listen(queue_length) {
     if !queue_length queue_length = SOMAXCONN # default to 128 simulataneous clients...
@@ -883,7 +883,7 @@ class Socket {
    * The accepted socket may not be used to accept more connections.
    * The original socket remains open.
    * 
-   * @return Socket
+   * @returns Socket
    */
   accept() {
     if self.is_bound and self.is_listening and !self.is_closed {
@@ -908,7 +908,7 @@ class Socket {
   /**
    * Closes the socket.
    * 
-   * @return bool
+   * @returns bool
    */
   close() {
     # silently ignore multiple calls to close()
@@ -934,7 +934,7 @@ class Socket {
    * When _how_ is not specified, it defaults to `SHUT_RD`.
    * 
    * @param int? how
-   * @return bool
+   * @returns bool
    */
   shutdown(how) {
     if !how how = SHUT_RD
@@ -970,7 +970,7 @@ class Socket {
    * 
    * @param int option
    * @param any value
-   * @return bool
+   * @returns bool
    */
   set_option(option, value) {
     if !option or !value 
@@ -1000,7 +1000,7 @@ class Socket {
    * Gets the options set on the current socket
    * 
    * @param int option
-   * @return any
+   * @returns any
    */
   get_option(option) {
     if !is_int(option) 
@@ -1029,7 +1029,7 @@ class Socket {
    * Returns a dictionary containing the address, ipv6, port and family of the current 
    * socket or an empty dictionary if the socket information could not be retrieved.
    * 
-   * @return dictionary
+   * @returns dictionary
    */
   info() {
     return _socket.getsockinfo(self.id)
@@ -1047,7 +1047,7 @@ class Socket {
  * @param number address
  * @param string? type: Default value is `http`
  * @param int? family: Default value is [AF_INET]
- * @return dictionary
+ * @returns dictionary
  */
 def get_address_info(address, type, family) {
   if !is_string(address)
@@ -1067,7 +1067,7 @@ def get_address_info(address, type, family) {
  * @param number family
  * @param number? type
  * @param number? protocol
- * @return Socket
+ * @returns Socket
  * 
  * @example socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
  * @default

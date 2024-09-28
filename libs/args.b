@@ -669,7 +669,7 @@ class Parser < _Optionable {
    * {options: {verbose: true}, command: {name: install, value: 5}}
    * ```
    * 
-   * @return dict
+   * @returns dict
    */
   parse() {
     # We have to strip out the application name and the script path.

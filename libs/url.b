@@ -201,7 +201,7 @@ class Url {
    * sign ("#") character, or by the end of the URI.
    *
    * @note mailto scheme does not have an authority. For this reason, mailto schemes return an empty string as authority.
-   * @return string
+   * @returns string
    */
   authority() {
     if !_SIMPLE_SCHEMES.contains(self.scheme) {
@@ -230,7 +230,7 @@ class Url {
    * Returns true if the host of the url is a valid ipv4 address
    * and false otherwise.
    *
-   * @return bool
+   * @returns bool
    */
   host_is_ipv4() {
     if self.host {
@@ -243,7 +243,7 @@ class Url {
    * Returns true if the host of the url is a valid ipv6 address
    * and false otherwise.
    *
-   * @return bool
+   * @returns bool
    */
   host_is_ipv6() {
     if self.host {
@@ -256,7 +256,7 @@ class Url {
   /**
    * Returns absolute url string of the url object.
    *
-   * @return string
+   * @returns string
    */
   absolute_url() {
     var url = '${self.scheme}:'
@@ -301,7 +301,7 @@ class Url {
    * only be the same as the absolute url if the original string is 
    * an absolute url.
    * 
-   * @return string
+   * @returns string
    */
   to_string() {
     var result = ''
@@ -373,7 +373,7 @@ class Url {
  *
  * @param string url
  * @param bool? strict: Default value is `false`
- * @return string
+ * @returns string
  */
 def encode(url, strict) {
   if !is_string(url)
@@ -408,7 +408,7 @@ def encode(url, strict) {
  * string and plus symbols ('+') to a space character.
  * 
  * @param string url
- * @return string
+ * @returns string
  */
 def decode(url) {
   if !is_string(url)
@@ -447,7 +447,7 @@ def decode(url) {
  * 
  * @param string url
  * @param bool? strict: Default value is `false`
- * @return Url
+ * @returns Url
  */
 def parse(url, strict) {
   if !is_string(url) 

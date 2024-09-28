@@ -1,3 +1,5 @@
+#!-- part of the imagine module
+
 import _imagine
 import _reflect
 
@@ -10,6 +12,11 @@ import .crops
 import .blurs
 import .interpolations
 
+
+/**
+ * The ImageResource class represents a loaded image and exposes all 
+ * the image processing, metadata and manipulation functions.
+ */
 class ImageResource {
   # cache for the image meta
   var _meta
@@ -31,7 +38,7 @@ class ImageResource {
    * ensures that an image is always closed and not forgotten in 
    * memory.
    * 
-   * @param {function(1)} callback
+   * @param function(1) callback
    */
   use(callback) {
     if !is_function(callback)
@@ -69,7 +76,7 @@ class ImageResource {
    * - `true_color`: True if the image uses true colors, false otherwise.
    * - `interlaced`: True if the image is interlaced, false otherwise.
    * 
-   * @returns {dict}
+   * @returns dict
    */
   meta() {
     if !self._meta {
@@ -85,9 +92,9 @@ class ImageResource {
    * Sets the pixel indicated by _x_ and _y_ coordinate in the image to 
    * the given _color_.
    * 
-   * @param {number} x
-   * @param {number} y
-   * @param {number} color
+   * @param number x
+   * @param number y
+   * @param number color
    */
   set_pixel(x, y, color) {
     if !is_number(x) or !is_number(y) or !is_number(color) {
@@ -101,9 +108,9 @@ class ImageResource {
    * Returns the color at the give pixel indicated by _x_ and _y_ 
    * coordinate in the image.
    * 
-   * @param {number} x
-   * @param {number} y
-   * @returns {number}
+   * @param number x
+   * @param number y
+   * @returns number
    */
   get_pixel(x, y) {
     if !is_number(x) or !is_number(y) {
@@ -121,11 +128,11 @@ class ImageResource {
    * returned by `allocate_color()` or one of `set_style()`, or
    * `set_brush()`.
    * 
-   * @param {number} x1
-   * @param {number} y1
-   * @param {number} x2
-   * @param {number} y2
-   * @param {number} color
+   * @param number x1
+   * @param number y1
+   * @param number x2
+   * @param number y2
+   * @param number color
    */
   line(x1, y1, x2, y2, color) {
     if !is_number(x1) or !is_number(y1) or !is_number(x2) or !is_number(y2) or !is_number(color) {
@@ -140,11 +147,11 @@ class ImageResource {
    * the color specified. Note that color index can be a color returned 
    * by `allocate_color()` or one of `set_style()`, or `set_brush()`.
    * 
-   * @param {number} x1
-   * @param {number} y1
-   * @param {number} x2
-   * @param {number} y2
-   * @param {number} color
+   * @param number x1
+   * @param number y1
+   * @param number x2
+   * @param number y2
+   * @param number color
    */
   dashed_line(x1, y1, x2, y2, color) {
     if !is_number(x1) or !is_number(y1) or !is_number(x2) or !is_number(y2) or !is_number(color) {
@@ -158,11 +165,11 @@ class ImageResource {
    * Draws a rectangle with the upper left (x1, y1) then lower right (y1,y2) 
    * corners specified, using the color specified.
    * 
-   * @param {number} x1
-   * @param {number} y1
-   * @param {number} x2
-   * @param {number} y2
-   * @param {number} color
+   * @param number x1
+   * @param number y1
+   * @param number x2
+   * @param number y2
+   * @param number color
    */
   rectangle(x1, y1, x2, y2, color) {
     if !is_number(x1) or !is_number(y1) or !is_number(x2) or !is_number(y2) or !is_number(color) {
@@ -176,11 +183,11 @@ class ImageResource {
    * Draws a solid rectangle with the upper left (x1, y1) then lower 
    * right (y1,y2) corners specified, using the color specified.
    * 
-   * @param {number} x1
-   * @param {number} y1
-   * @param {number} x2
-   * @param {number} y2
-   * @param {number} color
+   * @param number x1
+   * @param number y1
+   * @param number x2
+   * @param number y2
+   * @param number color
    */
   filled_rectangle(x1, y1, x2, y2, color) {
     if !is_number(x1) or !is_number(y1) or !is_number(x2) or !is_number(y2) or !is_number(color) {
@@ -194,8 +201,8 @@ class ImageResource {
    * Returns true if the coordinate represented by _x_ and _y_ 
    * is within the bounds of the image.
    * 
-   * @param {number} x
-   * @param {number} y
+   * @param number x
+   * @param number y
    */
   safe_bound(x, y) {
     if !is_number(x) or !is_number(y) {
@@ -208,11 +215,11 @@ class ImageResource {
   /**
    * Draws a single character.
    * 
-   * @param {number} x - The x coordinate of the upper left pixel.
-   * @param {number} y - The y coordinate of the upper left pixel.
-   * @param {char} text - The character.
-   * @param {font} font - The raster font.
-   * @param {number} color - The color.
+   * @param number x - The x coordinate of the upper left pixel.
+   * @param number y - The y coordinate of the upper left pixel.
+   * @param char text - The character.
+   * @param font font - The raster font.
+   * @param number color - The color.
    */
   char(x, y, char, font, color) {
     if !font font = _imagine.smallfont
@@ -240,11 +247,11 @@ class ImageResource {
   /**
    * Draws a single character vertically.
    * 
-   * @param {number} x - The x coordinate of the upper left pixel.
-   * @param {number} y - The y coordinate of the upper left pixel.
-   * @param {char} text - The character.
-   * @param {font} font - The raster font.
-   * @param {number} color - The color.
+   * @param number x - The x coordinate of the upper left pixel.
+   * @param number y - The y coordinate of the upper left pixel.
+   * @param char text - The character.
+   * @param font font - The raster font.
+   * @param number color - The color.
    */
   char_vert(x, y, char, font, color) {
     if !font font = _imagine.smallfont
@@ -272,11 +279,11 @@ class ImageResource {
   /**
    * Draws a character string.
    * 
-   * @param {number} x - The x coordinate of the upper left pixel.
-   * @param {number} y - The y coordinate of the upper left pixel.
-   * @param {string} text - The character string.
-   * @param {font} font - The raster font.
-   * @param {number} color - The color.
+   * @param number x - The x coordinate of the upper left pixel.
+   * @param number y - The y coordinate of the upper left pixel.
+   * @param string text - The character string.
+   * @param font font - The raster font.
+   * @param number color - The color.
    */
   string(x, y, text, font, color) {
     if !font font = _imagine.smallfont
@@ -304,11 +311,11 @@ class ImageResource {
   /**
    * Draws a character string vertically.
    * 
-   * @param {number} x - The x coordinate of the upper left pixel.
-   * @param {number} y - The y coordinate of the upper left pixel.
-   * @param {string} text - The character string.
-   * @param {font} font - The raster font.
-   * @param {number} color - The color.
+   * @param number x - The x coordinate of the upper left pixel.
+   * @param number y - The y coordinate of the upper left pixel.
+   * @param string text - The character string.
+   * @param font font - The raster font.
+   * @param number color - The color.
    */
   string_vert(x, y, text, font, color) {
     if !font font = _imagine.smallfont
@@ -341,8 +348,8 @@ class ImageResource {
    * for the x and y coordinates. It is required that there must be at 
    * least three points.
    * 
-   * @param {list[list]} points
-   * @param {number} color
+   * @param list[list] points
+   * @param number color
    */
   polygon(points, color) {
     if !is_list(points)
@@ -375,8 +382,8 @@ class ImageResource {
    * for the x and y coordinates. It is required that there must be at 
    * least three points.
    * 
-   * @param {list[list]} points
-   * @param {number} color
+   * @param list[list] points
+   * @param number color
    */
   open_polygon(points, color) {
     if !is_list(points)
@@ -409,8 +416,8 @@ class ImageResource {
    * for the x and y coordinates. It is required that there must be at 
    * least three points.
    * 
-   * @param {list[list]} points
-   * @param {number} color
+   * @param list[list] points
+   * @param number color
    */
   filled_polygon(points, color) {
     if !is_list(points)
@@ -445,13 +452,13 @@ class ImageResource {
    * and height being equal. `end` must be greater than `start`. 
    * Values greater than 360 are interpreted modulo 360. 
    * 
-   * @param {number} x
-   * @param {number} y
-   * @param {number} width
-   * @param {number} height
-   * @param {number} start
-   * @param {number} end
-   * @param {number} color
+   * @param number x
+   * @param number y
+   * @param number width
+   * @param number height
+   * @param number start
+   * @param number end
+   * @param number color
    */
   arc(x, y, width, height, start, end, color) {
     if !is_number(x) or !is_number(y) or !is_number(width) or 
@@ -477,14 +484,14 @@ class ImageResource {
    * 
    * When style is not given, it defaults to `ARC_PIE`.
    * 
-   * @param {number} x
-   * @param {number} y
-   * @param {number} width
-   * @param {number} height
-   * @param {number} start
-   * @param {number} end
-   * @param {number} color
-   * @param {number} style
+   * @param number x
+   * @param number y
+   * @param number width
+   * @param number height
+   * @param number start
+   * @param number end
+   * @param number color
+   * @param number style
    */
   filled_arc(x, y, width, height, start, end, color, style) {
     if !style style = arcs.ARC_PIE
@@ -502,11 +509,11 @@ class ImageResource {
    * Draws a full ellipse centered at the given point, with the 
    * specified width, height, and color.
    * 
-   * @param {number} x
-   * @param {number} y
-   * @param {number} width
-   * @param {number} height
-   * @param {number} color
+   * @param number x
+   * @param number y
+   * @param number width
+   * @param number height
+   * @param number color
    */
   ellipse(x, y, width, height, color) {
     if !is_number(x) or !is_number(y) or !is_number(width) or 
@@ -521,11 +528,11 @@ class ImageResource {
    * Fills a full ellipse centered at the given point, with the 
    * specified width, height, and color.
    * 
-   * @param {number} x
-   * @param {number} y
-   * @param {number} width
-   * @param {number} height
-   * @param {number} color
+   * @param number x
+   * @param number y
+   * @param number width
+   * @param number height
+   * @param number color
    */
   filled_ellipse(x, y, width, height, color) {
     if !is_number(x) or !is_number(y) or !is_number(width) or 
@@ -543,11 +550,11 @@ class ImageResource {
    * Any of R, G, B, or A can be omitted or set to nil in which case 
    * they'll default to zero.
    * 
-   * @param {number?} r
-   * @param {number?} g
-   * @param {number?} b
-   * @param {number?} a
-   * @returns {number}
+   * @param number? r
+   * @param number? g
+   * @param number? b
+   * @param number? a
+   * @returns number
    */
   allocate_color(r, g, b, a) {
     if r == nil r = 0
@@ -572,11 +579,11 @@ class ImageResource {
    * transparency beats the exact same color with radically different 
    * transparency.
    * 
-   * @param {number} r
-   * @param {number} g
-   * @param {number} b
-   * @param {number} a
-   * @returns {number}
+   * @param number r
+   * @param number g
+   * @param number b
+   * @param number a
+   * @returns number
    */
   closest_color(r, g, b, a) {
     if r == nil r = 0
@@ -599,10 +606,10 @@ class ImageResource {
    * Same as `closes_color()` but uses an alternative algorithm and does 
    * not account for transparency.
    * 
-   * @param {number} r
-   * @param {number} g
-   * @param {number} b
-   * @returns {number}
+   * @param number r
+   * @param number g
+   * @param number b
+   * @returns number
    */
   closest_color_hwb(r, g, b) {
     if r == nil r = 0
@@ -619,11 +626,11 @@ class ImageResource {
   /**
    * Returns an exact match only, including alpha when specified.
    * 
-   * @param {number} r
-   * @param {number} g
-   * @param {number} b
-   * @param {number} a
-   * @returns {number}
+   * @param number r
+   * @param number g
+   * @param number b
+   * @param number a
+   * @returns number
    */
   exact_color(r, g, b, a) {
     if r == nil r = 0
@@ -646,11 +653,11 @@ class ImageResource {
    * Resolves color in the image based on `exact_color()` and `closest_color()` 
    * and return the one that matches the image best.
    * 
-   * @param {number} r
-   * @param {number} g
-   * @param {number} b
-   * @param {number} a
-   * @returns {number}
+   * @param number r
+   * @param number g
+   * @param number b
+   * @param number a
+   * @returns number
    */
   resolve_color(r, g, b, a) {
     if r == nil r = 0
@@ -672,7 +679,7 @@ class ImageResource {
   /**
    * Deallocates a color previously allocated from the image.
    * 
-   * @param {number} color
+   * @param number color
    */
   deallocate_color(color) {
     if !is_number(color) {
@@ -691,7 +698,7 @@ class ImageResource {
    * compatible with older browsers that do not understand full alpha 
    * channels well.
    * 
-   * @param {number} color
+   * @param number color
    */
   color_transparent(color) {
     if !is_number(color) {
@@ -704,7 +711,7 @@ class ImageResource {
   /**
    * Copies the palatte from a paletted image to this image.
    * 
-   * @param {ImageResource} image
+   * @param ImageResource image
    */
   palette_copy(image) {
     if !instance_of(image, ImageResource) {
@@ -718,9 +725,9 @@ class ImageResource {
    * Replaces every occurrence of color _src_ in the image with the 
    * color _dest_.
    * 
-   * @param {number} src
-   * @param {number} dest
-   * @returns {bool}
+   * @param number src
+   * @param number dest
+   * @returns bool
    */
   color_replace(src, dest) {
     if !is_number(src) or !is_number(dest) {
@@ -736,9 +743,9 @@ class ImageResource {
    * Flood fills the image with the given _color_ starting are 
    * the coordinates given by _x_ and _y_.
    * 
-   * @param {number} x
-   * @param {number} y
-   * @param {number} color
+   * @param number x
+   * @param number y
+   * @param number color
    */
   fill(x, y, color) {
     if !is_number(x) or !is_number(y) {
@@ -757,9 +764,9 @@ class ImageResource {
    * the coordinates given by _x_ and _y_ and using the color 
    * specified by border to fill its borders.
    * 
-   * @param {number} x
-   * @param {number} y
-   * @param {number} color
+   * @param number x
+   * @param number y
+   * @param number color
    */
   fill_to_border(x, y, border, color) {
     if !is_number(x) or !is_number(y) {
@@ -779,13 +786,13 @@ class ImageResource {
    * portion defined will be copied onto the x,y coordinates, dst_x 
    * and dst_y.
    * 
-   * @param {ImageResource} src
-   * @param {number} dst_x
-   * @param {number} dst_y
-   * @param {number} src_x
-   * @param {number} src_y
-   * @param {number} width
-   * @param {number} height
+   * @param ImageResource src
+   * @param number dst_x
+   * @param number dst_y
+   * @param number src_x
+   * @param number src_y
+   * @param number width
+   * @param number height
    */
   copy(src, dst_x, dst_y, src_x, src_y, width, height) {
     if !instance_of(src, ImageResource) {
@@ -810,14 +817,14 @@ class ImageResource {
    * except for ignoring alpha components, while it implements 
    * alpha transparency for true colour images.
    * 
-   * @param {ImageResource} src
-   * @param {number} dst_x
-   * @param {number} dst_y
-   * @param {number} src_x
-   * @param {number} src_y
-   * @param {number} width
-   * @param {number} height
-   * @param {number} pct
+   * @param ImageResource src
+   * @param number dst_x
+   * @param number dst_y
+   * @param number src_x
+   * @param number src_y
+   * @param number width
+   * @param number height
+   * @param number pct
    */
   copy_merge(src, dst_x, dst_y, src_x, src_y, width, height, pct) {
     if !instance_of(src, ImageResource) {
@@ -836,14 +843,14 @@ class ImageResource {
    * hue of the source by converting the destination pixels to gray scale 
    * before the copy operation.
    * 
-   * @param {ImageResource} src
-   * @param {number} dst_x
-   * @param {number} dst_y
-   * @param {number} src_x
-   * @param {number} src_y
-   * @param {number} width
-   * @param {number} height
-   * @param {number} pct
+   * @param ImageResource src
+   * @param number dst_x
+   * @param number dst_y
+   * @param number src_x
+   * @param number src_y
+   * @param number width
+   * @param number height
+   * @param number pct
    */
   copy_merge_gray(src, dst_x, dst_y, src_x, src_y, width, height, pct) {
     if !instance_of(src, ImageResource) {
@@ -872,15 +879,15 @@ class ImageResource {
    * (if this image is the same as _src_) but if the regions overlap 
    * the results will be unpredictable.
    * 
-   * @param {ImageResource} src
-   * @param {number} x
-   * @param {number} y
-   * @param {number} src_x
-   * @param {number} src_y
-   * @param {number} width
-   * @param {number} height
-   * @param {number} src_width
-   * @param {number} src_height
+   * @param ImageResource src
+   * @param number x
+   * @param number y
+   * @param number src_x
+   * @param number src_y
+   * @param number width
+   * @param number height
+   * @param number src_width
+   * @param number src_height
    */
   copy_resized(src, x, y, src_x, src_y, width, height, src_width, src_height) {
     if !instance_of(src, ImageResource) {
@@ -911,15 +918,15 @@ class ImageResource {
    * (if this image is the same as _src_) but if the regions overlap 
    * the results will be unpredictable.
    * 
-   * @param {ImageResource} src
-   * @param {number} x
-   * @param {number} y
-   * @param {number} src_x
-   * @param {number} src_y
-   * @param {number} width
-   * @param {number} height
-   * @param {number} src_width
-   * @param {number} src_height
+   * @param ImageResource src
+   * @param number x
+   * @param number y
+   * @param number src_x
+   * @param number src_y
+   * @param number width
+   * @param number height
+   * @param number src_width
+   * @param number src_height
    */
   copy_resampled(src, x, y, src_x, src_y, width, height, src_width, src_height) {
     if !instance_of(src, ImageResource) {
@@ -943,14 +950,14 @@ class ImageResource {
    * The rotation angle is interpreted as the number of degrees to rotate the 
    * image anticlockwise.
    * 
-   * @param {ImageResource} src
-   * @param {number} x
-   * @param {number} y
-   * @param {number} src_x
-   * @param {number} src_y
-   * @param {number} src_width
-   * @param {number} src_height
-   * @param {number} angle
+   * @param ImageResource src
+   * @param number x
+   * @param number y
+   * @param number src_x
+   * @param number src_y
+   * @param number src_width
+   * @param number src_height
+   * @param number angle
    */
   copy_rotated(src, x, y, src_x, src_y, src_width, src_height, angle) {
     if !instance_of(src, ImageResource) {
@@ -966,7 +973,7 @@ class ImageResource {
   /**
    * Clones this image resource.
    * 
-   * @returns {ImageResource}
+   * @returns ImageResource
    */
   clone() {
     return ImageResource(_imagine.clone(self._ptr))
@@ -993,7 +1000,7 @@ class ImageResource {
    * > you must not use the `COLOR_BRUSHED` or `COLOR_STYLED_BRUSHED` colors 
    * > until you have set a new brush image.
    * 
-   * @param {ImageResource} brush
+   * @param ImageResource brush
    */
   set_brush(brush) {
     if !instance_of(brush, ImageResource) {
@@ -1027,7 +1034,7 @@ class ImageResource {
    * you should call `close()`. You must not use the color `COLOR_TILED` if the current 
    * tile has been closed; you can of course set a new tile to replace it.
    * 
-   * @param {ImageResource} tile
+   * @param ImageResource tile
    */
   set_tile(tile) {
     if !instance_of(tile, ImageResource) {
@@ -1041,8 +1048,8 @@ class ImageResource {
    * Set the color for subsequent anti-aliased drawing and whether to blend the 
    * color or not.
    * 
-   * @param {number} color
-   * @param {bool} dont_blend
+   * @param number color
+   * @param bool dont_blend
    */
   set_antialiased(color, dont_blend) {
     if !is_number(color) {
@@ -1061,7 +1068,7 @@ class ImageResource {
    * Sets the thickness in pixels for following lines drawn when drawing lines, 
    * ellipses, rectangles, polygons and so forth.
    * 
-   * @param {number} thickness
+   * @param number thickness
    */
   set_thickness(thickness) {
     if !is_number(thickness) {
@@ -1075,7 +1082,7 @@ class ImageResource {
    * Sets whether an image is interlaced. If the `enabled` parameter is not 
    * given, it defaults to true.
    * 
-   * @param {bool?} enable
+   * @param bool? enable
    */
   interlace(enable) {
     if enable == nil enable = true
@@ -1102,7 +1109,7 @@ class ImageResource {
    * 
    * If the `enabled` parameter is not given, it defaults to true.
    * 
-   * @param {bool} enable
+   * @param bool enable
    */
   alpha_blending(enable) {
     if enable == nil enable = true
@@ -1119,7 +1126,7 @@ class ImageResource {
    * in mode. `mode` must be one of the `FLIP_*` constants. When no mode is set, 
    * mode defaults to `FLIP_BOTH`.
    * 
-   * @param {number?} mode
+   * @param number? mode
    */
   flip(mode) {
     if !mode mode = flips.FLIP_BOTH
@@ -1145,11 +1152,11 @@ class ImageResource {
    * Returns a new imaged cropped from the rectangular area specified by x, y, 
    * width, and height in this image.
    * 
-   * @param {number} x
-   * @param {number} y
-   * @param {number} width
-   * @param {number} height
-   * @returns {ImageResource}
+   * @param number x
+   * @param number y
+   * @param number width
+   * @param number height
+   * @returns ImageResource
    */
   crop(x, y, width, height) {
     if !is_number(x) or !is_number(y) or !is_number(width) or !is_number(height) {
@@ -1163,8 +1170,8 @@ class ImageResource {
    * Crop an image automatically using one of the `CROP_*` modes. If `mode` 
    * is not give, it defaults to `CROP_DEFAULT`.
    * 
-   * @param {number?} mode
-   * @returns {ImageResource}
+   * @param number? mode
+   * @returns ImageResource
    */
   auto_crop(mode) {
     if mode == nil mode = crops.CROP_DEFAULT
@@ -1191,10 +1198,10 @@ class ImageResource {
    * 
    * This method returns a new image rather than modify this image.
    * 
-   * @param {number} width
-   * @param {number?} height
-   * @param {number?} method
-   * @returns {ImageResource}
+   * @param number width
+   * @param number? height
+   * @param number? method
+   * @returns ImageResource
    */
   scale(width, height, method) {
     if height == nil or height == -1 {
@@ -1221,10 +1228,10 @@ class ImageResource {
    * the given interpolation method.  Non-square angles will add a border with 
    * bgcolor.
    * 
-   * @param {number} angle
-   * @param {number} bg_color
-   * @param {number?} method
-   * @return {ImageResource}
+   * @param number angle
+   * @param number bg_color
+   * @param number? method
+   * @returns ImageResource
    */
   rotate(angle, bg_color, method) {
     if !is_number(angle) or !is_number(bg_color) {
@@ -1248,7 +1255,7 @@ class ImageResource {
    * be saved. This is supported only for image formats that support full alpha
    * transparency, e.g. PNG.
    * 
-   * @param {bool} save
+   * @param bool save
    */
   save_alpha(save) {
     if save == nil save = true
@@ -1264,8 +1271,8 @@ class ImageResource {
    * Applies pixelation effect to the image based on the block 
    * size and given effect mode.
    * 
-   * @param {number} block_size
-   * @param {number} mode
+   * @param number block_size
+   * @param number mode
    */
   pixelate(block_size, mode) {
     if !is_number(block_size) or !is_number(mode)
@@ -1279,9 +1286,9 @@ class ImageResource {
    * control the strength of the scatter and colors to indicate the 
    * colors it should be restricted to.
    * 
-   * @param {number} sub
-   * @param {number} plus
-   * @param {list<number>} colors
+   * @param number sub
+   * @param number plus
+   * @param list<number> colors
    */
   scatter(sub, plus, colors) {
     if !is_number(sub) or !is_number(plus)
@@ -1304,7 +1311,7 @@ class ImageResource {
    * Makes an image smooter based on the specified weight. If 
    * weight is not given, it defaults to `1`.
    * 
-   * @param {number} weight
+   * @param number weight
    */
   smooth(weight) {
     if weight == nil weight = 1
@@ -1332,7 +1339,7 @@ class ImageResource {
    * Applies a blur to the image. If the type is not given, a 
    * Guassian blur will be applied.
    * 
-   * @param {number} type
+   * @param number type
    */
   blur(type) {
     if type == nil type = blurs.BLUR_GAUSSIAN
@@ -1376,10 +1383,10 @@ class ImageResource {
    * Same as `grayscale()` except this allows you to specify the 
    * output color.
    * 
-   * @param {number} r
-   * @param {number} g
-   * @param {number} b
-   * @param {number} a
+   * @param number r
+   * @param number g
+   * @param number b
+   * @param number a
    */
   color(r, g, b, a) {
     if !is_number(r) or !is_number(g) or !is_number(b) or !is_number(a) {
@@ -1393,7 +1400,7 @@ class ImageResource {
    * Changes the contrast of the image based on the level set 
    * in _contrast_.
    * 
-   * @param {number} contrast
+   * @param number contrast
    */
   contrast(contrast) {
     if !is_number(contrast)
@@ -1406,7 +1413,7 @@ class ImageResource {
    * Changes the brightness of the image based on the level set 
    * in _brightness_.
    * 
-   * @param {number} brightness
+   * @param number brightness
    */
   brightness(brightness) {
     if !is_number(brightness)
@@ -1421,10 +1428,10 @@ class ImageResource {
    * Sets the rectangular clipping region beyond which no pixels 
    * will be drawn in the image.
    * 
-   * @param {number} x1
-   * @param {number} y1
-   * @param {number} x2
-   * @param {number} y2
+   * @param number x1
+   * @param number y1
+   * @param number x2
+   * @param number y2
    */
   set_clip(x1, y1, x2, y2) {
     if !is_number(x1) or !is_number(y1) or !is_number(x2) or !is_number(y2) {
@@ -1441,7 +1448,7 @@ class ImageResource {
    * indicates the x1, y1, x2, and y2 of the clipping region in 
    * the image.
    * 
-   * @return {list<number>}
+   * @returns list<number>
    */
   get_clip() {
     return _imagine.getclip(self._ptr)
@@ -1450,8 +1457,8 @@ class ImageResource {
   /**
    * Sets the resolution of the the image across both axis.
    * 
-   * @param {number} res_x
-   * @param {number} res_y
+   * @param number res_x
+   * @param number res_y
    */
   set_resolution(res_x, res_y) {
     if !is_number(res_x) or !is_number(res_y)
@@ -1482,9 +1489,9 @@ class ImageResource {
    * The second argument `colors_wanted` controls the number of 
    * colors that should be kept in the palette.
    * 
-   * @param {bool} dither
-   * @param {number} colors_wanted
-   * @returns {bool} - `true` if successful, otherwise `false`.
+   * @param bool dither
+   * @param number colors_wanted
+   * @returns bool - `true` if successful, otherwise `false`.
    */
   true_color_to_palette(dither, colors_wanted) {
     if !is_bool(dither_flag)
@@ -1502,7 +1509,7 @@ class ImageResource {
   /**
    * Converts a palette based image to true color.
    * 
-   * @returns {bool} - `true` if successful, otherwise `false`.
+   * @returns bool - `true` if successful, otherwise `false`.
    */
   palette_to_true_color() {
     var result = _imagine.palettetotruecolor(self._ptr)
@@ -1518,8 +1525,8 @@ class ImageResource {
    * true color image as the function will attempt to make the color 
    * of the image given if the current image is a paletted image.
    * 
-   * @param {ImageResource} image
-   * @returns {bool} - `true` if successful, otherwise `false`.
+   * @param ImageResource image
+   * @returns bool - `true` if successful, otherwise `false`.
    */
   match_color(image) {
     if !instance_of(image, ImageResource) {
@@ -1553,8 +1560,8 @@ class ImageResource {
    * var same_width = !(result & CMP_SIZE_X)
    * ```
    * 
-   * @param {ImageResource} image
-   * @returns {number}
+   * @param ImageResource image
+   * @returns number
    */
   compare(image) {
     if !instance_of(image, ImageResource) {
@@ -1574,8 +1581,8 @@ class ImageResource {
    * compression (smallest files) but takes a long time to compress, and
    * 10 selects the default compiled into the zlib library.
    * 
-   * @param {string|file} dest
-   * @param {number} quality
+   * @param string|file dest
+   * @param number quality
    */
   export_png(dest, quality) {
     if quality == nil quality = 10
@@ -1607,8 +1614,8 @@ class ImageResource {
    * a little loss with JPEG). 0 is lowest. 10 is about the 
    * lowest useful setting.
    * 
-   * @param {string|file} dest
-   * @param {number} quality
+   * @param string|file dest
+   * @param number quality
    */
   export_jpeg(dest, quality) {
     if quality == nil quality = 100
@@ -1640,8 +1647,8 @@ class ImageResource {
    * a little loss with BMP). 0 is lowest. 10 is about the 
    * lowest useful setting.
    * 
-   * @param {string|file} dest
-   * @param {number} quality
+   * @param string|file dest
+   * @param number quality
    */
   export_bmp(dest, quality) {
     if quality == nil quality = 100
@@ -1670,8 +1677,8 @@ class ImageResource {
    * Saves the image to file with the WBMP format using the 
    * given foreground color.
    * 
-   * @param {string|file} dest
-   * @param {number} foreground
+   * @param string|file dest
+   * @param number foreground
    */
   export_wbmp(dest, foreground) {
     if foreground == nil foreground = self.allocate_color(0, 0, 0)
@@ -1696,8 +1703,8 @@ class ImageResource {
    * Saves the image to file with the WEBP format using the 
    * given quantization.
    * 
-   * @param {string|file} dest
-   * @param {number} quantization
+   * @param string|file dest
+   * @param number quantization
    */
   export_webp(dest, quantization) {
     if quantization == nil quantization = quants.QUANT_DEFAULT
@@ -1721,7 +1728,7 @@ class ImageResource {
   /**
    * Saves the image to file with the TIFF format.
    * 
-   * @param {string|file} dest
+   * @param string|file dest
    */
   export_tiff(dest) {
     if !is_string(dest) and !is_file(dest) 
@@ -1745,9 +1752,9 @@ class ImageResource {
    * a little loss with JPEG). 0 is lowest. 10 is about the 
    * lowest useful setting.
    * 
-   * @param {string|file} dest
-   * @param {number} quality
-   * @param {number} speed - Default = 1
+   * @param string|file dest
+   * @param number quality
+   * @param number speed - Default = 1
    */
   export_avif(dest, quality, speed) {
     if quality == nil quality = 100
@@ -1780,7 +1787,7 @@ class ImageResource {
   /**
    * Returns the raw image resource pointer.
    * 
-   * @returns {ptr}
+   * @returns ptr
    */
   get_pointer() {
     return self._ptr

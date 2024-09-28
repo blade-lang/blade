@@ -140,7 +140,7 @@ def _get_sequence(v, bg) {
  * @param string value
  * @param int? color
  * @param int? bg
- * @return string
+ * @returns string
  */
 def text(value, color, bg) {
   return _get_sequence(color, bg) + value + _get_sequence(0)
@@ -152,7 +152,7 @@ def text(value, color, bg) {
  * @param int r
  * @param int g
  * @param int b
- * @return number
+ * @returns number
  */
 def rgb_to_ansi256(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
@@ -174,7 +174,7 @@ def rgb_to_ansi256(r, g, b) {
  * Converts ANSI-256 color number to ANSI-16 color number.
  * 
  * @param int code
- * @return number
+ * @returns number
  */
 def ansi256_to_ansi(code) {
   if !is_int(code)
@@ -212,7 +212,7 @@ def ansi256_to_ansi(code) {
  * Converts the hexadecimal string _h_ to its RGBA component
  * 
  * @param string h
- * @return list
+ * @returns list
  */
 def hex_to_rgb(h) {
   if !is_string(h)
@@ -251,7 +251,7 @@ def hex_to_rgb(h) {
  * Converts the given hexadecimal color to its ANSI-256 number.
  * 
  * @param string color
- * @return number
+ * @returns number
  */
 def hex_to_ansi256(color) {
   if !is_string(color)
@@ -266,7 +266,7 @@ def hex_to_ansi256(color) {
  * 
  * @note For use with `text()`, this should be prefered over `hex_to_ansi256`
  * @param string color
- * @return number
+ * @returns number
  */
 def hex_to_ansi(color) {
   if !is_string(color)
@@ -281,7 +281,7 @@ def hex_to_ansi(color) {
  * @note For use with `text()`, this should be prefered over `hex_to_ansi256` and `hex_to_ansi`
  * @note _color_ can include the '#' character. E.g. `#ff0`.
  * @param string color
- * @return number
+ * @returns number
  */
 def hex(color) {
   if !is_string(color)
@@ -297,7 +297,7 @@ def hex(color) {
  * @param number r
  * @param number g
  * @param number b
- * @return number
+ * @returns number
  */
 def rgb(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
@@ -311,7 +311,7 @@ def rgb(r, g, b) {
  * @param number h
  * @param number s
  * @param number l
- * @return number
+ * @returns number
  */
 def hsl(h, s, l) {
   if !is_number(h) or !is_number(s) or !is_number(l)
@@ -328,7 +328,7 @@ def hsl(h, s, l) {
  * @param number h
  * @param number s
  * @param number v
- * @return number
+ * @returns number
  */
 def hsv(h, s, v) {
   if !is_number(h) or !is_number(s) or !is_number(v)
@@ -345,7 +345,7 @@ def hsv(h, s, v) {
  * @param number h
  * @param number w
  * @param number b
- * @return number
+ * @returns number
  */
 def hwb(h, w, b) {
   if !is_number(h) or !is_number(w) or !is_number(b)
@@ -363,7 +363,7 @@ def hwb(h, w, b) {
  * @param number m
  * @param number y
  * @param number k
- * @return number
+ * @returns number
  */
 def cmyk(c, m, y, k) {
   if !is_number(c) or !is_number(m) or !is_number(y) or !is_number(k)
@@ -380,7 +380,7 @@ def cmyk(c, m, y, k) {
  * @param number x
  * @param number y
  * @param number z
- * @return number
+ * @returns number
  */
 def xyz(x, y, z) {
   if !is_number(x) or !is_number(y) or !is_number(z)
@@ -398,7 +398,7 @@ def xyz(x, y, z) {
  * @param int g
  * @param int b
  * @param int? a
- * @return string
+ * @returns string
  */
 def rgb_to_hex(r, g, b, a) {
   if !is_int(r) or !is_int(g) or !is_int(b) or (a != nil and !is_int(a))
@@ -413,7 +413,7 @@ def rgb_to_hex(r, g, b, a) {
  * @param int r
  * @param int g
  * @param int b
- * @return list[float]
+ * @returns list[float]
  */
 def rgb_to_hsl(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
@@ -453,7 +453,7 @@ def rgb_to_hsl(r, g, b) {
  * @param int r
  * @param int g
  * @param int b
- * @return list[float]
+ * @returns list[float]
  */
 def rgb_to_hsv(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
@@ -486,7 +486,7 @@ def rgb_to_hsv(r, g, b) {
  * @param int r
  * @param int g
  * @param int b
- * @return list[float]
+ * @returns list[float]
  */
 def rgb_to_hwb(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
@@ -504,7 +504,7 @@ def rgb_to_hwb(r, g, b) {
  * @param int r
  * @param int g
  * @param int b
- * @return list[float]
+ * @returns list[float]
  */
 def rgb_to_cmyk(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
@@ -528,7 +528,7 @@ def rgb_to_cmyk(r, g, b) {
  * @param int r
  * @param int g
  * @param int b
- * @return list[float]
+ * @returns list[float]
  */
 def rgb_to_xyz(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
@@ -555,7 +555,7 @@ def rgb_to_xyz(r, g, b) {
  * @param int r
  * @param int g
  * @param int b
- * @return list[float]
+ * @returns list[float]
  */
 def rgb_to_lab(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
@@ -586,7 +586,7 @@ def rgb_to_lab(r, g, b) {
  * @param number h
  * @param number s
  * @param number l
- * @return list[float]
+ * @returns list[float]
  */
 def hsl_to_rgb(h, s, l) {
   if !is_number(h) or !is_number(s) or !is_number(l)
@@ -641,7 +641,7 @@ def hsl_to_rgb(h, s, l) {
  * @param number h
  * @param number s
  * @param number l
- * @return list[float]
+ * @returns list[float]
  */
 def hsl_to_hsv(h, s, l) {
   if !is_number(h) or !is_number(s) or !is_number(l)
@@ -660,7 +660,7 @@ def hsl_to_hsv(h, s, l) {
  * @param number h
  * @param number s
  * @param number v
- * @return list[float]
+ * @returns list[float]
  */
 def hsv_to_rgb(h, s, v) {
   if !is_number(h) or !is_number(s) or !is_number(v)
@@ -694,7 +694,7 @@ def hsv_to_rgb(h, s, v) {
  * @param number h
  * @param number s
  * @param number v
- * @return list[float]
+ * @returns list[float]
  */
 def hsv_to_hsl(h, s, v) {
   if !is_number(h) or !is_number(s) or !is_number(v)
@@ -721,7 +721,7 @@ def hsv_to_hsl(h, s, v) {
  * @param number h
  * @param number w
  * @param number b
- * @return list[float]
+ * @returns list[float]
  */
 def hwb_to_rgb(h, w, b) {
   if !is_number(h) or !is_number(w) or !is_number(b)
@@ -767,7 +767,7 @@ def hwb_to_rgb(h, w, b) {
  * @param number m
  * @param number y
  * @param number k
- * @return list[float]
+ * @returns list[float]
  */
 def cmyk_to_rgb(c, m, y, k) {
   if !is_number(c) or !is_number(m) or !is_number(y) or !is_number(k)
@@ -791,7 +791,7 @@ def cmyk_to_rgb(c, m, y, k) {
  * @param number x
  * @param number y
  * @param number z
- * @return list[float]
+ * @returns list[float]
  */
 def xyz_to_rgb(x, y, z) {
   if !is_number(x) or !is_number(y) or !is_number(z)

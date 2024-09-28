@@ -134,9 +134,9 @@ class TLSSocket {
   var receive_timeout = -1
 
   /**
-   * @param {Socket} socket
-   * @param {SSLContext?} context
-   * @param {SSL?} ssl
+   * @param Socket socket
+   * @param SSLContext? context
+   * @param SSL? ssl
    * @constructor
    */
   TLSSocket(socket, context, ssl) {
@@ -161,7 +161,7 @@ class TLSSocket {
    * @param string host
    * @param int port
    * @param int? timeout: Default is 300,000ms (i.e. 300 seconds)
-   * @return bool
+   * @returns bool
    */
   connect(host, port, timeout) {
     if self._socket.connect(host, port, timeout) {
@@ -178,7 +178,7 @@ class TLSSocket {
    * 
    * @param int port
    * @param string? host
-   * @return bool
+   * @returns bool
    */
   bind(port, host) {
     return self._socket.bind(port, host)
@@ -189,9 +189,9 @@ class TLSSocket {
    * the file is read and the resultant bytes of the file content is streamed to the socket.
    * 
    * @note the flags parameter is currently redundant and is kept only to remanin compatible with future plans for this method.
-   * @param {string|bytes|file} message
+   * @param string|bytes|file message
    * @param int? flags
-   * @return number greater than -1 if successful indicating the total number of bytes sent or -1 if it fails.
+   * @returns number greater than -1 if successful indicating the total number of bytes sent or -1 if it fails.
    */
   send(message, flags) {
     if !self._ssl 
@@ -209,12 +209,12 @@ class TLSSocket {
    * @note the flags parameter is currently redundant and is kept only to remanin compatible with future plans for this method.
    * @param int? length
    * @param int? flags
-   * @return string
+   * @returns string
    */
   receive(length, flags) {
     if !self._ssl
       return self._socket.receive(length, flags)
-    return self._ssl.read(length)
+    return self._ssl.read(length, self._socket.is_blocking)
   }
 
   /**
@@ -227,7 +227,7 @@ class TLSSocket {
    * 
    * @note Only use this function after a call to `receive()` has succeeded.
    * @param int? length: Default value is 1024.
-   * @return string
+   * @returns string
    */
   read(length) {
     return self.receive(length)
@@ -247,7 +247,7 @@ class TLSSocket {
    * 
    * @note listen() call applies only to sockets of type `SOCK_STREAM` (which is the default).
    * @param int? queue_length: Default value is `SOMAXCONN`.
-   * @return bool
+   * @returns bool
    */
   listen(queue_length) {
     return self._socket.listen(queue_length)
@@ -264,7 +264,7 @@ class TLSSocket {
    * 
    * The accepted socket may not be used to accept more connections.  The original socket remains open.
    * 
-   * @return TLSSocket
+   * @returns TLSSocket
    */
   accept() {
     var s = self._socket.accept()
@@ -284,7 +284,7 @@ class TLSSocket {
   /**
    * Closes the socket.
    * 
-   * @return bool
+   * @returns bool
    */
   close() {
     if self._ssl {
@@ -299,7 +299,7 @@ class TLSSocket {
    * The shutdown() call causes all or part of a full-duplex connection on the socket associated with 
    * socket to be shut down.
    * 
-   * @return bool
+   * @returns bool
    */
   shutdown() {
     if self._ssl {
@@ -315,7 +315,7 @@ class TLSSocket {
    * @note Only `SO_` variables are valid option types.
    * @param int option
    * @param any value
-   * @return bool
+   * @returns bool
    */
   set_option(option, value) {
     return self._socket.set_option(option, value)
@@ -325,7 +325,7 @@ class TLSSocket {
    * Gets the options set on the current socket.
    * 
    * @param int option
-   * @return any
+   * @returns any
    */
   get_option(option) {
     return self._socket.get_option(option)
@@ -336,7 +336,7 @@ class TLSSocket {
    * (default) and `false` for non-blocking.
    * 
    * @param bool mode
-   * @return bool
+   * @returns bool
    */
   set_blocking(mode) {
     return self._socket.set_blocking(mode)
@@ -346,7 +346,7 @@ class TLSSocket {
    * Returns a dictionary containing the address, port and family of the current socket or an 
    * empty dictionary if the socket information could not be retrieved.
    * 
-   * @return dictionary
+   * @returns dictionary
    */
   info() {
     return self._socket.info()
@@ -355,7 +355,7 @@ class TLSSocket {
   /**
    * Returns the underlying Socket instance.
    * 
-   * @return {Socket}
+   * @returns Socket
    */
   get_socket() {
     return self._socket
@@ -364,7 +364,7 @@ class TLSSocket {
   /**
    * Returns the underlying SSLContext instance.
    * 
-   * @return {SSLContext}
+   * @returns SSLContext
    */
   get_context() {
     return self._context
@@ -373,7 +373,7 @@ class TLSSocket {
   /**
    * Returns the underlying SSL instance
    * 
-   * @return {SSL}
+   * @returns SSL
    */
   get_ssl() {
     return self._ssl
@@ -382,7 +382,7 @@ class TLSSocket {
   /**
    * Sets the underlying SSL context to use.
    * 
-   * @param {SSLContext} context
+   * @param SSLContext context
    */
   set_context(context) {
     if !instance_of(content, SSLContext)
@@ -399,9 +399,9 @@ class TLSSocket {
 /**
  * Returns a new instance of a TLSSocket.
  * 
- * @param {Socket} socket
- * @param {SSLContext?} context
- * @param {SSL?} ssl
+ * @param Socket socket
+ * @param SSLContext? context
+ * @param SSL? ssl
  * @default
  */
 def socket(socket, context, ssl) {

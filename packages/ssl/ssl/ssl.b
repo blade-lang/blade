@@ -3,6 +3,8 @@
 import _ssl
 import .context { SSLContext }
 
+import date
+
 
 /**
  * SSL interface class
@@ -10,7 +12,7 @@ import .context { SSLContext }
 class SSL {
 
   /**
-   * @param {SSLContext} context
+   * @param SSLContext context
    * @constructor
    */
   SSL(context) {
@@ -38,7 +40,7 @@ class SSL {
    * Returns the current socket file descriptor.
    * It returns `-1` on failure or a positive integer on success.
    * 
-   * @return number
+   * @returns number
    */
   get_fd() {
     return _ssl.get_fd(self._ptr)
@@ -48,7 +50,7 @@ class SSL {
    * Sets the socket file descriptor for this SSL.
    * 
    * @param int fd
-   * @return bool
+   * @returns bool
    */
   set_fd(fd) {
     if !is_int(fd)
@@ -61,7 +63,7 @@ class SSL {
    * Begins accepting data on SSL and returns `true` if successful or 
    * `false` otherwise.
    * 
-   * @return bool
+   * @returns bool
    */
   accept() {
     return _ssl.accept(self._ptr) == 1
@@ -70,7 +72,7 @@ class SSL {
   /**
    * Connects to an SSL server instance.
    * 
-   * @return bool
+   * @returns bool
    * @throws
    */
   connect() {
@@ -93,8 +95,8 @@ class SSL {
    * Writes data to the current I/O stream and return an integer representing 
    * the total bytes written.
    * 
-   * @param {string|bytes} data
-   * @return int 
+   * @param string|bytes data
+   * @returns int 
    */
   write(data) {
     if !is_string(data) and !is_bytes(data)
@@ -114,14 +116,19 @@ class SSL {
    * till no data is available in the stream.
    * 
    * @param int? length: Default value is -1
-   * @return string
+   * @param bool? is_blocking: Default value is false
+   * @returns string
    */
-  read(length) {
+  read(length, is_blocking) {
     if !length length = -1
-    if !is_int(length)
-      die Exception('integer expected')
+    if is_blocking == nil is_blocking = false
     
-    var result = _ssl.read(self._ptr, length)
+    if !is_int(length)
+      die Exception('integer expected in argument 1')
+    if !is_bool(is_blocking)
+      die Exception('boolean expected in argument 2')
+    
+    var result = _ssl.read(self._ptr, length, is_blocking)
     if result == nil {
       die Exception(self.error())
     }
@@ -133,7 +140,7 @@ class SSL {
    * Returns the last SSL error number
    * 
    * @param int? code
-   * @return int
+   * @returns int
    */
   error(code) {
     if !code code = -1
@@ -154,10 +161,64 @@ class SSL {
    * to be set properly.
    * 
    * @param string name
-   * @return bool
+   * @returns bool
    */
   set_tlsext_host_name(name) {
     return _ssl.set_tlsext_host_name(self._ptr, name)
+  }
+
+  _parse_cert_time(time) {
+    if time.length() > 13 {
+      # it uses four digit year e.g.20250728235959Z
+      return date(
+        to_number(time[0,4]), # year
+        to_number(time[4,6]), # month
+        to_number(time[6,8]), # day
+        to_number(time[8,10]), # hour
+        to_number(time[10,12]), # minute
+        to_number(time[12,14]) # second
+      )
+    } else {
+      # it uses two digit year e.g. 250728235959Z
+      return date(
+        to_number(time[0,2]) + 2000, # year
+        to_number(time[2,4]), # month
+        to_number(time[4,6]), # day
+        to_number(time[6,8]), # hour
+        to_number(time[8,10]), # minute
+        to_number(time[10,12]) # second
+      )
+    }
+  }
+
+  /**
+   * Returns informations about the peer certificate in a dictionary.
+   * 
+   * The returned information includes:
+   * 
+   * - `subject_name`
+   * - `issuer_name`
+   * - `serial_number`
+   * - `not_before`
+   * - `not_after`
+   * - `public_key`
+   * - `extensions`
+   * - `algorithm`
+   * 
+   * @returns dict
+   */
+  get_peer_certificate() {
+    var cert =  _ssl.get_peer_certificate(self._ptr)
+
+    if cert.not_before {
+      cert.not_before = self._parse_cert_time(cert.not_before)
+    }
+
+    if cert.not_after {
+      cert.not_after = self._parse_cert_time(cert.not_after)
+    }
+
+    return cert
   }
 
   /**
@@ -170,7 +231,7 @@ class SSL {
   /**
    * Returns the raw OpenSSl SSL pointer.
    * 
-   * @return ptr
+   * @returns ptr
    */
   get_pointer() {
     return self._ptr

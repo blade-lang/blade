@@ -64,9 +64,9 @@ class TLSServer < HttpServer {
   /**
    * Loads the given SSL/TLS certificate pairs for the given SSL/TLS context.
    * 
-   * @param {string|file} cert_file
-   * @param {string|file|nil} private_key_file
-   * @return bool
+   * @param string|file cert_file
+   * @param string|file|nil private_key_file
+   * @returns bool
    */
   load_certs(cert_file, private_key_file) {
     if !private_key_file private_key_file = cert_file

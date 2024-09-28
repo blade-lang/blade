@@ -23,7 +23,7 @@ import .token { * }
  * 
  * @param string source
  * @param string? path
- * @return ParseResult
+ * @returns ParseResult
  */
 def parse(source, path) {
   if !is_string(source)
@@ -46,7 +46,7 @@ def parse(source, path) {
  * 
  * @param string source
  * @param string? path
- * @return string
+ * @returns string
  */
 def json(source, path) {
   # return Exception('not yet implemented')

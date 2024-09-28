@@ -60,7 +60,7 @@ class InlineState {
   /**
    * Flush pending text.
    * 
-   * @return {Token}
+   * @returns Token
    */
   push_pending() {
     var token = _tkn.Token('text', '', 0)

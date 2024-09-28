@@ -17,7 +17,7 @@
  * @note method implemented as part of core language features
  * 
  * @param any value
- * @return string
+ * @returns string
  */
 def of(value) { 
   return typeof(value)
@@ -28,7 +28,7 @@ def of(value) {
  * otherwise returns false.
  * 
  * @param char value
- * @return bool
+ * @returns bool
  */
 def digit(value) {
   if !is_string(value) or !value.length() == 1
@@ -42,7 +42,7 @@ def digit(value) {
  * otherwise returns false.
  * 
  * @param char value
- * @return bool
+ * @returns bool
  */
 def alpha(value) {
   if !is_string(value) or !value.length() == 1
@@ -55,7 +55,7 @@ def alpha(value) {
  * Returns true if the value is an integer or false otherwise.
  * 
  * @param any value
- * @return bool
+ * @returns bool
  */
 def int(value) {
   return is_int(value)
@@ -65,7 +65,7 @@ def int(value) {
  * Returns true if the value is a boolean or false otherwise.
  * 
  * @param any value
- * @return bool
+ * @returns bool
  */
 def bool(value) {
   return is_bool(value)
@@ -77,7 +77,7 @@ def bool(value) {
  * @note this method also returns true for integers.
  * 
  * @param any value
- * @return bool
+ * @returns bool
  */
 def number(value) {
   return is_number(value)
@@ -87,7 +87,7 @@ def number(value) {
  * Returns true if the value is a single character or false otherwise.
  * 
  * @param any value
- * @return bool
+ * @returns bool
  */
 def char(value) {
   return is_string(value) and value.length() == 1
@@ -97,7 +97,7 @@ def char(value) {
  * Returns true if the value is a string or false otherwise.
  * 
  * @param any value
- * @return bool
+ * @returns bool
  */
 def string(value) {
   return is_string(value)
@@ -107,7 +107,7 @@ def string(value) {
  * Returns true if the value is a bytes or false otherwise.
  * 
  * @param any value
- * @return bool
+ * @returns bool
  */
 def bytes(value) {
   return is_bytes(value)
@@ -117,7 +117,7 @@ def bytes(value) {
  * Returns true if the value is a list or false otherwise.
  * 
  * @param any value
- * @return bool
+ * @returns bool
  */
 def list(value) {
   return is_list(value)
@@ -127,7 +127,7 @@ def list(value) {
  * Returns true if the value is a dictionary or false otherwise.
  * 
  * @param any value
- * @return bool
+ * @returns bool
  */
 def dict(value) {
   return is_dict(value)
@@ -137,7 +137,7 @@ def dict(value) {
  * Returns true if the value is an object or false otherwise.
  * 
  * @param any value
- * @return bool
+ * @returns bool
  */
 def object(value) {
   return is_object(value)
@@ -147,7 +147,7 @@ def object(value) {
  * Returns true if the value is a function or false otherwise.
  * 
  * @param any value
- * @return bool
+ * @returns bool
  */
 def function(value) {
   return is_function(value)
@@ -157,7 +157,7 @@ def function(value) {
  * Returns true if the value is a class or false otherwise.
  * 
  * @param any value
- * @return bool
+ * @returns bool
  */
 def is_a_class(value) {
   return is_class(value)
@@ -167,7 +167,7 @@ def is_a_class(value) {
  * Returns true if the value is a file or false otherwise.
  * 
  * @param any value
- * @return bool
+ * @returns bool
  */
 def file(value) {
   return is_file(value)
@@ -177,7 +177,7 @@ def file(value) {
  * Returns true if the value is an iterable or false otherwise.
  * 
  * @param any value
- * @return bool
+ * @returns bool
  */
 def iterable(value) {
   return is_iterable(value)
@@ -188,7 +188,7 @@ def iterable(value) {
  * otherwise.
  * 
  * @param any value
- * @return bool
+ * @returns bool
  */
 def callable(value) {
   return is_callable(value)
@@ -200,7 +200,7 @@ def callable(value) {
  * 
  * @param any value
  * @param class type
- * @return bool
+ * @returns bool
  */
 def instance(value, type) {
   if !is_class(type)
@@ -226,7 +226,7 @@ class Convert {
    * Converts the value into an integer.
    * 
    * @note classes may override the return value by declaring a `to_int()` function.
-   * @return bool
+   * @returns bool
    */
   to_int() {
     return to_int(self.value)
@@ -236,7 +236,7 @@ class Convert {
    * Converts the value into a number.
    * 
    * @note classes may override the return value by declaring a `to_number()` function.
-   * @return bool
+   * @returns bool
    */
   to_number() {
     return to_number(self.value)
@@ -246,7 +246,7 @@ class Convert {
    * Converts the value into a string.
    * 
    * @note classes may override the return value by declaring a `to_string()` function.
-   * @return bool
+   * @returns bool
    */
   to_string() {
     return to_string(self.value)
@@ -256,7 +256,7 @@ class Convert {
    * Convertss the value into a boolean.
    * 
    * @note classes may override the return value by declaring a `to_bool()` function.
-   * @return bool
+   * @returns bool
    */
   to_bool() {
     return to_bool(self.value)
@@ -266,7 +266,7 @@ class Convert {
    * Converts the value into a list.
    * 
    * @note classes may override the return value by declaring a `to_list()` function.
-   * @return bool
+   * @returns bool
    */
   to_list() {
     return to_list(self.value)
@@ -276,7 +276,7 @@ class Convert {
    * Converts the value value into a dictionary.
    * 
    * @note classes may override the return value by declaring a `to_dict()` function.
-   * @return bool
+   * @returns bool
    */
   to_dict() {
     return to_dict(self.value)

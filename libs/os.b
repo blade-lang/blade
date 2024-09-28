@@ -112,7 +112,7 @@ var DT_WHT = _os.DT_WHT
  * ```
  * 
  * @param string cmd
- * @return string
+ * @returns string
  */
 def exec(cmd) {
   return _os.exec(cmd)
@@ -137,7 +137,7 @@ def exec(cmd) {
  * release: 21.1.0, machine: arm64}
  * ```
  * 
- * @return dict
+ * @returns dict
  */
 def info() {
   return _os.info()
@@ -154,7 +154,7 @@ def sleep(duration) {
 
 /**
  * Returns the given environment variable if exists or nil otherwise
- * @return string
+ * @returns string
  * 
  * Example,
  * 
@@ -165,7 +165,7 @@ def sleep(duration) {
  * ```
  * 
  * @param string name
- * @return {string|nil}
+ * @returns string|nil
  */
 def get_env(name) {
   return _os.getenv(name)
@@ -201,7 +201,7 @@ def get_env(name) {
  * @param string name
  * @param string value
  * @param bool? overwrite: Default value is `false`.
- * @return string
+ * @returns string
  */
 def set_env(name, value, overwrite) {
   if overwrite == nil overwrite = false
@@ -217,7 +217,7 @@ def set_env(name, value, overwrite) {
  * @param string path
  * @param number? permission: Default value is `0c777`
  * @param bool? recursive: Default value is `true`.
- * @return boolean
+ * @returns boolean
  */
 def create_dir(path, permission, recursive) {
 
@@ -251,7 +251,7 @@ def create_dir(path, permission, recursive) {
 
 /**
  * Scans the given directory and returns a list of all matched files
- * @return list[string]
+ * @returns list[string]
  * 
  * Example,
  * 
@@ -263,7 +263,7 @@ def create_dir(path, permission, recursive) {
  * @note `.` indicates current directory and can be used as argument to _os.path_ as well.
  * @note `..` indicates parent directory and can be used as argument to _os.path_ as well.
  * @param string path
- * @return List[string]
+ * @returns List[string]
  */
 def read_dir(path) {
   return _os.readdir(path)
@@ -276,7 +276,7 @@ def read_dir(path) {
  * 
  * @param string path
  * @param number mode
- * @return boolean
+ * @returns boolean
  */
 def chmod(path, mode) {
   return _os.chmod(path, mode)
@@ -286,7 +286,7 @@ def chmod(path, mode) {
  * Returns `true` if the path is a directory or `false` otherwise.
  * 
  * @param string path
- * @return bool
+ * @returns bool
  */
 def is_dir(path) {
   return _os.isdir(path)
@@ -298,7 +298,7 @@ def is_dir(path) {
  * 
  * @param string path
  * @param bool recursive: Default value is `false`.
- * @return bool
+ * @returns bool
  */
 def remove_dir(path, recursive) {
   if recursive != nil {
@@ -313,7 +313,7 @@ def remove_dir(path, recursive) {
 /**
  * Returns the current working directory.
  * 
- * @return string
+ * @returns string
  */
 def cwd() {
   return _os.cwd()
@@ -323,7 +323,7 @@ def cwd() {
  * Navigates the working directory into the specified path.
  * 
  * @param string path
- * @return bool
+ * @returns bool
  */
 def change_dir(path) {
   return _os.chdir(path)
@@ -333,7 +333,7 @@ def change_dir(path) {
  * Returns `true` if the directory exists or `false` otherwise.
  * 
  * @param string path
- * @return bool
+ * @returns bool
  */
 def dir_exists(path) {
   return _os.exists(path)
@@ -343,7 +343,7 @@ def dir_exists(path) {
  * Exit the current process and quits the Blade runtime.
  * 
  * @param number code
- * @return
+ * @returns
  */
 def exit(code) {
   _os.exit(code)
@@ -361,7 +361,7 @@ def exit(code) {
  * ```
  * 
  * @param string... paths
- * @return string
+ * @returns string
  */
 def join_paths(...) {
   var result = ''
@@ -389,7 +389,7 @@ def join_paths(...) {
  * 
  * @note if the path is a file, see `abs_path()`.
  * @param string path
- * @return string
+ * @returns string
  */
 def real_path(path) {
   return _os.realpath(path)
@@ -400,7 +400,7 @@ def real_path(path) {
  * 
  * @note unlike real_path(), this function returns full path for a file.
  * @param string path
- * @return string
+ * @returns string
  */
 def abs_path(path) {
 
@@ -428,7 +428,7 @@ def abs_path(path) {
  * signifying the current directory.
  * 
  * @param string path
- * @return string
+ * @returns string
  */
 def dir_name(path) {
   return _os.dirname(path)
@@ -441,7 +441,7 @@ def dir_name(path) {
  * is returned.
  * 
  * @param string path
- * @return string
+ * @returns string
  */
 def base_name(path) {
   return _os.basename(path)

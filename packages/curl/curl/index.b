@@ -92,7 +92,7 @@ var version = _curl.version
  * says HTTP applications may use.
  * 
  * @param string date_string
- * @return number
+ * @returns number
  * @static
  */
 def get_time(date_string) {

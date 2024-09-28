@@ -5,7 +5,7 @@
  */
 class ParseException < Exception {
   /**
-   * @param {Token} token
+   * @param Token token
    * @param string message
    * @constructor 
    */

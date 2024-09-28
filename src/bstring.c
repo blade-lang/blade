@@ -963,7 +963,7 @@ DECLARE_STRING_METHOD(split) {
     use_regex = AS_BOOL(args[1]);
   }
 
-  if (string->length == 0 && delimeter->length == 0 || string->length == 0 || delimeter->length == 0) {
+  if ((string->length == 0 && delimeter->length == 0)) {
     RETURN_OBJ(new_list(vm)); // empty string matches empty string to empty list
   }
 
@@ -973,14 +973,29 @@ DECLARE_STRING_METHOD(split) {
   if ((int)compile_options == -1) {
     // not a regex, do a regular split
     if (delimeter->length > 0) {
-      // int start = 0;
-      for(int start = 0, i = 0; i <= string->length; i++) {
-        // match found.
-        if(memcmp(string->chars + i, delimeter->chars, delimeter->length) == 0 || i == string->length) {
-          write_list(vm, list, STRING_L_VAL(string->chars + start, i - start));
-          i += delimeter->length;
-          start = i;
-        }
+      char* start = string->chars;
+      char* end = strstr(start, delimeter->chars);
+
+      while (end != NULL) {
+        int len = end - start;
+        char *res = malloc((len + 1) * sizeof(char));
+        memcpy(res, start, len);
+        res[len] = '\0';
+
+        write_list(vm, list, GC_T_STRING(res, len));
+
+        start = end + strlen(delimeter->chars);
+        end = strstr(start, delimeter->chars);
+      }
+
+      // Last substring
+      int len = strlen(start);
+      if(len > 0) {
+        char *res = malloc((len + 1) * sizeof(char));
+        memcpy(res, start, len);
+        res[len] = '\0';
+        
+        write_list(vm, list, GC_T_STRING(res, len));
       }
     } else {
       int length = string->is_ascii ? string->length : string->utf8_length;
@@ -1033,6 +1048,7 @@ DECLARE_STRING_METHOD(split) {
     // add first set of matches to response
     for (int i = 0; i < rc; i++) {
       PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
+      PCRE2_SPTR substring_start = subject + o_vector[2 * i];
       PCRE2_SIZE subject_end = o_vector[2 * i];
       if(substring_length == 0) break;
 
@@ -1042,7 +1058,7 @@ DECLARE_STRING_METHOD(split) {
 
       // exit on end
       if(total_length == 0) {
-        write_list(vm, list, STRING_L_VAL("", 0));
+        write_list(vm, list, EMPTY_STRING_VAL);
         break;
       }
     }
@@ -1067,19 +1083,21 @@ DECLARE_STRING_METHOD(split) {
       bool broke_out_of_loop = false;
       for (int i = 0; i < rc; i++) {
         PCRE2_SIZE substring_length = o_vector[2 * i + 1] - o_vector[2 * i];
-
+        PCRE2_SPTR substring_start = subject + o_vector[2 * i];
         PCRE2_SIZE subject_end = o_vector[2 * i];
-        if(subject_end == 0) {
+        
+        if(substring_length == 0 || subject_end == 0 || total_length == 0) {
           broke_out_of_loop = true;
           break;
         }
+
         write_list(vm, list, STRING_L_VAL((char *) subject, subject_end));
         subject += subject_end + substring_length; // skip the match
         total_length -= subject_end + substring_length; // decrement total length
 
         // exit on end
         if(total_length == 0) {
-          write_list(vm, list, STRING_L_VAL("", 0));
+          write_list(vm, list, EMPTY_STRING_VAL);
           break;
         }
       }
@@ -1087,7 +1105,7 @@ DECLARE_STRING_METHOD(split) {
       if(broke_out_of_loop) break;
     }
 
-    if(total_length > 0 && rc != PCRE2_ERROR_NOMATCH) {
+    if(total_length > 0) {
       write_list(vm, list, STRING_L_VAL((char *) subject, total_length));
     }
 

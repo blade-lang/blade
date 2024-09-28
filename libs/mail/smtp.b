@@ -45,7 +45,7 @@ class Transport {
    *    not. (Default: The value of __verify_host__)
    * - __timeout__: The request timeout in milliseconds. (Default: 30,000)
    * 
-   * @param {dict?} options
+   * @param dict? options
    * @constructor
    */
   Transport(options) {
@@ -93,8 +93,8 @@ class Transport {
   /**
    * Adds an email message to the list of messages to be sent.
    * 
-   * @param {Message} message
-   * @return {Transport}
+   * @param Message message
+   * @returns Transport
    */
   add_message(message) {
     self.messages.append(message)
@@ -104,7 +104,7 @@ class Transport {
   /**
    * Tests the connection to the SMTP server
    * 
-   * @return bool
+   * @returns bool
    */
   test_connection() {
     var curl = self._init()
@@ -119,8 +119,8 @@ class Transport {
   /**
    * Verifys an email address
    * 
-   * @param {string} address
-   * @return bool
+   * @param string address
+   * @returns bool
    */
   verify(address) {
     var curl = self._init()
@@ -137,7 +137,7 @@ class Transport {
    * Send the email messages and returns `true` if the message was successfully 
    * sent or `false` otherwise.
    * 
-   * @return bool
+   * @returns bool
    */
   send() {
     var response_codes = []
@@ -175,7 +175,7 @@ class Transport {
  * Returns a new instance of SMTP {Transport} with the given __options__.
  * 
  * @params {dict?} options See {Transport}
- * @return {Transport}
+ * @returns Transport
  */
 def smtp(options) {
   if options != nil and !is_dict(options)

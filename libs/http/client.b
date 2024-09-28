@@ -91,8 +91,8 @@ class HttpClient {
    * 
    * @param string uri
    * @param string? method: Default value is `GET`.
-   * @param {string|dict|nil} data
-   * @return HttpResponse
+   * @param string|dict|nil data
+   * @returns HttpResponse
    * @dies SocketException
    * @dies Exception
    */
@@ -138,7 +138,7 @@ class HttpClient {
    * Sends an Http GET request and returns an HttpResponse.
    * 
    * @param string url
-   * @return HttpResponse
+   * @returns HttpResponse
    * @dies Exception
    * @dies SocketExcepion
    * @dies HttpException
@@ -151,8 +151,8 @@ class HttpClient {
    * Sends an Http POST request and returns an HttpResponse.
    * 
    * @param string url
-   * @param {string|bytes|nil} data
-   * @return HttpResponse
+   * @param string|bytes|nil data
+   * @returns HttpResponse
    * @dies Exception
    * @dies SocketExcepion
    * @dies HttpException
@@ -165,8 +165,8 @@ class HttpClient {
    * Sends an Http PUT request and returns an HttpResponse.
    * 
    * @param string url
-   * @param {string|bytes|nil} data
-   * @return HttpResponse
+   * @param string|bytes|nil data
+   * @returns HttpResponse
    * @dies Exception
    * @dies SocketExcepion
    * @dies HttpException
@@ -179,7 +179,7 @@ class HttpClient {
    * Sends an Http DELETE request and returns an HttpResponse.
    * 
    * @param string url
-   * @return HttpResponse
+   * @returns HttpResponse
    * @dies Exception
    * @dies SocketExcepion
    * @dies HttpException

@@ -668,7 +668,7 @@ def _generate_salt(rounds) {
  * @param string str
  * @param number? salt_length
  * @dies Exception
- * @return string
+ * @returns string
  */
 def hash(str, salt_length) {
   if !is_string(str)
@@ -688,7 +688,7 @@ def hash(str, salt_length) {
  * @param string str
  * @param string known_hash
  * @dies Exception
- * @return bool
+ * @returns bool
  */
 def compare(str, known_hash) {
   if !is_string(str) or !is_string(known_hash)
@@ -717,7 +717,7 @@ def compare(str, known_hash) {
  * 
  * @param string hash
  * @dies Exception
- * @return number
+ * @returns number
  */
 def get_rounds(hash) {
   if !is_string(hash)
@@ -731,7 +731,7 @@ def get_rounds(hash) {
  * @note This function does not validate the hash.
  * @param string hash
  * @dies Exception
- * @return string
+ * @returns string
  */
 def get_salt(hash) {
   if !is_string(hash)

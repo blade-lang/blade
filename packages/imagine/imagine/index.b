@@ -18,13 +18,13 @@ import .image { * }
 /**
  * Compose a truecolor value from its components.
  * 
- *  @param {number?} r - The red channel (0-255) - Default: 0
- *  @param {number?} g - The green channel (0-255) - Default: 0
- *  @param {number?} b - The blue channel (0-255) - Default: 0
- *  @param {number?} a - The alpha channel (0-127, where 127 is 
+ *  @param number? r - The red channel (0-255) - Default: 0
+ *  @param number? g - The green channel (0-255) - Default: 0
+ *  @param number? b - The blue channel (0-255) - Default: 0
+ *  @param number? a - The alpha channel (0-127, where 127 is 
  *      fully transparent, and 0 is completely opaque) 
  *      - Default: 0.
- * @returns {number}
+ * @returns number
  */
 def true_color(r, g, b, a) {
   if r == nil r = 0
@@ -56,8 +56,8 @@ def true_color(r, g, b, a) {
  * - `b` - The blue channel value
  * - `a` - The alpha channel value
  * 
- * @param {number} color
- * @returns {dict}
+ * @param number color
+ * @returns dict
  */
 def decompose(color) {
   var r = (c & 0xFF0000) >> 16

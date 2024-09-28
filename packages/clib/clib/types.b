@@ -199,7 +199,7 @@ var function = _clib.closure
  * 
  * @note This function can also be used to define a C union or array.
  * @param any... type
- * @return type
+ * @returns type
  */
 def struct(...) {
   if __args__.length() == 0
@@ -227,7 +227,7 @@ def struct(...) {
  * 
  * @note This function can also be used to define a C union or array.
  * @param dictionary types
- * @return type
+ * @returns type
  */
 def named_struct(types) {
   if !is_dict(types)

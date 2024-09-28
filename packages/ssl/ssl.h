@@ -26,5 +26,10 @@
 #include <openssl/err.h>
 #include <openssl/pem.h>
 #include <openssl/ssl.h>
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
+#include <openssl/bn.h>  // for BN_bn2dec
+#include <openssl/asn1.h>
+#include <openssl/objects.h>
 
 #endif //BLADE_SSL_MODULE_H

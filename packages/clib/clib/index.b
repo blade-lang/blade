@@ -110,7 +110,7 @@ class Clib {
    * Retrieves the handle to a specific function in the shared library.
    * 
    * @param string name
-   * @return ptr
+   * @returns ptr
    */
   function(name) {
     if !is_string(name)
@@ -140,9 +140,9 @@ class Clib {
    * ```
    * 
    * @param string name
-   * @param {clib_type} return_type
-   * @param {clib_type...} types
-   * @return function
+   * @param clib_type return_type
+   * @param clib_type... types
+   * @returns function
    */
   define(name, return_type, ...) {
     if !is_string(name)
@@ -166,7 +166,7 @@ class Clib {
   /**
    * Returns a pointer to the underlying module.
    * 
-   * @return ptr
+   * @returns ptr
    */
   get_pointer() {
     return self._ptr
@@ -180,7 +180,7 @@ class Clib {
  * it will be automatically added.
  * 
  * @param string name
- * @return CLib
+ * @returns CLib
  */
 def load(name) {
   return Clib(name)
@@ -189,9 +189,9 @@ def load(name) {
 /**
  * Creates a new C value for the specified clib type with the given values.
  * 
- * @param {clib_type} type
- * @param {any...} values
- * @return bytes
+ * @param clib_type type
+ * @param any... values
+ * @returns bytes
  */
 def new(type, ...) {
   if __args__.length() == 0
@@ -213,9 +213,9 @@ def new(type, ...) {
  * automatically be returned with the values mapped to the names of the 
  * structure elements.
  * 
- * @param {clib_type} type
- * @param {string|bytes} data
- * @return {list|dictionary}
+ * @param clib_type type
+ * @param string|bytes data
+ * @returns list|dictionary
  */
 def get(type, data) {
   # Ensure a valid and non void clib pointer.
@@ -232,10 +232,10 @@ def get(type, data) {
  * Get the value at the given index of a pointer based 
  * on the given CLib type.
  * 
- * @param {ptr} pointer
- * @param {clib_type} type 
- * @param {number} index
- * @return any
+ * @param ptr pointer
+ * @param clib_type type 
+ * @param number index
+ * @returns any
  */
 def get_ptr_index(pointer, type, index) {
   return _clib.get_ptr_index(pointer, type, index)
@@ -245,11 +245,11 @@ def get_ptr_index(pointer, type, index) {
  * Sets the value at the given index of a pointer based 
  * on the given CLib type to the given value.
  * 
- * @param {ptr} pointer
- * @param {clib_type} type
- * @param {number} index
- * @param {any} value
- * @return any
+ * @param ptr pointer
+ * @param clib_type type
+ * @param number index
+ * @param any value
+ * @returns any
  */
 def set_ptr_index(pointer, type, index, value) {
   return _clib.set_ptr_index(pointer, type, index, value)
@@ -275,9 +275,9 @@ def set_ptr_index(pointer, type, index, value) {
  * ```
  * 
  * @param ptr handle
- * @param {clib_type} return_type
- * @param {clib_type...} arg_types
- * @return function
+ * @param clib_type return_type
+ * @param clib_type... arg_types
+ * @returns function
  */
 def function_handle(handle, return_type, ...) {
   if !reflect.is_ptr(handle)
@@ -338,10 +338,10 @@ def function_handle(handle, return_type, ...) {
  * > **NOTE:** A callback can only be passed to a parameter previously defined 
  * > as function.
  * 
- * @param {function} closure
- * @param {clib_type} return_type
- * @param {clib_type...} types
- * @return {clib_callback}
+ * @param function closure
+ * @param clib_type return_type
+ * @param clib_type... types
+ * @returns clib_callback
  */
 def create_callback(closure, return_type, ...) {
   return _clib.new_closure(closure, return_type, __args__)

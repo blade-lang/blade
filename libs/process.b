@@ -104,7 +104,7 @@ class PagedValue {
   /**
    * Returns `true` if the PagedValue is locked for updating or `false` otherwise.
    * 
-   * @return boolean
+   * @returns boolean
    * @note a PagedValue is locked if in an invalid state.
    */
   is_locked() {
@@ -179,8 +179,8 @@ class PagedValue {
    * Sets the value of the PagedValue to the given value. It returns the number of 
    * bytes written or `false` if the PagedValue is in an invalid state.
    * 
-   * @param {boolean|number|string|list|dictionary} value
-   * @return number | boolean
+   * @param boolean|number|string|list|dictionary value
+   * @returns number | boolean
    */
   set(value) {
     if self._ptr {
@@ -207,8 +207,8 @@ class PagedValue {
    * Locks the PagedValue for writing then sets the value to the given value and unlocks it. 
    * It returns the number of bytes written or `false` if the PagedValue is in an invalid state.
    * 
-   * @param {boolean|number|string|list|dictionary} value
-   * @return number | boolean
+   * @param boolean|number|string|list|dictionary value
+   * @returns number | boolean
    */
   locked_set(value) {
     if self._ptr {
@@ -223,7 +223,7 @@ class PagedValue {
   /**
    * Returns the value stored in the PagedValue or `nil` if no value has been set.
    * 
-   * @return any
+   * @returns any
    */
   get() {
     if self._ptr {
@@ -268,7 +268,7 @@ class PagedValue {
   /**
    * Returns the pointer to the raw memory paged location pointed to by the object.
    * 
-   * @return ptr
+   * @returns ptr
    */
   raw_pointer() {
     return _process.raw_pointer(self._ptr)
@@ -303,7 +303,7 @@ class Process {
    * if the process was intitalized with a PagedValue.
    * 
    * @param function fn
-   * @param {PageValue?} paged
+   * @param PageValue? paged
    * @constructor
    */
   Process(fn, paged) {
@@ -326,7 +326,7 @@ class Process {
    * Returns the ID of the process or `-1` if the process is in an invalid 
    * state or has not been started.
    * 
-   * @return number
+   * @returns number
    */
   id() {
     if self._ptr {
@@ -349,7 +349,7 @@ class Process {
    * Starts/runs the process. This function returns `true` or `false` if the 
    * process is in an invalid state.
    * 
-   * @return boolean
+   * @returns boolean
    */
   start() {
     if self._ptr {
@@ -386,7 +386,7 @@ class Process {
    * Awaits for the process to finish running and returns it's exit code or `-1` 
    * if the process is in an invalid state.
    * 
-   * @return number
+   * @returns number
    */
   await() {
     if self._ptr {
@@ -400,7 +400,7 @@ class Process {
   /**
    * Returns `true` if the process is running or `false` if not.
    * 
-   * @return boolean
+   * @returns boolean
    */
   is_alive() {
     return _process.is_alive(self._ptr)
@@ -410,7 +410,7 @@ class Process {
    * Kills the running process. Returns `true` if the process was successfully 
    * killed or `false` otherwise.
    * 
-   * @return boolean
+   * @returns boolean
    */
   kill() {
     if self._ptr {
@@ -429,7 +429,7 @@ class Process {
  * if the process was intitalized with a PagedValue.
  * 
  * @param function fn
- * @param {PageValue?} paged
+ * @param PageValue? paged
  * @default
  */
 def process(fn, paged) {

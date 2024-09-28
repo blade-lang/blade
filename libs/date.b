@@ -192,7 +192,7 @@ def _dim(year, month) {
  * seconds: 55, microseconds: 620290, is_dst: false, zone: UTC, gmt_offset: 0}
  * ```
  * 
- * @return dictionary
+ * @returns dictionary
  */
 def gmtime() {
   return _date.gmtime()
@@ -210,7 +210,7 @@ def gmtime() {
  * seconds: 35, microseconds: 598166, is_dst: false, zone: WAT, gmt_offset: 3600}
  * ```
  * 
- * @return dictionary
+ * @returns dictionary
  */
 def localtime() {
   return _date.localtime()
@@ -237,7 +237,7 @@ def localtime() {
  * @param number minute
  * @param number seconds
  * @param bool is_dst
- * @return number
+ * @returns number
  */
 def mktime(year, month, day, hour, minute, seconds, is_dst) {
   return _date.mktime(year, month, day, hour, minute, seconds, is_dst)
@@ -267,6 +267,7 @@ def mktime(year, month, day, hour, minute, seconds, is_dst) {
  * 
  * @serializable
  * @printable
+ * @number
  */
 class Date {
 
@@ -279,10 +280,11 @@ class Date {
    * @param number? hour
    * @param number? minute
    * @param number? seconds
+   * @param number? microseconds
    * @param bool? is_dst
    * @constructor 
    */
-  Date(year, month, day, hour, minute, seconds) {
+  Date(year, month, day, hour, minute, seconds, microseconds) {
 
     if year {
       self.year = year
@@ -301,6 +303,9 @@ class Date {
 
       if seconds self.seconds = seconds
       else self.seconds = 0
+
+      if microseconds self.microseconds = microseconds
+      else self.microseconds = 0
     
       # check for valid input values
       _check_date_fields(self.year, self.month, self.day, 
@@ -312,7 +317,6 @@ class Date {
       self.zone = 'UTC'
       self.is_dst = false
       self.gmt_offset = 0
-      self.microseconds = 0
 
     } else {
       var date = localtime()
@@ -344,7 +348,7 @@ class Date {
    * true
    * ```
    * 
-   * @return bool
+   * @returns bool
    */
   is_leap() {
     return _is_leap(self.year)
@@ -361,7 +365,7 @@ class Date {
    * 142
    * ```
    * 
-   * @return number
+   * @returns number
    */
   days_before_month(month) {
     assert month >= 1 and month <= 12, 'month must be in 1..12'
@@ -397,7 +401,7 @@ class Date {
    * ```
    * 
    * @param int year
-   * @return number
+   * @returns number
    */
   days_before_year(year) {
     assert is_int(year), 'integer expected'
@@ -431,7 +435,7 @@ class Date {
    * 30
    * ```
    * 
-   * @return number
+   * @returns number
    */
   days_in_month() {
     return _dim(self.year, self.month)
@@ -447,7 +451,7 @@ class Date {
    * 2
    * ```
    * 
-   * @return number
+   * @returns number
    */
   weekday() {
     var day = self.day, month = self.month, year = self.year
@@ -469,7 +473,7 @@ class Date {
    * 19
    * ```
    * 
-   * @return number
+   * @returns number
    */
   week_number() {
     var year = self.year
@@ -551,7 +555,7 @@ class Date {
    * ```
    * 
    * @param string format
-   * @return string
+   * @returns string
    */
   format(format) {
     var result = ''
@@ -716,7 +720,7 @@ class Date {
    * 'Sat, 05 Mar 2022 06:23:32 GMT'
    * ```
    * 
-   * @return string
+   * @returns string
    */
   http() {
     return self.format('D, d M Y h:i:s') + ' GMT'
@@ -732,7 +736,7 @@ class Date {
    * 2459345
    * ```
    * 
-   * @return number
+   * @returns number
    */
   jd() {
     # calculate the julian day i.e. Y-m-d value
@@ -752,19 +756,50 @@ class Date {
   /**
    * Returns unix `mktime` equivalent of the current date.
    * 
-   * @return number
+   * @returns number
+   * @deprecated - Use `to_time()` instead as it offers more precision.
    */
   unix_time() {
     return _date.mktime(self.year, self.month, self.day, self.hour, 
               self.minute, self.seconds, self.is_dst)
   }
 
-  @to_string() {
-    return '<Date year: ${self.year}, month: ${self.month}, day: ${self.day}, hour: ' +
-        '${self.hour}, minute: ${self.minute}, seconds: ${self.seconds}>'
+  /**
+   * Returns the Epoch timestamp in seconds for the given date.
+   * 
+   * @returns number
+   */
+  to_time() {
+    var years = self.year - 1970
+    
+    var tm = (_days_before_year(self.year) - _days_before_year(1970)) * 86400
+        tm += (_days_before_month(1, self.month) + self.day) * 86400
+        tm += self.hour * 3600
+        tm += self.minute * 60
+        tm += self.seconds
+  
+    tm -= self.gmt_offset
+    tm += self.microseconds == 0 ? 0 : (self.microseconds / 1000000)
+  
+    return tm
   }
 
-  @to_json() {
+  /**
+   * Returns a string representation of the date
+   * 
+   * @returns string
+   */
+  to_string() {
+    return '<Date year: ${self.year}, month: ${self.month}, day: ${self.day}, hour: ' +
+        '${self.hour}, minute: ${self.minute}, seconds: ${self.seconds}, micro_seconds: ${self.microseconds}>'
+  }
+
+  /**
+   * Returns the date object as a dictionary.
+   * 
+   * @returns dict
+   */
+  to_dict() {
     return {
       year: self.year,
       month: self.month,
@@ -772,7 +807,27 @@ class Date {
       hour: self.hour,
       minute: self.minute,
       seconds: self.seconds,
+      microseconds: self.microseconds,
+      gmt_offset: self.gmt_offset,
+      is_dst: self.is_dst,
+      zone: self.zone,
     }
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+
+  @to_json() {
+    return self.to_dict()
+  }
+
+  @to_number() {
+    return self.to_time()
+  }
+
+  @to_abs() {
+    return self.to_time()
   }
 }
 
@@ -789,9 +844,26 @@ class Date {
  * 
  * @note Time must be in seconds.
  * @param number time
- * @return Date
+ * @returns Date
  */
 def from_time(time) {
+
+  var microseconds = 0
+  if time > 9999999999 { 
+    if time <= 9999999999999 {
+      # its in milliseconds
+      time /= 1000
+      microseconds = ((time - (time // 1)) * 1000 % 1000 // 1) / 1000
+      time //= 1
+    } else if time <= 9999999999999999 {
+      # its in microseconds
+      time /= 1000000
+      microseconds = ((time - (time // 1)) * 1000000 % 1000000 // 1) / 1000000
+      time //= 1
+    } else {
+      die Exception('time out of range')
+    }
+  }
 
   var _DI400Y = _days_before_year(401) # number of days in 400 years
   var _DI100Y = _days_before_year(101) # number of days in 100 years
@@ -912,7 +984,7 @@ def from_time(time) {
  * ```
  * 
  * @param number jdate
- * @return number
+ * @returns number
  */
 def from_jd(jdate) {
   if jdate < 0 die Exception('Invalid julian date')
@@ -960,7 +1032,7 @@ def from_jd(jdate) {
  * @param number? minute
  * @param number? seconds
  * @param bool? is_dst
- * @return Date
+ * @returns Date
  * @default
  */
 def date(year, month, day, hour, minute, seconds) {

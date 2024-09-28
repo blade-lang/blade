@@ -22,7 +22,7 @@ class ParseResult {
   /**
    * Adds a new item to the parse result
    * 
-   * @param {Expr|Decl|Defn|Stmt} item
+   * @param Expr|Decl|Defn|Stmt item
    */
   append(item) {
     if self._results.length() > 0 {
@@ -37,7 +37,7 @@ class ParseResult {
   /**
    * Returns the length of items in the parsed result.
    * 
-   * @return number
+   * @returns number
    */
   length() {
     return self._results.length()
@@ -47,7 +47,7 @@ class ParseResult {
    * Returns the item at the given ParseResult index or throws exception if out of range.
    * 
    * @param int index
-   * @return {Expr|Decl|Defn|Stmt}
+   * @returns Expr|Decl|Defn|Stmt
    */
   get(index) {
     if index >= 0 and index < self.length()
@@ -58,7 +58,7 @@ class ParseResult {
   /**
    * Returns the items in the ParseResult as a list object.
    * 
-   * @return {list[Expr|Decl|Defn|Stmt]}
+   * @returns list[Expr|Decl|Defn|Stmt]
    */
   to_list() {
     return self._results

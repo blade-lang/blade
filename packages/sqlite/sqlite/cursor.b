@@ -61,7 +61,7 @@ class SQLite3Cursor {
   var columns = []
 
   /**
-   * @param {SQLite3} db
+   * @param SQLite3 db
    * @param ptr cursor
    * @note SQLite3Cursor should NEVER be maually instantiated.
    * @constructor
@@ -76,7 +76,7 @@ class SQLite3Cursor {
   /**
    * Closes the cursor and prevents further reading.
    * 
-   * @return bool
+   * @returns bool
    */
   close() {
     return _cursor_close(self._cursor)
@@ -86,7 +86,7 @@ class SQLite3Cursor {
    * Returns `true` if there are more rows in the result set not yet retrieved, 
    * otherwise it returns `false`.
    * 
-   * @return boolean
+   * @returns boolean
    */
   has_next() {
     var result = _cursor_has_next(self._cursor)
@@ -103,8 +103,8 @@ class SQLite3Cursor {
    * @note If index is a number, it returns the value in the column at the given index. 
    * @note Index must be lower than columns.length() in this case.
    * @note If index is a string, it returns the value in the column with the given name.
-   * @param {number|string} index
-   * @return string
+   * @param number|string index
+   * @returns string
    * @throws SQLiteException if no matching column can be found.
    */
   get(index) {

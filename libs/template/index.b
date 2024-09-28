@@ -480,7 +480,7 @@ class Template {
   /**
    * The constructor of the Template class.
    * 
-   * @param {bool} auto_init: A boolean flag to control whether template root 
+   * @param bool auto_init: A boolean flag to control whether template root 
    *    directory will be automatically created on [[Template.set_root]] or 
    *    [[Template.render]].
    * @constructor
@@ -772,8 +772,8 @@ class Template {
    * If your template contains or will contain an `<include />` tag, the path given 
    * here will become the root of the include search path.
    * 
-   * @param {string} path
-   * @return bool
+   * @param string path
+   * @returns bool
    */
   set_root(path) {
     if !is_string(path)
@@ -794,7 +794,7 @@ class Template {
    * `<include />` tag searches for template files in the root directory when the path 
    * given does not match an existing file and does not end with another extension.
    * 
-   * @param {string} ext
+   * @param string ext
    */
   set_extension(ext) {
     if !is_string(ext)
@@ -827,8 +827,8 @@ class Template {
    * <div>{{ my_user|firstname }}</div>
    * ```
    * 
-   * @param {string} name
-   * @param {function} function
+   * @param string name
+   * @param function function
    */
   register_function(name, function) {
     if !is_string(name)
@@ -864,8 +864,8 @@ class Template {
    * <inline-input value="{{ my_var }}" />
    * ```
    * 
-   * @param {string} name
-   * @param {function(2)} element
+   * @param string name
+   * @param function(2) element
    */
   register_element(name, element) {
     if !is_string(name)
@@ -904,10 +904,10 @@ class Template {
    * <div>Johnson</div>
    * ```
    * 
-   * @param {string} source
-   * @param {dict?} variables
-   * @param {string?} path
-   * @return string
+   * @param string source
+   * @param dict? variables
+   * @param string? path
+   * @returns string
    */
   render_string(source, variables, path) {
     if !is_string(source)
@@ -949,9 +949,9 @@ class Template {
    * The above example renders the template as is and will die if any variable is found in it. 
    * You can pass a variable the same way you do with [[Template.render_string]].
    * 
-   * @param {string} path
-   * @param {dict?} variables
-   * @return string
+   * @param string path
+   * @param dict? variables
+   * @returns string
    */
   render(path, variables) {
     if !is_string(path)

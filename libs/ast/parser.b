@@ -26,7 +26,7 @@ def _get_doc_string(data) {
 class Parser {
 
   /**
-   * @param {list[Token]} tokens
+   * @param list[Token] tokens
    * @param string? path
    * @constructor 
    */
@@ -1095,7 +1095,7 @@ class Parser {
    * outputs a stream of AST objects that can be one of
    * Expr (expressions), Stmt (statements) or Decl (declarations).
    * 
-   * @return ParseResult
+   * @returns ParseResult
    */
   parse() {
     var result = ParseResult()
