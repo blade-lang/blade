@@ -3,6 +3,8 @@
 import _ssl
 import .context { SSLContext }
 
+import date
+
 
 /**
  * SSL interface class
@@ -165,6 +167,30 @@ class SSL {
     return _ssl.set_tlsext_host_name(self._ptr, name)
   }
 
+  _parse_cert_time(time) {
+    if time.length() > 13 {
+      # it uses four digit year e.g.20250728235959Z
+      return date(
+        to_number(time[0,4]), # year
+        to_number(time[4,6]), # month
+        to_number(time[6,8]), # day
+        to_number(time[8,10]), # hour
+        to_number(time[10,12]), # minute
+        to_number(time[12,14]) # second
+      )
+    } else {
+      # it uses two digit year e.g. 250728235959Z
+      return date(
+        to_number(time[0,2]) + 2000, # year
+        to_number(time[2,4]), # month
+        to_number(time[4,6]), # day
+        to_number(time[6,8]), # hour
+        to_number(time[8,10]), # minute
+        to_number(time[10,12]) # second
+      )
+    }
+  }
+
   /**
    * Returns informations about the peer certificate in a dictionary.
    * 
@@ -182,7 +208,17 @@ class SSL {
    * @returns dict
    */
   get_peer_certificate() {
-    return _ssl.get_peer_certificate(self._ptr)
+    var cert =  _ssl.get_peer_certificate(self._ptr)
+
+    if cert.not_before {
+      cert.not_before = self._parse_cert_time(cert.not_before)
+    }
+
+    if cert.not_after {
+      cert.not_after = self._parse_cert_time(cert.not_after)
+    }
+
+    return cert
   }
 
   /**
