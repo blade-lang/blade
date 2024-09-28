@@ -144,8 +144,8 @@ class Renderer {
   /**
    * Render token attributes to string.
    * 
-   * @param {Token} token
-   * @return string
+   * @param Token token
+   * @returns string
    */
   render_attrs(token) {
     var i = 0, l, result
@@ -165,10 +165,10 @@ class Renderer {
    * Default token renderer. Can be overriden by custom function
    * in [[Renderer#rules]].
    * 
-   * @param {list} tokens: list of tokens
-   * @param {number} idx: token index to render
-   * @param {dict} options: params of parser instance
-   * @return string
+   * @param list tokens: list of tokens
+   * @param number idx: token index to render
+   * @param dict options: params of parser instance
+   * @returns string
    */
   render_token(tokens, idx, options) {
     var nextToken,
@@ -232,10 +232,10 @@ class Renderer {
   /**
    * The same as [[Renderer.render]], but for single token of `inline` type.
    * 
-   * @param {list} tokens: list on block tokens to render
-   * @param {dict} options: params of parser instance
-   * @param {dict} env: additional data from parsed input (references, for example)
-   * @return string
+   * @param list tokens: list on block tokens to render
+   * @param dict options: params of parser instance
+   * @param dict env: additional data from parsed input (references, for example)
+   * @returns string
    */
   render_inline(tokens, options, env) {
     var type,
@@ -261,10 +261,10 @@ class Renderer {
    * Don't try to use it! Spec requires to show `alt` content with stripped markup,
    * instead of simple escaping.
    * 
-   * @param {list} tokens: list on block tokens to render
-   * @param {dict} options: params of parser instance
-   * @param {dict} env: additional data from parsed input (references, for example)
-   * @return string
+   * @param list tokens: list on block tokens to render
+   * @param dict options: params of parser instance
+   * @param dict env: additional data from parsed input (references, for example)
+   * @returns string
    * @internal
    */
   render_inline_as_text(tokens, options, env) {
@@ -287,10 +287,10 @@ class Renderer {
    * Takes token stream and generates HTML. Probably, you will never need to call
    * this method directly.
    * 
-   * @param {list} tokens: list on block tokens to render
-   * @param {dict} options: params of parser instance
-   * @param {dict} env: additional data from parsed input (references, for example)
-   * @return string
+   * @param list tokens: list on block tokens to render
+   * @param dict options: params of parser instance
+   * @param dict env: additional data from parsed input (references, for example)
+   * @returns string
    **/
   render(tokens, options, env) {
     var i = 0, len, type,

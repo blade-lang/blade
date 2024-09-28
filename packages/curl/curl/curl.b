@@ -24,7 +24,7 @@ class CurlMime {
    * 
    * @param string name
    * @param any value
-   * @return bool
+   * @returns bool
    */
   add(name, value) {
     if !is_string(name)
@@ -44,7 +44,7 @@ class CurlMime {
    * 
    * @param any value
    * @param string type
-   * @return bool
+   * @returns bool
    */
   add_as(value, type) {
     if !is_string(type)
@@ -63,7 +63,7 @@ class CurlMime {
    * Adds a new mime part with the given data.
    * 
    * @param any data
-   * @return bool
+   * @returns bool
    */
   add_data(data) {
     # This allows us to benefit from to_string decorators.
@@ -77,8 +77,8 @@ class CurlMime {
    * Adds a new mime part with the given name and file.
    * 
    * @param string name
-   * @param {string|instance} value
-   * @return bool
+   * @param string|instance value
+   * @returns bool
    */
   add_file(name, value) {
     if !is_string(name)
@@ -96,9 +96,9 @@ class CurlMime {
   /**
    * Adds a new mime subpart with the given mime.
    * 
-   * @param {CurlMime} mime
+   * @param CurlMime mime
    * @param string type
-   * @return bool
+   * @returns bool
    */
   add_mime(mime, type) {
     if !instance_of(mime, CurlMime)
@@ -196,9 +196,9 @@ class Curl {
    * 
    * @note Strings passed to `curl` as arguments, must not exceed 8MB in size.
    * @note The order in which the options are set does not matter.
-   * @param {Option} option
+   * @param Option option
    * @param any value
-   * @return boolean
+   * @returns boolean
    */
   set_option(option, value) {
 
@@ -216,8 +216,8 @@ class Curl {
    * Use this function AFTER performing a transfer if you want to get transfer 
    * related data.
    * 
-   * @param {Info} info
-   * @return {string|number|list}
+   * @param Info info
+   * @returns string|number|list
    */
   get_info(info) {
     return _curl.easy_getinfo(self._ptr, info)
@@ -231,7 +231,7 @@ class Curl {
    * 
    * @note This function does not accept a strings longer than 8MB.
    * @param string str
-   * @return string
+   * @returns string
    */
   escape(str) {
     return _curl.easy_escape(self._ptr, str)
@@ -244,7 +244,7 @@ class Curl {
    * converted to their decoded versions.
    * 
    * @param string str
-   * @return string
+   * @returns string
    */
   unescape(str) {
     return _curl.easy_unescape(self._ptr, str)
@@ -253,13 +253,13 @@ class Curl {
   /**
    * Performs the entire request in a blocking manner and returns when done, or 
    * if it failed. It returns a dictionary containing the `headers` and `body` key.
-   * @return dict
+   * @returns dict
    * 
    * > You must never call this function simultaneously from two places using
    * > the same instance. Let the function return first before invoking it
    * > another time.
    * 
-   * @return dictionary
+   * @returns dictionary
    */
   send() {
     return _curl.easy_perform(self._ptr)

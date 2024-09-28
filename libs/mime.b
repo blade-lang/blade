@@ -19,7 +19,7 @@ class MimeFormat {
   
   /**
    * @param string mimetype
-   * @param {list|bytes|nil} header
+   * @param list|bytes|nil header
    * @note only the first 16 bytes of a file header will be used.
    * @constructor
    */
@@ -402,7 +402,7 @@ var _mimes = {
  *
  * @note For popular files such as Jpeg and Pngs, calling this method directly is more efficient and provides a faster lookup.
  * @param string name
- * @return string
+ * @returns string
  */
 def detect_from_name(name) {
   if !is_string(name)
@@ -433,7 +433,7 @@ def detect_from_name(name) {
  * @note This method may produce slightly more rigorous results
  * @note This method requires that the file must be opened in binary mode.
  * @param file file
- * @return string
+ * @returns string
  */
 def detect_from_header(file) {
   if !is_file(file)
@@ -499,7 +499,7 @@ def detect_from_header(file) {
  *
  * @note this method gives the best result, but slightly slower than a direct lookup of name or header.
  * @param file file
- * @return string
+ * @returns string
  */
 def detect(file) {
   if !is_file(file)
@@ -534,7 +534,7 @@ def detect(file) {
  * @note the extension MUST start with `.`
  * @param string extension
  * @param MimeFormat format
- * @return bool
+ * @returns bool
  */
 def extend(extension, format) {
   if !is_string(extension) or extension[0] != '.'

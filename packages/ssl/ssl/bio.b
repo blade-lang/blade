@@ -30,7 +30,7 @@ class BIO {
    * Sets the working SSL instance for this BIO.
    * 
    * @note Option must be one of the BIO constants if given.
-   * @param {SSL} ssl
+   * @param SSL ssl
    * @param int? option: Default value is `BIO_NOCLOSE`
    */
   set_ssl(ssl, option) {
@@ -81,7 +81,7 @@ class BIO {
   /**
    * Sets the port for the current connected BIO socket.
    * 
-   * @param {int|string} port
+   * @param int|string port
    */
   set_conn_port(port) {
     if is_int(port) port = '${port}'
@@ -95,7 +95,7 @@ class BIO {
   /**
    * Sets the port for the current accepted BIO socket.
    * 
-   * @param {int|string} port
+   * @param int|string port
    */
   set_accept_port(port) {
     if is_int(port) port = '${port}'
@@ -133,7 +133,7 @@ class BIO {
   /**
    * Returns the hostname for the current connected BIO socket.
    * 
-   * @return string
+   * @returns string
    */
   get_conn_hostname() {
     return _ssl.get_conn_hostname(self._ptr)
@@ -142,7 +142,7 @@ class BIO {
   /**
    * Returns the hostname for the current accepted BIO socket.
    * 
-   * @return string
+   * @returns string
    */
   get_accept_name() {
     return _ssl.get_accept_name(self._ptr)
@@ -151,7 +151,7 @@ class BIO {
   /**
    * Returns the address for the current connected BIO socket.
    * 
-   * @return string
+   * @returns string
    */
   get_conn_address() {
     return _ssl.get_conn_address(self._ptr)
@@ -160,7 +160,7 @@ class BIO {
   /**
    * Returns the port for the current connected BIO socket.
    * 
-   * @return string
+   * @returns string
    */
   get_conn_port() {
     return to_int(_ssl.get_conn_port(self._ptr))
@@ -169,7 +169,7 @@ class BIO {
   /**
    * Returns the port for the current accepted BIO socket.
    * 
-   * @return string
+   * @returns string
    */
   get_accept_port() {
     return to_int(_ssl.get_accept_port(self._ptr))
@@ -178,7 +178,7 @@ class BIO {
   /**
    * Returns the family for the current connected BIO socket.
    * 
-   * @return int
+   * @returns int
    */
   get_conn_family() {
     return _ssl.get_conn_family(self._ptr)
@@ -187,7 +187,7 @@ class BIO {
   /**
    * Returns the family for the current accepted BIO socket.
    * 
-   * @return int
+   * @returns int
    */
   get_accept_family() {
     return _ssl.get_accept_family(self._ptr)
@@ -197,7 +197,7 @@ class BIO {
    * Returns the current socket file descriptor.
    * It returns `-1` on failure or a positive integer on success.
    * 
-   * @return number
+   * @returns number
    */
   get_fd() {
     return _ssl.bio_get_fd(self._ptr)
@@ -240,8 +240,8 @@ class BIO {
    * to the current BIO stack (unless the current pinter is `nil`). 
    * It then makes a control call on BIO _bio_ and returns it.
    * 
-   * @param {BIO} bio
-   * @return self
+   * @param BIO bio
+   * @returns self
    */
   push(bio) {
     if !instance_of(bio, BIO)
@@ -262,8 +262,8 @@ class BIO {
   /**
    * Writes data to the current I/O stream and returns the total bytes written.
    * 
-   * @param {string|bytes} data
-   * @return int
+   * @param string|bytes data
+   * @returns int
    */
   write(data) {
     if !is_string(data) and !is_bytes(data)
@@ -282,7 +282,7 @@ class BIO {
    * Reads data off the I/O and returns it.
    * 
    * @param int? length: Default value is `1024`
-   * @return string
+   * @returns string
    */
   read(length) {
     if !length length = 1024
@@ -301,7 +301,7 @@ class BIO {
    * Returns `true` if this BIO needs to retry its last operation. 
    * `false` otherwise.
    * 
-   * @return bool
+   * @returns bool
    */
   should_retry() {
     return _ssl.should_retry(self._ptr)
@@ -310,7 +310,7 @@ class BIO {
   /**
    * Attempts to establish a connection to the host.
    * 
-   * @return int
+   * @returns int
    */
   do_connect() {
     return _ssl.do_connect(self._ptr)
@@ -319,7 +319,7 @@ class BIO {
   /**
    * Attempts to accept the connected socket.
    * 
-   * @return int
+   * @returns int
    */
   do_accept() {
     return _ssl.do_accept(self._ptr)
@@ -329,7 +329,7 @@ class BIO {
    * Returns the last SSL error number.
    * 
    * @param int? code
-   * @return int
+   * @returns int
    */
   error(code) {
     if code != nil and !is_number(code) and !is_int(code)
@@ -342,7 +342,7 @@ class BIO {
   /**
    * Returns the last SSL error as string.
    * 
-   * @return string
+   * @returns string
    */
   error_string() {
     if !code code = -1
@@ -359,7 +359,7 @@ class BIO {
   /**
    * Returns the raw OpenSSl BIO pointer.
    * 
-   * @return ptr
+   * @returns ptr
    */
   get_pointer() {
     return self._ptr

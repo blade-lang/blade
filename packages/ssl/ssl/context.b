@@ -53,9 +53,9 @@ class SSLContext {
   /**
    * Loads the given SSL/TLS certificate pairs for the given SSL/TLS context.
    * 
-   * @param {string|file} cert_file
-   * @param {string|file} private_key_file
-   * @return bool
+   * @param string|file cert_file
+   * @param string|file private_key_file
+   * @returns bool
    */
   load_certs(cert_file, private_key_file) {
     if !is_string(cert_file) and !is_file(cert_file)
@@ -74,7 +74,7 @@ class SSLContext {
    * Sets the list of allowed ciphers. This list must be colon (:) separated.
    * 
    * @param string ciphers
-   * @return bool
+   * @returns bool
    */
   set_ciphers(ciphers) {
     if !is_string(ciphers)
@@ -92,7 +92,7 @@ class SSLContext {
   /**
    * Returns the raw OpenSSl SSL_CTX pointer.
    * 
-   * @return ptr
+   * @returns ptr
    */
   get_pointer() {
     return self._ptr

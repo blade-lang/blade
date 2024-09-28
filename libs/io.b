@@ -534,7 +534,7 @@ class TTY {
    * Returns the attribute of the current tty session
    * The returned attributes is a dict containing the TTY_ flags
    * 
-   * @return dict
+   * @returns dict
    */
   get_attr() {
     return _io.TTY.tcgetattr(self.std)
@@ -552,7 +552,7 @@ class TTY {
    * @note This flags will be merged and not overwritten
    * @param number option
    * @param dict attr
-   * @return bool
+   * @returns bool
    */
   set_attr(option, attrs) {
     if !is_int(option) 
@@ -565,7 +565,7 @@ class TTY {
   /**
    * Sets the current tty to raw mode.
    * 
-   * @return bool
+   * @returns bool
    */
   set_raw() {
     var new_attr = _io.TTY.tcgetattr(self.std)
@@ -582,7 +582,7 @@ class TTY {
   /**
    * Disables the raw mode flags on the current tty.
    * 
-   * @return bool
+   * @returns bool
    */
   exit_raw() {
     _io.TTY.exit_raw()
@@ -624,7 +624,7 @@ def flush(file) {
 /**
  * Writes character c to the screen.
  * 
- * @param {char|number} c
+ * @param char|number c
  */
 def putc(c) {
   _io.putc(c)
@@ -636,7 +636,7 @@ def putc(c) {
  * When length is given, gets `length` number of characters
  * else, gets a single character
  * 
- * @return {char|string}
+ * @returns char|string
  */
 def getc() {
   return _io.getc()
@@ -648,7 +648,7 @@ def getc() {
  * When length is given, gets `length` number of characters
  * else, gets a single character.
  * 
- * @return {char|string}
+ * @returns char|string
  */
 def getch() {
   return _io.getch()
@@ -664,7 +664,7 @@ def getch() {
  * @param string? message
  * @param bool? secure
  * @param string? obscure_text: Default value is `*`.
- * @return string
+ * @returns string
  */
 def readline(message, secure, obscure_text) {
 

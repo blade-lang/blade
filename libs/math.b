@@ -71,7 +71,7 @@ var NaN = 0/0
  *
  * calculates the product of all positive 
  * numbers less than or equal to a given positive number n
- * @return number
+ * @returns number
  * 
  * Example:
  * 
@@ -109,7 +109,7 @@ def factorial(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def sin(n) {
   return _math.sin(n)
@@ -127,7 +127,7 @@ def sin(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def cos(n) {
   return _math.cos(n)
@@ -145,7 +145,7 @@ def cos(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def tan(n) {
   return _math.tan(n)
@@ -162,7 +162,7 @@ def tan(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def sinh(n) {
   return _math.sinh(n)
@@ -179,7 +179,7 @@ def sinh(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def cosh(n) {
   return _math.cosh(n)
@@ -195,7 +195,7 @@ def cosh(n) {
  * 0.975
  * 
  * @param number n
- * @return number2591705196751
+ * @returns number2591705196751
  * ```
  */
 def tanh(n) {
@@ -215,7 +215,7 @@ def tanh(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def asin(n) {
   return _math.asin(n)
@@ -234,7 +234,7 @@ def asin(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def acos(n) {
   return _math.acos(n)
@@ -251,7 +251,7 @@ def acos(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def atan(n) {
   return _math.atan(n)
@@ -275,7 +275,7 @@ def atan(n) {
  * 
  * @note the arguments to this function pass the y-coordinate first and the x-coordinate second.
  * @param number n
- * @return number
+ * @returns number
  */
 def atan2(x, y) {
   return _math.atan2(x, y)
@@ -292,7 +292,7 @@ def atan2(x, y) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def asinh(n) {
   return _math.asinh(n)
@@ -309,7 +309,7 @@ def asinh(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def acosh(n) {
   return _math.acosh(n)
@@ -326,7 +326,7 @@ def acosh(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def atanh(n) {
   return _math.atanh(n)
@@ -345,7 +345,7 @@ def atanh(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def exp(n) {
   return _math.exp(n)
@@ -363,7 +363,7 @@ def exp(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def expm1(n) {
   return _math.expm1(n)
@@ -382,7 +382,7 @@ def expm1(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def ceil(n) {
   return _math.ceil(n)
@@ -401,7 +401,7 @@ def ceil(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def round(n) {
   return _math.round(n)
@@ -420,7 +420,7 @@ def round(n) {
  * @note If the value of x is 0, the return value is always -inf.
  * @note If the value of x is negative, the return value is always NaN.
  * @param number n
- * @return number
+ * @returns number
  */
 def log(n) {
   return _math.log(n)
@@ -438,7 +438,7 @@ def log(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def log2(n) {
   return _math.log2(n)
@@ -456,7 +456,7 @@ def log2(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def log10(n) {
   return _math.log10(n)
@@ -490,7 +490,7 @@ def log10(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def log1p(n) {
   return _math.log1p(n)
@@ -507,7 +507,7 @@ def log1p(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def cbrt(n) {
   if !is_number(n) {
@@ -538,7 +538,7 @@ def cbrt(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def sign(n) {
   if !is_number(n) n = to_number(n)
@@ -560,7 +560,7 @@ def sign(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def floor(n) {
   return _math.floor(n)
@@ -572,7 +572,7 @@ def floor(n) {
  * returns true if the given number is equal to NaN or false otherwise.
  * 
  * @param number n
- * @return bool
+ * @returns bool
  */
 def is_nan(n) {
   return n == NaN
@@ -594,7 +594,7 @@ def is_nan(n) {
  * ```
  * 
  * @param number n
- * @return bool
+ * @returns bool
  */
 def is_inf(n) {
   return n == Infinity or n == -Infinity
@@ -615,7 +615,7 @@ def is_inf(n) {
  * ```
  * 
  * @param number n
- * @return bool
+ * @returns bool
  */
 def is_finite(n) {
   return !is_inf(n) and !is_nan(n)
@@ -638,7 +638,7 @@ def is_finite(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def trunc(n) {
   if !is_number(n) {
@@ -659,7 +659,7 @@ def trunc(n) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def sqrt(n) {
   if !is_number(n) {
@@ -682,7 +682,7 @@ def sqrt(n) {
  * ```
  * 
  * @param iterable arg
- * @return number
+ * @returns number
  */
 def sum(arg) {
   if !is_iterable(arg) {
@@ -716,7 +716,7 @@ def sum(arg) {
  * ```
  * 
  * @param iterable arg
- * @return number
+ * @returns number
  */
 def product(arg) {
   if !is_iterable(arg) {
@@ -750,7 +750,7 @@ def product(arg) {
  * ```
  * 
  * @param number n
- * @return number
+ * @returns number
  */
 def fraction(n) {
   if !is_number(n) {

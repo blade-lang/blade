@@ -483,7 +483,7 @@ class Scanner {
   /**
    * Scans the source and returns a list of tokens.
    * 
-   * @return list[Token]
+   * @returns list[Token]
    */
   scan() {
 

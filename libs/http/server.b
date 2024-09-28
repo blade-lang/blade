@@ -133,7 +133,7 @@ class HttpServer {
    * 
    * @note Function _function_ MUST accept at one parameter which will be passed the client Socket object.
    * @note Multiple `on_connect()` may be set on a single instance.
-   * @param {function(1)} function
+   * @param function(1) function
    */
   on_connect(function) {
     if !is_function(function)
@@ -151,7 +151,7 @@ class HttpServer {
    * 
    * @note Function _function_ MUST accept at one parameter which will be passed the client information.
    * @note Multiple `on_disconnect()` may be set on a single instance.
-   * @param {function(1)} function
+   * @param function(1) function
    */
   on_disconnect(function) {
     if !is_function(function)
@@ -171,7 +171,7 @@ class HttpServer {
    * > object and the second will accept the HttpResponse object.
    * 
    * @note Multiple `on_receive()` may be set on a single instance.
-   * @param {function(2)} handler
+   * @param function(2) handler
    */
   on_receive(handler) {
     if !is_function(handler)
@@ -190,7 +190,7 @@ class HttpServer {
    * > Function _function_ MUST accept one parameter which will be passed the HttpResponse object.
    * 
    * @note Multiple `on_sent()` may be set on a single instance.
-   * @param {function(1)} function
+   * @param function(1) function
    */
   on_reply(function) {
     if !is_function(function)
@@ -210,7 +210,7 @@ class HttpServer {
    * > `Exception` object and the second will be passed the client `Socket` object.
    * 
    * @note Multiple `on_error()` may be set on a single instance.
-   * @param {function(2)} function
+   * @param function(2) function
    */
   on_error(function) {
     if !is_function(function)
@@ -229,7 +229,7 @@ class HttpServer {
    * 
    * @param string method
    * @param string path
-   * @param {function(2)} handler
+   * @param function(2) handler
    */
   handle(method, path, handler) {
     if !is_string(method)
@@ -250,7 +250,7 @@ class HttpServer {
    * Sets up the handle to invoke when a request is not processed. That is, when it does 
    * not match a registered route and no `on_receive()` handler is set.
    * 
-   * @param {function(2)} handler
+   * @param function(2) handler
    */
   none_handler(handler) {
     if !is_function(handler)

@@ -16,10 +16,10 @@ class Image {
    * Creates a palette-based image (up to 256 colors) or a truecolor 
    * image (millions of colors) when `use_true_colors` is set to true.
    * 
-   * @param {number} width
-   * @param {number} height
-   * @param {bool?} use_true_colors
-   * @returns {ImageResource}
+   * @param number width
+   * @param number height
+   * @param bool? use_true_colors
+   * @returns ImageResource
    */
   static new(width, height, use_true_colors) {
     if use_true_colors == nil {
@@ -40,8 +40,8 @@ class Image {
    * Creates an image from a PNG file. Truecolor PNG stays truecolor; 
    * palette PNG stays palette-based.
    * 
-   * @param {string|file} src
-   * @returns {ImageResource}
+   * @param string|file src
+   * @returns ImageResource
    */
   static from_png(src) {
     if !is_string(src) and !is_file(src) 
@@ -66,8 +66,8 @@ class Image {
    * Creates an image from a JPEG file.
    * JPEG is always truecolor.
    * 
-   * @param {string|file} src
-   * @returns {ImageResource}
+   * @param string|file src
+   * @returns ImageResource
    */
   static from_jpeg(src) {
     if !is_string(src) and !is_file(src) 
@@ -91,8 +91,8 @@ class Image {
   /**
    * Creates an image from a GIF file.
    * 
-   * @param {string|file} src
-   * @returns {ImageResource}
+   * @param string|file src
+   * @returns ImageResource
    */
   static from_gif(src) {
     if !is_string(src) and !is_file(src) 
@@ -116,8 +116,8 @@ class Image {
   /**
    * Creates an image from a BMP file.
    * 
-   * @param {string|file} src
-   * @returns {ImageResource}
+   * @param string|file src
+   * @returns ImageResource
    */
   static from_bmp(src) {
     if !is_string(src) and !is_file(src) 
@@ -141,8 +141,8 @@ class Image {
   /**
    * Creates an image from a WBMP file.
    * 
-   * @param {string|file} src
-   * @returns {ImageResource}
+   * @param string|file src
+   * @returns ImageResource
    */
   static from_wbmp(src) {
     if !is_string(src) and !is_file(src) 
@@ -166,8 +166,8 @@ class Image {
   /**
    * Creates an image from a TGA file.
    * 
-   * @param {string|file} src
-   * @returns {ImageResource}
+   * @param string|file src
+   * @returns ImageResource
    */
   static from_tga(src) {
     if !is_string(src) and !is_file(src) 
@@ -191,8 +191,8 @@ class Image {
   /**
    * Creates an image from a TIFF file.
    * 
-   * @param {string|file} src
-   * @returns {ImageResource}
+   * @param string|file src
+   * @returns ImageResource
    */
   static from_tiff(src) {
     if !is_string(src) and !is_file(src) 
@@ -216,8 +216,8 @@ class Image {
   /**
    * Creates an image from a WEBP file.
    * 
-   * @param {string|file} src
-   * @returns {ImageResource}
+   * @param string|file src
+   * @returns ImageResource
    */
   static from_webp(src) {
     if !is_string(src) and !is_file(src) 
@@ -241,8 +241,8 @@ class Image {
   /**
    * Creates an image from a AVIF file.
    * 
-   * @param {string|file} src
-   * @returns {ImageResource}
+   * @param string|file src
+   * @returns ImageResource
    */
   static from_avif(src) {
     if !is_string(src) and !is_file(src) 
@@ -268,8 +268,8 @@ class Image {
    * As long as the file type is supported by Imagine,
    * the file type will automatically be detected.
    * 
-   * @param {string|file} src
-   * @returns {ImageResource}
+   * @param string|file src
+   * @returns ImageResource
    */
   static from_file(src) {
     if !is_string(src) and !is_file(src) 

@@ -116,7 +116,7 @@ class Encoder {
    * Encodes a value to it's corresponding JSON string.
    * 
    * @param any value
-   * @return string
+   * @returns string
    */
   encode(value) {
 

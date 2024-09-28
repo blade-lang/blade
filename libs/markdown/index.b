@@ -166,8 +166,8 @@ class Markdown {
    * md.validate_link = @{ return true; }
    * ```
    * 
-   * @param {string} url
-   * @return bool
+   * @param string url
+   * @returns bool
    */
   var validate_link = validate_link
 
@@ -175,8 +175,8 @@ class Markdown {
    * Function used to encode link url to a machine-readable format,
    * which includes url-encoding, punycode, etc.
    * 
-   * @param {string} url
-   * @return string
+   * @param string url
+   * @returns string
    */
   var normalize_link = normalize_link
 
@@ -185,8 +185,8 @@ class Markdown {
    *
    * Function used to decode link url to a human-readable format`
    * 
-   * @param {string} url
-   * @return string
+   * @param string url
+   * @returns string
    */
   var normalize_link_text = normalize_link_text
 
@@ -300,8 +300,8 @@ class Markdown {
    * })
    * ```
    * 
-   * @param {string?} preset_name: `commonmark`, `standard` or `zero` (default: `standard`)
-   * @param {dict?} options
+   * @param string? preset_name: `commonmark`, `standard` or `zero` (default: `standard`)
+   * @param dict? options
    */
   Markdown(preset_name, options) {
     if !instance_of(self, Markdown) {
@@ -340,7 +340,7 @@ class Markdown {
    * it's best to create multiple instances and initialize each with separate
    * config.
    * 
-   * @param {dict} options
+   * @param dict options
    * @chainable
    */
   set(options) {
@@ -356,7 +356,7 @@ class Markdown {
    * We strongly recommend to use presets instead of direct config loads. That
    * will give better compatibility with standard versions.
    * 
-   * @param {dict|string} options
+   * @param dict|string options
    * @chainable
    * @internal
    */
@@ -401,8 +401,8 @@ class Markdown {
    *    disable('smartquotes')
    * ```
    * 
-   * @param {string|list} list: rule name or list of rule names to enable
-   * @param {bool} ignore_invalid: set `true` to ignore errors when rule not found.
+   * @param string|list list: rule name or list of rule names to enable
+   * @param bool ignore_invalid: set `true` to ignore errors when rule not found.
    * @chainable
    */
   enable(list, ignore_invalid) {
@@ -428,8 +428,8 @@ class Markdown {
   /**
    * The same as [[Markdown.enable]], but turn specified rules off.
    * 
-   * @param {string|list} list: rule name or list of rule names to disable.
-   * @param {bool} ignore_invalid: set `true` to ignore errors when rule not found.
+   * @param string|list list: rule name or list of rule names to disable.
+   * @param bool ignore_invalid: set `true` to ignore errors when rule not found.
    * @chainable
    */
   disable(list, ignore_invalid) {
@@ -468,8 +468,8 @@ class Markdown {
    *    })
    * ```
    * 
-   * @param {function|module} plugin
-   * @param {...any} params
+   * @param function|module plugin
+   * @param ...any params
    * @chainable
    */
   use(plugin, ...) {
@@ -488,9 +488,9 @@ class Markdown {
    * inject data in specific cases. Usually, you will be ok to pass `{}`,
    * and then pass updated object to renderer.
    * 
-   * @param {string} src: source string
-   * @param {dict} env: environment sandbox
-   * @return list
+   * @param string src: source string
+   * @param dict env: environment sandbox
+   * @returns list
    * @internal
    */
   parse(src, env) {
@@ -512,9 +512,9 @@ class Markdown {
    * But you will not need it with high probability. See also comment
    * in [[Markdown.parse]].
    * 
-   * @param {string} src: source string
-   * @param {object?} env: environment sandbox
-   * @return string
+   * @param string src: source string
+   * @param object? env: environment sandbox
+   * @returns string
    */
   render(src, env) {
     env = env or {}
@@ -527,9 +527,9 @@ class Markdown {
    * block tokens list with the single `inline` element, containing parsed inline
    * tokens in `children` property. Also updates `env` object.
    * 
-   * @param {string} src: source string
-   * @param {object?} env: environment sandbox
-   * @return list
+   * @param string src: source string
+   * @param object? env: environment sandbox
+   * @returns list
    * @internal
    **/
   parse_inline(src, env) {
@@ -549,9 +549,9 @@ class Markdown {
    * Similar to [[Markdown.render]] but for single paragraph content. Result
    * will NOT be wrapped into `<p>` tags.
    * 
-   * @param {string} src: source string
-   * @param {object?} env: environment sandbox
-   * @return string
+   * @param string src: source string
+   * @param object? env: environment sandbox
+   * @returns string
    */
   render_inline(src, env) {
     env = env or {}
@@ -563,9 +563,9 @@ class Markdown {
 /**
  * Returns a new instance of class Markdown.
  * 
- * @param {string} preset_name: optional, `commonmark` / `zero`
- * @param {dict} options
- * @return {Markdown}
+ * @param string preset_name: optional, `commonmark` / `zero`
+ * @param dict options
+ * @returns Markdown
  * @default
  */
 def markdown(preset_name, options) {

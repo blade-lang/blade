@@ -78,7 +78,7 @@ var _client = HttpClient()
  * ```
  * 
  * @param dict headers
- * @return HttpClient
+ * @returns HttpClient
  * @dies Exception
  */
 def set_headers(headers) {
@@ -93,7 +93,7 @@ def set_headers(headers) {
  * or throws one of SocketException or Exception if it fails.
  * 
  * @param string url
- * @return HttpResponse
+ * @returns HttpResponse
  * @dies Exception
  * @dies SocketExcepion
  * @dies HttpException
@@ -106,8 +106,8 @@ def get(url) {
  * Sends an Http POST request and returns an HttpResponse.
  * 
  * @param string url
- * @param {string|bytes|nil} data
- * @return HttpResponse
+ * @param string|bytes|nil data
+ * @returns HttpResponse
  * @dies Exception
  * @dies SocketExcepion
  * @dies HttpException
@@ -120,8 +120,8 @@ def post(url, data) {
  * Sends an Http PUT request and returns an HttpResponse.
  * 
  * @param string url
- * @param {string|bytes|nil} data
- * @return HttpResponse
+ * @param string|bytes|nil data
+ * @returns HttpResponse
  * @dies Exception
  * @dies SocketExcepion
  * @dies HttpException
@@ -134,7 +134,7 @@ def put(url, data) {
  * Sends an Http DELETE request and returns an HttpResponse.
  * 
  * @param string url
- * @return HttpResponse
+ * @returns HttpResponse
  * @dies Exception
  * @dies SocketExcepion
  * @dies HttpException
@@ -148,7 +148,7 @@ def delete(url) {
  * 
  * @param int port
  * @param string address
- * @return HttpServer
+ * @returns HttpServer
  * @dies Exception
  * @dies SocketExcepion
  * @dies HttpException

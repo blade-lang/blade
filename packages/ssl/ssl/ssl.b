@@ -10,7 +10,7 @@ import .context { SSLContext }
 class SSL {
 
   /**
-   * @param {SSLContext} context
+   * @param SSLContext context
    * @constructor
    */
   SSL(context) {
@@ -38,7 +38,7 @@ class SSL {
    * Returns the current socket file descriptor.
    * It returns `-1` on failure or a positive integer on success.
    * 
-   * @return number
+   * @returns number
    */
   get_fd() {
     return _ssl.get_fd(self._ptr)
@@ -48,7 +48,7 @@ class SSL {
    * Sets the socket file descriptor for this SSL.
    * 
    * @param int fd
-   * @return bool
+   * @returns bool
    */
   set_fd(fd) {
     if !is_int(fd)
@@ -61,7 +61,7 @@ class SSL {
    * Begins accepting data on SSL and returns `true` if successful or 
    * `false` otherwise.
    * 
-   * @return bool
+   * @returns bool
    */
   accept() {
     return _ssl.accept(self._ptr) == 1
@@ -70,7 +70,7 @@ class SSL {
   /**
    * Connects to an SSL server instance.
    * 
-   * @return bool
+   * @returns bool
    * @throws
    */
   connect() {
@@ -93,8 +93,8 @@ class SSL {
    * Writes data to the current I/O stream and return an integer representing 
    * the total bytes written.
    * 
-   * @param {string|bytes} data
-   * @return int 
+   * @param string|bytes data
+   * @returns int 
    */
   write(data) {
     if !is_string(data) and !is_bytes(data)
@@ -115,7 +115,7 @@ class SSL {
    * 
    * @param int? length: Default value is -1
    * @param bool? is_blocking: Default value is false
-   * @return string
+   * @returns string
    */
   read(length, is_blocking) {
     if !length length = -1
@@ -138,7 +138,7 @@ class SSL {
    * Returns the last SSL error number
    * 
    * @param int? code
-   * @return int
+   * @returns int
    */
   error(code) {
     if !code code = -1
@@ -159,7 +159,7 @@ class SSL {
    * to be set properly.
    * 
    * @param string name
-   * @return bool
+   * @returns bool
    */
   set_tlsext_host_name(name) {
     return _ssl.set_tlsext_host_name(self._ptr, name)
@@ -195,7 +195,7 @@ class SSL {
   /**
    * Returns the raw OpenSSl SSL pointer.
    * 
-   * @return ptr
+   * @returns ptr
    */
   get_pointer() {
     return self._ptr

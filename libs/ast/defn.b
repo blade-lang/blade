@@ -14,7 +14,7 @@ class Defn {
 class DocDefn < Defn {
 
   /**
-   * @param {Defn|any|nil} data
+   * @param Defn|any|nil data
    * @constructor
    */
   DocDefn(data) {

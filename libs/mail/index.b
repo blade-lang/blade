@@ -135,7 +135,7 @@ class Mail {
  * Parses email messages and return an instance of Mail representing it.
  * 
  * @param string message
- * @return {Mail}
+ * @returns Mail
  */
 def parse(message) {
   message = _split_parts(message.trim() + '\n\n')

@@ -105,7 +105,7 @@ var _parse_defaults = {
  * 
  * @param string str
  * @param dict? options
- * @return list
+ * @returns list
  */
 def decode(str, options) {
   # create options
@@ -133,7 +133,7 @@ def decode(str, options) {
  * 
  * @param list nodes
  * @param dict? options
- * @return string
+ * @returns string
  */
 def encode(nodes, options) {
   if !options options = _parse_defaults

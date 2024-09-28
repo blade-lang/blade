@@ -320,8 +320,8 @@ class HttpRequest {
    * Parses a raw HTTP request string into a correct HttpRequest.
    * 
    * @param string raw_data
-   * @param {Socket|TLSSocket|nil} client
-   * @return boolean
+   * @param Socket|TLSSocket|nil client
+   * @returns boolean
    */
   parse(raw_data, client) {
     # reset files...
@@ -416,11 +416,11 @@ class HttpRequest {
    * Sends the given request to the given uri using the given method and 
    * optionally passing the data if given.
    * 
-   * @param {Url} uri
+   * @param Url uri
    * @param string method
-   * @param {string|bytes|nil} data
+   * @param string|bytes|nil data
    * @param dict? options
-   * @return HttpResponse
+   * @returns HttpResponse
    * @dies HttpException
    */
   send(uri, method, data, options) {
@@ -530,7 +530,7 @@ class HttpRequest {
   /**
    * Returns a dictionary representation of the HttpRequest instance.
    * 
-   * @return dict
+   * @returns dict
    */
   to_dict() {
     return {
@@ -550,7 +550,7 @@ class HttpRequest {
   /**
    * Returns a string representation of the HttpRequest instance.
    * 
-   * @return string
+   * @returns string
    */
   to_string() {
     return '<HttpRequest method=${self.method}, path=${self.path}>'

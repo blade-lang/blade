@@ -94,7 +94,7 @@ class HttpResponse {
    * > This method should be prefered over writing directly to the body 
    * > property to prevent unexpected behaviors.
    * 
-   * @param {string|bytes} data
+   * @param string|bytes data
    */
   write(data) {
     if !is_string(data) and !is_bytes(data)

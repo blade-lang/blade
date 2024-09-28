@@ -151,7 +151,7 @@ class ZipItem {
    * - `data`: bytes
    * 
    * @param dictionary dict
-   * @return ZipItem
+   * @returns ZipItem
    */
   static from_dict(dict) {
     if !is_dict(dict)
@@ -181,7 +181,7 @@ class ZipItem {
    * This function returns `true` if the operation succeeds or `false` otherwise.
    * 
    * @param string? base_dir: Default value is `os.cwd()`.
-   * @return bool
+   * @returns bool
    */
   export(base_dir) {
     if base_dir != nil and !is_string(base_dir)
@@ -254,7 +254,7 @@ class ZipFile {
    * This function returns `true` if the operation succeeds or `false` otherwise.
    * 
    * @param string? base_dir: Default value is `os.cwd()`.
-   * @return bool
+   * @returns bool
    */
   export(base_dir) {
     if base_dir != nil and !is_string(base_dir)
@@ -350,7 +350,7 @@ class ZipArchive {
    * Adds a directory to the zip with the given name.
    * 
    * @param string name
-   * @return bool
+   * @returns bool
    */
   create_dir(name) {
 
@@ -442,8 +442,8 @@ class ZipArchive {
    * Adds a file to the path specified with the contents given data.
    * 
    * @param string path
-   * @param {bytes|string} data
-   * @return bool
+   * @param bytes|string data
+   * @returns bool
    */
   create_file(path, data, stat) {
 
@@ -546,7 +546,7 @@ class ZipArchive {
    * 
    * @param string path
    * @param string? destination
-   * @return bool
+   * @returns bool
    */
   add_file(path, destination) {
     if !is_string(path)
@@ -626,7 +626,7 @@ class ZipArchive {
    * @param string directory
    * @param list file_blacklist: Default value is `[]`
    * @param list ext_blacklist: Default value is `[]`
-   * @return bool
+   * @returns bool
    */
   add_directory(directory, file_blacklist, ext_blacklist) {
     if !is_string(directory)
@@ -652,7 +652,7 @@ class ZipArchive {
    * ZipFile describing it's contents.
    * 
    * @param string path
-   * @return ZipFile
+   * @returns ZipFile
    */
   read() {
 
@@ -797,7 +797,7 @@ class ZipArchive {
    * Saves the current Zip archive to file.
    * 
    * @param string filename
-   * @return bool
+   * @returns bool
    */
   save() {
     if self._handle and self._handle.is_open() {
@@ -856,7 +856,7 @@ class ZipArchive {
  * @param string file
  * @param string? destination: Default value is `os.cwd()`.
  * @param bool? is_zip64: Default value is `false`.
- * @return bool
+ * @returns bool
  */
 def extract(file, destination, is_zip64) {
   if !is_string(file)
@@ -888,7 +888,7 @@ def extract(file, destination, is_zip64) {
  * @param string file
  * @param string? destination: Default value is `os.cwd()`.
  * @param bool? is_zip64: Default value is `false`.
- * @return bool
+ * @returns bool
  */
 def compress(path, destination, use_zip64) {
   if !is_string(path)

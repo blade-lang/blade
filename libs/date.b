@@ -192,7 +192,7 @@ def _dim(year, month) {
  * seconds: 55, microseconds: 620290, is_dst: false, zone: UTC, gmt_offset: 0}
  * ```
  * 
- * @return dictionary
+ * @returns dictionary
  */
 def gmtime() {
   return _date.gmtime()
@@ -210,7 +210,7 @@ def gmtime() {
  * seconds: 35, microseconds: 598166, is_dst: false, zone: WAT, gmt_offset: 3600}
  * ```
  * 
- * @return dictionary
+ * @returns dictionary
  */
 def localtime() {
   return _date.localtime()
@@ -237,7 +237,7 @@ def localtime() {
  * @param number minute
  * @param number seconds
  * @param bool is_dst
- * @return number
+ * @returns number
  */
 def mktime(year, month, day, hour, minute, seconds, is_dst) {
   return _date.mktime(year, month, day, hour, minute, seconds, is_dst)
@@ -348,7 +348,7 @@ class Date {
    * true
    * ```
    * 
-   * @return bool
+   * @returns bool
    */
   is_leap() {
     return _is_leap(self.year)
@@ -365,7 +365,7 @@ class Date {
    * 142
    * ```
    * 
-   * @return number
+   * @returns number
    */
   days_before_month(month) {
     assert month >= 1 and month <= 12, 'month must be in 1..12'
@@ -401,7 +401,7 @@ class Date {
    * ```
    * 
    * @param int year
-   * @return number
+   * @returns number
    */
   days_before_year(year) {
     assert is_int(year), 'integer expected'
@@ -435,7 +435,7 @@ class Date {
    * 30
    * ```
    * 
-   * @return number
+   * @returns number
    */
   days_in_month() {
     return _dim(self.year, self.month)
@@ -451,7 +451,7 @@ class Date {
    * 2
    * ```
    * 
-   * @return number
+   * @returns number
    */
   weekday() {
     var day = self.day, month = self.month, year = self.year
@@ -473,7 +473,7 @@ class Date {
    * 19
    * ```
    * 
-   * @return number
+   * @returns number
    */
   week_number() {
     var year = self.year
@@ -555,7 +555,7 @@ class Date {
    * ```
    * 
    * @param string format
-   * @return string
+   * @returns string
    */
   format(format) {
     var result = ''
@@ -720,7 +720,7 @@ class Date {
    * 'Sat, 05 Mar 2022 06:23:32 GMT'
    * ```
    * 
-   * @return string
+   * @returns string
    */
   http() {
     return self.format('D, d M Y h:i:s') + ' GMT'
@@ -736,7 +736,7 @@ class Date {
    * 2459345
    * ```
    * 
-   * @return number
+   * @returns number
    */
   jd() {
     # calculate the julian day i.e. Y-m-d value
@@ -756,7 +756,7 @@ class Date {
   /**
    * Returns unix `mktime` equivalent of the current date.
    * 
-   * @return number
+   * @returns number
    * @deprecated - Use `to_time()` instead as it offers more precision.
    */
   unix_time() {
@@ -767,7 +767,7 @@ class Date {
   /**
    * Returns the Epoch timestamp in seconds for the given date.
    * 
-   * @return number
+   * @returns number
    */
   to_time() {
     var years = self.year - 1970
@@ -844,7 +844,7 @@ class Date {
  * 
  * @note Time must be in seconds.
  * @param number time
- * @return Date
+ * @returns Date
  */
 def from_time(time) {
 
@@ -984,7 +984,7 @@ def from_time(time) {
  * ```
  * 
  * @param number jdate
- * @return number
+ * @returns number
  */
 def from_jd(jdate) {
   if jdate < 0 die Exception('Invalid julian date')
@@ -1032,7 +1032,7 @@ def from_jd(jdate) {
  * @param number? minute
  * @param number? seconds
  * @param bool? is_dst
- * @return Date
+ * @returns Date
  * @default
  */
 def date(year, month, day, hour, minute, seconds) {

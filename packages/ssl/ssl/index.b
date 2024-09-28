@@ -18,7 +18,7 @@ import .server { * }
  * 
  * @param int port
  * @param string? host
- * @return TLSServer
+ * @returns TLSServer
  * @throws Exception, SocketExcepion, HttpException
  */
 def server(port, host) {

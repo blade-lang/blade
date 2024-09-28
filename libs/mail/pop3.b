@@ -47,7 +47,7 @@ class POP3 {
    *    not. (Default: The value of __verify_host__)
    * - __timeout__: The request timeout in milliseconds. (Default: 30,000)
    * 
-   * @param {dict?} options
+   * @param dict? options
    * @constructor
    */
   POP3(options) {
@@ -136,11 +136,11 @@ class POP3 {
   /**
    * Executes an POP3 command.
    * 
-   * @param {string} command The command to execute.
-   * @param {string?} path The path segement of the request url.
-   * @param {bool?} no_transfer Set to `true` if the command will return the requested data 
+   * @param string command The command to execute.
+   * @param string? path The path segement of the request url.
+   * @param bool? no_transfer Set to `true` if the command will return the requested data 
    *    as response response. Default `false`.
-   * @return string The response from the server.
+   * @returns string The response from the server.
    */
   exec(command, path, no_transfer) {
     if command != nil and !is_string(command)
@@ -165,8 +165,8 @@ class POP3 {
    * mail if the _uid_ argument is not given or the content of the message identified by the 
    * given _uid_.
    * 
-   * @param {number?} uid
-   * @return {list[dictionary]|string}
+   * @param number? uid
+   * @returns list[dictionary]|string
    */
   list(uid) {
     if uid != nil and !is_number(uid)
@@ -181,7 +181,7 @@ class POP3 {
    * Returns a list of dictionaries containing the `uid` and `id` for every message in the mailbox 
    * based on their unique ids.
    * 
-   * @return {list[dictionary]}
+   * @returns list[dictionary]
    */
   uid_list() {
     return self._to_uid_list(self.exec('UIDL'))
@@ -190,8 +190,8 @@ class POP3 {
   /**
    * Retrieves the whole message with the specified _uid_.
    * 
-   * @param {number} uid
-   * @return {string}
+   * @param number uid
+   * @returns string
    */
   retr(uid) {
     if !is_number(uid)
@@ -203,7 +203,7 @@ class POP3 {
   /**
    * Returns a dictionary containing the message `count` and `size` of the mailbox.
    * 
-   * @return {dictionary}
+   * @returns dictionary
    */
   stat() {
     var curl = self._init()
@@ -228,7 +228,7 @@ class POP3 {
    * The POP3 server does not actually delete the message until the POP3 session enters the 
    * UPDATE state.
    * 
-   * @param {number} uid
+   * @param number uid
    */
   delete(uid) {
     if !is_string(uid)
@@ -257,9 +257,9 @@ class POP3 {
    * Retrieves the header for the message identified by `uid` plus `count` lines 
    * of the message after the header of message.
    * 
-   * @param {number} uid
-   * @param {number?} count (Default: 0)
-   * @return {string}
+   * @param number uid
+   * @param number? count (Default: 0)
+   * @returns string
    */
   top(uid, count) {
     if !is_number(uid)
@@ -293,7 +293,7 @@ class POP3 {
  * Returns a new instance of the POP3 class with the given options (if any) passed 
  * to the constructor.
  * 
- * @return {POP3}
+ * @returns POP3
  * @default
  */
 def pop3(options) {

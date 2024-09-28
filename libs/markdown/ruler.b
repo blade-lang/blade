@@ -87,9 +87,9 @@ class Ruler {
    * })
    * ```
    * 
-   * @param {string} name: rule name to replace.
-   * @param {function} fn: new rule function.
-   * @param {dict?} options: new rule options (optional).
+   * @param string name: rule name to replace.
+   * @param function fn: new rule function.
+   * @param dict? options: new rule options (optional).
    */
   at(name, fn, options) {
     var index = self.__find__(name)
@@ -120,10 +120,10 @@ class Ruler {
    * })
    * ```
    * 
-   * @param {string} before_name: new rule will be added before this one.
-   * @param {string} rule_name: name of added rule.
-   * @param {function} fn: rule function.
-   * @param {dict?} options: rule options (optional).
+   * @param string before_name: new rule will be added before this one.
+   * @param string rule_name: name of added rule.
+   * @param function fn: rule function.
+   * @param dict? options: rule options (optional).
    */
   before(before_name, rule_name, fn, options) {
     var index = self.__find__(before_name)
@@ -160,10 +160,10 @@ class Ruler {
    * })
    * ```
    * 
-   * @param {string} after_name: new rule will be added after this one.
-   * @param {string} rule_name: name of added rule.
-   * @param {function} fn: rule function.
-   * @param {dict?} options: rule options (optional).
+   * @param string after_name: new rule will be added after this one.
+   * @param string rule_name: name of added rule.
+   * @param function fn: rule function.
+   * @param dict? options: rule options (optional).
    */
   after(after_name, rule_name, fn, options) {
     var index = self.__find__(after_name)
@@ -200,9 +200,9 @@ class Ruler {
    * })
    * ```
    * 
-   * @param {string} rule_name: name of added rule.
-   * @param {function} fn: rule function.
-   * @param {dict?} options: rule options (optional).
+   * @param string rule_name: name of added rule.
+   * @param function fn: rule function.
+   * @param dict? options: rule options (optional).
    */
   push(rule_name, fn, options) {
     var opt = options or {}
@@ -225,9 +225,9 @@ class Ruler {
    *
    * See also [[Ruler.disable]], [[Ruler.enable_only]].
    * 
-   * @param {string|list} list: list of rule names to enable.
-   * @param {bool} ignore_invalid: set `true` to ignore errors when rule not found.
-   * @return list
+   * @param string|list list: list of rule names to enable.
+   * @param bool ignore_invalid: set `true` to ignore errors when rule not found.
+   * @returns list
    */
   enable(list, ignore_invalid) {
     if !is_list(list) list = [ list ]
@@ -256,8 +256,8 @@ class Ruler {
    *
    * See also [[Ruler.disable]], [[Ruler.enable]].
    * 
-   * @param {string|list} list: list of rule names to enable (whitelist).
-   * @param {bool} ignore_invalid: set `true` to ignore errors when rule not found.
+   * @param string|list list: list of rule names to enable (whitelist).
+   * @param bool ignore_invalid: set `true` to ignore errors when rule not found.
    */
   enable_only(list, ignore_invalid) {
     if !is_list(list) list = [ list ]
@@ -274,9 +274,9 @@ class Ruler {
    *
    * See also [[Ruler.enable]], [[Ruler.enable_only]].
    * 
-   * @param {string|list} list: list of rule names to disable.
-   * @param {bool} ignore_invalid: set `true` to ignore errors when rule not found.
-   * @return list
+   * @param string|list list: list of rule names to disable.
+   * @param bool ignore_invalid: set `true` to ignore errors when rule not found.
+   * @returns list
    */
   disable(list, ignore_invalid) {
     if !is_list(list) list = [ list ]
@@ -306,8 +306,8 @@ class Ruler {
    * Default chain name is `''` (empty string). It can't be skipped. That's
    * done intentionally, to keep signature monomorphic for high speed.
    * 
-   * @param {string} chain_name
-   * @return string
+   * @param string chain_name
+   * @returns string
    **/
   get_rules(chain_name) {
     if self.__cache__ == nil {

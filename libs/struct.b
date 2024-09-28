@@ -58,7 +58,7 @@ import _struct
  * 
  * @param string format
  * @param any... \__args__
- * @return bytes
+ * @returns bytes
  */
 def pack(format, ...) {
   if !is_string(format)
@@ -90,9 +90,9 @@ def pack(format, ...) {
  * > numbering restarts from 1 for each element.
  * 
  * @param string format
- * @param {bytes|string} data
+ * @param bytes|string data
  * @param number? offset: Default value is `0`
- * @return any
+ * @returns any
  */
 def unpack(format, data, offset) {
   if !is_string(format)
@@ -114,7 +114,7 @@ def unpack(format, data, offset) {
  * 
  * @param string format
  * @param list args
- * @return bytes
+ * @returns bytes
  */
 def pack_from(format, args) {
   if !is_string(format)
