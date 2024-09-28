@@ -1,3 +1,5 @@
+#!-- part of the imagine module
+
 # Image blurs
 
 /**

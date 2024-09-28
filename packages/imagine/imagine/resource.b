@@ -1,3 +1,5 @@
+#!-- part of the imagine module
+
 import _imagine
 import _reflect
 
@@ -10,6 +12,11 @@ import .crops
 import .blurs
 import .interpolations
 
+
+/**
+ * The ImageResource class represents a loaded image and exposes all 
+ * the image processing, metadata and manipulation functions.
+ */
 class ImageResource {
   # cache for the image meta
   var _meta

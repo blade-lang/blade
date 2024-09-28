@@ -1,7 +1,15 @@
+#!-- part of the imagine module
+
 import _imagine
 
 import .resource { ImageResource }
 
+
+/**
+ * The Image class is allows creating and opening of imnages in 
+ * any of the supported formats which includes `JPEG`, `PNG`, 
+ * `GIF`, `TIFF`, `BMP`, `WBMP`, `TGA`, `WEBP`, `AVIF`.
+ */
 class Image {
 
   /**

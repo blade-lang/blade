@@ -1,3 +1,5 @@
+#!-- part of the imagine module
+
 /**
  * Actual image IS different
  */
