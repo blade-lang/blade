@@ -593,6 +593,10 @@ DECLARE_MODULE_METHOD(ssl_read) {
 
   int ssl_fd = SSL_get_fd(ssl);
 
+#ifdef SSL_OP_IGNORE_UNEXPECTED_EOF
+  SSL_set_options(ssl, SSL_OP_IGNORE_UNEXPECTED_EOF);
+#endif
+
   fd_set read_fds;
   FD_ZERO(&read_fds);
   FD_SET(ssl_fd, &read_fds);
