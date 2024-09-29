@@ -545,6 +545,7 @@ DECLARE_MODULE_METHOD(ssl_write) {
   SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
   b_obj_bytes *bytes = AS_BYTES(args[1]);
 
+  SSL_set_mode(ssl, SSL_MODE_ENABLE_PARTIAL_WRITE);
   ERR_clear_error();
 
   unsigned char *buffer = (unsigned char*)bytes->bytes.bytes;
@@ -656,7 +657,7 @@ DECLARE_MODULE_METHOD(ssl_read) {
       } else if(error == SSL_ERROR_ZERO_RETURN || error == SSL_ERROR_NONE) {
         break;
       } else {
-        RETURN_SSL_ERROR();
+        RETURN_NIL;
       }
     }
 

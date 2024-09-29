@@ -174,7 +174,6 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_ONE:
     case OP_SET_INDEX:
     case OP_ASSERT:
-    case OP_DIE:
     case OP_POP_TRY:
     case OP_RANGE:
     case OP_STRINGIFY:
@@ -228,6 +227,9 @@ static int get_code_args_count(const uint8_t *bytecode,
 
     case OP_TRY:
       return 6;
+
+    case OP_DIE:
+      return 4;
 
     case OP_CLOSURE: {
       int constant = (bytecode[ip + 1] << 8) | bytecode[ip + 2];
@@ -343,6 +345,18 @@ static int emit_try(b_parser *p) {
   emit_byte(p, 0xff);
 
   return current_blob(p)->count - 6;
+}
+
+static void emit_die(b_parser *p, int locals_count, int upvalues_count) {
+  emit_byte(p, OP_DIE);
+
+  // locals_count
+  emit_byte(p, (locals_count >> 8) & 0xff);
+  emit_byte(p, locals_count & 0xff);
+
+  // upvalues_count
+  emit_byte(p, (upvalues_count >> 8) & 0xff);
+  emit_byte(p, upvalues_count & 0xff);
 }
 
 static void patch_switch(b_parser *p, int offset, int constant) {
@@ -2053,9 +2067,21 @@ static void echo_statement(b_parser *p) {
 }
 
 static void die_statement(b_parser *p) {
+  int locals_count = 0;
+  int upvalues_count = 0;
+
+  int local = p->vm->compiler->local_count - 1;
+  while (local >= 0 && p->vm->compiler->locals[local].depth >= p->vm->compiler->scope_depth - 1) {
+    if (p->vm->compiler->locals[local].is_captured) {
+      upvalues_count++;
+    } else {
+      locals_count++;
+    }
+    local--;
+  }
+
   expression(p);
-  emit_byte(p, OP_DIE);
-  discard_locals(p, p->vm->compiler->scope_depth - 1);
+  emit_die(p, locals_count, upvalues_count);
   consume_statement_end(p);
 }
 
@@ -2303,7 +2329,7 @@ static void try_statement(b_parser *p) {
 
     end_scope(p);
   } else {
-      type = make_constant(p, OBJ_VAL(copy_string(p->vm, "Exception", 9)));
+    type = make_constant(p, OBJ_VAL(copy_string(p->vm, "Exception", 9)));
   }
 
   patch_jump(p, exit_jump);

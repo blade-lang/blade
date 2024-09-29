@@ -105,8 +105,14 @@ class SSL {
     if is_string(data) data = data.to_bytes()
 
     var result = _ssl.write(self._ptr, data)
-    if result == false
-      die Exception(self.error())
+    if result == false {
+      var err = self.error()
+      if err {
+        die Exception(err)
+      }
+
+      return 0
+    }
     
     return data.length()
   }
@@ -130,7 +136,12 @@ class SSL {
     
     var result = _ssl.read(self._ptr, length, is_blocking)
     if result == nil {
-      die Exception(self.error())
+      var err = self.error()
+      if err {
+        die Exception(err)
+      }
+
+      return ''
     }
 
     return result

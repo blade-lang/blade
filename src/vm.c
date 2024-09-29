@@ -2454,15 +2454,31 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
       }
 
       case OP_DIE: {
+        uint16_t locals = READ_SHORT();
+        uint16_t upvalues = READ_SHORT();
+
         if (!IS_INSTANCE(peek(vm, 0)) ||
             !is_instance_of(AS_INSTANCE(peek(vm, 0))->klass, vm->exception_class->name->chars)) {
           runtime_error("instance of Exception expected");
           break;
         }
 
+        b_value exception = peek(vm, 0);
         b_value stacktrace = get_stack_trace(vm);
-        b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
+        b_obj_instance *instance = AS_INSTANCE(exception);
         table_set(vm, &instance->properties, STRING_L_VAL("stacktrace", 10), stacktrace);
+        pop(vm); // pop the exception
+
+        if(locals > 0) {
+          pop_n(vm, locals);
+        }
+        for(int i = 0; i < upvalues; i++) {
+          close_up_values(vm, vm->stack_top - 1);
+          pop(vm);
+        }
+
+        push(vm, exception); // push it back to the top.
+
         if (propagate_exception(vm, false)) {
           vm->current_frame = &vm->frames[vm->frame_count - 1];
           break;

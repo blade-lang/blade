@@ -254,13 +254,21 @@ static void print_list(b_obj_list *list) {
 
 static void print_bytes(b_obj_bytes *bytes) {
   printf("(");
-  for (int i = 0; i < bytes->bytes.count; i++) {
+
+  int count = bytes->bytes.count <= 20 ? bytes->bytes.count : 20;
+
+  for (int i = 0; i < count; i++) {
     printf("%x", bytes->bytes.bytes[i]);
     if (i != bytes->bytes.count - 1) {
       printf(" ");
     }
   }
-  printf(")");
+
+  if(bytes->bytes.count > 20) {
+    printf(" ...%d)", bytes->bytes.count);
+  } else {
+    printf(")");
+  }
 }
 
 static void print_dict(b_obj_dict *dict) {

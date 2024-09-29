@@ -55,6 +55,16 @@ static int jump_instruction(const char *name, int sign, b_blob *blob,
   return offset + 3;
 }
 
+static int die_instruction(const char *name, b_blob *blob, int offset) {
+  uint16_t locals = (uint16_t) (blob->code[offset + 1] << 8);
+  locals |= blob->code[offset + 2];
+  uint16_t upvalues = (uint16_t) (blob->code[offset + 3] << 8);
+  upvalues |= blob->code[offset + 4];
+
+  printf("%-16s %8d, %8d\n", name, locals, upvalues);
+  return offset + 5;
+}
+
 static int try_instruction(const char *name, b_blob *blob, int offset) {
   uint16_t type = (uint16_t) (blob->code[offset + 1] << 8);
   type |= blob->code[offset + 2];
@@ -63,7 +73,7 @@ static int try_instruction(const char *name, b_blob *blob, int offset) {
   uint16_t finally = (uint16_t) (blob->code[offset + 5] << 8);
   finally |= blob->code[offset + 6];
 
-  printf("%-16s %8d -> %d, %d\n", name, type, address, finally);
+  printf("%-16s %8d -> %8d, %8d\n", name, type, address, finally);
   return offset + 7;
 }
 
@@ -201,7 +211,7 @@ int disassemble_instruction(b_blob *blob, int offset) {
     case OP_CHOICE:
       return simple_instruction("cho", offset);
     case OP_DIE:
-      return simple_instruction("die", offset);
+      return die_instruction("die", blob, offset);
     case OP_POP:
       return simple_instruction("pop", offset);
     case OP_CLOSE_UP_VALUE:
