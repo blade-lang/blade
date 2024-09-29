@@ -112,7 +112,7 @@ class HttpRequest {
   var auth_method = Auth.ANY
 
   # Private fields.
-  var _body_type = 'application/x-wwx-form-urlencoded'
+  var _body_type = 'application/x-www-form-urlencoded'
 
   _read_cookies() {
     var cookies = self.headers.get('Cookie', nil)
