@@ -156,3 +156,12 @@ def delete(url) {
 def server(port, address) {
   return HttpServer(port, address)
 }
+
+/**
+ * Returns the default client.
+ * 
+ * @returns HttpClient
+ */
+def client() {
+  return _client
+}

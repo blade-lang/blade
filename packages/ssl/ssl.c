@@ -546,7 +546,32 @@ DECLARE_MODULE_METHOD(ssl_write) {
   b_obj_bytes *bytes = AS_BYTES(args[1]);
 
   ERR_clear_error();
-  RETURN_NUMBER(SSL_write(ssl, bytes->bytes.bytes, bytes->bytes.count));
+
+  unsigned char *buffer = (unsigned char*)bytes->bytes.bytes;
+  int total = bytes->bytes.count;
+  int processed = 0;
+
+  do {
+    int write_size = total - processed < 1024 ? (total - processed) : 1024;
+    int rc = SSL_write(ssl, buffer + processed, write_size);
+    if(rc < 0) {
+      int error = SSL_get_error(ssl, rc);
+      if(error == SSL_ERROR_WANT_WRITE) {
+        continue;
+      } else if(error == SSL_ERROR_ZERO_RETURN || error == SSL_ERROR_NONE) {
+        break;
+      } else {
+        RETURN_FALSE; // error occurred
+      }
+    } else {
+      processed += rc;
+      if(processed == total) {
+        break;
+      }
+    }
+  } while(true);
+
+  RETURN_TRUE;
 }
 
 DECLARE_MODULE_METHOD(ssl_read) {

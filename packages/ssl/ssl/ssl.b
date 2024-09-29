@@ -105,10 +105,10 @@ class SSL {
     if is_string(data) data = data.to_bytes()
 
     var result = _ssl.write(self._ptr, data)
-    if result == -1
+    if result == false
       die Exception(self.error())
     
-    return result
+    return data.length()
   }
 
   /**
