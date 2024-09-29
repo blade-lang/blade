@@ -12,6 +12,7 @@ import .response {
 
 import url
 import socket
+import json
 import curl { 
   Option, 
   Info, 
@@ -287,6 +288,10 @@ class HttpRequest {
     using type {
       when 'application/x-www-form-urlencoded' {
         self.body = self._get_url_encoded_parts(body.to_string())  
+        body.dispose()  # free body binary data
+      }
+      when 'application/json' {
+        self.body = json.decode(body.to_string())
         body.dispose()  # free body binary data
       }
       when 'multipart/form-data' {
