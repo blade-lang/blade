@@ -169,6 +169,8 @@ static inline void gc_clear_protection(b_vm *vm) {
 #define GC(o) gc_protect(vm, (b_obj*)(o))
 #define CLEAR_GC() gc_clear_protection(vm)
 
+bool call_value(b_vm *vm, b_value callee, int arg_count);
+b_value raw_closure_call(b_vm *vm, b_obj_closure *closure, b_obj_list *args, bool must_push);
 b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args);
 bool queue_closure(b_vm *vm, b_obj_closure *closure);
 void register_module__FILE__(b_vm *vm, b_obj_module *module);

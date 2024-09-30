@@ -143,12 +143,11 @@
       b_obj_string *name = (b_obj_string *)GC(copy_string(vm, "@" #override, (i) + 1)); \
       if(table_get(&instance->klass->methods, OBJ_VAL(name), &_tmp)) {         \
         CLEAR_GC(); \
-        if (invoke_from_class(vm, instance->klass, name, 0)) {               \
-          args[-1] = TRUE_VAL;                                                   \
-          return false; \
-        }                                                                        \
+        b_value val = raw_closure_call(vm, AS_CLOSURE(_tmp), 0, false); \
+        args[-1] = val;                                                   \
+        return false; \
       } \
-    }                                                                          \
+    }      \
     CLEAR_GC(); \
   } while (0)
 

@@ -2576,11 +2576,13 @@ void register_module__FILE__(b_vm *vm, b_obj_module *module) {
 }
 
 // helper function to access call outside the vm file.
-b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
+b_value raw_closure_call(b_vm *vm, b_obj_closure *closure, b_obj_list *args, bool must_push) {
   b_value *stack_top = vm->stack_top;
 
   // set the closure before the args
-  push(vm, OBJ_VAL(closure));
+  if(must_push) {
+    push(vm, OBJ_VAL(closure));
+  }
 
   int arg_count = 0;
   if(args && (arg_count = args->items.count)) {
@@ -2601,6 +2603,10 @@ b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
 
   vm->stack_top = stack_top;
   return result;
+}
+
+b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
+  return raw_closure_call(vm, closure, args, true);
 }
 
 // helper function to access call outside the vm file.
