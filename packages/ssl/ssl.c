@@ -144,7 +144,16 @@ DECLARE_MODULE_METHOD(ssl_new) {
   ENFORCE_ARG_TYPE(new, 0, IS_PTR);
 
   SSL_CTX *ctx = (SSL_CTX*)AS_PTR(args[0])->pointer;
-  RETURN_PTR(SSL_new(ctx));
+
+  SSL *ssl = SSL_new(ctx);
+
+  dbg(
+      SSL_set_msg_callback(ssl,SSL_trace);
+      SSL_set_msg_callback_arg(ssl, BIO_new_fp(stdout,0))
+  );
+
+
+  RETURN_PTR(ssl);
 }
 
 DECLARE_MODULE_METHOD(ssl_ssl_free) {
@@ -588,7 +597,7 @@ DECLARE_MODULE_METHOD(ssl_read) {
   char *data = (char*)malloc(sizeof(char));
   memset(data, 0, sizeof(char));
   int total = 0;
-  char buffer[1025];
+  char buffer[1028];
   ERR_clear_error();
 
   int ssl_fd = SSL_get_fd(ssl);
@@ -621,15 +630,15 @@ DECLARE_MODULE_METHOD(ssl_read) {
   } else {
     // set default timeout to 0 seconds
     timeout.tv_sec = 0;
-    timeout.tv_usec = 0;
+    timeout.tv_usec = 50000;
   }
 
   int ret = select(ssl_fd + 1, &read_fds, NULL, NULL, &timeout);
   if (ret == 0) {
     free(data);
-    RETURN_STRING("");
+    RETURN_NIL;
   } else if (ret < 0) {
-      // Error
+    // Error
   }
 
   do {
@@ -638,9 +647,7 @@ DECLARE_MODULE_METHOD(ssl_read) {
     );
 
     int bytes = SSL_read(ssl, buffer, read_count);
-    // printf("READ COUNT = %d, TOTAL: %d, LENGTH = %d, BYTE = %d\n", read_count, total, length, bytes);
-
-    if(bytes > 0) {
+    while(bytes > 0) {
       data = GROW_ARRAY(char, data, total, total + bytes + 1);
       if(data == NULL) {
         RETURN_ERROR("device out of memory.");
@@ -650,19 +657,23 @@ DECLARE_MODULE_METHOD(ssl_read) {
       total += bytes;
       data[total] = '\0';
 
-      if(total >= length && length != -1) break;
-      if((bytes == 1024 && length == -1)) {
-        continue;
-      }
-    } else {
-      int error = SSL_get_error(ssl, bytes);
+      bytes = SSL_read(ssl, buffer, read_count);
+    }
+
+    int error = SSL_get_error(ssl, bytes);
+    if(bytes == 0) {
       if(error == SSL_ERROR_WANT_READ) {
         continue;
       } else if(error == SSL_ERROR_ZERO_RETURN || error == SSL_ERROR_NONE) {
         break;
-      } else {
-        RETURN_NIL;
       }
+    } else {
+      if(select(ssl_fd + 1, &read_fds, NULL, NULL, &timeout) > 0) {
+        continue;
+      }
+
+      if(SSL_pending(ssl) > 0)
+        continue;
     }
 
     break;
@@ -755,9 +766,11 @@ DECLARE_MODULE_METHOD(ssl_error_string) {
     // const char *err = ERR_reason_error_string(ERR_get_error());
     char *err = ossl_err_as_string();
     RETURN_STRING(err);
-  } else {
+  } else if(errno > 0) {
     char *error = strerror(errno);
     RETURN_STRING(error);
+  } else {
+    RETURN_VALUE(EMPTY_STRING_VAL);
   }
 }
 
