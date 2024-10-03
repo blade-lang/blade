@@ -423,13 +423,15 @@ static inline b_obj_string *list_to_string(b_vm *vm, b_value_arr *array) {
 }
 
 static inline b_obj_string *bytes_to_string(b_vm *vm, b_byte_arr *array) {
+#define blade_bytes_format____ "%x"
+
   char *str = strdup("(");
   int length = 1;
   for (int i = 0; i < array->count; i++) {
-    int len = (int)snprintf(NULL, 0, "0x%x", array->bytes[i]);
+    int len = (int)snprintf(NULL, 0, blade_bytes_format____, array->bytes[i]);
     char *chars = ALLOCATE(char, len);
     if (chars != NULL) {
-      sprintf(chars, "0x%x", array->bytes[i]);
+      sprintf(chars, blade_bytes_format____, array->bytes[i]);
       str = append_strings(str, chars);
       free(chars);
       length += len;
@@ -443,6 +445,8 @@ static inline b_obj_string *bytes_to_string(b_vm *vm, b_byte_arr *array) {
   str = append_strings(str, ")");
   length++;
   return take_string(vm, str, length);
+
+#undef blade_bytes_format____
 }
 
 static b_obj_string *dict_to_string(b_vm *vm, b_obj_dict *dict) {

@@ -108,3 +108,22 @@ def unicode_to_hex(chr) {
 
   return decimal_to_hex(ord(chr))
 }
+
+/**
+ * Converts a bytes (binary data) to a decimal number.
+ *
+ * @param bytes bytes
+ * @return number
+ */
+def bytes_to_decimal(bytes) {
+  if !is_bytes(bytes)
+    die Exception('bytes expected, ${typeof(bytes)} given')
+
+  var result = 0
+  for byte in bytes {
+    result <<= 8
+    result |= byte
+  }
+
+  return result
+}

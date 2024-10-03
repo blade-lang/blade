@@ -21,6 +21,8 @@
 # include <sys/ioctl.h>
 #endif
 
+#define SSL_BUF_SIZE 16384
+
 DEFINE_SSL_CONSTANT(SSL_FILETYPE_PEM)
 DEFINE_SSL_CONSTANT(SSL_FILETYPE_ASN1)
 
@@ -149,7 +151,7 @@ DECLARE_MODULE_METHOD(ssl_new) {
 
   dbg(
       SSL_set_msg_callback(ssl,SSL_trace);
-      SSL_set_msg_callback_arg(ssl, BIO_new_fp(stdout,0))
+      SSL_set_msg_callback_arg(ssl, BIO_new_fp(stdout,0));
   );
 
 
@@ -562,7 +564,9 @@ DECLARE_MODULE_METHOD(ssl_write) {
   int processed = 0;
 
   do {
-    int write_size = total - processed < 1024 ? (total - processed) : 1024;
+    int diff = total - processed;
+    int write_size = diff < SSL_BUF_SIZE ? diff : SSL_BUF_SIZE;
+
     int rc = SSL_write(ssl, buffer + processed, write_size);
     if(rc < 0) {
       int error = SSL_get_error(ssl, rc);
@@ -594,10 +598,8 @@ DECLARE_MODULE_METHOD(ssl_read) {
   int length = AS_NUMBER(args[1]);
   bool is_blocking = AS_BOOL(args[2]);
 
-  char *data = (char*)malloc(sizeof(char));
-  memset(data, 0, sizeof(char));
   int total = 0;
-  char buffer[1028];
+  char buffer[SSL_BUF_SIZE];
   ERR_clear_error();
 
   int ssl_fd = SSL_get_fd(ssl);
@@ -609,8 +611,6 @@ DECLARE_MODULE_METHOD(ssl_read) {
   fd_set read_fds;
   FD_ZERO(&read_fds);
   FD_SET(ssl_fd, &read_fds);
-
-  // struct timeval timeout = { .tv_sec = 0, .tv_usec = 500000 };
 
   struct timeval timeout;
   if(is_blocking) {
@@ -628,23 +628,29 @@ DECLARE_MODULE_METHOD(ssl_read) {
       timeout.tv_usec = 0;
     }
   } else {
-    // set default timeout to 0 seconds
+    // set default timeout to 0.05 seconds
     timeout.tv_sec = 0;
     timeout.tv_usec = 50000;
   }
 
   int ret = select(ssl_fd + 1, &read_fds, NULL, NULL, &timeout);
   if (ret == 0) {
-    free(data);
     RETURN_NIL;
   } else if (ret < 0) {
     // Error
   }
 
+  char *data = (char*)malloc(sizeof(char));
+  memset(data, 0, sizeof(char));
+
   do {
-    int read_count = length == -1 ? 1024 : (
-      (length - total) < 1024 ? (length - total) : 1024
+    int diff = length - total;
+    int read_count = length == -1 ? SSL_BUF_SIZE : (
+      diff < SSL_BUF_SIZE ? diff : SSL_BUF_SIZE
     );
+
+    ERR_clear_error();
+    memset(buffer, 0, sizeof(buffer));
 
     int bytes = SSL_read(ssl, buffer, read_count);
     while(bytes > 0) {
@@ -657,14 +663,23 @@ DECLARE_MODULE_METHOD(ssl_read) {
       total += bytes;
       data[total] = '\0';
 
+      memset(buffer, 0, sizeof(buffer));
+      ERR_clear_error();
+
       bytes = SSL_read(ssl, buffer, read_count);
     }
 
     int error = SSL_get_error(ssl, bytes);
+    if(error == SSL_ERROR_SSL) {
+      free(data);
+      RETURN_NIL;
+    }
+
     if(bytes == 0) {
       if(error == SSL_ERROR_WANT_READ) {
         continue;
       } else if(error == SSL_ERROR_ZERO_RETURN || error == SSL_ERROR_NONE) {
+        SSL_shutdown(ssl);
         break;
       }
     } else {
@@ -672,8 +687,9 @@ DECLARE_MODULE_METHOD(ssl_read) {
         continue;
       }
 
-      if(SSL_pending(ssl) > 0)
+      if(SSL_pending(ssl) > 0) {
         continue;
+      }
     }
 
     break;
@@ -979,3 +995,5 @@ CREATE_MODULE_LOADER(ssl) {
 
   return &module;
 }
+
+#undef SSL_BUF_SIZE
