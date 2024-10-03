@@ -118,7 +118,7 @@ typedef struct b_obj_up_value {
   struct b_obj_up_value *next;
 } b_obj_up_value;
 
-typedef struct {
+struct s_obj_module {
   b_obj obj;
   bool imported;
   b_table values;
@@ -127,7 +127,8 @@ typedef struct {
   void *preloader;
   void *unloader;
   void *handle;
-} b_obj_module;
+  b_obj_module *parent;
+};
 
 typedef struct {
   b_obj obj;
@@ -228,7 +229,7 @@ typedef struct {
 } b_obj_ptr;
 
 // non-user objects...
-b_obj_module *new_module(b_vm *vm, char *name, char *file);
+b_obj_module *new_module(b_vm *vm, char *name, char *file, b_obj_module *parent);
 
 b_obj_switch *new_switch(b_vm *vm);
 b_obj_ptr *new_ptr(b_vm *vm, void *pointer);

@@ -217,15 +217,7 @@ void free_object(b_vm *vm, b_obj *object) {
   switch (object->type) {
     case OBJ_MODULE: {
       b_obj_module *module = (b_obj_module *) object;
-      free_table(vm, &module->values);
-      free(module->name);
-      free(module->file);
-      if (module->unloader != NULL && module->imported) {
-        ((b_module_loader)module->unloader)(vm);
-      }
-      if(module->handle != NULL) {
-        close_dl_module(module->handle);  // free the shared library...
-      }
+      free_module(vm, module);
       FREE(b_obj_module, object);
       break;
     }

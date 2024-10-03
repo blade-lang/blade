@@ -51,11 +51,12 @@ b_obj_ptr *new_closable_named_ptr(b_vm *vm, void *pointer, char *name, b_ptr_fre
   return ptr;
 }
 
-b_obj_module *new_module(b_vm *vm, char *name, char *file) {
+b_obj_module *new_module(b_vm *vm, char *name, char *file, b_obj_module *parent) {
   b_obj_module *module = ALLOCATE_OBJ(b_obj_module, OBJ_MODULE);
   init_table(&module->values);
   module->name = name;
   module->file = file;
+  module->parent = parent;
   module->unloader = NULL;
   module->preloader = NULL;
   module->handle = NULL;

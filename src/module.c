@@ -46,11 +46,28 @@ b_module_init modules[] = {
     NULL,
 };
 
+void free_module(b_vm *vm, b_obj_module *module) {
+  free_table(vm, &module->values);
+  free(module->name);
+  free(module->file);
+  if (module->unloader != NULL && module->imported) {
+    ((b_module_loader)module->unloader)(vm);
+  }
+  if(module->handle != NULL) {
+    close_dl_module(module->handle);  // free the shared library...
+  }
+
+  module->name = NULL;
+  module->file = NULL;
+  module->unloader = NULL;
+  module->handle = NULL;
+}
+
 bool load_module(b_vm *vm, b_module_init init_fn, char *import_name, char *source, void *handle) {
   b_module_reg *module = init_fn(vm);
 
   if(module != NULL) {
-    b_obj_module *the_module = (b_obj_module*)GC(new_module(vm, (char *)module->name, source));
+    b_obj_module *the_module = (b_obj_module*)GC(new_module(vm, (char *)module->name, source, NULL));
     the_module->preloader = module->preloader;
     the_module->unloader = module->unloader;
 

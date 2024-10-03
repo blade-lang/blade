@@ -2241,7 +2241,21 @@ static void import_statement(b_parser *p) {
     return;
   }
 
-  b_obj_module *module = new_module(p->vm, module_name, module_path);
+  // prevent cyclic imports
+  b_obj_module *check_module = p->module;
+  while (check_module->parent != NULL) {
+    size_t path_length = strlen(check_module->parent->file);
+    if(strlen(module_path) == path_length) {
+      if(memcmp(module_path, check_module->parent->file, path_length) == 0) {
+        error(p, "cyclic import detected at %s", module_name);
+        free(module_path);
+        return;
+      }
+    }
+    check_module = check_module->parent;
+  }
+
+  b_obj_module *module = new_module(p->vm, module_name, module_path, p->module);
 
   push(p->vm, OBJ_VAL(module));
   b_obj_func *function = compile(p->vm, module, source);

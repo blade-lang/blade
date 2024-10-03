@@ -41,7 +41,7 @@ static void repl(b_vm *vm) {
 
   int brace_count = 0, paren_count = 0, bracket_count = 0, single_quote_count = 0, double_quote_count = 0;
 
-  b_obj_module *module = new_module(vm, strdup(""), strdup("<repl>"));
+  b_obj_module *module = new_module(vm, strdup(""), strdup("<repl>"), NULL);
   add_module(vm, module);
   register_module__FILE__(vm, module);
 
@@ -192,7 +192,7 @@ static void run_file(b_vm *vm, char *file) {
   // set root file...
   vm->root_file = file;
 
-  b_obj_module *module = new_module(vm, strdup(""), realpath(file, NULL));
+  b_obj_module *module = new_module(vm, strdup(""), realpath(file, NULL), NULL);
   add_module(vm, module);
   register_module__FILE__(vm, module);
 
@@ -211,7 +211,7 @@ static void run_code(b_vm *vm, char *source) {
   // set root file...
   vm->root_file = NULL;
 
-  b_obj_module *module = new_module(vm, strdup(""), strdup("<script>"));
+  b_obj_module *module = new_module(vm, strdup(""), strdup("<script>"), NULL);
   add_module(vm, module);
   register_module__FILE__(vm, module);
 
