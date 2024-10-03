@@ -65,10 +65,28 @@ int ssl___SSL_verify_true_cb(int preverify_ok, X509_STORE_CTX *x509_ctx) {
   return 1;
 }
 
+void info_callback(const SSL *ssl, int where, int ret) {
+  const char *str;
+  int w = where & ~SSL_ST_MASK;
+  if (w & SSL_ST_CONNECT) str = "SSL_connect";
+  else if (w & SSL_ST_ACCEPT) str = "SSL_accept";
+  else str = "undefined";
+
+  printf("%s:%s\n", str, SSL_state_string_long(ssl));
+}
+
 DECLARE_MODULE_METHOD(ssl_ctx) {
   ENFORCE_ARG_COUNT(ctx, 1);
   ENFORCE_ARG_TYPE(ctx, 0, IS_PTR);
-  RETURN_PTR(SSL_CTX_new((SSL_METHOD*) AS_PTR(args[0])->pointer));
+
+  SSL_CTX *ctx = SSL_CTX_new((SSL_METHOD*) AS_PTR(args[0])->pointer);
+
+  dbg(
+      SSL_CTX_set_num_tickets(ctx, 1);
+      SSL_CTX_set_info_callback(ctx, info_callback);
+  );
+
+  RETURN_PTR(ctx);
 }
 
 DECLARE_MODULE_METHOD(ssl_ctx_free) {
@@ -634,7 +652,7 @@ DECLARE_MODULE_METHOD(ssl_read) {
   }
 
   int ret = select(ssl_fd + 1, &read_fds, NULL, NULL, &timeout);
-  if (ret == 0) {
+  if (ret == 0 || !FD_ISSET(ssl_fd, &read_fds)) {
     RETURN_NIL;
   } else if (ret < 0) {
     // Error
@@ -677,6 +695,9 @@ DECLARE_MODULE_METHOD(ssl_read) {
 
     if(bytes == 0) {
       if(error == SSL_ERROR_WANT_READ) {
+        continue;
+      } else if(error == SSL_ERROR_WANT_WRITE) {
+        SSL_do_handshake(ssl); // must want an handshake
         continue;
       } else if(error == SSL_ERROR_ZERO_RETURN || error == SSL_ERROR_NONE) {
         SSL_shutdown(ssl);
