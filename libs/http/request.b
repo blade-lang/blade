@@ -1,27 +1,431 @@
 #!-- part of the http module
 
-import ._process
-
-import .exception { 
-  HttpException 
-}
+import .exception { HttpException }
 import .status { * }
-import .response { 
-  HttpResponse 
-}
+import .response { HttpResponse }
+import .defaults
 
 import url
 import socket
+import url
+import ssl
+import hash
+import mime
+import zlib
 import json
-import curl { 
-  Option, 
-  Info, 
-  Curl, 
-  CurlList, 
-  CurlMime, 
-  Auth 
+import convert
+
+var _host_name_prefix = '/^[a-z0-9\-]+[.]/'
+var _host_name_postfix = '/[.][a-z0-9\-]+$/'
+
+def _process_header(header, meta_callback) {
+  var result = {
+    headers: {},
+    cookies: []
+  }
+
+  if header {
+    # Follow redirect headers...
+    var data = header.trim().split('\r\n')
+
+    iter var i = 0; i < data.length(); i++ {
+      var d = data[i].index_of(':')
+      if d > -1 {
+        var key = data[i][0,d]
+        var value = data[i][d + 1,].trim()
+
+        # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-3.2.6
+        # A string of text is parsed as a single value if it is quoted using
+        # double-quote marks
+        # if value.starts_with('"') and value.ends_with('"')
+        #   value = value[1,-1]
+
+        # handle cookies in header
+        if key.lower() == 'set-cookie' {
+          if result.cookies.contains(key) {
+            result.cookies.append(value)
+          } else {
+            result.cookies = [value]
+          }
+        } else {
+          result.headers.set(key, value)
+        }
+      } else if(data[i].lower().starts_with('http/')){
+        var split = data[i].split(' ')
+        var http_version = split[0].replace('~http/~', '')
+
+        # call back with (version, status code)
+        if meta_callback meta_callback(http_version, to_number(split[1]))
+      }
+    }
+  }
+
+  return result
 }
-# import ssl
+
+def _get_url_encoded_parts(data) {
+  var result = {}
+
+  var parts = data.split('&')
+  for p in parts {
+    p = p.split('=')
+    if p {
+      var name = url.decode(p[0].replace('+', ' '))
+      if p.length() == 2 {
+        result.set(name, url.decode(p[1].replace('+', ' ')))
+      } else {
+        result.set(name, nil)
+      }
+    }
+  }
+
+  return result
+}
+
+def _create_send_request_body(data, content_type, self_files) {
+  if data {
+
+    if !is_dict(data) and self_files {
+      die HttpException('data must be a dictionary when files are not empty')
+    } else if !is_dict(data) and !self_files {
+      return [to_string(data), content_type]
+    }
+
+    var data_objects = data.clone()
+    var file_objects = {}
+
+    for k, v in data_objects {
+      if is_file(v) {
+        file_objects.add(k, v)
+        data_objects.remove(k)
+      }
+    }
+
+    # enforce correct content type if request contains files.
+    if file_objects.length() > 0 {
+      content_type = 'multipart/form-data'
+    }
+
+    # We need to capture multipart/form-data here since it needs 
+    # to specify boundaries right in the content-type header.
+    using content_type {
+      when 'application/x-www-form-urlencoded' {
+
+        var body = ''
+        for k, v in data_objects {
+          if v {
+            body += '&${url.encode(k, true)}=${url.encode(to_string(v), true)}'
+          } else {
+            body += '&${url.encode(k, true)}='
+          }
+        }
+        
+        return [body.ltrim('&').trim(), content_type]
+      }
+      when 'application/json' {
+        return [json.encode(data_objects), content_type]
+      }
+      when 'multipart/form-data' {
+        var boundary = ('-' * 10) + hash.md5(to_string(microtime()))
+        content_type += '; boundary=${boundary}'
+
+        var body = bytes(0)
+        for k, v in data_objects {
+          body += '--${boundary}\r\n'.to_bytes()
+          body += 'Content-Disposition: form-data; name="${k}"\r\n'.to_bytes()
+          body += '\r\n'.to_bytes()
+          body += to_string(v).to_bytes()
+          body += '\r\n'.to_bytes()
+        }
+
+        for k, f in file_objects {
+          body += '--${boundary}\r\n'.to_bytes()
+          body += 'Content-Disposition: form-data; name="${k}"; filename="${f.name()}"\r\n'.to_bytes()
+          body += 'Content-Type: ${mime.detect(f)}\r\n'.to_bytes()
+          body += '\r\n'.to_bytes()
+
+          var content = f.read()
+          body += is_string(content) ? content.to_bytes() : content
+          body += '\r\n'.to_bytes()
+        }
+
+        # closing boundary marker
+        body += '--${boundary}--'.to_bytes()
+
+        return [body, content_type]
+      }
+      default {
+        return [data, content_type]
+      }
+    }
+  }
+
+  return [data, content_type]
+}
+
+def _handle_content_encoding(data, encodings) {
+    
+  for encoding in encodings.split(',', false) {
+    encoding = encoding.trim().lower()
+
+    using encoding {
+      when 'compress', 'x-compress' {
+        data = zlib.uncompress(data)
+      }
+      when 'gzip', 'x-gzip' {
+        data = zlib.ungzip(data)
+      }
+      when 'deflate' {
+        data = zlib.undeflate(data)
+      }
+      default {
+        die HttpException('unsupported encoding ${encoding}')
+      }
+    }
+  }
+
+  return is_string(data) ? data : data.to_string()
+}
+
+def _get_cookie_line(cookie, host) {
+  if is_string(cookie) {
+    return 'Set-Cookie: ${cookie}'
+  } else if is_dict(cookie) {
+    var name = cookie.get('name', nil),
+        value = cookie.get('value', nil),
+        domain = cookie.get('domain', host),
+        path = cookie.get('path', '/'),
+        expires = cookie.get('expires', nil),
+        max_age = cookie.get('max_age', '/'),
+        secure = cookie.get('secure', false),
+        same_site = cookie.get('same_site', nil),
+        http_only = cookie.get('http_only', false)
+
+    if name and value {
+      var line = 'Set-Cookie: ${name}=${value}'
+      if domain line += '; Domain=${domain}'
+      if path line += '; Path=${path}'
+      if expires line += '; Expires=${expires}'
+      if max_age line += '; Max-Age=${max_age}'
+      if secure line += '; Secure'
+      if same_site line += '; SameSite=${same_site}'
+      if http_only line += '; HttpOnly'
+
+      return line
+    }
+  }
+  
+  return ''
+}
+
+def _get_content_length(headers) {
+  for key, value in headers {
+    if key.lower() == 'content-length' {
+      return to_number(value)
+    }
+  }
+
+  return -1
+}
+
+def _is_chuncked_encoding(headers) {
+  for key, value in headers {
+    if key.lower() == 'transfer-encoding' {
+      return value.index_of('chunked') > -1
+    }
+  }
+
+  return false
+}
+
+def _get_chunk_size(bytes) {
+  return convert.hex_to_decimal(bytes.to_string())
+}
+
+def _parse_chunked_encoding(data, overflow) {
+  if !overflow overflow = -1
+  # echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> RAW DATA START <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+  # echo data
+  # echo overflow
+  # echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> RAW DATA ENDS <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+
+
+  # gracefully handle chunked data transfer
+  # 
+  # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-4.1
+  # 
+  # chunked-body   = *chunk
+  #           last-chunk
+  #           trailer-part
+  #           CRLF
+  # 
+  # chunk          = chunk-size [ chunk-ext ] CRLF
+  #                   chunk-data CRLF
+  # chunk-size     = 1*HEXDIG
+  # last-chunk     = 1*("0") [ chunk-ext ] CRLF
+  if !data return [data, 0, 0, false]
+
+  var last_index = 0
+  var total_size = 0
+  var has_zero_size = false
+
+  var chunks = bytes(0)
+
+  if overflow > 0 {
+    if data.length() > overflow {
+      chunks += data[,overflow]
+      last_index += overflow + 2 # skip the \r\n that should be inevitable.
+    }
+  }
+
+  if overflow == 0 and data.length() > 2 {
+    # if the data starts with \r\n and overflow is specifically 0,
+    # we want to skip the \r\n part and continue directly into the data.
+    if data[0] = 13 and data[1] = 10 {
+      last_index += 2
+    }
+  }
+
+  while true {
+    var next_index = data.index_of('\r\n'.to_bytes(), last_index)
+
+    # In HTTP Chunked Transfer Encoding, the chunk size is
+    # represented as a hexadecimal value followed by a
+    # newline \r\n.
+    #
+    # The maximum number of characters allowed for the chunk
+    # size is:
+    #
+    # - 8 hexadecimal digits (0-9, A-F) for the chunk size value
+    # - 2 characters for the newline \r\n
+    #
+    # since our delimiter was \r\n, we can ignore it.
+    if next_index - last_index > 8 {
+      chunks += data[last_index, next_index]
+      total_size += next_index - last_index
+      last_index = next_index + 2 # skip the \r\n
+
+      next_index = data.index_of('\r\n'.to_bytes(), last_index)
+    }
+
+    if next_index == -1 {
+      # echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>> STOP RETURN START <<<<<<<<<<<<<<<<<<<<<<<<<<<'
+      # echo 'NEXT: ' + next_index
+      # echo 'TOTAL: ' + total_size
+      # echo 'LAST: ' + last_index
+      # echo 'CHUNK: ' + chunks.length()
+      # echo 'DATA: ' + data.length()
+      # echo data[last_index,]
+      # echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>> STOP RETURN ENDS <<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+      
+      if data.length() - 1 > last_index {
+        total_size += data.length() - last_index
+        chunks += data[last_index, data.length() - 2]
+      }
+      break
+    }
+
+    var size = _get_chunk_size(data[last_index, next_index])
+    # echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> CHUNK REGIONS START <<<<<<<<<<<<<<<<<<<<<<<<<<'
+    # echo last_index
+    # echo next_index
+    # echo data[last_index, next_index]
+    # echo size
+    # echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> CHUNK REGIONS ENDS <<<<<<<<<<<<<<<<<<<<<<<<<<<'
+
+    if size == 0 and last_index > 0 {
+      # echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>> ZERO RETURN START <<<<<<<<<<<<<<<<<<<<<<<<<<<'
+      # echo data[last_index, next_index]
+      # echo last_index
+      # echo next_index
+      # echo data.length()
+      # echo chunks.length()
+      # echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>> ZERO RETURN ENDS <<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+      
+      has_zero_size = true
+      break
+    }
+
+    var start = next_index + 2, end = start + size
+    last_index = end + 2 # +2 to skip the ending \r\n
+
+    chunks += data[start,end]
+    total_size += end - start
+
+    if end > data.length() - 1 {
+      # echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>> END OVERFLOW START <<<<<<<<<<<<<<<<<<<<<<<<<<<'
+      # echo 'DATA: '
+      # echo data[start,end]
+      # echo 'LAST: ${last_index}'
+      # echo 'NEXT: ${next_index}'
+      # echo 'SIZE: ${size}'
+      # echo 'END: ${end}'
+      # echo 'LENGTH: ${data.length()}'
+      # echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>> END OVERFLOW ENDS <<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+      
+      # subtract the \r\n which was previously skipped for last_index
+      overflow = last_index - data.length() - 2
+      total_size -= overflow
+      break
+    }
+  }
+
+  return [chunks, total_size, overflow, has_zero_size]
+}
+
+def _verify_hostname(certificate, host) {
+  host = host.lower()
+
+  var current_time = time()
+  if certificate.not_before.to_time() > current_time or
+      certificate.not_after.to_time() < current_time {
+    return false
+  }
+
+  if certificate.subject_name.lower() == '/cn=${host}' {
+    return true
+  }
+
+  if certificate.extensions and certificate.extensions.subjectAltName {
+    # match against DNS subject alt names
+    var alt_names = certificate.extensions.subjectAltName.
+        split(',').map(@(x) { return x.trim()[4,] })
+
+    for name in alt_names {
+      name = name.lower()
+
+      var pre_match = name.starts_with('*.')
+      var post_match = name.ends_with('.*')
+
+      if pre_match {
+        name = name[2,]
+      }
+      if post_match {
+        name = name[,-2]
+      }
+
+      if name == host {
+        return true
+      }
+
+      if pre_match and post_match {
+        if host.replace(_host_name_postfix, '').replace(_host_name_prefix, '') == name {
+          return true
+        } 
+      } else if pre_match {
+        if host.replace(_host_name_prefix, '') == name {
+          return true
+        }
+      } else if post_match {
+        if host.replace(_host_name_postfix, '') == name {
+          return true
+        }
+      }
+    }
+  }
+
+  return false
+}
 
 /**
  * Http request handler and object.
@@ -82,8 +486,8 @@ class HttpRequest {
   var queries = {}
 
   /**
-   * A dictionary containing the cookies sent with the request.
-   * @type dictionary
+   * A list or dictionary containing the cookies sent with the request.
+   * @type {list|dictionary}
    */
   var cookies = {}
 
@@ -110,7 +514,7 @@ class HttpRequest {
    * Default value is `Auth.ANY`.
    * @type Auth
    */
-  var auth_method = Auth.ANY
+  # var auth_method = Auth.ANY
 
   # Private fields.
   var _body_type = 'application/x-www-form-urlencoded'
@@ -137,25 +541,6 @@ class HttpRequest {
     }
   }
 
-  _get_url_encoded_parts(data) {
-    var result = {}
-
-    var parts = data.split('&')
-    for p in parts {
-      p = p.split('=')
-      if p {
-        var name = url.decode(p[0].replace('+', ' '))
-        if p.length() == 2 {
-          result.set(name, url.decode(p[1].replace('+', ' ')))
-        } else {
-          result.set(name, nil)
-        }
-      }
-    }
-
-    return result
-  }
-
   _decode_line1(line1) {
     var parts = line1.split(' ')
 
@@ -172,7 +557,7 @@ class HttpRequest {
       if uri_parts.length() > 1 and uri_parts[1] {
         # A query exists and it must do so before any hash.
         var query = uri_parts[1].split('#')[0]
-        self.queries = self._get_url_encoded_parts(query)
+        self.queries = _get_url_encoded_parts(query)
       }
 
       return true
@@ -195,8 +580,8 @@ class HttpRequest {
         var content_header = bound[,content_start].to_string(),
             content_body = bound[content_start + 4,]
             
-        var content_headers = _process.process_header(content_header).headers,
-            dispositions = content_headers.get('Content-Disposition', nil)
+        var content_headers = _process_header(content_header).headers
+        var dispositions = content_headers.get('Content-Disposition', nil)
 
         if dispositions {
 
@@ -249,7 +634,7 @@ class HttpRequest {
           var content_type = content_headers.get('Content-Type', nil),
               name = disposition.name
               # value = content_body.rtrim('\n').rtrim('\r')
-            
+          
           if content_type {
 
             # We are dealing with an uploaded file.
@@ -266,7 +651,7 @@ class HttpRequest {
           contents.append(disposition)
         }
       }
-
+      
       bound.dispose()   # free the binary data
     }
 
@@ -277,7 +662,7 @@ class HttpRequest {
 
     # We need to capture multipart/form-data here since it allows 
     # specifying boundaries right in the content-type header.
-    var content_type = self.headers.get('Content-Type', ' ')
+    var content_type = self.headers.get('content-type', ' ')
     if content_type {
       content_type = content_type.split(';')
     }
@@ -285,14 +670,14 @@ class HttpRequest {
     var type = content_type[0].trim().lower()
     self._body_type = type
 
+    # TODO: Add support for multipart/byteranges
     using type {
       when 'application/x-www-form-urlencoded' {
-        self.body = self._get_url_encoded_parts(body.to_string())  
+        self.body = _get_url_encoded_parts(body.to_string())  
         body.dispose()  # free body binary data
       }
       when 'application/json' {
         self.body = json.decode(body.to_string())
-        body.dispose()  # free body binary data
       }
       when 'multipart/form-data' {
         # Content type should declare a boundary but nothing else.
@@ -319,6 +704,35 @@ class HttpRequest {
     }
 
     return true
+  }
+
+  _receive_data(client, timeout, size, should_wait) {
+    if size == nil size = -1
+    if should_wait == nil should_wait = true
+
+    var response = bytes(0)
+
+    var receive_time_start = microtime()
+    while true {
+      var data = client.receive(size)
+      if !data {
+        var time_taken = (microtime() - receive_time_start) / 1000
+        if time_taken < timeout {
+          if !should_wait and response.length() > 0 {
+            break
+          }
+          continue
+        } else {
+          break
+        }
+      }
+
+      var data_bytes = data.to_bytes()
+      response += data_bytes
+      data_bytes.dispose()
+    }
+
+    return response
   }
 
   /**
@@ -361,20 +775,22 @@ class HttpRequest {
       var line1 = headers[0]
       if !self._decode_line1(line1) return false
 
-      self.headers = _process.process_header('\r\n'.join(headers[1,])).headers
+      _process_header('\r\n'.join(headers[1,])).
+        headers.
+        each(@(v, k) { self.headers[k.lower()] = v  })
 
       # To parse the host, first we try to retrieve the `X-Forwarded-Host` header 
       # is it exists. If it does, we simply set our host to whatever value it has. 
       # Otherwise, We check the `Host` header. If it was set, our host will be set to that. 
       # Otherwise, our host will be an empty string.
-      self.host = self.headers.get('X-Forwarded-Host', self.headers.get('Host', '').split(':')[0])
+      self.host = self.headers.get('x-forwarded-host', self.headers.get('host', '').split(':')[0])
 
       self._read_cookies()
 
       # Make sure we have all body contents.
       body = body.to_bytes()
-      if self.headers.contains('Content-Length') {
-        var content_length = to_number(self.headers['Content-Length'])
+      if self.headers.contains('content-length') {
+        var content_length = to_number(self.headers['content-length'])
         var byte_length = body.length()
         if byte_length < content_length {
           var remaining_data = client.read(content_length - byte_length).to_bytes()
@@ -389,47 +805,17 @@ class HttpRequest {
     return false
   }
 
-  _create_send_request_body(curl, data) {
-    if data {
-      if !is_dict(data) and self.files {
-        die HttpException('data must be a dictionary when files are not empty')
-      } else if !is_dict(data) and !self.files {
-        curl.set_option(Option.POSTFIELDS, data)
-      } else {
-        var mime = CurlMime(curl)
-
-        for k, v in data {
-          if !is_file(v) {
-            mime.add(k, v)
-          } else {
-            mime.add_file(k, v.abs_path())
-          }
-        }
-  
-        if self.files {
-          for k, v in files {
-            mime.add_file(k, v)
-          }
-        }
-  
-        curl.set_option(Option.MIMEPOST, mime)
-      }
-    }
-  }
-
   /**
-   * Sends the given request to the given uri using the given method and 
-   * optionally passing the data if given.
+   * Send HTTP requests to the given uri for the given method 
+   * and data (if given).
    * 
-   * @param Url uri
+   * @param url uri
    * @param string method
-   * @param string|bytes|nil data
-   * @param dict? options
-   * @returns HttpResponse
-   * @dies HttpException
+   * @param string|bytes|dict|nil data
+   * @param dict? headers
+   * @params dict? options
    */
-  send(uri, method, data, options) {
-
+  send(uri, method, data, headers, options) {
     # arguments validation.
     if !instance_of(uri, url.Url)
       die HttpException('uri must be an instance of Url')
@@ -437,136 +823,415 @@ class HttpRequest {
       die HttpException('method must be string')
     if data != nil and !is_string(data) and !is_bytes(data) and !is_dict(data)
       die HttpException('data must be string, bytes or dictionary')
+    if headers != nil and !is_dict(headers)
+      die Exception('headers must be a dictionary')
     if options != nil and !is_dict(options)
       die Exception('options must be a dictionary')
 
     if options == nil options = {}
 
-    var responder = uri.absolute_url(), error, referer
+    var client_headers = headers or self.headers
 
-    var time_taken = 0, 
+    # cache the request with for case-insensitive matching.
+    var client_headers_cache = {}
+    var has_useragent = false
+    client_headers.each(@(v, k){
+      var name = k.lower()
+
+      # user is not allowed to override content-length to avoid
+      # undefined behaviors.
+      if name != 'content-length' {
+        client_headers_cache[name] = [v, k] 
+      }
+
+      if name == 'user-agent' {
+        has_useragent = true
+      }
+    })
+
+    # keep original values of important values
+    # because some servers write a relative redirect header
+    # we need to be able to resolve the correct redirect.
+    var original_host = uri.host
+    var original_scheme = uri.scheme
+
+    var responder = uri.absolute_url(), error, referer
+    var request_headers = {}, cookies = [], body
+    var server_certificate
+
+    var should_connect = true, 
+        time_taken = 0, 
         redirect_count = 0, 
         http_version = '1.0', 
         status_code = 0
 
-    var curl = Curl()
-    curl.set_option(Option.URL, responder)
-    if method.upper() != 'GET' {
-      curl.set_option(Option.CUSTOMREQUEST, method.upper())
-    }
+    var follow_redirect = options.get('follow_redirect', true),
+        connect_timeout = options.get('connect_timeout', 2000),
+        send_timeout = options.get('send_timeout', 2000),
+        receive_timeout = options.get('receive_timeout', 2000),
+        user_agent = options.get('user_agent', nil),
+        verify_peer = options.get('verify_peer', true),
+        verify_hostname = options.get('verify_hostname', true)
 
-    var user_agent = options.get('user_agent', nil)
-    if user_agent curl.set_option(Option.USERAGENT, user_agent)
 
-    curl.set_option(Option.FOLLOWLOCATION, options.get('follow_redirect', true))
-    curl.set_option(Option.CONNECTTIMEOUT_MS, options.get('connect_timeout', 2000))
-    curl.set_option(Option.TIMEOUT_MS, options.get('receive_timeout', 2000))
-    curl.set_option(Option.SSL_VERIFYPEER, !options.get('skip_peer_verification', false))
-    curl.set_option(Option.SSL_VERIFYHOST, !options.get('skip_hostname_verification', false))
+    var start = microtime()
 
-    if uri.username {
-      curl.set_option(Option.USERNAME, uri.username)
-      curl.set_option(Option.PASSWORD, uri.password)
+    while should_connect {
+      if !uri.host uri.host = original_host
+      if !uri.scheme uri.scheme = original_scheme
 
-      # Set the authentication method
-      curl.set_option(Option.HTTPAUTH, self.auth_method)
-    }
+      var resolved_host = socket.get_address_info(uri.host)
 
-    # Handle cookies.
-    var cookie_file = options.get('cookie_file', nil)
-    if cookie_file curl.set_option(Option.COOKIEFILE, cookie_file)
-    if self.cookies {
-      var cookie = ''
-      for k, v in self.cookies {
-        cookie += '${k}=${v};'
+      if resolved_host {
+        var host = resolved_host.ip,
+            port = uri.port,
+            is_secure = uri.scheme == 'https',
+            path = uri.path or '/'
+
+        # construct message
+        var message = '${method.upper()} ${path}'
+        if uri.query message += '?${uri.query}'
+        # if uri.hash message += '#${uri.hash}'
+        message += ' HTTP/1.1\r\n'
+
+        if !client_headers_cache.contains('host') {
+          message += 'Host: ${uri.host}\r\n'
+        }
+
+        # add custom headers
+        for key, value in client_headers_cache {
+          if key != 'content-type' {
+            message += '${value[1]}: ${value[0]}\r\n'
+          }
+        }
+
+        if !has_useragent and user_agent {
+          message += 'User-Agent: ${user_agent}\r\n'
+        }
+
+        if referer and !client_headers_cache.contains('referer') {
+          message += 'Referer: ${referer}\r\n'
+        }
+
+        if self.cookies {
+          if is_list(self.cookies) {
+            for cookie in self.cookies {
+              message += _get_cookie_line(cookie, uri.host)
+            }
+          } else if is_dict(cookie) {
+            message += _get_cookie_line({name: k, value: v}, uri.host)
+          }
+        }
+        
+
+        # process the request body
+        var resolved_data = _create_send_request_body(
+          data, 
+          client_headers_cache.get(
+            'content-type', 
+            [self._body_type]
+          )[0].lower(),
+          self.files
+        )
+
+        # set correct content type and body
+        message += 'Content-Type: ${resolved_data[1]}\r\n'
+        data = resolved_data[0]
+
+        if data {
+          # append the correct content length to the message
+          message += 'Content-Length: ${data.length()}\r\n'
+        } else {
+          # message += 'Content-Length: 0\r\n'
+        }
+
+        # convert message to binary in order to play nice with files
+        message = message.to_bytes()
+
+        # append the body
+        if data {
+          message += '\r\n'.to_bytes()
+          message += is_bytes(data) ? data : data.to_bytes()
+        } else {
+          message += '\r\n'.to_bytes()
+        }
+        
+
+        # do real request here...
+        var client = socket.Socket()
+
+        client.set_option(socket.SO_SNDTIMEO, send_timeout)
+        client.set_option(socket.SO_RCVTIMEO, receive_timeout)
+        client.set_blocking(false)
+        client.set_option(socket.SO_REUSEADDR, true)
+        
+        if is_secure {
+          client = ssl.TLSSocket(client, ssl.TLSClientContext())
+          client.get_context().set_ciphers(defaults.ciphers)
+          client.get_ssl().set_tlsext_host_name(uri.host)
+          
+          if verify_peer == false {
+            client.get_context().set_verify(ssl.SSL_VERIFY_PEER, false)
+          } else {
+            client.get_context().set_verify(ssl.SSL_VERIFY_PEER, true)
+          }
+        }
+
+        var local_port = to_number(port or 0)
+        if local_port == 0 {
+          local_port = is_secure ? 443 : 80
+        }
+
+        # echo '>>>>>>>>>>>>>>>>>>>>>>>>>> MESSAGE START <<<<<<<<<<<<<<<<<<<<<<<<<<'
+        # echo message.to_string()
+        # echo '>>>>>>>>>>>>>>>>>>>>>>>>>> MESSAGE END <<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+
+        # connect to the url host on the specified port and send the request message
+        if client.connect(host, local_port, connect_timeout) {
+          if is_secure {
+            server_certificate = client.get_ssl().get_peer_certificate()
+
+            if verify_hostname {
+              if !_verify_hostname(server_certificate, uri.host) {
+                echo server_certificate
+                die HttpException('bad certificate')
+              }
+            }
+          }
+
+          # try {
+            client.send(message)
+          # } catch Exception e {}
+
+          # receive the response...
+          var response_data = self._receive_data(client, receive_timeout, -1, false)
+
+          if response_data.length() == 0 {
+            die HttpException('failed to read response')
+          }
+
+          # separate the headers and the body
+          var header_ends = response_data.index_of('\r\n\r\n'.to_bytes())
+
+          if header_ends {
+            request_headers = response_data[0,header_ends].to_string().trim()
+            body = response_data[header_ends + 4, response_data.length()]
+          } else {
+            # Clear the headers here. It may currently be a dictionary.
+            request_headers = ''
+          }
+
+          var parsed_headers = _process_header(request_headers, @(version, status) {
+            http_version = version
+            status_code  = status
+          })
+
+          request_headers = parsed_headers.headers
+          cookies = parsed_headers.cookies
+
+          # build local headers cache
+          var headers_cache = {}
+          for key, value in request_headers {
+            headers_cache[key.lower()] = value
+          }
+
+          # According to https://datatracker.ietf.org/doc/html/rfc7230#section-3.3
+          # 
+          # Responses to the HEAD request method (Section 4.3.2
+          # of [RFC7231]) never include a message body because the associated
+          # response header fields (e.g., Transfer-Encoding, Content-Length,
+          # etc.), if present, indicate only what their values would have been if
+          # the request method had been GET
+          if method.upper() != 'HEAD' {
+
+            # ensure to handle chunked transfers first because a message can content
+            # content-length header and still be chunked in which case the specification
+            # says the content-length may be irrelevant (obviously, since by the time
+            # you read all the chunks completely you'll still arrive at the same length).
+            if headers_cache.contains('transfer-encoding') and headers_cache['transfer-encoding'].index_of('chunked') > -1 {
+              var chunk_size = 0, chunk_overflow = -1, has_zero_size = false
+
+              if body.length() > 0 {
+                # we ended up here because this current chunk contains
+                # more than one chunk within it.
+                var parsed_chunk = _parse_chunked_encoding(body, chunk_overflow)
+
+                # since we are overwriting body, we may as well dispose it.
+                body.dispose()
+
+                body = parsed_chunk[0]
+                chunk_size = parsed_chunk[1]
+                chunk_overflow = parsed_chunk[2]
+                has_zero_size = parsed_chunk[3]
+
+                # we're not disposing parsed_chunk[0] because it's the new body.
+              }
+
+              # echo '>>>>>>>>>>>>>>>>>>>>>>>>>> RETURN START <<<<<<<<<<<<<<<<<<<<<<<<<<'
+              # echo has_zero_size
+              # echo chunk_overflow
+              # echo '>>>>>>>>>>>>>>>>>>>>>>>>>> RETURN END <<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+
+              # if the original chunk does not end with the chunk ending marker,
+              # then we are expecting more chunks to come in.
+              # we need to keep reading and parsing the chunks until we finally
+              # read all chunks.
+              if !has_zero_size {
+                var chunk_size_read = body.length() or 0
+
+                while chunk_size > 0 {
+
+                  # ensure you've read the
+                  var data = self._receive_data(client, receive_timeout, -1, false)
+                  var parsed_chunk = _parse_chunked_encoding(data, chunk_overflow)
+
+                  # echo '>>>>>>>>>>>>>>>>>>>>>>>>>> FINAL DATA START <<<<<<<<<<<<<<<<<<<<<<<<<<'
+                  # echo data.length()
+                  # echo parsed_chunk
+                  # echo '>>>>>>>>>>>>>>>>>>>>>>>>>> FINAL DATA END <<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+
+                  # since we're overwriting data, we might as well free the former one.
+                  data.dispose()
+
+                  var tmp_data = parsed_chunk[0]
+
+                  if tmp_data.length() == 0 {
+                    if tmp_data[tmp_data.length() - 3,] == '0\r\n'.to_bytes() {
+                      data = tmp_data[,-3]
+                      chunk_size = 0
+                    } else {
+                      data = tmp_data
+                      chunk_size = tmp_data.length()
+                    }
+                  } else {
+                    data = tmp_data
+                  }
+
+                  body += data
+                  chunk_size = parsed_chunk[1]
+                  chunk_overflow = parsed_chunk[2]
+                  has_zero_size = parsed_chunk[3]
+
+                  # dispose the chunk
+                  tmp_data.dispose()
+
+                  if has_zero_size {
+                    break
+                  }
+
+                  /* # read the next chunk
+                  var data = self._receive_data(client, receive_timeout)
+                  if data.length() == 0 {
+                    die HttpException('error reading next chunk')
+                  }
+
+                  var chunk_size_ends = data.index_of('\r\n'.to_bytes())
+                  if chunk_size_ends == -1 {
+                    die HttpException('malformed response')
+                  }
+
+                  chunk_size = _get_chunk_size(data[,chunk_size_ends])
+
+                  var this_chunk = data[chunk_size_ends,]
+                  body += this_chunk
+                  chunk_size_read = this_chunk.length()
+
+                  data.dispose() */
+                }
+              }
+            }
+
+            # gracefully handle responses being sent in multiple packets
+            # if the request header contains the Content-Length,
+            # get that length and keep reading until we have read the total
+            # length of the response.
+            else if headers_cache.contains('content-length') {
+              var content_length = to_number(headers_cache['content-length']) - 2
+
+              # According to: https://datatracker.ietf.org/doc/html/rfc7230#section-3.4
+              # A client that receives an incomplete response message, which can
+              # occur when a connection is closed prematurely or when decoding a
+              # supposedly chunked transfer coding fails, MUST record the message as
+              # incomplete.
+              # 
+              # But it also says in https://datatracker.ietf.org/doc/html/rfc9112#section-8 
+              # that,
+              # A message that uses a valid Content-Length is incomplete if the size of 
+              # the message body received (in octets) is less than the value given by 
+              # Content-Length.
+              while body.length() < content_length {
+                # append the new data in the stream
+                var data = self._receive_data(client, receive_timeout, -1, false)
+                # var data = self._receive_data(client, receive_timeout)
+                
+                if data.length() == 0 {
+                  die HttpException('incomplete response')
+                }
+
+                body += data
+                data.dispose()
+              }
+            }
+          }
+
+          # handle content-encodings (compress, x-compress, deflate, gzip, and x-gzip)
+          if headers_cache.contains('content-encoding') {
+            body = _handle_content_encoding(body, headers_cache['content-encoding'])
+          }
+
+          # close client
+          client.close()
+
+          if follow_redirect and headers_cache.contains('location') {
+            referer = uri.absolute_url()
+            uri = url.parse(headers_cache['location'])
+            responder = referer
+          } else {
+            should_connect = false
+          }
+
+          # normalize body to bytes
+          if is_string(body) {
+            body = body.to_bytes()
+          }
+        } else {
+          should_connect = false
+          die HttpException('could not connect')
+        }
+      } else {
+        should_connect = false
+        die HttpException('could not resolve ip address')
       }
-      curl.set_option(Option.COOKIE, cookie)
     }
 
-    # Just trying to get a little performance boost.
-    if uri.scheme.lower() == 'https' {
-      curl.set_option(Option.DEFAULT_PROTOCOL, 'https')
-    }
-
-    # Set request headers
-    var headers = ['']
-    for key, value in self.headers {
-
-      # Make sure to always override user set Content-Length header 
-      # to avoid unexpected behavior.
-      if key.lower() != 'content-length' {
-        headers.append('${key}: ${value}')
-      }
-    }
-    curl.set_option(Option.HTTPHEADER, CurlList(headers))
-    
-    # handle files and data here...
-    self._create_send_request_body(curl, data)
-
-    var result = curl.send()
-
-    # Convert raw headers into a dictionary.
-    var response_headers = result.headers.trim().split('\r\n\r\n')
-    if response_headers.length() > 1 {
-      response_headers = response_headers[-1]
-    } else {
-      response_headers = response_headers[0]
-    }
-    response_headers = _process.process_header(response_headers)
+    time_taken += (microtime() - start) / 1000000
 
     # return a valid HttpResponse
-    var response =  HttpResponse(
-      result.body, 
-      curl.get_info(Info.RESPONSE_CODE), 
-      response_headers.headers,
-      response_headers.cookies,
-      curl.get_info(Info.HTTP_VERSION), 
-      curl.get_info(Info.TOTAL_TIME), 
-      curl.get_info(Info.REDIRECT_COUNT), 
-      curl.get_info(Info.EFFECTIVE_URL)
-    )
+    var http_response = HttpResponse(body, status_code, request_headers, cookies, http_version, 
+      time_taken, redirect_count, responder or uri.host)
 
-    # Free curl.
-    curl.close()
+    # set the certificate if it exists.
+    http_response.certificate = server_certificate
 
-    return response
+    return http_response
   }
 
-  /**
-   * Returns a dictionary representation of the HttpRequest instance.
-   * 
-   * @returns dict
-   */
-  to_dict() {
+  @to_string() {
+    return '<HttpRequest method=${self.method}, path=${self.path}>'
+  }
+
+  @to_json() {
     return {
       request_uri: self.request_uri,
       path: self.path,
       method: self.method,
       host: self.host,
       ip: self.ip,
-      ipv6: self.ipv6,
       headers: self.headers,
       queries: self.queries,
       cookies: self.cookies,
       body: self.body,
     }
-  }
-
-  /**
-   * Returns a string representation of the HttpRequest instance.
-   * 
-   * @returns string
-   */
-  to_string() {
-    return '<HttpRequest method=${self.method}, path=${self.path}>'
-  }
-
-  @to_string() {
-    return self.to_string()
-  }
-
-  @to_json() {
-    return self.to_dict()
   }
 }
 

@@ -1,14 +1,15 @@
 #!-- part of the ssl module
 
-import http.request { HttpRequest }
-import http.response { HttpResponse }
-import http.exception { HttpException }
-import http.server { HttpServer }
-import http.status
+import .request { HttpRequest }
+import .response { HttpResponse }
+import .exception { HttpException }
+import .server { HttpServer }
+import .status
+import .defaults
 
 import socket as so
-import .constants
-import .socket { TLSSocket }
+import ssl.constants
+import ssl.socket { TLSSocket }
 
 /**
  * TLS server
@@ -18,7 +19,7 @@ import .socket { TLSSocket }
 class TLSServer < HttpServer {
 
   /**
-   * The SSL/TLS ceritificate file that will be used be used by a secured server for 
+   * The SSL/TLS certificate file that will be used be used by a secured server for
    * serving requests.
    * 
    * @type string
@@ -77,7 +78,7 @@ class TLSServer < HttpServer {
       self.cert_file = cert_file
       self.private_key_file = private_key_file
 
-      return self.socket.get_context().set_ciphers(self._ciphers)
+      return self.socket.get_context().set_ciphers(defaults.ciphers)
     } else {
       # die Exception('could not load certificate(s)')
       return false

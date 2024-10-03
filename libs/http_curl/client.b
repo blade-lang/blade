@@ -1,5 +1,7 @@
 #!-- part of the http module
 
+import ._process
+
 import .request { HttpRequest }
 
 import url
@@ -34,7 +36,7 @@ class HttpClient {
    * will make the connection less secure.
    * @type bool
    */
-  var verify_hostname = true
+  var skip_hostname_verification = false
 
   /**
    * Indicates if you want to connect to a site who isn't using a certificate that is
@@ -42,7 +44,7 @@ class HttpClient {
    * of the server's certificate. This makes the connection A LOT LESS SECURE.
    * @type bool
    */
-  var verify_peer = true
+  var skip_peer_verification = false
 
   # ...
   var cookie_file
@@ -66,10 +68,10 @@ class HttpClient {
   var connect_timeout = 60000
 
   /**
-   * The receive timeout duration in milliseconds. Default value is 2,000 (2 seconds).
+   * The receive timeout duration in milliseconds. Default value is 300,000 (5 minutes).
    * @type number
    */
-  var receive_timeout = 2000
+  var receive_timeout = 300000
 
   /**
    * A dictionary of headers sent along with the request.
@@ -90,29 +92,19 @@ class HttpClient {
    * @param string uri
    * @param string? method: Default value is `GET`.
    * @param string|dict|nil data
-   * @param dict? headers: To override the instance options. 
-   *    This can be very useful if you want to reuse the same 
-   *    instance for multiple requests and headers scenarios.
-   * @param dict? client request options
    * @returns HttpResponse
    * @dies SocketException
    * @dies Exception
    */
-  send_request(uri, method, data, headers, options) {
+  send_request(uri, method, data) {
 
-    if !uri or !is_string(uri) {
+    if !uri or !is_string(uri) 
       die Exception('invalid url')
-    }
 
     if !method method = 'GET'
 
-    if data != nil and !is_string(data) and !is_dict(data) {
+    if data != nil and !is_string(data) and !is_dict(data)
       die Exception('string expected, ${typeof(data)} given')
-    }
-
-    if options != nil and !is_dict(options) {
-      die Exception('dictionary expected, ${typeof(options)} given')
-    }
 
     var request = HttpRequest()
     request.headers = self.headers
@@ -131,12 +123,12 @@ class HttpClient {
     # parse the url into component parts
     uri = url.parse(uri)
 
-    return request.send(uri, method.upper(), data, headers, {
+    return request.send(uri, method.upper(), data, {
       follow_redirect: self.follow_redirect,
       connect_timeout: self.connect_timeout,
       receive_timeout: self.receive_timeout,
-      verify_hostname: self.verify_hostname,
-      verify_peer: self.verify_peer,
+      skip_hostname_verification: self.skip_hostname_verification,
+      skip_peer_verification: self.skip_peer_verification,
       user_agent: self.user_agent,
       cookie_file: self.cookie_file,
     })
@@ -146,14 +138,13 @@ class HttpClient {
    * Sends an Http GET request and returns an HttpResponse.
    * 
    * @param string url
-   * @param dict? headers
    * @returns HttpResponse
    * @dies Exception
    * @dies SocketExcepion
    * @dies HttpException
    */
-  get(url, headers) {
-    return self.send_request(url, 'GET', nil, headers)
+  get(url) {
+    return self.send_request(url, 'GET')
   }
 
   /**
@@ -161,14 +152,13 @@ class HttpClient {
    * 
    * @param string url
    * @param string|bytes|nil data
-   * @param dict? headers
    * @returns HttpResponse
    * @dies Exception
    * @dies SocketExcepion
    * @dies HttpException
    */
-  post(url, data, headers) {
-    return self.send_request(url, 'POST', data, headers)
+  post(url, data) {
+    return self.send_request(url, 'POST', data)
   }
 
   /**
@@ -176,84 +166,25 @@ class HttpClient {
    * 
    * @param string url
    * @param string|bytes|nil data
-   * @param dict? headers
    * @returns HttpResponse
    * @dies Exception
    * @dies SocketExcepion
    * @dies HttpException
    */
-  put(url, data, headers) {
-    return self.send_request(url, 'PUT', data, headers)
-  }
-
-  /**
-   * Sends an Http PATCH request and returns an HttpResponse.
-   * 
-   * @param string url
-   * @param string|bytes|nil data
-   * @param dict? headers
-   * @returns HttpResponse
-   * @dies Exception
-   * @dies SocketExcepion
-   * @dies HttpException
-   */
-  patch(url, data, headers) {
-    return self.send_request(url, 'PATCH', data, headers)
+  put(url, data) {
+    return self.send_request(url, 'PUT', data)
   }
 
   /**
    * Sends an Http DELETE request and returns an HttpResponse.
    * 
    * @param string url
-   * @param dict? headers
    * @returns HttpResponse
    * @dies Exception
    * @dies SocketExcepion
    * @dies HttpException
    */
-  delete(url, headers) {
-    return self.send_request(url, 'DELETE', nil, headers)
-  }
-
-  /**
-   * Sends an Http OPTIONS request and returns an HttpResponse.
-   * 
-   * @param string url
-   * @param dict? headers
-   * @returns HttpResponse
-   * @dies Exception
-   * @dies SocketExcepion
-   * @dies HttpException
-   */
-  options(url, headers) {
-    return self.send_request(url, 'OPTIONS', nil, headers)
-  }
-
-  /**
-   * Sends an Http TRACE request and returns an HttpResponse.
-   * 
-   * @param string url
-   * @param dict? headers
-   * @returns HttpResponse
-   * @dies Exception
-   * @dies SocketExcepion
-   * @dies HttpException
-   */
-  trace(url, headers) {
-    return self.send_request(url, 'TRACE', nil, headers)
-  }
-
-  /**
-   * Sends an Http HEAD request and returns an HttpResponse.
-   * 
-   * @param string url
-   * @param dict? headers
-   * @returns HttpResponse
-   * @dies Exception
-   * @dies SocketExcepion
-   * @dies HttpException
-   */
-  head(url, headers) {
-    return self.send_request(url, 'HEAD', nil, headers)
+  delete(url) {
+    return self.send_request(url, 'DELETE', nil)
   }
 }

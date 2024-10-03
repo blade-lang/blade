@@ -59,12 +59,14 @@ import .response { HttpResponse }
 import .status { * }
 import .client { HttpClient }
 import .server { HttpServer }
+import .tls_server { TLSServer }
 
 # single HttpClient for all requests lifetime
 var _client = HttpClient()
+_client.follow_redirect = true
 
 /**
- * Sets the request headers for the current module instance.
+ * Sets the default request headers for the current module instance.
  *  
  * This function returns HttpClient in order to allow for idiomatic 
  * chaining such as:
@@ -87,60 +89,130 @@ def set_headers(headers) {
   _client.headers = headers
   return _client
 }
-
+ 
 /**
  * Sends an Http GET request and returns an HttpResponse
  * or throws one of SocketException or Exception if it fails.
  * 
  * @param string url
+ * @param dict? headers
  * @returns HttpResponse
  * @dies Exception
  * @dies SocketExcepion
  * @dies HttpException
  */
-def get(url) {
-  return _client.get(url)
+def get(url, headers) {
+  return _client.get(url, headers)
 }
-
+ 
 /**
  * Sends an Http POST request and returns an HttpResponse.
  * 
  * @param string url
  * @param string|bytes|nil data
+ * @param dict? headers
  * @returns HttpResponse
  * @dies Exception
  * @dies SocketExcepion
  * @dies HttpException
  */
-def post(url, data) {
-  return _client.post(url, data)
+def post(url, data, headers) {
+  return _client.post(url, data, headers)
 }
-
+ 
 /**
  * Sends an Http PUT request and returns an HttpResponse.
  * 
  * @param string url
  * @param string|bytes|nil data
+ * @param dict? headers
  * @returns HttpResponse
  * @dies Exception
  * @dies SocketExcepion
  * @dies HttpException
  */
-def put(url, data) {
-  return _client.put(url, data)
+def put(url, data, headers) {
+  return _client.put(url, data, headers)
+}
+
+/**
+ * Sends an Http PATCH request and returns an HttpResponse.
+ * 
+ * @param string url
+ * @param string|bytes|nil data
+ * @param dict? headers
+ * @returns HttpResponse
+ * @dies Exception
+ * @dies SocketExcepion
+ * @dies HttpException
+ */
+def patch(url, data, headers) {
+  return _client.patch(url, data, headers)
 }
 
 /**
  * Sends an Http DELETE request and returns an HttpResponse.
  * 
  * @param string url
+ * @param dict? headers
  * @returns HttpResponse
  * @dies Exception
  * @dies SocketExcepion
  * @dies HttpException
  */
-def delete(url) {
-  return _client.send_request(url, 'DELETE', nil)
+def delete(url, headers) {
+  return _client.delete(url, headers)
+}
+
+/**
+ * Sends an Http OPTIONS request and returns an HttpResponse.
+ * 
+ * @param string url
+ * @param dict? headers
+ * @returns HttpResponse
+ * @dies Exception
+ * @dies SocketExcepion
+ * @dies HttpException
+ */
+def options(url, headers) {
+  return _client.options(url, headers)
+}
+
+/**
+ * Sends an Http TRACE request and returns an HttpResponse.
+ * 
+ * @param string url
+ * @param dict? headers
+ * @returns HttpResponse
+ * @dies Exception
+ * @dies SocketExcepion
+ * @dies HttpException
+ */
+def trace(url, headers) {
+  return _client.trace(url, headers)
+}
+
+/**
+ * Sends an Http HEAD request and returns an HttpResponse.
+ * 
+ * @param string url
+ * @param dict? headers
+ * @returns HttpResponse
+ * @dies Exception
+ * @dies SocketExcepion
+ * @dies HttpException
+ */
+def head(url, headers) {
+  return _client.head(url, headers)
+}
+
+/**
+ * Returns the default shared client.
+ *
+ * @returns HttpClient
+ */
+def client() {
+  return _client
 }
 
 /**
@@ -157,11 +229,16 @@ def server(port, address) {
   return HttpServer(port, address)
 }
 
+
 /**
- * Returns the default client.
- * 
- * @returns HttpClient
+ * Creates an new TLSServer instance.
+ *
+ * @param int port
+ * @param string? host
+ * @returns TLSServer
+ * @throws Exception, SocketExcepion, HttpException
  */
-def client() {
-  return _client
+def tls_server(port, host) {
+  return TLSServer(port, host)
 }
+ 

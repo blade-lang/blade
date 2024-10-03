@@ -44,8 +44,8 @@ class HttpResponse {
   var redirects
 
   /**
-   * The final URL that provided the HttpResponse. This will sometimes 
-   * differ from the original request URI.
+   * The final URL that provided the HttpResponse. This will sometimes differ from the 
+   * original request URI.
    * @type string
    */
   var responder
@@ -61,14 +61,6 @@ class HttpResponse {
    * @type list
    */
   var cookies
-
-  /**
-   * The SSL certificate for the secure connection. This is only available 
-   * when visiting HTTPS/SSL/TLS secured websites.
-   * 
-   * @type dict|nil
-   */
-  var certificate
 
   /**
    * @param string body
