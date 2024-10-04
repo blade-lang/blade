@@ -54,7 +54,7 @@ def run(value, options, success, error) {
 
   config = Config.from_dict(config)
 
-  try {
+  catch {
     echo ''
       echo title('PACKAGE INFORMATION')
       echo info('Name', config.name)
@@ -83,7 +83,9 @@ def run(value, options, success, error) {
         echo empty()
       }
       echo ''
-  } catch Exception e {
+  } as e
+
+  if e {
     error('Failed to retrieve package information for ${value}:\n  ${e.message}')
   }
 }

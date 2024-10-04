@@ -356,23 +356,20 @@ class ImportStmt < Stmt {
 class CatchStmt < Stmt {
 
   /**
-   * @param {Stmt|any|nil} type
-   * @param {Stmt|any|nil} var_name
    * @param {Stmt|any|nil} body
+   * @param {Stmt|any|nil} var_name
    * @constructor
    */
-  CatchStmt(type, var_name, body) {
-    self.type = type
-    self.var_name = var_name
+  CatchStmt(body, var_name) {
     self.body = body
+    self.var_name = var_name
   }
 
   @to_json() {
     return {
       type: 'CatchStmt',
-      type: self.type,
-      var_name: self.var_name,
       body: self.body,
+      var_name: self.var_name,
     }
   }
 }
@@ -396,35 +393,6 @@ class FinallyStmt < Stmt {
     return {
       type: 'FinallyStmt',
       body: self.body,
-    }
-  }
-}
-
-/**
- * Try Stmt representation.
- * 
- * @serializable
- */
-class TryStmt < Stmt {
-
-  /**
-   * @param {Stmt|any|nil} body
-   * @param {Stmt|any|nil} catch_stmt
-   * @param {Stmt|any|nil} finally_stmt
-   * @constructor
-   */
-  TryStmt(body, catch_stmt, finally_stmt) {
-    self.body = body
-    self.catch_stmt = catch_stmt
-    self.finally_stmt = finally_stmt
-  }
-
-  @to_json() {
-    return {
-      type: 'TryStmt',
-      body: self.body,
-      catch_stmt: self.catch_stmt,
-      finally_stmt: self.finally_stmt,
     }
   }
 }

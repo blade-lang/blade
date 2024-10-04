@@ -136,6 +136,11 @@ int disassemble_instruction(b_blob *blob, int offset) {
     case OP_PUBLISH_TRY:
       return simple_instruction("pubtry", offset);
 
+    case OP_BEGIN_CATCH:
+      return short_instruction("scatch", blob, offset);
+    case OP_END_CATCH:
+      return simple_instruction("ecatch", offset);
+
     case OP_CONSTANT:
       return constant_instruction("load", blob, offset);
 
@@ -211,7 +216,7 @@ int disassemble_instruction(b_blob *blob, int offset) {
     case OP_CHOICE:
       return simple_instruction("cho", offset);
     case OP_DIE:
-      return die_instruction("die", blob, offset);
+      return simple_instruction("die", offset);
     case OP_POP:
       return simple_instruction("pop", offset);
     case OP_CLOSE_UP_VALUE:

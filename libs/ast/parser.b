@@ -769,42 +769,21 @@ class Parser {
   }
 
   /**
-   * try...catch...finally... blocks
+   * catch... blocks
    */
-  _try() {
-    self._consume(LBRACE, "'{' expected after try")
+  _catch() {
+    self._consume(LBRACE, "'{' expected after catch")
     var body = self._block()
-    var exception_type, exception_var, catch_body, finally_body
-    var has_catch = false, has_finally = false
 
-    if self._match(CATCH) {
-      self._consume(IDENTIFIER, 'exception name expected')
-      exception_type = self._previous().literal
-
+    var exception_var
+    if self._match(AS) {
       if self._check(IDENTIFIER) {
         self._consume(IDENTIFIER, 'exception variable expected')
         exception_var = self._previous().literal
       }
-
-      self._consume(LBRACE, "'{' expected after catch expression")
-      catch_body = self._block()
-      has_catch = true
-    }
-    
-    if self._match(FINALLY) {
-      has_finally = true
-      self._consume(LBRACE, "'{' expected after finally")
-      finally_body = self._block()
     }
 
-    if !has_catch and !has_finally
-      die ParseException(self._previous(), 'invalid try statement')
-
-    var catch_stmt, finally_stmt
-    if has_catch catch_stmt = CatchStmt(exception_type, exception_var, catch_body)
-    if has_finally finally_stmt = FinallyStmt(finally_body)
-
-    return TryStmt(body, catch_stmt, finally_stmt)
+    return CatchStmt(body, exception_var)
   }
 
   /**
@@ -870,8 +849,8 @@ class Parser {
       result = self._block()
     } else if self._match(IMPORT) {
       result = self._import()
-    } else if self._match(TRY) {
-      result = self._try()
+    } else if self._match(CATCH) {
+      result = self._catch()
     } else if self._match(COMMENT) {
       result = CommentStmt(self._previous().literal[1,].trim())
     } else if self._match(DOC) {

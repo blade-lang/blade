@@ -102,7 +102,7 @@ def install(config, repo, full_name, name, version, progress, no_cache, error) {
   var cache_id = hash.sha1(repo + name + version)
   var cache_path = os.join_paths(cache_dir, '${cache_id}.nyp')
 
-  try {
+  catch {
 
     # check local cache first to avoid redownloading all the time...
     if file(cache_path).exists() and !no_cache {
@@ -136,7 +136,9 @@ def install(config, repo, full_name, name, version, progress, no_cache, error) {
       log.debug('${full_name} not found at ${repo}')
       return false
     }
-  } catch Exception e {
+  } as e
+
+  if e {
     log.debug('${full_name} installation failed:\n  ${e.message}')
     return false
   }

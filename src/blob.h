@@ -89,6 +89,9 @@ typedef enum {
   OP_POP_TRY,
   OP_PUBLISH_TRY,
 
+  OP_BEGIN_CATCH,
+  OP_END_CATCH,
+
   OP_STRINGIFY,
   OP_SWITCH,
   OP_CHOICE,

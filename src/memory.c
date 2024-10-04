@@ -328,6 +328,7 @@ static void mark_roots(b_vm *vm) {
   for (b_value *slot = vm->stack; slot < vm->stack_top; slot++) {
     mark_value(vm, *slot);
   }
+
   for (int i = 0; i < vm->frame_count; i++) {
     mark_object(vm, (b_obj *) vm->frames[i].closure);
     for(int j = 0; j < vm->frames[i].handlers_count; j++) {
@@ -335,6 +336,12 @@ static void mark_roots(b_vm *vm) {
       mark_object(vm, (b_obj *)handler.klass);
     }
   }
+
+  for(b_error_frame **error = vm->errors; error < vm->error_top; error++) {
+    mark_value(vm, (*error)->value);
+    mark_object(vm, (b_obj *)(*error)->frame->closure);
+  }
+
   for (b_obj_up_value *up_value = vm->open_up_values; up_value != NULL;
        up_value = up_value->next) {
     mark_object(vm, (b_obj *) up_value);
@@ -350,6 +357,8 @@ static void mark_roots(b_vm *vm) {
   mark_table(vm, &vm->methods_range);
 
   mark_object(vm, (b_obj*)vm->exception_class);
+  mark_object(vm, (b_obj *)vm->current_frame->closure);
+
   mark_compiler_roots(vm);
 }
 

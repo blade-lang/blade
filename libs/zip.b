@@ -740,10 +740,12 @@ class ZipArchive {
 						# Not compressed, continue
           }
 					when 8 { # Deflated
-            try {
+            catch {
               decoded = zlib.undeflate(filedata)
               filedata.dispose()
-            } catch Exception {
+            } as e
+
+            if e {
               decoded = bytes(0)
             }
           }

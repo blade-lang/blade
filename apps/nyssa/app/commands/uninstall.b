@@ -50,7 +50,7 @@ def run(value, options, success, error) {
     }
 
     if os.dir_exists(package_dir) {
-      try {
+      catch {
         var pf = file(package_config_file)
         if pf.exists() {
           var package_config = Config.from_dict(json.decode(pf.read()))
@@ -90,7 +90,9 @@ def run(value, options, success, error) {
         }
 
         success('${value} uninstalled successfully!')
-      } catch Exception e {
+      } as e
+
+      if e {
         error(e.message)
       }
     } else {

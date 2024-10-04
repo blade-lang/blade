@@ -81,7 +81,7 @@ var _template_setup = @{
 }()
 
 def router(req, res) {
-  try {
+  catch {
     var view = errors.not_found
 
     # Check exact matchs first...
@@ -135,7 +135,9 @@ def router(req, res) {
     if res.session_key {
       db.update_session(res.session_key, json.encode(res.session))
     }
-  } catch Exception e {
+  } as e
+
+  if e {
     errors.server_error(e, req, res)
   }
 

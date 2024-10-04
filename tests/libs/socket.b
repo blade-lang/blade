@@ -23,18 +23,20 @@ def serve(port, on_client_receive) {
     # timeout if we can't send after 10 second
     client.set_option(SO_SNDTIMEO, 2000)
 
-    try {
+    catch {
       var data = client.receive()
       if data {
         echo 'Request received:\n${data}\n'
         on_client_receive(client, id, data)
       }
-    } catch Exception e {
+    } as e
+
+    id++
+    client.close()
+    echo 'Client disconnected...'
+
+    if e {
       echo 'Client error: ${e.message}'
-    } finally {
-      id++
-      client.close()
-      echo 'Client disconnected...'
     }
   }
 }

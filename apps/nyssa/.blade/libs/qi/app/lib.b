@@ -116,7 +116,7 @@ class expect {
       status: false,
     }
     
-    try {
+    catch {
       var test_value = fn(self.value, expected)
       if !self._is_not and test_value {
         _passed_assertions++
@@ -127,13 +127,15 @@ class expect {
       } else {
         _failed_assertions++
       }
-    } catch Exception e {
+    } as e
+
+    _curr_it.expects.append(state)
+    _total_assertions++
+
+    if e {
       _failed_assertions++
       io.stderr.write(e.message + '\r\n')
       io.stderr.write(e.stacktrace + '\r\n')
-    } finally {
-      _curr_it.expects.append(state)
-      _total_assertions++
     }
   }
 
@@ -217,10 +219,12 @@ class expect {
 
     if is_function(self.value) {
       self._run('to throw', e, @(x, y) {
-        try {
+        catch {
           x()
           return false
-        } catch Exception ex {
+        } as ex
+
+        if ex {
           if is_string(e) return ex.message.match(e)
           if is_class(e) return instance_of(ex, e)
           if instance_of(e, Exception) and ex == e return true
@@ -339,9 +343,11 @@ def it(desc, fn) {
   }
 
   var pre_run_count = _total_assertions
-  try {
+  catch {
     fn()
-  } catch Exception e {
+  } as e
+
+  if e {
     io.stderr.write(e.message + '\r\n')
     io.stderr.write(e.stacktrace + '\r\n')
   }
@@ -367,7 +373,7 @@ def describe(desc, fn) {
     skipped: false,
   }
 
-  try {
+  catch {
     var start = microtime()
 
     for ba in _before_alls {
@@ -388,11 +394,13 @@ def describe(desc, fn) {
     }
 
     _curr_desc.time = microtime() - start
-  } catch Exception e {
+  } as e
+
+  _total_suites++
+
+  if e {
     io.stderr.write(e.message + '\r\n')
     io.stderr.write(e.stacktrace + '\r\n')
-  } finally {
-    _total_suites++
   }
 
   show_result(_curr_desc)

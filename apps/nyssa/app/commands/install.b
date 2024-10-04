@@ -133,7 +133,7 @@ def install(config, repo, full_name, name, version, is_global, with_cache, progr
   var cache_id = hash.sha1(repo + name + version)
   var cache_path = os.join_paths(cache_dir, '${cache_id}.nyp')
 
-  try {
+  catch {
 
     # check local cache first to avoid redownloading all the time...
     if file(cache_path).exists() and with_cache {
@@ -180,7 +180,9 @@ def install(config, repo, full_name, name, version, is_global, with_cache, progr
     } else {
       error('${full_name} installation failed:\n  ${body.error}')
     }
-  } catch Exception e {
+  } as e
+
+  if e {
     error('${full_name} installation failed:\n  ${e.message}')
   }
 }
@@ -217,7 +219,7 @@ def run(value, options, success, error) {
 
   install(config, repo, full_name, name, version, is_global, with_cache, progress, error)
 
-  try {
+  catch {
     if progress.length() >= 1 {
       log.info('Updating dependency state for project')
 
@@ -238,7 +240,9 @@ def run(value, options, success, error) {
         file(config_file, 'w').write(json.encode(config, false))
       }
     }
-  } catch Exception e {
+  } as e
+
+  if e {
     echo colors.text(
       'Dependency state update failed!\n' + 
       'You can manually fix it by adding the following to the dependency section of you ' + setup.CONFIG_FILE + ' file.\n' +

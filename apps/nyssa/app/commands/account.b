@@ -50,7 +50,7 @@ def create(repo, success, error) {
   }
   echo '' # because password prompt won't go to a new line.
 
-  try {
+  catch {
     log.info('Creating new publisher account at ${repo}.')
     var res = http.post('${repo}/api/create-publisher', details)
     var body = json.decode(res.body.to_string())
@@ -72,7 +72,9 @@ def create(repo, success, error) {
     } else {
       error('Account creation failed:\n  ${body.error}')
     }
-  } catch Exception e {
+  } as e
+
+  if e {
     error('Account creation failed:\n  ${e.message}')
   }
 }
@@ -92,7 +94,7 @@ def login(repo, success, error) {
   }
   echo '' # because password prompt won't go to a new line.
 
-  try {
+  catch {
     log.info('Login in to publisher account at ${repo}.')
     var res = http.post('${repo}/api/login', details)
     var body = json.decode(res.body.to_string())
@@ -112,7 +114,9 @@ def login(repo, success, error) {
     } else {
       error('Login failed:\n  ${body.error}')
     }
-  } catch Exception e {
+  } as e
+
+  if e {
     error('Login failed:\n  ${e.message}')
   }
 }
@@ -123,10 +127,12 @@ def logout(repo, success, error) {
   if state.get('key', nil)
     state.remove('key')
 
-  try {
+  catch {
     if file(state_file, 'w').write(json.encode(state, false))
       success('Logged out of publisher account!')
-  } catch Exception e {
+  } as e
+
+  if e {
     error('Login failed:\n  ${e.message}')
   }
 }

@@ -179,8 +179,10 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_STRINGIFY:
     case OP_CHOICE:
     case OP_EMPTY:
+    case OP_DIE:
     case OP_IMPORT_ALL_NATIVE:
     case OP_IMPORT_ALL:
+    case OP_END_CATCH:
     case OP_PUBLISH_TRY:
       return 0;
 
@@ -217,6 +219,7 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_EJECT_IMPORT:
     case OP_EJECT_NATIVE_IMPORT:
     case OP_SELECT_IMPORT:
+    case OP_BEGIN_CATCH:
       return 2;
 
     case OP_INVOKE:
@@ -227,9 +230,6 @@ static int get_code_args_count(const uint8_t *bytecode,
 
     case OP_TRY:
       return 6;
-
-    case OP_DIE:
-      return 4;
 
     case OP_CLOSURE: {
       int constant = (bytecode[ip + 1] << 8) | bytecode[ip + 2];
@@ -347,19 +347,7 @@ static int emit_try(b_parser *p) {
   return current_blob(p)->count - 6;
 }
 
-static void emit_die(b_parser *p, int locals_count, int upvalues_count) {
-  emit_byte(p, OP_DIE);
-
-  // locals_count
-  emit_byte(p, (locals_count >> 8) & 0xff);
-  emit_byte(p, locals_count & 0xff);
-
-  // upvalues_count
-  emit_byte(p, (upvalues_count >> 8) & 0xff);
-  emit_byte(p, upvalues_count & 0xff);
-}
-
-static void patch_switch(b_parser *p, int offset, int constant) {
+static void patch_with_value(b_parser *p, int offset, int constant) {
   current_blob(p)->code[offset] = (constant >> 8) & 0xff;
   current_blob(p)->code[offset + 1] = constant & 0xff;
 }
@@ -2037,7 +2025,7 @@ static void using_statement(b_parser *p) {
 
   sw->exit_jump = current_blob(p)->count - start_offset;
 
-  patch_switch(p, switch_code, make_constant(p, OBJ_VAL(sw)));
+  patch_with_value(p, switch_code, make_constant(p, OBJ_VAL(sw)));
   pop(p->vm); // pop the switch
 }
 
@@ -2067,21 +2055,9 @@ static void echo_statement(b_parser *p) {
 }
 
 static void die_statement(b_parser *p) {
-  int locals_count = 0;
-  int upvalues_count = 0;
-
-  int local = p->vm->compiler->local_count - 1;
-  while (local >= 0 && p->vm->compiler->locals[local].depth >= p->vm->compiler->scope_depth - 1) {
-    if (p->vm->compiler->locals[local].is_captured) {
-      upvalues_count++;
-    } else {
-      locals_count++;
-    }
-    local--;
-  }
-
+  discard_locals(p, p->vm->compiler->scope_depth);
   expression(p);
-  emit_die(p, locals_count, upvalues_count);
+  emit_byte(p, OP_DIE);
   consume_statement_end(p);
 }
 
@@ -2372,6 +2348,27 @@ static void try_statement(b_parser *p) {
   patch_try(p, try_begins, type, address, finally);
 }
 
+static void catch_statement(b_parser *p) {
+  int jump = emit_jump(p, OP_BEGIN_CATCH);
+
+  ignore_whitespace(p);
+  consume(p, LBRACE_TOKEN, "expected '{' after catch");
+  begin_scope(p);
+  block(p);
+  end_scope(p);
+  ignore_whitespace(p);
+
+  patch_with_value(p, jump, current_blob(p)->count);
+  emit_byte(p, OP_END_CATCH);
+
+  if(match(p, AS_TOKEN)) {
+    consume(p, IDENTIFIER_TOKEN, "missing exception variable name");
+    created_variable(p, p->previous);
+  } else {
+    emit_byte(p, OP_POP);
+  }
+}
+
 static void return_statement(b_parser *p) {
   p->is_returning = true;
   if (p->vm->compiler->type == TYPE_SCRIPT) {
@@ -2383,10 +2380,6 @@ static void return_statement(b_parser *p) {
   } else {
     if (p->vm->compiler->type == TYPE_INITIALIZER) {
       error(p, "cannot return value from constructor");
-    }
-
-    if(p->is_trying) {
-      emit_byte(p, OP_POP_TRY);
     }
 
     expression(p);
@@ -2590,6 +2583,8 @@ static void statement(b_parser *p) {
     import_statement(p);
   } else if (match(p, TRY_TOKEN)) {
     try_statement(p);
+  } else if(match(p, CATCH_TOKEN)) {
+    catch_statement(p);
   } else {
     expression_statement(p, false, false);
   }

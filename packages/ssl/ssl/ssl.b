@@ -76,10 +76,12 @@ class SSL {
    * @throws
    */
   connect() {
-    /* try {
+    /* catch {
       var res = _ssl.connect(self._ptr)
       return res
-    } catch Exception e {
+    } as e
+
+    if e {
       if e.message.index_of('eof while reading') {
         die Exception('timeout')
       }

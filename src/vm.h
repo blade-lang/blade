@@ -30,6 +30,12 @@ typedef struct {
   b_exception_frame handlers[MAX_EXCEPTION_HANDLERS];
 } b_call_frame;
 
+typedef struct {
+  b_call_frame *frame;
+  uint16_t offset;
+  b_value value;
+} b_error_frame;
+
 struct s_vm {
   b_call_frame frames[FRAMES_MAX];
   b_call_frame *current_frame;
@@ -38,6 +44,9 @@ struct s_vm {
   b_blob *blob;
   uint8_t *ip;
   b_obj_up_value *open_up_values;
+
+  b_error_frame *errors[ERRORS_MAX];
+  b_error_frame **error_top;
 
   size_t stack_capacity;
   b_value *stack;
@@ -97,6 +106,10 @@ b_value pop(b_vm *vm);
 b_value pop_n(b_vm *vm, int n);
 
 b_value peek(b_vm *vm, int distance);
+
+void push_error(b_vm *vm, b_error_frame *frame);
+b_error_frame* pop_error(b_vm *vm);
+b_error_frame* peek_error(b_vm *vm);
 
 static inline void add_module(b_vm *vm, b_obj_module *module) {
   cond_dbg(vm->current_frame, printf("Adding module %s from %s to %s in %s\n", 

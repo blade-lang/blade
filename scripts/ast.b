@@ -56,7 +56,7 @@ var asts = {
       Import: ['path', 'elements'],
       Catch: ['type', 'var_name', 'body'],
       Finally: ['body'],
-      Try: ['body', 'catch_stmt', 'finally_stmt'],
+      Catch: ['body', 'var_name'],
       Comment: ['data'],
       Block: ['body'],
       Assign: ['expr', 'type', 'value']

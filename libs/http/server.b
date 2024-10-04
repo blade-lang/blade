@@ -365,7 +365,7 @@ class HttpServer {
 
       while self._is_listening {
 
-        try {
+        catch {
           client = self.socket.accept()
           
           # call the connect listeners.
@@ -381,20 +381,22 @@ class HttpServer {
           }
 
           self._process_received(client.receive(), client)
-        } catch Exception e {
+        } as e
+
+        var client_info = client.info()
+
+        # call the disconnect listeners.
+        self._disconnect_listeners.each(@(fn) {
+          fn(client_info)
+        })
+
+        client.close()
+
+        if e {
           # call the error listeners.
           self._error_listeners.each(@(fn) {
             fn(e, client)
           })
-        } finally {
-          var client_info = client.info()
-
-          # call the disconnect listeners.
-          self._disconnect_listeners.each(@(fn) {
-            fn(client_info)
-          })
-
-          client.close()
         }
       }
     }

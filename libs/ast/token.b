@@ -334,11 +334,6 @@ var ELSE = 71
 var FALSE = 72
 
 /**
- * finally token
- */
-var FINALLY = 73
-
-/**
  * for token
  */
 var FOR = 74
@@ -397,11 +392,6 @@ var STATIC = 84
  * true token
  */
 var TRUE = 85
-
-/**
- * try token
- */
-var TRY = 86
 
 /**
  * using token

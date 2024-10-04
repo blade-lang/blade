@@ -999,9 +999,9 @@ class HttpRequest {
             }
           }
 
-          # try {
+          catch {
             client.send(message)
-          # } catch Exception e {}
+          }
 
           # receive the response...
           var response_data = self._receive_data(client, receive_timeout, -1, false)

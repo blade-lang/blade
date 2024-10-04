@@ -52,9 +52,9 @@ var RECODE_HOSTNAME_FOR = [ 'http', 'https', 'mailto' ]
 
 def normalize_link(uri) {
   var normalized = utils.replace_entities(uri)
-  try {
+  catch {
     normalized = url.decode(normalized)
-  } catch Exception {}
+  }
   return url.encode(normalized, true)
 }
 
