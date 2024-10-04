@@ -67,56 +67,6 @@ static b_value get_stack_trace(b_vm *vm) {
   return STRING_L_VAL("", 0);
 }
 
-bool propagate_exception(b_vm *vm, bool is_assert) {
-  b_obj_instance *exception = AS_INSTANCE(peek(vm, 0));
-
-  while (vm->frame_count > 0) {
-    vm->current_frame = &vm->frames[vm->frame_count - 1];
-    for (int i = vm->current_frame->handlers_count; i > 0; i--) {
-      b_exception_frame handler = vm->current_frame->handlers[i - 1];
-      b_obj_func *function = vm->current_frame->closure->function;
-
-      if (handler.address != 0 && is_instance_of(exception->klass, handler.klass->name->chars)) {
-        vm->current_frame->ip = &function->blob.code[handler.address];
-        return true;
-      } else if (handler.finally_address != 0) {
-        push(vm, TRUE_VAL); // continue propagating once the 'finally' block completes
-        vm->current_frame->ip = &function->blob.code[handler.finally_address];
-        return true;
-      }
-    }
-
-    vm->frame_count--;
-  }
-
-  fflush(stdout); // flush out anything on stdout first
-
-  b_value message, trace;
-  if(!is_assert) {
-    fprintf(stderr, "Unhandled %s", exception->klass->name->chars);
-  } else {
-    fprintf(stderr, "Illegal State");
-  }
-  if (table_get(&exception->properties, STRING_L_VAL("message", 7), &message)) {
-    char *error_message = value_to_string(vm, message)->chars;
-    if(strlen(error_message) > 0) {
-      fprintf(stderr, ": %s", error_message);
-    } else {
-      fprintf(stderr, ":");
-    }
-    fprintf(stderr, "\n");
-  } else {
-    fprintf(stderr, "\n");
-  }
-
-  if (table_get(&exception->properties, STRING_L_VAL("stacktrace", 10), &trace)) {
-    char *trace_str = value_to_string(vm, trace)->chars;
-    fprintf(stderr, "  StackTrace:\n%s\n", trace_str);
-  }
-
-  return false;
-}
-
 bool print_exception(b_vm *vm, b_obj_instance *exception, bool is_assert) {
   if(vm->error_top - vm->errors > 0) {
     b_error_frame *error = peek_error(vm);
@@ -150,19 +100,6 @@ bool print_exception(b_vm *vm, b_obj_instance *exception, bool is_assert) {
   }
 
   return false;
-}
-
-bool push_exception_handler(b_vm *vm, b_obj_class *type, int address, int finally_address) {
-  b_call_frame *frame = &vm->frames[vm->frame_count - 1];
-  if (frame->handlers_count == MAX_EXCEPTION_HANDLERS) {
-    do_runtime_error(vm, "too many nested exception handlers in one function");
-    return false;
-  }
-  frame->handlers[frame->handlers_count].address = address;
-  frame->handlers[frame->handlers_count].finally_address = finally_address;
-  frame->handlers[frame->handlers_count].klass = type;
-  frame->handlers_count++;
-  return true;
 }
 
 bool do_throw_exception(b_vm *vm, bool is_assert, const char *format, ...) {
@@ -268,47 +205,6 @@ inline b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
   table_set(vm, &instance->properties, STRING_L_VAL("message", 7), OBJ_VAL(message));
   pop(vm);
   return instance;
-}
-
-void do_runtime_error(b_vm *vm, const char *format, ...) {
-  fflush(stdout); // flush out anything on stdout first
-
-  b_call_frame *frame = &vm->frames[vm->frame_count - 1];
-  b_obj_func *function = frame->closure->function;
-
-  size_t instruction = frame->ip - function->blob.code - 1;
-  int line = function->blob.lines[instruction];
-
-  fprintf(stderr, "RuntimeError: ");
-
-  va_list args;
-  va_start(args, format);
-  vfprintf(stderr, format, args);
-  va_end(args);
-
-  fprintf(stderr, " -> %s:%d ", function->module->file, line);
-  fputs("\n", stderr);
-
-  if (vm->frame_count > 1) {
-    fprintf(stderr, "StackTrace:\n");
-    for (int i = vm->frame_count - 1; i >= 0; i--) {
-      frame = &vm->frames[i];
-      function = frame->closure->function;
-
-      // -1 because the IP is sitting on the next instruction to be executed
-      instruction = frame->ip - function->blob.code - 1;
-
-      fprintf(stderr, "    %s:%d -> ", function->module->file, function->blob.lines[instruction]);
-      if (function->name == NULL) {
-        fprintf(stderr, "@.script()");
-      } else {
-        fprintf(stderr, "%s()", function->name->chars);
-      }
-      fprintf(stderr, "\n");
-    }
-  }
-
-  reset_stack(vm);
 }
 
 static inline void grow_vm_stack(b_vm *vm, size_t new_capacity) {

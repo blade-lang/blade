@@ -41,10 +41,6 @@ struct s_vm {
   b_call_frame *current_frame;
   unsigned int frame_count;
 
-  b_blob *blob;
-  uint8_t *ip;
-  b_obj_up_value *open_up_values;
-
   b_error_frame *errors[ERRORS_MAX];
   b_error_frame **error_top;
 
@@ -78,6 +74,9 @@ struct s_vm {
   b_table methods_file;
   b_table methods_bytes;
   b_table methods_range;
+
+  // upvalues tracker
+  b_obj_up_value *open_up_values;
 
   char **std_args;
   int std_args_count;
@@ -144,8 +143,6 @@ void define_native_method(b_vm *vm, b_table *table, const char *name,
 bool is_instance_of(b_obj_class *klass1, char *klass2_name);
 
 bool do_throw_exception(b_vm *vm, bool is_assert, const char *format, ...);
-
-void do_runtime_error(b_vm *vm, const char *format, ...);
 
 b_obj_instance *create_exception(b_vm *vm, b_obj_string *message);
 
