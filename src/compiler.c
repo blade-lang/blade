@@ -1350,9 +1350,7 @@ b_parse_rule parse_rules[] = {
     [USING_TOKEN] = {NULL, NULL, PREC_NONE},
     [WHEN_TOKEN] = {NULL, NULL, PREC_NONE},
     [WHILE_TOKEN] = {NULL, NULL, PREC_NONE},
-    [TRY_TOKEN] = {NULL, NULL, PREC_NONE},
     [CATCH_TOKEN] = {NULL, NULL, PREC_NONE},
-    [FINALLY_TOKEN] = {NULL, NULL, PREC_NONE},
 
     // types token
     [LITERAL_TOKEN] = {string, NULL, PREC_NONE},
@@ -2386,14 +2384,12 @@ static void synchronize(b_parser *p) {
       case WHILE_TOKEN:
       case ECHO_TOKEN:
       case ASSERT_TOKEN:
-      case TRY_TOKEN:
       case CATCH_TOKEN:
       case DIE_TOKEN:
       case RETURN_TOKEN:
       case STATIC_TOKEN:
       case SELF_TOKEN:
       case PARENT_TOKEN:
-      case FINALLY_TOKEN:
       case IN_TOKEN:
       case IMPORT_TOKEN:
       case AS_TOKEN:

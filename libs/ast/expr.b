@@ -13,9 +13,9 @@ class Expr {
 class BinaryExpr < Expr {
 
   /**
-   * @param {Expr|any|nil} left
-   * @param {Expr|any|nil} op
-   * @param {Expr|any|nil} right
+   * @param Expr|any|nil left
+   * @param Expr|any|nil op
+   * @param Expr|any|nil right
    * @constructor
    */
   BinaryExpr(left, op, right) {
@@ -42,7 +42,7 @@ class BinaryExpr < Expr {
 class GroupExpr < Expr {
 
   /**
-   * @param {Expr|any|nil} expression
+   * @param Expr|any|nil expression
    * @constructor
    */
   GroupExpr(expression) {
@@ -65,7 +65,7 @@ class GroupExpr < Expr {
 class LiteralExpr < Expr {
 
   /**
-   * @param {Expr|any|nil} value
+   * @param Expr|any|nil value
    * @constructor
    */
   LiteralExpr(value) {
@@ -88,7 +88,7 @@ class LiteralExpr < Expr {
 class IdentifierExpr < Expr {
 
   /**
-   * @param {Expr|any|nil} value
+   * @param Expr|any|nil value
    * @constructor
    */
   IdentifierExpr(value) {
@@ -111,8 +111,8 @@ class IdentifierExpr < Expr {
 class UnaryExpr < Expr {
 
   /**
-   * @param {Expr|any|nil} op
-   * @param {Expr|any|nil} right
+   * @param Expr|any|nil op
+   * @param Expr|any|nil right
    * @constructor
    */
   UnaryExpr(op, right) {
@@ -137,9 +137,9 @@ class UnaryExpr < Expr {
 class ConditionExpr < Expr {
 
   /**
-   * @param {Expr|any|nil} expr
-   * @param {Expr|any|nil} truth
-   * @param {Expr|any|nil} falsy
+   * @param Expr|any|nil expr
+   * @param Expr|any|nil truth
+   * @param Expr|any|nil falsy
    * @constructor
    */
   ConditionExpr(expr, truth, falsy) {
@@ -166,8 +166,8 @@ class ConditionExpr < Expr {
 class CallExpr < Expr {
 
   /**
-   * @param {Expr|any|nil} callee
-   * @param {Expr|any|nil} args
+   * @param Expr|any|nil callee
+   * @param Expr|any|nil args
    * @constructor
    */
   CallExpr(callee, args) {
@@ -192,8 +192,8 @@ class CallExpr < Expr {
 class GetExpr < Expr {
 
   /**
-   * @param {Expr|any|nil} expr
-   * @param {Expr|any|nil} name
+   * @param Expr|any|nil expr
+   * @param Expr|any|nil name
    * @constructor
    */
   GetExpr(expr, name) {
@@ -218,9 +218,9 @@ class GetExpr < Expr {
 class SetExpr < Expr {
 
   /**
-   * @param {Expr|any|nil} expr
-   * @param {Expr|any|nil} name
-   * @param {Expr|any|nil} value
+   * @param Expr|any|nil expr
+   * @param Expr|any|nil name
+   * @param Expr|any|nil value
    * @constructor
    */
   SetExpr(expr, name, value) {
@@ -247,7 +247,7 @@ class SetExpr < Expr {
 class IndexExpr < Expr {
 
   /**
-   * @param {Expr|any|nil} args
+   * @param Expr|any|nil args
    * @constructor
    */
   IndexExpr(args) {
@@ -270,7 +270,7 @@ class IndexExpr < Expr {
 class ListExpr < Expr {
 
   /**
-   * @param {Expr|any|nil} items
+   * @param Expr|any|nil items
    * @constructor
    */
   ListExpr(items) {
@@ -293,8 +293,8 @@ class ListExpr < Expr {
 class DictExpr < Expr {
 
   /**
-   * @param {Expr|any|nil} keys
-   * @param {Expr|any|nil} values
+   * @param Expr|any|nil keys
+   * @param Expr|any|nil values
    * @constructor
    */
   DictExpr(keys, values) {
@@ -319,7 +319,7 @@ class DictExpr < Expr {
 class InterpolationExpr < Expr {
 
   /**
-   * @param {Expr|any|nil} data
+   * @param Expr|any|nil data
    * @constructor
    */
   InterpolationExpr(data) {

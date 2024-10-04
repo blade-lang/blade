@@ -113,7 +113,7 @@ def unicode_to_hex(chr) {
  * Converts a bytes (binary data) to a decimal number.
  *
  * @param bytes bytes
- * @return number
+ * @returns number
  */
 def bytes_to_decimal(bytes) {
   if !is_bytes(bytes)
