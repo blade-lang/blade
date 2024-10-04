@@ -99,6 +99,8 @@ bool print_exception(b_vm *vm, b_obj_instance *exception, bool is_assert) {
     fprintf(stderr, "  StackTrace:\n%s\n", trace_str);
   }
 
+  reset_stack(vm);
+
   return false;
 }
 
@@ -169,11 +171,6 @@ static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
   // pop
   write_blob(vm, &function->blob, OP_POP, 0);
   write_blob(vm, &function->blob, OP_POP, 0);
-
-  // g_loc 0
-//  write_blob(vm, &function->blob, OP_GET_LOCAL, 0);
-//  write_blob(vm, &function->blob, (0 >> 8) & 0xff, 0);
-//  write_blob(vm, &function->blob, 0 & 0xff, 0);
 
   // ret
   write_blob(vm, &function->blob, OP_RETURN, 0);
@@ -574,6 +571,11 @@ void free_vm(b_vm *vm) {
   free_table(vm, &vm->methods_bytes);
 
   free(vm->stack);
+
+  for(b_error_frame **err = vm->errors; err < vm->error_top; err++) {
+    free(*err);
+  }
+
   free(vm);
 }
 

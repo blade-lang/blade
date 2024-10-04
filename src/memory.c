@@ -331,10 +331,6 @@ static void mark_roots(b_vm *vm) {
 
   for (int i = 0; i < vm->frame_count; i++) {
     mark_object(vm, (b_obj *) vm->frames[i].closure);
-    for(int j = 0; j < vm->frames[i].handlers_count; j++) {
-      b_exception_frame handler = vm->frames[i].handlers[j];
-      mark_object(vm, (b_obj *)handler.klass);
-    }
   }
 
   for(b_error_frame **error = vm->errors; error < vm->error_top; error++) {

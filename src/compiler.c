@@ -326,18 +326,6 @@ static void patch_with_value(b_parser *p, int offset, int constant) {
   current_blob(p)->code[offset + 1] = constant & 0xff;
 }
 
-static void patch_try(b_parser *p, int offset, int type, int address, int finally) {
-  // patch type
-  current_blob(p)->code[offset] = (type >> 8) & 0xff;
-  current_blob(p)->code[offset + 1] = type & 0xff;
-  // patch address
-  current_blob(p)->code[offset + 2] = (address >> 8) & 0xff;
-  current_blob(p)->code[offset + 3] = address & 0xff;
-  // patch finally
-  current_blob(p)->code[offset + 4] = (finally >> 8) & 0xff;
-  current_blob(p)->code[offset + 5] = finally & 0xff;
-}
-
 static void patch_jump(b_parser *p, int offset) {
   // -2 to adjust the bytecode for the offset itself
   int jump = current_blob(p)->count - offset - 2;
@@ -356,7 +344,6 @@ static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
   compiler->type = type;
   compiler->local_count = 0;
   compiler->scope_depth = 0;
-  compiler->handler_count = 0;
 
   compiler->function = new_function(p->vm, p->module, type);
   p->vm->compiler = compiler;
@@ -2505,7 +2492,6 @@ b_obj_func *compile(b_vm *vm, b_obj_module *module, const char *source) {
   parser.block_count = 0;
   parser.repl_can_echo = false;
   parser.is_returning = false;
-  parser.is_trying = false;
   parser.innermost_loop_start = -1;
   parser.innermost_loop_scope_depth = 0;
   parser.current_class = NULL;

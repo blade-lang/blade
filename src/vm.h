@@ -16,18 +16,10 @@ typedef enum {
 } b_ptr_result;
 
 typedef struct {
-  uint16_t address;
-  uint16_t finally_address;
-  b_obj_class *klass;
-} b_exception_frame;
-
-typedef struct {
   b_obj_closure *closure;
   uint8_t *ip;
   b_value *slots;
-  int handlers_count;
   int gc_protected;
-  b_exception_frame handlers[MAX_EXCEPTION_HANDLERS];
 } b_call_frame;
 
 typedef struct {
@@ -40,6 +32,10 @@ struct s_vm {
   b_call_frame frames[FRAMES_MAX];
   b_call_frame *current_frame;
   unsigned int frame_count;
+
+  b_blob *blob;
+  uint8_t *ip;
+  b_obj_up_value *open_up_values;
 
   b_error_frame *errors[ERRORS_MAX];
   b_error_frame **error_top;
@@ -74,9 +70,6 @@ struct s_vm {
   b_table methods_file;
   b_table methods_bytes;
   b_table methods_range;
-
-  // upvalues tracker
-  b_obj_up_value *open_up_values;
 
   char **std_args;
   int std_args_count;
