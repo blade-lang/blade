@@ -88,11 +88,11 @@ install_build_env() {
 remove_redundant_libraries() {
   # shellcheck disable=SC2154
   if [ -x "$(command -v apt-get)" ]; then
-    sudo apt-get remove libgd3
+    sudo apt-get remove libgd3 -y
   elif [ -x "$(command -v brew)" ]; then
     brew uninstall pkg-config --ignore-dependencies
   elif [ -x "$(command -v apk)" ]; then
-    sudo apk delete libgd3
+    sudo apk delete libgd3 -y
   fi
 }
 
