@@ -55,28 +55,6 @@ static int jump_instruction(const char *name, int sign, b_blob *blob,
   return offset + 3;
 }
 
-static int die_instruction(const char *name, b_blob *blob, int offset) {
-  uint16_t locals = (uint16_t) (blob->code[offset + 1] << 8);
-  locals |= blob->code[offset + 2];
-  uint16_t upvalues = (uint16_t) (blob->code[offset + 3] << 8);
-  upvalues |= blob->code[offset + 4];
-
-  printf("%-16s %8d, %8d\n", name, locals, upvalues);
-  return offset + 5;
-}
-
-static int try_instruction(const char *name, b_blob *blob, int offset) {
-  uint16_t type = (uint16_t) (blob->code[offset + 1] << 8);
-  type |= blob->code[offset + 2];
-  uint16_t address = (uint16_t) (blob->code[offset + 3] << 8);
-  address |= blob->code[offset + 4];
-  uint16_t finally = (uint16_t) (blob->code[offset + 5] << 8);
-  finally |= blob->code[offset + 6];
-
-  printf("%-16s %8d -> %8d, %8d\n", name, type, address, finally);
-  return offset + 7;
-}
-
 static int invoke_instruction(const char *name, b_blob *blob, int offset) {
   uint16_t constant = (uint16_t) (blob->code[offset + 1] << 8);
   constant |= blob->code[offset + 2];
@@ -102,8 +80,6 @@ int disassemble_instruction(b_blob *blob, int offset) {
       return jump_instruction("fjump", 1, blob, offset);
     case OP_JUMP:
       return jump_instruction("jump", 1, blob, offset);
-    case OP_TRY:
-      return try_instruction("itry", blob, offset);
     case OP_LOOP:
       return jump_instruction("loop", -1, blob, offset);
 
@@ -130,11 +106,6 @@ int disassemble_instruction(b_blob *blob, int offset) {
       return short_instruction("gupv", blob, offset);
     case OP_SET_UP_VALUE:
       return short_instruction("supv", blob, offset);
-
-    case OP_POP_TRY:
-      return simple_instruction("ptry", offset);
-    case OP_PUBLISH_TRY:
-      return simple_instruction("pubtry", offset);
 
     case OP_BEGIN_CATCH:
       return short_instruction("scatch", blob, offset);

@@ -174,7 +174,6 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_ONE:
     case OP_SET_INDEX:
     case OP_ASSERT:
-    case OP_POP_TRY:
     case OP_RANGE:
     case OP_STRINGIFY:
     case OP_CHOICE:
@@ -183,7 +182,6 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_IMPORT_ALL_NATIVE:
     case OP_IMPORT_ALL:
     case OP_END_CATCH:
-    case OP_PUBLISH_TRY:
       return 0;
 
     case OP_CALL:
@@ -227,9 +225,6 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_SUPER_INVOKE:
     case OP_CLASS_PROPERTY:
       return 3;
-
-    case OP_TRY:
-      return 6;
 
     case OP_CLOSURE: {
       int constant = (bytecode[ip + 1] << 8) | bytecode[ip + 2];
@@ -284,10 +279,6 @@ static void emit_loop(b_parser *p, int loop_start) {
 }
 
 static void emit_return(b_parser *p) {
-  if(p->is_trying) {
-    emit_byte(p, OP_POP_TRY);
-  }
-
   if (p->vm->compiler->type == TYPE_INITIALIZER) {
     emit_byte_and_short(p, OP_GET_LOCAL, 0);
   } else {
@@ -328,23 +319,6 @@ static int emit_switch(b_parser *p) {
   emit_byte(p, 0xff);
 
   return current_blob(p)->count - 2;
-}
-
-static int emit_try(b_parser *p) {
-  emit_byte(p, OP_TRY);
-  // type placeholders
-  emit_byte(p, 0xff);
-  emit_byte(p, 0xff);
-
-  // handler placeholders
-  emit_byte(p, 0xff);
-  emit_byte(p, 0xff);
-
-  // finally placeholders
-  emit_byte(p, 0xff);
-  emit_byte(p, 0xff);
-
-  return current_blob(p)->count - 6;
 }
 
 static void patch_with_value(b_parser *p, int offset, int constant) {
@@ -2275,79 +2249,6 @@ static void assert_statement(b_parser *p) {
   consume_statement_end(p);
 }
 
-static void try_statement(b_parser *p) {
-
-  if (p->vm->compiler->handler_count == MAX_EXCEPTION_HANDLERS) {
-    error(p, "maximum exception handler in scope exceeded");
-  }
-  p->vm->compiler->handler_count++;
-  p->is_trying = true;
-
-  ignore_whitespace(p);
-  int try_begins = emit_try(p);
-
-  statement(p); // compile the try body
-  emit_byte(p, OP_POP_TRY);
-  int exit_jump = emit_jump(p, OP_JUMP);
-  p->is_trying = false;
-
-  // we can safely use 0 because a program cannot start with a
-  // catch or finally block
-  int address = 0, type = -1, finally = 0;
-
-  bool catch_exists = false, final_exists = false;
-
-  // catch body must maintain its own scope
-  if (match(p, CATCH_TOKEN)) {
-    catch_exists = true;
-    begin_scope(p);
-
-    consume(p, IDENTIFIER_TOKEN, "missing exception class name");
-    type = identifier_constant(p, &p->previous);
-    address = current_blob(p)->count;
-
-    if (match(p, IDENTIFIER_TOKEN)) {
-      created_variable(p, p->previous);
-    } else {
-      emit_byte(p, OP_POP);
-    }
-
-    emit_byte(p, OP_POP_TRY);
-
-    ignore_whitespace(p);
-    statement(p);
-
-    end_scope(p);
-  } else {
-    type = make_constant(p, OBJ_VAL(copy_string(p->vm, "Exception", 9)));
-  }
-
-  patch_jump(p, exit_jump);
-
-  if (match(p, FINALLY_TOKEN)) {
-    final_exists = true;
-    // if we arrived here from either the try or handler block,
-    // we don't want to continue propagating the exception
-    emit_byte(p, OP_FALSE);
-    finally = current_blob(p)->count;
-
-    ignore_whitespace(p);
-    statement(p);
-
-    int continue_execution_address = emit_jump(p, OP_JUMP_IF_FALSE);
-    emit_byte(p, OP_POP); // pop the bool off the stack
-    emit_byte(p, OP_PUBLISH_TRY);
-    patch_jump(p, continue_execution_address);
-    emit_byte(p, OP_POP);
-  }
-
-  if (!final_exists && !catch_exists) {
-    error(p, "try block must contain at least one of catch or finally");
-  }
-
-  patch_try(p, try_begins, type, address, finally);
-}
-
 static void catch_statement(b_parser *p) {
   int jump = emit_jump(p, OP_BEGIN_CATCH);
 
@@ -2581,8 +2482,6 @@ static void statement(b_parser *p) {
     end_scope(p);
   } else if (match(p, IMPORT_TOKEN)) {
     import_statement(p);
-  } else if (match(p, TRY_TOKEN)) {
-    try_statement(p);
   } else if(match(p, CATCH_TOKEN)) {
     catch_statement(p);
   } else {

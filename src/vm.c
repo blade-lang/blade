@@ -2551,41 +2551,6 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         break;
       }
 
-      case OP_TRY: {
-        b_obj_string *type = READ_STRING();
-        uint16_t address = READ_SHORT();
-        uint16_t finally_address = READ_SHORT();
-
-        if (address != 0) {
-          b_value value;
-          if (!table_get(&vm->globals, OBJ_VAL(type), &value) || !IS_CLASS(value)) {
-            if(!table_get(&vm->current_frame->closure->function->module->values, OBJ_VAL(type), &value) || !IS_CLASS(value)) {
-              runtime_error("object of type '%s' is not an exception", type->chars);
-              break;
-            }
-          }
-          push_exception_handler(vm, AS_CLASS(value), address, finally_address);
-        } else {
-          push_exception_handler(vm, NULL, address, finally_address);
-        }
-        break;
-      }
-
-      case OP_POP_TRY: {
-        vm->current_frame->handlers_count--;
-        break;
-      }
-
-      case OP_PUBLISH_TRY: {
-        vm->current_frame->handlers_count--;
-        if (propagate_exception(vm, false)) {
-          vm->current_frame = &vm->frames[vm->frame_count - 1];
-          break;
-        }
-
-        EXIT_VM();
-      }
-
       case OP_SWITCH: {
         b_obj_switch *sw = AS_SWITCH(READ_CONSTANT());
         b_value expr = peek(vm, 0);
