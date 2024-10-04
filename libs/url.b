@@ -159,25 +159,25 @@ class Url {
    */
   Url(scheme, host, port, path, query, hash, username, password, has_slash, empty_path) {
     if scheme != nil and !is_string(scheme)
-      die Exception('scheme must be a string')
+      raise Exception('scheme must be a string')
     if host != nil and !is_string(host)
-      die Exception('host must be a string')
+      raise Exception('host must be a string')
     if port != nil and !is_string(port) and !is_int(port)
-      die Exception('port must be a string or an integer')
+      raise Exception('port must be a string or an integer')
     if path != nil and !is_string(path)
-      die Exception('path must be a string')
+      raise Exception('path must be a string')
     if query != nil and !is_string(query)
-      die Exception('query must be a string')
+      raise Exception('query must be a string')
     if hash != nil and !is_string(hash)
-      die Exception('hash must be a string')
+      raise Exception('hash must be a string')
     if username != nil and !is_string(username)
-      die Exception('username must be a string')
+      raise Exception('username must be a string')
     if password != nil and !is_string(password)
-      die Exception('password must be a string')
+      raise Exception('password must be a string')
     if has_slash != nil and !is_bool(has_slash)
-      die Exception('has_slash must be a boolean')
+      raise Exception('has_slash must be a boolean')
     if empty_path != nil and !is_bool(empty_path)
-      die Exception('empty_path must be a boolean')
+      raise Exception('empty_path must be a boolean')
 
     if is_number(port) port = to_string(port)
 
@@ -377,10 +377,10 @@ class Url {
  */
 def encode(url, strict) {
   if !is_string(url)
-    die Exception('string expected at parameter 1')
+    raise Exception('string expected at parameter 1')
 
   if strict != nil and !is_bool(strict) 
-    die Exception('boolean expected at parameter 2')
+    raise Exception('boolean expected at parameter 2')
 
   var result = ''
   url.ascii(true)
@@ -412,7 +412,7 @@ def encode(url, strict) {
  */
 def decode(url) {
   if !is_string(url)
-    die Exception('string expected')
+    raise Exception('string expected')
 
   # quick exit strategy
   if url.index_of('%') == -1 return url
@@ -426,7 +426,7 @@ def decode(url) {
       # decode percent-encoded data here
       var hexdata = url[i+1, i+3].lower()
 
-      if hexdata.length() != 2 die UrlMalformedException('bad encoding')
+      if hexdata.length() != 2 raise UrlMalformedException('bad encoding')
 
       result += chr((lookup_table.index_of(hexdata[0]) * 16) + lookup_table.index_of(hexdata[1]))
       i += 2
@@ -451,9 +451,9 @@ def decode(url) {
  */
 def parse(url, strict) {
   if !is_string(url) 
-    die Exception('string expected in argument 1 (url)')
+    raise Exception('string expected in argument 1 (url)')
   if strict != nil and !is_bool(strict)
-    die Exception('boolean expected in argument 2 (strict)')
+    raise Exception('boolean expected in argument 2 (strict)')
     
   if strict == nil strict = true
   url = url.trim() # support urls surrounded by whitespaces
@@ -512,7 +512,7 @@ def parse(url, strict) {
         if !_SIMPLE_SCHEMES.contains(scheme) {
           # if the // is missing, it's a malformed url
           if url[i,i+3] != '://' {
-            if strict die UrlMalformedException('expected // at index ${i}')
+            if strict raise UrlMalformedException('expected // at index ${i}')
             else break
           }
           i += 2
@@ -528,7 +528,7 @@ def parse(url, strict) {
         # names (e.g., allow "HTTP" as well as "http") for the sake of robustness.
         # https://tools.ietf.org/html/rfc3986#section-3.1
         if !scheme.match('/(?:^|[^a-z0-9.+-])([a-z][a-z0-9.+-]*)$/i') {
-          if strict die UrlMalformedException('invalid scheme')
+          if strict raise UrlMalformedException('invalid scheme')
           else break
         }
       } else if !port {
@@ -569,7 +569,7 @@ def parse(url, strict) {
               # we read the entire url without a terminating @ sign...
               # something is wrong with this url and the url is definitely
               # malformed...
-              if strict die UrlMalformedException('url not complete')
+              if strict raise UrlMalformedException('url not complete')
               else break
             }
 
@@ -620,7 +620,7 @@ def parse(url, strict) {
       # the path cannot begin with two slash characters
       # https://tools.ietf.org/html/rfc3986#section-3.3
       if path.starts_with('//') {
-        if strict die UrlMalformedException('invalid path')
+        if strict raise UrlMalformedException('invalid path')
         else break
       }
 
@@ -645,7 +645,7 @@ def parse(url, strict) {
         # but RFC 3986 doesn't allow this.
         # for this library, we are going strictly RFC 3986
         # https://tools.ietf.org/html/rfc3986#section-3.4
-        if strict die UrlMalformedException('query not allowed at index ${i}')
+        if strict raise UrlMalformedException('query not allowed at index ${i}')
         else break
       }
 

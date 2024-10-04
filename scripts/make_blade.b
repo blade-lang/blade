@@ -60,7 +60,7 @@ for f in header_list {
       for head in headers {
         if !processed.contains(head) {
           var h = file('${root}/src/${head}')
-          if !h.exists() die Exception('missing header file ${head}')
+          if !h.exists() raise Exception('missing header file ${head}')
 
           g = g.replace('/#include\s*"${head}"/', h.read())
           processed.append(head)

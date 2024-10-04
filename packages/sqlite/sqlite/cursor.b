@@ -92,7 +92,7 @@ class SQLite3Cursor {
     var result = _cursor_has_next(self._cursor)
 
     if is_string(result)
-      die SQLiteException(result)
+      raise SQLiteException(result)
 
     return result
   }
@@ -111,17 +111,17 @@ class SQLite3Cursor {
     if is_number(index) or is_string(index) {
       if is_number(index) {
         if index < 0  or index > self.columns.length()
-          die SQLiteException('unknown column index')
+          raise SQLiteException('unknown column index')
       } else if is_string(index) {
         index = self.columns.index_of(index)
         if index == -1
-          die SQLiteException('unknown column name')
+          raise SQLiteException('unknown column name')
       }
 
       return _cursor_get(self._cursor, index)
     }
 
-    die SQLiteException('column name or index expected')
+    raise SQLiteException('column name or index expected')
   }
 
   /**

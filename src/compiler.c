@@ -178,7 +178,7 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_STRINGIFY:
     case OP_CHOICE:
     case OP_EMPTY:
-    case OP_DIE:
+    case OP_RAISE:
     case OP_IMPORT_ALL_NATIVE:
     case OP_IMPORT_ALL:
     case OP_END_CATCH:
@@ -1329,7 +1329,7 @@ b_parse_rule parse_rules[] = {
     [CONTINUE_TOKEN] = {NULL, NULL, PREC_NONE},
     [DEF_TOKEN] = {NULL, NULL, PREC_NONE},
     [DEFAULT_TOKEN] = {NULL, NULL, PREC_NONE},
-    [DIE_TOKEN] = {NULL, NULL, PREC_NONE},
+    [RAISE_TOKEN] = {NULL, NULL, PREC_NONE},
     [DO_TOKEN] = {NULL, NULL, PREC_NONE},
     [ECHO_TOKEN] = {NULL, NULL, PREC_NONE},
     [ELSE_TOKEN] = {NULL, NULL, PREC_NONE},
@@ -2013,10 +2013,10 @@ static void echo_statement(b_parser *p) {
   consume_statement_end(p);
 }
 
-static void die_statement(b_parser *p) {
+static void raise_statement(b_parser *p) {
   discard_locals(p, p->vm->compiler->scope_depth);
   expression(p);
-  emit_byte(p, OP_DIE);
+  emit_byte(p, OP_RAISE);
   consume_statement_end(p);
 }
 
@@ -2385,7 +2385,7 @@ static void synchronize(b_parser *p) {
       case ECHO_TOKEN:
       case ASSERT_TOKEN:
       case CATCH_TOKEN:
-      case DIE_TOKEN:
+      case RAISE_TOKEN:
       case RETURN_TOKEN:
       case STATIC_TOKEN:
       case SELF_TOKEN:
@@ -2457,8 +2457,8 @@ static void statement(b_parser *p) {
     return_statement(p);
   } else if (match(p, ASSERT_TOKEN)) {
     assert_statement(p);
-  } else if (match(p, DIE_TOKEN)) {
-    die_statement(p);
+  } else if (match(p, RAISE_TOKEN)) {
+    raise_statement(p);
   } else if (match(p, LBRACE_TOKEN)) {
     begin_scope(p);
     block(p);

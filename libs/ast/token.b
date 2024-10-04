@@ -309,9 +309,9 @@ var DEF = 67
 var DEFAULT = 68
 
 /**
- * die token
+ * raise token
  */
-var DIE = 68
+var RAISE  = 68
 
 /**
  * do token

@@ -98,7 +98,7 @@ class InlineParser {
         state.level--
   
         if ok {
-          # if pos >= state.pos die Exception("inline rule didn't increment state position")
+          # if pos >= state.pos raise Exception("inline rule didn't increment state position")
           break
         }
       }
@@ -144,7 +144,7 @@ class InlineParser {
           ok = rules[i](state, false)
           if ok {
             # if prev_pos >= state.pos 
-            #   die Exception("inline rule didn't increment state.pos")
+            #   raise Exception("inline rule didn't increment state.pos")
             break
           }
         }

@@ -4,7 +4,7 @@ import io
 var tty = io.TTY(io.stdin)
 
 var keywords = ['default', 'def', 'class', 'echo', 'for', 'if', 'in', 
-  'as', 'import', 'let', 'using', 'when', 'while', 'iter', 'die', 'break', 'continue']
+  'as', 'import', 'let', 'using', 'when', 'while', 'iter', 'raise ', 'break', 'continue']
 
 def highlight(str) {
   if str.length() == 0

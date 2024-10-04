@@ -2,9 +2,9 @@ import socket { * }
 
 def serve(port, on_client_receive) {
   if !is_number(port)
-    die Exception('number expected at parameter 1')
+    raise Exception('number expected at parameter 1')
   if on_client_receive and !is_function(on_client_receive)
-    die Exception('function expected at parameter 2')
+    raise Exception('function expected at parameter 2')
 
   var id = 1
 

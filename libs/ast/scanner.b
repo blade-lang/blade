@@ -55,7 +55,7 @@ class Scanner {
     'continue': CONTINUE,
     'def': DEF,
     'default': DEFAULT,
-    'die': DIE,
+    'raise ': RAISE ,
     'do': DO,
     'echo': ECHO,
     'else': ELSE,
@@ -84,7 +84,7 @@ class Scanner {
    */
   Scanner(source, file) {
     if !is_string(source)
-      die Exception('Blade source code expected')
+      raise Exception('Blade source code expected')
     
     # to track the quote that started an interpolation
     self._interpolating = []
@@ -274,7 +274,7 @@ class Scanner {
           return
         }
 
-        die Exception('maximum interpolation nesting exceeded')
+        raise Exception('maximum interpolation nesting exceeded')
       }
 
       if self._peek() == '\\' and (self._next() == c or self._next() == '\\')
@@ -284,7 +284,7 @@ class Scanner {
     }
 
     if self._is_at_end() 
-      die Exception('unterminated string on line ${self._line}')
+      raise Exception('unterminated string on line ${self._line}')
 
     self._match(c)
     self._add_token(LITERAL, self.source[self._start + 1, self._current - 1])
@@ -472,7 +472,7 @@ class Scanner {
         } else if self._is_alpha(c) {
           self._identifier()
         } else {
-          die Exception("Unexpected character '${c}'")
+          raise Exception("Unexpected character '${c}'")
         }
       }
     }

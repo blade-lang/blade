@@ -32,9 +32,9 @@ class Parser {
    */
   Parser(tokens, path) {
     if !is_list(tokens)
-      die Exception('list expected in argument 1 (tokens)')
+      raise Exception('list expected in argument 1 (tokens)')
     if !is_string(path)
-      die Exception('string expected in argument 2 (path)')
+      raise Exception('string expected in argument 2 (path)')
 
     # set instance variable token
     self._tokens = tokens
@@ -118,7 +118,7 @@ class Parser {
    */
   _consume(type, message) {
     if self._check(type) return self._advance()
-    die ParseException(message, self._peek())
+    raise ParseException(message, self._peek())
   }
 
   /**
@@ -129,7 +129,7 @@ class Parser {
     for t in __args__ {
       if self._check(t) return self._advance()
     }
-    die ParseException(message, self._peek())
+    raise ParseException(message, self._peek())
   }
 
   _get_doc_defn_data() {
@@ -713,7 +713,7 @@ class Parser {
     while !self._match(RBRACE) and !self._check(EOF) {
       if self._match(WHEN, DEFAULT, COMMENT, DOC, NEWLINE) {
         if state == 1 
-          die ParseException("'when' cannot exist after a default", self._previous())
+          raise ParseException("'when' cannot exist after a default", self._previous())
 
         if [DOC, COMMENT, NEWLINE].contains(self._previous().type) {}
         else if self._previous().type == WHEN {
@@ -733,7 +733,7 @@ class Parser {
           default_case = self._statement()
         }
       } else {
-        die ParseException('Invalid using statement', self._previous())
+        raise ParseException('Invalid using statement', self._previous())
       }
     }
 
@@ -843,8 +843,8 @@ class Parser {
       result = ReturnStmt(self._expression())
     } else if self._match(ASSERT) {
       result = self._assert()
-    } else if self._match(DIE) {
-      result = DieStmt(self._expression())
+    } else if self._match(RAISE ) {
+      result = RaiseStmt(self._expression())
     } else if self._match(LBRACE) {
       result = self._block()
     } else if self._match(IMPORT) {

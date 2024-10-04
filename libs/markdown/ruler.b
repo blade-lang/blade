@@ -95,7 +95,7 @@ class Ruler {
     var index = self.__find__(name)
     var opt = options or {}
   
-    if index == -1 die Exception('Parser rule not found: ' + name)
+    if index == -1 raise Exception('Parser rule not found: ' + name)
   
     self.__rules__[index].fn = fn
     self.__rules__[index].alt = opt.alt or []
@@ -129,7 +129,7 @@ class Ruler {
     var index = self.__find__(before_name)
     var opt = options or {}
   
-    if index == -1 die Exception('Parser rule not found: ' + before_name)
+    if index == -1 raise Exception('Parser rule not found: ' + before_name)
   
     # self.__rules__.remove_at(index)
     self.__rules__.insert({
@@ -169,7 +169,7 @@ class Ruler {
     var index = self.__find__(after_name)
     var opt = options or {}
   
-    if index == -1 die Exception('Parser rule not found: ' + after_name)
+    if index == -1 raise Exception('Parser rule not found: ' + after_name)
   
     self.__rules__.remove_at(index + 1)
     self.__rules__.insert({
@@ -240,7 +240,7 @@ class Ruler {
   
       if idx < 0 {
         if ignore_invalid return
-        die Exception('Rules manager: invalid rule name ' + name);
+        raise Exception('Rules manager: invalid rule name ' + name);
       }
       self.__rules__[idx].enabled = true
       result.append(name)
@@ -289,7 +289,7 @@ class Ruler {
   
       if idx < 0 {
         if ignore_invalid return
-        die Exception('Rules manager: invalid rule name ' + name)
+        raise Exception('Rules manager: invalid rule name ' + name)
       }
       self.__rules__[idx].enabled = false
       result.append(name)

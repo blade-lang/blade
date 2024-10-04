@@ -1,11 +1,11 @@
 # Merge objects
 def assign(obj, ...) {
   if !is_dict(obj) 
-    die Exception('dictionary expected in argument 1')
+    raise Exception('dictionary expected in argument 1')
   for source in __args__ {
     if !source continue
     if !is_dict(source)
-      die Exception('invalid dictionary in parameter list')
+      raise Exception('invalid dictionary in parameter list')
 
     obj.extend(source)
   }

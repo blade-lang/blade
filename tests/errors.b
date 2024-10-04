@@ -1,5 +1,5 @@
 catch {
-  die Exception('there was an exception here')
+  raise Exception('there was an exception here')
 } as error
 
 if error {
@@ -12,7 +12,7 @@ def test() {
   def another_test() {
     def a_more_nested_test() {
       x = [1, 2, 3, 4, 5]
-      die Exception('a_more_nested_test died')
+      raise Exception('a_more_nested_test died')
       echo [6, 7, 8, 9, 10]
     }
 
@@ -43,9 +43,9 @@ catch {
 echo "The last catch didn't throw anything and wasn't bound to any variable."
 
 catch {
-  # die Exception('First exception thrown')
+  # raise Exception('First exception thrown')
   catch {
-    die Exception('Second exception thrown')
+    raise Exception('Second exception thrown')
   } as e
 
   if e {
@@ -78,8 +78,8 @@ if e {
 
 def run() {
   catch {
-    die Exception('I am a thrown exception')
-    die Exception('Second exception we will never reach')
+    raise Exception('I am a thrown exception')
+    raise Exception('Second exception we will never reach')
   } as e
 
   if e {

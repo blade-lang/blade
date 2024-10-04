@@ -143,9 +143,9 @@ class Int16Array {
    */
   append(value) {
     if !is_number(value) or !is_int(value)
-      die Exception('integer expected')
+      raise Exception('integer expected')
     if value < INT16_MIN or value > INT16_MAX
-      die Exception('value out of int16 range')
+      raise Exception('value out of int16 range')
 
     _array.append(self._ptr, value)
   }
@@ -160,7 +160,7 @@ class Int16Array {
    */
   get(index) {
     if !is_number(index)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     
     return _array.int16_get(self._ptr, index)
   }
@@ -174,9 +174,9 @@ class Int16Array {
    */
   set(index, value) {
     if !is_number(index)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     if !is_number(value) and !is_int(value)
-      die Exception('Int16Array stores integer values')
+      raise Exception('Int16Array stores integer values')
     
     return _array.int16_set(self._ptr, index, value)
   }
@@ -189,7 +189,7 @@ class Int16Array {
    */
   extend(array) {
     if !instance_of(array, Int16Array)
-      die Exception('instance of Int16Array expected')
+      raise Exception('instance of Int16Array expected')
     _array.extend(self._ptr, array.get_pointer())
   }
 
@@ -270,13 +270,13 @@ class Int16Array {
 
   @iter(n) {
     if !is_number(n)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     return _array.int16___iter__(self._ptr, n)
   }
 
   @itern(n) {
     if !is_number(n)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     return _array.itern(self._ptr, n)
   }
 }
@@ -349,9 +349,9 @@ class Int32Array {
    */
   append(value) {
     if !is_number(value) or !is_int(value)
-      die Exception('integer expected')
+      raise Exception('integer expected')
     if value < INT32_MIN or value > INT32_MAX
-      die Exception('value out of int32 range')
+      raise Exception('value out of int32 range')
 
     _array.append(self._ptr, value)
   }
@@ -366,7 +366,7 @@ class Int32Array {
    */
   get(index) {
     if !is_number(index)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     
     return _array.int32_get(self._ptr, index)
   }
@@ -380,9 +380,9 @@ class Int32Array {
    */
   set(index, value) {
     if !is_number(index)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     if !is_number(value) and !is_int(value)
-      die Exception('Int32Array stores integer values')
+      raise Exception('Int32Array stores integer values')
     
     return _array.int32_set(self._ptr, index, value)
   }
@@ -395,7 +395,7 @@ class Int32Array {
    */
   extend(array) {
     if !instance_of(array, Int32Array)
-      die Exception('instance of Int32Array expected')
+      raise Exception('instance of Int32Array expected')
     _array.extend(self._ptr, array.get_pointer())
   }
 
@@ -476,13 +476,13 @@ class Int32Array {
 
   @iter(n) {
     if !is_number(n)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     return _array.int32___iter__(self._ptr, n)
   }
 
   @itern(n) {
     if !is_number(n)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     return _array.itern(self._ptr, n)
   }
 }
@@ -555,9 +555,9 @@ class Int64Array {
    */
   append(value) {
     if !is_number(value) or !is_int(value)
-      die Exception('integer expected')
+      raise Exception('integer expected')
     if value < INT64_MIN or value > INT64_MAX
-      die Exception('value out of int64 range')
+      raise Exception('value out of int64 range')
 
     _array.append(self._ptr, value)
   }
@@ -572,7 +572,7 @@ class Int64Array {
    */
   get(index) {
     if !is_number(index)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     
     return _array.int64_get(self._ptr, index)
   }
@@ -588,9 +588,9 @@ class Int64Array {
    */
   set(index, value) {
     if !is_number(index)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     if !is_number(value)
-      die Exception('Int64Array stores numeric values')
+      raise Exception('Int64Array stores numeric values')
     
     return _array.int64_set(self._ptr, index, value)
   }
@@ -603,7 +603,7 @@ class Int64Array {
    */
   extend(array) {
     if !instance_of(array, Int64Array)
-      die Exception('instance of Int64Array expected')
+      raise Exception('instance of Int64Array expected')
     _array.extend(self._ptr, array.get_pointer())
   }
 
@@ -684,13 +684,13 @@ class Int64Array {
 
   @iter(n) {
     if !is_number(n)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     return _array.int64___iter__(self._ptr, n)
   }
 
   @itern(n) {
     if !is_number(n)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     return _array.itern(self._ptr, n)
   }
 }
@@ -763,9 +763,9 @@ class UInt16Array {
    */
   append(value) {
     if !is_number(value) or !is_int(value)
-      die Exception('integer expected')
+      raise Exception('integer expected')
     if value < INT16_MIN or value > INT16_MAX
-      die Exception('value out of uint16 range')
+      raise Exception('value out of uint16 range')
 
     _array.append(self._ptr, value)
   }
@@ -780,7 +780,7 @@ class UInt16Array {
    */
   get(index) {
     if !is_number(index)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     
     return _array.uint16_get(self._ptr, index)
   }
@@ -794,9 +794,9 @@ class UInt16Array {
    */
   set(index, value) {
     if !is_number(index)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     if !is_number(value) and !is_int(value)
-      die Exception('UInt16Array stores integer values')
+      raise Exception('UInt16Array stores integer values')
     
     return _array.uint16_set(self._ptr, index, value)
   }
@@ -809,7 +809,7 @@ class UInt16Array {
    */
   extend(array) {
     if !instance_of(array, UInt16Array)
-      die Exception('instance of UInt16Array expected')
+      raise Exception('instance of UInt16Array expected')
     _array.extend(self._ptr, array.get_pointer())
   }
 
@@ -890,13 +890,13 @@ class UInt16Array {
 
   @iter(n) {
     if !is_number(n)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     return _array.uint16___iter__(self._ptr, n)
   }
 
   @itern(n) {
     if !is_number(n)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     return _array.itern(self._ptr, n)
   }
 }
@@ -969,9 +969,9 @@ class UInt32Array {
    */
   append(value) {
     if !is_number(value) or !is_int(value)
-      die Exception('integer expected')
+      raise Exception('integer expected')
     if value < INT32_MIN or value > INT32_MAX
-      die Exception('value out of uint32 range')
+      raise Exception('value out of uint32 range')
 
     _array.append(self._ptr, value)
   }
@@ -986,7 +986,7 @@ class UInt32Array {
    */
   get(index) {
     if !is_number(index)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     
     return _array.uint32_get(self._ptr, index)
   }
@@ -1000,9 +1000,9 @@ class UInt32Array {
    */
   set(index, value) {
     if !is_number(index)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     if !is_number(value) and !is_int(value)
-      die Exception('UInt32Array stores integer values')
+      raise Exception('UInt32Array stores integer values')
     
     return _array.uint32_set(self._ptr, index, value)
   }
@@ -1015,7 +1015,7 @@ class UInt32Array {
    */
   extend(array) {
     if !instance_of(array, UInt32Array)
-      die Exception('instance of UInt32Array expected')
+      raise Exception('instance of UInt32Array expected')
     _array.extend(self._ptr, array.get_pointer())
   }
 
@@ -1096,13 +1096,13 @@ class UInt32Array {
 
   @iter(n) {
     if !is_number(n)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     return _array.uint32___iter__(self._ptr, n)
   }
 
   @itern(n) {
     if !is_number(n)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     return _array.itern(self._ptr, n)
   }
 }
@@ -1175,9 +1175,9 @@ class UInt64Array {
    */
   append(value) {
     if !is_number(value) or !is_int(value)
-      die Exception('integer expected')
+      raise Exception('integer expected')
     if value < INT64_MIN or value > INT64_MAX
-      die Exception('value out of uint64 range')
+      raise Exception('value out of uint64 range')
 
     _array.append(self._ptr, value)
   }
@@ -1192,7 +1192,7 @@ class UInt64Array {
    */
   get(index) {
     if !is_number(index)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     
     return _array.uint64_get(self._ptr, index)
   }
@@ -1206,9 +1206,9 @@ class UInt64Array {
    */
   set(index, value) {
     if !is_number(index)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     if !is_number(value)
-      die Exception('UInt64Array stores numeric values')
+      raise Exception('UInt64Array stores numeric values')
     
     return _array.uint64_set(self._ptr, index, value)
   }
@@ -1221,7 +1221,7 @@ class UInt64Array {
    */
   extend(array) {
     if !instance_of(array, UInt64Array)
-      die Exception('instance of UInt64Array expected')
+      raise Exception('instance of UInt64Array expected')
     _array.extend(self._ptr, array.get_pointer())
   }
 
@@ -1302,13 +1302,13 @@ class UInt64Array {
 
   @iter(n) {
     if !is_number(n)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     return _array.uint64___iter__(self._ptr, n)
   }
 
   @itern(n) {
     if !is_number(n)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     return _array.itern(self._ptr, n)
   }
 }
@@ -1381,9 +1381,9 @@ class FloatArray {
    */
   append(value) {
     if !is_number(value) or !is_int(value)
-      die Exception('integer expected')
+      raise Exception('integer expected')
     if value < FLOAT_MIN or value > FLOAT_MAX
-      die Exception('value out of float range')
+      raise Exception('value out of float range')
 
     _array.append(self._ptr, value)
   }
@@ -1398,7 +1398,7 @@ class FloatArray {
    */
   get(index) {
     if !is_number(index)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     
     return _array.float_get(self._ptr, index)
   }
@@ -1412,9 +1412,9 @@ class FloatArray {
    */
   set(index, value) {
     if !is_number(index)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     if !is_number(value)
-      die Exception('FloatArray stores numeric values')
+      raise Exception('FloatArray stores numeric values')
     
     return _array.float_set(self._ptr, index, value)
   }
@@ -1427,7 +1427,7 @@ class FloatArray {
    */
   extend(array) {
     if !instance_of(array, FloatArray)
-      die Exception('instance of FloatArray expected')
+      raise Exception('instance of FloatArray expected')
     _array.extend(self._ptr, array.get_pointer())
   }
 
@@ -1508,13 +1508,13 @@ class FloatArray {
 
   @iter(n) {
     if !is_number(n)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     return _array.uint64___iter__(self._ptr, n)
   }
 
   @itern(n) {
     if !is_number(n)
-      die Exception('Arrays are numerically indexed')
+      raise Exception('Arrays are numerically indexed')
     return _array.itern(self._ptr, n)
   }
 }

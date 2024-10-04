@@ -2421,7 +2421,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         break;
       }
 
-      case OP_DIE: {
+      case OP_RAISE: {
         if (!IS_INSTANCE(peek(vm, 0)) ||
             !is_instance_of(AS_INSTANCE(peek(vm, 0))->klass, vm->exception_class->name->chars)) {
           runtime_error("instance of Exception expected");

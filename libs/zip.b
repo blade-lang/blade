@@ -155,7 +155,7 @@ class ZipItem {
    */
   static from_dict(dict) {
     if !is_dict(dict)
-      die Exception('dictionary expected from argument 1 (dict)')
+      raise Exception('dictionary expected from argument 1 (dict)')
 
     var f = ZipItem()
 
@@ -185,7 +185,7 @@ class ZipItem {
    */
   export(base_dir) {
     if base_dir != nil and !is_string(base_dir)
-      die Exception('string expected in argument 1 (base_dir)')
+      raise Exception('string expected in argument 1 (base_dir)')
 
     if !base_dir base_dir = ''
 
@@ -258,7 +258,7 @@ class ZipFile {
    */
   export(base_dir) {
     if base_dir != nil and !is_string(base_dir)
-      die Exception('string expected in argument 1 (base_dir)')
+      raise Exception('string expected in argument 1 (base_dir)')
 
     if !base_dir base_dir = ''
     for zip_file in self.files {
@@ -297,9 +297,9 @@ class ZipArchive {
    */
   ZipArchive(path, use_zip_64) {
     if !is_string(path)
-      die Exception('string expected in argument 1 (path)')
+      raise Exception('string expected in argument 1 (path)')
     if use_zip_64 != nil and !is_bool(use_zip_64)
-      die Exception('boolean expected in argument 2 (use_zip_64)')
+      raise Exception('boolean expected in argument 2 (use_zip_64)')
     self._file = path
     self._is_64 = use_zip_64 == nil ? false : use_zip_64
   }
@@ -316,7 +316,7 @@ class ZipArchive {
     if self._handle == nil {
       self._handle = file(self._file, 'wb')
       if !self._handle.is_open()
-        die Exception('could not create new zip file')
+        raise Exception('could not create new zip file')
     }
   }
 
@@ -550,13 +550,13 @@ class ZipArchive {
    */
   add_file(path, destination) {
     if !is_string(path)
-      die Exception('expected string as argument 1 (path)')
+      raise Exception('expected string as argument 1 (path)')
     if destination != nil and !is_string(destination)
-      die Exception('expected string as argument 2 (destination)')
+      raise Exception('expected string as argument 2 (destination)')
 
     var f = file(path, 'rb')
     if !f.exists()
-      die Exception('file ${path} not found')
+      raise Exception('file ${path} not found')
 
     if !destination destination = f.name()
     else destination = destination.replace(_path_replace_regex, '/')
@@ -630,16 +630,16 @@ class ZipArchive {
    */
   add_directory(directory, file_blacklist, ext_blacklist) {
     if !is_string(directory)
-      die Exception('expected string in argument 1 (directory)')
+      raise Exception('expected string in argument 1 (directory)')
     if file_blacklist != nil and !is_list(file_blacklist)
-      die Exception('expected list in argument 2 (file_blacklist)')
+      raise Exception('expected list in argument 2 (file_blacklist)')
     if ext_blacklist != nil and !is_list(ext_blacklist)
-      die Exception('expected list in argument 3 (ext_blacklist)')
+      raise Exception('expected list in argument 3 (ext_blacklist)')
 
     directory = directory.replace(_path_replace_regex, '/')
 
     if !os.dir_exists(directory)
-      die Exception('directory ${directory} not found')
+      raise Exception('directory ${directory} not found')
 
     if !file_blacklist file_blacklist = []
     if !ext_blacklist ext_blacklist = []
@@ -661,7 +661,7 @@ class ZipArchive {
     var zip_stats = fh.stats()
 
     if zip_stats.size > ZIP_FILE_MAX
-      die Exception(_64_required)
+      raise Exception(_64_required)
 
     var zip_file = ZipFile()
 
@@ -840,7 +840,7 @@ class ZipArchive {
       return true
     }
     
-    die Exception('zip file not open')
+    raise Exception('zip file not open')
 	}
 }
 
@@ -862,11 +862,11 @@ class ZipArchive {
  */
 def extract(file, destination, is_zip64) {
   if !is_string(file)
-    die Exception('string expected in argument 1 (file)')
+    raise Exception('string expected in argument 1 (file)')
   if destination != nil and !is_string(destination)
-    die Exception('string expected in argument 2 (destination)')
+    raise Exception('string expected in argument 2 (destination)')
   if is_zip64 != nil and !is_bool(is_zip64)
-    die Exception('bool expected in argument 3 (use_zip64)')
+    raise Exception('bool expected in argument 3 (use_zip64)')
 
   if is_zip64 == nil is_zip64 = false
 
@@ -877,7 +877,7 @@ def extract(file, destination, is_zip64) {
 
 /**
  * Compresses the given path (file or directory) into the destination zip archive.
- * @dies Exception if file could not be written of zip max size exceeded.
+ * @raises  Exception if file could not be written of zip max size exceeded.
  * 
  * > When an exception is thrown becase max size exceeded, some files could 
  * > have already been compressed. In this case, the zip archive will should still 
@@ -894,11 +894,11 @@ def extract(file, destination, is_zip64) {
  */
 def compress(path, destination, use_zip64) {
   if !is_string(path)
-    die Exception('string expected in argument 1 (path)')
+    raise Exception('string expected in argument 1 (path)')
   if destination != nil and !is_string(destination)
-    die Exception('string expected in argument 2 (destination)')
+    raise Exception('string expected in argument 2 (destination)')
   if use_zip64 != nil and !is_bool(use_zip64)
-    die Exception('boolean expected in argument 3 (use_zip64)')
+    raise Exception('boolean expected in argument 3 (use_zip64)')
 
   if !destination 
     destination = os.join_paths(os.cwd(), os.base_name(path)) + ZIP_EXT
@@ -922,7 +922,7 @@ def compress(path, destination, use_zip64) {
   }
 
   if !completed or !zip.save()
-    die Exception(_64_required)
+    raise Exception(_64_required)
 
   return true
 }

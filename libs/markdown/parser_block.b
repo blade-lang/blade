@@ -81,14 +81,14 @@ class BlockParser {
         ok = rules[i](state, line, end_line, false)
         if ok {
           # if prev_line >= state.line {
-          #   die Exception("block rule didn't increment state line")
+          #   raise Exception("block rule didn't increment state line")
           # }
           break
         }
       }
   
       # this can only happen if user disables paragraph rule
-      if !ok die Exception('none of the block rules matched')
+      if !ok raise Exception('none of the block rules matched')
   
       # set state.tight if we had an empty line before current tag
       # i.e. latest empty line should not count

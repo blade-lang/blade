@@ -231,13 +231,13 @@ def snefru(str) {
  */
 def siphash(key, str) {
   if !is_string(key) and !is_bytes(key) {
-    die Exception('key must be string or bytes')
+    raise Exception('key must be string or bytes')
   } else if !is_string(str) and !is_bytes(str) {
-    die Exception('str must be string or bytes')
+    raise Exception('str must be string or bytes')
   }
 
   if key.length() > 16
-    die Exception('key must be maximum of 16 characters/bytes long')
+    raise Exception('key must be maximum of 16 characters/bytes long')
   else if key.length() < 16 {
     if is_bytes(key) key = key.to_string()
     key = key.rpad(16, '\0')
@@ -277,7 +277,7 @@ var _hmac_allowed = [
  */
 def hmac(method, key, str) {
   if !_hmac_allowed.contains(method)
-    die Exception('invalid HMAC method')
+    raise Exception('invalid HMAC method')
 
   # convert key and str to array of bytes.
   if is_string(key) key = key.to_bytes()

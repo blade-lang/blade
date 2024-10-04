@@ -76,9 +76,9 @@ class PagedValue {
     if private == nil private = false
 
     if !is_bool(executable)
-      die Exception('boolean value expected in argument 1 (executable)')
+      raise Exception('boolean value expected in argument 1 (executable)')
     if !is_bool(private)
-      die Exception('boolean value expected in argument 2 (private)')
+      raise Exception('boolean value expected in argument 2 (private)')
 
     self._ptr = _process.new_paged(executable, private)
   }
@@ -124,7 +124,7 @@ class PagedValue {
         var format = ''
         for item in value {
           if is_list(item) or is_dict(item)
-            die Exception('list not allowed here')
+            raise Exception('list not allowed here')
           format += self._set_format(item)
         }
         return format
@@ -133,7 +133,7 @@ class PagedValue {
         var format = ''
         for item in value {
           if is_list(item) or is_dict(item)
-            die Exception('list or dictionay not allowed here')
+            raise Exception('list or dictionay not allowed here')
           format += self._set_format(item)
         }
         return format
@@ -308,13 +308,13 @@ class Process {
    */
   Process(fn, paged) {
     if !is_function(fn)
-      die Exception('function expected in argument 1 (fn)')
+      raise Exception('function expected in argument 1 (fn)')
     if paged != nil and !instance_of(paged, PagedValue)
-      die Exception('instance of PagedValue expected in argument 2 (paged)')
+      raise Exception('instance of PagedValue expected in argument 2 (paged)')
 
     # No windows support yet.
     if os.platform == 'windows' {
-      die Exception('Process is not yet supported on this OS')
+      raise Exception('Process is not yet supported on this OS')
     }
 
     self._fn = fn
@@ -341,7 +341,7 @@ class Process {
    */
   on_complete(fn) {
     if !is_function(fn)
-      die Exception('function expected at argument 1')
+      raise Exception('function expected at argument 1')
     self._on_complete_listeners.append(fn)
   }
 
@@ -355,13 +355,13 @@ class Process {
     if self._ptr {
       var id = _process.create(self._ptr)
       if id == -1 {
-        die Exception('failed to start process')
+        raise Exception('failed to start process')
       } else if id == 0 {
         var fn_data = reflect.get_function_metadata(self._fn)
         var expected_arity = self._paged ? 2 : 1
 
         if fn_data.arity != expected_arity
-          die Exception('process function must take ${expected_arity} arguments')
+          raise Exception('process function must take ${expected_arity} arguments')
 
         if expected_arity == 2 {
           if self._paged self._fn(self, self._paged)

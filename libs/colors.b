@@ -156,7 +156,7 @@ def text(value, color, bg) {
  */
 def rgb_to_ansi256(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
-    die Exception('number expected')
+    raise Exception('number expected')
 
   # From https://github.com/Qix-/color-convert/blob/3f0e0d4e92e235796ccb17f6e85c72094a651f49/conversions.js
   if r == g and g == b {
@@ -178,7 +178,7 @@ def rgb_to_ansi256(r, g, b) {
  */
 def ansi256_to_ansi(code) {
   if !is_int(code)
-    die Exception('number expected')
+    raise Exception('number expected')
 
   if code < 8 return 30 + code
   if code < 16 return 90 + (code - 8)
@@ -216,7 +216,7 @@ def ansi256_to_ansi(code) {
  */
 def hex_to_rgb(h) {
   if !is_string(h)
-    die Exception('string expected')
+    raise Exception('string expected')
 
   var value = h.match('/^([a-f0-9]{8}|[a-f0-9]{6}|[a-f0-9]{4}|[a-f0-9]{3})$/')
   if !value {
@@ -255,7 +255,7 @@ def hex_to_rgb(h) {
  */
 def hex_to_ansi256(color) {
   if !is_string(color)
-    die Exception('string expected')
+    raise Exception('string expected')
 
   var v = hex_to_rgb(color)
   return rgb_to_ansi256(v[0], v[1], v[2])
@@ -270,7 +270,7 @@ def hex_to_ansi256(color) {
  */
 def hex_to_ansi(color) {
   if !is_string(color)
-    die Exception('string expected')
+    raise Exception('string expected')
 
   return ansi256_to_ansi(hex_to_ansi256(color))
 }
@@ -285,7 +285,7 @@ def hex_to_ansi(color) {
  */
 def hex(color) {
   if !is_string(color)
-    die Exception('string expected')
+    raise Exception('string expected')
 
   if color[0] == '#' color = color[1,]
   return hex_to_ansi(color)
@@ -301,7 +301,7 @@ def hex(color) {
  */
 def rgb(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
-    die Exception('number expected')
+    raise Exception('number expected')
   return ansi256_to_ansi(rgb_to_ansi256(r, g, b))
 }
 
@@ -315,7 +315,7 @@ def rgb(r, g, b) {
  */
 def hsl(h, s, l) {
   if !is_number(h) or !is_number(s) or !is_number(l)
-    die Exception('number expected')
+    raise Exception('number expected')
 
   var rgb = hsl_to_rgb(h, s, l)
 
@@ -332,7 +332,7 @@ def hsl(h, s, l) {
  */
 def hsv(h, s, v) {
   if !is_number(h) or !is_number(s) or !is_number(v)
-    die Exception('number expected')
+    raise Exception('number expected')
 
   var rgb = hsv_to_rgb(h, s, v)
 
@@ -349,7 +349,7 @@ def hsv(h, s, v) {
  */
 def hwb(h, w, b) {
   if !is_number(h) or !is_number(w) or !is_number(b)
-    die Exception('number expected')
+    raise Exception('number expected')
 
   var rgb = hwb_to_rgb(h, w, b)
 
@@ -367,7 +367,7 @@ def hwb(h, w, b) {
  */
 def cmyk(c, m, y, k) {
   if !is_number(c) or !is_number(m) or !is_number(y) or !is_number(k)
-    die Exception('number expected')
+    raise Exception('number expected')
 
   var rgb = cmyk_to_rgb(c, m, y, k)
 
@@ -384,7 +384,7 @@ def cmyk(c, m, y, k) {
  */
 def xyz(x, y, z) {
   if !is_number(x) or !is_number(y) or !is_number(z)
-    die Exception('number expected')
+    raise Exception('number expected')
 
   var rgb = xyz_to_rgb(x, y, z)
 
@@ -402,7 +402,7 @@ def xyz(x, y, z) {
  */
 def rgb_to_hex(r, g, b, a) {
   if !is_int(r) or !is_int(g) or !is_int(b) or (a != nil and !is_int(a))
-    die Exception('integer expected')
+    raise Exception('integer expected')
 
   return '${a ? _hex(a) : nil}${_hex(r)}${_hex(g)}${_hex(b)}'
 }
@@ -417,7 +417,7 @@ def rgb_to_hex(r, g, b, a) {
  */
 def rgb_to_hsl(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
-    die Exception('integer expected')
+    raise Exception('integer expected')
 
   r /= 255
   g /= 255
@@ -457,7 +457,7 @@ def rgb_to_hsl(r, g, b) {
  */
 def rgb_to_hsv(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
-    die Exception('integer expected')
+    raise Exception('integer expected')
 
   r /= 255
   g /= 255
@@ -490,7 +490,7 @@ def rgb_to_hsv(r, g, b) {
  */
 def rgb_to_hwb(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
-    die Exception('integer expected')
+    raise Exception('integer expected')
 
   var h = rgb_to_hsl(r, g, b)[0]
   var w = 1 / 255 * min(r, min(g, b))
@@ -508,7 +508,7 @@ def rgb_to_hwb(r, g, b) {
  */
 def rgb_to_cmyk(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
-    die Exception('integer expected')
+    raise Exception('integer expected')
 
   r /= 255
   g /= 255
@@ -532,7 +532,7 @@ def rgb_to_cmyk(r, g, b) {
  */
 def rgb_to_xyz(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
-    die Exception('integer expected')
+    raise Exception('integer expected')
 
   r /= 255
 	g /= 255
@@ -559,7 +559,7 @@ def rgb_to_xyz(r, g, b) {
  */
 def rgb_to_lab(r, g, b) {
   if !is_int(r) or !is_int(g) or !is_int(b)
-    die Exception('integer expected')
+    raise Exception('integer expected')
 
   var xyz = rgb_to_xyz(r, g, b)
 
@@ -590,11 +590,11 @@ def rgb_to_lab(r, g, b) {
  */
 def hsl_to_rgb(h, s, l) {
   if !is_number(h) or !is_number(s) or !is_number(l)
-    die Exception('number expected')
+    raise Exception('number expected')
 
   # For HSL, 0 <= H < 360, 0 <= S <= 1 and 0 <= L <= 1
   if h < 0 or h > 360 or s < 0 or l < 0 or s > 100 or l > 100
-    die Exception('invalid color components')
+    raise Exception('invalid color components')
 
   # Based on https://github.com/Qix-/color-convert/blob/3f0e0d4e92e235796ccb17f6e85c72094a651f49/conversions.js#L244
 
@@ -645,7 +645,7 @@ def hsl_to_rgb(h, s, l) {
  */
 def hsl_to_hsv(h, s, l) {
   if !is_number(h) or !is_number(s) or !is_number(l)
-    die Exception('number expected')
+    raise Exception('number expected')
 
   s /= 100
   l /= 100
@@ -664,7 +664,7 @@ def hsl_to_hsv(h, s, l) {
  */
 def hsv_to_rgb(h, s, v) {
   if !is_number(h) or !is_number(s) or !is_number(v)
-    die Exception('number expected')
+    raise Exception('number expected')
 
   h /= 60
   s /= 100
@@ -698,7 +698,7 @@ def hsv_to_rgb(h, s, v) {
  */
 def hsv_to_hsl(h, s, v) {
   if !is_number(h) or !is_number(s) or !is_number(v)
-    die Exception('number expected')
+    raise Exception('number expected')
 
   s /= 100
   v /= 100
@@ -725,7 +725,7 @@ def hsv_to_hsl(h, s, v) {
  */
 def hwb_to_rgb(h, w, b) {
   if !is_number(h) or !is_number(w) or !is_number(b)
-    die Exception('number expected')
+    raise Exception('number expected')
 
   h /= 360
   w /= 100
@@ -771,7 +771,7 @@ def hwb_to_rgb(h, w, b) {
  */
 def cmyk_to_rgb(c, m, y, k) {
   if !is_number(c) or !is_number(m) or !is_number(y) or !is_number(k)
-    die Exception('number expected')
+    raise Exception('number expected')
 
   c /= 100
   m /= 100
@@ -795,7 +795,7 @@ def cmyk_to_rgb(c, m, y, k) {
  */
 def xyz_to_rgb(x, y, z) {
   if !is_number(x) or !is_number(y) or !is_number(z)
-    die Exception('number expected')
+    raise Exception('number expected')
 
   x /= 100
   y /= 100

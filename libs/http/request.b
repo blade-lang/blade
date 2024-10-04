@@ -86,7 +86,7 @@ def _create_send_request_body(data, content_type, self_files) {
   if data {
 
     if !is_dict(data) and self_files {
-      die HttpException('data must be a dictionary when files are not empty')
+      raise HttpException('data must be a dictionary when files are not empty')
     } else if !is_dict(data) and !self_files {
       return [to_string(data), content_type]
     }
@@ -179,7 +179,7 @@ def _handle_content_encoding(data, encodings) {
         data = zlib.undeflate(data)
       }
       default {
-        die HttpException('unsupported encoding ${encoding}')
+        raise HttpException('unsupported encoding ${encoding}')
       }
     }
   }
@@ -751,9 +751,9 @@ class HttpRequest {
     self.cookies = {}
     
     if !is_string(raw_data)
-      die HttpException('raw_data must be string')
+      raise HttpException('raw_data must be string')
     # if !instance_of(client, socket.Socket)
-    #   die HttpException('invalid Socket')
+    #   raise HttpException('invalid Socket')
 
     var socket_info = client.info()
     self.ip = socket_info.address
@@ -818,15 +818,15 @@ class HttpRequest {
   send(uri, method, data, headers, options) {
     # arguments validation.
     if !instance_of(uri, url.Url)
-      die HttpException('uri must be an instance of Url')
+      raise HttpException('uri must be an instance of Url')
     if !is_string(method)
-      die HttpException('method must be string')
+      raise HttpException('method must be string')
     if data != nil and !is_string(data) and !is_bytes(data) and !is_dict(data)
-      die HttpException('data must be string, bytes or dictionary')
+      raise HttpException('data must be string, bytes or dictionary')
     if headers != nil and !is_dict(headers)
-      die Exception('headers must be a dictionary')
+      raise Exception('headers must be a dictionary')
     if options != nil and !is_dict(options)
-      die Exception('options must be a dictionary')
+      raise Exception('options must be a dictionary')
 
     if options == nil options = {}
 
@@ -994,7 +994,7 @@ class HttpRequest {
             if verify_hostname {
               if !_verify_hostname(server_certificate, uri.host) {
                 echo server_certificate
-                die HttpException('bad certificate')
+                raise HttpException('bad certificate')
               }
             }
           }
@@ -1007,7 +1007,7 @@ class HttpRequest {
           var response_data = self._receive_data(client, receive_timeout, -1, false)
 
           if response_data.length() == 0 {
-            die HttpException('failed to read response')
+            raise HttpException('failed to read response')
           }
 
           # separate the headers and the body
@@ -1122,12 +1122,12 @@ class HttpRequest {
                   /* # read the next chunk
                   var data = self._receive_data(client, receive_timeout)
                   if data.length() == 0 {
-                    die HttpException('error reading next chunk')
+                    raise HttpException('error reading next chunk')
                   }
 
                   var chunk_size_ends = data.index_of('\r\n'.to_bytes())
                   if chunk_size_ends == -1 {
-                    die HttpException('malformed response')
+                    raise HttpException('malformed response')
                   }
 
                   chunk_size = _get_chunk_size(data[,chunk_size_ends])
@@ -1165,7 +1165,7 @@ class HttpRequest {
                 # var data = self._receive_data(client, receive_timeout)
                 
                 if data.length() == 0 {
-                  die HttpException('incomplete response')
+                  raise HttpException('incomplete response')
                 }
 
                 body += data
@@ -1196,11 +1196,11 @@ class HttpRequest {
           }
         } else {
           should_connect = false
-          die HttpException('could not connect')
+          raise HttpException('could not connect')
         }
       } else {
         should_connect = false
-        die HttpException('could not resolve ip address')
+        raise HttpException('could not resolve ip address')
       }
     }
 

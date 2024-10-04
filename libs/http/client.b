@@ -96,23 +96,23 @@ class HttpClient {
    *    instance for multiple requests and headers scenarios.
    * @param dict? client request options
    * @returns HttpResponse
-   * @dies SocketException
-   * @dies Exception
+   * @raises  SocketException
+   * @raises  Exception
    */
   send_request(uri, method, data, headers, options) {
 
     if !uri or !is_string(uri) {
-      die Exception('invalid url')
+      raise Exception('invalid url')
     }
 
     if !method method = 'GET'
 
     if data != nil and !is_string(data) and !is_dict(data) {
-      die Exception('string expected, ${typeof(data)} given')
+      raise Exception('string expected, ${typeof(data)} given')
     }
 
     if options != nil and !is_dict(options) {
-      die Exception('dictionary expected, ${typeof(options)} given')
+      raise Exception('dictionary expected, ${typeof(options)} given')
     }
 
     var request = HttpRequest()
@@ -149,9 +149,9 @@ class HttpClient {
    * @param string url
    * @param dict? headers
    * @returns HttpResponse
-   * @dies Exception
-   * @dies SocketExcepion
-   * @dies HttpException
+   * @raises  Exception
+   * @raises  SocketExcepion
+   * @raises  HttpException
    */
   get(url, headers) {
     return self.send_request(url, 'GET', nil, headers)
@@ -164,9 +164,9 @@ class HttpClient {
    * @param string|bytes|nil data
    * @param dict? headers
    * @returns HttpResponse
-   * @dies Exception
-   * @dies SocketExcepion
-   * @dies HttpException
+   * @raises  Exception
+   * @raises  SocketExcepion
+   * @raises  HttpException
    */
   post(url, data, headers) {
     return self.send_request(url, 'POST', data, headers)
@@ -179,9 +179,9 @@ class HttpClient {
    * @param string|bytes|nil data
    * @param dict? headers
    * @returns HttpResponse
-   * @dies Exception
-   * @dies SocketExcepion
-   * @dies HttpException
+   * @raises  Exception
+   * @raises  SocketExcepion
+   * @raises  HttpException
    */
   put(url, data, headers) {
     return self.send_request(url, 'PUT', data, headers)
@@ -194,9 +194,9 @@ class HttpClient {
    * @param string|bytes|nil data
    * @param dict? headers
    * @returns HttpResponse
-   * @dies Exception
-   * @dies SocketExcepion
-   * @dies HttpException
+   * @raises  Exception
+   * @raises  SocketExcepion
+   * @raises  HttpException
    */
   patch(url, data, headers) {
     return self.send_request(url, 'PATCH', data, headers)
@@ -208,9 +208,9 @@ class HttpClient {
    * @param string url
    * @param dict? headers
    * @returns HttpResponse
-   * @dies Exception
-   * @dies SocketExcepion
-   * @dies HttpException
+   * @raises  Exception
+   * @raises  SocketExcepion
+   * @raises  HttpException
    */
   delete(url, headers) {
     return self.send_request(url, 'DELETE', nil, headers)
@@ -222,9 +222,9 @@ class HttpClient {
    * @param string url
    * @param dict? headers
    * @returns HttpResponse
-   * @dies Exception
-   * @dies SocketExcepion
-   * @dies HttpException
+   * @raises  Exception
+   * @raises  SocketExcepion
+   * @raises  HttpException
    */
   options(url, headers) {
     return self.send_request(url, 'OPTIONS', nil, headers)
@@ -236,9 +236,9 @@ class HttpClient {
    * @param string url
    * @param dict? headers
    * @returns HttpResponse
-   * @dies Exception
-   * @dies SocketExcepion
-   * @dies HttpException
+   * @raises  Exception
+   * @raises  SocketExcepion
+   * @raises  HttpException
    */
   trace(url, headers) {
     return self.send_request(url, 'TRACE', nil, headers)
@@ -250,9 +250,9 @@ class HttpClient {
    * @param string url
    * @param dict? headers
    * @returns HttpResponse
-   * @dies Exception
-   * @dies SocketExcepion
-   * @dies HttpException
+   * @raises  Exception
+   * @raises  SocketExcepion
+   * @raises  HttpException
    */
   head(url, headers) {
     return self.send_request(url, 'HEAD', nil, headers)

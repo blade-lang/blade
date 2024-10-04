@@ -109,11 +109,11 @@ class HttpServer {
   HttpServer(port, host) {
 
     if !is_int(port) or port <= 0
-      die HttpException('invalid port number')
+      raise HttpException('invalid port number')
     else self.port = port
 
     if host != nil and !is_string(host)
-      die HttpException('invalid host')
+      raise HttpException('invalid host')
     else if host != nil self.host = host
 
     self.socket = so.Socket()
@@ -137,11 +137,11 @@ class HttpServer {
    */
   on_connect(function) {
     if !is_function(function)
-      die Exception('argument 1 (function) must be a function')
+      raise Exception('argument 1 (function) must be a function')
       
     var fn_arity = reflect.get_function_metadata(function).arity
     if fn_arity != 1 
-      die Exception('function must accept exactly one argument (client)')
+      raise Exception('function must accept exactly one argument (client)')
 
     self._connect_listeners.append(function)
   }
@@ -155,11 +155,11 @@ class HttpServer {
    */
   on_disconnect(function) {
     if !is_function(function)
-      die Exception('argument 1 (function) must be a function')
+      raise Exception('argument 1 (function) must be a function')
       
     var fn_arity = reflect.get_function_metadata(function).arity
     if fn_arity != 1 
-      die Exception('function must accept exactly one argument (info)')
+      raise Exception('function must accept exactly one argument (info)')
 
     self._disconnect_listeners.append(function)
   }
@@ -175,11 +175,11 @@ class HttpServer {
    */
   on_receive(handler) {
     if !is_function(handler)
-      die Exception('argument 1 (handler) must be a function')
+      raise Exception('argument 1 (handler) must be a function')
 
     var fn_arity = reflect.get_function_metadata(handler).arity
     if fn_arity != 2 
-      die Exception('handler must accept two arguments (request, response)')
+      raise Exception('handler must accept two arguments (request, response)')
 
     self._received_listeners.append(handler)
   }
@@ -194,11 +194,11 @@ class HttpServer {
    */
   on_reply(function) {
     if !is_function(function)
-      die Exception('argument 1 (function) must be a function')
+      raise Exception('argument 1 (function) must be a function')
       
     var fn_arity = reflect.get_function_metadata(function).arity
     if fn_arity != 1 
-      die Exception('function must accept exactly one argument (response)')
+      raise Exception('function must accept exactly one argument (response)')
 
     self._reply_listeners.append(function)
   }
@@ -214,11 +214,11 @@ class HttpServer {
    */
   on_error(function) {
     if !is_function(function)
-      die Exception('argument 1 (function) must be a function')
+      raise Exception('argument 1 (function) must be a function')
       
     var fn_arity = reflect.get_function_metadata(function).arity
     if fn_arity != 2 
-      die Exception('function must accept exactly two arguments (exception, client)')
+      raise Exception('function must accept exactly two arguments (exception, client)')
 
     self._error_listeners.append(function)
   }
@@ -233,15 +233,15 @@ class HttpServer {
    */
   handle(method, path, handler) {
     if !is_string(method)
-      die Exception('argument 1 (method) must be a string')
+      raise Exception('argument 1 (method) must be a string')
     if !is_string(path)
-      die Exception('argument 2 (path) must be a string')
+      raise Exception('argument 2 (path) must be a string')
     if !is_function(handler)
-      die Exception('argument 3 (handler) must be a function')
+      raise Exception('argument 3 (handler) must be a function')
 
     var fn_arity = reflect.get_function_metadata(handler).arity
     if fn_arity != 2 
-      die Exception('handler must accept two arguments (request, response)')
+      raise Exception('handler must accept two arguments (request, response)')
 
     self._routes[method.upper()].set(path, handler)
   }
@@ -254,11 +254,11 @@ class HttpServer {
    */
   none_handler(handler) {
     if !is_function(handler)
-      die Exception('argument 1 (handler) must be a function')
+      raise Exception('argument 1 (handler) must be a function')
 
     var fn_arity = reflect.get_function_metadata(handler).arity
     if fn_arity != 2 
-      die Exception('handler must accept two arguments (request, response)')
+      raise Exception('handler must accept two arguments (request, response)')
 
     self._none_handler = handler
   }

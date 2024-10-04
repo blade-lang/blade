@@ -118,11 +118,11 @@ _client.follow_redirect = true
  * 
  * @param dict headers
  * @returns HttpClient
- * @dies Exception
+ * @raises  Exception
  */
 def set_headers(headers) {
   if !is_dict(headers)
-    die Exception('headers must be a dictionary')
+    raise Exception('headers must be a dictionary')
   _client.headers = headers
   return _client
 }
@@ -134,9 +134,9 @@ def set_headers(headers) {
  * @param string url
  * @param dict? headers
  * @returns HttpResponse
- * @dies Exception
- * @dies SocketExcepion
- * @dies HttpException
+ * @raises  Exception
+ * @raises  SocketExcepion
+ * @raises  HttpException
  */
 def get(url, headers) {
   return _client.get(url, headers)
@@ -149,9 +149,9 @@ def get(url, headers) {
  * @param string|bytes|nil data
  * @param dict? headers
  * @returns HttpResponse
- * @dies Exception
- * @dies SocketExcepion
- * @dies HttpException
+ * @raises  Exception
+ * @raises  SocketExcepion
+ * @raises  HttpException
  */
 def post(url, data, headers) {
   return _client.post(url, data, headers)
@@ -164,9 +164,9 @@ def post(url, data, headers) {
  * @param string|bytes|nil data
  * @param dict? headers
  * @returns HttpResponse
- * @dies Exception
- * @dies SocketExcepion
- * @dies HttpException
+ * @raises  Exception
+ * @raises  SocketExcepion
+ * @raises  HttpException
  */
 def put(url, data, headers) {
   return _client.put(url, data, headers)
@@ -179,9 +179,9 @@ def put(url, data, headers) {
  * @param string|bytes|nil data
  * @param dict? headers
  * @returns HttpResponse
- * @dies Exception
- * @dies SocketExcepion
- * @dies HttpException
+ * @raises  Exception
+ * @raises  SocketExcepion
+ * @raises  HttpException
  */
 def patch(url, data, headers) {
   return _client.patch(url, data, headers)
@@ -193,9 +193,9 @@ def patch(url, data, headers) {
  * @param string url
  * @param dict? headers
  * @returns HttpResponse
- * @dies Exception
- * @dies SocketExcepion
- * @dies HttpException
+ * @raises  Exception
+ * @raises  SocketExcepion
+ * @raises  HttpException
  */
 def delete(url, headers) {
   return _client.delete(url, headers)
@@ -207,9 +207,9 @@ def delete(url, headers) {
  * @param string url
  * @param dict? headers
  * @returns HttpResponse
- * @dies Exception
- * @dies SocketExcepion
- * @dies HttpException
+ * @raises  Exception
+ * @raises  SocketExcepion
+ * @raises  HttpException
  */
 def options(url, headers) {
   return _client.options(url, headers)
@@ -221,9 +221,9 @@ def options(url, headers) {
  * @param string url
  * @param dict? headers
  * @returns HttpResponse
- * @dies Exception
- * @dies SocketExcepion
- * @dies HttpException
+ * @raises  Exception
+ * @raises  SocketExcepion
+ * @raises  HttpException
  */
 def trace(url, headers) {
   return _client.trace(url, headers)
@@ -235,9 +235,9 @@ def trace(url, headers) {
  * @param string url
  * @param dict? headers
  * @returns HttpResponse
- * @dies Exception
- * @dies SocketExcepion
- * @dies HttpException
+ * @raises  Exception
+ * @raises  SocketExcepion
+ * @raises  HttpException
  */
 def head(url, headers) {
   return _client.head(url, headers)
@@ -258,9 +258,9 @@ def client() {
  * @param int port
  * @param string address
  * @returns HttpServer
- * @dies Exception
- * @dies SocketExcepion
- * @dies HttpException
+ * @raises  Exception
+ * @raises  SocketExcepion
+ * @raises  HttpException
  */
 def server(port, address) {
   return HttpServer(port, address)

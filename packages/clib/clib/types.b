@@ -203,12 +203,12 @@ var function = _clib.closure
  */
 def struct(...) {
   if __args__.length() == 0
-    die Exception('cannot have an empty struct')
+    raise Exception('cannot have an empty struct')
 
   for arg in __args__ {
     # Ensure a valid clib pointer.
     if !(reflect.is_ptr(arg) and to_string(arg).match('/clib/'))
-      die Exception('invalid type in struct declaration')
+      raise Exception('invalid type in struct declaration')
   }
 
   return _clib.new_struct(__args__, [])
@@ -231,14 +231,14 @@ def struct(...) {
  */
 def named_struct(types) {
   if !is_dict(types)
-    die Exception('dictionary expected, ${typeof(types)} given')
+    raise Exception('dictionary expected, ${typeof(types)} given')
   if types.length() == 0
-    die Exception('cannot have an empty struct')
+    raise Exception('cannot have an empty struct')
 
   for key, value in types {
     # Ensure a valid clib pointer.
     if !(reflect.is_ptr(value) and to_string(value).match('/clib/'))
-      die Exception('invalid type in struct declaration')
+      raise Exception('invalid type in struct declaration')
   }
 
   var items = types.to_list()

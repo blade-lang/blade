@@ -93,18 +93,18 @@ class HttpClient {
    * @param string? method: Default value is `GET`.
    * @param string|dict|nil data
    * @returns HttpResponse
-   * @dies SocketException
-   * @dies Exception
+   * @raises  SocketException
+   * @raises  Exception
    */
   send_request(uri, method, data) {
 
     if !uri or !is_string(uri) 
-      die Exception('invalid url')
+      raise Exception('invalid url')
 
     if !method method = 'GET'
 
     if data != nil and !is_string(data) and !is_dict(data)
-      die Exception('string expected, ${typeof(data)} given')
+      raise Exception('string expected, ${typeof(data)} given')
 
     var request = HttpRequest()
     request.headers = self.headers
@@ -139,9 +139,9 @@ class HttpClient {
    * 
    * @param string url
    * @returns HttpResponse
-   * @dies Exception
-   * @dies SocketExcepion
-   * @dies HttpException
+   * @raises  Exception
+   * @raises  SocketExcepion
+   * @raises  HttpException
    */
   get(url) {
     return self.send_request(url, 'GET')
@@ -153,9 +153,9 @@ class HttpClient {
    * @param string url
    * @param string|bytes|nil data
    * @returns HttpResponse
-   * @dies Exception
-   * @dies SocketExcepion
-   * @dies HttpException
+   * @raises  Exception
+   * @raises  SocketExcepion
+   * @raises  HttpException
    */
   post(url, data) {
     return self.send_request(url, 'POST', data)
@@ -167,9 +167,9 @@ class HttpClient {
    * @param string url
    * @param string|bytes|nil data
    * @returns HttpResponse
-   * @dies Exception
-   * @dies SocketExcepion
-   * @dies HttpException
+   * @raises  Exception
+   * @raises  SocketExcepion
+   * @raises  HttpException
    */
   put(url, data) {
     return self.send_request(url, 'PUT', data)
@@ -180,9 +180,9 @@ class HttpClient {
    * 
    * @param string url
    * @returns HttpResponse
-   * @dies Exception
-   * @dies SocketExcepion
-   * @dies HttpException
+   * @raises  Exception
+   * @raises  SocketExcepion
+   * @raises  HttpException
    */
   delete(url) {
     return self.send_request(url, 'DELETE', nil)

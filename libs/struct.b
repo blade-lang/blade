@@ -62,7 +62,7 @@ import _struct
  */
 def pack(format, ...) {
   if !is_string(format)
-    die Exception('format string expected')
+    raise Exception('format string expected')
 
   var items = []
   for arg in __args__ {
@@ -96,11 +96,11 @@ def pack(format, ...) {
  */
 def unpack(format, data, offset) {
   if !is_string(format)
-    die Exception('format string expected in argument 1')
+    raise Exception('format string expected in argument 1')
   if !is_string(data) and !is_bytes(data)
-    die Exception('data must be string or bytes')
+    raise Exception('data must be string or bytes')
   if offset != nil and !is_number(offset)
-    die Exception('offset must be number if set')
+    raise Exception('offset must be number if set')
 
   if is_string(data) data = data.to_bytes()
   if !offset offset = 0
@@ -118,9 +118,9 @@ def unpack(format, data, offset) {
  */
 def pack_from(format, args) {
   if !is_string(format)
-    die Exception('format string expected in argument 1')
+    raise Exception('format string expected in argument 1')
   if !is_list(args)
-    die Exception('list expected in argument 2 (args)')
+    raise Exception('list expected in argument 2 (args)')
 
   return _struct.pack(format, args)
 }

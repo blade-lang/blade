@@ -186,7 +186,7 @@ int disassemble_instruction(b_blob *blob, int offset) {
       return simple_instruction("str", offset);
     case OP_CHOICE:
       return simple_instruction("cho", offset);
-    case OP_DIE:
+    case OP_RAISE:
       return simple_instruction("die", offset);
     case OP_POP:
       return simple_instruction("pop", offset);

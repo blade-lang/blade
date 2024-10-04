@@ -222,23 +222,23 @@ class BreakStmt < Stmt {
 }
 
 /**
- * Die Stmt representation.
+ * Raise Stmt representation.
  * 
  * @serializable
  */
-class DieStmt < Stmt {
+class RaiseStmt < Stmt {
 
   /**
    * @param Stmt|any|nil exception
    * @constructor
    */
-  DieStmt(exception) {
+  RaiseStmt(exception) {
     self.exception = exception
   }
 
   @to_json() {
     return {
-      type: 'DieStmt',
+      type: 'RaiseStmt',
       exception: self.exception,
     }
   }
@@ -370,29 +370,6 @@ class CatchStmt < Stmt {
       type: 'CatchStmt',
       body: self.body,
       var_name: self.var_name,
-    }
-  }
-}
-
-/**
- * Finally Stmt representation.
- * 
- * @serializable
- */
-class FinallyStmt < Stmt {
-
-  /**
-   * @param Stmt|any|nil body
-   * @constructor
-   */
-  FinallyStmt(body) {
-    self.body = body
-  }
-
-  @to_json() {
-    return {
-      type: 'FinallyStmt',
-      body: self.body,
     }
   }
 }

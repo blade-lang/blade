@@ -53,7 +53,7 @@ typedef enum {
   OP_DUP,
   OP_POP_N,
   OP_ASSERT,
-  OP_DIE,
+  OP_RAISE,
 
   OP_CLOSURE,
   OP_CALL,

@@ -366,10 +366,10 @@ class Markdown {
     if is_string(presets) {
       preset_name = presets
       presets = config[preset_name]
-      if !presets die Exception('Wrong `markdown` preset "' + preset_name + '", check name')
+      if !presets raise Exception('Wrong `markdown` preset "' + preset_name + '", check name')
     }
 
-    if !presets die Exception('Wrong `markdown` preset, can\'t be empty')
+    if !presets raise Exception('Wrong `markdown` preset, can\'t be empty')
 
     if presets.options self.set(presets.options)
 
@@ -419,7 +419,7 @@ class Markdown {
     var missed = list.filter(@(name) { return result.index_of(name) < 0 })
 
     if missed.length() and !ignore_invalid {
-      die Exception('Failed to enable unknown rule(s): ' + missed)
+      raise Exception('Failed to enable unknown rule(s): ' + missed)
     }
 
     return self
@@ -446,7 +446,7 @@ class Markdown {
     var missed = list.filter(@(name) { return result.index_of(name) < 0 })
 
     if missed.length() and !ignore_invalid {
-      die Exception('Failed to disable unknown rule(s): ' + missed)
+      raise Exception('Failed to disable unknown rule(s): ' + missed)
     }
 
     return self
@@ -495,7 +495,7 @@ class Markdown {
    */
   parse(src, env) {
     if !is_string(src) {
-      die Exception('string expected in argument 1 (src)')
+      raise Exception('string expected in argument 1 (src)')
     }
 
     var state = self.core.State(src, self, env)
@@ -534,7 +534,7 @@ class Markdown {
    **/
   parse_inline(src, env) {
     if !is_string(src) {
-      die Exception('string expected in argument 1 (src)')
+      raise Exception('string expected in argument 1 (src)')
     }
     
     var state = self.core.State(src, self, env)

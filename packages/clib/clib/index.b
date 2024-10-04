@@ -1,7 +1,7 @@
 /**
  * @module clib
  *
- * The `clib` module exposes Blade capabilites to interact with C
+ * The `clib` module exposes Blade capabilities to interact with C
  * shared libraries. The workflow follows a simple approach.
  *
  * - Load the library
@@ -32,7 +32,7 @@
  * lib.close()
  * ```
  *
- * The first argument to a definiton is the name of the function.
+ * The first argument to a definition is the name of the function.
  * The second is its return type. If the function takes parameters,
  * the parameter types follow immediately. (See below for a list of the
  * available types.)
@@ -67,7 +67,7 @@ class Clib {
    */
   Clib(name) {
     if name != nil and !is_string(name)
-      die Exception('string expected in argument 1 (name)')
+      raise Exception('string expected in argument 1 (name)')
 
     if name {
       self.load(name)
@@ -76,7 +76,7 @@ class Clib {
 
   _ensure_lib_loaded() {
     if !self._ptr
-      die Exception('no library loaded')
+      raise Exception('no library loaded')
   }
 
   /**
@@ -89,7 +89,7 @@ class Clib {
    */
   load(name) {
     if !is_string(name)
-      die Exception('string expected in argument 1 (name)')
+      raise Exception('string expected in argument 1 (name)')
     if !name.ends_with(_EXT) and os.platform != 'linux'
       name += _EXT
 
@@ -114,7 +114,7 @@ class Clib {
    */
   function(name) {
     if !is_string(name)
-      die Exception('string expected in argument 1 (name)')
+      raise Exception('string expected in argument 1 (name)')
 
     self._ensure_lib_loaded()
     return _clib.function(self._ptr, name)
@@ -146,11 +146,11 @@ class Clib {
    */
   define(name, return_type, ...) {
     if !is_string(name)
-      die Exception('string expected in argument 1 (name)')
+      raise Exception('string expected in argument 1 (name)')
 
     # Ensure valid clib pointer.
     if !(reflect.is_ptr(return_type) and to_string(return_type).match('/clib/')) {
-      die Exception('invalid return type')
+      raise Exception('invalid return type')
     }
 
     var fn = self.function(name)
@@ -195,11 +195,11 @@ def load(name) {
  */
 def new(type, ...) {
   if __args__.length() == 0
-    die Exception('canot have an empty struct')
+    raise Exception('canot have an empty struct')
 
   # Ensure a valid and non void clib pointer.
   if !(reflect.is_ptr(type) and to_string(type).match('/clib/')) and type != void
-    die Exception('invalid type for new')
+    raise Exception('invalid type for new')
 
   return _clib.new(type, __args__)
 }
@@ -220,7 +220,7 @@ def new(type, ...) {
 def get(type, data) {
   # Ensure a valid and non void clib pointer.
   if !(reflect.is_ptr(type) and to_string(type).match('/clib/')) and type != void
-    die Exception('invalid type for new')
+    raise Exception('invalid type for new')
   if is_string(data) data = data.to_bytes()
 
   return _clib.get(type, data)
@@ -281,11 +281,11 @@ def set_ptr_index(pointer, type, index, value) {
  */
 def function_handle(handle, return_type, ...) {
   if !reflect.is_ptr(handle)
-    die Exception('pointer expected in argument 1 (handle)')
+    raise Exception('pointer expected in argument 1 (handle)')
 
   # Ensure valid clib pointer.
   if !(reflect.is_ptr(return_type) and to_string(return_type).match('/clib/')) {
-      die Exception('invalid return type')
+      raise Exception('invalid return type')
   }
 
   var ffi_ptr = _clib.define(handle, '@', return_type, __args__)

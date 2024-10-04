@@ -172,7 +172,7 @@ class _Option {
     self.options = nil # required for _Option and subclasses
 
     if type < NONE or type > OPTIONAL
-      die ArgsException('invalid value type')
+      raise ArgsException('invalid value type')
   }
 }
 
@@ -182,17 +182,17 @@ class _Optionable {
   
   add_option(name, help, opts) {
     if !is_string(name)
-      die ArgsException('name expected')
+      raise ArgsException('name expected')
     if help != nil and !is_string(help)
-      die ArgsException('help message must be string')
+      raise ArgsException('help message must be string')
     if opts == nil opts = {}
     else if !is_dict(opts)
-      die ArgsException('opts must be a dict')
+      raise ArgsException('opts must be a dict')
 
     # Ensure we don't have duplicated option declarations.
     for o in self.options {
       if o.long_name == name or o.short_name == name
-        die ArgsException('option with name "${name}" previously declared')
+        raise ArgsException('option with name "${name}" previously declared')
     }
 
     var short_name = opts.get('short_name'),
@@ -201,9 +201,9 @@ class _Optionable {
         choices = opts.get('choices', [])
 
     if short_name != nil and !is_string(short_name)
-      die ArgsException('short_name must be string')
+      raise ArgsException('short_name must be string')
     if !is_list(choices) and !is_dict(choices)
-      die ArgsException('choices must be a list or dictionary')
+      raise ArgsException('choices must be a list or dictionary')
 
     self.options.append(_Option(name, help, short_name, type, value, choices))
 
@@ -215,13 +215,13 @@ class _Optionable {
 class _Command < _Optionable {
   _Command(name, help, type, action, choices) {
     if !is_string(name)
-      die ArgsException('name expected')
+      raise ArgsException('name expected')
     if help != nil and !is_string(help)
-      die ArgsException('help message must be string')
+      raise ArgsException('help message must be string')
     if action != nil and !is_function(action)
-      die ArgsException('action must be of type function(options: dict)')
+      raise ArgsException('action must be of type function(options: dict)')
     if choices != nil and !is_list(choices) and !is_dict(choices)
-      die ArgsException('choices must be of type list')
+      raise ArgsException('choices must be of type list')
 
     self.name = name
     self.help = help
@@ -234,11 +234,11 @@ class _Command < _Optionable {
 class _Positional < _Optionable {
   _Positional(name, help, type, choices, value) {
     if !is_string(name)
-      die ArgsException('name expected')
+      raise ArgsException('name expected')
     if help != nil and !is_string(help)
-      die ArgsException('help message must be string')
+      raise ArgsException('help message must be string')
     if choices != nil and !is_list(choices) and !is_dict(choices)
-      die ArgsException('choices must be of type list')
+      raise ArgsException('choices must be of type list')
 
     self.name = name
     self.help = help
@@ -272,9 +272,9 @@ class Parser < _Optionable {
    */
   Parser(name, default_help) {
     if !is_string(name)
-      die Exception('missing program name')
+      raise Exception('missing program name')
     if default_help != nil and !is_bool(default_help)
-      die Exception('bool expected in argument 2 (default_help)')
+      raise Exception('bool expected in argument 2 (default_help)')
     if default_help == nil default_help = true
 
     self._default_help = default_help
@@ -599,17 +599,17 @@ class Parser < _Optionable {
    */
   add_command(name, help, opts) {
     if !is_string(name)
-      die ArgsException('name expected')
+      raise ArgsException('name expected')
     if help != nil and !is_string(help)
-      die ArgsException('help message must be string')
+      raise ArgsException('help message must be string')
     if opts == nil opts = {}
     else if !is_dict(opts)
-      die ArgsException('opts must be a dict')
+      raise ArgsException('opts must be a dict')
 
     # Ensure we don't have duplicated option declarations.
     for o in self.commands {
       if o.name == name
-        die ArgsException('option with name "${name}" previously declared')
+        raise ArgsException('option with name "${name}" previously declared')
     }
 
     var type = to_int(to_number(opts.get('type', NONE))),
@@ -639,12 +639,12 @@ class Parser < _Optionable {
    */
   add_index(name, help, opts) {
     if !is_string(name)
-      die ArgsException('name expected')
+      raise ArgsException('name expected')
     if help != nil and !is_string(help)
-      die ArgsException('help message must be string')
+      raise ArgsException('help message must be string')
     if opts == nil opts = {}
     else if !is_dict(opts)
-      die ArgsException('opts must be a dict')
+      raise ArgsException('opts must be a dict')
 
     var type = to_int(to_number(opts.get('type', NONE))),
       choices = opts.get('choices', []),

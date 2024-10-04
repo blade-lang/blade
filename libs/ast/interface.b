@@ -52,7 +52,7 @@ class ParseResult {
   get(index) {
     if index >= 0 and index < self.length()
       return self._results[index]
-    die Exception('ParseResult index ${index} out of range')
+    raise Exception('ParseResult index ${index} out of range')
   }
 
   /**
@@ -84,7 +84,7 @@ class ParseResult {
   @itern(index) {
     if index == nil return 0
     if !is_number(index)
-      die Exception('ParseResult is numerically indexed')
+      raise Exception('ParseResult is numerically indexed')
     if index < self._results.length() - 1 return index + 1
     return nil
   }

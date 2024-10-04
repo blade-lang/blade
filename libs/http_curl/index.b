@@ -92,11 +92,11 @@ var _client = HttpClient()
  * 
  * @param dict headers
  * @returns HttpClient
- * @dies Exception
+ * @raises  Exception
  */
 def set_headers(headers) {
   if !is_dict(headers)
-    die Exception('headers must be a dictionary')
+    raise Exception('headers must be a dictionary')
   _client.headers = headers
   return _client
 }
@@ -107,9 +107,9 @@ def set_headers(headers) {
  * 
  * @param string url
  * @returns HttpResponse
- * @dies Exception
- * @dies SocketExcepion
- * @dies HttpException
+ * @raises  Exception
+ * @raises  SocketExcepion
+ * @raises  HttpException
  */
 def get(url) {
   return _client.get(url)
@@ -121,9 +121,9 @@ def get(url) {
  * @param string url
  * @param string|bytes|nil data
  * @returns HttpResponse
- * @dies Exception
- * @dies SocketExcepion
- * @dies HttpException
+ * @raises  Exception
+ * @raises  SocketExcepion
+ * @raises  HttpException
  */
 def post(url, data) {
   return _client.post(url, data)
@@ -135,9 +135,9 @@ def post(url, data) {
  * @param string url
  * @param string|bytes|nil data
  * @returns HttpResponse
- * @dies Exception
- * @dies SocketExcepion
- * @dies HttpException
+ * @raises  Exception
+ * @raises  SocketExcepion
+ * @raises  HttpException
  */
 def put(url, data) {
   return _client.put(url, data)
@@ -148,9 +148,9 @@ def put(url, data) {
  * 
  * @param string url
  * @returns HttpResponse
- * @dies Exception
- * @dies SocketExcepion
- * @dies HttpException
+ * @raises  Exception
+ * @raises  SocketExcepion
+ * @raises  HttpException
  */
 def delete(url) {
   return _client.send_request(url, 'DELETE', nil)
@@ -162,9 +162,9 @@ def delete(url) {
  * @param int port
  * @param string address
  * @returns HttpServer
- * @dies Exception
- * @dies SocketExcepion
- * @dies HttpException
+ * @raises  Exception
+ * @raises  SocketExcepion
+ * @raises  HttpException
  */
 def server(port, address) {
   return HttpServer(port, address)

@@ -48,7 +48,7 @@ class Message {
       }
       return self
     }
-    die Exception('from() can only be called once.')
+    raise Exception('from() can only be called once.')
   }
 
   /**
@@ -200,7 +200,7 @@ class Message {
 
     for name, path in self._attachments {
       if !file(path).exists() or os.dir_exists(path)
-        die Exception('file "${path}" not found')
+        raise Exception('file "${path}" not found')
       mime.add_file(name, path)
     }
 
