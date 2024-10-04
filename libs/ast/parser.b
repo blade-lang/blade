@@ -118,7 +118,7 @@ class Parser {
    */
   _consume(type, message) {
     if self._check(type) return self._advance()
-    die ParseException(self._peek(), message)
+    die ParseException(message, self._peek())
   }
 
   /**
@@ -129,7 +129,7 @@ class Parser {
     for t in __args__ {
       if self._check(t) return self._advance()
     }
-    die ParseException(self._peek(), message)
+    die ParseException(message, self._peek())
   }
 
   _get_doc_defn_data() {
@@ -713,7 +713,7 @@ class Parser {
     while !self._match(RBRACE) and !self._check(EOF) {
       if self._match(WHEN, DEFAULT, COMMENT, DOC, NEWLINE) {
         if state == 1 
-          die ParseException(self._previous(), "'when' cannot exist after a default")
+          die ParseException("'when' cannot exist after a default", self._previous())
 
         if [DOC, COMMENT, NEWLINE].contains(self._previous().type) {}
         else if self._previous().type == WHEN {
@@ -733,7 +733,7 @@ class Parser {
           default_case = self._statement()
         }
       } else {
-        die ParseException(self._previous(), 'Invalid using statement')
+        die ParseException('Invalid using statement', self._previous())
       }
     }
 

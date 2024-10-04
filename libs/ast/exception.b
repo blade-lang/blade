@@ -5,11 +5,11 @@
  */
 class ParseException < Exception {
   /**
-   * @param Token token
    * @param string message
+   * @param Token token
    * @constructor 
    */
-  ParseException(token, message) {
-    parent('Error at ${token.literal} on line ${token.line}: ${message}')
+  ParseException(message, token) {
+    parent('Error at ${token.literal} on line ${token.line} in ${token.file}: ${message}')
   }
 }
