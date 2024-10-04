@@ -85,6 +85,17 @@ install_build_env() {
   fi
 }
 
+remove_redundant_libraries() {
+  # shellcheck disable=SC2154
+  if [ -x "$(command -v apt-get)" ]; then
+    sudo apt-get remove libgd3
+  elif [ -x "$(command -v brew)" ]; then
+    brew uninstall pkg-config --ignore-dependencies
+  elif [ -x "$(command -v apk)" ]; then
+    sudo apk delete libgd3
+  fi
+}
+
 install_blade() {
   if [[ -d "$1" ]]; then
     sudo mkdir -p "$1"
@@ -139,6 +150,7 @@ install_blade() {
 echo "Beginning installation of Blade..."
 
 install_build_env
+remove_redundant_libraries
 
 if [[ -z "${IS_LINUX-}" ]]; then
 
@@ -151,9 +163,9 @@ if [[ -z "${IS_LINUX-}" ]]; then
     echo "Brew is installed. Using brew!"
   fi
 
-  install_if_missing 'openssl'
+  install_if_missing 'pkg-config' 'openssl' 'gd' 'libffi'
 else
-  install_if_missing 'git' 'curl' 'libssl-dev' 'libcurl4-openssl-dev'
+  install_if_missing 'pkg-config' 'git' 'curl' 'libssl-dev' 'libcurl4-openssl-dev' 'libgd-dev' 'libavif-dev' 'libffi-dev'
   if [[ $(command -v 'apt') != "" ]]; then
     install_if_missing 'zlib1g-dev'
   else
