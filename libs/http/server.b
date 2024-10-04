@@ -83,6 +83,8 @@ class HttpServer {
     'POST': {},
     # Replace all current representations of the target resource with the request content.
     'PUT': {},
+    # Patches all current representations of the target resource with the request content.
+    'PATCH': {},
     # Remove all current representations of the target resource.
     'DELETE': {},
     # Establish a tunnel to the server identified by the target resource.
@@ -147,7 +149,7 @@ class HttpServer {
   /**
    * Adds a function to be called when a new client disconnects.
    * 
-   * @note Function _function_ MUST accept at one parameter which will be passed the client information.
+   * @note Function _function_ MUST accept at one parameter which will be passed the client.
    * @note Multiple `on_disconnect()` may be set on a single instance.
    * @param function(1) function
    */
@@ -314,7 +316,9 @@ class HttpServer {
       }
 
       if response.body {
-        feedback += 'Content-Length: ${response.body.length()}\r\n'.to_bytes()
+        var content_length = 'Content-Length: ${response.body.length()}\r\n'.to_bytes()
+        feedback += content_length
+        content_length.dispose()
       }
     }
 
@@ -331,6 +335,7 @@ class HttpServer {
     
     feedback += '\r\n'.to_bytes()
     feedback += response.body
+    response.body.dispose()
 
     var hdrv = ('HTTP/${response.version} ${response.status} ' +
     '${status.map.get(response.status, 'UNKNOWN')}\r\n').to_bytes()
@@ -347,7 +352,6 @@ class HttpServer {
     })
 
     feedback.dispose()
-    response.body.dispose()
   }
 
   /**
@@ -383,11 +387,9 @@ class HttpServer {
           self._process_received(client.receive(), client)
         } as e
 
-        var client_info = client.info()
-
         # call the disconnect listeners.
         self._disconnect_listeners.each(@(fn) {
-          fn(client_info)
+          fn(client)
         })
 
         client.close()

@@ -5,6 +5,7 @@ import .request { HttpRequest }
 import url
 import socket
 import .response { HttpResponse }
+import .defaults
 
 /**
  * Handles http requests.
@@ -18,7 +19,7 @@ class HttpClient {
    * Default value &mdash; `Blade HTTP Client/1.0`.
    * @type string
    */
-  var user_agent = 'Blade HTTP Client/1.0'
+  var user_agent = defaults.user_agent
 
   /**
    * Indicates if we receive a redirect from a server, this flag tells us whether 

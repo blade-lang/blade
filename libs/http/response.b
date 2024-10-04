@@ -145,6 +145,7 @@ class HttpResponse {
     }
 
     self.content_type(mime.detect_from_name(path))
+    
     var file_data = file(path, 'rb').read()
     self.write(file_data)
     file_data.dispose()

@@ -3,7 +3,8 @@
  *
  * The `http` module provides a rich library to help in building HTTP 
  * clients and servers. The module also provides a few generic abstractions 
- * for simple HTTP operations such as a GET request.
+ * for simple HTTP operations such as a GET request and supports basic
+ * routing.
  * 
  * ### Examples
  * 
@@ -47,10 +48,46 @@
  * server.listen()
  * ```
  * 
- * The `http` module does not make any assumption as to the type of data to be sent 
- * in request bodies and for this reason, it should not be expected to automatically 
- * convert dictionaries into JSON objects or create multipart/form-data request for you. 
- * Rather, it gives the tools required to craft any request body of your choice.
+ * Not only is it super simple to create an HTTP server, it is also very easy to create 
+ * a TLS/HTTPS server with few modifications.
+ * 
+ * The following code creates a TLS versionof the same server we created above.
+ * 
+ * ```blade
+ * import http
+ * import json
+ * 
+ * var server = http.tls_server(3000)
+ * if server.load_certs('/path/to/tlscert.crt', '/path/to/tlskey.key') {
+ *   server.handle('GET', '/', @(request, response) {
+ *     response.json(request)
+ *   })
+ *   server.listen()
+ * }
+ * ```
+ * 
+ * To create a TLS server, we use the `tls_server()` alternative to the `server()` function 
+ * and load our certificates before we start to listen for incoming connections. It's that 
+ * simple.
+ * 
+ * ---
+ * 
+ * The `http` module client does make some basic assumption as to the type of data to be 
+ * sent in request bodies and for this reason, it will (unless asked not to) automatically 
+ * convert dictionaries into JSON objects and create multipart/form-data request for you.
+ * 
+ * Natively, the `http` module will automatically encode and decode requests with the 
+ * following content types:
+ * 
+ * - multipart/form-data
+ * - application/x-www-form-urlencoded
+ * - application/json
+ * 
+ * In the abscence of any content-type in the request header or reponse header from a 
+ * server as the case may be, the module defaults to the `application/x-www-form-urlencoded` 
+ * content type.
+ * 
+ * That been said, it gives the tools required to craft any request body of your choice.
  * 
  * @copyright 2021, Ore Richard Muyiwa and Blade contributors
  */
