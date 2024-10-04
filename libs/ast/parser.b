@@ -253,10 +253,10 @@ class Parser {
     if self._match(SELF) return LiteralExpr('::self::')
     if self._match(PARENT) return LiteralExpr('::parent::')
 
+    if self._check(INTERPOLATION) return self._interpolation()
+
     if self._match(BIN_NUMBER, HEX_NUMBER, OCT_NUMBER, REG_NUMBER, LITERAL)
       return LiteralExpr(self._previous().literal)
-
-    if self._check(INTERPOLATION) return self._interpolation()
 
     if self._match(IDENTIFIER) return IdentifierExpr(self._previous().literal)
 
@@ -509,7 +509,7 @@ class Parser {
     if self._match(QUESTION) {
       self._ignore_newline()
       var truth = self._or()
-      self._consume(COLON, "':' expected in tenary operation")
+      self._consume(COLON, "':' expected in ternary operation")
       self._ignore_newline()
       expr = ConditionExpr(expr, truth, self._or())
     }
@@ -843,7 +843,7 @@ class Parser {
       result = ReturnStmt(self._expression())
     } else if self._match(ASSERT) {
       result = self._assert()
-    } else if self._match(RAISE ) {
+    } else if self._match(RAISE) {
       result = RaiseStmt(self._expression())
     } else if self._match(LBRACE) {
       result = self._block()
