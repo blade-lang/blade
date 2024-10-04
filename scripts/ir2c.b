@@ -73,7 +73,7 @@ var op_map = {
   'echo': 'OP_ECHO',
   'str': 'OP_STRINGIFY',
   'cho': 'OP_CHOICE',
-  'die': 'OP_DIE',
+  'raise ': 'OP_RAISE',
   'pop': 'OP_POP',
   'clupv': 'OP_CLOSE_UP_VALUE',
   'dup': 'OP_DUP',

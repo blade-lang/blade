@@ -27,11 +27,11 @@ class Image {
     }
 
     if !is_number(width)
-      die Exception('number expected at width expected, ${typeof(width)} given')
+      raise Exception('number expected at width expected, ${typeof(width)} given')
     if !is_number(height)
-      die Exception('number expected at height expected, ${typeof(width)} given')
+      raise Exception('number expected at height expected, ${typeof(width)} given')
     if !is_bool(use_true_colors)
-      die Exception('boolean expected at use_true_colors expected, ${typeof(use_true_colors)} given')
+      raise Exception('boolean expected at use_true_colors expected, ${typeof(use_true_colors)} given')
 
     return ImageResource(_imagine.new(width, height, use_true_colors))
   }
@@ -45,18 +45,18 @@ class Image {
    */
   static from_png(src) {
     if !is_string(src) and !is_file(src) 
-      die Exception('string path or file expected, ${typeof(src)} given')
+      raise Exception('string path or file expected, ${typeof(src)} given')
 
     if is_string(src) {
       src = file(src)
     }
 
     if !src.exists() {
-      die Exception('file not found')
+      raise Exception('file not found')
     }
 
     if src.mode().index_of('r') == -1{
-      die Exception('file not readable')
+      raise Exception('file not readable')
     }
 
     return ImageResource(_imagine.frompng(src))
@@ -71,18 +71,18 @@ class Image {
    */
   static from_jpeg(src) {
     if !is_string(src) and !is_file(src) 
-      die Exception('string path or file expected, ${typeof(src)} given')
+      raise Exception('string path or file expected, ${typeof(src)} given')
 
     if is_string(src) {
       src = file(src)
     }
 
     if !src.exists() {
-      die Exception('file not found')
+      raise Exception('file not found')
     }
 
     if src.mode().index_of('r') == -1{
-      die Exception('file not readable')
+      raise Exception('file not readable')
     }
 
     return ImageResource(_imagine.fromjpeg(src))
@@ -96,18 +96,18 @@ class Image {
    */
   static from_gif(src) {
     if !is_string(src) and !is_file(src) 
-      die Exception('string path or file expected, ${typeof(src)} given')
+      raise Exception('string path or file expected, ${typeof(src)} given')
 
     if is_string(src) {
       src = file(src)
     }
 
     if !src.exists() {
-      die Exception('file not found')
+      raise Exception('file not found')
     }
 
     if src.mode().index_of('r') == -1{
-      die Exception('file not readable')
+      raise Exception('file not readable')
     }
 
     return ImageResource(_imagine.fromgif(src))
@@ -121,18 +121,18 @@ class Image {
    */
   static from_bmp(src) {
     if !is_string(src) and !is_file(src) 
-      die Exception('string path or file expected, ${typeof(src)} given')
+      raise Exception('string path or file expected, ${typeof(src)} given')
 
     if is_string(src) {
       src = file(src)
     }
 
     if !src.exists() {
-      die Exception('file not found')
+      raise Exception('file not found')
     }
 
     if src.mode().index_of('r') == -1{
-      die Exception('file not readable')
+      raise Exception('file not readable')
     }
 
     return ImageResource(_imagine.frombmp(src))
@@ -146,18 +146,18 @@ class Image {
    */
   static from_wbmp(src) {
     if !is_string(src) and !is_file(src) 
-      die Exception('string path or file expected, ${typeof(src)} given')
+      raise Exception('string path or file expected, ${typeof(src)} given')
 
     if is_string(src) {
       src = file(src)
     }
 
     if !src.exists() {
-      die Exception('file not found')
+      raise Exception('file not found')
     }
 
     if src.mode().index_of('r') == -1{
-      die Exception('file not readable')
+      raise Exception('file not readable')
     }
 
     return ImageResource(_imagine.fromwbmp(src))
@@ -171,18 +171,18 @@ class Image {
    */
   static from_tga(src) {
     if !is_string(src) and !is_file(src) 
-      die Exception('string path or file expected, ${typeof(src)} given')
+      raise Exception('string path or file expected, ${typeof(src)} given')
 
     if is_string(src) {
       src = file(src)
     }
 
     if !src.exists() {
-      die Exception('file not found')
+      raise Exception('file not found')
     }
 
     if src.mode().index_of('r') == -1{
-      die Exception('file not readable')
+      raise Exception('file not readable')
     }
 
     return ImageResource(_imagine.fromtga(src))
@@ -196,18 +196,18 @@ class Image {
    */
   static from_tiff(src) {
     if !is_string(src) and !is_file(src) 
-      die Exception('string path or file expected, ${typeof(src)} given')
+      raise Exception('string path or file expected, ${typeof(src)} given')
 
     if is_string(src) {
       src = file(src)
     }
 
     if !src.exists() {
-      die Exception('file not found')
+      raise Exception('file not found')
     }
 
     if src.mode().index_of('r') == -1{
-      die Exception('file not readable')
+      raise Exception('file not readable')
     }
 
     return ImageResource(_imagine.fromtiff(src))
@@ -221,18 +221,18 @@ class Image {
    */
   static from_webp(src) {
     if !is_string(src) and !is_file(src) 
-      die Exception('string path or file expected, ${typeof(src)} given')
+      raise Exception('string path or file expected, ${typeof(src)} given')
 
     if is_string(src) {
       src = file(src)
     }
 
     if !src.exists() {
-      die Exception('file not found')
+      raise Exception('file not found')
     }
 
     if src.mode().index_of('r') == -1{
-      die Exception('file not readable')
+      raise Exception('file not readable')
     }
 
     return ImageResource(_imagine.fromwebp(src))
@@ -246,18 +246,18 @@ class Image {
    */
   static from_avif(src) {
     if !is_string(src) and !is_file(src) 
-      die Exception('string path or file expected, ${typeof(src)} given')
+      raise Exception('string path or file expected, ${typeof(src)} given')
 
     if is_string(src) {
       src = file(src)
     }
 
     if !src.exists() {
-      die Exception('file not found')
+      raise Exception('file not found')
     }
 
     if src.mode().index_of('r') == -1{
-      die Exception('file not readable')
+      raise Exception('file not readable')
     }
 
     return ImageResource(_imagine.fromavif(src))
@@ -273,7 +273,7 @@ class Image {
    */
   static from_file(src) {
     if !is_string(src) and !is_file(src) 
-      die Exception('string path or file expected, ${typeof(src)} given')
+      raise Exception('string path or file expected, ${typeof(src)} given')
 
     if is_file(src) {
       src = file.abs_path()

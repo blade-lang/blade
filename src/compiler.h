@@ -48,7 +48,6 @@ struct s_compiler {
   int local_count;
   b_up_value up_values[UINT8_COUNT];
   int scope_depth;
-  int handler_count;
 };
 
 typedef struct b_class_compiler {
@@ -67,7 +66,6 @@ typedef struct {
   bool panic_mode;
   int block_count;
   bool is_returning;
-  bool is_trying;
   bool repl_can_echo;
   b_class_compiler *current_class;
   const char *current_file;

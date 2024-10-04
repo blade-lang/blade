@@ -80,7 +80,7 @@ class DisgustingFlavorError < Exception {}
 
 def drink_flavor(flavor) {
   if flavor == 'octopus' {
-    die DisgustingFlavorError('yuck, octopus flavor')
+    raise DisgustingFlavorError('yuck, octopus flavor')
   }
   # Do some other stuff
 }

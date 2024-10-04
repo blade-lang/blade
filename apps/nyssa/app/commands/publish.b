@@ -65,7 +65,7 @@ def run(value, options, success, error) {
       readme_file = os.join_paths(os.cwd(), setup.README_FILE),
       tmp_dest
 
-  try {
+  catch {
     log.info('Checking for valid publisher account')
     var state = json.decode(file(state_file).read().trim()  or '{}')
     if !state.get('name', nil) or !state.get('key', nil)
@@ -127,9 +127,11 @@ def run(value, options, success, error) {
       file(tmp_dest).delete()
       error('Packaging failure')
     }
-  } catch Exception e {
+  } as e
+
+  if tmp_dest file(tmp_dest).delete()
+
+  if e {
     error(e.message)
-  } finally {
-    if tmp_dest file(tmp_dest).delete()
   }
 }

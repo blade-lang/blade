@@ -49,14 +49,12 @@ var asts = {
       For: ['vars', 'iterable', 'body'],
       Continue: [],
       Break: [],
-      Die: ['exception'],
+      Raise: ['exception'],
       Return: ['value'],
       Assert: ['expr', 'message'],
       Using: ['expr', 'cases', 'default_case'],
       Import: ['path', 'elements'],
-      Catch: ['type', 'var_name', 'body'],
-      Finally: ['body'],
-      Try: ['body', 'catch_stmt', 'finally_stmt'],
+      Catch: ['body', 'var_name'],
       Comment: ['data'],
       Block: ['body'],
       Assign: ['expr', 'type', 'value']
@@ -105,7 +103,7 @@ for ast, members in asts {
       var params = ', '.join(attr)
       f.write('  /**\n')
       for p in attr {
-        f.write('   * @param {${ast}|any|nil} ${p}\n')
+        f.write('   * @param ${ast}|any|nil ${p}\n')
       }
       f.write('   * @constructor\n   */\n')
       f.write('  ${cl}${ast}(${params}) {\n')

@@ -39,13 +39,13 @@ class Encoder {
   Encoder(compact, max_depth) {
     if max_depth {
       if !is_number(max_depth)
-        die Exception('max_depth must be number. ${typeof(max_depth)} given')
+        raise Exception('max_depth must be number. ${typeof(max_depth)} given')
       self._max_depth = max_depth
     }
 
     if compact != nil {
       if !is_bool(compact)
-        die Exception('compact expects boolean. ${typeof(compact)} given')
+        raise Exception('compact expects boolean. ${typeof(compact)} given')
       self._item_spacing = compact ? '' : ' '
       self._merge_strip_start = compact ? 1 : 2
     }
@@ -107,7 +107,7 @@ class Encoder {
           }
         }
  
-        die Exception('object of type ${typeof(value)} is not a JSON serializable')
+        raise Exception('object of type ${typeof(value)} is not a JSON serializable')
       }
     }
   }
@@ -124,7 +124,7 @@ class Encoder {
     self._is_object = is_dict(value)
 
     if self._depth > self._max_depth and self._max_depth != 0 {
-      die Exception('maximum recursive depth of ${self._max_depth} exceeded')
+      raise Exception('maximum recursive depth of ${self._max_depth} exceeded')
     }
 
     return self._encode(value)

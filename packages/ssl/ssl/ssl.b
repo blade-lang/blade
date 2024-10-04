@@ -17,7 +17,7 @@ class SSL {
    */
   SSL(context) {
     if !instance_of(context, SSLContext)
-      die Exception('instance of SSLContext expected')
+      raise Exception('instance of SSLContext expected')
     self._context = context
     self._ptr = _ssl.new(context.get_pointer())
   }
@@ -54,7 +54,7 @@ class SSL {
    */
   set_fd(fd) {
     if !is_int(fd)
-      die Exception('fd must be an integer')
+      raise Exception('fd must be an integer')
 
     return _ssl.set_fd(self._ptr, fd)
   }
@@ -76,15 +76,17 @@ class SSL {
    * @throws
    */
   connect() {
-    /* try {
+    /* catch {
       var res = _ssl.connect(self._ptr)
       return res
-    } catch Exception e {
+    } as e
+
+    if e {
       if e.message.index_of('eof while reading') {
-        die Exception('timeout')
+        raise Exception('timeout')
       }
 
-      die e
+      raise e
     } */
 
     # _ssl.set_connect_state(self._ptr)
@@ -100,15 +102,21 @@ class SSL {
    */
   write(data) {
     if !is_string(data) and !is_bytes(data)
-      die Exception('string or bytes expected')
+      raise Exception('string or bytes expected')
 
     if is_string(data) data = data.to_bytes()
 
     var result = _ssl.write(self._ptr, data)
-    if result == -1
-      die Exception(self.error())
+    if result == false {
+      var err = self.error()
+      if err {
+        raise Exception(err)
+      }
+
+      return 0
+    }
     
-    return result
+    return data.length()
   }
 
   /**
@@ -124,13 +132,18 @@ class SSL {
     if is_blocking == nil is_blocking = false
     
     if !is_int(length)
-      die Exception('integer expected in argument 1')
+      raise Exception('integer expected in argument 1')
     if !is_bool(is_blocking)
-      die Exception('boolean expected in argument 2')
+      raise Exception('boolean expected in argument 2')
     
     var result = _ssl.read(self._ptr, length, is_blocking)
     if result == nil {
-      die Exception(self.error())
+      var err = self.error()
+      if err {
+        raise Exception(err)
+      }
+
+      return ''
     }
 
     return result

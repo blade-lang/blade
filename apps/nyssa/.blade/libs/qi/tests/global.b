@@ -17,7 +17,7 @@ class CustomError < Exception {}
 
 var binay_string_to_number = @( bin_string ) {
   if !bin_string.match('/^[01]+$/') {
-    die CustomError('Not a binary number.')
+    raise CustomError('Not a binary number.')
   }
 
   return to_number('0b' + bin_string)

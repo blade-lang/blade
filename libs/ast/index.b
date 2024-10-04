@@ -27,9 +27,9 @@ import .token { * }
  */
 def parse(source, path) {
   if !is_string(source)
-    die Exception('string expected in argument 1 (source)')
+    raise Exception('string expected in argument 1 (source)')
   if path != nil and !is_string(path)
-    die Exception('string expected in argument 2 (path)') 
+    raise Exception('string expected in argument 2 (path)')
 
   # scan the source...
   var scanner = Scanner(source, path)

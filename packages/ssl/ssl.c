@@ -21,6 +21,8 @@
 # include <sys/ioctl.h>
 #endif
 
+#define SSL_BUF_SIZE 16384
+
 DEFINE_SSL_CONSTANT(SSL_FILETYPE_PEM)
 DEFINE_SSL_CONSTANT(SSL_FILETYPE_ASN1)
 
@@ -63,10 +65,28 @@ int ssl___SSL_verify_true_cb(int preverify_ok, X509_STORE_CTX *x509_ctx) {
   return 1;
 }
 
+void info_callback(const SSL *ssl, int where, int ret) {
+  const char *str;
+  int w = where & ~SSL_ST_MASK;
+  if (w & SSL_ST_CONNECT) str = "SSL_connect";
+  else if (w & SSL_ST_ACCEPT) str = "SSL_accept";
+  else str = "undefined";
+
+  printf("%s:%s\n", str, SSL_state_string_long(ssl));
+}
+
 DECLARE_MODULE_METHOD(ssl_ctx) {
   ENFORCE_ARG_COUNT(ctx, 1);
   ENFORCE_ARG_TYPE(ctx, 0, IS_PTR);
-  RETURN_PTR(SSL_CTX_new((SSL_METHOD*) AS_PTR(args[0])->pointer));
+
+  SSL_CTX *ctx = SSL_CTX_new((SSL_METHOD*) AS_PTR(args[0])->pointer);
+
+  dbg(
+      SSL_CTX_set_num_tickets(ctx, 1);
+      SSL_CTX_set_info_callback(ctx, info_callback);
+  );
+
+  RETURN_PTR(ctx);
 }
 
 DECLARE_MODULE_METHOD(ssl_ctx_free) {
@@ -144,7 +164,16 @@ DECLARE_MODULE_METHOD(ssl_new) {
   ENFORCE_ARG_TYPE(new, 0, IS_PTR);
 
   SSL_CTX *ctx = (SSL_CTX*)AS_PTR(args[0])->pointer;
-  RETURN_PTR(SSL_new(ctx));
+
+  SSL *ssl = SSL_new(ctx);
+
+  dbg(
+      SSL_set_msg_callback(ssl,SSL_trace);
+      SSL_set_msg_callback_arg(ssl, BIO_new_fp(stdout,0));
+  );
+
+
+  RETURN_PTR(ssl);
 }
 
 DECLARE_MODULE_METHOD(ssl_ssl_free) {
@@ -545,8 +574,36 @@ DECLARE_MODULE_METHOD(ssl_write) {
   SSL *ssl = (SSL*)AS_PTR(args[0])->pointer;
   b_obj_bytes *bytes = AS_BYTES(args[1]);
 
+  SSL_set_mode(ssl, SSL_MODE_ENABLE_PARTIAL_WRITE);
   ERR_clear_error();
-  RETURN_NUMBER(SSL_write(ssl, bytes->bytes.bytes, bytes->bytes.count));
+
+  unsigned char *buffer = (unsigned char*)bytes->bytes.bytes;
+  int total = bytes->bytes.count;
+  int processed = 0;
+
+  do {
+    int diff = total - processed;
+    int write_size = diff < SSL_BUF_SIZE ? diff : SSL_BUF_SIZE;
+
+    int rc = SSL_write(ssl, buffer + processed, write_size);
+    if(rc < 0) {
+      int error = SSL_get_error(ssl, rc);
+      if(error == SSL_ERROR_WANT_WRITE) {
+        continue;
+      } else if(error == SSL_ERROR_ZERO_RETURN || error == SSL_ERROR_NONE) {
+        break;
+      } else {
+        RETURN_FALSE; // error occurred
+      }
+    } else {
+      processed += rc;
+      if(processed == total) {
+        break;
+      }
+    }
+  } while(true);
+
+  RETURN_TRUE;
 }
 
 DECLARE_MODULE_METHOD(ssl_read) {
@@ -559,19 +616,19 @@ DECLARE_MODULE_METHOD(ssl_read) {
   int length = AS_NUMBER(args[1]);
   bool is_blocking = AS_BOOL(args[2]);
 
-  char *data = (char*)malloc(sizeof(char));
-  memset(data, 0, sizeof(char));
   int total = 0;
-  char buffer[1025];
+  char buffer[SSL_BUF_SIZE];
   ERR_clear_error();
 
   int ssl_fd = SSL_get_fd(ssl);
 
+#ifdef SSL_OP_IGNORE_UNEXPECTED_EOF
+  SSL_set_options(ssl, SSL_OP_IGNORE_UNEXPECTED_EOF);
+#endif
+
   fd_set read_fds;
   FD_ZERO(&read_fds);
   FD_SET(ssl_fd, &read_fds);
-
-  // struct timeval timeout = { .tv_sec = 0, .tv_usec = 500000 };
 
   struct timeval timeout;
   if(is_blocking) {
@@ -589,28 +646,32 @@ DECLARE_MODULE_METHOD(ssl_read) {
       timeout.tv_usec = 0;
     }
   } else {
-    // set default timeout to 0 seconds
+    // set default timeout to 0.05 seconds
     timeout.tv_sec = 0;
-    timeout.tv_usec = 0;
+    timeout.tv_usec = 50000;
   }
 
   int ret = select(ssl_fd + 1, &read_fds, NULL, NULL, &timeout);
-  if (ret == 0) {
-    free(data);
-    RETURN_STRING("");
+  if (ret == 0 || !FD_ISSET(ssl_fd, &read_fds)) {
+    RETURN_NIL;
   } else if (ret < 0) {
-      // Error
+    // Error
   }
 
+  char *data = (char*)malloc(sizeof(char));
+  memset(data, 0, sizeof(char));
+
   do {
-    int read_count = length == -1 ? 1024 : (
-      (length - total) < 1024 ? (length - total) : 1024
+    int diff = length - total;
+    int read_count = length == -1 ? SSL_BUF_SIZE : (
+      diff < SSL_BUF_SIZE ? diff : SSL_BUF_SIZE
     );
 
-    int bytes = SSL_read(ssl, buffer, read_count);
-    // printf("READ COUNT = %d, TOTAL: %d, LENGTH = %d, BYTE = %d\n", read_count, total, length, bytes);
+    ERR_clear_error();
+    memset(buffer, 0, sizeof(buffer));
 
-    if(bytes > 0) {
+    int bytes = SSL_read(ssl, buffer, read_count);
+    while(bytes > 0) {
       data = GROW_ARRAY(char, data, total, total + bytes + 1);
       if(data == NULL) {
         RETURN_ERROR("device out of memory.");
@@ -620,18 +681,35 @@ DECLARE_MODULE_METHOD(ssl_read) {
       total += bytes;
       data[total] = '\0';
 
-      if(total >= length && length != -1) break;
-      if((bytes == 1024 && length == -1)) {
-        continue;
-      }
-    } else {
-      int error = SSL_get_error(ssl, bytes);
+      memset(buffer, 0, sizeof(buffer));
+      ERR_clear_error();
+
+      bytes = SSL_read(ssl, buffer, read_count);
+    }
+
+    int error = SSL_get_error(ssl, bytes);
+    if(error == SSL_ERROR_SSL) {
+      free(data);
+      RETURN_NIL;
+    }
+
+    if(bytes == 0) {
       if(error == SSL_ERROR_WANT_READ) {
         continue;
+      } else if(error == SSL_ERROR_WANT_WRITE) {
+        SSL_do_handshake(ssl); // must want an handshake
+        continue;
       } else if(error == SSL_ERROR_ZERO_RETURN || error == SSL_ERROR_NONE) {
+        SSL_shutdown(ssl);
         break;
-      } else {
-        RETURN_SSL_ERROR();
+      }
+    } else {
+      if(select(ssl_fd + 1, &read_fds, NULL, NULL, &timeout) > 0) {
+        continue;
+      }
+
+      if(SSL_pending(ssl) > 0) {
+        continue;
       }
     }
 
@@ -725,9 +803,11 @@ DECLARE_MODULE_METHOD(ssl_error_string) {
     // const char *err = ERR_reason_error_string(ERR_get_error());
     char *err = ossl_err_as_string();
     RETURN_STRING(err);
-  } else {
+  } else if(errno > 0) {
     char *error = strerror(errno);
     RETURN_STRING(error);
+  } else {
+    RETURN_VALUE(EMPTY_STRING_VAL);
   }
 }
 
@@ -936,3 +1016,5 @@ CREATE_MODULE_LOADER(ssl) {
 
   return &module;
 }
+
+#undef SSL_BUF_SIZE

@@ -487,7 +487,7 @@ class Template {
    */
   Template(auto_init) {
     if auto_init != nil and !is_bool(auto_init)
-      die Exception('boolean expected in argument 1 (auto_init)')
+      raise Exception('boolean expected in argument 1 (auto_init)')
     self._auto_init = auto_init == nil ? false : auto_init
   }
 
@@ -636,9 +636,9 @@ class Template {
     def error(message) {
       if !is_string(element) and !is_list(element) {
         var start = element.position.start
-        die Exception('${message} at ${path}[${start.line},${start.column}]') 
+        raise Exception('${message} at ${path}[${start.line},${start.column}]')
       } else {
-        { die Exception(message) }
+        { raise Exception(message) }
       }
     }
   
@@ -777,7 +777,7 @@ class Template {
    */
   set_root(path) {
     if !is_string(path)
-      die Exception('string expected in argument 1 (path)')
+      raise Exception('string expected in argument 1 (path)')
     
     var directory_created = false
 
@@ -798,9 +798,9 @@ class Template {
    */
   set_extension(ext) {
     if !is_string(ext)
-      die Exception('string expected at argument 1 (ext)')
+      raise Exception('string expected at argument 1 (ext)')
     if !ext.starts_with('.')
-      die Exception('invalid extension name')
+      raise Exception('invalid extension name')
     self._file_ext = ext
   }
 
@@ -832,13 +832,13 @@ class Template {
    */
   register_function(name, function) {
     if !is_string(name)
-      die Exception('string expected in argument 1 (name)')
+      raise Exception('string expected in argument 1 (name)')
     if !is_function(function)
-      die Exception('function expected in argument 1 (function)')
+      raise Exception('function expected in argument 1 (function)')
 
     var fn_arity = reflect.get_function_metadata(function).arity
     if fn_arity > 2
-      die Exception('invalid template function')
+      raise Exception('invalid template function')
     
     self._functions.set(name, function)
   }
@@ -869,11 +869,11 @@ class Template {
    */
   register_element(name, element) {
     if !is_string(name)
-      die Exception('string expected in argument 1 (name)')
+      raise Exception('string expected in argument 1 (name)')
     if !is_function(element)
-      die Exception('function expected in argument 1 (function)')
+      raise Exception('function expected in argument 1 (function)')
     if reflect.get_function_metadata(element).arity != 2
-      die Exception('invalid function argument count for template element: ${name}')
+      raise Exception('invalid function argument count for template element: ${name}')
 
     self._elements.set(name, element)
   }
@@ -911,10 +911,10 @@ class Template {
    */
   render_string(source, variables, path) {
     if !is_string(source)
-      die Exception('template template expected')
+      raise Exception('template template expected')
   
     if variables != nil and !is_dict(variables)
-      die Exception('variables must be passed to render_string() as a dictionary')
+      raise Exception('variables must be passed to render_string() as a dictionary')
     if variables == nil variables = {}
 
     if !path path = '<source>'
@@ -946,7 +946,7 @@ class Template {
    * tpl.render('my_template')
    * ```
    * 
-   * The above example renders the template as is and will die if any variable is found in it. 
+   * The above example renders the template as is and will raise if any variable is found in it.
    * You can pass a variable the same way you do with [[Template.render_string]].
    * 
    * @param string path
@@ -955,12 +955,12 @@ class Template {
    */
   render(path, variables) {
     if !is_string(path)
-      die Exception('template path expected')
+      raise Exception('template path expected')
 
     # confirm/auto create root directory as configured
     if !os.dir_exists(self._root_dir) {
       if !self._auto_init 
-        die Exception('templates directory "${self._root_dir}" not found.')
+        raise Exception('templates directory "${self._root_dir}" not found.')
       else os.create_dir(self._root_dir)
     }
   
@@ -971,7 +971,7 @@ class Template {
     }
   
     if variables != nil and !is_dict(variables)
-      die Exception('variables must be passed to render() as a dictionary')
+      raise Exception('variables must be passed to render() as a dictionary')
     if variables == nil variables = {}
   
     var template_file = file(template_path)
@@ -979,7 +979,7 @@ class Template {
       return self.render_string(template_file.read(), variables, template_path)
     }
   
-    die Exception('template "${path}" not found')
+    raise Exception('template "${path}" not found')
   }
 }
 

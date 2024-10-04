@@ -53,7 +53,7 @@ typedef enum {
   OP_DUP,
   OP_POP_N,
   OP_ASSERT,
-  OP_DIE,
+  OP_RAISE,
 
   OP_CLOSURE,
   OP_CALL,
@@ -85,9 +85,8 @@ typedef enum {
   OP_EJECT_NATIVE_IMPORT,
   OP_IMPORT_ALL,
 
-  OP_TRY,
-  OP_POP_TRY,
-  OP_PUBLISH_TRY,
+  OP_BEGIN_CATCH,
+  OP_END_CATCH,
 
   OP_STRINGIFY,
   OP_SWITCH,

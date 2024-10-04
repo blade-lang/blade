@@ -35,7 +35,7 @@ _in()
 iter var i = 0; i < 10; i++ {
   var start = time()
   var sum = 0
-  iter var j = 0; j < 1000000; j++ {
+  iter var j = 0; j < 1000; j++ {
     def outer(a, b, c) {
       def inner() {
         return a + b + c

@@ -202,6 +202,10 @@ DECLARE_FILE_METHOD(read) {
     }
   }
 
+  if(!file->file) {
+    RETURN_ERROR(strerror(errno));
+  }
+
   char *buffer =
       (char *) ALLOCATE(char, file_size + 1); // +1 for terminator '\0'
 
@@ -252,10 +256,10 @@ DECLARE_FILE_METHOD(gets) {
       FILE_ERROR(Unsupported, "cannot read file in write mode");
     }
 
-    if (!file->is_open) { // open the file if it isn't open
-      FILE_ERROR(Read, "file not open");
-    } else if (file->file == NULL) {
+    if (file->file == NULL) {
       FILE_ERROR(Read, "could not read file");
+    } else if (!file->is_open) { // open the file if it isn't open
+      FILE_ERROR(Read, "file not open");
     }
 
     if(length == -1) {
@@ -342,6 +346,10 @@ DECLARE_FILE_METHOD(write) {
     if (fileno(stdin) == file->number) {
       FILE_ERROR(Unsupported, "cannot write to input file");
     }
+  }
+
+  if(!file->file) {
+    RETURN_ERROR(strerror(errno));
   }
 
   size_t count = fwrite(data, sizeof(unsigned char), length, file->file);

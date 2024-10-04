@@ -222,7 +222,7 @@ def set_env(name, value, overwrite) {
 def create_dir(path, permission, recursive) {
 
   if path {
-    if !is_string(path) die Exception('path must be string')
+    if !is_string(path) raise Exception('path must be string')
     path = path
   }
   if !path.ends_with(path_separator)
@@ -234,14 +234,14 @@ def create_dir(path, permission, recursive) {
 
   if permission {
     if !is_number(permission)
-      die Exception('expected number in first argument, ${typeof(permission)} given')
+      raise Exception('expected number in first argument, ${typeof(permission)} given')
   } else {
     permission = 0c777
   }
 
   if recursive != nil {
     if !is_bool(recursive) 
-      die Exception('boolean expected in second argument, ${typeof(recursive)} given')
+      raise Exception('boolean expected in second argument, ${typeof(recursive)} given')
   } else {
     recursive = true
   }
@@ -303,7 +303,7 @@ def is_dir(path) {
 def remove_dir(path, recursive) {
   if recursive != nil {
     if !is_bool(recursive)
-      die Exception('boolean expected in argument 2')
+      raise Exception('boolean expected in argument 2')
   } else {
     recursive = false
   }
@@ -367,7 +367,7 @@ def join_paths(...) {
   var result = ''
   for arg in __args__ {
     if !is_string(arg)
-      die Exception('string expected, ${typeof(arg)} given')
+      raise Exception('string expected, ${typeof(arg)} given')
 
     arg = arg.trim()
     

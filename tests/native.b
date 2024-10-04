@@ -35,7 +35,7 @@ echo to_string({name: 'Richard', age: 28})
 echo to_string(A())
 
 var start = time()
-echo fib(35)
+echo fib(30)
 echo 'Time taken for recursive fibonacci: ${time() - start}s'
 
 start = time()

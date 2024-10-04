@@ -99,11 +99,11 @@ def decode(value, allow_comments) {
  */
 def parse(path) {
   if !is_string(path)
-    die Exception('file path expected, ${typeof(path)} given')
+    raise Exception('file path expected, ${typeof(path)} given')
 
   var f = file(path)
   if !f.exists()
-    die Exception('could not open file ${path}')
+    raise Exception('could not open file ${path}')
 
   var content = f.read().trim()
   return content ? decode(content) : nil

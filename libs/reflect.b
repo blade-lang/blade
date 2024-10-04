@@ -46,9 +46,9 @@ import _reflect
  */
 def has_prop(object, name) {
   if !is_instance(object)
-    die Exception('object instance expected in argument 1 (object)')
+    raise Exception('object instance expected in argument 1 (object)')
   if !is_string(name)
-    die Exception('string expected in argument 2 (name)')
+    raise Exception('string expected in argument 2 (name)')
 
   return _reflect.hasprop(object, name)
 }
@@ -63,9 +63,9 @@ def has_prop(object, name) {
  */
 def get_prop(object, name) {
   if !is_instance(object)
-    die Exception('object instance expected in argument 1 (object)')
+    raise Exception('object instance expected in argument 1 (object)')
   if !is_string(name)
-    die Exception('string expected in argument 2 (name)')
+    raise Exception('string expected in argument 2 (name)')
 
   return _reflect.getprop(object, name)
 }
@@ -82,9 +82,9 @@ def get_prop(object, name) {
  */
 def set_prop(object, name, value) {
   if !is_instance(object)
-    die Exception('object instance expected in argument 1 (object)')
+    raise Exception('object instance expected in argument 1 (object)')
   if !is_string(name)
-    die Exception('string expected in argument 2 (name)')
+    raise Exception('string expected in argument 2 (name)')
 
   return _reflect.setprop(object, name, value)
 }
@@ -98,9 +98,9 @@ def set_prop(object, name, value) {
  */
 def del_prop(object, name) {
   if !is_instance(object)
-    die Exception('object instance expected in argument 1 (object)')
+    raise Exception('object instance expected in argument 1 (object)')
   if !is_string(name)
-    die Exception('string expected in argument 2 (name)')
+    raise Exception('string expected in argument 2 (name)')
 
   return _reflect.delprop(object, name)
 }
@@ -115,9 +115,9 @@ def del_prop(object, name) {
  */
 def has_method(object, name) {
   if !is_instance(object)
-    die Exception('object instance expected in argument 1 (object)')
+    raise Exception('object instance expected in argument 1 (object)')
   if !is_string(name)
-    die Exception('string expected in argument 2 (name)')
+    raise Exception('string expected in argument 2 (name)')
 
   return _reflect.hasmethod(object, name)
 }
@@ -132,9 +132,9 @@ def has_method(object, name) {
  */
 def has_decorator(object, name) {
   if !is_instance(object)
-    die Exception('object instance expected in argument 1 (object)')
+    raise Exception('object instance expected in argument 1 (object)')
   if !is_string(name)
-    die Exception('string expected in argument 2 (name)')
+    raise Exception('string expected in argument 2 (name)')
 
   return _reflect.hasmethod(object, '@${name}')
 }
@@ -150,9 +150,9 @@ def has_decorator(object, name) {
  */
 def get_method(object, name) {
   if !is_instance(object)
-    die Exception('object instance expected in argument 1 (object)')
+    raise Exception('object instance expected in argument 1 (object)')
   if !is_string(name)
-    die Exception('string expected in argument 2 (name)')
+    raise Exception('string expected in argument 2 (name)')
 
   return _reflect.getmethod(object, name)
 }
@@ -168,14 +168,14 @@ def get_method(object, name) {
  */
 def get_decorator(object, name) {
   if !is_instance(object)
-    die Exception('object instance expected in argument 1 (object)')
+    raise Exception('object instance expected in argument 1 (object)')
   if !is_string(name)
-    die Exception('string expected in argument 2 (name)')
+    raise Exception('string expected in argument 2 (name)')
 
   if _reflect.hasmethod(object, '@${name}') {
     return _reflect.getboundmethod(object, '@${name}')
   } else {
-    die Exception("class ${typeof(object)} does not implement decorator '${name}'")
+    raise Exception("class ${typeof(object)} does not implement decorator '${name}'")
   }
 }
 
@@ -191,9 +191,9 @@ def get_decorator(object, name) {
  */
 def bind_method(object, method) {
   if !is_instance(object)
-    die Exception('object instance expected in argument 1 (object)')
+    raise Exception('object instance expected in argument 1 (object)')
   if !is_function(method)
-    die Exception('function expected in argument 2 (method)')
+    raise Exception('function expected in argument 2 (method)')
 
   return _reflect.bindmethod(object, method)
 }
@@ -206,7 +206,7 @@ def bind_method(object, method) {
  */
 def get_type(object) {
   if !is_instance(object)
-    die Exception('instance expected in argument 1 (object)')
+    raise Exception('instance expected in argument 1 (object)')
 
   return _reflect.gettype(object)
 }
@@ -229,7 +229,7 @@ def get_type(object) {
  */
 def get_function_metadata(function) {
   if !is_function(function)
-    die Exception('function expected in argument 1 (function)')
+    raise Exception('function expected in argument 1 (function)')
 
   return _reflect.getfunctionmetadata(function)
 }
@@ -249,7 +249,7 @@ def get_function_metadata(function) {
  */
 def get_class_metadata(klass) {
   if !is_class(klass)
-    die Exception('class expected in argument 1 (klass)')
+    raise Exception('class expected in argument 1 (klass)')
 
   return _reflect.getclassmetadata(klass)
 }
@@ -280,7 +280,7 @@ def get_module_metadata(module) {
  */
 def get_class(object) {
   if !is_instance(object)
-    die Exception('instance expected in argument 1 (object)')
+    raise Exception('instance expected in argument 1 (object)')
 
   return _reflect.getclass(object)
 }
@@ -344,9 +344,9 @@ def ptr_from_address(address) {
  */
 def set_global(fn, name) {
   if !is_function(fn) and !is_class(fn)
-    die Exception('function or class expected in argument 1 (fn)')
+    raise Exception('function or class expected in argument 1 (fn)')
   if name != nil and !is_string(name)
-    die Exception('string expected in argument 2 (name)')
+    raise Exception('string expected in argument 2 (name)')
   _reflect.setglobal(fn, name)
 }
 
@@ -358,11 +358,11 @@ def set_global(fn, name) {
  */
 def run_script(path) {
   if !is_string(path)
-    die Exception('string expected in argument 1 (path)')
+    raise Exception('string expected in argument 1 (path)')
 
   var fh = file(path)
   if !fh.exists()
-    die Exception('cannot find script at "${path}"')
+    raise Exception('cannot find script at "${path}"')
 
   var content = fh.read()
 

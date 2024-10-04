@@ -32,9 +32,9 @@ class Parser {
    */
   Parser(tokens, path) {
     if !is_list(tokens)
-      die Exception('list expected in argument 1 (tokens)')
+      raise Exception('list expected in argument 1 (tokens)')
     if !is_string(path)
-      die Exception('string expected in argument 2 (path)')
+      raise Exception('string expected in argument 2 (path)')
 
     # set instance variable token
     self._tokens = tokens
@@ -118,7 +118,7 @@ class Parser {
    */
   _consume(type, message) {
     if self._check(type) return self._advance()
-    die ParseException(self._peek(), message)
+    raise ParseException(message, self._peek())
   }
 
   /**
@@ -129,7 +129,7 @@ class Parser {
     for t in __args__ {
       if self._check(t) return self._advance()
     }
-    die ParseException(self._peek(), message)
+    raise ParseException(message, self._peek())
   }
 
   _get_doc_defn_data() {
@@ -713,7 +713,7 @@ class Parser {
     while !self._match(RBRACE) and !self._check(EOF) {
       if self._match(WHEN, DEFAULT, COMMENT, DOC, NEWLINE) {
         if state == 1 
-          die ParseException(self._previous(), "'when' cannot exist after a default")
+          raise ParseException("'when' cannot exist after a default", self._previous())
 
         if [DOC, COMMENT, NEWLINE].contains(self._previous().type) {}
         else if self._previous().type == WHEN {
@@ -733,7 +733,7 @@ class Parser {
           default_case = self._statement()
         }
       } else {
-        die ParseException(self._previous(), 'Invalid using statement')
+        raise ParseException('Invalid using statement', self._previous())
       }
     }
 
@@ -769,42 +769,21 @@ class Parser {
   }
 
   /**
-   * try...catch...finally... blocks
+   * catch... blocks
    */
-  _try() {
-    self._consume(LBRACE, "'{' expected after try")
+  _catch() {
+    self._consume(LBRACE, "'{' expected after catch")
     var body = self._block()
-    var exception_type, exception_var, catch_body, finally_body
-    var has_catch = false, has_finally = false
 
-    if self._match(CATCH) {
-      self._consume(IDENTIFIER, 'exception name expected')
-      exception_type = self._previous().literal
-
+    var exception_var
+    if self._match(AS) {
       if self._check(IDENTIFIER) {
         self._consume(IDENTIFIER, 'exception variable expected')
         exception_var = self._previous().literal
       }
-
-      self._consume(LBRACE, "'{' expected after catch expression")
-      catch_body = self._block()
-      has_catch = true
-    }
-    
-    if self._match(FINALLY) {
-      has_finally = true
-      self._consume(LBRACE, "'{' expected after finally")
-      finally_body = self._block()
     }
 
-    if !has_catch and !has_finally
-      die ParseException(self._previous(), 'invalid try statement')
-
-    var catch_stmt, finally_stmt
-    if has_catch catch_stmt = CatchStmt(exception_type, exception_var, catch_body)
-    if has_finally finally_stmt = FinallyStmt(finally_body)
-
-    return TryStmt(body, catch_stmt, finally_stmt)
+    return CatchStmt(body, exception_var)
   }
 
   /**
@@ -864,14 +843,14 @@ class Parser {
       result = ReturnStmt(self._expression())
     } else if self._match(ASSERT) {
       result = self._assert()
-    } else if self._match(DIE) {
-      result = DieStmt(self._expression())
+    } else if self._match(RAISE ) {
+      result = RaiseStmt(self._expression())
     } else if self._match(LBRACE) {
       result = self._block()
     } else if self._match(IMPORT) {
       result = self._import()
-    } else if self._match(TRY) {
-      result = self._try()
+    } else if self._match(CATCH) {
+      result = self._catch()
     } else if self._match(COMMENT) {
       result = CommentStmt(self._previous().literal[1,].trim())
     } else if self._match(DOC) {

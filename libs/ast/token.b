@@ -309,9 +309,9 @@ var DEF = 67
 var DEFAULT = 68
 
 /**
- * die token
+ * raise token
  */
-var DIE = 68
+var RAISE  = 68
 
 /**
  * do token
@@ -332,11 +332,6 @@ var ELSE = 71
  * false token
  */
 var FALSE = 72
-
-/**
- * finally token
- */
-var FINALLY = 73
 
 /**
  * for token
@@ -397,11 +392,6 @@ var STATIC = 84
  * true token
  */
 var TRUE = 85
-
-/**
- * try token
- */
-var TRY = 86
 
 /**
  * using token

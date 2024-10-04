@@ -830,13 +830,14 @@ DECLARE_NATIVE(instance_of) {
  */
 DECLARE_NATIVE(print) {
   for (int i = 0; i < arg_count; i++) {
-    print_value(args[i]);
-    if (i != arg_count - 1) {
-      printf(" ");
-    }
-  }
-  if(vm->is_repl) {
-    printf("\n");
+    b_obj_string *val = value_to_string(vm, args[i]);
+
+    printf(
+      i == arg_count - 1 ? (
+        vm->is_repl ? "%.*s\n" : "%.*s"
+      ) : "%.*s ", 
+      val->length, val->chars
+    );
   }
   RETURN;
 }

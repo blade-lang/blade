@@ -146,9 +146,9 @@ var MAX_WBITS = _zlib.MAX_WBITS
  */
 def adler32(data, initial) {
   if !is_string(data) and !is_bytes(data)
-    die Exception('string or bytes expected in arg 1 (data)')
+    raise Exception('string or bytes expected in arg 1 (data)')
   if initial != nil and !is_number(initial)
-    die Exception('number expected in arg 2 (initial)')
+    raise Exception('number expected in arg 2 (initial)')
 
   if is_string(data) data = data.to_bytes()
   if initial == nil initial = 0
@@ -166,9 +166,9 @@ def adler32(data, initial) {
  */
 def crc32(data, initial) {
   if !is_string(data) and !is_bytes(data)
-    die Exception('string or bytes expected in arg 1 (data)')
+    raise Exception('string or bytes expected in arg 1 (data)')
   if initial != nil and !is_number(initial)
-    die Exception('number expected in arg 2 (initial)')
+    raise Exception('number expected in arg 2 (initial)')
 
   if is_string(data) data = data.to_bytes()
   if initial == nil initial = 0
@@ -241,15 +241,15 @@ def compress(data, level, strategy, wbits, memory_level) {
 
   # validations.
   if !is_string(data) and !is_bytes(data)
-    die Exception('string or bytes expected in arg 1 (data)')
+    raise Exception('string or bytes expected in arg 1 (data)')
   if level != nil and !is_number(level) and !is_int(level)
-    die Exception('integer expected in arg 2 (level)')
+    raise Exception('integer expected in arg 2 (level)')
   if strategy != nil and !is_number(strategy) and !is_int(strategy)
-    die Exception('integer expected in arg 3 (strategy)')
+    raise Exception('integer expected in arg 3 (strategy)')
   if wbits != nil and !is_number(wbits) and !is_int(wbits)
-    die Exception('integer expected in arg 4 (wbits)')
+    raise Exception('integer expected in arg 4 (wbits)')
   if memory_level != nil and !is_number(memory_level) and !is_int(memory_level)
-    die Exception('integer expected in arg 5 (memory_level)')
+    raise Exception('integer expected in arg 5 (memory_level)')
 
   # defaults.
   if !level level = DEFAULT_COMPRESSION
@@ -308,9 +308,9 @@ def compress(data, level, strategy, wbits, memory_level) {
  */
 def uncompress(data, wbits) {
   if !is_string(data) and !is_bytes(data)
-    die Exception('string or bytes expected in arg 1 (data)')
+    raise Exception('string or bytes expected in arg 1 (data)')
   if wbits != nil and !is_number(wbits) and !is_int(wbits)
-    die Exception('integer expected in arg 2 (wbits)')
+    raise Exception('integer expected in arg 2 (wbits)')
   
   if is_string(data) data = data.to_bytes()
   if wbits == nil wbits = MAX_WBITS
@@ -374,9 +374,9 @@ class GZ {
    */
   GZ(path, mode) {
     if !is_string(path)
-      die Exception('string expected in arg 1 (path)')
+      raise Exception('string expected in arg 1 (path)')
     if mode != nil and !is_string(mode)
-      die Exception('string expected in arg 2 (mode)')
+      raise Exception('string expected in arg 2 (mode)')
     if !mode mode = 'rb'
 
     self._ptr = _zlib.gzopen(path, mode)
@@ -409,7 +409,7 @@ class GZ {
    */
   read(length) {
     if length != nil and !is_number(length)
-      die Exception('number expected in arg 2 (length)')
+      raise Exception('number expected in arg 2 (length)')
     if !length length = 1
     return _zlib.gzread(self._ptr, length)
   }
@@ -424,7 +424,7 @@ class GZ {
    */
   write(data) {
     if !is_bytes(data) and !is_string(data)
-      die Exception('bytes or string expected in arg 2 (data)')
+      raise Exception('bytes or string expected in arg 2 (data)')
   
     if is_string(data) data = data.to_bytes()
     return _zlib.gzwrite(self._ptr, data)
@@ -497,9 +497,9 @@ class GZ {
   */
   set_params(level, strategy) {
     if !is_number(level) and !is_int(level)
-      die Exception('integer expected in arg 2 (level)')
+      raise Exception('integer expected in arg 2 (level)')
     if !is_number(strategy) and !is_int(strategy)
-      die Exception('integer expected in arg 3 (strategy)')
+      raise Exception('integer expected in arg 3 (strategy)')
     return _zlib.gzsetparams(self._ptr, level, strategy)
   }
 
@@ -525,9 +525,9 @@ class GZ {
    */
   seek(offset, whence) {
     if !is_number(offset) and !is_int(offset)
-      die Exception('integer expected in arg 2 (offset)')
+      raise Exception('integer expected in arg 2 (offset)')
     if whence != nil and !is_number(whence) and !is_int(whence)
-      die Exception('integer expected in arg 3 (whence)')
+      raise Exception('integer expected in arg 3 (whence)')
 
     if !whence whence = SEEK_SET
     return _zlib.gzseek(self._ptr, offset, whence)

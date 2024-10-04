@@ -174,15 +174,14 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_ONE:
     case OP_SET_INDEX:
     case OP_ASSERT:
-    case OP_DIE:
-    case OP_POP_TRY:
     case OP_RANGE:
     case OP_STRINGIFY:
     case OP_CHOICE:
     case OP_EMPTY:
+    case OP_RAISE:
     case OP_IMPORT_ALL_NATIVE:
     case OP_IMPORT_ALL:
-    case OP_PUBLISH_TRY:
+    case OP_END_CATCH:
       return 0;
 
     case OP_CALL:
@@ -218,6 +217,7 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_EJECT_IMPORT:
     case OP_EJECT_NATIVE_IMPORT:
     case OP_SELECT_IMPORT:
+    case OP_BEGIN_CATCH:
       return 2;
 
     case OP_INVOKE:
@@ -225,9 +225,6 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_SUPER_INVOKE:
     case OP_CLASS_PROPERTY:
       return 3;
-
-    case OP_TRY:
-      return 6;
 
     case OP_CLOSURE: {
       int constant = (bytecode[ip + 1] << 8) | bytecode[ip + 2];
@@ -282,10 +279,6 @@ static void emit_loop(b_parser *p, int loop_start) {
 }
 
 static void emit_return(b_parser *p) {
-  if(p->is_trying) {
-    emit_byte(p, OP_POP_TRY);
-  }
-
   if (p->vm->compiler->type == TYPE_INITIALIZER) {
     emit_byte_and_short(p, OP_GET_LOCAL, 0);
   } else {
@@ -328,38 +321,9 @@ static int emit_switch(b_parser *p) {
   return current_blob(p)->count - 2;
 }
 
-static int emit_try(b_parser *p) {
-  emit_byte(p, OP_TRY);
-  // type placeholders
-  emit_byte(p, 0xff);
-  emit_byte(p, 0xff);
-
-  // handler placeholders
-  emit_byte(p, 0xff);
-  emit_byte(p, 0xff);
-
-  // finally placeholders
-  emit_byte(p, 0xff);
-  emit_byte(p, 0xff);
-
-  return current_blob(p)->count - 6;
-}
-
-static void patch_switch(b_parser *p, int offset, int constant) {
+static void patch_with_value(b_parser *p, int offset, int constant) {
   current_blob(p)->code[offset] = (constant >> 8) & 0xff;
   current_blob(p)->code[offset + 1] = constant & 0xff;
-}
-
-static void patch_try(b_parser *p, int offset, int type, int address, int finally) {
-  // patch type
-  current_blob(p)->code[offset] = (type >> 8) & 0xff;
-  current_blob(p)->code[offset + 1] = type & 0xff;
-  // patch address
-  current_blob(p)->code[offset + 2] = (address >> 8) & 0xff;
-  current_blob(p)->code[offset + 3] = address & 0xff;
-  // patch finally
-  current_blob(p)->code[offset + 4] = (finally >> 8) & 0xff;
-  current_blob(p)->code[offset + 5] = finally & 0xff;
 }
 
 static void patch_jump(b_parser *p, int offset) {
@@ -380,7 +344,6 @@ static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
   compiler->type = type;
   compiler->local_count = 0;
   compiler->scope_depth = 0;
-  compiler->handler_count = 0;
 
   compiler->function = new_function(p->vm, p->module, type);
   p->vm->compiler = compiler;
@@ -1366,7 +1329,7 @@ b_parse_rule parse_rules[] = {
     [CONTINUE_TOKEN] = {NULL, NULL, PREC_NONE},
     [DEF_TOKEN] = {NULL, NULL, PREC_NONE},
     [DEFAULT_TOKEN] = {NULL, NULL, PREC_NONE},
-    [DIE_TOKEN] = {NULL, NULL, PREC_NONE},
+    [RAISE_TOKEN] = {NULL, NULL, PREC_NONE},
     [DO_TOKEN] = {NULL, NULL, PREC_NONE},
     [ECHO_TOKEN] = {NULL, NULL, PREC_NONE},
     [ELSE_TOKEN] = {NULL, NULL, PREC_NONE},
@@ -1387,9 +1350,7 @@ b_parse_rule parse_rules[] = {
     [USING_TOKEN] = {NULL, NULL, PREC_NONE},
     [WHEN_TOKEN] = {NULL, NULL, PREC_NONE},
     [WHILE_TOKEN] = {NULL, NULL, PREC_NONE},
-    [TRY_TOKEN] = {NULL, NULL, PREC_NONE},
     [CATCH_TOKEN] = {NULL, NULL, PREC_NONE},
-    [FINALLY_TOKEN] = {NULL, NULL, PREC_NONE},
 
     // types token
     [LITERAL_TOKEN] = {string, NULL, PREC_NONE},
@@ -2023,7 +1984,7 @@ static void using_statement(b_parser *p) {
 
   sw->exit_jump = current_blob(p)->count - start_offset;
 
-  patch_switch(p, switch_code, make_constant(p, OBJ_VAL(sw)));
+  patch_with_value(p, switch_code, make_constant(p, OBJ_VAL(sw)));
   pop(p->vm); // pop the switch
 }
 
@@ -2052,10 +2013,10 @@ static void echo_statement(b_parser *p) {
   consume_statement_end(p);
 }
 
-static void die_statement(b_parser *p) {
+static void raise_statement(b_parser *p) {
+  discard_locals(p, p->vm->compiler->scope_depth);
   expression(p);
-  emit_byte(p, OP_DIE);
-  discard_locals(p, p->vm->compiler->scope_depth - 1);
+  emit_byte(p, OP_RAISE);
   consume_statement_end(p);
 }
 
@@ -2215,7 +2176,21 @@ static void import_statement(b_parser *p) {
     return;
   }
 
-  b_obj_module *module = new_module(p->vm, module_name, module_path);
+  // prevent cyclic imports
+  b_obj_module *check_module = p->module;
+  while (check_module->parent != NULL) {
+    size_t path_length = strlen(check_module->parent->file);
+    if(strlen(module_path) == path_length) {
+      if(memcmp(module_path, check_module->parent->file, path_length) == 0) {
+        error(p, "cyclic import detected at %s", module_name);
+        free(module_path);
+        return;
+      }
+    }
+    check_module = check_module->parent;
+  }
+
+  b_obj_module *module = new_module(p->vm, module_name, module_path, p->module);
 
   push(p->vm, OBJ_VAL(module));
   b_obj_func *function = compile(p->vm, module, source);
@@ -2259,77 +2234,25 @@ static void assert_statement(b_parser *p) {
   consume_statement_end(p);
 }
 
-static void try_statement(b_parser *p) {
-
-  if (p->vm->compiler->handler_count == MAX_EXCEPTION_HANDLERS) {
-    error(p, "maximum exception handler in scope exceeded");
-  }
-  p->vm->compiler->handler_count++;
-  p->is_trying = true;
+static void catch_statement(b_parser *p) {
+  int jump = emit_jump(p, OP_BEGIN_CATCH);
 
   ignore_whitespace(p);
-  int try_begins = emit_try(p);
+  consume(p, LBRACE_TOKEN, "expected '{' after catch");
+  begin_scope(p);
+  block(p);
+  end_scope(p);
+  ignore_whitespace(p);
 
-  statement(p); // compile the try body
-  emit_byte(p, OP_POP_TRY);
-  int exit_jump = emit_jump(p, OP_JUMP);
-  p->is_trying = false;
+  patch_with_value(p, jump, current_blob(p)->count);
+  emit_byte(p, OP_END_CATCH);
 
-  // we can safely use 0 because a program cannot start with a
-  // catch or finally block
-  int address = 0, type = -1, finally = 0;
-
-  bool catch_exists = false, final_exists = false;
-
-  // catch body must maintain its own scope
-  if (match(p, CATCH_TOKEN)) {
-    catch_exists = true;
-    begin_scope(p);
-
-    consume(p, IDENTIFIER_TOKEN, "missing exception class name");
-    type = identifier_constant(p, &p->previous);
-    address = current_blob(p)->count;
-
-    if (match(p, IDENTIFIER_TOKEN)) {
-      created_variable(p, p->previous);
-    } else {
-      emit_byte(p, OP_POP);
-    }
-
-    emit_byte(p, OP_POP_TRY);
-
-    ignore_whitespace(p);
-    statement(p);
-
-    end_scope(p);
+  if(match(p, AS_TOKEN)) {
+    consume(p, IDENTIFIER_TOKEN, "missing exception variable name");
+    created_variable(p, p->previous);
   } else {
-      type = make_constant(p, OBJ_VAL(copy_string(p->vm, "Exception", 9)));
-  }
-
-  patch_jump(p, exit_jump);
-
-  if (match(p, FINALLY_TOKEN)) {
-    final_exists = true;
-    // if we arrived here from either the try or handler block,
-    // we don't want to continue propagating the exception
-    emit_byte(p, OP_FALSE);
-    finally = current_blob(p)->count;
-
-    ignore_whitespace(p);
-    statement(p);
-
-    int continue_execution_address = emit_jump(p, OP_JUMP_IF_FALSE);
-    emit_byte(p, OP_POP); // pop the bool off the stack
-    emit_byte(p, OP_PUBLISH_TRY);
-    patch_jump(p, continue_execution_address);
     emit_byte(p, OP_POP);
   }
-
-  if (!final_exists && !catch_exists) {
-    error(p, "try block must contain at least one of catch or finally");
-  }
-
-  patch_try(p, try_begins, type, address, finally);
 }
 
 static void return_statement(b_parser *p) {
@@ -2343,10 +2266,6 @@ static void return_statement(b_parser *p) {
   } else {
     if (p->vm->compiler->type == TYPE_INITIALIZER) {
       error(p, "cannot return value from constructor");
-    }
-
-    if(p->is_trying) {
-      emit_byte(p, OP_POP_TRY);
     }
 
     expression(p);
@@ -2465,14 +2384,12 @@ static void synchronize(b_parser *p) {
       case WHILE_TOKEN:
       case ECHO_TOKEN:
       case ASSERT_TOKEN:
-      case TRY_TOKEN:
       case CATCH_TOKEN:
-      case DIE_TOKEN:
+      case RAISE_TOKEN:
       case RETURN_TOKEN:
       case STATIC_TOKEN:
       case SELF_TOKEN:
       case PARENT_TOKEN:
-      case FINALLY_TOKEN:
       case IN_TOKEN:
       case IMPORT_TOKEN:
       case AS_TOKEN:
@@ -2540,16 +2457,16 @@ static void statement(b_parser *p) {
     return_statement(p);
   } else if (match(p, ASSERT_TOKEN)) {
     assert_statement(p);
-  } else if (match(p, DIE_TOKEN)) {
-    die_statement(p);
+  } else if (match(p, RAISE_TOKEN)) {
+    raise_statement(p);
   } else if (match(p, LBRACE_TOKEN)) {
     begin_scope(p);
     block(p);
     end_scope(p);
   } else if (match(p, IMPORT_TOKEN)) {
     import_statement(p);
-  } else if (match(p, TRY_TOKEN)) {
-    try_statement(p);
+  } else if(match(p, CATCH_TOKEN)) {
+    catch_statement(p);
   } else {
     expression_statement(p, false, false);
   }
@@ -2571,7 +2488,6 @@ b_obj_func *compile(b_vm *vm, b_obj_module *module, const char *source) {
   parser.block_count = 0;
   parser.repl_can_echo = false;
   parser.is_returning = false;
-  parser.is_trying = false;
   parser.innermost_loop_start = -1;
   parser.innermost_loop_scope_depth = 0;
   parser.current_class = NULL;

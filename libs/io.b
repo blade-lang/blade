@@ -524,7 +524,7 @@ class TTY {
    */
   TTY(std) {
     if !is_file(std) {
-      die Exception('TTY expects a standard file as argument, ${typeof(std)} given')
+      raise Exception('TTY expects a standard file as argument, ${typeof(std)} given')
     }
 
     self.std = std
@@ -556,9 +556,9 @@ class TTY {
    */
   set_attr(option, attrs) {
     if !is_int(option) 
-      die Exception('integer expected as first argument, ${typeof(option)} given')
+      raise Exception('integer expected as first argument, ${typeof(option)} given')
     if !is_dict(attrs) 
-      die Exception('dictionary expected as second argument, ${typeof(attrs)} given')
+      raise Exception('dictionary expected as second argument, ${typeof(attrs)} given')
     return _io.TTY.tcsetattr(self.std, option, attrs)
   }
 
@@ -669,11 +669,11 @@ def getch() {
 def readline(message, secure, obscure_text) {
 
   if message != nil and !is_string(message)
-    die Exception('string expected in argument 1 (message)')
+    raise Exception('string expected in argument 1 (message)')
   if secure != nil and !is_bool(secure)
-    die Exception('boolean expected in argument 2 (secure)')
+    raise Exception('boolean expected in argument 2 (secure)')
   if obscure_text != nil and !is_string(obscure_text)
-    die Exception('string expected in argument 3 (obscure_text)')
+    raise Exception('string expected in argument 3 (obscure_text)')
 
   if secure == nil secure = false
   if obscure_text == nil obscure_text = '*'

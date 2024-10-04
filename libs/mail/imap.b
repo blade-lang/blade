@@ -52,7 +52,7 @@ class Imap {
    */
   Imap(options) {
     if options != nil and !is_dict(options)
-      die Exception('dictionary expected as argument to constructor')
+      raise Exception('dictionary expected as argument to constructor')
     if !options options = {}
 
     
@@ -189,9 +189,9 @@ class Imap {
    */
   exec(command, path) {
     if command != nil and !is_string(command)
-      die Exception('string expected in argument 1 (command)')
+      raise Exception('string expected in argument 1 (command)')
     if path != nil and !is_string(path)
-      die Exception('string expected in argument 2 (path)')
+      raise Exception('string expected in argument 2 (path)')
 
     var curl = self._init(path)
     curl.set_option(Option.CUSTOMREQUEST, command)
@@ -206,7 +206,7 @@ class Imap {
    */
   get_dirs(path) {
     if !is_string(path)
-      die Exception('string expected in argument 1 (path)')
+      raise Exception('string expected in argument 1 (path)')
     return self._to_list(self.exec(nil, path), 'list', path)
   }
 
@@ -232,7 +232,7 @@ class Imap {
    * @returns dictionary
    */
   select(name) {
-    if !name die Exception('name required')
+    if !name raise Exception('name required')
     return self._examine(self.exec('SELECT ${name}'))
   }
 
@@ -244,7 +244,7 @@ class Imap {
    * @returns dictionary
    */
   examine(name) {
-    if !name die Exception('name required')
+    if !name raise Exception('name required')
     return self._examine(self.exec('EXAMINE ${name}'))
   }
 
@@ -255,7 +255,7 @@ class Imap {
    * @returns list
    */
   create(name) {
-    if !name die Exception('name required')
+    if !name raise Exception('name required')
     return self._to_list(self.exec('CREATE ${name}'))
   }
 
@@ -266,7 +266,7 @@ class Imap {
    * @returns list
    */
   delete(name) {
-    if !name die Exception('name required')
+    if !name raise Exception('name required')
     return self._to_list(self.exec('DELETE ${name}'))
   }
 
@@ -278,7 +278,7 @@ class Imap {
    * @returns list
    */
   rename(old_name, new_name) {
-    if !old_name or !new_name die Exception('old and new name required')
+    if !old_name or !new_name raise Exception('old and new name required')
     return self._to_list(self.exec('RENAME ${old_name} ${new_name}'))
   }
 
@@ -291,7 +291,7 @@ class Imap {
    * @returns bool
    */
   subscribe(name) {
-    if !name die Exception('name required')
+    if !name raise Exception('name required')
     self.exec('SUBSCRIBE ${name}')
     return self._curl.get_info(Info.RESPONSE_CODE) == 250
   }
@@ -305,7 +305,7 @@ class Imap {
    * @returns bool
    */
   unsubscribe(name) {
-    if !name die Exception('name required')
+    if !name raise Exception('name required')
     self.exec('UNSUBSCRIBE ${name}')
     return self._curl.get_info(Info.RESPONSE_CODE) == 250
   }
@@ -339,7 +339,7 @@ class Imap {
    * @returns list
    */
   list(name, pattern) {
-    if !name die Exception('name required')
+    if !name raise Exception('name required')
     if !pattern and !is_string(pattern) pattern = '%'
     return self._to_list(self.exec('LIST ${name} ${pattern}'))
   }
@@ -352,7 +352,7 @@ class Imap {
    * @returns list
    */
   lsub(name, pattern) {
-    if !name die Exception('name required')
+    if !name raise Exception('name required')
     if !pattern and !is_string(pattern) pattern = '%'
     return self._to_list(self.exec('LSUB ${name} ${pattern}'))
   }
@@ -379,8 +379,8 @@ class Imap {
    * @returns bool|string
    */
   status(name, attrs) {
-    if !name die Exception('name required')
-    if !attrs die Exception('attrs required')
+    if !name raise Exception('name required')
+    if !attrs raise Exception('attrs required')
     var result = self.exec('STATUS ${name} (${filter})')
     if self._curl.get_info(Info.RESPONSE_CODE) == 250 {
       var response = {}
@@ -406,7 +406,7 @@ class Imap {
    */
   append(folder, message) {
     if !instance_of(message, Message)
-      die Exception('instance of Message expected in second argument')
+      raise Exception('instance of Message expected in second argument')
 
     var examine_result = self.examine(folder)
     # var selection_result = self.select(folder)
@@ -468,7 +468,7 @@ class Imap {
    */
   expunge(path) {
     if !is_string(path)
-      die Exception('string expected in argument 1 (path)')
+      raise Exception('string expected in argument 1 (path)')
 
     self.exec('EXPUNGE', path)
     return self._curl.get_info(Info.RESPONSE_CODE) == 250
@@ -492,9 +492,9 @@ class Imap {
    */
   search(query, folder) {
     if query != nil and !is_string(query)
-      die Exception('string expected in argument 1 (query)')
+      raise Exception('string expected in argument 1 (query)')
     if folder != nil and !is_string(folder)
-      die Exception('string expected in argument 2 (folder)')
+      raise Exception('string expected in argument 2 (folder)')
 
     if !folder folder = 'INBOX'
     if !query query = 'NEW'
@@ -513,9 +513,9 @@ class Imap {
    */
   fetch(uid, path) {
     if uid != nil and !is_number(uid)
-      die Exception('number expected in argument 1 (uid)')
+      raise Exception('number expected in argument 1 (uid)')
     if path != nil and !is_string(path)
-      die Exception('string expected in argument 2 (path)')
+      raise Exception('string expected in argument 2 (path)')
 
     if !uid uid = 1
     if !path path = 'INBOX'
@@ -529,8 +529,8 @@ class Imap {
    * @returns bool
    */
   copy(id, destination, path) {
-    if !id die Exception('id required')
-    if !destination die Exception('destination required')
+    if !id raise Exception('id required')
+    if !destination raise Exception('destination required')
     self.exec('COPY ${id} ${destination}', path)
     return self._curl.get_info(Info.RESPONSE_CODE) == 250
   }
@@ -544,10 +544,10 @@ class Imap {
    * @returns bool
    */
   store(id, command, flags) {
-    if !id die Exception('id required')
+    if !id raise Exception('id required')
     if !command or !command.match('^[+-]?FLAGS([.]SILENT)?')
-      die Exception('invalid command')
-    if !flags die Exception('flags required')
+      raise Exception('invalid command')
+    if !flags raise Exception('flags required')
 
     self.exec('STORE ${id} ${command.upper()} ${flags.upper()}', path)
     return self._curl.get_info(Info.RESPONSE_CODE) == 250
@@ -580,6 +580,6 @@ class Imap {
  */
 def imap(options) {
   if options != nil and !is_dict(options)
-    die Exception('dictionary expected as argument to constructor')
+    raise Exception('dictionary expected as argument to constructor')
   return Imap(options)
 }

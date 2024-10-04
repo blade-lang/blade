@@ -44,8 +44,8 @@ class HttpResponse {
   var redirects
 
   /**
-   * The final URL that provided the HttpResponse. This will sometimes differ from the 
-   * original request URI.
+   * The final URL that provided the HttpResponse. This will sometimes 
+   * differ from the original request URI.
    * @type string
    */
   var responder
@@ -61,6 +61,14 @@ class HttpResponse {
    * @type list
    */
   var cookies
+
+  /**
+   * The SSL certificate for the secure connection. This is only available 
+   * when visiting HTTPS/SSL/TLS secured websites.
+   * 
+   * @type dict|nil
+   */
+  var certificate
 
   /**
    * @param string body
@@ -98,7 +106,7 @@ class HttpResponse {
    */
   write(data) {
     if !is_string(data) and !is_bytes(data)
-      die Exception('data must be bytes or string')
+      raise Exception('data must be bytes or string')
     if is_string(data) self.body += data.to_bytes()
     else self.body += data
   }
@@ -114,7 +122,7 @@ class HttpResponse {
   json(data, status_code) {
     if status_code != nil {
       if !is_number(status_code)
-        die Exception('argument 2 (status_code) expects a number')
+        raise Exception('argument 2 (status_code) expects a number')
       self.status = status_code
     }
     self.content_type('application/json')
@@ -132,11 +140,12 @@ class HttpResponse {
   file(path, status_code) {
     if status_code != nil {
       if !is_number(status_code)
-        die Exception('argument 2 (status_code) expects a number')
+        raise Exception('argument 2 (status_code) expects a number')
       self.status = status_code
     }
 
     self.content_type(mime.detect_from_name(path))
+    
     var file_data = file(path, 'rb').read()
     self.write(file_data)
     file_data.dispose()
@@ -157,17 +166,17 @@ class HttpResponse {
    */
   set_cookie(key, value, domain, path, expires, secure, extras) {
     if !is_string(key) or !is_string(value)
-      die Exception('argument 1 (key) and argument 2 (value) must be string')
+      raise Exception('argument 1 (key) and argument 2 (value) must be string')
     if (domain != nil and !is_string(domain)) or
         (path != nil and !is_string(path)) or
         (expires != nil and !is_string(expires))
-      die Exception(
+      raise Exception(
         'argument 3 (domain), argument 4 (path) and argument 5 (expires) must be string when given'
       )
     if secure != nil and !is_bool(secure)
-      die Exception('argument 6 (secure) must be a boolean')
+      raise Exception('argument 6 (secure) must be a boolean')
     if extras != nil and !is_string(extras)
-      die Exception('argument 7 (extras) must be a string when given')
+      raise Exception('argument 7 (extras) must be a string when given')
 
     # fix common prefix support for clients that implement them
     # NOTE: they have no effect when the client do not.
@@ -196,15 +205,15 @@ class HttpResponse {
    */
   redirect(location, status) {
     if !is_string(location)
-      die Exception('location must be a string')
+      raise Exception('location must be a string')
     if status != nil and !is_number(status) and !is_int(status)
-      die Exception('status must be an integer if present')
+      raise Exception('status must be an integer if present')
 
     self.headers.set('Location', location)
     self.status = status ? status : 302
 
     if self.status < 300 or self.status > 399
-      die HttpException('redirect status code must be a 30x')
+      raise HttpException('redirect status code must be a 30x')
     self.body = bytes(0)
   }
 
@@ -215,7 +224,7 @@ class HttpResponse {
    */
   content_type(mimetype) {
     if !is_string(mimetype)
-      die Exception('argument 1 (mimetype) expects string')
+      raise Exception('argument 1 (mimetype) expects string')
 
     self.headers.set('Content-Type', mimetype)
   }

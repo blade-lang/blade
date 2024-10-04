@@ -16,19 +16,17 @@ typedef enum {
 } b_ptr_result;
 
 typedef struct {
-  uint16_t address;
-  uint16_t finally_address;
-  b_obj_class *klass;
-} b_exception_frame;
-
-typedef struct {
   b_obj_closure *closure;
   uint8_t *ip;
   b_value *slots;
-  int handlers_count;
   int gc_protected;
-  b_exception_frame handlers[MAX_EXCEPTION_HANDLERS];
 } b_call_frame;
+
+typedef struct {
+  b_call_frame *frame;
+  uint16_t offset;
+  b_value value;
+} b_error_frame;
 
 struct s_vm {
   b_call_frame frames[FRAMES_MAX];
@@ -38,6 +36,9 @@ struct s_vm {
   b_blob *blob;
   uint8_t *ip;
   b_obj_up_value *open_up_values;
+
+  b_error_frame *errors[ERRORS_MAX];
+  b_error_frame **error_top;
 
   size_t stack_capacity;
   b_value *stack;
@@ -98,6 +99,10 @@ b_value pop_n(b_vm *vm, int n);
 
 b_value peek(b_vm *vm, int distance);
 
+void push_error(b_vm *vm, b_error_frame *frame);
+b_error_frame* pop_error(b_vm *vm);
+b_error_frame* peek_error(b_vm *vm);
+
 static inline void add_module(b_vm *vm, b_obj_module *module) {
   cond_dbg(vm->current_frame, printf("Adding module %s from %s to %s in %s\n", 
     module->name, 
@@ -131,8 +136,6 @@ void define_native_method(b_vm *vm, b_table *table, const char *name,
 bool is_instance_of(b_obj_class *klass1, char *klass2_name);
 
 bool do_throw_exception(b_vm *vm, bool is_assert, const char *format, ...);
-
-void do_runtime_error(b_vm *vm, const char *format, ...);
 
 b_obj_instance *create_exception(b_vm *vm, b_obj_string *message);
 
@@ -169,6 +172,8 @@ static inline void gc_clear_protection(b_vm *vm) {
 #define GC(o) gc_protect(vm, (b_obj*)(o))
 #define CLEAR_GC() gc_clear_protection(vm)
 
+bool call_value(b_vm *vm, b_value callee, int arg_count);
+b_value raw_closure_call(b_vm *vm, b_obj_closure *closure, b_obj_list *args, bool must_push);
 b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args);
 bool queue_closure(b_vm *vm, b_obj_closure *closure);
 void register_module__FILE__(b_vm *vm, b_obj_module *module);

@@ -27,6 +27,7 @@
 
 static inline void reset_stack(b_vm *vm) {
   vm->stack_top = vm->stack;
+  vm->error_top = vm->errors;
   vm->frame_count = 0;
   vm->open_up_values = NULL;
 }
@@ -66,26 +67,11 @@ static b_value get_stack_trace(b_vm *vm) {
   return STRING_L_VAL("", 0);
 }
 
-bool propagate_exception(b_vm *vm, bool is_assert) {
-  b_obj_instance *exception = AS_INSTANCE(peek(vm, 0));
-
-  while (vm->frame_count > 0) {
-    vm->current_frame = &vm->frames[vm->frame_count - 1];
-    for (int i = vm->current_frame->handlers_count; i > 0; i--) {
-      b_exception_frame handler = vm->current_frame->handlers[i - 1];
-      b_obj_func *function = vm->current_frame->closure->function;
-
-      if (handler.address != 0 && is_instance_of(exception->klass, handler.klass->name->chars)) {
-        vm->current_frame->ip = &function->blob.code[handler.address];
-        return true;
-      } else if (handler.finally_address != 0) {
-        push(vm, TRUE_VAL); // continue propagating once the 'finally' block completes
-        vm->current_frame->ip = &function->blob.code[handler.finally_address];
-        return true;
-      }
-    }
-
-    vm->frame_count--;
+bool print_exception(b_vm *vm, b_obj_instance *exception, bool is_assert) {
+  if(vm->error_top - vm->errors > 0) {
+    b_error_frame *error = peek_error(vm);
+    error->value = OBJ_VAL(exception);
+    return true;
   }
 
   fflush(stdout); // flush out anything on stdout first
@@ -113,20 +99,9 @@ bool propagate_exception(b_vm *vm, bool is_assert) {
     fprintf(stderr, "  StackTrace:\n%s\n", trace_str);
   }
 
-  return false;
-}
+  reset_stack(vm);
 
-bool push_exception_handler(b_vm *vm, b_obj_class *type, int address, int finally_address) {
-  b_call_frame *frame = &vm->frames[vm->frame_count - 1];
-  if (frame->handlers_count == MAX_EXCEPTION_HANDLERS) {
-    do_runtime_error(vm, "too many nested exception handlers in one function");
-    return false;
-  }
-  frame->handlers[frame->handlers_count].address = address;
-  frame->handlers[frame->handlers_count].finally_address = finally_address;
-  frame->handlers[frame->handlers_count].klass = type;
-  frame->handlers_count++;
-  return true;
+  return false;
 }
 
 bool do_throw_exception(b_vm *vm, bool is_assert, const char *format, ...) {
@@ -143,9 +118,23 @@ bool do_throw_exception(b_vm *vm, bool is_assert, const char *format, ...) {
   b_value stacktrace = get_stack_trace(vm);
   push(vm, stacktrace);
   table_set(vm, &instance->properties, STRING_L_VAL("stacktrace", 10), stacktrace);
+  table_set(vm, &instance->properties, STRING_L_VAL("type", 4),
+    STRING_L_VAL(instance->klass->name->chars, instance->klass->name->length)
+  );
   pop(vm);
 
-  return propagate_exception(vm, is_assert);
+  pop(vm); // pop the instance
+
+  bool return_val = print_exception(vm, instance, is_assert);
+  if(return_val) {
+    // switch context immediately to the catch block
+    b_error_frame *error = peek_error(vm);
+    vm->frame_count -= vm->current_frame - error->frame;
+    vm->current_frame = error->frame;
+    vm->current_frame->ip = &error->frame->closure->function->blob.code[error->offset];
+  }
+
+  return return_val;
 }
 
 static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
@@ -183,11 +172,6 @@ static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
   write_blob(vm, &function->blob, OP_POP, 0);
   write_blob(vm, &function->blob, OP_POP, 0);
 
-  // g_loc 0
-//  write_blob(vm, &function->blob, OP_GET_LOCAL, 0);
-//  write_blob(vm, &function->blob, (0 >> 8) & 0xff, 0);
-//  write_blob(vm, &function->blob, 0 & 0xff, 0);
-
   // ret
   write_blob(vm, &function->blob, OP_RETURN, 0);
 
@@ -220,47 +204,6 @@ inline b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
   return instance;
 }
 
-void do_runtime_error(b_vm *vm, const char *format, ...) {
-  fflush(stdout); // flush out anything on stdout first
-
-  b_call_frame *frame = &vm->frames[vm->frame_count - 1];
-  b_obj_func *function = frame->closure->function;
-
-  size_t instruction = frame->ip - function->blob.code - 1;
-  int line = function->blob.lines[instruction];
-
-  fprintf(stderr, "RuntimeError: ");
-
-  va_list args;
-  va_start(args, format);
-  vfprintf(stderr, format, args);
-  va_end(args);
-
-  fprintf(stderr, " -> %s:%d ", function->module->file, line);
-  fputs("\n", stderr);
-
-  if (vm->frame_count > 1) {
-    fprintf(stderr, "StackTrace:\n");
-    for (int i = vm->frame_count - 1; i >= 0; i--) {
-      frame = &vm->frames[i];
-      function = frame->closure->function;
-
-      // -1 because the IP is sitting on the next instruction to be executed
-      instruction = frame->ip - function->blob.code - 1;
-
-      fprintf(stderr, "    %s:%d -> ", function->module->file, function->blob.lines[instruction]);
-      if (function->name == NULL) {
-        fprintf(stderr, "@.script()");
-      } else {
-        fprintf(stderr, "%s()", function->name->chars);
-      }
-      fprintf(stderr, "\n");
-    }
-  }
-
-  reset_stack(vm);
-}
-
 static inline void grow_vm_stack(b_vm *vm, size_t new_capacity) {
   b_value *new_stack = ALLOCATE(b_value, new_capacity);
   for(size_t i = 0; i < new_capacity; i++) {
@@ -287,6 +230,25 @@ inline void push(b_vm *vm, b_value value) {
 
   *vm->stack_top = value;
   vm->stack_top++;
+}
+
+inline void push_error(b_vm *vm, b_error_frame *frame) {
+  if(vm->error_top - vm->errors > ERRORS_MAX) {
+    fprintf(stderr, "Exit: Maximum open catch blocks %d exceeded.\n", ERRORS_MAX);
+    exit(EXIT_RUNTIME);
+  }
+
+  *vm->error_top = frame;
+  vm->error_top++;
+}
+
+inline b_error_frame* pop_error(b_vm *vm) {
+  vm->error_top--;
+  return *vm->error_top;
+}
+
+inline b_error_frame* peek_error(b_vm *vm) {
+  return vm->error_top[-1];
 }
 
 inline b_value pop(b_vm *vm) {
@@ -595,6 +557,7 @@ void init_vm(b_vm *vm) {
 
 void free_vm(b_vm *vm) {
   free_objects(vm);
+
   // since object in module can exist in globals
   // it must come before
   free_table(vm, &vm->modules);
@@ -608,6 +571,11 @@ void free_vm(b_vm *vm) {
   free_table(vm, &vm->methods_bytes);
 
   free(vm->stack);
+
+  for(b_error_frame **err = vm->errors; err < vm->error_top; err++) {
+    free(*err);
+  }
+
   free(vm);
 }
 
@@ -2453,57 +2421,32 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         break;
       }
 
-      case OP_DIE: {
+      case OP_RAISE: {
         if (!IS_INSTANCE(peek(vm, 0)) ||
             !is_instance_of(AS_INSTANCE(peek(vm, 0))->klass, vm->exception_class->name->chars)) {
           runtime_error("instance of Exception expected");
           break;
         }
 
+        b_value exception = peek(vm, 0);
         b_value stacktrace = get_stack_trace(vm);
-        b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
+        b_obj_instance *instance = AS_INSTANCE(exception);
         table_set(vm, &instance->properties, STRING_L_VAL("stacktrace", 10), stacktrace);
-        if (propagate_exception(vm, false)) {
-          vm->current_frame = &vm->frames[vm->frame_count - 1];
+        table_set(vm, &instance->properties, STRING_L_VAL("type", 4),
+          STRING_L_VAL(instance->klass->name->chars, instance->klass->name->length)
+        );
+        pop(vm); // pop the exception
+
+        if(print_exception(vm, instance, false)) {
+          b_error_frame *error = peek_error(vm);
+          vm->frame_count -= vm->current_frame - error->frame;
+          vm->current_frame = error->frame;
+          vm->current_frame->ip = &error->frame->closure->function->blob.code[error->offset];
           break;
         }
 
         EXIT_VM();
-      }
-
-      case OP_TRY: {
-        b_obj_string *type = READ_STRING();
-        uint16_t address = READ_SHORT();
-        uint16_t finally_address = READ_SHORT();
-
-        if (address != 0) {
-          b_value value;
-          if (!table_get(&vm->globals, OBJ_VAL(type), &value) || !IS_CLASS(value)) {
-            if(!table_get(&vm->current_frame->closure->function->module->values, OBJ_VAL(type), &value) || !IS_CLASS(value)) {
-              runtime_error("object of type '%s' is not an exception", type->chars);
-              break;
-            }
-          }
-          push_exception_handler(vm, AS_CLASS(value), address, finally_address);
-        } else {
-          push_exception_handler(vm, NULL, address, finally_address);
-        }
         break;
-      }
-
-      case OP_POP_TRY: {
-        vm->current_frame->handlers_count--;
-        break;
-      }
-
-      case OP_PUBLISH_TRY: {
-        vm->current_frame->handlers_count--;
-        if (propagate_exception(vm, false)) {
-          vm->current_frame = &vm->frames[vm->frame_count - 1];
-          break;
-        }
-
-        EXIT_VM();
       }
 
       case OP_SWITCH: {
@@ -2536,6 +2479,24 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         break;
       }
 
+      case OP_BEGIN_CATCH: {
+        uint16_t offset = READ_SHORT();
+
+        b_error_frame *error = ALLOCATE(b_error_frame, 1);
+        error->frame = vm->current_frame;
+        error->offset = offset;
+        error->value = NIL_VAL;
+
+        push_error(vm, error);
+        break;
+      }
+
+      case OP_END_CATCH: {
+        b_error_frame *error = pop_error(vm);
+        push(vm, error->value);
+        break;
+      }
+
       default:
         break;
     }
@@ -2560,11 +2521,13 @@ void register_module__FILE__(b_vm *vm, b_obj_module *module) {
 }
 
 // helper function to access call outside the vm file.
-b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
+b_value raw_closure_call(b_vm *vm, b_obj_closure *closure, b_obj_list *args, bool must_push) {
   b_value *stack_top = vm->stack_top;
 
   // set the closure before the args
-  push(vm, OBJ_VAL(closure));
+  if(must_push) {
+    push(vm, OBJ_VAL(closure));
+  }
 
   int arg_count = 0;
   if(args && (arg_count = args->items.count)) {
@@ -2585,6 +2548,10 @@ b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
 
   vm->stack_top = stack_top;
   return result;
+}
+
+b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
+  return raw_closure_call(vm, closure, args, true);
 }
 
 // helper function to access call outside the vm file.

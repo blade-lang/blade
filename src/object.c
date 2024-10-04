@@ -51,11 +51,12 @@ b_obj_ptr *new_closable_named_ptr(b_vm *vm, void *pointer, char *name, b_ptr_fre
   return ptr;
 }
 
-b_obj_module *new_module(b_vm *vm, char *name, char *file) {
+b_obj_module *new_module(b_vm *vm, char *name, char *file, b_obj_module *parent) {
   b_obj_module *module = ALLOCATE_OBJ(b_obj_module, OBJ_MODULE);
   init_table(&module->values);
   module->name = name;
   module->file = file;
+  module->parent = parent;
   module->unloader = NULL;
   module->preloader = NULL;
   module->handle = NULL;
@@ -254,13 +255,21 @@ static void print_list(b_obj_list *list) {
 
 static void print_bytes(b_obj_bytes *bytes) {
   printf("(");
-  for (int i = 0; i < bytes->bytes.count; i++) {
+
+  int count = bytes->bytes.count <= 20 ? bytes->bytes.count : 20;
+
+  for (int i = 0; i < count; i++) {
     printf("%x", bytes->bytes.bytes[i]);
     if (i != bytes->bytes.count - 1) {
       printf(" ");
     }
   }
-  printf(")");
+
+  if(bytes->bytes.count > 20) {
+    printf(" ...%d)", bytes->bytes.count);
+  } else {
+    printf(")");
+  }
 }
 
 static void print_dict(b_obj_dict *dict) {
@@ -415,13 +424,15 @@ static inline b_obj_string *list_to_string(b_vm *vm, b_value_arr *array) {
 }
 
 static inline b_obj_string *bytes_to_string(b_vm *vm, b_byte_arr *array) {
+#define blade_bytes_format____ "%x"
+
   char *str = strdup("(");
   int length = 1;
   for (int i = 0; i < array->count; i++) {
-    int len = (int)snprintf(NULL, 0, "0x%x", array->bytes[i]);
+    int len = (int)snprintf(NULL, 0, blade_bytes_format____, array->bytes[i]);
     char *chars = ALLOCATE(char, len);
     if (chars != NULL) {
-      sprintf(chars, "0x%x", array->bytes[i]);
+      sprintf(chars, blade_bytes_format____, array->bytes[i]);
       str = append_strings(str, chars);
       free(chars);
       length += len;
@@ -435,6 +446,8 @@ static inline b_obj_string *bytes_to_string(b_vm *vm, b_byte_arr *array) {
   str = append_strings(str, ")");
   length++;
   return take_string(vm, str, length);
+
+#undef blade_bytes_format____
 }
 
 static b_obj_string *dict_to_string(b_vm *vm, b_obj_dict *dict) {

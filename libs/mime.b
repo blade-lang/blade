@@ -25,9 +25,9 @@ class MimeFormat {
    */
   MimeFormat(mimetype, header) {
     if !is_string(mimetype)
-      die Exception('expecting mimetype as string')
+      raise Exception('expecting mimetype as string')
     if header and !is_list(header)
-      die Exception('Mime type definition must set header to nil, list of numbers or bytes')
+      raise Exception('Mime type definition must set header to nil, list of numbers or bytes')
 
     self.mimetype = mimetype
     self.header = header
@@ -406,7 +406,7 @@ var _mimes = {
  */
 def detect_from_name(name) {
   if !is_string(name)
-    die Exception('name must be string')
+    raise Exception('name must be string')
 
   for ext, mime in _mimes {
     if name.ends_with(ext) return mime.mimetype
@@ -437,10 +437,10 @@ def detect_from_name(name) {
  */
 def detect_from_header(file) {
   if !is_file(file)
-    die Exception('file object expected')
+    raise Exception('file object expected')
 
   if !file.mode().match('b') {
-    die Exception('detect_from_header expects file to be opened in binary mode')
+    raise Exception('detect_from_header expects file to be opened in binary mode')
   }
 
   var top_16 = file.read(16)
@@ -503,7 +503,7 @@ def detect_from_header(file) {
  */
 def detect(file) {
   if !is_file(file)
-    die Exception('file object expected')
+    raise Exception('file object expected')
 
   if file.mode().match('b') {
     var mime = detect_from_header(file)
@@ -538,9 +538,9 @@ def detect(file) {
  */
 def extend(extension, format) {
   if !is_string(extension) or extension[0] != '.'
-    die Exception('invalid file extension')
+    raise Exception('invalid file extension')
   if !instance_of(format, MimeFormat)
-    die Exception('instance of MimeFormat expected')
+    raise Exception('instance of MimeFormat expected')
   
   extension = extension.lower()
   

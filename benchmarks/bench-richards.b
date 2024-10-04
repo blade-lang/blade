@@ -233,7 +233,7 @@ class Task < TaskState {
   }
 
   fn(pkt,r) {
-    die Exception('not implemented')
+    raise Exception('not implemented')
   }
 
   addPacket(p,old) {
@@ -296,7 +296,7 @@ class Task < TaskState {
   findtcb(id) {
     var t = taskWorkArea.taskTab[id]
     if t == nil
-      die Exception("Bad task id ${id}")
+      raise Exception("Bad task id ${id}")
     return t
   }
 }

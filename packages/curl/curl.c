@@ -488,7 +488,7 @@ DEFINE_CURL_CONSTANT(CURLUSESSL_TRY)
 DEFINE_CURL_CONSTANT(CURLUSESSL_CONTROL)
 DEFINE_CURL_CONSTANT(CURLUSESSL_ALL)
 
-const char *get_error_message(int result) {
+const char *get_error_message(CURLcode result) {
   switch(result) {
     case CURLE_UNSUPPORTED_PROTOCOL: return "unsupported protocol";
     case CURLE_FAILED_INIT: return "library init failed";
@@ -566,7 +566,11 @@ const char *get_error_message(int result) {
     case CURLE_NO_CONNECTION_AVAILABLE: return "no connection available";
     case CURLE_SSL_PINNEDPUBKEYNOTMATCH: return "ssl pinned public key does not match";
     case CURLE_SSL_INVALIDCERTSTATUS: return "ssl invalid cert status";
+    case CURLE_HTTP2_STREAM: return "stream error in HTTP/2 framing layer";
     case CURLE_AUTH_ERROR: return "auth error";
+    case CURLE_HTTP3: return "http3 layer error";
+    case CURLE_SSL_CLIENTCERT: return "client-side certificate required";
+    case CURLE_PROXY: return "proxy handshake error";
     default: return "error occurred";
   }
 }
@@ -695,7 +699,7 @@ DECLARE_MODULE_METHOD(curl__easy_perform) {
   curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, b_Curl_WriteFunction);
   curl_easy_setopt(curl, CURLOPT_HEADERDATA, &headers);
 
-  int result = curl_easy_perform(curl);
+  CURLcode result = curl_easy_perform(curl);
   if(result == CURLE_OK) {
 
     b_obj_dict *dict = (b_obj_dict*)GC(new_dict(vm));

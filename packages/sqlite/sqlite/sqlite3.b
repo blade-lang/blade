@@ -35,7 +35,7 @@ class SQLite3 {
   SQLite3(path) {
     if path != nil {
       if !is_string(path)
-        die SQLiteException('database path expected')
+        raise SQLiteException('database path expected')
 
       self.path = path
     }
@@ -48,7 +48,7 @@ class SQLite3 {
     self._db = _open(self.path)
 
     if is_string(self._db)
-      die SQLiteException('could not open database: ${self._db}')
+      raise SQLiteException('could not open database: ${self._db}')
 
     self._is_open = true
   }
@@ -81,14 +81,14 @@ class SQLite3 {
    */
   exec(query, params) {
     if !is_string(query)
-      die SQLiteException('string expected, ${typeof(query)} given')
+      raise SQLiteException('string expected, ${typeof(query)} given')
 
     if !self._is_open
-      die SQLiteException('database not open for exec')
+      raise SQLiteException('database not open for exec')
 
     var result = _exec(self._db, query, params)
     if is_string(result)
-      die SQLiteException('SQL error ${result}')
+      raise SQLiteException('SQL error ${result}')
 
     return result
   }
@@ -107,7 +107,7 @@ class SQLite3 {
   last_insert_id() {
 
     if !self._is_open
-      die SQLiteException('database not open for exec')
+      raise SQLiteException('database not open for exec')
 
     return _last_insert_id(self._db)
   }
@@ -144,15 +144,15 @@ class SQLite3 {
   query(sql, params) {
     if params != nil {
       if !is_list(params) and !is_dict(params)
-        die SQLiteException('list of query parameters expected')
+        raise SQLiteException('list of query parameters expected')
     }
 
     if !self._is_open
-      die SQLiteException('database not open for query')
+      raise SQLiteException('database not open for query')
 
     var result = _query(self._db, sql, params)
     if is_string(result) 
-      die SQLiteException('SQL error ${result}')
+      raise SQLiteException('SQL error ${result}')
     
       # if no error occurs, the _query function always returns a valid cursor
     return SQLite3Cursor(self, result)

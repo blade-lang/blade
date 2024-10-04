@@ -15,8 +15,8 @@ var default_classes = {
 
 var blade_keywords = '|'.join([
   'as', 'assert', 'break', 'catch', 'class', 'continue',
-  'def', 'default', 'die', 'do', 'echo', 'else', 'finally', 'for',
-  'if', 'import', 'in', 'iter', 'return', 'static', 'try',
+  'def', 'default', 'do', 'echo', 'else', 'for', 'if',
+  'import', 'in', 'iter', 'raise', 'return', 'static',
   'using', 'var', 'when', 'while',
 ])
 

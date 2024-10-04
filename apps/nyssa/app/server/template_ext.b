@@ -33,9 +33,11 @@ def template_ext() {
       return t.replace('\n', '<br>')
     },
     draw: @( t ) {
-      try {
+      catch {
         return md.render(t)
-      } catch Exception e {
+      } as e
+
+      if e {
         log.error(e.message)
         log.error(e.stacktrace)
         return t

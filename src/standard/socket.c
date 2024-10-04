@@ -279,7 +279,21 @@ DECLARE_MODULE_METHOD(socket__send) {
 #endif
 #endif
 
-  RETURN_NUMBER(send(sock, content, length, flags));
+  int processed = 0;
+  do {
+    int write_size = length - processed < 1024 ? (length - processed) : 1024;
+    int rc = (int)send(sock, content + processed, write_size, flags);
+    if(rc < 0) {
+      RETURN_NUMBER(rc);
+    } else {
+      processed += rc;
+      if(processed == length) {
+        break;
+      }
+    }
+  } while(true);
+
+  RETURN_NUMBER(processed);
 }
 
 DECLARE_MODULE_METHOD(socket__recv) {

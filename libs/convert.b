@@ -20,7 +20,7 @@ var _reverse_hex_table = ['0', '1', '2', '3', '4', '5', '6', '7',
  */
 def hex_to_bytes(str) {
   if !is_string(str)
-    die Exception('string expected, ${typeof(str)} given')
+    raise Exception('string expected, ${typeof(str)} given')
 
   # str = ''.join(str.to_list().reverse())
 
@@ -44,7 +44,7 @@ def hex_to_bytes(str) {
  */
 def bytes_to_hex(data) {
   if !is_bytes(data)
-    die Exception('bytes expected, ${typeof(data)} given')
+    raise Exception('bytes expected, ${typeof(data)} given')
 
   var result = ''
 
@@ -63,7 +63,7 @@ def bytes_to_hex(data) {
  */
 def decimal_to_hex(n) {
   if !is_number(n)
-    die Exception('number expected, ${typeof(n)} given')
+    raise Exception('number expected, ${typeof(n)} given')
 
   var result = []
   while n > 0 {
@@ -82,7 +82,7 @@ def decimal_to_hex(n) {
  */
 def hex_to_decimal(str) {
   if !is_string(str)
-    die Exception('string expected, ${typeof(str)} given')
+    raise Exception('string expected, ${typeof(str)} given')
 
   if str.starts_with('0x')
     str = str[2,]
@@ -104,7 +104,26 @@ def hex_to_decimal(str) {
  */
 def unicode_to_hex(chr) {
   if !is_string(chr) or chr.length() > 1
-    die Exception('char expected, ${typeof(chr)} given')
+    raise Exception('char expected, ${typeof(chr)} given')
 
   return decimal_to_hex(ord(chr))
+}
+
+/**
+ * Converts a bytes (binary data) to a decimal number.
+ *
+ * @param bytes bytes
+ * @returns number
+ */
+def bytes_to_decimal(bytes) {
+  if !is_bytes(bytes)
+    raise Exception('bytes expected, ${typeof(bytes)} given')
+
+  var result = 0
+  for byte in bytes {
+    result <<= 8
+    result |= byte
+  }
+
+  return result
 }

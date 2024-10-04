@@ -22,7 +22,7 @@ class BIO {
    */
   BIO(method) {
     if !reflect.is_ptr(method)
-      die Exception('SSL BIO method expected')
+      raise Exception('SSL BIO method expected')
     self._ptr = _ssl.new_bio(method)
   }
 
@@ -35,11 +35,11 @@ class BIO {
    */
   set_ssl(ssl, option) {
     if !instance_of(ssl, SSL)
-      die Exception('instance of SSL expected')
+      raise Exception('instance of SSL expected')
 
     if !option option = constants.BIO_CLOSE
     if !is_int(option)
-      die Exception('option must be a BIO_* constant')
+      raise Exception('option must be a BIO_* constant')
 
     self._ssl = ssl
     _ssl.set_ssl(self._ptr, ssl.get_pointer(), option)
@@ -52,7 +52,7 @@ class BIO {
    */
   set_conn_hostname(name) {
     if !is_string(name)
-      die Exception('string expected')
+      raise Exception('string expected')
     _ssl.set_conn_hostname(self._ptr, name)
   }
 
@@ -63,7 +63,7 @@ class BIO {
    */
   set_accept_tname(name) {
     if !is_string(name)
-      die Exception('string expected')
+      raise Exception('string expected')
     _ssl.set_accept_name(self._ptr, name)
   }
 
@@ -74,7 +74,7 @@ class BIO {
    */
   set_conn_address(address) {
     if !is_string(address)
-      die Exception('string expected')
+      raise Exception('string expected')
     _ssl.set_conn_address(self._ptr, address)
   }
 
@@ -87,7 +87,7 @@ class BIO {
     if is_int(port) port = '${port}'
 
     if !is_string(port)
-      die Exception('integer or string expected')
+      raise Exception('integer or string expected')
 
     _ssl.set_conn_port(self._ptr, port)
   }
@@ -101,7 +101,7 @@ class BIO {
     if is_int(port) port = '${port}'
 
     if !is_string(port)
-      die Exception('integer or string expected')
+      raise Exception('integer or string expected')
 
     _ssl.set_accept_port(self._ptr, port)
   }
@@ -113,7 +113,7 @@ class BIO {
    */
   set_conn_family(family) {
     if !is_int(family)
-      die Exception('integer expected')
+      raise Exception('integer expected')
 
     _ssl.set_conn_family(self._ptr, family)
   }
@@ -125,7 +125,7 @@ class BIO {
    */
   set_accept_family(family) {
     if !is_int(family)
-      die Exception('integer expected')
+      raise Exception('integer expected')
 
     _ssl.set_accept_family(self._ptr, family)
   }
@@ -211,9 +211,9 @@ class BIO {
    */
   set_fd(fd, opt) {
     if !is_int(fd)
-      die Exception('fd must be an integer')
+      raise Exception('fd must be an integer')
     if opt != nil and !_close_opts.contains(fd)
-      die Exception('opt must be one of BIO_CLOSE or BIO_NOCLOSE')
+      raise Exception('opt must be one of BIO_CLOSE or BIO_NOCLOSE')
 
     if !opt opt = constants.BIO_NOCLOSE
 
@@ -230,7 +230,7 @@ class BIO {
     if !is_blocking is_blocking = true
 
     if !is_bool(is_blocking)
-      die Exception('boolean expected')
+      raise Exception('boolean expected')
 
     _ssl.set_nbio(self._ptr, is_blocking)
   }
@@ -245,7 +245,7 @@ class BIO {
    */
   push(bio) {
     if !instance_of(bio, BIO)
-      die Exception('instance of BIO expected')
+      raise Exception('instance of BIO expected')
     if bio {
       _ssl.push(self._ptr, bio.get_pointer())
     }
@@ -267,13 +267,13 @@ class BIO {
    */
   write(data) {
     if !is_string(data) and !is_bytes(data)
-      die Exception('string or bytes expected')
+      raise Exception('string or bytes expected')
 
     if is_bytes(data) data = to_string(data)
 
     var result = _ssl.bio_write(self._ptr, data)
     if result == -1
-      die Exception(self.error_string())
+      raise Exception(self.error_string())
     
     return result
   }
@@ -287,11 +287,11 @@ class BIO {
   read(length) {
     if !length length = 1024
     if !is_int(length)
-      die Exception('integer expected')
+      raise Exception('integer expected')
     
     var result = _ssl.bio_read(self._ptr, length)
     if result == nil {
-      die Exception(self.error_string())
+      raise Exception(self.error_string())
     }
 
     return result
@@ -333,7 +333,7 @@ class BIO {
    */
   error(code) {
     if code != nil and !is_number(code) and !is_int(code)
-      die Exception('integer expected')
+      raise Exception('integer expected')
       
     if !code code = -1
     return _ssl.error(self._ptr, code)

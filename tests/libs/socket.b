@@ -2,9 +2,9 @@ import socket { * }
 
 def serve(port, on_client_receive) {
   if !is_number(port)
-    die Exception('number expected at parameter 1')
+    raise Exception('number expected at parameter 1')
   if on_client_receive and !is_function(on_client_receive)
-    die Exception('function expected at parameter 2')
+    raise Exception('function expected at parameter 2')
 
   var id = 1
 
@@ -23,18 +23,20 @@ def serve(port, on_client_receive) {
     # timeout if we can't send after 10 second
     client.set_option(SO_SNDTIMEO, 2000)
 
-    try {
+    catch {
       var data = client.receive()
       if data {
         echo 'Request received:\n${data}\n'
         on_client_receive(client, id, data)
       }
-    } catch Exception e {
+    } as e
+
+    id++
+    client.close()
+    echo 'Client disconnected...'
+
+    if e {
       echo 'Client error: ${e.message}'
-    } finally {
-      id++
-      client.close()
-      echo 'Client disconnected...'
     }
   }
 }

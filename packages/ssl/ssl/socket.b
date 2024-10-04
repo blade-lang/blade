@@ -141,9 +141,9 @@ class TLSSocket {
    */
   TLSSocket(socket, context, ssl) {
     if socket != nil and !instance_of(socket, Socket)
-      die Exception('instance of Socket expected in first argument')
+      raise Exception('instance of Socket expected in first argument')
     if context != nil and !instance_of(context, SSLContext)
-      die Exception('instance of SSLContext expected in second argument')
+      raise Exception('instance of SSLContext expected in second argument')
 
     if !socket self._socket = Socket()
     else self._socket = socket
@@ -274,7 +274,7 @@ class TLSSocket {
     ssl.set_accept_state()
 
     # var accepted = ssl.accept()
-    # if !accepted die Exception(ssl.error(accepted))
+    # if !accepted raise Exception(ssl.error(accepted))
 
     var client = TLSSocket(s, self._context, ssl)
     client.is_connected = true
@@ -386,7 +386,7 @@ class TLSSocket {
    */
   set_context(context) {
     if !instance_of(content, SSLContext)
-      die Exception('instance of SSLContext expected')
+      raise Exception('instance of SSLContext expected')
     self._context = context
   }
 
