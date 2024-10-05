@@ -25,10 +25,13 @@ def generate_publisher_key(name) {
 def validate_auth_data(req, res) {
   if !req.headers return res.fail(status.UNAUTHORIZED)
 
-  var key = req.headers.get('Nyssa-Publisher-Key', nil)
+  var headers_cache = {}
+  req.headers.each(@(v, k) { headers_cache[k.lower()] = v })
+
+  var key = headers_cache.get('nyssa-publisher-key', nil)
   if !key return res.fail(status.UNAUTHORIZED)
 
-  var name = req.headers.get('Nyssa-Publisher-Name', nil)
+  var name = req.headers.get('nyssa-publisher-name', nil)
   if !name return res.fail(status.UNAUTHORIZED)
 
   var publisher = db.get_publisher(name, key)

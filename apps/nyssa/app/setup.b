@@ -27,14 +27,15 @@ var STATE_FILE = '${STORAGE_DIR}/config.json'
 var REPOSITORY_HOST = '127.0.0.1'
 var REPOSITORY_PORT = 3000
 
-var DEFAULT_REPOSITORY = 'https://nyssa.bladelang.org'
+# var DEFAULT_REPOSITORY = 'https://nyssa.bladelang.org'
+var DEFAULT_REPOSITORY = 'http://localhost:3000'
 
 # frontend
 var PACKAGES_PER_PAGE = 10
 var SESSION_NAME = 'NYSSA-SESSION-ID'
 
 # Nyssa directory
-var NYSSA_DIR = os.dir_name(os.args[1])
+var NYSSA_DIR = os.dir_name(os.dir_name(__file__))
 
 var config_file = os.join_paths(NYSSA_DIR, CONFIG_FILE)
 if (config_file = file(config_file)) and config_file.exists() {

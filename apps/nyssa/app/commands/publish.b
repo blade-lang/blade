@@ -93,23 +93,21 @@ def run(value, options, success, error) {
     if zip.compress(os.cwd(), tmp_dest) {
       os.change_dir(curr_dir)
       os.remove_dir(tmp_root, true)
-      var client = http.HttpClient()
 
       # set authentication headers
       log.info('Authenticating')
-      client.headers = {
-        'Nyssa-Publisher-Name': state.name,
-        'Nyssa-Publisher-Key': state.key,
-      }
 
       # make the request
       log.info('Uploading ${config.name}@${config.version} to ${repo}...')
-      var res = client.send_request('${repo}/api/create-package', 'POST', {
+      var res = http.post('${repo}/api/create-package', {
         name: config.name,
         version: config.version,
         config: json.encode(config),
         source: file(tmp_dest),
         readme: file(readme_file).exists() ? file(readme_file).read() : nil,
+      }, {
+        'Nyssa-Publisher-Name': state.name,
+        'Nyssa-Publisher-Key': state.key,
       })
       var body = json.decode(res.body.to_string())
 
