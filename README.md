@@ -36,14 +36,13 @@ server.listen()
 - **Zero-dependency full-stack web development**: Blade comes with a built-in web server and a rich set of tools and libraries that support it, making it easy to build composable full-stack web applications out of the box:
   - Built-in Model-View-Template (MVT) based HTTP web server.
   - Built-in testing framework.
-  - Built-in Object Relation Mapping support &mdash; Planned!
   - Built-in support for multiple databases.
   - Built-in web template engine &mdash; `Wire`.
   - Built-in routing library.
   - Built-in mail library with SMTP, IMAP, and POP3 support.
   - Built-in device integrations (such as support for COM/Ports, USB, etc.) &mdash; Planned!
   - Built-in cryptography library.
-  - Built-in support for media processing (Image, audio, video, etc.) &mdash; Planned!
+  - Built-in support for media processing (Image - Done, audio, video, etc.) &mdash; Planned!
   - And more.
 - **Function promotion**: A feature of the Blade language that makes it easy to reuse any code from an imported module.
 - **Access modifiers**: Unlike JavaScript and Python, Blade supports access modifiers for variables, properties, functions, classes, modules, etc.
@@ -63,11 +62,11 @@ To install Blade, please follow the instructions in the [Building](./BUILDING.md
 
 ## Usage
 
-To start using Blade, please refer to the [Tutorial](https://bladelang.com/tutorial/index.html) section of the online documentation.
+To start using Blade, please refer to the [Tutorial](https://bladelang.org/tutorial/index.html) section of the online documentation.
 
 ## API Documentation
 
-API documentation for Blade is under active development and can be found at [bladelang.com](https://bladelang.com/standard/index.html).
+API documentation for Blade is under active development and can be found at [bladelang.org](https://bladelang.org/standard/index.html).
 
 ## Community
 
