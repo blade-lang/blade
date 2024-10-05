@@ -40,7 +40,7 @@ nyssa install --global <package_name>
 
 > **NOTE:** You can install a package globally from any directory on your device. A `nyssa.json` file will only be updated if it is ran inside a nyssa project.
 
-You can also choose to install a package from another repository other than [nyssa.bladelang.com](https://nyssa.bladelang.com) by specifying the `--repo` flag (or `-r` for short) like below.
+You can also choose to install a package from another repository other than [nyssa.bladelang.org](https://nyssa.bladelang.org) by specifying the `--repo` flag (or `-r` for short) like below.
 
 ```
 nyssa install --repo <repo_url> <package_name>

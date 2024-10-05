@@ -8,7 +8,7 @@ Before publishing a package, there are a few things you should consider when cho
 
 1. It must be unique. Package names are unique throughout a repository irrespective of who publishes them. 
   
-  It is advisable to first search the repository you want to publish to (such as [nyssa.bladelang.com](nyssa.bladelang.com)) for any package already using the name you want to choose. 
+  It is advisable to first search the repository you want to publish to (such as [nyssa.bladelang.org](nyssa.bladelang.org)) for any package already using the name you want to choose. 
   
   > It is also highly possible but not conventional to have the same package published under different names in different repositories.
 2. It should be descriptive.

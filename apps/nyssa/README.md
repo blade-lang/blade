@@ -42,7 +42,7 @@ Nyssa is the official package manager for the Blade programming language. It is 
 
 ## Documentation
 
-To read the documentation, see the [Getting started](https://nyssa.bladelang.com/docs) guide on the website.
+To read the documentation, see the [Getting started](https://nyssa.bladelang.org/docs) guide on the website.
 
 
 ## Contributing

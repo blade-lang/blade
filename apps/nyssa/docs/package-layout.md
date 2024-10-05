@@ -50,7 +50,7 @@ package.json files. A typical sample of a complete `nyssa.json` file looks like 
   "author": "Package Author <someone@example.com>", 
   "license": "MIT", 
   "sources": [
-    "nyssa.bladelang.com"
+    "nyssa.bladelang.org"
   ],
   "deps": {
     "dependecny1": "1.0.0",

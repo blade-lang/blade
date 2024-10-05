@@ -2,7 +2,7 @@
 
 Nyssa is a self-hostable repository.
 
-This means that you can install and configure your own private or custom instance of [nyssa.bladelang.com](https://nyssa.bladelang.com) that people can publish to and install packages from. In fact, [nyssa.bladelang.com](https://nyssa.bladelang.com) is essentially just another private repository that is accessible to everyone in the Blade community and hosted on the public web.
+This means that you can install and configure your own private or custom instance of [nyssa.bladelang.org](https://nyssa.bladelang.org) that people can publish to and install packages from. In fact, [nyssa.bladelang.org](https://nyssa.bladelang.org) is essentially just another private repository that is accessible to everyone in the Blade community and hosted on the public web.
 
 ### Starting the respository server
 
