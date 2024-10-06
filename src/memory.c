@@ -400,6 +400,15 @@ void free_objects(b_vm *vm) {
   vm->gray_stack = NULL;
 }
 
+void free_error_stacks(b_vm *vm) {
+  for(int index = vm->error_top - vm->errors; index < ERRORS_MAX && vm->errors[index] != NULL; index++) {
+    if(vm->errors[index]) {
+      free(vm->errors[index]);
+      vm->errors[index] = NULL;
+    }
+  }
+}
+
 void collect_garbage(b_vm *vm) {
 #if defined(DEBUG_GC) && DEBUG_GC
   printf("-- gc begins\n");
@@ -414,6 +423,7 @@ void collect_garbage(b_vm *vm) {
   table_remove_whites(vm, &vm->strings);
   table_remove_whites(vm, &vm->modules);
   sweep(vm);
+  free_error_stacks(vm);
 
   vm->next_gc = vm->bytes_allocated * GC_HEAP_GROWTH_FACTOR;
   vm->mark_value = !vm->mark_value;

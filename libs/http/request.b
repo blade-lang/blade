@@ -1216,11 +1216,17 @@ class HttpRequest {
     return http_response
   }
 
-  @to_string() {
+  /**
+   * Returns the request as a string.
+   */
+  to_string() {
     return '<HttpRequest method=${self.method}, path=${self.path}>'
   }
 
-  @to_json() {
+  /**
+   * Returns the request as a JSON object.
+   */
+  to_json() {
     return {
       request_uri: self.request_uri,
       path: self.path,
@@ -1230,8 +1236,16 @@ class HttpRequest {
       headers: self.headers,
       queries: self.queries,
       cookies: self.cookies,
-      body: self.body,
+      body: to_string(self.body),
     }
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+
+  @to_json() {
+    return self.to_json()
   }
 }
 

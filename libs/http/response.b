@@ -229,12 +229,18 @@ class HttpResponse {
     self.headers.set('Content-Type', mimetype)
   }
 
-  @to_string() {
+  /**
+   * Returns the response details in a string
+   */
+  to_string() {
     return '<HttpResponse status: ${self.status}, version: ${self.version}, time_taken:' +
-        ' ${self.time_taken}, redirects: ${self.redirects}, responder: ${self.responder}>'
+      ' ${self.time_taken}, redirects: ${self.redirects}, responder: ${self.responder}>'
   }
 
-  @to_json() {
+  /**
+   * Returns the response as a JSON object
+   */
+  to_json() {
     return {
       status: self.status,
       version: self.version,
@@ -243,7 +249,15 @@ class HttpResponse {
       responder: self.responder,
       headers: self.headers,
       cookies: self.cookies,
-      body: self.body
+      body: self.body,
     }
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+
+  @to_json() {
+    return self.to_json()
   }
 }
