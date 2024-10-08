@@ -203,8 +203,8 @@ target_link_libraries(blade PRIVATE libblade)
 
 add_custom_target(blade_lib_files ALL
 		COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/libs" "${OUTPUT_DIR}/libs"
-		COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/tests" "${OUTPUT_DIR}/tests"
-		COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/benchmarks" "${OUTPUT_DIR}/benchmarks"
+#		COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/tests" "${OUTPUT_DIR}/tests"
+#		COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/benchmarks" "${OUTPUT_DIR}/benchmarks"
 		COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/apps" "${OUTPUT_DIR}/apps"
 		COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/bins" "${OUTPUT_DIR}"
 		COMMENT "Exporting libs, tests, and benchmark scripts..."
