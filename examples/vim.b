@@ -3,8 +3,13 @@ import io
 # simple test
 var tty = io.TTY(io.stdin)
 
-var keywords = ['default', 'def', 'class', 'echo', 'for', 'if', 'in', 
-  'as', 'import', 'let', 'using', 'when', 'while', 'iter', 'raise', 'break', 'continue']
+var keywords = [
+  'and', 'as', 'assert', 'break', 'catch', 'class',
+  'continue', 'def', 'default', 'do', 'echo','else',
+  'false', 'for', 'if', 'import','in', 'iter', 'nil',
+  'or', 'parent','raise', 'return', 'self', 'static',
+  'true', 'using', 'var', 'when', 'while'
+]
 
 def highlight(str) {
   if str.length() == 0
@@ -15,19 +20,18 @@ def highlight(str) {
   return str.replace(regex, '\x1b[32m$1\x1b[0m')
 }
 
-# go full screen by clearning output
-# stdout().write("\x1b[2J");
-# stdout().write("\x1b[H");
+# go full screen by cleaning output
+io.stdout.write("\x1b[2J")
+io.stdout.write("\x1b[H")
 
-print('\x1b[33m')
-print('A simple TTY implementation for Bladey io module demonstration')
-print('Note that your cursor can move left and right.')
-print('Nope! That\'s not how the terminal works by default.')
-print('And we have a few key words too: ' + ', '.join(keywords))
-print('That\'s the power of Bladey!')
-print('Press Ctrl+C to quit')
-print('-------------------------------------------------------------')
-print('\x1b[0m')
+echo '\x1b[33m'
+echo 'A simple TTY based editor with syntax highlighting for Blade using the io module'
+echo 'Note that your cursor can move left and right.'
+echo 'Nope! That\'s not how the terminal works by default.'
+echo 'That\'s the power of Blade!'
+echo 'Press Ctrl+C to quit'
+echo '-------------------------------------------------------------'
+echo '\x1b[0m'
 
 if !tty.set_raw() {
   echo 'Failed to enter raw mode for STDIN'
@@ -40,7 +44,6 @@ var input = ''
 var index = 0
 
 var s
-
 while s = io.stdin.read() {
   if ord(s) == 3 { # ctrl + c
     io.stdout.write('\x1b[1000D\n')
@@ -59,11 +62,11 @@ while s = io.stdin.read() {
     history.append(input)
     history_index++
     # you can take this out to see the output
-    # print('\nechoing...', input)
+    # echo '\nechoing...', input
     input = ''
     index = 0
   } else if ord(s) == 27 { # arrow keys
-    var next1 = ord(io.stdin.read()) 
+    var next1 = ord(io.stdin.read())
     var next2 = ord(io.stdin.read())
     if next1 == 91 {
       if next2 == 68 #left

@@ -215,16 +215,22 @@ DECLARE_FILE_METHOD(read) {
 
   size_t bytes_read = fread(buffer, sizeof(char), file_size, file->file);
 
-  if (bytes_read == 0 && file_size != 0 && file_size == file_size_real) {
+  if (bytes_read == 0 && file_size != 0 && file_size == file_size_real && !file->is_std) {
     FILE_ERROR(Read, "could not read file contents");
   }
 
-  // we made use of +1 so we can terminate the string.
+  if(file->is_std && bytes_read == 0) {
+    RETURN_VALUE(EMPTY_STRING_VAL);
+  }
+
+  // we made use of +1, so we can terminate the string.
   if (buffer != NULL)
     buffer[bytes_read] = '\0';
 
   // close file
-  file_close(file);
+  if(!file->is_std) {
+    file_close(file);
+  }
 
   if (!in_binary_mode) {
     RETURN_T_STRING(buffer, bytes_read);
@@ -294,8 +300,12 @@ DECLARE_FILE_METHOD(gets) {
 
   size_t bytes_read = fread(buffer, sizeof(char), length, file->file);
 
-  if (bytes_read == 0 && length != 0) {
-    FILE_ERROR(Read, "could not read file contents");
+  if (bytes_read == 0 && length != 0 && !file->is_std) {
+    FILE_ERROR(Read, "could not read file contents %d, %d");
+  }
+
+  if(file->is_std && bytes_read == 0) {
+    RETURN_VALUE(EMPTY_STRING_VAL);
   }
 
   // we made use of +1, so we can terminate the string.

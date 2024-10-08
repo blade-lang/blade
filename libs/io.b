@@ -564,18 +564,18 @@ class TTY {
 
   /**
    * Sets the current tty to raw mode.
-   * 
+   *
    * @returns bool
    */
   set_raw() {
-    var new_attr = _io.TTY.tcgetattr(self.std)
+    var new_attr = _io.TTY.tcgetattr(self.std, false)
 
     new_attr[TTY.TTY_IFLAG] &= ~(TTY.IGNBRK | TTY.BRKINT | TTY.PARMRK | TTY.ISTRIP | TTY.INLCR | TTY.IGNCR | TTY.ICRNL | TTY.IXON)
     new_attr[TTY.TTY_OFLAG] &= ~TTY.OPOST
     new_attr[TTY.TTY_LFLAG] &= ~(TTY.ECHO | TTY.ECHONL | TTY.ICANON | TTY.ISIG | TTY.IEXTEN)
     new_attr[TTY.TTY_CFLAG] &= ~(TTY.CSIZE | TTY.PARENB)
     new_attr[TTY.TTY_CFLAG] |= TTY.CS8
-    
+
     return self.set_attr(TTY.TCSAFLUSH, new_attr)
   }
 
@@ -585,7 +585,8 @@ class TTY {
    * @returns bool
    */
   exit_raw() {
-    _io.TTY.exit_raw()
+#     return _io.TTY.exit_raw(self.std)
+    return self.set_attr(TTY.TCSAFLUSH, _io.TTY.tcgetattr(self.std, true))
   }
 
   /**
@@ -655,7 +656,7 @@ def getch() {
 }
 
 /**
- * Reads an entire line from standard input. If a _messagge_ is given, the 
+ * Reads an entire line from standard input. If a _message_ is given, the
  * message will be printed before it begins to wait for a user input. If 
  * _secure_ is `true`, the user's input will not be printing and _obscure_text_ 
  * will be printed instead.

@@ -219,17 +219,21 @@ class expect {
 
     if is_function(self.value) {
       self._run('to throw', e, @(x, y) {
+
+        var res
         catch {
-          x()
+          res = x()
           return false
         } as ex
 
         if ex {
           if is_string(e) return ex.message.match(e)
           if is_class(e) return instance_of(ex, e)
-          if instance_of(e, Exception) and ex == e return true
+          if instance_of(e, Exception) return ex == e
           return true
         }
+
+        return res
       })
     } else {
       self._run('to throw', e, @(x, y) { return false })

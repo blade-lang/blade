@@ -1,5 +1,5 @@
-#ifndef bladey_compart_unistd_h
-#define bladey_compart_unistd_h
+#ifndef blade_compart_unistd_h
+#define blade_compart_unistd_h
 
 #include "common.h"
 

@@ -82,24 +82,30 @@ static int read_line(char line[], int max) {
 }
 
 /**
- * tty._tcgetattr()
+ * tty.tcgetattr()
  *
  * returns the configuration of the current tty input
  */
 DECLARE_MODULE_METHOD(io_tty__tcgetattr) {
-  ENFORCE_ARG_COUNT(_tcgetattr, 1);
-  ENFORCE_ARG_TYPE(_tcsetattr, 0, IS_FILE);
+  ENFORCE_ARG_COUNT(tcgetattr, 2);
+  ENFORCE_ARG_TYPE(tcsetattr, 0, IS_FILE);
+  ENFORCE_ARG_TYPE(tcsetattr, 1, IS_BOOL);
 
 #ifdef HAVE_TERMIOS_H
   b_obj_file *file = AS_FILE(args[0]);
+  bool original = AS_BOOL(args[1]);
 
-  if (!is_std_file(file)) {
+  if (!file->is_std) {
     RETURN_ERROR("can only use tty on std objects");
   }
 
   struct termios raw_attr;
-  if (tcgetattr(fileno(file->file), &raw_attr) != 0) {
-    RETURN_ERROR(strerror(errno));
+  if(!original) {
+    if (tcgetattr(fileno(file->file), &raw_attr) != 0) {
+      RETURN_ERROR(strerror(errno));
+    }
+  } else {
+    raw_attr = orig_termios;
   }
 
   // we have our attributes already
@@ -108,6 +114,7 @@ DECLARE_MODULE_METHOD(io_tty__tcgetattr) {
   dict_add_entry(vm, dict, NUMBER_VAL(1), NUMBER_VAL(raw_attr.c_oflag));
   dict_add_entry(vm, dict, NUMBER_VAL(2), NUMBER_VAL(raw_attr.c_cflag));
   dict_add_entry(vm, dict, NUMBER_VAL(3), NUMBER_VAL(raw_attr.c_lflag));
+
 #if !defined(__MUSL__)
   dict_add_entry(vm, dict, NUMBER_VAL(4), NUMBER_VAL(raw_attr.c_ispeed));
   dict_add_entry(vm, dict, NUMBER_VAL(5), NUMBER_VAL(raw_attr.c_ospeed));
@@ -123,30 +130,32 @@ DECLARE_MODULE_METHOD(io_tty__tcgetattr) {
 }
 
 /**
- * tty._tcsetattr(attrs: dict)
+ * tty.tcsetattr(attrs: dict)
  *
  * sets the attributes of a tty
  * @return true if succeed or false otherwise
  * TODO: support the c_cc flag
  */
 DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
-  ENFORCE_ARG_COUNT(_tcsetattr, 3);
-  ENFORCE_ARG_TYPE(_tcsetattr, 0, IS_FILE);
-  ENFORCE_ARG_TYPE(_tcsetattr, 1, IS_NUMBER);
-  ENFORCE_ARG_TYPE(_tcsetattr, 2, IS_DICT);
+  ENFORCE_ARG_COUNT(tcsetattr, 3);
+  ENFORCE_ARG_TYPE(tcsetattr, 0, IS_FILE);
+  ENFORCE_ARG_TYPE(tcsetattr, 1, IS_NUMBER);
+  ENFORCE_ARG_TYPE(tcsetattr, 2, IS_DICT);
 
 #ifdef HAVE_TERMIOS_H
   b_obj_file *file = AS_FILE(args[0]);
   int type = AS_NUMBER(args[1]);
   b_obj_dict *dict = AS_DICT(args[2]);
 
-  if (!is_std_file(file)) {
+  if (!file->is_std) {
     RETURN_ERROR("can only use tty on std objects");
   }
 
   if (type < 0) {
-    RETURN_ERROR("tty options should be one of TTY's TCSA");
+    RETURN_ERROR("tty options should be one of TTY's TCSAs");
   }
+
+  struct termios raw = orig_termios;
 
   // make sure we have good values so that we don't freeze the tty
   for (int i = 0; i < dict->names.count; i++) {
@@ -155,50 +164,28 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
         AS_NUMBER(dict->names.values[i]) > 5) { // ospeed
       RETURN_ERROR("attributes must be one of io TTY flags");
     }
-    b_value dummy_value;
-    if (dict_get_entry(dict, dict->names.values[i], &dummy_value)) {
-      if (!IS_NUMBER(dummy_value)) {
-        RETURN_ERROR("TTY attribute cannot be %s", value_type(dummy_value));
+    b_value value;
+    if (dict_get_entry(dict, dict->names.values[i], &value)) {
+      if (!IS_NUMBER(value)) {
+        RETURN_ERROR("TTY attribute cannot be %s", value_type(value));
+      }
+
+      switch (i) {
+        case 0: raw.c_iflag = (unsigned long) AS_NUMBER(value); break;
+        case 1: raw.c_oflag = (unsigned long) AS_NUMBER(value); break;
+        case 2: raw.c_cflag = (unsigned long) AS_NUMBER(value); break;
+        case 3: raw.c_lflag = (unsigned long) AS_NUMBER(value); break;
+#if !defined(__MUSL__)
+        case 4: raw.c_ispeed = (unsigned long) AS_NUMBER(value); break;
+        case 5: raw.c_ospeed = (unsigned long) AS_NUMBER(value); break;
+#else
+        case 4: raw.__c_ispeed = (unsigned long) AS_NUMBER(value); break;
+        case 5: raw.__c_ospeed = (unsigned long) AS_NUMBER(value); break;
+#endif
+        default:;
       }
     }
   }
-
-  b_value iflag = NIL_VAL, oflag = NIL_VAL, cflag = NIL_VAL, lflag = NIL_VAL,
-      ispeed = NIL_VAL, ospeed = NIL_VAL;
-
-
-  tcgetattr(STDIN_FILENO, &orig_termios);
-  atexit(disable_raw_mode);
-
-  struct termios raw = orig_termios;
-
-  if (dict_get_entry(dict, NUMBER_VAL(0), &iflag)) {
-    raw.c_iflag = (long) AS_NUMBER(iflag);
-  }
-  if (dict_get_entry(dict, NUMBER_VAL(1), &iflag)) {
-    raw.c_oflag = (long) AS_NUMBER(oflag);
-  }
-  if (dict_get_entry(dict, NUMBER_VAL(2), &iflag)) {
-    raw.c_cflag = (long) AS_NUMBER(cflag);
-  }
-  if (dict_get_entry(dict, NUMBER_VAL(3), &iflag)) {
-    raw.c_lflag = (long) AS_NUMBER(lflag);
-  }
-#if !defined(__MUSL__)
-  if (dict_get_entry(dict, NUMBER_VAL(4), &iflag)) {
-    raw.c_ispeed = (long) AS_NUMBER(ispeed);
-  }
-  if (dict_get_entry(dict, NUMBER_VAL(5), &iflag)) {
-    raw.c_ospeed = (long) AS_NUMBER(ospeed);
-  }
-#else
-  if (dict_get_entry(dict, NUMBER_VAL(4), &iflag)) {
-    raw.__c_ispeed = (long) AS_NUMBER(ispeed);
-  }
-  if (dict_get_entry(dict, NUMBER_VAL(5), &iflag)) {
-    raw.__c_ospeed = (long) AS_NUMBER(ospeed);
-  }
-#endif
 
   set_attr_was_called = true;
 
@@ -206,21 +193,6 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
   RETURN_BOOL(result != -1);
 #else
   RETURN_ERROR("tcsetattr() is not supported on this platform");
-#endif /* HAVE_TERMIOS_H */
-}
-
-/**
- * TTY.exit_raw()
- * exits raw mode
- * @return nil
- */
-DECLARE_MODULE_METHOD(io_tty__exit_raw) {
-#ifdef HAVE_TERMIOS_H
-  ENFORCE_ARG_COUNT(TTY.exit_raw, 0);
-  tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
-  RETURN;
-#else
-  RETURN_ERROR("exit_raw() is not supported on this platform");
 #endif /* HAVE_TERMIOS_H */
 }
 
@@ -379,6 +351,13 @@ void __io_module_unload(b_vm *vm) {
 #endif /* ifdef HAVE_TERMIOS_H */
 }
 
+void __io_module_preload(b_vm *vm) {
+#ifdef HAVE_TERMIOS_H
+  tcgetattr(STDIN_FILENO, &orig_termios);
+  atexit(disable_raw_mode);
+#endif /* ifdef HAVE_TERMIOS_H */
+}
+
 CREATE_MODULE_LOADER(io) {
   static b_field_reg io_module_fields[] = {
       {"stdin",  false, io_module_stdin},
@@ -399,7 +378,6 @@ CREATE_MODULE_LOADER(io) {
       {"tcgetattr", false, GET_MODULE_METHOD(io_tty__tcgetattr)},
       {"tcsetattr", false, GET_MODULE_METHOD(io_tty__tcsetattr)},
       {"flush",     false, GET_MODULE_METHOD(io_tty__flush)},
-      {"exit_raw",  false, GET_MODULE_METHOD(io_tty__exit_raw)},
       {NULL,        false, NULL},
   };
 
@@ -413,7 +391,7 @@ CREATE_MODULE_LOADER(io) {
       .fields = io_module_fields,
       .functions = io_functions,
       .classes = classes,
-      .preloader = NULL,
+      .preloader = &__io_module_preload,
       .unloader = &__io_module_unload
   };
 

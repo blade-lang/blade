@@ -279,8 +279,6 @@ static inline bool is_obj_type(b_value v, b_obj_type t) {
   return IS_OBJ(v) && AS_OBJ(v)->type == t;
 }
 
-static inline bool is_std_file(b_obj_file *file) { return file->mode->length == 0; }
-
 #define ALLOCATE_OBJ(type, obj_type)                                           \
   (type *)allocate_object(vm, sizeof(type), obj_type)
 
