@@ -86,6 +86,10 @@ class Animal {
     echo 'Name is set'
   }
 
+  echoes() {
+    return self._echo()
+  }
+
   var _print = @(g) {
     echo g
   }
@@ -98,7 +102,7 @@ class Dog < Animal {
   getName() {
     self._x += 120
     echo self._x
-    return parent._echo()
+    return parent.echoes()
   }
 }
 
