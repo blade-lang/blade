@@ -266,6 +266,9 @@ void mark_table(b_vm *vm, b_table *table) {
     b_entry *entry = &table->entries[i];
 
     if(entry != NULL) {
+      if(IS_OBJ(entry->key) && AS_OBJ(entry->key)->vm_id != vm->id) continue;
+      if(IS_OBJ(entry->value) && AS_OBJ(entry->value)->vm_id != vm->id) continue;
+
       mark_value(vm, entry->key);
       mark_value(vm, entry->value);
     }

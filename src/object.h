@@ -92,6 +92,7 @@ typedef enum {
 struct s_obj {
   b_obj_type type;
   bool mark;
+  int vm_id;
 
   // when an object is marked as stale, it means that the
   // GC will never collect this object. This can be useful

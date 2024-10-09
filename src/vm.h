@@ -53,7 +53,6 @@ struct s_vm {
   // gc
   int gray_count;
   int gray_capacity;
-  int gc_protected;
   b_obj **gray_stack;
   size_t bytes_allocated;
   size_t next_gc;
@@ -82,21 +81,18 @@ struct s_vm {
   bool should_print_bytecode;
   bool should_exit_after_bytecode;
 
-  // miscellaneous
+  // id
+  int id;
 };
 
-void init_vm(b_vm *vm);
-
+void init_vm(b_vm *vm, int id);
 void free_vm(b_vm *vm);
 
 b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source);
 
 void push(b_vm *vm, b_value value);
-
 b_value pop(b_vm *vm);
-
 b_value pop_n(b_vm *vm, int n);
-
 b_value peek(b_vm *vm, int distance);
 
 void push_error(b_vm *vm, b_error_frame *frame);
@@ -122,21 +118,16 @@ static inline void add_module(b_vm *vm, b_obj_module *module) {
 
 bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name, int arg_count);
 
-bool is_false(b_value value);
-
 void dict_add_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value);
-
 bool dict_get_entry(b_obj_dict *dict, b_value key, b_value *value);
-
 bool dict_set_entry(b_vm *vm, b_obj_dict *dict, b_value key, b_value value);
-
 void define_native_method(b_vm *vm, b_table *table, const char *name,
                           b_native_fn function);
 
+bool is_false(b_value value);
 bool is_instance_of(b_obj_class *klass1, char *klass2_name);
 
 bool do_throw_exception(b_vm *vm, bool is_assert, const char *format, ...);
-
 b_obj_instance *create_exception(b_vm *vm, b_obj_string *message);
 
 #define EXIT_VM() return PTR_RUNTIME_ERR

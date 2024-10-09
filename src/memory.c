@@ -80,7 +80,7 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
 void mark_object(b_vm *vm, b_obj *object) {
   if (object == NULL)
     return;
-  if (object->mark == vm->mark_value)
+  if (object->mark == vm->mark_value || object->vm_id != vm->id)
     return;
 
 #if defined(DEBUG_GC) && DEBUG_GC
@@ -121,6 +121,8 @@ void blacken_object(b_vm *vm, b_obj *object) {
   print_object(OBJ_VAL(object), false);
   printf("\n");
 #endif
+
+//  if(object->vm_id != vm->id) return;
 
   switch (object->type) {
     case OBJ_MODULE: {
@@ -211,8 +213,8 @@ void free_object(b_vm *vm, b_obj *object) {
   printf("%p free type %d\n", (void *)object, object->type);
 #endif
 
-  // Do not free stale objects.
-  if(object->stale) return;
+  // Do not free stale objects and objects that do not belong to this vm.
+  if(object->stale || object->vm_id != vm->id) return;
 
   switch (object->type) {
     case OBJ_MODULE: {
@@ -383,7 +385,9 @@ static void sweep(b_vm *vm) {
         vm->objects = object;
       }
 
-      free_object(vm, unreached);
+      if(unreached->vm_id == vm->id) {
+        free_object(vm, unreached);
+      }
     }
   }
 }

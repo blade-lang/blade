@@ -512,19 +512,20 @@ static void init_builtin_methods(b_vm *vm) {
 #undef DEFINE_RANGE_METHOD
 }
 
-void init_vm(b_vm *vm) {
+void init_vm(b_vm *vm, int id) {
 
   vm->stack = ALLOCATE(b_value, STACK_MIN);
   vm->stack_capacity = STACK_MIN;
 
   reset_stack(vm);
+
+  vm->id = id;
   vm->compiler = NULL;
   vm->objects = NULL;
   vm->exception_class = NULL;
   vm->current_frame = NULL;
   vm->root_file = NULL;
   vm->bytes_allocated = 0;
-  vm->gc_protected = 0;
   vm->next_gc = DEFAULT_GC_START; // default is 1mb. Can be modified via the -g flag.
   vm->is_repl = false;
   vm->mark_value = true;

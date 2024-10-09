@@ -15,6 +15,7 @@ b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   object->type = type;
   object->mark = !vm->mark_value;
   object->stale = false;
+  object->vm_id = vm->id;
 
   object->next = vm->objects;
   vm->objects = object;
