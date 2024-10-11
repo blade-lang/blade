@@ -51,5 +51,6 @@
 #cmakedefine HAVE_SYSCONF
 #cmakedefine HAVE_SYSCTLBYNAME
 #cmakedefine HAVE_SETJMP
+#cmakedefine HAVE_TIMESPEC_GET
 
 #endif

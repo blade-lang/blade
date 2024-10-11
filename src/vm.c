@@ -247,6 +247,30 @@ inline b_error_frame* pop_error(b_vm *vm) {
   return *vm->error_top;
 }
 
+inline void push_thread(b_vm *vm, b_thread_handle *thread) {
+  if(vm->threads_capacity == vm->threads_count) {
+    size_t capacity = GROW_CAPACITY(vm->threads_capacity);
+    vm->threads = GROW_ARRAY(b_thread_handle *, vm->threads, vm->threads_capacity, capacity);
+    vm->threads_capacity = capacity;
+
+    vm->threads[vm->threads_count] = thread;
+    thread->parent_thead_index = vm->threads_count;
+    thread->parent_vm = vm;
+    vm->threads_count++;
+  } else {
+    for(int i = 0; i < vm->threads_capacity; i++) {
+      if(vm->threads[i] == NULL) {
+        vm->threads[i] = thread;
+        thread->parent_thead_index = i;
+        thread->parent_vm = vm;
+        break;
+      }
+    }
+
+    vm->threads_count++;
+  }
+}
+
 inline b_error_frame* peek_error(b_vm *vm) {
   return vm->error_top[-1];
 }
@@ -512,10 +536,15 @@ static void init_builtin_methods(b_vm *vm) {
 #undef DEFINE_RANGE_METHOD
 }
 
-void init_vm(b_vm *vm, int id) {
+void init_vm(b_vm *vm, uint64_t id) {
 
   vm->stack = ALLOCATE(b_value, STACK_MIN);
   vm->stack_capacity = STACK_MIN;
+
+  vm->threads = ALLOCATE(b_thread_handle *, THREADS_MIN);
+  memset(vm->threads, 0, sizeof(b_thread_handle *));
+  vm->threads_count = 0;
+  vm->threads_capacity = THREADS_MIN;
 
   reset_stack(vm);
 
@@ -556,21 +585,89 @@ void init_vm(b_vm *vm, int id) {
   init_builtin_methods(vm);
 }
 
+b_vm *copy_vm(b_vm *src, uint64_t id) {
+
+  b_vm *vm = (b_vm *) malloc(sizeof(b_vm));
+  if(!vm) {
+    return NULL;
+  }
+
+  memset(vm, 0, sizeof(b_vm));
+
+  vm->stack = ALLOCATE(b_value, COPIED_STACK_MIN);
+  vm->stack_capacity = COPIED_STACK_MIN;
+
+  vm->threads = ALLOCATE(b_thread_handle *, THREADS_MIN);
+  memset(vm->threads, 0, sizeof(b_thread_handle *));
+  vm->threads_count = 0;
+  vm->threads_capacity = THREADS_MIN;
+
+  reset_stack(vm);
+
+  // copies
+  vm->compiler = src->compiler;
+  vm->exception_class = src->exception_class;
+  vm->root_file = src->root_file;
+  vm->is_repl = src->is_repl;
+  vm->show_warnings = src->show_warnings;
+  vm->should_print_bytecode = src->should_print_bytecode;
+  vm->should_exit_after_bytecode = src->should_exit_after_bytecode;
+  vm->std_args = src->std_args;
+  vm->std_args_count = src->std_args_count;
+
+  // fresh
+  vm->id = id;
+  vm->objects = NULL;
+  vm->current_frame = NULL;
+  vm->bytes_allocated = 0;
+  vm->next_gc = DEFAULT_GC_START; // default is 1mb. Can be modified via the -g flag.
+  vm->mark_value = true;
+  vm->gray_count = 0;
+  vm->gray_capacity = 0;
+  vm->gray_stack = NULL;
+
+  init_table(&vm->modules);
+  table_add_all(vm, &vm->modules, &src->modules);
+  init_table(&vm->strings);
+  table_add_all(vm, &vm->strings, &src->strings);
+  init_table(&vm->globals);
+  table_add_all(vm, &vm->globals, &src->globals);
+
+  // object methods tables
+  init_table(&vm->methods_string);
+  table_add_all(vm, &vm->methods_string, &src->methods_string);
+  init_table(&vm->methods_list);
+  table_add_all(vm, &vm->methods_list, &src->methods_list);
+  init_table(&vm->methods_dict);
+  table_add_all(vm, &vm->methods_dict, &src->methods_dict);
+  init_table(&vm->methods_file);
+  table_add_all(vm, &vm->methods_file, &src->methods_file);
+  init_table(&vm->methods_bytes);
+  table_add_all(vm, &vm->methods_bytes, &src->methods_bytes);
+  init_table(&vm->methods_range);
+  table_add_all(vm, &vm->methods_range, &src->methods_range);
+
+  return vm;
+}
+
 void free_vm(b_vm *vm) {
   free_objects(vm);
 
   // since object in module can exist in globals
   // it must come before
-  free_table(vm, &vm->modules);
-  free_table(vm, &vm->globals);
-  free_table(vm, &vm->strings);
+  if(vm->id == 0) {
+    free_table(vm, &vm->modules);
+    free_table(vm, &vm->globals);
+    free_table(vm, &vm->strings);
 
-  free_table(vm, &vm->methods_string);
-  free_table(vm, &vm->methods_list);
-  free_table(vm, &vm->methods_dict);
-  free_table(vm, &vm->methods_file);
-  free_table(vm, &vm->methods_bytes);
+    free_table(vm, &vm->methods_string);
+    free_table(vm, &vm->methods_list);
+    free_table(vm, &vm->methods_dict);
+    free_table(vm, &vm->methods_file);
+    free_table(vm, &vm->methods_bytes);
+  }
 
+  free(vm->threads);
   free(vm->stack);
 
   for(b_error_frame **err = vm->errors; err < vm->error_top; err++) {
@@ -578,6 +675,26 @@ void free_vm(b_vm *vm) {
   }
 
   free(vm);
+}
+
+void free_thread_handle(b_thread_handle *thread) {
+  if(thread != NULL && thread->parent_vm) {
+    // make slot available for another thread
+
+    b_vm *vm = thread->parent_vm;
+    thread->parent_vm->threads[thread->parent_thead_index] = NULL;
+
+    free_vm(thread->vm);
+    free(thread->thread);
+
+    thread->vm = NULL;
+    thread->thread = NULL;
+    thread->closure = NULL;
+    thread->args = NULL;
+
+    thread->parent_vm = NULL;
+    FREE(b_thread_handle *, thread);
+  }
 }
 
 static inline bool is_private(b_obj_string *name) {
@@ -938,10 +1055,16 @@ inline bool is_false(b_value value) {
   return false;
 }
 
-bool is_instance_of(b_obj_class *klass1, char *klass2_name) {
+bool is_instance_of(b_obj_class *klass1, b_obj_class *klass2) {
   while (klass1 != NULL) {
-    if ((int) strlen(klass2_name) == klass1->name->length
-        && memcmp(klass1->name->chars, klass2_name, klass1->name->length) == 0) {
+    // check the class names
+    if (klass2->name->length == klass1->name->length
+        && memcmp(klass1->name->chars, klass2->name->chars, klass1->name->length) == 0) {
+
+      // TODO: ensure they're actually the same
+      /*if(klass1->initializer == klass2->initializer) {
+        return true;
+      }*/
       return true;
     }
     klass1 = klass1->superclass;
@@ -2424,7 +2547,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
 
       case OP_RAISE: {
         if (!IS_INSTANCE(peek(vm, 0)) ||
-            !is_instance_of(AS_INSTANCE(peek(vm, 0))->klass, vm->exception_class->name->chars)) {
+            !is_instance_of(AS_INSTANCE(peek(vm, 0))->klass, vm->exception_class)) {
           runtime_error("instance of Exception expected");
           break;
         }
@@ -2549,6 +2672,22 @@ b_value raw_closure_call(b_vm *vm, b_obj_closure *closure, b_obj_list *args, boo
 
   vm->stack_top = stack_top;
   return result;
+}
+
+// helper function to access call outside the vm file.
+b_ptr_result run_closure_call(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
+  // set the closure before the args
+  push(vm, OBJ_VAL(closure));
+
+  int arg_count = 0;
+  if(args && (arg_count = args->items.count)) {
+    for(int i = 0; i < args->items.count; i++) {
+      push(vm, args->items.values[i]);
+    }
+  }
+
+  call(vm, closure, arg_count);
+  return run(vm, vm->frame_count - 1);
 }
 
 b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {

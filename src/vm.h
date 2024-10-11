@@ -28,10 +28,21 @@ typedef struct {
   b_value value;
 } b_error_frame;
 
+
+typedef struct {
+  void *thread;
+  b_vm *vm;
+  b_vm *parent_vm;
+  b_obj_closure *closure;
+  b_obj_list *args;
+  b_value return_value[1];
+  size_t parent_thead_index;
+} b_thread_handle;
+
 struct s_vm {
   b_call_frame frames[FRAMES_MAX];
   b_call_frame *current_frame;
-  unsigned int frame_count;
+  int frame_count;
 
   b_blob *blob;
   uint8_t *ip;
@@ -43,6 +54,10 @@ struct s_vm {
   size_t stack_capacity;
   b_value *stack;
   b_value *stack_top;
+
+  size_t threads_capacity;
+  size_t threads_count;
+  b_thread_handle **threads;
 
 
   b_obj *objects;
@@ -82,10 +97,11 @@ struct s_vm {
   bool should_exit_after_bytecode;
 
   // id
-  int id;
+  uint64_t id;
 };
 
-void init_vm(b_vm *vm, int id);
+void init_vm(b_vm *vm, uint64_t id);
+b_vm *copy_vm(b_vm *src, uint64_t id);
 void free_vm(b_vm *vm);
 
 b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source);
@@ -98,6 +114,9 @@ b_value peek(b_vm *vm, int distance);
 void push_error(b_vm *vm, b_error_frame *frame);
 b_error_frame* pop_error(b_vm *vm);
 b_error_frame* peek_error(b_vm *vm);
+
+void push_thread(b_vm *vm, b_thread_handle *thread);
+void free_thread_handle(b_thread_handle *thread);
 
 static inline void add_module(b_vm *vm, b_obj_module *module) {
   cond_dbg(vm->current_frame, printf("Adding module %s from %s to %s in %s\n", 
@@ -125,17 +144,17 @@ void define_native_method(b_vm *vm, b_table *table, const char *name,
                           b_native_fn function);
 
 bool is_false(b_value value);
-bool is_instance_of(b_obj_class *klass1, char *klass2_name);
+bool is_instance_of(b_obj_class *klass1, b_obj_class *klass2);
 
 bool do_throw_exception(b_vm *vm, bool is_assert, const char *format, ...);
 b_obj_instance *create_exception(b_vm *vm, b_obj_string *message);
 
 #define EXIT_VM() return PTR_RUNTIME_ERR
 
-#define runtime_error(...)                                                     \
+#define runtime_error(...)  do {                                                   \
   if(!throw_exception(vm, ##__VA_ARGS__)){                                     \
     EXIT_VM(); \
-  }
+  }} while(0)
 
 #define throw_exception(v, ...) do_throw_exception(v, false, ##__VA_ARGS__)
 
@@ -167,6 +186,7 @@ bool call_value(b_vm *vm, b_value callee, int arg_count);
 b_value raw_closure_call(b_vm *vm, b_obj_closure *closure, b_obj_list *args, bool must_push);
 b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args);
 bool queue_closure(b_vm *vm, b_obj_closure *closure);
+b_ptr_result run_closure_call(b_vm *vm, b_obj_closure *closure, b_obj_list *args);
 void register_module__FILE__(b_vm *vm, b_obj_module *module);
 
 #endif

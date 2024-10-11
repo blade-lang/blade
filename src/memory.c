@@ -344,6 +344,15 @@ static void mark_roots(b_vm *vm) {
        up_value = up_value->next) {
     mark_object(vm, (b_obj *) up_value);
   }
+
+  /*for(size_t i = 0; i < vm->threads_count; i++) {
+    if(vm->threads[i] != NULL) {
+      mark_object(vm, (b_obj *)vm->threads[i]->closure);
+      mark_object(vm, (b_obj *)vm->threads[i]->args);
+      mark_value(vm, vm->threads[i]->return_value[0]);
+    }
+  }*/
+
   mark_table(vm, &vm->globals);
   mark_table(vm, &vm->modules);
 

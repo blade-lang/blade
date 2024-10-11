@@ -19,8 +19,6 @@ void init_table(b_table *table);
 
 void free_table(b_vm *vm, b_table *table);
 
-void clean_free_table(b_vm *vm, b_table *table);
-
 bool table_set(b_vm *vm, b_table *table, b_value key, b_value value);
 
 bool table_get(b_table *table, b_value key, b_value *value);

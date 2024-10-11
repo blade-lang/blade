@@ -2,7 +2,6 @@
 #include "vm.h"
 #include "utf8.h"
 
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,7 +9,6 @@
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif /* HAVE_SYS_TIME_H */
-#include <time.h>
 
 #ifndef HAVE_GETTIMEOFDAY
 #include <gettimeofday.h>
@@ -817,8 +815,7 @@ DECLARE_NATIVE(instance_of) {
   ENFORCE_ARG_TYPE(instance_of, 0, IS_INSTANCE);
   ENFORCE_ARG_TYPE(instance_of, 1, IS_CLASS);
 
-  RETURN_BOOL(is_instance_of(AS_INSTANCE(args[0])->klass,
-                             AS_CLASS(args[1])->name->chars));
+  RETURN_BOOL(is_instance_of(AS_INSTANCE(args[0])->klass, AS_CLASS(args[1])));
 }
 
 //------------------------------------------------------------------------------

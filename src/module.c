@@ -43,6 +43,7 @@ b_module_init modules[] = {
     GET_MODULE_LOADER(array), //
     GET_MODULE_LOADER(process), //
     GET_MODULE_LOADER(struct), //
+    GET_MODULE_LOADER(thread), //
     NULL,
 };
 

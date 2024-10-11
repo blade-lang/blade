@@ -69,7 +69,7 @@ set(BLADE_SOURCES
 		src/standard/process.c
 		src/standard/reflect.c
 		src/standard/struct.c
-		)
+        src/standard/thread.c)
 
 add_definitions(-DEXPORT_LIBS)
 
@@ -131,6 +131,7 @@ check_function_exists("gettimeofday" HAVE_GETTIMEOFDAY)
 if(NOT "${HAVE_GETTIMEOFDAY}")
 	target_link_libraries(libblade PRIVATE gettimeofday)
 endif()
+check_function_exists("timespec_get" HAVE_TIMESPEC_GET)
 target_link_libraries(libblade PRIVATE threads)
 
 check_function_exists("utime" HAVE_UTIME)
