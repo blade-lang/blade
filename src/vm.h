@@ -9,6 +9,8 @@ typedef struct s_compiler b_compiler;
 #include "table.h"
 #include "value.h"
 
+#include <pthread.h>
+
 typedef enum {
   PTR_OK,
   PTR_COMPILE_ERR,
@@ -28,9 +30,8 @@ typedef struct {
   b_value value;
 } b_error_frame;
 
-
 typedef struct {
-  void *thread;
+  pthread_t thread;
   b_vm *vm;
   b_vm *parent_vm;
   b_obj_closure *closure;

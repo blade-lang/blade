@@ -14,27 +14,20 @@ static b_thread_handle *create_thread_handle(b_vm *vm, b_obj_closure *closure, b
 
   b_thread_handle *handle = ALLOCATE(b_thread_handle, 1);
   if(handle != NULL) {
-    pthread_t *thread = ALLOCATE(pthread_t, 1);
+    pthread_t thread;
 
-    if(thread) {
-      handle->vm = copy_vm(vm, ++last_thread_vm_id);
+    handle->vm = copy_vm(vm, ++last_thread_vm_id);
 
-      if(handle->vm == NULL) {
-        FREE(pthread_t, thread);
-        FREE(b_thread_handle, handle);
-        return NULL;
-      }
-
-      handle->thread = (void *)thread;
-      handle->closure = closure;
-      handle->args = args;
-
-      ((b_obj *)closure)->stale = true;
-      ((b_obj *)args)->stale = true;
-    } else {
+    if(handle->vm == NULL) {
       FREE(b_thread_handle, handle);
       return NULL;
     }
+
+    handle->closure = closure;
+    handle->args = args;
+
+    ((b_obj *)closure)->stale = true;
+    ((b_obj *)args)->stale = true;
   }
 
   return handle;
@@ -65,23 +58,19 @@ static void push_thread(b_vm *vm, b_thread_handle *thread) {
 }
 
 static void free_thread_handle(b_thread_handle *thread) {
-  if(thread != NULL && thread->parent_vm) {
+  if(thread != NULL && thread->parent_vm != NULL) {
     // make slot available for another thread
 
-    b_vm *vm = thread->parent_vm;
     thread->parent_vm->threads[thread->parent_thead_index] = NULL;
     thread->parent_vm->threads_count--;
 
     free_vm(thread->vm);
-    free(thread->thread);
 
     thread->parent_vm = NULL;
     thread->vm = NULL;
-    thread->thread = NULL;
     thread->closure = NULL;
     thread->args = NULL;
 
-    FREE(b_thread_handle *, thread);
     thread = NULL;
   }
 }
@@ -103,7 +92,8 @@ static void *b_thread_callback_function(void *data) {
   ((b_obj *)handle->closure)->stale = false;
   ((b_obj *)handle->args)->stale = false;
 
-  return NULL;
+  free_thread_handle(handle);
+  pthread_exit(NULL);
 }
 
 DECLARE_MODULE_METHOD(thread__run) {
@@ -117,9 +107,9 @@ DECLARE_MODULE_METHOD(thread__run) {
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, 64 * 1024);  // Reduce stack size to 8KB
+    pthread_attr_setstacksize(&attr, 8 * 1024);  // Reduce stack size to 8KB
 
-    if(pthread_create((pthread_t *)thread->thread, NULL, b_thread_callback_function, thread) == 0) {
+    if(pthread_create(&thread->thread, &attr, b_thread_callback_function, thread) == 0) {
       pthread_attr_destroy(&attr);
       RETURN_NAMED_PTR(thread, B_THREAD_PTR_NAME);
     }
@@ -135,7 +125,7 @@ DECLARE_MODULE_METHOD(thread__dispose) {
   ENFORCE_ARG_TYPE(dispose, 0, IS_PTR);
 
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
-  if(thread) {
+  if(thread && thread->thread && thread->vm != NULL) {
     free_thread_handle(thread);
   }
   RETURN;
@@ -146,17 +136,24 @@ DECLARE_MODULE_METHOD(thread__await) {
   ENFORCE_ARG_TYPE(await, 0, IS_PTR);
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
 
-  bool success = pthread_join(*((pthread_t *)thread->thread), NULL) == 0;
-  free_thread_handle(thread);
+  if(thread && thread->thread && thread->vm != NULL) {
+    bool success = pthread_join(thread->thread, NULL) == 0;
+    free_thread_handle(thread);
+    RETURN_BOOL(success);
+  }
 
-  RETURN_BOOL(success);
+  RETURN_TRUE;
 }
 
 DECLARE_MODULE_METHOD(thread__detach) {
   ENFORCE_ARG_COUNT(detach, 1);
   ENFORCE_ARG_TYPE(detach, 0, IS_PTR);
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
-  RETURN_BOOL(pthread_detach(*((pthread_t *)thread->thread)) == 0);
+  if(thread && thread->thread && thread->vm != NULL) {
+    RETURN_BOOL(pthread_detach(thread->thread) == 0);
+  }
+
+  RETURN_FALSE;
 }
 
 CREATE_MODULE_LOADER(thread) {
