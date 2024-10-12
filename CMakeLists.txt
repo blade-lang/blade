@@ -193,10 +193,7 @@ if(UNIX)
 		target_link_libraries(libblade PRIVATE dl)
 	endif()
 
-	set(THREADS_PREFER_PTHREAD_FLAG ON)
-	find_package(Threads REQUIRED)
-	target_link_libraries(libblade PRIVATE Threads::Threads)
-#	target_link_libraries(libblade PRIVATE pthread)
+	target_link_libraries(libblade PRIVATE pthread)
 endif(UNIX)
 
 if(WIN32)
