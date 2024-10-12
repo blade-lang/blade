@@ -32,6 +32,10 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 endif()
 
+if(WIN32)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
+endif()
+
 add_custom_target(copy-ssl-to-libs ALL
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/ssl ${BLADE_ROOT}/libs/ssl
         COMMENT "Exporting ssl source files to libs folder..."

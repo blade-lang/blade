@@ -204,6 +204,8 @@ if(WIN32)
 
 	find_package(PThreads4W REQUIRED)
 	target_link_libraries(libblade PRIVATE PThreads4W::PThreads4W)
+
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-pragmas")
 endif()
 
 target_link_libraries(blade PRIVATE libblade)
