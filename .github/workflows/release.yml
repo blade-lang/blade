@@ -18,7 +18,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get remove libgd3 
-          sudo apt-get install curl libcurl4-openssl-dev libgd-dev libavif-dev libffi-dev -y
+          sudo apt-get install curl libpthread-stubs0-dev libcurl4-openssl-dev libgd-dev libavif-dev libffi-dev -y
           cmake -B .
           cmake --build . -- -j 12
       - name: Create ZIP Archive
@@ -94,7 +94,7 @@ jobs:
         run: |
           ${{ env.VCPKG_ROOT }}/vcpkg update
           ${{ env.VCPKG_ROOT }}/vcpkg version
-          ${{ env.VCPKG_ROOT }}/vcpkg install pkgconf curl:x64-windows libffi:x64-windows openssl:x64-windows libgd:x64-windows
+          ${{ env.VCPKG_ROOT }}/vcpkg install pkgconf pthreads:x64-windows curl:x64-windows libffi:x64-windows openssl:x64-windows libgd:x64-windows
           ${{ env.VCPKG_ROOT }}/vcpkg list
       - name: Compile
         run: |
