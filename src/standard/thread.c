@@ -18,10 +18,9 @@ static b_thread_handle *create_thread_handle(b_vm *vm, b_obj_closure *closure, b
 
     if(thread) {
       handle->thread = (void *)thread;
-      handle->vm = copy_vm(vm, last_thread_vm_id++);
+      handle->vm = copy_vm(vm, ++last_thread_vm_id);
       handle->closure = closure;
       handle->args = args;
-      handle->return_value[0] = EMPTY_VAL;
 
       ((b_obj *)closure)->stale = true;
       ((b_obj *)args)->stale = true;
@@ -29,10 +28,6 @@ static b_thread_handle *create_thread_handle(b_vm *vm, b_obj_closure *closure, b
   }
 
   return handle;
-}
-
-static void b_free_thread_handle(void *data) {
-  free_thread_handle((b_thread_handle *) data);
 }
 
 static int b_thread_callback_function(void *data) {
@@ -46,18 +41,19 @@ static int b_thread_callback_function(void *data) {
     push(handle->vm, handle->args->items.values[i]);
   }
 
+  bool result = 1;
   if(run_closure_call(handle->vm, handle->closure, handle->args) == PTR_OK) {
-    b_value result = handle->vm->stack_top[-1];
-    handle->return_value[0] = result;
+    result = 0;
   }
 
   ((b_obj *)handle->closure)->stale = false;
   ((b_obj *)handle->args)->stale = false;
 
-  return 0;
+//  free_thread_handle(handle);
+  return result;
 }
 
-DECLARE_MODULE_METHOD(thread__new) {
+DECLARE_MODULE_METHOD(thread__run) {
   ENFORCE_ARG_COUNT(new, 2);
   ENFORCE_ARG_TYPE(new, 0, IS_CLOSURE);
   ENFORCE_ARG_TYPE(new, 1, IS_LIST);
@@ -65,7 +61,9 @@ DECLARE_MODULE_METHOD(thread__new) {
   b_thread_handle *thread = create_thread_handle(vm, AS_CLOSURE(args[0]), AS_LIST(args[1]));
   if(thread) {
     push_thread(vm, thread);
-    RETURN_CLOSABLE_NAMED_PTR(thread, B_THREAD_PTR_NAME, b_free_thread_handle);
+    if(thrd_create((thrd_t *)thread->thread, b_thread_callback_function, thread) == thrd_success) {
+      RETURN_NAMED_PTR(thread, B_THREAD_PTR_NAME);
+    }
   }
 
   RETURN_FALSE;
@@ -76,24 +74,22 @@ DECLARE_MODULE_METHOD(thread__dispose) {
   ENFORCE_ARG_TYPE(dispose, 0, IS_PTR);
 
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
-  free_thread_handle(thread);
-  vm->threads_count--;
+  if(thread) {
+    free_thread_handle(thread);
+    vm->threads_count--;
+  }
   RETURN;
-}
-
-DECLARE_MODULE_METHOD(thread__start) {
-  ENFORCE_ARG_COUNT(start, 1);
-  ENFORCE_ARG_TYPE(start, 0, IS_PTR);
-
-  b_thread_handle *thread = AS_PTR(args[0])->pointer;
-  RETURN_BOOL(thrd_create((thrd_t *)thread->thread, b_thread_callback_function, thread) == thrd_success);
 }
 
 DECLARE_MODULE_METHOD(thread__await) {
   ENFORCE_ARG_COUNT(await, 1);
   ENFORCE_ARG_TYPE(await, 0, IS_PTR);
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
-  RETURN_BOOL(thrd_join(*((thrd_t *)thread->thread), 0) == thrd_success);
+
+  bool success = thrd_join(*((thrd_t *)thread->thread), 0) == thrd_success;
+  free_thread_handle(thread);
+
+  RETURN_BOOL(success);
 }
 
 DECLARE_MODULE_METHOD(thread__detach) {
@@ -105,9 +101,8 @@ DECLARE_MODULE_METHOD(thread__detach) {
 
 CREATE_MODULE_LOADER(thread) {
   static b_func_reg module_functions[] = {
-      {"new", false, GET_MODULE_METHOD(thread__new)},
+      {"run", false, GET_MODULE_METHOD(thread__run)},
       {"dispose", false, GET_MODULE_METHOD(thread__dispose)},
-      {"start", false, GET_MODULE_METHOD(thread__start)},
       {"await", false, GET_MODULE_METHOD(thread__await)},
       {"detach", false, GET_MODULE_METHOD(thread__detach)},
       {NULL,     false, NULL},

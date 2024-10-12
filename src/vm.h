@@ -35,7 +35,6 @@ typedef struct {
   b_vm *parent_vm;
   b_obj_closure *closure;
   b_obj_list *args;
-  b_value return_value[1];
   size_t parent_thead_index;
 } b_thread_handle;
 
@@ -55,10 +54,9 @@ struct s_vm {
   b_value *stack;
   b_value *stack_top;
 
-  size_t threads_capacity;
-  size_t threads_count;
+  uint64_t threads_capacity;
+  uint64_t threads_count;
   b_thread_handle **threads;
-
 
   b_obj *objects;
   b_compiler *compiler;

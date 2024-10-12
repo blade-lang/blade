@@ -2,7 +2,6 @@
 #include "compiler.h"
 #include "config.h"
 #include "object.h"
-#include "file.h"
 #include "module.h"
 
 #include <stdio.h>
@@ -345,14 +344,6 @@ static void mark_roots(b_vm *vm) {
     mark_object(vm, (b_obj *) up_value);
   }
 
-  /*for(size_t i = 0; i < vm->threads_count; i++) {
-    if(vm->threads[i] != NULL) {
-      mark_object(vm, (b_obj *)vm->threads[i]->closure);
-      mark_object(vm, (b_obj *)vm->threads[i]->args);
-      mark_value(vm, vm->threads[i]->return_value[0]);
-    }
-  }*/
-
   mark_table(vm, &vm->globals);
   mark_table(vm, &vm->modules);
 
@@ -415,16 +406,14 @@ void free_objects(b_vm *vm) {
 
 void free_error_stacks(b_vm *vm) {
   for(int index = vm->error_top - vm->errors; index < ERRORS_MAX && vm->errors[index] != NULL; index++) {
-    if(vm->errors[index]) {
-      free(vm->errors[index]);
-      vm->errors[index] = NULL;
-    }
+    free(vm->errors[index]);
+    vm->errors[index] = NULL;
   }
 }
 
 void collect_garbage(b_vm *vm) {
 #if defined(DEBUG_GC) && DEBUG_GC
-  printf("-- gc begins\n");
+  printf("-- gc begins for vm %llu\n", vm->id);
   size_t before = vm->bytes_allocated;
 #endif
 

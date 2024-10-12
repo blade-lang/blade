@@ -586,7 +586,6 @@ void init_vm(b_vm *vm, uint64_t id) {
 }
 
 b_vm *copy_vm(b_vm *src, uint64_t id) {
-
   b_vm *vm = (b_vm *) malloc(sizeof(b_vm));
   if(!vm) {
     return NULL;
@@ -604,7 +603,7 @@ b_vm *copy_vm(b_vm *src, uint64_t id) {
 
   reset_stack(vm);
 
-  // copies
+  // copies properties
   vm->compiler = src->compiler;
   vm->exception_class = src->exception_class;
   vm->root_file = src->root_file;
@@ -615,37 +614,51 @@ b_vm *copy_vm(b_vm *src, uint64_t id) {
   vm->std_args = src->std_args;
   vm->std_args_count = src->std_args_count;
 
-  // fresh
-  vm->id = id;
+  // copied globals
+  vm->modules = src->modules;
+  vm->strings = src->strings;
+  vm->globals = src->globals;
+
+  // copied object methods
+  vm->methods_string = src->methods_string;
+  vm->methods_list = src->methods_list;
+  vm->methods_dict = src->methods_dict;
+  vm->methods_file = src->methods_file;
+  vm->methods_bytes = src->methods_bytes;
+  vm->methods_range = src->methods_range;
+
+  // own properties
   vm->objects = NULL;
   vm->current_frame = NULL;
   vm->bytes_allocated = 0;
-  vm->next_gc = DEFAULT_GC_START; // default is 1mb. Can be modified via the -g flag.
+  vm->next_gc = DEFAULT_GC_START / 4; // default is quarter the original set value
   vm->mark_value = true;
   vm->gray_count = 0;
   vm->gray_capacity = 0;
   vm->gray_stack = NULL;
 
-  init_table(&vm->modules);
-  table_add_all(vm, &vm->modules, &src->modules);
+  vm->id = id;
+
+  /*init_table(&vm->modules);
+  table_add_all(vm, &src->modules, &vm->modules);
   init_table(&vm->strings);
-  table_add_all(vm, &vm->strings, &src->strings);
+  table_add_all(vm, &src->strings, &vm->strings);
   init_table(&vm->globals);
-  table_add_all(vm, &vm->globals, &src->globals);
+  table_add_all(vm, &src->globals, &vm->globals);
 
   // object methods tables
   init_table(&vm->methods_string);
-  table_add_all(vm, &vm->methods_string, &src->methods_string);
+  table_add_all(vm, &src->methods_string, &vm->methods_string);
   init_table(&vm->methods_list);
-  table_add_all(vm, &vm->methods_list, &src->methods_list);
+  table_add_all(vm, &src->methods_list, &vm->methods_list);
   init_table(&vm->methods_dict);
-  table_add_all(vm, &vm->methods_dict, &src->methods_dict);
+  table_add_all(vm, &src->methods_dict, &vm->methods_dict);
   init_table(&vm->methods_file);
-  table_add_all(vm, &vm->methods_file, &src->methods_file);
+  table_add_all(vm, &src->methods_file, &vm->methods_file);
   init_table(&vm->methods_bytes);
-  table_add_all(vm, &vm->methods_bytes, &src->methods_bytes);
+  table_add_all(vm, &src->methods_bytes, &vm->methods_bytes);
   init_table(&vm->methods_range);
-  table_add_all(vm, &vm->methods_range, &src->methods_range);
+  table_add_all(vm, &src->methods_range, &vm->methods_range);*/
 
   return vm;
 }
@@ -665,6 +678,7 @@ void free_vm(b_vm *vm) {
     free_table(vm, &vm->methods_dict);
     free_table(vm, &vm->methods_file);
     free_table(vm, &vm->methods_bytes);
+    free_table(vm, &vm->methods_range);
   }
 
   free(vm->threads);
@@ -683,17 +697,19 @@ void free_thread_handle(b_thread_handle *thread) {
 
     b_vm *vm = thread->parent_vm;
     thread->parent_vm->threads[thread->parent_thead_index] = NULL;
+    thread->parent_vm->threads_count--;
 
     free_vm(thread->vm);
     free(thread->thread);
 
+    thread->parent_vm = NULL;
     thread->vm = NULL;
     thread->thread = NULL;
     thread->closure = NULL;
     thread->args = NULL;
 
-    thread->parent_vm = NULL;
     FREE(b_thread_handle *, thread);
+    thread = NULL;
   }
 }
 
