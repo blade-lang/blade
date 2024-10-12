@@ -192,13 +192,19 @@ if(UNIX)
 	if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 		target_link_libraries(libblade PRIVATE dl)
 	endif()
-endif(UNIX)
 
-target_link_libraries(libblade PRIVATE pthread)
+	set(THREADS_PREFER_PTHREAD_FLAG ON)
+	find_package(Threads REQUIRED)
+	target_link_libraries(libblade PRIVATE Threads::Threads)
+#	target_link_libraries(libblade PRIVATE pthread)
+endif(UNIX)
 
 if(WIN32)
 	add_dependencies(libblade mman)
 	target_link_libraries(libblade PRIVATE mman)
+
+	find_package(PThreads4W REQUIRED)
+	target_link_libraries(libblade PRIVATE PThreads4W::PThreads4W)
 endif()
 
 target_link_libraries(blade PRIVATE libblade)

@@ -1,5 +1,5 @@
 #include "module.h"
-#include "threads.h"
+#include <pthread.h>
 
 static uint64_t last_thread_vm_id = 0;
 
@@ -119,7 +119,7 @@ DECLARE_MODULE_METHOD(thread__run) {
     pthread_attr_init(&attr);
     pthread_attr_setstacksize(&attr, 64 * 1024);  // Reduce stack size to 8KB
 
-    if(pthread_create((pthread_t *)thread->thread, NULL, b_thread_callback_function, thread) == thrd_success) {
+    if(pthread_create((pthread_t *)thread->thread, NULL, b_thread_callback_function, thread) == 0) {
       pthread_attr_destroy(&attr);
       RETURN_NAMED_PTR(thread, B_THREAD_PTR_NAME);
     }
