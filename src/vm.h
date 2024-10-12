@@ -113,9 +113,6 @@ void push_error(b_vm *vm, b_error_frame *frame);
 b_error_frame* pop_error(b_vm *vm);
 b_error_frame* peek_error(b_vm *vm);
 
-void push_thread(b_vm *vm, b_thread_handle *thread);
-void free_thread_handle(b_thread_handle *thread);
-
 static inline void add_module(b_vm *vm, b_obj_module *module) {
   cond_dbg(vm->current_frame, printf("Adding module %s from %s to %s in %s\n", 
     module->name, 

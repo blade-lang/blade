@@ -190,10 +190,11 @@ if(UNIX)
 
 	target_link_libraries(libblade PRIVATE m)
 	if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-		target_link_libraries(libblade PRIVATE pthread)
 		target_link_libraries(libblade PRIVATE dl)
 	endif()
 endif(UNIX)
+
+target_link_libraries(libblade PRIVATE pthread)
 
 if(WIN32)
 	add_dependencies(libblade mman)

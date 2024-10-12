@@ -349,14 +349,12 @@ static inline int mtx_unlock(mtx_t *mtx) {
 /*------------------- 7.25.5 Thread functions -------------------*/
 // 7.25.5.1
 static inline int thrd_create(thrd_t *thr, thrd_start_t func, void *arg) {
-  struct impl_thrd_param *pack;
-  uintptr_t handle;
   assert(thr != NULL);
-  pack = (struct impl_thrd_param *)malloc(sizeof(struct impl_thrd_param));
+  struct impl_thrd_param *pack = (struct impl_thrd_param *)malloc(sizeof(struct impl_thrd_param));
   if (!pack) return thrd_nomem;
   pack->func = func;
   pack->arg = arg;
-  handle = _beginthreadex(NULL, 0, impl_thrd_routine, pack, 0, NULL);
+  uintptr_t handle = _beginthreadex(NULL, 8 * 1024, impl_thrd_routine, pack, 0, NULL);
   if (handle == 0) {
     if (errno == EAGAIN || errno == EACCES)
       return thrd_nomem;
@@ -727,10 +725,18 @@ static inline int thrd_create(thrd_t *thr, thrd_start_t func, void *arg) {
   if (!pack) return thrd_nomem;
   pack->func = func;
   pack->arg = arg;
+
+//  pthread_attr_t attr;
+//  pthread_attr_init(&attr);
+//  pthread_attr_setstacksize(&attr, 8 * 1024);  // Reduce stack size to 8KB
+
   if (pthread_create(thr, NULL, impl_thrd_routine, pack) != 0) {
     free(pack);
+//    pthread_attr_destroy(&attr);
     return thrd_error;
   }
+
+//  pthread_attr_destroy(&attr);
   return thrd_success;
 }
 

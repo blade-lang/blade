@@ -247,30 +247,6 @@ inline b_error_frame* pop_error(b_vm *vm) {
   return *vm->error_top;
 }
 
-inline void push_thread(b_vm *vm, b_thread_handle *thread) {
-  if(vm->threads_capacity == vm->threads_count) {
-    size_t capacity = GROW_CAPACITY(vm->threads_capacity);
-    vm->threads = GROW_ARRAY(b_thread_handle *, vm->threads, vm->threads_capacity, capacity);
-    vm->threads_capacity = capacity;
-
-    vm->threads[vm->threads_count] = thread;
-    thread->parent_thead_index = vm->threads_count;
-    thread->parent_vm = vm;
-    vm->threads_count++;
-  } else {
-    for(int i = 0; i < vm->threads_capacity; i++) {
-      if(vm->threads[i] == NULL) {
-        vm->threads[i] = thread;
-        thread->parent_thead_index = i;
-        thread->parent_vm = vm;
-        break;
-      }
-    }
-
-    vm->threads_count++;
-  }
-}
-
 inline b_error_frame* peek_error(b_vm *vm) {
   return vm->error_top[-1];
 }
@@ -639,27 +615,6 @@ b_vm *copy_vm(b_vm *src, uint64_t id) {
 
   vm->id = id;
 
-  /*init_table(&vm->modules);
-  table_add_all(vm, &src->modules, &vm->modules);
-  init_table(&vm->strings);
-  table_add_all(vm, &src->strings, &vm->strings);
-  init_table(&vm->globals);
-  table_add_all(vm, &src->globals, &vm->globals);
-
-  // object methods tables
-  init_table(&vm->methods_string);
-  table_add_all(vm, &src->methods_string, &vm->methods_string);
-  init_table(&vm->methods_list);
-  table_add_all(vm, &src->methods_list, &vm->methods_list);
-  init_table(&vm->methods_dict);
-  table_add_all(vm, &src->methods_dict, &vm->methods_dict);
-  init_table(&vm->methods_file);
-  table_add_all(vm, &src->methods_file, &vm->methods_file);
-  init_table(&vm->methods_bytes);
-  table_add_all(vm, &src->methods_bytes, &vm->methods_bytes);
-  init_table(&vm->methods_range);
-  table_add_all(vm, &src->methods_range, &vm->methods_range);*/
-
   return vm;
 }
 
@@ -689,28 +644,6 @@ void free_vm(b_vm *vm) {
   }
 
   free(vm);
-}
-
-void free_thread_handle(b_thread_handle *thread) {
-  if(thread != NULL && thread->parent_vm) {
-    // make slot available for another thread
-
-    b_vm *vm = thread->parent_vm;
-    thread->parent_vm->threads[thread->parent_thead_index] = NULL;
-    thread->parent_vm->threads_count--;
-
-    free_vm(thread->vm);
-    free(thread->thread);
-
-    thread->parent_vm = NULL;
-    thread->vm = NULL;
-    thread->thread = NULL;
-    thread->closure = NULL;
-    thread->args = NULL;
-
-    FREE(b_thread_handle *, thread);
-    thread = NULL;
-  }
 }
 
 static inline bool is_private(b_obj_string *name) {
