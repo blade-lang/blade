@@ -14,8 +14,6 @@ static b_thread_handle *create_thread_handle(b_vm *vm, b_obj_closure *closure, b
 
   b_thread_handle *handle = ALLOCATE(b_thread_handle, 1);
   if(handle != NULL) {
-    pthread_t thread;
-
     handle->vm = copy_vm(vm, ++last_thread_vm_id);
 
     if(handle->vm == NULL) {
@@ -108,7 +106,7 @@ DECLARE_MODULE_METHOD(thread__run) {
   ENFORCE_ARG_TYPE(new, 1, IS_LIST);
 
   b_thread_handle *thread = create_thread_handle(vm, AS_CLOSURE(args[0]), AS_LIST(args[1]));
-  if(thread) {
+  if(thread != NULL) {
     push_thread(vm, thread);
 
     pthread_attr_t attr;
@@ -131,7 +129,7 @@ DECLARE_MODULE_METHOD(thread__dispose) {
   ENFORCE_ARG_TYPE(dispose, 0, IS_PTR);
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
 
-  if(thread && thread->thread && thread->vm != NULL) {
+  if(thread != NULL && thread->thread && thread->vm != NULL) {
     pthread_kill(thread->thread, SIGABRT);
     free_thread_handle(thread);
   }
@@ -144,7 +142,7 @@ DECLARE_MODULE_METHOD(thread__await) {
   ENFORCE_ARG_TYPE(await, 0, IS_PTR);
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
 
-  if(thread && thread->thread && thread->vm != NULL) {
+  if(thread != NULL && thread->thread && thread->vm != NULL) {
     RETURN_BOOL(pthread_join(thread->thread, NULL) == 0);
   }
 
@@ -156,7 +154,7 @@ DECLARE_MODULE_METHOD(thread__detach) {
   ENFORCE_ARG_TYPE(detach, 0, IS_PTR);
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
 
-  if(thread && thread->thread && thread->vm != NULL) {
+  if(thread != NULL && thread->thread && thread->vm != NULL) {
     RETURN_BOOL(pthread_detach(thread->thread) == 0);
   }
 
