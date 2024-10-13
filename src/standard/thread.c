@@ -71,8 +71,14 @@ static void free_thread_handle(b_thread_handle *thread) {
     thread->closure = NULL;
     thread->args = NULL;
 
+//    free(thread);
     thread = NULL;
   }
+}
+
+static void b_free_thread_handle(void *data) {
+  b_thread_handle *handle = (b_thread_handle *) data;
+  free_thread_handle(handle);
 }
 
 static void *b_thread_callback_function(void *data) {
@@ -107,11 +113,11 @@ DECLARE_MODULE_METHOD(thread__run) {
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, 8 * 1024);  // Reduce stack size to 8KB
+    pthread_attr_setstacksize(&attr, 64 * 1024);  // Reduce stack size to 64KB
 
     if(pthread_create(&thread->thread, &attr, b_thread_callback_function, thread) == 0) {
       pthread_attr_destroy(&attr);
-      RETURN_NAMED_PTR(thread, B_THREAD_PTR_NAME);
+      RETURN_CLOSABLE_NAMED_PTR(thread, B_THREAD_PTR_NAME, b_free_thread_handle);
     }
 
     pthread_attr_destroy(&attr);
@@ -123,11 +129,13 @@ DECLARE_MODULE_METHOD(thread__run) {
 DECLARE_MODULE_METHOD(thread__dispose) {
   ENFORCE_ARG_COUNT(dispose, 1);
   ENFORCE_ARG_TYPE(dispose, 0, IS_PTR);
-
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
+
   if(thread && thread->thread && thread->vm != NULL) {
+    pthread_kill(thread->thread, SIGABRT);
     free_thread_handle(thread);
   }
+
   RETURN;
 }
 
@@ -137,9 +145,7 @@ DECLARE_MODULE_METHOD(thread__await) {
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
 
   if(thread && thread->thread && thread->vm != NULL) {
-    bool success = pthread_join(thread->thread, NULL) == 0;
-    free_thread_handle(thread);
-    RETURN_BOOL(success);
+    RETURN_BOOL(pthread_join(thread->thread, NULL) == 0);
   }
 
   RETURN_TRUE;
@@ -149,6 +155,7 @@ DECLARE_MODULE_METHOD(thread__detach) {
   ENFORCE_ARG_COUNT(detach, 1);
   ENFORCE_ARG_TYPE(detach, 0, IS_PTR);
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
+
   if(thread && thread->thread && thread->vm != NULL) {
     RETURN_BOOL(pthread_detach(thread->thread) == 0);
   }
