@@ -1,4 +1,4 @@
-import _thread
+import thread
 
 import http
 
@@ -17,13 +17,13 @@ start = microtime()
 
 var thrds = []
 for i in 0..10 {
-    thrds.append(_thread.run(@{
+    thrds.append(thread.start(@{
         echo http.get('https://google.com')
-    }, []))
+    }))
 }
 
 for t in thrds {
-    _thread.await(t)
+    t.await()
 }
 
 var thread_ends = microtime() - start

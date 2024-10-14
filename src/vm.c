@@ -592,8 +592,15 @@ b_vm *copy_vm(b_vm *src, uint64_t id) {
 
   // copied globals
   vm->modules = src->modules;
-  vm->strings = src->strings;
   vm->globals = src->globals;
+
+  // every thread needs to maintain their own copy of the strings
+  // without this, the threads will never terminate since the parent
+  // vm always holds the root pointer to the strings
+  // this will in turn lead to an infinite hang when creating
+  // lots of threads in succession.
+  init_table(&vm->strings);
+  table_copy(vm, &src->strings, &vm->strings);
 
   // copied object methods
   vm->methods_string = src->methods_string;
@@ -626,7 +633,6 @@ void free_vm(b_vm *vm) {
   if(vm->id == 0) {
     free_table(vm, &vm->modules);
     free_table(vm, &vm->globals);
-    free_table(vm, &vm->strings);
 
     free_table(vm, &vm->methods_string);
     free_table(vm, &vm->methods_list);
@@ -635,6 +641,9 @@ void free_vm(b_vm *vm) {
     free_table(vm, &vm->methods_bytes);
     free_table(vm, &vm->methods_range);
   }
+
+  // since every vm holds a unique copy.
+  free_table(vm, &vm->strings);
 
   free(vm->threads);
   free(vm->stack);

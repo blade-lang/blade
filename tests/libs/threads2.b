@@ -1,13 +1,15 @@
-import _thread
+import thread
 
 var s = []
 for i in 0..60000 {
-    var th = _thread.run(@(i){ echo i }, [i])
+    var th = thread.start(@(t, i){
+        echo '${t.get_id()}, ${i}'
+    }, [i])
     if(th) {
         s.append(th)
     }
 }
 
 for i in 0..60000 {
-    _thread.await(s[i])
+    s[i].await()
 }
