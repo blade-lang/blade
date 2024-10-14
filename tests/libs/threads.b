@@ -1,4 +1,4 @@
-import _thread
+import thread
 
 # var th = _thread.new(@(i) { echo i }, [1])
 # _thread.start(th)
@@ -22,7 +22,7 @@ start = microtime()
 var thrds = []
 for i in 0..4 {
     thrds.append(
-        _thread.run(@(i){
+        thread.start(@(t, i){
             for j in (i * 8)..((i * 8) + 8) {
                 fib(j)
             }
@@ -31,7 +31,7 @@ for i in 0..4 {
 }
 
 for th in thrds {
-    _thread.await(th)
+    th.await()
 }
 
 var thread_time = microtime() - start

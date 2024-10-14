@@ -1,6 +1,19 @@
 #include "module.h"
 #include <pthread.h>
 
+#ifdef __linux__
+#include <sys/syscall.h>
+#elif defined(__FreeBSD__)
+#include <sys/thr.h>
+#elif defined(__NetBSD__)
+#include <lwp.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#else
+#include "bunistd.h"
+#endif /* HAVE_UNISTD_H */
+
 static uint64_t last_thread_vm_id = 0;
 
 #define B_THREAD_PTR_NAME "<void *thread::thread>"
@@ -100,10 +113,11 @@ static void *b_thread_callback_function(void *data) {
   pthread_exit(NULL);
 }
 
-DECLARE_MODULE_METHOD(thread__run) {
-  ENFORCE_ARG_COUNT(new, 2);
-  ENFORCE_ARG_TYPE(new, 0, IS_CLOSURE);
-  ENFORCE_ARG_TYPE(new, 1, IS_LIST);
+DECLARE_MODULE_METHOD(thread__start) {
+  ENFORCE_ARG_COUNT(start, 3);
+  ENFORCE_ARG_TYPE(start, 0, IS_CLOSURE);
+  ENFORCE_ARG_TYPE(start, 1, IS_LIST);
+  ENFORCE_ARG_TYPE(start, 2, IS_NUMBER);
 
   b_thread_handle *thread = create_thread_handle(vm, AS_CLOSURE(args[0]), AS_LIST(args[1]));
   if(thread != NULL) {
@@ -111,7 +125,7 @@ DECLARE_MODULE_METHOD(thread__run) {
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, 64 * 1024);  // Reduce stack size to 64KB
+    pthread_attr_setstacksize(&attr, (size_t)AS_NUMBER(args[2]));  // Reduce stack size to 64KB
 
     if(pthread_create(&thread->thread, &attr, b_thread_callback_function, thread) == 0) {
       pthread_attr_destroy(&attr);
@@ -129,7 +143,7 @@ DECLARE_MODULE_METHOD(thread__dispose) {
   ENFORCE_ARG_TYPE(dispose, 0, IS_PTR);
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
 
-  if(thread != NULL && thread->thread && thread->vm != NULL) {
+  if(thread != NULL && thread->thread != NULL && thread->vm != NULL) {
     pthread_kill(thread->thread, SIGABRT);
     free_thread_handle(thread);
   }
@@ -142,7 +156,7 @@ DECLARE_MODULE_METHOD(thread__await) {
   ENFORCE_ARG_TYPE(await, 0, IS_PTR);
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
 
-  if(thread != NULL && thread->thread && thread->vm != NULL) {
+  if(thread != NULL && thread->thread != NULL && thread->vm != NULL) {
     RETURN_BOOL(pthread_join(thread->thread, NULL) == 0);
   }
 
@@ -154,19 +168,54 @@ DECLARE_MODULE_METHOD(thread__detach) {
   ENFORCE_ARG_TYPE(detach, 0, IS_PTR);
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
 
-  if(thread != NULL && thread->thread && thread->vm != NULL) {
+  if(thread != NULL && thread->thread != NULL && thread->vm != NULL) {
     RETURN_BOOL(pthread_detach(thread->thread) == 0);
   }
 
   RETURN_FALSE;
 }
 
+DECLARE_MODULE_METHOD(thread__set_name) {
+  ENFORCE_ARG_COUNT(set_name, 1);
+  ENFORCE_ARG_TYPE(set_name, 0, IS_STRING);
+  RETURN_BOOL(pthread_setname_np(AS_C_STRING(args[0])) == 0);
+}
+
+uint64_t get_thread_id(void)
+{
+#if defined(__linux__)
+  return syscall(SYS_gettid);
+#elif defined(__FreeBSD__)
+  /* thread id is up to INT_MAX */
+    long tid;
+    thr_self(&tid);
+    return (uint64_t)tid;
+#elif defined(__NetBSD__)
+  return (uint64_t)_lwp_self();
+#elif defined(__OpenBSD__)
+  return (uint64_t)getthrid();
+#elif defined(__APPLE__)
+  uint64_t id;
+  pthread_threadid_np(NULL, &id);
+  return id;
+#else
+  return (uint64_t)getpid();
+#endif
+}
+
+DECLARE_MODULE_METHOD(thread__get_id) {
+  ENFORCE_ARG_COUNT(get_id, 0);
+  RETURN_NUMBER(get_thread_id());
+}
+
 CREATE_MODULE_LOADER(thread) {
   static b_func_reg module_functions[] = {
-      {"run", false, GET_MODULE_METHOD(thread__run)},
+      {"start", false, GET_MODULE_METHOD(thread__start)},
       {"dispose", false, GET_MODULE_METHOD(thread__dispose)},
       {"await", false, GET_MODULE_METHOD(thread__await)},
       {"detach", false, GET_MODULE_METHOD(thread__detach)},
+      {"set_name", false, GET_MODULE_METHOD(thread__set_name)},
+      {"get_id", false, GET_MODULE_METHOD(thread__get_id)},
       {NULL,     false, NULL},
   };
 
