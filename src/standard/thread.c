@@ -14,6 +14,10 @@
 #include "bunistd.h"
 #endif /* HAVE_UNISTD_H */
 
+#ifndef SIGKILL
+#define SIGKILL 9
+#endif
+
 static uint64_t last_thread_vm_id = 0;
 
 #define B_THREAD_PTR_NAME "<void *thread::thread>"
@@ -143,8 +147,8 @@ DECLARE_MODULE_METHOD(thread__dispose) {
   ENFORCE_ARG_TYPE(dispose, 0, IS_PTR);
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
 
-  if(thread != NULL && thread->thread != NULL && thread->vm != NULL) {
-    pthread_kill(thread->thread, SIGABRT);
+  if(thread != NULL && thread->vm != NULL) {
+    pthread_kill(thread->thread, SIGKILL);
     free_thread_handle(thread);
   }
 
@@ -156,7 +160,7 @@ DECLARE_MODULE_METHOD(thread__await) {
   ENFORCE_ARG_TYPE(await, 0, IS_PTR);
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
 
-  if(thread != NULL && thread->thread != NULL && thread->vm != NULL) {
+  if(thread != NULL && thread->vm != NULL) {
     RETURN_BOOL(pthread_join(thread->thread, NULL) == 0);
   }
 
@@ -168,7 +172,7 @@ DECLARE_MODULE_METHOD(thread__detach) {
   ENFORCE_ARG_TYPE(detach, 0, IS_PTR);
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
 
-  if(thread != NULL && thread->thread != NULL && thread->vm != NULL) {
+  if(thread != NULL && thread->vm != NULL) {
     RETURN_BOOL(pthread_detach(thread->thread) == 0);
   }
 
