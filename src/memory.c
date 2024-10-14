@@ -213,7 +213,7 @@ void free_object(b_vm *vm, b_obj *object) {
 #endif
 
   // Do not free stale objects and objects that do not belong to this vm.
-  if(object->stale || object->vm_id != vm->id) return;
+  if(object->stale > 0 || object->vm_id != vm->id) return;
 
   switch (object->type) {
     case OBJ_MODULE: {

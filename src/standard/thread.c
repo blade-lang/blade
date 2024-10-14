@@ -110,8 +110,8 @@ static b_thread_handle *create_thread_handle(b_vm *vm, b_obj_closure *closure, b
     handle->closure = closure;
     handle->args = args;
 
-    ((b_obj *)closure)->stale = true;
-    ((b_obj *)args)->stale = true;
+    ((b_obj *)closure)->stale++;
+    ((b_obj *)args)->stale++;
   }
 
   return handle;
@@ -179,8 +179,8 @@ static void *b_thread_callback_function(void *data) {
     // do nothing for now...
   }
 
-  ((b_obj *)handle->closure)->stale = false;
-  ((b_obj *)handle->args)->stale = false;
+  ((b_obj *)handle->closure)->stale--;
+  ((b_obj *)handle->args)->stale--;
 
   free_thread_handle(handle);
   pthread_exit(NULL);

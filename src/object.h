@@ -99,7 +99,7 @@ struct s_obj {
   // for library/package objects that want to reuse native
   // objects in their types/pointers. The GC cannot reach
   // them yet, so it's best for them to be kept stale.
-  bool stale;
+  uint32_t stale;
   struct s_obj *next;
 };
 

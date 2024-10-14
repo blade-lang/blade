@@ -404,7 +404,7 @@ DECLARE_MODULE_METHOD(clib_new_struct) {
   if(arg_count == 2) {
     ENFORCE_ARG_TYPE(new_struct, 1, IS_LIST);
     names = AS_LIST(args[1]);
-    names->obj.stale = true;
+    names->obj.stale++;
   }
 
   ffi_type *type = ALLOCATE(ffi_type, 1);
