@@ -99,8 +99,7 @@ struct s_vm {
   uint64_t id;
 };
 
-void init_vm(b_vm *vm, uint64_t id);
-b_vm *copy_vm(b_vm *src, uint64_t id);
+void init_vm(b_vm *vm);
 void free_vm(b_vm *vm);
 
 b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source);

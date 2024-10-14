@@ -23,6 +23,74 @@ static uint64_t last_thread_vm_id = 0;
 
 #define B_THREAD_PTR_NAME "<void *thread::thread>"
 
+b_vm *copy_vm(b_vm *src, uint64_t id) {
+  b_vm *vm = (b_vm *) malloc(sizeof(b_vm));
+  if(!vm) {
+    return NULL;
+  }
+
+  memset(vm, 0, sizeof(b_vm));
+
+  vm->stack = ALLOCATE(b_value, COPIED_STACK_MIN);
+  vm->stack_capacity = COPIED_STACK_MIN;
+
+  vm->threads = ALLOCATE(b_thread_handle *, THREADS_MIN);
+  memset(vm->threads, 0, sizeof(b_thread_handle *));
+  vm->threads_count = 0;
+  vm->threads_capacity = THREADS_MIN;
+
+  // reset stack
+  vm->stack_top = vm->stack;
+  vm->error_top = vm->errors;
+  vm->frame_count = 0;
+  vm->open_up_values = NULL;
+
+  // copies properties
+  vm->compiler = src->compiler;
+  vm->exception_class = src->exception_class;
+  vm->root_file = src->root_file;
+  vm->is_repl = src->is_repl;
+  vm->show_warnings = src->show_warnings;
+  vm->should_print_bytecode = src->should_print_bytecode;
+  vm->should_exit_after_bytecode = src->should_exit_after_bytecode;
+  vm->std_args = src->std_args;
+  vm->std_args_count = src->std_args_count;
+
+  // copied globals
+  vm->modules = src->modules;
+  vm->globals = src->globals;
+
+  // every thread needs to maintain their own copy of the strings
+  // without this, the threads will never terminate since the parent
+  // vm always holds the root pointer to the strings
+  // this will in turn lead to an infinite hang when creating
+  // lots of threads in succession.
+  init_table(&vm->strings);
+  table_copy(vm, &src->strings, &vm->strings);
+
+  // copied object methods
+  vm->methods_string = src->methods_string;
+  vm->methods_list = src->methods_list;
+  vm->methods_dict = src->methods_dict;
+  vm->methods_file = src->methods_file;
+  vm->methods_bytes = src->methods_bytes;
+  vm->methods_range = src->methods_range;
+
+  // own properties
+  vm->objects = NULL;
+  vm->current_frame = NULL;
+  vm->bytes_allocated = 0;
+  vm->next_gc = DEFAULT_GC_START / 4; // default is quarter the original set value
+  vm->mark_value = true;
+  vm->gray_count = 0;
+  vm->gray_capacity = 0;
+  vm->gray_stack = NULL;
+
+  vm->id = id;
+
+  return vm;
+}
+
 static b_thread_handle *create_thread_handle(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
   if(last_thread_vm_id == UINT64_MAX) {
     // whatever makes us get here, due to resource constraint on devices,

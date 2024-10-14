@@ -303,7 +303,7 @@ int main(int argc, char *argv[]) {
   b_vm *vm = (b_vm *) malloc(sizeof(b_vm));
   if (vm != NULL) {
     memset(vm, 0, sizeof(b_vm));
-    init_vm(vm, 0);
+    init_vm(vm);
 
     // set vm options...
     vm->show_warnings = show_warnings;
