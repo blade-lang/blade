@@ -1,5 +1,6 @@
 #include "module.h"
 #include <pthread.h>
+#include <sched.h>
 
 #ifdef __linux__
 #include <sys/syscall.h>
@@ -117,23 +118,35 @@ static void *b_thread_callback_function(void *data) {
   pthread_exit(NULL);
 }
 
-DECLARE_MODULE_METHOD(thread__start) {
-  ENFORCE_ARG_COUNT(start, 3);
-  ENFORCE_ARG_TYPE(start, 0, IS_CLOSURE);
-  ENFORCE_ARG_TYPE(start, 1, IS_LIST);
-  ENFORCE_ARG_TYPE(start, 2, IS_NUMBER);
+DECLARE_MODULE_METHOD(thread__new) {
+  ENFORCE_ARG_COUNT(new, 2);
+  ENFORCE_ARG_TYPE(new, 0, IS_CLOSURE);
+  ENFORCE_ARG_TYPE(new, 1, IS_LIST);
 
   b_thread_handle *thread = create_thread_handle(vm, AS_CLOSURE(args[0]), AS_LIST(args[1]));
+  if(thread != NULL) {
+    RETURN_CLOSABLE_NAMED_PTR(thread, B_THREAD_PTR_NAME, b_free_thread_handle);
+  }
+
+  RETURN_NIL;
+}
+
+DECLARE_MODULE_METHOD(thread__start) {
+  ENFORCE_ARG_COUNT(start, 2);
+  ENFORCE_ARG_TYPE(start, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(start, 1, IS_NUMBER);
+  b_thread_handle *thread = AS_PTR(args[0])->pointer;
+
   if(thread != NULL) {
     push_thread(vm, thread);
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, (size_t)AS_NUMBER(args[2]));  // Reduce stack size to 64KB
+    pthread_attr_setstacksize(&attr, (size_t)AS_NUMBER(args[1]));
 
     if(pthread_create(&thread->thread, &attr, b_thread_callback_function, thread) == 0) {
       pthread_attr_destroy(&attr);
-      RETURN_CLOSABLE_NAMED_PTR(thread, B_THREAD_PTR_NAME, b_free_thread_handle);
+      RETURN_TRUE;
     }
 
     pthread_attr_destroy(&attr);
@@ -148,11 +161,13 @@ DECLARE_MODULE_METHOD(thread__dispose) {
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
 
   if(thread != NULL && thread->vm != NULL) {
-    pthread_kill(thread->thread, SIGKILL);
-    free_thread_handle(thread);
+    if(pthread_kill(thread->thread, SIGKILL) == 0) {
+      free_thread_handle(thread);
+      RETURN_TRUE;
+    }
   }
 
-  RETURN;
+  RETURN_FALSE;
 }
 
 DECLARE_MODULE_METHOD(thread__await) {
@@ -235,17 +250,19 @@ DECLARE_MODULE_METHOD(thread__get_id) {
   RETURN_NUMBER(get_thread_id());
 }
 
-DECLARE_MODULE_METHOD(thread__main_thread) {
-  ENFORCE_ARG_COUNT(main_thread, 0);
-  RETURN;
+DECLARE_MODULE_METHOD(thread__yield) {
+  ENFORCE_ARG_COUNT(yield, 0);
+  RETURN_BOOL(sched_yield() == 0);
 }
 
 CREATE_MODULE_LOADER(thread) {
   static b_func_reg module_functions[] = {
+      {"new", false, GET_MODULE_METHOD(thread__new)},
       {"start", false, GET_MODULE_METHOD(thread__start)},
       {"dispose", false, GET_MODULE_METHOD(thread__dispose)},
       {"await", false, GET_MODULE_METHOD(thread__await)},
       {"detach", false, GET_MODULE_METHOD(thread__detach)},
+      {"yield", false, GET_MODULE_METHOD(thread__yield)},
       {"set_name", false, GET_MODULE_METHOD(thread__set_name)},
       {"get_name", false, GET_MODULE_METHOD(thread__get_name)},
       {"get_id", false, GET_MODULE_METHOD(thread__get_id)},
