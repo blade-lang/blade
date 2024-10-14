@@ -7,9 +7,16 @@
 import _thread
 
 import reflect
+import os
 
 var _MIN_STACK_SIZE = 8 * 1024
 var _DEFAULT_STACK_SIZE = 64 * 1024
+
+var _main_thread_id = _thread.get_id()
+
+def _is_main_thread(id) {
+  return id == _main_thread_id
+}
 
 class Thread {
 
@@ -17,7 +24,7 @@ class Thread {
   var _fn_arity
 
   var _args
-  var _name = 'blade'
+  var _name
   var _size = _DEFAULT_STACK_SIZE
 
   var _ptr
@@ -67,11 +74,17 @@ class Thread {
 
   try_await() {}
 
-  sleep(time) {}
+  sleep(time) {
+    if _is_main_thread(self.get_id())
+      raise Exception('cannot call sleep() from main thread')
 
-  cancel() {}
+    os.sleep(time)
+  }
 
-  yield() {}
+  yield() {
+    if _is_main_thread(self.get_id())
+      raise Exception('cannot call yield() from main thread')
+  }
 
   set_name(name) {
     if !is_string(name)
@@ -81,6 +94,9 @@ class Thread {
       raise Exception('string length must be between 1 and 16')
     }
 
+    if _is_main_thread(self.get_id())
+      raise Exception('cannot call set_name() from main thread')
+
     if self._ptr {
       self._name = name
       _thread.set_name(self._ptr, name)
@@ -88,7 +104,16 @@ class Thread {
   }
 
   get_name() {
-    return self._name
+    if _is_main_thread(self.get_id())
+      raise Exception('cannot call get_name() from main thread')
+
+    if self._ptr {
+      if self._name
+        return self._name
+      return _thread.get_name(self._ptr)
+    }
+
+    return 'blade'
   }
 
   set_stack_size(size) {

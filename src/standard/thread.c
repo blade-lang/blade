@@ -195,6 +195,19 @@ DECLARE_MODULE_METHOD(thread__set_name) {
 #endif
 }
 
+DECLARE_MODULE_METHOD(thread__get_name) {
+  ENFORCE_ARG_COUNT(get_name, 1);
+  ENFORCE_ARG_TYPE(get_name, 0, IS_PTR);
+  b_thread_handle *thread = AS_PTR(args[0])->pointer;
+
+  char buffer[255];
+  if(pthread_getname_np(thread->thread, buffer, 255) == 0) {
+    RETURN_STRING(buffer);
+  }
+
+  RETURN_VALUE(EMPTY_STRING_VAL);
+}
+
 uint64_t get_thread_id(void)
 {
 #if defined(__linux__)
@@ -222,6 +235,11 @@ DECLARE_MODULE_METHOD(thread__get_id) {
   RETURN_NUMBER(get_thread_id());
 }
 
+DECLARE_MODULE_METHOD(thread__main_thread) {
+  ENFORCE_ARG_COUNT(main_thread, 0);
+  RETURN;
+}
+
 CREATE_MODULE_LOADER(thread) {
   static b_func_reg module_functions[] = {
       {"start", false, GET_MODULE_METHOD(thread__start)},
@@ -229,6 +247,7 @@ CREATE_MODULE_LOADER(thread) {
       {"await", false, GET_MODULE_METHOD(thread__await)},
       {"detach", false, GET_MODULE_METHOD(thread__detach)},
       {"set_name", false, GET_MODULE_METHOD(thread__set_name)},
+      {"get_name", false, GET_MODULE_METHOD(thread__get_name)},
       {"get_id", false, GET_MODULE_METHOD(thread__get_id)},
       {NULL,     false, NULL},
   };
