@@ -9,8 +9,6 @@ typedef struct s_compiler b_compiler;
 #include "table.h"
 #include "value.h"
 
-#include <pthread.h>
-
 typedef enum {
   PTR_OK,
   PTR_COMPILE_ERR,
@@ -30,15 +28,6 @@ typedef struct {
   b_value value;
 } b_error_frame;
 
-typedef struct {
-  pthread_t thread;
-  b_vm *vm;
-  b_vm *parent_vm;
-  b_obj_closure *closure;
-  b_obj_list *args;
-  size_t parent_thead_index;
-} b_thread_handle;
-
 struct s_vm {
   b_call_frame frames[FRAMES_MAX];
   b_call_frame *current_frame;
@@ -54,10 +43,6 @@ struct s_vm {
   size_t stack_capacity;
   b_value *stack;
   b_value *stack_top;
-
-  uint64_t threads_capacity;
-  uint64_t threads_count;
-  b_thread_handle **threads;
 
   b_obj *objects;
   b_compiler *compiler;

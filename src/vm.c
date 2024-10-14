@@ -517,11 +517,6 @@ void init_vm(b_vm *vm) {
   vm->stack = ALLOCATE(b_value, STACK_MIN);
   vm->stack_capacity = STACK_MIN;
 
-  vm->threads = ALLOCATE(b_thread_handle *, THREADS_MIN);
-  memset(vm->threads, 0, sizeof(b_thread_handle *));
-  vm->threads_count = 0;
-  vm->threads_capacity = THREADS_MIN;
-
   reset_stack(vm);
 
   vm->id = 0;
@@ -581,7 +576,6 @@ void free_vm(b_vm *vm) {
   // since every vm holds a unique copy.
   free_table(vm, &vm->strings);
 
-  free(vm->threads);
   free(vm->stack);
 
   for(b_error_frame **err = vm->errors; err < vm->error_top; err++) {
