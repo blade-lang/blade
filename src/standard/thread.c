@@ -46,6 +46,11 @@ b_vm *copy_vm(b_vm *src, uint64_t id) {
   vm->stack = ALLOCATE(b_value, COPIED_STACK_MIN);
   vm->stack_capacity = COPIED_STACK_MIN;
 
+  vm->threads = ALLOCATE(b_thread_handle *, THREADS_MIN);
+  memset(vm->threads, 0, sizeof(b_thread_handle *));
+  vm->threads_count = 0;
+  vm->threads_capacity = THREADS_MIN;
+
   // reset stack
   vm->stack_top = vm->stack;
   vm->error_top = vm->errors;
@@ -124,27 +129,57 @@ static b_thread_handle *create_thread_handle(b_vm *vm, b_obj_closure *closure, b
   return handle;
 }
 
+
+static void push_thread(b_vm *vm, b_thread_handle *thread) {
+  if(vm->threads_capacity == vm->threads_count) {
+    size_t capacity = GROW_CAPACITY(vm->threads_capacity);
+    vm->threads = GROW_ARRAY(b_thread_handle *, vm->threads, vm->threads_capacity, capacity);
+    vm->threads_capacity = capacity;
+
+    vm->threads[vm->threads_count] = thread;
+    thread->parent_thead_index = vm->threads_count;
+    thread->parent_vm = vm;
+  } else {
+    for(int i = 0; i < vm->threads_capacity; i++) {
+      if(vm->threads[i] == NULL) {
+        vm->threads[i] = thread;
+        thread->parent_thead_index = i;
+        thread->parent_vm = vm;
+        break;
+      }
+    }
+  }
+
+  vm->threads_count++;
+}
+
 static void free_thread_handle(b_thread_handle *thread) {
-  if(thread != NULL && thread->vm != NULL) {
+  if(thread != NULL && thread->parent_vm != NULL) {
+    // make slot available for another thread
+
+    thread->parent_vm->threads[thread->parent_thead_index] = NULL;
+    thread->parent_vm->threads_count--;
+
     free_vm(thread->vm);
 
+    thread->parent_vm = NULL;
     thread->vm = NULL;
     thread->closure = NULL;
     thread->args = NULL;
 
-    ((b_obj *)thread)->stale--;
+//    free(thread);
+    thread = NULL;
   }
 }
 
 static void b_free_thread_handle(void *data) {
   b_thread_handle *handle = (b_thread_handle *) data;
   free_thread_handle(handle);
-  free(handle);
 }
 
 static void *b_thread_callback_function(void *data) {
   b_thread_handle *handle = (b_thread_handle *) data;
-  if(handle == NULL || handle->vm == NULL) {
+  if(handle == NULL || handle->vm == NULL || handle->parent_vm == NULL) {
     pthread_exit(NULL);
   }
 
@@ -170,9 +205,7 @@ DECLARE_MODULE_METHOD(thread__new) {
 
   b_thread_handle *thread = create_thread_handle(vm, AS_CLOSURE(args[0]), AS_LIST(args[1]));
   if(thread != NULL) {
-    b_obj_ptr *ptr = new_closable_named_ptr(vm, thread, B_THREAD_PTR_NAME, b_free_thread_handle);
-    ((b_obj *)ptr)->stale++;
-    RETURN_OBJ(ptr);
+    RETURN_CLOSABLE_NAMED_PTR(thread, B_THREAD_PTR_NAME, b_free_thread_handle);
   }
 
   RETURN_NIL;
@@ -185,6 +218,8 @@ DECLARE_MODULE_METHOD(thread__start) {
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
 
   if(thread != NULL) {
+    push_thread(vm, thread);
+
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setstacksize(&attr, (size_t)AS_NUMBER(args[1]));
