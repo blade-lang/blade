@@ -81,8 +81,10 @@ class Thread {
       raise Exception('string length must be between 1 and 16')
     }
 
-    self._name = name
-    _thread.set_name(name)
+    if self._ptr {
+      self._name = name
+      _thread.set_name(self._ptr, name)
+    }
   }
 
   get_name() {

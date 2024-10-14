@@ -176,9 +176,19 @@ DECLARE_MODULE_METHOD(thread__detach) {
 }
 
 DECLARE_MODULE_METHOD(thread__set_name) {
-  ENFORCE_ARG_COUNT(set_name, 1);
-  ENFORCE_ARG_TYPE(set_name, 0, IS_STRING);
-  RETURN_BOOL(pthread_setname_np(AS_C_STRING(args[0])) == 0);
+  ENFORCE_ARG_COUNT(set_name, 2);
+  ENFORCE_ARG_TYPE(set_name, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(set_name, 1, IS_STRING);
+#ifdef __APPLE__
+  RETURN_BOOL(pthread_setname_np(AS_C_STRING(args[1])) == 0);
+#else
+  b_thread_handle *thread = AS_PTR(args[0])->pointer;
+# if defined(PTHREAD_MAX_NAMELEN_NP) && PTHREAD_MAX_NAMELEN_NP == 16
+  RETURN_BOOL(pthread_setname_np(thread->thread, AS_C_STRING(args[1]), NULL) == 0);
+# else
+  RETURN_BOOL(pthread_setname_np(thread->thread, AS_C_STRING(args[1])) == 0);
+# endif
+#endif
 }
 
 uint64_t get_thread_id(void)
