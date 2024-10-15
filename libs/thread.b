@@ -19,12 +19,15 @@ def _is_not_main_thread(id) {id
 }
 
 /**
+ * The thread class exposes methods to manage creating, running, 
+ * and controlling threads.
+ * 
  * @class
  */
 class Thread {
 
-  var _fn
-  var _fn_arity
+  var _delegate
+  var _delegate_arity
 
   var _args
   var _name
@@ -37,17 +40,17 @@ class Thread {
   var _detached = false
 
   /**
-   * The function passed to the constructor may accept zero or more 
-   * parameters. When it accepts no parameter, the function will be 
-   * called without any argument when run otherwise, it will be 
-   * called with as many argument as it can receive.
+   * The delegate function passed to the constructor may accept zero 
+   * or more parameters. When it accepts no parameter, the function 
+   * will be called without any argument when run otherwise, it will 
+   * be called with as many argument as it can receive.
    * 
-   * When a function accepts arguments, the first argument passed 
+   * When a delegate accepts arguments, the first argument passed 
    * will always be the thread object itself followed by the arguments 
    * it received from start.
    * 
    * For example, in the following thread execution, the first 
-   * parameter _t_ in the function will receive the thread object 
+   * parameter _t_ in the delegate will receive the thread object 
    * itself.
    * 
    * ```blade
@@ -58,10 +61,11 @@ class Thread {
    * th.start(21)
    * ```
    * 
-   * The function doesn't raise an exception because parameter _t_ never 
-   * received the `start()` argument but the thread itself. In the next 
-   * example, the function accepts the start argument. Note that the start 
-   * argument was received starting from the second argument.
+   * The delegate function doesn't raise an exception because parameter 
+   * _t_ never received the `start()` argument but the thread itself. 
+   * In the next example, the function accepts the start argument. Note 
+   * that the start argument was received starting from the second 
+   * argument.
    * 
    * ```blade
    * var th = Thread(@(t, balance) {
@@ -71,15 +75,26 @@ class Thread {
    * th.start(21)
    * ```
    * 
-   * @params function fn
+   * The optional second parameter allows us to set the size of the stack
+   * used for the thread when started.
+   * 
+   * @param function delegate
+   * @param number? stack_size
    * @constructor
    */
-  Thread(fn) {
-    if !is_function(fn)
-      raise Exception('function(1..) expected, ${typeof(fn)} given')
+  Thread(delegate, stack_size) {
+    if !is_function(delegate)
+      raise Exception('function(1..) expected, ${typeof(delegate)} given')
 
-    self._fn = fn
-    self._fn_arity = reflect.get_function_metadata(fn).arity
+    self._delegate = delegate
+    self._delegate_arity = reflect.get_function_metadata(delegate).arity
+    
+    # set stack size if given.
+    # we're falling back on the type check done by set_stack_size
+    # here...
+    if stack_size != nil {
+      self.set_stack_size(stack_size)
+    }
   }
 
   /**
@@ -92,7 +107,7 @@ class Thread {
    * 
    * > **NOTE:** A thread can only be started once.
    * 
-   * @params any... args
+   * @param any... args
    */
   start(...) {
     self.start_from_list(__args__)
@@ -101,7 +116,7 @@ class Thread {
   /**
    * Same as `start()` but takes the argument from a list instead.
    * 
-   * @params list args
+   * @param list args
    */
   start_from_list(args) {
     if !is_list(args)
@@ -115,9 +130,9 @@ class Thread {
     args = [self] + args
 
     # only pass on arguments that the run function is able to accept.
-    args = args[0,self._fn_arity]
+    args = args[0,self._delegate_arity]
 
-    self._ptr = _thread.new(self._fn, args)
+    self._ptr = _thread.new(self._delegate, args)
     self._started = _thread.start(self._ptr, self._size)
   }
 
@@ -133,7 +148,13 @@ class Thread {
    */
   dispose() {
     assert self._ptr, 'thread not started'
-    return _thread.dispose(self._ptr)
+
+    if _thread.dispose(self._ptr) {
+      self._ptr = nil
+      return true
+    }
+
+    return false
   }
 
   /**
@@ -201,9 +222,6 @@ class Thread {
     _thread.await(self._ptr)
     self._joined = false
   }
-
-  # TODO: Implement
-  try_await() {}
 
   /**
    * Causes the current thread to sleep for the specified number of seconds.
@@ -331,19 +349,50 @@ class Thread {
     return _thread.get_id()
   }
 
-  # TODO: Implement
-  is_alive() {}
+  /**
+   * Returns true if the thread is started and alive (running) 
+   * or false if not.
+   * 
+   * @returns bool
+   */
+  is_alive() {
+    if self._ptr {
+      return self._started and _thread.is_alive(self._ptr)
+    }
+
+    return false
+  }
 }
 
 
-def start(function, args) {
+/**
+ * Returns a new instance of Thread.
+ * 
+ * @param function delegate
+ * @param number? stack_size
+ * @see Constructor
+ * @returns Thread
+ */
+def thread(delegate, stack_size) {
+  return Thread(delegate, stack_size)
+}
+
+
+/**
+ * Creates a new thread and automatically starts the thread 
+ * using the default options and arguments.
+ * 
+ * @param function delegate
+ * @param list args
+ */
+def start(delegate, args) {
   if args == nil args = []
 
   # we're deliberately not checking the arguments here 
   # because the thread initializer and start_from_list function 
   # will take care of that on their own.
 
-  var thread = Thread(function)
+  var thread = Thread(delegate)
   thread.start_from_list(args)
   return thread
 }

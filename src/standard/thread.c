@@ -247,11 +247,14 @@ DECLARE_MODULE_METHOD(thread__set_name) {
   RETURN_BOOL(pthread_setname_np(AS_C_STRING(args[1])) == 0);
 #else
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
+  if(thread != NULL && thread->vm != NULL) {
 # if defined(PTHREAD_MAX_NAMELEN_NP) && PTHREAD_MAX_NAMELEN_NP == 16
-  RETURN_BOOL(pthread_setname_np(thread->thread, AS_C_STRING(args[1]), NULL) == 0);
+    RETURN_BOOL(pthread_setname_np(thread->thread, AS_C_STRING(args[1]), NULL) == 0);
 # else
-  RETURN_BOOL(pthread_setname_np(thread->thread, AS_C_STRING(args[1])) == 0);
+    RETURN_BOOL(pthread_setname_np(thread->thread, AS_C_STRING(args[1])) == 0);
 # endif
+  }
+  RETURN_FALSE;
 #endif
 }
 
@@ -260,16 +263,17 @@ DECLARE_MODULE_METHOD(thread__get_name) {
   ENFORCE_ARG_TYPE(get_name, 0, IS_PTR);
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
 
-  char buffer[255];
-  if(pthread_getname_np(thread->thread, buffer, 255) == 0) {
-    RETURN_STRING(buffer);
+  if(thread != NULL && thread->vm != NULL) {
+    char buffer[255];
+    if(pthread_getname_np(thread->thread, buffer, 255) == 0) {
+      RETURN_STRING(buffer);
+    }
   }
 
   RETURN_VALUE(EMPTY_STRING_VAL);
 }
 
-uint64_t get_thread_id(void)
-{
+uint64_t get_thread_id(void) {
 #if defined(__linux__)
   return syscall(SYS_gettid);
 #elif defined(__FreeBSD__)
@@ -300,6 +304,13 @@ DECLARE_MODULE_METHOD(thread__yield) {
   RETURN_BOOL(sched_yield() == 0);
 }
 
+DECLARE_MODULE_METHOD(thread__is_alive) {
+  ENFORCE_ARG_COUNT(is_alive, 1);
+  ENFORCE_ARG_TYPE(get_name, 0, IS_PTR);
+  b_thread_handle *thread = AS_PTR(args[0])->pointer;
+  RETURN_BOOL(thread != NULL && thread->vm != NULL);
+}
+
 CREATE_MODULE_LOADER(thread) {
   static b_func_reg module_functions[] = {
       {"new", false, GET_MODULE_METHOD(thread__new)},
@@ -311,6 +322,7 @@ CREATE_MODULE_LOADER(thread) {
       {"set_name", false, GET_MODULE_METHOD(thread__set_name)},
       {"get_name", false, GET_MODULE_METHOD(thread__get_name)},
       {"get_id", false, GET_MODULE_METHOD(thread__get_id)},
+      {"is_alive", false, GET_MODULE_METHOD(thread__is_alive)},
       {NULL,     false, NULL},
   };
 
