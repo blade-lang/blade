@@ -13,13 +13,79 @@
  * offload long tasks to a separate thread of execution becomes 
  * aparent when creating scalable applications.
  * 
- * ## Create and start a new thread
+ * ### Create and start a new thread
  * 
- * ## Stopping a thread
+ * You can create a thread by creating a new instance if the `Thread` 
+ * class wither directly or via the `thread()` function and passing 
+ * in a function delegate that will be called when the thread is run.
+ * To start the thread, you can call the start function passing 
+ * parameters for the thread delegate function to it directly to the 
+ * start function.
  * 
- * ## Awaiting a thread
+ * For example, the following code creates and start a new thread by 
+ * creating an instance of the Thread class directly,
  * 
- * ## Renaming a thread
+ * ```blade-repl
+ * import thread
+ * 
+ * var th = thread.Thread(@(t, name) {
+ *   echo name * 5
+ * })
+ * 
+ * th.start('John')
+ * ```
+ * 
+ * The `thread()` function serves as a syntatic sugar for this as well 
+ * as a module function and like other blade module functions is the 
+ * conventional way to create an instance of a thread. The example 
+ * below is a rewrite of the previous example with the module function.
+ * 
+ * ```blade-repl
+ * import thread
+ * 
+ * var th = thread(@(t, name) {
+ *   echo name * 5
+ * })
+ * 
+ * th.start('John')
+ * ```
+ * 
+ * Since for most usecases this is exactly the process you'll want and 
+ * not very often will you need to configure settings on a thread, the 
+ * `start()` module function provides a simply way of combining this 
+ * process into a single function call. However, unlike with the Thread 
+ * instance or thread function, the start function accepts it's delegate 
+ * function arguments as a list in its second argument. This makes it 
+ * very friendly for creating fine-tuned and non-predefined arguments 
+ * to the delegate function.
+ * 
+ * The example below rewrites the previous functionality by using the 
+ * start function.
+ * 
+ * ```blade-repl
+ * import thread
+ * 
+ * var th = thread.start(@(t, name) {
+ *   echo name * 5
+ * }, ['John'])
+ * ```
+ * 
+ * Notice that the `start()` function is more concise. Unless you need to 
+ * configure the thread behavior before starting a thread, the `start()` 
+ * function is the idiomatic way to create threads.
+ * 
+ * > **NOTICE THE _t_ VARIABLE?**
+ * >
+ * > When a thread's delegate function accepts parameters, it will always 
+ * > be given the thread instance itself as the first argument. Any other 
+ * > argument passed into the function will be received in the postceeding 
+ * > parameters.
+ * 
+ * ### Awaiting a thread
+ * 
+ * ### Stopping a thread
+ * 
+ * ### Renaming a thread
  * 
  * @copyright 2024, Ore Richard Muyiwa and Blade contributors
  */
@@ -46,15 +112,19 @@ def _is_not_main_thread(id) {id
  */
 class Thread {
 
+  # delegate information
   var _delegate
   var _delegate_arity
+  
+  # thread pointer
+  var _ptr
 
+  # thread pointer information
   var _args
   var _name
   var _size = _DEFAULT_STACK_SIZE
 
-  var _ptr
-
+  # thread state store
   var _started = false
   var _joined = false
   var _detached = false
