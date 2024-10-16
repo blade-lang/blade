@@ -1,7 +1,5 @@
 #include "module.h"
 #include <pthread.h>
-#include <sched.h>
-#include <signal.h>
 
 #ifdef __linux__
 #include <sys/syscall.h>
@@ -25,6 +23,9 @@
 #define SIGUSR2 31
 #endif
 #endif
+
+#include <sched.h>
+#include <signal.h>
 
 typedef struct {
   pthread_t thread;
