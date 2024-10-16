@@ -1,6 +1,26 @@
 /**
  * @module threads
  * 
+ * The thread module provides functionality for creating and 
+ * controlling threads. With the thread module, you can create 
+ * applications that perform multiple operations at the same 
+ * time. 
+ * 
+ * Operations that can potentially block/hold up other operations 
+ * can be executed on separate threads.
+ * 
+ * As the workload of your application increases, the need to 
+ * offload long tasks to a separate thread of execution becomes 
+ * aparent when creating scalable applications.
+ * 
+ * ## Create and start a new thread
+ * 
+ * ## Stopping a thread
+ * 
+ * ## Awaiting a thread
+ * 
+ * ## Renaming a thread
+ * 
  * @copyright 2024, Ore Richard Muyiwa and Blade contributors
  */
 
@@ -137,19 +157,19 @@ class Thread {
   }
 
   /**
-   * Terminates the thread by sending `SIGKILL` signals to the thread 
-   * and free all associated resources afterwords. If the thread has 
-   * already been disposed, then it does nothing.
+   * Terminates the thread by sending kill signals to the thread 
+   * and freeing all associated resources afterwards. If the thread 
+   * has already been cancelled, then it does nothing.
    * 
    * Returns `true` if the thread was successfully terminated and all 
    * resources freed otherwise it returns `false`.
    * 
    * @returns bool
    */
-  dispose() {
+  cancel() {
     assert self._ptr, 'thread not started'
 
-    if _thread.dispose(self._ptr) {
+    if _thread.cancel(self._ptr) {
       self._ptr = nil
       return true
     }

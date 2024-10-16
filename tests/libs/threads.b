@@ -1,10 +1,5 @@
 import thread
 
-# var th = _thread.new(@(i) { echo i }, [1])
-# _thread.start(th)
-# # _thread.await(th)
-# # _thread.dispose(th)
-
 def fib(n) {
   if n < 2 return n
   return fib(n - 2) + fib(n - 1)
@@ -38,11 +33,3 @@ var thread_time = microtime() - start
 
 echo 'Raw took ${non_thread_time / 1000000} seconds'
 echo 'Threads took ${thread_time / 1000000} seconds'
-
-
-# for i in 0..1000000 {
-#     var th = _thread.new(@(i) { echo i }, [i])
-#     _thread.start(th)
-#     _thread.await(th)
-# #     _thread.dispose(th)
-# }

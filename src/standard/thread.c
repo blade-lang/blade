@@ -1,6 +1,7 @@
 #include "module.h"
 #include <pthread.h>
 #include <sched.h>
+#include <signal.h>
 
 #ifdef __linux__
 #include <sys/syscall.h>
@@ -18,10 +19,6 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#endif
-
-#ifndef SIGKILL
-#define SIGKILL 9
 #endif
 
 typedef struct {
@@ -143,6 +140,12 @@ static void b_free_thread_handle(void *data) {
 }
 
 static void *b_thread_callback_function(void *data) {
+  // Unblock SIGUSR2
+  sigset_t mask;
+  sigemptyset(&mask);
+  sigaddset(&mask, SIGUSR2);
+  pthread_sigmask(SIG_UNBLOCK, &mask, NULL);
+
   b_thread_handle *handle = (b_thread_handle *) data;
   if(handle == NULL || handle->vm == NULL) {
     pthread_exit(NULL);
@@ -200,13 +203,13 @@ DECLARE_MODULE_METHOD(thread__start) {
   RETURN_FALSE;
 }
 
-DECLARE_MODULE_METHOD(thread__dispose) {
-  ENFORCE_ARG_COUNT(dispose, 1);
-  ENFORCE_ARG_TYPE(dispose, 0, IS_PTR);
+DECLARE_MODULE_METHOD(thread__cancel) {
+  ENFORCE_ARG_COUNT(cancel, 1);
+  ENFORCE_ARG_TYPE(cancel, 0, IS_PTR);
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
 
   if(thread != NULL && thread->vm != NULL) {
-    if(pthread_kill(thread->thread, SIGKILL) == 0) {
+    if(pthread_kill(thread->thread, SIGUSR2) == 0) {
       free_thread_handle(thread);
       RETURN_TRUE;
     }
@@ -311,11 +314,33 @@ DECLARE_MODULE_METHOD(thread__is_alive) {
   RETURN_BOOL(thread != NULL && thread->vm != NULL);
 }
 
+void b_thread_SIGUSR2_signal_handler(int signum) {
+  pthread_exit(NULL);
+}
+
+void b_thread_init_function(b_vm *vm) {
+  struct sigaction sa;
+  sa.sa_handler = b_thread_SIGUSR2_signal_handler;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = 0;
+
+  // Block SIGUSR2 in main thread
+  sigaction(SIGUSR2, &sa, NULL);
+}
+
+void b_thread_unload_function(b_vm *vm) {
+  // Unblock SIGUSR2
+  sigset_t mask;
+  sigemptyset(&mask);
+  sigaddset(&mask, SIGUSR2);
+  pthread_sigmask(SIG_UNBLOCK, &mask, NULL);
+}
+
 CREATE_MODULE_LOADER(thread) {
   static b_func_reg module_functions[] = {
       {"new", false, GET_MODULE_METHOD(thread__new)},
       {"start", false, GET_MODULE_METHOD(thread__start)},
-      {"dispose", false, GET_MODULE_METHOD(thread__dispose)},
+      {"cancel", false, GET_MODULE_METHOD(thread__cancel)},
       {"await", false, GET_MODULE_METHOD(thread__await)},
       {"detach", false, GET_MODULE_METHOD(thread__detach)},
       {"yield", false, GET_MODULE_METHOD(thread__yield)},
@@ -331,8 +356,8 @@ CREATE_MODULE_LOADER(thread) {
       .fields = NULL,
       .functions = module_functions,
       .classes = NULL,
-      .preloader = NULL,
-      .unloader = NULL
+      .preloader = b_thread_init_function,
+      .unloader = b_thread_unload_function
   };
 
   return &module;
