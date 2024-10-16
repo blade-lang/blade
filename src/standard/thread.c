@@ -18,7 +18,7 @@
 #ifdef _WIN32
 #define _POSIX 1
 #include <windows.h>
-#including <sys/types.h>
+#include <sys/types.h>
 #ifndef SIGUSR2
 #define SIGUSR2 31
 #endif
