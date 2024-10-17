@@ -45,7 +45,9 @@ typedef enum {
   GREATER_TOKEN,     // >
   GREATER_EQ_TOKEN,  // >=
   RSHIFT_TOKEN,      // >>
+  URSHIFT_TOKEN,      // >>>
   RSHIFT_EQ_TOKEN,   // >>=
+  URSHIFT_EQ_TOKEN,   // >>>=
   PERCENT_TOKEN,     // %
   PERCENT_EQ_TOKEN,  // %=
   AMP_TOKEN,         // &

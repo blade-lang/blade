@@ -19,6 +19,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 // for debugging...
 #include "debug.h"
@@ -1421,6 +1422,29 @@ static inline double modulo(double a, double b) {
   return r;
 }
 
+static double b_int_bin_op(b_code op, double a, double b) {
+  int32_t ia = isnan(a) || isinf(a) ? 0 : (int32_t)(int64_t) a;
+  int32_t ib = isnan(b) || isinf(b) ? 0 : (int32_t)(int64_t) b;
+
+  switch (op) {
+    case OP_LSHIFT:
+      return (int32_t)((uint32_t) ia << ((uint32_t) ib & 31));
+    case OP_RSHIFT:
+      return ia >> ((uint32_t) ib & 31);
+    case OP_URSHIFT:
+      return (uint32_t) ia >> ((uint32_t) ib & 31);
+    case OP_OR:
+      return ia | ib;
+    case OP_XOR:
+      return ia ^ ib;
+    case OP_AND:
+      return ia & ib;
+    default:
+      assert(0);
+  }
+  return 0;
+}
+
 b_ptr_result run(b_vm *vm, int exit_frame) {
   vm->current_frame = &vm->frames[vm->frame_count - 1];
 
@@ -1457,9 +1481,9 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
                      value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
                      break;       \
     }                                                                          \
-    long b = AS_NUMBER(pop(vm));                                       \
-    long a = AS_NUMBER(pop(vm));                        \
-    push(vm, INTEGER_VAL(a op b));                                          \
+    double b = AS_NUMBER(pop(vm));                                       \
+    double a = AS_NUMBER(pop(vm));                        \
+    push(vm, NUMBER_VAL(b_int_bin_op(op, a, b)));                                          \
   } while (false)
 
 #define BINARY_MOD_OP(type, op)                                                \
@@ -1588,23 +1612,27 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         break;
       }
       case OP_AND: {
-        BINARY_BIT_OP(&);
+        BINARY_BIT_OP(OP_AND);
         break;
       }
       case OP_OR: {
-        BINARY_BIT_OP(|);
+        BINARY_BIT_OP(OP_OR);
         break;
       }
       case OP_XOR: {
-        BINARY_BIT_OP(^);
+        BINARY_BIT_OP(OP_XOR);
         break;
       }
       case OP_LSHIFT: {
-        BINARY_BIT_OP(<<);
+        BINARY_BIT_OP(OP_LSHIFT);
         break;
       }
       case OP_RSHIFT: {
-        BINARY_BIT_OP(>>);
+        BINARY_BIT_OP(OP_RSHIFT);
+        break;
+      }
+      case OP_URSHIFT: {
+        BINARY_BIT_OP(OP_URSHIFT);
         break;
       }
       case OP_ONE: {

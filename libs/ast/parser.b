@@ -10,7 +10,7 @@ import .exception { * }
 
 var _assigners_ = [EQUAL, PLUS_EQ, MINUS_EQ, PERCENT_EQ, DIVIDE_EQ,
   MULTIPLY_EQ, FLOOR_EQ, POW_EQ, AMP_EQ, BAR_EQ, TILDE_EQ, XOR_EQ,
-  LSHIFT_EQ, RSHIFT_EQ]
+  LSHIFT_EQ, RSHIFT_EQ, URSHIFT_EQ]
 
 # Helper function to get documentation string
 def _get_doc_string(data) {
@@ -378,7 +378,7 @@ class Parser {
   _shift() {
     var expr = self._range()
 
-    while self._match(LSHIFT, RSHIFT) {
+    while self._match(LSHIFT, RSHIFT, URSHIFT) {
       var op = self._previous().literal
       self._ignore_newline()
       var right = self._range()

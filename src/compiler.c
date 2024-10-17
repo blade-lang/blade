@@ -170,6 +170,7 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_XOR:
     case OP_LSHIFT:
     case OP_RSHIFT:
+    case OP_URSHIFT:
     case OP_BIT_NOT:
     case OP_ONE:
     case OP_SET_INDEX:
@@ -653,6 +654,10 @@ static void binary(b_parser *p, b_token previous, bool can_assign) {
       emit_byte(p, OP_RSHIFT);
       break;
 
+    case URSHIFT_TOKEN:
+      emit_byte(p, OP_URSHIFT);
+      break;
+
       // range
     case RANGE_TOKEN:
       emit_byte(p, OP_RANGE);
@@ -759,6 +764,8 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg, boo
     parse_assignment(p, OP_LSHIFT, get_op, set_op, arg);
   } else if (can_assign && match(p, RSHIFT_EQ_TOKEN)) {
     parse_assignment(p, OP_RSHIFT, get_op, set_op, arg);
+  }  else if (can_assign && match(p, URSHIFT_EQ_TOKEN)) {
+    parse_assignment(p, OP_URSHIFT, get_op, set_op, arg);
   } else if (can_assign && match(p, INCREMENT_TOKEN)) {
     p->repl_can_echo = false;
     if (get_op == OP_GET_PROPERTY || get_op == OP_GET_SELF_PROPERTY) {
@@ -1307,7 +1314,9 @@ b_parse_rule parse_rules[] = {
     [GREATER_TOKEN] = {NULL, binary, PREC_COMPARISON},        // >
     [GREATER_EQ_TOKEN] = {NULL, binary, PREC_COMPARISON},     // >=
     [RSHIFT_TOKEN] = {NULL, binary, PREC_SHIFT},              // >>
+    [URSHIFT_TOKEN] = {NULL, binary, PREC_SHIFT},              // >>>
     [RSHIFT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},              // >>=
+    [URSHIFT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},              // >>>=
     [PERCENT_TOKEN] = {NULL, binary, PREC_FACTOR},            // %
     [PERCENT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},             // %=
     [AMP_TOKEN] = {NULL, binary, PREC_BIT_AND},               // &

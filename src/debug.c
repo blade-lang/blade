@@ -160,6 +160,8 @@ int disassemble_instruction(b_blob *blob, int offset) {
       return simple_instruction("lshift", offset);
     case OP_RSHIFT:
       return simple_instruction("rshift", offset);
+    case OP_URSHIFT:
+      return simple_instruction("urshift", offset);
     case OP_ONE:
       return simple_instruction("one", offset);
 
