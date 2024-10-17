@@ -19,22 +19,33 @@
 #define _POSIX 1
 #include <windows.h>
 #include <sys/types.h>
-#ifndef SIGUSR2
-#define SIGUSR2 (NSIG - 1)
-#endif
+
+# ifndef SIGUSR2
+#   define SIGUSR2 (NSIG - 1)
+# endif
+# ifndef SIG_BLOCK
+#   define SIG_BLOCK 0
+# endif
+# ifndef SIG_UNBLOCK
+#   define SIG_UNBLOCK 1
+# endif
+# ifndef SIG_SETMASK
+#   define SIG_SETMASK 2
+# endif
 #endif
 
 #include <sched.h>
 #include <signal.h>
 
 #ifdef _WIN32
-
-
 // Include the reimplementation of sigemptyset, sigaddset, and sigaction
 // (You can either put this code in the same file or in a separate header and source file)
 typedef struct {
     int signals[32];  // Simple signal set (can hold up to 32 signals)
 } sigset_t;
+
+// Thread-local storage for the signal mask
+__thread sigset_t thread_sigmask;
 
 int sigemptyset(sigset_t *set) {
     if (set == NULL) return -1;
@@ -58,11 +69,15 @@ struct sigaction {
     int sa_flags;
 };
 
+// Global handler to store the current signal handler for SIGINT
 static sighandler_t sigint_handler = NULL;
 
 BOOL WINAPI CtrlHandler(DWORD fdwCtrlType) {
     if (fdwCtrlType == CTRL_C_EVENT && sigint_handler != NULL) {
-        sigint_handler(SIGINT);
+        // Check if SIGUSR2 is blocked in the current thread's mask
+        if (thread_sigmask.signals[SIGUSR2 - 1] == 0) {
+            sigint_handler(SIGUSR2);  // Call the signal handler
+        }
         return TRUE;
     }
     return FALSE;
@@ -80,6 +95,43 @@ int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
         return 0;
     }
     return -1;
+}
+
+// Emulate pthread_sigmask
+int pthread_sigmask2(int how, const sigset_t *set, sigset_t *oldset) {
+    if (oldset != NULL) {
+        // Save the current signal mask to oldset
+        *oldset = thread_sigmask;
+    }
+
+    if (set == NULL) {
+        return 0;  // No changes if set is NULL
+    }
+
+    for (int i = 0; i < 32; i++) {
+        switch (how) {
+            case SIG_BLOCK:
+                // Block signals by adding them to the mask
+                if (set->signals[i] == 1) {
+                    thread_sigmask.signals[i] = 1;
+                }
+                break;
+            case SIG_UNBLOCK:
+                // Unblock signals by removing them from the mask
+                if (set->signals[i] == 1) {
+                    thread_sigmask.signals[i] = 0;
+                }
+                break;
+            case SIG_SETMASK:
+                // Set the signal mask to the given set
+                thread_sigmask.signals[i] = set->signals[i];
+                break;
+            default:
+                return -1;  // Invalid how value
+        }
+    }
+
+    return 0;
 }
 #endif
 
@@ -206,7 +258,11 @@ static void *b_thread_callback_function(void *data) {
   sigset_t mask;
   sigemptyset(&mask);
   sigaddset(&mask, SIGUSR2);
+#ifndef _WIN32
   pthread_sigmask(SIG_UNBLOCK, &mask, NULL);
+#else
+  pthread_sigmask2(SIG_UNBLOCK, &mask, NULL);
+#endif
 
   b_thread_handle *handle = (b_thread_handle *) data;
   if(handle == NULL || handle->vm == NULL) {
@@ -395,7 +451,12 @@ void b_thread_unload_function(b_vm *vm) {
   sigset_t mask;
   sigemptyset(&mask);
   sigaddset(&mask, SIGUSR2);
+
+#ifndef _WIN32
   pthread_sigmask(SIG_UNBLOCK, &mask, NULL);
+#else
+  pthread_sigmask2(SIG_UNBLOCK, &mask, NULL);
+#endif
 }
 
 CREATE_MODULE_LOADER(thread) {
