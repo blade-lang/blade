@@ -20,12 +20,68 @@
 #include <windows.h>
 #include <sys/types.h>
 #ifndef SIGUSR2
-#define SIGUSR2 31
+#define SIGUSR2 (NSIG - 1)
 #endif
 #endif
 
 #include <sched.h>
 #include <signal.h>
+
+#ifdef _WIN32
+
+
+// Include the reimplementation of sigemptyset, sigaddset, and sigaction
+// (You can either put this code in the same file or in a separate header and source file)
+typedef struct {
+    int signals[32];  // Simple signal set (can hold up to 32 signals)
+} sigset_t;
+
+int sigemptyset(sigset_t *set) {
+    if (set == NULL) return -1;
+    for (int i = 0; i < 32; i++) {
+        set->signals[i] = 0;
+    }
+    return 0;
+}
+
+int sigaddset(sigset_t *set, int signum) {
+    if (set == NULL || signum < 1 || signum > 32) return -1;
+    set->signals[signum - 1] = 1;
+    return 0;
+}
+
+typedef void (*sighandler_t)(int);
+
+struct sigaction {
+    sighandler_t sa_handler;
+    sigset_t sa_mask;
+    int sa_flags;
+};
+
+static sighandler_t sigint_handler = NULL;
+
+BOOL WINAPI CtrlHandler(DWORD fdwCtrlType) {
+    if (fdwCtrlType == CTRL_C_EVENT && sigint_handler != NULL) {
+        sigint_handler(SIGINT);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact) {
+    if (signum == SIGINT) {
+        if (oldact != NULL) {
+            oldact->sa_handler = sigint_handler;
+        }
+        if (act != NULL) {
+            sigint_handler = act->sa_handler;
+            SetConsoleCtrlHandler(CtrlHandler, TRUE);
+        }
+        return 0;
+    }
+    return -1;
+}
+#endif
 
 typedef struct {
   pthread_t thread;
