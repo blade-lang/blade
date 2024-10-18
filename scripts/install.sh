@@ -130,7 +130,7 @@ install_blade() {
 
 	# cloning
 	git clone https://github.com/blade-lang/blade.git
-	git checkout v0.0.86
+#	git checkout v0.0.86
 	cd blade || exit
 
 	# building
