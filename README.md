@@ -6,7 +6,7 @@
 
 [![Build Status](https://github.com/blade-lang/blade/actions/workflows/ci.yml/badge.svg)](https://github.com/blade-lang/blade/actions)
 [![Gitter](https://badges.gitter.im/blade-lang/community.svg)](https://gitter.im/blade-lang/community)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/blade-lang/blade/blob/master/LICENSE)
+[![License](https://img.shields.io/badge/License-BSDL-blue.svg)](https://github.com/blade-lang/blade/blob/master/LICENSE)
 [![Coverage Status](https://coveralls.io/repos/github/blade-lang/blade/badge.svg?branch=main)](https://coveralls.io/github/blade-lang/blade?branch=main)
 [![Version](https://img.shields.io/badge/version-0.0.86-green)](https://github.com/blade-lang/blade)
 

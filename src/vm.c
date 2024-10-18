@@ -19,6 +19,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 // for debugging...
 #include "debug.h"
@@ -518,13 +519,14 @@ void init_vm(b_vm *vm) {
   vm->stack_capacity = STACK_MIN;
 
   reset_stack(vm);
+
+  vm->id = 0;
   vm->compiler = NULL;
   vm->objects = NULL;
   vm->exception_class = NULL;
   vm->current_frame = NULL;
   vm->root_file = NULL;
   vm->bytes_allocated = 0;
-  vm->gc_protected = 0;
   vm->next_gc = DEFAULT_GC_START; // default is 1mb. Can be modified via the -g flag.
   vm->is_repl = false;
   vm->mark_value = true;
@@ -560,15 +562,20 @@ void free_vm(b_vm *vm) {
 
   // since object in module can exist in globals
   // it must come before
-  free_table(vm, &vm->modules);
-  free_table(vm, &vm->globals);
-  free_table(vm, &vm->strings);
+  if(vm->id == 0) {
+    free_table(vm, &vm->modules);
+    free_table(vm, &vm->globals);
 
-  free_table(vm, &vm->methods_string);
-  free_table(vm, &vm->methods_list);
-  free_table(vm, &vm->methods_dict);
-  free_table(vm, &vm->methods_file);
-  free_table(vm, &vm->methods_bytes);
+    free_table(vm, &vm->methods_string);
+    free_table(vm, &vm->methods_list);
+    free_table(vm, &vm->methods_dict);
+    free_table(vm, &vm->methods_file);
+    free_table(vm, &vm->methods_bytes);
+    free_table(vm, &vm->methods_range);
+  }
+
+  // since every vm holds a unique copy.
+  free_table(vm, &vm->strings);
 
   free(vm->stack);
 
@@ -937,10 +944,16 @@ inline bool is_false(b_value value) {
   return false;
 }
 
-bool is_instance_of(b_obj_class *klass1, char *klass2_name) {
+bool is_instance_of(b_obj_class *klass1, b_obj_class *klass2) {
   while (klass1 != NULL) {
-    if ((int) strlen(klass2_name) == klass1->name->length
-        && memcmp(klass1->name->chars, klass2_name, klass1->name->length) == 0) {
+    // check the class names
+    if (klass2->name->length == klass1->name->length
+        && memcmp(klass1->name->chars, klass2->name->chars, klass1->name->length) == 0) {
+
+      // TODO: ensure they're actually the same
+      /*if(klass1->initializer == klass2->initializer) {
+        return true;
+      }*/
       return true;
     }
     klass1 = klass1->superclass;
@@ -1409,6 +1422,29 @@ static inline double modulo(double a, double b) {
   return r;
 }
 
+static double b_int_bin_op(b_code op, double a, double b) {
+  int32_t ia = isnan(a) || isinf(a) ? 0 : (int32_t)(int64_t) a;
+  int32_t ib = isnan(b) || isinf(b) ? 0 : (int32_t)(int64_t) b;
+
+  switch (op) {
+    case OP_LSHIFT:
+      return (int32_t)((uint32_t) ia << ((uint32_t) ib & 31));
+    case OP_RSHIFT:
+      return ia >> ((uint32_t) ib & 31);
+    case OP_URSHIFT:
+      return (uint32_t) ia >> ((uint32_t) ib & 31);
+    case OP_OR:
+      return ia | ib;
+    case OP_XOR:
+      return ia ^ ib;
+    case OP_AND:
+      return ia & ib;
+    default:
+      assert(0);
+  }
+  return 0;
+}
+
 b_ptr_result run(b_vm *vm, int exit_frame) {
   vm->current_frame = &vm->frames[vm->frame_count - 1];
 
@@ -1445,9 +1481,9 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
                      value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
                      break;       \
     }                                                                          \
-    long b = AS_NUMBER(pop(vm));                                       \
-    long a = AS_NUMBER(pop(vm));                        \
-    push(vm, INTEGER_VAL(a op b));                                          \
+    double b = AS_NUMBER(pop(vm));                                       \
+    double a = AS_NUMBER(pop(vm));                        \
+    push(vm, NUMBER_VAL(b_int_bin_op(op, a, b)));                                          \
   } while (false)
 
 #define BINARY_MOD_OP(type, op)                                                \
@@ -1576,23 +1612,27 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         break;
       }
       case OP_AND: {
-        BINARY_BIT_OP(&);
+        BINARY_BIT_OP(OP_AND);
         break;
       }
       case OP_OR: {
-        BINARY_BIT_OP(|);
+        BINARY_BIT_OP(OP_OR);
         break;
       }
       case OP_XOR: {
-        BINARY_BIT_OP(^);
+        BINARY_BIT_OP(OP_XOR);
         break;
       }
       case OP_LSHIFT: {
-        BINARY_BIT_OP(<<);
+        BINARY_BIT_OP(OP_LSHIFT);
         break;
       }
       case OP_RSHIFT: {
-        BINARY_BIT_OP(>>);
+        BINARY_BIT_OP(OP_RSHIFT);
+        break;
+      }
+      case OP_URSHIFT: {
+        BINARY_BIT_OP(OP_URSHIFT);
         break;
       }
       case OP_ONE: {
@@ -2423,7 +2463,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
 
       case OP_RAISE: {
         if (!IS_INSTANCE(peek(vm, 0)) ||
-            !is_instance_of(AS_INSTANCE(peek(vm, 0))->klass, vm->exception_class->name->chars)) {
+            !is_instance_of(AS_INSTANCE(peek(vm, 0))->klass, vm->exception_class)) {
           runtime_error("instance of Exception expected");
           break;
         }
@@ -2548,6 +2588,22 @@ b_value raw_closure_call(b_vm *vm, b_obj_closure *closure, b_obj_list *args, boo
 
   vm->stack_top = stack_top;
   return result;
+}
+
+// helper function to access call outside the vm file.
+b_ptr_result run_closure_call(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {
+  // set the closure before the args
+  push(vm, OBJ_VAL(closure));
+
+  int arg_count = 0;
+  if(args && (arg_count = args->items.count)) {
+    for(int i = 0; i < args->items.count; i++) {
+      push(vm, args->items.values[i]);
+    }
+  }
+
+  call(vm, closure, arg_count);
+  return run(vm, vm->frame_count - 1);
 }
 
 b_value call_closure(b_vm *vm, b_obj_closure *closure, b_obj_list *args) {

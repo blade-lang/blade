@@ -46,13 +46,13 @@ def bytes_to_hex(data) {
   if !is_bytes(data)
     raise Exception('bytes expected, ${typeof(data)} given')
 
-  var result = ''
+  var hex_string = ''
 
   for b in data {
-    result += hex(b).lpad(2, '0')
+    hex_string += hex(b).lpad(2, '0')
   }
 
-  return result
+  return hex_string
 }
 
 /**
@@ -65,12 +65,13 @@ def decimal_to_hex(n) {
   if !is_number(n)
     raise Exception('number expected, ${typeof(n)} given')
 
-  var result = []
+  var hex_list = []
   while n > 0 {
-    result.append(_hex_table[n % 16])
+    hex_list.append(_hex_table[n % 16])
     n = int(n / 16)
   }
-  return ''.join(result.reverse())
+
+  return ''.join(hex_list.reverse())
 }
 
 /**
@@ -87,13 +88,14 @@ def hex_to_decimal(str) {
   if str.starts_with('0x')
     str = str[2,]
 
-  var l = str.length(), result = 0
+  var l = str.length(), hex = 0
   str = str.upper()
 
   iter var i = 0; i < l; i++ {
-    result += _reverse_hex_table.index_of(str[i]) * (16 ** (l - i - 1))
+    hex += _reverse_hex_table.index_of(str[i]) * (16 ** (l - i - 1))
   }
-  return result
+
+  return hex
 }
 
 /**
@@ -119,11 +121,11 @@ def bytes_to_decimal(bytes) {
   if !is_bytes(bytes)
     raise Exception('bytes expected, ${typeof(bytes)} given')
 
-  var result = 0
+  var decimal = 0
   for byte in bytes {
-    result <<= 8
-    result |= byte
+    decimal <<= 8
+    decimal |= byte
   }
 
-  return result
+  return decimal
 }

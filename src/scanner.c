@@ -495,7 +495,12 @@ b_token scan_token(b_scanner *s) {
       }
     case '>':
       if (match(s, '>')) {
-        return make_token(s, match(s, '=') ? RSHIFT_EQ_TOKEN : RSHIFT_TOKEN);
+//        return make_token(s, match(s, '=') ? RSHIFT_EQ_TOKEN : RSHIFT_TOKEN);
+        if (match(s, '>')) {
+          return make_token(s, match(s, '=') ? URSHIFT_EQ_TOKEN : URSHIFT_TOKEN);
+        } else {
+          return make_token(s, match(s, '=') ? RSHIFT_EQ_TOKEN : RSHIFT_TOKEN);
+        }
       } else {
         return make_token(s, match(s, '=') ? GREATER_EQ_TOKEN : GREATER_TOKEN);
       }
@@ -523,7 +528,7 @@ b_token scan_token(b_scanner *s) {
       return make_token(s, QUESTION_TOKEN);
 
       // --- DO NOT MOVE ABOVE OR BELOW THE DEFAULT CASE ---
-      // fall-through tokens goes here... this tokens are only valid
+      // fall-through tokens goes here... these tokens are only valid
       // when the carry another token with them...
       // be careful not to add break after them so that they may use the default
       // case.

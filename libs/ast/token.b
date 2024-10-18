@@ -207,6 +207,16 @@ var RSHIFT = 39   # >>
 var RSHIFT_EQ = 40   # >>=
 
 /**
+ * unsigned right shift (`>>>`) token
+ */
+var URSHIFT = 39   # >>
+
+/**
+ * unsigned right shift equal (`>>>=`) token
+ */
+var URSHIFT_EQ = 40   # >>=
+
+/**
  * modulous (`%`) token
  */
 var PERCENT = 41   # %

@@ -69,7 +69,7 @@ set(BLADE_SOURCES
 		src/standard/process.c
 		src/standard/reflect.c
 		src/standard/struct.c
-		)
+        src/standard/thread.c)
 
 add_definitions(-DEXPORT_LIBS)
 
@@ -131,7 +131,7 @@ check_function_exists("gettimeofday" HAVE_GETTIMEOFDAY)
 if(NOT "${HAVE_GETTIMEOFDAY}")
 	target_link_libraries(libblade PRIVATE gettimeofday)
 endif()
-target_link_libraries(libblade PRIVATE threads)
+check_function_exists("timespec_get" HAVE_TIMESPEC_GET)
 
 check_function_exists("utime" HAVE_UTIME)
 check_function_exists("basename" HAVE_BASENAME)
@@ -189,14 +189,23 @@ if(UNIX)
 
 	target_link_libraries(libblade PRIVATE m)
 	if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-		target_link_libraries(libblade PRIVATE pthread)
 		target_link_libraries(libblade PRIVATE dl)
 	endif()
+
+	set(THREADS_PREFER_PTHREAD_FLAG ON)
+	find_package(Threads REQUIRED)
+	target_link_libraries(libblade PRIVATE Threads::Threads)
+	#	target_link_libraries(libblade PRIVATE pthread)
 endif(UNIX)
 
 if(WIN32)
 	add_dependencies(libblade mman)
 	target_link_libraries(libblade PRIVATE mman)
+
+	find_package(PThreads4W REQUIRED)
+	target_link_libraries(libblade PRIVATE PThreads4W::PThreads4W)
+
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-pragmas")
 endif()
 
 target_link_libraries(blade PRIVATE libblade)

@@ -19,25 +19,6 @@ void free_table(b_vm *vm, b_table *table) {
   init_table(table);
 }
 
-void clean_free_table(b_vm *vm, b_table *table) {
-  for (int i = 0; i < table->capacity; i++) {
-    b_entry *entry = &table->entries[i];
-
-#if defined(USE_NAN_BOXING) && USE_NAN_BOXING
-    if (entry && entry->key) {
-#else
-      if(entry != NULL) {
-#endif
-      if(IS_OBJ(entry->key) && !IS_STRING(entry->key))
-        free_object(vm, AS_OBJ(entry->key));
-      if(IS_OBJ(entry->value) && !IS_STRING(entry->key))
-        free_object(vm, AS_OBJ(entry->value));
-    }
-  }
-  FREE_ARRAY(b_entry, table->entries, table->capacity);
-  init_table(table);
-}
-
 static b_entry *find_entry(b_entry *entries, int capacity, b_value key) {
   uint32_t hash = hash_value(key);
 

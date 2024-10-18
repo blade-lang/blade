@@ -1,4 +1,4 @@
-# The sieve benchmark counts the number of primes below 600000. 
+# The sieve benchmark counts the number of primes below 600000 based on the sieve of Eratosthenes.
 # The correct result is 49098.
 #
 # based on the JavaScript implementation at

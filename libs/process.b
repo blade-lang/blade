@@ -43,6 +43,10 @@ import _process
 import reflect
 import os
 import struct
+
+var _valid_paged_types = ['boolean', 'number', 'string', 'bytes', 'list', 'dict']
+
+
 /**
  * The number of CPU cores available on the current device.
  * @type number
@@ -123,8 +127,8 @@ class PagedValue {
       when 'list' {
         var format = ''
         for item in value {
-          if is_list(item) or is_dict(item)
-            raise Exception('list not allowed here')
+          if !_valid_paged_types.contains(typeof(item))
+            raise Exception('object of type ${typeof(item)} not allowed here')
           format += self._set_format(item)
         }
         return format
@@ -132,8 +136,8 @@ class PagedValue {
       when 'dictionary' {
         var format = ''
         for item in value {
-          if is_list(item) or is_dict(item)
-            raise Exception('list or dictionay not allowed here')
+          if !_valid_paged_types.contains(typeof(item))
+            raise Exception('object of type ${typeof(item)} not allowed here')
           format += self._set_format(item)
         }
         return format
@@ -232,11 +236,11 @@ class PagedValue {
         var format = data[0]
 
         # check palindromes in format
-        var palins = format.matches('/([a-z])\\1+/')
-        if palins {
-          iter var i = 0; i < palins[0].length(); i++ {
-            var val = palins[0][i]
-            var char = palins[1][i]
+        var palindromes = format.matches('/([a-z])\\1+/')
+        if palindromes {
+          iter var i = 0; i < palindromes[0].length(); i++ {
+            var val = palindromes[0][i]
+            var char = palindromes[1][i]
             
             var rem = ''
             for j in 0..val.length() {
@@ -300,7 +304,7 @@ class Process {
    * 
    * The function passed to a process must accept at least one parameter which 
    * will be passed the instance of the process itself and at most two parameters 
-   * if the process was intitalized with a PagedValue.
+   * if the process was initialized with a PagedValue.
    * 
    * @param function fn
    * @param PageValue? paged
@@ -384,13 +388,17 @@ class Process {
 
   /**
    * Awaits for the process to finish running and returns it's exit code or `-1` 
-   * if the process is in an invalid state.
+   * if the process is in an invalid state. Await can be used without `start()`.
+   * If `await()` is called without a previous call to start(), the await
+   * automatically calls start().
    * 
    * @returns number
    */
   await() {
     if self._ptr {
-      self.start()
+      if !self.is_alive() {
+        self.start()
+      }
       var result = _process.wait(self._ptr)
       return result
     }
@@ -426,7 +434,7 @@ class Process {
  * 
  * The function passed to a process must accept at least one parameter which 
  * will be passed the instance of the process itself and at most two parameters 
- * if the process was intitalized with a PagedValue.
+ * if the process was initialized with a PagedValue.
  * 
  * @param function fn
  * @param PageValue? paged

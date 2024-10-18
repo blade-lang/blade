@@ -85,6 +85,23 @@ install_build_env() {
   fi
 }
 
+install_platform_specific_tools() {
+  # shellcheck disable=SC2154
+  if [ -x "$(command -v apt-get)" ]; then
+    sudo apt-get install libpthread-stubs0-dev -y
+  elif [ -x "$(command -v apk)" ]; then
+    sudo apk add --no-cache glibc-headers
+  elif [ -x "$(command -v dnf)" ]; then
+    sudo dnf install glibc-headers -y
+  elif [ -x "$(command -v zypper)" ]; then
+    sudo zypper install glibc-devel -y
+  elif [ -x "$(command -v yum)" ]; then
+    sudo yum install glibc-headers -y
+  elif [ -x "$(command -v pacman)" ]; then
+    sudo pacman -Sy glibc
+  fi
+}
+
 remove_redundant_libraries() {
   # shellcheck disable=SC2154
   if [ -x "$(command -v apt-get)" ]; then
@@ -113,6 +130,7 @@ install_blade() {
 
 	# cloning
 	git clone https://github.com/blade-lang/blade.git
+#	git checkout v0.0.86
 	cd blade || exit
 
 	# building
@@ -151,6 +169,7 @@ echo "Beginning installation of Blade..."
 
 install_build_env
 remove_redundant_libraries
+install_platform_specific_tools
 
 if [[ -z "${IS_LINUX-}" ]]; then
 

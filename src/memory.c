@@ -2,7 +2,6 @@
 #include "compiler.h"
 #include "config.h"
 #include "object.h"
-#include "file.h"
 #include "module.h"
 
 #include <stdio.h>
@@ -80,7 +79,7 @@ void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
 void mark_object(b_vm *vm, b_obj *object) {
   if (object == NULL)
     return;
-  if (object->mark == vm->mark_value)
+  if (object->mark == vm->mark_value || object->vm_id != vm->id)
     return;
 
 #if defined(DEBUG_GC) && DEBUG_GC
@@ -121,6 +120,8 @@ void blacken_object(b_vm *vm, b_obj *object) {
   print_object(OBJ_VAL(object), false);
   printf("\n");
 #endif
+
+//  if(object->vm_id != vm->id) return;
 
   switch (object->type) {
     case OBJ_MODULE: {
@@ -211,8 +212,8 @@ void free_object(b_vm *vm, b_obj *object) {
   printf("%p free type %d\n", (void *)object, object->type);
 #endif
 
-  // Do not free stale objects.
-  if(object->stale) return;
+  // Do not free stale objects and objects that do not belong to this vm.
+  if(object->stale > 0 || object->vm_id != vm->id) return;
 
   switch (object->type) {
     case OBJ_MODULE: {
@@ -342,6 +343,7 @@ static void mark_roots(b_vm *vm) {
        up_value = up_value->next) {
     mark_object(vm, (b_obj *) up_value);
   }
+
   mark_table(vm, &vm->globals);
   mark_table(vm, &vm->modules);
 
@@ -383,7 +385,9 @@ static void sweep(b_vm *vm) {
         vm->objects = object;
       }
 
-      free_object(vm, unreached);
+      if(unreached->vm_id == vm->id) {
+        free_object(vm, unreached);
+      }
     }
   }
 }
@@ -402,16 +406,14 @@ void free_objects(b_vm *vm) {
 
 void free_error_stacks(b_vm *vm) {
   for(int index = vm->error_top - vm->errors; index < ERRORS_MAX && vm->errors[index] != NULL; index++) {
-    if(vm->errors[index]) {
-      free(vm->errors[index]);
-      vm->errors[index] = NULL;
-    }
+    free(vm->errors[index]);
+    vm->errors[index] = NULL;
   }
 }
 
 void collect_garbage(b_vm *vm) {
 #if defined(DEBUG_GC) && DEBUG_GC
-  printf("-- gc begins\n");
+  printf("-- gc begins for vm %llu\n", vm->id);
   size_t before = vm->bytes_allocated;
 #endif
 

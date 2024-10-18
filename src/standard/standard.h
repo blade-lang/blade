@@ -14,5 +14,6 @@ extern CREATE_MODULE_LOADER(reflect);
 extern CREATE_MODULE_LOADER(array);
 extern CREATE_MODULE_LOADER(process);
 extern CREATE_MODULE_LOADER(struct);
+extern CREATE_MODULE_LOADER(thread);
 
 #endif // BLADE_STANDARD_H

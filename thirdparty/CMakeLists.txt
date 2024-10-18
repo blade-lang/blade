@@ -15,5 +15,3 @@ endif()
 if(WIN32)
     add_subdirectory(mman-win32)
 endif()
-
-add_subdirectory(threads)
