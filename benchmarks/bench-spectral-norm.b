@@ -1,15 +1,16 @@
 /**
  * The Computer Language Benchmarks Game
  * https://salsa.debian.org/benchmarksgame-team/benchmarksgame/
- * contributed by Ian Osgood
+ * 
+ * contributed by Richard Ore
+ * based on contributed work by Ian Osgood
  * modified for Node.js by Isaac Gouy
- * modified for Blade by Ore Richard
  */ 
 
 def A(i, j) {
-    return 1 /(
-        (i + j) * (i + j + 1 ) / 2 + i + 1
-    )
+  return 1 / (
+    (i + j) * (i + j + 1 ) / 2 + i + 1
+  )
 }
 
 def Au(u, v) {
@@ -37,7 +38,7 @@ def AtAu(u, v, w) {
 
 def spectralnorm(n) {
   var i, u = [0] * n, v = [0] * n, 
-        w = [0] * n, vv = 0, vBv = 0
+      w = [0] * n, vv = 0, vBv = 0
 
   for i in 0..n {
     u[i] = 1

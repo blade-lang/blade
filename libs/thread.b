@@ -91,18 +91,26 @@
  */
 
 import _thread
+import _process
 
 import reflect
 import os
 
+
 var _MIN_STACK_SIZE = 16384 # 16kb
 var _DEFAULT_STACK_SIZE = 65536 # 64kb
-
 var _main_thread_id = _thread.get_id()
 
 def _is_not_main_thread(id) {id
   return id != _main_thread_id
 }
+
+
+/**
+ * The number of CPU cores available on the current device.
+ * @type number
+ */
+var cpu_count = _process.cpu_count
 
 /**
  * The thread class exposes methods to manage creating, running, 
