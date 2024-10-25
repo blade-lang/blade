@@ -188,7 +188,7 @@ class Token {
     var idx = self.attr_index(name)
   
     if idx < 0 {
-      self.attr_push([ name, value ]);
+      self.attr_push([ name, value ])
     } else {
       self.attrs[idx][1] = self.attrs[idx][1] + ' ' + value
     }

@@ -14,7 +14,7 @@
  * 
  * ### What's a Socket
  * 
- * Sockets are bidrectional communication medias for information exchange between 
+ * Sockets are bidirectional communication medias for information exchange between
  * various processes within the same machine or different machines.
  * 
  * There are three important concepts that must important to know when working with 
@@ -27,7 +27,7 @@
  * 3. `Protocol`: This is to identify the variant protocol on which one or more 
  * network protocols are based on. Typically `0` or any of the `IP_` constants.
  * 
- * A simple socket may be instanciated as follows:
+ * A simple socket may be instantiated as follows:
  * 
  * ```blade
  * import socket { Socket }
@@ -66,7 +66,7 @@
  * ```
  * 
  * The above example simply replies the client with `You sent: ` + whatever the client 
- * acutally sent.
+ * actually sent.
  * 
  * Due to resource limitations, its good practice to always ensure to close sockets when 
  * done with it. Doing this is pretty simple.

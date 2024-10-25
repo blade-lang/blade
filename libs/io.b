@@ -593,7 +593,7 @@ class TTY {
    * Flushes the standard output and standard error interface
    */
   flush() {
-    _io.TTY.flush(self.std);
+    _io.TTY.flush(self.std)
   }
 }
 

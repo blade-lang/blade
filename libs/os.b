@@ -209,7 +209,7 @@ def set_env(name, value, overwrite) {
 }
 
 /**
- * Creates the given directory with the specified permission and optionaly 
+ * Creates the given directory with the specified permission and optionally
  * add new files into it if any is given.
  * 
  * @note if the directory already exists, it returns `false` otherwise, it returns `true`.
@@ -350,7 +350,7 @@ def exit(code) {
 }
 
 /**
- * Concatenates the given paths together into a format that is valied on the 
+ * Concatenates the given paths together into a format that is valid on the
  * current operating system.
  * 
  * Example,

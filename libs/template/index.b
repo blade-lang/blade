@@ -469,7 +469,7 @@ class Template {
   var _elements = {}
 
   # root directory
-  var _root_dir = constants.DEFUALT_ROOT_DIR
+  var _root_dir = constants.DEFAULT_ROOT_DIR
 
   # auto_init control
   var _auto_init = false

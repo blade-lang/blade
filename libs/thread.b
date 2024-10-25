@@ -11,7 +11,7 @@
  * 
  * As the workload of your application increases, the need to 
  * offload long tasks to a separate thread of execution becomes 
- * aparent when creating scalable applications.
+ * apparent when creating scalable applications.
  * 
  * ### Create and start a new thread
  * 
@@ -35,7 +35,7 @@
  * th.start('John')
  * ```
  * 
- * The `thread()` function serves as a syntatic sugar for this as well 
+ * The `thread()` function serves as a syntax sugar for this as well
  * as a module function and like other blade module functions is the 
  * conventional way to create an instance of a thread. The example 
  * below is a rewrite of the previous example with the module function.
@@ -50,7 +50,7 @@
  * th.start('John')
  * ```
  * 
- * Since for most usecases this is exactly the process you'll want and 
+ * Since for most use-cases this is exactly the process you'll want and
  * not very often will you need to configure settings on a thread, the 
  * `start()` module function provides a simply way of combining this 
  * process into a single function call. However, unlike with the Thread 
@@ -78,9 +78,9 @@
  * >
  * > When a thread's delegate function accepts parameters, it will always 
  * > be given the thread instance itself as the first argument. Any other 
- * > argument passed into the function will be received in the postceeding 
+ * > argument passed into the function will be received in the postceeding
  * > parameters.
- * 
+ *
  * ### Awaiting a thread
  * 
  * ### Stopping a thread

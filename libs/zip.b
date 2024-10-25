@@ -879,7 +879,7 @@ def extract(file, destination, is_zip64) {
  * Compresses the given path (file or directory) into the destination zip archive.
  * @raises  Exception if file could not be written of zip max size exceeded.
  * 
- * > When an exception is thrown becase max size exceeded, some files could 
+ * > When an exception is thrown because max size was exceeded, some files could
  * > have already been compressed. In this case, the zip archive will should still 
  * > be usable but not all desired files will be contained in it.
  * 

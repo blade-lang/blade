@@ -213,7 +213,7 @@ def whirlpool(str) {
 }
 
 /**
- * Returns the snefru cyrptographic hash of the given string or bytes.
+ * Returns the Snefru cryptographic hash of the given string or bytes.
  * 
  * @param string|bytes str
  * @returns string
@@ -223,7 +223,7 @@ def snefru(str) {
 }
 
 /**
- * Returns the siphash cyrptographic hash of the given string or bytes.
+ * Returns the SipHash cryptographic hash of the given string or bytes.
  * 
  * @param string|bytes key
  * @param string|bytes str
@@ -236,9 +236,9 @@ def siphash(key, str) {
     raise Exception('str must be string or bytes')
   }
 
-  if key.length() > 16
+  if key.length() > 16 {
     raise Exception('key must be maximum of 16 characters/bytes long')
-  else if key.length() < 16 {
+  } else if key.length() < 16 {
     if is_bytes(key) key = key.to_string()
     key = key.rpad(16, '\0')
   }
@@ -250,7 +250,7 @@ def siphash(key, str) {
 }
 
 /**
- * Returns the gost cyrptographic hash of the given string or bytes.
+ * Returns the Gost cryptographic hash of the given string or bytes.
  * 
  * @param string|bytes str
  * @returns string
@@ -311,7 +311,7 @@ def hmac(method, key, str) {
 }
 
 /**
- * Returns the HMAC-MD2 cyrptographic hash of the given string or bytes.
+ * Returns the HMAC-MD2 cryptographic hash of the given string or bytes.
  * 
  * @param string|bytes key
  * @param string|bytes str
@@ -322,7 +322,7 @@ def hmac_md2(key, str) {
 }
 
 /**
- * Returns the HMAC-MD4 cyrptographic hash of the given string or bytes.
+ * Returns the HMAC-MD4 cryptographic hash of the given string or bytes.
  * 
  * @param string|bytes key
  * @param string|bytes str
@@ -333,7 +333,7 @@ def hmac_md4(key, str) {
 }
 
 /**
- * Returns the HMAC-MD5 cyrptographic hash of the given string or bytes.
+ * Returns the HMAC-MD5 cryptographic hash of the given string or bytes.
  * 
  * @param string|bytes key
  * @param string|bytes str
@@ -344,7 +344,7 @@ def hmac_md5(key, str) {
 }
 
 /**
- * Returns the HMAC-SHA1 cyrptographic hash of the given string or bytes.
+ * Returns the HMAC-SHA1 cryptographic hash of the given string or bytes.
  * 
  * @param string|bytes key
  * @param string|bytes str
@@ -355,7 +355,7 @@ def hmac_sha1(key, str) {
 }
 
 /**
- * Returns the HMAC-SHA224 cyrptographic hash of the given string or bytes.
+ * Returns the HMAC-SHA224 cryptographic hash of the given string or bytes.
  * 
  * @param string|bytes key
  * @param string|bytes str
@@ -366,7 +366,7 @@ def hmac_sha224(key, str) {
 }
 
 /**
- * Returns the HMAC-SHA256 cyrptographic hash of the given string or bytes.
+ * Returns the HMAC-SHA256 cryptographic hash of the given string or bytes.
  * 
  * @param string|bytes key
  * @param string|bytes str
@@ -377,7 +377,7 @@ def hmac_sha256(key, str) {
 }
 
 /**
- * Returns the HMAC-SHA384 cyrptographic hash of the given string or bytes.
+ * Returns the HMAC-SHA384 cryptographic hash of the given string or bytes.
  * 
  * @param string|bytes key
  * @param string|bytes str
@@ -388,7 +388,7 @@ def hmac_sha384(key, str) {
 }
 
 /**
- * Returns the HMAC-SHA512 cyrptographic hash of the given string or bytes.
+ * Returns the HMAC-SHA512 cryptographic hash of the given string or bytes.
  * 
  * @param string|bytes key
  * @param string|bytes str
@@ -399,7 +399,7 @@ def hmac_sha512(key, str) {
 }
 
 /**
- * Returns the HMAC-WHIRLPOOL cyrptographic hash of the given string or bytes.
+ * Returns the HMAC-WHIRLPOOL cryptographic hash of the given string or bytes.
  * 
  * @param string|bytes key
  * @param string|bytes str
@@ -410,7 +410,7 @@ def hmac_whirlpool(key, str) {
 }
 
 /**
- * Returns the HMAC-SNEFRU cyrptographic hash of the given string or bytes.
+ * Returns the HMAC-SNEFRU cryptographic hash of the given string or bytes.
  * 
  * @param string|bytes key
  * @param string|bytes str
@@ -421,7 +421,7 @@ def hmac_snefru(key, str) {
 }
 
 /**
- * Returns the HMAC-GOST cyrptographic hash of the given string or bytes.
+ * Returns the HMAC-GOST cryptographic hash of the given string or bytes.
  * 
  * @param string|bytes key
  * @param string|bytes str

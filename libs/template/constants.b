@@ -2,7 +2,7 @@
 
 import os
 
-var DEFUALT_ROOT_DIR = os.join_paths(os.cwd(), 'templates')
+var DEFAULT_ROOT_DIR = os.join_paths(os.cwd(), 'templates')
 
 var VAR_RE = '/(?<!%)\{\{\s*(?P<variable>([a-z_][a-z0-9_\-|="\']*(\.[a-z0-9_\-|=]+((["\'])([^\'"]+)\5)?)*))\s*\}\}/i'
 var FUNCTION_RE = '/(?<!%)\{\!\s*(?P<fn>[a-z0-9_]+)\s*\!\}/i'

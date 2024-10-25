@@ -478,7 +478,7 @@ def detect_from_header(file) {
  * Performs mimetype detection on a file.
  * 
  * this method is capable of detecting file mimetypes even
- * in the abscence of an extension.
+ * in the absence of an extension.
  *
  * If the file is opened in binary mode, it first attempt the more
  * accurate header check. If the header check returns a generic result 

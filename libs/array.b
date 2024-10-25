@@ -1,7 +1,7 @@
 /**
  * @module array
  * 
- * This moddule provides multiple classes for working with arrays of twos-complement 
+ * This module provides multiple classes for working with arrays of twos-complement
  * integers in the platform byte order. The classes provided in this module complement
  * the _bytes()_ object and allow higher other binary data manipulation.
  * 
