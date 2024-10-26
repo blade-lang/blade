@@ -78,7 +78,7 @@
  * >
  * > When a thread's delegate function accepts parameters, it will always 
  * > be given the thread instance itself as the first argument. Any other 
- * > argument passed into the function will be received in the postceeding
+ * > argument passed into the function will be received in the succeeding
  * > parameters.
  *
  * ### Awaiting a thread

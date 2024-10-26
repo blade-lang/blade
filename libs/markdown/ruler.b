@@ -240,7 +240,7 @@ class Ruler {
   
       if idx < 0 {
         if ignore_invalid return
-        raise Exception('Rules manager: invalid rule name ' + name);
+        raise Exception('Rules manager: invalid rule name ' + name)
       }
       self.__rules__[idx].enabled = true
       result.append(name)

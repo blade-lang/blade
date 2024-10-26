@@ -2023,7 +2023,7 @@ static void echo_statement(b_parser *p) {
 }
 
 static void raise_statement(b_parser *p) {
-  discard_locals(p, p->vm->compiler->scope_depth);
+//  discard_locals(p, p->vm->compiler->scope_depth - 1);
   expression(p);
   emit_byte(p, OP_RAISE);
   consume_statement_end(p);
