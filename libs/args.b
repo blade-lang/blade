@@ -149,9 +149,11 @@ def _get_real_value(item, value) {
   else if item.type == STRING return to_string(value)
   else if item.type == LIST return is_list(value) ? value : [value]
   else if item.type == CHOICE {
-    if is_list(item.choices)
-      return item.choices.contains(value) ? value : value
-    else return item.choices.contains(value) ? item.choices[value] : value
+    if is_list(item.choices) {
+        return item.choices.contains(value) ? value : value
+    } else {
+      return item.choices.contains(value) ? item.choices[value] : value
+    }
   }
   return value
 }
@@ -513,7 +515,7 @@ class Parser < _Optionable {
 
         line += self._opt_line(opt)
 
-        # We want to separate the longtest option names at least 12
+        # We want to separate the longest option names at least 12
         # characters away from the help texts.
         line = line.rpad(width + 5)
 
@@ -528,7 +530,7 @@ class Parser < _Optionable {
 
         line += self._opt_line(cmd)
 
-        # We want to separate the longtest option names at least 12
+        # We want to separate the longest option names at least 12
         # characters away from the help texts.
         line = line.rpad(width + 20)
 
@@ -663,7 +665,7 @@ class Parser < _Optionable {
    * blade test.b install 5 --verbose
    * ``` 
    * 
-   * may yeild such a result as similar to the one below.
+   * may yield such a result as similar to the one below.
    * 
    * ```
    * {options: {verbose: true}, command: {name: install, value: 5}}

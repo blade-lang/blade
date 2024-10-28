@@ -7,7 +7,7 @@
  * - enable/disable rules
  * - add/replace rules
  * - allow assign rules to additional named chains (in the same)
- * - cacheing lists of active rules
+ * - caching lists of active rules
  *
  * You will not need use this class directly until write plugins. For simple
  * rules control use [[markdown.disable]], [[markdown.enable]] and
@@ -240,7 +240,7 @@ class Ruler {
   
       if idx < 0 {
         if ignore_invalid return
-        raise Exception('Rules manager: invalid rule name ' + name);
+        raise Exception('Rules manager: invalid rule name ' + name)
       }
       self.__rules__[idx].enabled = true
       result.append(name)

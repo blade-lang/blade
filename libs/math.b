@@ -2,7 +2,7 @@
  * @module math
  *
  * This module contains functions and constants to make trigonometric and 
- * non-trignonometric mathematics a breeze. The module also defines a couple 
+ * non-trigonometric mathematics a breeze. The module also defines a couple
  * of commonly used scientific and mathematical constants such as `PI`.
  * 
  * @copyright 2021, Ore Richard Muyiwa and Blade contributors
@@ -282,7 +282,7 @@ def atan2(x, y) {
 }
 
 /**
- * Returns the hyperbolic arcsine (in radians) of number n.
+ * Returns the hyperbolic arc-sine (in radians) of number n.
  * 
  * Example:
  * 
@@ -299,7 +299,7 @@ def asinh(n) {
 }
 
 /**
- * Returns the hyperbolic arccosine (in radians) of number n.
+ * Returns the hyperbolic arc-cosine (in radians) of number n.
  * 
  * Example:
  * 
@@ -316,7 +316,7 @@ def acosh(n) {
 }
 
 /**
- * Returns the hyperbolic arctangent (in radians) of number n.
+ * Returns the hyperbolic arc-tangent (in radians) of number n.
  * 
  * Example:
  * 
@@ -473,7 +473,7 @@ def log10(n) {
  * If you calculate log(1 + 1.1111111111e-15) you should get an answer 
  * close to 1.1111111111e-15.  
  * Instead, you will end up taking the logarithm of 1.00000000000000111022 
- * (the roundoff is in binary so sometimes it gets ugly), so you get the answer 
+ * (the round-off is in binary so sometimes it gets ugly), so you get the answer
  * 1.11022...e-15, with only  3 correct digits.  
  * If, instead, you calculate log1p(1.1111111111e-15) you will get a much 
  * more accurate answer 1.1111111110999995e-15 with 15 correct digits of precision 
@@ -649,7 +649,7 @@ def trunc(n) {
 }
 
 /**
- * Returns the square root of a nunmber.
+ * Returns the square root of a number.
  * 
  * Example:
  * 

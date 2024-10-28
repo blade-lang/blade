@@ -469,7 +469,7 @@ class Template {
   var _elements = {}
 
   # root directory
-  var _root_dir = constants.DEFUALT_ROOT_DIR
+  var _root_dir = constants.DEFAULT_ROOT_DIR
 
   # auto_init control
   var _auto_init = false
@@ -570,7 +570,7 @@ class Template {
         # error('could not resolve "${_vars[0]}"')
 
         # Instead of returning an error, we'll return an empty string. This allows us to test 
-        # for falsey, allows us to catch non-existing variables without an Exception and still 
+        # for false, allows us to catch non-existing variables without an Exception and still
         # allow modifiers to be used with the non existing value. 
         # 
         # E.g. x-if="nonexistingvar|length" should still be false.

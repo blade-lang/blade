@@ -7,7 +7,7 @@
  * RFC1738.
  * 
  * The scope of URL in this module have not been limited to HTTP or any protocol 
- * for that matter. However, where deducable, the module tries to conform to the 
+ * for that matter. However, where deductible, the module tries to conform to the
  * most appropriate URL for the specified scheme.
  * 
  * Constructing a URL is vey simple. Here is an example.
@@ -41,7 +41,7 @@ import types
 
 
 /**
- * Excpetion thrown when a url is malformed
+ * Exception thrown when a url is malformed
  */
 class UrlMalformedException < Exception {
   /**
@@ -121,13 +121,13 @@ class Url {
   var query
 
   /**
-   * Username information for authentication are sometimes embeded in urls. When such information 
+   * Username information for authentication are sometimes embedded in urls. When such information
    * exist, this property holds the information
    */
   var username
 
   /**
-   * Password information for authentication are sometimes embeded in urls. When such information 
+   * Password information for authentication are sometimes embedded in urls. When such information
    * exist, this property holds the information
    */
   var password
@@ -138,7 +138,7 @@ class Url {
   var has_slash = false
 
   /**
-   * `true` if the original url contains a path segement even if its just an `/` and false if the 
+   * `true` if the original url contains a path segment even if its just an `/` and false if the
    * path value of `/` was implied.
    * @type bool
    */
@@ -575,7 +575,7 @@ def parse(url, strict) {
 
             # we need to go back to @ to let host be scanned completely
             # at the next iteration because we are now on the first
-            # character of the host segement
+            # character of the host segment
             i--
           }
         }
@@ -640,7 +640,7 @@ def parse(url, strict) {
 
       if hash_starts {
         # this is an edge-case where we have the url hash coming
-        # before the url query segement.
+        # before the url query segment.
         # while this may be allowed by specific implementations,
         # but RFC 3986 doesn't allow this.
         # for this library, we are going strictly RFC 3986
@@ -666,7 +666,7 @@ def parse(url, strict) {
       hash = ''
 
       # we are still checking for the ? character
-      # this ensures we don't eroneously 
+      # this ensures we don't erroneously
       while i < url.length() {
         hash += url[i]
         i++

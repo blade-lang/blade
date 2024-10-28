@@ -253,7 +253,7 @@ class Convert {
   }
 
   /**
-   * Convertss the value into a boolean.
+   * Converts the value into a boolean.
    * 
    * @note classes may override the return value by declaring a `to_bool()` function.
    * @returns bool

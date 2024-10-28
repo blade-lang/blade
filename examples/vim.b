@@ -1,3 +1,7 @@
+/**
+ * This example shows the implementation of a simple rudimentary vim
+ * like editor for Blade with syntax highlighting.
+ */
 import io
 
 # simple test
@@ -114,6 +118,6 @@ while s = io.stdin.read() {
 }
 
 # Clear the terminal (classic Nano and Vim style)
-io.stdout.write("\x1b[2J");
-io.stdout.write("\x1b[H");
+io.stdout.write("\x1b[2J")
+io.stdout.write("\x1b[H")
 io.stdout.flush()

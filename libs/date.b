@@ -355,7 +355,7 @@ class Date {
   }
 
   /** 
-   * Returns the number of days in the year preceeding the first 
+   * Returns the number of days in the year preceding the first
    * day of the month.
    * 
    * Example,
