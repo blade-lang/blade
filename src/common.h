@@ -95,7 +95,9 @@
 # define LIBRARY_FILE_EXTENSION ".so"
 #endif
 
-#define DEFAULT_GC_START (1024 * 1024)
+//#define DEFAULT_GC_START (1024 * 1024)
+#define DEFAULT_GC_START (1024 * 1024 * 10)
+#define MINIMUM_GC_START (1024 * 1024)
 
 #if defined(_WIN32) && !defined(errno) 
 # define errno (GetLastError())

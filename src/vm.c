@@ -515,6 +515,7 @@ static void init_builtin_methods(b_vm *vm) {
 
 void init_vm(b_vm *vm) {
 
+  vm->parent_vm = NULL;
   vm->stack = ALLOCATE(b_value, STACK_MIN);
   vm->stack_capacity = STACK_MIN;
 
@@ -527,7 +528,7 @@ void init_vm(b_vm *vm) {
   vm->current_frame = NULL;
   vm->root_file = NULL;
   vm->bytes_allocated = 0;
-  vm->next_gc = DEFAULT_GC_START; // default is 1mb. Can be modified via the -g flag.
+  vm->next_gc = DEFAULT_GC_START; // default is 10mb. Can be modified via the -g flag.
   vm->is_repl = false;
   vm->mark_value = true;
   vm->show_warnings = false;

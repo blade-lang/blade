@@ -121,7 +121,7 @@ void blacken_object(b_vm *vm, b_obj *object) {
   printf("\n");
 #endif
 
-//  if(object->vm_id != vm->id) return;
+  if(object->vm_id != vm->id) return;
 
   switch (object->type) {
     case OBJ_MODULE: {
@@ -428,6 +428,10 @@ void collect_garbage(b_vm *vm) {
   free_error_stacks(vm);
 
   vm->next_gc = vm->bytes_allocated * GC_HEAP_GROWTH_FACTOR;
+  if(vm->next_gc < MINIMUM_GC_START) {
+    vm->next_gc = MINIMUM_GC_START;
+  }
+
   vm->mark_value = !vm->mark_value;
 
 #if defined(DEBUG_GC) && DEBUG_GC

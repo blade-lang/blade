@@ -82,6 +82,7 @@ struct s_vm {
 
   // id
   uint64_t id;
+  b_vm *parent_vm;
 };
 
 void init_vm(b_vm *vm);

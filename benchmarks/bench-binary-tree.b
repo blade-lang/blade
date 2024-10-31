@@ -13,41 +13,40 @@ class TreeNode {
     self.right = right
   }
 
-  check() {
+  count() {
     if self.left == nil return 1
-    return 1 + self.left.check() + self.right.check()
+    return 1 + self.left.count() + self.right.count()
   }
 }
 
-def bottomUpTree(depth) {
+def tree_with(depth) {
   if depth > 0 {
-    return TreeNode(bottomUpTree(depth - 1), bottomUpTree(depth - 1))
+    return TreeNode(tree_with(depth - 1), tree_with(depth - 1))
   }
   return TreeNode(nil, nil)
 }
 
 def main(n) {
-  var minDepth = 4
-  var maxDepth = max(minDepth + 2, n)
-  var stretchDepth = maxDepth + 1
+  var min_depth = 4
+  var max_depth = max(min_depth + 2, n)
+  var stretch_depth = max_depth + 1
 
-  echo 'stretch tree of depth ${stretchDepth}\t check: ${bottomUpTree(stretchDepth).check()}'
+  echo 'stretch tree of depth ${stretch_depth}\t check: ${tree_with(stretch_depth).count()}'
 
-  var longLivedTree = bottomUpTree(maxDepth)
+  var long_lived_tree = tree_with(max_depth)
 
-  iter var depth = minDepth; depth <= maxDepth; depth += 2 {
-    var check = 0
-    var iterations = 1 << (maxDepth - depth + minDepth)
+  iter var depth = min_depth; depth <= max_depth; depth += 2 {
+    var sum = 0
+    var iterations = 1 << (max_depth - depth + min_depth)
 
     iter var i = 1; i <= iterations; i++ {
-      var tempTree = bottomUpTree(depth)
-      check += tempTree.check()
+      sum += tree_with(depth).count()
     }
 
-    echo '${iterations}\t trees of depth ${depth}\t check: ${check}'
+    echo '${iterations}\t trees of depth ${depth}\t check: ${sum}'
   }
 
-  echo 'long lived tree of depth ${maxDepth}\t check: ${longLivedTree.check()}'
+  echo 'long lived tree of depth ${max_depth}\t check: ${long_lived_tree.count()}'
 }
 
 var start = time()

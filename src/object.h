@@ -284,6 +284,7 @@ static inline bool is_obj_type(b_value v, b_obj_type t) {
   (type *)allocate_object(vm, sizeof(type), obj_type)
 
 b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type);
+void migrate_objects(b_vm *src, b_vm *dest);
 
 #define ITER_TOOL_PREPARE() \
   int arity = closure->function->arity; \

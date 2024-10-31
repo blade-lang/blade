@@ -27,6 +27,19 @@ b_obj *allocate_object(b_vm *vm, size_t size, b_obj_type type) {
   return object;
 }
 
+void migrate_objects(b_vm *src, b_vm *dest) {
+  if(dest->objects != NULL) {
+    dest->objects->next = src->objects;
+  }
+
+  b_obj *object = src->objects;
+  while (object != NULL) {
+    b_obj *next = object->next;
+    object->vm_id = (int)dest->id;
+    object = next;
+  }
+}
+
 
 b_obj_ptr *new_ptr(b_vm *vm, void *pointer) {
   b_obj_ptr *ptr = ALLOCATE_OBJ(b_obj_ptr, OBJ_PTR);

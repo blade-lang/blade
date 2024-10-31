@@ -154,6 +154,7 @@ b_vm *copy_vm(b_vm *src, uint64_t id) {
 
   memset(vm, 0, sizeof(b_vm));
 
+  vm->parent_vm = src;
   vm->stack = ALLOCATE(b_value, COPIED_STACK_MIN);
   vm->stack_capacity = COPIED_STACK_MIN;
 
@@ -237,6 +238,11 @@ static b_thread_handle *create_thread_handle(b_vm *vm, b_obj_closure *closure, b
 
 static void free_thread_handle(b_thread_handle *thread) {
   if(thread != NULL && thread->vm != NULL) {
+    // move the surviving items to the parent vm's object list.
+    if(thread->vm->parent_vm != NULL) {
+      migrate_objects(thread->vm, thread->vm->parent_vm);
+    }
+
     free_vm(thread->vm);
 
     thread->vm = NULL;
