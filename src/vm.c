@@ -1351,7 +1351,7 @@ static bool concatenate(b_vm *vm) {
     double a = AS_NUMBER(_a);
 
     char num_str[27]; // + 1 for null terminator
-    int num_length = sprintf(num_str, NUMBER_FORMAT, a);
+    int num_length = sprintf(num_str, GET_NUMBER_FORMAT(a), a);
 
     b_obj_string *b = AS_STRING(_b);
 
@@ -1372,7 +1372,7 @@ static bool concatenate(b_vm *vm) {
     double b = AS_NUMBER(_b);
 
     char num_str[27]; // + 1 for null terminator
-    int num_length = sprintf(num_str, NUMBER_FORMAT, b);
+    int num_length = sprintf(num_str, GET_NUMBER_FORMAT(b), b);
 
     int length = num_length + a->length;
     char *chars = ALLOCATE(char, (size_t) length + 1);

@@ -72,14 +72,16 @@ void free_byte_arr(b_vm *vm, b_byte_arr *array) {
 static inline void do_print_value(b_value value, bool fix_string) {
 #if defined(USE_NAN_BOXING) && USE_NAN_BOXING
   if (IS_EMPTY(value)) return;
-  else if (IS_NIL(value))
+  else if (IS_NIL(value)) {
     printf("nil");
-  else if (IS_BOOL(value))
+  } else if (IS_BOOL(value)) {
     printf(AS_BOOL(value) ? "true" : "false");
-  else if (IS_NUMBER(value))
-    printf(NUMBER_FORMAT, AS_NUMBER(value));
-  else
+  } else if (IS_NUMBER(value)) {
+    double num = AS_NUMBER(value);
+    printf(GET_NUMBER_FORMAT(num), num);
+  } else {
     print_object(value, fix_string);
+  }
 #else
   switch (value.type) {
   case VAL_EMPTY:
@@ -91,7 +93,8 @@ static inline void do_print_value(b_value value, bool fix_string) {
     printf(AS_BOOL(value) ? "true" : "false");
     break;
   case VAL_NUMBER:
-    printf(NUMBER_FORMAT, AS_NUMBER(value));
+    double num = AS_NUMBER(value);
+    printf(GET_NUMBER_FORMAT(num), num);
     break;
   case VAL_OBJ:
     print_object(value, fix_string);
@@ -115,10 +118,11 @@ void echo_value(b_value value) { do_print_value(value, true); }
 #endif // !_WIN32
 
 static inline char *number_to_string(b_vm *vm, double number, int *length) {
-  *length = snprintf(NULL, 0, NUMBER_FORMAT, number);
+  const char *format = GET_NUMBER_FORMAT(number);
+  *length = snprintf(NULL, 0, format, number);
   char *num_str = ALLOCATE(char, *length + 1);
   if (num_str != NULL) {
-    sprintf(num_str, NUMBER_FORMAT, number);
+    sprintf(num_str, format, number);
     return num_str;
   }
   return strdup("");

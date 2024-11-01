@@ -41,14 +41,8 @@ def a_times_transp(v, u) {
 
   for i in 0..ncpu {
     t.append(thread.start(
-      times, 
-      [
-        x, 
-        i * v.length() / ncpu, 
-        (i + 1) * v.length() / ncpu, 
-        u, 
-        false,
-      ]
+      times,
+      [x, i * v.length() / ncpu, (i + 1) * v.length() / ncpu, u, false,]
     ))
   }
 
@@ -58,14 +52,8 @@ def a_times_transp(v, u) {
 
   for i in 0..ncpu {
     t[i] = thread.start(
-      times, 
-      [
-        v, 
-        i * v.length() / ncpu, 
-        (i + 1) * v.length() / ncpu, 
-        x, 
-        true,
-      ]
+      times,
+      [v, i * v.length() / ncpu, (i + 1) * v.length() / ncpu, x, true,]
     )
   }
 
@@ -79,11 +67,7 @@ def times(_, v, ii, n, u, transpose) {
   for i in ii..n {
     var vi = 0
     for j in 0..ul {
-      if transpose {
-        vi += u[j] / a(j, i)
-      } else {
-        vi += u[j] / a (i, j)
-      }
+      vi +=  u[j] / (transpose ? a(j, i) : a(i, j))
     }
 
     v[i] = vi
