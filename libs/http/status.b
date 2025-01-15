@@ -26,7 +26,7 @@ var SWITCHING_PROTOCOLS = 101
 var PROCESSING = 102
 
 
-# Succcess
+# Success
 /**
  * 200 ok.
  * @type int
@@ -465,7 +465,7 @@ var map = {
   101: 'Switching protocols',
   102: 'Processing',
 
-  # Succcess
+  # Success
   200: 'Ok',
   201: 'Created',
   202: 'Accepted',

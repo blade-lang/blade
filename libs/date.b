@@ -500,8 +500,8 @@ class Date {
    * 
    * Character | Description                                               | Example
    * ----------|-----------------------------------------------------------|-----------------------------------
-   * A         | uppercase Ante meridiem and Post meridiem                 | AM or PM
-   * a         | lowercase Ante meridiem and Post meridiem                 | am or pm
+   * A         | uppercase Ante meridian and Post meridian                 | AM or PM
+   * a         | lowercase Ante meridian and Post meridian                 | am or pm
    * d         | day of the month with leading zero                        | 01 to 31
    * D         | textual representation of a day, three letters            | Mon - Sun
    * j         | day of the month without leading zero                     | 1 to 31

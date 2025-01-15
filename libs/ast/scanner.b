@@ -325,7 +325,7 @@ class Scanner {
       while self._is_digit(self._peek())
         self._advance()
 
-      # E or e are only valid when followed by a didigt and 
+      # E or e are only valid when followed by a digit and
       # occurring after a dot.
       if (self._peek() == 'e' or self._peek() == 'E') and
           (self._next() == '+' or self._next() == '-') {

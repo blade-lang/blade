@@ -31,7 +31,7 @@ def _parse_headers(header) {
   return headers
 }
 
-def _strip_bounday(str, boundary) {
+def _strip_boundary(str, boundary) {
   str = str.trim()
   # remove the trailing `--` and trim the first --boundary out
   var bound_len = '--${boundary}'.length()
@@ -93,7 +93,7 @@ class Attachment {
  * 
  * - __headers__: A dictionary containing the key/value pair contained in the 
  *    mail message header.
- * - __body__: A dictionary containing the different segements of a mail body such 
+ * - __body__: A dictionary containing the different segments of a mail body such
  *    as its plain text and html counterpart.
  * - __attachments__: A list of attachments contained in the Mail message.
  * 
@@ -150,7 +150,7 @@ def parse(message) {
     var boundary = content_type.match(_boundary_rgx)
 
     if type and boundary and (boundary = boundary[1]) {
-      message.body = _strip_bounday(message.body, boundary)
+      message.body = _strip_boundary(message.body, boundary)
       text = message.body
 
       # split by boundary
@@ -179,7 +179,7 @@ def parse(message) {
   
               if boundary {
                 boundary = boundary[1]
-                message.body = _strip_bounday(message.body, boundary)
+                message.body = _strip_boundary(message.body, boundary)
                 var body_parts = message.body.split('/\-\-${boundary}/')
   
                 for part in body_parts {

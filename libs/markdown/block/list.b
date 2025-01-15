@@ -248,7 +248,7 @@ def list(state, start_line, end_line, silent) {
       token.info = state.src[start, pos_after_marker - 1]
     }
 
-    # change current state, then restore it after parser subcall
+    # change current state, then restore it after parser sub call
     old_tight = state.tight
     old_tShift = state.t_shift[nextLine]
     old_sCount = state.s_count[nextLine]
@@ -322,11 +322,16 @@ def list(state, start_line, end_line, silent) {
     # fail if list has another type
     if (is_ordered) {
       pos_after_marker = _skip_ordered_list_marker(state, nextLine);
-      if (pos_after_marker < 0) { break; }
+      if (pos_after_marker < 0) {
+        break
+      }
+
       start = state.b_marks[nextLine] + state.t_shift[nextLine];
     } else {
       pos_after_marker = _skip_bullet_list_marker(state, nextLine);
-      if (pos_after_marker < 0) { break; }
+      if (pos_after_marker < 0) {
+        break
+      }
     }
 
     if marker_char_code != state.src[pos_after_marker - 1] break

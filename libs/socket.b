@@ -845,7 +845,7 @@ class Socket {
    * Alternatively, if the underlying protocol supports retransmission, the request may be ignored 
    * so that retries may succeed.
    * 
-   * When the `queue_length` is ommited or set to -1, the method will use the default queue limit of 
+   * When the `queue_length` is omitted or set to -1, the method will use the default queue limit of
    * the current platform which is usually equal to `SOMAXCONN`.
    * 
    * @note listen() call applies only to sockets of type `SOCK_STREAM` (which is the default)
@@ -854,7 +854,7 @@ class Socket {
    * @returns bool
    */
   listen(queue_length) {
-    if !queue_length queue_length = SOMAXCONN # default to 128 simulataneous clients...
+    if !queue_length queue_length = SOMAXCONN # default to 128 simultaneous clients...
 
     if !is_int(queue_length) 
       raise SocketException('integer expected for queue_length, ${typeof(queue_length)} given')

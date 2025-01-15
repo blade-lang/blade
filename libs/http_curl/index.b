@@ -108,7 +108,7 @@ def set_headers(headers) {
  * @param string url
  * @returns HttpResponse
  * @raises  Exception
- * @raises  SocketExcepion
+ * @raises  SocketException
  * @raises  HttpException
  */
 def get(url) {
@@ -122,7 +122,7 @@ def get(url) {
  * @param string|bytes|nil data
  * @returns HttpResponse
  * @raises  Exception
- * @raises  SocketExcepion
+ * @raises  SocketException
  * @raises  HttpException
  */
 def post(url, data) {
@@ -136,7 +136,7 @@ def post(url, data) {
  * @param string|bytes|nil data
  * @returns HttpResponse
  * @raises  Exception
- * @raises  SocketExcepion
+ * @raises  SocketException
  * @raises  HttpException
  */
 def put(url, data) {
@@ -149,7 +149,7 @@ def put(url, data) {
  * @param string url
  * @returns HttpResponse
  * @raises  Exception
- * @raises  SocketExcepion
+ * @raises  SocketException
  * @raises  HttpException
  */
 def delete(url) {
@@ -163,7 +163,7 @@ def delete(url) {
  * @param string address
  * @returns HttpServer
  * @raises  Exception
- * @raises  SocketExcepion
+ * @raises  SocketException
  * @raises  HttpException
  */
 def server(port, address) {

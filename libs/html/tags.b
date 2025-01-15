@@ -1,7 +1,7 @@
 #!-- part of the html module
 
 /**
- * Tags which contain arbitary non-parsed content
+ * Tags which contain arbitrary non-parsed content
  * For example: `<script>` JavaScript should not be parsed
  * 
  * @readonly

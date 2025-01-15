@@ -81,7 +81,9 @@ def replacements(state) {
 
   iter blk_idx = state.tokens.length() - 1; blk_idx >= 0; blk_idx-- {
 
-    if (state.tokens[blk_idx].type != 'inline') { continue; }
+    if (state.tokens[blk_idx].type != 'inline') {
+      continue
+    }
 
     if state.tokens[blk_idx].content.match(SCOPED_ABBR_RE) {
       _replace_scoped(state.tokens[blk_idx].children)

@@ -184,7 +184,7 @@ class Imap {
    * Executes an IMAP command.
    * 
    * @param string command The command to execute.
-   * @param string? path The path segement of the request url.
+   * @param string? path The path segment of the request url.
    * @returns string The response from the server.
    */
   exec(command, path) {

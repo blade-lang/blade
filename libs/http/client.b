@@ -150,7 +150,7 @@ class HttpClient {
    * @param dict? headers
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   get(url, headers) {
@@ -165,7 +165,7 @@ class HttpClient {
    * @param dict? headers
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   post(url, data, headers) {
@@ -180,7 +180,7 @@ class HttpClient {
    * @param dict? headers
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   put(url, data, headers) {
@@ -195,7 +195,7 @@ class HttpClient {
    * @param dict? headers
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   patch(url, data, headers) {
@@ -209,7 +209,7 @@ class HttpClient {
    * @param dict? headers
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   delete(url, headers) {
@@ -223,7 +223,7 @@ class HttpClient {
    * @param dict? headers
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   options(url, headers) {
@@ -237,7 +237,7 @@ class HttpClient {
    * @param dict? headers
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   trace(url, headers) {
@@ -251,7 +251,7 @@ class HttpClient {
    * @param dict? headers
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   head(url, headers) {

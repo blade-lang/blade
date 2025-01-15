@@ -211,7 +211,7 @@ def deflist(state, start_line, end_line, silent) {
     # insert DT and DD tags and repeat checking
   }
 
-  # Finilize list
+  # Finalize list
   token = state.push('dl_close', 'dl', -1)
 
   list_lines[1] = next_line

@@ -264,7 +264,7 @@ def hex_to_ansi256(color) {
 /**
  * Converts the given hexadecimal color to its ANSI-16 number.
  * 
- * @note For use with `text()`, this should be prefered over `hex_to_ansi256`
+ * @note For use with `text()`, this should be preferred over `hex_to_ansi256`
  * @param string color
  * @returns number
  */
@@ -278,7 +278,7 @@ def hex_to_ansi(color) {
 /**
  * Converts the given hexadecimal color to its terminal compatible color.
  * 
- * @note For use with `text()`, this should be prefered over `hex_to_ansi256` and `hex_to_ansi`
+ * @note For use with `text()`, this should be preferred over `hex_to_ansi256` and `hex_to_ansi`
  * @note _color_ can include the '#' character. E.g. `#ff0`.
  * @param string color
  * @returns number

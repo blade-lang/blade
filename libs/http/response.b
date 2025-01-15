@@ -99,7 +99,7 @@ class HttpResponse {
   /**
    * Writes data to the response stream. 
    * 
-   * > This method should be prefered over writing directly to the body 
+   * > This method should be preferred over writing directly to the body
    * > property to prevent unexpected behaviors.
    * 
    * @param string|bytes data

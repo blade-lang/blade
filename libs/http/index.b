@@ -51,7 +51,7 @@
  * Not only is it super simple to create an HTTP server, it is also very easy to create 
  * a TLS/HTTPS server with few modifications.
  * 
- * The following code creates a TLS versionof the same server we created above.
+ * The following code creates a TLS version of the same server we created above.
  * 
  * ```blade
  * import http
@@ -83,7 +83,7 @@
  * - application/x-www-form-urlencoded
  * - application/json
  * 
- * In the abscence of any content-type in the request header or reponse header from a 
+ * In the absence of any content-type in the request header or response header from a
  * server as the case may be, the module defaults to the `application/x-www-form-urlencoded` 
  * content type.
  * 
@@ -135,7 +135,7 @@ def set_headers(headers) {
  * @param dict? headers
  * @returns HttpResponse
  * @raises  Exception
- * @raises  SocketExcepion
+ * @raises  SocketException
  * @raises  HttpException
  */
 def get(url, headers) {
@@ -150,7 +150,7 @@ def get(url, headers) {
  * @param dict? headers
  * @returns HttpResponse
  * @raises  Exception
- * @raises  SocketExcepion
+ * @raises  SocketException
  * @raises  HttpException
  */
 def post(url, data, headers) {
@@ -165,7 +165,7 @@ def post(url, data, headers) {
  * @param dict? headers
  * @returns HttpResponse
  * @raises  Exception
- * @raises  SocketExcepion
+ * @raises  SocketException
  * @raises  HttpException
  */
 def put(url, data, headers) {
@@ -180,7 +180,7 @@ def put(url, data, headers) {
  * @param dict? headers
  * @returns HttpResponse
  * @raises  Exception
- * @raises  SocketExcepion
+ * @raises  SocketException
  * @raises  HttpException
  */
 def patch(url, data, headers) {
@@ -194,7 +194,7 @@ def patch(url, data, headers) {
  * @param dict? headers
  * @returns HttpResponse
  * @raises  Exception
- * @raises  SocketExcepion
+ * @raises  SocketException
  * @raises  HttpException
  */
 def delete(url, headers) {
@@ -208,7 +208,7 @@ def delete(url, headers) {
  * @param dict? headers
  * @returns HttpResponse
  * @raises  Exception
- * @raises  SocketExcepion
+ * @raises  SocketException
  * @raises  HttpException
  */
 def options(url, headers) {
@@ -222,7 +222,7 @@ def options(url, headers) {
  * @param dict? headers
  * @returns HttpResponse
  * @raises  Exception
- * @raises  SocketExcepion
+ * @raises  SocketException
  * @raises  HttpException
  */
 def trace(url, headers) {
@@ -236,7 +236,7 @@ def trace(url, headers) {
  * @param dict? headers
  * @returns HttpResponse
  * @raises  Exception
- * @raises  SocketExcepion
+ * @raises  SocketException
  * @raises  HttpException
  */
 def head(url, headers) {
@@ -259,7 +259,7 @@ def client() {
  * @param string address
  * @returns HttpServer
  * @raises  Exception
- * @raises  SocketExcepion
+ * @raises  SocketException
  * @raises  HttpException
  */
 def server(port, address) {
@@ -273,7 +273,7 @@ def server(port, address) {
  * @param int port
  * @param string? host
  * @returns TLSServer
- * @throws Exception, SocketExcepion, HttpException
+ * @throws Exception, SocketException, HttpException
  */
 def tls_server(port, host) {
   return TLSServer(port, host)

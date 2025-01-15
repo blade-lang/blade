@@ -117,7 +117,7 @@ class Transport {
   }
 
   /**
-   * Verifys an email address
+   * Verifies an email address
    * 
    * @param string address
    * @returns bool

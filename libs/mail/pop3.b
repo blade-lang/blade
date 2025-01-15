@@ -137,7 +137,7 @@ class POP3 {
    * Executes an POP3 command.
    * 
    * @param string command The command to execute.
-   * @param string? path The path segement of the request url.
+   * @param string? path The path segment of the request url.
    * @param bool? no_transfer Set to `true` if the command will return the requested data 
    *    as response response. Default `false`.
    * @returns string The response from the server.

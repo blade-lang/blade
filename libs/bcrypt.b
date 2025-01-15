@@ -2,7 +2,7 @@
  * @module bcrypt
  *
  * This module provides functions for generating and verifying bcrypt 
- * hashes as well as functions for getting informations from a bcrypt hash.
+ * hashes as well as functions for getting information from a bcrypt hash.
  * 
  * @copyright 2022, Ore Richard Muyiwa and Blade contributors
  */
