@@ -40,7 +40,7 @@
 #endif
 
 #define BIGSIZ 8192    /* big buffers */
-#define SMALLSIZ 256    /* small buffers, hostnames, etc */
+#define SMALLSIZ 256    /* small buffers, hostnames, etc. */
 
 DECLARE_MODULE_METHOD(socket__error) {
   ENFORCE_ARG_COUNT(_error, 1);
@@ -48,7 +48,7 @@ DECLARE_MODULE_METHOD(socket__error) {
 
   // do not report errno == EINPROGRESS, EWOULDBLOCK and EAGAIN as error
   if (AS_NUMBER(args[0]) == -1 && errno != EINPROGRESS && errno != EWOULDBLOCK && errno != EAGAIN) {
-    char *error = strerror(errno);
+    const char *error = strerror(errno);
     RETURN_STRING(error);
   }
   RETURN_NIL;

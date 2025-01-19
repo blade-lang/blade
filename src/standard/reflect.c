@@ -61,7 +61,6 @@ DECLARE_MODULE_METHOD(reflect__setprop) {
   ENFORCE_ARG_COUNT(set_prop, 3);
   ENFORCE_ARG_TYPE(set_prop, 0, IS_INSTANCE);
   ENFORCE_ARG_TYPE(set_prop, 1, IS_STRING);
-  ENFORCE_ARG_TYPE(set_prop, 2, IS_STRING);
 
   b_obj_instance *instance = AS_INSTANCE(args[0]);
   RETURN_BOOL(table_set(vm, &instance->properties, args[1], args[2]));

@@ -659,9 +659,11 @@ bool call_value(b_vm *vm, b_value callee, int arg_count) {
         vm->stack_top[-arg_count - 1] = OBJ_VAL(new_instance(vm, klass));
         if (!IS_EMPTY(klass->initializer)) {
           return call(vm, AS_CLOSURE(klass->initializer), arg_count);
-        } else if (klass->superclass != NULL && !IS_EMPTY(klass->superclass->initializer)) {
+        }
+        if (klass->superclass != NULL && !IS_EMPTY(klass->superclass->initializer)) {
           return call(vm, AS_CLOSURE(klass->superclass->initializer), arg_count);
-        } else if (arg_count != 0) {
+        }
+        if (arg_count != 0) {
           return throw_exception(vm, "%s constructor expects 0 arguments, %d given", klass->name->chars, arg_count);
         }
         return true;
@@ -701,12 +703,17 @@ static inline b_func_type get_method_type(b_value method) {
   }
 }
 
-inline bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
-                       int arg_count) {
+inline bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name, int arg_count) {
   b_value method;
   if (table_get(&klass->methods, OBJ_VAL(name), &method)) {
-    if (get_method_type(method) == TYPE_PRIVATE) {
+    b_func_type type = get_method_type(method);
+
+    if (type == TYPE_PRIVATE) {
       return throw_exception(vm, "cannot call private method '%s' from instance of %s",
+                             name->chars, klass->name->chars);
+    }
+    if (type == TYPE_STATIC) {
+      return throw_exception(vm, "cannot call static method '%s' from instance of %s",
                              name->chars, klass->name->chars);
     }
 
@@ -724,7 +731,11 @@ static bool invoke_self(b_vm *vm, b_obj_string *name, int arg_count) {
     b_obj_instance *instance = AS_INSTANCE(receiver);
 
     if (table_get(&instance->klass->methods, OBJ_VAL(name), &value)) {
-      return call_value(vm, value, arg_count);
+      if (get_method_type(value) != TYPE_STATIC) {
+        return call_value(vm, value, arg_count);
+      }
+
+      return throw_exception(vm, "cannot call static method %s() on instance", name->chars);
     }
 
     if (table_get(&instance->properties, OBJ_VAL(name), &value)) {
@@ -772,7 +783,8 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
                                    name->chars, AS_CLASS(receiver)->name->chars);
           }
           return call_value(vm, value, arg_count);
-        } else if (table_get(&AS_CLASS(receiver)->static_properties, OBJ_VAL(name), &value)) {
+        }
+        if (table_get(&AS_CLASS(receiver)->static_properties, OBJ_VAL(name), &value)) {
           return call_value(vm, value, arg_count);
         }
 

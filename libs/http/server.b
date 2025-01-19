@@ -5,6 +5,9 @@ import .response { HttpResponse }
 import .exception { HttpException }
 import .status
 
+import os
+import mime
+import hash
 import socket as so
 import reflect
 
@@ -265,6 +268,61 @@ class HttpServer {
       raise Exception('handler must accept two arguments (request, response)')
 
     self._none_handler = handler
+  }
+
+  /**
+   * Setup the given base_path to serve static files from the given directory.
+   *
+   * If cache is set to true, and a default value is not set for tag, static
+   * file tagging will be automatically enabled.
+   *
+   * @param string base_path
+   * @param string directory
+   * @param number? cache_age = 0
+   * @param bool? tag = false
+   */
+  serve_files(base_path, directory, cache_age, tag) {
+    if !is_string(base_path)
+      raise Exception('argument 1 (base_path) must be a string')
+    if !is_string(directory)
+      raise Exception('argument 2 (directory) must be a string')
+
+    if cache_age == nil cache_age = 0
+    if tag == nil tag = cache_age > 0
+
+    if !is_number(cache_age)
+      raise Exception('argument 3 (cache_age) must be a number')
+    if !is_bool(tag)
+      raise Exception('argument 4 (tag) must be a boolean')
+
+    def static_file_handler(request, response) {
+      if request.method == 'GET' and request.path.starts_with('/' + base_path.ltrim('/')) {
+        var static_path = request.path[base_path.length(),].ltrim('/')
+        var reader = file(os.join_paths(directory, static_path), 'rb')
+
+        if reader.exists() {
+          response.headers['Content-Type'] = mime.detect_from_name(static_path)
+
+          # cache for 1 year
+          if cache_age > 0 {
+            response.headers['Cache-Control'] = 'public, max-age=${cache_age}, s-maxage=${cache_age}, immutable'
+          }
+
+          var content = reader.read()
+
+          if tag {
+            response.headers['Etag'] = 'W/"${hash.md5(content)}"'
+          }
+
+          response.write(content)
+          content.dispose()
+        } else if self._none_handler {
+          self._none_handler(request, response)
+        }
+      }
+    }
+
+    self.on_receive(static_file_handler)
   }
 
   _get_response_header_string(headers, cookies) {
