@@ -336,18 +336,22 @@ def ptr_from_address(address) {
 }
 
 /**
- * Sets a function or class as globally accessible in all modules, function 
- * and scopes.
+ * Sets any given value as globally accessible in all modules, function
+ * and scopes with the given name.
+ *
+ * If name is not given and the value is a class or function, the name
+ * will automatically be set to the name of the class or function
+ * respectively otherwise, an Exception will be raised.
  * 
- * @param function|class fn
+ * @param any value
  * @param string? name
  */
-def set_global(fn, name) {
-  if !is_function(fn) and !is_class(fn)
-    raise Exception('function or class expected in argument 1 (fn)')
+def set_global(value, name) {
+  if !is_function(value) and !is_class(value)
+    raise Exception('function or class expected in argument 1 (value)')
   if name != nil and !is_string(name)
     raise Exception('string expected in argument 2 (name)')
-  _reflect.setglobal(fn, name)
+  _reflect.setglobal(value, name)
 }
 
 /**

@@ -1,8 +1,6 @@
 #include "module.h"
 #include "compiler.h"
 
-extern bool call_value(b_vm *vm, b_value callee, int arg_count);
-
 /**
  * hasprop(object: instance | module, name: string)
  *
@@ -260,11 +258,13 @@ DECLARE_MODULE_METHOD(reflect__setglobal) {
   if(IS_NIL(args[1])) {
     if(IS_CLASS(args[0])) {
       name = AS_CLASS(args[0])->name;
-    } else {
+    } else if (IS_CLOSURE(args[0])) {
       name = AS_CLOSURE(args[0])->function->name;
+    } else {
+      RETURN_ERROR("name required for unnamed global value");
     }
   } else {
-    ENFORCE_ARG_TYPE(set_global, 0, IS_STRING);
+    ENFORCE_ARG_TYPE(set_global, 1, IS_STRING);
     name = AS_STRING(args[1]);
   }
 
@@ -326,11 +326,13 @@ DECLARE_MODULE_METHOD(reflect__getptr) {
         RETURN_PTR(AS_OBJ(args[0]));
       }
     }
-  } else if(IS_NUMBER(args[0])) {
-    RETURN_PTR(args);
-  } else {
-    RETURN_PTR(NULL);
   }
+
+  if(IS_NUMBER(args[0])) {
+    RETURN_PTR(args);
+  }
+
+  RETURN_PTR(NULL);
 }
 
 DECLARE_MODULE_METHOD(reflect__getaddress) {
@@ -368,9 +370,9 @@ DECLARE_MODULE_METHOD(reflect__getaddress) {
         RETURN_PTR((uintptr_t)AS_OBJ(args[0]));
       }
     }
-  } else {
-    RETURN_NUMBER(0);
   }
+
+  RETURN_NUMBER(0);
 }
 
 DECLARE_MODULE_METHOD(reflect__ptr_from_address) {
