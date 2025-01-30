@@ -501,6 +501,7 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_RANGE_METHOD(lower);
   DEFINE_RANGE_METHOD(upper);
   DEFINE_RANGE_METHOD(range);
+  DEFINE_RANGE_METHOD(within);
   DEFINE_RANGE_METHOD(loop);
   define_native_method(vm, &vm->methods_range, "@iter", native_method_range__iter__);
   define_native_method(vm, &vm->methods_range, "@itern", native_method_range__itern__);
@@ -2011,7 +2012,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
       }
 
       case OP_SET_PROPERTY: {
-        if (!IS_INSTANCE(peek(vm, 1)) && !IS_DICT(peek(vm, 1))) {
+        if (!IS_INSTANCE(peek(vm, 1)) && !IS_DICT(peek(vm, 1)) && !IS_CLASS(peek(vm, 1))) {
           runtime_error("object of type %s can not carry properties", value_type(peek(vm, 1)));
           break;
         } else  if(IS_EMPTY(peek(vm, 0))) {
@@ -2024,6 +2025,13 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         if (IS_INSTANCE(peek(vm, 1))) {
           b_obj_instance *instance = AS_INSTANCE(peek(vm, 1));
           table_set(vm, &instance->properties, OBJ_VAL(name), peek(vm, 0));
+
+          b_value value = pop(vm);
+          pop(vm); // removing the instance object
+          push(vm, value);
+        } else if (IS_CLASS(peek(vm, 1))) {
+          b_obj_class *klass = AS_CLASS(peek(vm, 1));
+          table_set(vm, &klass->static_properties, OBJ_VAL(name), peek(vm, 0));
 
           b_value value = pop(vm);
           pop(vm); // removing the instance object

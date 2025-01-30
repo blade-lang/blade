@@ -41,4 +41,6 @@ DECLARE_RANGE_METHOD(loop);
  */
 DECLARE_RANGE_METHOD(range);
 
+DECLARE_RANGE_METHOD(within);
+
 #endif

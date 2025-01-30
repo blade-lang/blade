@@ -95,7 +95,7 @@ DECLARE_DICT_METHOD(values);
 /**
  * dict.remove(key: any)
  *
- * removes a key and it's value from the dictionary and returns
+ * removes a key, and it's value from the dictionary and returns
  * the removed key
  */
 DECLARE_DICT_METHOD(remove);

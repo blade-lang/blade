@@ -15,6 +15,15 @@ DECLARE_RANGE_METHOD(range) {
   RETURN_NUMBER(AS_RANGE(METHOD_OBJECT)->range);
 }
 
+DECLARE_RANGE_METHOD(within) {
+  ENFORCE_ARG_COUNT(within, 1);
+  ENFORCE_ARG_TYPE(within, 0, IS_NUMBER);
+
+  const b_obj_range *range = AS_RANGE(METHOD_OBJECT);
+  const double number = AS_NUMBER(args[0]);
+  RETURN_BOOL(number >= range->lower && number <= range->upper);
+}
+
 DECLARE_RANGE_METHOD(__iter__) {
   ENFORCE_ARG_COUNT(__iter__, 1);
   ENFORCE_ARG_TYPE(__iter__, 0, IS_NUMBER);
