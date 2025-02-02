@@ -31,6 +31,7 @@ catch {
     var bg_color = im.allocate_color(0, 0, 0, 127)
     im.fill(0, 0, bg_color)
 
+#    # Commenting this out till we find a way to fix WebP on all supported OS.
 #    Image.from_webp('./tmp/image2.webp').use(@(im2) {
 #      var meta = im2.meta()
 #
