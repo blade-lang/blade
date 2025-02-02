@@ -55,7 +55,7 @@ class Image {
       raise Exception('file not found')
     }
 
-    if src.mode().index_of('r') == -1{
+    if src.mode().index_of('r') == -1 {
       raise Exception('file not readable')
     }
 
@@ -81,7 +81,7 @@ class Image {
       raise Exception('file not found')
     }
 
-    if src.mode().index_of('r') == -1{
+    if src.mode().index_of('r') == -1 {
       raise Exception('file not readable')
     }
 
@@ -106,7 +106,7 @@ class Image {
       raise Exception('file not found')
     }
 
-    if src.mode().index_of('r') == -1{
+    if src.mode().index_of('r') == -1 {
       raise Exception('file not readable')
     }
 
@@ -131,7 +131,7 @@ class Image {
       raise Exception('file not found')
     }
 
-    if src.mode().index_of('r') == -1{
+    if src.mode().index_of('r') == -1 {
       raise Exception('file not readable')
     }
 
@@ -156,7 +156,7 @@ class Image {
       raise Exception('file not found')
     }
 
-    if src.mode().index_of('r') == -1{
+    if src.mode().index_of('r') == -1 {
       raise Exception('file not readable')
     }
 
@@ -181,7 +181,7 @@ class Image {
       raise Exception('file not found')
     }
 
-    if src.mode().index_of('r') == -1{
+    if src.mode().index_of('r') == -1 {
       raise Exception('file not readable')
     }
 
@@ -206,7 +206,7 @@ class Image {
       raise Exception('file not found')
     }
 
-    if src.mode().index_of('r') == -1{
+    if src.mode().index_of('r') == -1 {
       raise Exception('file not readable')
     }
 
@@ -231,7 +231,7 @@ class Image {
       raise Exception('file not found')
     }
 
-    if src.mode().index_of('r') == -1{
+    if src.mode().index_of('r') == -1 {
       raise Exception('file not readable')
     }
 
@@ -256,7 +256,7 @@ class Image {
       raise Exception('file not found')
     }
 
-    if src.mode().index_of('r') == -1{
+    if src.mode().index_of('r') == -1 {
       raise Exception('file not readable')
     }
 

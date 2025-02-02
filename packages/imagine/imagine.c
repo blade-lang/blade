@@ -155,7 +155,7 @@ DECLARE_MODULE_METHOD(imagine__fromwtiff) {
   RETURN_PTR(image);
 }
 
-DECLARE_MODULE_METHOD(imagine__fromwwebp) {
+DECLARE_MODULE_METHOD(imagine__fromwebp) {
   ENFORCE_ARG_COUNT(fromwwebp, 1);
   ENFORCE_ARG_TYPE(fromwwebp, 0, IS_FILE);
 
@@ -1745,7 +1745,7 @@ CREATE_MODULE_LOADER(imagine) {
       {"fromwbmp",   true,  GET_MODULE_METHOD(imagine__fromwbmp)},
       {"fromtga",   true,  GET_MODULE_METHOD(imagine__fromwtga)},
       {"fromtiff",   true,  GET_MODULE_METHOD(imagine__fromwtiff)},
-      {"fromwebp",   true,  GET_MODULE_METHOD(imagine__fromwwebp)},
+      {"fromwebp",   true,  GET_MODULE_METHOD(imagine__fromwebp)},
       {"fromavif",   true,  GET_MODULE_METHOD(imagine__fromwavif)},
       {"fromfile",   true,  GET_MODULE_METHOD(imagine__fromfile)},
       
