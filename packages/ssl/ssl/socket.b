@@ -188,7 +188,7 @@ class TLSSocket {
    * Sends the specified message to the socket. When this methods accepts a file as a message, 
    * the file is read and the resultant bytes of the file content is streamed to the socket.
    * 
-   * @note the flags parameter is currently redundant and is kept only to remanin compatible with future plans for this method.
+   * @note the flags parameter is currently redundant and is kept only to remain compatible with future plans for this method.
    * @param string|bytes|file message
    * @param int? flags
    * @returns number greater than -1 if successful indicating the total number of bytes sent or -1 if it fails.
@@ -206,7 +206,7 @@ class TLSSocket {
    * `receive_timeout` which is also equal to the `SO_RCVTIMEO` setting of the socket has elapsed before or 
    * until it has received the total number of bytes required (whichever comes first).
    * 
-   * @note the flags parameter is currently redundant and is kept only to remanin compatible with future plans for this method.
+   * @note the flags parameter is currently redundant and is kept only to remain compatible with future plans for this method.
    * @param int? length
    * @param int? flags
    * @returns string
@@ -242,7 +242,7 @@ class TLSSocket {
    * Alternatively, if the underlying protocol supports retransmission, the request may be ignored 
    * so that retries may succeed.
    * 
-   * When the `queue_length` is ommited or set to -1, the method will use the default queue limit of 
+   * When the `queue_length` is omitted or set to -1, the method will use the default queue limit of
    * the current platform which is usually equal to `SOMAXCONN`.
    * 
    * @note listen() call applies only to sockets of type `SOCK_STREAM` (which is the default).
@@ -372,7 +372,7 @@ class TLSSocket {
 
   /**
    * Returns the underlying SSL instance
-   * 
+   *
    * @returns SSL
    */
   get_ssl() {

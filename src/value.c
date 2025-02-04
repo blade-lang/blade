@@ -423,6 +423,8 @@ uint32_t hash_string(const char *str, int wrdlen) {
 
 // Generates a hash code for [object].
 static uint32_t hash_object(b_obj *object) {
+  if (!object) return 0;
+
   switch (object->type) {
     case OBJ_CLASS:
       // Classes just use their name.

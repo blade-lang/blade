@@ -112,7 +112,7 @@ class Enum {
    * @raises Exception
    */
   static ensure(enum, value) {
-    var values = Enum.values()
+    var values = Enum.values(enum)
 
     if values.contains(value) {
       values.clear()  # free memory immediately
@@ -128,3 +128,8 @@ class Enum {
  * The default export of the enum module used to create enums.
  */
 var enum = Enum
+
+/**
+ * Exported Enum.ensure static function for module access.
+ */
+var ensure = Enum.ensure

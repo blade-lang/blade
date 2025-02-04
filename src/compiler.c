@@ -920,6 +920,7 @@ static void dictionary(b_parser *p, bool can_assign) {
       }
     } while (match(p, COMMA_TOKEN));
   }
+  
   ignore_whitespace(p);
   consume(p, RBRACE_TOKEN, "expected '}' after dictionary");
 
