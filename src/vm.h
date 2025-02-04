@@ -38,7 +38,7 @@ struct s_vm {
   b_obj_up_value *open_up_values;
 
   b_error_frame *errors[ERRORS_MAX];
-  b_error_frame **error_top;
+  int error_count;
 
   size_t stack_capacity;
   b_value *stack;

@@ -28,8 +28,8 @@
 
 static inline void reset_stack(b_vm *vm) {
   vm->stack_top = vm->stack;
-  vm->error_top = vm->errors;
   vm->frame_count = 0;
+  vm->error_count = 0;
   vm->open_up_values = NULL;
 }
 
@@ -69,7 +69,7 @@ static b_value get_stack_trace(b_vm *vm) {
 }
 
 bool print_exception(b_vm *vm, b_obj_instance *exception, bool is_assert) {
-  if(vm->error_top - vm->errors > 0) {
+  if(vm->error_count > 0) {
     b_error_frame *error = peek_error(vm);
     error->value = OBJ_VAL(exception);
     return true;
@@ -234,22 +234,22 @@ inline void push(b_vm *vm, b_value value) {
 }
 
 inline void push_error(b_vm *vm, b_error_frame *frame) {
-  if(vm->error_top - vm->errors > ERRORS_MAX) {
+  if(vm->error_count >= ERRORS_MAX) {
     fprintf(stderr, "Exit: Maximum open catch blocks %d exceeded.\n", ERRORS_MAX);
     exit(EXIT_RUNTIME);
   }
 
-  *vm->error_top = frame;
-  vm->error_top++;
+  vm->errors[vm->error_count] = frame;
+  vm->error_count++;
 }
 
 inline b_error_frame* pop_error(b_vm *vm) {
-  vm->error_top--;
-  return *vm->error_top;
+  b_error_frame *error =  vm->errors[--vm->error_count];
+  return error;
 }
 
 inline b_error_frame* peek_error(b_vm *vm) {
-  return vm->error_top[-1];
+  return vm->errors[vm->error_count -1];
 }
 
 inline b_value pop(b_vm *vm) {
@@ -581,8 +581,10 @@ void free_vm(b_vm *vm) {
 
   free(vm->stack);
 
-  for(b_error_frame **err = vm->errors; err < vm->error_top; err++) {
-    free(*err);
+  for(int i = 0; i < vm->error_count; i++) {
+    if (vm->errors[i] != NULL) {
+      free(vm->errors[i]);
+    }
   }
 
   free(vm);
@@ -2353,6 +2355,10 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         b_value result = pop(vm);
 
         close_up_values(vm, vm->current_frame->slots);
+
+        if (vm->error_count > 0 && vm->errors[vm->error_count - 1]->frame == vm->current_frame) {
+          pop_error(vm);
+        }
 
         vm->frame_count--;
         if (vm->frame_count == 0) {
