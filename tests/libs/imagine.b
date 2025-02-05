@@ -31,13 +31,14 @@ catch {
     var bg_color = im.allocate_color(0, 0, 0, 127)
     im.fill(0, 0, bg_color)
 
-    Image.from_webp('./tmp/image2.webp').use(@(im2) {
+    # Commenting this out till we find a way to fix WebP on all supported OS.
+    Image.from_png('./tmp/image1.png').use(@(im2) {
       var meta = im2.meta()
 
       im.copy_resized(im2, 0, 0, 0, 0, 640, 640, meta.width, meta.height)
     })
 
-    im.export_png('./tmp/image3.png')
+    im.export_jpeg('./tmp/image3.jpg')
   })
 } as e
 

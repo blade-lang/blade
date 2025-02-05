@@ -124,7 +124,11 @@ DECLARE_LIST_METHOD(shift) {
   }
 
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
-  if (count >= list->items.count || list->items.count == 1) {
+  if (list->items.count == 1) {
+    b_value ret = list->items.values[0];
+    list->items.count = 0;
+    RETURN_VALUE(ret);
+  } else if (count >= list->items.count) {
     list->items.count = 0;
     RETURN_NIL;
   } else if (count > 0) {

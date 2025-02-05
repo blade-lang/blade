@@ -273,7 +273,7 @@ class ZipFile {
 
 /**
  * ZipArchive provides a class for zip archive creation, 
- * manuipulation and extraction.
+ * manipulation and extraction.
  */
 class ZipArchive {
 

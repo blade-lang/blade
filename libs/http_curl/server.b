@@ -39,7 +39,7 @@ class HttpServer {
    * Default value is `true`.
    * @type bool
    */
-  var resuse_address = true
+  var reuse_address = true
 
   /**
    * The timeout in milliseconds after which an attempt to read clients 
@@ -358,7 +358,7 @@ class HttpServer {
    */
   listen() {
     if !self.socket.is_listening {
-      self.socket.set_option(so.SO_REUSEADDR, is_bool(self.resuse_address) ? self.resuse_address : true)
+      self.socket.set_option(so.SO_REUSEADDR, is_bool(self.reuse_address) ? self.reuse_address : true)
       self.socket.bind(self.port, self.host)
       self.socket.listen()
 

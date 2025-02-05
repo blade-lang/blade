@@ -1919,7 +1919,9 @@ def quote_re(str) {
   return str.replace('/[.?*+^$[\]\\\\(){}|-]/', '\\$0')
 }
 
-var emoji_keys = emojies.keys().map(@(name){ return ':${name}:' })
+var emoji_keys = emojies.keys().map(@(name){
+  return ':${name}:'
+})
 emoji_keys.extend(shortcuts.keys())
 emoji_keys.sort()
 var names = '|'.join(emoji_keys.reverse().map(@(name) {

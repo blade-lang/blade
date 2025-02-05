@@ -109,3 +109,7 @@ echo {name: 'Richard', age: 40}.reduce(@(x, y, z){ return x += z + ' => ' + y + 
   echo offset
   return match
 })
+
+(0..5).loop(@{
+  echo 'It has happened'
+})

@@ -23,7 +23,7 @@ def encode(data) {
 /**
  * Decodes a base64 string into it's corresponding bytes.
  * 
- * @param strinf data
+ * @param string data
  * @returns bytes
  */
 def decode(data) {

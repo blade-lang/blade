@@ -85,6 +85,25 @@ class HttpClient {
    */
   var no_expect = false
 
+  var _base_url = ''
+
+  /**
+   * If the _base_url_ param is set, all calls to HTTP method functions will automatically
+   * prepend requested url with the base url if they do not start with the base url.
+   *
+   * @param string? base_url: The base url for the HTTP client requests
+   * @constructor
+   */
+  HttpClient(base_url) {
+    if base_url != nil {
+      if !is_string(base_url) {
+        raise Exception('invalid url')
+      }
+
+      self._base_url = base_url
+    }
+  }
+
   /**
    * Sends an Http request and returns a HttpResponse.
    * 
@@ -103,6 +122,10 @@ class HttpClient {
 
     if !uri or !is_string(uri) {
       raise Exception('invalid url')
+    }
+
+    if self._base_url and !uri.starts_with(self._base_url) {
+      uri = self._base_url.rtrim('/') + '/' + uri.ltrim('/')
     }
 
     if !method method = 'GET'
@@ -150,7 +173,7 @@ class HttpClient {
    * @param dict? headers
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   get(url, headers) {
@@ -165,7 +188,7 @@ class HttpClient {
    * @param dict? headers
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   post(url, data, headers) {
@@ -180,7 +203,7 @@ class HttpClient {
    * @param dict? headers
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   put(url, data, headers) {
@@ -195,7 +218,7 @@ class HttpClient {
    * @param dict? headers
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   patch(url, data, headers) {
@@ -209,7 +232,7 @@ class HttpClient {
    * @param dict? headers
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   delete(url, headers) {
@@ -223,7 +246,7 @@ class HttpClient {
    * @param dict? headers
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   options(url, headers) {
@@ -237,7 +260,7 @@ class HttpClient {
    * @param dict? headers
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   trace(url, headers) {
@@ -251,7 +274,7 @@ class HttpClient {
    * @param dict? headers
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   head(url, headers) {

@@ -104,7 +104,9 @@ class expect {
 
   _run(name, expected, fn) {
     if self._is_not name = 'not ${name}'
-    if !fn fn = @(x, y) { return x == y }
+    if !fn fn = @(x, y) {
+      return x == y
+    }
 
     var v = to_string(self.value).replace('\r', '\\r').replace('\n', '\\n')
     var w = expected != nil ? to_string(expected).replace('\r', '\\r').replace('\n', '\\n') : nil
@@ -155,12 +157,16 @@ class expect {
   }
 
   to_be_defined() {
-    self._run('to be defined', nil, @(x, y) { return x != nil })
+    self._run('to be defined', nil, @(x, y) {
+      return x != nil
+    })
     return self
   }
 
   to_be_truthy() {
-    self._run('to be truthy', nil, @(x, y) { return !!x })
+    self._run('to be truthy', nil, @(x, y) {
+      return !!x
+    })
     return self
   }
 
@@ -220,9 +226,8 @@ class expect {
     if is_function(self.value) {
       self._run('to throw', e, @(x, y) {
 
-        var res
         catch {
-          res = x()
+          x()
           return false
         } as ex
 
@@ -233,7 +238,7 @@ class expect {
           return true
         }
 
-        return res
+        return false
       })
     } else {
       self._run('to throw', e, @(x, y) { return false })

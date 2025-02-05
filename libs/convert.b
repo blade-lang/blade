@@ -56,7 +56,7 @@ def bytes_to_hex(data) {
 }
 
 /**
- * Converts the given decimal based number to an hexadeccimal string.
+ * Converts the given decimal based number to an hexadecimal string.
  * 
  * @param number n
  * @returns string

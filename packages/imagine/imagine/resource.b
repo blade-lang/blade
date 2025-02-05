@@ -1600,7 +1600,7 @@ class ImageResource {
       dest = file(dest, 'wb')
     }
 
-    if dest.mode().index_of('w') == -1{
+    if dest.mode().index_of('w') == -1 {
       raise Exception('file not writable')
     }
 
@@ -1633,7 +1633,7 @@ class ImageResource {
       dest = file(dest, 'wb')
     }
 
-    if dest.mode().index_of('w') == -1{
+    if dest.mode().index_of('w') == -1 {
       raise Exception('file not writable')
     }
 
@@ -1666,7 +1666,7 @@ class ImageResource {
       dest = file(dest, 'wb')
     }
 
-    if dest.mode().index_of('w') == -1{
+    if dest.mode().index_of('w') == -1 {
       raise Exception('file not writable')
     }
 
@@ -1692,7 +1692,7 @@ class ImageResource {
       dest = file(dest, 'wb')
     }
 
-    if dest.mode().index_of('w') == -1{
+    if dest.mode().index_of('w') == -1 {
       raise Exception('file not writable')
     }
 
@@ -1718,7 +1718,7 @@ class ImageResource {
       dest = file(dest, 'wb')
     }
 
-    if dest.mode().index_of('w') == -1{
+    if dest.mode().index_of('w') == -1 {
       raise Exception('file not writable')
     }
 
@@ -1738,7 +1738,7 @@ class ImageResource {
       dest = file(dest, 'wb')
     }
 
-    if dest.mode().index_of('w') == -1{
+    if dest.mode().index_of('w') == -1 {
       raise Exception('file not writable')
     }
 
@@ -1775,7 +1775,7 @@ class ImageResource {
       dest = file(dest, 'wb')
     }
 
-    if dest.mode().index_of('w') == -1{
+    if dest.mode().index_of('w') == -1 {
       raise Exception('file not writable')
     }
 

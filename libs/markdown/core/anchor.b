@@ -9,8 +9,11 @@ var tokens_filter = ['text', 'code_inline']
 def get_tokens_text(tokens) {
   return ''.join(
     tokens.
-      filter(@(t) { return tokens_filter.contains(t.type) }).
-      map(@(t) { return t.content })
+      filter(@(t) {
+        return tokens_filter.contains(t.type)
+      }).map(@(t) {
+        return t.content
+      })
   )
 }
   

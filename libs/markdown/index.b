@@ -191,7 +191,7 @@ class Markdown {
   var normalize_link_text = normalize_link_text
 
 
-  # Expose utils & helpers for easy acces from plugins
+  # Expose utils & helpers for easy access from plugins
 
   /**
    * Assorted utility functions, useful to write plugins. See details
@@ -214,7 +214,7 @@ class Markdown {
   }
 
   /**
-   * Creates parser instanse with given config. Can be called without `new`.
+   * Creates parser instance with given config. Can be called without `new`.
    *
    * ##### preset_name:
    *
@@ -238,18 +238,18 @@ class Markdown {
    * - __breaks__ - `false`. Set `true` to convert `\n` in paragraphs into `<br>`.
    * - __lang_prefix__ - `language-`. CSS language class prefix for fenced blocks.
    *   Can be useful for external highlighters.
-   * - __linkify__ - `false`. Set `true` to autoconvert URL-like text to links.
+   * - __linkify__ - `false`. Set `true` to auto convert URL-like text to links.
    * - __typographer__  - `false`. Set `true` to enable [some language-neutral
    *   replacement](https://github.com/blade-lang/blade/blob/master/libs/markdown/rules_core/replacements.b) +
-   *   quotes beautification (smartquotes).
+   *   quotes beautification (smart quotes).
    * - __quotes__ - `“”‘’`, String or Array. Double + single quotes replacement
-   *   pairs, when typographer enabled and smartquotes on. For example, you can
+   *   pairs, when typographer enabled and smart quotes on. For example, you can
    *   use `'«»„“'` for Russian, `'„“‚‘'` for German, and
    *   `['«\xA0', '\xA0»', '‹\xA0', '\xA0›']` for French (including nbsp).
    * - __highlight__ - `nil`. Highlighter def for fenced code blocks.
    *   Highlighter `def (str, lang)` should return escaped HTML. It can also
    *   return empty string if the source was not changed and should be escaped
-   *   externaly. If result starts with <pre... internal wrapper is skipped.
+   *   externally. If result starts with <pre... internal wrapper is skipped.
    *
    * ##### Example
    *
@@ -349,7 +349,7 @@ class Markdown {
   }
 
   /**
-   * Batch load of all options and compenent settings. This is internal method,
+   * Batch load of all options and component settings. This is internal method,
    * and you probably will not need it. But if you will - see available presets
    * and data structure [here](https://github.com/blade-lang/blade/tree/master/libs/markdown/presets)
    *
@@ -416,7 +416,9 @@ class Markdown {
 
     result += self.inline.ruler2.enable(list, true)
 
-    var missed = list.filter(@(name) { return result.index_of(name) < 0 })
+    var missed = list.filter(@(name) {
+      return result.index_of(name) < 0
+    })
 
     if missed.length() and !ignore_invalid {
       raise Exception('Failed to enable unknown rule(s): ' + missed)
@@ -443,7 +445,9 @@ class Markdown {
 
     result += self.inline.ruler2.disable(list, true)
 
-    var missed = list.filter(@(name) { return result.index_of(name) < 0 })
+    var missed = list.filter(@(name) {
+      return result.index_of(name) < 0
+    })
 
     if missed.length() and !ignore_invalid {
       raise Exception('Failed to disable unknown rule(s): ' + missed)

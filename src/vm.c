@@ -28,8 +28,8 @@
 
 static inline void reset_stack(b_vm *vm) {
   vm->stack_top = vm->stack;
-  vm->error_top = vm->errors;
   vm->frame_count = 0;
+  vm->error_count = 0;
   vm->open_up_values = NULL;
 }
 
@@ -69,7 +69,7 @@ static b_value get_stack_trace(b_vm *vm) {
 }
 
 bool print_exception(b_vm *vm, b_obj_instance *exception, bool is_assert) {
-  if(vm->error_top - vm->errors > 0) {
+  if(vm->error_count > 0) {
     b_error_frame *error = peek_error(vm);
     error->value = OBJ_VAL(exception);
     return true;
@@ -234,22 +234,22 @@ inline void push(b_vm *vm, b_value value) {
 }
 
 inline void push_error(b_vm *vm, b_error_frame *frame) {
-  if(vm->error_top - vm->errors > ERRORS_MAX) {
+  if(vm->error_count >= ERRORS_MAX) {
     fprintf(stderr, "Exit: Maximum open catch blocks %d exceeded.\n", ERRORS_MAX);
     exit(EXIT_RUNTIME);
   }
 
-  *vm->error_top = frame;
-  vm->error_top++;
+  vm->errors[vm->error_count] = frame;
+  vm->error_count++;
 }
 
 inline b_error_frame* pop_error(b_vm *vm) {
-  vm->error_top--;
-  return *vm->error_top;
+  b_error_frame *error =  vm->errors[--vm->error_count];
+  return error;
 }
 
 inline b_error_frame* peek_error(b_vm *vm) {
-  return vm->error_top[-1];
+  return vm->errors[vm->error_count -1];
 }
 
 inline b_value pop(b_vm *vm) {
@@ -501,6 +501,7 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_RANGE_METHOD(lower);
   DEFINE_RANGE_METHOD(upper);
   DEFINE_RANGE_METHOD(range);
+  DEFINE_RANGE_METHOD(within);
   DEFINE_RANGE_METHOD(loop);
   define_native_method(vm, &vm->methods_range, "@iter", native_method_range__iter__);
   define_native_method(vm, &vm->methods_range, "@itern", native_method_range__itern__);
@@ -580,8 +581,10 @@ void free_vm(b_vm *vm) {
 
   free(vm->stack);
 
-  for(b_error_frame **err = vm->errors; err < vm->error_top; err++) {
-    free(*err);
+  for(int i = 0; i < vm->error_count; i++) {
+    if (vm->errors[i] != NULL) {
+      free(vm->errors[i]);
+    }
   }
 
   free(vm);
@@ -659,9 +662,11 @@ bool call_value(b_vm *vm, b_value callee, int arg_count) {
         vm->stack_top[-arg_count - 1] = OBJ_VAL(new_instance(vm, klass));
         if (!IS_EMPTY(klass->initializer)) {
           return call(vm, AS_CLOSURE(klass->initializer), arg_count);
-        } else if (klass->superclass != NULL && !IS_EMPTY(klass->superclass->initializer)) {
+        }
+        if (klass->superclass != NULL && !IS_EMPTY(klass->superclass->initializer)) {
           return call(vm, AS_CLOSURE(klass->superclass->initializer), arg_count);
-        } else if (arg_count != 0) {
+        }
+        if (arg_count != 0) {
           return throw_exception(vm, "%s constructor expects 0 arguments, %d given", klass->name->chars, arg_count);
         }
         return true;
@@ -701,12 +706,17 @@ static inline b_func_type get_method_type(b_value method) {
   }
 }
 
-inline bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name,
-                       int arg_count) {
+inline bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name, int arg_count) {
   b_value method;
   if (table_get(&klass->methods, OBJ_VAL(name), &method)) {
-    if (get_method_type(method) == TYPE_PRIVATE) {
+    b_func_type type = get_method_type(method);
+
+    if (type == TYPE_PRIVATE) {
       return throw_exception(vm, "cannot call private method '%s' from instance of %s",
+                             name->chars, klass->name->chars);
+    }
+    if (type == TYPE_STATIC) {
+      return throw_exception(vm, "cannot call static method '%s' from instance of %s",
                              name->chars, klass->name->chars);
     }
 
@@ -724,7 +734,11 @@ static bool invoke_self(b_vm *vm, b_obj_string *name, int arg_count) {
     b_obj_instance *instance = AS_INSTANCE(receiver);
 
     if (table_get(&instance->klass->methods, OBJ_VAL(name), &value)) {
-      return call_value(vm, value, arg_count);
+      if (get_method_type(value) != TYPE_STATIC) {
+        return call_value(vm, value, arg_count);
+      }
+
+      return throw_exception(vm, "cannot call static method %s() on instance", name->chars);
     }
 
     if (table_get(&instance->properties, OBJ_VAL(name), &value)) {
@@ -772,7 +786,8 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
                                    name->chars, AS_CLASS(receiver)->name->chars);
           }
           return call_value(vm, value, arg_count);
-        } else if (table_get(&AS_CLASS(receiver)->static_properties, OBJ_VAL(name), &value)) {
+        }
+        if (table_get(&AS_CLASS(receiver)->static_properties, OBJ_VAL(name), &value)) {
           return call_value(vm, value, arg_count);
         }
 
@@ -1999,7 +2014,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
       }
 
       case OP_SET_PROPERTY: {
-        if (!IS_INSTANCE(peek(vm, 1)) && !IS_DICT(peek(vm, 1))) {
+        if (!IS_INSTANCE(peek(vm, 1)) && !IS_DICT(peek(vm, 1)) && !IS_CLASS(peek(vm, 1))) {
           runtime_error("object of type %s can not carry properties", value_type(peek(vm, 1)));
           break;
         } else  if(IS_EMPTY(peek(vm, 0))) {
@@ -2012,6 +2027,13 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         if (IS_INSTANCE(peek(vm, 1))) {
           b_obj_instance *instance = AS_INSTANCE(peek(vm, 1));
           table_set(vm, &instance->properties, OBJ_VAL(name), peek(vm, 0));
+
+          b_value value = pop(vm);
+          pop(vm); // removing the instance object
+          push(vm, value);
+        } else if (IS_CLASS(peek(vm, 1))) {
+          b_obj_class *klass = AS_CLASS(peek(vm, 1));
+          table_set(vm, &klass->static_properties, OBJ_VAL(name), peek(vm, 0));
 
           b_value value = pop(vm);
           pop(vm); // removing the instance object
@@ -2333,6 +2355,10 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         b_value result = pop(vm);
 
         close_up_values(vm, vm->current_frame->slots);
+
+        if (vm->error_count > 0 && vm->errors[vm->error_count - 1]->frame == vm->current_frame) {
+          pop_error(vm);
+        }
 
         vm->frame_count--;
         if (vm->frame_count == 0) {

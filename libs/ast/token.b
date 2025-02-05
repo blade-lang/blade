@@ -82,7 +82,7 @@ var DOT = 14   # .
 var RANGE = 15   # ..
 
 /**
- * tridot (`...`) token
+ * tri-dot (`...`) token
  */
 var TRI_DOT = 16   # ...
 
@@ -192,7 +192,7 @@ var LSHIFT_EQ = 36   # <<=
 var GREATER = 37   # >
 
 /**
- * greather than or equal (`>=`) token
+ * greater than or equal (`>=`) token
  */
 var GREATER_EQ = 38   # >=
 
@@ -217,12 +217,12 @@ var URSHIFT = 39   # >>
 var URSHIFT_EQ = 40   # >>=
 
 /**
- * modulous (`%`) token
+ * modulos (`%`) token
  */
 var PERCENT = 41   # %
 
 /**
- * modulous equal (`%=`) token
+ * modulos equal (`%=`) token
  */
 var PERCENT_EQ = 42   # %=
 

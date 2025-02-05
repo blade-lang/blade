@@ -196,6 +196,30 @@ static inline bool list_equal(b_obj_list *a, b_obj_list *b) {
   return true;
 }
 
+static inline bool dict_equal(b_obj_dict *dict1, b_obj_dict *dict2) {
+  if (dict1->names.count != dict2->names.count) {
+    return false;
+  }
+
+  for (int i = 0; i < dict2->names.count; i++) {
+    b_value value1;
+    if(!table_get(&dict1->items, dict2->names.values[i], &value1)) {
+      return false;
+    }
+
+    b_value value2;
+    if(!table_get(&dict2->items, dict2->names.values[i], &value2)) {
+      return false;
+    }
+
+    if (!values_equal(value1, value2)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool values_equal(b_value a, b_value b) {
 #if defined(USE_NAN_BOXING) && USE_NAN_BOXING
   if (IS_NUMBER(a) && IS_NUMBER(b))
@@ -204,6 +228,8 @@ bool values_equal(b_value a, b_value b) {
     return bytes_equal(AS_BYTES(a), AS_BYTES(b));
   if (IS_LIST(a) && IS_LIST(b))
     return list_equal(AS_LIST(a), AS_LIST(b));
+  if (IS_DICT(a) && IS_DICT(b))
+    return dict_equal(AS_DICT(a), AS_DICT(b));
   return a == b;
 #else
   if (a.type != b.type)
@@ -397,6 +423,8 @@ uint32_t hash_string(const char *str, int wrdlen) {
 
 // Generates a hash code for [object].
 static uint32_t hash_object(b_obj *object) {
+  if (!object) return 0;
+
   switch (object->type) {
     case OBJ_CLASS:
       // Classes just use their name.

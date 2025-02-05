@@ -104,7 +104,7 @@
  * the _length_ modifier function. If _name_ contains the value `John Doe`, then the value printed 
  * will be `8`.
  * 
- * The built-in modifiers are documentated under [Template Functions](#template-functions).
+ * The built-in modifiers are documented under [Template Functions](#template-functions).
  * 
  * Some expression modifiers require that a value is passed. To pass value to a modifier, use the 
  * equal (`=`) sign. For example:
@@ -125,11 +125,11 @@
  * ### If... and If not...
  * 
  * Wire implements conditionals via the `x-if` and `x-not` attribute that can be attached to any HTML 
- * element. This attributes are never returned in the compiled HTML output and decides wether an 
- * element will be printed or not. The `x-if` attribte evaluates a variable or expression and will only 
+ * element. This attributes are never returned in the compiled HTML output and decides whether an
+ * element will be printed or not. The `x-if` attribute evaluates a variable or expression and will only
  * print the element to which it is attached and its children if the result of the expression or variable 
- * evaulation returns a value that is boolean `true` in Blade. The `x-not` attribute does the reverse of 
- * this (i.e. it only prints if the evaulation returns Blade boolean `false`).
+ * evaluation returns a value that is boolean `true` in Blade. The `x-not` attribute does the reverse of
+ * this (i.e. it only prints if the evaluation returns Blade boolean `false`).
  * 
  * ```blade
  * tpl.render_string('<div x-if="name">Hello</div>')
@@ -217,7 +217,7 @@
  * 
  * In a website for a client all pages UTF-8 enabled and are mobile first. This leaves room for a set 
  * of `<meta>` tags that will need to be on every page of the website and in practice it will soon 
- * become burdersome to have to keep repeating the `meta` tags across all page templates. To reduce 
+ * become burdensome to have to keep repeating the `meta` tags across all page templates. To reduce
  * this code duplication, we can have a file located at the template root directory (See 
  * [[Template.set_root]]) that contains all shared `meta` tags as shown in the sample below and include 
  * this file in every other template.
@@ -244,7 +244,7 @@
  * file is found, that file will be rendered. If none is found, it will interpret the path as a relative 
  * path first then as an absolute path if no match is found. 
  * 
- * See [[Tempate.render]] for more information.
+ * See [[Template.render]] for more information.
  * 
  * ### Custom Modifiers
  * 
@@ -270,7 +270,7 @@
  * <div>ognam</div>
  * ```
  * 
- * Modifier functions can also take a second argument which will recieve any argument passed to the 
+ * Modifier functions can also take a second argument which will receive any argument passed to the
  * modifier. This is best expressed with an example.
  * 
  * ```blade
@@ -289,7 +289,7 @@
  * <p>{{ fruit|reverse_weird='Reversed' }}</p>
  * ```
  * 
- * Yes I know. It's weird. But if we passed in the same arguemt as the last, the output will be
+ * Yes I know. It's weird. But if we passed in the same argument as the last, the output will be
  * 
  * ```wire
  * <p>Reversed: ognam</p>
@@ -317,7 +317,7 @@
  * return a string representing the processed tag or a valid HTML element Blade representation as 
  * defined by the {{html}} module. 
  * 
- * > NOTE: It's more memory efficient to modify and return the same element when returing an HTML 
+ * > NOTE: It's more memory efficient to modify and return the same element when returning an HTML
  *    representation.
  * 
  * The example below defines a custom tag _`link`_ that will always be rendered as an anchor 
@@ -385,7 +385,7 @@
  * The example above will return `https://localhost:8000`.
  * 
  * Like with the `{{` and `}}` pair for variables, if you really intend to write the `{!` and `!}` pair, 
- * you'll need to escapte the first `{` with a `%` sign. For example, `%{! name !}` will render as 
+ * you'll need to escape the first `{` with a `%` sign. For example, `%{! name !}` will render as
  * `{! name !}` without processing.
  */
 
@@ -441,7 +441,7 @@ var _default_html_config = {
  * The root directory will become the root search path for the `<include />` tag.
  * 
  * The default extension for a template file is the `.html` extension. This extension 
- * allows furnishes the interopability between Blade's Wire templates and HTML5 since the 
+ * allows furnishes the interoperability between Blade's Wire templates and HTML5 since the
  * former is based on the later anyway and allows us to leverage the already near 
  * omnipresent support that HTML files have had over the years. This behavior can be 
  * changed using the [[Template.set_extension]] function to change the extension to any 
@@ -806,9 +806,9 @@ class Template {
 
   /**
    * Registers a function that can be used to process variables in the template. 
-   * The given function must accept a minimum of one argument which will recieve 
+   * The given function must accept a minimum of one argument which will receive
    * the value of the value to be processed and at most two arguments, the second of 
-   * which will recieve arguments passed to the function as a string.
+   * which will receive arguments passed to the function as a string.
    * 
    * ##### Example
    * 
@@ -845,8 +845,8 @@ class Template {
 
   /**
    * Registers a custom HTML element for the template. The function passed must 
-   * take exactly two (2) arguments the first of which will recieve the the 
-   * template object iteself and the second the HTML as an object of {{html}}.
+   * take exactly two (2) arguments the first of which will receive the the
+   * template object itself and the second the HTML as an object of {{html}}.
    * 
    * ##### Example
    * 
@@ -933,7 +933,7 @@ class Template {
    * Process and render template contained in the given template file. The template 
    * path should be a path relative to the root directory (See [[Template]]) and may 
    * or not carry any extension. If the template file uses the template _extension_ 
-   * (defualt: `.html`), the path argument may exlcude the extension from the path 
+   * (default: `.html`), the path argument may exclude the extension from the path
    * altogether provided there is a file with a matching name that may or not have the 
    * default extension (See [[Template.set_extension]]). 
    * 

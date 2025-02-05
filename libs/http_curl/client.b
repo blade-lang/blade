@@ -140,7 +140,7 @@ class HttpClient {
    * @param string url
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   get(url) {
@@ -154,7 +154,7 @@ class HttpClient {
    * @param string|bytes|nil data
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   post(url, data) {
@@ -168,7 +168,7 @@ class HttpClient {
    * @param string|bytes|nil data
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   put(url, data) {
@@ -181,7 +181,7 @@ class HttpClient {
    * @param string url
    * @returns HttpResponse
    * @raises  Exception
-   * @raises  SocketExcepion
+   * @raises  SocketException
    * @raises  HttpException
    */
   delete(url) {

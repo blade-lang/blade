@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ROOT=`dirname $0`
+ROOT=$(dirname "$0")
 
 NYSSA_DIR="$ROOT/apps/nyssa/cli.b"
 BLADE_EXE="$ROOT/blade"

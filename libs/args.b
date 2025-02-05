@@ -284,7 +284,7 @@ class Parser < _Optionable {
     self.name = name
     self._command = nil
 
-    # Initalize the automatic help option.
+    # Initialize the automatic help option.
     self.add_option(
       'help', 
       'Show this help message and exit', 
@@ -337,7 +337,7 @@ class Parser < _Optionable {
 
         line += self._opt_line(op)
 
-        # We want to separate the longtest option names at least 12
+        # We want to separate the longest option names at least 12
         # characters away from the help texts.
         line = line.rpad(width + 8)
 
@@ -361,7 +361,7 @@ class Parser < _Optionable {
       for k, v in opt {
         var line = '${k}'.lpad(k.length() + 4)
 
-        # We want to separate the longtest option names at least 12
+        # We want to separate the longest option names at least 12
         # characters away from the help texts.
         line = colors.text(line, colors.style.italic).rpad(width + 17)
 
@@ -495,7 +495,7 @@ class Parser < _Optionable {
 
         line += self._opt_line(index)
 
-        # We want to separate the longtest option names at least 12
+        # We want to separate the longest option names at least 12
         # characters away from the help texts.
         line = line.rpad(width + 20)
 

@@ -125,7 +125,8 @@ def is_space(code) {
   using code {
     when 0x09, 0x20, '\t', ' ' return true
   }
-  return false;
+
+  return false
 }
 
 # Zs (unicode class) || [\t\f\v\r\n]

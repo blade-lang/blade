@@ -12,7 +12,7 @@ def _replace_at(str, index, ch) {
 def _process_inlines(tokens, state) {
   var i, token, text, t, pos, max, this_level, item, last_char, nextChar,
       is_last_punct_char, is_nextPunct_char, is_last_white_space, is_nextWhite_space,
-      can_open, can_close, j, is_single, stack, open_quote, close_quote;
+      can_open, can_close, j, is_single, stack, open_quote, close_quote
 
   stack = []
 
