@@ -115,11 +115,11 @@ class Enum {
     var values = Enum.values(enum)
 
     if values.contains(value) {
-      values.clear()  # free memory immediately
+#      values.clear()  # free memory immediately
       return value
     }
 
-    values.clear()  # free memory immediately
+#    values.clear()  # free memory immediately
     raise Exception('unknown key in specified enumeration')
   }
 }
