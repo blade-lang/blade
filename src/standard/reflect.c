@@ -46,6 +46,20 @@ DECLARE_MODULE_METHOD(reflect__getprop) {
   RETURN_NIL;
 }
 
+DECLARE_MODULE_METHOD(reflect__getprops) {
+  ENFORCE_ARG_COUNT(get_props, 1);
+  ENFORCE_ARG_TYPES(has_props, 0, IS_INSTANCE, IS_MODULE);
+
+  b_table *table;
+  if(IS_INSTANCE(args[0])) {
+    table = &AS_INSTANCE(args[0])->properties;
+  } else {
+    table = &AS_MODULE(args[0])->values;
+  }
+
+  RETURN_OBJ(table_get_keys(vm, table));
+}
+
 /**
  * setprop(object: instance, name: string, value: any)
  *
@@ -440,6 +454,7 @@ CREATE_MODULE_LOADER(reflect) {
   static b_func_reg module_functions[] = {
       {"hasprop",   true,  GET_MODULE_METHOD(reflect__hasprop)},
       {"getprop",   true,  GET_MODULE_METHOD(reflect__getprop)},
+      {"getprops",   true,  GET_MODULE_METHOD(reflect__getprops)},
       {"setprop",   true,  GET_MODULE_METHOD(reflect__setprop)},
       {"delprop",   true,  GET_MODULE_METHOD(reflect__delprop)},
       {"hasmethod", true,  GET_MODULE_METHOD(reflect__hasmethod)},

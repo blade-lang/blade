@@ -22,9 +22,6 @@ import _reflect
  */
 class Enum {
 
-  var _keymap = []
-  var _value_map = []
-
   /**
    * The constructor of the Enum class accepts a list of symbolic names or a
    * dictionary of name to unique value mapping and returns a copy of the Enum
@@ -61,9 +58,6 @@ class Enum {
 
       seen_values.append(working_value)
       _reflect.setprop(self, working_key, working_value)
-
-      self._keymap.append(working_key)
-      self._value_map.append(working_value)
     }
 
     # free up memory used by value tracking
@@ -77,7 +71,7 @@ class Enum {
    * @returns list[string]
    */
   static keys(enum) {
-    return _reflect.getprop(enum, '_keymap')
+    return _reflect.getprops(enum)
   }
 
   /**
@@ -87,7 +81,9 @@ class Enum {
    * @returns list[number]
    */
   static values(enum) {
-    return _reflect.getprop(enum, '_value_map')
+    return Enum.keys(enum).map(@(key) {
+      return _reflect.getprop(enum, key)
+    })
   }
 
   /**
@@ -115,11 +111,11 @@ class Enum {
     var values = Enum.values(enum)
 
     if values.contains(value) {
-#      values.clear()  # free memory immediately
+      values.clear()  # free memory immediately
       return value
     }
 
-#    values.clear()  # free memory immediately
+    values.clear()  # free memory immediately
     raise Exception('unknown key in specified enumeration')
   }
 }

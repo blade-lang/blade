@@ -2565,7 +2565,6 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
       }
 
       default:
-        runtime_error("unknown operation");
         break;
     }
   }

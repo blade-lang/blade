@@ -62,12 +62,27 @@ def has_prop(object, name) {
  * @returns any
  */
 def get_prop(object, name) {
-  if !is_instance(object)
-    raise Exception('object instance expected in argument 1 (object)')
+  if !is_instance(object) and typeof(object) != 'module'
+    raise Exception('object instance or module expected in argument 1 (object)')
   if !is_string(name)
     raise Exception('string expected in argument 2 (name)')
 
   return _reflect.getprop(object, name)
+}
+
+/**
+ * Returns all properties of an instance or value in a module or an empty
+ * list if the instance or module has no property.
+ *
+ * @param instance|module object
+ * @param string name
+ * @returns list[string]
+ */
+def get_props(object) {
+  if !is_instance(object) and typeof(object) != 'module'
+    raise Exception('object instance or module expected in argument 1 (object)')
+
+  return _reflect.getprops(object)
 }
 
 /**

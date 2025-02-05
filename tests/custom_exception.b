@@ -37,4 +37,10 @@ if instance_of(error, MyCustomException) {
 
 class ClientError < Error {}
 
-raise ClientError()
+catch {
+  raise ClientError()
+} as e
+
+if e {
+  echo e.message
+}
