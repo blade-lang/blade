@@ -87,6 +87,32 @@ class Enum {
   }
 
   /**
+   * Returns the enumeration as a key/value dictionary
+   *
+   * @param Enum enum
+   * @returns dict
+   */
+  static to_dict(enum) {
+    return Enum.keys(enum).reduce(@(prev, key) {
+      prev.set(key, _reflect.getprop(enum, key))
+      return prev
+    }, {})
+  }
+
+  /**
+   * Returns the enumeration as a value/key dictionary
+   *
+   * @param Enum enum
+   * @returns dict
+   */
+  static to_value_dict(enum) {
+    return Enum.keys(enum).reduce(@(prev, key) {
+      prev.set(_reflect.getprop(enum, key), key)
+      return prev
+    }, {})
+  }
+
+  /**
    * Returns `true` if the enumeration contains the given symbolic key or
    * `false` if otherwise.
    *
@@ -126,6 +152,31 @@ class Enum {
 var enum = Enum
 
 /**
+ * Exported Enum.has static function for module access.
+ */
+var has = Enum.has
+
+/**
+ * Exported Enum.keys static function for module access.
+ */
+var keys = Enum.keys
+
+/**
+ * Exported Enum.values static function for module access.
+ */
+var values = Enum.values
+
+/**
  * Exported Enum.ensure static function for module access.
  */
 var ensure = Enum.ensure
+
+/**
+ * Exported Enum.to_dict static function for module access.
+ */
+var to_dict = Enum.to_dict
+
+/**
+ * Exported Enum.to_value_dict static function for module access.
+ */
+var to_value_dict = Enum.to_value_dict
