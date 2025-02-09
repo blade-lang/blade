@@ -190,7 +190,8 @@ static void run_file(b_vm *vm, char *file) {
   }
 
   // set root file...
-  vm->root_file = file;
+  vm->root_file = realpath(file, NULL);
+  register__ROOT__(vm);
 
   b_obj_module *module = new_module(vm, strdup(""), realpath(file, NULL), NULL);
   add_module(vm, module);

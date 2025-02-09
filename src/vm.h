@@ -87,6 +87,7 @@ struct s_vm {
 
 void init_vm(b_vm *vm);
 void free_vm(b_vm *vm);
+void register__ROOT__(b_vm *vm);
 
 b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source);
 
