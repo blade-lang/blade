@@ -2583,7 +2583,7 @@ void register_module__FILE__(b_vm *vm, b_obj_module *module) {
   // register module __file__
   push(vm, STRING_L_VAL("__file__", 8));
   push(vm, STRING_VAL(module->file));
-  table_set(vm, &module->values, vm->stack[0], vm->stack[1]);
+  table_set(vm, &module->values, peek(vm, 1), peek(vm, 0));
   pop_n(vm, 2);
 }
 
@@ -2591,7 +2591,7 @@ void register__ROOT__(b_vm *vm) {
   // register module __file__
   push(vm, STRING_L_VAL("__root__", 8));
   push(vm, STRING_VAL(vm->root_file));
-  table_set(vm, &vm->globals, vm->stack[0], vm->stack[1]);
+  table_set(vm, &vm->globals, peek(vm, 1), peek(vm, 0));
   pop_n(vm, 2);
 }
 
