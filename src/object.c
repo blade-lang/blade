@@ -49,6 +49,16 @@ b_obj_ptr *new_ptr(b_vm *vm, void *pointer) {
   return ptr;
 }
 
+b_obj_ptr *new_closable_ptr(b_vm *vm, void *pointer, void *free_fn) {
+  b_obj_ptr *ptr = ALLOCATE_OBJ(b_obj_ptr, OBJ_PTR);
+  ptr->pointer = pointer;
+  ptr->name = "<void *>";
+  if (free_fn != NULL) {
+    ptr->free_fn = (b_ptr_free_fn)free_fn;
+  }
+  return ptr;
+}
+
 b_obj_ptr *new_named_ptr(b_vm *vm, void *pointer, char *name) {
   b_obj_ptr *ptr = ALLOCATE_OBJ(b_obj_ptr, OBJ_PTR);
   ptr->pointer = pointer;
