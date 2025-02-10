@@ -2,12 +2,14 @@
 
 DECLARE_RANGE_METHOD(lower) {
   ENFORCE_ARG_COUNT(lower, 0);
-  RETURN_NUMBER(AS_RANGE(METHOD_OBJECT)->lower);
+  b_obj_range *range = AS_RANGE(METHOD_OBJECT);
+  RETURN_NUMBER(range->upper > range->lower ? range->lower : range->upper);
 }
 
 DECLARE_RANGE_METHOD(upper) {
   ENFORCE_ARG_COUNT(upper, 0);
-  RETURN_NUMBER(AS_RANGE(METHOD_OBJECT)->upper);
+  b_obj_range *range = AS_RANGE(METHOD_OBJECT);
+  RETURN_NUMBER(range->upper > range->lower ? range->upper : range->lower);
 }
 
 DECLARE_RANGE_METHOD(range) {
@@ -21,6 +23,9 @@ DECLARE_RANGE_METHOD(within) {
 
   const b_obj_range *range = AS_RANGE(METHOD_OBJECT);
   const double number = AS_NUMBER(args[0]);
+  if (range->lower > range->upper) {
+    RETURN_BOOL(number <= range->lower && number >= range->upper);
+  }
   RETURN_BOOL(number >= range->lower && number <= range->upper);
 }
 
@@ -75,15 +80,28 @@ DECLARE_RANGE_METHOD(loop) {
 
     ITER_TOOL_PREPARE();
 
-    for(int i = 0; i < range->range; i++) {
-      if(arity > 0) {
-        call_list->items.values[0] = NUMBER_VAL(i);
-        if(arity > 1) {
-          call_list->items.values[1] = NUMBER_VAL(i);
+    if (range->lower < range->upper) {
+      for(int i = range->lower; i < range->upper; i++) {
+        if(arity > 0) {
+          call_list->items.values[0] = NUMBER_VAL(i);
+          if(arity > 1) {
+            call_list->items.values[1] = NUMBER_VAL(i);
+          }
         }
-      }
 
-      call_closure(vm, closure, call_list);
+        call_closure(vm, closure, call_list);
+      }
+    } else {
+      for(int i = range->lower; i > range->upper; i--) {
+        if(arity > 0) {
+          call_list->items.values[0] = NUMBER_VAL(i);
+          if(arity > 1) {
+            call_list->items.values[1] = NUMBER_VAL(i);
+          }
+        }
+
+        call_closure(vm, closure, call_list);
+      }
     }
 
     pop(vm); // pop the argument list

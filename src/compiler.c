@@ -2220,6 +2220,10 @@ static void import_statement(b_parser *p) {
   b_obj_closure *closure = new_closure(p->vm, function);
   pop(p->vm);
 
+  if (p->vm->compiler->scope_depth > 0) {
+    emit_byte(p, OP_DUP);
+  }
+
   int import_constant = make_constant(p, OBJ_VAL(closure));
   push(p->vm, OBJ_VAL(closure));
   emit_byte_and_short(p, OP_CALL_IMPORT, import_constant);
@@ -2229,6 +2233,10 @@ static void import_statement(b_parser *p) {
 
   parse_specific_import(p, module_name, import_constant, was_renamed, false);
   free(module_file);
+
+  if (p->vm->compiler->scope_depth > 0) {
+    emit_byte(p, OP_POP);
+  }
 }
 
 static void assert_statement(b_parser *p) {

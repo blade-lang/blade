@@ -765,7 +765,7 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
 
   if (!IS_OBJ(receiver)) {
     // @TODO: have methods for non objects as well.
-    return throw_exception(vm, "non-object %s has no method", value_type(receiver));
+    return throw_exception(vm, "non-object %s has no method '%s'", value_type(receiver), name->chars);
   } else {
     switch (AS_OBJ(receiver)->type) {
       case OBJ_MODULE: {
@@ -2584,6 +2584,14 @@ void register_module__FILE__(b_vm *vm, b_obj_module *module) {
   push(vm, STRING_L_VAL("__file__", 8));
   push(vm, STRING_VAL(module->file));
   table_set(vm, &module->values, peek(vm, 1), peek(vm, 0));
+  pop_n(vm, 2);
+}
+
+void register__ROOT__(b_vm *vm) {
+  // register module __file__
+  push(vm, STRING_L_VAL("__root__", 8));
+  push(vm, STRING_VAL(vm->root_file));
+  table_set(vm, &vm->globals, peek(vm, 1), peek(vm, 0));
   pop_n(vm, 2);
 }
 

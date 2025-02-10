@@ -152,7 +152,7 @@ class BytesIO {
       raise Exception('invalid I/O seek position')
     }
 
-    if seek_type == nil seek_type = 1
+    if seek_type == nil seek_type = 0
     if !is_number(seek_type) or seek_type < 0 or seek_type > 2 {
       raise Exception('invalid seek type')
     }

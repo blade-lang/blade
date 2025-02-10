@@ -9,7 +9,7 @@
 extern "C" {
 #endif // __cplusplus
 
-#define GET_NUMBER_FORMAT(num) ((num) > 1e10 ? "%.21g" : "%.10g")
+#define GET_NUMBER_FORMAT(num) ((((num) > 0 && (num) < 1) || ((num) > 1e10)) ? "%.21g" : "%.10g")
 
 typedef struct s_obj b_obj;
 typedef struct s_obj_string b_obj_string;
