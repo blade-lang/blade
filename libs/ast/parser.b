@@ -8,9 +8,13 @@ import .defn { * }
 import .interface { * }
 import .exception { * }
 
-var _assigners_ = [EQUAL, PLUS_EQ, MINUS_EQ, PERCENT_EQ, DIVIDE_EQ,
-  MULTIPLY_EQ, FLOOR_EQ, POW_EQ, AMP_EQ, BAR_EQ, TILDE_EQ, XOR_EQ,
-  LSHIFT_EQ, RSHIFT_EQ, URSHIFT_EQ]
+var _assigners_ = [
+  TokenType.EQUAL, TokenType.PLUS_EQ, TokenType.MINUS_EQ, 
+  TokenType.PERCENT_EQ, TokenType.DIVIDE_EQ, TokenType.MULTIPLY_EQ, 
+  TokenType.FLOOR_EQ, TokenType.POW_EQ, TokenType.AMP_EQ, 
+  TokenType.BAR_EQ, TokenType.TILDE_EQ, TokenType.XOR_EQ,
+  TokenType.LSHIFT_EQ, TokenType.RSHIFT_EQ, TokenType.URSHIFT_EQ,
+]
 
 # Helper function to get documentation string
 def _get_doc_string(data) {
@@ -62,7 +66,7 @@ class Parser {
 
   /**
    * checks to see if the current token has any of the given types
-   * _A list alternative to the default._
+   * TokenType._A list alternative to the default._
    */
   _match_in(args) {
     for t in args {
@@ -79,7 +83,7 @@ class Parser {
    * otherwise returns false
    */
   _check(type) {
-    if self._is_at_end() and type != EOF return false
+    if self._is_at_end() and type != TokenType.EOF return false
     return self._peek().type == type
   }
 
@@ -95,7 +99,7 @@ class Parser {
    * checks if we’ve run out of tokens to parse
    */
   _is_at_end() {
-    return self._peek().type == EOF
+    return self._peek().type == TokenType.EOF
   }
 
   /**
@@ -137,25 +141,25 @@ class Parser {
   }
 
   _end_statement() {
-    if self._match(EOF) or self._is_at_end() return
+    if self._match(TokenType.EOF) or self._is_at_end() return
 
-    if self._block_count > 0 and self._check(RBRACE) return
+    if self._block_count > 0 and self._check(TokenType.RBRACE) return
 
-    if self._match(SEMICOLON, COMMENT) {
-      while self._match(NEWLINE, SEMICOLON, COMMENT) {}
+    if self._match(TokenType.SEMICOLON, TokenType.COMMENT) {
+      while self._match(TokenType.NEWLINE, TokenType.SEMICOLON, TokenType.COMMENT) {}
       return
     }
 
-    self._consume(NEWLINE, 'end of statement expected')
+    self._consume(TokenType.NEWLINE, 'end of statement expected')
 
-    while self._match(NEWLINE, SEMICOLON) {}
+    while self._match(TokenType.NEWLINE, TokenType.SEMICOLON) {}
   }
 
   /**
    * ignores consecutive newlines
    */
   _ignore_newline() {
-    while self._match(NEWLINE, COMMENT) {}
+    while self._match(TokenType.NEWLINE, TokenType.COMMENT) {}
   }
 
   ### EXPRESSIONS START
@@ -167,7 +171,7 @@ class Parser {
     self._ignore_newline()
     var expr = self._expression()
     self._ignore_newline()
-    self._consume(RPAREN, "')' Expected after expression")
+    self._consume(TokenType.RPAREN, "')' Expected after expression")
     return GroupExpr(expr)
   }
 
@@ -178,17 +182,17 @@ class Parser {
     self._ignore_newline()
     var args = []
 
-    if !self._check(RPAREN) {
+    if !self._check(TokenType.RPAREN) {
       args.append(self._expression())
 
-      while self._match(COMMA) {
+      while self._match(TokenType.COMMA) {
         self._ignore_newline()
         args.append(self._expression())
       }
     }
 
     self._ignore_newline()
-    self._consume(RPAREN, "')' expected after args")
+    self._consume(TokenType.RPAREN, "')' expected after args")
     return CallExpr(callee, args)
   }
 
@@ -199,13 +203,13 @@ class Parser {
       self._ignore_newline()
     var args = [self._expression()]
 
-    if self._match(COMMA) {
+    if self._match(TokenType.COMMA) {
       self._ignore_newline()
       args.append(self._expression())
     }
 
     self._ignore_newline()
-    self._consume(RBRACKET, "']' expected at end of indexer")
+    self._consume(TokenType.RBRACKET, "']' expected at end of indexer")
     return IndexExpr(args)
   }
 
@@ -214,7 +218,7 @@ class Parser {
    */
   _finish_dot(expr) {
     self._ignore_newline()
-    var prop = self._consume(IDENTIFIER, 'property name expected').literal
+    var prop = self._consume(TokenType.IDENTIFIER, 'property name expected').literal
 
     if self._match_in(_assigners_) {
       expr = SetExpr(expr, prop, self._expression())
@@ -230,7 +234,7 @@ class Parser {
    */
   _interpolation() {
     var data = []
-    while self._match(INTERPOLATION, LITERAL) {
+    while self._match(TokenType.INTERPOLATION, TokenType.LITERAL) {
       if self._previous().literal.length() > 0
         data.append(LiteralExpr(self._previous().literal))
 
@@ -247,23 +251,23 @@ class Parser {
    * primary expressions
    */
   _primary() {
-    if self._match(FALSE) return LiteralExpr(false)
-    if self._match(TRUE) return LiteralExpr(true)
-    if self._match(NIL) return LiteralExpr(nil)
-    if self._match(SELF) return LiteralExpr('::self::')
-    if self._match(PARENT) return LiteralExpr('::parent::')
+    if self._match(TokenType.FALSE) return LiteralExpr(false)
+    if self._match(TokenType.TRUE) return LiteralExpr(true)
+    if self._match(TokenType.NIL) return LiteralExpr(nil)
+    if self._match(TokenType.SELF) return LiteralExpr('::self::')
+    if self._match(TokenType.PARENT) return LiteralExpr('::parent::')
 
-    if self._check(INTERPOLATION) return self._interpolation()
+    if self._check(TokenType.INTERPOLATION) return self._interpolation()
 
-    if self._match(BIN_NUMBER, HEX_NUMBER, OCT_NUMBER, REG_NUMBER, LITERAL)
+    if self._match(TokenType.BIN_NUMBER, TokenType.HEX_NUMBER, TokenType.OCT_NUMBER, TokenType.REG_NUMBER, TokenType.LITERAL)
       return LiteralExpr(self._previous().literal)
 
-    if self._match(IDENTIFIER) return IdentifierExpr(self._previous().literal)
+    if self._match(TokenType.IDENTIFIER) return IdentifierExpr(self._previous().literal)
 
-    if self._match(LPAREN) return self._grouping()
-    if self._match(LBRACE) return self._dict()
-    if self._match(LBRACKET) return self._list()
-    if self._match(AT) return self._anonymous()
+    if self._match(TokenType.LPAREN) return self._grouping()
+    if self._match(TokenType.LBRACE) return self._dict()
+    if self._match(TokenType.LBRACKET) return self._list()
+    if self._match(TokenType.AT) return self._anonymous()
 
     return nil
   }
@@ -275,11 +279,11 @@ class Parser {
     var expr = self._primary()
 
     while true {
-      if self._match(DOT) {
+      if self._match(TokenType.DOT) {
         expr = self._finish_dot(expr)
-      } else if self._match(LPAREN) {
+      } else if self._match(TokenType.LPAREN) {
         expr = self._finish_call(expr)
-      } else if self._match(LBRACKET) {
+      } else if self._match(TokenType.LBRACKET) {
         expr = self._finish_index(expr)
       } else {
         break
@@ -295,9 +299,9 @@ class Parser {
   _assign_expr() {
     var expr = self._call()
 
-    if self._match(INCREMENT) {
+    if self._match(TokenType.INCREMENT) {
       expr = AssignStmt(expr, '++', nil)
-    } else if self._match(DECREMENT) {
+    } else if self._match(TokenType.DECREMENT) {
       expr = AssignStmt(expr, '--', nil)
     }
 
@@ -308,7 +312,7 @@ class Parser {
    * factor expressions
    */
   _unary() {
-    if self._match(BANG, MINUS, TILDE) {
+    if self._match(TokenType.BANG, TokenType.MINUS, TokenType.TILDE) {
       var op = self._previous().literal
       self._ignore_newline()
       var right = self._assign_expr()
@@ -322,17 +326,17 @@ class Parser {
    * factor expressions
    */
   _factor() {
-    while self._match(DOC){}
+    while self._match(TokenType.DOC){}
     var expr = self._unary()
-    while self._match(DOC){}
+    while self._match(TokenType.DOC){}
 
-    while self._match(MULTIPLY, DIVIDE, PERCENT, POW, FLOOR) {
+    while self._match(TokenType.MULTIPLY, TokenType.DIVIDE, TokenType.PERCENT, TokenType.POW, TokenType.FLOOR) {
       var op = self._previous().literal
       self._ignore_newline()
 
-      while self._match(DOC){}
+      while self._match(TokenType.DOC){}
       var right = self._unary()
-      while self._match(DOC){}
+      while self._match(TokenType.DOC){}
 
       expr = BinaryExpr(expr, op, right)
     }
@@ -346,7 +350,7 @@ class Parser {
   _term() {
     var expr = self._factor()
 
-    while self._match(PLUS, MINUS) {
+    while self._match(TokenType.PLUS, TokenType.MINUS) {
       var op = self._previous().literal
       self._ignore_newline()
       var right = self._factor()
@@ -362,7 +366,7 @@ class Parser {
   _range() {
     var expr = self._term()
 
-    while self._match(RANGE) {
+    while self._match(TokenType.RANGE) {
       self._ignore_newline()
       var op = '..'
       var right = self._term()
@@ -378,7 +382,7 @@ class Parser {
   _shift() {
     var expr = self._range()
 
-    while self._match(LSHIFT, RSHIFT, URSHIFT) {
+    while self._match(TokenType.LSHIFT, TokenType.RSHIFT, TokenType.URSHIFT) {
       var op = self._previous().literal
       self._ignore_newline()
       var right = self._range()
@@ -394,7 +398,7 @@ class Parser {
   _bit_and() {
     var expr = self._shift()
 
-    while self._match(AMP) {
+    while self._match(TokenType.AMP) {
       self._ignore_newline()
       var op = '&'
       var right = self._shift()
@@ -410,7 +414,7 @@ class Parser {
   _bit_xor() {
     var expr = self._bit_and()
 
-    while self._match(XOR) {
+    while self._match(TokenType.XOR) {
       self._ignore_newline()
       var op = '^'
       var right = self._bit_and()
@@ -426,7 +430,7 @@ class Parser {
   _bit_or() {
     var expr = self._bit_xor()
 
-    while self._match(BAR) {
+    while self._match(TokenType.BAR) {
       self._ignore_newline()
       var op = '|'
       var right = self._bit_xor()
@@ -442,7 +446,7 @@ class Parser {
   _comparison() {
     var expr = self._bit_or()
 
-    while self._match(GREATER, GREATER_EQ, LESS, LESS_EQ) {
+    while self._match(TokenType.GREATER, TokenType.GREATER_EQ, TokenType.LESS, TokenType.LESS_EQ) {
       var op = self._previous().literal
       self._ignore_newline()
       var right = self._bit_or()
@@ -458,7 +462,7 @@ class Parser {
   _equality() {
     var expr = self._comparison()
 
-    while self._match(BANG_EQ, EQUAL_EQ) {
+    while self._match(TokenType.BANG_EQ, TokenType.EQUAL_EQ) {
       var op = self._previous().literal
       self._ignore_newline()
       var right = self._comparison()
@@ -474,7 +478,7 @@ class Parser {
   _and() {
     var expr = self._equality()
 
-    while self._match(AND) {
+    while self._match(TokenType.AND) {
       self._ignore_newline()
       var op = 'and'
       var right = self._equality()
@@ -490,7 +494,7 @@ class Parser {
   _or() {
     var expr = self._and()
 
-    while self._match(OR) {
+    while self._match(TokenType.OR) {
       self._ignore_newline()
       var op = 'or'
       var right = self._and()
@@ -506,10 +510,10 @@ class Parser {
   _conditional() {
     var expr = self._or()
 
-    if self._match(QUESTION) {
+    if self._match(TokenType.QUESTION) {
       self._ignore_newline()
       var truth = self._or()
-      self._consume(COLON, "':' expected in ternary operation")
+      self._consume(TokenType.COLON, "':' expected in ternary operation")
       self._ignore_newline()
       expr = ConditionExpr(expr, truth, self._or())
     }
@@ -547,22 +551,22 @@ class Parser {
     self._ignore_newline()
     var keys = [], values = []
 
-    if !self._check(RBRACE) {
+    if !self._check(TokenType.RBRACE) {
       do {
-        while self._match(DOC) {}
+        while self._match(TokenType.DOC) {}
         self._ignore_newline()
-        while self._match(DOC) {}
+        while self._match(TokenType.DOC) {}
 
-        if !self._check(RBRACE) {
+        if !self._check(TokenType.RBRACE) {
           var auto_value
-          if self._match(IDENTIFIER) {
+          if self._match(TokenType.IDENTIFIER) {
             keys.append(self._previous().literal)
           } else {
             keys.append(self._expression())
           }
           self._ignore_newline()
 
-          if !self._match(COLON) {
+          if !self._match(TokenType.COLON) {
             auto_value = self._previous().literal
           } else {
             self._ignore_newline()
@@ -571,11 +575,11 @@ class Parser {
 
           self._ignore_newline()
         }
-      } while(self._match(COMMA))
+      } while(self._match(TokenType.COMMA))
     }
 
     self._ignore_newline()
-    self._consume(RBRACE, "'}' expected after dictionary")
+    self._consume(TokenType.RBRACE, "'}' expected after dictionary")
     return DictExpr(keys, values)
   }
 
@@ -586,21 +590,21 @@ class Parser {
     self._ignore_newline()
     var items = []
 
-    if !self._check(RBRACKET) {
+    if !self._check(TokenType.RBRACKET) {
       do {
-        while self._match(DOC) {}
+        while self._match(TokenType.DOC) {}
         self._ignore_newline()
-        while self._match(DOC) {}
+        while self._match(TokenType.DOC) {}
   
-        if !self._check(RBRACKET) {
+        if !self._check(TokenType.RBRACKET) {
           items.append(self._expression())
           self._ignore_newline()
         }
-      } while(self._match(COMMA))
+      } while(self._match(TokenType.COMMA))
     }
 
     self._ignore_newline()
-    self._consume(RBRACKET, "expected ']' at the end of list")
+    self._consume(TokenType.RBRACKET, "expected ']' at the end of list")
     return ListExpr(items)
   }
 
@@ -635,10 +639,10 @@ class Parser {
     var val = []
     self._ignore_newline()
 
-    while !self._check(RBRACE) and !self._is_at_end()
+    while !self._check(TokenType.RBRACE) and !self._is_at_end()
       val.append(self._declaration())
 
-    self._consume(RBRACE, "'}' expected after block")
+    self._consume(TokenType.RBRACE, "'}' expected after block")
     self._block_count--
 
     return BlockStmt(val)
@@ -651,7 +655,7 @@ class Parser {
     var expr = self._expression()
     var body = self._statement()
     
-    if self._match(ELSE) return IfStmt(expr, body, self._statement())
+    if self._match(TokenType.ELSE) return IfStmt(expr, body, self._statement())
 
     return IfStmt(expr, body, nil)
   }
@@ -668,7 +672,7 @@ class Parser {
    */
   _do_while() {
     var body = self._statement()
-    self._consume(WHILE, "'while' expected after do body")
+    self._consume(TokenType.WHILE, "'while' expected after do body")
     return DoWhileStmt(body, self._expression())
   }
 
@@ -676,12 +680,12 @@ class Parser {
    * for loops
    */
   _for() {
-    var vars = [self._consume(IDENTIFIER, 'variable name expected')]
+    var vars = [self._consume(TokenType.IDENTIFIER, 'variable name expected')]
 
-    if self._match(COMMA)
-      vars.append(self._consume(IDENTIFIER, 'variable name expected'))
+    if self._match(TokenType.COMMA)
+      vars.append(self._consume(TokenType.IDENTIFIER, 'variable name expected'))
 
-    self._consume(IN, "'in' expected after for statement variables")
+    self._consume(TokenType.IN, "'in' expected after for statement variables")
 
     return ForStmt(vars, self._expression(), self._statement())
   }
@@ -693,7 +697,7 @@ class Parser {
     var message
     var expr = self._expression()
 
-    if self._match(COMMA) message = self._expression()
+    if self._match(TokenType.COMMA) message = self._expression()
     return AssertStmt(expr, message)
   }
 
@@ -705,24 +709,24 @@ class Parser {
     var cases = {}
     var default_case
 
-    self._consume(LBRACE, "'{' expected after using expression")
+    self._consume(TokenType.LBRACE, "'{' expected after using expression")
     self._ignore_newline()
 
     var state = 0
 
-    while !self._match(RBRACE) and !self._check(EOF) {
-      if self._match(WHEN, DEFAULT, COMMENT, DOC, NEWLINE) {
+    while !self._match(TokenType.RBRACE) and !self._check(TokenType.EOF) {
+      if self._match(TokenType.WHEN, TokenType.DEFAULT, TokenType.COMMENT, TokenType.DOC, TokenType.NEWLINE) {
         if state == 1 
           raise ParseException("'when' cannot exist after a default", self._previous())
 
-        if [DOC, COMMENT, NEWLINE].contains(self._previous().type) {}
-        else if self._previous().type == WHEN {
+        if [TokenType.DOC, TokenType.COMMENT, TokenType.NEWLINE].contains(self._previous().type) {}
+        else if self._previous().type == TokenType.WHEN {
           var tmp_cases = []
           do {
             self._ignore_newline()
             
             tmp_cases.append(self._expression())
-          } while self._match(COMMA)
+          } while self._match(TokenType.COMMA)
           var stmt = self._statement()
 
           for tmp in tmp_cases {
@@ -747,22 +751,22 @@ class Parser {
     var path = []
     var elements = []
 
-    while !self._match(NEWLINE, EOF, LBRACE) {
+    while !self._match(TokenType.NEWLINE, TokenType.EOF, TokenType.LBRACE) {
       self._advance()
       path.append(self._previous().literal)
     }
 
-    if self._previous().type == LBRACE {
+    if self._previous().type == TokenType.LBRACE {
       var scan = true
-      while !self._check(RBRACE) and scan {
+      while !self._check(TokenType.RBRACE) and scan {
         self._ignore_newline()
-        elements.append(self._consume_any('identifier expected', IDENTIFIER, MULTIPLY).literal)
-        if !self._match(COMMA)
+        elements.append(self._consume_any('identifier expected', TokenType.IDENTIFIER, TokenType.MULTIPLY).literal)
+        if !self._match(TokenType.COMMA)
           scan = false
         self._ignore_newline()
       }
 
-      self._consume(RBRACE, "'}' expected at end of selective import")
+      self._consume(TokenType.RBRACE, "'}' expected at end of selective import")
     }
 
     return ImportStmt(''.join(path), elements)
@@ -772,13 +776,13 @@ class Parser {
    * catch... blocks
    */
   _catch() {
-    self._consume(LBRACE, "'{' expected after catch")
+    self._consume(TokenType.LBRACE, "'{' expected after catch")
     var body = self._block()
 
     var exception_var
-    if self._match(AS) {
-      if self._check(IDENTIFIER) {
-        self._consume(IDENTIFIER, 'exception variable expected')
+    if self._match(TokenType.AS) {
+      if self._check(TokenType.IDENTIFIER) {
+        self._consume(TokenType.IDENTIFIER, 'exception variable expected')
         exception_var = self._previous().literal
       }
     }
@@ -791,22 +795,22 @@ class Parser {
    */
   _iter() {
     var decl
-    if !self._check(SEMICOLON) {
-      if self._check(VAR) {
-        self._consume(VAR, 'variable declaration expected')
+    if !self._check(TokenType.SEMICOLON) {
+      if self._check(TokenType.VAR) {
+        self._consume(TokenType.VAR, 'variable declaration expected')
       }
       decl = self._var()
     }
-    self._consume(SEMICOLON, "';' expected")
+    self._consume(TokenType.SEMICOLON, "';' expected")
     self._ignore_newline()
 
     var condition
-    if !self._check(SEMICOLON) condition = self._expression()
-    self._consume(SEMICOLON, "';' expected")
+    if !self._check(TokenType.SEMICOLON) condition = self._expression()
+    self._consume(TokenType.SEMICOLON, "';' expected")
     self._ignore_newline()
 
     var iterator
-    if !self._check(LBRACE) iterator = self._expr_stmt(true)
+    if !self._check(TokenType.LBRACE) iterator = self._expr_stmt(true)
     self._ignore_newline()
 
     var body = self._statement()
@@ -821,39 +825,39 @@ class Parser {
 
     var result
 
-    if self._match(ECHO) {
+    if self._match(TokenType.ECHO) {
       result = self._echo()
-    } else if self._match(IF) {
+    } else if self._match(TokenType.IF) {
       result = self._if()
-    } else if self._match(WHILE) {
+    } else if self._match(TokenType.WHILE) {
       result = self._while()
-    } else if self._match(DO) {
+    } else if self._match(TokenType.DO) {
       result = self._do_while()
-    } else if self._match(ITER) {
+    } else if self._match(TokenType.ITER) {
       result = self._iter()
-    } else if self._match(FOR) {
+    } else if self._match(TokenType.FOR) {
       result = self._for()
-    } else if self._match(USING) {
+    } else if self._match(TokenType.USING) {
       result = self._using()
-    } else if self._match(CONTINUE) {
+    } else if self._match(TokenType.CONTINUE) {
       result = ContinueStmt()
-    } else if self._match(BREAK) {
+    } else if self._match(TokenType.BREAK) {
       result = BreakStmt()
-    } else if self._match(RETURN) {
+    } else if self._match(TokenType.RETURN) {
       result = ReturnStmt(self._expression())
-    } else if self._match(ASSERT) {
+    } else if self._match(TokenType.ASSERT) {
       result = self._assert()
-    } else if self._match(RAISE) {
+    } else if self._match(TokenType.RAISE) {
       result = RaiseStmt(self._expression())
-    } else if self._match(LBRACE) {
+    } else if self._match(TokenType.LBRACE) {
       result = self._block()
-    } else if self._match(IMPORT) {
+    } else if self._match(TokenType.IMPORT) {
       result = self._import()
-    } else if self._match(CATCH) {
+    } else if self._match(TokenType.CATCH) {
       result = self._catch()
-    } else if self._match(COMMENT) {
+    } else if self._match(TokenType.COMMENT) {
       result = CommentStmt(self._previous().literal[1,].trim())
-    } else if self._match(DOC) {
+    } else if self._match(TokenType.DOC) {
       result = DocDefn(self._get_doc_defn_data())
     } else {
       result = self._expr_stmt(false)
@@ -872,22 +876,22 @@ class Parser {
    * variable declarations
    */
   _var() {
-    self._consume(IDENTIFIER, 'variable name expected')
+    self._consume(TokenType.IDENTIFIER, 'variable name expected')
     var result = self._previous().literal
 
-    if self._match(EQUAL)
+    if self._match(TokenType.EQUAL)
       result = VarDecl(result, self._expression())
     else result = VarDecl(result, nil)
 
-    if self._check(COMMA) {
+    if self._check(TokenType.COMMA) {
       result = [result] # we want to return an array of declarations
 
-      while self._match(COMMA) {
+      while self._match(TokenType.COMMA) {
         self._ignore_newline()
-        self._consume(IDENTIFIER, 'variable name expected')
+        self._consume(TokenType.IDENTIFIER, 'variable name expected')
         var r = self._previous().literal
 
-        if self._match(EQUAL)
+        if self._match(TokenType.EQUAL)
           r = VarDecl(r, self._expression())
         else r = VarDecl(r, nil)
 
@@ -904,20 +908,20 @@ class Parser {
   _anonymous() {
     var params = []
 
-    if self._check(LPAREN) {
-      self._consume(LPAREN, "expected '(' at start of anonymous function")
+    if self._check(TokenType.LPAREN) {
+      self._consume(TokenType.LPAREN, "expected '(' at start of anonymous function")
   
-      while !self._check(RPAREN) {
-        params.append(self._consume_any('parameter name expected', IDENTIFIER, TRI_DOT).literal)
+      while !self._check(TokenType.RPAREN) {
+        params.append(self._consume_any('parameter name expected', TokenType.IDENTIFIER, TokenType.TRI_DOT).literal)
   
-        if !self._check(RPAREN)
-          self._consume(COMMA, "',' expected between function params")
+        if !self._check(TokenType.RPAREN)
+          self._consume(TokenType.COMMA, "',' expected between function params")
       }
   
-      self._consume(RPAREN, "expected ')' after anonymous function parameters")
+      self._consume(TokenType.RPAREN, "expected ')' after anonymous function parameters")
     }
 
-    self._consume(LBRACE, "'{' expected after function declaration")
+    self._consume(TokenType.LBRACE, "'{' expected after function declaration")
     var body = self._block()
 
     return FunctionDecl('', params, body)
@@ -927,21 +931,21 @@ class Parser {
    * function definitions
    */
   _def() {
-    self._consume(IDENTIFIER, 'function name expected')
+    self._consume(TokenType.IDENTIFIER, 'function name expected')
     var name = self._previous().literal
     var params = []
 
-    self._consume(LPAREN, "'(' expected after function name")
-    while self._match(IDENTIFIER, TRI_DOT) {
+    self._consume(TokenType.LPAREN, "'(' expected after function name")
+    while self._match(TokenType.IDENTIFIER, TokenType.TRI_DOT) {
       params.append(self._previous().literal)
 
-      if !self._check(RPAREN) {
-        self._consume(COMMA, "',' expected between function arguments")
+      if !self._check(TokenType.RPAREN) {
+        self._consume(TokenType.COMMA, "',' expected between function arguments")
         self._ignore_newline()
       }
     }
-    self._consume(RPAREN, "')' expected after function arguments")
-    self._consume(LBRACE, "'{' expected after function declaration")
+    self._consume(TokenType.RPAREN, "')' expected after function arguments")
+    self._consume(TokenType.LBRACE, "'{' expected after function declaration")
     var body = self._block()
 
     return FunctionDecl(name, params, body)
@@ -951,10 +955,10 @@ class Parser {
    * class fields
    */
   _class_field(is_static) {
-    self._consume(IDENTIFIER, 'class property name expected')
+    self._consume(TokenType.IDENTIFIER, 'class property name expected')
     var name = self._previous().literal, value
 
-    if self._match(EQUAL) value = self._expression()
+    if self._match(TokenType.EQUAL) value = self._expression()
     self._end_statement()
     self._ignore_newline()
 
@@ -965,21 +969,21 @@ class Parser {
    * class methods
    */
   _method(is_static) {
-    self._consume_any('method name expected', IDENTIFIER, DECORATOR)
+    self._consume_any('method name expected', TokenType.IDENTIFIER, TokenType.DECORATOR)
     var name = self._previous().literal
     var params = []
 
-    self._consume(LPAREN, "'(' expected after method name")
-    while self._match(IDENTIFIER, TRI_DOT) {
+    self._consume(TokenType.LPAREN, "'(' expected after method name")
+    while self._match(TokenType.IDENTIFIER, TokenType.TRI_DOT) {
       params.append(self._previous().literal)
 
-      if !self._check(RPAREN) {
-        self._consume(COMMA, "',' expected between method arguments")
+      if !self._check(TokenType.RPAREN) {
+        self._consume(TokenType.COMMA, "',' expected between method arguments")
         self._ignore_newline()
       }
     }
-    self._consume(RPAREN, "'(' expected after method arguments")
-    self._consume(LBRACE, "'{' expected after method declaration")
+    self._consume(TokenType.RPAREN, "'(' expected after method arguments")
+    self._consume(TokenType.LBRACE, "'{' expected after method declaration")
     var body = self._block()
 
     return MethodDecl(name, params, body, is_static)
@@ -991,34 +995,34 @@ class Parser {
   _class() {
     var properties = [], methods = []
 
-    self._consume(IDENTIFIER, 'class name expected')
+    self._consume(TokenType.IDENTIFIER, 'class name expected')
     var name = self._previous().literal, superclass
 
-    if self._match(LESS) {
-      self._consume(IDENTIFIER, 'super class name expected')
+    if self._match(TokenType.LESS) {
+      self._consume(TokenType.IDENTIFIER, 'super class name expected')
       superclass = self._previous().literal
     }
 
     self._ignore_newline()
-    self._consume(LBRACE, "'{' expected after class declaration")
+    self._consume(TokenType.LBRACE, "'{' expected after class declaration")
     self._ignore_newline()
 
-    while !self._check(RBRACE) and !self._check(EOF) {
+    while !self._check(TokenType.RBRACE) and !self._check(TokenType.EOF) {
       var is_static = false
       var doc
 
       self._ignore_newline()
-      while self._match(COMMENT) {}
+      while self._match(TokenType.COMMENT) {}
       self._ignore_newline()
 
-      if self._match(DOC)
+      if self._match(TokenType.DOC)
         doc = DocDefn(self._get_doc_defn_data())
 
       self._ignore_newline()
 
-      if self._match(STATIC) is_static = true
+      if self._match(TokenType.STATIC) is_static = true
 
-      if self._match(VAR) {
+      if self._match(TokenType.VAR) {
         var prop = self._class_field(is_static)
         if doc and !prop.name.starts_with('_') 
           prop.doc = _get_doc_string(doc.data)
@@ -1032,7 +1036,7 @@ class Parser {
       }
     }
 
-    self._consume(RBRACE, "'{' expected at end of class definition")
+    self._consume(TokenType.RBRACE, "'{' expected at end of class definition")
 
     return ClassDecl(name, superclass, properties, methods)
   }
@@ -1045,18 +1049,18 @@ class Parser {
     
     var result
 
-    if self._match(VAR) {
+    if self._match(TokenType.VAR) {
       result = self._var()
-    } else if self._match(DEF) {
+    } else if self._match(TokenType.DEF) {
       result = self._def()
-    } else if self._match(CLASS) {
+    } else if self._match(TokenType.CLASS) {
       result = self._class()
-    } else if self._match(COMMENT) {
+    } else if self._match(TokenType.COMMENT) {
       result = CommentStmt(self._previous().literal[1,].trim())
-    } else if self._match(DOC) {
+    } else if self._match(TokenType.DOC) {
       result = DocDefn(self._get_doc_defn_data())
-    } else if self._match(LBRACE) {
-      if !self._check(NEWLINE) and self._block_count == 0 
+    } else if self._match(TokenType.LBRACE) {
+      if !self._check(TokenType.NEWLINE) and self._block_count == 0 
         result = self._dict()
       else result = self._block()
     }  else {

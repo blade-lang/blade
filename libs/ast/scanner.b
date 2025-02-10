@@ -46,36 +46,36 @@ class Scanner {
    * a keyword to token map
    */
   var _keywords = {
-    'and': AND,
-    'as': AS,
-    'assert': ASSERT,
-    'break': BREAK,
-    'catch': CATCH,
-    'class': CLASS,
-    'continue': CONTINUE,
-    'def': DEF,
-    'default': DEFAULT,
-    'do': DO,
-    'echo': ECHO,
-    'else': ELSE,
-    'false': FALSE,
-    'for': FOR,
-    'if': IF,
-    'import': IMPORT,
-    'in': IN,
-    'iter': ITER,
-    'nil': NIL,
-    'or': OR,
-    'parent': PARENT,
-    'raise': RAISE,
-    'return': RETURN,
-    'self': SELF,
-    'static': STATIC,
-    'true': TRUE,
-    'using': USING,
-    'var': VAR,
-    'when': WHEN,
-    'while': WHILE
+    'and': TokenType.AND,
+    'as': TokenType.AS,
+    'assert': TokenType.ASSERT,
+    'break': TokenType.BREAK,
+    'catch': TokenType.CATCH,
+    'class': TokenType.CLASS,
+    'continue': TokenType.CONTINUE,
+    'def': TokenType.DEF,
+    'default': TokenType.DEFAULT,
+    'do': TokenType.DO,
+    'echo': TokenType.ECHO,
+    'else': TokenType.ELSE,
+    'false': TokenType.FALSE,
+    'for': TokenType.FOR,
+    'if': TokenType.IF,
+    'import': TokenType.IMPORT,
+    'in': TokenType.IN,
+    'iter': TokenType.ITER,
+    'nil': TokenType.NIL,
+    'or': TokenType.OR,
+    'parent': TokenType.PARENT,
+    'raise': TokenType.RAISE,
+    'return': TokenType.RETURN,
+    'self': TokenType.SELF,
+    'static': TokenType.STATIC,
+    'true': TokenType.TRUE,
+    'using': TokenType.USING,
+    'var': TokenType.VAR,
+    'when': TokenType.WHEN,
+    'while': TokenType.WHILE
   }
 
   /**
@@ -239,7 +239,7 @@ class Scanner {
           self._advance()
           while self._peek() != '\n' and !self._is_at_end()
             self._advance()
-          self._add_token(COMMENT)
+          self._add_token(TokenType.COMMENT)
           self._advance()
           self._start = self._current
         }
@@ -255,7 +255,7 @@ class Scanner {
   _decorator() {
     while self._is_alpha(self._peek()) or self._is_digit(self._peek())
       self._advance()
-    self._add_token(DECORATOR)
+    self._add_token(TokenType.DECORATOR)
   }
 
   /**
@@ -269,7 +269,7 @@ class Scanner {
         if self._interpolating.length() < self._max_interpolation_nest {
           self._interpolating.append(c)
           self._current++
-          self._add_token(INTERPOLATION)
+          self._add_token(TokenType.INTERPOLATION)
           self._current++
           return
         }
@@ -287,7 +287,7 @@ class Scanner {
       raise Exception('unterminated string on line ${self._line}')
 
     self._match(c)
-    self._add_token(LITERAL, self.source[self._start + 1, self._current - 1])
+    self._add_token(TokenType.LITERAL, self.source[self._start + 1, self._current - 1])
   }
 
   /**
@@ -299,19 +299,19 @@ class Scanner {
         while self._is_binary(self._peek())
           self._advance()
 
-        self._add_token(BIN_NUMBER)
+        self._add_token(TokenType.BIN_NUMBER)
         return
       } else if self._match('c') {  # octal number
         while self._is_octal(self._peek())
           self._advance()
 
-        self._add_token(OCT_NUMBER)
+        self._add_token(TokenType.OCT_NUMBER)
         return
       } else if self._match('x') {  # hex number
         while self._is_hexadecimal(self._peek())
           self._advance()
 
-        self._add_token(HEX_NUMBER)
+        self._add_token(TokenType.HEX_NUMBER)
         return
       }
     }
@@ -338,7 +338,7 @@ class Scanner {
       }
     }
 
-    self._add_token(REG_NUMBER)
+    self._add_token(TokenType.REG_NUMBER)
   }
 
   /**
@@ -349,7 +349,7 @@ class Scanner {
       self._advance()
 
     var text = self.source[self._start, self._current].trim()
-    self._add_token(self._keywords.get(text, IDENTIFIER), text)
+    self._add_token(self._keywords.get(text, TokenType.IDENTIFIER), text)
   }
 
   /**
@@ -363,105 +363,105 @@ class Scanner {
     var c = self._advance()
 
     using c {
-      when '(' self._add_token(LPAREN)
-      when ')' self._add_token(RPAREN)
-      when '[' self._add_token(LBRACKET)
-      when ']' self._add_token(RBRACKET)
-      when '{' self._add_token(LBRACE)
+      when '(' self._add_token(TokenType.LPAREN)
+      when ')' self._add_token(TokenType.RPAREN)
+      when '[' self._add_token(TokenType.LBRACKET)
+      when ']' self._add_token(TokenType.RBRACKET)
+      when '{' self._add_token(TokenType.LBRACE)
       when '}' {
         if self._interpolating.length() > 0 {
           self._string(self._interpolating.pop())
         } else {
-          self._add_token(RBRACE)
+          self._add_token(TokenType.RBRACE)
         }
       }
-      when ',' self._add_token(COMMA)
-      when ';' self._add_token(SEMICOLON)
+      when ',' self._add_token(TokenType.COMMA)
+      when ';' self._add_token(TokenType.SEMICOLON)
       when '@' {
         if !self._is_alpha(self._peek()) {
-          self._add_token(AT)
+          self._add_token(TokenType.AT)
         } else {
           self._decorator()
         }
       }
       when '.' {
         if self._match('.') {
-          self._add_token(self._match('.') ? TRI_DOT : RANGE)
+          self._add_token(self._match('.') ? TokenType.TRI_DOT : TokenType.RANGE)
         } else {
-          self._add_token(DOT)
+          self._add_token(TokenType.DOT)
         }
       }
       when '-' {
         if self._match('-') {
-          self._add_token(DECREMENT)
+          self._add_token(TokenType.DECREMENT)
         } else if self._match('=') {
-          self._add_token(MINUS_EQ)
+          self._add_token(TokenType.MINUS_EQ)
         } else {
-          self._add_token(MINUS)
+          self._add_token(TokenType.MINUS)
         }
       }
       when '+' {
         if self._match('+') {
-          self._add_token(INCREMENT)
+          self._add_token(TokenType.INCREMENT)
         } else if self._match('=') {
-          self._add_token(PLUS_EQ)
+          self._add_token(TokenType.PLUS_EQ)
         } else {
-          self._add_token(PLUS)
+          self._add_token(TokenType.PLUS)
         }
       }
       when '*' {
         if self._match('*') {
-          self._add_token(self._match('=') ? POW_EQ : POW)
+          self._add_token(self._match('=') ? TokenType.POW_EQ : TokenType.POW)
         } else {
-          self._add_token(self._match('=') ? MULTIPLY_EQ : MULTIPLY)
+          self._add_token(self._match('=') ? TokenType.MULTIPLY_EQ : TokenType.MULTIPLY)
         }
       }
       when '/' {
         if self._match('/') {
-          self._add_token(self._match('=') ? FLOOR_EQ : FLOOR)
+          self._add_token(self._match('=') ? TokenType.FLOOR_EQ : TokenType.FLOOR)
         } else if self._match('*') {
           if self._match('*') {
             self._advance()
             self._skip_block_comment()
-            self._add_token(DOC)
+            self._add_token(TokenType.DOC)
             self._start = self._current
           } else {
             self._advance()
             self._skip_block_comment()
-            self._add_token(COMMENT)
+            self._add_token(TokenType.COMMENT)
             self._start = self._current
           }
         } else {
-          self._add_token(self._match('=') ? DIVIDE_EQ : DIVIDE)
+          self._add_token(self._match('=') ? TokenType.DIVIDE_EQ : TokenType.DIVIDE)
         }
       }
-      when '\\' self._add_token(BACKSLASH)
-      when ':' self._add_token(COLON)
+      when '\\' self._add_token(TokenType.BACKSLASH)
+      when ':' self._add_token(TokenType.COLON)
       when '<' {
         if self._match('<') {
-          self._add_token(self._match('=') ? LSHIFT_EQ : LSHIFT)
+          self._add_token(self._match('=') ? TokenType.LSHIFT_EQ : TokenType.LSHIFT)
         } else {
-          self._add_token(self._match('=') ? LESS_EQ : LESS)
+          self._add_token(self._match('=') ? TokenType.LESS_EQ : TokenType.LESS)
         }
       }
       when '>' {
         if self._match('>') {
-          self._add_token(self._match('=') ? RSHIFT_EQ : RSHIFT)
+          self._add_token(self._match('=') ? TokenType.RSHIFT_EQ : TokenType.RSHIFT)
         } else {
-          self._add_token(self._match('=') ? GREATER_EQ : GREATER)
+          self._add_token(self._match('=') ? TokenType.GREATER_EQ : TokenType.GREATER)
         }
       }
-      when '!' self._add_token(self._match('=') ? BANG_EQ : BANG)
-      when '=' self._add_token(self._match('=') ? EQUAL_EQ : EQUAL)
-      when '%' self._add_token(self._match('=') ? PERCENT_EQ : PERCENT)
-      when '&' self._add_token(self._match('=') ? AMP_EQ : AMP)
-      when '|' self._add_token(self._match('=') ? BAR_EQ : BAR)
-      when '^' self._add_token(self._match('=') ? XOR_EQ : XOR)
-      when '~' self._add_token(self._match('=') ? TILDE_EQ : TILDE)
-      when '?' self._add_token(QUESTION)
+      when '!' self._add_token(self._match('=') ? TokenType.BANG_EQ : TokenType.BANG)
+      when '=' self._add_token(self._match('=') ? TokenType.EQUAL_EQ : TokenType.EQUAL)
+      when '%' self._add_token(self._match('=') ? TokenType.PERCENT_EQ : TokenType.PERCENT)
+      when '&' self._add_token(self._match('=') ? TokenType.AMP_EQ : TokenType.AMP)
+      when '|' self._add_token(self._match('=') ? TokenType.BAR_EQ : TokenType.BAR)
+      when '^' self._add_token(self._match('=') ? TokenType.XOR_EQ : TokenType.XOR)
+      when '~' self._add_token(self._match('=') ? TokenType.TILDE_EQ : TokenType.TILDE)
+      when '?' self._add_token(TokenType.QUESTION)
 
       # newline token
-      when '\n' self._add_token(NEWLINE)
+      when '\n' self._add_token(TokenType.NEWLINE)
 
       when "'" self._string("'")
       when '"' self._string('"')
@@ -493,7 +493,7 @@ class Scanner {
       self._scan()
     }
 
-    self._tokens.append(Token(EOF, 'end of file', self._line, self._file))
+    self._tokens.append(Token(TokenType.EOF, 'end of file', self._line, self._file))
     return self._tokens
   }
 

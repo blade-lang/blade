@@ -149,34 +149,48 @@ class Enum {
 /**
  * The default export of the enum module used to create enums.
  */
-var enum = Enum
+def enum(data, unique) {
+  return Enum(data, unique)
+}
 
 /**
  * Exported Enum.has static function for module access.
  */
-var has = Enum.has
+def has(enum, key) {
+  return Enum.has(enum, key)
+}
 
 /**
  * Exported Enum.keys static function for module access.
  */
-var keys = Enum.keys
+def keys(enum) {
+  return Enum.keys(enum)
+}
 
 /**
  * Exported Enum.values static function for module access.
  */
-var values = Enum.values
+def values(enum) {
+  return Enum.values(enum)
+}
 
 /**
  * Exported Enum.ensure static function for module access.
  */
-var ensure = Enum.ensure
+def ensure(enum, value) {
+  return Enum.ensure(enum, value)
+}
 
 /**
  * Exported Enum.to_dict static function for module access.
  */
-var to_dict = Enum.to_dict
+def to_dict(enum) {
+  return Enum.to_dict(enum)
+}
 
 /**
  * Exported Enum.to_value_dict static function for module access.
  */
-var to_value_dict = Enum.to_value_dict
+def to_value_dict(enum) {
+  return Enum.to_value_dict(enum)
+}
