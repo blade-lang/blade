@@ -236,6 +236,7 @@ b_obj_switch *new_switch(b_vm *vm);
 b_obj_ptr *new_ptr(b_vm *vm, void *pointer);
 b_obj_ptr *new_named_ptr(b_vm *vm, void *pointer, char *name);
 b_obj_ptr *new_closable_named_ptr(b_vm *vm, void *pointer, char *name, b_ptr_free_fn free_fn);
+b_obj_ptr *new_closable_ptr(b_vm *vm, void *pointer, void *free_fn);
 
 // data containers
 b_obj_list *new_list(b_vm *vm);
