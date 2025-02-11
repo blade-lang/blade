@@ -38,7 +38,7 @@ def highlight_blade(text, classes) {
     replace('/\\b(${constant_keywords})\\b/', '<_c>$1</_c>').
 
     # numbers
-    replace('/(([0-9][0-9]*\.[0-9]+([eE][0-9]+)?[fd]?)|(0x[0-9a-fA-F]+)|(0c[0-7][0-7]*)|(0b[01][01]*)|([0-9]+))/', '<_n>$1</_n>').
+    replace('/\\b(([0-9][0-9]*\.[0-9]+([eE][0-9]+)?[fd]?)|(0x[0-9a-fA-F]+)|(0c[0-7][0-7]*)|(0b[01][01]*)|([0-9]+))\\b/', '<_n>$1</_n>').
 
     # functions
     # property/method call and access
