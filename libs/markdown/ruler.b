@@ -136,7 +136,7 @@ class Ruler {
       name: rule_name,
       enabled: true,
       fn: fn,
-      alt: opt.alt or []
+      alt: opt.get('alt') or []
     }, index)
   
     self.__cache__ = nil
