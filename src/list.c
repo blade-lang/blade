@@ -647,6 +647,11 @@ DECLARE_LIST_METHOD(reduce) {
     start_index = 1;
   }
 
+  // early exit to avoid creating unnecessary list
+  if(list->items.count == 0) {
+    RETURN_VALUE(accumulator);
+  }
+
   b_obj_list *call_list = new_list(vm);
   push(vm, OBJ_VAL(call_list));
 
