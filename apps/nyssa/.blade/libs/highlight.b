@@ -21,7 +21,7 @@ var blade_keywords = '|'.join([
 ])
 
 var constant_keywords = '|'.join([
-  'nil', 'parent', 'self', 'true', 'false', '__args__', '__file__'
+  'nil', 'parent', 'self', 'true', 'false', '__args__', '__file__', '__root__'
 ])
 
 var _quote_re = '/((?<![a-z])(\'(?:[^\'\\\\]|\\\\.)*\')|("(?:[^"\\\\]|\\\\.)*"))/m'
