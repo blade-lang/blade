@@ -1,6 +1,6 @@
 /**
- * Helper class, used by [[markdown#core]], [[markdown#block]] and
- * [[markdown#inline]] to manage sequences of functions (rules):
+ * Helper class, used by `markdown#core`, `markdown#block` and
+ * `markdown#inline` to manage sequences of functions (rules):
  *
  * - keep rules in defined order
  * - assign the name to each rule
@@ -10,8 +10,8 @@
  * - caching lists of active rules
  *
  * You will not need use this class directly until write plugins. For simple
- * rules control use [[markdown.disable]], [[markdown.enable]] and
- * [[markdown.use]].
+ * rules control use [[markdown.markdown.disable]], [[markdown.Markdown.enable]] and
+ * [[markdown.Markdown.use]].
  */
 class Ruler {
   # List of added rules. Each element is:
@@ -104,7 +104,7 @@ class Ruler {
 
   /**
    * Add new rule to chain before one with given name. See also
-   * [[Ruler.after]], [[Ruler.push]].
+   * [[markdown.Ruler.after]], [[markdown.Ruler.push]].
    *
    * ##### Options:
    *
@@ -144,7 +144,7 @@ class Ruler {
 
   /**
    * Add new rule to chain after one with given name. See also
-   * [[Ruler.before]], [[Ruler.push]].
+   * [[markdown.Ruler.before]], [[markdown.Ruler.push]].
    *
    * ##### Options:
    *
@@ -184,7 +184,7 @@ class Ruler {
 
   /**
    * Push new rule to the end of chain. See also
-   * [[Ruler.before]], [[Ruler.after]].
+   * [[markdown.Ruler.before]], [[markdown.Ruler.after]].
    *
    * ##### Options:
    *
@@ -223,7 +223,7 @@ class Ruler {
    *
    * Returns list of found rule names (if no exception happened).
    *
-   * See also [[Ruler.disable]], [[Ruler.enable_only]].
+   * See also [[markdown.Ruler.disable]], [[markdown.Ruler.enable_only]].
    * 
    * @param string|list list: list of rule names to enable.
    * @param bool ignore_invalid: set `true` to ignore errors when rule not found.
@@ -254,7 +254,7 @@ class Ruler {
    * Enable rules with given names, and disable everything else. If any rule name
    * not found - throw Error. Errors can be disabled by second param.
    *
-   * See also [[Ruler.disable]], [[Ruler.enable]].
+   * See also [[markdown.Ruler.disable]], [[markdown.Ruler.enable]].
    * 
    * @param string|list list: list of rule names to enable (whitelist).
    * @param bool ignore_invalid: set `true` to ignore errors when rule not found.
@@ -272,7 +272,7 @@ class Ruler {
    *
    * Returns list of found rule names (if no exception happened).
    *
-   * See also [[Ruler.enable]], [[Ruler.enable_only]].
+   * See also [[markdown.Ruler.enable]], [[markdown.Ruler.enable_only]].
    * 
    * @param string|list list: list of rule names to disable.
    * @param bool ignore_invalid: set `true` to ignore errors when rule not found.

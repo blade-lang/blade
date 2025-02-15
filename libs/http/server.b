@@ -33,7 +33,7 @@ class HttpServer {
 
   /**
    * The working Socket instance for the HttpServer.
-   * @type {Socket}
+   * @type [[socket.Socket]]
    */
   var socket
 

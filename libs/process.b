@@ -297,8 +297,6 @@ class Process {
   var _on_complete_listeners = []
 
   /**
-   * Process(fn: function [, paged: PagedValue])
-   * 
    * Creates a new instance of Process for the function _`fn`_. This 
    * constructor accepts an optional PagedValue.
    * 

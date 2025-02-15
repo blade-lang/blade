@@ -53,7 +53,7 @@ class InlineParser {
   var ruler = Ruler()
 
   /**
-   *[[Ruler]] instance. Second ruler used for post-processing
+   * [[Ruler]] instance. Second ruler used for post-processing
    * (e.g. in emphasis-like rules).
    * 
    * @type Ruler

@@ -134,9 +134,9 @@ class TLSSocket {
   var receive_timeout = -1
 
   /**
-   * @param Socket socket
-   * @param SSLContext? context
-   * @param SSL? ssl
+   * @param [[socket.Socket]] socket
+   * @param [[ssl.SSLContext]]? context
+   * @param [[ssl.SSL]]? ssl
    * @constructor
    */
   TLSSocket(socket, context, ssl) {
@@ -264,7 +264,7 @@ class TLSSocket {
    * 
    * The accepted socket may not be used to accept more connections.  The original socket remains open.
    * 
-   * @returns TLSSocket
+   * @returns [[ssl.TLSSocket]]
    */
   accept() {
     var s = self._socket.accept()
@@ -355,7 +355,7 @@ class TLSSocket {
   /**
    * Returns the underlying Socket instance.
    * 
-   * @returns Socket
+   * @returns [[socket.Socket]]
    */
   get_socket() {
     return self._socket
@@ -364,7 +364,7 @@ class TLSSocket {
   /**
    * Returns the underlying SSLContext instance.
    * 
-   * @returns SSLContext
+   * @returns [[ssl.SSLContext]]
    */
   get_context() {
     return self._context
@@ -373,7 +373,7 @@ class TLSSocket {
   /**
    * Returns the underlying SSL instance
    *
-   * @returns SSL
+   * @returns [[ssl.SSL]]
    */
   get_ssl() {
     return self._ssl
@@ -382,7 +382,7 @@ class TLSSocket {
   /**
    * Sets the underlying SSL context to use.
    * 
-   * @param SSLContext context
+   * @param [[ssl.SSLContext]] context
    */
   set_context(context) {
     if !instance_of(content, SSLContext)
@@ -399,9 +399,9 @@ class TLSSocket {
 /**
  * Returns a new instance of a TLSSocket.
  * 
- * @param Socket socket
- * @param SSLContext? context
- * @param SSL? ssl
+ * @param [[socket.Socket]] socket
+ * @param [[ssl.SSLContext]]? context
+ * @param [[ssl.SSL]]? ssl
  * @default
  */
 def socket(socket, context, ssl) {

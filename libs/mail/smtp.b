@@ -31,8 +31,8 @@ class Transport {
    * - __port__: The port number of the SMTP server. (Default: 465)
    * - __username__: The access username for the SMTP user.
    * - __password__: The password for the connection user.
-   * - __tls__: The TLS mode of the connection. One of {TLS_TRY} (default), {TLS_CONTROL}, 
-   *    {TLS_ALL} or {TLS_NONE}.
+   * - __tls__: The TLS mode of the connection. One of [[ssl.TLS_TRY]] (default), [[ssl.TLS_CONTROL]], 
+   *    [[ssl.TLS_ALL]] or [[ssl.TLS_NONE]].
    * - __debug__: Whether to print debug information or not. (Default: false)
    * - __verify_peer__: If the peer certificate should be verified or not. (Default: false)
    * - __verify_host__: If the host certificate should be verified or not. (Default: false)
@@ -172,9 +172,9 @@ class Transport {
 
 
 /**
- * Returns a new instance of SMTP {Transport} with the given __options__.
+ * Returns a new instance of SMTP [[mail.Transport]] with the given __options__.
  * 
- * @params {dict?} options See {Transport}
+ * @params {dict?} options See [[mail.Transport]]
  * @returns Transport
  */
 def smtp(options) {

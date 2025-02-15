@@ -215,7 +215,7 @@ class Message {
 
 
 /**
- * Returns a new instance of {Message}.
+ * Returns a new instance of [[mail.Message]].
  * 
  * @returns Message
  * @default

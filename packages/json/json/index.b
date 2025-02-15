@@ -64,7 +64,7 @@ import _json { _decode }
 /**
  * JSON encodes the given value with a recursive depth up to `max_depth`.
  * 
- * If _compact_ is `false`, the resulting json string will be 
+ * If _compact_ is `true`, the resulting json string will be 
  * tightly packed. i.e. spaces will be trimmed from objects and arrays. Otherwise, 
  * the JSON output will be pretty formatted.
  * 

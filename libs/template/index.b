@@ -312,7 +312,7 @@
  * An example of a custom tag is the `<include />` tag previously discussed. To declare a custom 
  * element and its behavior, you need to create a function that accepts two arguments and 
  * register it with the `register_element()` method. When your custom element is matched in a 
- * template, the registered function will be called with an instance of [[Template]] in the first 
+ * template, the registered function will be called with an instance of [[template.Template]] in the first 
  * argument and the {{html}} decoded template as the second argument. Your function must then 
  * return a string representing the processed tag or a valid HTML element Blade representation as 
  * defined by the {{html}} module. 
