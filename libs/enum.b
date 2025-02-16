@@ -337,7 +337,7 @@ class Enum {
 /**
  * The default export of the enum module used to create enums.
  * 
- * @see class Enum
+ * See [[enum.Emum]]
  */
 def enum(data, unique) {
   return Enum(data, unique)
@@ -346,7 +346,7 @@ def enum(data, unique) {
 /**
  * Exported Enum.has static function for module access.
  * 
- * @see class Enum.has
+ * See [[enum.Emum.has]]
  */
 def has(enum, key) {
   return Enum.has(enum, key)
@@ -355,7 +355,7 @@ def has(enum, key) {
 /**
  * Exported Enum.keys static function for module access.
  * 
- * @see class Enum.keys
+ * See [[enum.Emum.keys]]
  */
 def keys(enum) {
   return Enum.keys(enum)
@@ -364,7 +364,7 @@ def keys(enum) {
 /**
  * Exported Enum.values static function for module access.
  * 
- * @see class Enum.values
+ * See [[enum.Emum.values]]
  */
 def values(enum) {
   return Enum.values(enum)
@@ -373,7 +373,7 @@ def values(enum) {
 /**
  * Exported Enum.ensure static function for module access.
  * 
- * @see class Enum.ensure
+ * See [[enum.Emum.ensure]]
  */
 def ensure(enum, value) {
   return Enum.ensure(enum, value)
@@ -382,7 +382,7 @@ def ensure(enum, value) {
 /**
  * Exported Enum.to_dict static function for module access.
  * 
- * @see class Enum.to_dict
+ * See [[enum.Emum.to_dict]]
  */
 def to_dict(enum) {
   return Enum.to_dict(enum)
@@ -391,7 +391,7 @@ def to_dict(enum) {
 /**
  * Exported Enum.to_value_dict static function for module access.
  * 
- * @see class Enum.to_value_dict
+ * See [[enum.Emum.to_value_dict]]
  */
 def to_value_dict(enum) {
   return Enum.to_value_dict(enum)
