@@ -69,7 +69,7 @@ set(BLADE_SOURCES
 		src/standard/process.c
 		src/standard/reflect.c
 		src/standard/struct.c
-        src/standard/thread.c)
+    src/standard/thread.c)
 
 add_definitions(-DEXPORT_LIBS)
 

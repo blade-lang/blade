@@ -1,5 +1,7 @@
 # io.TTY implementation
 
+import _io
+
 /**
  * class TTY is an interface to TTY terminals this class contains definitions
  * to control TTY terminals
@@ -532,8 +534,25 @@ class TTY {
    * @returns bool
    */
   exit_raw() {
-#     return _io.TTY.exit_raw(self.std)
+    # return _io.TTY.exit_raw(self.std)
     return self.set_attr(TTY.TCSAFLUSH, _io.TTY.tcgetattr(self.std, true))
+  }
+
+  /**
+   * Returns the size of the current TTY device as a dictionary of cols and rows.
+   * 
+   * - `cols`: The number of text columns that can fit into the TTY device.
+   * - `rows`: The number of text rows that can fit into the TTY device.
+   * 
+   * @returns dict
+   */
+  get_size() {
+    var size = _io.TTY.getsize(self.std)
+
+    return {
+      cols: size.first(),
+      rows: size.last(),
+    }
   }
 
   /**
