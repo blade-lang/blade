@@ -10,7 +10,7 @@ import .infos { Info }
 class CurlMime {
 
   /**
-   * @pram {Curl} curl
+   * @param [[curl.Curl]] curl
    * @constructor
    */
   CurlMime(curl) {
@@ -96,7 +96,7 @@ class CurlMime {
   /**
    * Adds a new mime subpart with the given mime.
    * 
-   * @param CurlMime mime
+   * @param [[curl.CurlMime]] mime
    * @param string type
    * @returns bool
    */
@@ -216,7 +216,7 @@ class Curl {
    * Use this function AFTER performing a transfer if you want to get transfer 
    * related data.
    * 
-   * @param Info info
+   * @param [[curl.Info]] info
    * @returns string|number|list
    */
   get_info(info) {

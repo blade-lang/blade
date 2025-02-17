@@ -1,10 +1,14 @@
 /**
- * @module http
+ * @module http_curl
  * 
  * > **IMPORTANT NOTICE:**
  * >
+ * > THIS MODULE WAS FORMERLY THE `http` module.
+ * >
  * > THIS MODULE IS DEPRECIATED AND WILL BE REMOVED FROM THE CORE
- * > LIBRARY AS SOON AS THE PURE BLADE IMPLEMENTATION IS STABLE.
+ * > LIBRARY AS SOON AS THE CLIENT OF THE PURE BLADE IMPLEMENTATION 
+ * > IS STABLE.
+ * >
  * > IT IS ONLY HERE FOR HISTORICAL REASONS AND TO SERVE AS A BASE
  * > BENCHMARK FOR THE DEVELOPMENT OF THE `http` MODULE.
  * >
@@ -14,7 +18,7 @@
  * > BUG REPORTS AND ISSUES FOR THIS MODULE WILL NOT BE TREATED AS
  * > PRIORITY.
  *
- * The `chttp` module provides a rich library to help in building HTTP
+ * The `http_curl` module provides a rich library to help in building HTTP
  * clients and servers. The module also provides a few generic abstractions
  * for simple HTTP operations such as a GET request.
  *
@@ -23,9 +27,9 @@
  * The example below shows making a GET request to fetch a webpage.
  *
  * ```blade
- * import chttp
+ * import http_curl
  *
- * echo chttp.get('http://example.com')
+ * echo http_curl.get('http://example.com')
  * # <class HttpResponse instance at 0x600002adacd0>
  * ```
  *
@@ -37,30 +41,30 @@
  * receiving response back from the server to 30 seconds.
  *
  * ```blade
- * import chttp
+ * import http_curl
  *
- * var client = chttp.HttpClient()
+ * var client = http_curl.HttpClient()
  * client.receive_timeout = 30000 # Optional
  * var res = client.send_request('http://example.com/endpoint?query=1', 'GET')
  * echo res.body.to_string()
  * ```
  *
- * Creating a server with the `chttp` module is also a breeze.
+ * Creating a server with the `http_curl` module is also a breeze.
  * The example below shows an implementation of an HTTP API server listening on port
  * 3000 and simple returns the JSON of the request object itself.
  *
  * ```blade
- * import chttp
+ * import http_curl
  * import json
  *
- * var server = chttp.server(3000)
+ * var server = http_curl.server(3000)
  * server.handle('GET', '/', @(request, response) {
  *   response.json(request)
  * })
  * server.listen()
  * ```
  *
- * The `chttp` module does not make any assumption as to the type of data to be sent
+ * The `http_curl` module does not make any assumption as to the type of data to be sent
  * in request bodies and for this reason, it should not be expected to automatically
  * convert dictionaries into JSON objects or create multipart/form-data request for you.
  * Rather, it gives the tools required to craft any request body of your choice.
@@ -83,8 +87,8 @@ var _client = HttpClient()
  * chaining such as:
  * 
  * ```blade
- * import chttp
- * echo chttp.set_headers({
+ * import http_curl
+ * echo http_curl.set_headers({
  *   'Authorization': 'Bearer SomeAPIBearerToken',
  *   'Host': 'example.com',
  * }).get('http://example.com/current-user').body.to_string()

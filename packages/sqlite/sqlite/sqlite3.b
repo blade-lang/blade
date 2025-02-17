@@ -77,7 +77,7 @@ class SQLite3 {
    * @param string query
    * @param list|dict|nil params
    * @returns boolean
-   * @throws SQLiteException if an error occured
+   * @throws [[sqlite.SQLiteException]] if an error occured
    */
   exec(query, params) {
     if !is_string(query)
@@ -102,7 +102,7 @@ class SQLite3 {
    * * A number greater than 0 if it succeeded
    * 
    * @returns number
-   * @throws SQLiteException if database is not opened
+   * @throws [[sqlite.SQLiteException]] if database is not opened
    */
   last_insert_id() {
 
@@ -138,8 +138,8 @@ class SQLite3 {
    * 
    * @param string sql
    * @param list|dict|nil params
-   * @returns SQLite3Cursor
-   * @throws SQLiteException if an error occured.
+   * @returns [[sqlite.SQLite3Cursor]]
+   * @throws [[sqlite.SQLiteException]] if an error occured.
    */
   query(sql, params) {
     if params != nil {

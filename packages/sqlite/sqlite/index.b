@@ -198,7 +198,7 @@ import .sqlite3 { * }
  * it will create an in-memory sqlite database.
  * 
  * @param string? path
- * @returns SQLite3
+ * @returns [[sqlite.SQLite3]]
  */
 def open(path) {
   var sqlite = SQLite3(path)

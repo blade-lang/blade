@@ -230,6 +230,7 @@ def crc32(data, initial) {
  *    slow and reduces compression ratio; memory_level 9 uses maximum memory for
  *    optimal speed.  The default value is 8.
  * 
+ * {.list}
  * @param bytes|string data
  * @param int? level: Default value is `DEFAULT_COMPRESSION`.
  * @param int? strategy: Default value is `DEFAULT_STRATEGY`.
@@ -302,6 +303,7 @@ def compress(data, level, strategy, wbits, memory_level) {
  * -  uncompress() can uncompress either zlib-wrapped or gzip-wrapped compress data.
  *    If the compression uses gzip-wrapper, the correct `wbits` may need to be set.
  * 
+ * {.list}
  * @param bytes|string data
  * @param int? wbits: Default value is `MAX_WBITS`.
  * @returns bytes

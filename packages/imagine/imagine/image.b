@@ -19,7 +19,7 @@ class Image {
    * @param number width
    * @param number height
    * @param bool? use_true_colors
-   * @returns ImageResource
+   * @returns [[imagine.ImageResource]]
    */
   static new(width, height, use_true_colors) {
     if use_true_colors == nil {
@@ -41,7 +41,7 @@ class Image {
    * palette PNG stays palette-based.
    * 
    * @param string|file src
-   * @returns ImageResource
+   * @returns [[imagine.ImageResource]]
    */
   static from_png(src) {
     if !is_string(src) and !is_file(src) 
@@ -67,7 +67,7 @@ class Image {
    * JPEG is always truecolor.
    * 
    * @param string|file src
-   * @returns ImageResource
+   * @returns [[imagine.ImageResource]]
    */
   static from_jpeg(src) {
     if !is_string(src) and !is_file(src) 
@@ -92,7 +92,7 @@ class Image {
    * Creates an image from a GIF file.
    * 
    * @param string|file src
-   * @returns ImageResource
+   * @returns [[imagine.ImageResource]]
    */
   static from_gif(src) {
     if !is_string(src) and !is_file(src) 
@@ -117,7 +117,7 @@ class Image {
    * Creates an image from a BMP file.
    * 
    * @param string|file src
-   * @returns ImageResource
+   * @returns [[imagine.ImageResource]]
    */
   static from_bmp(src) {
     if !is_string(src) and !is_file(src) 
@@ -142,7 +142,7 @@ class Image {
    * Creates an image from a WBMP file.
    * 
    * @param string|file src
-   * @returns ImageResource
+   * @returns [[imagine.ImageResource]]
    */
   static from_wbmp(src) {
     if !is_string(src) and !is_file(src) 
@@ -167,7 +167,7 @@ class Image {
    * Creates an image from a TGA file.
    * 
    * @param string|file src
-   * @returns ImageResource
+   * @returns [[imagine.ImageResource]]
    */
   static from_tga(src) {
     if !is_string(src) and !is_file(src) 
@@ -192,7 +192,7 @@ class Image {
    * Creates an image from a TIFF file.
    * 
    * @param string|file src
-   * @returns ImageResource
+   * @returns [[imagine.ImageResource]]
    */
   static from_tiff(src) {
     if !is_string(src) and !is_file(src) 
@@ -217,7 +217,7 @@ class Image {
    * Creates an image from a WEBP file.
    * 
    * @param string|file src
-   * @returns ImageResource
+   * @returns [[imagine.ImageResource]]
    */
   static from_webp(src) {
     if !is_string(src) and !is_file(src) 
@@ -242,7 +242,7 @@ class Image {
    * Creates an image from a AVIF file.
    * 
    * @param string|file src
-   * @returns ImageResource
+   * @returns [[imagine.ImageResource]]
    */
   static from_avif(src) {
     if !is_string(src) and !is_file(src) 
@@ -269,7 +269,7 @@ class Image {
    * the file type will automatically be detected.
    * 
    * @param string|file src
-   * @returns ImageResource
+   * @returns [[imagine.ImageResource]]
    */
   static from_file(src) {
     if !is_string(src) and !is_file(src) 

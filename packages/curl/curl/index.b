@@ -1,5 +1,31 @@
 /**
  * @module curl
+ * 
+ * This module provides native bindings to libcurl's client-side 
+ * URL transfer library, supporting DICT, FILE, FTP, FTPS, Gopher, 
+ * HTTP, HTTPS, IMAP, IMAPS, LDAP, LDAPS, POP3, POP3S, RTMP, RTSP, 
+ * SCP, SFTP, SMTP, SMTPS, Telnet and TFTP. libcurl supports SSL 
+ * certificates, HTTP POST, HTTP PUT, FTP uploading, HTTP form based 
+ * upload, proxies, cookies, user+password authentication (Basic, 
+ * Digest, NTLM, Negotiate, Kerberos), file transfer resume, http 
+ * proxy tunneling and more!
+ * 
+ * The following example shows the basic usage that visits a website 
+ * and prints the output.
+ * 
+ * ```blade
+ * import curl
+ * 
+ * var c = curl.Curl()
+ * c.set_option(curl.Option.URL, 'www.google.com')
+ * c.set_option(curl.Option.FOLLOWLOCATION)
+ * 
+ * echo c.send()
+ * c.close()
+ * ```
+ * 
+ * See [Libcurl's official documentation](https://curl.se/libcurl/)
+ * for more information.
  *
  * @copyright 2021, Ore Richard Muyiwa and Blade contributors
  */
@@ -93,7 +119,6 @@ var version = _curl.version
  * 
  * @param string date_string
  * @returns number
- * @static
  */
 def get_time(date_string) {
   return _curl.getdate(date_string)

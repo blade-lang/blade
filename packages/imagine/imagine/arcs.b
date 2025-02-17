@@ -29,7 +29,7 @@ var ARC_CHORD = 1
 var ARC_NO_FILL = 2
 
 /**
- * Used together with ARC_NO_FILL, indicates that the beginning and 
+ * Used together with [[imagine.ARC_NO_FILL]], indicates that the beginning and 
  * ending angles should be connected to the center; this is a good 
  * way to outline (rather than fill) a 'pie slice'.
  * 

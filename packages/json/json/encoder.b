@@ -78,7 +78,14 @@ class Encoder {
         self._depth++
         for val in value {
           # inner lists will increase the depth
+          #
+          # We're wrapping this line in a catch to allow lists encoding
+          # to skip values that are unencodable. This let's the result or
+          # json.encode to be directly compatible with the original definition
+          # of JSON by JavaScript.
+          catch {
             result += ',${self._start_alignment()}${self._encode(val)}'
+          }
         }
         if result {
           result = '[${result[self._merge_strip_start,]}${self._end_alignment()}]'
@@ -91,7 +98,14 @@ class Encoder {
         self._depth++
         for key, val in value {
           # inner dictionaries will increase the depth
-          result += ',${self._start_alignment()}"${to_string(key)}":${spacing}${self._encode(val)}'
+          #
+          # We're wrapping this line in a catch to allow dictionary encoding
+          # to skip values that are unencodable. This let's the result or
+          # json.encode to be directly compatible with the original definition
+          # of JSON by JavaScript.
+          catch {
+            result += ',${self._start_alignment()}"${to_string(key)}":${spacing}${self._encode(val)}'
+          }
         }
         if result {
           result = '{${result[self._merge_strip_start,]}${self._end_alignment()}}'

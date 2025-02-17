@@ -711,7 +711,7 @@ class ImageResource {
   /**
    * Copies the palatte from a paletted image to this image.
    * 
-   * @param ImageResource image
+   * @param [[imagine.ImageResource]] image
    */
   palette_copy(image) {
     if !instance_of(image, ImageResource) {
@@ -786,7 +786,7 @@ class ImageResource {
    * portion defined will be copied onto the x,y coordinates, dst_x 
    * and dst_y.
    * 
-   * @param ImageResource src
+   * @param [[imagine.ImageResource]] src
    * @param number dst_x
    * @param number dst_y
    * @param number src_x
@@ -817,7 +817,7 @@ class ImageResource {
    * except for ignoring alpha components, while it implements 
    * alpha transparency for true colour images.
    * 
-   * @param ImageResource src
+   * @param [[imagine.ImageResource]] src
    * @param number dst_x
    * @param number dst_y
    * @param number src_x
@@ -843,7 +843,7 @@ class ImageResource {
    * hue of the source by converting the destination pixels to gray scale 
    * before the copy operation.
    * 
-   * @param ImageResource src
+   * @param [[imagine.ImageResource]] src
    * @param number dst_x
    * @param number dst_y
    * @param number src_x
@@ -879,7 +879,7 @@ class ImageResource {
    * (if this image is the same as _src_) but if the regions overlap 
    * the results will be unpredictable.
    * 
-   * @param ImageResource src
+   * @param [[imagine.ImageResource]] src
    * @param number x
    * @param number y
    * @param number src_x
@@ -918,7 +918,7 @@ class ImageResource {
    * (if this image is the same as _src_) but if the regions overlap 
    * the results will be unpredictable.
    * 
-   * @param ImageResource src
+   * @param [[imagine.ImageResource]] src
    * @param number x
    * @param number y
    * @param number src_x
@@ -950,7 +950,7 @@ class ImageResource {
    * The rotation angle is interpreted as the number of degrees to rotate the 
    * image anticlockwise.
    * 
-   * @param ImageResource src
+   * @param [[imagine.ImageResource]] src
    * @param number x
    * @param number y
    * @param number src_x
@@ -973,7 +973,7 @@ class ImageResource {
   /**
    * Clones this image resource.
    * 
-   * @returns ImageResource
+   * @returns [[imagine.ImageResource]]
    */
   clone() {
     return ImageResource(_imagine.clone(self._ptr))
@@ -1000,7 +1000,7 @@ class ImageResource {
    * > you must not use the `COLOR_BRUSHED` or `COLOR_STYLED_BRUSHED` colors 
    * > until you have set a new brush image.
    * 
-   * @param ImageResource brush
+   * @param [[imagine.ImageResource]] brush
    */
   set_brush(brush) {
     if !instance_of(brush, ImageResource) {
@@ -1034,7 +1034,7 @@ class ImageResource {
    * you should call `close()`. You must not use the color `COLOR_TILED` if the current 
    * tile has been closed; you can of course set a new tile to replace it.
    * 
-   * @param ImageResource tile
+   * @param [[imagine.ImageResource]] tile
    */
   set_tile(tile) {
     if !instance_of(tile, ImageResource) {
@@ -1156,7 +1156,7 @@ class ImageResource {
    * @param number y
    * @param number width
    * @param number height
-   * @returns ImageResource
+   * @returns [[imagine.ImageResource]]
    */
   crop(x, y, width, height) {
     if !is_number(x) or !is_number(y) or !is_number(width) or !is_number(height) {
@@ -1171,7 +1171,7 @@ class ImageResource {
    * is not give, it defaults to `CROP_DEFAULT`.
    * 
    * @param number? mode
-   * @returns ImageResource
+   * @returns [[imagine.ImageResource]]
    */
   auto_crop(mode) {
     if mode == nil mode = crops.CROP_DEFAULT
@@ -1201,7 +1201,7 @@ class ImageResource {
    * @param number width
    * @param number? height
    * @param number? method
-   * @returns ImageResource
+   * @returns [[imagine.ImageResource]]
    */
   scale(width, height, method) {
     if height == nil or height == -1 {
@@ -1231,7 +1231,7 @@ class ImageResource {
    * @param number angle
    * @param number bg_color
    * @param number? method
-   * @returns ImageResource
+   * @returns [[imagine.ImageResource]]
    */
   rotate(angle, bg_color, method) {
     if !is_number(angle) or !is_number(bg_color) {
@@ -1525,7 +1525,7 @@ class ImageResource {
    * true color image as the function will attempt to make the color 
    * of the image given if the current image is a paletted image.
    * 
-   * @param ImageResource image
+   * @param [[imagine.ImageResource]] image
    * @returns bool - `true` if successful, otherwise `false`.
    */
   match_color(image) {
@@ -1560,7 +1560,7 @@ class ImageResource {
    * var same_width = !(result & CMP_SIZE_X)
    * ```
    * 
-   * @param ImageResource image
+   * @param [[imagine.ImageResource]] image
    * @returns number
    */
   compare(image) {

@@ -2,6 +2,8 @@
 
 /**
  * class Token
+ *
+ * @serializable
  */
 class Token {
 
@@ -192,6 +194,33 @@ class Token {
     } else {
       self.attrs[idx][1] = self.attrs[idx][1] + ' ' + value
     }
+  }
+
+  /**
+   * Returns the Token properties as a dictionary.
+   *
+   * @returns dict
+   */
+  to_dict() {
+    return {
+      type: self.type,
+      tag: self.tag,
+      attrs: self.attrs,
+      map: self.map,
+      nesting: self.nesting,
+      level: self.level,
+      children: self.children,
+      content: self.content,
+      markup: self.markup,
+      info: self.info,
+      meta: self.meta,
+      block: self.block,
+      hidden: self.hidden,
+    }
+  }
+
+  @to_json() {
+    return self.to_dict()
   }
 }
 

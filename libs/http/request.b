@@ -382,7 +382,7 @@ def _verify_hostname(certificate, host) {
     return false
   }
 
-  if certificate.subject_name.lower() == '/cn=${host}' {
+  if certificate.subject_name.lower() == '/cn=' + host {
     return true
   }
 

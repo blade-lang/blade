@@ -91,21 +91,15 @@ class Attachment {
  * The Mail class represents a mail message as a blade object with the following 
  * properties.
  * 
- * - __headers__: A dictionary containing the key/value pair contained in the 
- *    mail message header.
- * - __body__: A dictionary containing the different segments of a mail body such
- *    as its plain text and html counterpart.
- * - __attachments__: A list of attachments contained in the Mail message.
- * 
  * @serializable
  * @printable
  */
 class Mail {
 
   /**
-   * @param dict headers
-   * @param dict body
-   * @param list[Attachment] attachments
+   * @param dict headers: A dictionary containing the key/value pair contained in the mail message header.
+   * @param dict body: A dictionary containing the different segments of a mail body such as its plain text and html counterpart.
+   * @param list[Attachment] attachments: A list of attachments contained in the Mail message.
    * @constructor
    */
   Mail(headers, body, attachments) {

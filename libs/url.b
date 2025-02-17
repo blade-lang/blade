@@ -45,7 +45,7 @@ import types
  */
 class UrlMalformedException < Exception {
   /**
-   * UrlMalformedException(message: string)
+   * @param string message
    * @constructor
    */
   UrlMalformedException(message) {
@@ -362,11 +362,11 @@ class Url {
 /**
  * URL-encodes a string
  * 
- * this function is convenient when encoding a string to be used in 
+ * This function is convenient when encoding a string to be used in 
  * a query part of a URL, as a convenient way to pass variables to 
  * the next page.
  *
- * if strict mode is enabled, space character is encoded with the 
+ * If strict mode is enabled, space character is encoded with the 
  * percent (%) sign in order to conform with RFC 3986. Otherwise,
  * is is encoded with the plus (+) sign in order to align with
  * the default encoding used by modern browsers.
