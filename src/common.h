@@ -27,6 +27,7 @@
 # define DISABLE_WARNING_PUSH __pragma(warning(push))
 # define DISABLE_WARNING_POP __pragma(warning(pop))
 # define DISABLE_WARNING(w) __pragma(warning(disable:w))
+# define message(ignore)
 #else
 # define DISABLE_WARNING_PUSH
 # define DISABLE_WARNING_POP

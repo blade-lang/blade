@@ -4,12 +4,12 @@ import reflect
 
 def _get_string(value) {
   return '"' + 
-      value.replace('\b', '\\b', false). # replace \b
+    value.replace('\\', '\\\\', false). # replace \
       replace('\f', '\\f', false). # replace \f
       replace('\n', '\\n', false). # replace \n
       replace('\r', '\\r', false). # replace \r
       replace('\t', '\\t', false). # replace \t
-      replace('\\', '\\\\', false). # replace \
+      replace('\b', '\\b', false). # replace \b
       replace('"', '\\"', false). # replace " with \"
 
       # This part is essential to handle JSON data 
