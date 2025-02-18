@@ -234,6 +234,16 @@ class HttpServer {
    * Sets up a request handler that will be called when a request with the given method 
    * has a path that matches the one specified.
    * 
+   * If the path ends with a `/`, it also matches all routes that starts with the path 
+   * so long as there is no other path that matches the request better. The exception 
+   * to this is when the path is an ordinary `/` (root path) in which case it won't 
+   * match any other route except for the root path.
+   * 
+   * For example, if the path is declared as `/user/`, it will match the request for 
+   * `/user/record/1` unless another handle has been registered for `/user/record` in 
+   * which case the handle for `/user/record` will handle the request since it is the 
+   * handler for the closest path.
+   * 
    * @param string method
    * @param string path
    * @param function(2) handler
@@ -367,6 +377,32 @@ class HttpServer {
         if route_handler {
           route_handler(request, response)
           router_matched = true
+        } else if request.path != '/' {
+          var possible_handlers = {}
+
+          # Find the handler that matches the request path the most
+          # 
+          # This is achieved by iterating through all registered routes 
+          # for the request method and finding all possible matches. 
+          # If at least one match is found, we return the path that 
+          # matches the requested route the longest.
+          for path, _handler in router_method {
+            if path != "/" and  path.ends_with('/') and request.path.starts_with(path) {
+              possible_handlers.set(path, _handler)
+              router_matched = true
+            }
+          }
+
+          if router_matched and possible_handlers {
+            # find the longest route
+            var longest_route = possible_handlers.keys().reduce(@(prev, x) {
+              return x.length() > prev.length() ? x : prev
+            })
+
+            route_handler = possible_handlers.get(longest_route)
+            possible_handlers.clear()
+            route_handler(request, response)
+          }
         }
       }
 
