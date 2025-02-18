@@ -19,11 +19,6 @@
 #include <sys/ioctl.h>
 #endif
 
-#ifdef _WIN32
-#include <windows.h>
-#include <conio.h>
-#endif
-
 #ifdef HAVE_TERMIOS_H
 #include <termios.h>
 #include <stdlib.h>
@@ -63,6 +58,7 @@ int getch() {
   return cinput;
 }
 #elif _MSC_VER  || __WIN32__ || __MS_DOS__
+#include <windows.h>
 #include <conio.h>  // for getch and cbreak support
 #endif /* HAVE_TERMIOS_H */
 
