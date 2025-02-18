@@ -22,7 +22,8 @@
 #ifdef IS_UNIX
 #include <sys/ioctl.h>
 #elif defined(_WIN32)
-#include <Windows.h>
+#include <windows.h>
+#include <conio.h>
 #endif
 
 static struct termios orig_termios;
