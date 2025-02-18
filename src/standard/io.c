@@ -15,16 +15,18 @@
 #include <errno.h>
 #include <stdio.h>
 
-#ifdef HAVE_TERMIOS_H
-#include <termios.h>
-#include <stdlib.h>
-
 #ifdef IS_UNIX
 #include <sys/ioctl.h>
-#elif defined(_WIN32)
+#endif
+
+#ifdef _WIN32
 #include <windows.h>
 #include <conio.h>
 #endif
+
+#ifdef HAVE_TERMIOS_H
+#include <termios.h>
+#include <stdlib.h>
 
 static struct termios orig_termios;
 static bool set_attr_was_called = false;
