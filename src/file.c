@@ -1,5 +1,3 @@
-#define message(ignore)
-
 #include "file.h"
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
