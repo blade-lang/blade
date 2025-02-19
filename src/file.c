@@ -780,7 +780,7 @@ DECLARE_FILE_METHOD(tell) {
   ENFORCE_ARG_COUNT(tell, 0);
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
   DENY_STD();
-  RETURN_NUMBER(ftell(file->file));
+  RETURN_NUMBER(file->file != NULL ? ftell(file->file) : -1);
 }
 
 #undef FILE_ERROR
