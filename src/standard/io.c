@@ -15,6 +15,10 @@
 #include <errno.h>
 #include <stdio.h>
 
+#ifdef IS_UNIX
+#include <sys/ioctl.h>
+#endif
+
 #ifdef HAVE_TERMIOS_H
 #include <termios.h>
 #include <stdlib.h>
@@ -54,6 +58,7 @@ int getch() {
   return cinput;
 }
 #elif _MSC_VER  || __WIN32__ || __MS_DOS__
+#include <windows.h>
 #include <conio.h>  // for getch and cbreak support
 #endif /* HAVE_TERMIOS_H */
 
@@ -206,6 +211,31 @@ DECLARE_MODULE_METHOD(io_tty__flush) {
   fflush(stdout);
   fflush(stderr);
   RETURN;
+}
+
+DECLARE_MODULE_METHOD(io_tty__getsize) {
+  ENFORCE_ARG_COUNT(get_size, 1);
+  b_obj_file *file = AS_FILE(args[0]);
+
+  int columns = 0, rows = 0;
+#ifdef _WIN32
+  CONSOLE_SCREEN_BUFFER_INFO csbi;
+  if(GetConsoleScreenBufferInfo(GetStdHandle(file->number), &csbi)) {
+    columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+  }
+#elif defined(IS_UNIX)
+  struct winsize w;
+  if((ioctl(file->number, TIOCGWINSZ, &w)) >= 0) {
+    columns = w.ws_col;
+    rows = w.ws_row;
+  }
+#endif
+
+  b_obj_list *list = (b_obj_list *)GC(new_list(vm));
+  write_list(vm, list, NUMBER_VAL(columns));
+  write_list(vm, list, NUMBER_VAL(rows));
+  RETURN_OBJ(list);
 }
 
 /**
@@ -377,6 +407,7 @@ CREATE_MODULE_LOADER(io) {
   static b_func_reg tty_class_functions[] = {
       {"tcgetattr", false, GET_MODULE_METHOD(io_tty__tcgetattr)},
       {"tcsetattr", false, GET_MODULE_METHOD(io_tty__tcsetattr)},
+      {"getsize",     false, GET_MODULE_METHOD(io_tty__getsize)},
       {"flush",     false, GET_MODULE_METHOD(io_tty__flush)},
       {NULL,        false, NULL},
   };

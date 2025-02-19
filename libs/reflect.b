@@ -362,8 +362,8 @@ def ptr_from_address(address) {
  * @param string? name
  */
 def set_global(value, name) {
-  if !is_function(value) and !is_class(value)
-    raise Exception('function or class expected in argument 1 (value)')
+  if typeof(value) == 'module'
+    raise Exception('modules cannot be set as global')
   if name != nil and !is_string(name)
     raise Exception('string expected in argument 2 (name)')
   _reflect.setglobal(value, name)

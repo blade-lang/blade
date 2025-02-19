@@ -86,16 +86,19 @@ DECLARE_MODULE_METHOD(os_exec) {
     }
 
     if (length == 0) {
+      fflush(fd);
       pclose(fd);
       RETURN_NIL;
     }
 
     output[length - 1] = '\0';
 
+    fflush(fd);
     pclose(fd);
     RETURN_T_STRING(output, length);
   }
 
+  fflush(fd);
   pclose(fd);
   RETURN_STRING("");
 }

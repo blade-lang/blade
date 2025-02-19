@@ -9,6 +9,7 @@
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif /* HAVE_SYS_TIME_H */
+#include <time.h>
 
 #ifndef HAVE_GETTIMEOFDAY
 #include <gettimeofday.h>
