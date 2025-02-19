@@ -3,7 +3,7 @@
 import reflect
 
 def _get_string(value) {
-  return '"' + 
+  var string_data = '"' + 
     value.replace('\\', '\\\\', false). # replace \
       replace('\f', '\\f', false). # replace \f
       replace('\n', '\\n', false). # replace \n
@@ -16,6 +16,20 @@ def _get_string(value) {
       # coming from corrupted sources.
       replace('\0', '\\\\0', false) + # replace NULL characters
     '"' 
+
+  # We want to escape non-ASCII characters to their UTF-8 encoding string
+  # 
+  # While this may increase the size of the final JSON string, it is more
+  # widely supported as not all JSON decoders will decode UTF-8 characters
+  # correctly due to different charset supports across different tools.
+  var unicode_character_matches = string_data.matches('/[^\\x00-\\x7F]/u')
+  if unicode_character_matches {
+    for match in unicode_character_matches[0] {
+      string_data = string_data.replace(match, '\\\\u' + hex(ord(match)).lpad(4, '0'))
+    }
+  }
+
+  return string_data
 }
 
 /**
