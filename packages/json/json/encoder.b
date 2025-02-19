@@ -25,7 +25,7 @@ def _get_string(value) {
   var unicode_character_matches = string_data.matches('/[^\\x00-\\x7F]/u')
   if unicode_character_matches {
     for match in unicode_character_matches[0] {
-      string_data = string_data.replace(match, '\\\\u' + hex(ord(match)).lpad(4, '0'))
+      string_data = string_data.replace(match, '\\u' + hex(ord(match)).lpad(4, '0'))
     }
   }
 
