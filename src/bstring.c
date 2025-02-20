@@ -990,7 +990,7 @@ DECLARE_STRING_METHOD(split) {
 
       // Last substring
       int len = strlen(start);
-      if(len > 0) {
+      if(len > -1) {
         char *res = malloc((len + 1) * sizeof(char));
         memcpy(res, start, len);
         res[len] = '\0';

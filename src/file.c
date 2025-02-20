@@ -56,7 +56,7 @@ char *ttyname(int fd) {
   if ((status) == 0) {                                                         \
     RETURN_TRUE;                                                               \
   } else {                                                                     \
-    FILE_ERROR(File, strerror(errno));                                             \
+    RETURN_ERROR(strerror(errno));                                             \
   }
 
 #define DENY_STD()                                                             \
@@ -161,18 +161,18 @@ DECLARE_FILE_METHOD(read) {
   if (!file->is_std) {
     // file does not exist
     if (!file_exists(file->path->chars)) {
-      FILE_ERROR(NotFound, "no such file or directory");
+      RETURN_ERROR(strerror(ENOENT));
     }
     // file is in write only mode
     else if (strstr(file->mode->chars, "w") != NULL &&
              strstr(file->mode->chars, "+") == NULL) {
-      FILE_ERROR(Unsupported, "cannot read file in write mode");
+      RETURN_ERROR("cannot read file in write mode: %s", strerror(ENOTSUP));
     }
 
     if (!file->is_open) { // open the file if it isn't open
       file_open(file);
     } else if (file->file == NULL) {
-      FILE_ERROR(Read, "could not read file");
+      RETURN_ERROR("could not read file: %s", strerror(EIO));
     }
 
     // Get file size
@@ -192,7 +192,7 @@ DECLARE_FILE_METHOD(read) {
   } else {
     // stdout should not read
     if (fileno(stdout) == file->number || fileno(stderr) == file->number) {
-      FILE_ERROR(Unsupported, "cannot read from output file");
+      RETURN_ERROR("cannot read from output file: %s", strerror(ENOTSUP));
     }
 
     // for non-file objects such as stdin
@@ -210,13 +210,13 @@ DECLARE_FILE_METHOD(read) {
       (char *) ALLOCATE(char, file_size + 1); // +1 for terminator '\0'
 
   if (buffer == NULL && file_size != 0) {
-    FILE_ERROR(Buffer, "not enough memory to read file");
+    RETURN_ERROR(strerror(ENOMEM));
   }
 
   size_t bytes_read = fread(buffer, sizeof(char), file_size, file->file);
 
   if (bytes_read == 0 && file_size != 0 && file_size == file_size_real && !file->is_std) {
-    FILE_ERROR(Read, "could not read file contents");
+    RETURN_ERROR("could not read file contents: %s", strerror(EIO));
   }
 
   if(file->is_std && bytes_read == 0) {
@@ -254,18 +254,18 @@ DECLARE_FILE_METHOD(gets) {
   if (!file->is_std) {
     // file does not exist
     if (!file_exists(file->path->chars)) {
-      FILE_ERROR(NotFound, "no such file or directory");
+      RETURN_ERROR(strerror(ENOENT));
     }
     // file is in write only mode
     else if (strstr(file->mode->chars, "w") != NULL &&
              strstr(file->mode->chars, "+") == NULL) {
-      FILE_ERROR(Unsupported, "cannot read file in write mode");
+      RETURN_ERROR("cannot read file in write mode: %s", strerror(ENOTSUP));
     }
 
     if (file->file == NULL) {
-      FILE_ERROR(Read, "could not read file");
+      RETURN_ERROR("could not read file: %s", strerror(EIO));
     } else if (!file->is_open) { // open the file if it isn't open
-      FILE_ERROR(Read, "file not open");
+      RETURN_ERROR("file not open: %s", strerror(ENOTSUP));
     }
 
     if(length == -1) {
@@ -281,7 +281,7 @@ DECLARE_FILE_METHOD(gets) {
   } else {
     // stdout should not read
     if (fileno(stdout) == file->number || fileno(stderr) == file->number) {
-      FILE_ERROR(Unsupported, "cannot read from output file");
+      RETURN_ERROR("cannot read from output file: %s", strerror(ENOTSUP));
     }
 
     // for non-file objects such as stdin
@@ -295,13 +295,13 @@ DECLARE_FILE_METHOD(gets) {
       (char *) ALLOCATE(char, length + 1); // +1 for terminator '\0'
 
   if (buffer == NULL && length != 0) {
-    FILE_ERROR(Buffer, "not enough memory to read file");
+    RETURN_ERROR(strerror(ENOMEM));
   }
 
   size_t bytes_read = fread(buffer, sizeof(char), length, file->file);
 
   if (bytes_read == 0 && length != 0 && !file->is_std) {
-    FILE_ERROR(Read, "could not read file contents %d, %d");
+    RETURN_ERROR("could not read file contents: %s", strerror(EIO));
   }
 
   if(file->is_std && bytes_read == 0) {
@@ -343,18 +343,18 @@ DECLARE_FILE_METHOD(write) {
   if (!file->is_std) {
     if (strstr(file->mode->chars, "r") != NULL &&
         strstr(file->mode->chars, "+") == NULL) {
-      FILE_ERROR(Unsupported, "cannot write into non-writable file");
+      RETURN_ERROR("cannot write into non-writable file: %s", strerror(ENOTSUP));
     } else if (length == 0) {
-      FILE_ERROR(Write, "cannot write empty buffer to file");
+      RETURN_ERROR("cannot write empty buffer to file: %s", strerror(EIO));
     } else if (file->file == NULL || !file->is_open) { // open the file if it isn't open
       file_open(file);
     } else if (file->file == NULL) {
-      FILE_ERROR(Write, "could not write to file");
+      RETURN_ERROR("could not write to file: %s", strerror(EIO));
     }
   } else {
     // stdin should not write
     if (fileno(stdin) == file->number) {
-      FILE_ERROR(Unsupported, "cannot write to input file");
+      RETURN_ERROR("cannot write to input file: %s", strerror(ENOTSUP));
     }
   }
 
@@ -396,18 +396,18 @@ DECLARE_FILE_METHOD(puts) {
   if (!file->is_std) {
     if (strstr(file->mode->chars, "r") != NULL &&
         strstr(file->mode->chars, "+") == NULL) {
-      FILE_ERROR(Unsupported, "cannot write into non-writable file");
+      RETURN_ERROR("cannot write into non-writable file: %s", strerror(ENOTSUP));
     } else if (length == 0) {
-      FILE_ERROR(Write, "cannot write empty buffer to file");
+      RETURN_ERROR("cannot write empty buffer to file: %s", strerror(EIO));
     } else if (!file->is_open) { // open the file if it isn't open
-      FILE_ERROR(Write, "file not open");
+      RETURN_ERROR("file not open: %s", strerror(EACCES));
     } else if (file->file == NULL) {
-      FILE_ERROR(Write, "could not write to file");
+      RETURN_ERROR("could not write to file: %s", strerror(EIO));
     }
   } else {
     // stdin should not write
     if (fileno(stdin) == file->number) {
-      FILE_ERROR(Unsupported, "cannot write to input file");
+      RETURN_ERROR("cannot write to input file: %s", strerror(ENOTSUP));
     }
   }
 
@@ -435,20 +435,22 @@ DECLARE_FILE_METHOD(flush) {
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
 
   if (!file->is_open) {
-    FILE_ERROR(Unsupported, "I/O operation on closed file");
+    RETURN_ERROR("I/O operation on closed file: %s", strerror(ENOTSUP));
   }
 
+  if(file->file != NULL) {
 #if defined(IS_UNIX)
-  // using fflush on stdin have undesired effect on unix environments
-  if (fileno(stdin) == file->number) {
-    while ((getchar()) != '\n')
-      ;
-  } else {
-    fflush(file->file);
-  }
+    // using fflush on stdin have undesired effect on unix environments
+    if (fileno(stdin) == file->number) {
+      while ((getchar()) != '\n')
+        ;
+    } else {
+      fflush(file->file);
+    }
 #else
-  fflush(file->file);
+    fflush(file->file);
 #endif
+  }
   RETURN;
 }
 
@@ -515,7 +517,7 @@ DECLARE_FILE_METHOD(stats) {
 #endif
       }
     } else {
-      RETURN_ERROR("cannot get stats for non-existing file");
+      RETURN_ERROR(strerror(ENOENT));
     }
   } else {
     // we are dealing with an std
@@ -545,7 +547,7 @@ DECLARE_FILE_METHOD(symlink) {
     b_obj_string *path = AS_STRING(args[0]);
     RETURN_BOOL(symlink(file->path->chars, path->chars) == 0);
   } else {
-    RETURN_ERROR("symlink to file not found");
+    RETURN_ERROR(strerror(ENOENT));
   }
 #endif /* ifdef _WIN32 */
 }
@@ -556,7 +558,7 @@ DECLARE_FILE_METHOD(delete) {
   DENY_STD();
 
   if(file_close(file) != 0) {
-    RETURN_ERROR("error closing file.");
+    RETURN_ERROR(strerror(EBADF));
   }
   RETURN_STATUS(unlink(file->path->chars));
 }
@@ -571,12 +573,12 @@ DECLARE_FILE_METHOD(rename) {
   if (file_exists(file->path->chars)) {
     b_obj_string *new_name = AS_STRING(args[0]);
     if (new_name->length == 0) {
-      FILE_ERROR(Operation, "file name cannot be empty");
+      RETURN_ERROR("file name cannot be empty: %s", strerror(ENOTSUP));
     }
     file_close(file);
     RETURN_STATUS(rename(file->path->chars, new_name->chars));
   } else {
-    RETURN_ERROR("file not found");
+    RETURN_ERROR(strerror(ENOENT));
   }
 }
 
@@ -629,7 +631,7 @@ DECLARE_FILE_METHOD(copy) {
     b_obj_string *name = AS_STRING(args[0]);
 
     if (strstr(file->mode->chars, "r") == NULL) {
-      FILE_ERROR(Unsupported, "file not open for reading");
+      RETURN_ERROR("file not open for reading: %s", strerror(ENOTSUP));
     }
 
     char *mode = "w";
@@ -640,7 +642,7 @@ DECLARE_FILE_METHOD(copy) {
 
     FILE *fp = fopen(name->chars, mode);
     if (fp == NULL) {
-      FILE_ERROR(Permission, "unable to create new file");
+      RETURN_ERROR("unable to create new file: %s", strerror(EPERM));
     }
 
     size_t n_read, n_write;
@@ -655,7 +657,7 @@ DECLARE_FILE_METHOD(copy) {
     } while ((n_read > 0) && (n_read == n_write));
 
     if (n_write > 0) {
-      FILE_ERROR(Operation, "error copying file");
+      RETURN_ERROR("error copying file: %s", strerror(EIO));
     }
 
     fflush(fp);
@@ -664,7 +666,7 @@ DECLARE_FILE_METHOD(copy) {
 
     RETURN_BOOL(n_read == n_write);
   } else {
-    RETURN_ERROR("file not found");
+    RETURN_ERROR(strerror(ENOENT));
   }
 }
 
@@ -706,7 +708,7 @@ DECLARE_FILE_METHOD(chmod) {
     RETURN_STATUS(_chmod(file->path->chars, mode));
 #endif // !_WIN32
   } else {
-    RETURN_ERROR("file not found");
+    RETURN_ERROR(strerror(ENOENT));
   }
 }
 
@@ -756,7 +758,7 @@ DECLARE_FILE_METHOD(set_times) {
       RETURN_STATUS(status);
     }
   } else {
-    FILE_ERROR(Access, "file not found");
+    RETURN_ERROR(strerror(ENOENT));
   }
 #else
   RETURN_ERROR("not available: OS does not support utime");
@@ -773,7 +775,9 @@ DECLARE_FILE_METHOD(seek) {
 
   long position = (long) AS_NUMBER(args[0]);
   int seek_type = AS_NUMBER(args[1]);
-  RETURN_STATUS(fseek(file->file, position, seek_type));
+  RETURN_STATUS(
+    file->file != NULL ? fseek(file->file, position, seek_type) : ENOENT
+  );
 }
 
 DECLARE_FILE_METHOD(tell) {
