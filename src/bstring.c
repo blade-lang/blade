@@ -1086,7 +1086,7 @@ DECLARE_STRING_METHOD(split) {
         PCRE2_SPTR substring_start = subject + o_vector[2 * i];
         PCRE2_SIZE subject_end = o_vector[2 * i];
         
-        if(substring_length == 0 || subject_end == 0 || total_length == 0) {
+        if(substring_length == 0 /* || subject_end == 0 */ || total_length == 0) {
           broke_out_of_loop = true;
           break;
         }
