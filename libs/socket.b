@@ -706,6 +706,7 @@ class Socket {
       self.is_listening = false
       self.is_bound = false
     }
+
     return result == 0
   }
   
@@ -868,6 +869,7 @@ class Socket {
     if result {
       self.is_listening = true
     }
+
     return result == 0
   }
 
@@ -902,6 +904,7 @@ class Socket {
         return socket
       }
     }
+
     raise SocketException('socket not bound/listening')
   }
 
@@ -960,6 +963,7 @@ class Socket {
     if result {
       self.shutdown_reason = how
     }
+    
     return result == 0
   }
 
