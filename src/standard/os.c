@@ -65,7 +65,7 @@ DECLARE_MODULE_METHOD(os_exec) {
   size_t length = 0;
 
   char *output = ALLOCATE(char, 1);
-  memset(output, 0, sizeof(output));
+  memset(output, 0, sizeof(*output));
 
   if (output != NULL) {
     while ((n_read = fread(buffer, sizeof(*buffer), sizeof(buffer), fd)) != 0) {
