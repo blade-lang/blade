@@ -19,7 +19,8 @@ install dependencies on macOS.
 ```sh
 sudo xcode-select    # prompt the user to install Xcode CLT if it is not already installed
 sudo brew update
-sudo brew install openssl cmake
+brew uninstall pkg-config --ignore-dependencies
+brew install pkg-config gd libffi
 ```
 
 Proceed to the [Configure](#configure) section to configure your CMake build.
@@ -32,7 +33,7 @@ Install the required dependencies using the `apt` package manager.
 
 ```sh
 sudo apt update
-sudo apt install build-essential libssl-dev cmake
+sudo apt install build-essential curl libpthread-stubs0-dev libcurl4-openssl-dev libgd-dev libavif-dev libffi-dev
 ```
 
 Proceed to the [Configure](#configure) section to configure your CMake build.
@@ -43,7 +44,7 @@ Install the required dependencies using the `pacman` package manager.
 
 ```sh
 sudo pacman -Sy
-sudo pacman -S --needed --noconfirm base-devel openssl cmake
+sudo pacman -S --needed --noconfirm base-devel openssl cmake pthread gd avif ffi curl
 ```
 
 Proceed to the [Configure](#configure) section to configure your CMake build.
@@ -55,7 +56,7 @@ Install the required dependencies using the `yum` package manager.
 ```sh
 sudo yum check-update
 sudo yum groupinstall 'Development Tools'
-sudo yum install -y openssl-devel cmake
+sudo yum install -y openssl-devel cmake glibc-devel gd-devel libffi-devel libavif curl libcurl-devel
 ```
 
 Proceed to the [Configure](#configure) section to configure your CMake build.
@@ -82,14 +83,14 @@ via the given links. Add WinLibs or TDM-GCC `bin` directory to your environment 
 Next, install [vcpkg](https://vcpkg.io/en/index.html) following the instruction [here](https://vcpkg.io/en/getting-started.html)
 and add `vcpkg` to your environment. After this, run the commands below to install the required dependencies:
 
-```bat
-vcpkg install curl:x64-windows libffi:x64-windows openssl:x64-windows
+```shell
+vcpkg install pkgconf pthreads:x64-windows curl:x64-windows libffi:x64-windows openssl:x64-windows libgd:x64-windows
 ```
 
 If you are on an `x86` system, you can also install the x86 versions of the dependencies using the command:
 
 ```shell
-vcpkg install curl:x86-windows libffi:x86-windows openssl:x86-windows
+vcpkg install pkgconf pthreads:x86-windows curl:x86-windows libffi:x86-windows openssl:x86-windows libgd:x86-windows
 ```
 
 ## Configure
@@ -124,7 +125,7 @@ cmake -B build -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl
 If you are configuring on Windows, you'll need to specify the `make` program as well as the `vcpkg` toolchain file.
 
 ```shell
-cmake -B build -DCMAKE_MAKE_PROGRAM=mingw32-make -G "Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="${PATH_TO_VCPKG}/scripts/buildsystems/vcpkg.cmake"
+cmake -B build -DCMAKE_MAKE_PROGRAM=mingw32-make -G "Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="${PATH_TO_VCPKG}/scripts/buildsystems/vcpkg.cmake" -DOPENSSL_ROOT_DIR="${PATH_TO_VCPKG}/installed/x64-windows-static"
 ```
 
 On Windows, it is also mostly common to use the `ninja` build system when available. For this, you'll only need to replace the `mingw32-make` with `ninja` in the command.

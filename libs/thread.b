@@ -164,7 +164,7 @@ var _MIN_STACK_SIZE = 16384 # 16kb
 var _DEFAULT_STACK_SIZE = 65536 # 64kb
 var _main_thread_id = _thread.get_id()
 
-def _is_not_main_thread(id) {id
+def _is_not_main_thread(id) {
   return id != _main_thread_id
 }
 

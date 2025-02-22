@@ -7,8 +7,6 @@
 [![Build Status](https://github.com/blade-lang/blade/actions/workflows/ci.yml/badge.svg)](https://github.com/blade-lang/blade/actions)
 [![Gitter](https://badges.gitter.im/blade-lang/community.svg)](https://gitter.im/blade-lang/community)
 [![License](https://img.shields.io/badge/License-BSD_2--Clause-orange.svg)](https://github.com/blade-lang/blade/blob/master/LICENSE)
-
-[//]: # ([![Coverage Status]&#40;https://coveralls.io/repos/github/blade-lang/blade/badge.svg?branch=main&#41;]&#40;https://coveralls.io/github/blade-lang/blade?branch=main&#41;)
 [![Version](https://img.shields.io/badge/version-0.0.86-green)](https://github.com/blade-lang/blade)
 
 Blade is a modern general-purpose programming language focused on enterprise Web, IoT, and secure application development. Blade offers a comprehensive set of tools and libraries out of the box leading to reduced reliance on third-party packages. 
@@ -19,7 +17,7 @@ Blade comes equipped with an integrated package management system, simplifying t
 
 The following code implements a simple backend API that runs on port 3000:
 
-```js
+```blade
 import http
 
 var server = http.server(3000)
