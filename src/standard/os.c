@@ -78,7 +78,7 @@ DECLARE_MODULE_METHOD(os_exec) {
       }
 
       memcpy(output + current_length, buffer, n_read - 1);
-      output[length] = 0;
+      output[length - 1] = 0;
     }
 
     if (length == 0) {

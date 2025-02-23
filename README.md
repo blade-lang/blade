@@ -9,6 +9,8 @@
 [![License](https://img.shields.io/badge/License-BSD_2--Clause-orange.svg)](https://github.com/blade-lang/blade/blob/master/LICENSE)
 [![Version](https://img.shields.io/badge/version-0.0.86-green)](https://github.com/blade-lang/blade)
 
+#### [Try Blade Online](https://play.bladelang.org)
+
 Blade is a modern general-purpose programming language focused on enterprise Web, IoT, and secure application development. Blade offers a comprehensive set of tools and libraries out of the box leading to reduced reliance on third-party packages. 
 
 Blade comes equipped with an integrated package management system, simplifying the management of both internal and external dependencies and a self-hostable repository server making it ideal for private organizational and personal use. Its intuitive syntax and gentle learning curve ensure an accessible experience for developers of all skill levels. Leveraging the best features from JavaScript, Python, Ruby, and Dart, Blade provides a familiar and robust ecosystem that enables developers to harness the strengths of these languages effortlessly.

@@ -462,7 +462,8 @@ class HttpServer {
     if !self.socket.is_listening {
       self.socket.set_option(so.SO_REUSEADDR, is_bool(self.reuse_address) ? self.reuse_address : true)
       self.socket.bind(self.port, self.host)
-      self.socket.listen()
+      
+      assert self.socket.listen(), 'socket failed to listen'
 
       self._is_listening = true
       var client
@@ -487,18 +488,20 @@ class HttpServer {
           self._process_received(client.receive(), client)
         } as e
 
-        # call the disconnect listeners.
-        self._disconnect_listeners.each(@(fn) {
-          fn(client)
-        })
-
-        client.close()
-
-        if e {
-          # call the error listeners.
-          self._error_listeners.each(@(fn) {
-            fn(e, client)
+        if client {
+          # call the disconnect listeners.
+          self._disconnect_listeners.each(@(fn) {
+            fn(client)
           })
+
+          client.close()
+
+          if e {
+            # call the error listeners.
+            self._error_listeners.each(@(fn) {
+              fn(e, client)
+            })
+          }
         }
       }
     }
