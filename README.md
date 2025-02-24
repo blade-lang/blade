@@ -82,3 +82,8 @@ We need your help to make Blade great! The Blade community is as friendly and we
 ## License
 
 Blade is licensed under the [2-clause BSDL License](https://github.com/blade-lang/blade/blob/master/LICENSE).
+
+## Sponsors
+
+- [Jetbrains](https://www.jetbrains.com/)
+- [DigitalOcean](https://www.digitalocean.com/)
