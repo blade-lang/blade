@@ -1728,8 +1728,10 @@ static void iter_statement(b_parser *p) {
     int body_jump = emit_jump(p, OP_JUMP);
 
     int increment_start = current_blob(p)->count;
-    expression(p);
-    ignore_whitespace(p);
+    do {
+      expression(p);
+      ignore_whitespace(p);
+    } while(match(p, COMMA_TOKEN));
     emit_byte(p, OP_POP);
 
     emit_loop(p, p->innermost_loop_start);
