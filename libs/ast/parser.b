@@ -810,8 +810,12 @@ class Parser {
     self._ignore_newline()
 
     var iterator
-    if !self._check(TokenType.LBRACE) iterator = self._expr_stmt(true)
-    self._ignore_newline()
+    if !self._check(TokenType.LBRACE) {
+      do {
+        iterator = self._expr_stmt(true)
+        self._ignore_newline()
+      } while self._check(TokenType.COMMA)
+    }
 
     var body = self._statement()
     return IterStmt(decl, condition, iterator, body)
