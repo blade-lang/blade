@@ -49,6 +49,12 @@ var groupBases = [
   24300000, 28629151, 33554432, 39135393, 45435424, 52521875, 60466176,
 ]
 
+def _verify(value, message) {
+  if !value {
+    raise Exception(message or 'Assertion failed')
+  }
+}
+
 def imul(x, y) {
   return (x | 0) * (y | 0) | 0
 }
@@ -840,7 +846,11 @@ def jumboMulTo(_this, num, out) {
 
 
 /**
- * BigInt class
+ * BigInt class represent integer values which are too high or too low 
+ * to be represented by the number primitive.
+ * 
+ * @printable
+ * @numeric
  */
 class BigInt {
 
@@ -2813,8 +2823,92 @@ class BigInt {
   eq(num) {
     return self.cmp(num) == 0
   }
+
+  @to_string() {
+    return '<BigInt v=${self.toString(10)}>'
+  }
+
+  @to_int() {
+    return self.toNumber()
+  }
+
+  @to_json() {
+    return self.toJSON()
+  }
+
+  @to_list() {
+    return self.toArray()
+  }
+
+  def - {
+    if __arg__ == nil { # -x
+      return self.neg()
+    } else { # x - y
+      return self.sub(__arg__)
+    }
+  }
+
+  def + {
+    return self.add(__arg__)
+  }
+
+  def * {
+    return self.mul(__arg__)
+  }
+
+  def / {
+    return self.div(__arg__)
+  }
+
+  def ** {
+    return self.pow(__arg__)
+  }
+
+  def % {
+    return self.divmod(__arg__).mod
+  }
+
+  def // {
+    return self.divmod(__arg__).div
+  }
+
+  def | {
+    return self.or_(__arg__)
+  }
+
+  def & {
+    return self.and_(__arg__)
+  }
+
+  def ^ {
+    return self.xor(__arg__)
+  }
+
+  def << {
+    return self.shln(__arg__.toNumber())
+  }
+
+  def >> {
+    return self.shrn(__arg__.toNumber())
+  }
+
+  def ~ {
+    return self.notn(__arg__.toNumber())
+  }
+
+  def >>> {
+    raise Exception('BigInt does not support >>> operations')
+  }
 }
 
+
+/**
+ * @param number
+ * @param base
+ * @param endian
+ * @returns [[bigint.BigInt]]
+ * @exported
+ */
 def bigint(number, base, endian) {
   if BigInt.isBigInt(number) {
     return number
@@ -2822,3 +2916,9 @@ def bigint(number, base, endian) {
 
   return BigInt(number, base, endian)
 }
+
+
+/**
+ * @type [[bigint.BigInt]]
+ */
+var zero = BigInt(0)
