@@ -2639,6 +2639,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
     }
   }
 
+#undef TRY_STRING_OVERRIDE
 #undef READ_BYTE
 #undef READ_SHORT
 #undef READ_CONSTANT
