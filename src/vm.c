@@ -1506,16 +1506,13 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
   break
 
 #define CLASS_BINARY_OPERATION(op) \
-  if(IS_INSTANCE(__a) && IS_INSTANCE(__b)) {                               \
+  if(IS_INSTANCE(__a)) {                               \
     b_obj_instance *a_instance = AS_INSTANCE(__a); \
-    b_obj_instance *b_instance = AS_INSTANCE(__b);                         \
-    if(is_instance_of(b_instance->klass, a_instance->klass)) { \
-      if(!invoke_operator(vm, copy_string(vm, (op), strlen((op))), 1, true)) { \
-        EXIT_VM();                                                       \
-      }                                                                    \
-      vm->current_frame = &vm->frames[vm->frame_count - 1];\
-      break; \
-    }\
+    if(!invoke_operator(vm, copy_string(vm, (op), strlen((op))), 1, true)) { \
+      EXIT_VM();                                                       \
+    }                                                                    \
+    vm->current_frame = &vm->frames[vm->frame_count - 1];\
+    break; \
   } \
   UNSUPPORTED_OPERAND(op)
 

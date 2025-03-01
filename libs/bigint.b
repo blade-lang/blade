@@ -850,6 +850,7 @@ def jumboMulTo(_this, num, out) {
  * to be represented by the number primitive.
  * 
  * @printable
+ * @serializable
  * @numeric
  */
 class BigInt {
@@ -894,11 +895,19 @@ class BigInt {
   }
 
   static max(left, right) {
+    if !BigInt.isBigInt(left) or !BigInt.isBigInt(right) {
+      raise Exception('BigInt.max expects both numbers as BigInt')
+    }
+
     if left.cmp(right) > 0 return left
     return right
   }
 
   static min(left, right) {
+    if !BigInt.isBigInt(left) or !BigInt.isBigInt(right) {
+      raise Exception('BigInt.min expects both numbers as BigInt')
+    }
+
     if left.cmp(right) < 0 return left
     return right
   }
@@ -932,7 +941,7 @@ class BigInt {
       } else {
         self._parseBase(number, base, start)
         if endian == 'le' {
-          self._initArray(self.toArray(), base, endian)
+          self._initArray(self.toList(), base, endian)
         }
       }
     }
@@ -966,7 +975,7 @@ class BigInt {
     if endian != 'le' return
 
     # Reverse the bytes
-    self._initArray(self.toArray(), base, endian)
+    self._initArray(self.toList(), base, endian)
   }
 
   _initArray(number, base, endian) {
@@ -1126,7 +1135,12 @@ class BigInt {
     move(dest, self)
   }
 
-  clone () {
+  /**
+   * Clones the BigInt into a new instance
+   * 
+   * @returns [[bigint.BigInt]]
+   */
+  clone() {
     var r = BigInt(nil)
     self.copy(r)
     return r
@@ -1162,9 +1176,25 @@ class BigInt {
     return self
   }
 
+  /**
+   * Convert the number to a string in the given base padded with 
+   * the given number of zeroes. If the base is omitted or nil, a 
+   * default value of `10` will be set and if the padding is 
+   * omitted or nil, it will be ignored altogether.
+   * 
+   * @param {number} base: Default = `10`
+   * @param {number} padding: Default = `1`
+   * @returns string
+   */
   toString(base, padding) {
     base = base or 10
     padding = padding ? (padding | 0 or 1) : 1
+
+    if base != 'hex' and (!is_number(base) or !((base | 0) and base >= 2 and base <= 36)) {
+      raise Exception("base should be between 2 and 36 or the string 'hex'")
+    } else if !is_number(padding) {
+      raise Exception('padding must be a number')
+    }
 
     var out
     if base == 16 or base == 'hex' {
@@ -1205,43 +1235,45 @@ class BigInt {
       return out
     }
 
-    if base == (base | 0) and base >= 2 and base <= 36 {
-      # var groupSize = (self.wordSize * math.LOG_2_E / math.log(base)) // 1
-      var groupSize = groupSizes[base]
-      # var groupBase = base ** groupSize
-      var groupBase = groupBases[base]
-      out = ''
-      var c = self.clone()
-      c.negative = 0
-      while !c.isZero() {
-        var r = numberToBase(c.modrn(groupBase), base)
-        c = c.idivn(groupBase)
+    # var groupSize = (self.wordSize * math.LOG_2_E / math.log(base)) // 1
+    var groupSize = groupSizes[base]
+    # var groupBase = base ** groupSize
+    var groupBase = groupBases[base]
+    out = ''
+    var c = self.clone()
+    c.negative = 0
+    while !c.isZero() {
+      var r = numberToBase(c.modrn(groupBase), base)
+      c = c.idivn(groupBase)
 
-        if !c.isZero() {
-          out = zeros[groupSize - r.length()] + r + out
-        } else {
-          out = r + out
-        }
+      if !c.isZero() {
+        out = zeros[groupSize - r.length()] + r + out
+      } else {
+        out = r + out
       }
-
-      if (self.isZero()) {
-        out = '0' + out
-      }
-
-      while out.length() % padding != 0 {
-        out = '0' + out
-      }
-
-      if self.negative != 0 {
-        out = '-' + out
-      }
-
-      return out
     }
 
-    assert false, 'Base should be between 2 and 36'
+    if (self.isZero()) {
+      out = '0' + out
+    }
+
+    while out.length() % padding != 0 {
+      out = '0' + out
+    }
+
+    if self.negative != 0 {
+      out = '-' + out
+    }
+
+    return out
   }
 
+  /**
+   * Converts the BigInt to a standard Blade number which has a 
+   * precision of up to limited to 53 bits.
+   * 
+   * @return number
+   */
   toNumber() {
     var ret = self.words[0]
     if self.length == 2 {
@@ -1256,15 +1288,23 @@ class BigInt {
     return (self.negative != 0) ? -ret : ret
   }
 
+  /**
+   * Converts to number to a Json compatible hex string.
+   * 
+   * @returns string
+   */
   toJSON() {
     return self.toString(16, 2)
   }
 
-  toArray(endian, length) {
-    return self.toArrayLike(endian, length)
-  }
-
-  toArrayLike(endian, length) {
+  /**
+   * Converts the number to a byte list and optionally zero pad 
+   * to length; throwing if already exceeding.
+   * 
+   * @param {string} endian: One of `le` or `be`
+   * @param {number} length
+   */
+  toList(endian, length) {
     self.strip()
 
     var byteLength = self.byteLength()
@@ -1275,15 +1315,15 @@ class BigInt {
 
     var res = [0] * reqLength
     if endian == 'le' {
-      self._toArrayLikeLE(res, byteLength)
+      self._toListLikeLE(res, byteLength)
     } else {
-      self._toArrayLikeBE(res, byteLength)
+      self._toListLikeBE(res, byteLength)
     }
 
     return res
   }
 
-  _toArrayLikeLE(res, byteLength) {
+  _toListLikeLE(res, byteLength) {
     var position = 0
     var carry = 0
 
@@ -1320,7 +1360,7 @@ class BigInt {
     }
   }
 
-  _toArrayLikeBE(res, byteLength) {
+  _toListLikeBE(res, byteLength) {
     var position = res.length() - 1
     var carry = 0
 
@@ -1416,12 +1456,23 @@ class BigInt {
     return r
   }
 
+  /**
+   * Returns the number of bits occupied by the bigint
+   * 
+   * @returns number
+   */
   bitLength () {
     var w = self.words[self.length - 1]
     var hi = self._countBits(w)
     return (self.length - 1) * 26 + hi
   }
 
+  /**
+   * Returns number of less-significant consequent zero bits 
+   * (example: 1010000 has 4 zero bits)
+   * 
+   * @returns number
+   */
   zeroBits() {
     if self.isZero() return 0
 
@@ -1435,10 +1486,18 @@ class BigInt {
     return r
   }
 
+  /**
+   * Returns the number of bytes occupied by the bigint
+   * 
+   * @returns number
+   */
   byteLength() {
     return math.ceil(self.bitLength() / 8)
   }
 
+  /**
+   * Converts the number to two's complement representation of the given bit _width_.
+   */
   toTwos(width) {
     if self.negative != 0 {
       return self.abs().inotn(width).iaddn(1)
@@ -1447,6 +1506,11 @@ class BigInt {
     return self.clone()
   }
 
+  /**
+   * Convert from two's complement representation in the give _width_ to a BigInt number.
+   * 
+   * @returns [[bigint.BigInt]]
+   */
   fromTwos(width) {
     if self.testn(width - 1) {
       return self.notn(width).iaddn(1).ineg()
@@ -1455,10 +1519,20 @@ class BigInt {
     return self.clone()
   }
 
+  /**
+   * Returns `true` if the number is negative, returns `false` otherwise.
+   * 
+   * @returns bool
+   */
   isNeg() {
     return self.negative != 0
   }
 
+  /**
+   * Negates the sign on the number.
+   * 
+   * @returns [[bigint.BigInt]]
+   */
   neg() {
     return self.clone().ineg()
   }
@@ -2837,63 +2911,165 @@ class BigInt {
   }
 
   @to_list() {
-    return self.toArray()
+    return self.toList()
+  }
+
+  @to_dict() {
+    return self.toList().to_dict()
+  }
+
+  @to_abs() {
+    return self.abs()
+  }
+
+  @to_number() {
+    return self.toNumber()
+  }
+
+  @to_int() {
+    return to_int(self.toNumber())
+  }
+
+  @to_bin() {
+    return self.toString(2)
+  }
+
+  @to_oct() {
+    return self.toString(8)
+  }
+
+  @to_hex() {
+    return self.toString(16)
+  }
+
+  @to_bool() {
+    return self.gten(-1)
   }
 
   def - {
     if __arg__ == nil { # -x
       return self.neg()
-    } else { # x - y
+    } else if instance_of(__arg__, BigInt) { # xn - yn
       return self.sub(__arg__)
+    } else if is_number(__arg__) {
+      return self.subn(__arg__)
     }
+
+    raise Exception('BigInt operation - not permitted on ${typeof(__arg__)}')
   }
 
   def + {
-    return self.add(__arg__)
+    if instance_of(__arg__, BigInt) {
+      return self.add(__arg__)
+    } else if is_number(__arg__) {
+      return self.addn(__arg__)
+    }
+
+    raise Exception('BigInt operation + not permitted on ${typeof(__arg__)}')
   }
 
   def * {
-    return self.mul(__arg__)
+    if instance_of(__arg__, BigInt) {
+      return self.mul(__arg__)
+    } else if is_number(__arg__) {
+      return self.muln(__arg__)
+    }
+
+    raise Exception('BigInt operation * not permitted on ${typeof(__arg__)}')
   }
 
   def / {
-    return self.div(__arg__)
+    if instance_of(__arg__, BigInt) {
+      return self.div(__arg__)
+    } else if is_number(__arg__) {
+      return self.divn(__arg__)
+    }
+
+    raise Exception('BigInt operation / not permitted on ${typeof(__arg__)}')
   }
 
   def ** {
-    return self.pow(__arg__)
+    if instance_of(__arg__, BigInt) {
+      return self.pow(__arg__)
+    } else if is_number(__arg__) {
+      return self.pow(bigint(__arg__))
+    }
+
+    raise Exception('BigInt operation ** not permitted on ${typeof(__arg__)}')
   }
 
   def % {
-    return self.divmod(__arg__).mod
+    if instance_of(__arg__, BigInt) {
+      return self.mod(__arg__)
+    } else if is_number(__arg__) {
+      return BigInt(self.modrn(__arg__))
+    }
+
+    raise Exception('BigInt operation % not permitted on ${typeof(__arg__)}')
   }
 
   def // {
-    return self.divmod(__arg__).div
+    if instance_of(__arg__, BigInt) {
+      return self.divmod(__arg__).div
+    } else if is_number(__arg__) {
+      return self.divmod(bigint(__arg__)).div
+    }
+
+    raise Exception('BigInt operation // not permitted on ${typeof(__arg__)}')
   }
 
   def | {
-    return self.or_(__arg__)
+    if instance_of(__arg__, BigInt) {
+      return self.or_(__arg__)
+    } else if is_number(__arg__) {
+      return self.or_(bigint(__arg__))
+    }
+
+    raise Exception('BigInt operation | not permitted on ${typeof(__arg__)}')
   }
 
   def & {
-    return self.and_(__arg__)
+    if instance_of(__arg__, BigInt) {
+      return self.and_(__arg__)
+    } else if is_number(__arg__) {
+      return self.andln(__arg__)
+    }
+
+    raise Exception('BigInt operation & not permitted on ${typeof(__arg__)}')
   }
 
   def ^ {
-    return self.xor(__arg__)
+    if instance_of(__arg__, BigInt) {
+      return self.xor(__arg__)
+    } else if is_number(__arg__) {
+      return self.xor(bigint(__arg__))
+    }
+
+    raise Exception('BigInt operation ^ not permitted on ${typeof(__arg__)}')
   }
 
   def << {
-    return self.shln(__arg__.toNumber())
+    if instance_of(__arg__, BigInt) {
+      return self.shln(__arg__.toNumber())
+    } else if is_number(__arg__) {
+      return self.shln(__arg__)
+    }
+
+    raise Exception('BigInt operation << not permitted on ${typeof(__arg__)}')
   }
 
   def >> {
-    return self.shrn(__arg__.toNumber())
+    if instance_of(__arg__, BigInt) {
+      return self.shrn(__arg__.toNumber())
+    } else if is_number(__arg__) {
+      return self.shrn(__arg__)
+    }
+
+    raise Exception('BigInt operation >> not permitted on ${typeof(__arg__)}')
   }
 
   def ~ {
-    return self.notn(__arg__.toNumber())
+    return self.neg().isubn(1)
   }
 
   def >>> {
