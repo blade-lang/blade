@@ -108,12 +108,30 @@ static inline void add_module(b_vm *vm, b_obj_module *module) {
     vm->current_frame->closure->function->module->file
   ));
 
+  
   table_set(vm, &vm->modules, STRING_VAL(module->file), OBJ_VAL(module));
   if (vm->frame_count == 0) {
     table_set(vm, &vm->globals, STRING_VAL(module->name), OBJ_VAL(module));
   } else {
     table_set(vm, &vm->current_frame->closure->function->module->values,
               STRING_VAL(module->name), OBJ_VAL(module));
+  }
+}
+
+static inline void add_known_module(b_vm *vm, b_obj_module *module, char *name) {
+  cond_dbg(vm->current_frame, printf("Adding known module %s from %s to %s in %s as %s\n", 
+    module->name, 
+    module->file, 
+    vm->current_frame->closure->function->module->name, 
+    vm->current_frame->closure->function->module->file,
+    name
+  ));
+
+  if (vm->frame_count == 0) {
+    table_set(vm, &vm->globals, STRING_VAL(name), OBJ_VAL(module));
+  } else {
+    table_set(vm, &vm->current_frame->closure->function->module->values,
+              STRING_VAL(name), OBJ_VAL(module));
   }
 }
 

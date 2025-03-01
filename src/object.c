@@ -372,7 +372,6 @@ void print_object(b_value value, bool fix_string) {
       break;
     }
     case OBJ_INSTANCE: {
-      // @TODO: support the to_string() override
       b_obj_instance *instance = AS_INSTANCE(value);
       printf("<class %s instance at %p>", instance->klass->name->chars,
              (void *) instance);

@@ -2,7 +2,7 @@ import math
 
 var _baseNumbers = '0123456789abcdefghijklmnopqrstuvwxyz'
 
-var zeros = [
+var _zeros = [
   '',
   '0',
   '00',
@@ -31,7 +31,7 @@ var zeros = [
   '0000000000000000000000000',
 ]
 
-var groupSizes = [
+var _groupSizes = [
   0, 0,
   25, 16, 12, 11, 10, 9, 8,
   8, 7, 7, 7, 7, 6, 6,
@@ -40,7 +40,7 @@ var groupSizes = [
   5, 5, 5, 5, 5, 5, 5,
 ]
 
-var groupBases = [
+var _groupBases = [
   0, 0,
   33554432, 43046721, 16777216, 48828125, 60466176, 40353607, 16777216,
   43046721, 10000000, 19487171, 35831808, 62748517, 7529536, 11390625,
@@ -55,11 +55,11 @@ def _verify(value, message) {
   }
 }
 
-def imul(x, y) {
+def _imul(x, y) {
   return (x | 0) * (y | 0) | 0
 }
 
-def numberToBase(n, b) {
+def _numberToBase(n, b) {
   var isNeg = n < 0
   if isNeg {
     n = -n
@@ -75,7 +75,7 @@ def numberToBase(n, b) {
   return (isNeg? '-' : '') + ''.join(digits.reverse())
 }
 
-def parseHex4Bits(string, index) {
+def _parseHex4Bits(string, index) {
   var c = ord(string[index])
 
   # '0' - '9'
@@ -92,16 +92,16 @@ def parseHex4Bits(string, index) {
   }
 }
 
-def parseHexByte(string, lowerBound, index) {
-  var r = parseHex4Bits(string, index)
+def _parseHexByte(string, lowerBound, index) {
+  var r = _parseHex4Bits(string, index)
   if index - 1 >= lowerBound {
-    r |= parseHex4Bits(string, index - 1) << 4
+    r |= _parseHex4Bits(string, index - 1) << 4
   }
 
   return r
 }
 
-def parseBase(str, start, end, mul) {
+def _parseBase(str, start, end, mul) {
   var r = 0
   var b = 0
 
@@ -131,14 +131,14 @@ def parseBase(str, start, end, mul) {
   return r
 }
 
-def move(dest, src) {
+def _move(dest, src) {
   dest.words = src.words
   dest.length = src.length
   dest.negative = src.negative
   dest.red = src.red
 }
 
-def toBitArray(num) {
+def _toBitArray(num) {
   var w = [0] * num.bitLength()
 
   iter var bit = 0; bit < w.length(); bit++ {
@@ -151,7 +151,7 @@ def toBitArray(num) {
   return w
 }
 
-def smallMulTo(_self, num, out) {
+def _smallMulTo(_self, num, out) {
   out.negative = num.negative ^ _self.negative
   var len = (_self.length + num.length) | 0
   out.length = len
@@ -199,7 +199,7 @@ def smallMulTo(_self, num, out) {
   return out.strip()
 }
 
-def comb10MulTo(_this, num, out) {
+def _comb10MulTo(_this, num, out) {
   var a = _this.words
   var b = num.words
   var o = out.words
@@ -271,496 +271,496 @@ def comb10MulTo(_this, num, out) {
   out.negative = _this.negative ^ num.negative
   out.length = 19
   /* k = 0 */
-  lo = imul(al0, bl0)
-  mid = imul(al0, bh0)
-  mid = (mid + imul(ah0, bl0)) | 0
-  hi = imul(ah0, bh0)
+  lo = _imul(al0, bl0)
+  mid = _imul(al0, bh0)
+  mid = (mid + _imul(ah0, bl0)) | 0
+  hi = _imul(ah0, bh0)
 
   var w0 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w0 >>> 26)) | 0
   w0 &= 0x3ffffff
   /* k = 1 */
-  lo = imul(al1, bl0)
-  mid = imul(al1, bh0)
-  mid = (mid + imul(ah1, bl0)) | 0
-  hi = imul(ah1, bh0)
-  lo = (lo + imul(al0, bl1)) | 0
-  mid = (mid + imul(al0, bh1)) | 0
-  mid = (mid + imul(ah0, bl1)) | 0
-  hi = (hi + imul(ah0, bh1)) | 0
+  lo = _imul(al1, bl0)
+  mid = _imul(al1, bh0)
+  mid = (mid + _imul(ah1, bl0)) | 0
+  hi = _imul(ah1, bh0)
+  lo = (lo + _imul(al0, bl1)) | 0
+  mid = (mid + _imul(al0, bh1)) | 0
+  mid = (mid + _imul(ah0, bl1)) | 0
+  hi = (hi + _imul(ah0, bh1)) | 0
 
   var w1 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w1 >>> 26)) | 0
   w1 &= 0x3ffffff
   /* k = 2 */
-  lo = imul(al2, bl0)
-  mid = imul(al2, bh0)
-  mid = (mid + imul(ah2, bl0)) | 0
-  hi = imul(ah2, bh0)
-  lo = (lo + imul(al1, bl1)) | 0
-  mid = (mid + imul(al1, bh1)) | 0
-  mid = (mid + imul(ah1, bl1)) | 0
-  hi = (hi + imul(ah1, bh1)) | 0
-  lo = (lo + imul(al0, bl2)) | 0
-  mid = (mid + imul(al0, bh2)) | 0
-  mid = (mid + imul(ah0, bl2)) | 0
-  hi = (hi + imul(ah0, bh2)) | 0
+  lo = _imul(al2, bl0)
+  mid = _imul(al2, bh0)
+  mid = (mid + _imul(ah2, bl0)) | 0
+  hi = _imul(ah2, bh0)
+  lo = (lo + _imul(al1, bl1)) | 0
+  mid = (mid + _imul(al1, bh1)) | 0
+  mid = (mid + _imul(ah1, bl1)) | 0
+  hi = (hi + _imul(ah1, bh1)) | 0
+  lo = (lo + _imul(al0, bl2)) | 0
+  mid = (mid + _imul(al0, bh2)) | 0
+  mid = (mid + _imul(ah0, bl2)) | 0
+  hi = (hi + _imul(ah0, bh2)) | 0
 
   var w2 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w2 >>> 26)) | 0
   w2 &= 0x3ffffff
   /* k = 3 */
-  lo = imul(al3, bl0)
-  mid = imul(al3, bh0)
-  mid = (mid + imul(ah3, bl0)) | 0
-  hi = imul(ah3, bh0)
-  lo = (lo + imul(al2, bl1)) | 0
-  mid = (mid + imul(al2, bh1)) | 0
-  mid = (mid + imul(ah2, bl1)) | 0
-  hi = (hi + imul(ah2, bh1)) | 0
-  lo = (lo + imul(al1, bl2)) | 0
-  mid = (mid + imul(al1, bh2)) | 0
-  mid = (mid + imul(ah1, bl2)) | 0
-  hi = (hi + imul(ah1, bh2)) | 0
-  lo = (lo + imul(al0, bl3)) | 0
-  mid = (mid + imul(al0, bh3)) | 0
-  mid = (mid + imul(ah0, bl3)) | 0
-  hi = (hi + imul(ah0, bh3)) | 0
+  lo = _imul(al3, bl0)
+  mid = _imul(al3, bh0)
+  mid = (mid + _imul(ah3, bl0)) | 0
+  hi = _imul(ah3, bh0)
+  lo = (lo + _imul(al2, bl1)) | 0
+  mid = (mid + _imul(al2, bh1)) | 0
+  mid = (mid + _imul(ah2, bl1)) | 0
+  hi = (hi + _imul(ah2, bh1)) | 0
+  lo = (lo + _imul(al1, bl2)) | 0
+  mid = (mid + _imul(al1, bh2)) | 0
+  mid = (mid + _imul(ah1, bl2)) | 0
+  hi = (hi + _imul(ah1, bh2)) | 0
+  lo = (lo + _imul(al0, bl3)) | 0
+  mid = (mid + _imul(al0, bh3)) | 0
+  mid = (mid + _imul(ah0, bl3)) | 0
+  hi = (hi + _imul(ah0, bh3)) | 0
 
   var w3 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w3 >>> 26)) | 0
   w3 &= 0x3ffffff
   /* k = 4 */
-  lo = imul(al4, bl0)
-  mid = imul(al4, bh0)
-  mid = (mid + imul(ah4, bl0)) | 0
-  hi = imul(ah4, bh0)
-  lo = (lo + imul(al3, bl1)) | 0
-  mid = (mid + imul(al3, bh1)) | 0
-  mid = (mid + imul(ah3, bl1)) | 0
-  hi = (hi + imul(ah3, bh1)) | 0
-  lo = (lo + imul(al2, bl2)) | 0
-  mid = (mid + imul(al2, bh2)) | 0
-  mid = (mid + imul(ah2, bl2)) | 0
-  hi = (hi + imul(ah2, bh2)) | 0
-  lo = (lo + imul(al1, bl3)) | 0
-  mid = (mid + imul(al1, bh3)) | 0
-  mid = (mid + imul(ah1, bl3)) | 0
-  hi = (hi + imul(ah1, bh3)) | 0
-  lo = (lo + imul(al0, bl4)) | 0
-  mid = (mid + imul(al0, bh4)) | 0
-  mid = (mid + imul(ah0, bl4)) | 0
-  hi = (hi + imul(ah0, bh4)) | 0
+  lo = _imul(al4, bl0)
+  mid = _imul(al4, bh0)
+  mid = (mid + _imul(ah4, bl0)) | 0
+  hi = _imul(ah4, bh0)
+  lo = (lo + _imul(al3, bl1)) | 0
+  mid = (mid + _imul(al3, bh1)) | 0
+  mid = (mid + _imul(ah3, bl1)) | 0
+  hi = (hi + _imul(ah3, bh1)) | 0
+  lo = (lo + _imul(al2, bl2)) | 0
+  mid = (mid + _imul(al2, bh2)) | 0
+  mid = (mid + _imul(ah2, bl2)) | 0
+  hi = (hi + _imul(ah2, bh2)) | 0
+  lo = (lo + _imul(al1, bl3)) | 0
+  mid = (mid + _imul(al1, bh3)) | 0
+  mid = (mid + _imul(ah1, bl3)) | 0
+  hi = (hi + _imul(ah1, bh3)) | 0
+  lo = (lo + _imul(al0, bl4)) | 0
+  mid = (mid + _imul(al0, bh4)) | 0
+  mid = (mid + _imul(ah0, bl4)) | 0
+  hi = (hi + _imul(ah0, bh4)) | 0
 
   var w4 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w4 >>> 26)) | 0
   w4 &= 0x3ffffff
   /* k = 5 */
-  lo = imul(al5, bl0)
-  mid = imul(al5, bh0)
-  mid = (mid + imul(ah5, bl0)) | 0
-  hi = imul(ah5, bh0)
-  lo = (lo + imul(al4, bl1)) | 0
-  mid = (mid + imul(al4, bh1)) | 0
-  mid = (mid + imul(ah4, bl1)) | 0
-  hi = (hi + imul(ah4, bh1)) | 0
-  lo = (lo + imul(al3, bl2)) | 0
-  mid = (mid + imul(al3, bh2)) | 0
-  mid = (mid + imul(ah3, bl2)) | 0
-  hi = (hi + imul(ah3, bh2)) | 0
-  lo = (lo + imul(al2, bl3)) | 0
-  mid = (mid + imul(al2, bh3)) | 0
-  mid = (mid + imul(ah2, bl3)) | 0
-  hi = (hi + imul(ah2, bh3)) | 0
-  lo = (lo + imul(al1, bl4)) | 0
-  mid = (mid + imul(al1, bh4)) | 0
-  mid = (mid + imul(ah1, bl4)) | 0
-  hi = (hi + imul(ah1, bh4)) | 0
-  lo = (lo + imul(al0, bl5)) | 0
-  mid = (mid + imul(al0, bh5)) | 0
-  mid = (mid + imul(ah0, bl5)) | 0
-  hi = (hi + imul(ah0, bh5)) | 0
+  lo = _imul(al5, bl0)
+  mid = _imul(al5, bh0)
+  mid = (mid + _imul(ah5, bl0)) | 0
+  hi = _imul(ah5, bh0)
+  lo = (lo + _imul(al4, bl1)) | 0
+  mid = (mid + _imul(al4, bh1)) | 0
+  mid = (mid + _imul(ah4, bl1)) | 0
+  hi = (hi + _imul(ah4, bh1)) | 0
+  lo = (lo + _imul(al3, bl2)) | 0
+  mid = (mid + _imul(al3, bh2)) | 0
+  mid = (mid + _imul(ah3, bl2)) | 0
+  hi = (hi + _imul(ah3, bh2)) | 0
+  lo = (lo + _imul(al2, bl3)) | 0
+  mid = (mid + _imul(al2, bh3)) | 0
+  mid = (mid + _imul(ah2, bl3)) | 0
+  hi = (hi + _imul(ah2, bh3)) | 0
+  lo = (lo + _imul(al1, bl4)) | 0
+  mid = (mid + _imul(al1, bh4)) | 0
+  mid = (mid + _imul(ah1, bl4)) | 0
+  hi = (hi + _imul(ah1, bh4)) | 0
+  lo = (lo + _imul(al0, bl5)) | 0
+  mid = (mid + _imul(al0, bh5)) | 0
+  mid = (mid + _imul(ah0, bl5)) | 0
+  hi = (hi + _imul(ah0, bh5)) | 0
 
   var w5 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w5 >>> 26)) | 0
   w5 &= 0x3ffffff
   /* k = 6 */
-  lo = imul(al6, bl0)
-  mid = imul(al6, bh0)
-  mid = (mid + imul(ah6, bl0)) | 0
-  hi = imul(ah6, bh0)
-  lo = (lo + imul(al5, bl1)) | 0
-  mid = (mid + imul(al5, bh1)) | 0
-  mid = (mid + imul(ah5, bl1)) | 0
-  hi = (hi + imul(ah5, bh1)) | 0
-  lo = (lo + imul(al4, bl2)) | 0
-  mid = (mid + imul(al4, bh2)) | 0
-  mid = (mid + imul(ah4, bl2)) | 0
-  hi = (hi + imul(ah4, bh2)) | 0
-  lo = (lo + imul(al3, bl3)) | 0
-  mid = (mid + imul(al3, bh3)) | 0
-  mid = (mid + imul(ah3, bl3)) | 0
-  hi = (hi + imul(ah3, bh3)) | 0
-  lo = (lo + imul(al2, bl4)) | 0
-  mid = (mid + imul(al2, bh4)) | 0
-  mid = (mid + imul(ah2, bl4)) | 0
-  hi = (hi + imul(ah2, bh4)) | 0
-  lo = (lo + imul(al1, bl5)) | 0
-  mid = (mid + imul(al1, bh5)) | 0
-  mid = (mid + imul(ah1, bl5)) | 0
-  hi = (hi + imul(ah1, bh5)) | 0
-  lo = (lo + imul(al0, bl6)) | 0
-  mid = (mid + imul(al0, bh6)) | 0
-  mid = (mid + imul(ah0, bl6)) | 0
-  hi = (hi + imul(ah0, bh6)) | 0
+  lo = _imul(al6, bl0)
+  mid = _imul(al6, bh0)
+  mid = (mid + _imul(ah6, bl0)) | 0
+  hi = _imul(ah6, bh0)
+  lo = (lo + _imul(al5, bl1)) | 0
+  mid = (mid + _imul(al5, bh1)) | 0
+  mid = (mid + _imul(ah5, bl1)) | 0
+  hi = (hi + _imul(ah5, bh1)) | 0
+  lo = (lo + _imul(al4, bl2)) | 0
+  mid = (mid + _imul(al4, bh2)) | 0
+  mid = (mid + _imul(ah4, bl2)) | 0
+  hi = (hi + _imul(ah4, bh2)) | 0
+  lo = (lo + _imul(al3, bl3)) | 0
+  mid = (mid + _imul(al3, bh3)) | 0
+  mid = (mid + _imul(ah3, bl3)) | 0
+  hi = (hi + _imul(ah3, bh3)) | 0
+  lo = (lo + _imul(al2, bl4)) | 0
+  mid = (mid + _imul(al2, bh4)) | 0
+  mid = (mid + _imul(ah2, bl4)) | 0
+  hi = (hi + _imul(ah2, bh4)) | 0
+  lo = (lo + _imul(al1, bl5)) | 0
+  mid = (mid + _imul(al1, bh5)) | 0
+  mid = (mid + _imul(ah1, bl5)) | 0
+  hi = (hi + _imul(ah1, bh5)) | 0
+  lo = (lo + _imul(al0, bl6)) | 0
+  mid = (mid + _imul(al0, bh6)) | 0
+  mid = (mid + _imul(ah0, bl6)) | 0
+  hi = (hi + _imul(ah0, bh6)) | 0
 
   var w6 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w6 >>> 26)) | 0
   w6 &= 0x3ffffff
   /* k = 7 */
-  lo = imul(al7, bl0)
-  mid = imul(al7, bh0)
-  mid = (mid + imul(ah7, bl0)) | 0
-  hi = imul(ah7, bh0)
-  lo = (lo + imul(al6, bl1)) | 0
-  mid = (mid + imul(al6, bh1)) | 0
-  mid = (mid + imul(ah6, bl1)) | 0
-  hi = (hi + imul(ah6, bh1)) | 0
-  lo = (lo + imul(al5, bl2)) | 0
-  mid = (mid + imul(al5, bh2)) | 0
-  mid = (mid + imul(ah5, bl2)) | 0
-  hi = (hi + imul(ah5, bh2)) | 0
-  lo = (lo + imul(al4, bl3)) | 0
-  mid = (mid + imul(al4, bh3)) | 0
-  mid = (mid + imul(ah4, bl3)) | 0
-  hi = (hi + imul(ah4, bh3)) | 0
-  lo = (lo + imul(al3, bl4)) | 0
-  mid = (mid + imul(al3, bh4)) | 0
-  mid = (mid + imul(ah3, bl4)) | 0
-  hi = (hi + imul(ah3, bh4)) | 0
-  lo = (lo + imul(al2, bl5)) | 0
-  mid = (mid + imul(al2, bh5)) | 0
-  mid = (mid + imul(ah2, bl5)) | 0
-  hi = (hi + imul(ah2, bh5)) | 0
-  lo = (lo + imul(al1, bl6)) | 0
-  mid = (mid + imul(al1, bh6)) | 0
-  mid = (mid + imul(ah1, bl6)) | 0
-  hi = (hi + imul(ah1, bh6)) | 0
-  lo = (lo + imul(al0, bl7)) | 0
-  mid = (mid + imul(al0, bh7)) | 0
-  mid = (mid + imul(ah0, bl7)) | 0
-  hi = (hi + imul(ah0, bh7)) | 0
+  lo = _imul(al7, bl0)
+  mid = _imul(al7, bh0)
+  mid = (mid + _imul(ah7, bl0)) | 0
+  hi = _imul(ah7, bh0)
+  lo = (lo + _imul(al6, bl1)) | 0
+  mid = (mid + _imul(al6, bh1)) | 0
+  mid = (mid + _imul(ah6, bl1)) | 0
+  hi = (hi + _imul(ah6, bh1)) | 0
+  lo = (lo + _imul(al5, bl2)) | 0
+  mid = (mid + _imul(al5, bh2)) | 0
+  mid = (mid + _imul(ah5, bl2)) | 0
+  hi = (hi + _imul(ah5, bh2)) | 0
+  lo = (lo + _imul(al4, bl3)) | 0
+  mid = (mid + _imul(al4, bh3)) | 0
+  mid = (mid + _imul(ah4, bl3)) | 0
+  hi = (hi + _imul(ah4, bh3)) | 0
+  lo = (lo + _imul(al3, bl4)) | 0
+  mid = (mid + _imul(al3, bh4)) | 0
+  mid = (mid + _imul(ah3, bl4)) | 0
+  hi = (hi + _imul(ah3, bh4)) | 0
+  lo = (lo + _imul(al2, bl5)) | 0
+  mid = (mid + _imul(al2, bh5)) | 0
+  mid = (mid + _imul(ah2, bl5)) | 0
+  hi = (hi + _imul(ah2, bh5)) | 0
+  lo = (lo + _imul(al1, bl6)) | 0
+  mid = (mid + _imul(al1, bh6)) | 0
+  mid = (mid + _imul(ah1, bl6)) | 0
+  hi = (hi + _imul(ah1, bh6)) | 0
+  lo = (lo + _imul(al0, bl7)) | 0
+  mid = (mid + _imul(al0, bh7)) | 0
+  mid = (mid + _imul(ah0, bl7)) | 0
+  hi = (hi + _imul(ah0, bh7)) | 0
 
   var w7 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w7 >>> 26)) | 0
   w7 &= 0x3ffffff
   /* k = 8 */
-  lo = imul(al8, bl0)
-  mid = imul(al8, bh0)
-  mid = (mid + imul(ah8, bl0)) | 0
-  hi = imul(ah8, bh0)
-  lo = (lo + imul(al7, bl1)) | 0
-  mid = (mid + imul(al7, bh1)) | 0
-  mid = (mid + imul(ah7, bl1)) | 0
-  hi = (hi + imul(ah7, bh1)) | 0
-  lo = (lo + imul(al6, bl2)) | 0
-  mid = (mid + imul(al6, bh2)) | 0
-  mid = (mid + imul(ah6, bl2)) | 0
-  hi = (hi + imul(ah6, bh2)) | 0
-  lo = (lo + imul(al5, bl3)) | 0
-  mid = (mid + imul(al5, bh3)) | 0
-  mid = (mid + imul(ah5, bl3)) | 0
-  hi = (hi + imul(ah5, bh3)) | 0
-  lo = (lo + imul(al4, bl4)) | 0
-  mid = (mid + imul(al4, bh4)) | 0
-  mid = (mid + imul(ah4, bl4)) | 0
-  hi = (hi + imul(ah4, bh4)) | 0
-  lo = (lo + imul(al3, bl5)) | 0
-  mid = (mid + imul(al3, bh5)) | 0
-  mid = (mid + imul(ah3, bl5)) | 0
-  hi = (hi + imul(ah3, bh5)) | 0
-  lo = (lo + imul(al2, bl6)) | 0
-  mid = (mid + imul(al2, bh6)) | 0
-  mid = (mid + imul(ah2, bl6)) | 0
-  hi = (hi + imul(ah2, bh6)) | 0
-  lo = (lo + imul(al1, bl7)) | 0
-  mid = (mid + imul(al1, bh7)) | 0
-  mid = (mid + imul(ah1, bl7)) | 0
-  hi = (hi + imul(ah1, bh7)) | 0
-  lo = (lo + imul(al0, bl8)) | 0
-  mid = (mid + imul(al0, bh8)) | 0
-  mid = (mid + imul(ah0, bl8)) | 0
-  hi = (hi + imul(ah0, bh8)) | 0
+  lo = _imul(al8, bl0)
+  mid = _imul(al8, bh0)
+  mid = (mid + _imul(ah8, bl0)) | 0
+  hi = _imul(ah8, bh0)
+  lo = (lo + _imul(al7, bl1)) | 0
+  mid = (mid + _imul(al7, bh1)) | 0
+  mid = (mid + _imul(ah7, bl1)) | 0
+  hi = (hi + _imul(ah7, bh1)) | 0
+  lo = (lo + _imul(al6, bl2)) | 0
+  mid = (mid + _imul(al6, bh2)) | 0
+  mid = (mid + _imul(ah6, bl2)) | 0
+  hi = (hi + _imul(ah6, bh2)) | 0
+  lo = (lo + _imul(al5, bl3)) | 0
+  mid = (mid + _imul(al5, bh3)) | 0
+  mid = (mid + _imul(ah5, bl3)) | 0
+  hi = (hi + _imul(ah5, bh3)) | 0
+  lo = (lo + _imul(al4, bl4)) | 0
+  mid = (mid + _imul(al4, bh4)) | 0
+  mid = (mid + _imul(ah4, bl4)) | 0
+  hi = (hi + _imul(ah4, bh4)) | 0
+  lo = (lo + _imul(al3, bl5)) | 0
+  mid = (mid + _imul(al3, bh5)) | 0
+  mid = (mid + _imul(ah3, bl5)) | 0
+  hi = (hi + _imul(ah3, bh5)) | 0
+  lo = (lo + _imul(al2, bl6)) | 0
+  mid = (mid + _imul(al2, bh6)) | 0
+  mid = (mid + _imul(ah2, bl6)) | 0
+  hi = (hi + _imul(ah2, bh6)) | 0
+  lo = (lo + _imul(al1, bl7)) | 0
+  mid = (mid + _imul(al1, bh7)) | 0
+  mid = (mid + _imul(ah1, bl7)) | 0
+  hi = (hi + _imul(ah1, bh7)) | 0
+  lo = (lo + _imul(al0, bl8)) | 0
+  mid = (mid + _imul(al0, bh8)) | 0
+  mid = (mid + _imul(ah0, bl8)) | 0
+  hi = (hi + _imul(ah0, bh8)) | 0
 
   var w8 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w8 >>> 26)) | 0
   w8 &= 0x3ffffff
   /* k = 9 */
-  lo = imul(al9, bl0)
-  mid = imul(al9, bh0)
-  mid = (mid + imul(ah9, bl0)) | 0
-  hi = imul(ah9, bh0)
-  lo = (lo + imul(al8, bl1)) | 0
-  mid = (mid + imul(al8, bh1)) | 0
-  mid = (mid + imul(ah8, bl1)) | 0
-  hi = (hi + imul(ah8, bh1)) | 0
-  lo = (lo + imul(al7, bl2)) | 0
-  mid = (mid + imul(al7, bh2)) | 0
-  mid = (mid + imul(ah7, bl2)) | 0
-  hi = (hi + imul(ah7, bh2)) | 0
-  lo = (lo + imul(al6, bl3)) | 0
-  mid = (mid + imul(al6, bh3)) | 0
-  mid = (mid + imul(ah6, bl3)) | 0
-  hi = (hi + imul(ah6, bh3)) | 0
-  lo = (lo + imul(al5, bl4)) | 0
-  mid = (mid + imul(al5, bh4)) | 0
-  mid = (mid + imul(ah5, bl4)) | 0
-  hi = (hi + imul(ah5, bh4)) | 0
-  lo = (lo + imul(al4, bl5)) | 0
-  mid = (mid + imul(al4, bh5)) | 0
-  mid = (mid + imul(ah4, bl5)) | 0
-  hi = (hi + imul(ah4, bh5)) | 0
-  lo = (lo + imul(al3, bl6)) | 0
-  mid = (mid + imul(al3, bh6)) | 0
-  mid = (mid + imul(ah3, bl6)) | 0
-  hi = (hi + imul(ah3, bh6)) | 0
-  lo = (lo + imul(al2, bl7)) | 0
-  mid = (mid + imul(al2, bh7)) | 0
-  mid = (mid + imul(ah2, bl7)) | 0
-  hi = (hi + imul(ah2, bh7)) | 0
-  lo = (lo + imul(al1, bl8)) | 0
-  mid = (mid + imul(al1, bh8)) | 0
-  mid = (mid + imul(ah1, bl8)) | 0
-  hi = (hi + imul(ah1, bh8)) | 0
-  lo = (lo + imul(al0, bl9)) | 0
-  mid = (mid + imul(al0, bh9)) | 0
-  mid = (mid + imul(ah0, bl9)) | 0
-  hi = (hi + imul(ah0, bh9)) | 0
+  lo = _imul(al9, bl0)
+  mid = _imul(al9, bh0)
+  mid = (mid + _imul(ah9, bl0)) | 0
+  hi = _imul(ah9, bh0)
+  lo = (lo + _imul(al8, bl1)) | 0
+  mid = (mid + _imul(al8, bh1)) | 0
+  mid = (mid + _imul(ah8, bl1)) | 0
+  hi = (hi + _imul(ah8, bh1)) | 0
+  lo = (lo + _imul(al7, bl2)) | 0
+  mid = (mid + _imul(al7, bh2)) | 0
+  mid = (mid + _imul(ah7, bl2)) | 0
+  hi = (hi + _imul(ah7, bh2)) | 0
+  lo = (lo + _imul(al6, bl3)) | 0
+  mid = (mid + _imul(al6, bh3)) | 0
+  mid = (mid + _imul(ah6, bl3)) | 0
+  hi = (hi + _imul(ah6, bh3)) | 0
+  lo = (lo + _imul(al5, bl4)) | 0
+  mid = (mid + _imul(al5, bh4)) | 0
+  mid = (mid + _imul(ah5, bl4)) | 0
+  hi = (hi + _imul(ah5, bh4)) | 0
+  lo = (lo + _imul(al4, bl5)) | 0
+  mid = (mid + _imul(al4, bh5)) | 0
+  mid = (mid + _imul(ah4, bl5)) | 0
+  hi = (hi + _imul(ah4, bh5)) | 0
+  lo = (lo + _imul(al3, bl6)) | 0
+  mid = (mid + _imul(al3, bh6)) | 0
+  mid = (mid + _imul(ah3, bl6)) | 0
+  hi = (hi + _imul(ah3, bh6)) | 0
+  lo = (lo + _imul(al2, bl7)) | 0
+  mid = (mid + _imul(al2, bh7)) | 0
+  mid = (mid + _imul(ah2, bl7)) | 0
+  hi = (hi + _imul(ah2, bh7)) | 0
+  lo = (lo + _imul(al1, bl8)) | 0
+  mid = (mid + _imul(al1, bh8)) | 0
+  mid = (mid + _imul(ah1, bl8)) | 0
+  hi = (hi + _imul(ah1, bh8)) | 0
+  lo = (lo + _imul(al0, bl9)) | 0
+  mid = (mid + _imul(al0, bh9)) | 0
+  mid = (mid + _imul(ah0, bl9)) | 0
+  hi = (hi + _imul(ah0, bh9)) | 0
 
   var w9 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w9 >>> 26)) | 0
   w9 &= 0x3ffffff
   /* k = 10 */
-  lo = imul(al9, bl1)
-  mid = imul(al9, bh1)
-  mid = (mid + imul(ah9, bl1)) | 0
-  hi = imul(ah9, bh1)
-  lo = (lo + imul(al8, bl2)) | 0
-  mid = (mid + imul(al8, bh2)) | 0
-  mid = (mid + imul(ah8, bl2)) | 0
-  hi = (hi + imul(ah8, bh2)) | 0
-  lo = (lo + imul(al7, bl3)) | 0
-  mid = (mid + imul(al7, bh3)) | 0
-  mid = (mid + imul(ah7, bl3)) | 0
-  hi = (hi + imul(ah7, bh3)) | 0
-  lo = (lo + imul(al6, bl4)) | 0
-  mid = (mid + imul(al6, bh4)) | 0
-  mid = (mid + imul(ah6, bl4)) | 0
-  hi = (hi + imul(ah6, bh4)) | 0
-  lo = (lo + imul(al5, bl5)) | 0
-  mid = (mid + imul(al5, bh5)) | 0
-  mid = (mid + imul(ah5, bl5)) | 0
-  hi = (hi + imul(ah5, bh5)) | 0
-  lo = (lo + imul(al4, bl6)) | 0
-  mid = (mid + imul(al4, bh6)) | 0
-  mid = (mid + imul(ah4, bl6)) | 0
-  hi = (hi + imul(ah4, bh6)) | 0
-  lo = (lo + imul(al3, bl7)) | 0
-  mid = (mid + imul(al3, bh7)) | 0
-  mid = (mid + imul(ah3, bl7)) | 0
-  hi = (hi + imul(ah3, bh7)) | 0
-  lo = (lo + imul(al2, bl8)) | 0
-  mid = (mid + imul(al2, bh8)) | 0
-  mid = (mid + imul(ah2, bl8)) | 0
-  hi = (hi + imul(ah2, bh8)) | 0
-  lo = (lo + imul(al1, bl9)) | 0
-  mid = (mid + imul(al1, bh9)) | 0
-  mid = (mid + imul(ah1, bl9)) | 0
-  hi = (hi + imul(ah1, bh9)) | 0
+  lo = _imul(al9, bl1)
+  mid = _imul(al9, bh1)
+  mid = (mid + _imul(ah9, bl1)) | 0
+  hi = _imul(ah9, bh1)
+  lo = (lo + _imul(al8, bl2)) | 0
+  mid = (mid + _imul(al8, bh2)) | 0
+  mid = (mid + _imul(ah8, bl2)) | 0
+  hi = (hi + _imul(ah8, bh2)) | 0
+  lo = (lo + _imul(al7, bl3)) | 0
+  mid = (mid + _imul(al7, bh3)) | 0
+  mid = (mid + _imul(ah7, bl3)) | 0
+  hi = (hi + _imul(ah7, bh3)) | 0
+  lo = (lo + _imul(al6, bl4)) | 0
+  mid = (mid + _imul(al6, bh4)) | 0
+  mid = (mid + _imul(ah6, bl4)) | 0
+  hi = (hi + _imul(ah6, bh4)) | 0
+  lo = (lo + _imul(al5, bl5)) | 0
+  mid = (mid + _imul(al5, bh5)) | 0
+  mid = (mid + _imul(ah5, bl5)) | 0
+  hi = (hi + _imul(ah5, bh5)) | 0
+  lo = (lo + _imul(al4, bl6)) | 0
+  mid = (mid + _imul(al4, bh6)) | 0
+  mid = (mid + _imul(ah4, bl6)) | 0
+  hi = (hi + _imul(ah4, bh6)) | 0
+  lo = (lo + _imul(al3, bl7)) | 0
+  mid = (mid + _imul(al3, bh7)) | 0
+  mid = (mid + _imul(ah3, bl7)) | 0
+  hi = (hi + _imul(ah3, bh7)) | 0
+  lo = (lo + _imul(al2, bl8)) | 0
+  mid = (mid + _imul(al2, bh8)) | 0
+  mid = (mid + _imul(ah2, bl8)) | 0
+  hi = (hi + _imul(ah2, bh8)) | 0
+  lo = (lo + _imul(al1, bl9)) | 0
+  mid = (mid + _imul(al1, bh9)) | 0
+  mid = (mid + _imul(ah1, bl9)) | 0
+  hi = (hi + _imul(ah1, bh9)) | 0
 
   var w10 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w10 >>> 26)) | 0
   w10 &= 0x3ffffff
   /* k = 11 */
-  lo = imul(al9, bl2)
-  mid = imul(al9, bh2)
-  mid = (mid + imul(ah9, bl2)) | 0
-  hi = imul(ah9, bh2)
-  lo = (lo + imul(al8, bl3)) | 0
-  mid = (mid + imul(al8, bh3)) | 0
-  mid = (mid + imul(ah8, bl3)) | 0
-  hi = (hi + imul(ah8, bh3)) | 0
-  lo = (lo + imul(al7, bl4)) | 0
-  mid = (mid + imul(al7, bh4)) | 0
-  mid = (mid + imul(ah7, bl4)) | 0
-  hi = (hi + imul(ah7, bh4)) | 0
-  lo = (lo + imul(al6, bl5)) | 0
-  mid = (mid + imul(al6, bh5)) | 0
-  mid = (mid + imul(ah6, bl5)) | 0
-  hi = (hi + imul(ah6, bh5)) | 0
-  lo = (lo + imul(al5, bl6)) | 0
-  mid = (mid + imul(al5, bh6)) | 0
-  mid = (mid + imul(ah5, bl6)) | 0
-  hi = (hi + imul(ah5, bh6)) | 0
-  lo = (lo + imul(al4, bl7)) | 0
-  mid = (mid + imul(al4, bh7)) | 0
-  mid = (mid + imul(ah4, bl7)) | 0
-  hi = (hi + imul(ah4, bh7)) | 0
-  lo = (lo + imul(al3, bl8)) | 0
-  mid = (mid + imul(al3, bh8)) | 0
-  mid = (mid + imul(ah3, bl8)) | 0
-  hi = (hi + imul(ah3, bh8)) | 0
-  lo = (lo + imul(al2, bl9)) | 0
-  mid = (mid + imul(al2, bh9)) | 0
-  mid = (mid + imul(ah2, bl9)) | 0
-  hi = (hi + imul(ah2, bh9)) | 0
+  lo = _imul(al9, bl2)
+  mid = _imul(al9, bh2)
+  mid = (mid + _imul(ah9, bl2)) | 0
+  hi = _imul(ah9, bh2)
+  lo = (lo + _imul(al8, bl3)) | 0
+  mid = (mid + _imul(al8, bh3)) | 0
+  mid = (mid + _imul(ah8, bl3)) | 0
+  hi = (hi + _imul(ah8, bh3)) | 0
+  lo = (lo + _imul(al7, bl4)) | 0
+  mid = (mid + _imul(al7, bh4)) | 0
+  mid = (mid + _imul(ah7, bl4)) | 0
+  hi = (hi + _imul(ah7, bh4)) | 0
+  lo = (lo + _imul(al6, bl5)) | 0
+  mid = (mid + _imul(al6, bh5)) | 0
+  mid = (mid + _imul(ah6, bl5)) | 0
+  hi = (hi + _imul(ah6, bh5)) | 0
+  lo = (lo + _imul(al5, bl6)) | 0
+  mid = (mid + _imul(al5, bh6)) | 0
+  mid = (mid + _imul(ah5, bl6)) | 0
+  hi = (hi + _imul(ah5, bh6)) | 0
+  lo = (lo + _imul(al4, bl7)) | 0
+  mid = (mid + _imul(al4, bh7)) | 0
+  mid = (mid + _imul(ah4, bl7)) | 0
+  hi = (hi + _imul(ah4, bh7)) | 0
+  lo = (lo + _imul(al3, bl8)) | 0
+  mid = (mid + _imul(al3, bh8)) | 0
+  mid = (mid + _imul(ah3, bl8)) | 0
+  hi = (hi + _imul(ah3, bh8)) | 0
+  lo = (lo + _imul(al2, bl9)) | 0
+  mid = (mid + _imul(al2, bh9)) | 0
+  mid = (mid + _imul(ah2, bl9)) | 0
+  hi = (hi + _imul(ah2, bh9)) | 0
 
   var w11 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w11 >>> 26)) | 0
   w11 &= 0x3ffffff
   /* k = 12 */
-  lo = imul(al9, bl3)
-  mid = imul(al9, bh3)
-  mid = (mid + imul(ah9, bl3)) | 0
-  hi = imul(ah9, bh3)
-  lo = (lo + imul(al8, bl4)) | 0
-  mid = (mid + imul(al8, bh4)) | 0
-  mid = (mid + imul(ah8, bl4)) | 0
-  hi = (hi + imul(ah8, bh4)) | 0
-  lo = (lo + imul(al7, bl5)) | 0
-  mid = (mid + imul(al7, bh5)) | 0
-  mid = (mid + imul(ah7, bl5)) | 0
-  hi = (hi + imul(ah7, bh5)) | 0
-  lo = (lo + imul(al6, bl6)) | 0
-  mid = (mid + imul(al6, bh6)) | 0
-  mid = (mid + imul(ah6, bl6)) | 0
-  hi = (hi + imul(ah6, bh6)) | 0
-  lo = (lo + imul(al5, bl7)) | 0
-  mid = (mid + imul(al5, bh7)) | 0
-  mid = (mid + imul(ah5, bl7)) | 0
-  hi = (hi + imul(ah5, bh7)) | 0
-  lo = (lo + imul(al4, bl8)) | 0
-  mid = (mid + imul(al4, bh8)) | 0
-  mid = (mid + imul(ah4, bl8)) | 0
-  hi = (hi + imul(ah4, bh8)) | 0
-  lo = (lo + imul(al3, bl9)) | 0
-  mid = (mid + imul(al3, bh9)) | 0
-  mid = (mid + imul(ah3, bl9)) | 0
-  hi = (hi + imul(ah3, bh9)) | 0
+  lo = _imul(al9, bl3)
+  mid = _imul(al9, bh3)
+  mid = (mid + _imul(ah9, bl3)) | 0
+  hi = _imul(ah9, bh3)
+  lo = (lo + _imul(al8, bl4)) | 0
+  mid = (mid + _imul(al8, bh4)) | 0
+  mid = (mid + _imul(ah8, bl4)) | 0
+  hi = (hi + _imul(ah8, bh4)) | 0
+  lo = (lo + _imul(al7, bl5)) | 0
+  mid = (mid + _imul(al7, bh5)) | 0
+  mid = (mid + _imul(ah7, bl5)) | 0
+  hi = (hi + _imul(ah7, bh5)) | 0
+  lo = (lo + _imul(al6, bl6)) | 0
+  mid = (mid + _imul(al6, bh6)) | 0
+  mid = (mid + _imul(ah6, bl6)) | 0
+  hi = (hi + _imul(ah6, bh6)) | 0
+  lo = (lo + _imul(al5, bl7)) | 0
+  mid = (mid + _imul(al5, bh7)) | 0
+  mid = (mid + _imul(ah5, bl7)) | 0
+  hi = (hi + _imul(ah5, bh7)) | 0
+  lo = (lo + _imul(al4, bl8)) | 0
+  mid = (mid + _imul(al4, bh8)) | 0
+  mid = (mid + _imul(ah4, bl8)) | 0
+  hi = (hi + _imul(ah4, bh8)) | 0
+  lo = (lo + _imul(al3, bl9)) | 0
+  mid = (mid + _imul(al3, bh9)) | 0
+  mid = (mid + _imul(ah3, bl9)) | 0
+  hi = (hi + _imul(ah3, bh9)) | 0
 
   var w12 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w12 >>> 26)) | 0
   w12 &= 0x3ffffff
   /* k = 13 */
-  lo = imul(al9, bl4)
-  mid = imul(al9, bh4)
-  mid = (mid + imul(ah9, bl4)) | 0
-  hi = imul(ah9, bh4)
-  lo = (lo + imul(al8, bl5)) | 0
-  mid = (mid + imul(al8, bh5)) | 0
-  mid = (mid + imul(ah8, bl5)) | 0
-  hi = (hi + imul(ah8, bh5)) | 0
-  lo = (lo + imul(al7, bl6)) | 0
-  mid = (mid + imul(al7, bh6)) | 0
-  mid = (mid + imul(ah7, bl6)) | 0
-  hi = (hi + imul(ah7, bh6)) | 0
-  lo = (lo + imul(al6, bl7)) | 0
-  mid = (mid + imul(al6, bh7)) | 0
-  mid = (mid + imul(ah6, bl7)) | 0
-  hi = (hi + imul(ah6, bh7)) | 0
-  lo = (lo + imul(al5, bl8)) | 0
-  mid = (mid + imul(al5, bh8)) | 0
-  mid = (mid + imul(ah5, bl8)) | 0
-  hi = (hi + imul(ah5, bh8)) | 0
-  lo = (lo + imul(al4, bl9)) | 0
-  mid = (mid + imul(al4, bh9)) | 0
-  mid = (mid + imul(ah4, bl9)) | 0
-  hi = (hi + imul(ah4, bh9)) | 0
+  lo = _imul(al9, bl4)
+  mid = _imul(al9, bh4)
+  mid = (mid + _imul(ah9, bl4)) | 0
+  hi = _imul(ah9, bh4)
+  lo = (lo + _imul(al8, bl5)) | 0
+  mid = (mid + _imul(al8, bh5)) | 0
+  mid = (mid + _imul(ah8, bl5)) | 0
+  hi = (hi + _imul(ah8, bh5)) | 0
+  lo = (lo + _imul(al7, bl6)) | 0
+  mid = (mid + _imul(al7, bh6)) | 0
+  mid = (mid + _imul(ah7, bl6)) | 0
+  hi = (hi + _imul(ah7, bh6)) | 0
+  lo = (lo + _imul(al6, bl7)) | 0
+  mid = (mid + _imul(al6, bh7)) | 0
+  mid = (mid + _imul(ah6, bl7)) | 0
+  hi = (hi + _imul(ah6, bh7)) | 0
+  lo = (lo + _imul(al5, bl8)) | 0
+  mid = (mid + _imul(al5, bh8)) | 0
+  mid = (mid + _imul(ah5, bl8)) | 0
+  hi = (hi + _imul(ah5, bh8)) | 0
+  lo = (lo + _imul(al4, bl9)) | 0
+  mid = (mid + _imul(al4, bh9)) | 0
+  mid = (mid + _imul(ah4, bl9)) | 0
+  hi = (hi + _imul(ah4, bh9)) | 0
 
   var w13 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w13 >>> 26)) | 0
   w13 &= 0x3ffffff
   /* k = 14 */
-  lo = imul(al9, bl5)
-  mid = imul(al9, bh5)
-  mid = (mid + imul(ah9, bl5)) | 0
-  hi = imul(ah9, bh5)
-  lo = (lo + imul(al8, bl6)) | 0
-  mid = (mid + imul(al8, bh6)) | 0
-  mid = (mid + imul(ah8, bl6)) | 0
-  hi = (hi + imul(ah8, bh6)) | 0
-  lo = (lo + imul(al7, bl7)) | 0
-  mid = (mid + imul(al7, bh7)) | 0
-  mid = (mid + imul(ah7, bl7)) | 0
-  hi = (hi + imul(ah7, bh7)) | 0
-  lo = (lo + imul(al6, bl8)) | 0
-  mid = (mid + imul(al6, bh8)) | 0
-  mid = (mid + imul(ah6, bl8)) | 0
-  hi = (hi + imul(ah6, bh8)) | 0
-  lo = (lo + imul(al5, bl9)) | 0
-  mid = (mid + imul(al5, bh9)) | 0
-  mid = (mid + imul(ah5, bl9)) | 0
-  hi = (hi + imul(ah5, bh9)) | 0
+  lo = _imul(al9, bl5)
+  mid = _imul(al9, bh5)
+  mid = (mid + _imul(ah9, bl5)) | 0
+  hi = _imul(ah9, bh5)
+  lo = (lo + _imul(al8, bl6)) | 0
+  mid = (mid + _imul(al8, bh6)) | 0
+  mid = (mid + _imul(ah8, bl6)) | 0
+  hi = (hi + _imul(ah8, bh6)) | 0
+  lo = (lo + _imul(al7, bl7)) | 0
+  mid = (mid + _imul(al7, bh7)) | 0
+  mid = (mid + _imul(ah7, bl7)) | 0
+  hi = (hi + _imul(ah7, bh7)) | 0
+  lo = (lo + _imul(al6, bl8)) | 0
+  mid = (mid + _imul(al6, bh8)) | 0
+  mid = (mid + _imul(ah6, bl8)) | 0
+  hi = (hi + _imul(ah6, bh8)) | 0
+  lo = (lo + _imul(al5, bl9)) | 0
+  mid = (mid + _imul(al5, bh9)) | 0
+  mid = (mid + _imul(ah5, bl9)) | 0
+  hi = (hi + _imul(ah5, bh9)) | 0
 
   var w14 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w14 >>> 26)) | 0
   w14 &= 0x3ffffff
   /* k = 15 */
-  lo = imul(al9, bl6)
-  mid = imul(al9, bh6)
-  mid = (mid + imul(ah9, bl6)) | 0
-  hi = imul(ah9, bh6)
-  lo = (lo + imul(al8, bl7)) | 0
-  mid = (mid + imul(al8, bh7)) | 0
-  mid = (mid + imul(ah8, bl7)) | 0
-  hi = (hi + imul(ah8, bh7)) | 0
-  lo = (lo + imul(al7, bl8)) | 0
-  mid = (mid + imul(al7, bh8)) | 0
-  mid = (mid + imul(ah7, bl8)) | 0
-  hi = (hi + imul(ah7, bh8)) | 0
-  lo = (lo + imul(al6, bl9)) | 0
-  mid = (mid + imul(al6, bh9)) | 0
-  mid = (mid + imul(ah6, bl9)) | 0
-  hi = (hi + imul(ah6, bh9)) | 0
+  lo = _imul(al9, bl6)
+  mid = _imul(al9, bh6)
+  mid = (mid + _imul(ah9, bl6)) | 0
+  hi = _imul(ah9, bh6)
+  lo = (lo + _imul(al8, bl7)) | 0
+  mid = (mid + _imul(al8, bh7)) | 0
+  mid = (mid + _imul(ah8, bl7)) | 0
+  hi = (hi + _imul(ah8, bh7)) | 0
+  lo = (lo + _imul(al7, bl8)) | 0
+  mid = (mid + _imul(al7, bh8)) | 0
+  mid = (mid + _imul(ah7, bl8)) | 0
+  hi = (hi + _imul(ah7, bh8)) | 0
+  lo = (lo + _imul(al6, bl9)) | 0
+  mid = (mid + _imul(al6, bh9)) | 0
+  mid = (mid + _imul(ah6, bl9)) | 0
+  hi = (hi + _imul(ah6, bh9)) | 0
 
   var w15 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w15 >>> 26)) | 0
   w15 &= 0x3ffffff
   /* k = 16 */
-  lo = imul(al9, bl7)
-  mid = imul(al9, bh7)
-  mid = (mid + imul(ah9, bl7)) | 0
-  hi = imul(ah9, bh7)
-  lo = (lo + imul(al8, bl8)) | 0
-  mid = (mid + imul(al8, bh8)) | 0
-  mid = (mid + imul(ah8, bl8)) | 0
-  hi = (hi + imul(ah8, bh8)) | 0
-  lo = (lo + imul(al7, bl9)) | 0
-  mid = (mid + imul(al7, bh9)) | 0
-  mid = (mid + imul(ah7, bl9)) | 0
-  hi = (hi + imul(ah7, bh9)) | 0
+  lo = _imul(al9, bl7)
+  mid = _imul(al9, bh7)
+  mid = (mid + _imul(ah9, bl7)) | 0
+  hi = _imul(ah9, bh7)
+  lo = (lo + _imul(al8, bl8)) | 0
+  mid = (mid + _imul(al8, bh8)) | 0
+  mid = (mid + _imul(ah8, bl8)) | 0
+  hi = (hi + _imul(ah8, bh8)) | 0
+  lo = (lo + _imul(al7, bl9)) | 0
+  mid = (mid + _imul(al7, bh9)) | 0
+  mid = (mid + _imul(ah7, bl9)) | 0
+  hi = (hi + _imul(ah7, bh9)) | 0
 
   var w16 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w16 >>> 26)) | 0
   w16 &= 0x3ffffff
   /* k = 17 */
-  lo = imul(al9, bl8)
-  mid = imul(al9, bh8)
-  mid = (mid + imul(ah9, bl8)) | 0
-  hi = imul(ah9, bh8)
-  lo = (lo + imul(al8, bl9)) | 0
-  mid = (mid + imul(al8, bh9)) | 0
-  mid = (mid + imul(ah8, bl9)) | 0
-  hi = (hi + imul(ah8, bh9)) | 0
+  lo = _imul(al9, bl8)
+  mid = _imul(al9, bh8)
+  mid = (mid + _imul(ah9, bl8)) | 0
+  hi = _imul(ah9, bh8)
+  lo = (lo + _imul(al8, bl9)) | 0
+  mid = (mid + _imul(al8, bh9)) | 0
+  mid = (mid + _imul(ah8, bl9)) | 0
+  hi = (hi + _imul(ah8, bh9)) | 0
 
   var w17 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w17 >>> 26)) | 0
   w17 &= 0x3ffffff
   /* k = 18 */
-  lo = imul(al9, bl9)
-  mid = imul(al9, bh9)
-  mid = (mid + imul(ah9, bl9)) | 0
-  hi = imul(ah9, bh9)
+  lo = _imul(al9, bl9)
+  mid = _imul(al9, bh9)
+  mid = (mid + _imul(ah9, bl9)) | 0
+  hi = _imul(ah9, bh9)
   
   var w18 = (((c + lo) | 0) + ((mid & 0x1fff) << 13)) | 0
   c = (((hi + (mid >>> 13)) | 0) + (w18 >>> 26)) | 0
@@ -791,7 +791,7 @@ def comb10MulTo(_this, num, out) {
   return out
 }
 
-def bigMulTo(_this, num, out) {
+def _bigMulTo(_this, num, out) {
   out.negative = num.negative ^ _this.negative
   out.length = _this.length + num.length
 
@@ -840,14 +840,42 @@ def bigMulTo(_this, num, out) {
   return out.strip()
 }
 
-def jumboMulTo(_this, num, out) {
-  return bigMulTo(_this, num, out)
+def _jumboMulTo(_this, num, out) {
+  return _bigMulTo(_this, num, out)
 }
 
 
 /**
  * BigInt class represent integer values which are too high or too low 
- * to be represented by the number primitive.
+ * to be represented by the number primitive. They behave just like 
+ * numbers and implement all numeric operators except the unsigned right 
+ * shift (>>>). For this reason, they work in all contexts that numbers 
+ * can be used. For example, the following code is completely valid:
+ * 
+ * ```blade-repl
+ * %> import bigint
+ * %> 
+ * %> abs(bigint('-450'))
+ * '<BigInt v=450>'
+ * ```
+ * 
+ * As said earlier, BigInt defines arithemetic operations.
+ * 
+ * ```blade-repl
+ * %> bigint('72672676789679863767863976783') * bigint('3679687870387890379')
+ * '<BigInt v=267412767291604568032754996823951848184805070757>'
+ * ```
+ * 
+ * Even bitwise operations
+ * 
+ * ```blade-repl
+ * %> bigint('72672676789679863767863976783') & bigint('3679687870387890379')
+ * '<BigInt v=72128620998467659>'
+ * ```
+ * 
+ * While this class exports a lot of functions, it is preferred that the 
+ * arithemetic operators be used more as they mask the underlying naunces and 
+ * will feel and look more natural.
  * 
  * @printable
  * @serializable
@@ -1047,7 +1075,7 @@ class BigInt {
     var w
     if endian == 'be' {
       iter var i = number.length() - 1; i >= start; i -= 2 {
-        w = parseHexByte(number, start, i) << off
+        w = _parseHexByte(number, start, i) << off
         self.words[j] |= w & 0x3ffffff
         if off >= 18 {
           off -= 18
@@ -1060,7 +1088,7 @@ class BigInt {
     } else {
       var parseLength = number.length() - start
       iter var i = parseLength % 2 == 0 ? start + 1 : start; i < number.length(); i += 2 {
-        w = parseHexByte(number, start, i) << off
+        w = _parseHexByte(number, start, i) << off
         self.words[j] |= w & 0x3ffffff
         if off >= 18 {
           off -= 18
@@ -1095,7 +1123,7 @@ class BigInt {
     var word = 0
     var i = start
     iter ; i < end; i += limbLen {
-      word = parseBase(number, i, i + limbLen, base)
+      word = _parseBase(number, i, i + limbLen, base)
 
       self.imuln(limbPow)
       if self.words[0] + word < 0x4000000 {
@@ -1107,7 +1135,7 @@ class BigInt {
 
     if mod != 0 {
       var pow = 1
-      word = parseBase(number, i, number.length(), base)
+      word = _parseBase(number, i, number.length(), base)
 
       iter var i = 0; i < mod; i++ {
         pow *= base
@@ -1132,7 +1160,7 @@ class BigInt {
   }
 
   _move(dest) {
-    move(dest, self)
+    _move(dest, self)
   }
 
   /**
@@ -1214,7 +1242,7 @@ class BigInt {
         }
 
         if carry != 0 or i != self.length - 1 {
-          out = zeros[6 - word.length()] + word + out
+          out = _zeros[6 - word.length()] + word + out
         } else {
           out = word + out
         }
@@ -1236,18 +1264,18 @@ class BigInt {
     }
 
     # var groupSize = (self.wordSize * math.LOG_2_E / math.log(base)) // 1
-    var groupSize = groupSizes[base]
+    var groupSize = _groupSizes[base]
     # var groupBase = base ** groupSize
-    var groupBase = groupBases[base]
+    var groupBase = _groupBases[base]
     out = ''
     var c = self.clone()
     c.negative = 0
     while !c.isZero() {
-      var r = numberToBase(c.modrn(groupBase), base)
+      var r = _numberToBase(c.modrn(groupBase), base)
       c = c.idivn(groupBase)
 
       if !c.isZero() {
-        out = zeros[groupSize - r.length()] + r + out
+        out = _zeros[groupSize - r.length()] + r + out
       } else {
         out = r + out
       }
@@ -1303,6 +1331,7 @@ class BigInt {
    * 
    * @param {string} endian: One of `le` or `be`
    * @param {number} length
+   * @returns list
    */
   toList(endian, length) {
     self.strip()
@@ -1497,6 +1526,9 @@ class BigInt {
 
   /**
    * Converts the number to two's complement representation of the given bit _width_.
+   * 
+   * @param number width
+   * @returns [[bigint.BigInt]]
    */
   toTwos(width) {
     if self.negative != 0 {
@@ -1509,6 +1541,7 @@ class BigInt {
   /**
    * Convert from two's complement representation in the give _width_ to a BigInt number.
    * 
+   * @param number width
    * @returns [[bigint.BigInt]]
    */
   fromTwos(width) {
@@ -1537,6 +1570,9 @@ class BigInt {
     return self.clone().ineg()
   }
 
+  /**
+   * The in-place version of [[bigint.BigInt.neg]]
+   */
   ineg () {
     if !self.isZero() {
       self.negative ^= 1
@@ -1545,6 +1581,11 @@ class BigInt {
     return self
   }
 
+  /**
+   * The in-place and unsigned version of [[bigint.BigInt.or_]]
+   * 
+   * @returns self
+   */
   iuor(num) {
     while self.length < num.length {
       var i = self.length++ - 1
@@ -1562,11 +1603,22 @@ class BigInt {
     return self.strip()
   }
 
+  /**
+   * The in-place version of [[bigint.BigInt.or_]]
+   * 
+   * @returns self
+   */
   ior(num) {
     assert (self.negative | num.negative) == 0
     return self.iuor(num)
   }
 
+  /**
+   * Performs a bitwise OR operation on the number and the given one.
+   * 
+   * @param [[bigint.BigInt]] num
+   * @returns [[bigint.BigInt]]
+   */
   or_(num) {
     if self.length > num.length {
       return self.clone().ior(num)
@@ -1575,6 +1627,9 @@ class BigInt {
     return num.clone().ior(self)
   }
 
+  /**
+   * The unsigned version of [[bigint.BigInt.or_]]
+   */
   uor(num) {
     if self.length > num.length {
       return self.clone().iuor(num)
@@ -1583,6 +1638,11 @@ class BigInt {
     return num.clone().iuor(self)
   }
 
+  /**
+   * The in-place and unsigned version of [[bigint.BigInt.and_]]
+   * 
+   * @returns self
+   */
   iuand(num) {
     # b = min-length(num, self)
     var b
@@ -1601,11 +1661,22 @@ class BigInt {
     return self.strip()
   }
 
+  /**
+   * The in-place version of [[bigint.BigInt.and_]]
+   * 
+   * @returns self
+   */
   iand(num) {
     assert (self.negative | num.negative) == 0
     return self.iuand(num)
   }
 
+  /**
+   * Performs a bitwise AND operation on the number and the given one.
+   * 
+   * @param [[bigint.BigInt]] num
+   * @returns [[bigint.BigInt]]
+   */
   and_(num) {
     if self.length > num.length {
       return self.clone().iand(num)
@@ -1614,6 +1685,9 @@ class BigInt {
     return num.clone().iand(self)
   }
 
+  /**
+   * The unsigned version of [[bigint.BigInt.and_]]
+   */
   uand(num) {
     if self.length > num.length {
       return self.clone().iuand(num)
@@ -1622,6 +1696,11 @@ class BigInt {
     return num.clone().iuand(self)
   }
 
+  /**
+   * The in-place and unsigned version of [[bigint.BigInt.xor]]
+   * 
+   * @returns self
+   */
   iuxor(num) {
     # a.length > b.length
     var a, b
@@ -1653,11 +1732,22 @@ class BigInt {
     return self.strip()
   }
 
+  /**
+   * The in-place version of [[bigint.BigInt.xor]]
+   * 
+   * @returns self
+   */
   ixor(num) {
     assert (self.negative | num.negative) == 0
     return self.iuxor(num)
   }
 
+  /**
+   * Performs a bitwise XOR operation on the number and the given one.
+   * 
+   * @param [[bigint.BigInt]] num
+   * @returns [[bigint.BigInt]]
+   */
   xor(num) {
     if self.length > num.length {
       return self.clone().ixor(num)
@@ -1666,6 +1756,9 @@ class BigInt {
     return num.clone().ixor(self)
   }
 
+  /**
+   * The unsigned version of [[bigint.BigInt.xor]]
+   */
   uxor(num) {
     if self.length > num.length {
       return self.clone().iuxor(num)
@@ -1674,6 +1767,11 @@ class BigInt {
     return num.clone().iuxor(self)
   }
 
+  /**
+   * The in-place version of [[bigint.BigInt.notn]]
+   * 
+   * @returns self
+   */
   inotn(width) {
     assert is_number(width) and width >= 0
 
@@ -1702,10 +1800,23 @@ class BigInt {
     return self.strip()
   }
 
+  /**
+   * Performs a bitwise NOT operation on the BigInt and the given one number.
+   * 
+   * @param number width
+   * @returns [[bigint.BigInt]]
+   */
   notn(width) {
     return self.clone().inotn(width)
   }
 
+  /**
+   * Sets the specified bit in the number to the given value
+   * 
+   * @param number bit
+   * @param {number|bool} val
+   * @returns [[bigint.BigInt]]
+   */
   setn(bit, val) {
     assert is_number(bit) and bit >= 0
 
@@ -1723,6 +1834,11 @@ class BigInt {
     return self.strip()
   }
 
+  /**
+   * The in-place version of [[bigint.BigInt.and]]
+   * 
+   * @returns self
+   */
   iadd(num) {
     var r
 
@@ -1787,6 +1903,12 @@ class BigInt {
     return self
   }
 
+  /**
+   * Adds the given number to the current one.
+   * 
+   * @param [[bigint.BigInt]] num
+   * @returns [[bigint.BigInt]]
+   */
   add(num) {
     var res
     if num.negative != 0 and self.negative == 0 {
@@ -1808,6 +1930,11 @@ class BigInt {
     return num.clone().iadd(self)
   }
 
+  /**
+   * The in-place version of [[bigint.BigInt.sub]]
+   * 
+   * @returns self
+   */
   isub(num) {
     # self - (-num) = self + num
     if num.negative != 0 {
@@ -1882,6 +2009,12 @@ class BigInt {
     return self.strip()
   }
 
+  /**
+   * Subracts the given number from the current one.
+   * 
+   * @param [[bigint.BigInt]] num
+   * @returns [[bigint.BigInt]]
+   */
   sub(num) {
     return self.clone().isub(num)
   }
@@ -1890,34 +2023,44 @@ class BigInt {
     var res
     var len = self.length + num.length
     if self.length == 10 and num.length == 10 {
-      res = comb10MulTo(self, num, out)
+      res = _comb10MulTo(self, num, out)
     } else if len < 63 {
-      res = smallMulTo(self, num, out)
+      res = _smallMulTo(self, num, out)
     } else if len < 1024 {
-      res = bigMulTo(self, num, out)
+      res = _bigMulTo(self, num, out)
     } else {
-      res = jumboMulTo(self, num, out)
+      res = _jumboMulTo(self, num, out)
     }
 
     return res
   }
 
+  /**
+   * Multiplies the given number by the current one.
+   * 
+   * @param [[bigint.BigInt]] num
+   * @returns [[bigint.BigInt]]
+   */
   mul(num) {
     var out = BigInt(nil)
     out.words = [0] * (self.length + num.length)
     return self.mulTo(num, out)
   }
 
-  mulf(num) {
-    var out = BigInt(nil)
-    out.words = [0] * (self.length + num.length)
-    return jumboMulTo(self, num, out)
-  }
-
+  /**
+   * The in-place version of [[bigint.BigInt.mul]]
+   * 
+   * @returns self
+   */
   imul(num) {
     return self.clone().mulTo(num, self)
   }
 
+  /**
+   * The in-place version of [[bigint.BigInt.muln]]
+   * 
+   * @returns self
+   */
   imuln(num) {
     var isNegNum = num < 0
     if isNegNum num = -num
@@ -1950,20 +2093,43 @@ class BigInt {
     return isNegNum ? self.ineg() : self
   }
 
+  /**
+   * Multiplies the given BigInt by the given number.
+   * 
+   * @param number num
+   * @returns [[bigint.BigInt]]
+   */
   muln(num) {
     return self.clone().imuln(num)
   }
 
+  /**
+   * Returns a number which is equal to the square of the current number.
+   * 
+   * @returns [[bigint.BigInt]]
+   */
   sqr() {
     return self.mul(self)
   }
 
+  /**
+   * The in-place version of [[bigint.BigInt.sqr]]
+   * 
+   * @returns self
+   */
   isqr() {
     return self.imul(self.clone())
   }
 
+  /**
+   * Returns a number which is equal to the current number raise to the power 
+   * of the given number.
+   * 
+   * @param [[bigint.BigInt]] num
+   * @returns [[bigint.BigInt]]
+   */
   pow(num) {
-    var w = toBitArray(num)
+    var w = _toBitArray(num)
     if w.length == 0 return BigInt(1)
 
     # Skip leading zeroes
@@ -1984,6 +2150,11 @@ class BigInt {
     return res
   }
 
+  /**
+   * The in-place and unsigned version of [[bigint.BigInt.shln]]
+   * 
+   * @returns self
+   */
   iushln(bits) {
     assert is_number(bits) and bits >= 0
 
@@ -2031,6 +2202,11 @@ class BigInt {
     return self.strip()
   }
 
+  /**
+   * The in-place version of [[bigint.BigInt.shln]]
+   * 
+   * @returns self
+   */
   ishln (bits) {
     assert self.negative == 0
     return self.iushln(bits)
@@ -2039,6 +2215,11 @@ class BigInt {
   # Shift-right in-place
   # NOTE: `hint` is a lowest bit before trailing zeroes
   # NOTE: if `extended` is present - it will be filled with destroyed bits
+  /**
+   * The in-place and unsigned version of [[bigint.BigInt.shrn]]
+   * 
+   * @returns self
+   */
   iushrn(bits, hint, extended) {
     assert is_number(bits) and bits >= 0
 
@@ -2098,27 +2279,56 @@ class BigInt {
     return self.strip()
   }
 
+  /**
+   * The in-place version of [[bigint.BigInt.shrn]]
+   * 
+   * @returns self
+   */
   ishrn(bits, hint, extended) {
     assert self.negative == 0
     return self.iushrn(bits, hint, extended)
   }
 
+  /**
+   * Performs a bitwise left shift operation on the BigInt and the given number.
+   * 
+   * @param number bits
+   * @returns [[bigint.BigInt]]
+   */
   shln(bits) {
     return self.clone().ishln(bits)
   }
 
+  /**
+   * The unsigned version of [[bigint.BigInt.shln]]
+   */
   ushln(bits) {
     return self.clone().iushln(bits)
   }
 
+  /**
+   * Performs a bitwise right shift operation on the number and the given one.
+   * 
+   * @param number bits
+   * @returns [[bigint.BigInt]]
+   */
   shrn(bits) {
     return self.clone().ishrn(bits)
   }
 
+  /**
+   * The unsigned version of [[bigint.BigInt.shrn]]
+   */
   ushrn(bits) {
     return self.clone().iushrn(bits)
   }
 
+  /**
+   * Tests the number to see if the specified bit is set.
+   * 
+   * @param number bit
+   * @returns bool
+   */
   testn(bit) {
     assert is_number(bit) and bit >= 0
     var r = bit % 26
@@ -2134,6 +2344,11 @@ class BigInt {
     return g == 0 ? false : !!g
   }
 
+  /**
+   * The in-place version of [[bigint.BigInt.maskn]]
+   * 
+   * @returns self
+   */
   imaskn(bits) {
     assert is_number(bits) and bits >= 0
 
@@ -2159,10 +2374,21 @@ class BigInt {
     return self.strip()
   }
 
-  maskn(bits) {
-    return self.clone().imaskn(bits)
+  /**
+   * Clears all bits higher than or equal to the given bit in the number.
+   * 
+   * @param number bit
+   * @returns [[bigint.BigInt]]
+   */
+  maskn(bit) {
+    return self.clone().imaskn(bit)
   }
 
+  /**
+   * The in-place version of [[bigint.BigInt.addn]]
+   * 
+   * @returns self
+   */
   iaddn (num) {
     assert is_number(num)
     assert num < 0x4000000
@@ -2205,6 +2431,11 @@ class BigInt {
     return self
   }
 
+  /**
+   * The in-place version of [[bigint.BigInt.subn]]
+   * 
+   * @returns self
+   */
   isubn (num) {
     assert is_number(num)
     assert num < 0x4000000
@@ -2235,20 +2466,42 @@ class BigInt {
     return self.strip()
   }
 
+  /**
+   * Adds the given number _num_ to the current BigInt
+   * 
+   * @param number num
+   * @returns [[bigint.BigInt]]
+   */
   addn(num) {
     return self.clone().iaddn(num)
   }
 
+  /**
+   * Subracts the given number _num_ from the current BigInt
+   * 
+   * @param number num
+   * @returns [[bigint.BigInt]]
+   */
   subn(num) {
     return self.clone().isubn(num)
   }
 
+  /**
+   * The in-place version of [[bigint.BigInt.abs]]
+   * 
+   * @returns self
+   */
   iabs() {
     self.negative = 0
 
     return self
   }
 
+  /**
+   * Returns the absolute value of the current number.
+   * 
+   * @returns [[bigint.BigInt]]
+   */
   abs() {
     return self.clone().iabs()
   }
@@ -2365,10 +2618,29 @@ class BigInt {
     }
   }
 
-  # NOTE: 1) `mode` can be set to `mod` to request mod only,
-  #       to `div` to request div only, or be absent to
+  # NOTE: 1) 
+  #       to 
   #       request both div & mod
-  #       2) `positive` is true if unsigned mod is requested
+  #       2) 
+  /**
+   * Returns the quotient and modulus obtained when the current number is divided by 
+   * the given number as a dictionary containg the keys `mod` (modulus) and `div` 
+   * (quotient). 
+   * 
+   * The second paramter of the function (`mode`) allows the customization of the 
+   * computation and accepts the values listed below to achive different results.
+   * 
+   * - `mod` to request mod only,
+   * - `div` to request div only, or be absent to
+   * 
+   * It also accept a third argument `positive` causes the function to return the 
+   * unsigned mod if `true`.
+   * 
+   * @param [[bigint.BigInt]] num
+   * @param string? mode: `''` (default) | `'mod'` | `'div'`
+   * @param bool? positive
+   * @returns dict
+   */
   divmod(num, mode, positive) {
     assert !num.isZero()
 
@@ -2464,18 +2736,39 @@ class BigInt {
     return self._wordDiv(num, mode)
   }
 
+  /**
+   * Divides the current number by the given number _num_.
+   * 
+   * @param [[bigint.BigInt]] num
+   * @returns [[bigint.BigInt]]
+   */
   div(num) {
     return self.divmod(num, 'div', false).div
   }
 
+  /**
+   * Returns the remainder of dividing the current number by the given number _num_.
+   * 
+   * @param [[bigint.BigInt]] num
+   * @returns [[bigint.BigInt]]
+   */
   mod(num) {
     return self.divmod(num, 'mod', false).mod
   }
 
+  /**
+   * The unsigned form of [[bigint.BigInt.mod]]
+   */
   umod(num) {
     return self.divmod(num, 'mod', true).mod
   }
 
+  /**
+   * Same as [[bigint.BigInt.div]] but rounds the result to the nearest number.
+   * 
+   * @param [[bigint.BigInt]] num
+   * @returns [[bigint.BigInt]]
+   */
   divRound(num) {
     var dm = self.divmod(num)
 
@@ -2499,6 +2792,7 @@ class BigInt {
     return dm.div.negative != 0 ? dm.div.isubn(1) : dm.div.iaddn(1)
   }
 
+  # leave undocumented
   modrn(num) {
     var isNegNum = num < 0
     if isNegNum num = -num
@@ -2514,6 +2808,11 @@ class BigInt {
     return isNegNum ? -acc : acc
   }
 
+  /**
+   * The in-place version of [[bigint.BigInt.divn]]
+   * 
+   * @returns self
+   */
   idivn(num) {
     var isNegNum = num < 0
     if (isNegNum) num = -num
@@ -2531,10 +2830,19 @@ class BigInt {
     return isNegNum ? self.ineg() : self
   }
 
+  /**
+   * Divides the current BigInt by the given number _num_.
+   * 
+   * @param number num
+   * @returns [[bigint.BigInt]]
+   */
   divn(num) {
     return self.clone().idivn(num)
   }
 
+  /**
+   * 
+   */
   egcd(p) {
     assert p.negative == 0
     assert !p.isZero()
@@ -2699,6 +3007,10 @@ class BigInt {
     return res
   }
 
+  /**
+   * 
+   * @returns [[bigint.BigInt]]
+   */
   gcd(num) {
     if self.isZero() return num.abs()
     if num.isZero() return self.abs()
@@ -2739,14 +3051,26 @@ class BigInt {
     return b.iushln(shift)
   }
 
+  /**
+   * 
+   * @returns [[bigint.BigInt]]
+   */
   invm(num) {
     return self.egcd(num).a.umod(num)
   }
 
+  /**
+   * 
+   * @returns bool
+   */
   isEven() {
     return (self.words[0] & 1) == 0
   }
 
+  /**
+   * 
+   * @returns bool
+   */
   isOdd() {
     return (self.words[0] & 1) == 1
   }
@@ -2755,7 +3079,11 @@ class BigInt {
     return self.words[0] & num
   }
 
-  bincn (bit) {
+  /**
+   * 
+   * @returns self
+   */
+  bincn(bit) {
     assert is_number(bit)
     var r = bit % 26
     var s = (bit - r) / 26
@@ -2786,10 +3114,18 @@ class BigInt {
     return self
   }
 
+  /**
+   * 
+   * @returns bool
+   */
   isZero() {
     return self.length == 1 and self.words[0] == 0
   }
 
+  /**
+   * 
+   * @returns number
+   */
   cmpn(num) {
     var negative = num < 0
 
@@ -2823,6 +3159,10 @@ class BigInt {
   # 1 - if `self` > `num`
   # 0 - if `self` == `num`
   # -1 - if `self` < `num`
+  /**
+   * 
+   * @returns number
+   */
   cmp(num) {
     if self.negative != 0 and num.negative == 0 return -1
     if self.negative == 0 and num.negative != 0 return 1
@@ -2835,6 +3175,9 @@ class BigInt {
     return res
   }
 
+  /**
+   * The unsigned version of [[bigint.BigInt.cmp]]
+   */
   ucmp(num) {
     # At self point both numbers have the same sign
     if self.length > num.length return 1
@@ -2858,42 +3201,82 @@ class BigInt {
     return res
   }
 
+  /**
+   * 
+   * @returns bool
+   */
   gtn(num) {
     return self.cmpn(num) == 1
   }
 
+  /**
+   * 
+   * @returns bool
+   */
   gt(num) {
     return self.cmp(num) == 1
   }
 
+  /**
+   * 
+   * @returns bool
+   */
   gten(num) {
     return self.cmpn(num) >= 0
   }
 
+  /**
+   * 
+   * @returns bool
+   */
   gte(num) {
     return self.cmp(num) >= 0
   }
 
+  /**
+   * 
+   * @returns bool
+   */
   ltn(num) {
     return self.cmpn(num) == -1
   }
 
+  /**
+   * 
+   * @returns bool
+   */
   lt(num) {
     return self.cmp(num) == -1
   }
 
+  /**
+   * 
+   * @returns bool
+   */
   lten(num) {
     return self.cmpn(num) <= 0
   }
 
+  /**
+   * 
+   * @returns bool
+   */
   lte(num) {
     return self.cmp(num) <= 0
   }
 
+  /**
+   * 
+   * @returns bool
+   */
   eqn(num) {
     return self.cmpn(num) == 0
   }
 
+  /**
+   * 
+   * @returns bool
+   */
   eq(num) {
     return self.cmp(num) == 0
   }
@@ -3079,6 +3462,8 @@ class BigInt {
 
 
 /**
+ * See [[big.BigInt]]
+ * 
  * @param number
  * @param base
  * @param endian

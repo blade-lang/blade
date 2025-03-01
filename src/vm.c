@@ -2447,10 +2447,18 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
 
       case OP_CALL_IMPORT: {
         b_obj_closure *closure = AS_CLOSURE(READ_CONSTANT());
-        add_module(vm, closure->function->module);
-        register_module__FILE__(vm, closure->function->module);
-        call(vm, closure, 0);
-        vm->current_frame = &vm->frames[vm->frame_count - 1];
+
+        b_value existing_module;
+        if(table_get(&vm->modules, STRING_VAL(closure->function->module->file), &existing_module)) {
+          add_known_module(vm, AS_MODULE(existing_module), closure->function->module->name);
+          // attach same module to import closure for selective import
+          closure->function->module = AS_MODULE(existing_module);
+        } else {
+          add_module(vm, closure->function->module);
+          register_module__FILE__(vm, closure->function->module);
+          call(vm, closure, 0);
+          vm->current_frame = &vm->frames[vm->frame_count - 1];
+        }
         break;
       }
 
