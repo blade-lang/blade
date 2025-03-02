@@ -15,8 +15,8 @@ class Decl {
 class VarDecl < Decl {
 
   /**
-   * @param Decl|any|nil name
-   * @param Decl|any|nil value
+   * @param {Decl|any|nil} name
+   * @param {Decl|any|nil} value
    * @constructor
    */
   VarDecl(name, value) {
@@ -41,9 +41,9 @@ class VarDecl < Decl {
 class FunctionDecl < Decl {
 
   /**
-   * @param Decl|any|nil name
-   * @param Decl|any|nil params
-   * @param Decl|any|nil body
+   * @param {Decl|any|nil} name
+   * @param {Decl|any|nil} params
+   * @param {Decl|any|nil} body
    * @constructor
    */
   FunctionDecl(name, params, body) {
@@ -70,10 +70,10 @@ class FunctionDecl < Decl {
 class MethodDecl < Decl {
 
   /**
-   * @param Decl|any|nil name
-   * @param Decl|any|nil params
-   * @param Decl|any|nil body
-   * @param Decl|any|nil is_static
+   * @param {Decl|any|nil} name
+   * @param {Decl|any|nil} params
+   * @param {Decl|any|nil} body
+   * @param {Decl|any|nil} is_static
    * @constructor
    */
   MethodDecl(name, params, body, is_static) {
@@ -102,9 +102,9 @@ class MethodDecl < Decl {
 class PropertyDecl < Decl {
 
   /**
-   * @param Decl|any|nil name
-   * @param Decl|any|nil value
-   * @param Decl|any|nil is_static
+   * @param {Decl|any|nil} name
+   * @param {Decl|any|nil} value
+   * @param {Decl|any|nil} is_static
    * @constructor
    */
   PropertyDecl(name, value, is_static) {
@@ -131,17 +131,19 @@ class PropertyDecl < Decl {
 class ClassDecl < Decl {
 
   /**
-   * @param Decl|any|nil name
-   * @param Decl|any|nil superclass
-   * @param Decl|any|nil properties
-   * @param Decl|any|nil methods
+   * @param {Decl|any|nil} name
+   * @param {Decl|any|nil} superclass
+   * @param {Decl|any|nil} properties
+   * @param {Decl|any|nil} methods
+   * @param {Decl|any|nil} operators
    * @constructor
    */
-  ClassDecl(name, superclass, properties, methods) {
+  ClassDecl(name, superclass, properties, methods, operators) {
     self.name = name
     self.superclass = superclass
     self.properties = properties
     self.methods = methods
+    self.operators = operators
   }
 
   @to_json() {
@@ -151,6 +153,7 @@ class ClassDecl < Decl {
       superclass: self.superclass,
       properties: self.properties,
       methods: self.methods,
+      operators: self.operators,
     }
   }
 }

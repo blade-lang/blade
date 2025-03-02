@@ -23,7 +23,7 @@ import .token { * }
  * 
  * @param string source
  * @param string? path
- * @returns ParseResult
+ * @returns [[ast.ParseResult]]
  */
 def parse(source, path) {
   if !is_string(source)
@@ -38,6 +38,20 @@ def parse(source, path) {
   # parse the scanned tokens
   var parser = Parser(tokens, path)
   return parser.parse()
+}
+
+/**
+ * Parses the given file and outputs Blade AST objects.
+ * 
+ * @param {file|string} source
+ * @returns [[ast.ParseResult]]
+ */
+def parse_file(source) {
+  if is_string(source) source = file(source)
+  if !is_file(source)
+    raise Exception('file expected in argument 1 (source)')
+
+  return parse(source.read(), source.abs_path())
 }
 
 /**

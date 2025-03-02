@@ -13,7 +13,7 @@ class Stmt {
 class EchoStmt < Stmt {
 
   /**
-   * @param Stmt|any|nil value
+   * @param {Stmt|any|nil} value
    * @constructor
    */
   EchoStmt(value) {
@@ -36,7 +36,7 @@ class EchoStmt < Stmt {
 class ExprStmt < Stmt {
 
   /**
-   * @param Stmt|any|nil expr
+   * @param {Stmt|any|nil} expr
    * @constructor
    */
   ExprStmt(expr) {
@@ -59,9 +59,9 @@ class ExprStmt < Stmt {
 class IfStmt < Stmt {
 
   /**
-   * @param Stmt|any|nil condition
-   * @param Stmt|any|nil truth
-   * @param Stmt|any|nil falsy
+   * @param {Stmt|any|nil} condition
+   * @param {Stmt|any|nil} truth
+   * @param {Stmt|any|nil} falsy
    * @constructor
    */
   IfStmt(condition, truth, falsy) {
@@ -88,10 +88,10 @@ class IfStmt < Stmt {
 class IterStmt < Stmt {
 
   /**
-   * @param Stmt|any|nil declaration
-   * @param Stmt|any|nil condition
-   * @param Stmt|any|nil iterator
-   * @param Stmt|any|nil body
+   * @param {Stmt|any|nil} declaration
+   * @param {Stmt|any|nil} condition
+   * @param {Stmt|any|nil} iterator
+   * @param {Stmt|any|nil} body
    * @constructor
    */
   IterStmt(declaration, condition, iterator, body) {
@@ -120,8 +120,8 @@ class IterStmt < Stmt {
 class WhileStmt < Stmt {
 
   /**
-   * @param Stmt|any|nil condition
-   * @param Stmt|any|nil body
+   * @param {Stmt|any|nil} condition
+   * @param {Stmt|any|nil} body
    * @constructor
    */
   WhileStmt(condition, body) {
@@ -146,8 +146,8 @@ class WhileStmt < Stmt {
 class DoWhileStmt < Stmt {
 
   /**
-   * @param Stmt|any|nil body
-   * @param Stmt|any|nil condition
+   * @param {Stmt|any|nil} body
+   * @param {Stmt|any|nil} condition
    * @constructor
    */
   DoWhileStmt(body, condition) {
@@ -172,9 +172,9 @@ class DoWhileStmt < Stmt {
 class ForStmt < Stmt {
 
   /**
-   * @param Stmt|any|nil vars
-   * @param Stmt|any|nil iterable
-   * @param Stmt|any|nil body
+   * @param {Stmt|any|nil} vars
+   * @param {Stmt|any|nil} iterable
+   * @param {Stmt|any|nil} body
    * @constructor
    */
   ForStmt(vars, iterable, body) {
@@ -229,7 +229,7 @@ class BreakStmt < Stmt {
 class RaiseStmt < Stmt {
 
   /**
-   * @param Stmt|any|nil exception
+   * @param {Stmt|any|nil} exception
    * @constructor
    */
   RaiseStmt(exception) {
@@ -252,7 +252,7 @@ class RaiseStmt < Stmt {
 class ReturnStmt < Stmt {
 
   /**
-   * @param Stmt|any|nil value
+   * @param {Stmt|any|nil} value
    * @constructor
    */
   ReturnStmt(value) {
@@ -275,8 +275,8 @@ class ReturnStmt < Stmt {
 class AssertStmt < Stmt {
 
   /**
-   * @param Stmt|any|nil expr
-   * @param Stmt|any|nil message
+   * @param {Stmt|any|nil} expr
+   * @param {Stmt|any|nil} message
    * @constructor
    */
   AssertStmt(expr, message) {
@@ -301,9 +301,9 @@ class AssertStmt < Stmt {
 class UsingStmt < Stmt {
 
   /**
-   * @param Stmt|any|nil expr
-   * @param Stmt|any|nil cases
-   * @param Stmt|any|nil default_case
+   * @param {Stmt|any|nil} expr
+   * @param {Stmt|any|nil} cases
+   * @param {Stmt|any|nil} default_case
    * @constructor
    */
   UsingStmt(expr, cases, default_case) {
@@ -330,8 +330,8 @@ class UsingStmt < Stmt {
 class ImportStmt < Stmt {
 
   /**
-   * @param Stmt|any|nil path
-   * @param Stmt|any|nil elements
+   * @param {Stmt|any|nil} path
+   * @param {Stmt|any|nil} elements
    * @constructor
    */
   ImportStmt(path, elements) {
@@ -356,8 +356,8 @@ class ImportStmt < Stmt {
 class CatchStmt < Stmt {
 
   /**
-   * @param Stmt|any|nil body
-   * @param Stmt|any|nil var_name
+   * @param {Stmt|any|nil} body
+   * @param {Stmt|any|nil} var_name
    * @constructor
    */
   CatchStmt(body, var_name) {
@@ -382,7 +382,7 @@ class CatchStmt < Stmt {
 class CommentStmt < Stmt {
 
   /**
-   * @param Stmt|any|nil data
+   * @param {Stmt|any|nil} data
    * @constructor
    */
   CommentStmt(data) {
@@ -405,7 +405,7 @@ class CommentStmt < Stmt {
 class BlockStmt < Stmt {
 
   /**
-   * @param Stmt|any|nil body
+   * @param {Stmt|any|nil} body
    * @constructor
    */
   BlockStmt(body) {
@@ -428,9 +428,9 @@ class BlockStmt < Stmt {
 class AssignStmt < Stmt {
 
   /**
-   * @param Stmt|any|nil expr
-   * @param Stmt|any|nil type
-   * @param Stmt|any|nil value
+   * @param {Stmt|any|nil} expr
+   * @param {Stmt|any|nil} type
+   * @param {Stmt|any|nil} value
    * @constructor
    */
   AssignStmt(expr, type, value) {

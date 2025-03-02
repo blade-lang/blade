@@ -2841,17 +2841,22 @@ class BigInt {
   }
 
   /**
+   * Caculates the Greatest Common Divisor using the Extended Euclidean algorithm 
+   * (ax + by) where _x_ is the current number and returns a dictionary containing 
+   * the results of `a`, `b`, and `gcd`.
    * 
+   * @param [[bigint.BigInt]] y
+   * @returns dict
    */
-  egcd(p) {
-    assert p.negative == 0
-    assert !p.isZero()
+  egcd(y) {
+    assert y.negative == 0
+    assert !y.isZero()
 
     var x = self
-    var y = p.clone()
+    y = y.clone()
 
     if x.negative != 0 {
-      x = x.umod(p)
+      x = x.umod(y)
     } else {
       x = x.clone()
     }
@@ -3008,7 +3013,9 @@ class BigInt {
   }
 
   /**
+   * Calculates the Greatest Common Divisor of the current number and the given number _num_.
    * 
+   * @param [[bigint.BigInt]] num
    * @returns [[bigint.BigInt]]
    */
   gcd(num) {
@@ -3052,7 +3059,9 @@ class BigInt {
   }
 
   /**
+   * Calculates the inverse of the current number modulo the given number _num_.
    * 
+   * @param [[bigint.BigInt]] num
    * @returns [[bigint.BigInt]]
    */
   invm(num) {
@@ -3060,6 +3069,7 @@ class BigInt {
   }
 
   /**
+   * Returns `true` if the current number is an even number or `false` otherwise.
    * 
    * @returns bool
    */
@@ -3068,6 +3078,7 @@ class BigInt {
   }
 
   /**
+   * Returns `true` if the current number is an odd number or `false` otherwise.
    * 
    * @returns bool
    */
@@ -3075,16 +3086,33 @@ class BigInt {
     return (self.words[0] & 1) == 1
   }
 
+  /**
+   * Perform AND on lo 32 bits of the current number and the given number 
+   * and returns a regular number.
+   * 
+   * @param number num
+   * @returns number
+   */
   andln(num) {
+    if !is_number(num) {
+      raise Exception('number expected for operation')
+    }
+
     return self.words[0] & num
   }
 
   /**
+   * Adds the result of calculating `1 << bit` to the current number and returns 
+   * the resulting value.
    * 
+   * @param number num
    * @returns self
    */
   bincn(bit) {
-    assert is_number(bit)
+    if !is_number(bit) {
+      raise Exception('number expected for operation')
+    }
+
     var r = bit % 26
     var s = (bit - r) / 26
     var q = 1 << r
@@ -3115,6 +3143,7 @@ class BigInt {
   }
 
   /**
+   * Returns `true` if the current number is zero otherwise returns `false`
    * 
    * @returns bool
    */
@@ -3123,10 +3152,18 @@ class BigInt {
   }
 
   /**
+   * Compares the current BigInt with the given number and return `-1` if the 
+   * current BigInt is less than the given number, `0` if it is equal to the 
+   * given number, or `1` if it is greater than the given number.
    * 
+   * @param number num
    * @returns number
    */
   cmpn(num) {
+    if !is_number(num) {
+      raise Exception('number expected for operation')
+    }
+
     var negative = num < 0
 
     if self.negative != 0 and !negative return -1
@@ -3160,7 +3197,11 @@ class BigInt {
   # 0 - if `self` == `num`
   # -1 - if `self` < `num`
   /**
+   * Compares the current number with the given number and return `-1` if the 
+   * current number is less than the given number, `0` if it is equal to the 
+   * given number, or `1` if it is greater than the given number.
    * 
+   * @param [[bigint.BigInt]] num
    * @returns number
    */
   cmp(num) {
@@ -3457,6 +3498,36 @@ class BigInt {
 
   def >>> {
     raise Exception('BigInt does not support >>> operations')
+  }
+
+  def > {
+    if instance_of(__arg__, BigInt) {
+      return self.gt(__arg__)
+    } else if is_number(__arg__) {
+      return self.gtn(__arg__)
+    }
+
+    raise Exception('BigInt operation > not permitted on ${typeof(__arg__)}')
+  }
+
+  def < {
+    if instance_of(__arg__, BigInt) {
+      return self.lt(__arg__)
+    } else if is_number(__arg__) {
+      return self.ltn(__arg__)
+    }
+
+    raise Exception('BigInt operation < not permitted on ${typeof(__arg__)}')
+  }
+
+  def = {
+    if instance_of(__arg__, BigInt) {
+      return self.eq(__arg__)
+    } else if is_number(__arg__) {
+      return self.eq(BigInt(__arg__))
+    }
+
+    raise Exception('BigInt operation = not permitted on ${typeof(__arg__)}')
   }
 }
 

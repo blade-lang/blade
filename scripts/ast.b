@@ -68,7 +68,7 @@ var asts = {
       Function: ['name', 'params', 'body'],
       Method: ['name', 'params', 'body', 'is_static'],
       Property: ['name', 'value', 'is_static'],
-      Class: ['name', 'superclass', 'properties', 'methods'],
+      Class: ['name', 'superclass', 'properties', 'methods', 'operators'],
     },
     props: ['doc', 'file',]
   },
@@ -103,7 +103,7 @@ for ast, members in asts {
       var params = ', '.join(attr)
       f.write('  /**\n')
       for p in attr {
-        f.write('   * @param ${ast}|any|nil ${p}\n')
+        f.write('   * @param {${ast}|any|nil} ${p}\n')
       }
       f.write('   * @constructor\n   */\n')
       f.write('  ${cl}${ast}(${params}) {\n')

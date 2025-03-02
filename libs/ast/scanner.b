@@ -446,7 +446,11 @@ class Scanner {
       }
       when '>' {
         if self._match('>') {
-          self._add_token(self._match('=') ? TokenType.RSHIFT_EQ : TokenType.RSHIFT)
+          if self._match('>') {
+            self._add_token(self._match('=') ? TokenType.URSHIFT_EQ : TokenType.URSHIFT)
+          } else {
+            self._add_token(self._match('=') ? TokenType.RSHIFT_EQ : TokenType.RSHIFT)
+          }
         } else {
           self._add_token(self._match('=') ? TokenType.GREATER_EQ : TokenType.GREATER)
         }

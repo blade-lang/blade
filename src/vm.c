@@ -1719,6 +1719,11 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
       case OP_EQUAL: {
         b_value b = pop(vm);
         b_value a = pop(vm);
+
+        if(IS_INSTANCE(a)) {
+          CLASS_UNARY_OPERATION("=");
+        }
+
         push(vm, BOOL_VAL(values_equal(a, b)));
         break;
       }
@@ -1768,10 +1773,10 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
       case OP_ECHO: {
         b_value val = peek(vm, 0);
 
-        if (vm->is_repl) {
-          // check if its a class with @to_string() override first.
-          TRY_STRING_OVERRIDE(val);
+        // check if its a class with @to_string() override first.
+        TRY_STRING_OVERRIDE(val);
 
+        if (vm->is_repl) {
           echo_value(val);
         } else {
           print_value(val);

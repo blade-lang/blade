@@ -16,6 +16,27 @@ var _assigners_ = [
   TokenType.LSHIFT_EQ, TokenType.RSHIFT_EQ, TokenType.URSHIFT_EQ,
 ]
 
+# NOTE: ++, and -- are not primary operators in Blade.
+var _ops = [
+  TokenType.PLUS, #  +
+  TokenType.MINUS, #  -
+  TokenType.MULTIPLY, #  *
+  TokenType.POW, #  **
+  TokenType.DIVIDE, #  '/'
+  TokenType.FLOOR, #  '//'
+  TokenType.EQUAL, #  =
+  TokenType.LESS, #  <
+  TokenType.LSHIFT, #  <<
+  TokenType.GREATER, #  >
+  TokenType.RSHIFT, #  >>
+  TokenType.URSHIFT, #  >>>
+  TokenType.PERCENT, #  %
+  TokenType.AMP, #  &
+  TokenType.BAR, #  |
+  TokenType.TILDE, #  ~
+  TokenType.XOR, #  ^
+]
+
 # Helper function to get documentation string
 def _get_doc_string(data) {
   return '${data}\n'.replace('/\\s*\\*(.*)\n/', '$1\n ').trim()
@@ -136,6 +157,13 @@ class Parser {
     raise ParseException(message, self._peek())
   }
 
+  _consume_one_of(message, opts) {
+    for t in opts {
+      if self._check(t) return self._advance()
+    }
+    raise ParseException(message, self._peek())
+  }
+
   _get_doc_defn_data() {
     return self._previous().literal[3,-2].replace('/^\s*\*\s?/m', '').trim()
   }
@@ -159,7 +187,7 @@ class Parser {
    * ignores consecutive newlines
    */
   _ignore_newline() {
-    while self._match(TokenType.NEWLINE, TokenType.COMMENT) {}
+    while self._match(TokenType.NEWLINE, TokenType.COMMENT, TokenType.DOC) {}
   }
 
   ### EXPRESSIONS START
@@ -512,10 +540,10 @@ class Parser {
 
     if self._match(TokenType.QUESTION) {
       self._ignore_newline()
-      var truth = self._or()
+      var truth = self._conditional()
       self._consume(TokenType.COLON, "':' expected in ternary operation")
       self._ignore_newline()
-      expr = ConditionExpr(expr, truth, self._or())
+      expr = ConditionExpr(expr, truth, self._conditional())
     }
 
     return expr
@@ -814,7 +842,7 @@ class Parser {
       do {
         iterator = self._expr_stmt(true)
         self._ignore_newline()
-      } while self._check(TokenType.COMMA)
+      } while self._match(TokenType.COMMA)
     }
 
     var body = self._statement()
@@ -970,6 +998,19 @@ class Parser {
   }
 
   /**
+   * class operator
+   */
+  _class_operator() {
+    self._consume_one_of('non-assignment operator expected', _ops)
+    var name = self._previous().literal
+
+    self._consume(TokenType.LBRACE, "'{' expected after operator declaration")
+    var body = self._block()
+
+    return MethodDecl(name, [], body, false)
+  }
+
+  /**
    * class methods
    */
   _method(is_static) {
@@ -986,7 +1027,7 @@ class Parser {
         self._ignore_newline()
       }
     }
-    self._consume(TokenType.RPAREN, "'(' expected after method arguments")
+    self._consume(TokenType.RPAREN, "')' expected after method arguments")
     self._consume(TokenType.LBRACE, "'{' expected after method declaration")
     var body = self._block()
 
@@ -997,7 +1038,7 @@ class Parser {
    * classes
    */
   _class() {
-    var properties = [], methods = []
+    var properties = [], methods = [], operators = []
 
     self._consume(TokenType.IDENTIFIER, 'class name expected')
     var name = self._previous().literal, superclass
@@ -1031,6 +1072,9 @@ class Parser {
         if doc and !prop.name.starts_with('_') 
           prop.doc = _get_doc_string(doc.data)
         properties.append(prop)
+      } else if self._match(TokenType.DEF) {
+        operators.append(self._class_operator())
+        self._ignore_newline()
       } else {
         var method = self._method(is_static)
         if doc and !method.name.starts_with('_') and !method.name.starts_with('@') 
@@ -1042,7 +1086,7 @@ class Parser {
 
     self._consume(TokenType.RBRACE, "'{' expected at end of class definition")
 
-    return ClassDecl(name, superclass, properties, methods)
+    return ClassDecl(name, superclass, properties, methods, operators)
   }
 
   /**
@@ -1085,7 +1129,7 @@ class Parser {
    * @returns ParseResult
    */
   parse() {
-    var result = ParseResult()
+    var result = ParseResult(self._path)
 
     while !self._is_at_end() {
       var declaration = self._declaration()
