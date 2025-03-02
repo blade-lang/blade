@@ -57,7 +57,7 @@ import _struct
  *  @     | NUL-fill to absolute position 
  * 
  * @param string format
- * @param any... \__args__
+ * @param any... args
  * @returns bytes
  */
 def pack(format, ...) {

@@ -244,7 +244,7 @@ class Int16Array {
    * @returns string
    */
   to_string() {
-    return _array.to_string(self._ptr)
+    return _array.to_string(self._ptr, 2)
   }
 
   /**
@@ -450,7 +450,7 @@ class Int32Array {
    * @returns string
    */
   to_string() {
-    return _array.to_string(self._ptr)
+    return _array.to_string(self._ptr, 4)
   }
 
   /**
@@ -658,7 +658,7 @@ class Int64Array {
    * @returns string
    */
   to_string() {
-    return _array.to_string(self._ptr)
+    return _array.to_string(self._ptr, 8)
   }
 
   /**
@@ -864,7 +864,7 @@ class UInt16Array {
    * @returns string
    */
   to_string() {
-    return _array.to_string(self._ptr)
+    return _array.to_string(self._ptr, 2)
   }
 
   /**
@@ -1070,7 +1070,7 @@ class UInt32Array {
    * @returns string
    */
   to_string() {
-    return _array.to_string(self._ptr)
+    return _array.to_string(self._ptr, 4)
   }
 
   /**
@@ -1276,7 +1276,7 @@ class UInt64Array {
    * @returns string
    */
   to_string() {
-    return _array.to_string(self._ptr)
+    return _array.to_string(self._ptr, 8)
   }
 
   /**
@@ -1482,7 +1482,7 @@ class FloatArray {
    * @returns string
    */
   to_string() {
-    return _array.to_string(self._ptr)
+    return _array.to_string(self._ptr, 8)
   }
 
   /**

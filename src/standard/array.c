@@ -19,7 +19,7 @@ b_obj_ptr *new_array(b_vm *vm, b_array *array) {
 
 //--------- INT 16 STARTS -------------------------
 b_array *new_int16_array(b_vm *vm, int length) {
-  b_array *array = ALLOCATE_OBJ(b_array, OBJ_BYTES);
+  b_array *array = ALLOCATE(b_array, 1);
   array->length = length;
   array->buffer = ALLOCATE(int16_t, length);
   return array;
@@ -221,7 +221,7 @@ DECLARE_MODULE_METHOD(array_int16___iter__) {
 //--------- INT 32 STARTS -------------------------
 
 b_array *new_int32_array(b_vm *vm, int length) {
-  b_array *array = ALLOCATE_OBJ(b_array, OBJ_BYTES);
+  b_array *array = ALLOCATE(b_array, 1);
   array->length = length;
   array->buffer = ALLOCATE(int32_t, length);
   return array;
@@ -423,7 +423,7 @@ DECLARE_MODULE_METHOD(array_int32___iter__) {
 //--------- INT 64 STARTS -------------------------
 
 b_array *new_int64_array(b_vm *vm, int length) {
-  b_array *array = ALLOCATE_OBJ(b_array, OBJ_BYTES);
+  b_array *array = ALLOCATE(b_array, 1);
   array->length = length;
   array->buffer = ALLOCATE(int64_t, length);
   return array;
@@ -625,7 +625,7 @@ DECLARE_MODULE_METHOD(array_int64___iter__) {
 //--------- Unsigned INT 16 STARTS ----------------
 
 b_array *new_uint16_array(b_vm *vm, int length) {
-  b_array *array = ALLOCATE_OBJ(b_array, OBJ_BYTES);
+  b_array *array = ALLOCATE(b_array, 1);
   array->length = length;
   array->buffer = ALLOCATE(uint16_t, length);
   return array;
@@ -827,7 +827,7 @@ DECLARE_MODULE_METHOD(array_uint16___iter__) {
 //--------- Unsigned INT 32 STARTS ----------------
 
 b_array *new_uint32_array(b_vm *vm, int length) {
-  b_array *array = ALLOCATE_OBJ(b_array, OBJ_BYTES);
+  b_array *array = ALLOCATE(b_array, 1);
   array->length = length;
   array->buffer = ALLOCATE(uint32_t, length);
   return array;
@@ -1029,7 +1029,7 @@ DECLARE_MODULE_METHOD(array_uint32___iter__) {
 //--------- Unsigned INT 64 STARTS ----------------
 
 b_array *new_uint64_array(b_vm *vm, int length) {
-  b_array *array = ALLOCATE_OBJ(b_array, OBJ_BYTES);
+  b_array *array = ALLOCATE(b_array, 1);
   array->length = length;
   array->buffer = ALLOCATE(int64_t, length);
   return array;
@@ -1231,7 +1231,7 @@ DECLARE_MODULE_METHOD(array_uint64___iter__) {
 //--------- FLOAT STARTS -------------------------
 
 b_array *new_float_array(b_vm *vm, int length) {
-  b_array *array = ALLOCATE_OBJ(b_array, OBJ_BYTES);
+  b_array *array = ALLOCATE(b_array, 1);
   array->length = length;
   array->buffer = ALLOCATE(float, length);
   return array;
@@ -1469,14 +1469,17 @@ DECLARE_MODULE_METHOD(array_extend) {
 }
 
 DECLARE_MODULE_METHOD(array_to_string) {
-  ENFORCE_ARG_COUNT(to_string, 1);
+  ENFORCE_ARG_COUNT(to_string, 2);
   ENFORCE_ARG_TYPE(to_string, 0, IS_PTR);
+  ENFORCE_ARG_TYPE(to_bytes, 1, IS_NUMBER);
+
+  int size = AS_NUMBER(args[1]);
   b_array *array = (b_array *)AS_PTR(args[0])->pointer;
-  RETURN_STRING(array->buffer);
+  RETURN_L_STRING(array->buffer, array->length * size);
 }
 
 DECLARE_MODULE_METHOD(array_to_bytes) {
-  ENFORCE_ARG_COUNT(to_bytes, 1);
+  ENFORCE_ARG_COUNT(to_bytes, 2);
   ENFORCE_ARG_TYPE(to_bytes, 0, IS_PTR);
   ENFORCE_ARG_TYPE(to_bytes, 1, IS_NUMBER);
 

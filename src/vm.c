@@ -982,6 +982,9 @@ inline bool is_false(b_value value) {
 
 bool is_instance_of(b_obj_class *klass1, b_obj_class *klass2) {
   while (klass1 != NULL) {
+    // quick exit check
+    if(klass1 == klass2) return true;
+
     // check the class names
     if (klass2->name->length == klass1->name->length
         && memcmp(klass1->name->chars, klass2->name->chars, klass1->name->length) == 0) {
@@ -1496,7 +1499,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
 
 #define PRE_BINARY_OP() \
       b_value __b = peek(vm, 0); \
-      b_value __a = peek(vm, 1);
+      b_value __a = peek(vm, 1)
 
 #define BINARY_ON_NON_NUMBERS() \
   (!IS_NUMBER(__b) && !IS_BOOL(__b)) || (!IS_NUMBER(__a) && !IS_BOOL(__a))
@@ -1717,14 +1720,17 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
 
         // comparisons
       case OP_EQUAL: {
-        b_value b = pop(vm);
-        b_value a = pop(vm);
+        PRE_BINARY_OP();
 
-        if(IS_INSTANCE(a)) {
-          CLASS_UNARY_OPERATION("=");
+        if(IS_INSTANCE(__a)) {
+          b_value dummy;
+          if(table_get(&AS_INSTANCE(__a)->klass->methods, STRING_VAL("="), &dummy)) {
+            CLASS_BINARY_OPERATION("=");
+          }
         }
 
-        push(vm, BOOL_VAL(values_equal(a, b)));
+        pop_n(vm, 2); // pop __a and __b
+        push(vm, BOOL_VAL(values_equal(__a, __b)));
         break;
       }
       case OP_GREATER: {
