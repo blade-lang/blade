@@ -1,4 +1,4 @@
-# Proceess '\n'
+# Process '\n'
 
 import ..common.utils { is_space }
 

@@ -245,8 +245,6 @@ class ZipFile {
   var files = []
 
   /**
-   * export([base_dir: string])
-   * 
    * Exports the all files in the ZipFile to files on the machine. If base_dir is given, 
    * the files will be exported into the base_dir and all directories will be 
    * created inside of base_dir as is to reflect the ZipFile's original structure.
@@ -273,7 +271,7 @@ class ZipFile {
 
 /**
  * ZipArchive provides a class for zip archive creation, 
- * manuipulation and extraction.
+ * manipulation and extraction.
  */
 class ZipArchive {
 

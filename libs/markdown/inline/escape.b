@@ -1,4 +1,4 @@
-# Process escaped chars and hardbreaks
+# Process escaped chars and hard breaks
 
 import ..common.utils { is_space }
 

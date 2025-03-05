@@ -84,7 +84,7 @@ def router(req, res) {
   catch {
     var view = errors.not_found
 
-    # Check exact matchs first...
+    # Check exact matches first...
     if routes.contains(req.path) {
       var data = routes[req.path]
       if data[0].upper() == req.method.upper()

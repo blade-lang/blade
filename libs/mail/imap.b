@@ -33,8 +33,8 @@ class Imap {
    * - __port__: The port number of the Imap server. (Default: 143)
    * - __username__: The access username for the Imap user.
    * - __password__: The password for the connection user.
-   * - __tls__: The TLS mode of the connection. One of {TLS_TRY} (default), {TLS_CONTROL}, 
-   *    {TLS_ALL} or {TLS_NONE}.
+   * - __tls__: The TLS mode of the connection. One of [[ssl.TLS_TRY]] (default), [[ssl.TLS_CONTROL]], 
+   *    [[ssl.TLS_ALL]] or [[ssl.TLS_NONE]].
    * - __debug__: Whether to print debug information or not. (Default: false)
    * - __verify_peer__: If the peer certificate should be verified or not. (Default: false)
    * - __verify_host__: If the host certificate should be verified or not. (Default: false)
@@ -184,7 +184,7 @@ class Imap {
    * Executes an IMAP command.
    * 
    * @param string command The command to execute.
-   * @param string? path The path segement of the request url.
+   * @param string? path The path segment of the request url.
    * @returns string The response from the server.
    */
   exec(command, path) {

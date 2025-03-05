@@ -190,7 +190,8 @@ static void run_file(b_vm *vm, char *file) {
   }
 
   // set root file...
-  vm->root_file = file;
+  vm->root_file = realpath(file, NULL);
+  register__ROOT__(vm);
 
   b_obj_module *module = new_module(vm, strdup(""), realpath(file, NULL), NULL);
   add_module(vm, module);
@@ -234,7 +235,7 @@ void show_usage(char *argv[], bool fail) {
   fprintf(out, "   -e       Print bytecode and exit.\n");
   fprintf(out, "   -g arg   Sets the minimum heap size in kilobytes before the GC\n"
                "            can start. [Default = %d (%s)]\n", DEFAULT_GC_START / 1024, format_size(DEFAULT_GC_START));
-  fprintf(out, "   -c arg   Runs the give code.\n");
+  fprintf(out, "   -c arg   Runs the given code.\n");
   fprintf(out, "   -w       Show runtime warnings.\n");
   exit(fail ? EXIT_FAILURE : EXIT_SUCCESS);
 }

@@ -62,12 +62,27 @@ def has_prop(object, name) {
  * @returns any
  */
 def get_prop(object, name) {
-  if !is_instance(object)
-    raise Exception('object instance expected in argument 1 (object)')
+  if !is_instance(object) and typeof(object) != 'module'
+    raise Exception('object instance or module expected in argument 1 (object)')
   if !is_string(name)
     raise Exception('string expected in argument 2 (name)')
 
   return _reflect.getprop(object, name)
+}
+
+/**
+ * Returns all properties of an instance or value in a module or an empty
+ * list if the instance or module has no property.
+ *
+ * @param instance|module object
+ * @param string name
+ * @returns list[string]
+ */
+def get_props(object) {
+  if !is_instance(object) and typeof(object) != 'module'
+    raise Exception('object instance or module expected in argument 1 (object)')
+
+  return _reflect.getprops(object)
 }
 
 /**
@@ -336,18 +351,22 @@ def ptr_from_address(address) {
 }
 
 /**
- * Sets a function or class as globally accessible in all modules, function 
- * and scopes.
+ * Sets any given value as globally accessible in all modules, function
+ * and scopes with the given name.
+ *
+ * If name is not given and the value is a class or function, the name
+ * will automatically be set to the name of the class or function
+ * respectively otherwise, an Exception will be raised.
  * 
- * @param function|class fn
+ * @param any value
  * @param string? name
  */
-def set_global(fn, name) {
-  if !is_function(fn) and !is_class(fn)
-    raise Exception('function or class expected in argument 1 (fn)')
+def set_global(value, name) {
+  if typeof(value) == 'module'
+    raise Exception('modules cannot be set as global')
   if name != nil and !is_string(name)
     raise Exception('string expected in argument 2 (name)')
-  _reflect.setglobal(fn, name)
+  _reflect.setglobal(value, name)
 }
 
 /**

@@ -93,6 +93,10 @@ def _time(time) {
   return (time / 1000000) + 's'
 }
 
+def _default_fn(x, y) {
+  return x == y
+}
+
 import hash
 class expect {
   var value
@@ -104,20 +108,22 @@ class expect {
 
   _run(name, expected, fn) {
     if self._is_not name = 'not ${name}'
-    if !fn fn = @(x, y) { return x == y }
+    if !fn fn = _default_fn
 
     var v = to_string(self.value).replace('\r', '\\r').replace('\n', '\\n')
     var w = expected != nil ? to_string(expected).replace('\r', '\\r').replace('\n', '\\n') : nil
 
     var state = {
       name: w != nil ? 
-        'Expect value ${name}:\n          ${_orange(w)}\n        Got:\n          ${_red(v)}' : 
+        'Expect value ${name}:\n          ${_orange(w)}\n        Got:\n          ${_red(v)}' :
         'Expected "${_red(v)}" ${name}', 
       status: false,
     }
     
     catch {
-      var test_value = fn(self.value, expected)
+      var test_value = fn == _default_fn ? fn(v, w) :
+          fn(self.value, expected)
+
       if !self._is_not and test_value {
         _passed_assertions++
         state.status = true
@@ -155,12 +161,16 @@ class expect {
   }
 
   to_be_defined() {
-    self._run('to be defined', nil, @(x, y) { return x != nil })
+    self._run('to be defined', nil, @(x, y) {
+      return x != nil
+    })
     return self
   }
 
   to_be_truthy() {
-    self._run('to be truthy', nil, @(x, y) { return !!x })
+    self._run('to be truthy', nil, @(x, y) {
+      return !!x
+    })
     return self
   }
 
@@ -220,9 +230,8 @@ class expect {
     if is_function(self.value) {
       self._run('to throw', e, @(x, y) {
 
-        var res
         catch {
-          res = x()
+          x()
           return false
         } as ex
 
@@ -233,7 +242,7 @@ class expect {
           return true
         }
 
-        return res
+        return false
       })
     } else {
       self._run('to throw', e, @(x, y) { return false })

@@ -2,6 +2,7 @@
 
 import json
 import mime
+import template
 import date { Date }
 import .exception { HttpException }
 
@@ -70,6 +71,14 @@ class HttpResponse {
    */
   var certificate
 
+  # the response template module holder.
+  # this field is never initialized until first needed (lazy initialization)
+  # in order to reduce the overhead on multiple requests
+  #
+  # consider the lazy initialization as a minimal optimization in performance
+  # and memory consumption.
+  var _template
+
   /**
    * @param string body
    * @param int status
@@ -99,7 +108,7 @@ class HttpResponse {
   /**
    * Writes data to the response stream. 
    * 
-   * > This method should be prefered over writing directly to the body 
+   * > This method should be preferred over writing directly to the body
    * > property to prevent unexpected behaviors.
    * 
    * @param string|bytes data
@@ -218,6 +227,36 @@ class HttpResponse {
   }
 
   /**
+   * A shorthand method that renders a template using  Blade's template
+   * module default settings.
+   *
+   * Follow the [template module documentation](https://bladelang.org/standard/template)
+   * to know more about setting up your project to render from templates.
+   *
+   * > **NOTE**
+   * >
+   * > The default template root directory is a directory called
+   * > "templates" in the current working directory. To use render, ensure
+   * > that the directory exists as the template instance used for `render()`
+   * > does not have the `auto_init` parameter set to true. This is intentional
+   * > to discourage misuse and/or unintended behaviors.
+   *
+   * Support for template rendering in HttpResponse class is lazy loaded and
+   * will not be enabled until the first attempt to render a template. This
+   * helps reduce the overhead for use cases where rending is never needed.
+   *
+   * @param string path
+   * @param dict? variables
+   */
+  render(path, variables) {
+    if !self._template {
+      self._template = template()
+    }
+
+    self.write(self._template.render(path, variables))
+  }
+
+  /**
    * Sets the content type of the HTTP response.
    * 
    * @param string mimetype
@@ -235,6 +274,39 @@ class HttpResponse {
   to_string() {
     return '<HttpResponse status: ${self.status}, version: ${self.version}, time_taken:' +
       ' ${self.time_taken}, redirects: ${self.redirects}, responder: ${self.responder}>'
+  }
+
+  /**
+   * Returns the body of an HTTP response as a string or an empty
+   * string if the response is empty.
+   *
+   * @returns string
+   */
+  as_text() {
+    if !self.body return ''
+    return self.body.to_string()
+  }
+
+  /**
+   * Returns the body of an HTTP response as a dictionary.
+   *
+   * > **NOTE:**
+   * >
+   * > Call this method only if you're certain that the response
+   * > is a JSON response or have set the header `Accepts` and/or
+   * > `Content-Type` to accept only `application/json` responses
+   * > only because the method will raise and Exception if the
+   * > response does not contain a valid JSON in the body.
+   *
+   * @returns string
+   * @raises Exception
+   */
+  as_dict() {
+    if !self.body {
+      raise Exception('invalid response body')
+    }
+
+    return json.decode(self.body.to_string())
   }
 
   /**

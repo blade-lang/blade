@@ -17,7 +17,6 @@ var SSL_FILETYPE_ASN1 = _ssl.SSL_FILETYPE_ASN1()
 
 
 /**
- * >>>
  * Server mode:
  * :  The server will not send a client certificate request to the client, 
  *    so the client will not send a certificate.
@@ -26,12 +25,10 @@ var SSL_FILETYPE_ASN1 = _ssl.SSL_FILETYPE_ASN1()
  * :  If not using an anonymous cipher (by default disabled), 
  *    the server will send a certificate which will be checked. The handshake 
  *    will be continued regardless of the verification result.
- * <<<
  */
 var SSL_VERIFY_NONE = _ssl.SSL_VERIFY_NONE()
 
 /**
- * >>>
  * Server mode: 
  * :  The server sends a client certificate request to the client. 
  *    The certificate returned (if any) is checked. If the verification process fails, 
@@ -45,12 +42,10 @@ var SSL_VERIFY_NONE = _ssl.SSL_VERIFY_NONE()
  *    fails, the TLS/SSL handshake is immediately terminated with an alert message 
  *    containing the reason for the verification failure. If no server certificate is sent, 
  *    because an anonymous cipher is used, SSL_VERIFY_PEER is ignored.
- * <<<
  */
 var SSL_VERIFY_PEER = _ssl.SSL_VERIFY_PEER()
 
 /**
- * >>>
  * Server mode:
  * :  If the client did not return a certificate, the TLS/SSL handshake is immediately 
  *    terminated with a "handshake failure" alert. This flag must be used together 
@@ -58,12 +53,10 @@ var SSL_VERIFY_PEER = _ssl.SSL_VERIFY_PEER()
  * 
  * Client mode: 
  * :  Ignored
- * <<<
  */
 var SSL_VERIFY_FAIL_IF_NO_PEER_CERT = _ssl.SSL_VERIFY_FAIL_IF_NO_PEER_CERT()
 
 /**
- * >>>
  * Server mode:
  * :  Only request a client certificate once during the connection. Do not 
  *    ask for a client certificate again during renegotiation or post-authentication if a 
@@ -72,12 +65,10 @@ var SSL_VERIFY_FAIL_IF_NO_PEER_CERT = _ssl.SSL_VERIFY_FAIL_IF_NO_PEER_CERT()
  * 
  * Client mode: 
  * :  Ignored
- * <<<
  */
 var SSL_VERIFY_CLIENT_ONCE = _ssl.SSL_VERIFY_CLIENT_ONCE()
 
 /**
- * >>>
  * Server mode: 
  * :  The server will not send a client certificate request during the initial 
  *    handshake, but will send the request via SSL_verify_client_post_handshake(). This allows 
@@ -87,7 +78,6 @@ var SSL_VERIFY_CLIENT_ONCE = _ssl.SSL_VERIFY_CLIENT_ONCE()
  * 
  * Client mode: 
  * :  Ignored
- * <<<
  */
 var SSL_VERIFY_POST_HANDSHAKE = _ssl.SSL_VERIFY_POST_HANDSHAKE()
 

@@ -1,59 +1,9 @@
-/**
- * @module io
- * 
- * This module provides interfaces for working with to I/O stream and TTYs 
- * as well as expose the operating system standard I/O for easy access.
- * 
- * Some I/O operations that should belong to this module have been merged as 
- * core features and offered as built-in functions for Blade. Specifically 
- * file I/O features that can be accessed via the built-in `file()` function. 
- * 
- * The standard I/O streams are also files and you can call almost all file 
- * methods on them. Whenever a file method is not supported, you'll get an error 
- * message telling you that such operation is not supported for standard streams.
- * 
- * ### Example
- * 
- * The following example shows how to use the `io` module for accepting user name 
- * and printing the result.
- * 
- * ```blade
- * import io
- * 
- * var name = io.readline('What is your name?')
- * echo name
- * ```
- * 
- * @copyright 2021, Ore Richard Muyiwa and Blade contributors
- */
+# io.TTY implementation
 
 import _io
-import _os
 
 /**
- * Set I/O position from the beginning.
- * 
- * @type int
- */
-var SEEK_SET = 0
-
-/**
- * Set I/O position from the current position.
- * 
- * @type int
- */
-var SEEK_CUR = 1
-
-/**
- * Set I/O position from the end.
- * 
- * @type int
- */
-var SEEK_END = 2
-
-
-/**
- * class TTY is an interface to TTY terminals this class contains definitions 
+ * class TTY is an interface to TTY terminals this class contains definitions
  * to control TTY terminals
  */
 class TTY {
@@ -62,7 +12,7 @@ class TTY {
 
   /**
    * TTY attribute for input flags.
-   * 
+   *
    * @type int
    * @static
    */
@@ -70,7 +20,7 @@ class TTY {
 
   /**
    * TTY attribute for output flags.
-   * 
+   *
    * @type int
    * @static
    */
@@ -78,7 +28,7 @@ class TTY {
 
   /**
    * TTY attribute for control flags.
-   * 
+   *
    * @type int
    * @static
    */
@@ -86,7 +36,7 @@ class TTY {
 
   /**
    * TTY attribute for local flags.
-   * 
+   *
    * @type int
    * @static
    */
@@ -94,7 +44,7 @@ class TTY {
 
   /**
    * TTY attribute for input speed.
-   * 
+   *
    * @type int
    * @static
    */
@@ -102,7 +52,7 @@ class TTY {
 
   /**
    * TTY attribute for output speed.
-   * 
+   *
    * @type int
    * @static
    */
@@ -112,39 +62,39 @@ class TTY {
 
   /**
    * Ignore BREAK condition.
-   * 
+   *
    * @type int
    * @static
    */
   static var IGNBRK   = 0x00000001
-  
+
   /**
    * Map BREAK to SIGINTR.
-   * 
+   *
    * @type int
    * @static
    */
-  static var BRKINT   = 0x00000002      
+  static var BRKINT   = 0x00000002
 
   /**
    * Ignore (discard) parity errors.
-   * 
+   *
    * @type int
    * @static
    */
-  static var IGNPAR   = 0x00000004      
+  static var IGNPAR   = 0x00000004
 
   /**
    * Mark parity and framing errors.
-   * 
+   *
    * @type int
    * @static
    */
-  static var PARMRK   = 0x00000008      
+  static var PARMRK   = 0x00000008
 
   /**
    * Enable checking of parity errors.
-   * 
+   *
    * @type int
    * @static
    */
@@ -152,7 +102,7 @@ class TTY {
 
   /**
    * Strip 8th bit off chars.
-   * 
+   *
    * @type int
    * @static
    */
@@ -160,7 +110,7 @@ class TTY {
 
   /**
    * Map NL into CR.
-   * 
+   *
    * @type int
    * @static
    */
@@ -168,7 +118,7 @@ class TTY {
 
   /**
    * Ignore CR.
-   * 
+   *
    * @type int
    * @static
    */
@@ -176,7 +126,7 @@ class TTY {
 
   /**
    * Map CR to NL (ala CRMOD).
-   * 
+   *
    * @type int
    * @static
    */
@@ -184,7 +134,7 @@ class TTY {
 
   /**
    * Enable output flow control.
-   * 
+   *
    * @type int
    * @static
    */
@@ -192,7 +142,7 @@ class TTY {
 
   /**
    * Enable input flow control.
-   * 
+   *
    * @type int
    * @static
    */
@@ -200,7 +150,7 @@ class TTY {
 
   /**
    * Any char will restart after stop.
-   * 
+   *
    * @type int
    * @static
    */
@@ -208,7 +158,7 @@ class TTY {
 
   /**
    * Maintain state for UTF-8 VERASE.
-   * 
+   *
    * @type int
    * @static
    */
@@ -218,7 +168,7 @@ class TTY {
 
   /**
    * Enable following output processing.
-   * 
+   *
    * @type int
    * @static
    */
@@ -226,7 +176,7 @@ class TTY {
 
   /**
    * Map NL to CR-NL (ala CRMOD).
-   * 
+   *
    * @type int
    * @static
    */
@@ -236,7 +186,7 @@ class TTY {
 
   /**
    * Character size mask .
-   * 
+   *
    * @type int
    * @static
    */
@@ -244,7 +194,7 @@ class TTY {
 
   /**
    * 5 bits (pseudo).
-   * 
+   *
    * @type int
    * @static
    */
@@ -252,7 +202,7 @@ class TTY {
 
   /**
    * 6 bits.
-   * 
+   *
    * @type int
    * @static
    */
@@ -260,7 +210,7 @@ class TTY {
 
   /**
    * 7 bits.
-   * 
+   *
    * @type int
    * @static
    */
@@ -268,7 +218,7 @@ class TTY {
 
   /**
    * 8 bits.
-   * 
+   *
    * @type int
    * @static
    */
@@ -276,7 +226,7 @@ class TTY {
 
   /**
    * Send 2 stop bits.
-   * 
+   *
    * @type int
    * @static
    */
@@ -284,7 +234,7 @@ class TTY {
 
   /**
    * Enable receiver.
-   * 
+   *
    * @type int
    * @static
    */
@@ -292,7 +242,7 @@ class TTY {
 
   /**
    * Parity enable.
-   * 
+   *
    * @type int
    * @static
    */
@@ -300,7 +250,7 @@ class TTY {
 
   /**
    * Odd parity, else even.
-   * 
+   *
    * @type int
    * @static
    */
@@ -308,7 +258,7 @@ class TTY {
 
   /**
    * Hang up on last close.
-   * 
+   *
    * @type int
    * @static
    */
@@ -316,7 +266,7 @@ class TTY {
 
   /**
    * Ignore modem status lines.
-   * 
+   *
    * @type int
    * @static
    */
@@ -329,21 +279,21 @@ class TTY {
 
   /**
    * Visually erase chars.
-   * 
+   *
    * @type int
    * @static
    */
   static var ECHOE    = 0x00000002
 
   /**
-   * Echo NL after line kill 
+   * Echo NL after line kill
    * @static
    */
   static var ECHOK    = 0x00000004
 
   /**
    * Enable echoing.
-   * 
+   *
    * @type int
    * @static
    */
@@ -351,7 +301,7 @@ class TTY {
 
   /**
    * Echo NL even if ECHO is off.
-   * 
+   *
    * @type int
    * @static
    */
@@ -359,7 +309,7 @@ class TTY {
 
   /**
    * Enable signals INTR, QUIT, [D]SUSP.
-   * 
+   *
    * @type int
    * @static
    */
@@ -367,7 +317,7 @@ class TTY {
 
   /**
    * Canonicalize input lines.
-   * 
+   *
    * @type int
    * @static
    */
@@ -375,7 +325,7 @@ class TTY {
 
   /**
    * Enable DISCARD and LNEXT.
-   * 
+   *
    * @type int
    * @static
    */
@@ -383,7 +333,7 @@ class TTY {
 
   /**
    * Stop background jobs from output.
-   * 
+   *
    * @type int
    * @static
    */
@@ -391,7 +341,7 @@ class TTY {
 
   /**
    * Don't flush after interrupt.
-   * 
+   *
    * @type int
    * @static
    */
@@ -403,7 +353,7 @@ class TTY {
 
   /**
    * Make change immediate.
-   * 
+   *
    * @type int
    * @static
    */
@@ -411,7 +361,7 @@ class TTY {
 
   /**
    * Drain output, then change.
-   * 
+   *
    * @type int
    * @static
    */
@@ -419,7 +369,7 @@ class TTY {
 
   /**
    * Drain output, flush input.
-   * 
+   *
    * @type int
    * @static
    */
@@ -429,7 +379,7 @@ class TTY {
 
   /**
    * ICANON.
-   * 
+   *
    * @type int
    * @static
    */
@@ -437,7 +387,7 @@ class TTY {
 
   /**
    * ICANON.
-   * 
+   *
    * @type int
    * @static
    */
@@ -445,7 +395,7 @@ class TTY {
 
   /**
    * ICANON.
-   * 
+   *
    * @type int
    * @static
    */
@@ -453,7 +403,7 @@ class TTY {
 
   /**
    * ICANON.
-   * 
+   *
    * @type int
    * @static
    */
@@ -461,7 +411,7 @@ class TTY {
 
   /**
    * ISIG.
-   * 
+   *
    * @type int
    * @static
    */
@@ -469,7 +419,7 @@ class TTY {
 
   /**
    * ISIG.
-   * 
+   *
    * @type int
    * @static
    */
@@ -477,7 +427,7 @@ class TTY {
 
   /**
    * ISIG.
-   * 
+   *
    * @type int
    * @static
    */
@@ -485,7 +435,7 @@ class TTY {
 
   /**
    * IXON, IXOFF.
-   * 
+   *
    * @type int
    * @static
    */
@@ -493,7 +443,7 @@ class TTY {
 
   /**
    * IXON, IXOFF.
-   * 
+   *
    * @type int
    * @static
    */
@@ -501,7 +451,7 @@ class TTY {
 
   /**
    * !ICANON.
-   * 
+   *
    * @type int
    * @static
    */
@@ -509,7 +459,7 @@ class TTY {
 
   /**
    * !ICANON.
-   * 
+   *
    * @type int
    * @static
    */
@@ -517,10 +467,10 @@ class TTY {
 
   /**
    * TTY(std: file)
-   * 
+   *
    * @note _file_ must be one of stdout and stderr
    * @param file std
-   * @constructor 
+   * @constructor
    */
   TTY(std) {
     if !is_file(std) {
@@ -533,7 +483,7 @@ class TTY {
   /**
    * Returns the attribute of the current tty session
    * The returned attributes is a dict containing the TTY_ flags
-   * 
+   *
    * @returns dict
    */
   get_attr() {
@@ -541,23 +491,22 @@ class TTY {
   }
 
   /**
-   * set_attr(option: number, attrs: dict)
-   * 
    * sets the attributes of the current tty session
-   * 
-   * - option: one ot the TCSA options above (see their description above)
-   * - attrs a dictionary of the TTY_ flags listed above
-   * - one can safely omit any of the TTY_ flags listed above and Blade will fill in the default values as it exists.
-   * 
-   * @note This flags will be merged and not overwritten
+   *
+   * >  __NOTE__: 
+   * > - _option_ must be one ot the TCSA options above (see their description above)
+   * > - _attrs_ must be a dictionary of the TTY_ flags listed above
+   * > - one can safely omit any of the TTY_ flags listed above and Blade will
+   * >   fill in the default values as it exists.
+   * > - This flags will be merged and not overwritten
    * @param number option
    * @param dict attr
    * @returns bool
    */
   set_attr(option, attrs) {
-    if !is_int(option) 
+    if !is_int(option)
       raise Exception('integer expected as first argument, ${typeof(option)} given')
-    if !is_dict(attrs) 
+    if !is_dict(attrs)
       raise Exception('dictionary expected as second argument, ${typeof(attrs)} given')
     return _io.TTY.tcsetattr(self.std, option, attrs)
   }
@@ -581,12 +530,29 @@ class TTY {
 
   /**
    * Disables the raw mode flags on the current tty.
-   * 
+   *
    * @returns bool
    */
   exit_raw() {
-#     return _io.TTY.exit_raw(self.std)
+    # return _io.TTY.exit_raw(self.std)
     return self.set_attr(TTY.TCSAFLUSH, _io.TTY.tcgetattr(self.std, true))
+  }
+
+  /**
+   * Returns the size of the current TTY device as a dictionary of cols and rows.
+   * 
+   * - `cols`: The number of text columns that can fit into the TTY device.
+   * - `rows`: The number of text rows that can fit into the TTY device.
+   * 
+   * @returns dict
+   */
+  get_size() {
+    var size = _io.TTY.getsize(self.std)
+
+    return {
+      cols: size.first(),
+      rows: size.last(),
+    }
   }
 
   /**
@@ -596,111 +562,3 @@ class TTY {
     _io.TTY.flush(self.std)
   }
 }
-
-/** 
- * Stdin is a file handle to the standard input file of the system.
- * @type file
- */
-var stdin = _io.stdin
-
-/**
- * Stdout is a file handle to the standard output file of the system.
- * @type file
- */
-var stdout = _io.stdout
-
-/**
- * Stderr is a file handle to the standard error file of the system.
- * @type file
- */
-var stderr = _io.stderr
-
-/**
- * Flushes the content of the given file handle
- */
-def flush(file) {
-  _io.flush(file)
-}
-
-/**
- * Writes character c to the screen.
- * 
- * @param char|number c
- */
-def putc(c) {
-  _io.putc(c)
-}
-
-/**
- * Reads character(s) from standard input
- *
- * When length is given, gets `length` number of characters
- * else, gets a single character
- * 
- * @returns char|string
- */
-def getc() {
-  return _io.getc()
-}
-
-/**
- * Reads character(s) from standard input without printing to standard output
- *
- * When length is given, gets `length` number of characters
- * else, gets a single character.
- * 
- * @returns char|string
- */
-def getch() {
-  return _io.getch()
-}
-
-/**
- * Reads an entire line from standard input. If a _message_ is given, the
- * message will be printed before it begins to wait for a user input. If 
- * _secure_ is `true`, the user's input will not be printing and _obscure_text_ 
- * will be printed instead.
- * 
- * @note Newlines will not be added automatically for messages.
- * @param string? message
- * @param bool? secure
- * @param string? obscure_text: Default value is `*`.
- * @returns string
- */
-def readline(message, secure, obscure_text) {
-
-  if message != nil and !is_string(message)
-    raise Exception('string expected in argument 1 (message)')
-  if secure != nil and !is_bool(secure)
-    raise Exception('boolean expected in argument 2 (secure)')
-  if obscure_text != nil and !is_string(obscure_text)
-    raise Exception('string expected in argument 3 (obscure_text)')
-
-  if secure == nil secure = false
-  if obscure_text == nil obscure_text = '*'
-
-  if message
-    stdout.write('${message} ')
-
-  var result = ''
-  var input
-
-  if !secure {
-    while (input = stdin.read()) and input != '\n' and input != '\0'
-      result += input
-  } else {
-    while (input = getch()) and input != '\n' and input != '\r' and input != '\0' {
-    if ord(input) != 0x7f and input != '\b' {
-        result += input
-        stdout.write(obscure_text)
-      } else {
-        if result.length() > 0
-          stdout.write('\b \b')
-        result = result[,result.length() - 1]
-      }
-    }
-  }
-
-  return result
-}
-

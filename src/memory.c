@@ -334,9 +334,9 @@ static void mark_roots(b_vm *vm) {
     mark_object(vm, (b_obj *) vm->frames[i].closure);
   }
 
-  for(b_error_frame **error = vm->errors; error < vm->error_top; error++) {
-    mark_value(vm, (*error)->value);
-    mark_object(vm, (b_obj *)(*error)->frame->closure);
+  for(int i = 0; i < vm->error_count; i++) {
+    mark_value(vm, vm->errors[i]->value);
+    mark_object(vm, (b_obj *)vm->errors[i]->frame->closure);
   }
 
   for (b_obj_up_value *up_value = vm->open_up_values; up_value != NULL;
@@ -405,7 +405,7 @@ void free_objects(b_vm *vm) {
 }
 
 void free_error_stacks(b_vm *vm) {
-  for(int index = vm->error_top - vm->errors; index < ERRORS_MAX && vm->errors[index] != NULL; index++) {
+  for(int index = vm->error_count; index < ERRORS_MAX && vm->errors[index] != NULL; index++) {
     free(vm->errors[index]);
     vm->errors[index] = NULL;
   }

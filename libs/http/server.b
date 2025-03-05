@@ -5,6 +5,9 @@ import .response { HttpResponse }
 import .exception { HttpException }
 import .status
 
+import os
+import mime
+import hash
 import socket as so
 import reflect
 
@@ -30,7 +33,7 @@ class HttpServer {
 
   /**
    * The working Socket instance for the HttpServer.
-   * @type {Socket}
+   * @type [[socket.Socket]]
    */
   var socket
 
@@ -39,7 +42,7 @@ class HttpServer {
    * Default value is `true`.
    * @type bool
    */
-  var resuse_address = true
+  var reuse_address = true
 
   /**
    * The timeout in milliseconds after which an attempt to read clients 
@@ -108,13 +111,17 @@ class HttpServer {
    */
   HttpServer(port, host) {
 
-    if !is_int(port) or port <= 0
+    if !is_int(port) or port <= 0 {
       raise HttpException('invalid port number')
-    else self.port = port
+    } else {
+      self.port = port
+    }
 
-    if host != nil and !is_string(host)
+    if host != nil and !is_string(host) {
       raise HttpException('invalid host')
-    else if host != nil self.host = host
+    } else if host != nil {
+      self.host = host
+    }
 
     self.socket = so.Socket()
   }
@@ -227,6 +234,16 @@ class HttpServer {
    * Sets up a request handler that will be called when a request with the given method 
    * has a path that matches the one specified.
    * 
+   * If the path ends with a `/`, it also matches all routes that starts with the path 
+   * so long as there is no other path that matches the request better. The exception 
+   * to this is when the path is an ordinary `/` (root path) in which case it won't 
+   * match any other route except for the root path.
+   * 
+   * For example, if the path is declared as `/user/`, it will match the request for 
+   * `/user/record/1` unless another handle has been registered for `/user/record` in 
+   * which case the handle for `/user/record` will handle the request since it is the 
+   * handler for the closest path.
+   * 
    * @param string method
    * @param string path
    * @param function(2) handler
@@ -261,6 +278,61 @@ class HttpServer {
       raise Exception('handler must accept two arguments (request, response)')
 
     self._none_handler = handler
+  }
+
+  /**
+   * Setup the given base_path to serve static files from the given directory.
+   *
+   * If cache is set to true, and a default value is not set for tag, static
+   * file tagging will be automatically enabled.
+   *
+   * @param string base_path
+   * @param string directory
+   * @param number? cache_age = 0
+   * @param bool? tag = false
+   */
+  serve_files(base_path, directory, cache_age, tag) {
+    if !is_string(base_path)
+      raise Exception('argument 1 (base_path) must be a string')
+    if !is_string(directory)
+      raise Exception('argument 2 (directory) must be a string')
+
+    if cache_age == nil cache_age = 0
+    if tag == nil tag = cache_age > 0
+
+    if !is_number(cache_age)
+      raise Exception('argument 3 (cache_age) must be a number')
+    if !is_bool(tag)
+      raise Exception('argument 4 (tag) must be a boolean')
+
+    def static_file_handler(request, response) {
+      if request.method == 'GET' and request.path.starts_with('/' + base_path.ltrim('/')) {
+        var static_path = request.path[base_path.length(),].ltrim('/')
+        var reader = file(os.join_paths(directory, static_path), 'rb')
+
+        if reader.exists() {
+          response.headers['Content-Type'] = mime.detect_from_name(static_path)
+
+          # cache for 1 year
+          if cache_age > 0 {
+            response.headers['Cache-Control'] = 'public, max-age=${cache_age}, s-maxage=${cache_age}, immutable'
+          }
+
+          var content = reader.read()
+
+          if tag {
+            response.headers['Etag'] = 'W/"${hash.md5(content)}"'
+          }
+
+          response.write(content)
+          content.dispose()
+        } else if self._none_handler {
+          self._none_handler(request, response)
+        }
+      }
+    }
+
+    self.on_receive(static_file_handler)
   }
 
   _get_response_header_string(headers, cookies) {
@@ -305,6 +377,32 @@ class HttpServer {
         if route_handler {
           route_handler(request, response)
           router_matched = true
+        } else if request.path != '/' {
+          var possible_handlers = {}
+
+          # Find the handler that matches the request path the most
+          # 
+          # This is achieved by iterating through all registered routes 
+          # for the request method and finding all possible matches. 
+          # If at least one match is found, we return the path that 
+          # matches the requested route the longest.
+          for path, _handler in router_method {
+            if path != "/" and  path.ends_with('/') and request.path.starts_with(path) {
+              possible_handlers.set(path, _handler)
+              router_matched = true
+            }
+          }
+
+          if router_matched and possible_handlers {
+            # find the longest route
+            var longest_route = possible_handlers.keys().reduce(@(prev, x) {
+              return x.length() > prev.length() ? x : prev
+            })
+
+            route_handler = possible_handlers.get(longest_route)
+            possible_handlers.clear()
+            route_handler(request, response)
+          }
         }
       }
 
@@ -337,8 +435,10 @@ class HttpServer {
     feedback += response.body
     response.body.dispose()
 
-    var hdrv = ('HTTP/${response.version} ${response.status} ' +
-    '${status.map.get(response.status, 'UNKNOWN')}\r\n').to_bytes()
+    var hdrv = (
+      'HTTP/${response.version} ${response.status} ' +
+      '${status.map.get(response.status, 'UNKNOWN')}\r\n'
+    ).to_bytes()
     feedback =  hdrv + feedback
     hdrv.dispose()
            
@@ -360,9 +460,10 @@ class HttpServer {
    */
   listen() {
     if !self.socket.is_listening {
-      self.socket.set_option(so.SO_REUSEADDR, is_bool(self.resuse_address) ? self.resuse_address : true)
+      self.socket.set_option(so.SO_REUSEADDR, is_bool(self.reuse_address) ? self.reuse_address : true)
       self.socket.bind(self.port, self.host)
-      self.socket.listen()
+      
+      assert self.socket.listen(), 'socket failed to listen'
 
       self._is_listening = true
       var client
@@ -387,18 +488,20 @@ class HttpServer {
           self._process_received(client.receive(), client)
         } as e
 
-        # call the disconnect listeners.
-        self._disconnect_listeners.each(@(fn) {
-          fn(client)
-        })
-
-        client.close()
-
-        if e {
-          # call the error listeners.
-          self._error_listeners.each(@(fn) {
-            fn(e, client)
+        if client {
+          # call the disconnect listeners.
+          self._disconnect_listeners.each(@(fn) {
+            fn(client)
           })
+
+          client.close()
+
+          if e {
+            # call the error listeners.
+            self._error_listeners.each(@(fn) {
+              fn(e, client)
+            })
+          }
         }
       }
     }

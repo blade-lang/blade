@@ -382,14 +382,16 @@ def _verify_hostname(certificate, host) {
     return false
   }
 
-  if certificate.subject_name.lower() == '/cn=${host}' {
+  if certificate.subject_name.lower() == '/cn=' + host {
     return true
   }
 
   if certificate.extensions and certificate.extensions.subjectAltName {
     # match against DNS subject alt names
     var alt_names = certificate.extensions.subjectAltName.
-        split(',').map(@(x) { return x.trim()[4,] })
+        split(',').map(@(x) {
+          return x.trim()[4,]
+        })
 
     for name in alt_names {
       name = name.lower()

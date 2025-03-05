@@ -4,7 +4,39 @@
  * This module provide the generic Keccak class and functions for 
  * working with SHA3, Keccak and SHAKE hashes.
  * 
+ * Like the `hash` module, this module exports quick and simple 
+ * functions to compute SHA3/Keccak family of functions.
+ * 
+ * For example:
+ * 
+ * ```blade-repl
+ * %> import sha3
+ * %> 
+ * %> sha3.sha3_256('hello')
+ * '3338be694f50c5f338814986cdf0686453a888b84f424d792af4b9202398f392'
+ * ```
+ * 
+ * It also exports the generic `Keccak` class that you can customize 
+ * to your preference.
+ * 
+ * For example:
+ * 
+ * ```blade-repl
+ * %> import sha3
+ * %> 
+ * %> var h = sha3.Keccak(256, 1)
+ * %> h.update('How are you?')
+ * <class Keccak instance at 0x14010bf40>
+ * %> h.digest('')
+ * (97 bf fd e9 c7 30 76 73 58 99 84 84 1c cc c1 8c dc 28 90 d6  ...32)
+ * ```
+ * 
+ * You can use the `bytes_to_hex()` function in the `convert` module to 
+ * get a hexadecimal string from the digest.
+ * 
  * @copyright 2024, Ore Richard Muyiwa and Blade contributors
+ * @copyright Marco Paland (marco at paland dot com)
+ * @copyright 2015-2018, PALANDesign Hannover, Germany
  */
 import convert { bytes_to_hex }
 
@@ -18,7 +50,7 @@ var _rc = [
 
 
 /**
- * @class
+ * Keccak hash manipulation class.
  */
 class Keccak {
   var _hash_size
@@ -30,9 +62,9 @@ class Keccak {
   var _padding
 
   /**
-   * @param number bits
-   * @param number padding
-   * @param number? length
+   * @param number bits: Capacity
+   * @param number padding: Padding value - 1 for Keccak, 6 for SHA3 and 31 for SHAKE
+   * @param number? length: Optional length of the output hash in bits. If not given bits is taken as default.
    * @constructor
    */
   Keccak(bits, padding, length) {
@@ -53,6 +85,8 @@ class Keccak {
   }
 
   /**
+   * Initializes the hash functionality and prepares it for a new round.
+   * 
    * @returns self
    */
   init() {
@@ -63,8 +97,10 @@ class Keccak {
   }
 
   /**
+   * Update the hash with additional message data.
+   * 
    * @param string|bytes message
-   * @returns string
+   * @returns self
    */
   update(message) {
     if !is_string(message) and !is_bytes(message) 
@@ -86,8 +122,11 @@ class Keccak {
   }
 
   /**
+   * Finalize the hash with additional message data and returns 
+   * the message digest.
+   * 
    * @param string|bytes message
-   * @returns string
+   * @returns bytes
    */
   digest(message) {
     self.update(message)
@@ -126,6 +165,9 @@ class Keccak {
   }
 
   /**
+   * All-in-one method to initialize a new round, update the 
+   * message and generate the final hash digest.
+   * 
    * @param string|bytes message
    * @returns string
    */
@@ -329,6 +371,8 @@ class Keccak {
 
 
 /**
+ * Returns the Keccak-224 cryptographic hash of the given string or bytes.
+ * 
  * @param string|bytes message
  * @returns string
  */
@@ -337,6 +381,8 @@ def keccak_224(message) {
 }
 
 /**
+ * Returns the Keccak-256 cryptographic hash of the given string or bytes.
+ * 
  * @param string|bytes message
  * @returns string
  */
@@ -345,6 +391,8 @@ def keccak_256(message) {
 }
 
 /**
+ * Returns the Keccak-384 cryptographic hash of the given string or bytes.
+ * 
  * @param string|bytes message
  * @returns string
  */
@@ -353,6 +401,8 @@ def keccak_384(message) {
 }
 
 /**
+ * Returns the Keccak-512 cryptographic hash of the given string or bytes.
+ * 
  * @param string|bytes message
  * @returns string
  */
@@ -361,6 +411,8 @@ def keccak_512(message) {
 }
 
 /**
+ * Returns the SHA3-224 cryptographic hash of the given string or bytes.
+ * 
  * @param string|bytes message
  * @returns string
  */
@@ -369,6 +421,8 @@ def sha3_224(message) {
 }
 
 /**
+ * Returns the SHA3-256 cryptographic hash of the given string or bytes.
+ * 
  * @param string|bytes message
  * @returns string
  */
@@ -377,6 +431,8 @@ def sha3_256(message) {
 }
 
 /**
+ * Returns the SHA3-384 cryptographic hash of the given string or bytes.
+ * 
  * @param string|bytes message
  * @returns string
  */
@@ -385,6 +441,8 @@ def sha3_384(message) {
 }
 
 /**
+ * Returns the SHA3-512 cryptographic hash of the given string or bytes.
+ * 
  * @param string|bytes message
  * @returns string
  */
@@ -393,6 +451,9 @@ def sha3_512(message) {
 }
 
 /**
+ * Returns the SHAKE-128 cryptographic hash of the given string or bytes computed to the given length.
+ * 
+ * @param number length
  * @param string|bytes message
  * @returns string
  */
@@ -401,6 +462,9 @@ def shake128(length, message) {
 }
 
 /**
+ * Returns the SHAKE-256 cryptographic hash of the given string or bytes computed to the given length.
+ * 
+ * @param number length
  * @param string|bytes message
  * @returns string
  */

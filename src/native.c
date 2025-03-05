@@ -9,6 +9,7 @@
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif /* HAVE_SYS_TIME_H */
+#include <time.h>
 
 #ifndef HAVE_GETTIMEOFDAY
 #include <gettimeofday.h>
@@ -573,57 +574,59 @@ DECLARE_NATIVE(ord) {
  * - returns a random number between limit and upper if two arguments is
  * given
  */
-#define MT_STATE_SIZE 624
+#define MT_STATE_SIZE 312
 
-static void mt_seed(uint32_t seed, uint32_t* state, uint32_t* index) {
+static void mt_seed(uint64_t seed, uint64_t* state, uint64_t* index) {
   state[0] = seed;
-  for (uint32_t i = 1; i < MT_STATE_SIZE; i++) {
-    state[i] = (uint32_t)(1812433253UL * (state[i - 1] ^ (state[i - 1] >> 30)) + i);
+  for (uint64_t i = 1; i < MT_STATE_SIZE; i++) {
+    state[i] = (uint64_t)(6364136223846793005ULL * (state[i - 1] ^ (state[i - 1] >> 62)) + i);
   }
   *index = MT_STATE_SIZE;
 }
 
-static uint32_t mt_generate(uint32_t* state, uint32_t* index) {
+static uint64_t mt_generate(uint64_t* state, uint64_t* index) {
   if (*index >= MT_STATE_SIZE) {
-    uint32_t i;
-    for (i = 0; i < MT_STATE_SIZE - 397; i++) {
-      uint32_t y = (state[i] & 0x80000000) | (state[i + 1] & 0x7fffffff);
-      state[i] = state[i + 397] ^ (y >> 1) ^ ((y & 1) * 0x9908b0df);
+    uint64_t i;
+    for (i = 0; i < MT_STATE_SIZE - 156; i++) {
+      uint64_t y = (state[i] & 0xffffffff80000000ULL) | (state[i + 1] & 0x7fffffffULL);
+      state[i] = state[i + 156] ^ (y >> 1) ^ ((y & 1ULL) * 0xb5026f5aa96619e9ULL);
     }
     for (; i < MT_STATE_SIZE - 1; i++) {
-      uint32_t y = (state[i] & 0x80000000) | (state[i + 1] & 0x7fffffff);
-      state[i] = state[i + (397 - MT_STATE_SIZE)] ^ (y >> 1) ^ ((y & 1) * 0x9908b0df);
+      uint64_t y = (state[i] & 0xffffffff80000000ULL) | (state[i + 1] & 0x7fffffffULL);
+      state[i] = state[i + (156 - MT_STATE_SIZE)] ^ (y >> 1) ^ ((y & 1ULL) * 0xb5026f5aa96619e9ULL);
     }
-    uint32_t y = (state[MT_STATE_SIZE - 1] & 0x80000000) | (state[0] & 0x7fffffff);
-    state[MT_STATE_SIZE - 1] = state[396] ^ (y >> 1) ^ ((y & 1) * 0x9908b0df);
+    uint64_t y = (state[MT_STATE_SIZE - 1] & 0xffffffff80000000ULL) | (state[0] & 0x7fffffffULL);
+    state[MT_STATE_SIZE - 1] = state[155] ^ (y >> 1) ^ ((y & 1ULL) * 0xb5026f5aa96619e9ULL);
     *index = 0;
   }
-  uint32_t y = state[*index];
+  uint64_t y = state[*index];
   *index = *index + 1;
-  y = y ^ (y >> 11);
-  y = y ^ ((y << 7) & 0x9d2c5680);
-  y = y ^ ((y << 15) & 0xefc60000);
-  y = y ^ (y >> 18);
+  y ^= (y >> 29) & 0x5555555555555555ULL;
+  y ^= (y << 17) & 0x71D67FFFEDA60000ULL;
+  y ^= (y << 37) & 0xFFF7EEE000000000ULL;
+  y ^= (y >> 43);
   return y;
 }
 
 double mt_rand(double lower_limit, double upper_limit) {
-  static uint32_t mt_state[MT_STATE_SIZE];
-  static uint32_t mt_index = MT_STATE_SIZE + 1;
+  static uint64_t mt_state[MT_STATE_SIZE];
+  static uint64_t mt_index = MT_STATE_SIZE + 1;
   if (mt_index >= MT_STATE_SIZE) {
     struct timeval tv;
     gettimeofday(&tv, NULL);
-    mt_seed((uint32_t)(1000000 * tv.tv_sec + tv.tv_usec), mt_state, &mt_index);
+    time_t t;
+    time(&t);
+    mt_seed((1ULL * tv.tv_sec + tv.tv_usec) * t, mt_state, &mt_index);
   }
-  uint32_t rand_val = mt_generate(mt_state, &mt_index);
-  double rand_num = lower_limit + ((double)rand_val / UINT32_MAX) * (upper_limit - lower_limit);
+  uint64_t rand_val = mt_generate(mt_state, &mt_index);
+  double rand_num = lower_limit + ((double)rand_val / UINT64_MAX) * (upper_limit - lower_limit);
   return rand_num;
 }
 
 DECLARE_NATIVE(rand) {
   ENFORCE_ARG_RANGE(rand, 0, 2);
-  int lower_limit = 0;
-  int upper_limit = 1;
+  double lower_limit = 0;
+  double upper_limit = 1;
 
   if (arg_count > 0) {
     ENFORCE_ARG_TYPE(rand, 0, IS_NUMBER);
@@ -635,7 +638,7 @@ DECLARE_NATIVE(rand) {
   }
 
   if (lower_limit > upper_limit) {
-    int tmp = upper_limit;
+    double tmp = upper_limit;
     upper_limit = lower_limit;
     lower_limit = tmp;
   }

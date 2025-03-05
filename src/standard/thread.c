@@ -160,7 +160,6 @@ b_vm *copy_vm(b_vm *src, uint64_t id) {
 
   // reset stack
   vm->stack_top = vm->stack;
-  vm->error_top = vm->errors;
   vm->frame_count = 0;
   vm->open_up_values = NULL;
 
@@ -204,6 +203,7 @@ b_vm *copy_vm(b_vm *src, uint64_t id) {
   vm->gray_count = 0;
   vm->gray_capacity = 0;
   vm->gray_stack = NULL;
+  vm->error_count = 0;
 
   vm->id = id;
 

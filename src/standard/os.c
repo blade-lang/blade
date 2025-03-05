@@ -62,40 +62,39 @@ DECLARE_MODULE_METHOD(os_exec) {
 
   char buffer[256];
   size_t n_read;
-  size_t output_size = 256;
-  int length = 0;
-  char *output = ALLOCATE(char, output_size);
+  size_t length = 0;
+
+  char *output = ALLOCATE(char, 1);
+  memset(output, 0, sizeof(*output));
 
   if (output != NULL) {
-    while ((n_read = fread(buffer, 1, sizeof(buffer), fd)) != 0) {
-      if (length + n_read >= output_size) {
-        size_t old = output_size;
-        output_size *= 2;
-        char *temp = GROW_ARRAY(char, output, old, output_size);
-        if (temp == NULL) {
-          RETURN_ERROR("device out of memory");
-        } else {
-          vm->bytes_allocated += output_size / 2;
-          output = temp;
-        }
+    while ((n_read = fread(buffer, sizeof(*buffer), sizeof(buffer), fd)) != 0) {
+      size_t current_length = strlen(output);
+      length = current_length + n_read;
+
+      output = GROW_ARRAY(char, output, current_length, length);
+      if(output == NULL) {
+        RETURN_NIL;
       }
-      if ((output + length) != NULL) {
-        strncat(output + length, buffer, n_read);
-      }
-      length += (int) n_read;
+
+      memcpy(output + current_length, buffer, n_read - 1);
+      output[length - 1] = 0;
     }
 
     if (length == 0) {
+      fflush(fd);
       pclose(fd);
       RETURN_NIL;
     }
 
-    output[length - 1] = '\0';
+    output[length - 1] = 0;
 
+    fflush(fd);
     pclose(fd);
     RETURN_T_STRING(output, length);
   }
 
+  fflush(fd);
   pclose(fd);
   RETURN_STRING("");
 }

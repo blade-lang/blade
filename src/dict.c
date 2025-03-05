@@ -387,6 +387,11 @@ DECLARE_DICT_METHOD(reduce) {
     start_index = 1;
   }
 
+  // early exit to avoid creating unnecessary dictionary
+  if(dict->names.count == 0) {
+    RETURN_VALUE(accumulator);
+  }
+
   b_obj_list *call_list = new_list(vm);
   push(vm, OBJ_VAL(call_list));
 

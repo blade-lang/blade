@@ -10,8 +10,8 @@
 #include "bdlfcn.h"
 #endif
 
-#define CLIB_RETURN_PTR(handle, cf, ...) \
-  b_obj_ptr *ptr = (b_obj_ptr *)GC(new_ptr(vm, (handle))); \
+#define CLIB_RETURN_PTR(handle, u, cf, ...) \
+  b_obj_ptr *ptr = (b_obj_ptr *)GC(new_closable_ptr(vm, (handle), (u))); \
   const char *format = #cf; \
   int length = snprintf(NULL, 0, format, ##__VA_ARGS__); \
   ptr->name = ALLOCATE(char, length + 1); \
@@ -345,6 +345,31 @@ static inline b_ffi_values *get_c_values(b_vm *vm, b_ffi_cif *cif, b_obj_list *l
   return values;
 }
 
+void clib_load_library_free_fn(void *data) {
+  if (data != NULL) {
+    dlclose(data);
+  }
+}
+
+void clib_new_struct_free_fn(void *data) {
+  if (data != NULL) {
+    b_ffi_type *type = (b_ffi_type *)data;
+    if (type != NULL) {
+      // make name list available for freeing.
+      type->names->obj.stale--;
+    }
+  }
+}
+
+void clib_new_closure_free_fn(void *data) {
+  if (data != NULL) {
+    b_ffi_cif_closure *ci = (b_ffi_cif_closure *)data;
+    if (ci != NULL && ci->closure != NULL) {
+      ffi_closure_free(ci->closure);
+    }
+  }
+}
+
 DECLARE_MODULE_METHOD(clib_load_library) {
   ENFORCE_ARG_COUNT(load_library, 1);
   ENFORCE_ARG_TYPE(load_library, 0, IS_STRING);
@@ -357,7 +382,7 @@ DECLARE_MODULE_METHOD(clib_load_library) {
     RETURN_ERROR(error);
   }
 
-  CLIB_RETURN_PTR(handle, <void *clib::Library(%s)>, name->chars);
+  CLIB_RETURN_PTR(handle, &clib_load_library_free_fn, <void *clib::Library(%s)>, name->chars);
 }
 
 DECLARE_MODULE_METHOD(clib_get_function) {
@@ -375,7 +400,7 @@ DECLARE_MODULE_METHOD(clib_get_function) {
       RETURN_ERROR(error);
     }
 
-    CLIB_RETURN_PTR(fn, <void *clib::function(%s)>, name->chars);
+    CLIB_RETURN_PTR(fn, NULL, <void *clib::function(%s)>, name->chars);
   }
 
   RETURN_ERROR("handle not initialized");
@@ -389,6 +414,7 @@ DECLARE_MODULE_METHOD(clib_close_library) {
 
   if(handle) {
     dlclose(handle);
+    handle = NULL;
     RETURN;
   }
 
@@ -432,7 +458,7 @@ DECLARE_MODULE_METHOD(clib_new_struct) {
   struct_type->length = args_list->items.count;
   struct_type->names = names;
 
-  CLIB_RETURN_PTR(struct_type, <void *clib::struct(%d)>, args_list->items.count);
+  CLIB_RETURN_PTR(struct_type, &clib_new_struct_free_fn, <void *clib::struct(%d)>, args_list->items.count);
 }
 
 void clib_closure_interface_trampoline(ffi_cif *cif, void *ret, void *args[], void *data) {
@@ -511,7 +537,7 @@ DECLARE_MODULE_METHOD(clib_new_closure) {
     if(ffi_prep_cif(ci->cif, ci->abi, ci->args_count, ci->return_type->as_ffi, types) == FFI_OK) {
 
       if(ffi_prep_closure_loc(ci->closure, ci->cif, clib_closure_interface_trampoline, (void *)ci, ci->code) == FFI_OK) {
-        CLIB_RETURN_PTR(ci, <void *clib::cif::closure(*%d)(%d)>, ci->return_type->as_int, ci->args_count);
+        CLIB_RETURN_PTR(ci, &clib_new_closure_free_fn, <void *clib::cif::closure(*%d)(%d)>, ci->return_type->as_int, ci->args_count);
       }
     }
 
@@ -697,7 +723,7 @@ DECLARE_MODULE_METHOD(clib_define) {
     types[args_list->items.count] = NULL;
 
     if(ffi_prep_cif(ci->cif, ci->abi, ci->args_count, ci->return_type->as_ffi, types) == FFI_OK) {
-      CLIB_RETURN_PTR(ci, <void *clib::cif::%s(%d)>, fn_name->chars, ci->return_type->as_int);
+      CLIB_RETURN_PTR(ci, NULL, <void *clib::cif::%s(%d)>, fn_name->chars, ci->return_type->as_int);
     }
 
     FREE_ARRAY(ffi_cif, cif, 1);

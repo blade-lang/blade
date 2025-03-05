@@ -201,7 +201,7 @@ def get_env(name) {
  * @param string name
  * @param string value
  * @param bool? overwrite: Default value is `false`.
- * @returns string
+ * @returns bool
  */
 def set_env(name, value, overwrite) {
   if overwrite == nil overwrite = false

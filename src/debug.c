@@ -179,7 +179,7 @@ int disassemble_instruction(b_blob *blob, int offset) {
       return short_instruction("enimport", blob, offset);
     case OP_IMPORT_ALL:
       return simple_instruction("aimport", offset);
-      case OP_IMPORT_ALL_NATIVE:
+    case OP_IMPORT_ALL_NATIVE:
       return simple_instruction("animport", offset);
 
     case OP_ECHO:

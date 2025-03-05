@@ -61,7 +61,7 @@ class SQLite3Cursor {
   var columns = []
 
   /**
-   * @param SQLite3 db
+   * @param [[sqlite.SQLite3]] db
    * @param ptr cursor
    * @note SQLite3Cursor should NEVER be maually instantiated.
    * @constructor
@@ -105,7 +105,7 @@ class SQLite3Cursor {
    * @note If index is a string, it returns the value in the column with the given name.
    * @param number|string index
    * @returns string
-   * @throws SQLiteException if no matching column can be found.
+   * @throws [[sqlite.SQLiteException]] if no matching column can be found.
    */
   get(index) {
     if is_number(index) or is_string(index) {

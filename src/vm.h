@@ -38,7 +38,7 @@ struct s_vm {
   b_obj_up_value *open_up_values;
 
   b_error_frame *errors[ERRORS_MAX];
-  b_error_frame **error_top;
+  int error_count;
 
   size_t stack_capacity;
   b_value *stack;
@@ -87,6 +87,7 @@ struct s_vm {
 
 void init_vm(b_vm *vm);
 void free_vm(b_vm *vm);
+void register__ROOT__(b_vm *vm);
 
 b_ptr_result interpret(b_vm *vm, b_obj_module *module, const char *source);
 

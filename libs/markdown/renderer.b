@@ -163,7 +163,7 @@ class Renderer {
 
   /**
    * Default token renderer. Can be overriden by custom function
-   * in [[Renderer#rules]].
+   * in [[markdown.Renderer.rules]].
    * 
    * @param list tokens: list of tokens
    * @param number idx: token index to render
@@ -230,7 +230,7 @@ class Renderer {
   }
 
   /**
-   * The same as [[Renderer.render]], but for single token of `inline` type.
+   * The same as [[markdown.Renderer.render]], but for single token of `inline` type.
    * 
    * @param list tokens: list on block tokens to render
    * @param dict options: params of parser instance

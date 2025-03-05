@@ -15,7 +15,7 @@ class BlockState {
     self.env = env
   
     #
-    # Internal state vartiables
+    # Internal state variables
     #
   
     self.tokens = tokens

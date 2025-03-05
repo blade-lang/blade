@@ -1,8 +1,6 @@
 #include "module.h"
 #include "compiler.h"
 
-extern bool call_value(b_vm *vm, b_value callee, int arg_count);
-
 /**
  * hasprop(object: instance | module, name: string)
  *
@@ -48,6 +46,20 @@ DECLARE_MODULE_METHOD(reflect__getprop) {
   RETURN_NIL;
 }
 
+DECLARE_MODULE_METHOD(reflect__getprops) {
+  ENFORCE_ARG_COUNT(get_props, 1);
+  ENFORCE_ARG_TYPES(has_props, 0, IS_INSTANCE, IS_MODULE);
+
+  b_table *table;
+  if(IS_INSTANCE(args[0])) {
+    table = &AS_INSTANCE(args[0])->properties;
+  } else {
+    table = &AS_MODULE(args[0])->values;
+  }
+
+  RETURN_OBJ(table_get_keys(vm, table));
+}
+
 /**
  * setprop(object: instance, name: string, value: any)
  *
@@ -61,7 +73,6 @@ DECLARE_MODULE_METHOD(reflect__setprop) {
   ENFORCE_ARG_COUNT(set_prop, 3);
   ENFORCE_ARG_TYPE(set_prop, 0, IS_INSTANCE);
   ENFORCE_ARG_TYPE(set_prop, 1, IS_STRING);
-  ENFORCE_ARG_TYPE(set_prop, 2, IS_STRING);
 
   b_obj_instance *instance = AS_INSTANCE(args[0]);
   RETURN_BOOL(table_set(vm, &instance->properties, args[1], args[2]));
@@ -261,11 +272,13 @@ DECLARE_MODULE_METHOD(reflect__setglobal) {
   if(IS_NIL(args[1])) {
     if(IS_CLASS(args[0])) {
       name = AS_CLASS(args[0])->name;
-    } else {
+    } else if (IS_CLOSURE(args[0])) {
       name = AS_CLOSURE(args[0])->function->name;
+    } else {
+      RETURN_ERROR("name required for unnamed global value");
     }
   } else {
-    ENFORCE_ARG_TYPE(set_global, 0, IS_STRING);
+    ENFORCE_ARG_TYPE(set_global, 1, IS_STRING);
     name = AS_STRING(args[1]);
   }
 
@@ -327,11 +340,13 @@ DECLARE_MODULE_METHOD(reflect__getptr) {
         RETURN_PTR(AS_OBJ(args[0]));
       }
     }
-  } else if(IS_NUMBER(args[0])) {
-    RETURN_PTR(args);
-  } else {
-    RETURN_PTR(NULL);
   }
+
+  if(IS_NUMBER(args[0])) {
+    RETURN_PTR(args);
+  }
+
+  RETURN_PTR(NULL);
 }
 
 DECLARE_MODULE_METHOD(reflect__getaddress) {
@@ -369,9 +384,9 @@ DECLARE_MODULE_METHOD(reflect__getaddress) {
         RETURN_PTR((uintptr_t)AS_OBJ(args[0]));
       }
     }
-  } else {
-    RETURN_NUMBER(0);
   }
+
+  RETURN_NUMBER(0);
 }
 
 DECLARE_MODULE_METHOD(reflect__ptr_from_address) {
@@ -439,6 +454,7 @@ CREATE_MODULE_LOADER(reflect) {
   static b_func_reg module_functions[] = {
       {"hasprop",   true,  GET_MODULE_METHOD(reflect__hasprop)},
       {"getprop",   true,  GET_MODULE_METHOD(reflect__getprop)},
+      {"getprops",   true,  GET_MODULE_METHOD(reflect__getprops)},
       {"setprop",   true,  GET_MODULE_METHOD(reflect__setprop)},
       {"delprop",   true,  GET_MODULE_METHOD(reflect__delprop)},
       {"hasmethod", true,  GET_MODULE_METHOD(reflect__hasmethod)},

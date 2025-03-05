@@ -134,9 +134,9 @@ class TLSSocket {
   var receive_timeout = -1
 
   /**
-   * @param Socket socket
-   * @param SSLContext? context
-   * @param SSL? ssl
+   * @param [[socket.Socket]] socket
+   * @param [[ssl.SSLContext]]? context
+   * @param [[ssl.SSL]]? ssl
    * @constructor
    */
   TLSSocket(socket, context, ssl) {
@@ -188,7 +188,7 @@ class TLSSocket {
    * Sends the specified message to the socket. When this methods accepts a file as a message, 
    * the file is read and the resultant bytes of the file content is streamed to the socket.
    * 
-   * @note the flags parameter is currently redundant and is kept only to remanin compatible with future plans for this method.
+   * @note the flags parameter is currently redundant and is kept only to remain compatible with future plans for this method.
    * @param string|bytes|file message
    * @param int? flags
    * @returns number greater than -1 if successful indicating the total number of bytes sent or -1 if it fails.
@@ -206,7 +206,7 @@ class TLSSocket {
    * `receive_timeout` which is also equal to the `SO_RCVTIMEO` setting of the socket has elapsed before or 
    * until it has received the total number of bytes required (whichever comes first).
    * 
-   * @note the flags parameter is currently redundant and is kept only to remanin compatible with future plans for this method.
+   * @note the flags parameter is currently redundant and is kept only to remain compatible with future plans for this method.
    * @param int? length
    * @param int? flags
    * @returns string
@@ -242,7 +242,7 @@ class TLSSocket {
    * Alternatively, if the underlying protocol supports retransmission, the request may be ignored 
    * so that retries may succeed.
    * 
-   * When the `queue_length` is ommited or set to -1, the method will use the default queue limit of 
+   * When the `queue_length` is omitted or set to -1, the method will use the default queue limit of
    * the current platform which is usually equal to `SOMAXCONN`.
    * 
    * @note listen() call applies only to sockets of type `SOCK_STREAM` (which is the default).
@@ -264,7 +264,7 @@ class TLSSocket {
    * 
    * The accepted socket may not be used to accept more connections.  The original socket remains open.
    * 
-   * @returns TLSSocket
+   * @returns [[ssl.TLSSocket]]
    */
   accept() {
     var s = self._socket.accept()
@@ -355,7 +355,7 @@ class TLSSocket {
   /**
    * Returns the underlying Socket instance.
    * 
-   * @returns Socket
+   * @returns [[socket.Socket]]
    */
   get_socket() {
     return self._socket
@@ -364,7 +364,7 @@ class TLSSocket {
   /**
    * Returns the underlying SSLContext instance.
    * 
-   * @returns SSLContext
+   * @returns [[ssl.SSLContext]]
    */
   get_context() {
     return self._context
@@ -372,8 +372,8 @@ class TLSSocket {
 
   /**
    * Returns the underlying SSL instance
-   * 
-   * @returns SSL
+   *
+   * @returns [[ssl.SSL]]
    */
   get_ssl() {
     return self._ssl
@@ -382,7 +382,7 @@ class TLSSocket {
   /**
    * Sets the underlying SSL context to use.
    * 
-   * @param SSLContext context
+   * @param [[ssl.SSLContext]] context
    */
   set_context(context) {
     if !instance_of(content, SSLContext)
@@ -399,9 +399,9 @@ class TLSSocket {
 /**
  * Returns a new instance of a TLSSocket.
  * 
- * @param Socket socket
- * @param SSLContext? context
- * @param SSL? ssl
+ * @param [[socket.Socket]] socket
+ * @param [[ssl.SSLContext]]? context
+ * @param [[ssl.SSL]]? ssl
  * @default
  */
 def socket(socket, context, ssl) {
