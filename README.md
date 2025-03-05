@@ -63,11 +63,11 @@ To install Blade, please follow the instructions in the [Building](./BUILDING.md
 
 ## Usage
 
-To start using Blade, please refer to the [Tutorial](https://bladelang.org/tutorial/index.html) section of the online documentation.
+To start using Blade, please refer to the [Tutorial](https://bladelang.org/tutorial/) section of the online documentation.
 
 ## API Documentation
 
-API documentation for Blade is under active development and can be found at [bladelang.org](https://bladelang.org/standard/index.html).
+API documentation for Blade is under active development and can be found at [bladelang.org](https://bladelang.org/standard/).
 
 ## Community
 
@@ -81,7 +81,7 @@ We need your help to make Blade great! The Blade community is as friendly and we
 
 ## License
 
-Blade is licensed under the [2-clause BSDL License](https://github.com/blade-lang/blade/blob/master/LICENSE).
+Blade is licensed under the [2-clause BSDL License](https://github.com/blade-lang/blade/blob/main/LICENSE).
 
 ## Sponsors
 
