@@ -1,3 +1,42 @@
+/** 
+ * @module bigint
+ * 
+ * This module provides functionality for working with Big Integers. 
+ * Big Integer (BigInt) values represent integer values which are too high 
+ * or too low to be represented by the standard number primitive.
+ * 
+ * BigInt values possess nearly all the same properties as numbers except 
+ * for a few very important differences:
+ * 
+ * - The are purely integers and cannot carry decimal/fractional values
+ * - They cannot be used with the [[math]] module without first coercing 
+ *   precision to the valid range of number values.
+ * - They return `false` when tested with `is_number()`
+ * - They return `BigInt` when passed to `typeof()`.
+ * 
+ * All Blade operators except `++`, `--`, and `>>>` works perfectly with BigInts 
+ * are permit mixing with regular numbers.
+ * 
+ * ```blade-repl
+ * %> import bigint
+ * %> 
+ * %> bigint('9007199254740991')
+ * '<BigInt v=9007199254740991>'
+ * %> bigint('0b11111111111111111111111111111111111111111111111111111')
+ * '<BigInt v=9007199254740991>'
+ * %> 
+ * %> # using regular number
+ * %> 6000000000000000000000 + 2000000000000000000000
+ * 8e+21
+ * %> 
+ * %> # using bigint
+ * %> bigint('6000000000000000000000') + bigint('2000000000000000000000')
+ * '<BigInt v=8000000000000000000000>'
+ * ```
+ * 
+ * @copyright 2025, Ore Richard Muyiwa and Blade contributors
+ */
+
 import math
 
 var _baseNumbers = '0123456789abcdefghijklmnopqrstuvwxyz'
@@ -961,6 +1000,16 @@ class BigInt {
     if number[0] == '-' {
       start++
       self.negative = 1
+    }
+
+    if base == 10 and number.match('/^0(b|c|x)/') {
+      using number[start + 1] {
+        when 'b' base = 2
+        when 'c' base = 8
+        when 'x' base = 16
+      }
+
+      start += 2
     }
 
     if start < number.length() {
@@ -3243,7 +3292,10 @@ class BigInt {
   }
 
   /**
+   * Returns `true` if the current BigInt is greater than the given number 
+   * _num_ otherwise, it returns `false`.
    * 
+   * @param number num
    * @returns bool
    */
   gtn(num) {
@@ -3251,7 +3303,10 @@ class BigInt {
   }
 
   /**
+   * Returns `true` if the current number is greater than the given number 
+   * _num_ otherwise, it returns `false`.
    * 
+   * @param [[bigint.BigInt]] num
    * @returns bool
    */
   gt(num) {
@@ -3259,7 +3314,10 @@ class BigInt {
   }
 
   /**
+   * Returns `true` if the current BigInt is greater than or equal to the 
+   * given number _num_ otherwise, it returns `false`.
    * 
+   * @param number num
    * @returns bool
    */
   gten(num) {
@@ -3267,7 +3325,10 @@ class BigInt {
   }
 
   /**
+   * Returns `true` if the current number is greater than or equal to the given 
+   * number _num_ otherwise, it returns `false`.
    * 
+   * @param [[bigint.BigInt]] num
    * @returns bool
    */
   gte(num) {
@@ -3275,7 +3336,10 @@ class BigInt {
   }
 
   /**
+   * Returns `true` if the current BigInt is less than the given number 
+   * _num_ otherwise, it returns `false`.
    * 
+   * @param number num
    * @returns bool
    */
   ltn(num) {
@@ -3283,7 +3347,10 @@ class BigInt {
   }
 
   /**
+   * Returns `true` if the current number is less than the given number 
+   * _num_ otherwise, it returns `false`.
    * 
+   * @param [[bigint.BigInt]] num
    * @returns bool
    */
   lt(num) {
@@ -3291,7 +3358,10 @@ class BigInt {
   }
 
   /**
+   * Returns `true` if the current BigInt is less than or equal to the 
+   * given number _num_ otherwise, it returns `false`.
    * 
+   * @param number num
    * @returns bool
    */
   lten(num) {
@@ -3299,7 +3369,10 @@ class BigInt {
   }
 
   /**
+   * Returns `true` if the current number is less than or equal to the given 
+   * number _num_ otherwise, it returns `false`.
    * 
+   * @param [[bigint.BigInt]] num
    * @returns bool
    */
   lte(num) {
@@ -3307,7 +3380,10 @@ class BigInt {
   }
 
   /**
+   * Returns `true` if the current BigInt is equal to the given number _num_ 
+   * otherwise, it returns `false`.
    * 
+   * @param number num
    * @returns bool
    */
   eqn(num) {
@@ -3315,7 +3391,10 @@ class BigInt {
   }
 
   /**
+   * Returns `true` if the current number isequal to the given number _num_ 
+   * otherwise, it returns `false`.
    * 
+   * @param [[bigint.BigInt]] num
    * @returns bool
    */
   eq(num) {
@@ -3524,7 +3603,7 @@ class BigInt {
     if instance_of(__arg__, BigInt) {
       return self.eq(__arg__)
     } else if is_number(__arg__) {
-      return self.eq(BigInt(__arg__))
+      return self.eqn(__arg__)
     }
 
     raise Exception('BigInt operation = not permitted on ${typeof(__arg__)}')
@@ -3554,3 +3633,79 @@ def bigint(number, base, endian) {
  * @type [[bigint.BigInt]]
  */
 var zero = BigInt(0)
+
+
+# function to find the quicksort partition position
+def _partition(list, low, high) {
+  # choose the rightmost element as pivot
+  var pivot = list[high]
+
+  # pointer for greater element
+  var i = low - 1
+
+  # traverse through all elements
+  # compare each element with pivot
+  for j in low..high {
+    if list[j] <= pivot {
+      # if element smaller than pivot is found
+      # swap it with the greater element pointed by i
+      i++
+
+      # swapping element at i with element at j
+      var tmp = list[i]
+      list[i] = list[j]
+      list[j] = tmp
+    }
+  }
+
+  # swap the pivot element with the greater element specified by i
+  var tmp = list[i + 1]
+  list[i + 1] = list[high]
+  list[high] = tmp
+
+  # return the position from where partition is done
+  return i + 1
+}
+
+# function to perform quicksort
+def _sort(list, low, high) {
+  if low < high {
+    # find pivot element such that
+    # element smaller than pivot are on the left
+    # element greater than pivot are on the right
+    var pivot = _partition(items, low, high)
+
+    # recursive call on the left of pivot
+    _sort(items, low, pivot - 1)
+
+    # recursive call on the right of pivot
+    _sort(items, pivot + 1, high)
+  }
+}
+
+
+/**
+ * Performs in place sort on a list of BigInt values. This is the sort that 
+ * should be used on a list of BigInts as the default `list.sort()` will 
+ * fail.
+ * 
+ * @params {list<BigInt>} items
+ */
+def sort(items) {
+  if !is_list(items) {
+    raise Exception('list expected, ${typeof(items)} given')
+  }
+
+  if items.is_empty() {
+    return items
+  }
+
+  # validate the arguments passed
+  for item in items {
+    if !BigInt.isBigInt(item) {
+      raise Exception('invalid BigInt in sort()')
+    }
+  }
+
+  _sort(items, 0, items.length() - 1)
+}
