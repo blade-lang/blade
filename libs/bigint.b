@@ -3618,7 +3618,7 @@ class BigInt {
  * @param base
  * @param endian
  * @returns [[bigint.BigInt]]
- * @exported
+ * @default
  */
 def bigint(number, base, endian) {
   if BigInt.isBigInt(number) {

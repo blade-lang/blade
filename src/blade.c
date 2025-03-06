@@ -14,8 +14,7 @@
 #include <errno.h>
 
 #if !defined(_WIN32) && !defined(__CYGWIN__)
-#include "linenoise/utf8.h"
-#include "linenoise/linenoise.h"
+#include "linenoise.h"
 #endif
 
 #include <setjmp.h>
