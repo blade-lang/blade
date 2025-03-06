@@ -58,7 +58,6 @@ set(BLADE_SOURCES
 		src/value.c
 		src/vm.c
 		# standard module
-		src/standard/array.c
 		src/standard/base64.c
 		src/standard/date.c
 		src/standard/io.c
