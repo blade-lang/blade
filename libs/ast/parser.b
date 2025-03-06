@@ -187,7 +187,7 @@ class Parser {
    * ignores consecutive newlines
    */
   _ignore_newline() {
-    while self._match(TokenType.NEWLINE, TokenType.COMMENT, TokenType.DOC) {}
+    while self._match(TokenType.NEWLINE, TokenType.COMMENT) {}
   }
 
   ### EXPRESSIONS START
