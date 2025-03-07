@@ -5,7 +5,7 @@
  * non-trigonometric mathematics a breeze. The module also defines a couple
  * of commonly used scientific and mathematical constants such as `PI`.
  * 
- * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ * @copyright 2021, Richard Ore and Blade contributors
  */
 
 import _math

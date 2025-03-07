@@ -12,7 +12,7 @@
  * - The Julian date number (`jd`) is in elapsed days and time since noon 
  * (Greenwich Mean Time) on January 1, 4713 BCE (in the Julian calendar).
  * 
- * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ * @copyright 2021, Richard Ore and Blade contributors
  */
 
 import _date

@@ -75,7 +75,7 @@
  * socket.close()
  * ```
  * 
- * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ * @copyright 2021, Richard Ore and Blade contributors
  */
 
 import _socket

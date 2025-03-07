@@ -69,7 +69,7 @@
  * convert dictionaries into JSON objects or create multipart/form-data request for you.
  * Rather, it gives the tools required to craft any request body of your choice.
  * 
- * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ * @copyright 2021, Richard Ore and Blade contributors
  */
 
 import .response { HttpResponse }

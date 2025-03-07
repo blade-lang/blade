@@ -5,7 +5,7 @@
  * The third is the decl module that describes Blade declarations such as classes
  * 
  * This script was created to help with the ast module 
- * @copyright Ore Richard Muyiwa
+ * @copyright Richard Ore
  */
 
 import os

@@ -44,7 +44,7 @@
  * colors.text('Colored text!', colors.hex('#fc0'))
  * ```
  *
- * @copyright 2022, Ore Richard Muyiwa and Blade contributors
+ * @copyright 2022, Richard Ore and Blade contributors
  */
 
 import os

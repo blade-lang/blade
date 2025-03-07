@@ -36,7 +36,7 @@
  * {name: Richard, age: 3.142}
  * ```
  * 
- * @copyright 2022, Ore Richard Muyiwa and Blade contributors
+ * @copyright 2022, Richard Ore and Blade contributors
  */
 
 import _process

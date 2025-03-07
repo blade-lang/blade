@@ -8,7 +8,7 @@
  * 
  * _See defined functions for example._
  * 
- * @copyright O2021, Ore Richard Muyiwa
+ * @copyright O2021, Richard Ore
  */
 
 
