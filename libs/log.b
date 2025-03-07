@@ -90,7 +90,8 @@
  * 
  * For more complex uses, the process of creating a custom transport is really simple. 
  * To create a custom transport, you'll need to create a class that inherits from 
- * [[log.Transport]] and implement both the `format()` and `write()` method at a minimum.
+ * [[log.Transport]] and implement both the `format()` and `write()` method at a 
+ * minimum.
  * 
  * The example below shows the creation of a custom transport that outputs structured 
  * JSON data to the console.
@@ -114,6 +115,7 @@
  *     echo json.encode({
  *       logtime: time(),
  *       records: message.records,
+ *       name: self.get_name(),
  *       level: enum.to_value_dict(log.LogLevel)[message.level]
  *     })
  *   }
@@ -132,15 +134,15 @@
  * You should be seeing something similar to the below if you run the code:
  * 
  * ```sh
- * {"logtime":1741376459,"records":["Finished setting up json console log transport..."],"level":"Info"}
+ * {"logtime":1741376459,"records":["Finished setting up json console log transport..."],"name":"tmp","level":"Info"}
  * ```
  * 
  * You can set multiple transports at the same time as well as set them to only work at 
  * different log levels. Every transport inherits the method [[log.Transport.set_level]] 
  * which allows us set the minimum level at which a transport is available.
  * 
- * There is also a gloabl [[log.set_level]] function that allows us to set the minimum 
- * log level at which all transports can start logging.
+ * There is also a gloabl [[log.set_level]] function that allows us to set the 
+ * minimum log level at which all transports can start logging.
  * 
  * ```blade
  * import log
@@ -150,8 +152,21 @@
  * log.info('Finished setting up json console log transport...')
  * ```
  * 
- * If you try the above code, you won't be seeing anything in the console. This is because 
- * level [[log.Info]] is lower than the minium required [[log.Warning]].
+ * If you try the above code, you won't be seeing anything in the console. This is 
+ * because level [[log.Info]] is lower than the minium required [[log.Warning]].
+ * 
+ * > **IMPORTANT!**
+ * > 
+ * > Because the `log` module exports the a function, if you are not interested in all 
+ * > the shanengians of logging level and simply want to do some quick logging, you can 
+ * > ignore the whole logging levels altogether and log at level [[log.None]] by simply 
+ * > calling the log module itself.
+ * > 
+ * > ```blade
+ * > import log
+ * > 
+ * > log('An anonymous log!')
+ * > ```
  * 
  * @copyright 2025, Richard Ore and Blade contributors
  */
@@ -162,7 +177,16 @@ import date
 
 
 /**
+ * The Log levels in order
  * 
+ * - None
+ * - Debug
+ * - Info
+ * - Warning
+ * - Error
+ * - Critical
+ * 
+ * @type enum
  */
 var LogLevel = enum([
   'None',
@@ -179,38 +203,39 @@ var _default_log_level = LogLevel.None
 # LogLevel Exports
 
 /**
- * 
+ * Module level declaration of `LogLevel.None`
  */
 var None =  LogLevel.None
 
 /**
- * 
+ * Module level declaration of `LogLevel.Debug`
  */
 var Debug = LogLevel.Debug
 
 /**
- * 
+ * Module level declaration of `LogLevel.Info`
  */
 var Info = LogLevel.Info
 
 /**
- * 
+ * Module level declaration of `LogLevel.Warning`
  */
 var Warning = LogLevel.Warning
 
 /**
- * 
+ * Module level declaration of `LogLevel.Error`
  */
 var Error = LogLevel.Error
 
 /**
- * 
+ * Module level declaration of `LogLevel.Critical`
  */
 var Critical = LogLevel.Critical
 
 
 /**
- * 
+ * The Transport class acts as the base class for log transports and handle the actual 
+ * logging of the specified log records.
  */
 class Transport {
   var _level = LogLevel.None
@@ -222,7 +247,13 @@ class Transport {
   var _time_format = 'c'
 
   /**
+   * Sets the threshold level for this transport to handle. Logging messages which are 
+   * less severe than level will be ignored. Unless overriden by the transport 
+   * implementation, when a handler is created, the level is set to [[log.None]] (which 
+   * causes all messages to be processed).
    * 
+   * @param [[log.LogLevel]] level
+   * @returns self
    */
   set_level(level) {
     if !is_number(level) {
@@ -230,17 +261,23 @@ class Transport {
     }
 
     self._level = enum.ensure(LogLevel, level)
+    return self
   }
 
   /**
+   * The threshold level of this transport.
    * 
+   * @returns [[log.LogLevel]]
    */
   get_level() {
     return self._level
   }
 
   /**
+   * Sets the name of the current transport.
    * 
+   * @param string name
+   * @returns self
    */
   set_name(name) {
     if !is_string(name) {
@@ -248,17 +285,24 @@ class Transport {
     }
   
     self._log_name = name
+    return self
   }
 
   /**
+   * Retuns the name of the current transport.
    * 
+   * @returns string
    */
   get_name() {
     return self._log_name
   }
 
   /**
+   * Sets the time formatting string used by the transport when 
+   * [[log.Transport.show_time]] is set to true.
    * 
+   * @param string format
+   * @returns self
    */
   set_time_format(format) {
     if !is_string(format) {
@@ -266,43 +310,61 @@ class Transport {
     }
   
     self._time_format = format
+    return self
   }
 
   /**
+   * Returns the time formatting string used by the current transport. The default 
+   * value is `c`.
    * 
+   * @returns string
    */
   get_time_format() {
     return self._time_format
   }
 
   /**
+   * Enable or disable showing transport names in the logs based on the passed 
+   * boolean value.
    * 
+   * @param bool show
+   * @returns self
    */
-  show_name(bool) {
-    if bool == nil bool = true
+  show_name(show) {
+    if show == nil show = true
 
-    if !is_bool(bool) {
-      raise Exception('boolean expected, ${typeof(bool)} given')
+    if !is_bool(show) {
+      raise Exception('boolean expected, ${typeof(show)} given')
     }
 
-    return self._show_name = bool
+    self._show_name = show
+    return self
   }
 
   /**
+   * Enables or disables showing logging time in the logs based on the passed boolean 
+   * value.
    * 
+   * @param bool show
+   * @returns self
    */
-  show_time(bool) {
-    if bool == nil bool = true
+  show_time(show) {
+    if show == nil show = true
 
-    if !is_bool(bool) {
-      raise Exception('boolean expected, ${typeof(bool)} given')
+    if !is_bool(show) {
+      raise Exception('boolean expected, ${typeof(show)} given')
     }
 
-    return self._show_time = bool
+    self._show_time = show
+    return self
   }
 
   /**
+   * Returns a boolean value which indicates if a message of severity *level* can be 
+   * processed by this transport.
    * 
+   * @param [[log.LogLeven]] level
+   * @returns bool
    */
   can_log(level) {
     if !is_number(level) {
@@ -313,60 +375,42 @@ class Transport {
   }
 
   /**
+   * Enables and starts processing of logs by the current transport.
    * 
+   * @returns self
    */
   enable() {
     self._enabled = true
+    return self
   }
 
   /**
+   * Disables and stops the current transport from processing further logs.
    * 
+   * @returns self
    */
   disable() {
     self._enabled = false
+    return self
   }
 
   /**
+   * Formats the log records for the current level for writing to the transport's 
+   * stream. The default implementation of this method is exactly as seen when using 
+   * the [[log.Transport.default_transport]] which logs to the console. The method 
+   * should be overriden by subclasses to get a custom formatting.
    * 
-   */
-  format(records, level) {}
-
-  /**
+   * > **IMPORTANT!**
+   * >
+   * > The result of this function will be passed into the [[log.Transport.write()]] 
+   * > function so transport implementations *MUST* ensure to expect the same type as 
+   * > is returned from this function in the [[log.Transport.write()]] function message 
+   * > parameter.
    * 
+   * @params {list[any]} records
+   * @param [[log.LogLevel]] level
+   * @returns any
    */
-  write(message) {}
-
-  /**
-   * 
-   */
-  flush() {}
-
-  /**
-   * 
-   */
-  close() {}
-}
-
-
-# Verifies that obj is a valid Transport and returns obj as is if true 
-# or raises an Exception if not.
-def _assert_transport(obj) {
-  if !instance_of(obj, Transport) {
-    raise Exception('invalid Transport')
-  }
-
-  return obj
-}
-
-
-/**
- * 
- */
-class ConsoleTransport < Transport {
-  write(message) {
-    echo message
-  }
-
   format(records, level) {
     var message = ''
 
@@ -389,6 +433,54 @@ class ConsoleTransport < Transport {
     return message
   }
 
+  /**
+   * Do whatever it takes to actually log the specified logging record. This method is 
+   * intended to be implemented by subclasses and so raises an *Exception* if called 
+   * directly from `Transport`.
+   * 
+   * @param any message
+   * @raises Exception
+   */
+  write(message) {
+    raise Exception('not implemented')
+  }
+
+  /**
+   * Ensure all logging output has been flushed to the target stream. This default version 
+   * does nothing and is intended to be implemented by subclasses.
+   */
+  flush() {}
+
+  /**
+   * Tidy up any resources used by the transport. This default version does no output but 
+   * removes the handler from an internal list of handlers. Subclasses should ensure that 
+   * this gets called from overridden close() methods.
+   */
+  close() {
+    _transports.remove(self)
+  }
+}
+
+
+# Verifies that obj is a valid Transport and returns obj as is if true 
+# or raises an Exception if not.
+def _assert_transport(obj) {
+  if !instance_of(obj, Transport) {
+    raise Exception('invalid Transport')
+  }
+
+  return obj
+}
+
+
+/**
+ * ConsoleTransport is a log transport that facilitates sending log streams to the console.
+ */
+class ConsoleTransport < Transport {
+  write(message) {
+    echo message
+  }
+
   flush() {
     io.flush(io.stdout)
   }
@@ -396,12 +488,16 @@ class ConsoleTransport < Transport {
 
 
 /**
- * 
+ * FileTransport is a log transport that facilitates sending log streams to an on-disk file.
  */
-class FileTransport < ConsoleTransport {
+class FileTransport < Transport {
   
   /**
+   * Returns a new instance of FileTransport and opens a file handle to the the file 
+   * specified in the path.
    * 
+   * @param string path
+   * @constructor
    */
   FileTransport(path) {
     self.file = file(path, 'a')
@@ -416,6 +512,7 @@ class FileTransport < ConsoleTransport {
   }
 
   close() {
+    parent.close()
     self.file.close()
   }
 }
@@ -429,7 +526,10 @@ var _default_transport = ConsoleTransport()
 
 
 /**
+ * Sets the threshold level for the default transport to handle.
  * 
+ * @param [[log.LogLevel]] level
+ * @returns default_transport
  */
 def set_level(level) {
   if !is_number(level) {
@@ -437,6 +537,25 @@ def set_level(level) {
   }
 
   _default_log_level = enum.ensure(LogLevel, level)
+  _default_transport.set_level(_default_log_level)
+
+  return _default_transport
+}
+
+
+/**
+ * Sets the name of the default transport.
+ * 
+ * @param string name
+ * @returns default_transport
+ */
+def set_name(name) {
+  if !is_string(name) {
+    raise Exception('string expected, ${typeof(name)} given')
+  }
+
+  _default_transport.set_name(name)
+  return _default_transport
 }
 
 
@@ -444,7 +563,10 @@ def set_level(level) {
 var _transports = [ _default_transport ]
 
 /**
+ * Adds a new transport service to the list of registered transports. If the transport 
+ * has been previously added, this function will do nothing.
  * 
+ * @param [[log.Transport]] transport
  */
 def add_transport(transport) {
   # ensure we are not adding the same transport again
@@ -456,14 +578,19 @@ def add_transport(transport) {
 }
 
 /**
+ * Removes the given transport service from the list of registered transports.
  * 
+ * @param [[log.Transport]] transport
  */
 def remove_transport(transport) {
   _transports.remove(transport)
 }
 
 /**
+ * Returns the instance [[log.ConsoleTransport]] which is used as the default transport 
+ * by the module.
  * 
+ * @returns [[log.ConsoleTransport]]
  */
 def default_transport() {
   return _default_transport
@@ -481,43 +608,92 @@ def _write(level, args) {
 
 
 /**
+ * Logs a message with level [[log.None]] on all registered transports.
  * 
+ * The format of the output log is dependent on the specific transport service as well 
+ * as limitations on the nature and type of arguments that is passed to the function.
+ * 
+ * @params any...
+ * @default
  */
 def log(...) {
   _write(LogLevel.None, __args__)
 }
 
 /**
+ * Logs a message with level [[log.Info]] on all registered transports. The arguments and 
+ * limitations as same as in [[log.log()]].
  * 
+ * @params any...
  */
 def info(...) {
   _write(LogLevel.Info, __args__)
 }
 
 /**
+ * Logs a message with level [[log.Debug]] on all registered transports. The arguments and 
+ * limitations as same as in [[log.log()]].
  * 
+ * @params any...
  */
 def debug(...) {
   _write(LogLevel.Debug, __args__)
 }
 
 /**
+ * Logs a message with level [[log.Warning]] on all registered transports. The arguments and 
+ * limitations as same as in [[log.log()]].
  * 
+ * @params any...
  */
 def warn(...) {
   _write(LogLevel.Warning, __args__)
 }
 
 /**
+ * Logs a message with level [[log.Error]] on all registered transports. The arguments and 
+ * limitations as same as in [[log.log()]].
  * 
+ * @params any...
  */
 def error(...) {
   _write(LogLevel.Error, __args__)
 }
 
 /**
+ * Logs a message with level [[log.Critical]] on all registered transports. The arguments and 
+ * limitations as same as in [[log.log()]].
  * 
+ * @params any...
  */
 def critical(...) {
   _write(LogLevel.Critical, __args__)
+}
+
+/**
+ * Logs a message with level [[log.Error]] on all registered transports along with an exception 
+ * message and stacktrace. The arguments and limitations as same as in [[log.log()]].
+ * 
+ * @param Exception ex
+ * @param any? message
+ */
+def exception(ex, message) {
+  if instance_of(ex, Exception) {
+    if message {
+      _write(LogLevel.Error, [ 
+        '${message}\n', 
+        'Unhandled ${typeof(ex)}: ${ex.message}', 
+        '\n${ex.stacktrace}', 
+      ])
+    } else {
+      _write(LogLevel.Error, [ 
+        'Unhandled ${typeof(ex)}: ${ex.message}', 
+        '\n${ex.stacktrace}' 
+      ])
+    }
+  } else if message {
+    _write(LogLevel.Error, [ 
+      'Unhandled ${typeof(ex)}: ${message}' 
+    ])
+  }
 }
