@@ -1,7 +1,7 @@
 import markdown
 import highlight { highlight }
 import .util
-
+import log
 
 
 var md = markdown({
@@ -38,8 +38,7 @@ def template_ext() {
       } as e
 
       if e {
-        log.error(e.message)
-        log.error(e.stacktrace)
+        log.exception(e)
         return t
       }
     },

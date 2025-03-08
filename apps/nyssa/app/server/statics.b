@@ -3,7 +3,7 @@ import mime
 import hash
 import .errors
 import ..setup
-import ..log
+import log
 
 var static_files_directory = os.join_paths(setup.NYSSA_DIR, setup.STATIC_DIR)
 var source_files_directory = os.join_paths(setup.NYSSA_DIR, setup.SOURCES_DIR)

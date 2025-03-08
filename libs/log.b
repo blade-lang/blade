@@ -439,9 +439,10 @@ class Transport {
    * directly from `Transport`.
    * 
    * @param any message
+   * @param [[log.LogLevel]] level
    * @raises Exception
    */
-  write(message) {
+  write(message, level) {
     raise Exception('not implemented')
   }
 
@@ -477,8 +478,12 @@ def _assert_transport(obj) {
  * ConsoleTransport is a log transport that facilitates sending log streams to the console.
  */
 class ConsoleTransport < Transport {
-  write(message) {
-    echo message
+  write(message, level) {
+    if level >= Error {
+      io.stderr.write(message + '\n')
+    } else {
+      echo message
+    }
   }
 
   flush() {
@@ -503,7 +508,7 @@ class FileTransport < Transport {
     self.file = file(path, 'a')
   }
 
-  write(message) {
+  write(message, level) {
     self.file.write('${message}\n')
   }
 
@@ -601,7 +606,7 @@ def default_transport() {
 def _write(level, args) {
   for trans in _transports {
     if trans.can_log(level) {
-      trans.write(trans.format(args, level))
+      trans.write(trans.format(args, level), level)
     }
   }
 }

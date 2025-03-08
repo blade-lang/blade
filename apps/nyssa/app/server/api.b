@@ -4,12 +4,12 @@ import hash
 import json
 import bcrypt
 import os
+import log
 import http.status
 import .db
 import .util
 import .errors
 import ..setup
-import ..log
 import ..package
 import ..publisher
 

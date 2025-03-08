@@ -1,8 +1,8 @@
 import args
 import os
 import json
+import log
 import ..setup
-import ..log
 import ..config { Config }
 import ..util { remove_cli }
 

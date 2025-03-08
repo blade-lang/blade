@@ -1,7 +1,7 @@
 import args
 import os
 import ..setup
-import ..log
+import log
 
 def parse(parser) {
   parser.add_command(
@@ -38,7 +38,6 @@ def run(value, options, success, error) {
   if is_logs or is_all {
     log.info('Cleaning logs...', true)
     os.remove_dir(os.join_paths(setup.NYSSA_DIR, setup.LOGS_DIR), true)
-    log.init()
   }
   if is_cache or is_all {
     log.info('Cleaning cache...', true)

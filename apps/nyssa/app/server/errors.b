@@ -1,6 +1,6 @@
 import http.status
 import json
-import ..log
+import log
 
 def _error(s, req, res) {
   res.status = s
@@ -18,8 +18,5 @@ def not_found(req, res) {
 def server_error(err, req, res) {
   res.body = bytes(0)
   _error(500, req, res)
-echo err
-  var error = 'Error: ${err.message}\nTrace:\n${err.stacktrace}'
-
-  log.error(error)
+  log.exception(err)
 }
