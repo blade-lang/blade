@@ -31,6 +31,10 @@ log.add_transport(log.FileTransport(
   '${logs_dir}/${time.year}-${to_string(time.month).lpad(2,'0')}-${to_string(time.day).lpad(2,'0')}.log'
 ))
 
+# setup console logging
+log.default_transport().show_time(false)
+log.default_transport().show_level(false)
+
 # import commands...
 import .commands.account
 import .commands.clean

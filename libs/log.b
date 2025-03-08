@@ -111,7 +111,7 @@
  *     }
  *   }
  * 
- *   write(message) {
+ *   write(message, level) {
  *     echo json.encode({
  *       logtime: time(),
  *       records: message.records,
@@ -234,16 +234,35 @@ var Critical = LogLevel.Critical
 
 
 /**
+ * Returns the name of a log level as a string.
+ * 
+ * @param [[log.LogLevel]] level
+ * @returns string
+ */
+def get_level_name(level) {
+  if !is_number(level) {
+    raise Exception('invalid log level')
+  }
+
+  level = enum.ensure(LogLevel, level)
+  return _level_lookup_table[level].upper()
+}
+
+
+/**
  * The Transport class acts as the base class for log transports and handle the actual 
  * logging of the specified log records.
  */
 class Transport {
   var _level = LogLevel.None
+  var _max_level = LogLevel.Critical
+
   var _log_name = os.base_name(os.dir_name(__root__))
 
   var _enabled = true
   var _show_name = true
   var _show_time = true
+  var _show_level = true
   var _time_format = 'c'
 
   /**
@@ -265,12 +284,41 @@ class Transport {
   }
 
   /**
-   * The threshold level of this transport.
+   * The threshold level of this transport. The default level is [[log.LogLevel.None]].
    * 
    * @returns [[log.LogLevel]]
    */
   get_level() {
     return self._level
+  }
+
+  /**
+   * Sets the maximum threshold level for this transport to handle. Logging 
+   * messages which are more severe than level will be ignored. Unless 
+   * overriden by the transport implementation, when a handler is created, the 
+   * maximum level is set to [[log.Critical]] (which causes all messages to be 
+   * processed).
+   * 
+   * @param [[log.LogLevel]] level
+   * @returns self
+   */
+  set_max_level(level) {
+    if !is_number(level) {
+      raise Exception('invalid log level')
+    }
+
+    self._max_level = enum.ensure(LogLevel, level)
+    return self
+  }
+
+  /**
+   * The maximum threshold level of this transport. The default maximum level is 
+   * [[log.Critical]].
+   * 
+   * @returns [[log.LogLevel]]
+   */
+  get_max_level() {
+    return self._max_level
   }
 
   /**
@@ -289,7 +337,8 @@ class Transport {
   }
 
   /**
-   * Retuns the name of the current transport.
+   * Retuns the name of the current transport. By default, name will be equal to the 
+   * name of the directory containig the root file.
    * 
    * @returns string
    */
@@ -360,6 +409,24 @@ class Transport {
   }
 
   /**
+   * Enable or disable showing transport log level in the logs based on the passed 
+   * boolean value.
+   * 
+   * @param bool show
+   * @returns self
+   */
+  show_level(show) {
+    if show == nil show = true
+
+    if !is_bool(show) {
+      raise Exception('boolean expected, ${typeof(show)} given')
+    }
+
+    self._show_level = show
+    return self
+  }
+
+  /**
    * Returns a boolean value which indicates if a message of severity *level* can be 
    * processed by this transport.
    * 
@@ -371,7 +438,9 @@ class Transport {
       raise Exception('invalid log level')
     }
     
-    return self._enabled and self._level <= level and level >= _default_log_level
+    return self._enabled and self._level <= level and 
+      level >= _default_log_level and
+      level <= self._max_level
   }
 
   /**
@@ -407,6 +476,15 @@ class Transport {
    * > is returned from this function in the [[log.Transport.write()]] function message 
    * > parameter.
    * 
+   * Transport implementations should be aware of the following available private 
+   * fields in the transport class:
+   * 
+   * - *[[log.LogLevel]]* `self._level`
+   * - *string* `self._log_name`
+   * - *bool* `self._show_name`
+   * - *bool* `self._show_time`
+   * - *bool* `self._show_level`
+   * 
    * @params {list[any]} records
    * @param [[log.LogLevel]] level
    * @returns any
@@ -418,7 +496,9 @@ class Transport {
       message += date().format(self._time_format)
     }
 
-    message += ' ${_level_lookup_table[level].upper()}'
+    if self._show_level {
+      message += ' ${_level_lookup_table[level].upper()}'
+    }
 
     if self._show_name {
       message += ' [${self._log_name}]'
@@ -430,7 +510,7 @@ class Transport {
       message += ' ' + to_string(arg)
     }
 
-    return message
+    return message.trim()
   }
 
   /**
