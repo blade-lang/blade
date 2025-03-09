@@ -255,15 +255,18 @@ def get_level_name(level) {
  */
 class Transport {
   var _level = LogLevel.None
-  var _max_level = LogLevel.Critical
 
   var _log_name = os.base_name(os.dir_name(__root__))
 
-  var _enabled = true
+  # hidden at one more level to avoid accidental overrides.
+  # should this be overriden, it should be deliberate.
+  var __enabled = true
+  var __time_format = 'c'
+  var __max_level = LogLevel.Critical
+
   var _show_name = true
   var _show_time = true
   var _show_level = true
-  var _time_format = 'c'
 
   /**
    * Sets the threshold level for this transport to handle. Logging messages which are 
@@ -307,7 +310,7 @@ class Transport {
       raise Exception('invalid log level')
     }
 
-    self._max_level = enum.ensure(LogLevel, level)
+    self.__max_level = enum.ensure(LogLevel, level)
     return self
   }
 
@@ -318,7 +321,7 @@ class Transport {
    * @returns [[log.LogLevel]]
    */
   get_max_level() {
-    return self._max_level
+    return self.__max_level
   }
 
   /**
@@ -358,7 +361,7 @@ class Transport {
       raise Exception('string expected, ${typeof(name)} given')
     }
   
-    self._time_format = format
+    self.__time_format = format
     return self
   }
 
@@ -369,7 +372,7 @@ class Transport {
    * @returns string
    */
   get_time_format() {
-    return self._time_format
+    return self.__time_format
   }
 
   /**
@@ -438,9 +441,9 @@ class Transport {
       raise Exception('invalid log level')
     }
     
-    return self._enabled and self._level <= level and 
+    return self.__enabled and self._level <= level and 
       level >= _default_log_level and
-      level <= self._max_level
+      level <= self.__max_level
   }
 
   /**
@@ -449,7 +452,7 @@ class Transport {
    * @returns self
    */
   enable() {
-    self._enabled = true
+    self.__enabled = true
     return self
   }
 
@@ -459,7 +462,7 @@ class Transport {
    * @returns self
    */
   disable() {
-    self._enabled = false
+    self.__enabled = false
     return self
   }
 
@@ -493,7 +496,7 @@ class Transport {
     var message = ''
 
     if self._show_time {
-      message += date().format(self._time_format)
+      message += date().format(self.__time_format)
     }
 
     if self._show_level {
