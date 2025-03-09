@@ -3,8 +3,8 @@ import io
 import os
 import http
 import json
+import log
 import ..setup
-import ..log
 
 # read the state file
 var state_file = os.join_paths(setup.NYSSA_DIR, setup.STATE_FILE)

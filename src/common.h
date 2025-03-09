@@ -109,6 +109,6 @@
 #define EXIT_RUNTIME 11
 #define EXIT_TERMINAL 12
 
-#define BLADE_COPYRIGHT "\tCopyright (c) Ore Richard Muyiwa"
+#define BLADE_COPYRIGHT "\tCopyright (c) Richard Ore"
 
 #endif

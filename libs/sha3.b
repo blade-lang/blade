@@ -34,7 +34,7 @@
  * You can use the `bytes_to_hex()` function in the `convert` module to 
  * get a hexadecimal string from the digest.
  * 
- * @copyright 2024, Ore Richard Muyiwa and Blade contributors
+ * @copyright 2024, Richard Ore and Blade contributors
  * @copyright Marco Paland (marco at paland dot com)
  * @copyright 2015-2018, PALANDesign Hannover, Germany
  */

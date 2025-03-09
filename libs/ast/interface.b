@@ -20,6 +20,14 @@ class ParseResult {
   var _results = []
 
   /**
+   * @param string path
+   * @constructor
+   */
+  ParseResult(path) {
+    self._path = path
+  }
+
+  /**
    * Adds a new item to the parse result
    * 
    * @param Expr|Decl|Defn|Stmt item
@@ -94,6 +102,6 @@ class ParseResult {
   }
 
   @to_string() {
-    return '<ast::ParseResult>'
+    return '<ast::ParseResult(${self._path}){${self._results.length()} results}>'
   }
 }

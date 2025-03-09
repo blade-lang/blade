@@ -759,6 +759,26 @@ static bool invoke_self(b_vm *vm, b_obj_string *name, int arg_count) {
                          name->chars, value_type(receiver));
 }
 
+static bool invoke_operator(b_vm *vm, b_obj_string *name, int arg_count, bool is_binary) {
+  b_value receiver = peek(vm, arg_count);
+  b_value value;
+  b_obj_instance *instance = AS_INSTANCE(receiver);
+  if (table_get(&instance->klass->methods, OBJ_VAL(name), &value)) {
+    if (IS_CLOSURE(value)) {
+      b_obj_func *function = AS_CLOSURE(value)->function;
+      if (!function->is_variadic && function->arity == 1) {
+        return call_value(vm, value, is_binary ? arg_count : 0);
+      }
+    }
+  }
+
+  if(!is_binary) {
+    return throw_exception(vm, "object of type %s does not define unary operation %s", value_type(receiver), name->chars);
+  } else {
+    return throw_exception(vm, "object of type %s does not define binary operation %s", value_type(receiver), name->chars);
+  }
+}
+
 static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
   b_value receiver = peek(vm, arg_count);
   b_value value;
@@ -962,15 +982,18 @@ inline bool is_false(b_value value) {
 
 bool is_instance_of(b_obj_class *klass1, b_obj_class *klass2) {
   while (klass1 != NULL) {
+    // quick exit check
+    if(klass1 == klass2) return true;
+
     // check the class names
     if (klass2->name->length == klass1->name->length
         && memcmp(klass1->name->chars, klass2->name->chars, klass1->name->length) == 0) {
 
       // TODO: ensure they're actually the same
-      /*if(klass1->initializer == klass2->initializer) {
+      if(klass1->initializer == klass2->initializer) {
         return true;
-      }*/
-      return true;
+      }
+      // return true;
     }
     klass1 = klass1->superclass;
   }
@@ -1474,13 +1497,44 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
 
 #define READ_STRING() (AS_STRING(READ_CONSTANT()))
 
+#define PRE_BINARY_OP() \
+      b_value __b = peek(vm, 0); \
+      b_value __a = peek(vm, 1)
+
+#define BINARY_ON_NON_NUMBERS() \
+  (!IS_NUMBER(__b) && !IS_BOOL(__b)) || (!IS_NUMBER(__a) && !IS_BOOL(__a))
+
+#define UNSUPPORTED_OPERAND(op) \
+  runtime_error("unsupported operand %s for %s and %s", #op, value_type(__a), value_type(__b)); \
+  break
+
+#define CLASS_BINARY_OPERATION(op) \
+  if(IS_INSTANCE(__a)) {                               \
+    b_obj_instance *a_instance = AS_INSTANCE(__a); \
+    if(!invoke_operator(vm, copy_string(vm, (op), strlen((op))), 1, true)) { \
+      EXIT_VM();                                                       \
+    }                                                                    \
+    vm->current_frame = &vm->frames[vm->frame_count - 1];\
+    break; \
+  } \
+  UNSUPPORTED_OPERAND(op)
+
+#define CLASS_UNARY_OPERATION(op) \
+  if(IS_INSTANCE(a)) {                               \
+    b_obj_instance *a_instance = AS_INSTANCE(a); \
+    if(!invoke_operator(vm, copy_string(vm, (op), strlen((op))), 0, false)) { \
+      EXIT_VM();                                                       \
+    }                                                                    \
+    vm->current_frame = &vm->frames[vm->frame_count - 1];\
+    break; \
+  } \
+  runtime_error("operator %s not defined for object of type %s", #op, value_type(a))
+
 #define BINARY_OP(type, op)                                                    \
-  do {                                                                         \
-    if ((!IS_NUMBER(peek(vm, 0)) && !IS_BOOL(peek(vm, 0))) ||                  \
-        (!IS_NUMBER(peek(vm, 1)) && !IS_BOOL(peek(vm, 1)))) {                  \
-      runtime_error("unsupported operand %s for %s and %s", #op,          \
-                     value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
-                     break;        \
+  do { \
+    PRE_BINARY_OP();          \
+    if (BINARY_ON_NON_NUMBERS()) { \
+      CLASS_BINARY_OPERATION(#op);    \
     }                                                                          \
     b_value _b = pop(vm);                                                      \
     double b = IS_BOOL(_b) ? (AS_BOOL(_b) ? 1 : 0) : AS_NUMBER(_b);            \
@@ -1489,33 +1543,41 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
     push(vm, type(a op b));                                                    \
   } while (false)
 
-#define BINARY_BIT_OP(op)                                                \
-  do {                                                                         \
-    if ((!IS_NUMBER(peek(vm, 0)) && !IS_BOOL(peek(vm, 0))) ||                  \
-        (!IS_NUMBER(peek(vm, 1)) && !IS_BOOL(peek(vm, 1)))) {                  \
-      runtime_error("unsupported operand %s for %s and %s", #op,          \
-                     value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
-                     break;       \
+#define BINARY_BIT_OP(op, original_op)                                                \
+  do {          \
+    PRE_BINARY_OP();          \
+    if (BINARY_ON_NON_NUMBERS()) { \
+      CLASS_BINARY_OPERATION(#original_op);    \
     }                                                                          \
     double b = AS_NUMBER(pop(vm));                                       \
     double a = AS_NUMBER(pop(vm));                        \
     push(vm, NUMBER_VAL(b_int_bin_op(op, a, b)));                                          \
   } while (false)
 
-#define BINARY_MOD_OP(type, op)                                                \
-  do {                                                                         \
-    if ((!IS_NUMBER(peek(vm, 0)) && !IS_BOOL(peek(vm, 0))) ||                  \
-        (!IS_NUMBER(peek(vm, 1)) && !IS_BOOL(peek(vm, 1)))) {                  \
-      runtime_error("unsupported operand %s for %s and %s", #op,          \
-                     value_type(peek(vm, 0)), value_type(peek(vm, 1)));        \
-                     break;        \
-    }                                                                          \
+#define BINARY_MOD_OP(type, op, original_op)                                                \
+  do {  \
+    PRE_BINARY_OP();          \
+    if (BINARY_ON_NON_NUMBERS()) { \
+      CLASS_BINARY_OPERATION(original_op);    \
+    }                                                    \
     b_value _b = pop(vm);                                                      \
     double b = IS_BOOL(_b) ? (AS_BOOL(_b) ? 1 : 0) : AS_NUMBER(_b);            \
     b_value _a = pop(vm);                                                      \
     double a = IS_BOOL(_a) ? (AS_BOOL(_a) ? 1 : 0) : AS_NUMBER(_a);            \
     push(vm, type(op(a, b)));                                                  \
   } while (false)
+
+#define TRY_STRING_OVERRIDE(val) if(IS_INSTANCE((val))) { \
+    b_value tmp_fn; \
+    if(table_get(&AS_INSTANCE((val))->klass->methods, STRING_L_VAL("@to_string", 10), &tmp_fn)) { \
+      vm->current_frame->ip--; \
+      if(call_value(vm, tmp_fn, 0)) { \
+        vm->current_frame = &vm->frames[vm->frame_count - 1]; \
+        break; \
+      } \
+      vm->current_frame->ip++;  \
+    } \
+  }
 
   for (;;) {
     // try...finally... (i.e. try without a catch but finally
@@ -1600,55 +1662,55 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         break;
       }
       case OP_REMINDER: {
-        BINARY_MOD_OP(NUMBER_VAL, modulo);
+        BINARY_MOD_OP(NUMBER_VAL, modulo, "%");
         break;
       }
       case OP_POW: {
-        BINARY_MOD_OP(NUMBER_VAL, pow);
+        BINARY_MOD_OP(NUMBER_VAL, pow, "**");
         break;
       }
       case OP_F_DIVIDE: {
-        BINARY_MOD_OP(NUMBER_VAL, floor_div);
+        BINARY_MOD_OP(NUMBER_VAL, floor_div, "//");
         break;
       }
       case OP_NEGATE: {
-        if (!IS_NUMBER(peek(vm, 0))) {
-          runtime_error("operator - not defined for object of type %s", value_type(peek(vm, 0)));
-          break;
+        b_value a = peek(vm, 0);
+        if (!IS_NUMBER(a)) {
+          CLASS_UNARY_OPERATION("-");
         }
         push(vm, NUMBER_VAL(-AS_NUMBER(pop(vm))));
         break;
       }
       case OP_BIT_NOT: {
-        if (!IS_NUMBER(peek(vm, 0))) {
-          runtime_error("operator ~ not defined for object of type %s", value_type(peek(vm, 0)));
-          break;
+        b_value a = peek(vm, 0);
+        if (!IS_NUMBER(a)) {
+          CLASS_UNARY_OPERATION("~");
         }
         push(vm, INTEGER_VAL(~((int) AS_NUMBER(pop(vm)))));
         break;
       }
       case OP_AND: {
-        BINARY_BIT_OP(OP_AND);
+        BINARY_BIT_OP(OP_AND, &);
         break;
       }
       case OP_OR: {
-        BINARY_BIT_OP(OP_OR);
+        BINARY_BIT_OP(OP_OR, |);
         break;
       }
       case OP_XOR: {
-        BINARY_BIT_OP(OP_XOR);
+        BINARY_BIT_OP(OP_XOR, ^);
         break;
       }
       case OP_LSHIFT: {
-        BINARY_BIT_OP(OP_LSHIFT);
+        BINARY_BIT_OP(OP_LSHIFT, <<);
         break;
       }
       case OP_RSHIFT: {
-        BINARY_BIT_OP(OP_RSHIFT);
+        BINARY_BIT_OP(OP_RSHIFT, >>);
         break;
       }
       case OP_URSHIFT: {
-        BINARY_BIT_OP(OP_URSHIFT);
+        BINARY_BIT_OP(OP_URSHIFT, >>>);
         break;
       }
       case OP_ONE: {
@@ -1658,9 +1720,17 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
 
         // comparisons
       case OP_EQUAL: {
-        b_value b = pop(vm);
-        b_value a = pop(vm);
-        push(vm, BOOL_VAL(values_equal(a, b)));
+        PRE_BINARY_OP();
+
+        if(IS_INSTANCE(__a)) {
+          b_value dummy;
+          if(table_get(&AS_INSTANCE(__a)->klass->methods, STRING_VAL("="), &dummy)) {
+            CLASS_BINARY_OPERATION("=");
+          }
+        }
+
+        pop_n(vm, 2); // pop __a and __b
+        push(vm, BOOL_VAL(values_equal(__a, __b)));
         break;
       }
       case OP_GREATER: {
@@ -1708,6 +1778,10 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
 
       case OP_ECHO: {
         b_value val = peek(vm, 0);
+
+        // check if its a class with @to_string() override first.
+        TRY_STRING_OVERRIDE(val);
+
         if (vm->is_repl) {
           echo_value(val);
         } else {
@@ -1721,7 +1795,11 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
       }
 
       case OP_STRINGIFY: {
-        if (!IS_STRING(peek(vm, 0)) && !IS_NIL(peek(vm, 0))) {
+        b_value val = peek(vm, 0);
+        if (!IS_STRING(val) && !IS_NIL(val)) {
+          // check if its a class with @to_string() override first.
+          TRY_STRING_OVERRIDE(val);
+
           b_obj_string *value = value_to_string(vm, pop(vm));
           if (value->length != 0) {
             push(vm, OBJ_VAL(value));
@@ -2380,10 +2458,18 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
 
       case OP_CALL_IMPORT: {
         b_obj_closure *closure = AS_CLOSURE(READ_CONSTANT());
-        add_module(vm, closure->function->module);
-        register_module__FILE__(vm, closure->function->module);
-        call(vm, closure, 0);
-        vm->current_frame = &vm->frames[vm->frame_count - 1];
+
+        b_value existing_module;
+        if(table_get(&vm->modules, STRING_VAL(closure->function->module->file), &existing_module)) {
+          add_known_module(vm, AS_MODULE(existing_module), closure->function->module->name);
+          // attach same module to import closure for selective import
+          closure->function->module = AS_MODULE(existing_module);
+        } else {
+          add_module(vm, closure->function->module);
+          register_module__FILE__(vm, closure->function->module);
+          call(vm, closure, 0);
+          vm->current_frame = &vm->frames[vm->frame_count - 1];
+        }
         break;
       }
 
@@ -2569,6 +2655,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
     }
   }
 
+#undef TRY_STRING_OVERRIDE
 #undef READ_BYTE
 #undef READ_SHORT
 #undef READ_CONSTANT

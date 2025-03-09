@@ -2,12 +2,12 @@ import json
 import hash
 import template
 import os
+import log
 import http.status
 import .errors
 import .db
 import .template_ext
 import .routes { routes }
-import ..log
 import ..setup
 
 def _log_request(req, res) {

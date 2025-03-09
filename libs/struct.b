@@ -4,7 +4,7 @@
  * This module provides functions for converting between Blade values and C
  * structs and vice-versa in the binary format.
  * 
- * @copyright 2022, Ore Richard Muyiwa and Blade contributors
+ * @copyright 2022, Richard Ore and Blade contributors
  */
 
 import _struct
@@ -57,7 +57,7 @@ import _struct
  *  @     | NUL-fill to absolute position 
  * 
  * @param string format
- * @param any... \__args__
+ * @param any... args
  * @returns bytes
  */
 def pack(format, ...) {

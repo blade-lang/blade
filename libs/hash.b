@@ -24,7 +24,7 @@
  * 'd782079145a3476fd4e018d44dd024034fa91f626f7f30f2009200c5ac757723'
  * ```
  * 
- * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ * @copyright 2021, Richard Ore and Blade contributors
  */
 
 import _hash

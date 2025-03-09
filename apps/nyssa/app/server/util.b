@@ -1,7 +1,7 @@
 import hash
 import http.status
 import .db
-import ..log
+import log
 
 def generate_publisher_key(name) {
   var table = bytes(0)

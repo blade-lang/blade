@@ -150,7 +150,7 @@
  * after printing the text `I'm cancelling on you!` as well. It never slept for the 
  * specified 15 seconds; this is because the thread has been stopped.
  * 
- * @copyright 2024, Ore Richard Muyiwa and Blade contributors
+ * @copyright 2024, Richard Ore and Blade contributors
  */
 
 import _thread

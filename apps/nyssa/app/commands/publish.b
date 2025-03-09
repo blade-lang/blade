@@ -4,8 +4,8 @@ import json
 import http
 import colors
 import zip
+import log
 import ..setup
-import ..log
 import ..config { Config }
 
 var storage_dir = os.join_paths(setup.NYSSA_DIR, setup.STORAGE_DIR)

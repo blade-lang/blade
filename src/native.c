@@ -815,8 +815,10 @@ DECLARE_NATIVE(is_instance) {
  */
 DECLARE_NATIVE(instance_of) {
   ENFORCE_ARG_COUNT(instance_of, 2);
-  ENFORCE_ARG_TYPE(instance_of, 0, IS_INSTANCE);
   ENFORCE_ARG_TYPE(instance_of, 1, IS_CLASS);
+  if(!IS_INSTANCE(args[0])) {
+    RETURN_FALSE;
+  }
 
   RETURN_BOOL(is_instance_of(AS_INSTANCE(args[0])->klass, AS_CLASS(args[1])));
 }
@@ -830,14 +832,24 @@ DECLARE_NATIVE(instance_of) {
  */
 DECLARE_NATIVE(print) {
   for (int i = 0; i < arg_count; i++) {
-    b_obj_string *val = value_to_string(vm, args[i]);
-
-    printf(
-      i == arg_count - 1 ? (
+    const char *format = i == arg_count - 1 ? (
         vm->is_repl ? "%.*s\n" : "%.*s"
-      ) : "%.*s ", 
-      val->length, val->chars
-    );
+      ) : "%.*s ";
+
+    b_value value = args[i];
+
+    while(IS_INSTANCE(value)) {
+      b_value closure;
+      if(table_get(&AS_INSTANCE(value)->klass->methods, STRING_L_VAL("@to_string", 10), &closure)) {
+        value = raw_closure_call(vm, AS_CLOSURE(closure), NULL, false);
+      }
+
+      // once we hit a place where @to_string isn't defined, we cut our loses.
+      break;
+    }
+
+    b_obj_string *val = value_to_string(vm, value);
+    printf(format, val->length, val->chars);
   }
   RETURN;
 }

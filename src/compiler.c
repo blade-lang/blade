@@ -1324,7 +1324,7 @@ b_parse_rule parse_rules[] = {
     [AMP_EQ_TOKEN] = {NULL, NULL, PREC_NONE},                 // &=
     [BAR_TOKEN] = {NULL, binary, PREC_BIT_OR},           // |
     [BAR_EQ_TOKEN] = {NULL, NULL, PREC_NONE},                 // |=
-    [TILDE_TOKEN] = {unary, NULL, PREC_UNARY},                // ~
+    [TILDE_TOKEN] = {unary, NULL, PREC_NONE},                // ~
     [TILDE_EQ_TOKEN] = {NULL, NULL, PREC_NONE},               // ~=
     [XOR_TOKEN] = {NULL, binary, PREC_BIT_XOR},               // ^
     [XOR_EQ_TOKEN] = {NULL, NULL, PREC_NONE},                 // ^=
@@ -1442,9 +1442,12 @@ static void block(b_parser *p) {
   consume(p, RBRACE_TOKEN, "expected '}' after block");
 }
 
-static void function_args(b_parser *p) {
+static int function_args(b_parser *p, bool is_operator) {
   // compile argument list...
+  int count = 0;
   do {
+    count++;
+
     ignore_whitespace(p);
     p->vm->compiler->function->arity++;
     if (p->vm->compiler->function->arity > MAX_FUNCTION_PARAMETERS) {
@@ -1457,12 +1460,17 @@ static void function_args(b_parser *p) {
       add_local(p, synthetic_token("__args__"));
       define_variable(p, 0);
       break;
+    } else if(is_operator) {
+      add_local(p, synthetic_token("__arg__"));
+      define_variable(p, 0);
+      break;
     }
 
     int param_constant = parse_variable(p, "expected parameter name");
     define_variable(p, param_constant);
     ignore_whitespace(p);
   } while (match(p, COMMA_TOKEN));
+  return count;
 }
 
 static void function_body(b_parser *p, b_compiler *compiler, bool close_scope) {
@@ -1488,19 +1496,27 @@ static void function_body(b_parser *p, b_compiler *compiler, bool close_scope) {
   pop(p->vm);
 }
 
-static void function(b_parser *p, b_func_type type) {
+static int function(b_parser *p, b_func_type type, bool is_operator) {
   b_compiler compiler;
   init_compiler(p, &compiler, type);
   begin_scope(p);
 
   // compile parameter list
-  consume(p, LPAREN_TOKEN, "expected '(' after function name");
-  if (!check(p, RPAREN_TOKEN)) {
-    function_args(p);
+  int arg_count = 0;
+  if(!is_operator) {
+    consume(p, LPAREN_TOKEN, "expected '(' after function name");
   }
-  consume(p, RPAREN_TOKEN, "expected ')' after function parameters");
+
+  if (!check(p, RPAREN_TOKEN)) {
+    arg_count = function_args(p, is_operator);
+  }
+  
+  if(!is_operator) {
+    consume(p, RPAREN_TOKEN, "expected ')' after function parameters");
+  }
 
   function_body(p, &compiler, false);
+  return arg_count;
 }
 
 static void method(b_parser *p, b_token class_name, bool is_static) {
@@ -1517,7 +1533,40 @@ static void method(b_parser *p, b_token class_name, bool is_static) {
     type = TYPE_PRIVATE;
   }
 
-  function(p, type);
+  function(p, type, false);
+  emit_byte_and_short(p, OP_METHOD, constant);
+}
+
+static void operator_definition(b_parser *p, b_token class_name) {
+  // NOTE: ++, and -- are not primary operators in Blade.
+  b_tkn_type tkns[] = {
+      PLUS_TOKEN,        // +
+      MINUS_TOKEN,       // -
+      MULTIPLY_TOKEN,    // *
+      POW_TOKEN,         // **
+      DIVIDE_TOKEN,      // '/'
+      FLOOR_TOKEN,       // '//'
+      EQUAL_TOKEN,       // =
+      LESS_TOKEN,        // <
+      LSHIFT_TOKEN,      // <<
+      GREATER_TOKEN,     // >
+      RSHIFT_TOKEN,      // >>
+      URSHIFT_TOKEN,      // >>>
+      PERCENT_TOKEN,     // %
+      AMP_TOKEN,         // &
+      BAR_TOKEN,         // |
+      TILDE_TOKEN,       // ~
+      XOR_TOKEN,         // ^
+  };
+
+  consume_or(p, "non-assignment operator expected", tkns, 18);
+  int constant = identifier_constant(p, &p->previous);
+
+  int arg_count = function(p, TYPE_METHOD, true);
+  if(arg_count > 1) {
+    error(p, "class operator cannot take more than one parameter");
+  }
+
   emit_byte_and_short(p, OP_METHOD, constant);
 }
 
@@ -1530,7 +1579,7 @@ static void anonymous(b_parser *p, bool can_assign) {
   if(check(p, LPAREN_TOKEN)) {
     consume(p, LPAREN_TOKEN, "expected '(' at start of anonymous function");
     if (!check(p, RPAREN_TOKEN)) {
-      function_args(p);
+      function_args(p, false);
     }
     consume(p, RPAREN_TOKEN, "expected ')' after anonymous function parameters");
   }
@@ -1558,7 +1607,7 @@ static void field(b_parser *p, bool is_static) {
 static void function_declaration(b_parser *p) {
   int global = parse_variable(p, "function name expected");
   mark_initialized(p);
-  function(p, TYPE_FUNCTION);
+  function(p, TYPE_FUNCTION, false);
   define_variable(p, global);
 }
 
@@ -1606,6 +1655,9 @@ static void class_declaration(b_parser *p) {
 
     if (match(p, VAR_TOKEN)) {
       field(p, is_static);
+    } else if (match(p, DEF_TOKEN) && !is_static) {
+      operator_definition(p, class_name);
+      ignore_whitespace(p);
     } else {
       method(p, class_name, is_static);
       ignore_whitespace(p);
@@ -1728,8 +1780,10 @@ static void iter_statement(b_parser *p) {
     int body_jump = emit_jump(p, OP_JUMP);
 
     int increment_start = current_blob(p)->count;
-    expression(p);
-    ignore_whitespace(p);
+    do {
+      expression(p);
+      ignore_whitespace(p);
+    } while(match(p, COMMA_TOKEN));
     emit_byte(p, OP_POP);
 
     emit_loop(p, p->innermost_loop_start);

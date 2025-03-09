@@ -2,8 +2,9 @@ import args
 import io
 import colors
 import os
+import log
+import date
 import .setup
-import .log
 
 # initialize storage directory
 var storage_dir = os.join_paths(setup.NYSSA_DIR, setup.STORAGE_DIR)
@@ -19,6 +20,20 @@ if !file(config_file).exists()
 var state_file = os.join_paths(setup.NYSSA_DIR, setup.STATE_FILE)
 if !file(state_file).exists()
   file(state_file, 'w').write('{}')
+
+var logs_dir = os.join_paths(setup.NYSSA_DIR, setup.LOGS_DIR)
+if !os.dir_exists(logs_dir)
+  os.create_dir(logs_dir)
+
+# setup file logging
+var time = date.localtime()
+log.add_transport(log.FileTransport(
+  '${logs_dir}/${time.year}-${to_string(time.month).lpad(2,'0')}-${to_string(time.day).lpad(2,'0')}.log'
+))
+
+# setup console logging
+log.default_transport().show_time(false)
+log.default_transport().show_level(false)
 
 # import commands...
 import .commands.account
@@ -63,21 +78,17 @@ for o in options {
 }
 
 def success(msg, info) {
-  io.stderr.write(colors.text(
-    colors.text(log.info(msg, true) + '\n', colors.text_color.green),
-    colors.style.bold
-  ))
+  log.info(cmsg)
+
   if info {
-    io.stderr.write(colors.text(
-      colors.text('\n' + info + '\n', colors.text_color.blue),
-      colors.style.italic
-    ))
+    log.info(info)
   }
+
   os.exit(0)
 }
 
 def error(msg) {
-  io.stderr.write(colors.text(log.error(msg, true) + '\n', colors.text_color.red))
+  log.error(msg)
   os.exit(1)
 }
 

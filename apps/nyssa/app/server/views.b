@@ -2,6 +2,7 @@
 import json
 import bcrypt
 import os
+import log
 import .db
 import .util
 import ..setup

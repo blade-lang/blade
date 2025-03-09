@@ -58,7 +58,6 @@ set(BLADE_SOURCES
 		src/value.c
 		src/vm.c
 		# standard module
-		src/standard/array.c
 		src/standard/base64.c
 		src/standard/date.c
 		src/standard/io.c
@@ -183,9 +182,18 @@ target_link_libraries(libblade PRIVATE pcre2-8-static)
 target_include_directories(libblade PUBLIC "${pcre2_BINARY_DIR}")
 
 if(UNIX)
+	FetchContent_Declare(LineNoiseSrc
+		URL      https://github.com/blade-lang/linenoise/archive/refs/heads/main.zip
+		URL_HASH SHA256=416ba5ccf0d7a1785c2cd7da8eb5f290412aa48400b3ea147e884fcf2c7f64f5
+		)
+	FetchContent_Populate(LineNoiseSrc)
+
+	add_subdirectory("${linenoisesrc_SOURCE_DIR}")
+	include_directories("${linenoisesrc_SOURCE_DIR}")
+
 	#	Add linenoise as dependency and link it.
-	add_dependencies(libblade linenoise)
-	target_link_libraries(libblade PRIVATE linenoise)
+	add_dependencies(blade linenoise)
+	target_link_libraries(blade PRIVATE linenoise)
 
 	target_link_libraries(libblade PRIVATE m)
 	if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")

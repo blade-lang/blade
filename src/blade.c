@@ -14,8 +14,7 @@
 #include <errno.h>
 
 #if !defined(_WIN32) && !defined(__CYGWIN__)
-#include "linenoise/utf8.h"
-#include "linenoise/linenoise.h"
+#include "linenoise.h"
 #endif
 
 #include <setjmp.h>
@@ -41,9 +40,12 @@ static void repl(b_vm *vm) {
 
   int brace_count = 0, paren_count = 0, bracket_count = 0, single_quote_count = 0, double_quote_count = 0;
 
-  b_obj_module *module = new_module(vm, strdup(""), strdup("<repl>"), NULL);
+  char *root_file = strdup("<repl>");
+  b_obj_module *module = new_module(vm, strdup(""), root_file, NULL);
   add_module(vm, module);
+  vm->root_file = root_file;
   register_module__FILE__(vm, module);
+  register__ROOT__(vm);
 
 #if !defined(_WIN32) && !defined(__CYGWIN__)
 
@@ -210,7 +212,8 @@ static void run_file(b_vm *vm, char *file) {
 
 static void run_code(b_vm *vm, char *source) {
   // set root file...
-  vm->root_file = NULL;
+  vm->root_file = "";
+  register__ROOT__(vm);
 
   b_obj_module *module = new_module(vm, strdup(""), strdup("<script>"), NULL);
   add_module(vm, module);

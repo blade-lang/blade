@@ -1,6 +1,6 @@
 import http
+import log
 import .router { * }
-import ..log
 
 def server(host, port) {
   

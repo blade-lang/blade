@@ -27,7 +27,7 @@
  * See [Libcurl's official documentation](https://curl.se/libcurl/)
  * for more information.
  *
- * @copyright 2021, Ore Richard Muyiwa and Blade contributors
+ * @copyright 2021, Richard Ore and Blade contributors
  */
 
 import .options { Option }

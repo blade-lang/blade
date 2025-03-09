@@ -145,7 +145,7 @@
         CLEAR_GC(); \
         b_value val = raw_closure_call(vm, AS_CLOSURE(_tmp), 0, false); \
         args[-1] = val;                                                   \
-        return false; \
+        return true; \
       } \
     }      \
     CLEAR_GC(); \

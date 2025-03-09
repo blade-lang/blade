@@ -8,10 +8,6 @@ if(NOT "${HAVE_STRSEP}")
     add_subdirectory(strsep)
 endif()
 
-if(UNIX)
-    add_subdirectory(linenoise)
-endif()
-
 if(WIN32)
     add_subdirectory(mman-win32)
 endif()

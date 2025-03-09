@@ -6,8 +6,8 @@ import http
 import json
 import io
 import zip
+import log
 import ..setup
-import ..log
 import ..config { Config }
 
 var config_file = os.join_paths(os.cwd(), setup.CONFIG_FILE)

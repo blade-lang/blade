@@ -3,11 +3,11 @@ import os
 import io
 import colors
 import json
+import log
 import ..config {
   Config
 }
 import ..setup
-import ..log
 
 def parse(parser) {
   parser.add_command(

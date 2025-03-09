@@ -1,5 +1,6 @@
 import os
 import template
+import log
 import .setup
 
 def setup_cli(name, base_path, cli_path) {

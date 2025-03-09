@@ -9,7 +9,7 @@
  * 
  * @note This script MUST be run from CMakeLists.txt.
  * 
- * @copyright Ore Richard Muyiwa
+ * @copyright Richard Ore
  */
 
 import os

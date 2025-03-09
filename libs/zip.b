@@ -3,7 +3,7 @@
  * 
  * The `zip` module contains classes and functions to make working with zip archives easy.
  *
- * @copyright 2022, Ore Richard Muyiwa and Blade contributors
+ * @copyright 2022, Richard Ore and Blade contributors
  */
 
 import struct { pack, unpack }

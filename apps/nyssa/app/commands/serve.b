@@ -1,5 +1,6 @@
 import args
 import os
+import log
 import ..server
 import ..setup
 

@@ -47,7 +47,7 @@
  * 
  * > Note: This applies to any function within the module that accepts an `options` argument.
  * 
- * @copyright 2023, Ore Richard Muyiwa and Blade contributors
+ * @copyright 2023, Richard Ore and Blade contributors
  */
 
 import .tags { * }

@@ -106,16 +106,8 @@ static inline void do_print_value(b_value value, bool fix_string) {
 #endif
 }
 
-#ifndef _WIN32
-
-inline void print_value(b_value value) { do_print_value(value, false); }
-
-inline void echo_value(b_value value) { do_print_value(value, true); }
-
-#else
 void print_value(b_value value) { do_print_value(value, false); }
 void echo_value(b_value value) { do_print_value(value, true); }
-#endif // !_WIN32
 
 static inline char *number_to_string(b_vm *vm, double number, int *length) {
   const char *format = GET_NUMBER_FORMAT(number);

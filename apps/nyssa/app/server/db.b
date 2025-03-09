@@ -2,7 +2,7 @@ import sqlite
 import os
 import json
 import math
-import ..log
+import log
 import ..setup
 
 var db_file = os.join_paths(setup.NYSSA_DIR, setup.DATABASE_FILE)
