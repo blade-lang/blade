@@ -19,3 +19,20 @@ for i in 0..1000000 {
 var end = time()
 
 echo 'Took ${end - start}s'
+
+
+import json
+import date
+
+def json_format(records, level, transport) {
+  return json.encode({
+    time: date().format(transport.get_time_format()),
+    level: log.get_level_name(level),
+    name: transport.get_name(),
+    records,
+  })
+}
+
+log.default_transport().set_formatter(json_format)
+
+log.debug('This is a debug information')

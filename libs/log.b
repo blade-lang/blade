@@ -33,12 +33,12 @@
  * application.
  * 
  * While allowing creation of custom transports for logs, the module provides 
- * transports for logging to the console (`ConsoleTransport`) and files 
- * (`FileTransport`) out of the box. This covers the most simple use-cases for most 
+ * transports for logging to the console ([[log.ConsoleTransport]]) and files 
+ * ([[log.FileTransport]]) out of the box. This covers the most simple use-cases for most 
  * applications. 
  * 
- * The default transport enabled is the `ConsoleTransport` known as the 
- * `default_transport()` and need no extra work to enable unless you have previously 
+ * The default transport enabled is the [[log.ConsoleTransport]] known as the 
+ * [[log.default_transport()]] and need no extra work to enable unless you have previously 
  * disabled it. The example below shows how to enable the file transport to log to a 
  * file on disk.
  * 
@@ -90,8 +90,7 @@
  * 
  * For more complex uses, the process of creating a custom transport is really simple. 
  * To create a custom transport, you'll need to create a class that inherits from 
- * [[log.Transport]] and implement both the `format()` and `write()` method at a 
- * minimum.
+ * [[log.Transport]] and implement the `write()` method at a minimum.
  * 
  * The example below shows the creation of a custom transport that outputs structured 
  * JSON data to the console.
@@ -155,6 +154,40 @@
  * If you try the above code, you won't be seeing anything in the console. This is 
  * because level [[log.Info]] is lower than the minium required [[log.Warning]].
  * 
+ * While every `Transport` implements the `format()` method, users can override the 
+ * format method by providing a format function via the [[log.Transport.set_formatter]] 
+ * method. This allows using the same formatter across different transports. 
+ * 
+ * For example, in the previous example, if we had wanted to serialize all logging 
+ * irrespective of the transport into the JSON format, a more appropriate solution would 
+ * have been to create a log format function and resuse it in all transports instead of 
+ * implementing a `JsonConsoleTransport`. The next example shows one such impementation.
+ * 
+ * ```blade
+ * import log
+ * import json
+ * import date
+ * 
+ * def json_format(records, level, transport) {
+ *   return json.encode({
+ *     time: date().format(transport.get_time_format()),
+ *     level: log.get_level_name(level),
+ *     name: transport.get_name(),
+ *     records,
+ *   })
+ * }
+ * 
+ * var file_transport = log.FileTransport('mylog.log')
+ * log.add_transport(file_transport)
+ * 
+ * log.default_transport().set_formatter(json_format)
+ * file_transport.set_formatter(json_format)
+ * 
+ * log.debug('This is a debug information')
+ * ```
+ * 
+ * Transport implementations should take note of this critical information.
+ * 
  * > **IMPORTANT!**
  * > 
  * > Because the `log` module exports the a function, if you are not interested in all 
@@ -174,6 +207,7 @@ import enum
 import io
 import os
 import date
+import json as js
 
 
 /**
@@ -263,6 +297,7 @@ class Transport {
   var __enabled = true
   var __time_format = 'c'
   var __max_level = LogLevel.Critical
+  var __formatter
 
   var _show_name = true
   var _show_time = true
@@ -430,6 +465,37 @@ class Transport {
   }
 
   /**
+   * Sets a formatter function that overrides a transports `format()` function. 
+   * 
+   * The formatter function is a function that when it is set overrides the transports 
+   * default format method and must MUST have the contract 
+   * `def my_function(records, level, transport)`. The `transport` parameter here is 
+   * the instance of the current transport. See [[log.Transport.format]] for what 
+   * `records`, and `level` means.
+   * 
+   * @param function formatter
+   * @returns self
+   */
+  set_formatter(formatter) {
+    if !is_function(formatter) {
+      raise Exception('function expected, ${typeof(formatter)} given')
+    }
+  
+    self.__formatter = formatter
+    return self
+  }
+
+  /**
+   * Returns the format method override that has been set for the current transport or 
+   * `nil` if none has been set.
+   * 
+   * @returns function?
+   */
+  get_formatter() {
+    return self.__formatter
+  }
+
+  /**
    * Returns a boolean value which indicates if a message of severity *level* can be 
    * processed by this transport.
    * 
@@ -469,10 +535,10 @@ class Transport {
   /**
    * Formats the log records for the current level for writing to the transport's 
    * stream. The default implementation of this method is exactly as seen when using 
-   * the [[log.Transport.default_transport]] which logs to the console. The method 
+   * the [[log.default_transport]] which logs to the console. The method 
    * should be overriden by subclasses to get a custom formatting.
    * 
-   * > **IMPORTANT!**
+   * > __IMPORTANT!__
    * >
    * > The result of this function will be passed into the [[log.Transport.write()]] 
    * > function so transport implementations *MUST* ensure to expect the same type as 
@@ -482,11 +548,11 @@ class Transport {
    * Transport implementations should be aware of the following available private 
    * fields in the transport class:
    * 
-   * - *[[log.LogLevel]]* `self._level`
-   * - *string* `self._log_name`
-   * - *bool* `self._show_name`
-   * - *bool* `self._show_time`
-   * - *bool* `self._show_level`
+   * - _[[log.LogLevel]]_ `self._level`
+   * - _string_ `self._log_name`
+   * - _bool_ `self._show_name`
+   * - _bool_ `self._show_time`
+   * - _bool_ `self._show_level`
    * 
    * @params {list[any]} records
    * @param [[log.LogLevel]] level
@@ -689,7 +755,12 @@ def default_transport() {
 def _write(level, args) {
   for trans in _transports {
     if trans.can_log(level) {
-      trans.write(trans.format(args, level), level)
+      var formatter = trans.get_formatter()
+
+      trans.write(
+        formatter ? formatter(args, level, trans) : trans.format(args, level), 
+        level
+      )
     }
   }
 }
