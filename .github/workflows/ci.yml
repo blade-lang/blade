@@ -120,7 +120,7 @@ jobs:
         run: |
           ${{ env.VCPKG_ROOT }}/vcpkg update
           ${{ env.VCPKG_ROOT }}/vcpkg version
-          ${{ env.VCPKG_ROOT }}/vcpkg install pkgconf:x64-windows-release curl:x64-windows-release libffi:x64-windows-release openssl:x64-windows-static libgd:x64-windows-release
+          ${{ env.VCPKG_ROOT }}/vcpkg install pkgconf:x64-windows-release curl:x64-windows-release libffi:x64-windows-release openssl:x64-windows libgd:x64-windows-release
           ${{ env.VCPKG_ROOT }}/vcpkg list
       - name: Compile
         run: |
