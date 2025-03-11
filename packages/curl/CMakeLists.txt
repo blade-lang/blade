@@ -33,7 +33,7 @@ if(UNIX)
     endif()
 else()
     find_package(CURL REQUIRED)
-    target_link_libraries(curl PRIVATE CURL::libcurl)
+    target_link_libraries(curl CURL::libcurl)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
