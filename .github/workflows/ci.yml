@@ -113,7 +113,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: johnwason/vcpkg-action@v6
         with:
-          pkg: pkgconf curl libffi openssl:x64-windows-static-release libgd
+          pkgs: pkgconf curl libffi openssl:x64-windows-static-release libgd
           revision: master
           triplet: x64-windows-release
           token: ${{ github.token }}
