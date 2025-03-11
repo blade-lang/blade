@@ -111,20 +111,16 @@ jobs:
           add_to_path: true
           tag: 14.2.0posix-18.1.8-12.0.0-msvcrt-r1
       - uses: actions/checkout@v4
-      - uses: friendlyanon/setup-vcpkg@v1
+      - uses: johnwason/vcpkg-action@v6
         with:
-          committish: 3508985146f1b1d248c67ead13f8f54be5b4f5da
-          cache-version: 1
-          save-always: true
-      - name: Install Dependencies
-        run: |
-          ${{ env.VCPKG_ROOT }}/vcpkg update
-          ${{ env.VCPKG_ROOT }}/vcpkg version
-          ${{ env.VCPKG_ROOT }}/vcpkg install pkgconf:x64-windows-release curl:x64-windows-release libffi:x64-windows-release openssl:x64-windows libgd:x64-windows-release
-          ${{ env.VCPKG_ROOT }}/vcpkg list
+          pkg: pkgconf curl libffi openssl:x64-windows-static-release libgd
+          revision: master
+          triplet: x64-windows-release
+          token: ${{ github.token }}
+          github-binarycache: true
       - name: Compile
         run: |
-          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake" -DOPENSSL_ROOT_DIR=${{ env.VCPKG_ROOT }}/installed/x64-windows-static
+          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPENSSL_ROOT_DIR=${{ github.workspace }}/vcpkg/installed/x64-windows-static
           cmake --build . -- -j 12
       - name: Test
         run: ctest
