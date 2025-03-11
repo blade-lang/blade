@@ -12,7 +12,7 @@ log.add_transport(transport)
 # log.remove_transport(log.default_transport())
 
 var start = time()
-for i in 0..1000000 {
+for i in 0..1000 {
   log.info('Finished')
   # echo to_string(date())
 }

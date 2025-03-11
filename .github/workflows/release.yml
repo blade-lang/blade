@@ -40,6 +40,41 @@ jobs:
           asset_name: blade-linux-${{ github.event.release.tag_name }}.zip
           asset_content_type: application/zip
 
+  build-linux-arm:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup cmake
+        uses: lukka/get-cmake@v3.25.2
+        with:
+          useLocalCache: true
+          useCloudCache: false
+      - name: Compile
+        run: |
+          sudo apt-get update
+          sudo apt-get remove libgd3 
+          sudo apt-get install curl libpthread-stubs0-dev libcurl4-openssl-dev libgd-dev libavif-dev libffi-dev -y
+          cmake -B .
+          cmake --build . -- -j 12
+      - name: Create ZIP Archive
+        run: |
+          chmod +x blade/blade
+          zip -r9 --symlinks blade_linux.zip blade/
+      - name: Generate Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: blade_linux-aarch64.zip
+      - name: Upload Artifact to Release
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: blade_linux-aarch64.zip
+          asset_name: blade-linux-aarch64-${{ github.event.release.tag_name }}.zip
+          asset_content_type: application/zip
+
   build-macos:
     runs-on: macos-latest
     steps:
