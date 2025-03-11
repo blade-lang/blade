@@ -121,7 +121,7 @@ jobs:
           github-binarycache: true
       - name: Compile
         run: |
-          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/scripts/buildsystems/vcpkg.cmake" -DOPENSSL_ROOT_DIR=${{ env.VCPKG_ROOT }}/installed/x64-windows-static
+          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPENSSL_ROOT_DIR=${{ github.workspace }}/vcpkg/installed/x64-windows-static
           cmake --build . -- -j 12
       - name: Test
         run: ctest
