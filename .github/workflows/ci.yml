@@ -54,6 +54,7 @@ jobs:
           useCloudCache: false
       - name: Compile
         run: |
+          sudo apt-get update
           sudo apt-get remove libgd3 
           sudo apt-get install curl libpthread-stubs0-dev libcurl4-openssl-dev libgd-dev libavif-dev libffi-dev -y
           cmake -B .
@@ -121,7 +122,7 @@ jobs:
           github-binarycache: true
       - name: Compile
         run: |
-          dir ${{ github.workspace }}/vcpkg/installed/x64-windows-static-release/
+          dir ${{ github.workspace }}/vcpkg/installed/x64-windows-release/
           cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPENSSL_ROOT_DIR=${{ github.workspace }}/vcpkg/installed/x64-windows-release
           cmake --build . -- -j 12
       - name: Test
