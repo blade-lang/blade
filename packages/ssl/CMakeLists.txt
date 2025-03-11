@@ -16,7 +16,7 @@ add_library(ssl SHARED ssl.h ssl.c)
 target_link_libraries(ssl libblade)
 add_dependencies(ssl blade)
 
-if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Linux" AND UNIX)
     set(OPENSSL_USE_STATIC_LIBS TRUE)
 endif()
 

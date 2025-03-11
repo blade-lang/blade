@@ -117,12 +117,12 @@ jobs:
         with:
           pkgs: pkgconf curl libffi openssl libgd
           revision: master
-          triplet: x64-windows-static-release
+          triplet: x64-windows-release
           token: ${{ github.token }}
           github-binarycache: true
       - name: Compile
         run: |
-          cmake -B . -G "Unix Makefiles" -DVCPKG_TARGET_TRIPLET=x64-windows-static-release -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+          cmake -B . -G "Unix Makefiles" -DVCPKG_TARGET_TRIPLET=x64-windows-release -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake"
           cmake --build . -- -j 12
       - name: Test
         run: ctest
