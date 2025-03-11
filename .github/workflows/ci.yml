@@ -115,15 +115,14 @@ jobs:
       - name: Install dependencies
         uses: johnwason/vcpkg-action@v6
         with:
-          pkgs: pkgconf curl libffi openssl libgd
+          pkgs: pkgconf curl libffi openssl:x64-windows libgd
           revision: master
           triplet: x64-windows-release
           token: ${{ github.token }}
           github-binarycache: true
       - name: Compile
         run: |
-          dir ${{ github.workspace }}/vcpkg/installed/x64-windows-release/
-          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPENSSL_ROOT_DIR=${{ github.workspace }}/vcpkg/installed/x64-windows-release
+          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPENSSL_ROOT_DIR=${{ github.workspace }}/vcpkg/installed/x64-windows-static
           cmake --build . -- -j 12
       - name: Test
         run: ctest
