@@ -116,7 +116,7 @@ jobs:
           pkgs: pkgconf pthreads curl libffi openssl libgd
           triplet: x64-windows-release
           cache-key: windows
-          revision: master
+          revision: '3508985146f1b1d248c67ead13f8f54be5b4f5da'
           token: ${{ github.token }}
           github-binarycache: true
       - name: Compile
