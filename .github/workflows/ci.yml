@@ -9,7 +9,6 @@ on:
 
 jobs:
 
-#  build-linux-and-analyze:
   build-linux:
     runs-on: ubuntu-24.04
     permissions:
@@ -22,10 +21,6 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v1.9
         with:
           cmake-version: '3.25.2'
-#      - name: Initialize CodeQL
-#        uses: github/codeql-action/init@v1
-#        with:
-#          languages: c
       - name: Compile
         run: |
           sudo apt-get update
@@ -36,13 +31,40 @@ jobs:
           chmod +x blade/blade
       - name: Test
         run: ctest
-#      - name: Perform CodeQL Analysis
-#        uses: github/codeql-action/analyze@v1
       - name: Generate Artifacts
         if: '!cancelled()'
         uses: actions/upload-artifact@v4
         with:
           name: blade-linux-${{ github.run_id }}
+          path: ${{github.workspace}}/blade
+  
+  build-linux-arm:
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup cmake
+        uses: jwlawson/actions-setup-cmake@v1.9
+        with:
+          cmake-version: '3.25.2'
+      - name: Compile
+        run: |
+          sudo apt-get update
+          sudo apt-get remove libgd3 
+          sudo apt-get install curl libpthread-stubs0-dev libcurl4-openssl-dev libgd-dev libavif-dev libffi-dev -y
+          cmake -B .
+          cmake --build . -- -j 12
+          chmod +x blade/blade
+      - name: Test
+        run: ctest
+      - name: Generate Artifacts
+        if: '!cancelled()'
+        uses: actions/upload-artifact@v4
+        with:
+          name: blade-linux-arm-${{ github.run_id }}
           path: ${{github.workspace}}/blade
 
   build-macos:
