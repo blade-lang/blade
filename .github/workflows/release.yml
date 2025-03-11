@@ -11,9 +11,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup cmake
-        uses: jwlawson/actions-setup-cmake@v1.9
+        uses: lukka/get-cmake@v3.25.2
         with:
-          cmake-version: '3.25.2'
+          useLocalCache: true
+          useCloudCache: false
       - name: Compile
         run: |
           sudo apt-get update
@@ -79,9 +80,10 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Setup cmake
-        uses: jwlawson/actions-setup-cmake@v1.9
+        uses: lukka/get-cmake@v3.25.2
         with:
-          cmake-version: '3.25.2'
+          useLocalCache: true
+          useCloudCache: false
       - uses: actions/checkout@v4
       - name: Setup dependencies
         run: |
@@ -114,9 +116,11 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Setup cmake
-        uses: jwlawson/actions-setup-cmake@v1.9
+        uses: lukka/get-cmake@latest
         with:
-          cmake-version: '3.28.x'
+          cmakeVersion: '3.28.x'
+          useLocalCache: true
+          useCloudCache: false
       - name: Setup WinLibs
         uses: bwoodsend/setup-winlibs-action@v1.8
         with:
