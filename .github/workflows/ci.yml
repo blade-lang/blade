@@ -115,8 +115,6 @@ jobs:
         with:
           committish: 3508985146f1b1d248c67ead13f8f54be5b4f5da
           cache-version: 1
-          cache-key: vcpkg-windows
-          cache-restore-keys: vcpkg-windows
           save-always: true
       - name: Install Dependencies
         run: |
