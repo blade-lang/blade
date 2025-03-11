@@ -123,7 +123,7 @@ jobs:
       - name: Compile
         run: |
           dir ${{ github.workspace }}/vcpkg/installed/x64-windows-release/lib
-          cmake -B . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPENSSL_ROOT_DIR=${{ github.workspace }}/vcpkg/installed/x64-windows-release
+          cmake -B . -G "Unix Makefiles" -DVCPKG_TARGET_TRIPLET=x64-windows-release -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPENSSL_ROOT_DIR=${{ github.workspace }}/vcpkg/installed/x64-windows-release
           cmake --build . -- -j 12
       - name: Test
         run: ctest
