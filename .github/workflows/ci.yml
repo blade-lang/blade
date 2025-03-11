@@ -21,7 +21,7 @@ jobs:
         uses: lukka/get-cmake@v3.25.2
         with:
           useLocalCache: true
-          useCloudCache: false
+          useCloudCache: true
       - name: Compile
         run: |
           sudo apt-get update
@@ -51,7 +51,7 @@ jobs:
         uses: lukka/get-cmake@v3.25.2
         with:
           useLocalCache: true
-          useCloudCache: false
+          useCloudCache: true
       - name: Compile
         run: |
           sudo apt-get update
@@ -76,7 +76,7 @@ jobs:
         uses: lukka/get-cmake@v3.25.2
         with:
           useLocalCache: true
-          useCloudCache: false
+          useCloudCache: true
       - uses: actions/checkout@v4
       - name: Setup dependencies
         run: |
@@ -104,7 +104,7 @@ jobs:
         with:
           cmakeVersion: '3.28.x'
           useLocalCache: true
-          useCloudCache: false
+          useCloudCache: true
       - name: Setup WinLibs
         uses: bwoodsend/setup-winlibs-action@v1.8
         with:
