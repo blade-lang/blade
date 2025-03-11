@@ -54,7 +54,6 @@ jobs:
           useCloudCache: false
       - name: Compile
         run: |
-          sudo apt-get update
           sudo apt-get remove libgd3 
           sudo apt-get install curl libpthread-stubs0-dev libcurl4-openssl-dev libgd-dev libavif-dev libffi-dev -y
           cmake -B .
@@ -115,15 +114,15 @@ jobs:
       - name: Install dependencies
         uses: johnwason/vcpkg-action@v6
         with:
-          pkgs: pkgconf curl libffi openssl:x64-windows-static-release libgd
+          pkgs: pkgconf curl libffi openssl libgd
           revision: master
           triplet: x64-windows-release
           token: ${{ github.token }}
           github-binarycache: true
       - name: Compile
         run: |
-          dir ${{ github.workspace }}/vcpkg/installed/x64-windows-static-release/lib/
-          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+          dir ${{ github.workspace }}/vcpkg/installed/x64-windows-static-release/
+          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPENSSL_ROOT_DIR=${{ github.workspace }}/vcpkg/installed/x64-windows-release
           cmake --build . -- -j 12
       - name: Test
         run: ctest
