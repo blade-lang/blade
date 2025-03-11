@@ -111,34 +111,14 @@ jobs:
           add_to_path: true
           tag: 14.2.0posix-18.1.8-12.0.0-msvcrt-r1
       - uses: actions/checkout@v4
-      - uses: friendlyanon/setup-vcpkg@v1
-        with: { committish: 3508985146f1b1d248c67ead13f8f54be5b4f5da, cache-version: "1", cache-key: "vcpkg-windows", cache-restore-keys: "vcpkg-windows" }
-      - name: Restore vcpkg dependencies cache
-        id: vcpkg-cache-restore
-        uses: actions/cache/restore@v4
+      - uses: johnwason/vcpkg-action@v6
         with:
-          path: |
-            ${{ env.VCPKG_ROOT }}/ports
-            ${{ env.VCPKG_ROOT }}/downloads
-            ${{ env.VCPKG_ROOT }}/installed
-            ${{ env.VCPKG_ROOT }}/vcpkg_installed
-          key: ${{ runner.OS }}-vcpkg-cache
-      - name: Install Dependencies
-        run: |
-          ${{ env.VCPKG_ROOT }}/vcpkg update
-          ${{ env.VCPKG_ROOT }}/vcpkg version
-          ${{ env.VCPKG_ROOT }}/vcpkg install pkgconf pthreads:x64-windows curl:x64-windows libffi:x64-windows openssl:x64-windows libgd:x64-windows
-          ${{ env.VCPKG_ROOT }}/vcpkg list
-      - name: Save vcpkg dependencies cache
-        id: vcpkg-cache-save
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ${{ env.VCPKG_ROOT }}/ports
-            ${{ env.VCPKG_ROOT }}/downloads
-            ${{ env.VCPKG_ROOT }}/installed
-            ${{ env.VCPKG_ROOT }}/vcpkg_installed
-          key: ${{ steps.vcpkg-cache-restore.outputs.cache-primary-key }}
+          pkgs: pkgconf pthreads curl libffi openssl libgd
+          triplet: x64-windows-release
+          cache-key: windows
+          revision: master
+          token: ${{ github.token }}
+          github-binarycache: true
       - name: Compile
         run: |
           cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake" -DOPENSSL_ROOT_DIR=${{ env.VCPKG_ROOT }}/installed/x64-windows-static
