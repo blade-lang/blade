@@ -49,6 +49,8 @@ var _Z_64_VERSION = 45
 ## Constants.
 var _path_replace_regex = '/\\\\/'
 
+var _is_unix = os.platform != 'windows'
+
 # Signatures.
 var _file_head_sig = 'PK\x03\x04'
 var _central_head_sign = 'PK\x01\x02'
@@ -62,7 +64,8 @@ var _locator_end_sign64 = 'PK\x06\x07'
 # Unpack formats.
 var _file_size_unpack = 'V1crc/V1size_compressed/V1size_uncompressed'
 var _file_head_unpack = 'v1version/v1general_purpose/v1compress_method/v1file_time/' +
-    'v1file_date/${_file_size_unpack}/v1filename_length/v1extra_field_length'
+    'v1file_date/${_file_size_unpack}/v1filename_length/v1extra_field_length/' +
+    'v1comment_length/v1internal_attribute/V1external_attribute'
 
 var _file_size_unpack64 = 'P1crc/P1size_compressed/P1size_uncompressed'
 
@@ -125,6 +128,12 @@ class ZipItem {
   var is_encrypted
 
   /**
+   * The file permission
+   * @type number
+   */
+  var permission
+
+  /**
    * Error encountered when attempting to read/extract the file
    * @type string
    */
@@ -149,6 +158,7 @@ class ZipItem {
    * - `encrypted`: boolean
    * - `error`: string &mdash; optional
    * - `data`: bytes
+   * - `permission`: number
    * 
    * @param dictionary dict
    * @returns ZipItem
@@ -166,6 +176,7 @@ class ZipItem {
     f.last_modified = date.from_time(dict.filemtime)
     f.compressed_size = dict.size_compressed
     f.uncompressed_size = dict.size_uncompressed
+    f.permission = dict.permission
     f.is_encrypted = dict.get('encrypted', false)
     f.error = dict.get('error', '')
     f.data = dict.data
@@ -196,8 +207,23 @@ class ZipItem {
 
     var path = final_dir ? os.join_paths(final_dir, self.name) : self.name
 
-    if self.data
-      return file(path, 'wb').write(self.data)
+    if self.data {
+      if !file(path, 'wb').write(self.data) {
+        return false
+      }
+
+      var fh = file(path)
+
+      var last_mod = self.last_modified.to_time()
+      if last_mod > 0 {
+        fh.set_times(last_mod, last_mod)
+      }
+
+      if self.permission > 0 {
+        fh.chmod(self.permission)
+      }
+    }
+
     return true
   }
 }
@@ -461,7 +487,7 @@ class ZipArchive {
       'v5', 
       self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION,  # version needed to extract
       0,                  # general purpose bit flag
-      _Z_DEFLATE,          # compression method
+      _Z_DEFLATE,         # compression method
       mod_date[0],        # last mod time
       mod_date[1]         # last mod date
     ))
@@ -505,26 +531,29 @@ class ZipArchive {
 
 		var new_offset = self._get_new_offset()
 
+    var extract_version = self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION
+    var permission = (stat.mode & 0xFFFF) << 16 >>> 0
+
 		# now add to central directory record
 		self._ctrl_dir.extend(_central_head_sign.to_bytes())
     self._ctrl_dir.extend(pack(
       'v6V3v5V2',           
-      0,                  # version made by
-      self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION,  # version needed to extract
-      0,                  # general purpose bit flag
-      _Z_DEFLATE,          # compression method
-      mod_date[0],        # last mod time
-      mod_date[1],        # last mod date
-      crc,                # crc32
-      c_len,              # compressed filesize
-      unc_len,            # uncompressed filesize
-      path.length(),      # length of filename
-      0,                  # extra field length
-      0,                  # file comment length
-      0,                  # disk number start
-      0,                  # internal file attributes
-      32,                 # external file attributes - 'archive' bit set
-      self._old_offset    # relative offset of local header
+      0,                      # version made by
+      extract_version,        # version needed to extract
+      0,                      # general purpose bit flag
+      _Z_DEFLATE,             # compression method
+      mod_date[0],            # last mod time
+      mod_date[1],            # last mod date
+      crc,                    # crc32
+      c_len,                  # compressed filesize
+      unc_len,                # uncompressed filesize
+      path.length(),          # length of filename
+      0,                      # extra field length
+      0,                      # file comment length
+      0,                      # disk number start
+      0,                      # internal file attributes
+      permission,             # external file attributes - 'archive' bit set
+      self._old_offset        # relative offset of local header
     ))
 
 		self._ctrl_dir.extend(path.to_bytes())
@@ -786,6 +815,12 @@ class ZipArchive {
 
       entrya.extend(unpackeda)
       entrya.set('encrypted', isencrypted)
+
+      if unpackeda['external_attribute'] > 0 {
+        entrya['permission'] = (unpackeda['external_attribute'] >>> 16) ^ 0c100000
+      } else {
+        entrya['permission'] = 0
+      }
       
       zip_file.files.append(ZipItem.from_dict(entrya))
 		}

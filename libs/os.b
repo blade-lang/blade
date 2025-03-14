@@ -446,3 +446,24 @@ def dir_name(path) {
 def base_name(path) {
   return _os.basename(path)
 }
+
+/**
+ * Renames the file or directory specified by `old_name` to the name given by `new_name`.
+ * 
+ * If `old_name` and `new_name` are existing hard links referring to the same file, then 
+ * it does nothing, and returns a success status.
+ * 
+ * If `old_name` specifies a directory, `new_name` must either not exist, or it must 
+ * specify an empty directory.
+ * 
+ * If `old_name` refers to a symbolic link, the link is renamed; if `new_name` refers to 
+ * a symbolic link, the link will be overwritten.
+ * 
+ * @param string old_name
+ * @param string new_name
+ * @returns bool
+ * @raises Exception
+ */
+def rename(old_name, new_name) {
+  return _os.rename(old_name, new_name)
+}

@@ -47,6 +47,7 @@ import .commands.uninstall
 import .commands.publish
 import .commands.serve
 import .commands.test
+import .commands.bundle
 
 # Import options...
 import .options.version
@@ -55,6 +56,7 @@ var parser = args.Parser('nyssa', true)
 
 var commands = {
   account,
+  bundle,
   clean,
   info,
   init,
