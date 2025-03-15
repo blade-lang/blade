@@ -257,7 +257,7 @@ def bundle_app(source_os, target_os, config, dest_dir) {
     os.join_paths(resources_dir, 'app')
   )
   log.info('Successfully packaged application')
-
+  
   file(
     config.contains('icns') ? config.icns : os.join_paths(bundle_dir, 'icon.icns')
   ).copy(
@@ -325,6 +325,9 @@ def bundle_zip(source_os, target_os, config, dest_dir) {
 def run(value, options, success, error) {
   var source_os = os.platform == 'osx' ? 'macos' : os.platform
   var target_os =  options.os == 'osx' ? 'macos' : options.os
+
+  # ensure that target location exists
+  options.dest = os.real_path(options.dest)
 
   var config
   catch {

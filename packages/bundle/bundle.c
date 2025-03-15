@@ -14,11 +14,16 @@ int main(int argc, char *argv[]) {
   const char *application_path = "app";
 #endif
 
+  char *exe_dir = get_exe_dir();
+  // start off from the exe directory
+  chdir(exe_dir);
+
   char *root_dir = NULL;
   if(file_exists("./macos")) {
     blade_exe_path = "Resources/runtime/blade";
     application_path = "Resources/app";
-    root_dir = dirname(get_exe_dir());
+
+    root_dir = dirname(exe_dir);
   } else {
     root_dir = get_exe_dir();
   }

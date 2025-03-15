@@ -230,7 +230,7 @@ class ZipItem {
         fh.set_times(last_mod, last_mod)
       }
 
-      if self.permission > 0 {
+      if self.permission > 0c0 and self.permission <= 0c777 {
         fh.chmod(self.permission)
       }
     }

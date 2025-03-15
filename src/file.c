@@ -627,6 +627,11 @@ DECLARE_FILE_METHOD(copy) {
   b_obj_file *file = AS_FILE(METHOD_OBJECT);
   DENY_STD();
 
+  file_open(file);
+  if(file->file == NULL) {
+    RETURN_ERROR(strerror(EBADF));
+  }
+
   if (file_exists(file->path->chars)) {
     b_obj_string *name = AS_STRING(args[0]);
 
