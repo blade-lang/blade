@@ -316,6 +316,7 @@ def bundle_zip(source_os, target_os, config, dest_dir) {
   zip.compress(
     target_src,
     os.join_paths(dest_dir, '${config.name}-${config.version}.zip'),
+    nil,
     true 
   )
 }
