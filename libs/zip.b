@@ -405,7 +405,7 @@ class ZipArchive {
 
 		name = name.replace(_path_replace_regex, '/')
 
-    var mod_date = self._dos_from_date(date.Date())
+    var mod_date = self._dos_from_date(date.localtime())
 
     var fr = _file_head_sig.to_bytes()
 
@@ -450,8 +450,7 @@ class ZipArchive {
 		# at http:#support.microsoft.com/support/kb/articles/Q125/0/19.asp
 
     var extract_version = self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION
-    var creator = (((_is_unix ? 3 : 0) << 8) | extract_version) & 0xFFFF
-    extract_version &= 0xFFFF
+    var creator = ((_is_unix ? 3 : 0) << 8) | extract_version
 
     # now add to central record
     self._ctrl_dir.extend(_central_head_sign.to_bytes())
@@ -558,10 +557,9 @@ class ZipArchive {
 		var new_offset = self._get_new_offset()
 
     var extract_version = self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION
-    var permission = (stat.mode & 0xFFFF) << 16 >>> 0
+    var permission = (stat.mode << 16) >>> 0
 
-    var creator = (((_is_unix ? 3 : 0) << 8) | extract_version) & 0xFFFF
-    extract_version &= 0xFFFF
+    var creator = ((_is_unix ? 3 : 0) << 8) | extract_version
 
 		# now add to central directory record
 		self._ctrl_dir.extend(_central_head_sign.to_bytes())
@@ -581,7 +579,7 @@ class ZipArchive {
       0,                        # file comment length
       0,                        # disk number start
       0,                        # internal file attributes
-      permission | 32,          # external file attributes (32 - DOS Archive flag)
+      permission,               # external file attributes (32 - DOS Archive flag)
       self._old_offset          # relative offset of local header
     ))
 
@@ -872,8 +870,7 @@ class ZipArchive {
       var ending = (self._is_64 ? _central_end_sign64 : _central_end_sign).to_bytes()
 
       var extract_version = self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION
-      var creator = (((_is_unix ? 3 : 0) << 8) | extract_version) & 0xFFFF
-      extract_version |= 0xFFFF
+      var creator = ((_is_unix ? 3 : 0) << 8) | extract_version
 
       if self._is_64 {
         ending.extend(pack(

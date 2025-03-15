@@ -6,9 +6,6 @@
 
 int main(int argc, char *argv[]) {
 
-  char *root_dir = dirname(get_exe_dir());
-  chdir(root_dir);
-
 #if defined(_WIN32)
   const char *blade_exe_path  = "runtime\\blade.exe";
   const char *application_path = "app";
@@ -17,10 +14,17 @@ int main(int argc, char *argv[]) {
   const char *application_path = "app";
 #endif
 
+  char *root_dir = NULL;
   if(file_exists("./macos")) {
     blade_exe_path = "Resources/runtime/blade";
     application_path = "Resources/app";
+    root_dir = dirname(get_exe_dir());
+  } else {
+    root_dir = get_exe_dir();
   }
+
+  // navigate to root directory
+  chdir(root_dir);
 
   /// PREPARATIONS
   char *exe_path = merge_paths(root_dir, (char *)blade_exe_path);

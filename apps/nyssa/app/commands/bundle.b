@@ -134,6 +134,7 @@ def _get_blade_bundler(source_os, target_os, config) {
   # be using a copy of our local installation.
   if source_os == target_os {
     copy_directory(os.dir_name(os.exe_path), runtime_dir)
+    log.info('Successfully copied bundler...')
   } else {
     var blade_zip = os.join_paths(cache_dir, 'blade-${target_os}.zip')
 
