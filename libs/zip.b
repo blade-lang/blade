@@ -74,9 +74,9 @@ var _locator_end_sign64 = 'PK\x06\x07'
 
 # Unpack formats.
 var _file_size_unpack = 'V1crc/V1size_compressed/V1size_uncompressed'
-var _file_head_unpack = 'v1version/v1general_purpose/v1compress_method/v1file_time/' +
+var _file_head_unpack = 'v1creator/v1version/v1general_purpose/v1compress_method/v1file_time/' +
     'v1file_date/${_file_size_unpack}/v1filename_length/v1extra_field_length/' +
-    'v1comment_length/v1internal_attribute/V1external_attribute'
+    'v1comment_length/v1disk_offset/v1internal_attribute/V1external_attribute'
 
 var _file_size_unpack64 = 'P1crc/P1size_compressed/P1size_uncompressed'
 
@@ -227,10 +227,15 @@ class ZipItem {
 
       var last_mod = self.last_modified.to_time()
       if last_mod > 0 {
+        var _time = time()
+        if last_mod > _time {
+          last_mod = _time
+        }
+
         fh.set_times(last_mod, last_mod)
       }
 
-      if self.permission > 0c0 and self.permission <= 0c777 {
+      if self.permission > 0 {
         fh.chmod(self.permission)
       }
     }
@@ -501,6 +506,12 @@ class ZipArchive {
 
 		path = path.replace(_path_replace_regex, '/')
 
+    # # fix modified time bug
+    # var _time = time()
+    # if stat.mtime > _time {
+    #   stat.mtime = _time
+    # }
+
     var mod_date = self._dos_from_date(date.from_time(stat.mtime))
 
 		var fr = _file_head_sig.to_bytes()
@@ -748,12 +759,18 @@ class ZipArchive {
 		filesecta = filesecta[0].split(_file_head_sig.to_bytes())
 		filesecta = filesecta[1,] # Removes empty entry/signature
 
-		for filedata in filesecta {
+    var central_heads = filesecta[-1].split(_central_head_sign.to_bytes())
+    central_heads = central_heads[1,]
+
+    iter var i = 0; i < filesecta.length(); i++ {
+      var filedata = filesecta[i]
+      var central_head = central_heads[i]
+      
 			# CRC:crc, FD:file date, FT: file time, CM: compression method, GPF: general purpose flag, VN: version needed, CS: compressed size, UCS: uncompressed size, FNL: filename length
 			var entrya = {}
 			entrya['error'] = nil
 
-			unpackeda = unpack(_file_head_unpack, filedata)
+			unpackeda = unpack(_file_head_unpack, central_head)
 
 			# Check for encryption
 			var isencrypted = (unpackeda['general_purpose'] & 0x0001) > 0 ? true : false
@@ -829,12 +846,12 @@ class ZipArchive {
 				}
 
 				entrya['filemtime'] = date.mktime(
-          ((unpackeda['file_date'] & 0xfe00) >>  9) + 1980, # year
-          (unpackeda['file_date']  & 0x01e0) >>  5,         # month
-          (unpackeda['file_date']  & 0x001f),               # day
-          (unpackeda['file_time']  & 0xf800) >> 11,         # hour
-          (unpackeda['file_time']  & 0x07e0) >>  5,         # minute
-          (unpackeda['file_time']  & 0x001f) <<  1,         # second
+          (unpackeda['file_date'] >>  9) + 1980,    # year
+          (unpackeda['file_date'] >>  5)  & 0xf,    # month
+          unpackeda['file_date']  & 0x1f,           # day
+          unpackeda['file_time'] >> 11,             # hour
+          (unpackeda['file_time'] >>  5)  & 0x3f,   # minute
+          (unpackeda['file_time']  & 0x1f) * 2,     # second
           true
         )
 				entrya['data'] = decoded
@@ -843,8 +860,11 @@ class ZipArchive {
       entrya.extend(unpackeda)
       entrya.set('encrypted', isencrypted)
 
-      if unpackeda['external_attribute'] > 32 {
-        entrya['permission'] = (unpackeda['external_attribute'] >>> 16) ^ 0c100000
+      var tmp_permission = unpackeda['external_attribute'] >>> 16
+      if tmp_permission >= 0c100000 and tmp_permission <= 0c100777 {
+        # its a valid unix permission for a regular file
+        # regular files are all we are willing to risk setting permissions for
+        entrya['permission'] = tmp_permission
       } else {
         entrya['permission'] = 0
       }
