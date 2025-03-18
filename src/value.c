@@ -212,16 +212,28 @@ static inline bool dict_equal(b_obj_dict *dict1, b_obj_dict *dict2) {
   return true;
 }
 
+static inline bool string_equal(b_obj_string *str1, b_obj_string *str2) {
+  if (str1->hash == str2->hash && str1->length == str2->length) {
+    return true;
+  } else if(str1->length != str2->length || str1->hash != str2->hash) {
+    return false;
+  }
+
+  return memcmp(str1->chars, str2->chars, str1->length) == 0;
+}
+
 bool values_equal(b_value a, b_value b) {
 #if defined(USE_NAN_BOXING) && USE_NAN_BOXING
   if (IS_NUMBER(a) && IS_NUMBER(b))
     return AS_NUMBER(a) == AS_NUMBER(b);
   if (IS_BYTES(a) && IS_BYTES(b))
-    return bytes_equal(AS_BYTES(a), AS_BYTES(b));
+    return a == b || bytes_equal(AS_BYTES(a), AS_BYTES(b));
   if (IS_LIST(a) && IS_LIST(b))
-    return list_equal(AS_LIST(a), AS_LIST(b));
+    return a == b || list_equal(AS_LIST(a), AS_LIST(b));
   if (IS_DICT(a) && IS_DICT(b))
-    return dict_equal(AS_DICT(a), AS_DICT(b));
+    return a == b || dict_equal(AS_DICT(a), AS_DICT(b));
+  if (IS_STRING(a) && IS_STRING(b))
+    return a == b || string_equal(AS_STRING(a), AS_STRING(b));
   return a == b;
 #else
   if (a.type != b.type)
@@ -232,6 +244,9 @@ bool values_equal(b_value a, b_value b) {
   
   if (IS_LIST(a) && IS_LIST(b))
     return list_equal(AS_LIST(a), AS_LIST(b));
+  
+  if (IS_DICT(a) && IS_DICT(b))
+    return a == b || dict_equal(AS_DICT(a), AS_DICT(b));
 
   switch (a.type) {
   case VAL_NIL:

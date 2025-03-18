@@ -11,7 +11,6 @@ import zlib
 import os
 import io
 import date
-import stat as stat_module
 
 /**
  * The maximum size of a single file in a zip archive when zip64 is not used
@@ -61,6 +60,7 @@ var _Z_64_VERSION = 45
 var _path_replace_regex = '/\\\\/'
 
 var _is_unix = os.platform != 'windows'
+var _os = (_is_unix ? 3 : 10) << 8
 
 # Signatures.
 var _file_head_sig = 'PK\x03\x04'
@@ -184,7 +184,7 @@ class ZipItem {
     f.directory = dict.get('dir', '')
     f.compression_method = dict.compress_method
     f.crc = dict.crc
-    f.last_modified = date.from_time(dict.filemtime)
+    f.last_modified = dict.filemtime
     f.compressed_size = dict.size_compressed
     f.uncompressed_size = dict.size_uncompressed
     f.permission = dict.permission
@@ -227,10 +227,10 @@ class ZipItem {
 
       var last_mod = self.last_modified.to_time()
       if last_mod > 0 {
-        var _time = time()
-        if last_mod > _time {
-          last_mod = _time
-        }
+        # var _time = time()
+        # if last_mod > _time {
+        #   last_mod = _time
+        # }
 
         fh.set_times(last_mod, last_mod)
       }
@@ -301,8 +301,8 @@ class ZipFile {
       raise Exception('string expected in argument 1 (base_dir)')
 
     if !base_dir base_dir = ''
-    for zip_file in self.files {
-      if !zip_file.export(base_dir)
+    for zip_item in self.files {
+      if !zip_item.export(base_dir)
         return false
     }
 
@@ -455,7 +455,7 @@ class ZipArchive {
 		# at http:#support.microsoft.com/support/kb/articles/Q125/0/19.asp
 
     var extract_version = self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION
-    var creator = ((_is_unix ? 3 : 0) << 8) | extract_version
+    var creator = _os | extract_version
 
     # now add to central record
     self._ctrl_dir.extend(_central_head_sign.to_bytes())
@@ -475,7 +475,7 @@ class ZipArchive {
       0,                        # file comment length
       0,                        # disk number start
       0,                        # internal file attributes
-      16,                       # external file attributes - 'archive' bit set
+      0c0040755 << 16 >>> 0,    # external file attributes - 'archive' bit set
       self._old_offset          # relative offset of local header
     ))
     
@@ -530,9 +530,7 @@ class ZipArchive {
 
     var uzdata = data
     if self._compression_method == ZIP_DEFLATE {
-      var zdata = zlib.compress(data)
-      uzdata = zdata[2, -4] # fix crc bug
-      zdata.dispose()
+      uzdata = zlib.deflate(data)
     }
 
 		var c_len = uzdata.length()
@@ -552,6 +550,7 @@ class ZipArchive {
 		# 'file data' segment
 		fr.extend(uzdata)
     uzdata.dispose()
+    data.dispose()
 
 		# 'data descriptor' segment (optional but necessary if archive is not served as file)
     fr.extend(pack(
@@ -570,7 +569,7 @@ class ZipArchive {
     var extract_version = self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION
     var permission = (stat.mode << 16) >>> 0
 
-    var creator = ((_is_unix ? 3 : 0) << 8) | extract_version
+    var creator = _os | extract_version
 
 		# now add to central directory record
 		self._ctrl_dir.extend(_central_head_sign.to_bytes())
@@ -808,12 +807,12 @@ class ZipArchive {
 				using method {
 					when 0 {
             # Stored
-						# Not compressed, continue
+						# Not compressed, continue as is
+            decoded = filedata[,]
           }
 					when 8 { # Deflated
             catch {
               decoded = zlib.undeflate(filedata)
-              filedata.dispose()
             } as e
 
             if e {
@@ -845,24 +844,30 @@ class ZipArchive {
 					}
 				}
 
-				entrya['filemtime'] = date.mktime(
-          (unpackeda['file_date'] >>  9) + 1980,    # year
-          (unpackeda['file_date'] >>  5)  & 0xf,    # month
-          unpackeda['file_date']  & 0x1f,           # day
-          unpackeda['file_time'] >> 11,             # hour
-          (unpackeda['file_time'] >>  5)  & 0x3f,   # minute
-          (unpackeda['file_time']  & 0x1f) * 2,     # second
-          true
+        var file_date = unpackeda['file_date']
+        var file_time = unpackeda['file_time']
+
+				entrya['filemtime'] = date(
+          ((file_date & 0xfe00) >>  9) + 1980, # year
+          (file_date  & 0x01e0) >>  5,         # month
+          (file_date  & 0x001f) - 1,           # day
+          ((file_time  & 0xf800) >> 11) - 1,   # hour
+          (file_time  & 0x07e0) >>  5,         # minute
+          (file_time  & 0x001f) <<  1          # second
         )
+
 				entrya['data'] = decoded
+        filedata.dispose()
 			}
 
       entrya.extend(unpackeda)
       entrya.set('encrypted', isencrypted)
 
       var tmp_permission = unpackeda['external_attribute'] >>> 16
-      if tmp_permission >= 0c100000 and tmp_permission <= 0c100777 {
-        # its a valid unix permission for a regular file
+      var creator = pack('v', unpackeda['creator'])[1]
+
+      if (_is_unix and creator == 3) or (!_is_unix and creator == 10) {
+        # its a valid unix or windows permission for a regular file on the same operating
         # regular files are all we are willing to risk setting permissions for
         entrya['permission'] = tmp_permission
       } else {
@@ -886,27 +891,49 @@ class ZipArchive {
       
       self._handle.puts(self._ctrl_dir)
 
-      # end of Central directory record
-      var ending = (self._is_64 ? _central_end_sign64 : _central_end_sign).to_bytes()
-
       var extract_version = self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION
-      var creator = ((_is_unix ? 3 : 0) << 8) | extract_version
+      var creator = _os | extract_version
 
       if self._is_64 {
+        # zip64 end of Central directory record
+        var ending = _central_end_sign64.to_bytes()
+        ending.extend(_disk_record_sign.to_bytes())
+
         ending.extend(pack(
           'Pvv',
           44,                 # size of zip64 end of central directory record
           creator,            # version made by
           extract_version     # version needed to extract
         ))
+  
+        ending.extend(_disk_record_sign64.to_bytes())
+
+        ending.extend(pack(
+          'P4',
+          self._ctrl_dir_length,      # total number of entries 'on this disk'
+          self._ctrl_dir_length,      # total number of entries overall
+          self._ctrl_dir.length(),    # size of central dir
+          0                           # starting disk number
+        ))
+
+        # zip64 end of central directory locator.
+        ending.extend(_locator_end_sign64.to_bytes())
+        ending.extend(pack(
+          'VPV',
+          0,
+          self._ctrl_dir.length(),
+          1
+        ))
       }
 
-      ending.extend(
-        (self._is_64 ? _disk_record_sign64 : _disk_record_sign).to_bytes()
-      )
+      # end of Central directory record
+      var ending = _central_end_sign.to_bytes()
+      ending.extend(_disk_record_sign.to_bytes())
+
 
       ending.extend(pack(
-        self._is_64 ? 'PPPPv' : 'vvVVv', 
+        # self._is_64 ? 'PPPPv' : 'vvVVv', 
+        'vvVVv', 
         self._ctrl_dir_length,      # total number of entries 'on this disk'
         self._ctrl_dir_length,      # total number of entries overall
         self._ctrl_dir.length(),    # size of central dir
@@ -915,6 +942,7 @@ class ZipArchive {
       ))
 
       self._handle.puts(ending)
+      self._handle.flush()
       self._handle.close()
 
       ending.dispose()

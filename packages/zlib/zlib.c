@@ -28,8 +28,11 @@
     RETURN_ERROR(#caller "()::error(%d): " #err, msg); \
   }
 
-// ZLIB_CHUNK_SIZE is 128kb
-#define ZLIB_CHUNK_SIZE 131072
+#if UINT_MAX < 4294967295
+# define ZLIB_CHUNK_SIZE 32768 
+#else
+# define ZLIB_CHUNK_SIZE 262144
+#endif
 
 #define ZLIB_CHECK_RET_ERROR(fn, end) \
   switch (ret) { \
@@ -160,15 +163,14 @@ DECLARE_MODULE_METHOD(zlib_deflate) {
       have = ZLIB_CHUNK_SIZE - strm.avail_out;
 
       if(have > 0) {
-        size_t len = sizeof(Bytef) * have;
-        output = GROW_ARRAY(Bytef, output, len, len + output_length);
+        output = GROW_ARRAY(Bytef, output, output_length, output_length + have);
         if(output == NULL) {
           RETURN_ERROR("deflate(): out of memory");
         }
 
-        vm->bytes_allocated += output_length;
+        vm->bytes_allocated += have;
         memcpy(output + output_length, out, have);
-        output_length += len;
+        output_length += have;
       }
 
     } while (strm.avail_out == 0);
@@ -179,7 +181,7 @@ DECLARE_MODULE_METHOD(zlib_deflate) {
 
   ret = deflateEnd(&strm);
   if(ret == Z_OK) {
-    RETURN_OBJ(take_bytes(vm, output, output_length));
+    RETURN_OBJ(take_bytes(vm, output, (int)output_length));
   }
 
   RETURN_ERROR("deflate(): Error %d while finishing deflation", ret);

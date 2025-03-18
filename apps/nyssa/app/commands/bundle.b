@@ -112,7 +112,16 @@ def copy_directory(src_dir, dest_dir) {
       # create the directory if its missing
       os.create_dir(os.dir_name(dest))
 
-      file(src).copy(dest)
+      var src_file = file(src)
+      src_file.copy(dest)
+      
+      # get source file stats
+      var src_stats = src_file.stats()
+      
+      # update destination file times and permissions with src values
+      var dest_file = file(dest)
+      dest_file.set_times(src_stats.atime, src_stats.mtime)
+      dest_file.chmod(src_stats.mode)
     }
   }
 }
@@ -320,6 +329,9 @@ def bundle_zip(source_os, target_os, config, dest_dir) {
     nil,
     true 
   )
+
+  # remove the target src
+  os.remove_dir(target_src, true)
 }
 
 def run(value, options, success, error) {
