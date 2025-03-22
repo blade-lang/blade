@@ -133,6 +133,7 @@ bool do_throw_exception(b_vm *vm, bool is_assert, const char *format, ...) {
     vm->frame_count -= vm->current_frame - error->frame;
     vm->current_frame = error->frame;
     vm->current_frame->ip = &error->frame->closure->function->blob.code[error->offset];
+    vm->stack_top = error->stack_head;
   }
 
   return return_val;
@@ -245,6 +246,9 @@ inline void push_error(b_vm *vm, b_error_frame *frame) {
 
 inline b_error_frame* pop_error(b_vm *vm) {
   b_error_frame *error =  vm->errors[--vm->error_count];
+  error->frame = NULL;
+  error->stack_head = NULL;
+  error->offset = 0;
   return error;
 }
 
@@ -2595,6 +2599,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
           vm->frame_count -= vm->current_frame - error->frame;
           vm->current_frame = error->frame;
           vm->current_frame->ip = &error->frame->closure->function->blob.code[error->offset];
+          vm->stack_top = error->stack_head;
           break;
         }
 
@@ -2639,6 +2644,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         error->frame = vm->current_frame;
         error->offset = offset;
         error->value = NIL_VAL;
+        error->stack_head = vm->stack_top;
 
         push_error(vm, error);
         break;
@@ -2647,6 +2653,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
       case OP_END_CATCH: {
         b_error_frame *error = pop_error(vm);
         push(vm, error->value);
+        error->value = NIL_VAL;
         break;
       }
 

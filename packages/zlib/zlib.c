@@ -247,14 +247,14 @@ DECLARE_MODULE_METHOD(zlib_inflate) {
       have = ZLIB_CHUNK_SIZE - strm.avail_out;
 
       if(have > 0) {
-        size_t len = sizeof(Bytef) * have;
-        output = GROW_ARRAY(Bytef, output, len, len + output_length);
+        // size_t len = sizeof(Bytef) * have;
+        output = GROW_ARRAY(Bytef, output, have, output_length + have);
         if(output == NULL) {
           RETURN_ERROR("inflate(): out of memory");
         }
 
         memcpy(output + output_length, out, have);
-        output_length += len;
+        output_length += have;
       }
 
     } while (strm.avail_out == 0);

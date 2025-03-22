@@ -464,7 +464,7 @@ class ZipArchive {
       creator,                  # version made by
       extract_version,          # version needed to extract
       0,                        # general purpose bit flag
-      self._compression_method, # compression method
+      0,                        # compression method (stored)
       mod_date[0],              # last mod time
       mod_date[1],              # last mod date
       0,                        # crc32
@@ -803,12 +803,13 @@ class ZipArchive {
 			} else {
 
         var method = unpackeda['compress_method']
+
         var decoded
 				using method {
 					when 0 {
             # Stored
 						# Not compressed, continue as is
-            decoded = filedata[,]
+            decoded = filedata.clone()
           }
 					when 8 { # Deflated
             catch {
@@ -816,7 +817,7 @@ class ZipArchive {
             } as e
 
             if e {
-              decoded = bytes(0)
+              entrya['error'] = e.message
             }
           }
 					when 12 { # BZIP2
@@ -837,12 +838,16 @@ class ZipArchive {
 				if !entrya['error'] {
 					if filedata == false {
 						entrya['error'] = 'Decompression failed.'
-					} else if filedata.length() != unpackeda['size_uncompressed'] {
+					} /* else if filedata.length() != unpackeda['size_uncompressed'] {
 						entrya['error'] = 'File size is not equal to the value given in header.'
 					} else if zlib.crc32(filedata) != unpackeda['crc'] {
 						entrya['error'] = 'CRC32 checksum is not equal to the value given in header.'
-					}
+					} */
 				}
+
+        if entrya['error'] {
+          raise Exception(entrya['error'])
+        }
 
         var file_date = unpackeda['file_date']
         var file_time = unpackeda['file_time']

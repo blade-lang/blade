@@ -25,6 +25,7 @@ typedef struct {
 typedef struct {
   b_call_frame *frame;
   uint16_t offset;
+  b_value *stack_head;
   b_value value;
 } b_error_frame;
 

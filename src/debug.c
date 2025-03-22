@@ -13,13 +13,13 @@ void disassemble_blob(b_blob *blob, const char *name) {
 }
 
 int simple_instruction(const char *name, int offset) {
-  printf("%s\n", name);
+  printf("%16s\n", name);
   return offset + 1;
 }
 
 int constant_instruction(const char *name, b_blob *blob, int offset) {
   uint16_t constant = (blob->code[offset + 1] << 8) | blob->code[offset + 2];
-  printf("%-16s %8d '", name, constant);
+  printf("%16s %8d '", name, constant);
   print_value(blob->constants.values[constant]);
   printf("'\n");
   return offset + 3;
@@ -27,7 +27,7 @@ int constant_instruction(const char *name, b_blob *blob, int offset) {
 
 int property_instruction(const char *name, b_blob *blob, int offset) {
   uint16_t constant = (blob->code[offset + 1] << 8) | blob->code[offset + 2];
-  printf("%-16s %8d '", name, constant);
+  printf("%16s %8d '", name, constant);
   print_value(blob->constants.values[constant]);
   printf(" (%s)", blob->code[offset + 3] == 1 ? "static" : "");
   printf("'\n");
@@ -36,13 +36,13 @@ int property_instruction(const char *name, b_blob *blob, int offset) {
 
 int short_instruction(const char *name, b_blob *blob, int offset) {
   uint16_t slot = (blob->code[offset + 1] << 8) | blob->code[offset + 2];
-  printf("%-16s %8d\n", name, slot);
+  printf("%16s %8d\n", name, slot);
   return offset + 3;
 }
 
 static int byte_instruction(const char *name, b_blob *blob, int offset) {
   uint8_t slot = blob->code[offset + 1];
-  printf("%-16s %8d\n", name, slot);
+  printf("%16s %8d\n", name, slot);
   return offset + 2;
 }
 
@@ -51,7 +51,7 @@ static int jump_instruction(const char *name, int sign, b_blob *blob,
   uint16_t jump = (uint16_t) (blob->code[offset + 1] << 8);
   jump |= blob->code[offset + 2];
 
-  printf("%-16s %8d -> %d\n", name, offset, offset + 3 + sign * jump);
+  printf("%16s %8d -> %d\n", name, offset, offset + 3 + sign * jump);
   return offset + 3;
 }
 
@@ -60,7 +60,7 @@ static int invoke_instruction(const char *name, b_blob *blob, int offset) {
   constant |= blob->code[offset + 2];
   uint8_t arg_count = blob->code[offset + 3];
 
-  printf("%-16s (%d args) %8d '", name, arg_count, constant);
+  printf("%10s (%03d) %8d '", name, arg_count, constant);
   print_value(blob->constants.values[constant]);
   printf("'\n");
   return offset + 4;
@@ -69,9 +69,9 @@ static int invoke_instruction(const char *name, b_blob *blob, int offset) {
 int disassemble_instruction(b_blob *blob, int offset) {
   printf("%08d ", offset);
   if (offset > 0 && blob->lines[offset] == blob->lines[offset - 1]) {
-    printf("       | ");
+    printf(" |       ");
   } else {
-    printf("%8d ", blob->lines[offset]);
+    printf(" %-8d", blob->lines[offset]);
   }
 
   uint8_t instruction = blob->code[offset];
@@ -223,7 +223,7 @@ int disassemble_instruction(b_blob *blob, int offset) {
       offset++;
       uint16_t constant = blob->code[offset++] << 8;
       constant |= blob->code[offset++];
-      printf("%-16s %8d ", "clsur", constant);
+      printf("%16s %8d ", "clsur", constant);
       print_value(blob->constants.values[constant]);
       printf("\n");
 

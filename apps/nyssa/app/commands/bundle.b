@@ -1,11 +1,11 @@
 import os
 import io
 import args
-import qi
 import log
 import http
 import zip
 import json
+import io
 
 import ..setup
 
@@ -115,13 +115,15 @@ def copy_directory(src_dir, dest_dir) {
       var src_file = file(src)
       src_file.copy(dest)
       
-      # get source file stats
+      # get source file stats and close source
       var src_stats = src_file.stats()
+      src_file.close()
       
       # update destination file times and permissions with src values
       var dest_file = file(dest)
       dest_file.set_times(src_stats.atime, src_stats.mtime)
       dest_file.chmod(src_stats.mode)
+      dest_file.close()
     }
   }
 }
@@ -334,12 +336,12 @@ def bundle_zip(source_os, target_os, config, dest_dir) {
   os.remove_dir(target_src, true)
 }
 
+def _get_tty_size() {
+  return io.TTY(io.stdin).get_size()
+}
+
 def run(value, options, success, error) {
   var source_os = os.platform == 'osx' ? 'macos' : os.platform
-  var target_os =  options.os == 'osx' ? 'macos' : options.os
-
-  # ensure that target location exists
-  options.dest = os.real_path(options.dest)
 
   var config
   catch {
@@ -373,16 +375,47 @@ def run(value, options, success, error) {
     os.create_dir(tmp_dir)
   }
 
-  catch {
-    using options.os {
-      when 'macos' bundle_app(source_os, target_os, config, options.dest)
-      default bundle_zip(source_os, target_os, config, options.dest)
-    }
-  } as error
+  var targets = []
+  if options.os == 'all' {
+    targets = _supported_platforms.clone()
 
-  if error {
-    log.exception(error)
+    # when target is all, only generate a bundle for macos and not osx since 
+    # 'macos' target is the default on macos devices
+    targets.remove('osx')
   } else {
-    log.info('Bundle generated successfully!')
+    targets.append(options.os)
+  }
+
+  var console_size = _get_tty_size()
+
+  for target_os in targets {
+    # keep a copy of the original target os incase it was osx rewritten to macos
+    var original_target_os = target_os
+
+    target_os =  target_os == 'osx' ? 'macos' : target_os
+
+    if targets.length() > 1 {
+      # when monitoring from the console, add a separator line between the target attempts
+      var line_width = '-' * ((console_size.cols - target_os.length() - 2) // 2)
+      echo '${line_width} ${target_os} ${line_width}'
+    }
+
+    log.info('Generating bundle ${config.name}-${config.version} for ${target_os}...')
+
+    # ensure that target location exists
+    options.dest = os.real_path(options.dest)
+
+    catch {
+      using original_target_os {
+        when 'macos' bundle_app(source_os, target_os, config, options.dest)
+        default bundle_zip(source_os, target_os, config, options.dest)
+      }
+    } as error
+
+    if error {
+      log.exception(error, 'Failed to generate bundle ${config.name}-${config.version} for ${target_os}!')
+    } else {
+      log.info('Bundle ${config.name}-${config.version} generated successfully for ${target_os}!')
+    }
   }
 }

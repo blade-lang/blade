@@ -113,6 +113,10 @@ DECLARE_NATIVE(file) {
   b_obj_file *file = (b_obj_file*)GC(new_file(vm, path, mode));
   file_open(file);
 
+  if(!file->file) {
+    RETURN_ERROR(strerror(errno));
+  }
+
   RETURN_OBJ(file);
 }
 
@@ -629,13 +633,14 @@ DECLARE_FILE_METHOD(copy) {
 
   file_open(file);
   if(file->file == NULL) {
-    RETURN_ERROR(strerror(EBADF));
+    RETURN_ERROR(strerror(errno));
   }
 
   if (file_exists(file->path->chars)) {
     b_obj_string *name = AS_STRING(args[0]);
 
     if (strstr(file->mode->chars, "r") == NULL) {
+      file_close(file);
       RETURN_ERROR("file not open for reading: %s", strerror(ENOTSUP));
     }
 
@@ -647,6 +652,7 @@ DECLARE_FILE_METHOD(copy) {
 
     FILE *fp = fopen(name->chars, mode);
     if (fp == NULL) {
+      file_close(file);
       RETURN_ERROR("unable to create new file: %s", strerror(EPERM));
     }
 
@@ -662,6 +668,7 @@ DECLARE_FILE_METHOD(copy) {
     } while ((n_read > 0) && (n_read == n_write));
 
     if (n_write > 0) {
+      file_close(file);
       RETURN_ERROR("error copying file: %s", strerror(EIO));
     }
 
@@ -671,6 +678,7 @@ DECLARE_FILE_METHOD(copy) {
 
     RETURN_BOOL(n_read == n_write);
   } else {
+    file_close(file);
     RETURN_ERROR(strerror(ENOENT));
   }
 }
