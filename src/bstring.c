@@ -432,7 +432,7 @@ DECLARE_STRING_METHOD(join) {
     RETURN_T_STRING(result, result_length);
   }
 
-  RETURN_ERROR("join() does not support object of type %s", value_type(argument));
+  RETURN_TYPE_ERROR("join() does not support object of type %s", value_type(argument));
 }
 
 DECLARE_STRING_METHOD(index_of) {
@@ -1229,13 +1229,13 @@ DECLARE_STRING_METHOD(replace_with) {
   }
 
   if(pattern_string->length == 0) {
-    RETURN_ERROR(_INVALID_REGEX_ERROR);
+    RETURN_VALUE_ERROR(_INVALID_REGEX_ERROR);
   }
 
   GET_REGEX_COMPILE_OPTIONS(pattern_string, false);
 
   if ((int) compile_options < 0) {
-    RETURN_ERROR(_INVALID_REGEX_ERROR);
+    RETURN_VALUE_ERROR(_INVALID_REGEX_ERROR);
   }
 
   char *real_regex = remove_regex_delimiter(vm, pattern_string);
@@ -1334,7 +1334,7 @@ DECLARE_STRING_METHOD(replace_with) {
     b_value call_result = call_closure(vm, replacer, call_args);
 
     if(!IS_STRING(call_result)) {
-      RETURN_ERROR("replace_with() function returned non-string");
+      RETURN_TYPE_ERROR("replace_with() function returned non-string");
     }
 
     if(index > start_offset) {
@@ -1408,7 +1408,7 @@ DECLARE_STRING_METHOD(__itern__) {
   }
 
   if (!IS_NUMBER(args[0])) {
-    RETURN_ERROR("strings are numerically indexed");
+    RETURN_ARGUMENT_ERROR("strings are numerically indexed");
   }
 
   int index = AS_NUMBER(args[0]);

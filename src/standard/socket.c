@@ -43,8 +43,8 @@
 #define SMALLSIZ 256    /* small buffers, hostnames, etc. */
 
 DECLARE_MODULE_METHOD(socket__error) {
-  ENFORCE_ARG_COUNT(_error, 1);
-  ENFORCE_ARG_TYPE(_error, 0, IS_NUMBER);
+  ENFORCE_ARG_COUNT(error, 1);
+  ENFORCE_ARG_TYPE(error, 0, IS_NUMBER);
 
   // do not report errno == EINPROGRESS, EWOULDBLOCK and EAGAIN as error
   if (AS_NUMBER(args[0]) == -1 && errno != EINPROGRESS && errno != EWOULDBLOCK && errno != EAGAIN) {
@@ -55,10 +55,10 @@ DECLARE_MODULE_METHOD(socket__error) {
 }
 
 DECLARE_MODULE_METHOD(socket__create) {
-  ENFORCE_ARG_COUNT(_create, 3);
-  ENFORCE_ARG_TYPE(_create, 0, IS_NUMBER); // family
-  ENFORCE_ARG_TYPE(_create, 1, IS_NUMBER); // type
-  ENFORCE_ARG_TYPE(_create, 2, IS_NUMBER); // protocol
+  ENFORCE_ARG_COUNT(create, 3);
+  ENFORCE_ARG_TYPE(create, 0, IS_NUMBER); // family
+  ENFORCE_ARG_TYPE(create, 1, IS_NUMBER); // type
+  ENFORCE_ARG_TYPE(create, 2, IS_NUMBER); // protocol
 
   int family = (int) AS_NUMBER(args[0]);
   int type = (int) AS_NUMBER(args[1]);
@@ -87,13 +87,13 @@ DECLARE_MODULE_METHOD(socket__create) {
 }
 
 DECLARE_MODULE_METHOD(socket__connect) {
-  ENFORCE_ARG_COUNT(_connect, 6);
-  ENFORCE_ARG_TYPE(_connect, 0, IS_NUMBER); // the socket id
-  ENFORCE_ARG_TYPE(_connect, 1, IS_STRING); // the address
-  ENFORCE_ARG_TYPE(_connect, 2, IS_NUMBER); // the port
-  ENFORCE_ARG_TYPE(_connect, 3, IS_NUMBER); // the family
-  ENFORCE_ARG_TYPE(_connect, 4, IS_NUMBER); // timeout
-  ENFORCE_ARG_TYPE(_connect, 5, IS_BOOL); // is_blocking
+  ENFORCE_ARG_COUNT(connect, 6);
+  ENFORCE_ARG_TYPE(connect, 0, IS_NUMBER); // the socket id
+  ENFORCE_ARG_TYPE(connect, 1, IS_STRING); // the address
+  ENFORCE_ARG_TYPE(connect, 2, IS_NUMBER); // the port
+  ENFORCE_ARG_TYPE(connect, 3, IS_NUMBER); // the family
+  ENFORCE_ARG_TYPE(connect, 4, IS_NUMBER); // timeout
+  ENFORCE_ARG_TYPE(connect, 5, IS_BOOL); // is_blocking
 
   int sock = AS_NUMBER(args[0]);
   char *address = AS_C_STRING(args[1]);
@@ -182,11 +182,11 @@ DECLARE_MODULE_METHOD(socket__connect) {
 }
 
 DECLARE_MODULE_METHOD(socket__bind) {
-  ENFORCE_ARG_COUNT(_bind, 4);
-  ENFORCE_ARG_TYPE(_bind, 0, IS_NUMBER); // the socket id
-  ENFORCE_ARG_TYPE(_bind, 1, IS_STRING); // the address
-  ENFORCE_ARG_TYPE(_bind, 2, IS_NUMBER); // the port
-  ENFORCE_ARG_TYPE(_bind, 3, IS_NUMBER); // the family
+  ENFORCE_ARG_COUNT(bind, 4);
+  ENFORCE_ARG_TYPE(bind, 0, IS_NUMBER); // the socket id
+  ENFORCE_ARG_TYPE(bind, 1, IS_STRING); // the address
+  ENFORCE_ARG_TYPE(bind, 2, IS_NUMBER); // the port
+  ENFORCE_ARG_TYPE(bind, 3, IS_NUMBER); // the family
 
   int sock = AS_NUMBER(args[0]);
   char *address = AS_C_STRING(args[1]);
@@ -200,16 +200,16 @@ DECLARE_MODULE_METHOD(socket__bind) {
   remote.sin_port = htons(port);
 
   if (inet_pton(AF_INET, address, &remote.sin_addr) <= 0) {
-    RETURN_ERROR("address not valid or unsupported");
+    RETURN_VALUE_ERROR("address not valid or unsupported");
   }
 
   RETURN_NUMBER(bind(sock, (struct sockaddr *) &remote, sizeof(remote)));
 }
 
 DECLARE_MODULE_METHOD(socket__listen) {
-  ENFORCE_ARG_COUNT(_bind, 2);
-  ENFORCE_ARG_TYPE(_bind, 0, IS_NUMBER); // the socket id
-  ENFORCE_ARG_TYPE(_bind, 1, IS_NUMBER); // backlog
+  ENFORCE_ARG_COUNT(bind, 2);
+  ENFORCE_ARG_TYPE(bind, 0, IS_NUMBER); // the socket id
+  ENFORCE_ARG_TYPE(bind, 1, IS_NUMBER); // backlog
 
   int sock = AS_NUMBER(args[0]);
   int backlog = AS_NUMBER(args[1]);
@@ -218,8 +218,8 @@ DECLARE_MODULE_METHOD(socket__listen) {
 }
 
 DECLARE_MODULE_METHOD(socket__accept) {
-  ENFORCE_ARG_COUNT(_accept, 1);
-  ENFORCE_ARG_TYPE(_accept, 0, IS_NUMBER); // the socket id
+  ENFORCE_ARG_COUNT(accept, 1);
+  ENFORCE_ARG_TYPE(accept, 0, IS_NUMBER); // the socket id
 
   int sock = AS_NUMBER(args[0]);
 
@@ -245,9 +245,9 @@ DECLARE_MODULE_METHOD(socket__accept) {
 }
 
 DECLARE_MODULE_METHOD(socket__send) {
-  ENFORCE_ARG_COUNT(_send, 3);
-  ENFORCE_ARG_TYPE(_send, 0, IS_NUMBER); // the socket id
-  ENFORCE_ARG_TYPE(_send, 2, IS_NUMBER); // flags
+  ENFORCE_ARG_COUNT(send, 3);
+  ENFORCE_ARG_TYPE(send, 0, IS_NUMBER); // the socket id
+  ENFORCE_ARG_TYPE(send, 2, IS_NUMBER); // flags
 
   int sock = AS_NUMBER(args[0]);
   b_value data = args[1];
@@ -297,10 +297,10 @@ DECLARE_MODULE_METHOD(socket__send) {
 }
 
 DECLARE_MODULE_METHOD(socket__recv) {
-  ENFORCE_ARG_COUNT(_recv, 3);
-  ENFORCE_ARG_TYPE(_recv, 0, IS_NUMBER); // the socket id
-  ENFORCE_ARG_TYPE(_recv, 1, IS_NUMBER); // length to read
-  ENFORCE_ARG_TYPE(_recv, 2, IS_NUMBER); // flags
+  ENFORCE_ARG_COUNT(recv, 3);
+  ENFORCE_ARG_TYPE(recv, 0, IS_NUMBER); // the socket id
+  ENFORCE_ARG_TYPE(recv, 1, IS_NUMBER); // length to read
+  ENFORCE_ARG_TYPE(recv, 2, IS_NUMBER); // flags
 
   int sock = AS_NUMBER(args[0]);
   int length = AS_NUMBER(args[1]);
@@ -355,10 +355,10 @@ DECLARE_MODULE_METHOD(socket__recv) {
 }
 
 DECLARE_MODULE_METHOD(socket__read) {
-  ENFORCE_ARG_COUNT(_read, 3);
-  ENFORCE_ARG_TYPE(_read, 0, IS_NUMBER); // the socket id
-  ENFORCE_ARG_TYPE(_read, 1, IS_NUMBER); // length to read
-  ENFORCE_ARG_TYPE(_read, 2, IS_NUMBER); // flags
+  ENFORCE_ARG_COUNT(read, 3);
+  ENFORCE_ARG_TYPE(read, 0, IS_NUMBER); // the socket id
+  ENFORCE_ARG_TYPE(read, 1, IS_NUMBER); // length to read
+  ENFORCE_ARG_TYPE(read, 2, IS_NUMBER); // flags
 
   int sock = AS_NUMBER(args[0]);
   int length = AS_NUMBER(args[1]);
@@ -381,9 +381,9 @@ DECLARE_MODULE_METHOD(socket__read) {
 }
 
 DECLARE_MODULE_METHOD(socket__setsockopt) {
-  ENFORCE_ARG_COUNT(_setsockopt, 3);
-  ENFORCE_ARG_TYPE(_setsockopt, 0, IS_NUMBER); // the socket id
-  ENFORCE_ARG_TYPE(_setsockopt, 1, IS_NUMBER); // the option id
+  ENFORCE_ARG_COUNT(setsockopt, 3);
+  ENFORCE_ARG_TYPE(setsockopt, 0, IS_NUMBER); // the socket id
+  ENFORCE_ARG_TYPE(setsockopt, 1, IS_NUMBER); // the option id
 
   int sock = AS_NUMBER(args[0]);
   int option = AS_NUMBER(args[1]);
@@ -392,7 +392,7 @@ DECLARE_MODULE_METHOD(socket__setsockopt) {
   switch (option) {
     case SO_SNDTIMEO:
     case SO_RCVTIMEO: {
-      ENFORCE_ARG_TYPE(_setsockopt, 2, IS_NUMBER);
+      ENFORCE_ARG_TYPE(setsockopt, 2, IS_NUMBER);
 
 #ifdef _WIN32
       DWORD timeout = AS_NUMBER(value);
@@ -406,7 +406,7 @@ DECLARE_MODULE_METHOD(socket__setsockopt) {
 #endif
     }
     default: {
-      ENFORCE_ARG_TYPE(_setsockopt, 2, IS_BOOL);
+      ENFORCE_ARG_TYPE(setsockopt, 2, IS_BOOL);
       int val = AS_BOOL(value) ? 1 : 0;
       RETURN_NUMBER(setsockopt(sock, SOL_SOCKET, option, (const char *) &val, sizeof val));
     }
@@ -414,9 +414,9 @@ DECLARE_MODULE_METHOD(socket__setsockopt) {
 }
 
 DECLARE_MODULE_METHOD(socket__getsockopt) {
-  ENFORCE_ARG_COUNT(_getsockopt, 2);
-  ENFORCE_ARG_TYPE(_getsockopt, 0, IS_NUMBER); // the socket id
-  ENFORCE_ARG_TYPE(_getsockopt, 1, IS_NUMBER); // the option id
+  ENFORCE_ARG_COUNT(getsockopt, 2);
+  ENFORCE_ARG_TYPE(getsockopt, 0, IS_NUMBER); // the socket id
+  ENFORCE_ARG_TYPE(getsockopt, 1, IS_NUMBER); // the option id
 
   int sock = AS_NUMBER(args[0]);
   int option = AS_NUMBER(args[1]);
@@ -474,8 +474,8 @@ DECLARE_MODULE_METHOD(socket__getsockopt) {
 }
 
 DECLARE_MODULE_METHOD(socket__getsockinfo) {
-  ENFORCE_ARG_COUNT(_getsockinfo, 1);
-  ENFORCE_ARG_TYPE(_getsockinfo, 0, IS_NUMBER);
+  ENFORCE_ARG_COUNT(getsockinfo, 1);
+  ENFORCE_ARG_TYPE(getsockinfo, 0, IS_NUMBER);
 
   int sock = AS_NUMBER(args[0]);
 
@@ -512,9 +512,9 @@ DECLARE_MODULE_METHOD(socket__getsockinfo) {
 }
 
 DECLARE_MODULE_METHOD(socket__getaddrinfo) {
-  ENFORCE_ARG_COUNT(_getaddrinfo, 3);
-  ENFORCE_ARG_TYPE(_getaddrinfo, 0, IS_STRING);
-  ENFORCE_ARG_TYPE(_getaddrinfo, 2, IS_NUMBER);
+  ENFORCE_ARG_COUNT(getaddrinfo, 3);
+  ENFORCE_ARG_TYPE(getaddrinfo, 0, IS_STRING);
+  ENFORCE_ARG_TYPE(getaddrinfo, 2, IS_NUMBER);
 
   b_obj_string *addr = AS_STRING(args[0]);
   char *type = "80";
@@ -582,8 +582,8 @@ DECLARE_MODULE_METHOD(socket__getaddrinfo) {
 }
 
 DECLARE_MODULE_METHOD(socket__close) {
-  ENFORCE_ARG_COUNT(_close, 1);
-  ENFORCE_ARG_TYPE(_close, 0, IS_NUMBER);
+  ENFORCE_ARG_COUNT(close, 1);
+  ENFORCE_ARG_TYPE(close, 0, IS_NUMBER);
   int sock = AS_NUMBER(args[0]);
 
 //  // discard all leftover readable data...
@@ -596,9 +596,9 @@ DECLARE_MODULE_METHOD(socket__close) {
 }
 
 DECLARE_MODULE_METHOD(socket__shutdown) {
-  ENFORCE_ARG_COUNT(_shutdown, 2);
-  ENFORCE_ARG_TYPE(_shutdown, 0, IS_NUMBER);
-  ENFORCE_ARG_TYPE(_shutdown, 0, IS_NUMBER);
+  ENFORCE_ARG_COUNT(shutdown, 2);
+  ENFORCE_ARG_TYPE(shutdown, 0, IS_NUMBER);
+  ENFORCE_ARG_TYPE(shutdown, 0, IS_NUMBER);
   RETURN_NUMBER(shutdown((int) AS_NUMBER(args[0]), (int) AS_NUMBER(args[1])));
 }
 

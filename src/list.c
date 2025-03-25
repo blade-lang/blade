@@ -157,7 +157,7 @@ DECLARE_LIST_METHOD(remove_at) {
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
   int index = AS_NUMBER(args[0]);
   if (index < 0 || index >= list->items.count) {
-    RETURN_ERROR("list index %d out of range at remove_at()", index);
+    RETURN_RANGE_ERROR("list index %d out of range at remove_at()", index);
   }
 
   b_value value = list->items.values[index];
@@ -194,16 +194,6 @@ DECLARE_LIST_METHOD(reverse) {
 
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
   b_obj_list *nlist = (b_obj_list *) GC(new_list(vm));
-
-  /*// in-place reversal
-  int start = 0, end = list->items.count - 1;
-  while (start < end) {
-    b_value temp = list->items.values[start];
-    list->items.values[start] = list->items.values[end];
-    list->items.values[end] = temp;
-    start++;
-    end--;
-  }*/
 
   for (int i = list->items.count - 1; i >= 0; i--) {
     write_list(vm, nlist, list->items.values[i]);
@@ -248,9 +238,9 @@ DECLARE_LIST_METHOD(delete) {
   b_obj_list *list = AS_LIST(METHOD_OBJECT);
 
   if (lower_index < 0 || lower_index >= list->items.count) {
-    RETURN_ERROR("list index %d out of range at delete()", lower_index);
+    RETURN_RANGE_ERROR("list index %d out of range at delete()", lower_index);
   } else if (upper_index < lower_index || upper_index >= list->items.count) {
-    RETURN_ERROR("invalid upper limit %d at delete()", upper_index);
+    RETURN_RANGE_ERROR("invalid upper limit %d at delete()", upper_index);
   }
 
   for (int i = 0; i < list->items.count - upper_index; i++) {
@@ -393,7 +383,7 @@ DECLARE_LIST_METHOD(zip_from) {
 
   for (int i = 0; i < arg_list->items.count; i++) {
     if(!IS_LIST(arg_list->items.values[i])) {
-      RETURN_ERROR("invalid list in zip entries");
+      RETURN_TYPE_ERROR("invalid list in zip entries");
     }
   }
 
@@ -453,7 +443,7 @@ DECLARE_LIST_METHOD(__itern__) {
   }
 
   if (!IS_NUMBER(args[0])) {
-    RETURN_ERROR("lists are numerically indexed");
+    RETURN_ARGUMENT_ERROR("lists are numerically indexed");
   }
 
   int index = AS_NUMBER(args[0]);

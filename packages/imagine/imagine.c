@@ -12,10 +12,10 @@
 #include <gdfontt.h>
 
 #define CHECK_IMAGE_PTR(x) if((x) == NULL) \
-    RETURN_ERROR("Invalid image pointer.") \
+    RETURN_ARGUMENT_ERROR("Invalid image pointer.") \
 
 #define CHECK_FONT_PTR(x) if((x) == NULL) \
-    RETURN_ERROR("Invalid font pointer.") \
+    RETURN_ARGUMENT_ERROR("Invalid font pointer.") \
 
 #define CHECK_IMAGE(x) if((x) == NULL) \
     RETURN_ERROR(strerror(errno)) \

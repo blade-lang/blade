@@ -57,7 +57,7 @@ DECLARE_RANGE_METHOD(__itern__) {
   }
 
   if (!IS_NUMBER(args[0])) {
-    RETURN_ERROR("ranges are numerically indexed");
+    RETURN_ARGUMENT_ERROR("ranges are numerically indexed");
   }
 
   int index = (int)AS_NUMBER(args[0]) + 1;

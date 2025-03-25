@@ -43,10 +43,10 @@
       RETURN_ERROR(#fn "(): Out of memory while " #fn "ing data"); \
     } \
     case Z_DATA_ERROR: { \
-      RETURN_ERROR(#fn "(): invalid or incomplete " #fn " data"); \
+      RETURN_VALUE_ERROR(#fn "(): invalid or incomplete " #fn " data"); \
     } \
     case Z_STREAM_ERROR: { \
-      RETURN_ERROR(#fn "(): Bad compression level"); \
+      RETURN_VALUE_ERROR(#fn "(): Bad compression level"); \
     } \
     case Z_VERSION_ERROR: { \
       RETURN_ERROR(#fn "(): zlib version mismatch!"); \
@@ -305,7 +305,7 @@ DECLARE_MODULE_METHOD(zlib_gzread) {
       RETURN_ERROR("%s", gzerror(file[0], &err));
     }
   } else {
-    RETURN_ERROR("invalid GZ handle");
+    RETURN_ARGUMENT_ERROR("invalid GZ handle");
   }
 }
 

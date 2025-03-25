@@ -653,14 +653,14 @@ DECLARE_MODULE_METHOD(curl__easy_setopt) {
   if(IS_STRING(args[2])) {
     b_obj_string *str = AS_STRING(args[2]);
     if(str->length > CURL_MAX_INPUT_LENGTH) {
-      RETURN_ERROR("string length exceeds maximum input length of %d", CURL_MAX_INPUT_LENGTH);
+      RETURN_VALUE_ERROR("string length exceeds maximum input length of %d", CURL_MAX_INPUT_LENGTH);
     }
 
     result = curl_easy_setopt(curl, opt, str->chars);
   } else if(IS_BYTES(args[2])) {
     b_obj_bytes *bytes = AS_BYTES(args[2]);
     if(bytes->bytes.count > CURL_MAX_INPUT_LENGTH) {
-      RETURN_ERROR("bytes length exceeds maximum input length of %d", CURL_MAX_INPUT_LENGTH);
+      RETURN_VALUE_ERROR("bytes length exceeds maximum input length of %d", CURL_MAX_INPUT_LENGTH);
     }
 
     result = curl_easy_setopt(curl, opt, bytes->bytes.bytes);
@@ -734,7 +734,7 @@ DECLARE_MODULE_METHOD(curl__easy_getinfo) {
   }
 
   if(!found) {
-    RETURN_ERROR("invalid info type");
+    RETURN_ARGUMENT_ERROR("invalid info type");
   }
 
   int result = CURLE_BAD_FUNCTION_ARGUMENT;
@@ -863,7 +863,7 @@ DECLARE_MODULE_METHOD(curl__getdate) {
   ENFORCE_ARG_TYPE(getdate, 0, IS_STRING);
   time_t tv = curl_getdate(AS_C_STRING(args[0]), NULL);
   if(tv == -1) {
-    RETURN_ERROR("invalid datetime");
+    RETURN_ARGUMENT_ERROR("invalid datetime");
   }
 
   RETURN_NUMBER(tv);

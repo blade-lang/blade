@@ -19,10 +19,7 @@
 
 DECLARE_MODULE_METHOD(hash__crc32) {
   ENFORCE_ARG_RANGE(crc32, 1, 2);
-
-  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
-    RETURN_ERROR("crc32() expects string or bytes");
-  }
+  ENFORCE_ARG_TYPES(crc32, 0, IS_STRING, IS_BYTES);
 
   uint32_t crc = 0;
   if (!IS_NIL(args[1])) {
@@ -41,10 +38,7 @@ DECLARE_MODULE_METHOD(hash__crc32) {
 
 DECLARE_MODULE_METHOD(hash__adler32) {
   ENFORCE_ARG_RANGE(adler32, 1, 2);
-
-  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
-    RETURN_ERROR("adler32() expects string or bytes");
-  }
+  ENFORCE_ARG_TYPES(adler32, 0, IS_STRING, IS_BYTES);
 
   unsigned int adler = 1;
   if (!IS_NIL(args[1])) {
@@ -63,10 +57,7 @@ DECLARE_MODULE_METHOD(hash__adler32) {
 
 DECLARE_MODULE_METHOD(hash__md2) {
   ENFORCE_ARG_COUNT(md2, 1);
-
-  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
-    RETURN_ERROR("md2() expects string or bytes");
-  }
+  ENFORCE_ARG_TYPES(md2, 0, IS_STRING, IS_BYTES);
 
   char *result;
   if (IS_STRING(args[0])) {
@@ -82,10 +73,7 @@ DECLARE_MODULE_METHOD(hash__md2) {
 
 DECLARE_MODULE_METHOD(hash__md4) {
   ENFORCE_ARG_COUNT(md4, 1);
-
-  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
-    RETURN_ERROR("md4() expects string or bytes");
-  }
+  ENFORCE_ARG_TYPES(md4, 0, IS_STRING, IS_BYTES);
 
   char *result;
   if (IS_STRING(args[0])) {
@@ -101,10 +89,7 @@ DECLARE_MODULE_METHOD(hash__md4) {
 
 DECLARE_MODULE_METHOD(hash__md5) {
   ENFORCE_ARG_COUNT(md5, 1);
-
-  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
-    RETURN_ERROR("md5() expects string or bytes");
-  }
+  ENFORCE_ARG_TYPES(md5, 0, IS_STRING, IS_BYTES);
 
   char *result;
   if (IS_STRING(args[0])) {
@@ -138,10 +123,7 @@ DECLARE_MODULE_METHOD(hash__md5_file) {
 
 DECLARE_MODULE_METHOD(hash__sha1) {
   ENFORCE_ARG_COUNT(sha1, 1);
-
-  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
-    RETURN_ERROR("sha1() expects string or bytes");
-  }
+  ENFORCE_ARG_TYPES(sha1, 0, IS_STRING, IS_BYTES);
 
   char *result;
   if (IS_STRING(args[0])) {
@@ -157,10 +139,7 @@ DECLARE_MODULE_METHOD(hash__sha1) {
 
 DECLARE_MODULE_METHOD(hash__sha224) {
   ENFORCE_ARG_COUNT(sha224, 1);
-
-  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
-    RETURN_ERROR("sha224() expects string or bytes");
-  }
+  ENFORCE_ARG_TYPES(sha224, 0, IS_STRING, IS_BYTES);
 
   char *result;
   if (IS_STRING(args[0])) {
@@ -178,10 +157,7 @@ DECLARE_MODULE_METHOD(hash__sha224) {
 
 DECLARE_MODULE_METHOD(hash__sha256) {
   ENFORCE_ARG_COUNT(sha256, 1);
-
-  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
-    RETURN_ERROR("sha256() expects string or bytes");
-  }
+  ENFORCE_ARG_TYPES(sha256, 0, IS_STRING, IS_BYTES);
 
   char *result;
   if (IS_STRING(args[0])) {
@@ -197,10 +173,7 @@ DECLARE_MODULE_METHOD(hash__sha256) {
 
 DECLARE_MODULE_METHOD(hash__sha384) {
   ENFORCE_ARG_COUNT(sha384, 1);
-
-  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
-    RETURN_ERROR("sha384() expects string or bytes");
-  }
+  ENFORCE_ARG_TYPES(sha384, 0, IS_STRING, IS_BYTES);
 
   char *result;
   if (IS_STRING(args[0])) {
@@ -218,10 +191,7 @@ DECLARE_MODULE_METHOD(hash__sha384) {
 
 DECLARE_MODULE_METHOD(hash__sha512) {
   ENFORCE_ARG_COUNT(sha512, 1);
-
-  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
-    RETURN_ERROR("sha512() expects string or bytes");
-  }
+  ENFORCE_ARG_TYPES(sha512, 0, IS_STRING, IS_BYTES);
 
   char *result;
   if (IS_STRING(args[0])) {
@@ -237,10 +207,7 @@ DECLARE_MODULE_METHOD(hash__sha512) {
 
 DECLARE_MODULE_METHOD(hash__fnv1) {
   ENFORCE_ARG_COUNT(fnv1, 1);
-
-  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
-    RETURN_ERROR("fnv1() expects string or bytes");
-  }
+  ENFORCE_ARG_TYPES(fnv1, 0, IS_STRING, IS_BYTES);
 
   char *result;
   if (IS_STRING(args[0])) {
@@ -256,10 +223,7 @@ DECLARE_MODULE_METHOD(hash__fnv1) {
 
 DECLARE_MODULE_METHOD(hash__fnv1a) {
   ENFORCE_ARG_COUNT(fnv1a, 1);
-
-  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
-    RETURN_ERROR("fnv1a() expects string or bytes");
-  }
+  ENFORCE_ARG_TYPES(fnv1a, 0, IS_STRING, IS_BYTES);
 
   char *result;
   if (IS_STRING(args[0])) {
@@ -275,10 +239,7 @@ DECLARE_MODULE_METHOD(hash__fnv1a) {
 
 DECLARE_MODULE_METHOD(hash__fnv1_64) {
   ENFORCE_ARG_COUNT(fnv1_64, 1);
-
-  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
-    RETURN_ERROR("fnv1_64() expects string or bytes");
-  }
+  ENFORCE_ARG_TYPES(fnv1_64, 0, IS_STRING, IS_BYTES);
 
   char *result;
   if (IS_STRING(args[0])) {
@@ -294,10 +255,7 @@ DECLARE_MODULE_METHOD(hash__fnv1_64) {
 
 DECLARE_MODULE_METHOD(hash__fnv1a_64) {
   ENFORCE_ARG_COUNT(fnv1a64, 1);
-
-  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
-    RETURN_ERROR("fnv1a_64() expects string or bytes");
-  }
+  ENFORCE_ARG_TYPES(fnv1a64, 0, IS_STRING, IS_BYTES);
 
   char *result;
   if (IS_STRING(args[0])) {
@@ -313,10 +271,7 @@ DECLARE_MODULE_METHOD(hash__fnv1a_64) {
 
 DECLARE_MODULE_METHOD(hash__whirlpool) {
   ENFORCE_ARG_COUNT(whirlpool, 1);
-
-  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
-    RETURN_ERROR("whirlpool() expects string or bytes");
-  }
+  ENFORCE_ARG_TYPES(whirlpool, 0, IS_STRING, IS_BYTES);
 
   char *result;
   if (IS_STRING(args[0])) {
@@ -332,10 +287,7 @@ DECLARE_MODULE_METHOD(hash__whirlpool) {
 
 DECLARE_MODULE_METHOD(hash__snefru) {
   ENFORCE_ARG_COUNT(snefru, 1);
-
-  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
-    RETURN_ERROR("snefru() expects string or bytes");
-  }
+  ENFORCE_ARG_TYPES(snefru, 0, IS_STRING, IS_BYTES);
 
   char *result;
   if (IS_STRING(args[0])) {
@@ -350,11 +302,9 @@ DECLARE_MODULE_METHOD(hash__snefru) {
 }
 
 DECLARE_MODULE_METHOD(hash__siphash) {
-  ENFORCE_ARG_COUNT(_siphash, 2);
-
-  if (!IS_BYTES(args[0]) && !IS_BYTES(args[1])) {
-    RETURN_ERROR("_siphash() expects key and str as bytes");
-  }
+  ENFORCE_ARG_COUNT(siphash, 2);
+  ENFORCE_ARG_TYPE(siphash, 0, IS_BYTES);
+  ENFORCE_ARG_TYPE(siphash, 1, IS_BYTES);
 
   b_obj_bytes *key = AS_BYTES(args[0]);
   b_obj_bytes *str = AS_BYTES(args[1]);
@@ -369,10 +319,7 @@ DECLARE_MODULE_METHOD(hash__siphash) {
 
 DECLARE_MODULE_METHOD(hash__gost) {
   ENFORCE_ARG_COUNT(gost, 1);
-
-  if (!IS_STRING(args[0]) && !IS_BYTES(args[0])) {
-    RETURN_ERROR("gost() expects string or bytes");
-  }
+  ENFORCE_ARG_TYPES(gost, 0, IS_STRING, IS_BYTES);
 
   char *result;
   if (IS_STRING(args[0])) {

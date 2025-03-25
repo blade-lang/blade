@@ -147,17 +147,35 @@ void define_native_method(b_vm *vm, b_table *table, const char *name,
 bool is_false(b_value value);
 bool is_instance_of(b_obj_class *klass1, b_obj_class *klass2);
 
-bool do_throw_exception(b_vm *vm, bool is_assert, const char *format, ...);
-b_obj_instance *create_exception(b_vm *vm, b_obj_string *message);
+bool do_throw_exception(b_vm *vm, const char *type, bool is_assert, const char *format, ...);
+b_obj_instance *create_exception(b_vm *vm, const char* type, b_obj_string *message);
 
 #define EXIT_VM() return PTR_RUNTIME_ERR
 
-#define runtime_error(...)  do {                                                   \
-  if(!throw_exception(vm, ##__VA_ARGS__)){                                     \
+#define base_runtime_error(s, ...)  do {                                               \
+  if(!do_throw_exception(vm, (s), false, ##__VA_ARGS__)){                \
     EXIT_VM(); \
   }} while(0)
 
-#define throw_exception(v, ...) do_throw_exception(v, false, ##__VA_ARGS__)
+#define runtime_error(...)  base_runtime_error(NULL, ##__VA_ARGS__)
+#define numeric_error(...)  base_runtime_error("NumericError", ##__VA_ARGS__)
+#define argument_error(...)  base_runtime_error("ArgumentError", ##__VA_ARGS__)
+#define value_error(...)  base_runtime_error("ValueError", ##__VA_ARGS__)
+#define type_error(...)  base_runtime_error("TypeError", ##__VA_ARGS__)
+#define range_error(...)  base_runtime_error("RangeError", ##__VA_ARGS__)
+#define access_error(...)  base_runtime_error("AccessError", ##__VA_ARGS__)
+#define property_error(...)  base_runtime_error("PropertyError", ##__VA_ARGS__)
+#define undefined_error(...)  base_runtime_error("UndefinedError", ##__VA_ARGS__)
+
+#define throw_exception(v, ...) do_throw_exception(v, NULL, false, ##__VA_ARGS__)
+#define throw_numeric_error(v, ...) do_throw_exception(v, "NumericError", false, ##__VA_ARGS__)
+#define throw_argument_error(v, ...) do_throw_exception(v, "ArgumentError", false, ##__VA_ARGS__)
+#define throw_value_error(v, ...) do_throw_exception(v, "ValueError", false, ##__VA_ARGS__)
+#define throw_type_error(v, ...) do_throw_exception(v, "TypeError", false, ##__VA_ARGS__)
+#define throw_range_error(v, ...) do_throw_exception(v, "RangeError", false, ##__VA_ARGS__)
+#define throw_access_error(v, ...) do_throw_exception(v, "AccessError", false, ##__VA_ARGS__)
+#define throw_property_error(v, ...) do_throw_exception(v, "PropertyError", false, ##__VA_ARGS__)
+#define throw_undefined_error(v, ...) do_throw_exception(v, "UndefinedError", false, ##__VA_ARGS__)
 
 static inline b_obj *gc_protect(b_vm *vm, b_obj *object) {
   push(vm, OBJ_VAL(object));

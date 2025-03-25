@@ -55,13 +55,22 @@
 #define RETURN do { args[-1] = EMPTY_VAL; return true; } while(0)
 #define RETURN_NIL do { args[-1] = NIL_VAL; return true; } while(0)
 #define RETURN_EMPTY do  { args[-1] = NIL_VAL; return false; } while(0)
-#define RETURN_ERROR(...)                                                      \
+#define RETURN_BASE_ERROR(s, ...)                                                      \
   do {                                                                            \
     pop_n(vm, arg_count); \
-    throw_exception(vm, ##__VA_ARGS__);                                        \
+    do_throw_exception(vm, (s), false, ##__VA_ARGS__);                                        \
     args[-1] = FALSE_VAL; \
     return false;                                                          \
   } while(0)
+#define RETURN_ERROR(...) RETURN_BASE_ERROR(NULL, ##__VA_ARGS__)
+#define RETURN_NUMERIC_ERROR(...)  RETURN_BASE_ERROR("NumericError", ##__VA_ARGS__)
+#define RETURN_ARGUMENT_ERROR(...)  RETURN_BASE_ERROR("ArgumentError", ##__VA_ARGS__)
+#define RETURN_VALUE_ERROR(...)  RETURN_BASE_ERROR("ValueError", ##__VA_ARGS__)
+#define RETURN_TYPE_ERROR(...)  RETURN_BASE_ERROR("TypeError", ##__VA_ARGS__)
+#define RETURN_RANGE_ERROR(...)  RETURN_BASE_ERROR("RangeError", ##__VA_ARGS__)
+#define RETURN_ACCESS_ERROR(...)  RETURN_BASE_ERROR("AccessError", ##__VA_ARGS__)
+#define RETURN_PROPERTY_ERROR(...)  RETURN_BASE_ERROR("PropertyError", ##__VA_ARGS__)
+#define RETURN_UNDEFINED_ERROR(...)  RETURN_BASE_ERROR("UndefinedError", ##__VA_ARGS__)
 #define RETURN_BOOL(v) do { args[-1] = BOOL_VAL(v); return true; } while(0)
 #define RETURN_TRUE do { args[-1] = TRUE_VAL; return true; } while(0)
 #define RETURN_FALSE do { args[-1] = FALSE_VAL; return true; } while(0)
@@ -86,44 +95,44 @@
 
 #define ENFORCE_ARG_COUNT(name, d)   do {                                          \
   if (arg_count != (d)) {                                                        \
-    RETURN_ERROR(#name "() expects %d arguments, %d given", d, arg_count);     \
+    RETURN_ARGUMENT_ERROR(#name "() expects %d arguments, %d given", d, arg_count);     \
   } } while(0)
 
 #define ENFORCE_MIN_ARG(name, d)    do {                                           \
   if (arg_count < (d)) {                                                         \
-    RETURN_ERROR(#name "() expects minimum of %d arguments, %d given", d,      \
+    RETURN_ARGUMENT_ERROR(#name "() expects minimum of %d arguments, %d given", d,      \
                  arg_count);                                                   \
   } } while(0)
 
 #define ENFORCE_MAX_ARG(name, d)   do {                                            \
   if (arg_count < (d)) {                                                         \
-    RETURN_ERROR(#name "() expects maximum of %d arguments, %d given", d,      \
+    RETURN_ARGUMENT_ERROR(#name "() expects maximum of %d arguments, %d given", d,      \
                  arg_count);                                                   \
   } } while(0)
 
 #define ENFORCE_ARG_RANGE(name, low, up)   do {                                    \
   if (arg_count < (low) || arg_count > (up)) {                                     \
-    RETURN_ERROR(#name "() expects between %d and %d arguments, %d given",     \
+    RETURN_ARGUMENT_ERROR(#name "() expects between %d and %d arguments, %d given",     \
                  low, up, arg_count);                                          \
   } } while(0)
 
 #define ENFORCE_ARG_TYPE(name, i, type)     do {                                   \
   if (!type(args[i])) {                                                        \
-    RETURN_ERROR(#name                                                         \
+    RETURN_TYPE_ERROR(#name                                                         \
                  "() expects argument %d as " NORMALIZE(type) ", %s given",    \
                  (i) + 1, value_type(args[i]));                                  \
   } } while(0)
 
 #define ENFORCE_ARG_TYPES(name, i, type1, type2)  do {                                      \
   if (!type1(args[i]) && !type2(args[i])) {                                                        \
-    RETURN_ERROR(#name                                                         \
+    RETURN_TYPE_ERROR(#name                                                         \
                  "() expects argument %d as " NORMALIZE(type1) " or " NORMALIZE(type2) ", %s given",    \
                  (i) + 1, value_type(args[i]));                                  \
   } } while(0)
 
 #define ENFORCE_CONSTRUCTOR_ARG_TYPE(name, i, type)    do {                        \
   if (!type(args[i])) {                                                        \
-    RETURN_ERROR(#name                                                         \
+    RETURN_TYPE_ERROR(#name                                                         \
                  "() expects argument %d to class constructor as " NORMALIZE(  \
                      type) ", %s given",                                       \
                  (i) + 1, value_type(args[i]));                                  \
@@ -131,7 +140,7 @@
 
 #define EXCLUDE_ARG_TYPE(method_name, arg_type, index)      do {                   \
   if (arg_type(args[index])) {                                                 \
-    RETURN_ERROR("invalid type %s() as argument %d in %s()",                   \
+    RETURN_TYPE_ERROR("invalid type %s() as argument %d in %s()",                   \
                  value_type(args[index]), (index) + 1, #method_name);            \
   } } while(0)
 
@@ -155,13 +164,13 @@
   if ((re) == NULL) {                                                            \
     PCRE2_UCHAR8 buffer[256];                                                  \
     pcre2_get_error_message_8(error_number, buffer, sizeof(buffer));           \
-    RETURN_ERROR("regular expression compilation failed at offset %d: %s",     \
+    RETURN_VALUE_ERROR("regular expression compilation failed at offset %d: %s",     \
                  (int)(error_offset), buffer);                                   \
   } } while(0)
 
 #define REGEX_ASSERTION_ERROR(re, match_data, ovector)      do {                   \
   if ((ovector)[0] > (ovector)[1]) {                                               \
-    RETURN_ERROR(                                                            \
+    RETURN_VALUE_ERROR(                                                            \
         "match aborted: regular expression used \\K in an assertion %.*s to "  \
         "set match start after its end.",                                      \
         (int)((ovector)[0] - (ovector)[1]), (char *)(subject + (ovector)[1]));       \
@@ -184,9 +193,9 @@
 #define GET_REGEX_COMPILE_OPTIONS(string, regex_show_error)             \
   int32_t compile_options = is_regex(string);  do {                               \
   if ((regex_show_error) && (int)compile_options == -1) {                        \
-    RETURN_ERROR("RegexError: Invalid regex");          \
+    RETURN_VALUE_ERROR("RegexError: Invalid regex");          \
   } else if ((regex_show_error) && (int)compile_options > 1000000) {                  \
-    RETURN_ERROR("RegexError: invalid modifier '%c' ",       \
+    RETURN_VALUE_ERROR("RegexError: invalid modifier '%c' ",       \
                  (char)abs(1000000 - (int)compile_options));                             \
   } } while(0)
 
