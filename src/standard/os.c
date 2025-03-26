@@ -469,7 +469,7 @@ DECLARE_MODULE_METHOD(os__rename) {
 #ifdef IS_UNIX
 #define MvFile(old, new) rename((old), (new)) == 0
 #elif defined(_WIN32)
-#define MvFile(old, new) (MoveFileW((L ## old), (L ## new)))
+#define MvFile(old, new) (MoveFileW((old), (new)))
 #else
 #define MvFile(old, new) false
 #endif
