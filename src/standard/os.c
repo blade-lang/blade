@@ -466,20 +466,23 @@ DECLARE_MODULE_METHOD(os__basename) {
 }
 
 DECLARE_MODULE_METHOD(os__rename) {
-#ifdef IS_UNIX
-#define MvFile(old, new) rename((old), (new)) == 0
-#elif defined(_WIN32)
-#define MvFile(old, new) (MoveFileW((old), (new)))
-#else
-#define MvFile(old, new) false
-#endif
-
   ENFORCE_ARG_COUNT(rename, 2);
   ENFORCE_ARG_TYPE(rename, 0, IS_STRING);
   ENFORCE_ARG_TYPE(rename, 1, IS_STRING);
-  RETURN_BOOL(MvFile(AS_C_STRING(args[0]), AS_C_STRING(args[1])));
 
-#undef MvDir
+#ifdef IS_UNIX
+  RETURN_BOOL(rename(AS_C_STRING(args[0]), AS_C_STRING(args[1])) == 0);
+#elif defined(_WIN32)
+  wchar_t from_buff[4096];
+  wchar_t to_buff[4096];
+
+  MultiByteToWideChar(CP_ACP, 0, AS_C_STRING(args[0]), -1, from_buff, 4096);
+  MultiByteToWideChar(CP_ACP, 0, AS_C_STRING(args[1]), -1, to_buff, 4096);
+
+  RETURN_BOOL(MoveFileW((LPCWSTR)from_buff, (LPCWSTR)to_buff));
+#else
+  RETURN_FALSE;
+#endif
 }
 
 /** DIR TYPES BEGIN */
