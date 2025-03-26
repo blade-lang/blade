@@ -17,7 +17,7 @@ import json as js
 def length(value) {
   if is_iterable(value)
     return value.length()
-  raise Exception('value is not an iterable')
+  raise TypeError('value is not an iterable')
 }
 
 /**
@@ -70,7 +70,7 @@ def lower(value) {
  */
 def is(value, expected) {
   if !expected
-    raise Exception('"is" modifier expects a value')
+    raise ValueError('"is" modifier expects a value')
   return value == expected
 }
 
@@ -91,7 +91,7 @@ def is(value, expected) {
  */
 def not(value, expected) {
   if !expected
-    raise Exception('"not" modifier expects a value')
+    raise ValueError('"not" modifier expects a value')
   return value != expected
 }
 
@@ -155,7 +155,7 @@ def string(value) {
  */
 def trim(value) {
   if !is_string(value)
-    raise Exception('value is not a string')
+    raise TypeError('value is not a string')
   return value.trim()
 }
 
@@ -172,7 +172,7 @@ def trim(value) {
  */
 def title(value) {
   if !is_string(value)
-    raise Exception('value is not a string')
+    raise TypeError('value is not a string')
 
   return ' '.join(value.split(' ').map(@(val) {
     val = val.lower()
@@ -213,7 +213,7 @@ def alt(value, alternative) {
  */
 def first(value) {
   if !is_iterable(value)
-    raise Exception('value is not an iterable')
+    raise TypeError('value is not an iterable')
   return value ? value[0] : ''
 }
 
@@ -230,7 +230,7 @@ def first(value) {
  */
 def last(value) {
   if !is_iterable(value)
-    raise Exception('value is not an iterable')
+    raise TypeError('value is not an iterable')
   return value ? value[value.length() - 1] : ''
 }
 
@@ -247,7 +247,7 @@ def last(value) {
  */
 def line_breaks(value) {
   if !is_string(value)
-    raise Exception('value is not a string')
+    raise TypeError('value is not a string')
   return value.replace('\n', '<br/>')
 }
 
@@ -266,9 +266,9 @@ def line_breaks(value) {
  */
 def lpad(value, count) {
   if !is_string(value)
-    raise Exception('value is not a string')
+    raise TypeError('value is not a string')
   if !is_number(count) or !(is_string(count) and count.match('/^\d+(\.\d+)?$/'))
-    raise Exception('count is not a number')
+    raise TypeError('count is not a number')
 
   return value.lpad(to_number(count))
 }
@@ -288,9 +288,9 @@ def lpad(value, count) {
  */
 def rpad(value, count) {
   if !is_string(value)
-    raise Exception('value is not a string')
+    raise TypeError('value is not a string')
   if !is_string(count) or !count.match('/^\d+(\.\d+)?$/')
-    raise Exception('count is not a number')
+    raise TypeError('count is not a number')
 
   return value.rpad(to_number(count))
 }
@@ -310,9 +310,9 @@ def rpad(value, count) {
  */
 def join(value, glue) {
   if !is_iterable(value)
-    raise Exception('value is not an iterable')
+    raise TypeError('value is not an iterable')
   if !is_string(glue)
-    raise Exception('glue is not a string')
+    raise TypeError('glue is not a string')
 
   return glue.join(to_list(value))
 }
@@ -330,7 +330,7 @@ def join(value, glue) {
  */
 def url_encode(value) {
   if !is_string(value)
-    raise Exception('value is not a string')
+    raise TypeError('value is not a string')
   return url.encode(value)
 }
 

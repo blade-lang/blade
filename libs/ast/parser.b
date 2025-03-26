@@ -57,9 +57,9 @@ class Parser {
    */
   Parser(tokens, path) {
     if !is_list(tokens)
-      raise Exception('list expected in argument 1 (tokens)')
+      raise TypeError('list expected in argument 1 (tokens)')
     if !is_string(path)
-      raise Exception('string expected in argument 2 (path)')
+      raise TypeError('string expected in argument 2 (path)')
 
     # set instance variable token
     self._tokens = tokens

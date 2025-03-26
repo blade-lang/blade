@@ -128,11 +128,11 @@ def getch() {
 def readline(message, secure, obscure_text) {
 
   if message != nil and !is_string(message)
-    raise Exception('string expected in argument 1 (message)')
+    raise TypeError('string expected in argument 1 (message)')
   if secure != nil and !is_bool(secure)
-    raise Exception('boolean expected in argument 2 (secure)')
+    raise TypeError('boolean expected in argument 2 (secure)')
   if obscure_text != nil and !is_string(obscure_text)
-    raise Exception('string expected in argument 3 (obscure_text)')
+    raise TypeError('string expected in argument 3 (obscure_text)')
 
   if secure == nil secure = false
   if obscure_text == nil obscure_text = '*'

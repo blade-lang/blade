@@ -52,13 +52,13 @@ class TLSServer < HttpServer {
   TLSServer(port, host) {
 
     if !is_int(port) or port <= 0 {
-      raise HttpException('invalid port number')
+      raise ValueError('invalid port number')
     } else {
       self.port = port
     }
 
     if host != nil and !is_string(host) {
-      raise HttpException('invalid host')
+      raise ValueError('invalid host')
     } else if host != nil {
       self.host = host
     }
