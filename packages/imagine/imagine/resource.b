@@ -42,11 +42,11 @@ class ImageResource {
    */
   use(callback) {
     if !is_function(callback)
-      raise Exception('function(1) expected as callback')
+      raise TypeError('function(1) expected as callback')
     
     var fn_arity = _reflect.getfunctionmetadata(callback).arity
     if fn_arity != 1 
-      raise Exception('function must accept exactly one argument (callback)')
+      raise ValueError('function must accept exactly one argument (callback)')
 
     callback(self)
     _imagine.close(self._ptr)
@@ -98,7 +98,7 @@ class ImageResource {
    */
   set_pixel(x, y, color) {
     if !is_number(x) or !is_number(y) or !is_number(color) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
 
     _imagine.setpixel(self._ptr, x, y, color)
@@ -114,7 +114,7 @@ class ImageResource {
    */
   get_pixel(x, y) {
     if !is_number(x) or !is_number(y) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
 
     return _imagine.getpixel(self._ptr, x, y, self._true_color)
@@ -136,7 +136,7 @@ class ImageResource {
    */
   line(x1, y1, x2, y2, color) {
     if !is_number(x1) or !is_number(y1) or !is_number(x2) or !is_number(y2) or !is_number(color) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
 
     _imagine.line(self._ptr, x1, y1, x2, y2, color)
@@ -173,7 +173,7 @@ class ImageResource {
    */
   rectangle(x1, y1, x2, y2, color) {
     if !is_number(x1) or !is_number(y1) or !is_number(x2) or !is_number(y2) or !is_number(color) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
 
     _imagine.rectangle(self._ptr, x1, y1, x2, y2, color)
@@ -191,7 +191,7 @@ class ImageResource {
    */
   filled_rectangle(x1, y1, x2, y2, color) {
     if !is_number(x1) or !is_number(y1) or !is_number(x2) or !is_number(y2) or !is_number(color) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
 
     _imagine.filledrectangle(self._ptr, x1, y1, x2, y2, color)
@@ -206,7 +206,7 @@ class ImageResource {
    */
   safe_bound(x, y) {
     if !is_number(x) or !is_number(y) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
 
     return _imagine.boundsafe(self._ptr, x, y)
@@ -226,19 +226,19 @@ class ImageResource {
     if !color color = self.allocate_color(0, 0, 0, 0)
 
     if !is_number(x) or !is_number(y) {
-      raise Exception('number expected for x and y coordinate')
+      raise TypeError('number expected for x and y coordinate')
     }
 
     if !types.char(char) {
-      raise Exception('char expected for char, ${typeof(char)} given')
+      raise ValueError('char expected for char, ${typeof(char)} given')
     }
 
     if !is_number(color) {
-      raise Exception('number expected color, ${typeof(color)} given')
+      raise TypeError('number expected color, ${typeof(color)} given')
     }
 
     if !_reflect.isptr(font) or to_string(font).index_of('imagine::type::font') == -1 {
-      raise Exception('imagine::font expected font')
+      raise ValueError('imagine::font expected font')
     }
 
     _imagine.char(self._ptr, font, x, y, ord(char), color)
@@ -258,19 +258,19 @@ class ImageResource {
     if !color color = self.allocate_color(0, 0, 0, 0)
 
     if !is_number(x) or !is_number(y) {
-      raise Exception('number expected for x and y coordinate')
+      raise TypeError('number expected for x and y coordinate')
     }
 
     if !types.char(char) {
-      raise Exception('char expected for char, ${typeof(char)} given')
+      raise ValueError('char expected for char, ${typeof(char)} given')
     }
 
     if !is_number(color) {
-      raise Exception('number expected color, ${typeof(color)} given')
+      raise TypeError('number expected color, ${typeof(color)} given')
     }
 
     if !_reflect.isptr(font) or to_string(font).index_of('imagine::type::font') == -1 {
-      raise Exception('imagine::font expected font')
+      raise ValueError('imagine::font expected font')
     }
 
     _imagine.charup(self._ptr, font, x, y, ord(char), color)
@@ -290,19 +290,19 @@ class ImageResource {
     if !color color = self.allocate_color(0, 0, 0, 0)
 
     if !is_number(x) or !is_number(y) {
-      raise Exception('number expected for x and y coordinate')
+      raise TypeError('number expected for x and y coordinate')
     }
 
     if !is_string(text) {
-      raise Exception('string expected for text, ${typeof(text)} given')
+      raise TypeError('string expected for text, ${typeof(text)} given')
     }
 
     if !is_number(color) {
-      raise Exception('number expected color, ${typeof(color)} given')
+      raise TypeError('number expected color, ${typeof(color)} given')
     }
 
     if !_reflect.isptr(font) or to_string(font).index_of('imagine::type::font') == -1 {
-      raise Exception('imagine::font expected font')
+      raise ValueError('imagine::font expected font')
     }
 
     _imagine.string(self._ptr, font, x, y, text, color)
@@ -322,19 +322,19 @@ class ImageResource {
     if !color color = self.allocate_color(0, 0, 0, 0)
 
     if !is_number(x) or !is_number(y) {
-      raise Exception('number expected for x and y coordinate')
+      raise TypeError('number expected for x and y coordinate')
     }
 
     if !is_string(text) {
-      raise Exception('string expected for text, ${typeof(text)} given')
+      raise TypeError('string expected for text, ${typeof(text)} given')
     }
 
     if !is_number(color) {
-      raise Exception('number expected color, ${typeof(color)} given')
+      raise TypeError('number expected color, ${typeof(color)} given')
     }
 
     if !_reflect.isptr(font) or to_string(font).index_of('imagine::type::font') == -1 {
-      raise Exception('imagine::font expected font')
+      raise ValueError('imagine::font expected font')
     }
 
     _imagine.stringup(self._ptr, font, x, y, text, color)
@@ -353,23 +353,23 @@ class ImageResource {
    */
   polygon(points, color) {
     if !is_list(points)
-      raise Exception('list expected at points, ${typeof(points)} given')
+      raise TypeError('list expected at points, ${typeof(points)} given')
     if !is_number(color)
-      raise Exception('number expected color, ${typeof(color)} given')
+      raise TypeError('number expected color, ${typeof(color)} given')
 
     # validate the point
     for point in points {
       if !is_list(point) or point.length() != 2
-        raise Exception('invalid points data')
+        raise ValueError('invalid points data')
 
       for item in point {
         if !is_number(item)
-          raise Exception('invalid points data')
+          raise ValueError('invalid points data')
       }
     }
 
     if points.length() < 3
-      raise Exception('a minimum of three points expected')
+      raise ValueError('a minimum of three points expected')
 
     _imagine.polygon(self._ptr, points, color)
   }
@@ -387,23 +387,23 @@ class ImageResource {
    */
   open_polygon(points, color) {
     if !is_list(points)
-      raise Exception('list expected at points, ${typeof(points)} given')
+      raise TypeError('list expected at points, ${typeof(points)} given')
     if !is_number(color)
-      raise Exception('number expected color, ${typeof(color)} given')
+      raise TypeError('number expected color, ${typeof(color)} given')
 
     # validate the point
     for point in points {
       if !is_list(point) or point.length() != 2
-        raise Exception('invalid points data')
+        raise ValueError('invalid points data')
 
       for item in point {
         if !is_number(item)
-          raise Exception('invalid points data')
+          raise ValueError('invalid points data')
       }
     }
 
     if points.length() < 3
-      raise Exception('a minimum of three points expected')
+      raise ValueError('a minimum of three points expected')
 
     _imagine.openpolygon(self._ptr, points, color)
   }
@@ -421,23 +421,23 @@ class ImageResource {
    */
   filled_polygon(points, color) {
     if !is_list(points)
-      raise Exception('list expected at points, ${typeof(points)} given')
+      raise TypeError('list expected at points, ${typeof(points)} given')
     if !is_number(color)
-      raise Exception('number expected color, ${typeof(color)} given')
+      raise TypeError('number expected color, ${typeof(color)} given')
 
     # validate the point
     for point in points {
       if !is_list(point) or point.length() != 2
-        raise Exception('invalid points data')
+        raise ValueError('invalid points data')
 
       for item in point {
         if !is_number(item)
-          raise Exception('invalid points data')
+          raise ValueError('invalid points data')
       }
     }
 
     if points.length() < 3
-      raise Exception('a minimum of three points expected')
+      raise ValueError('a minimum of three points expected')
 
     _imagine.filledpolygon(self._ptr, points, color)
   }
@@ -463,7 +463,7 @@ class ImageResource {
   arc(x, y, width, height, start, end, color) {
     if !is_number(x) or !is_number(y) or !is_number(width) or 
       !is_number(height) or !is_number(start) or !is_number(end) or !is_number(color) {
-        raise Exception('number expected')
+        raise ArgumentError('number expected')
     }
 
     _imagine.arc(self._ptr, x, y, width, height, start, end, color)
@@ -499,7 +499,7 @@ class ImageResource {
     if !is_number(x) or !is_number(y) or !is_number(width) or 
       !is_number(height) or !is_number(start) or !is_number(end) or 
       !is_number(color) or !is_number(style) {
-        raise Exception('number expected')
+        raise ArgumentError('number expected')
     }
 
     _imagine.filledarc(self._ptr, x, y, width, height, start, end, color, style)
@@ -518,7 +518,7 @@ class ImageResource {
   ellipse(x, y, width, height, color) {
     if !is_number(x) or !is_number(y) or !is_number(width) or 
       !is_number(height) or !is_number(color) {
-        raise Exception('number expected')
+        raise ArgumentError('number expected')
     }
 
     _imagine.ellipse(self._ptr, x, y, width, height, color)
@@ -537,7 +537,7 @@ class ImageResource {
   filled_ellipse(x, y, width, height, color) {
     if !is_number(x) or !is_number(y) or !is_number(width) or 
       !is_number(height) or !is_number(color) {
-        raise Exception('number expected')
+        raise ArgumentError('number expected')
     }
 
     _imagine.filledellipse(self._ptr, x, y, width, height, color)
@@ -563,7 +563,7 @@ class ImageResource {
     if a == nil a = 0
 
     if !is_number(r) or !is_number(g) or !is_number(b) or !is_number(a) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
 
     if self._true_color {
@@ -592,7 +592,7 @@ class ImageResource {
     if a == nil a = 0
 
     if !is_number(r) or !is_number(g) or !is_number(b) or !is_number(a) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
 
     if self._true_color and a {
@@ -617,7 +617,7 @@ class ImageResource {
     if b == nil b = 0
 
     if !is_number(r) or !is_number(g) or !is_number(b) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
 
     return _imagine.colorclosesthwb(self._ptr, r, g, b)
@@ -639,7 +639,7 @@ class ImageResource {
     if a == nil a = 0
 
     if !is_number(r) or !is_number(g) or !is_number(b) or !is_number(a) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
 
     if self._true_color and a {
@@ -666,7 +666,7 @@ class ImageResource {
     if a == nil a = 0
 
     if !is_number(r) or !is_number(g) or !is_number(b) or !is_number(a) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
 
     if self._true_color and a {
@@ -683,7 +683,7 @@ class ImageResource {
    */
   deallocate_color(color) {
     if !is_number(color) {
-      raise Exception('number expected')
+      raise TypeError('number expected')
     }
 
     _imagine.colordeallocate(self._ptr, color)
@@ -702,7 +702,7 @@ class ImageResource {
    */
   color_transparent(color) {
     if !is_number(color) {
-      raise Exception('number expected')
+      raise TypeError('number expected')
     }
 
     _imagine.colortransparent(self._ptr, color)
@@ -715,7 +715,7 @@ class ImageResource {
    */
   palette_copy(image) {
     if !instance_of(image, ImageResource) {
-      raise Exception('ImageResource expected')
+      raise TypeError('ImageResource expected')
     }
 
     _imagine.palettecopy(self._ptr, image._ptr)
@@ -731,7 +731,7 @@ class ImageResource {
    */
   color_replace(src, dest) {
     if !is_number(src) or !is_number(dest) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
 
     return _imagine.colorreplace(self._ptr, src, dest) == 0
@@ -749,11 +749,11 @@ class ImageResource {
    */
   fill(x, y, color) {
     if !is_number(x) or !is_number(y) {
-      raise Exception('number expected for x and y coordinate')
+      raise TypeError('number expected for x and y coordinate')
     }
 
     if !is_number(color) {
-      raise Exception('number expected color, ${typeof(color)} given')
+      raise TypeError('number expected color, ${typeof(color)} given')
     }
 
     _imagine.fill(self._ptr, x, y, color)
@@ -770,11 +770,11 @@ class ImageResource {
    */
   fill_to_border(x, y, border, color) {
     if !is_number(x) or !is_number(y) {
-      raise Exception('number expected for x and y coordinate')
+      raise TypeError('number expected for x and y coordinate')
     } else if !is_number(border) {
-      raise Exception('number expected border, ${typeof(border)} given')
+      raise TypeError('number expected border, ${typeof(border)} given')
     } else if !is_number(color) {
-      raise Exception('number expected color, ${typeof(color)} given')
+      raise TypeError('number expected color, ${typeof(color)} given')
     }
 
     _imagine.filltoborder(self._ptr, x, y, border, color)
@@ -796,10 +796,10 @@ class ImageResource {
    */
   copy(src, dst_x, dst_y, src_x, src_y, width, height) {
     if !instance_of(src, ImageResource) {
-      raise Exception('image resource expected in argument 1, ${typeof(src)} given')
+      raise TypeError('image resource expected in argument 1, ${typeof(src)} given')
     } else if !is_number(dst_x) or !is_number(dst_y) or !is_number(src_x) or
         !is_number(src_y) or !is_number(width) or !is_number(height) {
-      raise Exception('number expected')
+      raise TypeError('number expected')
     }
     
     _imagine.copy(self._ptr, src.get_pointer(), dst_x, dst_y, src_x, src_y, width, height)
@@ -828,11 +828,11 @@ class ImageResource {
    */
   copy_merge(src, dst_x, dst_y, src_x, src_y, width, height, pct) {
     if !instance_of(src, ImageResource) {
-      raise Exception('image resource expected in argument 1, ${typeof(src)} given')
+      raise TypeError('image resource expected in argument 1, ${typeof(src)} given')
     } else if !is_number(dst_x) or !is_number(dst_y) or !is_number(src_x) or
         !is_number(src_y) or !is_number(width) or !is_number(height) or
             !is_number(pct) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
 
     _imagine.copymerge(self._ptr, src.get_pointer(), dst_x, dst_y, src_x, src_y, width, height, pct)
@@ -854,11 +854,11 @@ class ImageResource {
    */
   copy_merge_gray(src, dst_x, dst_y, src_x, src_y, width, height, pct) {
     if !instance_of(src, ImageResource) {
-      raise Exception('image resource expected in argument 1, ${typeof(src)} given')
+      raise TypeError('image resource expected in argument 1, ${typeof(src)} given')
     } else if !is_number(dst_x) or !is_number(dst_y) or !is_number(src_x) or
         !is_number(src_y) or !is_number(width) or !is_number(height) or
             !is_number(pct) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
     
     _imagine.copymergegray(self._ptr, src.get_pointer(), dst_x, dst_y, src_x, src_y, width, height, pct)
@@ -891,10 +891,10 @@ class ImageResource {
    */
   copy_resized(src, x, y, src_x, src_y, width, height, src_width, src_height) {
     if !instance_of(src, ImageResource) {
-      raise Exception('ImageResource expected in argument 1')
+      raise TypeError('ImageResource expected in argument 1')
     } else if !is_number(x) or !is_number(y) or !is_number(src_x) or !is_number(src_y) or
         !is_number(width) or !is_number(height) or !is_number(src_width) or !is_number(src_height) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
     
     _imagine.copyresized(self._ptr, src.get_pointer(), x, y, src_x, src_y, width, height, src_width, src_height)
@@ -930,10 +930,10 @@ class ImageResource {
    */
   copy_resampled(src, x, y, src_x, src_y, width, height, src_width, src_height) {
     if !instance_of(src, ImageResource) {
-      raise Exception('ImageResource expected in argument 1')
+      raise TypeError('ImageResource expected in argument 1')
     } else if !is_number(x) or !is_number(y) or !is_number(src_x) or !is_number(src_y) or
         !is_number(width) or !is_number(height) or !is_number(src_width) or !is_number(src_height) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
     
     _imagine.copyresampled(self._ptr, src.get_pointer(), x, y, src_x, src_y, width, height, src_width, src_height)
@@ -961,10 +961,10 @@ class ImageResource {
    */
   copy_rotated(src, x, y, src_x, src_y, src_width, src_height, angle) {
     if !instance_of(src, ImageResource) {
-      raise Exception('ImageResource expected in argument 1')
+      raise TypeError('ImageResource expected in argument 1')
     } else if !is_number(x) or !is_number(y) or !is_number(src_x) or !is_number(src_y) or
         !is_number(src_width) or !is_number(src_height) or !is_number(angle) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
     
     _imagine.copyrotated(self._ptr, src.get_pointer(), x, y, src_x, src_y, src_width, src_height, angle)
@@ -1004,7 +1004,7 @@ class ImageResource {
    */
   set_brush(brush) {
     if !instance_of(brush, ImageResource) {
-      raise Exception('ImageResource expected')
+      raise TypeError('ImageResource expected')
     }
     
     _imagine.setbrush(self._ptr, brush.get_pointer())
@@ -1038,7 +1038,7 @@ class ImageResource {
    */
   set_tile(tile) {
     if !instance_of(tile, ImageResource) {
-      raise Exception('ImageResource expected')
+      raise TypeError('ImageResource expected')
     }
     
     _imagine.setbrush(self._ptr, tile.get_pointer())
@@ -1053,12 +1053,12 @@ class ImageResource {
    */
   set_antialiased(color, dont_blend) {
     if !is_number(color) {
-      raise Exception('color must be a number')
+      raise TypeError('color must be a number')
     }
 
     if dont_blend == nil dont_blend = false
     if !is_bool(dont_blend) {
-      raise Exception('dont_blend must be boolean')
+      raise TypeError('dont_blend must be boolean')
     }
     
     _imagine.setantialiased(self._ptr, color, dont_blend ? 1 : 0)
@@ -1072,7 +1072,7 @@ class ImageResource {
    */
   set_thickness(thickness) {
     if !is_number(thickness) {
-      raise Exception('number expected')
+      raise TypeError('number expected')
     }
 
     _imagine.setthickness(self._ptr, thickness)
@@ -1088,7 +1088,7 @@ class ImageResource {
     if enable == nil enable = true
 
     if !is_bool(enable) {
-      raise Exception('boolean expected')
+      raise TypeError('boolean expected')
     }
 
     _imagine.interlace(self._ptr, enable ? 1 : 0)
@@ -1115,7 +1115,7 @@ class ImageResource {
     if enable == nil enable = true
 
     if !is_bool(enable) {
-      raise Exception('boolean expected')
+      raise TypeError('boolean expected')
     }
     
     _imagine.alphablending(self._ptr, enable ? 1 : 0)
@@ -1132,11 +1132,11 @@ class ImageResource {
     if !mode mode = flips.FLIP_BOTH
 
     if !is_number(mode) {
-      raise Exception('FLIP_* mode constant expected')
+      raise ValueError('FLIP_* mode constant expected')
     }
 
     if mode < flips.FLIP_BOTH or mode > flips.FLIP_VERTICAL {
-      raise Exception('invalid flip mode')
+      raise ValueError('invalid flip mode')
     }
 
     if mode == flips.FLIP_BOTH {
@@ -1160,7 +1160,7 @@ class ImageResource {
    */
   crop(x, y, width, height) {
     if !is_number(x) or !is_number(y) or !is_number(width) or !is_number(height) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
 
     return ImageResource(_imagine.crop(self._ptr, x, y, width, height))
@@ -1177,11 +1177,11 @@ class ImageResource {
     if mode == nil mode = crops.CROP_DEFAULT
 
     if !is_number(mode) {
-      raise Exception('CROP_* mode constant expected')
+      raise ValueError('CROP_* mode constant expected')
     }
 
     if mode < crops.CROP_DEFAULT or mode > crops.CROP_SIDES {
-      raise Exception('invalid crop mode')
+      raise ValueError('invalid crop mode')
     }
 
     return ImageResource(_imagine.cropauto(self._ptr, mode))
@@ -1210,14 +1210,14 @@ class ImageResource {
     }
 
     if !is_number(width) or !is_number(height) {
-      raise Exception('width and height must be numbers')
+      raise TypeError('width and height must be numbers')
     }
 
     if method == nil method = interpolations.INTERP_BILINEAR_FIXED
 
     if !is_number(method) or method < interpolations.INTERP_DEFAULT or
         method > interpolations.WELSH {
-      raise Exception('interpolation must be an INTERP_* constant')
+      raise ValueError('interpolation must be an INTERP_* constant')
     }
 
     return ImageResource(_imagine.scale(self._ptr, width, height, method))
@@ -1235,14 +1235,14 @@ class ImageResource {
    */
   rotate(angle, bg_color, method) {
     if !is_number(angle) or !is_number(bg_color) {
-      raise Exception('angle and bg_color must be numbers')
+      raise TypeError('angle and bg_color must be numbers')
     }
 
     if method == nil method = interpolations.INTERP_BILINEAR_FIXED
 
     if !is_number(method) or method < interpolations.INTERP_DEFAULT or
         method > interpolations.WELSH {
-      raise Exception('interpolation must be an INTERP_* constant')
+      raise ValueError('interpolation must be an INTERP_* constant')
     }
 
     return ImageResource(_imagine.rotate(self._ptr, angle, bg_color, method))
@@ -1260,7 +1260,7 @@ class ImageResource {
   save_alpha(save) {
     if save == nil save = true
     if !is_bool(save)
-      raise Exception('boolean expected')
+      raise TypeError('boolean expected')
 
     _imagine.savealpha(self._ptr, save ? 1 : 0)
   }
@@ -1276,7 +1276,7 @@ class ImageResource {
    */
   pixelate(block_size, mode) {
     if !is_number(block_size) or !is_number(mode)
-      raise Exception('number expected')
+      raise TypeError('number expected')
 
     _imagine.pixelate(self._ptr, block_size, mode)
   }
@@ -1292,15 +1292,15 @@ class ImageResource {
    */
   scatter(sub, plus, colors) {
     if !is_number(sub) or !is_number(plus)
-      raise Exception('number expected')
+      raise TypeError('number expected')
     
     if colors != nil {
       if !is_list(colors)
-        raise Exception('list of color expected in argument 3')
+        raise TypeError('list of color expected in argument 3')
       
       for color in colors {
         if !is_number(color)
-          raise Exception('invalid color in color list')
+          raise ValueError('invalid color in color list')
       }
     }
 
@@ -1316,7 +1316,7 @@ class ImageResource {
   smooth(weight) {
     if weight == nil weight = 1
     if !is_number(weight)
-      raise Exception('number expected')
+      raise TypeError('number expected')
 
     _imagine.smooth(self._ptr, weight)
   }
@@ -1344,7 +1344,7 @@ class ImageResource {
   blur(type) {
     if type == nil type = blurs.BLUR_GAUSSIAN
     if !is_number(type) or !(type != blurs.BLUR_GAUSSIAN and type != blurs.BLUR_SELECTIVE) {
-      raise Exception('BLUR_* constant expected')
+      raise ValueError('BLUR_* constant expected')
     }
 
     if type == blurs.BLUR_GAUSSIAN {
@@ -1390,7 +1390,7 @@ class ImageResource {
    */
   color(r, g, b, a) {
     if !is_number(r) or !is_number(g) or !is_number(b) or !is_number(a) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
 
     _imagine.color(self._ptr, r, g, b, a)
@@ -1404,7 +1404,7 @@ class ImageResource {
    */
   contrast(contrast) {
     if !is_number(contrast)
-      raise Exception('number expected')
+      raise TypeError('number expected')
 
     _imagine.contrast(self._ptr, contrast)
   }
@@ -1417,7 +1417,7 @@ class ImageResource {
    */
   brightness(brightness) {
     if !is_number(brightness)
-      raise Exception('number expected')
+      raise TypeError('number expected')
 
     _imagine.brightness(self._ptr, brightness)
   }
@@ -1435,7 +1435,7 @@ class ImageResource {
    */
   set_clip(x1, y1, x2, y2) {
     if !is_number(x1) or !is_number(y1) or !is_number(x2) or !is_number(y2) {
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     }
 
     _imagine.setclip(self._ptr, x1, y1, x2, y2)
@@ -1462,7 +1462,7 @@ class ImageResource {
    */
   set_resolution(res_x, res_y) {
     if !is_number(res_x) or !is_number(res_y)
-      raise Exception('number expected')
+      raise ArgumentError('number expected')
     
     _imagine.setresolution(self._ptr, res_x, res_y)
 
@@ -1495,9 +1495,9 @@ class ImageResource {
    */
   true_color_to_palette(dither, colors_wanted) {
     if !is_bool(dither_flag)
-      raise Exception('boolean expected as first argument')
+      raise TypeError('boolean expected as first argument')
     else if !is_number(colors_wanted)
-      raise Exception('number expected as second argument')
+      raise TypeError('number expected as second argument')
     
     var result = _imagine.truecolortopalette(self._ptr, dither_flag ? 1 : 0, colors_wanted)
 
@@ -1530,11 +1530,11 @@ class ImageResource {
    */
   match_color(image) {
     if !instance_of(image, ImageResource) {
-      raise Exception('ImageResource expected')
+      raise TypeError('ImageResource expected')
     }
 
     if !image.meta().true_color {
-      raise Exception('true color image expected')
+      raise ValueError('true color image expected')
     }
 
     return _imagine.colormatch(image.get_pointer(), self._ptr) == 1
@@ -1565,7 +1565,7 @@ class ImageResource {
    */
   compare(image) {
     if !instance_of(image, ImageResource) {
-      raise Exception('ImageResource expected')
+      raise TypeError('ImageResource expected')
     }
 
     return _imagine.imagecompare(self._ptr, image.get_pointer())
@@ -1588,12 +1588,12 @@ class ImageResource {
     if quality == nil quality = 10
 
     if !is_string(dest) and !is_file(dest) 
-      raise Exception('string path or file expected, ${typeof(dest)} given')
+      raise TypeError('string path or file expected, ${typeof(dest)} given')
     if !is_number(quality)
-      raise Exception('number expected at quality, ${typeof(quality)} given')
+      raise TypeError('number expected at quality, ${typeof(quality)} given')
 
     if quality < 1 or quality > 10 {
-      raise Exception('quality must be between 1 and 10')
+      raise ValueError('quality must be between 1 and 10')
     }
 
     if is_string(dest) {
@@ -1621,12 +1621,12 @@ class ImageResource {
     if quality == nil quality = 100
 
     if !is_string(dest) and !is_file(dest) 
-      raise Exception('string path or file expected, ${typeof(dest)} given')
+      raise TypeError('string path or file expected, ${typeof(dest)} given')
     if !is_number(quality)
-      raise Exception('number expected at quality, ${typeof(quality)} given')
+      raise TypeError('number expected at quality, ${typeof(quality)} given')
 
     if quality < 0 or quality > 100 {
-      raise Exception('quality must be between 0 and 100')
+      raise ValueError('quality must be between 0 and 100')
     }
 
     if is_string(dest) {
@@ -1654,12 +1654,12 @@ class ImageResource {
     if quality == nil quality = 100
 
     if !is_string(dest) and !is_file(dest) 
-      raise Exception('string path or file expected, ${typeof(dest)} given')
+      raise TypeError('string path or file expected, ${typeof(dest)} given')
     if !is_number(quality)
-      raise Exception('number expected at quality, ${typeof(quality)} given')
+      raise TypeError('number expected at quality, ${typeof(quality)} given')
 
     if quality < 0 or quality > 100 {
-      raise Exception('quality must be between 0 and 100')
+      raise ValueError('quality must be between 0 and 100')
     }
 
     if is_string(dest) {
@@ -1684,9 +1684,9 @@ class ImageResource {
     if foreground == nil foreground = self.allocate_color(0, 0, 0)
 
     if !is_string(dest) and !is_file(dest) 
-      raise Exception('string path or file expected, ${typeof(dest)} given')
+      raise TypeError('string path or file expected, ${typeof(dest)} given')
     if !is_number(foreground)
-      raise Exception('number expected at quality, ${typeof(foreground)} given')
+      raise TypeError('number expected at quality, ${typeof(foreground)} given')
 
     if is_string(dest) {
       dest = file(dest, 'wb')
@@ -1710,9 +1710,9 @@ class ImageResource {
     if quantization == nil quantization = quants.QUANT_DEFAULT
 
     if !is_string(dest) and !is_file(dest) 
-      raise Exception('string path or file expected, ${typeof(dest)} given')
+      raise TypeError('string path or file expected, ${typeof(dest)} given')
     if !is_number(quantization)
-      raise Exception('number expected at quality, ${typeof(quantization)} given')
+      raise TypeError('number expected at quality, ${typeof(quantization)} given')
 
     if is_string(dest) {
       dest = file(dest, 'wb')
@@ -1732,7 +1732,7 @@ class ImageResource {
    */
   export_tiff(dest) {
     if !is_string(dest) and !is_file(dest) 
-      raise Exception('string path or file expected, ${typeof(dest)} given')
+      raise TypeError('string path or file expected, ${typeof(dest)} given')
 
     if is_string(dest) {
       dest = file(dest, 'wb')
@@ -1761,14 +1761,14 @@ class ImageResource {
     if speed == nil speed = 1
 
     if !is_string(dest) and !is_file(dest) 
-      raise Exception('string path or file expected, ${typeof(dest)} given')
+      raise TypeError('string path or file expected, ${typeof(dest)} given')
     if !is_number(quality)
-      raise Exception('number expected at quality, ${typeof(quality)} given')
+      raise TypeError('number expected at quality, ${typeof(quality)} given')
     if !is_number(speed)
-      raise Exception('number expected at speed, ${typeof(speed)} given')
+      raise TypeError('number expected at speed, ${typeof(speed)} given')
 
     if quality < 0 or quality > 100 {
-      raise Exception('quality must be between 0 and 100')
+      raise ValueError('quality must be between 0 and 100')
     }
 
     if is_string(dest) {

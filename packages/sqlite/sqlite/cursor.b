@@ -121,7 +121,7 @@ class SQLite3Cursor {
       return _cursor_get(self._cursor, index)
     }
 
-    raise SQLiteException('column name or index expected')
+    raise ValueError('column name or index expected')
   }
 
   /**

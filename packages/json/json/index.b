@@ -99,7 +99,7 @@ def decode(value, allow_comments) {
  */
 def parse(path) {
   if !is_string(path)
-    raise Exception('file path expected, ${typeof(path)} given')
+    raise TypeError('file path expected, ${typeof(path)} given')
 
   var f = file(path)
   if !f.exists()

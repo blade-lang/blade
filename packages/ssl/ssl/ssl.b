@@ -17,7 +17,7 @@ class SSL {
    */
   SSL(context) {
     if !instance_of(context, SSLContext)
-      raise Exception('instance of SSLContext expected')
+      raise TypeError('instance of SSLContext expected')
     self._context = context
     self._ptr = _ssl.new(context.get_pointer())
   }
@@ -54,7 +54,7 @@ class SSL {
    */
   set_fd(fd) {
     if !is_int(fd)
-      raise Exception('fd must be an integer')
+      raise TypeError('fd must be an integer')
 
     return _ssl.set_fd(self._ptr, fd)
   }
@@ -102,7 +102,7 @@ class SSL {
    */
   write(data) {
     if !is_string(data) and !is_bytes(data)
-      raise Exception('string or bytes expected')
+      raise TypeError('string or bytes expected')
 
     if is_string(data) data = data.to_bytes()
 
@@ -132,9 +132,9 @@ class SSL {
     if is_blocking == nil is_blocking = false
     
     if !is_int(length)
-      raise Exception('integer expected in argument 1')
+      raise TypeError('integer expected in argument 1')
     if !is_bool(is_blocking)
-      raise Exception('boolean expected in argument 2')
+      raise TypeError('boolean expected in argument 2')
     
     var result = _ssl.read(self._ptr, length, is_blocking)
     if result == nil {

@@ -141,9 +141,9 @@ class TLSSocket {
    */
   TLSSocket(socket, context, ssl) {
     if socket != nil and !instance_of(socket, Socket)
-      raise Exception('instance of Socket expected in first argument')
+      raise TypeError('instance of Socket expected in first argument')
     if context != nil and !instance_of(context, SSLContext)
-      raise Exception('instance of SSLContext expected in second argument')
+      raise TypeError('instance of SSLContext expected in second argument')
 
     if !socket self._socket = Socket()
     else self._socket = socket
@@ -386,7 +386,7 @@ class TLSSocket {
    */
   set_context(context) {
     if !instance_of(content, SSLContext)
-      raise Exception('instance of SSLContext expected')
+      raise TypeError('instance of SSLContext expected')
     self._context = context
   }
 

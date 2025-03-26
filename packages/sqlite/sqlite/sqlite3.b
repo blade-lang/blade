@@ -81,7 +81,7 @@ class SQLite3 {
    */
   exec(query, params) {
     if !is_string(query)
-      raise SQLiteException('string expected, ${typeof(query)} given')
+      raise TypeError('string expected, ${typeof(query)} given')
 
     if !self._is_open
       raise SQLiteException('database not open for exec')

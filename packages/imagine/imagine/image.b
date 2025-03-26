@@ -27,11 +27,11 @@ class Image {
     }
 
     if !is_number(width)
-      raise Exception('number expected at width expected, ${typeof(width)} given')
+      raise TypeError('number expected at width expected, ${typeof(width)} given')
     if !is_number(height)
-      raise Exception('number expected at height expected, ${typeof(width)} given')
+      raise TypeError('number expected at height expected, ${typeof(width)} given')
     if !is_bool(use_true_colors)
-      raise Exception('boolean expected at use_true_colors expected, ${typeof(use_true_colors)} given')
+      raise TypeError('boolean expected at use_true_colors expected, ${typeof(use_true_colors)} given')
 
     return ImageResource(_imagine.new(width, height, use_true_colors))
   }
@@ -45,7 +45,7 @@ class Image {
    */
   static from_png(src) {
     if !is_string(src) and !is_file(src) 
-      raise Exception('string path or file expected, ${typeof(src)} given')
+      raise TypeError('string path or file expected, ${typeof(src)} given')
 
     if is_string(src) {
       src = file(src)
@@ -71,7 +71,7 @@ class Image {
    */
   static from_jpeg(src) {
     if !is_string(src) and !is_file(src) 
-      raise Exception('string path or file expected, ${typeof(src)} given')
+      raise TypeError('string path or file expected, ${typeof(src)} given')
 
     if is_string(src) {
       src = file(src)
@@ -96,7 +96,7 @@ class Image {
    */
   static from_gif(src) {
     if !is_string(src) and !is_file(src) 
-      raise Exception('string path or file expected, ${typeof(src)} given')
+      raise TypeError('string path or file expected, ${typeof(src)} given')
 
     if is_string(src) {
       src = file(src)
@@ -121,7 +121,7 @@ class Image {
    */
   static from_bmp(src) {
     if !is_string(src) and !is_file(src) 
-      raise Exception('string path or file expected, ${typeof(src)} given')
+      raise TypeError('string path or file expected, ${typeof(src)} given')
 
     if is_string(src) {
       src = file(src)
@@ -146,7 +146,7 @@ class Image {
    */
   static from_wbmp(src) {
     if !is_string(src) and !is_file(src) 
-      raise Exception('string path or file expected, ${typeof(src)} given')
+      raise TypeError('string path or file expected, ${typeof(src)} given')
 
     if is_string(src) {
       src = file(src)
@@ -171,7 +171,7 @@ class Image {
    */
   static from_tga(src) {
     if !is_string(src) and !is_file(src) 
-      raise Exception('string path or file expected, ${typeof(src)} given')
+      raise TypeError('string path or file expected, ${typeof(src)} given')
 
     if is_string(src) {
       src = file(src)
@@ -196,7 +196,7 @@ class Image {
    */
   static from_tiff(src) {
     if !is_string(src) and !is_file(src) 
-      raise Exception('string path or file expected, ${typeof(src)} given')
+      raise TypeError('string path or file expected, ${typeof(src)} given')
 
     if is_string(src) {
       src = file(src)
@@ -221,7 +221,7 @@ class Image {
    */
   static from_webp(src) {
     if !is_string(src) and !is_file(src) 
-      raise Exception('string path or file expected, ${typeof(src)} given')
+      raise TypeError('string path or file expected, ${typeof(src)} given')
 
     if is_string(src) {
       src = file(src)
@@ -246,7 +246,7 @@ class Image {
    */
   static from_avif(src) {
     if !is_string(src) and !is_file(src) 
-      raise Exception('string path or file expected, ${typeof(src)} given')
+      raise TypeError('string path or file expected, ${typeof(src)} given')
 
     if is_string(src) {
       src = file(src)
@@ -273,7 +273,7 @@ class Image {
    */
   static from_file(src) {
     if !is_string(src) and !is_file(src) 
-      raise Exception('string path or file expected, ${typeof(src)} given')
+      raise TypeError('string path or file expected, ${typeof(src)} given')
 
     if is_file(src) {
       src = file.abs_path()

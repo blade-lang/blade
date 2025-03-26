@@ -15,7 +15,7 @@ class CurlMime {
    */
   CurlMime(curl) {
     if !instance_of(curl, Curl)
-      raise Exception('instance of Curl expected')
+      raise TypeError('instance of Curl expected')
     self._ptr = _curl.mime_init(curl.get_pointer())
   }
 
@@ -28,7 +28,7 @@ class CurlMime {
    */
   add(name, value) {
     if !is_string(name)
-      raise Exception('name must be string')
+      raise TypeError('name must be string')
 
     # This allows us to benefit from to_string decorators.
     if !is_string(value) value = to_string(value)
@@ -48,7 +48,7 @@ class CurlMime {
    */
   add_as(value, type) {
     if !is_string(type)
-      raise Exception('type must be string')
+      raise TypeError('type must be string')
 
     # This allows us to benefit from to_string decorators.
     if !is_string(value) value = to_string(value)
@@ -82,7 +82,7 @@ class CurlMime {
    */
   add_file(name, value) {
     if !is_string(name)
-      raise Exception('name must be string')
+      raise TypeError('name must be string')
 
     # This allows us to benefit from to_string decorators.
     if !is_string(value) value = to_string(value)
@@ -102,9 +102,9 @@ class CurlMime {
    */
   add_mime(mime, type) {
     if !instance_of(mime, CurlMime)
-      raise Exception('mime must be an instance of CurlMime')
+      raise TypeError('mime must be an instance of CurlMime')
     if !is_string(type)
-      raise Exception('type must be string')
+      raise TypeError('type must be string')
 
     var part = _curl.mime_addpart(self._ptr)
     if _curl.mime_subparts(part, mime.get_pointer())
@@ -119,7 +119,7 @@ class CurlMime {
    */
   set_encoding(encoding) {
     if !is_string(encoding)
-      raise Exception('encoding must be string')
+      raise TypeError('encoding must be string')
     _curl.mime_encoding(self._ptr)
   }
 
@@ -143,7 +143,7 @@ class CurlList {
    */
   CurlList(items) {
     if !is_list(items)
-      raise Exception('list expected')
+      raise TypeError('list expected')
 
     self._ptr = _curl.slist_create(items)
     if self._ptr == nil 
