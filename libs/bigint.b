@@ -963,7 +963,7 @@ class BigInt {
 
   static max(left, right) {
     if !BigInt.isBigInt(left) or !BigInt.isBigInt(right) {
-      raise Exception('BigInt.max expects both numbers as BigInt')
+      raise TypeError('BigInt.max expects both numbers as BigInt')
     }
 
     if left.cmp(right) > 0 return left
@@ -972,7 +972,7 @@ class BigInt {
 
   static min(left, right) {
     if !BigInt.isBigInt(left) or !BigInt.isBigInt(right) {
-      raise Exception('BigInt.min expects both numbers as BigInt')
+      raise TypeError('BigInt.min expects both numbers as BigInt')
     }
 
     if left.cmp(right) < 0 return left
@@ -1268,9 +1268,9 @@ class BigInt {
     padding = padding ? (padding | 0 or 1) : 1
 
     if base != 'hex' and (!is_number(base) or !((base | 0) and base >= 2 and base <= 36)) {
-      raise Exception("base should be between 2 and 36 or the string 'hex'")
+      raise ValueError("base should be between 2 and 36 or the string 'hex'")
     } else if !is_number(padding) {
-      raise Exception('padding must be a number')
+      raise TypeError('padding must be a number')
     }
 
     var out
@@ -3144,7 +3144,7 @@ class BigInt {
    */
   andln(num) {
     if !is_number(num) {
-      raise Exception('number expected for operation')
+      raise TypeError('number expected for operation')
     }
 
     return self.words[0] & num
@@ -3159,7 +3159,7 @@ class BigInt {
    */
   bincn(bit) {
     if !is_number(bit) {
-      raise Exception('number expected for operation')
+      raise TypeError('number expected for operation')
     }
 
     var r = bit % 26
@@ -3210,7 +3210,7 @@ class BigInt {
    */
   cmpn(num) {
     if !is_number(num) {
-      raise Exception('number expected for operation')
+      raise TypeError('number expected for operation')
     }
 
     var negative = num < 0
@@ -3458,7 +3458,7 @@ class BigInt {
       return self.subn(__arg__)
     }
 
-    raise Exception('BigInt operation - not permitted on ${typeof(__arg__)}')
+    raise NumericError('BigInt operation - not permitted on ${typeof(__arg__)}')
   }
 
   def + {
@@ -3468,7 +3468,7 @@ class BigInt {
       return self.addn(__arg__)
     }
 
-    raise Exception('BigInt operation + not permitted on ${typeof(__arg__)}')
+    raise NumericError('BigInt operation + not permitted on ${typeof(__arg__)}')
   }
 
   def * {
@@ -3478,7 +3478,7 @@ class BigInt {
       return self.muln(__arg__)
     }
 
-    raise Exception('BigInt operation * not permitted on ${typeof(__arg__)}')
+    raise NumericError('BigInt operation * not permitted on ${typeof(__arg__)}')
   }
 
   def / {
@@ -3488,7 +3488,7 @@ class BigInt {
       return self.divn(__arg__)
     }
 
-    raise Exception('BigInt operation / not permitted on ${typeof(__arg__)}')
+    raise NumericError('BigInt operation / not permitted on ${typeof(__arg__)}')
   }
 
   def ** {
@@ -3498,7 +3498,7 @@ class BigInt {
       return self.pow(bigint(__arg__))
     }
 
-    raise Exception('BigInt operation ** not permitted on ${typeof(__arg__)}')
+    raise NumericError('BigInt operation ** not permitted on ${typeof(__arg__)}')
   }
 
   def % {
@@ -3508,7 +3508,7 @@ class BigInt {
       return BigInt(self.modrn(__arg__))
     }
 
-    raise Exception('BigInt operation % not permitted on ${typeof(__arg__)}')
+    raise NumericError('BigInt operation % not permitted on ${typeof(__arg__)}')
   }
 
   def // {
@@ -3518,7 +3518,7 @@ class BigInt {
       return self.divmod(bigint(__arg__)).div
     }
 
-    raise Exception('BigInt operation // not permitted on ${typeof(__arg__)}')
+    raise NumericError('BigInt operation // not permitted on ${typeof(__arg__)}')
   }
 
   def | {
@@ -3528,7 +3528,7 @@ class BigInt {
       return self.or_(bigint(__arg__))
     }
 
-    raise Exception('BigInt operation | not permitted on ${typeof(__arg__)}')
+    raise NumericError('BigInt operation | not permitted on ${typeof(__arg__)}')
   }
 
   def & {
@@ -3538,7 +3538,7 @@ class BigInt {
       return self.andln(__arg__)
     }
 
-    raise Exception('BigInt operation & not permitted on ${typeof(__arg__)}')
+    raise NumericError('BigInt operation & not permitted on ${typeof(__arg__)}')
   }
 
   def ^ {
@@ -3548,7 +3548,7 @@ class BigInt {
       return self.xor(bigint(__arg__))
     }
 
-    raise Exception('BigInt operation ^ not permitted on ${typeof(__arg__)}')
+    raise NumericError('BigInt operation ^ not permitted on ${typeof(__arg__)}')
   }
 
   def << {
@@ -3558,7 +3558,7 @@ class BigInt {
       return self.shln(__arg__)
     }
 
-    raise Exception('BigInt operation << not permitted on ${typeof(__arg__)}')
+    raise NumericError('BigInt operation << not permitted on ${typeof(__arg__)}')
   }
 
   def >> {
@@ -3568,7 +3568,7 @@ class BigInt {
       return self.shrn(__arg__)
     }
 
-    raise Exception('BigInt operation >> not permitted on ${typeof(__arg__)}')
+    raise NumericError('BigInt operation >> not permitted on ${typeof(__arg__)}')
   }
 
   def ~ {
@@ -3576,7 +3576,7 @@ class BigInt {
   }
 
   def >>> {
-    raise Exception('BigInt does not support >>> operations')
+    raise NumericError('BigInt does not support >>> operations')
   }
 
   def > {
@@ -3586,7 +3586,7 @@ class BigInt {
       return self.gtn(__arg__)
     }
 
-    raise Exception('BigInt operation > not permitted on ${typeof(__arg__)}')
+    raise NumericError('BigInt operation > not permitted on ${typeof(__arg__)}')
   }
 
   def < {
@@ -3596,7 +3596,7 @@ class BigInt {
       return self.ltn(__arg__)
     }
 
-    raise Exception('BigInt operation < not permitted on ${typeof(__arg__)}')
+    raise NumericError('BigInt operation < not permitted on ${typeof(__arg__)}')
   }
 
   def = {
@@ -3606,7 +3606,7 @@ class BigInt {
       return self.eqn(__arg__)
     }
 
-    raise Exception('BigInt operation = not permitted on ${typeof(__arg__)}')
+    raise NumericError('BigInt operation = not permitted on ${typeof(__arg__)}')
   }
 }
 
@@ -3693,7 +3693,7 @@ def _sort(list, low, high) {
  */
 def sort(items) {
   if !is_list(items) {
-    raise Exception('list expected, ${typeof(items)} given')
+    raise TypeError('list expected, ${typeof(items)} given')
   }
 
   if items.is_empty() {
@@ -3703,7 +3703,7 @@ def sort(items) {
   # validate the arguments passed
   for item in items {
     if !BigInt.isBigInt(item) {
-      raise Exception('invalid BigInt in sort()')
+      raise ValueError('invalid BigInt in sort()')
     }
   }
 

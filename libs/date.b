@@ -81,7 +81,7 @@ var _date_ends = ['th', 'st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th', 'th']
 
 def _check_int_field(field, name) {
   if !is_int(field)
-    raise Exception('${name} must be an integer')
+    raise TypeError('${name} must be an integer')
 }
 
 def _check_date_fields(year, month, day, hour, minute, seconds) {
@@ -90,23 +90,23 @@ def _check_date_fields(year, month, day, hour, minute, seconds) {
   _check_int_field(day, 'day')
 
   if MIN_YEAR > year or year > MAX_YEAR
-    raise Exception('year must be in ${MIN_YEAR}..${MAX_YEAR}')
+    raise ValueError('year must be in ${MIN_YEAR}..${MAX_YEAR}')
   if 1 > month or month > 12
-    raise Exception('month must be in 1..12')
+    raise ValueError('month must be in 1..12')
   var dim = _dim(year, month)   
   if 1 > month or month > dim
-    raise Exception('month must be in 1..${dim}')
+    raise ValueError('month must be in 1..${dim}')
 
   _check_int_field(hour, 'hour')
   _check_int_field(minute, 'minute')
   _check_int_field(seconds, 'seconds')
 
   if 0 > hour or hour > 23
-    raise Exception('hour must be in 0..23')
+    raise ValueError('hour must be in 0..23')
   if 0 > minute or minute > 59
-    raise Exception('minute must be in 0..59')
+    raise ValueError('minute must be in 0..59')
   if 0 > seconds or seconds > 59
-    raise Exception('seconds must be in 0..59')
+    raise ValueError('seconds must be in 0..59')
 }
 
 
@@ -368,6 +368,10 @@ class Date {
    * @returns number
    */
   days_before_month(month) {
+    if !is_number(month) {
+      raise TypeError('number expected, ${typeof(month)} given')
+    }
+
     assert month >= 1 and month <= 12, 'month must be in 1..12'
 
     var start = self.month, end = month, day = self.day, comparator = end < 2
@@ -558,6 +562,10 @@ class Date {
    * @returns string
    */
   format(format) {
+    if !is_string(format) {
+      raise TypeError('string expected, ${typeof(format)} given')
+    }
+
     var result = ''
     iter var i = 0; i < format.length(); i++ {
       using format[i] {
@@ -847,6 +855,9 @@ class Date {
  * @returns Date
  */
 def from_time(time) {
+  if !is_number(time) {
+    raise TypeError('number expected, ${typeof(time)} given')
+  }
 
   var microseconds = 0
   if time > 9999999999 { 
@@ -861,7 +872,7 @@ def from_time(time) {
       microseconds = ((time - (time // 1)) * 1000000 % 1000000 // 1) / 1000000
       time //= 1
     } else {
-      raise Exception('time out of range')
+      raise RangeError('time out of range')
     }
   }
 
@@ -987,7 +998,13 @@ def from_time(time) {
  * @returns number
  */
 def from_jd(jdate) {
-  if jdate < 0 raise Exception('Invalid julian date')
+  if !is_number(jdate) {
+    raise TypeError('number expected, ${typeof(jdate)} given')
+  }
+
+  if jdate < 0 {
+    raise ValueError('Invalid julian date')
+  }
 
   var x = jdate + 0.5, z = int(x), f = x - z
   var y = int((z - 1867216.25) / 36524.25)

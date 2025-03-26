@@ -275,7 +275,7 @@ var Critical = LogLevel.Critical
  */
 def get_level_name(level) {
   if !is_number(level) {
-    raise Exception('invalid log level')
+    raise ValueError('invalid log level')
   }
 
   level = enum.ensure(LogLevel, level)
@@ -314,7 +314,7 @@ class Transport {
    */
   set_level(level) {
     if !is_number(level) {
-      raise Exception('invalid log level')
+      raise ValueError('invalid log level')
     }
 
     self._level = enum.ensure(LogLevel, level)
@@ -342,7 +342,7 @@ class Transport {
    */
   set_max_level(level) {
     if !is_number(level) {
-      raise Exception('invalid log level')
+      raise ValueError('invalid log level')
     }
 
     self.__max_level = enum.ensure(LogLevel, level)
@@ -367,7 +367,7 @@ class Transport {
    */
   set_name(name) {
     if !is_string(name) {
-      raise Exception('string expected, ${typeof(name)} given')
+      raise TypeError('string expected, ${typeof(name)} given')
     }
   
     self._log_name = name
@@ -393,7 +393,7 @@ class Transport {
    */
   set_time_format(format) {
     if !is_string(format) {
-      raise Exception('string expected, ${typeof(name)} given')
+      raise TypeError('string expected, ${typeof(name)} given')
     }
   
     self.__time_format = format
@@ -421,7 +421,7 @@ class Transport {
     if show == nil show = true
 
     if !is_bool(show) {
-      raise Exception('boolean expected, ${typeof(show)} given')
+      raise TypeError('boolean expected, ${typeof(show)} given')
     }
 
     self._show_name = show
@@ -439,7 +439,7 @@ class Transport {
     if show == nil show = true
 
     if !is_bool(show) {
-      raise Exception('boolean expected, ${typeof(show)} given')
+      raise TypeError('boolean expected, ${typeof(show)} given')
     }
 
     self._show_time = show
@@ -457,7 +457,7 @@ class Transport {
     if show == nil show = true
 
     if !is_bool(show) {
-      raise Exception('boolean expected, ${typeof(show)} given')
+      raise TypeError('boolean expected, ${typeof(show)} given')
     }
 
     self._show_level = show
@@ -478,7 +478,7 @@ class Transport {
    */
   set_formatter(formatter) {
     if !is_function(formatter) {
-      raise Exception('function expected, ${typeof(formatter)} given')
+      raise TypeError('function expected, ${typeof(formatter)} given')
     }
   
     self.__formatter = formatter
@@ -504,7 +504,7 @@ class Transport {
    */
   can_log(level) {
     if !is_number(level) {
-      raise Exception('invalid log level')
+      raise ValueError('invalid log level')
     }
     
     return self.__enabled and self._level <= level and 
@@ -592,7 +592,7 @@ class Transport {
    * @raises Exception
    */
   write(message, level) {
-    raise Exception('not implemented')
+    raise NotImplementedError()
   }
 
   /**
@@ -616,7 +616,7 @@ class Transport {
 # or raises an Exception if not.
 def _assert_transport(obj) {
   if !instance_of(obj, Transport) {
-    raise Exception('invalid Transport')
+    raise ValueError('invalid Transport')
   }
 
   return obj
@@ -687,7 +687,7 @@ var _default_transport = ConsoleTransport()
  */
 def set_level(level) {
   if !is_number(level) {
-    raise Exception('invalid log level')
+    raise ValueError('invalid log level')
   }
 
   _default_log_level = enum.ensure(LogLevel, level)
@@ -705,7 +705,7 @@ def set_level(level) {
  */
 def set_name(name) {
   if !is_string(name) {
-    raise Exception('string expected, ${typeof(name)} given')
+    raise TypeError('string expected, ${typeof(name)} given')
   }
 
   _default_transport.set_name(name)

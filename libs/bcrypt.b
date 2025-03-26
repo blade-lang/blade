@@ -268,7 +268,7 @@ def _encode(b, len) {
       c1, c2
 
   if len <= 0 or len > b.length()
-    raise Exception('Illegal len: ${len}')
+    raise ValueError('Illegal len: ${len}')
 
   while off < len {
     c1 = b[off++ - 1] & 0xff
@@ -303,7 +303,7 @@ def _decode(s, len) {
       c1, c2, c3, c4, o, code,
       codec_length = _CODEC_INDEX.length()
 
-  if len <= 0 raise Exception('Illegal len: ${len}')
+  if len <= 0 raise ValueError('Illegal len: ${len}')
 
   while off < slen - 1 and olen < len {
     code = ord(s[off++ - 1])
@@ -531,10 +531,10 @@ def _crypt(b, salt, rounds) {
 
   # validate
   if rounds < 4 or rounds > 31
-    raise Exception('illegal number or rounds (4-31): ${rounds}')
+    raise ValueError('illegal number or rounds (4-31): ${rounds}')
 
   if salt.length() != _SALT_LEN
-    raise Exception('Illegal salt length: ${salt.length()} != ${_SALT_LEN}')
+    raise ValueError('Illegal salt length: ${salt.length()} != ${_SALT_LEN}')
 
   rounds = (1 << rounds) >> 0
 
@@ -583,31 +583,31 @@ def _crypt(b, salt, rounds) {
 
 def _hash(s, salt) {
   if !is_string(s) or !is_string(salt)
-    raise Exception('invalid string / salt: Not a string')
+    raise TypeError('invalid string / salt: Not a string')
 
   # validate the salt
   var minor, offset
   if salt.length() < 2 or salt[,2] != '$2'
-    raise Exception('invalid salt version: ${salt[,2]}')
+    raise ValueError('invalid salt version: ${salt[,2]}')
 
   if salt[2] == '$' {
     minor = chr(0)
     offset = 3
   } else {
     if salt.length() < 4
-      raise Exception('invalid salt revision: ${salt[2,4]}')
+      raise ValueError('invalid salt revision: ${salt[2,4]}')
 
     minor = salt[2]
 
     if 'aby'.index_of(minor) == -1 or salt[3] != '$'
-      raise Exception('invalid salt revision: ${salt[2,4]}')
+      raise ValueError('invalid salt revision: ${salt[2,4]}')
 
     offset = 4
   }
 
   # extract number of rounds
   if salt.length() < offset + 2 or ord(salt[offset + 2]) > ord('$')
-    raise Exception('missing salt rounds')
+    raise UndefinedError('missing salt rounds')
 
   var r1 = to_number(salt[offset]) * 10,
       r2 = to_number(salt[offset + 1]),
@@ -645,7 +645,7 @@ def _random(len) {
 
 def _generate_salt(rounds) {
   if rounds != nil and !is_number(rounds)
-    raise Exception('number expected in argument 1 (rounds): ${typeof(round)} given')
+    raise TypeError('number expected in argument 1 (rounds): ${typeof(round)} given')
   if !rounds rounds = DEFAULT_LOG2_ROUNDS
 
   if rounds < 4 rounds = 4
@@ -672,9 +672,9 @@ def _generate_salt(rounds) {
  */
 def hash(str, salt_length) {
   if !is_string(str)
-    raise Exception('string expected in argument 1 (str)')
+    raise TypeError('string expected in argument 1 (str)')
   if salt_length != nil and !is_number(salt_length)
-    raise Exception('number expected in argument 2 (salt_length)')
+    raise TypeError('number expected in argument 2 (salt_length)')
 
   if salt_length == nil salt_length = DEFAULT_LOG2_ROUNDS
   var salt = _generate_salt(salt_length)
@@ -692,7 +692,7 @@ def hash(str, salt_length) {
  */
 def compare(str, known_hash) {
   if !is_string(str) or !is_string(known_hash)
-    raise Exception('arguments must be string')
+    raise TypeError('arguments must be string')
 
   var known_length = known_hash.length()
   if known_length != 60
@@ -721,7 +721,7 @@ def compare(str, known_hash) {
  */
 def get_rounds(hash) {
   if !is_string(hash)
-    raise Exception('string expected in argument 1 (hash)')
+    raise TypeError('string expected in argument 1 (hash)')
   return to_number(hash.split('$')[2])
 }
 
@@ -735,8 +735,8 @@ def get_rounds(hash) {
  */
 def get_salt(hash) {
   if !is_string(hash)
-    raise Exception('string expected in argument 1 (hash)')
+    raise TypeError('string expected in argument 1 (hash)')
   if hash.length() != 60
-    raise Exception('illegal hash length: ${hash.length()} != 60')
+    raise ValueError('illegal hash length: ${hash.length()} != 60')
   return hash[,29]
 }

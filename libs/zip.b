@@ -176,7 +176,7 @@ class ZipItem {
    */
   static from_dict(dict) {
     if !is_dict(dict)
-      raise Exception('dictionary expected from argument 1 (dict)')
+      raise TypeError('dictionary expected from argument 1 (dict)')
 
     var f = ZipItem()
 
@@ -207,7 +207,7 @@ class ZipItem {
    */
   export(base_dir) {
     if base_dir != nil and !is_string(base_dir)
-      raise Exception('string expected in argument 1 (base_dir)')
+      raise TypeError('string expected in argument 1 (base_dir)')
 
     if !base_dir base_dir = ''
 
@@ -298,7 +298,7 @@ class ZipFile {
    */
   export(base_dir) {
     if base_dir != nil and !is_string(base_dir)
-      raise Exception('string expected in argument 1 (base_dir)')
+      raise TypeError('string expected in argument 1 (base_dir)')
 
     if !base_dir base_dir = ''
     for zip_item in self.files {
@@ -339,11 +339,11 @@ class ZipArchive {
    */
   ZipArchive(path, compression_method, use_zip_64) {
     if !is_string(path)
-      raise Exception('string expected in argument 1 (path)')
+      raise TypeError('string expected in argument 1 (path)')
     if compression_method != nil and !is_number(compression_method)
-      raise Exception('number expected in argument 2 (compression_method)')
+      raise TypeError('number expected in argument 2 (compression_method)')
     if use_zip_64 != nil and !is_bool(use_zip_64)
-      raise Exception('boolean expected in argument 3 (use_zip_64)')
+      raise TypeError('boolean expected in argument 3 (use_zip_64)')
     self._file = path
     self._is_64 = use_zip_64 == nil ? false : use_zip_64
     
@@ -614,9 +614,9 @@ class ZipArchive {
    */
   add_file(path, destination) {
     if !is_string(path)
-      raise Exception('expected string as argument 1 (path)')
+      raise TypeError('expected string as argument 1 (path)')
     if destination != nil and !is_string(destination)
-      raise Exception('expected string as argument 2 (destination)')
+      raise TypeError('expected string as argument 2 (destination)')
 
     var f = file(path, 'rb')
     if !f.exists()
@@ -694,11 +694,11 @@ class ZipArchive {
    */
   add_directory(directory, file_blacklist, ext_blacklist) {
     if !is_string(directory)
-      raise Exception('expected string in argument 1 (directory)')
+      raise TypeError('expected string in argument 1 (directory)')
     if file_blacklist != nil and !is_list(file_blacklist)
-      raise Exception('expected list in argument 2 (file_blacklist)')
+      raise TypeError('expected list in argument 2 (file_blacklist)')
     if ext_blacklist != nil and !is_list(ext_blacklist)
-      raise Exception('expected list in argument 3 (ext_blacklist)')
+      raise TypeError('expected list in argument 3 (ext_blacklist)')
 
     directory = directory.replace(_path_replace_regex, '/')
 
@@ -978,11 +978,11 @@ class ZipArchive {
  */
 def extract(file, destination, is_zip64) {
   if !is_string(file)
-    raise Exception('string expected in argument 1 (file)')
+    raise TypeError('string expected in argument 1 (file)')
   if destination != nil and !is_string(destination)
-    raise Exception('string expected in argument 2 (destination)')
+    raise TypeError('string expected in argument 2 (destination)')
   if is_zip64 != nil and !is_bool(is_zip64)
-    raise Exception('bool expected in argument 3 (use_zip64)')
+    raise TypeError('bool expected in argument 3 (use_zip64)')
 
   if is_zip64 == nil is_zip64 = false
 
@@ -1011,13 +1011,13 @@ def extract(file, destination, is_zip64) {
  */
 def compress(path, destination, compression_method, use_zip64) {
   if !is_string(path)
-    raise Exception('string expected in argument 1 (path)')
+    raise TypeError('string expected in argument 1 (path)')
   if destination != nil and !is_string(destination)
-    raise Exception('string expected in argument 2 (destination)')
+    raise TypeError('string expected in argument 2 (destination)')
   if compression_method != nil and !is_number(compression_method)
-    raise Exception('number expected in argument 3 (compression_method)')
+    raise TypeError('number expected in argument 3 (compression_method)')
   if use_zip64 != nil and !is_bool(use_zip64)
-    raise Exception('boolean expected in argument 4 (use_zip64)')
+    raise TypeError('boolean expected in argument 4 (use_zip64)')
 
   if !destination 
     destination = os.join_paths(os.cwd(), os.base_name(path)) + ZIP_EXT

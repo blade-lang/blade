@@ -322,7 +322,7 @@ class Enum {
     }
 
     values.clear()  # free memory immediately
-    raise Exception('unknown key/value in specified enumeration')
+    raise ValueError('unknown key/value in specified enumeration')
   }
 
   @to_string() {
