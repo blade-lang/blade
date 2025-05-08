@@ -1,5 +1,3 @@
-var start = time()
-
 var N = 21
 
 def make_tree(depth) {
@@ -13,6 +11,8 @@ def check_tree(node) {
   if !left return 1
   return 1 + check_tree(left) + check_tree(right)
 }
+
+var start = time()
 
 var min_depth = 4
 var max_depth = max(min_depth + 2, N)

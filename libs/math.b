@@ -575,7 +575,7 @@ def floor(n) {
  * @returns bool
  */
 def is_nan(n) {
-  return n == NaN
+  return n != n
 }
 
 /**

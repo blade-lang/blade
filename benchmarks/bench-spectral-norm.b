@@ -37,13 +37,13 @@ def AtAu(u, v, w) {
 }
 
 def spectralnorm(n) {
-  var i, u = [0] * n, v = [0] * n, 
+  var i, u = [1] * n, v = [0] * n, 
       w = [0] * n, vv = 0, vBv = 0
 
-  for i in 0..n {
-    u[i] = 1
-    v[i] = w[i] = 0
-  }
+  # for i in 0..n {
+  #   u[i] = 1
+  #   v[i] = w[i] = 0
+  # }
 
   for i in 0..10 {
     AtAu(u, v, w)
