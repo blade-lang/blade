@@ -113,10 +113,6 @@ DECLARE_NATIVE(file) {
   b_obj_file *file = (b_obj_file*)GC(new_file(vm, path, mode));
   file_open(file);
 
-  if(!file->file) {
-    RETURN_ERROR(strerror(errno));
-  }
-
   RETURN_OBJ(file);
 }
 
