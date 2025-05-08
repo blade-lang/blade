@@ -165,10 +165,12 @@ def sleep(duration) {
  * ```
  * 
  * @param string name
+ * @param any|nil default_value
  * @returns string|nil
  */
-def get_env(name) {
-  return _os.getenv(name)
+def get_env(name, default_value) {
+  var value = _os.getenv(name)
+  return value != nil ? value : default_value
 }
 
 /**

@@ -9,7 +9,7 @@ var APP_DIR = 'app'
 var TEST_DIR = 'tests'
 var STATIC_DIR = 'public'
 var TEMPLATES_DIR = 'templates'
-var STORAGE_DIR = 'storage'
+var STORAGE_DIR = os.get_env('NYSSA_STORAGE_DIR', os.join_paths(os.dir_name(__root__), 'storage'))
 var DOCS_DIR = 'docs'
 var LOGS_DIR = '${STORAGE_DIR}/logs'
 var SOURCES_DIR = '${STORAGE_DIR}/sources'
@@ -31,10 +31,10 @@ var DEFAULT_REPOSITORY = 'https://nyssa.bladelang.org'
 
 # frontend
 var PACKAGES_PER_PAGE = 10
-var SESSION_NAME = 'NYSSA-SESSION-ID'
+var SESSION_NAME = os.get_env('NYSSA_SESSION_NAME', 'NYSSA-SESSION-ID')
 
 # Nyssa directory
-var NYSSA_DIR = os.dir_name(os.dir_name(__file__))
+var NYSSA_DIR = os.dir_name(__root__)
 
 var config_file = os.join_paths(NYSSA_DIR, CONFIG_FILE)
 if (config_file = file(config_file)) and config_file.exists() {

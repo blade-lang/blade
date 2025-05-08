@@ -17,9 +17,8 @@ if !file(config_file).exists()
   file(config_file, 'w').write('{}')
 
 # ensure the state file exists
-var state_file = os.join_paths(setup.NYSSA_DIR, setup.STATE_FILE)
-if !file(state_file).exists()
-  file(state_file, 'w').write('{}')
+if !file(setup.STATE_FILE).exists()
+  file(setup.STATE_FILE, 'w').write('{}')
 
 var logs_dir = os.join_paths(setup.NYSSA_DIR, setup.LOGS_DIR)
 if !os.dir_exists(logs_dir)

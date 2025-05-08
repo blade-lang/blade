@@ -7,8 +7,7 @@ import log
 import ..setup
 
 # read the state file
-var state_file = os.join_paths(setup.NYSSA_DIR, setup.STATE_FILE)
-var state = json.decode(file(state_file).read().trim() or '{}')
+var state = json.parse(setup.STATE_FILE) or {}
 if !is_dict(state) state = {}
 
 def parse(parser) {
