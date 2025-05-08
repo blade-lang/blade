@@ -122,7 +122,7 @@ _client.follow_redirect = true
  */
 def set_headers(headers) {
   if !is_dict(headers)
-    raise Exception('headers must be a dictionary')
+    raise TypeError('headers must be a dictionary')
   _client.headers = headers
   return _client
 }

@@ -135,12 +135,6 @@ b_token skip_whitespace(b_scanner *s) {
         advance(s);
         break;
 
-        /* case '\n': {
-          s->line++;
-          advance(s);
-          break;
-        } */
-
       case '#': { // single line comment
         while (current(s) != '\n' && !is_at_end(s))
           advance(s);

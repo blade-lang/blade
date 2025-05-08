@@ -136,7 +136,7 @@ def true_color(r, g, b, a) {
   if a == nil a = 0
 
   if !is_number(r) or !is_number(g) or !is_number(b) or !is_number(a) {
-    raise Exception('number expected')
+    raise TypeError('number expected')
   }
 
   if a == 0 {

@@ -30,9 +30,9 @@ class BytesIO {
     if !mode mode = 'r'
 
     if !is_bytes(source) {
-      raise Exception('BytesIO must take source from a bytearray')
+      raise TypeError('BytesIO must take source from a bytearray')
     } else if !is_string(mode) {
-      raise Exception('invalid I/O mode')
+      raise ValueError('invalid I/O mode')
     }
 
     self.source = source
@@ -96,7 +96,7 @@ class BytesIO {
     }
 
     if !is_number(length) {
-      raise Exception('length must be a number')
+      raise TypeError('length must be a number')
     }
 
     if !self._open {
@@ -121,7 +121,7 @@ class BytesIO {
     }
 
     if !is_number(length) {
-      raise Exception('length must be a number')
+      raise TypeError('length must be a number')
     }
 
     return self._read(length)
@@ -141,7 +141,7 @@ class BytesIO {
    */
   write(data) {
     if !is_bytes(data) and !is_string(data) {
-      raise Exception('string or bytes expected')
+      raise TypeError('string or bytes expected')
     }
 
     if is_string(data) data = data.to_bytes()
@@ -161,7 +161,7 @@ class BytesIO {
    */
   puts(data) {
     if !is_bytes(data) and !is_string(data) {
-      raise Exception('string or bytes expected')
+      raise TypeError('string or bytes expected')
     }
 
     if is_string(data) data = data.to_bytes()
@@ -324,7 +324,7 @@ class BytesIO {
   truncate(length) {
     if !length length = 0
     if !is_number(length) {
-      raise Exception('invalid I/O data truncation length')
+      raise TypeError('invalid I/O data truncation length')
     }
 
     self._max_length = length
@@ -347,9 +347,9 @@ class BytesIO {
    */
   set_times(atime, mtime) {
     if !is_number(atime) {
-      raise Exception('atime must be a number')
+      raise TypeError('atime must be a number')
     } else if !is_number(mtime) {
-      raise Exception('mtime must be a number')
+      raise TypeError('mtime must be a number')
     }
 
     if atime != -1 self._atime = atime
@@ -368,12 +368,12 @@ class BytesIO {
    */
   seek(position, seek_type) {
     if !is_number(position) {
-      raise Exception('invalid I/O seek position')
+      raise TypeError('invalid I/O seek position')
     }
 
     if seek_type == nil seek_type = 0
     if !is_number(seek_type) or seek_type < 0 or seek_type > 2 {
-      raise Exception('invalid seek type')
+      raise ValueError('invalid seek type')
     }
 
     using seek_type {

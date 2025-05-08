@@ -28,8 +28,11 @@
     RETURN_ERROR(#caller "()::error(%d): " #err, msg); \
   }
 
-// ZLIB_CHUNK_SIZE is 128kb
-#define ZLIB_CHUNK_SIZE 131072
+#if UINT_MAX < 4294967295
+# define ZLIB_CHUNK_SIZE 32768 
+#else
+# define ZLIB_CHUNK_SIZE 262144
+#endif
 
 #define ZLIB_CHECK_RET_ERROR(fn, end) \
   switch (ret) { \
@@ -40,10 +43,10 @@
       RETURN_ERROR(#fn "(): Out of memory while " #fn "ing data"); \
     } \
     case Z_DATA_ERROR: { \
-      RETURN_ERROR(#fn "(): invalid or incomplete " #fn " data"); \
+      RETURN_VALUE_ERROR(#fn "(): invalid or incomplete " #fn " data"); \
     } \
     case Z_STREAM_ERROR: { \
-      RETURN_ERROR(#fn "(): Bad compression level"); \
+      RETURN_VALUE_ERROR(#fn "(): Bad compression level"); \
     } \
     case Z_VERSION_ERROR: { \
       RETURN_ERROR(#fn "(): zlib version mismatch!"); \
@@ -160,15 +163,14 @@ DECLARE_MODULE_METHOD(zlib_deflate) {
       have = ZLIB_CHUNK_SIZE - strm.avail_out;
 
       if(have > 0) {
-        size_t len = sizeof(Bytef) * have;
-        output = GROW_ARRAY(Bytef, output, len, len + output_length);
+        output = GROW_ARRAY(Bytef, output, output_length, output_length + have);
         if(output == NULL) {
           RETURN_ERROR("deflate(): out of memory");
         }
 
-        vm->bytes_allocated += output_length;
+        vm->bytes_allocated += have;
         memcpy(output + output_length, out, have);
-        output_length += len;
+        output_length += have;
       }
 
     } while (strm.avail_out == 0);
@@ -179,7 +181,7 @@ DECLARE_MODULE_METHOD(zlib_deflate) {
 
   ret = deflateEnd(&strm);
   if(ret == Z_OK) {
-    RETURN_OBJ(take_bytes(vm, output, output_length));
+    RETURN_OBJ(take_bytes(vm, output, (int)output_length));
   }
 
   RETURN_ERROR("deflate(): Error %d while finishing deflation", ret);
@@ -245,14 +247,14 @@ DECLARE_MODULE_METHOD(zlib_inflate) {
       have = ZLIB_CHUNK_SIZE - strm.avail_out;
 
       if(have > 0) {
-        size_t len = sizeof(Bytef) * have;
-        output = GROW_ARRAY(Bytef, output, len, len + output_length);
+        // size_t len = sizeof(Bytef) * have;
+        output = GROW_ARRAY(Bytef, output, have, output_length + have);
         if(output == NULL) {
           RETURN_ERROR("inflate(): out of memory");
         }
 
         memcpy(output + output_length, out, have);
-        output_length += len;
+        output_length += have;
       }
 
     } while (strm.avail_out == 0);
@@ -303,7 +305,7 @@ DECLARE_MODULE_METHOD(zlib_gzread) {
       RETURN_ERROR("%s", gzerror(file[0], &err));
     }
   } else {
-    RETURN_ERROR("invalid GZ handle");
+    RETURN_ARGUMENT_ERROR("invalid GZ handle");
   }
 }
 

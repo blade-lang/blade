@@ -9,7 +9,6 @@ on:
 
 jobs:
 
-#  build-linux-and-analyze:
   build-linux:
     runs-on: ubuntu-24.04
     permissions:
@@ -19,13 +18,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup cmake
-        uses: jwlawson/actions-setup-cmake@v1.9
+        uses: lukka/get-cmake@v3.25.2
         with:
-          cmake-version: '3.25.2'
-#      - name: Initialize CodeQL
-#        uses: github/codeql-action/init@v1
-#        with:
-#          languages: c
+          useLocalCache: true
+          useCloudCache: false
       - name: Compile
         run: |
           sudo apt-get update
@@ -36,22 +32,51 @@ jobs:
           chmod +x blade/blade
       - name: Test
         run: ctest
-#      - name: Perform CodeQL Analysis
-#        uses: github/codeql-action/analyze@v1
       - name: Generate Artifacts
         if: '!cancelled()'
         uses: actions/upload-artifact@v4
         with:
           name: blade-linux-${{ github.run_id }}
           path: ${{github.workspace}}/blade
+  
+  build-linux-arm:
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup cmake
+        uses: lukka/get-cmake@v3.25.2
+        with:
+          useLocalCache: true
+          useCloudCache: false
+      - name: Compile
+        run: |
+          sudo apt-get update
+          sudo apt-get remove libgd3 
+          sudo apt-get install curl libpthread-stubs0-dev libcurl4-openssl-dev libgd-dev libavif-dev libffi-dev -y
+          cmake -B .
+          cmake --build . -- -j 12
+          chmod +x blade/blade
+      - name: Test
+        run: ctest
+      - name: Generate Artifacts
+        if: '!cancelled()'
+        uses: actions/upload-artifact@v4
+        with:
+          name: blade-linux-arm-${{ github.run_id }}
+          path: ${{github.workspace}}/blade
 
   build-macos:
     runs-on: macos-latest
     steps:
       - name: Setup cmake
-        uses: jwlawson/actions-setup-cmake@v1.9
+        uses: lukka/get-cmake@v3.25.2
         with:
-          cmake-version: '3.25.2'
+          useLocalCache: true
+          useCloudCache: false
       - uses: actions/checkout@v4
       - name: Setup dependencies
         run: |
@@ -75,46 +100,29 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Setup cmake
-        uses: jwlawson/actions-setup-cmake@v1.9
+        uses: lukka/get-cmake@latest
         with:
-          cmake-version: '3.28.x'
+          cmakeVersion: '3.28.x'
+          useLocalCache: true
+          useCloudCache: false
       - name: Setup WinLibs
         uses: bwoodsend/setup-winlibs-action@v1.8
         with:
           add_to_path: true
           tag: 14.2.0posix-18.1.8-12.0.0-msvcrt-r1
-      - uses: actions/checkout@v4
-      - uses: friendlyanon/setup-vcpkg@v1
-        with: { committish: 3508985146f1b1d248c67ead13f8f54be5b4f5da, cache-version: "1", cache-key: "vcpkg-windows", cache-restore-keys: "vcpkg-windows" }
-      - name: Restore vcpkg dependencies cache
-        id: vcpkg-cache-restore
-        uses: actions/cache/restore@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        uses: johnwason/vcpkg-action@v6
         with:
-          path: |
-            ${{ env.VCPKG_ROOT }}/ports
-            ${{ env.VCPKG_ROOT }}/downloads
-            ${{ env.VCPKG_ROOT }}/installed
-            ${{ env.VCPKG_ROOT }}/vcpkg_installed
-          key: ${{ runner.OS }}-vcpkg-cache
-      - name: Install Dependencies
-        run: |
-          ${{ env.VCPKG_ROOT }}/vcpkg update
-          ${{ env.VCPKG_ROOT }}/vcpkg version
-          ${{ env.VCPKG_ROOT }}/vcpkg install pkgconf pthreads:x64-windows curl:x64-windows libffi:x64-windows openssl:x64-windows libgd:x64-windows
-          ${{ env.VCPKG_ROOT }}/vcpkg list
-      - name: Save vcpkg dependencies cache
-        id: vcpkg-cache-save
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ${{ env.VCPKG_ROOT }}/ports
-            ${{ env.VCPKG_ROOT }}/downloads
-            ${{ env.VCPKG_ROOT }}/installed
-            ${{ env.VCPKG_ROOT }}/vcpkg_installed
-          key: ${{ steps.vcpkg-cache-restore.outputs.cache-primary-key }}
+          pkgs: pkgconf curl libffi openssl libgd
+          revision: master
+          triplet: x64-windows-release
+          token: ${{ github.token }}
+          github-binarycache: true
       - name: Compile
         run: |
-          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake" -DOPENSSL_ROOT_DIR=${{ env.VCPKG_ROOT }}/installed/x64-windows-static
+          cmake -B . -G "Unix Makefiles" -DVCPKG_TARGET_TRIPLET=x64-windows-release -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake"
           cmake --build . -- -j 12
       - name: Test
         run: ctest

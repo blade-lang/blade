@@ -20,7 +20,7 @@ var _reverse_hex_table = ['0', '1', '2', '3', '4', '5', '6', '7',
  */
 def hex_to_bytes(str) {
   if !is_string(str)
-    raise Exception('string expected, ${typeof(str)} given')
+    raise TypeError('string expected, ${typeof(str)} given')
 
   # str = ''.join(str.to_list().reverse())
 
@@ -44,7 +44,7 @@ def hex_to_bytes(str) {
  */
 def bytes_to_hex(data) {
   if !is_bytes(data)
-    raise Exception('bytes expected, ${typeof(data)} given')
+    raise TypeError('bytes expected, ${typeof(data)} given')
 
   var hex_string = ''
 
@@ -63,7 +63,7 @@ def bytes_to_hex(data) {
  */
 def decimal_to_hex(n) {
   if !is_number(n)
-    raise Exception('number expected, ${typeof(n)} given')
+    raise TypeError('number expected, ${typeof(n)} given')
 
   var hex_list = []
   while n > 0 {
@@ -83,7 +83,7 @@ def decimal_to_hex(n) {
  */
 def hex_to_decimal(str) {
   if !is_string(str)
-    raise Exception('string expected, ${typeof(str)} given')
+    raise TypeError('string expected, ${typeof(str)} given')
 
   if str.starts_with('0x')
     str = str[2,]
@@ -105,8 +105,9 @@ def hex_to_decimal(str) {
  * @returns string
  */
 def unicode_to_hex(chr) {
-  if !is_string(chr) or chr.length() > 1
-    raise Exception('char expected, ${typeof(chr)} given')
+  if !is_string(chr) or chr.length() > 1 {
+    raise ValueError('char expected, ${typeof(chr)} given')
+  }
 
   return decimal_to_hex(ord(chr))
 }
@@ -119,7 +120,7 @@ def unicode_to_hex(chr) {
  */
 def bytes_to_decimal(bytes) {
   if !is_bytes(bytes)
-    raise Exception('bytes expected, ${typeof(bytes)} given')
+    raise TypeError('bytes expected, ${typeof(bytes)} given')
 
   var decimal = 0
   for byte in bytes {

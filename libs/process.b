@@ -80,9 +80,9 @@ class PagedValue {
     if private == nil private = false
 
     if !is_bool(executable)
-      raise Exception('boolean value expected in argument 1 (executable)')
+      raise TypeError('boolean value expected in argument 1 (executable)')
     if !is_bool(private)
-      raise Exception('boolean value expected in argument 2 (private)')
+      raise TypeError('boolean value expected in argument 2 (private)')
 
     self._ptr = _process.new_paged(executable, private)
   }
@@ -128,7 +128,7 @@ class PagedValue {
         var format = ''
         for item in value {
           if !_valid_paged_types.contains(typeof(item))
-            raise Exception('object of type ${typeof(item)} not allowed here')
+            raise TypeError('object of type ${typeof(item)} not allowed here')
           format += self._set_format(item)
         }
         return format
@@ -137,7 +137,7 @@ class PagedValue {
         var format = ''
         for item in value {
           if !_valid_paged_types.contains(typeof(item))
-            raise Exception('object of type ${typeof(item)} not allowed here')
+            raise TypeError('object of type ${typeof(item)} not allowed here')
           format += self._set_format(item)
         }
         return format
@@ -310,13 +310,13 @@ class Process {
    */
   Process(fn, paged) {
     if !is_function(fn)
-      raise Exception('function expected in argument 1 (fn)')
+      raise TypeError('function expected in argument 1 (fn)')
     if paged != nil and !instance_of(paged, PagedValue)
-      raise Exception('instance of PagedValue expected in argument 2 (paged)')
+      raise TypeError('instance of PagedValue expected in argument 2 (paged)')
 
     # No windows support yet.
     if os.platform == 'windows' {
-      raise Exception('Process is not yet supported on this OS')
+      raise NotImplementedError('Process is not yet supported on this OS')
     }
 
     self._fn = fn
@@ -343,7 +343,7 @@ class Process {
    */
   on_complete(fn) {
     if !is_function(fn)
-      raise Exception('function expected at argument 1')
+      raise TypeError('function expected at argument 1')
     self._on_complete_listeners.append(fn)
   }
 
@@ -363,7 +363,7 @@ class Process {
         var expected_arity = self._paged ? 2 : 1
 
         if fn_data.arity != expected_arity
-          raise Exception('process function must take ${expected_arity} arguments')
+          raise ArgumentError('process function must take ${expected_arity} arguments')
 
         if expected_arity == 2 {
           if self._paged self._fn(self, self._paged)

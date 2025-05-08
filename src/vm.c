@@ -105,7 +105,7 @@ bool print_exception(b_vm *vm, b_obj_instance *exception, bool is_assert) {
   return false;
 }
 
-bool do_throw_exception(b_vm *vm, bool is_assert, const char *format, ...) {
+bool do_throw_exception(b_vm *vm, const char *type, bool is_assert, const char *format, ...) {
 
   va_list args;
   va_start(args, format);
@@ -113,7 +113,7 @@ bool do_throw_exception(b_vm *vm, bool is_assert, const char *format, ...) {
   int length = vasprintf(&message, format, args);
   va_end(args);
 
-  b_obj_instance *instance = create_exception(vm, take_string(vm, message, length));
+  b_obj_instance *instance = create_exception(vm, type, take_string(vm, message, length));
   push(vm, OBJ_VAL(instance));
 
   b_value stacktrace = get_stack_trace(vm);
@@ -133,9 +133,21 @@ bool do_throw_exception(b_vm *vm, bool is_assert, const char *format, ...) {
     vm->frame_count -= vm->current_frame - error->frame;
     vm->current_frame = error->frame;
     vm->current_frame->ip = &error->frame->closure->function->blob.code[error->offset];
+    vm->stack_top = error->stack_head;
   }
 
   return return_val;
+}
+
+static void new_execption_class(b_vm * vm, b_obj_class *superclass, const char *name, int name_length) {
+  b_obj_string *class_name = copy_string(vm, name, name_length);
+  push(vm, OBJ_VAL(class_name));
+  b_obj_class *klass = new_class(vm, class_name);
+  push(vm, OBJ_VAL(klass));
+  klass->initializer = superclass->initializer;
+  klass->superclass = superclass;
+  table_set(vm, &vm->globals, OBJ_VAL(class_name), OBJ_VAL(klass));
+  pop_n(vm, 2);
 }
 
 static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
@@ -195,10 +207,35 @@ static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
   pop(vm); // assert error name
 
   vm->exception_class = klass;
+
+  // Create other global exceptions
+  new_execption_class(vm, klass, "TypeError", 10);
+  new_execption_class(vm, klass, "ValueError", 11);
+  new_execption_class(vm, klass, "NumericError", 12);
+  new_execption_class(vm, klass, "ArgumentError", 13);
+  new_execption_class(vm, klass, "NotImplementedError", 19);
+  new_execption_class(vm, klass, "RangeError", 10);
+  new_execption_class(vm, klass, "AccessError", 11);
+  new_execption_class(vm, klass, "PropertyError", 13);
+  new_execption_class(vm, klass, "UndefinedError", 14);
 }
 
-inline b_obj_instance *create_exception(b_vm *vm, b_obj_string *message) {
-  b_obj_instance *instance = new_instance(vm, vm->exception_class);
+static b_obj_class *get_exception(b_vm *vm, const char *name) {
+  if(!name) {
+    return vm->exception_class;
+  } else {
+    b_value exception_class;
+    if(table_get(&vm->globals, STRING_VAL(name), &exception_class)) {
+      if(IS_CLASS(exception_class)) {
+        return AS_CLASS(exception_class);
+      }
+    }
+    return vm->exception_class;
+  }
+}
+
+inline b_obj_instance *create_exception(b_vm *vm, const char* type, b_obj_string *message) {
+  b_obj_instance *instance = new_instance(vm, get_exception(vm, type));
   push(vm, OBJ_VAL(instance));
   table_set(vm, &instance->properties, STRING_L_VAL("message", 7), OBJ_VAL(message));
   pop(vm);
@@ -245,6 +282,9 @@ inline void push_error(b_vm *vm, b_error_frame *frame) {
 
 inline b_error_frame* pop_error(b_vm *vm) {
   b_error_frame *error =  vm->errors[--vm->error_count];
+  error->frame = NULL;
+  error->stack_head = NULL;
+  error->offset = 0;
   return error;
 }
 
@@ -617,10 +657,10 @@ static bool call(b_vm *vm, b_obj_closure *closure, int arg_count) {
   if (arg_count != closure->function->arity) {
     pop_n(vm, arg_count);
     if (closure->function->is_variadic) {
-      return throw_exception(vm, "expected at least %d arguments but got %d",
+      return throw_argument_error(vm, "expected at least %d arguments but got %d",
                              closure->function->arity - 1, arg_count);
     } else {
-      return throw_exception(vm, "expected %d arguments but got %d",
+      return throw_argument_error(vm, "expected %d arguments but got %d",
                              closure->function->arity, arg_count);
     }
   }
@@ -667,7 +707,7 @@ bool call_value(b_vm *vm, b_value callee, int arg_count) {
           return call(vm, AS_CLOSURE(klass->superclass->initializer), arg_count);
         }
         if (arg_count != 0) {
-          return throw_exception(vm, "%s constructor expects 0 arguments, %d given", klass->name->chars, arg_count);
+          return throw_type_error(vm, "%s constructor expects 0 arguments, %d given", klass->name->chars, arg_count);
         }
         return true;
       }
@@ -679,7 +719,7 @@ bool call_value(b_vm *vm, b_value callee, int arg_count) {
           return call_value(vm, callable, arg_count);
         }
 
-        return throw_exception(vm, "module %s does not export a default function", module->name);
+        return throw_undefined_error(vm, "module %s does not export a default function", module->name);
       }
 
       case OBJ_CLOSURE: {
@@ -695,7 +735,7 @@ bool call_value(b_vm *vm, b_value callee, int arg_count) {
     }
   }
 
-  return throw_exception(vm, "object of type %s is not callable", value_type(callee));
+  return throw_type_error(vm, "object of type %s is not callable", value_type(callee));
 }
 
 static inline b_func_type get_method_type(b_value method) {
@@ -712,18 +752,18 @@ inline bool invoke_from_class(b_vm *vm, b_obj_class *klass, b_obj_string *name, 
     b_func_type type = get_method_type(method);
 
     if (type == TYPE_PRIVATE) {
-      return throw_exception(vm, "cannot call private method '%s' from instance of %s",
+      return throw_access_error(vm, "cannot call private method '%s' from instance of %s",
                              name->chars, klass->name->chars);
     }
     if (type == TYPE_STATIC) {
-      return throw_exception(vm, "cannot call static method '%s' from instance of %s",
+      return throw_access_error(vm, "cannot call static method '%s' from instance of %s",
                              name->chars, klass->name->chars);
     }
 
     return call_value(vm, method, arg_count);
   }
 
-  return throw_exception(vm, "undefined method '%s' in %s", name->chars, klass->name->chars);
+  return throw_undefined_error(vm, "undefined method '%s' in %s", name->chars, klass->name->chars);
 }
 
 static bool invoke_self(b_vm *vm, b_obj_string *name, int arg_count) {
@@ -738,7 +778,7 @@ static bool invoke_self(b_vm *vm, b_obj_string *name, int arg_count) {
         return call_value(vm, value, arg_count);
       }
 
-      return throw_exception(vm, "cannot call static method %s() on instance", name->chars);
+      return throw_access_error(vm, "cannot call static method %s() on instance", name->chars);
     }
 
     if (table_get(&instance->properties, OBJ_VAL(name), &value)) {
@@ -751,11 +791,11 @@ static bool invoke_self(b_vm *vm, b_obj_string *name, int arg_count) {
         return call_value(vm, value, arg_count);
       }
 
-      return throw_exception(vm, "cannot call non-static method %s() on non instance", name->chars);
+      return throw_access_error(vm, "cannot call non-static method %s() on non instance", name->chars);
     }
   }
 
-  return throw_exception(vm, "cannot call method %s on object of type %s",
+  return throw_type_error(vm, "cannot call method %s on object of type %s",
                          name->chars, value_type(receiver));
 }
 
@@ -773,9 +813,9 @@ static bool invoke_operator(b_vm *vm, b_obj_string *name, int arg_count, bool is
   }
 
   if(!is_binary) {
-    return throw_exception(vm, "object of type %s does not define unary operation %s", value_type(receiver), name->chars);
+    return throw_numeric_error(vm, "object of type %s does not define unary operation %s", value_type(receiver), name->chars);
   } else {
-    return throw_exception(vm, "object of type %s does not define binary operation %s", value_type(receiver), name->chars);
+    return throw_numeric_error(vm, "object of type %s does not define binary operation %s", value_type(receiver), name->chars);
   }
 }
 
@@ -785,24 +825,24 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
 
   if (!IS_OBJ(receiver)) {
     // @TODO: have methods for non objects as well.
-    return throw_exception(vm, "non-object %s has no method '%s'", value_type(receiver), name->chars);
+    return throw_type_error(vm, "non-object %s has no method '%s'", value_type(receiver), name->chars);
   } else {
     switch (AS_OBJ(receiver)->type) {
       case OBJ_MODULE: {
         b_obj_module *module = AS_MODULE(receiver);
         if (table_get(&module->values, OBJ_VAL(name), &value)) {
           if (is_private(name)) {
-            return throw_exception(vm, "cannot call private module method '%s'", name->chars);
+            return throw_access_error(vm, "cannot call private module method '%s'", name->chars);
           }
           return call_value(vm, value, arg_count);
         }
-        return throw_exception(vm, "module %s does not define class or method %s()", module->name, name->chars);
+        return throw_undefined_error(vm, "module %s does not define class or method %s()", module->name, name->chars);
         break;
       }
       case OBJ_CLASS: {
         if (table_get(&AS_CLASS(receiver)->methods, OBJ_VAL(name), &value)) {
           if (get_method_type(value) == TYPE_PRIVATE) {
-            return throw_exception(vm, "cannot call private method %s() on %s",
+            return throw_access_error(vm, "cannot call private method %s() on %s",
                                    name->chars, AS_CLASS(receiver)->name->chars);
           }
           return call_value(vm, value, arg_count);
@@ -811,7 +851,7 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
           return call_value(vm, value, arg_count);
         }
 
-        return throw_exception(vm, "unknown method %s() in class %s", name->chars, AS_CLASS(receiver)->name->chars);
+        return throw_undefined_error(vm, "unknown method %s() in class %s", name->chars, AS_CLASS(receiver)->name->chars);
       }
       case OBJ_INSTANCE: {
         b_obj_instance *instance = AS_INSTANCE(receiver);
@@ -827,19 +867,19 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
         if (table_get(&vm->methods_string, OBJ_VAL(name), &value)) {
           return call_native_method(vm, AS_NATIVE(value), arg_count);
         }
-        return throw_exception(vm, "String has no method %s()", name->chars);
+        return throw_property_error(vm, "String has no method %s()", name->chars);
       }
       case OBJ_LIST: {
         if (table_get(&vm->methods_list, OBJ_VAL(name), &value)) {
           return call_native_method(vm, AS_NATIVE(value), arg_count);
         }
-        return throw_exception(vm, "List has no method %s()", name->chars);
+        return throw_property_error(vm, "List has no method %s()", name->chars);
       }
       case OBJ_RANGE: {
         if (table_get(&vm->methods_range, OBJ_VAL(name), &value)) {
           return call_native_method(vm, AS_NATIVE(value), arg_count);
         }
-        return throw_exception(vm, "Range has no method %s()", name->chars);
+        return throw_property_error(vm, "Range has no method %s()", name->chars);
       }
       case OBJ_DICT: {
         if (table_get(&vm->methods_dict, OBJ_VAL(name), &value)) {
@@ -852,22 +892,22 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
             return call_value(vm, value, arg_count);
           }
         }
-        return throw_exception(vm, "Dict has no method %s()", name->chars);
+        return throw_property_error(vm, "Dict has no method %s()", name->chars);
       }
       case OBJ_FILE: {
         if (table_get(&vm->methods_file, OBJ_VAL(name), &value)) {
           return call_native_method(vm, AS_NATIVE(value), arg_count);
         }
-        return throw_exception(vm, "File has no method %s()", name->chars);
+        return throw_property_error(vm, "File has no method %s()", name->chars);
       }
       case OBJ_BYTES: {
         if (table_get(&vm->methods_bytes, OBJ_VAL(name), &value)) {
           return call_native_method(vm, AS_NATIVE(value), arg_count);
         }
-        return throw_exception(vm, "Bytes has no method %s()", name->chars);
+        return throw_property_error(vm, "Bytes has no method %s()", name->chars);
       }
       default: {
-        return throw_exception(vm, "cannot call method %s on object of type %s",
+        return throw_type_error(vm, "cannot call method %s on object of type %s",
                                name->chars, value_type(receiver));
       }
     }
@@ -878,7 +918,7 @@ static inline bool bind_method(b_vm *vm, b_obj_class *klass, b_obj_string *name)
   b_value method;
   if (table_get(&klass->methods, OBJ_VAL(name), &method)) {
     if (get_method_type(method) == TYPE_PRIVATE) {
-      return throw_exception(vm, "cannot get private property '%s' from instance", name->chars);
+      return throw_access_error(vm, "cannot get private property '%s' from instance", name->chars);
     }
 
     b_obj_bound *bound = new_bound_method(vm, peek(vm, 0), AS_CLOSURE(method));
@@ -887,7 +927,7 @@ static inline bool bind_method(b_vm *vm, b_obj_class *klass, b_obj_string *name)
     return true;
   }
 
-  return throw_exception(vm, "undefined property '%s'", name->chars);
+  return throw_undefined_error(vm, "undefined property '%s'", name->chars);
 }
 
 static b_obj_up_value *capture_up_value(b_vm *vm, b_value *local) {
@@ -1081,7 +1121,7 @@ static bool dict_get_index(b_vm *vm, b_obj_dict *dict, bool will_assign) {
   }
 
   pop_n(vm, 1);
-  return throw_exception(vm, "invalid index %s", value_to_string(vm, index)->chars);
+  return throw_argument_error(vm, "invalid index %s", value_to_string(vm, index)->chars);
 }
 
 static bool module_get_index(b_vm *vm, b_obj_module *module, bool will_assign) {
@@ -1097,7 +1137,7 @@ static bool module_get_index(b_vm *vm, b_obj_module *module, bool will_assign) {
   }
 
   pop_n(vm, 1);
-  return throw_exception(vm, "%s is undefined in module %s", value_to_string(vm, index)->chars, module->name);
+  return throw_undefined_error(vm, "%s is undefined in module %s", value_to_string(vm, index)->chars, module->name);
 }
 
 static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
@@ -1105,7 +1145,7 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
 
   if (!IS_NUMBER(lower)) {
     pop_n(vm, 1);
-    return throw_exception(vm, "strings are numerically indexed");
+    return throw_argument_error(vm, "strings are numerically indexed");
   }
 
   int index = AS_NUMBER(lower);
@@ -1130,7 +1170,7 @@ static bool string_get_index(b_vm *vm, b_obj_string *string, bool will_assign) {
     return true;
   } else {
     pop_n(vm, 1);
-    return throw_exception(vm, "string index %d out of range", real_index);
+    return throw_range_error(vm, "string index %d out of range", real_index);
   }
 }
 
@@ -1140,7 +1180,7 @@ static bool string_get_ranged_index(b_vm *vm, b_obj_string *string, bool will_as
 
   if (!(IS_NIL(lower) || IS_NUMBER(lower)) || !(IS_NUMBER(upper) || IS_NIL(upper))) {
     pop_n(vm, 2);
-    return throw_exception(vm, "string are numerically indexed");
+    return throw_argument_error(vm, "string are numerically indexed");
   }
   int length = string->is_ascii ? string->length : string->utf8_length;
 
@@ -1180,7 +1220,7 @@ static bool bytes_get_index(b_vm *vm, b_obj_bytes *bytes, bool will_assign) {
 
   if (!IS_NUMBER(lower)) {
     pop_n(vm, 1);
-    return throw_exception(vm, "bytes are numerically indexed");
+    return throw_argument_error(vm, "bytes are numerically indexed");
   }
 
   int index = AS_NUMBER(lower);
@@ -1198,7 +1238,7 @@ static bool bytes_get_index(b_vm *vm, b_obj_bytes *bytes, bool will_assign) {
     return true;
   } else {
     pop_n(vm, 1);
-    return throw_exception(vm, "bytes index %d out of range", real_index);
+    return throw_range_error(vm, "bytes index %d out of range", real_index);
   }
 }
 
@@ -1208,7 +1248,7 @@ static bool bytes_get_ranged_index(b_vm *vm, b_obj_bytes *bytes, bool will_assig
 
   if (!(IS_NIL(lower) || IS_NUMBER(lower)) || !(IS_NUMBER(upper) || IS_NIL(upper))) {
     pop_n(vm, 2);
-    return throw_exception(vm, "bytes are numerically indexed");
+    return throw_argument_error(vm, "bytes are numerically indexed");
   }
 
   int lower_index = IS_NUMBER(lower) ? AS_NUMBER(lower) : 0;
@@ -1243,7 +1283,7 @@ static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
 
   if (!IS_NUMBER(lower)) {
     pop(vm);
-    return throw_exception(vm, "list are numerically indexed");
+    return throw_argument_error(vm, "list are numerically indexed");
   }
 
   int index = AS_NUMBER(lower);
@@ -1261,7 +1301,7 @@ static bool list_get_index(b_vm *vm, b_obj_list *list, bool will_assign) {
     return true;
   } else {
     pop(vm);
-    return throw_exception(vm, "list index %d out of range", real_index);
+    return throw_range_error(vm, "list index %d out of range", real_index);
   }
 }
 
@@ -1271,7 +1311,7 @@ static bool list_get_ranged_index(b_vm *vm, b_obj_list *list, bool will_assign) 
 
   if (!(IS_NIL(lower) || IS_NUMBER(lower)) || !(IS_NUMBER(upper) || IS_NIL(upper))) {
     pop_n(vm, 2);
-    return throw_exception(vm, "list are numerically indexed");
+    return throw_argument_error(vm, "list are numerically indexed");
   }
 
   int lower_index = IS_NUMBER(lower) ? AS_NUMBER(lower) : 0;
@@ -1328,7 +1368,7 @@ static inline void module_set_index(b_vm *vm, b_obj_module *module, b_value inde
 static bool list_set_index(b_vm *vm, b_obj_list *list, b_value index, b_value value) {
   if (!IS_NUMBER(index)) {
     pop_n(vm, 3); // pop the value, index and list out
-    return throw_exception(vm, "list are numerically indexed");
+    return throw_argument_error(vm, "list are numerically indexed");
   }
 
   int _position = AS_NUMBER(index);
@@ -1345,16 +1385,16 @@ static bool list_set_index(b_vm *vm, b_obj_list *list, b_value index, b_value va
   }
 
   pop_n(vm, 3); // pop the value, index and list out
-  return throw_exception(vm, "lists index %d out of range", _position);
+  return throw_range_error(vm, "lists index %d out of range", _position);
 }
 
 static bool bytes_set_index(b_vm *vm, b_obj_bytes *bytes, b_value index, b_value value) {
   if (!IS_NUMBER(index)) {
     pop_n(vm, 3); // pop the value, index and bytes out
-    return throw_exception(vm, "bytes are numerically indexed");
+    return throw_argument_error(vm, "bytes are numerically indexed");
   } else if (!IS_NUMBER(value) || AS_NUMBER(value) < 0 || AS_NUMBER(value) > 255) {
     pop_n(vm, 3); // pop the value, index and bytes out
-    return throw_exception(vm, "invalid byte. bytes are numbers between 0 and 255.");
+    return throw_value_error(vm, "invalid byte. bytes are numbers between 0 and 255.");
   }
 
   int _position = AS_NUMBER(index);
@@ -1373,7 +1413,7 @@ static bool bytes_set_index(b_vm *vm, b_obj_bytes *bytes, b_value index, b_value
   }
 
   pop_n(vm, 3); // pop the value, index and bytes out
-  return throw_exception(vm, "bytes index %d out of range", _position);
+  return throw_range_error(vm, "bytes index %d out of range", _position);
 }
 
 static bool concatenate(b_vm *vm) {
@@ -1505,7 +1545,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
   (!IS_NUMBER(__b) && !IS_BOOL(__b)) || (!IS_NUMBER(__a) && !IS_BOOL(__a))
 
 #define UNSUPPORTED_OPERAND(op) \
-  runtime_error("unsupported operand %s for %s and %s", #op, value_type(__a), value_type(__b)); \
+  numeric_error("unsupported operand %s for %s and %s", #op, value_type(__a), value_type(__b)); \
   break
 
 #define CLASS_BINARY_OPERATION(op) \
@@ -1528,7 +1568,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
     vm->current_frame = &vm->frames[vm->frame_count - 1];\
     break; \
   } \
-  runtime_error("operator %s not defined for object of type %s", #op, value_type(a))
+  numeric_error("operator %s not defined for object of type %s", #op, value_type(a))
 
 #define BINARY_OP(type, op)                                                    \
   do { \
@@ -1614,7 +1654,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
       case OP_ADD: {
         if (IS_STRING(peek(vm, 0)) || IS_STRING(peek(vm, 1))) {
           if (!concatenate(vm)) {
-            runtime_error("unsupported operand + for %s and %s", value_type(peek(vm, 0)), value_type(peek(vm, 1)));
+            numeric_error("unsupported operand + for %s and %s", value_type(peek(vm, 0)), value_type(peek(vm, 1)));
             break;
           }
         } else if (IS_LIST(peek(vm, 0)) && IS_LIST(peek(vm, 1))) {
@@ -1851,7 +1891,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
             dbg(printf("Name requested: '%s' with length %d\n", name->chars, name->length));
             cond_dbg(vm->current_frame, table_print(&vm->current_frame->closure->function->module->values));
 
-            runtime_error("'%s' is undefined in this scope", name->chars);
+            undefined_error("'%s' is undefined in this scope", name->chars);
             break;
           }
         }
@@ -1869,7 +1909,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         b_table *table = &vm->current_frame->closure->function->module->values;
         if (table_set(vm, table, OBJ_VAL(name), peek(vm, 0))) {
           table_delete(table, OBJ_VAL(name));
-          runtime_error("%s is undefined in this scope", name->chars);
+          undefined_error("%s is undefined in this scope", name->chars);
           break;
         }
         break;
@@ -1901,7 +1941,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
               b_obj_module *module = AS_MODULE(peek(vm, 0));
               if (table_get(&module->values, OBJ_VAL(name), &value)) {
                 if (is_private(name)) {
-                  runtime_error("cannot get private module property '%s'", name->chars);
+                  access_error("cannot get private module property '%s'", name->chars);
                   break;
                 }
 
@@ -1910,14 +1950,14 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
                 break;
               }
 
-              runtime_error("%s module does not define '%s'", module->name, name->chars);
+              property_error("%s module does not define '%s'", module->name, name->chars);
               break;
             }
             case OBJ_CLASS: {
               if (table_get(&AS_CLASS(peek(vm, 0))->methods, OBJ_VAL(name), &value)) {
                 if (get_method_type(value) == TYPE_STATIC) {
                   if (is_private(name)) {
-                    runtime_error("cannot call private property '%s' of class %s",
+                    access_error("cannot call private property '%s' of class %s",
                                   name->chars, AS_CLASS(peek(vm, 0))->name->chars);
                     break;
                   }
@@ -1927,7 +1967,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
                 }
               } else if (table_get(&AS_CLASS(peek(vm, 0))->static_properties, OBJ_VAL(name), &value)) {
                 if (is_private(name)) {
-                  runtime_error("cannot call private property '%s' of class %s",
+                  access_error("cannot call private property '%s' of class %s",
                                 name->chars, AS_CLASS(peek(vm, 0))->name->chars);
                   break;
                 }
@@ -1936,7 +1976,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
                 break;
               }
 
-              runtime_error("class %s does not have a static property or method named '%s'",
+              property_error("class %s does not have a static property or method named '%s'",
                             AS_CLASS(peek(vm, 0))->name->chars, name->chars);
               break;
             }
@@ -1944,7 +1984,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
               b_obj_instance *instance = AS_INSTANCE(peek(vm, 0));
               if (table_get(&instance->properties, OBJ_VAL(name), &value)) {
                 if (is_private(name)) {
-                  runtime_error("cannot call private property '%s' from instance of %s",
+                  access_error("cannot call private property '%s' from instance of %s",
                                 name->chars, instance->klass->name->chars);
                   break;
                 }
@@ -1954,7 +1994,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
               }
 
               if (is_private(name)) {
-                runtime_error("cannot bind private property '%s' to instance of %s",
+                access_error("cannot bind private property '%s' to instance of %s",
                               name->chars, instance->klass->name->chars);
                 break;
               }
@@ -1963,7 +2003,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
                 break;
               }
 
-              runtime_error("instance of class %s does not have a property or method named '%s'",
+              property_error("instance of class %s does not have a property or method named '%s'",
                             AS_INSTANCE(peek(vm, 0))->klass->name->chars, name->chars);
               break;
             }
@@ -1974,7 +2014,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
                 break;
               }
 
-              runtime_error("class String has no named property '%s'", name->chars);
+              property_error("class String has no named property '%s'", name->chars);
               break;
             }
             case OBJ_LIST: {
@@ -1984,7 +2024,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
                 break;
               }
 
-              runtime_error("class List has no named property '%s'", name->chars);
+              property_error("class List has no named property '%s'", name->chars);
               break;
             }
             case OBJ_RANGE: {
@@ -1994,7 +2034,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
                 break;
               }
 
-              runtime_error("class Range has no named property '%s'", name->chars);
+              property_error("class Range has no named property '%s'", name->chars);
               break;
             }
             case OBJ_DICT: {
@@ -2005,7 +2045,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
                 break;
               }
 
-              runtime_error("unknown key or class Dict property '%s'", name->chars);
+              property_error("unknown key or class Dict property '%s'", name->chars);
               break;
             }
             case OBJ_BYTES: {
@@ -2015,7 +2055,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
                 break;
               }
 
-              runtime_error("class Bytes has no named property '%s'", name->chars);
+              property_error("class Bytes has no named property '%s'", name->chars);
               break;
             }
             case OBJ_FILE: {
@@ -2025,16 +2065,16 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
                 break;
               }
 
-              runtime_error("class File has no named property '%s'", name->chars);
+              property_error("class File has no named property '%s'", name->chars);
               break;
             }
             default: {
-              runtime_error("object of type %s does not carry properties", value_type(peek(vm, 0)));
+              type_error("object of type %s does not carry properties", value_type(peek(vm, 0)));
               break;
             }
           }
         } else {
-          runtime_error("'%s' of type %s does not have properties", value_to_string(vm, peek(vm, 0))->chars, value_type(peek(vm, 0)));
+          type_error("'%s' of type %s does not have properties", value_to_string(vm, peek(vm, 0))->chars, value_type(peek(vm, 0)));
           break;
         }
         break;
@@ -2056,7 +2096,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
             break;
           }
 
-          runtime_error("instance of class %s does not have a property or method named '%s'",
+          property_error("instance of class %s does not have a property or method named '%s'",
                         AS_INSTANCE(peek(vm, 0))->klass->name->chars, name->chars);
           break;
         } else if (IS_CLASS(peek(vm, 0))) {
@@ -2072,7 +2112,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
             push(vm, value);
             break;
           }
-          runtime_error("class %s does not have a static property or method named '%s'",
+          property_error("class %s does not have a static property or method named '%s'",
                         klass->name->chars, name->chars);
           break;
         } else if (IS_MODULE(peek(vm, 0))) {
@@ -2083,17 +2123,17 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
             break;
           }
 
-          runtime_error("module %s does not define '%s'", module->name, name->chars);
+          property_error("module %s does not define '%s'", module->name, name->chars);
           break;
         }
 
-        runtime_error("'%s' of type %s does not have properties", value_to_string(vm, peek(vm, 0))->chars, value_type(peek(vm, 0)));
+        type_error("'%s' of type %s does not have properties", value_to_string(vm, peek(vm, 0))->chars, value_type(peek(vm, 0)));
         break;
       }
 
       case OP_SET_PROPERTY: {
         if (!IS_INSTANCE(peek(vm, 1)) && !IS_DICT(peek(vm, 1)) && !IS_CLASS(peek(vm, 1))) {
-          runtime_error("object of type %s can not carry properties", value_type(peek(vm, 1)));
+          type_error("object of type %s can not carry properties", value_type(peek(vm, 1)));
           break;
         } else  if(IS_EMPTY(peek(vm, 0))) {
           runtime_error(ERR_CANT_ASSIGN_EMPTY);
@@ -2207,7 +2247,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
       }
       case OP_INHERIT: {
         if (!IS_CLASS(peek(vm, 1))) {
-          runtime_error("cannot inherit from non-class object");
+          type_error("cannot inherit from non-class object");
           break;
         }
 
@@ -2223,7 +2263,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         b_obj_string *name = READ_STRING();
         b_obj_class *klass = AS_CLASS(peek(vm, 0));
         if (!bind_method(vm, klass->superclass, name)) {
-          runtime_error("class %s does not define a function %s", klass->name->chars, name->chars);
+          property_error("class %s does not define a function %s", klass->name->chars, name->chars);
         }
         break;
       }
@@ -2262,7 +2302,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         b_value _upper = peek(vm, 0), _lower = peek(vm, 1);
 
         if (!IS_NUMBER(_upper) || !IS_NUMBER(_lower)) {
-          runtime_error("invalid range boundaries");
+          range_error("invalid range boundaries");
           break;
         }
 
@@ -2279,7 +2319,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         for (int i = 0; i < count; i += 2) {
           b_value name = vm->stack_top[-count + i];
           if(!IS_STRING(name) && !IS_NUMBER(name) && !IS_BOOL(name)) {
-            runtime_error("dictionary key must be one of string, number or boolean");
+            type_error("dictionary key must be one of string, number or boolean");
           }
           b_value value = vm->stack_top[-count + i + 1];
           dict_set_entry(vm, dict, name, value);
@@ -2322,7 +2362,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         }
 
         if (!is_gotten) {
-          runtime_error("cannot range index object of type %s", value_type(peek(vm, 2)));
+          type_error("cannot range index object of type %s", value_type(peek(vm, 2)));
         }
         break;
       }
@@ -2372,7 +2412,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         }
 
         if (!is_gotten) {
-          runtime_error("cannot index object of type %s", value_type(peek(vm, 1)));
+          type_error("cannot index object of type %s", value_type(peek(vm, 1)));
         }
         break;
       }
@@ -2397,7 +2437,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
               break;
             }
             case OBJ_STRING: {
-              runtime_error("strings do not support object assignment");
+              numeric_error("strings do not support object assignment");
               break;
             }
             case OBJ_DICT: {
@@ -2424,7 +2464,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         }
 
         if (!is_set) {
-          runtime_error("type of %s is not a valid iterable", value_type(peek(vm, 3)));
+          type_error("type of %s is not a valid iterable", value_type(peek(vm, 3)));
         }
         break;
       }
@@ -2485,7 +2525,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
           table_set(vm, &vm->current_frame->closure->function->module->values, OBJ_VAL(module_name), value);
           break;
         }
-        runtime_error("module '%s' not found", module_name->chars);
+        undefined_error("module '%s' not found", module_name->chars);
         break;
       }
 
@@ -2496,7 +2536,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         if (table_get(&function->module->values, OBJ_VAL(entry_name), &value)) {
           table_set(vm, &vm->current_frame->closure->function->module->values, OBJ_VAL(entry_name), value);
         } else {
-          runtime_error("module %s does not define '%s'", function->module->name, entry_name->chars);
+          property_error("module %s does not define '%s'", function->module->name, entry_name->chars);
         }
         break;
       }
@@ -2511,10 +2551,10 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
           if (table_get(&module->values, OBJ_VAL(value_name), &value)) {
             table_set(vm, &vm->current_frame->closure->function->module->values, OBJ_VAL(value_name), value);
           } else {
-            runtime_error("module %s does not define '%s'", module->name, value_name->chars);
+            property_error("module %s does not define '%s'", module->name, value_name->chars);
           }
         } else{
-          runtime_error("module '%s' not found", module_name->chars);
+          undefined_error("module '%s' not found", module_name->chars);
         }
         break;
       }
@@ -2566,9 +2606,9 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         b_value expression = pop(vm);
         if (is_false(expression)) {
           if (!IS_NIL(message)) {
-            do_throw_exception(vm, true, value_to_string(vm, message)->chars);
+            do_throw_exception(vm, NULL, true, value_to_string(vm, message)->chars);
           } else {
-            do_throw_exception(vm, true, "");
+            do_throw_exception(vm, NULL, true, "");
           }
         }
         break;
@@ -2577,7 +2617,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
       case OP_RAISE: {
         if (!IS_INSTANCE(peek(vm, 0)) ||
             !is_instance_of(AS_INSTANCE(peek(vm, 0))->klass, vm->exception_class)) {
-          runtime_error("instance of Exception expected");
+          type_error("instance of Exception expected");
           break;
         }
 
@@ -2595,6 +2635,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
           vm->frame_count -= vm->current_frame - error->frame;
           vm->current_frame = error->frame;
           vm->current_frame->ip = &error->frame->closure->function->blob.code[error->offset];
+          vm->stack_top = error->stack_head;
           break;
         }
 
@@ -2639,6 +2680,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
         error->frame = vm->current_frame;
         error->offset = offset;
         error->value = NIL_VAL;
+        error->stack_head = vm->stack_top;
 
         push_error(vm, error);
         break;
@@ -2647,6 +2689,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
       case OP_END_CATCH: {
         b_error_frame *error = pop_error(vm);
         push(vm, error->value);
+        error->value = NIL_VAL;
         break;
       }
 

@@ -97,7 +97,7 @@ class HttpClient {
   HttpClient(base_url) {
     if base_url != nil {
       if !is_string(base_url) {
-        raise Exception('invalid url')
+        raise ArgumentError('invalid url')
       }
 
       self._base_url = base_url
@@ -121,7 +121,7 @@ class HttpClient {
   send_request(uri, method, data, headers, options) {
 
     if !uri or !is_string(uri) {
-      raise Exception('invalid url')
+      raise ArgumentError('invalid url')
     }
 
     if self._base_url and !uri.starts_with(self._base_url) {
@@ -131,11 +131,11 @@ class HttpClient {
     if !method method = 'GET'
 
     if data != nil and !is_string(data) and !is_dict(data) {
-      raise Exception('string expected, ${typeof(data)} given')
+      raise TypeError('string expected, ${typeof(data)} given')
     }
 
     if options != nil and !is_dict(options) {
-      raise Exception('dictionary expected, ${typeof(options)} given')
+      raise TypeError('dictionary expected, ${typeof(options)} given')
     }
 
     var request = HttpRequest()

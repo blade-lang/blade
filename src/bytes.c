@@ -23,7 +23,7 @@ DECLARE_NATIVE(bytes) {
     RETURN_OBJ(bytes);
   }
 
-  RETURN_ERROR("expected bytes size or bytes list as argument");
+  RETURN_ARGUMENT_ERROR("expected bytes size or bytes list as argument");
 }
 
 DECLARE_BYTES_METHOD(length) {
@@ -37,7 +37,7 @@ DECLARE_BYTES_METHOD(append) {
   if (IS_NUMBER(args[0])) {
     int byte = (int) AS_NUMBER(args[0]);
     if (byte < 0 || byte > 255) {
-      RETURN_ERROR("invalid byte. bytes range from 0 to 255");
+      RETURN_RANGE_ERROR("invalid byte. bytes range from 0 to 255");
     }
 
     // append here...
@@ -62,12 +62,12 @@ DECLARE_BYTES_METHOD(append) {
 
       for (int i = 0; i < list->items.count; i++) {
         if (!IS_NUMBER(list->items.values[i])) {
-          RETURN_ERROR("bytes lists can only contain numbers");
+          RETURN_TYPE_ERROR("bytes lists can only contain numbers");
         }
 
         int byte = (int) AS_NUMBER(list->items.values[i]);
         if (byte < 0 || byte > 255) {
-          RETURN_ERROR("invalid byte. bytes range from 0 to 255");
+          RETURN_RANGE_ERROR("invalid byte. bytes range from 0 to 255");
         }
 
         bytes->bytes.bytes[bytes->bytes.count + i] = (unsigned char) byte;
@@ -78,7 +78,7 @@ DECLARE_BYTES_METHOD(append) {
     RETURN;
   }
 
-  RETURN_ERROR("bytes can only append a byte or a list of bytes");
+  RETURN_ARGUMENT_ERROR("bytes can only append a byte or a list of bytes");
 }
 
 DECLARE_BYTES_METHOD(clone) {
@@ -160,7 +160,7 @@ DECLARE_BYTES_METHOD(remove) {
   int index = AS_NUMBER(args[0]);
 
   if (index < 0 || index >= bytes->bytes.count) {
-    RETURN_ERROR("bytes index %d out of range", index);
+    RETURN_RANGE_ERROR("bytes index %d out of range", index);
   }
 
   unsigned char val = bytes->bytes.bytes[index];
@@ -240,7 +240,7 @@ DECLARE_BYTES_METHOD(get) {
   b_obj_bytes *bytes = AS_BYTES(METHOD_OBJECT);
   int index = AS_NUMBER(args[0]);
   if (index < 0 || index >= bytes->bytes.count) {
-    RETURN_ERROR("bytes index %d out of range", index);
+    RETURN_RANGE_ERROR("bytes index %d out of range", index);
   }
 
   RETURN_NUMBER((double) ((int) bytes->bytes.bytes[index]));
@@ -370,7 +370,7 @@ DECLARE_BYTES_METHOD(__itern__) {
   }
 
   if (!IS_NUMBER(args[0])) {
-    RETURN_ERROR("bytes are numerically indexed");
+    RETURN_ARGUMENT_ERROR("bytes are numerically indexed");
   }
 
   int index = AS_NUMBER(args[0]);

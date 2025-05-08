@@ -159,25 +159,25 @@ class Url {
    */
   Url(scheme, host, port, path, query, hash, username, password, has_slash, empty_path) {
     if scheme != nil and !is_string(scheme)
-      raise Exception('scheme must be a string')
+      raise TypeError('scheme must be a string')
     if host != nil and !is_string(host)
-      raise Exception('host must be a string')
+      raise TypeError('host must be a string')
     if port != nil and !is_string(port) and !is_int(port)
-      raise Exception('port must be a string or an integer')
+      raise TypeError('port must be a string or an integer')
     if path != nil and !is_string(path)
-      raise Exception('path must be a string')
+      raise TypeError('path must be a string')
     if query != nil and !is_string(query)
-      raise Exception('query must be a string')
+      raise TypeError('query must be a string')
     if hash != nil and !is_string(hash)
-      raise Exception('hash must be a string')
+      raise TypeError('hash must be a string')
     if username != nil and !is_string(username)
-      raise Exception('username must be a string')
+      raise TypeError('username must be a string')
     if password != nil and !is_string(password)
-      raise Exception('password must be a string')
+      raise TypeError('password must be a string')
     if has_slash != nil and !is_bool(has_slash)
-      raise Exception('has_slash must be a boolean')
+      raise TypeError('has_slash must be a boolean')
     if empty_path != nil and !is_bool(empty_path)
-      raise Exception('empty_path must be a boolean')
+      raise TypeError('empty_path must be a boolean')
 
     if is_number(port) port = to_string(port)
 
@@ -377,10 +377,10 @@ class Url {
  */
 def encode(url, strict) {
   if !is_string(url)
-    raise Exception('string expected at parameter 1')
+    raise TypeError('string expected at parameter 1')
 
   if strict != nil and !is_bool(strict) 
-    raise Exception('boolean expected at parameter 2')
+    raise TypeError('boolean expected at parameter 2')
 
   var result = ''
   url.ascii(true)
@@ -412,7 +412,7 @@ def encode(url, strict) {
  */
 def decode(url) {
   if !is_string(url)
-    raise Exception('string expected')
+    raise TypeError('string expected')
 
   # quick exit strategy
   if url.index_of('%') == -1 return url
@@ -451,9 +451,9 @@ def decode(url) {
  */
 def parse(url, strict) {
   if !is_string(url) 
-    raise Exception('string expected in argument 1 (url)')
+    raise TypeError('string expected in argument 1 (url)')
   if strict != nil and !is_bool(strict)
-    raise Exception('boolean expected in argument 2 (strict)')
+    raise TypeError('boolean expected in argument 2 (strict)')
     
   if strict == nil strict = true
   url = url.trim() # support urls surrounded by whitespaces

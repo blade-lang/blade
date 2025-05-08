@@ -11,9 +11,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup cmake
-        uses: jwlawson/actions-setup-cmake@v1.9
+        uses: lukka/get-cmake@v3.25.2
         with:
-          cmake-version: '3.25.2'
+          useLocalCache: true
+          useCloudCache: false
       - name: Compile
         run: |
           sudo apt-get update
@@ -40,13 +41,49 @@ jobs:
           asset_name: blade-linux-${{ github.event.release.tag_name }}.zip
           asset_content_type: application/zip
 
+  build-linux-arm:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup cmake
+        uses: lukka/get-cmake@v3.25.2
+        with:
+          useLocalCache: true
+          useCloudCache: false
+      - name: Compile
+        run: |
+          sudo apt-get update
+          sudo apt-get remove libgd3 
+          sudo apt-get install curl libpthread-stubs0-dev libcurl4-openssl-dev libgd-dev libavif-dev libffi-dev -y
+          cmake -B .
+          cmake --build . -- -j 12
+      - name: Create ZIP Archive
+        run: |
+          chmod +x blade/blade
+          zip -r9 --symlinks blade_linux-aarch64.zip blade/
+      - name: Generate Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: blade_linux-aarch64.zip
+      - name: Upload Artifact to Release
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: blade_linux-aarch64.zip
+          asset_name: blade-linux-aarch64-${{ github.event.release.tag_name }}.zip
+          asset_content_type: application/zip
+
   build-macos:
     runs-on: macos-latest
     steps:
       - name: Setup cmake
-        uses: jwlawson/actions-setup-cmake@v1.9
+        uses: lukka/get-cmake@v3.25.2
         with:
-          cmake-version: '3.25.2'
+          useLocalCache: true
+          useCloudCache: false
       - uses: actions/checkout@v4
       - name: Setup dependencies
         run: |
@@ -79,26 +116,29 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Setup cmake
-        uses: jwlawson/actions-setup-cmake@v1.9
+        uses: lukka/get-cmake@latest
         with:
-          cmake-version: '3.28.x'
+          cmakeVersion: '3.28.x'
+          useLocalCache: true
+          useCloudCache: false
       - name: Setup WinLibs
         uses: bwoodsend/setup-winlibs-action@v1.8
         with:
           add_to_path: true
           tag: 14.2.0posix-18.1.8-12.0.0-msvcrt-r1
-      - uses: actions/checkout@v4
-      - uses: friendlyanon/setup-vcpkg@v1
-        with: { committish: 3508985146f1b1d248c67ead13f8f54be5b4f5da, cache-version: "1", cache-key: "vcpkg-windows", cache-restore-keys: "vcpkg-windows" }
-      - name: Install Dependencies
-        run: |
-          ${{ env.VCPKG_ROOT }}/vcpkg update
-          ${{ env.VCPKG_ROOT }}/vcpkg version
-          ${{ env.VCPKG_ROOT }}/vcpkg install pkgconf pthreads:x64-windows curl:x64-windows libffi:x64-windows openssl:x64-windows libgd:x64-windows
-          ${{ env.VCPKG_ROOT }}/vcpkg list
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        uses: johnwason/vcpkg-action@v6
+        with:
+          pkgs: pkgconf curl libffi openssl libgd
+          revision: master
+          triplet: x64-windows-release
+          token: ${{ github.token }}
+          github-binarycache: true
       - name: Compile
         run: |
-          cmake -B . -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake" -DOPENSSL_ROOT_DIR=${{ env.VCPKG_ROOT }}/installed/x64-windows-static
+          cmake -B . -G "Unix Makefiles" -DVCPKG_TARGET_TRIPLET=x64-windows-release -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake"
           cmake --build .
       - name: Create ZIP Archive
         shell: cmd

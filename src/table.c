@@ -232,6 +232,9 @@ void table_print(b_table *table) {
     b_entry *entry = &table->entries[i];
     if (!IS_EMPTY(entry->key)) {
       print_value(entry->key);
+      if(IS_STRING(entry->key)) {
+        printf("(%d)", AS_STRING(entry->key)->hash);
+      }
       printf(": ");
       print_value(entry->value);
       if (i != table->capacity - 1) {

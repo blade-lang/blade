@@ -753,7 +753,7 @@ class HttpRequest {
     self.cookies = {}
     
     if !is_string(raw_data)
-      raise HttpException('raw_data must be string')
+      raise TypeError('raw_data must be string')
     # if !instance_of(client, socket.Socket)
     #   raise HttpException('invalid Socket')
 
@@ -820,15 +820,15 @@ class HttpRequest {
   send(uri, method, data, headers, options) {
     # arguments validation.
     if !instance_of(uri, url.Url)
-      raise HttpException('uri must be an instance of Url')
+      raise TypeError('uri must be an instance of Url')
     if !is_string(method)
-      raise HttpException('method must be string')
+      raise TypeError('method must be string')
     if data != nil and !is_string(data) and !is_bytes(data) and !is_dict(data)
-      raise HttpException('data must be string, bytes or dictionary')
+      raise TypeError('data must be string, bytes or dictionary')
     if headers != nil and !is_dict(headers)
-      raise Exception('headers must be a dictionary')
+      raise TypeError('headers must be a dictionary')
     if options != nil and !is_dict(options)
-      raise Exception('options must be a dictionary')
+      raise TypeError('options must be a dictionary')
 
     if options == nil options = {}
 

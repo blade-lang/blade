@@ -22,40 +22,10 @@ add_library(clib SHARED clib.c)
 target_link_libraries(clib libblade)
 add_dependencies(clib blade)
 
-# TEMPORARY WORKAROUND FOR THE OCCASIONAL CRASH WHEN RETURNING STRUCT
-# FROM C LIBRARIES WHEN RUNNING IN RELEASE MODE.
-#
-# @TODO: IDENTIFY AND FIX THE REAL BUG THAT CAUSES SEGFAULT IN RELEASE BUILD.
-#        THE BUG IS RELATED TO ASLR. IT IS STILL UNCLEAR IF THIS BUG ONLY EXISTS
-#        UNDER CERTAIN OS CONFIGURATIONS.
-# if(CMAKE_BUILD_TYPE STREQUAL "Release")
-#     target_compile_options(clib PRIVATE -O0)
-# endif()
-
-# if(NOT WIN32)
-#     # set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-#     # include(FetchContent)
-#     # FetchContent_Declare(LibFFI
-#     #     URL      https://github.com/blade-lang/ffi/archive/refs/heads/main.zip
-#     #     URL_HASH SHA256=c5b2b019ec0f2e3a901ec58de682aeeae30dc240dddf7f74f9892f3a38004018
-#     # )
-#     # FetchContent_MakeAvailable(LibFFI)
-#     # set(FFI_ROOT ${libffi_BINARY_DIR})
-
-#     # target_include_directories(clib PRIVATE "${FFI_ROOT}/include")
-#     # target_link_libraries(clib libffi)
-
-
-#     find_path(FFI_INCLUDE_DIR ffi.h)
-#     find_package(PkgConfig)
-#     pkg_check_modules(LIBFFI REQUIRED IMPORTED_TARGET libffi)
-#     target_link_libraries(clib PkgConfig::LIBFFI)
-# else()
 find_package(PkgConfig)
 find_path(FFI_INCLUDE_DIR ffi.h)
 pkg_check_modules(LIBFFI REQUIRED IMPORTED_TARGET libffi)
 target_link_libraries(clib PkgConfig::LIBFFI)
-# endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")

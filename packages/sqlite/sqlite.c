@@ -67,7 +67,7 @@ DECLARE_MODULE_METHOD(sqlite__exec) {
       RETURN_TRUE;
     } else {
       if(!IS_LIST(args[2]) && !IS_DICT(args[2])) {
-        RETURN_ERROR("params must be a list or dictionary");
+        RETURN_ARGUMENT_ERROR("params must be a list or dictionary");
       }
 
       sqlite3_stmt *stmt;
@@ -77,7 +77,7 @@ DECLARE_MODULE_METHOD(sqlite__exec) {
           b_obj_list *params = AS_LIST(args[2]);
 
           if(params->items.count != total_params_bindable) {
-            RETURN_ERROR("expected %d params, %d given", total_params_bindable, params->items.count);
+            RETURN_ARGUMENT_ERROR("expected %d params, %d given", total_params_bindable, params->items.count);
           }
 
           for(int i = 0; i < params->items.count; i++) {
@@ -91,12 +91,12 @@ DECLARE_MODULE_METHOD(sqlite__exec) {
           b_obj_dict *params = AS_DICT(args[2]);
 
           if(params->names.count != total_params_bindable) {
-            RETURN_ERROR("expected %d params, %d given", total_params_bindable, params->names.count);
+            RETURN_ARGUMENT_ERROR("expected %d params, %d given", total_params_bindable, params->names.count);
           }
 
           for(int i = 0; i < params->names.count; i++) {
             if(!IS_STRING(params->names.values[i])) {
-              RETURN_ERROR("SQL params dictionary key must be a string");
+              RETURN_ARGUMENT_ERROR("SQL params dictionary key must be a string");
             }
             int index = sqlite3_bind_parameter_index(stmt, AS_C_STRING(params->names.values[i]));
             b_value value;
@@ -108,7 +108,7 @@ DECLARE_MODULE_METHOD(sqlite__exec) {
             }
           }
         } else if(total_params_bindable != 0) {
-          RETURN_ERROR("expected %d params, 0 given", total_params_bindable);
+          RETURN_ARGUMENT_ERROR("expected %d params, 0 given", total_params_bindable);
         }
 
         if(sqlite3_step(stmt) != SQLITE_DONE) {
@@ -143,7 +143,7 @@ DECLARE_MODULE_METHOD(sqlite__query) {
   ENFORCE_ARG_TYPE(_query, 0, IS_PTR);
   ENFORCE_ARG_TYPE(_query, 1, IS_STRING);
   if(!IS_NIL(args[2]) && !IS_LIST(args[2]) && !IS_DICT(args[2])) {
-    RETURN_ERROR("params must be a list or dictionary");
+    RETURN_ARGUMENT_ERROR("params must be a list or dictionary");
   }
 
   sqlite3 *db = AS_PTR(args[0])->pointer;
@@ -156,7 +156,7 @@ DECLARE_MODULE_METHOD(sqlite__query) {
         b_obj_list *params = AS_LIST(args[2]);
 
         if(params->items.count != total_params_bindable) {
-          RETURN_ERROR("expected %d params, %d given", total_params_bindable, params->items.count);
+          RETURN_ARGUMENT_ERROR("expected %d params, %d given", total_params_bindable, params->items.count);
         }
 
         for(int i = 0; i < params->items.count; i++) {
@@ -170,12 +170,12 @@ DECLARE_MODULE_METHOD(sqlite__query) {
         b_obj_dict *params = AS_DICT(args[2]);
 
         if(params->names.count != total_params_bindable) {
-          RETURN_ERROR("expected %d params, %d given", total_params_bindable, params->names.count);
+          RETURN_ARGUMENT_ERROR("expected %d params, %d given", total_params_bindable, params->names.count);
         }
 
         for(int i = 0; i < params->names.count; i++) {
           if(!IS_STRING(params->names.values[i])) {
-            RETURN_ERROR("SQL params dictionary key must be a string");
+            RETURN_ARGUMENT_ERROR("SQL params dictionary key must be a string");
           }
           int index = sqlite3_bind_parameter_index(stmt, AS_C_STRING(params->names.values[i]));
           b_value value;
@@ -187,7 +187,7 @@ DECLARE_MODULE_METHOD(sqlite__query) {
           }
         }
       } else if(total_params_bindable != 0) {
-        RETURN_ERROR("expected %d params, 0 given", total_params_bindable);
+        RETURN_ARGUMENT_ERROR("expected %d params, 0 given", total_params_bindable);
       }
 
       b_obj_ptr *ptr = new_ptr(vm, (void*)stmt);

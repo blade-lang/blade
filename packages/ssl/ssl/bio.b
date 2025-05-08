@@ -22,7 +22,7 @@ class BIO {
    */
   BIO(method) {
     if !reflect.is_ptr(method)
-      raise Exception('SSL BIO method expected')
+      raise TypeError('SSL BIO method expected')
     self._ptr = _ssl.new_bio(method)
   }
 
@@ -35,11 +35,11 @@ class BIO {
    */
   set_ssl(ssl, option) {
     if !instance_of(ssl, SSL)
-      raise Exception('instance of SSL expected')
+      raise TypeError('instance of SSL expected')
 
     if !option option = constants.BIO_CLOSE
     if !is_int(option)
-      raise Exception('option must be a BIO_* constant')
+      raise ValueError('option must be a BIO_* constant')
 
     self._ssl = ssl
     _ssl.set_ssl(self._ptr, ssl.get_pointer(), option)
@@ -52,7 +52,7 @@ class BIO {
    */
   set_conn_hostname(name) {
     if !is_string(name)
-      raise Exception('string expected')
+      raise TypeError('string expected')
     _ssl.set_conn_hostname(self._ptr, name)
   }
 
@@ -63,7 +63,7 @@ class BIO {
    */
   set_accept_tname(name) {
     if !is_string(name)
-      raise Exception('string expected')
+      raise TypeError('string expected')
     _ssl.set_accept_name(self._ptr, name)
   }
 
@@ -74,7 +74,7 @@ class BIO {
    */
   set_conn_address(address) {
     if !is_string(address)
-      raise Exception('string expected')
+      raise TypeError('string expected')
     _ssl.set_conn_address(self._ptr, address)
   }
 
@@ -87,7 +87,7 @@ class BIO {
     if is_int(port) port = '${port}'
 
     if !is_string(port)
-      raise Exception('integer or string expected')
+      raise TypeError('integer or string expected')
 
     _ssl.set_conn_port(self._ptr, port)
   }
@@ -101,7 +101,7 @@ class BIO {
     if is_int(port) port = '${port}'
 
     if !is_string(port)
-      raise Exception('integer or string expected')
+      raise TypeError('integer or string expected')
 
     _ssl.set_accept_port(self._ptr, port)
   }
@@ -113,7 +113,7 @@ class BIO {
    */
   set_conn_family(family) {
     if !is_int(family)
-      raise Exception('integer expected')
+      raise TypeError('integer expected')
 
     _ssl.set_conn_family(self._ptr, family)
   }
@@ -125,7 +125,7 @@ class BIO {
    */
   set_accept_family(family) {
     if !is_int(family)
-      raise Exception('integer expected')
+      raise TypeError('integer expected')
 
     _ssl.set_accept_family(self._ptr, family)
   }
@@ -211,9 +211,9 @@ class BIO {
    */
   set_fd(fd, opt) {
     if !is_int(fd)
-      raise Exception('fd must be an integer')
+      raise TypeError('fd must be an integer')
     if opt != nil and !_close_opts.contains(fd)
-      raise Exception('opt must be one of BIO_CLOSE or BIO_NOCLOSE')
+      raise ValueError('opt must be one of BIO_CLOSE or BIO_NOCLOSE')
 
     if !opt opt = constants.BIO_NOCLOSE
 
@@ -230,7 +230,7 @@ class BIO {
     if !is_blocking is_blocking = true
 
     if !is_bool(is_blocking)
-      raise Exception('boolean expected')
+      raise TypeError('boolean expected')
 
     _ssl.set_nbio(self._ptr, is_blocking)
   }
@@ -245,7 +245,7 @@ class BIO {
    */
   push(bio) {
     if !instance_of(bio, BIO)
-      raise Exception('instance of BIO expected')
+      raise TypeError('instance of BIO expected')
     if bio {
       _ssl.push(self._ptr, bio.get_pointer())
     }
@@ -267,7 +267,7 @@ class BIO {
    */
   write(data) {
     if !is_string(data) and !is_bytes(data)
-      raise Exception('string or bytes expected')
+      raise TypeError('string or bytes expected')
 
     if is_bytes(data) data = to_string(data)
 
@@ -287,7 +287,7 @@ class BIO {
   read(length) {
     if !length length = 1024
     if !is_int(length)
-      raise Exception('integer expected')
+      raise TypeError('integer expected')
     
     var result = _ssl.bio_read(self._ptr, length)
     if result == nil {
@@ -333,7 +333,7 @@ class BIO {
    */
   error(code) {
     if code != nil and !is_number(code) and !is_int(code)
-      raise Exception('integer expected')
+      raise TypeError('integer expected')
       
     if !code code = -1
     return _ssl.error(self._ptr, code)

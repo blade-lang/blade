@@ -12,10 +12,10 @@
 #include <gdfontt.h>
 
 #define CHECK_IMAGE_PTR(x) if((x) == NULL) \
-    RETURN_ERROR("Invalid image pointer.") \
+    RETURN_ARGUMENT_ERROR("Invalid image pointer.") \
 
 #define CHECK_FONT_PTR(x) if((x) == NULL) \
-    RETURN_ERROR("Invalid font pointer.") \
+    RETURN_ARGUMENT_ERROR("Invalid font pointer.") \
 
 #define CHECK_IMAGE(x) if((x) == NULL) \
     RETURN_ERROR(strerror(errno)) \
@@ -1351,7 +1351,7 @@ DECLARE_MODULE_METHOD(imagine__scatter) {
     for(int i = 0; i < color_list->items.count; i++) {
       if(!IS_NUMBER(color_list->items.values[i])) {
         FREE_ARRAY(int, colors, color_list->items.count);
-        RETURN_ERROR("Invalid color in scatter profile.");
+        RETURN_VALUE_ERROR("Invalid color in scatter profile.");
       }
 
       colors[i] = AS_NUMBER(color_list->items.values[i]);

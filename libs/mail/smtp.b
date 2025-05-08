@@ -50,7 +50,7 @@ class Transport {
    */
   Transport(options) {
     if options != nil and !is_dict(options)
-      raise Exception('dictionary expected as argument to constructor')
+      raise TypeError('dictionary expected as argument to constructor')
     if !options options = {}
 
     self._host = options.get('host', 'localhost')
@@ -179,6 +179,6 @@ class Transport {
  */
 def smtp(options) {
   if options != nil and !is_dict(options)
-    raise Exception('dictionary expected as argument to constructor')
+    raise TypeError('dictionary expected as argument to constructor')
   return Transport(options)
 }

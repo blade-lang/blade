@@ -56,13 +56,13 @@ class Encoder {
   Encoder(compact, max_depth) {
     if max_depth {
       if !is_number(max_depth)
-        raise Exception('max_depth must be number. ${typeof(max_depth)} given')
+        raise TypeError('max_depth must be number. ${typeof(max_depth)} given')
       self._max_depth = max_depth
     }
 
     if compact != nil {
       if !is_bool(compact)
-        raise Exception('compact expects boolean. ${typeof(compact)} given')
+        raise TypeError('compact expects boolean. ${typeof(compact)} given')
       self._item_spacing = compact ? '' : ' '
       self._merge_strip_start = compact ? 1 : 2
     }
@@ -155,7 +155,7 @@ class Encoder {
     self._is_object = is_dict(value)
 
     if self._depth > self._max_depth and self._max_depth != 0 {
-      raise Exception('maximum recursive depth of ${self._max_depth} exceeded')
+      raise RangeError('maximum recursive depth of ${self._max_depth} exceeded')
     }
 
     return self._encode(value)

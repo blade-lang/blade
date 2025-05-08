@@ -245,7 +245,7 @@ class Thread {
    */
   Thread(delegate, stack_size) {
     if !is_function(delegate)
-      raise Exception('function(1..) expected, ${typeof(delegate)} given')
+      raise TypeError('function(1..) expected, ${typeof(delegate)} given')
 
     self._delegate = delegate
     self._delegate_arity = reflect.get_function_metadata(delegate).arity
@@ -281,7 +281,7 @@ class Thread {
    */
   start_from_list(args) {
     if !is_list(args)
-      raise Exception('list expected, ${typeof(args)} given')
+      raise TypeError('list expected, ${typeof(args)} given')
 
     assert !self._started, 'a thread cannot be started more than once'
 
@@ -392,7 +392,7 @@ class Thread {
    */
   sleep(duration) {
     if !is_number(duration)
-      raise Exception('number expected, ${typeof(duration)} given')
+      raise TypeError('number expected, ${typeof(duration)} given')
 
     assert _is_not_main_thread(self.get_id()), 'cannot call from main thread'
 
@@ -439,10 +439,10 @@ class Thread {
    */
   set_name(name) {
     if !is_string(name)
-      raise Exception('string expected, ${typeof(name)} given')
+      raise TypeError('string expected, ${typeof(name)} given')
     
     if name.length() < 0 or name.length() > 15 {
-      raise Exception('string length must be between 1 and 15')
+      raise ValueError('string length must be between 1 and 15')
     }
 
     assert _is_not_main_thread(self.get_id()), 'cannot call from main thread'
@@ -487,10 +487,10 @@ class Thread {
    */
   set_stack_size(size) {
     if !is_number(size)
-      raise Exception('number expected, ${typeof(size)} given')
+      raise TypeError('number expected, ${typeof(size)} given')
 
     if size < _MIN_STACK_SIZE
-      raise Exception('min size if 8kiB')
+      raise ValueError('min size if 8kiB')
 
     self._size = size
   }

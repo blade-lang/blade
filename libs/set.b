@@ -94,7 +94,7 @@ class Set {
   Set(items) {
     if items != nil {
       if !is_list(items) and !is_dict(items) {
-        raise Exception('expected list or dictionary, ${tyepof(items)} given')
+        raise TypeError('expected list or dictionary, ${tyepof(items)} given')
       }
   
       if is_dict(items) {
@@ -115,7 +115,7 @@ class Set {
    */
   union(other) {
     if !instance_of(other, Set) {
-      raise Exception('instance of Set expected, ${typeof(other)} given')
+      raise TypeError('instance of Set expected, ${typeof(other)} given')
     }
 
     var items = self.to_list()
@@ -132,7 +132,7 @@ class Set {
    */
   intersect(other) {
     if !instance_of(other, Set) {
-      raise Exception('instance of Set expected, ${typeof(other)} given')
+      raise TypeError('instance of Set expected, ${typeof(other)} given')
     }
 
     var common = []
@@ -156,7 +156,7 @@ class Set {
    */
   difference(other) {
     if !instance_of(other, Set) {
-      raise Exception('instance of Set expected, ${typeof(other)} given')
+      raise TypeError('instance of Set expected, ${typeof(other)} given')
     }
 
     var diff = []
@@ -183,7 +183,7 @@ class Set {
    */
   symetric_difference(other) {
     if !instance_of(other, Set) {
-      raise Exception('instance of Set expected, ${typeof(other)} given')
+      raise TypeError('instance of Set expected, ${typeof(other)} given')
     }
 
     var diff = []
@@ -218,7 +218,7 @@ class Set {
    */
   is_disjoint(other) {
     if !instance_of(other, Set) {
-      raise Exception('instance of Set expected, ${typeof(other)} given')
+      raise TypeError('instance of Set expected, ${typeof(other)} given')
     }
 
     var intersect = self.intersect(other)
@@ -238,7 +238,7 @@ class Set {
    */
   is_subset(other) {
     if !instance_of(other, Set) {
-      raise Exception('instance of Set expected, ${typeof(other)} given')
+      raise TypeError('instance of Set expected, ${typeof(other)} given')
     }
 
     # important early exit
@@ -263,7 +263,7 @@ class Set {
    */
   is_superset(other) {
     if !instance_of(other, Set) {
-      raise Exception('instance of Set expected, ${typeof(other)} given')
+      raise TypeError('instance of Set expected, ${typeof(other)} given')
     }
 
     # important early exit
@@ -364,7 +364,7 @@ class Set {
    */
   each(callback) {
     if !is_function(callback) {
-      raise Exception('callback function expected, ${typeof(callback)} given')
+      raise ArgumentError('callback function expected, ${typeof(callback)} given')
     }
 
     var fn_meta = _reflect.getfunctionmetadata(function)
@@ -415,7 +415,7 @@ class Set {
   @itern(index) {
     if index == nil return 0
     if !is_number(index)
-      raise Exception('sets are numerically indexed')
+      raise ArgumentError('sets are numerically indexed')
     if index < self._items.length() - 1 return index + 1
     return nil
   }
@@ -426,7 +426,7 @@ class Set {
 
   def + {
     if !instance_of(__arg__, Set) {
-      raise Exception('operation + not defined for Set and ${typeof(__arg__)}')
+      raise NumericError('operation + not defined for Set and ${typeof(__arg__)}')
     }
 
     return self.union(__arg__)
@@ -434,7 +434,7 @@ class Set {
 
   def - {
     if !instance_of(__arg__, Set) {
-      raise Exception('operation - not defined for Set and ${typeof(__arg__)}')
+      raise NumericError('operation - not defined for Set and ${typeof(__arg__)}')
     }
 
     return self.intersect(__arg__)
@@ -442,7 +442,7 @@ class Set {
 
   def = {
     if !instance_of(__arg__, Set) {
-      raise Exception('operation = not defined for Set and ${typeof(__arg__)}')
+      raise NumericError('operation = not defined for Set and ${typeof(__arg__)}')
     }
 
     if self.length() != __arg__.length() {

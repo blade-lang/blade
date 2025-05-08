@@ -403,7 +403,7 @@ DECLARE_MODULE_METHOD(clib_get_function) {
     CLIB_RETURN_PTR(fn, NULL, <void *clib::function(%s)>, name->chars);
   }
 
-  RETURN_ERROR("handle not initialized");
+  RETURN_ARGUMENT_ERROR("handle not initialized");
 }
 
 DECLARE_MODULE_METHOD(clib_close_library) {
@@ -418,7 +418,7 @@ DECLARE_MODULE_METHOD(clib_close_library) {
     RETURN;
   }
 
-  RETURN_ERROR("handle not initialized");
+  RETURN_ARGUMENT_ERROR("handle not initialized");
 }
 
 DECLARE_MODULE_METHOD(clib_new_struct) {
@@ -547,7 +547,7 @@ DECLARE_MODULE_METHOD(clib_new_closure) {
     RETURN_ERROR("failed to initialize closure interface");
   }
 
-  RETURN_ERROR("closure return type missing");
+  RETURN_ARGUMENT_ERROR("closure return type missing");
 }
 
 DECLARE_MODULE_METHOD(clib_new) {
@@ -650,7 +650,7 @@ DECLARE_MODULE_METHOD(clib_get) {
 
   b_ffi_type *type = (b_ffi_type *)AS_PTR(args[0])->pointer;
   if(type->as_ffi->elements == NULL) {
-    RETURN_ERROR("get can only be used on derived types such as struct, union and arrays.");
+    RETURN_ARGUMENT_ERROR("get can only be used on derived types such as struct, union and arrays.");
   }
 
   unsigned char *data;
@@ -731,7 +731,7 @@ DECLARE_MODULE_METHOD(clib_define) {
     RETURN_ERROR("failed to initialize call interface to %s()", fn_name->chars);
   }
 
-  RETURN_ERROR("invalid function handle to %s()", fn_name->chars);
+  RETURN_VALUE_ERROR("invalid function handle to %s()", fn_name->chars);
 }
 
 #define CLIB_CALL(t, r) {\
@@ -756,7 +756,7 @@ DECLARE_MODULE_METHOD(clib_call) {
   if(handle) {
     b_obj_list *args_list = AS_LIST(args[1]);
     if(args_list->items.count > handle->args_count && !handle->is_variadic) {
-      RETURN_ERROR("invalid number of arguments");
+      RETURN_ARGUMENT_ERROR("invalid number of arguments");
     }
 
     b_ffi_values *values = get_c_values(vm, handle, args_list);

@@ -101,7 +101,7 @@ DECLARE_MODULE_METHOD(io_tty__tcgetattr) {
   bool original = AS_BOOL(args[1]);
 
   if (!file->is_std) {
-    RETURN_ERROR("can only use tty on std objects");
+    RETURN_VALUE_ERROR("can only use tty on std objects");
   }
 
   struct termios raw_attr;
@@ -153,11 +153,11 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
   b_obj_dict *dict = AS_DICT(args[2]);
 
   if (!file->is_std) {
-    RETURN_ERROR("can only use tty on std objects");
+    RETURN_VALUE_ERROR("can only use tty on std objects");
   }
 
   if (type < 0) {
-    RETURN_ERROR("tty options should be one of TTY's TCSAs");
+    RETURN_TYPE_ERROR("tty options should be one of TTY's TCSAs");
   }
 
   struct termios raw = orig_termios;
@@ -167,12 +167,12 @@ DECLARE_MODULE_METHOD(io_tty__tcsetattr) {
     if (!IS_NUMBER(dict->names.values[i]) ||
         AS_NUMBER(dict->names.values[i]) < 0 || // c_iflag
         AS_NUMBER(dict->names.values[i]) > 5) { // ospeed
-      RETURN_ERROR("attributes must be one of io TTY flags");
+          RETURN_TYPE_ERROR("attributes must be one of io TTY flags");
     }
     b_value value;
     if (dict_get_entry(dict, dict->names.values[i], &value)) {
       if (!IS_NUMBER(value)) {
-        RETURN_ERROR("TTY attribute cannot be %s", value_type(value));
+        RETURN_TYPE_ERROR("TTY attribute cannot be %s", value_type(value));
       }
 
       switch (i) {

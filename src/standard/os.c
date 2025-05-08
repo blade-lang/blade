@@ -465,6 +465,26 @@ DECLARE_MODULE_METHOD(os__basename) {
   RETURN_STRING(dir);
 }
 
+DECLARE_MODULE_METHOD(os__rename) {
+  ENFORCE_ARG_COUNT(rename, 2);
+  ENFORCE_ARG_TYPE(rename, 0, IS_STRING);
+  ENFORCE_ARG_TYPE(rename, 1, IS_STRING);
+
+#ifdef IS_UNIX
+  RETURN_BOOL(rename(AS_C_STRING(args[0]), AS_C_STRING(args[1])) == 0);
+#elif defined(_WIN32)
+  wchar_t from_buff[4096];
+  wchar_t to_buff[4096];
+
+  MultiByteToWideChar(CP_ACP, 0, AS_C_STRING(args[0]), -1, from_buff, 4096);
+  MultiByteToWideChar(CP_ACP, 0, AS_C_STRING(args[1]), -1, to_buff, 4096);
+
+  RETURN_BOOL(MoveFileW((LPCWSTR)from_buff, (LPCWSTR)to_buff));
+#else
+  RETURN_FALSE;
+#endif
+}
+
 /** DIR TYPES BEGIN */
 
 b_value __os_dir_DT_UNKNOWN(b_vm *vm){
@@ -545,6 +565,7 @@ CREATE_MODULE_LOADER(os) {
       {"realpath", true,  GET_MODULE_METHOD(os__realpath)},
       {"dirname", true,  GET_MODULE_METHOD(os__dirname)},
       {"basename", true,  GET_MODULE_METHOD(os__basename)},
+      {"rename", true,  GET_MODULE_METHOD(os__rename)},
       {NULL,     false, NULL},
   };
 

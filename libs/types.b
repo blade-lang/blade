@@ -32,7 +32,7 @@ def of(value) {
  */
 def digit(value) {
   if !is_string(value) or !value.length() == 1
-    raise Exception('char expected')
+    raise ValueError('char expected')
   var _ = ord(value)
   return _ >= 48 and _ <= 57
 }
@@ -46,7 +46,7 @@ def digit(value) {
  */
 def alpha(value) {
   if !is_string(value) or !value.length() == 1
-    raise Exception('char expected')
+    raise ValueError('char expected')
   var _ = ord(value)
   return (_ >= 65 and _ <= 90) or (_ >= 97 and _ <= 122)
 }
@@ -204,7 +204,7 @@ def callable(value) {
  */
 def instance(value, type) {
   if !is_class(type)
-    raise Exception('class expected')
+    raise ValueError('class expected')
   return instance_of(value, type)
 }
 

@@ -83,9 +83,9 @@ var NaN = 0/0
  */
 def factorial(n) {
   if !is_number(n) {
-    raise Exception('number expected')
+    raise TypeError('number expected')
   } else if n < 0 {
-    raise Exception('Math error')
+    raise ValueError('Math error')
   }
 
   var result = 1
@@ -511,7 +511,7 @@ def log1p(n) {
  */
 def cbrt(n) {
   if !is_number(n) {
-    raise Exception('number expected')
+    raise TypeError('number expected')
   }
 
   if n == nil return 0
@@ -575,7 +575,7 @@ def floor(n) {
  * @returns bool
  */
 def is_nan(n) {
-  return n == NaN
+  return n != n
 }
 
 /**
@@ -642,7 +642,7 @@ def is_finite(n) {
  */
 def trunc(n) {
   if !is_number(n) {
-    raise Exception('number expected')
+    raise TypeError('number expected')
   }
 
   return n < 0 ?  ceil(n) : floor(n)
@@ -663,7 +663,7 @@ def trunc(n) {
  */
 def sqrt(n) {
   if !is_number(n) {
-    raise Exception('number expected')
+    raise TypeError('number expected')
   }
 
   return n ** 0.5
@@ -686,14 +686,14 @@ def sqrt(n) {
  */
 def sum(arg) {
   if !is_iterable(arg) {
-    raise Exception('iterable expected')
+    raise TypeError('iterable expected')
   }
 
   var result = 0
 
   for i in arg {
     if !is_number(i) and !is_list(i) and !is_dict(i)
-      raise Exception('invalid item in sumation iterable')
+      raise ValueError('invalid item in sumation iterable')
 
     if is_list(i) or is_dict(i) 
       result += sum(i)
@@ -720,14 +720,14 @@ def sum(arg) {
  */
 def product(arg) {
   if !is_iterable(arg) {
-    raise Exception('iterable expected')
+    raise TypeError('iterable expected')
   }
 
   var result = 1
 
   for i in arg {
     if !is_number(i) and !is_list(i) and !is_dict(i)
-      raise Exception('invalid item in product iterable')
+      raise ValueError('invalid item in product iterable')
 
     if is_list(i) or is_dict(i) 
       result *= product(i)
@@ -754,7 +754,7 @@ def product(arg) {
  */
 def fraction(n) {
   if !is_number(n) {
-    raise Exception('number expected')
+    raise TypeError('number expected')
   }
 
   var str = to_string(n).split('.')

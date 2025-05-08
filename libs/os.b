@@ -165,10 +165,12 @@ def sleep(duration) {
  * ```
  * 
  * @param string name
+ * @param any|nil default_value
  * @returns string|nil
  */
-def get_env(name) {
-  return _os.getenv(name)
+def get_env(name, default_value) {
+  var value = _os.getenv(name)
+  return value != nil ? value : default_value
 }
 
 /**
@@ -222,7 +224,7 @@ def set_env(name, value, overwrite) {
 def create_dir(path, permission, recursive) {
 
   if path {
-    if !is_string(path) raise Exception('path must be string')
+    if !is_string(path) raise TypeError('path must be string')
     path = path
   }
   if !path.ends_with(path_separator)
@@ -234,14 +236,14 @@ def create_dir(path, permission, recursive) {
 
   if permission {
     if !is_number(permission)
-      raise Exception('expected number in first argument, ${typeof(permission)} given')
+      raise TypeError('expected number in first argument, ${typeof(permission)} given')
   } else {
     permission = 0c777
   }
 
   if recursive != nil {
     if !is_bool(recursive) 
-      raise Exception('boolean expected in second argument, ${typeof(recursive)} given')
+      raise TypeError('boolean expected in second argument, ${typeof(recursive)} given')
   } else {
     recursive = true
   }
@@ -303,7 +305,7 @@ def is_dir(path) {
 def remove_dir(path, recursive) {
   if recursive != nil {
     if !is_bool(recursive)
-      raise Exception('boolean expected in argument 2')
+      raise TypeError('boolean expected in argument 2')
   } else {
     recursive = false
   }
@@ -367,7 +369,7 @@ def join_paths(...) {
   var result = ''
   for arg in __args__ {
     if !is_string(arg)
-      raise Exception('string expected, ${typeof(arg)} given')
+      raise TypeError('string expected, ${typeof(arg)} given')
 
     arg = arg.trim()
     
@@ -445,4 +447,25 @@ def dir_name(path) {
  */
 def base_name(path) {
   return _os.basename(path)
+}
+
+/**
+ * Renames the file or directory specified by `old_name` to the name given by `new_name`.
+ * 
+ * If `old_name` and `new_name` are existing hard links referring to the same file, then 
+ * it does nothing, and returns a success status.
+ * 
+ * If `old_name` specifies a directory, `new_name` must either not exist, or it must 
+ * specify an empty directory.
+ * 
+ * If `old_name` refers to a symbolic link, the link is renamed; if `new_name` refers to 
+ * a symbolic link, the link will be overwritten.
+ * 
+ * @param string old_name
+ * @param string new_name
+ * @returns bool
+ * @raises Exception
+ */
+def rename(old_name, new_name) {
+  return _os.rename(old_name, new_name)
 }

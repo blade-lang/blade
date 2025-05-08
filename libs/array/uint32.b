@@ -38,13 +38,13 @@ class UInt32Array {
       # validate
       for item in n {
         if !is_number(item) {
-          raise Exception('invalid UInt32Array value')
+          raise ValueError('invalid UInt32Array value')
         }
       }
 
       self._data = _struct.pack('${self._data_type}${n.length()}', n)
     } else {
-      raise Exception('number or list expected, ${typeof(n)} given')
+      raise TypeError('number or list expected, ${typeof(n)} given')
     }
   }
 
@@ -107,9 +107,9 @@ class UInt32Array {
    */
   append(value) {
     if !is_number(value) or !is_int(value)
-      raise Exception('integer expected')
+      raise TypeError('integer expected')
     if value < 0 or value > UINT32_MAX
-      raise Exception('value out of uint32 range')
+      raise ValueError('value out of uint32 range')
 
     var as_bytes = _struct.pack(self._data_type, [value])
     self._data.extend(as_bytes)
@@ -126,7 +126,7 @@ class UInt32Array {
    */
   get(index) {
     if !is_number(index)
-      raise Exception('Arrays are numerically indexed')
+      raise ArgumentError('Arrays are numerically indexed')
 
     if self.length() > index {
       var start = index * self._bit_size
@@ -156,9 +156,9 @@ class UInt32Array {
    */
   set(index, value) {
     if !is_number(index)
-      raise Exception('Arrays are numerically indexed')
+      raise ArgumentError('Arrays are numerically indexed')
     if !is_number(value) and !is_int(value)
-      raise Exception('UInt32Array stores integer values')
+      raise ArgumentError('UInt32Array stores integer values')
 
     var as_bytes = _struct.pack(self._data_type, [value])
     var start = index * self._bit_size
@@ -185,7 +185,7 @@ class UInt32Array {
    */
   extend(array) {
     if !instance_of(array, UInt32Array)
-      raise Exception('instance of UInt32Array expected')
+      raise TypeError('instance of UInt32Array expected')
     self._data.extend(array.to_bytes())
   }
 
@@ -269,14 +269,14 @@ class UInt32Array {
 
   @iter(n) {
     if !is_number(n)
-      raise Exception('Arrays are numerically indexed')
+      raise ArgumentError('Arrays are numerically indexed')
     return self.get(n)
   }
 
   @itern(n) {
     if index == nil return 0
     if !is_number(index)
-      raise Exception('Arrays are numerically indexed')
+      raise ArgumentError('Arrays are numerically indexed')
     if index < self.length() - 1 return index + 1
     return nil
   }

@@ -52,7 +52,7 @@ class POP3 {
    */
   POP3(options) {
     if options != nil and !is_dict(options)
-      raise Exception('dictionary expected as argument to constructor')
+      raise TypeError('dictionary expected as argument to constructor')
     if !options options = {}
 
     
@@ -144,11 +144,11 @@ class POP3 {
    */
   exec(command, path, no_transfer) {
     if command != nil and !is_string(command)
-      raise Exception('string expected in argument 1 (command)')
+      raise TypeError('string expected in argument 1 (command)')
     if path != nil and !is_string(path)
-      raise Exception('string expected in argument 2 (path)')
+      raise TypeError('string expected in argument 2 (path)')
     if no_transfer != nil and !is_bool(no_transfer)
-      raise Exception('boolean expected in argument 3 (no_transfer)')
+      raise TypeError('boolean expected in argument 3 (no_transfer)')
 
     var curl = self._init(path)
     curl.set_option(Option.CUSTOMREQUEST, command)
@@ -170,7 +170,7 @@ class POP3 {
    */
   list(uid) {
     if uid != nil and !is_number(uid)
-      raise Exception('number expected at argument 1 (uid)')
+      raise TypeError('number expected at argument 1 (uid)')
 
     return uid == nil ? 
       self._to_list(self._init().send().body.to_string()) :
@@ -195,7 +195,7 @@ class POP3 {
    */
   retr(uid) {
     if !is_number(uid)
-      raise Exception('number expected in argument 1 (uid)')
+      raise TypeError('number expected in argument 1 (uid)')
     
     return self._init('/${uid}').send().body.to_string()
   }
@@ -232,7 +232,7 @@ class POP3 {
    */
   delete(uid) {
     if !is_string(uid)
-      raise Exception('string expected in argument 1 (uid)')
+      raise TypeError('string expected in argument 1 (uid)')
 
     self.exec('DELE', uid, true)
   }
@@ -263,9 +263,9 @@ class POP3 {
    */
   top(uid, count) {
     if !is_number(uid)
-      raise Exception('number expected in argument 1 (uid)')
+      raise TypeError('number expected in argument 1 (uid)')
     if count != nil and !is_number(count)
-      raise Exception('number expected in argument 2 (count)')
+      raise TypeError('number expected in argument 2 (count)')
 
     if !count count = 0
     return self.exec('TOP ${uid} ${count}')
@@ -298,6 +298,6 @@ class POP3 {
  */
 def pop3(options) {
   if options != nil and !is_dict(options)
-    raise Exception('dictionary expected as argument to constructor')
+    raise TypeError('dictionary expected as argument to constructor')
   return POP3(options)
 }

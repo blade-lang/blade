@@ -174,7 +174,7 @@ class _Option {
     self.options = nil # required for _Option and subclasses
 
     if type < NONE or type > OPTIONAL
-      raise ArgsException('invalid value type')
+      raise ValueError('invalid value type')
   }
 }
 
@@ -184,12 +184,12 @@ class _Optionable {
   
   add_option(name, help, opts) {
     if !is_string(name)
-      raise ArgsException('name expected')
+      raise TypeError('string expected in argument 1 (name)')
     if help != nil and !is_string(help)
-      raise ArgsException('help message must be string')
+      raise TypeError('help message must be string')
     if opts == nil opts = {}
     else if !is_dict(opts)
-      raise ArgsException('opts must be a dict')
+      raise TypeError('opts must be a dict')
 
     # Ensure we don't have duplicated option declarations.
     for o in self.options {
@@ -203,9 +203,9 @@ class _Optionable {
         choices = opts.get('choices', [])
 
     if short_name != nil and !is_string(short_name)
-      raise ArgsException('short_name must be string')
+      raise TypeError('short_name must be string')
     if !is_list(choices) and !is_dict(choices)
-      raise ArgsException('choices must be a list or dictionary')
+      raise TypeError('choices must be a list or dictionary')
 
     self.options.append(_Option(name, help, short_name, type, value, choices))
 
@@ -217,13 +217,13 @@ class _Optionable {
 class _Command < _Optionable {
   _Command(name, help, type, action, choices) {
     if !is_string(name)
-      raise ArgsException('name expected')
+      raise TypeError('string expected in name')
     if help != nil and !is_string(help)
-      raise ArgsException('help message must be string')
+      raise TypeError('help message must be string')
     if action != nil and !is_function(action)
-      raise ArgsException('action must be of type function(options: dict)')
+      raise TypeError('action must be of type function(options: dict)')
     if choices != nil and !is_list(choices) and !is_dict(choices)
-      raise ArgsException('choices must be of type list')
+      raise TypeError('choices must be of type list')
 
     self.name = name
     self.help = help
@@ -236,11 +236,11 @@ class _Command < _Optionable {
 class _Positional < _Optionable {
   _Positional(name, help, type, choices, value) {
     if !is_string(name)
-      raise ArgsException('name expected')
+      raise TypeError('string expected in name')
     if help != nil and !is_string(help)
-      raise ArgsException('help message must be string')
+      raise TypeError('help message must be string')
     if choices != nil and !is_list(choices) and !is_dict(choices)
-      raise ArgsException('choices must be of type list')
+      raise TypeError('choices must be of type list')
 
     self.name = name
     self.help = help
@@ -274,9 +274,9 @@ class Parser < _Optionable {
    */
   Parser(name, default_help) {
     if !is_string(name)
-      raise Exception('missing program name')
+      raise TypeError('missing program name')
     if default_help != nil and !is_bool(default_help)
-      raise Exception('bool expected in argument 2 (default_help)')
+      raise TypeError('bool expected in argument 2 (default_help)')
     if default_help == nil default_help = true
 
     self._default_help = default_help
@@ -601,12 +601,12 @@ class Parser < _Optionable {
    */
   add_command(name, help, opts) {
     if !is_string(name)
-      raise ArgsException('name expected')
+      raise TypeError('string expected in name')
     if help != nil and !is_string(help)
-      raise ArgsException('help message must be string')
+      raise TypeError('help message must be string')
     if opts == nil opts = {}
     else if !is_dict(opts)
-      raise ArgsException('opts must be a dict')
+      raise TypeError('opts must be a dict')
 
     # Ensure we don't have duplicated option declarations.
     for o in self.commands {
@@ -641,12 +641,12 @@ class Parser < _Optionable {
    */
   add_index(name, help, opts) {
     if !is_string(name)
-      raise ArgsException('name expected')
+      raise TypeError('string expected in argument 1 (name)')
     if help != nil and !is_string(help)
-      raise ArgsException('help message must be string')
+      raise TypeError('help message must be string')
     if opts == nil opts = {}
     else if !is_dict(opts)
-      raise ArgsException('opts must be a dict')
+      raise TypeError('opts must be a dict')
 
     var type = to_int(to_number(opts.get('type', NONE))),
       choices = opts.get('choices', []),

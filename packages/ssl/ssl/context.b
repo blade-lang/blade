@@ -15,7 +15,7 @@ class SSLContext {
    */
   SSLContext(method) {
     if !reflect.is_ptr(method)
-      raise Exception('SSL method expected')
+      raise TypeError('SSL method expected')
     self._method = method
     self._ptr = _ssl.ctx(method)
   }
@@ -32,9 +32,9 @@ class SSLContext {
     if disable == nil disable = false
 
     if !is_int(mode)
-      raise Exception('integer expected in argument 1')
+      raise TypeError('integer expected in argument 1')
     if !is_bool(disable)
-      raise Exception('boolean expected in argument 2')
+      raise TypeError('boolean expected in argument 2')
 
     _ssl.ctx_set_verify(self._ptr, mode, disable)
   }
@@ -46,7 +46,7 @@ class SSLContext {
    */
   set_verify_locations(locations) {
     if !is_string(locations)
-      raise Exception('location path expected')
+      raise TypeError('location path string expected')
     _ssl.ctx_set_verify_locations(self._ptr, locations)
   }
 
@@ -59,9 +59,9 @@ class SSLContext {
    */
   load_certs(cert_file, private_key_file) {
     if !is_string(cert_file) and !is_file(cert_file)
-      raise Exception('cert_file must be a string or file')
+      raise TypeError('cert_file must be a string or file')
     if private_key_file != nil and !is_string(private_key_file) and !is_file(private_key_file)
-      raise Exception('private_key_file must be a string or file')
+      raise TypeError('private_key_file must be a string or file')
     if !private_key_file private_key_file = cert_file
 
     if is_file(cert_file) cert_file = cert_file.abs_path()
@@ -78,7 +78,7 @@ class SSLContext {
    */
   set_ciphers(ciphers) {
     if !is_string(ciphers)
-      raise Exception('string expected')
+      raise TypeError('string expected')
     return _ssl.set_ciphers(self._ptr, ciphers)
   }
 

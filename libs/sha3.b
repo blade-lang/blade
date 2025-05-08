@@ -70,7 +70,7 @@ class Keccak {
   Keccak(bits, padding, length) {
     if !is_number(bits) or !is_number(padding) or 
       (length != nil and !is_number(length)) {
-        raise Exception('number expected')
+        raise TypeError('number expected')
     }
 
     self._padding = padding
@@ -104,7 +104,7 @@ class Keccak {
    */
   update(message) {
     if !is_string(message) and !is_bytes(message) 
-      raise Exception('string or bytes expected.')
+      raise TypeError('string or bytes expected.')
 
     if is_string(message) 
       message = message.to_bytes()

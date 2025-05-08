@@ -474,7 +474,7 @@ class TTY {
    */
   TTY(std) {
     if !is_file(std) {
-      raise Exception('TTY expects a standard file as argument, ${typeof(std)} given')
+      raise TypeError('TTY expects a standard file as argument, ${typeof(std)} given')
     }
 
     self.std = std
@@ -505,9 +505,9 @@ class TTY {
    */
   set_attr(option, attrs) {
     if !is_int(option)
-      raise Exception('integer expected as first argument, ${typeof(option)} given')
+      raise TypeError('integer expected as first argument, ${typeof(option)} given')
     if !is_dict(attrs)
-      raise Exception('dictionary expected as second argument, ${typeof(attrs)} given')
+      raise TypeError('dictionary expected as second argument, ${typeof(attrs)} given')
     return _io.TTY.tcsetattr(self.std, option, attrs)
   }
 

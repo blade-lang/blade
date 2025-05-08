@@ -84,7 +84,7 @@ class Scanner {
    */
   Scanner(source, file) {
     if !is_string(source)
-      raise Exception('Blade source code expected')
+      raise TypeError('string expected for Blade source code expected')
     
     # to track the quote that started an interpolation
     self._interpolating = []
