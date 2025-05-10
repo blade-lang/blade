@@ -39,7 +39,7 @@ DECLARE_RANGE_METHOD(__iter__) {
 
   if (index >= 0 && index < range->range) {
     if(index == 0) RETURN_NUMBER(range->lower);
-    RETURN_NUMBER(range->lower > range->upper ? --range->lower : ++range->lower);
+    RETURN_NUMBER(range->lower > range->upper ? range->lower - index : range->lower + index);
   }
 
   RETURN_NIL;

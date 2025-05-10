@@ -18,11 +18,11 @@ typedef enum {
   PREC_BIT_XOR,     // ^
   PREC_BIT_AND,     // &
   PREC_SHIFT,       // <<, >>
-  PREC_RANGE,       // ..
   PREC_TERM,        // +, -
   PREC_FACTOR,      // *, /, %, **, //
   PREC_UNARY, // !, -, ~, (++, -- this two will now be treated as statements)
   PREC_CALL,  // ., ()
+  PREC_RANGE,       // ..
   PREC_PRIMARY
 } b_precedence;
 
