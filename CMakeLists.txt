@@ -78,6 +78,7 @@ endif()
 
 if(UNIX)
 	add_compile_options(-Wno-deprecated-declarations)
+	add_compile_options(-march=native)
 endif()
 
 include_directories(src thirdparty)
