@@ -74,9 +74,13 @@ var _locator_end_sign64 = 'PK\x06\x07'
 
 # Unpack formats.
 var _file_size_unpack = 'V1crc/V1size_compressed/V1size_uncompressed'
-var _file_head_unpack = 'v1creator/v1version/v1general_purpose/v1compress_method/v1file_time/' +
+var _central_file_head_unpack = 'v1creator/v1version/v1general_purpose/v1compress_method/v1file_time/' +
     'v1file_date/${_file_size_unpack}/v1filename_length/v1extra_field_length/' +
     'v1comment_length/v1disk_offset/v1internal_attribute/V1external_attribute'
+
+var _local_file_head_unpack = 'v1version/v1general_purpose/v1compress_method/v1file_time/' +
+    'v1file_date/${_file_size_unpack}/v1filename_length/v1extra_field_length/' +
+    'v1comment_length'
 
 var _file_size_unpack64 = 'P1crc/P1size_compressed/P1size_uncompressed'
 
@@ -769,7 +773,12 @@ class ZipArchive {
 			var entrya = {}
 			entrya['error'] = nil
 
-			unpackeda = unpack(_file_head_unpack, central_head)
+			unpackeda = unpack(_central_file_head_unpack, central_head)
+
+      # Since some zip archive creators can have misleading records in 
+      # the central directory, it is important that we decode the local 
+      # file header as well so we can fix any disrepancies.
+			var local_unpackeda = unpack(_local_file_head_unpack, filedata)
 
 			# Check for encryption
 			var isencrypted = (unpackeda['general_purpose'] & 0x0001) > 0 ? true : false
@@ -785,6 +794,13 @@ class ZipArchive {
 				unpackeda['size_compressed'] = unpackeda2['size_uncompressed']
 				unpackeda['size_uncompressed'] = unpackeda2['size_uncompressed']
 			}
+      
+      # A very common bug is to have different extra_field_length in the central 
+      # header and the local header. If we find ourselves here, the local header 
+      # must be our final source of truth.
+      if local_unpackeda['extra_field_length'] != unpackeda['extra_field_length'] {
+        unpackeda['extra_field_length'] = local_unpackeda['extra_field_length']
+      }
 
 			entrya['name'] = filedata[26, 26 + unpackeda['filename_length']].to_string()
 

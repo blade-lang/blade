@@ -21,9 +21,7 @@ import ..setup
  */
 
 # ...
-var storage_dir = os.join_paths(setup.NYSSA_DIR, setup.STORAGE_DIR)
-var cache_dir = os.join_paths(setup.NYSSA_DIR, setup.CACHE_DIR)
-var tmp_dir = os.join_paths(storage_dir, '.tmp')
+var tmp_dir = os.join_paths(setup.STORAGE_DIR, '.tmp')
 var config_file = os.join_paths(os.cwd(), setup.CONFIG_FILE)
 
 var arch = os.info().machine
@@ -147,7 +145,7 @@ def _get_blade_bundler(source_os, target_os, config) {
     copy_directory(os.dir_name(os.exe_path), runtime_dir)
     log.info('Successfully copied bundler...')
   } else {
-    var blade_zip = os.join_paths(cache_dir, 'blade-${target_os}.zip')
+    var blade_zip = os.join_paths(setup.CACHE_DIR, 'blade-${target_os}.zip')
 
     # create/recreate temporary target directory
     os.create_dir(blade_zip_tmp_target)
@@ -368,8 +366,8 @@ def run(value, options, success, error) {
   }
 
 
-  if !os.dir_exists(cache_dir) {
-    os.create_dir(cache_dir)
+  if !os.dir_exists(setup.CACHE_DIR) {
+    os.create_dir(setup.CACHE_DIR)
   }
   if !os.dir_exists(tmp_dir) {
     os.create_dir(tmp_dir)
