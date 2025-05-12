@@ -79,7 +79,7 @@ def get_file_list(root_dir, main_root) {
 
   if os.dir_exists(root_dir) {
     return os.read_dir(root_dir).filter(@(f) { 
-      return !f.starts_with('.')
+      return !f.starts_with('.git') and f != '.' and f != '..'
     }).reduce(@(list, file) {
       var full_path = os.join_paths(root_dir, file)
       if os.dir_exists(full_path) {
@@ -95,10 +95,7 @@ def get_file_list(root_dir, main_root) {
 }
 
 def copy_directory(src_dir, dest_dir) {
-  var fls = get_file_list(src_dir).filter(@(x) {
-    return x != '.' and x != '..' and 
-      !x.match('/(\\/|\\\\)[.]git\\1/')
-  })
+  var fls = get_file_list(src_dir)
 
   for fl in  fls {
     var src = os.join_paths(src_dir, fl)
