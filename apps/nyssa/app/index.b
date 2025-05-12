@@ -79,7 +79,7 @@ for o in options {
 }
 
 def success(msg, info) {
-  log.info(cmsg)
+  log.info(msg)
 
   if info {
     log.info(info)
