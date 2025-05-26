@@ -90,12 +90,20 @@ class Clib {
   load(name) {
     if !is_string(name)
       raise TypeError('string expected in argument 1 (name)')
-    if !name.ends_with(_EXT) and os.platform != 'linux'
-      name += _EXT
-
+    
+    var library_name = !name.ends_with(_EXT) and os.platform != 'linux' ?
+        name + _EXT : name
+    
     if self._ptr
       self.close()
-    self._ptr = _clib.load(name)
+
+    catch {
+      self._ptr = _clib.load(name)
+    } as error
+
+    if error {
+      self._ptr = _clib.load(library_name)
+    }
   }
 
   /**
@@ -205,7 +213,7 @@ def new(type, ...) {
 }
 
 /**
- * Returns the data contained in a C type _type_ encoded in the data.
+ * Returns the data contained in a C derived type _type_ encoded in the data.
  * The data should either be an output of `clib.new()` or a call to a 
  * function returning one of struct, union or array.
  * 
@@ -220,10 +228,30 @@ def new(type, ...) {
 def get(type, data) {
   # Ensure a valid and non void clib pointer.
   if !(reflect.is_ptr(type) and to_string(type).match('/clib/')) and type != void
-    raise ValueError('invalid type for new')
+    raise ValueError('invalid type for get')
   if is_string(data) data = data.to_bytes()
 
   return _clib.get(type, data)
+}
+
+/**
+ * Returns the data contained in a C non-derived type _type_ encoded in the data.
+ * The data should NOT either be an output of `clib.new()` or a call to any 
+ * function returning one of struct, union or array.
+ * 
+ * This is the opposite of [[clib.get]]
+ * 
+ * @param clib_type type
+ * @param string|bytes data
+ * @returns any
+ */
+def get_value(type, data) {
+  # Ensure a valid and non void clib pointer.
+  if !(reflect.is_ptr(type) and to_string(type).match('/clib/')) and type != void
+    raise ValueError('invalid type for get_value')
+  if is_string(data) data = data.to_bytes()
+
+  return _clib.get_value(type, data)
 }
 
 /**

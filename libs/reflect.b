@@ -331,7 +331,7 @@ def set_ptr(pointer, value) {
 }
 
 /**
- * Returns a the address of the pointer to the value in memory.
+ * Returns the address of the pointer to the value in memory.
  * 
  * @param any value
  * @returns ptr

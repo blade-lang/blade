@@ -209,8 +209,8 @@ static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
   vm->exception_class = klass;
 
   // Create other global exceptions
-  new_execption_class(vm, klass, "TypeError", 10);
-  new_execption_class(vm, klass, "ValueError", 11);
+  new_execption_class(vm, klass, "TypeError", 9);
+  new_execption_class(vm, klass, "ValueError", 10);
   new_execption_class(vm, klass, "NumericError", 12);
   new_execption_class(vm, klass, "ArgumentError", 13);
   new_execption_class(vm, klass, "NotImplementedError", 19);
