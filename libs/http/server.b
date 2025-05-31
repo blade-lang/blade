@@ -497,10 +497,14 @@ class HttpServer {
           client.close()
 
           if e {
-            # call the error listeners.
-            self._error_listeners.each(@(fn) {
-              fn(e, client)
-            })
+            if self._error_listeners.length() == 0 {
+              raise e
+            } else {
+              # call the error listeners.
+              self._error_listeners.each(@(fn) {
+                fn(e, client)
+              })
+            }
           }
         }
       }
