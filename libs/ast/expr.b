@@ -247,16 +247,19 @@ class SetExpr < Expr {
 class IndexExpr < Expr {
 
   /**
+   * @param {Expr|any|nil} expr
    * @param {Expr|any|nil} args
    * @constructor
    */
-  IndexExpr(args) {
+  IndexExpr(expr, args) {
+    self.expr = expr
     self.args = args
   }
 
   @to_json() {
     return {
       type: 'IndexExpr',
+      expr: self.expr,
       args: self.args,
     }
   }
