@@ -193,8 +193,6 @@ var function = _clib.closure
 /**
  * Returns a type that can be used to declare structs.
  * To create or read value for the struct you need to use the `new()`
- * Returns a type that can be used to declare structs.
- * To create or read value for the struct you need to use the `new()`
  * and `get()` functions respectively.
  * Alternatively, you may use the `pack()` and `unpack()`
  * function in the `struct` module respectively.
