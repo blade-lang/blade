@@ -30,7 +30,7 @@ var asts = {
       Call: ['callee', 'args'],
       Get: ['expr', 'name'],
       Set: ['expr', 'name', 'value'],
-      Index: ['args'],
+      Index: ['expr', 'args'],
       List: ['items'],
       Dict: ['keys', 'values'],
       Interpolation: ['data']

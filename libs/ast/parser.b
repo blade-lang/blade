@@ -238,7 +238,7 @@ class Parser {
 
     self._ignore_newline()
     self._consume(TokenType.RBRACKET, "']' expected at end of indexer")
-    return IndexExpr(args)
+    return IndexExpr(callee, args)
   }
 
   /**
