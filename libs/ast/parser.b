@@ -749,14 +749,16 @@ class Parser {
 
         if [TokenType.DOC, TokenType.COMMENT, TokenType.NEWLINE].contains(self._previous().type) {}
         else if self._previous().type == TokenType.WHEN {
-          var tmp_cases = []
+          var conditions = []
+
           do {
             self._ignore_newline()
-
-            tmp_cases.append(self._expression())
+            conditions.append(self._expression())
           } while self._match(TokenType.COMMA)
+
           var stmt = self._statement()
-          cases.append(CaseStmt(tmp_cases, stmt))
+          cases.append(CaseStmt(conditions, stmt))
+
         } else {
           state = 1
           default_case = self._statement()
