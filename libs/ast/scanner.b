@@ -263,14 +263,14 @@ class Scanner {
    */
   _string(c) {
     while self._peek() != c and !self._is_at_end() {
-      if self._peek() == '$' and self._next() == '{' and
-        self._previous() != '\\' {  # interpolation started
+      # interpolation expression
+      if self._peek() == '$' and self._next() == '{' and self._previous() != '\\' {
+        self._current++
+        self._current++
 
         if self._interpolating.length() < self._max_interpolation_nest {
           self._interpolating.append(c)
-          self._current++
           self._add_token(TokenType.INTERPOLATION)
-          self._current++
           return
         }
 
