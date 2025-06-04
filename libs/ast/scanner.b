@@ -287,7 +287,7 @@ class Scanner {
       raise Exception('unterminated string on line ${self._line}')
 
     self._match(c)
-    self._add_token(TokenType.LITERAL, self.source[self._start + 1, self._current - 1])
+    self._add_token(TokenType.LITERAL, self.source[self._start, self._current])
   }
 
   /**
