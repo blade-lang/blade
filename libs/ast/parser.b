@@ -734,7 +734,7 @@ class Parser {
    */
   _using() {
     var expr = self._expression()
-    var cases = {}
+    var cases = []
     var default_case
 
     self._consume(TokenType.LBRACE, "'{' expected after using expression")
@@ -752,14 +752,11 @@ class Parser {
           var tmp_cases = []
           do {
             self._ignore_newline()
-            
+
             tmp_cases.append(self._expression())
           } while self._match(TokenType.COMMA)
           var stmt = self._statement()
-
-          for tmp in tmp_cases {
-            cases[tmp] = stmt
-          }
+          cases.append(CaseStmt(tmp_cases, stmt))
         } else {
           state = 1
           default_case = self._statement()
