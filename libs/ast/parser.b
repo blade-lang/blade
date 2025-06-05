@@ -734,7 +734,7 @@ class Parser {
    */
   _using() {
     var expr = self._expression()
-    var cases = {}
+    var cases = []
     var default_case
 
     self._consume(TokenType.LBRACE, "'{' expected after using expression")
@@ -749,17 +749,16 @@ class Parser {
 
         if [TokenType.DOC, TokenType.COMMENT, TokenType.NEWLINE].contains(self._previous().type) {}
         else if self._previous().type == TokenType.WHEN {
-          var tmp_cases = []
+          var conditions = []
+
           do {
             self._ignore_newline()
-            
-            tmp_cases.append(self._expression())
+            conditions.append(self._expression())
           } while self._match(TokenType.COMMA)
-          var stmt = self._statement()
 
-          for tmp in tmp_cases {
-            cases[tmp] = stmt
-          }
+          var stmt = self._statement()
+          cases.append(CaseStmt(conditions, stmt))
+
         } else {
           state = 1
           default_case = self._statement()

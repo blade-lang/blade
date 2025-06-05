@@ -53,6 +53,7 @@ var asts = {
       Return: ['value'],
       Assert: ['expr', 'message'],
       Using: ['expr', 'cases', 'default_case'],
+      Case: ['conditions', 'statement'],
       Import: ['path', 'elements'],
       Catch: ['body', 'var_name'],
       Comment: ['data'],
