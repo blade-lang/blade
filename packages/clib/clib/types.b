@@ -191,12 +191,12 @@ var function = _clib.closure
 
 
 /**
- * Returns a type that can be used to declare structs. 
- * To create or read value for the struct you need to use the `new()` 
+ * Returns a type that can be used to declare structs.
+ * To create or read value for the struct you need to use the `new()`
  * and `get()` functions respectively.
- * Alternatively, you may use the `pack()` and `unpack()` 
+ * Alternatively, you may use the `pack()` and `unpack()`
  * function in the `struct` module respectively.
- * 
+ *
  * @note This function can also be used to define a C union or array.
  * @param any... type
  * @returns type
@@ -215,16 +215,40 @@ def struct(...) {
 }
 
 /**
- * Returns a type that can be used to declare structs based on the named 
- * types. The function works well with the `get()` function because it 
- * automatically assigns the name of the struct elements when getting the 
- * value. 
- * 
- * To create or read value for the struct you need to use the `new()` 
+ * Returns a struct type with named fields. The function works well with the `get()`
+ * function because it automatically assigns the name of the struct elements when
+ * getting the value.
+ *
+ * To create or read value for the struct you need to use the `new()`
  * and `get()` functions respectively.
- * Alternatively, you may use the `pack()` and `unpack()` 
+ * Alternatively, you may use the `pack()` and `unpack()`
  * function in the `struct` module respectively.
- * 
+ *
+ * For example, let's say you have the following C struct:
+ * ```c
+ * typedef struct {
+ *   char* message;
+ *   int status;
+ * } custom_error;
+ * ```
+ *
+ * This is how you'd create a named struct for it:
+ * ```blade
+ * import clib
+ *
+ * var lib = clib.load('./custom-library.so')
+ *
+ * var custom_error = clib.named_struct({
+ *   'message': clib.char_ptr,
+ *   'status': clib.int
+ * })
+ *
+ * var myfunction = lib.define('custom_error_function', custom_error)
+ * echo myfunction() # {message: oh no!, status: 1}
+ *
+ * lib.close()
+ * ```
+ *
  * @note This function can also be used to define a C union or array.
  * @param dictionary types
  * @returns type
