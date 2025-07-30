@@ -769,6 +769,10 @@ class Parser < _Optionable {
           if i < cli_args.length() - 1 {
             i++
             var value = cli_args[i]
+            if command.type == LIST {
+              value = [value]
+            }
+
             var v = _get_real_value(command, value)
 
             if command.type != CHOICE or !command.choices or command.choices.contains(value) {
