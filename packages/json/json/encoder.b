@@ -87,7 +87,13 @@ class Encoder {
     using typeof(value) {
       when 'nil' return 'null'
       when 'boolean' return to_string(value)
-      when 'number' return to_string(value)
+      when 'number' {
+        var encoded = to_string(value)
+        if encoded == 'inf' or encoded == 'nan' {
+          encoded = _get_string(encoded == 'nan' ? 'NaN' : 'Infinity')
+        }
+        return encoded
+      }
       when 'bytes' return _get_string(value.to_string())
       when 'string' return _get_string(value)
       when 'list' {

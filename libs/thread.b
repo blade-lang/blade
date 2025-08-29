@@ -561,3 +561,37 @@ def start(delegate, args) {
   thread.start_from_list(args)
   return thread
 }
+
+/**
+ * Awaits all threads in the given list and returns when the last 
+ * element exits.
+ * 
+ * @param list threads
+ */
+def await_list(threads) {
+  if !is_list(threads)
+    raise ArgumentError('list of threads expected')
+
+  for thread in threads {
+    if !instance_of(thread, Thread)
+      raise ValueError('list of threads expected')
+
+    thread.await()
+  }
+}
+
+/**
+ * Awaits all threads passed as an argument. This function is the 
+ * same as [[thread.await_list()]], but allows passing the items as 
+ * known arguments.
+ * 
+ * @param [[thread.Thread]]... threads
+ */
+def await_all(...) {
+  for thread in __args__ {
+    if !instance_of(thread, Thread)
+      raise ValueError('list of threads expected')
+
+    thread.await()
+  }
+}

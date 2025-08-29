@@ -323,6 +323,32 @@ class UsingStmt < Stmt {
 }
 
 /**
+ * Case Stmt representation.
+ * 
+ * @serializable
+ */
+class CaseStmt < Stmt {
+
+  /**
+   * @param {Stmt|any|nil} conditions
+   * @param {Stmt|any|nil} statement
+   * @constructor
+   */
+  CaseStmt(conditions, statement) {
+    self.conditions = conditions
+    self.statement = statement
+  }
+
+  @to_json() {
+    return {
+      type: 'CaseStmt',
+      conditions: self.conditions,
+      statement: self.statement,
+    }
+  }
+}
+
+/**
  * Import Stmt representation.
  * 
  * @serializable

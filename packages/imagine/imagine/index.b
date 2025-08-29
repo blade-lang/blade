@@ -163,10 +163,10 @@ def true_color(r, g, b, a) {
  * @returns dict
  */
 def decompose(color) {
-  var r = (c & 0xFF0000) >> 16
-  var g = (c & 0x00FF00) >> 8
-  var b = (c & 0x0000FF)
-  var a = (c & 0x7F000000) >> 24
+  var r = (color & 0xFF0000) >> 16
+  var g = (color & 0x00FF00) >> 8
+  var b = (color & 0x0000FF)
+  var a = (color & 0x7F000000) >> 24
 
   return { r, g, b, a}
 }

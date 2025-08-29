@@ -644,9 +644,9 @@ b_value get_blade_value(b_vm *vm, int type, size_t size, void *data, size_t *rea
 }
 
 DECLARE_MODULE_METHOD(clib_get) {
-  ENFORCE_ARG_COUNT(new, 2);
-  ENFORCE_ARG_TYPE(new, 0, IS_PTR);
-  ENFORCE_ARG_TYPES(new, 1, IS_BYTES, IS_PTR);
+  ENFORCE_ARG_COUNT(get, 2);
+  ENFORCE_ARG_TYPE(get, 0, IS_PTR);
+  ENFORCE_ARG_TYPES(get, 1, IS_BYTES, IS_PTR);
 
   b_ffi_type *type = (b_ffi_type *)AS_PTR(args[0])->pointer;
   if(type->as_ffi->elements == NULL) {
@@ -685,6 +685,35 @@ DECLARE_MODULE_METHOD(clib_get) {
   }
 
   RETURN_OBJ(list);
+}
+
+DECLARE_MODULE_METHOD(clib_get_value) {
+  ENFORCE_ARG_COUNT(get_value, 2);
+  ENFORCE_ARG_TYPE(get_value, 0, IS_PTR);
+  ENFORCE_ARG_TYPES(get_value, 1, IS_BYTES, IS_PTR);
+
+  b_ffi_type *type = (b_ffi_type *)AS_PTR(args[0])->pointer;
+  if(type->as_ffi->elements != NULL) {
+    RETURN_ARGUMENT_ERROR("get_value can only be used on non-derived types such as struct, union and arrays.");
+  }
+
+  unsigned char *data;
+  if(IS_PTR(args[1])) {
+    data = (unsigned char *)AS_PTR(args[1])->pointer;
+  } else {
+    data = AS_BYTES(args[1])->bytes.bytes;
+  }
+
+  b_obj_list *list = (b_obj_list *)GC(new_list(vm));
+
+  size_t read_len = 0;
+  RETURN_VALUE(get_blade_value(
+    vm, 
+    type->as_int,
+    type->as_ffi->size,
+    data,
+    &read_len
+  ));
 }
 
 DECLARE_MODULE_METHOD(clib_define) {
@@ -882,6 +911,7 @@ CREATE_MODULE_LOADER(clib) {
   static b_func_reg module_functions[] = {
       {"new",   true,  GET_MODULE_METHOD(clib_new)},
       {"get",   true,  GET_MODULE_METHOD(clib_get)},
+      {"get_value",   true,  GET_MODULE_METHOD(clib_get_value)},
       {"load",   true,  GET_MODULE_METHOD(clib_load_library)},
       {"function",   true,  GET_MODULE_METHOD(clib_get_function)},
       {"close",   true,  GET_MODULE_METHOD(clib_close_library)},
