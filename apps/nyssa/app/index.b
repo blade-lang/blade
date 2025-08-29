@@ -7,9 +7,8 @@ import date
 import .setup
 
 # initialize storage directory
-var storage_dir = os.join_paths(setup.NYSSA_DIR, setup.STORAGE_DIR)
-if !os.dir_exists(storage_dir)
-  os.create_dir(storage_dir)
+if !os.dir_exists(setup.STORAGE_DIR)
+  os.create_dir(setup.STORAGE_DIR)
 
 # ensure config file exists...
 var config_file = os.join_paths(setup.NYSSA_DIR, setup.CONFIG_FILE)
