@@ -130,14 +130,24 @@ DECLARE_MODULE_METHOD(process_is_alive) {
   ENFORCE_ARG_COUNT(create, 1);
   ENFORCE_ARG_TYPE(create, 0, IS_PTR);
   BProcess *process = (BProcess *) AS_PTR(args[0])->pointer;
-  RETURN_BOOL(waitpid(process->pid, NULL, WNOHANG) == 0);
+  if (!process || process->pid <= 0) RETURN_FALSE;
+  int rc;
+  do {
+    rc = waitpid(process->pid, NULL, WNOHANG);
+  } while (rc == -1 && errno == EINTR);
+  RETURN_BOOL(rc == 0);
 }
 
 DECLARE_MODULE_METHOD(process_kill) {
   ENFORCE_ARG_COUNT(kill, 1);
   ENFORCE_ARG_TYPE(kill, 0, IS_PTR);
   BProcess *process = (BProcess *) AS_PTR(args[0])->pointer;
-  RETURN_BOOL(kill(process->pid, SIGKILL) == 0);
+  if (!process || process->pid <= 0) RETURN_FALSE;
+  int rc;
+  do {
+    rc = kill(process->pid, SIGKILL);
+  } while (rc == -1 && errno == EINTR);
+  RETURN_BOOL(rc == 0);
 }
 
 DECLARE_MODULE_METHOD(process_wait) {
@@ -146,7 +156,6 @@ DECLARE_MODULE_METHOD(process_wait) {
   BProcess *process = (BProcess *) AS_PTR(args[0])->pointer;
 
   int status;
-  waitpid(process->pid, &status, 0);
 
   pid_t p;
   do {

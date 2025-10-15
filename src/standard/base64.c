@@ -38,11 +38,14 @@ static const unsigned char base64_decoding_table[256] = {
 char *base64_encode(const unsigned char *data, int input_length,
                     int *output_length) {
 
+  if (data == NULL || input_length < 0) return NULL;
+
   const int mod_table[] = {0, 2, 1};
 
   *output_length = 4 * ((input_length + 2) / 3);
 
-  char *encoded_data = (char *) malloc(*output_length);
+  // allocate one extra byte for NUL terminator (for safety when treating as string)
+  char *encoded_data = (char *) malloc(*output_length + 1);
 
   if (encoded_data == NULL)
     return NULL;
@@ -64,14 +67,24 @@ char *base64_encode(const unsigned char *data, int input_length,
   for (int i = 0; i < mod_table[input_length % 3]; i++)
     encoded_data[*output_length - 1 - i] = '=';
 
+  encoded_data[*output_length] = '\0';
   return encoded_data;
 }
 
 unsigned char *base64_decode(const char *data, int input_length,
                              int *output_length) {
 
-  if (input_length % 4 != 0)
+  if (data == NULL || input_length <= 0 || (input_length % 4) != 0)
     return NULL;
+
+  // Validate characters (basic): allow A-Z, a-z, 0-9, '+', '/', '='
+  for (int i = 0; i < input_length; i++) {
+    unsigned char c = (unsigned char)data[i];
+    if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '+' || c == '/' || c == '=') {
+      continue;
+    }
+    return NULL; // invalid char
+  }
 
   *output_length = input_length / 4 * 3;
 

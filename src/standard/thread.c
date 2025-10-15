@@ -21,7 +21,7 @@
 #include <sys/types.h>
 
 # ifndef SIGUSR2
-#   define SIGUSR2 (NSIG - 1)
+#   define SIGUSR2 2
 # endif
 # ifndef SIG_BLOCK
 #   define SIG_BLOCK 0
@@ -45,7 +45,12 @@ typedef struct {
 } sigset_t;
 
 // Thread-local storage for the signal mask
-__thread sigset_t thread_sigmask;
+#if defined(_MSC_VER)
+#define BLADE_TLS __declspec(thread)
+#else
+#define BLADE_TLS __thread
+#endif
+static BLADE_TLS sigset_t thread_sigmask;
 
 int sigemptyset(sigset_t *set) {
     if (set == NULL) return -1;
@@ -74,9 +79,12 @@ static sighandler_t sigint_handler = NULL;
 
 BOOL WINAPI CtrlHandler(DWORD fdwCtrlType) {
     if (fdwCtrlType == CTRL_C_EVENT && sigint_handler != NULL) {
-        // Check if SIGUSR2 is blocked in the current thread's mask
-        if (thread_sigmask.signals[SIGUSR2 - 1] == 0) {
-            sigint_handler(SIGUSR2);  // Call the signal handler
+        // Check if SIGUSR2 is blocked in the current thread's mask (bounds-safe)
+        int idx = SIGUSR2 - 1;
+        if (idx >= 0 && idx < 32) {
+            if (thread_sigmask.signals[idx] == 0) {
+                sigint_handler(SIGUSR2);  // Call the signal handler
+            }
         }
         return TRUE;
     }
@@ -333,10 +341,18 @@ DECLARE_MODULE_METHOD(thread__cancel) {
   b_thread_handle *thread = AS_PTR(args[0])->pointer;
 
   if(thread != NULL && thread->vm != NULL) {
+#ifdef _WIN32
+    // On Windows, avoid signal emulation; use pthread_cancel when available
+    if (pthread_cancel(thread->thread) == 0) {
+      free_thread_handle(thread);
+      RETURN_TRUE;
+    }
+#else
     if(pthread_kill(thread->thread, SIGUSR2) == 0) {
       free_thread_handle(thread);
       RETURN_TRUE;
     }
+#endif
   }
 
   RETURN_FALSE;
@@ -443,13 +459,16 @@ void b_thread_SIGUSR2_signal_handler(int signum) {
 }
 
 void b_thread_init_function(b_vm *vm) {
+#ifndef _WIN32
   struct sigaction sa;
   sa.sa_handler = b_thread_SIGUSR2_signal_handler;
   sigemptyset(&sa.sa_mask);
   sa.sa_flags = 0;
-
-  // Block SIGUSR2 in main thread
+  // Install handler for SIGUSR2 on POSIX
   sigaction(SIGUSR2, &sa, NULL);
+#else
+  (void)vm; // no-op on Windows
+#endif
 }
 
 void b_thread_unload_function(b_vm *vm) {

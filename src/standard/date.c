@@ -55,9 +55,16 @@ DECLARE_MODULE_METHOD(date____mktime) {
   if (arg_count > 5)
     seconds = AS_NUMBER(args[5]);
   if (arg_count > 6)
-    is_dst = AS_BOOL(args[5]) ? 1 : 0;
+    is_dst = AS_BOOL(args[6]) ? 1 : 0;
 
-  struct tm t;
+  // Basic range validation to prevent undefined behavior
+  if (month < 1 || month > 12 || day < 1 || day > 31 ||
+      hour < 0 || hour > 23 || minute < 0 || minute > 59 ||
+      seconds < 0 || seconds > 60) {
+    RETURN_VALUE_ERROR("invalid date component");
+  }
+
+  struct tm t = {0};
   t.tm_year = year;
   t.tm_mon = month - 1;
   t.tm_mday = day;
@@ -73,7 +80,16 @@ DECLARE_MODULE_METHOD(date__localtime) {
   struct timeval raw_time;
   gettimeofday(&raw_time, NULL);
   struct tm now;
-  localtime_r(&raw_time.tv_sec, &now);
+  time_t tt = raw_time.tv_sec;
+#ifdef _WIN32
+  if (localtime_r(&tt, &now) != 0) {
+    RETURN_ERROR("localtime failed");
+  }
+#else
+  if (localtime_r(&tt, &now) == NULL) {
+    RETURN_ERROR("localtime failed");
+  }
+#endif
 
   b_obj_dict *dict = (b_obj_dict *) GC(new_dict(vm));
 
@@ -112,7 +128,16 @@ DECLARE_MODULE_METHOD(date__gmtime) {
   struct timeval raw_time;
   gettimeofday(&raw_time, NULL);
   struct tm now;
-  gmtime_r(&raw_time.tv_sec, &now);
+  time_t tt = raw_time.tv_sec;
+#ifdef _WIN32
+  if (gmtime_r(&tt, &now) != 0) {
+    RETURN_ERROR("gmtime failed");
+  }
+#else
+  if (gmtime_r(&tt, &now) == NULL) {
+    RETURN_ERROR("gmtime failed");
+  }
+#endif
 
   b_obj_dict *dict = (b_obj_dict *) GC(new_dict(vm));
 

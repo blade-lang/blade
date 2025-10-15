@@ -335,9 +335,15 @@ static int remove_directory(char *path, int path_length, bool recursive) {
             free(path_string);
             return -1;
           }
-        } else if(unlink(path_string) == -1) {
-          free(path_string);
-          return -1;
+        } else {
+          int urc;
+          do {
+            urc = unlink(path_string);
+          } while (urc == -1 && errno == EINTR);
+          if (urc == -1) {
+            free(path_string);
+            return -1;
+          }
         }
         
         free(path_string);
@@ -471,7 +477,11 @@ DECLARE_MODULE_METHOD(os__rename) {
   ENFORCE_ARG_TYPE(rename, 1, IS_STRING);
 
 #ifdef IS_UNIX
-  RETURN_BOOL(rename(AS_C_STRING(args[0]), AS_C_STRING(args[1])) == 0);
+  int rrc;
+  do {
+    rrc = rename(AS_C_STRING(args[0]), AS_C_STRING(args[1]));
+  } while (rrc == -1 && errno == EINTR);
+  RETURN_BOOL(rrc == 0);
 #elif defined(_WIN32)
   wchar_t from_buff[4096];
   wchar_t to_buff[4096];

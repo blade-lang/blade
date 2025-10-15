@@ -99,13 +99,16 @@ static long to_long(b_vm *vm, b_value value) {
     char *t = ALLOCATE(char, length - 2);
     memcpy(t, v + (end + 1), length - 2);
 
+    long res = 0;
     if(v[end] == 'b') {
-      return (long)(multiplier * strtoll(t, NULL, 2));
+      res = (long)(multiplier * strtoll(t, NULL, 2));
     } else if(v[end] == 'x') {
-      return multiplier * strtol(t, NULL, 16);
+      res = multiplier * strtol(t, NULL, 16);
     } else if(v[end] == 'c') {
-      return multiplier * strtol(t, NULL, 8);
+      res = multiplier * strtol(t, NULL, 8);
     }
+    FREE_ARRAY(char, t, length - 2);
+    return res;
   }
 
   return (long)strtod(v, NULL);
