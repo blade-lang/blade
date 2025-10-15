@@ -80,16 +80,7 @@ DECLARE_MODULE_METHOD(date__localtime) {
   struct timeval raw_time;
   gettimeofday(&raw_time, NULL);
   struct tm now;
-  time_t tt = raw_time.tv_sec;
-#ifdef _WIN32
-  if (localtime_r(&tt, &now) != 0) {
-    RETURN_ERROR("localtime failed");
-  }
-#else
-  if (localtime_r(&tt, &now) == NULL) {
-    RETURN_ERROR("localtime failed");
-  }
-#endif
+  localtime_r(&raw_time.tv_sec, &now);
 
   b_obj_dict *dict = (b_obj_dict *) GC(new_dict(vm));
 
@@ -128,16 +119,7 @@ DECLARE_MODULE_METHOD(date__gmtime) {
   struct timeval raw_time;
   gettimeofday(&raw_time, NULL);
   struct tm now;
-  time_t tt = raw_time.tv_sec;
-#ifdef _WIN32
-  if (gmtime_r(&tt, &now) != 0) {
-    RETURN_ERROR("gmtime failed");
-  }
-#else
-  if (gmtime_r(&tt, &now) == NULL) {
-    RETURN_ERROR("gmtime failed");
-  }
-#endif
+  gmtime_r(&raw_time.tv_sec, &now);
 
   b_obj_dict *dict = (b_obj_dict *) GC(new_dict(vm));
 
