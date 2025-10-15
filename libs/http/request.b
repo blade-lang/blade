@@ -924,13 +924,13 @@ class HttpRequest {
             message += _get_cookie_line({name: k, value: v}, uri.host)
           }
         }
-        
+
 
         # process the request body
         var resolved_data = _create_send_request_body(
-          data, 
+          data,
           client_headers_cache.get(
-            'content-type', 
+            'content-type',
             [self._body_type]
           )[0].lower(),
           self.files
@@ -957,7 +957,7 @@ class HttpRequest {
         } else {
           message += '\r\n'.to_bytes()
         }
-        
+
 
         # do real request here...
         var client = socket.Socket()
@@ -966,12 +966,12 @@ class HttpRequest {
         client.set_option(socket.SO_RCVTIMEO, receive_timeout)
         client.set_blocking(false)
         client.set_option(socket.SO_REUSEADDR, true)
-        
+
         if is_secure {
           client = ssl.TLSSocket(client, ssl.TLSClientContext())
           client.get_context().set_ciphers(defaults.ciphers)
           client.get_ssl().set_tlsext_host_name(uri.host)
-          
+
           if verify_peer == false {
             client.get_context().set_verify(ssl.SSL_VERIFY_PEER, false)
           } else {
@@ -1009,7 +1009,11 @@ class HttpRequest {
           var response_data = self._receive_data(client, receive_timeout, -1, false)
 
           if response_data.length() == 0 {
-            raise HttpException('failed to read response')
+            if !client_headers_cache.get('connection', nil) == 'keep-alive' {
+              raise HttpException('failed to read response')
+            }
+
+            continue
           }
 
           # separate the headers and the body

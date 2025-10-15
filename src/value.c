@@ -20,11 +20,18 @@ void init_byte_arr(b_byte_arr *array, int length) {
 }
 
 void write_value_arr(b_vm *vm, b_value_arr *array, b_value value) {
+  if (array == NULL) {
+    return;
+  }
+
   if (array->capacity < array->count + 1) {
     int old_capacity = array->capacity;
     array->capacity = GROW_CAPACITY(old_capacity);
     array->values =
         GROW_ARRAY(b_value, array->values, old_capacity, array->capacity);
+    if (array->values == NULL) {
+      return;
+    }
   }
 
   array->values[array->count] = value;
@@ -32,6 +39,9 @@ void write_value_arr(b_vm *vm, b_value_arr *array, b_value value) {
 }
 
 void insert_value_arr(b_vm *vm, b_value_arr *array, b_value value, int index) {
+  if (array == NULL || index < 0) {
+    return;
+  }
 
   if (array->capacity <= index) {
     array->capacity = GROW_CAPACITY(index);
@@ -42,6 +52,10 @@ void insert_value_arr(b_vm *vm, b_value_arr *array, b_value value, int index) {
     array->capacity = GROW_CAPACITY(capacity);
     array->values =
         GROW_ARRAY(b_value, array->values, capacity, array->capacity);
+  }
+
+  if (array->values == NULL) {
+    return;
   }
 
   if (index <= array->count) {

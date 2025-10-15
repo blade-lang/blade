@@ -13,6 +13,10 @@
 #endif
 
 void *c_allocate(b_vm *vm, size_t size, size_t length) {
+  if (vm == NULL) {
+    return NULL;
+  }
+
   vm->bytes_allocated += length;
 
   if (vm->bytes_allocated > vm->next_gc) {
@@ -34,6 +38,10 @@ void *c_allocate(b_vm *vm, size_t size, size_t length) {
 }
 
 void *allocate(b_vm *vm, size_t size) {
+  if (vm == NULL) {
+    return NULL;
+  }
+
   vm->bytes_allocated += size;
 
   if (vm->bytes_allocated > vm->next_gc) {
@@ -55,6 +63,10 @@ void *allocate(b_vm *vm, size_t size) {
 }
 
 void *reallocate(b_vm *vm, void *pointer, size_t old_size, size_t new_size) {
+  if (vm == NULL) {
+    return NULL;
+  }
+
   vm->bytes_allocated += new_size - old_size;
 
   if (new_size > old_size && vm->bytes_allocated > vm->next_gc) {
@@ -109,6 +121,9 @@ void mark_value(b_vm *vm, b_value value) {
 }
 
 static void mark_array(b_vm *vm, b_value_arr *array) {
+  if (array == NULL || array->values == NULL) {
+    return;
+  }
   for (int i = 0; i < array->count; i++) {
     mark_value(vm, array->values[i]);
   }
@@ -326,17 +341,27 @@ void free_object(b_vm *vm, b_obj *object) {
 }
 
 static void mark_roots(b_vm *vm) {
-  for (b_value *slot = vm->stack; slot < vm->stack_top; slot++) {
-    mark_value(vm, *slot);
+  if (vm->stack != NULL && vm->stack_top != NULL) {
+    for (b_value *slot = vm->stack; slot < vm->stack_top; slot++) {
+      mark_value(vm, *slot);
+    }
   }
 
-  for (int i = 0; i < vm->frame_count; i++) {
-    mark_object(vm, (b_obj *) vm->frames[i].closure);
+  if (vm->frames != NULL) {
+    for (int i = 0; i < vm->frame_count; i++) {
+      mark_object(vm, (b_obj *) vm->frames[i].closure);
+    }
   }
 
-  for(int i = 0; i < vm->error_count; i++) {
-    mark_value(vm, vm->errors[i]->value);
-    mark_object(vm, (b_obj *)vm->errors[i]->frame->closure);
+  if (vm->errors != NULL) {
+    for(int i = 0; i < vm->error_count; i++) {
+      if (vm->errors[i] != NULL) {
+        mark_value(vm, vm->errors[i]->value);
+        if (vm->errors[i]->frame != NULL) {
+          mark_object(vm, (b_obj *)vm->errors[i]->frame->closure);
+        }
+      }
+    }
   }
 
   for (b_obj_up_value *up_value = vm->open_up_values; up_value != NULL;
@@ -355,7 +380,9 @@ static void mark_roots(b_vm *vm) {
   mark_table(vm, &vm->methods_range);
 
   mark_object(vm, (b_obj*)vm->exception_class);
-  mark_object(vm, (b_obj *)vm->current_frame->closure);
+  if (vm->current_frame != NULL) {
+    mark_object(vm, (b_obj *)vm->current_frame->closure);
+  }
 
   mark_compiler_roots(vm);
 }
@@ -405,6 +432,9 @@ void free_objects(b_vm *vm) {
 }
 
 void free_error_stacks(b_vm *vm) {
+  if (vm == NULL || vm->errors == NULL) {
+    return;
+  }
   for(int index = vm->error_count; index < ERRORS_MAX && vm->errors[index] != NULL; index++) {
     free(vm->errors[index]);
     vm->errors[index] = NULL;

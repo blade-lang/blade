@@ -16,10 +16,10 @@ int main(int argc, char *argv[]) {
 
   char *exe_dir = get_exe_dir();
   // start off from the exe directory
-  chdir(exe_dir);
+  const int in_exe_dir = chdir(exe_dir);
 
   char *root_dir = NULL;
-  if(file_exists("./macos")) {
+  if(file_exists("./macos") && in_exe_dir == 0) {
     blade_exe_path = "Resources/runtime/blade";
     application_path = "Resources/app";
 
@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
   }
 
   // navigate to root directory
-  chdir(root_dir);
+  const int in_root_dir = chdir(root_dir);
 
   /// PREPARATIONS
   char *exe_path = merge_paths(root_dir, (char *)blade_exe_path);
@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
   cmd = append_strings(cmd, app_root);
   cmd = append_strings_n(cmd, "\"", 1);
 
-  if(argc > 1) {
+  if(argc > 1 && in_root_dir == 0) {
     for(int i = 1; i < argc; i++) {
       cmd = append_strings_n(cmd, " ", 1);
       cmd = append_strings(cmd, argv[i]);
@@ -62,6 +62,7 @@ int main(int argc, char *argv[]) {
   free(app_root);
   free(exe_path);
   free(root_dir);
+  free(cmd);
 
   getchar();
   return return_value;

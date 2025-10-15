@@ -40,6 +40,9 @@ static b_value get_stack_trace(b_vm *vm) {
 
     for (int i = vm->frame_count - 1; i >= 0; i--) {
       b_call_frame *frame = &vm->frames[i];
+      if (frame == NULL || frame->closure == NULL || frame->closure->function == NULL) {
+        continue;
+      }
       b_obj_func *function = frame->closure->function;
 
       // -1 because the IP is sitting on the next instruction to be executed
@@ -261,6 +264,11 @@ static inline void grow_vm_stack(b_vm *vm, size_t new_capacity) {
 }
 
 inline void push(b_vm *vm, b_value value) {
+  if (vm == NULL || vm->stack == NULL || vm->stack_top == NULL) {
+    fprintf(stderr, "Exit: Invalid VM state in push.\n");
+    exit(EXIT_TERMINAL);
+  }
+
   if(vm->stack_top - vm->stack == vm->stack_capacity) {
     size_t capacity = GROW_CAPACITY(vm->stack_capacity);
     grow_vm_stack(vm, capacity);
@@ -281,6 +289,10 @@ inline void push_error(b_vm *vm, b_error_frame *frame) {
 }
 
 inline b_error_frame* pop_error(b_vm *vm) {
+  if (vm->error_count == 0) {
+    fprintf(stderr, "Exit: Error stack underflow.\n");
+    exit(EXIT_TERMINAL);
+  }
   b_error_frame *error =  vm->errors[--vm->error_count];
   error->frame = NULL;
   error->stack_head = NULL;
@@ -289,6 +301,10 @@ inline b_error_frame* pop_error(b_vm *vm) {
 }
 
 inline b_error_frame* peek_error(b_vm *vm) {
+  if (vm->error_count == 0) {
+    fprintf(stderr, "Exit: Error stack underflow in peek.\n");
+    exit(EXIT_TERMINAL);
+  }
   return vm->errors[vm->error_count -1];
 }
 
@@ -561,6 +577,11 @@ void init_vm(b_vm *vm) {
   vm->stack_capacity = STACK_MIN;
 
   reset_stack(vm);
+
+  // Ensure error frames array is initialized to NULL to avoid freeing garbage pointers during GC
+  for (int i = 0; i < ERRORS_MAX; i++) {
+    vm->errors[i] = NULL;
+  }
 
   vm->id = 0;
   vm->compiler = NULL;

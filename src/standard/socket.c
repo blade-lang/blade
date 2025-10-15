@@ -42,14 +42,80 @@
 #define BIGSIZ 8192    /* big buffers */
 #define SMALLSIZ 256    /* small buffers, hostnames, etc. */
 
+// Cross-platform socket error helpers
+static inline int last_sock_error(void) {
+#ifdef _WIN32
+  return WSAGetLastError();
+#else
+  return errno;
+#endif
+}
+
+static inline int map_sock_err_to_errno(int se) {
+#ifdef _WIN32
+  switch (se) {
+    case WSAEWOULDBLOCK: return EWOULDBLOCK;
+    case WSAEINPROGRESS: return EINPROGRESS;
+    case WSAEINTR:       return EINTR;
+    case WSAETIMEDOUT:   return ETIMEDOUT;
+    case WSAECONNREFUSED:return ECONNREFUSED;
+    case WSAECONNRESET:  return ECONNRESET;
+    case WSAEADDRINUSE:  return EADDRINUSE;
+    case WSAEADDRNOTAVAIL:return EADDRNOTAVAIL;
+    case WSAENETUNREACH: return ENETUNREACH;
+    case WSAEHOSTUNREACH:return EHOSTUNREACH;
+    default:             return EIO;
+  }
+#else
+  (void)se; return errno;
+#endif
+}
+
+static inline int is_would_block(int se) {
+#ifdef _WIN32
+  return se == WSAEWOULDBLOCK;
+#else
+  return se == EAGAIN || se == EWOULDBLOCK;
+#endif
+}
+
+static inline int is_in_progress(int se) {
+#ifdef _WIN32
+  return se == WSAEINPROGRESS || se == WSAEWOULDBLOCK;
+#else
+  return se == EINPROGRESS;
+#endif
+}
+
+static inline int is_interrupted(int se) {
+#ifdef _WIN32
+  return se == WSAEINTR;
+#else
+  return se == EINTR;
+#endif
+}
+
+static inline int is_timed_out(int se) {
+#ifdef _WIN32
+  return se == WSAETIMEDOUT;
+#else
+  return se == ETIMEDOUT;
+#endif
+}
+
 DECLARE_MODULE_METHOD(socket__error) {
   ENFORCE_ARG_COUNT(error, 1);
   ENFORCE_ARG_TYPE(error, 0, IS_NUMBER);
 
-  // do not report errno == EINPROGRESS, EWOULDBLOCK and EAGAIN as error
-  if (AS_NUMBER(args[0]) == -1 && errno != EINPROGRESS && errno != EWOULDBLOCK && errno != EAGAIN) {
-    const char *error = strerror(errno);
-    RETURN_STRING(error);
+  if (AS_NUMBER(args[0]) == -1) {
+    int se = last_sock_error();
+    if (!is_in_progress(se) && !is_would_block(se)) {
+#ifdef _WIN32
+      errno = map_sock_err_to_errno(se);
+#endif
+      const char *msg = strerror(errno);
+      RETURN_STRING(msg);
+    }
   }
   RETURN_NIL;
 }
@@ -75,10 +141,16 @@ DECLARE_MODULE_METHOD(socket__create) {
   }
 
 #ifndef _WIN32
+  // Best-effort: avoid SIGPIPE on send if platform lacks MSG_NOSIGNAL
 # ifdef SO_NOSIGPIPE
   int set = 1;
-  if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &set, sizeof(int)) < 0) {
-    // do nothing. this is just an optimization.
+  (void)setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &set, sizeof(int));
+# endif
+  // Ensure close-on-exec if SOCK_CLOEXEC was not applied
+# ifndef SOCK_CLOEXEC
+  int flags = fcntl(sock, F_GETFD);
+  if (flags != -1) {
+    (void)fcntl(sock, F_SETFD, flags | FD_CLOEXEC);
   }
 # endif
 #endif
@@ -92,8 +164,8 @@ DECLARE_MODULE_METHOD(socket__connect) {
   ENFORCE_ARG_TYPE(connect, 1, IS_STRING); // the address
   ENFORCE_ARG_TYPE(connect, 2, IS_NUMBER); // the port
   ENFORCE_ARG_TYPE(connect, 3, IS_NUMBER); // the family
-  ENFORCE_ARG_TYPE(connect, 4, IS_NUMBER); // timeout
-  ENFORCE_ARG_TYPE(connect, 5, IS_BOOL); // is_blocking
+  ENFORCE_ARG_TYPE(connect, 4, IS_NUMBER); // timeout (ms)
+  ENFORCE_ARG_TYPE(connect, 5, IS_BOOL);   // is_blocking
 
   int sock = AS_NUMBER(args[0]);
   char *address = AS_C_STRING(args[1]);
@@ -102,89 +174,127 @@ DECLARE_MODULE_METHOD(socket__connect) {
   int time_out = AS_NUMBER(args[4]);
   bool is_blocking = AS_BOOL(args[5]);
 
-  struct sockaddr_in remote = {0};
+  // Resolve address using getaddrinfo for IPv4/IPv6 support
+  char port_str[16];
+  snprintf(port_str, sizeof(port_str), "%d", port);
 
-  remote.sin_addr.s_addr = inet_addr(address);
-  remote.sin_family = family;
-  remote.sin_port = htons(port);
+  struct addrinfo hints; memset(&hints, 0, sizeof(hints));
+  hints.ai_socktype = 0; // allow any; we already created socket
+  hints.ai_family = family; // AF_INET, AF_INET6, or AF_UNSPEC
 
-  if (inet_pton(family, address, &remote.sin_addr) <= 0) {
+  struct addrinfo *res = NULL, *rp = NULL;
+  int gai_rc = getaddrinfo(address, port_str, &hints, &res);
+  if (gai_rc != 0 || res == NULL) {
     errno = EADDRNOTAVAIL;
     RETURN_NUMBER(-1);
   }
 
-  fd_set read_set;
-  FD_ZERO(&read_set);
-  if (!FD_ISSET(sock, &read_set)) {
-    FD_SET(sock, &read_set);//tcp socket
-  }
-
+  // Setup for nonblocking connect if a timeout is requested
+  bool toggled_nonblock = false;
 #ifndef _WIN32
-  long arg = fcntl(sock, F_GETFL) | O_NONBLOCK;
-  bool non_blocking = fcntl(sock, F_SETFL, arg) == 0;
-#else
-  unsigned long arg = 1;
-  bool non_blocking = ioctl(sock, FIONBIO, &arg) == 0;
-#endif
-
-  int con_result = -1;
-
-#if !defined(_WIN32) && defined(EINTR)
-  for (;;) {
-    con_result = connect(sock, (struct sockaddr *) &remote, sizeof(remote));
-    if (con_result >= 0 || errno != EINTR)
-      break;
-  }
-#else
-  con_result = connect(sock, (struct sockaddr*) & remote, sizeof(remote));
-#endif
-
-  if (con_result < 0) {
-#ifndef _WIN32
-    if (errno != EINPROGRESS) {
-#else
-      if (errno != ENOENT && errno != EINPROGRESS) {
-#endif // !_WIN32
-      RETURN_NUMBER(-1);
+  int old_flags = 0;
+  if (time_out > 0) {
+    old_flags = fcntl(sock, F_GETFL);
+    if (old_flags != -1 && (old_flags & O_NONBLOCK) == 0) {
+      if (fcntl(sock, F_SETFL, old_flags | O_NONBLOCK) == 0) toggled_nonblock = true;
+    } else if (old_flags != -1) {
+      toggled_nonblock = true; // already nonblocking
     }
   }
-
-  // getting the timeout...
-  struct timeval timeout = {(long) (time_out / 1000), (int) ((time_out % 1000) * 1000)};
-
-  if (select(sock + 1, NULL, &read_set, NULL, &timeout)) {
-    int so_error;
-    socklen_t len = sizeof so_error;
-
-#ifndef _WIN32
-    getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
 #else
-    getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&so_error, &len);
+  unsigned long nbarg = 1;
+  unsigned long old_nbarg = 0;
+  if (time_out > 0) {
+    // Querying blocking mode portably is tricky on Windows; just set nonblocking and restore to blocking later if requested
+    if (ioctl(sock, FIONBIO, &nbarg) == 0) toggled_nonblock = true;
+  }
 #endif
-    if (so_error == 0) {
-      if (is_blocking && non_blocking) {
-#ifndef _WIN32
-        arg &= (~O_NONBLOCK);
-        fcntl(sock, F_SETFL, arg);
+
+  int last_errno = 0;
+  int result = -1;
+
+  for (rp = res; rp != NULL; rp = rp->ai_next) {
+    // Ensure we pass correct sockaddr and length
+    int rc;
+#if !defined(_WIN32) && defined(EINTR)
+    for (;;) {
+      rc = connect(sock, rp->ai_addr, (socklen_t)rp->ai_addrlen);
+      if (rc >= 0 || errno != EINTR) break;
+    }
 #else
-        unsigned long arg = 0;
-        ioctl(sock, FIONBIO, &arg);
+    rc = connect(sock, rp->ai_addr, (socklen_t)rp->ai_addrlen);
+#endif
+    if (rc == 0) { result = 0; break; }
+
+    // If using timeout, INPROGRESS/WOULDBLOCK are acceptable; wait for writability
+    {
+      int se = last_sock_error();
+      if (is_in_progress(se) || is_would_block(se)) {
+        if (time_out > 0) {
+          fd_set wfds; FD_ZERO(&wfds); FD_SET(sock, &wfds);
+          struct timeval timeout = { (long)(time_out/1000), (int)((time_out%1000)*1000) };
+          int sel = select(sock + 1, NULL, &wfds, NULL, &timeout);
+          if (sel > 0) {
+            int so_error = 0; socklen_t len = (socklen_t)sizeof(so_error);
+#ifndef _WIN32
+            (void)getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
+#else
+            (void)getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&so_error, &len);
+#endif
+            if (so_error == 0) { result = 0; break; }
+#ifdef _WIN32
+            last_errno = map_sock_err_to_errno(so_error);
+#else
+            last_errno = so_error;
+#endif
+          } else if (sel == 0) {
+            last_errno = ETIMEDOUT;
+          } else {
+#ifdef _WIN32
+            last_errno = map_sock_err_to_errno(last_sock_error());
+#else
+            last_errno = errno; // select failed
+#endif
+          }
+        } else {
+#ifdef _WIN32
+          last_errno = map_sock_err_to_errno(se);
+#else
+          last_errno = se;
+#endif
+        }
+      } else {
+#ifdef _WIN32
+        last_errno = map_sock_err_to_errno(se);
+#else
+        last_errno = se;
 #endif
       }
-      RETURN_NUMBER(so_error);
-    } else {
-      errno = so_error;
     }
-  } else {
-    errno = ETIMEDOUT;
   }
+
+  freeaddrinfo(res);
+
+  // Restore blocking mode if needed
+#ifndef _WIN32
+  if (toggled_nonblock && is_blocking && old_flags != -1) {
+    (void)fcntl(sock, F_SETFL, old_flags);
+  }
+#else
+  if (toggled_nonblock && is_blocking) {
+    unsigned long zero = 0; (void)ioctl(sock, FIONBIO, &zero);
+  }
+#endif
+
+  if (result == 0) RETURN_NUMBER(0);
+  if (last_errno != 0) errno = last_errno;
   RETURN_NUMBER(-1);
 }
 
 DECLARE_MODULE_METHOD(socket__bind) {
   ENFORCE_ARG_COUNT(bind, 4);
   ENFORCE_ARG_TYPE(bind, 0, IS_NUMBER); // the socket id
-  ENFORCE_ARG_TYPE(bind, 1, IS_STRING); // the address
+  ENFORCE_ARG_TYPE(bind, 1, IS_STRING); // the address (or empty/null for wildcard)
   ENFORCE_ARG_TYPE(bind, 2, IS_NUMBER); // the port
   ENFORCE_ARG_TYPE(bind, 3, IS_NUMBER); // the family
 
@@ -193,17 +303,33 @@ DECLARE_MODULE_METHOD(socket__bind) {
   int port = AS_NUMBER(args[2]);
   int family = AS_NUMBER(args[3]);
 
-  struct sockaddr_in remote = {0};
+  // Use getaddrinfo with sockaddr_storage for IPv4/IPv6; allow AI_PASSIVE for wildcard
+  char port_str[16];
+  snprintf(port_str, sizeof(port_str), "%d", port);
 
-  remote.sin_addr.s_addr = inet_addr(address);
-  remote.sin_family = family;
-  remote.sin_port = htons(port);
+  struct addrinfo hints; memset(&hints, 0, sizeof(hints));
+  hints.ai_family = family; // AF_INET/AF_INET6/AF_UNSPEC
+  hints.ai_socktype = 0; // any
+  hints.ai_flags = 0;
+  if (address == NULL || address[0] == '\0' || strcmp(address, "*") == 0) {
+    hints.ai_flags |= AI_PASSIVE;
+    address = NULL; // let system choose ANY address
+  }
 
-  if (inet_pton(AF_INET, address, &remote.sin_addr) <= 0) {
+  struct addrinfo *res = NULL, *rp = NULL;
+  int gai_rc = getaddrinfo(address, port_str, &hints, &res);
+  if (gai_rc != 0 || res == NULL) {
     RETURN_VALUE_ERROR("address not valid or unsupported");
   }
 
-  RETURN_NUMBER(bind(sock, (struct sockaddr *) &remote, sizeof(remote)));
+  int rc = -1;
+  for (rp = res; rp != NULL; rp = rp->ai_next) {
+    rc = bind(sock, rp->ai_addr, (socklen_t)rp->ai_addrlen);
+    if (rc == 0) break;
+  }
+  freeaddrinfo(res);
+
+  RETURN_NUMBER(rc);
 }
 
 DECLARE_MODULE_METHOD(socket__listen) {
@@ -223,23 +349,45 @@ DECLARE_MODULE_METHOD(socket__accept) {
 
   int sock = AS_NUMBER(args[0]);
 
-  struct sockaddr_in client = {0};
-  int client_length = sizeof(struct sockaddr_in);
-  int new_sock = accept(sock, (struct sockaddr *) &client, (socklen_t *) &client_length);
+  struct sockaddr_storage ss; memset(&ss, 0, sizeof(ss));
+  socklen_t client_length = (socklen_t)sizeof(ss);
+  int new_sock = accept(sock, (struct sockaddr *) &ss, &client_length);
   if (new_sock < 0) {
     RETURN_ERROR("client accept failed");
   }
 
   b_obj_list *response = (b_obj_list *)GC(new_list(vm));
 
-  char *ip = ALLOCATE(char, INET_ADDRSTRLEN);
-  if(inet_ntop(AF_INET, &client.sin_addr, ip, sizeof(ip) * INET_ADDRSTRLEN) != NULL) {
-    int port = (int) ntohs(client.sin_port);
-
-    write_list(vm, response, NUMBER_VAL(new_sock));
-    write_list(vm, response, STRING_TT_VAL(ip));
-    write_list(vm, response, NUMBER_VAL(port));
+  char *ip = NULL;
+  int port = 0;
+  if (ss.ss_family == AF_INET) {
+    struct sockaddr_in *sa = (struct sockaddr_in *)&ss;
+    ip = ALLOCATE(char, INET_ADDRSTRLEN);
+    if (inet_ntop(AF_INET, &sa->sin_addr, ip, INET_ADDRSTRLEN) == NULL) {
+      FREE_ARRAY(char, ip, INET_ADDRSTRLEN); ip = NULL;
+    } else {
+      port = (int)ntohs(sa->sin_port);
+    }
   }
+#ifdef AF_INET6
+  else if (ss.ss_family == AF_INET6) {
+    struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&ss;
+    ip = ALLOCATE(char, INET6_ADDRSTRLEN);
+    if (inet_ntop(AF_INET6, &sa6->sin6_addr, ip, INET6_ADDRSTRLEN) == NULL) {
+      FREE_ARRAY(char, ip, INET6_ADDRSTRLEN); ip = NULL;
+    } else {
+      port = (int)ntohs(sa6->sin6_port);
+    }
+  }
+#endif
+
+  write_list(vm, response, NUMBER_VAL(new_sock));
+  if (ip != NULL) {
+    write_list(vm, response, STRING_TT_VAL(ip));
+  } else {
+    write_list(vm, response, STRING_L_VAL("", 0));
+  }
+  write_list(vm, response, NUMBER_VAL(port));
 
   RETURN_OBJ(response);
 }
@@ -273,25 +421,57 @@ DECLARE_MODULE_METHOD(socket__send) {
     length = data_str->length;
   }
 
-#ifdef __linux__
+#ifndef _WIN32
 #ifdef MSG_NOSIGNAL
   flags |= MSG_NOSIGNAL;
 #endif
 #endif
 
   int processed = 0;
-  do {
-    int write_size = length - processed < 1024 ? (length - processed) : 1024;
+
+  // Determine send timeout (if any) using SO_SNDTIMEO
+  struct timeval timeout; int optlen = sizeof(timeout);
+#ifndef _WIN32
+  int got_to = getsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, (socklen_t*)&optlen);
+#else
+  int got_to = getsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, (socklen_t*)&optlen);
+#endif
+  if (got_to != 0 || optlen != sizeof(timeout)) {
+    timeout.tv_sec = 0; timeout.tv_usec = 0; // no timeout info
+  }
+
+  while (processed < length) {
+    int write_size = length - processed < 4096 ? (length - processed) : 4096;
     int rc = (int)send(sock, content + processed, write_size, flags);
-    if(rc < 0) {
-      RETURN_NUMBER(rc);
-    } else {
+    if (rc > 0) {
       processed += rc;
-      if(processed == length) {
-        break;
+      continue;
+    }
+    if (rc == 0) break; // peer closed
+
+    // rc < 0
+    {
+      int se = last_sock_error();
+      if (is_interrupted(se)) {
+        continue; // interrupted, retry
+      }
+      if (is_would_block(se)) {
+        // Wait for socket to be writable if a timeout is configured
+        if (timeout.tv_sec > 0 || timeout.tv_usec > 0) {
+          fd_set wfds; FD_ZERO(&wfds); FD_SET(sock, &wfds);
+          int sel = select(sock + 1, NULL, &wfds, NULL, &timeout);
+          if (sel > 0) continue; // try sending again
+          if (sel == 0) { errno = ETIMEDOUT; return NUMBER_VAL(-1); }
+          // else select error -> fall through to error return
+        } else {
+          // No timeout configured; yield error to caller
+          RETURN_NUMBER(-1);
+        }
+      } else {
+        RETURN_NUMBER(-1);
       }
     }
-  } while(true);
+  }
 
   RETURN_NUMBER(processed);
 }
@@ -342,7 +522,29 @@ DECLARE_MODULE_METHOD(socket__recv) {
         content_length = length;
 
       char *response = ALLOCATE(char, content_length + 1);
-      int total_length = (int)recv(sock, response, content_length, flags);
+
+      int total_length = 0;
+      while (total_length < content_length) {
+        int chunk = (int)recv(sock, response + total_length, content_length - total_length, flags);
+        if (chunk > 0) {
+          total_length += chunk;
+          continue;
+        }
+        if (chunk == 0) break; // peer closed
+        {
+          int se = last_sock_error();
+          if (is_interrupted(se)) continue;
+          if (is_would_block(se)) {
+            // Wait again up to the same timeout for more data
+            fd_set rs; FD_ZERO(&rs); FD_SET(sock, &rs);
+            int sel2 = select(sock + 1, &rs, NULL, NULL, &timeout);
+            if (sel2 > 0) continue;
+            if (sel2 == 0) { errno = ETIMEDOUT; break; }
+            // select error: fall through
+          }
+        }
+        break; // some other error
+      }
       response[total_length] = '\0';
       RETURN_T_STRING(response, total_length);
     }
