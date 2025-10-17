@@ -37,6 +37,22 @@
 #include "config.h"
 #include "bendian.h"
 
+// Branch prediction hints
+#if defined(__GNUC__) || defined(__clang__)
+#  define B_LIKELY(x)   __builtin_expect(!!(x), 1)
+#  define B_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#else
+#  define B_LIKELY(x)   (x)
+#  define B_UNLIKELY(x) (x)
+#endif
+
+// Always-inline helper for hot tiny functions
+#if defined(__GNUC__) || defined(__clang__)
+#  define B_ALWAYS_INLINE inline __attribute__((always_inline))
+#else
+#  define B_ALWAYS_INLINE inline
+#endif
+
 // --> debug mode options starts here...
 #if DEBUG_MODE == 1
 # define DEBUG_PRINT_CODE 1

@@ -247,13 +247,15 @@ inline b_obj_instance *create_exception(b_vm *vm, const char* type, b_obj_string
 
 static inline void grow_vm_stack(b_vm *vm, size_t new_capacity) {
   b_value *new_stack = ALLOCATE(b_value, new_capacity);
-  for(size_t i = 0; i < new_capacity; i++) {
-    new_stack[i] = EMPTY_VAL;
-  }
 
   size_t old_capacity = vm->stack_capacity;
-  for (size_t i = 0; i < vm->stack_capacity; i++) {
-    new_stack[i] = vm->stack[i];
+  // Copy existing initialized region in a single pass
+  if (old_capacity > 0) {
+    memcpy(new_stack, vm->stack, old_capacity * sizeof(b_value));
+  }
+  // Initialize only the newly added region to EMPTY_VAL
+  for (size_t i = old_capacity; i < new_capacity; i++) {
+    new_stack[i] = EMPTY_VAL;
   }
 
   FREE_ARRAY(b_value, vm->stack, vm->stack_capacity);
@@ -263,13 +265,13 @@ static inline void grow_vm_stack(b_vm *vm, size_t new_capacity) {
   vm->stack_capacity = new_capacity;
 }
 
-inline void push(b_vm *vm, b_value value) {
-  if (vm == NULL || vm->stack == NULL || vm->stack_top == NULL) {
+B_ALWAYS_INLINE void push(b_vm *vm, b_value value) {
+  if (B_UNLIKELY(vm == NULL || vm->stack == NULL || vm->stack_top == NULL)) {
     fprintf(stderr, "Exit: Invalid VM state in push.\n");
     exit(EXIT_TERMINAL);
   }
 
-  if(vm->stack_top - vm->stack == vm->stack_capacity) {
+  if (B_UNLIKELY(vm->stack_top - vm->stack == vm->stack_capacity)) {
     size_t capacity = GROW_CAPACITY(vm->stack_capacity);
     grow_vm_stack(vm, capacity);
   }
@@ -308,8 +310,8 @@ inline b_error_frame* peek_error(b_vm *vm) {
   return vm->errors[vm->error_count -1];
 }
 
-inline b_value pop(b_vm *vm) {
-  if(vm->stack_top == vm->stack) {
+B_ALWAYS_INLINE b_value pop(b_vm *vm) {
+  if (B_UNLIKELY(vm->stack_top == vm->stack)) {
     fprintf(stderr, "Exit: Stack integrity check at end of stack failed.\n");
     exit(EXIT_TERMINAL);
   }
@@ -318,8 +320,8 @@ inline b_value pop(b_vm *vm) {
   return *vm->stack_top;
 }
 
-inline b_value pop_n(b_vm *vm, int n) {
-  if(vm->stack_top - vm->stack < n) {
+B_ALWAYS_INLINE b_value pop_n(b_vm *vm, int n) {
+  if (B_UNLIKELY(vm->stack_top - vm->stack < n)) {
     fprintf(stderr, "Exit: Stack integrity check at %ld failed.\n", vm->stack_top - vm->stack);
     exit(EXIT_TERMINAL);
   }
@@ -328,8 +330,8 @@ inline b_value pop_n(b_vm *vm, int n) {
   return *vm->stack_top;
 }
 
-inline b_value peek(b_vm *vm, int distance) {
-  if(vm->stack_top - vm->stack < distance + 1) {
+B_ALWAYS_INLINE b_value peek(b_vm *vm, int distance) {
+  if (B_UNLIKELY(vm->stack_top - vm->stack < distance + 1)) {
     fprintf(stderr, "Exit: Stack integrity check at distance %d failed.\n", distance);
     exit(EXIT_TERMINAL);
   }
@@ -1007,37 +1009,21 @@ static inline void define_property(b_vm *vm, b_obj_string *name, bool is_static)
   pop(vm);
 }
 
-inline bool is_false(b_value value) {
-  if (IS_BOOL(value))
-    return IS_BOOL(value) && !AS_BOOL(value);
-  if (IS_NIL(value) || IS_EMPTY(value))
-    return true;
+B_ALWAYS_INLINE bool is_false(b_value value) {
+  // Fast-path checks first (common cases):
+  if (B_LIKELY(IS_BOOL(value))) return !AS_BOOL(value);
+  if (B_LIKELY(IS_NUMBER(value))) return AS_NUMBER(value) < 0; // -1 is false in Blade
 
-  // -1 is the number equivalent of false in Blade
-  if (IS_NUMBER(value))
-    return AS_NUMBER(value) < 0;
+  // Nil or Empty are falsey
+  if (IS_NIL(value) || IS_EMPTY(value)) return true;
 
-  // Non-empty strings are true, empty strings are false.
-  if (IS_STRING(value))
-    return AS_STRING(value)->length < 1;
+  // Strings/bytes/collections: empty => false, non-empty => true
+  if (IS_STRING(value)) return AS_STRING(value)->length < 1;
+  if (IS_BYTES(value)) return AS_BYTES(value)->bytes.count < 1;
+  if (IS_LIST(value)) return AS_LIST(value)->items.count == 0;
+  if (IS_DICT(value)) return AS_DICT(value)->names.count == 0;
 
-  // Non-empty bytes are true, empty strings are false.
-  if (IS_BYTES(value))
-    return AS_BYTES(value)->bytes.count < 1;
-
-  // Non-empty lists are true, empty lists are false.
-  if (IS_LIST(value))
-    return AS_LIST(value)->items.count == 0;
-
-  // Non-empty dicts are true, empty dicts are false.
-  if (IS_DICT(value))
-    return AS_DICT(value)->names.count == 0;
-
-  // All classes are true
-  // All closures are true
-  // All bound methods are true
-  // All functions are in themselves true if you do not account for what they
-  // return.
+  // Classes, closures, bound methods, functions are true by default
   return false;
 }
 
@@ -1594,6 +1580,14 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
 #define BINARY_OP(type, op)                                                    \
   do { \
     PRE_BINARY_OP();          \
+    /* Fast path: both operands are numbers (most common). */ \
+    if (B_LIKELY(IS_NUMBER(__a) && IS_NUMBER(__b))) { \
+      double b = AS_NUMBER(pop(vm)); \
+      double a = AS_NUMBER(pop(vm)); \
+      push(vm, type(a op b)); \
+      break; \
+    } \
+    /* Fallback: handle mixed number/bool and non-number types via operator overloading. */ \
     if (BINARY_ON_NON_NUMBERS()) { \
       CLASS_BINARY_OPERATION(#op);    \
     }                                                                          \
@@ -1618,6 +1612,13 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
 #define BINARY_MOD_OP(type, op, original_op)                                                \
   do {  \
     PRE_BINARY_OP();          \
+    /* Fast path: both operands are numbers (most common). */ \
+    if (B_LIKELY(IS_NUMBER(__a) && IS_NUMBER(__b))) { \
+      double b = AS_NUMBER(pop(vm)); \
+      double a = AS_NUMBER(pop(vm)); \
+      push(vm, type(op(a, b))); \
+      break; \
+    } \
     if (BINARY_ON_NON_NUMBERS()) { \
       CLASS_BINARY_OPERATION(original_op);    \
     }                                                    \
