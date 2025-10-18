@@ -53,6 +53,13 @@
 #  define B_ALWAYS_INLINE inline
 #endif
 
+// Computed goto (threaded dispatch) support detection
+#if defined(__GNUC__) || defined(__clang__)
+#  define B_COMPUTED_GOTO_SUPPORTED 1
+#else
+#  define B_COMPUTED_GOTO_SUPPORTED 0
+#endif
+
 // --> debug mode options starts here...
 #if DEBUG_MODE == 1
 # define DEBUG_PRINT_CODE 1

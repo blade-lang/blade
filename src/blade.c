@@ -1,5 +1,7 @@
+#include "pathinfo.h"
 #include "util.h"
 #include "vm.h"
+#include "../cmake-build-release/_deps/linenoisesrc-src/linenoise.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -47,6 +49,8 @@ static void repl(b_vm *vm) {
   register_module__FILE__(vm, module);
   register__ROOT__(vm);
 
+  char *history_file = merge_paths(get_exe_dir(), ".history");
+
 #if !defined(_WIN32) && !defined(__CYGWIN__)
 
   linenoiseSetEncodingFunctions(
@@ -56,8 +60,8 @@ static void repl(b_vm *vm) {
   );
   linenoiseSetMultiLine(0);
 
-  // allow user to navigate through past input in terminal...
-  linenoiseHistoryAdd(".exit");
+  // Load previous prompts...
+  linenoiseHistoryLoad(history_file);
 #endif // !_WIN32
 
   for (;;) {
@@ -100,9 +104,18 @@ static void repl(b_vm *vm) {
 #else
     char *line = linenoise(cursor);
 
+#if !defined(_WIN32) && !defined(__CYGWIN__)
+    // allow user to navigate through past input in the terminal...
+    if (NULL != line) {
+      linenoiseHistoryAdd(line);
+      linenoiseHistorySave(history_file);
+    }
+#endif // !_WIN32
+
     // terminate early if we receive a terminating command such as exit() or Ctrl+D
     if (line == NULL || strcmp(line, ".exit") == 0) {
       free(source);
+      free(history_file);
       return;
     }
 
@@ -114,11 +127,6 @@ static void repl(b_vm *vm) {
       memset(source, 0, sizeof(char));
       continue;
     }
-
-#if !defined(_WIN32) && !defined(__CYGWIN__)
-    // allow user to navigate through past input in terminal...
-    linenoiseHistoryAdd(line);
-#endif // !_WIN32
 
     if(line_length > 0 && line[0] == '#') {
       continue;

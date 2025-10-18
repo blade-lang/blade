@@ -169,14 +169,14 @@ set(PCRE2_BUILD_TESTS OFF)
 set(PCRE2_BUILD_PCRE2GREP OFF)
 include(FetchContent)
 FetchContent_Declare(pcre2
-		URL      https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.43/pcre2-10.43.tar.gz
-		URL_HASH SHA256=889d16be5abb8d05400b33c25e151638b8d4bac0e2d9c76e9d6923118ae8a34e
+		URL      https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.46/pcre2-10.46.tar.gz
+		URL_HASH SHA256=8d28d7f2c3b970c3a4bf3776bcbb5adfc923183ce74bc8df1ebaad8c1985bd07
 		)
 FetchContent_MakeAvailable(pcre2)
 
 if(NOT pcre2_POPULATED)
-	FetchContent_Populate(pcre2)
-	add_subdirectory(${pcre2_SOURCE_DIR} ${pcre2_BUILD_DIR})
+	FetchContent_MakeAvailable(pcre2)
+	add_subdirectory("${pcre2_SOURCE_DIR}" "${pcre2_BUILD_DIR}")
 endif()
 
 # link pcre2
@@ -186,12 +186,15 @@ target_include_directories(libblade PUBLIC "${pcre2_BINARY_DIR}")
 if(UNIX)
 	FetchContent_Declare(LineNoiseSrc
 		URL      https://github.com/blade-lang/linenoise/archive/refs/heads/main.zip
-		URL_HASH SHA256=416ba5ccf0d7a1785c2cd7da8eb5f290412aa48400b3ea147e884fcf2c7f64f5
+		URL_HASH SHA256=590fbdba8f9b523562b433602dc23cd45aee45acef39f0d380aefd549bd35926
 		)
-	FetchContent_Populate(LineNoiseSrc)
+	FetchContent_MakeAvailable(LineNoiseSrc)
 
-	add_subdirectory("${linenoisesrc_SOURCE_DIR}")
-	include_directories("${linenoisesrc_SOURCE_DIR}")
+	if(NOT linenoisesrc_POPULATED)
+		FetchContent_MakeAvailable(LineNoiseSrc)
+		add_subdirectory("${linenoisesrc_SOURCE_DIR}" "${linenoisesrc_BUILD_DIR}")
+	endif()
+	target_include_directories(libblade PUBLIC "${linenoisesrc_SOURCE_DIR}")
 
 	#	Add linenoise as dependency and link it.
 	add_dependencies(blade linenoise)

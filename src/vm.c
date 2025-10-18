@@ -1665,6 +1665,166 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
 
     uint8_t instruction;
 
+#if defined(USE_THREAD_DISPATCH) && USE_THREAD_DISPATCH && B_COMPUTED_GOTO_SUPPORTED
+    static void* const dispatch_table[UINT8_COUNT] = {
+      [0 ... UINT8_MAX] = &&L_FALLBACK,
+      [OP_CONSTANT] = &&L_OP_CONSTANT,
+      [OP_ADD] = &&L_OP_ADD,
+      [OP_SUBTRACT] = &&L_OP_SUBTRACT,
+      [OP_MULTIPLY] = &&L_OP_MULTIPLY,
+      [OP_DIVIDE] = &&L_OP_DIVIDE,
+      [OP_JUMP] = &&L_OP_JUMP,
+      [OP_JUMP_IF_FALSE] = &&L_OP_JUMP_IF_FALSE,
+      [OP_LOOP] = &&L_OP_LOOP,
+      [OP_POP] = &&L_OP_POP,
+      [OP_POP_N] = &&L_OP_POP_N,
+      [OP_DUP] = &&L_OP_DUP,
+      [OP_RETURN] = &&L_OP_RETURN,
+      [OP_NIL] = &&L_OP_NIL,
+      [OP_TRUE] = &&L_OP_TRUE,
+      [OP_FALSE] = &&L_OP_FALSE,
+      [OP_EMPTY] = &&L_OP_EMPTY,
+      [OP_ONE] = &&L_OP_ONE,
+    };
+
+    // Initial threaded dispatch
+    instruction = READ_BYTE();
+    goto *dispatch_table[instruction];
+
+L_OP_CONSTANT: {
+      b_value constant = READ_CONSTANT();
+      push(vm, constant);
+      goto THREADED_DISPATCH;
+    }
+L_OP_ADD: {
+      if (IS_STRING(peek(vm, 0)) || IS_STRING(peek(vm, 1))) {
+        if (!concatenate(vm)) {
+          numeric_error("unsupported operand + for %s and %s", value_type(peek(vm, 0)), value_type(peek(vm, 1)));
+        } else {
+          // concatenate already pushed result and cleaned stack
+        }
+      } else if (IS_LIST(peek(vm, 0)) && IS_LIST(peek(vm, 1))) {
+        b_value result = OBJ_VAL(add_list(vm, AS_LIST(peek(vm, 1)), AS_LIST(peek(vm, 0))));
+        pop_n(vm, 2);
+        push(vm, result);
+      } else if (IS_BYTES(peek(vm, 0)) && IS_BYTES(peek(vm, 1))) {
+        b_value result = OBJ_VAL(add_bytes(vm, AS_BYTES(peek(vm, 1)), AS_BYTES(peek(vm, 0))));
+        pop_n(vm, 2);
+        push(vm, result);
+      } else {
+        BINARY_OP(NUMBER_VAL, +);
+      }
+      goto THREADED_DISPATCH;
+    }
+L_OP_SUBTRACT: {
+      BINARY_OP(NUMBER_VAL, -);
+      goto THREADED_DISPATCH;
+    }
+L_OP_MULTIPLY: {
+      if (IS_STRING(peek(vm, 1)) && IS_NUMBER(peek(vm, 0))) {
+        double number = AS_NUMBER(peek(vm, 0));
+        b_obj_string *string = AS_STRING(peek(vm, 1));
+        b_value result = OBJ_VAL(multiply_string(vm, string, number));
+        pop_n(vm, 2);
+        push(vm, result);
+      } else if (IS_LIST(peek(vm, 1)) && IS_NUMBER(peek(vm, 0))) {
+        int number = (int) AS_NUMBER(pop(vm));
+        b_obj_list *list = AS_LIST(peek(vm, 0));
+        b_obj_list *n_list = new_list(vm);
+        push(vm, OBJ_VAL(n_list));
+        multiply_list(vm, list, n_list, number);
+        pop_n(vm, 2);
+        push(vm, OBJ_VAL(n_list));
+      } else {
+        BINARY_OP(NUMBER_VAL, *);
+      }
+      goto THREADED_DISPATCH;
+    }
+L_OP_DIVIDE: {
+      BINARY_OP(NUMBER_VAL, /);
+      goto THREADED_DISPATCH;
+    }
+L_OP_JUMP: {
+      uint16_t offset = READ_SHORT();
+      vm->current_frame->ip += offset;
+      goto THREADED_DISPATCH;
+    }
+L_OP_JUMP_IF_FALSE: {
+      uint16_t offset = READ_SHORT();
+      if (is_false(peek(vm, 0))) {
+        vm->current_frame->ip += offset;
+      }
+      goto THREADED_DISPATCH;
+    }
+L_OP_LOOP: {
+      uint16_t offset = READ_SHORT();
+      vm->current_frame->ip -= offset;
+      goto THREADED_DISPATCH;
+    }
+L_OP_POP: {
+      pop(vm);
+      goto THREADED_DISPATCH;
+    }
+L_OP_POP_N: {
+      pop_n(vm, READ_SHORT());
+      goto THREADED_DISPATCH;
+    }
+L_OP_DUP: {
+      push(vm, peek(vm, 0));
+      goto THREADED_DISPATCH;
+    }
+L_OP_NIL: {
+      push(vm, NIL_VAL);
+      goto THREADED_DISPATCH;
+    }
+L_OP_TRUE: {
+      push(vm, BOOL_VAL(true));
+      goto THREADED_DISPATCH;
+    }
+L_OP_FALSE: {
+      push(vm, BOOL_VAL(false));
+      goto THREADED_DISPATCH;
+    }
+L_OP_EMPTY: {
+      push(vm, EMPTY_VAL);
+      goto THREADED_DISPATCH;
+    }
+L_OP_ONE: {
+      push(vm, NUMBER_VAL(1));
+      goto THREADED_DISPATCH;
+    }
+L_OP_RETURN: {
+      b_value result = pop(vm);
+      close_up_values(vm, vm->current_frame->slots);
+      if (vm->error_count > 0 && vm->errors[vm->error_count - 1]->frame == vm->current_frame) {
+        pop_error(vm);
+      }
+      vm->frame_count--;
+      if (vm->frame_count == 0) {
+        pop(vm);
+        return PTR_OK;
+      }
+      vm->stack_top = vm->current_frame->slots;
+      push(vm, result);
+      vm->current_frame = &vm->frames[vm->frame_count - 1];
+      if (vm->frame_count == exit_frame) {
+        return PTR_OK;
+      }
+      goto THREADED_DISPATCH;
+    }
+
+L_FALLBACK:
+    // Rewind IP so the switch-based dispatcher re-reads this opcode.
+    vm->current_frame->ip--;
+    goto SWITCH_DISPATCH;
+
+THREADED_DISPATCH:
+    instruction = READ_BYTE();
+    goto *dispatch_table[instruction];
+
+SWITCH_DISPATCH:
+#endif
+
     switch (instruction = READ_BYTE()) {
 
       case OP_CONSTANT: {
