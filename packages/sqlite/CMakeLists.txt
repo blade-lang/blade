@@ -14,8 +14,8 @@ include_directories("${BLADE_ROOT}/includes" ${CMAKE_CURRENT_SOURCE_DIR})
 
 include(FetchContent)
 FetchContent_Declare(SQLite3
-        URL      https://www.sqlite.org/2023/sqlite-amalgamation-3420000.zip
-        URL_HASH SHA3_256=436747dc8090d015b9869b96f5837f745e852d2ce73fd77410ed76ee51107a1f
+        URL      https://www.sqlite.org/2026/sqlite-amalgamation-3530000.zip
+        URL_HASH SHA3_256=c2325c53b3b41761469f91cfb078e96882ac5d85bac10c11b0bd8f253b031e5b
         )
 FetchContent_MakeAvailable(SQLite3)
 
