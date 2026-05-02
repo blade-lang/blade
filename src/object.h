@@ -227,6 +227,7 @@ typedef struct {
   void *pointer;
   char *name;
   b_ptr_free_fn free_fn;
+  bool name_is_static;
 } b_obj_ptr;
 
 // non-user objects...

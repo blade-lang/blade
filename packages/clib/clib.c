@@ -14,7 +14,8 @@
   b_obj_ptr *ptr = (b_obj_ptr *)GC(new_closable_ptr(vm, (handle), (u))); \
   const char *format = #cf; \
   int length = snprintf(NULL, 0, format, ##__VA_ARGS__); \
-  ptr->name = ALLOCATE(char, length + 1); \
+  ptr->name = malloc(length + 1); \
+  ptr->name_is_static = false; \
   sprintf((char *)ptr->name, format, ##__VA_ARGS__); \
   ptr->name[length] = '\0';   \
   RETURN_OBJ(ptr);
@@ -27,6 +28,9 @@ typedef struct {
   b_obj_list *names;
 } b_ffi_type;
 
+void clib_new_struct_free_fn(void *data);
+void clib_ffi_type_free_fn(void *data);
+
 #define DEFINE_CLIB_TYPE(v) \
   b_value __clib_type_##v(b_vm *vm) { \
     b_ffi_type *f = ALLOCATE(b_ffi_type, 1); \
@@ -34,7 +38,7 @@ typedef struct {
     f->as_int = b_clib_type_##v;      \
     f->types = NULL;        \
     f->length = 0; \
-    b_obj_ptr *ptr = (b_obj_ptr *)GC(new_ptr(vm, (void *)f)); \
+    b_obj_ptr *ptr = (b_obj_ptr *)GC(new_closable_ptr(vm, (void *)f, &clib_ffi_type_free_fn)); \
     ptr->name = "<void *clib::type::" #v ">"; \
     return OBJ_VAL(ptr); \
   }
@@ -46,7 +50,7 @@ typedef struct {
     f->as_int = b_clib_type_##v;      \
     f->types = NULL;         \
     f->length = 0;\
-    b_obj_ptr *ptr = (b_obj_ptr *)GC(new_ptr(vm, (void *)f)); \
+    b_obj_ptr *ptr = (b_obj_ptr *)GC(new_closable_ptr(vm, (void *)f, &clib_ffi_type_free_fn)); \
     ptr->name = "<void *clib::type::" #v ">"; \
     return OBJ_VAL(ptr); \
   }
@@ -199,6 +203,9 @@ static inline void add_value(b_vm *vm, b_ffi_values *values, void *object) {
 
   values->values[values->count++] = object;
 }
+
+void clib_new_struct_free_fn(void *data);
+void clib_ffi_type_free_fn(void *data);
 
 static inline void free_ffi_values(b_vm *vm, b_ffi_values *values) {
   if (values->values != NULL) {
@@ -357,6 +364,22 @@ static inline b_ffi_values *get_c_values(b_vm *vm, b_ffi_cif *cif, b_obj_list *l
   return values;
 }
 
+void clib_ffi_type_free_fn(void *data) {
+  if (data != NULL) {
+    b_ffi_type *type = (b_ffi_type *)data;
+    if (type->types != NULL) {
+      free(type->types);
+    }
+    if (type->as_ffi != NULL && type->as_int == b_clib_type_struct) {
+      if (type->as_ffi->elements != NULL) {
+        free(type->as_ffi->elements);
+      }
+      free(type->as_ffi);
+    }
+    free(type);
+  }
+}
+
 void clib_load_library_free_fn(void *data) {
   if (data != NULL) {
     dlclose(data);
@@ -370,6 +393,7 @@ void clib_new_struct_free_fn(void *data) {
       // make name list available for freeing.
       type->names->obj.stale--;
     }
+    clib_ffi_type_free_fn(data);
   }
 }
 

@@ -331,6 +331,9 @@ void free_object(b_vm *vm, b_obj *object) {
       if(ptr->free_fn) {
         ptr->free_fn(ptr->pointer);
       }
+      if (!ptr->name_is_static) {
+        free(ptr->name);
+      }
       FREE(b_obj_ptr, object);
       break;
     }
@@ -347,19 +350,15 @@ static void mark_roots(b_vm *vm) {
     }
   }
 
-  if (vm->frames != NULL) {
-    for (int i = 0; i < vm->frame_count; i++) {
-      mark_object(vm, (b_obj *) vm->frames[i].closure);
-    }
+  for (int i = 0; i < vm->frame_count; i++) {
+    mark_object(vm, (b_obj *) vm->frames[i].closure);
   }
 
-  if (vm->errors != NULL) {
-    for(int i = 0; i < vm->error_count; i++) {
-      if (vm->errors[i] != NULL) {
-        mark_value(vm, vm->errors[i]->value);
-        if (vm->errors[i]->frame != NULL) {
-          mark_object(vm, (b_obj *)vm->errors[i]->frame->closure);
-        }
+  for(int i = 0; i < vm->error_count; i++) {
+    if (vm->errors[i] != NULL) {
+      mark_value(vm, vm->errors[i]->value);
+      if (vm->errors[i]->frame != NULL) {
+        mark_object(vm, (b_obj *)vm->errors[i]->frame->closure);
       }
     }
   }
@@ -432,9 +431,10 @@ void free_objects(b_vm *vm) {
 }
 
 void free_error_stacks(b_vm *vm) {
-  if (vm == NULL || vm->errors == NULL) {
+  if (vm == NULL) {
     return;
   }
+
   for(int index = vm->error_count; index < ERRORS_MAX && vm->errors[index] != NULL; index++) {
     free(vm->errors[index]);
     vm->errors[index] = NULL;
