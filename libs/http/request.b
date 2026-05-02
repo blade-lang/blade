@@ -1089,12 +1089,10 @@ class HttpRequest {
                 var data = self._receive_data(client, receive_timeout, -1, false)
                 # var data = self._receive_data(client, receive_timeout)
                 
-                if data.length() == 0 {
-                  raise HttpException('incomplete response')
+                if data.length() > 0 {
+                  body += data
+                  data.dispose()
                 }
-
-                body += data
-                data.dispose()
               }
             }
           }
