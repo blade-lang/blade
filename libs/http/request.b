@@ -289,84 +289,65 @@ def _parse_chunked_encoding(data, overflow) {
   while true {
     var next_index = data.index_of('\r\n'.to_bytes(), last_index)
 
-    # In HTTP Chunked Transfer Encoding, the chunk size is
-    # represented as a hexadecimal value followed by a
-    # newline \r\n.
-    #
-    # The maximum number of characters allowed for the chunk
-    # size is:
-    #
-    # - 8 hexadecimal digits (0-9, A-F) for the chunk size value
-    # - 2 characters for the newline \r\n
-    #
-    # since our delimiter was \r\n, we can ignore it.
-    if next_index - last_index > 8 {
-      chunks += data[last_index, next_index]
-      total_size += next_index - last_index
-      last_index = next_index + 2 # skip the \r\n
-
-      next_index = data.index_of('\r\n'.to_bytes(), last_index)
-    }
-
     if next_index == -1 {
-      # echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>> STOP RETURN START <<<<<<<<<<<<<<<<<<<<<<<<<<<'
-      # echo 'NEXT: ' + next_index
-      # echo 'TOTAL: ' + total_size
-      # echo 'LAST: ' + last_index
-      # echo 'CHUNK: ' + chunks.length()
-      # echo 'DATA: ' + data.length()
-      # echo data[last_index,]
-      # echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>> STOP RETURN ENDS <<<<<<<<<<<<<<<<<<<<<<<<<<<<'
-      
-      if data.length() - 1 > last_index {
-        total_size += data.length() - last_index
-        chunks += data[last_index, data.length() - 2]
-      }
+      # If we don't find CRLF, it might be an incomplete chunk size or marker.
+      # Save the remaining data as overflow for the next read.
+      overflow = data.length() - last_index
       break
     }
 
-    var size = _get_chunk_size(data[last_index, next_index])
-    # echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> CHUNK REGIONS START <<<<<<<<<<<<<<<<<<<<<<<<<<'
-    # echo last_index
-    # echo next_index
-    # echo data[last_index, next_index]
-    # echo size
-    # echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> CHUNK REGIONS ENDS <<<<<<<<<<<<<<<<<<<<<<<<<<<'
+    # chunk-size     = 1*HEXDIG
+    # The chunk size is hex, but may have extensions.
+    var size_line = data[last_index, next_index].to_string()
+    var chunk_ext_index = size_line.index_of(';')
+    if chunk_ext_index > -1 {
+      size_line = size_line[0, chunk_ext_index]
+    }
+    
+    var size = -1
+    catch {
+      size = convert.hex_to_decimal(size_line.trim())
+    }
 
-    if size == 0 and last_index > 0 {
-      # echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>> ZERO RETURN START <<<<<<<<<<<<<<<<<<<<<<<<<<<'
-      # echo data[last_index, next_index]
-      # echo last_index
-      # echo next_index
-      # echo data.length()
-      # echo chunks.length()
-      # echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>> ZERO RETURN ENDS <<<<<<<<<<<<<<<<<<<<<<<<<<<<'
-      
+    if size == -1 {
+      # This is NOT a valid hex. It might be that we found CRLF in the middle of 
+      # some data that we thought was a chunk size marker but wasn't.
+      # However, in chunked encoding, after each chunk-data there is a CRLF.
+      # If we are here, we are EXPECTING a chunk size.
+      # If it's not a valid hex, the stream is likely malformed.
+      # To be safe, we'll treat it as the end of processing for this block.
+      break
+    }
+
+    if size == 0 {
       has_zero_size = true
+      last_index = next_index + 2
+      # We should technically check for trailers here.
       break
     }
 
-    var start = next_index + 2, end = start + size
-    last_index = end + 2 # +2 to skip the ending \r\n
+    var start = next_index + 2
+    var end = start + size
 
-    chunks += data[start,end]
-    total_size += end - start
-
-    if end > data.length() - 1 {
-      # echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>> END OVERFLOW START <<<<<<<<<<<<<<<<<<<<<<<<<<<'
-      # echo 'DATA: '
-      # echo data[start,end]
-      # echo 'LAST: ${last_index}'
-      # echo 'NEXT: ${next_index}'
-      # echo 'SIZE: ${size}'
-      # echo 'END: ${end}'
-      # echo 'LENGTH: ${data.length()}'
-      # echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>> END OVERFLOW ENDS <<<<<<<<<<<<<<<<<<<<<<<<<<<<'
-      
-      # subtract the \r\n which was previously skipped for last_index
-      overflow = last_index - data.length() - 2
-      total_size -= overflow
+    if data.length() < end {
+      # Not enough data for the full chunk.
+      overflow = data.length() - last_index
       break
+    }
+
+    chunks += data[start, end]
+    total_size += size
+
+    # Skip the data and the trailing CRLF
+    last_index = end + 2
+
+    if data.length() < last_index {
+        # We have the data but not the trailing CRLF yet.
+        # This is common in slow networks.
+        # However, since we now read the whole body before calling this, 
+        # this shouldn't happen unless the stream is truly truncated.
+        overflow = data.length() - end # Should be 0 or 1
+        break
     }
   }
 
@@ -1050,101 +1031,39 @@ class HttpRequest {
           # the request method had been GET
           if method.upper() != 'HEAD' {
 
-            # ensure to handle chunked transfers first because a message can content
+            # ensure to handle chunked transfers first because a message can contain
             # content-length header and still be chunked in which case the specification
             # says the content-length may be irrelevant (obviously, since by the time
             # you read all the chunks completely you'll still arrive at the same length).
             if headers_cache.contains('transfer-encoding') and headers_cache['transfer-encoding'].index_of('chunked') > -1 {
-              var chunk_size = 0, chunk_overflow = -1, has_zero_size = false
-
-              if body.length() > 0 {
-                # we ended up here because this current chunk contains
-                # more than one chunk within it.
-                var parsed_chunk = _parse_chunked_encoding(body, chunk_overflow)
-
-                # since we are overwriting body, we may as well dispose it.
-                body.dispose()
-
-                body = parsed_chunk[0]
-                chunk_size = parsed_chunk[1]
-                chunk_overflow = parsed_chunk[2]
-                has_zero_size = parsed_chunk[3]
-
-                # we're not disposing parsed_chunk[0] because it's the new body.
+              var chunk_overflow = -1, has_zero_size = false
+              
+              # we already have some body from the initial read. 
+              # Check if it contains the end-of-chunked-body marker '0\r\n\r\n'
+              if body.index_of('0\r\n\r\n'.to_bytes()) > -1 {
+                has_zero_size = true
               }
 
-              # echo '>>>>>>>>>>>>>>>>>>>>>>>>>> RETURN START <<<<<<<<<<<<<<<<<<<<<<<<<<'
-              # echo has_zero_size
-              # echo chunk_overflow
-              # echo '>>>>>>>>>>>>>>>>>>>>>>>>>> RETURN END <<<<<<<<<<<<<<<<<<<<<<<<<<<<'
-
-              # if the original chunk does not end with the chunk ending marker,
-              # then we are expecting more chunks to come in.
-              # we need to keep reading and parsing the chunks until we finally
-              # read all chunks.
-              if !has_zero_size {
-                var chunk_size_read = body.length() or 0
-
-                while chunk_size > 0 {
-
-                  # ensure you've read the
-                  var data = self._receive_data(client, receive_timeout, -1, false)
-                  var parsed_chunk = _parse_chunked_encoding(data, chunk_overflow)
-
-                  # echo '>>>>>>>>>>>>>>>>>>>>>>>>>> FINAL DATA START <<<<<<<<<<<<<<<<<<<<<<<<<<'
-                  # echo data.length()
-                  # echo parsed_chunk
-                  # echo '>>>>>>>>>>>>>>>>>>>>>>>>>> FINAL DATA END <<<<<<<<<<<<<<<<<<<<<<<<<<<<'
-
-                  # since we're overwriting data, we might as well free the former one.
-                  data.dispose()
-
-                  var tmp_data = parsed_chunk[0]
-
-                  chunk_size = parsed_chunk[1]
-                  chunk_overflow = parsed_chunk[2]
-                  has_zero_size = parsed_chunk[3]
-
-                  data = tmp_data
-                  chunk_size = tmp_data.length()
-
-                  if tmp_data.length() == 0 {
-                    if tmp_data[tmp_data.length() - 3,] == '0\r\n'.to_bytes() {
-                      data = tmp_data[,-3]
-                      chunk_size = 0
-                      has_zero_size = true
-                    }
-                  }
-
-                  body += data
-
-                  # dispose the chunk
-                  tmp_data.dispose()
-
-                  if has_zero_size {
-                    break
-                  }
-
-                  /* # read the next chunk
-                  var data = self._receive_data(client, receive_timeout)
-                  if data.length() == 0 {
-                    raise HttpException('error reading next chunk')
-                  }
-
-                  var chunk_size_ends = data.index_of('\r\n'.to_bytes())
-                  if chunk_size_ends == -1 {
-                    raise HttpException('malformed response')
-                  }
-
-                  chunk_size = _get_chunk_size(data[,chunk_size_ends])
-
-                  var this_chunk = data[chunk_size_ends,]
-                  body += this_chunk
-                  chunk_size_read = this_chunk.length()
-
-                  data.dispose() */
+              while !has_zero_size {
+                var data = self._receive_data(client, receive_timeout, -1, false)
+                if data.length() == 0 {
+                  # If we get no data, it might be a timeout or connection closed.
+                  # For chunked, we MUST see the 0 chunk.
+                  # However, if the connection is closed, we must stop.
+                  break
                 }
+                
+                body += data
+                
+                if data.index_of('0\r\n\r\n'.to_bytes()) > -1 or body.index_of('0\r\n\r\n'.to_bytes()) > -1 {
+                  has_zero_size = true
+                }
+                data.dispose()
               }
+
+              var parsed_chunk = _parse_chunked_encoding(body, -1)
+              body.dispose()
+              body = parsed_chunk[0]
             }
 
             # gracefully handle responses being sent in multiple packets
