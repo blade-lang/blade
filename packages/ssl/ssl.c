@@ -658,7 +658,7 @@ DECLARE_MODULE_METHOD(ssl_read) {
     // Error
   }
 
-  char *data = (char*)malloc(sizeof(char));
+  char *data = ALLOCATE(char, 1);
   memset(data, 0, sizeof(char));
 
   do {
@@ -689,7 +689,7 @@ DECLARE_MODULE_METHOD(ssl_read) {
 
     int error = SSL_get_error(ssl, bytes);
     if(error == SSL_ERROR_SSL) {
-      free(data);
+      FREE(char, data);
       RETURN_NIL;
     }
 
@@ -739,6 +739,7 @@ DECLARE_MODULE_METHOD(ssl_bio_read) {
         sleep(1);
         continue;
       }
+      FREE(char, data);
       RETURN_STRING(""); // error...
     }
 
@@ -749,7 +750,7 @@ DECLARE_MODULE_METHOD(ssl_bio_read) {
   }
 
   data[total] = '\0';
-  RETURN_L_STRING(data, total);
+  RETURN_T_STRING(data, total);
 }
 
 DECLARE_MODULE_METHOD(ssl_should_retry) {

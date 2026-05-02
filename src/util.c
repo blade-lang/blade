@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
 
 char *append_strings_n(char *old, char *new_str, size_t new_len) {
   // quick exit...
@@ -12,7 +13,11 @@ char *append_strings_n(char *old, char *new_str, size_t new_len) {
   }
 
   // find the size of the string to allocate
-  const size_t old_len = strlen(old);
+  const size_t old_len = NULL == old ? 0 : strlen(old);
+  if (new_len > SIZE_MAX - old_len - 1) {
+    return old;
+  }
+
   const size_t out_len = old_len + new_len;
 
   // allocate a pointer to the new string
@@ -29,6 +34,10 @@ char *append_strings_n(char *old, char *new_str, size_t new_len) {
 }
 
 char *append_strings(char *old, char *new_str) {
+  if (new_str == NULL) {
+    return old;
+  }
+
   return append_strings_n(old, new_str, strlen(new_str));
 }
 
@@ -40,8 +49,24 @@ char *read_file(const char *path) {
     return NULL;
   }
 
-  fseek(fp, 0L, SEEK_END);
-  size_t file_size = ftell(fp);
+  if (fseek(fp, 0L, SEEK_END) != 0) {
+    fclose(fp);
+    return NULL;
+  }
+
+  long file_size_long = ftell(fp);
+  if (file_size_long < 0) {
+    fclose(fp);
+    return NULL;
+  }
+
+  size_t file_size = (size_t) file_size_long;
+
+  if (file_size == SIZE_MAX) {
+    fclose(fp);
+    return NULL;
+  }
+
   rewind(fp);
 
   char *buffer = (char *) malloc(file_size + 1);
@@ -96,27 +121,45 @@ size_t *parse_size(char *input, size_t *target) {
   return target;
 }
 
-char *format_size(size_t size) {  
+char *format_size(size_t size) {
 
 #define DIM(x) (sizeof(x)/sizeof(*(x)))
 #define terabytes (1024UL * 1024UL * 1024UL * 1024UL)
 
-  char     *result = (char *) malloc(sizeof(char) * 20);
+  char    stack_buffer[64];
+  char    *result = NULL;
   size_t  multiplier = terabytes;
   int i;
 
-  for (i = 0; i < DIM(human_readable_filesize_labels); i++, multiplier /= 1024) {   
+  for (i = 0; i < DIM(human_readable_filesize_labels); i++, multiplier /= 1024) {
     if (size < multiplier) {
       continue;
     }
-    
+
     if (size % multiplier == 0) {
-      sprintf(result, "%lu %s", size / multiplier, human_readable_filesize_labels[i]);
+      snprintf(stack_buffer, sizeof(stack_buffer), "%lu %s",
+               (unsigned long) (size / multiplier),
+               human_readable_filesize_labels[i]);
     } else {
-      sprintf(result, "%.1f %s", (float) size / multiplier, human_readable_filesize_labels[i]);
+      snprintf(stack_buffer, sizeof(stack_buffer), "%.1f %s",
+               (float) size / multiplier,
+               human_readable_filesize_labels[i]);
     }
+
+    result = (char *) malloc(strlen(stack_buffer) + 1);
+    if (result == NULL) {
+      return NULL;
+    }
+
+    strcpy(result, stack_buffer);
     return result;
   }
+
+  result = (char *) malloc(2);
+  if (result == NULL) {
+    return NULL;
+  }
+
   strcpy(result, "0");
   return result;
 

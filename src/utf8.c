@@ -2852,24 +2852,24 @@ int utf8_decode(const uint8_t *bytes, uint32_t length) {
   return value;
 }
 
-char *utf8_codepoint(const char *b_restrict str, char *b_restrict out_codepoint) {
+char *utf8_codepoint(const char *b_restrict str, int *b_restrict out_codepoint) {
   if (0xf0 == (0xf8 & str[0])) {
     /* 4 byte utf8 codepoint */
-    *out_codepoint = ((0x07 & str[0]) << 18) | ((0x3f & str[1]) << 12) |
-                     ((0x3f & str[2]) << 6) | (0x3f & str[3]);
+    *out_codepoint = ((0x07 & str[0]) << 18) | ((0x3f & (uint8_t)str[1]) << 12) |
+                     ((0x3f & (uint8_t)str[2]) << 6) | (0x3f & (uint8_t)str[3]);
     str += 4;
   } else if (0xe0 == (0xf0 & str[0])) {
     /* 3 byte utf8 codepoint */
     *out_codepoint =
-        ((0x0f & str[0]) << 12) | ((0x3f & str[1]) << 6) | (0x3f & str[2]);
+        ((0x0f & str[0]) << 12) | ((0x3f & (uint8_t)str[1]) << 6) | (0x3f & (uint8_t)str[2]);
     str += 3;
   } else if (0xc0 == (0xe0 & str[0])) {
     /* 2 byte utf8 codepoint */
-    *out_codepoint = ((0x1f & str[0]) << 6) | (0x3f & str[1]);
+    *out_codepoint = ((0x1f & str[0]) << 6) | (0x3f & (uint8_t)str[1]);
     str += 2;
   } else {
     /* 1 byte utf8 codepoint otherwise */
-    *out_codepoint = str[0];
+    *out_codepoint = (uint8_t)str[0];
     str += 1;
   }
 
@@ -2877,7 +2877,7 @@ char *utf8_codepoint(const char *b_restrict str, char *b_restrict out_codepoint)
 }
 
 char *utf8_strstr(const char *haystack, const char *needle) {
-  char throwaway_codepoint = 0;
+  int throwaway_codepoint = 0;
 
   /* if needle has no utf8 codepoints before the null terminating
    * byte then return haystack */
@@ -2948,7 +2948,9 @@ char *utf8_toupper(char *s, int length) {
       utf8slice(s, &start, &end);
       int as_num = utf8_decode((uint8_t *) (s + start), end - start);
       char *data = utf8_encode(utf8_get_upper(as_num));
-      result = append_strings(result, data);
+      if (data != NULL) {
+        result = append_strings(result, data);
+      }
       free(data);
     }
   }

@@ -89,7 +89,7 @@ DECLARE_MODULE_METHOD(imagine__frompng) {
 
   gdImagePtr image = gdImageCreateFromPng(AS_FILE(args[0])->file);
   CHECK_IMAGE(image);
-  RETURN_PTR(image);
+  RETURN_CLOSABLE_NAMED_PTR(image, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
 }
 
 DECLARE_MODULE_METHOD(imagine__fromjpeg) {
@@ -98,7 +98,7 @@ DECLARE_MODULE_METHOD(imagine__fromjpeg) {
 
   gdImagePtr image = gdImageCreateFromJpeg(AS_FILE(args[0])->file);
   CHECK_IMAGE(image);
-  RETURN_PTR(image);
+  RETURN_CLOSABLE_NAMED_PTR(image, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
 }
 
 DECLARE_MODULE_METHOD(imagine__fromgif) {
@@ -107,7 +107,7 @@ DECLARE_MODULE_METHOD(imagine__fromgif) {
 
   gdImagePtr image = gdImageCreateFromGif(AS_FILE(args[0])->file);
   CHECK_IMAGE(image);
-  RETURN_PTR(image);
+  RETURN_CLOSABLE_NAMED_PTR(image, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
 }
 
 DECLARE_MODULE_METHOD(imagine__frombmp) {
@@ -116,7 +116,7 @@ DECLARE_MODULE_METHOD(imagine__frombmp) {
 
   gdImagePtr image = gdImageCreateFromBmp(AS_FILE(args[0])->file);
   CHECK_IMAGE(image);
-  RETURN_PTR(image);
+  RETURN_CLOSABLE_NAMED_PTR(image, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
 }
 
 DECLARE_MODULE_METHOD(imagine__fromwbmp) {
@@ -125,7 +125,7 @@ DECLARE_MODULE_METHOD(imagine__fromwbmp) {
 
   gdImagePtr image = gdImageCreateFromWBMP(AS_FILE(args[0])->file);
   CHECK_IMAGE(image);
-  RETURN_PTR(image);
+  RETURN_CLOSABLE_NAMED_PTR(image, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
 }
 
 DECLARE_MODULE_METHOD(imagine__fromwxbm) {
@@ -134,7 +134,7 @@ DECLARE_MODULE_METHOD(imagine__fromwxbm) {
 
   gdImagePtr image = gdImageCreateFromXbm(AS_FILE(args[0])->file);
   CHECK_IMAGE(image);
-  RETURN_PTR(image);
+  RETURN_CLOSABLE_NAMED_PTR(image, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
 }
 
 DECLARE_MODULE_METHOD(imagine__fromwtga) {
@@ -143,7 +143,7 @@ DECLARE_MODULE_METHOD(imagine__fromwtga) {
 
   gdImagePtr image = gdImageCreateFromTga(AS_FILE(args[0])->file);
   CHECK_IMAGE(image);
-  RETURN_PTR(image);
+  RETURN_CLOSABLE_NAMED_PTR(image, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
 }
 
 DECLARE_MODULE_METHOD(imagine__fromwtiff) {
@@ -152,7 +152,7 @@ DECLARE_MODULE_METHOD(imagine__fromwtiff) {
 
   gdImagePtr image = gdImageCreateFromTiff(AS_FILE(args[0])->file);
   CHECK_IMAGE(image);
-  RETURN_PTR(image);
+  RETURN_CLOSABLE_NAMED_PTR(image, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
 }
 
 DECLARE_MODULE_METHOD(imagine__fromwebp) {
@@ -161,7 +161,7 @@ DECLARE_MODULE_METHOD(imagine__fromwebp) {
 
   gdImagePtr image = gdImageCreateFromWebp(AS_FILE(args[0])->file);
   CHECK_IMAGE(image);
-  RETURN_PTR(image);
+  RETURN_CLOSABLE_NAMED_PTR(image, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
 }
 
 DECLARE_MODULE_METHOD(imagine__fromwavif) {
@@ -170,7 +170,7 @@ DECLARE_MODULE_METHOD(imagine__fromwavif) {
 
   gdImagePtr image = gdImageCreateFromAvif(AS_FILE(args[0])->file);
   CHECK_IMAGE(image);
-  RETURN_PTR(image);
+  RETURN_CLOSABLE_NAMED_PTR(image, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
 }
 
 DECLARE_MODULE_METHOD(imagine__fromfile) {
@@ -179,7 +179,7 @@ DECLARE_MODULE_METHOD(imagine__fromfile) {
 
   gdImagePtr image = gdImageCreateFromFile(AS_C_STRING(args[0]));
   CHECK_IMAGE(image);
-  RETURN_PTR(image);
+  RETURN_CLOSABLE_NAMED_PTR(image, IMAGINE_IMAGE_PTR_NAME, imagine_free_image_ptrs);
 }
 
 DECLARE_MODULE_METHOD(imagine__close) {

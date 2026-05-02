@@ -61,6 +61,7 @@ typedef struct {
   ffi_cif *cif;
   b_ffi_type *return_type;
   b_ffi_type **arg_types;
+  ffi_type **types;
   void *function;
 } b_ffi_cif;
 
@@ -71,6 +72,7 @@ typedef struct {
   ffi_cif *cif;
   b_ffi_type *return_type;
   b_ffi_type **arg_types;
+  ffi_type **types;
   void *code;
   void *closure;
   b_obj_closure *blade_closure;
@@ -198,6 +200,16 @@ static inline void add_value(b_vm *vm, b_ffi_values *values, void *object) {
   values->values[values->count++] = object;
 }
 
+static inline void free_ffi_values(b_vm *vm, b_ffi_values *values) {
+  if (values->values != NULL) {
+    for (size_t i = 0; i < values->count; i++) {
+      free(values->values[i]);
+    }
+    FREE_ARRAY(void *, values->values, values->capacity);
+  }
+  FREE(b_ffi_values, values);
+}
+
 static inline int clib_type_from_blade_value(b_value v) {
   if(IS_NIL(v)) {
     return 10000; // out of range -> void
@@ -279,9 +291,9 @@ static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size)
         b_obj_list *list = AS_LIST(value);
         for(int i = 0; i < list->items.count; i++) {
           v[i] = switch_c_values(
-            vm, 
-            clib_type_from_blade_value(list->items.values[i]), 
-            list->items.values[i], 
+            vm,
+            clib_type_from_blade_value(list->items.values[i]),
+            list->items.values[i],
             size / list->items.count // in C, items in an array have equal sizes
           );
         }
@@ -361,11 +373,39 @@ void clib_new_struct_free_fn(void *data) {
   }
 }
 
+void clib_cif_free_fn(void *data) {
+  if (data != NULL) {
+    b_ffi_cif *ci = (b_ffi_cif *)data;
+    if (ci->cif != NULL) {
+      free(ci->cif);
+    }
+    if (ci->arg_types != NULL) {
+      free(ci->arg_types);
+    }
+    if (ci->types != NULL) {
+      free(ci->types);
+    }
+    free(ci);
+  }
+}
+
 void clib_new_closure_free_fn(void *data) {
   if (data != NULL) {
     b_ffi_cif_closure *ci = (b_ffi_cif_closure *)data;
-    if (ci != NULL && ci->closure != NULL) {
-      ffi_closure_free(ci->closure);
+    if (ci != NULL) {
+      if (ci->closure != NULL) {
+        ffi_closure_free(ci->closure);
+      }
+      if (ci->cif != NULL) {
+        free(ci->cif);
+      }
+      if (ci->arg_types != NULL) {
+        free(ci->arg_types);
+      }
+      if (ci->types != NULL) {
+        free(ci->types);
+      }
+      free(ci);
     }
   }
 }
@@ -470,12 +510,12 @@ void clib_closure_interface_trampoline(ffi_cif *cif, void *ret, void *args[], vo
     int i = 0;
     size_t read_len = 0;
     b_obj_list *blade_args = (b_obj_list *)GC(new_list(vm));
-    
+
     while(i < ci->args_count) {
       b_ffi_type *type = ci->arg_types[i];
- 
+
       b_value blade_value = get_blade_value(
-        vm, 
+        vm,
         type->as_int,
         type->as_ffi->size,
         args,
@@ -496,7 +536,7 @@ DECLARE_MODULE_METHOD(clib_new_closure) {
   ENFORCE_ARG_TYPE(new_closure, 0, IS_CLOSURE);
   ENFORCE_ARG_TYPE(new_closure, 1, IS_PTR);
   ENFORCE_ARG_TYPE(new_closure, 2, IS_LIST);
-  
+
   b_obj_closure *blade_closure = AS_CLOSURE(args[0]);
   b_ffi_type *return_type = (b_ffi_type *)AS_PTR(args[1])->pointer;
   b_obj_list *args_list = AS_LIST(args[2]);
@@ -525,16 +565,16 @@ DECLARE_MODULE_METHOD(clib_new_closure) {
 
     // populate the argument types...
     ci->arg_types = ALLOCATE(b_ffi_type *, args_list->items.count);
-    ffi_type **types = ALLOCATE(ffi_type *, args_list->items.count);
+    ci->types = ALLOCATE(ffi_type *, args_list->items.count);
 
     // extract types out of b_ffi_type to ffi_type and into ci
     for (int i = 0; i < args_list->items.count; i++) {
       b_ffi_type *type = (b_ffi_type *) AS_PTR(args_list->items.values[i])->pointer;
       ci->arg_types[i] = type;
-      types[i] = type->as_ffi;
+      ci->types[i] = type->as_ffi;
     }
 
-    if(ffi_prep_cif(ci->cif, ci->abi, ci->args_count, ci->return_type->as_ffi, types) == FFI_OK) {
+    if(ffi_prep_cif(ci->cif, ci->abi, ci->args_count, ci->return_type->as_ffi, ci->types) == FFI_OK) {
 
       if(ffi_prep_closure_loc(ci->closure, ci->cif, clib_closure_interface_trampoline, (void *)ci, ci->code) == FFI_OK) {
         CLIB_RETURN_PTR(ci, &clib_new_closure_free_fn, <void *clib::cif::closure(*%d)(%d)>, ci->return_type->as_int, ci->args_count);
@@ -542,6 +582,8 @@ DECLARE_MODULE_METHOD(clib_new_closure) {
     }
 
     FREE_ARRAY(ffi_cif, cif, 1);
+    FREE_ARRAY(b_ffi_type *, ci->arg_types, args_list->items.count);
+    FREE_ARRAY(ffi_type *, ci->types, args_list->items.count);
     FREE_ARRAY(b_ffi_cif_closure, ci, 1);
     ffi_closure_free(closure);
     RETURN_ERROR("failed to initialize closure interface");
@@ -605,7 +647,7 @@ b_value get_blade_value(b_vm *vm, int type, size_t size, void *data, size_t *rea
 #endif
     case b_clib_type_char_ptr: {
       char **v;
-      memcpy(&v, data + len, sizeof(char *)); 
+      memcpy(&v, data + len, sizeof(char *));
 
       char* string = *v;
       int length = strlen(string);
@@ -665,14 +707,14 @@ DECLARE_MODULE_METHOD(clib_get) {
   size_t read_len = 0;
   for(int i = 0; i < type->length; i++) {
     b_value blade_value = get_blade_value(
-      vm, 
+      vm,
       type->types[i],
       type->as_ffi->elements[i]->size,
       data,
       &read_len
     );
 
-    write_list(vm, list, blade_value); 
+    write_list(vm, list, blade_value);
   }
 
   if(type->names != NULL) {
@@ -708,7 +750,7 @@ DECLARE_MODULE_METHOD(clib_get_value) {
 
   size_t read_len = 0;
   RETURN_VALUE(get_blade_value(
-    vm, 
+    vm,
     type->as_int,
     type->as_ffi->size,
     data,
@@ -741,21 +783,23 @@ DECLARE_MODULE_METHOD(clib_define) {
 
     // populate the argument types...
     ci->arg_types = ALLOCATE(b_ffi_type *, args_list->items.count);
-    ffi_type **types = ALLOCATE(ffi_type *, args_list->items.count + 1);
+    ci->types = ALLOCATE(ffi_type *, args_list->items.count + 1);
 
     // extract types out of b_ffi_type to ffi_type and into ci
     for (int i = 0; i < args_list->items.count; i++) {
       b_ffi_type *type = (b_ffi_type *) AS_PTR(args_list->items.values[i])->pointer;
       ci->arg_types[i] = type;
-      types[i] = type->as_ffi;
+      ci->types[i] = type->as_ffi;
     }
-    types[args_list->items.count] = NULL;
+    ci->types[args_list->items.count] = NULL;
 
-    if(ffi_prep_cif(ci->cif, ci->abi, ci->args_count, ci->return_type->as_ffi, types) == FFI_OK) {
-      CLIB_RETURN_PTR(ci, NULL, <void *clib::cif::%s(%d)>, fn_name->chars, ci->return_type->as_int);
+    if(ffi_prep_cif(ci->cif, ci->abi, ci->args_count, ci->return_type->as_ffi, ci->types) == FFI_OK) {
+      CLIB_RETURN_PTR(ci, &clib_cif_free_fn, <void *clib::cif::%s(%d)>, fn_name->chars, ci->return_type->as_int);
     }
 
     FREE_ARRAY(ffi_cif, cif, 1);
+    FREE_ARRAY(b_ffi_type *, ci->arg_types, args_list->items.count);
+    FREE_ARRAY(ffi_type *, ci->types, args_list->items.count + 1);
     FREE_ARRAY(b_ffi_cif, ci, 1);
     RETURN_ERROR("failed to initialize call interface to %s()", fn_name->chars);
   }
@@ -766,6 +810,7 @@ DECLARE_MODULE_METHOD(clib_define) {
 #define CLIB_CALL(t, r) {\
     t rc; \
     ffi_call(handle->cif, handle->function, &rc, values->values); \
+    free_ffi_values(vm, values);\
     RETURN_##r(rc);                 \
   }
 
@@ -793,11 +838,13 @@ DECLARE_MODULE_METHOD(clib_call) {
     switch (handle->return_type->as_int) {
       case b_clib_type_void: {
         ffi_call(handle->cif, handle->function, NULL, values->values);
+        free_ffi_values(vm, values);
         RETURN;
       }
       case b_clib_type_bool: {
         int b;
         ffi_call(handle->cif, handle->function, &b, values->values);
+        free_ffi_values(vm, values);
         RETURN_BOOL(b > 0);
       }
       case b_clib_type_uint8: CLIB_CALL(uint8_t, NUMBER);
@@ -836,10 +883,14 @@ DECLARE_MODULE_METHOD(clib_call) {
         ffi_call(handle->cif, handle->function, result, values->values);
         b_obj_bytes *bytes = (b_obj_bytes *)GC(take_bytes(vm, result, handle->cif->rtype->size));
 //#endif
+        free_ffi_values(vm, values);
         RETURN_OBJ(bytes);
       }
       case b_clib_type_pointer: CLIB_CALL(void *, PTR);
-      default: RETURN;
+      default: {
+        free_ffi_values(vm, values);
+        RETURN;
+      }
     }
   }
 

@@ -572,13 +572,11 @@ DECLARE_MODULE_METHOD(socket__read) {
   char buf[4096];
   int bytes_received;
 
-  while((bytes_received = (int)recv(sock, buf, 4096, flags)) > 0 && total_length < length) {
-    if(bytes_received > 0) {
-      memcpy(response + total_length, buf, bytes_received);
-    }
+  while((bytes_received = (int)recv(sock, buf, (length - total_length) < 4096 ? (length - total_length) : 4096, flags)) > 0 && total_length < length) {
+    memcpy(response + total_length, buf, bytes_received);
     total_length += bytes_received;
   }
-  response[total_length > length ? length : total_length] = '\0';
+  response[total_length] = '\0';
   RETURN_T_STRING(response, (int)total_length);
 }
 

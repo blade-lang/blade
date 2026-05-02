@@ -69,28 +69,27 @@ DECLARE_MODULE_METHOD(os_exec) {
 
   if (output != NULL) {
     while ((n_read = fread(buffer, sizeof(*buffer), sizeof(buffer), fd)) != 0) {
-      size_t current_length = strlen(output);
+      size_t current_length = length;
       length = current_length + n_read;
 
-      output = GROW_ARRAY(char, output, current_length, length);
+      output = GROW_ARRAY(char, output, current_length, length + 1);
       if(output == NULL) {
+        pclose(fd);
         RETURN_NIL;
       }
 
-      memcpy(output + current_length, buffer, n_read - 1);
-      output[length - 1] = 0;
+      memcpy(output + current_length, buffer, n_read);
+      output[length] = 0;
     }
-
-    if (length == 0) {
-      fflush(fd);
-      pclose(fd);
-      RETURN_NIL;
-    }
-
-    output[length - 1] = 0;
 
     fflush(fd);
     pclose(fd);
+
+    if (length == 0) {
+      FREE(char, output);
+      RETURN_NIL;
+    }
+
     RETURN_T_STRING(output, length);
   }
 
@@ -442,16 +441,14 @@ DECLARE_MODULE_METHOD(os__dirname) {
   ENFORCE_ARG_TYPE(dirname, 0, IS_STRING);
   char *str = strdup(AS_STRING(args[0])->chars);
   char *dir = dirname(str);
-#if __APPLE__
-  free(str);
-#else
-  // we are not freeing str because dirname will modify str.
-  // therefore, dir == str
-#endif
+  b_value result;
   if(!dir) {
-    RETURN_VALUE(args[0]);
+    result = args[0];
+  } else {
+    result = STRING_VAL(dir);
   }
-  RETURN_STRING(dir);
+  free(str);
+  RETURN_VALUE(result);
 }
 
 DECLARE_MODULE_METHOD(os__basename) {
@@ -459,16 +456,14 @@ DECLARE_MODULE_METHOD(os__basename) {
   ENFORCE_ARG_TYPE(basename, 0, IS_STRING);
   char *str = strdup(AS_STRING(args[0])->chars);
   char *dir = basename(str);
-#if __APPLE__
-  free(str);
-#else
-  // we are not freeing str because basename will modify str.
-  // therefore, dir == str
-#endif
+  b_value result;
   if(!dir) {
-    RETURN_VALUE(args[0]);
+    result = args[0];
+  } else {
+    result = STRING_VAL(dir);
   }
-  RETURN_STRING(dir);
+  free(str);
+  RETURN_VALUE(result);
 }
 
 DECLARE_MODULE_METHOD(os__rename) {

@@ -1101,22 +1101,22 @@ class HttpRequest {
 
                   var tmp_data = parsed_chunk[0]
 
+                  chunk_size = parsed_chunk[1]
+                  chunk_overflow = parsed_chunk[2]
+                  has_zero_size = parsed_chunk[3]
+
+                  data = tmp_data
+                  chunk_size = tmp_data.length()
+
                   if tmp_data.length() == 0 {
                     if tmp_data[tmp_data.length() - 3,] == '0\r\n'.to_bytes() {
                       data = tmp_data[,-3]
                       chunk_size = 0
-                    } else {
-                      data = tmp_data
-                      chunk_size = tmp_data.length()
+                      has_zero_size = true
                     }
-                  } else {
-                    data = tmp_data
                   }
 
                   body += data
-                  chunk_size = parsed_chunk[1]
-                  chunk_overflow = parsed_chunk[2]
-                  has_zero_size = parsed_chunk[3]
 
                   # dispose the chunk
                   tmp_data.dispose()

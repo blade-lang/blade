@@ -88,14 +88,15 @@ def hex_to_decimal(str) {
   if str.starts_with('0x')
     str = str[2,]
 
-  var l = str.length(), hex = 0
+  var l = str.length(), dec = 0
   str = str.upper()
 
   iter var i = 0; i < l; i++ {
-    hex += _reverse_hex_table.index_of(str[i]) * (16 ** (l - i - 1))
+    var x = str[i]
+    dec += _reverse_hex_table.index_of(x) * (16 ** (l - i - 1))
   }
 
-  return hex
+  return dec
 }
 
 /**
