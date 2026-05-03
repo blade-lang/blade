@@ -14,8 +14,7 @@
   b_obj_ptr *ptr = (b_obj_ptr *)GC(new_closable_ptr(vm, (handle), (u))); \
   const char *format = #cf; \
   int length = snprintf(NULL, 0, format, ##__VA_ARGS__); \
-  ptr->name = malloc(length + 1); \
-  ptr->name_is_static = false; \
+  ptr->name = ALLOCATE(char, length + 1); \
   sprintf((char *)ptr->name, format, ##__VA_ARGS__); \
   ptr->name[length] = '\0';   \
   RETURN_OBJ(ptr);
@@ -28,9 +27,6 @@ typedef struct {
   b_obj_list *names;
 } b_ffi_type;
 
-void clib_new_struct_free_fn(void *data);
-void clib_ffi_type_free_fn(void *data);
-
 #define DEFINE_CLIB_TYPE(v) \
   b_value __clib_type_##v(b_vm *vm) { \
     b_ffi_type *f = ALLOCATE(b_ffi_type, 1); \
@@ -38,7 +34,7 @@ void clib_ffi_type_free_fn(void *data);
     f->as_int = b_clib_type_##v;      \
     f->types = NULL;        \
     f->length = 0; \
-    b_obj_ptr *ptr = (b_obj_ptr *)GC(new_closable_ptr(vm, (void *)f, &clib_ffi_type_free_fn)); \
+    b_obj_ptr *ptr = (b_obj_ptr *)GC(new_ptr(vm, (void *)f)); \
     ptr->name = "<void *clib::type::" #v ">"; \
     return OBJ_VAL(ptr); \
   }
@@ -50,7 +46,7 @@ void clib_ffi_type_free_fn(void *data);
     f->as_int = b_clib_type_##v;      \
     f->types = NULL;         \
     f->length = 0;\
-    b_obj_ptr *ptr = (b_obj_ptr *)GC(new_closable_ptr(vm, (void *)f, &clib_ffi_type_free_fn)); \
+    b_obj_ptr *ptr = (b_obj_ptr *)GC(new_ptr(vm, (void *)f)); \
     ptr->name = "<void *clib::type::" #v ">"; \
     return OBJ_VAL(ptr); \
   }
@@ -65,7 +61,6 @@ typedef struct {
   ffi_cif *cif;
   b_ffi_type *return_type;
   b_ffi_type **arg_types;
-  ffi_type **types;
   void *function;
 } b_ffi_cif;
 
@@ -76,7 +71,6 @@ typedef struct {
   ffi_cif *cif;
   b_ffi_type *return_type;
   b_ffi_type **arg_types;
-  ffi_type **types;
   void *code;
   void *closure;
   b_obj_closure *blade_closure;
@@ -157,7 +151,6 @@ UNUSED b_value __clib_type_bool(b_vm *vm) {
 
 #define CLIB_GET_C_VALUE(t) { \
     t* g = N_ALLOCATE(t, size);                          \
-    add_value(vm, values, g);                            \
     *(t *)g = (t) AS_NUMBER(value); \
     return g; \
   }
@@ -205,21 +198,6 @@ static inline void add_value(b_vm *vm, b_ffi_values *values, void *object) {
   values->values[values->count++] = object;
 }
 
-void clib_new_struct_free_fn(void *data);
-void clib_ffi_type_free_fn(void *data);
-
-static inline void free_ffi_values(b_vm *vm, b_ffi_values *values) {
-  if (values->values != NULL) {
-    for (size_t i = 0; i < values->count; i++) {
-      if (values->values[i] != NULL) {
-        free(values->values[i]);
-      }
-    }
-    FREE_ARRAY(void *, values->values, values->capacity);
-  }
-  FREE(b_ffi_values, values);
-}
-
 static inline int clib_type_from_blade_value(b_value v) {
   if(IS_NIL(v)) {
     return 10000; // out of range -> void
@@ -241,15 +219,10 @@ static inline int clib_type_from_blade_value(b_value v) {
   }
 }
 
-static inline void *switch_c_values(b_vm *vm, b_ffi_values *values, int i, b_value value, size_t size) {
-  if (size == 0 && i != b_clib_type_void) {
-    size = sizeof(void *);
-  }
-
+static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size) {
   switch(i) {
     case b_clib_type_bool: {
       bool* g = N_ALLOCATE(bool, size);
-      add_value(vm, values, g);
       *(bool *)g = AS_BOOL(value);
       return g;
     }
@@ -271,10 +244,13 @@ static inline void *switch_c_values(b_vm *vm, b_ffi_values *values, int i, b_val
     case b_clib_type_sint: CLIB_GET_C_VALUE(int);
     case b_clib_type_ulong: CLIB_GET_C_VALUE(unsigned long);
     case b_clib_type_slong: CLIB_GET_C_VALUE(long);
+#ifdef LONG_LONG_MAX
+    case b_clib_type_longdouble: CLIB_GET_C_VALUE(long long);
+#else
     case b_clib_type_longdouble: CLIB_GET_C_VALUE(long);
+#endif
     case b_clib_type_char_ptr: {
       char **v = N_ALLOCATE(char *, 1);
-      add_value(vm, values, v);
       if(IS_STRING(value)) {
         v[0] = AS_C_STRING(value);
       } else {
@@ -283,8 +259,7 @@ static inline void *switch_c_values(b_vm *vm, b_ffi_values *values, int i, b_val
       return v;
     }
     case b_clib_type_uchar_ptr: {
-      unsigned char **v = N_ALLOCATE(unsigned char *, size / sizeof(unsigned char *) > 0 ? size / sizeof(unsigned char *) : 1);
-      add_value(vm, values, v);
+      unsigned char **v = N_ALLOCATE(unsigned char *, size);
       if(IS_BYTES(value)) {
         v[0] = AS_BYTES(value)->bytes.bytes;
       } else {
@@ -293,52 +268,35 @@ static inline void *switch_c_values(b_vm *vm, b_ffi_values *values, int i, b_val
       return v;
     }
     case b_clib_type_pointer: {
+      void **v = N_ALLOCATE(void *, size);
       if(IS_PTR(value)) {
-        void **v = N_ALLOCATE(void *, 1);
-        add_value(vm, values, v);
         v[0] = AS_PTR(value)->pointer;
-        return v;
       } else if(IS_FILE(value)) {
-        void **v = N_ALLOCATE(void *, 1);
-        add_value(vm, values, v);
         v[0] = AS_FILE(value)->file;
-        return v;
       } else if(IS_BYTES(value)) {
-        void **v = N_ALLOCATE(void *, 1);
-        add_value(vm, values, v);
         v[0] = AS_BYTES(value)->bytes.bytes;
-        return v;
       } else if(IS_LIST(value)) {
         b_obj_list *list = AS_LIST(value);
-        void **v = N_ALLOCATE(void *, list->items.count);
-        add_value(vm, values, v);
         for(int i = 0; i < list->items.count; i++) {
           v[i] = switch_c_values(
             vm,
-            values,
             clib_type_from_blade_value(list->items.values[i]),
             list->items.values[i],
-            sizeof(void *)
+            size / list->items.count // in C, items in an array have equal sizes
           );
         }
-        return v;
+        v[0] = AS_BYTES(value)->bytes.bytes;
       } else if(IS_NIL(value)) {
-        void **v = N_ALLOCATE(void *, 1);
-        add_value(vm, values, v);
         v[0] = NULL;
-        return v;
       } else {
-        void **v = N_ALLOCATE(void *, 1);
-        add_value(vm, values, v);
-        v[0] = NULL;
-        return v;
+        v[0] = &value;
       }
+      return v;
     }
     case b_clib_type_struct: {
       if(IS_BYTES(value)) {
         b_obj_bytes *bytes = AS_BYTES(value);
         void *v = N_ALLOCATE(void, bytes->bytes.count);
-        add_value(vm, values, v);
         memcpy(v, bytes->bytes.bytes, bytes->bytes.count);
         return v;
       }
@@ -346,8 +304,7 @@ static inline void *switch_c_values(b_vm *vm, b_ffi_values *values, int i, b_val
     }
 #if FFI_CLOSURES
     case b_clib_type_closure: {
-      void **v = N_ALLOCATE(void *, size / sizeof(void *) > 0 ? size / sizeof(void *) : 1);
-      add_value(vm, values, v);
+      void **v = N_ALLOCATE(void *, size);
 
       if(IS_PTR(value)) {
         b_ffi_cif_closure *closure = (b_ffi_cif_closure *)AS_PTR(value)->pointer;
@@ -381,27 +338,11 @@ static inline b_ffi_values *get_c_values(b_vm *vm, b_ffi_cif *cif, b_obj_list *l
     b_ffi_type *type = cif->arg_types[i];
     b_value value = list->items.values[i];
 
-    void *v = switch_c_values(vm, values, type->as_int, value, type->as_ffi->size);
-    // Note: add_value is now handled inside switch_c_values
+    void *v = switch_c_values(vm, type->as_int, value, type->as_ffi->size);
+    add_value(vm, values, v);
   }
 
   return values;
-}
-
-void clib_ffi_type_free_fn(void *data) {
-  if (data != NULL) {
-    b_ffi_type *type = (b_ffi_type *)data;
-    if (type->types != NULL) {
-      free(type->types);
-    }
-    if (type->as_ffi != NULL && type->as_int == b_clib_type_struct) {
-      if (type->as_ffi->elements != NULL) {
-        free(type->as_ffi->elements);
-      }
-      free(type->as_ffi);
-    }
-    free(type);
-  }
 }
 
 void clib_load_library_free_fn(void *data) {
@@ -417,43 +358,14 @@ void clib_new_struct_free_fn(void *data) {
       // make name list available for freeing.
       type->names->obj.stale--;
     }
-    clib_ffi_type_free_fn(data);
-  }
-}
-
-void clib_cif_free_fn(void *data) {
-  if (data != NULL) {
-    b_ffi_cif *ci = (b_ffi_cif *)data;
-    if (ci->cif != NULL) {
-      free(ci->cif);
-    }
-    if (ci->arg_types != NULL) {
-      free(ci->arg_types);
-    }
-    if (ci->types != NULL) {
-      free(ci->types);
-    }
-    free(ci);
   }
 }
 
 void clib_new_closure_free_fn(void *data) {
   if (data != NULL) {
     b_ffi_cif_closure *ci = (b_ffi_cif_closure *)data;
-    if (ci != NULL) {
-      if (ci->closure != NULL) {
-        ffi_closure_free(ci->closure);
-      }
-      if (ci->cif != NULL) {
-        free(ci->cif);
-      }
-      if (ci->arg_types != NULL) {
-        free(ci->arg_types);
-      }
-      if (ci->types != NULL) {
-        free(ci->types);
-      }
-      free(ci);
+    if (ci != NULL && ci->closure != NULL) {
+      ffi_closure_free(ci->closure);
     }
   }
 }
@@ -575,21 +487,7 @@ void clib_closure_interface_trampoline(ffi_cif *cif, void *ret, void *args[], vo
     }
 
     b_value return_value = call_closure(vm, ci->blade_closure, blade_args);
-    b_ffi_values *ret_vals = ALLOCATE(b_ffi_values, 1);
-    ret_vals->count = 0;
-    ret_vals->capacity = 0;
-    ret_vals->values = NULL;
-
-    void *ret_val = switch_c_values(vm, ret_vals, ci->return_type->as_int, return_value, ci->return_type->as_ffi->size);
-    if (ret_val != NULL) {
-      if (ci->return_type->as_ffi->size <= sizeof(void *)) {
-        memcpy(ret, ret_val, ci->return_type->as_ffi->size);
-      } else {
-        // For structs larger than void*, libffi usually expects ret to point to the actual struct space
-        memcpy(ret, ret_val, ci->return_type->as_ffi->size);
-      }
-    }
-    free_ffi_values(vm, ret_vals);
+    (*(void **)ret) = switch_c_values(vm, 0, return_value, ci->return_type->as_ffi->size);
   }
 }
 
@@ -627,16 +525,16 @@ DECLARE_MODULE_METHOD(clib_new_closure) {
 
     // populate the argument types...
     ci->arg_types = ALLOCATE(b_ffi_type *, args_list->items.count);
-    ci->types = ALLOCATE(ffi_type *, args_list->items.count);
+    ffi_type **types = ALLOCATE(ffi_type *, args_list->items.count);
 
     // extract types out of b_ffi_type to ffi_type and into ci
     for (int i = 0; i < args_list->items.count; i++) {
       b_ffi_type *type = (b_ffi_type *) AS_PTR(args_list->items.values[i])->pointer;
       ci->arg_types[i] = type;
-      ci->types[i] = type->as_ffi;
+      types[i] = type->as_ffi;
     }
 
-    if(ffi_prep_cif(ci->cif, ci->abi, ci->args_count, ci->return_type->as_ffi, ci->types) == FFI_OK) {
+    if(ffi_prep_cif(ci->cif, ci->abi, ci->args_count, ci->return_type->as_ffi, types) == FFI_OK) {
 
       if(ffi_prep_closure_loc(ci->closure, ci->cif, clib_closure_interface_trampoline, (void *)ci, ci->code) == FFI_OK) {
         CLIB_RETURN_PTR(ci, &clib_new_closure_free_fn, <void *clib::cif::closure(*%d)(%d)>, ci->return_type->as_int, ci->args_count);
@@ -644,8 +542,6 @@ DECLARE_MODULE_METHOD(clib_new_closure) {
     }
 
     FREE_ARRAY(ffi_cif, cif, 1);
-    FREE_ARRAY(b_ffi_type *, ci->arg_types, args_list->items.count);
-    FREE_ARRAY(ffi_type *, ci->types, args_list->items.count);
     FREE_ARRAY(b_ffi_cif_closure, ci, 1);
     ffi_closure_free(closure);
     RETURN_ERROR("failed to initialize closure interface");
@@ -662,29 +558,18 @@ DECLARE_MODULE_METHOD(clib_new) {
   b_ffi_type *type = (b_ffi_type *)AS_PTR(args[0])->pointer;
   b_obj_list *values = AS_LIST(args[1]);
 
-  b_ffi_values *tmp_values = ALLOCATE(b_ffi_values, 1);
-  tmp_values->count = 0;
-  tmp_values->capacity = 0;
-  tmp_values->values = NULL;
-
   unsigned char* data = ALLOCATE(unsigned char, type->as_ffi->size);
   size_t write_length = 0;
   if(type->as_ffi->elements != NULL) {
     for (int i = 0; i < type->length; i++) {
-      void *ret = switch_c_values(vm, tmp_values, type->types[i], values->items.values[i], type->as_ffi->elements[i]->size);
-      if (ret != NULL) {
-        memcpy(data + write_length, ret, type->as_ffi->elements[i]->size);
-        write_length += type->as_ffi->elements[i]->size;
-      }
+      void *ret = switch_c_values(vm, type->types[i], values->items.values[i], type->as_ffi->elements[i]->size);
+      memcpy(data + write_length, ret, type->as_ffi->elements[i]->size);
+      write_length += type->as_ffi->elements[i]->size;
     }
   } else {
-    void *ret = switch_c_values(vm, tmp_values, type->as_int, values->items.values[0], type->as_ffi->size);
-    if (ret != NULL) {
-      memcpy(data + write_length, ret, type->as_ffi->size);
-    }
+    void *ret = switch_c_values(vm, type->as_int, values->items.values[0], type->as_ffi->size);
+    memcpy(data + write_length, ret, type->as_ffi->size);
   }
-
-  free_ffi_values(vm, tmp_values);
 
   RETURN_OBJ(take_bytes(vm, data, type->as_ffi->size));
 }
@@ -723,14 +608,10 @@ b_value get_blade_value(b_vm *vm, int type, size_t size, void *data, size_t *rea
       memcpy(&v, data + len, sizeof(char *));
 
       char* string = *v;
-      if (string == NULL) {
-        blade_value = NIL_VAL;
-      } else {
-        int length = strlen(string);
-        blade_value = STRING_L_VAL(string, length);
-      }
+      int length = strlen(string);
 
       len += size;
+      blade_value = STRING_L_VAL(string, length);
       break;
     }
     case b_clib_type_pointer: CLIB_GET_BLADE_VALUE(void *, PTR_VAL);
@@ -860,23 +741,21 @@ DECLARE_MODULE_METHOD(clib_define) {
 
     // populate the argument types...
     ci->arg_types = ALLOCATE(b_ffi_type *, args_list->items.count);
-    ci->types = ALLOCATE(ffi_type *, args_list->items.count + 1);
+    ffi_type **types = ALLOCATE(ffi_type *, args_list->items.count + 1);
 
     // extract types out of b_ffi_type to ffi_type and into ci
     for (int i = 0; i < args_list->items.count; i++) {
       b_ffi_type *type = (b_ffi_type *) AS_PTR(args_list->items.values[i])->pointer;
       ci->arg_types[i] = type;
-      ci->types[i] = type->as_ffi;
+      types[i] = type->as_ffi;
     }
-    ci->types[args_list->items.count] = NULL;
+    types[args_list->items.count] = NULL;
 
-    if(ffi_prep_cif(ci->cif, ci->abi, ci->args_count, ci->return_type->as_ffi, ci->types) == FFI_OK) {
-      CLIB_RETURN_PTR(ci, &clib_cif_free_fn, <void *clib::cif::%s(%d)>, fn_name->chars, ci->return_type->as_int);
+    if(ffi_prep_cif(ci->cif, ci->abi, ci->args_count, ci->return_type->as_ffi, types) == FFI_OK) {
+      CLIB_RETURN_PTR(ci, NULL, <void *clib::cif::%s(%d)>, fn_name->chars, ci->return_type->as_int);
     }
 
     FREE_ARRAY(ffi_cif, cif, 1);
-    FREE_ARRAY(b_ffi_type *, ci->arg_types, args_list->items.count);
-    FREE_ARRAY(ffi_type *, ci->types, args_list->items.count + 1);
     FREE_ARRAY(b_ffi_cif, ci, 1);
     RETURN_ERROR("failed to initialize call interface to %s()", fn_name->chars);
   }
@@ -887,7 +766,6 @@ DECLARE_MODULE_METHOD(clib_define) {
 #define CLIB_CALL(t, r) {\
     t rc; \
     ffi_call(handle->cif, handle->function, &rc, values->values); \
-    free_ffi_values(vm, values);\
     RETURN_##r(rc);                 \
   }
 
@@ -915,13 +793,11 @@ DECLARE_MODULE_METHOD(clib_call) {
     switch (handle->return_type->as_int) {
       case b_clib_type_void: {
         ffi_call(handle->cif, handle->function, NULL, values->values);
-        free_ffi_values(vm, values);
         RETURN;
       }
       case b_clib_type_bool: {
         int b;
         ffi_call(handle->cif, handle->function, &b, values->values);
-        free_ffi_values(vm, values);
         RETURN_BOOL(b > 0);
       }
       case b_clib_type_uint8: CLIB_CALL(uint8_t, NUMBER);
@@ -960,14 +836,10 @@ DECLARE_MODULE_METHOD(clib_call) {
         ffi_call(handle->cif, handle->function, result, values->values);
         b_obj_bytes *bytes = (b_obj_bytes *)GC(take_bytes(vm, result, handle->cif->rtype->size));
 //#endif
-        free_ffi_values(vm, values);
         RETURN_OBJ(bytes);
       }
       case b_clib_type_pointer: CLIB_CALL(void *, PTR);
-      default: {
-        free_ffi_values(vm, values);
-        RETURN;
-      }
+      default: RETURN;
     }
   }
 
@@ -999,16 +871,8 @@ DECLARE_MODULE_METHOD(clib_set_ptr_index) {
   b_ffi_type *type = (b_ffi_type *) AS_PTR(args[1])->pointer;
   unsigned int index = AS_NUMBER(args[2]);
 
-  b_ffi_values *tmp_values = ALLOCATE(b_ffi_values, 1);
-  tmp_values->count = 0;
-  tmp_values->capacity = 0;
-  tmp_values->values = NULL;
-
-  void *v = switch_c_values(vm, tmp_values, type->as_int, args[3], type->as_ffi->size);
-  if (v != NULL) {
-    memcpy(ptr + (type->as_ffi->size * index), v, type->as_ffi->size);
-  }
-  free_ffi_values(vm, tmp_values);
+  void *v = switch_c_values(vm, type->as_int, args[3], type->as_ffi->size);
+  memcpy(ptr + (type->as_ffi->size * index), v, type->as_ffi->size);
   RETURN;
 }
 
