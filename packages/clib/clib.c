@@ -157,6 +157,7 @@ UNUSED b_value __clib_type_bool(b_vm *vm) {
 
 #define CLIB_GET_C_VALUE(t) { \
     t* g = N_ALLOCATE(t, size);                          \
+    add_value(vm, values, g);                            \
     *(t *)g = (t) AS_NUMBER(value); \
     return g; \
   }
@@ -210,7 +211,9 @@ void clib_ffi_type_free_fn(void *data);
 static inline void free_ffi_values(b_vm *vm, b_ffi_values *values) {
   if (values->values != NULL) {
     for (size_t i = 0; i < values->count; i++) {
-      free(values->values[i]);
+      if (values->values[i] != NULL) {
+        free(values->values[i]);
+      }
     }
     FREE_ARRAY(void *, values->values, values->capacity);
   }
@@ -238,10 +241,15 @@ static inline int clib_type_from_blade_value(b_value v) {
   }
 }
 
-static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size) {
+static inline void *switch_c_values(b_vm *vm, b_ffi_values *values, int i, b_value value, size_t size) {
+  if (size == 0 && i != b_clib_type_void) {
+    size = sizeof(void *);
+  }
+
   switch(i) {
     case b_clib_type_bool: {
       bool* g = N_ALLOCATE(bool, size);
+      add_value(vm, values, g);
       *(bool *)g = AS_BOOL(value);
       return g;
     }
@@ -263,13 +271,10 @@ static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size)
     case b_clib_type_sint: CLIB_GET_C_VALUE(int);
     case b_clib_type_ulong: CLIB_GET_C_VALUE(unsigned long);
     case b_clib_type_slong: CLIB_GET_C_VALUE(long);
-#ifdef LONG_LONG_MAX
-    case b_clib_type_longdouble: CLIB_GET_C_VALUE(long long);
-#else
     case b_clib_type_longdouble: CLIB_GET_C_VALUE(long);
-#endif
     case b_clib_type_char_ptr: {
       char **v = N_ALLOCATE(char *, 1);
+      add_value(vm, values, v);
       if(IS_STRING(value)) {
         v[0] = AS_C_STRING(value);
       } else {
@@ -278,7 +283,8 @@ static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size)
       return v;
     }
     case b_clib_type_uchar_ptr: {
-      unsigned char **v = N_ALLOCATE(unsigned char *, size);
+      unsigned char **v = N_ALLOCATE(unsigned char *, size / sizeof(unsigned char *) > 0 ? size / sizeof(unsigned char *) : 1);
+      add_value(vm, values, v);
       if(IS_BYTES(value)) {
         v[0] = AS_BYTES(value)->bytes.bytes;
       } else {
@@ -287,35 +293,52 @@ static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size)
       return v;
     }
     case b_clib_type_pointer: {
-      void **v = N_ALLOCATE(void *, size);
       if(IS_PTR(value)) {
+        void **v = N_ALLOCATE(void *, 1);
+        add_value(vm, values, v);
         v[0] = AS_PTR(value)->pointer;
+        return v;
       } else if(IS_FILE(value)) {
+        void **v = N_ALLOCATE(void *, 1);
+        add_value(vm, values, v);
         v[0] = AS_FILE(value)->file;
+        return v;
       } else if(IS_BYTES(value)) {
+        void **v = N_ALLOCATE(void *, 1);
+        add_value(vm, values, v);
         v[0] = AS_BYTES(value)->bytes.bytes;
+        return v;
       } else if(IS_LIST(value)) {
         b_obj_list *list = AS_LIST(value);
+        void **v = N_ALLOCATE(void *, list->items.count);
+        add_value(vm, values, v);
         for(int i = 0; i < list->items.count; i++) {
           v[i] = switch_c_values(
             vm,
+            values,
             clib_type_from_blade_value(list->items.values[i]),
             list->items.values[i],
-            size / list->items.count // in C, items in an array have equal sizes
+            sizeof(void *)
           );
         }
-        v[0] = AS_BYTES(value)->bytes.bytes;
+        return v;
       } else if(IS_NIL(value)) {
+        void **v = N_ALLOCATE(void *, 1);
+        add_value(vm, values, v);
         v[0] = NULL;
+        return v;
       } else {
-        v[0] = &value;
+        void **v = N_ALLOCATE(void *, 1);
+        add_value(vm, values, v);
+        v[0] = NULL;
+        return v;
       }
-      return v;
     }
     case b_clib_type_struct: {
       if(IS_BYTES(value)) {
         b_obj_bytes *bytes = AS_BYTES(value);
         void *v = N_ALLOCATE(void, bytes->bytes.count);
+        add_value(vm, values, v);
         memcpy(v, bytes->bytes.bytes, bytes->bytes.count);
         return v;
       }
@@ -323,7 +346,8 @@ static inline void *switch_c_values(b_vm *vm, int i, b_value value, size_t size)
     }
 #if FFI_CLOSURES
     case b_clib_type_closure: {
-      void **v = N_ALLOCATE(void *, size);
+      void **v = N_ALLOCATE(void *, size / sizeof(void *) > 0 ? size / sizeof(void *) : 1);
+      add_value(vm, values, v);
 
       if(IS_PTR(value)) {
         b_ffi_cif_closure *closure = (b_ffi_cif_closure *)AS_PTR(value)->pointer;
@@ -357,8 +381,8 @@ static inline b_ffi_values *get_c_values(b_vm *vm, b_ffi_cif *cif, b_obj_list *l
     b_ffi_type *type = cif->arg_types[i];
     b_value value = list->items.values[i];
 
-    void *v = switch_c_values(vm, type->as_int, value, type->as_ffi->size);
-    add_value(vm, values, v);
+    void *v = switch_c_values(vm, values, type->as_int, value, type->as_ffi->size);
+    // Note: add_value is now handled inside switch_c_values
   }
 
   return values;
@@ -551,7 +575,21 @@ void clib_closure_interface_trampoline(ffi_cif *cif, void *ret, void *args[], vo
     }
 
     b_value return_value = call_closure(vm, ci->blade_closure, blade_args);
-    (*(void **)ret) = switch_c_values(vm, 0, return_value, ci->return_type->as_ffi->size);
+    b_ffi_values *ret_vals = ALLOCATE(b_ffi_values, 1);
+    ret_vals->count = 0;
+    ret_vals->capacity = 0;
+    ret_vals->values = NULL;
+
+    void *ret_val = switch_c_values(vm, ret_vals, ci->return_type->as_int, return_value, ci->return_type->as_ffi->size);
+    if (ret_val != NULL) {
+      if (ci->return_type->as_ffi->size <= sizeof(void *)) {
+        memcpy(ret, ret_val, ci->return_type->as_ffi->size);
+      } else {
+        // For structs larger than void*, libffi usually expects ret to point to the actual struct space
+        memcpy(ret, ret_val, ci->return_type->as_ffi->size);
+      }
+    }
+    free_ffi_values(vm, ret_vals);
   }
 }
 
@@ -624,18 +662,29 @@ DECLARE_MODULE_METHOD(clib_new) {
   b_ffi_type *type = (b_ffi_type *)AS_PTR(args[0])->pointer;
   b_obj_list *values = AS_LIST(args[1]);
 
+  b_ffi_values *tmp_values = ALLOCATE(b_ffi_values, 1);
+  tmp_values->count = 0;
+  tmp_values->capacity = 0;
+  tmp_values->values = NULL;
+
   unsigned char* data = ALLOCATE(unsigned char, type->as_ffi->size);
   size_t write_length = 0;
   if(type->as_ffi->elements != NULL) {
     for (int i = 0; i < type->length; i++) {
-      void *ret = switch_c_values(vm, type->types[i], values->items.values[i], type->as_ffi->elements[i]->size);
-      memcpy(data + write_length, ret, type->as_ffi->elements[i]->size);
-      write_length += type->as_ffi->elements[i]->size;
+      void *ret = switch_c_values(vm, tmp_values, type->types[i], values->items.values[i], type->as_ffi->elements[i]->size);
+      if (ret != NULL) {
+        memcpy(data + write_length, ret, type->as_ffi->elements[i]->size);
+        write_length += type->as_ffi->elements[i]->size;
+      }
     }
   } else {
-    void *ret = switch_c_values(vm, type->as_int, values->items.values[0], type->as_ffi->size);
-    memcpy(data + write_length, ret, type->as_ffi->size);
+    void *ret = switch_c_values(vm, tmp_values, type->as_int, values->items.values[0], type->as_ffi->size);
+    if (ret != NULL) {
+      memcpy(data + write_length, ret, type->as_ffi->size);
+    }
   }
+
+  free_ffi_values(vm, tmp_values);
 
   RETURN_OBJ(take_bytes(vm, data, type->as_ffi->size));
 }
@@ -674,10 +723,14 @@ b_value get_blade_value(b_vm *vm, int type, size_t size, void *data, size_t *rea
       memcpy(&v, data + len, sizeof(char *));
 
       char* string = *v;
-      int length = strlen(string);
+      if (string == NULL) {
+        blade_value = NIL_VAL;
+      } else {
+        int length = strlen(string);
+        blade_value = STRING_L_VAL(string, length);
+      }
 
       len += size;
-      blade_value = STRING_L_VAL(string, length);
       break;
     }
     case b_clib_type_pointer: CLIB_GET_BLADE_VALUE(void *, PTR_VAL);
@@ -946,8 +999,16 @@ DECLARE_MODULE_METHOD(clib_set_ptr_index) {
   b_ffi_type *type = (b_ffi_type *) AS_PTR(args[1])->pointer;
   unsigned int index = AS_NUMBER(args[2]);
 
-  void *v = switch_c_values(vm, type->as_int, args[3], type->as_ffi->size);
-  memcpy(ptr + (type->as_ffi->size * index), v, type->as_ffi->size);
+  b_ffi_values *tmp_values = ALLOCATE(b_ffi_values, 1);
+  tmp_values->count = 0;
+  tmp_values->capacity = 0;
+  tmp_values->values = NULL;
+
+  void *v = switch_c_values(vm, tmp_values, type->as_int, args[3], type->as_ffi->size);
+  if (v != NULL) {
+    memcpy(ptr + (type->as_ffi->size * index), v, type->as_ffi->size);
+  }
+  free_ffi_values(vm, tmp_values);
   RETURN;
 }
 
