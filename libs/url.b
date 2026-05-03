@@ -194,6 +194,14 @@ class Url {
   }
 
   /**
+   * Returns a clone of the current url.
+   * @returns Url
+   */
+  clone() {
+    return Url(self.scheme, self.host, self.port, self.path, self.query, self.hash, self.username, self.password, self.has_slash, self.empty_path)
+  }
+
+  /**
    * Returns the url authority.
    * 
    * The authority component is preceded by a double slash ("//") and is

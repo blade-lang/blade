@@ -322,7 +322,17 @@ def _parse_chunked_encoding(data, overflow) {
     if size == 0 {
       has_zero_size = true
       last_index = next_index + 2
-      # We should technically check for trailers here.
+      
+      # Handle Trailers (RFC 7230 Section 4.1.2)
+      # A trailer is essentially a list of headers after the last chunk.
+      # It ends with an empty line (CRLF CRLF).
+      var trailer_end = data.index_of('\r\n\r\n'.to_bytes(), last_index)
+      if trailer_end > -1 {
+        last_index = trailer_end + 4
+      } else {
+        # If we don't find the end of the trailer, it might be incomplete.
+        # But for now, we'll just skip what we have.
+      }
       break
     }
 
@@ -501,6 +511,8 @@ class HttpRequest {
 
   # Private fields.
   var _body_type = 'application/x-www-form-urlencoded'
+  var _client
+  var _last_uri
 
   _read_cookies() {
     var cookies = self.headers.get('Cookie', nil)
@@ -517,8 +529,8 @@ class HttpRequest {
         }
       }
 
-      # We want to contain all cookie information in the cookies property 
-      # and not have them sprinkled everywhere. To do this, we need to 
+      # We want to contain all cookie information in the cookies property
+      # and not have them sprinkled everywhere. To do this, we need to
       # consider cookies as not part of the headers.
       self.headers.remove('Cookie')
     }
@@ -531,12 +543,12 @@ class HttpRequest {
       self.method = parts[0]
       self.request_uri = parts[1]
       self.http_version = parts[2].lower().replace('~http\\/~', '')
-  
+
       var uri_parts = parts[1].split('?')
-  
+
       # The request path must exist before both a query and an hash.
       self.path = uri_parts[0].split('#')[0]
-  
+
       if uri_parts.length() > 1 and uri_parts[1] {
         # A query exists and it must do so before any hash.
         var query = uri_parts[1].split('#')[0]
@@ -562,7 +574,7 @@ class HttpRequest {
       if content_start != -1 {
         var content_header = bound[,content_start].to_string(),
             content_body = bound[content_start + 4,]
-            
+
         var content_headers = _process_header(content_header).headers
         var dispositions = content_headers.get('Content-Disposition', nil)
 
@@ -585,14 +597,14 @@ class HttpRequest {
           dispositions = dispositions.split(';')
 
           # The first directive is always form-data.
-          if dispositions.length() < 2 or dispositions[0] != 'form-data' 
+          if dispositions.length() < 2 or dispositions[0] != 'form-data'
             return false
 
           var disposition = {}
 
           iter var i = 1; i < dispositions.length(); i++ {
 
-            # Directives are case-insensitive and have arguments that use 
+            # Directives are case-insensitive and have arguments that use
             # quoted-string syntax after the '=' sign
             var d = dispositions[i].split('=')
             var dname = d[0].trim().lower()
@@ -609,15 +621,15 @@ class HttpRequest {
             }
           }
 
-          # and the header must also include a name parameter to identify the 
-          # relevant field. 
-          if !disposition.contains('name') 
+          # and the header must also include a name parameter to identify the
+          # relevant field.
+          if !disposition.contains('name')
             return false
 
           var content_type = content_headers.get('Content-Type', nil),
               name = disposition.name
               # value = content_body.rtrim('\n').rtrim('\r')
-          
+
           if content_type {
 
             # We are dealing with an uploaded file.
@@ -634,7 +646,7 @@ class HttpRequest {
           contents.append(disposition)
         }
       }
-      
+
       bound.dispose()   # free the binary data
     }
 
@@ -643,7 +655,7 @@ class HttpRequest {
 
   _decode_body(body) {
 
-    # We need to capture multipart/form-data here since it allows 
+    # We need to capture multipart/form-data here since it allows
     # specifying boundaries right in the content-type header.
     var content_type = self.headers.get('content-type', ' ')
     if content_type {
@@ -656,7 +668,7 @@ class HttpRequest {
     # TODO: Add support for multipart/byteranges
     using type {
       when 'application/x-www-form-urlencoded' {
-        self.body = _get_url_encoded_parts(body.to_string())  
+        self.body = _get_url_encoded_parts(body.to_string())
         body.dispose()  # free body binary data
       }
       when 'application/json' {
@@ -699,11 +711,12 @@ class HttpRequest {
     while true {
       var data = client.receive(size)
       if !data {
+        if !should_wait and response.length() > 0 {
+           break
+        }
+
         var time_taken = (microtime() - receive_time_start) / 1000
         if time_taken < timeout {
-          if !should_wait and response.length() > 0 {
-            break
-          }
           continue
         } else {
           break
@@ -720,7 +733,7 @@ class HttpRequest {
 
   /**
    * Parses a raw HTTP request string into a correct HttpRequest.
-   * 
+   *
    * @param string raw_data
    * @param Socket|TLSSocket|nil client
    * @returns boolean
@@ -732,7 +745,7 @@ class HttpRequest {
     self.headers = {}
     self.queries = {}
     self.cookies = {}
-    
+
     if !is_string(raw_data)
       raise TypeError('raw_data must be string')
     # if !instance_of(client, socket.Socket)
@@ -762,9 +775,9 @@ class HttpRequest {
         headers.
         each(@(v, k) { self.headers[k.lower()] = v  })
 
-      # To parse the host, first we try to retrieve the `X-Forwarded-Host` header 
-      # is it exists. If it does, we simply set our host to whatever value it has. 
-      # Otherwise, We check the `Host` header. If it was set, our host will be set to that. 
+      # To parse the host, first we try to retrieve the `X-Forwarded-Host` header
+      # is it exists. If it does, we simply set our host to whatever value it has.
+      # Otherwise, We check the `Host` header. If it was set, our host will be set to that.
       # Otherwise, our host will be an empty string.
       self.host = self.headers.get('x-forwarded-host', self.headers.get('host', '').split(':')[0])
 
@@ -789,9 +802,9 @@ class HttpRequest {
   }
 
   /**
-   * Send HTTP requests to the given uri for the given method 
+   * Send HTTP requests to the given uri for the given method
    * and data (if given).
-   * 
+   *
    * @param url uri
    * @param string method
    * @param string|bytes|dict|nil data
@@ -824,7 +837,7 @@ class HttpRequest {
       # user is not allowed to override content-length to avoid
       # undefined behaviors.
       if name != 'content-length' {
-        client_headers_cache[name] = [v, k] 
+        client_headers_cache[name] = [v, k]
       }
 
       if name == 'user-agent' {
@@ -842,13 +855,14 @@ class HttpRequest {
     var request_headers = {}, cookies = [], body
     var server_certificate
 
-    var should_connect = true, 
-        time_taken = 0, 
-        redirect_count = 0, 
-        http_version = '1.0', 
+    var should_connect = true,
+        time_taken = 0,
+        redirect_count = 0,
+        http_version = '1.0',
         status_code = 0
 
     var follow_redirect = options.get('follow_redirect', true),
+        max_redirects = options.get('max_redirects', 5),
         connect_timeout = options.get('connect_timeout', 2000),
         send_timeout = options.get('send_timeout', 2000),
         receive_timeout = options.get('receive_timeout', 2000),
@@ -899,10 +913,20 @@ class HttpRequest {
         if self.cookies {
           if is_list(self.cookies) {
             for cookie in self.cookies {
-              message += _get_cookie_line(cookie, uri.host)
+              var cline = _get_cookie_line(cookie, uri.host)
+              if cline {
+                message += cline.to_bytes()
+                message += '\r\n'.to_bytes()
+              }
             }
-          } else if is_dict(cookie) {
-            message += _get_cookie_line({name: k, value: v}, uri.host)
+          } else if is_dict(self.cookies) {
+            self.cookies.each(@(v, k) {
+              var cline = _get_cookie_line({name: k, value: v}, uri.host)
+              if cline {
+                message += cline.to_bytes()
+                message += '\r\n'.to_bytes()
+              }
+            })
           }
         }
 
@@ -940,51 +964,84 @@ class HttpRequest {
         }
 
 
-        # do real request here...
-        var client = socket.Socket()
-
-        client.set_option(socket.SO_SNDTIMEO, send_timeout)
-        client.set_option(socket.SO_RCVTIMEO, receive_timeout)
-        client.set_blocking(false)
-        client.set_option(socket.SO_REUSEADDR, true)
-
-        if is_secure {
-          client = ssl.TLSSocket(client, ssl.TLSClientContext())
-          client.get_context().set_ciphers(defaults.ciphers)
-          client.get_ssl().set_tlsext_host_name(uri.host)
-
-          if verify_peer == false {
-            client.get_context().set_verify(ssl.SSL_VERIFY_PEER, false)
+        # connect to the url host on the specified port and send the request message
+        var client
+        var client_reused = false
+        if self._client {
+          if self._client.is_connected and
+             self._last_uri and
+             self._last_uri.host == uri.host and
+             self._last_uri.port == uri.port and
+             self._last_uri.scheme == uri.scheme {
+            client = self._client
+            client_reused = true
           } else {
-            client.get_context().set_verify(ssl.SSL_VERIFY_PEER, true)
+            self._client.close()
+            self._client = nil
           }
         }
 
-        var local_port = to_number(port or 0)
-        if local_port == 0 {
-          local_port = is_secure ? 443 : 80
+        if !client_reused {
+          # do real request here...
+          client = socket.Socket()
+
+          client.set_option(socket.SO_SNDTIMEO, send_timeout)
+          client.set_option(socket.SO_RCVTIMEO, receive_timeout)
+          client.set_blocking(false)
+          client.set_option(socket.SO_REUSEADDR, true)
+
+          if is_secure {
+            client = ssl.TLSSocket(client, ssl.TLSClientContext())
+            client.get_context().set_ciphers(defaults.ciphers)
+            client.get_ssl().set_tlsext_host_name(uri.host)
+
+            if verify_peer == false {
+              client.get_context().set_verify(ssl.SSL_VERIFY_PEER, false)
+            } else {
+              client.get_context().set_verify(ssl.SSL_VERIFY_PEER, true)
+            }
+          }
+
+          var local_port = to_number(port or 0)
+          if local_port == 0 {
+            local_port = is_secure ? 443 : 80
+          }
+
+          if !client.connect(host, local_port, connect_timeout) {
+            should_connect = false
+            raise HttpException('could not connect')
+          }
+
+          if is_secure {
+            server_certificate = client.get_ssl().get_peer_certificate()
+
+            if verify_hostname {
+              if !_verify_hostname(server_certificate, uri.host) {
+                client.close()
+                raise HttpException('bad certificate')
+              }
+            }
+          }
+        } else {
+          # If reused, we might still want to update timeouts?
+          client.set_option(socket.SO_SNDTIMEO, send_timeout)
+          client.set_option(socket.SO_RCVTIMEO, receive_timeout)
+
+          if is_secure {
+            server_certificate = client.get_ssl().get_peer_certificate()
+          }
         }
 
         # echo '>>>>>>>>>>>>>>>>>>>>>>>>>> MESSAGE START <<<<<<<<<<<<<<<<<<<<<<<<<<'
         # echo message.to_string()
         # echo '>>>>>>>>>>>>>>>>>>>>>>>>>> MESSAGE END <<<<<<<<<<<<<<<<<<<<<<<<<<<<'
 
-        # connect to the url host on the specified port and send the request message
-        if client.connect(host, local_port, connect_timeout) {
-          if is_secure {
-            server_certificate = client.get_ssl().get_peer_certificate()
+        # send the request message
+        catch {
+          client.send(message)
+        }
 
-            if verify_hostname {
-              if !_verify_hostname(server_certificate, uri.host) {
-                echo server_certificate
-                raise HttpException('bad certificate')
-              }
-            }
-          }
-
-          catch {
-            client.send(message)
-          }
+        if true {
 
           # receive the response...
           var response_data = self._receive_data(client, receive_timeout, -1, false)
@@ -997,10 +1054,32 @@ class HttpRequest {
             continue
           }
 
+          # Handle 100-Continue
+          var test_response_data = response_data[,12].to_string()
+          while test_response_data.starts_with('HTTP/1.1 100') or
+                test_response_data.starts_with('HTTP/1.0 100') {
+            var next_response_start = response_data.index_of('\r\n\r\n'.to_bytes())
+            if next_response_start > -1 {
+              var old_data = response_data
+              response_data = response_data[next_response_start + 4,]
+              old_data.dispose()
+
+              if response_data.length() == 0 {
+                response_data = self._receive_data(client, receive_timeout, -1, false)
+              }
+            } else {
+              break # Should not happen with valid 100 Continue
+            }
+          }
+
+          if response_data.length() == 0 {
+            raise HttpException('failed to read response after 100 Continue')
+          }
+
           # separate the headers and the body
           var header_ends = response_data.index_of('\r\n\r\n'.to_bytes())
 
-          if header_ends {
+          if header_ends > -1 {
             request_headers = response_data[0,header_ends].to_string().trim()
             body = response_data[header_ends + 4, response_data.length()]
           } else {
@@ -1023,7 +1102,7 @@ class HttpRequest {
           }
 
           # According to https://datatracker.ietf.org/doc/html/rfc7230#section-3.3
-          # 
+          #
           # Responses to the HEAD request method (Section 4.3.2
           # of [RFC7231]) never include a message body because the associated
           # response header fields (e.g., Transfer-Encoding, Content-Length,
@@ -1037,8 +1116,8 @@ class HttpRequest {
             # you read all the chunks completely you'll still arrive at the same length).
             if headers_cache.contains('transfer-encoding') and headers_cache['transfer-encoding'].index_of('chunked') > -1 {
               var chunk_overflow = -1, has_zero_size = false
-              
-              # we already have some body from the initial read. 
+
+              # we already have some body from the initial read.
               # Check if it contains the end-of-chunked-body marker '0\r\n\r\n'
               if body.index_of('0\r\n\r\n'.to_bytes()) > -1 {
                 has_zero_size = true
@@ -1052,9 +1131,9 @@ class HttpRequest {
                   # However, if the connection is closed, we must stop.
                   break
                 }
-                
+
                 body += data
-                
+
                 if data.index_of('0\r\n\r\n'.to_bytes()) > -1 or body.index_of('0\r\n\r\n'.to_bytes()) > -1 {
                   has_zero_size = true
                 }
@@ -1078,17 +1157,17 @@ class HttpRequest {
               # occur when a connection is closed prematurely or when decoding a
               # supposedly chunked transfer coding fails, MUST record the message as
               # incomplete.
-              # 
-              # But it also says in https://datatracker.ietf.org/doc/html/rfc9112#section-8 
+              #
+              # But it also says in https://datatracker.ietf.org/doc/html/rfc9112#section-8
               # that,
-              # A message that uses a valid Content-Length is incomplete if the size of 
-              # the message body received (in octets) is less than the value given by 
+              # A message that uses a valid Content-Length is incomplete if the size of
+              # the message body received (in octets) is less than the value given by
               # Content-Length.
               while body.length() < content_length {
                 # append the new data in the stream
                 var data = self._receive_data(client, receive_timeout, -1, false)
                 # var data = self._receive_data(client, receive_timeout)
-                
+
                 if data.length() > 0 {
                   body += data
                   data.dispose()
@@ -1102,13 +1181,32 @@ class HttpRequest {
             body = _handle_content_encoding(body, headers_cache['content-encoding'])
           }
 
-          # close client
-          client.close()
+          # close client or keep it for next request
+          if headers_cache.get('connection', '').lower() == 'keep-alive' {
+            self._client = client
+            self._last_uri = uri.clone()
+          } else {
+            client.close()
+            self._client = nil
+            self._last_uri = nil
+          }
 
           if follow_redirect and headers_cache.contains('location') {
-            referer = uri.absolute_url()
-            uri = url.parse(headers_cache['location'])
-            responder = referer
+            if redirect_count >= max_redirects {
+              should_connect = false
+            } else {
+              redirect_count++
+              referer = uri.absolute_url()
+              uri = url.parse(headers_cache['location'])
+              responder = referer
+
+              # Update Host header for the new URI
+              if uri.host {
+                client_headers_cache['host'] = [uri.host, 'Host']
+              } else {
+                uri.host = original_host
+              }
+            }
           } else {
             should_connect = false
           }
@@ -1130,13 +1228,24 @@ class HttpRequest {
     time_taken += (microtime() - start) / 1000000
 
     # return a valid HttpResponse
-    var http_response = HttpResponse(body, status_code, request_headers, cookies, http_version, 
+    var http_response = HttpResponse(body, status_code, request_headers, cookies, http_version,
       time_taken, redirect_count, responder or uri.host)
 
     # set the certificate if it exists.
     http_response.certificate = server_certificate
 
     return http_response
+  }
+
+  /**
+   * Closes any persistent connection maintained by this request.
+   */
+  close() {
+    if self._client {
+      self._client.close()
+      self._client = nil
+      self._last_uri = nil
+    }
   }
 
   /**
