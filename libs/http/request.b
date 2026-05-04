@@ -1225,7 +1225,7 @@ class HttpRequest {
       }
     }
 
-    time_taken += (microtime() - start) / 1000000
+    time_taken += (microtime() - start) / 1000
 
     # return a valid HttpResponse
     var http_response = HttpResponse(body, status_code, request_headers, cookies, http_version,

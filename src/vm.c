@@ -560,6 +560,7 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_RANGE_METHOD(upper);
   DEFINE_RANGE_METHOD(range);
   DEFINE_RANGE_METHOD(within);
+  DEFINE_RANGE_METHOD(step);
   DEFINE_RANGE_METHOD(loop);
   define_native_method(vm, &vm->methods_range, "@iter", native_method_range__iter__);
   define_native_method(vm, &vm->methods_range, "@itern", native_method_range__itern__);
@@ -678,13 +679,19 @@ static bool call(b_vm *vm, b_obj_closure *closure, int arg_count) {
   }
 
   if (arg_count != closure->function->arity) {
-    pop_n(vm, arg_count);
-    if (closure->function->is_variadic) {
-      return throw_argument_error(vm, "expected at least %d arguments but got %d",
-                             closure->function->arity - 1, arg_count);
+    if (arg_count > closure->function->arity) {
+      pop_n(vm, arg_count - closure->function->arity);
+      arg_count -= closure->function->arity;
     } else {
-      return throw_argument_error(vm, "expected %d arguments but got %d",
-                             closure->function->arity, arg_count);
+      // This should never happen, but just in case some larger-than-life codebase does exist...
+
+      pop_n(vm, arg_count);
+      if (closure->function->is_variadic) {
+        return throw_argument_error(vm, "expected at least %d arguments but got %d",
+                               closure->function->arity - 1, arg_count);
+      }
+
+      return throw_argument_error(vm, "expected %d arguments but got %d", closure->function->arity, arg_count);
     }
   }
 

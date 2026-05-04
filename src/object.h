@@ -191,6 +191,7 @@ typedef struct {
   int lower;
   int upper;
   int range;
+  int step;
 } b_obj_range;
 
 typedef struct {

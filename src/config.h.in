@@ -3,7 +3,7 @@
 
 #define BLADE_EXTENSION ".b"
 #define BLADE_VERSION_STRING "0.0.9-dev"
-#define BVM_VERSION "0.1.4"
+#define BVM_VERSION "0.1.5"
 #define LIBRARY_DIRECTORY "libs"
 #define LIBRARY_DIRECTORY_INDEX "index"
 #define PACKAGES_DIRECTORY "apps"

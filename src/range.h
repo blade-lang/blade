@@ -28,6 +28,13 @@ DECLARE_RANGE_METHOD(__iter__);
 DECLARE_RANGE_METHOD(__itern__);
 
 /**
+ * range.step(n)
+ *
+ * sets the step of the range.
+ */
+DECLARE_RANGE_METHOD(step);
+
+/**
  * range.loop()
  *
  * calls a callback function for the range times.

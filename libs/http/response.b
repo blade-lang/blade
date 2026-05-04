@@ -33,7 +33,7 @@ class HttpResponse {
   var headers
 
   /**
-   * Total time taken for the HTTP request that generated this HttpResponse to complete
+   * Total time taken in milliseconds for the HTTP request that generated this HttpResponse to complete
    * @type number
    */
   var time_taken

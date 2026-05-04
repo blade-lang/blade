@@ -29,6 +29,16 @@ DECLARE_RANGE_METHOD(within) {
   RETURN_BOOL(number >= range->lower && number <= range->upper);
 }
 
+DECLARE_RANGE_METHOD(step) {
+  ENFORCE_ARG_COUNT(step, 1);
+  ENFORCE_ARG_TYPE(step, 0, IS_NUMBER);
+
+  b_obj_range *range = AS_RANGE(METHOD_OBJECT);
+  const int number = (int)AS_NUMBER(args[0]);
+  range->step = number;
+  RETURN_VALUE(METHOD_OBJECT);
+}
+
 DECLARE_RANGE_METHOD(__iter__) {
   ENFORCE_ARG_COUNT(__iter__, 1);
   ENFORCE_ARG_TYPE(__iter__, 0, IS_NUMBER);
@@ -60,7 +70,7 @@ DECLARE_RANGE_METHOD(__itern__) {
     RETURN_ARGUMENT_ERROR("ranges are numerically indexed");
   }
 
-  int index = (int)AS_NUMBER(args[0]) + 1;
+  int index = (int)AS_NUMBER(args[0]) + range->step;
   if (index < range->range) {
     RETURN_NUMBER(index);
   }
@@ -81,7 +91,7 @@ DECLARE_RANGE_METHOD(loop) {
     ITER_TOOL_PREPARE();
 
     if (range->lower < range->upper) {
-      for(int i = range->lower; i < range->upper; i++) {
+      for(int i = range->lower; i < range->upper; i += range->step) {
         if(arity > 0) {
           call_list->items.values[0] = NUMBER_VAL(i);
           if(arity > 1) {
@@ -92,7 +102,7 @@ DECLARE_RANGE_METHOD(loop) {
         call_closure(vm, closure, call_list);
       }
     } else {
-      for(int i = range->lower; i > range->upper; i--) {
+      for(int i = range->lower; i > range->upper; i -= range->step) {
         if(arity > 0) {
           call_list->items.values[0] = NUMBER_VAL(i);
           if(arity > 1) {
