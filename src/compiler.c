@@ -14,11 +14,11 @@
 
 #include "debug.h"
 
-static b_blob *current_blob(b_parser *p) {
+static b_blob* current_blob(b_parser* p) {
   return &p->vm->compiler->function->blob;
 }
 
-static void error_at(b_parser *p, b_token *t, const char *message,
+static void error_at(b_parser* p, b_token* t, const char* message,
                      va_list args) {
   fflush(stdout); // flush out anything on stdout first
 
@@ -51,21 +51,21 @@ static void error_at(b_parser *p, b_token *t, const char *message,
   p->had_error = true;
 }
 
-static void error(b_parser *p, const char *message, ...) {
+static void error(b_parser* p, const char* message, ...) {
   va_list args;
   va_start(args, message);
   error_at(p, &p->previous, message, args);
   va_end(args);
 }
 
-static void error_at_current(b_parser *p, const char *message, ...) {
+static void error_at_current(b_parser* p, const char* message, ...) {
   va_list args;
   va_start(args, message);
   error_at(p, &p->current, message, args);
   va_end(args);
 }
 
-static void advance(b_parser *p) {
+static void advance(b_parser* p) {
   p->previous = p->current;
 
   for (;;) {
@@ -77,7 +77,7 @@ static void advance(b_parser *p) {
   }
 }
 
-static void consume(b_parser *p, b_tkn_type t, const char *message) {
+static void consume(b_parser* p, b_tkn_type t, const char* message) {
   if (p->current.type == t) {
     advance(p);
     return;
@@ -86,8 +86,7 @@ static void consume(b_parser *p, b_tkn_type t, const char *message) {
   error_at_current(p, message);
 }
 
-static void consume_or(b_parser *p, const char *message, const b_tkn_type ts[], int count) {
-
+static void consume_or(b_parser* p, const char* message, const b_tkn_type ts[], int count) {
   for (int i = 0; i < count; i++) {
     if (p->current.type == ts[i]) {
       advance(p);
@@ -98,26 +97,25 @@ static void consume_or(b_parser *p, const char *message, const b_tkn_type ts[], 
   error_at_current(p, message);
 }
 
-static bool check_number(b_parser *p) {
+static bool check_number(b_parser* p) {
   if (p->previous.type == REG_NUMBER_TOKEN ||
-      p->previous.type == OCT_NUMBER_TOKEN ||
-      p->previous.type == BIN_NUMBER_TOKEN ||
-      p->previous.type == HEX_NUMBER_TOKEN)
+    p->previous.type == OCT_NUMBER_TOKEN ||
+    p->previous.type == BIN_NUMBER_TOKEN ||
+    p->previous.type == HEX_NUMBER_TOKEN)
     return true;
   return false;
 }
 
-static bool check(b_parser *p, b_tkn_type t) { return p->current.type == t; }
+static bool check(b_parser* p, b_tkn_type t) { return p->current.type == t; }
 
-static bool match(b_parser *p, b_tkn_type t) {
+static bool match(b_parser* p, b_tkn_type t) {
   if (!check(p, t))
     return false;
   advance(p);
   return true;
 }
 
-static void consume_statement_end(b_parser *p) {
-
+static void consume_statement_end(b_parser* p) {
   // allow block last statement to omit statement end
   if (p->block_count > 0 && check(p, RBRACE_TOKEN))
     return;
@@ -134,13 +132,13 @@ static void consume_statement_end(b_parser *p) {
   while (match(p, SEMICOLON_TOKEN) || match(p, NEWLINE_TOKEN));
 }
 
-static void ignore_whitespace(b_parser *p) {
+static void ignore_whitespace(b_parser* p) {
   while (match(p, NEWLINE_TOKEN));
 }
 
-static int get_code_args_count(const uint8_t *bytecode,
-                               const b_value *constants, int ip) {
-  b_code code = (b_code) bytecode[ip];
+static int get_code_args_count(const uint8_t* bytecode,
+                               const b_value* constants, int ip) {
+  b_code code = (b_code)bytecode[ip];
 
   switch (code) {
     case OP_EQUAL:
@@ -164,6 +162,7 @@ static int get_code_args_count(const uint8_t *bytecode,
     case OP_DUP:
     case OP_RETURN:
     case OP_INHERIT:
+    case OP_EXTEND:
     case OP_GET_SUPER:
     case OP_AND:
     case OP_OR:
@@ -229,7 +228,7 @@ static int get_code_args_count(const uint8_t *bytecode,
 
     case OP_CLOSURE: {
       int constant = (bytecode[ip + 1] << 8) | bytecode[ip + 2];
-      b_obj_func *fn = AS_FUNCTION(constants[constant]);
+      b_obj_func* fn = AS_FUNCTION(constants[constant]);
 
       // There is two byte for the constant, then three for each up value.
       return 2 + (fn->up_value_count * 3);
@@ -241,21 +240,21 @@ static int get_code_args_count(const uint8_t *bytecode,
   return 0;
 }
 
-static void emit_byte(b_parser *p, uint8_t byte) {
+static void emit_byte(b_parser* p, uint8_t byte) {
   write_blob(p->vm, current_blob(p), byte, p->previous.line);
 }
 
-static void emit_short(b_parser *p, uint16_t byte) {
+static void emit_short(b_parser* p, uint16_t byte) {
   write_blob(p->vm, current_blob(p), (byte >> 8) & 0xff, p->previous.line);
   write_blob(p->vm, current_blob(p), byte & 0xff, p->previous.line);
 }
 
-static void emit_bytes(b_parser *p, uint8_t byte, uint8_t byte2) {
+static void emit_bytes(b_parser* p, uint8_t byte, uint8_t byte2) {
   write_blob(p->vm, current_blob(p), byte, p->previous.line);
   write_blob(p->vm, current_blob(p), byte2, p->previous.line);
 }
 
-static void emit_byte_and_short(b_parser *p, uint8_t byte, uint16_t byte2) {
+static void emit_byte_and_short(b_parser* p, uint8_t byte, uint16_t byte2) {
   write_blob(p->vm, current_blob(p), byte, p->previous.line);
   write_blob(p->vm, current_blob(p), (byte2 >> 8) & 0xff, p->previous.line);
   write_blob(p->vm, current_blob(p), byte2 & 0xff, p->previous.line);
@@ -268,7 +267,7 @@ static void emit_byte_and_short(b_parser *p, uint8_t byte, uint16_t byte2) {
   write_blob(p->vm, current_blob(p), byte2 & 0xff, p->previous.line);
 } */
 
-static void emit_loop(b_parser *p, int loop_start) {
+static void emit_loop(b_parser* p, int loop_start) {
   emit_byte(p, OP_LOOP);
 
   int offset = current_blob(p)->count - loop_start + 2;
@@ -279,7 +278,7 @@ static void emit_loop(b_parser *p, int loop_start) {
   emit_byte(p, offset & 0xff);
 }
 
-static void emit_return(b_parser *p) {
+static void emit_return(b_parser* p) {
   if (p->vm->compiler->type == TYPE_INITIALIZER) {
     emit_byte_and_short(p, OP_GET_LOCAL, 0);
   } else {
@@ -288,7 +287,7 @@ static void emit_return(b_parser *p) {
   emit_byte(p, OP_RETURN);
 }
 
-static int make_constant(b_parser *p, b_value value) {
+static int make_constant(b_parser* p, b_value value) {
   int constant = add_constant(p->vm, current_blob(p), value);
   if (constant >= UINT16_MAX) {
     error(p, "too many constants in current scope");
@@ -297,12 +296,12 @@ static int make_constant(b_parser *p, b_value value) {
   return constant;
 }
 
-static void emit_constant(b_parser *p, b_value value) {
+static void emit_constant(b_parser* p, b_value value) {
   int constant = make_constant(p, value);
-  emit_byte_and_short(p, OP_CONSTANT, (uint16_t) constant);
+  emit_byte_and_short(p, OP_CONSTANT, (uint16_t)constant);
 }
 
-static int emit_jump(b_parser *p, uint8_t instruction) {
+static int emit_jump(b_parser* p, uint8_t instruction) {
   emit_byte(p, instruction);
 
   // placeholders
@@ -312,7 +311,7 @@ static int emit_jump(b_parser *p, uint8_t instruction) {
   return current_blob(p)->count - 2;
 }
 
-static int emit_switch(b_parser *p) {
+static int emit_switch(b_parser* p) {
   emit_byte(p, OP_SWITCH);
 
   // placeholders
@@ -322,12 +321,12 @@ static int emit_switch(b_parser *p) {
   return current_blob(p)->count - 2;
 }
 
-static void patch_with_value(b_parser *p, int offset, int constant) {
+static void patch_with_value(b_parser* p, int offset, int constant) {
   current_blob(p)->code[offset] = (constant >> 8) & 0xff;
   current_blob(p)->code[offset + 1] = constant & 0xff;
 }
 
-static void patch_jump(b_parser *p, int offset) {
+static void patch_jump(b_parser* p, int offset) {
   // -2 to adjust the bytecode for the offset itself
   int jump = current_blob(p)->count - offset - 2;
 
@@ -339,7 +338,7 @@ static void patch_jump(b_parser *p, int offset) {
   current_blob(p)->code[offset + 1] = jump & 0xff;
 }
 
-static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
+static void init_compiler(b_parser* p, b_compiler* compiler, b_func_type type) {
   compiler->enclosing = p->vm->compiler;
   compiler->function = NULL;
   compiler->type = type;
@@ -352,12 +351,12 @@ static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
   if (type != TYPE_SCRIPT) {
     push(p->vm, OBJ_VAL(compiler->function));
     p->vm->compiler->function->name =
-        copy_string(p->vm, p->previous.start, p->previous.length);
+      copy_string(p->vm, p->previous.start, p->previous.length);
     pop(p->vm);
   }
 
   // claiming slot zero for use in class methods
-  b_local *local = &p->vm->compiler->locals[p->vm->compiler->local_count++];
+  b_local* local = &p->vm->compiler->locals[p->vm->compiler->local_count++];
   local->depth = 0;
   local->is_captured = false;
 
@@ -370,18 +369,18 @@ static void init_compiler(b_parser *p, b_compiler *compiler, b_func_type type) {
   }
 }
 
-static int identifier_constant(b_parser *p, b_token *name) {
+static int identifier_constant(b_parser* p, b_token* name) {
   return make_constant(p,
                        OBJ_VAL(copy_string(p->vm, name->start, name->length)));
 }
 
-static inline bool identifiers_equal(b_token *a, b_token *b) {
+static inline bool identifiers_equal(b_token* a, b_token* b) {
   return a->length == b->length && memcmp(a->start, b->start, a->length) == 0;
 }
 
-static int resolve_local(b_parser *p, b_compiler *compiler, b_token *name) {
+static int resolve_local(b_parser* p, b_compiler* compiler, b_token* name) {
   for (int i = compiler->local_count - 1; i >= 0; i--) {
-    b_local *local = &compiler->locals[i];
+    b_local* local = &compiler->locals[i];
     if (identifiers_equal(&local->name, name)) {
       if (local->depth == -1) {
         error(p, "cannot read local variable in it's own initializer");
@@ -392,12 +391,12 @@ static int resolve_local(b_parser *p, b_compiler *compiler, b_token *name) {
   return -1;
 }
 
-static int add_up_value(b_parser *p, b_compiler *compiler, uint16_t index,
+static int add_up_value(b_parser* p, b_compiler* compiler, uint16_t index,
                         bool is_local) {
   int up_value_count = compiler->function->up_value_count;
 
   for (int i = 0; i < up_value_count; i++) {
-    b_up_value *up_value = &compiler->up_values[i];
+    b_up_value* up_value = &compiler->up_values[i];
     if (up_value->index == index && up_value->is_local == is_local) {
       return i;
     }
@@ -413,47 +412,47 @@ static int add_up_value(b_parser *p, b_compiler *compiler, uint16_t index,
   return compiler->function->up_value_count++;
 }
 
-static int resolve_up_value(b_parser *p, b_compiler *compiler, b_token *name) {
+static int resolve_up_value(b_parser* p, b_compiler* compiler, b_token* name) {
   if (compiler->enclosing == NULL)
     return -1;
 
   int local = resolve_local(p, compiler->enclosing, name);
   if (local != -1) {
     compiler->enclosing->locals[local].is_captured = true;
-    return add_up_value(p, compiler, (uint16_t) local, true);
+    return add_up_value(p, compiler, (uint16_t)local, true);
   }
 
   int up_value = resolve_up_value(p, compiler->enclosing, name);
   if (up_value != -1) {
-    return add_up_value(p, compiler, (uint16_t) up_value, false);
+    return add_up_value(p, compiler, (uint16_t)up_value, false);
   }
 
   return -1;
 }
 
-static int add_local(b_parser *p, b_token name) {
+static int add_local(b_parser* p, b_token name) {
   if (p->vm->compiler->local_count == UINT8_COUNT) {
     // we've reached maximum local variables per scope
     error(p, "too many local variables in scope");
     return -1;
   }
 
-  b_local *local = &p->vm->compiler->locals[p->vm->compiler->local_count++];
+  b_local* local = &p->vm->compiler->locals[p->vm->compiler->local_count++];
   local->name = name;
   local->depth = -1;
   local->is_captured = false;
   return p->vm->compiler->local_count;
 }
 
-static void declare_variable(b_parser *p) {
+static void declare_variable(b_parser* p) {
   // global variables are implicitly declared...
   if (p->vm->compiler->scope_depth == 0)
     return;
 
-  b_token *name = &p->previous;
+  b_token* name = &p->previous;
 
   for (int i = p->vm->compiler->local_count - 1; i >= 0; i--) {
-    b_local *local = &p->vm->compiler->locals[i];
+    b_local* local = &p->vm->compiler->locals[i];
     if (local->depth != -1 && local->depth < p->vm->compiler->scope_depth) {
       break;
     }
@@ -467,7 +466,7 @@ static void declare_variable(b_parser *p) {
   add_local(p, *name);
 }
 
-static int parse_variable(b_parser *p, const char *message) {
+static int parse_variable(b_parser* p, const char* message) {
   consume(p, IDENTIFIER_TOKEN, message);
 
   declare_variable(p);
@@ -477,16 +476,17 @@ static int parse_variable(b_parser *p, const char *message) {
   return identifier_constant(p, &p->previous);
 }
 
-static void mark_initialized(b_parser *p) {
+static void mark_initialized(b_parser* p) {
   if (p->vm->compiler->scope_depth == 0)
     return;
 
   p->vm->compiler->locals[p->vm->compiler->local_count - 1].depth =
-      p->vm->compiler->scope_depth;
+    p->vm->compiler->scope_depth;
 }
 
-static void define_variable(b_parser *p, int global) {
-  if (p->vm->compiler->scope_depth > 0) { // we are in a local scope...
+static void define_variable(b_parser* p, int global) {
+  if (p->vm->compiler->scope_depth > 0) {
+    // we are in a local scope...
     mark_initialized(p);
     return;
   }
@@ -494,36 +494,36 @@ static void define_variable(b_parser *p, int global) {
   emit_byte_and_short(p, OP_DEFINE_GLOBAL, global);
 }
 
-static b_token synthetic_token(const char *name) {
+static b_token synthetic_token(const char* name) {
   b_token token;
   token.start = name;
-  token.length = (int) strlen(name);
+  token.length = (int)strlen(name);
   return token;
 }
 
-static b_obj_func *end_compiler(b_parser *p) {
+static b_obj_func* end_compiler(b_parser* p) {
   emit_return(p);
-  b_obj_func *function = p->vm->compiler->function;
+  b_obj_func* function = p->vm->compiler->function;
 
   if (!p->had_error && p->vm->should_print_bytecode) {
     disassemble_blob(current_blob(p), function->name == NULL
-                                      ? p->module->file
-                                      : function->name->chars);
+                                        ? p->module->file
+                                        : function->name->chars);
   }
 
   p->vm->compiler = p->vm->compiler->enclosing;
   return function;
 }
 
-static void begin_scope(b_parser *p) { p->vm->compiler->scope_depth++; }
+static void begin_scope(b_parser* p) { p->vm->compiler->scope_depth++; }
 
-static void end_scope(b_parser *p) {
+static void end_scope(b_parser* p) {
   p->vm->compiler->scope_depth--;
 
   // remove all variables declared in scope while exiting...
   while (p->vm->compiler->local_count > 0 &&
-         p->vm->compiler->locals[p->vm->compiler->local_count - 1].depth >
-         p->vm->compiler->scope_depth) {
+    p->vm->compiler->locals[p->vm->compiler->local_count - 1].depth >
+    p->vm->compiler->scope_depth) {
     if (p->vm->compiler->locals[p->vm->compiler->local_count - 1].is_captured) {
       emit_byte(p, OP_CLOSE_UP_VALUE);
     } else {
@@ -533,7 +533,7 @@ static void end_scope(b_parser *p) {
   }
 }
 
-static int discard_locals(b_parser *p, int depth) {
+static int discard_locals(b_parser* p, int depth) {
   if (p->vm->compiler->scope_depth == -1) {
     error(p, "cannot exit top-level scope");
   }
@@ -551,7 +551,7 @@ static int discard_locals(b_parser *p, int depth) {
   return p->vm->compiler->local_count - local - 1;
 }
 
-static void end_loop(b_parser *p) {
+static void end_loop(b_parser* p) {
   // find all OP_BREAK_PL placeholder and replace with the appropriate jump...
   int i = p->innermost_loop_start;
 
@@ -569,25 +569,25 @@ static void end_loop(b_parser *p) {
 }
 
 // --> Forward declarations start
-static void expression(b_parser *p);
+static void expression(b_parser* p);
 
-static void statement(b_parser *p);
+static void statement(b_parser* p);
 
-static void declaration(b_parser *p);
+static void declaration(b_parser* p);
 
-static void anonymous(b_parser *p, bool can_assign);
+static void anonymous(b_parser* p, bool can_assign);
 
-static b_parse_rule *get_rule(b_tkn_type type);
+static b_parse_rule* get_rule(b_tkn_type type);
 
-static void parse_precedence(b_parser *p, b_precedence precedence);
+static void parse_precedence(b_parser* p, b_precedence precedence);
 // --> Forward declarations end
 
-static void binary(b_parser *p, b_token previous, bool can_assign) {
+static void binary(b_parser* p, b_token previous, bool can_assign) {
   b_tkn_type op = p->previous.type;
 
   // compile the right operand
-  b_parse_rule *rule = get_rule(op);
-  parse_precedence(p, (b_precedence) (rule->precedence + 1));
+  b_parse_rule* rule = get_rule(op);
+  parse_precedence(p, (b_precedence)(rule->precedence + 1));
 
   // emit the operator instruction
   switch (op) {
@@ -613,7 +613,7 @@ static void binary(b_parser *p, b_token previous, bool can_assign) {
       emit_byte(p, OP_F_DIVIDE);
       break;
 
-      // equality
+    // equality
     case EQUAL_EQ_TOKEN:
       emit_byte(p, OP_EQUAL);
       break;
@@ -633,7 +633,7 @@ static void binary(b_parser *p, b_token previous, bool can_assign) {
       emit_bytes(p, OP_GREATER, OP_NOT);
       break;
 
-      // bitwise
+    // bitwise
     case AMP_TOKEN:
       emit_byte(p, OP_AND);
       break;
@@ -658,7 +658,7 @@ static void binary(b_parser *p, b_token previous, bool can_assign) {
       emit_byte(p, OP_URSHIFT);
       break;
 
-      // range
+    // range
     case RANGE_TOKEN:
       emit_byte(p, OP_RANGE);
       break;
@@ -668,7 +668,7 @@ static void binary(b_parser *p, b_token previous, bool can_assign) {
   }
 }
 
-static uint8_t argument_list(b_parser *p) {
+static uint8_t argument_list(b_parser* p) {
   uint8_t arg_count = 0;
   if (!check(p, RPAREN_TOKEN)) {
     do {
@@ -686,12 +686,12 @@ static uint8_t argument_list(b_parser *p) {
   return arg_count;
 }
 
-static void call(b_parser *p, b_token previous, bool can_assign) {
+static void call(b_parser* p, b_token previous, bool can_assign) {
   uint8_t arg_count = argument_list(p);
   emit_bytes(p, OP_CALL, arg_count);
 }
 
-static void literal(b_parser *p, bool can_assign) {
+static void literal(b_parser* p, bool can_assign) {
   switch (p->previous.type) {
     case NIL_TOKEN:
       emit_byte(p, OP_NIL);
@@ -707,7 +707,7 @@ static void literal(b_parser *p, bool can_assign) {
   }
 }
 
-static void parse_assignment(b_parser *p, uint8_t real_op, uint8_t get_op, uint8_t set_op, int arg) {
+static void parse_assignment(b_parser* p, uint8_t real_op, uint8_t get_op, uint8_t set_op, int arg) {
   p->repl_can_echo = false;
   if (get_op == OP_GET_PROPERTY || get_op == OP_GET_SELF_PROPERTY) {
     emit_byte(p, OP_DUP);
@@ -722,19 +722,18 @@ static void parse_assignment(b_parser *p, uint8_t real_op, uint8_t get_op, uint8
   expression(p);
   emit_byte(p, real_op);
   if (arg != -1) {
-    emit_byte_and_short(p, set_op, (uint16_t) arg);
+    emit_byte_and_short(p, set_op, (uint16_t)arg);
   } else {
     emit_byte(p, set_op);
   }
 }
 
-static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg, bool can_assign) {
-
+static void assignment(b_parser* p, uint8_t get_op, uint8_t set_op, int arg, bool can_assign) {
   if (can_assign && match(p, EQUAL_TOKEN)) {
     p->repl_can_echo = false;
     expression(p);
     if (arg != -1) {
-      emit_byte_and_short(p, set_op, (uint16_t) arg);
+      emit_byte_and_short(p, set_op, (uint16_t)arg);
     } else {
       emit_byte(p, set_op);
     }
@@ -764,7 +763,7 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg, boo
     parse_assignment(p, OP_LSHIFT, get_op, set_op, arg);
   } else if (can_assign && match(p, RSHIFT_EQ_TOKEN)) {
     parse_assignment(p, OP_RSHIFT, get_op, set_op, arg);
-  }  else if (can_assign && match(p, URSHIFT_EQ_TOKEN)) {
+  } else if (can_assign && match(p, URSHIFT_EQ_TOKEN)) {
     parse_assignment(p, OP_URSHIFT, get_op, set_op, arg);
   } else if (can_assign && match(p, INCREMENT_TOKEN)) {
     p->repl_can_echo = false;
@@ -779,7 +778,7 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg, boo
     }
 
     emit_bytes(p, OP_ONE, OP_ADD);
-    emit_byte_and_short(p, set_op, (uint16_t) arg);
+    emit_byte_and_short(p, set_op, (uint16_t)arg);
   } else if (can_assign && match(p, DECREMENT_TOKEN)) {
     p->repl_can_echo = false;
     if (get_op == OP_GET_PROPERTY || get_op == OP_GET_SELF_PROPERTY) {
@@ -793,21 +792,21 @@ static void assignment(b_parser *p, uint8_t get_op, uint8_t set_op, int arg, boo
     }
 
     emit_bytes(p, OP_ONE, OP_SUBTRACT);
-    emit_byte_and_short(p, set_op, (uint16_t) arg);
+    emit_byte_and_short(p, set_op, (uint16_t)arg);
   } else {
     if (arg != -1) {
       if (get_op == OP_GET_INDEX || get_op == OP_GET_RANGED_INDEX) {
-        emit_bytes(p, get_op, (uint8_t) 0);
+        emit_bytes(p, get_op, (uint8_t)0);
       } else {
-        emit_byte_and_short(p, get_op, (uint16_t) arg);
+        emit_byte_and_short(p, get_op, (uint16_t)arg);
       }
     } else {
-      emit_bytes(p, get_op, (uint8_t) 0);
+      emit_bytes(p, get_op, (uint8_t)0);
     }
   }
 }
 
-static void dot(b_parser *p, b_token previous, bool can_assign) {
+static void dot(b_parser* p, b_token previous, bool can_assign) {
   ignore_whitespace(p);
   consume(p, IDENTIFIER_TOKEN, "expected property name after '.'");
   int name = identifier_constant(p, &p->previous);
@@ -815,7 +814,7 @@ static void dot(b_parser *p, b_token previous, bool can_assign) {
   if (match(p, LPAREN_TOKEN)) {
     uint8_t arg_count = argument_list(p);
     if (p->current_class != NULL && (previous.type == SELF_TOKEN
-                                     || identifiers_equal(&p->previous, &p->current_class->name))) {
+      || identifiers_equal(&p->previous, &p->current_class->name))) {
       emit_byte_and_short(p, OP_INVOKE_SELF, name);
     } else {
       emit_byte_and_short(p, OP_INVOKE, name);
@@ -825,7 +824,7 @@ static void dot(b_parser *p, b_token previous, bool can_assign) {
     b_code get_op = OP_GET_PROPERTY, set_op = OP_SET_PROPERTY;
 
     if (p->current_class != NULL && (previous.type == SELF_TOKEN
-                                     || identifiers_equal(&p->previous, &p->current_class->name))) {
+      || identifiers_equal(&p->previous, &p->current_class->name))) {
       get_op = OP_GET_SELF_PROPERTY;
     }
 
@@ -833,7 +832,7 @@ static void dot(b_parser *p, b_token previous, bool can_assign) {
   }
 }
 
-static void named_variable(b_parser *p, b_token name, bool can_assign) {
+static void named_variable(b_parser* p, b_token name, bool can_assign) {
   uint8_t get_op, set_op;
   int arg = resolve_local(p, p->vm->compiler, &name);
   if (arg != -1) {
@@ -851,7 +850,7 @@ static void named_variable(b_parser *p, b_token name, bool can_assign) {
   assignment(p, get_op, set_op, arg, can_assign);
 }
 
-static void created_variable(b_parser *p, b_token name) {
+static void created_variable(b_parser* p, b_token name) {
   uint8_t get_op, set_op;
   int arg;
   if (p->vm->compiler->function->name != NULL) {
@@ -859,11 +858,11 @@ static void created_variable(b_parser *p, b_token name) {
     mark_initialized(p);
     emit_byte_and_short(p, OP_SET_LOCAL, (uint16_t)local);
   } else {
-    emit_byte_and_short(p, OP_DEFINE_GLOBAL, (uint16_t) identifier_constant(p, &name));
+    emit_byte_and_short(p, OP_DEFINE_GLOBAL, (uint16_t)identifier_constant(p, &name));
   }
 }
 
-static void list(b_parser *p, bool can_assign) {
+static void list(b_parser* p, bool can_assign) {
   emit_byte(p, OP_NIL); // placeholder for the list
 
   int count = 0;
@@ -872,7 +871,8 @@ static void list(b_parser *p, bool can_assign) {
     do {
       ignore_whitespace(p);
 
-      if(!check(p, RBRACKET_TOKEN)) { // allow comma to end lists
+      if (!check(p, RBRACKET_TOKEN)) {
+        // allow comma to end lists
         expression(p);
         ignore_whitespace(p);
         count++;
@@ -885,7 +885,7 @@ static void list(b_parser *p, bool can_assign) {
   emit_byte_and_short(p, OP_LIST, count);
 }
 
-static void dictionary(b_parser *p, bool can_assign) {
+static void dictionary(b_parser* p, bool can_assign) {
   emit_byte(p, OP_NIL); // placeholder for the dictionary
 
   int item_count = 0;
@@ -894,7 +894,8 @@ static void dictionary(b_parser *p, bool can_assign) {
     do {
       ignore_whitespace(p);
 
-      if (!check(p, RBRACE_TOKEN)) { // allow last pair to end with a comma
+      if (!check(p, RBRACE_TOKEN)) {
+        // allow last pair to end with a comma
         bool used_expression = false;
         if (check(p, IDENTIFIER_TOKEN)) {
           consume(p, IDENTIFIER_TOKEN, "");
@@ -904,13 +905,13 @@ static void dictionary(b_parser *p, bool can_assign) {
           used_expression = true;
         }
         ignore_whitespace(p);
-        if(!check(p, COMMA_TOKEN) && !check(p, RBRACE_TOKEN)) {
+        if (!check(p, COMMA_TOKEN) && !check(p, RBRACE_TOKEN)) {
           consume(p, COLON_TOKEN, "expected ':' after dictionary key");
           ignore_whitespace(p);
 
           expression(p);
         } else {
-          if(used_expression) {
+          if (used_expression) {
             error(p, "cannot infer dictionary values from expressions");
           } else {
             named_variable(p, p->previous, false);
@@ -920,14 +921,14 @@ static void dictionary(b_parser *p, bool can_assign) {
       }
     } while (match(p, COMMA_TOKEN));
   }
-  
+
   ignore_whitespace(p);
   consume(p, RBRACE_TOKEN, "expected '}' after dictionary");
 
   emit_byte_and_short(p, OP_DICT, item_count);
 }
 
-static void indexing(b_parser *p, b_token previous, bool can_assign) {
+static void indexing(b_parser* p, b_token previous, bool can_assign) {
   bool assignable = true, comma_match = false;
   uint8_t get_op = OP_GET_INDEX;
   if (match(p, COMMA_TOKEN)) {
@@ -951,7 +952,7 @@ static void indexing(b_parser *p, b_token previous, bool can_assign) {
     }
     assignable = false;
   } else {
-    if(comma_match) {
+    if (comma_match) {
       emit_byte(p, OP_NIL);
     }
   }
@@ -959,11 +960,11 @@ static void indexing(b_parser *p, b_token previous, bool can_assign) {
   assignment(p, get_op, OP_SET_INDEX, -1, assignable);
 }
 
-static void variable(b_parser *p, bool can_assign) {
+static void variable(b_parser* p, bool can_assign) {
   named_variable(p, p->previous, can_assign);
 }
 
-static void self(b_parser *p, bool can_assign) {
+static void self(b_parser* p, bool can_assign) {
   if (p->current_class == NULL) {
     error(p, "cannot use keyword 'self' outside of a class");
     return;
@@ -971,7 +972,7 @@ static void self(b_parser *p, bool can_assign) {
   variable(p, false);
 }
 
-static void parent(b_parser *p, bool can_assign) {
+static void parent(b_parser* p, bool can_assign) {
   if (p->current_class == NULL) {
     error(p, "cannot use keyword 'parent' outside of a class");
   } else if (!p->current_class->has_superclass) {
@@ -1006,14 +1007,14 @@ static void parent(b_parser *p, bool can_assign) {
   }
 }
 
-static void grouping(b_parser *p, bool can_assign) {
+static void grouping(b_parser* p, bool can_assign) {
   ignore_whitespace(p);
   expression(p);
   ignore_whitespace(p);
   consume(p, RPAREN_TOKEN, "expected ')' after grouped expression");
 }
 
-static b_value compile_number(b_parser *p) {
+static b_value compile_number(b_parser* p) {
   if (p->previous.type == BIN_NUMBER_TOKEN) {
     long long value = strtoll(p->previous.start + 2, NULL, 2);
     return NUMBER_VAL(value);
@@ -1029,7 +1030,7 @@ static b_value compile_number(b_parser *p) {
   }
 }
 
-static void number(b_parser *p, bool can_assign) {
+static void number(b_parser* p, bool can_assign) {
   emit_constant(p, compile_number(p));
 }
 
@@ -1047,7 +1048,7 @@ static int read_hex_digit(char c) {
 }
 
 // Reads [digits] hex digits in a string literal and returns their number value.
-static int read_hex_escape(b_parser *p, char *str, int index, int count) {
+static int read_hex_escape(b_parser* p, char* str, int index, int count) {
   int value = 0;
   int i = 0, digit = 0;
   for (; i < count; i++) {
@@ -1063,7 +1064,7 @@ static int read_hex_escape(b_parser *p, char *str, int index, int count) {
   return value;
 }
 
-static int read_unicode_escape(b_parser *p, char *string, char *real_string,
+static int read_unicode_escape(b_parser* p, char* string, char* real_string,
                                int number_bytes, int real_index, int index) {
   int value = read_hex_escape(p, real_string, real_index, number_bytes);
   int count = utf8_number_bytes(value);
@@ -1073,9 +1074,9 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
   if (value > 65535) // check for greater that \uffff
     count++;
   if (count != 0) {
-    char *chr = utf8_encode(value);
-    if(chr) {
-      memcpy(string + index, chr, (size_t) count + 1);
+    char* chr = utf8_encode(value);
+    if (chr) {
+      memcpy(string + index, chr, (size_t)count + 1);
       free(chr);
     } else {
       error(p, "cannot decode unicode escape at index %d", real_index);
@@ -1086,10 +1087,10 @@ static int read_unicode_escape(b_parser *p, char *string, char *real_string,
   return count;
 }
 
-static char *compile_string(b_parser *p, int *length) {
-  char *str = (char *) malloc((((size_t) p->previous.length - 2) + 1) * sizeof(char));
+static char* compile_string(b_parser* p, int* length) {
+  char* str = (char*)malloc((((size_t)p->previous.length - 2) + 1) * sizeof(char));
   char quote = p->previous.start[0];
-  char *real = (char *) p->previous.start + 1;
+  char* real = (char*)p->previous.start + 1;
 
   int real_length = p->previous.length - 2, k = 0;
 
@@ -1104,11 +1105,11 @@ static char *compile_string(b_parser *p, int *length) {
           c = '$';
           break;
         case '\'':
-          if(quote == '\'' || quote == '}') c = '\''; // } handle closing of interpolation.
+          if (quote == '\'' || quote == '}') c = '\''; // } handle closing of interpolation.
           else i--;
           break;
         case '"':
-          if(quote == '"' || quote == '}') c = '"';
+          if (quote == '"' || quote == '}') c = '"';
           else i--;
           break;
         case 'a':
@@ -1166,13 +1167,13 @@ static char *compile_string(b_parser *p, int *length) {
   return str;
 }
 
-static void string(b_parser *p, bool can_assign) {
+static void string(b_parser* p, bool can_assign) {
   int length;
-  char *str = compile_string(p, &length);
+  char* str = compile_string(p, &length);
   emit_constant(p, OBJ_VAL(take_string(p->vm, str, length)));
 }
 
-static void string_interpolation(b_parser *p, bool can_assign) {
+static void string_interpolation(b_parser* p, bool can_assign) {
   int count = 0;
   do {
     bool do_add = false;
@@ -1205,7 +1206,7 @@ static void string_interpolation(b_parser *p, bool can_assign) {
   }
 }
 
-static void unary(b_parser *p, bool can_assign) {
+static void unary(b_parser* p, bool can_assign) {
   b_tkn_type op = p->previous.type;
 
   // compile the expression
@@ -1228,7 +1229,7 @@ static void unary(b_parser *p, bool can_assign) {
   }
 }
 
-static void and_(b_parser *p, b_token previous, bool can_assign) {
+static void and_(b_parser* p, b_token previous, bool can_assign) {
   int end_jump = emit_jump(p, OP_JUMP_IF_FALSE);
 
   emit_byte(p, OP_POP);
@@ -1237,7 +1238,7 @@ static void and_(b_parser *p, b_token previous, bool can_assign) {
   patch_jump(p, end_jump);
 }
 
-static void or_(b_parser *p, b_token previous, bool can_assign) {
+static void or_(b_parser* p, b_token previous, bool can_assign) {
   int else_jump = emit_jump(p, OP_JUMP_IF_FALSE);
   int end_jump = emit_jump(p, OP_JUMP);
 
@@ -1248,7 +1249,7 @@ static void or_(b_parser *p, b_token previous, bool can_assign) {
   patch_jump(p, end_jump);
 }
 
-static void conditional(b_parser *p, b_token previous, bool can_assign) {
+static void conditional(b_parser* p, b_token previous, bool can_assign) {
   int then_jump = emit_jump(p, OP_JUMP_IF_FALSE);
   emit_byte(p, OP_POP);
 
@@ -1274,111 +1275,111 @@ static void conditional(b_parser *p, b_token previous, bool can_assign) {
 }
 
 b_parse_rule parse_rules[] = {
-    // symbols
-    [NEWLINE_TOKEN] = {NULL, NULL, PREC_NONE},                // (
-    [LPAREN_TOKEN] = {grouping, call, PREC_CALL},             // (
-    [RPAREN_TOKEN] = {NULL, NULL, PREC_NONE},                 // )
-    [LBRACKET_TOKEN] = {list, indexing, PREC_CALL},           // [
-    [RBRACKET_TOKEN] = {NULL, NULL, PREC_NONE},               // ]
-    [LBRACE_TOKEN] = {dictionary, NULL, PREC_NONE},           // {
-    [RBRACE_TOKEN] = {NULL, NULL, PREC_NONE},                 // }
-    [SEMICOLON_TOKEN] = {NULL, NULL, PREC_NONE},              // ;
-    [COMMA_TOKEN] = {NULL, NULL, PREC_NONE},                  // ,
-    [BACKSLASH_TOKEN] = {NULL, NULL, PREC_NONE},              // '\'
-    [BANG_TOKEN] = {unary, NULL, PREC_NONE},                  // !
-    [BANG_EQ_TOKEN] = {NULL, binary, PREC_EQUALITY},          // !=
-    [COLON_TOKEN] = {NULL, NULL, PREC_NONE},                  // :
-    [AT_TOKEN] = {anonymous, NULL, PREC_NONE},                     // @
-    [DOT_TOKEN] = {NULL, dot, PREC_CALL},                     // .
-    [RANGE_TOKEN] = {NULL, binary, PREC_RANGE},               // ..
-    [TRI_DOT_TOKEN] = {NULL, NULL, PREC_NONE},                // ...
-    [PLUS_TOKEN] = {unary, binary, PREC_TERM},                 // +
-    [PLUS_EQ_TOKEN] = {NULL, NULL, PREC_NONE},                // +=
-    [INCREMENT_TOKEN] = {NULL, NULL, PREC_NONE},              // ++
-    [MINUS_TOKEN] = {unary, binary, PREC_TERM},               // -
-    [MINUS_EQ_TOKEN] = {NULL, NULL, PREC_NONE},               // -=
-    [DECREMENT_TOKEN] = {NULL, NULL, PREC_NONE},              // --
-    [MULTIPLY_TOKEN] = {NULL, binary, PREC_FACTOR},           // *
-    [MULTIPLY_EQ_TOKEN] = {NULL, NULL, PREC_NONE},            // *=
-    [POW_TOKEN] = {NULL, binary, PREC_FACTOR},                // **
-    [POW_EQ_TOKEN] = {NULL, NULL, PREC_NONE},                 // **=
-    [DIVIDE_TOKEN] = {NULL, binary, PREC_FACTOR},             // '/'
-    [DIVIDE_EQ_TOKEN] = {NULL, NULL, PREC_NONE},              // '/='
-    [FLOOR_TOKEN] = {NULL, binary, PREC_FACTOR},              // '//'
-    [FLOOR_EQ_TOKEN] = {NULL, NULL, PREC_NONE},               // '//='
-    [EQUAL_TOKEN] = {NULL, NULL, PREC_NONE},                  // =
-    [EQUAL_EQ_TOKEN] = {NULL, binary, PREC_EQUALITY},         // ==
-    [LESS_TOKEN] = {NULL, binary, PREC_COMPARISON},           // <
-    [LESS_EQ_TOKEN] = {NULL, binary, PREC_COMPARISON},        // <=
-    [LSHIFT_TOKEN] = {NULL, binary, PREC_SHIFT},              // <<
-    [LSHIFT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},              // <<=
-    [GREATER_TOKEN] = {NULL, binary, PREC_COMPARISON},        // >
-    [GREATER_EQ_TOKEN] = {NULL, binary, PREC_COMPARISON},     // >=
-    [RSHIFT_TOKEN] = {NULL, binary, PREC_SHIFT},              // >>
-    [URSHIFT_TOKEN] = {NULL, binary, PREC_SHIFT},              // >>>
-    [RSHIFT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},              // >>=
-    [URSHIFT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},              // >>>=
-    [PERCENT_TOKEN] = {NULL, binary, PREC_FACTOR},            // %
-    [PERCENT_EQ_TOKEN] = {NULL, NULL, PREC_NONE},             // %=
-    [AMP_TOKEN] = {NULL, binary, PREC_BIT_AND},               // &
-    [AMP_EQ_TOKEN] = {NULL, NULL, PREC_NONE},                 // &=
-    [BAR_TOKEN] = {NULL, binary, PREC_BIT_OR},           // |
-    [BAR_EQ_TOKEN] = {NULL, NULL, PREC_NONE},                 // |=
-    [TILDE_TOKEN] = {unary, NULL, PREC_NONE},                // ~
-    [TILDE_EQ_TOKEN] = {NULL, NULL, PREC_NONE},               // ~=
-    [XOR_TOKEN] = {NULL, binary, PREC_BIT_XOR},               // ^
-    [XOR_EQ_TOKEN] = {NULL, NULL, PREC_NONE},                 // ^=
-    [QUESTION_TOKEN] = {NULL, conditional, PREC_CONDITIONAL}, // ??
+  // symbols
+  [NEWLINE_TOKEN] = {NULL, NULL, PREC_NONE}, // (
+  [LPAREN_TOKEN] = {grouping, call, PREC_CALL}, // (
+  [RPAREN_TOKEN] = {NULL, NULL, PREC_NONE}, // )
+  [LBRACKET_TOKEN] = {list, indexing, PREC_CALL}, // [
+  [RBRACKET_TOKEN] = {NULL, NULL, PREC_NONE}, // ]
+  [LBRACE_TOKEN] = {dictionary, NULL, PREC_NONE}, // {
+  [RBRACE_TOKEN] = {NULL, NULL, PREC_NONE}, // }
+  [SEMICOLON_TOKEN] = {NULL, NULL, PREC_NONE}, // ;
+  [COMMA_TOKEN] = {NULL, NULL, PREC_NONE}, // ,
+  [BACKSLASH_TOKEN] = {NULL, NULL, PREC_NONE}, // '\'
+  [BANG_TOKEN] = {unary, NULL, PREC_NONE}, // !
+  [BANG_EQ_TOKEN] = {NULL, binary, PREC_EQUALITY}, // !=
+  [COLON_TOKEN] = {NULL, NULL, PREC_NONE}, // :
+  [AT_TOKEN] = {anonymous, NULL, PREC_NONE}, // @
+  [DOT_TOKEN] = {NULL, dot, PREC_CALL}, // .
+  [RANGE_TOKEN] = {NULL, binary, PREC_RANGE}, // ..
+  [TRI_DOT_TOKEN] = {NULL, NULL, PREC_NONE}, // ...
+  [PLUS_TOKEN] = {unary, binary, PREC_TERM}, // +
+  [PLUS_EQ_TOKEN] = {NULL, NULL, PREC_NONE}, // +=
+  [INCREMENT_TOKEN] = {NULL, NULL, PREC_NONE}, // ++
+  [MINUS_TOKEN] = {unary, binary, PREC_TERM}, // -
+  [MINUS_EQ_TOKEN] = {NULL, NULL, PREC_NONE}, // -=
+  [DECREMENT_TOKEN] = {NULL, NULL, PREC_NONE}, // --
+  [MULTIPLY_TOKEN] = {NULL, binary, PREC_FACTOR}, // *
+  [MULTIPLY_EQ_TOKEN] = {NULL, NULL, PREC_NONE}, // *=
+  [POW_TOKEN] = {NULL, binary, PREC_FACTOR}, // **
+  [POW_EQ_TOKEN] = {NULL, NULL, PREC_NONE}, // **=
+  [DIVIDE_TOKEN] = {NULL, binary, PREC_FACTOR}, // '/'
+  [DIVIDE_EQ_TOKEN] = {NULL, NULL, PREC_NONE}, // '/='
+  [FLOOR_TOKEN] = {NULL, binary, PREC_FACTOR}, // '//'
+  [FLOOR_EQ_TOKEN] = {NULL, NULL, PREC_NONE}, // '//='
+  [EQUAL_TOKEN] = {NULL, NULL, PREC_NONE}, // =
+  [EQUAL_EQ_TOKEN] = {NULL, binary, PREC_EQUALITY}, // ==
+  [LESS_TOKEN] = {NULL, binary, PREC_COMPARISON}, // <
+  [LESS_EQ_TOKEN] = {NULL, binary, PREC_COMPARISON}, // <=
+  [LSHIFT_TOKEN] = {NULL, binary, PREC_SHIFT}, // <<
+  [LSHIFT_EQ_TOKEN] = {NULL, NULL, PREC_NONE}, // <<=
+  [GREATER_TOKEN] = {NULL, binary, PREC_COMPARISON}, // >
+  [GREATER_EQ_TOKEN] = {NULL, binary, PREC_COMPARISON}, // >=
+  [RSHIFT_TOKEN] = {NULL, binary, PREC_SHIFT}, // >>
+  [URSHIFT_TOKEN] = {NULL, binary, PREC_SHIFT}, // >>>
+  [RSHIFT_EQ_TOKEN] = {NULL, NULL, PREC_NONE}, // >>=
+  [URSHIFT_EQ_TOKEN] = {NULL, NULL, PREC_NONE}, // >>>=
+  [PERCENT_TOKEN] = {NULL, binary, PREC_FACTOR}, // %
+  [PERCENT_EQ_TOKEN] = {NULL, NULL, PREC_NONE}, // %=
+  [AMP_TOKEN] = {NULL, binary, PREC_BIT_AND}, // &
+  [AMP_EQ_TOKEN] = {NULL, NULL, PREC_NONE}, // &=
+  [BAR_TOKEN] = {NULL, binary, PREC_BIT_OR}, // |
+  [BAR_EQ_TOKEN] = {NULL, NULL, PREC_NONE}, // |=
+  [TILDE_TOKEN] = {unary, NULL, PREC_NONE}, // ~
+  [TILDE_EQ_TOKEN] = {NULL, NULL, PREC_NONE}, // ~=
+  [XOR_TOKEN] = {NULL, binary, PREC_BIT_XOR}, // ^
+  [XOR_EQ_TOKEN] = {NULL, NULL, PREC_NONE}, // ^=
+  [QUESTION_TOKEN] = {NULL, conditional, PREC_CONDITIONAL}, // ??
 
-    // keywords
-    [AND_TOKEN] = {NULL, and_, PREC_AND},
-    [AS_TOKEN] = {NULL, NULL, PREC_NONE},
-    [ASSERT_TOKEN] = {NULL, NULL, PREC_NONE},
-    [BREAK_TOKEN] = {NULL, NULL, PREC_NONE},
-    [CLASS_TOKEN] = {NULL, NULL, PREC_NONE},
-    [CONTINUE_TOKEN] = {NULL, NULL, PREC_NONE},
-    [DEF_TOKEN] = {NULL, NULL, PREC_NONE},
-    [DEFAULT_TOKEN] = {NULL, NULL, PREC_NONE},
-    [RAISE_TOKEN] = {NULL, NULL, PREC_NONE},
-    [DO_TOKEN] = {NULL, NULL, PREC_NONE},
-    [ECHO_TOKEN] = {NULL, NULL, PREC_NONE},
-    [ELSE_TOKEN] = {NULL, NULL, PREC_NONE},
-    [FALSE_TOKEN] = {literal, NULL, PREC_NONE},
-    [FOR_TOKEN] = {NULL, NULL, PREC_NONE},
-    [IF_TOKEN] = {NULL, NULL, PREC_NONE},
-    [IMPORT_TOKEN] = {NULL, NULL, PREC_NONE},
-    [IN_TOKEN] = {NULL, NULL, PREC_NONE},
-    [ITER_TOKEN] = {NULL, NULL, PREC_NONE},
-    [VAR_TOKEN] = {NULL, NULL, PREC_NONE},
-    [NIL_TOKEN] = {literal, NULL, PREC_NONE},
-    [OR_TOKEN] = {NULL, or_, PREC_OR},
-    [PARENT_TOKEN] = {parent, NULL, PREC_NONE},
-    [RETURN_TOKEN] = {NULL, NULL, PREC_NONE},
-    [SELF_TOKEN] = {self, NULL, PREC_NONE},
-    [STATIC_TOKEN] = {NULL, NULL, PREC_NONE},
-    [TRUE_TOKEN] = {literal, NULL, PREC_NONE},
-    [USING_TOKEN] = {NULL, NULL, PREC_NONE},
-    [WHEN_TOKEN] = {NULL, NULL, PREC_NONE},
-    [WHILE_TOKEN] = {NULL, NULL, PREC_NONE},
-    [CATCH_TOKEN] = {NULL, NULL, PREC_NONE},
+  // keywords
+  [AND_TOKEN] = {NULL, and_, PREC_AND},
+  [AS_TOKEN] = {NULL, NULL, PREC_NONE},
+  [ASSERT_TOKEN] = {NULL, NULL, PREC_NONE},
+  [BREAK_TOKEN] = {NULL, NULL, PREC_NONE},
+  [CLASS_TOKEN] = {NULL, NULL, PREC_NONE},
+  [CONTINUE_TOKEN] = {NULL, NULL, PREC_NONE},
+  [DEF_TOKEN] = {NULL, NULL, PREC_NONE},
+  [DEFAULT_TOKEN] = {NULL, NULL, PREC_NONE},
+  [RAISE_TOKEN] = {NULL, NULL, PREC_NONE},
+  [DO_TOKEN] = {NULL, NULL, PREC_NONE},
+  [ECHO_TOKEN] = {NULL, NULL, PREC_NONE},
+  [ELSE_TOKEN] = {NULL, NULL, PREC_NONE},
+  [FALSE_TOKEN] = {literal, NULL, PREC_NONE},
+  [FOR_TOKEN] = {NULL, NULL, PREC_NONE},
+  [IF_TOKEN] = {NULL, NULL, PREC_NONE},
+  [IMPORT_TOKEN] = {NULL, NULL, PREC_NONE},
+  [IN_TOKEN] = {NULL, NULL, PREC_NONE},
+  [ITER_TOKEN] = {NULL, NULL, PREC_NONE},
+  [VAR_TOKEN] = {NULL, NULL, PREC_NONE},
+  [NIL_TOKEN] = {literal, NULL, PREC_NONE},
+  [OR_TOKEN] = {NULL, or_, PREC_OR},
+  [PARENT_TOKEN] = {parent, NULL, PREC_NONE},
+  [RETURN_TOKEN] = {NULL, NULL, PREC_NONE},
+  [SELF_TOKEN] = {self, NULL, PREC_NONE},
+  [STATIC_TOKEN] = {NULL, NULL, PREC_NONE},
+  [TRUE_TOKEN] = {literal, NULL, PREC_NONE},
+  [USING_TOKEN] = {NULL, NULL, PREC_NONE},
+  [WHEN_TOKEN] = {NULL, NULL, PREC_NONE},
+  [WHILE_TOKEN] = {NULL, NULL, PREC_NONE},
+  [CATCH_TOKEN] = {NULL, NULL, PREC_NONE},
 
-    // types token
-    [LITERAL_TOKEN] = {string, NULL, PREC_NONE},
-    [REG_NUMBER_TOKEN] = {number, NULL, PREC_NONE}, // regular numbers
-    [BIN_NUMBER_TOKEN] = {number, NULL, PREC_NONE}, // binary numbers
-    [OCT_NUMBER_TOKEN] = {number, NULL, PREC_NONE}, // octal numbers
-    [HEX_NUMBER_TOKEN] = {number, NULL, PREC_NONE}, // hexadecimal numbers
-    [IDENTIFIER_TOKEN] = {variable, NULL, PREC_NONE},
-    [INTERPOLATION_TOKEN] = {string_interpolation, NULL, PREC_NONE},
-    [EOF_TOKEN] = {NULL, NULL, PREC_NONE},
+  // types token
+  [LITERAL_TOKEN] = {string, NULL, PREC_NONE},
+  [REG_NUMBER_TOKEN] = {number, NULL, PREC_NONE}, // regular numbers
+  [BIN_NUMBER_TOKEN] = {number, NULL, PREC_NONE}, // binary numbers
+  [OCT_NUMBER_TOKEN] = {number, NULL, PREC_NONE}, // octal numbers
+  [HEX_NUMBER_TOKEN] = {number, NULL, PREC_NONE}, // hexadecimal numbers
+  [IDENTIFIER_TOKEN] = {variable, NULL, PREC_NONE},
+  [INTERPOLATION_TOKEN] = {string_interpolation, NULL, PREC_NONE},
+  [EOF_TOKEN] = {NULL, NULL, PREC_NONE},
 
-    // error
-    [ERROR_TOKEN] = {NULL, NULL, PREC_NONE},
-    [EMPTY_TOKEN] = {literal, NULL, PREC_NONE},
-    [UNDEFINED_TOKEN] = {NULL, NULL, PREC_NONE},
+  // error
+  [ERROR_TOKEN] = {NULL, NULL, PREC_NONE},
+  [EMPTY_TOKEN] = {literal, NULL, PREC_NONE},
+  [UNDEFINED_TOKEN] = {NULL, NULL, PREC_NONE},
 };
 
-static void do_parse_precedence(b_parser *p, b_precedence precedence) {
+static void do_parse_precedence(b_parser* p, b_precedence precedence) {
   b_parse_prefix_fn prefix_rule = get_rule(p->previous.type)->prefix;
 
   if (prefix_rule == NULL) {
@@ -1402,7 +1403,7 @@ static void do_parse_precedence(b_parser *p, b_precedence precedence) {
   }
 }
 
-static void parse_precedence(b_parser *p, b_precedence precedence) {
+static void parse_precedence(b_parser* p, b_precedence precedence) {
   if (is_at_end(p->scanner) && p->vm->is_repl)
     return;
 
@@ -1416,7 +1417,7 @@ static void parse_precedence(b_parser *p, b_precedence precedence) {
   do_parse_precedence(p, precedence);
 }
 
-static void parse_precedence_no_advance(b_parser *p, b_precedence precedence) {
+static void parse_precedence_no_advance(b_parser* p, b_precedence precedence) {
   if (is_at_end(p->scanner) && p->vm->is_repl)
     return;
 
@@ -1428,11 +1429,11 @@ static void parse_precedence_no_advance(b_parser *p, b_precedence precedence) {
   do_parse_precedence(p, precedence);
 }
 
-static b_parse_rule *get_rule(b_tkn_type type) { return &parse_rules[type]; }
+static b_parse_rule* get_rule(b_tkn_type type) { return &parse_rules[type]; }
 
-static void expression(b_parser *p) { parse_precedence(p, PREC_ASSIGNMENT); }
+static void expression(b_parser* p) { parse_precedence(p, PREC_ASSIGNMENT); }
 
-static void block(b_parser *p) {
+static void block(b_parser* p) {
   p->block_count++;
   ignore_whitespace(p);
   while (!check(p, RBRACE_TOKEN) && !check(p, EOF_TOKEN)) {
@@ -1442,7 +1443,7 @@ static void block(b_parser *p) {
   consume(p, RBRACE_TOKEN, "expected '}' after block");
 }
 
-static int function_args(b_parser *p, bool is_operator) {
+static int function_args(b_parser* p, bool is_operator) {
   // compile argument list...
   int count = 0;
   do {
@@ -1460,7 +1461,7 @@ static int function_args(b_parser *p, bool is_operator) {
       add_local(p, synthetic_token("__args__"));
       define_variable(p, 0);
       break;
-    } else if(is_operator) {
+    } else if (is_operator) {
       add_local(p, synthetic_token("__arg__"));
       define_variable(p, 0);
       break;
@@ -1473,17 +1474,17 @@ static int function_args(b_parser *p, bool is_operator) {
   return count;
 }
 
-static void function_body(b_parser *p, b_compiler *compiler, bool close_scope) {
+static void function_body(b_parser* p, b_compiler* compiler, bool close_scope) {
   // compile the body
   ignore_whitespace(p);
   consume(p, LBRACE_TOKEN, "expected '{' before function body");
   block(p);
 
   // create the function object
-  if(close_scope) {
-      end_scope(p);
+  if (close_scope) {
+    end_scope(p);
   }
-  b_obj_func *function = end_compiler(p);
+  b_obj_func* function = end_compiler(p);
 
   push(p->vm, OBJ_VAL(function));
   emit_byte_and_short(p, OP_CLOSURE, make_constant(p, OBJ_VAL(function)));
@@ -1496,22 +1497,22 @@ static void function_body(b_parser *p, b_compiler *compiler, bool close_scope) {
   pop(p->vm);
 }
 
-static int function(b_parser *p, b_func_type type, bool is_operator) {
+static int function(b_parser* p, b_func_type type, bool is_operator) {
   b_compiler compiler;
   init_compiler(p, &compiler, type);
   begin_scope(p);
 
   // compile parameter list
   int arg_count = 0;
-  if(!is_operator) {
+  if (!is_operator) {
     consume(p, LPAREN_TOKEN, "expected '(' after function name");
   }
 
   if (!check(p, RPAREN_TOKEN)) {
     arg_count = function_args(p, is_operator);
   }
-  
-  if(!is_operator) {
+
+  if (!is_operator) {
     consume(p, RPAREN_TOKEN, "expected ')' after function parameters");
   }
 
@@ -1519,7 +1520,7 @@ static int function(b_parser *p, b_func_type type, bool is_operator) {
   return arg_count;
 }
 
-static void method(b_parser *p, b_token class_name, bool is_static) {
+static void method(b_parser* p, b_token class_name, bool is_static) {
   b_tkn_type tkns[] = {IDENTIFIER_TOKEN, DECORATOR_TOKEN};
 
   consume_or(p, "method name expected", tkns, 2);
@@ -1527,7 +1528,7 @@ static void method(b_parser *p, b_token class_name, bool is_static) {
 
   b_func_type type = is_static ? TYPE_STATIC : TYPE_METHOD;
   if (p->previous.length == class_name.length &&
-      memcmp(p->previous.start, class_name.start, class_name.length) == 0) {
+    memcmp(p->previous.start, class_name.start, class_name.length) == 0) {
     type = TYPE_INITIALIZER;
   } else if (p->previous.length > 0 && p->previous.start[0] == '_') {
     type = TYPE_PRIVATE;
@@ -1537,46 +1538,46 @@ static void method(b_parser *p, b_token class_name, bool is_static) {
   emit_byte_and_short(p, OP_METHOD, constant);
 }
 
-static void operator_definition(b_parser *p, b_token class_name) {
+static void operator_definition(b_parser* p, b_token class_name) {
   // NOTE: ++, and -- are not primary operators in Blade.
   b_tkn_type tkns[] = {
-      PLUS_TOKEN,        // +
-      MINUS_TOKEN,       // -
-      MULTIPLY_TOKEN,    // *
-      POW_TOKEN,         // **
-      DIVIDE_TOKEN,      // '/'
-      FLOOR_TOKEN,       // '//'
-      EQUAL_TOKEN,       // =
-      LESS_TOKEN,        // <
-      LSHIFT_TOKEN,      // <<
-      GREATER_TOKEN,     // >
-      RSHIFT_TOKEN,      // >>
-      URSHIFT_TOKEN,      // >>>
-      PERCENT_TOKEN,     // %
-      AMP_TOKEN,         // &
-      BAR_TOKEN,         // |
-      TILDE_TOKEN,       // ~
-      XOR_TOKEN,         // ^
+    PLUS_TOKEN, // +
+    MINUS_TOKEN, // -
+    MULTIPLY_TOKEN, // *
+    POW_TOKEN, // **
+    DIVIDE_TOKEN, // '/'
+    FLOOR_TOKEN, // '//'
+    EQUAL_TOKEN, // =
+    LESS_TOKEN, // <
+    LSHIFT_TOKEN, // <<
+    GREATER_TOKEN, // >
+    RSHIFT_TOKEN, // >>
+    URSHIFT_TOKEN, // >>>
+    PERCENT_TOKEN, // %
+    AMP_TOKEN, // &
+    BAR_TOKEN, // |
+    TILDE_TOKEN, // ~
+    XOR_TOKEN, // ^
   };
 
   consume_or(p, "non-assignment operator expected", tkns, 18);
   int constant = identifier_constant(p, &p->previous);
 
   int arg_count = function(p, TYPE_METHOD, true);
-  if(arg_count > 1) {
+  if (arg_count > 1) {
     error(p, "class operator cannot take more than one parameter");
   }
 
   emit_byte_and_short(p, OP_METHOD, constant);
 }
 
-static void anonymous(b_parser *p, bool can_assign) {
+static void anonymous(b_parser* p, bool can_assign) {
   b_compiler compiler;
   init_compiler(p, &compiler, TYPE_FUNCTION);
   begin_scope(p);
 
   // compile parameter list
-  if(check(p, LPAREN_TOKEN)) {
+  if (check(p, LPAREN_TOKEN)) {
     consume(p, LPAREN_TOKEN, "expected '(' at start of anonymous function");
     if (!check(p, RPAREN_TOKEN)) {
       function_args(p, false);
@@ -1587,7 +1588,7 @@ static void anonymous(b_parser *p, bool can_assign) {
   function_body(p, &compiler, true);
 }
 
-static void field(b_parser *p, bool is_static) {
+static void field(b_parser* p, bool is_static) {
   consume(p, IDENTIFIER_TOKEN, "class property name expected");
   int field_constant = identifier_constant(p, &p->previous);
 
@@ -1604,14 +1605,14 @@ static void field(b_parser *p, bool is_static) {
   ignore_whitespace(p);
 }
 
-static void function_declaration(b_parser *p) {
+static void function_declaration(b_parser* p) {
   int global = parse_variable(p, "function name expected");
   mark_initialized(p);
   function(p, TYPE_FUNCTION, false);
   define_variable(p, global);
 }
 
-static void class_declaration(b_parser *p) {
+static void class_declaration(b_parser* p) {
   consume(p, IDENTIFIER_TOKEN, "class name expected");
   int name_constant = identifier_constant(p, &p->previous);
   b_token class_name = p->previous;
@@ -1625,6 +1626,13 @@ static void class_declaration(b_parser *p) {
   class_compiler.has_superclass = false;
   class_compiler.enclosing = p->current_class;
   p->current_class = &class_compiler;
+
+  b_token extending_class = {
+    .length = 0,
+    .line  = 0,
+    .start = "",
+    .type = UNDEFINED_TOKEN,
+  };
 
   if (match(p, LESS_TOKEN)) {
     consume(p, IDENTIFIER_TOKEN, "name of superclass expected");
@@ -1641,6 +1649,13 @@ static void class_declaration(b_parser *p) {
     named_variable(p, class_name, false);
     emit_byte(p, OP_INHERIT);
     class_compiler.has_superclass = true;
+  } else if (match(p, GREATER_TOKEN)) {
+    consume(p, IDENTIFIER_TOKEN, "name of extension expected");
+    if (identifiers_equal(&class_name, &p->previous)) {
+      error(p, "class %.*s cannot extend itself", class_name.length, class_name.start);
+    }
+
+    extending_class = p->previous;
   }
 
   named_variable(p, class_name, false);
@@ -1653,9 +1668,13 @@ static void class_declaration(b_parser *p) {
     if (match(p, STATIC_TOKEN))
       is_static = true;
 
-    if (match(p, VAR_TOKEN)) {
+    if (!is_static && extending_class.type != UNDEFINED_TOKEN) {
+      error(p, "extensions can only carry static members");
+    }
+
+    if (extending_class.type == UNDEFINED_TOKEN && match(p, VAR_TOKEN)) {
       field(p, is_static);
-    } else if (match(p, DEF_TOKEN) && !is_static) {
+    } else if (extending_class.type == UNDEFINED_TOKEN && match(p, DEF_TOKEN) && !is_static) {
       operator_definition(p, class_name);
       ignore_whitespace(p);
     } else {
@@ -1670,14 +1689,40 @@ static void class_declaration(b_parser *p) {
     end_scope(p);
   }
 
+  if (extending_class.type != UNDEFINED_TOKEN) {
+    b_token string_type = synthetic_token("string");
+    b_token list_type = synthetic_token("list");
+    b_token dict_type = synthetic_token("dict");
+    b_token bytes_type = synthetic_token("bytes");
+    b_token range_type = synthetic_token("range");
+    b_token file_type = synthetic_token("file");
+
+    if (
+      identifiers_equal(&string_type, &extending_class)
+      || identifiers_equal(&list_type, &extending_class)
+      || identifiers_equal(&dict_type, &extending_class)
+      || identifiers_equal(&bytes_type, &extending_class)
+      || identifiers_equal(&range_type, &extending_class)
+      || identifiers_equal(&file_type, &extending_class)
+    ) {
+      emit_constant(p, OBJ_VAL(copy_string(p->vm, extending_class.start, extending_class.length)));
+    } else {
+      named_variable(p, extending_class, false);
+    }
+
+    named_variable(p, class_name, false);
+    emit_byte(p, OP_EXTEND);
+    class_compiler.has_superclass = true;
+  }
+
   p->current_class = p->current_class->enclosing;
 }
 
-static void compile_var_declaration(b_parser *p, bool is_initializer) {
+static void compile_var_declaration(b_parser* p, bool is_initializer) {
   int total_parsed = 0;
 
   do {
-    if(total_parsed > 0) {
+    if (total_parsed > 0) {
       ignore_whitespace(p);
     }
     int global = parse_variable(p, "variable name expected");
@@ -1700,13 +1745,13 @@ static void compile_var_declaration(b_parser *p, bool is_initializer) {
   }
 }
 
-static void var_declaration(b_parser *p) { compile_var_declaration(p, false); }
+static void var_declaration(b_parser* p) { compile_var_declaration(p, false); }
 
-static void expression_statement(b_parser *p, bool is_initializer, bool semi) {
+static void expression_statement(b_parser* p, bool is_initializer, bool semi) {
   if (p->vm->is_repl && p->vm->compiler->scope_depth == 0) {
     p->repl_can_echo = true;
   }
-  if(!semi) {
+  if (!semi) {
     expression(p);
   } else {
     parse_precedence_no_advance(p, PREC_ASSIGNMENT);
@@ -1744,7 +1789,7 @@ static void expression_statement(b_parser *p, bool is_initializer, bool semi) {
  *    i = i + 1
  * }
  */
-static void iter_statement(b_parser *p) {
+static void iter_statement(b_parser* p) {
   begin_scope(p);
 
   // parse initializer...
@@ -1765,7 +1810,8 @@ static void iter_statement(b_parser *p) {
   p->innermost_loop_scope_depth = p->vm->compiler->scope_depth;
 
   int exit_jump = -1;
-  if (!match(p, SEMICOLON_TOKEN)) { // the condition is optional
+  if (!match(p, SEMICOLON_TOKEN)) {
+    // the condition is optional
     expression(p);
     consume(p, SEMICOLON_TOKEN, "expected ';' after condition");
     ignore_whitespace(p);
@@ -1783,7 +1829,7 @@ static void iter_statement(b_parser *p) {
     do {
       expression(p);
       ignore_whitespace(p);
-    } while(match(p, COMMA_TOKEN));
+    } while (match(p, COMMA_TOKEN));
     emit_byte(p, OP_POP);
 
     emit_loop(p, p->innermost_loop_start);
@@ -1856,7 +1902,7 @@ static void iter_statement(b_parser *p) {
  * @itern(x) function returns a false value. so the @iter(x) never needs
  * to return a false value
  */
-static void for_statement(b_parser *p) {
+static void for_statement(b_parser* p) {
   begin_scope(p);
 
   // define @iter and @itern constant
@@ -1966,7 +2012,7 @@ static void for_statement(b_parser *p) {
  *    ...
  * }
  */
-static void using_statement(b_parser *p) {
+static void using_statement(b_parser* p) {
   expression(p); // the expression
   consume(p, LBRACE_TOKEN, "expected '{' after using expression");
   ignore_whitespace(p);
@@ -1975,7 +2021,7 @@ static void using_statement(b_parser *p) {
   int case_ends[MAX_USING_CASES];
   int case_count = 0;
 
-  b_obj_switch *sw = new_switch(p->vm);
+  b_obj_switch* sw = new_switch(p->vm);
   push(p->vm, OBJ_VAL(sw));
 
   int switch_code = emit_switch(p);
@@ -2010,8 +2056,8 @@ static void using_statement(b_parser *p) {
             table_set(p->vm, &sw->table, FALSE_VAL, jump);
           } else if (p->previous.type == LITERAL_TOKEN) {
             int length;
-            char *str = compile_string(p, &length);
-            b_obj_string *string = take_string(p->vm, str, length);
+            char* str = compile_string(p, &length);
+            b_obj_string* string = take_string(p->vm, str, length);
             push(p->vm, OBJ_VAL(string)); // gc fix
             table_set(p->vm, &sw->table, OBJ_VAL(string), jump);
             pop(p->vm); // gc fix
@@ -2022,7 +2068,7 @@ static void using_statement(b_parser *p) {
             error(p, "only constants can be used in when expressions");
             return;
           }
-        } while(match(p, COMMA_TOKEN));
+        } while (match(p, COMMA_TOKEN));
       } else {
         state = 2;
         sw->default_jump = current_blob(p)->count - start_offset;
@@ -2052,7 +2098,7 @@ static void using_statement(b_parser *p) {
   pop(p->vm); // pop the switch
 }
 
-static void if_statement(b_parser *p) {
+static void if_statement(b_parser* p) {
   expression(p);
 
   int then_jump = emit_jump(p, OP_JUMP_IF_FALSE);
@@ -2071,20 +2117,21 @@ static void if_statement(b_parser *p) {
   patch_jump(p, else_jump);
 }
 
-static void echo_statement(b_parser *p) {
+static void echo_statement(b_parser* p) {
   expression(p);
   emit_byte(p, OP_ECHO);
   consume_statement_end(p);
 }
 
-static void raise_statement(b_parser *p) {
+static void raise_statement(b_parser* p) {
 //  discard_locals(p, p->vm->compiler->scope_depth - 1);
   expression(p);
   emit_byte(p, OP_RAISE);
   consume_statement_end(p);
 }
 
-static void parse_specific_import(b_parser *p, char *module_name, int import_constant, bool was_renamed, bool is_native) {
+static void parse_specific_import(b_parser* p, char* module_name, int import_constant, bool was_renamed,
+                                  bool is_native) {
   if (match(p, LBRACE_TOKEN)) {
     if (was_renamed) {
       error(p, "selective import on renamed module");
@@ -2105,8 +2152,8 @@ static void parse_specific_import(b_parser *p, char *module_name, int import_con
 
       int name = parse_variable(p, "module object name expected");
 
-      if(module_name != NULL && p->previous.length == (int)strlen(module_name) &&
-          memcmp(module_name, p->previous.start, p->previous.length) == 0) {
+      if (module_name != NULL && p->previous.length == (int)strlen(module_name) &&
+        memcmp(module_name, p->previous.start, p->previous.length) == 0) {
         same_name_selective_exist = true;
       }
 
@@ -2116,7 +2163,7 @@ static void parse_specific_import(b_parser *p, char *module_name, int import_con
 
     consume(p, RBRACE_TOKEN, "expected '}' at end of selective import");
 
-    if(!same_name_selective_exist) {
+    if (!same_name_selective_exist) {
       emit_byte_and_short(p, is_native ? OP_EJECT_NATIVE_IMPORT : OP_EJECT_IMPORT, import_constant);
     }
     emit_byte(p, OP_POP); // pop the module constant from stack
@@ -2124,13 +2171,13 @@ static void parse_specific_import(b_parser *p, char *module_name, int import_con
   }
 }
 
-static void import_statement(b_parser *p) {
+static void import_statement(b_parser* p) {
 //  consume(p, LITERAL_TOKEN, "expected module name");
 //  int module_name_length;
 //  char *module_name = compile_string(p, &module_name_length);
 
-  char *module_name = NULL;
-  char *module_file = NULL;
+  char* module_name = NULL;
+  char* module_file = NULL;
 
   int part_count = 0;
 
@@ -2156,13 +2203,13 @@ static void import_statement(b_parser *p) {
       }
     }
 
-    if(module_name != NULL) {
+    if (module_name != NULL) {
       free(module_name);
     }
 
     consume(p, IDENTIFIER_TOKEN, "module name expected");
 
-    module_name = (char *) calloc(p->previous.length + 1, sizeof(char));
+    module_name = (char*)calloc(p->previous.length + 1, sizeof(char));
     memcpy(module_name, p->previous.start, p->previous.length);
     module_name[p->previous.length] = '\0';
 
@@ -2193,7 +2240,7 @@ static void import_statement(b_parser *p) {
   if (match(p, AS_TOKEN)) {
     consume(p, IDENTIFIER_TOKEN, "module name expected");
     free(module_name);
-    module_name = (char *) calloc(p->previous.length + 1, sizeof(char));
+    module_name = (char*)calloc(p->previous.length + 1, sizeof(char));
     if (module_name == NULL) {
       error(p, "could not allocate memory for module name");
       return;
@@ -2203,13 +2250,13 @@ static void import_statement(b_parser *p) {
     was_renamed = true;
   }
 
-  char *module_path = resolve_import_path(module_file, p->module->file, p->vm->root_file, is_relative);
+  char* module_path = resolve_import_path(module_file, p->module->file, p->vm->root_file, is_relative);
 
   if (module_path == NULL) {
     // check if there is one in the vm's registry
     // handle native modules
     b_value md;
-    b_obj_string *final_module_name = copy_string(p->vm, module_name, (int) strlen(module_name));
+    b_obj_string* final_module_name = copy_string(p->vm, module_name, (int)strlen(module_name));
     if (table_get(&p->vm->modules, OBJ_VAL(final_module_name), &md)) {
       int module = make_constant(p, OBJ_VAL(final_module_name));
       push(p->vm, OBJ_VAL(final_module_name));
@@ -2233,7 +2280,7 @@ static void import_statement(b_parser *p) {
   }
 
   // do the import here...
-  char *source = read_file(module_path);
+  char* source = read_file(module_path);
   if (source == NULL) {
     error(p, "could not read import file %s", module_path);
     free(module_file);
@@ -2241,11 +2288,11 @@ static void import_statement(b_parser *p) {
   }
 
   // prevent cyclic imports
-  b_obj_module *check_module = p->module;
+  b_obj_module* check_module = p->module;
   while (check_module->parent != NULL) {
     size_t path_length = strlen(check_module->parent->file);
-    if(strlen(module_path) == path_length) {
-      if(memcmp(module_path, check_module->parent->file, path_length) == 0) {
+    if (strlen(module_path) == path_length) {
+      if (memcmp(module_path, check_module->parent->file, path_length) == 0) {
         error(p, "cyclic import detected at %s", module_name);
         free(module_path);
         return;
@@ -2254,10 +2301,10 @@ static void import_statement(b_parser *p) {
     check_module = check_module->parent;
   }
 
-  b_obj_module *module = new_module(p->vm, module_name, module_path, p->module);
+  b_obj_module* module = new_module(p->vm, module_name, module_path, p->module);
 
   push(p->vm, OBJ_VAL(module));
-  b_obj_func *function = compile(p->vm, module, source);
+  b_obj_func* function = compile(p->vm, module, source);
   pop(p->vm);
 
   free(source);
@@ -2271,7 +2318,7 @@ static void import_statement(b_parser *p) {
   function->name = NULL;
 
   push(p->vm, OBJ_VAL(function));
-  b_obj_closure *closure = new_closure(p->vm, function);
+  b_obj_closure* closure = new_closure(p->vm, function);
   pop(p->vm);
 
   if (p->vm->compiler->scope_depth > 0) {
@@ -2293,7 +2340,7 @@ static void import_statement(b_parser *p) {
   }
 }
 
-static void assert_statement(b_parser *p) {
+static void assert_statement(b_parser* p) {
   expression(p);
   if (match(p, COMMA_TOKEN)) {
     ignore_whitespace(p);
@@ -2306,7 +2353,7 @@ static void assert_statement(b_parser *p) {
   consume_statement_end(p);
 }
 
-static void catch_statement(b_parser *p) {
+static void catch_statement(b_parser* p) {
   int jump = emit_jump(p, OP_BEGIN_CATCH);
 
   ignore_whitespace(p);
@@ -2319,7 +2366,7 @@ static void catch_statement(b_parser *p) {
   patch_with_value(p, jump, current_blob(p)->count);
   emit_byte(p, OP_END_CATCH);
 
-  if(match(p, AS_TOKEN)) {
+  if (match(p, AS_TOKEN)) {
     consume(p, IDENTIFIER_TOKEN, "missing exception variable name");
     created_variable(p, p->previous);
   } else {
@@ -2327,7 +2374,7 @@ static void catch_statement(b_parser *p) {
   }
 }
 
-static void return_statement(b_parser *p) {
+static void return_statement(b_parser* p) {
   p->is_returning = true;
   if (p->vm->compiler->type == TYPE_SCRIPT) {
     error(p, "cannot return from top-level code");
@@ -2347,7 +2394,7 @@ static void return_statement(b_parser *p) {
   p->is_returning = false;
 }
 
-static void while_statement(b_parser *p) {
+static void while_statement(b_parser* p) {
   int surrounding_loop_start = p->innermost_loop_start;
   int surrounding_scope_depth = p->innermost_loop_scope_depth;
 
@@ -2374,7 +2421,7 @@ static void while_statement(b_parser *p) {
   p->innermost_loop_scope_depth = surrounding_scope_depth;
 }
 
-static void do_while_statement(b_parser *p) {
+static void do_while_statement(b_parser* p) {
   int surrounding_loop_start = p->innermost_loop_start;
   int surrounding_scope_depth = p->innermost_loop_scope_depth;
 
@@ -2403,13 +2450,12 @@ static void do_while_statement(b_parser *p) {
   p->innermost_loop_scope_depth = surrounding_scope_depth;
 }
 
-static void continue_statement(b_parser *p) {
+static void continue_statement(b_parser* p) {
   if (p->innermost_loop_start == -1) {
     error(p, "'continue' can only be used in a loop");
   }
 
   // discard local variables created in the loop
-//  discard_local(p, p->innermost_loop_scope_depth);
   discard_locals(p, p->innermost_loop_scope_depth + 1);
 
   // go back to the top of the loop
@@ -2417,26 +2463,17 @@ static void continue_statement(b_parser *p) {
   consume_statement_end(p);
 }
 
-static void break_statement(b_parser *p) {
+static void break_statement(b_parser* p) {
   if (p->innermost_loop_start == -1) {
     error(p, "'break' can only be used in a loop");
   }
 
-  // discard local variables created in the loop
-  /*for(int i = p->vm->compiler->local_count - 1; i >= 0 &&
-    p->vm->compiler->locals[i].depth >= p->vm->compiler->scope_depth; i--) {
-    if (p->vm->compiler->locals[i].is_captured) {
-      emit_byte(p, OP_CLOSE_UP_VALUE);
-    } else {
-      emit_byte(p, OP_POP);
-    }
-  }*/
   discard_locals(p, p->innermost_loop_scope_depth + 1);
   emit_jump(p, OP_BREAK_PL);
   consume_statement_end(p);
 }
 
-static void synchronize(b_parser *p) {
+static void synchronize(b_parser* p) {
   p->panic_mode = false;
 
   while (p->current.type != EOF_TOKEN) {
@@ -2467,14 +2504,14 @@ static void synchronize(b_parser *p) {
       case AS_TOKEN:
         return;
 
-      default:; // do nothing
+      default: ; // do nothing
     }
 
     advance(p);
   }
 }
 
-static void declaration(b_parser *p) {
+static void declaration(b_parser* p) {
   ignore_whitespace(p);
 
   if (match(p, CLASS_TOKEN)) {
@@ -2483,8 +2520,8 @@ static void declaration(b_parser *p) {
     function_declaration(p);
   } else if (match(p, VAR_TOKEN)) {
     var_declaration(p);
-  } else if(match(p, LBRACE_TOKEN)) {
-    if(!check(p, NEWLINE_TOKEN) && p->vm->compiler->scope_depth == 0) {
+  } else if (match(p, LBRACE_TOKEN)) {
+    if (!check(p, NEWLINE_TOKEN) && p->vm->compiler->scope_depth == 0) {
       expression_statement(p, false, true);
     } else {
       begin_scope(p);
@@ -2503,7 +2540,7 @@ static void declaration(b_parser *p) {
   ignore_whitespace(p);
 }
 
-static void statement(b_parser *p) {
+static void statement(b_parser* p) {
   p->repl_can_echo = false;
   ignore_whitespace(p);
 
@@ -2537,7 +2574,7 @@ static void statement(b_parser *p) {
     end_scope(p);
   } else if (match(p, IMPORT_TOKEN)) {
     import_statement(p);
-  } else if(match(p, CATCH_TOKEN)) {
+  } else if (match(p, CATCH_TOKEN)) {
     catch_statement(p);
   } else {
     expression_statement(p, false, false);
@@ -2546,7 +2583,7 @@ static void statement(b_parser *p) {
   ignore_whitespace(p);
 }
 
-b_obj_func *compile(b_vm *vm, b_obj_module *module, const char *source) {
+b_obj_func* compile(b_vm* vm, b_obj_module* module, const char* source) {
   b_scanner scanner;
   init_scanner(&scanner, source);
 
@@ -2575,15 +2612,15 @@ b_obj_func *compile(b_vm *vm, b_obj_module *module, const char *source) {
     declaration(&parser);
   }
 
-  b_obj_func *function = end_compiler(&parser);
+  b_obj_func* function = end_compiler(&parser);
 
   return parser.had_error ? NULL : function;
 }
 
-void mark_compiler_roots(b_vm *vm) {
-  b_compiler *compiler = vm->compiler;
+void mark_compiler_roots(b_vm* vm) {
+  b_compiler* compiler = vm->compiler;
   while (compiler != NULL) {
-    mark_object(vm, (b_obj *) compiler->function);
+    mark_object(vm, (b_obj*)compiler->function);
     compiler = compiler->enclosing;
   }
 }

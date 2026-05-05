@@ -331,7 +331,7 @@ DECLARE_LIST_METHOD(unique) {
     for (int j = 0; j < n_list->items.count; j++) {
       if (values_equal(n_list->items.values[j], list->items.values[i])) {
         found = true;
-        continue;
+        break;
       }
     }
 

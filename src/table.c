@@ -153,6 +153,20 @@ void table_add_all(b_vm *vm, b_table *from, b_table *to) {
   }
 }
 
+void table_copy_extensions(b_vm *vm, b_table *from, b_table *to) {
+  for (int i = 0; i < from->capacity; i++) {
+    b_entry *entry = &from->entries[i];
+    if (!IS_EMPTY(entry->key) && IS_CLOSURE(entry->value)) {
+      b_obj_closure *closure = AS_CLOSURE(entry->value);
+
+      // Make non-static
+      closure->function->type = TYPE_METHOD;
+
+      table_set(vm, to, entry->key, OBJ_VAL(closure));
+    }
+  }
+}
+
 void table_import_all(b_vm *vm, b_table *from, b_table *to) {
   for (int i = 0; i < from->capacity; i++) {
     b_entry *entry = &from->entries[i];

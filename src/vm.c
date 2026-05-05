@@ -800,28 +800,65 @@ static bool invoke_self(b_vm *vm, b_obj_string *name, int arg_count) {
   b_value receiver = peek(vm, arg_count);
   b_value value;
 
-  if (IS_INSTANCE(receiver)) {
-    b_obj_instance *instance = AS_INSTANCE(receiver);
+  if (IS_OBJ(receiver)) {
+    switch (AS_OBJ(receiver)->type) {
+      case OBJ_INSTANCE: {
+        b_obj_instance *instance = AS_INSTANCE(receiver);
 
-    if (table_get(&instance->klass->methods, OBJ_VAL(name), &value)) {
-      if (get_method_type(value) != TYPE_STATIC) {
-        return call_value(vm, value, arg_count);
+        if (table_get(&instance->klass->methods, OBJ_VAL(name), &value)) {
+          if (get_method_type(value) != TYPE_STATIC) {
+            return call_value(vm, value, arg_count);
+          }
+
+          return throw_access_error(vm, "cannot call static method %s() on instance", name->chars);
+        }
+
+        if (table_get(&instance->properties, OBJ_VAL(name), &value)) {
+          vm->stack_top[-arg_count - 1] = value;
+          return call_value(vm, value, arg_count);
+        }
       }
+      case OBJ_CLASS: {
+        if (table_get(&AS_CLASS(receiver)->methods, OBJ_VAL(name), &value)) {
+          if (get_method_type(value) == TYPE_STATIC) {
+            return call_value(vm, value, arg_count);
+          }
 
-      return throw_access_error(vm, "cannot call static method %s() on instance", name->chars);
-    }
-
-    if (table_get(&instance->properties, OBJ_VAL(name), &value)) {
-      vm->stack_top[-arg_count - 1] = value;
-      return call_value(vm, value, arg_count);
-    }
-  } else if (IS_CLASS(receiver)) {
-    if (table_get(&AS_CLASS(receiver)->methods, OBJ_VAL(name), &value)) {
-      if (get_method_type(value) == TYPE_STATIC) {
-        return call_value(vm, value, arg_count);
+          return throw_access_error(vm, "cannot call non-static method %s() on non instance", name->chars);
+        }
       }
-
-      return throw_access_error(vm, "cannot call non-static method %s() on non instance", name->chars);
+      case OBJ_STRING: {
+        if (table_get(&vm->methods_string, OBJ_VAL(name), &value)) {
+          return call_value(vm, value, arg_count);
+        }
+      }
+      case OBJ_BYTES: {
+        if (table_get(&vm->methods_bytes, OBJ_VAL(name), &value)) {
+          return call_value(vm, value, arg_count);
+        }
+      }
+      case OBJ_DICT: {
+        if (table_get(&vm->methods_dict, OBJ_VAL(name), &value)) {
+          return call_value(vm, value, arg_count);
+        }
+      }
+      case OBJ_FILE: {
+        if (table_get(&vm->methods_file, OBJ_VAL(name), &value)) {
+          return call_value(vm, value, arg_count);
+        }
+      }
+      case OBJ_LIST: {
+        if (table_get(&vm->methods_list, OBJ_VAL(name), &value)) {
+          return call_value(vm, value, arg_count);
+        }
+      }
+      case OBJ_RANGE: {
+        if (table_get(&vm->methods_range, OBJ_VAL(name), &value)) {
+          return call_value(vm, value, arg_count);
+        }
+      }
+      default: // fallthrough
+        break;
     }
   }
 
@@ -895,25 +932,25 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
       }
       case OBJ_STRING: {
         if (table_get(&vm->methods_string, OBJ_VAL(name), &value)) {
-          return call_native_method(vm, AS_NATIVE(value), arg_count);
+          return call_value(vm, value, arg_count);
         }
         return throw_property_error(vm, "String has no method %s()", name->chars);
       }
       case OBJ_LIST: {
         if (table_get(&vm->methods_list, OBJ_VAL(name), &value)) {
-          return call_native_method(vm, AS_NATIVE(value), arg_count);
+          return call_value(vm, value, arg_count);
         }
         return throw_property_error(vm, "List has no method %s()", name->chars);
       }
       case OBJ_RANGE: {
         if (table_get(&vm->methods_range, OBJ_VAL(name), &value)) {
-          return call_native_method(vm, AS_NATIVE(value), arg_count);
+          return call_value(vm, value, arg_count);
         }
         return throw_property_error(vm, "Range has no method %s()", name->chars);
       }
       case OBJ_DICT: {
         if (table_get(&vm->methods_dict, OBJ_VAL(name), &value)) {
-          return call_native_method(vm, AS_NATIVE(value), arg_count);
+          return call_value(vm, value, arg_count);
         }
 
         // NEW in v0.0.84, dictionaries can declare extra methods as part of their entries.
@@ -926,13 +963,13 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
       }
       case OBJ_FILE: {
         if (table_get(&vm->methods_file, OBJ_VAL(name), &value)) {
-          return call_native_method(vm, AS_NATIVE(value), arg_count);
+          return call_value(vm, value, arg_count);
         }
         return throw_property_error(vm, "File has no method %s()", name->chars);
       }
       case OBJ_BYTES: {
         if (table_get(&vm->methods_bytes, OBJ_VAL(name), &value)) {
-          return call_native_method(vm, AS_NATIVE(value), arg_count);
+          return call_value(vm, value, arg_count);
         }
         return throw_property_error(vm, "Bytes has no method %s()", name->chars);
       }
@@ -2445,6 +2482,43 @@ SWITCH_DISPATCH:
         table_add_all(vm, &superclass->properties, &subclass->properties);
         table_add_all(vm, &superclass->methods, &subclass->methods);
         subclass->superclass = superclass;
+        pop(vm); // pop the subclass
+        break;
+      }
+      case OP_EXTEND: {
+        b_obj_class *ext_class = AS_CLASS(peek(vm, 0));
+
+        if (IS_STRING(peek(vm, 1))) {
+          b_obj_string *klass = AS_STRING(peek(vm, 1));
+
+          b_table *table = NULL;
+          if (memcmp(klass->chars, "string", klass->length) == 0) {
+            table = &vm->methods_string;
+          } else if (memcmp(klass->chars, "list", klass->length) == 0) {
+            table = &vm->methods_list;
+          } else if (memcmp(klass->chars, "range", klass->length) == 0) {
+            table = &vm->methods_range;
+          } else if (memcmp(klass->chars, "dict", klass->length) == 0) {
+            table = &vm->methods_dict;
+          } else if (memcmp(klass->chars, "bytes", klass->length) == 0) {
+            table = &vm->methods_bytes;
+          } else if (memcmp(klass->chars, "file", klass->length) == 0) {
+            table = &vm->methods_file;
+          }
+
+          if (table != NULL) {
+            table_copy_extensions(vm, &ext_class->methods, table);
+            break;
+          }
+
+          undefined_error("cannot extend undefined class %*.s", klass->length, klass->chars);
+        } else if (!IS_CLASS(peek(vm, 1))) {
+          type_error("cannot extend non-class object");
+          break;
+        }
+
+        b_obj_class *actual_class = AS_CLASS(peek(vm, 1));
+        table_copy_extensions(vm, &ext_class->methods, &actual_class->methods);
         pop(vm); // pop the subclass
         break;
       }
