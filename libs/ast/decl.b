@@ -136,14 +136,16 @@ class ClassDecl < Decl {
    * @param {Decl|any|nil} properties
    * @param {Decl|any|nil} methods
    * @param {Decl|any|nil} operators
+   * @param {Decl|any|nil} is_extension
    * @constructor
    */
-  ClassDecl(name, superclass, properties, methods, operators) {
+  ClassDecl(name, superclass, properties, methods, operators, is_extension) {
     self.name = name
     self.superclass = superclass
     self.properties = properties
     self.methods = methods
     self.operators = operators
+    self.is_extension = is_extension
   }
 
   @to_json() {
@@ -154,6 +156,7 @@ class ClassDecl < Decl {
       properties: self.properties,
       methods: self.methods,
       operators: self.operators,
+      is_extension: self.is_extension,
     }
   }
 }

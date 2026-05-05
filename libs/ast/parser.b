@@ -1042,7 +1042,12 @@ class Parser {
     self._consume(TokenType.IDENTIFIER, 'class name expected')
     var name = self._previous().literal, superclass
 
-    if self._match(TokenType.LESS) {
+    var is_extension = false
+    if self._match(TokenType.LESS) or self._match(TokenType.GREATER) {
+      if self._previous().type == TokenType.GREATER {
+        is_extension = true
+      }
+
       self._consume(TokenType.IDENTIFIER, 'super class name expected')
       superclass = self._previous().literal
     }
@@ -1085,7 +1090,7 @@ class Parser {
 
     self._consume(TokenType.RBRACE, "'{' expected at end of class definition")
 
-    return ClassDecl(name, superclass, properties, methods, operators)
+    return ClassDecl(name, superclass, properties, methods, operators, is_extension)
   }
 
   /**

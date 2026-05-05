@@ -9,9 +9,10 @@
  */
 
 import os
+import io
 
 if os.args.length() < 3 {
-    os.stderr.write('Missing argument: output directory\n')
+    io.stderr.write('Missing argument: output directory\n')
     os.exit(1)
 }
 
@@ -69,7 +70,7 @@ var asts = {
       Function: ['name', 'params', 'body'],
       Method: ['name', 'params', 'body', 'is_static'],
       Property: ['name', 'value', 'is_static'],
-      Class: ['name', 'superclass', 'properties', 'methods', 'operators'],
+      Class: ['name', 'superclass', 'properties', 'methods', 'operators', 'is_extension'],
     },
     props: ['doc', 'file',]
   },
