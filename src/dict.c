@@ -410,7 +410,7 @@ DECLARE_DICT_METHOD(reduce) {
   }
 
   for(int i = start_index; i < dict->names.count; i++) {
-    // only call map for non-empty values in a list.
+    // only call reduce method for non-empty values in a dict.
     if(!IS_NIL(dict->names.values[i]) && !IS_EMPTY(dict->names.values[i])) {
       if(arity > 0) {
         call_list->items.values[0] = accumulator;

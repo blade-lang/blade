@@ -660,7 +660,7 @@ DECLARE_LIST_METHOD(reduce) {
   }
 
   for(int i = start_index; i < list->items.count; i++) {
-    // only call map for non-empty values in a list.
+    // only call reduce method for non-empty values in a list.
     if(!IS_NIL(list->items.values[i]) && !IS_EMPTY(list->items.values[i])) {
       if(arity > 0) {
         call_list->items.values[0] = accumulator;

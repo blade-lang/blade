@@ -456,48 +456,45 @@ b_token scan_token(b_scanner *s) {
         return make_token(s, INCREMENT_TOKEN);
       if (match(s, '='))
         return make_token(s, PLUS_EQ_TOKEN);
-      else
-        return make_token(s, PLUS_TOKEN);
+      return make_token(s, PLUS_TOKEN);
     }
     case '-': {
       if (match(s, '-'))
         return make_token(s, DECREMENT_TOKEN);
       if (match(s, '='))
         return make_token(s, MINUS_EQ_TOKEN);
-      else
-        return make_token(s, MINUS_TOKEN);
+      return make_token(s, MINUS_TOKEN);
     }
     case '*':
       if (match(s, '*')) {
         return make_token(s, match(s, '=') ? POW_EQ_TOKEN : POW_TOKEN);
-      } else {
-        return make_token(s, match(s, '=') ? MULTIPLY_EQ_TOKEN : MULTIPLY_TOKEN);
       }
-    case '/':
+      return make_token(s, match(s, '=') ? MULTIPLY_EQ_TOKEN : MULTIPLY_TOKEN);
+    case '/': {
       if (match(s, '/')) {
         return make_token(s, match(s, '=') ? FLOOR_EQ_TOKEN : FLOOR_TOKEN);
-      } else {
-        return make_token(s, match(s, '=') ? DIVIDE_EQ_TOKEN : DIVIDE_TOKEN);
       }
+      return make_token(s, match(s, '=') ? DIVIDE_EQ_TOKEN : DIVIDE_TOKEN);
+    }
     case '=':
+      if (match(s, '>')) {
+        return make_token(s, ARROW_TOKEN);
+      }
       return make_token(s, match(s, '=') ? EQUAL_EQ_TOKEN : EQUAL_TOKEN);
     case '<':
       if (match(s, '<')) {
         return make_token(s, match(s, '=') ? LSHIFT_EQ_TOKEN : LSHIFT_TOKEN);
-      } else {
-        return make_token(s, match(s, '=') ? LESS_EQ_TOKEN : LESS_TOKEN);
       }
+      return make_token(s, match(s, '=') ? LESS_EQ_TOKEN : LESS_TOKEN);
     case '>':
       if (match(s, '>')) {
 //        return make_token(s, match(s, '=') ? RSHIFT_EQ_TOKEN : RSHIFT_TOKEN);
         if (match(s, '>')) {
           return make_token(s, match(s, '=') ? URSHIFT_EQ_TOKEN : URSHIFT_TOKEN);
-        } else {
-          return make_token(s, match(s, '=') ? RSHIFT_EQ_TOKEN : RSHIFT_TOKEN);
         }
-      } else {
-        return make_token(s, match(s, '=') ? GREATER_EQ_TOKEN : GREATER_TOKEN);
+        return make_token(s, match(s, '=') ? RSHIFT_EQ_TOKEN : RSHIFT_TOKEN);
       }
+      return make_token(s, match(s, '=') ? GREATER_EQ_TOKEN : GREATER_TOKEN);
     case '%':
       return make_token(s, match(s, '=') ? PERCENT_EQ_TOKEN : PERCENT_TOKEN);
     case '&':

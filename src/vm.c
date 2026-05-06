@@ -142,7 +142,7 @@ bool do_throw_exception(b_vm *vm, const char *type, bool is_assert, const char *
   return return_val;
 }
 
-static void new_execption_class(b_vm * vm, b_obj_class *superclass, const char *name, int name_length) {
+static void new_exception_class(b_vm * vm, b_obj_class *superclass, const char *name, int name_length) {
   b_obj_string *class_name = copy_string(vm, name, name_length);
   push(vm, OBJ_VAL(class_name));
   b_obj_class *klass = new_class(vm, class_name);
@@ -212,15 +212,15 @@ static void initialize_exceptions(b_vm *vm, b_obj_module *module) {
   vm->exception_class = klass;
 
   // Create other global exceptions
-  new_execption_class(vm, klass, "TypeError", 9);
-  new_execption_class(vm, klass, "ValueError", 10);
-  new_execption_class(vm, klass, "NumericError", 12);
-  new_execption_class(vm, klass, "ArgumentError", 13);
-  new_execption_class(vm, klass, "NotImplementedError", 19);
-  new_execption_class(vm, klass, "RangeError", 10);
-  new_execption_class(vm, klass, "AccessError", 11);
-  new_execption_class(vm, klass, "PropertyError", 13);
-  new_execption_class(vm, klass, "UndefinedError", 14);
+  new_exception_class(vm, klass, "TypeError", 9);
+  new_exception_class(vm, klass, "ValueError", 10);
+  new_exception_class(vm, klass, "NumericError", 12);
+  new_exception_class(vm, klass, "ArgumentError", 13);
+  new_exception_class(vm, klass, "NotImplementedError", 19);
+  new_exception_class(vm, klass, "RangeError", 10);
+  new_exception_class(vm, klass, "AccessError", 11);
+  new_exception_class(vm, klass, "PropertyError", 13);
+  new_exception_class(vm, klass, "UndefinedError", 14);
 }
 
 static b_obj_class *get_exception(b_vm *vm, const char *name) {
@@ -626,7 +626,7 @@ void init_vm(b_vm *vm) {
 void free_vm(b_vm *vm) {
   free_objects(vm);
 
-  // since object in module can exist in globals
+  // since object in module can exist in globals,
   // it must come before
   if(vm->id == 0) {
     free_table(vm, &vm->modules);
@@ -760,7 +760,7 @@ bool call_value(b_vm *vm, b_value callee, int arg_count) {
         return call_native_method(vm, AS_NATIVE(callee), arg_count);
       }
 
-      default: // non callable
+      default: // non-callable
         break;
     }
   }
@@ -891,7 +891,7 @@ static bool invoke(b_vm *vm, b_obj_string *name, int arg_count) {
   b_value value;
 
   if (!IS_OBJ(receiver)) {
-    // @TODO: have methods for non objects as well.
+    // @TODO: have methods for non-objects as well.
     return throw_type_error(vm, "non-object %s has no method '%s'", value_type(receiver), name->chars);
   } else {
     switch (AS_OBJ(receiver)->type) {
@@ -1307,7 +1307,7 @@ static bool bytes_get_ranged_index(b_vm *vm, b_obj_bytes *bytes, bool will_assig
 
   if (lower_index < 0 ||
       (upper_index < 0 && ((bytes->bytes.count + upper_index) < 0)) || lower_index >= bytes->bytes.count) {
-    // always return an empty bytes...
+    // always return an empty bytes object...
     if (!will_assign) {
       pop_n(vm, 3); // +1 for the bytes itself
     }
@@ -1403,7 +1403,7 @@ static inline void dict_set_index(b_vm *vm, b_obj_dict *dict, b_value index, b_v
   pop_n(vm, 3); // pop the value, index and dict out
 
   // leave the value on the stack for consumption
-  // e.g. variable = dict[index] = 10
+  // e.g., variable = dict[index] = 10
   push(vm, value);
 }
 
@@ -1412,7 +1412,7 @@ static inline void module_set_index(b_vm *vm, b_obj_module *module, b_value inde
   pop_n(vm, 3); // pop the value, index and dict out
 
   // leave the value on the stack for consumption
-  // e.g. variable = dict[index] = 10
+  // e.g., variable = dict[index] = 10
   push(vm, value);
 }
 
@@ -1430,7 +1430,7 @@ static bool list_set_index(b_vm *vm, b_obj_list *list, b_value index, b_value va
     pop_n(vm, 3); // pop the value, index and list out
 
     // leave the value on the stack for consumption
-    // e.g. variable = list[index] = 10
+    // e.g., variable = list[index] = 10
     push(vm, value);
     return true;
   }
@@ -1458,7 +1458,7 @@ static bool bytes_set_index(b_vm *vm, b_obj_bytes *bytes, b_value index, b_value
     pop_n(vm, 3); // pop the value, index and bytes out
 
     // leave the value on the stack for consumption
-    // e.g. variable = bytes[index] = 10
+    // e.g., variable = bytes[index] = 10
     push(vm, value);
     return true;
   }
@@ -1686,9 +1686,9 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
   }
 
   for (;;) {
-    // try...finally... (i.e. try without a catch but finally
+    // try...finally... (i.e., try without a catch but finally
     // whose try body raises an exception)
-    // can cause us to go into an invalid mode where frame count == 0
+    // can cause us to go into an invalid mode where frame count == 0;
     // to fix this, we need to exit with an appropriate mode here.
     if (vm->frame_count == 0) {
       return PTR_RUNTIME_ERR;
@@ -1707,169 +1707,7 @@ b_ptr_result run(b_vm *vm, int exit_frame) {
           (int) (vm->current_frame->ip - vm->current_frame->closure->function->blob.code));
 #endif
 
-    uint8_t instruction;
-
-#if defined(USE_THREAD_DISPATCH) && USE_THREAD_DISPATCH && B_COMPUTED_GOTO_SUPPORTED
-    static void* const dispatch_table[UINT8_COUNT] = {
-      [0 ... UINT8_MAX] = &&L_FALLBACK,
-      [OP_CONSTANT] = &&L_OP_CONSTANT,
-      [OP_ADD] = &&L_OP_ADD,
-      [OP_SUBTRACT] = &&L_OP_SUBTRACT,
-      [OP_MULTIPLY] = &&L_OP_MULTIPLY,
-      [OP_DIVIDE] = &&L_OP_DIVIDE,
-      [OP_JUMP] = &&L_OP_JUMP,
-      [OP_JUMP_IF_FALSE] = &&L_OP_JUMP_IF_FALSE,
-      [OP_LOOP] = &&L_OP_LOOP,
-      [OP_POP] = &&L_OP_POP,
-      [OP_POP_N] = &&L_OP_POP_N,
-      [OP_DUP] = &&L_OP_DUP,
-      [OP_RETURN] = &&L_OP_RETURN,
-      [OP_NIL] = &&L_OP_NIL,
-      [OP_TRUE] = &&L_OP_TRUE,
-      [OP_FALSE] = &&L_OP_FALSE,
-      [OP_EMPTY] = &&L_OP_EMPTY,
-      [OP_ONE] = &&L_OP_ONE,
-    };
-
-    // Initial threaded dispatch
-    instruction = READ_BYTE();
-    goto *dispatch_table[instruction];
-
-L_OP_CONSTANT: {
-      b_value constant = READ_CONSTANT();
-      push(vm, constant);
-      goto THREADED_DISPATCH;
-    }
-L_OP_ADD: {
-      if (IS_STRING(peek(vm, 0)) || IS_STRING(peek(vm, 1))) {
-        if (!concatenate(vm)) {
-          numeric_error("unsupported operand + for %s and %s", value_type(peek(vm, 0)), value_type(peek(vm, 1)));
-        } else {
-          // concatenate already pushed result and cleaned stack
-        }
-      } else if (IS_LIST(peek(vm, 0)) && IS_LIST(peek(vm, 1))) {
-        b_value result = OBJ_VAL(add_list(vm, AS_LIST(peek(vm, 1)), AS_LIST(peek(vm, 0))));
-        pop_n(vm, 2);
-        push(vm, result);
-      } else if (IS_BYTES(peek(vm, 0)) && IS_BYTES(peek(vm, 1))) {
-        b_value result = OBJ_VAL(add_bytes(vm, AS_BYTES(peek(vm, 1)), AS_BYTES(peek(vm, 0))));
-        pop_n(vm, 2);
-        push(vm, result);
-      } else {
-        BINARY_OP(NUMBER_VAL, +);
-      }
-      goto THREADED_DISPATCH;
-    }
-L_OP_SUBTRACT: {
-      BINARY_OP(NUMBER_VAL, -);
-      goto THREADED_DISPATCH;
-    }
-L_OP_MULTIPLY: {
-      if (IS_STRING(peek(vm, 1)) && IS_NUMBER(peek(vm, 0))) {
-        double number = AS_NUMBER(peek(vm, 0));
-        b_obj_string *string = AS_STRING(peek(vm, 1));
-        b_value result = OBJ_VAL(multiply_string(vm, string, number));
-        pop_n(vm, 2);
-        push(vm, result);
-      } else if (IS_LIST(peek(vm, 1)) && IS_NUMBER(peek(vm, 0))) {
-        int number = (int) AS_NUMBER(pop(vm));
-        b_obj_list *list = AS_LIST(peek(vm, 0));
-        b_obj_list *n_list = new_list(vm);
-        push(vm, OBJ_VAL(n_list));
-        multiply_list(vm, list, n_list, number);
-        pop_n(vm, 2);
-        push(vm, OBJ_VAL(n_list));
-      } else {
-        BINARY_OP(NUMBER_VAL, *);
-      }
-      goto THREADED_DISPATCH;
-    }
-L_OP_DIVIDE: {
-      BINARY_OP(NUMBER_VAL, /);
-      goto THREADED_DISPATCH;
-    }
-L_OP_JUMP: {
-      uint16_t offset = READ_SHORT();
-      vm->current_frame->ip += offset;
-      goto THREADED_DISPATCH;
-    }
-L_OP_JUMP_IF_FALSE: {
-      uint16_t offset = READ_SHORT();
-      if (is_false(peek(vm, 0))) {
-        vm->current_frame->ip += offset;
-      }
-      goto THREADED_DISPATCH;
-    }
-L_OP_LOOP: {
-      uint16_t offset = READ_SHORT();
-      vm->current_frame->ip -= offset;
-      goto THREADED_DISPATCH;
-    }
-L_OP_POP: {
-      pop(vm);
-      goto THREADED_DISPATCH;
-    }
-L_OP_POP_N: {
-      pop_n(vm, READ_SHORT());
-      goto THREADED_DISPATCH;
-    }
-L_OP_DUP: {
-      push(vm, peek(vm, 0));
-      goto THREADED_DISPATCH;
-    }
-L_OP_NIL: {
-      push(vm, NIL_VAL);
-      goto THREADED_DISPATCH;
-    }
-L_OP_TRUE: {
-      push(vm, BOOL_VAL(true));
-      goto THREADED_DISPATCH;
-    }
-L_OP_FALSE: {
-      push(vm, BOOL_VAL(false));
-      goto THREADED_DISPATCH;
-    }
-L_OP_EMPTY: {
-      push(vm, EMPTY_VAL);
-      goto THREADED_DISPATCH;
-    }
-L_OP_ONE: {
-      push(vm, NUMBER_VAL(1));
-      goto THREADED_DISPATCH;
-    }
-L_OP_RETURN: {
-      b_value result = pop(vm);
-      close_up_values(vm, vm->current_frame->slots);
-      if (vm->error_count > 0 && vm->errors[vm->error_count - 1]->frame == vm->current_frame) {
-        pop_error(vm);
-      }
-      vm->frame_count--;
-      if (vm->frame_count == 0) {
-        pop(vm);
-        return PTR_OK;
-      }
-      vm->stack_top = vm->current_frame->slots;
-      push(vm, result);
-      vm->current_frame = &vm->frames[vm->frame_count - 1];
-      if (vm->frame_count == exit_frame) {
-        return PTR_OK;
-      }
-      goto THREADED_DISPATCH;
-    }
-
-L_FALLBACK:
-    // Rewind IP so the switch-based dispatcher re-reads this opcode.
-    vm->current_frame->ip--;
-    goto SWITCH_DISPATCH;
-
-THREADED_DISPATCH:
-    instruction = READ_BYTE();
-    goto *dispatch_table[instruction];
-
-SWITCH_DISPATCH:
-#endif
-
-    switch (instruction = READ_BYTE()) {
+    switch (READ_BYTE()) {
 
       case OP_CONSTANT: {
         b_value constant = READ_CONSTANT();
@@ -2045,7 +1883,7 @@ SWITCH_DISPATCH:
       case OP_ECHO: {
         b_value val = peek(vm, 0);
 
-        // check if its a class with @to_string() override first.
+        // check if it's a class with @to_string() override first.
         TRY_STRING_OVERRIDE(val);
 
         if (vm->is_repl) {
@@ -2063,7 +1901,7 @@ SWITCH_DISPATCH:
       case OP_STRINGIFY: {
         b_value val = peek(vm, 0);
         if (!IS_STRING(val) && !IS_NIL(val)) {
-          // check if its a class with @to_string() override first.
+          // check if it's a class with @to_string() override first.
           TRY_STRING_OVERRIDE(val);
 
           b_obj_string *value = value_to_string(vm, pop(vm));

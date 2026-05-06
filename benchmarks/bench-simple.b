@@ -24,7 +24,7 @@ def simple(n) {
 }
 
 var start = microtime()
-simple(10000000000)
+simple(100000000)
 var end = microtime()
 
 echo '\nTime taken = ${(end - start) / 1000000} seconds'

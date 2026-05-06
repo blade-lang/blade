@@ -1329,7 +1329,8 @@ b_parse_rule parse_rules[] = {
   [TILDE_EQ_TOKEN] = {NULL, NULL, PREC_NONE}, // ~=
   [XOR_TOKEN] = {NULL, binary, PREC_BIT_XOR}, // ^
   [XOR_EQ_TOKEN] = {NULL, NULL, PREC_NONE}, // ^=
-  [QUESTION_TOKEN] = {NULL, conditional, PREC_CONDITIONAL}, // ??
+  [QUESTION_TOKEN] = {NULL, conditional, PREC_CONDITIONAL}, // ?
+  [ARROW_TOKEN] = {NULL, NULL, PREC_NONE}, // ?
 
   // keywords
   [AND_TOKEN] = {NULL, and_, PREC_AND},
@@ -1443,6 +1444,29 @@ static void block(b_parser* p) {
   consume(p, RBRACE_TOKEN, "expected '}' after block");
 }
 
+static void return_statement(b_parser* p, bool is_inline) {
+  p->is_returning = true;
+  if (p->vm->compiler->type == TYPE_SCRIPT) {
+    error(p, "cannot return from top-level code");
+  }
+
+  if (!is_inline && match(p, SEMICOLON_TOKEN) || match(p, NEWLINE_TOKEN)) {
+    emit_return(p);
+  } else {
+    if (p->vm->compiler->type == TYPE_INITIALIZER) {
+      error(p, "cannot return value from constructor");
+    }
+
+    expression(p);
+    emit_byte(p, OP_RETURN);
+
+    if (!is_inline) {
+      consume_statement_end(p);
+    }
+  }
+  p->is_returning = false;
+}
+
 static int function_args(b_parser* p, bool is_operator) {
   // compile argument list...
   int count = 0;
@@ -1479,6 +1503,28 @@ static void function_body(b_parser* p, b_compiler* compiler, bool close_scope) {
   ignore_whitespace(p);
   consume(p, LBRACE_TOKEN, "expected '{' before function body");
   block(p);
+
+  // create the function object
+  if (close_scope) {
+    end_scope(p);
+  }
+  b_obj_func* function = end_compiler(p);
+
+  push(p->vm, OBJ_VAL(function));
+  emit_byte_and_short(p, OP_CLOSURE, make_constant(p, OBJ_VAL(function)));
+
+  for (int i = 0; i < function->up_value_count; i++) {
+    emit_byte(p, compiler->up_values[i].is_local ? 1 : 0);
+    emit_short(p, compiler->up_values[i].index);
+  }
+
+  pop(p->vm);
+}
+
+static void inline_function_body(b_parser* p, b_compiler* compiler, bool close_scope) {
+  // compile the body
+  ignore_whitespace(p);
+  return_statement(p, true);
 
   // create the function object
   if (close_scope) {
@@ -1585,7 +1631,11 @@ static void anonymous(b_parser* p, bool can_assign) {
     consume(p, RPAREN_TOKEN, "expected ')' after anonymous function parameters");
   }
 
-  function_body(p, &compiler, true);
+  if (match(p, ARROW_TOKEN)) {
+    inline_function_body(p, &compiler, true);
+  } else {
+    function_body(p, &compiler, true);
+  }
 }
 
 static void field(b_parser* p, bool is_static) {
@@ -2374,26 +2424,6 @@ static void catch_statement(b_parser* p) {
   }
 }
 
-static void return_statement(b_parser* p) {
-  p->is_returning = true;
-  if (p->vm->compiler->type == TYPE_SCRIPT) {
-    error(p, "cannot return from top-level code");
-  }
-
-  if (match(p, SEMICOLON_TOKEN) || match(p, NEWLINE_TOKEN)) {
-    emit_return(p);
-  } else {
-    if (p->vm->compiler->type == TYPE_INITIALIZER) {
-      error(p, "cannot return value from constructor");
-    }
-
-    expression(p);
-    emit_byte(p, OP_RETURN);
-    consume_statement_end(p);
-  }
-  p->is_returning = false;
-}
-
 static void while_statement(b_parser* p) {
   int surrounding_loop_start = p->innermost_loop_start;
   int surrounding_scope_depth = p->innermost_loop_scope_depth;
@@ -2563,7 +2593,7 @@ static void statement(b_parser* p) {
   } else if (match(p, BREAK_TOKEN)) {
     break_statement(p);
   } else if (match(p, RETURN_TOKEN)) {
-    return_statement(p);
+    return_statement(p, false);
   } else if (match(p, ASSERT_TOKEN)) {
     assert_statement(p);
   } else if (match(p, RAISE_TOKEN)) {

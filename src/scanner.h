@@ -58,7 +58,8 @@ typedef enum {
   TILDE_EQ_TOKEN,    // ~=
   XOR_TOKEN,         // ^
   XOR_EQ_TOKEN,      // ^=
-  QUESTION_TOKEN,    // ??
+  QUESTION_TOKEN,    // ?
+  ARROW_TOKEN,    // =>
 
   // keywords
   AND_TOKEN,
