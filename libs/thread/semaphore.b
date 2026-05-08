@@ -1,0 +1,186 @@
+#!-- Part of the Blade Thread Library. See LICENSE for details. --!
+import _thread
+
+
+/**
+ * `Semaphore` is a counting synchronisation primitive that controls how many threads may concurrently 
+ * access a shared resource.
+ * 
+ * Internally it maintains an integer counter. `acquire()` decrements the counter, blocking if it is 
+ * already zero. `release()` increments the counter and wakes one waiting thread. This makes a `Semaphore` 
+ * ideal for rate-limiting concurrent access, implementing resource pools, or signalling between threads.
+ * 
+ * A `Semaphore` constructed with `initial = 1` and `max = 1` behaves as a binary semaphore (similar to 
+ * a `Mutex`), but unlike a `Mutex` it may be released by a *different* thread than the one that acquired 
+ * it, making it suitable for producer/consumer signalling.
+ * 
+ * ```blade
+ * import thread
+ * 
+ * def do_limited_work(i) {
+ *   echo i
+ * }
+ * 
+ * # Allow at most 3 threads into the critical section at once.
+ * var sem = thread.Semaphore(3)
+ * 
+ * def worker(id) {
+ *   return thread.start(@(t) {
+ *     sem.acquire()
+ *     do_limited_work(id)
+ *     sem.release()
+ *   })
+ * }
+ * 
+ * var threads = []
+ * iter var i = 0; i < 10; i++ {
+ *   threads.append(worker(i))
+ * }
+ * 
+ * for t in threads { t.await() }
+ * ```
+ */
+class Semaphore {
+
+  # the real semaphore pointer
+  var _ptr
+
+  /**
+   * Creates a new `Semaphore`.
+   * 
+   * _initial_ sets the starting value of the counter and determines how many threads may call 
+   * `acquire()` before any blocking occurs. _max_ caps how high `release()` may raise the counter, 
+   * preventing over-release bugs.
+   * 
+   * When called with no arguments a binary semaphore is created (`initial = 1`, `max = 1`).
+   * 
+   * When called with only _initial_, `max` is set equal to _initial_ (for `initial > 0`) or `1` 
+   * (for `initial == 0`), so `Semaphore(4)` gives a counting semaphore that allows 4 concurrent 
+   * acquirers.
+   * 
+   * ```blade
+   * var binary   = thread.Semaphore()      # initial=1, max=1
+   * var counting = thread.Semaphore(4)     # initial=4, max=4
+   * var custom   = thread.Semaphore(0, 8)  # starts locked, max=8
+   * ```
+   * 
+   * If the initial or maximum values are not numbers, or if they violate the constraints mentioned 
+   * above, an exception will be thrown.
+   * 
+   * @param {number?} initial - Starting counter value (default: `1`). Must be `>= 0`.
+   * @param {number?} max - Maximum counter value (default: `1`). Must be `> 0`.
+   * @throws {Exception}
+   * @constructor
+   */
+  Semaphore(initial, max) {
+    if !initial initial = 1
+    if !max max = initial > 0 ? initial : 1
+
+    if initial != nil and !is_number(initial) {
+      raise Exception('Initial value must be a number')
+    } else if max != nil and !is_number(max) {
+      raise Exception('Max value must be a number')
+    }
+
+    if initial < 0 or max <= 0 or initial > max {
+      raise Exception('Invalid semaphore parameters')
+    }
+
+    self._ptr = _thread.new_semaphore(initial, max)
+  }
+
+
+  /**
+   * Acquires one permit from the semaphore, blocking until one is available.
+   * 
+   * If the counter is greater than zero it is decremented immediately and `acquire()` returns. 
+   * If the counter is zero the calling thread is suspended by the OS until another thread calls 
+   * `release()`, at which point one waiting thread is woken and given the permit.
+   * 
+   * ```blade
+   *   sem.acquire()
+   *   # ... at most `max` threads are here simultaneously ...
+   *   sem.release()
+   * ```
+   */
+  acquire() {
+    _thread.semaphore_acquire(self._ptr)
+  }
+
+  /**
+   * Returns one permit to the semaphore, waking one waiting thread if any.
+   * 
+   * Increments the internal counter by one. If one or more threads are blocked in `acquire()`, 
+   * exactly one of them is woken by the OS and will decrement the counter.
+   * 
+   * Raises an exception if calling `release()` would cause the counter to exceed the _max_ 
+   * value set at construction. This catches common bugs where `release()` is called more times 
+   * than `acquire()`.
+   * 
+   * ```blade
+   *   sem.acquire()
+   *   do_work()
+   *   sem.release()
+   * ```
+   */
+  release() {
+    _thread.semaphore_release(self._ptr)
+  }
+
+  /**
+   * Attempts to acquire a permit without blocking.
+   * 
+   * Decrements the counter and returns `true` if the counter was greater than zero. Returns 
+   * `false` immediately if the counter is zero, without suspending the calling thread.
+   * 
+   * ```blade
+   *   if sem.try_acquire() {
+   *     do_work()
+   *     sem.release()
+   *   } else {
+   *     echo 'all permits in use, skipping'
+   *   }
+   * ```
+   * 
+   * @returns {boolean} - `true` if the permit was acquired, `false` otherwise.
+   */
+  try_acquire() {
+    return _thread.semaphore_try_acquire(self._ptr)
+  }
+
+  /**
+   * Returns the current value of the semaphore counter.
+   * 
+   * This is the number of additional `acquire()` calls that can succeed without blocking 
+   * right now. A value of `0` means the next `acquire()` will block.
+   * 
+   * The returned value is a snapshot and may be stale immediately after this method returns
+   * if other threads are concurrently calling `acquire()` or `release()`.
+   * 
+   * ```blade
+   *   echo 'permits available: ${sem.count()}'
+   * ```
+   * 
+   * @returns {number} - The current value of the semaphore counter.
+   */
+  count() {
+    return _thread.semaphore_count(self._ptr)
+  }
+
+  /**
+   * Returns the maximum counter value as set at construction time.
+   * 
+   * This is the upper bound that `release()` will not allow the counter to exceed. For a 
+   * binary semaphore this is always `1`; for a counting semaphore it is the value passed 
+   * as _max_ (or _initial_ when _max_ was omitted).
+   * 
+   * ```blade
+   *   echo 'max concurrent permits: ${sem.max()}'
+   * ```
+   * 
+   * @returns {number} - The maximum counter value as set at construction time.
+   */
+  max() {
+    return _thread.semaphore_max(self._ptr)
+  }
+}

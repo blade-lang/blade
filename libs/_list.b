@@ -1,0 +1,565 @@
+# -- Extensions for the builtin list object
+
+import math
+
+# TODO: Add support for non-numeric types and custom comparators
+def _default_comparator(a, b) {
+  if is_number(a) and is_number(b) {
+    return a > b
+  } else if is_string(a) and is_string(b) {
+    return ord(a) > ord(b)
+  } else {
+    raise Exception('Default comparator only supports numbers and strings. You must provide a custom comparator for other types.')
+  }
+}
+
+var _MIN_MERGE = 32
+
+def _min_run_length(n) {
+  var r = 0
+  while n >= _MIN_MERGE {
+    r |= (n & 1)
+    n >>= 1
+  }
+  return n + r
+}
+
+def _binary_insertion_sort(arr, left, right, comparator) {
+  for i in (left + 1)..(right + 1) {
+    var val = arr[i]
+    var l = left
+    var r = i - 1
+
+    while l <= r {
+      var mid = (l + r) >> 1
+      # Use comparator: val < arr[mid]
+      if !comparator(val, arr[mid]) {
+        r = mid - 1
+      } else {
+        l = mid + 1
+      }
+    }
+
+    var j = i
+    while j > l {
+      arr[j] = arr[j - 1]
+      j--
+    }
+    arr[l] = val
+  }
+}
+
+# PLUG 2: Pass 'comparator' here
+def _merge(arr, l, m, r, temp_buffer, comparator) {
+  var len1 = m - l + 1
+  var len2 = r - m
+
+  for i in 0..len1 {
+    temp_buffer[i] = arr[l + i]
+  }
+
+  var i = 0
+  var j = m + 1
+  var k = l
+
+  while i < len1 and j <= r {
+    # Use comparator: temp_buffer[i] <= arr[j]
+    # We check <= 0 to maintain stability
+    if !comparator(temp_buffer[i], arr[j]) {
+      arr[k] = temp_buffer[i]
+      i++
+    } else {
+      arr[k] = arr[j]
+      j++
+    }
+    k++
+  }
+
+  while i < len1 {
+    arr[k] = temp_buffer[i]
+    k++
+    i++
+  }
+}
+
+class _ListExtension > list {
+
+  /**
+   * Sorts the list in place using Timsort.
+   *
+   * The `isort` method returns the same list that it is called on.
+   *
+   * @param {function|nil} comparator Optional comparator function to use for sorting.
+   * @default Uses default comparator.
+   * @returns {list}
+   *
+   * Example:
+   *
+   * ```blade
+   * echo [5, 2, 9, 1].isort()
+   *
+   * # Output: [1, 2, 5, 9]
+   * ```
+   *
+   * The `isort` method modifies the original list and returns it. If you want to keep the
+   * original list unchanged, you can create a copy of it before sorting:
+   *
+   * ```blade
+   * var original = [5, 2, 9, 1]
+   * var sorted = original.isort()
+   * echo sorted
+   *
+   * # Output: [1, 2, 5, 9]
+   * ```
+   *
+   * The `isort` method is stable, meaning that it maintains the relative order of elements
+   * with equal keys.
+   */
+  static isort(comparator) {
+    # Timsort implementation in Blade
+    # Ported for performance and stability
+
+    if !comparator comparator = _default_comparator
+    if comparator != nil and !is_function(comparator) {
+      raise Exception('Comparator must be a function.')
+    }
+
+    var arr = self
+
+    var n = arr.length()
+    if (n < 2) return arr
+
+    var min_run = _min_run_length(n)
+
+    for i in 0..n.step(min_run) {
+      _binary_insertion_sort(arr, i, min(i + min_run - 1, n - 1), comparator)
+    }
+
+    var temp_buffer = [nil] * (n / 2 + 1)
+
+    var size = min_run
+    while size < n {
+      for left in 0..n.step(2 * size) {
+        var mid = left + size - 1
+        var right = min(left + 2 * size - 1, n - 1)
+
+        if mid < right {
+          _merge(arr, left, mid, right, temp_buffer, comparator)
+        }
+      }
+      size *= 2
+    }
+
+    return self
+  }
+
+  /**
+   * Iterates over each element in the list, calling the provided callback function with
+   * the current element as an argument.
+   *
+   * @param {function} callback The function to execute for each element in the list.
+   * @throws {Exception} if the callback is not a function.
+   *
+   * Example:
+   *
+   * ```blade
+   * ['A', 'B', 'C'].each(@(r) {
+   *   echo r
+   * })
+   *
+   * # Output: A B C
+   * ```
+   *
+   * > The `each` method does not return a new list; it simply executes the callback for each element.
+   * > If you want to create a new list based on the original, consider using the `map` method instead.
+   */
+  static each(callback) {
+    if !is_function(callback) {
+      raise Exception('Callback must be a function')
+    }
+
+    for item in self {
+      callback(item)
+    }
+  }
+
+  /**
+   * Creates a new list populated with the results of calling a provided function on every
+   * element in the calling list.
+   *
+   * @param {function} callback The function to execute on each element in the list. It receives the current
+   *    element and its index as arguments.
+   * @throws {Exception} if the callback is not a function.
+   * @returns {list}
+   *
+   * Example:
+   *
+   * ```blade
+   * echo [1, 2, 3].map(@(x) {
+   *   return x * 2
+   * })
+   *
+   * # Output: [2, 4, 6]
+    * ```
+   */
+  static map(callback) {
+    if !is_function(callback) {
+      raise Exception('Callback must be a function')
+    }
+
+    var result = []
+    for index, item in self {
+      result.append(callback(item, index))
+    }
+
+    return result
+  }
+
+  /**
+   * Creates a new list with all elements that pass the test implemented by the provided function.
+   *
+   * It returns a new list with the elements that pass the test. If no elements pass the test, an
+   * empty list will be returned.
+   *
+   * @param {function} callback The function to test each element of the list. It receives the current
+   *    element and its index as arguments.
+   * @throws {Exception} if the callback is not a function.
+   * @returns {list}
+   *
+   * Example:
+   *
+   * ```blade
+   * echo [1, 2, 3].filter(@(x) {
+   *   return x % 2 == 0
+   * })
+   *
+   * # Output: [2]
+   * ```
+   */
+  static filter(callback) {
+    if !is_function(callback) {
+      raise Exception('Callback must be a function')
+    }
+
+    var result = []
+    for index, item in self {
+      if callback(item, index) {
+        result.append(item)
+      }
+    }
+
+    return result
+  }
+
+  /**
+   * Applies a function against an accumulator and each element in the list (from left to right) to
+   * reduce it to a single value and returns the accumulated result of the callback function.
+   *
+   * @param {function} callback The function to execute on each element in the list. It receives the current
+   *    element and its index as arguments.
+   * @throws {Exception} if the callback is not a function.
+   * @param initial The initial value to use as the accumulator. If no initial value is provided, the
+   *    first element of the list will be used as the initial accumulator, and the iteration will start
+   *    from the second element.
+   * @returns {any}
+   *
+   * Example:
+   *
+   * ```blade
+   * echo [1, 2, 3].reduce(@(acc, x) {
+   *   return acc + x
+   * }, 0)
+   *
+   * # Output: 6
+   * ```
+   */
+  static reduce(callback, initial) {
+    if !is_function(callback) {
+      raise Exception('Callback must be a function')
+    }
+
+    var accumulator = initial
+    for index, item in self {
+      accumulator = callback(accumulator, item, index, self)
+    }
+
+    return accumulator
+  }
+
+  /**
+   * Tests whether at least one element in the list passes the test implemented by the provided function.
+   *
+   * @param {function} callback The function to test each element of the list. It receives the current
+   *    element and its index as arguments.
+   * @throws {Exception} if the callback is not a function.
+   * @returns {boolean}
+   *
+   * Example:
+   *
+   * ```blade
+   * echo [1, 2, 3].some(@(x) {
+   *   return x % 2 == 0
+   * })
+   *
+   * # Output: true
+   * ```
+   *
+   * The `some` method returns `true` if the callback function returns a truthy value for at least one
+   * element in the list. If the callback function returns a falsy value for all elements, `some` will
+   * return `false`. If the list is empty, `some` will return `false` by default.
+   */
+  static some(callback) {
+    if !is_function(callback) {
+      raise Exception('Callback must be a function')
+    }
+
+    for index, item in self {
+      if callback(item, index) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  /**
+   * Tests whether all elements in the list pass the test implemented by the provided function.
+   *
+   * @param {function} callback The function to test each element of the list. It receives the current
+   *    element and its index as arguments.
+   * @throws {Exception} if the callback is not a function.
+   * @returns {boolean}
+   *
+   * Example:
+   *
+   * ```blade
+   * echo [1, 2, 3].every(@(x) {
+   *   return x > 0
+   * })
+   *
+   * # Output: true
+   * ```
+   *
+   * The `every` method returns `true` if the callback function returns a truthy value for every
+   * element in the list. If the callback function returns a falsy value for any element, `every`
+   * will return `false`. If the list is empty, `every` will return `true` by default.
+   */
+  static every(callback) {
+    if !is_function(callback) {
+      raise Exception('Callback must be a function')
+    }
+
+    for index, item in self {
+      if !callback(item, index) {
+        return false
+      }
+    }
+
+    return true
+  }
+
+  /**
+   * Returns the value of the first element in the list that satisfies the provided testing function. If no
+   * elements satisfy the testing function, `find` returns `nil`.
+   *
+   * @param {function} callback The function to test each element of the list. It receives the current
+   *    element and its index as arguments.
+   * @throws {Exception} if the callback is not a function.
+   * @returns {list}
+   *
+   * Example:
+   *
+   * ```blade
+   * echo [1, 2, 3].find(@(x) {
+   *   return x % 2 == 0
+   * })
+   *
+   * # Output: 2
+   * ```
+   */
+  static find(callback) {
+    if !is_function(callback) {
+      raise Exception('Callback must be a function')
+    }
+
+    for index, item in self {
+      if callback(item, index) {
+        return item
+      }
+    }
+
+    return nil
+  }
+
+  /**
+   * Returns the index of the first element in the list that satisfies the provided testing function. If no
+   * elements satisfy the testing function, `find_index` returns `-1`.
+   *
+   * @param {function} callback The function to test each element of the list. It receives the current
+   *    element and its index as arguments.
+   * @throws {Exception} if the callback is not a function.
+   * @returns {list}
+   *
+   * Example:
+   *
+   * ```blade
+   * echo [1, 2, 3].find_index(@(x) {
+   *   return x % 2 == 0
+   * })
+   *
+   * # Output: 1
+   * ```
+   */
+  static find_index(callback) {
+    if !is_function(callback) {
+      raise Exception('Callback must be a function')
+    }
+
+    for index, item in self {
+      if callback(item, index) {
+        return index
+      }
+    }
+
+    return -1
+  }
+
+  /**
+   * Returns the value of the last element in the list that satisfies the provided testing function. If no
+   * elements satisfy the testing function, `find_last` returns `nil`.
+   *
+   * @param {function} callback The function to test each element of the list. It receives the current
+   *    element and its index as arguments.
+   * @throws {Exception} if the callback is not a function.
+   * @returns {list}
+   *
+   * Example:
+   *
+   * ```blade
+   * echo [1, 2, 3].find_last(@(x) {
+   *   return x % 2 == 0
+   * })
+   *
+   * # Output: 2
+   * ```
+   */
+  static find_last(callback) {
+    if !is_function(callback) {
+      raise Exception('Callback must be a function')
+    }
+
+    for index in (self.length() - 1)..0 {
+      var item = self[index]
+      if callback(item, index) {
+        return item
+      }
+    }
+
+    return nil
+  }
+
+  /**
+   * Returns the index of the last element in the list that satisfies the provided testing function. If no
+   * elements satisfy the testing function, `find_last_index` returns `-1`.
+   *
+   * @param {function} callback The function to test each element of the list. It receives the current
+   *    element and its index as arguments.
+   * @throws {Exception} if the callback is not a function.
+   * @returns {list}
+   *
+   * Example:
+   *
+   * ```blade
+   * echo [1, 2, 3].find_last_index(@(x) {
+   *   return x % 2 == 0
+   * })
+   *
+   * # Output: 1
+   * ```
+   */
+  static find_last_index(callback) {
+    if !is_function(callback) {
+      raise Exception('Callback must be a function')
+    }
+
+    for index in (self.length() - 1)..0 {
+      var item = self[index]
+      if callback(item, index) {
+        return index
+      }
+    }
+
+    return -1
+  }
+
+  /**
+   * Returns a new list containing all elements of the calling list that satisfy the provided testing function.
+   *
+   * @param {function} callback The function to test each element of the list. It receives the current
+   *    element and its index as arguments.
+   * @throws {Exception} if the callback is not a function.
+   * @returns {list}
+   *
+   * Example:
+   *
+   * ```blade
+   * echo [1, 2, 3].find_all(@(x) {
+   *   return x % 2 == 0
+   * })
+   *
+   * # Output: [2]
+   * ```
+   */
+  static find_all(callback) {
+    if !is_function(callback) {
+      raise Exception('Callback must be a function')
+    }
+
+    var result = []
+    for index, item in self {
+      if callback(item, index) {
+        result.append(item)
+      }
+    }
+
+    return result
+  }
+
+  /**
+   * Returns an list containing two lists: the first with elements that satisfy the provided testing function,
+   * and the second with elements that do not satisfy the testing function.
+   *
+   * @param {function} callback The function to test each element of the list. It receives the current
+   *    element and its index as arguments.
+   * @throws {Exception} if the callback is not a function.
+   * @returns {list}
+   *
+   * Example:
+   *
+   * ```blade
+   * echo [1, 2, 3].partition(@(x) {
+   *   return x % 2 == 0
+   * })
+   *
+   * # Output: [[2], [1, 3]]
+   * ```
+   */
+  static partition(callback) {
+    if !is_function(callback) {
+      raise Exception('Callback must be a function')
+    }
+
+    var true_partition = []
+    var false_partition = []
+
+    for index, item in self {
+      if callback(item, index) {
+        true_partition.append(item)
+      } else {
+        false_partition.append(item)
+      }
+    }
+
+    return [true_partition, false_partition]
+  }
+}

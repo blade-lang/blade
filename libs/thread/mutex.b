@@ -1,0 +1,177 @@
+#!-- Part of the Blade Thread Library. See LICENSE for details. --!
+import _thread
+
+
+/**
+ * This class represents a mutex (mutual exclusion) object that can be used to synchronize 
+ * access to shared resources. It provides methods to lock and unlock the mutex, as well as 
+ * to try to lock it without blocking.
+ * 
+ * A mutex is a synchronization primitive used to protect shared resources from concurrent 
+ * access by multiple threads. It allows only one thread to access a resource at a time, 
+ * ensuring that critical sections of code that access shared resources are executed by only 
+ * one thread.
+ * 
+ * Mutexes are useful in scenarios where multiple threads need to coordinate their access to 
+ * shared resources, such as when multiple threads are reading and writing to a shared buffer 
+ * or when multiple threads are updating a shared state.
+ * 
+ * > A `Mutex` is the correct tool whenever two or more threads read and write shared mutable 
+ * > state. Always release the lock with `unlock()` after the critical section completes. 
+ * > Use a `catch` block to guarantee `unlock()` is called even if an exception is raised:
+ * 
+ * Example:
+ * 
+ * ```blade
+ * import thread
+ * 
+ * var mu = thread.Mutex()
+ * var count = 0
+ * 
+ * var t1 = thread.start(@(t) {
+ *   mu.lock()
+ *   count++
+ *   mu.unlock()
+ * })
+ * 
+ * var t2 = thread.start(@(t) {
+ *   mu.lock()
+ *   count++
+ *   mu.unlock()
+ * })
+ * 
+ * t1.await()
+ * t2.await()
+ * echo count   # always 2
+ * ```
+ * 
+ * > **NOTE:** 
+ * > 
+ * > A `Mutex` is **not re-entrant**. Calling `lock()` from a thread that already 
+ * > holds the lock will deadlock that thread.
+ * 
+ * The Mutex class provides the following methods:
+ * 
+ * - `.lock()`              — acquire (blocks until available)
+ * - `.unlock()`            — release
+ * - `.try_lock()`  → bool  — non-blocking acquire attempt
+ * - `.is_locked()` → bool  — query state (advisory only)
+ */
+class Mutex {
+
+  # the real mutex pointer
+  var _ptr
+  
+  /**
+   * Creates a new unlocked mutex object.
+   * 
+   * Example:
+   * 
+   * ```blade
+   *   var mu = thread.Mutex()
+   * ```
+   * 
+   * @constructor
+   */
+  Mutex() {
+    self._ptr = _thread.new_mutex()
+  }
+
+  /**
+   * Acquires the lock, suspending the calling thread until the lock is available.
+   * 
+   * If no other thread currently holds the lock, `lock()` returns immediately. If the lock 
+   * is held, the calling thread is put to sleep by the OS and woken automatically when the 
+   * holder calls `unlock()`. There is no timeout; for a non-blocking attempt use `try_lock()`.
+   * 
+   * Every call to `lock()` must be paired with exactly one call to `unlock()`. Failing to 
+   * call `unlock()` will leave all other threads that attempt to `lock()` suspended 
+   * indefinitely (deadlock).
+   * 
+   * Example:
+   * 
+   * ```blade
+   *   mu.lock()
+   *   # ... critical section ...
+   *   mu.unlock()
+   * ```
+   * 
+   * > **NOTE:** This method must not be called from the thread that already holds the lock. 
+   * > Doing so will deadlock that thread.
+   * 
+   * @returns {void}
+   */
+  lock() {
+    _thread.mutex_lock(self._ptr)
+  }
+
+  /**
+   * Releases the lock, allowing one waiting thread to acquire it.
+   * 
+   * If one or more threads are suspended in `lock()`, exactly one of them will be woken by the 
+   * OS and will acquire the lock. The order in which waiting threads are woken is determined by 
+   * the OS scheduler.
+   * 
+   * `unlock()` must only be called by the thread that currently holds the lock. Calling it from 
+   * a non-holder thread, or calling it when the lock is not held, is a programming error and 
+   * will raise an exception.
+   * 
+   * Example:
+   * 
+   * ```blade
+   *   mu.lock()
+   *   do_work()
+   *   mu.unlock()
+   * ```
+   * 
+   * @returns {void}
+   */
+  unlock() {
+    _thread.mutex_unlock(self._ptr)
+  }
+
+  /**
+   * Attempts to acquire the lock without blocking.
+   * 
+   * Returns `true` and acquires the lock if it is currently unheld. Returns `false` immediately 
+   * if the lock is already held by another thread. The calling thread is never suspended.
+   * 
+   * This is useful when you want to do alternative work rather than wait:
+   * 
+   * ```blade
+   *   if mu.try_lock() {
+   *     do_critical_work()
+   *     mu.unlock()
+   *   } else {
+   *     do_other_work()
+   *   }
+   * ```
+   * 
+   * @returns {boolean} `true` if the lock was successfully acquired, `false` otherwise.
+   */
+  try_lock() {
+    return _thread.mutex_try_lock(self._ptr)
+  }
+
+  /**
+   * Returns `true` if the lock is currently held by any thread, `false` otherwise.
+   * 
+   * > **NOTE:** 
+   * > 
+   * > This method is **advisory only**. Because another thread may acquire or release the 
+   * > lock at any moment, the returned value may be stale by the time the caller acts on it. 
+   * > 
+   * > Do not use `is_locked()` as a substitute for `try_lock()` or `lock()`.
+   * 
+   * ```blade
+   * if mu.is_locked() {
+   *   echo 'lock is held'
+   * }
+   * ```
+   * 
+   * @returns {boolean} `true` if the lock is held, `false` otherwise.
+   */
+  is_locked() {
+    return _thread.mutex_is_locked(self._ptr)
+  }
+}

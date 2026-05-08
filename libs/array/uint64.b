@@ -1,4 +1,5 @@
 import _struct
+import ._base { Array }
 
 
 /**
@@ -16,7 +17,7 @@ var UINT64_MAX = 18446744073709551615
  * @iterable
  * @serializable
  */
-class UInt64Array {
+class UInt64Array < Array {
 
   var _data
   var _bit_size = 8
@@ -49,58 +50,6 @@ class UInt64Array {
   }
 
   /**
-   * Returns the number of items in the array. 
-   * 
-   * @returns number
-   */
-  length() {
-    return self._data.length() // self._bit_size
-  }
-
-  /**
-   * Returns the length of the array if it were to be converted to bytes.
-   * 
-   * @returns number
-   */
-  bytes_length() {
-    return self._data.length()
-  }
-
-  /**
-   * Returns the first item in the array or nil if the array is empty.
-   * 
-   * @returns number?
-   */
-  first() {
-    if self.length() > 0 {
-      return _struct.unpack(
-        self._data_type, 
-        self._data[,self._bit_size], 
-        0
-      ).values().first()
-    }
-
-    return nil
-  }
-
-  /**
-   * Returns the last item in the array or nil if the array is empty.
-   * 
-   * @returns number?
-   */
-  last() {
-    if self.length() > 0 {
-      return _struct.unpack(
-        self._data_type, 
-        self._data[self._data.length() - self._bit_size,], 
-        0
-      ).values().first()
-    }
-
-    return nil
-  }
-
-  /**
    * Adds the given _value_ to the end of the array.
    * 
    * @param int value
@@ -114,30 +63,6 @@ class UInt64Array {
     var as_bytes = _struct.pack(self._data_type, [value])
     self._data.extend(as_bytes)
     as_bytes.dispose()
-  }
-
-  /**
-   * Returns the number at the specified index in the array. If index is 
-   * outside the boundary of the array indexes (0..(array.length() - 1)), 
-   * an exception is thrown.
-   * 
-   * @param number index
-   * @returns number
-   */
-  get(index) {
-    if !is_number(index)
-      raise ArgumentError('Arrays are numerically indexed')
-
-    if self.length() > index {
-      var start = index * self._bit_size
-      return _struct.unpack(
-        self._data_type, 
-        self._data[start, start + self._bit_size], 
-        0
-      ).values().first()
-    }
-
-    return nil
   }
 
   _do_set(start, as_bytes) {
@@ -212,76 +137,5 @@ class UInt64Array {
    */
   clone() {
     return UInt64Array(self.to_list())
-  }
-
-  /**
-   * Removes the last element in the array and returns the value of that item.
-   * 
-   * @returns number?
-   */
-  pop() {
-    var last = self.last()
-    if last != nil {
-      self._data = self._data[,-self._bit_size]
-    }
-
-    return last
-  }
-
-  /**
-   * Returns the array as a bytes object.
-   * 
-   * @returns bytes
-   */
-  to_bytes() {
-    return self._data.clone()
-  }
-
-  /**
-   * Returns the elements of the array as a list of numbers.
-   * 
-   * @returns list
-   */
-  to_list() {
-    return _struct.unpack(
-      '${self._data_type}${self.length()}', 
-      self._data, 
-      0
-    ).values()
-  }
-
-  /**
-   * Returns a string representation of the array.
-   * 
-   * @returns string
-   */
-  to_string() {
-    return self._data.to_string()
-  }
-
-  @to_string() {
-    return self.to_string()
-  }
-
-  @to_list() {
-    return self.to_list()
-  }
-
-  @to_json() {
-    return self.to_list()
-  }
-
-  @iter(n) {
-    if !is_number(n)
-      raise ArgumentError('Arrays are numerically indexed')
-    return self.get(n)
-  }
-
-  @itern(n) {
-    if index == nil return 0
-    if !is_number(index)
-      raise ArgumentError('Arrays are numerically indexed')
-    if index < self.length() - 1 return index + 1
-    return nil
   }
 }

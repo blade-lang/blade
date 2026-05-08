@@ -6,7 +6,7 @@ def fib(n) {
 }
 
 var start = microtime()
-for i in 0..32 {
+for i in 0..40 {
     fib(i)
 }
 var non_thread_time = microtime() - start
@@ -15,7 +15,7 @@ var non_thread_time = microtime() - start
 start = microtime()
 
 var thrds = []
-for i in 0..4 {
+for i in 0..5 {
     thrds.append(
         thread.start(@(t, i){
             for j in (i * 8)..((i * 8) + 8) {

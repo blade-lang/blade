@@ -2,14 +2,12 @@
 
 DECLARE_RANGE_METHOD(lower) {
   ENFORCE_ARG_COUNT(lower, 0);
-  b_obj_range *range = AS_RANGE(METHOD_OBJECT);
-  RETURN_NUMBER(range->upper > range->lower ? range->lower : range->upper);
+  RETURN_NUMBER(AS_RANGE(METHOD_OBJECT)->lower);
 }
 
 DECLARE_RANGE_METHOD(upper) {
   ENFORCE_ARG_COUNT(upper, 0);
-  b_obj_range *range = AS_RANGE(METHOD_OBJECT);
-  RETURN_NUMBER(range->upper > range->lower ? range->upper : range->lower);
+  RETURN_NUMBER(AS_RANGE(METHOD_OBJECT)->upper);
 }
 
 DECLARE_RANGE_METHOD(range) {
@@ -37,6 +35,11 @@ DECLARE_RANGE_METHOD(step) {
   const int number = (int)AS_NUMBER(args[0]);
   range->step = number;
   RETURN_VALUE(METHOD_OBJECT);
+}
+
+DECLARE_RANGE_METHOD(get_step) {
+  ENFORCE_ARG_COUNT(get_step, 0);
+  RETURN_NUMBER(AS_RANGE(METHOD_OBJECT)->step);
 }
 
 DECLARE_RANGE_METHOD(__iter__) {

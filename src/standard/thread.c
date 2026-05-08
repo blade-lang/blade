@@ -1,5 +1,6 @@
 #include "module.h"
 #include <pthread.h>
+#include <asm-generic/errno-base.h>
 
 #ifdef __linux__
 #include <sys/syscall.h>
@@ -143,12 +144,73 @@ int pthread_sigmask2(int how, const sigset_t *set, sigset_t *oldset) {
 }
 #endif
 
+#define B_THREAD_MUTEX_NAME "Thread::Mutex"
+#define B_THREAD_CHANNEL_NAME "Thread::Channel"
+#define B_THREAD_SEMAPHORE_NAME "Thread::Semaphore"
+
 typedef struct {
   pthread_t thread;
   b_vm *vm;
   b_obj_closure *closure;
   b_obj_list *args;
 } b_thread_handle;
+
+typedef struct {
+  pthread_mutex_t mu;
+  int locked;          /* advisory flag for is_locked() */
+} b_thread_mutex;
+
+typedef struct {
+  pthread_mutex_t  mu;
+  pthread_cond_t   not_full;   /* signalled when an item is removed        */
+  pthread_cond_t   not_empty;  /* signalled when an item is added          */
+  b_value         *buf;        /* ring buffer of b_value                   */
+  int              cap;        /* capacity (0 = unbuffered)                */
+  int              head;       /* index of oldest item                     */
+  int              count;      /* number of items currently buffered       */
+  int              closed;
+  /* For unbuffered (rendezvous) channels we use a single-slot hand-off. */
+  int              sender_waiting;
+  int              receiver_waiting;
+  b_value          rendezvous_value;
+  int              rendezvous_taken;
+} b_thread_channel;
+
+typedef struct {
+  pthread_mutex_t mu;
+  pthread_cond_t  cond;
+  int             count;
+  int             max;
+} b_thread_semaphore;
+
+static void b_thread_mutex_finalizer(void *ptr) {
+  if (ptr) {
+    b_thread_mutex *m = (b_thread_mutex *)ptr;
+    pthread_mutex_destroy(&m->mu);
+    free(m);
+  }
+}
+
+static void b_thread_channel_finalizer(void *ptr) {
+  if (ptr) {
+    b_thread_channel *c = (b_thread_channel *)ptr;
+    pthread_cond_destroy(&c->not_full);
+    pthread_cond_destroy(&c->not_empty);
+    pthread_mutex_destroy(&c->mu);
+    if (c->buf) free(c->buf);
+    free(c);
+  }
+}
+
+static void b_thread_semaphore_finalizer(void *ptr) {
+  if (ptr) {
+    b_thread_semaphore *s = (b_thread_semaphore *)ptr;
+    pthread_cond_destroy(&s->cond);
+    pthread_mutex_destroy(&s->mu);
+    free(s);
+  }
+}
+
 
 static uint64_t last_thread_vm_id = 0;
 
@@ -454,6 +516,421 @@ DECLARE_MODULE_METHOD(thread__is_alive) {
   RETURN_BOOL(thread != NULL && thread->vm != NULL);
 }
 
+// MUTEX IMPL.
+
+DECLARE_MODULE_METHOD(thread__new_mutex) {
+  ENFORCE_ARG_COUNT(new, 0);
+
+  b_thread_mutex *m = (b_thread_mutex *)malloc(sizeof(b_thread_mutex));
+  if (!m) RETURN_ERROR("out of memory");
+
+  pthread_mutexattr_t attr;
+  pthread_mutexattr_init(&attr);
+  /* PTHREAD_MUTEX_ERRORCHECK gives us deadlock detection in debug builds. */
+  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
+  int rc = pthread_mutex_init(&m->mu, &attr);
+  pthread_mutexattr_destroy(&attr);
+
+  if (rc != 0) {
+    free(m);
+    RETURN_ERROR("MutexStatus: %d", rc);
+  }
+
+  m->locked = 0;
+  RETURN_CLOSABLE_NAMED_PTR(m, B_THREAD_MUTEX_NAME, b_thread_mutex_finalizer);
+}
+
+DECLARE_MODULE_METHOD(thread__mutex_lock) {
+  ENFORCE_ARG_COUNT(lock, 1);
+  b_thread_mutex *m = (b_thread_mutex *)AS_PTR(args[0])->pointer;
+  if (!m) RETURN_ERROR("invalid instance");
+
+  int rc = pthread_mutex_lock(&m->mu);
+  if (rc != 0) {
+    RETURN_ERROR("MutexStatus: %d", rc);
+  }
+  m->locked = 1;
+  RETURN_NIL;
+}
+
+DECLARE_MODULE_METHOD(thread__mutex_unlock) {
+  ENFORCE_ARG_COUNT(unlock, 1);
+  b_thread_mutex *m = (b_thread_mutex *)AS_PTR(args[0])->pointer;
+  if (!m) RETURN_ERROR("invalid instance");
+
+  m->locked = 0;
+  int rc = pthread_mutex_unlock(&m->mu);
+  if (rc != 0) {
+    RETURN_ERROR("MutexStatus: %d", rc);
+  }
+  RETURN_NIL;
+}
+
+DECLARE_MODULE_METHOD(thread__mutex_try_lock) {
+  ENFORCE_ARG_COUNT(try_lock, 1);
+  b_thread_mutex *m = (b_thread_mutex *)AS_PTR(args[0])->pointer;
+  if (!m) RETURN_ERROR("invalid instance");
+
+  int rc = pthread_mutex_trylock(&m->mu);
+  if (rc == 0) {
+    m->locked = 1;
+    RETURN_BOOL(true);
+  } else if (rc == EBUSY) {
+    RETURN_BOOL(false);
+  } else {
+    RETURN_ERROR("MutexStatus: %d", rc);
+  }
+}
+
+DECLARE_MODULE_METHOD(thread__mutex_is_locked) {
+  ENFORCE_ARG_COUNT(is_locked, 1);
+  b_thread_mutex *m = (b_thread_mutex *)AS_PTR(args[0])->pointer;
+  if (!m) RETURN_ERROR("invalid instance");
+  RETURN_BOOL(m->locked != 0);
+}
+
+// CHANNEL IMPL.
+DECLARE_MODULE_METHOD(thread__new_channel) {
+  ENFORCE_ARG_RANGE(new, 0, 1);
+
+  int cap = 0;
+  if (arg_count == 1) {
+    ENFORCE_ARG_TYPE(new, 0, IS_NUMBER);
+    cap = (int)AS_NUMBER(args[0]);
+    if (cap < 0) RETURN_ERROR("capacity must be >= 0");
+  }
+
+  b_thread_channel *c = (b_thread_channel *)calloc(1, sizeof(b_thread_channel));
+  if (!c) RETURN_ERROR("out of memory");
+
+  if (cap > 0) {
+    c->buf = (b_value *)malloc(sizeof(b_value) * cap);
+    if (!c->buf) {
+      free(c);
+      RETURN_ERROR("out of memory");
+    }
+  }
+
+  c->cap = cap;
+
+  int rc = pthread_mutex_init(&c->mu, NULL);
+  if (rc) {
+    free(c->buf);
+    free(c);
+    RETURN_ERROR("ChannelStatus: %d", rc);
+  }
+
+  rc = pthread_cond_init(&c->not_full, NULL);
+  if (rc) {
+    pthread_mutex_destroy(&c->mu);
+    free(c->buf);
+    free(c);
+    RETURN_ERROR("ChannelStatus: %d", rc);
+  }
+
+  rc = pthread_cond_init(&c->not_empty, NULL);
+  if (rc) {
+    pthread_cond_destroy(&c->not_full);
+    pthread_mutex_destroy(&c->mu);
+    free(c->buf);
+    free(c);
+    RETURN_ERROR("ChannelStatus: %d", rc);
+  }
+
+  RETURN_CLOSABLE_NAMED_PTR(c, B_THREAD_CHANNEL_NAME, b_thread_channel_finalizer);
+}
+
+DECLARE_MODULE_METHOD(thread__channel_send) {
+  ENFORCE_ARG_COUNT(send, 2);
+  b_thread_channel *c = (b_thread_channel *)AS_PTR(args[0])->pointer;
+  if (!c) RETURN_ERROR("invalid instance");
+
+  b_value val = args[1];
+
+  pthread_mutex_lock(&c->mu);
+
+  if (c->closed) {
+    pthread_mutex_unlock(&c->mu);
+    RETURN_ERROR("Cannot send on a closed Channel");
+  }
+
+  if (c->cap == 0) {
+    /* Unbuffered: park value and wait for a receiver. */
+    c->sender_waiting    = 1;
+    c->rendezvous_value  = val;
+    c->rendezvous_taken  = 0;
+    pthread_cond_signal(&c->not_empty);          /* wake a waiting receiver */
+
+    while (!c->rendezvous_taken && !c->closed) {
+      pthread_cond_wait(&c->not_full, &c->mu);   /* wait for receiver ACK   */
+    }
+    c->sender_waiting = 0;
+  } else {
+    /* Buffered: wait while full. */
+    while (c->count == c->cap && !c->closed) {
+      pthread_cond_wait(&c->not_full, &c->mu);
+    }
+    if (c->closed) {
+      pthread_mutex_unlock(&c->mu);
+      RETURN_ERROR("Cannot send on a closed Channel");
+    }
+
+    int tail = (c->head + c->count) % c->cap;
+    c->buf[tail] = val;
+    c->count++;
+    pthread_cond_signal(&c->not_empty);
+  }
+
+  pthread_mutex_unlock(&c->mu);
+  RETURN_NIL;
+}
+
+DECLARE_MODULE_METHOD(thread__channel_receive) {
+  ENFORCE_ARG_COUNT(receive, 1);
+  b_thread_channel *c = (b_thread_channel *)AS_PTR(args[0])->pointer;
+  if (!c) RETURN_ERROR("invalid instance");
+
+  b_value result = NIL_VAL;
+
+  pthread_mutex_lock(&c->mu);
+
+  if (c->cap == 0) {
+    /* Unbuffered: wait for a sender to park a value. */
+    c->receiver_waiting = 1;
+    while (!c->sender_waiting && !c->closed) {
+      pthread_cond_wait(&c->not_empty, &c->mu);
+    }
+    if (c->sender_waiting) {
+      result               = c->rendezvous_value;
+      c->rendezvous_taken  = 1;
+      c->sender_waiting    = 0;
+      pthread_cond_signal(&c->not_full);         /* wake the parked sender  */
+    }
+    /* else closed with no sender → return nil */
+    c->receiver_waiting = 0;
+  } else {
+    /* Buffered: wait while empty. */
+    while (c->count == 0 && !c->closed) {
+      pthread_cond_wait(&c->not_empty, &c->mu);
+    }
+    if (c->count > 0) {
+      result   = c->buf[c->head];
+      c->head  = (c->head + 1) % c->cap;
+      c->count--;
+      pthread_cond_signal(&c->not_full);
+    }
+    /* else closed + empty → return nil */
+  }
+
+  pthread_mutex_unlock(&c->mu);
+  RETURN_VALUE(result);
+}
+
+DECLARE_MODULE_METHOD(thread__channel_try_send) {
+  ENFORCE_ARG_COUNT(try_send, 2);
+  b_thread_channel *c = (b_thread_channel *)AS_PTR(args[0])->pointer;
+  if (!c) RETURN_ERROR("invalid instance");
+
+  pthread_mutex_lock(&c->mu);
+  int ok = 0;
+  if (!c->closed) {
+    b_value val = args[1];
+
+    if (c->cap == 0) {
+      /* Unbuffered: only succeeds if a receiver is already waiting. */
+      if (c->receiver_waiting) {
+        c->rendezvous_value = val;
+        c->rendezvous_taken = 1;
+        c->sender_waiting   = 1;
+        pthread_cond_signal(&c->not_full);
+        ok = 1;
+      }
+    } else if (c->count < c->cap) {
+      int tail = (c->head + c->count) % c->cap;
+      c->buf[tail] = val;
+      c->count++;
+      pthread_cond_signal(&c->not_empty);
+      ok = 1;
+    }
+  }
+
+  pthread_mutex_unlock(&c->mu);
+  RETURN_BOOL(ok);
+}
+
+DECLARE_MODULE_METHOD(thread__channel_try_receive) {
+  ENFORCE_ARG_COUNT(try_receive, 1);
+  b_thread_channel *c = (b_thread_channel *)AS_PTR(args[0])->pointer;
+  if (!c) RETURN_ERROR("invalid instance");
+
+  b_value result = NIL_VAL;
+
+  pthread_mutex_lock(&c->mu);
+  if (c->cap == 0) {
+    if (c->sender_waiting) {
+      result               = c->rendezvous_value;
+      c->rendezvous_taken  = 1;
+      c->sender_waiting    = 0;
+      pthread_cond_signal(&c->not_full);
+    }
+  } else if (c->count > 0) {
+    result   = c->buf[c->head];
+    c->head  = (c->head + 1) % c->cap;
+    c->count--;
+    pthread_cond_signal(&c->not_full);
+  }
+  pthread_mutex_unlock(&c->mu);
+  RETURN_VALUE(result);
+}
+
+DECLARE_MODULE_METHOD(thread__channel_close) {
+  ENFORCE_ARG_COUNT(close, 1);
+  b_thread_channel *c = (b_thread_channel *)AS_PTR(args[0])->pointer;
+  if (!c) RETURN_ERROR("invalid instance");
+
+  pthread_mutex_lock(&c->mu);
+  c->closed = 1;
+  /* Wake everyone so they see the closed flag. */
+  pthread_cond_broadcast(&c->not_empty);
+  pthread_cond_broadcast(&c->not_full);
+  pthread_mutex_unlock(&c->mu);
+  RETURN_NIL;
+}
+
+DECLARE_MODULE_METHOD(thread__channel_is_closed) {
+  ENFORCE_ARG_COUNT(is_closed, 1);
+  b_thread_channel *c = (b_thread_channel *)AS_PTR(args[0])->pointer;
+  if (!c) RETURN_ERROR("invalid instance");
+  RETURN_BOOL(c->closed != 0);
+}
+
+DECLARE_MODULE_METHOD(thread__channel_size) {
+  ENFORCE_ARG_COUNT(size, 1);
+  b_thread_channel *c = (b_thread_channel *)AS_PTR(args[0])->pointer;
+  if (!c) RETURN_ERROR("invalid instance");
+  pthread_mutex_lock(&c->mu);
+  int n = c->count;
+  pthread_mutex_unlock(&c->mu);
+  RETURN_NUMBER(n);
+}
+
+DECLARE_MODULE_METHOD(thread__channel_capacity) {
+  ENFORCE_ARG_COUNT(capacity, 1);
+  b_thread_channel *c = (b_thread_channel *)AS_PTR(args[0])->pointer;
+  if (!c) RETURN_ERROR("invalid instance");
+  RETURN_NUMBER(c->cap);
+}
+
+// SEMAPHORE IMPL.
+
+DECLARE_MODULE_METHOD(thread__new_semaphore) {
+  ENFORCE_ARG_RANGE(new, 0, 2);
+ 
+  int initial = 1, max = -1;
+ 
+  if (arg_count >= 1) {
+    ENFORCE_ARG_TYPE(new, 0, IS_NUMBER);
+    initial = (int)AS_NUMBER(args[0]);
+    if (initial < 0) RETURN_ERROR("initial count must be >= 0");
+  }
+  if (arg_count == 2) {
+    ENFORCE_ARG_TYPE(new, 1, IS_NUMBER);
+    max = (int)AS_NUMBER(args[1]);
+    if (max < initial) RETURN_ERROR("max must be >= initial");
+  } else {
+    max = initial > 0 ? initial : 1;
+  }
+ 
+  b_thread_semaphore *s = (b_thread_semaphore *)malloc(sizeof(b_thread_semaphore));
+  if (!s) RETURN_ERROR("out of memory");
+ 
+  int rc = pthread_mutex_init(&s->mu, NULL);
+  if (rc) {
+    free(s);
+    RETURN_ERROR("SemaphoreStatus: %d", rc);
+  }
+ 
+  rc = pthread_cond_init(&s->cond, NULL);
+  if (rc) {
+    pthread_mutex_destroy(&s->mu);
+    free(s);
+    RETURN_ERROR("SemaphoreStatus: %d", rc);
+  }
+ 
+  s->count = initial;
+  s->max   = max;
+
+  RETURN_CLOSABLE_NAMED_PTR(s, B_THREAD_SEMAPHORE_NAME, b_thread_semaphore_finalizer);
+}
+ 
+/* .acquire() — blocks until count > 0, then decrements */
+DECLARE_MODULE_METHOD(thread__semaphore_acquire) {
+  ENFORCE_ARG_COUNT(acquire, 1);
+  b_thread_semaphore *s = (b_thread_semaphore *)AS_PTR(args[0])->pointer;
+  if (!s) RETURN_ERROR("invalid instance");
+ 
+  pthread_mutex_lock(&s->mu);
+  while (s->count == 0) {
+    pthread_cond_wait(&s->cond, &s->mu);
+  }
+  s->count--;
+  pthread_mutex_unlock(&s->mu);
+  RETURN_NIL;
+}
+ 
+/* .release() — increments count and wakes one waiter */
+DECLARE_MODULE_METHOD(thread__semaphore_release) {
+  ENFORCE_ARG_COUNT(release, 1);
+  b_thread_semaphore *s = (b_thread_semaphore *)AS_PTR(args[0])->pointer;
+  if (!s) RETURN_ERROR("invalid instance");
+ 
+  pthread_mutex_lock(&s->mu);
+  if (s->count >= s->max) {
+    pthread_mutex_unlock(&s->mu);
+    RETURN_ERROR("count would exceed max");
+  }
+  s->count++;
+  pthread_cond_signal(&s->cond);
+  pthread_mutex_unlock(&s->mu);
+  RETURN_NIL;
+}
+ 
+/* .try_acquire() → bool */
+DECLARE_MODULE_METHOD(thread__semaphore_try_acquire) {
+  ENFORCE_ARG_COUNT(try_acquire, 1);
+  b_thread_semaphore *s = (b_thread_semaphore *)AS_PTR(args[0])->pointer;
+  if (!s) RETURN_ERROR("invalid instance");
+ 
+  pthread_mutex_lock(&s->mu);
+  int ok = 0;
+  if (s->count > 0) {
+    s->count--;
+    ok = 1;
+  }
+  pthread_mutex_unlock(&s->mu);
+  RETURN_BOOL(ok);
+}
+ 
+/* .count() → number */
+DECLARE_MODULE_METHOD(thread__semaphore_count) {
+  ENFORCE_ARG_COUNT(count, 1);
+  b_thread_semaphore *s = (b_thread_semaphore *)AS_PTR(args[0])->pointer;
+  if (!s) RETURN_ERROR("invalid instance");
+  pthread_mutex_lock(&s->mu);
+  int n = s->count;
+  pthread_mutex_unlock(&s->mu);
+  RETURN_NUMBER(n);
+}
+ 
+/* .max() → number */
+DECLARE_MODULE_METHOD(thread__semaphore_max) {
+  ENFORCE_ARG_COUNT(max, 1);
+  b_thread_semaphore *s = (b_thread_semaphore *)AS_PTR(args[0])->pointer;
+  if (!s) RETURN_ERROR("invalid instance");
+  RETURN_NUMBER(s->max);
+}
+
+
 void b_thread_SIGUSR2_signal_handler(int signum) {
   pthread_exit(NULL);
 }
@@ -496,6 +973,33 @@ CREATE_MODULE_LOADER(thread) {
       {"get_name", false, GET_MODULE_METHOD(thread__get_name)},
       {"get_id", false, GET_MODULE_METHOD(thread__get_id)},
       {"is_alive", false, GET_MODULE_METHOD(thread__is_alive)},
+
+    // Mutex
+    {"new_mutex", false, GET_MODULE_METHOD(thread__new_mutex)},
+    {"mutex_lock", false, GET_MODULE_METHOD(thread__mutex_lock)},
+    {"mutex_unlock", false, GET_MODULE_METHOD(thread__mutex_unlock)},
+    {"mutex_try_lock", false, GET_MODULE_METHOD(thread__mutex_try_lock)},
+    {"mutex_is_locked", false, GET_MODULE_METHOD(thread__mutex_is_locked)},
+
+    // Channels
+    {"new_channel",     false, GET_MODULE_METHOD(thread__new_channel)},
+    {"channel_send",     false, GET_MODULE_METHOD(thread__channel_send)},
+    {"channel_try_send",     false, GET_MODULE_METHOD(thread__channel_try_send)},
+    {"channel_receive",     false, GET_MODULE_METHOD(thread__channel_receive)},
+    {"channel_try_receive",     false, GET_MODULE_METHOD(thread__channel_try_receive)},
+    {"channel_close",     false, GET_MODULE_METHOD(thread__channel_close)},
+    {"channel_is_closed",     false, GET_MODULE_METHOD(thread__channel_is_closed)},
+    {"channel_size",     false, GET_MODULE_METHOD(thread__channel_size)},
+    {"channel_capacity",     false, GET_MODULE_METHOD(thread__channel_capacity)},
+
+    // Semaphore
+    {"new_semaphore", false, GET_MODULE_METHOD(thread__new_semaphore)},
+    {"semaphore_acquire", false, GET_MODULE_METHOD(thread__semaphore_acquire)},
+    {"semaphore_try_acquire", false, GET_MODULE_METHOD(thread__semaphore_try_acquire)},
+    {"semaphore_release", false, GET_MODULE_METHOD(thread__semaphore_release)},
+    {"semaphore_count", false, GET_MODULE_METHOD(thread__semaphore_count)},
+    {"semaphore_max", false, GET_MODULE_METHOD(thread__semaphore_max)},
+
       {NULL,     false, NULL},
   };
 
@@ -510,5 +1014,9 @@ CREATE_MODULE_LOADER(thread) {
 
   return &module;
 }
+
+#undef B_THREAD_SEMAPHORE_NAME
+#undef B_THREAD_CHANNEL_NAME
+#undef B_THREAD_MUTEX_NAME
 
 #undef B_THREAD_PTR_NAME

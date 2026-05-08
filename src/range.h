@@ -35,6 +35,13 @@ DECLARE_RANGE_METHOD(__itern__);
 DECLARE_RANGE_METHOD(step);
 
 /**
+ * range.step(n)
+ *
+ * returns the step of the range.
+ */
+DECLARE_RANGE_METHOD(get_step);
+
+/**
  * range.loop()
  *
  * calls a callback function for the range times.

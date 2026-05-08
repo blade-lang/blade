@@ -1,0 +1,258 @@
+#!-- Part of the Blade Thread Library. See LICENSE for details. --!
+import _thread
+
+
+/**
+ * This class represents a channel object that can be used for communication between threads. 
+ * It provides methods to send and receive values, as well as to check the status of the channel.
+ * 
+ * Channels are a powerful synchronization primitive that allow threads to communicate with each 
+ * other by sending and receiving values. They can be used to coordinate the execution of multiple 
+ * threads, to share data between threads, and to implement various concurrency patterns.
+ * 
+ * The `Channel` is a thread-safe FIFO queue for passing values between threads. It comes in two 
+ * modes selected at construction time:
+ * 
+ * - **Unbuffered** (`Channel()` or `Channel(0)`): every `send()` blocks until a matching 
+ *   `receive()` is ready, and every `receive()` blocks until a matching `send()` has posted a 
+ *   value. This gives a guaranteed hand-off — the sender knows the value has been collected 
+ *   before it continues.
+ * 
+ * - **Buffered** (`Channel(n)`): up to `n` values may be queued without a receiver being present. 
+ *   A `send()` only blocks when the buffer is full; a `receive()` only blocks when the buffer is 
+ *   empty.
+ * 
+ * Channels are the idiomatic way to coordinate work between threads without shared mutable state:
+ * 
+ * Example:
+ * 
+ * ```blade
+ * import thread
+ * 
+ * var ch = thread.Channel(4)
+ * 
+ * # Producer thread
+ * thread.start(@(t) {
+ *   iter var i = 0; i < 10; i++ {
+ *     ch.send(i)
+ *   }
+ *   ch.close()
+ * })
+ * 
+ * # Consumer on the main thread
+ * while !ch.is_closed() or ch.size() > 0 {
+ *   var val = ch.receive()
+ *   if val != nil echo val
+ * }
+ * ```
+ */
+class Channel {
+
+  # the real channel pointer
+  var _ptr
+
+  /**
+   * Creates a new channel object with the specified capacity. If the capacity is not provided, 
+   * it defaults to 0 (unbuffered channel).
+   * 
+   * A capacity of 0 creates an unbuffered channel, while a positive capacity creates a buffered 
+   * channel that can hold up to the specified number of slots (messages). 
+   * 
+   * If the capacity is 0, the channel will be unbuffered, meaning that send and receive operations
+   * will block until the other side is ready. If the capacity is greater than 0, the channel will 
+   * be buffered, allowing send operations to proceed without blocking until the buffer is full, 
+   * and receive operations to proceed without blocking until the buffer is empty.
+   * 
+   * If the capacity is not a number or is a negative number, an exception will be thrown.
+   * 
+   * ```blade
+   *   var unbuffered = thread.Channel()       # rendezvous
+   *   var buffered   = thread.Channel(16)     # buffer up to 16 items
+   * ```
+   * 
+   * @param {number?} capacity - The capacity of the channel.
+   * @throws {Exception} If the capacity is not a number or is negative.
+   * @constructor
+   */
+  Channel(capacity) {
+    if !capacity capacity = 0
+
+    if capacity != nil and !is_number(capacity) {
+      raise Exception('Channel capacity must be a number')
+    } else if capacity < 0 {
+      raise Exception('Channel capacity cannot be negative')
+    }
+
+    self._ptr = _thread.new_channel(to_int(capacity))
+  }
+
+  /**
+   * Sends a value into the channel, blocking if necessary.
+   * 
+   * **Unbuffered channel**: blocks until a thread calls `receive()` and collects the value. The 
+   * sender is guaranteed that the value has been handed off before `send()` returns.
+   * 
+   * **Buffered channel**: enqueues _value_ immediately if the buffer has space, and blocks 
+   * (suspending the calling thread) if the buffer is full until a receiver consumes an item to 
+   * make room.
+   * 
+   * Calling `send()` on a closed channel raises an exception.
+   * 
+   * ```blade
+   *   ch.send('hello')
+   *   ch.send(42)
+   * ```
+   * 
+   * @param {any} value - The value to send to the channel.
+   * @throws {Exception} If the channel has been closed.
+   * @returns {void}
+   */
+  send(value) {
+    _thread.channel_send(self._ptr, value)
+  }
+
+  /**
+   * Attempts to send _value_ without blocking.
+   * 
+   * **Unbuffered channel**: succeeds (returns `true`) only already blocked in ` already blocked 
+   * in `receive()`. Otherwise returns `false` immediately.
+   * 
+   * **Buffered channel**: succeeds if the buffer has at least one free slot, returns `false` if 
+   * the buffer is full.
+   * 
+   * Calling `try_send()` method never blocks the calling thread.
+   * 
+   * ```blade
+   *   if !ch.try_send(work_item) {
+   *     handle_backpressure()
+   *   }
+   * ```
+   * 
+   * @param {any} value - The value to send to the channel.
+   * @returns {boolean} `true` if the value was successfully sent to the channel, `false` otherwise.
+   */
+  try_send(value) {
+    return _thread.channel_try_send(self._ptr, value)
+  }
+
+  /**
+   * Receives and returns the next value from the channel, blocking if necessary.
+   * 
+   * **Unbuffered channel**: blocks until a thread calls `send()` with a value. Returns that 
+   * value once the hand-off completes.
+   * 
+   * **Buffered channel**: dequeues and returns the oldest buffered item immediately if one is 
+   * available, otherwise blocks until a sender posts a value.
+   * 
+   * If the channel is closed and no more values are buffered, returns `nil` as an end-of-stream 
+   * sentinel.
+   * 
+   * ```blade
+   *   var val = ch.receive()
+   *   if val != nil {
+   *     echo val
+   *   }
+   * ```
+   * 
+   * @returns {any} The value received from the channel or `nil` if the channel is empty 
+   *    or closed.
+   */
+  receive() {
+    return _thread.channel_receive(self._ptr)
+  }
+
+  /**
+   * Attempts to receive a value without blocking.
+   * 
+   * Returns the next available value if one is ready (a parked sender for unbuffered channels, 
+   * or a buffered item for buffered channels). Returns `nil` immediately if nothing is available.
+   * 
+   * Because `nil` is also the end-of-stream value returned by a closed empty channel, use 
+   * `is_closed()` together with `size()` to distinguish "nothing ready yet" from "channel is done".
+   * 
+   * ```blade
+   *   var val = ch.try_receive()
+   *   if val != nil {
+   *     process(val)
+   *   }
+   * ```
+   * 
+   * @returns {any?} The value received from the channel, or `nil` if the channel is empty.
+   */
+  try_receive() {
+    return _thread.channel_try_receive(self._ptr)
+  }
+
+  /**
+   * Closes the channel, signalling that no further values will be sent.
+   * 
+   * All threads currently blocked in `receive()` are woken and will return `nil`. All threads 
+   * currently blocked in `send()` are woken and will have their `send()` raise an exception.
+   * 
+   * After `close()` returns:
+   * - `send()` and `try_send()` raise an exception on every call.
+   * - `receive()` continues to drain any items still in the buffer, 
+   *   then returns `nil` once the buffer is empty.
+   * - `is_closed()` returns `true`.
+   * 
+   * Calling `close()` more than once is a no-op.
+   * 
+   * @returns {void}
+   */
+  close() {
+    _thread.channel_close(self._ptr)
+  }
+
+  /**
+   * Returns `true` if the channel is closed, `false` otherwise.
+   * 
+   * A channel is considered closed if the `close()` method has been called on it. Once a channel 
+   * is closed, no more values can be sent to it, but values can still be received until the 
+   * buffer is empty.
+   * 
+   * ```blade
+   *   while !ch.is_closed() {
+   *     var val = ch.receive()
+   *     if val != nil process(val)
+   *   }
+   * ```
+   * 
+   * @returns {boolean} `true` if the channel is closed, `false` otherwise.
+   */
+  is_closed() {
+    return _thread.channel_is_closed(self._ptr)
+  }
+
+  /**
+   * Returns the number of items currently buffered in the channel.
+   * 
+   * For unbuffered channels this always returns `0` because values are never stored — they pass 
+   * directly between sender and receiver.
+   * 
+   * The returned value is a snapshot; it may change immediately after this method returns if other 
+   * threads are actively sending or receiving.
+   * 
+   * ```blade
+   *   echo 'items waiting: ${ch.size()}'
+   * ```
+   * 
+   * @returns {number} The number of items currently buffered in the channel.
+   */
+  size() {
+    return _thread.channel_size(self._ptr)
+  }
+
+  /**
+   * Returns the maximum number of items the channel can buffer, as set at construction time. 
+   * Returns `0` for unbuffered channels.
+   * 
+   ```blade
+     echo 'buffer depth: ${ch.capacity()}'
+     ```
+   * 
+   * @returns {number} The capacity of the channel.
+   */
+  capacity() {
+    return _thread.channel_capacity(self._ptr)
+  }
+}

@@ -561,6 +561,7 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_RANGE_METHOD(range);
   DEFINE_RANGE_METHOD(within);
   DEFINE_RANGE_METHOD(step);
+  DEFINE_RANGE_METHOD(get_step);
   DEFINE_RANGE_METHOD(loop);
   define_native_method(vm, &vm->methods_range, "@iter", native_method_range__iter__);
   define_native_method(vm, &vm->methods_range, "@itern", native_method_range__itern__);
@@ -2848,6 +2849,7 @@ b_value raw_closure_call(b_vm *vm, b_obj_closure *closure, b_obj_list *args, boo
   if(vm_result != PTR_OK) {
     exit(EXIT_RUNTIME);
   }
+
 
   b_value result = vm->stack_top[-1];
   pop_n(vm, arg_count + 1);

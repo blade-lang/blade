@@ -1,0 +1,37 @@
+# -- Extensions for builtin bytes object
+
+class _BytesExtension > bytes {
+
+  /**
+   * Iterates over each byte of the bytes object, calling the provided callback function with the byte and its index.
+   *
+   * @param {function} callback A function that takes two arguments: the byte and its index.
+   * @throws {Exception} if the callback is not a function.
+   * @return void
+   * 
+   * Example:
+   * 
+   * ```blade
+   * var data = bytes([0x48, 0x65, 0x6C, 0x6C, 0x6F]) # "Hello" in bytes
+   * data.each((byte, index) => {
+   *   print(`Byte at index ${index}: ${byte}`)
+   * })
+   * 
+   * # Output:
+   * # Byte at index 0: 72
+   * # Byte at index 1: 101
+   * # Byte at index 2: 108
+   * # Byte at index 3: 108
+   * # Byte at index 4: 111
+   * ```
+   */
+  static each(callback) {
+    if !is_function(callback) {
+      raise Exception('Callback must be a function')
+    }
+
+    iter var i = 0; i < self.length(); i++ {
+      callback(self[i], i)
+    }
+  }
+}
