@@ -1,0 +1,48 @@
+import thread
+import http
+import json
+
+def parallel_fetch(count) {
+  var ch = thread.Channel(count)
+  var results = []
+
+  # Producer thread
+  for i in 0..count {
+    thread.start(@ {
+      ch.send(http.get('https://example.com').body.to_string())
+    }).detach()
+  }
+
+  # Consumer on the main thread
+  while !ch.is_closed() or ch.size() > 0 {
+    var val = ch.receive()
+    if val != nil {
+      results.append(val)
+    }
+
+    if results.length() == count {
+      ch.close()
+      break
+    }
+  }
+
+  return results
+}
+
+def serial_fetch(count) {
+  var results = []
+
+  for i in 0..count {
+    results.append(http.get('https://example.com').body.to_string())
+  }
+
+  return results
+}
+
+var start = time()
+var serial = serial_fetch(8)
+echo 'Serial took ${time() - start}'
+
+start = time()
+var parallel = parallel_fetch(8)
+echo 'Parallel took ${time() - start}'
