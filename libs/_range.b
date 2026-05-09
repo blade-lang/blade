@@ -25,7 +25,7 @@ class _RangeExtension > range {
    * # Number at index 4: 4
    * ```
    */
-  static each(callback) {
+  static loop(callback) {
     if !is_function(callback) {
       raise Exception('Callback must be a function')
     }

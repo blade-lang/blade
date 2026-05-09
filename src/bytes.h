@@ -181,6 +181,5 @@ DECLARE_BYTES_METHOD(to_string);
  */
 DECLARE_BYTES_METHOD(__iter__);
 DECLARE_BYTES_METHOD(__itern__);
-DECLARE_BYTES_METHOD(each);
 
 #endif

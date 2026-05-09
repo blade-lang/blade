@@ -353,6 +353,10 @@ int main(int argc, char *argv[]) {
     // always do this last so that we can have access to everything else
     bind_native_modules(vm);
 
+    // Initialize core...
+    char *core_module = get_core_library_file_path("_core");
+    run_file(vm, core_module);
+
     if (source != NULL) {
       run_code(vm, source);
     } else if (argc == 1 || argc <= optind) {

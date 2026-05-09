@@ -119,7 +119,7 @@ b_obj_range* new_range(b_vm* vm, int lower, int upper) {
   b_obj_range* range = ALLOCATE_OBJ(b_obj_range, OBJ_RANGE);
   range->lower = lower;
   range->upper = upper;
-    range->step = 1;
+  range->step = 1;
   if (upper > lower) {
     range->range = upper - lower;
   } else {

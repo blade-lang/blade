@@ -104,22 +104,49 @@ char *get_blade_filename(char *filename) {
   return merge_paths(filename, BLADE_EXTENSION);
 }
 
-char *resolve_import_path(char *module_name, const char *current_file, char *root_file, bool is_relative) {
+char *get_core_library_file_path(char *module_name) {
   char *blade_file_name = get_blade_filename(module_name);
+  if (blade_file_name != NULL) {
+    char *exe_dir = get_exe_dir();
 
-  // check relative to the current file...
-  char *tmp_str = strdup(current_file);
-  char *file_directory = dirname((char *) tmp_str);
-  free_tmp(tmp_str);
+    if (exe_dir != NULL) {
+      char *blade_directory = merge_paths(exe_dir, LIBRARY_DIRECTORY);
 
-  // fixing last path / if exists (looking at windows)...
-  int file_directory_length = (int) strlen(file_directory);
-  if (file_directory[file_directory_length - 1] == '\\') {
-    file_directory[file_directory_length - 1] = '\0';
+      // check blade libs directory for a matching module...
+      if (blade_directory != NULL) {
+        char *library_file = merge_paths(blade_directory, blade_file_name);
+
+        if (library_file != NULL) {
+          if (file_exists(library_file)) {
+            // stop a core library from importing itself
+            char *path1 = realpath(library_file, NULL);
+
+            if (path1 != NULL) {
+              free(library_file);
+              free(blade_directory);
+              free(exe_dir);
+              free(blade_file_name);
+              return path1;
+            }
+          }
+          free(library_file);
+        }
+        free_tmp(blade_directory);
+      }
+      free(exe_dir);
+    }
+    free(blade_file_name);
   }
+
+  return NULL;
+}
+
+char *resolve_import_path(char *module_name, const char *current_file, const char *root_file, bool is_relative) {
+  char *blade_file_name = get_blade_filename(module_name);
 
   // search system library if we are not looking for a relative module.
   if (!is_relative) {
+    char *tmp_str = NULL;
 
     // firstly, search the local vendor directory for a matching module
     char *root_dir = NULL;
@@ -129,7 +156,9 @@ char *resolve_import_path(char *module_name, const char *current_file, char *roo
       tmp_str = strdup(root_file);
       root_dir = dirname(tmp_str);
       free_tmp(tmp_str);
+      tmp_str = NULL;
     }
+
     char *current_dir = getcwd(NULL, 0);
     // fixing last path / if exists (looking at windows)...
     int root_dir_length = (int) strlen(root_dir);
@@ -314,6 +343,17 @@ char *resolve_import_path(char *module_name, const char *current_file, char *roo
     free(blade_package_directory);
     free(blade_directory);
   } else {
+
+    // check relative to the current file...
+    char *tmp_str = strdup(current_file);
+    char *file_directory = dirname((char *) tmp_str);
+    free_tmp(tmp_str);
+
+    // fixing last path / if exists (looking at windows)...
+    int file_directory_length = (int) strlen(file_directory);
+    if (file_directory[file_directory_length - 1] == '\\') {
+      file_directory[file_directory_length - 1] = '\0';
+    }
 
     // otherwise, search the relative path for a matching module
     char *relative_file = merge_paths(file_directory, blade_file_name);

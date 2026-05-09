@@ -2,7 +2,6 @@
 
 import math
 
-# TODO: Add support for non-numeric types and custom comparators
 def _default_comparator(a, b) {
   if is_number(a) and is_number(b) {
     return a > b
@@ -108,8 +107,11 @@ class _ListExtension > list {
    * var original = [5, 2, 9, 1]
    * var sorted = original.isort()
    * echo sorted
+   * echo original
    *
-   * # Output: [1, 2, 5, 9]
+   * # Output: 
+   * # [1, 2, 5, 9]
+   * # [1, 2, 5, 9]
    * ```
    *
    * The `isort` method is stable, meaning that it maintains the relative order of elements
@@ -117,7 +119,6 @@ class _ListExtension > list {
    */
   static isort(comparator) {
     # Timsort implementation in Blade
-    # Ported for performance and stability
 
     if !comparator comparator = _default_comparator
     if comparator != nil and !is_function(comparator) {
@@ -268,7 +269,7 @@ class _ListExtension > list {
    * ```blade
    * echo [1, 2, 3].reduce(@(acc, x) {
    *   return acc + x
-   * }, 0)
+   * })
    *
    * # Output: 6
    * ```
@@ -278,9 +279,21 @@ class _ListExtension > list {
       raise Exception('Callback must be a function')
     }
 
+    if self.length() == 0 return initial
+
+    var index = 0
+    if initial == nil {
+      initial = self[0]
+      index = 1
+    }
+
     var accumulator = initial
-    for index, item in self {
-      accumulator = callback(accumulator, item, index, self)
+    iter ; index < self.length(); index++ {
+      var value = self[index]
+
+      if value != nil {
+        accumulator = callback(accumulator, value, index, self)
+      }
     }
 
     return accumulator
