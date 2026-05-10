@@ -40,7 +40,8 @@
  * 
  * ## Automatic value assignment
  * 
- * Sometimes when creating a dictionary, it is very common to have keys that already match the name of a variable that already exists in scope. For example:
+ * Sometimes when creating a dictionary, it is very common to have keys that already match the name of a 
+ * variable that already exists in scope. For example:
  * 
  * ```blade-repl
  * %> var name = 'Paulina'
@@ -49,7 +50,9 @@
  * {name: Paulina}
  * ```
  * 
- * Because of how common and frequent developers do this, Blade has an automatic value assignment feature for dictionaries that allow you to assing variables to dictionary keys if they are already within scope without rewriting them.
+ * Because of how common and frequent developers do this, Blade has an automatic value assignment feature for 
+ * dictionaries that allow you to assing variables to dictionary keys if they are already within scope without 
+ * rewriting them.
  * 
  * For example,
  * 
