@@ -32,7 +32,7 @@ jobs:
           cmake --build . -- -j 12
           chmod +x blade/blade
       - name: Test
-        run: ctest
+        run: ctest --rerun-failed --output-on-failure
       - name: Generate Artifacts
         if: '!cancelled()'
         uses: actions/upload-artifact@v4
@@ -62,7 +62,7 @@ jobs:
           cmake --build . -- -j 12
           chmod +x blade/blade
       - name: Test
-        run: ctest
+        run: ctest --rerun-failed --output-on-failure
       - name: Generate Artifacts
         if: '!cancelled()'
         uses: actions/upload-artifact@v4
@@ -89,7 +89,7 @@ jobs:
           cmake --build . -- -j 12
           chmod 755 blade/blade
       - name: Test
-        run: ctest
+        run: ctest --rerun-failed --output-on-failure
       - name: Generate Artifacts
         if: '!cancelled()'
         uses: actions/upload-artifact@v4
@@ -126,7 +126,7 @@ jobs:
           cmake -B . -G "Unix Makefiles" -DVCPKG_TARGET_TRIPLET=x64-windows-release -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake"
           cmake --build . -- -j 12
       - name: Test
-        run: ctest
+        run: ctest --rerun-failed --output-on-failure
       - name: Generate Artifacts
         if: '!cancelled()'
         uses: actions/upload-artifact@v4
