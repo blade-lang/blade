@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup cmake
-        uses: lukka/get-cmake@v3.25.2
+        uses: lukka/get-cmake@v4.2.2
         with:
           useLocalCache: true
           useCloudCache: false
@@ -46,7 +46,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup cmake
-        uses: lukka/get-cmake@v3.25.2
+        uses: lukka/get-cmake@v4.2.2
         with:
           useLocalCache: true
           useCloudCache: false
@@ -80,7 +80,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Setup cmake
-        uses: lukka/get-cmake@v3.25.2
+        uses: lukka/get-cmake@v4.2.2
         with:
           useLocalCache: true
           useCloudCache: false

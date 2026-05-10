@@ -6,6 +6,7 @@ on:
       - main
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
 
@@ -18,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup cmake
-        uses: lukka/get-cmake@v3.25.2
+        uses: lukka/get-cmake@v4.2.2
         with:
           useLocalCache: true
           useCloudCache: false
@@ -28,7 +29,7 @@ jobs:
           sudo apt-get remove libgd3 
           sudo apt-get install curl libpthread-stubs0-dev libcurl4-openssl-dev libgd-dev libavif-dev libffi-dev -y
           cmake -B .
-          cmake --build . -- -j 12
+          cmake --build . -- -j 12Bump
           chmod +x blade/blade
       - name: Test
         run: ctest
@@ -48,7 +49,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup cmake
-        uses: lukka/get-cmake@v3.25.2
+        uses: lukka/get-cmake@v4.2.2
         with:
           useLocalCache: true
           useCloudCache: false
@@ -73,7 +74,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Setup cmake
-        uses: lukka/get-cmake@v3.25.2
+        uses: lukka/get-cmake@v4.2.2
         with:
           useLocalCache: true
           useCloudCache: false
