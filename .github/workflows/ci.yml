@@ -89,7 +89,7 @@ jobs:
           cmake --build . -- -j 12
           chmod 755 blade/blade
       - name: Test
-        run: ctest --rerun-failed --output-on-failure
+        run: ctest -V --rerun-failed --output-on-failure
       - name: Generate Artifacts
         if: '!cancelled()'
         uses: actions/upload-artifact@v4
