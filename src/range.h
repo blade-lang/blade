@@ -7,47 +7,13 @@
 
 #define DECLARE_RANGE_METHOD(name) DECLARE_METHOD(range##name)
 
-/**
- * range.lower()
- *
- * returns the lower limit of the range
- */
 DECLARE_RANGE_METHOD(lower);
-
-/**
- * range.upper()
- *
- * returns the upper limit of the range
- */
 DECLARE_RANGE_METHOD(upper);
-
-/**
- * See list.h
- */
 DECLARE_RANGE_METHOD(__iter__);
 DECLARE_RANGE_METHOD(__itern__);
-
-/**
- * range.step(n)
- *
- * sets the step of the range.
- */
 DECLARE_RANGE_METHOD(step);
-
-/**
- * range.step(n)
- *
- * returns the step of the range.
- */
 DECLARE_RANGE_METHOD(get_step);
-
-/**
- * range.range()
- *
- * returns the range value.
- */
 DECLARE_RANGE_METHOD(range);
-
 DECLARE_RANGE_METHOD(within);
 
 #endif

@@ -84,6 +84,34 @@
 class file {
 
   /**
+   * Create a new file object.
+   * 
+   * If the mode is not specified, the file is opened in the read-only mode.
+   * 
+   * Valid modes include:
+   * 
+   * ```blade-repl
+   * %> file('sample.txt', 'r')
+   * <file at sample.txt in mode r>
+   * %> file('sample.txt', 'w')
+   * <file at sample.txt in mode w>
+   * %> file('sample.txt', 'a')
+   * <file at sample.txt in mode a>
+   * %> file('sample.txt', 'r+')
+   * <file at sample.txt in mode r+>
+   * %> file('sample.txt', 'w+')
+   * <file at sample.txt in mode w+>
+   * %> file('sample.txt', 'a+')
+   * <file at sample.txt in mode a+>
+   * ```
+   * 
+   * @param {string} path - The path to the file.
+   * @param {string?} mode - The mode in which the file should be opened.
+   * @constructor
+   */
+  file(path, mode) {}
+
+  /**
    * Returns `true` if a file exists or `false` otherwise.
    * 
    * For example:
