@@ -1,39 +1,144 @@
-class range {
+/**
+ * # Ranges
+ * 
+ * Ranges are simple numeric iterables. i.e. They are structures that can be iterated/looped through. 
+ * Ranges are in the format `start..end`. They include a starting number (inclusive) and an ending 
+ * number (non-inclusive) separated by a operator (`..`).
+ * 
+ * For example:
+ * 
+ * ```blade-repl
+ * %> 0..10
+ * <range 0..10, step=1>
+ * %> 10..5
+ * <range 10..5, step=1>
+ * ```
+ * 
+ * Ranges are valid in any direction. That is, they can either ascend (end greater than start) or 
+ * descend (start greater than end). They are also evaluated in order. They can also be constructed 
+ * from variables or a mixture of constant number and variables as desired.
+ * 
+ * ```blade-repl
+ * %> var a = 20
+ * %> 5..a
+ * <range 5..20, step=1>
+ * %> a..10
+ * <range 20..10, step=1>
+ * %> var b = 16
+ * %> a..b
+ * <range 20..16, step=1>
+ * ```
+ * 
+ * > **NOTE:** 
+ * > 
+ * > Somtimes, parenthesis (`()`) should be used around a to make sure that the upper limit of 
+ * > the is not interpreted as a number since the was not assigned to a variable.
+ */
+
+
+class {
+
   /**
+   * Returns the lower limit of the range. 
    * 
+   * For example:
+   * 
+   * ```blade-repl
+   * %> (10..100).lower()
+   * 10
+   * ```
+   * 
+   * @returns {number}
    */
-  lower(n) {}
+  lower() {}
 
 
   /**
+   * Returns the upper limit of the range. 
    * 
+   * For example:
+   * 
+   * ```blade-repl
+   * %> (20..30).upper()
+   * 30
+   * ```
+   * 
+   * @returns {number}
    */
-  upper(n) {}
+  upper() {}
 
 
   /**
+   * Returns a number equal to the numbers betwwen the range.
    * 
+   * For example:
+   * 
+   * ```blade-repl
+   * %> (21..93).range()
+   * 72
+   * ```
+   * 
+   * The result of stays the same irrespective of the direction of the range. 
+   * For example, swapping the upper and lower limit of our previous still returns the same result.
+   * 
+   * ```blade-repl
+   * %> (21..93).range()
+   * 72
+   * ```
+   * 
+   * @returns {number}
    */
-  range(n) {}
+  range() {}
 
 
   /**
+   * Returns true if the given number falls somewhere within the or false otherwise.
    * 
+   * For example:
+   * 
+   * ```blade-repl
+   * %> (93..21).within(103)
+   * false
+   * %> (93..21).within(57)
+   * true
+   * ```
+   * 
+   * @returns {boolean}
    */
-  within(n) {}
+  within() {}
 
 
   /**
+   * Sets the step size of the range.
    * 
+   * For example:
+   * 
+   * ```blade-repl
+   * %> var a = (10..100).step(20)
+   * %> a
+   * <range 10..100, step=20>
+   * %> for i in a {
+   * ..   echo i
+   * .. }
+   * 10
+   * 30
+   * 50
+   * 70
+   * 90
+   * ```
+   * 
+   * @param {number} size - The step size of the range.
+   * @returns {range}
    */
-  step(n) {}
+  step(size) {}
 
 
   /**
+   * Returns the step size of the range.
    * 
+   * @returns {number}
    */
-  get_step(n) {}
-
+  get_step() {}
 
   @iter(n) {}
   @itern(n) {}
