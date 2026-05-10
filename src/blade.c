@@ -1,7 +1,6 @@
 #include "pathinfo.h"
 #include "util.h"
 #include "vm.h"
-#include "../cmake-build-release/_deps/linenoisesrc-src/linenoise.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
