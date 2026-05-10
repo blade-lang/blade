@@ -79,8 +79,9 @@ var _central_file_head_unpack = 'v1creator/v1version/v1general_purpose/v1compres
     'v1comment_length/v1disk_offset/v1internal_attribute/V1external_attribute'
 
 var _local_file_head_unpack = 'v1version/v1general_purpose/v1compress_method/v1file_time/' +
-    'v1file_date/${_file_size_unpack}/v1filename_length/v1extra_field_length/' +
-    'v1comment_length'
+    'v1file_date/${_file_size_unpack}/v1filename_length/v1extra_field_length'
+    # Note: local file headers have NO comment_length field — that only exists in
+    # central directory headers. Including it here would read 2 garbage bytes.
 
 var _file_size_unpack64 = 'P1crc/P1size_compressed/P1size_uncompressed'
 
@@ -240,7 +241,13 @@ class ZipItem {
       }
 
       if self.permission > 0 {
-        fh.chmod(self.permission)
+        # self.permission holds the full Unix mode word as stored in the ZIP
+        # external_attribute high 16 bits (e.g. 0o100755 for a regular
+        # executable). chmod() only accepts the lower 12 permission/sticky/setid
+        # bits — passing the file-type bits (S_IFMT, 0o170000) alongside them
+        # produces the wrong mode or an outright error on some platforms.
+        # Mask with 0o7777 to strip the file-type nibble before the call.
+        fh.chmod(self.permission & 0xFFF)  # 0xFFF = 0o7777 — strips file-type bits, keeps rwx + setid + sticky
       }
     }
 
@@ -416,13 +423,22 @@ class ZipArchive {
 
     var mod_date = self._dos_from_date(date.localtime())
 
+    # Set UTF-8 flag (bit 11) if name contains non-ASCII characters.
+    var gpflag = 0
+    for ch in name {
+      if ch.to_number() > 127 {
+        gpflag = 0x0800
+        break
+      }
+    }
+
     var fr = _file_head_sig.to_bytes()
 
     fr.extend(pack(
       'v5', 
       self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION,  # version needed to extract
-      0,                        # general purpose bit flag
-      self._compression_method, # compression method
+      gpflag,                   # general purpose bit flag
+      ZIP_STORED,               # compression method — directories are always stored, never compressed
       mod_date[0],              # last mod time
       mod_date[1]               # last mod date
     ))
@@ -442,6 +458,8 @@ class ZipArchive {
 		# no 'file data' segment for path
 
 		# 'data descriptor' segment (optional but necessary if archive is not served as file)
+		# The signature PK\x07\x08 is required by the spec for strict parsers.
+		fr.extend('PK\x07\x08'.to_bytes())
 		fr.extend(pack(
       self._is_64 ? 'P3' : 'V3', 
       0,            # crc32
@@ -467,7 +485,7 @@ class ZipArchive {
       'v6V3v5V2',           
       creator,                  # version made by
       extract_version,          # version needed to extract
-      0,                        # general purpose bit flag
+      gpflag,                   # general purpose bit flag (matches local header)
       0,                        # compression method (stored)
       mod_date[0],              # last mod time
       mod_date[1],              # last mod date
@@ -520,10 +538,21 @@ class ZipArchive {
 
 		var fr = _file_head_sig.to_bytes()
 
+    # Set the EFS (encoding follows specification) flag — bit 11 (0x0800) —
+    # whenever the filename contains characters outside plain ASCII. This tells
+    # extractors the name is UTF-8 encoded, preventing mojibake on non-ASCII paths.
+    var gpflag = 0
+    for ch in path {
+      if ch.to_number() > 127 {
+        gpflag = 0x0800   # UTF-8 filename flag
+        break
+      }
+    }
+
     fr.extend(pack(
       'v5', 
       self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION,  # version needed to extract
-      0,                        # general purpose bit flag
+      gpflag,                   # general purpose bit flag
       self._compression_method, # compression method
       mod_date[0],              # last mod time
       mod_date[1]               # last mod date
@@ -557,6 +586,8 @@ class ZipArchive {
     data.dispose()
 
 		# 'data descriptor' segment (optional but necessary if archive is not served as file)
+		# The signature PK\x07\x08 is required by the spec for strict parsers.
+		fr.extend('PK\x07\x08'.to_bytes())
     fr.extend(pack(
       self._is_64 ? 'P3' : 'V3', 
       crc,                # crc32
@@ -571,7 +602,22 @@ class ZipArchive {
 		var new_offset = self._get_new_offset()
 
     var extract_version = self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION
-    var permission = (stat.mode << 16) >>> 0
+
+    # The ZIP spec stores the full Unix mode (including file-type bits) in the
+    # high 16 bits of external_attributes. stat.mode from Blade's file.stats()
+    # may return only the permission bits (e.g. 0o755) without the S_IFREG
+    # file-type sentinel (0o100000). Without those bits, Unix extractors (macOS
+    # unzip, Info-ZIP, etc.) cannot identify the entry as a regular file and
+    # therefore skip restoring permissions altogether — the root cause of the
+    # bug where extracted files always revert to default permissions.
+    #
+    # Fix: if the file-type nibble (bits 12-15, masked by S_IFMT = 0o170000)
+    # is absent, inject S_IFREG (0o100000) before shifting into position.
+    var _mode = stat.mode
+    if (_mode & 0xF000) == 0 {   # S_IFMT mask — no file-type bits present
+      _mode |= 0x8000             # S_IFREG — mark as regular file
+    }
+    var permission = (_mode << 16) >>> 0
 
     var creator = _os | extract_version
 
@@ -581,7 +627,7 @@ class ZipArchive {
       'v6V3v5V2',           
       creator,                  # version made by
       extract_version,          # version needed to extract
-      0,                        # general purpose bit flag
+      gpflag,                   # general purpose bit flag (matches local header)
       self._compression_method, # compression method
       mod_date[0],              # last mod time
       mod_date[1],              # last mod date
@@ -631,7 +677,7 @@ class ZipArchive {
 
     var content = f.read()
     var r = self.create_file(destination, content, f.stats())
-    content.dispose()
+    # Note: content is disposed inside create_file — do not dispose again here.
 
     return r
   }
@@ -642,12 +688,6 @@ class ZipArchive {
 		if os.dir_exists(gpath) {
 			var sources = os.read_dir(gpath)
       for source in sources {
-
-        # check ext blacklist here...
-        for ext in ext_blacklist {
-          if source.ends_with('.${ext}')
-          return true
-        }
 
         if source != '.' and source != '..' {
           var npath = os.join_paths(gpath, source)
@@ -661,9 +701,19 @@ class ZipArchive {
               npath = npath[1,]
           }
 
-          # check file blacklist here...
+          # check file blacklist — skip this entry, do not abort the whole walk
           if file_blacklist.contains(npath)
-            return true
+            continue
+
+          # check ext blacklist — skip this entry, do not abort the whole walk
+          var skip = false
+          for ext in ext_blacklist {
+            if source.ends_with('.${ext}') {
+              skip = true
+              break
+            }
+          }
+          if skip continue
 
           if os.is_dir(npath) {
             if !self._add_files(gpath, source, file_blacklist, ext_blacklist)
@@ -767,6 +817,11 @@ class ZipArchive {
 
     iter var i = 0; i < filesecta.length(); i++ {
       var filedata = filesecta[i]
+
+      # central_heads may have fewer entries than filesecta if any file payload
+      # happens to contain the PK\x01\x02 byte sequence. Skip safely.
+      if i >= central_heads.length() break
+
       var central_head = central_heads[i]
       
 			# CRC:crc, FD:file date, FT: file time, CM: compression method, GPF: general purpose flag, VN: version needed, CS: compressed size, UCS: uncompressed size, FNL: filename length
@@ -783,15 +838,24 @@ class ZipArchive {
 			# Check for encryption
 			var isencrypted = (unpackeda['general_purpose'] & 0x0001) > 0 ? true : false
 
-			# Check for value block after compressed data
+			# Check for value block after compressed data.
+			# The data descriptor is either 12 bytes (no signature) or 16 bytes
+			# (with the optional PK\x07\x08 signature). Detect which is present.
 			if unpackeda['general_purpose'] & 0x0008 > 0 {
+        var dd_offset = filedata.length() - 12
+        # If the 4 bytes before the 12-byte block are the data descriptor signature,
+        # the block is actually 16 bytes — skip past the signature.
+        if filedata.length() >= 16 and filedata[dd_offset - 4, dd_offset].to_string() == 'PK\x07\x08' {
+          dd_offset -= 4
+          dd_offset += 4  # move past signature to the actual data
+        }
 				var unpackeda2 = unpack(
           self._is_64 ? _file_size_unpack64 : _file_size_unpack, 
-          filedata[filedata.length() - 12,]
+          filedata[dd_offset,]
         )
 
 				unpackeda['crc'] = unpackeda2['crc']
-				unpackeda['size_compressed'] = unpackeda2['size_uncompressed']
+				unpackeda['size_compressed'] = unpackeda2['size_compressed']   # was wrongly set to size_uncompressed
 				unpackeda['size_uncompressed'] = unpackeda2['size_uncompressed']
 			}
       
@@ -871,8 +935,8 @@ class ZipArchive {
 				entrya['filemtime'] = date(
           ((file_date & 0xfe00) >>  9) + 1980, # year
           (file_date  & 0x01e0) >>  5,         # month
-          (file_date  & 0x001f) - 1,           # day
-          ((file_time  & 0xf800) >> 11) - 1,   # hour
+          (file_date  & 0x001f),               # day — DOS stores 1-31 directly, no adjustment needed
+          (file_time  & 0xf800) >> 11,         # hour — 0-23 direct, no adjustment needed
           (file_time  & 0x07e0) >>  5,         # minute
           (file_time  & 0x001f) <<  1          # second
         )
@@ -909,7 +973,14 @@ class ZipArchive {
    */
   save() {
     if self._handle and self._handle.is_open() {
-      
+
+      # Record where the central directory begins BEFORE writing it.
+      # The end-of-central-directory record requires the offset to the
+      # START of the central directory. Calling tell() after puts() would
+      # capture the end offset instead, producing an invalid archive
+      # (unzip reports "missing N bytes in zipfile" and permissions are lost).
+      var ctrl_dir_offset = self._handle.tell()
+
       self._handle.puts(self._ctrl_dir)
 
       var extract_version = self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION
@@ -958,7 +1029,7 @@ class ZipArchive {
         self._ctrl_dir_length,      # total number of entries 'on this disk'
         self._ctrl_dir_length,      # total number of entries overall
         self._ctrl_dir.length(),    # size of central dir
-        self._handle.tell(),        # offset to start of central dir
+        ctrl_dir_offset,            # offset to start of central dir
         0                           # .zip file comment length
       ))
 
@@ -1049,10 +1120,14 @@ def compress(path, destination, compression_method, use_zip64) {
   if os.dir_exists(path) {
     var current_directory = os.cwd()
 
-    # Enter into the path so that we can treat the path as root.
-    os.change_dir(path)
+    # Resolve to absolute path BEFORE changing directory, so add_directory
+    # receives a path that is still valid after the cwd changes.
+    var abs_path = os.abs_path(path)
 
-    completed = zip.add_directory(path)
+    # Enter into the path so that we can treat the path as root.
+    os.change_dir(abs_path)
+
+    completed = zip.add_directory(abs_path)
 
     os.change_dir(current_directory)
   } else {

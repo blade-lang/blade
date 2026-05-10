@@ -84,6 +84,26 @@ def _merge(arr, l, m, r, temp_buffer, comparator) {
 class _ListExtension > list {
 
   /**
+   * Returns true if the list is empty, false otherwise.
+   * 
+   * Example:
+   * 
+   * ```blade
+   * echo [1, 2, 3].empty()
+   * echo [].empty()
+   * 
+   * # Output:
+   * # false
+   * # true
+   * ```
+   * 
+   * @returns {boolean}
+   */
+  static empty() {
+    return self.length() == 0
+  }
+
+  /**
    * Sorts the list in place using Timsort.
    *
    * The `isort` method returns the same list that it is called on.
