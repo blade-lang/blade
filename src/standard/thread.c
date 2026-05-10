@@ -1,6 +1,6 @@
 #include "module.h"
 #include <pthread.h>
-#include <asm-generic/errno-base.h>
+#include <errno.h>
 
 #ifdef __linux__
 #include <sys/syscall.h>
