@@ -438,6 +438,7 @@ static void init_builtin_methods(b_vm *vm) {
   DEFINE_STRING_METHOD(replace_with);
   DEFINE_STRING_METHOD(ascii);
   DEFINE_STRING_METHOD(case_fold);
+  DEFINE_STRING_METHOD(compare);
   define_native_method(vm, &vm->methods_string, "@iter", native_method_string__iter__);
   define_native_method(vm, &vm->methods_string, "@itern", native_method_string__itern__);
 

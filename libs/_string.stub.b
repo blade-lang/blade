@@ -1071,6 +1071,19 @@ class string {
    */
   case_fold() {}
 
+
+  /**
+   * Compares the string with another string.
+   * 
+   * @param {string} other - The other string to compare with.
+   * @throws {Exception} if the other string is not a string.
+   * @returns {number}
+   *    - A negative number if the string is less than the other string.
+   *    - Zero if the strings are equal.
+   *    - A positive number if the string is greater than the other string.
+   */
+  compare(other) {}
+
   @iter(n) {}
   @itern(n) {}
 }

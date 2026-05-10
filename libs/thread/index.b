@@ -16,7 +16,7 @@
  * ### Create and start a new thread
  * 
  * You can create a thread by creating a new instance if the `Thread` 
- * class wither directly or via the `thread()` function and passing 
+ * class either directly or via the `thread()` function and passing 
  * in a function delegate that will be called when the thread is run.
  * To start the thread, you can call the start function passing 
  * parameters for the thread delegate function to it directly to the 

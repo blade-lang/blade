@@ -6,7 +6,7 @@ def _default_comparator(a, b) {
   if is_number(a) and is_number(b) {
     return a > b
   } else if is_string(a) and is_string(b) {
-    return ord(a) > ord(b)
+    return a.compare(b) > 0
   } else {
     raise Exception('Default comparator only supports numbers and strings. You must provide a custom comparator for other types.')
   }

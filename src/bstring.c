@@ -295,10 +295,7 @@ DECLARE_STRING_METHOD(trim) {
       end--;
   }
 
-  // Write new null terminator character
-  end[1] = '\0';
-
-  RETURN_STRING(string);
+  RETURN_L_STRING(string, end - string + 1);
 }
 
 DECLARE_STRING_METHOD(ltrim) {
@@ -327,11 +324,6 @@ DECLARE_STRING_METHOD(ltrim) {
   if (*string == 0) { // All spaces?
     RETURN_OBJ(copy_string(vm, "", 0));
   }
-
-  end = string + strlen(string) - 1;
-
-  // Write new null terminator character
-  end[1] = '\0';
 
   RETURN_STRING(string);
 }
@@ -363,10 +355,7 @@ DECLARE_STRING_METHOD(rtrim) {
       end--;
   }
 
-  // Write new null terminator character
-  end[1] = '\0';
-
-  RETURN_STRING(string);
+  RETURN_L_STRING(string, end - string + 1);
 }
 
 DECLARE_STRING_METHOD(join) {
@@ -1367,6 +1356,14 @@ DECLARE_STRING_METHOD(to_bytes) {
 //  }
 //  RETURN_OBJ(take_bytes(vm, bytes, string->length));
   RETURN_OBJ(copy_bytes(vm, (unsigned char *) string->chars, string->length));
+}
+
+DECLARE_STRING_METHOD(compare) {
+  ENFORCE_ARG_COUNT(compare, 1);
+  ENFORCE_ARG_TYPE(compare, 0, IS_STRING);
+  b_obj_string *string = AS_STRING(METHOD_OBJECT);
+  b_obj_string *other = AS_STRING(args[0]);
+  RETURN_NUMBER(strcmp(string->chars, other->chars));
 }
 
 DECLARE_STRING_METHOD(__iter__) {
