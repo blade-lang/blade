@@ -771,6 +771,45 @@ class Socket {
   }
 
   /**
+   * Sends the specified message to the socket on the given host and port.
+   * 
+   * UDP (`SOCK_DGRAM`) sockets that haven't been `connect()`'d require `sendto()` and recvfrom() to 
+   * specify the peer address per datagram.
+   * 
+   * @param {string?} host
+   * @param {int?} port
+   * @param {int?} family
+   * @param {string|file|bytes|nil} message
+   * @param {int?} flags: Not currently used.
+   * @returns number greater than -1 if successful indicating the total number of bytes sent or 
+   *    -1 if it fails.
+   */
+  send_to(host, port, family, message, flags) {
+    if !host host = self.host
+    if !port port = self.port
+    if !family family = self.family
+    if !message message = ''
+    if !flags flags = 0
+
+    if !port raise ArgumentError('port not specified')
+    if !is_string(host) 
+      raise TypeError('string expected for host, ${typeof(host)} given')
+    if !is_int(port) 
+      raise TypeError('integer expected for port, ${typeof(port)} given')
+    if !is_string(message) and !is_bytes(message) and !is_file(message) 
+      raise TypeError('message must string, bytes or file; ${typeof(message)} given')
+    if !is_int(flags) 
+      raise TypeError('integer expected for flags, ${typeof(flags)} given')
+
+    if self.id == -1 or self.is_closed or (self.is_shutdown and 
+      (self.shutdown_reason == SHUT_WR or 
+        self.shutdown_reason == SHUT_RDWR)) 
+      raise SocketException('socket is in an illegal state')
+
+    return self._check_error(_socket.sendto(self.id, message, flags, host, port, family))
+  }
+
+  /**
    * Receives bytes of the given length from the socket. If the length is not given, it default length of 
    * -1 indicating that the total available data on the socket stream will be read. 
    * If no data is available for read on the socket, the socket will wait to receive data or until the 
@@ -802,6 +841,43 @@ class Socket {
     if is_string(result) or result == nil return result
 
     return self._check_error(result)
+  }
+
+  /**
+   * Receives bytes of the given length from the socket and returns the a dictionary that contains:
+   * 
+   * - string `data`: The received data.
+   * - string `host`: The host address of the peer.
+   * - int `port`: The port number of the peer.
+   * 
+   * @note The receive_from() method is especially useful for UDP sockets.
+   * 
+   * @param int? length
+   * @param int? flags: Not currently used.
+   * @returns {dict}
+   * @throws SocketException
+   */
+  receive_from(length, flags) {
+    if !length length = -1
+    if !flags flags = 0
+
+    if !is_int(length) 
+      raise TypeError('integer expected for length, ${typeof(length)} given')
+    if !is_int(flags) 
+      raise TypeError('integer expected for flags, ${typeof(flags)} given')
+
+    var result = _socket.recvfrom(self.id, length, flags)
+    if result == -1 {
+      return self._check_error(result)
+    } else if result == nil {
+      raise SocketException('receive_from timed out')
+    }
+
+    return {
+      data: result[0],
+      host: result[1],
+      port: result[2],
+    }
   }
 
   /**
@@ -1020,13 +1096,16 @@ class Socket {
 
   /**
    * Sets if the socket should operate in blocking or non-blocking mode. `true` for blocking 
-   * (default) and `false` for non-blocking.
+   * (default) and `false` for non-blocking. The method returns `true` if the operation succeeded or 
+   * `false` otherwise. 
    * 
-   * @param bool mode
+   * @param {bool} mode
+   * @returns {bool}
    */
   set_blocking(mode) {
     if !is_bool(mode) raise TypeError('boolean expected')
     self.is_blocking = mode
+    return _socket.setblocking(self.id, mode)
   }
 
   /**

@@ -103,6 +103,25 @@ static inline int is_timed_out(int se) {
 #endif
 }
 
+static void socket_configure_fd(int sock) {
+#ifndef _WIN32
+# ifdef SO_NOSIGPIPE
+  int set = 1;
+  (void)setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &set, sizeof(int));
+# endif
+# ifndef SOCK_CLOEXEC
+  int flags = fcntl(sock, F_GETFD);
+  if (flags != -1) {
+    (void)fcntl(sock, F_SETFD, flags | FD_CLOEXEC);
+  }
+# else
+  /* SOCK_CLOEXEC applied at socket()/accept4() time; nothing to do */
+# endif
+#else
+  (void)sock;
+#endif
+}
+
 DECLARE_MODULE_METHOD(socket__error) {
   ENFORCE_ARG_COUNT(error, 1);
   ENFORCE_ARG_TYPE(error, 0, IS_NUMBER);
@@ -140,20 +159,7 @@ DECLARE_MODULE_METHOD(socket__create) {
     RETURN_NUMBER(-1);
   }
 
-#ifndef _WIN32
-  // Best-effort: avoid SIGPIPE on send if platform lacks MSG_NOSIGNAL
-# ifdef SO_NOSIGPIPE
-  int set = 1;
-  (void)setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &set, sizeof(int));
-# endif
-  // Ensure close-on-exec if SOCK_CLOEXEC was not applied
-# ifndef SOCK_CLOEXEC
-  int flags = fcntl(sock, F_GETFD);
-  if (flags != -1) {
-    (void)fcntl(sock, F_SETFD, flags | FD_CLOEXEC);
-  }
-# endif
-#endif
+  socket_configure_fd(sock);
 
   RETURN_NUMBER(sock);
 }
@@ -203,9 +209,9 @@ DECLARE_MODULE_METHOD(socket__connect) {
   }
 #else
   unsigned long nbarg = 1;
-  unsigned long old_nbarg = 0;
   if (time_out > 0) {
-    // Querying blocking mode portably is tricky on Windows; just set nonblocking and restore to blocking later if requested
+    // Querying blocking mode portably is tricky on Windows; just set nonblocking
+    // and restore to blocking later if requested
     if (ioctl(sock, FIONBIO, &nbarg) == 0) toggled_nonblock = true;
   }
 #endif
@@ -214,7 +220,6 @@ DECLARE_MODULE_METHOD(socket__connect) {
   int result = -1;
 
   for (rp = res; rp != NULL; rp = rp->ai_next) {
-    // Ensure we pass correct sockaddr and length
     int rc;
 #if !defined(_WIN32) && defined(EINTR)
     for (;;) {
@@ -294,7 +299,7 @@ DECLARE_MODULE_METHOD(socket__connect) {
 DECLARE_MODULE_METHOD(socket__bind) {
   ENFORCE_ARG_COUNT(bind, 4);
   ENFORCE_ARG_TYPE(bind, 0, IS_NUMBER); // the socket id
-  ENFORCE_ARG_TYPE(bind, 1, IS_STRING); // the address (or empty/null for wildcard)
+  ENFORCE_ARG_TYPE(bind, 1, IS_STRING); // the address (or empty string/nil for wildcard)
   ENFORCE_ARG_TYPE(bind, 2, IS_NUMBER); // the port
   ENFORCE_ARG_TYPE(bind, 3, IS_NUMBER); // the family
 
@@ -333,9 +338,9 @@ DECLARE_MODULE_METHOD(socket__bind) {
 }
 
 DECLARE_MODULE_METHOD(socket__listen) {
-  ENFORCE_ARG_COUNT(bind, 2);
-  ENFORCE_ARG_TYPE(bind, 0, IS_NUMBER); // the socket id
-  ENFORCE_ARG_TYPE(bind, 1, IS_NUMBER); // backlog
+  ENFORCE_ARG_COUNT(listen, 2);
+  ENFORCE_ARG_TYPE(listen, 0, IS_NUMBER); // the socket id
+  ENFORCE_ARG_TYPE(listen, 1, IS_NUMBER); // backlog
 
   int sock = AS_NUMBER(args[0]);
   int backlog = AS_NUMBER(args[1]);
@@ -351,10 +356,19 @@ DECLARE_MODULE_METHOD(socket__accept) {
 
   struct sockaddr_storage ss; memset(&ss, 0, sizeof(ss));
   socklen_t client_length = (socklen_t)sizeof(ss);
-  int new_sock = accept(sock, (struct sockaddr *) &ss, &client_length);
+
+  int new_sock;
+#if defined(__linux__) && defined(SOCK_CLOEXEC)
+  new_sock = accept4(sock, (struct sockaddr *)&ss, &client_length, SOCK_CLOEXEC);
+#else
+  new_sock = accept(sock, (struct sockaddr *)&ss, &client_length);
+#endif
+
   if (new_sock < 0) {
     RETURN_ERROR("client accept failed");
   }
+
+  socket_configure_fd(new_sock);
 
   b_obj_list *response = (b_obj_list *)GC(new_list(vm));
 
@@ -402,7 +416,8 @@ DECLARE_MODULE_METHOD(socket__send) {
   int flags = AS_NUMBER(args[2]);
 
   char *content = NULL;
-  int length;
+  int length = 0;
+  bool file_content = false; // tracks whether we must free content ourselves
 
   if (IS_STRING(data)) {
     content = AS_STRING(data)->chars;
@@ -412,9 +427,36 @@ DECLARE_MODULE_METHOD(socket__send) {
     length = AS_BYTES(data)->bytes.count;
   } else if (IS_FILE(data)) {
     char *path = realpath(AS_FILE(data)->path->chars, NULL);
-    content = read_file(path);
-    length = (int) strlen(content);
+    if (path == NULL) {
+      errno = ENOENT;
+      RETURN_NUMBER(-1);
+    }
+
+    /* Obtain the file size before reading so we don't rely on strlen */
+    FILE *fp = fopen(path, "rb");
     free(path);
+    if (fp == NULL) {
+      RETURN_NUMBER(-1);
+    }
+    if (fseek(fp, 0, SEEK_END) != 0) {
+      fclose(fp);
+      RETURN_NUMBER(-1);
+    }
+    long file_size = ftell(fp);
+    rewind(fp);
+    if (file_size < 0) {
+      fclose(fp);
+      RETURN_NUMBER(-1);
+    }
+
+    content = (char *)malloc((size_t)file_size);
+    if (content == NULL) {
+      fclose(fp);
+      RETURN_NUMBER(-1);
+    }
+    length = (int)fread(content, 1, (size_t)file_size, fp);
+    fclose(fp);
+    file_content = true; // we own this buffer; free after send
   } else {
     b_obj_string *data_str = value_to_string(vm, data);
     content = data_str->chars;
@@ -430,19 +472,21 @@ DECLARE_MODULE_METHOD(socket__send) {
   int processed = 0;
 
   // Determine send timeout (if any) using SO_SNDTIMEO
-  struct timeval timeout; int optlen = sizeof(timeout);
+  struct timeval send_timeout_base; int optlen = sizeof(send_timeout_base);
+  send_timeout_base.tv_sec = 0; send_timeout_base.tv_usec = 0;
 #ifndef _WIN32
-  int got_to = getsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, (socklen_t*)&optlen);
+  (void)getsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &send_timeout_base, (socklen_t*)&optlen);
 #else
-  int got_to = getsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, (socklen_t*)&optlen);
+  (void)getsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char*)&send_timeout_base, (socklen_t*)&optlen);
 #endif
-  if (got_to != 0 || optlen != sizeof(timeout)) {
-    timeout.tv_sec = 0; timeout.tv_usec = 0; // no timeout info
-  }
+
+  bool has_timeout = (send_timeout_base.tv_sec > 0 || send_timeout_base.tv_usec > 0);
+  const int SEND_CHUNK = 65536;
 
   while (processed < length) {
-    int write_size = length - processed < 4096 ? (length - processed) : 4096;
-    int rc = (int)send(sock, content + processed, write_size, flags);
+    int write_size = (length - processed) < SEND_CHUNK
+                         ? (length - processed) : SEND_CHUNK;
+    int rc = (int)send(sock, content + processed, (size_t)write_size, flags);
     if (rc > 0) {
       processed += rc;
       continue;
@@ -453,33 +497,36 @@ DECLARE_MODULE_METHOD(socket__send) {
     {
       int se = last_sock_error();
       if (is_interrupted(se)) {
-        continue; // interrupted, retry
+        continue; // interrupted by signal, retry immediately
       }
       if (is_would_block(se)) {
-        // Wait for socket to be writable if a timeout is configured
-        if (timeout.tv_sec > 0 || timeout.tv_usec > 0) {
+        if (has_timeout) {
+          /* [C7] Always use a fresh copy of the timeout for each select() */
+          struct timeval tv = send_timeout_base;
           fd_set wfds; FD_ZERO(&wfds); FD_SET(sock, &wfds);
-          int sel = select(sock + 1, NULL, &wfds, NULL, &timeout);
-          if (sel > 0) continue; // try sending again
-          if (sel == 0) { errno = ETIMEDOUT; return NUMBER_VAL(-1); }
-          // else select error -> fall through to error return
+          int sel = select(sock + 1, NULL, &wfds, NULL, &tv);
+          if (sel > 0) continue;   // socket writable; retry send
+          if (sel == 0) { errno = ETIMEDOUT; break; }
+          // select error: fall through to return error
         } else {
-          // No timeout configured; yield error to caller
+          // Non-blocking socket with no timeout: surface WOULDBLOCK to caller
           RETURN_NUMBER(-1);
         }
-      } else {
-        RETURN_NUMBER(-1);
       }
+      // Any other error: stop
+      if (file_content) free(content);
+      RETURN_NUMBER(-1);
     }
   }
 
+  if (file_content) free(content);
   RETURN_NUMBER(processed);
 }
 
 DECLARE_MODULE_METHOD(socket__recv) {
   ENFORCE_ARG_COUNT(recv, 3);
   ENFORCE_ARG_TYPE(recv, 0, IS_NUMBER); // the socket id
-  ENFORCE_ARG_TYPE(recv, 1, IS_NUMBER); // length to read
+  ENFORCE_ARG_TYPE(recv, 1, IS_NUMBER); // length to read (-1 = all available)
   ENFORCE_ARG_TYPE(recv, 2, IS_NUMBER); // flags
 
   int sock = AS_NUMBER(args[0]);
@@ -490,34 +537,38 @@ DECLARE_MODULE_METHOD(socket__recv) {
   int option_length = sizeof(timeout);
 
 #ifndef _WIN32
-  int rc = getsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, (socklen_t *) &option_length);
+  int rc = getsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, (socklen_t *)&option_length);
 #else
-  int rc = getsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, (socklen_t*)&option_length);
-#endif // !_WIN32
+  int rc = getsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, (socklen_t *)&option_length);
+#endif
 
-  if (rc != 0 || sizeof(timeout) != option_length || (timeout.tv_sec == 0 && timeout.tv_usec == 0)) {
-    // set default timeout to 0.5 seconds
+  if (rc != 0 || (int)sizeof(timeout) != option_length ||
+      (timeout.tv_sec == 0 && timeout.tv_usec == 0)) {
+    // Default: 0.5 second wait for data to arrive
     timeout.tv_sec = 0;
     timeout.tv_usec = 500000;
   }
 
   fd_set read_set;
   FD_ZERO(&read_set);
-  if (!FD_ISSET(sock, &read_set)) {
-    FD_SET(sock, &read_set);//tcp socket
-  }
+  FD_SET(sock, &read_set);
 
   int status;
   if ((status = select(sock + 1, &read_set, NULL, NULL, &timeout)) > 0) {
-    int content_length;
 
+  int content_length = 0;
 #ifndef _WIN32
-    ioctl(sock, FIONREAD, &content_length);
+  (void)ioctl(sock, FIONREAD, &content_length);
 #else
-    ioctl(sock, FIONREAD, (long unsigned int *)&content_length);
+  {
+    u_long fionread_val = 0;
+    (void)ioctl(sock, FIONREAD, &fionread_val);
+    content_length = (int)fionread_val;
+  }
 #endif
 
     if (content_length > 0) {
+    // Honour caller's length cap if provided
       if (length != -1 && length < content_length)
         content_length = length;
 
@@ -525,7 +576,8 @@ DECLARE_MODULE_METHOD(socket__recv) {
 
       int total_length = 0;
       while (total_length < content_length) {
-        int chunk = (int)recv(sock, response + total_length, content_length - total_length, flags);
+        int chunk = (int)recv(sock, response + total_length,
+                              (size_t)(content_length - total_length), flags);
         if (chunk > 0) {
           total_length += chunk;
           continue;
@@ -535,12 +587,12 @@ DECLARE_MODULE_METHOD(socket__recv) {
           int se = last_sock_error();
           if (is_interrupted(se)) continue;
           if (is_would_block(se)) {
-            // Wait again up to the same timeout for more data
+            /* [C7] Fresh timeout copy for each retry select() */
+            struct timeval tv = timeout;
             fd_set rs; FD_ZERO(&rs); FD_SET(sock, &rs);
-            int sel2 = select(sock + 1, &rs, NULL, NULL, &timeout);
+            int sel2 = select(sock + 1, &rs, NULL, NULL, &tv);
             if (sel2 > 0) continue;
             if (sel2 == 0) { errno = ETIMEDOUT; break; }
-            // select error: fall through
           }
         }
         break; // some other error
@@ -565,17 +617,24 @@ DECLARE_MODULE_METHOD(socket__read) {
   int sock = AS_NUMBER(args[0]);
   int length = AS_NUMBER(args[1]);
   int flags = AS_NUMBER(args[2]);
-  int total_length = 0;
 
+  if (length <= 0) length = 1024;
+
+  int total_length = 0;
   char *response = ALLOCATE(char, length + 1);
 
   char buf[4096];
   int bytes_received;
 
-  while((bytes_received = (int)recv(sock, buf, (length - total_length) < 4096 ? (length - total_length) : 4096, flags)) > 0 && total_length < length) {
-    memcpy(response + total_length, buf, bytes_received);
+  while (total_length < length &&
+         (bytes_received = (int)recv(sock, buf,
+             (size_t)((length - total_length) < 4096
+                          ? (length - total_length) : 4096),
+             flags)) > 0) {
+    memcpy(response + total_length, buf, (size_t)bytes_received);
     total_length += bytes_received;
   }
+
   response[total_length] = '\0';
   RETURN_T_STRING(response, (int)total_length);
 }
@@ -595,20 +654,34 @@ DECLARE_MODULE_METHOD(socket__setsockopt) {
       ENFORCE_ARG_TYPE(setsockopt, 2, IS_NUMBER);
 
 #ifdef _WIN32
-      DWORD timeout = AS_NUMBER(value);
-      RETURN_NUMBER(setsockopt(sock, SOL_SOCKET, option, (const char*)&timeout, sizeof(timeout)));
+      DWORD timeout = (DWORD)AS_NUMBER(value);
+      RETURN_NUMBER(setsockopt(sock, SOL_SOCKET, option,
+                               (const char *)&timeout, sizeof(timeout)));
 #else
-      int milliseconds = AS_NUMBER(value);
-      struct timeval tv = {(long) (milliseconds / 1000),
-                           (int) ((milliseconds % 1000) * 1000)};
-
+      int milliseconds = (int)AS_NUMBER(value);
+      struct timeval tv = { (long)(milliseconds / 1000),
+                            (int)((milliseconds % 1000) * 1000) };
       RETURN_NUMBER(setsockopt(sock, SOL_SOCKET, option, &tv, sizeof(tv)));
 #endif
     }
+
+#ifdef SO_LINGER
+    case SO_LINGER: {
+      ENFORCE_ARG_TYPE(setsockopt, 2, IS_NUMBER);
+      int linger_secs = (int)AS_NUMBER(value);
+      struct linger lg;
+      lg.l_onoff  = (linger_secs > 0) ? 1 : 0;
+      lg.l_linger = (linger_secs > 0) ? linger_secs : 0;
+      RETURN_NUMBER(setsockopt(sock, SOL_SOCKET, SO_LINGER,
+                               (const char *)&lg, sizeof(lg)));
+    }
+#endif
+
     default: {
       ENFORCE_ARG_TYPE(setsockopt, 2, IS_BOOL);
       int val = AS_BOOL(value) ? 1 : 0;
-      RETURN_NUMBER(setsockopt(sock, SOL_SOCKET, option, (const char *) &val, sizeof val));
+      RETURN_NUMBER(setsockopt(sock, SOL_SOCKET, option,
+                               (const char *)&val, sizeof val));
     }
   }
 }
@@ -623,49 +696,45 @@ DECLARE_MODULE_METHOD(socket__getsockopt) {
 
   switch (option) {
     case SO_ERROR: {
-      int so_error;
-      socklen_t len = sizeof so_error;
-
+      int so_error = 0;
+      socklen_t len = (socklen_t)sizeof(so_error);
 #ifndef _WIN32
       getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
 #else
       getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&so_error, &len);
-#endif // !_WIN32
-
+#endif
       if (so_error == 0) RETURN_NIL;
-      char *error = strerror(so_error);
-      RETURN_STRING(error);
+      RETURN_STRING(strerror(so_error));
     }
 
     case SO_SNDTIMEO:
     case SO_RCVTIMEO: {
-
 #ifdef _WIN32
       DWORD timeout;
       int len = sizeof(timeout);
-      if(getsockopt(sock, SOL_SOCKET, option, (char *)&timeout, &len) >= 0) {
+      if (getsockopt(sock, SOL_SOCKET, option, (char *)&timeout, &len) >= 0) {
         RETURN_NUMBER(timeout);
       }
 #else
       struct timeval tv;
-      socklen_t len = sizeof tv;
+      socklen_t len = (socklen_t)sizeof(tv);
       getsockopt(sock, SOL_SOCKET, option, &tv, &len);
-      if (len == sizeof tv) {
-        RETURN_NUMBER((tv.tv_sec * 1000) + ((double) tv.tv_usec / 1000));
+      if (len == sizeof(tv)) {
+        RETURN_NUMBER((tv.tv_sec * 1000) + ((double)tv.tv_usec / 1000));
       }
 #endif
       RETURN_NUMBER(-1);
     }
+
     default: {
-      int so_result;
-      socklen_t len = sizeof so_result;
+      int so_result = 0;
+      socklen_t len = (socklen_t)sizeof(so_result);
 #ifndef _WIN32
       getsockopt(sock, SOL_SOCKET, option, &so_result, &len);
 #else
       getsockopt(sock, SOL_SOCKET, option, (char *)&so_result, &len);
-#endif // _WIN32
-
-      if (len == sizeof so_result) {
+#endif
+      if (len == sizeof(so_result)) {
         RETURN_NUMBER(so_result);
       }
       RETURN_NUMBER(-1);
@@ -679,35 +748,48 @@ DECLARE_MODULE_METHOD(socket__getsockinfo) {
 
   int sock = AS_NUMBER(args[0]);
 
-  struct sockaddr_in address;
-  struct sockaddr_in6 address6;
-  memset(&address, 0, sizeof(address));
-  memset(&address6, 0, sizeof(address6));
+  struct sockaddr_storage ss;
+  memset(&ss, 0, sizeof(ss));
+  socklen_t ss_len = (socklen_t)sizeof(ss);
 
-  b_obj_dict *dict = (b_obj_dict *) GC(new_dict(vm));
+  b_obj_dict *dict = (b_obj_dict *)GC(new_dict(vm));
 
-  int length = sizeof address;
-  if (getsockname(sock, (struct sockaddr *) &address, (socklen_t *) &length) >= 0 &&
-      getsockname(sock, (struct sockaddr *) &address6, (socklen_t *) &length) >= 0) {
-    char *ip = ALLOCATE(char, INET_ADDRSTRLEN);
-    char *ip6 = ALLOCATE(char, INET6_ADDRSTRLEN);
-    if(inet_ntop(AF_INET, &address.sin_addr, ip, sizeof(ip) * INET_ADDRSTRLEN) != NULL &&
-        inet_ntop(AF_INET6, &address6.sin6_addr, ip6, sizeof(ip6) * INET6_ADDRSTRLEN) != NULL) {
-      int port = ntohs(address.sin_port);
-
-      dict_add_entry(vm, dict, GC_L_STRING("address", 7), GC_TT_STRING(ip));
-      dict_add_entry(vm, dict, GC_L_STRING("ipv6", 4), GC_TT_STRING(ip6));
-      dict_add_entry(vm, dict, GC_L_STRING("port", 4), NUMBER_VAL(port));
-      dict_add_entry(vm, dict, GC_L_STRING("family", 6), NUMBER_VAL(ntohs(address.sin_family)));
-
-      RETURN_OBJ(dict);
-    }
+  if (getsockname(sock, (struct sockaddr *)&ss, &ss_len) < 0) {
+    dict_add_entry(vm, dict, GC_L_STRING("address", 7), NIL_VAL);
+    dict_add_entry(vm, dict, GC_L_STRING("ipv6",    4), NIL_VAL);
+    dict_add_entry(vm, dict, GC_L_STRING("port",    4), NUMBER_VAL(-1));
+    dict_add_entry(vm, dict, GC_L_STRING("family",  6), NUMBER_VAL(-1));
+    RETURN_OBJ(dict);
   }
 
-  dict_add_entry(vm, dict, GC_L_STRING("address", 7), NIL_VAL);
-  dict_add_entry(vm, dict, GC_L_STRING("ipv6", 4), NIL_VAL);
-  dict_add_entry(vm, dict, GC_L_STRING("port", 4), NUMBER_VAL(-1));
-  dict_add_entry(vm, dict, GC_L_STRING("family", 6), NUMBER_VAL(ntohs(address.sin_family)));
+  char ip4[INET_ADDRSTRLEN]   = {0};
+  char ip6[INET6_ADDRSTRLEN]  = {0};
+  int  port   = -1;
+  int  family = (int)ss.ss_family;
+
+  if (ss.ss_family == AF_INET) {
+    struct sockaddr_in *sa = (struct sockaddr_in *)&ss;
+    inet_ntop(AF_INET, &sa->sin_addr, ip4, INET_ADDRSTRLEN);
+    port = (int)ntohs(sa->sin_port);
+  }
+#ifdef AF_INET6
+  else if (ss.ss_family == AF_INET6) {
+    struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&ss;
+    inet_ntop(AF_INET6, &sa6->sin6_addr, ip6, INET6_ADDRSTRLEN);
+    port = (int)ntohs(sa6->sin6_port);
+  }
+#endif
+
+  /* Populate both address slots; whichever family is active will be non-empty */
+  char *ip4_str = ALLOCATE(char, INET_ADDRSTRLEN);
+  char *ip6_str = ALLOCATE(char, INET6_ADDRSTRLEN);
+  memcpy(ip4_str, ip4, INET_ADDRSTRLEN);
+  memcpy(ip6_str, ip6, INET6_ADDRSTRLEN);
+
+  dict_add_entry(vm, dict, GC_L_STRING("address", 7), GC_TT_STRING(ip4_str));
+  dict_add_entry(vm, dict, GC_L_STRING("ipv6",    4), GC_TT_STRING(ip6_str));
+  dict_add_entry(vm, dict, GC_L_STRING("port",    4), NUMBER_VAL(port));
+  dict_add_entry(vm, dict, GC_L_STRING("family",  6), NUMBER_VAL(family)); // [S6] host order, no ntohs
   RETURN_OBJ(dict);
 }
 
@@ -717,66 +799,71 @@ DECLARE_MODULE_METHOD(socket__getaddrinfo) {
   ENFORCE_ARG_TYPE(getaddrinfo, 2, IS_NUMBER);
 
   b_obj_string *addr = AS_STRING(args[0]);
-  char *type = "80";
+
+  const char *type = "http";
   if (!IS_NIL(args[1])) {
-    ENFORCE_ARG_TYPE(_getaddrinfo, 1, IS_STRING);
+    ENFORCE_ARG_TYPE(getaddrinfo, 1, IS_STRING);
     type = AS_C_STRING(args[1]);
   }
-  int family = AS_NUMBER(args[2]);
+  int family = (int)AS_NUMBER(args[2]);
 
-  struct addrinfo *res, hints = {0};
-
+  struct addrinfo hints;
+  memset(&hints, 0, sizeof(hints));
   hints.ai_socktype = SOCK_STREAM;
-  hints.ai_family = family;
+  hints.ai_family   = family;
+  hints.ai_flags    = AI_CANONNAME; // populate ai_canonname
 
-#ifdef _WIN32
-  WSADATA wsa_data;
-  int i_result = WSAStartup(MAKEWORD(1, 1), &wsa_data);
-  if (i_result != NO_ERROR) {
+  struct addrinfo *res = NULL;
+  if (getaddrinfo(addr->length > 0 ? addr->chars : NULL, type, &hints, &res) != 0
+      || res == NULL) {
     RETURN_NIL;
   }
+
+  struct addrinfo *rp;
+  for (rp = res; rp != NULL; rp = rp->ai_next) {
+    if (rp->ai_family != family) continue;
+
+    b_obj_dict *dict = (b_obj_dict *)GC(new_dict(vm));
+
+    /* [C3] Canonical name is now populated when available */
+    if (rp->ai_canonname != NULL) {
+      dict_add_entry(vm, dict, GC_L_STRING("canonical_name", 14),
+                     GC_STRING(rp->ai_canonname));
+    } else {
+      dict_add_entry(vm, dict, GC_L_STRING("canonical_name", 14), NIL_VAL);
+    }
+
+    char *result = NULL;
+    switch (family) {
+      case AF_INET: {
+        void *ptr = &((struct sockaddr_in *)rp->ai_addr)->sin_addr;
+        result = ALLOCATE(char, INET_ADDRSTRLEN);
+        inet_ntop(rp->ai_family, ptr, result, INET_ADDRSTRLEN);
+        break;
+      }
+#ifdef AF_INET6
+      case AF_INET6: {
+        void *ptr = &((struct sockaddr_in6 *)rp->ai_addr)->sin6_addr;
+        result = ALLOCATE(char, INET6_ADDRSTRLEN);
+        inet_ntop(rp->ai_family, ptr, result, INET6_ADDRSTRLEN);
+        break;
+      }
 #endif
-
-  if (getaddrinfo(addr->length > 0 ? addr->chars : NULL, type, &hints, &res) == 0) {
-    while (res) {
-      if (res->ai_family == family) {
-
-        b_obj_dict *dict = (b_obj_dict *) GC(new_dict(vm));
-        if (res->ai_canonname != NULL) {
-          dict_add_entry(vm, dict, GC_L_STRING("cannon_name", 11), GC_STRING(res->ai_canonname));
-        } else {
-          dict_add_entry(vm, dict, GC_L_STRING("cannon_name", 11), NIL_VAL);
-        }
-
-        char *result = NULL;
-
-        switch (family) {
-          case AF_INET: {
-            void *ptr = &((struct sockaddr_in *) res->ai_addr)->sin_addr;
-            result = ALLOCATE(char, INET_ADDRSTRLEN);
-            inet_ntop(res->ai_family, ptr, result, 16);
-            break;
-          }
-          case AF_INET6: {
-            void *ptr = &((struct sockaddr_in6 *) res->ai_addr)->sin6_addr;
-            result = ALLOCATE(char, INET6_ADDRSTRLEN);
-            inet_ntop(res->ai_family, ptr, result, 46);
-            break;
-          }
-          default: {
-            result = ALLOCATE(char, 1);
-            result[0] = '\0';
-            break;
-          }
-        }
-
-        dict_add_entry(vm, dict, GC_L_STRING("ip", 2), GC_TT_STRING(result));
-        freeaddrinfo(res);
-        RETURN_OBJ(dict);
+      default: {
+        result = ALLOCATE(char, 1);
+        result[0] = '\0';
+        break;
       }
     }
+
+    dict_add_entry(vm, dict, GC_L_STRING("ip", 2), GC_TT_STRING(result));
+
+    /* [S2b] Free the original head pointer, not the cursor */
+    freeaddrinfo(res);
+    RETURN_OBJ(dict);
   }
 
+  /* No matching entry found */
   freeaddrinfo(res);
   RETURN_NIL;
 }
@@ -785,21 +872,144 @@ DECLARE_MODULE_METHOD(socket__close) {
   ENFORCE_ARG_COUNT(close, 1);
   ENFORCE_ARG_TYPE(close, 0, IS_NUMBER);
   int sock = AS_NUMBER(args[0]);
-
-//  // discard all leftover readable data...
-//  char buf[16];
-//  while (read(sock, buf, sizeof(buf)-1) > 0){}
-
-  // close socket
   RETURN_NUMBER(closesocket(sock));
-
 }
 
 DECLARE_MODULE_METHOD(socket__shutdown) {
   ENFORCE_ARG_COUNT(shutdown, 2);
-  ENFORCE_ARG_TYPE(shutdown, 0, IS_NUMBER);
-  ENFORCE_ARG_TYPE(shutdown, 0, IS_NUMBER);
-  RETURN_NUMBER(shutdown((int) AS_NUMBER(args[0]), (int) AS_NUMBER(args[1])));
+  ENFORCE_ARG_TYPE(shutdown, 0, IS_NUMBER); // socket id
+  ENFORCE_ARG_TYPE(shutdown, 1, IS_NUMBER); // how  — [S8] was checking arg 0 twice
+  RETURN_NUMBER(shutdown((int)AS_NUMBER(args[0]), (int)AS_NUMBER(args[1])));
+}
+
+DECLARE_MODULE_METHOD(socket__setblocking) {
+  ENFORCE_ARG_COUNT(setblocking, 2);
+  ENFORCE_ARG_TYPE(setblocking, 0, IS_NUMBER); // socket id
+  ENFORCE_ARG_TYPE(setblocking, 1, IS_BOOL);   // blocking = true / non-blocking = false
+
+  int sock    = (int)AS_NUMBER(args[0]);
+  bool blocking = AS_BOOL(args[1]);
+
+#ifndef _WIN32
+  int flags = fcntl(sock, F_GETFL, 0);
+  if (flags < 0) RETURN_NUMBER(-1);
+  if (blocking) {
+    flags &= ~O_NONBLOCK;
+  } else {
+    flags |= O_NONBLOCK;
+  }
+  RETURN_BOOL(fcntl(sock, F_SETFL, flags) != -1);
+#else
+  unsigned long mode = blocking ? 0UL : 1UL;
+  RETURN_BOOL(ioctl(sock, FIONBIO, &mode) != -1);
+#endif
+}
+
+DECLARE_MODULE_METHOD(socket__sendto) {
+  ENFORCE_ARG_COUNT(sendto, 6);
+  ENFORCE_ARG_TYPE(sendto, 0, IS_NUMBER); // socket id
+  ENFORCE_ARG_TYPE(sendto, 2, IS_NUMBER); // flags
+  ENFORCE_ARG_TYPE(sendto, 3, IS_STRING); // destination address
+  ENFORCE_ARG_TYPE(sendto, 4, IS_NUMBER); // destination port
+  ENFORCE_ARG_TYPE(sendto, 5, IS_NUMBER); // family
+
+  int sock    = (int)AS_NUMBER(args[0]);
+  b_value data = args[1];
+  int flags   = (int)AS_NUMBER(args[2]);
+  char *address = AS_C_STRING(args[3]);
+  int port    = (int)AS_NUMBER(args[4]);
+  int family  = (int)AS_NUMBER(args[5]);
+
+  char *content = NULL;
+  int length = 0;
+
+  if (IS_STRING(data)) {
+    content = AS_STRING(data)->chars;
+    length  = AS_STRING(data)->length;
+  } else if (IS_BYTES(data)) {
+    content = (char *)AS_BYTES(data)->bytes.bytes;
+    length  = AS_BYTES(data)->bytes.count;
+  } else {
+    b_obj_string *s = value_to_string(vm, data);
+    content = s->chars;
+    length  = s->length;
+  }
+
+#ifndef _WIN32
+#ifdef MSG_NOSIGNAL
+  flags |= MSG_NOSIGNAL;
+#endif
+#endif
+
+  char port_str[16];
+  snprintf(port_str, sizeof(port_str), "%d", port);
+
+  struct addrinfo hints; memset(&hints, 0, sizeof(hints));
+  hints.ai_family   = family;
+  hints.ai_socktype = SOCK_DGRAM;
+
+  struct addrinfo *res = NULL;
+  if (getaddrinfo(address, port_str, &hints, &res) != 0 || res == NULL) {
+    errno = EADDRNOTAVAIL;
+    RETURN_NUMBER(-1);
+  }
+
+  int sent = (int)sendto(sock, content, (size_t)length, flags,
+                         res->ai_addr, (socklen_t)res->ai_addrlen);
+  freeaddrinfo(res);
+  RETURN_NUMBER(sent);
+}
+
+DECLARE_MODULE_METHOD(socket__recvfrom) {
+  ENFORCE_ARG_COUNT(recvfrom, 3);
+  ENFORCE_ARG_TYPE(recvfrom, 0, IS_NUMBER); // socket id
+  ENFORCE_ARG_TYPE(recvfrom, 1, IS_NUMBER); // max bytes to read
+  ENFORCE_ARG_TYPE(recvfrom, 2, IS_NUMBER); // flags
+
+  int sock   = (int)AS_NUMBER(args[0]);
+  int length = (int)AS_NUMBER(args[1]);
+  int flags  = (int)AS_NUMBER(args[2]);
+
+  if (length <= 0) length = BIGSIZ;
+
+  struct sockaddr_storage ss; memset(&ss, 0, sizeof(ss));
+  socklen_t ss_len = (socklen_t)sizeof(ss);
+
+  char *buf = ALLOCATE(char, length + 1);
+  int received = (int)recvfrom(sock, buf, (size_t)length, flags,
+                               (struct sockaddr *)&ss, &ss_len);
+  if (received < 0) {
+    FREE_ARRAY(char, buf, length + 1);
+    RETURN_NUMBER(-1);
+  }
+  buf[received] = '\0';
+
+  /* Resolve sender address */
+  char sender_ip[INET6_ADDRSTRLEN] = {0};
+  int  sender_port = 0;
+
+  if (ss.ss_family == AF_INET) {
+    struct sockaddr_in *sa = (struct sockaddr_in *)&ss;
+    inet_ntop(AF_INET, &sa->sin_addr, sender_ip, INET_ADDRSTRLEN);
+    sender_port = (int)ntohs(sa->sin_port);
+  }
+#ifdef AF_INET6
+  else if (ss.ss_family == AF_INET6) {
+    struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&ss;
+    inet_ntop(AF_INET6, &sa6->sin6_addr, sender_ip, INET6_ADDRSTRLEN);
+    sender_port = (int)ntohs(sa6->sin6_port);
+  }
+#endif
+
+  b_obj_list *result = (b_obj_list *)GC(new_list(vm));
+  write_list(vm, result, STRING_TT_VAL(buf));
+
+  char *sender_str = ALLOCATE(char, INET6_ADDRSTRLEN);
+  memcpy(sender_str, sender_ip, INET6_ADDRSTRLEN);
+  write_list(vm, result, STRING_TT_VAL(sender_str));
+  write_list(vm, result, NUMBER_VAL(sender_port));
+
+  RETURN_OBJ(result);
 }
 
 void __socket_module_unload(b_vm *vm) {
@@ -817,14 +1027,14 @@ void __socket_module_preloader(b_vm *vm) {
     return;
   }
 
-  if(LOBYTE(wsa_data.wVersion) != 2 || HIBYTE(wsa_data.wVersion) != 2) {
+  if (LOBYTE(wsa_data.wVersion) != 2 || HIBYTE(wsa_data.wVersion) != 2) {
     WSACleanup();
     return;
   }
 #else
-#  ifdef SIGPIPE
+# ifdef SIGPIPE
   signal(SIGPIPE, SIG_IGN);
-#  endif
+# endif
 #endif
 }
 
@@ -1169,7 +1379,7 @@ b_value __socket_AF_DATAKIT(b_vm *vm) {
 #endif
 }
 
-//  CITT protocols, X.25 etc
+//  CCITT protocols, X.25 etc
 b_value __socket_AF_CCITT(b_vm *vm) {
 #ifdef AF_CCITT
   return NUMBER_VAL(AF_CCITT);
@@ -1483,6 +1693,9 @@ CREATE_MODULE_LOADER(socket) {
       {"shutdown",    false, GET_MODULE_METHOD(socket__shutdown)},
       {"getsockinfo", false, GET_MODULE_METHOD(socket__getsockinfo)},
       {"getaddrinfo", false, GET_MODULE_METHOD(socket__getaddrinfo)},
+      {"setblocking", false, GET_MODULE_METHOD(socket__setblocking)},
+      {"sendto",      false, GET_MODULE_METHOD(socket__sendto)},
+      {"recvfrom",    false, GET_MODULE_METHOD(socket__recvfrom)},
       {NULL,          false, NULL},
   };
 
@@ -1490,119 +1703,117 @@ CREATE_MODULE_LOADER(socket) {
       /**
        * Types
        */
-      {"SOCK_STREAM", true, __socket_SOCK_STREAM},
-      {"SOCK_DGRAM", true, __socket_SOCK_DGRAM},
-      {"SOCK_RAW", true, __socket_SOCK_RAW},
-      {"SOCK_RDM", true, __socket_SOCK_RDM},
+      {"SOCK_STREAM",    true, __socket_SOCK_STREAM},
+      {"SOCK_DGRAM",     true, __socket_SOCK_DGRAM},
+      {"SOCK_RAW",       true, __socket_SOCK_RAW},
+      {"SOCK_RDM",       true, __socket_SOCK_RDM},
       {"SOCK_SEQPACKET", true, __socket_SOCK_SEQPACKET},
 
       /**
-       * Option flags per-
+       * Option flags per-socket.
        */
-      {"SO_DEBUG", true, __socket_SO_DEBUG},
-      {"SO_ACCEPTCONN", true, __socket_SO_ACCEPTCONN},
-      {"SO_REUSEADDR", true, __socket_SO_REUSEADDR},
-      {"SO_KEEPALIVE", true, __socket_SO_KEEPALIVE},
-      {"SO_DONTROUTE", true, __socket_SO_DONTROUTE},
-      {"SO_BROADCAST", true, __socket_SO_BROADCAST},
+      {"SO_DEBUG",       true, __socket_SO_DEBUG},
+      {"SO_ACCEPTCONN",  true, __socket_SO_ACCEPTCONN},
+      {"SO_REUSEADDR",   true, __socket_SO_REUSEADDR},
+      {"SO_KEEPALIVE",   true, __socket_SO_KEEPALIVE},
+      {"SO_DONTROUTE",   true, __socket_SO_DONTROUTE},
+      {"SO_BROADCAST",   true, __socket_SO_BROADCAST},
       {"SO_USELOOPBACK", true, __socket_SO_USELOOPBACK},
-      {"SO_LINGER", true, __socket_SO_LINGER},
-      {"SO_OOBINLINE", true, __socket_SO_OOBINLINE},
-      {"SO_REUSEPORT", true, __socket_SO_REUSEPORT},
-      {"SO_TIMESTAMP", true, __socket_SO_TIMESTAMP},
+      {"SO_LINGER",      true, __socket_SO_LINGER},
+      {"SO_OOBINLINE",   true, __socket_SO_OOBINLINE},
+      {"SO_REUSEPORT",   true, __socket_SO_REUSEPORT},
+      {"SO_TIMESTAMP",   true, __socket_SO_TIMESTAMP},
 
       /**
        * Additional options, not kept in so_options.
        */
-      {"SO_SNDBUF", true, __socket_SO_SNDBUF},
-      {"SO_RCVBUF", true, __socket_SO_RCVBUF},
-      {"SO_SNDLOWAT", true, __socket_SO_SNDLOWAT},
-      {"SO_RCVLOWAT", true, __socket_SO_RCVLOWAT},
-      {"SO_SNDTIMEO", true, __socket_SO_SNDTIMEO},
-      {"SO_RCVTIMEO", true, __socket_SO_RCVTIMEO},
-      {"SO_ERROR", true, __socket_SO_ERROR},
-      {"SO_TYPE", true, __socket_SO_TYPE},
+      {"SO_SNDBUF",      true, __socket_SO_SNDBUF},
+      {"SO_RCVBUF",      true, __socket_SO_RCVBUF},
+      {"SO_SNDLOWAT",    true, __socket_SO_SNDLOWAT},
+      {"SO_RCVLOWAT",    true, __socket_SO_RCVLOWAT},
+      {"SO_SNDTIMEO",    true, __socket_SO_SNDTIMEO},
+      {"SO_RCVTIMEO",    true, __socket_SO_RCVTIMEO},
+      {"SO_ERROR",       true, __socket_SO_ERROR},
+      {"SO_TYPE",        true, __socket_SO_TYPE},
 
-
-      {"SOL_SOCKET", true, __socket_SOL_SOCKET},
+      {"SOL_SOCKET",     true, __socket_SOL_SOCKET},
 
       /**
        * Address families.
        */
-      {"AF_UNSPEC", true, __socket_AF_UNSPEC},
-      {"AF_UNIX", true, __socket_AF_UNIX},
-      {"AF_LOCAL", true, __socket_AF_LOCAL},
-      {"AF_INET", true, __socket_AF_INET},
-      {"AF_IMPLINK", true, __socket_AF_IMPLINK},
-      {"AF_PUP", true, __socket_AF_PUP},
-      {"AF_CHAOS", true, __socket_AF_CHAOS},
-      {"AF_NS", true, __socket_AF_NS},
-      {"AF_ISO", true, __socket_AF_ISO},
-      {"AF_OSI", true, __socket_AF_OSI},
-      {"AF_ECMA", true, __socket_AF_ECMA},
-      {"AF_DATAKIT", true, __socket_AF_DATAKIT},
-      {"AF_CCITT", true, __socket_AF_CCITT},
-      {"AF_SNA", true, __socket_AF_SNA},
-      {"AF_DECnet", true, __socket_AF_DECnet},
-      {"AF_DLI", true, __socket_AF_DLI},
-      {"AF_LAT", true, __socket_AF_LAT},
-      {"AF_HYLINK", true, __socket_AF_HYLINK},
-      {"AF_APPLETALK", true, __socket_AF_APPLETALK},
-      {"AF_INET6", true, __socket_AF_INET6},
+      {"AF_UNSPEC",      true, __socket_AF_UNSPEC},
+      {"AF_UNIX",        true, __socket_AF_UNIX},
+      {"AF_LOCAL",       true, __socket_AF_LOCAL},
+      {"AF_INET",        true, __socket_AF_INET},
+      {"AF_IMPLINK",     true, __socket_AF_IMPLINK},
+      {"AF_PUP",         true, __socket_AF_PUP},
+      {"AF_CHAOS",       true, __socket_AF_CHAOS},
+      {"AF_NS",          true, __socket_AF_NS},
+      {"AF_ISO",         true, __socket_AF_ISO},
+      {"AF_OSI",         true, __socket_AF_OSI},
+      {"AF_ECMA",        true, __socket_AF_ECMA},
+      {"AF_DATAKIT",     true, __socket_AF_DATAKIT},
+      {"AF_CCITT",       true, __socket_AF_CCITT},
+      {"AF_SNA",         true, __socket_AF_SNA},
+      {"AF_DECnet",      true, __socket_AF_DECnet},
+      {"AF_DLI",         true, __socket_AF_DLI},
+      {"AF_LAT",         true, __socket_AF_LAT},
+      {"AF_HYLINK",      true, __socket_AF_HYLINK},
+      {"AF_APPLETALK",   true, __socket_AF_APPLETALK},
+      {"AF_INET6",       true, __socket_AF_INET6},
 
       /**
        * Standard well-defined IP protocols.
        */
-
-      {"IPPROTO_IP", true, __socket_IPPROTO_IP},
-      {"IPPROTO_ICMP", true, __socket_IPPROTO_ICMP},
-      {"IPPROTO_IGMP", true, __socket_IPPROTO_IGMP},
-      {"IPPROTO_IPIP", true, __socket_IPPROTO_IPIP},
-      {"IPPROTO_TCP", true, __socket_IPPROTO_TCP},
-      {"IPPROTO_EGP", true, __socket_IPPROTO_EGP},
-      {"IPPROTO_PUP", true, __socket_IPPROTO_PUP},
-      {"IPPROTO_UDP", true, __socket_IPPROTO_UDP},
-      {"IPPROTO_IDP", true, __socket_IPPROTO_IDP},
-      {"IPPROTO_TP", true, __socket_IPPROTO_TP},
-      {"IPPROTO_DCCP", true, __socket_IPPROTO_DCCP},
-      {"IPPROTO_IPV6", true, __socket_IPPROTO_IPV6},
-      {"IPPROTO_RSVP", true, __socket_IPPROTO_RSVP},
-      {"IPPROTO_GRE", true, __socket_IPPROTO_GRE},
-      {"IPPROTO_ESP", true, __socket_IPPROTO_ESP},
-      {"IPPROTO_AH", true, __socket_IPPROTO_AH},
-      {"IPPROTO_MTP", true, __socket_IPPROTO_MTP},
+      {"IPPROTO_IP",     true, __socket_IPPROTO_IP},
+      {"IPPROTO_ICMP",   true, __socket_IPPROTO_ICMP},
+      {"IPPROTO_IGMP",   true, __socket_IPPROTO_IGMP},
+      {"IPPROTO_IPIP",   true, __socket_IPPROTO_IPIP},
+      {"IPPROTO_TCP",    true, __socket_IPPROTO_TCP},
+      {"IPPROTO_EGP",    true, __socket_IPPROTO_EGP},
+      {"IPPROTO_PUP",    true, __socket_IPPROTO_PUP},
+      {"IPPROTO_UDP",    true, __socket_IPPROTO_UDP},
+      {"IPPROTO_IDP",    true, __socket_IPPROTO_IDP},
+      {"IPPROTO_TP",     true, __socket_IPPROTO_TP},
+      {"IPPROTO_DCCP",   true, __socket_IPPROTO_DCCP},
+      {"IPPROTO_IPV6",   true, __socket_IPPROTO_IPV6},
+      {"IPPROTO_RSVP",   true, __socket_IPPROTO_RSVP},
+      {"IPPROTO_GRE",    true, __socket_IPPROTO_GRE},
+      {"IPPROTO_ESP",    true, __socket_IPPROTO_ESP},
+      {"IPPROTO_AH",     true, __socket_IPPROTO_AH},
+      {"IPPROTO_MTP",    true, __socket_IPPROTO_MTP},
       {"IPPROTO_BEETPH", true, __socket_IPPROTO_BEETPH},
-      {"IPPROTO_ENCAP", true, __socket_IPPROTO_ENCAP},
-      {"IPPROTO_PIM", true, __socket_IPPROTO_PIM},
-      {"IPPROTO_COMP", true, __socket_IPPROTO_COMP},
-      {"IPPROTO_SCTP", true, __socket_IPPROTO_SCTP},
-      {"IPPROTO_UDPLITE", true, __socket_IPPROTO_UDPLITE},
-      {"IPPROTO_MPLS", true, __socket_IPPROTO_MPLS},
-      {"IPPROTO_RAW", true, __socket_IPPROTO_RAW},
-      {"IPPROTO_MAX", true, __socket_IPPROTO_MAX},
+      {"IPPROTO_ENCAP",  true, __socket_IPPROTO_ENCAP},
+      {"IPPROTO_PIM",    true, __socket_IPPROTO_PIM},
+      {"IPPROTO_COMP",   true, __socket_IPPROTO_COMP},
+      {"IPPROTO_SCTP",   true, __socket_IPPROTO_SCTP},
+      {"IPPROTO_UDPLITE",true, __socket_IPPROTO_UDPLITE},
+      {"IPPROTO_MPLS",   true, __socket_IPPROTO_MPLS},
+      {"IPPROTO_RAW",    true, __socket_IPPROTO_RAW},
+      {"IPPROTO_MAX",    true, __socket_IPPROTO_MAX},
 
       /**
        * howto arguments for shutdown(2), specified by Posix.1g.
        */
-      {"SHUT_RD", true, __socket_SHUT_RD},
-      {"SHUT_WR", true, __socket_SHUT_WR},
-      {"SHUT_RDWR", true, __socket_SHUT_RDWR},
+      {"SHUT_RD",        true, __socket_SHUT_RD},
+      {"SHUT_WR",        true, __socket_SHUT_WR},
+      {"SHUT_RDWR",      true, __socket_SHUT_RDWR},
 
       /**
        * Maximum queue length specifiable by listen.
        */
-      {"SOMAXCONN", true, __socket_SOMAXCONN},
+      {"SOMAXCONN",      true, __socket_SOMAXCONN},
 
-      {NULL,       false, NULL},
+      {NULL,             false, NULL},
   };
 
   static b_module_reg module = {
-      .name = "_socket",
-      .fields= socket_module_fields,
+      .name      = "_socket",
+      .fields    = socket_module_fields,
       .functions = module_functions,
-      .classes = NULL,
+      .classes   = NULL,
       .preloader = &__socket_module_preloader,
-      .unloader = &__socket_module_unload
+      .unloader  = &__socket_module_unload
   };
   return &module;
 }
