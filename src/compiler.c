@@ -2419,6 +2419,17 @@ static void catch_statement(b_parser* p) {
   if (match(p, AS_TOKEN)) {
     consume(p, IDENTIFIER_TOKEN, "missing exception variable name");
     created_variable(p, p->previous);
+
+    ignore_whitespace(p);
+
+    if (match(p, LBRACE_TOKEN)) {
+      int exit_jump = emit_jump(p, OP_JUMP_IF_FALSE);
+      begin_scope(p);
+      block(p);
+      end_scope(p);
+      ignore_whitespace(p);
+      patch_jump(p, exit_jump);
+    }
   } else {
     emit_byte(p, OP_POP);
   }

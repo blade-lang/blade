@@ -44,11 +44,7 @@ def parse(parser) {
     default_platform = 'macos'
   }
 
-  var platform_list = ', '.join(
-    _supported_platforms.map(@(x) {
-      return x == default_platform ? '${x} - default' : x
-    })
-  )
+  var platform_list = ', '.join(_supported_platforms)
 
   parser.add_command(
     'bundle', 

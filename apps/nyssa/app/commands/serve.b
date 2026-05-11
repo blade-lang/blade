@@ -10,17 +10,19 @@ def parse(parser) {
     'Starts a local Nyssa repository server'
   ).add_option(
     'port', 
-    'port of the server (default: ${setup.REPOSITORY_PORT})', 
+    'The port the server should run on',
     {
       short_name: 'p',
       type: args.OPTIONAL,
+      value: setup.REPOSITORY_PORT,
     }
   ).add_option(
     'host',
-    'the host ip (default: ${setup.REPOSITORY_HOST})',
+    'The host ip address',
     {
       short_name: 'n',
       type: args.OPTIONAL,
+      value: setup.REPOSITORY_HOST,
     }
   )
 }

@@ -4,9 +4,24 @@ def parse(parser) {
   parser.add_command(
     'doc', 
     'Generates documentation for the current project'
+  ).add_option(
+    'with-private',
+    'Generate documentation for private modules',
+    {
+     short_name: 'p',
+    }
+  ).add_option(
+    'with-stub',
+    'Generate documentation for stub modules',
+    {
+     short_name: 's',
+    }
   )
 }
 
 def run(value, options, success, error) {
-  
+  var with_private = options.get('with-private', false),
+      with_stub = options.get('with-stub', false)
+
+
 }

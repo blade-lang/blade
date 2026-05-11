@@ -43,6 +43,7 @@ def create_tables() {
       'license TEXT GENERATED ALWAYS AS (json_extract(config, \'$.license\')) VIRTUAL,' +
       'tags TEXT GENERATED ALWAYS AS (json_extract(config, \'$.tags\')) VIRTUAL,' +
       'deps TEXT GENERATED ALWAYS AS (json_extract(config, \'$.deps\')) VIRTUAL,' +
+      'cvs_deps TEXT GENERATED ALWAYS AS (json_extract(config, \'$.cvs_deps\')) VIRTUAL,' +
       # extracted columns end
 
       'downloads INTEGER DEFAULT 0,' +
