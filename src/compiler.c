@@ -2429,6 +2429,7 @@ static void catch_statement(b_parser* p) {
       end_scope(p);
       ignore_whitespace(p);
       patch_jump(p, exit_jump);
+      emit_byte(p, OP_POP);
     }
   } else {
     emit_byte(p, OP_POP);

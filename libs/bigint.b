@@ -41,6 +41,9 @@ import math
 
 var _baseNumbers = '0123456789abcdefghijklmnopqrstuvwxyz'
 
+# Maximum allowed string length for BigInt parsing (DoS protection)
+var _MAX_INPUT_LENGTH = 100000
+
 var _zeros = [
   '',
   '0',
@@ -127,7 +130,7 @@ def _parseHex4Bits(string, index) {
   } else if (c >= 97 and c <= 102) {
     return c - 87
   } else {
-    assert false, 'Invalid character in ' + string
+    raise ValueError('Invalid hexadecimal character in input string')
   }
 }
 
@@ -140,7 +143,7 @@ def _parseHexByte(string, lowerBound, index) {
   return r
 }
 
-def _parseBase(str, start, end, mul) {
+def _parseBaseStr(str, start, end, mul) {
   var r = 0
   var b = 0
 
@@ -162,8 +165,11 @@ def _parseBase(str, start, end, mul) {
     } else {
       b = c
     }
-
-    assert c >= 0 and b < mul, 'Invalid character'
+    
+    if c < 0 or b >= mul {
+      raise ValueError('Invalid character in BigInt string at position ${i}')
+    }
+    
     r += b
   }
 
@@ -928,16 +934,19 @@ class BigInt {
    * @constructor
    */
   BigInt(number, base, endian) {
-    if BigInt.isBigInt(number) {
-      return
-    }
-
+    # Always initialise fields first to guarantee a consistent object state.
     self.negative = 0
     self.words = nil
     self.length = 0
 
     # Reduction context
     self.red = nil
+
+    if BigInt.isBigInt(number) {
+      # Copy the value rather than returning a broken empty shell
+      number.copy(self)
+      return
+    }
 
     if number != nil {
       if base == 'le' or base == 'be' {
@@ -990,11 +999,20 @@ class BigInt {
       base = 16
     }
 
-    assert base == (base | 0) and base >= 2 and base <= 36,
-      'BigInt base out of range'
+    if !(base == (base | 0) and base >= 2 and base <= 36) {
+      raise ValueError('BigInt base out of range')
+    }
 
-    number = to_string(number).replace('/\s+/', '')
-    assert number.length() > 0, 'Invalid BigInt value'
+    number = to_string(number).replace('/\\s+/', '')
+
+    # Enforce an upper bound on input length to prevent DoS
+    if number.length() > _MAX_INPUT_LENGTH {
+      raise ValueError('BigInt input string exceeds maximum allowed length')
+    }
+
+    if number.length() == 0 {
+      raise ValueError('Invalid BigInt value: empty string')
+    }
 
     var start = 0
     if number[0] == '-' {
@@ -1021,6 +1039,10 @@ class BigInt {
           self._initArray(self.toList(), base, endian)
         }
       }
+    } else {
+      # Nothing after prefix (e.g. just "-" or "0x") — treat as zero
+      self.words = [0]
+      self.length = 1
     }
   }
 
@@ -1040,7 +1062,10 @@ class BigInt {
       ]
       self.length = 2
     } else {
-      assert number < 0x20000000000000, 'Unsafe BigInt number' # 2 ^ 53 (unsafe)
+      if number >= 0x20000000000000 {
+        raise ValueError('Unsafe BigInt number: value exceeds 2^53')
+      }
+
       self.words = [
         number & 0x3ffffff,
         (number / 0x4000000) & 0x3ffffff,
@@ -1057,7 +1082,9 @@ class BigInt {
 
   _initArray(number, base, endian) {
     # Perhaps a Uint8Array
-    assert is_number(number.length())
+    if !is_number(number.length()) {
+      raise TypeError('Invalid list-like object passed to _initArray')
+    }
 
     if number.length() <= 0 {
       self.words = [0]
@@ -1172,7 +1199,7 @@ class BigInt {
     var word = 0
     var i = start
     iter ; i < end; i += limbLen {
-      word = _parseBase(number, i, i + limbLen, base)
+      word = _parseBaseStr(number, i, i + limbLen, base)
 
       self.imuln(limbPow)
       if self.words[0] + word < 0x4000000 {
@@ -1184,7 +1211,7 @@ class BigInt {
 
     if mod != 0 {
       var pow = 1
-      word = _parseBase(number, i, number.length(), base)
+      word = _parseBaseStr(number, i, number.length(), base)
 
       iter var i = 0; i < mod; i++ {
         pow *= base
@@ -1239,6 +1266,7 @@ class BigInt {
   strip() {
     while self.length > 1 and self.words[self.length - 1] == 0 {
       self.length--
+      self.words.pop()
     }
 
     return self.normSign()
@@ -1312,16 +1340,18 @@ class BigInt {
       return out
     }
 
-    # var groupSize = (self.wordSize * math.LOG_2_E / math.log(base)) // 1
     var groupSize = _groupSizes[base]
-    # var groupBase = base ** groupSize
     var groupBase = _groupBases[base]
     out = ''
+
+    # Work on a clone once, then use idivn in-place so we
+    # do not allocate a fresh BigInt on every loop iteration.
     var c = self.clone()
     c.negative = 0
     while !c.isZero() {
-      var r = _numberToBase(c.modrn(groupBase), base)
-      c = c.idivn(groupBase)
+      var rem = c.modrn(groupBase)
+      c.idivn(groupBase)  # mutate c in-place; no extra allocation
+      var r = _numberToBase(rem, base)
 
       if !c.isZero() {
         out = _zeros[groupSize - r.length()] + r + out
@@ -1330,7 +1360,7 @@ class BigInt {
       }
     }
 
-    if (self.isZero()) {
+    if self.isZero() {
       out = '0' + out
     }
 
@@ -1359,7 +1389,7 @@ class BigInt {
       # NOTE: at self stage it is known that the top bit is set
       ret += 0x10000000000000 + (self.words[1] * 0x4000000)
     } else if self.length > 2 {
-      assert false, 'Number can only safely store up to 53 bits'
+      raise RangeError('Number can only safely store up to 53 bits')
     }
 
     return (self.negative != 0) ? -ret : ret
@@ -1388,8 +1418,13 @@ class BigInt {
     var byteLength = self.byteLength()
     var reqLength = length or max(1, byteLength)
 
-    assert byteLength <= reqLength, 'byte array longer than desired length'
-    assert reqLength > 0, 'Requested array length <= 0'
+    if byteLength > reqLength {
+      raise ValueError('Requested list length is shorter than the number of bytes required')
+    }
+
+    if reqLength <= 0 {
+      raise ValueError('Requested list length is non-positive')
+    }
 
     var res = [0] * reqLength
     if endian == 'le' {
@@ -1658,7 +1693,10 @@ class BigInt {
    * @returns self
    */
   ior(num) {
-    assert (self.negative | num.negative) == 0
+    if (self.negative | num.negative) != 0 {
+      raise ValueError('ior operates on non-negative numbers only')
+    }
+
     return self.iuor(num)
   }
 
@@ -1716,7 +1754,10 @@ class BigInt {
    * @returns self
    */
   iand(num) {
-    assert (self.negative | num.negative) == 0
+    if (self.negative | num.negative) != 0 {
+      raise ValueError('iand operates on non-negative numbers only')
+    }
+
     return self.iuand(num)
   }
 
@@ -1787,7 +1828,10 @@ class BigInt {
    * @returns self
    */
   ixor(num) {
-    assert (self.negative | num.negative) == 0
+    if (self.negative | num.negative) != 0 {
+      raise ValueError('ixor operates on non-negative numbers only')
+    }
+
     return self.iuxor(num)
   }
 
@@ -1822,7 +1866,9 @@ class BigInt {
    * @returns self
    */
   inotn(width) {
-    assert is_number(width) and width >= 0
+    if !is_number(width) or width < 0 {
+      raise ValueError('inotn requires a non-negative integer width')
+    }
 
     var bytesNeeded = math.ceil(width / 26) | 0
     var bitsLeft = width % 26
@@ -1867,7 +1913,9 @@ class BigInt {
    * @returns [[bigint.BigInt]]
    */
   setn(bit, val) {
-    assert is_number(bit) and bit >= 0
+    if !is_number(bit) or bit < 0 {
+      raise ValueError('setn requires a non-negative integer bit index')
+    }
 
     var off = (bit / 26) | 0
     var wbit = bit % 26
@@ -2114,8 +2162,14 @@ class BigInt {
     var isNegNum = num < 0
     if isNegNum num = -num
 
-    assert is_number(num)
-    assert num < 0x4000000
+    if !is_number(num) {
+      raise TypeError('imuln requires a number argument')
+    }
+
+    # Validate after negation so the boundary is symmetric
+    if num >= 0x4000000 {
+      raise RangeError('imuln argument must be < 0x4000000')
+    }
 
     # Carry
     var carry = 0
@@ -2205,7 +2259,9 @@ class BigInt {
    * @returns self
    */
   iushln(bits) {
-    assert is_number(bits) and bits >= 0
+    if !is_number(bits) or bits < 0 {
+      raise ValueError('iushln requires a non-negative integer')
+    }
 
     var r = bits % 26
     var s = (bits - r) / 26
@@ -2256,8 +2312,11 @@ class BigInt {
    * 
    * @returns self
    */
-  ishln (bits) {
-    assert self.negative == 0
+  ishln(bits) {
+    if self.negative != 0 {
+      raise ValueError('ishln requires a non-negative BigInt')
+    }
+
     return self.iushln(bits)
   }
 
@@ -2270,7 +2329,9 @@ class BigInt {
    * @returns self
    */
   iushrn(bits, hint, extended) {
-    assert is_number(bits) and bits >= 0
+    if !is_number(bits) or bits < 0 {
+      raise ValueError('iushrn requires a non-negative integer')
+    }
 
     var h
     if hint {
@@ -2334,7 +2395,10 @@ class BigInt {
    * @returns self
    */
   ishrn(bits, hint, extended) {
-    assert self.negative == 0
+    if self.negative != 0 {
+      raise ValueError('ishrn requires a non-negative BigInt')
+    }
+
     return self.iushrn(bits, hint, extended)
   }
 
@@ -2379,7 +2443,10 @@ class BigInt {
    * @returns bool
    */
   testn(bit) {
-    assert is_number(bit) and bit >= 0
+    if !is_number(bit) or bit < 0 {
+      raise ValueError('testn requires a non-negative integer bit index')
+    }
+
     var r = bit % 26
     var s = (bit - r) / 26
     var q = 1 << r
@@ -2399,12 +2466,16 @@ class BigInt {
    * @returns self
    */
   imaskn(bits) {
-    assert is_number(bits) and bits >= 0
+    if !is_number(bits) or bits < 0 {
+      raise ValueError('imaskn requires a non-negative integer')
+    }
 
     var r = bits % 26
     var s = (bits - r) / 26
 
-    assert self.negative == 0, 'imaskn works only with positive numbers'
+    if self.negative != 0 {
+      raise ValueError('imaskn works only with positive numbers')
+    }
 
     if self.length <= s {
       return self
@@ -2439,8 +2510,13 @@ class BigInt {
    * @returns self
    */
   iaddn (num) {
-    assert is_number(num)
-    assert num < 0x4000000
+    if !is_number(num) {
+      raise TypeError('iaddn requires a number argument')
+    }
+    if num >= 0x4000000 or num <= -0x4000000 {
+      raise RangeError('iaddn argument out of range')
+    }
+    
     if num < 0 return self.isubn(-num)
 
     # Possible sign change
@@ -2486,8 +2562,14 @@ class BigInt {
    * @returns self
    */
   isubn (num) {
-    assert is_number(num)
-    assert num < 0x4000000
+    if !is_number(num) {
+      raise TypeError('isubn requires a number argument')
+    }
+
+    if num >= 0x4000000 or num <= -0x4000000 {
+      raise RangeError('isubn argument out of range')
+    }
+
     if num < 0 {
       return self.iaddn(-num)
     }
@@ -2581,7 +2663,10 @@ class BigInt {
     }
 
     # Subtraction overflow
-    assert carry == -1
+    if carry != -1 {
+      raise Exception('ishlnsubmul: unexpected carry value ${carry}')
+    }
+
     carry = 0
     iter i = 0; i < self.length; i++ {
       w = -(self.words[i] | 0) + carry
@@ -2691,7 +2776,9 @@ class BigInt {
    * @returns dict
    */
   divmod(num, mode, positive) {
-    assert !num.isZero()
+    if num.isZero() {
+      raise ValueError('Division by zero in BigInt.divmod')
+    }
 
     if self.isZero() {
       return {
@@ -2846,7 +2933,14 @@ class BigInt {
     var isNegNum = num < 0
     if isNegNum num = -num
 
-    assert num <= 0x3ffffff
+    # Validate before using num in arithmetic
+    if num > 0x3ffffff {
+      raise RangeError('modrn argument must be <= 0x3ffffff')
+    }
+    if num == 0 {
+      raise ValueError('modrn: modulus cannot be zero')
+    }
+
     var p = (1 << 26) % num
 
     var acc = 0
@@ -2866,7 +2960,12 @@ class BigInt {
     var isNegNum = num < 0
     if (isNegNum) num = -num
 
-    assert num <= 0x3ffffff
+    if num > 0x3ffffff {
+      raise RangeError('idivn argument must be <= 0x3ffffff')
+    }
+    if num == 0 {
+      raise ValueError('idivn: divisor cannot be zero')
+    }
 
     var carry = 0
     iter var i = self.length - 1; i >= 0; i-- {
@@ -2898,8 +2997,13 @@ class BigInt {
    * @returns dict
    */
   egcd(y) {
-    assert y.negative == 0
-    assert !y.isZero()
+    if y.negative != 0 {
+      raise ValueError('egcd requires a non-negative y')
+    }
+
+    if y.isZero() {
+      raise ValueError('egcd requires a non-zero y')
+    }
 
     var x = self
     y = y.clone()
@@ -2988,8 +3092,14 @@ class BigInt {
   # above, designated to invert members of the
   # _prime_ fields F(p) at a maximal speed
   _invmp(p) {
-    assert p.negative == 0
-    assert !p.isZero()
+    if p.negative != 0 {
+      raise ValueError('_invmp requires a non-negative modulus')
+    }
+
+    if p.isZero() {
+      raise ValueError('_invmp requires a non-zero modulus')
+    }
+
 
     var a = self
     var b = p.clone()
@@ -3228,7 +3338,9 @@ class BigInt {
         num = -num
       }
 
-      assert num <= 0x3ffffff, 'Number is too big'
+      if num > 0x3ffffff {
+        raise ValueError('Number is too big')
+      }
 
       var w = self.words[0] | 0
       res = w == num ? 0 : w < num ? -1 : 1
@@ -3673,13 +3785,13 @@ def _sort(list, low, high) {
     # find pivot element such that
     # element smaller than pivot are on the left
     # element greater than pivot are on the right
-    var pivot = _partition(items, low, high)
+    var pivot = _partition(list, low, high)
 
     # recursive call on the left of pivot
-    _sort(items, low, pivot - 1)
+    _sort(list, low, pivot - 1)
 
     # recursive call on the right of pivot
-    _sort(items, pivot + 1, high)
+    _sort(list, pivot + 1, high)
   }
 }
 
