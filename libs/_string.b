@@ -3,6 +3,16 @@
 class _StringExtension > string {
 
   /**
+   * Returns true if the string contains the specified substring, false otherwise.
+   *
+   * @param {string} str The substring to search for.
+   * @return {boolean}
+   */
+  static contains(str) {
+    return self.index_of(str) > -1
+  }
+
+  /**
    * Returns the lines of the string as an list as it would be if split on newline characters.
    *
    * @return {list}

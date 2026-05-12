@@ -48,7 +48,7 @@ def parse(parser) {
 
   parser.add_command(
     'bundle', 
-    'Creates a standalone application bundle from any Blade project'
+    'Creates a standalone application bundle.'
   ).add_option(
     'os',
     'the target operating system (${platform_list})',

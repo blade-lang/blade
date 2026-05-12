@@ -709,7 +709,20 @@ class HttpRequest {
 
     var receive_time_start = microtime()
     while true {
-      var data = client.receive(size)
+      var data
+
+      catch {
+        data = client.receive(size)
+      } as error
+
+      if error {
+        if response.length() > 0 and error.message.contains('timed out') {
+          break
+        } else {
+          raise error
+        }
+      }
+
       if !data {
         if !should_wait and response.length() > 0 {
            break
