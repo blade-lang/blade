@@ -719,13 +719,13 @@ class HttpRequest {
         if response.length() > 0 and error.message.contains('timed out') {
           break
         } else {
-          raise error
+          raise HttpException(error.message)
         }
       }
 
       if !data {
         if !should_wait and response.length() > 0 {
-           break
+          break
         }
 
         var time_taken = (microtime() - receive_time_start) / 1000
