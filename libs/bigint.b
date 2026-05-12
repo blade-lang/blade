@@ -1266,7 +1266,6 @@ class BigInt {
   strip() {
     while self.length > 1 and self.words[self.length - 1] == 0 {
       self.length--
-      self.words.pop()
     }
 
     return self.normSign()
