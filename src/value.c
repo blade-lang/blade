@@ -83,6 +83,14 @@ void free_byte_arr(b_vm *vm, b_byte_arr *array) {
   init_byte_arr(array, 0);
 }
 
+static void print_number(const double x) {
+  if (x >= INT64_MIN && x <= INT64_MAX && x == (int64_t)x) {
+    printf(INTEGER_PRINT_FORMAT, (long long)(int64_t)x);
+  } else {
+    printf(DOUBLE_PRINT_FORMAT, x);
+  }
+}
+
 static inline void do_print_value(b_value value, bool fix_string) {
 #if defined(USE_NAN_BOXING) && USE_NAN_BOXING
   if (IS_EMPTY(value)) return;
@@ -92,7 +100,7 @@ static inline void do_print_value(b_value value, bool fix_string) {
     printf(AS_BOOL(value) ? "true" : "false");
   } else if (IS_NUMBER(value)) {
     double num = AS_NUMBER(value);
-    printf(GET_NUMBER_FORMAT(num), num);
+    print_number(num);
   } else {
     print_object(value, fix_string);
   }
@@ -108,7 +116,7 @@ static inline void do_print_value(b_value value, bool fix_string) {
     break;
   case VAL_NUMBER:
     double num = AS_NUMBER(value);
-    printf(GET_NUMBER_FORMAT(num), num);
+    print_number(num);
     break;
   case VAL_OBJ:
     print_object(value, fix_string);
@@ -123,14 +131,25 @@ static inline void do_print_value(b_value value, bool fix_string) {
 void print_value(b_value value) { do_print_value(value, false); }
 void echo_value(b_value value) { do_print_value(value, true); }
 
-static inline char *number_to_string(b_vm *vm, double number, int *length) {
-  const char *format = GET_NUMBER_FORMAT(number);
-  *length = snprintf(NULL, 0, format, number);
-  char *num_str = ALLOCATE(char, *length + 1);
-  if (num_str != NULL) {
-    sprintf(num_str, format, number);
-    return num_str;
+char *number_to_string(b_vm *vm, double x, int *length) {
+  if (x >= INT64_MIN && x <= INT64_MAX && x == (int64_t)x) {
+    *length = snprintf(NULL, 0, INTEGER_PRINT_FORMAT, (long long)(int64_t)x);
+    char *num_str = ALLOCATE(char, *length + 1);
+    if (num_str != NULL) {
+      sprintf(num_str, INTEGER_PRINT_FORMAT, (long long)(int64_t)x);
+      num_str[*length] = '\0';
+      return num_str;
+    }
+  } else {
+    *length = snprintf(NULL, 0, DOUBLE_PRINT_FORMAT, x);
+    char *num_str = ALLOCATE(char, *length + 1);
+    if (num_str != NULL) {
+      sprintf(num_str, DOUBLE_PRINT_FORMAT, x);
+      num_str[*length] = '\0';
+      return num_str;
+    }
   }
+
   return strdup("");
 }
 

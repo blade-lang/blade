@@ -1469,8 +1469,8 @@ static bool concatenate(b_vm *vm) {
   } else if (IS_NUMBER(_a)) {
     double a = AS_NUMBER(_a);
 
-    char num_str[27]; // + 1 for null terminator
-    int num_length = sprintf(num_str, GET_NUMBER_FORMAT(a), a);
+    int num_length = 0;
+    char *num_str = number_to_string(vm, a, &num_length);
 
     b_obj_string *b = AS_STRING(_b);
 
@@ -1484,14 +1484,16 @@ static bool concatenate(b_vm *vm) {
     b_obj_string *result = take_string(vm, chars, length);
     result->utf8_length = utf8len;
 
+    FREE(char, num_str);
+
     pop_n(vm, 2);
     push(vm, OBJ_VAL(result));
   } else if (IS_NUMBER(_b)) {
     b_obj_string *a = AS_STRING(_a);
     double b = AS_NUMBER(_b);
 
-    char num_str[27]; // + 1 for null terminator
-    int num_length = sprintf(num_str, GET_NUMBER_FORMAT(b), b);
+    int num_length = 0;
+    char *num_str = number_to_string(vm, b, &num_length);
 
     int length = num_length + a->length;
     char *chars = ALLOCATE(char, (size_t) length + 1);
@@ -1502,6 +1504,8 @@ static bool concatenate(b_vm *vm) {
     int utf8len = utf8length(chars);
     b_obj_string *result = take_string(vm, chars, length);
     result->utf8_length = utf8len;
+
+    FREE(char, num_str);
 
     pop_n(vm, 2);
     push(vm, OBJ_VAL(result));
