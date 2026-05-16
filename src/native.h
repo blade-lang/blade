@@ -133,7 +133,7 @@
 #define ENFORCE_CONSTRUCTOR_ARG_TYPE(name, i, type)    do {                        \
   if (!type(args[i])) {                                                        \
     RETURN_TYPE_ERROR(#name                                                         \
-                 "() expects argument %d to class constructor as " NORMALIZE(  \
+                 "() expects argument %d passed to class constructor as " NORMALIZE(  \
                      type) ", %s given",                                       \
                  (i) + 1, value_type(args[i]));                                  \
   } } while(0)

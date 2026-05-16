@@ -7,6 +7,8 @@
  * @copyright 2021, Richard Ore and Blade contributors
  */
 
+import math
+
 
 var _hex_table = '0123456789abcdef'
 var _reverse_hex_table = ['0', '1', '2', '3', '4', '5', '6', '7',
@@ -56,22 +58,51 @@ def bytes_to_hex(data) {
 }
 
 /**
- * Converts the given decimal based number to an hexadecimal string.
+ * Converts the given decimal based number to an hexadecimal string. If digits is 
+ * provided and the length of the result is less than digits, the result will be 
+ * padded with zeros on the left. If the lenght of the result is greater than 
+ * digits, the result will be truncated to the least significant digits.
  * 
  * @param number n
+ * @param number? digits
  * @returns string
  */
-def decimal_to_hex(n) {
+def decimal_to_hex(n, digits) {
   if !is_number(n)
     raise TypeError('number expected, ${typeof(n)} given')
 
-  var hex_list = []
-  while n > 0 {
-    hex_list.append(_hex_table[n % 16])
-    n = int(n / 16)
+  if digits != nil and !is_number(digits) {
+    raise ValueError('digits must be a number')
   }
 
-  return ''.join(hex_list.reverse())
+  # If n is a floating point number, you want to floor it
+  n = math.floor(n)
+
+  if n < 0 {
+    return '-' + decimal_to_hex(-n)
+  }
+
+  var result = ''
+  var remaining = n
+
+  while remaining > 0 {
+    var nibble = remaining % 16
+    result  = _hex_table[nibble] + result
+    remaining = math.floor(remaining / 16)
+  }
+
+  if digits {
+    while result.length() < digits {
+      result = '0' + result
+    }
+
+    if digits and result.length() > digits {
+      # Truncate to least-significant `digits` characters.
+      result = result[result.length() - digits, result.length()]
+    }
+  }
+
+  return result
 }
 
 /**

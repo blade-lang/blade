@@ -140,8 +140,8 @@ var MAX_WBITS = _zlib.MAX_WBITS
  * return the updated checksum.
  * 
  * @note An Adler-32 checksum is almost as reliable as a CRC-32 but can be computed much faster.
- * @param bytes|string data
- * @param number? intial
+ * @param {bytes|string} data
+ * @param number? initial
  * @returns number
  */
 def adler32(data, initial) {
@@ -157,10 +157,10 @@ def adler32(data, initial) {
 }
 
 /**
- * Update a running CRC-32 cheksum with the bytes buf[0..len-1] and return the
+ * Update a running CRC-32 checksum with the bytes buf[0..len-1] and return the
  * updated CRC-32 checksum.
  * 
- * @param bytes|string data
+ * @param {bytes|string} data
  * @param number? intial
  * @returns number
  */
@@ -231,7 +231,7 @@ def crc32(data, initial) {
  *    optimal speed.  The default value is 8.
  * 
  * {.list}
- * @param bytes|string data
+ * @param {bytes|string} data
  * @param int? level: Default value is `DEFAULT_COMPRESSION`.
  * @param int? strategy: Default value is `DEFAULT_STRATEGY`.
  * @param int? wbits: Default value is `MAX_WBITS`.
@@ -304,7 +304,7 @@ def compress(data, level, strategy, wbits, memory_level) {
  *    If the compression uses gzip-wrapper, the correct `wbits` may need to be set.
  * 
  * {.list}
- * @param bytes|string data
+ * @param {bytes|string} data
  * @param int? wbits: Default value is `MAX_WBITS`.
  * @returns bytes
  */
@@ -323,7 +323,7 @@ def uncompress(data, wbits) {
 /**
  * Compress data using the default options for Deflate.
  * 
- * @param bytes|string data
+ * @param {bytes|string} data
  * @returns bytes
  */
 def deflate(data) {
@@ -333,7 +333,7 @@ def deflate(data) {
 /**
  * Uncompress a deflated data using default options.
  * 
- * @param bytes|string data
+ * @param {bytes|string} data
  * @returns bytes
  */
 def undeflate(data) {
@@ -343,7 +343,7 @@ def undeflate(data) {
 /**
  * Compress data using the default options for GZip.
  * 
- * @param bytes|string data
+ * @param {bytes|string} data
  * @returns bytes
  */
 def gzip(data) {
@@ -353,7 +353,7 @@ def gzip(data) {
 /**
  * Uncompress a GZipped data using default options.
  * 
- * @param bytes|string data
+ * @param {bytes|string} data
  * @returns bytes
  */
 def ungzip(data) {
@@ -421,7 +421,7 @@ class GZ {
    * write returns the number of uncompressed bytes written or 0 in case of
    * error.
    * 
-   * @param bytes|string data
+   * @param {bytes|string} data
    * @returns number
    */
   write(data) {

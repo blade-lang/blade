@@ -3,27 +3,6 @@ import hash
 var start = time()
 
 for i in 1..101 {
-  hash.adler32('hello, world')
-}
-
-echo '1 hundred adler32 in ${time() - start}s'
-start = time()
-
-for i in 1..101 {
-  hash.crc32('hello, world')
-}
-
-echo '1 hundred crc32 in ${time() - start}s'
-start = time()
-
-for i in 1..101 {
-  hash.md2('hello, world')
-}
-
-echo '1 hundred md2 in ${time() - start}s'
-start = time()
-
-for i in 1..101 {
   hash.md4('hello, world')
 }
 
@@ -73,6 +52,13 @@ echo '1 hundred sha512 in ${time() - start}s'
 start = time()
 
 for i in 1..101 {
+  hash.fnv1('hello, world')
+}
+
+echo '1 hundred fnv1 in ${time() - start}s'
+start = time()
+
+for i in 1..101 {
   hash.fnv1a('hello, world')
 }
 
@@ -94,24 +80,10 @@ echo '1 hundred whirlpool in ${time() - start}s'
 start = time()
 
 for i in 1..101 {
-  hash.snefru('hello, world')
-}
-
-echo '1 hundred snefru in ${time() - start}s'
-start = time()
-
-for i in 1..101 {
   hash.gost('hello, world')
 }
 
 echo '1 hundred gost in ${time() - start}s'
-start = time()
-
-for i in 1..101 {
-  hash.siphash('0123456789ABCDEF', 'hello, world')
-}
-
-echo '1 hundred siphash in ${time() - start}s'
 start = time()
 
 for i in 1..101 {

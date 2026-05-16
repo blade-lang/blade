@@ -1,7 +1,10 @@
 #ifndef BLADE_MODULE_HASH_GOST_H
 #define BLADE_MODULE_HASH_GOST_H
 
+#include <string.h>
 #include <inttypes.h>
+
+static const uint32_t MAX32 = 0xffffffffLU;
 
 typedef struct {
   uint32_t state[16];
@@ -564,21 +567,6 @@ static void GOSTFinal(unsigned char digest[32], GOST_CTX *context) {
   }
 
   memset(context, 0, sizeof(*context));
-}
-
-static char *GOSTString(unsigned char *data, unsigned int data_len) {
-  unsigned char digest[32];
-
-  GOST_CTX ctx;
-  GOSTInit(&ctx);
-  GOSTUpdate(&ctx, data, data_len);
-  GOSTFinal(digest, &ctx);
-
-  char *result = (char *) calloc(65, sizeof(char));
-  for (int i = 0; i < 32; i++)
-    sprintf (result + (i * 2), "%02x", digest[i]);
-
-  return result;
 }
 
 #endif //BLADE_MODULE_HASH_GOST_H

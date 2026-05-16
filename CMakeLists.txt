@@ -64,7 +64,6 @@ set(BLADE_SOURCES
 		src/standard/math.c
 		src/standard/os.c
 		src/standard/socket.c
-		src/standard/hash.c
 		src/standard/process.c
 		src/standard/reflect.c
 		src/standard/struct.c

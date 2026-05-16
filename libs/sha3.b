@@ -33,7 +33,12 @@
  * 
  * You can use the `bytes_to_hex()` function in the `convert` module to 
  * get a hexadecimal string from the digest.
- * 
+ *
+ * @note This module does not replace the `hash` module. Rather, it complements
+ *    the SHA3 functions in the `hash` module allowing more fine-grained control
+ *    on the processing as may be found useful for many applications especially
+ *    those operating in the cryptocurrency/blockchain domain.
+ *
  * @copyright 2024, Richard Ore and Blade contributors
  * @copyright Marco Paland (marco at paland dot com)
  * @copyright 2015-2018, PALANDesign Hannover, Germany

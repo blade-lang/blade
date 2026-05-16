@@ -1450,7 +1450,7 @@ static void return_statement(b_parser* p, bool is_inline) {
     error(p, "cannot return from top-level code");
   }
 
-  if (!is_inline && match(p, SEMICOLON_TOKEN) || match(p, NEWLINE_TOKEN)) {
+  if (!is_inline && match(p, SEMICOLON_TOKEN) || match(p, NEWLINE_TOKEN) || check(p, RBRACE_TOKEN)) {
     emit_return(p);
   } else {
     if (p->vm->compiler->type == TYPE_INITIALIZER) {
@@ -2429,7 +2429,6 @@ static void catch_statement(b_parser* p) {
       end_scope(p);
       ignore_whitespace(p);
       patch_jump(p, exit_jump);
-      emit_byte(p, OP_POP);
     }
   } else {
     emit_byte(p, OP_POP);

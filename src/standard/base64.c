@@ -125,7 +125,7 @@ unsigned char *base64_decode(const char *data, int input_length,
 
 DECLARE_MODULE_METHOD(base64__decode) {
   ENFORCE_ARG_COUNT(decode, 1);
-  ENFORCE_CONSTRUCTOR_ARG_TYPE(decode, 0, IS_STRING);
+  ENFORCE_ARG_TYPE(decode, 0, IS_STRING);
 
   b_obj_string *string = AS_STRING(args[0]);
 
@@ -144,7 +144,7 @@ DECLARE_MODULE_METHOD(base64__decode) {
 
 DECLARE_MODULE_METHOD(base64__encode) {
   ENFORCE_ARG_COUNT(encode, 1);
-  ENFORCE_CONSTRUCTOR_ARG_TYPE(encode, 0, IS_BYTES);
+  ENFORCE_ARG_TYPE(encode, 0, IS_BYTES);
 
   b_obj_bytes *bytes = AS_BYTES(args[0]);
 

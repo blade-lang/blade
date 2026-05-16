@@ -618,7 +618,7 @@ DECLARE_FILE_METHOD(abs_path) {
   char *abs_path = realpath(file->path->chars, NULL);
   if (abs_path != NULL)
     RETURN_STRING(abs_path);
-  RETURN_STRING("");
+  RETURN_ERROR("%s", strerror(errno));
 }
 
 DECLARE_FILE_METHOD(copy) {

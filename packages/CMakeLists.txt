@@ -4,6 +4,7 @@ option(DISABLE_CLIB "Builds Blade without the clib module enabled" OFF)
 
 add_subdirectory(json)
 add_subdirectory(sqlite)
+add_subdirectory(hash)
 add_subdirectory(ssl)
 add_subdirectory(curl)
 add_subdirectory(zlib)
