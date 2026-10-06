@@ -4,7 +4,7 @@ use std::{ops::Deref, rc::Rc};
 
 use crate::{
   compiler::{
-    ast::{Decl, Expr, Stmt, Type},
+    ast::{Decl, Expr, Stmt, Type, WhenArm},
     lower::lower,
     parser::ParserError,
     token::{Token, TokenKind},
@@ -2140,6 +2140,9 @@ impl<'a> Compiler<'a> {
         self.free_regs_to(hi_mark.max(dst + 1));
         dst
       },
+      Expr::CompoundAssign(..) | Expr::Update(..) | Expr::Interpolation(_) | Expr::Shorthand(_) => {
+        unreachable!("shorthand expressions are lowered before compilation")
+      },
       _ => {
         panic!(
           "compile_expression: unsupported expression: {:?}",
@@ -2167,13 +2170,7 @@ impl<'a> Compiler<'a> {
   /// knowable (an arbitrary expression, a variable, a BigNumber, ...)
   /// fall back to sequential evaluate-and-compare; and even then,
   /// only those specific labels, never the constant ones.
-  fn compile_using(
-    &mut self,
-    subject: &Expr,
-    labels: &[Expr],
-    bodies: &[Stmt],
-    default: &Option<Box<Stmt>>,
-  ) {
+  fn compile_using(&mut self, subject: &Expr, arms: &[WhenArm], default: &Option<Box<Stmt>>) {
     struct Group<'a> {
       body: &'a Stmt,
       labels: Vec<&'a Expr>,
@@ -2181,8 +2178,12 @@ impl<'a> Compiler<'a> {
       dynamic_labels: Vec<&'a Expr>,
     }
 
+    let labelled = arms
+      .iter()
+      .flat_map(|arm| arm.labels.iter().map(move |label| (label, &arm.body)));
+
     let mut groups: Vec<Group> = Vec::new();
-    for (label, body) in labels.iter().zip(bodies.iter()) {
+    for (label, body) in labelled {
       let same_as_last = groups.last().is_some_and(|g| g.body == body);
       if !same_as_last {
         groups.push(Group {
@@ -2833,13 +2834,11 @@ impl<'a> Compiler<'a> {
         let reg = self.compile_expression(value);
         self.emit(Instr::Return { src: reg });
       },
-      Stmt::Using(subject, labels, bodies, default) => {
-        self.compile_using(subject, labels, bodies, default)
-      },
+      Stmt::Using(subject, arms, default) => self.compile_using(subject, arms, default),
       Stmt::Raise(expr) => self.compile_raise(expr),
       Stmt::Assert(cond, message) => self.compile_assert(cond, message),
       Stmt::Catch(body, error_block, var_expr) => self.compile_catch(body, error_block, var_expr),
-      Stmt::Import(path, name, elements, imports_all, exported) => self.compile_import(
+      Stmt::Import(path, _, name, elements, imports_all, exported) => self.compile_import(
         path.as_str(),
         name.as_ref(),
         elements.as_slice(),
@@ -2969,13 +2968,13 @@ fn collect_self_fields_stmt(stmt: &Stmt, out: &mut Vec<String>) {
         collect_self_fields_expr(m, out);
       }
     },
-    Stmt::Using(subject, labels, bodies, default) => {
+    Stmt::Using(subject, arms, default) => {
       collect_self_fields_expr(subject, out);
-      for l in labels {
+      for l in arms.iter().flat_map(|arm| arm.labels.iter()) {
         collect_self_fields_expr(l, out);
       }
-      for b in bodies {
-        collect_self_fields_stmt(b, out);
+      for arm in arms {
+        collect_self_fields_stmt(&arm.body, out);
       }
       if let Some(d) = default {
         collect_self_fields_stmt(d, out);
@@ -3025,6 +3024,9 @@ fn collect_self_fields_decl(decl: &Decl, out: &mut Vec<String>) {
 
 fn collect_self_fields_expr(expr: &Expr, out: &mut Vec<String>) {
   match expr {
+    Expr::CompoundAssign(..) | Expr::Update(..) | Expr::Interpolation(_) | Expr::Shorthand(_) => {
+      unreachable!("shorthand expressions are lowered before compilation")
+    },
     Expr::Set(target, field, value) => {
       if matches!(target.as_ref(), Expr::Self_) {
         if let TokenKind::Identifier(field_name) = &field.kind {

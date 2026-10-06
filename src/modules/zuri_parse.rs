@@ -30,7 +30,7 @@
 //! tree, not the comment itself.
 
 use crate::builtins::enforce::ArgType;
-use crate::compiler::ast::{Decl, Expr, Stmt, Type};
+use crate::compiler::ast::{Decl, Expr, Segment, Stmt, Type};
 use crate::compiler::lexer::Lexer;
 use crate::compiler::parser::Parser;
 use crate::compiler::token::{Token, TokenKind};
@@ -115,6 +115,13 @@ fn expr_pos(e: &Expr) -> (Option<usize>, Option<usize>) {
       .map(expr_pos)
       .unwrap_or((None, None)),
     Expr::Assign(target, _) => expr_pos(target),
+    Expr::CompoundAssign(target, ..) | Expr::Update(target, ..) => expr_pos(target),
+    Expr::Interpolation(segments) => match segments.first() {
+      Some(Segment::Text(token)) => (Some(token.line), Some(token.column)),
+      Some(Segment::Value(value)) => expr_pos(value),
+      None => (None, None),
+    },
+    Expr::Shorthand(token) => (Some(token.line), Some(token.column)),
     Expr::Anonymous(decl) => decl_pos(decl),
     Expr::Nil
     | Expr::Bool(_)
@@ -144,7 +151,7 @@ fn stmt_pos(s: &Stmt) -> (Option<usize>, Option<usize>) {
     },
     Stmt::DoWhile(body, _) => stmt_pos(body),
     Stmt::Using(subject, ..) => expr_pos(subject),
-    Stmt::Import(_, name_expr, ..) => expr_pos(name_expr),
+    Stmt::Import(_, _, name_expr, ..) => expr_pos(name_expr),
     Stmt::Catch(body, ..) => stmt_pos(body),
     Stmt::Block(stmts) => stmts.first().map(stmt_pos).unwrap_or((None, None)),
     Stmt::Decl(d) => decl_pos(d),
@@ -199,6 +206,14 @@ fn make_node(
     (col_k, col_v),
     (fields_k, fields_v),
   ])
+}
+
+/// The text a piece of an interpolated string holds, without quotes.
+fn segment_text(token: &Token) -> String {
+  match &token.kind {
+    TokenKind::Literal(text) | TokenKind::Interpolation(text) => text.clone(),
+    other => format!("{}", other),
+  }
 }
 
 /// The plain string an identifier-carrying `Token` names; used
@@ -463,6 +478,40 @@ fn expr_to_value(ctx: &mut ZuriContext, e: &Expr) -> Value {
       let f = vec![kv(ctx, "name", name), kv(ctx, "type_hint", type_v)];
       make_node(ctx, "Argument", pos, f)
     },
+    Expr::CompoundAssign(target, op, value, _) => {
+      let target_v = expr_to_value(ctx, target);
+      let op_v = ctx.heap().alloc_string(token_kind_name(op));
+      let value_v = expr_to_value(ctx, value);
+      let f = vec![
+        kv(ctx, "target", target_v),
+        kv(ctx, "op", op_v),
+        kv(ctx, "value", value_v),
+      ];
+      make_node(ctx, "CompoundAssign", pos, f)
+    },
+    Expr::Update(target, op, _) => {
+      let target_v = expr_to_value(ctx, target);
+      let op_v = ctx.heap().alloc_string(token_kind_name(op));
+      let f = vec![kv(ctx, "target", target_v), kv(ctx, "op", op_v)];
+      make_node(ctx, "Update", pos, f)
+    },
+    Expr::Interpolation(segments) => {
+      let mut parts = Vec::with_capacity(segments.len());
+      for segment in segments {
+        parts.push(match segment {
+          Segment::Text(token) => ctx.heap().alloc_string(segment_text(token)),
+          Segment::Value(value) => expr_to_value(ctx, value),
+        });
+      }
+      let parts_v = ctx.heap().alloc_list(parts);
+      let f = vec![kv(ctx, "parts", parts_v)];
+      make_node(ctx, "Interpolation", pos, f)
+    },
+    Expr::Shorthand(tok) => {
+      let name = ctx.heap().alloc_string(token_identifier_name(tok));
+      let f = vec![kv(ctx, "name", name)];
+      make_node(ctx, "Shorthand", pos, f)
+    },
   }
 }
 
@@ -552,15 +601,21 @@ fn stmt_to_value(ctx: &mut ZuriContext, s: &Stmt) -> Value {
       let f = vec![kv(ctx, "condition", cond_v), kv(ctx, "message", msg_v)];
       make_node(ctx, "Assert", pos, f)
     },
-    Stmt::Using(subject, labels, bodies, default) => {
+    Stmt::Using(subject, arms, default) => {
       let subject_v = expr_to_value(ctx, subject);
-      let labels_v = expr_list_to_value(ctx, labels);
-      let bodies_v = stmt_list_to_value(ctx, bodies);
+      let mut arm_values = Vec::with_capacity(arms.len());
+      for arm in arms {
+        let arm_pos = arm.labels.first().map(expr_pos).unwrap_or((None, None));
+        let labels_v = expr_list_to_value(ctx, &arm.labels);
+        let body_v = stmt_to_value(ctx, &arm.body);
+        let f = vec![kv(ctx, "labels", labels_v), kv(ctx, "body", body_v)];
+        arm_values.push(make_node(ctx, "When", arm_pos, f));
+      }
+      let arms_v = ctx.heap().alloc_list(arm_values);
       let default_v = opt_stmt_to_value(ctx, default);
       let f = vec![
         kv(ctx, "subject", subject_v),
-        kv(ctx, "labels", labels_v),
-        kv(ctx, "bodies", bodies_v),
+        kv(ctx, "arms", arms_v),
         // Not `"default"`: that's a reserved keyword, and a dict
         // field named after one can never be read back with plain
         // dot-access syntax (`node.fields.default` doesn't parse).
@@ -568,7 +623,7 @@ fn stmt_to_value(ctx: &mut ZuriContext, s: &Stmt) -> Value {
       ];
       make_node(ctx, "Using", pos, f)
     },
-    Stmt::Import(path, name_expr, elements, imports_all, exported) => {
+    Stmt::Import(path, _, name_expr, elements, imports_all, exported) => {
       let path_v = ctx.heap().alloc_string(path.clone());
       let name_v = expr_to_value(ctx, name_expr);
       let elements_v = expr_list_to_value(ctx, elements);

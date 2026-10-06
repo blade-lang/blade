@@ -2,7 +2,7 @@ use std::fmt::{self, Display};
 
 use nu_ansi_term::{Color, Style};
 
-use crate::compiler::ast::{Decl, Expr, Node, NodeKind, Stmt, Type};
+use crate::compiler::ast::{Decl, Expr, Node, NodeKind, Segment, Stmt, Type, WhenArm};
 use crate::compiler::lexer::Lexer;
 use crate::compiler::token::*;
 
@@ -585,12 +585,6 @@ impl<'a> Parser<'a> {
 
   // Composers
 
-  fn compose_one_binary(&mut self, expr: Expr, kind: TokenKind, line: u32) -> Expr {
-    let one = Expr::Integer(1);
-
-    Expr::Binary(Box::new(expr), kind, Box::new(one), line)
-  }
-
   fn compose_nil(&mut self) -> Expr {
     Expr::Nil
   }
@@ -695,33 +689,20 @@ impl<'a> Parser<'a> {
         );
       }
 
-      let get = Expr::Get(Box::new(callee.clone()), prop_token.clone());
+      let target = Expr::Get(Box::new(callee.clone()), prop_token.clone());
+      let value = self.assignment();
 
-      let rhs = self.assignment();
-      let binary_value = Expr::Binary(
-        Box::new(get),
-        get_assignment_alt(token.kind),
-        Box::new(rhs),
-        line,
-      );
-
-      return Expr::Set(
-        Box::new(callee.clone()),
-        prop_token.clone(),
-        Box::new(binary_value),
-      );
+      return Expr::CompoundAssign(Box::new(target), token.kind, Box::new(value), line);
     }
 
     Expr::Get(Box::new(callee.clone()), prop_token)
   }
 
   fn interpolation(&mut self) -> Expr {
-    let mut expr = self.compose_literal(self.previous().clone());
+    let mut segments = vec![Segment::Text(self.previous().clone())];
 
     loop {
-      let line = self.previous().line as u32;
-      let right = self.expression();
-      expr = Expr::Binary(Box::new(expr), TokenKind::Plus, Box::new(right), line);
+      segments.push(Segment::Value(self.expression()));
 
       // The token right after a `${...}` expression is always one the
       // lexer produced for the STATIC text that follows it, never
@@ -734,24 +715,18 @@ impl<'a> Parser<'a> {
       // final segment up to the closing quote, so it terminates the
       // loop right after being appended.
       if check_tok!(self, TokenKind::Interpolation(_)) {
-        let segment = self.advance().clone();
-        let seg_line = segment.line as u32;
-        let literal = self.compose_literal(segment);
-        expr = Expr::Binary(Box::new(expr), TokenKind::Plus, Box::new(literal), seg_line);
+        segments.push(Segment::Text(self.advance().clone()));
         continue;
       }
 
       if check_tok!(self, TokenKind::Literal(_)) {
-        let segment = self.advance().clone();
-        let seg_line = segment.line as u32;
-        let literal = self.compose_literal(segment);
-        expr = Expr::Binary(Box::new(expr), TokenKind::Plus, Box::new(literal), seg_line);
+        segments.push(Segment::Text(self.advance().clone()));
       }
 
       break;
     }
 
-    expr
+    Expr::Interpolation(segments)
   }
 
   fn literal(&mut self) -> Expr {
@@ -852,32 +827,14 @@ impl<'a> Parser<'a> {
     let start_token = self.peek().clone();
     let expr = self.call();
 
-    if match_tok!(self, TokenKind::Increment) {
-      let line = self.previous().line as u32;
-      let plus_one = Box::new(self.compose_one_binary(expr.clone(), TokenKind::Plus, line));
+    if match_tok!(self, TokenKind::Increment | TokenKind::Decrement) {
+      let operator = self.previous().clone();
 
-      return match expr {
-        Expr::Get(expression, name) => Expr::Set(expression, name, plus_one),
-        Expr::Identifier(_) | Expr::Index(..) => Expr::Assign(Box::new(expr), plus_one),
-        other => {
-          self.report_error_at("invalid assignment target".to_string(), start_token);
-          other
-        },
-      };
-    }
+      if !matches!(expr, Expr::Get(..) | Expr::Identifier(_) | Expr::Index(..)) {
+        self.report_error_at("invalid assignment target".to_string(), start_token);
+      }
 
-    if match_tok!(self, TokenKind::Decrement) {
-      let line = self.previous().line as u32;
-      let sub_one = Box::new(self.compose_one_binary(expr.clone(), TokenKind::Minus, line));
-
-      return match expr {
-        Expr::Get(expression, name) => Expr::Set(expression, name, sub_one),
-        Expr::Identifier(_) | Expr::Index(..) => Expr::Assign(Box::new(expr), sub_one),
-        other => {
-          self.report_error_at("invalid assignment target".to_string(), start_token);
-          other
-        },
-      };
+      return Expr::Update(Box::new(expr), operator.kind, operator.line as u32);
     }
 
     expr
@@ -1136,19 +1093,18 @@ impl<'a> Parser<'a> {
           value
         };
       } else {
-        let right = self.assignment();
-        let binary = Expr::Binary(
-          Box::new(expr.clone()),
-          get_assignment_alt(type_token.clone().kind),
-          Box::new(right),
+        let value = self.assignment();
+
+        if !valid_target {
+          self.report_error_at("invalid assignment target".to_string(), start_token.clone());
+        }
+
+        expr = Expr::CompoundAssign(
+          Box::new(expr),
+          type_token.kind.clone(),
+          Box::new(value),
           type_token.line as u32,
         );
-        expr = if valid_target {
-          Expr::Assign(Box::new(expr), Box::new(binary))
-        } else {
-          self.report_error_at("invalid assignment target".to_string(), start_token.clone());
-          binary
-        };
       }
     }
 
@@ -1185,7 +1141,7 @@ impl<'a> Parser<'a> {
 
             match key {
               Expr::Literal(v) => {
-                values.push(self.compose_id(token.copy_to(TokenKind::Identifier(v))))
+                values.push(Expr::Shorthand(token.copy_to(TokenKind::Identifier(v))))
               },
               _ => self.report_error(missing),
             };
@@ -1438,8 +1394,7 @@ impl<'a> Parser<'a> {
 
   fn using_stmt(&mut self) -> Stmt {
     let expr = self.expression();
-    let mut case_labels = Vec::new();
-    let mut case_bodies = Vec::new();
+    let mut arms = Vec::new();
     let mut default_case = None;
 
     consume_tok!(
@@ -1480,12 +1435,12 @@ impl<'a> Parser<'a> {
               consume_tok!(self, TokenKind::Comma, "Expected ',' but found none.");
             }
 
-            let stmt = self.statement();
+            let body = self.statement();
 
-            for case in tmp_cases {
-              case_labels.push(case);
-              case_bodies.push(stmt.clone());
-            }
+            arms.push(WhenArm {
+              labels: tmp_cases,
+              body,
+            });
           },
           TokenKind::Default => {
             state = 1;
@@ -1501,7 +1456,7 @@ impl<'a> Parser<'a> {
           self.synchronize(depth, true);
 
           if self.brace_depth < depth {
-            return Stmt::Using(Box::new(expr), case_labels, case_bodies, default_case);
+            return Stmt::Using(Box::new(expr), arms, default_case);
           }
         }
       } else {
@@ -1516,11 +1471,12 @@ impl<'a> Parser<'a> {
       "Expected '}' at end of using statement."
     );
 
-    Stmt::Using(Box::new(expr), case_labels, case_bodies, default_case)
+    Stmt::Using(Box::new(expr), arms, default_case)
   }
 
   fn import_stmt(&mut self) -> Stmt {
     let mut paths = Vec::new();
+    let mut path_tokens = Vec::new();
     let mut elements = Vec::new();
     let mut name = self.compose_nil();
     let sep = std::path::MAIN_SEPARATOR_STR;
@@ -1540,6 +1496,7 @@ impl<'a> Parser<'a> {
       TokenKind::Dot | TokenKind::Range | TokenKind::Identifier(_)
     ) {
       let token = self.previous().clone();
+      path_tokens.push(token.clone());
 
       match token.kind.clone() {
         TokenKind::Dot => paths.push(".".to_string()),
@@ -1623,7 +1580,14 @@ impl<'a> Parser<'a> {
       }
     }
 
-    Stmt::Import(final_path, Box::new(name), elements, imports_all, exported)
+    Stmt::Import(
+      final_path,
+      path_tokens,
+      Box::new(name),
+      elements,
+      imports_all,
+      exported,
+    )
   }
 
   fn catch_stmt(&mut self) -> Stmt {

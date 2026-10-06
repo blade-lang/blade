@@ -60,6 +60,39 @@ pub enum Expr {
   Anonymous(Box<Decl>),
   TypeHint(Vec<Type>, bool),
   Argument(Token, Box<Expr>),
+
+  // `target op= value` for any compound assignment operator, kept as the
+  // operator written (`+=`, not `+`). The target is a name, an index or a
+  // property, and the `u32` is the line the arithmetic is blamed on.
+  CompoundAssign(Box<Expr>, TokenKind, Box<Expr>, u32),
+
+  // `target++` or `target--`, with the operator's line.
+  Update(Box<Expr>, TokenKind, u32),
+
+  // A string with `${...}` in it, as the text and the expressions it
+  // alternates between, in source order. It always starts with text.
+  Interpolation(Vec<Segment>),
+
+  // A dictionary value written as nothing but its key, the `name` in
+  // `{ name }`. It reads the variable of that name.
+  Shorthand(Token),
+}
+
+/// One piece of an interpolated string.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Segment {
+  /// Text from the string itself, as the token the lexer produced for it.
+  Text(Token),
+  /// The expression inside one `${...}`.
+  Value(Expr),
+}
+
+/// One `when` arm of a `using` statement: every label it lists and the
+/// body they share.
+#[derive(Debug, Clone, PartialEq)]
+pub struct WhenArm {
+  pub labels: Vec<Expr>,
+  pub body: Stmt,
 }
 
 impl From<Expr> for NodeKind {
@@ -95,8 +128,12 @@ pub enum Stmt {
   Raise(Box<Expr>),
   Return(Box<Expr>),
   Assert(Box<Expr>, Option<Box<Expr>>),
-  Using(Box<Expr>, Vec<Expr>, Vec<Stmt>, Option<Box<Stmt>>),
-  Import(String, Box<Expr>, Vec<Expr>, bool, bool),
+  Using(Box<Expr>, Vec<WhenArm>, Option<Box<Stmt>>),
+
+  // The joined path, the tokens it was joined from (`.`, `..` and names),
+  // the name it binds, the items it picks, whether it takes them all, and
+  // whether it re-exports what it brings in.
+  Import(String, Vec<Token>, Box<Expr>, Vec<Expr>, bool, bool),
   Catch(Box<Stmt>, Option<Box<Stmt>>, Option<Box<Expr>>),
   Block(Vec<Stmt>),
   Decl(Box<Decl>),

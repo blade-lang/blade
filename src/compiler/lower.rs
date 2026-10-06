@@ -7,12 +7,17 @@
 //! here, once, before the compiler looks at anything. Nothing past this
 //! point ever meets a `For`, `Iter` or `DoWhile`.
 //!
+//! The same goes for the shorthands among the expressions. Compound
+//! assignment, `++` and `--` become a plain assignment of an arithmetic
+//! result, an interpolated string becomes a chain of `+`, and a `{ name }`
+//! dictionary value becomes a read of `name`.
+//!
 //! Every name made up here starts with `$`, which the lexer never
 //! produces from source, so none of them can collide with a name the
 //! program declares.
 
-use crate::compiler::ast::{Decl, Expr, Stmt};
-use crate::compiler::token::{Token, TokenKind};
+use crate::compiler::ast::{Decl, Expr, Segment, Stmt, WhenArm};
+use crate::compiler::token::{Token, TokenKind, get_assignment_alt};
 
 /// Lowers a whole program, including the bodies of its functions,
 /// methods, classes and anonymous functions.
@@ -86,14 +91,20 @@ fn stmt(s: Stmt) -> Stmt {
     Stmt::Assert(condition, message) => {
       Stmt::Assert(boxed_expr(condition), message.map(boxed_expr))
     },
-    Stmt::Using(subject, labels, bodies, default) => Stmt::Using(
+    Stmt::Using(subject, arms, default) => Stmt::Using(
       boxed_expr(subject),
-      exprs_of(labels),
-      stmts_of(bodies),
+      arms
+        .into_iter()
+        .map(|arm| WhenArm {
+          labels: exprs_of(arm.labels),
+          body: stmt(arm.body),
+        })
+        .collect(),
       default.map(boxed_stmt),
     ),
-    Stmt::Import(path, name, elements, imports_all, exported) => Stmt::Import(
+    Stmt::Import(path, path_tokens, name, elements, imports_all, exported) => Stmt::Import(
       path,
+      path_tokens,
       boxed_expr(name),
       exprs_of(elements),
       imports_all,
@@ -151,6 +162,19 @@ fn expr(e: Expr) -> Expr {
     Expr::Assign(target, value) => Expr::Assign(boxed_expr(target), boxed_expr(value)),
     Expr::Anonymous(function) => Expr::Anonymous(Box::new(decl(*function))),
     Expr::Argument(name, type_hint) => Expr::Argument(name, boxed_expr(type_hint)),
+    Expr::CompoundAssign(target, op, value, line) => {
+      assign_with(*target, get_assignment_alt(op), expr(*value), line)
+    },
+    Expr::Update(target, op, line) => {
+      let op = match op {
+        TokenKind::Increment => TokenKind::Plus,
+        _ => TokenKind::Minus,
+      };
+
+      assign_with(*target, op, Expr::Integer(1), line)
+    },
+    Expr::Interpolation(segments) => interpolation(segments),
+    Expr::Shorthand(name) => Expr::Identifier(name),
     leaf @ (Expr::Nil
     | Expr::Bool(_)
     | Expr::Integer(_)
@@ -178,6 +202,59 @@ fn exprs_of(items: Vec<Expr>) -> Vec<Expr> {
 
 fn stmts_of(items: Vec<Stmt>) -> Vec<Stmt> {
   items.into_iter().map(stmt).collect()
+}
+
+/// `target = target op operand`, the long form of `target op= operand`
+/// and of `++` and `--`. A property is read and written through the same
+/// receiver expression, a name or an index through itself.
+fn assign_with(target: Expr, op: TokenKind, operand: Expr, line: u32) -> Expr {
+  match target {
+    Expr::Get(object, name) => {
+      let object = boxed_expr(object);
+      let current = Expr::Get(object.clone(), name.clone());
+      let updated = Expr::Binary(Box::new(current), op, Box::new(operand), line);
+
+      Expr::Set(object, name, Box::new(updated))
+    },
+    target => {
+      let target = expr(target);
+      let updated = Expr::Binary(Box::new(target.clone()), op, Box::new(operand), line);
+
+      Expr::Assign(Box::new(target), Box::new(updated))
+    },
+  }
+}
+
+/// An interpolated string as the chain of `+` it compiles to: its
+/// leading text, then every `${...}` and every run of text after it,
+/// added on in order. A `${...}` takes the line of the text before it.
+fn interpolation(segments: Vec<Segment>) -> Expr {
+  let mut chain: Option<Expr> = None;
+  let mut line = 0;
+
+  for segment in segments {
+    let (part, part_line) = match segment {
+      Segment::Text(token) => {
+        line = token.line as u32;
+        (Expr::Literal(text_of(&token)), line)
+      },
+      Segment::Value(value) => (expr(value), line),
+    };
+
+    chain = Some(match chain {
+      None => part,
+      Some(chain) => Expr::Binary(Box::new(chain), TokenKind::Plus, Box::new(part), part_line),
+    });
+  }
+
+  chain.expect("an interpolated string starts with text")
+}
+
+fn text_of(token: &Token) -> String {
+  match &token.kind {
+    TokenKind::Literal(text) | TokenKind::Interpolation(text) => text.clone(),
+    _ => token.to_string(),
+  }
 }
 
 fn named(token: &Token, name: &str) -> Token {
