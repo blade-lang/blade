@@ -121,7 +121,9 @@ fn expr_pos(e: &Expr) -> (Option<usize>, Option<usize>) {
       Some(Segment::Value(value)) => expr_pos(value),
       None => (None, None),
     },
-    Expr::Shorthand(token) => (Some(token.line), Some(token.column)),
+    Expr::Shorthand(token) | Expr::Parent(token) | Expr::Self_(token) => {
+      (Some(token.line), Some(token.column))
+    },
     Expr::Anonymous(decl) => decl_pos(decl),
     Expr::Nil
     | Expr::Bool(_)
@@ -129,8 +131,6 @@ fn expr_pos(e: &Expr) -> (Option<usize>, Option<usize>) {
     | Expr::Float(_)
     | Expr::BigNumber(_)
     | Expr::Literal(_)
-    | Expr::Parent
-    | Expr::Self_
     | Expr::TypeHint(..) => (None, None),
   }
 }
@@ -138,7 +138,10 @@ fn expr_pos(e: &Expr) -> (Option<usize>, Option<usize>) {
 fn stmt_pos(s: &Stmt) -> (Option<usize>, Option<usize>) {
   match s {
     Stmt::Var(t, ..) | Stmt::Trivia(t) => (Some(t.line), Some(t.column)),
-    Stmt::Echo(e) | Stmt::Expression(e) | Stmt::Raise(e) | Stmt::Return(e) => expr_pos(e),
+    Stmt::Echo(e) | Stmt::Expression(e) | Stmt::Raise(e) => expr_pos(e),
+    Stmt::Return(keyword, _) | Stmt::Continue(keyword) | Stmt::Break(keyword) => {
+      (Some(keyword.line), Some(keyword.column))
+    },
     Stmt::If(cond, ..) | Stmt::While(cond, _) | Stmt::Assert(cond, _) => expr_pos(cond),
     Stmt::For(key, value, ..) => {
       let first = key.as_ref().unwrap_or(value);
@@ -156,7 +159,7 @@ fn stmt_pos(s: &Stmt) -> (Option<usize>, Option<usize>) {
     Stmt::Block(stmts) => stmts.first().map(stmt_pos).unwrap_or((None, None)),
     Stmt::Decl(d) => decl_pos(d),
     Stmt::VarList(list) => list.first().map(stmt_pos).unwrap_or((None, None)),
-    Stmt::None | Stmt::FixContinue | Stmt::Continue | Stmt::Break => (None, None),
+    Stmt::None | Stmt::FixContinue => (None, None),
   }
 }
 
@@ -451,8 +454,8 @@ fn expr_to_value(ctx: &mut ZuriContext, e: &Expr) -> Value {
       let f = vec![kv(ctx, "keys", keys_v), kv(ctx, "values", values_v)];
       make_node(ctx, "Dict", pos, f)
     },
-    Expr::Parent => make_node(ctx, "Parent", pos, vec![]),
-    Expr::Self_ => make_node(ctx, "Self", pos, vec![]),
+    Expr::Parent(_) => make_node(ctx, "Parent", pos, vec![]),
+    Expr::Self_(_) => make_node(ctx, "Self", pos, vec![]),
     Expr::Assign(target, value) => {
       let target_v = expr_to_value(ctx, target);
       let value_v = expr_to_value(ctx, value);
@@ -583,14 +586,14 @@ fn stmt_to_value(ctx: &mut ZuriContext, s: &Stmt) -> Value {
       let f = vec![kv(ctx, "body", body_v), kv(ctx, "condition", condition_v)];
       make_node(ctx, "DoWhile", pos, f)
     },
-    Stmt::Continue => make_node(ctx, "Continue", pos, vec![]),
-    Stmt::Break => make_node(ctx, "Break", pos, vec![]),
+    Stmt::Continue(_) => make_node(ctx, "Continue", pos, vec![]),
+    Stmt::Break(_) => make_node(ctx, "Break", pos, vec![]),
     Stmt::Raise(e) => {
       let v = expr_to_value(ctx, e);
       let f = vec![kv(ctx, "value", v)];
       make_node(ctx, "Raise", pos, f)
     },
-    Stmt::Return(e) => {
+    Stmt::Return(_, e) => {
       let v = expr_to_value(ctx, e);
       let f = vec![kv(ctx, "value", v)];
       make_node(ctx, "Return", pos, f)

@@ -54,8 +54,9 @@ pub enum Expr {
   Slice(Box<Expr>, Box<Expr>, Box<Expr>, u32),
   List(Vec<Expr>),
   Dict(Vec<Expr>, Vec<Expr>),
-  Parent,
-  Self_,
+  // `parent` and `self`, each with its keyword.
+  Parent(Token),
+  Self_(Token),
   Assign(Box<Expr>, Box<Expr>),
   Anonymous(Box<Decl>),
   TypeHint(Vec<Type>, bool),
@@ -123,10 +124,14 @@ pub enum Stmt {
   // condition is first tested.
   DoWhile(Box<Stmt>, Box<Expr>),
 
-  Continue,
-  Break,
+  // `continue` and `break`, each with its keyword.
+  Continue(Token),
+  Break(Token),
   Raise(Box<Expr>),
-  Return(Box<Expr>),
+
+  // The `return` keyword, or the `->` of a one-expression anonymous
+  // function, and the value returned.
+  Return(Token, Box<Expr>),
   Assert(Box<Expr>, Option<Box<Expr>>),
   Using(Box<Expr>, Vec<WhenArm>, Option<Box<Stmt>>),
 

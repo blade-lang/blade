@@ -1,0 +1,64 @@
+# A misplaced `self`, `parent`, `break` or `continue` is a compile error
+# that points at the keyword itself, line and column.
+
+import zuri
+
+var _passed = 0
+
+def ok(label) {
+  _passed++
+  echo '  [PASS] ' + label
+}
+
+# `zuri.compile()` raises on a compile error, which lets a test ask what
+# the error would have said without ending its own run.
+def compile_error(source) {
+  catch {
+    zuri.compile(source)
+    return nil
+  } as e {
+    return e.message
+  }
+}
+
+echo '═══════════════════════════════════════════════════════'
+echo '  keyword errors: test suite'
+echo '═══════════════════════════════════════════════════════'
+
+var message = compile_error('var x = 1\necho self')
+assert message.contains("'self' used outside of a method (2:6)"),
+  'self outside a method points at self'
+ok('self outside a method')
+
+message = compile_error('def f() {\n  return parent.x\n}')
+assert message.contains("'parent' used outside of a method (2:10)"),
+  'parent outside a method points at parent'
+ok('parent outside a method')
+
+message = compile_error('class A {\n  m() {\n    echo parent\n  }\n}')
+assert message.contains("'parent' must be followed by '.member' or '.member(...)' (3:10)"),
+  'a bare parent is an error at parent, not a crash'
+ok('parent on its own')
+
+message = compile_error('class A {\n  m() {\n    parent.m()\n  }\n}')
+assert message.contains("'parent' used in a class with no superclass (3:5)"),
+  'parent in a class with no superclass points at parent'
+
+message = compile_error('class A {\n  @new() {\n    parent()\n  }\n}')
+assert message.contains("'parent' used in a class with no superclass (3:5)"),
+  'a parent constructor call with no superclass points at parent'
+ok('parent with no superclass')
+
+message = compile_error('if true {\n  break\n}')
+assert message.contains("'break' used outside of a loop (2:3)"),
+  'break outside a loop points at break'
+
+message = compile_error('var y = 2\n  continue')
+assert message.contains("'continue' used outside of a loop (2:3)"),
+  'continue outside a loop points at continue'
+ok('break and continue outside a loop')
+
+echo ''
+echo '═══════════════════════════════════════════════════════'
+echo '  All ${_passed} assertions passed.'
+echo '═══════════════════════════════════════════════════════'

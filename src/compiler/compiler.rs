@@ -308,12 +308,12 @@ impl<'a> Compiler<'a> {
     self.errors.push(ParserError::new(message, token.clone()));
   }
 
-  /// Same, for the handful of sites with no surviving `Token` in the
-  /// AST at all; `Expr::Self_`/`Expr::Parent` are unit variants,
-  /// `Stmt::Break`/`Stmt::Continue` carry no payload; so this falls
-  /// back to whatever line `current_line` was last stamped with (see
-  /// `Compiler::emit`). At worst slightly stale within the same
-  /// statement; never the wrong function or file.
+  /// Same, for an error that belongs to no single token: a function
+  /// needing more registers than there are, or a call with too many
+  /// arguments to count. It falls back to whatever line `current_line`
+  /// was last stamped with (see `Compiler::emit`), which at worst is
+  /// slightly stale within the same statement and never the wrong
+  /// function or file.
   fn report_error_here(&mut self, message: String) {
     let line = self.cur().current_line as usize;
     self.errors.push(ParserError {
@@ -472,7 +472,7 @@ impl<'a> Compiler<'a> {
   /// analysis than this optimization is worth.
   fn stmt_never_falls_through(stmt: &Stmt) -> bool {
     match stmt {
-      Stmt::Return(_) | Stmt::Raise(_) | Stmt::Break | Stmt::Continue => true,
+      Stmt::Return(..) | Stmt::Raise(_) | Stmt::Break(_) | Stmt::Continue(_) => true,
       Stmt::Block(stmts) => stmts.last().is_some_and(Self::stmt_never_falls_through),
       Stmt::If(_, then_b, Some(else_b)) => {
         Self::stmt_never_falls_through(then_b) && Self::stmt_never_falls_through(else_b)
@@ -1216,8 +1216,9 @@ impl<'a> Compiler<'a> {
   /// specifically so nested closures can capture it as an upvalue
   /// through the same mechanism as any other outer local (see
   /// `compile_method_prototype`). Panics outside of a method, where no
-  /// such local exists.
-  fn compile_self_reg(&mut self, parent: bool) -> u8 {
+  /// such local exists. `keyword` is the `self` or `parent` being
+  /// compiled, which is what an error outside a method points at.
+  fn compile_self_reg(&mut self, keyword: &Token) -> u8 {
     match self.resolve_variable("self") {
       VarLoc::Local(reg, _) => reg,
       VarLoc::Upvalue(idx) => {
@@ -1226,10 +1227,11 @@ impl<'a> Compiler<'a> {
         dst
       },
       VarLoc::Global => {
-        self.report_error_here(format!(
-          "'{}' used outside of a method",
-          if parent { "parent" } else { "self" }
-        ));
+        let word = match keyword.kind {
+          TokenKind::Parent => "parent",
+          _ => "self",
+        };
+        self.report_error(format!("'{}' used outside of a method", word), keyword);
         self.error_reg()
       },
     }
@@ -1243,7 +1245,7 @@ impl<'a> Compiler<'a> {
   /// `self.x` are simply the same access.
   fn compile_receiver(&mut self, expr: &Expr) -> u8 {
     match expr {
-      Expr::Parent => self.compile_self_reg(true),
+      Expr::Parent(keyword) => self.compile_self_reg(keyword),
       other => self.compile_expression(other),
     }
   }
@@ -1261,7 +1263,7 @@ impl<'a> Compiler<'a> {
     // unconditionally privileged (see check_private_access's own doc
     // comment for why this has to be checked here, purely
     // syntactically, rather than deferred to Invoke's runtime handler).
-    self.check_private_access(&method_name, matches!(obj, Expr::Self_), method);
+    self.check_private_access(&method_name, matches!(obj, Expr::Self_(_)), method);
 
     let obj_reg = self.alloc_reg();
     let raw = self.compile_receiver(obj);
@@ -1313,7 +1315,7 @@ impl<'a> Compiler<'a> {
   /// captured via the synthetic "@superclass" local: see
   /// `compile_class_decl`) while still binding the CURRENT self, unlike
   /// a plain virtual `self.method()` call.
-  fn compile_invoke_super(&mut self, method: &Token, args: &[Expr]) -> u8 {
+  fn compile_invoke_super(&mut self, keyword: &Token, method: &Token, args: &[Expr]) -> u8 {
     let call_reg = self.alloc_reg();
     let raw_super = match self.resolve_variable("@superclass") {
       VarLoc::Local(reg, _) => reg,
@@ -1323,7 +1325,10 @@ impl<'a> Compiler<'a> {
         dst
       },
       VarLoc::Global => {
-        self.report_error_here("'parent' used in a class with no superclass".to_string());
+        self.report_error(
+          "'parent' used in a class with no superclass".to_string(),
+          keyword,
+        );
         self.error_reg()
       },
     };
@@ -1336,7 +1341,7 @@ impl<'a> Compiler<'a> {
     self.free_regs_to(call_reg + 1);
 
     let self_slot = self.alloc_reg();
-    let self_reg = self.compile_self_reg(true);
+    let self_reg = self.compile_self_reg(keyword);
     self.emit(Instr::Move {
       dst: self_slot,
       src: self_reg,
@@ -1377,7 +1382,7 @@ impl<'a> Compiler<'a> {
   /// `parent(args)`; calls the SUPERCLASS's own constructor on the
   /// CURRENT self. See `Instr::CallSuperCtor`'s doc comment for why this
   /// reads `ObjClass::constructor` directly instead of a name lookup.
-  fn compile_super_ctor_call(&mut self, args: &[Expr]) -> u8 {
+  fn compile_super_ctor_call(&mut self, keyword: &Token, args: &[Expr]) -> u8 {
     let call_reg = self.alloc_reg();
     let raw_super = match self.resolve_variable("@superclass") {
       VarLoc::Local(reg, _) => reg,
@@ -1387,7 +1392,10 @@ impl<'a> Compiler<'a> {
         dst
       },
       VarLoc::Global => {
-        self.report_error_here("'parent' used in a class with no superclass".to_string());
+        self.report_error(
+          "'parent' used in a class with no superclass".to_string(),
+          keyword,
+        );
         self.error_reg()
       },
     };
@@ -1400,7 +1408,7 @@ impl<'a> Compiler<'a> {
     self.free_regs_to(call_reg + 1);
 
     let self_slot = self.alloc_reg();
-    let self_reg = self.compile_self_reg(true);
+    let self_reg = self.compile_self_reg(keyword);
     self.emit(Instr::Move {
       dst: self_slot,
       src: self_reg,
@@ -1947,22 +1955,13 @@ impl<'a> Compiler<'a> {
       },
       Expr::Call(callee, args, line) => {
         if let Expr::Get(obj, method) = callee.as_ref() {
-          return if matches!(obj.as_ref(), Expr::Parent) {
-            self.compile_invoke_super(method, args)
-          } else {
-            self.compile_invoke(obj, method, args)
+          return match obj.as_ref() {
+            Expr::Parent(keyword) => self.compile_invoke_super(keyword, method, args),
+            _ => self.compile_invoke(obj, method, args),
           };
         }
-        if matches!(callee.as_ref(), Expr::Parent) {
-          return self.compile_super_ctor_call(args);
-        }
-
-        if let Expr::Get(obj, method) = callee.as_ref() {
-          return if matches!(obj.as_ref(), Expr::Parent) {
-            self.compile_invoke_super(method, args)
-          } else {
-            self.compile_invoke(obj, method, args)
-          };
+        if let Expr::Parent(keyword) = callee.as_ref() {
+          return self.compile_super_ctor_call(keyword, args);
         }
 
         let mark = self.cur().next_reg;
@@ -2029,9 +2028,13 @@ impl<'a> Compiler<'a> {
       },
       Expr::List(elements) => self.compile_list_literal(elements),
       Expr::Dict(keys, values) => self.compile_dict_literal(keys, values),
-      Expr::Self_ => self.compile_self_reg(false),
-      Expr::Parent => {
-        panic!("compile: 'parent' must be followed by '.member' or '.member(...)'")
+      Expr::Self_(keyword) => self.compile_self_reg(keyword),
+      Expr::Parent(keyword) => {
+        self.report_error(
+          "'parent' must be followed by '.member' or '.member(...)'".to_string(),
+          keyword,
+        );
+        self.error_reg()
       },
       Expr::Get(obj, field) => {
         let field_name = Self::identifier_name(field);
@@ -2041,7 +2044,7 @@ impl<'a> Compiler<'a> {
         // to begin with (see compile_receiver's own doc comment).
         self.check_private_access(
           &field_name,
-          matches!(obj.as_ref(), Expr::Self_ | Expr::Parent),
+          matches!(obj.as_ref(), Expr::Self_(_) | Expr::Parent(_)),
           field,
         );
 
@@ -2062,7 +2065,7 @@ impl<'a> Compiler<'a> {
 
         self.check_private_access(
           &field_name,
-          matches!(obj.as_ref(), Expr::Self_ | Expr::Parent),
+          matches!(obj.as_ref(), Expr::Self_(_) | Expr::Parent(_)),
           field,
         );
 
@@ -2178,27 +2181,24 @@ impl<'a> Compiler<'a> {
       dynamic_labels: Vec<&'a Expr>,
     }
 
-    let labelled = arms
-      .iter()
-      .flat_map(|arm| arm.labels.iter().map(move |label| (label, &arm.body)));
-
     let mut groups: Vec<Group> = Vec::new();
-    for (label, body) in labelled {
-      let same_as_last = groups.last().is_some_and(|g| g.body == body);
-      if !same_as_last {
-        groups.push(Group {
-          body,
-          labels: Vec::new(),
-          const_keys: Vec::new(),
-          dynamic_labels: Vec::new(),
-        });
+    for arm in arms {
+      let mut group = Group {
+        body: &arm.body,
+        labels: Vec::new(),
+        const_keys: Vec::new(),
+        dynamic_labels: Vec::new(),
+      };
+
+      for label in &arm.labels {
+        group.labels.push(label);
+        match expr_as_jump_key(label) {
+          Some(key) => group.const_keys.push(key),
+          None => group.dynamic_labels.push(label),
+        }
       }
-      let group = groups.last_mut().unwrap();
-      group.labels.push(label);
-      match expr_as_jump_key(label) {
-        Some(key) => group.const_keys.push(key),
-        None => group.dynamic_labels.push(label),
-      }
+
+      groups.push(group);
     }
 
     let stmt_mark = self.cur().next_reg;
@@ -2719,9 +2719,9 @@ impl<'a> Compiler<'a> {
           "patching break jumps should not emit new code"
         );
       },
-      Stmt::Break => {
+      Stmt::Break(keyword) => {
         if self.cur().loops.is_empty() {
-          self.report_error_here("'break' used outside of a loop".to_string());
+          self.report_error("'break' used outside of a loop".to_string(), keyword);
         } else {
           let body_mark = self.cur().loops.last().unwrap().body_mark;
           if self.locals_captured_from(body_mark) {
@@ -2738,9 +2738,9 @@ impl<'a> Compiler<'a> {
             .push(jump_at);
         }
       },
-      Stmt::Continue => {
+      Stmt::Continue(keyword) => {
         if self.cur().loops.is_empty() {
-          self.report_error_here("'continue' used outside of a loop".to_string());
+          self.report_error("'continue' used outside of a loop".to_string(), keyword);
         } else {
           let (body_mark, continue_target) = {
             let loop_ctx = self.cur().loops.last().unwrap();
@@ -2830,7 +2830,7 @@ impl<'a> Compiler<'a> {
           });
         }
       },
-      Stmt::Return(value) => {
+      Stmt::Return(_, value) => {
         let reg = self.compile_expression(value);
         self.emit(Instr::Return { src: reg });
       },
@@ -2948,7 +2948,7 @@ fn collect_self_fields_stmt(stmt: &Stmt, out: &mut Vec<String>) {
     Stmt::For(..) | Stmt::Iter(..) | Stmt::DoWhile(..) => {
       unreachable!("loops are lowered to `while` before compilation")
     },
-    Stmt::Echo(e) | Stmt::Expression(e) | Stmt::Raise(e) | Stmt::Return(e) => {
+    Stmt::Echo(e) | Stmt::Expression(e) | Stmt::Raise(e) | Stmt::Return(_, e) => {
       collect_self_fields_expr(e, out)
     },
     Stmt::If(cond, then_b, else_b) => {
@@ -3000,8 +3000,8 @@ fn collect_self_fields_stmt(stmt: &Stmt, out: &mut Vec<String>) {
     },
     Stmt::None
     | Stmt::FixContinue
-    | Stmt::Continue
-    | Stmt::Break
+    | Stmt::Continue(_)
+    | Stmt::Break(_)
     | Stmt::Import(..)
     | Stmt::Trivia(_) => {},
   }
@@ -3028,7 +3028,7 @@ fn collect_self_fields_expr(expr: &Expr, out: &mut Vec<String>) {
       unreachable!("shorthand expressions are lowered before compilation")
     },
     Expr::Set(target, field, value) => {
-      if matches!(target.as_ref(), Expr::Self_) {
+      if matches!(target.as_ref(), Expr::Self_(_)) {
         if let TokenKind::Identifier(field_name) = &field.kind {
           if !out.contains(field_name) {
             out.push(field_name.clone());
@@ -3081,8 +3081,8 @@ fn collect_self_fields_expr(expr: &Expr, out: &mut Vec<String>) {
     | Expr::BigNumber(_)
     | Expr::Literal(_)
     | Expr::Identifier(_)
-    | Expr::Parent
-    | Expr::Self_
+    | Expr::Parent(_)
+    | Expr::Self_(_)
     | Expr::TypeHint(..)
     | Expr::Argument(..) => {},
   }

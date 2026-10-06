@@ -87,7 +87,7 @@ fn stmt(s: Stmt) -> Stmt {
     ),
     Stmt::While(condition, body) => Stmt::While(boxed_expr(condition), boxed_stmt(body)),
     Stmt::Raise(e) => Stmt::Raise(boxed_expr(e)),
-    Stmt::Return(e) => Stmt::Return(boxed_expr(e)),
+    Stmt::Return(keyword, e) => Stmt::Return(keyword, boxed_expr(e)),
     Stmt::Assert(condition, message) => {
       Stmt::Assert(boxed_expr(condition), message.map(boxed_expr))
     },
@@ -126,8 +126,8 @@ fn stmt(s: Stmt) -> Stmt {
     Stmt::VarList(stmts) => Stmt::VarList(stmts_of(stmts)),
     Stmt::None => Stmt::None,
     Stmt::FixContinue => Stmt::FixContinue,
-    Stmt::Continue => Stmt::Continue,
-    Stmt::Break => Stmt::Break,
+    Stmt::Continue(keyword) => Stmt::Continue(keyword),
+    Stmt::Break(keyword) => Stmt::Break(keyword),
     Stmt::Trivia(token) => Stmt::Trivia(token),
   }
 }
@@ -182,8 +182,8 @@ fn expr(e: Expr) -> Expr {
     | Expr::BigNumber(_)
     | Expr::Literal(_)
     | Expr::Identifier(_)
-    | Expr::Parent
-    | Expr::Self_
+    | Expr::Parent(_)
+    | Expr::Self_(_)
     | Expr::TypeHint(..)) => leaf,
   }
 }
@@ -324,7 +324,11 @@ fn for_loop(key: Option<Token>, value: Token, iterable: Expr, body: Stmt) -> Stm
     Box::new(Expr::Nil),
     key_track.line as u32,
   );
-  let stop = Stmt::If(Box::new(exhausted), Box::new(Stmt::Break), None);
+  let stop = Stmt::If(
+    Box::new(exhausted),
+    Box::new(Stmt::Break(key_track.clone())),
+    None,
+  );
 
   // value = $iter.@value(key)
   let value_getter = Expr::Get(id(&iter_name), named(&value, "@value"));

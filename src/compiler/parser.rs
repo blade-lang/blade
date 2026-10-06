@@ -744,8 +744,8 @@ impl<'a> Parser<'a> {
       TokenKind::False => Expr::Bool(false),
       TokenKind::True => Expr::Bool(true),
       TokenKind::Nil => Expr::Nil,
-      TokenKind::Self_ => Expr::Self_,
-      TokenKind::Parent => Expr::Parent,
+      TokenKind::Self_ => Expr::Self_(prev.clone()),
+      TokenKind::Parent => Expr::Parent(prev.clone()),
       TokenKind::Double(v) => Expr::Float(v),
       TokenKind::Integer(v) => Expr::Integer(v),
       TokenKind::BinNumber(v) => Expr::Integer(v),
@@ -1222,7 +1222,8 @@ impl<'a> Parser<'a> {
     self.ignore_newlines();
 
     let body = if match_tok!(self, TokenKind::Arrow) {
-      Stmt::Return(Box::new(self.expression()))
+      let arrow = self.previous().clone();
+      Stmt::Return(arrow, Box::new(self.expression()))
     } else {
       self.match_block("Expected '{' after function declaration".to_string())
     };
@@ -1716,13 +1717,15 @@ impl<'a> Parser<'a> {
           self.expression_stmt(false)
         }
       },
-      TokenKind::Continue => Stmt::Continue,
-      TokenKind::Break => Stmt::Break,
+      TokenKind::Continue => Stmt::Continue(self.previous().clone()),
+      TokenKind::Break => Stmt::Break(self.previous().clone()),
       TokenKind::Return => {
+        let keyword = self.previous().clone();
+
         if self.functions_count == 0 {
           self.report_error_at(
             "'return' is only a valid keyword in function context".to_string(),
-            self.previous().clone(),
+            keyword.clone(),
           );
         }
 
@@ -1737,7 +1740,7 @@ impl<'a> Parser<'a> {
           result = self.expression();
         }
 
-        Stmt::Return(Box::new(result))
+        Stmt::Return(keyword, Box::new(result))
       },
       TokenKind::Raise => {
         let mut result = self.compose_nil();

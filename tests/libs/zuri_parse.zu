@@ -151,6 +151,15 @@ assert using_node.fields.arms[0].fields.body.kind == 'Echo', 'and holds its body
 assert using_node.fields.default_body.kind == 'Echo', 'the default body is kept'
 ok('using keeps one arm per when')
 
+var keyword_source = 'class A {\n  m() {\n    while true {\n      break\n    }\n' +
+  '    return self\n  }\n}'
+var method_body = zuri.parse(keyword_source)[0].fields.methods[0].fields.body.fields.statements
+var loop_body = method_body[0].fields.body.fields.statements
+assert loop_body[0].to_string() == 'Break@4:7', 'break carries its own position'
+assert method_body[1].to_string() == 'Return@6:5', 'return is placed at its keyword'
+assert method_body[1].fields.value.to_string() == 'Self@6:12', 'self carries its own position'
+ok('keywords carry their own positions')
+
 # ---------------------------------------------------------------------------
 # Comment preservation: leading, mid-block, and doc blocks
 # ---------------------------------------------------------------------------

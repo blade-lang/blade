@@ -1,0 +1,12 @@
+═══════════════════════════════════════════════════════
+  keyword errors: test suite
+═══════════════════════════════════════════════════════
+  [PASS] self outside a method
+  [PASS] parent outside a method
+  [PASS] parent on its own
+  [PASS] parent with no superclass
+  [PASS] break and continue outside a loop
+
+═══════════════════════════════════════════════════════
+  All 5 assertions passed.
+═══════════════════════════════════════════════════════
