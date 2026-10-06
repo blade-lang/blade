@@ -66,6 +66,46 @@ assert body.fields.statements[0].kind == 'Return', 'that statement is a Return'
 ok('function declarations, parameters, and bodies parse correctly')
 
 # ---------------------------------------------------------------------------
+# Loops come back as they were written, not as the while loops they
+# compile to
+# ---------------------------------------------------------------------------
+var for_node = zuri.parse('for item in items {\n  echo item\n}')[0].fields.statement
+assert for_node.kind == 'For', 'a for loop is a For node'
+assert for_node.fields.key == nil, 'a single-variable for loop has no key'
+assert for_node.fields.value == 'item', 'its one variable is the value'
+assert for_node.fields.iterable.kind == 'Identifier', 'the iterable is kept as written'
+assert for_node.fields.body.fields.statements.length() == 1, 'the body holds only what was written'
+assert for_node.fields.body.fields.statements[0].kind == 'Echo', 'the body is the loop body itself'
+
+var pair_node = zuri.parse('for k, v in table {\n}')[0].fields.statement
+assert pair_node.fields.key == 'k', 'the first of two variables is the key'
+assert pair_node.fields.value == 'v', 'the second of two variables is the value'
+
+var range_node = zuri.parse('for i in 0..10 {\n}')[0].fields.statement
+assert range_node.kind == 'For', 'a loop over a range literal is still a For node'
+assert range_node.fields.iterable.kind == 'Range', 'and its iterable is still the range'
+ok('for loops keep their variables, iterable and body')
+
+var iter_node = zuri.parse('iter var i = 0; i < 3; i++ {\n  echo i\n}')[0].fields.statement
+assert iter_node.kind == 'Iter', 'an iter loop is an Iter node'
+assert iter_node.fields.initializer.kind == 'Var', 'the initializer is kept'
+assert iter_node.fields.condition.kind == 'Logical', 'the condition is kept'
+assert iter_node.fields.steps.length() == 1, 'each step is kept'
+assert iter_node.fields.body.fields.statements.length() == 1, 'the steps stay out of the body'
+
+var bare_iter = zuri.parse('iter ; ; {\n  break\n}')[0].fields.statement
+assert bare_iter.fields.initializer == nil, 'an empty initializer is nil'
+assert bare_iter.fields.condition == nil, 'an empty condition is nil'
+assert bare_iter.fields.steps.length() == 0, 'no steps is an empty list'
+ok('iter loops keep each clause, and an empty clause is nil')
+
+var do_node = zuri.parse('do {\n  echo 1\n} while false')[0].fields.statement
+assert do_node.kind == 'DoWhile', 'a do..while loop is a DoWhile node'
+assert do_node.fields.body.kind == 'Block', 'its body appears once'
+assert do_node.fields.condition.kind == 'Bool', 'its condition follows the body'
+ok('do..while keeps its body once, ahead of its condition')
+
+# ---------------------------------------------------------------------------
 # Comment preservation: leading, mid-block, and doc blocks
 # ---------------------------------------------------------------------------
 var commented_source = '# leading comment\ndef greet() {\n  # inside the block\n  return 1\n}\n'
@@ -76,7 +116,8 @@ assert commented_nodes[0].fields.text == ' leading comment', 'comment text exclu
 assert commented_nodes[1].kind == 'Function', 'the second node must be the function itself'
 var greet_body = commented_nodes[1].fields.body.fields.statements
 assert greet_body.length() == 2, 'the block has the comment plus the return statement'
-assert greet_body[0].kind == 'Comment', 'the in-block comment must appear before the statement it precedes'
+assert greet_body[0].kind == 'Comment',
+  'the in-block comment must appear before the statement it precedes'
 assert greet_body[1].kind == 'Return', 'the return statement follows the comment'
 ok('leading and in-block comments are preserved in their original position')
 
@@ -90,7 +131,9 @@ ok('doc blocks are preserved distinctly from ordinary comments')
 # ---------------------------------------------------------------------------
 # Comments between class members: fields vs methods, and a trailing one
 # ---------------------------------------------------------------------------
-var class_source = 'class Foo {\n  # comment before a field\n  var bar = 1\n\n  # comment before a method\n  baz() {\n    return self.bar\n  }\n  # trailing comment\n}\n'
+var class_source = 'class Foo {\n  # comment before a field\n  var bar = 1\n\n' +
+  '  # comment before a method\n  baz() {\n    return self.bar\n  }\n' +
+  '  # trailing comment\n}\n'
 var class_nodes = zuri.parse(class_source)
 assert class_nodes.length() == 1, 'a single class declaration parses to one top-level node'
 var class_node = class_nodes[0]
@@ -120,16 +163,20 @@ var expr_comment_body = zuri.parse(expr_comment_source)[0].fields.body.fields.st
 assert expr_comment_body.length() == 3, 'the comment must still show up as its own node, not vanish'
 assert expr_comment_body[0].kind == 'Echo', 'first statement is the one the comment sat inside'
 assert expr_comment_body[1].kind == 'Comment', 'the comment lands right after that statement'
-assert expr_comment_body[1].fields.text == ' x', 'the comment text itself is unaffected by where it landed'
+assert expr_comment_body[1].fields.text == ' x',
+  'the comment text itself is unaffected by where it landed'
 assert expr_comment_body[2].kind == 'Echo', 'the following statement is unaffected'
-ok('a comment embedded inside an expression is preserved as a sibling of the statement it sat inside')
+ok(
+  'a comment embedded inside an expression is preserved as a sibling of the statement it sat inside'
+)
 
 var nested_source = "def foo() {\n  if true {\n    echo bar(a, # w\n    b)\n  }\n  echo 2\n}\n"
 var nested_stmts = zuri.parse(nested_source)[0].fields.body.fields.statements
 var inner_stmts = nested_stmts[0].fields.then.fields.statements
 assert inner_stmts.length() == 2, 'the comment stays nested inside the same block it was found in'
 assert inner_stmts[1].kind == 'Comment', 'not hoisted out to the enclosing function body'
-assert nested_stmts.length() == 2, 'the outer block only has the if and the trailing echo, nothing extra'
+assert nested_stmts.length() == 2,
+  'the outer block only has the if and the trailing echo, nothing extra'
 ok('an embedded comment stays exactly as deeply nested as the statement that contained it')
 
 # ---------------------------------------------------------------------------
@@ -144,8 +191,10 @@ ok('a syntax error raises instead of returning a partial result')
 var ts_nodes = zuri.parse('var y = 1')
 # A `Var` node's position is its own name token's, not the `var`
 # keyword's, so `y` (the 5th character) is where it points.
-assert ts_nodes[0].to_string() == 'Stmt@1:5', 'to_string() must be kind@line:col when a position exists'
-assert ts_nodes[0].fields.statement.to_string() == 'Var@1:5', 'a nested node has its own to_string() too'
+assert ts_nodes[0].to_string() == 'Stmt@1:5',
+  'to_string() must be kind@line:col when a position exists'
+assert ts_nodes[0].fields.statement.to_string() == 'Var@1:5',
+  'a nested node has its own to_string() too'
 ok('Node.to_string()')
 
 # ---------------------------------------------------------------------------
@@ -180,7 +229,8 @@ ok('walk_nodes() with a dict visitor reaches every nested node')
 
 var visited_kinds = []
 zuri.walk_nodes(walk_nodes_list, @(node) { visited_kinds.append(node.kind) })
-assert visited_kinds.length() > fn_names.length(), 'a plain-function visitor must be called for every node, not just Function'
+assert visited_kinds.length() > fn_names.length(),
+  'a plain-function visitor must be called for every node, not just Function'
 ok('walk_nodes() with a plain function visits every node')
 
 var identifiers = zuri.find_nodes(walk_nodes_list, 'Identifier')
@@ -199,7 +249,8 @@ scratch_file.write('def add(a, b) {\n  return a + b\n}\n')
 scratch_file.close()
 
 var file_nodes = zuri.parse_file(scratch_path)
-assert file_nodes.length() == 1, 'parse_file() must parse the file content, not an empty/default source'
+assert file_nodes.length() == 1,
+  'parse_file() must parse the file content, not an empty/default source'
 assert file_nodes[0].kind == 'Function', 'parse_file() must actually read the file content'
 assert file_nodes[0].fields.name == 'add', 'parse_file() must parse the function correctly'
 
@@ -209,7 +260,8 @@ ok('parse_file() reads and parses a real file')
 
 var dump = zuri.dump_file(scratch_path)
 assert is_string(dump), 'dump_file() must return a string'
-assert dump == file_nodes[0].dump(), 'dump_file() must match dumping the result of parse_file() by hand'
+assert dump == file_nodes[0].dump(),
+  'dump_file() must match dumping the result of parse_file() by hand'
 ok('dump_file() matches parsing then dumping the same file by hand')
 
 # ===========================================================================

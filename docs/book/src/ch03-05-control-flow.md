@@ -189,6 +189,22 @@ The initialiser runs once. The condition is tested before every pass. The
 update runs after every pass. A variable declared in the initialiser
 belongs to the loop and does not exist after it.
 
+The initialiser may declare several variables and the update may hold
+several expressions, each list separated by commas. The updates run in the
+order they are written:
+
+```zuri
+iter var i = 0, j = 10; i < 3; i++, j-- {
+  echo '${i} ${j}'
+}
+```
+
+```console
+0 10
+1 9
+2 8
+```
+
 Every clause is optional:
 
 ```zuri

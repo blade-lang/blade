@@ -1,0 +1,22 @@
+# Several variables in the initialiser and several steps in the update,
+# each list separated by commas. The steps run in the order written.
+iter var i = 0, j = 10; i < 3; i++, j-- {
+  echo '${i} ${j}'
+}
+
+# The step list may break across lines after a comma.
+var total = 0
+
+iter var k = 0; k < 4; k++,
+  total += k {
+  echo total
+}
+
+# A `continue` still runs every step before the next pass.
+iter var a = 0, b = 0; a < 4; a++, b += 2 {
+  if a == 1 {
+    continue
+  }
+
+  echo '${a} ${b}'
+}

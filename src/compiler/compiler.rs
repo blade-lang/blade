@@ -5,6 +5,7 @@ use std::{ops::Deref, rc::Rc};
 use crate::{
   compiler::{
     ast::{Decl, Expr, Stmt, Type},
+    lower::lower,
     parser::ParserError,
     token::{Token, TokenKind},
   },
@@ -153,7 +154,7 @@ impl<'a> Compiler<'a> {
     top.chunk.add_constant(heap.alloc_string_old("@new"));
 
     Compiler {
-      decls,
+      decls: lower(decls),
       heap,
       source_path,
       scopes: vec![top],
@@ -2845,6 +2846,9 @@ impl<'a> Compiler<'a> {
         *imports_all,
         *exported,
       ),
+      Stmt::For(..) | Stmt::Iter(..) | Stmt::DoWhile(..) => {
+        unreachable!("loops are lowered to `while` before compilation")
+      },
       _ => {},
     };
   }
@@ -2942,6 +2946,9 @@ impl<'a> Compiler<'a> {
 /// captured by a closure nested inside a method.
 fn collect_self_fields_stmt(stmt: &Stmt, out: &mut Vec<String>) {
   match stmt {
+    Stmt::For(..) | Stmt::Iter(..) | Stmt::DoWhile(..) => {
+      unreachable!("loops are lowered to `while` before compilation")
+    },
     Stmt::Echo(e) | Stmt::Expression(e) | Stmt::Raise(e) | Stmt::Return(e) => {
       collect_self_fields_expr(e, out)
     },

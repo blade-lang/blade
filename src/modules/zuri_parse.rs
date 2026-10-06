@@ -133,6 +133,16 @@ fn stmt_pos(s: &Stmt) -> (Option<usize>, Option<usize>) {
     Stmt::Var(t, ..) | Stmt::Trivia(t) => (Some(t.line), Some(t.column)),
     Stmt::Echo(e) | Stmt::Expression(e) | Stmt::Raise(e) | Stmt::Return(e) => expr_pos(e),
     Stmt::If(cond, ..) | Stmt::While(cond, _) | Stmt::Assert(cond, _) => expr_pos(cond),
+    Stmt::For(key, value, ..) => {
+      let first = key.as_ref().unwrap_or(value);
+      (Some(first.line), Some(first.column))
+    },
+    Stmt::Iter(initializer, condition, _, body) => match (initializer, condition) {
+      (Some(initializer), _) => stmt_pos(initializer),
+      (None, Some(condition)) => expr_pos(condition),
+      (None, None) => stmt_pos(body),
+    },
+    Stmt::DoWhile(body, _) => stmt_pos(body),
     Stmt::Using(subject, ..) => expr_pos(subject),
     Stmt::Import(_, name_expr, ..) => expr_pos(name_expr),
     Stmt::Catch(body, ..) => stmt_pos(body),
@@ -488,6 +498,41 @@ fn stmt_to_value(ctx: &mut ZuriContext, s: &Stmt) -> Value {
       let body_v = stmt_to_value(ctx, body);
       let f = vec![kv(ctx, "condition", cond_v), kv(ctx, "body", body_v)];
       make_node(ctx, "While", pos, f)
+    },
+    Stmt::For(key, value, iterable, body) => {
+      let key_v = match key {
+        Some(key) => ctx.heap().alloc_string(token_identifier_name(key)),
+        None => Value::nil(),
+      };
+      let value_v = ctx.heap().alloc_string(token_identifier_name(value));
+      let iterable_v = expr_to_value(ctx, iterable);
+      let body_v = stmt_to_value(ctx, body);
+      let f = vec![
+        kv(ctx, "key", key_v),
+        kv(ctx, "value", value_v),
+        kv(ctx, "iterable", iterable_v),
+        kv(ctx, "body", body_v),
+      ];
+      make_node(ctx, "For", pos, f)
+    },
+    Stmt::Iter(initializer, condition, steps, body) => {
+      let initializer_v = opt_stmt_to_value(ctx, initializer);
+      let condition_v = opt_expr_to_value(ctx, condition);
+      let steps_v = expr_list_to_value(ctx, steps);
+      let body_v = stmt_to_value(ctx, body);
+      let f = vec![
+        kv(ctx, "initializer", initializer_v),
+        kv(ctx, "condition", condition_v),
+        kv(ctx, "steps", steps_v),
+        kv(ctx, "body", body_v),
+      ];
+      make_node(ctx, "Iter", pos, f)
+    },
+    Stmt::DoWhile(body, condition) => {
+      let body_v = stmt_to_value(ctx, body);
+      let condition_v = expr_to_value(ctx, condition);
+      let f = vec![kv(ctx, "body", body_v), kv(ctx, "condition", condition_v)];
+      make_node(ctx, "DoWhile", pos, f)
     },
     Stmt::Continue => make_node(ctx, "Continue", pos, vec![]),
     Stmt::Break => make_node(ctx, "Break", pos, vec![]),

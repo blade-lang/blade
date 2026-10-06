@@ -76,6 +76,20 @@ pub enum Stmt {
   Expression(Box<Expr>),
   If(Box<Expr>, Box<Stmt>, Option<Box<Stmt>>),
   While(Box<Expr>, Box<Stmt>),
+
+  // `for value in iterable` or `for key, value in iterable`, with the
+  // key absent in the first form. The compiler lowers it to a `while`
+  // over the iterable's `@key` and `@value` methods.
+  For(Option<Token>, Token, Box<Expr>, Box<Stmt>),
+
+  // `iter initializer; condition; steps { body }`. Every clause may be
+  // left empty, and a missing condition loops until something breaks.
+  Iter(Option<Box<Stmt>>, Option<Box<Expr>>, Vec<Expr>, Box<Stmt>),
+
+  // `do body while condition`, whose body runs once before the
+  // condition is first tested.
+  DoWhile(Box<Stmt>, Box<Expr>),
+
   Continue,
   Break,
   Raise(Box<Expr>),
