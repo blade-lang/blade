@@ -3,34 +3,41 @@
 //! Runs the real `Lexer`/`Parser` pipeline (the SAME grammar the
 //! compiler itself uses; no second, parallel parser to keep in sync)
 //! and converts the resulting `Vec<Decl>` into a list of generic node
-//! dicts, each shaped `{ kind, line, col, fields }`. `libs/zuri/ast.zu`
-//! wraps each dict into a proper `Node` instance, recursively.
+//! dicts, each shaped `{ kind, start, end, line, col, end_line, end_col,
+//! fields }`. `libs/zuri/ast.zu` wraps each dict into a proper `Node`
+//! instance, recursively.
+//!
+//! A node's position is the whole of the source it was read from:
+//! `start` and `end` are char offsets, the first character and the one
+//! just past the last, and `line`/`col` and `end_line`/`end_col` are
+//! the same two points as one-based lines and columns. A declaration
+//! starts at its keyword, so `var x = 1` starts at `var`, and the name it
+//! declares comes with a `name_span` of its own in `fields`, shaped like
+//! a node's position without the `kind` and `fields`.
 //!
 //! Every comment and doc block the source contains comes back too, as
 //! its own `"Comment"`/`"DocBlock"`-kind node sitting exactly where it
-//! appeared lexically (see `Decl::Trivia`/`Stmt::Trivia` in
+//! appeared lexically (see `DeclKind::Trivia`/`StmtKind::Trivia` in
 //! `src/compiler/ast.rs`, and the parser's own trivia-draining logic in
 //! `src/compiler/parser.rs`); this is what makes the result "lossless
 //! enough to rewrite the file from" for anything at statement/
 //! declaration granularity. A comment written INSIDE an expression
-//! (`foo(a, # x` on one line, `b)` on the next, ...) is never attached
-//! inside that expression's own node (there's no node kind for it, and
-//! never will be: CLAUDE.md's Zuri style never places a comment there
-//! in the first place). It's still captured, though, not dropped: the
-//! parser's trivia buffer doesn't distinguish "seen while parsing this
-//! statement's own expression" from "seen while chasing trailing
+//! (`foo(a, # x` on one line, `b)` on the next, ...) has no node kind of
+//! its own inside that expression. It's still captured, not dropped:
+//! the parser's trivia buffer doesn't distinguish "seen while parsing
+//! this statement's own expression" from "seen while chasing trailing
 //! whitespace toward the next one", so it comes back as an ordinary
 //! sibling node immediately after the smallest enclosing statement/
 //! declaration/class-member, in that statement's own surrounding list,
 //! rather than nested inside the expression it visually sat in. Source
-//! written against CLAUDE.md's own comment convention never hits this,
-//! since every comment there is already its own whole line between
-//! statements; this only affects source that breaks that convention,
-//! and even then costs only where the comment ends up attached in the
-//! tree, not the comment itself.
+//! that keeps each comment on a line of its own, between statements,
+//! never meets this; elsewhere it costs only where the comment ends up
+//! in the tree, never the comment itself.
 
 use crate::builtins::enforce::ArgType;
-use crate::compiler::ast::{Decl, Expr, Segment, Stmt, Type};
+use crate::compiler::ast::{
+  Decl, DeclKind, Expr, ExprKind, Segment, Span, Stmt, StmtKind, Type, TypeName,
+};
 use crate::compiler::lexer::Lexer;
 use crate::compiler::parser::Parser;
 use crate::compiler::token::{Token, TokenKind};
@@ -77,138 +84,626 @@ fn parse_fn(ctx: &mut ZuriContext) -> Result<Value, String> {
     },
   };
 
-  Ok(decl_list_to_value(ctx, &decls))
+  let mut w = Writer {
+    ctx,
+    lines: Lines::new(&source),
+  };
+
+  Ok(w.decls(&decls))
 }
 
-// Position helpers: best-effort `(line, col)` for a node, from
-// whatever the current AST actually carries. Most `Expr`/`Stmt`/`Decl`
-// variants don't store a position of their own (only ones embedding a
-// `Token`, or an explicit trailing source-line `u32` on the handful of
-// operator/delimiter nodes that need one for error messages); for
-// everything else, this borrows the position of the first meaningful
-// child, and only falls back to `(None, None)` for a genuinely
-// position-less leaf/structural node (`Decl::None`, an empty block,
-// ...). This doesn't affect reconstruction fidelity; rebuilding
-// source from this AST needs structure, literal values, and comments,
-// never a node's own line/col; it's purely a best-effort convenience
-// for a consumer that wants to point at where something is.
+/// Where each line of the source starts, as a char offset, so an offset
+/// can be turned into the one-based line and column the lexer counts in.
+struct Lines {
+  starts: Vec<usize>,
+}
 
-fn expr_pos(e: &Expr) -> (Option<usize>, Option<usize>) {
-  match e {
-    Expr::Identifier(t) | Expr::Get(_, t) | Expr::Set(_, t, _) | Expr::Argument(t, _) => {
-      (Some(t.line), Some(t.column))
-    },
-    Expr::Unary(_, _, line)
-    | Expr::Binary(_, _, _, line)
-    | Expr::Logical(_, _, _, line)
-    | Expr::Range(_, _, line)
-    | Expr::Call(_, _, line)
-    | Expr::Index(_, _, line)
-    | Expr::Slice(_, _, _, line) => (Some(*line as usize), None),
-    Expr::Grouping(inner) => expr_pos(inner),
-    Expr::Circuit(a, ..) => expr_pos(a),
-    Expr::Condition(cond, ..) => expr_pos(cond),
-    Expr::List(items) => items.first().map(expr_pos).unwrap_or((None, None)),
-    Expr::Dict(keys, values) => keys
-      .first()
-      .or(values.first())
-      .map(expr_pos)
-      .unwrap_or((None, None)),
-    Expr::Assign(target, _) => expr_pos(target),
-    Expr::CompoundAssign(target, ..) | Expr::Update(target, ..) => expr_pos(target),
-    Expr::Interpolation(segments) => match segments.first() {
-      Some(Segment::Text(token)) => (Some(token.line), Some(token.column)),
-      Some(Segment::Value(value)) => expr_pos(value),
-      None => (None, None),
-    },
-    Expr::Shorthand(token) | Expr::Parent(token) | Expr::Self_(token) => {
-      (Some(token.line), Some(token.column))
-    },
-    Expr::Anonymous(decl) => decl_pos(decl),
-    Expr::Nil
-    | Expr::Bool(_)
-    | Expr::Integer(_)
-    | Expr::Float(_)
-    | Expr::BigNumber(_)
-    | Expr::Literal(_)
-    | Expr::TypeHint(..) => (None, None),
+impl Lines {
+  fn new(source: &str) -> Self {
+    let mut starts = vec![0];
+
+    for (offset, c) in source.chars().enumerate() {
+      if c == '\n' {
+        starts.push(offset + 1);
+      }
+    }
+
+    Self { starts }
+  }
+
+  fn position(&self, offset: usize) -> (usize, usize) {
+    let index = match self.starts.binary_search(&offset) {
+      Ok(index) => index,
+      Err(index) => index - 1,
+    };
+
+    (index + 1, offset - self.starts[index] + 1)
   }
 }
 
-fn stmt_pos(s: &Stmt) -> (Option<usize>, Option<usize>) {
-  match s {
-    Stmt::Var(t, ..) | Stmt::Trivia(t) => (Some(t.line), Some(t.column)),
-    Stmt::Echo(e) | Stmt::Expression(e) | Stmt::Raise(e) => expr_pos(e),
-    Stmt::Return(keyword, _) | Stmt::Continue(keyword) | Stmt::Break(keyword) => {
-      (Some(keyword.line), Some(keyword.column))
-    },
-    Stmt::If(cond, ..) | Stmt::While(cond, _) | Stmt::Assert(cond, _) => expr_pos(cond),
-    Stmt::For(key, value, ..) => {
-      let first = key.as_ref().unwrap_or(value);
-      (Some(first.line), Some(first.column))
-    },
-    Stmt::Iter(initializer, condition, _, body) => match (initializer, condition) {
-      (Some(initializer), _) => stmt_pos(initializer),
-      (None, Some(condition)) => expr_pos(condition),
-      (None, None) => stmt_pos(body),
-    },
-    Stmt::DoWhile(body, _) => stmt_pos(body),
-    Stmt::Using(subject, ..) => expr_pos(subject),
-    Stmt::Import(_, _, name_expr, ..) => expr_pos(name_expr),
-    Stmt::Catch(body, ..) => stmt_pos(body),
-    Stmt::Block(stmts) => stmts.first().map(stmt_pos).unwrap_or((None, None)),
-    Stmt::Decl(d) => decl_pos(d),
-    Stmt::VarList(list) => list.first().map(stmt_pos).unwrap_or((None, None)),
-    Stmt::None | Stmt::FixContinue => (None, None),
+/// Builds the node dicts for one parsed source.
+struct Writer<'c, 'v> {
+  ctx: &'c mut ZuriContext<'v>,
+  lines: Lines,
+}
+
+impl<'c, 'v> Writer<'c, 'v> {
+  fn string(&mut self, text: impl Into<String>) -> Value {
+    self.ctx.heap().alloc_string(text.into())
   }
-}
 
-fn decl_pos(d: &Decl) -> (Option<usize>, Option<usize>) {
-  match d {
-    Decl::Function(t, ..)
-    | Decl::Method(t, ..)
-    | Decl::Property(t, ..)
-    | Decl::Class(t, ..)
-    | Decl::Trivia(t) => (Some(t.line), Some(t.column)),
-    Decl::Stmt(s) => stmt_pos(s),
-    Decl::Block(stmts) => stmts.first().map(stmt_pos).unwrap_or((None, None)),
-    Decl::Import(_, name_expr, ..) => expr_pos(name_expr),
-    Decl::None => (None, None),
+  fn kv(&mut self, key: &str, value: Value) -> (Value, Value) {
+    let k = self.ctx.heap().alloc_string(key);
+    (k, value)
   }
-}
 
-// Node construction
+  /// `start`, `end`, `line`, `col`, `end_line` and `end_col` for a span.
+  fn position(&mut self, span: Span) -> Vec<(Value, Value)> {
+    let (line, col) = self.lines.position(span.start);
+    let (end_line, end_col) = self.lines.position(span.end);
 
-fn kv(ctx: &mut ZuriContext, key: &str, value: Value) -> (Value, Value) {
-  let k = ctx.heap().alloc_string(key);
-  (k, value)
-}
+    vec![
+      self.kv("start", Value::number(span.start as f64)),
+      self.kv("end", Value::number(span.end as f64)),
+      self.kv("line", Value::number(line as f64)),
+      self.kv("col", Value::number(col as f64)),
+      self.kv("end_line", Value::number(end_line as f64)),
+      self.kv("end_col", Value::number(end_col as f64)),
+    ]
+  }
 
-fn opt_pos(pos: Option<usize>) -> Value {
-  pos.map(|n| Value::number(n as f64)).unwrap_or(Value::nil())
-}
+  /// A span on its own, as the dict a `name_span` holds.
+  fn span(&mut self, span: Span) -> Value {
+    let entries = self.position(span);
+    self.ctx.heap().alloc_dict(entries)
+  }
 
-fn make_node(
-  ctx: &mut ZuriContext,
-  kind: &str,
-  pos: (Option<usize>, Option<usize>),
-  fields: Vec<(Value, Value)>,
-) -> Value {
-  let kind_k = ctx.heap().alloc_string("kind");
-  let kind_v = ctx.heap().alloc_string(kind);
-  let line_k = ctx.heap().alloc_string("line");
-  let col_k = ctx.heap().alloc_string("col");
-  let fields_k = ctx.heap().alloc_string("fields");
-  let fields_v = ctx.heap().alloc_dict(fields);
-  let line_v = opt_pos(pos.0);
-  let col_v = opt_pos(pos.1);
+  fn node(&mut self, kind: &str, span: Span, fields: Vec<(Value, Value)>) -> Value {
+    let kind_v = self.string(kind);
+    let mut entries = vec![self.kv("kind", kind_v)];
+    entries.extend(self.position(span));
 
-  ctx.heap().alloc_dict(vec![
-    (kind_k, kind_v),
-    (line_k, line_v),
-    (col_k, col_v),
-    (fields_k, fields_v),
-  ])
+    let fields_v = self.ctx.heap().alloc_dict(fields);
+    entries.push(self.kv("fields", fields_v));
+
+    self.ctx.heap().alloc_dict(entries)
+  }
+
+  /// The `name` and `name_span` fields of anything that declares or reads
+  /// a name through a token of its own.
+  fn name_fields(&mut self, token: &Token) -> Vec<(Value, Value)> {
+    let name = self.string(token_identifier_name(token));
+    let span = self.span(Span::of(token));
+
+    vec![self.kv("name", name), self.kv("name_span", span)]
+  }
+
+  fn opt_expr(&mut self, e: &Option<Box<Expr>>) -> Value {
+    match e {
+      Some(e) => self.expr(e),
+      None => Value::nil(),
+    }
+  }
+
+  fn opt_stmt(&mut self, s: &Option<Box<Stmt>>) -> Value {
+    match s {
+      Some(s) => self.stmt(s),
+      None => Value::nil(),
+    }
+  }
+
+  fn exprs(&mut self, items: &[Expr]) -> Value {
+    let vals: Vec<Value> = items.iter().map(|item| self.expr(item)).collect();
+    self.ctx.heap().alloc_list(vals)
+  }
+
+  fn stmts(&mut self, items: &[Stmt]) -> Value {
+    let vals: Vec<Value> = items.iter().map(|item| self.stmt(item)).collect();
+    self.ctx.heap().alloc_list(vals)
+  }
+
+  fn decls(&mut self, items: &[Decl]) -> Value {
+    let vals: Vec<Value> = items.iter().map(|item| self.decl(item)).collect();
+    self.ctx.heap().alloc_list(vals)
+  }
+
+  fn type_name(&mut self, name: &TypeName) -> Value {
+    let (kind, class_name) = match &name.ty {
+      Type::Any => ("Any", None),
+      Type::Bool => ("Bool", None),
+      Type::Int => ("Int", None),
+      Type::Number => ("Number", None),
+      Type::BigInt => ("BigInt", None),
+      Type::String => ("String", None),
+      Type::Bytes => ("Bytes", None),
+      Type::List => ("List", None),
+      Type::Dict => ("Dict", None),
+      Type::Range => ("Range", None),
+      Type::File => ("File", None),
+      Type::Function => ("Function", None),
+      Type::Type => ("Type", None),
+      Type::Callable => ("Callable", None),
+      Type::Iterable => ("Iterable", None),
+      Type::Instance(tok) => ("Instance", Some(token_identifier_name(tok))),
+    };
+
+    let class_name_v = match class_name {
+      Some(n) => self.string(n),
+      None => Value::nil(),
+    };
+    let fields = vec![self.kv("class_name", class_name_v)];
+
+    self.node(kind, name.span, fields)
+  }
+
+  /// `left`, `op` and `right`, for the binary-shaped nodes.
+  fn operands(&mut self, left: &Expr, op: &TokenKind, right: &Expr) -> Vec<(Value, Value)> {
+    let op_v = self.string(token_kind_name(op));
+    let left_v = self.expr(left);
+    let right_v = self.expr(right);
+
+    vec![
+      self.kv("left", left_v),
+      self.kv("op", op_v),
+      self.kv("right", right_v),
+    ]
+  }
+
+  fn expr(&mut self, e: &Expr) -> Value {
+    let span = e.span;
+
+    let (kind, fields) = match &e.kind {
+      ExprKind::Nil => ("Nil", vec![]),
+      ExprKind::Bool(b) => ("Bool", vec![self.kv("value", Value::bool(*b))]),
+      ExprKind::Integer(n) => ("Integer", vec![self.kv("value", Value::number(*n as f64))]),
+      ExprKind::Float(n) => ("Float", vec![self.kv("value", Value::number(*n))]),
+      ExprKind::BigNumber(n) => {
+        let v = self.ctx.heap().alloc_bigint(n.clone());
+        ("BigNumber", vec![self.kv("value", v)])
+      },
+      ExprKind::Literal(s) => {
+        let v = self.string(s.clone());
+        ("Literal", vec![self.kv("value", v)])
+      },
+      ExprKind::Unary(op, inner, _) => {
+        let op_v = self.string(token_kind_name(op));
+        let inner_v = self.expr(inner);
+        (
+          "Unary",
+          vec![self.kv("op", op_v), self.kv("operand", inner_v)],
+        )
+      },
+      ExprKind::Binary(l, op, r, _) => ("Binary", self.operands(l, op, r)),
+      ExprKind::Logical(l, op, r, _) => ("Logical", self.operands(l, op, r)),
+      ExprKind::Circuit(l, op, r) => ("Circuit", self.operands(l, op, r)),
+      ExprKind::Grouping(inner) => {
+        let v = self.expr(inner);
+        ("Grouping", vec![self.kv("inner", v)])
+      },
+      ExprKind::Range(lo, hi, _) => {
+        let lo_v = self.expr(lo);
+        let hi_v = self.expr(hi);
+        (
+          "Range",
+          vec![self.kv("lower", lo_v), self.kv("upper", hi_v)],
+        )
+      },
+      ExprKind::Identifier(tok) => {
+        let name = self.string(token_identifier_name(tok));
+        ("Identifier", vec![self.kv("name", name)])
+      },
+      ExprKind::Condition(cond, then_e, else_e) => {
+        let cond_v = self.expr(cond);
+        let then_v = self.expr(then_e);
+        let else_v = self.expr(else_e);
+        (
+          "Condition",
+          vec![
+            self.kv("condition", cond_v),
+            self.kv("then", then_v),
+            self.kv("otherwise", else_v),
+          ],
+        )
+      },
+      ExprKind::Call(callee, args, _) => {
+        let callee_v = self.expr(callee);
+        let args_v = self.exprs(args);
+        (
+          "Call",
+          vec![self.kv("callee", callee_v), self.kv("arguments", args_v)],
+        )
+      },
+      ExprKind::Get(obj, tok) => {
+        let obj_v = self.expr(obj);
+        let mut fields = vec![self.kv("object", obj_v)];
+        fields.extend(self.name_fields(tok));
+        ("Get", fields)
+      },
+      ExprKind::Set(obj, tok, val) => {
+        let obj_v = self.expr(obj);
+        let val_v = self.expr(val);
+        let mut fields = vec![self.kv("object", obj_v)];
+        fields.extend(self.name_fields(tok));
+        fields.push(self.kv("value", val_v));
+        ("Set", fields)
+      },
+      ExprKind::Index(obj, idx, _) => {
+        let obj_v = self.expr(obj);
+        let idx_v = self.expr(idx);
+        (
+          "Index",
+          vec![self.kv("object", obj_v), self.kv("index", idx_v)],
+        )
+      },
+      ExprKind::Slice(obj, lo, hi, _) => {
+        let obj_v = self.expr(obj);
+        let lo_v = self.expr(lo);
+        let hi_v = self.expr(hi);
+        (
+          "Slice",
+          vec![
+            self.kv("object", obj_v),
+            self.kv("lower", lo_v),
+            self.kv("upper", hi_v),
+          ],
+        )
+      },
+      ExprKind::List(items) => {
+        let items_v = self.exprs(items);
+        ("List", vec![self.kv("items", items_v)])
+      },
+      ExprKind::Dict(keys, values) => {
+        let keys_v = self.exprs(keys);
+        let values_v = self.exprs(values);
+        (
+          "Dict",
+          vec![self.kv("keys", keys_v), self.kv("values", values_v)],
+        )
+      },
+      ExprKind::Parent(_) => ("Parent", vec![]),
+      ExprKind::Self_(_) => ("Self", vec![]),
+      ExprKind::Assign(target, value) => {
+        let target_v = self.expr(target);
+        let value_v = self.expr(value);
+        (
+          "Assign",
+          vec![self.kv("target", target_v), self.kv("value", value_v)],
+        )
+      },
+      ExprKind::Anonymous(decl) => {
+        let decl_v = self.decl(decl);
+        ("Anonymous", vec![self.kv("declaration", decl_v)])
+      },
+      ExprKind::TypeHint(types, nullable) => {
+        let names: Vec<Value> = types.iter().map(|name| self.type_name(name)).collect();
+        let types_v = self.ctx.heap().alloc_list(names);
+        (
+          "TypeHint",
+          vec![
+            self.kv("types", types_v),
+            self.kv("nullable", Value::bool(*nullable)),
+          ],
+        )
+      },
+      ExprKind::Argument(tok, type_hint) => {
+        let type_v = self.expr(type_hint);
+        let mut fields = self.name_fields(tok);
+        fields.push(self.kv("type_hint", type_v));
+        ("Argument", fields)
+      },
+      ExprKind::CompoundAssign(target, op, value, _) => {
+        let target_v = self.expr(target);
+        let op_v = self.string(token_kind_name(op));
+        let value_v = self.expr(value);
+        (
+          "CompoundAssign",
+          vec![
+            self.kv("target", target_v),
+            self.kv("op", op_v),
+            self.kv("value", value_v),
+          ],
+        )
+      },
+      ExprKind::Update(target, op, _) => {
+        let target_v = self.expr(target);
+        let op_v = self.string(token_kind_name(op));
+        (
+          "Update",
+          vec![self.kv("target", target_v), self.kv("op", op_v)],
+        )
+      },
+      ExprKind::Interpolation(segments) => {
+        let parts: Vec<Value> = segments
+          .iter()
+          .map(|segment| match segment {
+            Segment::Text(token) => self.string(segment_text(token)),
+            Segment::Value(value) => self.expr(value),
+          })
+          .collect();
+        let parts_v = self.ctx.heap().alloc_list(parts);
+        ("Interpolation", vec![self.kv("parts", parts_v)])
+      },
+      ExprKind::Shorthand(tok) => {
+        let name = self.string(token_identifier_name(tok));
+        ("Shorthand", vec![self.kv("name", name)])
+      },
+    };
+
+    self.node(kind, span, fields)
+  }
+
+  fn stmt(&mut self, s: &Stmt) -> Value {
+    let span = s.span;
+
+    let (kind, fields) = match &s.kind {
+      StmtKind::None => ("None", vec![]),
+      StmtKind::FixContinue => ("FixContinue", vec![]),
+      StmtKind::Echo(e) => {
+        let v = self.expr(e);
+        ("Echo", vec![self.kv("value", v)])
+      },
+      StmtKind::Expression(e) => {
+        let v = self.expr(e);
+        ("Expression", vec![self.kv("value", v)])
+      },
+      StmtKind::If(cond, then_s, else_s) => {
+        let cond_v = self.expr(cond);
+        let then_v = self.stmt(then_s);
+        let else_v = self.opt_stmt(else_s);
+        (
+          "If",
+          vec![
+            self.kv("condition", cond_v),
+            self.kv("then", then_v),
+            self.kv("otherwise", else_v),
+          ],
+        )
+      },
+      StmtKind::While(cond, body) => {
+        let cond_v = self.expr(cond);
+        let body_v = self.stmt(body);
+        (
+          "While",
+          vec![self.kv("condition", cond_v), self.kv("body", body_v)],
+        )
+      },
+      StmtKind::For(key, value, iterable, body) => {
+        let (key_v, key_span_v) = match key {
+          Some(key) => (
+            self.string(token_identifier_name(key)),
+            self.span(Span::of(key)),
+          ),
+          None => (Value::nil(), Value::nil()),
+        };
+        let value_v = self.string(token_identifier_name(value));
+        let value_span_v = self.span(Span::of(value));
+        let iterable_v = self.expr(iterable);
+        let body_v = self.stmt(body);
+        (
+          "For",
+          vec![
+            self.kv("key", key_v),
+            self.kv("key_span", key_span_v),
+            self.kv("value", value_v),
+            self.kv("value_span", value_span_v),
+            self.kv("iterable", iterable_v),
+            self.kv("body", body_v),
+          ],
+        )
+      },
+      StmtKind::Iter(initializer, condition, steps, body) => {
+        let initializer_v = self.opt_stmt(initializer);
+        let condition_v = self.opt_expr(condition);
+        let steps_v = self.exprs(steps);
+        let body_v = self.stmt(body);
+        (
+          "Iter",
+          vec![
+            self.kv("initializer", initializer_v),
+            self.kv("condition", condition_v),
+            self.kv("steps", steps_v),
+            self.kv("body", body_v),
+          ],
+        )
+      },
+      StmtKind::DoWhile(body, condition) => {
+        let body_v = self.stmt(body);
+        let condition_v = self.expr(condition);
+        (
+          "DoWhile",
+          vec![self.kv("body", body_v), self.kv("condition", condition_v)],
+        )
+      },
+      StmtKind::Continue(_) => ("Continue", vec![]),
+      StmtKind::Break(_) => ("Break", vec![]),
+      StmtKind::Raise(e) => {
+        let v = self.expr(e);
+        ("Raise", vec![self.kv("value", v)])
+      },
+      StmtKind::Return(_, e) => {
+        let v = self.expr(e);
+        ("Return", vec![self.kv("value", v)])
+      },
+      StmtKind::Assert(cond, msg) => {
+        let cond_v = self.expr(cond);
+        let msg_v = self.opt_expr(msg);
+        (
+          "Assert",
+          vec![self.kv("condition", cond_v), self.kv("message", msg_v)],
+        )
+      },
+      StmtKind::Using(subject, arms, default) => {
+        let subject_v = self.expr(subject);
+        let mut arm_values = Vec::with_capacity(arms.len());
+        for arm in arms {
+          let labels_v = self.exprs(&arm.labels);
+          let body_v = self.stmt(&arm.body);
+          let f = vec![self.kv("labels", labels_v), self.kv("body", body_v)];
+          arm_values.push(self.node("When", arm.span, f));
+        }
+        let arms_v = self.ctx.heap().alloc_list(arm_values);
+        let default_v = self.opt_stmt(default);
+        (
+          "Using",
+          vec![
+            self.kv("subject", subject_v),
+            self.kv("arms", arms_v),
+            // Not `"default"`: that's a reserved keyword, and a dict
+            // field named after one can never be read back with plain
+            // dot-access syntax (`node.fields.default` doesn't parse).
+            self.kv("default_body", default_v),
+          ],
+        )
+      },
+      StmtKind::Import(path, path_tokens, name_expr, elements, imports_all, exported) => {
+        let path_v = self.string(path.clone());
+        let mut segments = Vec::with_capacity(path_tokens.len());
+        for token in path_tokens {
+          let text = match &token.kind {
+            TokenKind::Dot => ".".to_string(),
+            TokenKind::Range => "..".to_string(),
+            _ => token_identifier_name(token),
+          };
+          let text_v = self.string(text);
+          let mut entries = vec![self.kv("text", text_v)];
+          entries.extend(self.position(Span::of(token)));
+          segments.push(self.ctx.heap().alloc_dict(entries));
+        }
+        let segments_v = self.ctx.heap().alloc_list(segments);
+        let aliased = matches!(
+          &name_expr.kind,
+          ExprKind::Identifier(token) if matches!(token.kind, TokenKind::Identifier(_))
+        );
+        let name_v = self.expr(name_expr);
+        let elements_v = self.exprs(elements);
+        (
+          "Import",
+          vec![
+            self.kv("path", path_v),
+            self.kv("segments", segments_v),
+            self.kv("name", name_v),
+            self.kv("aliased", Value::bool(aliased)),
+            self.kv("elements", elements_v),
+            self.kv("imports_all", Value::bool(*imports_all)),
+            self.kv("exported", Value::bool(*exported)),
+          ],
+        )
+      },
+      StmtKind::Catch(body, catch_body, error_var) => {
+        let body_v = self.stmt(body);
+        let catch_v = self.opt_stmt(catch_body);
+        let var_v = self.opt_expr(error_var);
+        (
+          "Catch",
+          vec![
+            self.kv("body", body_v),
+            self.kv("catch_body", catch_v),
+            self.kv("error_var", var_v),
+          ],
+        )
+      },
+      StmtKind::Block(stmts) => {
+        let v = self.stmts(stmts);
+        ("Block", vec![self.kv("statements", v)])
+      },
+      StmtKind::Decl(d) => {
+        let v = self.decl(d);
+        ("Decl", vec![self.kv("declaration", v)])
+      },
+      StmtKind::Var(tok, init, type_hint, is_constant) => {
+        let init_v = self.expr(init);
+        let type_v = self.opt_expr(type_hint);
+        let mut fields = self.name_fields(tok);
+        fields.push(self.kv("value", init_v));
+        fields.push(self.kv("type_hint", type_v));
+        fields.push(self.kv("is_constant", Value::bool(*is_constant)));
+        ("Var", fields)
+      },
+      StmtKind::VarList(list) => {
+        let v = self.stmts(list);
+        ("VarList", vec![self.kv("declarations", v)])
+      },
+      StmtKind::Trivia(tok) => return self.trivia(tok, span),
+    };
+
+    self.node(kind, span, fields)
+  }
+
+  /// Shared by `StmtKind::Trivia`/`DeclKind::Trivia`: a `#`-comment
+  /// becomes a `"Comment"`-kind node, a `/* ... */` becomes a
+  /// `"DocBlock"`-kind node; both carry `{ text }`, the comment's own
+  /// content, with the leading `#`/wrapping `/*`/`*/` already stripped
+  /// off (same content the raw `Token` itself carries).
+  fn trivia(&mut self, tok: &Token, span: Span) -> Value {
+    let (kind, text) = match &tok.kind {
+      TokenKind::Comment(s) => ("Comment", s.clone()),
+      TokenKind::DocBlock(s) => ("DocBlock", s.clone()),
+      _ => {
+        unreachable!("DeclKind::Trivia/StmtKind::Trivia always wraps a Comment or DocBlock token")
+      },
+    };
+    let text_v = self.string(text);
+    let f = vec![self.kv("text", text_v)];
+
+    self.node(kind, span, f)
+  }
+
+  fn decl(&mut self, d: &Decl) -> Value {
+    let span = d.span;
+
+    let (kind, fields) = match &d.kind {
+      DeclKind::Stmt(s) => {
+        let v = self.stmt(s);
+        ("Stmt", vec![self.kv("statement", v)])
+      },
+      DeclKind::Function(tok, params, body, is_variadic) => {
+        let params_v = self.exprs(params);
+        let body_v = self.stmt(body);
+        let mut fields = self.name_fields(tok);
+        fields.push(self.kv("parameters", params_v));
+        fields.push(self.kv("body", body_v));
+        fields.push(self.kv("is_variadic", Value::bool(*is_variadic)));
+        ("Function", fields)
+      },
+      DeclKind::Method(tok, params, body, is_variadic, is_static) => {
+        let params_v = self.exprs(params);
+        let body_v = self.stmt(body);
+        let mut fields = self.name_fields(tok);
+        fields.push(self.kv("parameters", params_v));
+        fields.push(self.kv("body", body_v));
+        fields.push(self.kv("is_variadic", Value::bool(*is_variadic)));
+        fields.push(self.kv("is_static", Value::bool(*is_static)));
+        ("Method", fields)
+      },
+      DeclKind::Property(tok, value, type_hint, is_static, is_constant) => {
+        let value_v = self.expr(value);
+        let type_v = self.expr(type_hint);
+        let mut fields = self.name_fields(tok);
+        fields.push(self.kv("value", value_v));
+        fields.push(self.kv("type_hint", type_v));
+        fields.push(self.kv("is_static", Value::bool(*is_static)));
+        fields.push(self.kv("is_constant", Value::bool(*is_constant)));
+        ("Property", fields)
+      },
+      DeclKind::Class(tok, superclass, properties, methods, is_extension) => {
+        let superclass_v = match superclass {
+          Some(e) => self.expr(e),
+          None => Value::nil(),
+        };
+        let properties_v = self.decls(properties);
+        let methods_v = self.decls(methods);
+        let mut fields = self.name_fields(tok);
+        fields.push(self.kv("superclass", superclass_v));
+        fields.push(self.kv("properties", properties_v));
+        fields.push(self.kv("methods", methods_v));
+        fields.push(self.kv("is_extension", Value::bool(*is_extension)));
+        ("Class", fields)
+      },
+      DeclKind::Trivia(tok) => return self.trivia(tok, span),
+    };
+
+    self.node(kind, span, fields)
+  }
 }
 
 /// The text a piece of an interpolated string holds, without quotes.
@@ -219,570 +714,12 @@ fn segment_text(token: &Token) -> String {
   }
 }
 
-/// The plain string an identifier-carrying `Token` names; used
-/// wherever the AST stores a `Token` purely to carry a name (a
-/// variable, a function, a field, a class), never a full `Token`
-/// dict the way `tokenize()`'s output does; `zuri.parse()`'s nodes
-/// only need the name itself here, not its own separate span (the
-/// owning node's `line`/`col` already covers it).
+/// The plain string an identifier-carrying `Token` names: a variable,
+/// a function, a field or a class. The name an import binds without an
+/// `as` is carried as a literal, since nothing in the source spelled it.
 fn token_identifier_name(tok: &Token) -> String {
   match &tok.kind {
-    TokenKind::Identifier(s) | TokenKind::Decorator(s) => s.clone(),
+    TokenKind::Identifier(s) | TokenKind::Decorator(s) | TokenKind::Literal(s) => s.clone(),
     other => format!("{}", other),
-  }
-}
-
-fn opt_expr_to_value(ctx: &mut ZuriContext, e: &Option<Box<Expr>>) -> Value {
-  match e {
-    Some(e) => expr_to_value(ctx, e),
-    None => Value::nil(),
-  }
-}
-
-fn opt_stmt_to_value(ctx: &mut ZuriContext, s: &Option<Box<Stmt>>) -> Value {
-  match s {
-    Some(s) => stmt_to_value(ctx, s),
-    None => Value::nil(),
-  }
-}
-
-fn expr_list_to_value(ctx: &mut ZuriContext, items: &[Expr]) -> Value {
-  let mut vals = Vec::with_capacity(items.len());
-  for item in items {
-    vals.push(expr_to_value(ctx, item));
-  }
-  ctx.heap().alloc_list(vals)
-}
-
-fn stmt_list_to_value(ctx: &mut ZuriContext, items: &[Stmt]) -> Value {
-  let mut vals = Vec::with_capacity(items.len());
-  for item in items {
-    vals.push(stmt_to_value(ctx, item));
-  }
-  ctx.heap().alloc_list(vals)
-}
-
-fn decl_list_to_value(ctx: &mut ZuriContext, items: &[Decl]) -> Value {
-  let mut vals = Vec::with_capacity(items.len());
-  for item in items {
-    vals.push(decl_to_value(ctx, item));
-  }
-  ctx.heap().alloc_list(vals)
-}
-
-fn type_to_value(ctx: &mut ZuriContext, t: &Type) -> Value {
-  let (kind, pos, class_name): (&str, (Option<usize>, Option<usize>), Option<String>) = match t {
-    Type::Any => ("Any", (None, None), None),
-    Type::Bool => ("Bool", (None, None), None),
-    Type::Int => ("Int", (None, None), None),
-    Type::Number => ("Number", (None, None), None),
-    Type::BigInt => ("BigInt", (None, None), None),
-    Type::String => ("String", (None, None), None),
-    Type::Bytes => ("Bytes", (None, None), None),
-    Type::List => ("List", (None, None), None),
-    Type::Dict => ("Dict", (None, None), None),
-    Type::Range => ("Range", (None, None), None),
-    Type::File => ("File", (None, None), None),
-    Type::Function => ("Function", (None, None), None),
-    Type::Type => ("Type", (None, None), None),
-    Type::Callable => ("Callable", (None, None), None),
-    Type::Iterable => ("Iterable", (None, None), None),
-    Type::Instance(tok) => (
-      "Instance",
-      (Some(tok.line), Some(tok.column)),
-      Some(token_identifier_name(tok)),
-    ),
-  };
-
-  let class_name_value = match class_name {
-    Some(n) => ctx.heap().alloc_string(n),
-    None => Value::nil(),
-  };
-  let fields = vec![kv(ctx, "class_name", class_name_value)];
-  make_node(ctx, kind, pos, fields)
-}
-
-fn types_list_to_value(ctx: &mut ZuriContext, items: &[Type]) -> Value {
-  let mut vals = Vec::with_capacity(items.len());
-  for item in items {
-    vals.push(type_to_value(ctx, item));
-  }
-  ctx.heap().alloc_list(vals)
-}
-
-fn expr_to_value(ctx: &mut ZuriContext, e: &Expr) -> Value {
-  let pos = expr_pos(e);
-
-  match e {
-    Expr::Nil => make_node(ctx, "Nil", pos, vec![]),
-    Expr::Bool(b) => {
-      let f = vec![kv(ctx, "value", Value::bool(*b))];
-      make_node(ctx, "Bool", pos, f)
-    },
-    Expr::Integer(n) => {
-      let f = vec![kv(ctx, "value", Value::number(*n as f64))];
-      make_node(ctx, "Integer", pos, f)
-    },
-    Expr::Float(n) => {
-      let f = vec![kv(ctx, "value", Value::number(*n))];
-      make_node(ctx, "Float", pos, f)
-    },
-    Expr::BigNumber(n) => {
-      let v = ctx.heap().alloc_bigint(n.clone());
-      let f = vec![kv(ctx, "value", v)];
-      make_node(ctx, "BigNumber", pos, f)
-    },
-    Expr::Literal(s) => {
-      let v = ctx.heap().alloc_string(s.clone());
-      let f = vec![kv(ctx, "value", v)];
-      make_node(ctx, "Literal", pos, f)
-    },
-    Expr::Unary(op, inner, _) => {
-      let op_v = ctx.heap().alloc_string(token_kind_name(op));
-      let inner_v = expr_to_value(ctx, inner);
-      let f = vec![kv(ctx, "op", op_v), kv(ctx, "operand", inner_v)];
-      make_node(ctx, "Unary", pos, f)
-    },
-    Expr::Binary(l, op, r, _) => {
-      let op_v = ctx.heap().alloc_string(token_kind_name(op));
-      let l_v = expr_to_value(ctx, l);
-      let r_v = expr_to_value(ctx, r);
-      let f = vec![
-        kv(ctx, "left", l_v),
-        kv(ctx, "op", op_v),
-        kv(ctx, "right", r_v),
-      ];
-      make_node(ctx, "Binary", pos, f)
-    },
-    Expr::Logical(l, op, r, _) => {
-      let op_v = ctx.heap().alloc_string(token_kind_name(op));
-      let l_v = expr_to_value(ctx, l);
-      let r_v = expr_to_value(ctx, r);
-      let f = vec![
-        kv(ctx, "left", l_v),
-        kv(ctx, "op", op_v),
-        kv(ctx, "right", r_v),
-      ];
-      make_node(ctx, "Logical", pos, f)
-    },
-    Expr::Circuit(l, op, r) => {
-      let op_v = ctx.heap().alloc_string(token_kind_name(op));
-      let l_v = expr_to_value(ctx, l);
-      let r_v = expr_to_value(ctx, r);
-      let f = vec![
-        kv(ctx, "left", l_v),
-        kv(ctx, "op", op_v),
-        kv(ctx, "right", r_v),
-      ];
-      make_node(ctx, "Circuit", pos, f)
-    },
-    Expr::Grouping(inner) => {
-      let v = expr_to_value(ctx, inner);
-      let f = vec![kv(ctx, "inner", v)];
-      make_node(ctx, "Grouping", pos, f)
-    },
-    Expr::Range(lo, hi, _) => {
-      let lo_v = expr_to_value(ctx, lo);
-      let hi_v = expr_to_value(ctx, hi);
-      let f = vec![kv(ctx, "lower", lo_v), kv(ctx, "upper", hi_v)];
-      make_node(ctx, "Range", pos, f)
-    },
-    Expr::Identifier(tok) => {
-      let name = ctx.heap().alloc_string(token_identifier_name(tok));
-      let f = vec![kv(ctx, "name", name)];
-      make_node(ctx, "Identifier", pos, f)
-    },
-    Expr::Condition(cond, then_e, else_e) => {
-      let cond_v = expr_to_value(ctx, cond);
-      let then_v = expr_to_value(ctx, then_e);
-      let else_v = expr_to_value(ctx, else_e);
-      let f = vec![
-        kv(ctx, "condition", cond_v),
-        kv(ctx, "then", then_v),
-        kv(ctx, "otherwise", else_v),
-      ];
-      make_node(ctx, "Condition", pos, f)
-    },
-    Expr::Call(callee, args, _) => {
-      let callee_v = expr_to_value(ctx, callee);
-      let args_v = expr_list_to_value(ctx, args);
-      let f = vec![kv(ctx, "callee", callee_v), kv(ctx, "arguments", args_v)];
-      make_node(ctx, "Call", pos, f)
-    },
-    Expr::Get(obj, tok) => {
-      let obj_v = expr_to_value(ctx, obj);
-      let name = ctx.heap().alloc_string(token_identifier_name(tok));
-      let f = vec![kv(ctx, "object", obj_v), kv(ctx, "name", name)];
-      make_node(ctx, "Get", pos, f)
-    },
-    Expr::Set(obj, tok, val) => {
-      let obj_v = expr_to_value(ctx, obj);
-      let name = ctx.heap().alloc_string(token_identifier_name(tok));
-      let val_v = expr_to_value(ctx, val);
-      let f = vec![
-        kv(ctx, "object", obj_v),
-        kv(ctx, "name", name),
-        kv(ctx, "value", val_v),
-      ];
-      make_node(ctx, "Set", pos, f)
-    },
-    Expr::Index(obj, idx, _) => {
-      let obj_v = expr_to_value(ctx, obj);
-      let idx_v = expr_to_value(ctx, idx);
-      let f = vec![kv(ctx, "object", obj_v), kv(ctx, "index", idx_v)];
-      make_node(ctx, "Index", pos, f)
-    },
-    Expr::Slice(obj, lo, hi, _) => {
-      let obj_v = expr_to_value(ctx, obj);
-      let lo_v = expr_to_value(ctx, lo);
-      let hi_v = expr_to_value(ctx, hi);
-      let f = vec![
-        kv(ctx, "object", obj_v),
-        kv(ctx, "lower", lo_v),
-        kv(ctx, "upper", hi_v),
-      ];
-      make_node(ctx, "Slice", pos, f)
-    },
-    Expr::List(items) => {
-      let items_v = expr_list_to_value(ctx, items);
-      let f = vec![kv(ctx, "items", items_v)];
-      make_node(ctx, "List", pos, f)
-    },
-    Expr::Dict(keys, values) => {
-      let keys_v = expr_list_to_value(ctx, keys);
-      let values_v = expr_list_to_value(ctx, values);
-      let f = vec![kv(ctx, "keys", keys_v), kv(ctx, "values", values_v)];
-      make_node(ctx, "Dict", pos, f)
-    },
-    Expr::Parent(_) => make_node(ctx, "Parent", pos, vec![]),
-    Expr::Self_(_) => make_node(ctx, "Self", pos, vec![]),
-    Expr::Assign(target, value) => {
-      let target_v = expr_to_value(ctx, target);
-      let value_v = expr_to_value(ctx, value);
-      let f = vec![kv(ctx, "target", target_v), kv(ctx, "value", value_v)];
-      make_node(ctx, "Assign", pos, f)
-    },
-    Expr::Anonymous(decl) => {
-      let decl_v = decl_to_value(ctx, decl);
-      let f = vec![kv(ctx, "declaration", decl_v)];
-      make_node(ctx, "Anonymous", pos, f)
-    },
-    Expr::TypeHint(types, nullable) => {
-      let types_v = types_list_to_value(ctx, types);
-      let f = vec![
-        kv(ctx, "types", types_v),
-        kv(ctx, "nullable", Value::bool(*nullable)),
-      ];
-      make_node(ctx, "TypeHint", pos, f)
-    },
-    Expr::Argument(tok, type_hint) => {
-      let name = ctx.heap().alloc_string(token_identifier_name(tok));
-      let type_v = expr_to_value(ctx, type_hint);
-      let f = vec![kv(ctx, "name", name), kv(ctx, "type_hint", type_v)];
-      make_node(ctx, "Argument", pos, f)
-    },
-    Expr::CompoundAssign(target, op, value, _) => {
-      let target_v = expr_to_value(ctx, target);
-      let op_v = ctx.heap().alloc_string(token_kind_name(op));
-      let value_v = expr_to_value(ctx, value);
-      let f = vec![
-        kv(ctx, "target", target_v),
-        kv(ctx, "op", op_v),
-        kv(ctx, "value", value_v),
-      ];
-      make_node(ctx, "CompoundAssign", pos, f)
-    },
-    Expr::Update(target, op, _) => {
-      let target_v = expr_to_value(ctx, target);
-      let op_v = ctx.heap().alloc_string(token_kind_name(op));
-      let f = vec![kv(ctx, "target", target_v), kv(ctx, "op", op_v)];
-      make_node(ctx, "Update", pos, f)
-    },
-    Expr::Interpolation(segments) => {
-      let mut parts = Vec::with_capacity(segments.len());
-      for segment in segments {
-        parts.push(match segment {
-          Segment::Text(token) => ctx.heap().alloc_string(segment_text(token)),
-          Segment::Value(value) => expr_to_value(ctx, value),
-        });
-      }
-      let parts_v = ctx.heap().alloc_list(parts);
-      let f = vec![kv(ctx, "parts", parts_v)];
-      make_node(ctx, "Interpolation", pos, f)
-    },
-    Expr::Shorthand(tok) => {
-      let name = ctx.heap().alloc_string(token_identifier_name(tok));
-      let f = vec![kv(ctx, "name", name)];
-      make_node(ctx, "Shorthand", pos, f)
-    },
-  }
-}
-
-fn stmt_to_value(ctx: &mut ZuriContext, s: &Stmt) -> Value {
-  let pos = stmt_pos(s);
-
-  match s {
-    Stmt::None => make_node(ctx, "None", pos, vec![]),
-    Stmt::FixContinue => make_node(ctx, "FixContinue", pos, vec![]),
-    Stmt::Echo(e) => {
-      let v = expr_to_value(ctx, e);
-      let f = vec![kv(ctx, "value", v)];
-      make_node(ctx, "Echo", pos, f)
-    },
-    Stmt::Expression(e) => {
-      let v = expr_to_value(ctx, e);
-      let f = vec![kv(ctx, "value", v)];
-      make_node(ctx, "Expression", pos, f)
-    },
-    Stmt::If(cond, then_s, else_s) => {
-      let cond_v = expr_to_value(ctx, cond);
-      let then_v = stmt_to_value(ctx, then_s);
-      let else_v = opt_stmt_to_value(ctx, else_s);
-      let f = vec![
-        kv(ctx, "condition", cond_v),
-        kv(ctx, "then", then_v),
-        kv(ctx, "otherwise", else_v),
-      ];
-      make_node(ctx, "If", pos, f)
-    },
-    Stmt::While(cond, body) => {
-      let cond_v = expr_to_value(ctx, cond);
-      let body_v = stmt_to_value(ctx, body);
-      let f = vec![kv(ctx, "condition", cond_v), kv(ctx, "body", body_v)];
-      make_node(ctx, "While", pos, f)
-    },
-    Stmt::For(key, value, iterable, body) => {
-      let key_v = match key {
-        Some(key) => ctx.heap().alloc_string(token_identifier_name(key)),
-        None => Value::nil(),
-      };
-      let value_v = ctx.heap().alloc_string(token_identifier_name(value));
-      let iterable_v = expr_to_value(ctx, iterable);
-      let body_v = stmt_to_value(ctx, body);
-      let f = vec![
-        kv(ctx, "key", key_v),
-        kv(ctx, "value", value_v),
-        kv(ctx, "iterable", iterable_v),
-        kv(ctx, "body", body_v),
-      ];
-      make_node(ctx, "For", pos, f)
-    },
-    Stmt::Iter(initializer, condition, steps, body) => {
-      let initializer_v = opt_stmt_to_value(ctx, initializer);
-      let condition_v = opt_expr_to_value(ctx, condition);
-      let steps_v = expr_list_to_value(ctx, steps);
-      let body_v = stmt_to_value(ctx, body);
-      let f = vec![
-        kv(ctx, "initializer", initializer_v),
-        kv(ctx, "condition", condition_v),
-        kv(ctx, "steps", steps_v),
-        kv(ctx, "body", body_v),
-      ];
-      make_node(ctx, "Iter", pos, f)
-    },
-    Stmt::DoWhile(body, condition) => {
-      let body_v = stmt_to_value(ctx, body);
-      let condition_v = expr_to_value(ctx, condition);
-      let f = vec![kv(ctx, "body", body_v), kv(ctx, "condition", condition_v)];
-      make_node(ctx, "DoWhile", pos, f)
-    },
-    Stmt::Continue(_) => make_node(ctx, "Continue", pos, vec![]),
-    Stmt::Break(_) => make_node(ctx, "Break", pos, vec![]),
-    Stmt::Raise(e) => {
-      let v = expr_to_value(ctx, e);
-      let f = vec![kv(ctx, "value", v)];
-      make_node(ctx, "Raise", pos, f)
-    },
-    Stmt::Return(_, e) => {
-      let v = expr_to_value(ctx, e);
-      let f = vec![kv(ctx, "value", v)];
-      make_node(ctx, "Return", pos, f)
-    },
-    Stmt::Assert(cond, msg) => {
-      let cond_v = expr_to_value(ctx, cond);
-      let msg_v = opt_expr_to_value(ctx, msg);
-      let f = vec![kv(ctx, "condition", cond_v), kv(ctx, "message", msg_v)];
-      make_node(ctx, "Assert", pos, f)
-    },
-    Stmt::Using(subject, arms, default) => {
-      let subject_v = expr_to_value(ctx, subject);
-      let mut arm_values = Vec::with_capacity(arms.len());
-      for arm in arms {
-        let arm_pos = arm.labels.first().map(expr_pos).unwrap_or((None, None));
-        let labels_v = expr_list_to_value(ctx, &arm.labels);
-        let body_v = stmt_to_value(ctx, &arm.body);
-        let f = vec![kv(ctx, "labels", labels_v), kv(ctx, "body", body_v)];
-        arm_values.push(make_node(ctx, "When", arm_pos, f));
-      }
-      let arms_v = ctx.heap().alloc_list(arm_values);
-      let default_v = opt_stmt_to_value(ctx, default);
-      let f = vec![
-        kv(ctx, "subject", subject_v),
-        kv(ctx, "arms", arms_v),
-        // Not `"default"`: that's a reserved keyword, and a dict
-        // field named after one can never be read back with plain
-        // dot-access syntax (`node.fields.default` doesn't parse).
-        kv(ctx, "default_body", default_v),
-      ];
-      make_node(ctx, "Using", pos, f)
-    },
-    Stmt::Import(path, _, name_expr, elements, imports_all, exported) => {
-      let path_v = ctx.heap().alloc_string(path.clone());
-      let name_v = expr_to_value(ctx, name_expr);
-      let elements_v = expr_list_to_value(ctx, elements);
-      let f = vec![
-        kv(ctx, "path", path_v),
-        kv(ctx, "name", name_v),
-        kv(ctx, "elements", elements_v),
-        kv(ctx, "imports_all", Value::bool(*imports_all)),
-        kv(ctx, "exported", Value::bool(*exported)),
-      ];
-      make_node(ctx, "Import", pos, f)
-    },
-    Stmt::Catch(body, catch_body, error_var) => {
-      let body_v = stmt_to_value(ctx, body);
-      let catch_v = opt_stmt_to_value(ctx, catch_body);
-      let var_v = opt_expr_to_value(ctx, error_var);
-      let f = vec![
-        kv(ctx, "body", body_v),
-        kv(ctx, "catch_body", catch_v),
-        kv(ctx, "error_var", var_v),
-      ];
-      make_node(ctx, "Catch", pos, f)
-    },
-    Stmt::Block(stmts) => {
-      let v = stmt_list_to_value(ctx, stmts);
-      let f = vec![kv(ctx, "statements", v)];
-      make_node(ctx, "Block", pos, f)
-    },
-    Stmt::Decl(d) => {
-      let v = decl_to_value(ctx, d);
-      let f = vec![kv(ctx, "declaration", v)];
-      make_node(ctx, "Decl", pos, f)
-    },
-    Stmt::Var(tok, init, type_hint, is_constant) => {
-      let name = ctx.heap().alloc_string(token_identifier_name(tok));
-      let init_v = expr_to_value(ctx, init);
-      let type_v = opt_expr_to_value(ctx, type_hint);
-      let f = vec![
-        kv(ctx, "name", name),
-        kv(ctx, "value", init_v),
-        kv(ctx, "type_hint", type_v),
-        kv(ctx, "is_constant", Value::bool(*is_constant)),
-      ];
-      make_node(ctx, "Var", pos, f)
-    },
-    Stmt::VarList(list) => {
-      let v = stmt_list_to_value(ctx, list);
-      let f = vec![kv(ctx, "declarations", v)];
-      make_node(ctx, "VarList", pos, f)
-    },
-    Stmt::Trivia(tok) => trivia_to_value(ctx, tok, pos),
-  }
-}
-
-/// Shared by `Stmt::Trivia`/`Decl::Trivia`: a `#`-comment becomes a
-/// `"Comment"`-kind node, a `/* ... */` becomes a `"DocBlock"`-kind
-/// node; both carry `{ text }`, the comment's own content, with the
-/// leading `#`/wrapping `/*`/`*/` already stripped off (same content
-/// the raw `Token` itself carries).
-fn trivia_to_value(
-  ctx: &mut ZuriContext,
-  tok: &Token,
-  pos: (Option<usize>, Option<usize>),
-) -> Value {
-  let (kind, text) = match &tok.kind {
-    TokenKind::Comment(s) => ("Comment", s.clone()),
-    TokenKind::DocBlock(s) => ("DocBlock", s.clone()),
-    _ => unreachable!("Decl::Trivia/Stmt::Trivia always wraps a Comment or DocBlock token"),
-  };
-  let text_v = ctx.heap().alloc_string(text);
-  let f = vec![kv(ctx, "text", text_v)];
-  make_node(ctx, kind, pos, f)
-}
-
-fn decl_to_value(ctx: &mut ZuriContext, d: &Decl) -> Value {
-  let pos = decl_pos(d);
-
-  match d {
-    Decl::None => make_node(ctx, "None", pos, vec![]),
-    Decl::Stmt(s) => {
-      let v = stmt_to_value(ctx, s);
-      let f = vec![kv(ctx, "statement", v)];
-      make_node(ctx, "Stmt", pos, f)
-    },
-    Decl::Block(stmts) => {
-      let v = stmt_list_to_value(ctx, stmts);
-      let f = vec![kv(ctx, "statements", v)];
-      make_node(ctx, "Block", pos, f)
-    },
-    Decl::Import(path, name_expr, elements, imports_all) => {
-      let path_v = ctx.heap().alloc_string(path.clone());
-      let name_v = expr_to_value(ctx, name_expr);
-      let elements_v = expr_list_to_value(ctx, elements);
-      let f = vec![
-        kv(ctx, "path", path_v),
-        kv(ctx, "name", name_v),
-        kv(ctx, "elements", elements_v),
-        kv(ctx, "imports_all", Value::bool(*imports_all)),
-      ];
-      make_node(ctx, "Import", pos, f)
-    },
-    Decl::Function(tok, params, body, is_variadic) => {
-      let name = ctx.heap().alloc_string(token_identifier_name(tok));
-      let params_v = expr_list_to_value(ctx, params);
-      let body_v = stmt_to_value(ctx, body);
-      let f = vec![
-        kv(ctx, "name", name),
-        kv(ctx, "parameters", params_v),
-        kv(ctx, "body", body_v),
-        kv(ctx, "is_variadic", Value::bool(*is_variadic)),
-      ];
-      make_node(ctx, "Function", pos, f)
-    },
-    Decl::Method(tok, params, body, is_variadic, is_static) => {
-      let name = ctx.heap().alloc_string(token_identifier_name(tok));
-      let params_v = expr_list_to_value(ctx, params);
-      let body_v = stmt_to_value(ctx, body);
-      let f = vec![
-        kv(ctx, "name", name),
-        kv(ctx, "parameters", params_v),
-        kv(ctx, "body", body_v),
-        kv(ctx, "is_variadic", Value::bool(*is_variadic)),
-        kv(ctx, "is_static", Value::bool(*is_static)),
-      ];
-      make_node(ctx, "Method", pos, f)
-    },
-    Decl::Property(tok, value, type_hint, is_static, is_constant) => {
-      let name = ctx.heap().alloc_string(token_identifier_name(tok));
-      let value_v = expr_to_value(ctx, value);
-      let type_v = expr_to_value(ctx, type_hint);
-      let f = vec![
-        kv(ctx, "name", name),
-        kv(ctx, "value", value_v),
-        kv(ctx, "type_hint", type_v),
-        kv(ctx, "is_static", Value::bool(*is_static)),
-        kv(ctx, "is_constant", Value::bool(*is_constant)),
-      ];
-      make_node(ctx, "Property", pos, f)
-    },
-    Decl::Class(tok, superclass, properties, methods, is_extension) => {
-      let name = ctx.heap().alloc_string(token_identifier_name(tok));
-      let superclass_v = match superclass {
-        Some(e) => expr_to_value(ctx, e),
-        None => Value::nil(),
-      };
-      let properties_v = decl_list_to_value(ctx, properties);
-      let methods_v = decl_list_to_value(ctx, methods);
-      let f = vec![
-        kv(ctx, "name", name),
-        kv(ctx, "superclass", superclass_v),
-        kv(ctx, "properties", properties_v),
-        kv(ctx, "methods", methods_v),
-        kv(ctx, "is_extension", Value::bool(*is_extension)),
-      ];
-      make_node(ctx, "Class", pos, f)
-    },
-    Decl::Trivia(tok) => trivia_to_value(ctx, tok, pos),
   }
 }

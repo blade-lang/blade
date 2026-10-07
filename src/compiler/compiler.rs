@@ -4,7 +4,7 @@ use std::{ops::Deref, rc::Rc};
 
 use crate::{
   compiler::{
-    ast::{Decl, Expr, Stmt, Type, WhenArm},
+    ast::{Decl, DeclKind, Expr, ExprKind, Stmt, StmtKind, Type, WhenArm},
     lower::lower,
     parser::ParserError,
     token::{Token, TokenKind},
@@ -70,7 +70,7 @@ struct FunctionScope {
   /// Source line of whatever statement is CURRENTLY being compiled --
   /// stamped onto every instruction `Compiler::emit` produces until
   /// it's next updated (see `Compiler::compile`'s top-level loop and
-  /// `Stmt::Block`'s own handling).
+  /// `StmtKind::Block`'s own handling).
   current_line: u32,
   /// Set the first time `alloc_reg` hits the 255-register ceiling for
   /// this function, so a pathological expression reports the overflow
@@ -243,7 +243,7 @@ impl<'a> Compiler<'a> {
   /// before the body compiles; so a mismatched argument raises before
   /// the function does anything with it, exactly like the reference C
   /// runtime's own `compile_type_check` placement. `params`/`regs` are
-  /// parallel (every params[i] a plain `Expr::Argument`, its register
+  /// parallel (every params[i] a plain `ExprKind::Argument`, its register
   /// already bound to a `Local` by the caller); `variadic_tail_idx`
   /// excludes the synthetic `TypeHint([List], false)` the parser always
   /// attaches to a `...args` collector (see `Parser::function_args`) --
@@ -264,24 +264,24 @@ impl<'a> Compiler<'a> {
       if Some(i) == variadic_tail_idx {
         continue;
       }
-      let Expr::Argument(name, type_hint) = param else {
+      let ExprKind::Argument(name, type_hint) = &param.kind else {
         panic!(
-          "compile: function parameter is not Expr::Argument: {:?}",
+          "compile: function parameter is not ExprKind::Argument: {:?}",
           param
         );
       };
-      let Expr::TypeHint(types, nullable) = type_hint.deref() else {
+      let ExprKind::TypeHint(types, nullable) = &type_hint.deref().kind else {
         panic!(
-          "compile: parameter type hint is not Expr::TypeHint: {:?}",
+          "compile: parameter type hint is not ExprKind::TypeHint: {:?}",
           type_hint
         );
       };
-      if types.iter().any(|t| matches!(t, Type::Any)) {
+      if types.iter().any(|t| matches!(t.ty, Type::Any)) {
         continue;
       }
       let param_types: Vec<ParamType> = types
         .iter()
-        .map(|t| self.ast_type_to_param_type(t))
+        .map(|t| self.ast_type_to_param_type(&t.ty))
         .collect();
       let check = ParamTypeCheck {
         param_name: Self::identifier_name(name),
@@ -471,10 +471,12 @@ impl<'a> Compiler<'a> {
   /// every exit from the loop body is covered too, which is more
   /// analysis than this optimization is worth.
   fn stmt_never_falls_through(stmt: &Stmt) -> bool {
-    match stmt {
-      Stmt::Return(..) | Stmt::Raise(_) | Stmt::Break(_) | Stmt::Continue(_) => true,
-      Stmt::Block(stmts) => stmts.last().is_some_and(Self::stmt_never_falls_through),
-      Stmt::If(_, then_b, Some(else_b)) => {
+    match &stmt.kind {
+      StmtKind::Return(..) | StmtKind::Raise(_) | StmtKind::Break(_) | StmtKind::Continue(_) => {
+        true
+      },
+      StmtKind::Block(stmts) => stmts.last().is_some_and(Self::stmt_never_falls_through),
+      StmtKind::If(_, then_b, Some(else_b)) => {
         Self::stmt_never_falls_through(then_b) && Self::stmt_never_falls_through(else_b)
       },
       _ => false,
@@ -533,7 +535,7 @@ impl<'a> Compiler<'a> {
 
   /// Does any local currently in scope, at register `from` or above,
   /// need closing before a `break`/`continue` jumps out from under it?
-  /// Used instead of the `locals[locals_mark..]` slice `Stmt::Block`
+  /// Used instead of the `locals[locals_mark..]` slice `StmtKind::Block`
   /// checks, since a mid-block jump doesn't truncate `locals`; every
   /// local from an enclosing scope is still sitting in the same Vec.
   fn locals_captured_from(&self, from: u8) -> bool {
@@ -558,7 +560,7 @@ impl<'a> Compiler<'a> {
 
   /// Compile a function's PARAMETERS and BODY into a standalone
   /// `ObjFunction` prototype. Does NOT bind the resulting function
-  /// anywhere; callers (`compile_function_decl`, `Expr::Anonymous`)
+  /// anywhere; callers (`compile_function_decl`, `ExprKind::Anonymous`)
   /// decide that.
   fn compile_function_prototype(
     &mut self,
@@ -572,10 +574,10 @@ impl<'a> Compiler<'a> {
 
     let mut param_names = Vec::with_capacity(params.len());
     for param in params {
-      match param {
-        Expr::Argument(ptoken, _type_hint) => param_names.push(Self::identifier_name(ptoken)),
+      match &param.kind {
+        ExprKind::Argument(ptoken, _type_hint) => param_names.push(Self::identifier_name(ptoken)),
         other => panic!(
-          "compile: function parameter is not Expr::Argument: {:?}",
+          "compile: function parameter is not ExprKind::Argument: {:?}",
           other
         ),
       }
@@ -648,10 +650,10 @@ impl<'a> Compiler<'a> {
     let mut reserved: Vec<String> = Vec::new();
 
     for stmt in statements {
-      let Stmt::Decl(decl) = stmt else {
+      let StmtKind::Decl(decl) = &stmt.kind else {
         continue;
       };
-      let Decl::Function(token, ..) = decl.as_ref() else {
+      let DeclKind::Function(token, ..) = &decl.as_ref().kind else {
         continue;
       };
 
@@ -795,10 +797,10 @@ impl<'a> Compiler<'a> {
 
     let mut param_names = Vec::with_capacity(params.len());
     for param in params {
-      match param {
-        Expr::Argument(ptoken, _type_hint) => param_names.push(Self::identifier_name(ptoken)),
+      match &param.kind {
+        ExprKind::Argument(ptoken, _type_hint) => param_names.push(Self::identifier_name(ptoken)),
         other => panic!(
-          "compile: method parameter is not Expr::Argument: {:?}",
+          "compile: method parameter is not ExprKind::Argument: {:?}",
           other
         ),
       }
@@ -890,7 +892,7 @@ impl<'a> Compiler<'a> {
     });
 
     for prop in own_fields {
-      if let Decl::Property(fname, value, ..) = prop {
+      if let DeclKind::Property(fname, value, ..) = &prop.kind {
         let mark = self.cur().next_reg;
         let value_reg = self.compile_expression(value);
         let fname_val = self.heap.alloc_string_old(Self::identifier_name(fname));
@@ -986,11 +988,11 @@ impl<'a> Compiler<'a> {
 
     let own_fields: Vec<&Decl> = properties
       .iter()
-      .filter(|p| matches!(p, Decl::Property(_, _, _, is_static, _) if !*is_static))
+      .filter(|p| matches!(&p.kind, DeclKind::Property(_, _, _, is_static, _) if !*is_static))
       .collect();
 
     for prop in &own_fields {
-      if let Decl::Property(fname, ..) = prop {
+      if let DeclKind::Property(fname, ..) = &prop.kind {
         let fname_val = self.heap.alloc_string_old(Self::identifier_name(fname));
         let fname_const = self.add_constant(fname_val);
         self.emit(Instr::DeclareField {
@@ -1013,15 +1015,15 @@ impl<'a> Compiler<'a> {
     // matters; Instr::DeclareField's own handler in vm.rs.
     let explicit_names: Vec<String> = own_fields
       .iter()
-      .filter_map(|p| match p {
-        Decl::Property(fname, ..) => Some(Self::identifier_name(fname)),
+      .filter_map(|p| match &p.kind {
+        DeclKind::Property(fname, ..) => Some(Self::identifier_name(fname)),
         _ => None,
       })
       .collect();
 
     let mut implicit_names: Vec<String> = Vec::new();
     for m in methods.iter().filter(|f| f.is_method("@new")) {
-      if let Decl::Method(_, _, body, _, is_static) = m {
+      if let DeclKind::Method(_, _, body, _, is_static) = &m.kind {
         if !*is_static {
           collect_self_fields_stmt(body, &mut implicit_names);
         }
@@ -1055,7 +1057,7 @@ impl<'a> Compiler<'a> {
     }
 
     for prop in properties {
-      if let Decl::Property(pname, value, _, true, _) = prop {
+      if let DeclKind::Property(pname, value, _, true, _) = &prop.kind {
         let mark2 = self.cur().next_reg;
         let vreg = self.compile_expression(value);
         let pname_val = self.heap.alloc_string_old(Self::identifier_name(pname));
@@ -1071,7 +1073,7 @@ impl<'a> Compiler<'a> {
 
     let mut seen_method_names: Vec<String> = Vec::new();
     for m in methods {
-      if let Decl::Method(mname, ..) = m {
+      if let DeclKind::Method(mname, ..) = &m.kind {
         let mname_str = Self::identifier_name(mname);
         if seen_method_names.contains(&mname_str) {
           self.report_error(
@@ -1088,7 +1090,7 @@ impl<'a> Compiler<'a> {
     }
 
     for m in methods {
-      if let Decl::Method(mname, params, body, is_variadic, is_static) = m {
+      if let DeclKind::Method(mname, params, body, is_variadic, is_static) = &m.kind {
         let obj_fn =
           self.compile_method_prototype(mname, params, body, *is_variadic, *is_static, &class_name);
         let proto_val = self.heap.alloc_function(obj_fn);
@@ -1169,7 +1171,7 @@ impl<'a> Compiler<'a> {
       );
     }
     for m in methods {
-      if let Decl::Method(mname, _, _, _, is_static) = m {
+      if let DeclKind::Method(mname, _, _, _, is_static) = &m.kind {
         if !*is_static {
           self.report_error(
             format!(
@@ -1187,7 +1189,7 @@ impl<'a> Compiler<'a> {
     let target_reg = self.compile_expression(target_expr);
 
     for m in methods {
-      if let Decl::Method(mname, params, body, is_variadic, _is_static) = m {
+      if let DeclKind::Method(mname, params, body, is_variadic, _is_static) = &m.kind {
         let obj_fn = self.compile_function_prototype(mname, params, body, *is_variadic, true);
         let proto_val = self.heap.alloc_function(obj_fn);
         let const_idx = self.add_constant(proto_val);
@@ -1244,9 +1246,9 @@ impl<'a> Compiler<'a> {
   /// in one flat, already-inherited slot layout), so `parent.x` and
   /// `self.x` are simply the same access.
   fn compile_receiver(&mut self, expr: &Expr) -> u8 {
-    match expr {
-      Expr::Parent(keyword) => self.compile_self_reg(keyword),
-      other => self.compile_expression(other),
+    match &expr.kind {
+      ExprKind::Parent(keyword) => self.compile_self_reg(keyword),
+      _ => self.compile_expression(expr),
     }
   }
 
@@ -1263,7 +1265,11 @@ impl<'a> Compiler<'a> {
     // unconditionally privileged (see check_private_access's own doc
     // comment for why this has to be checked here, purely
     // syntactically, rather than deferred to Invoke's runtime handler).
-    self.check_private_access(&method_name, matches!(obj, Expr::Self_(_)), method);
+    self.check_private_access(
+      &method_name,
+      matches!(&obj.kind, ExprKind::Self_(_)),
+      method,
+    );
 
     let obj_reg = self.alloc_reg();
     let raw = self.compile_receiver(obj);
@@ -1484,7 +1490,7 @@ impl<'a> Compiler<'a> {
   }
 
   /// One bounded (`<= LIST_LITERAL_CHUNK_SIZE` elements) list literal,
-  /// via a single `MakeList`; the ORIGINAL `Expr::List` compiling
+  /// via a single `MakeList`; the ORIGINAL `ExprKind::List` compiling
   /// logic, just factored out and switched from raw register arithmetic
   /// to `alloc_reg()` (which reports a proper compile error instead of
   /// panicking if this function is somehow already almost out of
@@ -1646,30 +1652,30 @@ impl<'a> Compiler<'a> {
   }
 
   fn compile_expression(&mut self, expression: &Expr) -> u8 {
-    match expression {
-      Expr::Nil => {
+    match &expression.kind {
+      ExprKind::Nil => {
         let dst = self.alloc_reg();
         self.emit(Instr::LoadNil { dst });
         dst
       },
-      Expr::Bool(value) => {
+      ExprKind::Bool(value) => {
         let dst = self.alloc_reg();
         self.emit(Instr::LoadBool { dst, val: *value });
         dst
       },
-      Expr::Integer(value) => {
+      ExprKind::Integer(value) => {
         let dst = self.alloc_reg();
         let const_idx = self.add_constant(Value::number(*value as f64));
         self.emit(Instr::LoadConst { dst, const_idx });
         dst
       },
-      Expr::Float(value) => {
+      ExprKind::Float(value) => {
         let dst = self.alloc_reg();
         let const_idx = self.add_constant(Value::number(*value as f64));
         self.emit(Instr::LoadConst { dst, const_idx });
         dst
       },
-      Expr::Literal(literal) => {
+      ExprKind::Literal(literal) => {
         // String literal: intern it on the heap now, at compile time, and
         // reference the resulting Value from the constant pool.
         let dst = self.alloc_reg();
@@ -1678,7 +1684,7 @@ impl<'a> Compiler<'a> {
         self.emit(Instr::LoadConst { dst, const_idx });
         dst
       },
-      Expr::BigNumber(number) => {
+      ExprKind::BigNumber(number) => {
         // String literal: intern it on the heap now, at compile time, and
         // reference the resulting Value from the constant pool.
         let dst = self.alloc_reg();
@@ -1687,7 +1693,7 @@ impl<'a> Compiler<'a> {
         self.emit(Instr::LoadConst { dst, const_idx });
         dst
       },
-      Expr::Identifier(token) => {
+      ExprKind::Identifier(token) => {
         let name = Self::identifier_name(token);
         match self.resolve_variable(&name) {
           VarLoc::Local(reg, _) => reg,
@@ -1706,7 +1712,7 @@ impl<'a> Compiler<'a> {
           },
         }
       },
-      Expr::Unary(op, expr, line) => {
+      ExprKind::Unary(op, expr, line) => {
         let mark = self.cur().next_reg;
         let src = self.compile_expression(expr);
         let dst = if src >= mark { src } else { self.alloc_reg() };
@@ -1721,7 +1727,7 @@ impl<'a> Compiler<'a> {
         self.emit(instr);
         dst
       },
-      Expr::Binary(lhs, op, rhs, line) => {
+      ExprKind::Binary(lhs, op, rhs, line) => {
         if let Some(imm) = literal_as_f64(rhs) {
           if let Some(ctor) = imm_arith_ctor(op) {
             let mark = self.cur().next_reg;
@@ -1765,7 +1771,7 @@ impl<'a> Compiler<'a> {
         self.free_regs_to(rhs_mark.max(dst + 1));
         dst
       },
-      Expr::Logical(lhs, op, rhs, line) => {
+      ExprKind::Logical(lhs, op, rhs, line) => {
         if let Some(imm) = literal_as_f64(rhs) {
           if let Some(ctor) = imm_logical_ctor(op) {
             let mark = self.cur().next_reg;
@@ -1805,7 +1811,7 @@ impl<'a> Compiler<'a> {
         self.free_regs_to(rhs_mark.max(dst + 1));
         dst
       },
-      Expr::Circuit(lhs, op, rhs) => {
+      ExprKind::Circuit(lhs, op, rhs) => {
         let mark = self.cur().next_reg;
         let result = mark;
 
@@ -1843,8 +1849,8 @@ impl<'a> Compiler<'a> {
         self.patch_jump(short_circuit_jump);
         result
       },
-      Expr::Grouping(expr) => self.compile_expression(expr),
-      Expr::Condition(condition, truth, falsey) => {
+      ExprKind::Grouping(expr) => self.compile_expression(expr),
+      ExprKind::Condition(condition, truth, falsey) => {
         let mark = self.cur().next_reg;
         let cond_reg = self.compile_expression(condition);
         let then_jump = self.emit_jump_if_false(cond_reg);
@@ -1874,7 +1880,7 @@ impl<'a> Compiler<'a> {
 
         result
       },
-      Expr::Assign(target, value) => match target.as_ref() {
+      ExprKind::Assign(target, value) => match &target.as_ref().kind {
         // `obj[idx] = value`; and, via the parser's generic Increment/
         // Decrement desugaring in assign_expr, also `obj[idx]++` /
         // `obj[idx]--`. No explicit free here (matching the VarLoc::Global
@@ -1882,7 +1888,7 @@ impl<'a> Compiler<'a> {
         // allocated for whatever called compile_expression to consume; the
         // enclosing statement's own mark eventually reclaims obj_reg/idx_reg
         // too.
-        Expr::Index(obj, idx, line) => {
+        ExprKind::Index(obj, idx, line) => {
           let obj_reg = self.compile_expression(obj);
           let idx_reg = self.compile_expression(idx);
           let value_reg = self.compile_expression(value);
@@ -1894,7 +1900,7 @@ impl<'a> Compiler<'a> {
           });
           value_reg
         },
-        Expr::Identifier(token) => {
+        ExprKind::Identifier(token) => {
           let name = Self::identifier_name(token);
           match self.resolve_variable(&name) {
             VarLoc::Local(_, true) => {
@@ -1953,14 +1959,14 @@ impl<'a> Compiler<'a> {
           self.error_reg()
         },
       },
-      Expr::Call(callee, args, line) => {
-        if let Expr::Get(obj, method) = callee.as_ref() {
-          return match obj.as_ref() {
-            Expr::Parent(keyword) => self.compile_invoke_super(keyword, method, args),
+      ExprKind::Call(callee, args, line) => {
+        if let ExprKind::Get(obj, method) = &callee.as_ref().kind {
+          return match &obj.as_ref().kind {
+            ExprKind::Parent(keyword) => self.compile_invoke_super(keyword, method, args),
             _ => self.compile_invoke(obj, method, args),
           };
         }
-        if let Expr::Parent(keyword) = callee.as_ref() {
+        if let ExprKind::Parent(keyword) = &callee.as_ref().kind {
           return self.compile_super_ctor_call(keyword, args);
         }
 
@@ -1990,7 +1996,7 @@ impl<'a> Compiler<'a> {
           }
           self.free_regs_to(expected + 1);
 
-          num_args = if let Expr::Get(obj, method) = callee.as_ref() {
+          num_args = if let ExprKind::Get(obj, method) = &callee.as_ref().kind {
             self.checked_arg_count(num_args, Some(method))
           } else {
             self.checked_arg_count(num_args, None)
@@ -2009,8 +2015,8 @@ impl<'a> Compiler<'a> {
         self.free_regs_to(func_reg + 1);
         dst
       },
-      Expr::Anonymous(decl) => match decl.as_ref() {
-        Decl::Function(token, params, body, is_variadic) => {
+      ExprKind::Anonymous(decl) => match &decl.as_ref().kind {
+        DeclKind::Function(token, params, body, is_variadic) => {
           let obj_fn = self.compile_function_prototype(token, params, body, *is_variadic, false);
           let proto_val = self.heap.alloc_function(obj_fn);
           let const_idx = self.add_constant(proto_val);
@@ -2026,17 +2032,17 @@ impl<'a> Compiler<'a> {
           other
         ),
       },
-      Expr::List(elements) => self.compile_list_literal(elements),
-      Expr::Dict(keys, values) => self.compile_dict_literal(keys, values),
-      Expr::Self_(keyword) => self.compile_self_reg(keyword),
-      Expr::Parent(keyword) => {
+      ExprKind::List(elements) => self.compile_list_literal(elements),
+      ExprKind::Dict(keys, values) => self.compile_dict_literal(keys, values),
+      ExprKind::Self_(keyword) => self.compile_self_reg(keyword),
+      ExprKind::Parent(keyword) => {
         self.report_error(
           "'parent' must be followed by '.member' or '.member(...)'".to_string(),
           keyword,
         );
         self.error_reg()
       },
-      Expr::Get(obj, field) => {
+      ExprKind::Get(obj, field) => {
         let field_name = Self::identifier_name(field);
 
         // Both self.x and parent.x count as privileged here; a plain
@@ -2044,7 +2050,7 @@ impl<'a> Compiler<'a> {
         // to begin with (see compile_receiver's own doc comment).
         self.check_private_access(
           &field_name,
-          matches!(obj.as_ref(), Expr::Self_(_) | Expr::Parent(_)),
+          matches!(&obj.as_ref().kind, ExprKind::Self_(_) | ExprKind::Parent(_)),
           field,
         );
 
@@ -2060,12 +2066,12 @@ impl<'a> Compiler<'a> {
         });
         dst
       },
-      Expr::Set(obj, field, value) => {
+      ExprKind::Set(obj, field, value) => {
         let field_name = Self::identifier_name(field);
 
         self.check_private_access(
           &field_name,
-          matches!(obj.as_ref(), Expr::Self_(_) | Expr::Parent(_)),
+          matches!(&obj.as_ref().kind, ExprKind::Self_(_) | ExprKind::Parent(_)),
           field,
         );
 
@@ -2082,7 +2088,7 @@ impl<'a> Compiler<'a> {
         value_reg
       },
 
-      Expr::Index(obj, idx, line) => {
+      ExprKind::Index(obj, idx, line) => {
         let mark = self.cur().next_reg;
         let obj_reg = self.compile_expression(obj);
         let dst = if obj_reg >= mark {
@@ -2103,7 +2109,7 @@ impl<'a> Compiler<'a> {
         self.free_regs_to(idx_mark.max(dst + 1));
         dst
       },
-      Expr::Slice(obj, lo, hi, line) => {
+      ExprKind::Slice(obj, lo, hi, line) => {
         let mark = self.cur().next_reg;
         let obj_reg = self.compile_expression(obj);
         let dst = if obj_reg >= mark {
@@ -2126,7 +2132,7 @@ impl<'a> Compiler<'a> {
         self.free_regs_to(operand_mark.max(dst + 1));
         dst
       },
-      Expr::Range(lower, upper, line) => {
+      ExprKind::Range(lower, upper, line) => {
         let mark = self.cur().next_reg;
         let lo = self.compile_expression(lower);
         let dst = if lo >= mark { lo } else { self.alloc_reg() };
@@ -2143,7 +2149,10 @@ impl<'a> Compiler<'a> {
         self.free_regs_to(hi_mark.max(dst + 1));
         dst
       },
-      Expr::CompoundAssign(..) | Expr::Update(..) | Expr::Interpolation(_) | Expr::Shorthand(_) => {
+      ExprKind::CompoundAssign(..)
+      | ExprKind::Update(..)
+      | ExprKind::Interpolation(_)
+      | ExprKind::Shorthand(_) => {
         unreachable!("shorthand expressions are lowered before compilation")
       },
       _ => {
@@ -2316,7 +2325,7 @@ impl<'a> Compiler<'a> {
   /// `AssertError(MSG or 'Assertion failed')` via the exact same
   /// global-lookup + Call path a user's own `raise AssertError(...)`
   /// would use (so its constructor runs normally), then `Raise` it --
-  /// reusing Stmt::Raise's own instruction for the stacktrace-
+  /// reusing StmtKind::Raise's own instruction for the stacktrace-
   /// attachment and Error-subclass validation, rather than
   /// duplicating either.
   fn compile_assert(&mut self, cond: &Expr, message: &Option<Box<Expr>>) {
@@ -2384,8 +2393,8 @@ impl<'a> Compiler<'a> {
     var_expr: &Option<Box<Expr>>,
   ) {
     let var_reg = var_expr.as_ref().map(|e| {
-      let name = match e.as_ref() {
-        Expr::Identifier(token) => Self::identifier_name(token),
+      let name = match &e.as_ref().kind {
+        ExprKind::Identifier(token) => Self::identifier_name(token),
         other => panic!(
           "compile: catch variable must be an identifier, got {:?}",
           other
@@ -2419,7 +2428,7 @@ impl<'a> Compiler<'a> {
     // this exact point: see Instr::PushCatch's doc comment.
     self.patch_jump(push_at);
 
-    // REPL top-level persistence: mirrors Stmt::Var's own is_repl
+    // REPL top-level persistence: mirrors StmtKind::Var's own is_repl
     // special-case; a REPL line's register file is gone by the time
     // the NEXT line compiles (each is a fresh Chunk), so without this,
     // the caught error would be unreachable outside the exact
@@ -2552,7 +2561,7 @@ impl<'a> Compiler<'a> {
 
     if !elements.is_empty() {
       for element in elements {
-        let Expr::Identifier(token) = element else {
+        let ExprKind::Identifier(token) = &element.kind else {
           panic!(
             "compile: import element is not an identifier: {:?}",
             element
@@ -2573,7 +2582,7 @@ impl<'a> Compiler<'a> {
       return;
     }
 
-    let Expr::Identifier(name_token) = name else {
+    let ExprKind::Identifier(name_token) = &name.kind else {
       panic!(
         "compile: import binding name is not an identifier: {:?}",
         name
@@ -2593,8 +2602,8 @@ impl<'a> Compiler<'a> {
   }
 
   fn compile_statement(&mut self, statement: &Stmt) {
-    match statement {
-      Stmt::Expression(expression) => {
+    match &statement.kind {
+      StmtKind::Expression(expression) => {
         let mark = self.cur().next_reg;
 
         // REPL auto-echo: a bare expression statement typed directly
@@ -2626,13 +2635,13 @@ impl<'a> Compiler<'a> {
 
         self.free_regs_to(mark);
       },
-      Stmt::Echo(value) => {
+      StmtKind::Echo(value) => {
         let mark = self.cur().next_reg;
         let reg = self.compile_expression(value);
         self.emit(Instr::Print { src: reg });
         self.free_regs_to(mark);
       },
-      Stmt::Block(statements) => {
+      StmtKind::Block(statements) => {
         let mark = self.cur().next_reg;
         let locals_mark = self.cur().locals.len();
         self.cur_mut().scope_depth += 1;
@@ -2651,7 +2660,7 @@ impl<'a> Compiler<'a> {
         }
         self.free_regs_to(mark);
       },
-      Stmt::If(condition, then_branch, else_branch) => {
+      StmtKind::If(condition, then_branch, else_branch) => {
         let mark = self.cur().next_reg;
         let cond_reg = self.compile_expression(condition);
         let then_jump = self.emit_jump_if_false(cond_reg);
@@ -2686,7 +2695,7 @@ impl<'a> Compiler<'a> {
           },
         }
       },
-      Stmt::While(cond, body) => {
+      StmtKind::While(cond, body) => {
         let loop_start = self.cur().chunk.code.len();
 
         let mark = self.cur().next_reg;
@@ -2719,7 +2728,7 @@ impl<'a> Compiler<'a> {
           "patching break jumps should not emit new code"
         );
       },
-      Stmt::Break(keyword) => {
+      StmtKind::Break(keyword) => {
         if self.cur().loops.is_empty() {
           self.report_error("'break' used outside of a loop".to_string(), keyword);
         } else {
@@ -2738,7 +2747,7 @@ impl<'a> Compiler<'a> {
             .push(jump_at);
         }
       },
-      Stmt::Continue(keyword) => {
+      StmtKind::Continue(keyword) => {
         if self.cur().loops.is_empty() {
           self.report_error("'continue' used outside of a loop".to_string(), keyword);
         } else {
@@ -2760,7 +2769,7 @@ impl<'a> Compiler<'a> {
             .push(continue_location);
         }
       },
-      Stmt::FixContinue => {
+      StmtKind::FixContinue => {
         let locales = self
           .cur_mut()
           .loops
@@ -2771,13 +2780,13 @@ impl<'a> Compiler<'a> {
           .iter()
           .for_each(|f| self.patch_jump(*f));
       },
-      Stmt::Decl(decl) => self.compile_declaration(decl),
-      Stmt::VarList(list) => {
+      StmtKind::Decl(decl) => self.compile_declaration(decl),
+      StmtKind::VarList(list) => {
         for item in list {
           self.compile_statement(item);
         }
       },
-      Stmt::Var(token, initializer, _type_hint, is_const) => {
+      StmtKind::Var(token, initializer, _type_hint, is_const) => {
         let name = Self::identifier_name(token);
 
         if self.at_module_top_level() {
@@ -2830,22 +2839,24 @@ impl<'a> Compiler<'a> {
           });
         }
       },
-      Stmt::Return(_, value) => {
+      StmtKind::Return(_, value) => {
         let reg = self.compile_expression(value);
         self.emit(Instr::Return { src: reg });
       },
-      Stmt::Using(subject, arms, default) => self.compile_using(subject, arms, default),
-      Stmt::Raise(expr) => self.compile_raise(expr),
-      Stmt::Assert(cond, message) => self.compile_assert(cond, message),
-      Stmt::Catch(body, error_block, var_expr) => self.compile_catch(body, error_block, var_expr),
-      Stmt::Import(path, _, name, elements, imports_all, exported) => self.compile_import(
+      StmtKind::Using(subject, arms, default) => self.compile_using(subject, arms, default),
+      StmtKind::Raise(expr) => self.compile_raise(expr),
+      StmtKind::Assert(cond, message) => self.compile_assert(cond, message),
+      StmtKind::Catch(body, error_block, var_expr) => {
+        self.compile_catch(body, error_block, var_expr)
+      },
+      StmtKind::Import(path, _, name, elements, imports_all, exported) => self.compile_import(
         path.as_str(),
         name.as_ref(),
         elements.as_slice(),
         *imports_all,
         *exported,
       ),
-      Stmt::For(..) | Stmt::Iter(..) | Stmt::DoWhile(..) => {
+      StmtKind::For(..) | StmtKind::Iter(..) | StmtKind::DoWhile(..) => {
         unreachable!("loops are lowered to `while` before compilation")
       },
       _ => {},
@@ -2853,12 +2864,12 @@ impl<'a> Compiler<'a> {
   }
 
   fn compile_declaration(&mut self, declaration: &Decl) {
-    match declaration {
-      Decl::Stmt(statement) => self.compile_statement(statement),
-      Decl::Function(token, params, body, is_variadic) => {
+    match &declaration.kind {
+      DeclKind::Stmt(statement) => self.compile_statement(statement),
+      DeclKind::Function(token, params, body, is_variadic) => {
         self.compile_function_decl(token, params, body, *is_variadic)
       },
-      Decl::Class(name, superclass, properties, methods, is_extension) => {
+      DeclKind::Class(name, superclass, properties, methods, is_extension) => {
         self.compile_class_decl(name, superclass, properties, methods, *is_extension)
       },
       _ => {},
@@ -2944,31 +2955,31 @@ impl<'a> Compiler<'a> {
 /// Descends into nested `def`/`@(...)` bodies too, since `self` can be
 /// captured by a closure nested inside a method.
 fn collect_self_fields_stmt(stmt: &Stmt, out: &mut Vec<String>) {
-  match stmt {
-    Stmt::For(..) | Stmt::Iter(..) | Stmt::DoWhile(..) => {
+  match &stmt.kind {
+    StmtKind::For(..) | StmtKind::Iter(..) | StmtKind::DoWhile(..) => {
       unreachable!("loops are lowered to `while` before compilation")
     },
-    Stmt::Echo(e) | Stmt::Expression(e) | Stmt::Raise(e) | Stmt::Return(_, e) => {
+    StmtKind::Echo(e) | StmtKind::Expression(e) | StmtKind::Raise(e) | StmtKind::Return(_, e) => {
       collect_self_fields_expr(e, out)
     },
-    Stmt::If(cond, then_b, else_b) => {
+    StmtKind::If(cond, then_b, else_b) => {
       collect_self_fields_expr(cond, out);
       collect_self_fields_stmt(then_b, out);
       if let Some(e) = else_b {
         collect_self_fields_stmt(e, out);
       }
     },
-    Stmt::While(cond, body) => {
+    StmtKind::While(cond, body) => {
       collect_self_fields_expr(cond, out);
       collect_self_fields_stmt(body, out);
     },
-    Stmt::Assert(e, msg) => {
+    StmtKind::Assert(e, msg) => {
       collect_self_fields_expr(e, out);
       if let Some(m) = msg {
         collect_self_fields_expr(m, out);
       }
     },
-    Stmt::Using(subject, arms, default) => {
+    StmtKind::Using(subject, arms, default) => {
       collect_self_fields_expr(subject, out);
       for l in arms.iter().flat_map(|arm| arm.labels.iter()) {
         collect_self_fields_expr(l, out);
@@ -2980,55 +2991,53 @@ fn collect_self_fields_stmt(stmt: &Stmt, out: &mut Vec<String>) {
         collect_self_fields_stmt(d, out);
       }
     },
-    Stmt::Catch(body, catch_body, _name) => {
+    StmtKind::Catch(body, catch_body, _name) => {
       collect_self_fields_stmt(body, out);
       if let Some(cb) = catch_body {
         collect_self_fields_stmt(cb, out);
       }
     },
-    Stmt::Block(stmts) => {
+    StmtKind::Block(stmts) => {
       for s in stmts {
         collect_self_fields_stmt(s, out);
       }
     },
-    Stmt::Decl(decl) => collect_self_fields_decl(decl, out),
-    Stmt::Var(_, init, _, _) => collect_self_fields_expr(init, out),
-    Stmt::VarList(list) => {
+    StmtKind::Decl(decl) => collect_self_fields_decl(decl, out),
+    StmtKind::Var(_, init, _, _) => collect_self_fields_expr(init, out),
+    StmtKind::VarList(list) => {
       for s in list {
         collect_self_fields_stmt(s, out);
       }
     },
-    Stmt::None
-    | Stmt::FixContinue
-    | Stmt::Continue(_)
-    | Stmt::Break(_)
-    | Stmt::Import(..)
-    | Stmt::Trivia(_) => {},
+    StmtKind::None
+    | StmtKind::FixContinue
+    | StmtKind::Continue(_)
+    | StmtKind::Break(_)
+    | StmtKind::Import(..)
+    | StmtKind::Trivia(_) => {},
   }
 }
 
 fn collect_self_fields_decl(decl: &Decl, out: &mut Vec<String>) {
-  match decl {
-    Decl::Stmt(s) => collect_self_fields_stmt(s, out),
-    Decl::Block(stmts) => {
-      for s in stmts {
-        collect_self_fields_stmt(s, out);
-      }
-    },
-    Decl::Function(_, _, body, _) => collect_self_fields_stmt(body, out),
-    // Method/Class/Property/Import/None aren't expected nested inside a
-    // method body; ignored defensively rather than assumed unreachable.
+  match &decl.kind {
+    DeclKind::Stmt(s) => collect_self_fields_stmt(s, out),
+    DeclKind::Function(_, _, body, _) => collect_self_fields_stmt(body, out),
+    // Method/Class/Property aren't expected nested inside a method body;
+    // ignored defensively rather than assumed unreachable.
     _ => {},
   }
 }
 
 fn collect_self_fields_expr(expr: &Expr, out: &mut Vec<String>) {
-  match expr {
-    Expr::CompoundAssign(..) | Expr::Update(..) | Expr::Interpolation(_) | Expr::Shorthand(_) => {
+  match &expr.kind {
+    ExprKind::CompoundAssign(..)
+    | ExprKind::Update(..)
+    | ExprKind::Interpolation(_)
+    | ExprKind::Shorthand(_) => {
       unreachable!("shorthand expressions are lowered before compilation")
     },
-    Expr::Set(target, field, value) => {
-      if matches!(target.as_ref(), Expr::Self_(_)) {
+    ExprKind::Set(target, field, value) => {
+      if matches!(&target.as_ref().kind, ExprKind::Self_(_)) {
         if let TokenKind::Identifier(field_name) = &field.kind {
           if !out.contains(field_name) {
             out.push(field_name.clone());
@@ -3038,34 +3047,34 @@ fn collect_self_fields_expr(expr: &Expr, out: &mut Vec<String>) {
       collect_self_fields_expr(target, out);
       collect_self_fields_expr(value, out);
     },
-    Expr::Unary(_, e, _) | Expr::Grouping(e) => collect_self_fields_expr(e, out),
-    Expr::Binary(a, _, b, _)
-    | Expr::Logical(a, _, b, _)
-    | Expr::Circuit(a, _, b)
-    | Expr::Range(a, b, _)
-    | Expr::Index(a, b, _)
-    | Expr::Assign(a, b) => {
+    ExprKind::Unary(_, e, _) | ExprKind::Grouping(e) => collect_self_fields_expr(e, out),
+    ExprKind::Binary(a, _, b, _)
+    | ExprKind::Logical(a, _, b, _)
+    | ExprKind::Circuit(a, _, b)
+    | ExprKind::Range(a, b, _)
+    | ExprKind::Index(a, b, _)
+    | ExprKind::Assign(a, b) => {
       collect_self_fields_expr(a, out);
       collect_self_fields_expr(b, out);
     },
-    Expr::Condition(a, b, c) | Expr::Slice(a, b, c, _) => {
+    ExprKind::Condition(a, b, c) | ExprKind::Slice(a, b, c, _) => {
       collect_self_fields_expr(a, out);
       collect_self_fields_expr(b, out);
       collect_self_fields_expr(c, out);
     },
-    Expr::Call(callee, args, _) => {
+    ExprKind::Call(callee, args, _) => {
       collect_self_fields_expr(callee, out);
       for a in args {
         collect_self_fields_expr(a, out);
       }
     },
-    Expr::Get(obj, _) => collect_self_fields_expr(obj, out),
-    Expr::List(items) => {
+    ExprKind::Get(obj, _) => collect_self_fields_expr(obj, out),
+    ExprKind::List(items) => {
       for i in items {
         collect_self_fields_expr(i, out);
       }
     },
-    Expr::Dict(keys, values) => {
+    ExprKind::Dict(keys, values) => {
       for k in keys {
         collect_self_fields_expr(k, out);
       }
@@ -3073,18 +3082,18 @@ fn collect_self_fields_expr(expr: &Expr, out: &mut Vec<String>) {
         collect_self_fields_expr(v, out);
       }
     },
-    Expr::Anonymous(decl) => collect_self_fields_decl(decl, out),
-    Expr::Nil
-    | Expr::Bool(_)
-    | Expr::Integer(_)
-    | Expr::Float(_)
-    | Expr::BigNumber(_)
-    | Expr::Literal(_)
-    | Expr::Identifier(_)
-    | Expr::Parent(_)
-    | Expr::Self_(_)
-    | Expr::TypeHint(..)
-    | Expr::Argument(..) => {},
+    ExprKind::Anonymous(decl) => collect_self_fields_decl(decl, out),
+    ExprKind::Nil
+    | ExprKind::Bool(_)
+    | ExprKind::Integer(_)
+    | ExprKind::Float(_)
+    | ExprKind::BigNumber(_)
+    | ExprKind::Literal(_)
+    | ExprKind::Identifier(_)
+    | ExprKind::Parent(_)
+    | ExprKind::Self_(_)
+    | ExprKind::TypeHint(..)
+    | ExprKind::Argument(..) => {},
   }
 }
 
@@ -3096,12 +3105,12 @@ fn collect_self_fields_expr(expr: &Expr, out: &mut Vec<String>) {
 /// `Compiler::compile_using`; correctness is unaffected either way,
 /// this only decides which path a given label's comparison takes.
 fn expr_as_jump_key(expr: &Expr) -> Option<JumpKey> {
-  match expr {
-    Expr::Nil => Some(JumpKey::Nil),
-    Expr::Bool(b) => Some(JumpKey::Bool(*b)),
-    Expr::Integer(i) => Some(JumpKey::Number((*i as f64).to_bits())),
-    Expr::Float(f) => Some(JumpKey::Number(f.to_bits())),
-    Expr::Literal(s) => Some(JumpKey::Str(s.clone())),
+  match &expr.kind {
+    ExprKind::Nil => Some(JumpKey::Nil),
+    ExprKind::Bool(b) => Some(JumpKey::Bool(*b)),
+    ExprKind::Integer(i) => Some(JumpKey::Number((*i as f64).to_bits())),
+    ExprKind::Float(f) => Some(JumpKey::Number(f.to_bits())),
+    ExprKind::Literal(s) => Some(JumpKey::Str(s.clone())),
     _ => None,
   }
 }
@@ -3110,9 +3119,9 @@ fn expr_as_jump_key(expr: &Expr) -> Option<JumpKey> {
 /// `Integer`/`Float`; NOT `BigNumber`, which needs its own bigint
 /// arithmetic path and never participates in this fusion.
 fn literal_as_f64(expr: &Expr) -> Option<f64> {
-  match expr {
-    Expr::Integer(i) => Some(*i as f64),
-    Expr::Float(f) => Some(*f),
+  match &expr.kind {
+    ExprKind::Integer(i) => Some(*i as f64),
+    ExprKind::Float(f) => Some(*f),
     _ => None,
   }
 }

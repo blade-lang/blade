@@ -59,18 +59,19 @@ echo zuri.parse('var total = a + 1')[0].dump()
 ```
 
 ```console
-Stmt@1:5
+Stmt@1:1
   statement:
-    Var@1:5
+    Var@1:1
       name: 'total'
+      name_span: 1:5-1:10
       value:
-        Binary@1
+        Binary@1:13
           left:
             Identifier@1:13
               name: 'a'
           op: 'Plus'
           right:
-            Integer
+            Integer@1:17
               value: 1
       type_hint: nil
       is_constant: false
@@ -78,8 +79,9 @@ Stmt@1:5
 
 Everything about that node is in front of you: it is a `Stmt` wrapping a
 `Var`, the initialiser is a `Binary` whose `op` is the string `'Plus'`, and
-the literal `1` is an `Integer` node rather than a generic literal. Nothing
-had to be looked up.
+the literal `1` is an `Integer` node rather than a generic literal. Each
+header names where that node starts, and `name_span` says exactly where the
+name `total` is. Nothing had to be looked up.
 
 `dump()` is the fastest way to learn any node's shape, and it is the first
 thing to reach for whenever you are unsure. `zuri.dump_file(path)` does the
@@ -537,15 +539,44 @@ echo tree[0].line
 
 ```console
 Function
-[name, parameters, body, is_variadic]
+[name, name_span, parameters, body, is_variadic]
 double
 1
 ```
 
-A `Node` has a `kind`, a `line`, a `column` and a `fields` dictionary. The
-fields hold more nodes, plain lists, plain dictionaries or scalars — never
-anything else — so walking the tree is uniform no matter which node you are
-looking at.
+A `Node` has a `kind`, a position and a `fields` dictionary. The fields hold
+more nodes, plain lists, plain dictionaries or scalars and nothing else, so
+walking the tree is uniform no matter which node you are looking at.
+
+### Where Each Node Is
+
+A node's position covers the whole of the source it was read from.
+`start` and `end` are character offsets, the first character and the one
+just past the last, so slicing the source with them gives back the node's
+own text. `line` and `col` are where it starts and `end_line` and `end_col`
+where it ends, all counted from 1:
+
+```zuri
+import zuri
+
+var source = 'def double(n) {\n  return n * 2\n}'
+var function = zuri.parse(source)[0]
+var product = function.fields.body.fields.statements[0].fields.value
+
+echo source[product.start, product.end]
+echo '${function.line}:${function.col} to ${function.end_line}:${function.end_col}'
+echo source[function.fields.name_span.start, function.fields.name_span.end]
+```
+
+```console
+n * 2
+1:1 to 3:2
+double
+```
+
+A declaration starts at its keyword, so the function starts at `def`, and
+its name has a `name_span` of its own. That is everything a tool needs to
+underline a mistake, jump to a definition or select a whole statement.
 
 ### Walking It
 

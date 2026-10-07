@@ -7,7 +7,7 @@
  * whatever that kind carries. There is one `Node` class rather
  * than one class per grammar rule, since the grammar has roughly
  * fifty expression/statement/declaration shapes, and a dedicated
- * class per shape would mean fifty near- identical classes to
+ * class per shape would mean fifty near-identical classes to
  * maintain in lockstep with the parser forever after. A `fields`
  * entry that's itself node-shaped (or a list of node-shaped
  * entries) is already wrapped into a {Node} recursively, so you
@@ -22,32 +22,71 @@
  * # Function
  * ```
  *
+ * The tree is the program as it was written. A `for` loop is a
+ * `For` node, `x += 1` is a `CompoundAssign`, and an interpolated
+ * string is an `Interpolation`; none of them is rewritten into the
+ * simpler forms the compiler turns them into.
+ *
+ * ## Positions
+ *
+ * Every node records the whole of the source it was read from:
+ *
+ * | Attribute | Meaning |
+ * | --- | --- |
+ * | `start` | The offset of its first character |
+ * | `end` | The offset just past its last character |
+ * | `line`, `col` | Where it starts, both counted from 1 |
+ * | `end_line`, `end_col` | Where it ends: the column just past its last character |
+ *
+ * Offsets count characters, not bytes, and index the source the
+ * way slicing does, so `source[node.start, node.end]` is exactly
+ * the node's own text. A node covers its delimiters: a string
+ * literal's quotes, a block's braces, a call's parentheses.
+ *
+ * A statement or declaration starts at its keyword: `var total =
+ * 1` starts at `var` and `def add(a, b)` at `def`. A class member
+ * starts at its first word, `static` included. In a list of
+ * declarations, `var a = 1, b`, each `Var` spans from its name to
+ * the end of its value.
+ *
+ * A node that names something through a name of its own also
+ * says where that name is, in its `fields`:
+ *
+ * | Kind | Field | Covers |
+ * | --- | --- | --- |
+ * | `Function`, `Method`, `Class` | `name_span` | The declared name |
+ * | `Property`, `Var`, `Argument` | `name_span` | The declared name |
+ * | `Get`, `Set` | `name_span` | The property name after the `.` |
+ * | `For` | `key_span`, `value_span` | Each loop variable |
+ * | `Import` | `segments` | Each part of the path |
+ *
+ * A span field is a plain dict with the same six keys a node has,
+ * and a `For` without a key has a `key_span` of `nil`.
+ * An import segment adds `text`, the part as written: `'.'`,
+ * `'..'` or a name.
+ *
+ * A node the source leaves implicit has an empty span, `start ==
+ * end`, where it would have been written: the `nil` of a `return`
+ * with no value or of a `var` with no initializer sits just after
+ * the keyword or name, and so does the `Any` type of an untyped
+ * parameter and the `List` type of a `...` parameter.
+ *
  * ## Comments and doc blocks
  *
- * `parse()`'s whole point, beyond exposing the grammar itself,
- * is that its result is complete enough to rebuild the source
- * file from. Every `#`-comment and doc block comment in the file
- * comes back as its own `'Comment'`/`'DocBlock'`-kind node,
- * sitting exactly where it appeared: as a sibling in the
- * surrounding statement/declaration list, at the top level,
- * inside a `{ }` block, or between two class members.
+ * Every `#`-comment and doc block comes back as its own
+ * `'Comment'`/`'DocBlock'`-kind node, sitting exactly where it
+ * appeared: as a sibling in the surrounding statement or
+ * declaration list, at the top level, inside a `{ }` block, or
+ * between two class members.
  *
- * A comment written inside an expression is NOT lost, but it
- * isn't attached inside that expression's own node either.
- * There's no `Node` kind for "a comment sitting between two call
- * arguments", and there never will be, since CLAUDE.md's own
- * Zuri style guide never places a comment there in the first
- * place (a comment is always its own whole line, between
- * statements/declarations/class members, not mid-expression).
- * What actually happens: the comment is captured as a standalone
- * `'Comment'`/`'DocBlock'` node and placed as a sibling of the
- * SMALLEST enclosing statement/declaration/class-member, in that
- * same surrounding list, immediately after it (before whatever
- * real node follows in that list, or at the list's own end if
- * nothing does). It stays exactly as deeply nested as the
- * statement that contained it; a comment inside an `if` body
- * three blocks deep comes back three blocks deep too, never
- * hoisted to the top.
+ * A comment written in the middle of a statement, among a call's
+ * arguments or between an `if` block's `}` and its `else`, has no
+ * place among that statement's own nodes. It comes back as a
+ * sibling placed immediately after the smallest statement,
+ * declaration or class member that contains it, at that
+ * statement's depth: a comment inside an `if` body three blocks
+ * deep comes back three blocks deep, never hoisted to the top. Its
+ * position still says where it was written.
  *
  * ```zuri
  * import zuri
@@ -55,20 +94,12 @@
  * var source = "def foo() {\n  echo bar(a, # x\n  b)\n  echo 2\n}\n"
  * var body = zuri.parse(source)[0].fields.body.fields.statements
  * echo body[0].kind        # Echo, the statement the comment sat inside
- * echo body[1].kind        # Comment, landed right after it, not inside it
+ * echo body[1].kind        # Comment, placed right after it
  * echo body[1].fields.text # ' x'
  * echo body[2].kind        # Echo, the "echo 2" line, unaffected
  * ```
  *
- * Source written against CLAUDE.md's own comment-placement
- * convention is completely unaffected by this: every comment in
- * real, style-conformant Zuri source is already its own whole
- * line between statements, which is exactly the case `parse()`
- * places correctly, in its original position. This only matters
- * for source that breaks that convention, and even then, nothing
- * is thrown away; the comment's `line`/`col` still point at
- * where it actually appeared, it's just not a descendant of the
- * expression node it visually sat inside.
+ * A comment above a declaration comes back right before it:
  *
  * ```zuri
  * import zuri
@@ -80,15 +111,100 @@
  * echo nodes[1].kind        # Function
  * ```
  *
- * A class body's fields and methods are two separate lists
- * (`Decl::Class`'s own shape, mirrored here as a `Class` node's
- * `properties`/`methods` fields), so a comment between a field
- * and a method lands in `methods`, whichever list the member
- * right after it belongs to, and a comment between two fields
- * lands in `properties`. See `Node`'s own field-by-field notes
- * below. Code that wants the true interleaved order across both
- * lists, to rebuild a class body exactly as written, should
- * merge `properties ++ methods` and sort by `(line, col)`.
+ * A class body's fields and methods are two separate lists, a
+ * `Class` node's `properties` and `methods`, so a comment between
+ * a field and a method lands in `methods`, the list of the member
+ * right after it, and a comment between two fields lands in
+ * `properties`. A comment after the last member goes to the list
+ * of the member before it. To rebuild a class body in its written
+ * order, merge the two lists and sort them by `start`.
+ *
+ * ## Node kinds
+ *
+ * Expressions:
+ *
+ * | Kind | Fields |
+ * | --- | --- |
+ * | `Nil`, `Self`, `Parent` | None |
+ * | `Bool`, `Integer`, `Float`, `BigNumber` | `value` |
+ * | `Literal` | `value`: a string's text, or a dictionary key written as a name |
+ * | `Interpolation` | `parts`: a string for each run of text and a node for each `${...}` |
+ * | `Identifier` | `name` |
+ * | `Unary` | `op`, `operand` |
+ * | `Binary` | `left`, `op`, `right`, for the arithmetic, bitwise and shift operators |
+ * | `Logical` | `left`, `op`, `right`, for the comparisons |
+ * | `Circuit` | `left`, `op`, `right`, for `and` and `or` |
+ * | `Condition` | `condition`, `then`, `otherwise`: `a ? b : c` |
+ * | `Grouping` | `inner`: an expression in parentheses |
+ * | `Range` | `lower`, `upper` |
+ * | `Call` | `callee`, `arguments` |
+ * | `Get` | `object`, `name`, `name_span` |
+ * | `Set` | `object`, `name`, `name_span`, `value`: `object.name = value` |
+ * | `Index` | `object`, `index` |
+ * | `Slice` | `object`, `lower`, `upper`; an omitted bound is an implicit `Nil` |
+ * | `List` | `items` |
+ * | `Dict` | `keys`, `values`, in matching order |
+ * | `Shorthand` | `name`: the value of a `{ name }` entry, which reads `name` |
+ * | `Assign` | `target`, `value`: `target = value` |
+ * | `CompoundAssign` | `target`, `op`, `value`: `target += value` and its kin |
+ * | `Update` | `target`, `op`: `target++` or `target--` |
+ * | `Anonymous` | `declaration`: a `Function` named `@anon` and a number |
+ * | `TypeHint` | `types`, `nullable` |
+ * | `Argument` | `name`, `name_span`, `type_hint` |
+ *
+ * A `Literal`'s `value` leaves out the quotes, and an
+ * `Interpolation`'s text parts come with their escapes already
+ * applied. A `CompoundAssign`'s `op` and an `Update`'s name the
+ * operator written, such as `'PlusEq'` or `'Increment'`.
+ *
+ * Each entry of a `TypeHint`'s `types` is a node named after the
+ * type: `Any`, `Bool`, `Int`, `Number`, `BigInt`, `String`,
+ * `Bytes`, `List`, `Dict`, `Range`, `File`, `Function`, `Type`,
+ * `Callable`, `Iterable`, or `Instance` for a class. Every one
+ * carries `class_name`, the class an `Instance` names and `nil` on
+ * the rest.
+ *
+ * Statements:
+ *
+ * | Kind | Fields |
+ * | --- | --- |
+ * | `Expression`, `Echo`, `Raise`, `Return` | `value` |
+ * | `Var` | `name`, `name_span`, `value`, `type_hint`, `is_constant` |
+ * | `VarList` | `declarations`: the `Var` nodes of `var a = 1, b = 2` |
+ * | `Block` | `statements` |
+ * | `If` | `condition`, `then`, `otherwise` |
+ * | `While` | `condition`, `body` |
+ * | `DoWhile` | `body`, `condition` |
+ * | `For` | `key`, `key_span`, `value`, `value_span`, `iterable`, `body` |
+ * | `Iter` | `initializer`, `condition`, `steps`, `body` |
+ * | `Using` | `subject`, `arms`, `default_body` |
+ * | `When` | `labels`, `body`: one arm of a `Using` |
+ * | `Catch` | `body`, `catch_body`, `error_var` |
+ * | `Assert` | `condition`, `message` |
+ * | `Import` | `path`, `segments`, `name`, `aliased`, `elements`, `imports_all`, `exported` |
+ * | `Continue`, `Break` | None |
+ * | `Decl` | `declaration`: a function declared inside a block |
+ * | `Comment`, `DocBlock` | `text`: the comment without its `#`, `/*` and `*/` |
+ *
+ * A `For` written as `for value in iterable` has a `key` of `nil`.
+ * An `Iter` clause left empty is `nil`, and with no steps `steps`
+ * is an empty list.
+ *
+ * Declarations:
+ *
+ * | Kind | Fields |
+ * | --- | --- |
+ * | `Stmt` | `statement`: a statement at the top level |
+ * | `Function` | `name`, `name_span`, `parameters`, `body`, `is_variadic` |
+ * | `Class` | `name`, `name_span`, `superclass`, `properties`, `methods`, `is_extension` |
+ * | `Property` | `name`, `name_span`, `value`, `type_hint`, `is_static`, `is_constant` |
+ * | `Method` | `name`, `name_span`, `parameters`, `body`, `is_variadic`, `is_static` |
+ *
+ * An `Import`'s `name` is the `Identifier` it binds: the name after
+ * `as` when `aliased` is true, otherwise the last part of its path,
+ * placed on that part. `path` joins every part with the platform's
+ * path separator. A decorated method's `name` keeps its `@`, as in
+ * `'@new'`.
  *
  * @copyright 2026, Richard Ore and Zuri contributors
  */
@@ -112,49 +228,41 @@ class Node {
    * constructor does no wrapping of its own.
    *
    * @param string kind: The node's kind, e.g. `'Binary'`, `'If'`
-   * @param ?number line: The node's source line, or `nil` if
-   *    this kind of node carries no position (see `from_dict`'s
-   *    own docs)
-   * @param ?number col: The node's source column, or `nil`
+   * @param dict position: Where the node sits in its source, as
+   *    `{ start, end, line, col, end_line, end_col }`; see this
+   *    module's own docs for what each one counts
    * @param dict fields: This kind's own fields, already wrapped
    */
-  @new(kind, line, col, fields) {
+  @new(kind: string, position: dict, fields: dict) {
     self.kind = kind
-    self.line = line
-    self.col = col
+    self.start = position.start
+    self.end = position.end
+    self.line = position.line
+    self.col = position.col
+    self.end_line = position.end_line
+    self.end_col = position.end_col
     self.fields = fields
   }
 
   /**
    * Builds a {Node} from the raw dict `zuri.parse()`'s native
-   * backing produces (`{ kind, line, col, fields }`),
-   * recursively wrapping any node-shaped entry inside `fields`,
-   * a single nested node or a list of them, into its own {Node}.
-   * A `fields` entry that isn't node-shaped (a string, a number,
-   * a bool, `nil`, or a plain dict like a `Var` node's
-   * `type_hint` when there isn't one) passes through unchanged.
+   * backing produces (`{ kind, start, end, line, col, end_line,
+   * end_col, fields }`), recursively wrapping any node-shaped
+   * entry inside `fields`, a single nested node or a list of
+   * them, into its own {Node}. A `fields` entry that isn't
+   * node-shaped (a string, a number, a bool, `nil`, or a plain
+   * dict such as a `name_span`) passes through unchanged.
    *
-   * `line`/`col` are best-effort, not guaranteed on every node.
-   * Most AST shapes carry a full position (an identifier, an
-   * operator, a declaration's own name); a few (`Binary`,
-   * `Call`, `Index`, and other operator/delimiter-driven
-   * expressions) only ever carry a bare source `line`, with
-   * `col` always `nil`; and a handful of purely structural nodes
-   * (an empty `Block`, `None`) carry neither, coming back with
-   * `line`/`col` both `nil`. None of this affects what `fields`
-   * contains, since position is a convenience for pointing at
-   * where something is, not part of the information rebuilding
-   * source needs.
-   *
-   * @param dict data: `{ kind, line, col, fields }`
+   * @param dict data: `{ kind, start, end, line, col, end_line,
+   *    end_col, fields }`
    * @returns Node
    */
-  static from_dict(data) {
+  static from_dict(data: dict) {
     var fields = {}
     for key in data.fields.keys() {
       fields[key] = _wrap_node(data.fields[key])
     }
-    return Node(data.kind, data.line, data.col, fields)
+    return Node(data.kind, data, fields)
   }
 
   /**
@@ -170,12 +278,10 @@ class Node {
   }
 
   /**
-   * This node as `kind@line:col`, e.g. `'Binary@3:5'`;
-   * `kind@line` when a position exists but has no column (some
-   * AST shapes only ever carry a bare source line, never a
-   * column: see `from_dict`'s own docs); or just `kind` when it
-   * carries no position at all. A one-line summary; use `dump()`
-   * to actually see what's inside a node.
+   * This node as `kind@line:col`, e.g. `'Binary@3:5'`, naming
+   * the line and column it starts at. A one-line summary; use
+   * `dump()` to actually see what's inside a node.
+   *
    * @returns string
    */
   to_string() {
@@ -202,33 +308,36 @@ class Node {
    * ```
    * 
    * prints
-   * 
+   *
    * ```
-   * Function@1:5
+   * Function@1:1
    *   name: 'add'
+   *   name_span: 1:5-1:8
    *   parameters:
    *     Argument@1:9
    *       name: 'a'
+   *       name_span: 1:9-1:10
    *       type_hint:
-   *         TypeHint
+   *         TypeHint@1:10
    *           types:
-   *             Any
+   *             Any@1:10
    *               class_name: nil
    *           nullable: true
    *     Argument@1:12
    *       name: 'b'
+   *       name_span: 1:12-1:13
    *       type_hint:
-   *         TypeHint
+   *         TypeHint@1:13
    *           types:
-   *             Any
+   *             Any@1:13
    *               class_name: nil
    *           nullable: true
    *   body:
-   *     Block@1
+   *     Block@1:15
    *       statements:
-   *         Return@1
+   *         Return@1:17
    *           value:
-   *             Binary@1
+   *             Binary@1:24
    *               left:
    *                 Identifier@1:24
    *                   name: 'a'
@@ -239,11 +348,12 @@ class Node {
    *   is_variadic: false
    * ```
    *
-   * `Block`/`Return`/`Binary` above only carry a line, never a
-   * column (see `from_dict`'s own docs on which shapes do and
-   * don't); `class_name` is `nil` on `Any` specifically because
-   * that field only ever has a real value on an `Instance` type
-   * (a named class used as a type hint).
+   * Each node's header is its kind and the line and column it
+   * starts at. A span field such as `name_span` prints as the
+   * range it covers, `line:col-end_line:end_col`. The untyped
+   * parameters carry an implicit `Any` type sitting just after
+   * their names, and `class_name` is `nil` on `Any` because only an
+   * `Instance` type names a class.
    *
    * @returns string
    */
@@ -302,19 +412,26 @@ def _dump_scalar(value) {
   if is_string(value) {
     return "'" + value + "'"
   }
+  if _is_span(value) {
+    var range = '${value.line}:${value.col}-${value.end_line}:${value.end_col}'
+
+    if value.contains('text') {
+      return "'${value.text}'@${range}"
+    }
+
+    return range
+  }
   return '${value}'
 }
 
-# Shared by `Node.to_string()` and `dump()`'s own node header line;
-# `line` without `col` is a real, common case (see `from_dict`'s
-# docs), not just a hypothetical to guard against.
+# A `name_span`, a `key_span`, a `value_span` or an import segment: a
+# plain dict holding a position.
+def _is_span(value) {
+  return is_dict(value) and value.contains('start') and value.contains('end_col')
+}
+
+# Shared by `Node.to_string()` and `dump()`'s own node header line.
 def _header(node) {
-  if node.line == nil {
-    return node.kind
-  }
-  if node.col == nil {
-    return '${node.kind}@${node.line}'
-  }
   return '${node.kind}@${node.line}:${node.col}'
 }
 
@@ -476,5 +593,4 @@ def walk_nodes(nodes, visitor) {
  */
 def find_nodes(nodes, kind) {
   return _tree.find(nodes, _describe, kind)
-  return matches
 }

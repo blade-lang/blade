@@ -58,24 +58,26 @@
  * echo nodes[0].dump()
  * ```
  * ```
- * Function@1:5
+ * Function@1:1
  *   name: 'add'
+ *   name_span: 1:5-1:8
  *   parameters:
  *     Argument@1:9
  *       name: 'a'
+ *       name_span: 1:9-1:10
  *       type_hint:
- *         TypeHint
+ *         TypeHint@1:10
  *           types:
- *             Any
+ *             Any@1:10
  *               class_name: nil
  *           nullable: true
  *     ...
  *   body:
- *     Block@1
+ *     Block@1:15
  *       statements:
- *         Return@1
+ *         Return@1:17
  *           value:
- *             Binary@1
+ *             Binary@1:24
  *               left:
  *                 Identifier@1:24
  *                   name: 'a'

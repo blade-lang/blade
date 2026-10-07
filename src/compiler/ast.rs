@@ -1,5 +1,89 @@
+//! The syntax tree the parser builds and the compiler reads.
+//!
+//! Every expression, statement and declaration is a `kind` plus the
+//! `Span` of source it was read from, so anything holding a node can
+//! point back at exactly the text it came from. The tree keeps the
+//! program the way it was written: loops, compound assignment and the
+//! other shorthands stay as themselves until `lower` rewrites them for
+//! the compiler.
+
 use crate::compiler::token::{Token, TokenKind};
 use num_bigint::BigInt;
+
+/// A stretch of source, as the char offsets of its first character and
+/// of the one just past its last. These are the units of `Token::start`
+/// and `Token::end`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Span {
+  pub start: usize,
+  pub end: usize,
+}
+
+impl Span {
+  pub fn new(start: usize, end: usize) -> Self {
+    Self { start, end }
+  }
+
+  /// Exactly the text of one token.
+  pub fn of(token: &Token) -> Self {
+    Self::new(token.start, token.end)
+  }
+
+  /// From the start of this span to the end of `other`.
+  pub fn to(self, other: Span) -> Self {
+    Self::new(self.start, other.end.max(self.start))
+  }
+}
+
+/// An expression and the source it was read from.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Expr {
+  pub kind: ExprKind,
+  pub span: Span,
+}
+
+impl Expr {
+  pub fn new(kind: ExprKind, span: Span) -> Self {
+    Self { kind, span }
+  }
+}
+
+/// A statement and the source it was read from.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Stmt {
+  pub kind: StmtKind,
+  pub span: Span,
+}
+
+impl Stmt {
+  pub fn new(kind: StmtKind, span: Span) -> Self {
+    Self { kind, span }
+  }
+}
+
+/// A declaration and the source it was read from.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Decl {
+  pub kind: DeclKind,
+  pub span: Span,
+}
+
+impl Decl {
+  pub fn new(kind: DeclKind, span: Span) -> Self {
+    Self { kind, span }
+  }
+
+  pub fn is_method(&self, name: &str) -> bool {
+    match &self.kind {
+      DeclKind::Method(token, ..) => match token.kind.clone() {
+        TokenKind::Identifier(token_name) => token_name.eq(name),
+        TokenKind::Decorator(token_name) => token_name.eq(name),
+        _ => false,
+      },
+      _ => false,
+    }
+  }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
@@ -21,8 +105,16 @@ pub enum Type {
   Instance(Token),
 }
 
+/// One name in a type hint, `string` or `Point` in `x: ?string|Point`,
+/// and where it was written.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Expr {
+pub struct TypeName {
+  pub ty: Type,
+  pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExprKind {
   Nil,
   Bool(bool),
   Integer(i64),
@@ -59,7 +151,7 @@ pub enum Expr {
   Self_(Token),
   Assign(Box<Expr>, Box<Expr>),
   Anonymous(Box<Decl>),
-  TypeHint(Vec<Type>, bool),
+  TypeHint(Vec<TypeName>, bool),
   Argument(Token, Box<Expr>),
 
   // `target op= value` for any compound assignment operator, kept as the
@@ -89,21 +181,16 @@ pub enum Segment {
 }
 
 /// One `when` arm of a `using` statement: every label it lists and the
-/// body they share.
+/// body they share, with the span from its `when` to the end of the body.
 #[derive(Debug, Clone, PartialEq)]
 pub struct WhenArm {
   pub labels: Vec<Expr>,
   pub body: Stmt,
-}
-
-impl From<Expr> for NodeKind {
-  fn from(e: Expr) -> Self {
-    NodeKind::Expr(e)
-  }
+  pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Stmt {
+pub enum StmtKind {
   None,
   FixContinue,
   Echo(Box<Expr>),
@@ -149,81 +236,20 @@ pub enum Stmt {
   // its original lexical position. The compiler never emits anything for
   // these; they exist purely so `zuri.parse()` can hand back an AST that
   // still has every comment in it, in place, for the `ast` module. See
-  // the matching `Decl::Trivia` for the top-level/class-body equivalent.
+  // the matching `DeclKind::Trivia` for the top-level/class-body
+  // equivalent.
   Trivia(Token),
 }
 
-impl From<Stmt> for NodeKind {
-  fn from(e: Stmt) -> Self {
-    NodeKind::Stmt(e)
-  }
-}
-
 #[derive(Debug, Clone, PartialEq)]
-pub enum Decl {
-  None,
+pub enum DeclKind {
   Stmt(Box<Stmt>),
-  Block(Vec<Stmt>),
-  Import(String, Box<Expr>, Vec<Expr>, bool),
   Function(Token, Vec<Expr>, Box<Stmt>, bool),
   Method(Token, Vec<Expr>, Box<Stmt>, bool, bool),
   Property(Token, Box<Expr>, Box<Expr>, bool, bool),
   Class(Token, Option<Box<Expr>>, Vec<Decl>, Vec<Decl>, bool),
 
-  // Same purpose as `Stmt::Trivia`, at top level and inside class bodies.
+  // Same purpose as `StmtKind::Trivia`, at top level and inside class
+  // bodies.
   Trivia(Token),
-}
-
-impl Decl {
-  pub fn is_method(&self, name: &str) -> bool {
-    match self {
-      Decl::Method(token, ..) => match token.kind.clone() {
-        TokenKind::Identifier(token_name) => token_name.eq(name),
-        TokenKind::Decorator(token_name) => token_name.eq(name),
-        _ => false,
-      },
-      _ => false,
-    }
-  }
-}
-
-impl From<Decl> for NodeKind {
-  fn from(e: Decl) -> Self {
-    NodeKind::Decl(e)
-  }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum NodeKind {
-  Type(Type),
-  Expr(Expr),
-  Stmt(Stmt),
-  Decl(Decl),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Node {
-  pub kind: NodeKind,
-  pub line: usize,
-  pub col: usize,
-}
-
-impl From<Node> for NodeKind {
-  fn from(e: Node) -> Self {
-    e.kind
-  }
-}
-
-impl From<&mut Node> for NodeKind {
-  fn from(e: &mut Node) -> Self {
-    e.clone().kind
-  }
-}
-
-impl Node {
-  pub fn mark_from(&mut self, token: Token) -> Self {
-    self.line = token.line;
-    self.col = token.column;
-    self.clone()
-  }
 }

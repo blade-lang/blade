@@ -244,13 +244,68 @@ ok('a syntax error raises instead of returning a partial result')
 # Node.to_string()
 # ---------------------------------------------------------------------------
 var ts_nodes = zuri.parse('var y = 1')
-# A `Var` node's position is its own name token's, not the `var`
-# keyword's, so `y` (the 5th character) is where it points.
-assert ts_nodes[0].to_string() == 'Stmt@1:5',
-  'to_string() must be kind@line:col when a position exists'
-assert ts_nodes[0].fields.statement.to_string() == 'Var@1:5',
+# A declaration starts at its keyword, so `var y = 1` starts at `var`.
+assert ts_nodes[0].to_string() == 'Stmt@1:1',
+  'to_string() must be kind@line:col'
+assert ts_nodes[0].fields.statement.to_string() == 'Var@1:1',
   'a nested node has its own to_string() too'
 ok('Node.to_string()')
+
+# ---------------------------------------------------------------------------
+# Every node knows the whole of the source it was read from, and every
+# declared name knows its own
+# ---------------------------------------------------------------------------
+var position_source = 'def area(w: number, h) {\n  return w * h\n}'
+var area = zuri.parse(position_source)[0]
+assert area.start == 0, 'a declaration starts at its keyword'
+assert area.end == position_source.length(), 'and ends past its closing brace'
+assert area.line == 1 and area.col == 1, 'line and col name where it starts'
+assert area.end_line == 3 and area.end_col == 2,
+  'end_line and end_col name the column just past its last character'
+
+var area_name = area.fields.name_span
+assert position_source[area_name.start, area_name.end] == 'area',
+  'name_span covers exactly the name'
+assert area_name.line == 1 and area_name.col == 5, 'name_span has its own line and col'
+
+var width = area.fields.parameters[0]
+assert position_source[width.start, width.end] == 'w: number',
+  'a parameter spans its name and its type'
+var width_type = width.fields.type_hint.fields.types[0]
+assert position_source[width_type.start, width_type.end] == 'number',
+  'each name in a type hint has its own span'
+
+var product = area.fields.body.fields.statements[0].fields.value
+assert position_source[product.start, product.end] == 'w * h',
+  'an expression spans its operands'
+ok('nodes carry their full span, and declared names their own')
+
+var property_source = 'point.x += 1'
+var property_target = zuri.parse(property_source)[0].fields.statement.fields.value.fields.target
+var property_name = property_target.fields.name_span
+assert property_source[property_name.start, property_name.end] == 'x',
+  'a property access knows where its property name is'
+
+var pair_loop = zuri.parse('for k, v in t {\n}')[0].fields.statement
+assert pair_loop.fields.key_span.col == 5, 'a for loop knows where its key is'
+assert pair_loop.fields.value_span.col == 8, 'and where its value is'
+
+var relative = zuri.parse('import ..net.addr { Ip }')[0].fields.statement
+var segment_texts = relative.fields.segments.map(@(segment) => segment.text)
+assert segment_texts == ['..', 'net', '.', 'addr'], 'an import keeps every part of its path'
+assert relative.fields.segments[1].col == 10, 'each part knows where it was written'
+ok('names, loop variables and import paths are placed')
+
+# A comment written in the middle of a statement, here between `}` and
+# its `else`, comes back after that statement rather than inside the
+# block that happens to open next.
+var between_source = "if a {\n  echo 1\n}\n# between\nelse {\n  echo 2\n}\n"
+var between_nodes = zuri.parse(between_source)
+assert between_nodes.length() == 2, 'the comment is a sibling of the if'
+assert between_nodes[1].kind == 'Comment', 'placed right after the statement it sat in'
+var otherwise = between_nodes[0].fields.statement.fields.otherwise.fields.statements
+assert otherwise.length() == 1, 'the else block holds only what was written inside it'
+ok('a comment inside a statement comes back after that statement')
 
 # ---------------------------------------------------------------------------
 # Node.dump()
@@ -258,13 +313,11 @@ ok('Node.to_string()')
 var dump_nodes = zuri.parse('def add(a, b) { return a + b }')
 var dump = dump_nodes[0].dump()
 assert is_string(dump), 'dump() must return a string'
-assert dump.contains("Function@1:5"), 'dump() must show the node header'
+assert dump.contains("Function@1:1"), 'dump() must show the node header'
 assert dump.contains("name: 'add'"), 'dump() must show a string field quoted'
 assert dump.contains('parameters:'), 'dump() must show a nested-list field name on its own line'
 assert dump.contains("Argument@1:9"), 'dump() must recurse into nested nodes'
 assert dump.contains('is_variadic: false'), 'dump() must show a plain bool field inline'
-# a node with a line but no column must not print a bogus ":nil"
-assert !dump.contains(':nil'), 'dump() must never print a literal nil column'
 ok('Node.dump() produces a readable, correctly nested dump')
 
 # ---------------------------------------------------------------------------
