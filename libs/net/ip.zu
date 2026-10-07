@@ -875,7 +875,7 @@ class Ip {
     if self.is_ipv4() != other.is_ipv4() {
       return false
     }
-    return self.to_list().equals(other.to_list())
+    return self.to_list() == other.to_list()
   }
 
   /**

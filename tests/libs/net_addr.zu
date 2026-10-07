@@ -33,6 +33,9 @@ echo '════════════════════════�
 # ---------------------------------------------------------------------------
 var v4 = net.SocketAddrV4.parse('192.168.1.10:8080')
 assert v4.ip().equals(net.Ipv4.parse('192.168.1.10')), 'SocketAddrV4.parse must extract the IP'
+assert net.Ip.parse('10.0.0.1').equals(net.Ip.parse('10.0.0.1')), 'equal addresses must be equal'
+assert !net.Ip.parse('10.0.0.1').equals(net.Ip.parse('10.0.0.2')), 'different addresses must differ'
+assert !net.Ip.parse('::1').equals(net.Ip.parse('127.0.0.1')), 'addresses of two families must differ'
 assert v4.port() == 8080, 'SocketAddrV4.parse must extract the port'
 assert v4.to_string() == '192.168.1.10:8080', 'SocketAddrV4.to_string() must round-trip'
 ok('SocketAddrV4.parse() and to_string() round-trip')
