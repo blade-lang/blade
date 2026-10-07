@@ -1560,6 +1560,52 @@ impl<'a> Parser<'a> {
     StmtKind::Using(Box::new(expr), arms, default_case)
   }
 
+  /// Turns a run of dots written together in an import path into its
+  /// parts: a `..` for each pair and a `.` for one left over, each a
+  /// token over its own characters, so the parts and their spans read
+  /// the same however the lexer split the run.
+  fn split_dots(dots: &mut Vec<Token>, paths: &mut Vec<String>, path_tokens: &mut Vec<Token>) {
+    let Some(first) = dots.first() else {
+      return;
+    };
+
+    let count: usize = dots
+      .iter()
+      .map(|token| match token.kind {
+        TokenKind::Dot => 1,
+        TokenKind::Range => 2,
+        _ => 3,
+      })
+      .sum();
+    let (line, column, start) = (first.line, first.column, first.start);
+    let mut at = 0;
+
+    while at < count {
+      let width = if count - at >= 2 { 2 } else { 1 };
+      let kind = if width == 2 {
+        TokenKind::Range
+      } else {
+        TokenKind::Dot
+      };
+
+      path_tokens.push(Token::new(
+        kind,
+        line,
+        column + at,
+        start + at,
+        start + at + width,
+      ));
+      paths.push(if width == 2 {
+        "..".to_string()
+      } else {
+        ".".to_string()
+      });
+      at += width;
+    }
+
+    dots.clear();
+  }
+
   fn import_stmt(&mut self) -> StmtKind {
     let mut paths = Vec::new();
     let mut path_tokens = Vec::new();
@@ -1577,20 +1623,38 @@ impl<'a> Parser<'a> {
     // `..package..root_package..module`), so this is one unified loop
     // rather than "one leading `..`, then only dots/identifiers"; the
     // latter silently stopped consuming after the FIRST embedded `..`.
+    //
+    // Dots written together are read by how many there are, two for
+    // each directory up, so `....module` climbs two even though the
+    // lexer hands its first three over as the variadic `...`.
+    let mut dots: Vec<Token> = Vec::new();
+
     while match_tok!(
       self,
-      TokenKind::Dot | TokenKind::Range | TokenKind::Identifier(_)
+      TokenKind::Dot | TokenKind::Range | TokenKind::TriDot | TokenKind::Identifier(_)
     ) {
       let token = self.previous().clone();
-      path_tokens.push(token.clone());
 
       match token.kind.clone() {
-        TokenKind::Dot => paths.push(".".to_string()),
-        TokenKind::Range => paths.push("..".to_string()),
-        TokenKind::Identifier(name) => paths.push(name.clone()),
+        TokenKind::Dot | TokenKind::Range | TokenKind::TriDot => {
+          let touching = dots.last().is_some_and(|last| last.end == token.start);
+
+          if !touching {
+            Self::split_dots(&mut dots, &mut paths, &mut path_tokens);
+          }
+
+          dots.push(token);
+        },
+        TokenKind::Identifier(name) => {
+          Self::split_dots(&mut dots, &mut paths, &mut path_tokens);
+          path_tokens.push(token.clone());
+          paths.push(name.clone());
+        },
         _ => {},
       }
     }
+
+    Self::split_dots(&mut dots, &mut paths, &mut path_tokens);
 
     let mut imports_all = false;
 

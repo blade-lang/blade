@@ -1,0 +1,13 @@
+# A relative import climbs one directory for each `..` it starts with,
+# so `....top` is two up, whether the dots are written together or
+# apart.
+
+import ..sibling
+import ....top
+import .. ..top as spaced
+import @....top { where }
+
+echo sibling.where
+echo top.where
+echo spaced.where
+echo where

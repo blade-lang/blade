@@ -69,10 +69,16 @@ A path starting with `.` or `..` is resolved against the directory of the
 file doing the importing, and is never searched for anywhere else.
 
 ```zuri,ignore
-import .helpers          # next to this file
-import .models.user      # models/ next to this file, then user
-import ..shared.config   # up one directory, then shared/, then config
+import .helpers             # next to this file
+import .models.user         # models/ next to this file, then user
+import ..shared.config      # up one directory, then shared/, then config
+import .. ..shared.config   # up two directories, then shared/, then config
 ```
+
+Each `..` climbs one directory, so `.. ..` climbs two and `.. .. ..` three.
+The dots may also be written together, `....shared.config`, and it is the
+same import: a run of dots counts two for each directory up. `zuri fmt`
+leaves whichever way the path is written as it is.
 
 Each segment resolves the same way a bare name does: `name.zu` is tried
 first, then `name/index.zu`. So `import .helpers` finds either
