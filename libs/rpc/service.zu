@@ -1,0 +1,632 @@
+/**
+ * @module service
+ *
+ * {Service}: what a program answers. A service holds the handler for
+ * each method the program serves, and answers every message it is
+ * given with them, whatever carried the message there.
+ *
+ * A service on its own answers messages that each arrive in an
+ * exchange of their own, such as the body of an HTTP request, and
+ * whose answer goes back in that same exchange. An {Endpoint} is a
+ * service on a connection: it answers what arrives on the connection,
+ * and calls the other side of it as well.
+ *
+ * Re-exported by `rpc`.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import json
+import .error { * }
+import .message { Request, Notification, Response }
+import .message as messages
+
+/**
+ * The most messages a batch may hold before it is refused whole,
+ * `1000`, until `Service.set_batch_limit()` says otherwise.
+ */
+const DEFAULT_BATCH_LIMIT = 1000
+
+# The `id` a malformed message is answered with: its own, when it has
+# one that can be read, and `nil` otherwise.
+def _answer_id(value) {
+  if !is_dict(value) or !value.contains('id') {
+    return nil
+  }
+
+  var id = value.get('id', nil)
+
+  if id == nil or is_string(id) or is_number(id) {
+    return id
+  }
+
+  return nil
+}
+
+# True for a value that has the shape of a response, which JSON-RPC
+# never answers, even when it is malformed.
+def _looks_like_response(value) {
+  return is_dict(value) and !value.contains('method') and (
+    value.contains('result') or value.contains('error')
+  )
+}
+
+# Turns one message, as its text or as the bytes of its text, into
+# what reading it gives: `{ kind: 'message', text, value }` with the
+# value decoded from it, or `{ kind: 'unreadable', text, message }`
+# with the parse error it is answered with. `text` is `nil` for bytes
+# that are not valid UTF-8.
+def _decode(body) {
+  var text = body
+
+  if is_bytes(body) {
+    text = body.to_string()
+
+    # `to_string()` reads whatever is not UTF-8 as U+FFFD, so only
+    # valid text encodes back to the bytes it came from.
+    if text.to_bytes() != body {
+      return {
+        kind: 'unreadable',
+        text: nil,
+        message: 'Parse error: a message is not valid UTF-8',
+      }
+    }
+  }
+
+  catch {
+    return { kind: 'message', text, value: json.decode(text) }
+  } as error {
+    return { kind: 'unreadable', text, message: 'Parse error: ${error.message}' }
+  }
+}
+
+def _check_method(method: string) {
+  if method.starts_with('rpc.') {
+    raise ValueError("method names starting with 'rpc.' are reserved by JSON-RPC")
+  }
+}
+
+/**
+ * What a handler is told about the message it is handling: the
+ * request's `id`, its `method`, the `endpoint` handling it, and the
+ * `request` it arrived in.
+ *
+ * A request handler normally answers by returning. One on an
+ * {Endpoint} that cannot answer before it returns, because the answer
+ * comes from work still to be done, calls `defer()`, keeps the
+ * context, and answers through it with `reply()` or `fail()` once the
+ * answer is ready.
+ *
+ * @printable
+ */
+class Context {
+
+  /**
+   * Returns a new {Context}. A service makes one for each message it
+   * hands to a handler.
+   *
+   * @param Service endpoint: The {Service} or {Endpoint} handling the
+   *    message.
+   * @param string|number|nil id: The request's `id`; `nil` for a
+   *    notification.
+   * @param string method: The method called.
+   * @param bool is_request: Whether the message is a request, which
+   *    is answered, rather than a notification, which is not.
+   * @param any request: What the message arrived in, such as the
+   *    `http` request whose body it was; `nil` for a message from a
+   *    connection.
+   * @param bool can_defer: Whether the request can be answered after
+   *    its handler returns, which needs a connection to answer on.
+   */
+  @new(endpoint, id, method: string, is_request: bool, request, can_defer: bool) {
+    self.endpoint = endpoint
+    self.id = id
+    self.method = method
+    self.request = request
+    self._is_request = is_request
+    self._can_defer = can_defer
+    self._deferred = false
+    self._answered = false
+  }
+
+  /**
+   * True when the message is a notification, which nothing answers.
+   *
+   * @returns bool
+   */
+  is_notification() {
+    return !self._is_request
+  }
+
+  /**
+   * Takes over answering the request: whatever the handler returns
+   * is ignored, and the request is answered when `reply()` or
+   * `fail()` is called, from the isolate that owns the endpoint.
+   * Calling it again changes nothing.
+   *
+   * Only a request that arrived on an {Endpoint}'s connection can be
+   * deferred. One answered in its own exchange, such as an HTTP
+   * request, is answered when its handler returns.
+   *
+   * A request deferred from inside a batch is answered on its own,
+   * after the batch's other answers.
+   *
+   * @returns Context itself.
+   * @throws ValueError for a notification, which is never answered,
+   *    or for a request with no connection to answer it on later.
+   */
+  defer() {
+    if !self._is_request {
+      raise ValueError('a notification is never answered')
+    }
+
+    if !self._can_defer {
+      raise ValueError('a request answered in its own exchange cannot be deferred')
+    }
+
+    self._deferred = true
+
+    return self
+  }
+
+  /**
+   * True once `defer()` has been called.
+   *
+   * @returns bool
+   */
+  is_deferred() {
+    return self._deferred
+  }
+
+  /**
+   * Answers the deferred request with `result`.
+   *
+   * @param any result
+   * @throws ValueError when the request was not deferred, or has
+   *    already been answered.
+   * @throws RpcClosedError when the endpoint has been closed.
+   */
+  reply(result) {
+    self._answer(Response.success(self.id, result))
+  }
+
+  /**
+   * Answers the deferred request with `error`.
+   *
+   * @param RpcError error
+   * @throws ValueError when the request was not deferred, or has
+   *    already been answered.
+   * @throws RpcClosedError when the endpoint has been closed.
+   */
+  fail(error) {
+    self._answer(Response.failure(self.id, error))
+  }
+
+  /**
+   * True once a deferred request has been answered.
+   *
+   * @returns bool
+   */
+  is_answered() {
+    return self._answered
+  }
+
+  _answer(response) {
+    if !self._deferred {
+      raise ValueError('only a deferred request is answered through its context')
+    }
+
+    if self._answered {
+      raise ValueError('request #${self.id} has already been answered')
+    }
+
+    self._answered = true
+    self.endpoint.send(response)
+  }
+
+  /**
+   * This context as `Context(method #id)`.
+   *
+   * @returns string
+   */
+  to_string() {
+    return 'Context(${self.method} #${self.id})'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+/**
+ * The methods a program serves, and the answering of every message
+ * sent to them.
+ *
+ * Handlers say what it answers. A request handler is called with the
+ * request's `params` and a {Context}, and what it returns is the
+ * result sent back; an {RpcError} it raises is sent back as that
+ * error, and any other error as an `INTERNAL_ERROR` carrying its
+ * message. A notification handler is called the same way and nothing
+ * is sent back. A message for a method with no handler goes to the
+ * `on_unhandled()` fallback when one is set; without one, a request
+ * is answered with `METHOD_NOT_FOUND` and a notification is dropped.
+ * A message that is not valid UTF-8, or not valid JSON, is answered
+ * with `PARSE_ERROR`.
+ *
+ * ```zuri
+ * import rpc
+ *
+ * var calculator = rpc.Service()
+ *   .on_request('add', @(params) => params[0] + params[1])
+ *
+ * echo calculator.answer('{"jsonrpc": "2.0", "id": 1, "method": "add", "params": [2, 3]}')
+ * # {"jsonrpc":"2.0","id":1,"result":5}
+ * ```
+ *
+ * `answer()` is the whole of a service's work: one message or batch
+ * in, its answer out. `rpc.http_handler()` puts a service behind an
+ * `http` route, and an {Endpoint} puts one on a connection.
+ *
+ * @printable
+ */
+class Service {
+
+  /**
+   * Returns a new {Service} with no handlers and a batch limit of
+   * `DEFAULT_BATCH_LIMIT`.
+   */
+  @new() {
+    self._request_handlers = {}
+    self._notification_handlers = {}
+    self._unhandled = nil
+    self._error_handler = nil
+    self._trace_handler = nil
+    self._batch_limit = DEFAULT_BATCH_LIMIT
+  }
+
+  /**
+   * Answers requests for `method` with `handler`, in place of any
+   * handler set for it before.
+   *
+   * @param string method: The method's name. Names starting with
+   *    `rpc.` are reserved by JSON-RPC.
+   * @param function(2) handler: Called with the request's `params`
+   *    and a {Context}; what it returns is the result sent back.
+   * @returns Service itself.
+   * @throws ValueError for a name starting with `rpc.`.
+   */
+  on_request(method: string, handler: function) {
+    _check_method(method)
+    self._request_handlers[method] = handler
+
+    return self
+  }
+
+  /**
+   * Handles notifications for `method` with `handler`, in place of
+   * any handler set for it before.
+   *
+   * @param string method: The method's name. Names starting with
+   *    `rpc.` are reserved by JSON-RPC.
+   * @param function(2) handler: Called with the notification's
+   *    `params` and a {Context}; what it returns is ignored.
+   * @returns Service itself.
+   * @throws ValueError for a name starting with `rpc.`.
+   */
+  on_notification(method: string, handler: function) {
+    _check_method(method)
+    self._notification_handlers[method] = handler
+
+    return self
+  }
+
+  /**
+   * Handles every request and notification whose method has no
+   * handler of its own, in place of any fallback set before. It is
+   * called as the other handlers are, with `context.method` naming
+   * the method. For a request, what it returns is the result sent
+   * back, and raising an {RpcError} with `METHOD_NOT_FOUND` refuses
+   * the method as a service without a fallback would.
+   *
+   * A method whose name starts with `rpc.` never reaches it: JSON-RPC
+   * reserves those names, so such a request is answered with
+   * `METHOD_NOT_FOUND` and such a notification is dropped.
+   *
+   * @param function(2) handler: Called with the message's `params`
+   *    and a {Context}.
+   * @returns Service itself.
+   */
+  on_unhandled(handler: function) {
+    self._unhandled = handler
+
+    return self
+  }
+
+  /**
+   * Called with every problem the other side is not told about: an
+   * error a notification handler raised, an error other than an
+   * {RpcError} a request handler raised, a response nothing was
+   * waiting for, and, on an {Endpoint}, an error a `send_request()`
+   * callback raised and a connection that failed.
+   *
+   * @param function(2) handler: Called with the error and the
+   *    message it concerns, as a dictionary, or `nil` when there is
+   *    no one message.
+   * @returns Service itself.
+   */
+  on_error(handler: function) {
+    self._error_handler = handler
+
+    return self
+  }
+
+  /**
+   * Called with the text of every message, as it arrives and as it is
+   * sent, for logging a conversation.
+   *
+   * @param function(2) handler: Called with `'in'` or `'out'` and the
+   *    message's JSON text.
+   * @returns Service itself.
+   */
+  on_trace(handler: function) {
+    self._trace_handler = handler
+
+    return self
+  }
+
+  /**
+   * Sets the most messages a batch may hold. A larger batch is
+   * refused whole with one `INVALID_REQUEST` error and an `id` of
+   * `nil`, before any of it is handled, so one message cannot make a
+   * service do an unbounded amount of work.
+   *
+   * @param ?int limit: Default `DEFAULT_BATCH_LIMIT`, `1000`. `nil`
+   *    takes a batch of any size.
+   * @returns Service itself.
+   * @throws ValueError for a limit below `1`.
+   */
+  set_batch_limit(limit: ?int) {
+    if limit != nil and limit < 1 {
+      raise ValueError('a batch limit must be at least 1')
+    }
+
+    self._batch_limit = limit
+
+    return self
+  }
+
+  /**
+   * The most messages a batch may hold, or `nil` for no limit.
+   *
+   * @returns ?int
+   */
+  batch_limit() {
+    return self._batch_limit
+  }
+
+  /**
+   * Answers one message, or a batch of them, and returns the JSON
+   * text of the answer, or `nil` when there is nothing to answer: a
+   * notification, or a batch of nothing but notifications.
+   *
+   * ```zuri
+   * import rpc
+   *
+   * var greeter = rpc.Service()
+   *   .on_request('greet', @(params) => 'Hello, ${params.name}!')
+   *
+   * var call = '{"jsonrpc": "2.0", "id": 7, "method": "greet", "params": {"name": "Ada"}}'
+   * var note = '{"jsonrpc": "2.0", "method": "greet", "params": {"name": "Ada"}}'
+   *
+   * echo greeter.answer(call)  # {"jsonrpc":"2.0","id":7,"result":"Hello, Ada!"}
+   * echo greeter.answer(note)  # nil
+   * ```
+   *
+   * @param string|bytes message: The message's JSON text, or the
+   *    bytes of it, which must be UTF-8.
+   * @param any request: What the message arrived in, handed to every
+   *    handler as `context.request`, such as the `http` request whose
+   *    body it was. Default `nil`.
+   * @returns ?string
+   */
+  answer(message, request) {
+    if !is_string(message) and !is_bytes(message) {
+      raise TypeError('a message is a string or bytes, not ${typeof(message)}')
+    }
+
+    var item = _decode(message)
+
+    if item.text != nil {
+      self._trace('in', item.text)
+    }
+
+    var answer = nil
+
+    if item.kind == 'unreadable' {
+      answer = Response.failure(nil, RpcError(PARSE_ERROR, item.message))
+    } else {
+      answer = self._answers_for(item.value, request)
+    }
+
+    if answer == nil {
+      return nil
+    }
+
+    var text = messages.encode(answer)
+    self._trace('out', text)
+
+    return text
+  }
+
+  /**
+   * This service as `Service(n methods)`.
+   *
+   * @returns string
+   */
+  to_string() {
+    var count = self._request_handlers.length() + self._notification_handlers.length()
+
+    return 'Service(${count} methods)'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+
+  # Whether a request can be answered after its handler returns. A
+  # service answers each message in the exchange it arrived in, so it
+  # cannot; an endpoint has a connection to answer on.
+  _can_defer() {
+    return false
+  }
+
+  _trace(direction: string, text: string) {
+    if self._trace_handler != nil {
+      self._trace_handler(direction, text)
+    }
+  }
+
+  _report(error, value) {
+    if self._error_handler != nil {
+      self._error_handler(error, value)
+    }
+  }
+
+  # The answer to a message, or a batch of them, already decoded from
+  # JSON: a `Response`, a list of them, or `nil` when nothing is to be
+  # sent now.
+  _answers_for(value, request) {
+    if !is_list(value) {
+      return self._handle_one(value, request)
+    }
+
+    if value.is_empty() {
+      var empty = RpcError(INVALID_REQUEST, 'Invalid Request: a batch must not be empty')
+      return Response.failure(nil, empty)
+    }
+
+    if self._batch_limit != nil and value.length() > self._batch_limit {
+      var detail = 'a batch of ${value.length()} messages is over the limit of ${self._batch_limit}'
+      return Response.failure(nil, RpcError(INVALID_REQUEST, 'Invalid Request: ${detail}'))
+    }
+
+    var answers = []
+
+    for entry in value {
+      var answer = self._handle_one(entry, request)
+
+      if answer != nil {
+        answers.append(answer)
+      }
+    }
+
+    return answers.is_empty() ? nil : answers
+  }
+
+  # Handles one message and returns the answer to send, or `nil` when
+  # nothing is to be sent now.
+  _handle_one(value, request) {
+    var incoming = nil
+
+    catch {
+      incoming = messages.read(value)
+    } as error {
+      if !instance_of(error, RpcError) {
+        raise error
+      }
+
+      if _looks_like_response(value) {
+        self._report(error, value)
+        return nil
+      }
+
+      return Response.failure(_answer_id(value), error)
+    }
+
+    if instance_of(incoming, Response) {
+      self._accept(incoming)
+      return nil
+    }
+
+    if instance_of(incoming, Notification) {
+      self._notify(incoming, value, request)
+      return nil
+    }
+
+    return self._call(incoming, value, request)
+  }
+
+  # A response that arrived here. A service sends no requests, so
+  # nothing is ever waiting for one.
+  _accept(response) {
+    var detail = 'a response to #${response.id}, which nothing is waiting for'
+    self._report(RpcError(INVALID_REQUEST, detail), response.to_dict())
+  }
+
+  # The handler for `method` from `handlers`, the fallback when it has
+  # none, or `nil`. Reserved names never fall back.
+  _handler_for(handlers: dict, method: string) {
+    var handler = handlers.get(method, nil)
+
+    if handler == nil and !method.starts_with('rpc.') {
+      handler = self._unhandled
+    }
+
+    return handler
+  }
+
+  _notify(notification, value, request) {
+    var handler = self._handler_for(self._notification_handlers, notification.method)
+
+    if handler == nil {
+      return
+    }
+
+    var context = Context(self, nil, notification.method, false, request, false)
+
+    catch {
+      handler(notification.params, context)
+    } as error {
+      self._report(error, value)
+    }
+  }
+
+  _call(call, value, request) {
+    var handler = self._handler_for(self._request_handlers, call.method)
+
+    if handler == nil {
+      var missing = RpcError(METHOD_NOT_FOUND, 'Method not found: ${call.method}')
+      return Response.failure(call.id, missing)
+    }
+
+    var context = Context(self, call.id, call.method, true, request, self._can_defer())
+    var result = nil
+
+    catch {
+      result = handler(call.params, context)
+    } as error {
+      var failure = error
+
+      if !instance_of(error, RpcError) {
+        self._report(error, value)
+        failure = RpcError(INTERNAL_ERROR, error.message)
+      }
+
+      if context.is_deferred() {
+        if !context.is_answered() {
+          context.fail(failure)
+        }
+
+        return nil
+      }
+
+      return Response.failure(call.id, failure)
+    }
+
+    if context.is_deferred() {
+      return nil
+    }
+
+    return Response.success(call.id, result)
+  }
+}

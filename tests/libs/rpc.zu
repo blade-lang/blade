@@ -4,10 +4,21 @@
  * across processes.
  */
 
-import rpc
 import isolate
+
+# The servers below run workers of their own, so the pool is sized for
+# them before anything else takes a thread.
+isolate.configure(12)
+
+import rpc
 import os
 import json
+import net
+import net.tls
+import net.unix
+import http
+import http.websocket
+import .rpc_servers
 
 var _passed = 0
 
@@ -428,6 +439,243 @@ raw[1].close()
 ok('a listening endpoint refuses text that is not UTF-8')
 
 # ---------------------------------------------------------------------------
+# Services, answering one exchange at a time
+# ---------------------------------------------------------------------------
+var calculator = rpc.Service()
+  .on_request('add', @(params) => params[0] + params[1])
+  .on_request('source', @(params, context) => context.request)
+  .on_request('later', @(params, context) => context.defer())
+
+var sum_text = '{"jsonrpc": "2.0", "id": 1, "method": "add", "params": [2, 3]}'
+assert calculator.answer(sum_text) == '{"jsonrpc":"2.0","id":1,"result":5}',
+  'a service answers a request with its JSON text'
+assert calculator.answer(sum_text.to_bytes()) == '{"jsonrpc":"2.0","id":1,"result":5}',
+  'and the bytes of one'
+assert calculator.answer('{"jsonrpc": "2.0", "method": "add", "params": [2, 3]}') == nil,
+  'a notification has no answer'
+
+var source_text = '{"jsonrpc": "2.0", "id": 2, "method": "source"}'
+assert json.decode(calculator.answer(source_text, 'the exchange')).result == 'the exchange',
+  'every handler is given what the message arrived in'
+
+var deferred = json.decode(calculator.answer('{"jsonrpc": "2.0", "id": 3, "method": "later"}'))
+assert deferred.error.code == rpc.INTERNAL_ERROR,
+  'a request answered in its own exchange cannot be deferred'
+
+var unreadable_answer = json.decode(calculator.answer(bytes([0x7b, 0xff])))
+assert unreadable_answer.error.code == rpc.PARSE_ERROR and unreadable_answer.id == nil,
+  'bytes that are not UTF-8 are a parse error'
+assert raises(@() => calculator.answer(42), TypeError) != nil, 'a message is text or bytes'
+ok('a Service answers each message it is given')
+
+assert calculator.batch_limit() == rpc.DEFAULT_BATCH_LIMIT, 'batches are limited by default'
+
+var three = '[' + ', '.join([sum_text, sum_text, sum_text]) + ']'
+var over = json.decode(calculator.set_batch_limit(2).answer(three))
+assert over.id == nil and over.error.code == rpc.INVALID_REQUEST,
+  'a batch over the limit is refused whole'
+assert json.decode(calculator.set_batch_limit(nil).answer(three)).length() == 3,
+  'and a service without a limit takes any batch'
+assert raises(@() => calculator.set_batch_limit(0), ValueError) != nil, 'a limit is at least 1'
+ok('set_batch_limit() bounds the work one message can ask for')
+
+var whole = rpc.MessageFraming()
+assert whole.feed('{"a":1}'.to_bytes())[0].to_string() == '{"a":1}', 'each piece is one message'
+assert whole.feed(bytes(0)).is_empty() and whole.pending() == 0, 'and nothing is held back'
+assert whole.frame('{"b":2}').to_string() == '{"b":2}', 'framing adds nothing'
+assert raises(@() => rpc.MessageFraming().set_max_size(2).feed('{}{}'.to_bytes()),
+  rpc.RpcFramingError) != nil, 'a message over the limit is refused'
+ok('MessageFraming takes each read as one whole message')
+
+# ---------------------------------------------------------------------------
+# JSON-RPC over HTTP
+# ---------------------------------------------------------------------------
+var http_ready = isolate.channel(1)
+var http_task = isolate.spawn(rpc_servers.http_server, http_ready)
+var http_base = 'http://127.0.0.1:${http_ready.recv(5)}'
+
+var remote_calculator = rpc.HttpClient('${http_base}/rpc', { headers: { 'X-Caller': 'tests' } })
+
+assert remote_calculator.request('add', [2, 3]) == 5, 'a request over HTTP is answered'
+assert remote_calculator.request('caller', nil) == 'tests',
+  'with the client headers on the HTTP request handlers see'
+assert remote_calculator.notify('add', [1, 1]) == nil, 'a notification has no answer'
+
+var over_http = remote_calculator.request_batch([
+  ['add', [1, 2]],
+  ['missing', nil],
+  ['add', [3, 4]],
+])
+assert over_http[0] == 3 and over_http[2] == 7, 'a batch over HTTP is answered in order'
+assert over_http[1].code == rpc.METHOD_NOT_FOUND, 'with each failure in its place'
+
+var refused_defer = raises(@() => remote_calculator.request('later', nil), rpc.RpcError)
+assert refused_defer.code == rpc.INTERNAL_ERROR, 'an HTTP request cannot be deferred'
+ok('HttpClient calls a Service behind an http route')
+
+var locked_client = rpc.HttpClient('${http_base}/locked')
+var locked = raises(@() => locked_client.request('add', [1]), rpc.RpcHttpError)
+assert locked.status == 401 and locked.body == 'no\n', 'a status with no answer raises with it'
+
+var legacy = raises(@() => rpc.HttpClient('${http_base}/legacy').request('add', [1]), rpc.RpcError)
+assert legacy.code == -32601, 'a JSON-RPC error on another status is read as the answer'
+
+var wrong_method = http.get('${http_base}/rpc')
+assert wrong_method.status == 405 and wrong_method.headers.get('allow', '') == 'POST',
+  'anything but POST is refused'
+
+var plain_text = http.post('${http_base}/rpc', '{}', { headers: { 'Content-Type': 'text/plain' } })
+assert plain_text.status == 415, 'a body that is not JSON is refused'
+
+var latin1 = { 'Content-Type': 'application/json; charset=latin1' }
+assert http.post('${http_base}/rpc', '{}', { headers: latin1 }).status == 415,
+  'and so is JSON that is not UTF-8'
+
+var silent_text = '{"jsonrpc": "2.0", "method": "add", "params": [1, 1]}'
+var silent = http.post('${http_base}/rpc', silent_text, {
+  headers: { 'Content-Type': 'application/json' },
+})
+assert silent.status == 204 and silent.body.length() == 0, 'nothing to answer is a 204'
+ok('the HTTP side speaks the statuses JSON-RPC clients expect')
+
+http_task.cancel()
+
+# ---------------------------------------------------------------------------
+# JSON-RPC over a WebSocket
+# ---------------------------------------------------------------------------
+var ws_ready = isolate.channel(1)
+var ws_task = isolate.spawn(rpc_servers.websocket_server, ws_ready)
+var ws_port = ws_ready.recv(5)
+
+var shop = rpc.endpoint(rpc.websocket(websocket.connect('ws://127.0.0.1:${ws_port}/ws')))
+  .on_request('price_of', @(params) => params[0] == 'tea' ? 3 : 5)
+
+assert shop.request('total', { item: 'tea', count: 4 }) == 12,
+  'either side calls the other over a WebSocket'
+assert shop.request_batch([['total', { item: 'cake', count: 2 }]]) == [10],
+  'batches included'
+shop.close()
+ws_task.cancel()
+ok('an Endpoint talks over a WebSocket, one message to a frame')
+
+# ---------------------------------------------------------------------------
+# Many connections through rpc.serve()
+# ---------------------------------------------------------------------------
+def line_client(address) {
+  var stream = net.TcpStream()
+  stream.connect(address)
+
+  return rpc.endpoint(rpc.socket(stream))
+    .set_framing(rpc.LineFraming())
+    .on_request('double', @(params) => params[0] * 2)
+}
+
+var tcp_ready = isolate.channel(2)
+var tcp_options = { port: 0, workers: 2, framing: 'line', max_connections: 2 }
+var tcp_task = isolate.spawn(rpc_servers.run_serve, tcp_ready, tcp_options)
+var tcp_address = tcp_ready.recv(5)
+
+var first_client = line_client(tcp_address)
+var second_client = line_client(tcp_address)
+
+assert second_client.request('add', [40, 2]) == 42, 'two connections are served at once'
+assert first_client.request('ask_back', [10]) == 21, 'and each can be called back by the server'
+assert first_client.request_batch([['add', [1, 1]], ['add', [2, 2]]]) == [2, 4], 'batches included'
+
+first_client.close()
+second_client.close()
+assert tcp_ready.recv(5) == 'done', 'serve() returns once its last connection closes'
+tcp_task.join(5)
+ok('serve() gives every TCP connection an endpoint of its own')
+
+if unix.is_supported() {
+  var socket_path = os.join_paths(os.dir_name(__file__), '_rpc_test.sock')
+  var unix_ready = isolate.channel(2)
+  var unix_options = { path: socket_path, workers: 1, max_connections: 1 }
+  var unix_task = isolate.spawn(rpc_servers.run_serve, unix_ready, unix_options)
+
+  assert unix_ready.recv(5) == socket_path, 'a Unix domain socket is reported by its path'
+
+  var local = net.UnixStream()
+  local.connect(socket_path)
+
+  var local_client = rpc.endpoint(rpc.socket(local))
+  assert local_client.request('add', [5, 6]) == 11, 'and served like any other connection'
+
+  local_client.close()
+  assert unix_ready.recv(5) == 'done', 'until it closes'
+  unix_task.join(5)
+  assert !file(socket_path).exists(), 'and the socket file goes with the server'
+}
+ok('serve() listens on a Unix domain socket')
+
+var ca_cert = '-----BEGIN CERTIFICATE-----
+MIIBnDCCAUOgAwIBAgIUeWaA1kIpfHmP8pCrmYnl7E501IUwCgYIKoZIzj0EAwIw
+HDEaMBgGA1UEAwwRWnVyaSBUZXN0IFJvb3QgQ0EwHhcNMjYwODI4MDE1MjE1WhcN
+MzYwODI1MDE1MjE1WjAcMRowGAYDVQQDDBFadXJpIFRlc3QgUm9vdCBDQTBZMBMG
+ByqGSM49AgEGCCqGSM49AwEHA0IABFAaDC18AhIebjzRZpFvvbvzcuboDHU5lMqS
+ikGzkBAJSpBvmNiilC6S87CtECJcSyUH99BGoXW1V7ZKPyY8fJijYzBhMB0GA1Ud
+DgQWBBQ3dj3HS36c++2sfxUEXvzdETg99zAfBgNVHSMEGDAWgBQ3dj3HS36c++2s
+fxUEXvzdETg99zAPBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBBjAKBggq
+hkjOPQQDAgNHADBEAiB9+2A7FyeRsuGsGYMK8doy3Il6VM9aaoeg44Z+VhpdogIg
+O/OaIrLQfEgEqK/tBQDGYtaFpM2SiUwNlGYCpDYL2OM=
+-----END CERTIFICATE-----
+'
+
+var server_cert = '-----BEGIN CERTIFICATE-----
+MIIBxjCCAWugAwIBAgIUKY6KD8+UhDTVfnuwbeg/aqGZjEUwCgYIKoZIzj0EAwIw
+HDEaMBgGA1UEAwwRWnVyaSBUZXN0IFJvb3QgQ0EwHhcNMjYwODI4MDE1MjE1WhcN
+MzYwODI1MDE1MjE1WjAUMRIwEAYDVQQDDAlsb2NhbGhvc3QwWTATBgcqhkjOPQIB
+BggqhkjOPQMBBwNCAAQktM0xvAHGLQrfkjDG9GgqlkQ7Jp/M3J5nouQxtkO2DRbN
+8wTgShvkOwPLtTn4QsZzNvNcfYd5yVw3QEbWUygko4GSMIGPMAwGA1UdEwEB/wQC
+MAAwDgYDVR0PAQH/BAQDAgeAMBMGA1UdJQQMMAoGCCsGAQUFBwMBMBoGA1UdEQQT
+MBGCCWxvY2FsaG9zdIcEfwAAATAdBgNVHQ4EFgQUYWdSTBIeJ8/+kYIfmzI1jQtz
+t3owHwYDVR0jBBgwFoAUN3Y9x0t+nPvtrH8VBF783RE4PfcwCgYIKoZIzj0EAwID
+SQAwRgIhAKyTEhmIrP+F4HYULeh1NlzYB+Fn8xgSY3OHQEemXM0eAiEA+zIv/TKY
+ygqPPVtOmV8uMme4Jp3vxdZJhkGY4OPTTUQ=
+-----END CERTIFICATE-----
+'
+
+var server_key = '-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEIKCvr/d71GiDa9QHie6zXXMk+h/PJ6j2mc2dr31IL/xIoAoGCCqGSM49
+AwEHoUQDQgAEJLTNMbwBxi0K35IwxvRoKpZEOyafzNyeZ6LkMbZDtg0WzfME4Eob
+5DsDy7U5+ELGczbzXH2HeclcN0BG1lMoJA==
+-----END EC PRIVATE KEY-----
+'
+
+var tls_ready = isolate.channel(2)
+var tls_options = {
+  port: 0,
+  workers: 1,
+  max_connections: 1,
+  cert_chain: server_cert,
+  private_key: server_key,
+}
+var tls_task = isolate.spawn(rpc_servers.run_serve, tls_ready, tls_options)
+var tls_address = tls_ready.recv(5)
+
+var trust = tls.TlsConfig()
+trust.add_ca_pem(ca_cert)
+
+var tls_stream = net.TcpStream()
+tls_stream.connect(tls_address)
+
+var secure_client = rpc.endpoint(rpc.socket(tls.TlsStream.connect(tls_stream, trust, 'localhost')))
+assert secure_client.request('secure', nil) == 'over TLS', 'serve() puts its connections behind TLS'
+secure_client.close()
+assert tls_ready.recv(5) == 'done', 'and ends with them'
+tls_task.join(5)
+
+var stop_ready = isolate.channel(1)
+var stop_task = isolate.spawn(rpc_servers.stop_at_once, stop_ready)
+assert stop_ready.recv(5) == 'stopped', 'a stopped server returns'
+stop_task.join(5)
+
+assert raises(@() => rpc.serve(rpc_servers.serve_setup, { framing: 'xml' }), ValueError) != nil,
+  'an unknown framing is refused'
+ok('serve() serves TLS and stops when told to')
+
+# ---------------------------------------------------------------------------
 # A child process over its standard streams
 # ---------------------------------------------------------------------------
 var server_script = os.join_paths(os.dir_name(__file__), '_rpc_stdio_server.zu')
@@ -438,7 +686,7 @@ assert remote.request('echo', { text: 'hé' }) == { text: 'hé' }, 'a child answ
 assert raises(@() => remote.listen(), ValueError) != nil, 'a child is read where it was spawned'
 assert remote.request('stop', nil) == 'stopping', 'and keeps answering until it stops'
 remote.close()
-assert child.wait(10000) == 0, 'the child ends cleanly'
+assert child.wait(5000) == 0, 'the child ends cleanly'
 ok('ProcessTransport and StdioTransport talk across processes')
 
 echo ''

@@ -1,0 +1,490 @@
+/**
+ * @module server
+ *
+ * Serving JSON-RPC to many connections at once, over TCP, TLS or a
+ * Unix domain socket.
+ *
+ * `serve()` binds a listening socket and spreads the connections it
+ * accepts across a pool of worker isolates. Every connection gets an
+ * {Endpoint} of its own, and `setup` gives it its handlers, so each
+ * connection is a full JSON-RPC peer: it answers what its client
+ * asks, and it can call its client and notify it in return.
+ *
+ * Each worker polls the connections it holds rather than blocking on
+ * one, so a quiet client occupies a descriptor and not a thread, and
+ * one worker serves many long-lived connections side by side.
+ *
+ * Re-exported by `rpc`.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import isolate
+import .endpoint { Endpoint }
+import .framing { HeaderFraming, LineFraming }
+
+# How much of a connection is read at a time.
+const _CHUNK = 65536
+
+# How long a worker waits on its own connections, in milliseconds,
+# before looking for newly accepted ones.
+const _POLL_INTERVAL = 10
+
+# Pool threads asked for on top of the workers themselves, so the
+# server is not the only thing that can ever run in its process.
+const _POOL_HEADROOM = 2
+
+# The transport over one accepted connection: an `http.stream`
+# connection, which reads what is buffered first, TLS or not.
+class _ConnectionTransport {
+
+  @new(connection) {
+    self._connection = connection
+  }
+
+  read(max: int) {
+    return self._connection.read_some(max)
+  }
+
+  write(data: bytes) {
+    self._connection.write(data)
+    self._connection.flush()
+  }
+
+  close() {
+    self._connection.close()
+  }
+
+  can_listen() {
+    return false
+  }
+
+  to_string() {
+    return 'ConnectionTransport(${self._connection.peer_address})'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+def _framing_for(settings: dict) {
+  var framing = settings.framing == 'line' ? LineFraming() : HeaderFraming()
+
+  return framing.set_max_size(settings.max_message_size)
+}
+
+def _tls_config(settings: dict) {
+  if settings.cert_chain == nil {
+    return nil
+  }
+
+  import net.tls
+
+  var config = tls.TlsConfig()
+  config.set_cert_chain(settings.cert_chain, settings.private_key or settings.cert_chain)
+
+  return config
+}
+
+# Takes on one accepted socket: wraps it, gives it an endpoint and its
+# handlers, and starts watching it.
+def _admit(state: dict, client) {
+  import http.stream
+  import net
+
+  var connection = nil
+
+  catch {
+    connection = stream.accept(client, {
+      tls_config: state.tls,
+      read_timeout: state.settings.read_timeout * 1000,
+      write_timeout: state.settings.write_timeout * 1000,
+    })
+  } as error {
+    # A failed TLS handshake has already closed the socket.
+    return
+  }
+
+  var endpoint = Endpoint(_ConnectionTransport(connection))
+  endpoint.set_framing(_framing_for(state.settings))
+
+  var setup = state.setup
+
+  catch {
+    setup(endpoint, connection.peer_address)
+  } as error {
+    connection.close()
+    return
+  }
+
+  var token = state.next_token
+  state.next_token = token + 1
+
+  state.live[token] = { connection, endpoint, seen: time() }
+  state.poller.add(connection.transport(), token, net.READABLE)
+}
+
+# Answers what one readable connection has sent, and everything else
+# it already holds.
+def _service(state: dict, token) {
+  var entry = state.live.get(token, nil)
+
+  if entry == nil {
+    return
+  }
+
+  catch {
+    entry.endpoint.feed(entry.connection.read_some(_CHUNK))
+
+    while !entry.endpoint.is_closed() and entry.connection.buffered() > 0 {
+      entry.endpoint.feed(entry.connection.read_some(_CHUNK))
+    }
+  } as error {
+    entry.endpoint.dispatch({ kind: 'failed', message: error.message })
+  }
+
+  entry.seen = time()
+
+  if entry.endpoint.is_closed() {
+    _close(state, token)
+  }
+}
+
+def _close(state: dict, token) {
+  var entry = state.live.get(token, nil)
+
+  if entry == nil {
+    return
+  }
+
+  state.poller.remove(token)
+  state.live.remove(token)
+
+  catch {
+    entry.endpoint.close()
+  } as error {
+    # The other side has gone already; there is nothing to tell it.
+  }
+}
+
+# Closes every connection that has been quiet for longer than the
+# idle timeout. The poller reports nothing for a peer that has simply
+# gone silent, so this is the only thing that notices.
+def _reap_idle(state: dict) {
+  var limit = state.settings.idle_timeout
+
+  if limit == nil {
+    return
+  }
+
+  var now = time()
+  var expired = []
+
+  for token, entry in state.live {
+    if now - entry.seen > limit {
+      expired.append(token)
+    }
+  }
+
+  for token in expired {
+    _close(state, token)
+  }
+}
+
+# Closes every socket still waiting in `connections`, which no worker
+# will serve now.
+def _close_waiting(connections) {
+  var left = connections.try_recv()
+
+  while left != nil {
+    catch {
+      left.close()
+    } as error {
+      # Gone already.
+    }
+
+    left = connections.try_recv()
+  }
+}
+
+/**
+ * The loop each worker isolate runs: serve the connections the
+ * acceptor hands it until the server stops.
+ *
+ * @internal
+ * @param isolate.Channel connections: Accepted sockets arrive here,
+ *    and it closes once nothing more will be accepted.
+ * @param isolate.Channel halt: Closed when the server is stopped, at
+ *    which point every connection is closed.
+ * @param function(2) setup: Called with each connection's endpoint.
+ * @param dict settings: The server's settings, every one filled in.
+ */
+def worker_main(connections, halt, setup, settings: dict) {
+  import net
+
+  var state = {
+    setup,
+    settings,
+    tls: _tls_config(settings),
+    poller: net.Poller(),
+    live: {},
+    next_token: 1,
+  }
+
+  while !halt.is_closed() {
+    while state.live.length() < settings.max_connections_per_worker {
+      var waiting = connections.try_recv()
+
+      if waiting == nil {
+        break
+      }
+
+      _admit(state, waiting)
+    }
+
+    # Nothing to watch: wait for the acceptor, or for the server to
+    # stop, so an idle worker costs nothing.
+    if state.live.is_empty() {
+      var ready = isolate.select([halt, connections])
+
+      if ready[0] == halt or ready[1] == nil {
+        break
+      }
+
+      _admit(state, ready[1])
+      continue
+    }
+
+    for event in state.poller.wait(_POLL_INTERVAL) {
+      if event[1] & net.ERROR != 0 {
+        _close(state, event[0])
+      } else {
+        _service(state, event[0])
+      }
+    }
+
+    _reap_idle(state)
+  }
+
+  for token in state.live.keys() {
+    _close(state, token)
+  }
+
+  _close_waiting(connections)
+}
+
+# Every setting with its default filled in.
+def _settings(options: ?dict) {
+  var given = options == nil ? {} : options
+  var workers = given.get('workers', isolate.cpu_count())
+
+  var settings = {
+    host: given.get('host', '127.0.0.1'),
+    port: given.get('port', 8000),
+    path: given.get('path', nil),
+    workers: workers < 1 ? 1 : workers,
+    backlog: given.get('backlog', nil),
+    framing: given.get('framing', 'header'),
+    max_message_size: given.get('max_message_size', 67108864),
+    max_connections_per_worker: given.get('max_connections_per_worker', 256),
+    idle_timeout: given.get('idle_timeout', nil),
+    read_timeout: given.get('read_timeout', 30),
+    write_timeout: given.get('write_timeout', 30),
+    cert_chain: given.get('cert_chain', nil),
+    private_key: given.get('private_key', nil),
+  }
+
+  if settings.backlog == nil {
+    settings.backlog = settings.workers * 4
+  }
+
+  if settings.framing != 'header' and settings.framing != 'line' {
+    raise ValueError("framing must be 'header' or 'line', not '${settings.framing}'")
+  }
+
+  if settings.path != nil and settings.cert_chain != nil {
+    raise ValueError('TLS is served over TCP, not over a Unix domain socket')
+  }
+
+  return settings
+}
+
+/**
+ * Serves JSON-RPC on a listening socket, across a pool of worker
+ * isolates, until it is stopped.
+ *
+ * `setup` is called inside a worker for every connection accepted,
+ * with the connection's own {Endpoint} and the client's address, and
+ * gives the endpoint its handlers. A worker shares nothing with the
+ * others or with this isolate, so `setup` builds whatever state a
+ * connection needs, and is a function of a module, or a function that
+ * uses nothing but its own imports.
+ *
+ * ```zuri,ignore
+ * import rpc
+ *
+ * def setup(endpoint, peer) {
+ *   endpoint
+ *     .on_request('add', @(params) => params[0] + params[1])
+ *     .on_request('whoami', @() => peer.to_string())
+ * }
+ *
+ * rpc.serve(setup, { port: 4444, framing: 'line' })
+ * ```
+ *
+ * | Option | Meaning | Default |
+ * | --- | --- | --- |
+ * | `host` | the address to listen on | `'127.0.0.1'` |
+ * | `port` | the port to listen on; `0` picks a free one | `8000` |
+ * | `path` | a Unix domain socket to listen on, in place of `host` and `port` | `nil` |
+ * | `workers` | how many worker isolates serve connections | the number of CPUs |
+ * | `backlog` | how many accepted connections may wait for a worker | `workers * 4` |
+ * | `framing` | `'header'` for `Content-Length` headers, `'line'` for lines | `'header'` |
+ * | `max_message_size` | the largest message accepted, in bytes | 64 MiB |
+ * | `max_connections_per_worker` | the most connections one worker holds | `256` |
+ * | `idle_timeout` | seconds a connection may stay silent before it is closed | `nil`, never |
+ * | `read_timeout` | seconds a read may wait once a message has begun | `30` |
+ * | `write_timeout` | seconds a write may wait | `30` |
+ * | `cert_chain`, `private_key` | PEM strings that put every connection behind TLS | `nil` |
+ * | `on_ready` | called here once bound, with the address and a `stop` function | `nil` |
+ * | `max_connections` | stop after accepting this many connections | `nil`, never |
+ *
+ * `on_ready` is called on this isolate once the socket is bound,
+ * with the address it is bound to, as a `SocketAddr` or the socket's
+ * path, and a function that stops the server. Stopping it stops
+ * accepting connections; every worker then finishes the message it
+ * is handling, closes its connections and ends, and `serve()`
+ * returns. Reaching `max_connections` stops accepting too, but serves
+ * the connections already accepted until each of them closes, and
+ * `serve()` returns after the last.
+ *
+ * A connection whose TLS handshake fails, or whose `setup` raises,
+ * is closed and nothing else is affected. A connection that cannot be
+ * read is reported to its endpoint's `on_error()` handler and closed.
+ *
+ * A handler that calls its client with `request()` holds its worker
+ * until the answer arrives, and every other connection on that worker
+ * waits with it.
+ *
+ * The socket file of a Unix domain socket is removed when the server
+ * stops. A file already at `path` makes binding fail.
+ *
+ * A failure accepting connections stops the server as `stop` would,
+ * and raises from `serve()` once it has.
+ *
+ * @param function(2) setup: Called with each connection's {Endpoint}
+ *    and the client's address.
+ * @param ?dict options: Default `nil`, every option at its default.
+ * @throws ValueError when an option holds a value it cannot take.
+ * @throws Error when the socket cannot be bound.
+ */
+def serve(setup, options: ?dict) {
+  if !is_function(setup) and !is_callable(setup) {
+    raise TypeError('setup must be a function')
+  }
+
+  import net
+
+  var settings = _settings(options)
+  var given = options == nil ? {} : options
+  var on_ready = given.get('on_ready', nil)
+  var max_connections = given.get('max_connections', nil)
+
+  var listener = settings.path == nil ? net.TcpStream() : net.UnixStream()
+
+  if settings.path == nil {
+    listener.bind('${settings.host}:${settings.port}')
+  } else {
+    listener.bind(settings.path)
+  }
+
+  catch {
+    isolate.configure(settings.workers + _POOL_HEADROOM)
+  } as error {
+    # The pool exists already; its size is checked below.
+  }
+
+  if isolate.pool_size() < settings.workers {
+    listener.close()
+    raise ValueError(
+      'cannot run ${settings.workers} workers on an isolate pool of ' +
+      '${isolate.pool_size()}; call isolate.configure() first, or ask for fewer'
+    )
+  }
+
+  var connections = isolate.channel(settings.backlog)
+  var halt = isolate.channel()
+  var pool = []
+
+  iter var i = 0; i < settings.workers; i++ {
+    pool.append(isolate.spawn(worker_main, connections, halt, setup, settings))
+  }
+
+  var running = [true]
+  var stopped = [false]
+  var acceptor = net.Acceptor(listener)
+
+  if on_ready != nil {
+    var address = settings.path == nil ? listener.local_address() : settings.path
+
+    on_ready(address, @() {
+      running[0] = false
+      stopped[0] = true
+    })
+  }
+
+  var accepted = 0
+  var failure = nil
+
+  catch {
+    while running[0] {
+      var client = acceptor.next()
+
+      if client == nil {
+        continue
+      }
+
+      connections.send(client)
+      accepted++
+
+      if max_connections != nil and accepted >= max_connections {
+        running[0] = false
+      }
+    }
+  } as accept_error {
+    failure = accept_error
+  }
+
+  if stopped[0] or failure != nil {
+    halt.close()
+  }
+
+  connections.close()
+
+  for task in pool {
+    catch {
+      task.join()
+    } as error {
+      # A worker that failed has nothing left to hand back.
+    }
+  }
+
+  catch {
+    listener.close()
+  } as error {
+    # Closed already.
+  }
+
+  if settings.path != nil {
+    catch {
+      file(settings.path).delete()
+    } as error {
+      # Removed already.
+    }
+  }
+
+  if failure != nil {
+    raise failure
+  }
+}

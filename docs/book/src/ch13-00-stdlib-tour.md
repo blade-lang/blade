@@ -633,12 +633,14 @@ fully in [Chapter 15](ch15-00-http.md), and used throughout
 
 ### `rpc`
 
-JSON-RPC 2.0, the protocol for calling methods in another program:
-the messages, checked against every rule of the specification, two
-ways of telling them apart in a stream, transports over standard
-streams, sockets, child processes and isolates, and an endpoint that
-answers calls with handlers and makes calls of its own. Either side
-can call the other at any time.
+JSON-RPC 2.0, the protocol for calling methods in another program, on
+both ends. A service answers calls with handlers, behind an `http`
+route or on a connection; a client calls a service over HTTP; and an
+endpoint on a WebSocket, a socket, a child process's standard streams
+or a pipe between isolates both answers and calls, so either side can
+call the other at any time. `rpc.serve()` gives every connection to a
+listening socket an endpoint of its own, over TCP, TLS or a Unix
+domain socket.
 
 ```zuri
 import rpc

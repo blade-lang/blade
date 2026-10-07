@@ -1,72 +1,36 @@
 /**
  * @module endpoint
  *
- * {Endpoint}: one side of a JSON-RPC connection. It answers the
- * requests and notifications the other side sends, and sends its own.
- * JSON-RPC makes no difference between a client and a server, so the
- * same endpoint can do both on one connection.
+ * {Endpoint}: one side of a JSON-RPC connection. It is a {Service} on
+ * a connection: it answers the requests and notifications the other
+ * side sends, and sends its own. JSON-RPC makes no difference between
+ * a client and a server, so the same endpoint can do both on one
+ * connection.
  *
  * Re-exported by `rpc`.
  *
  * @copyright 2026, Richard Ore and Zuri contributors
  */
 
-import json
 import isolate
 import zuri
 import .error { * }
 import .message { Request, Notification, Response }
 import .message as messages
 import .framing { HeaderFraming }
+import .service { * }
 
 # How much of a stream is read at a time.
 const _CHUNK = 65536
 
-# The `id` a malformed message is answered with: its own, when it has
-# one that can be read, and `nil` otherwise.
-def _answer_id(value) {
-  if !is_dict(value) or !value.contains('id') {
-    return nil
+# The framing a transport keeps messages apart with: its own, when it
+# has one, and `Content-Length` headers otherwise.
+def _framing_of(transport) {
+  if zuri.reflect.has_method(transport, 'framing') {
+    return transport.framing()
   }
 
-  var id = value.get('id', nil)
-
-  if id == nil or is_string(id) or is_number(id) {
-    return id
-  }
-
-  return nil
-}
-
-# True for a value that has the shape of a response, which JSON-RPC
-# never answers, even when it is malformed.
-def _looks_like_response(value) {
-  return is_dict(value) and !value.contains('method') and (
-    value.contains('result') or value.contains('error')
-  )
-}
-
-# Turns the bytes of one message into the item `Endpoint.dispatch()`
-# takes: its text and the value decoded from it, or the parse error
-# it is answered with.
-def _decode(body: bytes) {
-  var text = body.to_string()
-
-  # `to_string()` reads whatever is not UTF-8 as U+FFFD, so only valid
-  # text encodes back to the bytes it came from.
-  if text.to_bytes() != body {
-    return {
-      kind: 'unreadable',
-      text: nil,
-      message: 'Parse error: a message is not valid UTF-8',
-    }
-  }
-
-  catch {
-    return { kind: 'message', text, value: json.decode(text) }
-  } as error {
-    return { kind: 'unreadable', text, message: 'Parse error: ${error.message}' }
-  }
+  return HeaderFraming()
 }
 
 # Runs on an isolate of its own for `Endpoint.listen()`: reads the
@@ -93,151 +57,13 @@ def _read(transport, framing, inbox) {
 }
 
 /**
- * What a handler is told about the message it is handling: the
- * request's `id`, its `method`, and the `endpoint` it arrived on.
- *
- * A request handler normally answers by returning. One that cannot
- * answer before it returns, because the answer comes from work still
- * to be done, calls `defer()`, keeps the context, and answers through
- * it with `reply()` or `fail()` once the answer is ready.
- *
- * @printable
- */
-class Context {
-
-  /**
-   * Returns a new {Context}. An endpoint makes one for each message
-   * it hands to a handler.
-   *
-   * @param Endpoint endpoint: The endpoint the message arrived on.
-   * @param string|number|nil id: The request's `id`; `nil` for a
-   *    notification.
-   * @param string method: The method called.
-   * @param bool is_request: Whether the message is a request, which
-   *    is answered, rather than a notification, which is not.
-   */
-  @new(endpoint, id, method: string, is_request: bool) {
-    self.endpoint = endpoint
-    self.id = id
-    self.method = method
-    self._is_request = is_request
-    self._deferred = false
-    self._answered = false
-  }
-
-  /**
-   * True when the message is a notification, which nothing answers.
-   *
-   * @returns bool
-   */
-  is_notification() {
-    return !self._is_request
-  }
-
-  /**
-   * Takes over answering the request: whatever the handler returns
-   * is ignored, and the request is answered when `reply()` or
-   * `fail()` is called, from the isolate that owns the endpoint.
-   * Calling it again changes nothing.
-   *
-   * A request deferred from inside a batch is answered on its own,
-   * after the batch's other answers.
-   *
-   * @returns Context itself.
-   * @throws ValueError for a notification, which is never answered.
-   */
-  defer() {
-    if !self._is_request {
-      raise ValueError('a notification is never answered')
-    }
-
-    self._deferred = true
-
-    return self
-  }
-
-  /**
-   * True once `defer()` has been called.
-   *
-   * @returns bool
-   */
-  is_deferred() {
-    return self._deferred
-  }
-
-  /**
-   * Answers the deferred request with `result`.
-   *
-   * @param any result
-   * @throws ValueError when the request was not deferred, or has
-   *    already been answered.
-   * @throws RpcClosedError when the endpoint has been closed.
-   */
-  reply(result) {
-    self._answer(Response.success(self.id, result))
-  }
-
-  /**
-   * Answers the deferred request with `error`.
-   *
-   * @param RpcError error
-   * @throws ValueError when the request was not deferred, or has
-   *    already been answered.
-   * @throws RpcClosedError when the endpoint has been closed.
-   */
-  fail(error) {
-    self._answer(Response.failure(self.id, error))
-  }
-
-  /**
-   * True once a deferred request has been answered.
-   *
-   * @returns bool
-   */
-  is_answered() {
-    return self._answered
-  }
-
-  _answer(response) {
-    if !self._deferred {
-      raise ValueError('only a deferred request is answered through its context')
-    }
-
-    if self._answered {
-      raise ValueError('request #${self.id} has already been answered')
-    }
-
-    self._answered = true
-    self.endpoint.send(response)
-  }
-
-  /**
-   * This context as `Context(method #id)`.
-   *
-   * @returns string
-   */
-  to_string() {
-    return 'Context(${self.method} #${self.id})'
-  }
-
-  @to_string() {
-    return self.to_string()
-  }
-}
-
-/**
  * One side of a JSON-RPC connection over a transport.
  *
- * Handlers say what it answers. A request handler is called with the
- * request's `params` and a {Context}, and what it returns is the
- * result sent back; an {RpcError} it raises is sent back as that
- * error, and any other error as an `INTERNAL_ERROR` carrying its
- * message. A notification handler is called the same way and nothing
- * is sent back. A message for a method with no handler goes to the
- * `on_unhandled()` fallback when one is set; without one, a request
- * is answered with `METHOD_NOT_FOUND` and a notification is dropped.
- * A message that is not valid UTF-8, or not valid JSON, is answered
- * with `PARSE_ERROR`.
+ * An endpoint is a {Service}, so its handlers, its fallback and its
+ * batch limit work exactly as a service's do. The connection adds the
+ * other direction: an endpoint calls the other side with `request()`,
+ * `request_batch()`, `send_request()` and `notify()`, and a handler
+ * on one can `defer()` its answer and send it later.
  *
  * ```zuri
  * import rpc
@@ -261,32 +87,33 @@ class Context {
  * client.close()
  * ```
  *
- * An endpoint reads its transport in one of two ways. `serve()` reads
- * and answers until the connection ends, on the isolate that calls
- * it. `listen()` reads on an isolate of its own and returns a
+ * An endpoint reads its transport in one of three ways. `serve()`
+ * reads and answers until the connection ends, on the isolate that
+ * calls it. `listen()` reads on an isolate of its own and returns a
  * `Channel` of what arrives, for a program that waits on other things
  * as well; it passes each one to `dispatch()` when it is ready to
- * handle it. Either way, every handler runs on the isolate that owns
- * the endpoint, and everything is sent from there.
+ * handle it. A program that reads the transport itself, such as one
+ * polling many connections, hands what it reads to `feed()`. Every
+ * handler runs on the isolate that owns the endpoint, and everything
+ * is sent from there.
  *
  * @printable
  */
-class Endpoint {
+class Endpoint < Service {
 
   /**
-   * Returns a new {Endpoint} over `transport`, framing its messages
-   * with a {HeaderFraming}.
+   * Returns a new {Endpoint} over `transport`. Its messages are framed
+   * the way the transport keeps them apart: with the transport's own
+   * `framing()` when it has one, as a WebSocket does, and with a
+   * {HeaderFraming} otherwise.
    *
    * @param any transport: A transport; see `rpc.transport`.
    */
   @new(transport) {
+    parent()
+
     self._transport = transport
-    self._framing = HeaderFraming()
-    self._request_handlers = {}
-    self._notification_handlers = {}
-    self._unhandled = nil
-    self._error_handler = nil
-    self._trace_handler = nil
+    self._framing = _framing_of(transport)
     self._next_id = 1
     self._callbacks = {}
     self._answers = {}
@@ -301,102 +128,12 @@ class Endpoint {
    * Sets how messages are told apart in the stream. Set it before
    * `listen()`, which hands the framing to the isolate it reads on.
    *
-   * @param HeaderFraming|LineFraming framing: Default
-   *    `HeaderFraming()`.
+   * @param HeaderFraming|LineFraming|MessageFraming framing: Default
+   *    the transport's own `framing()`, or `HeaderFraming()`.
    * @returns Endpoint itself.
    */
   set_framing(framing) {
     self._framing = framing
-
-    return self
-  }
-
-  /**
-   * Answers requests for `method` with `handler`, in place of any
-   * handler set for it before.
-   *
-   * @param string method: The method's name. Names starting with
-   *    `rpc.` are reserved by JSON-RPC.
-   * @param function(2) handler: Called with the request's `params`
-   *    and a {Context}; what it returns is the result sent back.
-   * @returns Endpoint itself.
-   * @throws ValueError for a name starting with `rpc.`.
-   */
-  on_request(method: string, handler: function) {
-    _check_method(method)
-    self._request_handlers[method] = handler
-
-    return self
-  }
-
-  /**
-   * Handles notifications for `method` with `handler`, in place of
-   * any handler set for it before.
-   *
-   * @param string method: The method's name. Names starting with
-   *    `rpc.` are reserved by JSON-RPC.
-   * @param function(2) handler: Called with the notification's
-   *    `params` and a {Context}; what it returns is ignored.
-   * @returns Endpoint itself.
-   * @throws ValueError for a name starting with `rpc.`.
-   */
-  on_notification(method: string, handler: function) {
-    _check_method(method)
-    self._notification_handlers[method] = handler
-
-    return self
-  }
-
-  /**
-   * Handles every request and notification whose method has no
-   * handler of its own, in place of any fallback set before. It is
-   * called as the other handlers are, with `context.method` naming
-   * the method. For a request, what it returns is the result sent
-   * back, and raising an {RpcError} with `METHOD_NOT_FOUND` refuses
-   * the method as an endpoint without a fallback would.
-   *
-   * A method whose name starts with `rpc.` never reaches it: JSON-RPC
-   * reserves those names, so such a request is answered with
-   * `METHOD_NOT_FOUND` and such a notification is dropped.
-   *
-   * @param function(2) handler: Called with the message's `params`
-   *    and a {Context}.
-   * @returns Endpoint itself.
-   */
-  on_unhandled(handler: function) {
-    self._unhandled = handler
-
-    return self
-  }
-
-  /**
-   * Called with every problem the other side is not told about: an
-   * error a notification handler raised, an error other than an
-   * {RpcError} a request handler raised, an error a `send_request()`
-   * callback raised, a response nothing was waiting for, and a
-   * connection that failed.
-   *
-   * @param function(2) handler: Called with the error and the
-   *    message it concerns, as a dictionary, or `nil` when there is
-   *    no one message.
-   * @returns Endpoint itself.
-   */
-  on_error(handler: function) {
-    self._error_handler = handler
-
-    return self
-  }
-
-  /**
-   * Called with the text of every message, as it is sent and as it
-   * arrives, for logging a conversation.
-   *
-   * @param function(2) handler: Called with `'in'` or `'out'` and the
-   *    message's JSON text.
-   * @returns Endpoint itself.
-   */
-  on_trace(handler: function) {
-    self._trace_handler = handler
 
     return self
   }
@@ -649,39 +386,37 @@ class Endpoint {
 
   /**
    * Handles one message already decoded from JSON, or a batch of
-   * them, exactly as if it had just arrived.
+   * them, exactly as if it had just arrived, and sends whatever answer
+   * it has.
    *
    * @param any value: A value as `json.decode()` returns it.
    */
   handle(value) {
-    if !is_list(value) {
-      var answer = self._handle_one(value)
+    var answer = self._answers_for(value, nil)
 
-      if answer != nil {
-        self.send(answer)
-      }
+    if answer != nil {
+      self.send(answer)
+    }
+  }
 
+  /**
+   * Handles every message `data` completes, for a program that reads
+   * the transport itself rather than through `serve()` or `listen()`,
+   * such as one polling many connections. Empty `data` ends the
+   * connection, as an empty read does.
+   *
+   * @param bytes data: The next bytes read from the transport.
+   * @throws RpcFramingError when the stream cannot be read past a
+   *    message.
+   */
+  feed(data: bytes) {
+    if data.is_empty() {
+      self._end()
       return
     }
 
-    if value.is_empty() {
-      var empty = RpcError(INVALID_REQUEST, 'Invalid Request: a batch must not be empty')
-      self.send(Response.failure(nil, empty))
-      return
-    }
-
-    var answers = []
-
-    for entry in value {
-      var answer = self._handle_one(entry)
-
-      if answer != nil {
-        answers.append(answer)
-      }
-    }
-
-    if !answers.is_empty() {
-      self.send(answers)
+    for body in self._framing.feed(data) {
+      self.dispatch(_decode(body))
     }
   }
 
@@ -728,30 +463,13 @@ class Endpoint {
     return id
   }
 
-  _trace(direction: string, text: string) {
-    if self._trace_handler != nil {
-      self._trace_handler(direction, text)
-    }
-  }
-
-  _report(error, value) {
-    if self._error_handler != nil {
-      self._error_handler(error, value)
-    }
-  }
-
   # Reads the transport once and answers every message that completes.
   _pump() {
-    var data = self._transport.read(_CHUNK)
+    self.feed(self._transport.read(_CHUNK))
+  }
 
-    if data.is_empty() {
-      self._end()
-      return
-    }
-
-    for body in self._framing.feed(data) {
-      self.dispatch(_decode(body))
-    }
+  _can_defer() {
+    return true
   }
 
   _end() {
@@ -841,39 +559,6 @@ class Endpoint {
     }
   }
 
-  # Handles one message and returns the answer to send, or `nil` when
-  # nothing is to be sent now.
-  _handle_one(value) {
-    var incoming = nil
-
-    catch {
-      incoming = messages.read(value)
-    } as error {
-      if !instance_of(error, RpcError) {
-        raise error
-      }
-
-      if _looks_like_response(value) {
-        self._report(error, value)
-        return nil
-      }
-
-      return Response.failure(_answer_id(value), error)
-    }
-
-    if instance_of(incoming, Response) {
-      self._accept(incoming)
-      return nil
-    }
-
-    if instance_of(incoming, Notification) {
-      self._notify(incoming, value)
-      return nil
-    }
-
-    return self._call(incoming, value)
-  }
-
   _accept(response) {
     var id = response.id
 
@@ -889,78 +574,6 @@ class Endpoint {
       return
     }
 
-    var stray = RpcError(INVALID_REQUEST, 'a response to #${id}, which nothing is waiting for')
-    self._report(stray, response.to_dict())
-  }
-
-  # The handler for `method` from `handlers`, the fallback when it has
-  # none, or `nil`. Reserved names never fall back.
-  _handler_for(handlers: dict, method: string) {
-    var handler = handlers.get(method, nil)
-
-    if handler == nil and !method.starts_with('rpc.') {
-      handler = self._unhandled
-    }
-
-    return handler
-  }
-
-  _notify(notification, value) {
-    var handler = self._handler_for(self._notification_handlers, notification.method)
-
-    if handler == nil {
-      return
-    }
-
-    catch {
-      handler(notification.params, Context(self, nil, notification.method, false))
-    } as error {
-      self._report(error, value)
-    }
-  }
-
-  _call(request, value) {
-    var handler = self._handler_for(self._request_handlers, request.method)
-
-    if handler == nil {
-      var missing = RpcError(METHOD_NOT_FOUND, 'Method not found: ${request.method}')
-      return Response.failure(request.id, missing)
-    }
-
-    var context = Context(self, request.id, request.method, true)
-    var result = nil
-
-    catch {
-      result = handler(request.params, context)
-    } as error {
-      var failure = error
-
-      if !instance_of(error, RpcError) {
-        self._report(error, value)
-        failure = RpcError(INTERNAL_ERROR, error.message)
-      }
-
-      if context.is_deferred() {
-        if !context.is_answered() {
-          context.fail(failure)
-        }
-
-        return nil
-      }
-
-      return Response.failure(request.id, failure)
-    }
-
-    if context.is_deferred() {
-      return nil
-    }
-
-    return Response.success(request.id, result)
-  }
-}
-
-def _check_method(method: string) {
-  if method.starts_with('rpc.') {
-    raise ValueError("method names starting with 'rpc.' are reserved by JSON-RPC")
+    parent._accept(response)
   }
 }

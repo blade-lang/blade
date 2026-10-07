@@ -162,3 +162,28 @@ class RpcTimeoutError < Error {
     self.type = 'RpcTimeoutError'
   }
 }
+
+/**
+ * Raised by an {HttpClient} when the server answers with an HTTP
+ * status that carries no JSON-RPC answer: anything other than `200`,
+ * or `202` and `204` for a message that needs no answer, unless the
+ * body is a JSON-RPC answer all the same.
+ */
+class RpcHttpError < Error {
+
+  /**
+   * Returns a new {RpcHttpError}.
+   *
+   * @param int status: The HTTP status the server answered with.
+   * @param string message: What went wrong.
+   * @param string body: The body the server sent with it, as text;
+   *    `''` for none.
+   */
+  @new(status: int, message: string, body: string) {
+    parent(message)
+
+    self.type = 'RpcHttpError'
+    self.status = status
+    self.body = body
+  }
+}

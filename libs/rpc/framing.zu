@@ -4,7 +4,10 @@
  * How messages are told apart in a stream of bytes. A stream carries
  * one message after another with nothing to mark where one ends, so
  * each is framed: {HeaderFraming} puts a header giving its length in
- * front of it, and {LineFraming} ends it with a line break.
+ * front of it, and {LineFraming} ends it with a line break. A
+ * transport that already keeps messages apart, as a WebSocket does,
+ * needs no framing of its own, and {MessageFraming} takes each of its
+ * reads as one whole message.
  *
  * A framing is fed the bytes as they arrive, in whatever pieces they
  * arrive in, and hands back each message once the whole of it is
@@ -370,6 +373,106 @@ class LineFraming {
    */
   to_string() {
     return 'LineFraming(${self._buffer.length()} bytes pending)'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+/**
+ * Takes each piece it is fed as one whole message, for a transport
+ * that keeps messages apart itself, such as a WebSocket, whose every
+ * read returns exactly one message. Framing a message adds nothing to
+ * it.
+ *
+ * ```zuri
+ * import rpc
+ *
+ * var framing = rpc.MessageFraming()
+ *
+ * echo framing.feed('{"a":1}'.to_bytes())[0].to_string()  # {"a":1}
+ * echo framing.frame('{"b":2}').to_string()               # {"b":2}
+ * ```
+ *
+ * @printable
+ */
+class MessageFraming {
+
+  /**
+   * Returns a new {MessageFraming} with a maximum message size of
+   * `DEFAULT_MAX_SIZE`.
+   */
+  @new() {
+    self._max_size = DEFAULT_MAX_SIZE
+  }
+
+  /**
+   * Sets the largest message, in bytes, that `feed()` accepts.
+   *
+   * @param int size: Default `DEFAULT_MAX_SIZE`, 64 MiB.
+   * @returns MessageFraming itself.
+   */
+  set_max_size(size: int) {
+    self._max_size = size
+
+    return self
+  }
+
+  /**
+   * The largest message, in bytes, that `feed()` accepts.
+   *
+   * @returns int
+   */
+  max_size() {
+    return self._max_size
+  }
+
+  /**
+   * How many bytes are held waiting for the rest of a message: always
+   * `0`, since every piece is a message of its own.
+   *
+   * @returns int
+   */
+  pending() {
+    return 0
+  }
+
+  /**
+   * Takes one whole message and returns it, alone in a list. Empty
+   * `data` holds no message and returns an empty list.
+   *
+   * @param bytes data: One whole message.
+   * @returns list[bytes]
+   * @throws RpcFramingError when the message is larger than
+   *    `max_size()`.
+   */
+  feed(data: bytes) {
+    if data.length() > self._max_size {
+      var size = data.length()
+      raise RpcFramingError('a message of ${size} bytes is over the ${self._max_size}-byte limit')
+    }
+
+    return data.is_empty() ? [] : [data]
+  }
+
+  /**
+   * The bytes that send `message`: its text, as it is.
+   *
+   * @param string|bytes message: The message's text.
+   * @returns bytes
+   */
+  frame(message) {
+    return is_bytes(message) ? message : message.to_bytes()
+  }
+
+  /**
+   * This framing as `MessageFraming()`.
+   *
+   * @returns string
+   */
+  to_string() {
+    return 'MessageFraming()'
   }
 
   @to_string() {

@@ -1,0 +1,408 @@
+/**
+ * @module http
+ *
+ * JSON-RPC over HTTP, both ends of it. Each message, or batch, is the
+ * body of a `POST`, and its answer is the body of the response, so
+ * every exchange stands on its own: no connection is kept between
+ * calls, and nothing is framed.
+ *
+ * `http_handler()` serves a {Service} from a route of an `http`
+ * server, and {HttpClient} calls a JSON-RPC service over HTTP.
+ *
+ * The statuses on the wire follow common practice:
+ *
+ * | Status | When |
+ * | --- | --- |
+ * | `200` | an answer, whether it is a result or a JSON-RPC error |
+ * | `204` | nothing to answer: a notification, or a batch of them |
+ * | `405` | a method other than `POST` |
+ * | `415` | a body that is not `application/json` in UTF-8 |
+ *
+ * A JSON-RPC error never changes the status: `METHOD_NOT_FOUND` comes
+ * back as a `200` whose body says so. The `http` server's own limits
+ * apply first, so a body over its `max_body_size` is refused with
+ * `413` before it reaches the service.
+ *
+ * Re-exported by `rpc`.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import .error { * }
+import .message { Request, Notification, Response }
+import .message as messages
+
+# The media types a JSON-RPC body is sent as: `application/json`, and
+# the two that earlier drafts of JSON-RPC over HTTP named, which some
+# clients still send.
+const _MEDIA_TYPES = ['application/json', 'application/json-rpc', 'application/jsonrequest']
+
+# What is wrong with a request's `Content-Type`, or `nil` when it is
+# one a JSON-RPC body is sent as.
+def _media_problem(content_type) {
+  if content_type == nil {
+    return 'a JSON-RPC request needs a Content-Type of application/json'
+  }
+
+  var parts = content_type.split(';')
+  var media = parts[0].trim().lower()
+
+  if !_MEDIA_TYPES.contains(media) {
+    return 'a JSON-RPC request is application/json, not ${media}'
+  }
+
+  for part in parts[1, parts.length()] {
+    var setting = part.trim().lower()
+
+    if setting.starts_with('charset=') {
+      var charset = setting[8, setting.length()].trim().replace('"', '')
+
+      if charset != 'utf-8' and charset != 'utf8' {
+        return 'a JSON-RPC request is UTF-8, not ${charset}'
+      }
+    }
+  }
+
+  return nil
+}
+
+# Answers one HTTP request with `service`.
+def _serve(service, request, response) {
+  if request.method != 'POST' {
+    response.header('Allow', 'POST')
+    response.text('JSON-RPC is sent with POST\n', 405)
+    return
+  }
+
+  var problem = _media_problem(request.headers.get('content-type', nil))
+
+  if problem != nil {
+    response.text('${problem}\n', 415)
+    return
+  }
+
+  var body = request.body == nil ? bytes(0) : request.body
+  var answer = service.answer(body, request)
+
+  if answer == nil {
+    response.status = 204
+    return
+  }
+
+  response.header('Content-Type', 'application/json')
+  response.write(answer)
+}
+
+/**
+ * A route handler for an `http` server that answers JSON-RPC with
+ * `service`: register it for `POST` on whatever path the service
+ * lives at.
+ *
+ * ```zuri,ignore
+ * import http
+ * import rpc
+ *
+ * def setup(server) {
+ *   var calculator = rpc.Service()
+ *     .on_request('add', @(params) => params[0] + params[1])
+ *
+ *   server.post('/rpc', rpc.http_handler(calculator))
+ * }
+ *
+ * http.serve(setup, { port: 8545 })
+ * ```
+ *
+ * Every handler of the service is given the `http` request in
+ * `context.request`, for its headers, its client's address, or what a
+ * middleware put in its `context`. A request cannot be deferred, since
+ * its answer is the response to the HTTP request it came in.
+ *
+ * Registered for every method with `server.any()`, the handler
+ * answers anything other than `POST` with `405` and an `Allow`
+ * header, as the other methods should be answered.
+ *
+ * @param Service service: What answers the messages.
+ * @returns function(2): A handler taking an `HttpRequest` and an
+ *    `HttpResponse`.
+ */
+def http_handler(service) {
+  return @(request, response) {
+    _serve(service, request, response)
+  }
+}
+
+# The text of a response's body, or `nil` when it is not UTF-8.
+def _body_text(reply) {
+  if reply.body == nil {
+    return ''
+  }
+
+  var text = reply.body.to_string()
+
+  return text.to_bytes() == reply.body ? text : nil
+}
+
+/**
+ * Calls a JSON-RPC service over HTTP: each call is one `POST` to
+ * `url`, and its answer is the response.
+ *
+ * ```zuri,ignore
+ * import rpc
+ *
+ * var node = rpc.HttpClient('https://node.example.com', {
+ *   headers: { Authorization: 'Bearer ${token}' },
+ *   timeout: 10,
+ * })
+ *
+ * echo node.request('eth_blockNumber', [])
+ *
+ * var answers = node.request_batch([
+ *   ['eth_blockNumber', []],
+ *   ['eth_gasPrice', []],
+ * ])
+ * ```
+ *
+ * An answer is matched to its call by `id`, never by position, so a
+ * batch's answers come back in the order of its calls whatever order
+ * the server sent them in.
+ *
+ * Some servers send a JSON-RPC error with a status other than `200`.
+ * When the body of such a response is a JSON-RPC answer, it is read
+ * like any other answer, and its error raises from the call. Any
+ * other status raises an {RpcHttpError}.
+ *
+ * @printable
+ */
+class HttpClient {
+
+  /**
+   * Returns a new {HttpClient} calling the service at `url`.
+   *
+   * | Option | Meaning |
+   * | --- | --- |
+   * | `headers` | headers sent with every call, such as `Authorization` |
+   * | `timeout` | the most seconds to wait for an answer |
+   * | `client` | the `http.HttpClient` to send through |
+   *
+   * `headers` defaults to none. `timeout` defaults to `nil`, which
+   * leaves the wait to the `http` client's own read timeout. `client`
+   * defaults to a new `http.HttpClient`; pass one for its proxy, TLS
+   * and connection settings.
+   *
+   * @param string url: Where the service is, an `http:` or `https:`
+   *    URL.
+   * @param ?dict options: Default `nil`, every option at its default.
+   */
+  @new(url: string, options: ?dict) {
+    import http
+
+    var settings = options == nil ? {} : options
+    var client = settings.get('client', nil)
+
+    self.url = url
+    self._client = client == nil ? http.client() : client
+    self._headers = settings.get('headers', {})
+    self._timeout = settings.get('timeout', nil)
+    self._next_id = 1
+  }
+
+  /**
+   * Calls `method` and returns its result.
+   *
+   * @param string method
+   * @param list|dict|nil params
+   * @param ?number timeout: The most seconds to wait for the answer.
+   *    Default `nil`, the client's own `timeout`.
+   * @returns any: The result the service answered with.
+   * @throws RpcError when the service answers with an error, or its
+   *    answer is not a valid answer to the call.
+   * @throws RpcHttpError when the server answers with an HTTP status
+   *    that carries no answer.
+   */
+  request(method: string, params, timeout: ?number) {
+    var id = self._take_id()
+    var answer = self.send(Request(method, params, id), timeout)
+
+    if answer == nil {
+      raise RpcError(INTERNAL_ERROR, 'the server sent no answer to ${method}')
+    }
+
+    if is_list(answer) or !instance_of(answer, Response) {
+      var detail = 'the server answered ${method} with something other than one response'
+      raise RpcError(INVALID_REQUEST, detail)
+    }
+
+    # An error that names no request is the server saying it could
+    # not read the call at all.
+    if answer.id == nil and answer.is_error() {
+      raise answer.error
+    }
+
+    if answer.id != id {
+      raise RpcError(INVALID_REQUEST, 'the server answered #${answer.id} to request #${id}')
+    }
+
+    if answer.is_error() {
+      raise answer.error
+    }
+
+    return answer.result
+  }
+
+  /**
+   * Sends a notification: calls `method` and expects nothing back.
+   *
+   * @param string method
+   * @param list|dict|nil params: Default `nil`, which sends none.
+   * @throws RpcHttpError when the server answers with an HTTP status
+   *    that carries no answer.
+   */
+  notify(method: string, params) {
+    self.send(Notification(method, params), nil)
+  }
+
+  /**
+   * Sends several requests as one batch, in one `POST`, and returns
+   * every answer in the order of `calls`.
+   *
+   * @param list calls: Each call as a pair, `[method, params]`.
+   * @param ?number timeout: The most seconds to wait for the answer.
+   *    Default `nil`, the client's own `timeout`.
+   * @returns list: For each call, in order, the result the service
+   *    answered with, or the {RpcError} it answered with. A call the
+   *    service left unanswered holds an {RpcError} with code
+   *    `INTERNAL_ERROR` saying so.
+   * @throws ValueError when `calls` is empty, or a call is not a
+   *    `[method, params]` pair.
+   * @throws RpcError when the service refuses the batch whole, or its
+   *    answer is not a batch of answers.
+   * @throws RpcHttpError when the server answers with an HTTP status
+   *    that carries no answer.
+   */
+  request_batch(calls: list, timeout: ?number) {
+    if calls.is_empty() {
+      raise ValueError('a batch must hold at least one call')
+    }
+
+    var batch = []
+
+    for call in calls {
+      if !is_list(call) or call.length() != 2 or !is_string(call[0]) {
+        raise ValueError('each call is a [method, params] pair')
+      }
+
+      batch.append(Request(call[0], call[1], self._take_id()))
+    }
+
+    var answer = self.send(batch, timeout)
+
+    if answer == nil {
+      raise RpcError(INTERNAL_ERROR, 'the server sent no answer to the batch')
+    }
+
+    if !is_list(answer) {
+      if instance_of(answer, Response) and answer.is_error() {
+        raise answer.error
+      }
+
+      var detail = 'the server answered a batch with something other than a batch'
+      raise RpcError(INVALID_REQUEST, detail)
+    }
+
+    var by_id = {}
+
+    for entry in answer {
+      if instance_of(entry, Response) and entry.id != nil {
+        by_id[entry.id] = entry
+      }
+    }
+
+    return batch.map(@(call) {
+      var entry = by_id.get(call.id, nil)
+
+      if entry == nil {
+        return RpcError(INTERNAL_ERROR, 'the server did not answer #${call.id}')
+      }
+
+      return entry.is_error() ? entry.error : entry.result
+    })
+  }
+
+  /**
+   * Sends a message as it is, a {Request}, a {Notification}, or a list
+   * of them as a batch, and returns the answer as it came: a
+   * {Response}, a list of what the batch's answer holds, or `nil` when
+   * the server answered with nothing.
+   *
+   * @param Request|Notification|list message
+   * @param ?number timeout: The most seconds to wait for the answer.
+   *    Default `nil`, the client's own `timeout`.
+   * @returns Response|list|nil
+   * @throws RpcError when the answer is not valid JSON-RPC.
+   * @throws RpcHttpError when the server answers with an HTTP status
+   *    that carries no answer.
+   */
+  send(message, timeout: ?number) {
+    var headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+
+    for name, value in self._headers {
+      headers[name] = value
+    }
+
+    var options = { headers }
+    var seconds = timeout == nil ? self._timeout : timeout
+
+    if seconds != nil {
+      options.timeout = seconds * 1000
+    }
+
+    var reply = self._client.post(self.url, messages.encode(message), options)
+    var text = _body_text(reply)
+
+    if reply.status == 200 {
+      if text == nil {
+        raise RpcError(PARSE_ERROR, 'Parse error: the answer is not valid UTF-8')
+      }
+
+      return text.trim().is_empty() ? nil : messages.decode(text)
+    }
+
+    if reply.status == 202 or reply.status == 204 {
+      return nil
+    }
+
+    # Some servers carry a JSON-RPC error on another status. When the
+    # body is an answer, it is the answer.
+    if text != nil and reply.media_type() == 'application/json' and !text.trim().is_empty() {
+      catch {
+        return messages.decode(text)
+      } as error {
+        # Not an answer after all; the status is what there is to say.
+      }
+    }
+
+    var reason = 'the server answered with HTTP ${reply.status} ${reply.reason_phrase()}'
+
+    raise RpcHttpError(reply.status, reason, text == nil ? '' : text)
+  }
+
+  /**
+   * This client as `HttpClient(url)`.
+   *
+   * @returns string
+   */
+  to_string() {
+    return 'HttpClient(${self.url})'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+
+  _take_id() {
+    var id = self._next_id
+    self._next_id++
+
+    return id
+  }
+}

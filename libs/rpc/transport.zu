@@ -12,14 +12,18 @@
  *
  * A transport may also have `can_listen()`, true when another isolate
  * can read it while the one that made it writes to it, which
- * `Endpoint.listen()` relies on. Without the method, it is false.
+ * `Endpoint.listen()` relies on. Without the method, it is false. And
+ * a transport that keeps messages apart itself has `framing()`,
+ * returning the framing an endpoint over it uses unless told
+ * otherwise.
  *
  * {StdioTransport} talks over the program's own standard input and
  * output, {SocketTransport} over a connected socket,
  * {ProcessTransport} over the standard input and output of a child
- * process, and {ChannelTransport} over isolate channels, two of
- * which `pipe()` joins into a connection between isolates. Any other
- * object with the three methods works the same.
+ * process, {WebSocketTransport} over a WebSocket, and
+ * {ChannelTransport} over isolate channels, two of which `pipe()`
+ * joins into a connection between isolates. Any other object with the
+ * three methods works the same.
  *
  * Re-exported by `rpc`.
  *
@@ -29,6 +33,7 @@
 import io
 import isolate
 import .error { RpcClosedError }
+import .framing { MessageFraming }
 
 /**
  * Talks over the program's own standard input and output: what it
@@ -108,8 +113,8 @@ class StdioTransport {
  * `UnixStream` or a `TlsStream`, or anything else with `read()`,
  * `write_all()` and `close()`.
  *
- * A socket belongs to the isolate that holds it, so an endpoint
- * serving one reads it with `serve()` rather than `listen()`.
+ * A socket is held by one isolate at a time, so an endpoint serving
+ * one reads it with `serve()` rather than `listen()`.
  *
  * @printable
  */
@@ -157,7 +162,7 @@ class SocketTransport {
   }
 
   /**
-   * False: a socket is read by the isolate that holds it.
+   * False: a socket is held by one isolate at a time.
    *
    * @returns bool
    */
@@ -197,9 +202,9 @@ class SocketTransport {
  * echo calculator.request('add', [2, 3])
  * ```
  *
- * The child belongs to the isolate that spawned it, so an endpoint
- * talking to it reads with `serve()` and `request()` rather than
- * `listen()`.
+ * The child's streams are held by the isolate that spawned it, so an
+ * endpoint talking to it reads with `serve()` and `request()` rather
+ * than `listen()`.
  *
  * @printable
  */
@@ -261,6 +266,107 @@ class ProcessTransport {
    */
   to_string() {
     return 'ProcessTransport()'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+/**
+ * Talks over a WebSocket from `http.websocket`, on either end of it:
+ * one `websocket.accept()` returned in a route handler, or one
+ * `websocket.connect()` opened. Each message is one WebSocket message,
+ * sent as text, so an endpoint over it uses a {MessageFraming}.
+ *
+ * ```zuri,ignore
+ * import http.websocket
+ * import rpc
+ *
+ * var node = rpc.endpoint(rpc.websocket(websocket.connect('ws://127.0.0.1:8546')))
+ *
+ * echo node.request('eth_blockNumber', [])
+ * ```
+ *
+ * A WebSocket is held by one isolate at a time, so an endpoint over
+ * one reads with `serve()` and `request()` rather than `listen()`.
+ *
+ * @printable
+ */
+class WebSocketTransport {
+
+  /**
+   * Returns a new {WebSocketTransport} over `socket`.
+   *
+   * @param http.websocket.WebSocket socket: An open WebSocket.
+   */
+  @new(socket) {
+    self._socket = socket
+  }
+
+  /**
+   * The next message that arrives, as its bytes, or empty bytes once
+   * the connection has closed. An empty message is skipped, since it
+   * holds no JSON-RPC message.
+   *
+   * @param int max: Ignored; each read returns one message whole.
+   * @returns bytes
+   */
+  read(max: int) {
+    while true {
+      var message = self._socket.receive()
+
+      if message == nil or message.is_close() {
+        return bytes(0)
+      }
+
+      if !message.data.is_empty() {
+        return message.data
+      }
+    }
+  }
+
+  /**
+   * Sends `data` as one text message.
+   *
+   * @param bytes data: One message's UTF-8 text.
+   */
+  write(data: bytes) {
+    self._socket.send(data.to_string())
+  }
+
+  /**
+   * Closes the WebSocket, with the closing handshake.
+   */
+  close() {
+    self._socket.close()
+  }
+
+  /**
+   * False: a WebSocket is held by one isolate at a time.
+   *
+   * @returns bool
+   */
+  can_listen() {
+    return false
+  }
+
+  /**
+   * A {MessageFraming}: a WebSocket keeps messages apart itself.
+   *
+   * @returns MessageFraming
+   */
+  framing() {
+    return MessageFraming()
+  }
+
+  /**
+   * This transport as `WebSocketTransport()`.
+   *
+   * @returns string
+   */
+  to_string() {
+    return 'WebSocketTransport()'
   }
 
   @to_string() {

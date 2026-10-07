@@ -1,10 +1,10 @@
 # JSON-RPC
 
-The `rpc` module is JSON-RPC 2.0: the messages, the two common ways of
-telling them apart in a stream, the transports that carry them, and an
-endpoint that hands each call to a handler and makes calls of its own.
-It is written in Zuri on top of `json`, `isolate` and `net`, and it
-holds to the specification exactly.
+The `rpc` module is JSON-RPC 2.0, on both ends and over everything it
+travels on: as the body of an HTTP request, over a WebSocket, a TCP or
+TLS socket, a Unix domain socket, a pipe to a child process, or any
+other stream of bytes. It is written in Zuri on top of `json`, `http`,
+`isolate` and `net`, and it holds to the specification exactly.
 
 JSON-RPC is a remote procedure call protocol, and a small one. One
 program sends the name of a method and its parameters; the other runs
@@ -12,14 +12,16 @@ it and sends back the result or an error. That is very nearly all of
 it, and the smallness is the point. The protocol says nothing about
 what the methods are, how the two programs are connected, or which of
 them is in charge, so it fits wherever two programs need to call each
-other. Blockchain nodes publish their whole API through it. Wallets,
-trading systems, editors and their tools, plugin hosts and internal
-services use it across pipes, sockets and HTTP.
+other. Services call each other with it over HTTP. Blockchain nodes
+publish their whole API through it, over HTTP for calls and over
+WebSockets for what they push to subscribers. Mining pools, wallets,
+trading systems, editors and their tools, and plugin hosts speak it
+over sockets and pipes.
 
-The module is built in the same spirit. Each layer stands on its own: a
-program that only reads and writes messages uses the messages, one that
-already has a connection of its own adds a framing, and one that wants
-to be called puts an endpoint on top.
+The module is built in the same spirit. A service answers messages and
+nothing else, so the same service answers whatever carried the message
+there; an HTTP route, a WebSocket and a socket server are each a few
+lines around it.
 
 - [Following Along](#following-along)
 - [Introduction](#introduction)
@@ -29,22 +31,31 @@ to be called puts an endpoint on top.
   - [Errors and Their Codes](#errors-and-their-codes)
   - [Reading and Writing JSON](#reading-and-writing-json)
   - [Batches](#batches)
+- [Services](#services)
+  - [Answering Requests](#answering-requests)
+  - [Failing Properly](#failing-properly)
+  - [Notifications](#notifications)
+  - [Methods Without a Handler](#methods-without-a-handler)
+  - [Batches and Their Limit](#batches-and-their-limit)
+- [JSON-RPC Over HTTP](#json-rpc-over-http)
+  - [Serving a Service](#serving-a-service)
+  - [Calling a Service](#calling-a-service)
+  - [Statuses](#statuses)
+  - [Who Is Calling](#who-is-calling)
 - [Framing](#framing)
   - [Content-Length Headers](#content-length-headers)
   - [One Message to a Line](#one-message-to-a-line)
+  - [One Message to Each Read](#one-message-to-each-read)
   - [Choosing a Framing](#choosing-a-framing)
   - [Limits](#limits)
 - [Transports](#transports)
   - [Standard Streams](#standard-streams)
   - [Sockets](#sockets)
   - [Child Processes](#child-processes)
+  - [WebSockets](#websockets)
   - [Between Isolates](#between-isolates)
   - [A Transport of Your Own](#a-transport-of-your-own)
 - [Endpoints](#endpoints)
-  - [Answering Requests](#answering-requests)
-  - [Failing Properly](#failing-properly)
-  - [Notifications](#notifications)
-  - [Methods Without a Handler](#methods-without-a-handler)
   - [Calling the Other Side](#calling-the-other-side)
   - [Sending a Batch](#sending-a-batch)
   - [Answering Later](#answering-later)
@@ -52,51 +63,38 @@ to be called puts an endpoint on top.
 - [Reading the Connection](#reading-the-connection)
   - [Serving](#serving)
   - [Listening While Doing Other Work](#listening-while-doing-other-work)
+  - [Reading It Yourself](#reading-it-yourself)
   - [Timeouts](#timeouts)
   - [Stopping and Closing](#stopping-and-closing)
+- [Serving Many Connections](#serving-many-connections)
 - [Watching the Conversation](#watching-the-conversation)
-- [JSON-RPC Over HTTP](#json-rpc-over-http)
 - [Errors](#errors)
 - [What the Module Refuses](#what-the-module-refuses)
 - [Module Reference](#module-reference)
 
 ## Following Along
 
-Most of this chapter builds on one shape: a server answering on an
-isolate of its own, and a client calling it. This is it:
+A service says which methods it answers, and answers one message at a
+time:
 
 ```zuri
 import rpc
-import isolate
 
-var ends = rpc.pipe()
+var calculator = rpc.Service()
+  .on_request('add', @(params) => params[0] + params[1])
 
-isolate.spawn(@(transport) {
-  import rpc
-
-  rpc.endpoint(transport)
-    .on_request('greet', @(params) => 'Hello, ${params.name}!')
-    .serve()
-}, ends[1])
-
-var client = rpc.endpoint(ends[0])
-
-echo client.request('greet', { name: 'Zuri' })
-client.close()
+echo calculator.answer('{"jsonrpc": "2.0", "id": 1, "method": "add", "params": [2, 3]}')
 ```
 
 ```console
-Hello, Zuri!
+{"jsonrpc":"2.0","id":1,"result":5}
 ```
 
-`rpc.pipe()` makes the two ends of a connection between isolates. The
-server takes one end, says which methods it answers, and serves until
-the connection ends. The client takes the other end, calls `greet`,
-and waits for the answer. Closing the client's end ends the server's
-`serve()` as well.
-
-Swap the pipe for a socket or a child process and nothing else in the
-program changes. That is the whole design.
+The message went in as JSON text and the answer came out the same way.
+Nothing touched a network. Everything else in this chapter is about
+how the message gets to a service and how its answer gets back: as the
+body of an HTTP request, over a WebSocket or a socket, or between two
+isolates of one program.
 
 ## Introduction
 
@@ -123,23 +121,27 @@ Messages can also travel together as a **batch**, a JSON array of
 them. The requests in a batch are answered together, as an array of
 responses, each matched to its request by `id`.
 
-Neither side is the client. Either may send requests and notifications
-at any time, including while it is in the middle of answering one.
-Where this chapter says client and server, it means only who connected
-to whom.
-
-The protocol has no transport of its own. Anything that moves bytes
-between two programs carries it, as long as both ends agree on where
-one message stops and the next begins. That agreement is the framing.
+The protocol has no transport of its own, and two kinds carry it. In
+an **exchange**, such as an HTTP request and its response, one message
+or batch goes each way and that is the end of it. On a **connection**,
+such as a WebSocket or a socket, messages flow both ways for as long as
+it stays open, and neither side is the client: either may send
+requests and notifications at any time, including while it is in the
+middle of answering one. On a stream of bytes, both ends must also
+agree on where one message stops and the next begins. That agreement
+is the framing.
 
 The module has a layer for each of these:
 
 | Layer | What it holds |
 | --- | --- |
 | messages | `Request`, `Notification`, `Response`, `RpcError`, and `encode()`, `decode()` and `read()` |
-| framing | `HeaderFraming` and `LineFraming` |
-| transports | `StdioTransport`, `SocketTransport`, `ProcessTransport`, `ChannelTransport` and `pipe()` |
-| endpoints | `Endpoint` and the `Context` its handlers are given |
+| services | `Service`, and the `Context` its handlers are given |
+| HTTP | `http_handler()` to serve a service, and `HttpClient` to call one |
+| framing | `HeaderFraming`, `LineFraming` and `MessageFraming` |
+| transports | `StdioTransport`, `SocketTransport`, `ProcessTransport`, `WebSocketTransport`, `ChannelTransport` and `pipe()` |
+| endpoints | `Endpoint`, a service on a connection |
+| servers | `serve()`, an endpoint for every connection to a listening socket |
 
 `import rpc` reaches all of it.
 
@@ -367,6 +369,358 @@ refused: Invalid Request: the jsonrpc member must be '2.0'
 An empty batch, `[]`, is not a message at all, and decoding one raises
 `INVALID_REQUEST`.
 
+## Services
+
+A `Service` holds the handler for every method a program answers.
+`answer()` takes one message, or a batch, as JSON text or as its
+bytes, and returns the JSON text of the answer, or `nil` when there is
+nothing to answer.
+
+### Answering Requests
+
+`on_request()` gives a method its handler. The handler is called with
+the request's `params` and a `Context`, and what it returns is the
+result sent back:
+
+```zuri
+import rpc
+
+var service = rpc.Service()
+  .on_request('add', @(params) => params[0] + params[1])
+  .on_request('whoami', @(params, context) => '${context.method} #${context.id}')
+
+echo service.answer('{"jsonrpc": "2.0", "id": 1, "method": "add", "params": [2, 3]}')
+echo service.answer('{"jsonrpc": "2.0", "id": 2, "method": "whoami"}')
+echo service.answer('{"jsonrpc": "2.0", "id": 3, "method": "mul", "params": [2, 3]}')
+```
+
+```console
+{"jsonrpc":"2.0","id":1,"result":5}
+{"jsonrpc":"2.0","id":2,"result":"whoami #2"}
+{"jsonrpc":"2.0","id":3,"error":{"code":-32601,"message":"Method not found: mul"}}
+```
+
+The `Context` names the request's `id` and `method`, the `endpoint`
+handling it, and the `request` it arrived in, which for a message from
+HTTP is the HTTP request. A handler that has no use for the context
+leaves it out, as `add` does. A request for a method with no handler is
+answered with `METHOD_NOT_FOUND`, as `mul` is.
+
+A handler is replaced by calling `on_request()` again with the same
+method. Method names that start with `rpc.` are reserved by the
+specification, and `on_request()` refuses them.
+
+A message that is not valid UTF-8, or not valid JSON, is answered with
+`PARSE_ERROR` and an `id` of `nil`, since its `id` cannot be read.
+
+### Failing Properly
+
+A handler fails a request by raising. An `RpcError` is sent back as it
+is, code, message, data and all. Any other error is sent back as an
+`INTERNAL_ERROR` carrying the error's message:
+
+```zuri
+import rpc
+
+var service = rpc.Service()
+  .on_request('divide', @(params) {
+    if params.length() != 2 or params[1] == 0 {
+      raise rpc.RpcError(rpc.INVALID_PARAMS, 'divide takes a number and a non-zero divisor')
+    }
+
+    return params[0] / params[1]
+  })
+  .on_request('save', @(params) {
+    raise Error('the disk is full')
+  })
+
+echo service.answer('{"jsonrpc": "2.0", "id": 1, "method": "divide", "params": [1, 0]}')
+echo service.answer('{"jsonrpc": "2.0", "id": 2, "method": "save", "params": ["notes"]}')
+```
+
+```console
+{"jsonrpc":"2.0","id":1,"error":{"code":-32602,"message":"divide takes a number and a non-zero divisor"}}
+{"jsonrpc":"2.0","id":2,"error":{"code":-32603,"message":"the disk is full"}}
+```
+
+An error that is not an `RpcError` also goes to the service's
+[`on_error()`](#watching-the-conversation) handler, since it is a
+failure in the program rather than a refusal the program meant to
+make. A handler that must not let its failures' messages reach the
+other side catches them and raises an `RpcError` of its own instead.
+
+On the calling side, an error answer raises from `request()` as the
+`RpcError` the other side sent.
+
+### Notifications
+
+`on_notification()` gives a notification its handler. It is called
+the same way, with the `params` and a `Context`, and whatever it
+returns is ignored, since nothing is sent back:
+
+```zuri
+import rpc
+
+var seen = []
+var service = rpc.Service()
+  .on_notification('log', @(params) {
+    seen.append(params.text)
+  })
+
+echo service.answer('{"jsonrpc": "2.0", "method": "log", "params": {"text": "started"}}')
+echo seen
+```
+
+```console
+nil
+[started]
+```
+
+A notification for a method with no handler is dropped, and a
+notification handler that raises sends nothing back either: the error
+goes to `on_error()`. That is the specification's rule, and it is
+deliberate. The sender asked not to be answered.
+
+### Methods Without a Handler
+
+`on_unhandled()` sets a fallback for every request and notification
+whose method has no handler of its own. It is called like any other
+handler, and `context.method` says which method it is standing in for:
+
+```zuri
+import rpc
+
+var service = rpc.Service()
+  .on_unhandled(@(params, context) {
+    if context.method.starts_with('legacy.') {
+      return 'retired: ${context.method}'
+    }
+
+    raise rpc.RpcError(rpc.METHOD_NOT_FOUND, 'Method not found: ${context.method}')
+  })
+
+echo service.answer('{"jsonrpc": "2.0", "id": 1, "method": "legacy.export"}')
+echo service.answer('{"jsonrpc": "2.0", "id": 2, "method": "export"}')
+```
+
+```console
+{"jsonrpc":"2.0","id":1,"result":"retired: legacy.export"}
+{"jsonrpc":"2.0","id":2,"error":{"code":-32601,"message":"Method not found: export"}}
+```
+
+It is the place for a family of methods answered the same way, for a
+proxy that passes calls on, and for logging what a client asks for
+that nothing answers. Raising `METHOD_NOT_FOUND` from it refuses a
+method exactly as a service without a fallback would. Methods whose
+names start with `rpc.` never reach it.
+
+### Batches and Their Limit
+
+A batch is answered as a batch. Each request in it gets its answer,
+in place, and each notification gets none; a batch of nothing but
+notifications has no answer at all:
+
+```zuri
+import rpc
+
+var service = rpc.Service()
+  .on_request('add', @(params) => params[0] + params[1])
+
+echo service.answer('[' +
+  '{"jsonrpc": "2.0", "id": 1, "method": "add", "params": [1, 2]},' +
+  '{"jsonrpc": "2.0", "method": "add", "params": [3, 4]},' +
+  '{"jsonrpc": "2.0", "id": 3, "method": "sub"}' +
+']')
+```
+
+```console
+[{"jsonrpc":"2.0","id":1,"result":3},{"jsonrpc":"2.0","id":3,"error":{"code":-32601,"message":"Method not found: sub"}}]
+```
+
+One message holding a million requests is one message, and a service
+that took it whole would do a million calls' work for it. A batch of
+more than `batch_limit()` messages, `1000` unless set otherwise, is
+refused whole, before any of it runs:
+
+```zuri
+import rpc
+
+var service = rpc.Service()
+  .set_batch_limit(2)
+  .on_request('ping', @() => 'pong')
+
+var call = '{"jsonrpc": "2.0", "id": 1, "method": "ping"}'
+
+echo service.answer('[${call}, ${call}, ${call}]')
+```
+
+```console
+{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid Request: a batch of 3 messages is over the limit of 2"}}
+```
+
+`set_batch_limit(nil)` takes a batch of any size, for a service that
+only ever hears from programs it trusts.
+
+## JSON-RPC Over HTTP
+
+Over HTTP, each message, or batch, is the body of a `POST`, and its
+answer is the body of the response. Every exchange stands on its own:
+nothing is framed, and no connection is kept between calls beyond what
+HTTP keeps for itself. It is how services call each other, and how
+most of the JSON-RPC in the world is spoken.
+
+### Serving a Service
+
+`rpc.http_handler()` turns a service into a route handler for an
+`http` server. Here the server runs on an isolate of its own and the
+client calls it:
+
+```zuri
+import rpc
+import isolate
+
+def serve_calculator(ready) {
+  import http
+  import rpc
+
+  var calculator = rpc.Service()
+    .on_request('add', @(params) => params[0] + params[1])
+
+  var server = http.server(0, '127.0.0.1')
+
+  server.post('/rpc', rpc.http_handler(calculator))
+  server.bind()
+  ready.send(server.socket.local_address().port())
+  server.listen()
+}
+
+var ready = isolate.channel(1)
+var server = isolate.spawn(serve_calculator, ready)
+var calculator = rpc.HttpClient('http://127.0.0.1:${ready.recv()}/rpc')
+
+echo calculator.request('add', [2, 3])
+echo calculator.request_batch([['add', [1, 2]], ['add', [3, 4]]])
+
+server.cancel()
+```
+
+```console
+5
+[3, 7]
+```
+
+In production the service is built in the setup each `http` worker
+runs, and the server spreads its requests across a pool of isolates:
+
+```zuri,ignore
+import http
+import rpc
+
+def setup(server) {
+  var api = rpc.Service()
+    .on_request('add', @(params) => params[0] + params[1])
+
+  server.post('/rpc', rpc.http_handler(api))
+}
+
+http.serve(setup, { host: '0.0.0.0', port: 8545 })
+```
+
+Everything `http` offers a route applies to this one: middleware,
+TLS, HTTP/2, compression, body limits, and the rest of
+[Chapter 15](ch15-00-http.md).
+
+A request that arrives over HTTP is answered in the response to that
+HTTP request, so its handler answers by returning: `context.defer()`
+raises there, since there is no connection to send a later answer on.
+
+### Calling a Service
+
+`rpc.HttpClient` calls a service at a URL. Each call is one `POST`:
+
+```zuri,ignore
+import rpc
+
+var node = rpc.HttpClient('https://node.example.com', {
+  headers: { Authorization: 'Bearer ${token}' },
+  timeout: 10,
+})
+
+echo node.request('eth_blockNumber', [])
+node.notify('log', ['checked the block number'])
+
+var answers = node.request_batch([
+  ['eth_blockNumber', []],
+  ['eth_gasPrice', []],
+])
+```
+
+`request()` returns the result or raises the `RpcError` the service
+answered with. `notify()` expects nothing back. `request_batch()`
+sends every call in one `POST` and returns the answers in the order of
+the calls, whatever order the server sent them in, with each failed
+call's `RpcError` in its place.
+
+The options are `headers`, sent with every call, `timeout`, the most
+seconds to wait for an answer, and `client`, the `http.HttpClient` to
+send through, for its proxy, TLS and connection settings. Each call
+can also take a timeout of its own.
+
+### Statuses
+
+The statuses on the wire follow common practice:
+
+| Status | When |
+| --- | --- |
+| `200` | an answer, whether it is a result or a JSON-RPC error |
+| `204` | nothing to answer: a notification, or a batch of them |
+| `405` | a method other than `POST`, with an `Allow: POST` header |
+| `415` | a body that is not `application/json` in UTF-8 |
+
+A JSON-RPC error never changes the status: `METHOD_NOT_FOUND` is a
+`200` whose body says so. The `http` server's own limits apply before
+the service sees anything, so a body over its `max_body_size` is a
+`413`. Register the handler with `server.any()` and every method other
+than `POST` gets its `405`; with `server.post()`, they get the server's
+`404`.
+
+On the calling side, any other status raises an `RpcHttpError`
+carrying the `status` and the `body`. Some servers send a JSON-RPC
+error with a status other than `200`, as older JSON-RPC over HTTP
+drafts asked for; when the body of such a response is a JSON-RPC
+answer, `HttpClient` reads it as one, and the error raises as the
+`RpcError` it is.
+
+### Who Is Calling
+
+Every handler gets the HTTP request it came in as `context.request`,
+so it can read headers, the client's address, or whatever a middleware
+left in the request's `context`. Authentication belongs in a
+middleware, which refuses a request before the service sees it:
+
+```zuri,ignore
+def setup(server) {
+  var api = rpc.Service()
+    .on_request('balance', @(params, context) {
+      return accounts.balance(context.request.context.user)
+    })
+
+  server.use(@(request, response, next) {
+    var user = tokens.user_for(request.bearer_token())
+
+    if user == nil {
+      response.text('who are you?\n', 401)
+      return
+    }
+
+    request.context.user = user
+    next()
+  })
+
+  server.post('/rpc', rpc.http_handler(api))
+}
+```
+
 ## Framing
 
 A stream of bytes has no edges. A program reading a socket gets bytes
@@ -460,11 +814,37 @@ inside a string is escaped, so a line is always exactly one message.
 A peer that pretty-prints its JSON over several lines cannot use this
 framing.
 
+### One Message to Each Read
+
+`MessageFraming` frames nothing. It is for a transport that keeps
+messages apart itself, a WebSocket above all, whose every read returns
+exactly one message: `feed()` takes each piece as one whole message,
+and `frame()` hands the text back as it is.
+
+```zuri
+import rpc
+
+var framing = rpc.MessageFraming()
+
+echo framing.feed('{"a":1}'.to_bytes())[0].to_string()
+echo framing.frame('{"b":2}').to_string()
+```
+
+```console
+{"a":1}
+{"b":2}
+```
+
+A transport that wants it says so with a `framing()` method of its
+own, and an endpoint over it uses that framing unless told otherwise.
+`rpc.websocket()` does exactly that.
+
 ### Choosing a Framing
 
 Both ends must use the same framing, so the choice is usually made by
-whatever is on the other end. An endpoint uses `HeaderFraming` unless
-told otherwise:
+whatever is on the other end. An endpoint uses its transport's own
+framing when it has one, and `HeaderFraming` otherwise, unless told
+something else:
 
 ```zuri,ignore
 var endpoint = rpc.endpoint(transport).set_framing(rpc.LineFraming())
@@ -476,7 +856,7 @@ message that is too large without reading it.
 
 ### Limits
 
-Both framings refuse a message larger than `max_size()`, 64 MiB by
+Every framing refuses a message larger than `max_size()`, 64 MiB by
 default, and `HeaderFraming` refuses a header block longer than 8 KiB.
 Without them, a peer could make a reader hold any amount of memory by
 never finishing a message.
@@ -594,8 +974,12 @@ sends the address back over a channel for the client to connect to. It
 serves the one connection it accepts, and its `serve()` returns when
 the client closes its end.
 
-A socket is read by the isolate that holds it, so a socket endpoint
-reads with `serve()` and `request()` rather than `listen()`.
+A socket is held by one isolate at a time, so a socket endpoint reads
+with `serve()` and `request()` rather than `listen()`.
+
+This server serves one connection and ends. A server for many clients
+at once is [`rpc.serve()`](#serving-many-connections), which gives
+every connection an endpoint of its own.
 
 ### Child Processes
 
@@ -621,9 +1005,73 @@ child.wait()
 
 Closing the endpoint closes the child's stdin. The calculator above
 reads that as the end of the connection, its `serve()` returns, and
-the program ends, which is what `wait()` waits for. A child belongs to
-the isolate that spawned it, so this endpoint reads with `serve()` and
-`request()` too.
+the program ends, which is what `wait()` waits for. A child's streams
+are held by the isolate that spawned it, so this endpoint reads with
+`serve()` and `request()` too.
+
+### WebSockets
+
+`rpc.websocket()` talks over a WebSocket from `http.websocket`, either
+one a route accepted or one `websocket.connect()` opened. Each
+JSON-RPC message is one WebSocket message, so an endpoint over it uses
+a `MessageFraming` without being told to.
+
+A WebSocket is a connection in both directions, so either side calls
+the other whenever it likes. That is what makes it the transport of
+choice for a server that pushes to its clients, such as a node
+streaming new blocks to whoever subscribed:
+
+```zuri
+import http.websocket
+import rpc
+import isolate
+
+def serve_shop(ready) {
+  import http
+  import http.websocket
+  import rpc
+
+  var server = http.server(0, '127.0.0.1')
+
+  server.get('/ws', @(request, response) {
+    var socket = websocket.accept(request, response)
+
+    rpc.endpoint(rpc.websocket(socket))
+      .on_request('total', @(params, context) {
+        var price = context.endpoint.request('price_of', [params.item])
+
+        return price * params.count
+      })
+      .serve()
+  })
+
+  server.bind()
+  ready.send(server.socket.local_address().port())
+  server.listen()
+}
+
+var ready = isolate.channel(1)
+var shop = isolate.spawn(serve_shop, ready)
+var socket = websocket.connect('ws://127.0.0.1:${ready.recv()}/ws')
+
+var client = rpc.endpoint(rpc.websocket(socket))
+  .on_request('price_of', @(params) => params[0] == 'tea' ? 3 : 5)
+
+echo client.request('total', { item: 'tea', count: 4 })
+
+client.close()
+shop.cancel()
+```
+
+```console
+12
+```
+
+The route accepts the WebSocket and serves an endpoint on it for as
+long as the client stays connected. Asked for a total, the server asks
+the client for a price before it answers. A WebSocket is held by one
+isolate at a time, so an endpoint over one reads with `serve()` and
+`request()`.
 
 ### Between Isolates
 
@@ -705,158 +1153,11 @@ echo '${counted.sent} bytes sent'
 
 ## Endpoints
 
-An endpoint is one side of a connection. `rpc.endpoint(transport)`
-makes one, and its handlers say what it answers.
-
-### Answering Requests
-
-`on_request()` gives a method its handler. The handler is called with
-the request's `params` and a `Context`, and what it returns is the
-result sent back:
-
-```zuri
-import rpc
-
-var ends = rpc.pipe()
-var server = rpc.endpoint(ends[0])
-  .set_framing(rpc.LineFraming())
-  .on_request('add', @(params) => params[0] + params[1])
-  .on_request('whoami', @(params, context) => '${context.method} #${context.id}')
-
-server.handle({ jsonrpc: '2.0', id: 1, method: 'add', params: [2, 3] })
-server.handle({ jsonrpc: '2.0', id: 2, method: 'whoami' })
-server.handle({ jsonrpc: '2.0', id: 3, method: 'mul', params: [2, 3] })
-
-for i in 0..3 {
-  echo ends[1].read(4096).to_string().trim()
-}
-```
-
-```console
-{"jsonrpc":"2.0","id":1,"result":5}
-{"jsonrpc":"2.0","id":2,"result":"whoami #2"}
-{"jsonrpc":"2.0","id":3,"error":{"code":-32601,"message":"Method not found: mul"}}
-```
-
-`handle()` takes one message already decoded from JSON and deals with
-it exactly as if it had just arrived, which is what `serve()` does for
-every message it reads. With `LineFraming` on the endpoint, each answer
-is one line on the other end of the pipe, which makes it a good way to
-see exactly what an endpoint sends.
-
-The `Context` names the request's `id` and `method`, and the
-`endpoint` it arrived on. A handler that has no use for it leaves it
-out, as `add` does. A request for a method with no handler is
-answered with `METHOD_NOT_FOUND`, as `mul` is.
-
-A handler may be replaced by calling `on_request()` again with the
-same method. Method names that start with `rpc.` are reserved by the
-specification, and `on_request()` refuses them.
-
-### Failing Properly
-
-A handler fails a request by raising. An `RpcError` is sent back as it
-is, code, message, data and all. Any other error is sent back as an
-`INTERNAL_ERROR` carrying the error's message:
-
-```zuri
-import rpc
-
-var ends = rpc.pipe()
-var server = rpc.endpoint(ends[0])
-  .set_framing(rpc.LineFraming())
-  .on_request('divide', @(params) {
-    if params.length() != 2 or params[1] == 0 {
-      raise rpc.RpcError(rpc.INVALID_PARAMS, 'divide takes a number and a non-zero divisor')
-    }
-
-    return params[0] / params[1]
-  })
-  .on_request('save', @(params) {
-    raise Error('the disk is full')
-  })
-
-server.handle({ jsonrpc: '2.0', id: 1, method: 'divide', params: [1, 0] })
-server.handle({ jsonrpc: '2.0', id: 2, method: 'save', params: ['notes'] })
-
-echo ends[1].read(4096).to_string().trim()
-echo ends[1].read(4096).to_string().trim()
-```
-
-```console
-{"jsonrpc":"2.0","id":1,"error":{"code":-32602,"message":"divide takes a number and a non-zero divisor"}}
-{"jsonrpc":"2.0","id":2,"error":{"code":-32603,"message":"the disk is full"}}
-```
-
-An error that is not an `RpcError` also goes to the endpoint's
-[`on_error()`](#watching-the-conversation) handler, since it is a
-failure in the program rather than a refusal the program meant to
-make. A handler that must not let its failures' messages reach the
-other side catches them and raises an `RpcError` of its own instead.
-
-On the calling side, an error answer raises from `request()` as the
-`RpcError` the other side sent.
-
-### Notifications
-
-`on_notification()` gives a notification its handler. It is called
-the same way, with the `params` and a `Context`, and whatever it
-returns is ignored, since nothing is sent back:
-
-```zuri,ignore
-server.on_notification('log', @(params) {
-  io.stderr.write('${params.level}: ${params.text}\n')
-})
-```
-
-A notification for a method with no handler is dropped, and a
-notification handler that raises sends nothing back either: the error
-goes to `on_error()`. That is the specification's rule, and it is
-deliberate. The sender asked not to be answered.
-
-`notify()` sends one:
-
-```zuri,ignore
-client.notify('log', { level: 'info', text: 'started' })
-```
-
-### Methods Without a Handler
-
-`on_unhandled()` sets a fallback for every request and notification
-whose method has no handler of its own. It is called like any other
-handler, and `context.method` says which method it is standing in for:
-
-```zuri
-import rpc
-
-var ends = rpc.pipe()
-var server = rpc.endpoint(ends[0])
-  .set_framing(rpc.LineFraming())
-  .on_unhandled(@(params, context) {
-    if context.method.starts_with('legacy.') {
-      return 'retired: ${context.method}'
-    }
-
-    raise rpc.RpcError(rpc.METHOD_NOT_FOUND, 'Method not found: ${context.method}')
-  })
-
-server.handle({ jsonrpc: '2.0', id: 1, method: 'legacy.export' })
-server.handle({ jsonrpc: '2.0', id: 2, method: 'export' })
-
-echo ends[1].read(4096).to_string().trim()
-echo ends[1].read(4096).to_string().trim()
-```
-
-```console
-{"jsonrpc":"2.0","id":1,"result":"retired: legacy.export"}
-{"jsonrpc":"2.0","id":2,"error":{"code":-32601,"message":"Method not found: export"}}
-```
-
-It is the place for a family of methods answered the same way, for a
-proxy that passes calls on, and for logging what a peer asks for that
-nothing answers. Raising `METHOD_NOT_FOUND` from it refuses a method
-exactly as an endpoint without a fallback would. Methods whose names
-start with `rpc.` never reach it.
+An endpoint is a service on a connection. `rpc.endpoint(transport)`
+makes one, and everything in [Services](#services) holds for it: its
+handlers, its fallback, its batch limit and its errors. The connection
+adds the other direction. An endpoint calls the other side, and a
+handler on one can answer later than it returns.
 
 ### Calling the Other Side
 
@@ -871,6 +1172,12 @@ with, and raises `RpcClosedError` if the connection ends first. While
 it waits, it handles everything else that arrives, exactly as
 `serve()` would: other answers, notifications, and requests from the
 other side.
+
+`notify()` sends a notification, and returns as soon as it is sent:
+
+```zuri,ignore
+client.notify('log', { level: 'info', text: 'started' })
+```
 
 `send_request()` sends a request and returns at once, with the
 request's `id`. The answer goes to a callback when it arrives:
@@ -1154,13 +1461,21 @@ Everything is still sent from the owning isolate, and every handler
 still runs there.
 
 Only a transport another isolate can read can be listened to. That is
-stdio and a pipe; a socket and a child process are read by the isolate
-that holds them, and `listen()` on one raises `ValueError`. Set the
+stdio and a pipe; a socket, a WebSocket and a child process are held
+by one isolate at a time, and `listen()` on one raises `ValueError`. Set the
 framing before calling `listen()`, since the reader isolate takes the
 framing with it.
 
 `serve()` and `request()` work on a listening endpoint too, taking
 what arrives from the same channel.
+
+### Reading It Yourself
+
+A program that reads the transport itself, such as one polling many
+connections at once, hands each read to `feed()`. It handles every
+message the bytes complete, exactly as `serve()` would have, and empty
+bytes end the connection. `rpc.serve()` drives every connection it
+holds this way.
 
 ### Timeouts
 
@@ -1201,6 +1516,110 @@ server.on_request('shutdown', @(params, context) {
 raises `RpcClosedError`; every `send_request()` callback still waiting
 is called with an `RpcClosedError`. `is_closed()` is true once the
 endpoint is closed or the connection has ended from the other side.
+
+## Serving Many Connections
+
+`rpc.serve()` binds a listening socket and gives every connection
+accepted on it an endpoint of its own, spread across a pool of worker
+isolates. Each worker polls the connections it holds rather than
+blocking on one, so a quiet client costs a descriptor and not a
+thread, and one worker serves hundreds of long-lived connections side
+by side.
+
+```zuri
+import isolate
+import net
+import rpc
+
+isolate.configure(6)
+
+def setup(endpoint, peer) {
+  endpoint.on_request('add', @(params) => params[0] + params[1])
+}
+
+def run(ready) {
+  import rpc
+
+  rpc.serve(setup, {
+    port: 0,
+    workers: 2,
+    framing: 'line',
+    max_connections: 1,
+    on_ready: @(address, stop) {
+      ready.send(address.to_string())
+    },
+  })
+}
+
+var ready = isolate.channel(1)
+var server = isolate.spawn(run, ready)
+
+var stream = net.TcpStream()
+stream.connect(ready.recv())
+
+var client = rpc.endpoint(rpc.socket(stream)).set_framing(rpc.LineFraming())
+
+echo client.request('add', [20, 22])
+client.close()
+server.join()
+```
+
+```console
+42
+```
+
+`setup` runs inside a worker for every connection, with the
+connection's endpoint and the client's address, and gives the endpoint
+its handlers. A worker shares nothing with the others, so `setup` is a
+function of a module, or one that uses nothing but its own imports,
+and builds whatever a connection needs. Each endpoint is a full peer:
+its handlers can call the client back, and it can notify the client
+whenever it has something to say.
+
+| Option | Meaning | Default |
+| --- | --- | --- |
+| `host` | the address to listen on | `'127.0.0.1'` |
+| `port` | the port to listen on; `0` picks a free one | `8000` |
+| `path` | a Unix domain socket to listen on, in place of `host` and `port` | `nil` |
+| `workers` | how many worker isolates serve connections | the number of CPUs |
+| `backlog` | how many accepted connections may wait for a worker | `workers * 4` |
+| `framing` | `'header'` for `Content-Length` headers, `'line'` for one message to a line | `'header'` |
+| `max_message_size` | the largest message accepted, in bytes | 64 MiB |
+| `max_connections_per_worker` | the most connections one worker holds | `256` |
+| `idle_timeout` | seconds a connection may stay silent before it is closed | `nil`, never |
+| `read_timeout` | seconds a read may wait once a message has begun | `30` |
+| `write_timeout` | seconds a write may wait | `30` |
+| `cert_chain`, `private_key` | PEM strings that put every connection behind TLS | `nil` |
+| `on_ready` | called once bound, with the address and a `stop` function | `nil` |
+| `max_connections` | stop accepting after this many | `nil`, never |
+
+`on_ready` is called on the isolate that called `serve()`, once the
+socket is bound. The `stop` it is given stops accepting connections;
+every worker then finishes the message it is handling, closes its
+connections and ends, and `serve()` returns. That is what a signal
+handler calls to shut a server down cleanly. Reaching
+`max_connections` also stops accepting, but serves the connections
+already accepted until each closes, which is what the example above
+relies on.
+
+Each worker holds a thread of the isolate pool for as long as the
+server runs. When `serve()` is the first thing in a program to use an
+isolate it sizes the pool itself; otherwise, call `isolate.configure()`
+first thing, as the example does, with room for the workers and
+whatever else the program runs.
+
+With `cert_chain` and `private_key`, every connection is TLS, and a
+client that fails the handshake is closed without reaching a worker's
+handlers. With `path`, the server listens on a Unix domain socket,
+the way local daemons offer an API to the programs on their machine;
+the socket file is removed when the server stops, and Unix domain
+sockets need a platform that has them, which `net.unix.is_supported()`
+answers.
+
+A handler that calls its client with `request()` holds its worker
+until the answer arrives, and every other connection on that worker
+waits with it. For a call that can take a while, `send_request()` with
+a callback keeps the worker free.
 
 ## Watching the Conversation
 
@@ -1252,50 +1671,6 @@ Without an `on_error()` handler, these are dropped. A server that
 leaves it unset has no way to learn its own handlers are failing, so
 set it.
 
-## JSON-RPC Over HTTP
-
-Many services, blockchain nodes among them, take JSON-RPC over HTTP:
-each request is the body of a `POST`, and the answer is the body of the
-response. That is one message each way rather than a stream, so it
-needs no framing and no endpoint. The message layer and the `http`
-client are enough:
-
-```zuri,ignore
-import http
-import rpc
-
-var call = rpc.Request('eth_blockNumber', [], 1)
-var reply = http.post('https://node.example.com', rpc.encode(call), {
-  headers: { 'Content-Type': 'application/json' },
-})
-var answer = rpc.decode(reply.as_text())
-
-if answer.is_error() {
-  raise answer.error
-}
-
-echo answer.result
-```
-
-A batch goes the same way, as a list:
-
-```zuri,ignore
-var calls = [
-  rpc.Request('eth_blockNumber', [], 1),
-  rpc.Request('eth_gasPrice', [], 2),
-]
-var reply = http.post('https://node.example.com', rpc.encode(calls), {
-  headers: { 'Content-Type': 'application/json' },
-})
-
-for answer in rpc.decode(reply.as_text()) {
-  echo '${answer.id}: ${answer.result}'
-}
-```
-
-The answers to a batch come back in whatever order the server chose,
-so they are matched by `id`, never by position.
-
 ## Errors
 
 Every error the module raises is one of these:
@@ -1303,13 +1678,14 @@ Every error the module raises is one of these:
 | | |
 | --- | --- |
 | `RpcError` | a JSON-RPC error, with a `code`: the other side's answer, or a message that broke the rules |
+| `RpcHttpError` | an HTTP status with no JSON-RPC answer, with the `status` and the `body` |
 | `RpcFramingError` | the stream's framing cannot be read, and nothing after it can be either |
 | `RpcClosedError` | the connection ended before an answer, or the endpoint has been closed |
 | `RpcTimeoutError` | a request's timeout ran out before its answer |
 | `ValueError` | a mistake in the calling program: params that are not structured, a reserved method name, a request answered twice |
 
 The first is the one a program handles as part of its work. The next
-three are about the connection, and the last is a bug to fix.
+four are about the transport, and the last is a bug to fix.
 
 ## What the Module Refuses
 
@@ -1325,7 +1701,8 @@ gives it, never guessed at.
 
 **It will not read text that is not UTF-8.** JSON is UTF-8, and a
 message that is not is answered with `PARSE_ERROR` rather than read
-with its bad bytes replaced. A header block must be ASCII.
+with its bad bytes replaced. A header block must be ASCII, and an HTTP
+body that declares another charset is refused with `415`.
 
 **It will not answer a response.** A malformed response goes to
 `on_error()`, never back to the peer, so two endpoints can never fall
@@ -1336,12 +1713,19 @@ start with `rpc.` belong to the specification, and neither
 `on_request()`, `on_notification()` nor `on_unhandled()` will answer
 them.
 
-**It will not read a message past its size limit.** A framing refuses
-an oversized message from its header, before reading a byte of it.
+**It will not do unbounded work for one message.** A batch over the
+service's limit is refused whole, and a framing refuses an oversized
+message from its header, before reading a byte of it.
 
-**It will not listen to a transport that belongs to one isolate.** A
-socket or a child process is read where it was opened, and `listen()`
-on one raises rather than reading it from somewhere it cannot be.
+**It will not defer what has nowhere to be answered.** A request that
+arrived over HTTP is answered in its HTTP response, and `defer()` on
+it raises rather than leaving the client waiting for an answer that
+cannot come.
+
+**It will not listen to a transport only one isolate can hold.** A
+socket, a WebSocket or a child process is read where it is held, and
+`listen()` on one raises rather than reading it from somewhere it
+cannot be.
 
 ## Module Reference
 
@@ -1350,10 +1734,15 @@ shape of the module:
 
 | | |
 | --- | --- |
+| `rpc.Service()` | a service: handlers, and `answer()` |
+| `rpc.http_handler(service)` | an `http` route handler answering with a service |
+| `rpc.HttpClient(url, options)` | a client calling a service over HTTP |
 | `rpc.endpoint(transport)` | an `Endpoint` over a transport |
+| `rpc.serve(setup, options)` | an endpoint for every connection to a listening socket |
 | `rpc.stdio()` | the program's own standard streams |
 | `rpc.socket(stream)` | a connected `net` stream |
 | `rpc.process(child)` | a child process's standard streams |
+| `rpc.websocket(socket)` | a WebSocket from `http.websocket` |
 | `rpc.pipe()` | two transports joined to each other |
 | `rpc.encode(message)` | a message, or a list of them, as JSON text |
 | `rpc.decode(text)` | JSON text as a message, or a batch of them |
@@ -1371,7 +1760,39 @@ The messages:
 | `INVALID_PARAMS`, `INTERNAL_ERROR` | the rest of them |
 | `SERVER_ERROR_MIN`, `SERVER_ERROR_MAX` | the range set aside for implementations |
 
-The framings, `HeaderFraming` and `LineFraming`:
+On a `Service`, and so on an `Endpoint`:
+
+| | |
+| --- | --- |
+| `on_request`, `on_notification`, `on_unhandled` | what it answers |
+| `on_error`, `on_trace` | what it reports |
+| `set_batch_limit`, `batch_limit` | the most messages a batch may hold, `DEFAULT_BATCH_LIMIT` by default |
+| `answer` | one message or batch in, its answer out |
+
+On an `Endpoint` as well:
+
+| | |
+| --- | --- |
+| `set_framing` | how its messages are told apart |
+| `request`, `request_batch`, `send_request`, `notify` | calling the other side |
+| `send`, `handle` | sending and handling messages as they are |
+| `serve`, `stop` | reading on the isolate that calls it |
+| `listen`, `dispatch` | reading on an isolate of its own |
+| `feed` | handling what the program read itself |
+| `close`, `is_closed` | ending the connection |
+
+On an `HttpClient`: `request`, `request_batch`, `notify` and `send`.
+
+On a `Context`:
+
+| | |
+| --- | --- |
+| `endpoint`, `id`, `method`, `request` | what is being handled, where, and what it arrived in |
+| `is_notification` | whether anything is answered |
+| `defer`, `is_deferred` | taking over answering |
+| `reply`, `fail`, `is_answered` | answering a deferred request |
+
+The framings, `HeaderFraming`, `LineFraming` and `MessageFraming`:
 
 | | |
 | --- | --- |
@@ -1380,28 +1801,7 @@ The framings, `HeaderFraming` and `LineFraming`:
 | `set_max_size(size)`, `max_size()` | the largest message accepted |
 | `pending()` | how many bytes are held for an unfinished message |
 
-The transports, `StdioTransport`, `SocketTransport`, `ProcessTransport`
-and `ChannelTransport`, each have `read(max)`, `write(data)`, `close()`
-and `can_listen()`.
-
-On an `Endpoint`:
-
-| | |
-| --- | --- |
-| `on_request`, `on_notification`, `on_unhandled` | what it answers |
-| `on_error`, `on_trace` | what it reports |
-| `set_framing` | how its messages are told apart |
-| `request`, `request_batch`, `send_request`, `notify` | calling the other side |
-| `send`, `handle` | sending and handling messages as they are |
-| `serve`, `stop` | reading on the isolate that calls it |
-| `listen`, `dispatch` | reading on an isolate of its own |
-| `close`, `is_closed` | ending the connection |
-
-On a `Context`:
-
-| | |
-| --- | --- |
-| `endpoint`, `id`, `method` | what is being handled, and where |
-| `is_notification` | whether anything is answered |
-| `defer`, `is_deferred` | taking over answering |
-| `reply`, `fail`, `is_answered` | answering a deferred request |
+The transports, `StdioTransport`, `SocketTransport`, `ProcessTransport`,
+`WebSocketTransport` and `ChannelTransport`, each have `read(max)`,
+`write(data)`, `close()` and `can_listen()`, and `WebSocketTransport`
+has `framing()`.

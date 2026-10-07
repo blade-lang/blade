@@ -1,0 +1,84 @@
+# The servers the rpc test suite starts on isolates of their own:
+# JSON-RPC over HTTP, over a WebSocket, and through rpc.serve().
+
+import http
+import http.websocket
+import rpc
+
+# A service behind an HTTP route, plus the routes that answer with
+# what a JSON-RPC client meets in the wild.
+def http_server(ready) {
+  var calculator = rpc.Service()
+    .on_request('add', @(params) => params[0] + params[1])
+    .on_request('caller', @(params, context) => context.request.header('x-caller', 'nobody'))
+    .on_request('later', @(params, context) => context.defer())
+
+  var server = http.server(0, '127.0.0.1')
+
+  server.any('/rpc', rpc.http_handler(calculator))
+  server.post('/locked', @(request, response) {
+    response.text('no\n', 401)
+  })
+  server.post('/legacy', @(request, response) {
+    var error = { code: -32601, message: 'Method not found' }
+    response.json({ jsonrpc: '2.0', id: 1, error }, 500)
+  })
+
+  server.bind()
+  ready.send(server.socket.local_address().port())
+  server.listen()
+}
+
+# An endpoint on every WebSocket, which calls its client back in the
+# middle of answering.
+def websocket_server(ready) {
+  var server = http.server(0, '127.0.0.1')
+
+  server.get('/ws', @(request, response) {
+    var peer = rpc.endpoint(rpc.websocket(websocket.accept(request, response)))
+
+    peer
+      .on_request('total', @(params, context) {
+        var price = context.endpoint.request('price_of', [params.item])
+
+        return price * params.count
+      })
+      .serve()
+  })
+
+  server.bind()
+  ready.send(server.socket.local_address().port())
+  server.listen()
+}
+
+def serve_setup(endpoint, peer) {
+  endpoint
+    .on_request('add', @(params) => params[0] + params[1])
+    .on_request('ask_back', @(params, context) {
+      return context.endpoint.request('double', [params[0]]) + 1
+    })
+    .on_request('secure', @() => 'over TLS')
+}
+
+# Runs rpc.serve() with `options`, sending the bound address and then
+# `'done'` once it returns.
+def run_serve(ready, options) {
+  options.on_ready = @(address, stop) {
+    ready.send(address.to_string())
+  }
+
+  rpc.serve(serve_setup, options)
+  ready.send('done')
+}
+
+def stop_at_once(ready) {
+  rpc.serve(serve_setup, {
+    port: 0,
+    workers: 1,
+    on_ready: @(address, stop) {
+      stop()
+    },
+  })
+
+  ready.send('stopped')
+}

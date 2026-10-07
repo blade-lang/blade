@@ -93,7 +93,7 @@ a doc block stating its parameters, its defaults and its edge cases.
 | --- | --- | --- |
 | `net` | TCP, UDP, unix sockets, TLS, DTLS, addresses and polling | [12](ch12-00-networking.md) |
 | `http` | an HTTP/1.1 and HTTP/2 client and server | [15](ch15-00-http.md) |
-| `rpc` | JSON-RPC 2.0: messages, framing, transports and endpoints | [28](ch28-00-rpc.md) |
+| `rpc` | JSON-RPC 2.0 over HTTP, WebSockets, sockets and streams, both ends | [28](ch28-00-rpc.md) |
 
 ## Graphics
 
@@ -281,9 +281,12 @@ One module per element width, each exporting a single class.
 | --- | --- |
 | `rpc.message` | `Request`, `Notification`, `Response`, and reading and writing them as JSON |
 | `rpc.error` | `RpcError`, the codes the specification defines, and the module's other errors |
-| `rpc.framing` | `HeaderFraming` and `LineFraming`, telling messages apart in a stream |
-| `rpc.transport` | the transports, and `pipe()` between isolates |
-| `rpc.endpoint` | `Endpoint` and the `Context` its handlers are given |
+| `rpc.service` | `Service` and the `Context` its handlers are given |
+| `rpc.http` | `http_handler()` and `HttpClient`, JSON-RPC over HTTP |
+| `rpc.framing` | `HeaderFraming`, `LineFraming` and `MessageFraming`, telling messages apart |
+| `rpc.transport` | the transports, WebSockets among them, and `pipe()` between isolates |
+| `rpc.endpoint` | `Endpoint`, a service on a connection |
+| `rpc.server` | `serve()`, an endpoint for every connection to a listening socket |
 
 ### `sql`
 
