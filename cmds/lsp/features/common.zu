@@ -389,6 +389,80 @@ def path_to(nodes: list, offset: int) {
   return found
 }
 
+# The node of `level` that starts last at or before `offset`.
+def _last_started(level: list, offset: int) {
+  var last = nil
+
+  for node in level {
+    if is_node(node) and node.start <= offset and (last == nil or node.start >= last.start) {
+      last = node
+    }
+  }
+
+  return last
+}
+
+/**
+ * Where a scan reading the source forwards to `offset` can begin: the
+ * start of the last node at or before `offset`, however deeply nested.
+ * No node starts inside a string or a comment, so the scan reads only
+ * the few characters it needs wherever the cursor is in the file. The
+ * parts of an interpolated string are never taken, since they start in
+ * code that sits inside a string.
+ *
+ * @param list nodes: A file's top-level nodes.
+ * @param int offset
+ * @returns int: `0` when no node starts at or before `offset`.
+ */
+def code_start(nodes: list, offset: int) {
+  var found = 0
+  var level = nodes
+
+  while true {
+    var last = _last_started(level, offset)
+
+    if last == nil {
+      return found
+    }
+
+    found = last.start
+
+    if last.kind == 'Interpolation' {
+      return found
+    }
+
+    level = children(last)
+  }
+}
+
+/**
+ * Where a scan reading a whole statement up to `offset` can begin: the
+ * start of the last statement at or before `offset` in the innermost
+ * block holding it, or of the last top-level node when no block does.
+ * A statement still being written, which the parser cut short, is read
+ * whole from there.
+ *
+ * @param list nodes: A file's top-level nodes.
+ * @param int offset
+ * @returns int: `0` when nothing starts at or before `offset`.
+ */
+def statement_start(nodes: list, offset: int) {
+  var last = _last_started(nodes, offset)
+  var found = last == nil ? 0 : last.start
+
+  for node in path_to(nodes, offset) {
+    if node.kind == 'Block' {
+      var statement = _last_started(node.fields.statements, offset)
+
+      if statement != nil {
+        found = statement.start
+      }
+    }
+  }
+
+  return found
+}
+
 /**
  * The declaration `ref` points at as the linker holds it, with the
  * path and index it was found by.

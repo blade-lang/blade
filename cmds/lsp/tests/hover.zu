@@ -128,4 +128,15 @@ describe('signature help', @{
   it('is not offered inside a list written as an argument', @{
     expect(help_at(SOURCE + 'here.move([1, ', 'here.move([1, ')).to_be_nil()
   })
+
+  it('finds the call being written inside a method', @{
+    var head = 'def apply(items, fn, start) {\n  return items\n}\n\nclass Box {\n  f() {\n'
+    var past = help_at(head + '    apply([1], @(x) {\n      return x\n    }, ', '}, ')
+    var inside = help_at(head + '    apply([1], @(x) {\n      return apply(x, ', 'return apply(x, ')
+
+    expect(past.signatures[0].label).to_equal('apply(items, fn, start)')
+    expect(past.activeParameter).to_equal(2)
+    expect(inside.signatures[0].label).to_equal('apply(items, fn, start)')
+    expect(inside.activeParameter).to_equal(1)
+  })
 })

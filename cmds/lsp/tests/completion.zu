@@ -144,6 +144,18 @@ describe('other places', @{
     expect(labels_at("echo 'a.", nil)).to_equal([])
     expect(labels_at('# json.', nil)).to_equal([])
   })
+
+  it('tells code, strings and comments apart deep inside a class', @{
+    # `${` is kept apart so this file does not interpolate it.
+    var open = '$' + '{'
+    var source = "class Box {\n  var name\n\n  f() {\n    var s = 'a " + open + "self.} b.'\n" +
+      "    # self.\n    return self.\n  }\n}\n"
+
+    expect(labels_at(source, open + 'self.')).to_contain_all(['name', 'f'])
+    expect(labels_at(source, '} b.')).to_equal([])
+    expect(labels_at(source, '# self.')).to_equal([])
+    expect(labels_at(source, 'return self.')).to_contain_all(['name', 'f'])
+  })
 })
 
 describe('resolve', @{

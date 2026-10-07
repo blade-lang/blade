@@ -17,22 +17,6 @@ import ..analysis.query
 import ..analysis.render
 import ..analysis.summary as summaries
 
-# Where reading up to the cursor starts: the start of the last
-# top-level statement or declaration that starts before it. That is
-# outside any string or comment, and an unfinished statement the
-# parser stopped short of is read whole.
-def _reading_start(nodes: list, offset: int) {
-  var found = 0
-
-  for node in nodes {
-    if common.is_node(node) and node.start <= offset {
-      found = node.start
-    }
-  }
-
-  return found
-}
-
 /**
  * The call the cursor at `offset` is writing the arguments of: where
  * its `(` is, and how many of its arguments come before the cursor.
@@ -223,7 +207,7 @@ def help(server, params: dict) {
   var offset = server.offset(document, params.position)
   var analysis = server.analysis(document)
   var text = document.text
-  var call = open_call(text, _reading_start(analysis.nodes, offset), offset)
+  var call = open_call(text, common.statement_start(analysis.nodes, offset), offset)
 
   if call == nil {
     return nil
