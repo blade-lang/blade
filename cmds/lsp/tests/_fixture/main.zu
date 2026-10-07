@@ -1,0 +1,11 @@
+import json
+import .shapes { Point, Circle, origin }
+import .geometry
+
+var here = Point(3, 4)
+var ring = Circle(0, 0, 2)
+
+echo here.distance(origin())
+echo ring.distance(here)
+echo geometry.area_of(ring)
+echo json.encode({ x: here.x })

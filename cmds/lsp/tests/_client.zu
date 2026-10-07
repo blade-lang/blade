@@ -1,0 +1,404 @@
+# A language client for the end-to-end suites: it starts `zuri lsp` as
+# a child process, talks to it through `rpc` the way an editor does,
+# and keeps what the server sends unasked, so a test can wait for it.
+
+import os
+import json
+import rpc
+import os.process { spawn }
+
+import ..text
+
+# The most seconds a test waits for something the server sends of its
+# own accord.
+const _PATIENCE = 30
+
+# The most seconds a test waits for the workspace to be indexed, which
+# reads the standard library modules it imports too.
+const _INDEXING = 180
+
+/**
+ * The capabilities of a capable editor: everything the server can use,
+ * with positions in UTF-16 unless a test asks for others.
+ */
+def capabilities() {
+  return {
+    general: { positionEncodings: ['utf-16'] },
+    workspace: {
+      configuration: true,
+      workspaceFolders: true,
+      applyEdit: true,
+      workspaceEdit: { documentChanges: true },
+      didChangeConfiguration: { dynamicRegistration: true },
+      didChangeWatchedFiles: { dynamicRegistration: true },
+      codeLens: { refreshSupport: true },
+      inlayHint: { refreshSupport: true },
+      semanticTokens: { refreshSupport: true },
+      diagnostics: { refreshSupport: true },
+      fileOperations: { willRename: true, didRename: true },
+    },
+    textDocument: {
+      synchronization: { didSave: true },
+      completion: {
+        completionItem: { snippetSupport: true, labelDetailsSupport: true },
+      },
+      hover: { contentFormat: ['markdown', 'plaintext'] },
+      signatureHelp: {},
+      definition: { linkSupport: false },
+      documentSymbol: { hierarchicalDocumentSymbolSupport: true },
+      codeAction: {
+        codeActionLiteralSupport: {
+          codeActionKind: {
+            valueSet: ['quickfix', 'refactor', 'refactor.extract', 'refactor.inline'],
+          },
+        },
+      },
+      rename: { prepareSupport: true },
+      foldingRange: { lineFoldingOnly: true },
+      semanticTokens: {
+        requests: { range: true, full: { delta: true } },
+        formats: ['relative'],
+      },
+      inlayHint: { resolveSupport: { properties: ['tooltip'] } },
+      publishDiagnostics: { tagSupport: { valueSet: [1, 2] } },
+    },
+    window: { workDoneProgress: true },
+  }
+}
+
+/**
+ * The URI of a file.
+ *
+ * @param string path
+ * @returns string
+ */
+def uri(path: string) {
+  return text.path_to_uri(path)
+}
+
+/**
+ * The text of the file at `path`.
+ *
+ * @param string path
+ * @returns string
+ */
+def read(path: string) {
+  return file(path).read()
+}
+
+/**
+ * The position just past the first `marker` in `source`, as the
+ * protocol counts it, for pointing at code in a test.
+ *
+ * @param string source
+ * @param string marker: Text the position is found by.
+ * @param ?int shift: Characters to move back from the end of
+ *    `marker`; default 0.
+ * @param ?string encoding: How the position counts characters;
+ *    default UTF-16.
+ * @returns dict
+ */
+def position(source: string, marker: string, shift: ?int, encoding: ?string) {
+  var at = source.index_of(marker)
+
+  if at < 0 {
+    raise Error("'${marker}' is not in the source")
+  }
+
+  var offset = at + marker.length() - (shift == nil ? 0 : shift)
+
+  return text.LineIndex(source).position(offset, encoding == nil ? text.UTF16 : encoding)
+}
+
+/**
+ * A protocol range over the first `marker` in `source`, in UTF-16.
+ *
+ * @param string source
+ * @param string marker
+ * @returns dict
+ */
+def range_of(source: string, marker: string) {
+  var at = source.index_of(marker)
+
+  if at < 0 {
+    raise Error("'${marker}' is not in the source")
+  }
+
+  return text.LineIndex(source).range(at, at + marker.length(), text.UTF16)
+}
+
+/**
+ * Applies `TextEdit`s to `source`, the way a client does.
+ *
+ * @param string source
+ * @param list edits
+ * @returns string
+ */
+def apply(source: string, edits: list) {
+  var lines = text.LineIndex(source)
+  var spans = edits.map(@(edit) {
+    return {
+      start: lines.offset(edit.range.start, text.UTF16),
+      end: lines.offset(edit.range.end, text.UTF16),
+      text: edit.newText,
+    }
+  })
+
+  spans.sort(@(a, b) => b.start != a.start ? b.start - a.start : b.end - a.end)
+
+  var result = source
+
+  for span in spans {
+    result = result[0, span.start] + span.text + result[span.end, result.length()]
+  }
+
+  return result
+}
+
+/**
+ * One editor's conversation with one server.
+ */
+class Client {
+
+  /**
+   * Starts a server for the workspace at `root`.
+   *
+   * @param string root: The workspace folder.
+   * @param ?dict settings: The `zuri` settings the client reports.
+   */
+  @new(root: string, settings) {
+    self.root = root
+    self.settings = settings == nil ? {} : settings
+    self.diagnostics = {}
+    self.notifications = []
+    self.requests = []
+    self.answers = {}
+    self.versions = {}
+    self.texts = {}
+    self.child = spawn(os.exe_path, ['lsp'], {
+      stdin: 'pipe',
+      stdout: 'pipe',
+      stderr: 'inherit',
+      cwd: root,
+    })
+    self.endpoint = rpc.endpoint(rpc.process(self.child))
+
+    self.endpoint.on_notification('textDocument/publishDiagnostics', @(params, context) {
+      self.diagnostics[params.uri] = params
+    })
+
+    # The answers to messages written with `send_together()`, which
+    # nothing waits on, by id.
+    self.endpoint.on_error(@(error, value) {
+      if is_dict(value) and value.contains('id') {
+        self.answers[value.id] = value
+      }
+    })
+
+    self.endpoint.on_unhandled(@(params, context) {
+      if context.is_notification() {
+        self.notifications.append({ method: context.method, params })
+        return nil
+      }
+
+      self.requests.append({ method: context.method, params })
+
+      if context.method == 'workspace/configuration' {
+        return params.items.map(@(item) => self.settings)
+      }
+
+      return nil
+    })
+  }
+
+  /**
+   * Sends `initialize` and `initialized`, and returns the server's
+   * answer to `initialize`.
+   *
+   * @param ?dict given: The client's capabilities; default
+   *    `capabilities()`.
+   * @returns dict
+   */
+  initialize(given) {
+    var result = self.request('initialize', {
+      processId: os.pid(),
+      clientInfo: { name: 'zuri lsp tests' },
+      rootUri: uri(self.root),
+      workspaceFolders: [{ uri: uri(self.root), name: os.base_name(self.root) }],
+      capabilities: given == nil ? capabilities() : given,
+      initializationOptions: { zuri: self.settings },
+    })
+
+    self.notify('initialized', {})
+
+    return result
+  }
+
+  /**
+   * Sends a request and returns its result.
+   *
+   * @param string method
+   * @param any params
+   * @returns any
+   * @throws rpc.RpcError when the server answers with an error.
+   */
+  request(method: string, params) {
+    return self.endpoint.request(method, params)
+  }
+
+  /**
+   * Sends a notification.
+   *
+   * @param string method
+   * @param any params
+   */
+  notify(method: string, params) {
+    self.endpoint.notify(method, params)
+  }
+
+  /**
+   * Opens the file at `path` with `content`, its text on disk by
+   * default.
+   *
+   * @param string path
+   * @param ?string content
+   * @returns string: Its URI.
+   */
+  open(path: string, content) {
+    var body = content == nil ? read(path) : content
+    var address = uri(path)
+
+    self.versions[address] = 1
+    self.texts[address] = body
+    self.diagnostics.remove(address)
+    self.notify('textDocument/didOpen', {
+      textDocument: { uri: address, languageId: 'zuri', version: 1, text: body },
+    })
+
+    return address
+  }
+
+  /**
+   * Replaces the whole text of an open document.
+   *
+   * @param string address: Its URI.
+   * @param string content
+   */
+  change(address: string, content: string) {
+    self.versions[address] = self.versions[address] + 1
+    self.texts[address] = content
+    self.notify('textDocument/didChange', {
+      textDocument: { uri: address, version: self.versions[address] },
+      contentChanges: [{ text: content }],
+    })
+  }
+
+  /**
+   * Makes a round trip to the server, handling whatever it sent first.
+   */
+  ping() {
+    catch {
+      self.endpoint.request('zuri/ping', nil)
+    } as error {
+      if !instance_of(error, rpc.RpcError) {
+        raise error
+      }
+    }
+  }
+
+  /**
+   * Waits until `ready()` is true, handling what the server sends
+   * meanwhile.
+   *
+   * @param function ready
+   * @param string what: What is waited for, for the error.
+   * @param ?number patience: The most seconds to wait; default 30.
+   * @throws Error when it does not happen in time.
+   */
+  wait_for(ready: function, what: string, patience: ?number) {
+    var deadline = time() + (patience == nil ? _PATIENCE : patience)
+
+    while !ready() {
+      if time() > deadline {
+        raise Error('timed out waiting for ${what}')
+      }
+
+      self.ping()
+      os.sleep(0.01)
+    }
+  }
+
+  /**
+   * Waits until the server has indexed the workspace.
+   */
+  wait_indexed() {
+    self.wait_for(@() => self.logged('indexed '), 'the workspace to be indexed', _INDEXING)
+  }
+
+  /**
+   * Whether the server has logged a message holding `part`.
+   *
+   * @param string part
+   * @returns bool
+   */
+  logged(part: string) {
+    return self.notifications.some(@(n) {
+      return n.method == 'window/logMessage' and n.params.message.contains(part)
+    })
+  }
+
+  /**
+   * Writes several messages in one write, so the server reads them
+   * together, as it does a burst from a busy editor.
+   *
+   * @param list messages: Each a dictionary, sent as it is.
+   */
+  send_together(messages: list) {
+    var data = bytes(0)
+
+    for message in messages {
+      var body = json.encode(message).to_bytes()
+
+      data = data + 'Content-Length: ${body.length()}\r\n\r\n'.to_bytes() + body
+    }
+
+    self.child.write_stdin(data)
+  }
+
+  /**
+   * The diagnostics pushed for `address` once there are some for its
+   * current version.
+   *
+   * @param string address
+   * @returns list[dict]
+   */
+  diagnostics_of(address: string) {
+    var version = self.versions.get(address, nil)
+
+    self.wait_for(@() {
+      var pushed = self.diagnostics.get(address, nil)
+
+      return pushed != nil and (version == nil or pushed.get('version', nil) == version)
+    }, 'diagnostics of ${address}')
+
+    return self.diagnostics[address].diagnostics
+  }
+
+  /**
+   * Asks the server to shut down and exit, and returns its exit code.
+   *
+   * @returns int
+   */
+  stop() {
+    self.request('shutdown', nil)
+    self.notify('exit', nil)
+
+    var code = self.child.wait(5000)
+
+    if code == nil {
+      self.child.kill(9)
+    }
+
+    return code
+  }
+}

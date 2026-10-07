@@ -1,0 +1,16 @@
+import ..shapes { Circle }
+
+/**
+ * The area of a circle.
+ *
+ * @param Circle circle
+ * @returns number
+ * @throws ValueError when `circle` is not a {Circle}.
+ */
+def area_of(circle) {
+  if !instance_of(circle, Circle) {
+    raise ValueError('a circle has an area; ${typeof(circle)} has none here')
+  }
+
+  return 3.14159 * circle.radius ** 2
+}

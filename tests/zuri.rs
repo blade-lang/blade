@@ -1824,4 +1824,138 @@ mod command_suites {
   fn serve() {
     suite("serve");
   }
+
+  #[test]
+  fn lsp() {
+    suite("lsp");
+  }
+}
+
+/// `zuri lsp` reached the way an editor reaches it: through the command
+/// dispatch, over standard input and output. What the server does is
+/// covered in Zuri, under `cmds/lsp/tests`; this proves the command the
+/// runtime ships starts, answers and exits as the protocol lays down.
+mod lsp_command {
+  use std::io::{Read, Write};
+  use std::path::PathBuf;
+  use std::process::{Child, Command, Stdio};
+  use std::time::{Duration, Instant};
+
+  fn frame(body: &str) -> Vec<u8> {
+    format!("Content-Length: {}\r\n\r\n{}", body.len(), body).into_bytes()
+  }
+
+  fn zuri(args: &[&str]) -> Command {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let mut command = Command::new(env!("CARGO_BIN_EXE_zuri"));
+
+    command
+      .args(args)
+      .current_dir(&root)
+      .env("ZURI_ROOT", &root)
+      .env("NO_COLOR", "1");
+
+    command
+  }
+
+  fn server() -> Child {
+    zuri(&["lsp"])
+      .stdin(Stdio::piped())
+      .stdout(Stdio::piped())
+      .stderr(Stdio::piped())
+      .spawn()
+      .expect("failed to start zuri lsp")
+  }
+
+  /// The child's exit code once it exits, or `None` if it is still
+  /// running after `limit`, when it is killed.
+  fn exit_code(child: &mut Child, limit: Duration) -> Option<i32> {
+    let started = Instant::now();
+
+    while started.elapsed() < limit {
+      if let Some(status) = child.try_wait().expect("failed to wait on zuri lsp") {
+        return status.code();
+      }
+
+      std::thread::sleep(Duration::from_millis(20));
+    }
+
+    let _ = child.kill();
+    None
+  }
+
+  #[test]
+  fn it_answers_initialize_and_exits_cleanly_after_shutdown() {
+    let mut child = server();
+    let mut stdin = child.stdin.take().expect("no stdin");
+    let initialize = r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"processId":null,"rootUri":null,"capabilities":{}}}"#;
+    let shutdown = r#"{"jsonrpc":"2.0","id":2,"method":"shutdown"}"#;
+    let exit = r#"{"jsonrpc":"2.0","method":"exit"}"#;
+
+    for message in [initialize, shutdown, exit] {
+      stdin
+        .write_all(&frame(message))
+        .expect("failed to write to zuri lsp");
+    }
+
+    drop(stdin);
+
+    let code = exit_code(&mut child, Duration::from_secs(60));
+    let mut out = String::new();
+
+    child
+      .stdout
+      .take()
+      .expect("no stdout")
+      .read_to_string(&mut out)
+      .expect("failed to read zuri lsp's output");
+
+    assert_eq!(
+      code,
+      Some(0),
+      "zuri lsp did not exit cleanly\n--- output ---\n{out}\n"
+    );
+    assert!(
+      out.contains(r#""positionEncoding":"utf-16""#),
+      "\n--- output ---\n{out}\n"
+    );
+    assert!(
+      out.contains(r#""name":"zuri lsp""#),
+      "\n--- output ---\n{out}\n"
+    );
+    assert!(
+      out.contains(r#""id":2"#) && out.contains(r#""result":null"#),
+      "shutdown was not answered\n--- output ---\n{out}\n"
+    );
+  }
+
+  #[test]
+  fn it_exits_with_one_when_its_input_ends() {
+    let mut child = server();
+
+    drop(child.stdin.take());
+
+    assert_eq!(exit_code(&mut child, Duration::from_secs(60)), Some(1));
+  }
+
+  #[test]
+  fn it_describes_itself() {
+    let help = zuri(&["lsp", "--help"])
+      .output()
+      .expect("failed to run zuri lsp --help");
+    let text = String::from_utf8_lossy(&help.stdout);
+
+    assert!(help.status.success(), "\n--- output ---\n{text}\n");
+    assert!(text.contains("--log-level"), "\n--- output ---\n{text}\n");
+
+    let listing = zuri(&["--help"])
+      .output()
+      .expect("failed to run zuri --help");
+    let commands = String::from_utf8_lossy(&listing.stdout);
+
+    assert!(
+      commands.contains("lsp") && commands.contains("language server"),
+      "zuri --help does not list lsp\n--- output ---\n{commands}\n"
+    );
+  }
 }

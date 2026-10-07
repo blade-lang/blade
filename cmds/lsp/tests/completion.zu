@@ -1,0 +1,158 @@
+# Completion in each place it is offered, and resolving an item's
+# documentation.
+
+import os
+import test { * }
+
+import ._client { Client, position, uri }
+
+var FIXTURE = os.join_paths(os.dir_name(__file__), '_fixture')
+var SCRATCH = os.join_paths(FIXTURE, 'scratch.zu')
+var client = nil
+
+# The labels completion offers at the end of `source`, or just past
+# `marker` when one is given.
+def labels_at(source: string, marker) {
+  var address = client.open(SCRATCH, source)
+  var at = marker == nil ? position(source, source, 0) : position(source, marker, 0)
+  var asked = { textDocument: { uri: address }, position: at }
+  var answer = client.request('textDocument/completion', asked)
+
+  client.notify('textDocument/didClose', { textDocument: { uri: address } })
+
+  return answer.items.map(@(item) => item.label)
+}
+
+# The items completion offers just past `marker`.
+def items_at(source: string, marker: string) {
+  var address = client.open(SCRATCH, source)
+  var at = position(source, marker, 0)
+  var asked = { textDocument: { uri: address }, position: at }
+  var answer = client.request('textDocument/completion', asked)
+
+  client.notify('textDocument/didClose', { textDocument: { uri: address } })
+
+  return answer.items
+}
+
+before_all(@{
+  client = Client(FIXTURE, { diagnostics: { delay: 0 } })
+  client.initialize(nil)
+  client.wait_indexed()
+})
+
+after_all(@{
+  client.stop()
+})
+
+describe('members', @{
+  it('offers an instance its fields and methods, inherited ones too', @{
+    var found = labels_at('import .shapes { Circle }\nvar ring = Circle(0, 0, 1)\necho ring.', nil)
+
+    expect(found).to_contain_all(['radius', 'distance', 'move', 'x', 'y', 'to_string'])
+    expect(found).not.to_contain('@new')
+  })
+
+  it('offers a module its exports and nothing private', @{
+    var found = labels_at('import json\necho json.', nil)
+
+    expect(found).to_contain_all(['encode', 'decode'])
+    expect(found.some(@(label) => label.starts_with('_'))).to_be_false()
+  })
+
+  it('offers a string its methods', @{
+    expect(labels_at("echo 'text'.", nil)).to_contain_all(['upper', 'split', 'trim'])
+  })
+
+  it('offers a dictionary written out the keys it was given', @{
+    expect(labels_at('var point = { x: 1, y: 2 }\necho point.', nil)).to_contain_all(['x', 'y'])
+  })
+
+  it('offers self its private members, and other receivers not', @{
+    var source = 'class A {\n  var _hidden = 1\n  show() {\n    return self.\n  }\n}\n' +
+      'echo A()._'
+    var inside = labels_at(source, 'return self.')
+    var outside = labels_at(source, 'A().')
+
+    expect(inside).to_contain('_hidden')
+    expect(outside).not.to_contain('_hidden')
+  })
+})
+
+describe('names', @{
+  it('offers the names in scope, the built-ins and keywords that start a statement', @{
+    var found = labels_at('var total = 1\ndef add(a) {\n  var inner = a\n  \n}\n', 'inner = a\n  ')
+
+    expect(found).to_contain_all(['total', 'add', 'a', 'inner', 'print', 'Error'])
+    expect(found).to_contain_all(['if', 'return', 'nil'])
+  })
+
+  it('offers what a module exports to be imported with it', @{
+    var items = items_at('echo Circ', 'Circ')
+    var circle = items.find(@(item) => item.label == 'Circle')
+
+    expect(circle.additionalTextEdits[0].newText).to_equal('import .shapes { Circle }\n')
+  })
+
+  it('offers a standard library module to be imported whole', @{
+    var items = items_at('echo jso', 'jso')
+    var json = items.find(@(item) => item.label == 'json')
+
+    expect(json.additionalTextEdits[0].newText).to_equal('import json\n')
+  })
+})
+
+describe('imports', @{
+  it('offers the modules beside the file', @{
+    expect(labels_at('import .', nil)).to_contain_all(['shapes', 'main', 'geometry'])
+  })
+
+  it('offers what a module exports between the braces', @{
+    var found = labels_at('import .shapes { Point, ', nil)
+
+    expect(found).to_contain_all(['Circle', 'origin', 'centre', 'UNIT'])
+    expect(found).not.to_contain('Point')
+  })
+
+  it('offers standard library modules', @{
+    expect(labels_at('import js', nil)).to_contain('json')
+  })
+})
+
+describe('other places', @{
+  it('offers the decorated methods a class lacks', @{
+    var found = labels_at('class A {\n  @new() {\n  }\n\n  @\n}\n', '\n\n  @')
+
+    expect(found).to_contain_all(['@add', '@eq', '@to_string'])
+    expect(found).not.to_contain('@new')
+  })
+
+  it('offers type names after a parameter', @{
+    var found = labels_at('import .shapes { Point }\ndef f(a: ', nil)
+
+    expect(found).to_contain_all(['string', 'number', 'list', 'Point'])
+  })
+
+  it('offers doc tags, and the parameters after @param', @{
+    var source = '/**\n * @\n * @param \n */\ndef f(first, second) {\n}\n'
+
+    expect(labels_at(source, ' * @')).to_contain_all(['param', 'returns', 'throws'])
+    expect(labels_at(source, '@param ')).to_equal(['first', 'second'])
+  })
+
+  it('offers nothing inside a string or comment', @{
+    expect(labels_at("echo 'a.", nil)).to_equal([])
+    expect(labels_at('# json.', nil)).to_equal([])
+  })
+})
+
+describe('resolve', @{
+  it('fills in the signature and documentation of the item looked at', @{
+    var items = items_at('import .shapes { Point }\nvar p = Point(1, 2)\necho p.dis', 'p.dis')
+    var item = items.find(@(each) => each.label == 'distance')
+    var resolved = client.request('completionItem/resolve', item)
+
+    expect(resolved.detail).to_equal('Point.distance(other)')
+    expect(resolved.documentation.value).to_contain('The distance to `other`.')
+  })
+})

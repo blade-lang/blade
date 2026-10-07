@@ -1,0 +1,16 @@
+import test { * }
+import .shapes { Point }
+
+describe('points', @{
+  it('measure the distance between them', @{
+    expect(Point(0, 0).distance(Point(3, 4))).to_equal(5)
+  })
+
+  it('know where they are', @{
+    expect(Point(1, 2).x).to_equal(2)
+  })
+})
+
+it_each([[1, 2], [2, 4]], 'doubles $0 to $1', @(a, b) {
+  expect(a * 2).to_equal(b)
+})

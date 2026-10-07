@@ -1,0 +1,7 @@
+/**
+ * @module geometry
+ *
+ * Measuring shapes.
+ */
+
+import @.area { area_of }

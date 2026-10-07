@@ -1,0 +1,122 @@
+# Keeping documents in step with the editor: incremental changes, the
+# three position encodings, and the line endings a file may use.
+
+import os
+import test { * }
+
+import ._client { Client, capabilities, position, uri }
+
+var FIXTURE = os.join_paths(os.dir_name(__file__), '_fixture')
+var SCRATCH = os.join_paths(FIXTURE, 'scratch.zu')
+
+# A protocol range.
+def span(line: int, character: int, end_line: int, end_character: int) {
+  return {
+    start: { line, character },
+    end: { line: end_line, character: end_character },
+  }
+}
+
+# The first line of a hover's markdown code block.
+def hover_line(client, address: string, at: dict) {
+  var document = { uri: address }
+  var answer = client.request('textDocument/hover', { textDocument: document, position: at })
+
+  return answer == nil ? nil : answer.contents.value.split('\n')[1]
+}
+
+describe('changes', @{
+  var client = nil
+
+  before_all(@{
+    client = Client(FIXTURE, { diagnostics: { delay: 0 } })
+    client.initialize(nil)
+  })
+
+  after_all(@{
+    client.stop()
+  })
+
+  it('applies a change to a range of the text', @{
+    var address = client.open(SCRATCH, 'var alpha = 1\necho alpha\n')
+
+    client.versions[address] = 2
+    client.notify('textDocument/didChange', {
+      textDocument: { uri: address, version: 2 },
+      contentChanges: [
+        { range: span(1, 5, 1, 10), text: 'beta' },
+        { range: span(0, 4, 0, 9), text: 'beta' },
+      ],
+    })
+
+    expect(hover_line(client, address, { line: 1, character: 6 })).to_equal('var beta: number')
+    client.notify('textDocument/didClose', { textDocument: { uri: address } })
+  })
+
+  it('applies a change of the whole text', @{
+    var address = client.open(SCRATCH, 'var one = 1\n')
+
+    client.change(address, 'var two = "2"\necho two\n')
+    expect(hover_line(client, address, { line: 1, character: 6 })).to_equal('var two: string')
+    client.notify('textDocument/didClose', { textDocument: { uri: address } })
+  })
+
+  it('reports diagnostics for the version they were worked out for', @{
+    var address = client.open(SCRATCH, 'echo missing\n')
+
+    expect(client.diagnostics_of(address).length()).to_equal(1)
+    client.change(address, 'var missing = 1\necho missing\n')
+    expect(client.diagnostics_of(address)).to_equal([])
+    expect(client.diagnostics[address].version).to_equal(2)
+    client.notify('textDocument/didClose', { textDocument: { uri: address } })
+  })
+
+  it("clears a closed document's diagnostics", @{
+    var address = client.open(SCRATCH, 'echo nowhere\n')
+
+    expect(client.diagnostics_of(address).length()).to_equal(1)
+    client.notify('textDocument/didClose', { textDocument: { uri: address } })
+    client.versions.remove(address)
+    var cleared = @() => client.diagnostics[address].diagnostics.is_empty()
+
+    client.wait_for(cleared, 'cleared diagnostics')
+  })
+
+  it('counts every kind of line ending as the protocol does', @{
+    # Zuri reads a lone `\r` as a space, so here it sits inside a
+    # dictionary; positions still count it as the end of a line.
+    var address = client.open(SCRATCH, 'var d = {\r  b: 2\r}\r\necho d.b\n')
+    var found = client.request('textDocument/definition', {
+      textDocument: { uri: address },
+      position: { line: 3, character: 5 },
+    })
+
+    expect(found[0].range.start).to_equal({ line: 0, character: 4 })
+    client.notify('textDocument/didClose', { textDocument: { uri: address } })
+  })
+})
+
+describe('position encodings', @{
+  # A line whose name comes after characters outside the Basic
+  # Multilingual Plane, where the encodings disagree.
+  var SOURCE = "var face = '😀😀'; var name = 1\necho '😀' + name\n"
+
+  it_each([['utf-16'], ['utf-8'], ['utf-32']], 'counts positions in $0', @(encoding) {
+    var client = Client(FIXTURE, nil)
+    var asked = capabilities()
+
+    asked.general.positionEncodings = [encoding]
+
+    var result = client.initialize(asked)
+
+    expect(result.capabilities.positionEncoding).to_equal(encoding)
+
+    var address = client.open(SCRATCH, SOURCE)
+    var at = position(SOURCE, "'😀' + nam", 0, encoding)
+    var asked_at = { textDocument: { uri: address }, position: at }
+    var found = client.request('textDocument/definition', asked_at)
+
+    expect(found[0].range.start).to_equal(position(SOURCE, 'var name', 4, encoding))
+    client.stop()
+  })
+})

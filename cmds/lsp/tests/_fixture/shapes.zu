@@ -1,0 +1,85 @@
+/**
+ * @module shapes
+ *
+ * Points and circles on a plane.
+ */
+
+/** The length of one unit. */
+const UNIT = 1
+
+/**
+ * A point on the plane.
+ */
+class Point {
+
+  /**
+   * Returns a new {Point}.
+   *
+   * @param number x: How far along.
+   * @param number y: How far up.
+   */
+  @new(x: number, y: number) {
+    self.x = x
+    self.y = y
+  }
+
+  /**
+   * The distance to `other`.
+   *
+   * @param Point other: Where to measure to.
+   * @returns number
+   */
+  distance(other) {
+    return ((self.x - other.x) ** 2 + (self.y - other.y) ** 2).sqrt()
+  }
+
+  /**
+   * Moves the point.
+   *
+   * @param number dx
+   * @param number dy
+   */
+  move(dx: number, dy: number) {
+    self.x += dx
+    self.y += dy
+  }
+}
+
+/**
+ * A circle around a centre.
+ */
+class Circle < Point {
+
+  @new(x: number, y: number, radius: number) {
+    parent(x, y)
+    self.radius = radius
+  }
+
+  /**
+   * How far the edge is from `other`.
+   *
+   * @param Point other
+   * @returns number
+   */
+  distance(other) {
+    return parent.distance(other) - self.radius
+  }
+}
+
+/**
+ * The point at the centre of the plane.
+ *
+ * @returns Point
+ */
+def origin() {
+  return Point(0, 0)
+}
+
+/**
+ * The centre of the plane.
+ *
+ * @deprecated Use origin() instead.
+ */
+def centre() {
+  return origin()
+}

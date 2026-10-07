@@ -1,0 +1,131 @@
+# Hover and signature help.
+
+import os
+import test { * }
+
+import ._client { Client, position }
+
+var FIXTURE = os.join_paths(os.dir_name(__file__), '_fixture')
+var SCRATCH = os.join_paths(FIXTURE, 'scratch.zu')
+var client = nil
+
+# The hover text at the end of `marker` in `source`.
+def hover_at(source: string, marker: string, shift) {
+  var address = client.open(SCRATCH, source)
+  var at = position(source, marker, shift)
+  var asked = { textDocument: { uri: address }, position: at }
+  var answer = client.request('textDocument/hover', asked)
+
+  client.notify('textDocument/didClose', { textDocument: { uri: address } })
+
+  return answer == nil ? nil : answer.contents.value
+}
+
+# The signature help at the end of `marker` in `source`.
+def help_at(source: string, marker: string) {
+  var address = client.open(SCRATCH, source)
+  var at = position(source, marker, 0)
+  var asked = { textDocument: { uri: address }, position: at }
+  var answer = client.request('textDocument/signatureHelp', asked)
+
+  client.notify('textDocument/didClose', { textDocument: { uri: address } })
+
+  return answer
+}
+
+var SOURCE = 'import json\nimport .shapes { Point, Circle, UNIT }\n\n' +
+  'var here = Point(3, 4)\nvar ring = Circle(0, 0, 1)\n' +
+  'echo here.distance(ring)\necho UNIT\necho json.encode(here.x)\nprint(here)\n'
+
+before_all(@{
+  client = Client(FIXTURE, { diagnostics: { delay: 0 } })
+  client.initialize(nil)
+  client.wait_indexed()
+})
+
+after_all(@{
+  client.stop()
+})
+
+describe('hover', @{
+  it('shows a class with its documentation', @{
+    var text = hover_at(SOURCE, 'Point(3', 3)
+
+    expect(text).to_start_with('```zuri\nclass Point\n```')
+    expect(text).to_contain('A point on the plane.')
+  })
+
+  it('shows a method with its parameters laid out', @{
+    var text = hover_at(SOURCE, 'here.distance', 2)
+
+    expect(text).to_start_with('```zuri\nPoint.distance(other)\n```')
+    expect(text).to_contain('**Parameters**')
+    expect(text).to_contain('- `other` `Point`: Where to measure to.')
+    expect(text).to_contain('**Returns**')
+  })
+
+  it('shows the type a variable is inferred to hold', @{
+    expect(hover_at(SOURCE, 'var here', 1)).to_start_with('```zuri\nvar here: Point\n```')
+  })
+
+  it('shows the value of a constant', @{
+    expect(hover_at(SOURCE, 'echo UNIT', 1)).to_start_with('```zuri\nconst UNIT = 1\n```')
+  })
+
+  it('shows a module and its overview', @{
+    var text = hover_at(SOURCE, 'json.encode', 7)
+
+    expect(text).to_start_with('```zuri\nimport json\n```')
+  })
+
+  it('shows a built-in from its stub', @{
+    var text = hover_at(SOURCE, 'print(', 2)
+
+    expect(text).to_start_with('```zuri\ndef print(')
+    expect(text).to_contain('*built in*')
+  })
+
+  it('shows what parent stands for', @{
+    var source = 'import .shapes { Point }\nclass P < Point {\n' +
+      '  @new() {\n    parent(1, 2)\n  }\n}\n'
+
+    expect(hover_at(source, 'parent', 2)).to_start_with('```zuri\nclass Point\n```')
+  })
+
+  it('shows nothing where nothing is named', @{
+    expect(hover_at(SOURCE, '\n\nvar', 3)).to_be_nil()
+  })
+})
+
+describe('signature help', @{
+  it('marks the parameter being written', @{
+    var help = help_at(SOURCE + 'here.move(1, ', 'here.move(1, ')
+
+    expect(help.signatures[0].label).to_equal('Point.move(dx: number, dy: number)')
+    expect(help.activeParameter).to_equal(1)
+  })
+
+  it('shows a constructor by its class', @{
+    var help = help_at(SOURCE + 'Circle(', 'print(here)\nCircle(')
+
+    expect(help.signatures[0].label).to_equal('Circle(x: number, y: number, radius: number)')
+    expect(help.activeParameter).to_equal(0)
+  })
+
+  it("carries each parameter's documentation", @{
+    var help = help_at(SOURCE + 'Point(', 'here)\nPoint(')
+
+    expect(help.signatures[0].parameters[0].documentation.value).to_equal('`number` How far along.')
+  })
+
+  it('stays on a variadic parameter', @{
+    var source = 'def total(first, ...rest) {\n  return first\n}\ntotal(1, 2, 3, '
+    var help = help_at(source, '2, 3, ')
+
+    expect(help.activeParameter).to_equal(1)
+  })
+
+  it('is not offered inside a list written as an argument', @{
+    expect(help_at(SOURCE + 'here.move([1, ', 'here.move([1, ')).to_be_nil()
+  })
+})

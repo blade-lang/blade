@@ -1,0 +1,201 @@
+# Going to definitions, declarations, types and implementations, and
+# finding references, highlights and renames.
+
+import os
+import rpc
+import test { * }
+
+import ._client { Client, position, uri, apply }
+
+var FIXTURE = os.join_paths(os.dir_name(__file__), '_fixture')
+var MAIN = os.join_paths(FIXTURE, 'main.zu')
+var SHAPES = os.join_paths(FIXTURE, 'shapes.zu')
+var AREA = os.join_paths(FIXTURE, 'geometry', 'area.zu')
+var MOVED = os.join_paths(FIXTURE, 'geometry', 'shapes.zu')
+var client = nil
+var main_uri = nil
+var main_text = nil
+
+# A request at the end of `marker` in main.zu, less `shift` characters.
+def ask(method: string, marker: string, shift, extra) {
+  var params = { textDocument: { uri: main_uri }, position: position(main_text, marker, shift) }
+
+  if extra != nil {
+    for key, value in extra {
+      params[key] = value
+    }
+  }
+
+  return client.request(method, params)
+}
+
+# Where a location points, as `file:line:character`.
+def place(location: dict) {
+  var file_name = location.uri.split('/').last()
+
+  return '${file_name}:${location.range.start.line}:${location.range.start.character}'
+}
+
+before_all(@{
+  client = Client(FIXTURE, { diagnostics: { delay: 0 } })
+  client.initialize(nil)
+  client.wait_indexed()
+  main_uri = client.open(MAIN, nil)
+  main_text = client.texts[main_uri]
+})
+
+after_all(@{
+  client.stop()
+})
+
+describe('definitions', @{
+  it('follows an imported name to the module that declares it', @{
+    var found = ask('textDocument/definition', 'here.distance(origin', 0)
+
+    expect(found.map(place)).to_equal(['shapes.zu:73:4'])
+  })
+
+  it('stops at the import for the declaration', @{
+    var found = ask('textDocument/declaration', 'here.distance(origin', 0)
+
+    expect(found.map(place)).to_equal(['main.zu:1:32'])
+  })
+
+  it('goes from a member to the method its receiver has', @{
+    var found = ask('textDocument/definition', 'ring.dist', 0)
+
+    expect(found.map(place)).to_equal(['shapes.zu:63:2'])
+  })
+
+  it('goes from an import path to its module', @{
+    expect(ask('textDocument/definition', 'import .geo', 0).map(place)).to_equal(['index.zu:0:0'])
+  })
+
+  it('goes from a built-in to its stub', @{
+    var found = ask('textDocument/definition', 'json.enc', 0)
+
+    expect(found[0].uri).to_end_with('/libs/json.stub.zu')
+  })
+
+  it("goes to the class of a variable's value", @{
+    var found = ask('textDocument/typeDefinition', 'var ring', 0)
+
+    expect(found.map(place)).to_equal(['shapes.zu:50:6'])
+  })
+
+  it('lists the methods that override one', @{
+    var shapes = client.open(SHAPES, nil)
+    var found = client.request('textDocument/implementation', {
+      textDocument: { uri: shapes },
+      position: position(client.texts[shapes], '  distance', 0),
+    })
+
+    client.notify('textDocument/didClose', { textDocument: { uri: shapes } })
+    expect(found.map(place)).to_equal(['shapes.zu:63:2'])
+  })
+})
+
+describe('references', @{
+  it('finds every use across the workspace, the declaration included when asked', @{
+    var including = { context: { includeDeclaration: true } }
+    var found = ask('textDocument/references', 'here.distance', 0, including)
+    var places = found.map(place).sort()
+
+    expect(places).to_equal(['checks.zu:5:23', 'main.zu:7:10', 'shapes.zu:31:2', 'shapes.zu:64:18'])
+  })
+
+  it('tells reads from writes in the file', @{
+    var found = ask('textDocument/documentHighlight', 'var here', 0)
+
+    var kinds = found.map(@(h) => [h.range.start.line, h.kind])
+
+    expect(kinds).to_equal([[4, 3], [7, 2], [8, 2], [10, 2]])
+  })
+
+  it('finds a module by every import of it', @{
+    var area = client.open(AREA, nil)
+    var found = client.request('textDocument/references', {
+      textDocument: { uri: area },
+      position: position(client.texts[area], 'import ..sha', 0),
+      context: { includeDeclaration: false },
+    })
+
+    client.notify('textDocument/didClose', { textDocument: { uri: area } })
+    expect(found.map(place).sort()).to_equal(['area.zu:0:9', 'checks.zu:1:8', 'main.zu:1:8'])
+  })
+})
+
+describe('rename', @{
+  it('says what will be renamed', @{
+    var found = ask('textDocument/prepareRename', 'origin()', 3)
+
+    expect(found.placeholder).to_equal('origin')
+  })
+
+  it('renames a declaration and every use, across files', @{
+    var edit = ask('textDocument/rename', 'origin()', 3, { newName: 'start' })
+    var changed = {}
+
+    for change in edit.documentChanges {
+      changed[change.textDocument.uri.split('/').last()] = change.edits.length()
+    }
+
+    expect(changed).to_equal({ 'main.zu': 2, 'shapes.zu': 2 })
+
+    var main_change = edit.documentChanges.find(@(c) => c.textDocument.uri == main_uri)
+
+    expect(main_change.textDocument.version).to_equal(1)
+    var renamed = apply(main_text, main_change.edits)
+
+    expect(renamed).to_contain('import .shapes { Point, Circle, start }')
+  })
+
+  it('keeps the key of a { name } entry', @{
+    var edit = ask('textDocument/rename', 'var here', 0, { newName: 'there' })
+    var main_change = edit.documentChanges.find(@(c) => c.textDocument.uri == main_uri)
+    var renamed = apply(main_text, main_change.edits)
+
+    expect(renamed).to_contain('var there = Point(3, 4)')
+    expect(renamed).to_contain('json.encode({ x: there.x })')
+  })
+
+  it_each([
+    ['class', "'class' is a keyword"],
+    ['2fast', "'2fast' is not a name"],
+    ['ring', "'ring' is already declared where 'here' is used"],
+  ], 'refuses $0', @(name, reason) {
+    catch {
+      ask('textDocument/rename', 'var here', 0, { newName: name })
+      expect('no error').to_equal(reason)
+    } as error {
+      expect(error.code).to_equal(-32803)
+      expect(error.message).to_contain(reason)
+    }
+  })
+
+  it('refuses what the standard library declares', @{
+    catch {
+      ask('textDocument/prepareRename', 'json.enc', 0)
+      expect('no error').to_equal('an error')
+    } as error {
+      expect(error.message).to_contain('outside the workspace')
+    }
+  })
+
+  it('moves the relative imports of a moved module', @{
+    var edit = client.request('workspace/willRenameFiles', {
+      files: [{ oldUri: uri(SHAPES), newUri: uri(MOVED) }],
+    })
+    var by_file = {}
+
+    for change in edit.documentChanges {
+      by_file[change.textDocument.uri.split('/').last()] = change.edits.map(@(e) => e.newText)
+    }
+
+    expect(by_file).to_equal({
+      'area.zu': ['.shapes'],
+      'checks.zu': ['.geometry.shapes'],
+      'main.zu': ['.geometry.shapes'],
+    })
+  })
+})

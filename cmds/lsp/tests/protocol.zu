@@ -1,0 +1,149 @@
+# The protocol around the features: cancellation, answers about
+# changed documents, malformed input, and settings.
+
+import os
+import rpc
+import test { * }
+
+import ._client { Client, capabilities, position, uri }
+
+var FIXTURE = os.join_paths(os.dir_name(__file__), '_fixture')
+var SCRATCH = os.join_paths(FIXTURE, 'scratch.zu')
+var client = nil
+
+# Sends `messages` together and waits for the answer with `id`.
+def answer_to(id: int, messages: list) {
+  var answered = nil
+
+  client.send_together(messages)
+  client.wait_for(@() {
+    answered = client.answers.get(id, nil)
+    return answered != nil
+  }, 'the answer to #${id}')
+
+  return answered
+}
+
+before_all(@{
+  client = Client(FIXTURE, { diagnostics: { delay: 0 } })
+  client.initialize(nil)
+  client.wait_indexed()
+})
+
+after_all(@{
+  client.stop()
+})
+
+describe('cancellation', @{
+  it('answers a request cancelled before it ran as cancelled', @{
+    var answer = answer_to(9001, [
+      { jsonrpc: '2.0', id: 9001, method: 'workspace/symbol', params: { query: 'a' } },
+      { jsonrpc: '2.0', method: '$/cancelRequest', params: { id: 9001 } },
+    ])
+
+    expect(answer.error.code).to_equal(-32800)
+  })
+
+  it('answers a request whose document changed meanwhile as modified', @{
+    var address = client.open(SCRATCH, 'var a = 1\necho a\n')
+    var answer = answer_to(9002, [
+      {
+        jsonrpc: '2.0',
+        id: 9002,
+        method: 'textDocument/references',
+        params: {
+          textDocument: { uri: address },
+          position: { line: 1, character: 5 },
+          context: { includeDeclaration: true },
+        },
+      },
+      {
+        jsonrpc: '2.0',
+        method: 'textDocument/didChange',
+        params: {
+          textDocument: { uri: address, version: 2 },
+          contentChanges: [{ text: 'var a = 2\necho a\n' }],
+        },
+      },
+    ])
+
+    expect(answer.error.code).to_equal(-32801)
+    client.notify('textDocument/didClose', { textDocument: { uri: address } })
+  })
+})
+
+describe('malformed input', @{
+  it('answers a message that is not JSON with a parse error, and carries on', @{
+    var body = '{"jsonrpc": "2.0", "id": 5, "method": '.to_bytes()
+
+    client.child.write_stdin('Content-Length: ${body.length()}\r\n\r\n'.to_bytes() + body)
+    client.ping()
+
+    expect(client.request('workspace/symbol', { query: 'Point' }).length()).to_be_greater_than(0)
+  })
+
+  it('answers a request it cannot read as invalid', @{
+    var answer = answer_to(9003, [{ jsonrpc: '1.0', id: 9003, method: 'workspace/symbol' }])
+
+    expect(answer.error.code).to_equal(-32600)
+  })
+
+  it('answers a request with parameters it cannot use as an internal error, and carries on', @{
+    catch {
+      client.request('textDocument/hover', { textDocument: { uri: uri(SCRATCH) } })
+      expect('no error').to_equal('an error')
+    } as error {
+      expect(instance_of(error, rpc.RpcError)).to_be_true()
+    }
+
+    expect(client.request('workspace/symbol', { query: 'Circle' }).length()).to_be_greater_than(0)
+  })
+
+  it('ignores a change to a document it does not have open', @{
+    client.notify('textDocument/didChange', {
+      textDocument: { uri: uri(os.join_paths(FIXTURE, 'nowhere.zu')), version: 2 },
+      contentChanges: [{ text: 'x' }],
+    })
+
+    expect(client.request('workspace/symbol', { query: 'origin' }).length()).to_equal(1)
+  })
+})
+
+describe('settings', @{
+  it('asks for them when it starts and follows them as they change', @{
+    var settled = Client(FIXTURE, { inlayHints: { parameterNames: 'none' } })
+
+    settled.initialize(nil)
+    settled.wait_indexed()
+
+    var main = settled.open(os.join_paths(FIXTURE, 'main.zu'), nil)
+    var whole = { start: { line: 0, character: 0 }, end: { line: 12, character: 0 } }
+    var asked = { textDocument: { uri: main }, range: whole }
+    var hints = settled.request('textDocument/inlayHint', asked)
+
+    expect(hints).to_equal([])
+
+    settled.settings = { inlayHints: { parameterNames: 'all' } }
+    settled.notify('workspace/didChangeConfiguration', { settings: nil })
+    var pulled = @() => settled.requests.filter(@(r) => r.method == 'workspace/configuration')
+
+    settled.wait_for(@() => pulled().length() >= 2, 'a second settings request')
+    settled.ping()
+
+    hints = settled.request('textDocument/inlayHint', asked)
+    expect(hints.length()).to_be_greater_than(0)
+    settled.stop()
+  })
+
+  it('leaves files the settings exclude out of the workspace', @{
+    var excluding = Client(FIXTURE, { exclude: ['geometry/**'] })
+
+    excluding.initialize(nil)
+    excluding.wait_indexed()
+
+    var found = excluding.request('workspace/symbol', { query: 'area_of' })
+
+    expect(found).to_equal([])
+    excluding.stop()
+  })
+})
