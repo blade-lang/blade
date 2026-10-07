@@ -1009,6 +1009,57 @@ fn find_binding_name(vm: &VM, home: &Home, v: Value) -> Option<String> {
 // materialize: TransferGraph -> destination heap
 // ---------------------------------------------------------------------
 
+/// The longest string `materialize_string` shares, in bytes. Repetition
+/// lives in short strings: dictionary keys, names, the handful of words
+/// a field takes its values from. A long string is nearly always unique,
+/// and hashing it would cost a second pass over its bytes for nothing.
+const SHARED_STRING_LIMIT: usize = 64;
+
+/// How often `materialize_string` checks that sharing pays, counted in
+/// strings it had to make rather than found.
+const SHARING_CHECK: usize = 4096;
+
+/// What one `materialize` call has rebuilt so far, as pin indices so a
+/// collection mid-way cannot leave a stale pointer behind.
+///
+/// `nodes` holds one entry per arena node, which is what keeps shared
+/// and cyclic structure intact. `strings` holds the short strings by
+/// their text. Strings cross as plain text, so without it every
+/// occurrence would come back as its own object: a list of a thousand
+/// records with the same five keys would arrive holding five thousand
+/// key strings where the sender had five.
+///
+/// `found` counts the strings the table supplied. A message of mostly
+/// distinct strings, a list of words say, gains nothing from the table
+/// and pays for every entry, so `sharing` turns off for the rest of the
+/// message once strings are made more often than they are found.
+struct Memo<'g> {
+  nodes: Vec<Option<usize>>,
+  strings: FxHashMap<&'g str, usize>,
+  found: usize,
+  sharing: bool,
+}
+
+/// Rebuilds a string leaf, handing back the object already made for the
+/// same text earlier in this graph when there is one. Strings are
+/// immutable and compare by content, so sharing them is unobservable.
+fn materialize_string<'g>(vm: &mut VM, text: &'g str, memo: &mut Memo<'g>) -> Value {
+  if !memo.sharing || text.len() > SHARED_STRING_LIMIT {
+    return vm.heap_mut().alloc_string(text);
+  }
+  if let Some(&p) = memo.strings.get(text) {
+    memo.found += 1;
+    return vm.pinned(p);
+  }
+  let value = vm.heap_mut().alloc_string(text);
+  memo.strings.insert(text, vm.pin_values([value]));
+  if memo.strings.len() % SHARING_CHECK == 0 && memo.found < memo.strings.len() {
+    memo.sharing = false;
+    memo.strings = FxHashMap::default();
+  }
+  value
+}
+
 /// Rebuilds `graph` as a real `Value` on `vm`'s own heap, loading
 /// whatever module a `Named` value or a structurally-captured
 /// closure's home needs (once per destination isolate; cheap and a
@@ -1064,24 +1115,29 @@ pub fn materialize(vm: &mut VM, graph: &TransferGraph) -> Result<Value, String> 
   }
 
   let outer_mark = vm.pin_values(std::iter::empty());
-  let mut node_pin: Vec<Option<usize>> = vec![None; graph.arena.len()];
-  let result = materialize_value(vm, &graph.root, &graph.arena, &mut node_pin);
+  let mut memo = Memo {
+    nodes: vec![None; graph.arena.len()],
+    strings: FxHashMap::default(),
+    found: 0,
+    sharing: true,
+  };
+  let result = materialize_value(vm, &graph.root, &graph.arena, &mut memo);
   vm.unpin(outer_mark);
   result
 }
 
-fn materialize_value(
+fn materialize_value<'g>(
   vm: &mut VM,
-  tv: &TransferValue,
-  arena: &[TransferNode],
-  node_pin: &mut Vec<Option<usize>>,
+  tv: &'g TransferValue,
+  arena: &'g [TransferNode],
+  memo: &mut Memo<'g>,
 ) -> Result<Value, String> {
   match tv {
     TransferValue::Nil => Ok(Value::nil()),
     TransferValue::Bool(b) => Ok(Value::bool(*b)),
     TransferValue::Number(n) => Ok(Value::number(*n)),
     TransferValue::BigInt(b) => Ok(vm.heap_mut().alloc_bigint(b.clone())),
-    TransferValue::Str(s) => Ok(vm.heap_mut().alloc_string(s.clone())),
+    TransferValue::Str(s) => Ok(materialize_string(vm, s, memo)),
     TransferValue::Bytes(b) => Ok(vm.heap_mut().alloc_bytes(b.clone())),
     TransferValue::Range { lower, upper, step } => {
       let v = vm.heap_mut().alloc_range(*lower, *upper);
@@ -1118,17 +1174,17 @@ fn materialize_value(
         .alloc_ptr(pool::ISOLATE_PTR_TYPE, state.clone()),
     ),
     TransferValue::Module { key, binding } => resolve_module(vm, key, binding.as_deref()),
-    TransferValue::Ref(idx) => materialize_ref(vm, *idx, arena, node_pin),
+    TransferValue::Ref(idx) => materialize_ref(vm, *idx, arena, memo),
   }
 }
 
-fn materialize_ref(
+fn materialize_ref<'g>(
   vm: &mut VM,
   idx: u32,
-  arena: &[TransferNode],
-  node_pin: &mut Vec<Option<usize>>,
+  arena: &'g [TransferNode],
+  memo: &mut Memo<'g>,
 ) -> Result<Value, String> {
-  if let Some(p) = node_pin[idx as usize] {
+  if let Some(p) = memo.nodes[idx as usize] {
     return Ok(vm.pinned(p));
   }
   match &arena[idx as usize] {
@@ -1138,9 +1194,9 @@ fn materialize_ref(
       // instead of recursing forever.
       let placeholder = vm.heap_mut().alloc_list(vec![Value::nil(); items.len()]);
       let p = vm.pin_values([placeholder]);
-      node_pin[idx as usize] = Some(p);
+      memo.nodes[idx as usize] = Some(p);
       for (i, item_tv) in items.iter().enumerate() {
-        let item_val = materialize_value(vm, item_tv, arena, node_pin)?;
+        let item_val = materialize_value(vm, item_tv, arena, memo)?;
         vm.pinned(p).list_set(i, item_val);
       }
       Ok(vm.pinned(p))
@@ -1148,18 +1204,18 @@ fn materialize_ref(
     TransferNode::Dict(pairs) => {
       let placeholder = vm.heap_mut().alloc_dict(Vec::new());
       let p = vm.pin_values([placeholder]);
-      node_pin[idx as usize] = Some(p);
+      memo.nodes[idx as usize] = Some(p);
       for (k_tv, v_tv) in pairs {
-        let k_val = materialize_value(vm, k_tv, arena, node_pin)?;
+        let k_val = materialize_value(vm, k_tv, arena, memo)?;
         let kp = vm.pin_values([k_val]);
-        let v_val = materialize_value(vm, v_tv, arena, node_pin)?;
+        let v_val = materialize_value(vm, v_tv, arena, memo)?;
         let k_val = vm.pinned(kp);
         vm.pinned(p).dict_set(k_val, v_val);
       }
       Ok(vm.pinned(p))
     },
     TransferNode::Instance { class, fields } => {
-      let class_val = materialize_value(vm, class, arena, node_pin)?;
+      let class_val = materialize_value(vm, class, arena, memo)?;
       let cp = vm.pin_values([class_val]);
       let field_count = fields.len();
       let placeholder = {
@@ -1167,9 +1223,9 @@ fn materialize_ref(
         vm.heap_mut().alloc_instance(c, field_count)
       };
       let p = vm.pin_values([placeholder]);
-      node_pin[idx as usize] = Some(p);
+      memo.nodes[idx as usize] = Some(p);
       for (i, f_tv) in fields.iter().enumerate() {
-        let f_val = materialize_value(vm, f_tv, arena, node_pin)?;
+        let f_val = materialize_value(vm, f_tv, arena, memo)?;
         let inst_val = vm.pinned(p);
         inst_val.as_instance().fields[i].set(f_val);
         write_barrier(inst_val.as_obj());
@@ -1177,20 +1233,20 @@ fn materialize_ref(
       Ok(vm.pinned(p))
     },
     TransferNode::BoundMethod { receiver, method } => {
-      let r_val = materialize_value(vm, receiver, arena, node_pin)?;
+      let r_val = materialize_value(vm, receiver, arena, memo)?;
       let rp = vm.pin_values([r_val]);
-      let m_val = materialize_value(vm, method, arena, node_pin)?;
+      let m_val = materialize_value(vm, method, arena, memo)?;
       let r_val = vm.pinned(rp);
       let bound = vm.heap_mut().alloc_bound_method(r_val, m_val);
       let p = vm.pin_values([bound]);
-      node_pin[idx as usize] = Some(p);
+      memo.nodes[idx as usize] = Some(p);
       Ok(bound)
     },
-    TransferNode::Class(cc) => materialize_class(vm, cc, idx, arena, node_pin),
+    TransferNode::Class(cc) => materialize_class(vm, cc, idx, arena, memo),
     TransferNode::SharedPtr(type_name, make) => {
       let val = vm.heap_mut().alloc_ptr_boxed(type_name, make());
       let p = vm.pin_values([val]);
-      node_pin[idx as usize] = Some(p);
+      memo.nodes[idx as usize] = Some(p);
       Ok(val)
     },
     TransferNode::Ptr(slot) => {
@@ -1206,12 +1262,12 @@ fn materialize_ref(
       };
       let val = vm.heap_mut().alloc_ptr_boxed(type_name, payload);
       let p = vm.pin_values([val]);
-      node_pin[idx as usize] = Some(p);
+      memo.nodes[idx as usize] = Some(p);
       Ok(val)
     },
-    TransferNode::Proto(proto) => materialize_prototype(vm, proto, idx, arena, node_pin),
+    TransferNode::Proto(proto) => materialize_prototype(vm, proto, idx, arena, memo),
     TransferNode::Closure { proto, upvalues } => {
-      let proto_val = materialize_value(vm, proto, arena, node_pin)?;
+      let proto_val = materialize_value(vm, proto, arena, memo)?;
       let proto_pin = vm.pin_values([proto_val]);
 
       // Phase 1: a placeholder (Closed(nil)) Upvalue object per
@@ -1241,17 +1297,17 @@ fn materialize_ref(
       });
       write_barrier(closure_val.as_obj());
       let p = vm.pin_values([closure_val]);
-      node_pin[idx as usize] = Some(p);
+      memo.nodes[idx as usize] = Some(p);
 
       // Phase 2: materialize what each upvalue actually holds (which
-      // may now safely reference the closure above via `node_pin`),
+      // may now safely reference the closure above via `memo`),
       // and patch the corresponding shell in place; sound because
       // `Obj::Upvalue` is a `Cell`, mutable after creation, and every
       // `ObjClosure.upvalues` entry is a `Value` (a pointer/handle),
       // so patching what it points AT is visible through every copy
       // of that handle, not just this one.
       for (uv_tv, &shell_pin) in upvalues.iter().zip(shell_pins.iter()) {
-        let val = materialize_value(vm, uv_tv, arena, node_pin)?;
+        let val = materialize_value(vm, uv_tv, arena, memo)?;
         let shell = vm.pinned(shell_pin);
         shell.as_upvalue().set(UpvalueState::Closed(val));
         write_barrier(shell.as_obj());
@@ -1276,17 +1332,17 @@ fn materialize_ref(
 /// OWN class by name (a static method calling another static method
 /// on the same class, say) resolve back to this exact class instead
 /// of recursing forever.
-fn materialize_class(
+fn materialize_class<'g>(
   vm: &mut VM,
-  cc: &CapturedClass,
+  cc: &'g CapturedClass,
   idx: u32,
-  arena: &[TransferNode],
-  node_pin: &mut Vec<Option<usize>>,
+  arena: &'g [TransferNode],
+  memo: &mut Memo<'g>,
 ) -> Result<Value, String> {
   if let Some(existing) = vm.lookup_global(&cc.name) {
     if existing.is_class() {
       let p = vm.pin_values([existing]);
-      node_pin[idx as usize] = Some(p);
+      memo.nodes[idx as usize] = Some(p);
       return Ok(existing);
     }
   }
@@ -1310,25 +1366,25 @@ fn materialize_class(
     finalized: Default::default(),
   });
   let p = vm.pin_values([placeholder]);
-  node_pin[idx as usize] = Some(p);
+  memo.nodes[idx as usize] = Some(p);
 
   let superclass = match &cc.superclass {
-    Some(s) => Some(materialize_value(vm, s, arena, node_pin)?),
+    Some(s) => Some(materialize_value(vm, s, arena, memo)?),
     None => None,
   };
   let mut methods = FxHashMap::default();
   for (name, tv) in &cc.methods {
-    let m = materialize_value(vm, tv, arena, node_pin)?;
+    let m = materialize_value(vm, tv, arena, memo)?;
     methods.insert(name.clone(), m);
   }
   let own_field_initializer = match &cc.own_field_initializer {
-    Some(f) => Some(materialize_value(vm, f, arena, node_pin)?),
+    Some(f) => Some(materialize_value(vm, f, arena, memo)?),
     None => None,
   };
   let mut statics = Vec::with_capacity(cc.statics.len());
   for tv in &cc.statics {
     statics.push(std::cell::Cell::new(materialize_value(
-      vm, tv, arena, node_pin,
+      vm, tv, arena, memo,
     )?));
   }
   // Same derivation `Instr::FinalizeClass` uses: the constructor, if
@@ -1364,32 +1420,32 @@ fn materialize_class(
   Ok(class_val)
 }
 
-fn materialize_constant(
+fn materialize_constant<'g>(
   vm: &mut VM,
-  tv: &TransferValue,
-  arena: &[TransferNode],
-  node_pin: &mut Vec<Option<usize>>,
+  tv: &'g TransferValue,
+  arena: &'g [TransferNode],
+  memo: &mut Memo<'g>,
 ) -> Result<Value, String> {
   match tv {
     TransferValue::Str(s) => Ok(vm.heap_mut().alloc_string_old(s.clone())),
     TransferValue::BigInt(b) => Ok(vm.heap_mut().alloc_bigint_old(b.clone())),
-    _ => materialize_value(vm, tv, arena, node_pin),
+    _ => materialize_value(vm, tv, arena, memo),
   }
 }
 
-fn materialize_prototype(
+fn materialize_prototype<'g>(
   vm: &mut VM,
-  proto: &CapturedFunction,
+  proto: &'g CapturedFunction,
   idx: u32,
-  arena: &[TransferNode],
-  node_pin: &mut Vec<Option<usize>>,
+  arena: &'g [TransferNode],
+  memo: &mut Memo<'g>,
 ) -> Result<Value, String> {
   let proto_id = proto.data.id;
   let key = format!("__proto_{}", proto_id);
   if let Some(cached_val) = vm.lookup_global(&key) {
     if cached_val.is_func() {
       let p = vm.pin_values([cached_val]);
-      node_pin[idx as usize] = Some(p);
+      memo.nodes[idx as usize] = Some(p);
       return Ok(cached_val);
     }
   }
@@ -1406,7 +1462,7 @@ fn materialize_prototype(
   // n-th constant of this chunk is not the n-th pin past the mark.
   let mut pins = Vec::with_capacity(proto.data.constants.len());
   for c in &proto.data.constants {
-    let v = materialize_constant(vm, c, arena, node_pin)?;
+    let v = materialize_constant(vm, c, arena, memo)?;
     pins.push(vm.pin_values([v]));
   }
   let constants: Vec<Value> = pins.into_iter().map(|p| vm.pinned(p)).collect();
@@ -1444,10 +1500,10 @@ fn materialize_prototype(
   let fn_val = vm.heap_mut().alloc_function(fn_obj);
   write_barrier(fn_val.as_obj());
   let p = vm.pin_values([fn_val]);
-  node_pin[idx as usize] = Some(p);
+  memo.nodes[idx as usize] = Some(p);
 
   for (name, tv) in &proto.data.root_globals {
-    let val = materialize_value(vm, tv, arena, node_pin)?;
+    let val = materialize_value(vm, tv, arena, memo)?;
     vm.define_global(name.clone(), val);
   }
 

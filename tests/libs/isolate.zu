@@ -1178,6 +1178,55 @@ def test_pool_size_and_cpu_count() {
   echo 'test_pool_size_and_cpu_count passed'
 }
 
+def test_repeated_strings_cross_as_one_object() {
+  # Built in the isolate, every name below is a separate string, and the
+  # notes are too long to be worth sharing. Enough records that the
+  # receiving side collects while it rebuilds them.
+  var t = isolate.spawn(@(count) {
+    var records = []
+
+    iter var i = 0; i < count; i++ {
+      var note = 'a note long enough that a message never shares it between records: ${i}'
+
+      records.append({ name: 'item ${i % 7}', kind: 'function', note })
+    }
+
+    return records
+  }, 50000)
+
+  var records = t.join()
+  var intact = true
+  var shared = true
+
+  iter var i = 0; i < records.length(); i++ {
+    var record = records[i]
+    var note = 'a note long enough that a message never shares it between records: ${i}'
+
+    if record.name != 'item ${i % 7}' or record.kind != 'function' or record.note != note {
+      intact = false
+    }
+
+    # An address is only comparable with nothing allocated in between:
+    # a collection moves young objects. Both key lists come first.
+    var keys = record.keys()
+    var first_keys = records[0].keys()
+
+    if id(keys[0]) != id(first_keys[0]) or id(record.kind) != id(records[0].kind) {
+      shared = false
+    }
+  }
+
+  assert records.length() == 50000, 'every record must arrive'
+  assert intact, 'every record must arrive with its own values'
+  assert shared, 'equal short strings must arrive as one object'
+  assert id(records[0].name) == id(records[7].name), 'equal names must arrive as one object'
+  assert id(records[0].name) != id(records[1].name), 'different names must stay different'
+
+  records[0].kind = 'class'
+  assert records[1].kind == 'function', 'the records themselves must not be shared'
+  echo 'test_repeated_strings_cross_as_one_object passed'
+}
+
 test_basic_spawn_join()
 test_join_is_repeatable()
 test_is_done_and_try_join()
@@ -1266,6 +1315,7 @@ test_broadcast_unsubscribe()
 test_broadcast_close_closes_subscribers()
 test_broadcast_rejects_operations_after_close()
 test_broadcast_bounded_capacity_drops_when_full()
+test_repeated_strings_cross_as_one_object()
 
 # must run LAST: permanently shuts the pool down for the rest of the process
 test_shutdown_drains_and_blocks_new_spawns()
