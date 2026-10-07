@@ -94,6 +94,10 @@
 
 - [JSON-RPC](ch28-00-rpc.md)
 
+# Tooling
+
+- [Editor Support](ch29-00-editors.md)
+
 # Appendices
 
 - [A - Keywords](appendix-01-keywords.md)
