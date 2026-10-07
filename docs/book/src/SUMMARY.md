@@ -90,6 +90,10 @@
   - [Bundles and Upgrades](ch27-05-bundles.md)
   - [Running Nyssa](ch27-06-nyssa.md)
 
+# Talking to Other Programs
+
+- [JSON-RPC](ch28-00-rpc.md)
+
 # Appendices
 
 - [A - Keywords](appendix-01-keywords.md)

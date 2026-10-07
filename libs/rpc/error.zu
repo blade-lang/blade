@@ -1,0 +1,164 @@
+/**
+ * @module error
+ *
+ * The error codes JSON-RPC defines and the errors `rpc` raises, kept
+ * in a module of their own so every other part of `rpc` can use them.
+ * Re-exported by `rpc`.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+/**
+ * The code for a message that is not valid JSON, `-32700`.
+ */
+const PARSE_ERROR = -32700
+
+/**
+ * The code for valid JSON that is not a valid JSON-RPC message,
+ * `-32600`.
+ */
+const INVALID_REQUEST = -32600
+
+/**
+ * The code for a request naming a method the other side does not
+ * have, `-32601`.
+ */
+const METHOD_NOT_FOUND = -32601
+
+/**
+ * The code for a request whose parameters the method cannot take,
+ * `-32602`.
+ */
+const INVALID_PARAMS = -32602
+
+/**
+ * The code for a request that failed while it was being handled,
+ * `-32603`.
+ */
+const INTERNAL_ERROR = -32603
+
+/**
+ * The lowest code JSON-RPC sets aside for errors a server defines
+ * itself, `-32099`. The range runs up to `SERVER_ERROR_MAX`.
+ */
+const SERVER_ERROR_MIN = -32099
+
+/**
+ * The highest code JSON-RPC sets aside for errors a server defines
+ * itself, `-32000`.
+ */
+const SERVER_ERROR_MAX = -32000
+
+/**
+ * A JSON-RPC error: what a request failed with, on either side of a
+ * connection.
+ *
+ * Raised from a request handler, it answers the request: its `code`,
+ * `message` and `data` go back to the caller as they are.
+ * `Endpoint.request()` raises one when the other side answers a
+ * request with an error.
+ *
+ * JSON-RPC reserves the codes from `-32768` to `-32000` for itself;
+ * the constants in this module name the ones it defines. An
+ * application's own errors take any code outside that range.
+ *
+ * ```zuri
+ * import rpc
+ *
+ * var error = rpc.RpcError(rpc.INVALID_PARAMS, 'a name is required', { field: 'name' })
+ *
+ * echo error.code       # -32602
+ * echo error.to_dict()  # {code: -32602, message: a name is required, data: {field: name}}
+ * ```
+ */
+class RpcError < Error {
+
+  /**
+   * Returns a new {RpcError}.
+   *
+   * @param int code: The error's code.
+   * @param string message: A short description of what went wrong.
+   * @param any data: Anything more the other side may need, sent
+   *    along with the error. Default `nil`, which sends nothing.
+   */
+  @new(code: int, message: string, data) {
+    parent(message)
+
+    self.type = 'RpcError'
+    self.code = code
+    self.data = data
+  }
+
+  /**
+   * The error as JSON-RPC sends it: `{ code, message }`, and `data`
+   * as well when the error carries any.
+   *
+   * @returns dict
+   */
+  to_dict() {
+    var error = { code: self.code, message: self.message }
+
+    if self.data != nil {
+      error.data = self.data
+    }
+
+    return error
+  }
+}
+
+/**
+ * Raised when the framing of a stream cannot be read: a header block
+ * that is not ASCII, a header without a length, a length that is not
+ * a whole number, a header or message larger than the framing
+ * allows, or a charset other than UTF-8. Nothing after it in the
+ * stream can be read.
+ */
+class RpcFramingError < Error {
+
+  /**
+   * Returns a new {RpcFramingError}.
+   *
+   * @param string message: What was wrong with the stream.
+   */
+  @new(message: string) {
+    parent(message)
+
+    self.type = 'RpcFramingError'
+  }
+}
+
+/**
+ * Raised by `Endpoint.request()` when the connection ends before the
+ * answer arrives, and by sending on an endpoint that has been closed.
+ */
+class RpcClosedError < Error {
+
+  /**
+   * Returns a new {RpcClosedError}.
+   *
+   * @param string message: What could not be done.
+   */
+  @new(message: string) {
+    parent(message)
+
+    self.type = 'RpcClosedError'
+  }
+}
+
+/**
+ * Raised by `Endpoint.request()` when its `timeout` runs out before
+ * the answer arrives.
+ */
+class RpcTimeoutError < Error {
+
+  /**
+   * Returns a new {RpcTimeoutError}.
+   *
+   * @param string message: What timed out.
+   */
+  @new(message: string) {
+    parent(message)
+
+    self.type = 'RpcTimeoutError'
+  }
+}

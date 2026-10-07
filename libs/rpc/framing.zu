@@ -1,0 +1,378 @@
+/**
+ * @module framing
+ *
+ * How messages are told apart in a stream of bytes. A stream carries
+ * one message after another with nothing to mark where one ends, so
+ * each is framed: {HeaderFraming} puts a header giving its length in
+ * front of it, and {LineFraming} ends it with a line break.
+ *
+ * A framing is fed the bytes as they arrive, in whatever pieces they
+ * arrive in, and hands back each message once the whole of it is
+ * there. It frames the other way too, turning a message's text into
+ * the bytes to send.
+ *
+ * Re-exported by `rpc`.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import .error { RpcFramingError }
+
+/**
+ * The largest message a framing accepts unless told otherwise:
+ * 64 MiB.
+ */
+const DEFAULT_MAX_SIZE = 67108864
+
+# A header block longer than this is not a header.
+const _MAX_HEADER = 8192
+
+var _CR = 13
+var _LF = 10
+
+# Where the blank line that ends a header block starts in `data`, or
+# -1 when it has not arrived yet.
+def _blank_line(data: bytes) {
+  var at = data.index_of(_CR)
+
+  while at >= 0 and at + 3 < data.length() {
+    if data[at + 1] == _LF and data[at + 2] == _CR and data[at + 3] == _LF {
+      return at
+    }
+
+    at = data.index_of(_CR, at + 1)
+  }
+
+  return -1
+}
+
+/**
+ * Frames each message with a header block giving its length:
+ *
+ * ```text
+ * Content-Length: 42\r\n
+ * \r\n
+ * {"jsonrpc":"2.0","id":1,"method":"status"}
+ * ```
+ *
+ * The header block is ASCII: lines of `Name: value`, each ended by
+ * `\r\n`, and a blank line after them. `Content-Length` gives the length of
+ * the message after the blank line, in bytes, and is required.
+ * `Content-Type` may be given, and if it names a charset that charset
+ * must be UTF-8. Header names are read without regard to case, and
+ * any other header is ignored. A message is sent with a
+ * `Content-Length` header alone.
+ *
+ * ```zuri
+ * import rpc
+ *
+ * var framing = rpc.HeaderFraming()
+ * var stream = framing.frame('{"a":1}') + framing.frame('{"b":2}')
+ *
+ * # However the bytes are split, the same two messages come out.
+ * var first = framing.feed(stream[0, 30])
+ * var second = framing.feed(stream[30, stream.length()])
+ *
+ * echo first.map(@(m) => m.to_string())   # [{"a":1}]
+ * echo second.map(@(m) => m.to_string())  # [{"b":2}]
+ * ```
+ *
+ * @printable
+ */
+class HeaderFraming {
+
+  /**
+   * Returns a new {HeaderFraming} with nothing buffered and a
+   * maximum message size of `DEFAULT_MAX_SIZE`.
+   */
+  @new() {
+    self._buffer = bytes(0)
+    self._expected = -1
+    self._max_size = DEFAULT_MAX_SIZE
+  }
+
+  /**
+   * Sets the largest message, in bytes, that `feed()` accepts.
+   *
+   * @param int size: Default `DEFAULT_MAX_SIZE`, 64 MiB.
+   * @returns HeaderFraming itself.
+   */
+  set_max_size(size: int) {
+    self._max_size = size
+
+    return self
+  }
+
+  /**
+   * The largest message, in bytes, that `feed()` accepts.
+   *
+   * @returns int
+   */
+  max_size() {
+    return self._max_size
+  }
+
+  /**
+   * How many bytes are held waiting for the rest of a message.
+   *
+   * @returns int
+   */
+  pending() {
+    return self._buffer.length()
+  }
+
+  /**
+   * Takes the next bytes of the stream and returns every message they
+   * complete, as the bytes of its text, in the order they arrived. A
+   * message cut off at the end of `data` is held until the rest of it
+   * is fed.
+   *
+   * @param bytes data: The next bytes of the stream.
+   * @returns list[bytes]
+   * @throws RpcFramingError when the header block is not ASCII, has
+   *    no `Content-Length`, or runs past 8 KiB, its length is not a
+   *    whole number of bytes, a header line has no `:`, the charset
+   *    is not UTF-8, or the message is larger than `max_size()`.
+   *    Nothing after it in the stream can be read.
+   */
+  feed(data: bytes) {
+    self._buffer = self._buffer + data
+
+    var messages = []
+
+    while true {
+      if self._expected < 0 {
+        var blank = _blank_line(self._buffer)
+
+        if blank < 0 {
+          if self._buffer.length() > _MAX_HEADER {
+            raise RpcFramingError('a header block ran past ${_MAX_HEADER} bytes')
+          }
+
+          break
+        }
+
+        self._expected = self._read_headers(self._buffer[0, blank])
+        self._buffer = self._buffer[blank + 4, self._buffer.length()]
+      }
+
+      if self._buffer.length() < self._expected {
+        break
+      }
+
+      messages.append(self._buffer[0, self._expected])
+      self._buffer = self._buffer[self._expected, self._buffer.length()]
+      self._expected = -1
+    }
+
+    return messages
+  }
+
+  # The length the header block gives the message that follows it.
+  _read_headers(block: bytes) {
+    for byte in block {
+      if byte > 127 {
+        raise RpcFramingError('a header block holds a byte that is not ASCII')
+      }
+    }
+
+    var length = -1
+
+    for line in block.to_string().split('\r\n') {
+      var colon = line.index_of(':')
+
+      if colon < 0 {
+        raise RpcFramingError("a header line has no ':': '${line}'")
+      }
+
+      var name = line[0, colon].trim().lower()
+      var value = line[colon + 1, line.length()].trim()
+
+      if name == 'content-length' {
+        if !value.is_number() {
+          raise RpcFramingError("Content-Length is not a whole number: '${value}'")
+        }
+
+        length = value.to_number()
+      } else if name == 'content-type' {
+        _check_charset(value)
+      }
+    }
+
+    if length < 0 {
+      raise RpcFramingError('a header block has no Content-Length')
+    }
+
+    if length > self._max_size {
+      raise RpcFramingError('a message of ${length} bytes is over the ${self._max_size}-byte limit')
+    }
+
+    return length
+  }
+
+  /**
+   * The bytes that send `message`: its text with a `Content-Length`
+   * header in front.
+   *
+   * @param string|bytes message: The message's text.
+   * @returns bytes
+   */
+  frame(message) {
+    var body = is_bytes(message) ? message : message.to_bytes()
+
+    return 'Content-Length: ${body.length()}\r\n\r\n'.to_bytes() + body
+  }
+
+  /**
+   * This framing as `HeaderFraming(n bytes pending)`.
+   *
+   * @returns string
+   */
+  to_string() {
+    return 'HeaderFraming(${self._buffer.length()} bytes pending)'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+def _check_charset(content_type: string) {
+  for part in content_type.split(';') {
+    var setting = part.trim().lower()
+
+    if setting.starts_with('charset=') {
+      var charset = setting[8, setting.length()].trim()
+
+      if charset != 'utf-8' and charset != 'utf8' {
+        raise RpcFramingError("charset '${charset}' is not UTF-8")
+      }
+    }
+  }
+}
+
+/**
+ * Frames each message as one line, ended by `\n`, the framing of
+ * newline-delimited JSON. JSON text holds no line breaks of its own,
+ * so a line is always exactly one message.
+ *
+ * A line may end in `\r\n` as well, and an empty line is skipped.
+ *
+ * ```zuri
+ * import rpc
+ *
+ * var framing = rpc.LineFraming()
+ * var lines = framing.feed('{"a":1}\n{"b":'.to_bytes())
+ *
+ * echo lines.length()  # 1
+ * echo framing.feed('2}\n'.to_bytes())[0].to_string()  # {"b":2}
+ * ```
+ *
+ * @printable
+ */
+class LineFraming {
+
+  /**
+   * Returns a new {LineFraming} with nothing buffered and a maximum
+   * message size of `DEFAULT_MAX_SIZE`.
+   */
+  @new() {
+    self._buffer = bytes(0)
+    self._max_size = DEFAULT_MAX_SIZE
+  }
+
+  /**
+   * Sets the longest line, in bytes, that `feed()` accepts.
+   *
+   * @param int size: Default `DEFAULT_MAX_SIZE`, 64 MiB.
+   * @returns LineFraming itself.
+   */
+  set_max_size(size: int) {
+    self._max_size = size
+
+    return self
+  }
+
+  /**
+   * The longest line, in bytes, that `feed()` accepts.
+   *
+   * @returns int
+   */
+  max_size() {
+    return self._max_size
+  }
+
+  /**
+   * How many bytes are held waiting for the end of a line.
+   *
+   * @returns int
+   */
+  pending() {
+    return self._buffer.length()
+  }
+
+  /**
+   * Takes the next bytes of the stream and returns every line they
+   * complete, without its line break, as bytes, in the order they
+   * arrived. A line cut off at the end of `data` is held until the
+   * rest of it is fed.
+   *
+   * @param bytes data: The next bytes of the stream.
+   * @returns list[bytes]
+   * @throws RpcFramingError when a line runs past `max_size()`.
+   *    Nothing after it in the stream can be read.
+   */
+  feed(data: bytes) {
+    self._buffer = self._buffer + data
+
+    var messages = []
+    var end = self._buffer.index_of(_LF)
+
+    while end >= 0 {
+      var line = self._buffer[0, end]
+
+      if !line.is_empty() and line[line.length() - 1] == _CR {
+        line = line[0, line.length() - 1]
+      }
+
+      if !line.is_empty() {
+        messages.append(line)
+      }
+
+      self._buffer = self._buffer[end + 1, self._buffer.length()]
+      end = self._buffer.index_of(_LF)
+    }
+
+    if self._buffer.length() > self._max_size {
+      raise RpcFramingError('a line ran past the ${self._max_size}-byte limit')
+    }
+
+    return messages
+  }
+
+  /**
+   * The bytes that send `message`: its text and a `\n`.
+   *
+   * @param string|bytes message: The message's text, which must hold
+   *    no line break.
+   * @returns bytes
+   */
+  frame(message) {
+    var body = is_bytes(message) ? message : message.to_bytes()
+
+    return body + '\n'.to_bytes()
+  }
+
+  /**
+   * This framing as `LineFraming(n bytes pending)`.
+   *
+   * @returns string
+   */
+  to_string() {
+    return 'LineFraming(${self._buffer.length()} bytes pending)'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}

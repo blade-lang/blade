@@ -29,7 +29,7 @@ thing.
 | [`is_upper()`](#is_upper) | `boolean` | Returns `true` if the byte stream only contains upper case characters, `false` otherwise. |
 | [`is_space()`](#is_space) | `boolean` | Returns `true` if the byte stream only contains space characters, `false` otherwise. |
 | [`to_list()`](#to_list) | `list` | Returns the byte stream as a list of bytes. |
-| [`to_string()`](#to_string) | `string` | Returns the byte stream as a string. |
+| [`to_string()`](#to_string) | `string` | Returns the byte stream as a string, reading it as UTF-8. |
 | [`each(callback: function)`](#each) | `void` | Iterates over each byte of the bytes object, calling the provided callback function with the byte and its index. |
 
 ## `length()`
@@ -487,7 +487,7 @@ to_list() -> list
 Returns the byte stream as a list of bytes.
 
 ```zuri-repl
-%> bytes([0x31, 0x55, 0x149, 0x215]).to_list()
+%> bytes([0x31, 0x55, 0xe9, 0x21]).to_list()
 [49, 85, 233, 33]
 ```
 
@@ -499,7 +499,9 @@ Returns the byte stream as a list of bytes.
 to_string() -> string
 ```
 
-Returns the byte stream as a string.
+Returns the byte stream as a string, reading it as UTF-8. Each sequence
+that is not valid UTF-8 reads as U+FFFD, the replacement character, so
+the string of such bytes does not encode back to the same bytes.
 
 ```zuri-repl
 %> bytes([65, 66, 67, 68, 69]).to_string()

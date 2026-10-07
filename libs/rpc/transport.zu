@@ -1,0 +1,372 @@
+/**
+ * @module transport
+ *
+ * Where an endpoint's bytes come from and go to. A transport is any
+ * object with three methods:
+ *
+ * - `read(max)` returns the next bytes that arrive, at most `max` of
+ *   them, waiting until at least one does. It returns empty bytes
+ *   once the stream has ended.
+ * - `write(data)` sends all of `data`, a `bytes`.
+ * - `close()` ends the stream in the direction it writes.
+ *
+ * A transport may also have `can_listen()`, true when another isolate
+ * can read it while the one that made it writes to it, which
+ * `Endpoint.listen()` relies on. Without the method, it is false.
+ *
+ * {StdioTransport} talks over the program's own standard input and
+ * output, {SocketTransport} over a connected socket,
+ * {ProcessTransport} over the standard input and output of a child
+ * process, and {ChannelTransport} over isolate channels, two of
+ * which `pipe()` joins into a connection between isolates. Any other
+ * object with the three methods works the same.
+ *
+ * Re-exported by `rpc`.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import io
+import isolate
+import .error { RpcClosedError }
+
+/**
+ * Talks over the program's own standard input and output: what it
+ * reads arrives on stdin, and what it writes goes to stdout. This is
+ * the transport of a program that another one starts and talks to.
+ *
+ * Every write is flushed at once. Anything else the program prints
+ * to stdout lands in the middle of the stream, so a program serving
+ * over stdio writes everything else to stderr.
+ *
+ * @printable
+ */
+class StdioTransport {
+
+  /**
+   * Returns a new {StdioTransport}.
+   */
+  @new() {
+  }
+
+  /**
+   * The next bytes on stdin, at most `max` of them, or empty bytes
+   * once stdin has ended.
+   *
+   * @param int max
+   * @returns bytes
+   */
+  read(max: int) {
+    var data = io.stdin.read(max)
+
+    return data == nil ? bytes(0) : data
+  }
+
+  /**
+   * Writes `data` to stdout and flushes it.
+   *
+   * @param bytes data
+   */
+  write(data: bytes) {
+    io.stdout.write(data)
+    io.stdout.flush()
+  }
+
+  /**
+   * Flushes stdout. The program's standard streams stay open.
+   */
+  close() {
+    io.stdout.flush()
+  }
+
+  /**
+   * True: every isolate reads the same stdin, so one can read it while
+   * another writes.
+   *
+   * @returns bool
+   */
+  can_listen() {
+    return true
+  }
+
+  /**
+   * This transport as `StdioTransport()`.
+   *
+   * @returns string
+   */
+  to_string() {
+    return 'StdioTransport()'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+/**
+ * Talks over a connected stream from `net`: a `TcpStream`, a
+ * `UnixStream` or a `TlsStream`, or anything else with `read()`,
+ * `write_all()` and `close()`.
+ *
+ * A socket belongs to the isolate that holds it, so an endpoint
+ * serving one reads it with `serve()` rather than `listen()`.
+ *
+ * @printable
+ */
+class SocketTransport {
+
+  /**
+   * Returns a new {SocketTransport} over `socket`.
+   *
+   * @param any socket: A connected socket.
+   */
+  @new(socket) {
+    self._socket = socket
+  }
+
+  /**
+   * The next bytes from the socket, at most `max` of them, or empty
+   * bytes once the other side has closed its end.
+   *
+   * @param int max
+   * @returns bytes
+   * @throws Error when the socket fails, or its read timeout runs
+   *    out.
+   */
+  read(max: int) {
+    var data = self._socket.read(max)
+
+    return data == nil ? bytes(0) : data
+  }
+
+  /**
+   * Writes all of `data` to the socket.
+   *
+   * @param bytes data
+   * @throws Error when the socket fails.
+   */
+  write(data: bytes) {
+    self._socket.write_all(data)
+  }
+
+  /**
+   * Closes the socket.
+   */
+  close() {
+    self._socket.close()
+  }
+
+  /**
+   * False: a socket is read by the isolate that holds it.
+   *
+   * @returns bool
+   */
+  can_listen() {
+    return false
+  }
+
+  /**
+   * This transport as `SocketTransport()`.
+   *
+   * @returns string
+   */
+  to_string() {
+    return 'SocketTransport()'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+/**
+ * Talks to a child process over its standard input and output, from
+ * `os.spawn()` with `stdin` and `stdout` both `'pipe'`: what the
+ * child prints is read, and what is written goes to its stdin.
+ *
+ * ```zuri,ignore
+ * import os
+ * import rpc
+ *
+ * var child = os.spawn('zuri', ['run', 'calculator.zu'], {
+ *   stdin: 'pipe',
+ *   stdout: 'pipe'
+ * })
+ * var calculator = rpc.endpoint(rpc.process(child))
+ *
+ * echo calculator.request('add', [2, 3])
+ * ```
+ *
+ * The child belongs to the isolate that spawned it, so an endpoint
+ * talking to it reads with `serve()` and `request()` rather than
+ * `listen()`.
+ *
+ * @printable
+ */
+class ProcessTransport {
+
+  /**
+   * Returns a new {ProcessTransport} over `process`.
+   *
+   * @param os.Process process: A child whose stdin and stdout are
+   *    pipes.
+   */
+  @new(process) {
+    self._process = process
+  }
+
+  /**
+   * The next bytes the child printed, at most `max` of them, or empty
+   * bytes once its stdout has ended.
+   *
+   * @param int max
+   * @returns bytes
+   */
+  read(max: int) {
+    var data = self._process.read_stdout(max)
+
+    return data == nil ? bytes(0) : data
+  }
+
+  /**
+   * Writes all of `data` to the child's stdin.
+   *
+   * @param bytes data
+   */
+  write(data: bytes) {
+    self._process.write_stdin(data)
+  }
+
+  /**
+   * Closes the child's stdin, so it reads the end of its input. The
+   * child itself keeps running until it exits.
+   */
+  close() {
+    self._process.close_stdin()
+  }
+
+  /**
+   * False: a child process is read by the isolate that spawned it.
+   *
+   * @returns bool
+   */
+  can_listen() {
+    return false
+  }
+
+  /**
+   * This transport as `ProcessTransport()`.
+   *
+   * @returns string
+   */
+  to_string() {
+    return 'ProcessTransport()'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+/**
+ * Talks over two isolate channels: what it reads arrives on `inbox`
+ * and what it writes goes to `outbox`. Channels cross isolates, so a
+ * {ChannelTransport} can be handed to another isolate and talk to it
+ * from there; `pipe()` makes the two ends of such a connection.
+ *
+ * @printable
+ */
+class ChannelTransport {
+
+  /**
+   * Returns a new {ChannelTransport}.
+   *
+   * @param isolate.Channel inbox: Where the bytes it reads arrive.
+   * @param isolate.Channel outbox: Where the bytes it writes go.
+   */
+  @new(inbox, outbox) {
+    self._inbox = inbox
+    self._outbox = outbox
+  }
+
+  /**
+   * The next bytes sent to this end, whatever their length, or empty
+   * bytes once the other end has closed.
+   *
+   * @param int max: Ignored; each read returns one write from the
+   *    other end whole.
+   * @returns bytes
+   */
+  read(max: int) {
+    var data = self._inbox.recv()
+
+    return data == nil ? bytes(0) : data
+  }
+
+  /**
+   * Sends `data` to the other end.
+   *
+   * @param bytes data
+   * @throws RpcClosedError when this end has been closed.
+   */
+  write(data: bytes) {
+    catch {
+      self._outbox.send(data)
+    } as error {
+      raise RpcClosedError('this end of the pipe has been closed')
+    }
+  }
+
+  /**
+   * Closes this end, so the other end reads the end of its input.
+   */
+  close() {
+    self._outbox.close()
+  }
+
+  /**
+   * True: channels are shared between isolates, so one can read this
+   * end while another writes to it.
+   *
+   * @returns bool
+   */
+  can_listen() {
+    return true
+  }
+
+  /**
+   * This transport as `ChannelTransport()`.
+   *
+   * @returns string
+   */
+  to_string() {
+    return 'ChannelTransport()'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+/**
+ * Two {ChannelTransport}s joined to each other: what one writes, the
+ * other reads. Hand one end to another isolate and the two can talk
+ * JSON-RPC across the isolate boundary.
+ *
+ * ```zuri
+ * import rpc
+ *
+ * var ends = rpc.pipe()
+ *
+ * ends[0].write('ping'.to_bytes())
+ * echo ends[1].read(4096).to_string()  # ping
+ * ```
+ *
+ * @returns list[ChannelTransport]: The two ends.
+ */
+def pipe() {
+  var forward = isolate.channel()
+  var backward = isolate.channel()
+
+  return [ChannelTransport(backward, forward), ChannelTransport(forward, backward)]
+}

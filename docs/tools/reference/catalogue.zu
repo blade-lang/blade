@@ -52,8 +52,8 @@ var GROUPS = [
   },
   {
     title: 'Networking',
-    blurb: 'Sockets, addresses, and a complete HTTP stack on top of them.',
-    modules: ['net', 'http'],
+    blurb: 'Sockets, addresses, and a complete HTTP stack and JSON-RPC on top of them.',
+    modules: ['net', 'http', 'rpc'],
   },
   {
     title: 'Security and Identity',

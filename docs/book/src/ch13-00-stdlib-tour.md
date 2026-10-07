@@ -631,6 +631,41 @@ reverse proxy. Introduced in [Chapter 12](ch12-00-networking.md), covered
 fully in [Chapter 15](ch15-00-http.md), and used throughout
 [Chapter 25](ch25-00-task-board.md).
 
+### `rpc`
+
+JSON-RPC 2.0, the protocol for calling methods in another program:
+the messages, checked against every rule of the specification, two
+ways of telling them apart in a stream, transports over standard
+streams, sockets, child processes and isolates, and an endpoint that
+answers calls with handlers and makes calls of its own. Either side
+can call the other at any time.
+
+```zuri
+import rpc
+import isolate
+
+var ends = rpc.pipe()
+
+isolate.spawn(@(transport) {
+  import rpc
+
+  rpc.endpoint(transport)
+    .on_request('add', @(params) => params[0] + params[1])
+    .serve()
+}, ends[1])
+
+var client = rpc.endpoint(ends[0])
+
+echo client.request('add', [2, 3])
+client.close()
+```
+
+```console
+5
+```
+
+Covered in [Chapter 28](ch28-00-rpc.md).
+
 ## Databases
 
 ### `sql`

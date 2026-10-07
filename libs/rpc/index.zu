@@ -1,0 +1,102 @@
+/**
+ * @module rpc
+ *
+ * JSON-RPC 2.0: calling methods on another program, and answering its
+ * calls, over any stream of bytes.
+ *
+ * JSON-RPC is a small, stateless protocol for calling methods in
+ * another program. It defines the messages and nothing more: which
+ * methods exist is up to the programs using it, and the messages
+ * travel over whatever connects them. A message is a small JSON
+ * object: a request names a method and carries its parameters and an
+ * `id`, the response carries the same `id` and a result or an error,
+ * and a notification is a request nobody answers. Either side may
+ * send any of them, so the protocol has no fixed client and server.
+ *
+ * The module is built in layers, each usable on its own:
+ *
+ * - {Request}, {Notification}, {Response} and {RpcError} are the
+ *   messages, and `encode()`, `decode()` and `read()` turn them to and
+ *   from JSON, checking every rule of the specification.
+ * - {HeaderFraming} and {LineFraming} tell messages apart in a
+ *   stream, the first with a `Content-Length` header in front of each
+ *   message, the second one message to a line.
+ * - A transport carries the bytes: {StdioTransport} over the
+ *   program's own standard streams, {SocketTransport} over a socket,
+ *   {ProcessTransport} to a child process, and the two ends of a
+ *   `pipe()` between isolates.
+ * - {Endpoint} puts them together: it calls the right handler for
+ *   each message that arrives, sends back the answer, and sends
+ *   requests and notifications of its own.
+ *
+ * ```zuri
+ * import rpc
+ * import isolate
+ *
+ * var ends = rpc.pipe()
+ *
+ * isolate.spawn(@(transport) {
+ *   import rpc
+ *
+ *   rpc.endpoint(transport)
+ *     .on_request('greet', @(params) => 'Hello, ${params.name}!')
+ *     .serve()
+ * }, ends[1])
+ *
+ * var client = rpc.endpoint(ends[0])
+ *
+ * echo client.request('greet', { name: 'Zuri' })  # Hello, Zuri!
+ * client.close()
+ * ```
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import @.error { * }
+import @.message { * }
+import @.framing { * }
+import @.transport { * }
+import @.endpoint { * }
+
+/**
+ * A new {Endpoint} over `transport`, framing its messages with a
+ * {HeaderFraming}.
+ *
+ * @param any transport: A transport; see {rpc.transport}.
+ * @returns Endpoint
+ */
+def endpoint(transport) {
+  return Endpoint(transport)
+}
+
+/**
+ * A transport over the program's own standard input and output.
+ *
+ * @returns StdioTransport
+ */
+def stdio() {
+  return StdioTransport()
+}
+
+/**
+ * A transport over a connected socket from `net`.
+ *
+ * @param any socket: A connected `TcpStream`, `UnixStream` or
+ *    `TlsStream`.
+ * @returns SocketTransport
+ */
+def socket(socket) {
+  return SocketTransport(socket)
+}
+
+/**
+ * A transport to a child process, over its standard input and
+ * output.
+ *
+ * @param os.Process child: A child spawned with `stdin` and `stdout`
+ *    both `'pipe'`.
+ * @returns ProcessTransport
+ */
+def process(child) {
+  return ProcessTransport(child)
+}

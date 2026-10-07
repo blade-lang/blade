@@ -1,0 +1,409 @@
+/**
+ * @module message
+ *
+ * The messages JSON-RPC 2.0 exchanges, a {Request}, a {Notification}
+ * and a {Response}, and turning them to and from JSON.
+ *
+ * Every message is a JSON object whose `jsonrpc` member is the string
+ * `'2.0'`. A request names a `method`, may carry `params`, and has an
+ * `id` its response is matched to. A notification is a request
+ * without an `id`, and nothing answers it. A response carries the
+ * `id` of the request it answers and either a `result` or an
+ * `error`, never both. A message may also be a batch: a JSON array
+ * of messages sent and answered together.
+ *
+ * Re-exported by `rpc`.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import json
+import .error { RpcError, PARSE_ERROR, INVALID_REQUEST }
+
+# JSON-RPC carries parameters by position or by name, and nothing else.
+def _check_params(params) {
+  if params != nil and !is_list(params) and !is_dict(params) {
+    raise ValueError('params must be a list, a dictionary or nil, not ${typeof(params)}')
+  }
+}
+
+/**
+ * A call that expects an answer: the `method` to run, its `params`,
+ * and the `id` the answer comes back with.
+ *
+ * ```zuri
+ * import rpc
+ *
+ * var call = rpc.Request('add', [2, 3], 1)
+ * echo rpc.encode(call)  # {"jsonrpc":"2.0","id":1,"method":"add","params":[2,3]}
+ * ```
+ *
+ * @printable
+ */
+class Request {
+
+  /**
+   * Returns a new {Request}.
+   *
+   * @param string method: The method to call.
+   * @param list|dict|nil params: Its parameters, by position as a
+   *    list or by name as a dictionary; `nil` sends none.
+   * @param string|number id: What the answer will be matched by.
+   * @throws ValueError when `params` is not a list, a dictionary or
+   *    `nil`.
+   */
+  @new(method: string, params, id) {
+    _check_params(params)
+
+    self.method = method
+    self.params = params
+    self.id = id
+  }
+
+  /**
+   * The request as the dictionary JSON-RPC sends.
+   *
+   * @returns dict
+   */
+  to_dict() {
+    var value = { jsonrpc: '2.0', id: self.id, method: self.method }
+
+    if self.params != nil {
+      value.params = self.params
+    }
+
+    return value
+  }
+
+  /**
+   * This request as `Request(method #id)`.
+   *
+   * @returns string
+   */
+  to_string() {
+    return 'Request(${self.method} #${self.id})'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+/**
+ * A call that expects no answer: the `method` to run and its
+ * `params`. Nothing comes back from a notification, not even an
+ * error.
+ *
+ * @printable
+ */
+class Notification {
+
+  /**
+   * Returns a new {Notification}.
+   *
+   * @param string method: The method to call.
+   * @param list|dict|nil params: Its parameters, by position as a
+   *    list or by name as a dictionary; `nil` sends none.
+   * @throws ValueError when `params` is not a list, a dictionary or
+   *    `nil`.
+   */
+  @new(method: string, params) {
+    _check_params(params)
+
+    self.method = method
+    self.params = params
+  }
+
+  /**
+   * The notification as the dictionary JSON-RPC sends.
+   *
+   * @returns dict
+   */
+  to_dict() {
+    var value = { jsonrpc: '2.0', method: self.method }
+
+    if self.params != nil {
+      value.params = self.params
+    }
+
+    return value
+  }
+
+  /**
+   * This notification as `Notification(method)`.
+   *
+   * @returns string
+   */
+  to_string() {
+    return 'Notification(${self.method})'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+/**
+ * The answer to a {Request}: its `id`, and either the `result` the
+ * method returned or the `error` it failed with.
+ *
+ * The `id` is `nil` only for an answer to a message whose `id` could
+ * not be read, such as one that was not valid JSON.
+ *
+ * @printable
+ */
+class Response {
+
+  /**
+   * Returns a new {Response}. `success()` and `failure()` say which
+   * kind more plainly.
+   *
+   * @param string|number|nil id: The `id` of the request answered.
+   * @param any result: What the method returned; ignored when
+   *    `error` is given.
+   * @param ?RpcError error: What the method failed with, or `nil`
+   *    for a success.
+   */
+  @new(id, result, error) {
+    self.id = id
+    self.result = error == nil ? result : nil
+    self.error = error
+  }
+
+  /**
+   * A response answering request `id` with `result`.
+   *
+   * @param string|number id
+   * @param any result
+   * @returns Response
+   */
+  static success(id, result) {
+    return Response(id, result, nil)
+  }
+
+  /**
+   * A response answering request `id` with `error`.
+   *
+   * @param string|number|nil id
+   * @param RpcError error
+   * @returns Response
+   */
+  static failure(id, error) {
+    return Response(id, nil, error)
+  }
+
+  /**
+   * True when the response carries an error rather than a result.
+   *
+   * @returns bool
+   */
+  is_error() {
+    return self.error != nil
+  }
+
+  /**
+   * The response as the dictionary JSON-RPC sends.
+   *
+   * @returns dict
+   */
+  to_dict() {
+    if self.error != nil {
+      return { jsonrpc: '2.0', id: self.id, error: self.error.to_dict() }
+    }
+
+    return { jsonrpc: '2.0', id: self.id, result: self.result }
+  }
+
+  /**
+   * This response as `Response(#id ok)` or `Response(#id error
+   * code)`.
+   *
+   * @returns string
+   */
+  to_string() {
+    if self.error != nil {
+      return 'Response(#${self.id} error ${self.error.code})'
+    }
+
+    return 'Response(#${self.id} ok)'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+# Raises the error for a value that is not a message.
+def _invalid(detail: string) {
+  raise RpcError(INVALID_REQUEST, 'Invalid Request: ${detail}')
+}
+
+# A request `id` must be a string, a number or null.
+def _is_id(value) {
+  return value == nil or is_string(value) or is_number(value)
+}
+
+# The `id` of a message, for answering it, or `nil` when it has none
+# that could be read.
+def _id_of(value) {
+  if !is_dict(value) or !value.contains('id') {
+    return nil
+  }
+
+  var id = value.get('id', nil)
+
+  return _is_id(id) ? id : nil
+}
+
+def _read_error(value) {
+  if !is_dict(value) {
+    _invalid('a response error must be an object')
+  }
+
+  var code = value.get('code', nil)
+  var message = value.get('message', nil)
+
+  if !is_number(code) or code != code.floor() {
+    _invalid('a response error needs an integer code')
+  }
+
+  if !is_string(message) {
+    _invalid('a response error needs a string message')
+  }
+
+  return RpcError(code, message, value.get('data', nil))
+}
+
+def _read_one(value) {
+  if !is_dict(value) {
+    _invalid('a message must be an object')
+  }
+
+  if value.get('jsonrpc', nil) != '2.0' {
+    _invalid("the jsonrpc member must be '2.0'")
+  }
+
+  if value.contains('method') {
+    var method = value.get('method', nil)
+
+    if !is_string(method) {
+      _invalid('method must be a string')
+    }
+
+    var params = value.get('params', nil)
+
+    if params != nil and !is_list(params) and !is_dict(params) {
+      _invalid('params must be an array or an object')
+    }
+
+    if !value.contains('id') {
+      return Notification(method, params)
+    }
+
+    var id = value.get('id', nil)
+
+    if !_is_id(id) {
+      _invalid('id must be a string, a number or null')
+    }
+
+    return Request(method, params, id)
+  }
+
+  if value.contains('result') == value.contains('error') {
+    _invalid('a response needs exactly one of result and error')
+  }
+
+  if !value.contains('id') or !_is_id(value.get('id', nil)) {
+    _invalid('a response needs an id that is a string, a number or null')
+  }
+
+  if value.contains('error') {
+    return Response.failure(value.get('id', nil), _read_error(value.get('error', nil)))
+  }
+
+  return Response.success(value.get('id', nil), value.get('result', nil))
+}
+
+/**
+ * Reads a value decoded from JSON as a message: a {Request}, a
+ * {Notification} or a {Response}.
+ *
+ * A batch, a list, comes back as a list holding, for each of its
+ * entries in order, the message it holds or the {RpcError} saying
+ * why it does not hold one, so every entry can be answered on its
+ * own. An empty batch is not a message.
+ *
+ * @param any value: A value as `json.decode()` returns it.
+ * @returns Request|Notification|Response|list
+ * @throws RpcError with code `INVALID_REQUEST` when `value` is not a
+ *    message, or is an empty batch.
+ */
+def read(value) {
+  if !is_list(value) {
+    return _read_one(value)
+  }
+
+  if value.is_empty() {
+    _invalid('a batch must not be empty')
+  }
+
+  var messages = []
+
+  for entry in value {
+    catch {
+      messages.append(_read_one(entry))
+    } as error {
+      if !instance_of(error, RpcError) {
+        raise error
+      }
+
+      messages.append(error)
+    }
+  }
+
+  return messages
+}
+
+/**
+ * Decodes the JSON text of a message, or of a batch, and reads it as
+ * `read()` does.
+ *
+ * ```zuri
+ * import rpc
+ *
+ * var call = rpc.decode('{"jsonrpc": "2.0", "id": 7, "method": "ping"}')
+ * echo call.method  # ping
+ * echo call.id      # 7
+ * ```
+ *
+ * @param string text: The message's JSON text.
+ * @returns Request|Notification|Response|list
+ * @throws RpcError with code `PARSE_ERROR` when `text` is not valid
+ *    JSON, or code `INVALID_REQUEST` when it is not a message.
+ */
+def decode(text: string) {
+  var value = nil
+
+  catch {
+    value = json.decode(text)
+  } as error {
+    raise RpcError(PARSE_ERROR, 'Parse error: ${error.message}')
+  }
+
+  return read(value)
+}
+
+/**
+ * The JSON text of a message, or of a list of messages sent as a
+ * batch.
+ *
+ * @param Request|Notification|Response|list message
+ * @returns string
+ */
+def encode(message) {
+  if is_list(message) {
+    return json.encode(message.map(@(one) => one.to_dict()))
+  }
+
+  return json.encode(message.to_dict())
+}
