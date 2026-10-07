@@ -1,0 +1,103 @@
+/**
+ * Code lens: how often each class, function and method of a workspace
+ * file is used, counted across the workspace, above its declaration.
+ * Opening a count lists the uses. A file of tests also gets the lenses
+ * that run them, from `testing`.
+ *
+ * The lens carries the command `zuri.showReferences`, with the
+ * document's URI, the position of the name and the locations of the
+ * uses; the editor extension turns it into the editor's own list of
+ * references. `codeLens.references` turns the counts off.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import .references
+import .testing
+
+# The declarations a count is shown for.
+const _COUNTED = ['class', 'function', 'method']
+
+/**
+ * Answers `textDocument/codeLens`: a lens over each declaration, its
+ * count left for `resolve()` to work out when the lens comes into
+ * view.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns list[dict]
+ */
+def lenses(server, params: dict) {
+  var document = server.document(params.textDocument.uri)
+
+  if !server.is_workspace(document.key) {
+    return []
+  }
+
+  var found = testing.lenses(server, document)
+
+  if server.settings.get('codeLens.references') != true {
+    return found
+  }
+
+  var summary = server.analysis(document).summary
+  var index = 0
+
+  for symbol in summary.symbols {
+    var counted = _COUNTED.contains(symbol.kind) and !symbol.get('anonymous', false)
+
+    if counted and !symbol.name.is_empty() and !symbol.name.starts_with('@') {
+      found.append({
+        range: server.range(document.key, symbol.name_start, symbol.name_end),
+        data: { uri: document.uri, version: document.version, index },
+      })
+    }
+
+    index++
+  }
+
+  return found
+}
+
+/**
+ * Answers `codeLens/resolve`: counts the uses of the lens's
+ * declaration and gives it the command that lists them.
+ *
+ * @param Server server
+ * @param dict lens
+ * @param rpc.Context context
+ * @returns dict
+ */
+def resolve(server, lens: dict, context) {
+  var data = lens.get('data', nil)
+
+  if !is_dict(data) {
+    return lens
+  }
+
+  var document = server.document(data.uri)
+  var target = { path: document.key, index: data.index }
+  var symbol = server.linker.symbol(target)
+
+  if symbol == nil {
+    lens.command = { title: '', command: '' }
+    return lens
+  }
+
+  var uses = references.find(server, target, false, context)
+  var count = uses.length()
+  var title = count == 1 ? '1 reference' : '${count} references'
+  var position = server.range(document.key, symbol.name_start, symbol.name_end).start
+
+  lens.command = {
+    title,
+    command: count == 0 ? '' : 'zuri.showReferences',
+    arguments: [
+      document.uri,
+      position,
+      uses.map(@(use) => server.location(use.path, use.start, use.end)),
+    ],
+  }
+
+  return lens
+}

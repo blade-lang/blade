@@ -1,0 +1,282 @@
+/**
+ * Doc blocks and declarations, as the markdown an editor shows: the
+ * signature of a declaration as a code block, its prose, and its tags
+ * laid out the way the standard library reference lays them out.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import zuri
+
+# How each tag is headed, in the order they are shown.
+const _SECTIONS = [
+  ['param', 'Parameters'],
+  ['property', 'Properties'],
+  ['returns', 'Returns'],
+  ['throws', 'Throws'],
+  ['default', 'Default'],
+  ['note', 'Note'],
+  ['see', 'See'],
+]
+
+# `{Name}` in prose is a link to a declaration; it reads as code.
+def _links(text: string) {
+  return text.replace('/\{([A-Za-z_][A-Za-z0-9_.]*)\}/', '`$1`')
+}
+
+# The prose of a block, with a `zuri-repl` fence shown as Zuri and
+# `{Name}` links as code.
+def _prose(lines: list) {
+  var out = []
+  var fenced = false
+
+  for line in lines {
+    var trimmed = line.trim()
+
+    if trimmed.starts_with('```') {
+      if !fenced {
+        var language = trimmed[3, trimmed.length()].split(',')[0].trim()
+        out.append(language == 'zuri-repl' or language.is_empty() ? '```zuri' : '```${language}')
+        fenced = true
+      } else {
+        out.append('```')
+        fenced = false
+      }
+
+      continue
+    }
+
+    out.append(fenced ? line : _links(line))
+  }
+
+  if fenced {
+    out.append('```')
+  }
+
+  return '\n'.join(out).trim()
+}
+
+def _tag_line(tag) {
+  var parts = []
+
+  if !tag.name.is_empty() {
+    parts.append('`${tag.name}`')
+  }
+
+  if !tag.type.is_empty() {
+    parts.append('`${tag.type}`')
+  }
+
+  var head = ' '.join(parts)
+  var text = _links(tag.text.trim())
+
+  if text.is_empty() {
+    return '- ${head}'
+  }
+
+  return head.is_empty() ? '- ${text}' : '- ${head}: ${text}'
+}
+
+/**
+ * A doc block's text as markdown: its prose, then its tags under a
+ * heading each, then a deprecation notice when it carries one.
+ *
+ * @param ?string text: The doc block's text, from a summary.
+ * @returns string: Empty for no doc block.
+ */
+def markdown(text) {
+  if text == nil {
+    return ''
+  }
+
+  var block = zuri.doc.parse(text)
+  var sections = []
+  var prose = _prose(block.body)
+
+  var deprecated = block.first('deprecated')
+
+  if deprecated != nil {
+    var why = _links(deprecated.text.trim())
+    sections.append('**Deprecated.**' + (why.is_empty() ? '' : ' ${why}'))
+  }
+
+  if !prose.is_empty() {
+    sections.append(prose)
+  }
+
+  for section in _SECTIONS {
+    var tags = block.all(section[0])
+
+    if tags.is_empty() {
+      continue
+    }
+
+    var lines = tags.map(@(tag) => _tag_line(tag))
+    sections.append('**${section[1]}**\n\n' + '\n'.join(lines))
+  }
+
+  return '\n\n'.join(sections)
+}
+
+/**
+ * A piece of a doc block's text, such as a tag's, as markdown: `{Name}`
+ * links as code.
+ *
+ * @param string text
+ * @returns string
+ */
+def markdown_text(text: string) {
+  return _links(text.trim())
+}
+
+/**
+ * The first sentence of a doc block's prose, for a one-line
+ * description.
+ *
+ * @param ?string text
+ * @returns string
+ */
+def summary(text) {
+  if text == nil {
+    return ''
+  }
+
+  return _links(zuri.doc.parse(text).summary())
+}
+
+/**
+ * The text of the first `@name` tag of a doc block, links as code, or
+ * an empty string when it has none.
+ *
+ * @param ?string text
+ * @param string name: The tag, without its `@`.
+ * @returns string
+ */
+def tag_text(text, name: string) {
+  if text == nil or !text.contains('@${name}') {
+    return ''
+  }
+
+  var tag = zuri.doc.parse(text).first(name)
+
+  return tag == nil ? '' : _links(tag.text.trim())
+}
+
+/**
+ * Whether a doc block marks what it documents as deprecated.
+ *
+ * @param ?string text
+ * @returns bool
+ */
+def is_deprecated(text) {
+  return text != nil and text.contains('@deprecated') and zuri.doc.parse(text).has('deprecated')
+}
+
+/**
+ * An import's path as it is written in source, from its segments:
+ * `.addr`, `..shared.config` or `http.websocket`.
+ *
+ * @param list segments: `{ text }` for each part of the path.
+ * @returns string
+ */
+def import_text(segments: list) {
+  var text = ''
+  var joined = false
+
+  for segment in segments {
+    if segment.text == '.' or segment.text == '..' {
+      text += segment.text
+      joined = true
+      continue
+    }
+
+    text += (text.is_empty() or joined) ? segment.text : '.' + segment.text
+    joined = false
+  }
+
+  return text
+}
+
+/**
+ * A declaration's parameters as written: `a: string, ...rest`.
+ *
+ * @param dict symbol
+ * @returns string
+ */
+def parameters(symbol: dict) {
+  var params = symbol.get('params', nil)
+
+  if params == nil {
+    return ''
+  }
+
+  return ', '.join(params.map(@(param) {
+    var text = param.variadic ? '...${param.name}' : param.name
+
+    return param.hint == nil ? text : '${text}: ${param.hint}'
+  }))
+}
+
+/**
+ * A declaration as a line of Zuri, for the code block a hover opens
+ * with.
+ *
+ * @param dict symbol
+ * @param ?string owner: The class a member belongs to.
+ * @param ?string type: A description of an inferred type, for a
+ *    variable.
+ * @returns string
+ */
+def signature(symbol: dict, owner, type) {
+  var name = symbol.name
+  var modifier = symbol.get('is_static', false) ? 'static ' : ''
+
+  using symbol.kind {
+    when 'function' {
+      if symbol.get('anonymous', false) {
+        return '@(${parameters(symbol)})'
+      }
+
+      return 'def ${name}(${parameters(symbol)})'
+    }
+    when 'method' {
+      var prefix = owner == nil ? '' : '${owner}.'
+
+      return '${modifier}${prefix}${name}(${parameters(symbol)})'
+    }
+    when 'class' {
+      var arrow = symbol.get('extension', false) ? ' > ' : ' < '
+      var parent_text = symbol.get('superclass_text', nil)
+
+      return parent_text == nil ? 'class ${name}' : 'class ${name}${arrow}${parent_text}'
+    }
+    when 'field' {
+      var keyword = symbol.get('constant', false) ? 'const' : 'var'
+      var prefix = owner == nil ? '' : '${owner}.'
+      var hint = symbol.get('hint', nil)
+      var shown = hint != nil ? hint : type
+
+      return shown == nil ? '${modifier}${keyword} ${prefix}${name}' : (
+        '${modifier}${keyword} ${prefix}${name}: ${shown}'
+      )
+    }
+    when 'constant' {
+      var value = symbol.get('value', nil)
+
+      return value == nil ? 'const ${name}' : 'const ${name} = ${value}'
+    }
+    when 'parameter' {
+      var hint = symbol.get('hint', nil)
+
+      return hint == nil ? '(parameter) ${name}' : '(parameter) ${name}: ${hint}'
+    }
+    when 'module' return 'import ${import_text(symbol.source.segments)}'
+    when 'import' return 'import ${symbol.source.member}'
+    default {
+      var hint = symbol.get('hint', nil)
+      var shown = hint != nil ? hint : type
+
+      return shown == nil ? 'var ${name}' : 'var ${name}: ${shown}'
+    }
+  }
+}

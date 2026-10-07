@@ -1,0 +1,149 @@
+/**
+ * The summary of one file: everything the server knows about it
+ * without its syntax tree, in plain lists and dictionaries so it can be
+ * built on an indexing isolate and sent across a channel.
+ *
+ * A summary holds the walk's declarations, scopes, references, member
+ * accesses, calls and imports (see `scope.walk()`), plus the file's
+ * syntax errors, the code no path through it reaches, and a hash of
+ * its text. It is a pure function of the
+ * path, the text and the built-in names, which is what lets an
+ * unchanged file keep its summary.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import hash
+import zuri
+import .scope
+
+# The statements that leave the statement list they are in.
+const _LEAVING = ['Return', 'Raise', 'Break', 'Continue']
+
+# Whether `node`, a member of a statement list, leaves it.
+def _leaves(node) {
+  var statement = node.kind == 'Stmt' ? node.fields.statement : node
+
+  return statement != nil and is_instance(statement) and _LEAVING.contains(statement.kind)
+}
+
+# Whether `value` is a syntax tree node.
+def _is_node(value) {
+  return is_instance(value) and hasprop(value, 'kind') and hasprop(value, 'fields')
+}
+
+# Adds to `found` the span of every statement of the list `nodes` that
+# follows one leaving it, then looks inside each statement for more. A
+# nested `def` is declared before the list runs, so it is never
+# unreachable, and nor is a comment.
+def _unreachable_in(nodes: list, found: list) {
+  var left = false
+  var first = nil
+  var last = nil
+
+  for node in nodes {
+    if !_is_node(node) {
+      continue
+    }
+
+    if left and !node.is_trivia() and node.kind != 'Decl' {
+      if first == nil {
+        first = node.start
+      }
+
+      last = node.end
+    }
+
+    if !left and _leaves(node) {
+      left = true
+    }
+
+    _unreachable_under(node, found)
+  }
+
+  if first != nil {
+    found.append([first, last])
+  }
+}
+
+def _unreachable_under(node, found: list) {
+  for key, value in node.fields {
+    if is_list(value) {
+      if key == 'statements' {
+        _unreachable_in(value, found)
+      } else {
+        for item in value {
+          if _is_node(item) {
+            _unreachable_under(item, found)
+          }
+        }
+      }
+    } else if _is_node(value) {
+      _unreachable_under(value, found)
+    }
+  }
+}
+
+/**
+ * The code that can never run because a `return`, `raise`, `break` or
+ * `continue` before it, in the same list of statements, always leaves
+ * first, as `[start, end]` spans: one for each list holding any.
+ *
+ * @param list nodes: A file's top-level nodes.
+ * @returns list[list]
+ */
+def unreachable(nodes: list) {
+  var found = []
+
+  _unreachable_in(nodes, found)
+
+  return found
+}
+
+/**
+ * The hash a summary is keyed by.
+ *
+ * @param string text
+ * @returns string
+ */
+def digest(text: string) {
+  return hash.fnv1a_64(text)
+}
+
+/**
+ * Parses and walks one file.
+ *
+ * @param ?string path: The file's path; `nil` for a document never
+ *    saved.
+ * @param string text: Its text.
+ * @param list builtins: The names the runtime defines globally.
+ * @returns dict: `{ summary, nodes }`: the summary, and the syntax
+ *    tree it was read from, which only an open document keeps.
+ */
+def analyze(path, text: string, builtins: list) {
+  var parsed = zuri.parse_partial(text)
+  var summary = scope.walk(path, text, parsed.nodes, builtins)
+
+  summary.hash = digest(text)
+  summary.unreachable = unreachable(parsed.nodes)
+  summary.errors = parsed.errors.map(@(error) => {
+    message: error.message,
+    start: error.start,
+    end: error.end,
+  })
+
+  return { summary, nodes: parsed.nodes }
+}
+
+/**
+ * Parses and walks one file and returns only its summary, for a file
+ * nothing has open.
+ *
+ * @param ?string path
+ * @param string text
+ * @param list builtins
+ * @returns dict
+ */
+def summarize(path, text: string, builtins: list) {
+  return analyze(path, text, builtins).summary
+}

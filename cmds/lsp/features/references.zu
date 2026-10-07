@@ -1,0 +1,170 @@
+/**
+ * References: every place across the workspace that names the same
+ * declaration as the name at the cursor, found by what each name
+ * resolves to rather than by its spelling, and the same within one
+ * file for highlighting.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import .common
+import ..analysis.query
+
+# The protocol's `DocumentHighlightKind`s.
+const _TEXT = 1
+const _READ = 2
+const _WRITE = 3
+
+/**
+ * Every place the declaration `target` is named: in each workspace
+ * file, and in the file that declares it, checked for cancellation
+ * between files.
+ *
+ * @param Server server
+ * @param dict target: `{ path, index }` or `{ module }`.
+ * @param bool include_declaration
+ * @param ?rpc.Context context
+ * @returns list[dict]: `{ path, start, end, write, declaration }`.
+ */
+def find(server, target: dict, include_declaration: bool, context) {
+  server.sync_open()
+
+  var paths = server.paths()
+
+  if target.contains('path') and !paths.contains(target.path) {
+    paths.append(target.path)
+  }
+
+  var found = []
+
+  for path in paths.sort() {
+    server.interrupted(context, nil)
+
+    if target.contains('module') {
+      found.extend(_module_uses(server, target, path))
+    } else {
+      found.extend(query.references(server.linker, target, [path], include_declaration))
+    }
+  }
+
+  return found
+}
+
+# Where the file at `path` names the module `target`: its imports'
+# paths and the names it binds the module to.
+def _module_uses(server, target: dict, path: string) {
+  var linker = server.linker
+  var summary = linker.summary(path)
+  var found = []
+
+  if summary == nil {
+    return found
+  }
+
+  for occurrence in query.occurrences(summary) {
+    if occurrence.kind == 'member' {
+      continue
+    }
+
+    if occurrence.kind == 'ref' and occurrence.target < 0 {
+      continue
+    }
+
+    if query.same(query.canonical(linker, path, occurrence), target) {
+      found.append({
+        path,
+        start: occurrence.start,
+        end: occurrence.end,
+        write: false,
+        declaration: false,
+      })
+    }
+  }
+
+  return found
+}
+
+/**
+ * Answers `textDocument/references`.
+ *
+ * @param Server server
+ * @param dict params
+ * @param rpc.Context context
+ * @returns ?list[dict]: `Location`s.
+ */
+def references(server, params: dict, context) {
+  var document = server.document(params.textDocument.uri)
+  var offset = server.offset(document, params.position)
+  var summary = server.analysis(document).summary
+  var found = common.target_at(server.linker, document.key, summary, offset)
+
+  if found == nil or found.target == nil {
+    return nil
+  }
+
+  var options = params.get('context', {})
+  var include = is_dict(options) and options.get('includeDeclaration', false) == true
+
+  return find(server, found.target, include, context).map(@(place) {
+    return server.location(place.path, place.start, place.end)
+  })
+}
+
+/**
+ * Answers `textDocument/documentHighlight`: every name in the document
+ * that stands for the same declaration as the one at the cursor,
+ * marked as read or written.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns ?list[dict]
+ */
+def highlight(server, params: dict) {
+  var document = server.document(params.textDocument.uri)
+  var offset = server.offset(document, params.position)
+  var summary = server.analysis(document).summary
+  var key = document.key
+  var linker = server.linker
+  var found = common.target_at(linker, key, summary, offset)
+
+  if found == nil or found.target == nil {
+    return nil
+  }
+
+  var target = found.target
+  var places = []
+
+  if target.contains('module') {
+    places = _module_uses(server, target, key)
+  } else {
+    places = query.references(linker, target, [key], true)
+  }
+
+  var seen = {}
+  var answer = []
+
+  for place in places {
+    var span = '${place.start}:${place.end}'
+
+    if seen.contains(span) {
+      continue
+    }
+
+    seen[span] = true
+
+    var kind = place.write ? _WRITE : _READ
+
+    # A variable's declaration gives it its value; anything else is
+    # simply named there.
+    if place.declaration {
+      var declared = linker.symbol(target)
+      var assigned = ['variable', 'constant', 'parameter', 'field'].contains(declared.kind)
+
+      kind = assigned ? _WRITE : _TEXT
+    }
+
+    answer.append({ range: server.range(key, place.start, place.end), kind })
+  }
+
+  return answer
+}

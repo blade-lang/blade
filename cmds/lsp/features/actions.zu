@@ -1,0 +1,508 @@
+/**
+ * Code actions: quick fixes for the diagnostics the server reports,
+ * and the refactorings that apply to the selection.
+ *
+ * The quick fixes add the import an undefined name needs, change a
+ * misspelt name or member to the one meant, remove an unused import or
+ * import element, and declare a field set outside `@new` in its
+ * class. The refactorings are in `refactor`.
+ *
+ * A client that resolves code actions gets the refactorings without
+ * their edits, which are worked out only for the one chosen.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import .common
+import .refactor
+import ..analysis.query
+
+/** The kinds of action the server offers. */
+const KINDS = ['quickfix', 'refactor.extract', 'refactor.inline']
+
+# How many import fixes are offered for one name at most.
+const _MOST_IMPORTS = 5
+
+# How many spelling fixes are offered for one name at most.
+const _MOST_SPELLINGS = 3
+
+# Whether the client asked for actions of `kind`: everything when it
+# did not say, and otherwise what it named or what sits under it.
+def _wanted(only, kind: string) {
+  if !is_list(only) or only.is_empty() {
+    return true
+  }
+
+  return only.some(@(asked) => kind == asked or kind.starts_with(asked + '.'))
+}
+
+/**
+ * Answers `textDocument/codeAction`.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns list[dict]
+ */
+def actions(server, params: dict) {
+  var document = server.document(params.textDocument.uri)
+  var lines = document.index()
+  var start = lines.offset(params.range.start, server.encoding)
+  var end = lines.offset(params.range.end, server.encoding)
+  var request = params.get('context', {})
+  var only = is_dict(request) ? request.get('only', nil) : nil
+  var found = []
+
+  if _wanted(only, 'quickfix') and is_dict(request) {
+    for diagnostic in request.get('diagnostics', []) {
+      if diagnostic.get('source', nil) == 'zuri' {
+        found.extend(_fixes(server, document, diagnostic))
+      }
+    }
+  }
+
+  var lazy = _resolves_edits(server)
+
+  for kind in [refactor.EXTRACT, refactor.INLINE] {
+    if !_wanted(only, kind) {
+      continue
+    }
+
+    for item in _refactorings(server, document, start, end, kind) {
+      var action = { title: item.title, kind }
+
+      if lazy {
+        action.data = {
+          uri: document.uri,
+          version: document.version,
+          range: params.range,
+          kind,
+          title: item.title,
+        }
+      } else {
+        action.edit = common.workspace_edit(server, item.edits)
+      }
+
+      found.append(action)
+    }
+  }
+
+  return found
+}
+
+# Whether the client fills in an action's edit through resolve.
+def _resolves_edits(server) {
+  var properties = server.supports('textDocument.codeAction.resolveSupport.properties')
+
+  return is_list(properties) and properties.contains('edit')
+}
+
+# The refactorings of one kind for a selection.
+def _refactorings(server, document, start: int, end: int, kind: string) {
+  var subject = refactor.Subject(server, document, start, end)
+
+  if kind == refactor.EXTRACT {
+    var found = refactor.extract_variable(subject)
+
+    found.extend(refactor.extract_function(subject))
+
+    return found
+  }
+
+  var found = refactor.inline_variable(subject)
+
+  found.extend(refactor.inline_function(subject))
+
+  return found
+}
+
+/**
+ * Answers `codeAction/resolve`: works out the edit of a refactoring
+ * offered without one, as long as the document has not changed since.
+ *
+ * @param Server server
+ * @param dict action
+ * @returns dict
+ */
+def resolve(server, action: dict) {
+  var data = action.get('data', nil)
+
+  if !is_dict(data) or action.contains('edit') {
+    return action
+  }
+
+  var document = server.document(data.uri)
+
+  if document.version != data.version {
+    return action
+  }
+
+  var lines = document.index()
+  var start = lines.offset(data.range.start, server.encoding)
+  var end = lines.offset(data.range.end, server.encoding)
+
+  for item in _refactorings(server, document, start, end, data.kind) {
+    if item.title == data.title {
+      action.edit = common.workspace_edit(server, item.edits)
+      break
+    }
+  }
+
+  return action
+}
+
+# --------------------------------------------------------------
+# Quick fixes
+# --------------------------------------------------------------
+
+# The fixes for one of the server's own diagnostics.
+def _fixes(server, document, diagnostic: dict) {
+  var lines = document.index()
+  var start = lines.offset(diagnostic.range.start, server.encoding)
+  var end = lines.offset(diagnostic.range.end, server.encoding)
+  var data = diagnostic.get('data', nil)
+
+  using diagnostic.get('code', nil) {
+    when 'undefined-name' {
+      var name = document.text[start, end]
+      var found = _import_fixes(server, document, name, diagnostic)
+
+      var names = _names_at(server, document, start)
+
+      found.extend(_spelling_fixes(server, document, diagnostic, start, end, names))
+
+      return found
+    }
+    when 'unknown-member' {
+      var members = _members_at(server, document, start)
+
+      return _spelling_fixes(server, document, diagnostic, start, end, members)
+    }
+    when 'unused' {
+      if is_dict(data) and data.get('kind', nil) == 'import' {
+        return _remove_import(server, document, diagnostic, start)
+      }
+
+      return []
+    }
+    when 'undeclared-field' {
+      return _declare_field(server, document, diagnostic, start, document.text[start, end])
+    }
+    default {
+      return []
+    }
+  }
+}
+
+def _fix(server, document, title: string, diagnostic: dict, edits: list, preferred: bool) {
+  var by_key = {}
+
+  by_key[document.key] = edits
+
+  var action = {
+    title,
+    kind: 'quickfix',
+    diagnostics: [diagnostic],
+    edit: common.workspace_edit(server, by_key),
+  }
+
+  if preferred {
+    action.isPreferred = true
+  }
+
+  return action
+}
+
+# Imports that would define `name`: a module of that name, or a module
+# exporting it.
+def _import_fixes(server, document, name: string, diagnostic: dict) {
+  var found = []
+  var nodes = server.analysis(document).nodes
+  var lines = document.index()
+  var importer = document.path
+  var module = server.resolver.resolve(name, importer)
+
+  if module != nil and module.kind != 'internal' {
+    var edit = common.import_edit(nodes, lines, 'import ${name}')
+
+    found.append(_fix(server, document, "Import module '${name}'", diagnostic, [edit], true))
+  }
+
+  var linker = server.linker
+  var best = {}
+
+  for path in linker.paths() {
+    if path == document.key {
+      continue
+    }
+
+    var ref = linker.globals(path).get(name, nil)
+
+    if ref == nil or name.starts_with('_') {
+      continue
+    }
+
+    var import_path = server.resolver.import_path(path, importer)
+
+    if import_path == nil or import_path.is_empty() {
+      continue
+    }
+
+    var identity = '${ref.path}#${ref.index}'
+    var current = best.get(identity, nil)
+
+    if current == nil or import_path.length() < current.length() {
+      best[identity] = import_path
+    }
+  }
+
+  var paths = best.values().sort(@(a, b) => a.length() - b.length())
+
+  for import_path in paths {
+    if found.length() >= _MOST_IMPORTS {
+      break
+    }
+
+    var edit = common.import_edit(nodes, lines, 'import ${import_path} { ${name} }')
+    var title = "Import '${name}' from '${import_path}'"
+
+    found.append(_fix(server, document, title, diagnostic, [edit], found.is_empty()))
+  }
+
+  return found
+}
+
+# The names usable at `offset`: those in scope, those wildcard imports
+# bring in, and the built-in globals.
+def _names_at(server, document, offset: int) {
+  var summary = server.analysis(document).summary
+  var names = common.visible_names(summary, offset).keys()
+
+  names.extend(server.linker.starred(document.key).keys())
+  names.extend(server.builtins.names)
+
+  return names
+}
+
+# The members of the receiver whose member starts at `offset`.
+def _members_at(server, document, offset: int) {
+  var summary = server.analysis(document).summary
+
+  for access in summary.members {
+    if access.start == offset {
+      var owner = server.linker.resolve(access.receiver)
+      var private_ok = access.self_receiver
+
+      return server.linker.members(owner).map(@(member) => member.name).filter(@(name) {
+        return private_ok or !name.starts_with('_')
+      })
+    }
+  }
+
+  return []
+}
+
+# Replacements spelt closest to what was written.
+def _spelling_fixes(server, document, diagnostic: dict, start: int, end: int, candidates: list) {
+  var written = document.text[start, end]
+  var limit = written.length() <= 4 ? 1 : (written.length() <= 8 ? 2 : 3)
+  var scored = []
+  var seen = {}
+
+  for candidate in candidates {
+    if candidate == written or seen.contains(candidate) {
+      continue
+    }
+
+    seen[candidate] = true
+
+    var distance = edit_distance(written.lower(), candidate.lower())
+
+    if distance <= limit {
+      scored.append({ candidate, distance })
+    }
+  }
+
+  scored.sort(@(a, b) {
+    return a.distance != b.distance ? a.distance - b.distance : a.candidate.compare(b.candidate)
+  })
+
+  var found = []
+
+  for item in scored {
+    if found.length() >= _MOST_SPELLINGS {
+      break
+    }
+
+    var edit = { range: diagnostic.range, newText: item.candidate }
+    var title = "Change to '${item.candidate}'"
+
+    var preferred = found.is_empty() and scored.length() == 1
+
+    found.append(_fix(server, document, title, diagnostic, [edit], preferred))
+  }
+
+  return found
+}
+
+/**
+ * How many single-character insertions, deletions, substitutions and
+ * swaps of neighbours turn `a` into `b`.
+ *
+ * @param string a
+ * @param string b
+ * @returns int
+ */
+def edit_distance(a: string, b: string) {
+  var rows = []
+
+  iter var i = 0; i <= a.length(); i++ {
+    var row = []
+
+    iter var j = 0; j <= b.length(); j++ {
+      row.append(i == 0 ? j : (j == 0 ? i : 0))
+    }
+
+    rows.append(row)
+  }
+
+  iter var i = 1; i <= a.length(); i++ {
+    iter var j = 1; j <= b.length(); j++ {
+      var cost = a[i - 1] == b[j - 1] ? 0 : 1
+      var best = (rows[i - 1][j] + 1).min(rows[i][j - 1] + 1).min(rows[i - 1][j - 1] + cost)
+
+      if i > 1 and j > 1 and a[i - 1] == b[j - 2] and a[i - 2] == b[j - 1] {
+        best = best.min(rows[i - 2][j - 2] + 1)
+      }
+
+      rows[i][j] = best
+    }
+  }
+
+  return rows[a.length()][b.length()]
+}
+
+# Removes an unused import: the element alone when the import names
+# others, the whole statement otherwise.
+def _remove_import(server, document, diagnostic: dict, start: int) {
+  var analysis = server.analysis(document)
+  var path = common.path_to(analysis.nodes, start)
+  var statement = nil
+  var holder = nil
+
+  for node in path {
+    if node.kind == 'Import' {
+      statement = node
+    }
+  }
+
+  if statement == nil {
+    return []
+  }
+
+  # The node a statement list holds: the `Stmt` around a top-level
+  # import.
+  for node in path {
+    if node.kind == 'Stmt' and node.fields.statement == statement {
+      holder = node
+    }
+  }
+
+  var subject = refactor.Subject(server, document, start, start)
+  var elements = statement.fields.elements.filter(@(element) => common.is_node(element))
+  var name = document.text[start, document.index().offset(diagnostic.range.end, server.encoding)]
+
+  if elements.length() > 1 {
+    var position = 0
+
+    for element in elements {
+      if element.start <= start and start <= element.end {
+        var from = element.start
+        var to = element.end
+
+        if position < elements.length() - 1 {
+          to = elements[position + 1].start
+        } else {
+          from = elements[position - 1].end
+        }
+
+        var edit = subject.edit(from, to, '')
+
+        var title = "Remove '${name}' from the import"
+
+        return [_fix(server, document, title, diagnostic, [edit], true)]
+      }
+
+      position++
+    }
+
+    return []
+  }
+
+  var edit = refactor.delete_statement(subject, holder == nil ? statement : holder)
+
+  return [_fix(server, document, "Remove the unused import of '${name}'", diagnostic, [edit], true)]
+}
+
+# Declares a field in the class whose method sets it.
+def _declare_field(server, document, diagnostic: dict, start: int, name: string) {
+  var analysis = server.analysis(document)
+  var summary = analysis.summary
+  var scope = common.scope_at(summary, start)
+  var owner = nil
+
+  while scope > 0 and owner == nil {
+    owner = summary.scopes[scope].get('owner_class', nil)
+    scope = summary.scopes[scope].outer
+  }
+
+  if owner == nil {
+    return []
+  }
+
+  var symbol = summary.symbols[owner]
+  var class_node = nil
+
+  for node in common.path_to(analysis.nodes, symbol.name_start) {
+    if node.kind == 'Class' and node.start == symbol.start {
+      class_node = node
+    }
+  }
+
+  if class_node == nil {
+    return []
+  }
+
+  var lines = document.index()
+  var subject = refactor.Subject(server, document, start, start)
+  var members = class_node.fields.properties.clone()
+
+  members.extend(class_node.fields.methods)
+  members = members.filter(@(member) => common.is_node(member))
+  members.sort(@(a, b) => a.start - b.start)
+
+  var line = 0
+  var text = ''
+
+  if members.is_empty() {
+    line = lines.line_of(symbol.name_end) + 1
+
+    var indent = subject.indent_of(lines.line_of(class_node.start)) + '  '
+
+    text = '${indent}var ${name}\n'
+  } else {
+    var first = members[0]
+
+    line = lines.line_of(first.start)
+
+    var indent = subject.indent_of(line)
+    var spacer = first.kind == 'Property' ? '' : '\n'
+
+    text = '${indent}var ${name}\n${spacer}'
+  }
+
+  var offset = line < lines.line_count() ? lines.line_start(line) : document.text.length()
+  var edit = subject.edit(offset, offset, text)
+  var title = "Declare '${name}' as a field of ${symbol.name}"
+
+  return [_fix(server, document, title, diagnostic, [edit], true)]
+}

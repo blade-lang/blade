@@ -1,0 +1,169 @@
+/**
+ * What the runtime defines without an import, read from the stubs the
+ * standard library ships beside its modules.
+ *
+ * `_builtins.stub.zu` declares the global functions and the module
+ * variables every file has, `_prelude.stub.zu` the `Error` classes,
+ * and one stub per built-in type, `_string.stub.zu` and the rest,
+ * declares the methods its values carry. The runtime's own tests hold
+ * each stub to what the runtime defines, so they are read as the
+ * truth.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import os
+import zuri
+import .scope
+
+/** The built-in types, each with a stub of its own. */
+const TYPES = [
+  'string', 'number', 'bigint', 'bool', 'list', 'dict', 'range',
+  'bytes', 'file', 'function',
+]
+
+# Walks a stub, which names nothing it does not declare.
+def _read(path: string) {
+  if !file(path).exists() {
+    return nil
+  }
+
+  var text = file(path).read()
+  var parsed = zuri.parse_partial(text)
+  var summary = scope.walk(path, text, parsed.nodes, [])
+
+  summary.text = text
+
+  return summary
+}
+
+# The module-level declarations of a stub, by name.
+def _top_level(summary) {
+  var found = {}
+
+  if summary == nil {
+    return found
+  }
+
+  var index = 0
+
+  for symbol in summary.symbols {
+    if symbol.scope == 0 and symbol.kind != 'parameter' {
+      found[symbol.name] = index
+    }
+
+    index++
+  }
+
+  return found
+}
+
+/**
+ * The built-in globals and types of one installation.
+ */
+class Builtins {
+
+  /**
+   * Reads the stubs in `libs`.
+   *
+   * @param string libs: The installation's `libs` directory.
+   */
+  @new(libs: string) {
+    self.libs = libs
+    self.globals = _read(os.join_paths(libs, '_builtins.stub.zu'))
+    self.prelude = _read(os.join_paths(libs, '_prelude.stub.zu'))
+    self.types = {}
+
+    for name in TYPES {
+      var summary = _read(os.join_paths(libs, '_${name}.stub.zu'))
+
+      if summary != nil {
+        self.types[name] = summary
+      }
+    }
+
+    self._global_names = _top_level(self.globals)
+    self._prelude_names = _top_level(self.prelude)
+
+    # `value` documents what every value carries; it is not a name.
+    self._global_names.remove('value')
+    self.names = self._global_names.keys()
+    self.names.extend(self._prelude_names.keys())
+  }
+
+  /**
+   * Where the built-in global `name` is declared, as `{ summary, index }`,
+   * or `nil` for a name that is not one.
+   *
+   * @param string name
+   * @returns ?dict
+   */
+  global(name: string) {
+    var index = self._global_names.get(name, nil)
+
+    if index != nil {
+      return { summary: self.globals, index }
+    }
+
+    index = self._prelude_names.get(name, nil)
+
+    if index != nil {
+      return { summary: self.prelude, index }
+    }
+
+    return nil
+  }
+
+  /**
+   * The class a built-in type's stub declares, as `{ summary, index }`,
+   * or `nil`.
+   *
+   * @param string name: One of `TYPES`.
+   * @returns ?dict
+   */
+  type_class(name: string) {
+    var summary = self.types.get(name, nil)
+
+    if summary == nil {
+      return nil
+    }
+
+    var index = 0
+
+    for symbol in summary.symbols {
+      if symbol.kind == 'class' and symbol.name == name {
+        return { summary, index }
+      }
+
+      index++
+    }
+
+    return nil
+  }
+
+  /**
+   * The class that documents what every value carries, `to_string()`
+   * among it, as `{ summary, index }`.
+   *
+   * @returns ?dict
+   */
+  value_class() {
+    var index = self._global_names.get('value', nil)
+
+    if index == nil and self.globals != nil {
+      var position = 0
+
+      for symbol in self.globals.symbols {
+        if symbol.kind == 'class' and symbol.name == 'value' {
+          return { summary: self.globals, index: position }
+        }
+
+        position++
+      }
+
+      return nil
+    }
+
+    return index == nil ? nil : { summary: self.globals, index }
+  }
+}

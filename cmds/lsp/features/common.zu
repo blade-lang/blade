@@ -1,0 +1,570 @@
+/**
+ * What the features share: the protocol's numbering of kinds and
+ * severities, names and keywords, how a type is described to a person,
+ * and the questions about a position that more than one feature asks.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import ..analysis.query
+import ..analysis.scope { BUILTIN, STARRED }
+
+/** The words the language reserves, which no name can be. */
+const KEYWORDS = [
+  'and', 'as', 'assert', 'break', 'catch', 'class', 'const', 'continue',
+  'def', 'default', 'do', 'echo', 'else', 'false', 'for', 'if', 'import',
+  'in', 'iter', 'nil', 'or', 'parent', 'raise', 'return', 'self', 'static',
+  'true', 'using', 'var', 'when', 'while',
+]
+
+/** The words a type hint names a built-in type by. */
+const TYPE_WORDS = [
+  'any', 'bool', 'int', 'number', 'bigint', 'string', 'bytes', 'list',
+  'dict', 'range', 'file', 'function', 'type', 'callable', 'iterable',
+]
+
+/** The decorated methods a class can declare, with their parameters. */
+const DECORATORS = {
+  '@new': [],
+  '@add': ['other'],
+  '@sub': ['other'],
+  '@mul': ['other'],
+  '@div': ['other'],
+  '@floordiv': ['other'],
+  '@mod': ['other'],
+  '@pow': ['other'],
+  '@neg': [],
+  '@and': ['other'],
+  '@or': ['other'],
+  '@xor': ['other'],
+  '@not': [],
+  '@lshift': ['other'],
+  '@rshift': ['other'],
+  '@urshift': ['other'],
+  '@eq': ['other'],
+  '@lt': ['other'],
+  '@lte': ['other'],
+  '@gt': ['other'],
+  '@gte': ['other'],
+  '@key': ['key'],
+  '@value': ['key'],
+  '@to_string': [],
+  '@to_json': [],
+}
+
+/** `SymbolKind`, as the protocol numbers it. */
+const SYMBOL_KIND = {
+  module: 2,
+  'class': 5,
+  method: 6,
+  property: 7,
+  field: 8,
+  constructor: 9,
+  function: 12,
+  variable: 13,
+  constant: 14,
+}
+
+/** `CompletionItemKind`, as the protocol numbers it. */
+const COMPLETION_KIND = {
+  text: 1,
+  method: 2,
+  function: 3,
+  constructor: 4,
+  field: 5,
+  variable: 6,
+  'class': 7,
+  module: 9,
+  property: 10,
+  keyword: 14,
+  snippet: 15,
+  file: 17,
+  folder: 19,
+  constant: 21,
+  type: 25,
+}
+
+/** `DiagnosticSeverity`, as the protocol numbers it. */
+const SEVERITY = { error: 1, warning: 2, information: 3, hint: 4 }
+
+/**
+ * Whether `name` can name a declaration: letters, digits and
+ * underscores, not starting with a digit, and no keyword.
+ *
+ * @param string name
+ * @returns bool
+ */
+def is_identifier(name: string) {
+  return !!name.match('/^[A-Za-z_][A-Za-z0-9_]*$/') and !KEYWORDS.contains(name)
+}
+
+/**
+ * The protocol's `SymbolKind` for a declaration.
+ *
+ * @param dict symbol
+ * @returns int
+ */
+def symbol_kind(symbol: dict) {
+  using symbol.kind {
+    when 'class' return SYMBOL_KIND['class']
+    when 'method' return symbol.name == '@new' ? SYMBOL_KIND.constructor : SYMBOL_KIND.method
+    when 'field' return symbol.get('constant', false) ? SYMBOL_KIND.constant : SYMBOL_KIND.field
+    when 'function' return SYMBOL_KIND.function
+    when 'constant' return SYMBOL_KIND.constant
+    when 'module', 'import' return SYMBOL_KIND.module
+    default {
+      return SYMBOL_KIND.variable
+    }
+  }
+}
+
+/**
+ * The protocol's `CompletionItemKind` for a declaration.
+ *
+ * @param dict symbol
+ * @returns int
+ */
+def completion_kind(symbol: dict) {
+  using symbol.kind {
+    when 'class' return COMPLETION_KIND['class']
+    when 'method' {
+      return symbol.name == '@new' ? COMPLETION_KIND.constructor : COMPLETION_KIND.method
+    }
+    when 'field' return COMPLETION_KIND.field
+    when 'function' return COMPLETION_KIND.function
+    when 'constant' return COMPLETION_KIND.constant
+    when 'module' return COMPLETION_KIND.module
+    default {
+      return COMPLETION_KIND.variable
+    }
+  }
+}
+
+/**
+ * A type as a person reads it: `string`, `Point`, `module json`,
+ * `class Point` or `function`. `nil` for a type that cannot be told.
+ *
+ * @param Linker linker
+ * @param ?dict type: A type `linker.resolve()` returned.
+ * @returns ?string
+ */
+def describe(linker, type) {
+  if type == nil {
+    return nil
+  }
+
+  using type.t {
+    when 'builtin' return type.name
+    when 'instance', 'super' {
+      var symbol = linker.symbol({ path: type.path, index: type.index })
+
+      return symbol == nil ? nil : symbol.name
+    }
+    when 'class' {
+      var symbol = linker.symbol({ path: type.path, index: type.index })
+
+      return symbol == nil ? nil : 'class ${symbol.name}'
+    }
+    when 'module' return 'module ' + module_name(type.path)
+    when 'function' return 'function'
+    default {
+      return nil
+    }
+  }
+}
+
+/**
+ * The name a module's file is imported by: its file name, or its
+ * directory's for a package's `index.zu`, and a native module's name
+ * for its stub.
+ *
+ * @param string path
+ * @returns string
+ */
+def module_name(path: string) {
+  var normal = path.replace('\\', '/', false)
+  var parts = normal.split('/')
+  var last = parts[parts.length() - 1]
+
+  if last.ends_with('.stub.zu') {
+    return last[0, last.length() - 8]
+  }
+
+  if last == 'index.zu' and parts.length() > 1 {
+    return parts[parts.length() - 2]
+  }
+
+  return last.ends_with('.zu') ? last[0, last.length() - 3] : last
+}
+
+/**
+ * The innermost scope of a summary holding `offset`.
+ *
+ * @param dict summary
+ * @param int offset
+ * @returns int: A scope index; `0`, the module, when no other holds
+ *    it.
+ */
+def scope_at(summary: dict, offset: int) {
+  var best = 0
+  var index = 0
+
+  for scope in summary.scopes {
+    if scope.start <= offset and offset <= scope.end and index > 0 {
+      var current = summary.scopes[best]
+
+      if best == 0 or scope.end - scope.start <= current.end - current.start {
+        best = index
+      }
+    }
+
+    index++
+  }
+
+  return best
+}
+
+/**
+ * The innermost function, method or anonymous function holding
+ * `offset`, as its symbol's index, or `-1` at the top of the file.
+ *
+ * @param dict summary
+ * @param int offset
+ * @returns int
+ */
+def function_at(summary: dict, offset: int) {
+  var scope = scope_at(summary, offset)
+
+  while scope > 0 {
+    var found = summary.scopes[scope]
+
+    if found.kind == 'function' {
+      return found.owner
+    }
+
+    scope = found.outer
+  }
+
+  return -1
+}
+
+/**
+ * Every name a summary's file can use at `offset`, innermost first, as
+ * `{ name: index }`: the locals of the scopes holding it that are
+ * declared before it, then the module's globals and the imports above
+ * it. Built-in globals and wildcard imports are left to the caller.
+ *
+ * @param dict summary
+ * @param int offset
+ * @returns dict
+ */
+def visible_names(summary: dict, offset: int) {
+  var found = {}
+  var scope = scope_at(summary, offset)
+
+  while scope >= 0 {
+    var current = summary.scopes[scope]
+
+    for name, index in current.names {
+      if found.contains(name) {
+        continue
+      }
+
+      var symbol = summary.symbols[index]
+
+      # A local exists from its declaration on; a function's siblings
+      # and the module's globals exist throughout.
+      var hoisted = symbol.kind == 'function' or scope == 0 and symbol.kind != 'module'
+
+      if hoisted or symbol.name_start < offset {
+        found[name] = index
+      }
+    }
+
+    scope = current.outer
+  }
+
+  for name, index in summary.get('globals', {}) {
+    if !found.contains(name) {
+      found[name] = index
+    }
+  }
+
+  return found
+}
+
+/**
+ * The declaration a name stands for where it is used, as the linker
+ * identifies it, from the occurrence at `offset`.
+ *
+ * @param Linker linker
+ * @param string path
+ * @param dict summary
+ * @param int offset
+ * @returns ?dict: `{ occurrence, target }`, `target` `nil` when the
+ *    name stands for nothing found; `nil` when nothing is named at
+ *    `offset`.
+ */
+def target_at(linker, path: string, summary: dict, offset: int) {
+  var occurrence = query.at(summary, offset)
+
+  if occurrence == nil {
+    return nil
+  }
+
+  return { occurrence, target: query.canonical(linker, path, occurrence) }
+}
+
+/**
+ * Whether `value` is a syntax tree node.
+ *
+ * @param any value
+ * @returns bool
+ */
+def is_node(value) {
+  return is_instance(value) and hasprop(value, 'kind') and hasprop(value, 'fields')
+}
+
+/**
+ * The nodes directly inside `node`, in the order they are written.
+ *
+ * @param any node
+ * @returns list
+ */
+def children(node) {
+  var found = []
+
+  if !is_node(node) {
+    return found
+  }
+
+  for key, value in node.fields {
+    if is_list(value) {
+      for item in value {
+        if is_node(item) {
+          found.append(item)
+        }
+      }
+    } else if is_node(value) {
+      found.append(value)
+    }
+  }
+
+  found.sort(@(a, b) => a.start - b.start)
+
+  return found
+}
+
+/**
+ * The nodes holding `offset`, outermost first, from a file's top-level
+ * nodes down to the innermost one.
+ *
+ * @param list nodes
+ * @param int offset
+ * @returns list
+ */
+def path_to(nodes: list, offset: int) {
+  var found = []
+  var level = nodes
+
+  while true {
+    var inner = nil
+
+    for node in level {
+      if is_node(node) and node.start <= offset and offset <= node.end and node.end > node.start {
+        if inner == nil or node.end - node.start < inner.end - inner.start {
+          inner = node
+        }
+      }
+    }
+
+    if inner == nil {
+      break
+    }
+
+    found.append(inner)
+    level = children(inner)
+  }
+
+  return found
+}
+
+/**
+ * The declaration `ref` points at as the linker holds it, with the
+ * path and index it was found by.
+ *
+ * @param Linker linker
+ * @param ?dict ref: `{ path, index }`.
+ * @returns ?dict: `{ path, index, symbol }`.
+ */
+def lookup(linker, ref) {
+  if ref == nil or ref.contains('module') {
+    return nil
+  }
+
+  var symbol = linker.symbol(ref)
+
+  return symbol == nil ? nil : { path: ref.path, index: ref.index, symbol }
+}
+
+/**
+ * The name of the class a member belongs to, for showing it.
+ *
+ * @param Linker linker
+ * @param string path
+ * @param dict symbol
+ * @returns ?string
+ */
+def owner_name(linker, path: string, symbol: dict) {
+  var owner = symbol.get('owner', nil)
+
+  if owner == nil {
+    return nil
+  }
+
+  var found = linker.symbol({ path, index: owner })
+
+  return found == nil ? nil : found.name
+}
+
+/**
+ * The function calling something of the type `callee` runs: the
+ * function or method itself, or a class's `@new`, inherited when the
+ * class has none of its own.
+ *
+ * @param Linker linker
+ * @param ?dict callee: A type `linker.resolve()` returned.
+ * @returns ?dict: `{ symbol, name, path, index }`, `name` the class's
+ *    for a constructor; `nil` when it cannot be told.
+ */
+def callable(linker, callee) {
+  if callee == nil {
+    return nil
+  }
+
+  if callee.t == 'function' {
+    var symbol = linker.symbol({ path: callee.path, index: callee.index })
+
+    if symbol == nil {
+      return nil
+    }
+
+    return { symbol, name: symbol.name, path: callee.path, index: callee.index }
+  }
+
+  if callee.t != 'class' {
+    return nil
+  }
+
+  var class_symbol = linker.symbol({ path: callee.path, index: callee.index })
+
+  for ref in linker.chain({ path: callee.path, index: callee.index }) {
+    var owner = linker.symbol(ref)
+
+    for index in owner.get('members', []) {
+      var member = linker.symbol({ path: ref.path, index })
+
+      if member != nil and member.name == '@new' and !member.get('is_static', false) {
+        return { symbol: member, name: class_symbol.name, path: ref.path, index }
+      }
+    }
+  }
+
+  return nil
+}
+
+/**
+ * A `WorkspaceEdit` from `TextEdit`s by file key: versioned document
+ * changes when the client takes them, plain changes otherwise.
+ *
+ * @param Server server
+ * @param dict edits: `{ key: [TextEdit] }`.
+ * @returns dict
+ */
+def workspace_edit(server, edits: dict) {
+  if server.supports('workspace.workspaceEdit.documentChanges') == true {
+    var changes = []
+
+    for key in edits.keys().sort() {
+      var open = server.open_document(key)
+
+      changes.append({
+        textDocument: { uri: server.uri(key), version: open == nil ? nil : open.version },
+        edits: edits[key],
+      })
+    }
+
+    return { documentChanges: changes }
+  }
+
+  var changes = {}
+
+  for key, list in edits {
+    changes[server.uri(key)] = list
+  }
+
+  return { changes }
+}
+
+/**
+ * The line an added import goes on: the one after the last import at
+ * the top of the file, or after the module's doc block, or the first.
+ *
+ * @param list nodes: The file's top-level nodes.
+ * @param LineIndex lines
+ * @returns int
+ */
+def import_line(nodes: list, lines) {
+  var last = nil
+
+  for node in nodes {
+    if !is_node(node) {
+      continue
+    }
+
+    var statement = node.kind == 'Stmt' ? node.fields.statement : node
+
+    if is_node(statement) and statement.kind == 'Import' {
+      last = node.end
+    } else if node.kind == 'DocBlock' and last == nil and node.fields.text.contains('@module') {
+      last = node.end
+    }
+  }
+
+  return last == nil ? 0 : lines.line_of(last) + 1
+}
+
+/**
+ * A `TextEdit` adding the line `text` as an import of a file.
+ *
+ * @param list nodes: The file's top-level nodes.
+ * @param LineIndex lines
+ * @param string text: The import, such as `'import json'`.
+ * @returns dict
+ */
+def import_edit(nodes: list, lines, text: string) {
+  var position = { line: import_line(nodes, lines), character: 0 }
+
+  return { range: { start: position, end: position }, newText: text + '\n' }
+}
+
+/**
+ * Whether a reference's target is a name the runtime defines.
+ *
+ * @param int target
+ * @returns bool
+ */
+def is_builtin(target: int) {
+  return target == BUILTIN
+}
+
+/**
+ * Whether a reference's target is only known through a wildcard
+ * import.
+ *
+ * @param int target
+ * @returns bool
+ */
+def is_starred(target: int) {
+  return target == STARRED
+}

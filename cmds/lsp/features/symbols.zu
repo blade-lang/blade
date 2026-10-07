@@ -1,0 +1,293 @@
+/**
+ * Symbols: the outline of one file, and a search for declarations by
+ * name across the whole workspace.
+ *
+ * The outline holds the file's classes with their fields and methods,
+ * its functions with the functions declared inside them, and its
+ * module variables and constants. The search matches the letters
+ * typed in order, so `hrq` finds `HttpRequest`, and ranks names that
+ * start with what was typed first.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import .common
+import ..analysis.render
+
+# The most results a workspace search returns.
+const _MOST = 500
+
+# The protocol's `SymbolTag` for something deprecated.
+const _DEPRECATED = 1
+
+# Whether a declaration belongs in an outline.
+def _outlined(symbol: dict) {
+  if symbol.get('anonymous', false) or symbol.name.is_empty() {
+    return false
+  }
+
+  return ['class', 'function', 'method', 'field', 'variable', 'constant'].contains(symbol.kind)
+}
+
+# A short description of a declaration, beside its name.
+def _detail(symbol: dict) {
+  using symbol.kind {
+    when 'function', 'method' return '(${render.parameters(symbol)})'
+    when 'class' {
+      var parent_text = symbol.get('superclass_text', nil)
+
+      if parent_text == nil {
+        return ''
+      }
+
+      return symbol.get('extension', false) ? '> ${parent_text}' : '< ${parent_text}'
+    }
+    default {
+      var hint = symbol.get('hint', nil)
+
+      return hint == nil ? '' : hint
+    }
+  }
+}
+
+/**
+ * Answers `textDocument/documentSymbol`: the outline, nested, or flat
+ * for a client that cannot take it nested.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns list[dict]
+ */
+def document(server, params: dict) {
+  var source = server.document(params.textDocument.uri)
+  var summary = server.analysis(source).summary
+  var key = source.key
+  var nested = server.supports('textDocument.documentSymbol.hierarchicalDocumentSymbolSupport')
+  var children = {}
+  var roots = []
+  var index = 0
+
+  # Each declaration under what holds it: a member under its class, a
+  # function's own functions under it.
+  for symbol in summary.symbols {
+    if _outlined(symbol) {
+      var parent_index = _parent_of(summary, symbol)
+
+      if parent_index == nil {
+        if symbol.scope == 0 {
+          roots.append(index)
+        }
+      } else {
+        if !children.contains('${parent_index}') {
+          children['${parent_index}'] = []
+        }
+
+        children['${parent_index}'].append(index)
+      }
+    }
+
+    index++
+  }
+
+  if nested != true {
+    var flat = []
+
+    for root in roots {
+      _flatten(server, key, summary, root, nil, children, flat)
+    }
+
+    return flat
+  }
+
+  return roots.map(@(root) => _node(server, key, summary, root, children))
+}
+
+# The declaration a declaration is outlined under: a member's class,
+# or the function a named function is declared in.
+def _parent_of(summary: dict, symbol: dict) {
+  var owner = symbol.get('owner', nil)
+
+  if owner != nil {
+    return owner
+  }
+
+  if symbol.kind == 'function' and symbol.container >= 0 {
+    var container = summary.symbols[symbol.container]
+
+    if !container.get('anonymous', false) {
+      return symbol.container
+    }
+  }
+
+  return nil
+}
+
+def _node(server, key: string, summary: dict, index: int, children: dict) {
+  var symbol = summary.symbols[index]
+  var node = {
+    name: symbol.name,
+    detail: _detail(symbol),
+    kind: common.symbol_kind(symbol),
+    range: server.range(key, symbol.start, symbol.end),
+    selectionRange: server.range(key, symbol.name_start, symbol.name_end),
+  }
+
+  if render.is_deprecated(symbol.get('doc', nil)) {
+    node.tags = [_DEPRECATED]
+  }
+
+  var inner = children.get('${index}', []).clone()
+
+  # Members in the order they are written: an implicit field reads
+  # where `@new` sets it.
+  inner.sort(@(a, b) => summary.symbols[a].start - summary.symbols[b].start)
+
+  if !inner.is_empty() {
+    node.children = inner.map(@(child) => _node(server, key, summary, child, children))
+  }
+
+  return node
+}
+
+def _flatten(server, key: string, summary: dict, index: int, container, children: dict, out: list) {
+  var symbol = summary.symbols[index]
+  var item = {
+    name: symbol.name,
+    kind: common.symbol_kind(symbol),
+    location: server.location(key, symbol.start, symbol.end),
+  }
+
+  if container != nil {
+    item.containerName = container
+  }
+
+  out.append(item)
+
+  for child in children.get('${index}', []) {
+    _flatten(server, key, summary, child, symbol.name, children, out)
+  }
+}
+
+/**
+ * How well `name` matches `query`, or `nil` when it does not: the
+ * letters of `query` must appear in `name` in order, ignoring case.
+ * Lower is better: a name starting with the query, then one holding
+ * it whole, then the rest by how spread out the letters are.
+ *
+ * @param string name
+ * @param string query: Lowercase.
+ * @returns ?number
+ */
+def match_score(name: string, query: string) {
+  if query.is_empty() {
+    return 0
+  }
+
+  var lower = name.lower()
+
+  if lower.starts_with(query) {
+    return name.length() - query.length()
+  }
+
+  var at = lower.index_of(query)
+
+  if at >= 0 {
+    return 1000 + at
+  }
+
+  var position = 0
+  var gaps = 0
+  var last = -1
+
+  for ch in query {
+    var found = lower.index_of(ch, position)
+
+    if found < 0 {
+      return nil
+    }
+
+    if last >= 0 and found > last + 1 {
+      gaps += found - last
+    }
+
+    last = found
+    position = found + 1
+  }
+
+  return 2000 + gaps
+}
+
+/**
+ * Answers `workspace/symbol`: the declarations of every workspace file
+ * whose names match the query, best matches first.
+ *
+ * @param Server server
+ * @param dict params
+ * @param rpc.Context context
+ * @returns list[dict]
+ */
+def workspace(server, params: dict, context) {
+  var query = params.get('query', '').lower().trim()
+  var linker = server.linker
+  var found = []
+
+  server.sync_open()
+
+  for path in server.paths().sort() {
+    server.interrupted(context, nil)
+
+    var summary = linker.summary(path)
+
+    if summary == nil {
+      continue
+    }
+
+    for symbol in summary.symbols {
+      if !_outlined(symbol) or (symbol.scope != 0 and symbol.get('owner', nil) == nil) {
+        continue
+      }
+
+      var score = match_score(symbol.name, query)
+
+      if score == nil {
+        continue
+      }
+
+      found.append({ score, path, symbol })
+    }
+  }
+
+  found.sort(@(a, b) {
+    if a.score != b.score {
+      return a.score - b.score
+    }
+
+    return a.symbol.name.compare(b.symbol.name)
+  })
+
+  var answer = []
+
+  for item in found {
+    if answer.length() >= _MOST {
+      break
+    }
+
+    var symbol = item.symbol
+    var entry = {
+      name: symbol.name,
+      kind: common.symbol_kind(symbol),
+      location: server.location(item.path, symbol.name_start, symbol.name_end),
+    }
+    var owner = common.owner_name(linker, item.path, symbol)
+
+    entry.containerName = owner == nil ? common.module_name(item.path) : owner
+
+    if render.is_deprecated(symbol.get('doc', nil)) {
+      entry.tags = [_DEPRECATED]
+    }
+
+    answer.append(entry)
+  }
+
+  return answer
+}

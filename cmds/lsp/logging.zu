@@ -1,0 +1,240 @@
+/**
+ * The server's logging, on the `log` module. The server logs with
+ * `log.info()` and its siblings like any other program, and this sets
+ * up where those records go: to the client, through a
+ * {ClientTransport}, and to the `--log` file, through a
+ * `log.FileTransport`.
+ *
+ * The server's standard output carries the protocol, so the console
+ * transport `log` starts with, which prints there, is removed before
+ * anything is logged.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import log
+
+/**
+ * The levels `--log-level` takes, from the fewest records to the most.
+ * `trace` logs what `debug` does and every message the server reads
+ * and writes as well, to the `--log` file alone.
+ */
+const LEVELS = ['error', 'warn', 'info', 'debug', 'trace']
+
+/** The level used when none is given. */
+const DEFAULT_LEVEL = 'info'
+
+# The log module's level for each of `LEVELS`.
+const _THRESHOLDS = {
+  error: log.Error,
+  warn: log.Warning,
+  info: log.Info,
+  debug: log.Debug,
+  trace: log.Debug,
+}
+
+# The name the protocol records are logged under.
+const _PROTOCOL = 'protocol'
+
+# The `MessageType` the protocol gives a record of `level`.
+def _message_type(level) {
+  if level >= log.Error {
+    return 1
+  }
+
+  if level == log.Warning {
+    return 2
+  }
+
+  return level == log.Info ? 3 : 4
+}
+
+/**
+ * Sends the server's log records to the client. A record at or above
+ * the transport's threshold goes out as `window/logMessage`, which an
+ * editor shows in the server's output panel. While the client has
+ * turned tracing on, with `$/setTrace` or the `trace` field of
+ * `initialize`, every record down to `debug` also goes out as
+ * `$/logTrace`.
+ *
+ * Records logged before an endpoint is connected, after it has
+ * closed, or under the `protocol` name are dropped: the client keeps
+ * its own trace of the messages it exchanges, and sending it a record
+ * of each would add a message to trace for every message traced.
+ */
+class ClientTransport < log.Transport {
+
+  /**
+   * Returns a new {ClientTransport} named `lsp`, with no endpoint and
+   * tracing off.
+   *
+   * @param log.LogLevel threshold: The least severe level sent as
+   *    `window/logMessage`.
+   */
+  @new(threshold) {
+    self._endpoint = nil
+    self._threshold = threshold
+    self._trace = 'off'
+
+    self.set_name('lsp')
+    self.set_level(threshold)
+  }
+
+  /**
+   * Sends records to the client through `endpoint` from now on.
+   *
+   * @param rpc.Endpoint endpoint
+   * @returns ClientTransport itself.
+   */
+  connect(endpoint) {
+    self._endpoint = endpoint
+
+    return self
+  }
+
+  /**
+   * Sets how much is traced to the client: `'off'`, `'messages'` or
+   * `'verbose'`, the values of the protocol's `TraceValue`. Anything
+   * else turns tracing off.
+   *
+   * @param string value
+   * @returns ClientTransport itself.
+   */
+  set_trace(value: string) {
+    self._trace = value == 'messages' or value == 'verbose' ? value : 'off'
+    self.set_level(self._trace == 'off' ? self._threshold : log.Debug)
+
+    return self
+  }
+
+  /**
+   * The trace the client asked for: `'off'`, `'messages'` or
+   * `'verbose'`. Default `'off'`.
+   *
+   * @returns string
+   */
+  get_trace() {
+    return self._trace
+  }
+
+  /**
+   * The record as the client shows it: the message alone, with any
+   * structured fields after it as `key=value`. The client stamps each
+   * line with its own time and level.
+   *
+   * @param list records
+   * @param log.LogLevel level
+   * @param ?dict context
+   * @returns dict: `{ text, protocol }`, where `protocol` is true for a
+   *    record logged under the `protocol` name.
+   */
+  format(records, level, context) {
+    var parts = records
+    var fields = {}
+    var protocol = false
+
+    if context {
+      protocol = context.get('name', nil) == _PROTOCOL
+
+      for key, value in context.get('fields', {}) {
+        fields[key] = value
+      }
+    }
+
+    if !records.is_empty() and is_dict(records[records.length() - 1]) {
+      parts = records[0, records.length() - 1]
+
+      for key, value in records[records.length() - 1] {
+        fields[key] = value
+      }
+    }
+
+    var text = ''
+
+    for part in parts {
+      text += ' ' + part.to_string()
+    }
+
+    for key, value in fields {
+      text += ' ${key}=${value.to_string()}'
+    }
+
+    return { text: text.trim(), protocol }
+  }
+
+  /**
+   * Sends a formatted record to the client. A client that has gone
+   * away is not an error worth raising from inside a log call, so a
+   * failed send is dropped.
+   *
+   * @param dict message: What `format()` returned.
+   * @param log.LogLevel level
+   */
+  write(message, level) {
+    if message.protocol or self._endpoint == nil or self._endpoint.is_closed() {
+      return
+    }
+
+    catch {
+      if level >= self._threshold {
+        var type = _message_type(level)
+
+        self._endpoint.notify('window/logMessage', { type, message: message.text })
+      }
+
+      if self._trace != 'off' {
+        self._endpoint.notify('$/logTrace', { message: message.text })
+      }
+    } as error {
+      return
+    }
+  }
+}
+
+/**
+ * Sets the server's logging up for `level`: removes the console
+ * transport, adds a {ClientTransport}, and adds a `log.FileTransport`
+ * appending to `path` when one is given. The file's directory is made
+ * when it does not exist.
+ *
+ * @param string level: One of `LEVELS`.
+ * @param ?string path: The `--log` file; `nil` for none.
+ * @returns ClientTransport: Connected to the client once the server
+ *    has an endpoint.
+ * @throws ValueError when `level` is not one of `LEVELS`.
+ * @throws Error when the file cannot be made or opened. The client
+ *    transport is in place by then, so a server that carries on
+ *    without the file still logs to the client.
+ */
+def configure(level: string, path) {
+  if !LEVELS.contains(level) {
+    raise ValueError("'${level}' is not a log level")
+  }
+
+  var threshold = _THRESHOLDS[level]
+  var client = ClientTransport(threshold)
+
+  log.remove_transport(log.default_transport())
+  log.add_transport(client)
+
+  if path != nil {
+    log.add_transport(log.FileTransport(path).set_name('lsp').set_level(threshold))
+  }
+
+  return client
+}
+
+/**
+ * Logs every message `endpoint` reads and writes, at `debug` under the
+ * name `protocol`, which reaches the `--log` file alone. Read messages
+ * are marked `<-` and written ones `->`.
+ *
+ * @param rpc.Endpoint endpoint
+ */
+def trace_protocol(endpoint) {
+  var protocol = log.get_logger(_PROTOCOL)
+
+  endpoint.on_trace(@(direction, text) {
+    protocol.debug(direction == 'in' ? '<-' : '->', text)
+  })
+}

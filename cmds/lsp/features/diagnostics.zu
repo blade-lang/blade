@@ -1,0 +1,879 @@
+/**
+ * Diagnostics: what is wrong with a file, found by reading it rather
+ * than running it.
+ *
+ * Every error reported is a compile error or a failure the runtime is
+ * certain to raise when the code is reached: a syntax error, an error
+ * the compiler reports, a module that cannot be found, a member a
+ * module does not have, a name nothing declares, a field set outside
+ * `@new` that no class declares, and a literal argument of the wrong
+ * type, or a missing one, for a typed parameter. A member that an
+ * instance of a fully known class does not have is a warning, since an
+ * extension the server has not read could still add it. Unused
+ * declarations and unreachable code are hints the editor shows faded,
+ * and uses of anything documented `@deprecated` are struck through.
+ * Arity is never checked, because the runtime does not enforce it.
+ *
+ * Nothing is ever concluded from what cannot be told: a receiver of
+ * unknown type, a module whose wildcard imports lead somewhere unread,
+ * or a class whose superclass cannot be found is not diagnosed.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import hash
+import json
+import zuri
+import rpc
+import .common
+import .common { SEVERITY }
+import ..analysis.query
+import ..analysis.render
+import ..analysis.scope { REF_STRIDE, UNRESOLVED, STARRED, WRITE, READ }
+
+# The protocol's `DiagnosticTag`s.
+const _UNNECESSARY = 1
+const _DEPRECATED = 2
+
+# The least wait, in seconds, between two answers to a held workspace
+# pull.
+const _WORKSPACE_PAUSE = 1
+
+# The compiler's diagnostics of files nobody has open, by path, with
+# the hash of the text they were found in.
+var _compiled = {}
+
+/**
+ * Everything wrong with the file `key` names.
+ *
+ * @param Server server
+ * @param string key
+ * @returns list[dict]: Protocol `Diagnostic`s.
+ */
+def compute(server, key: string) {
+  var summary = server.summary(key)
+
+  if summary == nil {
+    return []
+  }
+
+  var report = _Report(server, key, summary)
+
+  report.syntax()
+
+  if summary.errors.is_empty() {
+    report.compiler()
+  }
+
+  report.imports()
+  report.names()
+  report.members()
+  report.arguments()
+  report.unreachable()
+
+  if server.settings.get('diagnostics.unusedHints') {
+    report.unused()
+  }
+
+  report.found.extend(server.test_diagnostics(key))
+
+  return report.found
+}
+
+# What a typed parameter accepts, read from its hint: `{ nullable,
+# words }`, the words lowercase for built-in types.
+def _accepts(hint: string) {
+  var text = hint.trim()
+  var nullable = text.starts_with('?')
+
+  if nullable {
+    text = text[1, text.length()]
+  }
+
+  var words = text.split('|').map(@(word) => word.trim()).filter(@(word) => !word.is_empty())
+
+  return { nullable, words }
+}
+
+# The type a literal argument has, as a hint names it, or `nil` for an
+# argument that is not a literal.
+def _literal_type(kind: string, text: string) {
+  using kind {
+    when 'Literal', 'Interpolation' return 'string'
+    when 'Integer' return 'int'
+    when 'Float' {
+      var value = text.replace('_', '', false).to_number()
+
+      return value == value.floor() ? 'int' : 'number'
+    }
+    when 'BigNumber' return 'bigint'
+    when 'Bool' return 'bool'
+    when 'Nil' return 'nil'
+    when 'List' return 'list'
+    when 'Dict' return 'dict'
+    when 'Range' return 'range'
+    when 'Anonymous' return 'function'
+    default {
+      return nil
+    }
+  }
+}
+
+# Whether a value of the type `given` passes the hint word `word`.
+# A word this cannot judge passes.
+def _passes(given: string, word: string) {
+  using word {
+    when 'any', 'type' return true
+    when 'int' return given == 'int'
+    when 'number' return given == 'int' or given == 'number'
+    when 'string', 'bool', 'list', 'dict', 'range', 'bigint', 'bytes', 'file' {
+      return given == word
+    }
+    when 'function', 'callable' return given == 'function'
+    when 'iterable' return ['string', 'list', 'dict', 'range'].contains(given)
+    default {
+      # A class: no literal is an instance of one.
+      return false
+    }
+  }
+}
+
+# The article a type name reads with in the runtime's own message.
+def _article(word: string) {
+  return ['a', 'e', 'i', 'o', 'u'].contains(word[0]) ? 'an' : 'a'
+}
+
+/**
+ * The diagnostics of one file, gathered a kind at a time.
+ */
+class _Report {
+
+  @new(server, key: string, summary: dict) {
+    self.server = server
+    self.linker = server.linker
+    self.key = key
+    self.summary = summary
+    self.found = []
+    self._broken = {}
+  }
+
+  _add(start: int, end: int, severity: int, code: string, message: string, extra: dict) {
+    var diagnostic = {
+      range: self.server.range(self.key, start, end),
+      severity,
+      code,
+      source: 'zuri',
+      message,
+    }
+
+    for name, value in extra {
+      diagnostic[name] = value
+    }
+
+    self.found.append(diagnostic)
+  }
+
+  # The path imports in this file are resolved from: `nil` for a
+  # document never saved.
+  _importer() {
+    var open = self.server.open_document(self.key)
+
+    if open != nil {
+      return open.path
+    }
+
+    return self.key
+  }
+
+  # Whether every name the module at `path` exports is known: each of
+  # its re-exported wildcard imports leads to a module read in full.
+  _complete(path, depth: int) {
+    if path == nil or depth > 8 {
+      return false
+    }
+
+    var summary = self.linker.summary(path)
+
+    if summary == nil {
+      return false
+    }
+
+    for star in summary.stars {
+      if !star.exported {
+        continue
+      }
+
+      var found = self.server.resolver.resolve(star.path, path)
+
+      if found == nil or found.kind == 'internal' {
+        return false
+      }
+
+      if !self._complete(self.linker.module_path(star.path, path), depth + 1) {
+        return false
+      }
+    }
+
+    return true
+  }
+
+  # Whether the names this file's own wildcard imports bring in are
+  # all known.
+  _stars_complete() {
+    for star in self.summary.stars {
+      var found = self.server.resolver.resolve(star.path, self._importer())
+
+      if found == nil or found.kind == 'internal' {
+        return false
+      }
+
+      if !self._complete(self.linker.module_path(star.path, self.key), 0) {
+        return false
+      }
+    }
+
+    return true
+  }
+
+  syntax() {
+    for error in self.summary.errors {
+      self._add(error.start, error.end, SEVERITY.error, 'syntax', error.message, {})
+    }
+  }
+
+  compiler() {
+    var open = self.server.open_document(self.key)
+    var problems = nil
+
+    if open != nil {
+      if open.checked == nil {
+        open.checked = _check(open.text)
+      }
+
+      problems = open.checked
+    } else {
+      var cached = _compiled.get(self.key, nil)
+      var hash_now = self.summary.get('hash', nil)
+
+      if cached != nil and cached.hash == hash_now {
+        problems = cached.problems
+      } else {
+        var text = self.server.text(self.key)
+
+        problems = text == nil ? [] : _check(text)
+        _compiled[self.key] = { hash: hash_now, problems }
+      }
+    }
+
+    for problem in problems {
+      self._add(problem.start, problem.end, SEVERITY.error, 'compile', problem.message, {})
+    }
+  }
+
+  # A module that cannot be found, and an element its module does not
+  # have.
+  imports() {
+    var importer = self._importer()
+    var reported = {}
+
+    for index in self.summary.imports {
+      var symbol = self.summary.symbols[index]
+      var source = symbol.source
+      var segments = source.segments
+      var statement = '${symbol.start}'
+
+      var found = self.server.resolver.resolve(source.path, importer)
+
+      if found == nil {
+        self._broken['${index}'] = true
+
+        if !reported.contains(statement) {
+          reported[statement] = true
+          self._missing_module(source.path, segments, importer)
+        }
+
+        continue
+      }
+
+      if symbol.kind != 'import' or found.kind == 'internal' {
+        continue
+      }
+
+      var target = self.linker.module_path(source.path, self.key)
+
+      if !self._complete(target, 0) {
+        continue
+      }
+
+      if !self.linker.globals(target).contains(source.member) {
+        self._broken['${index}'] = true
+
+        var module = render.import_text(segments)
+        var message = "module '${module}' has no member '${source.member}'"
+
+        self._add(symbol.name_start, symbol.name_end, SEVERITY.error, 'missing-member', message, {
+          data: { name: source.member },
+        })
+      }
+    }
+
+    for star in self.summary.stars {
+      if self.server.resolver.resolve(star.path, importer) == nil {
+        self._missing_module(star.path, star.segments, importer)
+      }
+    }
+  }
+
+  _missing_module(path: string, segments: list, importer) {
+    if segments.is_empty() {
+      return
+    }
+
+    var start = segments[0].start
+    var end = segments[segments.length() - 1].end
+    var module = render.import_text(segments)
+    var message = "cannot find module '${module}'"
+
+    if path.starts_with('.') and importer == nil {
+      message = "cannot find module '${module}': a relative import needs the file to be saved"
+    }
+
+    self._add(start, end, SEVERITY.error, 'module-not-found', message, { data: { module } })
+  }
+
+  # Names nothing declares.
+  names() {
+    var refs = self.summary.refs
+    var stars = nil
+    var i = 0
+
+    while i < refs.length() {
+      var target = refs[i + 2]
+      var name = refs[i + 4]
+      var undefined = target == UNRESOLVED
+
+      if target == STARRED {
+        if stars == nil {
+          stars = self._stars_complete()
+        }
+
+        undefined = stars and !self.linker.starred(self.key).contains(name)
+      }
+
+      if undefined {
+        var message = "'${name}' is not defined"
+
+        self._add(refs[i], refs[i + 1], SEVERITY.error, 'undefined-name', message, {
+          data: { name },
+        })
+      }
+
+      i += REF_STRIDE
+    }
+  }
+
+  # Members that are not there, fields set where they cannot be
+  # declared, and uses of what is deprecated.
+  members() {
+    var position = 0
+
+    for access in self.summary.members {
+      self._member(access, position)
+      position++
+    }
+
+    self._deprecated_names()
+  }
+
+  _member(access: dict, position: int) {
+    if access.self_receiver and access.write {
+      self._self_field(access)
+      return
+    }
+
+    var owner = self.linker.resolve(access.receiver)
+
+    if owner == nil {
+      return
+    }
+
+    var ref = self.linker.member(owner, access.name)
+
+    if ref != nil {
+      self._deprecated(access.start, access.end, ref, access.name)
+      return
+    }
+
+    if owner.t == 'module' {
+      if self._complete(owner.path, 0) {
+        var module = self._module_label(access)
+        var message = "module '${module}' has no member '${access.name}'"
+
+        self._add(access.start, access.end, SEVERITY.error, 'missing-member', message, {
+          data: { name: access.name },
+        })
+      }
+
+      return
+    }
+
+    if !['instance', 'builtin', 'class'].contains(owner.t) or !self.linker.fully_known(owner) {
+      return
+    }
+
+    var what = self._owner_label(owner)
+    var message = "'${access.name}' is not a member of ${what}"
+
+    self._add(access.start, access.end, SEVERITY.warning, 'unknown-member', message, {
+      data: { name: access.name },
+    })
+  }
+
+  _module_label(access: dict) {
+    var text = self.server.text(self.key)
+
+    return text == nil ? 'module' : text[access.object_start, access.object_end]
+  }
+
+  _owner_label(owner: dict) {
+    if owner.t == 'builtin' {
+      return owner.name
+    }
+
+    var symbol = self.linker.symbol({ path: owner.path, index: owner.index })
+    var name = symbol == nil ? 'the class' : symbol.name
+
+    return owner.t == 'class' ? 'class ${name}' : name
+  }
+
+  # `self.name = value` declares a field only in `@new`; anywhere else
+  # some class in the chain, or a subclass, has to declare it.
+  _self_field(access: dict) {
+    var method = self._method_at(access.scope)
+
+    if method == nil {
+      return
+    }
+
+    var symbol = self.summary.symbols[method]
+
+    if symbol.name == '@new' and !symbol.get('is_static', false) {
+      return
+    }
+
+    var owner_index = symbol.get('owner', nil)
+
+    if owner_index == nil {
+      return
+    }
+
+    var owner = { t: 'instance', path: self.key, index: owner_index }
+
+    if !self.linker.fully_known(owner) {
+      return
+    }
+
+    if self.linker.member(owner, access.name) != nil {
+      return
+    }
+
+    if self._declared_below({ path: self.key, index: owner_index }, access.name, 0) {
+      return
+    }
+
+    var class_name = self.summary.symbols[owner_index].name
+    var name = access.name
+    var message = "'${name}' is not a field of ${class_name}: declare it with `var ${name}` "
+    message += 'in the class or set it in @new'
+
+    self._add(access.start, access.end, SEVERITY.error, 'undeclared-field', message, {
+      data: { name: access.name, owner: owner_index },
+    })
+  }
+
+  # The method a scope is inside, through any anonymous functions in
+  # between, as a symbol index.
+  _method_at(scope: int) {
+    var current = scope
+
+    while current > 0 {
+      var found = self.summary.scopes[current]
+
+      if found.kind == 'function' {
+        var symbol = self.summary.symbols[found.owner]
+
+        if symbol.kind == 'method' {
+          return found.owner
+        }
+      }
+
+      current = found.outer
+    }
+
+    return nil
+  }
+
+  # Whether a subclass of `ref` the linker holds declares `name`.
+  _declared_below(ref: dict, name: string, depth: int) {
+    if depth > 8 {
+      return false
+    }
+
+    for below in self.linker.subclasses(ref) {
+      var symbol = self.linker.symbol(below)
+
+      for index in symbol.get('members', []) {
+        var member = self.linker.symbol({ path: below.path, index })
+
+        if member != nil and member.name == name {
+          return true
+        }
+      }
+
+      if self._declared_below(below, name, depth + 1) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  # Strikes through a use of `ref` when it is documented as deprecated.
+  _deprecated(start: int, end: int, ref, name: string) {
+    var symbol = self.linker.symbol(ref)
+
+    if symbol == nil or !render.is_deprecated(symbol.get('doc', nil)) {
+      return
+    }
+
+    var why = render.tag_text(symbol.doc, 'deprecated')
+    var message = why.is_empty() ? "'${name}' is deprecated" : "'${name}' is deprecated: ${why}"
+
+    self._add(start, end, SEVERITY.hint, 'deprecated', message, { tags: [_DEPRECATED] })
+  }
+
+  _deprecated_names() {
+    var refs = self.summary.refs
+    var i = 0
+
+    while i < refs.length() {
+      var occurrence = {
+        kind: 'ref',
+        start: refs[i],
+        end: refs[i + 1],
+        target: refs[i + 2],
+        flags: refs[i + 3],
+        name: refs[i + 4],
+      }
+
+      if occurrence.target != UNRESOLVED {
+        var target = query.canonical(self.linker, self.key, occurrence)
+
+        if target != nil and !target.contains('module') {
+          self._deprecated(occurrence.start, occurrence.end, target, occurrence.name)
+        }
+      }
+
+      i += REF_STRIDE
+    }
+  }
+
+  # Literal arguments of the wrong type, and missing ones, for typed
+  # parameters.
+  arguments() {
+    var text = nil
+
+    for call in self.summary.calls {
+      var target = common.callable(self.linker, self.linker.resolve(call.callee))
+
+      if target == nil {
+        continue
+      }
+
+      if text == nil {
+        text = self.server.text(self.key)
+      }
+
+      self._check_call(call, target, text)
+    }
+  }
+
+  _check_call(call: dict, target: dict, text) {
+    var params = target.symbol.get('params', nil)
+
+    # A stub describes a native function, whose hints the runtime does
+    # not check; only a function written in Zuri has its hints enforced.
+    if params == nil or target.path.ends_with('.stub.zu') {
+      return
+    }
+
+    var position = 0
+
+    for param in params {
+      if param.variadic {
+        break
+      }
+
+      position++
+
+      if param.hint == nil {
+        continue
+      }
+
+      var accepts = _accepts(param.hint)
+      var argument = position <= call.arguments.length() ? call.arguments[position - 1] : nil
+      var given = 'nil'
+      var start = call.callee_start
+      var end = call.callee_end
+
+      if argument != nil {
+        given = _literal_type(argument.kind, text == nil ? '' : text[argument.start, argument.end])
+        start = argument.start
+        end = argument.end
+      }
+
+      if given == nil {
+        continue
+      }
+
+      var passes = accepts.nullable or accepts.words.contains('any')
+
+      if given != 'nil' {
+        passes = accepts.words.some(@(word) => _passes(given, word))
+      }
+
+      if passes {
+        continue
+      }
+
+      var wanted = ' or '.join(accepts.words.map(@(word) => '${_article(word)} ${word}'))
+      var reported = given == 'int' ? 'number' : given
+      var name = target.symbol.name
+      var message = "${name}() expects parameter '${param.name}' (argument ${position}) "
+      message += 'to be ${wanted}, got ${reported}'
+      var code = argument == nil ? 'missing-argument' : 'argument-type'
+
+      self._add(start, end, SEVERITY.error, code, message, {})
+    }
+  }
+
+  unreachable() {
+    for span in self.summary.get('unreachable', []) {
+      self._add(span[0], span[1], SEVERITY.hint, 'unreachable', 'this code is never reached', {
+        tags: [_UNNECESSARY],
+      })
+    }
+  }
+
+  # Imports, locals and private module globals nothing reads.
+  unused() {
+    var index = 0
+    var starred = nil
+
+    for symbol in self.summary.symbols {
+      # An import already reported as broken is not reported again as
+      # unused.
+      var kind = self._broken.contains('${index}') ? nil : self._unused_kind(symbol)
+
+      if kind == 'private' {
+        if starred == nil {
+          starred = self._wildcard_imported()
+        }
+
+        if starred {
+          kind = nil
+        }
+      }
+
+      if kind != nil {
+        var message = kind == 'import' ? "'${symbol.name}' is imported but never used" : (
+          "'${symbol.name}' is never used"
+        )
+
+        self._add(symbol.name_start, symbol.name_end, SEVERITY.hint, 'unused', message, {
+          tags: [_UNNECESSARY],
+          data: { kind, index },
+        })
+      }
+
+      index++
+    }
+  }
+
+  # What sort of unused declaration a symbol is, or `nil` when it is
+  # used or is never reported.
+  _unused_kind(symbol: dict) {
+    if symbol.reads > 0 or symbol.get('anonymous', false) or symbol.name.is_empty() {
+      return nil
+    }
+
+    if symbol.kind == 'module' or symbol.kind == 'import' {
+      return symbol.exported ? nil : 'import'
+    }
+
+    var declarations = ['variable', 'constant', 'function', 'class']
+
+    if !declarations.contains(symbol.kind) {
+      return nil
+    }
+
+    if symbol.get('loop', false) or symbol.get('caught', false) {
+      return nil
+    }
+
+    if symbol.scope == 0 {
+      return symbol.name.starts_with('_') ? 'private' : nil
+    }
+
+    return symbol.name.starts_with('_') ? nil : 'local'
+  }
+
+  # Whether a file the linker holds imports this one with `{ * }`,
+  # which brings its private names in too.
+  _wildcard_imported() {
+    for path in self.linker.paths() {
+      var summary = self.linker.summary(path)
+
+      if summary == nil or summary.stars.is_empty() {
+        continue
+      }
+
+      for star in summary.stars {
+        if self.linker.module_path(star.path, path) == self.key {
+          return true
+        }
+      }
+    }
+
+    return false
+  }
+}
+
+# The compiler's diagnostics for source that parses.
+def _check(text: string) {
+  return zuri.check(text).map(@(problem) {
+    return { message: problem.message, start: problem.start, end: problem.end }
+  })
+}
+
+# The id a report is known by: a hash of what it says.
+def _result_id(items: list) {
+  return hash.fnv1a_64(json.encode(items))
+}
+
+/**
+ * Answers `textDocument/diagnostic`: the document's diagnostics, or
+ * word that they are unchanged since the report the client already
+ * has.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns dict
+ */
+def document_report(server, params: dict) {
+  var document = server.document(params.textDocument.uri)
+  var items = server.settings.get('diagnostics.enable') ? compute(server, document.key) : []
+  var id = _result_id(items)
+
+  if params.get('previousResultId', nil) == id {
+    return { kind: 'unchanged', resultId: id }
+  }
+
+  return { kind: 'full', resultId: id, items }
+}
+
+# The workspace report: one entry for every workspace file nobody has
+# open, or none at all unless diagnostics cover the workspace.
+def _workspace_items(server, params: dict, context) {
+  var reports = []
+  var enabled = server.settings.get('diagnostics.enable')
+
+  if !enabled or server.settings.get('diagnostics.scope') != 'workspace' {
+    return { items: reports }
+  }
+
+  var previous = {}
+
+  for entry in params.get('previousResultIds', []) {
+    previous[entry.uri] = entry.value
+  }
+
+  for path in server.files.keys().sort() {
+    if server.open_document(path) != nil {
+      continue
+    }
+
+    server.interrupted(context, nil)
+
+    var uri = server.uri(path)
+    var items = compute(server, path)
+    var id = _result_id(items)
+
+    if previous.get(uri, nil) == id {
+      reports.append({ kind: 'unchanged', uri, version: nil, resultId: id })
+    } else {
+      reports.append({ kind: 'full', uri, version: nil, resultId: id, items })
+    }
+  }
+
+  return { items: reports }
+}
+
+/**
+ * Answers `workspace/diagnostic`. A pull that would report nothing new
+ * since the last one is held until the workspace changes, so a client
+ * that pulls again as soon as it is answered does not keep the server
+ * busy.
+ *
+ * @param Server server
+ * @param dict params
+ * @param rpc.Context context
+ * @returns ?dict
+ */
+def workspace_report(server, params: dict, context) {
+  var generation = server.linker.generation
+  var asked = !params.get('previousResultIds', []).is_empty()
+
+  if asked and server.workspace_generation == generation {
+    context.defer()
+    server.hold_workspace_pull(params, context)
+
+    return nil
+  }
+
+  server.workspace_generation = generation
+
+  return _workspace_items(server, params, context)
+}
+
+/**
+ * Answers a held workspace pull once the workspace has changed since
+ * it was held and at least a second has passed.
+ *
+ * @param Server server
+ * @param dict held: `{ params, context, since }`.
+ * @returns bool: Whether it was answered.
+ */
+def answer_held(server, held: dict) {
+  if server.linker.generation == server.workspace_generation {
+    return false
+  }
+
+  if time() - held.since < _WORKSPACE_PAUSE {
+    return false
+  }
+
+  server.workspace_generation = server.linker.generation
+
+  catch {
+    held.context.reply(_workspace_items(server, held.params, held.context))
+  } as error {
+    if instance_of(error, rpc.RpcError) {
+      held.context.fail(error)
+    } else {
+      held.context.fail(rpc.RpcError(rpc.INTERNAL_ERROR, error.message))
+    }
+  }
+
+  return true
+}

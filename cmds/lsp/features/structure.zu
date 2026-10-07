@@ -1,0 +1,231 @@
+/**
+ * The shape of a file: the regions an editor can fold away, and the
+ * ranges a selection grows through, from a name out to the whole
+ * file.
+ *
+ * Blocks, class bodies, and dictionaries, lists and calls written
+ * across lines fold. So do doc blocks, runs of `#` comments, and runs
+ * of imports. A fold ends on the line before a closing bracket that
+ * starts its own line, so the bracket stays in view.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import .common
+import ..analysis.query
+
+# The kinds of node a fold is made for.
+const _FOLDED = ['Block', 'Class', 'Dict', 'List', 'Call', 'Using', 'When']
+
+# Whether `node` is an import statement, written alone or at the top
+# of a file.
+def _is_import(node) {
+  var statement = node.kind == 'Stmt' ? node.fields.statement : node
+
+  return statement != nil and common.is_node(statement) and statement.kind == 'Import'
+}
+
+/**
+ * Answers `textDocument/foldingRange`.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns list[dict]
+ */
+def folding(server, params: dict) {
+  var document = server.document(params.textDocument.uri)
+  var nodes = server.analysis(document).nodes
+  var lines = document.index()
+  var text = document.text
+  var found = []
+  var seen = {}
+
+  def add(start_line: int, end_line: int, kind) {
+    if end_line <= start_line {
+      return
+    }
+
+    var key = '${start_line}:${end_line}'
+
+    if seen.contains(key) {
+      return
+    }
+
+    seen[key] = true
+
+    var fold = { startLine: start_line, endLine: end_line }
+
+    if kind != nil {
+      fold.kind = kind
+    }
+
+    found.append(fold)
+  }
+
+  def fold_node(node) {
+    var first = lines.line_of(node.start)
+    var last = lines.line_of((node.end - 1).max(node.start))
+
+    # Keep a closing bracket that starts its line in view.
+    var closing = text[node.end - 1, node.end]
+    var line_start = lines.line_start(last)
+
+    if ['}', ']', ')'].contains(closing) and text[line_start, node.end - 1].trim().is_empty() {
+      last--
+    }
+
+    add(first, last, nil)
+  }
+
+  def walk(list_nodes: list) {
+    var comment_first = nil
+    var comment_last = nil
+    var import_first = nil
+    var import_last = nil
+
+    for node in list_nodes {
+      if !common.is_node(node) {
+        continue
+      }
+
+      var first = lines.line_of(node.start)
+      var last = lines.line_of((node.end - 1).max(node.start))
+
+      if node.kind == 'Comment' {
+        if comment_last != nil and first == comment_last + 1 {
+          comment_last = last
+        } else {
+          if comment_first != nil {
+            add(comment_first, comment_last, 'comment')
+          }
+
+          comment_first = first
+          comment_last = last
+        }
+      } else if comment_first != nil {
+        add(comment_first, comment_last, 'comment')
+        comment_first = nil
+        comment_last = nil
+      }
+
+      if _is_import(node) {
+        if import_first == nil {
+          import_first = first
+        }
+
+        import_last = last
+      } else if !node.is_trivia() and import_first != nil {
+        add(import_first, import_last, 'imports')
+        import_first = nil
+        import_last = nil
+      }
+
+      _fold_inside(node, add, fold_node, walk, lines)
+    }
+
+    if comment_first != nil {
+      add(comment_first, comment_last, 'comment')
+    }
+
+    if import_first != nil {
+      add(import_first, import_last, 'imports')
+    }
+  }
+
+  walk(nodes)
+
+  var limit = server.supports('textDocument.foldingRange.rangeLimit')
+
+  if is_number(limit) and found.length() > limit {
+    found = found[0, limit]
+  }
+
+  return found
+}
+
+# Folds what `node` holds: itself when it is a kind that folds, a doc
+# block as a comment, and every list of statements inside it.
+def _fold_inside(node, add, fold_node, walk, lines) {
+  if node.kind == 'DocBlock' {
+    add(lines.line_of(node.start), lines.line_of((node.end - 1).max(node.start)), 'comment')
+    return
+  }
+
+  if _FOLDED.contains(node.kind) {
+    fold_node(node)
+  }
+
+  for key, value in node.fields {
+    if is_list(value) {
+      if key == 'statements' or key == 'properties' or key == 'methods' {
+        walk(value)
+      } else {
+        for item in value {
+          if common.is_node(item) {
+            _fold_inside(item, add, fold_node, walk, lines)
+          }
+        }
+      }
+    } else if common.is_node(value) {
+      _fold_inside(value, add, fold_node, walk, lines)
+    }
+  }
+}
+
+/**
+ * Answers `textDocument/selectionRange`: for each position, the name
+ * there, then every node holding it, out to the whole file.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns list[dict]
+ */
+def selection(server, params: dict) {
+  var document = server.document(params.textDocument.uri)
+  var analysis = server.analysis(document)
+  var key = document.key
+  var answer = []
+
+  for position in params.get('positions', []) {
+    var offset = server.offset(document, position)
+    var spans = [[0, document.text.length()]]
+
+    for node in common.path_to(analysis.nodes, offset) {
+      spans.append([node.start, node.end])
+    }
+
+    var occurrence = query.at(analysis.summary, offset)
+
+    if occurrence != nil {
+      spans.append([occurrence.start, occurrence.end])
+    }
+
+    var current = nil
+    var last = nil
+
+    # Outermost first, each a parent of the next; the same span twice
+    # is one step.
+    for span in spans {
+      if last != nil and last[0] == span[0] and last[1] == span[1] {
+        continue
+      }
+
+      if last != nil and (span[0] < last[0] or span[1] > last[1]) {
+        continue
+      }
+
+      var range = server.range(key, span[0], span[1])
+
+      current = current == nil ? { range } : { range, 'parent': current }
+      last = span
+    }
+
+    if current == nil {
+      current = { range: server.range(key, offset, offset) }
+    }
+
+    answer.append(current)
+  }
+
+  return answer
+}

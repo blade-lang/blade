@@ -1,0 +1,362 @@
+/**
+ * Questions about one position, and about every use of one
+ * declaration: what is at the cursor, which declaration a name there
+ * stands for, and everywhere else that declaration is named.
+ *
+ * Everything named in a file is an occurrence, a dictionary with the
+ * `start` and `end` of the name and a `kind`:
+ *
+ * | `kind` | Other keys | What it is |
+ * | --- | --- | --- |
+ * | `'decl'` | `index`, `name` | the name a declaration gives |
+ * | `'ref'` | `target`, `flags`, `name` | a name used as a value |
+ * | `'member'` | `member`, `name` | the name after a `.` |
+ * | `'segment'` | `path` | one part of an import's path |
+ *
+ * A declaration's identity is `{ path, index }`, after following an
+ * imported name back to where it was declared, or `{ module }` for a
+ * whole module.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import .scope { REF_STRIDE, BUILTIN, STARRED }
+
+# The import path a run of segments spells, as the parser joins it.
+def _segment_path(segments: list, upto: int) {
+  var path = ''
+
+  iter var i = 0; i <= upto; i++ {
+    var text = segments[i].text
+
+    if text == '.' {
+      path += './'
+    } else if text == '..' {
+      path += '../'
+    } else {
+      path += text + '/'
+    }
+  }
+
+  return path.ends_with('/') ? path[0, path.length() - 1] : path
+}
+
+def _add_segments(found: list, segments) {
+  if segments == nil {
+    return
+  }
+
+  var position = 0
+
+  for segment in segments {
+    if segment.text != '.' and segment.text != '..' {
+      found.append({
+        kind: 'segment',
+        start: segment.start,
+        end: segment.end,
+        name: segment.text,
+        path: _segment_path(segments, position),
+      })
+    }
+
+    position++
+  }
+}
+
+/**
+ * Every occurrence in a summary, sorted by where it starts. Worked out
+ * once per summary and kept on it.
+ *
+ * @param dict summary
+ * @returns list[dict]
+ */
+def occurrences(summary: dict) {
+  var cached = summary.get('occurrences', nil)
+
+  if cached != nil {
+    return cached
+  }
+
+  var found = []
+  var index = 0
+  var seen_imports = {}
+
+  for symbol in summary.symbols {
+    if !symbol.get('anonymous', false) and symbol.name_end > symbol.name_start {
+      found.append({
+        kind: 'decl',
+        start: symbol.name_start,
+        end: symbol.name_end,
+        index,
+        name: symbol.name,
+      })
+    }
+
+    var source = symbol.get('source', nil)
+
+    # One import binding several names shares its path's segments.
+    if source != nil and !seen_imports.contains('${symbol.start}') {
+      seen_imports['${symbol.start}'] = true
+      _add_segments(found, source.segments)
+    }
+
+    index++
+  }
+
+  for star in summary.stars {
+    _add_segments(found, star.get('segments', nil))
+  }
+
+  var refs = summary.refs
+  var i = 0
+
+  while i < refs.length() {
+    found.append({
+      kind: 'ref',
+      start: refs[i],
+      end: refs[i + 1],
+      target: refs[i + 2],
+      flags: refs[i + 3],
+      name: refs[i + 4],
+    })
+    i += REF_STRIDE
+  }
+
+  var position = 0
+
+  for access in summary.members {
+    found.append({
+      kind: 'member',
+      start: access.start,
+      end: access.end,
+      member: position,
+      name: access.name,
+    })
+    position++
+  }
+
+  found.sort(@(a, b) => a.start != b.start ? a.start - b.start : a.end - b.end)
+  summary.occurrences = found
+
+  return found
+}
+
+/**
+ * The occurrence at `offset`: the one whose name holds it, counting
+ * the position just past a name's last character as on it. When two
+ * meet there, the one starting at `offset` wins.
+ *
+ * @param dict summary
+ * @param int offset
+ * @returns ?dict
+ */
+def at(summary: dict, offset: int) {
+  var all = occurrences(summary)
+  var low = 0
+  var high = all.length() - 1
+  var last = -1
+
+  # The last occurrence starting at or before `offset`.
+  while low <= high {
+    var middle = (low + high) // 2
+
+    if all[middle].start <= offset {
+      last = middle
+      low = middle + 1
+    } else {
+      high = middle - 1
+    }
+  }
+
+  var best = nil
+  var i = last
+
+  while i >= 0 and i > last - 8 {
+    var candidate = all[i]
+
+    if candidate.start <= offset and offset <= candidate.end {
+      if best == nil or candidate.end - candidate.start < best.end - best.start {
+        best = candidate
+      }
+    }
+
+    i--
+  }
+
+  return best
+}
+
+/**
+ * The declaration an occurrence of the file at `path` stands for.
+ *
+ * @param Linker linker
+ * @param string path
+ * @param dict occurrence
+ * @returns ?dict: `{ path, index }`, `{ module }`, or `nil` when it
+ *    stands for nothing that can be found.
+ */
+def canonical(linker, path: string, occurrence: dict) {
+  using occurrence.kind {
+    when 'decl' return _declaration(linker, { path, index: occurrence.index })
+    when 'segment' {
+      var module = linker.module_path(occurrence.path, path)
+
+      return module == nil ? nil : { module }
+    }
+    when 'ref' {
+      var target = occurrence.target
+
+      if target >= 0 {
+        return _declaration(linker, { path, index: target })
+      }
+
+      if target == BUILTIN {
+        var global = linker.builtins.global(occurrence.name)
+
+        return global == nil ? nil : { path: global.summary.path, index: global.index }
+      }
+
+      if target == STARRED {
+        var ref = linker.starred(path).get(occurrence.name, nil)
+
+        return ref == nil ? nil : _declaration(linker, ref)
+      }
+
+      return nil
+    }
+    when 'member' {
+      var summary = linker.summary(path)
+      var access = summary.members[occurrence.member]
+      var owner = linker.resolve(access.receiver)
+      var ref = linker.member(owner, access.name)
+
+      return ref == nil ? nil : _declaration(linker, ref)
+    }
+    default {
+      return nil
+    }
+  }
+}
+
+# An import's name stands for what it imports; anything else stands
+# for itself.
+def _declaration(linker, ref) {
+  var symbol = linker.symbol(ref)
+
+  if symbol == nil {
+    return nil
+  }
+
+  if symbol.kind == 'import' or symbol.kind == 'module' {
+    var followed = linker.follow(ref)
+
+    return followed == nil ? nil : followed
+  }
+
+  return ref
+}
+
+/**
+ * Whether two identities name the same declaration.
+ *
+ * @param ?dict a
+ * @param ?dict b
+ * @returns bool
+ */
+def same(a, b) {
+  if a == nil or b == nil {
+    return false
+  }
+
+  if a.contains('module') or b.contains('module') {
+    return a.get('module', nil) == b.get('module', nil)
+  }
+
+  return a.path == b.path and a.index == b.index
+}
+
+/**
+ * Whether the declaration `ref` can be named from another file: a
+ * module global, or a member of a class.
+ *
+ * @param Linker linker
+ * @param dict ref
+ * @returns bool
+ */
+def is_shared(linker, ref) {
+  var symbol = linker.symbol(ref)
+
+  if symbol == nil {
+    return false
+  }
+
+  return symbol.scope == 0 or symbol.get('owner', nil) != nil
+}
+
+/**
+ * Every place the declaration `target` is named, in the files at
+ * `paths`, as `{ path, start, end, write, declaration }`.
+ *
+ * @param Linker linker
+ * @param dict target: `{ path, index }`.
+ * @param list paths: The files to look in. A declaration only its own
+ *    file can name is only looked for there, when `paths` holds it.
+ * @param bool include_declaration: Whether the declaration's own name
+ *    counts.
+ * @returns list[dict]
+ */
+def references(linker, target: dict, paths: list, include_declaration: bool) {
+  var symbol = linker.symbol(target)
+
+  if symbol == nil {
+    return []
+  }
+
+  var name = symbol.name
+  var found = []
+  var places = paths
+
+  if !is_shared(linker, target) {
+    places = paths.contains(target.path) ? [target.path] : []
+  }
+
+  for path in places {
+    var summary = linker.summary(path)
+
+    if summary == nil {
+      continue
+    }
+
+    for occurrence in occurrences(summary) {
+      if occurrence.name != name or occurrence.kind == 'segment' {
+        continue
+      }
+
+      var is_declaration = occurrence.kind == 'decl' and path == target.path and (
+        occurrence.index == target.index
+      )
+
+      if is_declaration and !include_declaration {
+        continue
+      }
+
+      if is_declaration or same(canonical(linker, path, occurrence), target) {
+        var write = occurrence.kind == 'ref' and occurrence.flags & 1 != 0
+
+        if occurrence.kind == 'member' {
+          write = summary.members[occurrence.member].write
+        }
+
+        found.append({
+          path,
+          start: occurrence.start,
+          end: occurrence.end,
+          write,
+          declaration: is_declaration,
+        })
+      }
+    }
+  }
+
+  return found
+}

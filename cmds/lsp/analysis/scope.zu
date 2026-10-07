@@ -1,0 +1,1253 @@
+/**
+ * The resolver: one walk over a file's syntax tree that finds every
+ * declaration and every name that refers to one, the way the compiler
+ * itself resolves them.
+ *
+ * Names resolve as the compiler resolves them:
+ *
+ * - A `var` inside a function or a block, a parameter, a loop
+ *   variable and a `catch` variable are locals, visible from where
+ *   they are declared to the end of their block. A `var`'s own
+ *   initializer cannot see it.
+ * - A `def` inside a block is reserved when the block starts, so its
+ *   siblings can call each other in either order.
+ * - Inner functions see the locals of the functions around them.
+ * - At the top of a file, `var`, `const`, `def` and `class` are module
+ *   globals, visible anywhere in the file. An import that is not
+ *   re-exported with `@` is a local of the file, visible after it; one
+ *   that is re-exported is a global.
+ * - A wildcard import brings in every global of the module it names,
+ *   so a name nothing else declares may come from one; that is left to
+ *   the linker, which knows what each module exports.
+ * - Anything else is a built-in global or is undefined.
+ *
+ * The result is a summary: plain lists and dictionaries, so it can be
+ * built on an isolate and sent across a channel.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import .infer
+
+/** A reference to a declaration of this file: the target is its index. */
+const LOCAL = 0
+
+/** A name nothing declares. */
+const UNRESOLVED = -1
+
+/** A name the runtime defines: a built-in function, class or variable. */
+const BUILTIN = -2
+
+/** A name only a wildcard import can declare. */
+const STARRED = -3
+
+/** A reference that writes the name. */
+const WRITE = 1
+
+/** A reference that reads the name. */
+const READ = 2
+
+/** A reference that calls what the name holds. */
+const CALL = 4
+
+/** A reference written as the `{ name }` shorthand of a dictionary entry. */
+const SHORTHAND = 8
+
+/**
+ * How many entries each reference takes in a summary's `refs`: its
+ * start, end, target, flags and name, in that order.
+ */
+const REF_STRIDE = 5
+
+# The expression kinds whose value is known at a glance.
+const _CONSTANT_KINDS = ['Nil', 'Bool', 'Integer', 'Float', 'BigNumber', 'Literal']
+
+# A span dictionary's offsets, as a pair.
+def _span(value) {
+  return [value.start, value.end]
+}
+
+# The keys a dictionary literal spells out by name, or `nil` when the
+# value is not a dictionary literal. A key computed by an expression
+# is left out.
+def _literal_keys(value) {
+  if value == nil or !is_instance(value) or value.kind != 'Dict' {
+    return nil
+  }
+
+  var keys = []
+
+  for key in value.fields.keys {
+    if key.kind == 'Literal' and !keys.contains(key.fields.value) {
+      keys.append(key.fields.value)
+    }
+  }
+
+  return keys
+}
+
+# Whether a type hint was left implicit: the `Any` of an untyped
+# parameter, which has no text of its own.
+def _is_implicit(hint) {
+  return hint == nil or hint.start == hint.end
+}
+
+/**
+ * The walk over one file. `run()` returns its summary.
+ */
+class Walker {
+
+  /**
+   * Returns a new {Walker}.
+   *
+   * @param ?string path: The file's path, or `nil` for a document
+   *    never saved.
+   * @param string text: The file's text.
+   * @param list nodes: Its top-level nodes, from `zuri.parse_partial()`.
+   * @param list builtins: The names the runtime defines globally.
+   */
+  @new(path, text: string, nodes: list, builtins) {
+    self.path = path
+    self.text = text
+    self.nodes = nodes
+    self.builtins = builtins
+    self.symbols = []
+    self.scopes = []
+    self.refs = []
+    self.members = []
+    self.calls = []
+    self.imports = []
+    self.stars = []
+    self.returns = {}
+    self.module_doc = nil
+    self._current = -1
+    self._globals = {}
+    self._predeclared = {}
+    self._redeclared = {}
+    self._classes = []
+    self._functions = []
+  }
+
+  /**
+   * Walks the file and returns its summary.
+   *
+   * @returns dict
+   */
+  run() {
+    var end = self.text.length()
+
+    self._open('module', 0, end, -1)
+    self._declare_globals(self.nodes)
+    self._statements(self.nodes, true)
+    self._close()
+
+    return {
+      path: self.path,
+      symbols: self.symbols,
+      scopes: self.scopes,
+      refs: self.refs,
+      members: self.members,
+      calls: self.calls,
+      imports: self.imports,
+      stars: self.stars,
+      returns: self.returns,
+      module_doc: self.module_doc,
+      globals: self._globals,
+    }
+  }
+
+  # --------------------------------------------------------------
+  # Scopes and declarations
+  # --------------------------------------------------------------
+
+  _open(kind: string, start, end, owner) {
+    self.scopes.append({
+      kind,
+      start,
+      end,
+      outer: self._current,
+      owner,
+      names: {},
+    })
+    self._current = self.scopes.length() - 1
+
+    return self._current
+  }
+
+  _close() {
+    self._current = self.scopes[self._current].outer
+  }
+
+  # Adds a declaration and returns its index. `visible` says whether
+  # the name enters the current scope now; a module global is already
+  # there from the first pass.
+  _symbol(name: string, kind: string, node, name_range: list, extra: dict, visible: bool) {
+    var symbol = {
+      name,
+      kind,
+      start: node.start,
+      end: node.end,
+      name_start: name_range[0],
+      name_end: name_range[1],
+      scope: self._current,
+      container: self._functions.is_empty() ? -1 : self._functions[self._functions.length() - 1],
+      exported: false,
+      doc: nil,
+      reads: 0,
+      writes: 0,
+    }
+
+    for key, value in extra {
+      symbol[key] = value
+    }
+
+    self.symbols.append(symbol)
+    var index = self.symbols.length() - 1
+
+    if visible {
+      self.scopes[self._current].names[name] = index
+    }
+
+    return index
+  }
+
+  /**
+   * The declaration `name` refers to from where the walk is.
+   *
+   * @param string name
+   * @returns int: A symbol index, or one of `UNRESOLVED`, `BUILTIN`
+   *    and `STARRED`.
+   */
+  lookup(name: string) {
+    var scope = self._current
+
+    while scope >= 0 {
+      var found = self.scopes[scope].names.get(name, nil)
+
+      if found != nil {
+        return found
+      }
+
+      scope = self.scopes[scope].outer
+    }
+
+    var global = self._globals.get(name, nil)
+
+    if global != nil {
+      return global
+    }
+
+    if self.builtins.contains(name) {
+      return BUILTIN
+    }
+
+    return self.stars.is_empty() ? UNRESOLVED : STARRED
+  }
+
+  _reference(name: string, start, end, flags) {
+    var target = self.lookup(name)
+
+    self.refs.append(start)
+    self.refs.append(end)
+    self.refs.append(target)
+    self.refs.append(flags)
+    self.refs.append(name)
+
+    if target >= 0 {
+      var symbol = self.symbols[target]
+
+      if flags & READ != 0 {
+        symbol.reads++
+      }
+
+      if flags & WRITE != 0 {
+        symbol.writes++
+      }
+    }
+
+    return target
+  }
+
+  # The first pass over the top level: every module global, so that a
+  # function can name one declared further down the file.
+  _declare_globals(nodes: list) {
+    var doc = nil
+
+    for node in nodes {
+      if node.kind == 'DocBlock' {
+        doc = node
+        continue
+      }
+
+      var attached = doc
+      doc = nil
+
+      if node.kind == 'Comment' {
+        continue
+      }
+
+      var decl = node.kind == 'Stmt' ? node.fields.statement : node
+
+      if decl.kind == 'Var' {
+        self._predeclare_var(decl, attached)
+      } else if decl.kind == 'VarList' {
+        for one in decl.fields.declarations {
+          self._predeclare_var(one, attached)
+          attached = nil
+        }
+      } else if decl.kind == 'Function' {
+        var index = self._symbol(
+          decl.fields.name,
+          'function',
+          decl,
+          _span(decl.fields.name_span),
+          { doc: attached == nil ? nil : attached.fields.text, exported: true },
+          false
+        )
+
+        self._globals[decl.fields.name] = index
+        self._predeclared[decl.start] = index
+      } else if decl.kind == 'Class' and !decl.fields.is_extension {
+        var index = self._symbol(
+          decl.fields.name,
+          'class',
+          decl,
+          _span(decl.fields.name_span),
+          { doc: attached == nil ? nil : attached.fields.text, exported: true, members: [] },
+          false
+        )
+
+        self._globals[decl.fields.name] = index
+        self._predeclared[decl.start] = index
+      } else if decl.kind == 'Import' and decl.fields.exported and !decl.fields.imports_all {
+        self._predeclare_import(decl)
+      }
+    }
+  }
+
+  _predeclare_var(decl, doc) {
+    # A module variable declared again is the same global, written a
+    # second time.
+    var existing = self._globals.get(decl.fields.name, nil)
+
+    if existing != nil and ['variable', 'constant'].contains(self.symbols[existing].kind) {
+      self._predeclared[decl.start] = existing
+      self._redeclared[decl.start] = true
+      return
+    }
+
+    var kind = decl.fields.is_constant ? 'constant' : 'variable'
+    var index = self._symbol(
+      decl.fields.name,
+      kind,
+      decl,
+      _span(decl.fields.name_span),
+      { doc: doc == nil ? nil : doc.fields.text, exported: true },
+      false
+    )
+
+    self._globals[decl.fields.name] = index
+    self._predeclared[decl.start] = index
+  }
+
+  # A re-exported import is a global: `import @.addr` binds `addr`, and
+  # `import @.addr { SocketAddr }` binds `SocketAddr`.
+  _predeclare_import(decl) {
+    var bindings = self._import_bindings(decl, true)
+
+    for index in bindings {
+      self._globals[self.symbols[index].name] = index
+    }
+
+    self._predeclared[decl.start] = bindings
+  }
+
+  # --------------------------------------------------------------
+  # Statements
+  # --------------------------------------------------------------
+
+  # Walks a list of sibling statements. A doc block documents the
+  # declaration directly below it, and a `def` is reserved before any
+  # of its siblings run.
+  _statements(nodes: list, top: bool) {
+    if !top {
+      for node in nodes {
+        if node.kind == 'Decl' and node.fields.declaration.kind == 'Function' {
+          var decl = node.fields.declaration
+          var index = self._symbol(
+            decl.fields.name,
+            'function',
+            decl,
+            _span(decl.fields.name_span),
+            {},
+            true
+          )
+
+          self._predeclared[decl.start] = index
+        }
+      }
+    }
+
+    var doc = nil
+    var first = true
+
+    for node in nodes {
+      if node.kind == 'DocBlock' {
+        if top and first and self.module_doc == nil and node.fields.text.contains('@module') {
+          self.module_doc = node.fields.text
+        } else {
+          doc = node
+        }
+
+        first = false
+        continue
+      }
+
+      first = false
+
+      var attached = doc
+      doc = nil
+
+      if node.kind == 'Comment' {
+        continue
+      }
+
+      self._node(node, attached, top)
+    }
+  }
+
+  _node(node, doc, top: bool) {
+    using node.kind {
+      when 'Stmt' self._statement(node.fields.statement, doc, top)
+      when 'Function' self._function_decl(node, doc)
+      when 'Class' self._class(node, doc)
+      default {
+        self._statement(node, doc, top)
+      }
+    }
+  }
+
+  _statement(node, doc, top: bool) {
+    if node == nil {
+      return
+    }
+
+    using node.kind {
+      when 'Expression', 'Echo', 'Raise' self._expression(node.fields.value)
+      when 'Return' self._return(node)
+      when 'Var' self._var(node, doc, top)
+      when 'VarList' {
+        for one in node.fields.declarations {
+          self._var(one, doc, top)
+          doc = nil
+        }
+      }
+      when 'Block' self._block(node)
+      when 'If' {
+        self._expression(node.fields.condition)
+        self._statement(node.fields.then, nil, false)
+        self._statement(node.fields.otherwise, nil, false)
+      }
+      when 'While' {
+        self._expression(node.fields.condition)
+        self._statement(node.fields.body, nil, false)
+      }
+      when 'DoWhile' {
+        self._statement(node.fields.body, nil, false)
+        self._expression(node.fields.condition)
+      }
+      when 'For' self._for(node)
+      when 'Iter' self._iter(node)
+      when 'Using' {
+        self._expression(node.fields.subject)
+
+        for arm in node.fields.arms {
+          for label in arm.fields.labels {
+            self._expression(label)
+          }
+
+          self._statement(arm.fields.body, nil, false)
+        }
+
+        self._statement(node.fields.default_body, nil, false)
+      }
+      when 'Catch' self._catch(node)
+      when 'Assert' {
+        self._expression(node.fields.condition)
+        self._expression(node.fields.message)
+      }
+      when 'Import' self._import(node, top)
+      when 'Decl' self._function_decl(node.fields.declaration, doc)
+      default {
+        # `break`, `continue`, comments and doc blocks bind nothing.
+      }
+    }
+  }
+
+  _block(node) {
+    self._open('block', node.start, node.end, -1)
+    self._statements(node.fields.statements, false)
+    self._close()
+  }
+
+  _return(node) {
+    self._expression(node.fields.value)
+
+    if self._functions.is_empty() {
+      return
+    }
+
+    var owner = self._functions[self._functions.length() - 1]
+    var found = self.returns.get('${owner}', nil)
+
+    if found == nil {
+      found = []
+      self.returns['${owner}'] = found
+    }
+
+    found.append(infer.of(self, node.fields.value))
+  }
+
+  _var(node, doc, top: bool) {
+    self._expression(node.fields.value)
+
+    var hint = node.fields.type_hint
+    var type = _is_implicit(hint) ? infer.of(self, node.fields.value) : infer.of_hint(self, hint)
+    var value = nil
+
+    if node.fields.is_constant and node.fields.value != nil {
+      if _CONSTANT_KINDS.contains(node.fields.value.kind) {
+        value = self.text[node.fields.value.start, node.fields.value.end]
+      }
+    }
+
+    if top and self._current == 0 {
+      var index = self._predeclared.get(node.start, nil)
+
+      if index != nil and self._redeclared.contains(node.start) {
+        var span = node.fields.name_span
+
+        self._reference(node.fields.name, span.start, span.end, WRITE)
+        self._retype(self.symbols[index], type)
+
+        return
+      }
+
+      if index != nil {
+        var symbol = self.symbols[index]
+        symbol.type = type
+        symbol.value = value
+        symbol.hint = _is_implicit(hint) ? nil : self.text[hint.start, hint.end]
+        symbol.keys = _literal_keys(node.fields.value)
+
+        return
+      }
+    }
+
+    var kind = node.fields.is_constant ? 'constant' : 'variable'
+
+    self._symbol(
+      node.fields.name,
+      kind,
+      node,
+      _span(node.fields.name_span),
+      {
+        doc: doc == nil ? nil : doc.fields.text,
+        type,
+        value,
+        hint: _is_implicit(hint) ? nil : self.text[hint.start, hint.end],
+        keys: _literal_keys(node.fields.value),
+      },
+      true
+    )
+  }
+
+  _for(node) {
+    self._open('block', node.start, node.end, -1)
+    self._expression(node.fields.iterable)
+
+    var element = infer.element_of(self, node.fields.iterable)
+
+    if node.fields.key != nil {
+      self._symbol(
+        node.fields.key,
+        'variable',
+        node,
+        _span(node.fields.key_span),
+        { loop: true, type: element.key },
+        true
+      )
+    }
+
+    self._symbol(
+      node.fields.value,
+      'variable',
+      node,
+      _span(node.fields.value_span),
+      { loop: true, type: element.value },
+      true
+    )
+
+    self._statement(node.fields.body, nil, false)
+    self._close()
+  }
+
+  _iter(node) {
+    self._open('block', node.start, node.end, -1)
+    self._statement(node.fields.initializer, nil, false)
+    self._expression(node.fields.condition)
+    self._statement(node.fields.body, nil, false)
+
+    for step in node.fields.steps {
+      self._expression(step)
+    }
+
+    self._close()
+  }
+
+  # The error variable is a local of the enclosing scope, declared
+  # before the guarded block runs and visible after the whole
+  # statement, as the compiler declares it.
+  _catch(node) {
+    var variable = node.fields.error_var
+
+    if variable != nil {
+      self._symbol(
+        variable.fields.name,
+        'variable',
+        variable,
+        [variable.start, variable.end],
+        { caught: true, type: infer.error_type() },
+        true
+      )
+    }
+
+    self._statement(node.fields.body, nil, false)
+    self._statement(node.fields.catch_body, nil, false)
+  }
+
+  # --------------------------------------------------------------
+  # Imports
+  # --------------------------------------------------------------
+
+  # The symbols an import binds, created now. Each records the path it
+  # names and, for an element, the member it takes.
+  _import_bindings(node, exported: bool) {
+    var fields = node.fields
+    var segments = fields.segments.map(@(segment) => {
+      text: segment.text,
+      start: segment.start,
+      end: segment.end,
+    })
+    var bound = []
+
+    if !fields.elements.is_empty() {
+      for element in fields.elements {
+        bound.append(self._symbol(
+          element.fields.name,
+          'import',
+          node,
+          [element.start, element.end],
+          {
+            exported,
+            source: { path: fields.path, member: element.fields.name, segments },
+          },
+          false
+        ))
+      }
+
+      return bound
+    }
+
+    var name = fields.name
+
+    bound.append(self._symbol(
+      name.fields.name,
+      'module',
+      node,
+      [name.start, name.end],
+      {
+        exported,
+        source: { path: fields.path, member: nil, segments, aliased: fields.aliased },
+        type: { t: 'import', path: fields.path, importer: self.path },
+      },
+      false
+    ))
+
+    return bound
+  }
+
+  _import(node, top: bool) {
+    var fields = node.fields
+    var segments = fields.segments.map(@(segment) => {
+      text: segment.text,
+      start: segment.start,
+      end: segment.end,
+    })
+
+    if fields.imports_all {
+      self.stars.append({
+        path: fields.path,
+        start: node.start,
+        end: node.end,
+        exported: fields.exported,
+        segments,
+      })
+
+      return
+    }
+
+    var bound = nil
+
+    if top and self._current == 0 and fields.exported {
+      bound = self._predeclared.get(node.start, nil)
+    }
+
+    if bound == nil {
+      bound = self._import_bindings(node, fields.exported)
+
+      for index in bound {
+        self.scopes[self._current].names[self.symbols[index].name] = index
+      }
+    }
+
+    for index in bound {
+      self.imports.append(index)
+    }
+  }
+
+  # --------------------------------------------------------------
+  # Functions and classes
+  # --------------------------------------------------------------
+
+  _function_decl(node, doc) {
+    var index = self._predeclared.get(node.start, nil)
+
+    if index == nil {
+      index = self._symbol(
+        node.fields.name,
+        'function',
+        node,
+        _span(node.fields.name_span),
+        {},
+        true
+      )
+    }
+
+    var symbol = self.symbols[index]
+
+    if doc != nil {
+      symbol.doc = doc.fields.text
+    }
+
+    self._function_body(node, index, nil)
+  }
+
+  # Parameters and body of a function, method or anonymous function.
+  _function_body(node, index, class_index) {
+    var symbol = self.symbols[index]
+    var params = []
+
+    self._functions.append(index)
+    self._open('function', node.start, node.end, index)
+
+    if class_index != nil {
+      self.scopes[self._current].owner_class = class_index
+    }
+
+    var count = node.fields.parameters.length()
+    var position = 0
+
+    for param in node.fields.parameters {
+      position++
+
+      var hint = param.fields.type_hint
+      var variadic = node.fields.is_variadic and position == count
+      var hint_text = nil
+
+      if !_is_implicit(hint) and !variadic {
+        hint_text = self.text[hint.start, hint.end]
+      }
+
+      params.append({ name: param.fields.name, hint: hint_text, variadic })
+
+      var type = variadic ? { t: 'builtin', name: 'list' } : (
+        _is_implicit(hint) ? nil : infer.of_hint(self, hint)
+      )
+
+      self._symbol(
+        param.fields.name,
+        'parameter',
+        param,
+        _span(param.fields.name_span),
+        { type, hint: hint_text, nullable: hint == nil ? true : hint.fields.nullable },
+        true
+      )
+    }
+
+    symbol.params = params
+    symbol.variadic = node.fields.is_variadic
+
+    var body = node.fields.body
+
+    if body != nil and body.kind == 'Block' {
+      self._statements(body.fields.statements, false)
+    } else {
+      self._statement(body, nil, false)
+    }
+
+    self._close()
+    self._functions.pop()
+  }
+
+  _class(node, doc) {
+    var fields = node.fields
+
+    if fields.superclass != nil {
+      self._expression(fields.superclass)
+    }
+
+    var index = self._predeclared.get(node.start, nil)
+
+    if index == nil {
+      index = self._symbol(
+        fields.name,
+        'class',
+        node,
+        _span(fields.name_span),
+        { members: [], extension: fields.is_extension },
+        !fields.is_extension
+      )
+    }
+
+    var symbol = self.symbols[index]
+
+    symbol.extension = fields.is_extension
+    symbol.superclass = fields.superclass == nil ? nil : infer.of(self, fields.superclass)
+    symbol.superclass_range = fields.superclass == nil ? nil : [
+      fields.superclass.start,
+      fields.superclass.end,
+    ]
+    symbol.superclass_text = fields.superclass == nil ? nil : (
+      self.text[fields.superclass.start, fields.superclass.end]
+    )
+
+    if doc != nil {
+      symbol.doc = doc.fields.text
+    }
+
+    self._classes.append(index)
+    self._open('class', node.start, node.end, index)
+
+    # A class body keeps its fields and methods in two lists; the doc
+    # block above each member is found in the order they were written.
+    var members = fields.properties.clone()
+    members.extend(fields.methods)
+    members.sort(@(a, b) => a.start - b.start)
+
+    var pending = nil
+
+    for member in members {
+      if member.kind == 'DocBlock' {
+        pending = member
+        continue
+      }
+
+      var attached = pending
+      pending = nil
+
+      if member.kind == 'Comment' {
+        continue
+      }
+
+      if member.kind == 'Property' {
+        self._property(member, attached, index)
+      } else if member.kind == 'Method' {
+        self._method(member, attached, index)
+      }
+    }
+
+    # `self.x = ...` in `@new` declares the field `x` as surely as
+    # `var x` does.
+    for method in fields.methods {
+      if method.kind == 'Method' and method.fields.name == '@new' and !method.fields.is_static {
+        self._implicit_fields(method.fields.body, index)
+      }
+    }
+
+    # A field written with values of different types has no type.
+    var writes = symbol.get('field_writes', {})
+
+    for member_index in symbol.members {
+      var member = self.symbols[member_index]
+
+      if member.kind != 'field' {
+        continue
+      }
+
+      for type in writes.get(member.name, []) {
+        self._retype(member, type)
+      }
+    }
+
+    symbol.remove('field_writes')
+    self._close()
+    self._classes.pop()
+  }
+
+  _property(node, doc, class_index) {
+    var fields = node.fields
+    var hint = fields.type_hint
+    var hint_text = _is_implicit(hint) ? nil : self.text[hint.start, hint.end]
+
+    self._expression(fields.value)
+
+    var member = self._symbol(
+      fields.name,
+      'field',
+      node,
+      _span(fields.name_span),
+      {
+        doc: doc == nil ? nil : doc.fields.text,
+        is_static: fields.is_static,
+        constant: fields.is_constant,
+        hint: hint_text,
+        type: hint_text == nil ? infer.of(self, fields.value) : infer.of_hint(self, hint),
+        owner: class_index,
+        keys: _literal_keys(fields.value),
+        loose_type: hint_text == nil,
+      },
+      false
+    )
+
+    self.symbols[class_index].members.append(member)
+  }
+
+  _method(node, doc, class_index) {
+    var fields = node.fields
+    var member = self._symbol(
+      fields.name,
+      'method',
+      node,
+      _span(fields.name_span),
+      {
+        doc: doc == nil ? nil : doc.fields.text,
+        is_static: fields.is_static,
+        owner: class_index,
+      },
+      false
+    )
+
+    self.symbols[class_index].members.append(member)
+    self._function_body(node, member, fields.is_static ? nil : class_index)
+  }
+
+  # Every `self.name = ...` in a constructor's body, nested functions
+  # included, that no `var` in the class declares already.
+  _implicit_fields(body, class_index) {
+    var symbol = self.symbols[class_index]
+    var known = symbol.members.map(@(i) => self.symbols[i].name)
+    var found = []
+
+    _collect_self_sets(body, found)
+
+    for set in found {
+      if known.contains(set.fields.name) {
+        continue
+      }
+
+      known.append(set.fields.name)
+
+      var member = self._symbol(
+        set.fields.name,
+        'field',
+        set,
+        _span(set.fields.name_span),
+        {
+          is_static: false,
+          constant: false,
+          implicit: true,
+          type: infer.of(self, set.fields.value),
+          owner: class_index,
+          loose_type: true,
+        },
+        false
+      )
+
+      symbol.members.append(member)
+    }
+  }
+
+  # --------------------------------------------------------------
+  # Expressions
+  # --------------------------------------------------------------
+
+  _expression(node) {
+    if node == nil or !is_instance(node) {
+      return
+    }
+
+    using node.kind {
+      when 'Identifier' self._reference(node.fields.name, node.start, node.end, READ)
+      when 'Shorthand' self._shorthand(node)
+      when 'Interpolation' {
+        for part in node.fields.parts {
+          if !is_string(part) {
+            self._expression(part)
+          }
+        }
+      }
+      when 'Unary' self._expression(node.fields.operand)
+      when 'Binary', 'Logical', 'Circuit' {
+        self._expression(node.fields.left)
+        self._expression(node.fields.right)
+      }
+      when 'Condition' {
+        self._expression(node.fields.condition)
+        self._expression(node.fields.then)
+        self._expression(node.fields.otherwise)
+      }
+      when 'Grouping' self._expression(node.fields.inner)
+      when 'Range' {
+        self._expression(node.fields.lower)
+        self._expression(node.fields.upper)
+      }
+      when 'Call' self._call(node)
+      when 'Get' self._get(node, false, false)
+      when 'Set' self._set(node)
+      when 'Index' {
+        self._expression(node.fields.object)
+        self._expression(node.fields.index)
+      }
+      when 'Slice' {
+        self._expression(node.fields.object)
+        self._expression(node.fields.lower)
+        self._expression(node.fields.upper)
+      }
+      when 'List' {
+        for item in node.fields.items {
+          self._expression(item)
+        }
+      }
+      when 'Dict' {
+        for key in node.fields.keys {
+          if key.kind != 'Literal' {
+            self._expression(key)
+          }
+        }
+
+        for value in node.fields.values {
+          self._expression(value)
+        }
+      }
+      when 'Assign' self._assign(node.fields.target, node.fields.value, WRITE)
+      when 'CompoundAssign' self._assign(node.fields.target, node.fields.value, WRITE | READ)
+      when 'Update' self._assign(node.fields.target, nil, WRITE | READ)
+      when 'Anonymous' self._anonymous(node)
+      default {
+        # Literals, `self` and `parent` refer to nothing by name.
+      }
+    }
+  }
+
+  _shorthand(node) {
+    # `{ name }` reads `name`; its span is the name itself.
+    self._reference(node.fields.name, node.start, node.end, READ | SHORTHAND)
+  }
+
+  _assign(target, value, flags) {
+    self._expression(value)
+
+    if target == nil {
+      return
+    }
+
+    using target.kind {
+      when 'Identifier' {
+        var index = self._reference(target.fields.name, target.start, target.end, flags)
+
+        if index >= 0 and flags == WRITE {
+          self._retype(self.symbols[index], infer.of(self, value))
+        }
+      }
+      when 'Get' self._get(target, true, false)
+      when 'Set' self._set(target)
+      default {
+        self._expression(target)
+      }
+    }
+  }
+
+  _call(node) {
+    var callee = node.fields.callee
+    var target = nil
+
+    if callee.kind == 'Identifier' {
+      target = self._reference(callee.fields.name, callee.start, callee.end, READ | CALL)
+    } else if callee.kind == 'Get' {
+      self._get(callee, false, true)
+    } else {
+      self._expression(callee)
+    }
+
+    var arguments = []
+
+    for argument in node.fields.arguments {
+      self._expression(argument)
+      arguments.append({
+        start: argument.start,
+        end: argument.end,
+        literal: _CONSTANT_KINDS.contains(argument.kind) or argument.kind == 'Interpolation',
+        kind: argument.kind,
+      })
+    }
+
+    self.calls.append({
+      start: node.start,
+      end: node.end,
+      callee_start: callee.start,
+      callee_end: callee.end,
+      callee: infer.of(self, callee),
+      target,
+      arguments,
+    })
+  }
+
+  # A declaration given a value of another type than it was declared
+  # with no longer has a type anyone can rely on. A hint still holds:
+  # the runtime enforces it.
+  _retype(symbol, type) {
+    if symbol.get('hint', nil) != nil {
+      return
+    }
+
+    var merged = infer.agree(symbol.get('type', nil), type)
+
+    if merged == nil or symbol.get('type', nil) == nil {
+      symbol.type = nil
+    } else {
+      symbol.type = merged
+    }
+  }
+
+  _get(node, write: bool, call: bool) {
+    var object = node.fields.object
+
+    self._expression(object)
+    self.members.append({
+      start: node.fields.name_span.start,
+      end: node.fields.name_span.end,
+      name: node.fields.name,
+      object_start: object.start,
+      object_end: object.end,
+      receiver: infer.of(self, object),
+      self_receiver: object.kind == 'Self',
+      write,
+      call,
+      scope: self._current,
+    })
+  }
+
+  _set(node) {
+    self._expression(node.fields.value)
+    self._get(node, true, false)
+
+    # `self.name = value` anywhere in the class may change the field's
+    # type; the class checks every one once its body is walked.
+    var owner = self.enclosing_class()
+
+    if node.fields.object.kind == 'Self' and owner != nil {
+      var writes = self.symbols[owner].get('field_writes', nil)
+
+      if writes == nil {
+        writes = {}
+        self.symbols[owner].field_writes = writes
+      }
+
+      if !writes.contains(node.fields.name) {
+        writes[node.fields.name] = []
+      }
+
+      writes[node.fields.name].append(infer.of(self, node.fields.value))
+    }
+  }
+
+  _anonymous(node) {
+    var declaration = node.fields.declaration
+    var index = self._symbol(
+      '<anonymous>',
+      'function',
+      declaration,
+      [declaration.start, declaration.start],
+      { anonymous: true },
+      false
+    )
+
+    self._function_body(declaration, index, self.enclosing_class())
+  }
+
+  /**
+   * The class whose method the walk is in, when `self` means one of
+   * its instances.
+   *
+   * @returns ?int: The class's symbol index.
+   */
+  enclosing_class() {
+    var scope = self._current
+
+    while scope >= 0 {
+      var found = self.scopes[scope].get('owner_class', nil)
+
+      if found != nil {
+        return found
+      }
+
+      scope = self.scopes[scope].outer
+    }
+
+    return nil
+  }
+}
+
+# Every `self.name = ...` under `node`.
+def _collect_self_sets(node, found: list) {
+  if node == nil {
+    return
+  }
+
+  if is_list(node) {
+    for item in node {
+      _collect_self_sets(item, found)
+    }
+
+    return
+  }
+
+  if !is_instance(node) or !hasprop(node, 'fields') {
+    return
+  }
+
+  if node.kind == 'Set' and node.fields.object.kind == 'Self' {
+    found.append(node)
+  }
+
+  for key, value in node.fields {
+    if is_list(value) or (is_instance(value) and hasprop(value, 'fields')) {
+      _collect_self_sets(value, found)
+    }
+  }
+}
+
+/**
+ * Walks one file and returns its summary.
+ *
+ * @param ?string path: The file's path, or `nil` for a document never
+ *    saved.
+ * @param string text: The file's text.
+ * @param list nodes: Its top-level nodes, from `zuri.parse_partial()`.
+ * @param list builtins: The names the runtime defines globally.
+ * @returns dict
+ */
+def walk(path, text: string, nodes: list, builtins) {
+  return Walker(path, text, nodes, builtins).run()
+}

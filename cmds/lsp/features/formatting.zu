@@ -1,0 +1,53 @@
+/**
+ * Formatting edits. The formatter, `zuri fmt`'s own engine, returns
+ * the whole file laid out afresh; the client is sent only the lines
+ * that differ, so its cursor, selections and undo history stay where
+ * they belong.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import ..text
+
+/**
+ * The edits that turn `before` into `after`, as protocol `TextEdit`s.
+ * With a `range`, only the changes that touch it are kept, so range
+ * formatting changes nothing outside the lines it was asked about.
+ *
+ * @param Server server
+ * @param string key: The file both texts are of.
+ * @param string before: The text the client has.
+ * @param string after: The text laid out.
+ * @param ?dict range: A protocol range of `before`, or `nil` for the
+ *    whole file.
+ * @returns list[dict]
+ */
+def edits(server, key: string, before: string, after: string, range) {
+  if before == after {
+    return []
+  }
+
+  var lines = text.LineIndex(before)
+  var start = 0
+  var end = before.length()
+
+  if range != nil {
+    start = lines.offset(range.start, server.encoding)
+    end = lines.offset(range.end, server.encoding)
+  }
+
+  var found = []
+
+  for edit in text.line_edits(before, after) {
+    var touches = edit.start <= end and edit.end >= start
+
+    if range == nil or touches {
+      found.append({
+        range: lines.range(edit.start, edit.end, server.encoding),
+        newText: edit.text,
+      })
+    }
+  }
+
+  return found
+}

@@ -1,0 +1,224 @@
+/**
+ * What the server keeps about each open document, and the settings it
+ * runs with.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import .text
+import .analysis.summary as summaries
+
+/**
+ * Every setting the server reads, with its default. A client sends
+ * them under the `zuri` section, nested or as dotted names; both are
+ * read as these dotted names.
+ *
+ * | Setting | Default | Meaning |
+ * | --- | --- | --- |
+ * | `root` | `''` | the installation whose standard library is read |
+ * | `exclude` | `[]` | globs, relative to a workspace folder, of files never indexed |
+ * | `index.workers` | `2` | isolates that index the workspace |
+ * | `diagnostics.enable` | `true` | whether diagnostics are reported at all |
+ * | `diagnostics.scope` | `'openFiles'` | `'openFiles'`, or `'workspace'` for every indexed file |
+ * | `diagnostics.delay` | `300` | milliseconds after the last edit before a document is checked |
+ * | `diagnostics.unusedHints` | `true` | whether unused declarations are shown faded |
+ * | `inlayHints.parameterNames` | `'literals'` | which arguments show their parameter's name |
+ * | `inlayHints.variableTypes` | `false` | whether inferred variable types are shown |
+ * | `codeLens.references` | `true` | whether declarations show how often they are used |
+ * | `completion.autoImport` | `true` | whether names from modules not imported yet are offered |
+ * | `completion.callParentheses` | `false` | whether completing a function adds its parentheses |
+ * | `testing.codeLens` | `true` | whether suites and tests show lenses that run them |
+ *
+ * An empty `root` reads the standard library of `ZURI_ROOT` when it is
+ * set, and of the running `zuri` otherwise. `inlayHints.parameterNames`
+ * is `'none'`, `'literals'` for arguments written as a literal value, or
+ * `'all'`.
+ */
+const DEFAULTS = {
+  'root': '',
+  'exclude': [],
+  'index.workers': 2,
+  'diagnostics.enable': true,
+  'diagnostics.scope': 'openFiles',
+  'diagnostics.delay': 300,
+  'diagnostics.unusedHints': true,
+  'inlayHints.parameterNames': 'literals',
+  'inlayHints.variableTypes': false,
+  'codeLens.references': true,
+  'completion.autoImport': true,
+  'completion.callParentheses': false,
+  'testing.codeLens': true,
+}
+
+# Nested settings as dotted names: `{ diagnostics: { enable: true } }`
+# is `diagnostics.enable`.
+def _flatten(value, prefix: string, out: dict) {
+  if !is_dict(value) {
+    out[prefix] = value
+    return out
+  }
+
+  for key, inner in value {
+    var name = prefix.is_empty() ? key : '${prefix}.${key}'
+
+    # A dictionary-valued setting the defaults know is a value, not a
+    # section.
+    if is_dict(inner) and !DEFAULTS.contains(name) {
+      _flatten(inner, name, out)
+    } else {
+      out[name] = inner
+    }
+  }
+
+  return out
+}
+
+/**
+ * The settings the server runs with: the defaults, overridden by what
+ * the client sends.
+ */
+class Settings {
+
+  /**
+   * Returns {Settings} at their defaults.
+   */
+  @new() {
+    self.values = DEFAULTS.clone()
+  }
+
+  /**
+   * The setting `name`.
+   *
+   * @param string name: Its dotted name, such as `'diagnostics.scope'`.
+   * @returns any
+   */
+  get(name: string) {
+    return self.values.get(name, DEFAULTS.get(name, nil))
+  }
+
+  /**
+   * Takes what the client sent under `zuri`, and returns the names of
+   * the settings that changed. A setting of the wrong type keeps its
+   * value.
+   *
+   * @param any given: The `zuri` section, nested or dotted.
+   * @returns list[string]
+   */
+  update(given) {
+    var changed = []
+
+    if !is_dict(given) {
+      return changed
+    }
+
+    for name, value in _flatten(given, '', {}) {
+      if !DEFAULTS.contains(name) or value == nil {
+        continue
+      }
+
+      if typeof(value) != typeof(DEFAULTS[name]) {
+        continue
+      }
+
+      if self.values[name] != value {
+        self.values[name] = value
+        changed.append(name)
+      }
+    }
+
+    return changed
+  }
+}
+
+/**
+ * One document the client has open: its text as the client has it,
+ * which may differ from the file on disk, and what has been worked out
+ * from that text.
+ *
+ * `linked` is true once the linker holds the summary of this version,
+ * and `checked` holds the compiler's diagnostics for it once they are
+ * worked out; both are reset by every change.
+ */
+class Document {
+
+  /**
+   * Returns a new {Document}.
+   *
+   * @param string uri
+   * @param ?string path: The file's path; `nil` for a document never
+   *    saved.
+   * @param int version
+   * @param string text
+   */
+  @new(uri: string, path, version: int, text: string) {
+    self.uri = uri
+    self.path = path
+    self.key = path == nil ? uri : path
+    self.version = version
+    self.text = text
+    self.linked = false
+    self.checked = nil
+    self._index = nil
+    self._analysis = nil
+  }
+
+  /**
+   * Applies the client's changes, in order, and moves to `version`.
+   *
+   * @param list changes: `TextDocumentContentChangeEvent`s.
+   * @param int version
+   * @param string encoding: How the changes' positions are counted.
+   */
+  change(changes: list, version: int, encoding: string) {
+    var current = self.text
+
+    for change in changes {
+      current = text.apply_change(current, change, encoding)
+    }
+
+    self.text = current
+    self.version = version
+    self.linked = false
+    self.checked = nil
+    self._index = nil
+    self._analysis = nil
+  }
+
+  /**
+   * The document's {LineIndex}.
+   *
+   * @returns LineIndex
+   */
+  index() {
+    if self._index == nil {
+      self._index = text.LineIndex(self.text)
+    }
+
+    return self._index
+  }
+
+  /**
+   * The document's analysis, `{ summary, nodes }`, worked out once
+   * for each version.
+   *
+   * @param list builtins: The names the runtime defines globally.
+   * @returns dict
+   */
+  analysis(builtins: list) {
+    if self._analysis == nil {
+      self._analysis = summaries.analyze(self.key, self.text, builtins)
+    }
+
+    return self._analysis
+  }
+
+  /**
+   * Whether the document's analysis is worked out for its current
+   * text.
+   *
+   * @returns bool
+   */
+  is_analyzed() {
+    return self._analysis != nil
+  }
+}

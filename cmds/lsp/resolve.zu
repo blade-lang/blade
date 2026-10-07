@@ -1,0 +1,279 @@
+/**
+ * Import resolution, in the runtime's own order, so the file the
+ * server reads for an import is the file the program would load.
+ *
+ * A path starting with `.` is resolved against the directory of the
+ * file importing it, and nowhere else. Any other path is looked for,
+ * in order:
+ *
+ * 1. in the `.zuri/libs` of the project the importing file belongs
+ *    to;
+ * 2. in the standard library, the `libs` of the installation;
+ * 3. among the native modules the runtime builds in, when the path is
+ *    one name;
+ * 4. in `ZURI_HOME/libs`, among the packages installed for the user.
+ *
+ * At each place, `name.zu` is a module and `name/index.zu` a package.
+ * A native module is described by the `libs/<name>.stub.zu` beside
+ * the standard library. One whose name starts with `_` is internal to
+ * the runtime and has no stub; it is known to exist, and nothing is
+ * known about what it holds.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import os
+import .._shared.paths
+
+/**
+ * Where imports lead, for one installation.
+ */
+class Resolver {
+
+  /**
+   * Returns a new {Resolver}.
+   *
+   * @param ?string root: The installation to read the standard
+   *    library from. Default `nil`, which is `ZURI_ROOT` when it is set
+   *    and the directory the running `zuri` sits in otherwise, the
+   *    runtime's own rule.
+   */
+  @new(root: ?string) {
+    self.root = root == nil or root.is_empty() ? paths.install_root() : os.abs_path(root)
+    self.stdlib = os.join_paths(self.root, 'libs')
+    self.home_libs = paths.global_libs()
+    self.natives = {}
+    self._projects = {}
+
+    if os.dir_exists(self.stdlib) {
+      for name in os.read_dir(self.stdlib) {
+        if name.ends_with('.stub.zu') and !name.starts_with('_') {
+          var module = name[0, name.length() - 8]
+          self.natives[module] = os.join_paths(self.stdlib, name)
+        }
+      }
+    }
+  }
+
+  /**
+   * The `.zuri/libs` of the project `path` belongs to, or `nil` when
+   * it belongs to none.
+   *
+   * @param string path: A file's path.
+   * @returns ?string
+   */
+  project_libs(path: string) {
+    var directory = os.dir_name(path)
+    var known = self._projects.get(directory, false)
+
+    if known != false {
+      return known
+    }
+
+    var root = paths.find_root(directory)
+    var libs = root == nil ? nil : os.join_paths(root, '.zuri', 'libs')
+
+    self._projects[directory] = libs
+
+    return libs
+  }
+
+  /**
+   * Forgets which project each directory belongs to, for when a
+   * `project.toml` appears or goes.
+   */
+  forget_projects() {
+    self._projects = {}
+  }
+
+  /**
+   * Where an import leads.
+   *
+   * | `kind` | Other keys | Meaning |
+   * | --- | --- | --- |
+   * | `'file'` | `path` | a module or package written in Zuri |
+   * | `'native'` | `name`, `stub` | a native module, described by its stub |
+   * | `'internal'` | `name` | a native module internal to the runtime |
+   *
+   * @param string path: The import's path, as `zuri.parse()` gives it.
+   * @param ?string importer: The importing file's path; `nil`, or the
+   *    URI it is known by, for a document never saved, which no
+   *    relative import can leave.
+   * @returns ?dict: `nil` when the import leads nowhere.
+   */
+  resolve(path: string, importer: ?string) {
+    if importer != nil and !_is_path(importer) {
+      importer = nil
+    }
+
+    if path.starts_with('.') {
+      if importer == nil {
+        return nil
+      }
+
+      return self._candidate(os.join_paths(os.dir_name(importer), path))
+    }
+
+    if importer != nil {
+      var project = self.project_libs(importer)
+
+      if project != nil {
+        var found = self._candidate(os.join_paths(project, path))
+
+        if found != nil {
+          return found
+        }
+      }
+    }
+
+    var found = self._candidate(os.join_paths(self.stdlib, path))
+
+    if found != nil {
+      return found
+    }
+
+    if !path.contains('/') and !path.contains('\\') {
+      var stub = self.natives.get(path, nil)
+
+      if stub != nil {
+        return { kind: 'native', name: path, stub }
+      }
+
+      if path.starts_with('_') {
+        return { kind: 'internal', name: path }
+      }
+    }
+
+    return self._candidate(os.join_paths(self.home_libs, path))
+  }
+
+  # `base.zu` when it is a file, else `base/index.zu` when that is.
+  _candidate(base: string) {
+    var normal = os.abs_path(base)
+    var as_file = normal.ends_with('.zu') ? normal : normal + '.zu'
+
+    if file(as_file).exists() and !os.is_dir(as_file) {
+      return { kind: 'file', path: as_file }
+    }
+
+    var as_package = os.join_paths(normal, 'index.zu')
+
+    if file(as_package).exists() {
+      return { kind: 'file', path: as_package }
+    }
+
+    return nil
+  }
+
+  /**
+   * The import path, relative to `importer`, that names the module at
+   * `target`, for adding an import: a bare name when the standard
+   * library or a package provides it, and a `.` or `..` path within a
+   * project otherwise.
+   *
+   * @param string target: The module's file.
+   * @param ?string importer: The importing file.
+   * @returns ?string: `nil` when no import can reach it.
+   */
+  import_path(target: string, importer: ?string) {
+    for base in [self.stdlib, importer == nil ? nil : self.project_libs(importer), self.home_libs] {
+      if base == nil {
+        continue
+      }
+
+      var named = _under(base, target)
+
+      if named != nil {
+        return named
+      }
+    }
+
+    if importer == nil {
+      return nil
+    }
+
+    return _relative(os.dir_name(importer), target)
+  }
+}
+
+/**
+ * The relative import path that leads from the file `importer` to the
+ * module at `target`: `.name` for a sibling, and one `..` for each
+ * directory climbed, so `..name` is one up and `.. ..name` two.
+ *
+ * @param string importer: The importing file.
+ * @param string target: The module's file, or a package's `index.zu`.
+ * @returns string
+ */
+def relative_import(importer: string, target: string) {
+  return _relative(os.dir_name(importer), target)
+}
+
+# Whether `text` is an absolute path, as against the URI an unsaved
+# document is known by.
+def _is_path(text: string) {
+  return text.starts_with('/') or text.starts_with('\\\\') or !!text.match('/^[A-Za-z]:[\\\\\/]/')
+}
+
+# The bare import path of `target` under `base`, or `nil` when it is
+# not under it.
+def _under(base: string, target: string) {
+  var prefix = base.ends_with(os.path_separator) ? base : base + os.path_separator
+
+  if !target.starts_with(prefix) {
+    return nil
+  }
+
+  var rest = _without_module_suffix(target[prefix.length(), target.length()])
+
+  return rest.replace(os.path_separator, '.')
+}
+
+# `a/b.zu` as `a/b`, and `a/index.zu` as `a`.
+def _without_module_suffix(path: string) {
+  var rest = path
+
+  if rest.ends_with('.zu') {
+    rest = rest[0, rest.length() - 3]
+  }
+
+  var index = os.path_separator + 'index'
+
+  if rest.ends_with(index) {
+    rest = rest[0, rest.length() - index.length()]
+  } else if rest == 'index' {
+    rest = ''
+  }
+
+  return rest
+}
+
+# The relative import path from the directory `from` to `target`:
+# `.name` for a sibling, and one `..` for each directory climbed, so
+# `..name` is one up and `.. ..name` two.
+def _relative(from: string, target: string) {
+  var separator = os.path_separator
+  var here = from.split(separator).filter(@(part) => !part.is_empty())
+  var there = _without_module_suffix(target).split(separator).filter(@(part) => !part.is_empty())
+  var common = 0
+
+  while common < here.length() and common < there.length() - 1 and here[common] == there[common] {
+    common++
+  }
+
+  var prefix = '.'
+  var climbs = here.length() - common
+
+  if climbs > 0 {
+    var ups = []
+
+    while climbs > 0 {
+      ups.append('..')
+      climbs--
+    }
+
+    prefix = ' '.join(ups)
+  }
+
+  return prefix + '.'.join(there[common, there.length()])
+}

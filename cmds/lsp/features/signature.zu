@@ -1,0 +1,296 @@
+/**
+ * Signature help: while arguments are being written, the parameters
+ * of the function being called, with the one the cursor is on marked
+ * and each one's documentation.
+ *
+ * The call is found by reading the source up to the cursor, so it is
+ * found while it is still unfinished and does not parse. Constructors
+ * show the parameters of `@new`, and a variadic parameter stays the
+ * active one for every argument it takes.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import zuri
+import .common
+import ..analysis.query
+import ..analysis.render
+import ..analysis.summary as summaries
+
+# Where reading up to the cursor starts: the start of the last
+# top-level statement or declaration that starts before it. That is
+# outside any string or comment, and an unfinished statement the
+# parser stopped short of is read whole.
+def _reading_start(nodes: list, offset: int) {
+  var found = 0
+
+  for node in nodes {
+    if common.is_node(node) and node.start <= offset {
+      found = node.start
+    }
+  }
+
+  return found
+}
+
+/**
+ * The call the cursor at `offset` is writing the arguments of: where
+ * its `(` is, and how many of its arguments come before the cursor.
+ * Strings and comments are skipped, and brackets nested inside the
+ * arguments are passed over.
+ *
+ * @param string text
+ * @param int start: Where reading begins, outside any string or
+ *    comment.
+ * @param int offset
+ * @returns ?dict: `{ paren, commas }`, or `nil` when the cursor is in
+ *    no call.
+ */
+def open_call(text: string, start: int, offset: int) {
+  var stack = []
+  var i = start
+
+  while i < offset {
+    var ch = text[i]
+
+    if ch == '#' {
+      while i < offset and text[i] != '\n' {
+        i++
+      }
+
+      continue
+    }
+
+    if ch == '/' and i + 1 < text.length() and text[i + 1] == '*' {
+      var depth = 1
+
+      i += 2
+
+      while i < offset and depth > 0 {
+        if text[i] == '/' and i + 1 < text.length() and text[i + 1] == '*' {
+          depth++
+          i++
+        } else if text[i] == '*' and i + 1 < text.length() and text[i + 1] == '/' {
+          depth--
+          i++
+        }
+
+        i++
+      }
+
+      continue
+    }
+
+    if ch == "'" or ch == '"' {
+      i++
+
+      while i < offset and text[i] != ch {
+        if text[i] == '\\' {
+          i++
+        }
+
+        i++
+      }
+
+      i++
+      continue
+    }
+
+    if ch == '(' or ch == '[' or ch == '{' {
+      stack.append({ bracket: ch, at: i, commas: 0 })
+    } else if ch == ')' or ch == ']' or ch == '}' {
+      if !stack.is_empty() {
+        stack.pop()
+      }
+    } else if ch == ',' and !stack.is_empty() {
+      stack[stack.length() - 1].commas++
+    }
+
+    i++
+  }
+
+  # The innermost open bracket must be a call's own parenthesis: inside
+  # a list or dictionary written as an argument, the cursor is on that
+  # argument rather than among the call's.
+  if stack.is_empty() or stack[stack.length() - 1].bracket != '(' {
+    return nil
+  }
+
+  var top = stack[stack.length() - 1]
+
+  return { paren: top.at, commas: top.commas }
+}
+
+# The offset just past the callee's name, before the `(`.
+def _callee_end(text: string, paren: int) {
+  var at = paren
+
+  while at > 0 and text[at - 1].is_space() {
+    at--
+  }
+
+  return at
+}
+
+# What the name before `(` stands for, from the document's own
+# analysis or, when the unfinished call kept it from parsing, from a
+# copy with the call closed.
+def _callee(server, document, analysis: dict, name_end: int, offset: int) {
+  var linker = server.linker
+  var key = document.key
+  var occurrence = query.at(analysis.summary, (name_end - 1).max(0))
+
+  if occurrence != nil and occurrence.end == name_end {
+    return query.canonical(linker, key, occurrence)
+  }
+
+  var text = document.text
+  var before = text[0, offset].rtrim()
+  var closing = before.ends_with(',') or before.ends_with('(') ? 'nil)' : ')'
+  var patched = text[0, offset] + closing + text[offset, text.length()]
+  var copy = summaries.analyze(key, patched, server.builtins.names).summary
+
+  occurrence = query.at(copy, (name_end - 1).max(0))
+
+  if occurrence == nil or occurrence.end != name_end {
+    return nil
+  }
+
+  # The copy is read in place of the document only for this answer.
+  var held = linker.holds(key) ? linker.summary(key) : nil
+
+  linker.put(key, copy)
+
+  var target = query.canonical(linker, key, occurrence)
+
+  if held != nil {
+    linker.put(key, held)
+  }
+
+  return target
+}
+
+# The function calling `target` runs, as `common.callable()` gives it.
+def _function_of(linker, target) {
+  if target == nil or target.contains('module') {
+    return nil
+  }
+
+  var symbol = linker.symbol(target)
+
+  if symbol == nil {
+    return nil
+  }
+
+  if symbol.kind == 'class' {
+    return common.callable(linker, { t: 'class', path: target.path, index: target.index })
+  }
+
+  if symbol.kind == 'function' or symbol.kind == 'method' {
+    return { symbol, name: symbol.name, path: target.path, index: target.index }
+  }
+
+  return common.callable(linker, linker.type_of(target))
+}
+
+# Each parameter's documentation from the function's doc block.
+def _param_docs(symbol: dict) {
+  var docs = {}
+  var doc = symbol.get('doc', nil)
+
+  if doc == nil {
+    return docs
+  }
+
+  for tag in zuri.doc.parse(doc).all('param') {
+    var type = tag.type.is_empty() ? '' : '`${tag.type}` '
+
+    docs[tag.name] = '${type}${render.markdown_text(tag.text)}'.trim()
+  }
+
+  return docs
+}
+
+/**
+ * Answers `textDocument/signatureHelp`.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns ?dict
+ */
+def help(server, params: dict) {
+  var document = server.document(params.textDocument.uri)
+  var offset = server.offset(document, params.position)
+  var analysis = server.analysis(document)
+  var text = document.text
+  var call = open_call(text, _reading_start(analysis.nodes, offset), offset)
+
+  if call == nil {
+    return nil
+  }
+
+  var name_end = _callee_end(text, call.paren)
+
+  if name_end == 0 {
+    return nil
+  }
+
+  var linker = server.linker
+  var target = _function_of(linker, _callee(server, document, analysis, name_end, offset))
+
+  if target == nil {
+    return nil
+  }
+
+  var symbol = target.symbol
+  var params_list = symbol.get('params', [])
+  var docs = _param_docs(symbol)
+  var labels = params_list.map(@(param) {
+    var label = param.variadic ? '...${param.name}' : param.name
+
+    return param.hint == nil ? label : '${label}: ${param.hint}'
+  })
+
+  var name = target.name
+  var owner = common.owner_name(linker, target.path, symbol)
+
+  if symbol.kind == 'method' and symbol.name != '@new' and owner != nil {
+    name = '${owner}.${symbol.name}'
+  }
+
+  var signature = {
+    label: '${name}(${", ".join(labels)})',
+    parameters: [],
+  }
+
+  var position = 0
+
+  for param in params_list {
+    var info = { label: labels[position] }
+    var doc = docs.get(param.name, '')
+
+    if !doc.is_empty() {
+      info.documentation = { kind: 'markdown', value: doc }
+    }
+
+    signature.parameters.append(info)
+    position++
+  }
+
+  var doc = render.markdown(symbol.get('doc', nil))
+
+  if !doc.is_empty() {
+    signature.documentation = { kind: 'markdown', value: doc }
+  }
+
+  var active = call.commas
+  var count = params_list.length()
+
+  if count > 0 and params_list[count - 1].variadic and active >= count {
+    active = count - 1
+  }
+
+  signature.activeParameter = active
+
+  return { signatures: [signature], activeSignature: 0, activeParameter: active }
+}

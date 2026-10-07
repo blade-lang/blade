@@ -1,0 +1,321 @@
+/**
+ * Semantic tokens: every name in a file, coloured by what it resolves
+ * to rather than by how it is spelt. A name imported from another
+ * module is coloured as what it is there, a member by the declaration
+ * its receiver's type gives it, and anything the standard library
+ * defines is marked as such.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import .common
+import ..analysis.query
+import ..analysis.render
+import ..analysis.scope { BUILTIN, STARRED }
+
+/** The token types and modifiers, in the order the protocol numbers them. */
+const LEGEND = {
+  tokenTypes: [
+    'namespace', 'class', 'function', 'method', 'parameter', 'variable', 'property', 'decorator',
+  ],
+  tokenModifiers: ['declaration', 'readonly', 'static', 'defaultLibrary', 'deprecated'],
+}
+
+const _NAMESPACE = 0
+const _CLASS = 1
+const _FUNCTION = 2
+const _METHOD = 3
+const _PARAMETER = 4
+const _VARIABLE = 5
+const _PROPERTY = 6
+const _DECORATOR = 7
+
+const _DECLARATION = 1
+const _READONLY = 2
+const _STATIC = 4
+const _DEFAULT_LIBRARY = 8
+const _DEPRECATED_TOKEN = 16
+
+# The token type of a declaration.
+def _type_of(symbol: dict) {
+  using symbol.kind {
+    when 'class' return _CLASS
+    when 'function' return _FUNCTION
+    when 'method' return symbol.name.starts_with('@') ? _DECORATOR : _METHOD
+    when 'field' return _PROPERTY
+    when 'parameter' return _PARAMETER
+    when 'module' return _NAMESPACE
+    default {
+      return _VARIABLE
+    }
+  }
+}
+
+/**
+ * Works out the token of each name in one file, remembering what it
+ * has found for each declaration.
+ */
+class _Classifier {
+
+  @new(server, key: string, summary: dict) {
+    self.server = server
+    self.linker = server.linker
+    self.key = key
+    self.summary = summary
+    self._known = {}
+  }
+
+  # Whether the file at `path` is part of what Zuri ships: the
+  # standard library, or a stub of what the runtime builds in.
+  _is_library(path: string) {
+    var stdlib = self.server.resolver.stdlib
+
+    return path.starts_with(stdlib)
+  }
+
+  # The token of the declaration `ref`, as `[type, modifiers]`.
+  _token(ref) {
+    if ref == nil {
+      return nil
+    }
+
+    if ref.contains('module') {
+      return [_NAMESPACE, 0]
+    }
+
+    var key = '${ref.path}#${ref.index}'
+    var known = self._known.get(key, nil)
+
+    if known != nil {
+      return known
+    }
+
+    var symbol = self.linker.symbol(ref)
+
+    if symbol == nil {
+      return nil
+    }
+
+    var modifiers = 0
+
+    if symbol.kind == 'constant' or symbol.get('constant', false) {
+      modifiers |= _READONLY
+    }
+
+    if symbol.get('is_static', false) {
+      modifiers |= _STATIC
+    }
+
+    if self._is_library(ref.path) {
+      modifiers |= _DEFAULT_LIBRARY
+    }
+
+    if render.is_deprecated(symbol.get('doc', nil)) {
+      modifiers |= _DEPRECATED_TOKEN
+    }
+
+    var token = [_type_of(symbol), modifiers]
+
+    self._known[key] = token
+
+    return token
+  }
+
+  # The token of an occurrence, or `nil` for one left uncoloured.
+  classify(occurrence: dict) {
+    using occurrence.kind {
+      when 'segment' return [_NAMESPACE, 0]
+      when 'decl' {
+        var symbol = self.summary.symbols[occurrence.index]
+        var ref = { path: self.key, index: occurrence.index }
+
+        if symbol.kind == 'import' or symbol.kind == 'module' {
+          ref = query.canonical(self.linker, self.key, occurrence)
+        }
+
+        var token = self._token(ref)
+
+        if token == nil {
+          return symbol.kind == 'module' ? [_NAMESPACE, _DECLARATION] : nil
+        }
+
+        return [token[0], token[1] | _DECLARATION]
+      }
+      when 'ref' {
+        var target = occurrence.target
+
+        if target >= 0 {
+          var symbol = self.summary.symbols[target]
+
+          if symbol.kind != 'import' and symbol.kind != 'module' {
+            return self._token({ path: self.key, index: target })
+          }
+        }
+
+        if target < 0 and target != BUILTIN and target != STARRED {
+          return nil
+        }
+
+        return self._token(query.canonical(self.linker, self.key, occurrence))
+      }
+      when 'member' {
+        var token = self._token(query.canonical(self.linker, self.key, occurrence))
+
+        if token != nil {
+          return token
+        }
+
+        var access = self.summary.members[occurrence.member]
+
+        return [access.call ? _METHOD : _PROPERTY, 0]
+      }
+      default {
+        return nil
+      }
+    }
+  }
+}
+
+# The tokens of a document between two offsets, encoded as the
+# protocol's relative five-number groups.
+def _encode(server, document, start: int, end: int) {
+  var analysis = server.analysis(document)
+  var summary = analysis.summary
+  var lines = document.index()
+  var classifier = _Classifier(server, document.key, summary)
+  var data = []
+  var last_line = 0
+  var last_character = 0
+  var last_end = -1
+
+  for occurrence in query.occurrences(summary) {
+    if occurrence.end <= occurrence.start or occurrence.start < start or occurrence.end > end {
+      continue
+    }
+
+    # Two occurrences over the same name, such as an import's last
+    # segment and the name it binds, make one token.
+    if occurrence.start < last_end {
+      continue
+    }
+
+    var token = classifier.classify(occurrence)
+
+    if token == nil {
+      continue
+    }
+
+    var from = lines.position(occurrence.start, server.encoding)
+    var to = lines.position(occurrence.end, server.encoding)
+
+    if from.line != to.line {
+      continue
+    }
+
+    var delta_line = from.line - last_line
+    var delta_character = delta_line == 0 ? from.character - last_character : from.character
+
+    data.append(delta_line)
+    data.append(delta_character)
+    data.append(to.character - from.character)
+    data.append(token[0])
+    data.append(token[1])
+
+    last_line = from.line
+    last_character = from.character
+    last_end = occurrence.end
+  }
+
+  return data
+}
+
+# Keeps a document's latest tokens, for the next delta request.
+def _remember(server, uri: string, data: list) {
+  var previous = server.tokens.get(uri, nil)
+  var id = previous == nil ? 1 : previous.number + 1
+
+  server.tokens[uri] = { number: id, id: '${id}', data }
+
+  return '${id}'
+}
+
+/**
+ * Answers `textDocument/semanticTokens/full`.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns dict
+ */
+def full(server, params: dict) {
+  var document = server.document(params.textDocument.uri)
+  var data = _encode(server, document, 0, document.text.length())
+
+  return { resultId: _remember(server, document.uri, data), data }
+}
+
+/**
+ * Answers `textDocument/semanticTokens/full/delta`: the change from
+ * the tokens last sent, as one edit, or every token when the client's
+ * are not the last ones sent.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns dict
+ */
+def delta(server, params: dict) {
+  var document = server.document(params.textDocument.uri)
+  var previous = server.tokens.get(document.uri, nil)
+  var data = _encode(server, document, 0, document.text.length())
+
+  if previous == nil or previous.id != params.get('previousResultId', nil) {
+    return { resultId: _remember(server, document.uri, data), data }
+  }
+
+  var old = previous.data
+  var prefix = 0
+  var shortest = old.length().min(data.length())
+
+  while prefix < shortest and old[prefix] == data[prefix] {
+    prefix++
+  }
+
+  var suffix = 0
+  var old_last = old.length() - 1
+  var new_last = data.length() - 1
+
+  while suffix < shortest - prefix and old[old_last - suffix] == data[new_last - suffix] {
+    suffix++
+  }
+
+  var id = _remember(server, document.uri, data)
+
+  if prefix == old.length() and prefix == data.length() {
+    return { resultId: id, edits: [] }
+  }
+
+  return {
+    resultId: id,
+    edits: [{
+      start: prefix,
+      deleteCount: old.length() - prefix - suffix,
+      data: data[prefix, data.length() - suffix],
+    }],
+  }
+}
+
+/**
+ * Answers `textDocument/semanticTokens/range`: the tokens of the names
+ * that lie within the range.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns dict
+ */
+def range(server, params: dict) {
+  var document = server.document(params.textDocument.uri)
+  var lines = document.index()
+  var start = lines.offset(params.range.start, server.encoding)
+  var end = lines.offset(params.range.end, server.encoding)
+
+  return { data: _encode(server, document, start, end) }
+}

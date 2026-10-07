@@ -1,0 +1,181 @@
+/**
+ * Inlay hints: parameter names shown before the arguments of a call,
+ * and, when asked for, the type a variable is inferred to hold shown
+ * after its name.
+ *
+ * `inlayHints.parameterNames` picks which arguments are named:
+ * `'literals'` names an argument written as a literal value, where the
+ * value alone says least, `'all'` names every argument, and `'none'`
+ * names none. An argument that is already a name spelt like its
+ * parameter is never named again. `inlayHints.variableTypes` turns the
+ * type hints on.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import zuri
+import .common
+import ..analysis.render
+
+# The protocol's `InlayHintKind`s.
+const _TYPE = 1
+const _PARAMETER = 2
+
+/**
+ * Answers `textDocument/inlayHint` for the requested range.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns list[dict]
+ */
+def inlay(server, params: dict) {
+  var document = server.document(params.textDocument.uri)
+  var summary = server.analysis(document).summary
+  var lines = document.index()
+  var start = lines.offset(params.range.start, server.encoding)
+  var end = lines.offset(params.range.end, server.encoding)
+  var found = []
+  var mode = server.settings.get('inlayHints.parameterNames')
+
+  if mode == 'literals' or mode == 'all' {
+    for call in summary.calls {
+      if call.end < start or call.start > end or call.arguments.is_empty() {
+        continue
+      }
+
+      _name_arguments(server, document, call, mode == 'all', found)
+    }
+  }
+
+  if server.settings.get('inlayHints.variableTypes') == true {
+    _show_types(server, document, summary, start, end, found)
+  }
+
+  found.sort(@(a, b) {
+    if a.position.line != b.position.line {
+      return a.position.line - b.position.line
+    }
+
+    return a.position.character - b.position.character
+  })
+
+  return found
+}
+
+def _name_arguments(server, document, call: dict, every: bool, found: list) {
+  var linker = server.linker
+  var target = common.callable(linker, linker.resolve(call.callee))
+
+  if target == nil {
+    return
+  }
+
+  var params = target.symbol.get('params', nil)
+
+  if params == nil or params.is_empty() {
+    return
+  }
+
+  var position = 0
+
+  for argument in call.arguments {
+    if position >= params.length() {
+      break
+    }
+
+    var param = params[position]
+    var label = param.variadic ? '...${param.name}:' : '${param.name}:'
+    var text = document.text[argument.start, argument.end]
+
+    position++
+
+    if !every and !argument.literal {
+      continue
+    }
+
+    if argument.kind == 'Identifier' and text == param.name {
+      continue
+    }
+
+    found.append({
+      position: document.index().position(argument.start, server.encoding),
+      label,
+      kind: _PARAMETER,
+      paddingRight: true,
+      data: {
+        uri: document.uri,
+        path: target.path,
+        index: target.index,
+        parameter: param.name,
+      },
+    })
+
+    # A variadic parameter takes every argument from here on; it is
+    # named once, at the first.
+    if param.variadic {
+      break
+    }
+  }
+}
+
+def _show_types(server, document, summary: dict, start: int, end: int, found: list) {
+  var linker = server.linker
+  var index = 0
+
+  for symbol in summary.symbols {
+    var shown = symbol.kind == 'variable' and symbol.get('hint', nil) == nil
+    var inside = symbol.name_end >= start and symbol.name_start <= end
+
+    if shown and inside and !symbol.get('caught', false) and symbol.name_end > symbol.name_start {
+      var type = common.describe(linker, linker.type_of({ path: document.key, index }))
+
+      if type != nil and type != 'nil' {
+        found.append({
+          position: document.index().position(symbol.name_end, server.encoding),
+          label: ': ${type}',
+          kind: _TYPE,
+          paddingLeft: false,
+        })
+      }
+    }
+
+    index++
+  }
+}
+
+/**
+ * Answers `inlayHint/resolve`: adds the parameter's documentation to a
+ * parameter name hint, for its tooltip.
+ *
+ * @param Server server
+ * @param dict hint
+ * @returns dict
+ */
+def resolve(server, hint: dict) {
+  var data = hint.get('data', nil)
+
+  if !is_dict(data) or !data.contains('parameter') {
+    return hint
+  }
+
+  var symbol = server.linker.symbol({ path: data.path, index: data.index })
+
+  if symbol == nil or symbol.get('doc', nil) == nil {
+    return hint
+  }
+
+  for tag in zuri.doc.parse(symbol.doc).all('param') {
+    if tag.name == data.parameter {
+      var type = tag.type.is_empty() ? '' : '`${tag.type}` '
+      var value = '${type}${render.markdown_text(tag.text)}'.trim()
+
+      if !value.is_empty() {
+        hint.tooltip = { kind: 'markdown', value }
+      }
+
+      break
+    }
+  }
+
+  return hint
+}

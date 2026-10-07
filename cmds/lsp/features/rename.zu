@@ -1,0 +1,431 @@
+/**
+ * Renaming: a declaration and every use of it across the workspace,
+ * and the relative imports that reach a module whose file is renamed
+ * or moved.
+ *
+ * A rename is refused rather than made when it could change what the
+ * program does: when the new name is a keyword or not a name at all,
+ * when it is declared already where it would be used, when it would
+ * make private something used from outside, and for what the standard
+ * library or a package declares, which is not the workspace's to
+ * change. A dictionary entry written `{ name }` keeps its key, becoming
+ * `{ name: renamed }`. A member used on a receiver whose type cannot be
+ * told is left alone, and the client is told where.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import os
+import rpc
+import log
+import .common
+import .references
+import ..text
+import ..resolve
+import ..analysis.query
+import ..analysis.scope { SHORTHAND }
+
+# The answer for a rename that cannot be made.
+const _REQUEST_FAILED = -32803
+
+# The most uses on unknown receivers listed in the message about them.
+const _LISTED = 10
+
+def _refuse(message: string) {
+  raise rpc.RpcError(_REQUEST_FAILED, message)
+}
+
+# The declaration a rename at the request's position is of, as
+# `{ document, occurrence, target, symbol }`, refusing anything that
+# cannot be renamed.
+def _subject(server, params: dict) {
+  var document = server.document(params.textDocument.uri)
+  var offset = server.offset(document, params.position)
+  var summary = server.analysis(document).summary
+  var found = common.target_at(server.linker, document.key, summary, offset)
+
+  if found == nil {
+    _refuse('there is no name here to rename')
+  }
+
+  var occurrence = found.occurrence
+  var target = found.target
+
+  if occurrence.kind == 'segment' or (target != nil and target.contains('module')) {
+    _refuse("a module is renamed by renaming its file")
+  }
+
+  if target == nil {
+    _refuse("'${occurrence.name}' does not resolve to a declaration that can be renamed")
+  }
+
+  var symbol = server.linker.symbol(target)
+
+  if symbol == nil {
+    _refuse("'${occurrence.name}' does not resolve to a declaration that can be renamed")
+  }
+
+  if symbol.name.starts_with('@') {
+    _refuse("'${symbol.name}' is a decorated method, whose name the language fixes")
+  }
+
+  if !server.is_workspace(target.path) {
+    _refuse("'${symbol.name}' is declared outside the workspace, in ${target.path}")
+  }
+
+  return { document, occurrence, target, symbol }
+}
+
+/**
+ * Answers `textDocument/prepareRename`: the span of the name to
+ * rename, or the reason it cannot be.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns dict
+ */
+def prepare(server, params: dict) {
+  var subject = _subject(server, params)
+  var occurrence = subject.occurrence
+
+  return {
+    range: server.range(subject.document.key, occurrence.start, occurrence.end),
+    placeholder: occurrence.name,
+  }
+}
+
+/**
+ * Answers `textDocument/rename`.
+ *
+ * @param Server server
+ * @param dict params
+ * @param rpc.Context context
+ * @returns dict: A `WorkspaceEdit`.
+ */
+def rename(server, params: dict, context) {
+  var subject = _subject(server, params)
+  var name = params.newName
+  var old = subject.symbol.name
+
+  if !common.is_identifier(name) {
+    _refuse(common.KEYWORDS.contains(name) ? "'${name}' is a keyword" : "'${name}' is not a name")
+  }
+
+  if name == old {
+    return common.workspace_edit(server, {})
+  }
+
+  var target = subject.target
+  var places = references.find(server, target, true, context)
+
+  _check_privacy(server, subject, name, places)
+  _check_clashes(server, subject, name, places)
+
+  var edits = {}
+
+  for place in places {
+    var replacement = name
+
+    if _is_shorthand(server, place) {
+      replacement = '${old}: ${name}'
+    }
+
+    if !edits.contains(place.path) {
+      edits[place.path] = []
+    }
+
+    edits[place.path].append({
+      range: server.range(place.path, place.start, place.end),
+      newText: replacement,
+    })
+  }
+
+  if subject.symbol.get('owner', nil) != nil {
+    _report_unknown_receivers(server, old, places, context)
+  }
+
+  return common.workspace_edit(server, edits)
+}
+
+# Whether a use is the `{ name }` shorthand of a dictionary entry.
+def _is_shorthand(server, place: dict) {
+  var summary = server.linker.summary(place.path)
+
+  if summary == nil {
+    return false
+  }
+
+  var occurrence = query.at(summary, place.start)
+
+  return occurrence != nil and occurrence.kind == 'ref' and occurrence.start == place.start and (
+    occurrence.flags & SHORTHAND != 0
+  )
+}
+
+# Refuses making private what is used from outside: a module global
+# named in another file, or a member used other than through `self` or
+# `parent`.
+def _check_privacy(server, subject: dict, name: string, places: list) {
+  var old = subject.symbol.name
+
+  if old.starts_with('_') or !name.starts_with('_') {
+    return
+  }
+
+  var target = subject.target
+  var symbol = subject.symbol
+
+  if symbol.get('owner', nil) != nil {
+    for place in places {
+      if place.declaration {
+        continue
+      }
+
+      var summary = server.linker.summary(place.path)
+      var occurrence = query.at(summary, place.start)
+
+      if occurrence == nil or occurrence.kind != 'member' {
+        continue
+      }
+
+      var access = summary.members[occurrence.member]
+      var text = server.text(place.path)
+      var receiver = text == nil ? '' : text[access.object_start, access.object_end]
+
+      if receiver != 'self' and receiver != 'parent' {
+        _refuse("'${name}' would be private, but '${old}' is used through '${receiver}'")
+      }
+    }
+
+    return
+  }
+
+  if symbol.scope == 0 {
+    for place in places {
+      if place.path != target.path {
+        _refuse("'${name}' would be private, but '${old}' is used in ${place.path}")
+      }
+    }
+  }
+}
+
+# Refuses a name already declared where the declaration or any use of
+# it would see it, and a declaration that would take over uses of a
+# name already in its scope.
+def _check_clashes(server, subject: dict, name: string, places: list) {
+  var linker = server.linker
+  var target = subject.target
+  var symbol = subject.symbol
+
+  if symbol.get('owner', nil) != nil {
+    var instance = { t: 'instance', path: target.path, index: symbol.owner }
+    var statics = { t: 'class', path: target.path, index: symbol.owner }
+
+    if linker.member(instance, name) != nil or linker.member(statics, name) != nil {
+      _refuse("the class already has a member named '${name}'")
+    }
+
+    return
+  }
+
+  for place in places {
+    var summary = linker.summary(place.path)
+
+    if summary == nil {
+      continue
+    }
+
+    var visible = common.visible_names(summary, place.start)
+    var existing = visible.get(name, nil)
+
+    if existing != nil {
+      _refuse("'${name}' is already declared where '${symbol.name}' is used, in ${place.path}")
+    }
+
+    if linker.starred(place.path).contains(name) or server.builtins.global(name) != nil {
+      if symbol.scope == 0 or place.path != target.path {
+        _refuse("'${name}' already names something in ${place.path}")
+      }
+    }
+  }
+
+  # Within the declaration's own scope, a use of an existing `name`
+  # would start meaning the renamed declaration.
+  var summary = linker.summary(target.path)
+  var scope = summary.scopes[symbol.scope]
+  var refs = summary.refs
+  var i = 0
+
+  while i < refs.length() {
+    var inside = refs[i] >= scope.start and refs[i] <= scope.end
+
+    if inside and refs[i + 4] == name {
+      var why = "and would come to mean it"
+
+      _refuse("'${name}' is already used in the scope of '${symbol.name}', ${why}")
+    }
+
+    i += 5
+  }
+}
+
+# Tells the client about uses of a member name on receivers whose type
+# is unknown, which are left as they are.
+def _report_unknown_receivers(server, old: string, places: list, context) {
+  var linker = server.linker
+  var renamed = {}
+
+  for place in places {
+    renamed['${place.path}:${place.start}'] = true
+  }
+
+  var left = []
+
+  for path in server.paths().sort() {
+    server.interrupted(context, nil)
+
+    var summary = linker.summary(path)
+
+    if summary == nil {
+      continue
+    }
+
+    for access in summary.members {
+      if access.name != old or renamed.contains('${path}:${access.start}') {
+        continue
+      }
+
+      if linker.resolve(access.receiver) == nil {
+        var lines = server.index(path)
+        var line = lines == nil ? 0 : lines.line_of(access.start)
+
+        left.append('${path}:${line + 1}')
+      }
+    }
+  }
+
+  if left.is_empty() {
+    return
+  }
+
+  var shown = left.length() > _LISTED ? left[0, _LISTED] : left
+  var more = left.length() > _LISTED ? ' and ${left.length() - _LISTED} more' : ''
+  var count = left.length()
+  var message = "${count} use(s) of '.${old}' on a receiver of unknown type were left as they are: "
+  message += ', '.join(shown) + more
+
+  log.info(message)
+  server.endpoint.notify('window/showMessage', { type: 3, message })
+}
+
+# Where each file ends up after the renames in `files`: a renamed file
+# moves, and so does everything under a renamed directory.
+def _moves(server, files: list) {
+  var moves = {}
+
+  for item in files {
+    var from = text.uri_to_path(item.oldUri)
+    var to = text.uri_to_path(item.newUri)
+
+    if from == nil or to == nil {
+      continue
+    }
+
+    if from.ends_with('.zu') {
+      moves[from] = to
+      continue
+    }
+
+    var prefix = from.ends_with(os.path_separator) ? from : from + os.path_separator
+
+    for path in server.paths() {
+      if path.starts_with(prefix) {
+        moves[path] = to + os.path_separator + path[prefix.length(), path.length()]
+      }
+    }
+  }
+
+  return moves
+}
+
+/**
+ * Answers `workspace/willRenameFiles`: edits that keep every relative
+ * import reaching the same module once files are renamed or moved, in
+ * the files that import them and in the moved files themselves.
+ *
+ * @param Server server
+ * @param dict params
+ * @param rpc.Context context
+ * @returns ?dict: A `WorkspaceEdit`, or `nil` when nothing changes.
+ */
+def will_rename_files(server, params: dict, context) {
+  var moves = _moves(server, params.get('files', []))
+
+  if moves.is_empty() {
+    return nil
+  }
+
+  server.sync_open()
+
+  var linker = server.linker
+  var edits = {}
+
+  for path in server.paths().sort() {
+    server.interrupted(context, nil)
+
+    var summary = linker.summary(path)
+
+    if summary == nil {
+      continue
+    }
+
+    var importer_after = moves.get(path, path)
+    var seen = {}
+    var sources = []
+
+    for index in summary.imports {
+      sources.append(summary.symbols[index].source)
+    }
+
+    for star in summary.stars {
+      sources.append(star)
+    }
+
+    for source in sources {
+      if !source.path.starts_with('.') or source.segments.is_empty() {
+        continue
+      }
+
+      var start = source.segments[0].start
+
+      if seen.contains('${start}') {
+        continue
+      }
+
+      seen['${start}'] = true
+
+      var found = server.resolver.resolve(source.path, path)
+
+      if found == nil or found.kind != 'file' {
+        continue
+      }
+
+      var target_after = moves.get(found.path, found.path)
+
+      if importer_after == path and target_after == found.path {
+        continue
+      }
+
+      var written = resolve.relative_import(importer_after, target_after)
+      var end = source.segments[source.segments.length() - 1].end
+
+      if !edits.contains(path) {
+        edits[path] = []
+      }
+
+      edits[path].append({ range: server.range(path, start, end), newText: written })
+    }
+  }
+
+  return edits.is_empty() ? nil : common.workspace_edit(server, edits)
+}

@@ -1,0 +1,1657 @@
+/**
+ * Refactorings that keep behaviour: extracting an expression into a
+ * variable or statements into a function, and inlining a variable or
+ * a function. Each is offered only when the change provably leaves
+ * what the program does as it was, and not offered otherwise.
+ *
+ * Extracting a variable moves an expression to a `var` just before its
+ * statement, which is only sound when the expression would have run
+ * there anyway, exactly once: never from a loop's condition or step, a
+ * `do..while` condition, the right of `and`/`or`, a branch of `?:`, a
+ * `when` label or an `else if` condition, and never past something
+ * with a side effect that the statement runs first. Extracting every
+ * identical copy also needs the expression free of side effects, and
+ * nothing it reads written between the copies.
+ *
+ * Extracting statements takes whole statements of one block. The
+ * outer locals they use become parameters, and the ones they set that
+ * are read afterwards come back: one directly, several in a
+ * dictionary. Statements holding a `return`, or a `break`/`continue`
+ * for a loop outside them, stay where they are. They become a private
+ * method when they use `self` or `parent`, and a module function
+ * otherwise.
+ *
+ * Inlining a variable needs a `var` set once and never again; inlining
+ * a function needs one whose body is a single `return`. In both, a
+ * value with a side effect is only moved when it then runs exactly as
+ * often and in the same place, and a name it reads must mean the same
+ * thing where it lands.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import .common
+import ..analysis.scope { REF_STRIDE, WRITE, READ, CALL, SHORTHAND }
+
+/** The protocol's kinds for these actions. */
+const EXTRACT = 'refactor.extract'
+const INLINE = 'refactor.inline'
+
+# The kinds of node that are statements or declarations rather than
+# expressions.
+const _STATEMENTS = [
+  'Expression', 'Echo', 'Raise', 'Return', 'Var', 'VarList', 'Block', 'If',
+  'While', 'DoWhile', 'For', 'Iter', 'Using', 'When', 'Catch', 'Assert',
+  'Import', 'Continue', 'Break', 'Decl', 'Stmt', 'Function', 'Class',
+  'Property', 'Method', 'Comment', 'DocBlock', 'Argument', 'TypeHint', 'None',
+]
+
+# Expressions that change something when they run.
+const _EFFECTS = ['Call', 'Assign', 'CompoundAssign', 'Update', 'Set']
+
+# Expressions that never need parentheses around them where another
+# expression is.
+const _ATOMIC = [
+  'Identifier', 'Nil', 'Bool', 'Integer', 'Float', 'BigNumber', 'Literal',
+  'Interpolation', 'Call', 'Get', 'Index', 'Slice', 'List', 'Dict',
+  'Grouping', 'Self', 'Parent',
+]
+
+# The loops.
+const _LOOPS = ['While', 'DoWhile', 'For', 'Iter']
+
+# Kinds that start code run at another time: a function's body.
+const _FUNCTIONS = ['Anonymous', 'Function', 'Decl', 'Method']
+
+/**
+ * What a refactoring works from: the document, its tree and summary,
+ * and the selection as offsets.
+ */
+class Subject {
+
+  @new(server, document, start: int, end: int) {
+    self.server = server
+    self.document = document
+    self.key = document.key
+    self.text = document.text
+    self.lines = document.index()
+
+    var analysis = server.analysis(document)
+
+    self.nodes = analysis.nodes
+    self.summary = analysis.summary
+
+    # A selection is read without the blank space around it.
+    while start < end and self.text[start].is_space() {
+      start++
+    }
+
+    while end > start and self.text[end - 1].is_space() {
+      end--
+    }
+
+    self.start = start
+    self.end = end
+  }
+
+  /**
+   * The source of `node`.
+   *
+   * @param any node
+   * @returns string
+   */
+  source(node) {
+    return self.text[node.start, node.end]
+  }
+
+  /**
+   * The whitespace a line starts with.
+   *
+   * @param int line
+   * @returns string
+   */
+  indent_of(line: int) {
+    var text = self.lines.line_text(line)
+    var length = text.length() - text.ltrim().length()
+
+    return text[0, length]
+  }
+
+  /**
+   * Whether only blank space comes before `offset` on its line.
+   *
+   * @param int offset
+   * @returns bool
+   */
+  starts_line(offset: int) {
+    var line_start = self.lines.line_start(self.lines.line_of(offset))
+
+    return self.text[line_start, offset].trim().is_empty()
+  }
+
+  /**
+   * The references whose names lie between two offsets, as
+   * `{ start, end, target, flags, name }`.
+   *
+   * @param int start
+   * @param int end
+   * @returns list[dict]
+   */
+  refs_in(start: int, end: int) {
+    var found = []
+    var refs = self.summary.refs
+    var i = 0
+
+    while i < refs.length() {
+      if refs[i] >= start and refs[i + 1] <= end {
+        found.append({
+          start: refs[i],
+          end: refs[i + 1],
+          target: refs[i + 2],
+          flags: refs[i + 3],
+          name: refs[i + 4],
+        })
+      }
+
+      i += REF_STRIDE
+    }
+
+    return found
+  }
+
+  /**
+   * Every reference to the declaration `index` of this file.
+   *
+   * @param int index
+   * @returns list[dict]
+   */
+  uses_of(index: int) {
+    return self.refs_in(0, self.text.length()).filter(@(ref) => ref.target == index)
+  }
+
+  /**
+   * A name for something new, based on `wanted`, that nothing visible
+   * at `offset` or used in the scope holding it already has.
+   *
+   * @param string wanted
+   * @param int offset
+   * @returns string
+   */
+  fresh_name(wanted: string, offset: int) {
+    var taken = common.visible_names(self.summary, offset)
+    var scope = self.summary.scopes[common.scope_at(self.summary, offset)]
+    var used = {}
+
+    for ref in self.refs_in(scope.start, scope.end) {
+      used[ref.name] = true
+    }
+
+    var builtins = self.server.builtins
+    var name = common.is_identifier(wanted) ? wanted : 'value'
+    var count = 1
+
+    while taken.contains(name) or used.contains(name) or builtins.global(name) != nil {
+      count++
+      name = '${wanted}${count}'
+    }
+
+    return name
+  }
+
+  # A `TextEdit` over the offsets `start` to `end`.
+  edit(start: int, end: int, text: string) {
+    return { range: self.server.range(self.key, start, end), newText: text }
+  }
+}
+
+# Edits of the subject's own file, by its key.
+def _by_key(subject, edits: list) {
+  var found = {}
+
+  found[subject.key] = edits
+
+  return found
+}
+
+# Every node in and under `node`, `node` first.
+def _all(node) {
+  var found = []
+
+  def visit(current) {
+    found.append(current)
+
+    for child in common.children(current) {
+      visit(child)
+    }
+  }
+
+  if common.is_node(node) {
+    visit(node)
+  }
+
+  return found
+}
+
+# Whether running `node` can change anything: a call, an assignment or
+# an update, anywhere inside it.
+def _has_effect(node) {
+  return _all(node).some(@(inner) => _EFFECTS.contains(inner.kind))
+}
+
+# `text` in parentheses unless `node` never needs them.
+def _wrapped(node, text: string) {
+  return _ATOMIC.contains(node.kind) ? text : '(${text})'
+}
+
+# Whether `outer` holds `inner`.
+def _holds(outer, inner) {
+  return outer.start <= inner.start and inner.end <= outer.end
+}
+
+# The statement of a statement list that holds the innermost node of
+# `path`, with that list and its position in it: `{ statement, list,
+# index, depth }`, `depth` the statement's position in `path`.
+def _statement_of(nodes: list, path: list) {
+  var depth = path.length() - 1
+
+  while depth >= 0 {
+    var node = path[depth]
+    var list = nil
+
+    if depth == 0 {
+      list = nodes
+    } else if path[depth - 1].kind == 'Block' {
+      list = path[depth - 1].fields.statements
+    }
+
+    if list != nil and !_STATEMENTS.contains(node.kind) {
+      list = nil
+    }
+
+    if list != nil {
+      var index = 0
+
+      for item in list {
+        if item == node {
+          return { statement: node, list, index, depth }
+        }
+
+        index++
+      }
+    }
+
+    depth--
+  }
+
+  return nil
+}
+
+# A name for the value of an expression.
+def _name_for(node) {
+  using node.kind {
+    when 'Call' {
+      var callee = node.fields.callee
+
+      if callee.kind == 'Identifier' {
+        return callee.fields.name
+      }
+
+      if callee.kind == 'Get' {
+        var name = callee.fields.name
+
+        return name.starts_with('get_') ? name[4, name.length()] : name
+      }
+
+      return 'result'
+    }
+    when 'Get' return node.fields.name.ltrim('_')
+    when 'Literal', 'Interpolation' return 'text'
+    when 'Integer', 'Float', 'BigNumber' return 'number'
+    when 'List' return 'items'
+    when 'Dict' return 'entries'
+    when 'Index' return 'item'
+    when 'Logical' return 'matches'
+    default {
+      return 'value'
+    }
+  }
+}
+
+# --------------------------------------------------------------
+# Extract variable
+# --------------------------------------------------------------
+
+/**
+ * The extract-variable refactorings that apply to a selection: one for
+ * the selected expression alone, and one for every identical copy in
+ * its block when there are more.
+ *
+ * @param Subject subject
+ * @returns list[dict]: `{ title, edits }`, `edits` by file key.
+ */
+def extract_variable(subject) {
+  var found = []
+
+  if subject.start >= subject.end {
+    return found
+  }
+
+  var path = common.path_to(subject.nodes, subject.start)
+  var at = nil
+
+  # The outermost node spanning exactly the selection.
+  iter var i = 0; i < path.length(); i++ {
+    if path[i].start == subject.start and path[i].end == subject.end {
+      at = i
+      break
+    }
+  }
+
+  if at == nil {
+    return found
+  }
+
+  var expression = path[at]
+  var kind = expression.kind
+
+  if _STATEMENTS.contains(kind) or ['Identifier', 'Self', 'Parent', 'Anonymous'].contains(kind) {
+    return found
+  }
+
+  if ['Assign', 'CompoundAssign', 'Update', 'Set'].contains(kind) {
+    return found
+  }
+
+  var location = _statement_of(subject.nodes, path[0, at + 1])
+
+  if location == nil or !_moves_before(path, location.depth, at, expression) {
+    return found
+  }
+
+  var statement = location.statement
+
+  if !subject.starts_line(statement.start) {
+    return found
+  }
+
+  # Something with a side effect that the statement runs first would
+  # come to run after the extracted expression.
+  for inner in _all(statement) {
+    var before = inner.end <= expression.start and !_holds(inner, expression)
+
+    if before and _EFFECTS.contains(inner.kind) {
+      return found
+    }
+  }
+
+  var name = subject.fresh_name(_name_for(expression), statement.start)
+  var line = subject.lines.line_of(statement.start)
+  var indent = subject.indent_of(line)
+  var line_start = subject.lines.line_start(line)
+  var declaration = '${indent}var ${name} = ${subject.source(expression)}\n'
+
+  found.append({
+    title: "Extract '${_preview(subject.source(expression))}' into a variable",
+    edits: _by_key(subject, [
+      subject.edit(line_start, line_start, declaration),
+      subject.edit(expression.start, expression.end, name),
+    ]),
+  })
+
+  var copies = _copies(subject, location, expression)
+
+  if copies.length() > 1 {
+    var edits = [subject.edit(line_start, line_start, declaration)]
+
+    for copy in copies {
+      edits.append(subject.edit(copy.start, copy.end, name))
+    }
+
+    found.append({
+      title: 'Extract all ${copies.length()} copies into a variable',
+      edits: _by_key(subject, edits),
+    })
+  }
+
+  return found
+}
+
+# A short form of source for a title.
+def _preview(text: string) {
+  var single = text.replace('/\s+/', ' ')
+
+  return single.length() > 30 ? single[0, 27] + '...' : single
+}
+
+# Whether the expression at `path[at]` runs exactly once, as the first
+# thing evaluated from where it is, every time the statement at
+# `path[depth]` runs.
+def _moves_before(path: list, depth: int, at: int, expression) {
+  iter var i = depth; i < at; i++ {
+    var node = path[i]
+    var fields = node.fields
+
+    using node.kind {
+      when 'While', 'DoWhile' return false
+      when 'Iter' {
+        if fields.condition != nil and _holds(fields.condition, expression) {
+          return false
+        }
+
+        for step in fields.steps {
+          if _holds(step, expression) {
+            return false
+          }
+        }
+      }
+      when 'If' {
+        if !_holds(fields.condition, expression) {
+          return false
+        }
+      }
+      when 'Circuit' {
+        if _holds(fields.right, expression) {
+          return false
+        }
+      }
+      when 'Condition' {
+        if !_holds(fields.condition, expression) {
+          return false
+        }
+      }
+      when 'Using' {
+        if !_holds(fields.subject, expression) {
+          return false
+        }
+      }
+      when 'Anonymous', 'Function', 'Decl', 'Catch' return false
+      default {
+        # Anything else evaluates the expression wherever it sits.
+      }
+    }
+  }
+
+  return true
+}
+
+# Every copy of `expression` in the statements of its block from its
+# own on, when all of them can share one variable: `expression` has no
+# side effect, nothing it reads is written from the first copy to the
+# last, and each copy reads the same declarations.
+def _copies(subject, location: dict, expression) {
+  if _has_effect(expression) {
+    return []
+  }
+
+  var text = subject.source(expression)
+  var reads = subject.refs_in(expression.start, expression.end)
+  var found = []
+
+  iter var i = location.index; i < location.list.length(); i++ {
+    for node in _all(location.list[i]) {
+      var same = node.kind == expression.kind and node.end - node.start == text.length()
+
+      if same and subject.source(node) == text and !_in_function(location.list[i], node) {
+        found.append(node)
+      }
+    }
+  }
+
+  if found.length() < 2 {
+    return found
+  }
+
+  var first = found[0].start
+  var last = found[found.length() - 1].end
+  var targets = reads.map(@(ref) => ref.target)
+
+  # Each copy must read the very declarations the first does.
+  for copy in found {
+    var copy_reads = subject.refs_in(copy.start, copy.end).map(@(ref) => ref.target)
+
+    if copy_reads != targets {
+      return []
+    }
+  }
+
+  for ref in subject.refs_in(first, last) {
+    if ref.flags & WRITE != 0 and targets.contains(ref.target) {
+      return []
+    }
+  }
+
+  # A member read through a field written in between could differ.
+  var gets = _all(expression).filter(@(node) => node.kind == 'Get')
+  var read_members = gets.map(@(node) => node.fields.name)
+
+  for access in subject.summary.members {
+    var between = access.start >= first and access.end <= last
+
+    if access.write and between and read_members.contains(access.name) {
+      return []
+    }
+  }
+
+  return found
+}
+
+# Whether `node` sits inside a function declared within `statement`,
+# whose body runs at some other time.
+def _in_function(statement, node) {
+  for inner in _all(statement) {
+    if _FUNCTIONS.contains(inner.kind) and inner != node and _holds(inner, node) {
+      return true
+    }
+  }
+
+  return false
+}
+
+# --------------------------------------------------------------
+# Extract function
+# --------------------------------------------------------------
+
+/**
+ * The extract-function refactoring for a selection of whole
+ * statements, when it applies.
+ *
+ * @param Subject subject
+ * @returns list[dict]
+ */
+def extract_function(subject) {
+  var selection = _selected_statements(subject)
+
+  if selection == nil {
+    return []
+  }
+
+  var statements = selection.statements
+
+  for statement in statements {
+    for node in _all_outside_functions(statement) {
+      if node.kind == 'Return' or node.kind == 'Import' {
+        return []
+      }
+    }
+
+    if ['Function', 'Class', 'Import'].contains(statement.kind) {
+      return []
+    }
+
+    if statement.kind == 'Stmt' and common.is_node(statement.fields.statement) {
+      if statement.fields.statement.kind == 'Import' {
+        return []
+      }
+    }
+
+    if _leaves_loop(statement, 0) {
+      return []
+    }
+  }
+
+  var start = statements[0].start
+  var end = statements[statements.length() - 1].end
+  var summary = subject.summary
+  var uses_self = false
+
+  for statement in statements {
+    if _all(statement).some(@(node) => node.kind == 'Self' or node.kind == 'Parent') {
+      uses_self = true
+    }
+  }
+
+  var method = uses_self ? _enclosing_method(subject, start) : nil
+
+  if uses_self and method == nil {
+    return []
+  }
+
+  var flow = _data_flow(subject, start, end)
+
+  if flow == nil {
+    return []
+  }
+
+  var name = nil
+  var inner = '  '
+
+  if method == nil {
+    name = _fresh_global(subject, 'extracted')
+  } else {
+    name = _fresh_member(subject, summary.symbols[method].owner, '_extracted')
+    inner = _member_indent(subject, method) + '  '
+  }
+
+  var first_line = subject.lines.line_of(start)
+  var indent = subject.indent_of(first_line)
+  var body = _reindent(subject, start, end, inner)
+  var params = ', '.join(flow.params)
+  var returning = ''
+
+  if flow.returns.length() == 1 {
+    returning = '\n${inner}return ${flow.returns[0].name}\n'
+  } else if flow.returns.length() > 1 {
+    var names = ', '.join(flow.returns.map(@(item) => item.name))
+
+    returning = '\n${inner}return { ${names} }\n'
+  }
+
+  var callee = method == nil ? name : 'self.${name}'
+  var call = '${callee}(${params})'
+  var call_lines = []
+
+  if flow.returns.is_empty() {
+    call_lines.append('${indent}${call}')
+  } else if flow.returns.length() == 1 {
+    var only = flow.returns[0]
+
+    var keyword = only.declared ? 'var ' : ''
+
+    call_lines.append('${indent}${keyword}${only.name} = ${call}')
+  } else {
+    var holder = subject.fresh_name('${name.ltrim("_")}_result', start)
+
+    call_lines.append('${indent}var ${holder} = ${call}')
+
+    for item in flow.returns {
+      var keyword = item.declared ? 'var ' : ''
+
+      call_lines.append('${indent}${keyword}${item.name} = ${holder}.${item.name}')
+    }
+  }
+
+  var replace_start = subject.lines.line_start(first_line)
+  var replace_end = subject.lines.line_end(subject.lines.line_of(end))
+  var replacement = '\n'.join(call_lines)
+  var edits = []
+
+  if method != nil {
+    var method_symbol = summary.symbols[method]
+    var member_indent = _member_indent(subject, method)
+    var after = subject.lines.line_end(subject.lines.line_of(method_symbol.end))
+    var text = '\n\n${member_indent}${name}(${params}) {\n${body}${returning}${member_indent}}'
+
+    edits.append(subject.edit(replace_start, replace_end, replacement))
+    edits.append(subject.edit(after, after, text))
+  } else {
+    var top = _top_level_node(subject, start)
+    var function_text = 'def ${name}(${params}) {\n${body}${returning}}'
+
+    if top == nil or (top.start == start and top.end >= end) or selection.top_level {
+      # Statements at the top of the file: the new function goes just
+      # above them; a module function is visible from anywhere in it.
+      edits.append(subject.edit(replace_start, replace_end, '${function_text}\n\n${replacement}'))
+    } else {
+      var after = subject.lines.line_end(subject.lines.line_of(top.end))
+
+      edits.append(subject.edit(replace_start, replace_end, replacement))
+      edits.append(subject.edit(after, after, '\n\n${function_text}'))
+    }
+  }
+
+  var title = method == nil ? "Extract into function '${name}'" : "Extract into method '${name}'"
+
+  return [{ title, edits: _by_key(subject, edits) }]
+}
+
+# The whole statements of one block the selection covers, or `nil`.
+def _selected_statements(subject) {
+  var start = subject.start
+  var end = subject.end
+
+  if start >= end {
+    return nil
+  }
+
+  var lists = [{ list: subject.nodes, top_level: true }]
+
+  for node in common.path_to(subject.nodes, start) {
+    if node.kind == 'Block' {
+      lists.append({ list: node.fields.statements, top_level: false })
+    }
+  }
+
+  # The innermost block whose statements begin and end the selection.
+  var i = lists.length() - 1
+
+  while i >= 0 {
+    var list = lists[i].list
+    var chosen = []
+    var opened = false
+    var closed = false
+
+    for node in list {
+      if !common.is_node(node) {
+        continue
+      }
+
+      if node.start == start {
+        opened = true
+      }
+
+      if opened and !closed {
+        if !node.is_trivia() {
+          chosen.append(node)
+        }
+
+        if node.end == end {
+          closed = true
+        }
+      }
+    }
+
+    if opened and closed and !chosen.is_empty() {
+      return { statements: chosen, top_level: lists[i].top_level }
+    }
+
+    i--
+  }
+
+  return nil
+}
+
+# Every node under `node` that runs as part of it, leaving out the
+# bodies of functions declared there.
+def _all_outside_functions(node) {
+  var found = []
+
+  def visit(current) {
+    found.append(current)
+
+    if _FUNCTIONS.contains(current.kind) and current != node {
+      return
+    }
+
+    for child in common.children(current) {
+      visit(child)
+    }
+  }
+
+  visit(node)
+
+  return found
+}
+
+# Whether a `break` or `continue` under `node` leaves a loop that
+# `node` itself is not inside: `loops` counts the loops entered.
+def _leaves_loop(node, loops: int) {
+  if node.kind == 'Break' or node.kind == 'Continue' {
+    return loops == 0
+  }
+
+  if _FUNCTIONS.contains(node.kind) {
+    return false
+  }
+
+  var inside = _LOOPS.contains(node.kind) ? loops + 1 : loops
+
+  for child in common.children(node) {
+    if _leaves_loop(child, inside) {
+      return true
+    }
+  }
+
+  return false
+}
+
+# The non-static method holding `offset`, as a symbol index.
+def _enclosing_method(subject, offset: int) {
+  var summary = subject.summary
+  var scope = common.scope_at(summary, offset)
+
+  while scope > 0 {
+    var found = summary.scopes[scope]
+
+    if found.kind == 'function' {
+      var symbol = summary.symbols[found.owner]
+
+      if symbol.kind == 'method' {
+        return symbol.get('is_static', false) ? nil : found.owner
+      }
+    }
+
+    scope = found.outer
+  }
+
+  return nil
+}
+
+# What statements between two offsets take in and give back: the
+# outer locals they use become parameters, and what they set that is
+# read after them is returned. `nil` when they cannot be moved.
+def _data_flow(subject, start: int, end: int) {
+  var summary = subject.summary
+  var params = []
+  var returns = []
+  var seen = {}
+  var loops = _enclosing_loops(subject, start)
+
+  for ref in subject.refs_in(start, end) {
+    if ref.target < 0 or seen.contains('${ref.target}') {
+      continue
+    }
+
+    seen['${ref.target}'] = true
+
+    var symbol = summary.symbols[ref.target]
+    var inside = symbol.name_start >= start and symbol.name_end <= end
+
+    if inside or symbol.scope == 0 {
+      continue
+    }
+
+    params.append(symbol.name)
+
+    if ref.flags & WRITE != 0 or _written_in(subject, ref.target, start, end) {
+      if _read_after(subject, ref.target, start, end, loops) {
+        returns.append({ name: symbol.name, declared: false })
+      }
+    }
+  }
+
+  # What the statements declare and later code reads.
+  var index = 0
+
+  for symbol in summary.symbols {
+    var inside = symbol.name_start >= start and symbol.name_end <= end
+
+    if inside and symbol.get('owner', nil) == nil and symbol.kind != 'parameter' {
+      var declared_here = !_inside_nested_function(subject, symbol, start, end)
+
+      if declared_here and _read_after(subject, index, start, end, loops) {
+        returns.append({ name: symbol.name, declared: true })
+      }
+    }
+
+    index++
+  }
+
+  return { params, returns }
+}
+
+# Whether the declaration `index` is written between two offsets.
+def _written_in(subject, index: int, start: int, end: int) {
+  return subject.refs_in(start, end).some(@(ref) => ref.target == index and ref.flags & WRITE != 0)
+}
+
+# Whether `symbol` is declared in a function nested within the
+# selection, where the code after it cannot see it anyway.
+def _inside_nested_function(subject, symbol: dict, start: int, end: int) {
+  var container = symbol.get('container', -1)
+
+  if container < 0 {
+    return false
+  }
+
+  var owner = subject.summary.symbols[container]
+
+  return owner.start >= start and owner.end <= end
+}
+
+# The spans of the loops around `offset` within its function.
+def _enclosing_loops(subject, offset: int) {
+  var found = []
+
+  for node in common.path_to(subject.nodes, offset) {
+    if _FUNCTIONS.contains(node.kind) {
+      found = []
+    } else if _LOOPS.contains(node.kind) {
+      found.append([node.start, node.end])
+    }
+  }
+
+  return found
+}
+
+# Whether the declaration `index` is read outside the selection by
+# code that can run after it: later in the file, or anywhere in a loop
+# around it, or anywhere at all for a module global.
+def _read_after(subject, index: int, start: int, end: int, loops: list) {
+  var symbol = subject.summary.symbols[index]
+
+  for ref in subject.uses_of(index) {
+    if ref.start >= start and ref.end <= end {
+      continue
+    }
+
+    if ref.flags & READ == 0 {
+      continue
+    }
+
+    if ref.start > end or symbol.scope == 0 {
+      return true
+    }
+
+    for loop in loops {
+      if ref.start >= loop[0] and ref.end <= loop[1] {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
+# The statements between two offsets, from the start of their first
+# line, moved to the indentation `indent`.
+def _reindent(subject, start: int, end: int, indent: string) {
+  var first = subject.lines.line_of(start)
+  var last = subject.lines.line_of(end)
+  var base = subject.indent_of(first)
+  var out = ''
+
+  iter var line = first; line <= last; line++ {
+    var text = subject.lines.line_text(line)
+
+    if text.trim().is_empty() {
+      out += '\n'
+    } else if text.starts_with(base) {
+      out += indent + text[base.length(), text.length()] + '\n'
+    } else {
+      out += indent + text.ltrim() + '\n'
+    }
+  }
+
+  return out
+}
+
+# The indentation of a class's members, from the method `index`.
+def _member_indent(subject, index: int) {
+  var symbol = subject.summary.symbols[index]
+
+  return subject.indent_of(subject.lines.line_of(symbol.start))
+}
+
+# The top-level node holding `offset`.
+def _top_level_node(subject, offset: int) {
+  for node in subject.nodes {
+    if common.is_node(node) and node.start <= offset and offset <= node.end {
+      return node
+    }
+  }
+
+  return nil
+}
+
+# A module global name based on `wanted` that the file does not use.
+def _fresh_global(subject, wanted: string) {
+  var globals = subject.summary.get('globals', {})
+  var name = wanted
+  var count = 1
+
+  while globals.contains(name) or subject.server.builtins.global(name) != nil {
+    count++
+    name = '${wanted}${count}'
+  }
+
+  return name
+}
+
+# A member name based on `wanted` that the class `owner` does not
+# have.
+def _fresh_member(subject, owner: int, wanted: string) {
+  var linker = subject.server.linker
+  var type = { t: 'instance', path: subject.key, index: owner }
+  var name = wanted
+  var count = 1
+
+  while linker.member(type, name) != nil {
+    count++
+    name = '${wanted}${count}'
+  }
+
+  return name
+}
+
+# --------------------------------------------------------------
+# Inline variable
+# --------------------------------------------------------------
+
+/**
+ * The inline-variable refactoring for the variable named at the
+ * cursor, when it applies.
+ *
+ * @param Subject subject
+ * @returns list[dict]
+ */
+def inline_variable(subject) {
+  var index = _named_declaration(subject, ['variable', 'constant'])
+
+  if index == nil {
+    return []
+  }
+
+  var summary = subject.summary
+  var symbol = summary.symbols[index]
+
+  if symbol.writes > 0 or symbol.get('loop', false) or symbol.get('caught', false) {
+    return []
+  }
+
+  var declaration = _var_node(subject, symbol)
+
+  if declaration == nil or declaration.statement == nil {
+    return []
+  }
+
+  var value = declaration.node.fields.value
+
+  if value == nil or value.start == value.end {
+    return []
+  }
+
+  # A module global may be used from other files, which inlining here
+  # cannot reach.
+  if symbol.scope == 0 and !_used_only_here(subject, index) {
+    return []
+  }
+
+  var uses = subject.uses_of(index)
+
+  if uses.is_empty() or uses.some(@(ref) => ref.flags & WRITE != 0) {
+    return []
+  }
+
+  if !_value_holds(subject, value, declaration.statement, uses) {
+    return []
+  }
+
+  var text = subject.source(value)
+  var edits = []
+
+  for use in uses {
+    if use.flags & SHORTHAND != 0 {
+      edits.append(subject.edit(use.start, use.end, '${symbol.name}: ${text}'))
+    } else {
+      edits.append(subject.edit(use.start, use.end, _wrapped(value, text)))
+    }
+  }
+
+  edits.append(delete_statement(subject, declaration.statement))
+
+  return [{ title: "Inline variable '${symbol.name}'", edits: _by_key(subject, edits) }]
+}
+
+# The declaration of one of `kinds` that a name within the selection
+# declares or uses, as a symbol index.
+def _named_declaration(subject, kinds: list) {
+  for occurrence in _occurrences_in(subject, subject.start, subject.end.max(subject.start)) {
+    var index = nil
+
+    if occurrence.kind == 'decl' {
+      index = occurrence.index
+    } else if occurrence.kind == 'ref' and occurrence.target >= 0 {
+      index = occurrence.target
+    }
+
+    if index != nil and kinds.contains(subject.summary.symbols[index].kind) {
+      return index
+    }
+  }
+
+  return nil
+}
+
+# The names that meet the span from `start` to `end`: the
+# declarations first, then the references.
+def _occurrences_in(subject, start: int, end: int) {
+  var found = []
+  var index = 0
+
+  for symbol in subject.summary.symbols {
+    var named = symbol.name_end > symbol.name_start
+
+    if named and symbol.name_start <= end and start <= symbol.name_end {
+      found.append({ kind: 'decl', index })
+    }
+
+    index++
+  }
+
+  var refs = subject.summary.refs
+  var i = 0
+
+  while i < refs.length() {
+    if refs[i] <= end and start <= refs[i + 1] {
+      found.append({ kind: 'ref', start: refs[i], end: refs[i + 1], target: refs[i + 2] })
+    }
+
+    i += REF_STRIDE
+  }
+
+  return found
+}
+
+# The `Var` node declaring `symbol` and the statement it is, when it
+# is a whole statement of its own.
+def _var_node(subject, symbol: dict) {
+  var path = common.path_to(subject.nodes, symbol.name_start)
+  var depth = path.length() - 1
+
+  while depth >= 0 {
+    var node = path[depth]
+
+    if node.kind == 'Var' and node.start == symbol.start {
+      var location = _statement_of(subject.nodes, path[0, depth + 1])
+      var statement = nil
+
+      if location != nil {
+        var held = location.statement
+        var inner = held.kind == 'Stmt' ? held.fields.statement : held
+
+        if inner == node {
+          statement = held
+        }
+      }
+
+      return { node, statement }
+    }
+
+    depth--
+  }
+
+  return nil
+}
+
+# Whether nothing outside this file names the declaration `index`.
+def _used_only_here(subject, index: int) {
+  var linker = subject.server.linker
+  var target = { path: subject.key, index }
+
+  for path in subject.server.paths() {
+    if path == subject.key {
+      continue
+    }
+
+    var summary = linker.summary(path)
+
+    if summary == nil {
+      continue
+    }
+
+    for import_index in summary.imports {
+      var followed = linker.follow({ path, index: import_index })
+
+      if followed == nil or followed.contains('module') {
+        continue
+      }
+
+      if followed.path == target.path and followed.index == index {
+        return false
+      }
+    }
+
+    var name = subject.summary.symbols[index].name
+
+    if !summary.stars.is_empty() and linker.starred(path).contains(name) {
+      return false
+    }
+  }
+
+  return true
+}
+
+# Whether `value`, evaluated where each of `uses` is instead of where
+# `statement` is, gives the same result and runs as often: names it
+# reads mean the same there and are not written in between, and one
+# with a side effect is used exactly once, by the next statement, run
+# unconditionally and first.
+def _value_holds(subject, value, statement, uses: list) {
+  var reads = subject.refs_in(value.start, value.end)
+  var summary = subject.summary
+  var declared_scope = summary.scopes[common.scope_at(summary, statement.start)]
+
+  for read in reads {
+    if read.target < 0 {
+      continue
+    }
+
+    # Written anywhere it could be between the declaration and a use.
+    for ref in subject.uses_of(read.target) {
+      var after = ref.start >= statement.end and ref.start <= declared_scope.end
+
+      if after and ref.flags & WRITE != 0 {
+        return false
+      }
+    }
+
+    for use in uses {
+      if common.visible_names(summary, use.start).get(read.name, nil) != read.target {
+        return false
+      }
+    }
+  }
+
+  if !_has_effect(value) {
+    return true
+  }
+
+  if uses.length() != 1 {
+    return false
+  }
+
+  return _used_next_and_first(subject, statement, uses[0])
+}
+
+# Whether `use` is in the statement right after `statement`, in the
+# same block, reached on every run of it before anything with a side
+# effect.
+def _used_next_and_first(subject, statement, use: dict) {
+  var path = common.path_to(subject.nodes, statement.start)
+  var location = _statement_of(subject.nodes, path[0, path.length()])
+
+  if location == nil or location.statement != statement {
+    location = _statement_of(subject.nodes, path)
+  }
+
+  if location == nil {
+    return false
+  }
+
+  var next = nil
+
+  iter var i = location.index + 1; i < location.list.length(); i++ {
+    if common.is_node(location.list[i]) and !location.list[i].is_trivia() {
+      next = location.list[i]
+      break
+    }
+  }
+
+  if next == nil or use.start < next.start or use.end > next.end {
+    return false
+  }
+
+  var use_path = common.path_to([next], use.start)
+  var target = use_path[use_path.length() - 1]
+
+  if !_moves_before(use_path, 0, use_path.length() - 1, target) {
+    return false
+  }
+
+  for inner in _all(next) {
+    if inner.end <= use.start and _EFFECTS.contains(inner.kind) {
+      return false
+    }
+  }
+
+  return true
+}
+
+/**
+ * The edit deleting a statement, and the line it is on when nothing
+ * else is.
+ *
+ * @param Subject subject
+ * @param any statement: Its node.
+ * @returns dict: A `TextEdit`.
+ */
+def delete_statement(subject, statement) {
+  var first = subject.lines.line_of(statement.start)
+  var last = subject.lines.line_of(statement.end)
+  var line_start = subject.lines.line_start(first)
+  var line_end = subject.lines.line_end(last)
+  var before = subject.text[line_start, statement.start]
+  var after = subject.text[statement.end, line_end]
+
+  if before.trim().is_empty() and after.trim().is_empty() {
+    var next = last + 1 < subject.lines.line_count() ? subject.lines.line_start(last + 1) : line_end
+
+    return subject.edit(line_start, next, '')
+  }
+
+  return subject.edit(statement.start, statement.end, '')
+}
+
+# --------------------------------------------------------------
+# Inline function
+# --------------------------------------------------------------
+
+/**
+ * The inline-function refactorings for the function named at the
+ * cursor: inlining the call under it, and inlining every call and
+ * removing the function when every one can be.
+ *
+ * @param Subject subject
+ * @returns list[dict]
+ */
+def inline_function(subject) {
+  var index = _named_declaration(subject, ['function', 'method'])
+
+  if index == nil {
+    index = _called_method(subject)
+  }
+
+  if index == nil {
+    return []
+  }
+
+  var summary = subject.summary
+  var symbol = summary.symbols[index]
+
+  if symbol.get('variadic', false) or symbol.name.starts_with('@') {
+    return []
+  }
+
+  var body = _single_return(subject, symbol)
+
+  if body == nil {
+    return []
+  }
+
+  var calls = _calls_of(subject, index, symbol)
+  var found = []
+  var at_cursor = nil
+  var all = []
+
+  for call in calls {
+    var replacement = _inlined(subject, index, symbol, body, call)
+
+    if replacement != nil {
+      all.append({ call, replacement })
+
+      if call.start <= subject.start and subject.start <= call.end {
+        at_cursor = { call, replacement }
+      }
+    }
+  }
+
+  if at_cursor != nil {
+    var call = at_cursor.call
+
+    found.append({
+      title: "Inline this call of '${symbol.name}'",
+      edits: _by_key(subject, [subject.edit(call.start, call.end, at_cursor.replacement)]),
+    })
+  }
+
+  var whole = !calls.is_empty() and all.length() == calls.length()
+  var every = whole and _only_called(subject, index, symbol)
+
+  if every {
+    var edits = all.map(@(item) => subject.edit(item.call.start, item.call.end, item.replacement))
+    var declaration = _declaration_node(subject, symbol)
+
+    if declaration != nil {
+      edits.append(delete_statement(subject, declaration))
+
+      found.append({
+        title: "Inline every call of '${symbol.name}' and remove it",
+        edits: _by_key(subject, edits),
+      })
+    }
+  }
+
+  return found
+}
+
+# The method a call at the cursor calls, as a symbol index of this
+# file, for a call written `self.name(...)`.
+def _called_method(subject) {
+  var offset = subject.start
+  var linker = subject.server.linker
+
+  for access in subject.summary.members {
+    if access.call and access.start <= offset and offset <= access.end {
+      var owner = linker.resolve(access.receiver)
+      var ref = linker.member(owner, access.name)
+
+      if ref != nil and ref.path == subject.key {
+        return ref.index
+      }
+    }
+  }
+
+  return nil
+}
+
+# The expression of a function whose whole body is one `return`.
+def _single_return(subject, symbol: dict) {
+  var path = common.path_to(subject.nodes, symbol.name_start)
+  var depth = path.length() - 1
+
+  while depth >= 0 {
+    var node = path[depth]
+
+    if (node.kind == 'Function' or node.kind == 'Method') and node.start == symbol.start {
+      var body = node.fields.body
+
+      if body == nil or body.kind != 'Block' {
+        return nil
+      }
+
+      var statements = body.fields.statements.filter(@(item) {
+        return common.is_node(item) and !item.is_trivia()
+      })
+
+      if statements.length() != 1 or statements[0].kind != 'Return' {
+        return nil
+      }
+
+      var value = statements[0].fields.value
+
+      return value == nil or value.start == value.end ? nil : value
+    }
+
+    depth--
+  }
+
+  return nil
+}
+
+# The declaration node of a function, as the statement deleted.
+def _declaration_node(subject, symbol: dict) {
+  var path = common.path_to(subject.nodes, symbol.name_start)
+
+  for node in path {
+    if node.start == symbol.start and ['Function', 'Method', 'Decl'].contains(node.kind) {
+      return node
+    }
+  }
+
+  return nil
+}
+
+# Every call of the function `index` in this file, as `{ start, end,
+# arguments, receiver }`, `receiver` the text before the `.` of a
+# method call.
+def _calls_of(subject, index: int, symbol: dict) {
+  var linker = subject.server.linker
+  var found = []
+
+  for call in subject.summary.calls {
+    var direct = call.target != nil and call.target == index
+
+    if !direct {
+      var callee = linker.resolve(call.callee)
+
+      direct = callee != nil and callee.t == 'function' and callee.path == subject.key and (
+        callee.index == index
+      )
+    }
+
+    if !direct {
+      continue
+    }
+
+    var receiver = nil
+    var callee_text = subject.text[call.callee_start, call.callee_end]
+    var dot = callee_text.last_index_of('.')
+
+    if symbol.kind == 'method' {
+      receiver = dot < 0 ? nil : callee_text[0, dot].trim()
+    }
+
+    found.append({ start: call.start, end: call.end, arguments: call.arguments, receiver })
+  }
+
+  return found
+}
+
+# Whether the function `index` is only ever called, here: not passed as
+# a value or named from another file, so removing it changes nothing
+# once its calls are inlined.
+def _only_called(subject, index: int, symbol: dict) {
+  if symbol.scope == 0 and !_used_only_here(subject, index) {
+    return false
+  }
+
+  for ref in subject.uses_of(index) {
+    if ref.flags & CALL == 0 {
+      return false
+    }
+  }
+
+  if symbol.kind == 'method' {
+    var linker = subject.server.linker
+
+    for access in subject.summary.members {
+      if access.name == symbol.name and !access.call {
+        return false
+      }
+    }
+
+    # A method may also be called from other files.
+    for path in subject.server.paths() {
+      if path == subject.key {
+        continue
+      }
+
+      var other = linker.summary(path)
+
+      if other != nil and other.members.some(@(access) => access.name == symbol.name) {
+        return false
+      }
+    }
+  }
+
+  return true
+}
+
+# The text replacing `call` with the body of the function, or `nil`
+# when the substitution would not keep behaviour.
+def _inlined(subject, index: int, symbol: dict, body, call: dict) {
+  var summary = subject.summary
+  var params = symbol.get('params', [])
+  var uses_self = _all(body).some(@(node) => node.kind == 'Self' or node.kind == 'Parent')
+
+  if symbol.kind == 'method' {
+    if uses_self and call.receiver != 'self' {
+      return nil
+    }
+
+    if _all(body).some(@(node) => node.kind == 'Parent') and call.receiver != 'self' {
+      return nil
+    }
+  }
+
+  # Arguments past the parameters still run, so they must not matter.
+  iter var i = params.length(); i < call.arguments.length(); i++ {
+    var extra = _node_at(subject, call.arguments[i])
+
+    if extra == nil or _has_effect(extra) {
+      return nil
+    }
+  }
+
+  var body_refs = subject.refs_in(body.start, body.end)
+  var param_indexes = {}
+  var position = 0
+
+  for ref in body_refs {
+    var target_symbol = ref.target >= 0 ? summary.symbols[ref.target] : nil
+    var is_param = target_symbol != nil and target_symbol.kind == 'parameter'
+
+    if is_param and target_symbol.get('container', -1) == index {
+      param_indexes[ref.name] = true
+      continue
+    }
+
+    # Any other name must mean the same thing where the call is.
+    if ref.target >= 0 {
+      if common.visible_names(summary, call.start).get(ref.name, nil) != ref.target {
+        return nil
+      }
+    } else if common.visible_names(summary, call.start).contains(ref.name) {
+      return nil
+    }
+  }
+
+  # Each argument goes where its parameter is used; one with a side
+  # effect must be used exactly once, and run there unconditionally.
+  var substitutions = {}
+
+  for param in params {
+    var argument = nil
+
+    if position < call.arguments.length() {
+      argument = _node_at(subject, call.arguments[position])
+    }
+
+    var uses = body_refs.filter(@(ref) {
+      return ref.name == param.name and param_indexes.contains(ref.name)
+    })
+
+    position++
+
+    if argument == nil {
+      if position <= call.arguments.length() {
+        return nil
+      }
+
+      substitutions[param.name] = 'nil'
+      continue
+    }
+
+    if _has_effect(argument) {
+      if uses.length() != 1 {
+        return nil
+      }
+
+      var use_path = common.path_to([body], uses[0].start)
+
+      if !_moves_before(use_path, 0, use_path.length() - 1, use_path[use_path.length() - 1]) {
+        return nil
+      }
+    }
+
+    substitutions[param.name] = _wrapped(argument, subject.source(argument))
+  }
+
+  # Writes to parameters would become writes to the arguments.
+  if body_refs.some(@(ref) => param_indexes.contains(ref.name) and ref.flags & WRITE != 0) {
+    return nil
+  }
+
+  var text = ''
+  var at = body.start
+
+  for ref in body_refs {
+    if !param_indexes.contains(ref.name) {
+      continue
+    }
+
+    text += subject.text[at, ref.start]
+
+    var replacement = substitutions.get(ref.name, 'nil')
+
+    text += ref.flags & SHORTHAND != 0 ? '${ref.name}: ${replacement}' : replacement
+    at = ref.end
+  }
+
+  text += subject.text[at, body.end]
+
+  return _wrapped(body, text)
+}
+
+# The node an argument record of a call names.
+def _node_at(subject, argument: dict) {
+  var path = common.path_to(subject.nodes, argument.start)
+
+  for node in path {
+    if node.start == argument.start and node.end == argument.end {
+      return node
+    }
+  }
+
+  return nil
+}

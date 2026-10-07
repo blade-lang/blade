@@ -1,0 +1,286 @@
+/**
+ * Types, as far as reading the source can tell them.
+ *
+ * A type here is a small dictionary, so it can travel in a summary:
+ *
+ * | `t` | Meaning |
+ * | --- | --- |
+ * | `'builtin'` | a value of a built-in type, named by `name`: `'string'`, `'list'` and the rest |
+ * | `'instance'` | an instance of the class the type `of` refers to |
+ * | `'super'` | `parent` inside a method of the class the type `of` refers to |
+ * | `'symbol'` | whatever declaration `index` of the file at `module` holds |
+ * | `'global'` | the built-in global `name` |
+ * | `'star'` | the name `name`, from a wildcard import of the file at `module` |
+ * | `'import'` | the module an import of `path` from `importer` binds |
+ * | `'member'` | member `name` of the type `of` |
+ * | `'call'` | what calling the type `of` returns |
+ *
+ * The last six are deferred: they name where a type comes from, and
+ * the linker works out what it is when something asks, following
+ * other files' summaries as it goes. Anything that cannot be told is
+ * `nil`, and nothing is ever concluded from `nil`.
+ *
+ * An instance is `loose` when it may be of a subclass: `self`, a
+ * caught error, a parameter whose hint names a class, and what a
+ * documented `@returns` names. Only an instance made by calling its
+ * class is exact, and only an exact instance is ever said to lack a
+ * member.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+# The built-in type each type hint names.
+const _HINT_TYPES = {
+  String: 'string',
+  Number: 'number',
+  Int: 'number',
+  Bool: 'bool',
+  BigInt: 'bigint',
+  Bytes: 'bytes',
+  List: 'list',
+  Dict: 'dict',
+  Range: 'range',
+  File: 'file',
+  Function: 'function',
+  Callable: 'function',
+}
+
+# The arithmetic operators, whose result is a number when an operand is.
+const _ARITHMETIC = [
+  'Minus', 'Multiply', 'Divide', 'Floor', 'Percent', 'Pow',
+  'Amp', 'Bar', 'Xor', 'Tilde', 'Lshift', 'Rshift', 'Urshift',
+]
+
+/**
+ * A value of the built-in type `name`.
+ *
+ * @param string name
+ * @returns dict
+ */
+def builtin(name: string) {
+  return { t: 'builtin', name }
+}
+
+/**
+ * The type of a caught error: an instance of `Error`.
+ *
+ * @returns dict
+ */
+def error_type() {
+  return { t: 'instance', of: { t: 'global', name: 'Error' }, loose: true }
+}
+
+# Whether `type` is the built-in `name`.
+def _is(type, name: string) {
+  return type != nil and type.t == 'builtin' and type.name == name
+}
+
+# What the name `name` refers to where `walker` is, as a type.
+def _named(walker, name: string) {
+  var target = walker.lookup(name)
+
+  if target >= 0 {
+    return { t: 'symbol', module: walker.path, index: target }
+  }
+
+  if target == -2 {
+    return { t: 'global', name }
+  }
+
+  if target == -3 {
+    return { t: 'star', module: walker.path, name }
+  }
+
+  return nil
+}
+
+/**
+ * The type of the expression `node`, read where `walker` is.
+ *
+ * @param Walker walker
+ * @param any node: An expression node, or `nil`.
+ * @returns ?dict
+ */
+def of(walker, node) {
+  if node == nil or !is_instance(node) {
+    return nil
+  }
+
+  using node.kind {
+    when 'Nil' return builtin('nil')
+    when 'Literal', 'Interpolation' return builtin('string')
+    when 'Integer', 'Float' return builtin('number')
+    when 'BigNumber' return builtin('bigint')
+    when 'Bool' return builtin('bool')
+    when 'List' return builtin('list')
+    when 'Dict' return builtin('dict')
+    when 'Range' return builtin('range')
+    when 'Anonymous' return builtin('function')
+    when 'Logical' return builtin('bool')
+    when 'Identifier' return _named(walker, node.fields.name)
+    when 'Shorthand' return _named(walker, node.fields.name)
+    when 'Grouping' return of(walker, node.fields.inner)
+    when 'Assign' return of(walker, node.fields.value)
+    when 'Call' return _call(walker, node)
+    when 'Get' return _member(walker, node)
+    when 'Self' return _self(walker, 'instance')
+    when 'Parent' return _self(walker, 'super')
+    when 'Unary' return _unary(walker, node)
+    when 'Binary' return _binary(walker, node)
+    when 'Condition' return agree(of(walker, node.fields.then), of(walker, node.fields.otherwise))
+    when 'Circuit' return agree(of(walker, node.fields.left), of(walker, node.fields.right))
+    when 'Index' {
+      var object = of(walker, node.fields.object)
+
+      return _is(object, 'string') ? builtin('string') : nil
+    }
+    when 'Slice' {
+      var object = of(walker, node.fields.object)
+
+      if _is(object, 'string') or _is(object, 'list') or _is(object, 'bytes') {
+        return object
+      }
+
+      return nil
+    }
+    default {
+      return nil
+    }
+  }
+}
+
+def _call(walker, node) {
+  var callee = of(walker, node.fields.callee)
+
+  return callee == nil ? nil : { t: 'call', of: callee }
+}
+
+def _member(walker, node) {
+  var object = of(walker, node.fields.object)
+
+  return object == nil ? nil : { t: 'member', of: object, name: node.fields.name }
+}
+
+def _self(walker, kind: string) {
+  var owner = walker.enclosing_class()
+
+  if owner == nil {
+    return nil
+  }
+
+  return { t: kind, of: { t: 'symbol', module: walker.path, index: owner }, loose: true }
+}
+
+def _unary(walker, node) {
+  if node.fields.op == 'Bang' {
+    return builtin('bool')
+  }
+
+  return of(walker, node.fields.operand)
+}
+
+# `+` on a string makes a string whatever is added to it; every other
+# operator is only known when both operands are the same known type.
+def _binary(walker, node) {
+  var left = of(walker, node.fields.left)
+  var op = node.fields.op
+
+  if op == 'Plus' and _is(left, 'string') {
+    return left
+  }
+
+  if op != 'Plus' and !_ARITHMETIC.contains(op) {
+    return nil
+  }
+
+  var right = of(walker, node.fields.right)
+
+  if left == nil or right == nil or left.t != 'builtin' or left != right {
+    return nil
+  }
+
+  return ['number', 'bigint', 'string', 'list', 'bytes'].contains(left.name) ? left : nil
+}
+
+/**
+ * One type for two that must agree: either when they are the same,
+ * the other when one is `nil` the value, and unknown otherwise.
+ *
+ * @param ?dict a
+ * @param ?dict b
+ * @returns ?dict
+ */
+def agree(a, b) {
+  if _is(a, 'nil') {
+    return b
+  }
+
+  if _is(b, 'nil') {
+    return a
+  }
+
+  if a == nil or b == nil or a != b {
+    return nil
+  }
+
+  return a
+}
+
+/**
+ * The type a type hint names: a built-in type, or an instance of the
+ * class it names. A hint naming more than one type tells nothing.
+ *
+ * @param Walker walker
+ * @param any hint: A `TypeHint` node.
+ * @returns ?dict
+ */
+def of_hint(walker, hint) {
+  if hint == nil or hint.fields.types.length() != 1 {
+    return nil
+  }
+
+  var type = hint.fields.types[0]
+  var name = _HINT_TYPES.get(type.kind, nil)
+
+  if name != nil {
+    return builtin(name)
+  }
+
+  if type.kind == 'Instance' and type.fields.class_name != nil {
+    var class_type = _named(walker, type.fields.class_name)
+
+    return class_type == nil ? nil : { t: 'instance', of: class_type, loose: true }
+  }
+
+  return nil
+}
+
+/**
+ * The types of the key and value a `for` loop over `iterable` binds.
+ *
+ * @param Walker walker
+ * @param any iterable: The loop's iterable expression.
+ * @returns dict: `{ key, value }`, either `nil` when it cannot be
+ *    told.
+ */
+def element_of(walker, iterable) {
+  var type = of(walker, iterable)
+
+  if _is(type, 'list') {
+    return { key: builtin('number'), value: nil }
+  }
+
+  if _is(type, 'string') {
+    return { key: builtin('number'), value: builtin('string') }
+  }
+
+  if _is(type, 'bytes') {
+    return { key: builtin('number'), value: builtin('number') }
+  }
+
+  if _is(type, 'range') {
+    return { key: builtin('number'), value: builtin('number') }
+  }
+
+  return { key: nil, value: nil }
+}

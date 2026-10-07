@@ -1,0 +1,119 @@
+/**
+ * The Zuri files of a workspace folder.
+ *
+ * Inside a git work tree they are what git tracks and what it would,
+ * so `.gitignore` is honoured; elsewhere they are every `.zu` file
+ * under the folder. Either way, anything under a `.git`, `.zuri` or
+ * `node_modules` directory is left out, and so is what the
+ * `zuri.exclude` globs name.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import os
+import os.process { spawn }
+import .._shared.files
+
+# Directories never indexed, wherever they are.
+const _SKIPPED = ['.git', '.zuri', 'node_modules']
+
+/**
+ * Whether the file at `relative`, relative to its workspace folder and
+ * with `/` between its parts, is one the server leaves alone.
+ *
+ * @param string relative
+ * @param list excludes: Globs, as `zuri.exclude` gives them.
+ * @returns bool
+ */
+def is_excluded(relative: string, excludes: list) {
+  for part in relative.split('/') {
+    if _SKIPPED.contains(part) {
+      return true
+    }
+  }
+
+  for pattern in excludes {
+    if is_string(pattern) and files.matches(relative, pattern) {
+      return true
+    }
+  }
+
+  return false
+}
+
+# What git lists under `folder`, relative to it, or `nil` when git
+# cannot list it.
+def _listed_by_git(folder: string) {
+  catch {
+    var child = spawn('git', [
+      '-C', folder, 'ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', '*.zu',
+    ], { stdout: 'pipe', stderr: 'pipe', stdin: 'null' })
+
+    if child.wait() != 0 {
+      return nil
+    }
+
+    return child.read_stdout().to_string().split('\0').filter(@(path) => !path.is_empty())
+  } as error {
+    return nil
+  }
+}
+
+/**
+ * Every `.zu` file of the workspace folder `folder`, as absolute paths,
+ * sorted.
+ *
+ * @param string folder: The folder's absolute path.
+ * @param list excludes: Globs, relative to the folder, to leave out.
+ * @returns list[string]
+ */
+def zu_files(folder: string, excludes: list) {
+  var relative = nil
+
+  if files.in_git_tree(folder) {
+    relative = _listed_by_git(folder)
+  }
+
+  if relative == nil {
+    relative = os.read_dir(folder, true).filter(@(path) => path.ends_with('.zu'))
+  }
+
+  var found = []
+
+  for path in relative {
+    var normal = path.replace('\\', '/', false)
+
+    if !normal.ends_with('.zu') or is_excluded(normal, excludes) {
+      continue
+    }
+
+    var full = os.join_paths(folder, path)
+
+    if file(full).exists() {
+      found.append(full)
+    }
+  }
+
+  return found.sort()
+}
+
+/**
+ * The path of `path` relative to the workspace folder holding it, with
+ * `/` between its parts, or `nil` when no folder of `folders` holds
+ * it.
+ *
+ * @param string path
+ * @param list folders: Absolute paths.
+ * @returns ?string
+ */
+def relative_to(path: string, folders: list) {
+  for folder in folders {
+    var prefix = folder.ends_with(os.path_separator) ? folder : folder + os.path_separator
+
+    if path.starts_with(prefix) {
+      return path[prefix.length(), path.length()].replace('\\', '/', false)
+    }
+  }
+
+  return nil
+}

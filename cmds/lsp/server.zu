@@ -1,0 +1,2292 @@
+/**
+ * The language server: the loop that reads the client's messages,
+ * the lifecycle the protocol lays down, and everything the features
+ * share, from the open documents to the workspace's index.
+ *
+ * One isolate owns all of the server's state and answers every
+ * message. Others read standard input, index the files nobody has
+ * open, and lay out files for formatting; each reports back over a
+ * channel, and the owning isolate waits on all of them at once, along
+ * with its own timers.
+ *
+ * Before it handles anything, the server takes every message that has
+ * arrived. A request cancelled while it waited is answered as
+ * cancelled without being handled, and work that runs across the
+ * workspace looks again between files, so a cancelled request or one
+ * whose document changed underneath it stops early.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import os
+import isolate
+import rpc
+import log
+import .text
+import .state { Settings, Document }
+import .workspace
+import .resolve { Resolver }
+import .indexer { IndexPool }
+import .formatter
+import .analysis.builtins { Builtins }
+import .analysis.linker { Linker }
+import .analysis.summary as summaries
+import .features.common
+import .features.diagnostics
+import .features.completion
+import .features.hover
+import .features.signature
+import .features.navigation
+import .features.references
+import .features.rename
+import .features.symbols
+import .features.tokens
+import .features.hints
+import .features.actions
+import .features.lens
+import .features.hierarchy
+import .features.structure
+import .features.links
+import .features.formatting
+import .features.testing
+
+/** A request that arrived before `initialize`. */
+const SERVER_NOT_INITIALIZED = -32002
+
+/** A request the client cancelled. */
+const REQUEST_CANCELLED = -32800
+
+/** A request whose document changed before it was answered. */
+const CONTENT_MODIFIED = -32801
+
+/** A well-formed request the server cannot carry out, with why. */
+const REQUEST_FAILED = -32803
+
+# Seconds between checks that the editor that started the server is
+# still running.
+const _PARENT_CHECK = 3
+
+# The fewest seconds between two reports of indexing progress.
+const _PROGRESS_EVERY = 0.25
+
+# The isolate threads the server may use at most: the reader, every
+# indexer the setting allows, and formatting. A thread only starts
+# when work needs it, so the ceiling costs nothing while idle.
+const _THREADS = 32
+
+# The most indexers `index.workers` can ask for.
+const _MOST_WORKERS = 16
+
+# How an error that ends a process is described by the system: the
+# process is gone, as against merely not ours to signal.
+const _GONE = ['No such process', 'has exited', 'parameter is incorrect']
+
+# The requests the features answer, each by a function called with the
+# server, the request's params and its context.
+const _FEATURES = {
+  'textDocument/completion': completion.complete,
+  'completionItem/resolve': completion.resolve,
+  'textDocument/hover': hover.hover,
+  'textDocument/signatureHelp': signature.help,
+  'textDocument/definition': navigation.definition,
+  'textDocument/declaration': navigation.declaration,
+  'textDocument/typeDefinition': navigation.type_definition,
+  'textDocument/implementation': navigation.implementation,
+  'textDocument/references': references.references,
+  'textDocument/documentHighlight': references.highlight,
+  'textDocument/prepareRename': rename.prepare,
+  'textDocument/rename': rename.rename,
+  'workspace/willRenameFiles': rename.will_rename_files,
+  'textDocument/documentSymbol': symbols.document,
+  'workspace/symbol': symbols.workspace,
+  'textDocument/semanticTokens/full': tokens.full,
+  'textDocument/semanticTokens/full/delta': tokens.delta,
+  'textDocument/semanticTokens/range': tokens.range,
+  'textDocument/inlayHint': hints.inlay,
+  'inlayHint/resolve': hints.resolve,
+  'textDocument/codeAction': actions.actions,
+  'codeAction/resolve': actions.resolve,
+  'textDocument/codeLens': lens.lenses,
+  'codeLens/resolve': lens.resolve,
+  'textDocument/prepareCallHierarchy': hierarchy.prepare_calls,
+  'callHierarchy/incomingCalls': hierarchy.incoming,
+  'callHierarchy/outgoingCalls': hierarchy.outgoing,
+  'textDocument/prepareTypeHierarchy': hierarchy.prepare_types,
+  'typeHierarchy/supertypes': hierarchy.supertypes,
+  'typeHierarchy/subtypes': hierarchy.subtypes,
+  'textDocument/foldingRange': structure.folding,
+  'textDocument/selectionRange': structure.selection,
+  'textDocument/documentLink': links.links,
+  'textDocument/diagnostic': diagnostics.document_report,
+  'workspace/diagnostic': diagnostics.workspace_report,
+  'zuri/tests': testing.document_tests,
+  'zuri/workspaceTests': testing.workspace_tests,
+}
+
+# The URI of the document a request is about, or `nil`.
+def _document_of(params: dict) {
+  var document = params.get('textDocument', nil)
+
+  if is_dict(document) and is_string(document.get('uri', nil)) {
+    return document.uri
+  }
+
+  return nil
+}
+
+/**
+ * The server, from the first message to the last.
+ */
+class Server {
+
+  /**
+   * Returns a new {Server} talking over standard input and output.
+   *
+   * @param logging.ClientTransport client_log: Where the server's log
+   *    reaches the client.
+   */
+  @new(client_log) {
+    self.client_log = client_log
+    self.endpoint = rpc.endpoint(rpc.stdio())
+    self.client_log.connect(self.endpoint)
+    self.settings = Settings()
+    self.documents = {}
+    self.folders = []
+    self.files = {}
+    self.capabilities = {}
+    self.encoding = text.UTF16
+    self.resolver = nil
+    self.builtins = nil
+    self.linker = nil
+    self.pool = nil
+    self.exit_code = nil
+    self.tokens = {}
+    self.workspace_generation = -1
+
+    self._phase = 'new'
+    self._inbox = nil
+    self._queue = []
+    self._cancelled = {}
+    self._due = {}
+    self._refresh_due = nil
+    self._published = {}
+    self._parent = nil
+    self._parent_due = nil
+    self._progress = nil
+    self._requested = {}
+    self._indexed = 0
+    self._index_started = nil
+    self._formats = {}
+    self._format_results = isolate.channel()
+    self._next_format = 1
+    self._background = []
+    self._text_cache = {}
+    self._held = nil
+    self._test_runs = {}
+    self._test_results = isolate.channel()
+    self._next_test_run = 1
+    self._test_failures = {}
+  }
+
+  /**
+   * Answers the client until it says to exit or its connection ends,
+   * and returns the process's exit code: `0` after an orderly
+   * `shutdown` and `exit`, `1` otherwise.
+   *
+   * @returns int
+   */
+  run() {
+    isolate.configure(_THREADS)
+    self._register()
+    self._inbox = self.endpoint.listen()
+
+    while self.exit_code == nil {
+      self._wait()
+      self._handle()
+
+      if self.exit_code == nil {
+        self._run_timers()
+        self._run_background()
+      }
+    }
+
+    if self.pool != nil {
+      self.pool.stop()
+    }
+
+    return self.exit_code
+  }
+
+  # --------------------------------------------------------------
+  # The loop
+  # --------------------------------------------------------------
+
+  # Waits for the next thing to do: a message, a result from another
+  # isolate, or the nearest timer. Anything already waiting is taken
+  # without blocking.
+  _wait() {
+    if self._queue.is_empty() and self._background.is_empty() {
+      var timeout = self._timeout()
+      var channels = [self._inbox, self._format_results, self._test_results]
+
+      if self.pool != nil {
+        channels.append(self.pool.results)
+      }
+
+      catch {
+        var ready = isolate.select(channels, timeout)
+
+        self._take(ready[0], ready[1])
+      } as error {
+        if !instance_of(error, isolate.IsolateTimeoutError) {
+          raise error
+        }
+      }
+    }
+
+    self._drain()
+  }
+
+  # Seconds until the nearest timer, or `nil` for none.
+  _timeout() {
+    var nearest = nil
+
+    for uri, due in self._due {
+      nearest = nearest == nil ? due : nearest.min(due)
+    }
+
+    for due in [self._refresh_due, self._parent_due] {
+      if due != nil {
+        nearest = nearest == nil ? due : nearest.min(due)
+      }
+    }
+
+    if self._progress != nil or !self._formats.is_empty() or self._held != nil {
+      var soon = time() + _PROGRESS_EVERY
+      nearest = nearest == nil ? soon : nearest.min(soon)
+    }
+
+    return nearest == nil ? nil : (nearest - time()).max(0)
+  }
+
+  # Routes one value taken from a channel.
+  _take(channel, value) {
+    if channel == self._inbox {
+      self._queue.append(value == nil ? { kind: 'closed' } : value)
+    } else if channel == self._format_results {
+      if value != nil {
+        self._formatted(value)
+      }
+    } else if channel == self._test_results {
+      if value != nil {
+        self._tested(value)
+      }
+    } else if self.pool != nil and channel == self.pool.results and value != nil {
+      self._indexed_batch(value)
+    }
+  }
+
+  # Takes everything already waiting on every channel.
+  _drain() {
+    var item = self._inbox.try_recv()
+
+    while item != nil {
+      self._queue.append(item)
+      item = self._inbox.try_recv()
+    }
+
+    var result = self._format_results.try_recv()
+
+    while result != nil {
+      self._formatted(result)
+      result = self._format_results.try_recv()
+    }
+
+    var tested = self._test_results.try_recv()
+
+    while tested != nil {
+      self._tested(tested)
+      tested = self._test_results.try_recv()
+    }
+
+    if self.pool != nil {
+      var batch = self.pool.results.try_recv()
+
+      while batch != nil {
+        self._indexed_batch(batch)
+        batch = self.pool.results.try_recv()
+      }
+    }
+  }
+
+  # Handles every message taken so far, in the order they came.
+  _handle() {
+    self._apply_cancellations()
+
+    while !self._queue.is_empty() and self.exit_code == nil {
+      var item = self._queue.shift()
+
+      self.endpoint.dispatch(item)
+
+      if self.endpoint.is_closed() and self.exit_code == nil {
+        log.info('the client closed the connection without asking the server to exit')
+        self.exit_code = 1
+      }
+    }
+  }
+
+  # The `id` a waiting message cancels, or `nil` for a message that
+  # is not `$/cancelRequest`.
+  _cancels(item) {
+    if item.kind != 'message' or !is_dict(item.value) {
+      return nil
+    }
+
+    if item.value.get('method', nil) != '$/cancelRequest' {
+      return nil
+    }
+
+    var params = item.value.get('params', nil)
+
+    return is_dict(params) ? params.get('id', nil) : nil
+  }
+
+  # Answers every waiting request that a waiting `$/cancelRequest`
+  # names, without handling it, and remembers the rest for the request
+  # being handled now and any deferred one.
+  _apply_cancellations() {
+    var ids = []
+
+    for item in self._queue {
+      var id = self._cancels(item)
+
+      if id != nil {
+        ids.append(id)
+      }
+    }
+
+    if ids.is_empty() {
+      return
+    }
+
+    var kept = []
+
+    for item in self._queue {
+      var value = item.get('value', nil)
+      var is_request = item.kind == 'message' and is_dict(value) and value.contains('method')
+
+      if is_request and value.contains('id') and ids.contains(value.id) {
+        self._answer_cancelled(value.id)
+      } else if self._cancels(item) == nil {
+        kept.append(item)
+      }
+    }
+
+    self._queue = kept
+
+    for id in ids {
+      self._cancelled[id] = true
+    }
+
+    for job_id in self._formats.keys() {
+      var job = self._formats[job_id]
+
+      if ids.contains(job.context.id) {
+        self._formats.remove(job_id)
+        self._cancelled.remove(job.context.id)
+        job.context.fail(rpc.RpcError(REQUEST_CANCELLED, 'the request was cancelled'))
+      }
+    }
+
+    for run_id in self._test_runs.keys() {
+      var run = self._test_runs[run_id]
+
+      if ids.contains(run.context.id) {
+        self._test_runs.remove(run_id)
+        self._cancelled.remove(run.context.id)
+        self._stop_test_run(run)
+        run.context.fail(rpc.RpcError(REQUEST_CANCELLED, 'the request was cancelled'))
+      }
+    }
+
+    if self._held != nil and ids.contains(self._held.context.id) {
+      var held = self._held
+
+      self._held = nil
+      self._cancelled.remove(held.context.id)
+      held.context.fail(rpc.RpcError(REQUEST_CANCELLED, 'the request was cancelled'))
+    }
+  }
+
+  _answer_cancelled(id) {
+    var cancelled = rpc.RpcError(REQUEST_CANCELLED, 'the request was cancelled')
+
+    self.endpoint.send(rpc.Response.failure(id, cancelled))
+  }
+
+  /**
+   * Stops the request being handled when it is no longer wanted: takes
+   * every message that has arrived, and raises when the client
+   * cancelled the request or changed `uri` since it was asked. Work
+   * that spans the workspace calls this between files.
+   *
+   * @param ?rpc.Context context: The request being handled.
+   * @param ?string uri: The document the answer is about.
+   * @throws rpc.RpcError with `REQUEST_CANCELLED` or `CONTENT_MODIFIED`.
+   */
+  interrupted(context, uri) {
+    self._drain()
+    self._apply_cancellations()
+
+    if context != nil and context.id != nil and self._cancelled.contains(context.id) {
+      self._cancelled.remove(context.id)
+      raise rpc.RpcError(REQUEST_CANCELLED, 'the request was cancelled')
+    }
+
+    if uri == nil {
+      return
+    }
+
+    for item in self._queue {
+      var value = item.get('value', nil)
+
+      if item.kind != 'message' or !is_dict(value) {
+        continue
+      }
+
+      if value.get('method', nil) != 'textDocument/didChange' {
+        continue
+      }
+
+      var params = value.get('params', {})
+      var document = is_dict(params) ? params.get('textDocument', {}) : {}
+
+      if is_dict(document) and document.get('uri', nil) == uri {
+        raise rpc.RpcError(CONTENT_MODIFIED, 'the document changed before the answer was ready')
+      }
+    }
+  }
+
+  # Runs the timers that are due: diagnostics, the editor check,
+  # progress and formatting jobs.
+  _run_timers() {
+    var now = time()
+
+    for uri in self._due.keys() {
+      if self._due[uri] <= now {
+        self._due.remove(uri)
+        self._publish(uri)
+      }
+    }
+
+    if self._refresh_due != nil and self._refresh_due <= now {
+      self._refresh_due = nil
+      self._request_refresh('workspace/diagnostic/refresh', 'workspace.diagnostics.refreshSupport')
+    }
+
+    if self._parent_due != nil and self._parent_due <= now {
+      self._parent_due = now + _PARENT_CHECK
+
+      if !self._parent_alive() {
+        log.info('the editor that started the server has exited, so the server does too')
+        self.exit_code = 1
+      }
+    }
+
+    self._report_progress(false)
+    self._check_formats()
+
+    if self._held != nil and diagnostics.answer_held(self, self._held) {
+      self._held = nil
+    }
+  }
+
+  /**
+   * Holds a workspace diagnostic pull, deferred by its handler, until
+   * there is something new to answer it with. A pull held already is
+   * answered as cancelled, since the client only waits on its latest.
+   *
+   * @param dict params
+   * @param rpc.Context context
+   */
+  hold_workspace_pull(params: dict, context) {
+    if self._held != nil {
+      self._held.context.fail(rpc.RpcError(REQUEST_CANCELLED, 'a newer pull replaced this one'))
+    }
+
+    self._held = { params, context, since: time() }
+  }
+
+  # Runs one piece of background work, such as checking one more file
+  # of the workspace, so messages are never kept waiting behind a
+  # long run of it.
+  _run_background() {
+    if self._background.is_empty() or self._inbox.length() > 0 {
+      return
+    }
+
+    var job = self._background.shift()
+
+    catch {
+      job()
+    } as error {
+      log.exception(error, 'background work failed')
+    }
+  }
+
+  # --------------------------------------------------------------
+  # Registration and the lifecycle
+  # --------------------------------------------------------------
+
+  # Answers requests for `method` with `handler`, enforcing the
+  # lifecycle and turning an unexpected error into `INTERNAL_ERROR`.
+  _request(method: string, handler) {
+    self.endpoint.on_request(method, @(params, context) {
+      return self._answer(method, handler, params, context)
+    })
+  }
+
+  _answer(method: string, handler, params, context) {
+    if self._phase == 'new' and method != 'initialize' {
+      raise rpc.RpcError(SERVER_NOT_INITIALIZED, 'the server has not been initialized')
+    }
+
+    if self._phase == 'shutdown' {
+      raise rpc.RpcError(rpc.INVALID_REQUEST, 'the server is shutting down')
+    }
+
+    var id = context.id
+
+    if self._cancelled.contains(id) {
+      self._cancelled.remove(id)
+      raise rpc.RpcError(REQUEST_CANCELLED, 'the request was cancelled')
+    }
+
+    var started = time()
+
+    catch {
+      var given = is_dict(params) ? params : {}
+      var result = handler(given, context)
+      var spent = ((time() - started) * 1000).round()
+
+      # An answer about a document that changed while it was worked out
+      # describes text the client no longer has.
+      if !context.is_deferred() {
+        self.interrupted(context, _document_of(given))
+      }
+
+      self._cancelled.remove(id)
+      log.debug('${method} #${id} answered in ${spent} ms')
+
+      return result
+    } as error {
+      self._cancelled.remove(id)
+
+      if instance_of(error, rpc.RpcError) {
+        raise error
+      }
+
+      log.exception(error, '${method} failed')
+      raise rpc.RpcError(rpc.INTERNAL_ERROR, error.message)
+    }
+  }
+
+  # Handles notifications for `method` with `handler`. Before
+  # `initialize` and after `shutdown` they are dropped, as the
+  # protocol asks.
+  _notification(method: string, handler) {
+    self.endpoint.on_notification(method, @(params, context) {
+      if self._phase != 'running' {
+        return
+      }
+
+      catch {
+        handler(is_dict(params) ? params : {})
+      } as error {
+        log.exception(error, '${method} failed')
+      }
+    })
+  }
+
+  _register() {
+    self.endpoint.on_error(@(error, value) {
+      log.error('protocol: ${error.message}')
+    })
+
+    self.endpoint.on_unhandled(@(params, context) {
+      if context.is_notification() {
+        return nil
+      }
+
+      if self._phase == 'new' {
+        raise rpc.RpcError(SERVER_NOT_INITIALIZED, 'the server has not been initialized')
+      }
+
+      if self._phase == 'shutdown' {
+        raise rpc.RpcError(rpc.INVALID_REQUEST, 'the server is shutting down')
+      }
+
+      raise rpc.RpcError(rpc.METHOD_NOT_FOUND, 'Method not found: ${context.method}')
+    })
+
+    self._request('initialize', @(params, context) => self._initialize(params))
+    self._request('shutdown', @(params, context) => self._shutdown())
+
+    self.endpoint.on_notification('exit', @(params, context) {
+      self.exit_code = self._phase == 'shutdown' ? 0 : 1
+    })
+
+    self.endpoint.on_notification('$/cancelRequest', @(params, context) {
+      # Handled when the message is taken, before anything else runs.
+    })
+
+    self.endpoint.on_notification('$/setTrace', @(params, context) {
+      if is_dict(params) and is_string(params.get('value', nil)) {
+        self.client_log.set_trace(params.value)
+      }
+    })
+
+    self._notification('initialized', @(params) => self._initialized())
+    self._notification('textDocument/didOpen', @(params) => self._did_open(params))
+    self._notification('textDocument/didChange', @(params) => self._did_change(params))
+    self._notification('textDocument/didSave', @(params) => self._did_save(params))
+    self._notification('textDocument/didClose', @(params) => self._did_close(params))
+
+    self._notification('workspace/didChangeConfiguration', @(params) {
+      self._did_change_settings(params)
+    })
+
+    self._notification('workspace/didChangeWatchedFiles', @(params) {
+      self._did_change_files(params)
+    })
+
+    self._notification('workspace/didChangeWorkspaceFolders', @(params) {
+      self._did_change_folders(params)
+    })
+
+    self._notification('workspace/didRenameFiles', @(params) => self._did_rename_files(params))
+
+    self._request('textDocument/formatting', @(params, context) {
+      return self._format(params, context, nil)
+    })
+
+    self._request('textDocument/rangeFormatting', @(params, context) {
+      return self._format(params, context, params.get('range', nil))
+    })
+
+    self._request('workspace/executeCommand', @(params, context) {
+      return self._execute(params, context)
+    })
+
+    for method, handler in _FEATURES {
+      self._feature(method, handler)
+    }
+  }
+
+  # Answers requests for `method` with a feature's `handler`, called
+  # with the server, the request's params and its context.
+  _feature(method: string, handler) {
+    self._request(method, @(params, context) => handler(self, params, context))
+  }
+
+  _initialize(params: dict) {
+    if self._phase != 'new' {
+      raise rpc.RpcError(rpc.INVALID_REQUEST, 'the server has already been initialized')
+    }
+
+    var capabilities = params.get('capabilities', nil)
+
+    self.capabilities = is_dict(capabilities) ? capabilities : {}
+    self.encoding = self._negotiate_encoding()
+    self.folders = self._read_folders(params)
+
+    var options = params.get('initializationOptions', nil)
+
+    if is_dict(options) {
+      self.settings.update(options.get('zuri', options))
+    }
+
+    var trace = params.get('trace', nil)
+
+    if is_string(trace) {
+      self.client_log.set_trace(trace)
+    }
+
+    var process_id = params.get('processId', nil)
+
+    if is_number(process_id) {
+      self._parent = process_id
+      self._parent_due = time() + _PARENT_CHECK
+    }
+
+    self._load_installation()
+    self._phase = 'running'
+
+    var client = params.get('clientInfo', nil)
+    var name = is_dict(client) ? client.get('name', 'an editor') : 'an editor'
+
+    var stdlib = self.resolver.stdlib
+
+    log.info('started for ${name}, positions in ${self.encoding}, standard library at ${stdlib}')
+
+    return {
+      capabilities: self._server_capabilities(),
+      serverInfo: { name: 'zuri lsp', version: os.version },
+    }
+  }
+
+  _shutdown() {
+    self._phase = 'shutdown'
+
+    if self.pool != nil {
+      self.pool.stop()
+      self.pool = nil
+    }
+
+    return nil
+  }
+
+  _initialized() {
+    if self.supports('workspace.didChangeWatchedFiles.dynamicRegistration') {
+      self.endpoint.send_request('client/registerCapability', {
+        registrations: [{
+          id: 'zuri-watched-files',
+          method: 'workspace/didChangeWatchedFiles',
+          registerOptions: {
+            watchers: [{ globPattern: '**/*.zu' }, { globPattern: '**/project.toml' }],
+          },
+        }],
+      }, @(result, error) {
+        if error != nil {
+          log.warn('the client would not watch files for the server: ${error.message}')
+        }
+      })
+    }
+
+    if self.supports('workspace.didChangeConfiguration.dynamicRegistration') {
+      self.endpoint.send_request('client/registerCapability', {
+        registrations: [{ id: 'zuri-configuration', method: 'workspace/didChangeConfiguration' }],
+      }, @(result, error) {
+        if error != nil {
+          log.warn('the client would not report setting changes: ${error.message}')
+        }
+      })
+    }
+
+    self._pull_settings(true)
+  }
+
+  # The position encoding the server and client agree on: UTF-32 when
+  # the client offers it, which is how Zuri counts characters, then
+  # UTF-8, and otherwise UTF-16, which every client supports.
+  _negotiate_encoding() {
+    var offered = self.supports('general.positionEncodings')
+
+    if !is_list(offered) {
+      return text.UTF16
+    }
+
+    for preferred in [text.UTF32, text.UTF8] {
+      if offered.contains(preferred) {
+        return preferred
+      }
+    }
+
+    return text.UTF16
+  }
+
+  _read_folders(params: dict) {
+    var found = []
+    var folders = params.get('workspaceFolders', nil)
+
+    if is_list(folders) {
+      for folder in folders {
+        var path = text.uri_to_path(folder.uri)
+
+        if path != nil and !found.contains(path) {
+          found.append(path)
+        }
+      }
+    }
+
+    if found.is_empty() {
+      var root = params.get('rootUri', nil)
+      var path = is_string(root) ? text.uri_to_path(root) : params.get('rootPath', nil)
+
+      if is_string(path) {
+        found.append(path)
+      }
+    }
+
+    return found
+  }
+
+  # Reads the installation the settings name: its import rules, its
+  # built-in globals and types, and a linker over them.
+  _load_installation() {
+    self.resolver = Resolver(self.settings.get('root'))
+    self.builtins = Builtins(self.resolver.stdlib)
+    self.linker = Linker(self.resolver, self.builtins)
+
+    if self.builtins.globals == nil {
+      var stdlib = self.resolver.stdlib
+
+      log.error('no standard library at ${stdlib}; set zuri.root to a Zuri installation')
+    }
+
+    for uri, document in self.documents {
+      document.linked = false
+      document.checked = nil
+    }
+  }
+
+  _server_capabilities() {
+    var capabilities = {
+      positionEncoding: self.encoding,
+      textDocumentSync: {
+        openClose: true,
+        change: 2,
+        save: { includeText: false },
+      },
+      completionProvider: {
+        triggerCharacters: ['.', '@', '{', ':'],
+        resolveProvider: true,
+        completionItem: { labelDetailsSupport: true },
+      },
+      hoverProvider: true,
+      signatureHelpProvider: {
+        triggerCharacters: ['(', ','],
+        retriggerCharacters: [','],
+      },
+      declarationProvider: true,
+      definitionProvider: true,
+      typeDefinitionProvider: true,
+      implementationProvider: true,
+      referencesProvider: true,
+      documentHighlightProvider: true,
+      documentSymbolProvider: { label: 'Zuri' },
+      workspaceSymbolProvider: true,
+      codeActionProvider: true,
+      codeLensProvider: { resolveProvider: true },
+      documentLinkProvider: { resolveProvider: false },
+      documentFormattingProvider: true,
+      documentRangeFormattingProvider: true,
+      renameProvider: true,
+      foldingRangeProvider: true,
+      selectionRangeProvider: true,
+      callHierarchyProvider: true,
+      typeHierarchyProvider: true,
+      semanticTokensProvider: {
+        legend: tokens.LEGEND,
+        range: true,
+        full: { delta: true },
+      },
+      inlayHintProvider: { resolveProvider: true },
+      executeCommandProvider: { commands: [testing.RUN_COMMAND] },
+      workspace: {
+        workspaceFolders: { supported: true, changeNotifications: true },
+        fileOperations: {
+          willRename: {
+            filters: [
+              { scheme: 'file', pattern: { glob: '**/*.zu', matches: 'file' } },
+              { scheme: 'file', pattern: { glob: '**', matches: 'folder' } },
+            ],
+          },
+          didRename: {
+            filters: [
+              { scheme: 'file', pattern: { glob: '**/*.zu', matches: 'file' } },
+              { scheme: 'file', pattern: { glob: '**', matches: 'folder' } },
+            ],
+          },
+        },
+      },
+    }
+
+    if self.supports('textDocument.codeAction.codeActionLiteralSupport') != nil {
+      capabilities.codeActionProvider = {
+        codeActionKinds: actions.KINDS,
+        resolveProvider: self.supports('textDocument.codeAction.resolveSupport') != nil,
+      }
+    }
+
+    if self.supports('textDocument.rename.prepareSupport') == true {
+      capabilities.renameProvider = { prepareProvider: true }
+    }
+
+    if self.pull_diagnostics() {
+      capabilities.diagnosticProvider = {
+        identifier: 'zuri',
+        interFileDependencies: true,
+        workspaceDiagnostics: true,
+      }
+    }
+
+    return capabilities
+  }
+
+  /**
+   * The client's capability at a dotted path, such as
+   * `'textDocument.completion.completionItem.snippetSupport'`, or `nil`
+   * when it does not say.
+   *
+   * @param string path
+   * @returns any
+   */
+  supports(path: string) {
+    var current = self.capabilities
+
+    for part in path.split('.') {
+      if !is_dict(current) {
+        return nil
+      }
+
+      current = current.get(part, nil)
+    }
+
+    return current
+  }
+
+  /**
+   * Whether the client pulls diagnostics rather than having them
+   * pushed.
+   *
+   * @returns bool
+   */
+  pull_diagnostics() {
+    return self.supports('textDocument.diagnostic') != nil
+  }
+
+  # --------------------------------------------------------------
+  # Settings
+  # --------------------------------------------------------------
+
+  # Asks the client for the `zuri` settings when it can be asked, and
+  # starts indexing once they are known when `start` is true.
+  _pull_settings(start: bool) {
+    if self.supports('workspace.configuration') != true {
+      if start {
+        self._start_indexing()
+      }
+
+      return
+    }
+
+    var wanted = { items: [{ section: 'zuri' }] }
+
+    self.endpoint.send_request('workspace/configuration', wanted, @(result, error) {
+      if error == nil and is_list(result) and !result.is_empty() and is_dict(result[0]) {
+        self._apply_settings(result[0], !start)
+      }
+
+      if start {
+        self._start_indexing()
+      }
+    })
+  }
+
+  _did_change_settings(params: dict) {
+    var given = params.get('settings', nil)
+
+    if is_dict(given) and is_dict(given.get('zuri', nil)) {
+      self._apply_settings(given.zuri, true)
+    } else {
+      self._pull_settings(false)
+    }
+  }
+
+  # Takes new settings, and redoes whatever depends on the ones that
+  # changed when `act` is true.
+  _apply_settings(given: dict, act: bool) {
+    var changed = self.settings.update(given)
+
+    if changed.is_empty() {
+      return
+    }
+
+    log.info('settings changed: ${", ".join(changed)}')
+
+    if !act {
+      return
+    }
+
+    if changed.contains('root') {
+      self._load_installation()
+      self._start_indexing()
+    } else if changed.contains('exclude') or changed.contains('index.workers') {
+      self._start_indexing()
+    }
+
+    if changed.some(@(name) => name.starts_with('diagnostics.')) {
+      self._diagnostics_changed()
+    }
+
+    if changed.some(@(name) => name.starts_with('inlayHints.')) {
+      self._request_refresh('workspace/inlayHint/refresh', 'workspace.inlayHint.refreshSupport')
+    }
+
+    if changed.some(@(name) => name.starts_with('codeLens.')) {
+      self._request_refresh('workspace/codeLens/refresh', 'workspace.codeLens.refreshSupport')
+    }
+  }
+
+  # Sends a refresh request the client said it supports.
+  _request_refresh(method: string, capability: string) {
+    if self.supports(capability) == true {
+      self.endpoint.send_request(method, nil, @(result, error) {
+        if error != nil {
+          log.debug('${method} was refused: ${error.message}')
+        }
+      })
+    }
+  }
+
+  # --------------------------------------------------------------
+  # Indexing
+  # --------------------------------------------------------------
+
+  # Lists the workspace's files and has the indexers summarize every
+  # one nobody has open.
+  _start_indexing() {
+    var workers = self.settings.get('index.workers')
+    var count = is_number(workers) ? workers.int().max(1).min(_MOST_WORKERS) : 2
+
+    if self.pool == nil {
+      self.pool = IndexPool(count, self.builtins.names)
+    } else {
+      self.pool.restart(count, self.builtins.names)
+    }
+
+    var excludes = self.settings.get('exclude')
+    var listed = {}
+
+    for folder in self.folders {
+      catch {
+        for path in workspace.zu_files(folder, is_list(excludes) ? excludes : []) {
+          listed[path] = true
+        }
+      } as error {
+        log.warn('could not list the files of ${folder}: ${error.message}')
+      }
+    }
+
+    for path in self.files.keys() {
+      if !listed.contains(path) and !self._is_open_path(path) {
+        self.linker.drop(path)
+      }
+    }
+
+    self.files = listed
+    self._requested = {}
+    self._indexed = 0
+    self._index_started = time()
+
+    var entries = []
+
+    for path in listed.keys().sort() {
+      if !self._is_open_path(path) {
+        entries.append(self._entry(path))
+        self._requested[path] = true
+      }
+    }
+
+    self._begin_progress(entries.length())
+    self.pool.submit(entries)
+
+    if entries.is_empty() {
+      self._finish_indexing()
+    }
+  }
+
+  # What an indexer is told about `path`: the hash of what is held.
+  _entry(path: string) {
+    var hash = nil
+
+    if self.linker.holds(path) {
+      hash = self.linker.summary(path).get('hash', nil)
+    }
+
+    return { path, hash }
+  }
+
+  # Takes a batch of results from an indexer.
+  _indexed_batch(batch: dict) {
+    if self.pool == nil {
+      return
+    }
+
+    var items = self.pool.receive(batch)
+    var follow = []
+
+    for item in items {
+      self._indexed++
+
+      if self._is_open_path(item.path) {
+        continue
+      }
+
+      if item.get('missing', false) {
+        self.linker.drop(item.path)
+        self.files.remove(item.path)
+        continue
+      }
+
+      if item.contains('failed') {
+        log.warn('could not index ${item.path}: ${item.failed}')
+        continue
+      }
+
+      if item.contains('summary') {
+        self.linker.put(item.path, item.summary)
+        follow.extend(self._imported_by(item.path, item.summary))
+      }
+    }
+
+    # What the workspace imports is indexed too, the first time it is
+    # seen, so its declarations are ready before they are asked for.
+    var more = []
+
+    for path in follow {
+      if !self._requested.contains(path) and !self.linker.holds(path) {
+        self._requested[path] = true
+        more.append({ path, hash: nil })
+      }
+    }
+
+    if !more.is_empty() {
+      self._progress_total(more.length())
+      self.pool.submit(more)
+    }
+
+    if !self.pool.is_busy() {
+      self._finish_indexing()
+    }
+  }
+
+  # The files of the modules a summary imports.
+  _imported_by(path: string, summary: dict) {
+    var found = []
+    var seen = {}
+
+    var paths = []
+
+    for index in summary.imports {
+      paths.append(summary.symbols[index].source.path)
+    }
+
+    for star in summary.stars {
+      paths.append(star.path)
+    }
+
+    for import_path in paths {
+      if seen.contains(import_path) {
+        continue
+      }
+
+      seen[import_path] = true
+
+      var target = self.linker.module_path(import_path, path)
+
+      if target != nil {
+        found.append(target)
+      }
+    }
+
+    return found
+  }
+
+  _finish_indexing() {
+    if self._index_started == nil {
+      return
+    }
+
+    var spent = time() - self._index_started
+
+    self._index_started = nil
+    self._end_progress()
+    log.info('indexed ${self._indexed} files in ${(spent * 10).round() / 10} s')
+
+    for uri in self.documents.keys() {
+      self._schedule(uri, 0)
+    }
+
+    if self.settings.get('diagnostics.scope') == 'workspace' {
+      self._check_workspace()
+    }
+
+    self._request_refresh(
+      'workspace/semanticTokens/refresh',
+      'workspace.semanticTokens.refreshSupport'
+    )
+    self._request_refresh('workspace/inlayHint/refresh', 'workspace.inlayHint.refreshSupport')
+    self._request_refresh('workspace/codeLens/refresh', 'workspace.codeLens.refreshSupport')
+  }
+
+  # --------------------------------------------------------------
+  # Progress
+  # --------------------------------------------------------------
+
+  _begin_progress(total: int) {
+    self._progress = nil
+
+    if self.supports('window.workDoneProgress') != true or total == 0 {
+      return
+    }
+
+    var token = 'zuri-index-${time()}'
+
+    self._progress = { token, total, done: 0, reported: 0, started: false }
+
+    self.endpoint.send_request('window/workDoneProgress/create', { token }, @(result, error) {
+      if error != nil or self._progress == nil or self._progress.token != token {
+        self._progress = nil
+        return
+      }
+
+      self._progress.started = true
+      self.endpoint.notify('$/progress', {
+        token,
+        value: { kind: 'begin', title: 'Indexing', percentage: 0, cancellable: false },
+      })
+    })
+  }
+
+  _progress_total(more: int) {
+    if self._progress != nil {
+      self._progress.total += more
+    }
+  }
+
+  _report_progress(force: bool) {
+    var progress = self._progress
+
+    if progress == nil or !progress.started {
+      return
+    }
+
+    var now = time()
+
+    if !force and now - progress.reported < _PROGRESS_EVERY {
+      return
+    }
+
+    progress.reported = now
+
+    var percentage = progress.total == 0 ? 100 : (self._indexed * 100 / progress.total).floor()
+
+    self.endpoint.notify('$/progress', {
+      token: progress.token,
+      value: {
+        kind: 'report',
+        message: '${self._indexed}/${progress.total} files',
+        percentage: percentage.min(100),
+      },
+    })
+  }
+
+  _end_progress() {
+    var progress = self._progress
+
+    self._progress = nil
+
+    if progress == nil or !progress.started {
+      return
+    }
+
+    self.endpoint.notify('$/progress', {
+      token: progress.token,
+      value: { kind: 'end', message: 'indexed ${self._indexed} files' },
+    })
+  }
+
+  # --------------------------------------------------------------
+  # Documents
+  # --------------------------------------------------------------
+
+  _did_open(params: dict) {
+    var item = params.textDocument
+    var path = text.uri_to_path(item.uri)
+    var document = Document(item.uri, path, item.version, item.text)
+
+    self.documents[item.uri] = document
+    self._schedule(item.uri, 0)
+    self._schedule_dependents(document)
+  }
+
+  _did_change(params: dict) {
+    var document = self.documents.get(params.textDocument.uri, nil)
+
+    if document == nil {
+      log.warn('a change arrived for ${params.textDocument.uri}, which is not open')
+      return
+    }
+
+    document.change(params.contentChanges, params.textDocument.version, self.encoding)
+    self._forget_test_failures(document.key)
+
+    var delay = self.settings.get('diagnostics.delay')
+
+    self._schedule(document.uri, is_number(delay) ? delay / 1000 : 0.3)
+    self._schedule_dependents(document)
+  }
+
+  _did_save(params: dict) {
+    var document = self.documents.get(params.textDocument.uri, nil)
+
+    if document != nil {
+      self._schedule_dependents(document)
+    }
+  }
+
+  _did_close(params: dict) {
+    var uri = params.textDocument.uri
+    var document = self.documents.get(uri, nil)
+
+    if document == nil {
+      return
+    }
+
+    self.documents.remove(uri)
+    self._due.remove(uri)
+    self.tokens.remove(uri)
+
+    if document.path == nil {
+      self.linker.drop(document.key)
+      self._clear_diagnostics(uri)
+      return
+    }
+
+    # The file on disk is what counts again.
+    self.linker.drop(document.path)
+
+    if self.files.contains(document.path) and self.pool != nil {
+      self.pool.submit([{ path: document.path, hash: nil }])
+    }
+
+    var scope = self.settings.get('diagnostics.scope')
+    var keep = scope == 'workspace' and self.files.contains(document.path)
+
+    if keep {
+      self._background.append(@() => self._publish_file(document.path))
+    } else {
+      self._clear_diagnostics(uri)
+    }
+
+    self._schedule_dependents(document)
+  }
+
+  _did_change_files(params: dict) {
+    var changes = params.get('changes', [])
+    var excludes = self.settings.get('exclude')
+    var touched = false
+
+    for change in is_list(changes) ? changes : [] {
+      var path = text.uri_to_path(change.uri)
+
+      if path == nil {
+        continue
+      }
+
+      if path.ends_with('project.toml') {
+        self.resolver.forget_projects()
+        self.linker.refresh()
+        touched = true
+        continue
+      }
+
+      if !path.ends_with('.zu') or self._is_open_path(path) {
+        continue
+      }
+
+      touched = true
+
+      if change.type == 3 {
+        self.files.remove(path)
+        self.linker.drop(path)
+        self._clear_diagnostics(text.path_to_uri(path))
+        continue
+      }
+
+      var relative = workspace.relative_to(path, self.folders)
+      var globs = is_list(excludes) ? excludes : []
+      var inside = relative != nil and !workspace.is_excluded(relative, globs)
+
+      if inside {
+        self.files[path] = true
+      }
+
+      if (inside or self.linker.holds(path)) and self.pool != nil {
+        self.pool.submit([self._entry(path)])
+      }
+    }
+
+    if touched {
+      for uri in self.documents.keys() {
+        self._schedule(uri, 0.1)
+      }
+    }
+  }
+
+  _did_change_folders(params: dict) {
+    var event = params.get('event', {})
+
+    for folder in event.get('removed', []) {
+      var path = text.uri_to_path(folder.uri)
+
+      if path != nil {
+        self.folders.remove(path)
+      }
+    }
+
+    for folder in event.get('added', []) {
+      var path = text.uri_to_path(folder.uri)
+
+      if path != nil and !self.folders.contains(path) {
+        self.folders.append(path)
+      }
+    }
+
+    self._start_indexing()
+  }
+
+  # After files are renamed, whatever was known under their old paths
+  # is gone, and the new paths are read afresh.
+  _did_rename_files(params: dict) {
+    var changes = []
+
+    for item in params.get('files', []) {
+      changes.append({ uri: item.oldUri, type: 3 })
+      changes.append({ uri: item.newUri, type: 1 })
+    }
+
+    self._did_change_files({ changes })
+  }
+
+  /**
+   * The open document at `uri`, or the file there read from disk as if
+   * it were open, for a request about a file the client has not
+   * opened.
+   *
+   * @param string uri
+   * @returns Document
+   * @throws rpc.RpcError when there is no such document.
+   */
+  document(uri: string) {
+    var open = self.documents.get(uri, nil)
+
+    if open != nil {
+      return open
+    }
+
+    var path = text.uri_to_path(uri)
+    var content = path == nil ? nil : self.text(path)
+
+    if content == nil {
+      raise rpc.RpcError(REQUEST_FAILED, 'there is no document at ${uri}')
+    }
+
+    return Document(uri, path, 0, content)
+  }
+
+  /**
+   * The analysis of a document, `{ summary, nodes }`, which the linker
+   * then holds as what the document's file declares.
+   *
+   * @param Document document
+   * @returns dict
+   */
+  analysis(document) {
+    var result = document.analysis(self.builtins.names)
+
+    if !document.linked {
+      document.linked = true
+      self.linker.put(document.key, result.summary)
+    }
+
+    return result
+  }
+
+  /**
+   * The summary of the file `key` names: its open document's, kept
+   * current, or the linker's.
+   *
+   * @param string key
+   * @returns ?dict
+   */
+  summary(key: string) {
+    var open = self._open_by_key(key)
+
+    if open != nil {
+      return self.analysis(open).summary
+    }
+
+    return self.linker.summary(key)
+  }
+
+  /**
+   * The syntax tree of the file `key` names, parsed afresh when no
+   * document of it is open.
+   *
+   * @param string key
+   * @returns ?list
+   */
+  tree(key: string) {
+    var open = self._open_by_key(key)
+
+    if open != nil {
+      return self.analysis(open).nodes
+    }
+
+    var content = self.text(key)
+
+    return content == nil ? nil : summaries.analyze(key, content, self.builtins.names).nodes
+  }
+
+  /**
+   * The text of the file `key` names: its open document's, or what is
+   * on disk.
+   *
+   * @param string key
+   * @returns ?string
+   */
+  text(key: string) {
+    var open = self._open_by_key(key)
+
+    if open != nil {
+      return open.text
+    }
+
+    var cached = self._text_cache.get(key, nil)
+    var summary = self.linker.holds(key) ? self.linker.summary(key) : nil
+
+    if cached != nil and summary != nil and cached.hash == summary.get('hash', nil) {
+      return cached.text
+    }
+
+    catch {
+      var content = file(key).read()
+
+      if summary != nil {
+        self._text_cache[key] = { hash: summaries.digest(content), text: content }
+      }
+
+      return content
+    } as error {
+      return nil
+    }
+  }
+
+  /**
+   * The line index of the file `key` names.
+   *
+   * @param string key
+   * @returns ?LineIndex
+   */
+  index(key: string) {
+    var open = self._open_by_key(key)
+
+    if open != nil {
+      return open.index()
+    }
+
+    var cached = self._text_cache.get(key, nil)
+    var content = self.text(key)
+
+    if content == nil {
+      return nil
+    }
+
+    cached = self._text_cache.get(key, nil)
+
+    if cached != nil and cached.text == content {
+      if !cached.contains('index') {
+        cached.index = text.LineIndex(content)
+      }
+
+      return cached.index
+    }
+
+    return text.LineIndex(content)
+  }
+
+  /**
+   * The offset a protocol position names in a document.
+   *
+   * @param Document document
+   * @param dict position
+   * @returns int
+   */
+  offset(document, position: dict) {
+    return document.index().offset(position, self.encoding)
+  }
+
+  /**
+   * A protocol range over the file `key` names.
+   *
+   * @param string key
+   * @param int start
+   * @param int end
+   * @returns dict
+   */
+  range(key: string, start: int, end: int) {
+    var lines = self.index(key)
+
+    if lines == nil {
+      return { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }
+    }
+
+    return lines.range(start, end, self.encoding)
+  }
+
+  /**
+   * A protocol location in the file `key` names.
+   *
+   * @param string key
+   * @param int start
+   * @param int end
+   * @returns dict
+   */
+  location(key: string, start: int, end: int) {
+    return { uri: self.uri(key), range: self.range(key, start, end) }
+  }
+
+  /**
+   * The URI of the file `key` names.
+   *
+   * @param string key
+   * @returns string
+   */
+  uri(key: string) {
+    var open = self._open_by_key(key)
+
+    if open != nil {
+      return open.uri
+    }
+
+    return key.contains(':') and !key.match('/^[A-Za-z]:[\\\\\/]/') ? key : text.path_to_uri(key)
+  }
+
+  /**
+   * The key the file at `uri` is known by: its path, or the URI itself
+   * for a document never saved.
+   *
+   * @param string uri
+   * @returns string
+   */
+  key(uri: string) {
+    var open = self.documents.get(uri, nil)
+
+    if open != nil {
+      return open.key
+    }
+
+    var path = text.uri_to_path(uri)
+
+    return path == nil ? uri : path
+  }
+
+  /**
+   * The open document whose key is `key`, or `nil`.
+   *
+   * @param string key
+   * @returns ?Document
+   */
+  open_document(key: string) {
+    return self._open_by_key(key)
+  }
+
+  _open_by_key(key: string) {
+    for uri, document in self.documents {
+      if document.key == key {
+        return document
+      }
+    }
+
+    return nil
+  }
+
+  _is_open_path(path: string) {
+    return self._open_by_key(path) != nil
+  }
+
+  /**
+   * Brings the linker up to date with every open document's text, for
+   * work that reads across files.
+   */
+  sync_open() {
+    for uri, document in self.documents {
+      self.analysis(document)
+    }
+  }
+
+  /**
+   * Every file of the workspace, open documents included, by key.
+   *
+   * @returns list[string]
+   */
+  paths() {
+    var found = self.files.keys()
+
+    for uri, document in self.documents {
+      if !found.contains(document.key) {
+        found.append(document.key)
+      }
+    }
+
+    return found
+  }
+
+  /**
+   * Whether the file `key` names belongs to the workspace: a file of
+   * one of its folders, or a document never saved. The standard
+   * library and installed packages do not.
+   *
+   * @param string key
+   * @returns bool
+   */
+  is_workspace(key: string) {
+    if self.files.contains(key) {
+      return true
+    }
+
+    var open = self._open_by_key(key)
+
+    if open != nil and open.path == nil {
+      return true
+    }
+
+    return workspace.relative_to(key, self.folders) != nil and !self._is_library(key)
+  }
+
+  # Whether `path` is part of the standard library or the installed
+  # packages.
+  _is_library(path: string) {
+    for base in [self.resolver.stdlib, self.resolver.home_libs] {
+      if base != nil and path.starts_with(base) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  # --------------------------------------------------------------
+  # Diagnostics
+  # --------------------------------------------------------------
+
+  # Checks the document at `uri` once `delay` seconds have passed with
+  # no further change.
+  _schedule(uri: string, delay) {
+    if self.pull_diagnostics() {
+      return
+    }
+
+    self._due[uri] = time() + delay
+  }
+
+  # Checks again every open document that imports the module
+  # `document` holds, directly or through a module that re-exports it.
+  _schedule_dependents(document) {
+    var delay = self.settings.get('diagnostics.delay')
+    var seconds = is_number(delay) ? delay / 1000 : 0.3
+
+    if self.pull_diagnostics() {
+      if self.supports('workspace.diagnostics.refreshSupport') == true {
+        self._refresh_due = time() + seconds
+      }
+
+      return
+    }
+
+    for uri, other in self.documents {
+      if other.uri != document.uri and self._depends_on(other.key, document.key, 0, {}) {
+        self._schedule(uri, seconds)
+      }
+    }
+  }
+
+  # Whether the file `key` imports `target`, directly or through
+  # re-exports.
+  _depends_on(key: string, target: string, depth: int, seen: dict) {
+    if depth > 8 or seen.contains(key) {
+      return false
+    }
+
+    seen[key] = true
+
+    var summary = self.linker.holds(key) ? self.linker.summary(key) : nil
+
+    if summary == nil {
+      return false
+    }
+
+    for path in self._imported_by(key, summary) {
+      if path == target {
+        return true
+      }
+
+      if self._reexports(path) and self._depends_on(path, target, depth + 1, seen) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  # Whether the module at `path` passes on anything it imports.
+  _reexports(path: string) {
+    var summary = self.linker.holds(path) ? self.linker.summary(path) : nil
+
+    if summary == nil {
+      return false
+    }
+
+    if summary.stars.some(@(star) => star.exported) {
+      return true
+    }
+
+    return summary.imports.some(@(index) => summary.symbols[index].exported)
+  }
+
+  # Pushes the diagnostics of the open document at `uri`.
+  _publish(uri: string) {
+    var document = self.documents.get(uri, nil)
+
+    if document == nil or self.pull_diagnostics() {
+      return
+    }
+
+    var items = []
+
+    if self.settings.get('diagnostics.enable') {
+      catch {
+        items = diagnostics.compute(self, document.key)
+      } as error {
+        log.exception(error, 'diagnostics for ${uri} failed')
+      }
+    }
+
+    self._published[uri] = true
+    self.endpoint.notify('textDocument/publishDiagnostics', {
+      uri,
+      version: document.version,
+      diagnostics: items,
+    })
+  }
+
+  # Pushes the diagnostics of a workspace file nobody has open.
+  _publish_file(path: string) {
+    if self.pull_diagnostics() or self._is_open_path(path) or !self.files.contains(path) {
+      return
+    }
+
+    var enabled = self.settings.get('diagnostics.enable')
+
+    if !enabled or self.settings.get('diagnostics.scope') != 'workspace' {
+      return
+    }
+
+    var uri = text.path_to_uri(path)
+    var items = []
+
+    catch {
+      items = diagnostics.compute(self, path)
+    } as error {
+      log.exception(error, 'diagnostics for ${path} failed')
+    }
+
+    self._published[uri] = true
+    self.endpoint.notify('textDocument/publishDiagnostics', { uri, diagnostics: items })
+  }
+
+  _clear_diagnostics(uri: string) {
+    if self._published.contains(uri) {
+      self._published.remove(uri)
+      self.endpoint.notify('textDocument/publishDiagnostics', { uri, diagnostics: [] })
+    }
+  }
+
+  # Checks every workspace file nobody has open, one at a time in the
+  # background.
+  _check_workspace() {
+    if self.pull_diagnostics() {
+      self._refresh_due = time()
+      return
+    }
+
+    for path in self.files.keys().sort() {
+      self._background.append(@() => self._publish_file(path))
+    }
+  }
+
+  # Redoes the diagnostics after their settings changed.
+  _diagnostics_changed() {
+    if self.pull_diagnostics() {
+      self._refresh_due = time()
+      return
+    }
+
+    if !self.settings.get('diagnostics.enable') {
+      for uri in self._published.keys() {
+        self._clear_diagnostics(uri)
+      }
+
+      return
+    }
+
+    for uri in self.documents.keys() {
+      self._schedule(uri, 0)
+    }
+
+    if self.settings.get('diagnostics.scope') == 'workspace' {
+      self._check_workspace()
+    } else {
+      for uri in self._published.keys() {
+        if !self.documents.contains(uri) {
+          self._clear_diagnostics(uri)
+        }
+      }
+    }
+  }
+
+  # --------------------------------------------------------------
+  # The editor's process
+  # --------------------------------------------------------------
+
+  _parent_alive() {
+    catch {
+      os.kill(self._parent, 0)
+      return true
+    } as error {
+      for sign in _GONE {
+        if error.message.contains(sign) {
+          return false
+        }
+      }
+
+      # A process this one may not signal is still running.
+      return true
+    }
+  }
+
+  # --------------------------------------------------------------
+  # Formatting
+  # --------------------------------------------------------------
+
+  # Lays the document out on an isolate of its own and answers once it
+  # is done, so the server keeps answering meanwhile.
+  _format(params: dict, context, range) {
+    var document = self.document(params.textDocument.uri)
+    var id = self._next_format
+
+    self._next_format++
+    context.defer()
+
+    self._formats[id] = {
+      context,
+      uri: document.uri,
+      version: document.version,
+      before: document.text,
+      range,
+      task: isolate.spawn(formatter.run, id, document.text, self._format_results),
+    }
+
+    return nil
+  }
+
+  _formatted(result: dict) {
+    var job = self._formats.get(result.id, nil)
+
+    if job == nil {
+      return
+    }
+
+    self._formats.remove(result.id)
+
+    var document = self.documents.get(job.uri, nil)
+
+    if document != nil and document.version != job.version {
+      var changed = 'the document changed while it was being formatted'
+
+      job.context.fail(rpc.RpcError(CONTENT_MODIFIED, changed))
+      return
+    }
+
+    if result.contains('error') {
+      log.info('${job.uri} was not formatted: ${result.error}')
+      job.context.reply([])
+      return
+    }
+
+    catch {
+      var key = document == nil ? self.key(job.uri) : document.key
+
+      job.context.reply(formatting.edits(self, key, job.before, result.text, job.range))
+    } as error {
+      log.exception(error, 'formatting ${job.uri} failed')
+      job.context.fail(rpc.RpcError(rpc.INTERNAL_ERROR, error.message))
+    }
+  }
+
+  # --------------------------------------------------------------
+  # Running tests
+  # --------------------------------------------------------------
+
+  # Runs the command a client asked for: `zuri.runTests`, with
+  # `{ uri, filter, name, notify }`.
+  _execute(params: dict, context) {
+    var command = params.get('command', nil)
+
+    if command != testing.RUN_COMMAND {
+      raise rpc.RpcError(rpc.INVALID_PARAMS, "there is no command '${command}'")
+    }
+
+    var arguments = params.get('arguments', [])
+    var target = is_list(arguments) and !arguments.is_empty() ? arguments[0] : nil
+
+    if !is_dict(target) or !is_string(target.get('uri', nil)) {
+      raise rpc.RpcError(rpc.INVALID_PARAMS, '${command} takes { uri, filter, name, notify }')
+    }
+
+    var path = text.uri_to_path(target.uri)
+
+    if path == nil or !file(path).exists() {
+      raise rpc.RpcError(REQUEST_FAILED, 'tests run from a saved file')
+    }
+
+    var open = self.documents.get(target.uri, nil)
+
+    if open != nil and self._disk_text(path) != open.text {
+      log.warn('${path} has unsaved changes; its tests run as they are saved')
+    }
+
+    var id = self._next_test_run
+    var filter = target.get('filter', nil)
+    var cwd = testing.working_directory(self, path)
+
+    if !is_string(filter) {
+      filter = nil
+    }
+
+    self._next_test_run++
+    context.defer()
+
+    self._test_runs[id] = {
+      id,
+      context,
+      path,
+      uri: target.uri,
+      cwd,
+      label: target.get('name', nil) == nil ? os.base_name(path) : target.name,
+      notify: target.get('notify', true) != false,
+      tests: [],
+      output: [],
+      pid: nil,
+      task: isolate.spawn(testing.run_file, id, path, cwd, filter, self._test_results),
+    }
+
+    log.info('running the tests of ${path}' + (filter == nil ? '' : ' matching ${filter}'))
+
+    return nil
+  }
+
+  # What the file at `path` holds on disk now.
+  _disk_text(path: string) {
+    catch {
+      return file(path).read()
+    } as error {
+      return nil
+    }
+  }
+
+  # Takes a message from a test run's isolate.
+  _tested(message: dict) {
+    var run = self._test_runs.get(message.id, nil)
+
+    if run == nil {
+      return
+    }
+
+    using message.kind {
+      when 'started' run.pid = message.pid
+      when 'output' run.output.append(message.text)
+      when 'event' {
+        var event = message.event
+
+        if is_dict(event) and event.get('event', nil) == 'test_finished' {
+          run.tests.append(event)
+          self.endpoint.notify('zuri/testEvent', { id: run.id, uri: run.uri, event })
+        }
+      }
+      when 'failed' {
+        self._test_runs.remove(run.id)
+        var why = 'the tests could not be run: ${message.message}'
+
+        run.context.fail(rpc.RpcError(REQUEST_FAILED, why))
+      }
+      when 'finished' {
+        self._test_runs.remove(run.id)
+        self._finish_test_run(run, message.code, message.stderr)
+      }
+    }
+  }
+
+  _finish_test_run(run: dict, code, stderr: string) {
+    var counts = { passed: 0, failed: 0, skipped: 0, todo: 0 }
+
+    for test in run.tests {
+      var status = test.get('status', '')
+
+      if counts.contains(status) {
+        counts[status]++
+      }
+    }
+
+    # A failure names its file relative to where the run was; the
+    # client is given where that is.
+    for test in run.tests {
+      for failure in test.get('failures', []) {
+        var name = failure.get('file', nil)
+
+        if is_string(name) {
+          failure.uri = text.path_to_uri(os.abs_path(os.join_paths(run.cwd, name)))
+        }
+      }
+    }
+
+    var touched = self._test_failures.get(run.path, {}).keys()
+    var failures = testing.failure_diagnostics(self, run.cwd, run.tests)
+
+    self._test_failures[run.path] = failures
+    touched.extend(failures.keys())
+    self._refresh_diagnostics(touched)
+
+    var summary = '${run.label}: ${counts.passed} passed, ${counts.failed} failed'
+
+    if counts.skipped > 0 {
+      summary += ', ${counts.skipped} skipped'
+    }
+
+    if counts.todo > 0 {
+      summary += ', ${counts.todo} to do'
+    }
+
+    var broke = code != 0 and counts.failed == 0
+
+    if broke {
+      var why = stderr.trim().split('\n')[0]
+
+      summary = '${run.label}: the test file exited with ${code}'
+
+      if !why.is_empty() {
+        summary += ': ${why}'
+      }
+    }
+
+    if counts.failed > 0 or broke {
+      log.warn(summary)
+    } else {
+      log.info(summary)
+    }
+
+    if run.notify {
+      var type = counts.failed > 0 or broke ? 1 : 3
+
+      self.endpoint.notify('window/showMessage', { type, message: summary })
+    }
+
+    run.context.reply({
+      id: run.id,
+      uri: run.uri,
+      exitCode: code,
+      passed: counts.passed,
+      failed: counts.failed,
+      skipped: counts.skipped,
+      todo: counts.todo,
+      tests: run.tests,
+      output: '\n'.join(run.output),
+      stderr,
+    })
+  }
+
+  # Ends a test run's process.
+  _stop_test_run(run: dict) {
+    if run.pid == nil {
+      return
+    }
+
+    catch {
+      os.kill(run.pid, 9)
+    } as error {
+      log.debug('the test process ${run.pid} had already ended')
+    }
+  }
+
+  /**
+   * The diagnostics of the tests that failed in the last runs, for the
+   * file `key`.
+   *
+   * @param string key
+   * @returns list[dict]
+   */
+  test_diagnostics(key: string) {
+    var found = []
+
+    for run_path, by_file in self._test_failures {
+      found.extend(by_file.get(key, []))
+    }
+
+    return found
+  }
+
+  # Drops the test failures shown in a file that has changed, whose
+  # lines they no longer match.
+  _forget_test_failures(key: string) {
+    for run_path, by_file in self._test_failures {
+      by_file.remove(key)
+    }
+  }
+
+  # Shows the diagnostics of these files again.
+  _refresh_diagnostics(keys: list) {
+    if self.pull_diagnostics() {
+      self._refresh_due = time()
+      return
+    }
+
+    for key in keys {
+      var open = self._open_by_key(key)
+
+      if open != nil {
+        self._schedule(open.uri, 0)
+      } else if self.files.contains(key) and self.settings.get('diagnostics.scope') == 'workspace' {
+        self._background.append(@() => self._publish_file(key))
+      } else {
+        var uri = text.path_to_uri(key)
+        var items = self.test_diagnostics(key)
+
+        self._published[uri] = true
+        self.endpoint.notify('textDocument/publishDiagnostics', { uri, diagnostics: items })
+      }
+    }
+  }
+
+  # Answers a formatting request whose isolate ended without a result.
+  _check_formats() {
+    for id in self._formats.keys() {
+      var job = self._formats[id]
+      var failure = nil
+
+      catch {
+        job.task.try_join()
+      } as error {
+        failure = error.message
+      }
+
+      if failure != nil {
+        self._formats.remove(id)
+        log.error('the formatter for ${job.uri} failed: ${failure}')
+        job.context.fail(rpc.RpcError(rpc.INTERNAL_ERROR, failure))
+      }
+    }
+  }
+}

@@ -1,0 +1,330 @@
+/**
+ * Call and type hierarchies: who calls a function and what it calls,
+ * and the classes above and below a class.
+ *
+ * A call made at the top of a file, outside any function, is shown as
+ * a call from the module itself.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import .common
+import ..analysis.query
+import ..analysis.render
+import ..analysis.scope { CALL }
+
+# The item for a declaration, as both hierarchies give it.
+def _item(server, ref: dict) {
+  var symbol = server.linker.symbol(ref)
+
+  if symbol == nil {
+    return nil
+  }
+
+  var owner = common.owner_name(server.linker, ref.path, symbol)
+  var detail = owner == nil ? common.module_name(ref.path) : owner
+
+  if symbol.kind == 'function' or symbol.kind == 'method' {
+    detail += ' (${render.parameters(symbol)})'
+  }
+
+  return {
+    name: symbol.name,
+    kind: common.symbol_kind(symbol),
+    detail,
+    uri: server.uri(ref.path),
+    range: server.range(ref.path, symbol.start, symbol.end),
+    selectionRange: server.range(ref.path, symbol.name_start, symbol.name_end),
+    data: { path: ref.path, index: ref.index },
+  }
+}
+
+# The item standing for the top of a file.
+def _module_item(server, path: string) {
+  var lines = server.index(path)
+  var end = lines == nil ? 0 : lines.line_end(0)
+
+  return {
+    name: common.module_name(path),
+    kind: common.SYMBOL_KIND.module,
+    detail: path,
+    uri: server.uri(path),
+    range: server.range(path, 0, end),
+    selectionRange: server.range(path, 0, 0),
+    data: { path, index: -1 },
+  }
+}
+
+# The declaration at the request's position, when it is of one of
+# `kinds`.
+def _prepare(server, params: dict, kinds: list) {
+  var document = server.document(params.textDocument.uri)
+  var offset = server.offset(document, params.position)
+  var summary = server.analysis(document).summary
+  var found = common.target_at(server.linker, document.key, summary, offset)
+
+  if found == nil or found.target == nil or found.target.contains('module') {
+    return nil
+  }
+
+  var symbol = server.linker.symbol(found.target)
+
+  if symbol == nil or !kinds.contains(symbol.kind) {
+    return nil
+  }
+
+  var item = _item(server, found.target)
+
+  return item == nil ? nil : [item]
+}
+
+/**
+ * Answers `textDocument/prepareCallHierarchy`.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns ?list[dict]
+ */
+def prepare_calls(server, params: dict) {
+  return _prepare(server, params, ['function', 'method'])
+}
+
+/**
+ * Answers `callHierarchy/incomingCalls`: the functions that call the
+ * item's, each with where it calls it.
+ *
+ * @param Server server
+ * @param dict params
+ * @param rpc.Context context
+ * @returns list[dict]
+ */
+def incoming(server, params: dict, context) {
+  var data = params.item.get('data', nil)
+
+  if !is_dict(data) {
+    return []
+  }
+
+  server.sync_open()
+
+  var linker = server.linker
+  var target = { path: data.path, index: data.index }
+  var paths = server.paths()
+
+  if !paths.contains(target.path) {
+    paths.append(target.path)
+  }
+
+  var callers = {}
+  var order = []
+
+  for path in paths.sort() {
+    server.interrupted(context, nil)
+
+    var summary = linker.summary(path)
+
+    if summary == nil {
+      continue
+    }
+
+    for occurrence in query.occurrences(summary) {
+      if !_is_call(summary, occurrence) {
+        continue
+      }
+
+      if !query.same(query.canonical(linker, path, occurrence), target) {
+        continue
+      }
+
+      var caller = common.function_at(summary, occurrence.start)
+      var key = '${path}#${caller}'
+
+      if !callers.contains(key) {
+        callers[key] = { path, index: caller, ranges: [] }
+        order.append(key)
+      }
+
+      callers[key].ranges.append(server.range(path, occurrence.start, occurrence.end))
+    }
+  }
+
+  var answer = []
+
+  for key in order {
+    var caller = callers[key]
+    var from = caller.index < 0 ? _module_item(server, caller.path) : (
+      _item(server, { path: caller.path, index: caller.index })
+    )
+
+    if from != nil {
+      answer.append({ from, fromRanges: caller.ranges })
+    }
+  }
+
+  return answer
+}
+
+# Whether an occurrence calls what it names.
+def _is_call(summary: dict, occurrence: dict) {
+  if occurrence.kind == 'ref' {
+    return occurrence.flags & CALL != 0
+  }
+
+  if occurrence.kind == 'member' {
+    return summary.members[occurrence.member].call
+  }
+
+  return false
+}
+
+/**
+ * Answers `callHierarchy/outgoingCalls`: what the item's function
+ * calls, each with where.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns list[dict]
+ */
+def outgoing(server, params: dict) {
+  var data = params.item.get('data', nil)
+
+  if !is_dict(data) {
+    return []
+  }
+
+  server.sync_open()
+
+  var linker = server.linker
+  var path = data.path
+  var summary = linker.summary(path)
+
+  if summary == nil {
+    return []
+  }
+
+  var start = 0
+  var end = summary.scopes.is_empty() ? 0 : summary.scopes[0].end
+
+  if data.index >= 0 {
+    var symbol = summary.symbols[data.index]
+
+    start = symbol.start
+    end = symbol.end
+  }
+
+  var callees = {}
+  var order = []
+
+  for occurrence in query.occurrences(summary) {
+    if occurrence.start < start or occurrence.end > end or !_is_call(summary, occurrence) {
+      continue
+    }
+
+    if common.function_at(summary, occurrence.start) != data.index {
+      continue
+    }
+
+    var target = query.canonical(linker, path, occurrence)
+
+    if target == nil or target.contains('module') {
+      continue
+    }
+
+    var symbol = linker.symbol(target)
+
+    # Calling a class runs its `@new`, shown as the class.
+    if symbol == nil or !['function', 'method', 'class'].contains(symbol.kind) {
+      continue
+    }
+
+    var key = '${target.path}#${target.index}'
+
+    if !callees.contains(key) {
+      callees[key] = { target, ranges: [] }
+      order.append(key)
+    }
+
+    callees[key].ranges.append(server.range(path, occurrence.start, occurrence.end))
+  }
+
+  var answer = []
+
+  for key in order {
+    var callee = callees[key]
+    var to = _item(server, callee.target)
+
+    if to != nil {
+      answer.append({ to, fromRanges: callee.ranges })
+    }
+  }
+
+  return answer
+}
+
+/**
+ * Answers `textDocument/prepareTypeHierarchy`.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns ?list[dict]
+ */
+def prepare_types(server, params: dict) {
+  return _prepare(server, params, ['class'])
+}
+
+/**
+ * Answers `typeHierarchy/supertypes`: the class the item's class
+ * inherits from.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns list[dict]
+ */
+def supertypes(server, params: dict) {
+  var data = params.item.get('data', nil)
+
+  if !is_dict(data) {
+    return []
+  }
+
+  var above = server.linker.superclass({ path: data.path, index: data.index })
+
+  if above == nil {
+    return []
+  }
+
+  var item = _item(server, above)
+
+  return item == nil ? [] : [item]
+}
+
+/**
+ * Answers `typeHierarchy/subtypes`: the classes that inherit from the
+ * item's class directly.
+ *
+ * @param Server server
+ * @param dict params
+ * @param rpc.Context context
+ * @returns list[dict]
+ */
+def subtypes(server, params: dict, context) {
+  var data = params.item.get('data', nil)
+
+  if !is_dict(data) {
+    return []
+  }
+
+  server.sync_open()
+
+  var found = []
+
+  for ref in server.linker.subclasses({ path: data.path, index: data.index }) {
+    var item = _item(server, ref)
+
+    if item != nil {
+      found.append(item)
+    }
+  }
+
+  return found
+}

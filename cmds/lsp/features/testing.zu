@@ -1,0 +1,541 @@
+/**
+ * Tests: finding the tests a file declares with the `test` module, and
+ * running a file's tests, a suite or a single test.
+ *
+ * A test is found from its `describe` or `it` call, and the `_only`,
+ * `_skip`, `_todo` and `_each` forms of them, when its name is written
+ * as a literal string: a name worked out at run time cannot be told
+ * before the run. A suite holds what is declared inside its body.
+ *
+ * A run is `zuri run` on the file in a process of its own, with the
+ * `test` module's `ndjson` reporter and a name filter matching exactly
+ * what was asked for, so it runs as `zuri test` would run it. The run
+ * is watched from an isolate, so the server keeps answering while the
+ * tests run, and each result reaches the client as it comes. A failed
+ * assertion is shown on the line it failed at until the file changes
+ * or its tests run again.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import os
+import json
+import .common
+import ..analysis.query
+import .. .._shared.paths
+
+/** The command that runs tests. */
+const RUN_COMMAND = 'zuri.runTests'
+
+# The test module's functions that declare a suite, and a test.
+const _SUITES = ['describe', 'describe_only', 'describe_skip', 'describe_each']
+const _CASES = ['it', 'it_only', 'it_skip', 'it_todo', 'it_each']
+
+# What marks a line of the reporter's output as a result.
+const _PREFIX = '@@zuri-test@@'
+
+# Whether the file `key` imports the `test` module in any way.
+def _imports_test(server, key: string, summary: dict) {
+  for index in summary.imports {
+    var source = summary.symbols[index].source
+
+    if source.path == 'test' or source.path.starts_with('test/') {
+      return true
+    }
+  }
+
+  return summary.stars.some(@(star) => star.path == 'test')
+}
+
+# The directory the `test` module lives in, as the file sees it.
+def _test_directory(server, key: string) {
+  var path = server.linker.module_path('test', key)
+
+  return path == nil ? nil : os.dir_name(path)
+}
+
+# The test function a call is, by name, when it is one of the `test`
+# module's: `'it'`, `'describe_each'` and so on, or `nil`.
+def _test_function(server, key: string, summary: dict, call, directory) {
+  var callee = call.fields.callee
+  var name = nil
+  var at = nil
+
+  if callee.kind == 'Identifier' {
+    name = callee.fields.name
+    at = callee.start
+  } else if callee.kind == 'Get' and callee.fields.object.kind == 'Identifier' {
+    name = callee.fields.name
+    at = callee.fields.name_span.start
+  }
+
+  if name == nil or (!_SUITES.contains(name) and !_CASES.contains(name)) {
+    return nil
+  }
+
+  var occurrence = query.at(summary, at)
+
+  if occurrence == nil {
+    return nil
+  }
+
+  var target = query.canonical(server.linker, key, occurrence)
+
+  if target == nil or target.contains('module') or directory == nil {
+    return nil
+  }
+
+  return target.path.starts_with(directory) ? name : nil
+}
+
+# A regular expression matching `text` exactly, `$0`, `$1` and `$#`
+# matching anything when `each` is true.
+def _pattern_of(text: string, each: bool) {
+  var escaped = ''
+
+  for ch in text {
+    escaped += '\\^$.|?*+()[]{}/'.contains(ch) ? '\\' + ch : ch
+  }
+
+  if each {
+    escaped = escaped.replace('/\\\\\$(\d+|#)/', '.*')
+  }
+
+  return escaped
+}
+
+/**
+ * The tests the file `key` declares, as a tree of suites and tests.
+ * Each item is `{ name, kind, full_name, filter, modifier, start, end,
+ * name_start, name_end, children }`: `kind` is `'suite'` or `'test'`,
+ * `filter` the `ZURI_TEST_FILTER` that runs exactly it, and
+ * `modifier` `'only'`, `'skip'`, `'todo'`, `'each'` or `nil`.
+ *
+ * @param Server server
+ * @param string key
+ * @returns list[dict]
+ */
+def discover(server, key: string) {
+  var summary = server.summary(key)
+
+  if summary == nil or !_imports_test(server, key, summary) {
+    return []
+  }
+
+  var nodes = server.tree(key)
+  var directory = _test_directory(server, key)
+  var found = []
+
+  if nodes == nil or directory == nil {
+    return found
+  }
+
+  _Finder(server, key, summary, directory).collect(nodes, [], [], found)
+
+  return found
+}
+
+/**
+ * The walk that finds the test declarations of one file.
+ */
+class _Finder {
+
+  @new(server, key: string, summary: dict, directory: string) {
+    self.server = server
+    self.key = key
+    self.summary = summary
+    self.directory = directory
+  }
+
+  # Finds the tests among `nodes`, inside the suites `names`, whose
+  # filter patterns are `patterns`.
+  collect(nodes: list, names: list, patterns: list, out: list) {
+    for node in nodes {
+      self._visit(node, names, patterns, out)
+    }
+  }
+
+  _visit(node, names: list, patterns: list, out: list) {
+    if !common.is_node(node) {
+      return
+    }
+
+    if node.kind == 'Call' {
+      var function_name = _test_function(self.server, self.key, self.summary, node, self.directory)
+
+      if function_name != nil {
+        var item = _item(node, function_name, names, patterns)
+
+        if item != nil {
+          out.append(item)
+
+          if item.kind == 'suite' {
+            var inner_names = names.clone()
+            var inner_patterns = patterns.clone()
+
+            inner_names.append(item.name)
+            inner_patterns.append(_pattern_of(item.name, item.modifier == 'each'))
+
+            var body = node.fields.arguments.last()
+
+            self.collect(common.children(body), inner_names, inner_patterns, item.children)
+          }
+        }
+
+        return
+      }
+    }
+
+    for child in common.children(node) {
+      self._visit(child, names, patterns, out)
+    }
+  }
+}
+
+# The item for one `describe` or `it` call, or `nil` when its name is
+# not written out.
+def _item(call, function_name: string, names: list, patterns: list) {
+  var arguments = call.fields.arguments
+  var position = function_name.ends_with('_each') ? 1 : 0
+
+  if arguments.length() <= position or arguments[position].kind != 'Literal' {
+    return nil
+  }
+
+  var literal = arguments[position]
+  var name = literal.fields.value
+  var suite = _SUITES.contains(function_name)
+  var modifier = nil
+  var parts = function_name.split('_')
+
+  if parts.length() > 1 {
+    modifier = parts[1]
+  }
+
+  var full_names = names.clone()
+  var own_pattern = _pattern_of(name, modifier == 'each')
+  var all_patterns = patterns.clone()
+
+  full_names.append(name)
+  all_patterns.append(own_pattern)
+
+  var joined = ' > '.join(all_patterns)
+  var filter = suite ? '/^${joined} > /' : '/^${joined}$/'
+
+  return {
+    name,
+    kind: suite ? 'suite' : 'test',
+    full_name: ' > '.join(full_names),
+    filter,
+    modifier,
+    start: call.start,
+    end: call.end,
+    name_start: literal.start,
+    name_end: literal.end,
+    children: [],
+  }
+}
+
+# Every item of a tree, suites before what they hold.
+def _flatten(items: list, out: list) {
+  for item in items {
+    out.append(item)
+    _flatten(item.children, out)
+  }
+
+  return out
+}
+
+/**
+ * The tests of a file as the client is given them: protocol ranges in
+ * place of offsets.
+ *
+ * @param Server server
+ * @param string key
+ * @param list items: From `discover()`.
+ * @returns list[dict]
+ */
+def describe_items(server, key: string, items: list) {
+  return items.map(@(item) {
+    return {
+      name: item.name,
+      kind: item.kind,
+      fullName: item.full_name,
+      filter: item.filter,
+      modifier: item.modifier,
+      range: server.range(key, item.start, item.end),
+      selectionRange: server.range(key, item.name_start, item.name_end),
+      children: describe_items(server, key, item.children),
+    }
+  })
+}
+
+/**
+ * Answers `zuri/tests`: the tests one document declares.
+ *
+ * @param Server server
+ * @param dict params: `{ textDocument }`.
+ * @returns list[dict]
+ */
+def document_tests(server, params: dict) {
+  var document = server.document(params.textDocument.uri)
+
+  return describe_items(server, document.key, discover(server, document.key))
+}
+
+/**
+ * Answers `zuri/workspaceTests`: every workspace file that declares
+ * tests, with its tests.
+ *
+ * @param Server server
+ * @param dict params
+ * @param rpc.Context context
+ * @returns list[dict]: `{ uri, tests }` for each file.
+ */
+def workspace_tests(server, params: dict, context) {
+  server.sync_open()
+
+  var found = []
+
+  for key in server.paths().sort() {
+    server.interrupted(context, nil)
+
+    var summary = server.linker.summary(key)
+
+    if summary == nil or !_imports_test(server, key, summary) {
+      continue
+    }
+
+    var items = discover(server, key)
+
+    if !items.is_empty() {
+      found.append({ uri: server.uri(key), tests: describe_items(server, key, items) })
+    }
+  }
+
+  return found
+}
+
+/**
+ * The code lenses that run tests: one over the file's first test
+ * declaration for the whole file, and one over each suite and test.
+ *
+ * @param Server server
+ * @param Document document
+ * @returns list[dict]
+ */
+def lenses(server, document) {
+  if server.settings.get('testing.codeLens') != true {
+    return []
+  }
+
+  var items = _flatten(discover(server, document.key), [])
+
+  if items.is_empty() {
+    return []
+  }
+
+  var key = document.key
+  var found = [{
+    range: server.range(key, items[0].name_start, items[0].name_end),
+    command: {
+      title: 'Run tests in file',
+      command: RUN_COMMAND,
+      arguments: [{ uri: document.uri }],
+    },
+  }]
+
+  for item in items {
+    var title = item.kind == 'suite' ? 'Run suite' : 'Run test'
+
+    found.append({
+      range: server.range(key, item.name_start, item.name_end),
+      command: {
+        title,
+        command: RUN_COMMAND,
+        arguments: [{ uri: document.uri, name: item.full_name, filter: item.filter }],
+      },
+    })
+  }
+
+  return found
+}
+
+/**
+ * Where tests in the file at `path` run from: the root of its project,
+ * or the workspace folder holding it, or its own directory.
+ *
+ * @param Server server
+ * @param string path
+ * @returns string
+ */
+def working_directory(server, path: string) {
+  var root = paths.find_root(os.dir_name(path))
+
+  if root != nil {
+    return root
+  }
+
+  for folder in server.folders {
+    var prefix = folder.ends_with(os.path_separator) ? folder : folder + os.path_separator
+
+    if path.starts_with(prefix) {
+      return folder
+    }
+  }
+
+  return os.dir_name(path)
+}
+
+/**
+ * Runs the tests of one file in a process of its own, on an isolate,
+ * and sends what happens to `results`, each message carrying `id`:
+ *
+ * - `{ kind: 'started', pid }` once the process runs;
+ * - `{ kind: 'event', event }` for each event of the `test` module's
+ *   `ndjson` reporter, as it is reported;
+ * - `{ kind: 'output', text }` for anything else the file prints;
+ * - `{ kind: 'finished', code, stderr }` once it exits;
+ * - `{ kind: 'failed', message }` when it cannot be run at all.
+ *
+ * @param int id
+ * @param string path: The test file.
+ * @param string cwd: Where it runs.
+ * @param ?string filter: The `ZURI_TEST_FILTER`, or `nil` for every
+ *    test.
+ * @param isolate.Channel results
+ * @returns bool: `true`, once it is over.
+ */
+def run_file(id: int, path: string, cwd: string, filter, results) {
+  import os.process { spawn }
+
+  var env = { ZURI_TEST_REPORTER: 'ndjson', NO_COLOR: '1' }
+
+  if filter != nil {
+    env.ZURI_TEST_FILTER = filter
+  }
+
+  var child = nil
+
+  catch {
+    child = spawn(os.exe_path, ['run', path], {
+      cwd,
+      env,
+      stdin: 'null',
+      stdout: 'pipe',
+      stderr: 'pipe',
+    })
+  } as error {
+    results.send({ id, kind: 'failed', message: error.message })
+    return true
+  }
+
+  results.send({ id, kind: 'started', pid: child.pid() })
+
+  var pending = ''
+
+  while true {
+    var chunk = child.read_stdout(65536)
+
+    if chunk == nil or chunk.is_empty() {
+      break
+    }
+
+    pending += chunk.to_string()
+
+    var newline = pending.index_of('\n')
+
+    while newline >= 0 {
+      _report_line(id, pending[0, newline], results)
+      pending = pending[newline + 1, pending.length()]
+      newline = pending.index_of('\n')
+    }
+  }
+
+  if !pending.is_empty() {
+    _report_line(id, pending, results)
+  }
+
+  var code = child.wait()
+  var stderr = child.read_stderr()
+
+  results.send({ id, kind: 'finished', code, stderr: stderr == nil ? '' : stderr.to_string() })
+
+  return true
+}
+
+def _report_line(id: int, line: string, results) {
+  var trimmed = line.rtrim('\r')
+
+  if trimmed.starts_with(_PREFIX) {
+    catch {
+      var event = json.decode(trimmed[_PREFIX.length(), trimmed.length()])
+
+      results.send({ id, kind: 'event', event })
+      return
+    } as error {
+      # Not a result after all: shown as output.
+    }
+  }
+
+  results.send({ id, kind: 'output', text: trimmed })
+}
+
+/**
+ * The diagnostics showing a run's failed assertions, by file, each on
+ * the line it failed at.
+ *
+ * @param Server server
+ * @param string cwd: Where the run was, which its file names are
+ *    relative to.
+ * @param list tests: The run's `test_finished` events.
+ * @returns dict: `{ path: [Diagnostic] }`.
+ */
+def failure_diagnostics(server, cwd: string, tests: list) {
+  var found = {}
+
+  for test in tests {
+    if test.get('status', nil) != 'failed' {
+      continue
+    }
+
+    for failure in test.get('failures', []) {
+      var file_name = failure.get('file', nil)
+      var line = failure.get('line', nil)
+
+      if file_name == nil or !is_number(line) {
+        continue
+      }
+
+      var path = os.abs_path(os.join_paths(cwd, file_name))
+      var lines = server.index(path)
+
+      if lines == nil or line < 1 or line > lines.line_count() {
+        continue
+      }
+
+      var text = lines.line_text(line - 1)
+      var start = lines.line_start(line - 1) + (text.length() - text.ltrim().length())
+      var end = lines.line_start(line - 1) + text.rtrim().length()
+      var message = '${test.full_name}: ${failure.message}'
+
+      if failure.get('expected', nil) != nil or failure.get('received', nil) != nil {
+        message += '\nexpected ${failure.expected}\nreceived ${failure.received}'
+      }
+
+      if !found.contains(path) {
+        found[path] = []
+      }
+
+      found[path].append({
+        range: server.range(path, start, end.max(start)),
+        severity: common.SEVERITY.error,
+        code: 'test-failed',
+        source: 'zuri test',
+        message,
+      })
+    }
+  }
+
+  return found
+}

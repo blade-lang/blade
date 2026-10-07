@@ -1,0 +1,260 @@
+/**
+ * Hover: what a name is, shown where it is used. A declaration shows
+ * as a line of Zuri, followed by its documentation with the tags laid
+ * out under headings. A variable shows the type it is inferred to
+ * hold, a constant its value, and a module its overview.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import zuri
+import .common
+import ..analysis.render
+
+/**
+ * Answers `textDocument/hover`.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns ?dict: A `Hover`, or `nil` when nothing is named there.
+ */
+def hover(server, params: dict) {
+  var document = server.document(params.textDocument.uri)
+  var offset = server.offset(document, params.position)
+  var analysis = server.analysis(document)
+  var key = document.key
+  var linker = server.linker
+  var found = common.target_at(linker, key, analysis.summary, offset)
+  var value = nil
+  var start = offset
+  var end = offset
+
+  if found != nil {
+    value = _describe(server, key, found.occurrence, found.target)
+    start = found.occurrence.start
+    end = found.occurrence.end
+  } else {
+    var keyword = _keyword(server, key, analysis, offset)
+
+    if keyword != nil {
+      value = keyword.value
+      start = keyword.start
+      end = keyword.end
+    }
+  }
+
+  if value == nil or value.is_empty() {
+    return nil
+  }
+
+  return {
+    contents: _markup(server, value),
+    range: server.range(key, start, end),
+  }
+}
+
+# Markdown when the client shows it, and the plain text otherwise.
+def _markup(server, value: string) {
+  var formats = server.supports('textDocument.hover.contentFormat')
+
+  if is_list(formats) and !formats.is_empty() and !formats.contains('markdown') {
+    var plain = value.replace('```zuri\n', '', false).replace('```', '', false)
+
+    return { kind: 'plaintext', value: plain }
+  }
+
+  return { kind: 'markdown', value }
+}
+
+# The text shown for what an occurrence names.
+def _describe(server, key: string, occurrence: dict, target) {
+  var linker = server.linker
+
+  if target == nil {
+    return nil
+  }
+
+  if target.contains('module') {
+    return target.module == nil ? nil : module_text(linker, target.module)
+  }
+
+  return declaration_text(server, target)
+}
+
+/**
+ * The hover text for the module at `path`: how it is imported, and
+ * its overview.
+ *
+ * @param Linker linker
+ * @param string path
+ * @returns string
+ */
+def module_text(linker, path: string) {
+  var name = common.module_name(path)
+  var summary = linker.summary(path)
+  var parts = ['```zuri\nimport ${name}\n```']
+
+  if summary != nil and summary.module_doc != nil {
+    var doc = render.markdown(summary.module_doc)
+
+    if !doc.is_empty() {
+      parts.append(doc)
+    }
+  }
+
+  return '\n\n'.join(parts)
+}
+
+/**
+ * The hover text for a declaration: a line of Zuri for it, where it
+ * comes from when that is another module, and its documentation.
+ *
+ * @param Server server
+ * @param dict target: `{ path, index }`.
+ * @returns ?string
+ */
+def declaration_text(server, target: dict) {
+  var linker = server.linker
+  var symbol = linker.symbol(target)
+
+  if symbol == nil {
+    return nil
+  }
+
+  var owner = common.owner_name(linker, target.path, symbol)
+  var type = nil
+
+  if ['variable', 'field', 'parameter'].contains(symbol.kind) and symbol.get('hint', nil) == nil {
+    type = common.describe(linker, linker.type_of(target))
+  }
+
+  var parts = ['```zuri\n${render.signature(symbol, owner, type)}\n```']
+  var doc = symbol.get('doc', nil)
+
+  if symbol.kind == 'parameter' {
+    var text = _parameter_doc(linker, target, symbol)
+
+    if !text.is_empty() {
+      parts.append(text)
+    }
+  } else if doc != nil {
+    var text = render.markdown(doc)
+
+    if !text.is_empty() {
+      parts.append(text)
+    }
+  }
+
+  var from = _origin(server, target, symbol)
+
+  if from != nil {
+    parts.append(from)
+  }
+
+  return '\n\n'.join(parts)
+}
+
+# What a parameter's function says about it in its `@param` tag.
+def _parameter_doc(linker, target: dict, symbol: dict) {
+  var function_index = symbol.get('container', -1)
+
+  if function_index < 0 {
+    return ''
+  }
+
+  var function_symbol = linker.symbol({ path: target.path, index: function_index })
+
+  if function_symbol == nil or function_symbol.get('doc', nil) == nil {
+    return ''
+  }
+
+  for tag in zuri.doc.parse(function_symbol.doc).all('param') {
+    if tag.name == symbol.name {
+      var type = tag.type.is_empty() ? '' : '`${tag.type}` '
+
+      return '${type}${render.markdown_text(tag.text)}'.trim()
+    }
+  }
+
+  return ''
+}
+
+# Where a module-level declaration of another file comes from, as a
+# line under its hover.
+def _origin(server, target: dict, symbol: dict) {
+  if symbol.scope != 0 or symbol.kind == 'parameter' {
+    return nil
+  }
+
+  var builtins = server.builtins
+
+  if builtins.globals != nil and target.path == builtins.globals.path {
+    return '*built in*'
+  }
+
+  if builtins.prelude != nil and target.path == builtins.prelude.path {
+    return '*built in*'
+  }
+
+  for name, summary in builtins.types {
+    if summary.path == target.path {
+      return nil
+    }
+  }
+
+  return '*from* `${common.module_name(target.path)}`'
+}
+
+# `self` and `parent`, which no occurrence covers: the class they
+# stand for.
+def _keyword(server, key: string, analysis: dict, offset: int) {
+  var path = common.path_to(analysis.nodes, offset)
+
+  if path.is_empty() {
+    return nil
+  }
+
+  var node = path[path.length() - 1]
+
+  if node.kind != 'Self' and node.kind != 'Parent' {
+    return nil
+  }
+
+  var summary = analysis.summary
+  var owner = _class_at(summary, offset)
+
+  if owner == nil {
+    return nil
+  }
+
+  var ref = { path: key, index: owner }
+
+  if node.kind == 'Parent' {
+    ref = server.linker.superclass(ref)
+
+    if ref == nil {
+      return nil
+    }
+  }
+
+  var value = declaration_text(server, ref)
+
+  return value == nil ? nil : { value, start: node.start, end: node.end }
+}
+
+# The class whose method holds `offset`, as a symbol index.
+def _class_at(summary: dict, offset: int) {
+  var scope = common.scope_at(summary, offset)
+
+  while scope > 0 {
+    var found = summary.scopes[scope].get('owner_class', nil)
+
+    if found != nil {
+      return found
+    }
+
+    scope = summary.scopes[scope].outer
+  }
+
+  return nil
+}

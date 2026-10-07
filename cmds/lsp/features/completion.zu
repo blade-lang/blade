@@ -1,0 +1,1018 @@
+/**
+ * Completion: what can be written at the cursor.
+ *
+ * - After a `.`, the members of the receiver's type: the fields and
+ *   methods of an instance, inherited ones and those extensions add
+ *   included, a class's statics, a module's exports, a built-in type's
+ *   methods, and the keys of a dictionary written out where the name
+ *   was declared.
+ * - Elsewhere, the names in scope, the built-in globals, and the
+ *   keywords that can start what is being written there.
+ * - After `import`, module paths, and inside its `{ }` what the module
+ *   exports.
+ * - At the start of a class member, `@new` and the operator
+ *   decorators the class lacks, as method skeletons.
+ * - After the `:` of a type hint, the type names.
+ * - Inside a doc block, its tags after `@`, and after `@param` the
+ *   parameter names of the function it documents.
+ *
+ * With `completion.autoImport`, a name another module exports is
+ * offered with the import it needs: a module of the standard library
+ * or a package as `import m` and `m.name`, and a module of the
+ * project as `import .x { Name }`. With `completion.callParentheses`,
+ * completing a function also writes its parentheses.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import os
+import .common
+import .common { COMPLETION_KIND }
+import ..analysis.query
+import ..analysis.render
+import ..analysis.summary as summaries
+
+# The doc block tags offered after `@`, with what each says.
+const _DOC_TAGS = {
+  param: 'a parameter: its type, name and meaning',
+  returns: 'what is returned',
+  throws: 'an error raised, and when',
+  type: 'the type of a variable or field',
+  note: 'something a reader must not miss',
+  see: 'related reading',
+  'default': 'the value used when none is given',
+  deprecated: 'what replaces it, and why it should not be used',
+  property: 'a field: its type, name and meaning',
+  module: 'the module this block describes',
+  copyright: 'who holds the copyright',
+  printable: 'a class with @to_string',
+  internal: 'kept out of the published reference',
+  constructor: 'a function that builds an instance',
+  command: 'the name of a zuri command',
+  description: 'what a command does, for zuri --help',
+  iterable: 'a class with @key and @value',
+  serializable: 'a class with @to_json',
+  valueable: 'a class with @value',
+  license: 'the license it is published under',
+}
+
+# Keywords that start a statement.
+const _STATEMENT_KEYWORDS = [
+  'var', 'const', 'def', 'class', 'if', 'while', 'for', 'iter', 'do',
+  'using', 'catch', 'return', 'raise', 'echo', 'assert', 'import',
+  'break', 'continue',
+]
+
+# Keywords that can be written where a value is.
+const _VALUE_KEYWORDS = ['nil', 'true', 'false', 'self', 'parent', 'def']
+
+# Keywords that start a member of a class body.
+const _CLASS_KEYWORDS = ['var', 'const', 'static']
+
+# What completion groups sort as: nearest names first.
+const _GROUP = {
+  local: '0',
+  member: '1',
+  module: '2',
+  builtin: '3',
+  keyword: '4',
+  imported: '5',
+}
+
+# The placeholder name written at the cursor of a copy of the text, so
+# an unfinished member access parses.
+const _PLACEHOLDER = '__zuri_completion__'
+
+/**
+ * Where the cursor is, lexically: in code, a string, a comment or a
+ * doc block, read from `start`, a point outside any string or comment.
+ *
+ * @param string text
+ * @param int start
+ * @param int offset
+ * @returns dict: `{ state }`, with `start`, the block's first
+ *    character, for `'doc'`.
+ */
+def lexical_state(text: string, start: int, offset: int) {
+  var i = start
+  var length = text.length()
+
+  while i < offset {
+    var ch = text[i]
+
+    if ch == '#' {
+      while i < length and text[i] != '\n' {
+        if i >= offset {
+          return { state: 'comment' }
+        }
+
+        i++
+      }
+
+      if i >= offset {
+        return { state: 'comment' }
+      }
+
+      continue
+    }
+
+    if ch == '/' and i + 1 < length and text[i + 1] == '*' {
+      var opened = i
+      var doc = i + 2 < length and text[i + 2] == '*' and !(i + 3 < length and text[i + 3] == '/')
+      var depth = 1
+
+      i += 2
+
+      while i < length and depth > 0 {
+        if text[i] == '/' and i + 1 < length and text[i + 1] == '*' {
+          depth++
+          i += 2
+        } else if text[i] == '*' and i + 1 < length and text[i + 1] == '/' {
+          depth--
+          i += 2
+        } else {
+          i++
+        }
+
+        if depth > 0 and i >= offset {
+          return { state: doc ? 'doc' : 'comment', start: opened }
+        }
+      }
+
+      continue
+    }
+
+    if ch == "'" or ch == '"' {
+      i++
+
+      while i < length and text[i] != ch {
+        if i >= offset {
+          return { state: 'string' }
+        }
+
+        if text[i] == '\\' {
+          i += 2
+          continue
+        }
+
+        if text[i] == '$' and i + 1 < length and text[i + 1] == '{' {
+          var close = _interpolation_end(text, i + 2)
+
+          if offset <= close {
+            return { state: 'code' }
+          }
+
+          i = close + 1
+          continue
+        }
+
+        i++
+      }
+
+      if i >= offset {
+        return { state: 'string' }
+      }
+
+      i++
+      continue
+    }
+
+    i++
+  }
+
+  return { state: 'code' }
+}
+
+# Where the `}` closing an interpolation opened just before `at` is.
+def _interpolation_end(text: string, at: int) {
+  var depth = 1
+  var i = at
+
+  while i < text.length() {
+    if text[i] == '{' {
+      depth++
+    } else if text[i] == '}' {
+      depth--
+
+      if depth == 0 {
+        return i
+      }
+    }
+
+    i++
+  }
+
+  return text.length()
+}
+
+# Where reading up to the cursor starts: the start of the last
+# top-level statement or declaration that starts before it. That is
+# outside any string or comment, and an unfinished statement the
+# parser stopped short of is read whole.
+def _reading_start(nodes: list, offset: int) {
+  var found = 0
+
+  for node in nodes {
+    if common.is_node(node) and node.start <= offset {
+      found = node.start
+    }
+  }
+
+  return found
+}
+
+# The identifier being written: where it starts, and what is written
+# of it so far.
+def _word_before(text: string, offset: int) {
+  var start = offset
+
+  while start > 0 and !!text[start - 1].match('/[A-Za-z0-9_]/') {
+    start--
+  }
+
+  return { start, prefix: text[start, offset] }
+}
+
+/**
+ * Builds the items of one completion request.
+ */
+class _Completion {
+
+  @new(server, document, offset: int) {
+    self.server = server
+    self.linker = server.linker
+    self.document = document
+    self.key = document.key
+    self.text = document.text
+    self.offset = offset
+    self.analysis = server.analysis(document)
+    self.summary = self.analysis.summary
+    self.items = []
+    self.incomplete = false
+    self._labels = {}
+    self.snippets = server.supports('textDocument.completion.completionItem.snippetSupport') == true
+    self.parentheses = server.settings.get('completion.callParentheses') == true
+  }
+
+  _add(item: dict) {
+    var label = item.label
+
+    if self._labels.contains(label) {
+      return
+    }
+
+    self._labels[label] = true
+    self.items.append(item)
+  }
+
+  # An item for a declaration, its documentation left for resolve. An
+  # imported name stands for what it imports.
+  _declaration_item(name: string, ref: dict, symbol: dict, group: string) {
+    if symbol.kind == 'import' {
+      var followed = self.linker.follow(ref)
+      var original = nil
+
+      if followed != nil and !followed.contains('module') {
+        original = self.linker.symbol(followed)
+      }
+
+      if original != nil {
+        ref = followed
+        symbol = original
+      }
+    }
+
+    var item = {
+      label: name,
+      kind: common.completion_kind(symbol),
+      sortText: group + name,
+      data: { path: ref.path, index: ref.index },
+    }
+
+    var callable = symbol.kind == 'function' or symbol.kind == 'method' or symbol.kind == 'class'
+
+    if callable {
+      item.labelDetails = { detail: '(${render.parameters(symbol)})' }
+    }
+
+    if callable and self.parentheses {
+      var empty = symbol.get('params', []).is_empty() and symbol.kind != 'class'
+
+      if self.snippets and !empty {
+        item.insertText = '${name}($0)'
+        item.insertTextFormat = 2
+      } else {
+        item.insertText = '${name}()'
+      }
+    }
+
+    if render.is_deprecated(symbol.get('doc', nil)) {
+      item.tags = [1]
+    }
+
+    return item
+  }
+
+  run() {
+    var line_start = self.document.index().line_start(self.document.index().line_of(self.offset))
+    var line = self.text[line_start, self.offset]
+    var reading = _reading_start(self.analysis.nodes, self.offset)
+    var lexical = lexical_state(self.text, reading, self.offset)
+
+    if lexical.state == 'doc' {
+      self._doc(lexical.start, line)
+      return
+    }
+
+    if lexical.state != 'code' {
+      return
+    }
+
+    var element_match = line.match('/^\s*import\s+@?((?:\.\.\s+)*[.A-Za-z0-9_]+)\s*\{([^}]*)$/')
+
+    if element_match {
+      self._import_elements(element_match[1], element_match[2])
+      return
+    }
+
+    var path_match = line.match('/^\s*import\s+@?((?:\.\.\s+)*[.A-Za-z0-9_]*)$/')
+
+    if path_match {
+      self._import_paths(path_match[1])
+      return
+    }
+
+    var word = _word_before(self.text, self.offset)
+    var before = word.start > 0 ? self.text[word.start - 1] : ''
+    var dot_dot = word.start > 1 and self.text[word.start - 2] == '.'
+
+    if before == '.' and !dot_dot {
+      self._members(word)
+      return
+    }
+
+    if before == '@' {
+      self._decorators(word, line)
+      return
+    }
+
+    if !!line.match('/(\(|,)\s*[A-Za-z_][A-Za-z0-9_]*\s*:\s*\??[A-Za-z0-9_|]*$/') {
+      self._types(word)
+      return
+    }
+
+    var hinted = '[A-Za-z_][A-Za-z0-9_]*\s*:\s*\??[A-Za-z0-9_|]*$/'
+
+    if !!line.match('/^\s*(static\s+)?(var|const)\s+' + hinted) {
+      self._types(word)
+      return
+    }
+
+    self._names(word, line)
+  }
+
+  # --------------------------------------------------------------
+  # Doc blocks
+  # --------------------------------------------------------------
+
+  _doc(start: int, line: string) {
+    var param = line.match('/@param\s+(\{[^}]*\}\s+|[A-Za-z_.|?\[\]]+\s+)?[A-Za-z_]*$/')
+
+    if param {
+      var symbol = self._documented(start)
+
+      if symbol != nil {
+        for each in symbol.get('params', []) {
+          self._add({
+            label: each.name,
+            kind: COMPLETION_KIND.variable,
+            sortText: _GROUP.local + each.name,
+            detail: each.hint == nil ? 'parameter' : each.hint,
+          })
+        }
+      }
+
+      return
+    }
+
+    if !!line.match('/@[a-z_]*$/') {
+      for tag, meaning in _DOC_TAGS {
+        self._add({
+          label: tag,
+          kind: COMPLETION_KIND.keyword,
+          detail: meaning,
+          sortText: tag,
+        })
+      }
+    }
+  }
+
+  # The declaration a doc block starting at `start` documents: the
+  # first one beginning after it.
+  _documented(start: int) {
+    var best = nil
+
+    for symbol in self.summary.symbols {
+      if symbol.start > start and (best == nil or symbol.start < best.start) {
+        best = symbol
+      }
+    }
+
+    return best
+  }
+
+  # --------------------------------------------------------------
+  # Imports
+  # --------------------------------------------------------------
+
+  # The directories a path written so far lists the children of. The
+  # `..` of each directory up may be written apart, `.. ..name`, or
+  # together.
+  _import_bases(written: string) {
+    written = written.replace('/\s+/', '')
+
+    var bases = []
+    var parts = written.split('.')
+
+    if written.starts_with('.') {
+      if self.document.path == nil {
+        return bases
+      }
+
+      var dots = 0
+
+      while dots < written.length() and written[dots] == '.' {
+        dots++
+      }
+
+      var climbs = dots == 1 ? 0 : (dots / 2).floor()
+      var directory = os.dir_name(self.document.path)
+
+      iter var i = 0; i < climbs; i++ {
+        directory = os.dir_name(directory)
+      }
+
+      var rest = written[dots, written.length()].split('.')
+      bases.append({ directory, rest })
+
+      return bases
+    }
+
+    var roots = []
+    var resolver = self.server.resolver
+    var project = self.document.path == nil ? nil : resolver.project_libs(self.document.path)
+
+    for root in [project, resolver.stdlib, resolver.home_libs] {
+      if root != nil {
+        roots.append(root)
+      }
+    }
+
+    for root in roots {
+      bases.append({ directory: root, rest: parts })
+    }
+
+    return bases
+  }
+
+  _import_paths(written: string) {
+    for base in self._import_bases(written) {
+      var directory = base.directory
+      var rest = base.rest
+
+      # Every part but the last, which is being written, names a
+      # directory to descend into.
+      iter var i = 0; i < rest.length() - 1; i++ {
+        directory = os.join_paths(directory, rest[i])
+      }
+
+      if !os.dir_exists(directory) {
+        continue
+      }
+
+      for name in os.read_dir(directory) {
+        var full = os.join_paths(directory, name)
+
+        if name.starts_with('.') or name.starts_with('_') {
+          continue
+        }
+
+        if os.is_dir(full) {
+          var package = file(os.join_paths(full, 'index.zu')).exists()
+
+          self._add({
+            label: name,
+            kind: package ? COMPLETION_KIND.module : COMPLETION_KIND.folder,
+            sortText: _GROUP.module + name,
+          })
+        } else if name.ends_with('.zu') and !name.ends_with('.stub.zu') and name != 'index.zu' {
+          var module = name[0, name.length() - 3]
+
+          if full != self.document.path {
+            self._add({
+              label: module,
+              kind: COMPLETION_KIND.module,
+              sortText: _GROUP.module + module,
+            })
+          }
+        }
+      }
+    }
+
+    # Native modules are one name, written at the start.
+    if !written.contains('.') {
+      for name, stub in self.server.resolver.natives {
+        self._add({ label: name, kind: COMPLETION_KIND.module, sortText: _GROUP.module + name })
+      }
+    }
+  }
+
+  _import_elements(path_text: string, listed: string) {
+    var path = _import_path(path_text)
+    var target = self.linker.module_path(path, self.key)
+
+    if target == nil {
+      return
+    }
+
+    var taken = listed.split(',').map(@(part) => part.trim())
+
+    for name, ref in self.linker.globals(target) {
+      if name.starts_with('_') or taken.contains(name) {
+        continue
+      }
+
+      var symbol = self.linker.symbol(ref)
+
+      if symbol != nil {
+        self._add(self._declaration_item(name, ref, symbol, _GROUP.module))
+      }
+    }
+  }
+
+  # --------------------------------------------------------------
+  # Members
+  # --------------------------------------------------------------
+
+  _members(word: dict) {
+    var access = self._access_at(self.summary, word.start)
+
+    if access != nil {
+      self._members_of(access)
+      return
+    }
+
+    # `foo.` alone does not parse; a copy with a name after the dot
+    # does.
+    var rest = self.text[self.offset, self.text.length()]
+    var patched = self.text[0, word.start] + _PLACEHOLDER + rest
+    var copy = summaries.analyze(self.key, patched, self.server.builtins.names).summary
+
+    access = self._access_at(copy, word.start)
+
+    if access == nil {
+      return
+    }
+
+    # The copy stands for the document only while its members are
+    # read: its types name its own declarations.
+    var held = self.linker.holds(self.key) ? self.linker.summary(self.key) : nil
+
+    self.linker.put(self.key, copy)
+
+    catch {
+      self._members_of(access)
+    } as error {
+      if held != nil {
+        self.linker.put(self.key, held)
+      }
+
+      raise error
+    }
+
+    if held != nil {
+      self.linker.put(self.key, held)
+    }
+  }
+
+  _access_at(summary: dict, start: int) {
+    for access in summary.members {
+      if access.start == start {
+        return access
+      }
+    }
+
+    return nil
+  }
+
+  _members_of(access: dict) {
+    var owner = self.linker.resolve(access.receiver)
+    var receiver_text = self.text[access.object_start, access.object_end]
+    var private_ok = access.self_receiver or receiver_text == 'parent'
+
+    if owner != nil {
+      for member in self.linker.members(owner) {
+        if member.name.starts_with('_') and !private_ok {
+          continue
+        }
+
+        var ref = { path: member.path, index: member.index }
+        var symbol = self.linker.symbol(ref)
+
+        if symbol != nil {
+          self._add(self._declaration_item(member.name, ref, symbol, _GROUP.member))
+        }
+      }
+    }
+
+    # The keys of a dictionary written out where the name was declared.
+    var receiver = access.receiver
+
+    if receiver != nil and receiver.t == 'symbol' {
+      var symbol = self.linker.symbol({ path: receiver.module, index: receiver.index })
+      var keys = symbol == nil ? nil : symbol.get('keys', nil)
+
+      for key in keys == nil ? [] : keys {
+        if !!key.match('/^[A-Za-z_][A-Za-z0-9_]*$/') {
+          self._add({ label: key, kind: COMPLETION_KIND.property, sortText: _GROUP.member + key })
+        }
+      }
+    }
+  }
+
+  # --------------------------------------------------------------
+  # Decorators and types
+  # --------------------------------------------------------------
+
+  _decorators(word: dict, line: string) {
+    var scope = self.summary.scopes[common.scope_at(self.summary, self.offset)]
+
+    if scope.kind != 'class' or !line.trim().starts_with('@') {
+      return
+    }
+
+    var owner = self.summary.symbols[scope.owner]
+    var declared = owner.get('members', []).map(@(index) => self.summary.symbols[index].name)
+    var at = word.start - 1
+    var range = self.server.range(self.key, at, self.offset)
+
+    for name, params in common.DECORATORS {
+      if declared.contains(name) {
+        continue
+      }
+
+      var item = {
+        label: name,
+        kind: name == '@new' ? COMPLETION_KIND.constructor : COMPLETION_KIND.method,
+        sortText: _GROUP.member + name,
+        filterText: name,
+      }
+
+      var arguments = ', '.join(params)
+
+      if self.snippets {
+        item.textEdit = { range, newText: '${name}(${arguments}) {\n  $0\n}' }
+        item.insertTextFormat = 2
+      } else {
+        item.textEdit = { range, newText: '${name}(${arguments})' }
+      }
+
+      self._add(item)
+    }
+  }
+
+  _types(word: dict) {
+    for name in common.TYPE_WORDS {
+      self._add({ label: name, kind: COMPLETION_KIND.type, sortText: _GROUP.builtin + name })
+    }
+
+    for name, index in common.visible_names(self.summary, self.offset) {
+      var symbol = self.summary.symbols[index]
+      var ref = { path: self.key, index }
+
+      if symbol.kind == 'import' {
+        var followed = self.linker.follow(ref)
+
+        if followed == nil or followed.contains('module') {
+          continue
+        }
+
+        symbol = self.linker.symbol(followed)
+        ref = followed
+      }
+
+      if symbol != nil and symbol.kind == 'class' {
+        self._add(self._declaration_item(name, ref, symbol, _GROUP.local))
+      }
+    }
+  }
+
+  # --------------------------------------------------------------
+  # Names
+  # --------------------------------------------------------------
+
+  _names(word: dict, line: string) {
+    var scope = self.summary.scopes[common.scope_at(self.summary, self.offset)]
+    var statement = line[0, line.length() - word.prefix.length()].trim().is_empty()
+
+    if scope.kind == 'class' {
+      if statement {
+        for keyword in _CLASS_KEYWORDS {
+          self._keyword(keyword)
+        }
+      }
+
+      return
+    }
+
+    for name, index in common.visible_names(self.summary, self.offset) {
+      var symbol = self.summary.symbols[index]
+      var group = symbol.scope == 0 ? _GROUP.module : _GROUP.local
+
+      if symbol.get('anonymous', false) or name == _PLACEHOLDER {
+        continue
+      }
+
+      self._add(self._declaration_item(name, { path: self.key, index }, symbol, group))
+    }
+
+    for name, ref in self.linker.starred(self.key) {
+      var symbol = self.linker.symbol(ref)
+
+      if symbol != nil {
+        self._add(self._declaration_item(name, ref, symbol, _GROUP.module))
+      }
+    }
+
+    for name in self.server.builtins.names {
+      var global = self.server.builtins.global(name)
+
+      if global != nil {
+        var ref = { path: global.summary.path, index: global.index }
+
+        var symbol = global.summary.symbols[global.index]
+
+        self._add(self._declaration_item(name, ref, symbol, _GROUP.builtin))
+      }
+    }
+
+    if statement {
+      for keyword in _STATEMENT_KEYWORDS {
+        self._keyword(keyword)
+      }
+    }
+
+    for keyword in _VALUE_KEYWORDS {
+      self._keyword(keyword)
+    }
+
+    if self.server.settings.get('completion.autoImport') == true {
+      self._auto_imports(word)
+    }
+  }
+
+  _keyword(keyword: string) {
+    self._add({ label: keyword, kind: COMPLETION_KIND.keyword, sortText: _GROUP.keyword + keyword })
+  }
+
+  # --------------------------------------------------------------
+  # Auto-import
+  # --------------------------------------------------------------
+
+  # An edit that adds an import line.
+  _import_edit(line_text: string) {
+    return common.import_edit(self.analysis.nodes, self.document.index(), line_text)
+  }
+
+  # The name this file already binds the module at `path` to, when it
+  # imports it whole.
+  _bound_module(path: string) {
+    for index in self.summary.imports {
+      var symbol = self.summary.symbols[index]
+
+      if symbol.kind == 'module' and self.linker.module_path(symbol.source.path, self.key) == path {
+        return symbol.name
+      }
+    }
+
+    return nil
+  }
+
+  _auto_imports(word: dict) {
+    var prefix = word.prefix.lower()
+
+    # Without a letter to go on the candidates are the whole index;
+    # the client asks again as the name is written.
+    if prefix.is_empty() {
+      self.incomplete = true
+      return
+    }
+
+    var visible = common.visible_names(self.summary, self.offset)
+    var importer = self.document.path
+    var best = {}
+    var builtins = self.server.builtins
+    var stubs = []
+
+    for summary in [builtins.globals, builtins.prelude] {
+      if summary != nil {
+        stubs.append(summary.path)
+      }
+    }
+
+    for summary in builtins.types.values() {
+      stubs.append(summary.path)
+    }
+
+    for path in self.linker.paths() {
+      if path == self.key or stubs.contains(path) {
+        continue
+      }
+
+      var import_path = self.server.resolver.import_path(path, importer)
+
+      if import_path == nil or import_path.is_empty() {
+        continue
+      }
+
+      for name, ref in self.linker.globals(path) {
+        if name.starts_with('_') or !name.lower().starts_with(prefix) or visible.contains(name) {
+          continue
+        }
+
+        var identity = '${ref.path}#${ref.index}'
+        var current = best.get(identity, nil)
+
+        # One declaration can be exported by several modules; the one
+        # with the shortest import path is offered.
+        if current == nil or import_path.length() < current.import_path.length() {
+          best[identity] = { name, ref, path, import_path }
+        }
+      }
+    }
+
+    for identity, candidate in best {
+      var symbol = self.linker.symbol(candidate.ref)
+
+      if symbol == nil {
+        continue
+      }
+
+      var item = self._declaration_item(candidate.name, candidate.ref, symbol, _GROUP.imported)
+      var relative = candidate.import_path.starts_with('.')
+
+      if relative {
+        var line = 'import ${candidate.import_path} { ${candidate.name} }'
+
+        item.additionalTextEdits = [self._import_edit(line)]
+        item.labelDetails = { description: candidate.import_path }
+      } else {
+        var bound = self._bound_module(candidate.path)
+        var module = bound == nil ? candidate.import_path.split('.').last() : bound
+
+        item.insertText = '${module}.${item.get("insertText", candidate.name)}'
+        item.filterText = candidate.name
+        item.labelDetails = { description: candidate.import_path }
+
+        if bound == nil {
+          item.additionalTextEdits = [self._import_edit('import ${candidate.import_path}')]
+        }
+      }
+
+      self._add(item)
+    }
+
+    # A standard library module or native module named like what is
+    # being written, imported whole.
+    for name in self._module_names(prefix) {
+      if visible.contains(name) {
+        continue
+      }
+
+      self._add({
+        label: name,
+        kind: COMPLETION_KIND.module,
+        sortText: _GROUP.imported + name,
+        detail: 'import ${name}',
+        additionalTextEdits: [self._import_edit('import ${name}')],
+      })
+    }
+  }
+
+  # The top-level modules of the standard library, the installed
+  # packages and the native modules whose names start with `prefix`.
+  _module_names(prefix: string) {
+    var found = []
+    var resolver = self.server.resolver
+
+    for root in [resolver.stdlib, resolver.home_libs] {
+      if root == nil or !os.dir_exists(root) {
+        continue
+      }
+
+      for name in os.read_dir(root) {
+        var module = name.ends_with('.zu') ? name[0, name.length() - 3] : name
+
+        if name.ends_with('.stub.zu') or module.starts_with('_') or module.starts_with('.') {
+          continue
+        }
+
+        var package = os.join_paths(root, name, 'index.zu')
+        var is_module = name.ends_with('.zu') or file(package).exists()
+
+        if is_module and module.lower().starts_with(prefix) and !found.contains(module) {
+          found.append(module)
+        }
+      }
+    }
+
+    for name in resolver.natives.keys() {
+      if name.lower().starts_with(prefix) and !found.contains(name) {
+        found.append(name)
+      }
+    }
+
+    return found
+  }
+}
+
+# An import path as written, `a.b` or `..a.b`, as `zuri.parse()` gives
+# paths: its parts joined by `/`.
+def _import_path(written: string) {
+  written = written.replace('/\s+/', '')
+
+  var dots = 0
+
+  while dots < written.length() and written[dots] == '.' {
+    dots++
+  }
+
+  var lead = ''
+
+  if dots == 1 {
+    lead = './'
+  } else if dots > 1 {
+    iter var i = 0; i < (dots / 2).floor(); i++ {
+      lead += '../'
+    }
+  }
+
+  return lead + written[dots, written.length()].replace('.', '/', false)
+}
+
+/**
+ * Answers `textDocument/completion`.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns dict: A `CompletionList`.
+ */
+def complete(server, params: dict) {
+  var document = server.document(params.textDocument.uri)
+  var offset = server.offset(document, params.position)
+  var completion = _Completion(server, document, offset)
+
+  completion.run()
+
+  return { isIncomplete: completion.incomplete, items: completion.items }
+}
+
+/**
+ * Answers `completionItem/resolve`: the item's signature as its detail
+ * and its documentation, worked out only for the item being looked at.
+ *
+ * @param Server server
+ * @param dict item
+ * @returns dict
+ */
+def resolve(server, item: dict) {
+  var data = item.get('data', nil)
+
+  if !is_dict(data) or !data.contains('path') {
+    return item
+  }
+
+  var linker = server.linker
+  var symbol = linker.symbol({ path: data.path, index: data.index })
+
+  if symbol == nil {
+    return item
+  }
+
+  var owner = common.owner_name(linker, data.path, symbol)
+  var type = nil
+
+  if symbol.kind == 'variable' or symbol.kind == 'field' {
+    type = common.describe(linker, linker.type_of({ path: data.path, index: data.index }))
+  }
+
+  item.detail = render.signature(symbol, owner, type)
+
+  var doc = render.markdown(symbol.get('doc', nil))
+
+  if !doc.is_empty() {
+    item.documentation = { kind: 'markdown', value: doc }
+  }
+
+  return item
+}

@@ -1,0 +1,184 @@
+/**
+ * The background indexers: isolates that read and summarize the files
+ * no editor has open, so the server's own isolate never waits on a
+ * workspace's worth of parsing.
+ *
+ * Work goes out on one channel all the indexers share, a batch of
+ * files at a time, each with the hash of the summary the server
+ * already holds of it. Results come back on another. A file whose text
+ * still has that hash comes back marked unchanged, so no file is ever
+ * summarized twice for the same text.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import isolate
+import .analysis.summary as summaries
+
+/** How many files an indexer takes at a time. */
+const BATCH = 8
+
+# What became of one file: summarized, unchanged since the hash it
+# came with, gone, or impossible to read.
+def _index(entry: dict, names: list) {
+  var text = nil
+
+  catch {
+    text = file(entry.path).read()
+  } as error {
+    return { path: entry.path, missing: true }
+  }
+
+  if entry.hash != nil and summaries.digest(text) == entry.hash {
+    return { path: entry.path, unchanged: true }
+  }
+
+  catch {
+    return { path: entry.path, summary: summaries.summarize(entry.path, text, names) }
+  } as error {
+    return { path: entry.path, failed: error.message }
+  }
+}
+
+/**
+ * The work of one indexer isolate: summarizes each batch it takes from
+ * `jobs` and sends the results to `results`, until `jobs` is closed.
+ *
+ * A batch is `{ generation, files }`, each file `{ path, hash }` with
+ * `hash` `nil` when the server holds no summary of it. The result is
+ * `{ generation, items }`, an item for each file:
+ *
+ * - `{ path, summary }` for a file summarized;
+ * - `{ path, unchanged: true }` for a file whose text has `hash`;
+ * - `{ path, missing: true }` for a file that cannot be read;
+ * - `{ path, failed }` for a file whose analysis raised, with the
+ *   error's message.
+ *
+ * @param isolate.Channel jobs
+ * @param isolate.Channel results
+ * @param list names: The names the runtime defines globally.
+ * @returns bool: `true`, once `jobs` is closed.
+ */
+def work(jobs, results, names: list) {
+  while true {
+    var job = jobs.recv()
+
+    if job == nil {
+      break
+    }
+
+    var items = []
+
+    for entry in job.files {
+      items.append(_index(entry, names))
+    }
+
+    results.send({ generation: job.generation, items })
+  }
+
+  return true
+}
+
+/**
+ * A pool of indexer isolates sharing one queue of work.
+ *
+ * Restarting the pool, as a change of installation or of the worker
+ * count does, moves it to a new generation, and whatever an indexer of
+ * an older generation still sends back is dropped.
+ */
+class IndexPool {
+
+  /**
+   * Starts `workers` indexers.
+   *
+   * @param int workers: At least one.
+   * @param list names: The names the runtime defines globally.
+   */
+  @new(workers: int, names: list) {
+    self.results = isolate.channel()
+    self.pending = 0
+    self._names = names
+    self._jobs = nil
+    self._workers = []
+    self._generation = 0
+
+    self._start(workers)
+  }
+
+  _start(workers: int) {
+    self._generation++
+    self._jobs = isolate.channel()
+    self._workers = []
+    self.pending = 0
+
+    var count = workers < 1 ? 1 : workers
+
+    iter var i = 0; i < count; i++ {
+      self._workers.append(isolate.spawn(work, self._jobs, self.results, self._names))
+    }
+  }
+
+  /**
+   * Stops every indexer and starts `workers` new ones, forgetting all
+   * the work still queued.
+   *
+   * @param int workers
+   * @param list names: The names the runtime defines globally, which
+   *    a new installation may change.
+   */
+  restart(workers: int, names: list) {
+    self._jobs.close()
+    self._names = names
+    self._start(workers)
+  }
+
+  /**
+   * Queues files to index.
+   *
+   * @param list entries: `{ path, hash }` for each file.
+   */
+  submit(entries: list) {
+    var at = 0
+
+    while at < entries.length() {
+      var end = (at + BATCH).min(entries.length())
+
+      self._jobs.send({ generation: self._generation, files: entries[at, end] })
+      self.pending += end - at
+      at = end
+    }
+  }
+
+  /**
+   * Takes one result from `results` and returns its items, or an empty
+   * list for a result of an older generation.
+   *
+   * @param dict result
+   * @returns list[dict]
+   */
+  receive(result: dict) {
+    if result.generation != self._generation {
+      return []
+    }
+
+    self.pending = (self.pending - result.items.length()).max(0)
+
+    return result.items
+  }
+
+  /**
+   * Whether files are still queued or being indexed.
+   *
+   * @returns bool
+   */
+  is_busy() {
+    return self.pending > 0
+  }
+
+  /**
+   * Stops every indexer once it finishes the batch in hand.
+   */
+  stop() {
+    self._jobs.close()
+  }
+}

@@ -1,0 +1,368 @@
+/**
+ * Going to where something is: its definition, the declaration this
+ * file has of it, the class of its type, and the code that implements
+ * it further down a class hierarchy.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import .common
+import ..analysis.query
+
+# How deep a class hierarchy is followed.
+const _DEPTH = 16
+
+# The document, offset and analysis a navigation request is about.
+def _at(server, params: dict) {
+  var document = server.document(params.textDocument.uri)
+  var offset = server.offset(document, params.position)
+  var analysis = server.analysis(document)
+
+  return { document, offset, analysis, key: document.key }
+}
+
+# Where a declaration is, as a location of its name.
+def _location_of(server, ref) {
+  if ref == nil {
+    return nil
+  }
+
+  if ref.contains('module') {
+    return ref.module == nil ? nil : server.location(ref.module, 0, 0)
+  }
+
+  var symbol = server.linker.symbol(ref)
+
+  if symbol == nil {
+    return nil
+  }
+
+  return {
+    uri: server.uri(ref.path),
+    range: server.range(ref.path, symbol.start, symbol.end),
+    selection: server.range(ref.path, symbol.name_start, symbol.name_end),
+  }
+}
+
+# Locations as the client wants them: links that carry the span of the
+# name they were reached from, when it takes those.
+def _answer(server, capability: string, origin, places: list) {
+  var found = places.filter(@(place) => place != nil)
+
+  if found.is_empty() {
+    return nil
+  }
+
+  if server.supports('textDocument.${capability}.linkSupport') == true {
+    return found.map(@(place) {
+      var link = {
+        targetUri: place.uri,
+        targetRange: place.range,
+        targetSelectionRange: place.get('selection', place.range),
+      }
+
+      if origin != nil {
+        link.originSelectionRange = origin
+      }
+
+      return link
+    })
+  }
+
+  return found.map(@(place) {
+    return { uri: place.uri, range: place.get('selection', place.range) }
+  })
+}
+
+# The class whose method holds `offset`, as `{ path, index }`.
+def _class_at(key: string, summary: dict, offset: int) {
+  var scope = common.scope_at(summary, offset)
+
+  while scope > 0 {
+    var found = summary.scopes[scope].get('owner_class', nil)
+
+    if found != nil {
+      return { path: key, index: found }
+    }
+
+    scope = summary.scopes[scope].outer
+  }
+
+  return nil
+}
+
+# What `self` or `parent` under `offset` stands for, with its span.
+def _keyword_target(server, at: dict) {
+  var path = common.path_to(at.analysis.nodes, at.offset)
+
+  if path.is_empty() {
+    return nil
+  }
+
+  var node = path[path.length() - 1]
+
+  if node.kind != 'Self' and node.kind != 'Parent' {
+    return nil
+  }
+
+  var ref = _class_at(at.key, at.analysis.summary, at.offset)
+
+  if ref != nil and node.kind == 'Parent' {
+    ref = server.linker.superclass(ref)
+  }
+
+  return ref == nil ? nil : { ref, start: node.start, end: node.end }
+}
+
+# The declaration at the cursor, as `{ ref, start, end }`.
+def _target(server, at: dict) {
+  var found = common.target_at(server.linker, at.key, at.analysis.summary, at.offset)
+
+  if found != nil {
+    if found.target == nil {
+      return nil
+    }
+
+    return { ref: found.target, start: found.occurrence.start, end: found.occurrence.end }
+  }
+
+  return _keyword_target(server, at)
+}
+
+/**
+ * Answers `textDocument/definition`: where the name at the cursor is
+ * declared, after following imports back to the module that declares
+ * it. A built-in leads to its stub, and a module to its file.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns any
+ */
+def definition(server, params: dict) {
+  var at = _at(server, params)
+  var target = _target(server, at)
+
+  if target == nil {
+    return nil
+  }
+
+  var origin = server.range(at.key, target.start, target.end)
+
+  return _answer(server, 'definition', origin, [_location_of(server, target.ref)])
+}
+
+/**
+ * Answers `textDocument/declaration`: where this file declares the
+ * name at the cursor, which for an imported name is its import, and
+ * for anything else its definition.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns any
+ */
+def declaration(server, params: dict) {
+  var at = _at(server, params)
+  var occurrence = query.at(at.analysis.summary, at.offset)
+
+  if occurrence != nil and occurrence.kind == 'ref' and occurrence.target >= 0 {
+    var local = { path: at.key, index: occurrence.target }
+    var symbol = server.linker.symbol(local)
+
+    if symbol != nil and (symbol.kind == 'import' or symbol.kind == 'module') {
+      var origin = server.range(at.key, occurrence.start, occurrence.end)
+
+      return _answer(server, 'declaration', origin, [_location_of(server, local)])
+    }
+  }
+
+  var target = _target(server, at)
+
+  if target == nil {
+    return nil
+  }
+
+  var origin = server.range(at.key, target.start, target.end)
+
+  return _answer(server, 'declaration', origin, [_location_of(server, target.ref)])
+}
+
+/**
+ * Answers `textDocument/typeDefinition`: the class of the value the
+ * name at the cursor holds, or the module's file for a module.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns any
+ */
+def type_definition(server, params: dict) {
+  var at = _at(server, params)
+  var target = _target(server, at)
+
+  if target == nil {
+    return nil
+  }
+
+  var ref = target.ref
+
+  if ref.contains('module') {
+    return definition(server, params)
+  }
+
+  var type = server.linker.type_of(ref)
+
+  if type == nil {
+    return nil
+  }
+
+  var place = nil
+
+  using type.t {
+    when 'instance', 'super', 'class' {
+      place = _location_of(server, { path: type.path, index: type.index })
+    }
+    when 'module' place = _location_of(server, { module: type.path })
+    when 'builtin' {
+      var stub = server.builtins.type_class(type.name)
+
+      if stub != nil {
+        place = _location_of(server, { path: stub.summary.path, index: stub.index })
+      }
+    }
+    default {
+      place = nil
+    }
+  }
+
+  var origin = server.range(at.key, target.start, target.end)
+
+  return _answer(server, 'typeDefinition', origin, [place])
+}
+
+/**
+ * Answers `textDocument/implementation`: for a method, every method
+ * of a subclass that overrides it; for a class, every class below it.
+ *
+ * @param Server server
+ * @param dict params
+ * @param rpc.Context context
+ * @returns any
+ */
+def implementation(server, params: dict, context) {
+  var at = _at(server, params)
+  var target = _target(server, at)
+
+  if target == nil or target.ref.contains('module') {
+    return nil
+  }
+
+  server.sync_open()
+
+  var linker = server.linker
+  var symbol = linker.symbol(target.ref)
+
+  if symbol == nil {
+    return nil
+  }
+
+  var places = []
+
+  if symbol.kind == 'class' {
+    for ref in subclasses_below(server, target.ref, context) {
+      places.append(_location_of(server, ref))
+    }
+  } else if symbol.kind == 'method' and symbol.get('owner', nil) != nil {
+    var owner = { path: target.ref.path, index: symbol.owner }
+
+    for ref in overrides(server, owner, symbol.name, context) {
+      places.append(_location_of(server, ref))
+    }
+  }
+
+  var origin = server.range(at.key, target.start, target.end)
+
+  return _answer(server, 'implementation', origin, places)
+}
+
+/**
+ * Every class the linker holds below the class `ref`, nearest first.
+ *
+ * @param Server server
+ * @param dict ref
+ * @param ?rpc.Context context: Checked for cancellation as it goes.
+ * @returns list[dict]
+ */
+def subclasses_below(server, ref: dict, context) {
+  var found = []
+  var level = [ref]
+  var depth = 0
+
+  while !level.is_empty() and depth < _DEPTH {
+    var next = []
+
+    for current in level {
+      server.interrupted(context, nil)
+
+      for below in server.linker.subclasses(current) {
+        if !found.some(@(seen) => seen.path == below.path and seen.index == below.index) {
+          found.append(below)
+          next.append(below)
+        }
+      }
+    }
+
+    level = next
+    depth++
+  }
+
+  return found
+}
+
+/**
+ * The methods named `name` that classes below `owner` declare
+ * themselves, each overriding the one above it.
+ *
+ * @param Server server
+ * @param dict owner: The class, `{ path, index }`.
+ * @param string name
+ * @param ?rpc.Context context
+ * @returns list[dict]
+ */
+def overrides(server, owner: dict, name: string, context) {
+  var found = []
+
+  for below in subclasses_below(server, owner, context) {
+    var member = declared_member(server.linker, below, name)
+
+    if member != nil {
+      found.append(member)
+    }
+  }
+
+  return found
+}
+
+/**
+ * The member `name` the class `ref` declares itself, not inherits.
+ *
+ * @param Linker linker
+ * @param dict ref
+ * @param string name
+ * @returns ?dict: `{ path, index }`.
+ */
+def declared_member(linker, ref: dict, name: string) {
+  var symbol = linker.symbol(ref)
+
+  if symbol == nil {
+    return nil
+  }
+
+  for index in symbol.get('members', []) {
+    var member = linker.symbol({ path: ref.path, index })
+
+    if member != nil and member.name == name {
+      return { path: ref.path, index }
+    }
+  }
+
+  return nil
+}

@@ -1,0 +1,1056 @@
+/**
+ * The linker: what the files of a workspace mean to each other.
+ *
+ * It holds the summary of every file the server knows, and answers the
+ * questions no single file can: what a module exports, what a wildcard
+ * import brings in, which declaration an import names, what a deferred
+ * type turns out to be, and which members a class has once its
+ * superclasses and every extension of it are counted.
+ *
+ * A file it is asked about and does not hold is read from disk and
+ * summarized then, so an answer never waits on the indexers; they only
+ * make it faster.
+ *
+ * A reference to a declaration is `{ path, index }`: the file's path
+ * and the declaration's index in its summary. A built-in type's stub is
+ * a file like any other, so `string`'s methods are declarations of
+ * `_string.stub.zu`.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import zuri
+import .summary as summaries
+import .builtins { TYPES }
+
+# How long a chain of deferred types is followed before giving up, so
+# a type defined in terms of itself ends.
+const _DEPTH = 16
+
+# The words a `@returns` tag names a built-in type by.
+const _TYPE_WORDS = {
+  string: 'string',
+  str: 'string',
+  number: 'number',
+  int: 'number',
+  float: 'number',
+  bool: 'bool',
+  boolean: 'bool',
+  list: 'list',
+  array: 'list',
+  dict: 'dict',
+  dictionary: 'dict',
+  range: 'range',
+  bytes: 'bytes',
+  file: 'file',
+  function: 'function',
+  bigint: 'bigint',
+}
+
+# The type a `@returns` tag's type names, read as a word: `?dict` and
+# `dict|nil` are `dict`, `list[bytes]` and `number[]` are `list`, and
+# a union of two real types is no one type.
+def _type_word(text) {
+  if text == nil {
+    return nil
+  }
+
+  var word = text.trim().replace('/^[\{\?]+/', '').replace('/[\}]+$/', '').trim()
+  var choices = word.split('|').map(@(part) => part.trim()).filter(@(part) {
+    return part != 'nil' and part != 'null' and !part.is_empty()
+  })
+
+  if choices.length() != 1 {
+    return nil
+  }
+
+  word = choices[0]
+
+  if word.ends_with('[]') {
+    return 'list'
+  }
+
+  word = word.replace('/[\[<].*$/', '').trim()
+
+  return word.is_empty() ? nil : word
+}
+
+/**
+ * Every summary the server knows, and the answers that need more than
+ * one of them.
+ */
+class Linker {
+
+  /**
+   * Returns a new {Linker}.
+   *
+   * @param Resolver resolver: Where imports lead.
+   * @param Builtins builtins: The installation's built-in globals and
+   *    types; their stubs join the files the linker holds.
+   */
+  @new(resolver, builtins) {
+    self.resolver = resolver
+    self.builtins = builtins
+    self.generation = 0
+    self._summaries = {}
+    self._unreadable = {}
+    self._globals = {}
+    self._starred = {}
+    self._extensions = nil
+    self._subclasses = nil
+    self._returns = {}
+
+    for summary in [builtins.globals, builtins.prelude] {
+      if summary != nil {
+        self._summaries[summary.path] = summary
+      }
+    }
+
+    for name, summary in builtins.types {
+      self._summaries[summary.path] = summary
+    }
+  }
+
+  _clear() {
+    self._globals = {}
+    self._starred = {}
+    self._extensions = nil
+    self._subclasses = nil
+    self._returns = {}
+  }
+
+  /**
+   * Holds `summary` as the summary of the file at `path`, in place of
+   * whatever was held before.
+   *
+   * @param string path
+   * @param dict summary
+   */
+  put(path: string, summary: dict) {
+    self._summaries[path] = summary
+    self._unreadable.remove(path)
+    self.generation++
+    self._clear()
+  }
+
+  /**
+   * Forgets the file at `path`.
+   *
+   * @param string path
+   */
+  drop(path: string) {
+    self._summaries.remove(path)
+    self._unreadable.remove(path)
+    self.generation++
+    self._clear()
+  }
+
+  /**
+   * Forgets everything worked out from the summaries, keeping the
+   * summaries themselves, for when where imports lead has changed, as
+   * when a `project.toml` appears or goes.
+   */
+  refresh() {
+    self.generation++
+    self._unreadable = {}
+    self._clear()
+  }
+
+  /**
+   * Whether the linker holds a summary of `path`, without reading it.
+   *
+   * @param string path
+   * @returns bool
+   */
+  holds(path: string) {
+    return self._summaries.contains(path)
+  }
+
+  /**
+   * Every path the linker holds a summary of.
+   *
+   * @returns list[string]
+   */
+  paths() {
+    return self._summaries.keys()
+  }
+
+  /**
+   * The summary of `path`, reading and summarizing the file when the
+   * linker does not hold it yet; `nil` when it cannot be read.
+   *
+   * @param ?string path
+   * @returns ?dict
+   */
+  summary(path) {
+    if path == nil {
+      return nil
+    }
+
+    var found = self._summaries.get(path, nil)
+
+    if found != nil or self._unreadable.contains(path) {
+      return found
+    }
+
+    var text = nil
+
+    catch {
+      text = file(path).read()
+    } as error {
+      self._unreadable[path] = true
+      return nil
+    }
+
+    var summary = summaries.summarize(path, text, self.builtins.names)
+
+    # Read in passing, not edited: no generation change, so nothing
+    # cached is lost to a file merely being looked at.
+    self._summaries[path] = summary
+
+    return summary
+  }
+
+  /**
+   * The declaration `ref` points at.
+   *
+   * @param dict ref: `{ path, index }`.
+   * @returns ?dict
+   */
+  symbol(ref) {
+    if ref == nil {
+      return nil
+    }
+
+    var summary = self.summary(ref.path)
+
+    if summary == nil or ref.index < 0 or ref.index >= summary.symbols.length() {
+      return nil
+    }
+
+    return summary.symbols[ref.index]
+  }
+
+  # --------------------------------------------------------------
+  # Modules
+  # --------------------------------------------------------------
+
+  /**
+   * The summary path of the module an import of `path` from
+   * `importer` names: a file, or a native module's stub. `nil` when it
+   * names nothing, or a native module internal to the runtime.
+   *
+   * @param string path
+   * @param ?string importer
+   * @returns ?string
+   */
+  module_path(path: string, importer) {
+    var found = self.resolver.resolve(path, importer)
+
+    if found == nil {
+      return nil
+    }
+
+    using found.kind {
+      when 'file' return found.path
+      when 'native' return found.stub
+      default {
+        return nil
+      }
+    }
+  }
+
+  /**
+   * The globals of the module at `path`, by name: what importing it
+   * makes reachable through `module.name`, and what a wildcard import
+   * of it brings in. Each is `{ path, index }`.
+   *
+   * @param string path
+   * @returns dict
+   */
+  globals(path: string) {
+    var cached = self._globals.get(path, nil)
+
+    if cached != nil {
+      return cached
+    }
+
+    var found = {}
+
+    # Marked before the wildcard imports are followed, so two modules
+    # that re-export each other end.
+    self._globals[path] = found
+
+    var summary = self.summary(path)
+
+    if summary == nil {
+      return found
+    }
+
+    for name, index in summary.get('globals', {}) {
+      found[name] = { path, index }
+    }
+
+    for star in summary.stars {
+      if !star.exported {
+        continue
+      }
+
+      var target = self.module_path(star.path, path)
+
+      if target == nil {
+        continue
+      }
+
+      for name, ref in self.globals(target) {
+        if !name.starts_with('_') and !found.contains(name) {
+          found[name] = ref
+        }
+      }
+    }
+
+    return found
+  }
+
+  /**
+   * The names the file at `path` has from its own wildcard imports, by
+   * name, each `{ path, index }`. A wildcard import brings in every
+   * global of its module, private ones included.
+   *
+   * @param string path
+   * @returns dict
+   */
+  starred(path: string) {
+    var cached = self._starred.get(path, nil)
+
+    if cached != nil {
+      return cached
+    }
+
+    var found = {}
+    var summary = self.summary(path)
+
+    if summary != nil {
+      for star in summary.stars {
+        var target = self.module_path(star.path, path)
+
+        if target == nil {
+          continue
+        }
+
+        for name, ref in self.globals(target) {
+          if !found.contains(name) {
+            found[name] = ref
+          }
+        }
+      }
+    }
+
+    self._starred[path] = found
+
+    return found
+  }
+
+  /**
+   * Whether every wildcard import of `path` leads to a module whose
+   * globals are known, so a name none of them has is truly missing.
+   *
+   * @param string path
+   * @returns bool
+   */
+  stars_known(path: string) {
+    var summary = self.summary(path)
+
+    if summary == nil {
+      return false
+    }
+
+    for star in summary.stars {
+      var found = self.resolver.resolve(star.path, path)
+
+      if found == nil or found.kind == 'internal' {
+        return false
+      }
+    }
+
+    return true
+  }
+
+  # --------------------------------------------------------------
+  # Following declarations
+  # --------------------------------------------------------------
+
+  /**
+   * The declaration a name imported by `ref` stands for, following
+   * re-exports to where it was declared: `{ path, index }` for an
+   * element of an import, or `{ module }` with the module's summary
+   * path for a whole module. `nil` when it cannot be followed.
+   *
+   * @param dict ref: `{ path, index }` of an import declaration.
+   * @returns ?dict
+   */
+  follow(ref) {
+    var current = ref
+    var steps = 0
+
+    while steps < _DEPTH {
+      steps++
+
+      var symbol = self.symbol(current)
+
+      if symbol == nil {
+        return nil
+      }
+
+      if symbol.kind == 'module' {
+        return { module: self.module_path(symbol.source.path, current.path) }
+      }
+
+      if symbol.kind != 'import' {
+        return current
+      }
+
+      var target = self.module_path(symbol.source.path, current.path)
+
+      if target == nil {
+        return nil
+      }
+
+      current = self.globals(target).get(symbol.source.member, nil)
+
+      if current == nil {
+        return nil
+      }
+    }
+
+    return nil
+  }
+
+  /**
+   * The declaration the name `name`, used at the top level of the file
+   * at `path`, stands for: one of its globals, a local import, a name
+   * from a wildcard import, or a built-in global. `nil` for none.
+   *
+   * @param string path
+   * @param string name
+   * @returns ?dict: `{ path, index }`.
+   */
+  module_name(path: string, name: string) {
+    var summary = self.summary(path)
+
+    if summary != nil {
+      var index = summary.get('globals', {}).get(name, nil)
+
+      if index == nil and !summary.scopes.is_empty() {
+        index = summary.scopes[0].names.get(name, nil)
+      }
+
+      if index != nil {
+        return { path, index }
+      }
+
+      var starred = self.starred(path).get(name, nil)
+
+      if starred != nil {
+        return starred
+      }
+    }
+
+    var global = self.builtins.global(name)
+
+    return global == nil ? nil : { path: global.summary.path, index: global.index }
+  }
+
+  # --------------------------------------------------------------
+  # Types
+  # --------------------------------------------------------------
+
+  /**
+   * What a type comes to: a built-in type, a class, an instance, a
+   * module or a function, or `nil` when it cannot be told.
+   *
+   * | `t` | Other keys |
+   * | --- | --- |
+   * | `'builtin'` | `name` |
+   * | `'class'`, `'instance'`, `'super'`, `'function'` | `path`, `index` |
+   * | `'module'` | `path`: the module's summary path |
+   *
+   * @param ?dict type: A type from a summary.
+   * @returns ?dict
+   */
+  resolve(type) {
+    return self._resolve(type, 0)
+  }
+
+  _resolve(type, depth) {
+    if type == nil or depth > _DEPTH {
+      return nil
+    }
+
+    using type.t {
+      when 'builtin', 'class', 'module', 'function' return type
+      when 'instance', 'super' {
+        if type.contains('path') {
+          return type
+        }
+
+        var owner = self._resolve(type.of, depth + 1)
+
+        if owner == nil or owner.t != 'class' {
+          return nil
+        }
+
+        return {
+          t: type.t,
+          path: owner.path,
+          index: owner.index,
+          loose: type.get('loose', false),
+        }
+      }
+      when 'symbol' return self._symbol_type({ path: type.module, index: type.index }, depth + 1)
+      when 'global' {
+        var global = self.builtins.global(type.name)
+
+        if global == nil {
+          return nil
+        }
+
+        return self._symbol_type({ path: global.summary.path, index: global.index }, depth + 1)
+      }
+      when 'star' {
+        var ref = self.starred(type.module).get(type.name, nil)
+
+        return ref == nil ? nil : self._symbol_type(ref, depth + 1)
+      }
+      when 'import' {
+        var path = self.module_path(type.path, type.importer)
+
+        return path == nil ? nil : { t: 'module', path }
+      }
+      when 'member' {
+        var owner = self._resolve(type.of, depth + 1)
+        var member = self._member(owner, type.name)
+
+        return member == nil ? nil : self._symbol_type(member, depth + 1)
+      }
+      when 'call' return self._call(self._resolve(type.of, depth + 1), depth + 1)
+      default {
+        return nil
+      }
+    }
+  }
+
+  /**
+   * The type of the declaration `ref`.
+   *
+   * @param dict ref: `{ path, index }`.
+   * @returns ?dict
+   */
+  type_of(ref) {
+    return self._symbol_type(ref, 0)
+  }
+
+  _symbol_type(ref, depth) {
+    if depth > _DEPTH {
+      return nil
+    }
+
+    var symbol = self.symbol(ref)
+
+    if symbol == nil {
+      return nil
+    }
+
+    using symbol.kind {
+      when 'class' return { t: 'class', path: ref.path, index: ref.index }
+      when 'function', 'method' return { t: 'function', path: ref.path, index: ref.index }
+      when 'module' {
+        var path = self.module_path(symbol.source.path, ref.path)
+
+        return path == nil ? nil : { t: 'module', path }
+      }
+      when 'import' {
+        var target = self.follow(ref)
+
+        if target == nil {
+          return nil
+        }
+
+        if target.contains('module') {
+          return target.module == nil ? nil : { t: 'module', path: target.module }
+        }
+
+        return self._symbol_type(target, depth + 1)
+      }
+      default {
+        var resolved = self._resolve(symbol.get('type', nil), depth + 1)
+
+        # A field's type read from what it is set to holds until some
+        # other code sets it to something else, which any code holding
+        # an instance can; it is never proof.
+        if resolved != nil and symbol.get('loose_type', false) and !resolved.get('loose', false) {
+          var loosened = resolved.clone()
+
+          loosened.loose = true
+
+          return loosened
+        }
+
+        return resolved
+      }
+    }
+  }
+
+  # What calling something of the concrete type `callee` gives.
+  _call(callee, depth) {
+    if callee == nil {
+      return nil
+    }
+
+    if callee.t == 'class' {
+      return { t: 'instance', path: callee.path, index: callee.index }
+    }
+
+    if callee.t != 'function' {
+      return nil
+    }
+
+    var key = '${callee.path}#${callee.index}'
+
+    if self._returns.contains(key) {
+      return self._returns[key]
+    }
+
+    # Assumed unknown while it is worked out, so a function that
+    # returns its own result ends.
+    self._returns[key] = nil
+
+    var result = self._declared_return(callee, depth)
+
+    # Without a documented type, what every `return` gives, when they
+    # all give the same; a bare `nil` agrees with anything.
+    if result == nil {
+      var summary = self.summary(callee.path)
+      var found = summary == nil ? nil : summary.returns.get('${callee.index}', nil)
+      var agreed = nil
+      var first = true
+
+      for type in found == nil ? [] : found {
+        var resolved = type == nil ? nil : self._resolve(type, depth + 1)
+
+        if resolved == nil {
+          agreed = nil
+          break
+        }
+
+        if resolved.t == 'builtin' and resolved.name == 'nil' {
+          continue
+        }
+
+        if first {
+          agreed = resolved
+          first = false
+        } else if agreed != resolved {
+          agreed = nil
+          break
+        }
+      }
+
+      result = agreed
+    }
+
+    self._returns[key] = result
+
+    return result
+  }
+
+  # The type a function's `@returns` tag names, when it names one this
+  # can find.
+  _declared_return(callee, depth) {
+    var symbol = self.symbol(callee)
+
+    if symbol == nil or symbol.doc == nil {
+      return nil
+    }
+
+    var block = zuri.doc.parse(symbol.doc)
+    var tag = block.first('returns')
+
+    if tag == nil {
+      return nil
+    }
+
+    var word = _type_word(tag.type.is_empty() ? tag.text.split(' ')[0] : tag.type)
+
+    if word == nil {
+      return nil
+    }
+
+    # What a doc block says is taken as a hint, never as proof: a value
+    # it describes may be narrower or wider than the words say.
+    var builtin = _TYPE_WORDS.get(word.lower(), nil)
+
+    if builtin != nil and word == word.lower() {
+      return { t: 'builtin', name: builtin, loose: true }
+    }
+
+    # A class: the one its name means in the function's own module, or
+    # the class whose method this is, when it returns `itself`.
+    var ref = self.module_name(callee.path, word.split('.').last())
+
+    if ref == nil {
+      return nil
+    }
+
+    var named = self._symbol_type(ref, depth + 1)
+
+    if named != nil and named.t == 'class' {
+      return { t: 'instance', path: named.path, index: named.index, loose: true }
+    }
+
+    return nil
+  }
+
+  # --------------------------------------------------------------
+  # Classes and members
+  # --------------------------------------------------------------
+
+  /**
+   * The superclass of the class `ref`, or `nil` for one with none or
+   * one whose superclass cannot be told.
+   *
+   * @param dict ref: `{ path, index }` of a class.
+   * @returns ?dict: `{ path, index }`.
+   */
+  superclass(ref) {
+    var symbol = self.symbol(ref)
+
+    if symbol == nil or symbol.get('extension', false) or symbol.get('superclass', nil) == nil {
+      return nil
+    }
+
+    var found = self.resolve(symbol.superclass)
+
+    if found == nil or found.t != 'class' {
+      return nil
+    }
+
+    return { path: found.path, index: found.index }
+  }
+
+  /**
+   * Whether the superclass of `ref` names something, known or not.
+   *
+   * @param dict ref
+   * @returns bool
+   */
+  has_superclass(ref) {
+    var symbol = self.symbol(ref)
+
+    if symbol == nil or symbol.get('extension', false) {
+      return false
+    }
+
+    # Written, whether or not its type can be told.
+    return symbol.get('superclass_text', nil) != nil
+  }
+
+  /**
+   * The class `ref` and every class above it, nearest first.
+   *
+   * @param dict ref
+   * @returns list[dict]
+   */
+  chain(ref) {
+    var found = []
+    var current = ref
+
+    while current != nil and found.length() < _DEPTH {
+      if found.some(@(seen) => seen.path == current.path and seen.index == current.index) {
+        break
+      }
+
+      found.append(current)
+      current = self.superclass(current)
+    }
+
+    return found
+  }
+
+  # Every extension the linker holds, by the class it extends.
+  _extension_map() {
+    if self._extensions != nil {
+      return self._extensions
+    }
+
+    var map = {}
+
+    for path in self.paths() {
+      var summary = self._summaries[path]
+      var index = 0
+
+      for symbol in summary.symbols {
+        var extends = symbol.kind == 'class' and symbol.get('extension', false)
+
+        if extends and symbol.get('superclass', nil) != nil {
+          var target = self.resolve(symbol.superclass)
+
+          if target != nil and target.t == 'class' {
+            var key = '${target.path}#${target.index}'
+
+            if !map.contains(key) {
+              map[key] = []
+            }
+
+            map[key].append({ path, index })
+          }
+        }
+
+        index++
+      }
+    }
+
+    self._extensions = map
+
+    return map
+  }
+
+  /**
+   * The extensions the linker holds of the class `ref`.
+   *
+   * @param dict ref
+   * @returns list[dict]
+   */
+  extensions(ref) {
+    return self._extension_map().get('${ref.path}#${ref.index}', [])
+  }
+
+  /**
+   * The classes the linker holds that inherit directly from `ref`.
+   *
+   * @param dict ref
+   * @returns list[dict]
+   */
+  subclasses(ref) {
+    if self._subclasses == nil {
+      var map = {}
+
+      for path in self.paths() {
+        var summary = self._summaries[path]
+        var index = 0
+
+        for symbol in summary.symbols {
+          if symbol.kind == 'class' and !symbol.get('extension', false) {
+            var parent_ref = self.superclass({ path, index })
+
+            if parent_ref != nil {
+              var key = '${parent_ref.path}#${parent_ref.index}'
+
+              if !map.contains(key) {
+                map[key] = []
+              }
+
+              map[key].append({ path, index })
+            }
+          }
+
+          index++
+        }
+      }
+
+      self._subclasses = map
+    }
+
+    return self._subclasses.get('${ref.path}#${ref.index}', [])
+  }
+
+  /**
+   * Every member reachable through a value of the concrete type
+   * `owner`, nearest declaration first for each name. Each is
+   * `{ name, path, index, via }`, where `via` says how it is reached:
+   * `'field'`, `'method'`, `'static'`, `'extension'`, `'export'` or
+   * `'value'` for what every value carries.
+   *
+   * @param ?dict owner: A type `resolve()` returned.
+   * @returns list[dict]
+   */
+  members(owner) {
+    var found = []
+    var seen = {}
+
+    if owner == nil {
+      return found
+    }
+
+    def add(name, ref, via) {
+      if !seen.contains(name) {
+        seen[name] = true
+        found.append({ name, path: ref.path, index: ref.index, via })
+      }
+    }
+
+    using owner.t {
+      when 'module' {
+        for name, ref in self.globals(owner.path) {
+          add(name, ref, 'export')
+        }
+
+        return found
+      }
+      when 'builtin' {
+        var stub = self.builtins.type_class(owner.name)
+
+        if stub != nil {
+          self._class_members({ path: stub.summary.path, index: stub.index }, false, add)
+        }
+      }
+      when 'instance', 'super' {
+        var start = { path: owner.path, index: owner.index }
+
+        if owner.t == 'super' {
+          start = self.superclass(start)
+        }
+
+        for ref in start == nil ? [] : self.chain(start) {
+          self._class_members(ref, false, add)
+        }
+      }
+      when 'class' {
+        for ref in self.chain({ path: owner.path, index: owner.index }) {
+          self._class_members(ref, true, add)
+        }
+      }
+      when 'function' {
+        var stub = self.builtins.type_class('function')
+
+        if stub != nil {
+          self._class_members({ path: stub.summary.path, index: stub.index }, false, add)
+        }
+      }
+      default {
+        return found
+      }
+    }
+
+    var value = self.builtins.value_class()
+
+    if value != nil and owner.t != 'class' {
+      self._class_members({ path: value.summary.path, index: value.index }, false, add)
+    }
+
+    return found
+  }
+
+  # The members one class declares, as `add(name, ref, via)` calls:
+  # instance members for `statics` false, static ones for true.
+  _class_members(ref, statics: bool, add) {
+    var symbol = self.symbol(ref)
+
+    if symbol == nil {
+      return
+    }
+
+    for index in symbol.get('members', []) {
+      var member = self.symbol({ path: ref.path, index })
+
+      if member == nil or member.name == '@new' {
+        continue
+      }
+
+      if member.get('is_static', false) != statics {
+        continue
+      }
+
+      var via = statics ? 'static' : (member.kind == 'field' ? 'field' : 'method')
+
+      add(member.name, { path: ref.path, index }, via)
+    }
+
+    if statics {
+      return
+    }
+
+    # An extension's static methods become methods of the class it
+    # extends.
+    for extension in self.extensions(ref) {
+      var extended = self.symbol(extension)
+
+      for index in extended.get('members', []) {
+        var member = self.symbol({ path: extension.path, index })
+
+        if member != nil and member.kind == 'method' {
+          add(member.name, { path: extension.path, index }, 'extension')
+        }
+      }
+    }
+  }
+
+  /**
+   * The member `name` of a value of the concrete type `owner`, as
+   * `{ path, index }`, or `nil` when it has none this can find.
+   *
+   * @param ?dict owner
+   * @param string name
+   * @returns ?dict
+   */
+  member(owner, name: string) {
+    return self._member(owner, name)
+  }
+
+  _member(owner, name) {
+    if owner == nil {
+      return nil
+    }
+
+    for found in self.members(owner) {
+      if found.name == name {
+        return { path: found.path, index: found.index }
+      }
+    }
+
+    return nil
+  }
+
+  /**
+   * Whether every member a value of `owner` can have is known: its
+   * class and each class above it are found, so a name none of them
+   * declares is truly missing. A dictionary never is, since any name
+   * reads one of its keys. An extension the server has not read
+   * could still add one, which is why a missing member is only ever a
+   * warning.
+   *
+   * @param ?dict owner
+   * @returns bool
+   */
+  fully_known(owner) {
+    if owner == nil {
+      return false
+    }
+
+    if owner.get('loose', false) {
+      return false
+    }
+
+    # Any name reads a key of a dictionary, and `nil` is checked by
+    # nothing here.
+    if owner.t == 'builtin' {
+      return owner.name != 'dict' and owner.name != 'nil'
+    }
+
+    if owner.t == 'module' {
+      return true
+    }
+
+    if owner.t != 'instance' and owner.t != 'class' {
+      return false
+    }
+
+    for ref in self.chain({ path: owner.path, index: owner.index }) {
+      if self.has_superclass(ref) and self.superclass(ref) == nil {
+        return false
+      }
+    }
+
+    return true
+  }
+}

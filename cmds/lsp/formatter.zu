@@ -1,0 +1,30 @@
+/**
+ * Formatting off the server's own isolate. Each request runs `zuri
+ * fmt`'s own engine on an isolate of its own, so the server goes on
+ * answering while a large file is laid out, and a formatter failure
+ * stays inside that isolate.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import ..fmt.engine
+
+/**
+ * Formats `text` and sends `{ id, text }` to `results`, or `{ id,
+ * error }` with the message when it cannot be formatted, as when it
+ * holds a syntax error.
+ *
+ * @param int id: Which request this answers.
+ * @param string text
+ * @param isolate.Channel results
+ * @returns bool: `true`, once the result is sent.
+ */
+def run(id: int, text: string, results) {
+  catch {
+    results.send({ id, text: engine.format(text) })
+  } as error {
+    results.send({ id, error: error.message })
+  }
+
+  return true
+}

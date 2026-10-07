@@ -1,0 +1,71 @@
+/**
+ * Document links: each import's path links to the file it loads, or to
+ * the stub that describes a native module.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+/**
+ * Answers `textDocument/documentLink`.
+ *
+ * @param Server server
+ * @param dict params
+ * @returns list[dict]
+ */
+def links(server, params: dict) {
+  var document = server.document(params.textDocument.uri)
+  var summary = server.analysis(document).summary
+  var key = document.key
+  var importer = document.path
+  var found = []
+  var seen = {}
+
+  def add(path: string, segments: list) {
+    if segments.is_empty() {
+      return
+    }
+
+    var start = segments[0].start
+
+    if seen.contains('${start}') {
+      return
+    }
+
+    seen['${start}'] = true
+
+    var target = server.resolver.resolve(path, importer)
+    var file_path = nil
+
+    if target != nil {
+      using target.kind {
+        when 'file' file_path = target.path
+        when 'native' file_path = target.stub
+        default {
+          file_path = nil
+        }
+      }
+    }
+
+    if file_path == nil {
+      return
+    }
+
+    found.append({
+      range: server.range(key, start, segments[segments.length() - 1].end),
+      target: server.uri(file_path),
+      tooltip: file_path,
+    })
+  }
+
+  for index in summary.imports {
+    var source = summary.symbols[index].source
+
+    add(source.path, source.segments)
+  }
+
+  for star in summary.stars {
+    add(star.path, star.segments)
+  }
+
+  return found
+}

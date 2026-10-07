@@ -1,0 +1,594 @@
+/**
+ * Text as the protocol sees it: positions in each of its three
+ * encodings, edits to a document, file URIs, and the line diff that
+ * turns a formatted file into the smallest set of edits.
+ *
+ * Zuri strings index by code point, and so does everything the server
+ * computes. The protocol counts a line's characters in UTF-16 code
+ * units unless the client agrees to UTF-8 bytes or UTF-32 code points,
+ * so every position crossing the wire goes through a {LineIndex}.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import os
+
+/** Characters counted as UTF-16 code units, the protocol's default. */
+const UTF16 = 'utf-16'
+
+/** Characters counted as UTF-8 bytes. */
+const UTF8 = 'utf-8'
+
+/** Characters counted as code points, the way Zuri counts them. */
+const UTF32 = 'utf-32'
+
+# How many units of `encoding` the character `ch` takes.
+def _width(ch: string, encoding: string) {
+  if encoding == UTF32 {
+    return 1
+  }
+
+  var code = ch.ord()
+
+  if encoding == UTF16 {
+    return code > 65535 ? 2 : 1
+  }
+
+  if code < 128 {
+    return 1
+  }
+
+  if code < 2048 {
+    return 2
+  }
+
+  return code < 65536 ? 3 : 4
+}
+
+# Whether every character of `line` takes one unit in every encoding.
+def _is_ascii(line: string) {
+  return line.to_bytes().length() == line.length()
+}
+
+# The offset each line starts at. A line ends at `\n`, at `\r\n`, or
+# at a `\r` on its own.
+def _line_starts(text: string) {
+  var starts = [0]
+
+  if !text.contains('\r') {
+    var offset = 0
+
+    for line in text.split('\n') {
+      offset += line.length() + 1
+      starts.append(offset)
+    }
+
+    starts.pop()
+
+    return starts
+  }
+
+  var length = text.length()
+  var i = 0
+
+  while i < length {
+    var ch = text[i]
+
+    if ch == '\n' {
+      starts.append(i + 1)
+    } else if ch == '\r' {
+      if i + 1 < length and text[i + 1] == '\n' {
+        i++
+      }
+
+      starts.append(i + 1)
+    }
+
+    i++
+  }
+
+  return starts
+}
+
+/**
+ * Where each line of a text starts, and the conversion between
+ * offsets into the text and the protocol's `{ line, character }`
+ * positions.
+ *
+ * A position past the end of its line means the end of that line, and
+ * a line past the last means the end of the text, as the protocol
+ * asks.
+ */
+class LineIndex {
+
+  /**
+   * Returns a new {LineIndex} over `text`.
+   *
+   * @param string text
+   */
+  @new(text: string) {
+    self.text = text
+    self._starts = _line_starts(text)
+  }
+
+  /**
+   * How many lines the text has; an empty text has one.
+   *
+   * @returns int
+   */
+  line_count() {
+    return self._starts.length()
+  }
+
+  /**
+   * The offset line `line` starts at.
+   *
+   * @param int line: Counted from `0`.
+   * @returns int
+   */
+  line_start(line: int) {
+    if line >= self._starts.length() {
+      return self.text.length()
+    }
+
+    return self._starts[line < 0 ? 0 : line]
+  }
+
+  /**
+   * The offset just past line `line`'s last character, before its line
+   * break.
+   *
+   * @param int line: Counted from `0`.
+   * @returns int
+   */
+  line_end(line: int) {
+    if line + 1 >= self._starts.length() {
+      return self.text.length()
+    }
+
+    var end = self._starts[line + 1]
+
+    if end > 0 and self.text[end - 1] == '\n' {
+      end--
+    }
+
+    if end > 0 and self.text[end - 1] == '\r' {
+      end--
+    }
+
+    return end
+  }
+
+  /**
+   * Line `line`'s text, without its line break.
+   *
+   * @param int line: Counted from `0`.
+   * @returns string
+   */
+  line_text(line: int) {
+    return self.text[self.line_start(line), self.line_end(line)]
+  }
+
+  /**
+   * The line `offset` falls on, counted from `0`.
+   *
+   * @param int offset
+   * @returns int
+   */
+  line_of(offset: int) {
+    var low = 0
+    var high = self._starts.length() - 1
+
+    while low < high {
+      var middle = (low + high + 1) // 2
+
+      if self._starts[middle] <= offset {
+        low = middle
+      } else {
+        high = middle - 1
+      }
+    }
+
+    return low
+  }
+
+  /**
+   * The offset of a protocol position.
+   *
+   * @param dict position: `{ line, character }`.
+   * @param string encoding: `UTF16`, `UTF8` or `UTF32`.
+   * @returns int
+   */
+  offset(position: dict, encoding: string) {
+    var line = position.line
+
+    if line < 0 {
+      return 0
+    }
+
+    if line >= self._starts.length() {
+      return self.text.length()
+    }
+
+    var start = self.line_start(line)
+    var text = self.text[start, self.line_end(line)]
+    var wanted = position.character
+
+    if encoding == UTF32 or _is_ascii(text) {
+      return start + (wanted < text.length() ? wanted : text.length())
+    }
+
+    var units = 0
+    var i = 0
+
+    while i < text.length() and units < wanted {
+      units += _width(text[i], encoding)
+      i++
+    }
+
+    return start + i
+  }
+
+  /**
+   * The protocol position of `offset`.
+   *
+   * @param int offset: Clamped to the text.
+   * @param string encoding: `UTF16`, `UTF8` or `UTF32`.
+   * @returns dict: `{ line, character }`.
+   */
+  position(offset: int, encoding: string) {
+    var at = offset < 0 ? 0 : (offset > self.text.length() ? self.text.length() : offset)
+    var line = self.line_of(at)
+    var start = self._starts[line]
+    var end = self.line_end(line)
+
+    if at > end {
+      at = end
+    }
+
+    if encoding == UTF32 {
+      return { line, character: at - start }
+    }
+
+    var before = self.text[start, at]
+
+    if _is_ascii(before) {
+      return { line, character: before.length() }
+    }
+
+    var units = 0
+
+    iter var i = 0; i < before.length(); i++ {
+      units += _width(before[i], encoding)
+    }
+
+    return { line, character: units }
+  }
+
+  /**
+   * The protocol range from offset `start` to offset `end`.
+   *
+   * @param int start
+   * @param int end
+   * @param string encoding
+   * @returns dict: `{ start, end }`, each a position.
+   */
+  range(start: int, end: int, encoding: string) {
+    return { start: self.position(start, encoding), end: self.position(end, encoding) }
+  }
+}
+
+/**
+ * Applies one `TextDocumentContentChangeEvent` to `text`: a whole new
+ * text when it has no `range`, otherwise a replacement of the range.
+ *
+ * @param string text
+ * @param dict change
+ * @param string encoding: How the change's positions are counted.
+ * @returns string
+ */
+def apply_change(text: string, change: dict, encoding: string) {
+  var range = change.get('range', nil)
+
+  if range == nil {
+    return change.text
+  }
+
+  var index = LineIndex(text)
+  var start = index.offset(range.start, encoding)
+  var end = index.offset(range.end, encoding)
+
+  if end < start {
+    var swap = start
+    start = end
+    end = swap
+  }
+
+  return text[0, start] + change.text + text[end, text.length()]
+}
+
+# Hex digits, for percent-encoding.
+const _HEX = '0123456789ABCDEF'
+
+# Characters a URI path keeps as they are.
+const _KEPT = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~/'
+
+# `text` with every `%XX` replaced by the byte it stands for. A `+`
+# is a `+` in a URI path, never a space.
+def _percent_decode(text: string) {
+  if !text.contains('%') {
+    return text
+  }
+
+  var out = bytes(0)
+  var i = 0
+
+  while i < text.length() {
+    var ch = text[i]
+
+    if ch == '%' and i + 2 < text.length() {
+      var hex = text[i + 1, i + 3].upper()
+      var high = _HEX.index_of(hex.length() > 0 ? hex[0] : 'Z')
+      var low = _HEX.index_of(hex.length() > 1 ? hex[1] : 'Z')
+
+      if high >= 0 and low >= 0 {
+        out.append(high * 16 + low)
+        i += 3
+        continue
+      }
+    }
+
+    out.extend(ch.to_bytes())
+    i++
+  }
+
+  return out.to_string()
+}
+
+# `text` with every byte outside the kept characters percent-encoded.
+def _percent_encode(text: string) {
+  var out = ''
+
+  for byte in text.to_bytes() {
+    var ch = byte < 128 ? byte.chr() : ''
+
+    if ch != '' and _KEPT.contains(ch) {
+      out += ch
+    } else {
+      out += '%' + _HEX[byte // 16] + _HEX[byte % 16]
+    }
+  }
+
+  return out
+}
+
+/**
+ * The file path a `file:` URI names, or `nil` for any other scheme,
+ * such as the `untitled:` of a document never saved.
+ *
+ * On Windows, `file:///c%3A/src/app.zu` is `c:\src\app.zu`, and a
+ * URI with an authority, `file://server/share/app.zu`, is the UNC
+ * path `\\server\share\app.zu`.
+ *
+ * @param string uri
+ * @returns ?string
+ */
+def uri_to_path(uri: string) {
+  if !uri.lower().starts_with('file://') {
+    return nil
+  }
+
+  var rest = uri[7, uri.length()]
+  var slash = rest.index_of('/')
+  var authority = slash < 0 ? rest : rest[0, slash]
+  var path = _percent_decode(slash < 0 ? '/' : rest[slash, rest.length()])
+
+  if os.platform != 'windows' {
+    return path
+  }
+
+  if !authority.is_empty() and authority.lower() != 'localhost' {
+    return '\\\\' + authority + path.replace('/', '\\')
+  }
+
+  # `/c:/src` is the drive path `c:\src`.
+  if path.length() >= 3 and path[0] == '/' and path[2] == ':' {
+    path = path[1, path.length()]
+  }
+
+  return path.replace('/', '\\')
+}
+
+/**
+ * The `file:` URI of a path, in the form VS Code writes: forward
+ * slashes, a lowercase drive letter with its colon encoded, and every
+ * byte outside the unreserved characters percent-encoded.
+ *
+ * @param string path: An absolute path.
+ * @returns string
+ */
+def path_to_uri(path: string) {
+  var normal = path.replace('\\', '/')
+
+  # A UNC path keeps its server as the authority.
+  if normal.starts_with('//') {
+    var rest = normal[2, normal.length()]
+    var slash = rest.index_of('/')
+
+    if slash > 0 {
+      return 'file://' + rest[0, slash] + _percent_encode(rest[slash, rest.length()])
+    }
+  }
+
+  if normal.length() >= 2 and normal[1] == ':' {
+    normal = '/' + normal[0].lower() + normal[1, normal.length()]
+  }
+
+  if !normal.starts_with('/') {
+    normal = '/' + normal
+  }
+
+  return 'file://' + _percent_encode(normal)
+}
+
+# The lines of `text`, each with its line break still on, so joining
+# them gives the text back.
+def _lines_with_breaks(text: string) {
+  var index = LineIndex(text)
+  var lines = []
+
+  iter var i = 0; i < index.line_count(); i++ {
+    var next = i + 1 < index.line_count() ? index.line_start(i + 1) : text.length()
+    lines.append(text[index.line_start(i), next])
+  }
+
+  if !lines.is_empty() and lines[lines.length() - 1] == '' {
+    lines.pop()
+  }
+
+  return lines
+}
+
+# The shortest edit script turning `a` into `b`, by Myers' algorithm,
+# as a list of `['=', i, j]`, `['-', i]` and `['+', j]` steps.
+def _edit_script(a: list, b: list) {
+  var n = a.length()
+  var m = b.length()
+  var max = n + m
+  var offset = max + 1
+  var v = []
+
+  iter var k = 0; k < 2 * max + 3; k++ {
+    v.append(0)
+  }
+
+  var trace = []
+  var found = false
+
+  iter var d = 0; d <= max and !found; d++ {
+    trace.append(v.clone())
+
+    iter var k = -d; k <= d; k += 2 {
+      var x = 0
+
+      if k == -d or (k != d and v[offset + k - 1] < v[offset + k + 1]) {
+        x = v[offset + k + 1]
+      } else {
+        x = v[offset + k - 1] + 1
+      }
+
+      var y = x - k
+
+      while x < n and y < m and a[x] == b[y] {
+        x++
+        y++
+      }
+
+      v[offset + k] = x
+
+      if x >= n and y >= m {
+        found = true
+        break
+      }
+    }
+  }
+
+  var steps = []
+  var x = n
+  var y = m
+
+  iter var d = trace.length() - 1; d >= 0; d-- {
+    var saved = trace[d]
+    var k = x - y
+    var previous_k = 0
+
+    if k == -d or (k != d and saved[offset + k - 1] < saved[offset + k + 1]) {
+      previous_k = k + 1
+    } else {
+      previous_k = k - 1
+    }
+
+    var previous_x = saved[offset + previous_k]
+    var previous_y = previous_x - previous_k
+
+    while x > previous_x and y > previous_y {
+      x--
+      y--
+      steps.append(['=', x, y])
+    }
+
+    if d > 0 {
+      if x == previous_x {
+        y--
+        steps.append(['+', y])
+      } else {
+        x--
+        steps.append(['-', x])
+      }
+    }
+  }
+
+  return steps.reverse()
+}
+
+/**
+ * The fewest whole-line edits that turn `before` into `after`. Each is
+ * `{ start, end, text }`: the offsets in `before` that are replaced,
+ * always at the start of a line or the end of the text, and what
+ * replaces them.
+ *
+ * ```zuri,ignore
+ * text.line_edits('a\nb\nc\n', 'a\nB\nc\n')
+ * # [{ start: 2, end: 4, text: 'B\n' }]
+ * ```
+ *
+ * @param string before
+ * @param string after
+ * @returns list[dict]
+ */
+def line_edits(before: string, after: string) {
+  if before == after {
+    return []
+  }
+
+  var a = _lines_with_breaks(before)
+  var b = _lines_with_breaks(after)
+  var offsets = [0]
+
+  for line in a {
+    offsets.append(offsets[offsets.length() - 1] + line.length())
+  }
+
+  var edits = []
+  var current = nil
+  var next = 0
+
+  for step in _edit_script(a, b) {
+    if step[0] == '=' {
+      if current != nil {
+        edits.append(current)
+        current = nil
+      }
+
+      next = step[1] + 1
+      continue
+    }
+
+    if current == nil {
+      current = { start: offsets[next], end: offsets[next], text: '' }
+    }
+
+    if step[0] == '-' {
+      current.end = offsets[step[1] + 1]
+      next = step[1] + 1
+    } else {
+      current.text += b[step[1]]
+    }
+  }
+
+  if current != nil {
+    edits.append(current)
+  }
+
+  return edits
+}
