@@ -1,0 +1,63 @@
+/**
+ * @module diagnostic
+ *
+ * The {Diagnostic} type: one problem found in a piece of Zuri
+ * source by reading it rather than running it, as
+ * `zuri.parse_partial()` and `zuri.check()` reports them.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+/**
+ * One problem in a piece of Zuri source: what is wrong and exactly
+ * where.
+ *
+ * The position has the same six parts a {zuri.ast.Node} has.
+ * `start` and `end` are character offsets, the first character the
+ * problem is about and the one just past it, so `source[d.start,
+ * d.end]` is the text it is about. `line` and `col` are where that
+ * text starts and `end_line` and `end_col` where it ends, all
+ * counted from 1.
+ *
+ * A syntax error covers the token it is about. When the source
+ * ends where more was expected, that is an empty span at the very
+ * end. A compiler error covers the token it is about, or the whole
+ * of its line when it belongs to the line rather than to one token.
+ *
+ * @printable
+ */
+class Diagnostic {
+
+  /**
+   * Returns a new {Diagnostic}. Ordinary code receives these from
+   * `zuri.parse_partial()` and `zuri.check()` rather than building
+   * them.
+   *
+   * @param string message: What is wrong, without a position
+   * @param dict position: `{ start, end, line, col, end_line,
+   *    end_col }`
+   */
+  @new(message: string, position: dict) {
+    self.message = message
+    self.start = position.start
+    self.end = position.end
+    self.line = position.line
+    self.col = position.col
+    self.end_line = position.end_line
+    self.end_col = position.end_col
+  }
+
+  /**
+   * This diagnostic as `line:col: message`, e.g.
+   * `'2:3: 'break' used outside of a loop'`.
+   *
+   * @returns string
+   */
+  to_string() {
+    return '${self.line}:${self.col}: ${self.message}'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}

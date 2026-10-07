@@ -12,15 +12,21 @@
  *   every comment and doc block preserved in place; see {zuri.ast}.
  * - `compile(source)` returns `source`'s compiled VM instructions;
  *   see {zuri.compile}.
+ * - `parse_partial(source)` reads as much of `source` as it can and
+ *   returns the tree along with every syntax error, and
+ *   `check(source)` returns every problem compiling `source` would
+ *   report, both as {zuri.Diagnostic}s and neither raising on bad
+ *   source; see {zuri.ast} and {zuri.compile}.
  * - `zuri.reflect` inspects live functions, classes and modules,
  *   reads or updates an instance's own properties, and runs the
  *   garbage collector on demand; see {zuri.reflect}.
  *
  * The ordinary starting point in practice is a real file on
  * disk, not a source string already sitting in a variable, so
- * each of the three above also has a `_file` counterpart that
- * reads `path` first: `tokenize_file(path)`, `parse_file(path)`,
- * `compile_file(path)`. There's a fourth, `dump_file(path)`,
+ * each of the above also has a `_file` counterpart that reads
+ * `path` first: `tokenize_file(path)`, `parse_file(path)`,
+ * `compile_file(path)`, `parse_partial_file(path)` and
+ * `check_file(path)`. There's one more, `dump_file(path)`,
  * with no bare-`source` equivalent of its own; it reads and
  * parses `path`, then returns the `dump()` of every top-level
  * node, which is usually the single fastest way to answer
@@ -135,10 +141,9 @@
  *    kind, wherever it appears.
  * 4. Reach for {zuri.ast}'s or {zuri.compile}'s own doc comments
  *    only for the parts exploration doesn't answer on its own:
- *    exactly which shapes carry a `line`/`col` (most do, a
- *    handful of purely structural ones don't), how a `Closure`
- *    instruction's resolved value nests a whole other
- *    instruction list inside it, and so on.
+ *    what a node's position covers, how a `Closure` instruction's
+ *    resolved value nests a whole other instruction list inside
+ *    it, and so on.
  *
  * `zuri.reflect` doesn't need any of this: it's ordinary named
  * functions (`function_info(f)`, `has_method(object, name)`,
@@ -173,4 +178,5 @@
 import @.token { * }
 import @.ast { * }
 import @.compile { * }
+import @.diagnostic { * }
 import @.reflect

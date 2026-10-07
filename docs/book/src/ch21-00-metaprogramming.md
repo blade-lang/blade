@@ -755,15 +755,81 @@ Every instruction carries the source line it came from, but **never a
 column**. The compiler's own tracking is line-only. A `Token` and a `Node`
 both have real column information from the lexer; an `Instr` does not.
 
+## Checking Source Without Running It
+
+`parse()` and `compile()` raise on the first sign of bad source, which is
+right for a tool that needs the whole program. A tool working on source as
+it is being written, half a statement at a time, needs the opposite:
+everything that can be read, and an exact account of what is wrong.
+
+`parse_partial()` reads as much as it can. Where a statement fails, the
+parser reports it, skips to where the next statement starts and carries
+on, so one mistake costs one statement and is reported once:
+
+```zuri
+import zuri
+
+var result = zuri.parse_partial('var a = 1
+var = 2
+var c = 3')
+
+echo result.is_clean()
+echo result.errors
+echo result.nodes.map(@(n) => n.fields.statement.fields.name)
+```
+
+```console
+false
+[2:5: Variable name expected.]
+[a, , c]
+```
+
+Each error is a `Diagnostic`: a `message` and the same six-part position a
+node has, so it can be underlined exactly. The statement that failed is
+still in the tree, its missing name an empty string sitting where the name
+belongs.
+
+`check()` goes one stage further. Source that parses goes on to the
+compiler, which catches what the grammar cannot see, such as a `break`
+with no loop around it or a name declared twice in one scope:
+
+```zuri
+import zuri
+
+var source = 'def total(items) {
+  var sum = 0
+  for item in items {
+    sum += item
+  }
+  break
+}'
+
+for problem in zuri.check(source) {
+  echo problem
+  echo source[problem.start, problem.end]
+}
+```
+
+```console
+6:3: 'break' used outside of a loop
+break
+```
+
+An empty list from `check()` means the source compiles. Neither function
+runs anything or raises on bad source, so both can be pointed at whatever
+an editor's buffer holds at the time.
+
 ## Reading a File
 
-Each of the three has a `_file` counterpart that reads the path first:
+Each of these has a `_file` counterpart that reads the path first:
 
 | Source string | File |
 | --- | --- |
 | `tokenize(source)` | `tokenize_file(path)` |
 | `parse(source)` | `parse_file(path)` |
 | `compile(source)` | `compile_file(path)` |
+| `parse_partial(source)` | `parse_partial_file(path)` |
+| `check(source)` | `check_file(path)` |
 
 There is a fourth with no string equivalent: **`dump_file(path)`** reads,
 parses and returns the `dump()` of every top-level node. It is usually the
@@ -956,9 +1022,10 @@ what it exposes.
 the function your host expects, and call the ones that do. `module_info()`
 answers the question without importing blindly and hoping.
 
-**Editor tooling.** `tokenize()` never raises, so it can run against a
-half-typed buffer. Every token carries `start` and `end`, so a rename or a
-reformat can rewrite exact spans.
+**Editor tooling.** `tokenize()`, `parse_partial()` and `check()` never
+raise, so they can run against a half-typed buffer. Every token and every
+node carries `start` and `end`, so a rename or a reformat can rewrite exact
+spans, and every problem `check()` finds can be underlined where it is.
 
 **Understanding the compiler.** `zuri.compile()` on a snippet is faster
 than reading the compiler's source, and it can never go out of date with

@@ -27,6 +27,7 @@ use crate::compiler::lexer::Lexer;
 use crate::compiler::parser::Parser;
 use crate::enforce_arg_count;
 use crate::enforce_arg_type;
+use crate::modules::zuri_parse::Writer;
 use crate::modules::{BuiltinModuleDef, native};
 use crate::vm::chunk::{Chunk, Instr, JumpKey, ParamType, ParamTypeCheck};
 use crate::vm::object::{ObjFunction, ZuriContext};
@@ -39,7 +40,37 @@ pub static MODULE: BuiltinModuleDef = BuiltinModuleDef {
 };
 
 fn build(vm: &mut VM) -> Vec<(&'static str, Value)> {
-  vec![("compile", native(vm, "compile", 1, false, compile_fn))]
+  vec![
+    ("compile", native(vm, "compile", 1, false, compile_fn)),
+    ("check", native(vm, "check", 1, false, check_fn)),
+  ]
+}
+
+/// `_zuri_compile.check(source)`: the problems compiling `source` would
+/// report, as a list of diagnostic dicts, without running anything and
+/// without raising. A source that does not parse reports its syntax
+/// errors alone, since compiling a tree the parser could not finish
+/// would only report its gaps a second time. An empty list means the
+/// source compiles.
+fn check_fn(ctx: &mut ZuriContext) -> Result<Value, String> {
+  enforce_arg_count!(ctx, 1);
+  enforce_arg_type!(ctx, 0, ArgType::String);
+
+  let source = ctx.args[0].as_str().to_string();
+  let mut lexer = Lexer::new(&source);
+  let mut parser = Parser::new(&mut lexer);
+  let (decls, mut errors) = parser.parse_recovering();
+
+  if errors.is_empty() {
+    let chunk = Box::new(Chunk::new());
+    let compiler = Compiler::new(decls, chunk, ctx.heap(), std::rc::Rc::from("<zuri.check>"));
+
+    if let Err(found) = compiler.compile() {
+      errors = found;
+    }
+  }
+
+  Ok(Writer::new(ctx, &source).diagnostics(&errors))
 }
 
 /// `_zuri_compile.compile(source)`: compiles `source` as a standalone

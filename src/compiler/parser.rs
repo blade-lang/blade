@@ -40,7 +40,7 @@ macro_rules! consume_tok {
       $self.advance().clone()
     } else {
       $self.report_error($message.to_string());
-      EMPTY_TOKEN.clone()
+      $self.missing_token()
     }
   };
 }
@@ -50,6 +50,9 @@ pub struct ParserError {
   pub message: String,
   pub line_number: usize,
   pub offset: usize,
+  /// The token the error is about, or `None` for one that belongs to a
+  /// whole line rather than any token on it.
+  pub span: Option<Span>,
 }
 
 impl ParserError {
@@ -58,6 +61,7 @@ impl ParserError {
       message,
       line_number: token.line,
       offset: token.column,
+      span: Some(Span::of(&token)),
     }
   }
 }
@@ -267,6 +271,15 @@ impl<'a> Parser<'a> {
     self.panic_mode = true;
     self.panic_at = self.consumed;
     self.errors.push(ParserError::new(message, token));
+  }
+
+  /// What a rule that expected a token gets when the source has none
+  /// there: an end-of-file placeholder, as an empty span where the token
+  /// should have started, so a recovered tree only ever points at places
+  /// in the source.
+  fn missing_token(&self) -> Token {
+    let at = &self.current;
+    Token::new(TokenKind::Eof, at.line, at.column, at.start, at.start)
   }
 
   /// Where the next token starts, for a node that begins with it.
@@ -2217,7 +2230,24 @@ impl<'a> Parser<'a> {
     result
   }
 
+  /// Parses the whole source and returns it as a list of declarations,
+  /// or every error found when there is any.
   pub fn parse(&mut self) -> Result<Vec<Decl>, Vec<ParserError>> {
+    let (decls, errors) = self.parse_recovering();
+
+    if errors.is_empty() {
+      Ok(decls)
+    } else {
+      Err(errors)
+    }
+  }
+
+  /// Parses the whole source, carrying on past every error it recovers
+  /// from, and returns everything it read along with the errors. Where a
+  /// statement failed, the tree holds what was read of it or a `None`
+  /// statement, and a name the source was missing is an end-of-file
+  /// token placed where the name should have been.
+  pub fn parse_recovering(&mut self) -> (Vec<Decl>, Vec<ParserError>) {
     let mut result = Vec::new();
 
     // Prime `current` (it starts as an unscanned `None` sentinel) and
@@ -2253,10 +2283,6 @@ impl<'a> Parser<'a> {
       self.drain_trivia_into_decls(&mut result, 0);
     }
 
-    if self.errors.is_empty() {
-      Ok(result)
-    } else {
-      Err(self.errors.clone())
-    }
+    (result, self.errors.clone())
   }
 }

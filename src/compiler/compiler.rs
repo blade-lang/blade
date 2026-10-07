@@ -320,6 +320,7 @@ impl<'a> Compiler<'a> {
       message,
       line_number: line,
       offset: 1,
+      span: None,
     });
   }
 
@@ -327,7 +328,7 @@ impl<'a> Compiler<'a> {
   /// site right after `report_error`/`report_error_here`; keeps the
   /// bytecode structurally valid (every caller still gets *a* register)
   /// even though the function is already known to be invalid and will
-  /// never actually run. Mirrors the parser's own `EMPTY_TOKEN`
+  /// never actually run. Mirrors the parser's own `missing_token`
   /// fallback in `consume_tok!`: report once, substitute something
   /// harmless, keep going so later problems in the same file surface
   /// too.

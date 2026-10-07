@@ -54,6 +54,7 @@
 
 import _zuri_compile
 import ._tree
+import .diagnostic { Diagnostic }
 
 /**
  * One VM instruction.
@@ -332,4 +333,48 @@ def compile(source) {
  */
 def compile_file(path) {
   return compile(file(path).read())
+}
+
+/**
+ * Every problem compiling `source` would report, as a list of
+ * {zuri.Diagnostic} in the order they occur, without running
+ * anything and without raising. An empty list means `source`
+ * compiles.
+ *
+ * Source that does not parse reports its syntax errors, exactly as
+ * `parse_partial()` finds them. Source that parses goes on to the
+ * compiler, which reports a name declared twice in one scope,
+ * `self` or `parent` outside a method, `parent` in a class with no
+ * superclass, `break` or `continue` outside a loop, an assignment to
+ * a constant, a private member reached through anything other than
+ * `self` or `parent`, a class extension declaring a field or an
+ * instance method, and a function too large for its registers.
+ *
+ * ```zuri
+ * import zuri
+ *
+ * for problem in zuri.check('if true {\n  break\n}') {
+ *   echo problem  # 2:3: 'break' used outside of a loop
+ * }
+ *
+ * echo zuri.check('var x = 1').length()  # 0
+ * ```
+ *
+ * @param string source: The Zuri source to check
+ * @returns list[Diagnostic]
+ */
+def check(source: string) {
+  return _zuri_compile.check(source).map(@(raw) => Diagnostic(raw.message, raw))
+}
+
+/**
+ * Reads the file at `path` and checks it; exactly
+ * `check(file(path).read())`.
+ *
+ * @param string path: Path to the Zuri source file to check
+ * @returns list[Diagnostic]
+ * @throws Error if `path` can't be opened or read
+ */
+def check_file(path: string) {
+  return check(file(path).read())
 }

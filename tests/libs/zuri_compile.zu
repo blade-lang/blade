@@ -61,7 +61,8 @@ for instr in global_instrs {
   }
 }
 assert set_global != nil, 'a top-level var declaration must compile through a SetGlobal'
-assert set_global.fields.name == 'counter', 'SetGlobal must resolve the global name from the constant pool'
+assert set_global.fields.name == 'counter',
+  'SetGlobal must resolve the global name from the constant pool'
 ok('SetGlobal resolves the global name inline')
 
 # ---------------------------------------------------------------------------
@@ -79,7 +80,8 @@ assert closure_instr != nil, 'a function declaration must compile through a Clos
 var prototype = closure_instr.fields.prototype
 assert prototype.name == 'add', 'the resolved prototype must carry the function name'
 assert prototype.arity == 2, 'the resolved prototype must carry its arity'
-assert prototype.instructions.length() > 0, 'the resolved prototype must expose its own instructions'
+assert prototype.instructions.length() > 0,
+  'the resolved prototype must expose its own instructions'
 assert instance_of(prototype.instructions[0], zuri.Instr),
   'nested instructions must be Instr instances too, not raw dicts'
 var found_return = false
@@ -101,7 +103,8 @@ ok('instructions carry their source line')
 # ---------------------------------------------------------------------------
 # A compile error raises rather than returning partial bytecode
 # ---------------------------------------------------------------------------
-assert raises(@() { zuri.compile('def (') }), 'malformed source must raise, not return partial bytecode'
+assert raises(@() { zuri.compile('def (') }),
+  'malformed source must raise, not return partial bytecode'
 ok('a compile error raises instead of returning a partial result')
 
 # ---------------------------------------------------------------------------
@@ -131,12 +134,14 @@ var returns_seen = []
 zuri.walk_instrs(walk_instrs_list, {
   Return: @(instr) { returns_seen.append(instr) },
 })
-assert returns_seen.length() > 0, 'walk_instrs() must reach Return instructions inside the nested Closure body'
+assert returns_seen.length() > 0,
+  'walk_instrs() must reach Return instructions inside the nested Closure body'
 ok('walk_instrs() with a dict visitor reaches instructions inside a nested function body')
 
 var all_visited = []
 zuri.walk_instrs(walk_instrs_list, @(instr) { all_visited.append(instr.op) })
-assert all_visited.length() > returns_seen.length(), 'a plain-function visitor must be called for every instruction'
+assert all_visited.length() > returns_seen.length(),
+  'a plain-function visitor must be called for every instruction'
 ok('walk_instrs() with a plain function visits every instruction')
 
 var closures = zuri.find_instrs(walk_instrs_list, 'Closure')
@@ -161,11 +166,49 @@ for instr in file_instrs {
   }
 }
 assert file_load_const != nil, 'compile_file() must actually compile the file content'
-assert file_load_const.fields.value == 42, 'compile_file() must resolve constants the same way compile() does'
+assert file_load_const.fields.value == 42,
+  'compile_file() must resolve constants the same way compile() does'
 
 assert raises(@() { zuri.compile_file('tmp/zuri_this_file_does_not_exist.zu') }),
   'compile_file() on a missing file must raise'
 ok('compile_file() reads and compiles a real file')
+
+# ---------------------------------------------------------------------------
+# check(): problems as diagnostics, never raised
+# ---------------------------------------------------------------------------
+assert zuri.check('var x = 1\necho x').is_empty(), 'source that compiles has no problems'
+
+var loop_problems = zuri.check('if true {\n  break\n}')
+assert loop_problems.length() == 1, 'one compile error is one diagnostic'
+var loop_problem = loop_problems[0]
+assert instance_of(loop_problem, zuri.Diagnostic), 'a problem is a Diagnostic'
+assert loop_problem.message == "'break' used outside of a loop", 'with the compiler message'
+assert loop_problem.line == 2 and loop_problem.col == 3, 'placed at the keyword'
+assert loop_problem.end_line == 2 and loop_problem.end_col == 8, 'and covering it'
+assert loop_problem.to_string() == "2:3: 'break' used outside of a loop",
+  'to_string() leads with the position'
+ok('check() reports a compile error at its token')
+
+var syntax_problems = zuri.check('var a = (1\nvar b = 2')
+assert syntax_problems.length() == 1, 'source that does not parse reports its syntax errors'
+assert syntax_problems[0].message.contains("Expected ')'"), 'with the parser message'
+
+var duplicate = 'def f() {\n}\ndef f() {\n}'
+var duplicate_problems = zuri.check(duplicate)
+assert duplicate_problems.length() == 1, 'a name declared twice is one problem'
+var duplicate_text = duplicate[duplicate_problems[0].start, duplicate_problems[0].end]
+assert duplicate_text == 'f', 'covering the second declaration of the name'
+ok('check() reports syntax errors before compile errors')
+
+var check_path = 'tmp/zuri_check_file_scratch.zu'
+var check_file = file(check_path, 'w')
+check_file.write('continue')
+check_file.close()
+
+var file_problems = zuri.check_file(check_path)
+assert file_problems.length() == 1, 'check_file() checks the file content'
+assert file_problems[0].message == "'continue' used outside of a loop", 'and reports it'
+ok('check_file() reads and checks a real file')
 
 # ===========================================================================
 # Final summary

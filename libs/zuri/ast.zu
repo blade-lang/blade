@@ -211,6 +211,7 @@
 
 import _zuri_parse
 import ._tree
+import .diagnostic { Diagnostic }
 
 /**
  * One AST node: an expression, statement, declaration, type
@@ -484,6 +485,97 @@ def parse(source) {
     nodes.append(Node.from_dict(raw))
   }
   return nodes
+}
+
+/**
+ * What `parse_partial()` read from a piece of source: the tree it
+ * built and every syntax error it found on the way.
+ *
+ * @printable
+ */
+class ParseResult {
+
+  /**
+   * Returns a new {ParseResult}. Ordinary code receives these from
+   * `parse_partial()` rather than building them.
+   *
+   * @param list nodes: The top-level nodes read, as `parse()`
+   *    returns them
+   * @param list errors: Every syntax error, as {zuri.Diagnostic}s,
+   *    in the order they occur in the source
+   */
+  @new(nodes: list, errors: list) {
+    self.nodes = nodes
+    self.errors = errors
+  }
+
+  /**
+   * True when the source parsed without a single error, in which
+   * case `nodes` is exactly what `parse()` returns.
+   *
+   * @returns bool
+   */
+  is_clean() {
+    return self.errors.is_empty()
+  }
+
+  /**
+   * This result as `ParseResult(n nodes, m errors)`.
+   *
+   * @returns string
+   */
+  to_string() {
+    return 'ParseResult(${self.nodes.length()} nodes, ${self.errors.length()} errors)'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+/**
+ * Parses `source` as far as it can and returns everything it read
+ * along with every syntax error it found, without raising.
+ *
+ * At a statement it cannot read, the parser reports the problem,
+ * skips to where the next statement starts and carries on, so one
+ * mistake is reported once and the rest of the source still comes
+ * back. The statement that failed comes back as far as it was
+ * read, or as a `None` node when nothing of it could be kept. A
+ * name the source is missing, such as the variable name in `var =
+ * 2`, comes back as an empty string with an empty span where the
+ * name belongs.
+ *
+ * ```zuri
+ * import zuri
+ *
+ * var result = zuri.parse_partial('var a = 1\nvar = 2\nvar c = 3')
+ *
+ * echo result.errors[0]       # 2:5: Variable name expected.
+ * echo result.nodes.length()  # 3
+ * ```
+ *
+ * @param string source: The Zuri source to parse
+ * @returns ParseResult
+ */
+def parse_partial(source: string) {
+  var raw = _zuri_parse.parse_partial(source)
+  var nodes = raw.nodes.map(@(node) => Node.from_dict(node))
+  var errors = raw.errors.map(@(error) => Diagnostic(error.message, error))
+
+  return ParseResult(nodes, errors)
+}
+
+/**
+ * Reads the file at `path` and parses as much of it as it can;
+ * exactly `parse_partial(file(path).read())`.
+ *
+ * @param string path: Path to the Zuri source file to parse
+ * @returns ParseResult
+ * @throws Error if `path` can't be opened or read
+ */
+def parse_partial_file(path: string) {
+  return parse_partial(file(path).read())
 }
 
 /**

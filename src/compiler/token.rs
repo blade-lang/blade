@@ -403,14 +403,6 @@ pub fn get_assignment_alt(kind: TokenKind) -> TokenKind {
   }
 }
 
-pub static EMPTY_TOKEN: Token = Token {
-  kind: TokenKind::Eof,
-  line: 0,
-  column: 0,
-  start: 0,
-  end: 0,
-};
-
 pub static KEYWORD_TOKENS: &[TokenKind] = &[
   TokenKind::And,
   TokenKind::As,

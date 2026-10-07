@@ -39,7 +39,7 @@ use crate::compiler::ast::{
   Decl, DeclKind, Expr, ExprKind, Segment, Span, Stmt, StmtKind, Type, TypeName,
 };
 use crate::compiler::lexer::Lexer;
-use crate::compiler::parser::Parser;
+use crate::compiler::parser::{Parser, ParserError};
 use crate::compiler::token::{Token, TokenKind};
 use crate::enforce_arg_count;
 use crate::enforce_arg_type;
@@ -55,7 +55,13 @@ pub static MODULE: BuiltinModuleDef = BuiltinModuleDef {
 };
 
 fn build(vm: &mut VM) -> Vec<(&'static str, Value)> {
-  vec![("parse", native(vm, "parse", 1, false, parse_fn))]
+  vec![
+    ("parse", native(vm, "parse", 1, false, parse_fn)),
+    (
+      "parse_partial",
+      native(vm, "parse_partial", 1, false, parse_partial_fn),
+    ),
+  ]
 }
 
 /// `_zuri_parse.parse(source)`: parses `source` in full and returns
@@ -84,31 +90,67 @@ fn parse_fn(ctx: &mut ZuriContext) -> Result<Value, String> {
     },
   };
 
-  let mut w = Writer {
-    ctx,
-    lines: Lines::new(&source),
-  };
+  let mut w = Writer::new(ctx, &source);
 
   Ok(w.decls(&decls))
+}
+
+/// `_zuri_parse.parse_partial(source)`: parses `source` as far as the
+/// parser can recover and returns `{ nodes, errors }`, the tree it read
+/// and a diagnostic dict for every syntax error. Never raises on bad
+/// source.
+fn parse_partial_fn(ctx: &mut ZuriContext) -> Result<Value, String> {
+  enforce_arg_count!(ctx, 1);
+  enforce_arg_type!(ctx, 0, ArgType::String);
+
+  let source = ctx.args[0].as_str().to_string();
+  let mut lexer = Lexer::new(&source);
+  let mut parser = Parser::new(&mut lexer);
+  let (decls, errors) = parser.parse_recovering();
+
+  let mut w = Writer::new(ctx, &source);
+  let nodes = w.decls(&decls);
+  let errors = w.diagnostics(&errors);
+  let entries = vec![w.kv("nodes", nodes), w.kv("errors", errors)];
+
+  Ok(w.ctx.heap().alloc_dict(entries))
 }
 
 /// Where each line of the source starts, as a char offset, so an offset
 /// can be turned into the one-based line and column the lexer counts in.
 struct Lines {
   starts: Vec<usize>,
+  len: usize,
 }
 
 impl Lines {
   fn new(source: &str) -> Self {
     let mut starts = vec![0];
+    let mut len = 0;
 
     for (offset, c) in source.chars().enumerate() {
       if c == '\n' {
         starts.push(offset + 1);
       }
+      len = offset + 1;
     }
 
-    Self { starts }
+    Self { starts, len }
+  }
+
+  /// The whole of one line, its line end aside. A line past the end of
+  /// the source is an empty span at the end.
+  fn line(&self, line: usize) -> Span {
+    let Some(&start) = self.starts.get(line.saturating_sub(1)) else {
+      return Span::new(self.len, self.len);
+    };
+
+    let end = match self.starts.get(line) {
+      Some(&next) => next - 1,
+      None => self.len,
+    };
+
+    Span::new(start, end)
   }
 
   fn position(&self, offset: usize) -> (usize, usize) {
@@ -121,13 +163,39 @@ impl Lines {
   }
 }
 
-/// Builds the node dicts for one parsed source.
-struct Writer<'c, 'v> {
+/// Builds the node and diagnostic dicts for one source.
+pub(crate) struct Writer<'c, 'v> {
   ctx: &'c mut ZuriContext<'v>,
   lines: Lines,
 }
 
 impl<'c, 'v> Writer<'c, 'v> {
+  pub(crate) fn new(ctx: &'c mut ZuriContext<'v>, source: &str) -> Self {
+    Self {
+      ctx,
+      lines: Lines::new(source),
+    }
+  }
+
+  /// A list of `{ message, start, end, line, col, end_line, end_col }`
+  /// dicts, one for each error. An error that belongs to no one token
+  /// covers its whole line.
+  pub(crate) fn diagnostics(&mut self, errors: &[ParserError]) -> Value {
+    let mut values = Vec::with_capacity(errors.len());
+
+    for error in errors {
+      let span = error
+        .span
+        .unwrap_or_else(|| self.lines.line(error.line_number));
+      let message = self.string(error.message.clone());
+      let mut entries = vec![self.kv("message", message)];
+      entries.extend(self.position(span));
+      values.push(self.ctx.heap().alloc_dict(entries));
+    }
+
+    self.ctx.heap().alloc_list(values)
+  }
+
   fn string(&mut self, text: impl Into<String>) -> Value {
     self.ctx.heap().alloc_string(text.into())
   }
@@ -720,6 +788,9 @@ fn segment_text(token: &Token) -> String {
 fn token_identifier_name(tok: &Token) -> String {
   match &tok.kind {
     TokenKind::Identifier(s) | TokenKind::Decorator(s) | TokenKind::Literal(s) => s.clone(),
+    // The placeholder for a name the source is missing, in a tree read
+    // by `parse_partial`.
+    TokenKind::Eof => String::new(),
     other => format!("{}", other),
   }
 }
