@@ -99,6 +99,7 @@ class Linker {
     self._extensions = nil
     self._subclasses = nil
     self._returns = {}
+    self._member_tables = {}
 
     for summary in [builtins.globals, builtins.prelude] {
       if summary != nil {
@@ -117,6 +118,7 @@ class Linker {
     self._extensions = nil
     self._subclasses = nil
     self._returns = {}
+    self._member_tables = {}
   }
 
   /**
@@ -871,10 +873,47 @@ class Linker {
    * `'field'`, `'method'`, `'static'`, `'extension'`, `'export'` or
    * `'value'` for what every value carries.
    *
+   * The list is worked out once for each owner and kept until what the
+   * linker holds changes, so it is shared: read it, never change it.
+   *
    * @param ?dict owner: A type `resolve()` returned.
    * @returns list[dict]
    */
   members(owner) {
+    if owner == nil {
+      return []
+    }
+
+    return self._member_table(owner).list
+  }
+
+  # The members of `owner` as a list and by name. A file is checked by
+  # looking up every member access in it, so the table is built once
+  # per owner rather than once per access.
+  _member_table(owner) {
+    var place = owner.get('path', owner.get('name', ''))
+    var index = owner.get('index', '')
+    var key = '${owner.t} ${place}#${index}'
+    var table = self._member_tables.get(key, nil)
+
+    if table != nil {
+      return table
+    }
+
+    var list = self._collect_members(owner)
+    var by_name = {}
+
+    for found in list {
+      by_name[found.name] = found
+    }
+
+    table = { list, by_name }
+    self._member_tables[key] = table
+
+    return table
+  }
+
+  _collect_members(owner) {
     var found = []
     var seen = {}
 
@@ -1002,13 +1041,9 @@ class Linker {
       return nil
     }
 
-    for found in self.members(owner) {
-      if found.name == name {
-        return { path: found.path, index: found.index }
-      }
-    }
+    var found = self._member_table(owner).by_name.get(name, nil)
 
-    return nil
+    return found == nil ? nil : { path: found.path, index: found.index }
   }
 
   /**
