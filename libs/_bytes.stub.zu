@@ -96,29 +96,6 @@
 
 class bytes {
 
-  /**
-   * Creates a new byte stream.
-   *
-   * @note If a number is given, creates an array of size number
-   * @note If a list is given, converts the bytes list into an
-   *    array of bytes.
-   *
-   * @param {number|list} n The number of bytes or the list of
-   *    bytes to create.
-   * @returns {bytes}
-   * @constructor
-   *
-   * For example,
-   *
-   * ```zuri-repl
-   * %> bytes(5)
-   * (0 0 0 0 0)
-   * %> bytes([65, 66, 67, 68, 69])
-   * (41  42 43 44 45)
-   * ```
-   */
-  bytes(n: number|list) {}
-
    /**
    * Returns the number of bytes in the byte stream.
    *

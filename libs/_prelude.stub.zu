@@ -1,0 +1,131 @@
+/**
+ * # Errors
+ *
+ * Every error in Zuri is an instance of `Error` or of a class
+ * built on it. The classes here are ordinary Zuri: the runtime
+ * runs this file before any program, so each of them is defined
+ * in every file with no import, and subclassing one works exactly
+ * like subclassing anything else.
+ *
+ * ```zuri-repl
+ * %> var e = ValueError('bad input')
+ * %> e.type
+ * 'ValueError'
+ * %> e.message
+ * 'bad input'
+ * ```
+ */
+
+
+/**
+ * The root of every error. Raise it for a general failure with
+ * nothing more specific to say, and build on it for an error of
+ * your own.
+ *
+ * `instance_of(e, Error)` holds for every error, and a parameter
+ * typed `Error` accepts any of them.
+ */
+class Error {
+
+  /**
+   * What went wrong, `'An unexpected error has occurred'` unless
+   * the error was given a message of its own.
+   *
+   * @type string
+   */
+  var message = 'An unexpected error has occurred'
+
+  /**
+   * The frames the error was raised through, innermost first, each
+   * a string naming its file, line and function.
+   *
+   * @type list
+   */
+  var stacktrace = []
+
+  /**
+   * The name of the error's class, as a string.
+   *
+   * @type string
+   */
+  var type = typeof(self)
+
+  /**
+   * Returns a new error carrying `message`.
+   *
+   * ```zuri-repl
+   * %> Error('disk full').message
+   * 'disk full'
+   * %> Error().message
+   * 'An unexpected error has occurred'
+   * ```
+   *
+   * @param ?string message: What went wrong. When it is missing or
+   *    falsy, the error keeps its default message.
+   */
+  @new(message) {
+    self.message = message or self.message
+  }
+}
+
+/**
+ * Raised when an operation receives the wrong type: an operator
+ * with no meaning for its operands, a method called on `nil`, or a
+ * typed parameter given a value of another type.
+ */
+class TypeError < Error {}
+
+/**
+ * Raised when a value has the right type and the wrong value.
+ */
+class ValueError < Error {}
+
+/**
+ * Raised when an arithmetic operation fails.
+ */
+class NumericError < Error {}
+
+/**
+ * Raised when a call passes a native function the wrong number of
+ * arguments.
+ */
+class ArgumentError < Error {}
+
+/**
+ * Raised by a method meant to be overridden, when it was not.
+ */
+class NotImplementedError < Error {}
+
+/**
+ * Raised when an index or a bound falls outside what the value
+ * allows.
+ */
+class RangeError < Error {}
+
+/**
+ * Raised when a permission or access check fails.
+ */
+class AccessError < Error {}
+
+/**
+ * Raised when an `assert` condition is falsy, carrying the
+ * assertion's message, or `'Assertion failed'` when it has none.
+ */
+class AssertError < Error {}
+
+/**
+ * Raised when a member that does not exist is read: a missing
+ * dictionary key, an undeclared field, or a module member the
+ * module does not have.
+ */
+class PropertyError < Error {}
+
+/**
+ * Raised when a name no scope declares is read.
+ */
+class UndefinedError < Error {}
+
+/**
+ * Raised when an `import` names a module that cannot be found.
+ */
+class ModuleNotFoundError < Error {}

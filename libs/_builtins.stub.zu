@@ -42,6 +42,13 @@ def sum(...values) {}
  * If x is a list, it returns a new `bytes` object whose contents
  * are the bytes specified in the list.
  *
+ * ```zuri-repl
+ * %> bytes(5)
+ * (00 00 00 00 00)
+ * %> bytes([65, 66, 67, 68, 69])
+ * (41 42 43 44 45)
+ * ```
+ *
  * @note If x is a list, then the list must only contain valid
  *    bytes which can be any number between 0 and 255.
  * @param {number|list} x The number or list to convert to bytes.
@@ -54,6 +61,32 @@ def bytes(x: number|list) {}
  * Returns an open file handle to the file specified in the path
  * in the specified mode. If the mode is not specified, the file
  * will be opened in the read only mode.
+ *
+ * Valid modes include:
+ *
+ * ```zuri-repl
+ * %> file('sample.txt', 'r')
+ * <file at sample.txt in mode r>
+ * %> file('sample.txt', 'w')
+ * <file at sample.txt in mode w>
+ * %> file('sample.txt', 'a')
+ * <file at sample.txt in mode a>
+ * %> file('sample.txt', 'r+')
+ * <file at sample.txt in mode r+>
+ * %> file('sample.txt', 'w+')
+ * <file at sample.txt in mode w+>
+ * %> file('sample.txt', 'a+')
+ * <file at sample.txt in mode a+>
+ * %> file('sample.lock', 'x')
+ * <file at sample.lock in mode x>
+ * ```
+ *
+ * `x` and `x+` create the file and fail when anything already exists
+ * at the path. The check and the creation are one step, so of two
+ * programs creating the same path in `x` mode, exactly one succeeds.
+ * That makes it the mode for lock files. The failure comes on the
+ * first read, write or `open()`, since creating the handle touches
+ * nothing.
  *
  * @param {string} path The path to the file to open.
  * @param {?string} mode The mode to open the file in.
@@ -318,3 +351,66 @@ def is_file(x: any) {}
  * @returns {boolean}
  */
 def is_iterable(x: any) {}
+
+
+/**
+ * The path of the file it is read in. In the file a program was
+ * started from, it is the path the program was started with; in an
+ * imported module, it is the module's full path.
+ *
+ * @type string
+ */
+var __file__ = ''
+
+
+/**
+ * The path of the file the program was started from, the same in
+ * every module of one run and in every isolate, so `__root__ ==
+ * __file__` holds in that one file alone. That is how a file serves
+ * both as a module others import and as a program of its own:
+ *
+ * ```zuri
+ * def main() {
+ *   echo 'started directly'
+ * }
+ *
+ * if __root__ == __file__ {
+ *   main()
+ * }
+ * ```
+ *
+ * `__root__` and `__file__` are both set when a file runs; the
+ * REPL, which runs no file, defines neither.
+ *
+ * @type string
+ */
+var __root__ = ''
+
+
+/**
+ * The methods every value carries whatever its type: `nil`, every
+ * built-in type, a function, a module, and an instance of any
+ * class. A class that declares a method of the same name gives its
+ * instances that method in this one's place.
+ */
+class value {
+
+  /**
+   * The value as a string. A string comes back as itself, `nil` as
+   * `'nil'`, and a number, a list or a dictionary as it is written
+   * in source. An instance comes back as `'<instance of Name>'` and
+   * a module as `'<module name at path>'`.
+   *
+   * ```zuri-repl
+   * %> (5).to_string()
+   * '5'
+   * %> nil.to_string()
+   * 'nil'
+   * %> [1, 'a'].to_string()
+   * '[1, a]'
+   * ```
+   *
+   * @returns string
+   */
+  to_string() {}
+}

@@ -14,14 +14,21 @@
  * specifying the mode in which the file should be opened. Below
  * is a list of supported modes.
  *
- * | Mode | Name          | Description |
- * |:----:| --------------|-------------|
- * | `r`  | Read          | Opens the file for reading it's content. The file must exist.  |
- * | `w`  | Write         | Opens the file for writing to it. Creates file it does not exist. |
- * | `a`  | Append        | Opens a file for writing to it starting from the end. This mode ignores any previous mode to `seek()`. Creates file if it does not exist.  |
- * | `r+` | Read/Update   | Opens a file for update. The file must exist. |
- * | `w+` | Write/Update  | Opens a file for update. If the file does not exits, it creates it. Unlike in C and Python, if the file exists, this method does not truncate the file. |
- * | `a+` | Append/Update | Opens a file for updating starting from the end. This mode ignores any previous mode to `seek()` for outputs, but it's input will respect any previous call to `seek()`. Creates file if it does not exist. |
+ * | Mode | Name | Opens the file for |
+ * |:----:| ---- | ------------------ |
+ * | `r` | Read | reading; the file must exist |
+ * | `w` | Write | writing, creating it when it does not exist |
+ * | `a` | Append | writing from its end, creating it when it does not exist |
+ * | `r+` | Read/Update | reading and writing; the file must exist |
+ * | `w+` | Write/Update | reading and writing, creating it when it does not exist |
+ * | `a+` | Append/Update | reading, and writing from its end, creating it when needed |
+ * | `x` | Create | writing a new file; nothing may exist at the path yet |
+ * | `x+` | Create/Update | reading and writing a new file; nothing may exist there yet |
+ *
+ * The append modes write from the end of the file whatever `seek()`
+ * was called with before; `a+` still reads from wherever `seek()`
+ * last placed it. Unlike in C and Python, `w+` does not truncate a
+ * file that already exists.
  *
  * Like in C, while not usually necessary, the modes can be mixed
  * for clarity. For example, the mode `r+w` opens a file for
@@ -93,45 +100,6 @@
 
 
 class file {
-
-  /**
-   * Create a new file object.
-   *
-   * If the mode is not specified, the file is opened in the
-   * read-only mode.
-   *
-   * Valid modes include:
-   *
-   * ```zuri-repl
-   * %> file('sample.txt', 'r')
-   * <file at sample.txt in mode r>
-   * %> file('sample.txt', 'w')
-   * <file at sample.txt in mode w>
-   * %> file('sample.txt', 'a')
-   * <file at sample.txt in mode a>
-   * %> file('sample.txt', 'r+')
-   * <file at sample.txt in mode r+>
-   * %> file('sample.txt', 'w+')
-   * <file at sample.txt in mode w+>
-   * %> file('sample.txt', 'a+')
-   * <file at sample.txt in mode a+>
-   * %> file('sample.lock', 'x')
-   * <file at sample.lock in mode x>
-   * ```
-   *
-   * `x` and `x+` create the file and fail when anything already exists
-   * at the path. The check and the creation are one step, so of two
-   * programs creating the same path in `x` mode, exactly one succeeds.
-   * That makes it the mode for lock files. The failure comes on the
-   * first read, write or `open()`, since creating the handle touches
-   * nothing.
-   *
-   * @param {string} path - The path to the file.
-   * @param {?string} mode - The mode in which the file should be
-   *    opened.
-   * @constructor
-   */
-  file(path: string, mode: ?string) {}
 
   /**
    * Returns `true` if a file exists or `false` otherwise.
@@ -344,9 +312,10 @@ class file {
    *
    * ```zuri-repl
    * %> file('sample.txt').stats()
-   * {is_readable: true, is_writable: true, is_executable: false, is_symbolic: false, size: 72, mode: 33188, dev: 16777230, 
-   * ino: 4865113, nlink: 1, uid: 501, gid: 20, mtime: 1631395239, atime: 1631395271, ctime: 1631395239, blocks: 8, 
-   * blksize: 4096}
+   * {is_readable: true, is_writable: true, is_executable: false,
+   * is_symbolic: false, size: 72, mode: 33188, dev: 16777230,
+   * ino: 4865113, nlink: 1, uid: 501, gid: 20, mtime: 1631395239,
+   * atime: 1631395271, ctime: 1631395239, blocks: 8, blksize: 4096}
    * ```
    *
    * Every key above is present on every platform, so reading `size` or
@@ -530,9 +499,10 @@ class file {
    * %> file('sample.txt').set_times(time(), time())
    * true
    * %> file('sample.txt').stats()
-   * {is_readable: true, is_writable: true, is_executable: true, is_symbolic: false, size: 72, mode: 33261, 
-   * dev: 16777230, ino: 4865113, nlink: 1, uid: 501, gid: 20, mtime: 1631477099, atime: 1631477100, ctime: 
-   * 1631477099, blocks: 8, blksize: 4096}
+   * {is_readable: true, is_writable: true, is_executable: true,
+   * is_symbolic: false, size: 72, mode: 33261, dev: 16777230,
+   * ino: 4865113, nlink: 1, uid: 501, gid: 20, mtime: 1631477099,
+   * atime: 1631477100, ctime: 1631477099, blocks: 8, blksize: 4096}
    * ```
    *
    * @param {number} atime
@@ -609,4 +579,18 @@ class file {
    * @return {string}
    */
   name() {}
+
+
+  /**
+   * Returns the file handle as a string, naming its path and the
+   * mode it was opened in.
+   *
+   * ```zuri-repl
+   * %> file('sample.txt', 'w').to_string()
+   * '<file at sample.txt in mode w>'
+   * ```
+   *
+   * @returns {string}
+   */
+  to_string() {}
 }

@@ -209,7 +209,30 @@ def render_type_page(spec, members: list) {
   return '${'\n'.join(squeeze(out))}\n'
 }
 
-def render_builtins_page(functions: list) {
+# One module-level variable: its name, what it holds, and its type.
+def _render_variable(variable) {
+  var out = []
+
+  out.append('## `${variable.name}`')
+  out.append('')
+
+  for line in reflow(variable.body) {
+    out.append(line)
+  }
+
+  out.append('')
+
+  var type = variable.first_tag('type')
+
+  if type != nil and type.type != '' {
+    out.append('**Type** ${code(type.type)}')
+    out.append('')
+  }
+
+  return squeeze(out)
+}
+
+def render_builtins_page(functions: list, variables: list) {
   var out = []
 
   out.append('# Appendix D: Built-in Functions')
@@ -237,6 +260,28 @@ def render_builtins_page(functions: list) {
     }
 
     out.append('')
+  }
+
+  if !variables.is_empty() {
+    out.append('# Module Variables')
+    out.append('')
+
+    for line in wrap(
+      'Every file also has these variables, which describe the file '
+      + 'itself rather than anything it declares.'
+    ) {
+      out.append(line)
+    }
+
+    out.append('')
+
+    for variable in variables {
+      for line in _render_variable(variable) {
+        out.append(line)
+      }
+
+      out.append('')
+    }
   }
 
   return '${'\n'.join(squeeze(out))}\n'
@@ -282,9 +327,6 @@ def render_index_page(types: list, counts: dict) {
     out.append('| `${spec.stub}` | ${counts[spec.stub]} | [${spec.title}](${spec.page}) |')
   }
 
-  # `function` has no stub of its own: its methods live in the runtime
-  # rather than in `libs/`, so that page is written by hand.
-  out.append('| `function` | 5 | [Function Methods](appendix-05-10-function.md) |')
   out.append('')
 
   for line in [

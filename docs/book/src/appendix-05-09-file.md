@@ -6,7 +6,6 @@ thing.
 
 | Method | Returns | Summary |
 | --- | --- | --- |
-| [`file(path: string, mode: ?string)`](#file) |  | Create a new file object. |
 | [`exists()`](#exists) | `boolean` | Returns `true` if a file exists or `false` otherwise. |
 | [`close()`](#close) | `void` | Closes the stream to an opened file. |
 | [`open()`](#open) | `void` | Opens the stream to a file for the operation originally specified on the file object during creation. |
@@ -33,46 +32,7 @@ thing.
 | [`tell()`](#tell) | `number` | Returns the current position of the reader/writer in a file. |
 | [`mode()`](#mode) | `string` | Returns the mode in which the current file was opened. |
 | [`name()`](#name) | `string` | Returns the name of the current file. |
-
-## `file()`
-
-```zuri,ignore
-file(path: string, mode: ?string)
-```
-
-Create a new file object.
-
-If the mode is not specified, the file is opened in the read-only mode.
-
-Valid modes include:
-
-```zuri-repl
-%> file('sample.txt', 'r')
-<file at sample.txt in mode r>
-%> file('sample.txt', 'w')
-<file at sample.txt in mode w>
-%> file('sample.txt', 'a')
-<file at sample.txt in mode a>
-%> file('sample.txt', 'r+')
-<file at sample.txt in mode r+>
-%> file('sample.txt', 'w+')
-<file at sample.txt in mode w+>
-%> file('sample.txt', 'a+')
-<file at sample.txt in mode a+>
-%> file('sample.lock', 'x')
-<file at sample.lock in mode x>
-```
-
-`x` and `x+` create the file and fail when anything already exists at
-the path. The check and the creation are one step, so of two programs
-creating the same path in `x` mode, exactly one succeeds. That makes it
-the mode for lock files. The failure comes on the first read, write or
-`open()`, since creating the handle touches nothing.
-
-**Parameters**
-
-- `path` (`string`) — The path to the file.
-- `mode` (`?string`) — The mode in which the file should be opened.
+| [`to_string()`](#to_string) | `string` | Returns the file handle as a string, naming its path and the mode it was opened in. |
 
 ## `exists()`
 
@@ -320,9 +280,10 @@ For example:
 
 ```zuri-repl
 %> file('sample.txt').stats()
-{is_readable: true, is_writable: true, is_executable: false, is_symbolic: false, size: 72, mode: 33188, dev: 16777230, 
-ino: 4865113, nlink: 1, uid: 501, gid: 20, mtime: 1631395239, atime: 1631395271, ctime: 1631395239, blocks: 8, 
-blksize: 4096}
+{is_readable: true, is_writable: true, is_executable: false,
+is_symbolic: false, size: 72, mode: 33188, dev: 16777230,
+ino: 4865113, nlink: 1, uid: 501, gid: 20, mtime: 1631395239,
+atime: 1631395271, ctime: 1631395239, blocks: 8, blksize: 4096}
 ```
 
 Every key above is present on every platform, so reading `size` or
@@ -535,9 +496,10 @@ For example:
 %> file('sample.txt').set_times(time(), time())
 true
 %> file('sample.txt').stats()
-{is_readable: true, is_writable: true, is_executable: true, is_symbolic: false, size: 72, mode: 33261, 
-dev: 16777230, ino: 4865113, nlink: 1, uid: 501, gid: 20, mtime: 1631477099, atime: 1631477100, ctime: 
-1631477099, blocks: 8, blksize: 4096}
+{is_readable: true, is_writable: true, is_executable: true,
+is_symbolic: false, size: 72, mode: 33261, dev: 16777230,
+ino: 4865113, nlink: 1, uid: 501, gid: 20, mtime: 1631477099,
+atime: 1631477100, ctime: 1631477099, blocks: 8, blksize: 4096}
 ```
 
 **Parameters**
@@ -622,6 +584,22 @@ For example:
 ```zuri-repl
 %> file('./sample.txt').name()
 'sample.txt'
+```
+
+**Returns** `string`
+
+## `to_string()`
+
+```zuri,ignore
+to_string() -> string
+```
+
+Returns the file handle as a string, naming its path and the mode it was
+opened in.
+
+```zuri-repl
+%> file('sample.txt', 'w').to_string()
+'<file at sample.txt in mode w>'
 ```
 
 **Returns** `string`

@@ -6,7 +6,6 @@ thing.
 
 | Method | Returns | Summary |
 | --- | --- | --- |
-| [`bytes(n: number\|list)`](#bytes) | `bytes` | Creates a new byte stream. |
 | [`length()`](#length) | `number` | Returns the number of bytes in the byte stream. |
 | [`is_empty()`](#is_empty) | `boolean` | Returns `true` if the byte stream holds no bytes at all, and `false` otherwise. |
 | [`append(n: int)`](#append) | `bytes` | Adds an item to the top of a byte stream. |
@@ -32,35 +31,6 @@ thing.
 | [`to_list()`](#to_list) | `list` | Returns the byte stream as a list of bytes. |
 | [`to_string()`](#to_string) | `string` | Returns the byte stream as a string. |
 | [`each(callback: function)`](#each) | `void` | Iterates over each byte of the bytes object, calling the provided callback function with the byte and its index. |
-
-## `bytes()`
-
-```zuri,ignore
-bytes(n: number|list) -> bytes
-```
-
-Creates a new byte stream.
-
-For example,
-
-```zuri-repl
-%> bytes(5)
-(0 0 0 0 0)
-%> bytes([65, 66, 67, 68, 69])
-(41  42 43 44 45)
-```
-
-**Parameters**
-
-- `n` (`number|list`) — The number of bytes or the list of bytes to
-  create.
-
-**Returns** `bytes`
-
-> **Note:** If a number is given, creates an array of size number
-
-> **Note:** If a list is given, converts the bytes list into an array of
-> bytes.
 
 ## `length()`
 

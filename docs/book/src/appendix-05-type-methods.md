@@ -28,9 +28,9 @@ ff
 | `list` | 40 | [List Methods](appendix-05-05-list.md) |
 | `dict` | 21 | [Dictionary Methods](appendix-05-06-dict.md) |
 | `range` | 9 | [Range Methods](appendix-05-07-range.md) |
-| `bytes` | 26 | [Bytes Methods](appendix-05-08-bytes.md) |
+| `bytes` | 25 | [Bytes Methods](appendix-05-08-bytes.md) |
 | `file` | 27 | [File Methods](appendix-05-09-file.md) |
-| `function` | 5 | [Function Methods](appendix-05-10-function.md) |
+| `function` | 6 | [Function Methods](appendix-05-10-function.md) |
 
 ## What Is Not Listed Here
 

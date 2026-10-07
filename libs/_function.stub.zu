@@ -1,0 +1,128 @@
+/**
+ * # Functions
+ *
+ * A function is a value like any other, and carries methods of its
+ * own. They apply alike to a named `def`, an anonymous function, a
+ * bound method, and a built-in native function.
+ *
+ * ```zuri-repl
+ * %> def add(a, b) { return a + b }
+ * %> add.name()
+ * 'add'
+ * %> add.call(2, 3)
+ * 5
+ * ```
+ */
+
+
+class function {
+
+  /**
+   * The function's declared name. An anonymous function is named
+   * `@anon` followed by a number, counted in the order the compiler
+   * met it; a bound method reports the method's own name, not its
+   * class's.
+   *
+   * ```zuri-repl
+   * %> def named(a, b, ...c) {}
+   * %> named.name()
+   * 'named'
+   * %> print.name()
+   * 'print'
+   * ```
+   *
+   * @returns string
+   */
+  name() {}
+
+  /**
+   * How many parameters the function declares, counting a variadic
+   * one as a single parameter.
+   *
+   * ```zuri-repl
+   * %> def named(a, b, ...c) {}
+   * %> named.arity()
+   * 3
+   * ```
+   *
+   * A method read off an instance counts the instance as its first
+   * parameter, so a method declaring two parameters reports `3`. A
+   * foreign function from `ffi` has no receiver and reports its C
+   * parameter list.
+   *
+   * @returns number
+   */
+  arity() {}
+
+  /**
+   * Whether the last parameter is variadic (`...name`).
+   *
+   * ```zuri-repl
+   * %> def named(a, b, ...c) {}
+   * %> named.is_variadic()
+   * true
+   * ```
+   *
+   * @returns bool
+   */
+  is_variadic() {}
+
+  /**
+   * Calls the function with the given arguments and returns its
+   * result. The same as calling it directly; useful when the
+   * function is held in a variable and the call site reads better
+   * spelled out.
+   *
+   * ```zuri-repl
+   * %> def add(a, b) { return a + b }
+   * %> add.call(2, 3)
+   * 5
+   * ```
+   *
+   * @param ...any args: The arguments to call with.
+   * @returns {any} Whatever the function returns.
+   * @throws anything the called function raises.
+   */
+  call(...args) {}
+
+  /**
+   * Calls the function with the arguments in a list, and returns
+   * its result. `call()` takes them written out; this one takes
+   * them in a list.
+   *
+   * ```zuri-repl
+   * %> def add(a, b) { return a + b }
+   * %> add.apply([2, 3])
+   * 5
+   * %> def collect(first, ...rest) { return [first, rest] }
+   * %> collect.apply([1, 2, 3])
+   * [1, [2, 3]]
+   * ```
+   *
+   * A list shorter than the function's arity leaves the remaining
+   * parameters `nil`, exactly as calling it directly with too few
+   * arguments does; a longer one overflows into a variadic
+   * parameter, or is discarded when there is none.
+   *
+   * @param list args: The arguments to call with, in order.
+   * @returns {any} Whatever the function returns.
+   * @throws TypeError when `args` is not a list, and anything the
+   *    called function raises.
+   */
+  apply(args: list) {}
+
+  /**
+   * The function rendered for display, as `<function NAME(ARITY)>`,
+   * with a trailing `...` on the arity when the function is
+   * variadic.
+   *
+   * ```zuri-repl
+   * %> def named(a, b, ...c) {}
+   * %> named.to_string()
+   * '<function named(3...)>'
+   * ```
+   *
+   * @returns string
+   */
+  to_string() {}
+}

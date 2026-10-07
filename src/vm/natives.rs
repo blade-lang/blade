@@ -10,38 +10,43 @@ use std::cell::Cell;
 use std::io::Write;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+/// Every global function the runtime defines: its name, the fewest
+/// arguments it takes, and whether it takes any number more.
+pub(crate) static NATIVE_GLOBALS: &[(&str, u8, bool, NativeFn)] = &[
+  ("time", 0, false, time),
+  ("sum", 1, true, sum),
+  ("bytes", 1, false, bytes),
+  ("file", 1, true, file),
+  ("instance_of", 2, false, instance_of),
+  ("typeof", 1, false, typeof_fn),
+  ("delprop", 2, false, delprop),
+  ("getprop", 2, false, getprop),
+  ("hasprop", 2, false, hasprop),
+  ("setprop", 3, false, setprop),
+  ("id", 1, false, id_fn),
+  ("print", 0, true, print_fn),
+  ("rand", 0, true, rand_fn),
+  ("is_bigint", 1, false, is_bigint),
+  ("is_bool", 1, false, is_bool),
+  ("is_bytes", 1, false, is_bytes),
+  ("is_callable", 1, false, is_callable),
+  ("is_class", 1, false, is_class),
+  ("is_dict", 1, false, is_dict),
+  ("is_file", 1, false, is_file),
+  ("is_function", 1, false, is_function),
+  ("is_instance", 1, false, is_instance),
+  ("is_int", 1, false, is_int),
+  ("is_iterable", 1, false, is_iterable),
+  ("is_list", 1, false, is_list),
+  ("is_number", 1, false, is_number),
+  ("is_object", 1, false, is_object),
+  ("is_string", 1, false, is_string),
+];
+
 pub fn install(vm: &mut VM) {
-  register(vm, "time", 0, false, time);
-  register(vm, "sum", 1, true, sum);
-  register(vm, "bytes", 1, false, bytes);
-  register(vm, "file", 1, true, file);
-  register(vm, "instance_of", 2, false, instance_of);
-  register(vm, "typeof", 1, false, typeof_fn);
-
-  register(vm, "delprop", 2, false, delprop);
-  register(vm, "getprop", 2, false, getprop);
-  register(vm, "hasprop", 2, false, hasprop);
-  register(vm, "setprop", 3, false, setprop);
-
-  register(vm, "id", 1, false, id_fn);
-  register(vm, "print", 0, true, print_fn);
-  register(vm, "rand", 0, true, rand_fn);
-
-  register(vm, "is_bigint", 1, false, is_bigint);
-  register(vm, "is_bool", 1, false, is_bool);
-  register(vm, "is_bytes", 1, false, is_bytes);
-  register(vm, "is_callable", 1, false, is_callable);
-  register(vm, "is_class", 1, false, is_class);
-  register(vm, "is_dict", 1, false, is_dict);
-  register(vm, "is_file", 1, false, is_file);
-  register(vm, "is_function", 1, false, is_function);
-  register(vm, "is_instance", 1, false, is_instance);
-  register(vm, "is_int", 1, false, is_int);
-  register(vm, "is_iterable", 1, false, is_iterable);
-  register(vm, "is_list", 1, false, is_list);
-  register(vm, "is_number", 1, false, is_number);
-  register(vm, "is_object", 1, false, is_object);
-  register(vm, "is_string", 1, false, is_string);
+  for &(name, min_arity, variadic, func) in NATIVE_GLOBALS {
+    register(vm, name, min_arity, variadic, func);
+  }
 }
 
 fn register(vm: &mut VM, name: &'static str, min_arity: u8, variadic: bool, func: NativeFn) {

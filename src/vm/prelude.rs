@@ -12,39 +12,10 @@ use crate::vm::chunk::Chunk;
 use crate::vm::value::Value;
 use crate::vm::vm::VM;
 
-const PRELUDE_SOURCE: &str = r#"
-class Error {
-  var message = 'An unexpected error has occurred'
-  var stacktrace = []
-  var type = typeof(self)
-
-  @new(message) {
-    self.message = message or self.message
-  }
-}
-
-class TypeError < Error {}
-
-class ValueError < Error {}
-
-class NumericError < Error {}
-
-class ArgumentError < Error {}
-
-class NotImplementedError < Error {}
-
-class RangeError < Error {}
-
-class AccessError < Error {}
-
-class AssertError < Error {}
-
-class PropertyError < Error {}
-
-class UndefinedError < Error {}
-
-class ModuleNotFoundError < Error {}
-"#;
+/// The error classes, from the standard library stub that documents
+/// them, so the source the runtime runs and the documentation readers
+/// see are one file.
+const PRELUDE_SOURCE: &str = include_str!("../../libs/_prelude.stub.zu");
 
 /// Names of every builtin error class, in declaration order (each
 /// subclasses `Error`, so it has to already be bound as a global by

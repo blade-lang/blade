@@ -93,6 +93,13 @@ x having all its bytes set to `0x0`.
 If x is a list, it returns a new `bytes` object whose contents are the
 bytes specified in the list.
 
+```zuri-repl
+%> bytes(5)
+(00 00 00 00 00)
+%> bytes([65, 66, 67, 68, 69])
+(41 42 43 44 45)
+```
+
 **Parameters**
 
 - `x` (`number|list`) — The number or list to convert to bytes.
@@ -111,6 +118,31 @@ file(path: string, mode: ?string) -> file
 Returns an open file handle to the file specified in the path in the
 specified mode. If the mode is not specified, the file will be opened in
 the read only mode.
+
+Valid modes include:
+
+```zuri-repl
+%> file('sample.txt', 'r')
+<file at sample.txt in mode r>
+%> file('sample.txt', 'w')
+<file at sample.txt in mode w>
+%> file('sample.txt', 'a')
+<file at sample.txt in mode a>
+%> file('sample.txt', 'r+')
+<file at sample.txt in mode r+>
+%> file('sample.txt', 'w+')
+<file at sample.txt in mode w+>
+%> file('sample.txt', 'a+')
+<file at sample.txt in mode a+>
+%> file('sample.lock', 'x')
+<file at sample.lock in mode x>
+```
+
+`x` and `x+` create the file and fail when anything already exists at
+the path. The check and the creation are one step, so of two programs
+creating the same path in `x` mode, exactly one succeeds. That makes it
+the mode for lock files. The failure comes on the first read, write or
+`open()`, since creating the handle touches nothing.
 
 **Parameters**
 
@@ -486,3 +518,38 @@ any class that defines both `@key()` and `@value()` decorator functions.
 - `x` (`any`) — The value to check.
 
 **Returns** `boolean`
+
+# Module Variables
+
+Every file also has these variables, which describe the file itself
+rather than anything it declares.
+
+## `__file__`
+
+The path of the file it is read in. In the file a program was started
+from, it is the path the program was started with; in an imported
+module, it is the module's full path.
+
+**Type** `string`
+
+## `__root__`
+
+The path of the file the program was started from, the same in every
+module of one run and in every isolate, so `__root__ == __file__` holds
+in that one file alone. That is how a file serves both as a module
+others import and as a program of its own:
+
+```zuri,ignore
+def main() {
+  echo 'started directly'
+}
+
+if __root__ == __file__ {
+  main()
+}
+```
+
+`__root__` and `__file__` are both set when a file runs; the REPL, which
+runs no file, defines neither.
+
+**Type** `string`

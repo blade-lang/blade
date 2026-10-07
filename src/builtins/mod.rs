@@ -413,3 +413,189 @@ mod operator_lookup_tests {
     }
   }
 }
+
+/// The stubs in `libs/` are where readers and editor tooling learn what
+/// the built-ins are, so each has to list exactly what the runtime
+/// provides: no method it lacks, and none it leaves out.
+#[cfg(test)]
+mod stub_parity_tests {
+  use std::collections::BTreeSet;
+
+  use super::*;
+  use crate::compiler::ast::{Decl, DeclKind, StmtKind};
+  use crate::compiler::lexer::Lexer;
+  use crate::compiler::parser::Parser;
+  use crate::compiler::token::{Token, TokenKind};
+  use crate::vm::object::Heap;
+  use crate::vm::vm::VM;
+
+  fn stub(name: &str) -> Vec<Decl> {
+    let path = format!("{}/libs/{}.stub.zu", env!("CARGO_MANIFEST_DIR"), name);
+    let source = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
+    let mut lexer = Lexer::new(&source);
+
+    Parser::new(&mut lexer)
+      .parse()
+      .unwrap_or_else(|errors| panic!("{path} does not parse: {errors:?}"))
+  }
+
+  fn name_of(token: &Token) -> String {
+    match &token.kind {
+      TokenKind::Identifier(name) | TokenKind::Decorator(name) => name.clone(),
+      other => panic!("not a name: {other}"),
+    }
+  }
+
+  /// The methods of the class named `class` in a stub.
+  fn stub_methods(decls: &[Decl], class: &str) -> BTreeSet<String> {
+    let mut methods = BTreeSet::new();
+
+    for decl in decls {
+      if let DeclKind::Class(name, _, _, members, _) = &decl.kind
+        && name_of(name) == class
+      {
+        for member in members {
+          if let DeclKind::Method(method, ..) = &member.kind {
+            methods.insert(name_of(method));
+          }
+        }
+      }
+    }
+
+    methods
+  }
+
+  /// The functions, variables and classes a stub declares at its top level.
+  fn stub_globals(decls: &[Decl], functions_only: bool) -> BTreeSet<String> {
+    let mut globals = BTreeSet::new();
+
+    for decl in decls {
+      match &decl.kind {
+        DeclKind::Function(name, ..) => {
+          globals.insert(name_of(name));
+        },
+        DeclKind::Class(name, ..) if !functions_only => {
+          globals.insert(name_of(name));
+        },
+        DeclKind::Stmt(statement) if !functions_only => {
+          if let StmtKind::Var(name, ..) = &statement.kind {
+            globals.insert(name_of(name));
+          }
+        },
+        _ => {},
+      }
+    }
+
+    globals
+  }
+
+  /// What differs between a stub and the runtime, or `None` when they
+  /// agree.
+  fn mismatch(
+    what: &str,
+    documented: BTreeSet<String>,
+    provided: BTreeSet<String>,
+  ) -> Option<String> {
+    let undocumented: Vec<_> = provided.difference(&documented).collect();
+    let absent: Vec<_> = documented.difference(&provided).collect();
+
+    if undocumented.is_empty() && absent.is_empty() {
+      return None;
+    }
+
+    Some(format!(
+      "{what}: undocumented {undocumented:?}, documented but not provided {absent:?}"
+    ))
+  }
+
+  fn compare(what: &str, documented: BTreeSet<String>, provided: BTreeSet<String>) {
+    if let Some(problem) = mismatch(what, documented, provided) {
+      panic!("{problem}");
+    }
+  }
+
+  #[test]
+  fn every_type_stub_lists_its_runtime_methods() {
+    let types: [(&str, &MethodTable); 10] = [
+      ("string", &STRING_METHODS),
+      ("number", &NUMBER_METHODS),
+      ("bigint", &BIGINT_METHODS),
+      ("bool", &BOOL_METHODS),
+      ("list", &LIST_METHODS),
+      ("dict", &DICT_METHODS),
+      ("range", &RANGE_METHODS),
+      ("bytes", &BYTES_METHODS),
+      ("file", &FILE_METHODS),
+      ("function", &FUNCTION_METHODS),
+    ];
+
+    let mut problems = Vec::new();
+
+    for (name, table) in types {
+      // `@key` and `@value` are the iteration protocol, which a stub may
+      // document on its type or leave to the protocol's own chapter.
+      let provided = table
+        .keys()
+        .filter(|method| !method.starts_with('@'))
+        .map(|method| method.to_string())
+        .collect();
+      let documented = stub_methods(&stub(&format!("_{name}")), name)
+        .into_iter()
+        .filter(|method| !method.starts_with('@'))
+        .collect();
+
+      problems.extend(mismatch(&format!("_{name}.stub.zu"), documented, provided));
+    }
+
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+  }
+
+  #[test]
+  fn the_builtins_stub_lists_every_native_global() {
+    let provided = crate::vm::natives::NATIVE_GLOBALS
+      .iter()
+      .map(|(name, ..)| name.to_string())
+      .collect();
+
+    compare(
+      "_builtins.stub.zu",
+      stub_globals(&stub("_builtins"), true),
+      provided,
+    );
+  }
+
+  #[test]
+  fn every_value_carries_what_the_builtins_stub_says_it_does() {
+    let provided = NIL_METHODS
+      .keys()
+      .map(|method| method.to_string())
+      .collect();
+
+    compare(
+      "_builtins.stub.zu's value",
+      stub_methods(&stub("_builtins"), "value"),
+      provided,
+    );
+  }
+
+  #[test]
+  fn every_public_native_module_matches_its_stub() {
+    let mut vm = VM::new(Heap::new());
+
+    for def in crate::modules::REGISTRY
+      .iter()
+      .filter(|def| !def.name.starts_with('_'))
+    {
+      let provided = (def.build)(&mut vm)
+        .into_iter()
+        .map(|(name, _)| name.to_string())
+        .collect();
+
+      compare(
+        &format!("{}.stub.zu", def.name),
+        stub_globals(&stub(def.name), false),
+        provided,
+      );
+    }
+  }
+}

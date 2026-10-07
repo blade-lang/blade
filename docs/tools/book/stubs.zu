@@ -120,3 +120,25 @@ def parse_members(source: string) {
 def parse_functions(source: string) {
   return _members(zuri.parse(source), 'Function')
 }
+
+/**
+ * Every documented module-level variable, for the built-ins appendix.
+ * A variable has no parameters, so each comes back with an empty list.
+ */
+def parse_variables(source: string) {
+  var variables = []
+
+  for attached in zuri.doc.attach(zuri.parse(source)) {
+    var node = attached.node
+
+    if node.kind == 'Stmt' {
+      node = node.fields.statement
+    }
+
+    if node.kind == 'Var' and attached.documented {
+      variables.append(Member(node.fields.name, [], attached.block))
+    }
+  }
+
+  return variables
+}
