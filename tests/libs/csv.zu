@@ -56,6 +56,35 @@ def test_writer() {
   echo "test_writer passed"
 }
 
+def test_writer_header_and_dicts() {
+  var b = io.BytesIO(bytes(0), "w+")
+  var w = csv.Writer(b)
+  w.write_header(["name", "age"])
+  w.write_dict({ name: "Ann", age: 7 }, ["name", "age"])
+
+  var text = b.read().to_string()
+  assert text == "name,age\r\nAnn,7\r\n", text
+  w.close()
+
+  echo "test_writer_header_and_dicts passed"
+}
+
+def test_stringify() {
+  assert csv.stringify([["Alice", 30], ["Bob", 25]]) == "Alice,30\r\nBob,25\r\n"
+
+  var from_dicts = csv.stringify([{ name: "Alice", age: 30 }, { name: "Bob", age: 25 }])
+  assert from_dicts == "name,age\r\nAlice,30\r\nBob,25\r\n", from_dicts
+
+  echo "test_stringify passed"
+}
+
+def test_format_record() {
+  var record = csv.format_record(["Alice", "New York, NY", 'She said "hello"'])
+  assert record == 'Alice,"New York, NY","She said ""hello"""\r\n', record
+
+  echo "test_format_record passed"
+}
+
 def test_parse() {
   var data = "a,b,c\nd,e,f"
   var rows = csv.parse(data)
@@ -93,5 +122,8 @@ test_reader()
 test_reader_quoted()
 test_reader_multiline()
 test_writer()
+test_writer_header_and_dicts()
+test_stringify()
+test_format_record()
 test_parse()
 test_sniff_dialect()

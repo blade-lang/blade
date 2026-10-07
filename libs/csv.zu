@@ -1081,7 +1081,7 @@ class Writer {
     for name in headers {
       parts.append(_encode_field(name, self.dialect))
     }
-    self._file.write(parts.join(self.dialect.delimiter) + self.dialect.line_terminator)
+    self._file.write(self.dialect.delimiter.join(parts) + self.dialect.line_terminator)
   }
 
   /**
@@ -1110,7 +1110,7 @@ class Writer {
       var value = row.get(key, '')
       parts.append(_encode_field(value, self.dialect))
     }
-    self._file.write(parts.join(self.dialect.delimiter) + self.dialect.line_terminator)
+    self._file.write(self.dialect.delimiter.join(parts) + self.dialect.line_terminator)
     self.record_num++
   }
 
@@ -1366,7 +1366,7 @@ def stringify(rows, dialect, keys) {
     for key in keys {
       header_parts.append(_encode_field(key, dialect))
     }
-    result += header_parts.join(dialect.delimiter) + term
+    result += dialect.delimiter.join(header_parts) + term
 
     # Write data rows.
     for row in rows {
@@ -1374,7 +1374,7 @@ def stringify(rows, dialect, keys) {
       for key in keys {
         parts.append(_encode_field(row.get(key, ''), dialect))
       }
-      result += parts.join(dialect.delimiter) + term
+      result += dialect.delimiter.join(parts) + term
     }
   } else {
     for row in rows {
@@ -1382,7 +1382,7 @@ def stringify(rows, dialect, keys) {
       for value in row {
         parts.append(_encode_field(value, dialect))
       }
-      result += parts.join(dialect.delimiter) + term
+      result += dialect.delimiter.join(parts) + term
     }
   }
 
@@ -1466,7 +1466,7 @@ def format_record(row, dialect) {
   for value in row {
     parts.append(_encode_field(value, dialect))
   }
-  return parts.join(dialect.delimiter) + dialect.line_terminator
+  return dialect.delimiter.join(parts) + dialect.line_terminator
 }
 
 /**
