@@ -934,7 +934,7 @@ class list {
    *    of the list. It receives the current element and its
    *    index as arguments.
    * @throws {Error} if the callback is not a function.
-   * @returns {list}
+   * @returns {any} The first element that satisfies it, or `nil`.
    *
    * Example:
    *
@@ -957,7 +957,8 @@ class list {
    *    of the list. It receives the current element and its
    *    index as arguments.
    * @throws {Error} if the callback is not a function.
-   * @returns {list}
+   * @returns {number} The index of the first element that satisfies it,
+   *    or `-1`.
    *
    * Example:
    *
@@ -980,7 +981,7 @@ class list {
    *    of the list. It receives the current element and its
    *    index as arguments.
    * @throws {Error} if the callback is not a function.
-   * @returns {list}
+   * @returns {any} The last element that satisfies it, or `nil`.
    *
    * Example:
    *
@@ -1004,7 +1005,8 @@ class list {
    *    of the list. It receives the current element and its
    *    index as arguments.
    * @throws {Error} if the callback is not a function.
-   * @returns {list}
+   * @returns {number} The index of the last element that satisfies it,
+   *    or `-1`.
    *
    * Example:
    *

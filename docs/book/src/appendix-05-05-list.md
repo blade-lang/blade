@@ -39,10 +39,10 @@ thing.
 | [`reduce(callback: function, initial)`](#reduce) | `any` | Applies a function against an accumulator and each element in the list (from left to right) to reduce it to a single value and returns the accumulated result of the callback function. |
 | [`some(callback: function)`](#some) | `boolean` | Tests whether at least one element in the list passes the test implemented by the provided function. |
 | [`every(callback: function)`](#every) | `boolean` | Tests whether all elements in the list pass the test implemented by the provided function. |
-| [`find(callback: function)`](#find) | `list` | Returns the value of the first element in the list that satisfies the provided testing function. |
-| [`find_index(callback: function)`](#find_index) | `list` | Returns the index of the first element in the list that satisfies the provided testing function. |
-| [`find_last(callback: function)`](#find_last) | `list` | Returns the value of the last element in the list that satisfies the provided testing function. |
-| [`find_last_index(callback: function)`](#find_last_index) | `list` | Returns the index of the last element in the list that satisfies the provided testing function. |
+| [`find(callback: function)`](#find) | `any` | Returns the value of the first element in the list that satisfies the provided testing function. |
+| [`find_index(callback: function)`](#find_index) | `number` | Returns the index of the first element in the list that satisfies the provided testing function. |
+| [`find_last(callback: function)`](#find_last) | `any` | Returns the value of the last element in the list that satisfies the provided testing function. |
+| [`find_last_index(callback: function)`](#find_last_index) | `number` | Returns the index of the last element in the list that satisfies the provided testing function. |
 | [`find_all(callback: function)`](#find_all) | `list` | Returns a new list containing all elements of the calling list that satisfy the provided testing function. |
 | [`partition(callback: function)`](#partition) | `list` | Returns an list containing two lists: the first with elements that satisfy the provided testing function, and the second with elements that do not satisfy the testing function. |
 | [`to_string()`](#to_string) | `string` | Returns the string representation of the list. |
@@ -962,7 +962,7 @@ the list is empty, `every` will return `true` by default.
 ## `find()`
 
 ```zuri,ignore
-find(callback: function) -> list
+find(callback: function) -> any
 ```
 
 Returns the value of the first element in the list that satisfies the
@@ -984,14 +984,14 @@ echo [1, 2, 3].find(@(x) {
 - `callback` (`function`) — The function to test each element of the
   list. It receives the current element and its index as arguments.
 
-**Returns** `list`
+**Returns** `any` — The first element that satisfies it, or `nil`.
 
 **Raises** `Error` if the callback is not a function.
 
 ## `find_index()`
 
 ```zuri,ignore
-find_index(callback: function) -> list
+find_index(callback: function) -> number
 ```
 
 Returns the index of the first element in the list that satisfies the
@@ -1013,14 +1013,15 @@ echo [1, 2, 3].find_index(@(x) {
 - `callback` (`function`) — The function to test each element of the
   list. It receives the current element and its index as arguments.
 
-**Returns** `list`
+**Returns** `number` — The index of the first element that satisfies it,
+or `-1`.
 
 **Raises** `Error` if the callback is not a function.
 
 ## `find_last()`
 
 ```zuri,ignore
-find_last(callback: function) -> list
+find_last(callback: function) -> any
 ```
 
 Returns the value of the last element in the list that satisfies the
@@ -1042,14 +1043,14 @@ echo [1, 2, 3].find_last(@(x) {
 - `callback` (`function`) — The function to test each element of the
   list. It receives the current element and its index as arguments.
 
-**Returns** `list`
+**Returns** `any` — The last element that satisfies it, or `nil`.
 
 **Raises** `Error` if the callback is not a function.
 
 ## `find_last_index()`
 
 ```zuri,ignore
-find_last_index(callback: function) -> list
+find_last_index(callback: function) -> number
 ```
 
 Returns the index of the last element in the list that satisfies the
@@ -1071,7 +1072,8 @@ echo [1, 2, 3].find_last_index(@(x) {
 - `callback` (`function`) — The function to test each element of the
   list. It receives the current element and its index as arguments.
 
-**Returns** `list`
+**Returns** `number` — The index of the last element that satisfies it,
+or `-1`.
 
 **Raises** `Error` if the callback is not a function.
 
