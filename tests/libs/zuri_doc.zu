@@ -52,6 +52,18 @@ assert forms.tags[0].type == '?string' and forms.tags[0].name == 'a', 'a {type} 
 assert forms.tags[1].type == '' and forms.tags[1].name == 'b', 'no type is an empty string'
 assert forms.tags[1].text == 'The second', 'a dash before the text is dropped'
 assert forms.tags[2].type == 'number' and forms.tags[2].text == '', 'a type after the name'
+
+var classes = zuri.doc.parse(
+  '@param Point other: Where to\n@param ?http.Request request: Its request\n' +
+  '@param function(2) handler: Called back\n@param [Isolate] tasks: To wait on'
+)
+assert classes.tags[0].type == 'Point' and classes.tags[0].name == 'other', 'a class is a type'
+assert classes.tags[0].text == 'Where to', 'and the name after it is the name'
+assert classes.tags[1].type == '?http.Request', 'a class reached through its module'
+assert classes.tags[1].name == 'request', 'names the argument after it'
+assert classes.tags[2].type == 'function(2)', 'a function by how many it takes'
+assert classes.tags[2].name == 'handler', 'names the argument after it'
+assert classes.tags[3].type == '[Isolate]' and classes.tags[3].name == 'tasks', 'a list of a class'
 ok('a tag reads its type and name in each spelling')
 
 var wrapped_text = ' * @param string query: The text to find,\n *    which may span\n' +

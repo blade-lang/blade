@@ -318,11 +318,18 @@ def _take_type(text: string) {
   var head = space < 0 ? text : text[0, space]
   var bare = head.replace('/^\.\.\./', '').replace('/^\?/', '')
 
-  # `list[string]`, `list<string>` and `number|string` are all types,
-  # so test the outermost name rather than the whole spelling.
-  var root = bare.replace('/[\[<\|].*$/', '')
+  # `list[string]`, `list<string>`, `number|string` and `function(2)`
+  # are all types, so test the outermost name rather than the whole
+  # spelling.
+  var root = bare.replace('/[\[<\|(].*$/', '')
 
-  if _TYPE_WORDS.contains(root.lower()) {
+  # A class is a type too: a capitalised name, `Point`, or one reached
+  # through its module, `http.Request`. So is a list of them written
+  # `[Point]`.
+  var is_class = !!root.match('/^([a-z_][a-z0-9_]*\.)*[A-Z][A-Za-z0-9_]*$/')
+  var is_list_of = bare.starts_with('[') and bare.ends_with(']') and bare.length() > 2
+
+  if _TYPE_WORDS.contains(root.lower()) or is_class or is_list_of {
     return {
       type: head,
       rest: space < 0 ? '' : text[space + 1, text.length()].ltrim(),
