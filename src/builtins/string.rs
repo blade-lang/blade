@@ -970,20 +970,57 @@ fn string_match(ctx: &mut ZuriContext) -> Result<Value, String> {
   if let Some((pattern, modifiers)) = parse_regex(&pattern_str) {
     let compiled = compile_regex(pattern, modifiers)?;
     let (re, anchored) = (&compiled.0, compiled.1);
-    match find_at_anchored(re, anchored, s.as_bytes(), start)? {
-      Some(m) => {
-        let matched = ctx
-          .vm
-          .heap_mut()
-          .alloc_string(bytes_to_string(m.as_bytes()));
-        Ok(
-          ctx
-            .vm
-            .heap_mut()
-            .alloc_dict(vec![(Value::number(0.0), matched)]),
-        )
+    let bytes = s.as_bytes();
+    let mut locs = re.capture_locations();
+    let found = re
+      .captures_read_at(&mut locs, bytes, start)
+      .map_err(|e| e.to_string())?;
+
+    match found {
+      Some(m) if !anchored || m.start() == start => {
+        // The whole match is group 0 and every group follows under its
+        // number; a named group is under its name too. A group that
+        // took no part in the match is `nil`.
+        let mut pairs = Vec::with_capacity(locs.len());
+
+        for group in 0..locs.len() {
+          let value = match locs.get(group) {
+            Some((from, to)) => ctx
+              .vm
+              .heap_mut()
+              .alloc_string(bytes_to_string(&bytes[from..to])),
+            None => Value::nil(),
+          };
+
+          pairs.push((Value::number(group as f64), value));
+        }
+
+        // Several groups may share a name (the `J` modifier); the name
+        // holds whichever of them took part.
+        let mut named: Vec<(&String, Value)> = Vec::new();
+
+        for (group, name) in re.capture_names().iter().enumerate() {
+          let Some(name) = name else {
+            continue;
+          };
+          let value = pairs[group].1;
+
+          match named.iter_mut().find(|(known, _)| *known == name) {
+            Some(entry) if entry.1.is_nil() => entry.1 = value,
+            Some(_) => {},
+            None => named.push((name, value)),
+          }
+        }
+
+        for (name, value) in named {
+          let key = ctx.vm.heap_mut().alloc_string(name.clone());
+
+          pairs.push((key, value));
+        }
+
+        Ok(ctx.vm.heap_mut().alloc_dict(pairs))
       },
-      None => Ok(Value::bool(false)),
+      _ => Ok(Value::bool(false)),
     }
   } else {
     Ok(Value::bool(

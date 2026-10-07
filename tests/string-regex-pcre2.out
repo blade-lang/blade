@@ -1,7 +1,10 @@
 named groups:
-{0: John Doe}
+{0: John Doe, 1: John, 2: Doe, first: John, last: Doe}
+numbered groups, and one that takes no part:
+{0: 2024-01, 1: 2024, 2: 01}
+{0: ab, 1: ab, 2: nil}
 backreference:
-{0: hello hello}
+{0: hello hello, 1: hello}
 false
 lookahead:
 {0: [100]}
@@ -15,7 +18,7 @@ false
 {0: hello}
 false
 duplicate subpattern names modifier (J):
-{0: a}
+{0: a, 1: a, 2: nil, x: a}
 case insensitive modifier (i):
 {0: HELLO}
 multiline modifier (m):

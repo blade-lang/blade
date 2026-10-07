@@ -923,7 +923,7 @@ Five, and only five:
 
 | Method | What it does with the pattern |
 | --- | --- |
-| `match(pattern)` | the first match, or `false` |
+| `match(pattern)` | the first match and its groups, or `false` |
 | `matches(pattern)` | every match, grouped by capture group |
 | `replace(pattern, with, use_regex)` | replaces every match |
 | `replace_with(pattern, callback)` | replaces every match with a call |
@@ -969,6 +969,20 @@ bool
 Both are falsy, so `if s.match(p) { ... }` reads correctly. An equality
 test against `nil` does not, and this is the single most common regex
 mistake in Zuri code.
+
+The dictionary holds the pattern's capture groups as well, each under its
+number, and a named group under its name too. A group that takes no part in
+the match is `nil`:
+
+```zuri
+echo '2024-01'.match('/(?<year>\d+)-(\d+)/')
+echo 'ab'.match('/([a-z]+)(\d+)?/')
+```
+
+```console
+{0: 2024-01, 1: 2024, 2: 01, year: 2024}
+{0: ab, 1: ab, 2: nil}
+```
 
 `matches()` finds **every** match and groups the results by capture group.
 Key `0` holds the whole matches, key `1` the first group's, and so on —

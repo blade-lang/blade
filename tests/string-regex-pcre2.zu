@@ -1,6 +1,10 @@
 echo 'named groups:'
 echo 'John Doe'.match('/(?<first>\w+) (?<last>\w+)/')
 
+echo 'numbered groups, and one that takes no part:'
+echo '2024-01'.match('/(\d+)-(\d+)/')
+echo 'ab'.match('/([a-z]+)(\d+)?/')
+
 echo 'backreference:'
 echo 'hello hello'.match('/(\w+) \1/')
 echo 'hello world'.match('/(\w+) \1/')

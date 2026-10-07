@@ -795,8 +795,11 @@ the _string_ contains a substring _str_. Otherwise, it returns `false`.
 If the string _str_ contains a valid [regular
 expression](ch04-01-strings.md#regular-expressions) (we'll get to that shortly below), it
 returns `false` if a match for the regex _str_ cannot be found in the
-string. Otherwise, it returns a [dictionary](ch04-04-dictionaries.md) containing
-all first matching substring.
+string. Otherwise, it returns a [dictionary](ch04-04-dictionaries.md) of the
+first match: the whole match under key `0`, each capture group under its
+number, and a named group under its name as well. A group that takes no
+part in the match is `nil`. Groups that share a name, under the `J`
+modifier, give the name to the one that took part.
 
 If the _offset_ argument is specified, it becomes the offset in the
 _string_ at which to start matching.
@@ -812,6 +815,8 @@ false
 {0: go}
 %> 'gorilla'.match('/gox\d/') # regular expression non-match
 false
+%> '2024-01'.match('/(?<year>\d+)-(\d+)/')
+{0: 2024-01, 1: 2024, 2: 01, year: 2024}
 ```
 
 **Parameters**
