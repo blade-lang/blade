@@ -39,6 +39,7 @@
 - The `sql` capability `transactional_ddl` says whether schema changes stay inside a transaction; it is false for MySQL and MariaDB, which commit at every `create`, `alter` and `drop`. A `Transaction` now has `fetch_column()`, `stream()`, `prepare()` and `exec_script()` like a connection.
 - `after_all` runs even when `before_all` failed, so a setup that got part of the way still releases what it acquired.
 - The isolate pool starts its threads as work arrives, up to its size, rather than all at once.
+- `zuri.parse()` returns the program as it was written. `for`, `iter` and `do` loops, compound assignment, `++` and `--`, interpolated strings, `when` arms and `{ name }` dictionary shorthand each come back as a node of their own, and every node carries the whole of the source it was read from: `start` and `end` offsets, and `line`, `col`, `end_line` and `end_col`. A declaration starts at its keyword, and a node that names something carries a `name_span` saying exactly where the name is. `zuri.parse_partial()` reads as much of a source as it can, carrying on past every statement it cannot read, and returns the tree with every syntax error, and `zuri.check()` returns every problem compiling a source would report. Both report `zuri.Diagnostic`s, a message and the span it is about, and neither raises on bad source. `zuri.doc` reads documentation comments: the prose and `@tag`s of a doc block, and which declaration each block documents.
 
 # CHANGELOGS
 

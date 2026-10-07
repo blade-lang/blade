@@ -6,12 +6,11 @@
  * `zuri` module's job. `zuri.parse()` keeps every doc block in the
  * tree as a node sitting right before whatever it documents, so both
  * the pairing and the signatures come from the parser rather than
- * from guessing at source text. Reading the inside of a block is
- * `docs.zu`'s job, which the library reference shares.
+ * from guessing at source text, and `zuri.doc` reads the inside of
+ * each block, as it does for the library reference.
  */
 
 import zuri
-import ..docs
 
 /**
  * One documented member: a method on a built-in type, or a built-in
@@ -90,21 +89,13 @@ def _params_of(node) {
 # undocumented and does not belong in the reference.
 def _members(nodes: list, kind: string) {
   var members = []
-  var pending = nil
 
-  for node in nodes {
-    if node.kind == 'DocBlock' {
-      pending = node.fields.text
-      continue
+  for attached in zuri.doc.attach(nodes) {
+    var node = attached.node
+
+    if node.kind == kind and attached.documented {
+      members.append(Member(node.fields.name, _params_of(node), attached.block))
     }
-
-    if node.kind == kind and pending != nil {
-      members.append(Member(node.fields.name, _params_of(node), docs.parse_text(pending)))
-    }
-
-    # Anything else between a block and a declaration breaks the
-    # pairing, including a plain `#` comment.
-    pending = nil
   }
 
   return members

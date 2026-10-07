@@ -1,0 +1,598 @@
+/**
+ * @module doc
+ *
+ * Reads Zuri's documentation comments: the doc blocks a
+ * `zuri.parse()` tree keeps as `DocBlock` nodes, turned into prose
+ * and a list of `@tag` entries, and paired with the declarations
+ * they document.
+ *
+ * A doc block is markdown prose followed by a run of tags. Each tag
+ * starts a line with `@` and its name, and its text may wrap onto
+ * the lines below it, which are recognised by their indentation.
+ * A blank line ends the run of tags.
+ *
+ * ```zuri
+ * import zuri
+ *
+ * # Spelled in pieces so this example can sit inside a doc block.
+ * var open = '/' + '**'
+ * var close = '*' + '/'
+ *
+ * var source = '${open}
+ *  * Adds two numbers.
+ *  *
+ *  * @param number a: The first number
+ *  * @returns number
+ *  ${close}
+ * def add(a, b) {
+ *   return a + b
+ * }'
+ *
+ * for attached in zuri.doc.attach(zuri.parse(source)) {
+ *   echo attached.node.fields.name           # add
+ *   echo attached.block.summary()            # Adds two numbers.
+ *   echo attached.block.first('param').name  # a
+ * }
+ * ```
+ *
+ * Fenced code inside a block is kept as it is, with no line of it
+ * read as a tag, and since Zuri block comments nest, an example
+ * that opens a comment of its own does not end the block it sits
+ * in.
+ *
+ * Several tags have a second spelling, read as the first:
+ * `@return` as `@returns`, `@raises` as `@throws`, `@params` as
+ * `@param`, and `@number` as `@numeric`.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+# The tags whose text begins with a name rather than a description.
+# `@param count The number of rows` names `count`; `@returns list` does
+# not name anything.
+var _NAMED_TAGS = ['param', 'property']
+
+# Spellings that mean the same thing, collapsed onto one so a reader
+# only has to know about one of each pair.
+var _TAG_ALIASES = {
+  'return': 'returns',
+  'raises': 'throws',
+  'params': 'param',
+  'number': 'numeric',
+}
+
+# Type names a stub may write where a parameter name would normally
+# go, as in `@param ...number values`. Recognising them is what stops
+# a type being read as if it were the argument's name.
+var _TYPE_WORDS = [
+  'any', 'number', 'int', 'float', 'string', 'list', 'dict', 'bool',
+  'boolean', 'bytes', 'file', 'function', 'callable', 'range',
+  'bigint', 'instance', 'class', 'module', 'iterable', 'void', 'nil',
+  'pointer',
+]
+
+/**
+ * One `@tag` from a doc block, its wrapped lines already joined
+ * into one string.
+ *
+ * `kind` is the tag's name without its `@`, under its main
+ * spelling: an `@return` is a `'returns'` tag. `type` is the type
+ * the tag names, written as `{type}` or as a type word leading its
+ * text, and `name` is the name an `@param` or `@property` tag
+ * names. Both are empty strings, never `nil`, when the tag carries
+ * none. `text` is what remains: the description.
+ *
+ * ```zuri
+ * import zuri
+ *
+ * var block = zuri.doc.parse('@param {string} name: Who to greet')
+ * var tag = block.tags[0]
+ *
+ * echo tag.kind  # param
+ * echo tag.type  # string
+ * echo tag.name  # name
+ * echo tag.text  # Who to greet
+ * ```
+ *
+ * @printable
+ */
+class Tag {
+
+  /**
+   * Returns a new {Tag}. Ordinary code receives these from
+   * `parse()` rather than building them.
+   *
+   * @param string kind: The tag's name without its `@`
+   * @param string type: The type it names, or `''`
+   * @param string name: The name it names, or `''`
+   * @param string text: Its description
+   */
+  @new(kind: string, type: string, name: string, text: string) {
+    self.kind = kind
+    self.type = type
+    self.name = name
+    self.text = text
+  }
+
+  /**
+   * This tag as `Tag(@kind type name)`.
+   *
+   * @returns string
+   */
+  to_string() {
+    return 'Tag(@${self.kind} ${self.type} ${self.name})'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+/**
+ * A parsed doc block: `body`, its markdown prose as a list of
+ * lines, and `tags`, every `@tag` in the order it was written.
+ *
+ * Blank lines at the start and end of the prose are dropped. Each
+ * line keeps the indentation it had after the `*` that starts it,
+ * so code blocks and nested lists read as they were written.
+ *
+ * @printable
+ */
+class Block {
+
+  /**
+   * Returns a new {Block}. Ordinary code receives these from
+   * `parse()` and `attach()` rather than building them.
+   *
+   * @param list body: The prose, one string per line
+   * @param list tags: The block's {Tag}s, in source order
+   */
+  @new(body: list, tags: list) {
+    self.body = body
+    self.tags = tags
+  }
+
+  /**
+   * Every tag of one kind, in source order; an empty list when the
+   * block has none. `kind` is a tag's main spelling, such as
+   * `'returns'`.
+   *
+   * @param string kind
+   * @returns list[Tag]
+   */
+  all(kind: string) {
+    return self.tags.filter(@(tag) => tag.kind == kind)
+  }
+
+  /**
+   * The first tag of one kind, or `nil` when the block has none.
+   *
+   * @param string kind
+   * @returns ?Tag
+   */
+  first(kind: string) {
+    var found = self.all(kind)
+
+    if found.is_empty() {
+      return nil
+    }
+
+    return found[0]
+  }
+
+  /**
+   * True when the block carries at least one tag of this kind.
+   *
+   * @param string kind
+   * @returns bool
+   */
+  has(kind: string) {
+    return !self.all(kind).is_empty()
+  }
+
+  /**
+   * The block's first paragraph of prose as one line, for a
+   * one-line summary in an index. It stops at the first blank line,
+   * heading or code fence, and is an empty string for a block that
+   * opens with one of those.
+   *
+   * @returns string
+   */
+  summary() {
+    var sentence = []
+
+    for line in self.body {
+      var text = line.trim()
+
+      if text == '' {
+        break
+      }
+
+      if text.starts_with('#') or text.starts_with('```') {
+        break
+      }
+
+      sentence.append(text)
+    }
+
+    return ' '.join(sentence)
+  }
+
+  /**
+   * True when the block has neither prose nor tags.
+   *
+   * @returns bool
+   */
+  is_empty() {
+    return self.body.is_empty() and self.tags.is_empty()
+  }
+
+  /**
+   * This block as `Block(n lines, m tags)`.
+   *
+   * @returns string
+   */
+  to_string() {
+    return 'Block(${self.body.length()} lines, ${self.tags.length()} tags)'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+/**
+ * One node from a list of siblings, with the doc block written
+ * directly above it, as `attach()` pairs them.
+ *
+ * `block` is an empty {Block} when there is no doc block above the
+ * node, and `documented` says which: a doc block that holds nothing
+ * still counts as documenting its node.
+ *
+ * @printable
+ */
+class Attached {
+
+  /**
+   * Returns a new {Attached}. Ordinary code receives these from
+   * `attach()` rather than building them.
+   *
+   * @param Node node: The node, exactly as it sits in the list
+   * @param Block block: Its documentation
+   * @param bool documented: Whether a doc block was written above it
+   */
+  @new(node, block: Block, documented: bool) {
+    self.node = node
+    self.block = block
+    self.documented = documented
+  }
+
+  /**
+   * This pairing as `Attached(kind, documented)`.
+   *
+   * @returns string
+   */
+  to_string() {
+    return 'Attached(${self.node.kind}, ${self.documented})'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+# Strips the leading `*` from one line of a block, keeping whatever
+# indentation followed it. That indentation is what marks a tag
+# continuation, so it must survive this function.
+def _strip_star(line: string) {
+  var text = line.ltrim()
+
+  if !text.starts_with('*') {
+    return text
+  }
+
+  text = text[1, text.length()]
+
+  if text.starts_with(' ') {
+    return text[1, text.length()]
+  }
+
+  return text
+}
+
+# Pulls `{type}` or a bare leading type word off the front of a tag's
+# text. Libraries write both spellings, and a few write neither.
+def _take_type(text: string) {
+  if text.starts_with('{') {
+    var close = text.index_of('}')
+
+    if close > 0 {
+      return {
+        type: text[1, close],
+        rest: text[close + 1, text.length()].ltrim(),
+      }
+    }
+  }
+
+  var space = text.index_of(' ')
+  var head = space < 0 ? text : text[0, space]
+  var bare = head.replace('/^\.\.\./', '').replace('/^\?/', '')
+
+  # `list[string]`, `list<string>` and `number|string` are all types,
+  # so test the outermost name rather than the whole spelling.
+  var root = bare.replace('/[\[<\|].*$/', '')
+
+  if _TYPE_WORDS.contains(root.lower()) {
+    return {
+      type: head,
+      rest: space < 0 ? '' : text[space + 1, text.length()].ltrim(),
+    }
+  }
+
+  return { type: '', rest: text }
+}
+
+# Pulls the argument name off the front of what is left, for the tags
+# that name something.
+def _take_name(text: string) {
+  var space = text.index_of(' ')
+  var name = space < 0 ? text : text[0, space]
+  var rest = space < 0 ? '' : text[space + 1, text.length()].ltrim()
+
+  # `@param count: how many` and `@param count - how many` both mean
+  # the same thing as `@param count how many`.
+  if name.ends_with(':') {
+    name = name[0, name.length() - 1]
+  }
+
+  if rest.starts_with('- ') or rest.starts_with(': ') {
+    rest = rest[2, rest.length()].ltrim()
+  }
+
+  return { name, rest }
+}
+
+# Splits one tag's accumulated text into type, name and description.
+def _split(kind: string, text: string) {
+  var type = ''
+  var name = ''
+  var rest = text
+
+  if _NAMED_TAGS.contains(kind) {
+    var taken = _take_type(rest)
+
+    type = taken.type
+    rest = taken.rest
+
+    var named = _take_name(rest)
+
+    name = named.name
+    rest = named.rest
+
+    # `@param name: string` puts the type last. Recover it rather than
+    # leaving the description reading as a lone type word.
+    if type == '' {
+      var trailing = _take_type(rest)
+
+      if trailing.type != '' and trailing.rest == '' {
+        type = trailing.type
+        rest = ''
+      }
+    }
+
+    return Tag(kind, type, name, rest)
+  }
+
+  if kind == 'returns' or kind == 'throws' or kind == 'type' {
+    var taken = _take_type(rest)
+
+    type = taken.type
+    rest = taken.rest
+
+    # `@throws TypeError When ...` names a class rather than one of the
+    # built-in type words, so take the first word as the type when it
+    # looks like a class name.
+    if type == '' and (kind == 'throws' or kind == 'type') {
+      var space = rest.index_of(' ')
+      var head = space < 0 ? rest : rest[0, space]
+
+      if head != '' and head[0] == head[0].upper() and head != head.upper() {
+        type = head
+        rest = space < 0 ? '' : rest[space + 1, rest.length()].ltrim()
+      }
+    }
+  }
+
+  if rest.starts_with('- ') or rest.starts_with(': ') {
+    rest = rest[2, rest.length()].ltrim()
+  }
+
+  return Tag(kind, type, name, rest)
+}
+
+# Drops the blank lines that top and tail nearly every block.
+def _tidy(lines: list) {
+  var start = 0
+  var end = lines.length()
+
+  while start < end and lines[start].trim() == '' {
+    start++
+  }
+
+  while end > start and lines[end - 1].trim() == '' {
+    end--
+  }
+
+  return lines[start, end]
+}
+
+/**
+ * Parses the lines of a doc block into its prose and tags; the same
+ * as `parse()` for text already split into lines.
+ *
+ * Everything before the first tag is prose. Once tags start, a line
+ * beginning with whitespace continues the tag above it, a line
+ * beginning with `@` starts a new one, and a blank line ends the
+ * run.
+ *
+ * Each line is read from just after the `*` that starts a line of
+ * a doc block, dropping that `*` and the one space after it, so
+ * whatever indentation follows is what marks a continuation. A line
+ * with no `*` is read from its first character that is not
+ * whitespace, and so never continues a tag.
+ *
+ * @param list lines: The block's text, one string per line
+ * @returns Block
+ */
+def parse_lines(lines: list) {
+  var body = []
+  var tags = []
+  var current = nil
+  var fenced = false
+
+  for line in lines {
+    var raw = _strip_star(line)
+    var text = raw.trim()
+
+    if text.starts_with('```') {
+      fenced = !fenced
+      current = nil
+      body.append(raw)
+      continue
+    }
+
+    if fenced {
+      body.append(raw)
+      continue
+    }
+
+    if text.starts_with('@') {
+      var space = text.index_of(' ')
+      var kind = space < 0 ? text[1, text.length()] : text[1, space]
+      var rest = space < 0 ? '' : text[space + 1, text.length()].ltrim()
+
+      # `@internal: use parse()` hangs the colon off the tag name.
+      if kind.ends_with(':') {
+        kind = kind[0, kind.length() - 1]
+      }
+
+      kind = _TAG_ALIASES.get(kind, kind)
+      current = { kind, text: rest }
+      tags.append(current)
+      continue
+    }
+
+    if current != nil and text != '' and raw.starts_with(' ') {
+      current.text = current.text == '' ? text : '${current.text} ${text}'
+      continue
+    }
+
+    if text == '' {
+      current = nil
+    }
+
+    if current == nil {
+      body.append(raw)
+    }
+  }
+
+  return Block(_tidy(body), tags.map(@(tag) => _split(tag.kind, tag.text)))
+}
+
+/**
+ * Parses the text of a doc block, the `text` a `DocBlock` node
+ * carries, into its prose and tags.
+ *
+ * ```zuri
+ * import zuri
+ *
+ * var block = zuri.doc.parse('Opens the file.\n\n@param string path\n@returns file')
+ *
+ * echo block.summary()               # Opens the file.
+ * echo block.first('returns').type   # file
+ * ```
+ *
+ * @param string text: The block's text, as a `DocBlock` node carries it
+ * @returns Block
+ */
+def parse(text: string) {
+  return parse_lines(text.split('\n'))
+}
+
+/**
+ * A block with neither prose nor tags, for a declaration that has
+ * no documentation.
+ *
+ * @returns Block
+ */
+def empty() {
+  return Block([], [])
+}
+
+/**
+ * The module's own documentation among the top-level nodes of a
+ * file: the first doc block carrying an `@module` tag, parsed, or
+ * `nil` when the file has none.
+ *
+ * @param list nodes: The file's top-level nodes, as `zuri.parse()`
+ *    returns them
+ * @returns ?Block
+ */
+def module_block(nodes: list) {
+  for node in nodes {
+    if node.kind == 'DocBlock' {
+      var block = parse(node.fields.text)
+
+      if block.has('module') {
+        return block
+      }
+    }
+  }
+
+  return nil
+}
+
+/**
+ * Pairs every node in a list of siblings with the doc block written
+ * directly above it.
+ *
+ * A doc block documents the node that follows it and nothing else:
+ * anything in between, a plain `#` comment included, breaks the
+ * pairing. The module's own doc block, the first carrying an
+ * `@module` tag, documents the module rather than the node after
+ * it, so it is paired with nothing. Every node other than a doc
+ * block comes back, in order, documented or not.
+ *
+ * `nodes` is any list of siblings: a file's top-level nodes, a
+ * block's statements, or a class's `properties` or `methods`. A
+ * top-level declaration that is a statement comes back as the
+ * `Stmt` node wrapping it, exactly as it sits in the list.
+ *
+ * @param list nodes: A list of sibling nodes from `zuri.parse()`
+ * @returns list[Attached]
+ */
+def attach(nodes: list) {
+  var attached = []
+  var pending = nil
+  var seen_module_block = false
+
+  for node in nodes {
+    if node.kind == 'DocBlock' {
+      var block = parse(node.fields.text)
+
+      if block.has('module') and !seen_module_block {
+        seen_module_block = true
+        pending = nil
+        continue
+      }
+
+      pending = block
+      continue
+    }
+
+    attached.append(Attached(node, pending or empty(), pending != nil))
+    pending = nil
+  }
+
+  return attached
+}

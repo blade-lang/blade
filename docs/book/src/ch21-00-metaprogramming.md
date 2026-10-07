@@ -843,50 +843,50 @@ declaration with the doc block above it.
 
 The key fact is that `zuri.parse()` keeps comments in the tree. A doc block
 comes back as its own `DocBlock` node, sitting as a sibling immediately
-before whatever it documents, so pairing them is a single pass with one
-variable of state:
+before whatever it documents. `zuri.doc.attach()` walks a list of siblings
+and pairs each one with the doc block right above it, and `zuri.doc` reads
+the inside of each block into its prose and its `@tag`s:
 
 ```zuri
 import zuri
 
 def documented_functions(text) {
   var found = []
-  var pending = nil
 
-  for node in zuri.parse(text) {
-    if node.kind == 'DocBlock' {
-      pending = node.fields.text
-      continue
-    }
+  for attached in zuri.doc.attach(zuri.parse(text)) {
+    var node = attached.node
 
-    if node.kind == 'Function' and pending != nil {
+    if node.kind == 'Function' and attached.documented {
       var params = node.fields.parameters.map(@(p) => p.fields.name)
 
-      found.append({ name: node.fields.name, params, doc: pending })
+      found.append({ name: node.fields.name, params, doc: attached.block })
     }
-
-    # Anything else between a block and a declaration breaks the pairing.
-    pending = nil
   }
 
   return found
 }
 
-var source = "/**\n * Adds two numbers.\n */\ndef add(a: number, b: number) {\n  return a + b\n}\n\ndef undocumented(x) {\n  return x\n}\n"
+var source = "/**\n * Adds two numbers.\n *\n * @param number a\n * @param number b\n */\n" +
+  "def add(a: number, b: number) {\n  return a + b\n}\n\n" +
+  "def undocumented(x) {\n  return x\n}\n"
 
 for fn in documented_functions(source) {
+  var takes = fn.doc.all('param').map(@(tag) => '${tag.name}: ${tag.type}')
+
   echo '${fn.name}(${', '.join(fn.params)})'
-  echo '  ' + fn.doc.split('\n')[1].trim().replace('* ', '', false)
+  echo '  ' + fn.doc.summary()
+  echo '  takes ' + ', '.join(takes)
 }
 ```
 
 ```console
 add(a, b)
   Adds two numbers.
+  takes a: number, b: number
 ```
 
-`undocumented` is absent from the output, because nothing set `pending`
-before it.
+`undocumented` is absent from the output: `attach()` hands it back with
+`documented` false, because no doc block sits above it.
 
 Three things make this approach worth preferring over scanning the text
 yourself.
@@ -903,11 +903,10 @@ than what the source happened to look like.
 **It cannot drift.** When the grammar gains something, the parser gains it
 too, and a tool built this way keeps working.
 
-What the parser does *not* do is interpret the doc block's contents. The
-`@param` and `@returns` conventions are a convention, not grammar, so the
-text inside a `DocBlock` node is yours to parse. That is the one piece you
-write yourself — and the place to be careful, since a tag's text may wrap
-onto the following line.
+**The tags are read for you.** `zuri.doc` joins a tag's wrapped lines,
+reads its type and the name it documents, and treats `@return` as
+`@returns`. It is the same reading the book's own reference is generated
+with, so a block reads the same here as it does there.
 
 ## A Second Example: A Linter
 

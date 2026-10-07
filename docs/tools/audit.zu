@@ -23,8 +23,6 @@
 import os
 import zuri
 
-import .docs
-
 var ROOT = os.dir_name(os.dir_name(os.dir_name(__file__)))
 var LIBS = os.join_paths(ROOT, 'libs')
 var CMDS = os.join_paths(ROOT, 'cmds')
@@ -299,7 +297,7 @@ def check_command(path: string, name: string, source: string) {
     return findings
   }
 
-  var block = docs.parse(blocks[0].body.split('\n'))
+  var block = zuri.doc.parse_lines(blocks[0].body.split('\n'))
   var declared = block.all('command')
   var described = block.all('description')
 

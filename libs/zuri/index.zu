@@ -17,6 +17,9 @@
  *   `check(source)` returns every problem compiling `source` would
  *   report, both as {zuri.Diagnostic}s and neither raising on bad
  *   source; see {zuri.ast} and {zuri.compile}.
+ * - `zuri.doc` reads documentation comments: the prose and `@tag`s
+ *   of a doc block, and which declaration each block documents;
+ *   see {zuri.doc}.
  * - `zuri.reflect` inspects live functions, classes and modules,
  *   reads or updates an instance's own properties, and runs the
  *   garbage collector on demand; see {zuri.reflect}.
@@ -179,4 +182,5 @@ import @.token { * }
 import @.ast { * }
 import @.compile { * }
 import @.diagnostic { * }
+import @.doc
 import @.reflect

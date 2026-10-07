@@ -5,7 +5,8 @@
  *
  * Nothing here guesses at source text. `zuri.parse()` supplies the
  * declarations, their parameter lists and the doc blocks sitting
- * above them; `docs.zu` reads the inside of a block. What is left for
+ * above them; `zuri.doc` reads the inside of a block and pairs it with
+ * the declaration under it. What is left for
  * this file is the question the parser cannot answer on its own:
  * given a package whose entry point re-exports its neighbours in four
  * different ways, what is the name a reader actually types to reach
@@ -23,7 +24,6 @@
 
 import os
 import zuri
-import ..docs
 
 # Names beginning with an underscore are private: the compiler refuses
 # to import them across a module boundary, so they are not API.
@@ -139,7 +139,7 @@ class Module {
     self.path = path
     self.is_package = is_package
 
-    self.overview = docs.empty()
+    self.overview = zuri.doc.empty()
     self.copyright = nil
     self.default_export = nil
 
@@ -274,23 +274,13 @@ def _literal(node) {
   return nil
 }
 
-# Pairs each declaration in a run of sibling nodes with the doc block
-# immediately above it. Anything else in between breaks the pairing,
-# including a plain `#` comment, which is how a source file says "this
-# note is for the next reader, not for the reference".
+# Visits each declaration in a run of sibling nodes with the doc block
+# immediately above it. A plain `#` comment in between breaks the
+# pairing, which is how a source file says "this note is for the next
+# reader, not for the reference".
 def _paired(nodes: list, visit: function) {
-  var pending = nil
-
-  for node in nodes {
-    if node.kind == 'DocBlock' {
-      pending = docs.parse_text(node.fields.text)
-      continue
-    }
-
-    var inner = _unwrap(node)
-
-    visit(inner, pending or docs.empty(), pending != nil)
-    pending = nil
+  for attached in zuri.doc.attach(nodes) {
+    visit(_unwrap(attached.node), attached.block, attached.documented)
   }
 }
 
@@ -395,33 +385,19 @@ def _binding(node) {
 def read(name: string, path: string, is_package: bool) {
   var module = Module(name, path, is_package)
   var nodes = zuri.parse(file(path).read())
-  var seen_module_block = false
 
-  # A doc block with no declaration under it and an `@module` tag is
-  # the module's own documentation. Only the first one counts; a
-  # second is a stray.
-  var pending = nil
+  # The first doc block with an `@module` tag is the module's own
+  # documentation; a second is a stray.
+  var overview = zuri.doc.module_block(nodes)
 
-  for node in nodes {
-    if node.kind == 'DocBlock' {
-      var block = docs.parse_text(node.fields.text)
+  if overview != nil {
+    module.overview = overview
+    module.copyright = overview.first('copyright')
+  }
 
-      if block.has('module') and !seen_module_block {
-        module.overview = block
-        module.copyright = block.first('copyright')
-        seen_module_block = true
-        pending = nil
-        continue
-      }
-
-      pending = block
-      continue
-    }
-
-    var inner = _unwrap(node)
-    var block = pending or docs.empty()
-
-    pending = nil
+  for attached in zuri.doc.attach(nodes) {
+    var inner = _unwrap(attached.node)
+    var block = attached.block
 
     if inner.kind == 'Import' {
       module.imports.append({
