@@ -1053,6 +1053,21 @@ signature of a starved pool.
 it; it is there for a long-lived process that wants to release its threads
 without exiting.
 
+### Memory While Waiting
+
+A pool thread keeps its isolate's heap from one task to the next, and the
+collector runs as a program allocates. A thread that waits allocates
+nothing, so a waiting thread collects on its own: once it has waited a
+second, for its next task or inside `recv()`, `select()`, `join()`,
+`wait_any()` or `wait_all()`, it collects its garbage and the memory that
+garbage held goes back to the system. The main thread does the same in
+those calls. A task that built and dropped a large structure leaves the
+process at its working size rather than its peak.
+
+A wait of a second or less returns before that point, and a heap that has
+grown by less than 4 MB since its last such collection is left as it is, so
+a loop of short waits pays nothing for it.
+
 ## The Errors
 
 Three error types come out of this module, and they mean different things:

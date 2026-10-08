@@ -302,7 +302,8 @@ def get_decorator(object, name) {
  *
  * Every object nothing reaches is freed before this returns, and
  * anything that releases a resource when collected releases it:
- * an owned `ffi` pointer's destructor runs, for one.
+ * an owned `ffi` pointer's destructor runs, for one. The memory
+ * freed goes back to the system before this returns too.
  *
  * A program never needs this to stay correct; the collector runs
  * on its own as the program allocates. It is for the moments the

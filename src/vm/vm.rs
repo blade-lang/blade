@@ -97,6 +97,10 @@ impl CalleeGathering<'_> {
 }
 
 static ZURI_LOG_GC: LazyLock<bool> = LazyLock::new(|| std::env::var_os("ZURI_GC_LOG").is_some());
+
+/// How much the heap must grow after a full collection before an idle one
+/// is worth making: see `VM::release_idle_memory`.
+const IDLE_GROWTH: usize = 4 * 1024 * 1024;
 static ZURI_JIT_ENABLED: LazyLock<bool> = LazyLock::new(|| {
   !matches!(
     std::env::var("ZURI_JIT").as_deref(),
@@ -7130,6 +7134,23 @@ impl VM {
   //-----------------------------------------------------------------------------------
   // Garbage collection
   //-----------------------------------------------------------------------------------
+
+  /// Gives the memory this VM's garbage holds back to the system, for a
+  /// thread that has been waiting a while. Nothing allocates while a
+  /// thread waits, so the collection that would free its garbage never
+  /// comes on its own, and the allocator returns what a collection frees
+  /// only on its way to later allocation.
+  ///
+  /// Skipped while the heap has grown by less than `IDLE_GROWTH` since
+  /// its last full collection, whatever made it, which leaves too little
+  /// to be worth another.
+  pub(crate) fn release_idle_memory(&mut self) {
+    if self.heap.bytes_allocated() < self.heap.live_after_collection() + IDLE_GROWTH {
+      return;
+    }
+    self.collect_garbage();
+    crate::memory::return_free_memory();
+  }
 
   /// Full mark-and-sweep collection. Roots are every register within reach
   /// of an active frame, every global, each frame's executing closure, and

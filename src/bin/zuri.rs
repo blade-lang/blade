@@ -315,6 +315,8 @@ fn display_path_of(path: &Path) -> Rc<str> {
 }
 
 fn main() {
+  zuri::memory::configure();
+
   let argv = env::args().collect::<Vec<_>>();
 
   clear_replaced_executable();

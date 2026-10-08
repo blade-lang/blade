@@ -41,6 +41,10 @@ fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
 
 const MAX_POOL_SIZE: usize = 4096;
 
+/// How long a wait lasts before the thread counts as idle and gives back
+/// the memory its garbage holds: see `VM::release_idle_memory`.
+pub(crate) const IDLE_AFTER: Duration = Duration::from_secs(1);
+
 /// `Ptr::type_name` a `Isolate`/`Channel` handle is tagged with;
 /// shared between `isolate.rs` (which allocates these) and
 /// `transfer.rs` (which needs to recognize them as thread-safe,
@@ -357,16 +361,34 @@ fn isolate_loop() {
   // This thread was counted idle when it was claimed, and counts itself
   // idle again after every task, so it only ever leaves the count here.
   loop {
-    let task = {
+    // The VM outlives every task, and so does whatever garbage the last
+    // one left, so a thread with nothing to do for a while gives that
+    // back before it goes on waiting. The queue's lock is let go first,
+    // since the collection takes a while and other threads need it.
+    let mut released = false;
+    let task = loop {
       let mut queue = lock(&pool.queue);
-      while queue.tasks.is_empty() {
+      if released {
+        while queue.tasks.is_empty() {
+          queue = pool
+            .not_empty
+            .wait(queue)
+            .unwrap_or_else(PoisonError::into_inner);
+        }
+      } else if queue.tasks.is_empty() {
         queue = pool
           .not_empty
-          .wait(queue)
-          .unwrap_or_else(PoisonError::into_inner);
+          .wait_timeout_while(queue, IDLE_AFTER, |q| q.tasks.is_empty())
+          .unwrap_or_else(PoisonError::into_inner)
+          .0;
       }
-      queue.idle -= 1;
-      queue.tasks.pop_front().unwrap()
+      if let Some(task) = queue.tasks.pop_front() {
+        queue.idle -= 1;
+        break task;
+      }
+      drop(queue);
+      isolate.vm.release_idle_memory();
+      released = true;
     };
     pool.running.fetch_add(1, Ordering::AcqRel);
 

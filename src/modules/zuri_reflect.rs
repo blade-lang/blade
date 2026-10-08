@@ -537,5 +537,6 @@ fn bind_method_fn(ctx: &mut ZuriContext) -> Result<Value, String> {
 fn gc_fn(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_arg_count!(ctx, 0);
   ctx.vm.collect_garbage();
+  crate::memory::return_free_memory();
   Ok(Value::nil())
 }

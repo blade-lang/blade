@@ -433,7 +433,8 @@ collected
 
 Every object nothing reaches is freed before `gc()` returns, and anything
 that releases a resource when collected releases it then: an `ffi` pointer
-taken over with `own()` runs its destructor. No program needs `gc()` to
+taken over with `own()` runs its destructor. The memory it frees goes back
+to the system before it returns too. No program needs `gc()` to
 stay correct. It is for the moments timing matters, such as releasing
 native resources at a known point, or a test checking what collection
 does. A full collection visits every live object, so calling it in a loop

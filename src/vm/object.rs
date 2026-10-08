@@ -2571,6 +2571,9 @@ pub struct Heap {
   /// into collecting roughly every time the heap doubles rather than
   /// thrashing on a fixed budget.
   next_gc: usize,
+  /// `bytes_allocated` as the last full collection left it: the live
+  /// heap, since a full collection empties the nursery first.
+  live_after_collection: usize,
   /// The most this heap ever lets its young generation grow to before a
   /// minor collection; `nursery_ceiling`, or at most
   /// `ISOLATE_YOUNG_CEILING` for an isolate's own heap. Fixed for the
@@ -3297,6 +3300,7 @@ impl Heap {
       candidates: Vec::new(),
       bytes_allocated: 0,
       next_gc: Self::MIN_NEXT_GC,
+      live_after_collection: 0,
       young_ceiling,
       young_floor,
       young_budget: young_floor,
@@ -3402,6 +3406,12 @@ impl Heap {
 
   pub fn bytes_allocated(&self) -> usize {
     self.bytes_allocated
+  }
+
+  /// The live heap as the last full collection left it, in the same
+  /// units as `bytes_allocated`.
+  pub(crate) fn live_after_collection(&self) -> usize {
+    self.live_after_collection
   }
 
   #[inline]
@@ -4829,6 +4839,7 @@ impl Heap {
 
     self.live_count -= freed;
     self.old_live_count -= freed;
+    self.live_after_collection = self.bytes_allocated;
     // Re-armed against the surviving OLD set specifically; the same
     // quantity `needs_major_gc` now tests, so `GC_HEAP_GROW_FACTOR`
     // means what it says: allow the long-lived set to grow by half

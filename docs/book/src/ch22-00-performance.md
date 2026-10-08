@@ -468,6 +468,7 @@ them.
 | `ZURI_GC_LOG=1` | garbage collector activity |
 | `ZURI_GC_NURSERY_MB=n` | the young generation's starting and smallest size, in megabytes |
 | `ZURI_OPCODE_PROFILE=1` | interpreter opcode histogram |
+| `MIMALLOC_PURGE_DELAY=n` | milliseconds freed memory waits before going back to the system; 10 unless set |
 
 `ZURI_JIT=0` is the most useful one. Running a benchmark with and without it
 tells you immediately whether your hot path is being compiled at all, which

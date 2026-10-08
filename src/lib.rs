@@ -3,6 +3,7 @@ pub mod bundle;
 pub mod cli;
 pub mod compiler;
 pub mod jit;
+pub mod memory;
 pub(crate) mod modules;
 pub mod project;
 pub mod term;

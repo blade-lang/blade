@@ -12,7 +12,7 @@
 //! script on whichever isolate picks it up.
 
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::builtins::enforce::ArgType;
 use crate::modules::isolate_util::{pool, transfer};
@@ -186,6 +186,30 @@ fn optional_timeout(ctx: &ZuriContext, idx: usize) -> Result<Option<Duration>, S
 // ---------------------------------------------------------------------
 // Pool sizing
 // ---------------------------------------------------------------------
+
+/// Runs a blocking wait that may last long enough for this thread to
+/// count as idle. It waits for at most `pool::IDLE_AFTER` first; when
+/// that passes with nothing to show, the VM gives back what its garbage
+/// holds, then waits out the rest of `timeout`. `wait` is handed how
+/// long to wait, `None` for as long as it takes, and `timed_out` says
+/// whether an outcome is the wait running out.
+fn wait_quietly<T>(
+  vm: &mut VM,
+  timeout: Option<Duration>,
+  mut wait: impl FnMut(Option<Duration>) -> T,
+  timed_out: impl Fn(&T) -> bool,
+) -> T {
+  if timeout.is_some_and(|d| d <= pool::IDLE_AFTER) {
+    return wait(timeout);
+  }
+  let started = Instant::now();
+  let outcome = wait(Some(pool::IDLE_AFTER));
+  if !timed_out(&outcome) {
+    return outcome;
+  }
+  vm.release_idle_memory();
+  wait(timeout.map(|d| d.saturating_sub(started.elapsed())))
+}
 
 fn configure(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_arg_count!(ctx, 1);
@@ -361,10 +385,15 @@ fn join(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_arg_ptr!(ctx, 0, pool::ISOLATE_PTR_TYPE);
   let timeout = optional_timeout(ctx, 1)?;
   let state = isolate_state_of(ctx, 0)?;
-  let outcome = match timeout {
-    Some(d) => state.join_timeout(d),
-    None => state.join(),
-  };
+  let outcome = wait_quietly(
+    ctx.vm,
+    timeout,
+    |t| match t {
+      Some(d) => state.join_timeout(d),
+      None => state.join(),
+    },
+    |o| matches!(o, pool::JoinOutcome::Pending),
+  );
   match outcome {
     pool::JoinOutcome::Pending => Ok(status_pair(ctx.vm, "pending", Value::nil())),
     pool::JoinOutcome::Cancelled => Ok(status_pair(ctx.vm, "cancelled", Value::nil())),
@@ -471,7 +500,13 @@ fn wait_any(ctx: &mut ZuriContext) -> Result<Value, String> {
     }
     states.push(isolate_state_of_value(*v)?);
   }
-  match pool::wait_any_isolates(&states, timeout) {
+  let outcome = wait_quietly(
+    ctx.vm,
+    timeout,
+    |t| pool::wait_any_isolates(&states, t),
+    |o| matches!(o, pool::WaitAnyOutcome::TimedOut),
+  );
+  match outcome {
     pool::WaitAnyOutcome::Ready(i) => Ok(status_pair(ctx.vm, "ok", Value::number(i as f64))),
     pool::WaitAnyOutcome::TimedOut => Ok(status_pair(ctx.vm, "timeout", Value::nil())),
     pool::WaitAnyOutcome::Cancelled => Ok(status_pair(ctx.vm, "cancelled", Value::nil())),
@@ -494,7 +529,13 @@ fn wait_all(ctx: &mut ZuriContext) -> Result<Value, String> {
     }
     states.push(isolate_state_of_value(*v)?);
   }
-  let status = match pool::wait_all_isolates(&states, timeout) {
+  let outcome = wait_quietly(
+    ctx.vm,
+    timeout,
+    |t| pool::wait_all_isolates(&states, t),
+    |o| matches!(o, pool::WaitAllOutcome::TimedOut),
+  );
+  let status = match outcome {
     pool::WaitAllOutcome::Ready => "ok",
     pool::WaitAllOutcome::TimedOut => "timeout",
     pool::WaitAllOutcome::Cancelled => "cancelled",
@@ -539,10 +580,15 @@ fn channel_recv(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_arg_ptr!(ctx, 0, pool::CHANNEL_PTR_TYPE);
   let timeout = optional_timeout(ctx, 1)?;
   let state = channel_state_of(ctx, 0)?;
-  let outcome = match timeout {
-    Some(d) => state.recv_timeout(d),
-    None => state.recv(),
-  };
+  let outcome = wait_quietly(
+    ctx.vm,
+    timeout,
+    |t| match t {
+      Some(d) => state.recv_timeout(d),
+      None => state.recv(),
+    },
+    |o| matches!(o, pool::RecvOutcome::TimedOut),
+  );
   match outcome {
     pool::RecvOutcome::TimedOut => Ok(status_pair(ctx.vm, "timeout", Value::nil())),
     pool::RecvOutcome::Cancelled => Ok(status_pair(ctx.vm, "cancelled", Value::nil())),
@@ -570,7 +616,13 @@ fn select(ctx: &mut ZuriContext) -> Result<Value, String> {
     }
     states.push(channel_state_of_value(*v)?);
   }
-  match pool::select_channels(&states, timeout) {
+  let outcome = wait_quietly(
+    ctx.vm,
+    timeout,
+    |t| pool::select_channels(&states, t),
+    |o| matches!(o, pool::SelectOutcome::TimedOut),
+  );
+  match outcome {
     pool::SelectOutcome::TimedOut => {
       Ok(select_result(ctx.vm, Value::nil(), "timeout", Value::nil()))
     },
