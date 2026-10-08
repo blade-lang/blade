@@ -7,7 +7,7 @@
  * the width calls for.
  *
  * A plain string is text and a list is its parts in order. Everything
- * else is a dictionary tagged by `t`:
+ * else is a {Doc} tagged by `t`:
  *
  * - `line`: a place to break. While its group stays on one line it is a
  *   space, or nothing when `soft`; once the group breaks it is a
@@ -34,26 +34,79 @@
  */
 
 /**
+ * One piece of a layout document that is neither text nor a list of
+ * parts. Every kind is the same class, told apart by `t`, and uses the
+ * fields its kind needs: `doc` for what a group, an indent or a branch
+ * holds, `other` for the second branch of an `if_break` or a `choose`,
+ * `parts` and `at` for a fill, `soft`, `hard` and `kept` for a line,
+ * `broken` for a group, `limit` for a `choose`, and `text` and `column`
+ * for a doc block.
+ *
+ * Build one with the functions below rather than by hand.
+ */
+class Doc {
+  var t = ''
+  var doc = nil
+  var other = nil
+  var parts = nil
+  var at = 0
+  var broken = false
+  var soft = false
+  var hard = false
+  var kept = false
+  var limit = 0
+  var text = ''
+  var column = 0
+
+  /**
+   * @param string t: The kind, one of those listed for this module.
+   */
+  @new(t: string) {
+    self.t = t
+  }
+}
+
+# A line of the given sort.
+def _line(soft: bool, hard: bool, kept: bool) {
+  var line = Doc('line')
+
+  line.soft = soft
+  line.hard = hard
+  line.kept = kept
+
+  return line
+}
+
+# A document of kind `t` holding `contents`.
+def _holding(t: string, contents) {
+  var held = Doc(t)
+
+  held.doc = contents
+
+  return held
+}
+
+/**
  * A space on one line, a newline once the group holding it breaks.
  */
-var LINE = { t: 'line', soft: false, hard: false }
+var LINE = _line(false, false, false)
 
 /**
  * Nothing on one line, a newline once the group holding it breaks.
  */
-var SOFTLINE = { t: 'line', soft: true, hard: false }
+var SOFTLINE = _line(true, false, false)
 
 /**
  * A newline, always.
  */
-var HARDLINE = { t: 'line', soft: false, hard: true }
+var HARDLINE = _line(false, true, false)
 
 /**
  * A newline the author wrote between two items of a list. It stays one
  * while every line of the list fits; once a line holding several items
  * runs past the width, the list is laid out again and this is a `LINE`.
  */
-var KEPTLINE = { t: 'line', soft: false, hard: true, kept: true }
+var KEPTLINE = _line(false, true, true)
 
 /**
  * An empty line followed by a newline, for a blank line kept between two
@@ -66,10 +119,10 @@ var BLANKLINE = [HARDLINE, HARDLINE]
  * line, and breaks every line in it otherwise.
  *
  * @param any contents
- * @returns dict
+ * @returns Doc
  */
 def group(contents) {
-  return { t: 'group', doc: contents, broken: false }
+  return _holding('group', contents)
 }
 
 /**
@@ -77,10 +130,14 @@ def group(contents) {
  * already broken.
  *
  * @param any contents
- * @returns dict
+ * @returns Doc
  */
 def broken_group(contents) {
-  return { t: 'group', doc: contents, broken: true }
+  var held = _holding('group', contents)
+
+  held.broken = true
+
+  return held
 }
 
 /**
@@ -89,10 +146,26 @@ def broken_group(contents) {
  * only when the content after it does not fit on the line.
  *
  * @param list parts
- * @returns dict
+ * @returns Doc
  */
 def fill(parts: list) {
-  return { t: 'fill', parts, at: 0 }
+  return fill_from(parts, 0)
+}
+
+/**
+ * What is left of a fill from the part at `at` on.
+ *
+ * @param list parts
+ * @param number at
+ * @returns Doc
+ */
+def fill_from(parts: list, at: number) {
+  var rest = Doc('fill')
+
+  rest.parts = parts
+  rest.at = at
+
+  return rest
 }
 
 /**
@@ -101,10 +174,10 @@ def fill(parts: list) {
  * first line this way, however deeply its parts are nested.
  *
  * @param any contents
- * @returns dict
+ * @returns Doc
  */
 def indent(contents) {
-  return { t: 'indent', doc: contents }
+  return _holding('indent', contents)
 }
 
 /**
@@ -112,10 +185,10 @@ def indent(contents) {
  * block's body sits one level past the statement that owns it.
  *
  * @param any contents
- * @returns dict
+ * @returns Doc
  */
 def nest(contents) {
-  return { t: 'nest', doc: contents }
+  return _holding('nest', contents)
 }
 
 /**
@@ -123,10 +196,10 @@ def nest(contents) {
  * closer returns this way to the line its opener is on.
  *
  * @param any contents
- * @returns dict
+ * @returns Doc
  */
 def base(contents) {
-  return { t: 'base', doc: contents }
+  return _holding('base', contents)
 }
 
 /**
@@ -134,10 +207,14 @@ def base(contents) {
  *
  * @param any broken
  * @param any flat
- * @returns dict
+ * @returns Doc
  */
 def if_break(broken, flat) {
-  return { t: 'if_break', broken, flat }
+  var branches = _holding('if_break', broken)
+
+  branches.other = flat
+
+  return branches
 }
 
 /**
@@ -147,10 +224,15 @@ def if_break(broken, flat) {
  * @param number limit
  * @param any first
  * @param any second
- * @returns dict
+ * @returns Doc
  */
 def choose(limit: number, first, second) {
-  return { t: 'choose', limit, first, second }
+  var choice = _holding('choose', first)
+
+  choice.other = second
+  choice.limit = limit
+
+  return choice
 }
 
 /**
@@ -160,10 +242,15 @@ def choose(limit: number, first, second) {
  *
  * @param string text
  * @param number column
- * @returns dict
+ * @returns Doc
  */
 def comment(text: string, column: number) {
-  return { t: 'comment', text, column }
+  var block = Doc('comment')
+
+  block.text = text
+  block.column = column
+
+  return block
 }
 
 /**
@@ -208,8 +295,8 @@ def flat_width(contents) {
     when 'fill' {
       return flat_width(contents.parts[contents.at,])
     }
-    when 'if_break' return flat_width(contents.flat)
-    when 'choose' return flat_width(contents.first)
+    when 'if_break' return flat_width(contents.other)
+    when 'choose' return flat_width(contents.doc)
     when 'comment' return -1
   }
 

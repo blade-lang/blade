@@ -1277,10 +1277,11 @@ class Layout {
   # string with everything inside it.
   _leaf(node) {
     var lead = self._flush(node.start)
+    var text = self.src.slice(node.start, node.end)
 
     self.src.skip(node.end)
 
-    return [lead, self.src.slice(node.start, node.end)]
+    return lead == '' ? text : [lead, text]
   }
 
   _unary(node) {

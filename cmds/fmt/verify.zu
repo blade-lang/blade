@@ -38,84 +38,8 @@ var _BODIES = {
 }
 
 def _is_comment(node) {
-  return node.kind == 'Comment' or node.kind == 'DocBlock'
-}
-
-def _is_node(value) {
-  return is_instance(value)
-    and hasprop(value, 'fields')
-    and hasprop(value, 'kind')
-}
-
-# A body as it compares: a block of one statement that declares nothing
-# reads as that statement.
-def _unbraced(body) {
-  if !_is_node(body) or body.kind != 'Block' {
-    return body
-  }
-
-  var statements = body.fields.statements.filter(@(node) => !_is_comment(node))
-
-  if statements.length() != 1 or _DECLARING.contains(statements[0].kind) {
-    return body
-  }
-
-  return statements[0]
-}
-
-def _write(value, out: list) {
-  if is_list(value) {
-    out.append('[')
-
-    for item in value {
-      if !_is_node(item) or !_is_comment(item) {
-        _write(item, out)
-      }
-    }
-
-    out.append(']')
-
-    return
-  }
-
-  if !_is_node(value) {
-    out.append(typeof(value))
-    out.append(is_string(value) ? value : '${value}')
-
-    return
-  }
-
-  var kind = value.kind == 'Shorthand' ? 'Identifier' : value.kind
-  var bodies = _BODIES.get(kind, [])
-
-  out.append('(${kind}')
-
-  for name in value.fields.keys() {
-    if !_PLACES.contains(name) {
-      var field = value.fields[name]
-
-      out.append(name)
-      _write(bodies.contains(name) ? _unbraced(field) : field, out)
-    }
-  }
-
-  out.append(')')
-}
-
-/**
- * What a parsed program is, as text: every node and value in it, with
- * positions and comments left out and the formatter's two rewrites read
- * as what they replace. Two programs are the same when this is.
- *
- * @param list nodes: The top-level nodes, from `zuri.parse()`.
- * @returns string
- */
-def shape(nodes: list) {
-  var out = []
-
-  _write(nodes, out)
-
-  return ' '.join(out)
+  return is_instance(node)
+    and (node.kind == 'Comment' or node.kind == 'DocBlock')
 }
 
 # A comment's text with what layout is allowed to change taken out: the
@@ -131,40 +55,135 @@ def _comment_text(node) {
   return '/*' + '\n'.join(text.split('\n').map(@(line) => line.trim()))
 }
 
-def _collect(value, out: list) {
-  if is_list(value) {
-    for item in value {
-      _collect(item, out)
+# Notes a comment's place and text on one side.
+def _note(node, notes: list) {
+  notes.append({ start: node.start, text: _comment_text(node) })
+}
+
+# A body as it compares: a block of one statement that declares nothing
+# reads as that statement. The comments the block held are noted, since
+# its statement is all that is compared from here on.
+def _unbraced(body, notes: list) {
+  if !is_instance(body) or body.kind != 'Block' {
+    return body
+  }
+
+  var statements = body.fields.statements
+  var code = statements.filter(@(node) => !_is_comment(node))
+
+  if code.length() != 1 or _DECLARING.contains(code[0].kind) {
+    return body
+  }
+
+  for node in statements {
+    if _is_comment(node) {
+      _note(node, notes)
+    }
+  }
+
+  return code[0]
+}
+
+# Whether two lists of values are the same, comments aside. Each side's
+# comments are noted as the walk passes them.
+def _same_lists(a: list, b: list, a_notes: list, b_notes: list) {
+  var i = 0
+  var j = 0
+
+  while true {
+    while i < a.length() and _is_comment(a[i]) {
+      _note(a[i], a_notes)
+      i += 1
     }
 
-    return
-  }
+    while j < b.length() and _is_comment(b[j]) {
+      _note(b[j], b_notes)
+      j += 1
+    }
 
-  if !_is_node(value) {
-    return
-  }
+    if i == a.length() or j == b.length() {
+      return i == a.length() and j == b.length()
+    }
 
-  if _is_comment(value) {
-    out.append({ start: value.start, text: _comment_text(value) })
+    if !_same(a[i], b[j], a_notes, b_notes) {
+      return false
+    }
 
-    return
-  }
-
-  for name in value.fields.keys() {
-    _collect(value.fields[name], out)
+    i += 1
+    j += 1
   }
 }
 
+# Whether two values of a tree are the same, positions aside and with
+# the formatter's two rewrites read as what they replace.
+def _same(a, b, a_notes: list, b_notes: list) {
+  if is_list(a) {
+    return is_list(b) and _same_lists(a, b, a_notes, b_notes)
+  }
+
+  if !is_instance(a) {
+    return !is_instance(b) and typeof(a) == typeof(b) and a == b
+  }
+
+  if !is_instance(b) {
+    return false
+  }
+
+  var kind = a.kind == 'Shorthand' ? 'Identifier' : a.kind
+  var other = b.kind == 'Shorthand' ? 'Identifier' : b.kind
+
+  if kind != other {
+    return false
+  }
+
+  var bodies = _BODIES.get(kind, [])
+
+  for name in a.fields.keys() {
+    if !_PLACES.contains(name) {
+      var left = a.fields[name]
+      var right = b.fields.get(name, nil)
+
+      if bodies.contains(name) {
+        left = _unbraced(left, a_notes)
+        right = _unbraced(right, b_notes)
+      }
+
+      if !_same(left, right, a_notes, b_notes) {
+        return false
+      }
+    }
+  }
+
+  return true
+}
+
+# The text of each comment noted, in the order they were written.
+def _in_order(notes: list) {
+  return notes.sort(@(x, y) => x.start - y.start).map(@(note) => note.text)
+}
+
 /**
- * Every comment in a parsed program, in the order it was written.
+ * What differs between two parsed programs: `nil` when they are the
+ * same program, `'code'` when their trees differ, and `'comments'` when
+ * the trees match but their comments are not the same, in the same
+ * order. Positions are never compared, and the formatter's two rewrites
+ * read as what they replace.
  *
- * @param list nodes: The top-level nodes, from `zuri.parse()`.
- * @returns list[string]
+ * @param list before: The top-level nodes of one, from `zuri.parse()`.
+ * @param list after: The top-level nodes of the other.
+ * @returns ?string
  */
-def comments(nodes: list) {
-  var found = []
+def difference(before: list, after: list) {
+  var before_notes = []
+  var after_notes = []
 
-  _collect(nodes, found)
+  if !_same_lists(before, after, before_notes, after_notes) {
+    return 'code'
+  }
 
-  return found.sort(@(a, b) => a.start - b.start).map(@(entry) => entry.text)
+  if _in_order(before_notes) != _in_order(after_notes) {
+    return 'comments'
+  }
+
+  return nil
 }

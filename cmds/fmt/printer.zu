@@ -13,7 +13,7 @@
  * @copyright 2026, Richard Ore and Zuri contributors
  */
 
-import .doc { flat_width, LINE }
+import .doc { flat_width, fill_from, LINE }
 
 /**
  * How wide a line may be.
@@ -27,6 +27,20 @@ var INDENT = '  '
 
 var _BREAK = 1
 var _FLAT = 0
+
+# One piece of the document still to lay out, with the level its lines
+# indent to and whether its groups are laid out broken or flat.
+class Cmd {
+  var level = 0
+  var mode = 0
+  var doc = nil
+
+  @new(level: number, mode: number, doc) {
+    self.level = level
+    self.mode = mode
+    self.doc = doc
+  }
+}
 
 # The column just past `text` when it starts at `column`. Text spanning
 # lines, a multi-line string, ends wherever its last line does.
@@ -61,7 +75,7 @@ def _trim(out: list) {
 # it in `rest` is measured too, since the line goes on past the group
 # until something breaks it. A line laid out broken, or one that always
 # breaks, ends the measure: whatever comes after starts a new line.
-def _fits(next: dict, rest: list, width: number) {
+def _fits(next, rest: list, width: number) {
   var rest_at = rest.length()
   var stack = [next]
   var left = width
@@ -97,7 +111,7 @@ def _fits(next: dict, rest: list, width: number) {
       var index = doc.length() - 1
 
       while index >= 0 {
-        stack.append({ mode: cmd.mode, doc: doc[index] })
+        stack.append(Cmd(0, cmd.mode, doc[index]))
         index -= 1
       }
 
@@ -115,30 +129,30 @@ def _fits(next: dict, rest: list, width: number) {
         }
       }
       when 'group' {
-        stack.append({ mode: doc.broken ? _BREAK : cmd.mode, doc: doc.doc })
+        stack.append(Cmd(0, doc.broken ? _BREAK : cmd.mode, doc.doc))
       }
       when 'fill' {
         var index = doc.parts.length() - 1
 
         while index >= doc.at {
-          stack.append({ mode: cmd.mode, doc: doc.parts[index] })
+          stack.append(Cmd(0, cmd.mode, doc.parts[index]))
           index -= 1
         }
       }
       when 'if_break' {
-        var chosen = cmd.mode == _BREAK ? doc.broken : doc.flat
+        var chosen = cmd.mode == _BREAK ? doc.doc : doc.other
 
-        stack.append({ mode: cmd.mode, doc: chosen })
+        stack.append(Cmd(0, cmd.mode, chosen))
       }
       when 'choose' {
-        stack.append({ mode: cmd.mode, doc: doc.first })
+        stack.append(Cmd(0, cmd.mode, doc.doc))
       }
       when 'comment' {
         var newline = doc.text.index_of('\n')
 
         return left - (newline == -1 ? doc.text.length() : newline) >= 0
       }
-      default stack.append({ mode: cmd.mode, doc: doc.doc })
+      default stack.append(Cmd(0, cmd.mode, doc.doc))
     }
   }
 
@@ -160,7 +174,7 @@ def render(document, width: ?number) {
   var column = 0
   var line_level = 0
   var remeasure = false
-  var cmds = [{ level: 0, mode: _BREAK, doc: document }]
+  var cmds = [Cmd(0, _BREAK, document)]
 
   while !cmds.is_empty() {
     var cmd = cmds.pop()
@@ -179,7 +193,7 @@ def render(document, width: ?number) {
       var index = doc.length() - 1
 
       while index >= 0 {
-        cmds.append({ level: cmd.level, mode: cmd.mode, doc: doc[index] })
+        cmds.append(Cmd(cmd.level, cmd.mode, doc[index]))
         index -= 1
       }
 
@@ -213,15 +227,15 @@ def render(document, width: ?number) {
         if cmd.mode == _FLAT and !remeasure {
           var mode = doc.broken ? _BREAK : _FLAT
 
-          cmds.append({ level: cmd.level, mode, doc: doc.doc })
+          cmds.append(Cmd(cmd.level, mode, doc.doc))
 
           continue
         }
 
         remeasure = false
 
-        var flat = { level: cmd.level, mode: _FLAT, doc: doc.doc }
-        var broken = { level: cmd.level, mode: _BREAK, doc: doc.doc }
+        var flat = Cmd(cmd.level, _FLAT, doc.doc)
+        var broken = Cmd(cmd.level, _BREAK, doc.doc)
 
         # A group that does not fit breaks only when breaking it brings
         # its line within the width. When the line runs past the width
@@ -241,27 +255,27 @@ def render(document, width: ?number) {
         _fill(doc, cmd, cmds, limit - column, limit)
       }
       when 'indent' {
-        cmds.append({ level: line_level + 1, mode: cmd.mode, doc: doc.doc })
+        cmds.append(Cmd(line_level + 1, cmd.mode, doc.doc))
       }
       when 'nest' {
-        cmds.append({ level: cmd.level + 1, mode: cmd.mode, doc: doc.doc })
+        cmds.append(Cmd(cmd.level + 1, cmd.mode, doc.doc))
       }
       when 'base' {
-        cmds.append({ level: line_level, mode: cmd.mode, doc: doc.doc })
+        cmds.append(Cmd(line_level, cmd.mode, doc.doc))
       }
       when 'if_break' {
-        var chosen = cmd.mode == _BREAK ? doc.broken : doc.flat
+        var chosen = cmd.mode == _BREAK ? doc.doc : doc.other
 
-        cmds.append({ level: cmd.level, mode: cmd.mode, doc: chosen })
+        cmds.append(Cmd(cmd.level, cmd.mode, chosen))
       }
       when 'choose' {
-        var width = flat_width(doc.first)
+        var width = flat_width(doc.doc)
         var fits = width >= 0 and column + width <= doc.limit
 
         if fits {
-          cmds.append({ level: cmd.level, mode: _FLAT, doc: doc.first })
+          cmds.append(Cmd(cmd.level, _FLAT, doc.doc))
         } else {
-          cmds.append({ level: cmd.level, mode: cmd.mode, doc: doc.second })
+          cmds.append(Cmd(cmd.level, cmd.mode, doc.other))
         }
       }
       when 'comment' {
@@ -281,7 +295,7 @@ def render(document, width: ?number) {
 # Whether `separator` is a line break the author wrote, kept while the
 # lines around it fit.
 def _kept(separator) {
-  return is_dict(separator) and separator.get('kept', false)
+  return is_instance(separator) and separator.kept
 }
 
 # Whether every line the author broke a fill into fits, the first from
@@ -296,7 +310,7 @@ def _kept_lines_fit(parts: list, cmds: list, first: number, rest: number) {
 
   for part in parts {
     if index % 2 == 1 and flat_width(part) < 0 {
-      if contents > 1 and !_fits({ mode: _FLAT, doc: line }, [], width) {
+      if contents > 1 and !_fits(Cmd(0, _FLAT, line), [], width) {
         return false
       }
 
@@ -314,7 +328,7 @@ def _kept_lines_fit(parts: list, cmds: list, first: number, rest: number) {
     index += 1
   }
 
-  return contents <= 1 or _fits({ mode: _FLAT, doc: line }, cmds, width)
+  return contents <= 1 or _fits(Cmd(0, _FLAT, line), cmds, width)
 }
 
 # Lays out the next content of a fill and its separator, and puts the
@@ -327,7 +341,7 @@ def _kept_lines_fit(parts: list, cmds: list, first: number, rest: number) {
 # A fill holding breaks the author wrote keeps them while its lines fit.
 # Once one of them runs past the width, those breaks are dropped and the
 # whole fill is laid out again, as many parts to a line as fit.
-def _fill(doc: dict, cmd: dict, cmds: list, left: number, limit: number) {
+def _fill(doc, cmd, cmds: list, left: number, limit: number) {
   var parts = doc.parts
   var at = doc.at
   var count = parts.length() - at
@@ -346,8 +360,8 @@ def _fill(doc: dict, cmd: dict, cmds: list, left: number, limit: number) {
     }
   }
   var content = parts[at]
-  var content_flat = { level, mode: _FLAT, doc: content }
-  var content_broken = { level, mode: _BREAK, doc: content }
+  var content_flat = Cmd(level, _FLAT, content)
+  var content_broken = Cmd(level, _BREAK, content)
   var content_fits = _fits(content_flat, count <= 2 ? cmds : [], left)
 
   if count == 1 {
@@ -357,8 +371,8 @@ def _fill(doc: dict, cmd: dict, cmds: list, left: number, limit: number) {
   }
 
   var separator = parts[at + 1]
-  var separator_flat = { level, mode: _FLAT, doc: separator }
-  var separator_broken = { level, mode: _BREAK, doc: separator }
+  var separator_flat = Cmd(level, _FLAT, separator)
+  var separator_broken = Cmd(level, _BREAK, separator)
 
   if count == 2 {
     if content_fits {
@@ -373,11 +387,11 @@ def _fill(doc: dict, cmd: dict, cmds: list, left: number, limit: number) {
   }
 
   var next = parts[at + 2]
-  var pair = { level, mode: _FLAT, doc: [content, separator, next] }
+  var pair = Cmd(level, _FLAT, [content, separator, next])
   var pair_fits = _fits(pair, count == 3 ? cmds : [], left)
-  var rest = { t: 'fill', parts, at: at + 2 }
+  var rest = fill_from(parts, at + 2)
 
-  cmds.append({ level, mode: cmd.mode, doc: rest })
+  cmds.append(Cmd(level, cmd.mode, rest))
 
   if pair_fits {
     cmds.append(separator_flat)

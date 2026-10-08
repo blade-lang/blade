@@ -47,6 +47,10 @@ class Gap {
   }
 }
 
+# The gap taken when there is nothing left to take. Gaps are only ever
+# read, so one serves for all of them.
+var _NOTHING = Gap(0, [], 0)
+
 /**
  * A source text and its tokens.
  */
@@ -179,7 +183,7 @@ class Source {
     var from = self.taken
 
     if to <= from {
-      return Gap(0, [], 0)
+      return _NOTHING
     }
 
     self.taken = to

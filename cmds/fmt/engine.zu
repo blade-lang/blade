@@ -79,11 +79,13 @@ def format(source: string) {
     result, 'formatting would have produced code that no longer parses',
   )
 
-  if verify.shape(nodes) != verify.shape(formatted) {
+  var difference = verify.difference(nodes, formatted)
+
+  if difference == 'code' {
     raise FormatError('formatting would have changed the code, not just its layout')
   }
 
-  if verify.comments(nodes) != verify.comments(formatted) {
+  if difference == 'comments' {
     raise FormatError('formatting would have moved or changed a comment')
   }
 
