@@ -1,0 +1,44 @@
+# Tests for the document constructors, and for measuring a document laid
+# out on one line, which is how a `when` arm decides whether its body
+# stays beside it.
+
+import test { * }
+
+import ..doc { * }
+
+describe('flat_width', @{
+  it('counts text, a space for a line and nothing for a soft one', @{
+    expect(flat_width(['ab', LINE, 'cd', SOFTLINE, 'e'])).to_be(6)
+  })
+
+  it('reads through groups, indents and fills', @{
+    var inner = group(indent(['a', LINE, fill(['b', LINE, 'c'])]))
+
+    expect(flat_width(base(nest(inner)))).to_be(5)
+  })
+
+  it('takes the flat side of an if_break and the first choice', @{
+    expect(flat_width(if_break(',,,', ''))).to_be(0)
+    expect(flat_width(choose(60, 'abc', 'abcdef'))).to_be(3)
+  })
+
+  # A line that always breaks, a group that never fits and text that
+  # spans lines all mean the document has no one-line form at all.
+  it('has no width for anything that cannot sit on one line', @{
+    expect(flat_width(['a', HARDLINE, 'b'])).to_be(-1)
+    expect(flat_width(broken_group('a'))).to_be(-1)
+    expect(flat_width('a\nb')).to_be(-1)
+    expect(flat_width(comment('/*\n */', 0))).to_be(-1)
+  })
+})
+
+describe('the constructors', @{
+  it('starts a fill at its first part', @{
+    expect(fill(['a', LINE, 'b']).at).to_be(0)
+  })
+
+  it('marks only a broken group as broken', @{
+    expect(group('a').broken).to_be(false)
+    expect(broken_group('a').broken).to_be(true)
+  })
+})

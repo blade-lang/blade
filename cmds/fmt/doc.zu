@@ -1,0 +1,217 @@
+/**
+ * @module fmt.doc
+ *
+ * The layout document the formatter builds from a parse tree and the
+ * printer turns into text. A document says what the text is and where
+ * it may break, and leaves the printer to decide which of those breaks
+ * the width calls for.
+ *
+ * A plain string is text and a list is its parts in order. Everything
+ * else is a dictionary tagged by `t`:
+ *
+ * - `line`: a place to break. While its group stays on one line it is a
+ *   space, or nothing when `soft`; once the group breaks it is a
+ *   newline, and it always is when `hard`. One that is `kept` is a break
+ *   the author wrote between two items of a fill, a newline while the
+ *   fill's lines fit and an ordinary `line` once they do not.
+ * - `group`: laid out on one line when it fits, otherwise broken as a
+ *   whole. `broken` says it never fits.
+ * - `fill`: parts and separators in turn, each separator breaking only
+ *   when what follows it does not fit.
+ * - `indent`: lines inside sit one level past the line it starts on.
+ * - `nest`: lines inside sit one level past those of what holds it.
+ * - `base`: lines inside sit at the level of the line it starts on.
+ * - `if_break`: one document when its group breaks, another when not.
+ * - `choose`: the first document when it fits on one line within a
+ *   column limit, otherwise the second.
+ * - `comment`: a doc block, its later lines moved along with its first.
+ *
+ * Breaking inside a part never forces the parts around it open. A group
+ * holding a block lays out on one line up to where the block opens, so
+ * `each(items, @{` stays together and only the block spreads out.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+/**
+ * A space on one line, a newline once the group holding it breaks.
+ */
+var LINE = { t: 'line', soft: false, hard: false }
+
+/**
+ * Nothing on one line, a newline once the group holding it breaks.
+ */
+var SOFTLINE = { t: 'line', soft: true, hard: false }
+
+/**
+ * A newline, always.
+ */
+var HARDLINE = { t: 'line', soft: false, hard: true }
+
+/**
+ * A newline the author wrote between two items of a list. It stays one
+ * while every line of the list fits; once a line holding several items
+ * runs past the width, the list is laid out again and this is a `LINE`.
+ */
+var KEPTLINE = { t: 'line', soft: false, hard: true, kept: true }
+
+/**
+ * An empty line followed by a newline, for a blank line kept between two
+ * lines of code.
+ */
+var BLANKLINE = [HARDLINE, HARDLINE]
+
+/**
+ * Lays `contents` out on one line when it fits in what is left of the
+ * line, and breaks every line in it otherwise.
+ *
+ * @param any contents
+ * @returns dict
+ */
+def group(contents) {
+  return { t: 'group', doc: contents, broken: false }
+}
+
+/**
+ * A group that is always broken, for one whose own lines the author had
+ * already broken.
+ *
+ * @param any contents
+ * @returns dict
+ */
+def broken_group(contents) {
+  return { t: 'group', doc: contents, broken: true }
+}
+
+/**
+ * Separators that each break on their own. `parts` alternates content
+ * and separator, starting and ending with content; a separator breaks
+ * only when the content after it does not fit on the line.
+ *
+ * @param list parts
+ * @returns dict
+ */
+def fill(parts: list) {
+  return { t: 'fill', parts, at: 0 }
+}
+
+/**
+ * Lines inside sit one level past the line this starts on, whatever
+ * holds it. Every continuation of a statement is one level under its
+ * first line this way, however deeply its parts are nested.
+ *
+ * @param any contents
+ * @returns dict
+ */
+def indent(contents) {
+  return { t: 'indent', doc: contents }
+}
+
+/**
+ * Lines inside sit one level past those of what holds this, the way a
+ * block's body sits one level past the statement that owns it.
+ *
+ * @param any contents
+ * @returns dict
+ */
+def nest(contents) {
+  return { t: 'nest', doc: contents }
+}
+
+/**
+ * Lines inside sit at the level of the line this starts on. A bracket's
+ * closer returns this way to the line its opener is on.
+ *
+ * @param any contents
+ * @returns dict
+ */
+def base(contents) {
+  return { t: 'base', doc: contents }
+}
+
+/**
+ * `broken` when the group around it breaks, `flat` when it does not.
+ *
+ * @param any broken
+ * @param any flat
+ * @returns dict
+ */
+def if_break(broken, flat) {
+  return { t: 'if_break', broken, flat }
+}
+
+/**
+ * `first` when it fits on one line ending at or before column `limit`,
+ * otherwise `second`.
+ *
+ * @param number limit
+ * @param any first
+ * @param any second
+ * @returns dict
+ */
+def choose(limit: number, first, second) {
+  return { t: 'choose', limit, first, second }
+}
+
+/**
+ * A doc block spread over several lines, written in the source with its
+ * opening `/` at `column` (counted from 0). Its later lines move by as
+ * much as its first does, so the block keeps its shape at a new indent.
+ *
+ * @param string text
+ * @param number column
+ * @returns dict
+ */
+def comment(text: string, column: number) {
+  return { t: 'comment', text, column }
+}
+
+/**
+ * The width of `contents` laid out on one line, or `-1` when it cannot
+ * be: it holds a line that always breaks, or text that spans lines.
+ *
+ * @param any contents
+ * @returns number
+ */
+def flat_width(contents) {
+  if is_string(contents) {
+    return contents.index_of('\n') == -1 ? contents.length() : -1
+  }
+
+  if is_list(contents) {
+    var total = 0
+
+    for part in contents {
+      var width = flat_width(part)
+
+      if width < 0 {
+        return -1
+      }
+
+      total += width
+    }
+
+    return total
+  }
+
+  using contents.t {
+    when 'line' {
+      if contents.hard {
+        return -1
+      }
+
+      return contents.soft ? 0 : 1
+    }
+    when 'group' {
+      return contents.broken ? -1 : flat_width(contents.doc)
+    }
+    when 'fill' {
+      return flat_width(contents.parts[contents.at,])
+    }
+    when 'if_break' return flat_width(contents.flat)
+    when 'choose' return flat_width(contents.first)
+    when 'comment' return -1
+  }
+
+  return flat_width(contents.doc)
+}

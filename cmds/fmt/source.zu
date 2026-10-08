@@ -1,0 +1,256 @@
+/**
+ * @module fmt.source
+ *
+ * What the formatter reads from the source text beyond the parse tree.
+ * The tree says what the program is; the tokens say how it was written:
+ * where the author broke lines, every comment and where it sat, and the
+ * exact position of each operator, comma and bracket between two nodes.
+ *
+ * The layout is built in source order, and the source keeps track of
+ * how far that has got. Taking the comments up to a point hands over
+ * every comment between there and the last point taken, so each comment
+ * is placed exactly once and none is ever skipped.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import zuri
+
+# The token kinds the grammar never reads.
+var _TRIVIA = ['Newline', 'Comment', 'DocBlock']
+
+/**
+ * The comments and line breaks between two pieces of code.
+ *
+ * `newlines` counts every line end in the gap. `comments` holds each
+ * comment in order as `{ token, before }`, where `before` counts the
+ * line ends between it and whatever came before it in the gap, so `0`
+ * means it shares a line with the code before it. `after` counts the
+ * line ends after the last comment, or all of them when there is none.
+ */
+class Gap {
+  @new(newlines: number, comments: list, after: number) {
+    self.newlines = newlines
+    self.comments = comments
+    self.after = after
+  }
+
+  /**
+   * Whether the gap holds a line break. A gap with a `#` comment always
+   * does, since the comment runs to the end of its line; a doc block
+   * written in the middle of a line does not.
+   *
+   * @returns bool
+   */
+  is_broken() {
+    return self.newlines > 0
+  }
+}
+
+/**
+ * A source text and its tokens.
+ */
+class Source {
+  /**
+   * @param string text
+   */
+  @new(text: string) {
+    self.text = text
+    self.tokens = zuri.tokenize(text)
+    self.taken = 0
+  }
+
+  /**
+   * The index of the first token starting at or after `offset`.
+   *
+   * @param number offset
+   * @returns number
+   */
+  index(offset: number) {
+    var low = 0
+    var high = self.tokens.length()
+
+    while low < high {
+      var middle = (low + high) // 2
+
+      if self.tokens[middle].start < offset {
+        low = middle + 1
+      } else {
+        high = middle
+      }
+    }
+
+    return low
+  }
+
+  /**
+   * The first token at or after `offset` that the grammar reads: not a
+   * line end and not a comment.
+   *
+   * @param number offset
+   * @returns Token
+   */
+  next(offset: number) {
+    var index = self.index(offset)
+
+    while _TRIVIA.contains(self.tokens[index].kind) {
+      index += 1
+    }
+
+    return self.tokens[index]
+  }
+
+  /**
+   * How many line ends sit between `from` and `to`.
+   *
+   * @param number from
+   * @param number to
+   * @returns number
+   */
+  newlines(from: number, to: number) {
+    var index = self.index(from)
+    var count = 0
+
+    while index < self.tokens.length() and self.tokens[index].start < to {
+      if self.tokens[index].kind == 'Newline' {
+        count += 1
+      }
+
+      index += 1
+    }
+
+    return count
+  }
+
+  /**
+   * Whether a line end sits between `from` and `to`.
+   *
+   * @param number from
+   * @param number to
+   * @returns bool
+   */
+  breaks(from: number, to: number) {
+    return self.newlines(from, to) > 0
+  }
+
+  /**
+   * Whether no comment sits between `from` and `to`.
+   *
+   * @param number from
+   * @param number to
+   * @returns bool
+   */
+  quiet(from: number, to: number) {
+    var index = self.index(from)
+
+    while index < self.tokens.length() and self.tokens[index].start < to {
+      var kind = self.tokens[index].kind
+
+      if kind == 'Comment' or kind == 'DocBlock' {
+        return false
+      }
+
+      index += 1
+    }
+
+    return true
+  }
+
+  /**
+   * The text from `start` up to `end`.
+   *
+   * @param number start
+   * @param number end
+   * @returns string
+   */
+  slice(start: number, end: number) {
+    return self.text[start, end]
+  }
+
+  /**
+   * Takes the gap from the last point taken up to `to`: its line ends
+   * and every comment in it not yet placed. Taking a point at or before
+   * the last one gives an empty gap.
+   *
+   * @param number to
+   * @returns Gap
+   */
+  take(to: number) {
+    var from = self.taken
+
+    if to <= from {
+      return Gap(0, [], 0)
+    }
+
+    self.taken = to
+
+    return self._gap(from, to)
+  }
+
+  /**
+   * Takes the comments that share a line with the code ending at
+   * `after`, as a gap whose comments all have `before` of `0`. A comment
+   * on a later line is left for whatever comes next.
+   *
+   * @param number after
+   * @returns Gap
+   */
+  take_trailing(after: number) {
+    var index = self.index(self.taken < after ? after : self.taken)
+    var comments = []
+
+    while index < self.tokens.length() {
+      var token = self.tokens[index]
+
+      if token.kind != 'Comment' and token.kind != 'DocBlock' {
+        break
+      }
+
+      comments.append({ token, before: 0 })
+      self.taken = token.end
+      index += 1
+    }
+
+    return Gap(0, comments, 0)
+  }
+
+  /**
+   * Moves the point taken past `to` without placing anything, for code
+   * written out whole, a string or a number, whose text holds no
+   * comment of its own.
+   *
+   * @param number to
+   */
+  skip(to: number) {
+    if to > self.taken {
+      self.taken = to
+    }
+  }
+
+  _gap(from: number, to: number) {
+    var index = self.index(from)
+    var newlines = 0
+    var run = 0
+    var comments = []
+
+    while index < self.tokens.length() {
+      var token = self.tokens[index]
+
+      if token.start >= to {
+        break
+      }
+
+      if token.kind == 'Newline' {
+        newlines += 1
+        run += 1
+      } else if token.kind == 'Comment' or token.kind == 'DocBlock' {
+        comments.append({ token, before: run })
+        run = 0
+      }
+
+      index += 1
+    }
+
+    return Gap(newlines, comments, run)
+  }
+}

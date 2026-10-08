@@ -1,0 +1,70 @@
+# Tests for what the formatter reads from the source beyond its tree:
+# token positions, line breaks and comments between two offsets, and
+# the point taken so far that keeps every comment placed exactly once.
+
+import test { * }
+
+import ..source { Source }
+
+describe('tokens', @{
+  it('finds the first token the grammar reads at or after an offset', @{
+    var src = Source('a + # note\n  b')
+
+    expect(src.next(1).kind).to_be('Plus')
+    expect(src.next(3).text).to_be('b')
+  })
+
+  it('counts the line ends between two offsets', @{
+    var src = Source('a\n\nb\nc')
+
+    expect(src.newlines(0, 3)).to_be(2)
+    expect(src.breaks(3, 4)).to_be(false)
+    expect(src.breaks(3, 6)).to_be(true)
+  })
+
+  it('tells whether a comment sits between two offsets', @{
+    var src = Source('a /* x */ b')
+
+    expect(src.quiet(0, 2)).to_be(true)
+    expect(src.quiet(0, 11)).to_be(false)
+  })
+})
+
+describe('taking gaps', @{
+  # `before` is what says whether a comment shares the line of the code
+  # it follows, which decides whether it stays at the end of that line.
+  it('gives each comment the line ends before it', @{
+    var src = Source('a # one\n\n# two\nb')
+    var gap = src.take(16)
+
+    expect(gap.newlines).to_be(3)
+    expect(gap.comments.map(@(entry) => entry.before)).to_equal([0, 2])
+    expect(gap.after).to_be(1)
+  })
+
+  it('hands each comment over once', @{
+    var src = Source('a # one\nb')
+
+    expect(src.take(8).comments.length()).to_be(1)
+    expect(src.take(8).comments.length()).to_be(0)
+  })
+
+  it('takes only the comments on the line a piece of code ends on', @{
+    var src = Source('a # same\n# next\nb')
+    var trailing = src.take_trailing(1)
+
+    expect(trailing.comments.map(
+      @(entry) => entry.token.text,
+    )).to_equal(['# same'])
+    expect(src
+      .take(16).comments
+      .map(@(entry) => entry.token.text)).to_equal(['# next'])
+  })
+
+  it('reads a doc block in the middle of a line as no break', @{
+    var gap = Source('a /* x */ b').take(10)
+
+    expect(gap.comments.length()).to_be(1)
+    expect(gap.is_broken()).to_be(false)
+  })
+})

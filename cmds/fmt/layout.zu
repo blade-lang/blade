@@ -1,1361 +1,1738 @@
 /**
- * @module format.layout
+ * @module fmt.layout
  *
- * Turns the node tree into physical lines. The line breaks the author
- * wrote are the layout: a collection opened out one item to a line, an
- * expression continued across several, a call whose arguments were
- * spread out, all keep the shape they were given and are only
- * re-indented. A statement that owns a block is always laid out across
- * several lines, its body indented one level deeper, and a line too
- * long for the width that the author left whole is broken at its
- * loosest operator or across the brackets that carry its parts.
+ * Builds the layout document for a parsed program: what each statement,
+ * declaration and expression prints as, and every place it may break.
  *
- * The one rule that can never bend: the statements inside a block each
- * get their own line. Two statements on one line is not a style
- * preference, it is different source.
+ * The line breaks the author wrote are the layout. Wherever the document
+ * offers a break and the source already had one, the break is kept, and
+ * a list, chain or condition the author spread out keeps its lines and
+ * breaks elsewhere only where the width needs it. One written on a
+ * single line is the formatter's to break, and only when it does not
+ * fit. Breaks are only ever offered where the parser accepts one.
+ *
+ * The document is built in source order, which is what lets every
+ * comment be placed where it was written: each piece of code takes the
+ * comments that came before it.
  *
  * @copyright 2026, Richard Ore and Zuri contributors
  */
 
-import .render { flat, LIMIT, INDENT, VALUE_ENDS }
+import .doc { * }
 
-# Whether a block sits anywhere inside these nodes, however deeply
-# nested in brackets.
-def _has_block(nodes: list) {
-  for node in nodes {
-    if node.node == 'group' {
-      if node.kind == 'block' or _has_block(node.items) {
-        return true
-      }
-    }
-  }
+# How wide a `when` or `default` arm may run on one line before its
+# body is braced instead.
+var _ARM_WIDTH = 60
 
-  return false
+# Statements that declare a name. Braces around one would give it a
+# scope of its own, so an unbraced body that declares stays unbraced.
+var _DECLARING = ['Var', 'VarList', 'Decl', 'Function']
+
+# Node kinds that are written exactly as the source has them.
+var _LEAVES = [
+  'Nil', 'Bool', 'Integer', 'Float', 'BigNumber', 'Literal', 'Interpolation',
+  'Identifier', 'Self', 'Parent',
+]
+
+# The two quotes a string, or a dictionary key written as one, opens with.
+var _QUOTES = ['\'', '"']
+
+# Every node but the comments, which are placed from the source instead.
+def _code(nodes: list) {
+  return nodes.filter(
+    @(node) => node.kind != 'Comment' and node.kind != 'DocBlock',
+  )
 }
 
-# Whether a group holds nothing that gets printed.
-def _is_empty(items: list) {
-  for node in items {
-    if node.node != 'newline' and node.node != 'blank' {
-      return false
-    }
-  }
-
-  return true
+# Whether `node` is a `nil` the source left out, as after a bare
+# `return`: it has no text at all.
+def _implicit(node) {
+  return node.start == node.end
 }
 
-def _is_break(node) {
-  return node.node == 'newline' or node.node == 'blank'
-}
-
-# Whether the author wrote this group across more than one line. Its own
-# breaks are the layout, so a group that has any is opened out again
-# exactly where it was opened out before.
-def _source_broken(group) {
-  for node in group.items {
-    if _is_break(node) {
-      return true
-    }
-  }
-
-  return false
-}
-
-# Whether a group has to be opened out rather than kept on its line: it
-# is a block with a body, it holds a comment, the author broke it, or
-# any of that is true of a group inside it.
-def _must_open(group) {
-  if group.kind == 'block' {
-    return !_is_empty(group.items) or _source_broken(group)
-  }
-
-  return _source_broken(group)
-    or _has_comment(group.items)
-    or _opens_inside(group.items)
-}
-
-# The same question asked of every group directly inside `items`.
-def _opens_inside(items: list) {
-  for node in items {
-    if node.node == 'group' and _must_open(node) {
-      return true
-    }
-  }
-
-  return false
-}
-
-# Whether a line break the author wrote, or a comment, sits anywhere in
-# this group outside the blocks it holds. Those lines are laid out where
-# they were written; a block is laid out by the statement that owns it,
-# and its insides are that statement's business rather than this one's.
-def _opened_by_author(group) {
-  if _source_broken(group) or _has_comment(group.items) {
+# Whether a lone item hugs the brackets around it, `f(g(` or `f([`,
+# rather than taking a line of its own when it does not fit: an item
+# that opens brackets of its own, which is where it breaks instead, or
+# one that cannot break at all and would be no shorter on its own line.
+def _hugs(node) {
+  if _LEAVES.contains(node.kind) {
     return true
   }
 
-  for node in group.items {
-    if node.node == 'group'
-      and node.kind != 'block'
-      and _opened_by_author(node) {
+  using node.kind {
+    when 'Call', 'List', 'Dict', 'Grouping', 'Index', 'Slice', 'Get' {
       return true
     }
-  }
-
-  return false
-}
-
-# The index of the first group the author opened out, or -1.
-def _find_authored(items: list) {
-  var index = 0
-
-  while index < items.length() {
-    var node = items[index]
-
-    if node.node == 'group'
-      and node.kind != 'block'
-      and _opened_by_author(node) {
-      return index
-    }
-
-    index += 1
-  }
-
-  return -1
-}
-
-# The index of the first group that has to be opened out, or -1.
-def _find_break(items: list) {
-  var index = 0
-
-  while index < items.length() {
-    var node = items[index]
-
-    if node.node == 'group' and _must_open(node) {
-      return index
-    }
-
-    index += 1
-  }
-
-  return -1
-}
-
-def _raw(kind: string, text: string) {
-  return { node: 'raw', kind, text }
-}
-
-def _is_comment(node) {
-  return node.node == 'tok'
-    and (node.atom.kind == 'Comment' or node.atom.kind == 'DocBlock')
-}
-
-def _has_comment(items: list) {
-  for node in items {
-    if _is_comment(node) {
-      return true
+    when 'Anonymous' {
+      return node.fields.declaration.fields.body.kind == 'Block'
     }
   }
 
   return false
 }
 
-# Emits a run of nodes as one or more lines, ending a line at every
-# comment. A `#` comment runs to the end of its line, so anything after
-# it on the same line would be swallowed; a comment is always the last
-# thing on its line. `suffix` (a block's ` {`, say) closes the final
-# line.
-def _emit_with_comments(
-  items: list, depth: number, suffix: string, lines: list,
-) {
-  var indent = INDENT * depth
-  var segment = []
-
-  for node in items {
-    if _is_break(node) {
-      continue
-    }
-
-    segment.append(node)
-
-    if _is_comment(node) {
-      lines.append(indent + flat(segment))
-      segment = []
-    }
-  }
-
-  var text = flat(segment)
-
-  if text == '' and suffix == '' {
-    return
-  }
-
-  if text == '' {
-    lines.append(indent + suffix.trim(' '))
-  } else {
-    lines.append(indent + text + suffix)
-  }
-}
-
-def _last_real(items: list) {
-  var index = items.length() - 1
-
-  while index >= 0 {
-    var node = items[index]
-
-    if node.node == 'tok' {
-      return node.atom
-    }
-
-    if node.node == 'group' {
-      return node.close
-    }
-
-    if node.node == 'raw' {
-      return node
-    }
-
-    index -= 1
-  }
-
-  return nil
-}
-
-# The last node of a sequence that gets printed, or nil.
-def _last_node(items: list) {
-  var index = items.length() - 1
-
-  while index >= 0 {
-    if !_is_break(items[index]) {
-      return items[index]
-    }
-
-    index -= 1
-  }
-
-  return nil
-}
-
-def _next_real(nodes: list, from: number) {
-  var index = from
-
-  while index < nodes.length() {
-    var node = nodes[index]
-
-    if node.node == 'tok' {
-      return node.atom
-    }
-
-    if node.node == 'group' {
-      return node.open
-    }
-
-    index += 1
-  }
-
-  return nil
-}
-
-# The statement keywords that may own a body without bracing it.
-var _HEADERS = [
-  'If', 'Else', 'While', 'For', 'Iter', 'Do', 'Using', 'When', 'Default',
-  'Catch',
-]
-
-# Whether the last thing on this line is a block's `}` rather than a
-# dictionary's.
-def _ends_block(items: list) {
-  var index = items.length() - 1
-
-  while index >= 0 {
-    var node = items[index]
-
-    if node.node == 'group' {
-      return node.kind == 'block'
-    }
-
-    if node.node == 'tok' or node.node == 'raw' {
-      return false
-    }
-
-    index -= 1
-  }
-
-  return false
-}
-
-# Where a statement started in the source, or -1 when it holds nothing
-# that came from one.
-def _column(items: list) {
-  for node in items {
-    if node.node == 'tok' {
-      return node.atom.column
-    }
-
-    if node.node == 'group' {
-      return node.open.column
-    }
-  }
-
-  return -1
-}
-
-# Whether a statement is a header waiting for a body it never braced:
-# `if x`, `else`, `for a in b`. A header that already carries its body,
-# braced (`if x { ... }`) or not (`if x y = 1`), is not one of these.
-#
-# The braced case is the block group. The unbraced case is the author's
-# indentation, which is the only thing in the stream that distinguishes
-# `if x` from a complete `if x y = 1`: a body written on the next line
-# is indented past its header, and an `else` or the statement after is
-# not.
-def _is_header(items: list) {
-  var first = _next_real(items, 0)
-
-  if first == nil or !_HEADERS.contains(first.kind) {
-    return false
-  }
-
-  for node in items {
-    if node.node == 'group' and node.kind == 'block' {
-      return false
-    }
-  }
-
-  return true
-}
-
-# Splits a block body or the top level into statements, honouring line
-# continuations (a line ending on an operator or comma, or the next one
-# starting on one, is the same statement). The break that joined two
-# lines is kept in the statement, since where the author broke it is
-# where it is laid out again. Each result is `{ items, blank_before }`.
-def split_statements(
-  nodes: list, continues_after: list, continues_before: list,
-) {
-  var statements = []
-  var current = []
-  var blank = false
-
-  var index = 0
-
-  while index < nodes.length() {
-    var node = nodes[index]
-
-    if node.node == 'blank' {
-      if !current.is_empty() {
-        statements.append({ items: current, blank_before: blank })
-        current = []
-        blank = false
-      }
-
-      blank = true
-      index += 1
-
-      continue
-    }
-
-    if node.node == 'newline' {
-      if current.is_empty() {
-        index += 1
-
-        continue
-      }
-
-      var last = _last_real(current)
-      var next = _next_real(nodes, index + 1)
-
-      var joins = last != nil and continues_after.contains(last.kind)
-      var keep = joins
-
-      # A line ending on a comma the caller does not read as a
-      # continuation is a complete one. Inside a bracket group that is
-      # every comma, and what follows opens the next item however it
-      # starts: `-1` after `0.0,` is an item, not a subtraction.
-      var closed = !joins and last != nil and last.kind == 'Comma'
-
-      if !joins
-        and !closed
-        and next != nil
-        and continues_before.contains(next.kind) {
-        # `else` pulls up onto the line that closed the block before it,
-        # `} else {`. It may not pull up onto anything else: a header
-        # that took its body unbraced ends its statement at the newline,
-        # and `if c x else y` on one line is not a statement Zuri reads.
-        joins = next.kind != 'Else' or _ends_block(current)
-
-        # That pull-up is the one join that loses its break. Every other
-        # one is the author's own line, and it is laid out again where
-        # they put it.
-        keep = joins and next.kind != 'Else'
-      }
-
-      if joins {
-        if keep {
-          current.append(node)
+# How tightly an operator binds, loosest first. Operators of one level
+# are laid out as one run; `0` is anything that is not an operator.
+def _level(node) {
+  using node.kind {
+    when 'Circuit' return node.fields.op == 'Or' ? 1 : 2
+    when 'Logical' return 3
+    when 'Binary' {
+      using node.fields.op {
+        when 'EqualEq', 'BangEq' return 3
+        when 'Bar' return 4
+        when 'Xor' return 5
+        when 'Amp' return 6
+        when 'Lshift', 'Rshift', 'Urshift' return 7
+        when 'Plus', 'Minus' return 8
+        when 'Multiply', 'Divide', 'Floor', 'Percent' {
+          return 9
         }
-
-        index += 1
-
-        continue
+        when 'Pow' return 10
       }
-
-      statements.append({ items: current, blank_before: blank })
-      current = []
-      blank = false
-      index += 1
-
-      continue
     }
-
-    current.append(node)
-    index += 1
   }
 
-  if !current.is_empty() {
-    statements.append({ items: current, blank_before: blank })
-  }
-
-  return statements
+  return 0
 }
 
-# Splits nodes at the breaks the author put directly in them, keeping a
-# blank line that separated two. Anything inside a bracket group stays
-# there; only the breaks at this level count. Each result is
-# `{ items, blank_before }`.
-def _source_lines(items: list) {
-  var segments = []
-  var current = []
-  var blank = false
+# The operands of a run of operators of one level, left to right.
+# `a + b - c` is one run of three; `**` groups to the right and is never
+# a run of more than two.
+def _operands(node) {
+  var level = _level(node)
+  var backwards = []
+  var current = node
 
-  for node in items {
-    if _is_break(node) {
-      if !current.is_empty() {
-        segments.append({ items: current, blank_before: blank })
-        current = []
-        blank = false
-      }
+  while current.kind == node.kind and _level(current) == level {
+    backwards.append(current.fields.right)
+    current = current.fields.left
 
-      if node.node == 'blank' {
-        blank = true
-      }
-
-      continue
-    }
-
-    current.append(node)
-  }
-
-  if !current.is_empty() {
-    segments.append({ items: current, blank_before: blank })
-  }
-
-  return segments
-}
-
-/**
- * Emits a block body or the top level: every statement, in order, with
- * a blank line kept where the source had one.
- */
-def emit_seq(nodes: list, depth: number, lines: list, ctx: dict) {
-  var statements = split_statements(nodes, ctx.after, ctx.before)
-
-  # How far past `depth` each statement sits. Everything is level with
-  # its neighbours except the body of a header that never braced one,
-  # which keeps the indent that is the only sign it is a body at all.
-  var offsets = _body_offsets(statements)
-  var index = 0
-
-  for statement in statements {
-    # A blank opening a block is kept too: the space under a `class` or
-    # a `def` before its first member is the author's, not an accident
-    # of where the brace fell.
-    if statement.blank_before {
-      lines.append('')
-    }
-
-    emit_statement(statement.items, depth + offsets[index], lines, ctx)
-    index += 1
-  }
-}
-
-# One offset per statement: `0`, or one deeper for each unbraced header
-# stacked above it. A header only owns the statement that follows it,
-# and only while that statement is indented past it, which is how
-# `if x` followed by its body is told from `if x y = 1` followed by an
-# `else`.
-def _body_offsets(statements: list) {
-  var offsets = []
-  var open_headers = []
-  var index = 0
-
-  while index < statements.length() {
-    var column = _column(statements[index].items)
-
-    while !open_headers.is_empty() and column <= open_headers.last() {
-      open_headers.pop()
-    }
-
-    offsets.append(open_headers.length())
-
-    if _is_header(statements[index].items) {
-      open_headers.append(column)
-    }
-
-    index += 1
-  }
-
-  return offsets
-}
-
-/**
- * Emits one statement, opening out any block it owns.
- *
- * `continued` says these nodes carry on a line above them rather than
- * starting one of their own, which is what holds every continuation of
- * one statement at a single level under its first line however many
- * breaks it takes to lay out.
- */
-def emit_statement(
-  items: list, depth: number, lines: list, ctx: dict, continued: ?bool,
-) {
-  var on = continued == true
-  var at = _find_break(items)
-
-  if at < 0 {
-    _emit_line(items, depth, '', lines, ctx, on)
-
-    return
-  }
-
-  var breaker = items[at]
-  var head = items[0, at]
-  var tail = items[at + 1, items.length()]
-
-  if breaker.kind == 'block' {
-    _emit_line(head, depth, _brace_suffix(head), lines, ctx, on)
-
-    emit_seq(breaker.items, depth + 1, lines, ctx)
-
-    emit_statement([_raw('Rbrace', '}')] + tail, depth, lines, ctx)
-
-    return
-  }
-
-  # A closure handed to a call on one line, `each(items, @{ work() })`,
-  # opens at the block and nowhere else. A group the author had already
-  # opened out is laid out on its own lines instead, so the block on one
-  # of them is opened by the statement that owns that line.
-  if !_opened_by_author(breaker) and _has_block(breaker.items) {
-    _emit_group_block(head, breaker, tail, depth, lines, ctx, on)
-
-    return
-  }
-
-  _emit_group_broken(head, breaker, tail, depth, lines, ctx, on)
-}
-
-# Whether the author put a break directly after the opener, which is
-# what says whether anything shares the opener's line.
-def _breaks_after_open(items: list) {
-  return !items.is_empty() and _is_break(items[0])
-}
-
-# The same for the closer.
-def _breaks_before_close(items: list) {
-  var last = items.length() - 1
-
-  return last >= 0 and _is_break(items[last])
-}
-
-# A bracket group the author opened out, or one holding a comment. Every
-# line they wrote inside it is emitted in turn, one level deeper, and
-# the opener and closer keep the company they were given: content left
-# on the opener's line stays on it, and a closer written against the
-# last item stays against it.
-def _emit_group_broken(
-  head: list, group, tail: list, depth: number, lines: list, ctx: dict,
-  continued: bool,
-) {
-  # A group broken only somewhere inside it keeps its own opener on the
-  # head line. The break belongs to the bracket the author actually
-  # opened, and every opener above it reads as part of reaching it.
-  while !_source_broken(group) and !_has_comment(group.items) {
-    var inner = _find_authored(group.items)
-
-    if inner < 0 {
+    if level == 10 {
       break
     }
-
-    var wrapper = _openers(group.kind)
-    var child = group.items[inner]
-
-    head = head + [_raw(group.open.kind, wrapper.open)] + group.items[0, inner]
-    tail = group.items[inner + 1, group.items.length()]
-      + [_raw(group.close.kind, wrapper.close)]
-      + tail
-    group = child
   }
 
-  var opener = _openers(group.kind)
-  var closer = [_raw(group.close.kind, opener.close)] + tail
+  backwards.append(current)
 
-  # Inside a bracket group a comma separates one item from the next
-  # rather than continuing a line; every other continuation still holds,
-  # so an item broken across lines stays one item.
-  var joins = ctx.after.filter(@(kind) => kind != 'Comma')
-  var segments = split_statements(group.items, joins, ctx.before)
-  var line = head + [_raw(group.open.kind, opener.open)]
-  var first = 0
+  return backwards.reverse()
+}
 
-  if !segments.is_empty() and !_breaks_after_open(group.items) {
-    line = line + segments[0].items
-    first = 1
+/**
+ * Builds layout documents for one source.
+ */
+class Layout {
+  /**
+   * @param Source source: The source being laid out, with its tokens.
+   */
+  @new(source) {
+    self.src = source
   }
 
-  var last = segments.length() - 1
-
-  if first > last {
-    emit_statement(line + closer, depth, lines, ctx, continued)
-
-    return
+  /**
+   * The document for a whole program.
+   *
+   * @param list nodes: Its top-level nodes, from `zuri.parse()`.
+   * @returns any
+   */
+  program(nodes: list) {
+    return self._sequence(_code(nodes), self.src.text.length(), true)
   }
 
-  emit_statement(line, depth, lines, ctx, continued)
+  # Comments
 
-  # The body indents under the line the opener actually landed on, which
-  # is one deeper than the statement when the head was itself written
-  # across lines. Measuring it from the statement instead would drift a
-  # level every time the file went through again.
-  var opened = _source_lines(head).length() > 1 ? depth + 1 : depth
-  var joins_closer = !_breaks_before_close(group.items)
-  var index = first
-
-  for segment in segments[first,] {
-    if segment.blank_before {
-      lines.append('')
+  # A comment as it prints. A `#` comment loses any space it trailed
+  # off with; a doc block that opens a line of its own moves its later
+  # lines along with its first.
+  _comment(token, own_line: bool) {
+    if token.kind == 'Comment' {
+      return token.text.rtrim()
     }
 
-    var body = index == last and joins_closer
-      ? segment.items + closer
-      : segment.items
+    if own_line and token.text.index_of('\n') != -1 {
+      return comment(token.text, token.column - 1)
+    }
 
-    emit_statement(body, opened + 1, lines, ctx)
-    index += 1
+    return token.text
   }
 
-  if !joins_closer {
-    # The closer sits on a continuation line exactly when the opener
-    # did, so a tail that breaks again stays level with it.
-    emit_statement(closer, opened, lines, ctx, opened > depth or continued)
-  }
-}
+  # A gap where the layout may break. Its comments stay where they were,
+  # one sharing the line with the code before it at the end of that
+  # line, and a gap the source broke breaks, with a blank line kept.
+  # `otherwise` is what the gap is when the source wrote none of that.
+  _break(gap, otherwise) {
+    if gap.comments.is_empty() and !gap.is_broken() {
+      return otherwise
+    }
 
-# A bracket group with a block inside it, most often a closure handed to
-# a call: the opener and everything before the block stay on the line,
-# the body indents, and the closer rejoins whatever follows.
-def _emit_group_block(
-  head: list, group, tail: list, depth: number, lines: list, ctx: dict,
-  continued: bool,
-) {
-  var inner_at = _find_break(group.items)
+    var out = []
 
-  # Descend to the group that actually holds the block. Each opener on
-  # the way stays on the head line, so `outer(inner(@{ ... }))` opens at
-  # the closure rather than giving up and flattening it.
-  while inner_at >= 0 and group.items[inner_at].kind != 'block' {
-    var wrapper = _openers(group.kind)
-    var child = group.items[inner_at]
+    for entry in gap.comments {
+      if entry.before == 0 {
+        out.append([' ', self._comment(entry.token, false)])
+      } else {
+        out.append(entry.before >= 2 ? BLANKLINE : HARDLINE)
+        out.append(self._comment(entry.token, true))
+      }
+    }
 
-    head = head
-      + [_raw(group.open.kind, wrapper.open)]
-      + group.items[0, inner_at]
-    tail = group.items[inner_at + 1, group.items.length()]
-      + [_raw(group.close.kind, wrapper.close)]
-      + tail
-    group = child
-    inner_at = _find_break(group.items)
+    if !gap.is_broken() {
+      out.append(otherwise)
+
+      return out
+    }
+
+    out.append(gap.after >= 2 ? BLANKLINE : HARDLINE)
+
+    return out
   }
 
-  if inner_at < 0 {
-    lines.append(INDENT * depth + flat(head + [group] + tail))
+  # A gap the layout writes no break into. A comment the author left in
+  # it still ends its line, since a `#` runs to the end of one.
+  _loose(gap) {
+    if gap.comments.is_empty() {
+      return ''
+    }
 
-    return
+    var out = []
+
+    for entry in gap.comments {
+      if entry.before == 0 {
+        out.append([' ', self._comment(entry.token, false)])
+      } else {
+        out.append([HARDLINE, self._comment(entry.token, true)])
+      }
+    }
+
+    var last = gap.comments.last().token
+
+    out.append(last.kind == 'Comment' or gap.after > 0 ? HARDLINE : ' ')
+
+    return out
   }
 
-  var opener = _openers(group.kind)
-  var block = group.items[inner_at]
-  var pre = group.items[0, inner_at]
-  var post = group.items[inner_at + 1, group.items.length()]
-
-  var prefix = head + [_raw(group.open.kind, opener.open)] + pre
-
-  _emit_line(prefix, depth, _brace_suffix(prefix), lines, ctx, continued)
-
-  emit_seq(block.items, depth + 1, lines, ctx)
-
-  var closing = [_raw('Rbrace', '}')]
-    + post
-    + [_raw(group.close.kind, opener.close)]
-    + tail
-
-  emit_statement(closing, depth, lines, ctx, continued)
-}
-
-# The ` {` that opens a block on the end of its head line, tightened to
-# `{` after a `@` so a no-argument closure stays `@{`, the way it is
-# written everywhere else.
-def _brace_suffix(head: list) {
-  var last = _last_real(head)
-
-  if last != nil and last.kind == 'At' {
-    return '{'
+  # Places the comments written before `offset`.
+  _flush(offset: number) {
+    return self._loose(self.src.take(offset))
   }
 
-  return ' {'
-}
+  # Sequences
 
-def _openers(kind: string) {
-  if kind == 'paren' {
-    return { open: '(', close: ')' }
-  }
-
-  if kind == 'bracket' or kind == 'index' {
-    return { open: '[', close: ']' }
-  }
-
-  return { open: '{', close: '}' }
-}
-
-# A line that continues the one above it opens on the operator joining
-# the two. Marked as such, since a bare `+` or `-` at the head of a
-# sequence would otherwise render as a sign on what follows it.
-def _as_continuation(segment: list) {
-  if segment.is_empty() {
-    return segment
-  }
-
-  var first = segment[0]
-
-  if first.node != 'tok'
-    or (first.atom.kind != 'Plus' and first.atom.kind != 'Minus') {
-    return segment
-  }
-
-  return [_raw('BinaryLead', first.atom.text)] + segment[1,]
-}
-
-# Emits one statement's worth of nodes as lines: the ones the author
-# wrote, then a comment ending each, and only a line they left whole
-# and too long for the width is broken by the formatter. `suffix` (a
-# block's ` {`, say) closes the final line.
-def _emit_line(
-  items: list, depth: number, suffix: string, lines: list, ctx: dict,
-  continued: ?bool,
-) {
-  var on = continued == true
-  var segments = _source_lines(items)
-
-  if segments.length() > 1 {
+  # Statements, members or arms, one to a line, with the comments around
+  # them and the blank lines between them. `close` is where the sequence
+  # ends: a block's `}`, or the end of the file when `top`. A block's
+  # sequence starts with the line break after its `{`; a file's starts
+  # with its first line.
+  _sequence(items: list, close: number, top: bool) {
+    var parts = []
     var previous = nil
-    var index = 0
 
-    for segment in segments {
-      var last = index == segments.length() - 1
-      var body = _ends_value(previous)
-        ? _as_continuation(segment.items)
-        : segment.items
-
-      _emit_line(
-        body, index == 0 or on ? depth : depth + 1, last ? suffix : '', lines,
-        ctx, index > 0 or on,
-      )
-
-      previous = _last_node(segment.items)
-      index += 1
+    for item in items {
+      parts.append(self._lead(self.src.take(item.start), previous, item, top))
+      parts.append(self._item(item))
+      previous = item
     }
 
-    return
+    parts.append(self._tail(self.src.take(close), previous, top))
+
+    return parts
   }
 
-  if _has_comment(items) {
-    _emit_with_comments(items, depth, suffix, lines)
+  # What goes before `item`: the comments since `previous` and the
+  # break onto its line. A blank line the author left is kept, one at
+  # most, and a declaration spanning several lines always has one on
+  # either side of it, ahead of the comments that lead into it.
+  _lead(gap, previous, item, top: bool) {
+    var out = []
+    var comments = gap.comments
+    var first = previous == nil
+    var at_top = first and top
+    var start = 0
 
-    return
-  }
-
-  var indent = INDENT * depth
-  var text = flat(items)
-
-  if (depth * 2 + text.length() + suffix.length()) <= LIMIT {
-    lines.append(indent + (text == '' ? suffix.trim(' ') : text + suffix))
-
-    return
-  }
-
-  _wrap(items, depth, suffix, lines, ctx, on)
-}
-
-# Whether the node before an operator carries a value, which is what
-# tells a binary `-` or `+` from a sign.
-def _ends_value(node) {
-  if node == nil {
-    return false
-  }
-
-  if node.node == 'group' {
-    return node.kind != 'block'
-  }
-
-  if node.node == 'raw' {
-    return VALUE_ENDS.contains(node.kind)
-  }
-
-  return node.node == 'tok' and VALUE_ENDS.contains(node.atom.kind)
-}
-
-# The index of the last node in `items` that gets printed, or -1.
-def _last_index(items: list) {
-  var index = items.length() - 1
-
-  while index >= 0 and _is_break(items[index]) {
-    index -= 1
-  }
-
-  return index
-}
-
-# Where in `items` a break at one of `kinds` would land: an operator of
-# that kind at the top level, not inside a bracket group, with an
-# operand on either side of it.
-#
-# A `+` or a `-` with nothing of value to its left is a sign on what
-# follows it rather than an operator, and nothing can be broken at a
-# sign. A `?` or a `:` breaks only when it belongs to a conditional,
-# which the tree settled and wrote on the atom; the same characters
-# spell an optional type and a dictionary key, and neither is an
-# operator to break at.
-def _break_points(items: list, kinds: list) {
-  var points = []
-  var previous = nil
-  var index = 0
-
-  for node in items {
-    if _is_break(node) {
-      index += 1
-
-      continue
+    # A comment on the line the code before it ended on, the previous
+    # item's or the block's `{`, stays at the end of that line.
+    if !comments.is_empty() and comments[0].before == 0 and !at_top {
+      out.append([' ', self._comment(comments[0].token, false)])
+      start = 1
     }
 
-    var kind = node.node == 'tok' ? node.atom.kind : ''
-    var breaks = previous != nil and kinds.contains(kind)
+    var own = comments[start,]
+    var blanks = own.map(@(entry) => entry.before >= 2)
 
-    if kind == 'Question' or kind == 'Colon' {
-      breaks = breaks and node.atom.ternary
-    } else if kind == 'Plus' or kind == 'Minus' {
-      breaks = breaks and _ends_value(previous)
-    }
+    blanks.append(gap.after >= 2)
 
-    if breaks {
-      points.append(index)
-    }
-
-    previous = node
-    index += 1
-  }
-
-  # An operator whose operand is on the line below ends the line rather
-  # than splitting it, and stays with what it follows.
-  if !points.is_empty() and points.last() == _last_index(items) {
-    points.pop()
-  }
-
-  return points
-}
-
-# Whether breaking `items` at any of `kinds` would actually split it. An
-# operator that only leads the line is not a split point, so a segment
-# that already starts with one is left whole rather than handed back to
-# the same break forever.
-def _splittable(items: list, kinds: list) {
-  return !_break_points(items, kinds).is_empty()
-}
-
-# The assignment operators a statement may open with, which a chain on the
-# right-hand side reads through.
-var _ASSIGN = [
-  'Equal', 'PlusEq', 'MinusEq', 'MultiplyEq', 'DivideEq', 'PowEq', 'FloorEq',
-  'PercentEq', 'LshiftEq', 'RshiftEq', 'UrshiftEq', 'AmpEq', 'BarEq', 'XorEq',
-  'TildeEq',
-]
-
-# Top-level tokens that mean the line is not a single chain but an
-# expression built from one: a comparison, arithmetic, a ternary, a
-# lambda arrow, a comma. Any of these and the dots belong to different
-# operands, so breaking at them would be wrong.
-var _CHAIN_STOP = [
-  'Question', 'Colon', 'And', 'Or', 'EqualEq', 'BangEq', 'Less', 'LessEq',
-  'Greater', 'GreaterEq', 'Plus', 'Minus', 'Multiply', 'Divide', 'Pow', 'Floor',
-  'Percent', 'Amp', 'Bar', 'Xor', 'Lshift', 'Rshift', 'Urshift', 'Comma', 'In',
-  'As', 'Arrow', 'Range',
-]
-
-# The operators a long line breaks at, loosest binding first, so the
-# break lands where the expression holds together least and each line
-# reads as one operand of the outermost operation.
-var _BREAK_OPS = [
-  ['Question', 'Colon'],
-  ['Or'],
-  ['And'],
-  ['EqualEq', 'BangEq', 'Less', 'LessEq', 'Greater', 'GreaterEq'],
-  ['Bar'],
-  ['Xor'],
-  ['Amp'],
-  ['Lshift', 'Rshift', 'Urshift'],
-  ['Plus', 'Minus'],
-  ['Multiply', 'Divide', 'Percent', 'Floor'],
-]
-
-# Whether a statement is a single fluent chain, once a leading assignment is
-# allowed for, rather than a larger expression that merely contains one. A
-# ternary with a `.length()` in each branch is not a chain, and must not
-# be broken as if it were.
-def _is_chain(items: list) {
-  var assigned = false
-
-  for node in items {
-    if node.node != 'tok' {
-      continue
-    }
-
-    var kind = node.atom.kind
-
-    if !assigned and _ASSIGN.contains(kind) {
-      assigned = true
-
-      continue
-    }
-
-    if _CHAIN_STOP.contains(kind) or _ASSIGN.contains(kind) {
-      return false
-    }
-  }
-
-  return true
-}
-
-# How many method-call links a fluent chain has at the top level: a `.`
-# followed by a name and its call parentheses, as in `.filter(x)`. Two or
-# more is what makes a chain worth breaking one call to a line rather than
-# leaving it to run past the width.
-def _method_links(items: list) {
-  var reals = items.filter(@(n) => n.node == 'tok' or n.node == 'group')
-  var count = 0
-  var index = 0
-
-  while index + 2 < reals.length() {
-    var dot = reals[index]
-    var name = reals[index + 1]
-    var call = reals[index + 2]
-
-    if dot.node == 'tok'
-      and dot.atom.kind == 'Dot'
-      and name.node == 'tok'
-      and name.atom.kind == 'Identifier'
-      and call.node == 'group'
-      and call.kind == 'paren' {
-      count += 1
-    }
-
-    index += 1
-  }
-
-  return count
-}
-
-# The first real node at or after `from`, and its index, as a pair
-# `{ node, at }`, or `{ node: nil, at: -1 }` when there is none.
-def _next_node(items: list, from: number) {
-  var index = from
-
-  while index < items.length() {
-    var node = items[index]
-
-    if !_is_break(node) {
-      return { node, at: index }
-    }
-
-    index += 1
-  }
-
-  return { node: nil, at: -1 }
-}
-
-# Whether the `.` at `index` begins a call link, `.name(...)`, rather than
-# a plain property access. A call link is where a fluent chain breaks; a
-# property access stays with the call that follows it.
-def _is_call_link(items: list, index: number) {
-  var name = _next_node(items, index + 1)
-
-  if name.node == nil
-    or name.node.node != 'tok'
-    or name.node.atom.kind != 'Identifier' {
-    return false
-  }
-
-  var call = _next_node(items, name.at + 1)
-
-  return call.node != nil
-    and call.node.node == 'group'
-    and call.node.kind == 'paren'
-}
-
-# Lays out a list of segments: the first at `depth`, the rest indented one
-# level under it, the closing `suffix` on the last. Each segment is
-# emitted through {_emit_line}, so one still too long breaks again.
-def _emit_segments(
-  segments: list, depth: number, suffix: string, lines: list, ctx: dict,
-  continued: bool,
-) {
-  var index = 0
-
-  for segment in segments {
-    var last = index == segments.length() - 1
-    var deeper = index == 0 or continued ? depth : depth + 1
-    var body = index == 0 ? segment : _as_continuation(segment)
-
-    _emit_line(
-      body, deeper, last ? suffix : '', lines, ctx, index > 0 or continued,
-    )
-
-    index += 1
-  }
-}
-
-# A long line split at the operators in `kinds`, each operand its own
-# segment with the operator leading it, the way a multi-line condition
-# reads.
-def _operator_segments(items: list, kinds: list) {
-  var points = _break_points(items, kinds)
-  var segments = []
-  var current = []
-  var index = 0
-
-  for node in items {
-    if _is_break(node) {
-      index += 1
-
-      continue
-    }
-
-    if points.contains(index) {
-      segments.append(current)
-      current = []
-    }
-
-    current.append(node)
-    index += 1
-  }
-
-  if !current.is_empty() {
-    segments.append(current)
-  }
-
-  return segments
-}
-
-# Breaks a long fluent chain at each call link, `.name(...)`, one call to a
-# line. A property access leading a link, as in `group.items.filter(...)`,
-# stays on the head line with what it reads from.
-def _emit_chain_break(
-  items: list, depth: number, suffix: string, lines: list, ctx: dict,
-  continued: bool,
-) {
-  var segments = []
-  var current = []
-  var index = 0
-
-  while index < items.length() {
-    var node = items[index]
-
-    if _is_break(node) {
-      index += 1
-
-      continue
-    }
-
-    if node.node == 'tok'
-      and node.atom.kind == 'Dot'
-      and !current.is_empty()
-      and _is_call_link(items, index) {
-      segments.append(current)
-      current = [node]
-    } else {
-      current.append(node)
-    }
-
-    index += 1
-  }
-
-  if !current.is_empty() {
-    segments.append(current)
-  }
-
-  _emit_segments(segments, depth, suffix, lines, ctx, continued)
-}
-
-# Whether a top-level `;` splits this statement into clauses, as an
-# `iter` header does. Those clauses are separate expressions, so none of
-# the operator breaks below applies to the statement as a whole.
-def _has_clauses(items: list) {
-  for node in items {
-    if node.node == 'tok' and node.atom.kind == 'Semicolon' {
-      return true
-    }
-  }
-
-  return false
-}
-
-# The operator breaks open to this statement. A class header spells its
-# parent with `<` and its extension target with `>`, and neither is a
-# comparison to break across lines.
-def _break_ops(items: list) {
-  if _has_clauses(items) {
-    return []
-  }
-
-  var first = _next_real(items, 0)
-
-  if first != nil and first.kind == 'Class' {
-    return _BREAK_OPS.filter(@(kinds) => !kinds.contains('Less'))
-  }
-
-  return _BREAK_OPS
-}
-
-# The loosest operator this statement can be split at, or an empty list
-# when it has none.
-def _loosest_split(items: list) {
-  for kinds in _break_ops(items) {
-    if _splittable(items, kinds) {
-      return kinds
-    }
-  }
-
-  return []
-}
-
-# Whether a bracket fill has somewhere to go in `items`: a group with
-# two or more comma-separated parts, reached through any wrapper that
-# holds nothing else to spread out. It is the same descent {_wrap} makes
-# and answers whether that descent would arrive anywhere.
-def _fillable(items: list) {
-  var at = _last_group(items)
-
-  while at >= 0 {
-    var group = items[at]
-
-    if _split_commas(group.items).length() >= 2 {
-      return true
-    }
-
-    items = group.items
-    at = _last_group(items)
-  }
-
-  return false
-}
-
-# Whether every line an operator break would leave can be laid out at
-# this width: each either fits, or carries a bracket group of its own to
-# spread across further lines. A break that leaves a line still running
-# past the width and nothing to do about it has not paid for itself, and
-# the line is better left whole.
-def _segments_resolve(
-  segments: list, depth: number, suffix: string, continued: bool,
-) {
-  var index = 0
-
-  for segment in segments {
-    var last = index == segments.length() - 1
-    var deeper = index == 0 or continued ? depth : depth + 1
-    var width = deeper * 2
-      + flat(segment).length()
-      + (last ? suffix.length() : 0)
-
-    if width > LIMIT and !_fillable(segment) {
-      return false
-    }
-
-    index += 1
-  }
-
-  return true
-}
-
-# A long line, broken at its loosest operator if a break there resolves
-# it, or else across the last bracket group it holds: the opener stays,
-# its parts fill the lines below, and the closer lands back at this
-# indent. A line with nowhere to break is left as it was written.
-def _wrap(
-  items: list, depth: number, suffix: string, lines: list, ctx: dict,
-  continued: bool,
-) {
-  var indent = INDENT * depth
-  var kinds = _loosest_split(items)
-
-  if !kinds.is_empty() {
-    var segments = _operator_segments(items, kinds)
-
-    if _segments_resolve(segments, depth, suffix, continued) {
-      _emit_segments(segments, depth, suffix, lines, ctx, continued)
-
-      return
-    }
-  }
-
-  # A fluent chain of two or more calls breaks a call to a line, each `.`
-  # leading its own, rather than filling the last call's arguments and
-  # leaving the head still too long.
-  if _is_chain(items) and _method_links(items) >= 2 {
-    _emit_chain_break(items, depth, suffix, lines, ctx, continued)
-
-    return
-  }
-
-  var at = _last_group(items)
-
-  if at < 0 {
-    lines.append(indent + flat(items) + suffix)
-
-    return
-  }
-
-  var group = items[at]
-  var head = items[0, at]
-  var tail = items[at + 1, items.length()]
-
-  # Descend while this group has nothing of its own to fill: a call whose
-  # one argument is another call, a wrapper around a lone list. Each
-  # opener stays on the head line and each closer joins the tail, so the
-  # break lands on the innermost bracket that has parts to spread out.
-  while _split_commas(group.items).length() < 2 {
-    var inner = _last_group(group.items)
-
-    if inner < 0 {
-      lines.append(indent + flat(items) + suffix)
-
-      return
-    }
-
-    var wrapper = _openers(group.kind)
-    var child = group.items[inner]
-
-    head = head + [_raw(group.open.kind, wrapper.open)] + group.items[0, inner]
-    tail = group.items[inner + 1, group.items.length()]
-      + [_raw(group.close.kind, wrapper.close)]
-      + tail
-    group = child
-  }
-
-  var opener = _openers(group.kind)
-  var parts = _split_commas(group.items)
-
-  _emit_line(
-    head + [_raw(group.open.kind, opener.open)], depth, '', lines, ctx,
-    continued,
-  )
-
-  # Fill: pack as many parts onto a line as the width allows, wrapping to
-  # the next when the next part would overflow. Every part, the last
-  # included, ends in a comma, so a later edit can add or reorder a line
-  # without touching its neighbours; Zuri accepts a trailing one anywhere.
-  var inner = INDENT * (depth + 1)
-  var line = ''
-
-  for part in parts {
-    var text = '${flat(part)},'
-
-    # One part too wide for a line of its own is laid out in turn rather
-    # than left to run past the width, which is the only thing filling
-    # cannot fix by packing differently.
-    if (inner.length() + text.length()) > LIMIT {
-      if line != '' {
-        lines.append(inner + line)
-        line = ''
+    if !first {
+      if self._opens(previous) {
+        blanks[0] = true
       }
 
-      _emit_line(part, depth + 1, ',', lines, ctx)
+      if self._opens(item) {
+        var attached = blanks.length() - 1
 
-      continue
+        while attached > 0 and !blanks[attached] {
+          attached -= 1
+        }
+
+        blanks[attached] = true
+      }
     }
 
-    if line == '' {
-      line = text
-    } else if (inner.length() + line.length() + 1 + text.length()) <= LIMIT {
-      line += ' ${text}'
+    var index = 0
+
+    for entry in own {
+      if !(at_top and index == 0) {
+        out.append(blanks[index] ? BLANKLINE : HARDLINE)
+      }
+
+      out.append(self._comment(entry.token, true))
+      index += 1
+    }
+
+    if !(at_top and own.is_empty()) {
+      out.append(blanks[index] ? BLANKLINE : HARDLINE)
+    }
+
+    return out
+  }
+
+  # The comments after the last item, up to the block's `}` or the end
+  # of the file. No blank line is left before the `}` itself.
+  _tail(gap, previous, top: bool) {
+    var out = []
+    var comments = gap.comments
+    var empty = previous == nil
+    var start = 0
+
+    if !comments.is_empty() and comments[0].before == 0 and !(empty and top) {
+      out.append([' ', self._comment(comments[0].token, false)])
+      start = 1
+    }
+
+    var index = start
+
+    for entry in comments[start,] {
+      if !(empty and top and index == 0) {
+        out.append(entry.before >= 2 ? BLANKLINE : HARDLINE)
+      }
+
+      out.append(self._comment(entry.token, true))
+      index += 1
+    }
+
+    return out
+  }
+
+  # Whether `node` is a declaration laid out across several lines: a
+  # function, method or class with a body that opens.
+  _opens(node) {
+    var target = node.kind == 'Decl' ? node.fields.declaration : node
+
+    using target.kind {
+      when 'Function', 'Method' {
+        var body = target.fields.body
+
+        return !_code(body.fields.statements).is_empty()
+          or !self.src.quiet(body.start + 1, body.end - 1)
+          or self.src.breaks(body.start + 1, body.end - 1)
+      }
+      when 'Class' {
+        var f = target.fields
+        var open = self.src.next(self._class_head_end(target))
+
+        return !_code(f.properties + f.methods).is_empty()
+          or !self.src.quiet(open.end, target.end - 1)
+          or self.src.breaks(open.end, target.end - 1)
+      }
+    }
+
+    return false
+  }
+
+  # One item of a sequence.
+  _item(node) {
+    using node.kind {
+      when 'Stmt' return self._item(node.fields.statement)
+      when 'Decl' return self._item(node.fields.declaration)
+      when 'Function' return self._function(node)
+      when 'Class' return self._class(node)
+      when 'Method' return self._method(node)
+      when 'Property' return self._property(node)
+      when 'Var' return self._var(node, true)
+      when 'VarList' return self._var_list(node, true)
+      when 'Expression' return self._expr(node.fields.value)
+      when 'Echo' {
+        return ['echo ', self._expr(node.fields.value)]
+      }
+      when 'Return' return self._keyword(node, 'return')
+      when 'Raise' return self._keyword(node, 'raise')
+      when 'Assert' return self._assert(node)
+      when 'If' return self._if(node)
+      when 'While' return self._while(node)
+      when 'DoWhile' return self._do(node)
+      when 'For' return self._for(node)
+      when 'Iter' return self._iter(node)
+      when 'Using' return self._using(node)
+      when 'When' return self._when(node)
+      when 'Default' return self._default(node)
+      when 'Catch' return self._catch(node)
+      when 'Import' return self._import(node)
+      when 'Block' return self._block(node)
+      when 'Continue' return 'continue'
+      when 'Break' return 'break'
+    }
+
+    raise Error('there is no layout for a ${node.kind}')
+  }
+
+  # Blocks and bodies
+
+  # A `{ }` block. One with statements always opens, one statement to a
+  # line; an empty one stays as it was written, closed up or open.
+  _block(block) {
+    var lead = self._flush(block.start)
+    var close = block.end - 1
+    var items = _code(block.fields.statements)
+
+    self.src.skip(block.start + 1)
+
+    if items.is_empty() and self.src.quiet(block.start + 1, close) {
+      var open = self.src.breaks(block.start + 1, close)
+
+      self.src.skip(block.end)
+
+      return [lead, open ? ['{', HARDLINE, '}'] : '{}']
+    }
+
+    var body = self._sequence(items, close, false)
+
+    self.src.skip(block.end)
+
+    return [lead, '{', nest(body), HARDLINE, '}']
+  }
+
+  # A single statement braced into a block of its own: the body of an
+  # `if` or a loop written without braces. A comment trailing it on its
+  # line goes inside with it.
+  _braced(statement) {
+    var lead = self._lead(self.src.take(statement.start), nil, statement, false)
+    var item = self._item(statement)
+    var trailing = self._break(self.src.take_trailing(statement.end), '')
+
+    return ['{', nest([lead, item, trailing]), HARDLINE, '}']
+  }
+
+  # The body of an `if`, `else`, loop or arm, after its header. A block
+  # is laid out as one, and anything else is braced unless it declares a
+  # name, which braces would scope. A body left unbraced keeps the line
+  # it was written on.
+  _body(body) {
+    if body.kind == 'Block' {
+      return [' ', self._block(body)]
+    }
+
+    if _DECLARING.contains(body.kind) {
+      var gap = self.src.take(body.start)
+
+      if gap.is_broken() {
+        return nest([self._break(gap, ''), self._item(body)])
+      }
+
+      return [self._loose(gap), ' ', self._item(body)]
+    }
+
+    return [' ', self._braced(body)]
+  }
+
+  # Whether a body ends on a `}`, the line an `else` or a `while` may
+  # follow it on.
+  _closes(body) {
+    return !_DECLARING.contains(body.kind)
+  }
+
+  # The keyword joining a body to what follows it: `else` after an `if`
+  # body, `while` after a `do` body. It follows a `}` on the same line;
+  # after a body left unbraced it needs a line of its own, since that
+  # body's statement ends at the line break.
+  _joint(body, word: string) {
+    var token = self.src.next(body.end)
+    var gap = self.src.take(token.start)
+
+    self.src.skip(token.end)
+
+    if !self._closes(body) {
+      return [self._break(gap, HARDLINE), word]
+    }
+
+    if gap.comments.is_empty() {
+      return [' ', word]
+    }
+
+    return [self._break(gap, ' '), word]
+  }
+
+  # Statements
+
+  _if(node) {
+    var f = node.fields
+    var out = ['if ', self._expr(f.condition), self._body(f.then)]
+
+    if f.otherwise == nil {
+      return out
+    }
+
+    out.append(self._joint(f.then, 'else'))
+
+    if f.otherwise.kind == 'If' {
+      out.append([' ', self._flush(f.otherwise.start), self._if(f.otherwise)])
     } else {
-      lines.append(inner + line)
-      line = text
-    }
-  }
-
-  if line != '' {
-    lines.append(inner + line)
-  }
-
-  _emit_line(
-    [_raw(group.close.kind, opener.close)] + tail, depth, suffix, lines, ctx,
-    continued,
-  )
-}
-
-def _last_group(items: list) {
-  var index = items.length() - 1
-
-  while index >= 0 {
-    var node = items[index]
-
-    # A subscript is never a place to break: filling its parts across
-    # lines would put a comma after the last one, and in a subscript
-    # that comma is the difference between an item and a slice.
-    if node.node == 'group'
-      and node.kind != 'block'
-      and node.kind != 'index'
-      and !node.items.is_empty() {
-      return index
+      out.append(self._body(f.otherwise))
     }
 
-    index -= 1
+    return out
   }
 
-  return -1
-}
+  _while(node) {
+    var f = node.fields
 
-# The comma-separated parts of a group's contents, each a node list.
-def _split_commas(items: list) {
-  var parts = []
-  var current = []
+    return ['while ', self._expr(f.condition), self._body(f.body)]
+  }
 
-  for node in items {
-    if _is_break(node) {
-      continue
+  _do(node) {
+    var f = node.fields
+    var body = self._body(f.body)
+    var joint = self._joint(f.body, 'while')
+
+    return ['do', body, joint, ' ', self._expr(f.condition)]
+  }
+
+  _for(node) {
+    var f = node.fields
+    var out = ['for ']
+
+    if f.key_span != nil {
+      out.append([self._flush(f.key_span.start), f.key, ', '])
     }
 
-    if node.node == 'tok' and node.atom.kind == 'Comma' {
-      parts.append(current)
-      current = []
+    out.append([self._flush(f.value_span.start), f.value, ' in '])
+    self.src.skip(f.value_span.end)
 
-      continue
+    var in_word = self.src.next(f.value_span.end)
+
+    out.append(self._flush(in_word.start))
+    self.src.skip(in_word.end)
+    out.append(self._expr(f.iterable))
+    out.append(self._body(f.body))
+
+    return out
+  }
+
+  # `iter init; condition; steps`. A clause left empty keeps the space
+  # that shows it is there: `iter ; i < n; i++`.
+  _iter(node) {
+    var f = node.fields
+    var out = ['iter']
+
+    if f.initializer != nil {
+      var init = f.initializer
+      var spelled = self.src.next(init.start).kind == 'Var'
+
+      if init.kind == 'VarList' {
+        out.append([' ', self._var_list(init, spelled)])
+      } else {
+        out.append([' ', self._var(init, spelled)])
+      }
+    } else {
+      out.append(' ')
     }
 
-    current.append(node)
+    out.append(';')
+
+    if f.condition != nil {
+      out.append([' ', self._expr(f.condition)])
+    }
+
+    out.append(';')
+
+    if !f.steps.is_empty() {
+      var steps = []
+      var index = 0
+
+      for step in f.steps {
+        if index > 0 {
+          steps.append(', ')
+        }
+
+        steps.append(self._expr(step))
+        index += 1
+      }
+
+      out.append([' ', steps])
+    }
+
+    out.append([' ', self._block(f.body)])
+
+    return out
   }
 
-  if !current.is_empty() {
-    parts.append(current)
+  _using(node) {
+    var f = node.fields
+    var out = ['using ', self._expr(f.subject), ' ']
+    var open = self.src.next(f.subject.end)
+    var close = node.end - 1
+    var arms = _code(f.arms)
+
+    out.append(self._flush(open.start))
+    self.src.skip(open.end)
+
+    if f.default_body != nil {
+      var word = self.src.next(arms.is_empty() ? open.end : arms.last().end)
+
+      arms.append({
+        kind: 'Default',
+        start: word.start,
+        end: f.default_body.end,
+        body: f.default_body,
+        word_end: word.end,
+      })
+    }
+
+    if arms.is_empty() and self.src.quiet(open.end, close) {
+      var spread = self.src.breaks(open.end, close)
+
+      self.src.skip(node.end)
+      out.append(spread ? ['{', HARDLINE, '}'] : '{}')
+
+      return out
+    }
+
+    var body = self._sequence(arms, close, false)
+
+    self.src.skip(node.end)
+    out.append(['{', nest(body), HARDLINE, '}'])
+
+    return out
   }
 
-  return parts
+  _when(node) {
+    var f = node.fields
+    var labels = []
+    var index = 0
+
+    self.src.skip(node.start + 4)
+
+    for label in f.labels {
+      if index > 0 {
+        var comma = self.src.next(f.labels[index - 1].end)
+        var gap = self.src.take(comma.start)
+
+        self.src.skip(comma.end)
+        labels.append([self._loose(gap), ','])
+        labels.append(self._break(self.src.take(label.start), LINE))
+      }
+
+      labels.append(self._expr(label))
+      index += 1
+    }
+
+    return ['when ', group(indent(labels)), self._arm(f.body)]
+  }
+
+  _default(arm) {
+    self.src.skip(arm.word_end)
+
+    return ['default', self._arm(arm.body)]
+  }
+
+  # The body of a `when` or `default` arm. Written without braces, it
+  # stays on the arm's line while that line is at most `_ARM_WIDTH`
+  # wide, and is braced otherwise.
+  _arm(body) {
+    if body.kind == 'Block' or _DECLARING.contains(body.kind) {
+      return self._body(body)
+    }
+
+    var gap = self.src.take(body.start)
+
+    if !gap.comments.is_empty() {
+      return [
+        ' {', nest([self._break(gap, HARDLINE), self._item(body)]), HARDLINE,
+        '}',
+      ]
+    }
+
+    var statement = self._item(body)
+    var braced = [' {', nest([HARDLINE, statement]), HARDLINE, '}']
+
+    return choose(_ARM_WIDTH, [' ', statement], braced)
+  }
+
+  _catch(node) {
+    var f = node.fields
+    var out = ['catch ', self._block(f.body)]
+
+    if f.error_var == nil {
+      return out
+    }
+
+    var as_word = self.src.next(f.body.end)
+
+    out.append([self._flush(as_word.start), ' as '])
+    self.src.skip(as_word.end)
+    out.append(self._expr(f.error_var))
+
+    if f.catch_body != nil {
+      out.append([' ', self._block(f.catch_body)])
+    }
+
+    return out
+  }
+
+  # `return` and `raise`, with their value when the source gave one.
+  _keyword(node, word: string) {
+    var value = node.fields.value
+
+    self.src.skip(node.start + word.length())
+
+    if value.kind == 'Nil' and _implicit(value) {
+      return word
+    }
+
+    return [word, ' ', self._expr(value)]
+  }
+
+  _assert(node) {
+    var f = node.fields
+    var condition = self._expr(f.condition)
+
+    if f.message == nil {
+      return ['assert ', condition]
+    }
+
+    var comma = self.src.next(f.condition.end)
+    var before = self._loose(self.src.take(comma.start))
+
+    self.src.skip(comma.end)
+
+    var gap = self.src.take(f.message.start)
+    var message = self._expr(f.message)
+
+    return [
+      'assert ',
+      group(indent([condition, before, ',', self._break(gap, LINE), message])),
+    ]
+  }
+
+  # `var name: type = value`, or the same without `var` in an `iter`
+  # that leaves the word out.
+  _var(node, spelled: bool) {
+    var f = node.fields
+    var out = []
+
+    if spelled {
+      out.append(f.is_constant ? 'const ' : 'var ')
+    }
+
+    out.append([self._flush(f.name_span.start), f.name])
+    self.src.skip(f.name_span.end)
+
+    if f.type_hint != nil and !_implicit(f.type_hint) {
+      out.append([': ', self._type(f.type_hint)])
+    }
+
+    if !(f.value.kind == 'Nil' and _implicit(f.value)) {
+      var equal = self.src.next(self.src.taken)
+
+      out.append([self._flush(equal.start), ' = '])
+      self.src.skip(equal.end)
+      out.append(self._expr(f.value))
+    }
+
+    return out
+  }
+
+  # `var a = 1, b = 2`, broken after a comma where the author broke it.
+  _var_list(node, spelled: bool) {
+    var declarations = node.fields.declarations
+    var first = declarations[0]
+    var parts = []
+    var index = 0
+
+    for declaration in declarations {
+      if index > 0 {
+        var comma = self.src.next(declarations[index - 1].end)
+
+        parts.append([self._flush(comma.start), ','])
+        self.src.skip(comma.end)
+        parts.append(self._break(self.src.take(declaration.start), LINE))
+      }
+
+      parts.append(self._var(declaration, false))
+      index += 1
+    }
+
+    var word = spelled ? (first.fields.is_constant ? 'const ' : 'var ') : ''
+
+    return [word, group(indent(parts))]
+  }
+
+  _import(node) {
+    var f = node.fields
+    var out = ['import ']
+
+    if f.exported {
+      out.append('@')
+    }
+
+    var previous = nil
+
+    for segment in f.segments {
+      if previous != nil and segment.start > previous.end {
+        out.append(' ')
+      }
+
+      out.append(segment.text)
+      previous = segment
+    }
+
+    var path_end = previous == nil ? node.start + 6 : previous.end
+
+    self.src.skip(path_end)
+
+    if f.imports_all or !f.elements.is_empty() {
+      var open = self.src.next(path_end)
+
+      out.append(' ')
+
+      if f.imports_all {
+        var star = self.src.next(open.end)
+        var close = self.src.next(star.end)
+
+        out.append([
+          self._flush(open.start), '{ ', self._flush(star.start), '* ',
+        ])
+        self.src.skip(star.end)
+        out.append([self._flush(close.start), '}'])
+        self.src.skip(close.end)
+
+        return out
+      }
+
+      var close = self._closer(open, f.elements)
+
+      out.append(self._bracket(
+        '{', '}', open.start, close.start, f.elements, true, true, 'expr',
+      ))
+
+      return out
+    }
+
+    if f.aliased {
+      var as_word = self.src.next(path_end)
+
+      out.append([self._flush(as_word.start), ' as '])
+      self.src.skip(as_word.end)
+      out.append(self._leaf(f.name))
+    }
+
+    return out
+  }
+
+  # Declarations
+
+  _function(node) {
+    var f = node.fields
+    var out = ['def ', self._flush(f.name_span.start), f.name]
+
+    self.src.skip(f.name_span.end)
+    out.append(self._parameters(
+      self.src.next(f.name_span.end), f.parameters, f.is_variadic,
+    ))
+    out.append([' ', self._block(f.body)])
+
+    return out
+  }
+
+  _method(node) {
+    var f = node.fields
+    var out = []
+
+    if f.is_static {
+      out.append('static ')
+    }
+
+    out.append([self._flush(f.name_span.start), f.name])
+    self.src.skip(f.name_span.end)
+    out.append(self._parameters(
+      self.src.next(f.name_span.end), f.parameters, f.is_variadic,
+    ))
+    out.append([' ', self._block(f.body)])
+
+    return out
+  }
+
+  _property(node) {
+    var f = node.fields
+    var out = []
+
+    if f.is_static {
+      out.append('static ')
+    }
+
+    out.append(f.is_constant ? 'const ' : 'var ')
+    out.append([self._flush(f.name_span.start), f.name])
+    self.src.skip(f.name_span.end)
+
+    if !_implicit(f.type_hint) {
+      out.append([': ', self._type(f.type_hint)])
+    }
+
+    if !(f.value.kind == 'Nil' and _implicit(f.value)) {
+      var equal = self.src.next(self.src.taken)
+
+      out.append([self._flush(equal.start), ' = '])
+      self.src.skip(equal.end)
+      out.append(self._expr(f.value))
+    }
+
+    return out
+  }
+
+  # Where a class's header ends: after its name, or the class it builds
+  # on or extends.
+  _class_head_end(node) {
+    var f = node.fields
+
+    return f.superclass == nil ? f.name_span.end : f.superclass.end
+  }
+
+  _class(node) {
+    var f = node.fields
+    var out = ['class ', self._flush(f.name_span.start), f.name]
+
+    self.src.skip(f.name_span.end)
+
+    if f.superclass != nil {
+      var arrow = self.src.next(f.name_span.end)
+
+      out.append([self._flush(arrow.start), f.is_extension ? ' > ' : ' < '])
+      self.src.skip(arrow.end)
+      out.append(self._expr(f.superclass))
+    }
+
+    var open = self.src.next(self._class_head_end(node))
+    var close = node.end - 1
+    var members = _code(f.properties + f.methods).sort(
+      @(a, b) => a.start - b.start,
+    )
+
+    out.append([' ', self._flush(open.start)])
+    self.src.skip(open.end)
+
+    if members.is_empty() and self.src.quiet(open.end, close) {
+      var spread = self.src.breaks(open.end, close)
+
+      self.src.skip(node.end)
+      out.append(spread ? ['{', HARDLINE, '}'] : '{}')
+
+      return out
+    }
+
+    var body = self._sequence(members, close, false)
+
+    self.src.skip(node.end)
+    out.append(['{', nest(body), HARDLINE, '}'])
+
+    return out
+  }
+
+  # The `)` closing a parameter list or the `}` closing an import's names
+  # that opened at `open`: the next token after the last item, or after
+  # its trailing comma.
+  _closer(open, items: list) {
+    if items.is_empty() {
+      return self.src.next(open.end)
+    }
+
+    var after = self.src.next(items.last().end)
+
+    if after.kind == 'Comma' {
+      return self.src.next(after.end)
+    }
+
+    return after
+  }
+
+  _parameters(open, parameters: list, variadic: bool) {
+    var close = self._closer(open, parameters)
+
+    return self._bracket(
+      '(', ')', open.start, close.start, parameters, false, !variadic,
+      'parameter',
+    )
+  }
+
+  _parameter(node) {
+    var f = node.fields
+    var out = [self._flush(node.start)]
+
+    if self.src.text[node.start] == '.' {
+      out.append('...')
+    }
+
+    out.append(f.name)
+    self.src.skip(f.name_span.end)
+
+    if !_implicit(f.type_hint) {
+      out.append([': ', self._type(f.type_hint)])
+    }
+
+    return out
+  }
+
+  # A type annotation, `?int|string`, written as the source spells its
+  # names.
+  _type(hint) {
+    var lead = self._flush(hint.start)
+    var names = hint.fields.types.map(
+      @(name) => self.src.slice(name.start, name.end),
+    )
+
+    self.src.skip(hint.end)
+
+    return [lead, hint.fields.nullable ? '?' : '', '|'.join(names)]
+  }
+
+  # Lists
+
+  # A bracketed list of items separated by commas: arguments, parameters,
+  # a list or dictionary literal, an import's names.
+  #
+  # A list the author wrote on one line is the formatter's: kept flat
+  # when it fits, otherwise opened out with as many items to a line as
+  # fit and a trailing comma. One the author broke keeps its lines while
+  # they fit, the opener's and closer's breaks included; once a line of
+  # several items runs past the width, the items are laid out again as
+  # many to a line as fit. A lone item that opens brackets of its own
+  # hugs these, so it breaks inside rather than moving to a line of its
+  # own.
+  #
+  # A dictionary made up mostly of `key: value` pairs takes one pair to
+  # a line instead, whenever it does not stay on one line.
+  _bracket(
+    open: string, close: string, open_at: number, close_at: number,
+    items: list, spaced: bool, trailing: bool, kind: string,
+  ) {
+    var lead = self._flush(open_at)
+    var count = items.length()
+
+    self.src.skip(open_at + 1)
+
+    if count == 0 {
+      var inside = self.src.take(close_at)
+
+      self.src.skip(close_at + 1)
+
+      if inside.comments.is_empty() {
+        return [lead, open, close]
+      }
+
+      return [
+        lead, base([open, nest(self._break(inside, '')), HARDLINE, close]),
+      ]
+    }
+
+    var after_open = self.src.breaks(open_at + 1, items[0].start)
+    var before_close = self.src.breaks(items.last().end, close_at)
+    var authored = after_open or before_close
+    var index = 0
+
+    while !authored and index < count - 1 {
+      authored = self.src.breaks(items[index].end, items[index + 1].start)
+      index += 1
+    }
+
+    var paired = kind == 'entry' and self._pairs(items) * 2 > count
+    var space = spaced ? ' ' : ''
+    var opening = nil
+    var parts = []
+
+    index = 0
+
+    for item in items {
+      var gap = self.src.take(item.start)
+
+      if index == 0 {
+        opening = gap
+      } else {
+        parts.append(self._separator(gap))
+      }
+
+      var item_doc = self._element(kind, item)
+
+      if index < count - 1 {
+        var comma = self.src.next(item.end)
+        var before = self._loose(self.src.take(comma.start))
+
+        self.src.skip(comma.end)
+        parts.append([item_doc, before, ','])
+      } else {
+        var after = self.src.next(item.end)
+
+        if after.kind == 'Comma' and after.start < close_at {
+          item_doc = [item_doc, self._loose(self.src.take(after.start))]
+          self.src.skip(after.end)
+        }
+
+        parts.append(item_doc)
+      }
+
+      index += 1
+    }
+
+    var closing = self.src.take(close_at)
+
+    self.src.skip(close_at + 1)
+
+    if paired {
+      return [
+        lead, self._paired(open, close, opening, parts, closing, authored),
+      ]
+    }
+
+    if !authored {
+      var opener = self._break(opening, '')
+      var closer = self._break(closing, '')
+
+      if count == 1 and kind != 'entry' and _hugs(items[0]) {
+        return [lead, open, opener, space, parts[0], closer, space, close]
+      }
+
+      var soft = spaced ? LINE : SOFTLINE
+
+      return [
+        lead,
+        group(base([
+          open, opener, nest([soft, fill(parts)]),
+          trailing ? if_break(',', '') : '', closer, soft, close,
+        ])),
+      ]
+    }
+
+    var first = after_open
+      ? self._break(opening, HARDLINE)
+      : [self._break(opening, ''), space]
+    var last = before_close
+      ? [trailing ? ',' : '', self._break(closing, HARDLINE)]
+      : [self._break(closing, ''), space]
+
+    return [lead, base([open, nest([first, fill(parts)]), last, close])]
+  }
+
+  # What separates two items of a bracketed list the author broke: the
+  # comments between them, and a line break that is kept while the lines
+  # around it fit.
+  _separator(gap) {
+    if gap.comments.is_empty() and gap.newlines == 1 {
+      return KEPTLINE
+    }
+
+    return self._break(gap, LINE)
+  }
+
+  # How many entries of a dictionary are `key: value` pairs rather than
+  # the shorthand `name`.
+  _pairs(entries: list) {
+    var count = 0
+
+    for entry in entries {
+      if !self._shorthand(entry) {
+        count += 1
+      }
+    }
+
+    return count
+  }
+
+  # A dictionary of `key: value` pairs: on one line when it fits there,
+  # otherwise one pair to a line, its braces on lines of their own. One
+  # the author broke stays broken. `parts` alternates the pairs, each
+  # with its comma, and what separates them.
+  _paired(
+    open: string, close: string, opening, parts: list, closing, authored: bool,
+  ) {
+    if !authored {
+      return group(base([
+        open, self._break(opening, ''), nest([LINE, parts]), if_break(',', ''),
+        self._break(closing, ''), LINE, close,
+      ]))
+    }
+
+    var lines = []
+    var index = 0
+
+    for part in parts {
+      var apart = index % 2 == 1 and (part == LINE or part == KEPTLINE)
+
+      lines.append(apart ? HARDLINE : part)
+      index += 1
+    }
+
+    return base([
+      open, nest([self._break(opening, HARDLINE), lines]), ',',
+      self._break(closing, HARDLINE), close,
+    ])
+  }
+
+  # Whether a dictionary entry is written as the shorthand `name`: it was
+  # written that way, or as `name: name` with the key a bare name.
+  _shorthand(entry) {
+    var key = entry.key
+    var value = entry.value
+
+    if value.kind == 'Shorthand' {
+      return true
+    }
+
+    return key.kind == 'Literal'
+      and !_QUOTES.contains(self.src.text[key.start])
+      and value.kind == 'Identifier'
+      and value.fields.name == key.fields.value
+      and self.src.quiet(key.end, value.end)
+  }
+
+  # One item of a bracketed list.
+  _element(kind: string, item) {
+    using kind {
+      when 'expr' return self._expr(item)
+      when 'parameter' return self._parameter(item)
+      when 'entry' return self._entry(item)
+    }
+
+    raise Error('there is no layout for a ${kind} list item')
+  }
+
+  # A dictionary entry, `key: value`. `name: name` with the key written
+  # as a bare name is written as the shorthand `name`.
+  _entry(entry) {
+    var key = entry.key
+    var value = entry.value
+
+    if self._shorthand(entry) {
+      var name = self._leaf(key)
+
+      self.src.skip(value.end)
+
+      return name
+    }
+
+    var key_doc = self._expr(key)
+    var colon = self.src.next(key.end)
+    var before = self._loose(self.src.take(colon.start))
+
+    self.src.skip(colon.end)
+
+    var gap = self.src.take(value.start)
+    var value_doc = self._expr(value)
+
+    if gap.is_broken() {
+      return [key_doc, before, ':', indent([self._break(gap, ' '), value_doc])]
+    }
+
+    return [key_doc, before, ':', self._loose(gap), ' ', value_doc]
+  }
+
+  # Expressions
+
+  _expr(node) {
+    if _LEAVES.contains(node.kind) {
+      return self._leaf(node)
+    }
+
+    using node.kind {
+      when 'Unary' return self._unary(node)
+      when 'Binary', 'Logical', 'Circuit' {
+        return self._operators(node)
+      }
+      when 'Condition' return self._conditional(node)
+      when 'Grouping' return self._grouping(node)
+      when 'Range' return self._range(node)
+      when 'Call', 'Get', 'Index', 'Slice' {
+        return self._chain(node)
+      }
+      when 'Set' return self._set(node)
+      when 'List' return self._list(node)
+      when 'Dict' return self._dict(node)
+      when 'Assign', 'CompoundAssign' {
+        return self._assign(node)
+      }
+      when 'Update' return self._update(node)
+      when 'Anonymous' return self._anonymous(node)
+      when 'Shorthand' return self._leaf(node)
+    }
+
+    raise Error('there is no layout for a ${node.kind}')
+  }
+
+  # Code written exactly as the source has it: a name, a number, a
+  # string with everything inside it.
+  _leaf(node) {
+    var lead = self._flush(node.start)
+
+    self.src.skip(node.end)
+
+    return [lead, self.src.slice(node.start, node.end)]
+  }
+
+  _unary(node) {
+    var lead = self._flush(node.start)
+    var operator = self.src.next(node.start)
+    var operand = node.fields.operand
+
+    self.src.skip(operator.end)
+
+    # `- -x` written together would read as a decrement.
+    var apart = operator.kind == 'Minus'
+      and operand.kind == 'Unary'
+      and operand.fields.op == 'Minus'
+
+    return [lead, operator.text, apart ? ' ' : '', self._expr(operand)]
+  }
+
+  # A run of operators of one level. Written on one line, it stays there
+  # when it fits and otherwise breaks at every one of its operators.
+  # Broken by the author, it keeps their breaks and breaks elsewhere only
+  # as the width needs.
+  #
+  # The operator leads the line it continues. A run holding a `-` is the
+  # exception: a line opening with `-` is a new statement, so every
+  # operator in it trails its line instead. Where the author broke after
+  # an operator, the run follows them.
+  _operators(node) {
+    var operands = _operands(node)
+    var count = operands.length()
+    var operators = []
+    var before = []
+    var after = []
+    var index = 0
+
+    while index < count - 1 {
+      var token = self.src.next(operands[index].end)
+
+      operators.append(token)
+      before.append(self.src.breaks(operands[index].end, token.start))
+      after.append(self.src.breaks(token.end, operands[index + 1].start))
+      index += 1
+    }
+
+    var authored = before.contains(true) or after.contains(true)
+    var trails = after.contains(true)
+      or operators.some(@(token) => token.kind == 'Minus')
+    var contents = [[self._expr(operands[0])]]
+    var separators = []
+
+    index = 0
+
+    for token in operators {
+      var leading = before[index] or (!after[index] and !trails)
+      var gap_before = self.src.take(token.start)
+
+      self.src.skip(token.end)
+
+      var gap_after = self.src.take(operands[index + 1].start)
+      var right = self._expr(operands[index + 1])
+
+      if leading {
+        separators.append(self._break(gap_before, LINE))
+        contents.append([token.text, self._loose(gap_after), ' ', right])
+      } else {
+        contents.last().append([self._loose(gap_before), ' ', token.text])
+        separators.append(self._break(gap_after, LINE))
+        contents.append([right])
+      }
+
+      index += 1
+    }
+
+    var parts = [contents[0]]
+
+    index = 0
+
+    for separator in separators {
+      parts.append(separator)
+      parts.append(contents[index + 1])
+      index += 1
+    }
+
+    if authored {
+      return indent(fill(parts))
+    }
+
+    return group(indent(parts))
+  }
+
+  # `condition ? then : otherwise`, broken before the `?` and the `:`
+  # when it does not fit, or wherever the author broke it.
+  _conditional(node) {
+    var f = node.fields
+    var question = self.src.next(f.condition.end)
+    var colon = self.src.next(f.then.end)
+    var marks = [question, colon]
+    var sides = [[f.condition, f.then], [f.then, f.otherwise]]
+    var authored = false
+
+    for pair in sides {
+      if self.src.breaks(pair[0].end, pair[1].start) {
+        authored = true
+      }
+    }
+
+    var contents = [[self._expr(f.condition)]]
+    var separators = []
+    var index = 0
+
+    for token in marks {
+      var next = sides[index][1]
+      var broke_before = self.src.breaks(sides[index][0].end, token.start)
+      var broke_after = self.src.breaks(token.end, next.start)
+      var gap_before = self.src.take(token.start)
+
+      self.src.skip(token.end)
+
+      var gap_after = self.src.take(next.start)
+      var right = self._expr(next)
+
+      if broke_after and !broke_before {
+        contents.last().append([self._loose(gap_before), ' ', token.text])
+        separators.append(self._break(gap_after, LINE))
+        contents.append([right])
+      } else {
+        separators.append(self._break(gap_before, LINE))
+        contents.append([token.text, self._loose(gap_after), ' ', right])
+      }
+
+      index += 1
+    }
+
+    var parts = [
+      contents[0], separators[0], contents[1], separators[1], contents[2],
+    ]
+
+    if authored {
+      return indent(fill(parts))
+    }
+
+    return group(indent(parts))
+  }
+
+  # An expression in parentheses. Its insides break as they would
+  # anywhere; the parentheses keep the breaks the author gave them.
+  _grouping(node) {
+    var lead = self._flush(node.start)
+    var inner = node.fields.inner
+
+    self.src.skip(node.start + 1)
+
+    var opening = self.src.take(inner.start)
+    var inner_doc = self._expr(inner)
+    var closing = self.src.take(node.end - 1)
+
+    self.src.skip(node.end)
+
+    if !opening.is_broken() and !closing.is_broken() {
+      return [
+        lead, '(', self._loose(opening), inner_doc, self._loose(closing), ')',
+      ]
+    }
+
+    return [
+      lead,
+      base([
+        '(', nest([self._break(opening, ''), inner_doc]),
+        self._break(closing, ''), ')',
+      ]),
+    ]
+  }
+
+  _range(node) {
+    var f = node.fields
+    var lower = self._expr(f.lower)
+    var dots = self.src.next(f.lower.end)
+    var before = self._flush(dots.start)
+
+    self.src.skip(dots.end)
+
+    return [
+      lower, before, '..', self._flush(f.upper.start), self._expr(f.upper),
+    ]
+  }
+
+  # A chain of calls, property reads and subscripts on one value. With
+  # two or more method calls in it, it breaks before each call's `.`,
+  # one call to a line, and the reads before the first call stay with
+  # the value they start from. A `.` the author put at the start of a
+  # line stays there.
+  _chain(node) {
+    var backwards = []
+    var current = node
+
+    while ['Call', 'Get', 'Index', 'Slice'].contains(current.kind) {
+      backwards.append(current)
+      current = current.kind == 'Call'
+        ? current.fields.callee
+        : current.fields.object
+    }
+
+    var links = backwards.reverse()
+    var count = links.length()
+    var calls = 0
+    var index = 0
+
+    while index < count - 1 {
+      if links[index].kind == 'Get' and links[index + 1].kind == 'Call' {
+        calls += 1
+      }
+
+      index += 1
+    }
+
+    var segments = [[self._expr(current)]]
+    var separators = []
+    var authored = false
+
+    index = 0
+
+    for link in links {
+      var calling = calls >= 2
+        and link.kind == 'Get'
+        and index + 1 < count
+        and links[index + 1].kind == 'Call'
+
+      if link.kind == 'Get' {
+        var object = link.fields.object
+        var dot = self.src.next(object.end)
+        var broke = self.src.breaks(object.end, link.fields.name_span.start)
+        var gap = self.src.take(dot.start)
+
+        self.src.skip(dot.end)
+
+        var name = [self._flush(link.fields.name_span.start), link.fields.name]
+
+        self.src.skip(link.fields.name_span.end)
+
+        if calling or broke {
+          authored = authored or broke
+          separators.append(self._break(gap, calling ? SOFTLINE : ''))
+          segments.append(['.', name])
+        } else {
+          segments.last().append([self._loose(gap), '.', name])
+        }
+      } else if link.kind == 'Call' {
+        segments.last().append(self._arguments(link))
+      } else {
+        segments.last().append(self._subscript(link))
+      }
+
+      index += 1
+    }
+
+    if segments.length() == 1 {
+      return segments[0]
+    }
+
+    var parts = [segments[0]]
+
+    index = 0
+
+    for separator in separators {
+      parts.append(separator)
+      parts.append(segments[index + 1])
+      index += 1
+    }
+
+    if calls >= 2 and !authored {
+      return group(indent(parts))
+    }
+
+    return indent(fill(parts))
+  }
+
+  _arguments(call) {
+    var callee = call.fields.callee
+    var open = self.src.next(callee.end)
+
+    return self._bracket(
+      '(', ')', open.start, call.end - 1, call.fields.arguments, false, true,
+      'expr',
+    )
+  }
+
+  # A subscript, `s[i]`, or a slice. Its commas say what it reads, so it
+  # is written as it stands: `s[1,]`, `s[,3]`, `s[1, 3]`.
+  _subscript(link) {
+    var f = link.fields
+    var open = self.src.next(f.object.end)
+    var close = link.end - 1
+    var out = [self._flush(open.start), '[']
+
+    self.src.skip(open.end)
+
+    if link.kind == 'Index' {
+      var opening = self.src.take(f.index.start)
+      var index_doc = self._expr(f.index)
+      var closing = self.src.take(close)
+
+      self.src.skip(link.end)
+
+      return [
+        out, nest([self._break(opening, ''), index_doc]),
+        self._break(closing, ''), ']',
+      ]
+    }
+
+    var parts = []
+
+    if !_implicit(f.lower) {
+      parts.append([
+        self._break(self.src.take(f.lower.start), ''), self._expr(f.lower),
+      ])
+    }
+
+    var comma = self.src.next(_implicit(f.lower) ? open.end : f.lower.end)
+
+    parts.append([self._loose(self.src.take(comma.start)), ','])
+    self.src.skip(comma.end)
+
+    if !_implicit(f.upper) {
+      var gap = self.src.take(f.upper.start)
+      var spacer = _implicit(f.lower) ? '' : ' '
+
+      parts.append([self._break(gap, spacer), self._expr(f.upper)])
+    }
+
+    var closing = self.src.take(close)
+
+    self.src.skip(link.end)
+
+    return [out, nest(parts), self._break(closing, ''), ']']
+  }
+
+  _set(node) {
+    var f = node.fields
+    var object = self._expr(f.object)
+    var dot = self.src.next(f.object.end)
+    var gap = self.src.take(dot.start)
+
+    self.src.skip(dot.end)
+
+    var name = [self._flush(f.name_span.start), f.name]
+
+    self.src.skip(f.name_span.end)
+
+    var equal = self.src.next(f.name_span.end)
+    var before = self._flush(equal.start)
+
+    self.src.skip(equal.end)
+
+    var lead = gap.is_broken()
+      ? indent([self._break(gap, ''), '.'])
+      : [self._loose(gap), '.']
+
+    return [object, lead, name, before, ' = ', self._expr(f.value)]
+  }
+
+  _list(node) {
+    return self._bracket(
+      '[', ']', node.start, node.end - 1, node.fields.items, false, true,
+      'expr',
+    )
+  }
+
+  _dict(node) {
+    var f = node.fields
+    var entries = []
+    var index = 0
+
+    for key in f.keys {
+      var value = f.values[index]
+      var end = value.end > key.end ? value.end : key.end
+
+      entries.append({ start: key.start, end, key, value })
+      index += 1
+    }
+
+    return self._bracket(
+      '{', '}', node.start, node.end - 1, entries, true, true, 'entry',
+    )
+  }
+
+  # `target = value` and its compound forms. Nothing breaks after the
+  # operator unless the author broke it there.
+  _assign(node) {
+    var f = node.fields
+    var target = self._expr(f.target)
+    var operator = self.src.next(f.target.end)
+    var before = self._loose(self.src.take(operator.start))
+
+    self.src.skip(operator.end)
+
+    var gap = self.src.take(f.value.start)
+    var value = self._expr(f.value)
+
+    if gap.is_broken() {
+      return [
+        target, before, ' ', operator.text,
+        indent([self._break(gap, ' '), value]),
+      ]
+    }
+
+    return [target, before, ' ', operator.text, self._loose(gap), ' ', value]
+  }
+
+  _update(node) {
+    var target = node.fields.target
+    var target_doc = self._expr(target)
+    var operator = self.src.next(target.end)
+    var before = self._loose(self.src.take(operator.start))
+
+    self.src.skip(operator.end)
+
+    return [target_doc, before, operator.text]
+  }
+
+  # A function written as a value: `def(x) { }`, `@(x) { }`, `@{ }` or
+  # `@(x) => x`. Its body opens from the line it starts on.
+  _anonymous(node) {
+    var function = node.fields.declaration
+    var f = function.fields
+    var lead = self._flush(node.start)
+    var word = self.src.next(node.start)
+    var out = [word.kind == 'Def' ? 'def' : '@']
+
+    self.src.skip(word.end)
+
+    var after = self.src.next(word.end)
+    var parameters = after.kind == 'Lparen'
+
+    if parameters {
+      out.append(self._parameters(after, f.parameters, f.is_variadic))
+    }
+
+    var body = f.body
+
+    if body.kind != 'Block' {
+      var arrow = self.src.next(self.src.taken)
+
+      out.append([self._flush(arrow.start), ' => '])
+      self.src.skip(arrow.end)
+      out.append(self._expr(body.fields.value))
+
+      return [lead, out]
+    }
+
+    var tight = word.kind != 'Def' and !parameters
+
+    out.append([tight ? '' : ' ', self._block(body)])
+
+    return [lead, base(out)]
+  }
 }

@@ -1,0 +1,58 @@
+# Tests for the check that formatting changed nothing but layout: two
+# sources are one program when their trees match, positions aside, and
+# their comments are the same in the same order.
+
+import test { * }
+
+import zuri
+
+import ..verify { shape, comments }
+
+def same(a, b) {
+  return shape(zuri.parse(a)) == shape(zuri.parse(b))
+}
+
+describe('shape', @{
+  it('ignores where code sits and how it is spaced', @{
+    expect(same('var x=f(a,b)', 'var x = f(\n  a,\n  b,\n)')).to_be(true)
+  })
+
+  it('tells two programs apart', @{
+    expect(same('var x = a - b', 'var x = a\n-b')).to_be(false)
+    expect(same('echo s[1]', 'echo s[1,]')).to_be(false)
+  })
+
+  it('reads the dictionary shorthand as the entry it stands for', @{
+    expect(same('var d = {\n  name: name,\n}', 'var d = { name }')).to_be(true)
+  })
+
+  it('reads a braced single statement as that statement in a body', @{
+    expect(same('if a b()', 'if a {\n  b()\n}')).to_be(true)
+    expect(same('while a b()', 'while a {\n  b()\n}')).to_be(true)
+  })
+
+  # Braces give a declaration a scope of its own, so a braced `var` is a
+  # different program from an unbraced one.
+  it('never reads a braced declaration as an unbraced one', @{
+    expect(same('if a var b = 1', 'if a {\n  var b = 1\n}')).to_be(false)
+  })
+
+  it('leaves comments out of the tree', @{
+    expect(same('a() # note', 'a()')).to_be(true)
+  })
+})
+
+describe('comments', @{
+  it('lists every comment in the order it was written', @{
+    var nodes = zuri.parse('# one\ndef f() {\n  g(a, # two\n    b)\n  # three\n}')
+
+    expect(comments(nodes)).to_equal(['# one', '# two', '# three'])
+  })
+
+  it('ignores the indent of a doc block and the end of a comment', @{
+    var before = comments(zuri.parse('/**\n * x\n */\na() # c   '))
+    var after = comments(zuri.parse('  /**\n     * x\n     */\na() # c'))
+
+    expect(before).to_equal(after)
+  })
+})

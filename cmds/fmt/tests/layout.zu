@@ -1,18 +1,19 @@
-# Tests for the line-breaking layer: what stays on one line, what a block
-# does, and how a line too long for the width is broken.
+# Tests for the layout: what each statement, declaration and expression
+# prints as, where a line too long for the width breaks, and how the
+# lines the author wrote are kept.
 
 import test { * }
 
 import ..engine { format }
 
-# The formatted source, split into its lines with the trailing blank
+# The formatted source, split into its lines with the trailing newline
 # dropped, so a test can point at one line.
 def lines(source) {
   return format(source).rtrim('\n').split('\n')
 }
 
 describe('blocks', @{
-  it('keeps a block open, one statement to a line', @{
+  it('opens a block, one statement to a line', @{
     expect(lines('def add(a,b){return a+b}')).to_equal([
       'def add(a, b) {', '  return a + b', '}',
     ])
@@ -24,57 +25,203 @@ describe('blocks', @{
     ])
   })
 
-  it('keeps a no-argument closure tight as `@{`', @{
-    expect(lines('each(items, @{ work() })')).to_equal([
-      'each(items, @{', '  work()', '})',
+  it('splits statements joined by a semicolon', @{
+    expect(lines('var a = 1; var b = 2')).to_equal(['var a = 1', 'var b = 2'])
+  })
+
+  it('leaves an empty block as it was written', @{
+    expect(lines('def f() {}')).to_equal(['def f() {}'])
+    expect(lines('def f() {\n}')).to_equal(['def f() {', '}'])
+  })
+
+  it('joins else, while and as to the brace before them', @{
+    expect(lines('if a {\n  b()\n}\nelse {\n  c()\n}')).to_equal([
+      'if a {', '  b()', '} else {', '  c()', '}',
+    ])
+    expect(lines('do {\n  a()\n}\nwhile b')).to_equal([
+      'do {', '  a()', '} while b',
+    ])
+  })
+
+  it('keeps an else if chain as one', @{
+    expect(lines('if a { x() } else if b { y() } else { z() }')).to_equal([
+      'if a {', '  x()', '} else if b {', '  y()', '} else {', '  z()', '}',
+    ])
+  })
+})
+
+describe('explicit blocks', @{
+  it('braces the body of an if, an else and a loop', @{
+    expect(lines('if a b = 1\nelse b = 2')).to_equal([
+      'if a {', '  b = 1', '} else {', '  b = 2', '}',
+    ])
+    expect(lines('while a b()')).to_equal(['while a {', '  b()', '}'])
+    expect(lines('for x in xs echo x')).to_equal([
+      'for x in xs {', '  echo x', '}',
+    ])
+  })
+
+  it('braces a body written on the next line', @{
+    expect(lines('if !ok\n  raise Error(1)')).to_equal([
+      'if !ok {', '  raise Error(1)', '}',
+    ])
+  })
+
+  it('takes a comment trailing the header or the body inside', @{
+    expect(lines('if a # why\n  b() # what')).to_equal([
+      'if a { # why', '  b() # what', '}',
+    ])
+  })
+
+  # Braces would give the name a scope of its own, which changes what
+  # the code after the `if` can see.
+  it('leaves a body that declares a name unbraced', @{
+    expect(lines('if a var b = 1')).to_equal(['if a var b = 1'])
+    expect(lines('if a\n  var b = 1\nelse\n  var b = 2')).to_equal([
+      'if a', '  var b = 1', 'else', '  var b = 2',
+    ])
+  })
+})
+
+describe('using', @{
+  it('keeps a short arm on its line', @{
+    expect(lines('using x {\nwhen 1, 2 echo 1\ndefault echo 2\n}')).to_equal([
+      'using x {', '  when 1, 2 echo 1', '  default echo 2', '}',
+    ])
+  })
+
+  it('braces an arm that would run past sixty columns', @{
+    var source = 'using x {\n  when 1 echo \'a piece of text long enough to pass sixty columns\'\n}'
+
+    expect(lines(source)).to_equal([
+      'using x {', '  when 1 {',
+      '    echo \'a piece of text long enough to pass sixty columns\'',
+      '  }', '}',
+    ])
+  })
+
+  it('leaves a braced arm braced', @{
+    expect(lines('using x {\n  when 1 {\n    a()\n  }\n}')).to_equal([
+      'using x {', '  when 1 {', '    a()', '  }', '}',
+    ])
+  })
+})
+
+describe('statements', @{
+  it('lays out catch with and without a handler', @{
+    var source = '\n'.join([
+      'catch {',
+      '  a()',
+      '}   as   e   {',
+      '  b(e)',
+      '}',
+    ])
+
+    expect(lines(source)).to_equal([
+      'catch {',
+      '  a()',
+      '} as e {',
+      '  b(e)',
+      '}',
+    ])
+    expect(lines('catch { a() }')).to_equal(['catch {', '  a()', '}'])
+  })
+
+  it('keeps the space that shows an iter clause is empty', @{
+    expect(lines('iter ;i < n;i++ {\n  work()\n}')).to_equal([
+      'iter ; i < n; i++ {', '  work()', '}',
+    ])
+  })
+
+  it('drops the parentheses an iter may be written with', @{
+    expect(lines('iter (var i = 0; i < n; i++) {\n  work()\n}')).to_equal([
+      'iter var i = 0; i < n; i++ {', '  work()', '}',
+    ])
+  })
+
+  it('writes return and raise with and without a value', @{
+    expect(lines('def f() {\n  return\n}')).to_equal([
+      'def f() {', '  return', '}',
+    ])
+    expect(lines('def f() {\n  raise Error(1)\n}')).to_equal([
+      'def f() {', '  raise Error(1)', '}',
+    ])
+  })
+
+  it('keeps the dots of an import as they were written', @{
+    expect(lines('import .. ..shared.config')).to_equal(['import .. ..shared.config'])
+    expect(lines('import ....shared.config')).to_equal(['import ....shared.config'])
+    expect(lines('import @.addr {SocketAddr,Ip}')).to_equal([
+      'import @.addr { SocketAddr, Ip }',
+    ])
+    expect(lines('import os {*}')).to_equal(['import os { * }'])
+    expect(lines('import .sibling as sib')).to_equal(['import .sibling as sib'])
+  })
+})
+
+describe('declarations', @{
+  it('lays out a class with its members in the order written', @{
+    var source = 'class P < Base {\n  static var count = 0\n  var x\n' +
+      '  @new(x) {\n    self.x = x\n  }\n}'
+
+    expect(lines(source)).to_equal([
+      'class P < Base {', '  static var count = 0', '  var x', '',
+      '  @new(x) {', '    self.x = x', '  }', '}',
+    ])
+  })
+
+  it('drops the def a method name may be written with', @{
+    expect(lines('class C {\n  def m() {}\n}')).to_equal([
+      'class C {', '  m() {}', '}',
+    ])
+  })
+
+  it('writes parameters with their types', @{
+    expect(lines('def f(a:int,b:?list|dict,...rest){}')).to_equal([
+      'def f(a: int, b: ?list|dict, ...rest) {}',
     ])
   })
 })
 
 # The line breaks in the source are the layout. A collection opened out
 # one item to a line, an expression continued across several, arguments
-# spread out on purpose: each of those is a decision the formatter keeps
-# and re-indents rather than one it makes again.
+# spread out on purpose: each is a decision the formatter keeps.
 describe('the lines the author wrote', @{
   it('keeps a list opened out one item to a line', @{
-    expect(lines('var xs = [\n  1,\n  2,\n  3,\n]')).to_equal([
+    expect(lines('var xs = [\n  1,\n  2,\n  3\n]')).to_equal([
       'var xs = [', '  1,', '  2,', '  3,', ']',
     ])
   })
 
-  it('keeps a list that was written on one line on one line', @{
+  it('keeps a list written on one line on one line', @{
     expect(lines('var xs = [1, 2, 3]')).to_equal(['var xs = [1, 2, 3]'])
   })
 
-  it('keeps the breaks in a multi-line concatenation', @{
-    expect(lines("var s = 'aaa' +\n  'bbb' +\n  'ccc'")).to_equal([
-      "var s = 'aaa' +", "  'bbb' +", "  'ccc'",
-    ])
-  })
-
   it('keeps arguments where they were spread out', @{
-    expect(lines('f(\n  alpha,\n  beta,\n)')).to_equal([
-      'f(', '  alpha,', '  beta,', ')',
-    ])
     expect(lines('f(alpha, beta,\n  gamma)')).to_equal([
       'f(alpha, beta,', '  gamma)',
     ])
   })
 
-  # The break belongs to the bracket that was opened, and every opener
-  # above it reads as part of reaching that bracket.
   it('opens the bracket that was opened, not the one around it', @{
     expect(lines('f(g(\n  alpha,\n  beta,\n))')).to_equal([
       'f(g(', '  alpha,', '  beta,', '))',
     ])
   })
 
-  # An item begins after a comma however it opens, so a negative number
-  # on its own line is an item rather than a subtraction of the one
-  # above it.
-  it('reads a negative on its own line as the next item', @{
-    expect(lines('var xs = [\n  0.0,\n  -1.5,\n]')).to_equal([
-      'var xs = [', '  0.0,', '  -1.5,', ']',
+  it('keeps the side of an operator the author broke on', @{
+    expect(lines("var s = 'aaa' +\n  'bbb' +\n  'ccc'")).to_equal([
+      "var s = 'aaa' +", "  'bbb' +", "  'ccc'",
+    ])
+    expect(lines('var ok = a\n  and b')).to_equal(['var ok = a', '  and b'])
+  })
+
+  it('keeps a conditional broken across lines', @{
+    expect(lines('var s = a ?\n  b :\n  c')).to_equal([
+      'var s = a ?', '  b :', '  c',
+    ])
+    expect(lines('var s = a\n  ? b\n  : c')).to_equal([
+      'var s = a', '  ? b', '  : c',
     ])
   })
 
@@ -84,95 +231,307 @@ describe('the lines the author wrote', @{
     ])
   })
 
-  it('keeps an empty block that was written open', @{
-    expect(lines('def f() {\n}')).to_equal(['def f() {', '}'])
+  it('keeps one blank line where the author left several', @{
+    expect(lines('a()\n\n\n\nb()')).to_equal(['a()', '', 'b()'])
   })
+})
 
-  # Whatever it takes to lay a statement out, everything after its first
-  # line sits at one level under it, never two.
-  it('holds every continuation of a statement at one level', @{
-    var source = 'assert aaaaaaaaaaaaaaaaaaaa == bbbbbbbbbbbbbbbbbbbbbb ' +
-      'and cccccccccccccccc == dddddddddd and e == f,\n  \'message\''
+# A list the author broke keeps its lines only while they fit. Once a
+# line of several items runs past the width, the whole list is laid out
+# again, as many items to a line as fit.
+describe('realigning a list that runs past the width', @{
+  it('lays the list out again once one of its lines is too long', @{
+    var source = '\n'.join([
+      'var xs = [',
+      '  alpha_long_item, beta_long_item, gamma_long_item, delta_long_item, epsilon_item,',
+      '  zeta,',
+      ']',
+    ])
 
     expect(lines(source)).to_equal([
-      'assert aaaaaaaaaaaaaaaaaaaa == bbbbbbbbbbbbbbbbbbbbbb',
-      '  and cccccccccccccccc == dddddddddd',
-      '  and e == f,',
-      '  \'message\'',
+      'var xs = [',
+      '  alpha_long_item, beta_long_item, gamma_long_item, delta_long_item,',
+      '  epsilon_item, zeta,',
+      ']',
+    ])
+  })
+
+  it('realigns arguments the same way', @{
+    var source = 'f(alpha_argument, beta_argument, gamma_argument, delta_argument, ' +
+      'epsilon_argument,\n  zeta)'
+
+    expect(lines(source)).to_equal([
+      'f(alpha_argument, beta_argument, gamma_argument, delta_argument,',
+      '  epsilon_argument, zeta)',
+    ])
+  })
+
+  # Packing cannot shorten a line holding one item, so a list written one
+  # item to a line stays that way around an item too long for any line.
+  it('leaves a list alone when the line too long holds one item', @{
+    var long = '\'' + 'x' * 80 + '\''
+    var source = '\n'.join(['var xs = [', '  a,', '  b,', '  ${long},', ']'])
+
+    expect(lines(source)).to_equal([
+      'var xs = [', '  a,', '  b,', '  ${long},', ']',
+    ])
+  })
+
+  it('keeps comments and blank lines where they were', @{
+    var source = '\n'.join([
+      'var xs = [',
+      '  alpha_long_item, beta_long_item, # first',
+      '  gamma_long_item, delta_long_item, epsilon_long_item, zeta_long_item, eta_long_item,',
+      '',
+      '  theta,',
+      ']',
+    ])
+
+    expect(lines(source)).to_equal([
+      'var xs = [',
+      '  alpha_long_item, beta_long_item, # first',
+      '  gamma_long_item, delta_long_item, epsilon_long_item, zeta_long_item,',
+      '  eta_long_item,',
+      '',
+      '  theta,',
+      ']',
+    ])
+  })
+})
+
+# A dictionary that is mostly `key: value` pairs takes one pair to a line
+# whenever it does not stay on one line; one mostly of shorthand names
+# packs like a list.
+describe('dictionaries', @{
+  it('keeps a dictionary of pairs on one line while it fits', @{
+    expect(lines('var d = {name: \'server\', port: 8080}')).to_equal([
+      'var d = { name: \'server\', port: 8080 }',
+    ])
+  })
+
+  it('puts a dictionary of pairs one pair to a line once it breaks', @{
+    var source = 'var config = { name: \'server\', host: \'localhost\', port: 8080, ' +
+      'secure: true, timeout: 30 }'
+
+    expect(lines(source)).to_equal([
+      'var config = {',
+      '  name: \'server\',',
+      '  host: \'localhost\',',
+      '  port: 8080,',
+      '  secure: true,',
+      '  timeout: 30,',
+      '}',
+    ])
+  })
+
+  it('puts a dictionary of pairs the author broke one pair to a line', @{
+    var source = 'var d = { name: \'server\', host: \'localhost\',\n  port: 8080 }'
+
+    expect(lines(source)).to_equal([
+      'var d = {', '  name: \'server\',', '  host: \'localhost\',',
+      '  port: 8080,', '}',
+    ])
+  })
+
+  it('keeps the comments and blank lines between pairs', @{
+    var source = '\n'.join([
+      'var d = {',
+      '  name: \'server\', # who',
+      '',
+      '  port: 8080,',
+      '}',
+    ])
+
+    expect(lines(source)).to_equal([
+      'var d = {', '  name: \'server\', # who', '', '  port: 8080,', '}',
+    ])
+  })
+
+  it('packs a dictionary of shorthand names like a list', @{
+    var source = 'var d = { alpha_name, beta_name, gamma_name, delta_name, ' +
+      'epsilon_name, zeta_name, eta }'
+
+    expect(lines(source)).to_equal([
+      'var d = {',
+      '  alpha_name, beta_name, gamma_name, delta_name, epsilon_name, zeta_name, eta,',
+      '}',
+    ])
+  })
+})
+
+describe('blank lines', @{
+  it('sets a declaration spanning lines off from its neighbours', @{
+    expect(lines('var a = 1\ndef f() {\n  g()\n}\nvar b = 2')).to_equal([
+      'var a = 1', '', 'def f() {', '  g()', '}', '', 'var b = 2',
+    ])
+  })
+
+  it('puts that blank line ahead of the comments leading in', @{
+    expect(lines('var a = 1\n# does f\ndef f() {\n  g()\n}')).to_equal([
+      'var a = 1', '', '# does f', 'def f() {', '  g()', '}',
+    ])
+  })
+
+  it('leaves no blank line before a closing brace', @{
+    expect(lines('def f() {\n  a()\n\n}')).to_equal(['def f() {', '  a()', '}'])
+  })
+})
+
+describe('comments', @{
+  it('keeps a trailing comment at the end of its line', @{
+    expect(lines('var x = 1 # note')).to_equal(['var x = 1 # note'])
+  })
+
+  it('keeps a comment written among arguments', @{
+    expect(lines('foo(a, # first\n  b)')).to_equal(['foo(a, # first', '  b)'])
+  })
+
+  it('keeps a comment between a brace and its else', @{
+    expect(lines('if a {\n  b()\n} # done\nelse {\n  c()\n}')).to_equal([
+      'if a {', '  b()', '} # done', 'else {', '  c()', '}',
+    ])
+  })
+
+  it('moves a doc block with the code it documents', @{
+    expect(lines('class C {\n      /**\n       * Doc.\n       */\n  m() {}\n}')).to_equal([
+      'class C {', '  /**', '   * Doc.', '   */', '  m() {}', '}',
+    ])
+  })
+})
+
+describe('expressions', @{
+  it('spaces operators, calls, subscripts and types by what they are', @{
+    expect(lines('var x=-a- -b+f(c)[0]*d.e')).to_equal(['var x = -a - -b + f(c)[0] * d.e'])
+    expect(lines('var r=1..n')).to_equal(['var r = 1..n'])
+    expect(lines('x++')).to_equal(['x++'])
+    expect(lines('var t=a?b:c')).to_equal(['var t = a ? b : c'])
+  })
+
+  it('writes a subscript with the commas that say what it reads', @{
+    expect(lines('echo [s[1,],s[,3],s[1,3],s[ 2 ]]')).to_equal([
+      'echo [s[1,], s[,3], s[1, 3], s[2]]',
+    ])
+  })
+
+  it('writes dictionaries with their shorthand', @{
+    expect(lines('var d={a:1,b,"c":c}')).to_equal(['var d = { a: 1, b, "c": c }'])
+    expect(lines('var d = {\n  name: name,\n}')).to_equal([
+      'var d = {', '  name,', '}',
+    ])
+  })
+
+  it('writes every spelling of a function value', @{
+    expect(lines('var a=@(x)=>x')).to_equal(['var a = @(x) => x'])
+    expect(lines('var a=@=>5')).to_equal(['var a = @ => 5'])
+    expect(lines('var a=@{b()}')).to_equal(['var a = @{', '  b()', '}'])
+    expect(lines('var a=def(x){return x}')).to_equal([
+      'var a = def(x) {', '  return x', '}',
+    ])
+  })
+
+  it('opens a closure handed to a call at the closure alone', @{
+    expect(lines('each(items, @{ work() })')).to_equal([
+      'each(items, @{', '  work()', '})',
+    ])
+  })
+
+  it('writes strings and numbers exactly as the source does', @{
+    expect(lines("echo ['a  ${'$'}{x}  b', 0xFF, 1_000, 2n, 1e3]")).to_equal([
+      "echo ['a  ${'$'}{x}  b', 0xFF, 1_000, 2n, 1e3]",
     ])
   })
 })
 
 describe('breaking long lines', @{
-  var chain = 'var ok = alpha and beta and gamma and delta and epsilon and zeta and eta and theta'
-
-  it('leaves a line that fits on one line', @{
+  it('leaves a line that fits alone', @{
     expect(lines('var x = a and b')).to_equal(['var x = a and b'])
   })
 
-  it('breaks an and-chain with the operator leading each line', @{
-    var out = lines(chain)
-
-    expect(out.length()).to_be_greater_than(1)
-    expect(out[0]).to_be('var ok = alpha')
-    expect(out[1]).to_be('  and beta')
-  })
-
-  it('fills a call across lines and keeps a trailing comma', @{
-    var call = 'foo(alphaArgument, betaArgument, gammaArgument, deltaArgument, epsilonArgument, zeta)'
-
-    var out = lines(call)
-
-    expect(out[0]).to_be('foo(')
-    expect(out[out.length() - 1]).to_be(')')
-    expect(out[out.length() - 2].rtrim(',')).to_end_with('zeta')
-  })
-
-  it('breaks a long concatenation at its own operator', @{
-    var long = 'var text = \'' + 'a' * 40 + '\' + \'' + 'b' * 40 + '\''
-
-    expect(lines(long)).to_equal([
-      'var text = \'' + 'a' * 40 + '\'', '  + \'' + 'b' * 40 + '\'',
-    ])
-  })
-
-  # A break that leaves a line still past the width, with no bracket on
-  # it to spread out, has not paid for itself.
-  it('leaves a long line whole when no break resolves it', @{
-    var source = 'x[idx] = (x0[idx] + a * (x[idx - 1] + x[idx + 1] + ' +
-      'x[prev + i] + x[next + i] + x[above + i] + x[below + i])) * inv_c'
-
-    expect(lines(source)).to_equal([source])
-  })
-
-  # A ternary binds looser than anything else on the line, so that is
-  # where the break goes; the `:` that introduces a type is not one of
-  # its branches and never a place to break.
-  it('breaks a long ternary at its branches', @{
-    var source = 'var items = group.kind == \'index\' ? group.items : ' +
-      '_without_trailing_comma(group.items)'
+  it('breaks a chain of and at every operator, the operator leading', @{
+    var source = 'var ok = alpha and beta and gamma and delta and epsilon and zeta and eta ' +
+      'and theta'
 
     expect(lines(source)).to_equal([
-      'var items = group.kind == \'index\'',
-      '  ? group.items',
-      '  : _without_trailing_comma(group.items)',
+      'var ok = alpha', '  and beta', '  and gamma', '  and delta',
+      '  and epsilon',
+      '  and zeta', '  and eta', '  and theta',
     ])
   })
 
-  it('leaves the colon of a type annotation alone', @{
-    var source = 'var x: ?number = some_quite_long_call(alpha) + ' +
-      'another_quite_long_call(beta) + 1'
+  it('breaks at the loosest operator first', @{
+    var source = 'var ok = alpha_value_one and beta_value_two or gamma_value_three and ' +
+      'delta_value_four'
+
+    expect(lines(source)).to_equal([
+      'var ok = alpha_value_one and beta_value_two',
+      '  or gamma_value_three and delta_value_four',
+    ])
+  })
+
+  # A line opening with `-` is a statement of its own, so a sum holding
+  # a `-` breaks after each operator, never before one.
+  it('trails every operator of a sum that subtracts', @{
+    var source = 'var total = first_value_with_a_long_name + second_value_with_a_long_name' +
+      ' - third_value'
+
+    expect(lines(source)).to_equal([
+      'var total = first_value_with_a_long_name +',
+      '  second_value_with_a_long_name -',
+      '  third_value',
+    ])
+  })
+
+  it('breaks a long conditional before its ? and :', @{
+    var source = 'var items = group.kind == \'index\' ? group.items : ' +
+      'without_trailing_comma(group.items)'
+
+    expect(lines(source)).to_equal([
+      'var items = group.kind == \'index\'', '  ? group.items',
+      '  : without_trailing_comma(group.items)',
+    ])
+  })
+
+  it('fills a call across lines and adds a trailing comma', @{
+    var source = 'foo(alpha_argument, beta_argument, gamma_argument, delta_argument, ' +
+      'epsilon_argument, zeta)'
+
+    expect(lines(source)).to_equal([
+      'foo(',
+      '  alpha_argument, beta_argument, gamma_argument, delta_argument,',
+      '  epsilon_argument, zeta,', ')',
+    ])
+  })
+
+  it('breaks the innermost call when the outer one holds just it', @{
+    var source = 'findings.append(Finding(path, 1, \'command has no doc ' +
+      'block\', \'zuri --help reads it\'))'
+
+    expect(lines(source)).to_equal([
+      'findings.append(Finding(',
+      '  path, 1, \'command has no doc block\', \'zuri --help reads it\',',
+      '))',
+    ])
+  })
+
+  it('breaks a chain of method calls one call to a line', @{
+    var source = 'return items.filter(@(i) => i > 0).map(@(i) => i * 2).reduce(@(a, b) => a + b, 0)'
+
+    expect(lines('def f() {\n  ${source}\n}')).to_equal([
+      'def f() {', '  return items', '    .filter(@(i) => i > 0)',
+      '    .map(@(i) => i * 2)',
+      '    .reduce(@(a, b) => a + b, 0)', '}',
+    ])
+  })
+
+  it('leaves a single argument that cannot break where it is', @{
+    var source = 'raise ArgsError(\'' + 'x' * 80 + '\')'
 
     expect(lines(source)).to_equal([source])
   })
 
-  it('breaks the innermost call that has arguments to spread', @{
-    var source = 'findings.append(Finding(path, 1, \'command has no doc ' +
-      'block\', \'zuri --help reads @command and @description from it\'))'
+  it('never breaks after the = of a var', @{
+    var source = 'var message = \'' + 'x' * 80 + '\''
 
-    var out = lines(source)
-
-    expect(out[0]).to_be('findings.append(Finding(')
-    expect(out[out.length() - 1]).to_be('))')
+    expect(lines(source)).to_equal([source])
   })
 })

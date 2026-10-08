@@ -1,0 +1,421 @@
+/**
+ * @module fmt.printer
+ *
+ * Turns a layout document into text. Each group is laid out on one line
+ * when what it holds fits in what is left of the line, and broken
+ * otherwise, outermost first, so a long line breaks where its
+ * expression holds together least before anywhere deeper.
+ *
+ * "Fits" looks as far as the next newline that is certain to happen.
+ * A block inside a group opens on a line of its own whatever the group
+ * decides, so the group only has to fit up to the brace.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import .doc { flat_width, LINE }
+
+/**
+ * How wide a line may be.
+ */
+var WIDTH = 80
+
+/**
+ * One level of indentation.
+ */
+var INDENT = '  '
+
+var _BREAK = 1
+var _FLAT = 0
+
+# The column just past `text` when it starts at `column`. Text spanning
+# lines, a multi-line string, ends wherever its last line does.
+def _advance(column: number, text: string) {
+  var newline = text.last_index_of('\n')
+
+  if newline == -1 {
+    return column + text.length()
+  }
+
+  return text.length() - newline - 1
+}
+
+# Drops the spaces the last line ended on, so a line that breaks after
+# a space never leaves it behind.
+def _trim(out: list) {
+  while !out.is_empty() {
+    var last = out.last()
+    var trimmed = last.rtrim(' ')
+
+    if trimmed != '' or last == '' {
+      out[out.length() - 1] = trimmed
+
+      return
+    }
+
+    out.pop()
+  }
+}
+
+# Whether `next` fits in `width` columns. Once it runs out, what follows
+# it in `rest` is measured too, since the line goes on past the group
+# until something breaks it. A line laid out broken, or one that always
+# breaks, ends the measure: whatever comes after starts a new line.
+def _fits(next: dict, rest: list, width: number) {
+  var rest_at = rest.length()
+  var stack = [next]
+  var left = width
+
+  while left >= 0 {
+    if stack.is_empty() {
+      if rest_at == 0 {
+        return true
+      }
+
+      rest_at -= 1
+      stack.append(rest[rest_at])
+
+      continue
+    }
+
+    var cmd = stack.pop()
+    var doc = cmd.doc
+
+    if is_string(doc) {
+      var newline = doc.index_of('\n')
+
+      if newline != -1 {
+        return left - newline >= 0
+      }
+
+      left -= doc.length()
+
+      continue
+    }
+
+    if is_list(doc) {
+      var index = doc.length() - 1
+
+      while index >= 0 {
+        stack.append({ mode: cmd.mode, doc: doc[index] })
+        index -= 1
+      }
+
+      continue
+    }
+
+    using doc.t {
+      when 'line' {
+        if cmd.mode == _BREAK or doc.hard {
+          return true
+        }
+
+        if !doc.soft {
+          left -= 1
+        }
+      }
+      when 'group' {
+        stack.append({ mode: doc.broken ? _BREAK : cmd.mode, doc: doc.doc })
+      }
+      when 'fill' {
+        var index = doc.parts.length() - 1
+
+        while index >= doc.at {
+          stack.append({ mode: cmd.mode, doc: doc.parts[index] })
+          index -= 1
+        }
+      }
+      when 'if_break' {
+        var chosen = cmd.mode == _BREAK ? doc.broken : doc.flat
+
+        stack.append({ mode: cmd.mode, doc: chosen })
+      }
+      when 'choose' {
+        stack.append({ mode: cmd.mode, doc: doc.first })
+      }
+      when 'comment' {
+        var newline = doc.text.index_of('\n')
+
+        return left - (newline == -1 ? doc.text.length() : newline) >= 0
+      }
+      default stack.append({ mode: cmd.mode, doc: doc.doc })
+    }
+  }
+
+  return false
+}
+
+/**
+ * Lays `document` out as text no wider than `width` where it can be.
+ * A line with nowhere to break that would bring it within the width is
+ * left as long as it is.
+ *
+ * @param any document
+ * @param ?number width: Defaults to `WIDTH`.
+ * @returns string
+ */
+def render(document, width: ?number) {
+  var limit = width == nil ? WIDTH : width
+  var out = []
+  var column = 0
+  var line_level = 0
+  var remeasure = false
+  var cmds = [{ level: 0, mode: _BREAK, doc: document }]
+
+  while !cmds.is_empty() {
+    var cmd = cmds.pop()
+    var doc = cmd.doc
+
+    if is_string(doc) {
+      if doc != '' {
+        out.append(doc)
+        column = _advance(column, doc)
+      }
+
+      continue
+    }
+
+    if is_list(doc) {
+      var index = doc.length() - 1
+
+      while index >= 0 {
+        cmds.append({ level: cmd.level, mode: cmd.mode, doc: doc[index] })
+        index -= 1
+      }
+
+      continue
+    }
+
+    using doc.t {
+      when 'line' {
+        if cmd.mode == _FLAT and !doc.hard {
+          if !doc.soft {
+            out.append(' ')
+            column += 1
+          }
+
+          continue
+        }
+
+        # A newline forced inside a group laid out flat means the groups
+        # after it start on a fresh line, and have to be measured again
+        # rather than inherit a decision made for the line before.
+        if cmd.mode == _FLAT {
+          remeasure = true
+        }
+
+        _trim(out)
+        out.append('\n' + INDENT * cmd.level)
+        column = cmd.level * INDENT.length()
+        line_level = cmd.level
+      }
+      when 'group' {
+        if cmd.mode == _FLAT and !remeasure {
+          var mode = doc.broken ? _BREAK : _FLAT
+
+          cmds.append({ level: cmd.level, mode, doc: doc.doc })
+
+          continue
+        }
+
+        remeasure = false
+
+        var flat = { level: cmd.level, mode: _FLAT, doc: doc.doc }
+        var broken = { level: cmd.level, mode: _BREAK, doc: doc.doc }
+
+        # A group that does not fit breaks only when breaking it brings
+        # its line within the width. When the line runs past the width
+        # before the group's first break, breaking moves the rest onto
+        # lines of its own and leaves this one as long as it was.
+        if doc.broken {
+          cmds.append(broken)
+        } else if _fits(flat, cmds, limit - column) {
+          cmds.append(flat)
+        } else if _fits(broken, cmds, limit - column) {
+          cmds.append(broken)
+        } else {
+          cmds.append(flat)
+        }
+      }
+      when 'fill' {
+        _fill(doc, cmd, cmds, limit - column, limit)
+      }
+      when 'indent' {
+        cmds.append({ level: line_level + 1, mode: cmd.mode, doc: doc.doc })
+      }
+      when 'nest' {
+        cmds.append({ level: cmd.level + 1, mode: cmd.mode, doc: doc.doc })
+      }
+      when 'base' {
+        cmds.append({ level: line_level, mode: cmd.mode, doc: doc.doc })
+      }
+      when 'if_break' {
+        var chosen = cmd.mode == _BREAK ? doc.broken : doc.flat
+
+        cmds.append({ level: cmd.level, mode: cmd.mode, doc: chosen })
+      }
+      when 'choose' {
+        var width = flat_width(doc.first)
+        var fits = width >= 0 and column + width <= doc.limit
+
+        if fits {
+          cmds.append({ level: cmd.level, mode: _FLAT, doc: doc.first })
+        } else {
+          cmds.append({ level: cmd.level, mode: cmd.mode, doc: doc.second })
+        }
+      }
+      when 'comment' {
+        var text = _realign(doc.text, doc.column, column)
+
+        out.append(text)
+        column = _advance(column, text)
+      }
+    }
+  }
+
+  _trim(out)
+
+  return ''.join(out)
+}
+
+# Whether `separator` is a line break the author wrote, kept while the
+# lines around it fit.
+def _kept(separator) {
+  return is_dict(separator) and separator.get('kept', false)
+}
+
+# Whether every line the author broke a fill into fits, the first from
+# where the fill starts and the rest from its indent, the last along with
+# what follows the fill on it. A line holding a single part counts as
+# fitting: laying the fill out again could not make it any shorter.
+def _kept_lines_fit(parts: list, cmds: list, first: number, rest: number) {
+  var line = []
+  var contents = 0
+  var width = first
+  var index = 0
+
+  for part in parts {
+    if index % 2 == 1 and flat_width(part) < 0 {
+      if contents > 1 and !_fits({ mode: _FLAT, doc: line }, [], width) {
+        return false
+      }
+
+      line = []
+      contents = 0
+      width = rest
+    } else {
+      line.append(part)
+
+      if index % 2 == 0 {
+        contents += 1
+      }
+    }
+
+    index += 1
+  }
+
+  return contents <= 1 or _fits({ mode: _FLAT, doc: line }, cmds, width)
+}
+
+# Lays out the next content of a fill and its separator, and puts the
+# rest of the fill back to be laid out after them. A separator breaks
+# when the content after it would not fit on the line; content that does
+# not fit even on a line of its own is laid out broken. The last content
+# is measured with what follows the fill on its line, a trailing comma or
+# a closer, which has to fit there too.
+#
+# A fill holding breaks the author wrote keeps them while its lines fit.
+# Once one of them runs past the width, those breaks are dropped and the
+# whole fill is laid out again, as many parts to a line as fit.
+def _fill(doc: dict, cmd: dict, cmds: list, left: number, limit: number) {
+  var parts = doc.parts
+  var at = doc.at
+  var count = parts.length() - at
+
+  if count == 0 {
+    return
+  }
+
+  var level = cmd.level
+
+  if at == 0 and parts.some(_kept) {
+    var indent = limit - level * INDENT.length()
+
+    if !_kept_lines_fit(parts, cmds, left, indent) {
+      parts = parts.map(@(part) => _kept(part) ? LINE : part)
+    }
+  }
+  var content = parts[at]
+  var content_flat = { level, mode: _FLAT, doc: content }
+  var content_broken = { level, mode: _BREAK, doc: content }
+  var content_fits = _fits(content_flat, count <= 2 ? cmds : [], left)
+
+  if count == 1 {
+    cmds.append(content_fits ? content_flat : content_broken)
+
+    return
+  }
+
+  var separator = parts[at + 1]
+  var separator_flat = { level, mode: _FLAT, doc: separator }
+  var separator_broken = { level, mode: _BREAK, doc: separator }
+
+  if count == 2 {
+    if content_fits {
+      cmds.append(separator_flat)
+      cmds.append(content_flat)
+    } else {
+      cmds.append(separator_broken)
+      cmds.append(content_broken)
+    }
+
+    return
+  }
+
+  var next = parts[at + 2]
+  var pair = { level, mode: _FLAT, doc: [content, separator, next] }
+  var pair_fits = _fits(pair, count == 3 ? cmds : [], left)
+  var rest = { t: 'fill', parts, at: at + 2 }
+
+  cmds.append({ level, mode: cmd.mode, doc: rest })
+
+  if pair_fits {
+    cmds.append(separator_flat)
+    cmds.append(content_flat)
+  } else if content_fits {
+    cmds.append(separator_broken)
+    cmds.append(content_flat)
+  } else {
+    cmds.append(separator_broken)
+    cmds.append(content_broken)
+  }
+}
+
+# A doc block written at `from` and now starting at `to`, its later
+# lines moved by the same amount so it keeps its shape. A line indented
+# less than the block itself was is left where it is, and a blank one
+# stays empty.
+def _realign(text: string, from: number, to: number) {
+  if from < 0 or from == to or text.index_of('\n') == -1 {
+    return text
+  }
+
+  var lines = text.split('\n')
+  var old_pad = ' ' * from
+  var new_pad = ' ' * to
+  var index = 1
+
+  while index < lines.length() {
+    var line = lines[index]
+
+    if line.trim() == '' {
+      lines[index] = ''
+    } else if line.starts_with(old_pad) {
+      lines[index] = new_pad + line[from,]
+    }
+
+    index += 1
+  }
+
+  return '\n'.join(lines)
+}

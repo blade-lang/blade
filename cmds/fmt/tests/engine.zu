@@ -1,0 +1,155 @@
+# Tests for the top layer: `format` end to end, its idempotence, what it
+# refuses, and reading a file off disk.
+
+import test { * }
+
+import os
+
+import ..engine { format, format_file, FormatError }
+
+# A bare `$`, so a source string can spell out `${` without the test file
+# interpolating it.
+var S = '$'
+
+describe('format', @{
+  it('ends the result with a single trailing newline', @{
+    expect(format('var x = 1')).to_be('var x = 1\n')
+    expect(format('var x = 1\n\n\n')).to_be('var x = 1\n')
+  })
+
+  it('gives back nothing for a source with no code in it', @{
+    expect(format('')).to_be('')
+    expect(format('\n\n')).to_be('')
+  })
+
+  it('keeps a file of nothing but comments', @{
+    expect(format('# one\n\n# two\n')).to_be('# one\n\n# two\n')
+  })
+
+  it('is a fixed point: formatting its own output changes nothing', @{
+    var once = format('def  g(a,b,c){var x={p:1,q:2}\nif a return x\nreturn [x,\n  a]}')
+
+    expect(format(once)).to_be(once)
+  })
+
+  it('is a fixed point over the formatter\'s own source', @{
+    var root = os.join_paths(os.dir_name(__file__), '..')
+
+    for name in os.read_dir(root) {
+      if name.ends_with('.zu') {
+        var once = format(file(os.join_paths(root, name)).read())
+
+        expect(format(once)).to_be(once)
+      }
+    }
+  })
+
+  # A conditional written across lines leaves its `?` on one line and its
+  # `:` on the next, and either may lead or trail its line.
+  it('keeps the space around a `?` and `:` written on separate lines', @{
+    var trailing = 'var s = rest.is_empty() ?\n  lead :\n  lead + rest\n'
+    var leading = 'var s = a ?\n  b\n  : c\n'
+
+    expect(format(trailing)).to_be(trailing)
+    expect(format(leading)).to_be(leading)
+  })
+
+  it('never touches the inside of an interpolated string', @{
+    var source = "echo 'a  " + S + "{x}  b'"
+
+    expect(format(source)).to_be(source + '\n')
+  })
+
+  it('normalises the spacing of a list, a call and a dictionary', @{
+    expect(format('echo [1,2,3]')).to_be('echo [1, 2, 3]\n')
+    expect(format('echo call(a,b)')).to_be('echo call(a, b)\n')
+    expect(format('var d = {a: 1,b: 2}')).to_be('var d = { a: 1, b: 2 }\n')
+  })
+
+  it('drops a trailing comma from what stays on one line', @{
+    expect(format('var x = [1, 2,]')).to_be('var x = [1, 2]\n')
+    expect(format('f(a, b,)')).to_be('f(a, b)\n')
+    expect(format('var d = { a: 1, }')).to_be('var d = { a: 1 }\n')
+  })
+})
+
+# `s[1]` reads one character and `s[1,]` slices to the end, so the comma
+# a list would happily lose is part of what a subscript means.
+describe('subscripts', @{
+  it('keeps the trailing comma that makes a subscript a slice', @{
+    expect(format('echo s[1,]')).to_be('echo s[1,]\n')
+    expect(format('echo s[1,][0]')).to_be('echo s[1,][0]\n')
+    expect(format('echo self.items[2,]')).to_be('echo self.items[2,]\n')
+  })
+
+  it('keeps a subscript that slices from the start', @{
+    expect(format('echo s[,3]')).to_be('echo s[,3]\n')
+    expect(format('echo s[,n + 1]')).to_be('echo s[,n + 1]\n')
+    expect(format('echo f()[,3]')).to_be('echo f()[,3]\n')
+    expect(format('echo s[,5][1,]')).to_be('echo s[,5][1,]\n')
+  })
+
+  # The comma between two bounds separates them the way any comma does.
+  # The one that opens a slice from the start is not a separator at all,
+  # and closes up against the bound it belongs to.
+  it('spaces a subscript around its commas', @{
+    expect(format('echo value[, 5]')).to_be('echo value[,5]\n')
+    expect(format('echo value[5, ]')).to_be('echo value[5,]\n')
+    expect(format('echo value[2,5]')).to_be('echo value[2, 5]\n')
+    expect(format('echo value[ 2 , 5 ]')).to_be('echo value[2, 5]\n')
+    expect(format('echo t[space + 1,text.length()]')).to_be(
+      'echo t[space + 1, text.length()]\n',
+    )
+    expect(format('echo value[f(1, 2),5]')).to_be('echo value[f(1, 2), 5]\n')
+  })
+
+  it('leaves a long subscript whole rather than breaking its commas', @{
+    var source = 'var value = a_rather_long_receiver_name' +
+      '[first_index_expression, second_index_expression_here]'
+
+    expect(format(source)).to_be(source + '\n')
+  })
+
+  it('leaves a long slice from the start whole', @{
+    var source = 'echo another_rather_long_receiver_name_for_testing_breaks' +
+      '[,some_deliberately_long_list_name.length() - 4]'
+
+    expect(format(source)).to_be(source + '\n')
+  })
+})
+
+describe('refusals', @{
+  it('raises a FormatError, which is an Error', @{
+    expect(FormatError('x')).to_be_instance_of(Error)
+  })
+
+  # `if c x else y` on one line is not a statement Zuri reads: the line
+  # break is what ends the unbraced body. A source that does not parse
+  # has no tree to lay out, so it is refused and left as it was.
+  it('refuses a source that does not parse, saying where', @{
+    expect(@{
+      format('if a b = 1 else b = 2')
+    })
+      .to_raise_instance_of(FormatError)
+
+    catch {
+      format('var = 2')
+    } as error {
+      expect(error.message).to_start_with('it does not parse: 1:5:')
+    }
+  })
+})
+
+describe('format_file', @{
+  it('reads a file and returns its formatted text', @{
+    var path = os.create_temp_file('fmt')
+    var handle = file(path, 'w')
+
+    handle.write('var  x=1')
+    handle.close()
+
+    expect(format_file(path)).to_be('var x = 1\n')
+
+    file(path).delete()
+  })
+})

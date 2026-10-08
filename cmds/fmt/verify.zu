@@ -1,0 +1,170 @@
+/**
+ * @module fmt.verify
+ *
+ * The check that formatting changed nothing but layout. Two sources are
+ * the same program when they parse to the same tree, every position
+ * aside, and hold the same comments in the same order.
+ *
+ * Two differences are allowed, both the formatter's own rewrites and
+ * neither a change to what runs:
+ *
+ * - The dictionary shorthand `{ name }` and the entry it stands for, a
+ *   key and a value of the same name.
+ * - A body written as a single statement and the same statement braced,
+ *   for the body of an `if`, `else`, loop, `when` or `default`. A body
+ *   that declares a name is never braced, since braces would give the
+ *   name a scope of its own, so it is never treated as the same either.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+# Fields that say where something is rather than what it is.
+var _PLACES = [
+  'start', 'end', 'line', 'col', 'end_line', 'end_col', 'name_span', 'key_span',
+  'value_span', 'segments',
+]
+
+# Statements that declare a name, which braces would scope.
+var _DECLARING = ['Var', 'VarList', 'Decl', 'Function']
+
+# The fields of each kind that hold a body.
+var _BODIES = {
+  If: ['then', 'otherwise'],
+  While: ['body'],
+  For: ['body'],
+  DoWhile: ['body'],
+  When: ['body'],
+  Using: ['default_body'],
+}
+
+def _is_comment(node) {
+  return node.kind == 'Comment' or node.kind == 'DocBlock'
+}
+
+def _is_node(value) {
+  return is_instance(value)
+    and hasprop(value, 'fields')
+    and hasprop(value, 'kind')
+}
+
+# A body as it compares: a block of one statement that declares nothing
+# reads as that statement.
+def _unbraced(body) {
+  if !_is_node(body) or body.kind != 'Block' {
+    return body
+  }
+
+  var statements = body.fields.statements.filter(@(node) => !_is_comment(node))
+
+  if statements.length() != 1 or _DECLARING.contains(statements[0].kind) {
+    return body
+  }
+
+  return statements[0]
+}
+
+def _write(value, out: list) {
+  if is_list(value) {
+    out.append('[')
+
+    for item in value {
+      if !_is_node(item) or !_is_comment(item) {
+        _write(item, out)
+      }
+    }
+
+    out.append(']')
+
+    return
+  }
+
+  if !_is_node(value) {
+    out.append(typeof(value))
+    out.append(is_string(value) ? value : '${value}')
+
+    return
+  }
+
+  var kind = value.kind == 'Shorthand' ? 'Identifier' : value.kind
+  var bodies = _BODIES.get(kind, [])
+
+  out.append('(${kind}')
+
+  for name in value.fields.keys() {
+    if !_PLACES.contains(name) {
+      var field = value.fields[name]
+
+      out.append(name)
+      _write(bodies.contains(name) ? _unbraced(field) : field, out)
+    }
+  }
+
+  out.append(')')
+}
+
+/**
+ * What a parsed program is, as text: every node and value in it, with
+ * positions and comments left out and the formatter's two rewrites read
+ * as what they replace. Two programs are the same when this is.
+ *
+ * @param list nodes: The top-level nodes, from `zuri.parse()`.
+ * @returns string
+ */
+def shape(nodes: list) {
+  var out = []
+
+  _write(nodes, out)
+
+  return ' '.join(out)
+}
+
+# A comment's text with what layout is allowed to change taken out: the
+# space a `#` comment trails off with, and the indent of a doc block's
+# lines, which move with the code around it.
+def _comment_text(node) {
+  var text = node.fields.text
+
+  if node.kind == 'Comment' {
+    return '#' + text.rtrim()
+  }
+
+  return '/*' + '\n'.join(text.split('\n').map(@(line) => line.trim()))
+}
+
+def _collect(value, out: list) {
+  if is_list(value) {
+    for item in value {
+      _collect(item, out)
+    }
+
+    return
+  }
+
+  if !_is_node(value) {
+    return
+  }
+
+  if _is_comment(value) {
+    out.append({ start: value.start, text: _comment_text(value) })
+
+    return
+  }
+
+  for name in value.fields.keys() {
+    _collect(value.fields[name], out)
+  }
+}
+
+/**
+ * Every comment in a parsed program, in the order it was written.
+ *
+ * @param list nodes: The top-level nodes, from `zuri.parse()`.
+ * @returns list[string]
+ */
+def comments(nodes: list) {
+  var found = []
+
+  _collect(nodes, found)
+
+  return found.sort(@(a, b) => a.start - b.start).map(@(entry) => entry.text)
+}
