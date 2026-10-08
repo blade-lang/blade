@@ -1,0 +1,101 @@
+/**
+ * A function the optimizing tier compiles keeps the registers of every
+ * call it builds in past its own. When one of those built-in callees
+ * makes a call the runtime carries out, constructing a class from
+ * another module or handing a native a function to call back, the frame
+ * that call runs in has to start past all of them. Starting it at the
+ * end of the compiled function's own registers lets the call overwrite
+ * values the built-in callers around it still hold: the list a loop
+ * appends to, the receiver of the next call, the list a loop walks.
+ */
+
+import .jit_built_in_callee_calls_base { Marker }
+
+def bump(at) {
+  return at + 1
+}
+
+class Walker {
+  @new(marker) {
+    self.marker = marker
+  }
+
+  # Constructs a class of the other module on every turn.
+  marks(items: list) {
+    var parts = []
+
+    for item in items {
+      parts.append(self._note(self.marker.take(item.at)))
+      parts.append(self._marks_inside(item))
+    }
+
+    return parts
+  }
+
+  _marks_inside(item) {
+    if item.inner == nil {
+      return item.at
+    }
+
+    var parts = []
+
+    for inner in item.inner {
+      parts.append(self._note(self.marker.take(inner.at)))
+    }
+
+    return parts
+  }
+
+  # Hands a native a function to call back on every turn.
+  steps(items: list) {
+    var parts = []
+
+    for item in items {
+      parts.append(self._note(self.marker.peek(item.at)))
+      parts.append(self._steps_inside(item))
+    }
+
+    return parts
+  }
+
+  _steps_inside(item) {
+    if item.inner == nil {
+      return item.at
+    }
+
+    var parts = []
+
+    for inner in item.inner {
+      parts.append(self._note(self.marker.peek(inner.at)))
+      parts.append(self.marker.each([inner.at], bump))
+    }
+
+    return parts
+  }
+
+  _note(mark) {
+    return [mark].map(@(m) => m.at)
+  }
+}
+
+var items = [
+  { at: 1, inner: [{ at: 2, inner: nil }, { at: 3, inner: nil }] },
+  { at: 4, inner: nil },
+]
+
+var rounds = 30000
+var marked = 0
+var stepped = 0
+
+iter var i = 0; i < rounds; i++ {
+  marked += Walker(Marker()).marks(items).length()
+}
+
+iter var i = 0; i < rounds; i++ {
+  stepped += Walker(Marker()).steps(items).length()
+}
+
+echo marked
+echo stepped
+echo Walker(Marker()).marks(items)
+echo Walker(Marker()).steps(items)

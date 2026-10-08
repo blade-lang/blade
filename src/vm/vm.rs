@@ -1635,11 +1635,12 @@ impl VM {
     // Bounds growth by max call depth instead of growing once per
     // call_value invocation; no truncate-on-return needed since later
     // calls at the same depth just reuse the already-grown capacity.
-    let new_base = self
-      .frames
-      .last()
-      .map(|f| f.base + unsafe { &*f.function }.num_registers as usize)
-      .unwrap_or(0);
+    //
+    // A compiled frame with callees built into it keeps their registers
+    // past its own, and a constructor or a native's callback can run
+    // from inside one of those callees, so the new frame starts past
+    // everything the frame reaches.
+    let new_base = self.frames.last().map(Self::frame_top).unwrap_or(0);
     let needed = new_base + proto.num_registers as usize;
     if self.registers.len() < needed {
       self.registers.resize(needed, Value::nil());

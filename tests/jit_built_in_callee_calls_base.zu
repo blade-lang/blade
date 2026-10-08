@@ -1,0 +1,25 @@
+# The module side of jit-built-in-callee-calls.zu: methods small enough
+# to be built into their callers, each making a call the compiled code
+# hands to the runtime. A class of this module reached from another one
+# is constructed through the runtime rather than inline, and a native
+# such as `map` calls its function back through the runtime too.
+
+class Mark {
+  @new(at) {
+    self.at = at
+  }
+}
+
+class Marker {
+  take(at: number) {
+    return Mark(at)
+  }
+
+  peek(at: number) {
+    return { at }
+  }
+
+  each(items: list, step) {
+    return items.map(step)
+  }
+}
