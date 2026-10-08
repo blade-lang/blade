@@ -80,7 +80,7 @@ describe('running tests', @{
 
     var failure = client.diagnostics[checks].diagnostics.find(@(d) => d.source == 'zuri test')
 
-    expect(failure.range.start.line).to_equal(9)
+    expect(failure.range.start.line).to_equal(11)
     expect(failure.message).to_contain('points > know where they are: Expected 1 to deeply equal 2')
   })
 
