@@ -70,7 +70,7 @@ import @.declare { Declarations }
  *
  * @type string
  */
-var LIBC = _ffi.libc_name()
+var LIBC: string = _ffi.libc_name()
 
 /**
  * The C maths library, which on macOS and Windows is the same library
@@ -78,206 +78,206 @@ var LIBC = _ffi.libc_name()
  *
  * @type string
  */
-var LIBM = _ffi.libm_name()
+var LIBM: string = _ffi.libm_name()
 
 /**
  * `void`: the return type of a function that returns nothing.
  * @type Type
  */
-var void = _ffi.builtin_type('void')
+var void: Type = _ffi.builtin_type('void')
 
 /**
  * `bool`: C's `_Bool` and Rust's `bool`, one byte; a Zuri bool.
  * @type Type
  */
-var bool = _ffi.builtin_type('bool')
+var bool: Type = _ffi.builtin_type('bool')
 
 /**
  * `char`: signed on x86-64 and on Apple's Arm platforms, unsigned on
  * Arm Linux, as the platform's C compiler has it.
  * @type Type
  */
-var char = _ffi.builtin_type('char')
+var char: Type = _ffi.builtin_type('char')
 
 /**
  * `signed char`.
  * @type Type
  */
-var schar = _ffi.builtin_type('signed char')
+var schar: Type = _ffi.builtin_type('signed char')
 
 /**
  * `unsigned char`.
  * @type Type
  */
-var uchar = _ffi.builtin_type('unsigned char')
+var uchar: Type = _ffi.builtin_type('unsigned char')
 
 /**
  * `short`, 16 bits.
  * @type Type
  */
-var short = _ffi.builtin_type('short')
+var short: Type = _ffi.builtin_type('short')
 
 /**
  * `unsigned short`, 16 bits.
  * @type Type
  */
-var ushort = _ffi.builtin_type('unsigned short')
+var ushort: Type = _ffi.builtin_type('unsigned short')
 
 /**
  * `int`, 32 bits.
  * @type Type
  */
-var int = _ffi.builtin_type('int')
+var int: Type = _ffi.builtin_type('int')
 
 /**
  * `unsigned int`, 32 bits.
  * @type Type
  */
-var uint = _ffi.builtin_type('unsigned int')
+var uint: Type = _ffi.builtin_type('unsigned int')
 
 /**
  * `long`: 64 bits, except on Windows, where it is 32.
  * @type Type
  */
-var long = _ffi.builtin_type('long')
+var long: Type = _ffi.builtin_type('long')
 
 /**
  * `unsigned long`: 64 bits, except on Windows, where it is 32.
  * @type Type
  */
-var ulong = _ffi.builtin_type('unsigned long')
+var ulong: Type = _ffi.builtin_type('unsigned long')
 
 /**
  * `long long`, 64 bits.
  * @type Type
  */
-var longlong = _ffi.builtin_type('long long')
+var longlong: Type = _ffi.builtin_type('long long')
 
 /**
  * `unsigned long long`, 64 bits.
  * @type Type
  */
-var ulonglong = _ffi.builtin_type('unsigned long long')
+var ulonglong: Type = _ffi.builtin_type('unsigned long long')
 
 /**
  * `int8_t`.
  * @type Type
  */
-var int8 = _ffi.builtin_type('int8_t')
+var int8: Type = _ffi.builtin_type('int8_t')
 
 /**
  * `uint8_t`.
  * @type Type
  */
-var uint8 = _ffi.builtin_type('uint8_t')
+var uint8: Type = _ffi.builtin_type('uint8_t')
 
 /**
  * `int16_t`.
  * @type Type
  */
-var int16 = _ffi.builtin_type('int16_t')
+var int16: Type = _ffi.builtin_type('int16_t')
 
 /**
  * `uint16_t`.
  * @type Type
  */
-var uint16 = _ffi.builtin_type('uint16_t')
+var uint16: Type = _ffi.builtin_type('uint16_t')
 
 /**
  * `int32_t`.
  * @type Type
  */
-var int32 = _ffi.builtin_type('int32_t')
+var int32: Type = _ffi.builtin_type('int32_t')
 
 /**
  * `uint32_t`.
  * @type Type
  */
-var uint32 = _ffi.builtin_type('uint32_t')
+var uint32: Type = _ffi.builtin_type('uint32_t')
 
 /**
  * `int64_t`. Values beyond 2^53 in magnitude read back as bigints.
  * @type Type
  */
-var int64 = _ffi.builtin_type('int64_t')
+var int64: Type = _ffi.builtin_type('int64_t')
 
 /**
  * `uint64_t`. Values above 2^53 read back as bigints.
  * @type Type
  */
-var uint64 = _ffi.builtin_type('uint64_t')
+var uint64: Type = _ffi.builtin_type('uint64_t')
 
 /**
  * `__int128`, a 128-bit integer; Rust's `i128`.
  * @type Type
  */
-var int128 = _ffi.builtin_type('__int128')
+var int128: Type = _ffi.builtin_type('__int128')
 
 /**
  * `unsigned __int128`; Rust's `u128`.
  * @type Type
  */
-var uint128 = _ffi.builtin_type('unsigned __int128')
+var uint128: Type = _ffi.builtin_type('unsigned __int128')
 
 /**
  * `size_t`, 64 bits.
  * @type Type
  */
-var size_t = _ffi.builtin_type('size_t')
+var size_t: Type = _ffi.builtin_type('size_t')
 
 /**
  * `ssize_t`, 64 bits.
  * @type Type
  */
-var ssize_t = _ffi.builtin_type('ssize_t')
+var ssize_t: Type = _ffi.builtin_type('ssize_t')
 
 /**
  * `ptrdiff_t`, 64 bits.
  * @type Type
  */
-var ptrdiff_t = _ffi.builtin_type('ptrdiff_t')
+var ptrdiff_t: Type = _ffi.builtin_type('ptrdiff_t')
 
 /**
  * `intptr_t`, 64 bits.
  * @type Type
  */
-var intptr_t = _ffi.builtin_type('intptr_t')
+var intptr_t: Type = _ffi.builtin_type('intptr_t')
 
 /**
  * `uintptr_t`, 64 bits.
  * @type Type
  */
-var uintptr_t = _ffi.builtin_type('uintptr_t')
+var uintptr_t: Type = _ffi.builtin_type('uintptr_t')
 
 /**
  * `wchar_t`: 16 bits and unsigned on Windows, 32 bits elsewhere.
  * @type Type
  */
-var wchar_t = _ffi.builtin_type('wchar_t')
+var wchar_t: Type = _ffi.builtin_type('wchar_t')
 
 /**
  * `char16_t`, a UTF-16 code unit.
  * @type Type
  */
-var char16_t = _ffi.builtin_type('char16_t')
+var char16_t: Type = _ffi.builtin_type('char16_t')
 
 /**
  * `char32_t`, a UTF-32 code unit.
  * @type Type
  */
-var char32_t = _ffi.builtin_type('char32_t')
+var char32_t: Type = _ffi.builtin_type('char32_t')
 
 /**
  * `float`, 32 bits.
  * @type Type
  */
-var float = _ffi.builtin_type('float')
+var float: Type = _ffi.builtin_type('float')
 
 /**
  * `double`, 64 bits.
  * @type Type
  */
-var double = _ffi.builtin_type('double')
+var double: Type = _ffi.builtin_type('double')
 
 /**
  * `long double`: 80-bit extended precision on x86-64 Linux and macOS,
@@ -286,7 +286,7 @@ var double = _ffi.builtin_type('double')
  * wider value is rounded to the nearest double when read.
  * @type Type
  */
-var longdouble = _ffi.builtin_type('long double')
+var longdouble: Type = _ffi.builtin_type('long double')
 
 /**
  * `float _Complex`: a list of two numbers, `[real, imaginary]`. Passing
@@ -294,19 +294,19 @@ var longdouble = _ffi.builtin_type('long double')
  * `_Complex`; in memory it works everywhere.
  * @type Type
  */
-var complex_float = _ffi.builtin_type('float _Complex')
+var complex_float: Type = _ffi.builtin_type('float _Complex')
 
 /**
  * `double _Complex`, as `complex_float` with doubles.
  * @type Type
  */
-var complex_double = _ffi.builtin_type('double _Complex')
+var complex_double: Type = _ffi.builtin_type('double _Complex')
 
 /**
  * `void *`, the untyped pointer.
  * @type Type
  */
-var ptr = _ffi.builtin_type('void *')
+var ptr: Type = _ffi.builtin_type('void *')
 
 /**
  * `const char *` that converts to and from a string: a string passed in
@@ -315,105 +315,105 @@ var ptr = _ffi.builtin_type('void *')
  * null. Use `pointer(char)` to receive the pointer itself.
  * @type Type
  */
-var string = _ffi.builtin_type('string')
+var string: Type = _ffi.builtin_type('string')
 
 /**
  * `const wchar_t *` that converts to and from a string, as `string` does
  * in `wchar_t`'s encoding: UTF-16 on Windows and UTF-32 elsewhere.
  * @type Type
  */
-var wstring = _ffi.builtin_type('wstring')
+var wstring: Type = _ffi.builtin_type('wstring')
 
 /**
  * Rust's `i8`.
  * @type Type
  */
-var i8 = _ffi.builtin_type('i8')
+var i8: Type = _ffi.builtin_type('i8')
 
 /**
  * Rust's `u8`.
  * @type Type
  */
-var u8 = _ffi.builtin_type('u8')
+var u8: Type = _ffi.builtin_type('u8')
 
 /**
  * Rust's `i16`.
  * @type Type
  */
-var i16 = _ffi.builtin_type('i16')
+var i16: Type = _ffi.builtin_type('i16')
 
 /**
  * Rust's `u16`.
  * @type Type
  */
-var u16 = _ffi.builtin_type('u16')
+var u16: Type = _ffi.builtin_type('u16')
 
 /**
  * Rust's `i32`.
  * @type Type
  */
-var i32 = _ffi.builtin_type('i32')
+var i32: Type = _ffi.builtin_type('i32')
 
 /**
  * Rust's `u32`.
  * @type Type
  */
-var u32 = _ffi.builtin_type('u32')
+var u32: Type = _ffi.builtin_type('u32')
 
 /**
  * Rust's `i64`.
  * @type Type
  */
-var i64 = _ffi.builtin_type('i64')
+var i64: Type = _ffi.builtin_type('i64')
 
 /**
  * Rust's `u64`.
  * @type Type
  */
-var u64 = _ffi.builtin_type('u64')
+var u64: Type = _ffi.builtin_type('u64')
 
 /**
  * Rust's `i128`.
  * @type Type
  */
-var i128 = _ffi.builtin_type('i128')
+var i128: Type = _ffi.builtin_type('i128')
 
 /**
  * Rust's `u128`.
  * @type Type
  */
-var u128 = _ffi.builtin_type('u128')
+var u128: Type = _ffi.builtin_type('u128')
 
 /**
  * Rust's `isize`.
  * @type Type
  */
-var isize = _ffi.builtin_type('isize')
+var isize: Type = _ffi.builtin_type('isize')
 
 /**
  * Rust's `usize`.
  * @type Type
  */
-var usize = _ffi.builtin_type('usize')
+var usize: Type = _ffi.builtin_type('usize')
 
 /**
  * Rust's `f32`.
  * @type Type
  */
-var f32 = _ffi.builtin_type('f32')
+var f32: Type = _ffi.builtin_type('f32')
 
 /**
  * Rust's `f64`.
  * @type Type
  */
-var f64 = _ffi.builtin_type('f64')
+var f64: Type = _ffi.builtin_type('f64')
 
 /**
  * Rust's `char`: four bytes holding a Unicode scalar value, which is a
  * one-character string on the Zuri side.
  * @type Type
  */
-var rust_char = _ffi.builtin_type('rust char')
+var rust_char: Type = _ffi.builtin_type('rust char')
 
 /**
  * Loads a shared library.

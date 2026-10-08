@@ -8,7 +8,6 @@
 
 import enum
 
-
 /**
  * The Log levels in order
  *
@@ -33,33 +32,32 @@ var _default_log_level = LogLevel.None
 /**
  * Module level declaration of `LogLevel.None`
  */
-var None = LogLevel.None
+var None: int = LogLevel.None
 
 /**
  * Module level declaration of `LogLevel.Debug`
  */
-var Debug = LogLevel.Debug
+var Debug: int = LogLevel.Debug
 
 /**
  * Module level declaration of `LogLevel.Info`
  */
-var Info = LogLevel.Info
+var Info: int = LogLevel.Info
 
 /**
  * Module level declaration of `LogLevel.Warning`
  */
-var Warning = LogLevel.Warning
+var Warning: int = LogLevel.Warning
 
 /**
  * Module level declaration of `LogLevel.Error`
  */
-var Error = LogLevel.Error
+var Error: int = LogLevel.Error
 
 /**
  * Module level declaration of `LogLevel.Critical`
  */
-var Critical = LogLevel.Critical
-
+var Critical: int = LogLevel.Critical
 
 # The default level is genuinely shared, cross-file, mutable state
 # (every Transport's `can_log()` reads it, and the module-level
@@ -77,7 +75,6 @@ def _get_default_level() {
 def _set_default_level(level) {
   _default_log_level = level
 }
-
 
 /**
  * Returns the name of a log level as a string.

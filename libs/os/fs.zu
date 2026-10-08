@@ -24,49 +24,49 @@ import .path { join_paths }
  * Unknown file type
  * @type number
  */
-var DT_UNKNOWN = _os.DT_UNKNOWN
+var DT_UNKNOWN: number = _os.DT_UNKNOWN
 
 /**
  * Block device file type
  * @type number
  */
-var DT_BLK = _os.DT_BLK
+var DT_BLK: number = _os.DT_BLK
 
 /**
  * Character device file type
  * @type number
  */
-var DT_CHR = _os.DT_CHR
+var DT_CHR: number = _os.DT_CHR
 
 /**
  * Directory file type
  * @type number
  */
-var DT_DIR = _os.DT_DIR
+var DT_DIR: number = _os.DT_DIR
 
 /**
  * Named pipe file type
  * @type number
  */
-var DT_FIFO = _os.DT_FIFO
+var DT_FIFO: number = _os.DT_FIFO
 
 /**
  * Symbolic link file type
  * @type number
  */
-var DT_LNK = _os.DT_LNK
+var DT_LNK: number = _os.DT_LNK
 
 /**
  * Regular file type
  * @type number
  */
-var DT_REG = _os.DT_REG
+var DT_REG: number = _os.DT_REG
 
 /**
  * Local-domain socket file type
  * @type number
  */
-var DT_SOCK = _os.DT_SOCK
+var DT_SOCK: number = _os.DT_SOCK
 
 /**
  * Whiteout file type (only meaningful on UNIX and some
@@ -74,7 +74,7 @@ var DT_SOCK = _os.DT_SOCK
  * @type number
  * @note value is `-1` on systems where it is not supported.
  */
-var DT_WHT = _os.DT_WHT
+var DT_WHT: number = _os.DT_WHT
 
 /**
  * Creates the given directory with the specified permission and

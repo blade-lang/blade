@@ -58,7 +58,6 @@
  * @copyright 2021, Richard Ore and Zuri contributors
  */
 
-
 /**
  * JSON encodes the given value with a recursive depth up to
  * `max_depth`.
@@ -75,13 +74,7 @@
  * @raises Error: If the value cannot be encoded to json.
  * @returns string
  */
-def encode(value, compact, max_depth) {
-  if compact == nil 
-    compact = true
-  if max_depth == nil 
-    max_depth = 1024
-  return _json.encode(value, compact, max_depth)
-}
+def encode(value, compact, max_depth) {}
 
 /**
  * Decodes the input JSON string into Zuri objects
@@ -92,11 +85,7 @@ def encode(value, compact, max_depth) {
  * @raises Error: If the json is invalid.
  * @returns object
  */
-def decode(value, allow_comments) {
-  if allow_comments == nil 
-    allow_comments = true
-  return _json.decode(value, allow_comments)
-}
+def decode(value, allow_comments) {}
 
 /**
  * Parses a file containing json data.
@@ -122,4 +111,3 @@ def parse(path, allow_comments) {}
  * @raises Error: If the file cannot be written to.
  */
 def dump(value, path, compact, max_depth) {}
-

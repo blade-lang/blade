@@ -13,7 +13,7 @@ import _os
  * The current Zuri version.
  * @type string
  */
-var version = _os.version
+var version: string = _os.version
 
 /**
  * The platform the running runtime was built for, as a target triple:
@@ -28,13 +28,13 @@ var version = _os.version
  *
  * @type string
  */
-var target = _os.target
+var target: string = _os.target
 
 /**
  * The current Zuri VM version.
  * @type string
  */
-var vm_version = _os.vm_version
+var vm_version: string = _os.vm_version
 
 /**
  * The name of the current platform in string or `unknown` if the
@@ -49,7 +49,7 @@ var vm_version = _os.vm_version
  * 'osx'
  * ```
  */
-var platform = _os.platform
+var platform: string = _os.platform
 
 /**
  * The command line, as the running script sees it.
@@ -71,19 +71,19 @@ var platform = _os.platform
  *
  * @type list
  */
-var args = _os.args
+var args: list = _os.args
 
 /**
  * The standard path separator for the current operating system.
  * @type string
  */
-var path_separator = _os.path_separator
+var path_separator: string = _os.path_separator
 
 /**
  * The full path to the running Zuri executable.
  * @type string
  */
-var exe_path = _os.exe_path
+var exe_path: string = _os.exe_path
 
 /**
  * Causes the current thread to sleep for the specified number of
