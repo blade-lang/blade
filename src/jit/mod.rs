@@ -421,6 +421,12 @@ pub struct CompileFacts {
   pub param_field_slots: FxHashMap<u8, (u64, FxHashMap<String, u16>)>,
   pub self_class_bits: Option<(u64, u64)>,
   pub globals_snapshot: FxHashMap<String, ResolvedGlobal>,
+  /// The slot table of the module the function belongs to, for its
+  /// compiled code to read that module's globals through (see
+  /// `object::module_slots_table`); 0 for the root script's functions.
+  /// Taken here, on the VM's thread, since the module object itself may
+  /// move while the compile runs.
+  pub module_table: usize,
   pub global_lists: rustc_hash::FxHashSet<String>,
   /// Global names holding a whole number at the moment compilation was
   /// requested.

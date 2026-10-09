@@ -20,7 +20,7 @@
 use rustc_hash::FxHashMap;
 
 use super::{replace_all, resolve};
-use crate::jit::ir::{BlockId, Func, GuardKind, InstId, Op, ValueId, dominators};
+use crate::jit::ir::{BlockId, Func, GlobalRef, GuardKind, InstId, Op, ValueId, dominators};
 
 /// The alias classes memory reads are versioned by.
 #[derive(Clone, Copy, Default)]
@@ -43,7 +43,7 @@ enum Key {
   Elem(u32),
   ListEnd(bool, u32, u32),
   Field(u16, u32),
-  Global(u32, u32),
+  Global(GlobalRef, u32),
   Cell(u8, u32),
   Upval(u32),
   /// A read of some kind of memory, by what it reads and the version of

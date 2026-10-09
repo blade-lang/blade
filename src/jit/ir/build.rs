@@ -29,8 +29,8 @@
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::{
-  BitOp, BlockId, Cmp, FTest, FUnary, FrameClosure, FrameState, Func, GuardKind, InlineFrame,
-  IntOp, NO_VALUE, Op, Terminator, Ty, ValueId,
+  BitOp, BlockId, Cmp, FTest, FUnary, FrameClosure, FrameState, Func, GlobalRef, GuardKind,
+  InlineFrame, IntOp, NO_VALUE, Op, Terminator, Ty, ValueId,
 };
 use crate::jit::typeflow;
 use crate::vm::chunk::{Instr, ParamType, kind};
@@ -64,8 +64,9 @@ pub struct Feedback {
   /// `VM::method_table_generation` when this was gathered. Code that
   /// builds a method into its caller checks it has not moved.
   pub method_generation: u64,
-  /// A global site's resolved root slot.
-  pub globals: FxHashMap<usize, u32>,
+  /// A global site's resolved slot. A write is here only for a root slot,
+  /// since a module's globals are written through the runtime.
+  pub globals: FxHashMap<usize, GlobalRef>,
   /// The invoke-cache key a list receiver gets.
   pub list_key: u64,
   /// Sites where compiled code has already deoptimized. Nothing is
@@ -80,12 +81,12 @@ pub struct Feedback {
   pub fields_off: bool,
   /// For a global slot holding a closure some call here reaches through,
   /// that closure's function, with what to build it from.
-  pub global_callees: FxHashMap<u32, Box<Callee>>,
+  pub global_callees: FxHashMap<GlobalRef, Box<Callee>>,
   /// Global slots holding a class that a call here reaches through.
-  pub global_classes: FxHashSet<u32>,
+  pub global_classes: FxHashSet<GlobalRef>,
   /// Global slots holding a number this function reads and never writes,
   /// with whether it is a whole one integer arithmetic can take.
-  pub global_numbers: FxHashMap<u32, bool>,
+  pub global_numbers: FxHashMap<GlobalRef, bool>,
   /// For a method call site whose cache holds a class, the method that
   /// class resolves it to.
   pub invoke_callees: FxHashMap<usize, Box<Callee>>,
@@ -1044,7 +1045,7 @@ impl<'a> Builder<'a> {
         if seen != 0
           && self
             .callee_global(*func)
-            .is_some_and(|slot| self.cx.feedback.global_classes.contains(&slot)) =>
+            .is_some_and(|global| self.cx.feedback.global_classes.contains(&global)) =>
       {
         Some("a call")
       },
@@ -1073,11 +1074,11 @@ impl<'a> Builder<'a> {
     }
   }
 
-  /// The global slot a call's callee register was just loaded from.
-  fn callee_global(&self, func: u8) -> Option<u32> {
+  /// The global a call's callee register was just loaded from.
+  fn callee_global(&self, func: u8) -> Option<GlobalRef> {
     let t = self.view(func).tagged?;
     match self.func.def_inst(t)?.op {
-      Op::LoadGlobal(slot) => Some(slot),
+      Op::LoadGlobal(global) => Some(global),
       _ => None,
     }
   }
@@ -1588,11 +1589,11 @@ impl<'a> Builder<'a> {
       },
 
       Instr::GetGlobal { dst, .. } if self.cx.feedback.globals.contains_key(&ip) => {
-        let slot = self.cx.feedback.globals[&ip];
-        let t = self.value(Op::LoadGlobal(slot), vec![], Ty::Tagged);
+        let global = self.cx.feedback.globals[&ip];
+        let t = self.value(Op::LoadGlobal(global), vec![], Ty::Tagged);
         self.set_tagged(dst, t);
         let feedback = self.cx.feedback;
-        if let Some(&whole) = feedback.global_numbers.get(&slot)
+        if let Some(&whole) = feedback.global_numbers.get(&global)
           && !feedback.sites_off
           && feedback.open(ip)
         {
@@ -1606,9 +1607,11 @@ impl<'a> Builder<'a> {
         }
       },
       Instr::SetGlobal { src, .. } | Instr::AssignGlobal { src, .. }
-        if self.cx.feedback.globals.contains_key(&ip) =>
+        if matches!(self.cx.feedback.globals.get(&ip), Some(GlobalRef::Root(_))) =>
       {
-        let slot = self.cx.feedback.globals[&ip];
+        let Some(&GlobalRef::Root(slot)) = self.cx.feedback.globals.get(&ip) else {
+          unreachable!("the guard matched a root slot");
+        };
         let v = self.tagged(src);
         self.push(Op::StoreGlobal(slot), vec![v], None, None);
       },
@@ -2361,10 +2364,10 @@ impl<'a> Builder<'a> {
       return None;
     }
     let t = self.view(func).tagged?;
-    let Op::LoadGlobal(slot) = &self.func.def_inst(t)?.op else {
+    let Op::LoadGlobal(global) = &self.func.def_inst(t)?.op else {
       return None;
     };
-    feedback.global_callees.get(slot).map(|c| &**c)
+    feedback.global_callees.get(global).map(|c| &**c)
   }
 
   /// The class a method call's receiver has had, and the method it

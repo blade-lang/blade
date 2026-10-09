@@ -181,6 +181,16 @@ pub struct InlineFrame {
   pub closure: FrameClosure,
 }
 
+/// A global a function resolved: a slot of `VM::global_slots`, or a slot
+/// of its own module's table, named by that table's address (see
+/// `object::module_slots_table`). A call built in from another module
+/// reads that module's table.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum GlobalRef {
+  Root(u32),
+  Module { table: usize, slot: u32 },
+}
+
 /// An integer operation checked against the interpreter's doubles.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum IntOp {
@@ -330,14 +340,14 @@ pub enum Op {
     reg: u8,
   },
 
-  /// A global from `VM::global_slots`, by the slot the interpreter
-  /// resolved it to.
-  LoadGlobal(u32),
+  /// A global, from the table and slot the interpreter resolved it to.
+  LoadGlobal(GlobalRef),
   /// `VM::method_table_generation`, which moves whenever a method is
   /// installed on a class. A `I64`.
   MethodGeneration,
-  /// Stores into a resolved global slot. The slots are roots, so no
-  /// barrier. Operand: the value.
+  /// Stores into a resolved slot of `VM::global_slots`. The slots are
+  /// roots, so no barrier. A module's globals are stored through the
+  /// runtime, which gives the module its barrier. Operand: the value.
   StoreGlobal(u32),
 
   /// `F64` to `Tagged`.

@@ -2038,15 +2038,14 @@ pub unsafe extern "C" fn zuri_jit_get_global(
       // Also populate the JIT-only array cache (`codegen::FuncCompiler`'s
       // inline fast path: see `JitInfo::global_slot_cache`'s own docs)
       // so every later execution of this instruction, from compiled
-      // code, skips this whole helper call. Root-globals only: a
-      // qualified-module resolution (`is_root == false`) would need the
-      // module's own namespace-slots pointer cached the same careful
-      // way `VM::global_slots_ptr_cache` is, which nothing here does
-      // yet; left as a real helper-call miss every time rather than
-      // baking in an unsound fast path.
-      if is_root {
-        func.jit.global_slot_cache[instr_ip].set(slot as i64);
-      }
+      // code, skips this whole helper call: a root slot through
+      // `VM::global_slots_ptr_cache`, a module slot through the
+      // module's own table.
+      let entry = match is_root {
+        true => slot as i64,
+        false => crate::vm::object::module_slot_entry(slot),
+      };
+      func.jit.global_slot_cache[instr_ip].set(entry);
       let v = vm.read_resolved(gmod, is_root, slot);
       vm.set_reg(base as usize, dst as u8, v);
       OK

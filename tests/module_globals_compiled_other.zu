@@ -1,0 +1,10 @@
+# A second module, whose function the first calls through a name it
+# imported. Built into a caller in the first module, it still reads
+# this module's globals.
+
+var SCALE = 4
+var OFFSET = 10
+
+def scaled(n) {
+  return n * SCALE + OFFSET
+}

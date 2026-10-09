@@ -1,0 +1,11 @@
+# Compiled code reads a module's globals through the module's own slot
+# table, and the optimizing tier speculates on them as it does on the
+# root script's: the class a call constructs, the function it calls,
+# the number a global holds. Everything here runs inside a library
+# module, so each result has to match what the interpreter gives.
+
+import .module_globals_compiled_lib
+
+for result in module_globals_compiled_lib.results {
+  echo result
+}

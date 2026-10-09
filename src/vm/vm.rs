@@ -11,6 +11,7 @@ use num_traits::ToPrimitive;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::builtins;
+use crate::jit::ir::GlobalRef;
 use crate::jit::{CompileFacts, EntryFn, background, escape, typeflow};
 use crate::modules::{ffi_util, os_util};
 use crate::vm::chunk::{Instr, JumpKey, ParamType, kind};
@@ -2657,9 +2658,7 @@ impl VM {
           {
             let name = name_val.as_str();
             if let Some((is_root, slot)) = self.resolve_global(callee_proto.globals_module, name) {
-              if is_root {
-                callee_proto.jit.global_slot_cache[cip].set(slot as i64);
-              }
+              callee_proto.jit.global_slot_cache[cip].set(Self::global_entry(is_root, slot));
             }
           }
         }
@@ -2728,6 +2727,9 @@ impl VM {
       field_speculation_off: proto.jit.field_speculation_off.get(),
       elem_speculation_off: proto.jit.elem_speculation_off.get(),
       globals_snapshot: self.snapshot_globals(proto),
+      module_table: proto
+        .globals_module
+        .map_or(0, crate::vm::object::module_slots_table),
       global_lists: self.snapshot_global_lists(proto),
       global_ints: self.snapshot_global_ints(proto),
       global_numbers: self.snapshot_global_numbers(proto),
@@ -2818,8 +2820,8 @@ impl VM {
     self.pending_jit_callees.retain(|(p, _)| *p != key);
   }
 
-  /// Resolves every global `proto` reads or writes to its root slot, for
-  /// compiled code to use directly.
+  /// Resolves every global `proto` reads or writes to its slot, in the
+  /// root table or in its module's, for compiled code to use directly.
   fn cache_global_slots(&self, proto: &ObjFunction) {
     for (ip, instr) in proto.chunk.code.iter().enumerate() {
       let name_const = match instr {
@@ -2833,11 +2835,37 @@ impl VM {
       {
         let name = name_val.as_str();
         if let Some((is_root, slot)) = self.resolve_global(proto.globals_module, name) {
-          if is_root {
-            proto.jit.global_slot_cache[ip].set(slot as i64);
-          }
+          proto.jit.global_slot_cache[ip].set(Self::global_entry(is_root, slot));
         }
       }
+    }
+  }
+
+  /// A resolved global as `JitInfo::global_slot_cache` holds it.
+  fn global_entry(is_root: bool, slot: u32) -> i64 {
+    match is_root {
+      true => slot as i64,
+      false => crate::vm::object::module_slot_entry(slot),
+    }
+  }
+
+  /// The global `proto`'s compiled code reaches at `ip`, as the
+  /// optimizing tier names it, once that site has resolved.
+  fn compiled_global(proto: &ObjFunction, ip: usize) -> Option<GlobalRef> {
+    let entry = proto.jit.global_slot_cache[ip].get();
+    let (is_root, slot) = crate::vm::object::decode_global_entry(entry)?;
+    if is_root {
+      return Some(GlobalRef::Root(slot));
+    }
+    let table = crate::vm::object::module_slots_table(proto.globals_module?);
+    Some(GlobalRef::Module { table, slot })
+  }
+
+  /// What `global`, resolved by `proto`, holds now.
+  fn global_value(&self, proto: &ObjFunction, global: GlobalRef) -> Value {
+    match global {
+      GlobalRef::Root(slot) => self.global_slots[slot as usize].get(),
+      GlobalRef::Module { slot, .. } => self.read_resolved(proto.globals_module, false, slot),
     }
   }
 
@@ -2864,10 +2892,10 @@ impl VM {
     for (ip, instr) in chunk.code.iter().enumerate() {
       match instr {
         Instr::Call { func, .. } => {
-          if let Some(slot) = Self::global_feeding(proto, ip, *func)
-            && self.global_slots[slot as usize].get().is_class()
+          if let Some(global) = Self::global_feeding(proto, ip, *func)
+            && self.global_value(proto, global).is_class()
           {
-            global_classes.insert(slot);
+            global_classes.insert(global);
           }
         },
         Instr::GetField { name_const, .. } | Instr::SetField { name_const, .. } => {
@@ -2917,9 +2945,8 @@ impl VM {
           }
         },
         Instr::GetGlobal { .. } | Instr::SetGlobal { .. } | Instr::AssignGlobal { .. } => {
-          let slot = proto.jit.global_slot_cache[ip].get();
-          if slot >= 0 {
-            globals.insert(ip, slot as u32);
+          if let Some(global) = Self::compiled_global(proto, ip) {
+            globals.insert(ip, global);
           }
         },
         _ => {},
@@ -2928,7 +2955,7 @@ impl VM {
     // Module-level numbers this function only reads, as they stand now.
     // A `const` is an ordinary global once compiled, so the builder bets
     // on what it holds and checks the bet where it reads it.
-    let written: FxHashSet<u32> = chunk
+    let written: FxHashSet<GlobalRef> = chunk
       .code
       .iter()
       .enumerate()
@@ -2938,16 +2965,16 @@ impl VM {
     let mut global_numbers = FxHashMap::default();
     for (ip, instr) in chunk.code.iter().enumerate() {
       if let Instr::GetGlobal { .. } = instr
-        && let Some(&slot) = globals.get(&ip)
-        && !written.contains(&slot)
+        && let Some(&global) = globals.get(&ip)
+        && !written.contains(&global)
       {
-        let value = self.global_slots[slot as usize].get();
+        let value = self.global_value(proto, global);
         if value.is_number() {
           let n = value.as_number();
           let whole = n.fract() == 0.0
             && n.abs() < 9_007_199_254_740_992.0
             && n.to_bits() != (-0.0f64).to_bits();
-          global_numbers.insert(slot, whole);
+          global_numbers.insert(global, whole);
         }
       }
     }
@@ -2957,11 +2984,11 @@ impl VM {
       for (ip, instr) in chunk.code.iter().enumerate() {
         match *instr {
           Instr::Call { func, .. } => {
-            let Some(slot) = Self::global_feeding(proto, ip, func) else {
+            let Some(global) = Self::global_feeding(proto, ip, func) else {
               continue;
             };
-            let value = self.global_slots[slot as usize].get();
-            if global_callees.contains_key(&slot) || !value.is_closure() {
+            let value = self.global_value(proto, global);
+            if global_callees.contains_key(&global) || !value.is_closure() {
               continue;
             }
             let function = value.as_closure().function;
@@ -2973,7 +3000,7 @@ impl VM {
             gather.values.push(function);
             let feedback = gather.within(callee, |gather| self.tier2_feedback(callee, gather));
             global_callees.insert(
-              slot,
+              global,
               Box::new(Callee {
                 proto: callee as *const ObjFunction as usize,
                 proto_bits: function.to_bits(),
@@ -3087,10 +3114,10 @@ impl VM {
     declaring != class.to_bits() || class.as_class().subclassed.get()
   }
 
-  /// The global slot a call's function register was last read from,
-  /// when the nearest write to it before the call is a global read the
-  /// function has resolved.
-  fn global_feeding(proto: &ObjFunction, ip: usize, func: u8) -> Option<u32> {
+  /// The global a call's function register was last read from, when the
+  /// nearest write to it before the call is a global read the function
+  /// has resolved.
+  fn global_feeding(proto: &ObjFunction, ip: usize, func: u8) -> Option<GlobalRef> {
     for at in (0..ip).rev() {
       let instr = &proto.chunk.code[at];
       if matches!(
@@ -3108,8 +3135,7 @@ impl VM {
       if !matches!(instr, Instr::GetGlobal { .. }) {
         return None;
       }
-      let slot = proto.jit.global_slot_cache[at].get();
-      return (slot >= 0).then_some(slot as u32);
+      return Self::compiled_global(proto, at);
     }
     None
   }

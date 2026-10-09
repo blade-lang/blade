@@ -29,8 +29,8 @@ use cranelift_module::{FuncId, Module};
 use rustc_hash::FxHashMap;
 
 use super::{
-  BitOp, BlockId, Cmp, FTest, FUnary, FrameState, Func, GuardKind, InstId, IntOp, Op, Terminator,
-  Ty, ValueId,
+  BitOp, BlockId, Cmp, FTest, FUnary, FrameState, Func, GlobalRef, GuardKind, InstId, IntOp, Op,
+  Terminator, Ty, ValueId,
 };
 use crate::vm::chunk::Instr;
 use crate::vm::object::{self, ObjFunction};
@@ -361,16 +361,31 @@ impl<'a, 'b> Lowering<'a, 'b> {
         self.vm,
         METHOD_TABLE_GENERATION_OFFSET,
       )),
-      Op::LoadGlobal(slot) => {
-        let slots = self
-          .fb
-          .ins()
-          .load(types::I64, flags, self.vm, GLOBAL_SLOTS_PTR_CACHE_OFFSET);
+      Op::LoadGlobal(global) => {
+        let (slots, slot) = match *global {
+          GlobalRef::Root(slot) => {
+            let slots =
+              self
+                .fb
+                .ins()
+                .load(types::I64, flags, self.vm, GLOBAL_SLOTS_PTR_CACHE_OFFSET);
+            (slots, slot)
+          },
+          GlobalRef::Module { table, slot } => {
+            let table = self.fb.ins().iconst(types::I64, table as i64);
+            let slots =
+              self
+                .fb
+                .ins()
+                .load(types::I64, flags, table, object::module_slots_ptr_offset());
+            (slots, slot)
+          },
+        };
         Some(
           self
             .fb
             .ins()
-            .load(types::I64, flags, slots, (*slot as i32) * 8),
+            .load(types::I64, flags, slots, (slot as i32) * 8),
         )
       },
       Op::StoreGlobal(slot) => {

@@ -1,0 +1,105 @@
+# Globals of a module read, called and constructed by its own compiled
+# code. See module-globals-compiled.zu.
+
+import .module_globals_compiled_other { scaled }
+
+var STEP = 3
+var LABEL = 'item'
+var TABLE = [1, 2, 3]
+var COUNTER = 0
+var FACTOR = 2
+
+class Pair {
+  @new(a, b) {
+    self.a = a
+    self.b = b
+  }
+}
+
+def twice(n) {
+  return n * 2
+}
+
+# Shadows the built-in `sum` for this module's own code.
+def sum(items) {
+  return items.length() * 100
+}
+
+# Numbers, a list and a string the module holds, one of its classes,
+# one of its functions, a function from another module and a built-in
+# it shadows, all in one loop hot enough to compile.
+def hot(count) {
+  var total = 0
+  iter var i = 0; i < count; i++ {
+    var pair = Pair(i, STEP)
+    total += twice(pair.b) + TABLE[i % 3] + LABEL.length() + scaled(i % 5)
+    total += sum(TABLE)
+  }
+  return total
+}
+
+# Compiled before LATE exists, then run again once it does.
+def maybe_late(read, count) {
+  var total = 0
+  iter var i = 0; i < count; i++ {
+    if read {
+      total += LATE
+    } else {
+      total += 1
+    }
+  }
+  return total
+}
+
+def bump() {
+  COUNTER += 1
+}
+
+# A global another function changes, read after every change.
+def watch(count) {
+  var seen = 0
+  iter var i = 0; i < count; i++ {
+    bump()
+    seen += COUNTER
+  }
+  return seen
+}
+
+def scale_all(count) {
+  var total = 0
+  iter var i = 0; i < count; i++ {
+    total += i * FACTOR
+  }
+  return total
+}
+
+var results = []
+
+results.append(hot(20000))
+results.append(maybe_late(false, 20000))
+
+var LATE = 7
+
+results.append(maybe_late(true, 20000))
+results.append(watch(20000))
+results.append(scale_all(20000))
+
+FACTOR = 2.5
+
+results.append(scale_all(20000))
+
+# Enough further globals that the module's slot table outgrows its
+# buffer while compiled code that reads it is installed.
+var G0 = 0, G1 = 1, G2 = 2, G3 = 3, G4 = 4, G5 = 5, G6 = 6, G7 = 7
+var G8 = 8, G9 = 9, G10 = 10, G11 = 11, G12 = 12, G13 = 13, G14 = 14
+var G15 = 15, G16 = 16, G17 = 17, G18 = 18, G19 = 19, G20 = 20
+var G21 = 21, G22 = 22, G23 = 23, G24 = 24, G25 = 25, G26 = 26
+var G27 = 27, G28 = 28, G29 = 29, G30 = 30, G31 = 31, G32 = 32
+var G33 = 33, G34 = 34, G35 = 35, G36 = 36, G37 = 37, G38 = 38
+
+STEP = 5
+LATE = 9
+
+results.append(hot(20000))
+results.append(maybe_late(true, 20000))
+results.append(G0 + G38)

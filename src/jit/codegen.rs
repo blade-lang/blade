@@ -1275,6 +1275,8 @@ struct FuncCompiler<'a, 'b> {
   global_lists: FxHashSet<String>,
   global_ints: FxHashSet<String>,
   global_numbers: FxHashSet<String>,
+  /// See `CompileFacts::module_table`.
+  module_table: usize,
   guarded_instance_vars: FxHashMap<u8, (Variable, Variable, Variable)>,
   active_guarded: FxHashSet<u8>,
   known_classes: FxHashMap<u64, FxHashMap<String, u16>>,
@@ -1891,6 +1893,7 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
       global_lists: facts.global_lists,
       global_ints: facts.global_ints,
       global_numbers: facts.global_numbers,
+      module_table: facts.module_table,
       param_field_slots: facts.param_field_slots,
       construct_field_slots: construct_slots,
       own_func_id,
@@ -7720,12 +7723,11 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
   }
 
   /// `Instr::GetGlobal`'s inline-cache-style fast path: once this exact
-  /// instruction has resolved its name to a ROOT global slot once (see
-  /// `JitInfo::global_slot_cache`'s own docs; a qualified-module
-  /// resolution never populates this cache, so those always take the
-  /// helper path below), every later execution reads the slot straight
-  /// out of `VM::global_slots` with two loads and an add, no helper
-  /// call, no name lookup at all; this is what makes a self-recursive
+  /// instruction has resolved its name to a global slot once (see
+  /// `JitInfo::global_slot_cache`'s own docs), every later execution
+  /// reads the slot straight out of `VM::global_slots`, or out of the
+  /// function's own module's table, with two loads and an add, no
+  /// helper call, no name lookup at all; this is what makes a self-recursive
   /// top-level call (`fib` referencing itself, the single most common
   /// hot pattern in real recursive code) cost the same as reading an
   /// already-resolved local instead of paying a full FFI call on every
@@ -7900,40 +7902,75 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
     self.fb.switch_to_block(ok_block);
   }
 
+  /// The data pointer of this function's module's slot table, read
+  /// afresh, since the table moves its buffer whenever the module
+  /// defines another global.
+  fn module_slots_ptr(&mut self) -> IrValue {
+    let flags = cranelift_codegen::ir::MemFlagsData::trusted();
+    let table = self.i64c(self.module_table as i64);
+    self
+      .fb
+      .ins()
+      .load(types::I64, flags, table, object::module_slots_ptr_offset())
+  }
+
   fn emit_get_global_load(&mut self, ip: usize, dst: u8, name_const: u16) {
     let flags = cranelift_codegen::ir::MemFlagsData::trusted();
-    let slot = self.proto.jit.global_slot_cache[ip].get();
-    if slot >= 0 {
-      if let Some(&var) = self.global_vars.get(&slot) {
-        let v = self.fb.use_var(var);
+    let entry = self.proto.jit.global_slot_cache[ip].get();
+    match object::decode_global_entry(entry) {
+      Some((true, slot)) => {
+        let slot = slot as i64;
+        if let Some(&var) = self.global_vars.get(&slot) {
+          let v = self.fb.use_var(var);
+          self.store_reg(dst, v);
+          return;
+        }
+        let slots_ptr = self.fb.ins().load(
+          types::I64,
+          flags,
+          self.vm_param,
+          GLOBAL_SLOTS_PTR_CACHE_OFFSET,
+        );
+        let byte_off = (slot * 8) as i32;
+        let v = self.fb.ins().load(types::I64, flags, slots_ptr, byte_off);
         self.store_reg(dst, v);
         return;
-      }
-      let slots_ptr = self.fb.ins().load(
-        types::I64,
-        flags,
-        self.vm_param,
-        GLOBAL_SLOTS_PTR_CACHE_OFFSET,
-      );
-      let byte_off = (slot * 8) as i32;
-      let v = self.fb.ins().load(types::I64, flags, slots_ptr, byte_off);
-      self.store_reg(dst, v);
-      return;
+      },
+      Some((false, slot)) if self.module_table != 0 => {
+        let slots_ptr = self.module_slots_ptr();
+        let v = self
+          .fb
+          .ins()
+          .load(types::I64, flags, slots_ptr, (slot * 8) as i32);
+        self.store_reg(dst, v);
+        return;
+      },
+      _ => {},
     }
 
+    // Not resolved when this was compiled: the cache says, once the
+    // helper below has run, whether it is a root slot (itself) or a
+    // slot of this function's module (below -1).
     let cache_ptr = self.proto.jit.global_slot_cache.as_ptr() as i64;
     let cache_base = self.i64c(cache_ptr);
     let cached = self
       .fb
       .ins()
       .load(types::I64, flags, cache_base, (ip as i32) * 8);
-    let neg1 = self.i64c(-1);
-    let is_hit = self.fb.ins().icmp(IntCC::NotEqual, cached, neg1);
+    let zero = self.i64c(0);
+    let is_root = self
+      .fb
+      .ins()
+      .icmp(IntCC::SignedGreaterThanOrEqual, cached, zero);
 
     let hit_block = self.fb.create_block();
+    let not_root_block = self.fb.create_block();
     let miss_block = self.fb.create_block();
     let done_block = self.fb.create_block();
-    self.fb.ins().brif(is_hit, hit_block, &[], miss_block, &[]);
+    self
+      .fb
+      .ins()
+      .brif(is_root, hit_block, &[], not_root_block, &[]);
 
     self.fb.switch_to_block(hit_block);
     let slots_ptr = self.fb.ins().load(
@@ -7947,6 +7984,32 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
     let v = self.fb.ins().load(types::I64, flags, addr, 0);
     self.store_reg(dst, v);
     self.fb.ins().jump(done_block, &[]);
+
+    self.fb.switch_to_block(not_root_block);
+    if self.module_table != 0 {
+      let unresolved = self.i64c(-1);
+      let is_module = self
+        .fb
+        .ins()
+        .icmp(IntCC::SignedLessThan, cached, unresolved);
+      let module_block = self.fb.create_block();
+      self
+        .fb
+        .ins()
+        .brif(is_module, module_block, &[], miss_block, &[]);
+
+      self.fb.switch_to_block(module_block);
+      let minus_two = self.i64c(-2);
+      let slot = self.fb.ins().isub(minus_two, cached);
+      let slots_ptr = self.module_slots_ptr();
+      let byte_off = self.fb.ins().imul_imm_s(slot, 8);
+      let addr = self.fb.ins().iadd(slots_ptr, byte_off);
+      let v = self.fb.ins().load(types::I64, flags, addr, 0);
+      self.store_reg(dst, v);
+      self.fb.ins().jump(done_block, &[]);
+    } else {
+      self.fb.ins().jump(miss_block, &[]);
+    }
 
     self.fb.switch_to_block(miss_block);
     self.publish_ip();
@@ -13384,14 +13447,19 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
       return;
     }
 
+    // Only a root slot is stored inline. A module's globals go through
+    // the helper, which gives the module its write barrier.
     let cache_ptr = self.proto.jit.global_slot_cache.as_ptr() as i64;
     let cache_base = self.i64c(cache_ptr);
     let cached = self
       .fb
       .ins()
       .load(types::I64, flags, cache_base, (ip as i32) * 8);
-    let neg1 = self.i64c(-1);
-    let is_hit = self.fb.ins().icmp(IntCC::NotEqual, cached, neg1);
+    let zero = self.i64c(0);
+    let is_hit = self
+      .fb
+      .ins()
+      .icmp(IntCC::SignedGreaterThanOrEqual, cached, zero);
 
     let hit_block = self.fb.create_block();
     let miss_block = self.fb.create_block();

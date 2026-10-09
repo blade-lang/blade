@@ -1221,12 +1221,14 @@ pub struct JitInfo {
   pub feedback_samples: Cell<u32>,
   /// Per-`GetGlobal`-instruction inline cache for compiled code ONLY
   /// (the interpreter has its own, separate `Chunk::global_cache` --
-  /// see that field's docs): `global_slot_cache[ip]` is the resolved
-  /// slot for the `GetGlobal` at that bytecode position, or `-1` if
-  /// never resolved (or resolved against a QUALIFIED module namespace
-  /// rather than the root globals table: see
-  /// `jit::runtime::zuri_jit_get_global`'s own docs on why only a root
-  /// resolution ever gets cached here). Unlike `Chunk::global_cache`
+  /// see that field's docs): `global_slot_cache[ip]` is the global the
+  /// instruction at that bytecode position resolved to, or `-1` if it
+  /// has not resolved yet. A slot of the root globals table is held as
+  /// itself; a slot of the function's own module is held as
+  /// `module_slot_entry(slot)`, below `-1`. Compiled code reads either
+  /// kind straight from its table but writes only a root slot itself,
+  /// leaving a module's to the helper, which gives the module its write
+  /// barrier. `decode_global_entry` reads an entry back. Unlike `Chunk::global_cache`
   /// (a `RefCell<HashMap>`, fine for the interpreter's own Rust-side
   /// lookups but not something generated machine code can probe), this
   /// is a flat, fixed-size array living at a STABLE address for
@@ -2486,6 +2488,50 @@ fn obj_bytes_data_offsets() -> (i32, i32) {
     let [ptr, len, _] = word_offsets(data, want, "Vec<u8>");
 
     (base + ptr, base + len)
+  })
+}
+
+/// How `JitInfo::global_slot_cache` holds a slot of a module's own
+/// table: `-2 - slot`, which keeps it apart from a root slot and from
+/// `-1`, nothing resolved.
+pub fn module_slot_entry(slot: u32) -> i64 {
+  -2 - slot as i64
+}
+
+/// A `JitInfo::global_slot_cache` entry read back: `Some((true, slot))`
+/// for a root slot, `Some((false, slot))` for a slot of the function's
+/// own module, `None` while nothing has resolved.
+pub fn decode_global_entry(entry: i64) -> Option<(bool, u32)> {
+  match entry {
+    0.. => Some((true, entry as u32)),
+    -1 => None,
+    _ => Some((false, (-2 - entry) as u32)),
+  }
+}
+
+/// The address of a module's slot table, the `Vec` its globals live
+/// in, for compiled code to read a global through. The `Vec` itself
+/// sits inside the module's boxed state, which never moves and lives
+/// as long as the module, and every function of the module holds the
+/// module. Its buffer can move when the module defines another global,
+/// so code reads the data pointer from it afresh each time, at
+/// `module_slots_ptr_offset()`.
+pub fn module_slots_table(module: Value) -> usize {
+  let m = module.as_module();
+  &m.namespace.slots as *const Vec<Cell<Value>> as usize
+}
+
+/// Byte offset of the data pointer within a module's slot table: see
+/// `module_slots_table`. Measured on a probe, as `obj_bytes_data_offsets`
+/// measures its `Vec`.
+pub fn module_slots_ptr_offset() -> i32 {
+  static OFFSET: std::sync::OnceLock<i32> = std::sync::OnceLock::new();
+  *OFFSET.get_or_init(|| {
+    let mut probe: Vec<Cell<Value>> = Vec::with_capacity(16);
+    probe.push(Cell::new(Value::nil()));
+    let want = [probe.as_ptr() as usize, probe.len(), probe.capacity()];
+    let [ptr, _, _] = word_offsets(&probe, want, "Vec<Cell<Value>>");
+    ptr
   })
 }
 
