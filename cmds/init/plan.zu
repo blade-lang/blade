@@ -13,6 +13,8 @@ import args
 import os
 import os.process { spawn }
 
+import .._shared.paths
+
 /** The version a project starts life at. */
 var DEFAULT_VERSION = '0.1.0'
 
@@ -55,18 +57,6 @@ class UsageError < Error {}
  */
 def clean(text) {
   return text.to_string().replace('/\\s+/', ' ', true).trim()
-}
-
-# Whether `path` is rooted, in which case it names exactly itself and
-# is never resolved against anything.
-def _is_absolute(path: string) {
-  if path.starts_with('/') or path.starts_with('\\') {
-    return true
-  }
-
-  # A Windows drive letter: `C:\work`, `c:/work`.
-  return path.length() > 2 and path[1, 2] == ':' and
-    (path[2, 3] == '\\' or path[2, 3] == '/')
 }
 
 # What `git config` says about `key`, or `nil` when git is not
@@ -382,7 +372,7 @@ def target_of(parsed, root: ?string) {
     return os.abs_path(root)
   }
 
-  if _is_absolute(typed) {
+  if paths.is_absolute(typed) {
     return os.abs_path(typed)
   }
 

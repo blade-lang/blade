@@ -12,6 +12,8 @@
 import args
 import os
 
+import .._shared.paths
+
 /** The directory a bare `zuri test` looks in. */
 var TESTS = 'tests'
 
@@ -45,23 +47,11 @@ def _whole(text: string) {
   return digits.to_number().int()
 }
 
-# Whether `path` is rooted, in which case it names exactly itself and
-# is never looked for under `tests/`.
-def _is_absolute(path: string) {
-  if path.starts_with('/') or path.starts_with('\\') {
-    return true
-  }
-
-  # A Windows drive letter: `C:\work`, `c:/work`.
-  return path.length() > 2 and path[1, 2] == ':' and
-    (path[2, 3] == '\\' or path[2, 3] == '/')
-}
-
 # Every path `target` could mean, in the order they are tried.
 def _candidates(root: string, target: string) {
   var bare = !target.ends_with('.zu')
 
-  if _is_absolute(target) {
+  if paths.is_absolute(target) {
     return bare ? [target, target + '.zu'] : [target]
   }
 

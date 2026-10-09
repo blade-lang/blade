@@ -22,6 +22,12 @@ import .rpc_servers
 
 var _passed = 0
 
+# The most seconds a wait on another isolate is given: a server coming
+# up, a message arriving, a task ending. A debug build on a loaded
+# machine takes seconds to start an isolate that imports http, and a
+# wait that succeeds returns as soon as it does.
+var PATIENCE = 30
+
 def ok(label) {
   _passed++
   echo '  [PASS] ' + label
@@ -288,7 +294,7 @@ client.send_request('later', nil, @(result, error) {
 client.notify('release', ['done'])
 
 while answered.is_empty() {
-  client.dispatch(inbox.recv(5))
+  client.dispatch(inbox.recv(PATIENCE))
 }
 
 assert answered == [['done']], 'a deferred request is answered when its reply is sent'
@@ -352,7 +358,7 @@ client.close()
 assert client.is_closed(), 'a closed endpoint says so'
 assert raises(@() => client.notify('note', ['x']), rpc.RpcClosedError) != nil,
   'and sends nothing more'
-server_task.join(5)
+server_task.join(PATIENCE)
 ok('closing one end ends the other')
 
 # ---------------------------------------------------------------------------
@@ -371,7 +377,7 @@ def answer_raw(sent) {
   }
 
   wire[0].close()
-  task.join(5)
+  task.join(PATIENCE)
 
   return json.decode(replies[0].to_string())
 }
@@ -413,13 +419,13 @@ var listened = listener.listen()
 
 raw[1].write(rpc.HeaderFraming().frame('{"jsonrpc": "2.0", "method": "tick"}'))
 
-var decoded_item = listened.recv(5)
+var decoded_item = listened.recv(PATIENCE)
 assert decoded_item.kind == 'message' and decoded_item.value.method == 'tick',
   'listen() decodes each message before handing it over'
 
 raw[1].write(rpc.HeaderFraming().frame(unreadable))
 
-var unreadable_item = listened.recv(5)
+var unreadable_item = listened.recv(PATIENCE)
 assert unreadable_item.kind == 'unreadable' and unreadable_item.text == nil,
   'and hands over no text for a message that is not UTF-8'
 
@@ -492,7 +498,7 @@ ok('MessageFraming takes each read as one whole message')
 # ---------------------------------------------------------------------------
 var http_ready = isolate.channel(1)
 var http_task = isolate.spawn(rpc_servers.http_server, http_ready)
-var http_base = 'http://127.0.0.1:${http_ready.recv(5)}'
+var http_base = 'http://127.0.0.1:${http_ready.recv(PATIENCE)}'
 
 var remote_calculator = rpc.HttpClient('${http_base}/rpc', { headers: { 'X-Caller': 'tests' } })
 
@@ -545,7 +551,7 @@ http_task.cancel()
 # ---------------------------------------------------------------------------
 var ws_ready = isolate.channel(1)
 var ws_task = isolate.spawn(rpc_servers.websocket_server, ws_ready)
-var ws_port = ws_ready.recv(5)
+var ws_port = ws_ready.recv(PATIENCE)
 
 var shop = rpc.endpoint(rpc.websocket(websocket.connect('ws://127.0.0.1:${ws_port}/ws')))
   .on_request('price_of', @(params) => params[0] == 'tea' ? 3 : 5)
@@ -573,7 +579,7 @@ def line_client(address) {
 var tcp_ready = isolate.channel(2)
 var tcp_options = { port: 0, workers: 2, framing: 'line', max_connections: 2 }
 var tcp_task = isolate.spawn(rpc_servers.run_serve, tcp_ready, tcp_options)
-var tcp_address = tcp_ready.recv(5)
+var tcp_address = tcp_ready.recv(PATIENCE)
 
 var first_client = line_client(tcp_address)
 var second_client = line_client(tcp_address)
@@ -584,8 +590,8 @@ assert first_client.request_batch([['add', [1, 1]], ['add', [2, 2]]]) == [2, 4],
 
 first_client.close()
 second_client.close()
-assert tcp_ready.recv(5) == 'done', 'serve() returns once its last connection closes'
-tcp_task.join(5)
+assert tcp_ready.recv(PATIENCE) == 'done', 'serve() returns once its last connection closes'
+tcp_task.join(PATIENCE)
 ok('serve() gives every TCP connection an endpoint of its own')
 
 if unix.is_supported() {
@@ -594,7 +600,7 @@ if unix.is_supported() {
   var unix_options = { path: socket_path, workers: 1, max_connections: 1 }
   var unix_task = isolate.spawn(rpc_servers.run_serve, unix_ready, unix_options)
 
-  assert unix_ready.recv(5) == socket_path, 'a Unix domain socket is reported by its path'
+  assert unix_ready.recv(PATIENCE) == socket_path, 'a Unix domain socket is reported by its path'
 
   var local = net.UnixStream()
   local.connect(socket_path)
@@ -603,8 +609,8 @@ if unix.is_supported() {
   assert local_client.request('add', [5, 6]) == 11, 'and served like any other connection'
 
   local_client.close()
-  assert unix_ready.recv(5) == 'done', 'until it closes'
-  unix_task.join(5)
+  assert unix_ready.recv(PATIENCE) == 'done', 'until it closes'
+  unix_task.join(PATIENCE)
   assert !file(socket_path).exists(), 'and the socket file goes with the server'
 }
 ok('serve() listens on a Unix domain socket')
@@ -652,7 +658,7 @@ var tls_options = {
   private_key: server_key,
 }
 var tls_task = isolate.spawn(rpc_servers.run_serve, tls_ready, tls_options)
-var tls_address = tls_ready.recv(5)
+var tls_address = tls_ready.recv(PATIENCE)
 
 var trust = tls.TlsConfig()
 trust.add_ca_pem(ca_cert)
@@ -663,13 +669,13 @@ tls_stream.connect(tls_address)
 var secure_client = rpc.endpoint(rpc.socket(tls.TlsStream.connect(tls_stream, trust, 'localhost')))
 assert secure_client.request('secure', nil) == 'over TLS', 'serve() puts its connections behind TLS'
 secure_client.close()
-assert tls_ready.recv(5) == 'done', 'and ends with them'
-tls_task.join(5)
+assert tls_ready.recv(PATIENCE) == 'done', 'and ends with them'
+tls_task.join(PATIENCE)
 
 var stop_ready = isolate.channel(1)
 var stop_task = isolate.spawn(rpc_servers.stop_at_once, stop_ready)
-assert stop_ready.recv(5) == 'stopped', 'a stopped server returns'
-stop_task.join(5)
+assert stop_ready.recv(PATIENCE) == 'stopped', 'a stopped server returns'
+stop_task.join(PATIENCE)
 
 assert raises(@() => rpc.serve(rpc_servers.serve_setup, { framing: 'xml' }), ValueError) != nil,
   'an unknown framing is refused'

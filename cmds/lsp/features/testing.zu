@@ -482,6 +482,37 @@ def _report_line(id: int, line: string, results) {
 }
 
 /**
+ * The path of a file a run names, spelled the way the server knows
+ * it. A run names a file relative to where it ran when the file lies
+ * under there, and whole when it does not. A whole name is spelled as
+ * the runtime resolved it, which on Windows can differ in case from
+ * the editor's spelling of the same file, so it is matched to the
+ * spelling the server already has.
+ *
+ * @param Server server
+ * @param string cwd: Where the run was.
+ * @param string name: The file, as the run named it.
+ * @returns string
+ */
+def failure_path(server, cwd: string, name: string) {
+  var path = os.abs_path(paths.is_absolute(name) ? name : os.join_paths(cwd, name))
+
+  if os.platform != 'windows' {
+    return path
+  }
+
+  var folded = path.lower()
+
+  for key in server.paths() {
+    if key.lower() == folded {
+      return key
+    }
+  }
+
+  return path
+}
+
+/**
  * The diagnostics showing a run's failed assertions, by file, each on
  * the line it failed at.
  *
@@ -507,7 +538,7 @@ def failure_diagnostics(server, cwd: string, tests: list) {
         continue
       }
 
-      var path = os.abs_path(os.join_paths(cwd, file_name))
+      var path = failure_path(server, cwd, file_name)
       var lines = server.index(path)
 
       if lines == nil or line < 1 or line > lines.line_count() {

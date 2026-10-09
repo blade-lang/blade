@@ -5,6 +5,7 @@ import os
 import test { * }
 
 import ._client { Client, position, uri }
+import ..features.testing { failure_path }
 
 var FIXTURE = os.join_paths(os.dir_name(__file__), '_fixture')
 var CHECKS = os.join_paths(FIXTURE, 'checks.zu')
@@ -22,6 +23,18 @@ def run(filter) {
   var command = { command: 'zuri.runTests', arguments: [target] }
 
   return client.request('workspace/executeCommand', command)
+}
+
+# Stands in for the server where only the files it knows are wanted.
+class _Known {
+
+  @new(keys: list) {
+    self.keys = keys
+  }
+
+  paths() {
+    return self.keys
+  }
 }
 
 before_all(@{
@@ -105,5 +118,25 @@ describe('running tests', @{
 
       return !pushed.diagnostics.some(@(d) => d.source == 'zuri test')
     }, 'the failures forgotten')
+  })
+})
+
+describe('failure paths', @{
+  it('resolves a name against where the run was', @{
+    expect(failure_path(_Known([]), FIXTURE, 'checks.zu')).to_equal(os.abs_path(CHECKS))
+  })
+
+  it('takes a whole name as it stands', @{
+    var elsewhere = os.abs_path(os.join_paths(FIXTURE, '..', '_client.zu'))
+
+    expect(failure_path(_Known([]), FIXTURE, elsewhere)).to_equal(elsewhere)
+  })
+
+  it('spells a whole name the way the server knows the file on Windows', @{
+    if os.platform == 'windows' {
+      var known = os.abs_path(CHECKS)
+
+      expect(failure_path(_Known([known]), FIXTURE, known.upper())).to_equal(known)
+    }
   })
 })

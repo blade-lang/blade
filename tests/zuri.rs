@@ -100,6 +100,11 @@ const FIXTURE_TIMEOUT: Duration = Duration::from_secs(180);
 /// itself is gone, and then whatever has arrived by now is all there is.
 const OUTPUT_GRACE: Duration = Duration::from_secs(5);
 
+/// How long a hung fixture's threads are sampled for on macOS before it
+/// is stopped.
+#[cfg(target_vendor = "apple")]
+const SAMPLE_SECONDS: u64 = 3;
+
 /// Runs the executable on one fixture, returning how it exited and
 /// everything it printed.
 ///
@@ -154,6 +159,7 @@ fn run_zuri(zu_path_str: &str) -> (ExitStatus, String) {
 
   let started = Instant::now();
   let mut stopped = None;
+  let mut threads = None;
   let status = loop {
     if let Some(status) = child.try_wait().expect("failed to poll a fixture") {
       break status;
@@ -168,6 +174,9 @@ fn run_zuri(zu_path_str: &str) -> (ExitStatus, String) {
         "stopped after running for {} seconds",
         FIXTURE_TIMEOUT.as_secs()
       ));
+      // Read before the fixture is stopped, so a hang that only ever
+      // happens on a CI runner says where it was.
+      threads = thread_report(&child);
     }
     if stopped.is_some() {
       let _ = child.kill();
@@ -189,6 +198,11 @@ fn run_zuri(zu_path_str: &str) -> (ExitStatus, String) {
   let mut text = String::from_utf8_lossy(&bytes).into_owned();
   if let Some(reason) = stopped {
     text.push_str(&format!("\n--- {reason} ---\n"));
+  }
+  if let Some(report) = threads {
+    text.push_str(&format!(
+      "\n--- its threads when it was stopped ---\n{report}\n"
+    ));
   }
 
   (status, text)
@@ -430,6 +444,88 @@ fn resident_bytes(child: &Child) -> Option<u64> {
   windows
 )))]
 fn resident_bytes(_child: &Child) -> Option<u64> {
+  None
+}
+
+/// Each thread of a hung fixture: its id, its scheduler state (`R`
+/// running, `S` sleeping, `D` waiting on a device), the processor time
+/// it has used, its name, and the kernel function a sleeping thread
+/// waits in. Its user-space stacks would take ptrace, which the usual
+/// Yama policy refuses anything but an ancestor, yet this much tells a
+/// thread spinning in a loop from one blocked on a lock.
+#[cfg(any(target_os = "linux", target_os = "android"))]
+fn thread_report(child: &Child) -> Option<String> {
+  let tasks = format!("/proc/{}/task", child.id());
+  let mut ids: Vec<u64> = fs::read_dir(&tasks)
+    .ok()?
+    .filter_map(|entry| entry.ok()?.file_name().to_str()?.parse().ok())
+    .collect();
+  ids.sort_unstable();
+
+  let ticks = unsafe { libc::sysconf(libc::_SC_CLK_TCK) }.max(1) as f64;
+  let mut report = String::from("  thread  state   cpu s  name              waiting in\n");
+
+  for id in ids {
+    let read = |file: &str| fs::read_to_string(format!("{tasks}/{id}/{file}")).unwrap_or_default();
+
+    // The fields after the name, which sits in parentheses and may
+    // hold spaces of its own: the state first, then user and system
+    // time as the 12th and 13th.
+    let stat = read("stat");
+    let fields: Vec<&str> = stat
+      .rsplit_once(") ")
+      .map(|(_, rest)| rest.split_whitespace().collect())
+      .unwrap_or_default();
+    let state = fields.first().copied().unwrap_or("?");
+    let used: u64 = [11, 12]
+      .iter()
+      .filter_map(|&i| fields.get(i)?.parse::<u64>().ok())
+      .sum();
+
+    let wchan = read("wchan");
+    let waiting = match wchan.trim() {
+      "" | "0" => "-",
+      symbol => symbol,
+    };
+
+    report.push_str(&format!(
+      "{id:>8}  {state:<5}  {:>6.2}  {:<16}  {waiting}\n",
+      used as f64 / ticks,
+      read("comm").trim()
+    ));
+  }
+
+  Some(report)
+}
+
+/// Every thread's stack in a hung fixture, from `sample`, which comes
+/// with macOS and needs nothing beyond owning the process.
+#[cfg(target_vendor = "apple")]
+fn thread_report(child: &Child) -> Option<String> {
+  let file = std::env::temp_dir().join(format!("zuri-fixture-{}.sample.txt", child.id()));
+  let ran = Command::new("sample")
+    .arg(child.id().to_string())
+    .arg(SAMPLE_SECONDS.to_string())
+    .arg("-mayDie")
+    .arg("-file")
+    .arg(&file)
+    .stdin(Stdio::null())
+    .output();
+
+  let report = match ran {
+    Ok(_) => fs::read_to_string(&file)
+      .unwrap_or_else(|e| format!("sample wrote no report to {}: {e}", file.display())),
+    Err(e) => format!("sample could not be run: {e}"),
+  };
+  let _ = fs::remove_file(&file);
+
+  Some(report)
+}
+
+/// Elsewhere there is no reader here, and a hung fixture reports its
+/// output alone.
+#[cfg(not(any(target_os = "linux", target_os = "android", target_vendor = "apple")))]
+fn thread_report(_child: &Child) -> Option<String> {
   None
 }
 

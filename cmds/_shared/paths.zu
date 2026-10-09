@@ -134,6 +134,31 @@ def config_file() {
 }
 
 /**
+ * Whether `path` is absolute, naming exactly itself wherever it is
+ * read from. On Windows that is a path on a drive (`C:\\work` or
+ * `c:/work`), a UNC path, or a path rooted on the current drive
+ * (`\\work`); everywhere else it is a path that starts with `/`.
+ *
+ * @param string path
+ * @returns bool
+ */
+def is_absolute(path: string) {
+  if path.starts_with('/') {
+    return true
+  }
+
+  if os.platform != 'windows' {
+    return false
+  }
+
+  if path.starts_with('\\') {
+    return true
+  }
+
+  return path.length() > 2 and path[1] == ':' and (path[2] == '\\' or path[2] == '/')
+}
+
+/**
  * The nearest directory at or above `start` holding a `project.toml`.
  *
  * @param ?string start: where to start; the working directory when

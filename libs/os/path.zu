@@ -257,6 +257,11 @@ def base_name(path: string) {
  * `abs_path()`, so neither has to already be absolute or exist on
  * disk.
  *
+ * On Windows, where a name is looked up without regard to case, the
+ * comparison ignores case too, and what follows the shared part keeps
+ * the spelling `target` gave it. A `target` on another drive or UNC
+ * share has no relative path from `base`, and comes back absolute.
+ *
  * Example,
  *
  * ```zuri-repl
@@ -273,13 +278,25 @@ def base_name(path: string) {
  * @returns string
  */
 def relative_path(base: string, target: string) {
-  var base_segments = abs_path(base).split(_sep).filter(@(s) { return s != '' })
-  var target_segments = abs_path(target).split(_sep).filter(@(s) { return s != '' })
+  var from = abs_path(base)
+  var to = abs_path(target)
+
+  if _os.platform == 'windows' {
+    var from_root = _windows_root(from).root
+    var to_root = _windows_root(to).root
+
+    if !_same_name(from_root, to_root) {
+      return to
+    }
+  }
+
+  var base_segments = from.split(_sep).filter(@(s) { return s != '' })
+  var target_segments = to.split(_sep).filter(@(s) { return s != '' })
 
   var common = 0
   while common < base_segments.length() and
         common < target_segments.length() and
-        base_segments[common] == target_segments[common] {
+        _same_name(base_segments[common], target_segments[common]) {
     common++
   }
 
@@ -333,7 +350,11 @@ def expand_user(path: string) {
  * This includes when `candidate` escapes `base` via `..` segments.
  * Both paths are resolved with `abs_path()` first, so relative
  * paths and mixed separators are handled the same way `abs_path()`
- * itself handles them.
+ * itself handles them. A root, `/` or a drive such as `C:\\`,
+ * contains every path under it.
+ *
+ * On Windows, where a name is looked up without regard to case, the
+ * comparison ignores case too: `C:\\Work` contains `c:\\work\\app`.
  *
  * Example,
  *
@@ -352,8 +373,27 @@ def path_contains(base: string, candidate: string) {
   var resolved_base = abs_path(base)
   var resolved_candidate = abs_path(candidate)
 
-  return resolved_candidate == resolved_base or
-    resolved_candidate.starts_with(resolved_base + _sep)
+  if _os.platform == 'windows' {
+    resolved_base = resolved_base.lower()
+    resolved_candidate = resolved_candidate.lower()
+  }
+
+  # A root already ends with the separator everything under it follows.
+  var prefix = resolved_base.ends_with(_sep) ? resolved_base : resolved_base + _sep
+
+  return resolved_candidate == resolved_base or resolved_candidate.starts_with(prefix)
+}
+
+# Whether two segments of a path name the same thing. Windows looks
+# names up without regard to case, so `C:` and `c:` are one drive and
+# `Work` and `work` one directory; everywhere else case is part of the
+# name.
+def _same_name(a: string, b: string) {
+  if _os.platform == 'windows' {
+    return a.lower() == b.lower()
+  }
+
+  return a == b
 }
 
 /**

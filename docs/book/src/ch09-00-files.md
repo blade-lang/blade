@@ -425,7 +425,8 @@ sub
 `abs_path()` does not. `expand_user()` turns a leading `~` into the home
 directory. `path_contains(base, candidate)` answers whether one path is
 inside another, which is the check you need before serving a file a user
-named.
+named. On Windows, both it and `relative_path()` ignore case, the way
+Windows itself looks names up.
 
 ```zuri
 echo os.cwd()

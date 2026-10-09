@@ -2141,14 +2141,14 @@ class Server {
       }
     }
 
-    # A failure names its file relative to where the run was; the
-    # client is given where that is.
+    # A failure names its file relative to where the run was, or whole
+    # when it lies elsewhere; the client is given where that is.
     for test in run.tests {
       for failure in test.get('failures', []) {
         var name = failure.get('file', nil)
 
         if is_string(name) {
-          failure.uri = text.path_to_uri(os.abs_path(os.join_paths(run.cwd, name)))
+          failure.uri = text.path_to_uri(testing.failure_path(self, run.cwd, name))
         }
       }
     }

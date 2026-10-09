@@ -276,6 +276,15 @@ ok('a code frame reads the real file and marks the real line')
 assert source.short_path(os.join_paths(os.cwd(), 'a', 'b.zu')) == os.join_paths('a', 'b.zu'),
   'a path under the working directory is shown relative to it'
 assert source.short_path('/elsewhere/b.zu') == '/elsewhere/b.zu', 'and anything else is left alone'
+assert source.short_path(os.cwd()) == os.cwd(), 'the working directory itself included'
+
+if os.platform == 'windows' {
+  var shouted = os.join_paths(os.cwd().upper(), 'a', 'b.zu')
+
+  assert source.short_path(shouted) == os.join_paths('a', 'b.zu'),
+    'whatever case Windows is given the working directory in'
+}
+
 ok('paths are shortened against the working directory')
 
 # ---------------------------------------------------------------------------

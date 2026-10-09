@@ -1,0 +1,31 @@
+# Telling an absolute path from one that is resolved against something.
+
+import os
+import test { * }
+
+import ..paths
+
+describe('is_absolute', @{
+  it('takes a path from the root as absolute', @{
+    expect(paths.is_absolute('/srv/app')).to_be_true()
+  })
+
+  it('takes anything else as relative', @{
+    expect(paths.is_absolute('srv/app')).to_be_false()
+    expect(paths.is_absolute('./app')).to_be_false()
+    expect(paths.is_absolute('')).to_be_false()
+  })
+
+  it('reads drives, shares and backslashes as Windows does', @{
+    var windows = os.platform == 'windows'
+
+    expect(paths.is_absolute('C:\\work')).to_equal(windows)
+    expect(paths.is_absolute('c:/work')).to_equal(windows)
+    expect(paths.is_absolute('\\\\server\\share\\app')).to_equal(windows)
+    expect(paths.is_absolute('\\work')).to_equal(windows)
+
+    # A drive with no separator after it is relative to that drive's
+    # own working directory.
+    expect(paths.is_absolute('C:work')).to_be_false()
+  })
+})

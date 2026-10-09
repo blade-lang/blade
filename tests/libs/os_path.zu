@@ -80,9 +80,27 @@ if os.platform == 'windows' {
   assert os.dir_name('\\\\server\\share') == '\\\\server\\share',
     'dir_name() of a UNC share must be the share'
   ok('dir_name() never climbs above a drive or a UNC share')
+
+  assert os.path_contains('C:\\Work', 'c:\\work\\app') == true,
+    'path_contains() must ignore case on Windows'
+  assert os.path_contains('C:\\Work', 'D:\\Work\\app') == false,
+    'path_contains() must never reach across drives'
+  assert os.relative_path('C:\\Work', 'c:\\WORK\\App\\x.zu') == 'App\\x.zu',
+    'relative_path() must ignore case on Windows and keep the spelling of the rest'
+  assert os.relative_path('C:\\work', 'D:\\other\\x.zu') == 'D:\\other\\x.zu',
+    'relative_path() must give a path on another drive whole'
+  assert os.relative_path('\\\\srv\\one', '\\\\srv\\two\\x') == '\\\\srv\\two\\x',
+    'relative_path() must give a path on another share whole'
+  ok('path_contains() and relative_path() compare names the way Windows does')
 } else {
   assert os.abs_path('/srv/../app') == '/app', 'abs_path() must resolve a rooted path from the root'
   ok('abs_path() resolves a rooted path from the root')
+
+  assert os.path_contains('/srv/App', '/srv/app/x') == false,
+    'path_contains() must treat case as part of a name'
+  assert os.relative_path('/srv/App', '/srv/app/x') == '../app/x',
+    'and so must relative_path()'
+  ok('path_contains() and relative_path() treat case as part of a name')
 }
 
 # ---------------------------------------------------------------------------
@@ -133,6 +151,12 @@ assert os.path_contains('/srv/app', '/srv/other') == false,
   'path_contains() must be false for a sibling directory'
 assert os.path_contains('/srv/app', '/srv/app/../../etc/passwd') == false,
   'path_contains() must be false for a path that escapes the base via ".." segments'
+
+var root = os.platform == 'windows' ? os.cwd()[,2] + '\\' : '/'
+
+assert os.path_contains(root, os.join_paths(root, 'etc', 'hosts')) == true,
+  'path_contains() must be true for any path under the filesystem root'
+assert os.path_contains(root, root) == true, 'and for the root itself'
 ok('path_contains() correctly detects containment, including a Zip-Slip-style escape attempt')
 
 # ===========================================================================
