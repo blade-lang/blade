@@ -60,7 +60,6 @@ var SEEK_CUR = 1
  */
 var SEEK_END = 2
 
-
 #------------------------------------------------------------------------------------------------
 # Standard I/O streams
 #------------------------------------------------------------------------------------------------
@@ -89,7 +88,7 @@ var SEEK_END = 2
  *
  * @type file
  */
-var stdin = _io.stdin
+var stdin: file = _io.stdin
 
 /**
  * Stdout is a file handle to the standard output file of the
@@ -100,22 +99,21 @@ var stdin = _io.stdin
  *
  * @type file
  */
-var stdout = _io.stdout
+var stdout: file = _io.stdout
 
 /**
  * Stderr is a file handle to the standard error file of the
  * system.
  * @type file
  */
-var stderr = _io.stderr
+var stderr: file = _io.stderr
 
 /**
  * Returns `true` if the current environment is the Zuri REPL,
  * `false` otherwise.
  * @type bool
  */
-var is_repl = _io.isrepl
-
+var is_repl: bool = _io.isrepl
 
 #------------------------------------------------------------------------------------------------
 # Output capture
@@ -224,14 +222,13 @@ def capture(body: function) {
   return output
 }
 
-
 /**
  * Flushes the content of the given file handle
  */
 def flush(file) {
   if !is_file(file)
     raise TypeError('file expected in argument 1 (file)')
-  
+
   file.flush()
 }
 
@@ -244,7 +241,7 @@ def putc(c) {
   if is_number(c) {
     if c < 0 or c > 255
       raise ValueError('character code must be in within range 0..255')
-    
+
     c = c.chr()
   } else if !is_string(c) or c.length() != 1 {
     raise TypeError('a single character expected in argument 1 (c)')
