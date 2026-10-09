@@ -4619,6 +4619,31 @@ impl Heap {
     self.young_budget / chunk_bytes + 1
   }
 
+  /// Lets go of what the young generation keeps between cycles, for a
+  /// collection that gives memory back to the system: an explicit
+  /// `zuri.reflect.gc()`, or one a waiting thread makes. The budget
+  /// falls back to its floor and the chunks kept for a larger one are
+  /// freed, where an ordinary collection keeps them because the next
+  /// cycle is about to fill them again. The next burst of allocation
+  /// grows the budget back as `resize_young` sees fit.
+  ///
+  /// Only right after a full collection, which leaves the young
+  /// generation empty.
+  pub(crate) fn shed_young(&mut self) {
+    debug_assert_eq!(self.young_bytes(), 0);
+    debug_assert!(self.survivor_chunks.is_empty());
+
+    self.young_budget = self.young_floor;
+    self.young_offset = self.young_ceiling - self.young_budget;
+    self.young_bytes_allocated = self.young_offset;
+    self.nursery_chunks.truncate(self.retained_nursery_chunks());
+    self.survivor_spare.clear();
+    self
+      .field_arena_chunks
+      .truncate(self.retained_field_arena_chunks());
+    self.update_jit_gc_needed();
+  }
+
   /// Starts a new nursery cycle, retiring every young box of the last
   /// except the survivors, which were stamped with the new epoch as they
   /// were copied.

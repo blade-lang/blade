@@ -536,7 +536,6 @@ fn bind_method_fn(ctx: &mut ZuriContext) -> Result<Value, String> {
 /// crosses its threshold.
 fn gc_fn(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_arg_count!(ctx, 0);
-  ctx.vm.collect_garbage();
-  crate::memory::return_free_memory();
+  ctx.vm.release_memory();
   Ok(Value::nil())
 }

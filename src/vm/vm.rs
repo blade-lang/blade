@@ -7117,7 +7117,15 @@ impl VM {
     if self.heap.bytes_allocated() < self.heap.live_after_collection() + IDLE_GROWTH {
       return;
     }
+    self.release_memory();
+  }
+
+  /// A full collection that gives what it frees back to the system: the
+  /// chunks the young generation keeps for its next cycles, and the
+  /// pages the allocator holds free.
+  pub(crate) fn release_memory(&mut self) {
     self.collect_garbage();
+    self.heap.shed_young();
     crate::memory::return_free_memory();
   }
 
