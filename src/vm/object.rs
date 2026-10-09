@@ -5250,3 +5250,39 @@ mod field_storage_tests {
     }
   }
 }
+
+#[cfg(test)]
+mod young_shedding_tests {
+  use super::*;
+
+  /// A budget that has grown keeps the chunks it used through an
+  /// ordinary collection, since the next cycle is about to fill them;
+  /// a collection that gives memory back keeps only the floor's.
+  #[test]
+  fn shedding_keeps_only_the_floors_chunks() {
+    let mut heap = Heap::with_young_ceiling(64 * 1024 * 1024);
+    heap.young_budget = heap.young_ceiling;
+    heap.young_offset = 0;
+    heap.young_bytes_allocated = 0;
+
+    // Ranges own nothing outside their slot, so the reset below can
+    // retire every one of them without a collection behind it.
+    let chunks = heap.young_floor / YOUNG_CHUNK_BYTES + 4;
+    for _ in 0..chunks * YOUNG_CHUNK_SLOTS {
+      heap.alloc_range(0.0, 1.0);
+    }
+    heap.promote_all = true;
+    heap.reset_nursery();
+    let kept = heap.nursery_chunks.len();
+
+    heap.shed_young();
+
+    assert!(kept >= chunks);
+    assert_eq!(heap.young_budget, heap.young_floor);
+    assert_eq!(
+      heap.nursery_chunks.len(),
+      heap.young_floor / YOUNG_CHUNK_BYTES + 1
+    );
+    assert_eq!(heap.young_bytes(), 0);
+  }
+}
