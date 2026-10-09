@@ -4766,6 +4766,19 @@ impl Heap {
     value
   }
 
+  /// `alloc_string_old` for borrowed text: the shared string when it is
+  /// already interned, without building a `String` to look it up.
+  ///
+  /// For names a native hands out from a fixed vocabulary of its own,
+  /// such as the kinds and field names of a syntax tree. Text a program
+  /// supplies has no bound and belongs in `alloc_string`.
+  pub fn intern_str(&mut self, text: &str) -> Value {
+    match self.interned_strings.get(text) {
+      Some(&existing) => existing,
+      None => self.alloc_string_old(text),
+    }
+  }
+
   /// Every interned compile-time string, for the major collector's root
   /// scan: see `alloc_string_old`. Without this the sweep would free
   /// strings the table still points at.

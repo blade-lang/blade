@@ -2,10 +2,15 @@
 //!
 //! Runs the real `Lexer`/`Parser` pipeline (the SAME grammar the
 //! compiler itself uses; no second, parallel parser to keep in sync)
-//! and converts the resulting `Vec<Decl>` into a list of generic node
-//! dicts, each shaped `{ kind, start, end, line, col, end_line, end_col,
-//! fields }`. `libs/zuri/ast.zu` wraps each dict into a proper `Node`
-//! instance, recursively.
+//! and converts the resulting `Vec<Decl>` into a list of nodes, built
+//! directly as instances of the `Node` class `libs/zuri/ast.zu` passes
+//! in: `kind`, the six position fields, and a `fields` dict holding
+//! the kind's own children, already nodes themselves.
+//!
+//! Kinds, field names and operator names come from a fixed vocabulary
+//! and are interned, so every node shares them with each other and
+//! with the same literals in Zuri code. A name the source spells is
+//! made once per parse, however often the file uses it.
 //!
 //! A node's position is the whole of the source it was read from:
 //! `start` and `end` are char offsets, the first character and the one
@@ -44,10 +49,11 @@ use crate::compiler::token::{Token, TokenKind};
 use crate::enforce_arg_count;
 use crate::enforce_arg_type;
 use crate::modules::zuri_lex::token_kind_name;
-use crate::modules::{BuiltinModuleDef, native};
+use crate::modules::{BuiltinModuleDef, Shape, native};
 use crate::vm::object::ZuriContext;
 use crate::vm::value::Value;
 use crate::vm::vm::VM;
+use rustc_hash::FxHashMap;
 
 pub static MODULE: BuiltinModuleDef = BuiltinModuleDef {
   name: "_zuri_parse",
@@ -56,26 +62,35 @@ pub static MODULE: BuiltinModuleDef = BuiltinModuleDef {
 
 fn build(vm: &mut VM) -> Vec<(&'static str, Value)> {
   vec![
-    ("parse", native(vm, "parse", 1, false, parse_fn)),
+    ("parse", native(vm, "parse", 2, false, parse_fn)),
     (
       "parse_partial",
-      native(vm, "parse_partial", 1, false, parse_partial_fn),
+      native(vm, "parse_partial", 2, false, parse_partial_fn),
     ),
   ]
 }
 
-/// `_zuri_parse.parse(source)`: parses `source` in full and returns
-/// its top-level declarations as a list of node dicts. See this
+/// The fields of a `Node` the writer fills, in the order `Writer::node`
+/// passes them.
+const NODE_FIELDS: [&str; 8] = [
+  "kind", "start", "end", "line", "col", "end_line", "end_col", "fields",
+];
+
+/// `_zuri_parse.parse(source, Node)`: parses `source` in full and
+/// returns its top-level declarations as a list of `Node`s. See this
 /// module's own doc comment for the exact shape and what is/isn't
 /// preserved. Raises (rather than returning a partial result) if
 /// `source` has a syntax error; there is no meaningful AST to hand
 /// back for input the parser itself couldn't make sense of.
 fn parse_fn(ctx: &mut ZuriContext) -> Result<Value, String> {
-  enforce_arg_count!(ctx, 1);
+  enforce_arg_count!(ctx, 2);
   enforce_arg_type!(ctx, 0, ArgType::String);
+  enforce_arg_type!(ctx, 1, ArgType::Class);
 
-  let source = ctx.args[0].as_str().to_string();
-  let mut lexer = Lexer::new(&source);
+  let nodes = Shape::of(ctx.args[1], NODE_FIELDS)?;
+  let args = ctx.args;
+  let source = args[0].as_str();
+  let mut lexer = Lexer::new(source);
   let mut parser = Parser::new(&mut lexer);
 
   let decls = match parser.parse() {
@@ -90,25 +105,28 @@ fn parse_fn(ctx: &mut ZuriContext) -> Result<Value, String> {
     },
   };
 
-  let mut w = Writer::new(ctx, &source);
+  let mut w = Writer::building(ctx, source, nodes);
 
   Ok(w.decls(&decls))
 }
 
-/// `_zuri_parse.parse_partial(source)`: parses `source` as far as the
-/// parser can recover and returns `{ nodes, errors }`, the tree it read
-/// and a diagnostic dict for every syntax error. Never raises on bad
-/// source.
+/// `_zuri_parse.parse_partial(source, Node)`: parses `source` as far as
+/// the parser can recover and returns `{ nodes, errors }`, the tree it
+/// read and a diagnostic dict for every syntax error. Never raises on
+/// bad source.
 fn parse_partial_fn(ctx: &mut ZuriContext) -> Result<Value, String> {
-  enforce_arg_count!(ctx, 1);
+  enforce_arg_count!(ctx, 2);
   enforce_arg_type!(ctx, 0, ArgType::String);
+  enforce_arg_type!(ctx, 1, ArgType::Class);
 
-  let source = ctx.args[0].as_str().to_string();
-  let mut lexer = Lexer::new(&source);
+  let nodes = Shape::of(ctx.args[1], NODE_FIELDS)?;
+  let args = ctx.args;
+  let source = args[0].as_str();
+  let mut lexer = Lexer::new(source);
   let mut parser = Parser::new(&mut lexer);
   let (decls, errors) = parser.parse_recovering();
 
-  let mut w = Writer::new(ctx, &source);
+  let mut w = Writer::building(ctx, source, nodes);
   let nodes = w.decls(&decls);
   let errors = w.diagnostics(&errors);
   let entries = vec![w.kv("nodes", nodes), w.kv("errors", errors)];
@@ -163,17 +181,34 @@ impl Lines {
   }
 }
 
-/// Builds the node and diagnostic dicts for one source.
+/// Builds the nodes and diagnostic dicts for one source.
 pub(crate) struct Writer<'c, 'v> {
   ctx: &'c mut ZuriContext<'v>,
   lines: Lines,
+  /// The `Node` class, for a writer that builds nodes.
+  nodes: Option<Shape<8>>,
+  /// Every name made so far, so each is one string however often the
+  /// source uses it.
+  names: FxHashMap<String, Value>,
 }
 
 impl<'c, 'v> Writer<'c, 'v> {
+  /// A writer for diagnostics alone.
   pub(crate) fn new(ctx: &'c mut ZuriContext<'v>, source: &str) -> Self {
     Self {
       ctx,
       lines: Lines::new(source),
+      nodes: None,
+      names: FxHashMap::default(),
+    }
+  }
+
+  /// A writer that builds nodes as instances of the class `nodes`
+  /// describes.
+  fn building(ctx: &'c mut ZuriContext<'v>, source: &str, nodes: Shape<8>) -> Self {
+    Self {
+      nodes: Some(nodes),
+      ..Self::new(ctx, source)
     }
   }
 
@@ -200,9 +235,25 @@ impl<'c, 'v> Writer<'c, 'v> {
     self.ctx.heap().alloc_string(text.into())
   }
 
+  /// A kind, field or operator name, all of which come from the
+  /// grammar's own fixed vocabulary.
+  fn word(&mut self, text: &str) -> Value {
+    self.ctx.heap().intern_str(text)
+  }
+
+  /// A name the source spells, shared with every earlier use of it.
+  fn name(&mut self, text: String) -> Value {
+    if let Some(&known) = self.names.get(&text) {
+      return known;
+    }
+
+    let value = self.ctx.heap().alloc_string(text.clone());
+    self.names.insert(text, value);
+    value
+  }
+
   fn kv(&mut self, key: &str, value: Value) -> (Value, Value) {
-    let k = self.ctx.heap().alloc_string(key);
-    (k, value)
+    (self.word(key), value)
   }
 
   /// `start`, `end`, `line`, `col`, `end_line` and `end_col` for a span.
@@ -227,20 +278,34 @@ impl<'c, 'v> Writer<'c, 'v> {
   }
 
   fn node(&mut self, kind: &str, span: Span, fields: Vec<(Value, Value)>) -> Value {
-    let kind_v = self.string(kind);
-    let mut entries = vec![self.kv("kind", kind_v)];
-    entries.extend(self.position(span));
-
+    let kind_v = self.word(kind);
+    let (line, col) = self.lines.position(span.start);
+    let (end_line, end_col) = self.lines.position(span.end);
     let fields_v = self.ctx.heap().alloc_dict(fields);
-    entries.push(self.kv("fields", fields_v));
 
-    self.ctx.heap().alloc_dict(entries)
+    let number = |n: usize| Value::number(n as f64);
+    let values = [
+      kind_v,
+      number(span.start),
+      number(span.end),
+      number(line),
+      number(col),
+      number(end_line),
+      number(end_col),
+      fields_v,
+    ];
+
+    let nodes = self
+      .nodes
+      .as_ref()
+      .expect("only a writer made by `building` writes nodes");
+    nodes.build(self.ctx.vm, values)
   }
 
   /// The `name` and `name_span` fields of anything that declares or reads
   /// a name through a token of its own.
   fn name_fields(&mut self, token: &Token) -> Vec<(Value, Value)> {
-    let name = self.string(token_identifier_name(token));
+    let name = self.name(token_identifier_name(token));
     let span = self.span(Span::of(token));
 
     vec![self.kv("name", name), self.kv("name_span", span)]
@@ -296,7 +361,7 @@ impl<'c, 'v> Writer<'c, 'v> {
     };
 
     let class_name_v = match class_name {
-      Some(n) => self.string(n),
+      Some(n) => self.name(n),
       None => Value::nil(),
     };
     let fields = vec![self.kv("class_name", class_name_v)];
@@ -306,7 +371,7 @@ impl<'c, 'v> Writer<'c, 'v> {
 
   /// `left`, `op` and `right`, for the binary-shaped nodes.
   fn operands(&mut self, left: &Expr, op: &TokenKind, right: &Expr) -> Vec<(Value, Value)> {
-    let op_v = self.string(token_kind_name(op));
+    let op_v = self.word(token_kind_name(op));
     let left_v = self.expr(left);
     let right_v = self.expr(right);
 
@@ -334,7 +399,7 @@ impl<'c, 'v> Writer<'c, 'v> {
         ("Literal", vec![self.kv("value", v)])
       },
       ExprKind::Unary(op, inner, _) => {
-        let op_v = self.string(token_kind_name(op));
+        let op_v = self.word(token_kind_name(op));
         let inner_v = self.expr(inner);
         (
           "Unary",
@@ -357,7 +422,7 @@ impl<'c, 'v> Writer<'c, 'v> {
         )
       },
       ExprKind::Identifier(tok) => {
-        let name = self.string(token_identifier_name(tok));
+        let name = self.name(token_identifier_name(tok));
         ("Identifier", vec![self.kv("name", name)])
       },
       ExprKind::Condition(cond, then_e, else_e) => {
@@ -461,7 +526,7 @@ impl<'c, 'v> Writer<'c, 'v> {
       },
       ExprKind::CompoundAssign(target, op, value, _) => {
         let target_v = self.expr(target);
-        let op_v = self.string(token_kind_name(op));
+        let op_v = self.word(token_kind_name(op));
         let value_v = self.expr(value);
         (
           "CompoundAssign",
@@ -474,7 +539,7 @@ impl<'c, 'v> Writer<'c, 'v> {
       },
       ExprKind::Update(target, op, _) => {
         let target_v = self.expr(target);
-        let op_v = self.string(token_kind_name(op));
+        let op_v = self.word(token_kind_name(op));
         (
           "Update",
           vec![self.kv("target", target_v), self.kv("op", op_v)],
@@ -492,7 +557,7 @@ impl<'c, 'v> Writer<'c, 'v> {
         ("Interpolation", vec![self.kv("parts", parts_v)])
       },
       ExprKind::Shorthand(tok) => {
-        let name = self.string(token_identifier_name(tok));
+        let name = self.name(token_identifier_name(tok));
         ("Shorthand", vec![self.kv("name", name)])
       },
     };
@@ -538,12 +603,12 @@ impl<'c, 'v> Writer<'c, 'v> {
       StmtKind::For(key, value, iterable, body) => {
         let (key_v, key_span_v) = match key {
           Some(key) => (
-            self.string(token_identifier_name(key)),
+            self.name(token_identifier_name(key)),
             self.span(Span::of(key)),
           ),
           None => (Value::nil(), Value::nil()),
         };
-        let value_v = self.string(token_identifier_name(value));
+        let value_v = self.name(token_identifier_name(value));
         let value_span_v = self.span(Span::of(value));
         let iterable_v = self.expr(iterable);
         let body_v = self.stmt(body);
@@ -632,7 +697,7 @@ impl<'c, 'v> Writer<'c, 'v> {
             TokenKind::Range => "..".to_string(),
             _ => token_identifier_name(token),
           };
-          let text_v = self.string(text);
+          let text_v = self.name(text);
           let mut entries = vec![self.kv("text", text_v)];
           entries.extend(self.position(Span::of(token)));
           segments.push(self.ctx.heap().alloc_dict(entries));

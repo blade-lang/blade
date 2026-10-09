@@ -246,11 +246,10 @@ class Node {
   }
 
   /**
-   * Builds a {Node} from the raw dict `zuri.parse()`'s native
-   * backing produces (`{ kind, start, end, line, col, end_line,
-   * end_col, fields }`), recursively wrapping any node-shaped
-   * entry inside `fields`, a single nested node or a list of
-   * them, into its own {Node}. A `fields` entry that isn't
+   * Builds a {Node} from a dict holding a node's parts (`{ kind,
+   * start, end, line, col, end_line, end_col, fields }`),
+   * recursively wrapping any node-shaped entry inside `fields`, a
+   * single nested node or a list of them, into its own {Node}. A `fields` entry that isn't
    * node-shaped (a string, a number, a bool, `nil`, or a plain
    * dict such as a `name_span`) passes through unchanged.
    *
@@ -480,11 +479,7 @@ def _dump_lines(value, indent) {
  * @throws Error if `source` has a syntax error
  */
 def parse(source) {
-  var nodes = []
-  for raw in _zuri_parse.parse(source) {
-    nodes.append(Node.from_dict(raw))
-  }
-  return nodes
+  return _zuri_parse.parse(source, Node)
 }
 
 /**
@@ -559,11 +554,10 @@ class ParseResult {
  * @returns ParseResult
  */
 def parse_partial(source: string) {
-  var raw = _zuri_parse.parse_partial(source)
-  var nodes = raw.nodes.map(@(node) => Node.from_dict(node))
+  var raw = _zuri_parse.parse_partial(source, Node)
   var errors = raw.errors.map(@(error) => Diagnostic(error.message, error))
 
-  return ParseResult(nodes, errors)
+  return ParseResult(raw.nodes, errors)
 }
 
 /**

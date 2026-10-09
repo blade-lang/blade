@@ -1,20 +1,20 @@
 //! `_zuri_lex` builtin module; the native backing for `zuri.tokenize()`.
 //!
 //! Runs the real `Lexer` over a source string and hands back every
-//! token it produces, in order, as a plain dict; comments, doc
-//! blocks, and newlines included, nothing filtered the way the parser
-//! filters them. `libs/zuri/token.zu` wraps each dict into a proper
-//! `Token` instance; this file only builds the raw data.
+//! token it produces, in order, as an instance of the `Token` class
+//! `libs/zuri/token.zu` passes in; comments, doc blocks, and newlines
+//! included, nothing filtered the way the parser filters them.
 
 use crate::builtins::enforce::ArgType;
 use crate::compiler::lexer::Lexer;
 use crate::compiler::token::TokenKind;
 use crate::enforce_arg_count;
 use crate::enforce_arg_type;
-use crate::modules::{BuiltinModuleDef, native};
+use crate::modules::{BuiltinModuleDef, Shape, native};
 use crate::vm::object::ZuriContext;
 use crate::vm::value::Value;
 use crate::vm::vm::VM;
+use rustc_hash::FxHashMap;
 
 pub static MODULE: BuiltinModuleDef = BuiltinModuleDef {
   name: "_zuri_lex",
@@ -22,7 +22,7 @@ pub static MODULE: BuiltinModuleDef = BuiltinModuleDef {
 };
 
 fn build(vm: &mut VM) -> Vec<(&'static str, Value)> {
-  vec![("tokenize", native(vm, "tokenize", 1, false, tokenize_fn))]
+  vec![("tokenize", native(vm, "tokenize", 2, false, tokenize_fn))]
 }
 
 /// This token kind's variant name, exactly as written in
@@ -165,10 +165,10 @@ fn token_kind_value(ctx: &mut ZuriContext, kind: &TokenKind) -> Value {
     // line/column (which is where the error TOKEN starts, not
     // necessarily the same position the lexer's own diagnostic names).
     TokenKind::Error(message, line, offset) => {
-      let message_key = ctx.heap().alloc_string("message");
+      let message_key = ctx.heap().intern_str("message");
       let message_value = ctx.heap().alloc_string(message.clone());
-      let line_key = ctx.heap().alloc_string("line");
-      let offset_key = ctx.heap().alloc_string("offset");
+      let line_key = ctx.heap().intern_str("line");
+      let offset_key = ctx.heap().intern_str("offset");
       ctx.heap().alloc_dict(vec![
         (message_key, message_value),
         (line_key, Value::number(*line as f64)),
@@ -179,40 +179,18 @@ fn token_kind_value(ctx: &mut ZuriContext, kind: &TokenKind) -> Value {
   }
 }
 
-fn token_to_dict(
-  ctx: &mut ZuriContext,
-  source: &[char],
-  token: &crate::compiler::token::Token,
-) -> Value {
-  let kind_key = ctx.heap().alloc_string("kind");
-  let kind_value = ctx.heap().alloc_string(token_kind_name(&token.kind));
+/// The fields of a `Token` the lexer fills, in the order `tokenize_fn`
+/// passes them.
+const TOKEN_FIELDS: [&str; 7] = ["kind", "line", "column", "start", "end", "text", "value"];
 
-  let line_key = ctx.heap().alloc_string("line");
-  let column_key = ctx.heap().alloc_string("column");
-  let start_key = ctx.heap().alloc_string("start");
-  let end_key = ctx.heap().alloc_string("end");
+/// Token texts up to this many bytes are made once per call and shared,
+/// since names, keywords and punctuation repeat throughout a file.
+const SHARED_TEXT: usize = 64;
 
-  let text: String = source[token.start..token.end].iter().collect();
-  let text_key = ctx.heap().alloc_string("text");
-  let text_value = ctx.heap().alloc_string(text);
-
-  let value_key = ctx.heap().alloc_string("value");
-  let value_value = token_kind_value(ctx, &token.kind);
-
-  ctx.heap().alloc_dict(vec![
-    (kind_key, kind_value),
-    (line_key, Value::number(token.line as f64)),
-    (column_key, Value::number(token.column as f64)),
-    (start_key, Value::number(token.start as f64)),
-    (end_key, Value::number(token.end as f64)),
-    (text_key, text_value),
-    (value_key, value_value),
-  ])
-}
-
-/// `_zuri_lex.tokenize(source)`: scans `source` in full and returns
-/// every token the lexer produces, in source order, as a list of
-/// dicts shaped `{ kind, line, column, start, end, text, value }`.
+/// `_zuri_lex.tokenize(source, Token)`: scans `source` in full and
+/// returns every token the lexer produces, in source order, as a list
+/// of `Token`s with `kind`, `line`, `column`, `start`, `end`, `text` and
+/// `value` filled.
 ///
 /// `kind` is the `TokenKind` variant name (`"Identifier"`, `"Plus"`,
 /// `"Comment"`, ...). `line`/`column` are 1-indexed; `start`/`end` are
@@ -231,19 +209,57 @@ fn token_to_dict(
 /// problem description in `value.message`, so this function is total
 /// over any input, including malformed source.
 fn tokenize_fn(ctx: &mut ZuriContext) -> Result<Value, String> {
-  enforce_arg_count!(ctx, 1);
+  enforce_arg_count!(ctx, 2);
   enforce_arg_type!(ctx, 0, ArgType::String);
+  enforce_arg_type!(ctx, 1, ArgType::Class);
 
-  let source_str = ctx.args[0].as_str().to_string();
-  let source_chars: Vec<char> = source_str.chars().collect();
-  let mut lexer = Lexer::new(&source_str);
+  let shape = Shape::of(ctx.args[1], TOKEN_FIELDS)?;
+  let args = ctx.args;
+  let source = args[0].as_str();
+  let chars: Vec<char> = source.chars().collect();
+  let mut lexer = Lexer::new(source);
+  let mut texts: FxHashMap<String, Value> = FxHashMap::default();
 
   let mut tokens = Vec::new();
   loop {
     let tok = lexer.scan();
-    let is_eof = matches!(tok.kind, TokenKind::Eof);
-    tokens.push(token_to_dict(ctx, &source_chars, &tok));
-    if is_eof {
+    let kind = ctx.heap().intern_str(token_kind_name(&tok.kind));
+
+    let text: String = chars[tok.start..tok.end].iter().collect();
+
+    // An identifier's value is its text, so the two share one string.
+    let names_itself = matches!(&tok.kind, TokenKind::Identifier(name) if *name == text);
+
+    let text_v = match texts.get(&text) {
+      Some(&known) => known,
+      None if text.len() <= SHARED_TEXT => {
+        let made = ctx.heap().alloc_string(text.clone());
+        texts.insert(text, made);
+        made
+      },
+      None => ctx.heap().alloc_string(text),
+    };
+
+    let value = match names_itself {
+      true => text_v,
+      false => token_kind_value(ctx, &tok.kind),
+    };
+
+    let number = |n: usize| Value::number(n as f64);
+    tokens.push(shape.build(
+      ctx.vm,
+      [
+        kind,
+        number(tok.line),
+        number(tok.column),
+        number(tok.start),
+        number(tok.end),
+        text_v,
+        value,
+      ],
+    ));
+
+    if matches!(tok.kind, TokenKind::Eof) {
       break;
     }
   }

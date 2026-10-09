@@ -94,6 +94,54 @@ pub fn socket_error(error: std::io::Error) -> String {
   error.to_string()
 }
 
+/// A Zuri class whose instances a native builds directly, without
+/// running its constructor: the class, and the slot of each field the
+/// native fills. Handing Zuri code a dict for its constructor to copy
+/// from costs the dict, its keys and the copy for every instance.
+pub(crate) struct Shape<const N: usize> {
+  class: Value,
+  field_count: usize,
+  slots: [usize; N],
+}
+
+impl<const N: usize> Shape<N> {
+  /// The shape of `class` for the fields `names`, in the order `build`
+  /// takes their values. Fails when `class` is not a class or declares
+  /// no field by one of the names.
+  pub(crate) fn of(class: Value, names: [&str; N]) -> Result<Self, String> {
+    if !class.is_class() {
+      return Err(format!("expected a class, got {}", class.type_name()));
+    }
+
+    let c = class.as_class();
+    let mut slots = [0; N];
+    for (slot, name) in slots.iter_mut().zip(names) {
+      match c.field_slots.get(name) {
+        Some(&found) => *slot = found as usize,
+        None => return Err(format!("class '{}' has no field '{}'", c.name, name)),
+      }
+    }
+
+    Ok(Self {
+      class,
+      field_count: c.field_count as usize,
+      slots,
+    })
+  }
+
+  /// A new instance holding `values` in the fields `of` named, and nil
+  /// in any other. The instance is young, so filling it needs no write
+  /// barrier.
+  pub(crate) fn build(&self, vm: &mut VM, values: [Value; N]) -> Value {
+    let instance = vm.heap_mut().alloc_instance(self.class, self.field_count);
+    let fields = &instance.as_instance().fields;
+    for (&slot, value) in self.slots.iter().zip(values) {
+      fields[slot].set(value);
+    }
+    instance
+  }
+}
+
 /// Allocate a free (non-method) native function Value; the
 /// module-scoped equivalent of `natives.rs`'s `register`, just
 /// handing back the Value instead of also binding it as a VM global.

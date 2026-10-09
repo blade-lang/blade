@@ -126,48 +126,6 @@ class Instr {
   }
 }
 
-/**
- * Recursively wraps a raw value from an instruction's `fields`
- * dict (or a nested function prototype's own fields): an
- * instruction-shaped dict becomes an {Instr}, a list has this
- * applied to each of its own entries, a nested function
- * prototype dict (recognized by its own `instructions` entry)
- * gets that entry wrapped the same way, and everything else (a
- * string, number, bool, `nil`, or a plain jump-table/param-check
- * entry) passes through as-is.
- */
-def _wrap_instr(value) {
-  if is_list(value) {
-    var result = []
-    for item in value {
-      result.append(_wrap_instr(item))
-    }
-    return result
-  }
-
-  if is_dict(value) and value.get('op', nil) != nil and value.get('fields', nil) != nil {
-    return _instr_from_dict(value)
-  }
-
-  if is_dict(value) and value.get('instructions', nil) != nil {
-    var wrapped = {}
-    for key in value.keys() {
-      wrapped[key] = _wrap_instr(value[key])
-    }
-    return wrapped
-  }
-
-  return value
-}
-
-def _instr_from_dict(data) {
-  var fields = {}
-  for key in data.fields.keys() {
-    fields[key] = _wrap_instr(data.fields[key])
-  }
-  return Instr(data.op, data.line, fields)
-}
-
 # --- dump() support ---
 
 def _indent(level) {
@@ -313,11 +271,7 @@ def find_instrs(instrs, op) {
  * @throws Error if `source` doesn't compile
  */
 def compile(source) {
-  var instrs = []
-  for raw in _zuri_compile.compile(source) {
-    instrs.append(_instr_from_dict(raw))
-  }
-  return instrs
+  return _zuri_compile.compile(source, Instr)
 }
 
 /**

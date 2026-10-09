@@ -54,7 +54,7 @@ class Token {
    * builds these for you.
    *
    * @param dict data: `{ kind, line, column, start, end, text,
-   *    value }`, as produced by the native lexer backing
+   *    value }`, the token's fields
    */
   @new(data) {
     self.kind = data.kind
@@ -108,11 +108,7 @@ class Token {
  * @returns list[Token]
  */
 def tokenize(source) {
-  var tokens = []
-  for raw in _zuri_lex.tokenize(source) {
-    tokens.append(Token(raw))
-  }
-  return tokens
+  return _zuri_lex.tokenize(source, Token)
 }
 
 /**
