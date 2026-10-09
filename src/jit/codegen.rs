@@ -10470,10 +10470,52 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
       .load(types::I8, flags, ptr, object::obj_str_ascii_offset());
     let rope = self.fb.ins().iconst(types::I8, object::STR_ROPE as i64);
     let is_rope = self.fb.ins().icmp(IntCC::Equal, form, rope);
-    self
-      .fb
-      .ins()
-      .brif(is_rope, slow_block, &[], fast_block, &[]);
+
+    if op == StringIntrinsic::Length {
+      // An ASCII string's length is its byte length. Any other string
+      // is counted here only while it is short: the builtin has a long
+      // one's count in its character index, where counting here would
+      // walk the whole string on every call.
+      let ascii_block = self.fb.create_block();
+      let unknown_block = self.fb.create_block();
+      let yes = self.fb.ins().iconst(types::I8, object::ASCII_YES as i64);
+      let is_ascii = self.fb.ins().icmp(IntCC::Equal, form, yes);
+      self
+        .fb
+        .ins()
+        .brif(is_ascii, ascii_block, &[], unknown_block, &[]);
+
+      self.fb.switch_to_block(ascii_block);
+      let byte_len = self
+        .fb
+        .ins()
+        .load(types::I64, flags, ptr, object::obj_str_len_offset());
+      let length = self.fb.ins().fcvt_from_sint(types::F64, byte_len);
+      let v = self.from_f64(length);
+      self.store_reg(dst, v);
+      self.fb.ins().jump(done_block, &[]);
+
+      self.fb.switch_to_block(unknown_block);
+      let byte_len = self
+        .fb
+        .ins()
+        .load(types::I64, flags, ptr, object::obj_str_len_offset());
+      let long = self.fb.ins().icmp_imm_u(
+        IntCC::UnsignedGreaterThanOrEqual,
+        byte_len,
+        object::STR_INDEXED_FROM as i64,
+      );
+      let to_builtin = self.fb.ins().bor(is_rope, long);
+      self
+        .fb
+        .ins()
+        .brif(to_builtin, slow_block, &[], fast_block, &[]);
+    } else {
+      self
+        .fb
+        .ins()
+        .brif(is_rope, slow_block, &[], fast_block, &[]);
+    }
 
     self.fb.switch_to_block(fast_block);
     let v = self.emit_string_intrinsic_value(op, recv);

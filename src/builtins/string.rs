@@ -327,13 +327,13 @@ fn expect_width(ctx: &ZuriContext, idx: usize) -> Result<usize, String> {
   Ok(v.as_number().max(0.0) as usize)
 }
 
-/// Char-index (not byte-index) offset into `s`, matching how the rest
-/// of the VM indexes strings (see `VM::index_get`'s string arm).
-fn char_offset_to_byte(s: &str, char_offset: usize) -> usize {
-  s.char_indices()
-    .nth(char_offset)
-    .map(|(b, _)| b)
-    .unwrap_or(s.len())
+/// Byte offset of character `offset` in the string `string`, or its
+/// byte length when `offset` is past the end.
+fn char_offset_to_byte(string: Value, offset: usize) -> usize {
+  let string = string.as_obj_str();
+  string
+    .byte_offset(offset)
+    .unwrap_or_else(|| string.text().len())
 }
 
 fn length(ctx: &mut ZuriContext) -> Result<Value, String> {
@@ -579,42 +579,23 @@ fn index_of(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type_opt!(ctx, 2, ArgType::Number);
 
   let start = optional_offset(ctx, 2)?;
-  let ascii = ctx.args[0].str_is_ascii();
-
-  let haystack = ctx.args[0].as_str();
+  let string = ctx.args[0].as_obj_str();
+  let haystack = string.text();
   let needle = ctx.args[1].as_str();
 
   if needle.is_empty() {
     return Ok(Value::number(-1.0));
   }
 
-  // `start` and the result are both codepoint counts, but the search
-  // itself works on bytes. For an all-ASCII haystack the two indexings
-  // coincide, so the conversions collapse; otherwise each costs one
-  // linear walk, which still beats materialising the whole string as a
-  // `Vec<char>` the way this used to.
-  let byte_start = if ascii {
-    if start > haystack.len() {
-      return Ok(Value::number(-1.0));
-    }
-    start
-  } else {
-    match haystack.char_indices().nth(start) {
-      Some((offset, _)) => offset,
-      // `start` sitting exactly at the end can still only match an
-      // empty needle, which is already handled above.
-      None => return Ok(Value::number(-1.0)),
-    }
+  // `start` and the result are both character offsets, but the search
+  // itself works on bytes, so both are converted through the string.
+  let Some(byte_start) = string.byte_offset(start) else {
+    return Ok(Value::number(-1.0));
   };
 
   match haystack[byte_start..].find(needle) {
     Some(offset) => {
-      let found = byte_start + offset;
-      let index = if ascii {
-        found
-      } else {
-        haystack[..found].chars().count()
-      };
+      let index = string.char_offset(byte_start + offset);
       Ok(Value::number(index as f64))
     },
     None => Ok(Value::number(-1.0)),
@@ -633,8 +614,8 @@ fn last_index_of(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 1, ArgType::String);
   enforce_method_arg_type_opt!(ctx, 2, ArgType::Number);
 
-  let ascii = ctx.args[0].str_is_ascii();
-  let haystack = ctx.args[0].as_str();
+  let string = ctx.args[0].as_obj_str();
+  let haystack = string.text();
   let needle = ctx.args[1].as_str();
 
   // An empty needle matches nowhere, matching `index_of` rather than
@@ -650,25 +631,13 @@ fn last_index_of(ctx: &mut ZuriContext) -> Result<Value, String> {
   let found = match bound {
     None => haystack.rfind(needle),
     Some(limit) => {
-      let byte_limit = if ascii {
-        limit.min(haystack.len())
-      } else {
-        char_offset_to_byte(haystack, limit)
-      };
-
+      let byte_limit = char_offset_to_byte(ctx.args[0], limit);
       last_match_within(haystack, needle, byte_limit)
     },
   };
 
   match found {
-    Some(offset) => {
-      let index = if ascii {
-        offset
-      } else {
-        haystack[..offset].chars().count()
-      };
-      Ok(Value::number(index as f64))
-    },
+    Some(offset) => Ok(Value::number(string.char_offset(offset) as f64)),
     None => Ok(Value::number(-1.0)),
   }
 }
@@ -963,11 +932,12 @@ fn string_match(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 1, ArgType::String);
   enforce_method_arg_type_opt!(ctx, 2, ArgType::Number);
 
-  let s = ctx.args[0].as_str().to_string();
-  let pattern_str = ctx.args[1].as_str().to_string();
-  let start = char_offset_to_byte(&s, optional_offset(ctx, 2)?);
+  let args = ctx.args;
+  let s = args[0].as_str();
+  let pattern_str = args[1].as_str();
+  let start = char_offset_to_byte(args[0], optional_offset(ctx, 2)?);
 
-  if let Some((pattern, modifiers)) = parse_regex(&pattern_str) {
+  if let Some((pattern, modifiers)) = parse_regex(pattern_str) {
     let compiled = compile_regex(pattern, modifiers)?;
     let (re, anchored) = (&compiled.0, compiled.1);
     let bytes = s.as_bytes();
@@ -1023,9 +993,7 @@ fn string_match(ctx: &mut ZuriContext) -> Result<Value, String> {
       _ => Ok(Value::bool(false)),
     }
   } else {
-    Ok(Value::bool(
-      s[start.min(s.len())..].contains(pattern_str.as_str()),
-    ))
+    Ok(Value::bool(s[start.min(s.len())..].contains(pattern_str)))
   }
 }
 
@@ -1038,12 +1006,13 @@ fn string_matches(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 1, ArgType::String);
   enforce_method_arg_type_opt!(ctx, 2, ArgType::Number);
 
-  let s = ctx.args[0].as_str().to_string();
-  let pattern_str = ctx.args[1].as_str().to_string();
-  let start = char_offset_to_byte(&s, optional_offset(ctx, 2)?);
+  let args = ctx.args;
+  let s = args[0].as_str();
+  let pattern_str = args[1].as_str();
+  let start = char_offset_to_byte(args[0], optional_offset(ctx, 2)?);
 
-  let (pattern, modifiers) = parse_regex(&pattern_str)
-    .ok_or_else(|| "matches() expects a regular expression".to_string())?;
+  let (pattern, modifiers) =
+    parse_regex(pattern_str).ok_or_else(|| "matches() expects a regular expression".to_string())?;
   let compiled = compile_regex(pattern, modifiers)?;
   let (re, anchored) = (&compiled.0, compiled.1);
 
@@ -1399,7 +1368,7 @@ fn _key(ctx: &mut ZuriContext) -> Result<Value, String> {
   }
 
   let index = val.as_number() as usize;
-  if index < obj.chars().count() - 1 {
+  if index + 1 < ctx.args[0].as_obj_str().char_len() {
     return Ok(Value::number(index as f64 + 1.0));
   }
 
@@ -1412,10 +1381,10 @@ fn _value(ctx: &mut ZuriContext) -> Result<Value, String> {
   }
 
   let index = ctx.args[1].as_number();
-  let obj = ctx.args[0].as_str();
+  let string = ctx.args[0].as_obj_str();
 
-  if index > -1.0 && index < obj.chars().count() as f64 {
-    let v = obj.chars().nth(index as usize).unwrap().to_string();
+  if index > -1.0 && index < string.char_len() as f64 {
+    let v = string.char_at(index as usize).unwrap().to_string();
     return Ok(ctx.vm.heap_mut().alloc_string(v));
   }
 

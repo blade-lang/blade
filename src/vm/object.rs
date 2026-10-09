@@ -44,8 +44,116 @@ pub struct ObjStr {
 
 #[repr(C)]
 union StrRepr {
-  flat: std::mem::ManuallyDrop<String>,
+  flat: std::mem::ManuallyDrop<Flat>,
   rope: std::mem::ManuallyDrop<Rope>,
+}
+
+/// A flat string's text, and the character index a long non-ASCII one
+/// builds the first time something reaches into it by character. The
+/// index sits in the room a rope leaves over, so it costs a string
+/// nothing until it is built.
+#[repr(C)]
+struct Flat {
+  text: String,
+  chars: std::cell::OnceCell<Box<CharIndex>>,
+}
+
+impl Flat {
+  fn new(text: String) -> Self {
+    Self {
+      text,
+      chars: std::cell::OnceCell::new(),
+    }
+  }
+}
+
+/// Where every `STRIDE`th character of a non-ASCII string starts.
+///
+/// Zuri indexes strings by character, and in UTF-8 the only way to find
+/// where character `n` starts is to walk the `n` before it. The index
+/// keeps that walk under `STRIDE` characters wherever `n` falls, so
+/// slicing, indexing and searching from an offset cost the same at the
+/// end of a long string as at its start.
+struct CharIndex {
+  /// Byte offset of character `i * STRIDE`, for every such character
+  /// the text has.
+  starts: Box<[u32]>,
+  /// How many characters the text holds.
+  chars: usize,
+}
+
+impl CharIndex {
+  const STRIDE: usize = 64;
+
+  /// Shorter strings are walked instead. The walk costs no more than a
+  /// lookup would, and a short string indexed once is not worth an
+  /// allocation.
+  const MIN_BYTES: usize = STR_INDEXED_FROM;
+
+  fn build(text: &str) -> Self {
+    let mut starts = Vec::with_capacity(text.len() / Self::STRIDE + 1);
+    let mut chars = 0;
+
+    for (offset, byte) in text.bytes().enumerate() {
+      if is_char_start(byte) {
+        if chars % Self::STRIDE == 0 {
+          starts.push(offset as u32);
+        }
+        chars += 1;
+      }
+    }
+
+    Self {
+      starts: starts.into_boxed_slice(),
+      chars,
+    }
+  }
+
+  /// Byte offset of character `index`, which must not be past the end.
+  fn byte_offset(&self, text: &str, index: usize) -> usize {
+    if index == self.chars {
+      return text.len();
+    }
+
+    let bytes = text.as_bytes();
+    let mut offset = self.starts[index / Self::STRIDE] as usize;
+    for _ in 0..index % Self::STRIDE {
+      offset += utf8_width(bytes[offset]);
+    }
+    offset
+  }
+
+  /// Character index of byte `offset`, which must start a character or
+  /// sit at the end.
+  fn char_offset(&self, text: &str, offset: usize) -> usize {
+    let block = self
+      .starts
+      .partition_point(|&start| start as usize <= offset)
+      - 1;
+    let from = self.starts[block] as usize;
+    block * Self::STRIDE + count_chars(&text.as_bytes()[from..offset])
+  }
+}
+
+/// Whether `byte` begins a UTF-8 character rather than continuing one.
+#[inline]
+fn is_char_start(byte: u8) -> bool {
+  (byte as i8) >= -0x40
+}
+
+/// Length of the UTF-8 character `lead` begins.
+#[inline]
+fn utf8_width(lead: u8) -> usize {
+  match lead {
+    0x00..=0x7F => 1,
+    0xC0..=0xDF => 2,
+    0xE0..=0xEF => 3,
+    _ => 4,
+  }
+}
+
+fn count_chars(bytes: &[u8]) -> usize {
+  bytes.iter().filter(|&&byte| is_char_start(byte)).count()
 }
 
 /// A string built by `+` and not yet assembled into one buffer: the
@@ -107,7 +215,7 @@ impl ObjStr {
     debug_assert_ne!(form, STR_ROPE);
     Self {
       repr: std::cell::UnsafeCell::new(StrRepr {
-        flat: std::mem::ManuallyDrop::new(text),
+        flat: std::mem::ManuallyDrop::new(Flat::new(text)),
       }),
       form: Cell::new(form),
     }
@@ -137,11 +245,17 @@ impl ObjStr {
     self.is_rope().then(|| unsafe { &*(*self.repr.get()).rope })
   }
 
+  /// The flat half, which must be live.
+  #[inline]
+  fn flat_parts(&self) -> &Flat {
+    debug_assert!(!self.is_rope());
+    unsafe { &(*self.repr.get()).flat }
+  }
+
   /// The flat text, which must be live.
   #[inline]
   fn flat_text(&self) -> &String {
-    debug_assert!(!self.is_rope());
-    unsafe { &(*self.repr.get()).flat }
+    &self.flat_parts().text
   }
 
   /// The contents, assembling a rope first if this is one. Every read
@@ -159,8 +273,109 @@ impl ObjStr {
     match self.form.get() {
       STR_ROPE => self.rope_parts().map_or(0, |rope| rope.chars as usize),
       ASCII_YES => self.flat_text().len(),
-      _ => self.flat_text().chars().count(),
+      // The flag is what makes appending to a string `+` produced build
+      // a rope, and classifying the text would overwrite it.
+      STR_CONCAT => self.flat_text().chars().count(),
+      _ => match self.char_index() {
+        Some(index) => index.chars,
+        None if self.form.get() == ASCII_YES => self.flat_text().len(),
+        None => self.flat_text().chars().count(),
+      },
     }
+  }
+
+  /// Whether every byte is ASCII, so that character offsets are byte
+  /// offsets. Worked out the first time anything asks and kept in the
+  /// form flag, assembling a rope first if this is one.
+  pub fn is_ascii(&self) -> bool {
+    match self.form.get() {
+      ASCII_YES => true,
+      ASCII_NO => false,
+      _ => {
+        let known = self.text().is_ascii();
+        self.form.set(if known { ASCII_YES } else { ASCII_NO });
+        known
+      },
+    }
+  }
+
+  /// The character index of a long non-ASCII string, built the first
+  /// time it is asked for. ASCII and short strings have none.
+  fn char_index(&self) -> Option<&CharIndex> {
+    let text = self.text();
+    if text.len() < CharIndex::MIN_BYTES || text.len() > u32::MAX as usize || self.is_ascii() {
+      return None;
+    }
+
+    let flat = self.flat_parts();
+    Some(flat.chars.get_or_init(|| Box::new(CharIndex::build(text))))
+  }
+
+  /// Byte offset of character `index`: the byte length when `index` is
+  /// the character count, and `None` past that.
+  pub fn byte_offset(&self, index: usize) -> Option<usize> {
+    let text = self.text();
+    if self.is_ascii() {
+      return (index <= text.len()).then_some(index);
+    }
+
+    if let Some(chars) = self.char_index() {
+      return (index <= chars.chars).then(|| chars.byte_offset(text, index));
+    }
+
+    let mut seen = 0;
+    for (offset, _) in text.char_indices() {
+      if seen == index {
+        return Some(offset);
+      }
+      seen += 1;
+    }
+    (seen == index).then_some(text.len())
+  }
+
+  /// Character index of byte `offset`, which must start a character or
+  /// sit at the end of the text.
+  pub fn char_offset(&self, offset: usize) -> usize {
+    let text = self.text();
+    debug_assert!(text.is_char_boundary(offset));
+    if self.is_ascii() {
+      return offset;
+    }
+
+    match self.char_index() {
+      Some(chars) => chars.char_offset(text, offset),
+      None => count_chars(&text.as_bytes()[..offset]),
+    }
+  }
+
+  /// The character at `index`, or `None` past the end.
+  pub fn char_at(&self, index: usize) -> Option<char> {
+    let offset = self.byte_offset(index)?;
+    self.text()[offset..].chars().next()
+  }
+
+  /// The characters from `from` up to `to`, which must be in order and
+  /// within the string.
+  pub fn char_slice(&self, from: usize, to: usize) -> &str {
+    debug_assert!(from <= to);
+    let text = self.text();
+    if self.is_ascii() {
+      return &text[from..to];
+    }
+
+    let start = self.byte_offset(from).unwrap_or(text.len());
+    let end = match self.char_index() {
+      Some(_) => self.byte_offset(to).unwrap_or(text.len()),
+      None => {
+        let rest = &text[start..];
+        start
+          + rest
+            .char_indices()
+            .nth(to - from)
+            .map_or(rest.len(), |(offset, _)| offset)
+      },
+    };
+    &text[start..end]
   }
 
   /// Byte length, without assembling a rope.
@@ -220,7 +435,7 @@ impl ObjStr {
     unsafe {
       let repr = &mut *self.repr.get();
       std::mem::ManuallyDrop::drop(&mut repr.rope);
-      repr.flat = std::mem::ManuallyDrop::new(joined);
+      repr.flat = std::mem::ManuallyDrop::new(Flat::new(joined));
     }
     self.form.set(ASCII_UNKNOWN);
   }
@@ -2063,6 +2278,12 @@ pub fn obj_to_gcbox_remembered_offset() -> i32 {
 
 /// `Obj::Str`'s ASCII flag: nobody has asked yet.
 pub const ASCII_UNKNOWN: u8 = 0;
+
+/// Byte length from which a non-ASCII string keeps an index of where
+/// its characters start rather than walking to them. Compiled code
+/// counts a shorter string's characters itself and leaves a longer one
+/// to the runtime, which has the count in that index.
+pub const STR_INDEXED_FROM: usize = 256;
 
 /// `Obj::Str`'s ASCII flag: every byte is below 0x80, so a codepoint
 /// index is also a byte index.

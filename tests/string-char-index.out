@@ -1,0 +1,32 @@
+flat strings of every size around the index:
+1: 1 characters, all agree
+63: 63 characters, all agree
+64: 64 characters, all agree
+65: 65 characters, all agree
+200: 200 characters, all agree
+255: 255 characters, all agree
+256: 256 characters, all agree
+257: 257 characters, all agree
+1000: 1000 characters, all agree
+2600: 2600 characters, all agree
+only wide characters:
+wide: 700 characters, all agree
+ASCII until the very end:
+late: 2001 characters, all agree
+built by +=:
+rope: 2000 characters, all agree
+true
+true
+[1000, 2000]
+length in a loop:
+[700, 0]
+[60, 30]
+[1500, 214]
+[2000, 286]
+past the end:
+true
+true
+[-1, -1]
+index 1000 out of bounds (length 1000)
+index -1 out of bounds (length 1000)
+slice bounds 10..1001 out of range (length 1000)

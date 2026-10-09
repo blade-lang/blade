@@ -33,9 +33,8 @@ use num_bigint::{BigInt, Sign};
 use num_traits::{Signed, ToPrimitive, Zero};
 
 use crate::vm::object::{
-  ASCII_NO, ASCII_YES, DictStorage, FileHandle, NativeFunction, Obj, ObjBoundMethod, ObjClass,
-  ObjClosure, ObjFunction, ObjInstance, ObjModule, ObjModuleBinding, ObjPtr, UpvalueState,
-  write_barrier,
+  DictStorage, FileHandle, NativeFunction, Obj, ObjBoundMethod, ObjClass, ObjClosure, ObjFunction,
+  ObjInstance, ObjModule, ObjModuleBinding, ObjPtr, ObjStr, UpvalueState, write_barrier,
 };
 
 use crate::vm::object::ListStorage;
@@ -189,17 +188,8 @@ impl Value {
       return false;
     }
 
-    let obj = unsafe { &*self.as_obj() };
-    match obj {
-      Obj::Str(string) => match string.form().get() {
-        ASCII_YES => true,
-        ASCII_NO => false,
-        _ => {
-          let known = obj.str_text().as_bytes().is_ascii();
-          string.form().set(if known { ASCII_YES } else { ASCII_NO });
-          known
-        },
-      },
+    match unsafe { &*self.as_obj() } {
+      Obj::Str(string) => string.is_ascii(),
       _ => false,
     }
   }
@@ -295,6 +285,14 @@ impl Value {
   pub fn as_str(&self) -> &str {
     debug_assert!(self.is_string());
     unsafe { &*self.as_obj() }.str_text()
+  }
+
+  /// The string object itself, for reaching into it by character.
+  pub fn as_obj_str(&self) -> &ObjStr {
+    match unsafe { &*self.as_obj() } {
+      Obj::Str(string) => string,
+      _ => unreachable!("as_obj_str() called on a non-string Value"),
+    }
   }
 
   pub fn as_func(&self) -> &ObjFunction {

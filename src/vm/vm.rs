@@ -5170,33 +5170,21 @@ impl VM {
   }
 
   /// `s[i]` for a string receiver, resolving `i` (possibly negative,
-  /// counting from the end) to the character it names.
-  ///
-  /// Has an ASCII fast path: the naive implementation walks the string
-  /// twice per index (once to bounds-check via `chars().count()`, once for
-  /// `chars().nth(i)`), making indexing in a loop quadratic. If every byte
-  /// up to and including byte `i` is ASCII, character `i` is byte `i` and
-  /// no counting is needed; checking that prefix is a word-at-a-time scan
-  /// instead of a per-character UTF-8 decode.
-  ///
-  /// Anything the fast path can't answer; non-ASCII in range, negative or
-  /// out-of-range index; falls through to the original behavior.
+  /// counting from the end) to the character it names. An ASCII string
+  /// answers straight from its bytes and any other from its character
+  /// index, so indexing costs the same wherever `i` falls.
   fn string_char_at(&mut self, receiver: Value, index: Value) -> RunResult<char> {
+    let string = receiver.as_obj_str();
     let raw = self.value_as_index(index)?;
-    if raw >= 0 {
-      let i = raw as usize;
-      let bytes = receiver.as_str().as_bytes();
-      // `str_is_ascii` is asked first even though the prefix check
-      // alone would do, because it caches its answer on the string and
-      // that cached answer is what lets compiled code index this same
-      // string without any scan at all on later reads.
-      if i < bytes.len() && (receiver.str_is_ascii() || bytes[..=i].is_ascii()) {
-        return Ok(bytes[i] as char);
+    if raw >= 0 && string.is_ascii() {
+      let bytes = string.text().as_bytes();
+      if let Some(&byte) = bytes.get(raw as usize) {
+        return Ok(byte as char);
       }
     }
-    let chars_len = receiver.as_str().chars().count();
-    let i = self.coerce_index(index, chars_len)?;
-    Ok(receiver.as_str().chars().nth(i).unwrap())
+
+    let i = self.coerce_index(index, string.char_len())?;
+    Ok(string.char_at(i).unwrap())
   }
 
   pub(crate) fn index_set(&mut self, receiver: Value, index: Value, value: Value) -> RunResult<()> {
@@ -5254,32 +5242,12 @@ impl VM {
           };
           return Ok(self.heap.alloc_bytes(items));
         },
-        Obj::Str(..) => {
-          // Same reasoning as `string_char_at`, which already has this fast
-          // path for `s[i]`: materializing the whole string as a `Vec<char>`
-          // to take a slice out of it makes `s[a, b]` cost O(len(s)) rather
-          // than O(b - a), so a loop slicing its way through a large string
-          // is quadratic. On an ASCII string character offsets ARE byte
-          // offsets, so the slice is a direct borrow and no scan happens at
-          // all; `str_is_ascii` caches its answer on the string, so the
-          // check itself is paid once.
-          let text = receiver.as_str();
-          if receiver.str_is_ascii() {
-            let bounds = self.resolve_slice_bounds(lo, hi, text.len())?;
-            let out = match bounds {
-              Some((lo, hi)) => text[lo..hi].to_string(),
-              None => String::new(),
-            };
-            return Ok(self.heap.alloc_string(out));
-          }
-
-          // Non-ASCII still has to count characters, but walking the
-          // iterator twice is far cheaper than building a 4-bytes-per-
-          // character vector of the entire string to index into once.
-          let char_len = text.chars().count();
-          let bounds = self.resolve_slice_bounds(lo, hi, char_len)?;
-          let out: String = match bounds {
-            Some((lo, hi)) => receiver.as_str().chars().skip(lo).take(hi - lo).collect(),
+        Obj::Str(string) => {
+          // Character offsets are found the way `string_char_at` finds
+          // them, so a slice costs what it copies wherever it falls.
+          let bounds = self.resolve_slice_bounds(lo, hi, string.char_len())?;
+          let out = match bounds {
+            Some((lo, hi)) => string.char_slice(lo, hi).to_string(),
             None => String::new(),
           };
           return Ok(self.heap.alloc_string(out));

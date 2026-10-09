@@ -1,0 +1,254 @@
+# Strings are indexed by character. A long string holding anything
+# outside ASCII finds its characters through an index of where every
+# 64th one starts, so everything here is checked against the list of
+# characters the string was built from: at every offset, across
+# characters of each UTF-8 width, and across the index's block edges.
+# The loops run past the JIT's warm-up, so compiled code reads them too.
+
+var WIDE = ['é', '€', '𝄞', 'ß']
+
+# Mostly ASCII with a wider character every few places, the way source
+# text usually is.
+def characters(count) {
+  var chars = []
+  iter var i = 0; i < count; i++ {
+    if i % 7 == 3 {
+      chars.append(WIDE[i % 4])
+    } else {
+      chars.append('abcdefg'[i % 7])
+    }
+  }
+  return chars
+}
+
+# The first place at or after `start` where `needle` begins, found one
+# character at a time.
+def find(chars, needle, start) {
+  var size = needle.length()
+  iter var at = start; at + size <= chars.length(); at++ {
+    if ''.join(chars[at, at + size]) == needle {
+      return at
+    }
+  }
+  return -1
+}
+
+# The last place at or before `bound` where `needle` begins.
+def find_last(chars, needle, bound) {
+  var size = needle.length()
+  var at = bound
+  if at + size > chars.length() {
+    at = chars.length() - size
+  }
+  while at >= 0 {
+    if ''.join(chars[at, at + size]) == needle {
+      return at
+    }
+    at--
+  }
+  return -1
+}
+
+def check(name, text, chars) {
+  var count = chars.length()
+  var wrong = []
+
+  if text.length() != count {
+    wrong.append('length ${text.length()}')
+  }
+
+  iter var i = 0; i < count; i++ {
+    if text[i] != chars[i] {
+      wrong.append('[${i}]')
+    }
+    if text[i - count] != chars[i] {
+      wrong.append('[${i - count}]')
+    }
+  }
+
+  iter var from = 0; from <= count; from += 11 {
+    for size in [0, 1, 2, 63, 64, 65, 129] {
+      var to = from + size
+      if to <= count and text[from, to] != ''.join(chars[from, to]) {
+        wrong.append('[${from}, ${to}]')
+      }
+    }
+  }
+
+  iter var from = 0; from <= count; from += 97 {
+    if text[from,] != ''.join(chars[from,]) {
+      wrong.append('[${from},]')
+    }
+    if text[,from] != ''.join(chars[,from]) {
+      wrong.append('[,${from}]')
+    }
+  }
+
+  iter var start = 0; start < count; start += 41 {
+    if start + 8 <= count {
+      var needle = ''.join(chars[start + 5, start + 8])
+      var found = text.index_of(needle, start)
+      if found != find(chars, needle, start) {
+        wrong.append('index_of(${needle}, ${start}) gave ${found}')
+      }
+
+      var last = text.last_index_of(needle, start)
+      if last != find_last(chars, needle, start) {
+        wrong.append('last_index_of(${needle}, ${start}) gave ${last}')
+      }
+    }
+
+    var matched = text.match('/[€𝄞]/', start)
+    var expected = false
+    iter var at = start; at < count; at++ {
+      if chars[at] == '€' or chars[at] == '𝄞' {
+        expected = chars[at]
+        break
+      }
+    }
+    if matched == false {
+      if expected != false {
+        wrong.append('match from ${start} found nothing')
+      }
+    } else if matched[0] != expected {
+      wrong.append('match from ${start} gave ${matched[0]}')
+    }
+
+    if start + 2 <= count and !text.match(''.join(chars[start, start + 2]), start) {
+      wrong.append('plain match from ${start}')
+    }
+
+    var all = text.matches('/é/', start)[0].length()
+    if all != chars[start,].filter(@(c) => c == 'é').length() {
+      wrong.append('matches from ${start} gave ${all}')
+    }
+  }
+
+  var seen = []
+  for c in text {
+    seen.append(c)
+  }
+  if seen != chars {
+    wrong.append('iteration')
+  }
+
+  var positions = 0
+  for index, c in text {
+    if chars[index] == c {
+      positions++
+    }
+  }
+  if positions != count {
+    wrong.append('indexed iteration')
+  }
+
+  if wrong.length() == 0 {
+    echo '${name}: ${count} characters, all agree'
+  } else {
+    echo '${name}: ${wrong.length()} disagree, first ${wrong[0, 5]}'
+  }
+}
+
+echo 'flat strings of every size around the index:'
+
+for count in [1, 63, 64, 65, 200, 255, 256, 257, 1000, 2600] {
+  var chars = characters(count)
+  check('${count}', ''.join(chars), chars)
+}
+
+echo 'only wide characters:'
+
+var wide = []
+iter var i = 0; i < 700; i++ {
+  wide.append(WIDE[i % 4])
+}
+check('wide', ''.join(wide), wide)
+
+echo 'ASCII until the very end:'
+
+var late = characters(2000).map(@(c) => c.ascii() == c ? c : 'x')
+late.append('€')
+check('late', ''.join(late), late)
+
+echo 'built by +=:'
+
+var chars = characters(2000)
+var built = ''
+for c in chars {
+  built += c
+}
+check('rope', built, chars)
+
+# A string read in the middle of being built, then extended further,
+# keeps answering for its own text while the longer one answers for
+# its own.
+var head = ''
+iter var i = 0; i < 1000; i++ {
+  head += chars[i]
+}
+var early = head[900, 1000]
+var longer = head
+iter var i = 1000; i < 2000; i++ {
+  longer += chars[i]
+}
+echo early == ''.join(chars[900, 1000])
+echo longer[1990,] == ''.join(chars[1990,])
+echo [head.length(), longer.length()]
+
+echo 'length in a loop:'
+
+# Compiled code reads an ASCII string's length off its byte count,
+# counts a short string's characters itself, and asks the runtime for a
+# long one's.
+def walk(text) {
+  var i = 0
+  var wide = 0
+  while i < text.length() {
+    if text[i].ascii() != text[i] {
+      wide++
+    }
+    i++
+  }
+  return [i, wide]
+}
+
+var ascii_text = 'abcdefg' * 100
+var short_text = 'añb€c𝄞' * 10
+var long_text = ''.join(characters(1500))
+for round in 0..30 {
+  if round == 29 {
+    echo walk(ascii_text)
+    echo walk(short_text)
+    echo walk(long_text)
+    echo walk(built)
+  } else {
+    walk(ascii_text)
+    walk(short_text)
+    walk(long_text)
+  }
+}
+
+echo 'past the end:'
+
+var text = ''.join(characters(1000))
+echo text[1000,] == ''
+echo text[999,] == text[-1]
+echo [text.index_of('a', 1000), text.index_of('a', 5000)]
+
+catch {
+  echo text[1000]
+} as error {
+  echo error.message
+}
+
+catch {
+  echo text[-1001]
+} as error {
+  echo error.message
+}
+
+catch {
+  echo text[10, 1001]
+} as error {
+  echo error.message
+}
