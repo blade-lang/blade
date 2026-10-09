@@ -28,7 +28,7 @@ def _resident_mb() {
 def _churn() {
   var held = []
 
-  iter var i = 0; i < 400000; i++ {
+  iter var i = 0; i < 800000; i++ {
     held.append({ name: 'item ${i}', kind: 'function', start: i, end: i + 5 })
   }
 
@@ -163,7 +163,7 @@ def test_a_thread_that_shrank_gives_back_again() {
   # A wait made while a large set is live, then a collection that is not
   # a wait's, which shrinks the heap again, then less garbage than that
   # set was.
-  _hold_while_waiting(600000)
+  _hold_while_waiting(1200000)
   zuri.reflect.gc()
 
   var before = _resident_mb()

@@ -1,0 +1,19 @@
+every kind of key, scanned and hashed:
+[one, zero, two and a half, literal, nil, true, false, list, false, box, false, nested, false, 10]
+[one, zero, two and a half, literal, nil, true, false, list, false, box, false, nested, false, 15]
+[one, zero, two and a half, literal, nil, true, false, list, false, box, false, nested, false, 30]
+growing past the scan and shrinking back:
+[0, 2, [k0, k1, k2], {k10: 100, k11: 110}, gone]
+repeated keys in a literal:
+{a: 3, b: 2}
+{1: float, 1: string}
+{a: 10, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8, i: 9}
+9
+equal dictionaries either side of the boundary:
+true
+true
+false
+keys that move during a collection:
+46
+literals made in a loop:
+599980000

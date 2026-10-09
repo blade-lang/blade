@@ -1,0 +1,163 @@
+# A dictionary of up to eight entries finds a key by scanning its
+# entries, and a larger one by hashing it. The two must find the same
+# entry for every kind of key, and a dictionary growing or shrinking
+# across the boundary must keep every entry it had. The loops run past
+# the JIT's warm-up, so compiled code builds and reads them too.
+import zuri
+
+class Box {
+  @new(n) {
+    self.n = n
+  }
+}
+
+echo 'every kind of key, scanned and hashed:'
+
+def kinds(size) {
+  var list_key = [1, 2]
+  var box = Box(1)
+  var nested = { a: 1 }
+  var d = {}
+
+  # Filler first, so `size` decides whether the keys below are scanned
+  # or hashed.
+  iter var i = 0; i < size; i++ {
+    d['filler ${i}'] = i
+  }
+
+  d[1] = 'one'
+  d[-0] = 'zero'
+  d[2.5] = 'two and a half'
+  d['name'] = 'literal'
+  d[nil] = 'nil'
+  d[true] = 'true'
+  d[false] = 'false'
+  d[list_key] = 'list'
+  d[box] = 'box'
+  d[nested] = 'nested'
+
+  var built = 'na' + 'me'
+  return [
+    d[1.0],
+    d[0],
+    d[2.5],
+    d[built],
+    d[nil],
+    d[true],
+    d[false],
+    d[list_key],
+    d.contains([1, 2]),
+    d[box],
+    d.contains(Box(1)),
+    d[nested],
+    d.contains({ a: 1 }),
+    d.length(),
+  ]
+}
+
+for size in [0, 5, 20] {
+  echo kinds(size)
+}
+
+echo 'growing past the scan and shrinking back:'
+
+def grow(count) {
+  var d = {}
+  var lost = 0
+  iter var i = 0; i < count; i++ {
+    d['k${i}'] = i
+    iter var j = 0; j <= i; j++ {
+      if d['k${j}'] != j {
+        lost++
+      }
+    }
+  }
+
+  # Overwrites keep their place and their count.
+  iter var i = 0; i < count; i++ {
+    d['k${i}'] = i * 10
+  }
+
+  var order = d.keys()
+  while d.length() > 2 {
+    d.remove(d.keys()[0])
+  }
+  return [lost, d.length(), order[0, 3], d, d.get('k0', 'gone')]
+}
+
+for round in 0..40 {
+  var result = grow(12)
+  if round == 39 {
+    echo result
+  }
+}
+
+echo 'repeated keys in a literal:'
+
+echo { a: 1, b: 2, a: 3 }
+echo { 1: 'int', 1.0: 'float', '1': 'string' }
+
+var many = { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8, i: 9, a: 10 }
+echo many
+echo many.length()
+
+echo 'equal dictionaries either side of the boundary:'
+
+def numbered(count, reverse) {
+  var d = {}
+  iter var i = 0; i < count; i++ {
+    var k = reverse ? count - 1 - i : i
+    d[k] = k * k
+  }
+  return d
+}
+
+echo numbered(6, false) == numbered(6, true)
+echo numbered(30, false) == numbered(30, true)
+echo numbered(6, false) == numbered(7, false)
+
+echo 'keys that move during a collection:'
+
+def moved() {
+  var keys = []
+  var small = {}
+  var large = {}
+  iter var i = 0; i < 40; i++ {
+    var key = [i]
+    keys.append(key)
+    if i < 6 {
+      small[key] = i
+    }
+    large[key] = i
+  }
+
+  zuri.reflect.gc()
+
+  var found = 0
+  iter var i = 0; i < 40; i++ {
+    if i < 6 and small[keys[i]] == i {
+      found++
+    }
+    if large[keys[i]] == i {
+      found++
+    }
+  }
+  return found
+}
+
+echo moved()
+
+echo 'literals made in a loop:'
+
+def records(count) {
+  var total = 0
+  iter var i = 0; i < count; i++ {
+    var record = { id: i, name: 'n${i}', score: i * 2, active: i % 2 == 0 }
+    total += record.score + (record.active ? 1 : 0)
+    record.extra = record.id
+    total += record.extra
+  }
+  return total
+}
+
+echo records(20000)

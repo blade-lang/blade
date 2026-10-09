@@ -513,14 +513,11 @@ pub enum Obj {
   BigInt(BigInt) = 2,
   /// A dynamically-sized list.
   List(RefCell<ListStorage>) = 3,
-  /// A dict literal's storage. Boxed for the same reason `Module` is
-  /// (see that variant's own doc comment): `DictStorage` (an
-  /// insertion-order `Vec` plus an `FxHashMap` index) is large relative
-  /// to the common case, and no current benchmark or hot path indexes
-  /// through a `Dict` anywhere near as often as it does a `List` or
-  /// `Instance`; unlike `List`, there's no small-N inline case worth
-  /// preserving here.
-  Dict(Box<RefCell<DictStorage>>) = 4,
+  /// A dictionary's storage, held in the object itself like a list's.
+  /// `DictStorage` keeps its hash index behind a pointer that stays null
+  /// for the small dictionaries most programs make, which is what lets
+  /// the rest fit in the slot.
+  Dict(RefCell<DictStorage>) = 4,
   /// A function PROTOTYPE; the static, compiled-once result of one
   /// `function` declaration or literal. Shared by every closure ever
   /// created from it; holds no per-call-site state itself.
@@ -808,7 +805,7 @@ mod obj_repr_tests {
       OBJ_TAG_LIST
     );
     assert_eq!(
-      Obj::Dict(Box::new(RefCell::new(DictStorage::new()))).tag(),
+      Obj::Dict(RefCell::new(DictStorage::new())).tag(),
       OBJ_TAG_DICT
     );
     assert_eq!(
@@ -1780,26 +1777,38 @@ pub struct ObjInstance {
 }
 
 /// Wrapper around `Value` that implements `Hash`/`Eq` in terms of
-/// `Value::equals` (content-equality for strings/numbers/nil/bool,
-/// pointer identity for lists/dicts/closures/instances/etc.), since
-/// `Value` itself has no `Hash` impl and its raw NaN-boxed bits don't
-/// hash/compare consistently on their own. This is what lets
-/// `DictStorage::index` be a real `FxHashMap`.
+/// `same_key` (content-equality for strings/numbers/nil/bool, identity
+/// for every other object), since `Value` itself has no `Hash` impl
+/// and its raw NaN-boxed bits don't hash/compare consistently on their
+/// own. This is what lets `DictStorage::index` be a real `FxHashMap`.
 #[derive(Clone, Copy)]
 pub struct DictKey(pub Value);
 
 impl PartialEq for DictKey {
   #[inline]
   fn eq(&self, other: &Self) -> bool {
-    // Every probe of the index compares keys, and number keys are the
-    // common case; `equals` compares them the same way, out of line.
-    if self.0.is_number() && other.0.is_number() {
-      return self.0.as_number() == other.0.as_number();
-    }
-    self.0.equals(&other.0)
+    same_key(self.0, other.0)
   }
 }
 impl Eq for DictKey {}
+
+/// Whether two keys name the same entry: numbers and strings by value,
+/// every other value by identity. `DictKey`'s hash follows the same
+/// rule, hashing a string's text and any other object's address, so a
+/// dictionary finds the same entry for a key whether it scans its
+/// entries or probes its index. Comparing a list or a big number by
+/// content here would let two keys the hash keeps apart meet whenever
+/// their buckets happened to collide.
+#[inline]
+fn same_key(a: Value, b: Value) -> bool {
+  if a.is_number() && b.is_number() {
+    return a.as_number() == b.as_number();
+  }
+  if a.to_bits() == b.to_bits() {
+    return true;
+  }
+  a.is_string() && b.is_string() && a.as_str() == b.as_str()
+}
 
 impl Hash for DictKey {
   fn hash<H: Hasher>(&self, state: &mut H) {
@@ -1837,9 +1846,9 @@ impl Hash for DictKey {
       self.0.as_str().hash(state);
     } else if self.0.is_obj() {
       // Every other heap-backed kind (list, dict, instance, closure,
-      // ...) is compared by pointer identity in Value::equals, so
-      // hash on that same pointer. Tradeoff: two distinct-but-equal
-      // lists used as dict keys hash differently.
+      // ...) is compared by identity in `same_key`, so hash on that
+      // same pointer: two distinct lists with equal contents are two
+      // different keys.
       4u8.hash(state);
       (self.0.as_obj() as usize).hash(state);
     } else {
@@ -1848,28 +1857,50 @@ impl Hash for DictKey {
   }
 }
 
-/// Backing storage for a Dict value. `entries` preserves insertion
-/// order (needed for iteration, `@key`/`@value`, and Display);
-/// `index` gives `get`/`set` O(1) average instead of the old O(n)
-/// linear scan. Kept in sync because every mutation goes through
-/// `set`, never touching `entries` directly from outside.
+/// Backing storage for a Dict value. `entries` keeps insertion order
+/// (needed for iteration, `@key`/`@value`, and Display) and is the
+/// dictionary itself: a small one is searched by scanning it, and only
+/// one past `SCANNED` entries builds `index` to find a key by its hash.
+/// Most dictionaries a program makes are small records, which this
+/// spares a hash table each and the hashing of every key. Every
+/// mutation goes through `set`, never touching `entries` directly from
+/// outside, which keeps the index in step.
 pub struct DictStorage {
   pub entries: Vec<(Value, Value)>,
-  index: FxHashMap<DictKey, usize>,
+  index: Option<Box<FxHashMap<DictKey, usize>>>,
 }
 
 impl DictStorage {
+  /// The most entries found by scanning. Comparing a key against this
+  /// many costs less than hashing it, and past it the index keeps a
+  /// lookup from growing with the dictionary.
+  const SCANNED: usize = 8;
+
   pub fn new() -> Self {
     DictStorage {
       entries: Vec::new(),
-      index: FxHashMap::default(),
+      index: None,
     }
   }
 
-  /// Builds storage from raw pairs, de-duplicating by VALUE equality
-  /// (via `set`'s own last-write-wins rule); same semantics the old
-  /// `Heap::alloc_dict` had.
+  /// Builds storage from raw pairs, de-duplicating by key (via `set`'s
+  /// own last-write-wins rule). Pairs that repeat no key, as a literal
+  /// almost never does, become the entries as they are.
   pub fn from_pairs(pairs: Vec<(Value, Value)>) -> Self {
+    let distinct = pairs.len() <= Self::SCANNED
+      && pairs.iter().enumerate().all(|(i, (key, _))| {
+        pairs[..i]
+          .iter()
+          .all(|(earlier, _)| !same_key(*earlier, *key))
+      });
+
+    if distinct {
+      return DictStorage {
+        entries: pairs,
+        index: None,
+      };
+    }
+
     let mut storage = DictStorage::new();
     for (k, v) in pairs {
       storage.set(k, v);
@@ -1882,21 +1913,31 @@ impl DictStorage {
   }
 
   pub fn get(&self, key: &Value) -> Option<Value> {
-    self.index.get(&DictKey(*key)).map(|&i| self.entries[i].1)
+    self.index_of(key).map(|i| self.entries[i].1)
   }
 
   pub fn set(&mut self, key: Value, value: Value) {
-    if let Some(&i) = self.index.get(&DictKey(key)) {
+    if let Some(i) = self.index_of(&key) {
       self.entries[i].1 = value;
-    } else {
-      let i = self.entries.len();
-      self.entries.push((key, value));
-      self.index.insert(DictKey(key), i);
+      return;
+    }
+
+    let i = self.entries.len();
+    self.entries.push((key, value));
+    match &mut self.index {
+      Some(index) => {
+        index.insert(DictKey(key), i);
+      },
+      None if self.entries.len() > Self::SCANNED => self.reindex(),
+      None => {},
     }
   }
 
   pub fn index_of(&self, key: &Value) -> Option<usize> {
-    self.index.get(&DictKey(*key)).copied()
+    match &self.index {
+      Some(index) => index.get(&DictKey(*key)).copied(),
+      None => self.entries.iter().position(|(k, _)| same_key(*k, *key)),
+    }
   }
 
   /// Rebuilds `index` from scratch against `entries`' CURRENT key
@@ -1906,10 +1947,18 @@ impl DictStorage {
   /// the raw pointer for exactly those, see its own docs), which
   /// changes that key's hash without `index`'s stored bucket knowing
   /// to move with it. See `VM::walk_children_mut`'s `Obj::Dict` case.
+  /// A dictionary small enough to scan keeps no index at all.
   pub(crate) fn reindex(&mut self) {
-    self.index.clear();
+    if self.entries.len() <= Self::SCANNED {
+      self.index = None;
+      return;
+    }
+
+    let index = self.index.get_or_insert_with(Default::default);
+    index.clear();
+    index.reserve(self.entries.len());
     for (i, (k, _)) in self.entries.iter().enumerate() {
-      self.index.insert(DictKey(*k), i);
+      index.insert(DictKey(*k), i);
     }
   }
 }
@@ -4838,7 +4887,7 @@ impl Heap {
   /// of any repeated key.
   pub fn alloc_dict(&mut self, pairs: Vec<(Value, Value)>) -> Value {
     let storage = DictStorage::from_pairs(pairs);
-    self.alloc(Obj::Dict(Box::new(RefCell::new(storage))))
+    self.alloc(Obj::Dict(RefCell::new(storage)))
   }
 
   /// Deliberately `alloc_old`, not `alloc`: see `alloc_old`'s own
