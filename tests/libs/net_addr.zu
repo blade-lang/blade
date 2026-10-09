@@ -44,6 +44,9 @@ var v4b = net.SocketAddrV4(net.Ipv4(192, 168, 1, 10), 8080)
 assert v4.equals(v4b), 'two SocketAddrV4 with the same ip and port must be equal'
 assert !v4.equals(net.SocketAddrV4(net.Ipv4(192, 168, 1, 10), 9090)),
   'a different port must not be equal'
+assert v4 == v4b, '== must compare the way equals() does'
+assert v4 != net.SocketAddrV4(net.Ipv4(192, 168, 1, 10), 9090), '!= must be the negation of =='
+assert !(v4 == '192.168.1.10:8080'), 'an address must not equal its own text'
 ok('SocketAddrV4.equals()')
 
 assert raises(@() { net.SocketAddrV4.parse('not-an-address') }),
@@ -74,6 +77,8 @@ ok('SocketAddrV6 zone/scope identifier (RFC 4007)')
 assert v6.equals(net.SocketAddrV6(net.Ipv6.parse('2001:db8::1'), 443, 0)),
   'two SocketAddrV6 with the same ip, port, and scope must be equal'
 assert !v6.equals(v6s), 'different scope ids must not be equal'
+assert v6 == net.SocketAddrV6(net.Ipv6.parse('2001:db8::1'), 443, 0), '== must compare v6 addresses by value'
+assert v6 != v6s, 'different scope ids must not be =='
 ok('SocketAddrV6.equals()')
 
 assert raises(@() { net.SocketAddrV6.parse('2001:db8::1:443') }),
@@ -105,6 +110,12 @@ ok('SocketAddr.v4()/v6() construction')
 assert net.SocketAddr.parse('10.0.0.1:22').equals(net.SocketAddr.parse('10.0.0.1:22')),
   'two equal SocketAddr must compare equal regardless of family wrapping'
 assert !a4.equals(a6), 'a v4 and a v6 address must never be equal'
+assert net.SocketAddr.parse('10.0.0.1:22') == net.SocketAddr.parse('10.0.0.1:22'), '== must compare SocketAddr by value'
+assert a4 != a6, 'a v4 and a v6 address must never be =='
+assert net.Ip.parse('10.0.0.1') == net.Ip.parse('10.0.0.1'), '== must compare Ip by value'
+assert net.Ipv4.parse('127.0.0.1') == net.Ipv4.localhost(), '== must compare Ipv4 by value'
+assert net.Ipv6.parse('::1') == net.Ipv6.parse('0:0:0:0:0:0:0:1'), '== must compare Ipv6 by value'
+assert net.Ip.parse('::1') != net.Ip.parse('127.0.0.1'), 'addresses of two families must not be =='
 ok('SocketAddr.equals()')
 
 # ---------------------------------------------------------------------------

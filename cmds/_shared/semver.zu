@@ -215,6 +215,17 @@ class Version {
   }
 
   /**
+   * Makes `==` and `!=` compare the way `equals()` does, and anything
+   * that is not a `Version` unequal.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return instance_of(other, Version) and self.equals(other)
+  }
+
+  /**
    * Whether `other` has the same major, minor and patch numbers.
    *
    * @param Version other

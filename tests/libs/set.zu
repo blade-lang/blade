@@ -77,13 +77,15 @@ assert set([1, 2]).is_disjoint(set([2, 3])) == false, 'two sets with a shared el
 ok('is_disjoint() correctly detects shared elements')
 
 # ---------------------------------------------------------------------------
-# equals() vs. == (reference identity)
+# equals() and ==
 # ---------------------------------------------------------------------------
 assert set([1, 2, 3]).equals(set([3, 2, 1])) == true, 'equals() must ignore element order'
 assert set([1, 2]).equals(set([1, 2, 3])) == false, 'equals() must be false for sets of different size'
-assert (set([1, 2]) == set([1, 2])) == false,
-  '== must still compare by reference identity, not use equals() automatically'
-ok('equals() compares contents; == still compares identity')
+assert set([1, 2, 3]) == set([3, 2, 1]), '== must compare contents the way equals() does'
+assert set([1, 2]) != set([1, 2, 3]), '!= must be the negation of =='
+assert !(set([1, 2]) == [1, 2]), 'a set must not equal a list holding the same elements'
+assert set([1]) != nil, 'comparing a set with nil must stay a nil check'
+ok('equals() and == both compare contents, ignoring order')
 
 # ---------------------------------------------------------------------------
 # add() / remove() / pop() / clear()

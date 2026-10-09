@@ -315,6 +315,16 @@ class Time {
   }
 
   /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
+  }
+
+  /**
    * The span as a SQL `TIME` literal, such as `'-12:30:00'`.
    *
    * Microseconds appear only where there are some, which is the same

@@ -1411,6 +1411,11 @@ check('equals() false for a non-Date value', early.equals(42), false)
 check('equals() true across different gmt_offset but same instant',
   date.Date(2024, 1, 1, 10, 0, 0, 0, 0).equals(
     date.Date(2024, 1, 1, 15, 30, 0, 0, 19800)), true)
+check('== true for the same instant', early == date.Date(2020, 1, 1), true)
+check('== true across different gmt_offset but same instant',
+  date.Date(2024, 1, 1, 10, 0, 0, 0, 0) == date.Date(2024, 1, 1, 15, 30, 0, 0, 19800), true)
+check('!= true for a different instant', early != late, true)
+check('== false for a string', early == '2020-01-01', false)
 
 
 # ===========================================================================

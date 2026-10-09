@@ -32,8 +32,8 @@ var GROUPS = [
   },
   {
     title: 'Numbers and Collections',
-    blurb: 'Arithmetic, statistics, and the containers the built-in types do not cover.',
-    modules: ['math', 'stat', 'array', 'set'],
+    blurb: 'Arithmetic, and the containers the built-in types do not cover.',
+    modules: ['math', 'array', 'set'],
   },
   {
     title: 'Dates and Times',
@@ -43,7 +43,7 @@ var GROUPS = [
   {
     title: 'The Machine',
     blurb: 'The filesystem, other processes, the terminal, the command line, and the configuration around them.',
-    modules: ['os', 'env', 'io', 'args', 'log'],
+    modules: ['os', 'env', 'io', 'args', 'log', 'stat'],
   },
   {
     title: 'Testing',
@@ -91,9 +91,14 @@ var GROUPS = [
     modules: ['ffi'],
   },
   {
-    title: 'The Language Itself',
-    blurb: 'Types, reflection, and the compiler Zuri is written with.',
-    modules: ['types', 'enum', 'convert', 'zuri'],
+    title: 'Types and Conversion',
+    blurb: 'Checked coercion between types, named constants, and conversions between bases and encodings.',
+    modules: ['types', 'enum', 'convert'],
+  },
+  {
+    title: 'Metaprogramming',
+    blurb: 'Lexing, parsing and compiling Zuri source, and reflecting on live functions, classes and modules.',
+    modules: ['zuri'],
   },
 ]
 

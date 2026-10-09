@@ -5,6 +5,7 @@
   [PASS] Color.parse() accepts every documented spelling and rejects the rest
   [PASS] bad colours raise rather than being silently accepted
   [PASS] Color conversions, luminance and contrast agree with the colors module
+  [PASS] Color compares by its channels with ==, != and using
   [PASS] Color mixing, compositing and adjustment behave as documented
   [PASS] an argument of the wrong type is rejected at every entry point that declares one
   [PASS] a wrong-range value stays the module own error rather than becoming a type error
@@ -45,5 +46,5 @@
   [PASS] the built-in stroke font measures, scales, wraps and draws without any font file
 
 ═══════════════════════════════════════════════════════
-  All 42 assertions passed.
+  All 43 assertions passed.
 ═══════════════════════════════════════════════════════

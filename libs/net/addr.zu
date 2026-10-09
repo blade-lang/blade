@@ -168,6 +168,16 @@ class SocketAddrV4 {
   }
 
   /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
+  }
+
+  /**
    * This address as `ip:port`, e.g. `'192.168.1.10:8080'`.
    * @returns string
    */
@@ -296,6 +306,16 @@ class SocketAddrV6 {
     return self._port == other.port() and
       self._scope_id == other.scope_id() and
       self._ip.equals(other.ip())
+  }
+
+  /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
   }
 
   /**
@@ -454,6 +474,16 @@ class SocketAddr {
       return false
     }
     return self._inner.equals(other.is_v4() ? other.as_v4() : other.as_v6())
+  }
+
+  /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
   }
 
   /**

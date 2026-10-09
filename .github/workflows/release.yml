@@ -57,8 +57,10 @@ jobs:
       - name: Patch crates
         run: cargo patch-crates
 
+      # The production profile is the release build without debug info,
+      # which would otherwise make up most of what a user downloads.
       - name: Build
-        run: cargo build --locked --profile release --target ${{ matrix.target }}
+        run: cargo build --locked --profile production --target ${{ matrix.target }}
 
       # The binary alone is not a working install: at startup it looks
       # for `libs` beside itself (or at $ZURI_ROOT), and without it no
@@ -77,7 +79,7 @@ jobs:
           fi
 
           name="zuri-${version}-${{ matrix.target }}"
-          out="target/${{ matrix.target }}/release"
+          out="target/${{ matrix.target }}/production"
           staged="dist/${name}"
 
           mkdir -p "${staged}"
@@ -124,9 +126,168 @@ jobs:
             dist/*.sha256
           if-no-files-found: error
 
+  # Both installers, on every platform, against the archives just built,
+  # served from the runner in the shape GitHub lists releases in. The
+  # release goes out only once each one has installed a runtime that
+  # runs, so the one-line install on the website is never the broken
+  # part of a release.
+  installers:
+    name: install on ${{ matrix.target }}
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: dist
+
+      - name: List the release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          version="${tag#v}"
+          python="${{ runner.os == 'Windows' && 'python' || 'python3' }}"
+
+          "$python" - "$version" "${{ matrix.target }}" > dist/releases.json <<'PY'
+          import json
+          import sys
+
+          version, target = sys.argv[1:]
+          name = f"zuri-{version}-{target}." + ("zip" if "windows" in target else "tar.gz")
+          base = "http://127.0.0.1:8765/"
+          assets = [{"name": n, "browser_download_url": base + n} for n in (name, name + ".sha256")]
+
+          print(json.dumps([{"tag_name": "v" + version, "draft": False, "prerelease": False, "assets": assets}]))
+          PY
+
+          echo "ZURI_VERSION_UNDER_TEST=${version}" >> "$GITHUB_ENV"
+
+      - name: install.sh
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="${ZURI_VERSION_UNDER_TEST}"
+          home="${RUNNER_TEMP}/home"
+          mkdir -p "${home}"
+
+          (cd dist && exec python3 -m http.server 8765 --bind 127.0.0.1 > /dev/null 2>&1) &
+          server=$!
+          trap 'kill ${server} 2> /dev/null || true' EXIT
+
+          for _ in $(seq 1 50); do
+            curl -fs -o /dev/null http://127.0.0.1:8765/releases.json && break
+            sleep 0.2
+          done
+
+          export ZURI_RELEASES_URL=http://127.0.0.1:8765/releases.json
+
+          HOME="${home}" SHELL=/bin/bash sh install.sh --version "${version}"
+
+          # Again, piped the way the website gives it, over the top of
+          # the first.
+          newest=''
+          case "${version}" in *-*) newest='--prerelease' ;; esac
+          cat install.sh | HOME="${home}" SHELL=/bin/bash sh -s -- ${newest}
+
+          "${home}/.zuri/bin/zuri" --version | grep -F "Zuri ${version}"
+
+          echo "echo 'installed'" > "${RUNNER_TEMP}/check.zu"
+          test "$("${home}/.zuri/bin/zuri" run "${RUNNER_TEMP}/check.zu")" = installed
+
+          profile="${home}/.bashrc"
+          if [ "$(uname -s)" = Darwin ]; then
+            profile="${home}/.bash_profile"
+          fi
+          test "$(grep -c '.zuri/bin' "${profile}")" = 1
+
+      - name: install.ps1
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $version = $env:ZURI_VERSION_UNDER_TEST
+          $env:ZURI_HOME = Join-Path $env:RUNNER_TEMP 'zuri-home'
+          $env:ZURI_RELEASES_URL = 'http://127.0.0.1:8765/releases.json'
+
+          $server = Start-Process python -PassThru -WindowStyle Hidden `
+            -ArgumentList '-m', 'http.server', '8765', '--bind', '127.0.0.1', '--directory', 'dist'
+
+          try {
+            for ($i = 0; $i -lt 50; $i++) {
+              try {
+                Invoke-WebRequest -Uri $env:ZURI_RELEASES_URL -UseBasicParsing | Out-Null
+                break
+              } catch {
+                Start-Sleep -Milliseconds 200
+              }
+            }
+
+            # Windows PowerShell first, which is what most machines have.
+            powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1 -Version $version
+
+            if ($LASTEXITCODE -ne 0) {
+              throw 'install.ps1 failed under Windows PowerShell'
+            }
+
+            # Then pasted into this session, the way the website gives it,
+            # over the top of the first.
+            $script = Get-Content -Raw install.ps1
+
+            if ($version.Contains('-')) {
+              & ([scriptblock]::Create($script)) -Prerelease
+            } else {
+              Invoke-Expression $script
+            }
+
+            $reported = (& zuri --version | Out-String)
+
+            if (-not $reported.Contains("Zuri $version")) {
+              throw "the installed zuri says '$reported'"
+            }
+
+            Set-Content -Path (Join-Path $env:RUNNER_TEMP 'check.zu') -Value "echo 'installed'"
+
+            if ((& zuri run (Join-Path $env:RUNNER_TEMP 'check.zu')) -ne 'installed') {
+              throw 'the installed zuri did not run a script'
+            }
+
+            $path = (Get-Item 'HKCU:\Environment').GetValue('Path', '', 'DoNotExpandEnvironmentNames')
+            $runtime = Join-Path $env:ZURI_HOME 'runtime'
+
+            if (-not (($path -split ';') -contains $runtime)) {
+              throw "$runtime is not on the user's PATH"
+            }
+          } finally {
+            Stop-Process -Id $server.Id -ErrorAction SilentlyContinue
+          }
+
   release:
     name: publish
-    needs: build
+    needs: [build, installers]
     runs-on: ubuntu-latest
 
     steps:

@@ -923,6 +923,16 @@ class Date {
   }
 
   /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
+  }
+
+  /**
    * Returns the signed difference, in seconds, between this date
    * and `other` (`self.to_time() - other.to_time()`). Positive when
    * this date is later than `other`, negative when earlier.

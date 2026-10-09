@@ -677,6 +677,16 @@ class Url {
     if !instance_of(other, Url) return false
     return self.to_string() == other.to_string()
   }
+
+  /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
+  }
 }
 
 

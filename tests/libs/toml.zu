@@ -164,7 +164,11 @@ assert stamps['odt'].to_string() == '1979-05-27T07:32:00Z',
 assert stamps['ld'].to_date().year == 1979, 'a local date converts to a Date'
 assert stamps['odt'].to_date().gmt_offset == 0, 'an offset survives the conversion'
 assert toml.LocalDate(2026, 9, 19).equals(toml.LocalDate(2026, 9, 19)),
-  'equals() compares by value where == compares identity'
+  'equals() compares by value'
+assert toml.LocalDate(2026, 9, 19) == toml.LocalDate(2026, 9, 19),
+  '== compares the way equals() does'
+assert toml.DateTime(1979, 5, 27, 7, 32, 0, 0, 0) != toml.DateTime(1979, 5, 27, 7, 32, 0, 0, 60),
+  'two timestamps with different offsets are not =='
 assert !toml.LocalDate(2026, 9, 19).equals(toml.LocalDate(2026, 9, 20)),
   'two different days are not equal'
 ok('temporal values print, convert and compare')

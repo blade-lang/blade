@@ -1,0 +1,92 @@
+# Tests for the command around the engine: which files a directory hands
+# it, and what it leaves alone.
+
+import os
+import os.process { spawn }
+import os.tempfile { create_temp_dir }
+import test { * }
+
+# Laid out by hand, so formatting it always changes something.
+var MESSY = 'def  area( w,h ){return w*h}\n'
+
+var TIDY = 'def area(w, h) {\n  return w * h\n}\n'
+
+var PROJECT = nil
+
+def put(path: string, text: string) {
+  var full = os.join_paths(PROJECT, path)
+
+  os.create_dir(os.dir_name(full), 0c755, true)
+  file(full, 'w').write(text)
+}
+
+def read(path: string) {
+  var handle = file(os.join_paths(PROJECT, path), 'r')
+  var text = handle.read()
+
+  handle.close()
+
+  return text
+}
+
+def fmt(words: list) {
+  var child = spawn(os.exe_path, ['fmt'] + words, {
+    cwd: PROJECT,
+    stdin: 'null',
+    stdout: 'pipe',
+    stderr: 'pipe',
+    env: { NO_COLOR: '1' },
+  })
+
+  var status = child.wait()
+  var out = child.read_stdout().to_string()
+  var err = child.read_stderr().to_string()
+
+  return { status, all: out + err }
+}
+
+before_each(@{
+  PROJECT = create_temp_dir('zuri-fmt-')
+
+  put('project.toml', '[project]\nname = "rooms"\nversion = "0.1.0"\n')
+  put('app/index.zu', MESSY)
+  put('.zuri/cmds/tidy.zu', MESSY)
+  put('.zuri/libs/geometry/index.zu', MESSY)
+  put('nested/.zuri/libs/shapes/index.zu', MESSY)
+})
+
+after_each(@{
+  os.remove_dir(PROJECT, true)
+})
+
+describe('a project directory', @{
+  it('formats the project and leaves its installed packages alone', @{
+    var ran = fmt([])
+
+    expect(ran.status).to_equal(0)
+    expect(read('app/index.zu')).to_equal(TIDY)
+    expect(read('.zuri/libs/geometry/index.zu')).to_equal(MESSY)
+    expect(read('nested/.zuri/libs/shapes/index.zu')).to_equal(MESSY)
+  })
+
+  it('formats the commands a project keeps for itself', @{
+    fmt([])
+
+    expect(read('.zuri/cmds/tidy.zu')).to_equal(TIDY)
+  })
+
+  it('counts only the files it would format in a dry run', @{
+    var ran = fmt(['--dry-run'])
+
+    expect(ran.status).to_equal(1)
+    expect(ran.all).to_contain('2 files would change.')
+    expect(ran.all).not.to_contain('geometry')
+  })
+
+  it('formats an installed package when it is named outright', @{
+    var ran = fmt(['.zuri/libs/geometry'])
+
+    expect(ran.status).to_equal(0)
+    expect(read('.zuri/libs/geometry/index.zu')).to_equal(TIDY)
+  })
+})

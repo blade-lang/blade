@@ -79,6 +79,11 @@ def test_comparison() {
 
   assert !Decimal('1.5').equals('1.5')
 
+  # == compares the way equals() does.
+  assert Decimal('1.5') == Decimal('1.50')
+  assert Decimal('1.5') != Decimal('1.51')
+  assert !(Decimal('1.5') == '1.5')
+
   echo 'test_comparison passed'
 }
 

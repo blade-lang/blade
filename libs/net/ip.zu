@@ -350,6 +350,16 @@ class Ipv4 {
   }
 
   /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
+  }
+
+  /**
    * This address in standard dotted-decimal notation, e.g.
    * `'192.168.1.10'`.
    *
@@ -648,6 +658,16 @@ class Ipv6 {
   }
 
   /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
+  }
+
+  /**
    * This address in its canonical, most-compressed colon-hex
    * notation - the longest run of consecutive zero segments (if
    * any run is at least two segments long) is collapsed to `::`;
@@ -876,6 +896,16 @@ class Ip {
       return false
     }
     return self.to_list() == other.to_list()
+  }
+
+  /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
   }
 
   /**

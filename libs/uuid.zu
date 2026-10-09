@@ -455,6 +455,20 @@ class UUID {
   }
 
   /**
+   * Makes `==` and `!=` compare the way `equals()` does, and anything
+   * that is not a `UUID` unequal.
+   *
+   * A string compares through `equals()` only, so `==` reads the same
+   * whichever side the UUID is on.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return instance_of(other, UUID) and self.equals(other)
+  }
+
+  /**
    * Compares this UUID with another UUID lexicographically by
    * canonical string form. For time-ordered versions (v1, v6, v7)
    * this is also a comparison by generation time.

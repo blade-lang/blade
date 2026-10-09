@@ -56,6 +56,13 @@ assert ffi.ptr.kind() == 'pointer' and ffi.string.kind() == 'string', 'pointer k
 assert ffi.void.kind() == 'void' and ffi.complex_float.kind() == 'complex', 'the rest'
 assert ffi.int32.equals(ffi.int) and ffi.i32.equals(ffi.int32), 'same shape, same type'
 assert !ffi.int.equals(ffi.uint) and !ffi.int.equals(nil), 'different types are not equal'
+assert ffi.int32 == ffi.int and ffi.int != ffi.uint, '== compares types the way equals() does'
+
+var block = ffi.alloc(ffi.int, 2)
+
+assert block == block.cast(ffi.uint), '== compares pointers by address'
+assert block != block.offset(4), 'a pointer to another address is not =='
+assert !(block == 'block'), 'a pointer never equals a string'
 assert ffi.uint64.name() == 'uint64_t' and ffi.ulong.to_string() == 'unsigned long', 'names'
 ok('kinds, names and equality')
 

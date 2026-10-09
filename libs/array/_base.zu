@@ -393,6 +393,16 @@ class Array {
   }
 
   /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
+  }
+
+  /**
    * Returns the array as a bytes object.
    *
    * @returns bytes

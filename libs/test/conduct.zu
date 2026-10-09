@@ -432,7 +432,7 @@ def _echo_file(result, options) {
 def _echo_totals(totals, duration) {
   var separator = style.dim('  ' + style.symbols().bullet + '  ')
 
-  var files = [style.dim('${totals.files} files')]
+  var files = [style.dim(format.plural(totals.files, 'file'))]
 
   if totals.failed_files > 0 {
     files.append(style.red('${totals.failed_files} with failures'))

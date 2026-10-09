@@ -131,6 +131,16 @@ class Address {
     return self.local == other.local and self.domain.lower() == other.domain.lower()
   }
 
+  /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
+  }
+
   @to_string() {
     return self.to_string()
   }

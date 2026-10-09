@@ -67,6 +67,28 @@ Chapter 3:
 - Every block is written with braces, and every control-flow statement
   requires one.
 
+## What Comes With Zuri
+
+Installing Zuri installs its whole toolchain with it. Every tool is a
+subcommand of `zuri`, and every one has its place in this book:
+
+| Command | What it does | Where |
+| --- | --- | --- |
+| `zuri` | the interactive REPL | [Chapter 1](ch01-03-the-repl.md) |
+| `zuri run` | runs a script, a package or a directory | [Chapter 1](ch01-02-hello-world.md) |
+| `zuri init` | starts a project | [Chapter 1](ch01-02-hello-world.md#starting-a-project) |
+| `zuri fmt` | lays out Zuri source in the house style | [Chapter 1](ch01-02-hello-world.md#formatting) |
+| `zuri test` | runs a project's tests | [Chapter 23](ch23-00-testing.md) |
+| `zuri lsp` | the language server behind your editor | [Chapter 29](ch29-00-editors.md) |
+| `zuri install` | adds packages, resolved into a lockfile | [Chapter 27](ch27-02-installing.md) |
+| `zuri publish` | shares a package on a registry | [Chapter 27](ch27-03-publishing.md) |
+| `zuri serve` | runs Nyssa, a package registry of your own | [Chapter 27](ch27-06-nyssa.md) |
+| `zuri bundle` | ships a program to machines without Zuri | [Chapter 27](ch27-05-bundles.md) |
+| `zuri upgrade` | moves the installation to a newer release | [Chapter 27](ch27-05-bundles.md#upgrading-zuri) |
+
+A project adds commands of its own the same way, and so can a package;
+[Appendix I](appendix-09-commands.md) shows how.
+
 ## Who This Book Is For
 
 Chapters 1 through 6 assume you can open a terminal and nothing else. If
@@ -83,8 +105,9 @@ hours get lost.
 ## How This Book Is Organised
 
 **Getting started**, Chapters 1 and 2. Install the language, run something,
-then build a small command-line application end to end so you have seen the
-shape of a real program before we take one apart.
+start a project and format it, then build a small command-line application
+end to end so you have seen the shape of a real program before we take one
+apart.
 
 **The language**, Chapters 3 to 8. Variables, types, operators, control
 flow, strings, numbers, collections, functions, closures, type
@@ -115,6 +138,12 @@ called back by them.
 **Sharing and shipping**, Chapter 27. Installing and publishing packages,
 the lockfile, packaging a program to run where Zuri is not installed, and
 running Nyssa, the package repository, for a team or the public.
+
+**Talking to other programs**, Chapter 28. JSON-RPC, for calling methods on
+another program and answering its calls over any connection.
+
+**Tooling**, Chapter 29. The language server, and setting up your editor
+to use it.
 
 **Appendices.** Keywords, operators and precedence, decorated methods,
 built-in functions, every method on every built-in type, the standard

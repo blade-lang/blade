@@ -10,9 +10,11 @@
  *
  * `path` is either a single `.zu` file, which is formatted in place, or
  * a directory, in which case every `.zu` file inside it is formatted,
- * subdirectories included. If no path is given, the current directory is
- * formatted. The `--dry-run` flag shows what would change without
- * writing anything, which is what a commit hook or a CI job wants.
+ * subdirectories included, apart from the packages a project has
+ * installed under `.zuri/libs`. If no path is given, the current
+ * directory is formatted. The `--dry-run` flag shows what would change
+ * without writing anything, which is what a commit hook or a CI job
+ * wants.
  *
  * @copyright 2026, Richard Ore and Zuri contributors
  */
@@ -23,14 +25,31 @@ import os.process { exit }
 
 import .engine
 
+# Whether `name`, a path relative to the directory being formatted,
+# lies in a project's installed packages. Those are their authors' code,
+# laid out however their authors chose, and a project's own `.zuri/cmds`
+# is still the project's.
+def _installed(name: string) {
+  var parts = name.replace('\\', '/').split('/')
+
+  iter var i = 0; i < parts.length() - 1; i++ {
+    if parts[i] == '.zuri' and parts[i + 1] == 'libs' {
+      return true
+    }
+  }
+
+  return false
+}
+
 # Every `.zu` file `path` points at: the one file, or every file under
-# the directory, deepest included, in a stable order.
+# the directory, deepest included, in a stable order, apart from the
+# packages installed beneath it.
 def _targets(path: string) {
   if os.is_dir(path) {
     var found = []
 
     for name in os.read_dir(path, true) {
-      if name.ends_with('.zu') {
+      if name.ends_with('.zu') and !_installed(name) {
         found.append(os.join_paths(path, name))
       }
     }

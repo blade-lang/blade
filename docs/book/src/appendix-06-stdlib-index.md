@@ -101,12 +101,17 @@ a doc block stating its parameters, its defaults and its edge cases.
 | --- | --- | --- |
 | `imagine` | decode, draw, filter and encode images | [16](ch16-00-imagine.md) |
 
-## The Language Itself
+## Numbers
+
+| Module | What it is for | Book |
+| --- | --- | --- |
+| `math` | the mathematical constants | [4](ch04-02-numbers.md) |
+
+## Metaprogramming
 
 | Module | What it is for | Book |
 | --- | --- | --- |
 | `zuri` | lexing, parsing, compiling and runtime reflection | [21](ch21-00-metaprogramming.md) |
-| `math` | the mathematical constants | [4](ch04-02-numbers.md) |
 
 ## Packages and Their Submodules
 

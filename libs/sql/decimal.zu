@@ -288,6 +288,16 @@ class Decimal {
   }
 
   /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
+  }
+
+  /**
    * The value written out, with exactly `scale` digits after the
    * point.
    *

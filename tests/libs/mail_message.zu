@@ -105,6 +105,10 @@ check('domains compare without case',
   mail.Address('a@b.com', nil).equals(mail.Address('a@B.COM', nil)), true)
 check('local parts compare with case',
   mail.Address('A@b.com', nil).equals(mail.Address('a@b.com', nil)), false)
+check('== compares addresses the way equals() does',
+  mail.Address('a@b.com', nil) == mail.Address('a@B.COM', nil), true)
+check('!= is the negation of ==',
+  mail.Address('A@b.com', nil) != mail.Address('a@b.com', nil), true)
 ok('no address raises', raises(@() { mail.parse_address('   ') }))
 ok('two addresses raise', raises(@() { mail.parse_address('a@b.com, c@d.com') }))
 

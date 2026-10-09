@@ -183,6 +183,12 @@ assert id.equals(uuid.NIL) == false, 'equals() must be false for a genuinely dif
 assert raises(@() { id.equals(123) }), 'equals() must raise for something that is neither a UUID nor a string'
 ok('equals() accepts both a UUID and a string, exactly as documented')
 
+assert id == uuid.UUID(canonical), '== must compare two UUIDs by value'
+assert id != uuid.NIL, '!= must be true for a different UUID'
+assert !(id == canonical), '== must not match a string, which would read differently the other way round'
+assert id != nil, 'comparing a UUID with nil must stay a nil check'
+ok('== compares two UUIDs by value and nothing else')
+
 # ---------------------------------------------------------------------------
 # compare(): ordering
 # ---------------------------------------------------------------------------

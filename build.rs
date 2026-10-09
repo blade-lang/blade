@@ -236,14 +236,19 @@ fn mdbook_available() -> bool {
 /// (`<profile>/build/<pkg>-<hash>/out`) rather than by rebuilding
 /// `target/[{triple}/]{profile}` from parts, so a cross-compiled build's
 /// extra target-triple component is handled without having to detect it.
-/// Falls back to the conventional relative path if `OUT_DIR` is ever
-/// missing or shaped unexpectedly.
+/// The directory is recognised by the `build` directory inside it, not
+/// by `PROFILE`: Cargo sets that to `release` or `debug` for the profile
+/// a custom one inherits from, while the directory carries the custom
+/// profile's own name, as `production` does. Falls back to the
+/// conventional relative path if `OUT_DIR` is ever missing or shaped
+/// unexpectedly.
 fn copy_output_dir(profile: &str) -> std::path::PathBuf {
   if let Some(out_dir) = env::var_os("OUT_DIR") {
     let path = Path::new(&out_dir);
     // out -> <pkg>-<hash> -> build -> <profile>
-    if let Some(profile_dir) = path.ancestors().nth(3)
-      && profile_dir.file_name() == Some(std::ffi::OsStr::new(profile))
+    if let Some(build_dir) = path.ancestors().nth(2)
+      && build_dir.file_name() == Some(std::ffi::OsStr::new("build"))
+      && let Some(profile_dir) = build_dir.parent()
     {
       return profile_dir.to_path_buf();
     }

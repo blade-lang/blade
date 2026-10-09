@@ -77,6 +77,26 @@ assert BLACK.is_dark() and WHITE.is_light(), 'is_dark()/is_light() must split on
 assert Color.hex('#111111').best_contrast().equals(WHITE), 'best_contrast() must pick white on a dark colour'
 ok('Color conversions, luminance and contrast agree with the colors module')
 
+assert Color.hex('#ff0000') == Color(255, 0, 0), '== must compare two colours by their channels'
+assert Color(255, 0, 0) != Color(255, 0, 0, 128), 'colours that differ only in alpha must not be =='
+assert !(RED == '#ff0000'), 'a colour must not equal a string'
+assert RED != nil, 'a colour compared with nil must stay a nil check'
+
+var matched = 'none'
+
+using Color.packed(0xFF0000FF) {
+  when BLUE matched = 'blue'
+  when RED matched = 'red'
+}
+
+assert matched == 'red', 'a using/when match must find a colour by its channels'
+assert !([Color(255, 0, 0)].contains(RED)), 'contains() must keep comparing colours by identity'
+
+var canvas = Image(2, 1, RED)
+
+assert canvas.get_pixel(0, 0) == canvas.get_pixel(1, 0), 'two pixels of the same colour must be =='
+ok('Color compares by its channels with ==, != and using')
+
 assert RED.mix(BLUE, 0.5).to_hex() == '#800080', 'mix() must interpolate linearly between two colours'
 assert Color(255, 0, 0, 128).over(WHITE).to_hex() == '#ff7f7f', 'over() must composite against an opaque backdrop'
 assert RED.invert().to_hex() == '#00ffff', 'invert() must invert colour but not alpha'

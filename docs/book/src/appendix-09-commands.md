@@ -149,7 +149,7 @@ should reach for `args` and leave `os.args` alone.
 A command ends with status 0 when it runs to the end. An uncaught error
 prints its trace and ends it with status 1, and `os.exit()` ends it
 with any other status. A command that checks something, the way
-`zuri fmt --dry-run` checks formatting, shoul exit with a non-zero exit 
+`zuri fmt --dry-run` checks formatting, should exit with a non-zero exit
 code when the check fails, so a shell script or a CI job can act on it.
 
 ## Where It Runs

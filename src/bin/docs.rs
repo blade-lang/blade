@@ -141,8 +141,9 @@ doc block it came from can never disagree. Building or serving it
 writes docs/reference/src first.
 
 `build` finishes by assembling target/site: the landing page from
-docs/site with both rendered books beneath it. That directory is the
-whole website, and is what gets published."
+docs/site with both rendered books beneath it, and the installers from
+the repository root beside it. That directory is the whole website, and
+is what gets published."
   );
 }
 
@@ -181,10 +182,14 @@ fn build(args: &[String]) -> Result<(), String> {
 /// The landing page is ordinary source in `docs/site`, edited and read
 /// like any other file in the repository; this only copies it into
 /// place and puts the rendered books beneath it, at the paths its links
-/// already point to:
+/// already point to. The installers live at the repository root, beside
+/// the runtime they install, and are served from the site so the
+/// one-line install has a short address:
 ///
 /// ```text
 /// target/site/index.html     from docs/site
+/// target/site/install.sh     from the repository root
+/// target/site/install.ps1    from the repository root
 /// target/site/book/          from target/book
 /// target/site/reference/     from target/reference/html
 /// ```
@@ -193,6 +198,8 @@ fn build(args: &[String]) -> Result<(), String> {
 /// locally exactly as it will be served, and that the workflow has
 /// nothing to do but publish the directory.
 fn assemble_site() -> Result<PathBuf, String> {
+  const INSTALLERS: [&str; 2] = ["install.sh", "install.ps1"];
+
   let root = crate_root();
   let source = root.join("docs").join("site");
   let site = root.join("target").join("site");
@@ -209,6 +216,13 @@ fn assemble_site() -> Result<PathBuf, String> {
   }
 
   copy_tree(&source, &site)?;
+
+  for installer in INSTALLERS {
+    let from = root.join(installer);
+
+    std::fs::copy(&from, site.join(installer))
+      .map_err(|e| format!("could not copy {}: {e}", from.display()))?;
+  }
 
   for doc in &DOCS {
     let rendered = match doc.generator {

@@ -744,6 +744,7 @@ def test_types_round_trip() {
   ] {
     assert round_trip(span, t.TYPES.TIME).total_seconds() == span.total_seconds(),
       span.to_string()
+    assert round_trip(span, t.TYPES.TIME) == span, span.to_string()
   }
 
   # Text decoding, which is what an unprepared statement produces.

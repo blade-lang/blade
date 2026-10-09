@@ -7,16 +7,17 @@ Zuri programs that generate and check them.
 | --- | --- |
 | [`book/`](book) | **The Zuri Programming Language**, the narrative text |
 | [`reference/`](reference) | **The Zuri Standard Library**: one `book.toml`, generated from `libs/` |
-| [`site/`](site) | the landing page the two books sit under |
+| [`site/`](site) | the landing page the two books sit under; the installers it serves live at the repository root |
 | [`tools/`](tools) | the generators, the audit, the verifier, the link checker |
 
 ## The Book
 
 [**The Zuri Programming Language**](book/src/SUMMARY.md) is the main text:
-twenty-two chapters from installation to a full-stack web application,
-plus eight appendices covering keywords, operators, decorated methods,
-every built-in function, every method on every built-in type, the
-standard library index, and the error hierarchy.
+everything from installation to a full-stack web application and on to
+publishing and shipping it, plus appendices covering keywords,
+operators, decorated methods, every built-in function, every method on
+every built-in type, the standard library index, the error hierarchy
+and writing commands of your own.
 
 It is written as mdBook source under [`book/`](book), so it reads fine as
 plain markdown on GitHub and renders to a searchable site with
@@ -127,6 +128,8 @@ Output lands in `target/book` and `target/reference/html`, and
 
 ```text
 target/site/index.html     the landing page, from docs/site
+target/site/install.sh     the installers, from the repository root
+target/site/install.ps1
 target/site/book/          the book
 target/site/reference/     the standard library reference
 ```

@@ -66,6 +66,8 @@ jobs:
           set -euo pipefail
 
           test -f target/site/index.html
+          test -f target/site/install.sh
+          test -f target/site/install.ps1
           test -f target/site/book/index.html
           test -f target/site/reference/index.html
 

@@ -14,6 +14,19 @@ import ..semver {
   sorted,
 }
 
+describe('==', @{
+  it('compares versions by precedence, the way equals() does', @{
+    expect(parse('1.2.3') == parse('1.2.3')).to_be_true()
+    expect(parse('1.2.3+build.1') == parse('1.2.3+build.2')).to_be_true()
+    expect(parse('1.2.3') != parse('1.2.4')).to_be_true()
+  })
+
+  it('never matches anything that is not a version', @{
+    expect(parse('1.2.3') == '1.2.3').to_be_false()
+    expect(parse('1.2.3') != nil).to_be_true()
+  })
+})
+
 describe('parse', @{
   it('reads the three numbers', @{
     var v = parse('1.22.333')

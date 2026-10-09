@@ -151,7 +151,7 @@ $ zuri test
 
    PASS   app.test.zu  36ms  2 tests
 
-  1 files
+  1 file
   2 passed  •  2 total
 ```
 
@@ -219,6 +219,64 @@ refuses rather than overwrite one.
 [Chapter 8](ch08-00-modules.md) is where packages and re-exports are
 covered properly, and [Chapter 25](ch25-00-task-board.md) grows this
 layout into a full application.
+
+## Formatting
+
+`zuri fmt` lays out Zuri source in one house style: two spaces to a
+level, one statement to a line, an explicit block wherever one belongs,
+spacing the way a reader expects it, and lines past eighty columns broken
+where the expression holds together least. Line breaks you made yourself
+are kept, so a list you laid out one entry to a line stays that way.
+
+Here is a file written in a hurry:
+
+<span class="filename">Filename: rooms.zu</span>
+
+```zuri
+def area(width,height){return width*height}
+var rooms=[ [3,4],[5,6] ]
+for room in rooms { echo area(room[0],room[1]) }
+```
+
+```console
+$ zuri fmt rooms.zu
+formatted rooms.zu
+Formatted 1 file.
+```
+
+<span class="filename">Filename: rooms.zu</span>
+
+```zuri
+def area(width, height) {
+  return width * height
+}
+
+var rooms = [[3, 4], [5, 6]]
+for room in rooms {
+  echo area(room[0], room[1])
+}
+```
+
+Given a directory, `zuri fmt` formats every `.zu` file beneath it apart
+from the packages a project has installed, and with no path at all it
+formats the current directory. It never changes what a program does:
+before it writes a file, it parses its own result and checks that the
+program and every comment in it are exactly what it started with, and a
+file it cannot format that way is left as it was.
+
+`--dry-run` writes nothing. It names each file that would change, and
+exits with status 1 when any would, which is the check a commit hook or
+a CI job wants:
+
+```console
+$ zuri fmt --dry-run
+would format /home/ada/myproject/app/extra.zu
+1 file would change. 3 files were already formatted.
+```
+
+Your editor runs the same formatter through the language server, on a
+whole file or a selection; [Chapter 29](ch29-00-editors.md) sets that
+up.
 
 ## Commands
 

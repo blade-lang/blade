@@ -120,7 +120,7 @@ def main(which: string, filter: string) {
   }
 
   echo ''
-  echo '${ran} examples run, ${failed} failed'
+  echo '${ran} example${ran == 1 ? "" : "s"} run, ${failed} failed'
 
   if failed > 0 {
     os.exit(1)

@@ -289,8 +289,10 @@ ok('decode() rejects malformed percent-escapes')
 var a = url.parse('https://example.com/x?y=1')
 var b = a.clone()
 assert b.to_string() == 'https://example.com/x?y=1', 'a clone must round-trip to the same string'
-assert !(a == b), 'clone() must produce a distinct instance, not the same reference'
+assert id(a) != id(b), 'clone() must produce a distinct instance, not the same reference'
 assert a.equals(b), 'equals() must compare by value regardless of identity'
+assert a == b, '== must compare the way equals() does'
+assert !(a == 'https://example.com/x?y=1'), 'a url must not equal its own text through =='
 ok('clone() produces a value-equal but reference-distinct copy')
 
 assert a.equals(url.parse('https://example.com/x?y=1')), 'two URLs parsed from the same string must be equals()'

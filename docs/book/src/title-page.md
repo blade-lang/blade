@@ -16,6 +16,14 @@ cryptography, image decoding and drawing, HTML parsing, date arithmetic
 with the IANA time zone database, and OS-thread concurrency are all part
 of the installation. Every one of them is reachable with a bare `import`.
 
+The tools ship in the same binary. `zuri fmt` lays out your code,
+`zuri test` runs your tests, and `zuri lsp` gives every editor
+completion, navigation and diagnostics. `zuri install` and
+`zuri publish` manage packages against Nyssa, a package registry any
+installation can serve, and `zuri bundle` ships a finished program to
+machines where Zuri is not installed, as a single executable if you
+like.
+
 Zuri is dynamically typed, and it declines to be vague. A declared
 parameter type is enforced at the call, classes are sealed, a function
 cannot be quietly redefined, and a name beginning with an underscore stays

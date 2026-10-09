@@ -395,6 +395,16 @@ class Pointer {
     return _ffi.ptr_equals(self._handle, other)
   }
 
+  /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
+  }
+
   to_string() {
     return _ffi.ptr_describe(self._handle)
   }

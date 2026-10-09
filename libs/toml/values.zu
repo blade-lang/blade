@@ -228,10 +228,7 @@ class LocalDate {
 
   /**
    * Returns true when `other` is a `LocalDate` naming the same day.
-   *
-   * `==` compares instances by identity, so two separately built
-   * dates for the same day are never `==`. This is the comparison to
-   * use.
+   * `==` makes the same comparison.
    *
    * @param any other
    * @returns bool
@@ -243,6 +240,16 @@ class LocalDate {
 
     return self.year == other.year and self.month == other.month and
         self.day == other.day
+  }
+
+  /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
   }
 
   /**
@@ -336,6 +343,16 @@ class LocalTime {
     return self.hour == other.hour and self.minute == other.minute and
         self.second == other.second and self.nanosecond == other.nanosecond
   }
+
+  /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
+  }
 }
 
 
@@ -421,6 +438,16 @@ class LocalDateTime {
         self.day == other.day and self.hour == other.hour and
         self.minute == other.minute and self.second == other.second and
         self.nanosecond == other.nanosecond
+  }
+
+  /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
   }
 
   /**
@@ -548,6 +575,16 @@ class DateTime {
   }
 
   /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
+  }
+
+  /**
    * Returns this timestamp as a `date.Date` carrying the same offset.
    *
    * This is the one temporal type that converts without inventing
@@ -658,5 +695,15 @@ class Float {
     }
 
     return self.value == other.value
+  }
+
+  /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
   }
 }

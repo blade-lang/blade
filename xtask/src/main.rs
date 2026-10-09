@@ -11,7 +11,7 @@ use std::process;
 
 include!("sync.rs");
 
-const PROFILES: [&str; 2] = ["debug", "release"];
+const PROFILES: [&str; 3] = ["debug", "release", "production"];
 
 fn main() {
   let args: Vec<String> = env::args().skip(1).collect();
@@ -34,7 +34,7 @@ fn usage() {
   println!("Copies libs/ and cmds/ beside a built binary, so a change to");
   println!("either takes effect without a rebuild.");
   println!();
-  println!("  PROFILE   debug or release; both by default, whichever exist");
+  println!("  PROFILE   debug, release or production; all by default, whichever exist");
   println!("  --check   report what is stale, change nothing, exit 1 if any");
 }
 
@@ -50,7 +50,7 @@ fn sync(args: &[&str]) {
 
   for word in &wanted {
     if !PROFILES.contains(word) {
-      eprintln!("cargo sync: '{word}' is not a profile; expected debug or release");
+      eprintln!("cargo sync: '{word}' is not a profile; expected debug, release or production");
       process::exit(1);
     }
   }

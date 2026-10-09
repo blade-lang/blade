@@ -208,6 +208,16 @@ class Type {
     return _ffi.type_equals(self._handle, other)
   }
 
+  /**
+   * Makes `==` and `!=` compare the way `equals()` does.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
+  }
+
   to_string() {
     return _ffi.type_name(self._handle)
   }

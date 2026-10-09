@@ -221,6 +221,9 @@ for Ctor in all_ctors {
   assert !Ctor([1, 2, 3]).equals(Ctor([1, 2])), 'equals() must be false for different lengths'
   assert !Ctor([1, 2, 3]).equals([1, 2, 3]), 'equals() must be false against a plain list'
   assert !Ctor([1, 2, 3]).equals(nil), 'equals() must be false against nil, not crash'
+  assert Ctor([1, 2, 3]) == Ctor([1, 2, 3]), '== must compare the way equals() does'
+  assert Ctor([1, 2, 3]) != Ctor([1, 2, 4]), '!= must be the negation of =='
+  assert !(Ctor([1, 2, 3]) == [1, 2, 3]), '== must be false against a plain list'
 }
 ok('equals() compares type, length, and content correctly across every class')
 

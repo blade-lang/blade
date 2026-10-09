@@ -790,6 +790,27 @@ class Color {
   }
 
   /**
+   * Compares two colours by their channels, so `==`, `!=` and a
+   * `using` match agree with `equals()`.
+   *
+   * ```zuri-repl
+   * %> Color.hex('#ff0000') == Color(255, 0, 0)
+   * true
+   * %> Color(255, 0, 0) == Color(255, 0, 0, 128)
+   * false
+   * ```
+   *
+   * Lists, dictionary keys, `contains()` and `index_of()` still hold
+   * colours by identity, as they hold every instance.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    return self.equals(other)
+  }
+
+  /**
    * Returns the colour as a list of its four channels.
    *
    * @returns list

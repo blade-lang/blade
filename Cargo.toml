@@ -284,6 +284,13 @@ codegen-units = 1
 # Big-integer RSA key generation and the password hashes, which are
 # slow on purpose, are unusably slow at debug opt-level. Bumping just
 # these packages keeps the zuri crate itself on fast normal debug builds.
+# What a release ships: the release build without debug info, which
+# would otherwise make up most of the binary's size. `release` keeps it
+# for profiling and readable backtraces while developing.
+[profile.production]
+inherits = "release"
+debug = false
+
 [profile.dev.package.rsa]
 opt-level = 3
 
