@@ -1367,6 +1367,11 @@ templates. Turn it off with `set_auto_reload(false)` once you are
 running under load and are not editing templates live; `clear_cache()`
 is then how a long-running process picks up a new deployment.
 
+Under `zuri run --watch` the program goes further than reloading a
+template: a change to any template it has rendered restarts it, exactly
+as a change to its code does. Wire tells watch mode about every template
+file it reads.
+
 `compile(path)` compiles a template without rendering it, and returns
 the compiled result — or raises, if the template has a mistake in it.
 That makes it a good fit for a startup-time check across a whole

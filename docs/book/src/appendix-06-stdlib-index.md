@@ -279,6 +279,7 @@ One module per element width, each exporting a single class.
 | `os.process` | process identity, subprocesses, signals |
 | `os.system` | facts about the process, the runtime and the machine |
 | `os.tempfile` | the temporary directory, and scratch files in it |
+| `os.watch` | filesystem events, and the exit of child processes |
 
 ### `rpc`
 
@@ -385,6 +386,7 @@ One module per element width, each exporting a single class.
 | `zuri.ast` | `parse()`, and the `Node` type it returns |
 | `zuri.compile` | `compile()`, and the `Instr` type it returns |
 | `zuri.reflect` | inspecting a live function, class, module or instance |
+| `zuri.watch` | telling `zuri run --watch` about the files a program depends on |
 
 ## Shadowing a Module
 

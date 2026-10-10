@@ -475,7 +475,7 @@ pub fn is_current_cancelled() -> bool {
 /// two apart: a plain blocking wait from the main thread (or any other
 /// non-isolate caller) has nothing to poll for and should just block
 /// the old way, at zero extra cost.
-fn in_isolate_context() -> bool {
+pub(crate) fn in_isolate_context() -> bool {
   CURRENT_ISOLATE.with(|c| c.borrow().is_some())
 }
 
@@ -493,7 +493,7 @@ fn in_isolate_context() -> bool {
 /// can take up to this long to be noticed, which is a fair trade for a
 /// cooperative cancellation model that already doesn't promise instant
 /// interruption of running code either.
-const CANCEL_POLL_INTERVAL: Duration = Duration::from_millis(50);
+pub(crate) const CANCEL_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 // ---------------------------------------------------------------------
 // wait_any / select

@@ -1016,6 +1016,40 @@ debugging dump and wrong for an API response — for the latter, filter on
 the leading underscore, or write a real `@to_json` and let the class decide
 what it exposes.
 
+## Telling Watch Mode What a Program Reads
+
+`zuri run --watch` restarts a program when a file it depends on changes.
+The runtime reports every Zuri source file the program reads by itself.
+A library that reads other files the program's behaviour comes from
+declares each one with `zuri.watch.depends_on()`, which is how Wire gets
+its templates watched:
+
+```zuri
+import zuri.watch
+
+def load_rules(path) {
+  watch.depends_on(path)
+  return file(path).read()
+}
+
+file('rules.txt', 'w').write('no shouting')
+
+echo load_rules('rules.txt')
+echo watch.active()
+
+file('rules.txt').delete()
+```
+
+```console
+no shouting
+false
+```
+
+Outside watch mode, `depends_on()` does nothing and `active()` is
+`false`, so a library calls it unconditionally. `zuri.watch` is a module
+of its own, apart from the rest of `zuri`, so importing it does not load
+the parser and compiler.
+
 ## What Else This Is Good For
 
 **Plugin systems.** Load modules from a directory, ask each whether it has

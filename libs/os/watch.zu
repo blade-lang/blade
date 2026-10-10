@@ -1,0 +1,376 @@
+/**
+ * @module os.watch
+ *
+ * Filesystem events: being told when files and directories change,
+ * rather than looking to see whether they have.
+ *
+ * A `Watcher` asks the operating system to report changes as they
+ * happen, through the mechanism each platform provides for it: inotify
+ * on Linux, FSEvents on macOS, `ReadDirectoryChangesW` on Windows and
+ * kqueue on the BSDs. Nothing is polled. A watcher waiting for a change
+ * costs no CPU until one happens, and the change is reported as soon as
+ * the operating system delivers it.
+ *
+ * ```zuri
+ * import os
+ *
+ * var watcher = os.Watcher()
+ *
+ * watcher.add('templates')
+ * watcher.add('config.toml')
+ *
+ * for event in watcher {
+ *   echo '${event.kind} ${event.path}'
+ * }
+ * ```
+ *
+ * ### What is reported
+ *
+ * Every event has a `kind`:
+ *
+ * - `'create'`: an entry now stands at `path`. It was created, or was
+ *   renamed or moved there, which includes a file renamed over an
+ *   existing one. Many editors save a file exactly that way, by writing
+ *   a new copy and renaming it over the original, so saving in them is
+ *   reported as `'create'`.
+ * - `'modify'`: the file or directory at `path` changed in place, its
+ *   contents or its metadata (permissions, ownership, modification
+ *   time). A `touch` of an existing file is a `'modify'`.
+ * - `'remove'`: nothing stands at `path` any more. It was deleted, or
+ *   renamed or moved away. A rename is a `'remove'` of the old path and
+ *   a `'create'` of the new one, on every platform.
+ * - `'rescan'`: the operating system dropped events, typically because
+ *   too many changes arrived too quickly for it to queue. Anything under
+ *   `path` may have changed, and anything watched at all when `path` is
+ *   `nil`.
+ * - `'exit'`: a process the watcher follows has exited. See `follow()`.
+ *
+ * Reading a file, or opening one without writing to it, is never
+ * reported.
+ *
+ * Each event is checked against the filesystem as `next()` hands it
+ * over, so it describes the path as it is at that moment. A file
+ * created and removed again before the events are read is reported only
+ * as removed. A file removed and then created again is reported only as
+ * created. Changes that have not been handed over yet are merged, so a
+ * file written in several steps while nobody was reading is reported
+ * once.
+ *
+ * ### Paths
+ *
+ * Every path is resolved through its links when it is added, and every
+ * event names the resolved path, so a watch added as `'./src'` reports
+ * `/home/ada/project/src/main.zu`. On Windows and macOS, whose
+ * filesystems look names up without regard to case, a path matches
+ * however its case was spelled when it was added.
+ *
+ * ### Signals
+ *
+ * A signal with a callback registered through `os.on_signal()` cuts a
+ * wait short: `next()` returns `nil` at once and the callback runs, as
+ * it would between any two statements. A watcher can therefore wait for
+ * as long as it likes and still shut down promptly on Ctrl+C.
+ *
+ * ### Isolates
+ *
+ * A watcher belongs to the isolate that created it and cannot be sent
+ * to another. An isolate that wants to watch creates a watcher of its
+ * own. Signal callbacks run only on the main thread, so a signal does
+ * not cut short a wait inside an isolate. Cancelling the isolate does:
+ * `next()` returns `nil` within the pool's cancellation interval, and
+ * `isolate.is_cancelled()` says why.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import _os
+
+import .process { Process }
+
+/**
+ * One change a `Watcher` reports.
+ *
+ * @note constructed only by a `Watcher`.
+ */
+class WatchEvent {
+
+  /**
+   * What happened: `'create'`, `'modify'`, `'remove'`, `'rescan'` or
+   * `'exit'`. The module documentation describes each.
+   */
+  var kind = ''
+
+  /**
+   * The absolute path it happened at. `nil` for `'exit'`, and for a
+   * `'rescan'` that covers everything watched.
+   */
+  var path
+
+  /**
+   * The process that exited, for `'exit'`. `nil` for every other kind.
+   */
+  var process
+
+  /**
+   * @param string kind
+   * @param ?string path
+   * @param ?Process process
+   */
+  @new(kind: string, path: ?string, process) {
+    self.kind = kind
+    self.path = path
+    self.process = process
+  }
+
+  /**
+   * The kind and the path, as `'modify /srv/app/index.zu'`, or the kind
+   * alone when there is no path.
+   *
+   * @returns string
+   */
+  @to_string() {
+    return self.path == nil ? self.kind : '${self.kind} ${self.path}'
+  }
+}
+
+/**
+ * Watches files and directories for changes, and child processes for
+ * their exit, and reports both as `WatchEvent`s in the order they
+ * happen.
+ *
+ * A watcher starts out watching nothing. `add()` gives it paths,
+ * `follow()` gives it processes, and `next()` waits for whatever
+ * happens first. Iterating a watcher with `for` calls `next()` for you
+ * and runs until the watcher is closed.
+ *
+ * Every watcher holds operating system resources until it is closed or
+ * collected. Call `close()` once a watcher is no longer needed rather
+ * than leaving it to the garbage collector.
+ *
+ * ```zuri
+ * import os
+ *
+ * var watcher = os.Watcher()
+ * watcher.add('src')
+ *
+ * var event = watcher.next(5000)
+ *
+ * if event == nil {
+ *   echo 'nothing changed in five seconds'
+ * } else {
+ *   echo event
+ * }
+ *
+ * watcher.close()
+ * ```
+ */
+class Watcher {
+
+  var _ptr
+
+  # The processes being followed, by the id the native side reports
+  # their exit under.
+  var _followed = {}
+
+  # The event the last `@key()` waited for, which `@value()` hands out.
+  var _current
+
+  var _closed = false
+
+  /**
+   * Creates a watcher that is watching nothing yet.
+   *
+   * @raises Error if the operating system refuses to create another
+   *    watch, which on Linux means the per-user limit on inotify
+   *    instances (`fs.inotify.max_user_instances`) has been reached.
+   */
+  @new() {
+    self._ptr = _os.watcher_new()
+    self._followed = {}
+  }
+
+  /**
+   * Starts watching `path`.
+   *
+   * A directory is watched with everything under it, however deep,
+   * including directories created inside it later. Pass `false` for
+   * `recursive` to watch only the directory itself and the entries
+   * directly inside it.
+   *
+   * A file is watched on its own, through the directory that holds it.
+   * That is what keeps a file saved by renaming a new copy over it
+   * reported: a watch on the file itself would end with the original,
+   * where a watch on its directory sees the new copy arrive.
+   * `recursive` has no meaning for a file and is ignored.
+   *
+   * Adding a path that is already watched takes the new `recursive`
+   * value and otherwise leaves its watch alone, without a moment in
+   * which a change could be missed. It is also how a watch comes back
+   * after the operating system dropped it: when a watched directory is
+   * removed, its watch ends with it, and adding it again once it exists
+   * again restores it. The same holds for a watched file whose
+   * directory was removed.
+   *
+   * @param string path: absolute, or relative to the working directory.
+   * @param ?bool recursive: Default `true`.
+   * @returns Watcher: this same watcher, for chaining.
+   * @raises Error if nothing exists at `path`, if the watcher is
+   *    closed, or if the system's limit on watched directories has been
+   *    reached. On Linux that limit is `fs.inotify.max_user_watches`,
+   *    and a recursive watch uses one per directory it covers.
+   */
+  add(path: string, recursive: ?bool) {
+    _os.watcher_add(self._ptr, path, recursive == nil ? true : recursive)
+    return self
+  }
+
+  /**
+   * Stops watching `path`, which is named the way it was added. Events
+   * for it that were already queued are still handed over by `next()`.
+   *
+   * @param string path
+   * @returns bool: `true` if `path` was being watched, `false` if it
+   *    was not.
+   * @raises Error if the watcher is closed.
+   */
+  remove(path: string) {
+    return _os.watcher_remove(self._ptr, path)
+  }
+
+  /**
+   * Starts following `process`, a child started with `os.spawn()`, so
+   * that its exit is reported as an `'exit'` event, in the same wait
+   * as the filesystem changes.
+   *
+   * Following a process does not reap it. The `'exit'` event's
+   * `process` is the same `Process`, and its `wait()` returns the exit
+   * status at once. A process that has already been waited for is
+   * reported as exited straight away.
+   *
+   * Each exit is reported once, after which the process is no longer
+   * followed. Following the same process twice reports its exit twice.
+   *
+   * ```zuri
+   * var server = os.spawn('zuri', ['run', 'app'], { stdout: 'inherit' })
+   * var watcher = os.Watcher().add('app').follow(server)
+   *
+   * for event in watcher {
+   *   if event.kind == 'exit' {
+   *     echo 'the server stopped with status ${event.process.wait()}'
+   *     watcher.close()
+   *   }
+   * }
+   * ```
+   *
+   * @param Process process
+   * @returns Watcher: this same watcher, for chaining.
+   * @raises TypeError if `process` is not a `Process`.
+   * @raises Error if the watcher is closed.
+   */
+  follow(process) {
+    if !instance_of(process, Process) {
+      raise TypeError('follow() expects a Process, got ${typeof(process)}')
+    }
+
+    var id = _os.watcher_follow(self._ptr, process.native_ptr())
+
+    self._followed[id] = process
+
+    return self
+  }
+
+  /**
+   * Every path being watched, resolved through its links the way it was
+   * when it was added. Empty for a closed watcher.
+   *
+   * @returns list
+   */
+  paths() {
+    if self._closed {
+      return []
+    }
+
+    return _os.watcher_paths(self._ptr)
+  }
+
+  /**
+   * Waits for the next event and returns it.
+   *
+   * Without a timeout this waits for as long as it takes. With one it
+   * gives up after `timeout` milliseconds and returns `nil`, and a
+   * timeout of `0` returns at once with whatever is already waiting. It
+   * also returns `nil` as soon as a signal with an `os.on_signal()`
+   * callback arrives, so the callback runs without waiting for the next
+   * change, and, inside an isolate, once that isolate is cancelled. A
+   * caller that cannot tell these apart does not need to: in each case,
+   * nothing changed.
+   *
+   * @param ?number timeout: in milliseconds. Default: wait as long as
+   *    it takes.
+   * @returns ?WatchEvent
+   * @raises Error if the watcher is closed.
+   */
+  next(timeout: ?number) {
+    var found = _os.watcher_next(self._ptr, timeout)
+
+    if found == nil {
+      return nil
+    }
+
+    var process
+
+    if found[2] != nil {
+      process = self._followed.get(found[2])
+      self._followed.remove(found[2])
+    }
+
+    return WatchEvent(found[0], found[1], process)
+  }
+
+  /**
+   * Stops every watch and releases what the watcher holds. Closing a
+   * closed watcher does nothing. A `for` loop over the watcher ends at
+   * the next event it would have waited for, which is how a signal
+   * callback stops one.
+   *
+   * @returns
+   */
+  close() {
+    if self._closed {
+      return
+    }
+
+    self._closed = true
+    self._followed = {}
+
+    _os.watcher_close(self._ptr)
+  }
+
+  /**
+   * Whether `close()` has been called.
+   *
+   * @returns bool
+   */
+  is_closed() {
+    return self._closed
+  }
+
+  @key(previous) {
+    while !self._closed {
+      var event = self.next()
+
+      # `nil` without a timeout means a signal arrived. Its callback has
+      # run by the time the loop comes round, and may have closed us.
+      if event != nil {
+        self._current = event
+        return previous == nil ? 1 : previous + 1
+      }
+    }
+
+    return nil
+  }
+
+  @value(key) {
+    return self._current
+  }
+}

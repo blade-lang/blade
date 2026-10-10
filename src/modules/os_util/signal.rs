@@ -11,12 +11,23 @@
 //! runs on the VM's own owning thread, never from signal-handler or
 //! background-thread context, and never touches another isolate's
 //! independent VM/Heap.
+//!
+//! Waiting natives that can block for as long as nothing happens, like
+//! `os.Watcher.next()`, register a waker here. A trapped signal calls
+//! every waker so the wait returns at once and the callback runs at the
+//! next safepoint, instead of whenever the wait would have ended by
+//! itself. On Unix the handler only writes a byte to a pipe, and a relay
+//! thread does the waking.
 
 use std::{
   io::{Write, stderr, stdout},
   process,
-  sync::atomic::{AtomicBool, AtomicUsize, Ordering},
+  sync::Mutex,
+  sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
 };
+
+#[cfg(unix)]
+use std::sync::{Once, atomic::AtomicI32};
 
 #[cfg(windows)]
 use windows_sys::Win32::{
@@ -240,6 +251,8 @@ extern "C" fn unix_handler(sig: c_int) {
     // Strictly after the flag above: see `PENDING_HINT`'s own docs on
     // why this order is the one that cannot lose a signal.
     PENDING_HINT.store(true, Ordering::SeqCst);
+
+    poke_relay();
   }
 }
 
@@ -314,6 +327,10 @@ unsafe extern "system" fn windows_handler(ctrl_type: u32) -> BOOL {
       // Strictly after the flag above, for the same reason the unix
       // handler does it in that order.
       PENDING_HINT.store(true, Ordering::SeqCst);
+
+      // Windows runs this handler on a thread of its own rather than
+      // inside an interrupted one, so it can wake the waiters directly.
+      wake_all();
       1
     },
     None => 0,
@@ -340,4 +357,168 @@ fn install_platform(name: &str, _idx: usize) -> Result<(), String> {
     "on_signal() is not supported on this platform (requested '{}')",
     name
   ))
+}
+
+/// Something waiting outside the interpreter that a trapped signal
+/// should cut short.
+type Waker = Box<dyn Fn() + Send>;
+
+static WAKERS: Mutex<Vec<(u64, Waker)>> = Mutex::new(Vec::new());
+
+static NEXT_WAKER: AtomicU64 = AtomicU64::new(1);
+
+/// Registers `waker` to be called whenever a trapped signal arrives,
+/// from a thread that is not the one waiting. Returns the id that
+/// `remove_waker` takes.
+///
+/// A waker is called for every trapped signal, including one that
+/// arrived while nothing was waiting, so a waiter checks
+/// `any_pending()` before treating a wake as a signal.
+pub fn add_waker(waker: impl Fn() + Send + 'static) -> u64 {
+  #[cfg(unix)]
+  start_relay();
+
+  let id = NEXT_WAKER.fetch_add(1, Ordering::Relaxed);
+
+  WAKERS
+    .lock()
+    .unwrap_or_else(|e| e.into_inner())
+    .push((id, Box::new(waker)));
+
+  id
+}
+
+/// Forgets the waker `add_waker` returned `id` for.
+pub fn remove_waker(id: u64) {
+  WAKERS
+    .lock()
+    .unwrap_or_else(|e| e.into_inner())
+    .retain(|(other, _)| *other != id);
+}
+
+fn wake_all() {
+  let wakers = WAKERS.lock().unwrap_or_else(|e| e.into_inner());
+
+  for (_, waker) in wakers.iter() {
+    waker();
+  }
+}
+
+/// The write end of the pipe the relay thread reads, or -1 until the
+/// first waker starts it.
+#[cfg(unix)]
+static RELAY_FD: AtomicI32 = AtomicI32::new(-1);
+
+/// Starts the thread that turns a byte written by `unix_handler` into a
+/// call to every waker. A signal handler can do almost nothing safely,
+/// and taking a lock or sending on a channel is not among it, but
+/// `write()` is.
+#[cfg(unix)]
+fn start_relay() {
+  static STARTED: Once = Once::new();
+
+  STARTED.call_once(|| {
+    let mut fds = [0 as c_int; 2];
+
+    if unsafe { libc::pipe(fds.as_mut_ptr()) } != 0 {
+      return;
+    }
+
+    let [read_fd, write_fd] = fds;
+
+    unsafe {
+      libc::fcntl(read_fd, libc::F_SETFD, libc::FD_CLOEXEC);
+      libc::fcntl(write_fd, libc::F_SETFD, libc::FD_CLOEXEC);
+
+      // A full pipe already holds a wake nobody has read, so a handler
+      // that finds it full has nothing to add and must not block.
+      let flags = libc::fcntl(write_fd, libc::F_GETFL);
+      libc::fcntl(write_fd, libc::F_SETFL, flags | libc::O_NONBLOCK);
+    }
+
+    let started = std::thread::Builder::new()
+      .name("zuri-signal-relay".to_string())
+      .spawn(move || relay(read_fd));
+
+    match started {
+      Ok(_) => RELAY_FD.store(write_fd, Ordering::SeqCst),
+      Err(_) => unsafe {
+        libc::close(read_fd);
+        libc::close(write_fd);
+      },
+    }
+  });
+}
+
+#[cfg(unix)]
+fn relay(read_fd: c_int) {
+  let mut buffer = [0u8; 64];
+
+  loop {
+    let read = unsafe { libc::read(read_fd, buffer.as_mut_ptr().cast(), buffer.len()) };
+
+    if read > 0 {
+      wake_all();
+      continue;
+    }
+
+    if read < 0 && std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted {
+      continue;
+    }
+
+    return;
+  }
+}
+
+/// Tells the relay thread a signal arrived. Called from inside the
+/// signal handler, so it does nothing but one `write()`, and puts back
+/// the `errno` that call may change, since the code the signal
+/// interrupted may be about to read it.
+#[cfg(unix)]
+fn poke_relay() {
+  let fd = RELAY_FD.load(Ordering::SeqCst);
+
+  if fd < 0 {
+    return;
+  }
+
+  let saved = errno();
+  let byte = 1u8;
+
+  unsafe {
+    libc::write(fd, (&raw const byte).cast(), 1);
+  }
+
+  set_errno(saved);
+}
+
+#[cfg(any(target_os = "linux", target_os = "android"))]
+fn errno_location() -> *mut c_int {
+  unsafe { libc::__errno_location() }
+}
+
+#[cfg(any(
+  target_vendor = "apple",
+  target_os = "freebsd",
+  target_os = "dragonfly"
+))]
+fn errno_location() -> *mut c_int {
+  unsafe { libc::__error() }
+}
+
+#[cfg(any(target_os = "openbsd", target_os = "netbsd"))]
+fn errno_location() -> *mut c_int {
+  unsafe { libc::__errno() }
+}
+
+#[cfg(unix)]
+fn errno() -> c_int {
+  unsafe { *errno_location() }
+}
+
+#[cfg(unix)]
+fn set_errno(value: c_int) {
+  unsafe {
+    *errno_location() = value;
+  }
 }

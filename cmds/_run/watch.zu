@@ -1,0 +1,452 @@
+/**
+ * Runs a program under `zuri run --watch`.
+ *
+ * The program runs as a child process. Watch mode watches every file it
+ * reads and runs it again from the start whenever one of them changes:
+ *
+ * - every Zuri source file it reads, which is its entry file and every
+ *   module imported from it, as the runtime reports them;
+ * - every file a library declares through `zuri.watch.depends_on()`,
+ *   the templates `wire` renders among them;
+ * - `project.toml`, and any `.env` or `.env.*` file, in the project's
+ *   root, or in the program's own directory when it belongs to no
+ *   project.
+ *
+ * Changes are gathered until they stop for a moment, so a save written
+ * in several steps, or a checkout touching many files, restarts the
+ * program once. A restart asks the program to stop with `SIGTERM` and
+ * gives it a few seconds to finish before ending it outright. Windows
+ * has no way to ask, so there the program is ended at once.
+ *
+ * The runtime launches this file itself, never as a command:
+ * `zuri run --watch [path] [args...]` hands it the program's entry
+ * file and then the program's own arguments.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import colors
+import io
+import os
+
+import .._shared.paths
+import .report { Report, fingerprint }
+
+# How long changes have to stop arriving before the program restarts.
+var QUIET_MS = 100
+
+# How long a program asked to stop is given before it is ended outright.
+var GRACE_MS = 5000
+
+# How long a signal that stops watch mode is held back from the program.
+# Ctrl+C, a closed terminal, or a service manager stopping a group
+# reaches the program as well, and one that is already on its way out
+# should not be told twice.
+var PASS_ON_MS = 200
+
+# Status lines are painted on the same terms the runtime paints its own,
+# judged by the stream they go to.
+var _paint = os.get_env('NO_COLOR') == nil and io.stderr.is_tty()
+
+# Writes one status line. They go to standard error so that the
+# program's own output can be piped on its own.
+def _say(line: string) {
+  var text = _paint ? colors.text(line, colors.text_color.dark_grey) : line
+
+  io.stderr.write(text + '\n')
+  io.stderr.flush()
+}
+
+# `path` as a status line names it: relative to the working directory
+# when it is under it.
+def _shown(path: string) {
+  var here = os.cwd()
+
+  if !os.path_contains(here, path) {
+    return path
+  }
+
+  var relative = os.relative_path(here, path)
+
+  return relative == '.' ? path : relative
+}
+
+# `path` in the form two spellings of one file compare equal in. Windows
+# and macOS look names up without regard to case.
+def _key(path: string) {
+  if os.platform == 'windows' or os.platform == 'macos' {
+    return path.lower()
+  }
+
+  return path
+}
+
+# Whether `name` is configuration a change to which restarts the
+# program, when it sits in the project's root.
+def _is_config(name: string) {
+  return name == 'project.toml' or name == '.env' or name.starts_with('.env.')
+}
+
+/**
+ * One program, run again each time what it depends on changes.
+ */
+class Session {
+
+  var entry = ''
+
+  var args = []
+
+  # The project's root, or the program's own directory.
+  var root = ''
+
+  var watcher
+
+  # The running program, `nil` while it is waiting for a change.
+  var child
+
+  # Where the current run reports what it reads.
+  var report
+
+  # The private directory the reports are written in.
+  var _scratch = ''
+
+  var _runs = 0
+
+  # Every file watched for the program, by `_key()`.
+  var _files = {}
+
+  # Every directory a library declared as a whole, by `_key()`.
+  var _trees = []
+
+  # The files the current run has reported, by `_key()`, so a file read
+  # twice is checked once.
+  var _seen = {}
+
+  # The files whose change is waiting to restart the program.
+  var _changed = []
+
+  # Set when the operating system said changes may have been lost.
+  var _missed = false
+
+  # When the program restarts, as a `time()`, once changes have stopped
+  # arriving. `nil` while nothing is waiting.
+  var _restart_at
+
+  var _closed = false
+
+  /**
+   * @param string entry: the program's entry file, absolute.
+   * @param list args: the program's own arguments.
+   */
+  @new(entry: string, args: list) {
+    self.entry = entry
+    self.args = args
+    self._changed = []
+    self._files = {}
+    self._trees = []
+    self._seen = {}
+
+    var directory = os.dir_name(entry)
+    var project = paths.find_root(directory)
+
+    self.root = project == nil ? directory : project
+    self.watcher = os.Watcher()
+    self._scratch = os.create_temp_dir('zuri-watch-')
+  }
+
+  /**
+   * Starts the program and keeps it running, until watch mode itself is
+   * stopped.
+   */
+  run() {
+    for name in ['INT', 'TERM', 'HUP'] {
+      if name != 'HUP' or os.platform != 'windows' {
+        self._trap(name)
+      }
+    }
+
+    # Whatever ends watch mode, an error in it included, the program does
+    # not outlive it.
+    os.at_exit(@() {
+      self._stop(15, 0)
+      self._close()
+    })
+
+    self.watcher.add(self.root, false)
+    self._watch(self.entry)
+
+    _say('watching ${_shown(self.entry)} and the files it uses, Ctrl+C to stop')
+
+    self._start()
+
+    while true {
+      var event = self.watcher.next(self._time_left())
+
+      # The quiet is timed from the last change that counts, so a file
+      # the program writes over and over cannot hold a restart back.
+      if event != nil and self._handle(event) {
+        self._restart_at = time() + QUIET_MS / 1000
+      }
+
+      if self._restart_at != nil and time() >= self._restart_at {
+        self._restart()
+      }
+    }
+  }
+
+  # How long until the program restarts, in milliseconds, or `nil` when
+  # no change is waiting and there is nothing to time out on.
+  _time_left() {
+    if self._restart_at == nil {
+      return nil
+    }
+
+    var left = ((self._restart_at - time()) * 1000).ceil()
+
+    return left > 0 ? left : 0
+  }
+
+  # Takes `event` in, and returns whether it is a change that restarts
+  # the program.
+  _handle(event) {
+    using event.kind {
+      when 'exit' {
+        self._exited(event.process)
+        return false
+      }
+      when 'rescan' {
+        self._missed = true
+        return true
+      }
+    }
+
+    var cause
+
+    if self.report != nil and event.path == self.report.path {
+      cause = self._read_report()
+    } else if self._depends_on(event.path) {
+      cause = event.path
+    }
+
+    if cause == nil {
+      return false
+    }
+
+    if !self._changed.contains(cause) {
+      self._changed.append(cause)
+    }
+
+    return true
+  }
+
+  # Whether a change at `path` is one the program depends on.
+  _depends_on(path: string) {
+    var key = _key(path)
+
+    if self._files.contains(key) {
+      return true
+    }
+
+    for tree in self._trees {
+      if key == tree or key.starts_with(tree + os.path_separator) {
+        return true
+      }
+    }
+
+    if _key(os.dir_name(path)) != _key(self.root) {
+      return false
+    }
+
+    return _is_config(os.base_name(path))
+  }
+
+  # Takes in what the current run has reported since last asked, and
+  # returns the first of those files that has changed since the program
+  # read it, or `nil` when none has.
+  _read_report() {
+    var cause
+
+    for entry in self.report.entries() {
+      var key = _key(entry.path)
+
+      if self._seen.contains(key) {
+        continue
+      }
+
+      self._seen[key] = true
+      self._watch(entry.path)
+
+      # The program read the file before the watch above existed, so a
+      # change in between is only visible in the content.
+      if cause == nil and fingerprint(entry.path) != entry.fingerprint {
+        cause = entry.path
+      }
+    }
+
+    return cause
+  }
+
+  # Starts watching `path` for the program.
+  _watch(path: string) {
+    var key = _key(path)
+
+    if os.is_dir(path) {
+      if !self._trees.contains(key) {
+        self._trees.append(key)
+      }
+
+      self.watcher.add(path)
+      return
+    }
+
+    self._files[key] = path
+
+    catch {
+      self.watcher.add(path)
+    } as error {
+      # Nothing stands at `path` yet. Its directory says when something
+      # does, and when the directory is gone as well there is nothing to
+      # watch until the program reads the file again.
+      catch {
+        self.watcher.add(os.dir_name(path), false)
+      } as missing {
+      }
+    }
+  }
+
+  # Runs the program, reporting into a fresh report.
+  _start() {
+    self._runs += 1
+
+    var previous = self.report
+
+    self.report = Report(os.join_paths(self._scratch, 'run-${self._runs}'))
+    self.watcher.add(self.report.path)
+
+    if previous != nil {
+      self.watcher.remove(previous.path)
+      previous.delete()
+    }
+
+    self._seen = {}
+
+    self.child = os.spawn(os.exe_path, ['run', self.entry] + self.args, {
+      stdin: 'inherit',
+      stdout: 'inherit',
+      stderr: 'inherit',
+      env: { ZURI_WATCH_REPORT: self.report.path },
+    })
+
+    self.watcher.follow(self.child)
+  }
+
+  # The program exited by itself, or was stopped for a restart.
+  _exited(process) {
+    if process != self.child {
+      return
+    }
+
+    var status = process.wait()
+    var name = _shown(self.entry)
+
+    self.child = nil
+
+    if status == 0 {
+      _say('${name} finished, waiting for a change')
+    } else {
+      _say('${name} exited with status ${status}, waiting for a change')
+    }
+  }
+
+  # Stops the program, if it is running, and starts it again.
+  _restart() {
+    var changed = self._changed
+
+    self._changed = []
+    self._restart_at = nil
+
+    if self._missed {
+      _say('changes may have been missed, restarting')
+    } else if changed.length() == 1 {
+      _say('${_shown(changed[0])} changed, restarting')
+    } else {
+      var first = _shown(changed[0])
+      var others = changed.length() - 1
+      var noun = others == 1 ? 'file' : 'files'
+
+      _say('${first} and ${others} other ${noun} changed, restarting')
+    }
+
+    self._missed = false
+    self._stop(15, 0)
+    self._start()
+  }
+
+  # Stops the program. Unless it has exited by itself within `pause`
+  # milliseconds, it is sent `signal`, and it is ended outright once the
+  # grace period is up.
+  _stop(signal: number, pause: number) {
+    var child = self.child
+
+    self.child = nil
+
+    if child == nil {
+      return
+    }
+
+    if child.wait(pause) != nil {
+      return
+    }
+
+    catch {
+      child.kill(signal)
+    } as error {
+      # It exited in the meantime, or, on Windows, the signal is one
+      # only the console can deliver and the program has it already.
+    }
+
+    if child.wait(GRACE_MS) == nil {
+      catch {
+        child.kill(9)
+      } as error {
+      }
+
+      child.wait()
+    }
+  }
+
+  # Stops watching and removes the reports.
+  _close() {
+    if self._closed {
+      return
+    }
+
+    self._closed = true
+    self.watcher.close()
+
+    catch {
+      os.remove_dir(self._scratch, true)
+    } as error {
+    }
+  }
+
+  # Shuts watch mode down on `name`, letting the program go first.
+  _trap(name: string) {
+    os.on_signal(name, @() {
+      using name {
+        when 'INT' self._stop(2, PASS_ON_MS)
+        when 'HUP' self._stop(1, PASS_ON_MS)
+        when 'TERM' self._stop(15, PASS_ON_MS)
+      }
+
+      self._close()
+
+      # Returning nothing lets the signal end watch mode the way it would
+      # have ended any other program.
+    })
+  }
+}
+
+var session = Session(os.args[2], os.args[3,])
+
+session.run()

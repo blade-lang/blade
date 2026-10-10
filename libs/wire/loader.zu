@@ -25,6 +25,7 @@
  */
 
 import os
+import zuri.watch
 
 import .constants { DEFAULT_EXTENSION }
 import .errors { TemplateNotFoundError }
@@ -125,11 +126,17 @@ class Loader {
   /**
    * The contents of the file at _full_.
    *
+   * A program running under `zuri run --watch` is restarted when a
+   * template it has read changes, so every read is declared to watch
+   * mode first.
+   *
    * @param string full
    * @returns string
    * @throws TemplateNotFoundError when the file cannot be read.
    */
   read(full: string) {
+    watch.depends_on(full)
+
     catch {
       return file(full).read()
     } as e {

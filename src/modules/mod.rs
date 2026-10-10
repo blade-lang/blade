@@ -16,7 +16,7 @@ mod crypto;
 mod date;
 mod ffi;
 pub(crate) mod ffi_util;
-mod hash;
+pub(crate) mod hash;
 mod imagine;
 mod io;
 mod isolate;
@@ -39,6 +39,7 @@ mod zuri_compile;
 mod zuri_lex;
 mod zuri_parse;
 mod zuri_reflect;
+mod zuri_watch;
 
 use crate::vm::object::{NativeFn, NativeFunction, ZuriContext};
 use crate::vm::value::Value;
@@ -76,6 +77,7 @@ pub static REGISTRY: &[BuiltinModuleDef] = &[
   zuri_lex::MODULE,
   zuri_parse::MODULE,
   zuri_reflect::MODULE,
+  zuri_watch::MODULE,
 ];
 
 pub fn find(name: &str) -> Option<&'static BuiltinModuleDef> {

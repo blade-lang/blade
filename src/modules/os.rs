@@ -8,7 +8,9 @@ use std::time::Duration;
 use crate::builtins::enforce::{ArgType, enforce_method_arg_count, enforce_method_arg_type};
 use crate::builtins::file as builtin_file;
 use crate::modules::isolate_util::pool;
-use crate::modules::os_util::{process as os_process, signal as os_signal, sysinfo};
+use crate::modules::os_util::{
+  process as os_process, signal as os_signal, sysinfo, watch as os_watch,
+};
 use crate::modules::{BuiltinModuleDef, native};
 use crate::vm::natives::{capture_unwind_all, flush_stdout};
 use crate::vm::object::ZuriContext;
@@ -92,6 +94,27 @@ fn build(vm: &mut VM) -> Vec<(&'static str, Value)> {
   ));
   members.push(("process_kill", native(vm, "kill", 2, false, process_kill)));
   members.push(("process_pid", native(vm, "pid", 1, false, process_pid)));
+
+  // watching
+  members.push(("watcher_new", native(vm, "Watcher", 0, false, watcher_new)));
+  members.push(("watcher_add", native(vm, "add", 3, false, watcher_add)));
+  members.push((
+    "watcher_remove",
+    native(vm, "remove", 2, false, watcher_remove),
+  ));
+  members.push((
+    "watcher_follow",
+    native(vm, "follow", 2, false, watcher_follow),
+  ));
+  members.push(("watcher_next", native(vm, "next", 2, false, watcher_next)));
+  members.push((
+    "watcher_paths",
+    native(vm, "paths", 1, false, watcher_paths),
+  ));
+  members.push((
+    "watcher_close",
+    native(vm, "close", 1, false, watcher_close),
+  ));
 
   // system
   members.push(("cpu_count", native(vm, "cpu_count", 0, false, cpu_count)));
@@ -993,6 +1016,130 @@ fn process_pid(ctx: &mut ZuriContext) -> Result<Value, String> {
   let ptr = ctx.args[0].as_ptr_cell().borrow();
   let process = ptr.downcast_ref::<os_process::Process>().unwrap();
   Ok(Value::number(process.pid() as f64))
+}
+
+// Watching
+
+const WATCHER_PTR: &str = "zuri::os::Watcher";
+
+fn watcher_new(ctx: &mut ZuriContext) -> Result<Value, String> {
+  enforce_arg_count!(ctx, 0);
+
+  let watcher = os_watch::Watcher::new()?;
+  Ok(ctx.heap().alloc_ptr(WATCHER_PTR, watcher))
+}
+
+fn watcher_add(ctx: &mut ZuriContext) -> Result<Value, String> {
+  enforce_method_arg_count!(ctx, 2);
+  enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(WATCHER_PTR));
+  enforce_method_arg_type!(ctx, 1, ArgType::String);
+
+  let path = ctx.args[1].as_str().to_string();
+  let recursive = ctx.args[2].is_nil() || ctx.args[2].as_bool();
+
+  let mut ptr = ctx.args[0].as_ptr_cell().borrow_mut();
+  let watcher = ptr.downcast_mut::<os_watch::Watcher>().unwrap();
+  watcher.add(&path, recursive)?;
+  Ok(Value::nil())
+}
+
+fn watcher_remove(ctx: &mut ZuriContext) -> Result<Value, String> {
+  enforce_method_arg_count!(ctx, 1);
+  enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(WATCHER_PTR));
+  enforce_method_arg_type!(ctx, 1, ArgType::String);
+
+  let path = ctx.args[1].as_str().to_string();
+
+  let mut ptr = ctx.args[0].as_ptr_cell().borrow_mut();
+  let watcher = ptr.downcast_mut::<os_watch::Watcher>().unwrap();
+  Ok(Value::bool(watcher.remove(&path)?))
+}
+
+fn watcher_follow(ctx: &mut ZuriContext) -> Result<Value, String> {
+  enforce_method_arg_count!(ctx, 1);
+  enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(WATCHER_PTR));
+  enforce_method_arg_type!(ctx, 1, ArgType::PtrOf(PROCESS_PTR));
+
+  let target = {
+    let ptr = ctx.args[1].as_ptr_cell().borrow();
+    let process = ptr.downcast_ref::<os_process::Process>().unwrap();
+    process.follow_target()?
+  };
+
+  let mut ptr = ctx.args[0].as_ptr_cell().borrow_mut();
+  let watcher = ptr.downcast_mut::<os_watch::Watcher>().unwrap();
+  let id = watcher.follow(target)?;
+  Ok(Value::number(id as f64))
+}
+
+/// `nil` when the timeout passed or a trapped signal cut the wait
+/// short, else `[kind, path, follow id]`, with whichever of the last two
+/// does not apply left `nil`.
+fn watcher_next(ctx: &mut ZuriContext) -> Result<Value, String> {
+  enforce_method_arg_count!(ctx, 1);
+  enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(WATCHER_PTR));
+
+  let timeout = match ctx.args[1] {
+    v if v.is_nil() => None,
+    v if v.is_number() => Some(Duration::from_secs_f64(v.as_number().max(0.0) / 1000.0)),
+    v => {
+      return Err(format!(
+        "'next' expects its timeout to be a number of milliseconds, got {}",
+        v.type_name()
+      ));
+    },
+  };
+
+  // Flushed first, because what a program printed before it settled
+  // down to wait should be on the screen while it waits.
+  flush_stdout();
+
+  let outcome = {
+    let mut ptr = ctx.args[0].as_ptr_cell().borrow_mut();
+    let watcher = ptr.downcast_mut::<os_watch::Watcher>().unwrap();
+    watcher.next(timeout)?
+  };
+
+  let (kind, path, id) = match outcome {
+    os_watch::Outcome::TimedOut | os_watch::Outcome::Interrupted => return Ok(Value::nil()),
+    os_watch::Outcome::Event(os_watch::Delivered::Change { kind, path }) => (kind, path, None),
+    os_watch::Outcome::Event(os_watch::Delivered::Exit(id)) => ("exit", None, Some(id)),
+  };
+
+  let heap = ctx.vm.heap_mut();
+  let kind = heap.alloc_string(kind);
+  let path = match path {
+    Some(path) => heap.alloc_string(path),
+    None => Value::nil(),
+  };
+  let id = id.map_or(Value::nil(), |id| Value::number(id as f64));
+
+  Ok(heap.alloc_list(vec![kind, path, id]))
+}
+
+fn watcher_paths(ctx: &mut ZuriContext) -> Result<Value, String> {
+  enforce_method_arg_count!(ctx, 0);
+  enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(WATCHER_PTR));
+
+  let paths = {
+    let ptr = ctx.args[0].as_ptr_cell().borrow();
+    let watcher = ptr.downcast_ref::<os_watch::Watcher>().unwrap();
+    watcher.paths()
+  };
+
+  let heap = ctx.vm.heap_mut();
+  let items: Vec<Value> = paths.into_iter().map(|p| heap.alloc_string(p)).collect();
+  Ok(heap.alloc_list(items))
+}
+
+fn watcher_close(ctx: &mut ZuriContext) -> Result<Value, String> {
+  enforce_method_arg_count!(ctx, 0);
+  enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(WATCHER_PTR));
+
+  let mut ptr = ctx.args[0].as_ptr_cell().borrow_mut();
+  let watcher = ptr.downcast_mut::<os_watch::Watcher>().unwrap();
+  watcher.close();
+  Ok(Value::nil())
 }
 
 // System / machine introspection

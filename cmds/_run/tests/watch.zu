@@ -1,0 +1,393 @@
+# Tests for `zuri run --watch`, run the way a person runs it: a real
+# project on disk, the real executable, and real edits to its files.
+#
+# The program under watch appends one line to `log.txt` each time it
+# starts, so a restart is seen as a new line. The waits are for that
+# file changing, through `os.Watcher`, never by looking repeatedly.
+
+import os
+import os.process { spawn }
+import os.tempfile { create_temp_dir }
+import test { * }
+
+# How long a restart is waited for, in milliseconds.
+var PATIENCE = 20000
+
+# How long nothing happening counts as no restart.
+var QUIET = 1500
+
+var PROJECT = nil
+
+# The watch mode the current test started, stopped after the test even
+# when an expectation failed halfway through it.
+var RUNNING = nil
+
+# What the program logs on each start: its module's message, the
+# template it rendered, its process id, and its own arguments.
+var PROGRAM = '\n'.join([
+  'import os',
+  'import wire',
+  'import .lib.greet',
+  '',
+  'var here = os.dir_name(__file__)',
+  'var view = wire.wire({ root: os.join_paths(here, "views") })',
+  'var page = view.render("page").trim()',
+  'var line = [greet.message(), page, os.pid().to_string(), " ".join(os.args[2,])]',
+  '',
+  'var log = file(os.join_paths(here, "log.txt"), "a")',
+  'log.write("|".join(line) + "\\n")',
+  'log.close()',
+  '',
+  'os.create_dir(os.join_paths(here, "data"), 0c755, true)',
+  '',
+  'var state = file(os.join_paths(here, "data", "state.txt"), "w")',
+  'state.write("written at start")',
+  'state.close()',
+  '',
+  'if greet.message() == "leave" {',
+  '  os.exit(3)',
+  '}',
+  '',
+  'while true {',
+  '  os.sleep(60)',
+  '}',
+  '',
+])
+
+def put(path: string, text: string) {
+  var full = os.join_paths(PROJECT, path)
+
+  os.create_dir(os.dir_name(full), 0c755, true)
+
+  var handle = file(full, 'w')
+
+  handle.write(text)
+  handle.close()
+}
+
+def message(text: string) {
+  put('lib/greet.zu', 'def message() {\n  return "${text}"\n}\n')
+}
+
+# The watch directories left in the temporary directory.
+def leftovers() {
+  var names = os.read_dir(os.temp_dir(), false)
+
+  return names.filter(@(name) => name.starts_with('zuri-watch-'))
+}
+
+/**
+ * One `zuri run --watch` of the project.
+ */
+class Watching {
+  @new(words: list) {
+    self.log = os.join_paths(PROJECT, 'log.txt')
+    self.watcher = os.Watcher().add(PROJECT, false)
+    self.output = ''
+    self.status = nil
+    self.process = spawn(os.exe_path, ['run', '-w'] + words, {
+      cwd: PROJECT,
+      stdin: 'null',
+      stdout: 'pipe',
+      stderr: 'pipe',
+      env: { NO_COLOR: '1' },
+    })
+
+    RUNNING = self
+  }
+
+  # Every start logged so far, as `{ message, page, pid, args }`.
+  starts() {
+    if !file(self.log).exists() {
+      return []
+    }
+
+    var handle = file(self.log, 'r')
+    var text = handle.read()
+
+    handle.close()
+
+    var found = []
+
+    for line in text.trim().split('\n') {
+      if line.is_empty() {
+        continue
+      }
+
+      var parts = line.split('|')
+
+      found.append({
+        message: parts[0],
+        page: parts[1],
+        pid: parts[2].to_number(),
+        args: parts[3],
+      })
+    }
+
+    return found
+  }
+
+  # Waits until `count` starts are logged, for at most `limit` ms.
+  # Returns whether they were.
+  wait_for(count: number, limit: number) {
+    var deadline = time() + limit / 1000
+
+    while self.starts().length() < count {
+      var left = ((deadline - time()) * 1000).floor()
+
+      if left <= 0 {
+        return false
+      }
+
+      self.watcher.next(left)
+    }
+
+    return true
+  }
+
+  # Sends watch mode `signal`, and returns how it exited.
+  signal(number: number) {
+    self.process.kill(number)
+    self.status = self.process.wait()
+    self.watcher.close()
+
+    return self.status
+  }
+
+  # Stops watch mode, and returns how it exited.
+  stop() {
+    if self.status != nil {
+      return self.status
+    }
+
+    var started = self.starts()
+
+    # Windows can only end watch mode outright, which leaves the program
+    # behind, so the program is ended first there.
+    if os.platform == 'windows' and !started.is_empty() {
+      catch {
+        os.kill(started.last().pid, 9)
+      } as error {
+      }
+    }
+
+    self.process.kill(15)
+    self.status = self.process.wait()
+
+    var out = self.process.read_stdout().to_string()
+    var err = self.process.read_stderr().to_string()
+
+    self.output = out + err
+    self.watcher.close()
+
+    return self.status
+  }
+}
+
+before_each(@{
+  PROJECT = os.real_path(create_temp_dir('zuri-run-watch-'))
+
+  put('project.toml', '[project]\nname = "watched"\nversion = "0.1.0"\n')
+  put('index.zu', PROGRAM)
+  put('views/page.html', 'page one\n')
+  message('v1')
+})
+
+after_each(@{
+  if RUNNING != nil {
+    RUNNING.stop()
+    RUNNING = nil
+  }
+
+  os.remove_dir(PROJECT, true)
+
+  # Windows ends watch mode outright, without its own clean up.
+  if os.platform == 'windows' {
+    for name in leftovers() {
+      os.remove_dir(os.join_paths(os.temp_dir(), name), true)
+    }
+  }
+})
+
+describe('zuri run --watch', @{
+  it('runs the program with its own arguments', @{
+    var run = Watching(['.', '--name', 'Ada'])
+
+    expect(run.wait_for(1, PATIENCE)).to_be_true()
+
+    run.stop()
+
+    var first = run.starts()[0]
+
+    expect(first.message).to_equal('v1')
+    expect(first.page).to_equal('page one')
+    expect(first.args).to_equal('--name Ada')
+    expect(run.output).to_contain('watching index.zu and the files it uses, Ctrl+C to stop')
+  })
+
+  it('restarts when a module it imports changes', @{
+    var run = Watching([])
+
+    expect(run.wait_for(1, PATIENCE)).to_be_true()
+
+    message('v2')
+
+    expect(run.wait_for(2, PATIENCE)).to_be_true()
+
+    run.stop()
+
+    var starts = run.starts()
+
+    expect(starts[1].message).to_equal('v2')
+    expect(starts[1].pid).not.to_equal(starts[0].pid)
+    expect(run.output).to_contain('lib${os.path_separator}greet.zu changed, restarting')
+  })
+
+  it('restarts when a template it rendered changes', @{
+    var run = Watching([])
+
+    expect(run.wait_for(1, PATIENCE)).to_be_true()
+
+    put('views/page.html', 'page two\n')
+
+    expect(run.wait_for(2, PATIENCE)).to_be_true()
+
+    run.stop()
+
+    expect(run.starts()[1].page).to_equal('page two')
+  })
+
+  it('restarts when the project configuration changes', @{
+    var run = Watching([])
+
+    expect(run.wait_for(1, PATIENCE)).to_be_true()
+
+    put('.env', 'GREETING=hello\n')
+
+    expect(run.wait_for(2, PATIENCE)).to_be_true()
+
+    run.stop()
+
+    expect(run.output).to_contain('.env changed, restarting')
+  })
+
+  it('leaves the program alone when the files it writes change', @{
+    var run = Watching([])
+
+    expect(run.wait_for(1, PATIENCE)).to_be_true()
+
+    put('data/state.txt', 'written by somebody else')
+    put('notes.txt', 'not part of the program')
+
+    expect(run.wait_for(2, QUIET)).to_be_false()
+
+    run.stop()
+  })
+
+  it('restarts while files it does not use keep changing', @{
+    var run = Watching([])
+
+    expect(run.wait_for(1, PATIENCE)).to_be_true()
+
+    message('v2')
+
+    # A file beside the project's configuration, rewritten faster than
+    # the quiet period, for as long as the restart takes.
+    var deadline = time() + PATIENCE / 1000
+    var restarted = false
+
+    while !restarted and time() < deadline {
+      put('notes.txt', 'written at ${time()}')
+      os.sleep(0.03)
+
+      restarted = run.starts().length() >= 2
+    }
+
+    run.stop()
+
+    expect(restarted).to_be_true()
+  })
+
+  it('waits for a change once the program exits by itself', @{
+    message('leave')
+
+    var run = Watching([])
+
+    expect(run.wait_for(1, PATIENCE)).to_be_true()
+
+    message('back')
+
+    expect(run.wait_for(2, PATIENCE)).to_be_true()
+
+    run.stop()
+
+    expect(run.starts()[1].message).to_equal('back')
+    expect(run.output).to_contain('index.zu exited with status 3, waiting for a change')
+  })
+
+  it('runs the program again once a broken module is fixed', @{
+    var run = Watching([])
+
+    expect(run.wait_for(1, PATIENCE)).to_be_true()
+
+    put('lib/greet.zu', 'def message( {\n')
+
+    # The broken start logs nothing, and its exit is what the fix
+    # follows.
+    expect(run.wait_for(2, QUIET)).to_be_false()
+
+    message('v3')
+
+    expect(run.wait_for(2, PATIENCE)).to_be_true()
+
+    run.stop()
+
+    expect(run.starts()[1].message).to_equal('v3')
+    expect(run.output).to_contain('exited with status 1, waiting for a change')
+  })
+
+  it('refuses a program that does not exist, the way run does', @{
+    var child = spawn(os.exe_path, ['run', '-w', 'missing.zu'], {
+      cwd: PROJECT,
+      stdin: 'null',
+      stdout: 'pipe',
+      stderr: 'pipe',
+    })
+
+    expect(child.wait()).to_equal(1)
+
+    var err = child.read_stderr().to_string()
+
+    expect(err).to_contain('Reason: No such file or directory')
+  })
+})
+
+# The signals that stop watch mode, and their numbers.
+var SIGNALS = [['TERM', 15], ['INT', 2], ['HUP', 1]]
+
+# Windows can only end watch mode outright, so how it stops on a signal
+# is a Unix question.
+if os.platform != 'windows' {
+  describe('stopping zuri run --watch', @{
+    it_each(SIGNALS, 'stops on $0 and leaves nothing behind', @(name, number) {
+      var before = leftovers()
+      var run = Watching([])
+
+      expect(run.wait_for(1, PATIENCE)).to_be_true()
+
+      var program = run.starts()[0].pid
+      var status = run.signal(number)
+      var gone = false
+
+      catch {
+        os.kill(program, 0)
+      } as error {
+        gone = true
+      }
+
+      expect(gone).to_be_true()
+      expect(status).to_equal(128 + number)
+      expect(leftovers().filter(@(dir) => !before.contains(dir))).to_equal([])
+    })
+  })
+}

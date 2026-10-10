@@ -30,6 +30,15 @@ pub const COMMAND_DIR: &str = "cmds";
 /// The subcommand that launches a script rather than naming a command.
 const RUN: &str = "run";
 
+/// The flags, right after `run`, that keep the program running again
+/// each time a file it depends on changes.
+const WATCH_FLAGS: [&str; 2] = ["--watch", "-w"];
+
+/// Where, under the shipped `cmds`, the script that runs a program in
+/// watch mode lives. Its leading underscore keeps it from ever being
+/// reachable as a command of its own.
+const WATCH_SCRIPT: [&str; 2] = ["_run", "watch.zu"];
+
 /// The flags that report what the runtime is instead of running
 /// anything.
 const VERSION_FLAGS: [&str; 2] = ["--version", "-v"];
@@ -104,12 +113,54 @@ pub fn resolve(args: &[String]) -> Result<Launch, LaunchError> {
   }
 }
 
-/// `zuri run [path] [args...]`.
+/// `zuri run [--watch] [path] [args...]`.
 ///
 /// A first argument starting with a dash is an option for the script
 /// rather than a path, so `zuri run --verbose` still launches the
-/// working directory and forwards the flag.
+/// working directory and forwards the flag. `--watch` is the one
+/// exception, and only right after `run`: after the path it belongs to
+/// the program like everything else.
 fn resolve_run(rest: &[String]) -> Result<Launch, LaunchError> {
+  match rest.first() {
+    Some(first) if WATCH_FLAGS.contains(&first.as_str()) => resolve_watch(&rest[1..]),
+    _ => resolve_target(rest).map(Launch::Script),
+  }
+}
+
+/// `zuri run --watch [path] [args...]`: the program is resolved exactly
+/// as `run` resolves it, so it fails to launch the same way, and then
+/// handed to the script that runs it and watches what it reads.
+///
+/// That script receives the program's entry file and the program's own
+/// arguments.
+fn resolve_watch(rest: &[String]) -> Result<Launch, LaunchError> {
+  let program = resolve_target(rest)?;
+
+  let watcher = installed_command_dir()
+    .map(|dir| WATCH_SCRIPT.iter().fold(dir, |path, part| path.join(part)))
+    .filter(|path| path.is_file())
+    .ok_or_else(|| {
+      LaunchError::new(
+        &program.name,
+        "Watch mode is missing from this installation",
+      )
+    })?;
+
+  let mut args = vec![working_dir().join(&program.path).display().to_string()];
+
+  args.extend(program.args);
+
+  Ok(Launch::Script(Script {
+    path: watcher,
+    anchor: program.anchor,
+    name: program.name,
+    args,
+  }))
+}
+
+/// The script `zuri run [path] [args...]` launches, and what it is
+/// handed.
+fn resolve_target(rest: &[String]) -> Result<Script, LaunchError> {
   let (target, args) = match rest.first() {
     Some(first) if !first.starts_with('-') => (Some(first.as_str()), &rest[1..]),
     _ => (None, rest),
@@ -130,12 +181,12 @@ fn resolve_run(rest: &[String]) -> Result<Launch, LaunchError> {
     None => working_dir(),
   };
 
-  Ok(Launch::Script(Script {
+  Ok(Script {
     path,
     anchor,
     name,
     args: args.to_vec(),
-  }))
+  })
 }
 
 /// The file `zuri run <path>` launches: the script itself, or the

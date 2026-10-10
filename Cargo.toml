@@ -194,6 +194,14 @@ libsqlite3-sys = { version = "0.38.2", features = [
 # types exist only where the C compiler has them, which rules out MSVC.
 libffi-sys = "4.2.2"
 
+# --- os.Watcher (src/modules/os_util/watch.rs) -----------------------------
+
+# The filesystem events each platform delivers natively: inotify on Linux,
+# FSEvents on macOS, ReadDirectoryChangesW on Windows and kqueue on the
+# BSDs. Only its recommended, event-driven watcher is used; the polling one
+# it also carries is never constructed.
+notify = "8.2"
+
 # --- io::TTY.getsize (src/modules/io.rs) -----------------------------------
 
 # The rest of io::TTY (raw mode, tcgetattr/tcsetattr) is genuinely termios-

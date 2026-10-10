@@ -183,7 +183,7 @@ fn fnv1_64(data: &[u8]) -> u64 {
   h
 }
 
-fn fnv1a_64(data: &[u8]) -> u64 {
+pub(crate) fn fnv1a_64(data: &[u8]) -> u64 {
   let mut h: u64 = 0xcbf2_9ce4_8422_2325;
   for &b in data {
     h ^= b as u64;

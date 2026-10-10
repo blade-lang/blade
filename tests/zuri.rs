@@ -1897,6 +1897,11 @@ mod command_suites {
   }
 
   #[test]
+  fn run_watch() {
+    suite("_run");
+  }
+
+  #[test]
   fn init() {
     suite("init");
   }

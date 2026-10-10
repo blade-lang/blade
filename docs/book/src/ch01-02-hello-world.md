@@ -108,6 +108,36 @@ $ zuri run main.zu --name Ada --verbose
 
 [Chapter 20](ch20-00-args.md) covers reading them.
 
+## Running It Again on Every Change
+
+While you work on a program, `--watch`, or `-w` for short, keeps it
+running and starts it again from the top each time a file it uses
+changes:
+
+```console
+$ zuri run -w
+watching index.zu and the files it uses, Ctrl+C to stop
+Hello, world!
+index.zu finished, waiting for a change
+```
+
+The files it uses are the entry file and every module imported from it,
+the [Wire](ch14-00-wire.md) templates it renders, and the project's
+`project.toml` and `.env` files. Zuri learns the first two from the
+program as it runs, so a module imported only halfway through is watched
+from the moment it loads. Files the program writes itself, such as logs,
+databases and uploads, never restart it.
+
+The lines watch mode adds go to standard error, so the program's own
+output can still be piped on its own. A program that exits waits there
+for the next change, and one that fails to start because of a mistake is
+started again as soon as the mistake is fixed. Ctrl+C stops both the
+program and watch mode.
+
+The flag goes straight after `run`. After the path it belongs to the
+program like every other argument, so `zuri run . -w` hands `-w` to the
+program.
+
 ## Starting a Project
 
 One file is where everybody starts, and it stops being enough about as
@@ -336,6 +366,7 @@ Build No. => 2026-09-10 23:19:10 UTC
 
 Usage: zuri                    start the interactive REPL
        zuri run [PATH]         run a script, a package, or this directory
+       zuri run -w [PATH]      run it again whenever a file it uses changes
        zuri <command> [ARGS]   run a command
 
 OPTIONS:

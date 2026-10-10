@@ -1,0 +1,106 @@
+/**
+ * Reading what a program running under watch mode reports about the
+ * files it reads.
+ *
+ * The runtime appends one line to the report for every file the
+ * program reads: the file's fingerprint, a tab, and its path. The
+ * fingerprint is `hash.fnv1a_64()` of the bytes it read, or `-` for a
+ * file that could not be read.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import hash
+import io
+
+/**
+ * The fingerprint of the file at `path` as it is now, in the form the
+ * report records one: `-` when it cannot be read.
+ *
+ * @param string path
+ * @returns string
+ */
+def fingerprint(path: string) {
+  catch {
+    return hash.fnv1a_64(file(path, 'rb').read())
+  } as error {
+    return '-'
+  }
+}
+
+/**
+ * One report file, read as it grows.
+ */
+class Report {
+
+  /**
+   * Where the report is written.
+   */
+  var path = ''
+
+  # How much of the report has been handed out already.
+  var _offset = 0
+
+  /**
+   * Creates the report, empty, at `path`.
+   *
+   * @param string path
+   */
+  @new(path: string) {
+    self.path = path
+
+    var handle = file(path, 'w')
+
+    handle.open()
+    handle.close()
+  }
+
+  /**
+   * Every entry written since the last call, as `{ fingerprint, path }`
+   * dictionaries in the order they were written. A line still being
+   * written is left for the next call.
+   *
+   * @returns list
+   */
+  entries() {
+    var handle = file(self.path, 'rb')
+
+    handle.open()
+    handle.seek(self._offset, io.SEEK_SET)
+
+    var data = handle.gets()
+
+    handle.close()
+
+    var end = data.last_index_of(10)
+
+    if end == -1 {
+      return []
+    }
+
+    self._offset += end + 1
+
+    var found = []
+
+    for line in data.take(end).to_string().split('\n') {
+      var tab = line.index_of('\t')
+
+      if tab > 0 {
+        found.append({ fingerprint: line[0, tab], path: line[tab + 1,] })
+      }
+    }
+
+    return found
+  }
+
+  /**
+   * Removes the report from disk.
+   */
+  delete() {
+    catch {
+      file(self.path).delete()
+    } as error {
+      # Already gone, along with the directory holding it.
+    }
+  }
+}

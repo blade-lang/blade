@@ -182,6 +182,8 @@ fn run_script(vm: &mut VM, path: &Path, name: &str, display_path: Rc<str>) {
     Err(e) => abort_launch(name, &io_error_reason(&e)),
   };
 
+  zuri::watch::record_source(Path::new(&*display_path), content.as_bytes());
+
   vm.set_root_path(display_path.to_string());
   vm.init_entry_globals(&display_path);
 
@@ -253,6 +255,10 @@ fn print_help() {
     palette.accent.paint("zuri")
   );
   println!(
+    "       {} run -w [PATH]      run it again whenever a file it uses changes",
+    palette.accent.paint("zuri")
+  );
+  println!(
     "       {} <command> [ARGS]   run a command",
     palette.accent.paint("zuri")
   );
@@ -315,6 +321,7 @@ fn display_path_of(path: &Path) -> Rc<str> {
 }
 
 fn main() {
+  zuri::watch::init();
   zuri::memory::configure();
 
   let argv = env::args().collect::<Vec<_>>();

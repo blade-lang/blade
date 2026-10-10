@@ -1,0 +1,397 @@
+/**
+ * os_watch.zu
+ *
+ * Test suite for `os.Watcher`: filesystem events, following a child
+ * process to its exit, and a trapped signal cutting a wait short.
+ *
+ * Events arrive from the operating system on its own schedule, so no
+ * check here counts them exactly. Each waits, with a generous bound,
+ * for the event it is about, and checks for what must not be reported
+ * by waiting out a short quiet period instead.
+ */
+
+import isolate
+import os
+
+var _passed = 0
+
+# How long a wait for an event that should arrive is allowed, in
+# milliseconds. A working build is done long before it.
+var PATIENCE = 10000
+
+# How long nothing arriving counts as nothing having happened.
+var QUIET = 400
+
+def ok(label) {
+  _passed++
+  echo '  [PASS] ' + label
+}
+
+def raises(fn) {
+  catch {
+    fn()
+    return false
+  } as e
+
+  return true
+}
+
+def write(path: string, text: string) {
+  var handle = file(path, 'w')
+
+  handle.write(text)
+  handle.close()
+}
+
+# Waits for an event of `kind` at `path`, handing back every event seen
+# on the way, the one waited for last. Raises when it does not arrive.
+def wait_for(watcher, kind: string, path: string) {
+  var seen = []
+  var deadline = time() + PATIENCE / 1000
+
+  while time() < deadline {
+    var left = ((deadline - time()) * 1000).floor()
+    var event = watcher.next(left > 0 ? left : 0)
+
+    if event != nil {
+      seen.append(event)
+
+      if event.kind == kind and event.path == path {
+        return seen
+      }
+    }
+  }
+
+  raise Error('no ${kind} event for ${path} arrived; saw ${seen}')
+}
+
+# Every event that arrives before `QUIET` milliseconds pass without one.
+def settle(watcher) {
+  var seen = []
+
+  while true {
+    var event = watcher.next(QUIET)
+
+    if event == nil {
+      return seen
+    }
+
+    seen.append(event)
+  }
+}
+
+def has(events: list, kind: string, path: string) {
+  return events.some(@(e) => e.kind == kind and e.path == path)
+}
+
+def count(events: list, kind: string, path: string) {
+  return events.filter(@(e) => e.kind == kind and e.path == path).length()
+}
+
+# A fresh directory, spelled the way events spell paths.
+def scratch() {
+  return os.real_path(os.create_temp_dir('zuri-watch-test-'))
+}
+
+echo '═══════════════════════════════════════════════════════'
+echo '  os.Watcher: test suite'
+echo '═══════════════════════════════════════════════════════'
+
+# ---------------------------------------------------------------------------
+# A directory: create, modify, remove
+# ---------------------------------------------------------------------------
+var dir = scratch()
+var watcher = os.Watcher()
+
+assert watcher.add(dir) == watcher,
+  'add() must return the watcher, for chaining'
+assert watcher.paths() == [dir],
+  'paths() must name the directory as it was resolved'
+
+var note = os.join_paths(dir, 'note.txt')
+
+write(note, 'one')
+wait_for(watcher, 'create', note)
+ok('a file created in a watched directory is reported as created')
+
+settle(watcher)
+write(note, 'two')
+wait_for(watcher, 'modify', note)
+ok('a file written in place is reported as modified')
+
+settle(watcher)
+file(note).delete()
+wait_for(watcher, 'remove', note)
+ok('a deleted file is reported as removed')
+
+# ---------------------------------------------------------------------------
+# Reading changes nothing
+# ---------------------------------------------------------------------------
+write(note, 'three')
+settle(watcher)
+
+var handle = file(note, 'r')
+handle.read()
+handle.close()
+
+assert settle(watcher).is_empty(), 'reading a file must not be reported'
+ok('reading or opening a file is never reported')
+
+# ---------------------------------------------------------------------------
+# A rename is a remove and a create
+# ---------------------------------------------------------------------------
+var renamed = os.join_paths(dir, 'renamed.txt')
+
+file(note).rename(renamed)
+
+var moved = wait_for(watcher, 'create', renamed)
+moved.extend(settle(watcher))
+
+assert has(moved, 'remove', note), 'the old name must be reported as removed'
+ok('a rename is reported as the old path removed and the new one created')
+
+# ---------------------------------------------------------------------------
+# Changes not yet handed over are merged
+# ---------------------------------------------------------------------------
+settle(watcher)
+
+iter var i = 0; i < 5; i++ {
+  write(renamed, 'version ${i}')
+}
+
+# Long enough for every one of those events to have arrived before any
+# of them is asked for.
+os.sleep(0.5)
+
+var burst = settle(watcher)
+
+assert count(burst, 'modify', renamed) == 1,
+  'five writes nobody read in between must be reported once, got ${burst}'
+ok('changes waiting to be handed over are merged')
+
+# ---------------------------------------------------------------------------
+# Recursive and non-recursive directories
+# ---------------------------------------------------------------------------
+var nested = os.join_paths(dir, 'later', 'deeper')
+
+os.create_dir(nested, 0c755, true)
+
+var deep = os.join_paths(nested, 'deep.txt')
+
+settle(watcher)
+write(deep, 'deep')
+wait_for(watcher, 'create', deep)
+ok('a recursive watch covers directories created after it started')
+
+watcher.close()
+
+var flat = scratch()
+var flat_watcher = os.Watcher().add(flat, false)
+var inner = os.join_paths(flat, 'inner')
+
+os.create_dir(inner)
+wait_for(flat_watcher, 'create', inner)
+write(os.join_paths(inner, 'hidden.txt'), 'not reported')
+
+var below = settle(flat_watcher)
+
+var leaked = below.filter(
+  @(e) => e.path != nil and e.path.starts_with(inner + os.path_separator),
+)
+
+assert leaked.is_empty(),
+  'a non-recursive watch must not report what happens inside a subdirectory, got ${below}'
+ok('a non-recursive watch covers only the entries directly inside it')
+
+flat_watcher.close()
+
+# ---------------------------------------------------------------------------
+# A single file, saved by renaming a new copy over it
+# ---------------------------------------------------------------------------
+var single = scratch()
+var config = os.join_paths(single, 'config.toml')
+var sibling = os.join_paths(single, 'sibling.txt')
+
+write(config, 'a = 1')
+
+var file_watcher = os.Watcher().add(config)
+
+write(sibling, 'not watched')
+assert settle(file_watcher).is_empty(),
+  'a file watch must not report the files beside it'
+ok('watching a file reports nothing about the files beside it')
+
+var copy = os.join_paths(single, 'config.toml.tmp')
+
+write(copy, 'a = 2')
+file(copy).rename(config)
+
+var saved = wait_for(file_watcher, 'create', config)
+saved.extend(settle(file_watcher))
+
+assert !saved.some(@(e) => e.path == copy),
+  'the temporary copy must not be reported'
+ok('a file replaced by renaming a new copy over it is reported as created')
+
+write(config, 'a = 3')
+wait_for(file_watcher, 'modify', config)
+ok('the watch on a file survives the file being replaced')
+
+# ---------------------------------------------------------------------------
+# remove(), paths(), close()
+# ---------------------------------------------------------------------------
+assert file_watcher.remove(config) == true,
+  'remove() must report that the path was watched'
+assert file_watcher.remove(config) == false, 'and that it is not any more'
+assert file_watcher.paths().is_empty(), 'paths() must not name a removed path'
+
+settle(file_watcher)
+write(config, 'a = 4')
+assert settle(file_watcher).is_empty(), 'a removed path must not be reported'
+ok('remove() stops a watch and says whether there was one')
+
+var started = time()
+assert file_watcher.next(150) == nil,
+  'next() must give up when the timeout passes'
+assert time() - started >= 0.1, 'and not before'
+assert file_watcher.next(0) == nil, 'a zero timeout must return at once'
+ok('next() returns nil once its timeout passes')
+
+file_watcher.close()
+file_watcher.close()
+
+assert file_watcher.is_closed(), 'is_closed() must say so'
+assert file_watcher.paths().is_empty(), 'a closed watcher watches nothing'
+assert raises(@() => file_watcher.next(0)),
+  'next() on a closed watcher must raise'
+assert raises(@() => file_watcher.add(single)),
+  'add() on a closed watcher must raise'
+ok('close() is final, and closing twice is harmless')
+
+# ---------------------------------------------------------------------------
+# Errors
+# ---------------------------------------------------------------------------
+var errors = os.Watcher()
+
+assert raises(@() => errors.add(os.join_paths(single, 'missing'))),
+  'add() must raise for a path with nothing at it'
+assert errors.paths().is_empty(), 'a failed add() must leave nothing watched'
+assert raises(@() => errors.follow('not a process')),
+  'follow() must raise for anything but a Process'
+ok('add() and follow() refuse what they cannot watch')
+
+errors.close()
+
+# ---------------------------------------------------------------------------
+# Iteration
+# ---------------------------------------------------------------------------
+var looped = os.Watcher().add(single)
+var trigger = os.join_paths(single, 'trigger.txt')
+var iterated = []
+
+write(trigger, 'go')
+
+for event in looped {
+  iterated.append(event)
+
+  if event.path == trigger {
+    looped.close()
+  }
+}
+
+assert has(iterated, 'create', trigger), 'a for loop must hand out events'
+ok('a for loop over a watcher runs until the watcher is closed')
+
+# ---------------------------------------------------------------------------
+# Following a process
+# ---------------------------------------------------------------------------
+var helper = os.join_paths(single, 'exits.zu')
+
+write(helper, 'import os\n\nos.sleep(0.3)\nos.exit(7)\n')
+
+var quiet = { stdout: 'null', stderr: 'null' }
+var child = os.spawn(os.exe_path, ['run', helper], quiet)
+var follower = os.Watcher()
+
+assert follower.follow(child) == follower,
+  'follow() must return the watcher, for chaining'
+
+var exit = follower.next(PATIENCE)
+
+assert exit != nil and exit.kind == 'exit',
+  'the exit of a followed process must be reported'
+assert exit.path == nil, 'an exit has no path'
+assert exit.process == child, 'the exit must name the process that exited'
+assert child.wait() == 7,
+  'following must leave the exit status for wait() to read'
+ok('a followed process is reported when it exits, and can still be waited for')
+
+follower.follow(child)
+
+var again = follower.next(PATIENCE)
+
+assert again != nil and again.kind == 'exit' and again.process == child,
+  'a process already waited for must be reported as exited at once'
+assert follower.next(QUIET) == nil, 'each exit is reported once'
+ok('a process that has already exited is reported straight away')
+
+follower.close()
+
+# ---------------------------------------------------------------------------
+# A trapped signal cuts the wait short
+# ---------------------------------------------------------------------------
+if os.platform != 'windows' {
+  var caught = 0
+
+  os.on_signal('INT', @() {
+    caught++
+    return true
+  })
+
+  var waiting = os.Watcher().add(single)
+
+  os.spawn('sh', ['-c', 'sleep 0.3; kill -INT ${os.pid()}'], nil)
+
+  var before = time()
+  var woken = waiting.next(PATIENCE)
+
+  assert woken == nil, 'a wait cut short by a signal must return nil'
+  assert caught == 1, 'the signal callback must have run'
+  assert time() - before < PATIENCE / 2000,
+    'the wait must end when the signal arrives'
+  ok('a signal with a callback ends the wait at once, and the callback runs')
+
+  waiting.close()
+}
+
+# ---------------------------------------------------------------------------
+# Inside an isolate, cancelling it ends the wait
+# ---------------------------------------------------------------------------
+def wait_in_isolate(path) {
+  var inside = os.Watcher().add(path)
+  var event = inside.next()
+
+  inside.close()
+
+  return [event == nil, isolate.is_cancelled()]
+}
+
+var worker = isolate.spawn(wait_in_isolate, single)
+
+os.sleep(0.3)
+worker.cancel()
+
+var ended = worker.join(PATIENCE / 1000)
+
+assert ended == [true, true],
+  'cancelling the isolate must end its wait with nil, got ${ended}'
+ok('a wait inside an isolate ends when the isolate is cancelled')
+
+os.remove_dir(dir, true)
+os.remove_dir(flat, true)
+os.remove_dir(single, true)
+
+echo ''
+echo '═══════════════════════════════════════════════════════'
+echo '  All ${_passed} watcher checks passed.'
+echo '═══════════════════════════════════════════════════════'

@@ -14,6 +14,8 @@
 use std::io::{Read, Write};
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::{Arc, Condvar, Mutex};
+
+use super::watch::FollowTarget;
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
@@ -465,5 +467,51 @@ impl Process {
 
   pub fn pid(&self) -> u32 {
     self.child.id()
+  }
+
+  /// What a watcher waits on to learn this child has exited, without
+  /// reaping it, so `wait()` still reads the exit status afterwards.
+  pub fn follow_target(&self) -> Result<FollowTarget, String> {
+    if self.exited {
+      return Ok(FollowTarget::Exited);
+    }
+
+    #[cfg(unix)]
+    return Ok(FollowTarget::Pid(self.child.id()));
+
+    #[cfg(windows)]
+    {
+      use std::os::windows::io::AsRawHandle;
+      use windows_sys::Win32::Foundation::{DUPLICATE_SAME_ACCESS, DuplicateHandle, HANDLE};
+      use windows_sys::Win32::System::Threading::GetCurrentProcess;
+
+      // A handle of the follower's own, since the `Child` closes its
+      // handle when it is dropped and the follower may still be waiting.
+      let mut copy: HANDLE = std::ptr::null_mut();
+      let ok = unsafe {
+        let me = GetCurrentProcess();
+        DuplicateHandle(
+          me,
+          self.child.as_raw_handle() as _,
+          me,
+          &mut copy,
+          0,
+          0,
+          DUPLICATE_SAME_ACCESS,
+        )
+      };
+
+      if ok == 0 {
+        return Err(format!(
+          "could not follow the process: {}",
+          std::io::Error::last_os_error()
+        ));
+      }
+
+      return Ok(FollowTarget::Handle(copy as usize));
+    }
+
+    #[cfg(not(any(unix, windows)))]
+    Err("following a process is not supported on this platform".to_string())
   }
 }

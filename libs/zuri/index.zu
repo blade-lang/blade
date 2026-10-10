@@ -23,6 +23,9 @@
  * - `zuri.reflect` inspects live functions, classes and modules,
  *   reads or updates an instance's own properties, and runs the
  *   garbage collector on demand; see {zuri.reflect}.
+ * - `zuri.watch` tells `zuri run --watch` about files a program
+ *   depends on beyond its own source, so a change to one restarts
+ *   it; see {zuri.watch}.
  *
  * The ordinary starting point in practice is a real file on
  * disk, not a source string already sitting in a variable, so
@@ -184,3 +187,4 @@ import @.compile { * }
 import @.diagnostic { * }
 import @.doc
 import @.reflect
+import @.watch

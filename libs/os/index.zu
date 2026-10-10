@@ -91,6 +91,20 @@
  * Windows has no signals. A callback registered there runs for console
  * events like Ctrl+C, and never for anything `kill()` sends.
  *
+ * ## Watching for changes
+ *
+ * A `Watcher` is told about changes to files and directories as the
+ * operating system delivers them, and about the exit of child processes
+ * it follows:
+ *
+ * ```zuri
+ * var watcher = os.Watcher().add('templates')
+ *
+ * for event in watcher {
+ *   echo '${event.kind} ${event.path}'  # e.g. 'modify /srv/app/templates/home.html'
+ * }
+ * ```
+ *
  * ## The machine
  *
  * ```zuri
@@ -120,3 +134,4 @@ import @.fs { * }
 import @.process { * }
 import @.system { * }
 import @.tempfile { * }
+import @.watch { * }

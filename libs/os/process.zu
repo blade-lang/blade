@@ -406,6 +406,18 @@ class Process {
   pid() {
     return _os.process_pid(self._ptr)
   }
+
+  /**
+   * Hands out this process's underlying native handle. `_ptr` is
+   * private the way every field prefixed with `_` is, so a sibling
+   * module like `watch`, which follows a `Process` without belonging to
+   * this class, has no other way to reach it.
+   *
+   * @returns Ptr
+   */
+  native_ptr() {
+    return self._ptr
+  }
 }
 
 /**

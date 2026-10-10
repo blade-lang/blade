@@ -56,6 +56,7 @@ $ zuri init weather --yes       # a project, with tests and a README
 $ cd weather
 $ zuri install thermo           # a dependency, resolved into a lockfile
 $ zuri run                      # run it
+$ zuri run -w                   # and again on every change
 $ zuri test                     # every test file, each in its own process
 $ zuri fmt                      # one house style
 $ zuri bundle --format exe      # one file that runs where Zuri is not installed
@@ -156,7 +157,7 @@ language it serves, and is documented in the same book.
 | Command | What it gives you |
 | --- | --- |
 | `zuri` | the REPL |
-| `zuri run` | runs a script, a package, or a whole directory |
+| `zuri run` | runs a script, a package, or a whole directory; with `-w`, runs it again whenever a file it uses changes |
 | `zuri init` | starts a project: a manifest, an app module, a test and a README |
 | `zuri test` | runs the tests, every file in a process of its own, as many at once as `--jobs` allows |
 | `zuri fmt` | lays out Zuri source in one house style; `--dry-run` is the check a commit hook or CI job runs |

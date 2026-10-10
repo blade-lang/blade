@@ -200,6 +200,10 @@ pub(crate) fn load_from_candidate(vm: &mut VM, base: &Path, raw_path: &str) -> I
     )
   })?;
 
+  // Before it is parsed, so a module that fails to compile is watched
+  // as well and its fix is what restarts the program.
+  crate::watch::record_source(Path::new(&canonical), source.as_bytes());
+
   let display_name = module_display_name(&file_path);
   let module_val = vm.heap.alloc_module(ObjModule {
     name: display_name,

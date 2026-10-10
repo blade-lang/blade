@@ -478,6 +478,92 @@ Doing this in every module that reads a file next to itself is the
 difference between a program that works and one that works only from the
 project root.
 
+## Watching for Changes
+
+An `os.Watcher` is told when files change, by the operating system, as
+they change. It does not look at the files over and over. It asks the
+platform's own mechanism to report them: inotify on Linux, FSEvents on
+macOS, `ReadDirectoryChangesW` on Windows, kqueue on the BSDs.
+
+```zuri
+import os
+
+var dir = os.create_temp_dir('notes-')
+var watcher = os.Watcher().add(dir)
+
+file(os.join_paths(dir, 'todo.txt'), 'w').write('buy milk')
+
+var event = watcher.next(5000)
+
+echo '${event.kind} ${os.base_name(event.path)}'
+
+watcher.close()
+os.remove_dir(dir, true)
+```
+
+```console
+create todo.txt
+```
+
+`add()` takes a directory, which is watched with everything under it, or
+a single file. `next()` waits for the next event and takes a timeout in
+milliseconds, returning `nil` if nothing happened in time. Each event's
+`kind` is one of these:
+
+- `'create'`: something now stands at `path`;
+- `'modify'`: the file at `path` changed in place;
+- `'remove'`: nothing stands at `path` any more;
+- `'rescan'`: the operating system dropped events, so anything may have
+  changed.
+
+A rename is a `'remove'` of the old path and a `'create'` of the new one.
+Reading a file is never reported.
+
+A watcher can follow a child process too, and then its exit arrives in
+the same wait as the file changes:
+
+```zuri
+import os
+
+var child = os.spawn(os.exe_path, ['--version'], { stdout: 'null' })
+var watcher = os.Watcher().follow(child)
+
+var event = watcher.next(5000)
+
+echo event.kind
+echo event.process.wait()
+
+watcher.close()
+```
+
+```console
+exit
+0
+```
+
+A `for` loop over a watcher waits for event after event until the
+watcher is closed. A signal handler is still answered while it waits,
+which makes Ctrl+C the natural way to stop one:
+
+```zuri,ignore
+import os
+
+var watcher = os.Watcher().add('templates')
+
+os.on_signal('INT', @() {
+  watcher.close()
+  return true
+})
+
+for event in watcher {
+  echo '${event.kind} ${event.path}'
+}
+
+echo 'stopped watching'
+```
+
+This is what `zuri run --watch` is built on.
+
 ## A Worked Example
 
 Counting words across every text file in a directory tree, start to finish:

@@ -8,3 +8,4 @@ pub(crate) mod modules;
 pub mod project;
 pub mod term;
 pub mod vm;
+pub mod watch;
