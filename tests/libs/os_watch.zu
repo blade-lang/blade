@@ -80,6 +80,11 @@ def settle(watcher) {
   }
 }
 
+# The events as text, for a failed check to show.
+def show(events: list) {
+  return ', '.join(events.map(@(e) => '${e.kind} ${e.path}'))
+}
+
 def has(events: list, kind: string, path: string) {
   return events.some(@(e) => e.kind == kind and e.path == path)
 }
@@ -134,7 +139,10 @@ var handle = file(note, 'r')
 handle.read()
 handle.close()
 
-assert settle(watcher).is_empty(), 'reading a file must not be reported'
+var reads = settle(watcher)
+
+assert reads.is_empty(),
+  'reading a file must not be reported, got ${show(reads)}'
 ok('reading or opening a file is never reported')
 
 # ---------------------------------------------------------------------------
@@ -216,9 +224,15 @@ write(config, 'a = 1')
 
 var file_watcher = os.Watcher().add(config)
 
+# FSEvents can deliver the write just before the watch started after it,
+# so anything already on its way is taken first.
+settle(file_watcher)
 write(sibling, 'not watched')
-assert settle(file_watcher).is_empty(),
-  'a file watch must not report the files beside it'
+
+var beside = settle(file_watcher)
+
+assert beside.is_empty(),
+  'a file watch must not report the files beside it, got ${show(beside)}'
 ok('watching a file reports nothing about the files beside it')
 
 var copy = os.join_paths(single, 'config.toml.tmp')
@@ -247,7 +261,11 @@ assert file_watcher.paths().is_empty(), 'paths() must not name a removed path'
 
 settle(file_watcher)
 write(config, 'a = 4')
-assert settle(file_watcher).is_empty(), 'a removed path must not be reported'
+
+var after = settle(file_watcher)
+
+assert after.is_empty(),
+  'a removed path must not be reported, got ${show(after)}'
 ok('remove() stops a watch and says whether there was one')
 
 var started = time()

@@ -48,6 +48,11 @@
  * Reading a file, or opening one without writing to it, is never
  * reported.
  *
+ * On macOS a change made just before `add()` can be reported after it,
+ * because FSEvents hands changes over asynchronously. Call `next()`
+ * with a short timeout until it returns `nil` to set aside anything
+ * already on its way.
+ *
  * Each event is checked against the filesystem as `next()` hands it
  * over, so it describes the path as it is at that moment. A file
  * created and removed again before the events are read is reported only

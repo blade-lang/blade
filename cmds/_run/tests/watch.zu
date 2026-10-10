@@ -18,18 +18,32 @@ var QUIET = 1500
 
 var PROJECT = nil
 
+# The temporary directory watch mode is given, so what it leaves behind
+# is this test's alone to look for, whatever else is running.
+var SCRATCH = nil
+
 # The watch mode the current test started, stopped after the test even
 # when an expectation failed halfway through it.
 var RUNNING = nil
 
-# What the program logs on each start: its module's message, the
-# template it rendered, its process id, and its own arguments.
+# The program under watch. Before it imports anything of its own it
+# notes that it has begun, so a run that fails on a broken module can be
+# told apart from one that never started; the module comes before
+# anything slow to load, so a broken one fails straight away. Once
+# running it logs its module's message, the template it rendered, its
+# process id, and its own arguments.
 var PROGRAM = '\n'.join([
   'import os',
-  'import wire',
-  'import .lib.greet',
   '',
   'var here = os.dir_name(__file__)',
+  'var begun = file(os.join_paths(here, "begun.txt"), "a")',
+  '',
+  'begun.write(os.pid().to_string() + "\\n")',
+  'begun.close()',
+  '',
+  'import .lib.greet',
+  'import wire',
+  '',
   'var view = wire.wire({ root: os.join_paths(here, "views") })',
   'var page = view.render("page").trim()',
   'var line = [greet.message(), page, os.pid().to_string(), " ".join(os.args[2,])]',
@@ -69,11 +83,11 @@ def message(text: string) {
   put('lib/greet.zu', 'def message() {\n  return "${text}"\n}\n')
 }
 
-# The watch directories left in the temporary directory.
+# What watch mode left in its temporary directory.
 def leftovers() {
-  var names = os.read_dir(os.temp_dir(), false)
+  var names = os.read_dir(SCRATCH, false)
 
-  return names.filter(@(name) => name.starts_with('zuri-watch-'))
+  return names.filter(@(name) => name != '.' and name != '..')
 }
 
 /**
@@ -90,7 +104,7 @@ class Watching {
       stdin: 'null',
       stdout: 'pipe',
       stderr: 'pipe',
-      env: { NO_COLOR: '1' },
+      env: { NO_COLOR: '1', TMPDIR: SCRATCH, TMP: SCRATCH, TEMP: SCRATCH },
     })
 
     RUNNING = self
@@ -127,12 +141,35 @@ class Watching {
     return found
   }
 
+  # How many runs have begun, whether or not they got as far as
+  # logging a start.
+  begun() {
+    var path = os.join_paths(PROJECT, 'begun.txt')
+
+    if !file(path).exists() {
+      return 0
+    }
+
+    var handle = file(path, 'r')
+    var text = handle.read()
+
+    handle.close()
+
+    return text.trim().split('\n').length()
+  }
+
   # Waits until `count` starts are logged, for at most `limit` ms.
   # Returns whether they were.
   wait_for(count: number, limit: number) {
+    return self.wait_until(@() => self.starts().length() >= count, limit)
+  }
+
+  # Waits until `done()` is true, for at most `limit` ms, looking again
+  # each time something in the project changes. Returns whether it was.
+  wait_until(done: function, limit: number) {
     var deadline = time() + limit / 1000
 
-    while self.starts().length() < count {
+    while !done() {
       var left = ((deadline - time()) * 1000).floor()
 
       if left <= 0 {
@@ -186,6 +223,18 @@ class Watching {
 
 before_each(@{
   PROJECT = os.real_path(create_temp_dir('zuri-run-watch-'))
+  SCRATCH = os.real_path(create_temp_dir('zuri-run-scratch-'))
+
+  # Reached through a link where links are free to make, the way macOS
+  # reaches its temporary directory, so watch mode is held to naming
+  # its own files the way their events do. Windows spells its own with
+  # short names, which comes to the same thing.
+  if os.platform != 'windows' {
+    var link = SCRATCH + '-link'
+
+    file(SCRATCH).symlink(link)
+    SCRATCH = link
+  }
 
   put('project.toml', '[project]\nname = "watched"\nversion = "0.1.0"\n')
   put('index.zu', PROGRAM)
@@ -201,12 +250,15 @@ after_each(@{
 
   os.remove_dir(PROJECT, true)
 
-  # Windows ends watch mode outright, without its own clean up.
-  if os.platform == 'windows' {
-    for name in leftovers() {
-      os.remove_dir(os.join_paths(os.temp_dir(), name), true)
-    }
+  # Windows ends watch mode outright, before it can clean up after
+  # itself, so whatever it left goes with its directory.
+  var real = os.real_path(SCRATCH)
+
+  if real != SCRATCH {
+    file(SCRATCH).delete()
   }
+
+  os.remove_dir(real, true)
 })
 
 describe('zuri run --watch', @{
@@ -315,6 +367,9 @@ describe('zuri run --watch', @{
 
     expect(run.wait_for(1, PATIENCE)).to_be_true()
 
+    # Nothing starts it again until something changes.
+    expect(run.wait_for(2, QUIET)).to_be_false()
+
     message('back')
 
     expect(run.wait_for(2, PATIENCE)).to_be_true()
@@ -332,8 +387,9 @@ describe('zuri run --watch', @{
 
     put('lib/greet.zu', 'def message( {\n')
 
-    # The broken start logs nothing, and its exit is what the fix
-    # follows.
+    # The broken run begins and then fails on its first import, which
+    # it is given time to do before the fix arrives. It logs no start.
+    expect(run.wait_until(@() => run.begun() >= 2, PATIENCE)).to_be_true()
     expect(run.wait_for(2, QUIET)).to_be_false()
 
     message('v3')
@@ -370,7 +426,6 @@ var SIGNALS = [['TERM', 15], ['INT', 2], ['HUP', 1]]
 if os.platform != 'windows' {
   describe('stopping zuri run --watch', @{
     it_each(SIGNALS, 'stops on $0 and leaves nothing behind', @(name, number) {
-      var before = leftovers()
       var run = Watching([])
 
       expect(run.wait_for(1, PATIENCE)).to_be_true()
@@ -387,7 +442,7 @@ if os.platform != 'windows' {
 
       expect(gone).to_be_true()
       expect(status).to_equal(128 + number)
-      expect(leftovers().filter(@(dir) => !before.contains(dir))).to_equal([])
+      expect(leftovers()).to_equal([])
     })
   })
 }

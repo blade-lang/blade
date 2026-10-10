@@ -139,19 +139,24 @@ class Session {
    * @param list args: the program's own arguments.
    */
   @new(entry: string, args: list) {
-    self.entry = entry
+    # Every path kept here is resolved through its links, the way the
+    # watcher names the paths in its events and the runtime names the
+    # files in its report. A temporary directory reached through a link,
+    # as on macOS, or spelled with short names, as on Windows, would
+    # otherwise never compare equal to the events about it.
+    self.entry = os.real_path(entry)
     self.args = args
     self._changed = []
     self._files = {}
     self._trees = []
     self._seen = {}
 
-    var directory = os.dir_name(entry)
+    var directory = os.dir_name(self.entry)
     var project = paths.find_root(directory)
 
-    self.root = project == nil ? directory : project
+    self.root = os.real_path(project == nil ? directory : project)
     self.watcher = os.Watcher()
-    self._scratch = os.create_temp_dir('zuri-watch-')
+    self._scratch = os.real_path(os.create_temp_dir('zuri-watch-'))
   }
 
   /**
@@ -222,7 +227,7 @@ class Session {
 
     var cause
 
-    if self.report != nil and event.path == self.report.path {
+    if self.report != nil and _key(event.path) == _key(self.report.path) {
       cause = self._read_report()
     } else if self._depends_on(event.path) {
       cause = event.path
