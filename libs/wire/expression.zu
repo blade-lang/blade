@@ -50,7 +50,6 @@ import .values {
   compare, invoke, is_blank, stringify, truthy, type_name, unwrap,
 }
 
-
 /**
  * The words that are part of the language rather than names a template
  * can bind.
@@ -70,7 +69,6 @@ var SHORT_OPERATORS = [
   '?', ':', '.', ',', '(', ')', '[', ']', '{', '}',
   '|', '=', '+', '-', '*', '/', '%', '<', '>', '!',
 ]
-
 
 # --------------------------------------------------------------------
 # Syntax tree
@@ -101,7 +99,6 @@ class Expression {
   }
 }
 
-
 /**
  * A number, a string, or one of `true`, `false` and `nil`.
  */
@@ -128,7 +125,6 @@ class Literal < Expression {
     return self.value
   }
 }
-
 
 /**
  * A bare name, looked up in the variables the template was rendered
@@ -157,7 +153,6 @@ class Variable < Expression {
     return scope.lookup(self.name)
   }
 }
-
 
 /**
  * A dotted lookup, as in `user.name`.
@@ -193,7 +188,6 @@ class Member < Expression {
   }
 }
 
-
 /**
  * A bracketed lookup, as in `items[index]`, where the key is itself an
  * expression.
@@ -228,7 +222,6 @@ class Index < Expression {
     return _read(scope, self.target.evaluate(scope), self.key.evaluate(scope))
   }
 }
-
 
 /**
  * A call, as in `route('home')` or `user.display_name()`.
@@ -284,7 +277,6 @@ class Call < Expression {
   }
 }
 
-
 /**
  * A list literal.
  */
@@ -317,7 +309,6 @@ class ListLiteral < Expression {
     return out
   }
 }
-
 
 /**
  * A dictionary literal.
@@ -353,7 +344,6 @@ class DictLiteral < Expression {
     return out
   }
 }
-
 
 /**
  * `not x`, `!x` or `-x`.
@@ -398,7 +388,6 @@ class Unary < Expression {
     return -value
   }
 }
-
 
 /**
  * An arithmetic or comparison operator.
@@ -477,7 +466,6 @@ class Binary < Expression {
   }
 }
 
-
 /**
  * `and`, `or` or `??`, each of which decides whether to evaluate its
  * right side after looking at its left.
@@ -545,7 +533,6 @@ class Logical < Expression {
   }
 }
 
-
 /**
  * `condition ? consequence : alternative`.
  */
@@ -590,7 +577,6 @@ class Conditional < Expression {
     return self.alternative.evaluate(scope)
   }
 }
-
 
 /**
  * A value passed through a filter, as in `name|upper`.
@@ -639,7 +625,6 @@ class Filter < Expression {
     return scope.apply_filter(self.name, value, values)
   }
 }
-
 
 # --------------------------------------------------------------------
 # Shared evaluation helpers
@@ -726,7 +711,6 @@ def _read(scope, target, key) {
   return nil
 }
 
-
 /**
  * _key_ as a list index, or `nil` when it is not one.
  *
@@ -752,7 +736,6 @@ def _as_index(key) {
   return nil
 }
 
-
 /**
  * Whether _a_ and _b_ are the same value, with markup compared by the
  * text it carries so that a filtered value still equals the string it
@@ -765,7 +748,6 @@ def _as_index(key) {
 def _equal(a, b) {
   return unwrap(a) == unwrap(b)
 }
-
 
 /**
  * Whether _needle_ is in _haystack_, for the `in` operator.
@@ -808,7 +790,6 @@ def _contains(scope, haystack, needle) {
   scope.fail('cannot look inside ${type_name(haystack)} with "in"')
 }
 
-
 /**
  * Applies an arithmetic or ordering operator to two values.
  *
@@ -833,7 +814,7 @@ def _arithmetic(scope, operator: string, a, b) {
     if !_numeric(left) or !_numeric(right) {
       if !is_string(left) or !is_string(right) {
         scope.fail(
-          'cannot order ${type_name(a)} against ${type_name(b)}'
+          'cannot order ${type_name(a)} against ${type_name(b)}',
         )
       }
     }
@@ -843,7 +824,7 @@ def _arithmetic(scope, operator: string, a, b) {
 
   if !_numeric(left) or !_numeric(right) {
     scope.fail(
-      'cannot apply "${operator}" to ${type_name(a)} and ${type_name(b)}'
+      'cannot apply "${operator}" to ${type_name(a)} and ${type_name(b)}',
     )
   }
 
@@ -874,7 +855,6 @@ def _arithmetic(scope, operator: string, a, b) {
   return left % right
 }
 
-
 /**
  * Turns the `-1`, `0` or `1` an ordering gives into the answer one of
  * the four ordering operators wanted.
@@ -899,7 +879,6 @@ def _ordered(operator: string, order: number) {
   return order >= 0
 }
 
-
 /**
  * The range from _a_ up to but not including _b_.
  *
@@ -915,13 +894,12 @@ def _range(scope, a, b) {
 
   if !is_number(from) or !is_number(to) or from % 1 != 0 or to % 1 != 0 {
     scope.fail(
-      'a range needs two whole numbers, got ${type_name(a)} and ${type_name(b)}'
+      'a range needs two whole numbers, got ${type_name(a)} and ${type_name(b)}',
     )
   }
 
   return from..to
 }
-
 
 /**
  * Whether _value_ is something arithmetic can be done with.
@@ -932,7 +910,6 @@ def _range(scope, a, b) {
 def _numeric(value) {
   return is_number(value) or is_bigint(value)
 }
-
 
 # --------------------------------------------------------------------
 # Lexer
@@ -971,7 +948,6 @@ class Token {
     self.offset = offset
   }
 }
-
 
 /**
  * Splits _source_ into tokens.
@@ -1040,14 +1016,13 @@ def tokenize(source: string, path: string, line: number, column: number) {
 
     raise TemplateSyntaxError(
       'unexpected "${character}" in expression "${source}"',
-      path, line, column
+      path, line, column,
     )
   }
 
   tokens.append(Token('end', nil, characters.length()))
   return tokens
 }
-
 
 /**
  * Reads a quoted string starting at _at_, returning its value and the
@@ -1088,10 +1063,9 @@ def _scan_string(characters: list, at: number, source: string, path: string,
 
   raise TemplateSyntaxError(
     'unterminated string in expression "${source}"',
-    path, line, column
+    path, line, column,
   )
 }
-
 
 /**
  * What a backslash escape stands for. Anything not listed stands for
@@ -1116,7 +1090,6 @@ def _unescape(character: string) {
 
   return character
 }
-
 
 /**
  * Reads a number starting at _at_, returning its value and the offset
@@ -1157,7 +1130,6 @@ def _scan_number(characters: list, at: number) {
   return [''.join(out).to_number(), index]
 }
 
-
 /**
  * Reads a name starting at _at_, returning it and the offset just past
  * it.
@@ -1178,7 +1150,6 @@ def _scan_name(characters: list, at: number) {
 
   return [''.join(out), index]
 }
-
 
 # --------------------------------------------------------------------
 # Parser
@@ -1870,11 +1841,10 @@ class Parser {
   fail(reason: string) {
     raise TemplateSyntaxError(
       '${reason} in expression "${self.source}"',
-      self.path, self.line, self.column
+      self.path, self.line, self.column,
     )
   }
 }
-
 
 /**
  * Compiles _source_ into a syntax tree.

@@ -127,8 +127,8 @@ class PostgresDriver < Driver {
     if !is_string(dsn) {
       raise ConnectionError(
         'a postgres connection string is a string or a dictionary, ' +
-        'not ${typeof(dsn)}',
-        { driver: 'postgres' }
+          'not ${typeof(dsn)}',
+        { driver: 'postgres' },
       )
     }
 
@@ -137,7 +137,7 @@ class PostgresDriver < Driver {
     if text.is_empty() {
       raise ConnectionError(
         'a postgres connection string cannot be empty',
-        { driver: 'postgres' }
+        { driver: 'postgres' },
       )
     }
 
@@ -206,8 +206,8 @@ class PostgresDriver < Driver {
     if !unix.is_supported() {
       raise NotSupportedError(
         'this platform has no unix domain sockets; connect over TCP ' +
-        'by giving a host name or address instead of ${path}',
-        { driver: 'postgres' }
+          'by giving a host name or address instead of ${path}',
+        { driver: 'postgres' },
       )
     }
 
@@ -220,7 +220,7 @@ class PostgresDriver < Driver {
     } as error {
       raise ConnectionError(
         'could not connect to ${path}: ${error.message}',
-        { driver: 'postgres' }
+        { driver: 'postgres' },
       )
     }
 
@@ -242,7 +242,7 @@ class PostgresDriver < Driver {
     } as error {
       raise ConnectionError(
         'could not connect to ${address}: ${error.message}',
-        { driver: 'postgres' }
+        { driver: 'postgres' },
       )
     }
 
@@ -266,7 +266,7 @@ class PostgresDriver < Driver {
     } as error {
       raise ConnectionError(
         'could not ask the server for TLS: ${error.message}',
-        { driver: 'postgres' }
+        { driver: 'postgres' },
       )
     }
 
@@ -275,7 +275,7 @@ class PostgresDriver < Driver {
     if answer == nil or answer.length() == 0 {
       raise ConnectionError(
         'the server closed the connection when asked for TLS',
-        { driver: 'postgres' }
+        { driver: 'postgres' },
       )
     }
 
@@ -285,7 +285,7 @@ class PostgresDriver < Driver {
 
         raise ConnectionError(
           'the server will not use TLS and sslmode is require',
-          { driver: 'postgres' }
+          { driver: 'postgres' },
         )
       }
 
@@ -309,7 +309,7 @@ class PostgresDriver < Driver {
     } as error {
       raise ConnectionError(
         'the TLS handshake with ${options.host} failed: ${error.message}',
-        { driver: 'postgres' }
+        { driver: 'postgres' },
       )
     }
   }
@@ -333,7 +333,9 @@ class PostgresDriver < Driver {
           continue
         }
 
-        options.set(_decode(pair[0, mark]), _decode(pair[mark + 1, pair.length()]))
+        options.set(
+          _decode(pair[0, mark]), _decode(pair[mark + 1, pair.length()]),
+        )
       }
 
       rest = rest[0, query]
@@ -363,7 +365,9 @@ class PostgresDriver < Driver {
         options.set('user', _decode(credentials))
       } else {
         options.set('user', _decode(credentials[0, colon]))
-        options.set('password', _decode(credentials[colon + 1, credentials.length()]))
+        options.set(
+          'password', _decode(credentials[colon + 1, credentials.length()]),
+        )
       }
     }
 
@@ -379,7 +383,7 @@ class PostgresDriver < Driver {
         if close == -1 {
           raise ConnectionError(
             'this connection string has an unclosed IPv6 address',
-            { driver: 'postgres' }
+            { driver: 'postgres' },
           )
         }
 
@@ -423,7 +427,7 @@ class PostgresDriver < Driver {
       if mark == -1 {
         raise ConnectionError(
           '${piece} is not a key=value pair',
-          { driver: 'postgres' }
+          { driver: 'postgres' },
         )
       }
 
@@ -451,7 +455,7 @@ class PostgresDriver < Driver {
     if is_string(port) {
       if !port.is_number() {
         raise ConnectionError(
-          '${port} is not a port number', { driver: 'postgres' }
+          '${port} is not a port number', { driver: 'postgres' },
         )
       }
 
@@ -460,7 +464,9 @@ class PostgresDriver < Driver {
 
     filled.set('port', port)
 
-    var timeout = options.get('timeout', options.get('connect_timeout', DEFAULT_TIMEOUT))
+    var timeout = options.get(
+      'timeout', options.get('connect_timeout', DEFAULT_TIMEOUT),
+    )
     filled.set('timeout', is_string(timeout) ? timeout.to_number() : timeout)
 
     var mode = options.get('sslmode', 'prefer')
@@ -468,18 +474,23 @@ class PostgresDriver < Driver {
     if !SSL_MODES.contains(mode) {
       raise ConnectionError(
         'sslmode is one of ${', '.join(SSL_MODES)}, not ${mode}',
-        { driver: 'postgres' }
+        { driver: 'postgres' },
       )
     }
 
     filled.set('sslmode', mode)
-    filled.set('ssl_root_cert', options.get('sslrootcert', options.get('ssl_root_cert', nil)))
+    filled.set(
+      'ssl_root_cert',
+      options.get('sslrootcert', options.get('ssl_root_cert', nil)),
+    )
     filled.set('registry', options.get('registry', DEFAULT_REGISTRY))
 
     var parameters = options.get('parameters', {}).clone()
 
     if !parameters.contains('application_name') {
-      parameters.set('application_name', options.get('application_name', 'zuri'))
+      parameters.set(
+        'application_name', options.get('application_name', 'zuri'),
+      )
     }
 
     filled.set('parameters', parameters)

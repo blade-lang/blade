@@ -180,8 +180,8 @@ def flatten(value) {
 
   raise QueryError(
     'a ${typeof(value)} has no database representation; expected nil, ' +
-    'a bool, a number, a bigint, a string, bytes, a date, a time ' +
-    'interval, or a list or dictionary to store as JSON'
+      'a bool, a number, a bigint, a string, bytes, a date, a time ' +
+      'interval, or a list or dictionary to store as JSON',
   )
 }
 
@@ -388,7 +388,7 @@ def time_from_seconds(total: number) {
     (seconds / 60).floor() % 60,
     seconds % 60,
     micros,
-    negative
+    negative,
   )
 }
 
@@ -451,7 +451,7 @@ def parse_time(text) {
     parts[1].to_number(),
     parts.length() > 2 ? parts[2].to_number() : 0,
     micros,
-    negative
+    negative,
   )
 }
 

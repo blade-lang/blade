@@ -17,7 +17,6 @@ import colors
 
 import .errors { ImageError }
 
-
 /**
  * Clamps a channel value to 0-255 and rounds it to a whole number.
  *
@@ -34,7 +33,6 @@ def _channel(value: number) {
 
   return ((0).max((255).min(value))).round()
 }
-
 
 /**
  * An 8-bit RGBA colour.
@@ -186,7 +184,7 @@ class Color {
       (bits >> 24) & 0xFF,
       (bits >> 16) & 0xFF,
       (bits >> 8) & 0xFF,
-      bits & 0xFF
+      bits & 0xFF,
     )
   }
 
@@ -359,7 +357,7 @@ class Color {
         value[0],
         value[1],
         value[2],
-        value.length() == 4 ? value[3] : 255
+        value.length() == 4 ? value[3] : 255,
       )
     }
 
@@ -645,7 +643,7 @@ class Color {
       self.r + (target.r - self.r) * ratio,
       self.g + (target.g - self.g) * ratio,
       self.b + (target.b - self.b) * ratio,
-      self.a + (target.a - self.a) * ratio
+      self.a + (target.a - self.a) * ratio,
     )
   }
 
@@ -672,7 +670,7 @@ class Color {
       self.r * alpha + under.r * (1 - alpha),
       self.g * alpha + under.g * (1 - alpha),
       self.b * alpha + under.b * (1 - alpha),
-      255
+      255,
     )
   }
 
@@ -850,7 +848,6 @@ class Color {
   }
 }
 
-
 /**
  * Fully transparent.
  *
@@ -862,7 +859,6 @@ class Color {
 # Colour strings already turned into Colors. See `Color.parse`.
 var _parse_cache = {}
 var _PARSE_CACHE_LIMIT = 512
-
 
 var TRANSPARENT = Color(0, 0, 0, 0)
 

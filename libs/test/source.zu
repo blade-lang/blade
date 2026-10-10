@@ -15,7 +15,6 @@ import os
 
 import .style
 
-
 # Files already read for a code frame. A failing suite tends to fail
 # several times in the same file, and reading it once is the
 # difference between one syscall and one per failure.
@@ -24,7 +23,6 @@ var _cache = {}
 # This module's own directory. Every frame under it belongs to the
 # test framework rather than to the code under test.
 var _own_directory = os.dir_name(__file__)
-
 
 /**
  * One frame of a stack trace, pulled apart.
@@ -63,7 +61,6 @@ class Frame {
   }
 }
 
-
 /**
  * Splits one stack trace line into a `Frame`.
  *
@@ -98,7 +95,6 @@ def parse_frame(line: string) {
   return Frame(location[0, colon], number.to_number().int(), name, line)
 }
 
-
 /**
  * Every frame of `stacktrace` that belongs to the code under test,
  * innermost first.
@@ -125,7 +121,6 @@ def user_frames(stacktrace: list) {
   return frames
 }
 
-
 /**
  * The innermost frame of `stacktrace` outside the test module: where
  * the failing line actually is.
@@ -139,7 +134,6 @@ def origin(stacktrace: list) {
 
   return frames.is_empty() ? nil : frames[0]
 }
-
 
 /**
  * A path written relative to the working directory when it is under
@@ -163,7 +157,6 @@ def short_path(path: string) {
   return relative == '.' ? path : relative
 }
 
-
 def _lines_of(path) {
   if _cache.contains(path) {
     return _cache[path]
@@ -179,7 +172,6 @@ def _lines_of(path) {
 
   return lines
 }
-
 
 /**
  * The source around a failure, with the offending line marked.
@@ -238,7 +230,6 @@ def code_frame(frame, context: ?int) {
 
   return out
 }
-
 
 /**
  * Forgets every file read for a code frame.

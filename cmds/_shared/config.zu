@@ -109,7 +109,7 @@ def registries(manifest) {
   } else {
     raise ConfigError(
       "${REGISTRY_VARIABLE} is '${chosen}', which is neither an address nor a registry alias "
-        + 'your configuration or the project defines'
+        + 'your configuration or the project defines',
     )
   }
 

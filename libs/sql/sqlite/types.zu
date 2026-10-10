@@ -147,7 +147,9 @@ def decode_row(values: list, conversions: list) {
   var out = []
 
   for index, value in values {
-    out.append(decode(value, index < conversions.length() ? conversions[index] : nil))
+    out.append(decode(
+      value, index < conversions.length() ? conversions[index] : nil,
+    ))
   }
 
   return out

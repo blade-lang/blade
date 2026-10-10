@@ -13,7 +13,6 @@ import .token { Token }
 import crypto
 import json
 
-
 # ---------------------------------------------------------------------------
 # Options dictionary reference (used by sign and verify)
 # ---------------------------------------------------------------------------
@@ -44,20 +43,24 @@ import json
 #   complete           bool     When true, returns the full Token; otherwise
 #                                returns only the payload dict. Default: false.
 
-
 # Maps a PS-family algorithm identifier to the hash name crypto.rsa expects.
 def _pss_hash_name(alg) {
-  if alg == PS384 return 'sha384'
-  if alg == PS512 return 'sha512'
+  if alg == PS384 {
+    return 'sha384'
+  }
+  if alg == PS512 {
+    return 'sha512'
+  }
   return 'sha256'
 }
 
 # Maps an ES-family algorithm identifier to its coordinate byte length.
 def _ec_coord_len(alg) {
-  if alg == ES384 return 48
+  if alg == ES384 {
+    return 48
+  }
   return 32
 }
-
 
 # ---------------------------------------------------------------------------
 # encode() / decode()
@@ -94,7 +97,7 @@ def encode(header, payload, secret, options) {
   if alg == NONE {
     if !options.get('allow_none', false) {
       raise AlgorithmError(
-        'algorithm "none" is disabled; set allow_none: true in options to permit unsecured tokens'
+        'algorithm "none" is disabled; set allow_none: true in options to permit unsecured tokens',
       )
     }
   }
@@ -152,7 +155,7 @@ def decode(token) {
   if parts.length() != 3 {
     raise MalformedTokenError(
       'malformed token: expected three dot-separated segments, got ' +
-      parts.length().to_string()
+        parts.length().to_string(),
     )
   }
 
@@ -193,7 +196,6 @@ def decode(token) {
 
   return Token(header, payload, parts[2], token)
 }
-
 
 # ---------------------------------------------------------------------------
 # sign()
@@ -313,7 +315,6 @@ def sign(payload, secret, options) {
   return encode(header, claims, secret, options)
 }
 
-
 # ---------------------------------------------------------------------------
 # verify()
 # ---------------------------------------------------------------------------
@@ -399,25 +400,27 @@ def verify(token, secret, options) {
 
   # Step 2: algorithm whitelist
   var accepted = options.get('algorithms', [HS256, HS384, HS512])
-  if !is_list(accepted) { accepted = [accepted] }
+  if !is_list(accepted) {
+    accepted = [accepted]
+  }
 
   if alg == NONE {
     if !options.get('allow_none', false) {
       raise AlgorithmError(
-        'algorithm "none" is not permitted; set allow_none: true to accept unsecured tokens'
+        'algorithm "none" is not permitted; set allow_none: true to accept unsecured tokens',
       )
     }
   } else if !accepted.contains(alg) {
     raise AlgorithmError(
       'token algorithm "' + alg + '" is not in the accepted list: ' +
-      ', '.join(accepted)
+        ', '.join(accepted),
     )
   }
 
   # Step 3: signature verification
   var parts = token.split('.')
   var signing_input = parts[0] + '.' + parts[1]
-  var provided_sig  = parts[2]
+  var provided_sig = parts[2]
   var message = signing_input.to_bytes()
 
   if alg == HS256 or alg == HS384 or alg == HS512 {
@@ -450,8 +453,8 @@ def verify(token, secret, options) {
 
 # Internal: runs temporal and registered claim checks after signature passes.
 def _finish_verify(tok, options) {
-  var payload   = tok.payload
-  var now       = time()
+  var payload = tok.payload
+  var now = time()
   var tolerance = options.get('clock_tolerance', 0)
 
   tok.set_leeway(tolerance)
@@ -466,7 +469,7 @@ def _finish_verify(tok, options) {
     if now > payload['exp'] + tolerance {
       raise TokenExpiredError(
         'token expired at ' + payload['exp'].to_string() +
-        ' (current time: ' + now.to_string() + ')'
+          ' (current time: ' + now.to_string() + ')',
       )
     }
   }
@@ -479,7 +482,7 @@ def _finish_verify(tok, options) {
     if now < payload['nbf'] - tolerance {
       raise TokenExpiredError(
         'token not valid before ' + payload['nbf'].to_string() +
-        ' (current time: ' + now.to_string() + ')'
+          ' (current time: ' + now.to_string() + ')',
       )
     }
   }
@@ -492,7 +495,7 @@ def _finish_verify(tok, options) {
     if payload['iat'] > now + tolerance {
       raise TokenExpiredError(
         'token issued in the future at ' + payload['iat'].to_string() +
-        ' (current time: ' + now.to_string() + ')'
+          ' (current time: ' + now.to_string() + ')',
       )
     }
   }
@@ -507,7 +510,7 @@ def _finish_verify(tok, options) {
     if payload['iss'] != options['issuer'] {
       raise ClaimError(
         'issuer mismatch: expected "' + options['issuer'] +
-        '", got "' + payload['iss'].to_string() + '"'
+          '", got "' + payload['iss'].to_string() + '"',
       )
     }
   }
@@ -520,7 +523,7 @@ def _finish_verify(tok, options) {
     if payload['sub'] != options['subject'] {
       raise ClaimError(
         'subject mismatch: expected "' + options['subject'] +
-        '", got "' + payload['sub'].to_string() + '"'
+          '", got "' + payload['sub'].to_string() + '"',
       )
     }
   }
@@ -552,7 +555,7 @@ def _finish_verify(tok, options) {
     }
     if !matched {
       raise ClaimError(
-        'audience mismatch: token aud does not include any of the expected values'
+        'audience mismatch: token aud does not include any of the expected values',
       )
     }
   }
@@ -562,7 +565,6 @@ def _finish_verify(tok, options) {
   }
   return payload
 }
-
 
 # ---------------------------------------------------------------------------
 # Convenience helpers
@@ -613,7 +615,9 @@ def payload(token) {
  * @throws MalformedTokenError
  */
 def is_expired(token, leeway) {
-  if !leeway { leeway = 0 }
+  if !leeway {
+    leeway = 0
+  }
   var tok = decode(token)
   if tok.payload.contains('exp') {
     if !is_number(tok.payload['exp']) {

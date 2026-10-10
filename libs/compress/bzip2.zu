@@ -33,7 +33,6 @@ def decompress(data) {
   return _compress.bzip2_decompress(data)
 }
 
-
 /**
  * A streaming Bzip2 encoder.
  *
@@ -158,7 +157,6 @@ class Bzip2Encoder {
     return _compress.bzip2_encoder_total_out(self._ptr)
   }
 }
-
 
 /**
  * Streaming bzip2 decompressor implementation.
@@ -291,7 +289,6 @@ class Bzip2Decoder {
     return _compress.bzip2_decoder_total_out(self._ptr)
   }
 }
-
 
 /**
  * The BzFile class implements a Bzip2 based I/O system that

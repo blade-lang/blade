@@ -34,7 +34,10 @@ def _index(entry: dict, names: list) {
   }
 
   catch {
-    return { path: entry.path, summary: summaries.summarize(entry.path, text, names) }
+    return {
+      path: entry.path,
+      summary: summaries.summarize(entry.path, text, names),
+    }
   } as error {
     return { path: entry.path, failed: error.message }
   }
@@ -114,7 +117,9 @@ class IndexPool {
     var count = workers < 1 ? 1 : workers
 
     iter var i = 0; i < count; i++ {
-      self._workers.append(isolate.spawn(work, self._jobs, self.results, self._names))
+      self._workers.append(isolate.spawn(
+        work, self._jobs, self.results, self._names,
+      ))
     }
   }
 

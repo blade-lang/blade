@@ -37,7 +37,9 @@ var STATUSES = ['OK', 'NO', 'BAD', 'PREAUTH', 'BYE']
 
 # The flags with a defined meaning, as opposed to the keywords a server
 # or a client invents.
-var SYSTEM_FLAGS = ['\\Seen', '\\Answered', '\\Flagged', '\\Deleted', '\\Draft', '\\Recent']
+var SYSTEM_FLAGS = [
+  '\\Seen', '\\Answered', '\\Flagged', '\\Deleted', '\\Draft', '\\Recent',
+]
 
 def _is_digit(value: number) {
   return value >= 0x30 and value <= 0x39
@@ -192,14 +194,17 @@ def _read_atom(state) {
   # `\*` is the one place a star is part of a name rather than a
   # wildcard: it is what a PERMANENTFLAGS list says to mean that new
   # keywords may be invented.
-  if state.text[start, start + 2 > state.text.length() ? state.text.length() : start + 2]
+  if state.text[start, start + 2 > state.text.length()
+    ? state.text.length()
+    : start + 2]
     == '\\*' {
     state.at += 2
 
     return '\\*'
   }
 
-  while state.at < state.text.length() and !_ends_atom(state.text[state.at].ord()) {
+  while state.at < state.text.length()
+    and !_ends_atom(state.text[state.at].ord()) {
     state.at++
   }
 
@@ -475,7 +480,9 @@ class Response {
 
     var from = is_number(self.tokens[0]) ? 2 : 1
 
-    return from >= self.tokens.length() ? [] : self.tokens[from, self.tokens.length()]
+    return from >= self.tokens.length()
+      ? []
+      : self.tokens[from, self.tokens.length()]
   }
 
   to_string() {
@@ -584,7 +591,10 @@ def quote(value: string) {
   var needs_quotes = value == ''
 
   for byte_value in value.to_bytes() {
-    if byte_value == 0x0d or byte_value == 0x0a or byte_value > 0x7f or byte_value == 0 {
+    if byte_value == 0x0d
+      or byte_value == 0x0a
+      or byte_value > 0x7f
+      or byte_value == 0 {
       needs_literal = true
       break
     }

@@ -26,7 +26,6 @@ import .node
 import .parser
 import .entities
 
-
 /**
  * Elements that flow inside a line of text rather than starting a new
  * block. Whitespace around these carries meaning, so neither
@@ -58,7 +57,6 @@ var PRESERVE_WHITESPACE = [
   'plaintext',
 ]
 
-
 /**
  * Turns _source_ into a tree, whatever form it arrived in.
  *
@@ -77,7 +75,6 @@ def _to_tree(source, fragment: bool) {
 
   return parser.parse(source, nil)
 }
-
 
 /**
  * Removes the markup a browser does not need and returns the result.
@@ -151,7 +148,6 @@ def minify(source, options: ?dict) {
   return working.outer_html()
 }
 
-
 /**
  * Rewrites _host_'s subtree in place according to the minify options.
  *
@@ -199,7 +195,6 @@ def _strip(host, keep_comments: bool, collapse: bool) {
   }
 }
 
-
 /**
  * True when nothing inside _node_ may be reflowed.
  *
@@ -210,7 +205,6 @@ def _is_preserved(host) {
   return host.is_element() and host.is_html() and
     PRESERVE_WHITESPACE.contains(host.tag_name)
 }
-
 
 /**
  * True when _node_ renders inline by default. Text counts as inline;
@@ -240,7 +234,6 @@ def _is_inline(host) {
   return INLINE_ELEMENTS.contains(host.tag_name)
 }
 
-
 /**
  * True when neither of _child_'s neighbours is inline, so whitespace
  * between them separates nothing.
@@ -255,7 +248,6 @@ def _has_no_inline_neighbour(child) {
   return !_is_inline(child.previous_sibling()) and
     !_is_inline(child.next_sibling())
 }
-
 
 /**
  * Removes whitespace at the very start and end of _host_'s content,
@@ -285,7 +277,6 @@ def _trim_edges(host) {
     }
   }
 }
-
 
 /**
  * Collapses every run of whitespace in _text_ to a single space.
@@ -318,7 +309,6 @@ def _collapse_whitespace(text: string) {
   return ''.join(out)
 }
 
-
 /**
  * True when _c_ is one of the five characters HTML treats as
  * whitespace.
@@ -330,7 +320,6 @@ def _is_whitespace(c: string) {
   return c == ' ' or c == '\n' or c == '\t' or
     c == '\f' or c == '\r'
 }
-
 
 /**
  * Renders _source_ as indented, readable HTML.
@@ -393,7 +382,6 @@ def format(source, options: ?dict) {
   return '\n'.join(lines)
 }
 
-
 /**
  * Normalizes the `indent` option into the string used per level.
  *
@@ -409,7 +397,7 @@ def _indent_unit(indent) {
 
   if !is_number(indent) {
     raise ArgumentError(
-      'indent must be a number of spaces or an indent string'
+      'indent must be a number of spaces or an indent string',
     )
   }
 
@@ -419,7 +407,6 @@ def _indent_unit(indent) {
 
   return ' ' * indent.floor()
 }
-
 
 /**
  * Appends the formatted rendering of _host_ to _lines_.
@@ -502,7 +489,6 @@ def _format_node(host, depth: number, unit: string, keep_comments: bool,
   lines.append(pad + close)
 }
 
-
 /**
  * The opening tag of _element_, attributes and all.
  *
@@ -519,7 +505,6 @@ def _open_tag(element) {
   out.append('>')
   return ''.join(out)
 }
-
 
 /**
  * True when every child of _host_ renders inline, so the whole
@@ -545,7 +530,6 @@ def _all_inline(host) {
 
   return true
 }
-
 
 /**
  * The inline content of _host_ on one line, with runs of whitespace

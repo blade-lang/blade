@@ -375,10 +375,14 @@ class Endpoint < Service {
   dispatch(item: dict) {
     using item.kind {
       when 'message' self._receive(item.text, item.value)
-      when 'unreadable' self._refuse(item.text, item.message)
+      when 'unreadable' {
+        self._refuse(item.text, item.message)
+      }
       when 'closed' self._end()
       when 'failed' {
-        self._report(RpcClosedError('the connection failed: ${item.message}'), nil)
+        self._report(
+          RpcClosedError('the connection failed: ${item.message}'), nil,
+        )
         self._end()
       }
     }

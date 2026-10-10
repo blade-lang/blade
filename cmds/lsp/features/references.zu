@@ -43,7 +43,9 @@ def find(server, target: dict, include_declaration: bool, context) {
     if target.contains('module') {
       found.extend(_module_uses(server, target, path))
     } else {
-      found.extend(query.references(server.linker, target, [path], include_declaration))
+      found.extend(query.references(
+        server.linker, target, [path], include_declaration,
+      ))
     }
   }
 
@@ -103,7 +105,8 @@ def references(server, params: dict, context) {
   }
 
   var options = params.get('context', {})
-  var include = is_dict(options) and options.get('includeDeclaration', false) == true
+  var include = is_dict(options)
+    and options.get('includeDeclaration', false) == true
 
   return find(server, found.target, include, context).map(@(place) {
     return server.location(place.path, place.start, place.end)
@@ -158,7 +161,9 @@ def highlight(server, params: dict) {
     # simply named there.
     if place.declaration {
       var declared = linker.symbol(target)
-      var assigned = ['variable', 'constant', 'parameter', 'field'].contains(declared.kind)
+      var assigned = [
+        'variable', 'constant', 'parameter', 'field',
+      ].contains(declared.kind)
 
       kind = assigned ? _WRITE : _TEXT
     }

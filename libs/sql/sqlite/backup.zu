@@ -59,7 +59,9 @@ class Backup {
     self._open()
 
     catch {
-      return _sqlite.backup_step(self._handle, pages == nil ? DEFAULT_PAGES : pages)
+      return _sqlite.backup_step(
+        self._handle, pages == nil ? DEFAULT_PAGES : pages,
+      )
     } as error {
       reraise(error, nil)
     }
@@ -126,7 +128,7 @@ class Backup {
       if remaining_attempts <= 0 {
         raise SqlError(
           'the source database stayed busy for the whole backup',
-          { driver: 'sqlite' }
+          { driver: 'sqlite' },
         )
       }
     }
@@ -162,7 +164,9 @@ class Backup {
 
   _open() {
     if self._closed {
-      raise ClosedError('this backup has already finished', { driver: 'sqlite' })
+      raise ClosedError(
+        'this backup has already finished', { driver: 'sqlite' },
+      )
     }
   }
 

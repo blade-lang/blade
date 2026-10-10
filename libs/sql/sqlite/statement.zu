@@ -73,9 +73,9 @@ def bind_all(statement, values: list, query: string) {
   if values.length() != expected {
     raise QueryError(
       'this statement binds ${expected} parameter' +
-      '${expected == 1 ? "" : "s"} and ${values.length()} ' +
-      '${values.length() == 1 ? "was" : "were"} given',
-      { driver: 'sqlite', query }
+        '${expected == 1 ? "" : "s"} and ${values.length()} ' +
+        '${values.length() == 1 ? "was" : "were"} given',
+      { driver: 'sqlite', query },
     )
   }
 
@@ -216,7 +216,7 @@ class SqliteStatement < DriverStatement {
       self._columns,
       self._conversions,
       self._query,
-      false
+      false,
     )
   }
 
@@ -247,15 +247,15 @@ class SqliteStatement < DriverStatement {
     if self._closed {
       raise ClosedError(
         'this prepared statement was closed',
-        { driver: 'sqlite', query: self._query }
+        { driver: 'sqlite', query: self._query },
       )
     }
 
     if self._lent and _sqlite.stmt_busy(self._statement) {
       raise QueryError(
         'a cursor is still reading this prepared statement; close it ' +
-        'before running the statement again',
-        { driver: 'sqlite', query: self._query }
+          'before running the statement again',
+        { driver: 'sqlite', query: self._query },
       )
     }
 

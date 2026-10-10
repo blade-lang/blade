@@ -46,14 +46,19 @@ def is_excluded(relative: string, excludes: list) {
 def _listed_by_git(folder: string) {
   catch {
     var child = spawn('git', [
-      '-C', folder, 'ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', '*.zu',
+      '-C', folder, 'ls-files', '-z', '--cached', '--others',
+      '--exclude-standard', '--', '*.zu',
     ], { stdout: 'pipe', stderr: 'pipe', stdin: 'null' })
 
     if child.wait() != 0 {
       return nil
     }
 
-    return child.read_stdout().to_string().split('\0').filter(@(path) => !path.is_empty())
+    return child
+      .read_stdout()
+      .to_string()
+      .split('\0')
+      .filter(@(path) => !path.is_empty())
   } as error {
     return nil
   }
@@ -75,7 +80,9 @@ def zu_files(folder: string, excludes: list) {
   }
 
   if relative == nil {
-    relative = os.read_dir(folder, true).filter(@(path) => path.ends_with('.zu'))
+    relative = os
+      .read_dir(folder, true)
+      .filter(@(path) => path.ends_with('.zu'))
   }
 
   var found = []
@@ -108,7 +115,9 @@ def zu_files(folder: string, excludes: list) {
  */
 def relative_to(path: string, folders: list) {
   for folder in folders {
-    var prefix = folder.ends_with(os.path_separator) ? folder : folder + os.path_separator
+    var prefix = folder.ends_with(os.path_separator)
+      ? folder
+      : folder + os.path_separator
 
     if path.starts_with(prefix) {
       return path[prefix.length(), path.length()].replace('\\', '/', false)

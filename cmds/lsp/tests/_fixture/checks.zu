@@ -7,7 +7,7 @@ describe('points', @{
   })
 
   it('know where they are', @{
-    # NOTE: This is an intentionally failing test to demonstrate the output 
+    # NOTE: This is an intentionally failing test to demonstrate the output
     # of a failed expectation.
     expect(Point(1, 2).x).to_equal(2)
   })

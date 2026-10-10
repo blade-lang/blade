@@ -10,7 +10,6 @@
  * @copyright 2021, Richard Ore and Zuri contributors
  */
 
-
 /**
  * Returns the name of the type of value
  *
@@ -31,8 +30,9 @@ def of(value: any) {
  * @returns bool
  */
 def digit(value: string) {
-  if value.length() != 1
+  if value.length() != 1 {
     raise ValueError('single char expected')
+  }
   var _ = value.ord()
   return _ >= 48 and _ <= 57
 }
@@ -45,8 +45,9 @@ def digit(value: string) {
  * @returns bool
  */
 def alpha(value: string) {
-  if value.length() != 1
+  if value.length() != 1 {
     raise ValueError('single char expected')
+  }
   var _ = value.ord()
   return (_ >= 65 and _ <= 90) or (_ >= 97 and _ <= 122)
 }
@@ -206,4 +207,3 @@ def callable(value: any) {
 def instance(value: any, type: type) {
   return instance_of(value, type)
 }
-

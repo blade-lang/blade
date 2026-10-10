@@ -8,7 +8,6 @@ import net
 import os
 import os.process { spawn }
 
-
 /**
  * Removes `path`, whatever it is, if it is there.
  *
@@ -95,8 +94,8 @@ class World {
     self.url = 'http://127.0.0.1:${port}'
 
     var flags = [
-      'serve', '--storage', os.join_paths(self.root, 'nyssa'), '--port', port.to_string(),
-      '--workers', '2', '--public-url', self.url,
+      'serve', '--storage', os.join_paths(self.root, 'nyssa'), '--port',
+      port.to_string(), '--workers', '2', '--public-url', self.url,
     ]
 
     if extra != nil {
@@ -104,7 +103,10 @@ class World {
     }
 
     self.server = spawn(os.exe_path, flags, {
-      stdout: 'null', stderr: 'pipe', stdin: 'null', env: self.env(),
+      stdout: 'null',
+      stderr: 'pipe',
+      stdin: 'null',
+      env: self.env(),
     })
 
     # Generous, since a loaded machine running every suite at once can
@@ -213,8 +215,10 @@ class World {
       password: 'a long enough password',
     }).as_dict()
 
-    var login = self.zuri(['account', 'login', '--registry', self.url, '--token-stdin'], cwd,
-      created.token.token)
+    var login = self.zuri([
+      'account', 'login', '--registry', self.url, '--token-stdin',
+    ],
+      cwd, created.token.token)
 
     if login.status != 0 {
       raise Error('signing in failed: ${login.all}')
@@ -241,7 +245,10 @@ class World {
 
     # Each project is a repository of its own with everything
     # committed, which is how publish expects to find one.
-    var words = ['init', name, '--yes', '--vcs', 'git', '--description', 'The ${name} package']
+    var words = [
+      'init', name, '--yes', '--vcs', 'git', '--description',
+      'The ${name} package',
+    ]
 
     if flags != nil {
       words = words + flags
@@ -268,13 +275,21 @@ class World {
  */
 def commit(dir: string) {
   var env = {
-    GIT_AUTHOR_NAME: 'Test', GIT_AUTHOR_EMAIL: 'test@example.test',
-    GIT_COMMITTER_NAME: 'Test', GIT_COMMITTER_EMAIL: 'test@example.test',
+    GIT_AUTHOR_NAME: 'Test',
+    GIT_AUTHOR_EMAIL: 'test@example.test',
+    GIT_COMMITTER_NAME: 'Test',
+    GIT_COMMITTER_EMAIL: 'test@example.test',
   }
 
-  for words in [['add', '-A'], ['commit', '-q', '--allow-empty', '-m', 'snapshot']] {
+  for words in [
+    ['add', '-A'], ['commit', '-q', '--allow-empty', '-m', 'snapshot'],
+  ] {
     var child = spawn('git', words, {
-      cwd: dir, env, stdin: 'null', stdout: 'null', stderr: 'pipe',
+      cwd: dir,
+      env,
+      stdin: 'null',
+      stdout: 'null',
+      stderr: 'pipe',
     })
 
     var status = child.wait()
@@ -295,7 +310,10 @@ def commit(dir: string) {
 def set_version(dir: string, version: string) {
   var path = os.join_paths(dir, 'project.toml')
 
-  put(path, read(path).replace('/^version = ".*"$/m', 'version = "${version}"', true))
+  put(
+    path,
+    read(path).replace('/^version = ".*"$/m', 'version = "${version}"', true),
+  )
   commit(dir)
 }
 

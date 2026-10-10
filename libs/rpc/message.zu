@@ -318,7 +318,9 @@ def _read_one(value) {
   }
 
   if value.contains('error') {
-    return Response.failure(value.get('id', nil), _read_error(value.get('error', nil)))
+    return Response.failure(
+      value.get('id', nil), _read_error(value.get('error', nil)),
+    )
   }
 
   return Response.success(value.get('id', nil), value.get('result', nil))

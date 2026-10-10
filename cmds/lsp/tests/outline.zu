@@ -29,8 +29,12 @@ after_all(@{
 describe('symbols', @{
   it('outlines a file, members under their class', @{
     var shapes = client.open(os.join_paths(FIXTURE, 'shapes.zu'), nil)
-    var found = client.request('textDocument/documentSymbol', { textDocument: { uri: shapes } })
-    var outline = found.map(@(s) => [s.name, s.kind, s.get('children', []).map(@(c) => c.name)])
+    var found = client.request(
+      'textDocument/documentSymbol', { textDocument: { uri: shapes } },
+    )
+    var outline = found.map(
+      @(s) => [s.name, s.kind, s.get('children', []).map(@(c) => c.name)],
+    )
 
     expect(outline).to_equal([
       ['UNIT', 14, []],
@@ -50,23 +54,35 @@ describe('symbols', @{
 
     var distances = client.request('workspace/symbol', { query: 'dist' })
 
-    expect(distances.map(@(s) => s.containerName).sort()).to_equal(['Circle', 'Point'])
+    expect(distances
+      .map(@(s) => s.containerName)
+      .sort()).to_equal(['Circle', 'Point'])
   })
 })
 
 describe('folding and selection', @{
   it('folds blocks, classes, doc blocks and runs of imports', @{
     var main = client.open(os.join_paths(FIXTURE, 'main.zu'), nil)
-    var folds = client.request('textDocument/foldingRange', { textDocument: { uri: main } })
+    var folds = client.request(
+      'textDocument/foldingRange', { textDocument: { uri: main } },
+    )
 
     expect(folds).to_contain({ startLine: 0, endLine: 2, kind: 'imports' })
     client.notify('textDocument/didClose', { textDocument: { uri: main } })
 
     var shapes = client.open(os.join_paths(FIXTURE, 'shapes.zu'), nil)
-    var shape_folds = client.request('textDocument/foldingRange', { textDocument: { uri: shapes } })
-    var comment_folds = shape_folds.filter(@(f) => f.get('kind', nil) == 'comment')
+    var shape_folds = client.request(
+      'textDocument/foldingRange', { textDocument: { uri: shapes } },
+    )
+    var comment_folds = shape_folds.filter(
+      @(f) => f.get('kind', nil) == 'comment',
+    )
 
-    expect(comment_folds[0]).to_equal({ startLine: 0, endLine: 4, kind: 'comment' })
+    expect(comment_folds[0]).to_equal({
+      startLine: 0,
+      endLine: 4,
+      kind: 'comment',
+    })
     # The class's fold ends before its closing brace, which stays in view.
     expect(shape_folds).to_contain({ startLine: 12, endLine: 44 })
     client.notify('textDocument/didClose', { textDocument: { uri: shapes } })
@@ -96,7 +112,9 @@ describe('folding and selection', @{
 describe('links', @{
   it('links each import to the file it loads', @{
     var main = client.open(os.join_paths(FIXTURE, 'main.zu'), nil)
-    var links = client.request('textDocument/documentLink', { textDocument: { uri: main } })
+    var links = client.request(
+      'textDocument/documentLink', { textDocument: { uri: main } },
+    )
     var targets = links.map(@(link) => link.target.split('/').last())
 
     expect(targets).to_equal(['json.stub.zu', 'shapes.zu', 'index.zu'])

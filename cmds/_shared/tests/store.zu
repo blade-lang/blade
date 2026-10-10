@@ -50,7 +50,9 @@ describe('Transaction', @{
     expect(read(os.join_paths(LIBS, 'old', 'index.zu'))).to_equal('old v2')
     expect(read(os.join_paths(LIBS, 'new', 'fresh.zu'))).to_equal('fresh')
     expect(os.dir_exists(os.join_paths(LIBS, 'gone'))).to_be_false()
-    var left = os.read_dir(STAGING).filter(@(name) => name != '.' and name != '..')
+    var left = os
+      .read_dir(STAGING)
+      .filter(@(name) => name != '.' and name != '..')
 
     expect(left).to_be_empty()
   })
@@ -107,7 +109,9 @@ describe('recover', @{
     }))
 
     expect(recover(STAGING)).to_equal(1)
-    expect(read(os.join_paths(LIBS, 'pkg', 'index.zu'))).to_equal('the original')
+    expect(read(os.join_paths(
+      LIBS, 'pkg', 'index.zu',
+    ))).to_equal('the original')
     expect(os.dir_exists(root)).to_be_false()
   })
 
@@ -141,7 +145,9 @@ describe('the installed record', @{
 
     var record = load_installed(os.join_paths(ROOT, 'installed.toml'))
 
-    record.put('web', { name: 'web', version: '1.0.0', commands: ['serve-web'] })
+    record.put(
+      'web', { name: 'web', version: '1.0.0', commands: ['serve-web'] },
+    )
     record.save()
 
     var again = load_installed(os.join_paths(ROOT, 'installed.toml'))

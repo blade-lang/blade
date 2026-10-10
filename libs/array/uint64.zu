@@ -12,7 +12,6 @@
 
 import ._base { Array }
 
-
 /**
  * Maximum value that "should" exist in a list passed to
  * UInt64Array.
@@ -24,7 +23,6 @@ var UINT64_MAX = 18446744073709551615n
 # number value; see Int64Array's own _INT64_MAX_NUM for why this
 # needs to exist separately (no number/bigint comparison operator).
 var _UINT64_MAX_NUM = UINT64_MAX.to_number()
-
 
 /**
  * class UInt64Array represents an array of twos-complement 64-bit
@@ -48,14 +46,17 @@ class UInt64Array < Array {
 
   _validate_value(value) {
     if is_bigint(value) {
-      if value < 0n or value > UINT64_MAX
+      if value < 0n or value > UINT64_MAX {
         raise ValueError('value out of uint64 range')
+      }
       return
     }
-    if !is_int(value)
+    if !is_int(value) {
       raise TypeError('integer expected')
-    if value < 0 or value > _UINT64_MAX_NUM
+    }
+    if value < 0 or value > _UINT64_MAX_NUM {
       raise ValueError('value out of uint64 range')
+    }
   }
 
   /**

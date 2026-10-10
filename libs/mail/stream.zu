@@ -52,7 +52,9 @@ class LineStream {
    */
   @new(transport, secure: ?bool) {
     self._transport = transport
-    self._secure = secure == nil ? instance_of(transport, tls.TlsStream) : secure
+    self._secure = secure == nil
+      ? instance_of(transport, tls.TlsStream)
+      : secure
     self._buffer = bytes(0)
     self._at = 0
     self._closed = false
@@ -152,7 +154,9 @@ class LineStream {
           stop--
         }
 
-        var line = stop == self._at ? '' : self._buffer[self._at, stop].to_string()
+        var line = stop == self._at
+          ? ''
+          : self._buffer[self._at, stop].to_string()
 
         self._at = index + 1
 
@@ -307,7 +311,7 @@ def connect(host: string, port: number, options: dict) {
   return LineStream(
     tls.TlsStream.connect(socket, config == nil ? tls.TlsConfig() : config,
       options.get('server_name', host)),
-    true
+    true,
   )
 }
 
@@ -326,9 +330,9 @@ def start_tls(stream, server_name: string, config) {
     tls.TlsStream.connect(
       stream.transport(),
       config == nil ? tls.TlsConfig() : config,
-      server_name
+      server_name,
     ),
-    true
+    true,
   )
 }
 

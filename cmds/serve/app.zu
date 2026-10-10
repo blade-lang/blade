@@ -26,7 +26,10 @@ var POLICY = "default-src 'self'; img-src 'self' https: data:; style-src 'self';
 
 # The paths where a password or a new account is submitted, which are
 # rate limited per address on top of the per-account limits.
-var _GUARDED = ['/api/v1/tokens', '/api/v1/accounts', '/login', '/signup', '/recover', '/reset']
+var _GUARDED = [
+  '/api/v1/tokens', '/api/v1/accounts', '/login', '/signup', '/recover',
+  '/reset',
+]
 
 /**
  * Configures one worker's server.
@@ -46,7 +49,11 @@ def setup(server) {
 
   store.migrate()
 
-  var limited = middleware.rate_limit({ limit: 30, window: 60, trust_proxy: trust })
+  var limited = middleware.rate_limit({
+    limit: 30,
+    window: 60,
+    trust_proxy: trust,
+  })
 
   server.use(middleware.request_id())
   server.use(middleware.logger({ trust_proxy: trust }))

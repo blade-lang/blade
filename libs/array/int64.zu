@@ -12,7 +12,6 @@
 
 import ._base { Array }
 
-
 /**
  * Maximum value that "should" exist in a list passed to
  * Int64Array. Written with the explicit `n` bigint suffix since
@@ -42,7 +41,6 @@ var INT64_MIN = -9223372036854775808n
 var _INT64_MAX_NUM = INT64_MAX.to_number()
 var _INT64_MIN_NUM = INT64_MIN.to_number()
 
-
 /**
  * class Int64Array represents an array of twos-complement 64-bit
  * signed integers in the platform byte order.
@@ -65,14 +63,17 @@ class Int64Array < Array {
 
   _validate_value(value) {
     if is_bigint(value) {
-      if value < INT64_MIN or value > INT64_MAX
+      if value < INT64_MIN or value > INT64_MAX {
         raise ValueError('value out of int64 range')
+      }
       return
     }
-    if !is_int(value)
+    if !is_int(value) {
       raise TypeError('integer expected')
-    if value < _INT64_MIN_NUM or value > _INT64_MAX_NUM
+    }
+    if value < _INT64_MIN_NUM or value > _INT64_MAX_NUM {
       raise ValueError('value out of int64 range')
+    }
   }
 
   /**

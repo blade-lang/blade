@@ -266,7 +266,9 @@
 import .runner
 
 import @.error { AssertionError, TestSetupError }
-import @.expect { Expect, expect, fail, assertions, has_assertions, capture_output }
+import @.expect {
+  Expect, expect, fail, assertions, has_assertions, capture_output,
+}
 import @.mock { Mock, mock, spy_on }
 import @.reporter { Reporter }
 import @.result { Case, Suite, Summary, Failure }
@@ -276,7 +278,6 @@ import .format
 import .mock as _mock
 import .snapshot as _snapshot
 import .style as _style
-
 
 /**
  * Groups tests, and may be nested.
@@ -319,7 +320,6 @@ def describe_only(name: string, body: function) {
 def describe_skip(name: string, body: function) {
   return runner.describe(name, body, 'skip')
 }
-
 
 /**
  * Declares one test.
@@ -377,7 +377,6 @@ def it_todo(name: string) {
   return runner.it(name, nil, nil, 'todo')
 }
 
-
 # `$0`, `$1`, ... stand for the row's values and `$#` for its number.
 # Substituting longest-first keeps `$10` from being read as `$1`
 # followed by a `0`.
@@ -387,18 +386,18 @@ def _fill(template, row, number) {
   iter var index = row.length() - 1; index >= 0; index-- {
     filled = filled.replace(
       '/\\$${index}/',
-      _style.strip(format.inline_plain(row[index]))
+      _style.strip(format.inline_plain(row[index])),
     )
   }
 
   return filled
 }
 
-
 def _rows_of(table) {
-  return table.map(@(row) { return is_list(row) ? row : [row] })
+  return table.map(@(row) {
+    return is_list(row) ? row : [row]
+  })
 }
-
 
 /**
  * Declares one test per row of a table.
@@ -433,9 +432,11 @@ def it_each(table: list, name: string, body: function, options: ?dict) {
 
     declared.append(runner.it(
       _fill(name, values, number),
-      @{ return body.apply(values) },
+      @{
+        return body.apply(values)
+      },
       options,
-      nil
+      nil,
     ))
 
     number++
@@ -443,7 +444,6 @@ def it_each(table: list, name: string, body: function, options: ?dict) {
 
   return declared
 }
-
 
 /**
  * Declares one suite per row of a table.
@@ -477,8 +477,10 @@ def describe_each(table: list, name: string, body: function) {
 
     declared.append(runner.describe(
       _fill(name, values, number),
-      @{ return body.apply(values) },
-      'normal'
+      @{
+        return body.apply(values)
+      },
+      'normal',
     ))
 
     number++
@@ -486,7 +488,6 @@ def describe_each(table: list, name: string, body: function) {
 
   return declared
 }
-
 
 /**
  * Runs once before the first test in the enclosing suite that is
@@ -530,7 +531,6 @@ def after_each(body: function) {
   runner.after_each(body)
 }
 
-
 /**
  * Runs everything declared so far, and reports it.
  *
@@ -555,7 +555,6 @@ def run(options: ?dict) {
   return runner.run(options)
 }
 
-
 /**
  * Discovers test files under `directory` and runs each in a process
  * of its own.
@@ -568,7 +567,6 @@ def conduct(directory: ?string, options: ?dict) {
   return _conduct.conduct(directory, options)
 }
 
-
 /**
  * The tests declared so far, as a tree, without running any of them.
  *
@@ -577,7 +575,6 @@ def conduct(directory: ?string, options: ?dict) {
 def declared() {
   return runner.root()
 }
-
 
 /**
  * Forgets every declaration and every loaded snapshot file.
@@ -589,7 +586,6 @@ def reset() {
   runner.reset()
   _mock.restore_all()
 }
-
 
 /**
  * Forces colour in the report on or off, overriding what the

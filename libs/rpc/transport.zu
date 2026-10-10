@@ -474,5 +474,7 @@ def pipe() {
   var forward = isolate.channel()
   var backward = isolate.channel()
 
-  return [ChannelTransport(backward, forward), ChannelTransport(forward, backward)]
+  return [
+    ChannelTransport(backward, forward), ChannelTransport(forward, backward),
+  ]
 }

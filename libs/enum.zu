@@ -99,7 +99,7 @@ def enum(source, allow_duplicates) {
       }
       if !is_number(value) and !is_string(value) {
         raise TypeError(
-          'enum() dictionary values must be a number or a string, ${typeof(value)} given'
+          'enum() dictionary values must be a number or a string, ${typeof(value)} given',
         )
       }
 

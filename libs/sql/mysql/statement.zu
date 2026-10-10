@@ -123,7 +123,7 @@ class MySqlStatement < DriverStatement {
     if self._closed {
       raise ClosedError(
         'this statement has been closed',
-        { driver: 'mysql', query: self._sql }
+        { driver: 'mysql', query: self._sql },
       )
     }
   }

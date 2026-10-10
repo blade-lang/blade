@@ -54,7 +54,6 @@ import zuri { reflect }
 
 import .error { TestSetupError }
 
-
 /**
  * One recorded call.
  */
@@ -77,13 +76,11 @@ class Call {
   }
 }
 
-
 # Every mock built in this process, so a matcher handed the bare
 # function can find its way back to the record. Mocks are cleared
 # between tests, so this stays a handful of entries and a linear
 # lookup is the right shape for it.
 var _mocks = []
-
 
 /**
  * A recording stand-in for a function.
@@ -131,7 +128,9 @@ class Mock {
     self.name = name != nil ? name : 'mock'
     self.calls = []
     self._queue = []
-    self._behaviour = implementation != nil ? { kind: 'call', value: implementation } : nil
+    self._behaviour = implementation != nil
+      ? { kind: 'call', value: implementation }
+      : nil
 
     if is_dict(replacing) {
       self._target = replacing.target
@@ -287,7 +286,9 @@ class Mock {
    * @returns list
    */
   call_args() {
-    return self.calls.map(@(call) { return call.args })
+    return self.calls.map(@(call) {
+      return call.args
+    })
   }
 
   /**
@@ -347,7 +348,6 @@ class Mock {
   }
 }
 
-
 def _assign(target, key, value) {
   if is_dict(target) {
     target.set(key, value)
@@ -357,7 +357,6 @@ def _assign(target, key, value) {
   reflect.set_prop(target, key, value)
 }
 
-
 def _read(target, key) {
   if is_dict(target) {
     return target.get(key)
@@ -366,7 +365,6 @@ def _read(target, key) {
   return reflect.get_prop(target, key)
 }
 
-
 def _has(target, key) {
   if is_dict(target) {
     return target.contains(key)
@@ -374,7 +372,6 @@ def _has(target, key) {
 
   return is_instance(target) and reflect.has_prop(target, key)
 }
-
 
 /**
  * A new recording function.
@@ -393,7 +390,6 @@ def _has(target, key) {
 def mock(implementation: ?function, name: ?string) {
   return Mock(name, implementation)
 }
-
 
 /**
  * Replaces `target[key]` with a recording stand-in that calls through
@@ -424,7 +420,7 @@ def mock(implementation: ?function, name: ?string) {
 def spy_on(target, key: string) {
   if !is_dict(target) and !is_instance(target) {
     raise TestSetupError(
-      'spy_on() needs a dict or an instance, got a ${reflect.kind(target)}'
+      'spy_on() needs a dict or an instance, got a ${reflect.kind(target)}',
     )
   }
 
@@ -436,7 +432,7 @@ def spy_on(target, key: string) {
 
   if !is_callable(original) {
     raise TestSetupError(
-      "spy_on() needs '${key}' to hold a function, but it holds a ${typeof(original)}"
+      "spy_on() needs '${key}' to hold a function, but it holds a ${typeof(original)}",
     )
   }
 
@@ -445,7 +441,6 @@ def spy_on(target, key: string) {
 
   return spy
 }
-
 
 /**
  * The `Mock` behind `value`, which may be a `Mock` already or the
@@ -472,7 +467,6 @@ def mock_of(value) {
   return nil
 }
 
-
 /**
  * Undoes every spy and forgets every mock built so far.
  *
@@ -486,7 +480,6 @@ def restore_all() {
 
   _mocks = []
 }
-
 
 /**
  * Forgets the calls recorded by every live mock, leaving the mocks

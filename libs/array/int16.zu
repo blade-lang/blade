@@ -12,7 +12,6 @@
 
 import ._base { Array }
 
-
 /**
  * Maximum value that "should" exist in a list passed to
  * Int16Array.
@@ -26,7 +25,6 @@ var INT16_MAX = 32767
  * @type number
  */
 var INT16_MIN = -INT16_MAX - 1
-
 
 /**
  * class Int16Array represents an array of twos-complement 16-bit
@@ -43,10 +41,12 @@ class Int16Array < Array {
   var _data_type = 's'
 
   _validate_value(value) {
-    if !is_int(value)
+    if !is_int(value) {
       raise TypeError('integer expected')
-    if value < INT16_MIN or value > INT16_MAX
+    }
+    if value < INT16_MIN or value > INT16_MAX {
       raise ValueError('value out of int16 range')
+    }
   }
 
   /**

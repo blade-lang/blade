@@ -98,7 +98,6 @@
  * Programming](http://probablyprogramming.com/2009/03/15/the-tiniest-gif-ever).
  */
 
-
 class file {
 
   /**
@@ -115,7 +114,6 @@ class file {
    */
   exists() {}
 
-
   /**
    * Closes the stream to an opened file. You'll rarely ever need
    * to call this method yourself in most use cases.
@@ -130,7 +128,6 @@ class file {
    * @return {void}
    */
   close() {}
-
 
   /**
    * Opens the stream to a file for the operation originally
@@ -148,7 +145,6 @@ class file {
    * @return {void}
    */
   open() {}
-
 
   /**
    * Reads the content of an opened file up to the specified
@@ -175,7 +171,6 @@ class file {
    */
   read(length: ?int) {}
 
-
   /**
    * Same as `read()`, but doesn't open or close the file
    * automatically.
@@ -184,7 +179,6 @@ class file {
    * @return {string|bytes}
    */
   gets(length: ?int) {}
-
 
   /**
    * Writes a string or bytes to an opened file at the current
@@ -201,7 +195,6 @@ class file {
    */
   write(data: string|bytes) {}
 
-
   /**
    * Same as `write()`, but doesn't open or close the file
    * automatically.
@@ -210,7 +203,6 @@ class file {
    * @return {string|bytes}
    */
   puts(data: string|bytes) {}
-
 
   /**
    * Returns the integer file descriptor number that is used by
@@ -236,7 +228,6 @@ class file {
    */
   number() {}
 
-
   /**
    * Returns `true` if the file is connected to a TTY like device
    * or `false` otherwise.
@@ -255,7 +246,6 @@ class file {
    */
   is_tty() {}
 
-
   /**
    * Returns `true` if the file is open for reading or writing
    * and `false` otherwise.
@@ -273,7 +263,6 @@ class file {
    */
   is_open() {}
 
-
   /**
    * Returns `true` if the file is closed for reading or writing
    * and `false` otherwise.
@@ -289,7 +278,6 @@ class file {
    */
   is_closed() {}
 
-
   /**
    * Flushes the buffer held by a file. This could be useful for
    * writable files as file writes are buffered.
@@ -303,7 +291,6 @@ class file {
    * @return {void}
    */
   flush() {}
-
 
   /**
    * Returns the statistics or details of a file.
@@ -333,7 +320,6 @@ class file {
    */
   stats() {}
 
-
   /**
    * Creates a symbolic link for the original file at the
    * specified path.
@@ -355,7 +341,6 @@ class file {
    */
   symlink() {}
 
-
   /**
    * Deletes a file.
    *
@@ -374,7 +359,6 @@ class file {
    * @return {boolean}
    */
   delete() {}
-
 
   /**
    * Renames a file to to `new_name`. The new name can be a full
@@ -396,7 +380,6 @@ class file {
    */
   rename(new_name: string) {}
 
-
   /**
    * Returns the path to the file.
    *
@@ -411,7 +394,6 @@ class file {
    */
   path() {}
 
-
   /**
    * Returns the absolute path to the file.
    *
@@ -425,7 +407,6 @@ class file {
    * @return {string}
    */
   abs_path() {}
-
 
   /**
    * Copies a file from the path specified in the original file
@@ -443,7 +424,6 @@ class file {
    */
   copy(path: string) {}
 
-
   /**
    * Truncates the entire file if length is not given or
    * truncates the file such that only length number of bytes is
@@ -460,7 +440,6 @@ class file {
    * @return {boolean}
    */
   truncate(length: ?number) {}
-
 
   /**
    * Changes the permission on the file to the one specified in
@@ -484,7 +463,6 @@ class file {
    * @return {boolean}
    */
   chmod(mode: int) {}
-
 
   /**
    * Sets the last access time and last modified time of the
@@ -511,7 +489,6 @@ class file {
    */
   set_times(atime: number, mtime: number) {}
 
-
   /**
    * Sets the position of a file reader or writer in a file. The
    * position must be within the range of the file size.
@@ -531,7 +508,6 @@ class file {
    */
   seek(offset: number, seek_type: int) {}
 
-
   /**
    * Returns the current position of the reader/writer in a file.
    *
@@ -550,7 +526,6 @@ class file {
    */
   tell() {}
 
-
   /**
    * Returns the mode in which the current file was opened.<br>
    *
@@ -565,7 +540,6 @@ class file {
    */
   mode() {}
 
-
   /**
    * Returns the name of the current file.<br>
    * 
@@ -579,7 +553,6 @@ class file {
    * @return {string}
    */
   name() {}
-
 
   /**
    * Returns the file handle as a string, naming its path and the

@@ -124,7 +124,9 @@ def _body_offset(raw) {
         return { headers: stop, body: next + 1 }
       }
 
-      if next + 1 < raw.length() and raw[next] == 0x0d and raw[next + 1] == 0x0a {
+      if next + 1 < raw.length()
+        and raw[next] == 0x0d
+        and raw[next + 1] == 0x0a {
         return { headers: stop, body: next + 2 }
       }
     }
@@ -189,8 +191,12 @@ class Message {
 
   _load(raw) {
     var split = _body_offset(raw)
-    var header_text = split.headers == 0 ? '' : raw[0, split.headers].to_string()
-    var body = split.body >= raw.length() ? bytes(0) : raw[split.body, raw.length()]
+    var header_text = split.headers == 0
+      ? ''
+      : raw[0, split.headers].to_string()
+    var body = split.body >= raw.length()
+      ? bytes(0)
+      : raw[split.body, raw.length()]
 
     self.headers = Headers.parse(header_text)
     self._source_headers = header_text
@@ -261,7 +267,9 @@ class Message {
       if content_start == nil {
         preamble_end = line.start
       } else {
-        pieces.append(body[content_start, _trim_eol(body, content_start, line.start)])
+        pieces.append(body[content_start, _trim_eol(
+          body, content_start, line.start,
+        )])
       }
 
       if text == closer {
@@ -362,7 +370,7 @@ class Message {
 
     return encoding.decode_body(
       self._body,
-      self.headers.get('Content-Transfer-Encoding', '7bit')
+      self.headers.get('Content-Transfer-Encoding', '7bit'),
     )
   }
 
@@ -373,7 +381,9 @@ class Message {
    * @returns string
    */
   text() {
-    return encoding.decode_text(self.body_bytes(), self.content_type().charset())
+    return encoding.decode_text(
+      self.body_bytes(), self.content_type().charset(),
+    )
   }
 
   /**
@@ -631,7 +641,8 @@ class Message {
       return true
     }
 
-    return !self.headers.contains('Content-Disposition') and self.filename() != nil
+    return !self.headers.contains('Content-Disposition')
+      and self.filename() != nil
   }
 
   /**
@@ -738,7 +749,9 @@ class Message {
    * @returns Message itself.
    */
   become_multipart(subtype: string, parts: list) {
-    self.headers.set('Content-Type', 'multipart/${subtype}; boundary="${_new_boundary()}"')
+    self.headers.set(
+      'Content-Type', 'multipart/${subtype}; boundary="${_new_boundary()}"',
+    )
     self.headers.remove('Content-Transfer-Encoding')
     self.headers.remove('Content-Disposition')
 
@@ -849,7 +862,7 @@ class Message {
 
     return self.become_multipart(
       'alternative',
-      mime_type == 'text/plain' ? [part, current] : [current, part]
+      mime_type == 'text/plain' ? [part, current] : [current, part],
     )
   }
 
@@ -868,7 +881,7 @@ class Message {
     if root_type == 'text/plain' or root_type == 'text/html' {
       inside[0] = Message().become_multipart(
         'alternative',
-        mime_type == 'text/plain' ? [part, root] : [root, part]
+        mime_type == 'text/plain' ? [part, root] : [root, part],
       )
 
       return self
@@ -1093,7 +1106,9 @@ class Message {
 
     var author = self.sender()
 
-    self.headers.set('Message-ID', new_message_id(author == nil ? nil : author.domain))
+    self.headers.set(
+      'Message-ID', new_message_id(author == nil ? nil : author.domain),
+    )
 
     return self
   }
@@ -1625,13 +1640,13 @@ class Attachment {
     if self._cid != nil {
       part.headers.set(
         'Content-ID',
-        self._cid.starts_with('<') ? self._cid : '<${self._cid}>'
+        self._cid.starts_with('<') ? self._cid : '<${self._cid}>',
       )
     }
 
     if self._description != nil {
       part.headers.set('Content-Description', encoding.encode_word(
-        self._description, 'utf-8', nil
+        self._description, 'utf-8', nil,
       ))
     }
 
@@ -1684,7 +1699,7 @@ def _as_part(part, doing: string) {
   }
 
   raise MessageError(
-    '${doing}() takes an Attachment; build one with mail.attachment()'
+    '${doing}() takes an Attachment; build one with mail.attachment()',
   )
 }
 

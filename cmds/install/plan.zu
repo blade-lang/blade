@@ -31,22 +31,44 @@ def parser() {
     { type: args.LIST, metavar: 'package' })
 
   cli.add_registry_option(parser)
-  parser.add_option('dev', 'Add them as development dependencies', { short_name: 'D' })
-  parser.add_option('global', 'Install for this user rather than the project', { short_name: 'g' })
-  parser.add_option('exact', 'Record the exact version chosen rather than a caret range',
+  parser.add_option(
+    'dev', 'Add them as development dependencies', { short_name: 'D' },
+  )
+  parser.add_option(
+    'global', 'Install for this user rather than the project',
+    { short_name: 'g' },
+  )
+  parser.add_option('exact',
+    'Record the exact version chosen rather than a caret range',
     { short_name: 'E' })
-  parser.add_option('git', 'Install from a git repository instead of a registry',
+  parser.add_option('git',
+    'Install from a git repository instead of a registry',
     { type: args.STRING, metavar: 'url' })
-  parser.add_option('tag', 'The git tag to install', { type: args.STRING, metavar: 'tag' })
-  parser.add_option('branch', 'The git branch to follow', { type: args.STRING, metavar: 'branch' })
-  parser.add_option('rev', 'The git commit to install', { type: args.STRING, metavar: 'commit' })
+  parser.add_option(
+    'tag', 'The git tag to install', { type: args.STRING, metavar: 'tag' },
+  )
+  parser.add_option(
+    'branch', 'The git branch to follow',
+    { type: args.STRING, metavar: 'branch' },
+  )
+  parser.add_option(
+    'rev', 'The git commit to install',
+    { type: args.STRING, metavar: 'commit' },
+  )
   parser.add_option('path', 'Install from a directory on this machine',
     { type: args.STRING, metavar: 'dir' })
   parser.add_option('offline', 'Use only what is already downloaded', nil)
-  parser.add_option('dry-run', 'Show what would change and change nothing', { short_name: 'n' })
-  parser.add_option('force', 'Replace directories in .zuri/libs that zuri did not install', nil)
-  parser.add_option('no-hooks', 'Run no install or uninstall scripts at all', nil)
-  parser.add_option('allow-hooks', 'Let these packages run their scripts this time',
+  parser.add_option(
+    'dry-run', 'Show what would change and change nothing', { short_name: 'n' },
+  )
+  parser.add_option(
+    'force', 'Replace directories in .zuri/libs that zuri did not install', nil,
+  )
+  parser.add_option(
+    'no-hooks', 'Run no install or uninstall scripts at all', nil,
+  )
+  parser.add_option('allow-hooks',
+    'Let these packages run their scripts this time',
     { type: args.LIST, metavar: 'package' })
   parser.add_option('quiet', 'Print only the result', { short_name: 'q' })
 

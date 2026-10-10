@@ -117,7 +117,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var IGNBRK   = _flag_table.IGNBRK
+  static var IGNBRK = _flag_table.IGNBRK
 
   /**
    * Map BREAK to SIGINTR.
@@ -125,7 +125,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var BRKINT   = _flag_table.BRKINT
+  static var BRKINT = _flag_table.BRKINT
 
   /**
    * Ignore (discard) parity errors.
@@ -133,7 +133,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var IGNPAR   = _flag_table.IGNPAR
+  static var IGNPAR = _flag_table.IGNPAR
 
   /**
    * Mark parity and framing errors.
@@ -141,7 +141,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var PARMRK   = _flag_table.PARMRK
+  static var PARMRK = _flag_table.PARMRK
 
   /**
    * Enable checking of parity errors.
@@ -149,7 +149,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var INPCK    = _flag_table.INPCK
+  static var INPCK = _flag_table.INPCK
 
   /**
    * Strip 8th bit off chars.
@@ -157,7 +157,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var ISTRIP   = _flag_table.ISTRIP
+  static var ISTRIP = _flag_table.ISTRIP
 
   /**
    * Map NL into CR.
@@ -165,7 +165,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var INLCR    = _flag_table.INLCR
+  static var INLCR = _flag_table.INLCR
 
   /**
    * Ignore CR.
@@ -173,7 +173,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var IGNCR    = _flag_table.IGNCR
+  static var IGNCR = _flag_table.IGNCR
 
   /**
    * Map CR to NL (ala CRMOD).
@@ -181,7 +181,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var ICRNL    = _flag_table.ICRNL
+  static var ICRNL = _flag_table.ICRNL
 
   /**
    * Enable output flow control.
@@ -189,7 +189,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var IXON     = _flag_table.IXON
+  static var IXON = _flag_table.IXON
 
   /**
    * Enable input flow control.
@@ -197,7 +197,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var IXOFF    = _flag_table.IXOFF
+  static var IXOFF = _flag_table.IXOFF
 
   /**
    * Any char will restart after stop.
@@ -205,7 +205,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var IXANY    = _flag_table.IXANY
+  static var IXANY = _flag_table.IXANY
 
   /**
    * Maintain state for UTF-8 VERASE. Only meaningful on Linux/Android/
@@ -215,7 +215,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var IUTF8    = _flag_table.IUTF8
+  static var IUTF8 = _flag_table.IUTF8
 
   # output flags
 
@@ -225,7 +225,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var OPOST    = _flag_table.OPOST
+  static var OPOST = _flag_table.OPOST
 
   /**
    * Map NL to CR-NL (ala CRMOD).
@@ -233,7 +233,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var ONLCR    = _flag_table.ONLCR
+  static var ONLCR = _flag_table.ONLCR
 
   # control flags
 
@@ -243,7 +243,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var CSIZE    = _flag_table.CSIZE
+  static var CSIZE = _flag_table.CSIZE
 
   /**
    * 5 bits (pseudo).
@@ -251,7 +251,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var CS5      = _flag_table.CS5
+  static var CS5 = _flag_table.CS5
 
   /**
    * 6 bits.
@@ -259,7 +259,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var CS6      = _flag_table.CS6
+  static var CS6 = _flag_table.CS6
 
   /**
    * 7 bits.
@@ -267,7 +267,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var CS7      = _flag_table.CS7
+  static var CS7 = _flag_table.CS7
 
   /**
    * 8 bits.
@@ -275,7 +275,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var CS8      = _flag_table.CS8
+  static var CS8 = _flag_table.CS8
 
   /**
    * Send 2 stop bits.
@@ -283,7 +283,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var CSTOPB   = _flag_table.CSTOPB
+  static var CSTOPB = _flag_table.CSTOPB
 
   /**
    * Enable receiver.
@@ -291,7 +291,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var CREAD    = _flag_table.CREAD
+  static var CREAD = _flag_table.CREAD
 
   /**
    * Parity enable.
@@ -299,7 +299,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var PARENB   = _flag_table.PARENB
+  static var PARENB = _flag_table.PARENB
 
   /**
    * Odd parity, else even.
@@ -307,7 +307,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var PARODD   = _flag_table.PARODD
+  static var PARODD = _flag_table.PARODD
 
   /**
    * Hang up on last close.
@@ -315,7 +315,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var HUPCL    = _flag_table.HUPCL
+  static var HUPCL = _flag_table.HUPCL
 
   /**
    * Ignore modem status lines.
@@ -323,7 +323,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var CLOCAL   = _flag_table.CLOCAL
+  static var CLOCAL = _flag_table.CLOCAL
 
   # "Local" flags - dumping ground for other state
   # Warning: some flags in this structure begin with
@@ -336,13 +336,13 @@ class TTY {
    * @type int
    * @static
    */
-  static var ECHOE    = _flag_table.ECHOE
+  static var ECHOE = _flag_table.ECHOE
 
   /**
    * Echo NL after line kill
    * @static
    */
-  static var ECHOK    = _flag_table.ECHOK
+  static var ECHOK = _flag_table.ECHOK
 
   /**
    * Enable echoing.
@@ -350,7 +350,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var ECHO     = _flag_table.ECHO
+  static var ECHO = _flag_table.ECHO
 
   /**
    * Echo NL even if ECHO is off.
@@ -358,7 +358,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var ECHONL   = _flag_table.ECHONL
+  static var ECHONL = _flag_table.ECHONL
 
   /**
    * Enable signals INTR, QUIT, [D]SUSP.
@@ -366,7 +366,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var ISIG     = _flag_table.ISIG
+  static var ISIG = _flag_table.ISIG
 
   /**
    * Canonicalize input lines.
@@ -374,7 +374,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var ICANON   = _flag_table.ICANON
+  static var ICANON = _flag_table.ICANON
 
   /**
    * Enable DISCARD and LNEXT.
@@ -382,7 +382,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var IEXTEN   = _flag_table.IEXTEN
+  static var IEXTEN = _flag_table.IEXTEN
 
   /**
    * Stop background jobs from output.
@@ -390,7 +390,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var TOSTOP   = _flag_table.TOSTOP
+  static var TOSTOP = _flag_table.TOSTOP
 
   /**
    * Don't flush after interrupt.
@@ -398,7 +398,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var NOFLSH   = _flag_table.NOFLSH
+  static var NOFLSH = _flag_table.NOFLSH
 
   #-----------------------------------------------------------------------
 
@@ -410,7 +410,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var TCSANOW    = _flag_table.TCSANOW
+  static var TCSANOW = _flag_table.TCSANOW
 
   /**
    * Drain output, then change.
@@ -418,7 +418,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var TCSADRAIN  = _flag_table.TCSADRAIN
+  static var TCSADRAIN = _flag_table.TCSADRAIN
 
   /**
    * Drain output, flush input.
@@ -426,7 +426,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var TCSAFLUSH  = _flag_table.TCSAFLUSH
+  static var TCSAFLUSH = _flag_table.TCSAFLUSH
 
   # Special Control Characters: indices into the TTY_CC table (see
   # TTY_CC above) rather than bit flags. Only meaningful in ICANON mode
@@ -438,7 +438,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var VEOF       = _flag_table.VEOF
+  static var VEOF = _flag_table.VEOF
 
   /**
    * ICANON.
@@ -446,7 +446,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var VEOL       = _flag_table.VEOL
+  static var VEOL = _flag_table.VEOL
 
   /**
    * ICANON.
@@ -454,7 +454,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var VERASE     = _flag_table.VERASE
+  static var VERASE = _flag_table.VERASE
 
   /**
    * ICANON.
@@ -462,7 +462,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var VKILL      = _flag_table.VKILL
+  static var VKILL = _flag_table.VKILL
 
   /**
    * ISIG.
@@ -470,7 +470,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var VINTR      = _flag_table.VINTR
+  static var VINTR = _flag_table.VINTR
 
   /**
    * ISIG.
@@ -478,7 +478,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var VQUIT      = _flag_table.VQUIT
+  static var VQUIT = _flag_table.VQUIT
 
   /**
    * ISIG.
@@ -486,7 +486,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var VSUSP      = _flag_table.VSUSP
+  static var VSUSP = _flag_table.VSUSP
 
   /**
    * IXON, IXOFF.
@@ -494,7 +494,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var VSTART     = _flag_table.VSTART
+  static var VSTART = _flag_table.VSTART
 
   /**
    * IXON, IXOFF.
@@ -502,7 +502,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var VSTOP      = _flag_table.VSTOP
+  static var VSTOP = _flag_table.VSTOP
 
   /**
    * !ICANON.
@@ -510,7 +510,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var VMIN       = _flag_table.VMIN
+  static var VMIN = _flag_table.VMIN
 
   /**
    * !ICANON.
@@ -518,7 +518,7 @@ class TTY {
    * @type int
    * @static
    */
-  static var VTIME      = _flag_table.VTIME
+  static var VTIME = _flag_table.VTIME
 
   /**
    * @note _file_ must be one of stdout and stderr
@@ -596,9 +596,20 @@ class TTY {
 
     var new_attr = _io.TTY.tcgetattr(self.std, false)
 
-    new_attr[TTY.TTY_IFLAG] &= ~(TTY.IGNBRK | TTY.BRKINT | TTY.PARMRK | TTY.ISTRIP | TTY.INLCR | TTY.IGNCR | TTY.ICRNL | TTY.IXON)
+    new_attr[TTY.TTY_IFLAG] &= ~(TTY.IGNBRK
+      | TTY.BRKINT
+      | TTY.PARMRK
+      | TTY.ISTRIP
+      | TTY.INLCR
+      | TTY.IGNCR
+      | TTY.ICRNL
+      | TTY.IXON)
     new_attr[TTY.TTY_OFLAG] &= ~TTY.OPOST
-    new_attr[TTY.TTY_LFLAG] &= ~(TTY.ECHO | TTY.ECHONL | TTY.ICANON | TTY.ISIG | TTY.IEXTEN)
+    new_attr[TTY.TTY_LFLAG] &= ~(TTY.ECHO
+      | TTY.ECHONL
+      | TTY.ICANON
+      | TTY.ISIG
+      | TTY.IEXTEN)
     new_attr[TTY.TTY_CFLAG] &= ~(TTY.CSIZE | TTY.PARENB)
     new_attr[TTY.TTY_CFLAG] |= TTY.CS8
 

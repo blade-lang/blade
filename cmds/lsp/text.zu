@@ -237,7 +237,9 @@ class LineIndex {
    * @returns dict: `{ line, character }`.
    */
   position(offset: int, encoding: string) {
-    var at = offset < 0 ? 0 : (offset > self.text.length() ? self.text.length() : offset)
+    var at = offset < 0
+      ? 0
+      : (offset > self.text.length() ? self.text.length() : offset)
     var line = self.line_of(at)
     var start = self._starts[line]
     var end = self.line_end(line)
@@ -274,7 +276,10 @@ class LineIndex {
    * @returns dict: `{ start, end }`, each a position.
    */
   range(start: int, end: int, encoding: string) {
-    return { start: self.position(start, encoding), end: self.position(end, encoding) }
+    return {
+      start: self.position(start, encoding),
+      end: self.position(end, encoding),
+    }
   }
 }
 
@@ -416,7 +421,9 @@ def path_to_uri(path: string) {
     var slash = rest.index_of('/')
 
     if slash > 0 {
-      return 'file://' + rest[0, slash] + _percent_encode(rest[slash, rest.length()])
+      return 'file://'
+        + rest[0, slash]
+        + _percent_encode(rest[slash, rest.length()])
     }
   }
 
@@ -438,7 +445,9 @@ def _lines_with_breaks(text: string) {
   var lines = []
 
   iter var i = 0; i < index.line_count(); i++ {
-    var next = i + 1 < index.line_count() ? index.line_start(i + 1) : text.length()
+    var next = i + 1 < index.line_count()
+      ? index.line_start(i + 1)
+      : text.length()
     lines.append(text[index.line_start(i), next])
   }
 

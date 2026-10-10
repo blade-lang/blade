@@ -281,7 +281,9 @@ class Server {
       if value != nil {
         self._tested(value)
       }
-    } else if self.pool != nil and channel == self.pool.results and value != nil {
+    } else if self.pool != nil
+      and channel == self.pool.results
+      and value != nil {
       self._indexed_batch(value)
     }
   }
@@ -373,7 +375,9 @@ class Server {
 
     for item in self._queue {
       var value = item.get('value', nil)
-      var is_request = item.kind == 'message' and is_dict(value) and value.contains('method')
+      var is_request = item.kind == 'message'
+        and is_dict(value)
+        and value.contains('method')
 
       if is_request and value.contains('id') and ids.contains(value.id) {
         self._answer_cancelled(value.id)
@@ -394,7 +398,9 @@ class Server {
       if ids.contains(job.context.id) {
         self._formats.remove(job_id)
         self._cancelled.remove(job.context.id)
-        job.context.fail(rpc.RpcError(REQUEST_CANCELLED, 'the request was cancelled'))
+        job.context.fail(rpc.RpcError(
+          REQUEST_CANCELLED, 'the request was cancelled',
+        ))
       }
     }
 
@@ -405,7 +411,9 @@ class Server {
         self._test_runs.remove(run_id)
         self._cancelled.remove(run.context.id)
         self._stop_test_run(run)
-        run.context.fail(rpc.RpcError(REQUEST_CANCELLED, 'the request was cancelled'))
+        run.context.fail(rpc.RpcError(
+          REQUEST_CANCELLED, 'the request was cancelled',
+        ))
       }
     }
 
@@ -414,7 +422,9 @@ class Server {
 
       self._held = nil
       self._cancelled.remove(held.context.id)
-      held.context.fail(rpc.RpcError(REQUEST_CANCELLED, 'the request was cancelled'))
+      held.context.fail(rpc.RpcError(
+        REQUEST_CANCELLED, 'the request was cancelled',
+      ))
     }
   }
 
@@ -438,7 +448,9 @@ class Server {
     self._drain()
     self._apply_cancellations()
 
-    if context != nil and context.id != nil and self._cancelled.contains(context.id) {
+    if context != nil
+      and context.id != nil
+      and self._cancelled.contains(context.id) {
       self._cancelled.remove(context.id)
       raise rpc.RpcError(REQUEST_CANCELLED, 'the request was cancelled')
     }
@@ -462,7 +474,9 @@ class Server {
       var document = is_dict(params) ? params.get('textDocument', {}) : {}
 
       if is_dict(document) and document.get('uri', nil) == uri {
-        raise rpc.RpcError(CONTENT_MODIFIED, 'the document changed before the answer was ready')
+        raise rpc.RpcError(
+          CONTENT_MODIFIED, 'the document changed before the answer was ready',
+        )
       }
     }
   }
@@ -481,7 +495,9 @@ class Server {
 
     if self._refresh_due != nil and self._refresh_due <= now {
       self._refresh_due = nil
-      self._request_refresh('workspace/diagnostic/refresh', 'workspace.diagnostics.refreshSupport')
+      self._request_refresh(
+        'workspace/diagnostic/refresh', 'workspace.diagnostics.refreshSupport',
+      )
     }
 
     if self._parent_due != nil and self._parent_due <= now {
@@ -511,7 +527,9 @@ class Server {
    */
   hold_workspace_pull(params: dict, context) {
     if self._held != nil {
-      self._held.context.fail(rpc.RpcError(REQUEST_CANCELLED, 'a newer pull replaced this one'))
+      self._held.context.fail(rpc.RpcError(
+        REQUEST_CANCELLED, 'a newer pull replaced this one',
+      ))
     }
 
     self._held = { params, context, since: time() }
@@ -548,7 +566,9 @@ class Server {
 
   _answer(method: string, handler, params, context) {
     if self._phase == 'new' and method != 'initialize' {
-      raise rpc.RpcError(SERVER_NOT_INITIALIZED, 'the server has not been initialized')
+      raise rpc.RpcError(
+        SERVER_NOT_INITIALIZED, 'the server has not been initialized',
+      )
     }
 
     if self._phase == 'shutdown' {
@@ -619,14 +639,18 @@ class Server {
       }
 
       if self._phase == 'new' {
-        raise rpc.RpcError(SERVER_NOT_INITIALIZED, 'the server has not been initialized')
+        raise rpc.RpcError(
+          SERVER_NOT_INITIALIZED, 'the server has not been initialized',
+        )
       }
 
       if self._phase == 'shutdown' {
         raise rpc.RpcError(rpc.INVALID_REQUEST, 'the server is shutting down')
       }
 
-      raise rpc.RpcError(rpc.METHOD_NOT_FOUND, 'Method not found: ${context.method}')
+      raise rpc.RpcError(
+        rpc.METHOD_NOT_FOUND, 'Method not found: ${context.method}',
+      )
     })
 
     self._request('initialize', @(params, context) => self._initialize(params))
@@ -647,10 +671,18 @@ class Server {
     })
 
     self._notification('initialized', @(params) => self._initialized())
-    self._notification('textDocument/didOpen', @(params) => self._did_open(params))
-    self._notification('textDocument/didChange', @(params) => self._did_change(params))
-    self._notification('textDocument/didSave', @(params) => self._did_save(params))
-    self._notification('textDocument/didClose', @(params) => self._did_close(params))
+    self._notification(
+      'textDocument/didOpen', @(params) => self._did_open(params),
+    )
+    self._notification(
+      'textDocument/didChange', @(params) => self._did_change(params),
+    )
+    self._notification(
+      'textDocument/didSave', @(params) => self._did_save(params),
+    )
+    self._notification(
+      'textDocument/didClose', @(params) => self._did_close(params),
+    )
 
     self._notification('workspace/didChangeConfiguration', @(params) {
       self._did_change_settings(params)
@@ -664,7 +696,9 @@ class Server {
       self._did_change_folders(params)
     })
 
-    self._notification('workspace/didRenameFiles', @(params) => self._did_rename_files(params))
+    self._notification(
+      'workspace/didRenameFiles', @(params) => self._did_rename_files(params),
+    )
 
     self._request('textDocument/formatting', @(params, context) {
       return self._format(params, context, nil)
@@ -691,7 +725,9 @@ class Server {
 
   _initialize(params: dict) {
     if self._phase != 'new' {
-      raise rpc.RpcError(rpc.INVALID_REQUEST, 'the server has already been initialized')
+      raise rpc.RpcError(
+        rpc.INVALID_REQUEST, 'the server has already been initialized',
+      )
     }
 
     var capabilities = params.get('capabilities', nil)
@@ -753,7 +789,9 @@ class Server {
           id: 'zuri-watched-files',
           method: 'workspace/didChangeWatchedFiles',
           registerOptions: {
-            watchers: [{ globPattern: '**/*.zu' }, { globPattern: '**/project.toml' }],
+            watchers: [
+              { globPattern: '**/*.zu' }, { globPattern: '**/project.toml' },
+            ],
           },
         }],
       }, @(result, error) {
@@ -765,7 +803,10 @@ class Server {
 
     if self.supports('workspace.didChangeConfiguration.dynamicRegistration') {
       self.endpoint.send_request('client/registerCapability', {
-        registrations: [{ id: 'zuri-configuration', method: 'workspace/didChangeConfiguration' }],
+        registrations: [{
+          id: 'zuri-configuration',
+          method: 'workspace/didChangeConfiguration',
+        }],
       }, @(result, error) {
         if error != nil {
           log.warn('the client would not report setting changes: ${error.message}')
@@ -811,7 +852,9 @@ class Server {
 
     if found.is_empty() {
       var root = params.get('rootUri', nil)
-      var path = is_string(root) ? text.uri_to_path(root) : params.get('rootPath', nil)
+      var path = is_string(root)
+        ? text.uri_to_path(root)
+        : params.get('rootPath', nil)
 
       if is_string(path) {
         found.append(path)
@@ -902,10 +945,12 @@ class Server {
       },
     }
 
-    if self.supports('textDocument.codeAction.codeActionLiteralSupport') != nil {
+    if self.supports('textDocument.codeAction.codeActionLiteralSupport')
+      != nil {
       capabilities.codeActionProvider = {
         codeActionKinds: actions.KINDS,
-        resolveProvider: self.supports('textDocument.codeAction.resolveSupport') != nil,
+        resolveProvider: self.supports('textDocument.codeAction.resolveSupport')
+          != nil,
       }
     }
 
@@ -973,15 +1018,20 @@ class Server {
 
     var wanted = { items: [{ section: 'zuri' }] }
 
-    self.endpoint.send_request('workspace/configuration', wanted, @(result, error) {
-      if error == nil and is_list(result) and !result.is_empty() and is_dict(result[0]) {
-        self._apply_settings(result[0], !start)
-      }
+    self.endpoint.send_request(
+      'workspace/configuration', wanted, @(result, error) {
+        if error == nil
+          and is_list(result)
+          and !result.is_empty()
+          and is_dict(result[0]) {
+          self._apply_settings(result[0], !start)
+        }
 
-      if start {
-        self._start_indexing()
-      }
-    })
+        if start {
+          self._start_indexing()
+        }
+      },
+    )
   }
 
   _did_change_settings(params: dict) {
@@ -1021,11 +1071,15 @@ class Server {
     }
 
     if changed.some(@(name) => name.starts_with('inlayHints.')) {
-      self._request_refresh('workspace/inlayHint/refresh', 'workspace.inlayHint.refreshSupport')
+      self._request_refresh(
+        'workspace/inlayHint/refresh', 'workspace.inlayHint.refreshSupport',
+      )
     }
 
     if changed.some(@(name) => name.starts_with('codeLens.')) {
-      self._request_refresh('workspace/codeLens/refresh', 'workspace.codeLens.refreshSupport')
+      self._request_refresh(
+        'workspace/codeLens/refresh', 'workspace.codeLens.refreshSupport',
+      )
     }
   }
 
@@ -1061,7 +1115,9 @@ class Server {
 
     for folder in self.folders {
       catch {
-        for path in workspace.zu_files(folder, is_list(excludes) ? excludes : []) {
+        for path in workspace.zu_files(
+          folder, is_list(excludes) ? excludes : [],
+        ) {
           listed[path] = true
         }
       } as error {
@@ -1215,10 +1271,14 @@ class Server {
 
     self._request_refresh(
       'workspace/semanticTokens/refresh',
-      'workspace.semanticTokens.refreshSupport'
+      'workspace.semanticTokens.refreshSupport',
     )
-    self._request_refresh('workspace/inlayHint/refresh', 'workspace.inlayHint.refreshSupport')
-    self._request_refresh('workspace/codeLens/refresh', 'workspace.codeLens.refreshSupport')
+    self._request_refresh(
+      'workspace/inlayHint/refresh', 'workspace.inlayHint.refreshSupport',
+    )
+    self._request_refresh(
+      'workspace/codeLens/refresh', 'workspace.codeLens.refreshSupport',
+    )
   }
 
   # --------------------------------------------------------------
@@ -1236,18 +1296,27 @@ class Server {
 
     self._progress = { token, total, done: 0, reported: 0, started: false }
 
-    self.endpoint.send_request('window/workDoneProgress/create', { token }, @(result, error) {
-      if error != nil or self._progress == nil or self._progress.token != token {
-        self._progress = nil
-        return
-      }
+    self.endpoint.send_request(
+      'window/workDoneProgress/create', { token }, @(result, error) {
+        if error != nil
+          or self._progress == nil
+          or self._progress.token != token {
+          self._progress = nil
+          return
+        }
 
-      self._progress.started = true
-      self.endpoint.notify('$/progress', {
-        token,
-        value: { kind: 'begin', title: 'Indexing', percentage: 0, cancellable: false },
-      })
-    })
+        self._progress.started = true
+        self.endpoint.notify('$/progress', {
+          token,
+          value: {
+            kind: 'begin',
+            title: 'Indexing',
+            percentage: 0,
+            cancellable: false,
+          },
+        })
+      },
+    )
   }
 
   _progress_total(more: int) {
@@ -1271,7 +1340,9 @@ class Server {
 
     progress.reported = now
 
-    var percentage = progress.total == 0 ? 100 : (self._indexed * 100 / progress.total).floor()
+    var percentage = progress.total == 0
+      ? 100
+      : (self._indexed * 100 / progress.total).floor()
 
     self.endpoint.notify('$/progress', {
       token: progress.token,
@@ -1320,7 +1391,9 @@ class Server {
       return
     }
 
-    document.change(params.contentChanges, params.textDocument.version, self.encoding)
+    document.change(
+      params.contentChanges, params.textDocument.version, self.encoding,
+    )
     self._forget_test_failures(document.key)
 
     var delay = self.settings.get('diagnostics.delay')
@@ -1538,7 +1611,9 @@ class Server {
 
     var content = self.text(key)
 
-    return content == nil ? nil : summaries.analyze(key, content, self.builtins.names).nodes
+    return content == nil
+      ? nil
+      : summaries.analyze(key, content, self.builtins.names).nodes
   }
 
   /**
@@ -1558,7 +1633,9 @@ class Server {
     var cached = self._text_cache.get(key, nil)
     var summary = self.linker.holds(key) ? self.linker.summary(key) : nil
 
-    if cached != nil and summary != nil and cached.hash == summary.get('hash', nil) {
+    if cached != nil
+      and summary != nil
+      and cached.hash == summary.get('hash', nil) {
       return cached.text
     }
 
@@ -1566,7 +1643,10 @@ class Server {
       var content = file(key).read()
 
       if summary != nil {
-        self._text_cache[key] = { hash: summaries.digest(content), text: content }
+        self._text_cache[key] = {
+          hash: summaries.digest(content),
+          text: content,
+        }
       }
 
       return content
@@ -1631,7 +1711,10 @@ class Server {
     var lines = self.index(key)
 
     if lines == nil {
-      return { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }
+      return {
+        start: { line: 0, character: 0 },
+        end: { line: 0, character: 0 },
+      }
     }
 
     return lines.range(start, end, self.encoding)
@@ -1662,7 +1745,9 @@ class Server {
       return open.uri
     }
 
-    return key.contains(':') and !key.match('/^[A-Za-z]:[\\\\\/]/') ? key : text.path_to_uri(key)
+    return key.contains(':') and !key.match('/^[A-Za-z]:[\\\\\/]/')
+      ? key
+      : text.path_to_uri(key)
   }
 
   /**
@@ -1754,7 +1839,8 @@ class Server {
       return true
     }
 
-    return workspace.relative_to(key, self.folders) != nil and !self._is_library(key)
+    return workspace.relative_to(key, self.folders) != nil
+      and !self._is_library(key)
   }
 
   # Whether `path` is part of the standard library or the installed
@@ -1798,7 +1884,8 @@ class Server {
     }
 
     for uri, other in self.documents {
-      if other.uri != document.uri and self._depends_on(other.key, document.key, 0, {}) {
+      if other.uri != document.uri
+        and self._depends_on(other.key, document.key, 0, {}) {
         self._schedule(uri, seconds)
       }
     }
@@ -1824,7 +1911,8 @@ class Server {
         return true
       }
 
-      if self._reexports(path) and self._depends_on(path, target, depth + 1, seen) {
+      if self._reexports(path)
+        and self._depends_on(path, target, depth + 1, seen) {
         return true
       }
     }
@@ -1875,7 +1963,9 @@ class Server {
 
   # Pushes the diagnostics of a workspace file nobody has open.
   _publish_file(path: string) {
-    if self.pull_diagnostics() or self._is_open_path(path) or !self.files.contains(path) {
+    if self.pull_diagnostics()
+      or self._is_open_path(path)
+      or !self.files.contains(path) {
       return
     }
 
@@ -1895,13 +1985,17 @@ class Server {
     }
 
     self._published[uri] = true
-    self.endpoint.notify('textDocument/publishDiagnostics', { uri, diagnostics: items })
+    self.endpoint.notify(
+      'textDocument/publishDiagnostics', { uri, diagnostics: items },
+    )
   }
 
   _clear_diagnostics(uri: string) {
     if self._published.contains(uri) {
       self._published.remove(uri)
-      self.endpoint.notify('textDocument/publishDiagnostics', { uri, diagnostics: [] })
+      self.endpoint.notify(
+        'textDocument/publishDiagnostics', { uri, diagnostics: [] },
+      )
     }
   }
 
@@ -1987,7 +2081,9 @@ class Server {
       version: document.version,
       before: document.text,
       range,
-      task: isolate.spawn(formatter.run, id, document.text, self._format_results),
+      task: isolate.spawn(
+        formatter.run, id, document.text, self._format_results,
+      ),
     }
 
     return nil
@@ -2020,7 +2116,9 @@ class Server {
     catch {
       var key = document == nil ? self.key(job.uri) : document.key
 
-      job.context.reply(formatting.edits(self, key, job.before, result.text, job.range))
+      job.context.reply(formatting.edits(
+        self, key, job.before, result.text, job.range,
+      ))
     } as error {
       log.exception(error, 'formatting ${job.uri} failed')
       job.context.fail(rpc.RpcError(rpc.INTERNAL_ERROR, error.message))
@@ -2041,10 +2139,14 @@ class Server {
     }
 
     var arguments = params.get('arguments', [])
-    var target = is_list(arguments) and !arguments.is_empty() ? arguments[0] : nil
+    var target = is_list(arguments) and !arguments.is_empty()
+      ? arguments[0]
+      : nil
 
     if !is_dict(target) or !is_string(target.get('uri', nil)) {
-      raise rpc.RpcError(rpc.INVALID_PARAMS, '${command} takes { uri, filter, name, notify }')
+      raise rpc.RpcError(
+        rpc.INVALID_PARAMS, '${command} takes { uri, filter, name, notify }',
+      )
     }
 
     var path = text.uri_to_path(target.uri)
@@ -2081,10 +2183,15 @@ class Server {
       tests: [],
       output: [],
       pid: nil,
-      task: isolate.spawn(testing.run_file, id, path, cwd, filter, self._test_results),
+      task: isolate.spawn(
+        testing.run_file, id, path, cwd, filter, self._test_results,
+      ),
     }
 
-    log.info('running the tests of ${path}' + (filter == nil ? '' : ' matching ${filter}'))
+    log.info(
+      'running the tests of ${path}'
+        + (filter == nil ? '' : ' matching ${filter}'),
+    )
 
     return nil
   }
@@ -2114,7 +2221,9 @@ class Server {
 
         if is_dict(event) and event.get('event', nil) == 'test_finished' {
           run.tests.append(event)
-          self.endpoint.notify('zuri/testEvent', { id: run.id, uri: run.uri, event })
+          self.endpoint.notify(
+            'zuri/testEvent', { id: run.id, uri: run.uri, event },
+          )
         }
       }
       when 'failed' {
@@ -2148,7 +2257,9 @@ class Server {
         var name = failure.get('file', nil)
 
         if is_string(name) {
-          failure.uri = text.path_to_uri(testing.failure_path(self, run.cwd, name))
+          failure.uri = text.path_to_uri(testing.failure_path(
+            self, run.cwd, name,
+          ))
         }
       }
     }
@@ -2258,14 +2369,17 @@ class Server {
 
       if open != nil {
         self._schedule(open.uri, 0)
-      } else if self.files.contains(key) and self.settings.get('diagnostics.scope') == 'workspace' {
+      } else if self.files.contains(key)
+        and self.settings.get('diagnostics.scope') == 'workspace' {
         self._background.append(@() => self._publish_file(key))
       } else {
         var uri = text.path_to_uri(key)
         var items = self.test_diagnostics(key)
 
         self._published[uri] = true
-        self.endpoint.notify('textDocument/publishDiagnostics', { uri, diagnostics: items })
+        self.endpoint.notify(
+          'textDocument/publishDiagnostics', { uri, diagnostics: items },
+        )
       }
     }
   }

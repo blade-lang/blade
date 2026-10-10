@@ -188,7 +188,7 @@ class ResultSet {
       if column < 0 or column >= self.columns.length() {
         raise QueryError(
           'column ${column} is out of range for a result with ' +
-          '${self.columns.length()} columns'
+            '${self.columns.length()} columns',
         )
       }
 
@@ -203,7 +203,7 @@ class ResultSet {
 
     raise QueryError(
       'this result has no column named ${column}; it has ' +
-      '${', '.join(self.column_names())}'
+        '${', '.join(self.column_names())}',
     )
   }
 

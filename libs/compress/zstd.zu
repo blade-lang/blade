@@ -30,9 +30,8 @@ def compress(data, level) {
  * @returns bytes
  */
 def decompress(data) {
- return _compress.zstd_decompress(data)
+  return _compress.zstd_decompress(data)
 }
-
 
 /**
  * Streaming zstd compressor implemention. This encoder supports
@@ -168,7 +167,6 @@ class ZstdEncoder {
     _compress.zstd_encoder_flush(self._ptr)
   }
 }
-
 
 /**
  * Streaming zstd decompressor implemention. This decoder reads

@@ -17,7 +17,6 @@
 import .namespaces { HTML_NAMESPACE, SVG_NAMESPACE, MATHML_NAMESPACE }
 import .namespaces { XLINK_NAMESPACE, XML_NAMESPACE, XMLNS_NAMESPACE }
 
-
 /**
  * The HTML elements the standard calls "special": the ones a list item
  * or definition term stops searching past, and the ones the adoption
@@ -351,7 +350,6 @@ var HTML4_TRANSITIONAL_PREFIXES = [
 var QUIRKS_SYSTEM_ID = 'http://www.ibm.com/data/dtd/v11/' +
   'ibmxhtml1-transitional.dtd'
 
-
 /**
  * True when the element _name_ in namespace _namespace_ is one of the
  * standard's special elements.
@@ -376,7 +374,6 @@ def is_special(namespace: string, name: string) {
   return false
 }
 
-
 /**
  * True when _element_ is a MathML text integration point, meaning its
  * children are parsed as HTML.
@@ -388,7 +385,6 @@ def is_mathml_text_integration_point(element) {
   return element.namespace == MATHML_NAMESPACE and
     MATHML_TEXT_INTEGRATION_POINTS.contains(element.tag_name)
 }
-
 
 /**
  * True when _element_ is an HTML integration point.
@@ -419,7 +415,6 @@ def is_html_integration_point(element) {
     SVG_HTML_INTEGRATION_POINTS.contains(element.tag_name)
 }
 
-
 /**
  * The correctly cased SVG tag name for the lowercase _name_ the
  * tokenizer produced, or _name_ itself when it needs no repair.
@@ -430,7 +425,6 @@ def is_html_integration_point(element) {
 def adjust_svg_tag_name(name: string) {
   return SVG_TAG_NAMES.get(name, name)
 }
-
 
 /**
  * Repairs the case of SVG attribute names in _attributes_ and returns
@@ -444,7 +438,6 @@ def adjust_svg_attributes(attributes: dict) {
   return _rename_attributes(attributes, SVG_ATTRIBUTES)
 }
 
-
 /**
  * Repairs the case of MathML attribute names in _attributes_ and
  * returns a new dictionary.
@@ -455,7 +448,6 @@ def adjust_svg_attributes(attributes: dict) {
 def adjust_mathml_attributes(attributes: dict) {
   return _rename_attributes(attributes, MATHML_ATTRIBUTES)
 }
-
 
 /**
  * Applies a rename table to a dictionary's keys, preserving order.
@@ -473,7 +465,6 @@ def _rename_attributes(attributes: dict, renames: dict) {
 
   return out
 }
-
 
 /**
  * Which quirks mode a doctype puts a document in.

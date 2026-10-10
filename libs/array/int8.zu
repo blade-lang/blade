@@ -12,7 +12,6 @@
 
 import ._base { Array }
 
-
 /**
  * Maximum value that "should" exist in a list passed to
  * Int8Array.
@@ -26,7 +25,6 @@ var INT8_MAX = 127
  * @type number
  */
 var INT8_MIN = -INT8_MAX - 1
-
 
 /**
  * class Int8Array represents an array of twos-complement 8-bit
@@ -43,10 +41,12 @@ class Int8Array < Array {
   var _data_type = 'c'
 
   _validate_value(value) {
-    if !is_int(value)
+    if !is_int(value) {
       raise TypeError('integer expected')
-    if value < INT8_MIN or value > INT8_MAX
+    }
+    if value < INT8_MIN or value > INT8_MAX {
       raise ValueError('value out of int8 range')
+    }
   }
 
   /**

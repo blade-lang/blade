@@ -30,8 +30,8 @@ var DEFAULT_LIMITS = {
   max_line_size: 8192,
   max_header_size: 65536,
   max_header_count: 100,
-  max_body_size: 10485760,   # 10 MiB
-  header_timeout: 10,        # seconds for the whole request head
+  max_body_size: 10485760, # 10 MiB
+  header_timeout: 10, # seconds for the whole request head
 }
 
 # Written into a response's `Server` header unless the application
@@ -179,7 +179,9 @@ def read_request(connection, options: ?dict) {
     request.cookies = cookies.parse_cookie_header(cookie_header)
   }
 
-  request.body_reader = body.reader_for(connection, request.headers, true, false)
+  request.body_reader = body.reader_for(
+    connection, request.headers, true, false,
+  )
 
   return request
 }
@@ -308,7 +310,9 @@ def write_response(connection, request, response, options: ?dict) {
   # RFC 9110 §6.6.1 makes Date mandatory for an origin server that has
   # a clock, and caches need it to compute freshness at all.
   response.headers.set_default('Date', util.format_date())
-  response.headers.set_default('Server', options.get('server_name', SERVER_NAME))
+  response.headers.set_default(
+    'Server', options.get('server_name', SERVER_NAME),
+  )
 
   var streaming = false
 
@@ -325,7 +329,9 @@ def write_response(connection, request, response, options: ?dict) {
       known_length = source[3]
     }
 
-    if method == 'HEAD' and known_length != nil and !response.headers.contains('content-length') {
+    if method == 'HEAD'
+      and known_length != nil
+      and !response.headers.contains('content-length') {
       response.headers.set('Content-Length', known_length)
     }
 
@@ -622,7 +628,7 @@ def read_response(connection, request, options: ?dict) {
   response.request_method = method
 
   var bodiless = method == 'HEAD' or status.is_bodiless(response.status) or
-      response.status == 101
+    response.status == 101
 
   # A 2xx answer to CONNECT establishes a tunnel; everything after the
   # head is tunnelled bytes, not a body.

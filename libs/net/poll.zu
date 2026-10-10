@@ -173,7 +173,7 @@ class Poller {
     if !is_instance(socket) {
       raise TypeError(
         'add() expects a TcpStream, UnixStream or TlsStream, got ' +
-        '${typeof(socket)}'
+          '${typeof(socket)}',
       )
     }
 
@@ -331,7 +331,9 @@ class Poller {
   wait(timeout: ?number) {
     var milliseconds = timeout == nil ? -1 : timeout
 
-    var ready = _net_poll.poll_wait(self._sockets, self._interests, milliseconds)
+    var ready = _net_poll.poll_wait(
+      self._sockets, self._interests, milliseconds,
+    )
     var events = []
 
     for event in ready {
@@ -360,11 +362,9 @@ class Poller {
   }
 }
 
-
 # How long `Acceptor.next()` waits on the poller before giving up on a
 # round, when the caller does not say.
 var _DEFAULT_ACCEPT_INTERVAL = 100
-
 
 /**
  * An accept loop that never parks the thread inside `accept()`.

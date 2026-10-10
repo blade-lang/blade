@@ -304,8 +304,8 @@ class PostgresConnection < DriverConnection {
   last_insert_id() {
     raise NotSupportedError(
       'postgres does not report a last insert id; an insert asks for ' +
-      'one with a RETURNING clause, which Connection.insert() adds',
-      { driver: 'postgres' }
+        'one with a RETURNING clause, which Connection.insert() adds',
+      { driver: 'postgres' },
     )
   }
 
@@ -596,7 +596,7 @@ class PostgresConnection < DriverConnection {
 
     raise NotSupportedError(
       'postgres has no ${isolation} isolation level',
-      { driver: 'postgres' }
+      { driver: 'postgres' },
     )
   }
 
@@ -604,7 +604,7 @@ class PostgresConnection < DriverConnection {
     if !self.in_transaction() {
       raise TransactionError(
         'there is no open transaction to ${what}',
-        { driver: 'postgres' }
+        { driver: 'postgres' },
       )
     }
   }
@@ -612,7 +612,7 @@ class PostgresConnection < DriverConnection {
   _open() {
     if self.is_closed() {
       raise ClosedError(
-        'this postgres connection was closed', { driver: 'postgres' }
+        'this postgres connection was closed', { driver: 'postgres' },
       )
     }
   }

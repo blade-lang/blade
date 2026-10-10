@@ -570,8 +570,8 @@ class Scram < Mechanism {
    *    wants; passing one is for reproducing a known exchange.
    * @throws AuthenticationError if `digest` is neither.
    */
-  @new(username: string, password: string, digest: ?string, authorize_as: ?string,
-    nonce: ?string) {
+  @new(username: string, password: string, digest: ?string,
+    authorize_as: ?string, nonce: ?string) {
     self.digest = digest == nil ? 'sha256' : digest.lower()
 
     if !_SCRAM_DIGESTS.contains(self.digest) {
@@ -640,7 +640,9 @@ class Scram < Mechanism {
 
     var salt = base64.decode(fields.s)
     var size = _SCRAM_DIGESTS[self.digest].size
-    var salted = hash.pbkdf2(self.digest, self.password, salt, iterations, size, true)
+    var salted = hash.pbkdf2(
+      self.digest, self.password, salt, iterations, size, true,
+    )
     var client_key = _scram_hmac(self.digest, salted, 'Client Key')
     var stored_key = _scram_hash(self.digest, client_key)
     var without_proof = 'c=${base64.encode(self._gs2().to_bytes())},r=${fields.r}'
@@ -648,7 +650,9 @@ class Scram < Mechanism {
     var signature = _scram_hmac(self.digest, stored_key, message)
     var server_key = _scram_hmac(self.digest, salted, 'Server Key')
 
-    self._server_signature = base64.encode(_scram_hmac(self.digest, server_key, message))
+    self._server_signature = base64.encode(_scram_hmac(
+      self.digest, server_key, message,
+    ))
     self._stage = 2
 
     return '${without_proof},p=${base64.encode(_xor(client_key, signature))}'.to_bytes()
@@ -722,7 +726,7 @@ def of(name: string, credentials: dict) {
       username,
       token,
       credentials.get('host', nil),
-      credentials.get('port', nil)
+      credentials.get('port', nil),
     )
   }
 
@@ -748,7 +752,7 @@ def of(name: string, credentials: dict) {
       password,
       wanted == 'SCRAM-SHA-1' ? 'sha1' : 'sha256',
       credentials.get('authorize_as', nil),
-      credentials.get('nonce', nil)
+      credentials.get('nonce', nil),
     )
   }
 

@@ -246,7 +246,7 @@ class ContentType {
     return ContentType(
       type,
       subtype == '' ? 'plain' : subtype,
-      encoding.decode_parameters(_read_parameters(text, end))
+      encoding.decode_parameters(_read_parameters(text, end)),
     )
   }
 
@@ -374,7 +374,7 @@ class ContentDisposition {
 
     return ContentDisposition(
       kind == '' ? 'inline' : kind,
-      encoding.decode_parameters(_read_parameters(text, end))
+      encoding.decode_parameters(_read_parameters(text, end)),
     )
   }
 

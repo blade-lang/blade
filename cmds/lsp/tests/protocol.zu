@@ -37,7 +37,12 @@ after_all(@{
 describe('cancellation', @{
   it('answers a request cancelled before it ran as cancelled', @{
     var answer = answer_to(9001, [
-      { jsonrpc: '2.0', id: 9001, method: 'workspace/symbol', params: { query: 'a' } },
+      {
+        jsonrpc: '2.0',
+        id: 9001,
+        method: 'workspace/symbol',
+        params: { query: 'a' },
+      },
       { jsonrpc: '2.0', method: '$/cancelRequest', params: { id: 9001 } },
     ])
 
@@ -76,36 +81,54 @@ describe('malformed input', @{
   it('answers a message that is not JSON with a parse error, and carries on', @{
     var body = '{"jsonrpc": "2.0", "id": 5, "method": '.to_bytes()
 
-    client.child.write_stdin('Content-Length: ${body.length()}\r\n\r\n'.to_bytes() + body)
+    client.child.write_stdin(
+      'Content-Length: ${body.length()}\r\n\r\n'.to_bytes() + body,
+    )
     client.ping()
 
-    expect(client.request('workspace/symbol', { query: 'Point' }).length()).to_be_greater_than(0)
+    expect(client
+      .request('workspace/symbol', { query: 'Point' })
+      .length()).to_be_greater_than(0)
   })
 
   it('answers a request it cannot read as invalid', @{
-    var answer = answer_to(9003, [{ jsonrpc: '1.0', id: 9003, method: 'workspace/symbol' }])
+    var answer = answer_to(
+      9003, [{ jsonrpc: '1.0', id: 9003, method: 'workspace/symbol' }],
+    )
 
     expect(answer.error.code).to_equal(-32600)
   })
 
-  it('answers a request with parameters it cannot use as an internal error, and carries on', @{
-    catch {
-      client.request('textDocument/hover', { textDocument: { uri: uri(SCRATCH) } })
-      expect('no error').to_equal('an error')
-    } as error {
-      expect(instance_of(error, rpc.RpcError)).to_be_true()
-    }
+  it(
+    'answers a request with parameters it cannot use as an internal error, and carries on',
+    @{
+      catch {
+        client.request(
+          'textDocument/hover', { textDocument: { uri: uri(SCRATCH) } },
+        )
+        expect('no error').to_equal('an error')
+      } as error {
+        expect(instance_of(error, rpc.RpcError)).to_be_true()
+      }
 
-    expect(client.request('workspace/symbol', { query: 'Circle' }).length()).to_be_greater_than(0)
-  })
+      expect(client
+        .request('workspace/symbol', { query: 'Circle' })
+        .length()).to_be_greater_than(0)
+    },
+  )
 
   it('ignores a change to a document it does not have open', @{
     client.notify('textDocument/didChange', {
-      textDocument: { uri: uri(os.join_paths(FIXTURE, 'nowhere.zu')), version: 2 },
+      textDocument: {
+        uri: uri(os.join_paths(FIXTURE, 'nowhere.zu')),
+        version: 2,
+      },
       contentChanges: [{ text: 'x' }],
     })
 
-    expect(client.request('workspace/symbol', { query: 'origin' }).length()).to_equal(1)
+    expect(client
+      .request('workspace/symbol', { query: 'origin' })
+      .length()).to_equal(1)
   })
 })
 
@@ -117,7 +140,10 @@ describe('settings', @{
     settled.wait_indexed()
 
     var main = settled.open(os.join_paths(FIXTURE, 'main.zu'), nil)
-    var whole = { start: { line: 0, character: 0 }, end: { line: 12, character: 0 } }
+    var whole = {
+      start: { line: 0, character: 0 },
+      end: { line: 12, character: 0 },
+    }
     var asked = { textDocument: { uri: main }, range: whole }
     var hints = settled.request('textDocument/inlayHint', asked)
 
@@ -125,7 +151,9 @@ describe('settings', @{
 
     settled.settings = { inlayHints: { parameterNames: 'all' } }
     settled.notify('workspace/didChangeConfiguration', { settings: nil })
-    var pulled = @() => settled.requests.filter(@(r) => r.method == 'workspace/configuration')
+    var pulled = @() => settled.requests.filter(
+      @(r) => r.method == 'workspace/configuration',
+    )
 
     settled.wait_for(@() => pulled().length() >= 2, 'a second settings request')
     settled.ping()

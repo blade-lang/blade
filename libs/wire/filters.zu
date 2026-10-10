@@ -38,7 +38,6 @@ import .values {
   type_name, unwrap,
 }
 
-
 # --------------------------------------------------------------------
 # Escaping
 # --------------------------------------------------------------------
@@ -103,7 +102,6 @@ def escape_value(value, context) {
   # marker, or asking for it would be a no-op exactly when it matters.
   return safe(escape.escape(unwrap(value), wanted, nil))
 }
-
 
 # --------------------------------------------------------------------
 # Text
@@ -284,7 +282,9 @@ def replace(value, search, replacement) {
  * @throws ArgumentError when _width_ is missing or not a number.
  */
 def lpad(value, width, fill) {
-  return stringify(unwrap(value)).lpad(_pad_width('lpad', width), _pad_fill(fill))
+  return stringify(unwrap(value)).lpad(
+    _pad_width('lpad', width), _pad_fill(fill),
+  )
 }
 
 /**
@@ -298,7 +298,9 @@ def lpad(value, width, fill) {
  * @throws ArgumentError when _width_ is missing or not a number.
  */
 def rpad(value, width, fill) {
-  return stringify(unwrap(value)).rpad(_pad_width('rpad', width), _pad_fill(fill))
+  return stringify(unwrap(value)).rpad(
+    _pad_width('rpad', width), _pad_fill(fill),
+  )
 }
 
 /**
@@ -434,10 +436,9 @@ def json_script(value, id) {
   }
 
   return Safe(
-    '<script${attributes}>' + escape.script(unwrap(value)) + '</script>'
+    '<script${attributes}>' + escape.script(unwrap(value)) + '</script>',
   )
 }
-
 
 # --------------------------------------------------------------------
 # Numbers
@@ -622,7 +623,6 @@ def filesize(value, binary) {
   var pieces = _decimals(scaled, 1)
   return '${pieces[0]}.${pieces[1]} ${unit}'
 }
-
 
 # --------------------------------------------------------------------
 # Collections
@@ -911,7 +911,6 @@ def split(value, separator) {
   return text.split(between)
 }
 
-
 # --------------------------------------------------------------------
 # Choice and comparison
 # --------------------------------------------------------------------
@@ -984,7 +983,6 @@ def not(value, expected) {
   return unwrap(value) != unwrap(expected)
 }
 
-
 # --------------------------------------------------------------------
 # Dates
 # --------------------------------------------------------------------
@@ -1017,7 +1015,6 @@ def date(value, format) {
 
   return _as_date(value).format(pattern)
 }
-
 
 # --------------------------------------------------------------------
 # Helpers
@@ -1089,7 +1086,6 @@ var BUILTIN = {
   date,
 }
 
-
 /**
  * _number_ rounded to _digits_ decimal places, split into its whole and
  * fractional halves with the fraction padded out to the full width.
@@ -1137,7 +1133,8 @@ def _number(filter: string, value) {
 
   # A number that arrived as text, which is what a form field or a query
   # string always gives, is worth reading rather than refusing.
-  if is_string(subject) and subject.trim().match('/^-?\\d+(\\.\\d+)?$/') != false {
+  if is_string(subject)
+    and subject.trim().match('/^-?\\d+(\\.\\d+)?$/') != false {
     return subject.trim().to_number()
   }
 

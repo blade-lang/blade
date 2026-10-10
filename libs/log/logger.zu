@@ -10,7 +10,6 @@
 import .transport { * }
 import .level { * }
 
-
 /**
  * Logs a message with level [[log.None]] on all registered
  * transports.
@@ -90,7 +89,9 @@ def critical(...args) {
 # within the module that shadows it; confirmed to affect even
 # `param: Type` annotations, not just plain expressions.
 def _looks_like_error(ex) {
-  return is_instance(ex) and hasprop(ex, 'message') and hasprop(ex, 'stacktrace')
+  return is_instance(ex)
+    and hasprop(ex, 'message')
+    and hasprop(ex, 'stacktrace')
 }
 
 /**
@@ -113,18 +114,17 @@ def exception(ex, message) {
     } else {
       _write(LogLevel.Error, [
         'Unhandled ${typeof(ex)}: ${ex.message}',
-        '\n${ex.stacktrace}'
+        '\n${ex.stacktrace}',
       ], nil)
     }
   } else if message {
     _write(LogLevel.Error, [
-      'Unhandled ${typeof(ex)}: ${message}'
+      'Unhandled ${typeof(ex)}: ${message}',
     ], nil)
   } else {
-    _write(LogLevel.Error, [ ex ], nil)
+    _write(LogLevel.Error, [ex], nil)
   }
 }
-
 
 # ---------------------------------------------------------------------------
 # Logger: namespaced, structured-field-bound loggers
@@ -164,8 +164,12 @@ class Logger {
   # be freely shared once bound.
   bind(fields: dict) {
     var merged = {}
-    for k, v in self._fields { merged[k] = v }
-    for k, v in fields { merged[k] = v }
+    for k, v in self._fields {
+      merged[k] = v
+    }
+    for k, v in fields {
+      merged[k] = v
+    }
     return Logger(self.name, merged)
   }
 
@@ -213,13 +217,13 @@ class Logger {
       } else {
         _write(LogLevel.Error, [
           'Unhandled ${typeof(ex)}: ${ex.message}',
-          '\n${ex.stacktrace}'
+          '\n${ex.stacktrace}',
         ], context)
       }
     } else if message {
-      _write(LogLevel.Error, [ 'Unhandled ${typeof(ex)}: ${message}' ], context)
+      _write(LogLevel.Error, ['Unhandled ${typeof(ex)}: ${message}'], context)
     } else {
-      _write(LogLevel.Error, [ ex ], context)
+      _write(LogLevel.Error, [ex], context)
     }
   }
 }

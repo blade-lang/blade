@@ -34,7 +34,9 @@ import .errors { MessageError }
 
 # The transfer encodings a part's Content-Transfer-Encoding may name.
 # The first three leave the data alone and only describe it.
-var TRANSFER_ENCODINGS = ['7bit', '8bit', 'binary', 'base64', 'quoted-printable']
+var TRANSFER_ENCODINGS = [
+  '7bit', '8bit', 'binary', 'base64', 'quoted-printable',
+]
 
 # The line length RFC 2045 sets for an encoded body, counting the soft
 # break that may end the line.
@@ -300,7 +302,9 @@ def decode_quoted_printable(text) {
       continue
     }
 
-    if index + 2 < raw.length() and raw[index + 1] == 0x0d and raw[index + 2] == 0x0a {
+    if index + 2 < raw.length()
+      and raw[index + 1] == 0x0d
+      and raw[index + 2] == 0x0a {
       index += 3
       continue
     }
@@ -554,7 +558,9 @@ def _word_body(text: string, kind: string) {
       continue
     }
 
-    parts.append('=' + _HEX[(value >> 4) & 0x0f].chr() + _HEX[value & 0x0f].chr())
+    parts.append(
+      '=' + _HEX[(value >> 4) & 0x0f].chr() + _HEX[value & 0x0f].chr(),
+    )
   }
 
   return ''.join(parts)
@@ -581,7 +587,9 @@ def _pick_method(text: string) {
 # up in ordinary text too and a header that merely looks encoded must
 # be left alone.
 def _scan_word(text: string, start: number) {
-  if !text[start, start + 2 > text.length() ? text.length() : start + 2].starts_with('=?') {
+  if !text[start, start + 2 > text.length()
+    ? text.length()
+    : start + 2].starts_with('=?') {
     return nil
   }
 
@@ -703,7 +711,10 @@ def decode_words(text: string) {
 
     var character = text[index]
 
-    if character == ' ' or character == '\t' or character == '\r' or character == '\n' {
+    if character == ' '
+      or character == '\t'
+      or character == '\r'
+      or character == '\n' {
       gap += character
       index++
       continue
@@ -819,7 +830,11 @@ def _percent_encode(value: string) {
       continue
     }
 
-    parts.append('%' + _HEX[(byte_value >> 4) & 0x0f].chr() + _HEX[byte_value & 0x0f].chr())
+    parts.append(
+      '%'
+        + _HEX[(byte_value >> 4) & 0x0f].chr()
+        + _HEX[byte_value & 0x0f].chr(),
+    )
   }
 
   return ''.join(parts)

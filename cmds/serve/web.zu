@@ -36,7 +36,9 @@ var _view = wire.wire()
 
 # The stylesheet is cached for a day, so its address carries a digest
 # of what is in it, and a changed file is fetched afresh straight away.
-var _STYLE_VERSION = hash.sha256(fsx.read_bytes(os.join_paths(_ROOT, 'public', 'nyssa.css')))[0, 12]
+var _STYLE_VERSION = hash.sha256(fsx.read_bytes(os.join_paths(
+  _ROOT, 'public', 'nyssa.css',
+)))[0, 12]
 
 _view.set_root(os.join_paths(_ROOT, 'templates'))
 
@@ -144,7 +146,9 @@ def _site_values(nyssa) {
 # Renders a page with what every page needs. A page's title is
 # `page_title` when the caller gives one, the name `_TITLES` holds for
 # it, or its own `title`.
-def _page(nyssa, request, response, template: string, variables: ?dict, status: ?number) {
+def _page(
+  nyssa, request, response, template: string, variables: ?dict, status: ?number,
+) {
   var viewer = _viewer(nyssa, request)
   var values = _site_values(nyssa)
 
@@ -168,7 +172,9 @@ def _page(nyssa, request, response, template: string, variables: ?dict, status: 
 }
 
 # A page that says one thing.
-def _message(nyssa, request, response, title: string, text: string, status: ?number) {
+def _message(
+  nyssa, request, response, title: string, text: string, status: ?number,
+) {
   _page(nyssa, request, response, 'message', { title, text, status }, status)
 }
 
@@ -186,7 +192,10 @@ def _require_viewer(nyssa, request, response) {
 # A local path to go back to after signing in, or `/account`. Anything
 # else would let a link send a signed-in visitor anywhere.
 def _next_path(raw) {
-  if raw == nil or !raw.starts_with('/') or raw.starts_with('//') or raw.contains('\\') {
+  if raw == nil
+    or !raw.starts_with('/')
+    or raw.starts_with('//')
+    or raw.contains('\\') {
     return '/account'
   }
 
@@ -263,7 +272,9 @@ def _pages(page: number, pages: number) {
 }
 
 # Runs a form handler, showing a refusal on the page the form was on.
-def _form(nyssa, request, response, template: string, extra: dict, body: function) {
+def _form(
+  nyssa, request, response, template: string, extra: dict, body: function,
+) {
   catch {
     body()
   } as error {
@@ -331,7 +342,9 @@ def routes(server, nyssa) {
     var query = request.query_param('q', '').trim()
     var sort = request.query_param('sort', 'relevance')
     var raw_page = request.query_param('page', '1')
-    var page = is_dict(raw_page.match('/^[0-9]{1,5}$/')) ? raw_page.to_number().max(1) : 1
+    var page = is_dict(raw_page.match('/^[0-9]{1,5}$/'))
+      ? raw_page.to_number().max(1)
+      : 1
 
     if !['relevance', 'downloads', 'updated', 'name'].contains(sort) {
       sort = 'relevance'
@@ -394,7 +407,9 @@ def routes(server, nyssa) {
       dependencies = json.decode(dependencies)
     }
 
-    var readme = shown.readme == nil ? nil : wire.safe(markdown.render(shown.readme))
+    var readme = shown.readme == nil
+      ? nil
+      : wire.safe(markdown.render(shown.readme))
     var tab = request.query_param('tab', TABS[0])
 
     if !TABS.contains(tab) {
@@ -404,9 +419,12 @@ def routes(server, nyssa) {
     _page(nyssa, request, response, 'package', {
       flush: true,
       page_title: '${package.name} ${shown.version}',
-      page_description: package.description.is_empty() ? nil : package.description,
+      page_description: package.description.is_empty()
+        ? nil
+        : package.description,
       tab,
-      base: '/packages/${package.name}' + (wanted == nil ? '' : '/${shown.version}'),
+      base: '/packages/${package.name}'
+        + (wanted == nil ? '' : '/${shown.version}'),
       latest: package.latest,
       manifest_line: _manifest_line(nyssa, package.name, shown.version),
       package: {
@@ -415,7 +433,9 @@ def routes(server, nyssa) {
         homepage: package.homepage,
         repository: package.repository,
         license: package.license,
-        keywords: package.keywords.is_empty() ? [] : package.keywords.split(' '),
+        keywords: package.keywords.is_empty()
+          ? []
+          : package.keywords.split(' '),
         downloads: package.downloads,
         import_name: names.import_name(package.name),
       },
@@ -432,7 +452,8 @@ def routes(server, nyssa) {
       readme,
       owners,
       is_owner: viewer != nil
-        and (owners.contains(viewer.username) or service.is_admin(nyssa, viewer.id)),
+        and (owners.contains(viewer.username)
+          or service.is_admin(nyssa, viewer.id)),
       versions: ordered.map(@(version) {
         var row = by_version.get(version)
 
@@ -455,7 +476,10 @@ def routes(server, nyssa) {
     var wanted = request.param('version')
 
     if !semver.is_valid(wanted) {
-      _message(nyssa, request, response, 'No such version', "'${wanted}' is not a version.", 404)
+      _message(
+        nyssa, request, response, 'No such version',
+        "'${wanted}' is not a version.", 404,
+      )
 
       return
     }
@@ -468,20 +492,27 @@ def routes(server, nyssa) {
 
     if publisher == nil or publisher.suspended_at != nil {
       _message(nyssa, request, response, 'No such publisher',
-        "There is no publisher called '${request.param("username")}' here.", 404)
+        "There is no publisher called '${request.param("username")}' here.",
+        404)
 
       return
     }
 
     _page(nyssa, request, response, 'publisher', {
       page_title: publisher.username,
-      publisher: { username: publisher.username, joined: iso(publisher.created_at) },
+      publisher: {
+        username: publisher.username,
+        joined: iso(publisher.created_at),
+      },
       packages: nyssa.db.packages_of(publisher.id).map(_card),
     })
   })
 
   server.get('/login', @(request, response) {
-    _page(nyssa, request, response, 'login', { next: _next_path(request.query_param('next', nil)) })
+    _page(
+      nyssa, request, response, 'login',
+      { next: _next_path(request.query_param('next', nil)) },
+    )
   })
 
   server.post('/login', @(request, response) {
@@ -489,8 +520,8 @@ def routes(server, nyssa) {
 
     _form(nyssa, request, response, 'login', { next: next_path }, @{
       var publisher = service.sign_in(
-        nyssa, request.form_field('username', '').trim(), request.form_field('password', ''),
-        nyssa.address_of(request)
+        nyssa, request.form_field('username', '').trim(),
+        request.form_field('password', ''), nyssa.address_of(request),
       )
 
       request.session().regenerate()
@@ -525,8 +556,11 @@ def routes(server, nyssa) {
     var email = request.form_field('email', '').trim()
 
     _form(nyssa, request, response, 'signup', { username, email }, @{
-      if request.form_field('password', '') != request.form_field('password_again', '') {
-        raise service.ServiceError(422, 'bad_password', 'the two passwords are not the same')
+      if request.form_field('password', '')
+        != request.form_field('password_again', '') {
+        raise service.ServiceError(
+          422, 'bad_password', 'the two passwords are not the same',
+        )
       }
 
       var created = service.create_account(nyssa, {
@@ -578,13 +612,16 @@ def routes(server, nyssa) {
     }
 
     catch {
-      if request.form_field('password', '') != request.form_field('password_again', '') {
-        raise service.ServiceError(422, 'bad_password', 'the two new passwords are not the same')
+      if request.form_field('password', '')
+        != request.form_field('password_again', '') {
+        raise service.ServiceError(
+          422, 'bad_password', 'the two new passwords are not the same',
+        )
       }
 
       service.change_password(
-        nyssa, viewer, request.form_field('current', ''), request.form_field('password', ''),
-        nyssa.address_of(request)
+        nyssa, viewer, request.form_field('current', ''),
+        request.form_field('password', ''), nyssa.address_of(request),
       )
 
       request.session().flash('notice', 'Your password is changed.')
@@ -610,8 +647,9 @@ def routes(server, nyssa) {
       var days = request.form_field('days', '365')
       var scopes = request.form_all().get('scopes', [])
       var issued = service.create_token(
-        nyssa, viewer.id, request.form_field('name', 'zuri'), scopes.is_empty() ? nil : scopes,
-        is_dict(days.match('/^[0-9]{1,4}$/')) ? days.to_number() : 0
+        nyssa, viewer.id, request.form_field('name', 'zuri'),
+        scopes.is_empty() ? nil : scopes,
+        is_dict(days.match('/^[0-9]{1,4}$/')) ? days.to_number() : 0,
       )
 
       nyssa.db.audit(viewer.id, 'create_token', issued.name, { id: issued.id },
@@ -636,7 +674,10 @@ def routes(server, nyssa) {
     }
 
     if nyssa.db.revoke_token(request.param('id'), viewer.id) {
-      nyssa.db.audit(viewer.id, 'revoke_token', request.param('id'), nil, nyssa.address_of(request))
+      nyssa.db.audit(
+        viewer.id, 'revoke_token', request.param('id'), nil,
+        nyssa.address_of(request),
+      )
       request.session().flash('notice', 'The token is revoked.')
     }
 
@@ -665,17 +706,21 @@ def routes(server, nyssa) {
 
   server.post('/packages/:name/:version/yank', @(request, response) {
     owner_action(request, response, @(viewer) {
-      service.yank(nyssa, viewer.id, request.param('name'), request.param('version'), false,
-        nyssa.address_of(request))
-      request.session().flash('notice', '${request.param("version")} is yanked.')
+      service.yank(nyssa, viewer.id, request.param('name'),
+        request.param('version'), false, nyssa.address_of(request))
+      request
+        .session()
+        .flash('notice', '${request.param("version")} is yanked.')
     })
   })
 
   server.post('/packages/:name/:version/unyank', @(request, response) {
     owner_action(request, response, @(viewer) {
-      service.yank(nyssa, viewer.id, request.param('name'), request.param('version'), true,
-        nyssa.address_of(request))
-      request.session().flash('notice', '${request.param("version")} is restored.')
+      service.yank(nyssa, viewer.id, request.param('name'),
+        request.param('version'), true, nyssa.address_of(request))
+      request
+        .session()
+        .flash('notice', '${request.param("version")} is restored.')
     })
   })
 
@@ -691,9 +736,11 @@ def routes(server, nyssa) {
 
   server.post('/packages/:name/owners/:username/remove', @(request, response) {
     owner_action(request, response, @(viewer) {
-      service.remove_owner(nyssa, viewer.id, request.param('name'), request.param('username'),
-        nyssa.address_of(request))
-      request.session().flash('notice', '${request.param("username")} is no longer an owner.')
+      service.remove_owner(nyssa, viewer.id, request.param('name'),
+        request.param('username'), nyssa.address_of(request))
+      request
+        .session()
+        .flash('notice', '${request.param("username")} is no longer an owner.')
     })
   })
 
@@ -704,26 +751,34 @@ def routes(server, nyssa) {
   server.post('/recover', @(request, response) {
     var username = request.form_field('username', '').trim()
 
-    _form(nyssa, request, response, 'recover', { username, mail: nyssa.mail_enabled() }, @{
-      if request.form_field('password', '') != request.form_field('password_again', '') {
-        raise service.ServiceError(422, 'bad_password', 'the two new passwords are not the same')
-      }
+    _form(
+      nyssa, request, response, 'recover',
+      { username, mail: nyssa.mail_enabled() }, @{
+        if request.form_field('password', '')
+          != request.form_field('password_again', '') {
+          raise service.ServiceError(
+            422, 'bad_password', 'the two new passwords are not the same',
+          )
+        }
 
-      var fresh = service.recover(
-        nyssa, username, request.form_field('recovery_key', ''),
-        request.form_field('password', ''), nyssa.address_of(request)
-      )
+        var fresh = service.recover(
+          nyssa, username, request.form_field('recovery_key', ''),
+          request.form_field('password', ''), nyssa.address_of(request),
+        )
 
-      _page(nyssa, request, response, 'recovered', { recovery_key: fresh })
-    })
+        _page(nyssa, request, response, 'recovered', { recovery_key: fresh })
+      },
+    )
   })
 
   server.post('/reset', @(request, response) {
-    _form(nyssa, request, response, 'recover', { mail: nyssa.mail_enabled() }, @{
-      service.request_reset(nyssa, request.form_field('email', ''))
-      _message(nyssa, request, response, 'Check your email',
-        'If that address has an account, a link to choose a new password is on its way.')
-    })
+    _form(
+      nyssa, request, response, 'recover', { mail: nyssa.mail_enabled() }, @{
+        service.request_reset(nyssa, request.form_field('email', ''))
+        _message(nyssa, request, response, 'Check your email',
+          'If that address has an account, a link to choose a new password is on its way.')
+      },
+    )
   })
 
   server.get('/reset/:code', @(request, response) {
@@ -734,13 +789,18 @@ def routes(server, nyssa) {
     var code = request.param('code')
 
     _form(nyssa, request, response, 'reset', { code }, @{
-      if request.form_field('password', '') != request.form_field('password_again', '') {
-        raise service.ServiceError(422, 'bad_password', 'the two passwords are not the same')
+      if request.form_field('password', '')
+        != request.form_field('password_again', '') {
+        raise service.ServiceError(
+          422, 'bad_password', 'the two passwords are not the same',
+        )
       }
 
       service.complete_reset(nyssa, code, request.form_field('password', ''),
         nyssa.address_of(request))
-      request.session().flash('notice', 'Your password is changed. Sign in with it now.')
+      request
+        .session()
+        .flash('notice', 'Your password is changed. Sign in with it now.')
       response.redirect('/login', 303)
     })
   })
@@ -764,7 +824,10 @@ def routes(server, nyssa) {
     var entry = DOCS.find(@(doc) => doc.slug == slug)
 
     if entry == nil {
-      _message(nyssa, request, response, 'No such page', 'There is no such page here.', 404)
+      _message(
+        nyssa, request, response, 'No such page', 'There is no such page here.',
+        404,
+      )
 
       return
     }
@@ -782,7 +845,9 @@ def routes(server, nyssa) {
     })
   })
 
-  server.serve_files('/static', os.join_paths(_ROOT, 'public'), { cache_age: 86400 })
+  server.serve_files(
+    '/static', os.join_paths(_ROOT, 'public'), { cache_age: 86400 },
+  )
 
   server.not_found(@(request, response) {
     if request.path.starts_with('/api/') {
@@ -791,12 +856,20 @@ def routes(server, nyssa) {
       return
     }
 
-    _message(nyssa, request, response, 'Not found', 'There is nothing at this address.', 404)
+    _message(
+      nyssa, request, response, 'Not found',
+      'There is nothing at this address.', 404,
+    )
   })
 
   server.error_handler(@(request, response, error) {
     if request.path.starts_with('/api/') {
-      response.json({ error: { code: 'internal', message: 'something went wrong on our side' } },
+      response.json({
+        error: {
+          code: 'internal',
+          message: 'something went wrong on our side',
+        },
+      },
         500)
 
       return
@@ -809,7 +882,9 @@ def routes(server, nyssa) {
     values.set('status', 500)
     values.set('page_title', 'Something went wrong')
     values.set('title', 'Something went wrong')
-    values.set('text', 'Something went wrong on our side. Try again in a moment.')
+    values.set(
+      'text', 'Something went wrong on our side. Try again in a moment.',
+    )
 
     response.write(_view.render('message', values))
   })

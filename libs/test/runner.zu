@@ -50,14 +50,12 @@ import .result
 import .result { Case, Failure, Suite, Summary }
 import .snapshot
 
-
 var _root = Suite('', nil, '', 'normal')
 var _current = _root
 var _has_only = false
 var _collecting = false
 var _ran = false
 var _armed = false
-
 
 # Declaring the first test arms `os.at_exit`, so a file that declares
 # tests runs them whether or not it says so. `run()` called by hand
@@ -82,7 +80,6 @@ def _arm() {
   })
 }
 
-
 /**
  * The tree as it stands, for a caller that wants to look at what was
  * declared without running it.
@@ -92,7 +89,6 @@ def _arm() {
 def root() {
   return _root
 }
-
 
 /**
  * Throws away every declaration and every snapshot store, so a second
@@ -108,7 +104,6 @@ def reset() {
   snapshot.reset()
 }
 
-
 # Where a test was declared, taken from its own body rather than from
 # a stack trace: a function already knows what file it was compiled
 # from, and asking costs nothing.
@@ -123,7 +118,6 @@ def _file_of(body) {
 
   return _current.file
 }
-
 
 /**
  * Opens a suite, runs `body` to collect what is inside it, and closes
@@ -160,7 +154,10 @@ def describe(name: string, body: function, mode: ?string) {
     # A suite body that raises has declared nothing past the point it
     # failed. Recording it as a failure of the suite keeps the run
     # going and still makes the problem impossible to miss.
-    var failure = Failure('error', 'The body of describe(${format.inline(name)}) raised: ${_message_of(error)}')
+    var failure = Failure(
+      'error',
+      'The body of describe(${format.inline(name)}) raised: ${_message_of(error)}',
+    )
     failure.stacktrace = _stacktrace_of(error)
     suite.failures.append(failure)
   }
@@ -170,7 +167,6 @@ def describe(name: string, body: function, mode: ?string) {
 
   return suite
 }
-
 
 /**
  * Declares one test.
@@ -198,7 +194,6 @@ def it(name: string, body: ?function, options: ?dict, mode: ?string) {
   return test
 }
 
-
 def _hook(kind, body) {
   if !is_callable(body) {
     raise TestSetupError('${kind}() needs a function')
@@ -211,7 +206,6 @@ def _hook(kind, body) {
     when 'after_each' _current.after_each.append(body)
   }
 }
-
 
 /** @param function body */
 def before_all(body: function) {
@@ -233,7 +227,6 @@ def after_each(body: function) {
   _hook('after_each', body)
 }
 
-
 def _message_of(error) {
   if is_instance(error) and reflect.has_prop(error, 'message') {
     return error.message
@@ -242,15 +235,15 @@ def _message_of(error) {
   return error.to_string()
 }
 
-
 def _stacktrace_of(error) {
-  if is_instance(error) and reflect.has_prop(error, 'stacktrace') and is_list(error.stacktrace) {
+  if is_instance(error)
+    and reflect.has_prop(error, 'stacktrace')
+    and is_list(error.stacktrace) {
     return error.stacktrace
   }
 
   return []
 }
-
 
 # =========================================================================
 # Options
@@ -276,13 +269,11 @@ def _defaults() {
   }
 }
 
-
 def _env_flag(name) {
   var raw = os.get_env(name)
 
   return raw != nil and raw != '' and raw != '0' and raw.lower() != 'false'
 }
-
 
 def _resolve(given) {
   var options = _defaults()
@@ -291,7 +282,7 @@ def _resolve(given) {
     for key, value in given {
       if !options.contains(key) {
         raise TestSetupError(
-          "run() does not know the option '${key}'; the ones it knows are ${', '.join(options.keys().clone().sort())}"
+          "run() does not know the option '${key}'; the ones it knows are ${', '.join(options.keys().clone().sort())}",
         )
       }
 
@@ -324,7 +315,6 @@ def _resolve(given) {
   return options
 }
 
-
 # =========================================================================
 # Planning
 # =========================================================================
@@ -336,28 +326,32 @@ def _matches_filter(test, pattern) {
 
   var name = test.full_name()
 
-  if pattern.length() > 1 and pattern.starts_with('/') and pattern.ends_with('/') {
+  if pattern.length() > 1
+    and pattern.starts_with('/')
+    and pattern.ends_with('/') {
     return is_dict(name.match(pattern))
   }
 
   return name.lower().contains(pattern.lower())
 }
 
-
 def _matches_tags(test, wanted, unwanted) {
   var tags = test.tags()
 
-  if is_list(unwanted) and unwanted.some(@(tag) { return tags.contains(tag) }) {
+  if is_list(unwanted) and unwanted.some(@(tag) {
+    return tags.contains(tag)
+  }) {
     return false
   }
 
   if is_list(wanted) and !wanted.is_empty() {
-    return wanted.some(@(tag) { return tags.contains(tag) })
+    return wanted.some(@(tag) {
+      return tags.contains(tag)
+    })
   }
 
   return true
 }
-
 
 def _inherits_skip(node) {
   var walker = node
@@ -373,7 +367,6 @@ def _inherits_skip(node) {
   return false
 }
 
-
 def _inherits_only(node) {
   var walker = node
 
@@ -387,7 +380,6 @@ def _inherits_only(node) {
 
   return false
 }
-
 
 # Decides, once, what happens to every declared test. Doing this up
 # front is what lets the reporter be told how many tests there are
@@ -404,22 +396,42 @@ def _plan(options) {
     }
 
     if test.mode == 'skip' or _inherits_skip(test) {
-      decisions.append({ test, run: false, status: result.SKIPPED, reason: 'skipped' })
+      decisions.append({
+        test,
+        run: false,
+        status: result.SKIPPED,
+        reason: 'skipped',
+      })
       continue
     }
 
     if _has_only and !_inherits_only(test) {
-      decisions.append({ test, run: false, status: result.SKIPPED, reason: 'not focused' })
+      decisions.append({
+        test,
+        run: false,
+        status: result.SKIPPED,
+        reason: 'not focused',
+      })
       continue
     }
 
     if !_matches_filter(test, options.filter) {
-      decisions.append({ test, run: false, status: result.SKIPPED, reason: 'filtered out' })
+      decisions.append({
+        test,
+        run: false,
+        status: result.SKIPPED,
+        reason: 'filtered out',
+      })
       continue
     }
 
     if !_matches_tags(test, options.tags, options.exclude_tags) {
-      decisions.append({ test, run: false, status: result.SKIPPED, reason: 'tag filtered' })
+      decisions.append({
+        test,
+        run: false,
+        status: result.SKIPPED,
+        reason: 'tag filtered',
+      })
       continue
     }
 
@@ -428,7 +440,6 @@ def _plan(options) {
 
   return decisions
 }
-
 
 def _decision_for(decisions, test) {
   for decision in decisions {
@@ -439,7 +450,6 @@ def _decision_for(decisions, test) {
 
   return nil
 }
-
 
 # A small linear congruential generator, so a shuffled order can be
 # reproduced from its seed. The runtime's own `rand()` cannot be
@@ -464,7 +474,6 @@ class _Random {
   }
 }
 
-
 def _shuffle(items, random) {
   iter var index = items.length() - 1; index > 0; index-- {
     var other = random.next(index + 1)
@@ -476,7 +485,6 @@ def _shuffle(items, random) {
 
   return items
 }
-
 
 # =========================================================================
 # Execution
@@ -500,11 +508,9 @@ class _State {
   }
 }
 
-
 def _now_ms() {
   return time() * 1000
 }
-
 
 def _capture_start(state) {
   if !state.options.capture {
@@ -516,7 +522,6 @@ def _capture_start(state) {
 
   return depth
 }
-
 
 def _capture_stop(state, outer_depth) {
   if outer_depth < 0 {
@@ -539,7 +544,6 @@ def _capture_stop(state, outer_depth) {
   return collected
 }
 
-
 def _failure_from(error) {
   if is_instance(error) and typeof(error) == 'AssertionError' {
     var failure = Failure('assertion', error.message)
@@ -553,13 +557,14 @@ def _failure_from(error) {
     return failure
   }
 
-  var kind = is_instance(error) and typeof(error) == 'TestSetupError' ? 'setup' : 'error'
+  var kind = is_instance(error) and typeof(error) == 'TestSetupError'
+    ? 'setup'
+    : 'error'
   var failure = Failure(kind, _error_headline(error))
   failure.stacktrace = _stacktrace_of(error)
 
   return failure
 }
-
 
 def _error_headline(error) {
   if is_instance(error) and reflect.has_prop(error, 'type') {
@@ -568,7 +573,6 @@ def _error_headline(error) {
 
   return 'Raised: ${format.inline_plain(error)}'
 }
-
 
 # Hooks from every enclosing suite, outermost first. `after_each` runs
 # them in reverse, which is what makes teardown undo setup in the
@@ -597,7 +601,6 @@ def _hooks_along(suite, kind) {
   return outermost_first
 }
 
-
 def _run_hooks(chain, label) {
   for hook in chain {
     catch {
@@ -613,7 +616,6 @@ def _run_hooks(chain, label) {
 
   return nil
 }
-
 
 def _attempt(state, test) {
   var frame = context.begin(test.name, test.suite_path(), test.file)
@@ -644,7 +646,6 @@ def _attempt(state, test) {
 
   return { failure, elapsed, output, assertions: finished.assertions }
 }
-
 
 def _run_case(state, test, suite) {
   var decision = _decision_for(state.decisions, test)
@@ -702,7 +703,7 @@ def _run_case(state, test, suite) {
     if outcome.failure == nil {
       failures.append(Failure(
         'assertion',
-        'Expected this test to fail, because it is marked failing, but it passed'
+        'Expected this test to fail, because it is marked failing, but it passed',
       ))
     }
   } else if outcome.failure != nil {
@@ -712,7 +713,7 @@ def _run_case(state, test, suite) {
   if failures.is_empty() and budget > 0 and outcome.elapsed > budget {
     failures.append(Failure(
       'timeout',
-      'Took ${format.duration(outcome.elapsed)}, over its ${format.duration(budget)} budget'
+      'Took ${format.duration(outcome.elapsed)}, over its ${format.duration(budget)} budget',
     ))
   }
 
@@ -743,7 +744,6 @@ def _run_case(state, test, suite) {
   state.reporter.test_finished(test)
 }
 
-
 def _finish_failed(state, test, failures) {
   test.status = result.FAILED
   test.failures = failures
@@ -759,7 +759,6 @@ def _finish_failed(state, test, failures) {
   }
 }
 
-
 def _will_run(state, suite) {
   for test in suite.cases() {
     var decision = _decision_for(state.decisions, test)
@@ -771,7 +770,6 @@ def _will_run(state, suite) {
 
   return false
 }
-
 
 def _run_suite(state, suite) {
   state.reporter.suite_started(suite)
@@ -825,7 +823,6 @@ def _run_suite(state, suite) {
   state.reporter.suite_finished(suite)
 }
 
-
 # Runs a suite's `after_all` hooks, recording a failure among them
 # against the suite.
 def _finish_suite(state, suite) {
@@ -836,7 +833,6 @@ def _finish_suite(state, suite) {
     _record_suite_failure(state, suite, failure)
   }
 }
-
 
 # A `before_all` that failed took every test in the suite with it:
 # none of them can be trusted to have had the setup they needed.
@@ -857,7 +853,6 @@ def _fail_whole_suite(state, suite, failure) {
   }
 }
 
-
 # A failure that belongs to a suite rather than to any one test still
 # has to reach the report, and a report is a list of tests. A
 # placeholder carrying the suite's name is the honest way to show it.
@@ -868,7 +863,7 @@ def _record_suite_failure(state, suite, failure) {
     suite.file,
     'normal',
     nil,
-    {}
+    {},
   )
 
   placeholder.status = result.FAILED
@@ -878,7 +873,6 @@ def _record_suite_failure(state, suite, failure) {
   state.summary.failures.append(placeholder)
 }
 
-
 def _collect_declaration_failures(state) {
   for suite in _root.suites() {
     for failure in suite.failures {
@@ -886,7 +880,6 @@ def _collect_declaration_failures(state) {
     }
   }
 }
-
 
 /**
  * Runs everything declared so far and reports it.
@@ -933,7 +926,9 @@ def run(options: ?dict) {
   }
 
   reporter.run_started({
-    cases: decisions.filter(@(decision) { return decision.run }).length(),
+    cases: decisions.filter(@(decision) {
+      return decision.run
+    }).length(),
     suites: _root.suites().length() - 1,
     files: files.length(),
     options: resolved,

@@ -183,8 +183,8 @@ class Pool {
 
     raise PoolExhaustedError(
       'all ${self._settings.max} connections are in use; release one ' +
-      'before acquiring another, or raise the pool maximum',
-      { driver: self._driver.name() }
+        'before acquiring another, or raise the pool maximum',
+      { driver: self._driver.name() },
     )
   }
 
@@ -303,7 +303,9 @@ class Pool {
    * @returns dict|nil
    */
   fetch_one(sql: string, params) {
-    return self.with_connection(@(connection) => connection.fetch_one(sql, params))
+    return self.with_connection(
+      @(connection) => connection.fetch_one(sql, params),
+    )
   }
 
   /**
@@ -314,7 +316,9 @@ class Pool {
    * @returns list[dict]
    */
   fetch_all(sql: string, params) {
-    return self.with_connection(@(connection) => connection.fetch_all(sql, params))
+    return self.with_connection(
+      @(connection) => connection.fetch_all(sql, params),
+    )
   }
 
   /**
@@ -327,7 +331,7 @@ class Pool {
    */
   fetch_value(sql: string, params, fallback) {
     return self.with_connection(
-      @(connection) => connection.fetch_value(sql, params, fallback)
+      @(connection) => connection.fetch_value(sql, params, fallback),
     )
   }
 
@@ -495,7 +499,7 @@ class Pool {
     if filled.min > filled.max {
       raise SqlError(
         'a pool cannot keep ${filled.min} connections open when its ' +
-        'maximum is ${filled.max}'
+          'maximum is ${filled.max}',
       )
     }
 

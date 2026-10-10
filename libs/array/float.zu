@@ -12,7 +12,6 @@
 
 import ._base { Array }
 
-
 /**
  * Maximum value that "should" exist in a list passed to
  * FloatArray.
@@ -26,7 +25,6 @@ var FLOAT_MAX = 3.402823466E+38
  * @type number
  */
 var FLOAT_MIN = -FLOAT_MAX
-
 
 /**
  * class FloatArray represents an array of 32-bit IEEE-754
@@ -43,10 +41,12 @@ class FloatArray < Array {
   var _data_type = 'f'
 
   _validate_value(value) {
-    if !is_number(value)
+    if !is_number(value) {
       raise TypeError('number expected')
-    if value < FLOAT_MIN or value > FLOAT_MAX
+    }
+    if value < FLOAT_MIN or value > FLOAT_MAX {
       raise ValueError('value out of float range')
+    }
   }
 
   /**

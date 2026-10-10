@@ -20,7 +20,6 @@ import _imagine
 import .errors { FontError }
 import .strokefont { StrokeFont }
 
-
 /**
  * Where `Font.system()` looks, in order, per platform.
  *
@@ -69,7 +68,6 @@ var _FONT_EXTENSIONS = ['.ttf', '.otf', '.ttc']
 # Parsing a face is the expensive part of drawing text, so a path is
 # parsed once per process no matter how many sizes are asked for.
 var _cache = {}
-
 
 /**
  * A typeface at a particular size, ready to draw with.
@@ -206,7 +204,7 @@ class Font {
 
     if found == nil {
       raise FontError(
-        "no font matching '${family}' is installed; load one by path with Font.load()"
+        "no font matching '${family}' is installed; load one by path with Font.load()",
       )
     }
 
@@ -250,8 +248,8 @@ class Font {
 
     raise FontError(
       'no usable font was found on this system; install one, supply a font ' +
-      'file with Font.load() or Font.from_bytes(), or use Font.builtin(), ' +
-      'which never depends on what is installed'
+        'file with Font.load() or Font.from_bytes(), or use Font.builtin(), ' +
+        'which never depends on what is installed',
     )
   }
 
@@ -360,7 +358,9 @@ class Font {
    * @returns dict
    */
   measure(text, options) {
-    return _imagine.measure_text(self._handle, text.to_string(), self._size, options)
+    return _imagine.measure_text(
+      self._handle, text.to_string(), self._size, options,
+    )
   }
 
   /**
@@ -463,7 +463,9 @@ class Font {
    * @returns dict
    */
   render(text, options) {
-    return _imagine.render_text(self._handle, text.to_string(), self._size, options)
+    return _imagine.render_text(
+      self._handle, text.to_string(), self._size, options,
+    )
   }
 
   to_string() {
@@ -474,7 +476,6 @@ class Font {
     return self.to_string()
   }
 }
-
 
 /**
  * The search directories for whatever platform this is, with `~`
@@ -503,7 +504,6 @@ def _search_roots() {
   return usable
 }
 
-
 /**
  * Every font file under the search roots.
  */
@@ -526,7 +526,6 @@ def _all_system_fonts() {
   return found
 }
 
-
 def _is_font_file(name) {
   var lower = name.lower()
 
@@ -539,7 +538,6 @@ def _is_font_file(name) {
   return false
 }
 
-
 /**
  * Reduces a family name to the form matching compares: lower case,
  * with spaces, hyphens and underscores removed. That is what lets
@@ -548,7 +546,6 @@ def _is_font_file(name) {
 def _normalize_family(name) {
   return name.lower().replace('/[ _-]/', '')
 }
-
 
 /**
  * The path of an installed font whose file name matches `family`, or

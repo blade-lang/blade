@@ -29,37 +29,86 @@ import date
 import .errors { EditError, EncodeError }
 import .values { DateTime, LocalDateTime, LocalDate, LocalTime, Float }
 
-
 # The bare keys TOML allows without quoting.
 var _BARE = {
-  'A': true, 'B': true, 'C': true, 'D': true, 'E': true, 'F': true,
-  'G': true, 'H': true, 'I': true, 'J': true, 'K': true, 'L': true,
-  'M': true, 'N': true, 'O': true, 'P': true, 'Q': true, 'R': true,
-  'S': true, 'T': true, 'U': true, 'V': true, 'W': true, 'X': true,
-  'Y': true, 'Z': true,
-  'a': true, 'b': true, 'c': true, 'd': true, 'e': true, 'f': true,
-  'g': true, 'h': true, 'i': true, 'j': true, 'k': true, 'l': true,
-  'm': true, 'n': true, 'o': true, 'p': true, 'q': true, 'r': true,
-  's': true, 't': true, 'u': true, 'v': true, 'w': true, 'x': true,
-  'y': true, 'z': true,
-  '0': true, '1': true, '2': true, '3': true, '4': true, '5': true,
-  '6': true, '7': true, '8': true, '9': true,
-  '_': true, '-': true,
+  'A': true,
+  'B': true,
+  'C': true,
+  'D': true,
+  'E': true,
+  'F': true,
+  'G': true,
+  'H': true,
+  'I': true,
+  'J': true,
+  'K': true,
+  'L': true,
+  'M': true,
+  'N': true,
+  'O': true,
+  'P': true,
+  'Q': true,
+  'R': true,
+  'S': true,
+  'T': true,
+  'U': true,
+  'V': true,
+  'W': true,
+  'X': true,
+  'Y': true,
+  'Z': true,
+  'a': true,
+  'b': true,
+  'c': true,
+  'd': true,
+  'e': true,
+  'f': true,
+  'g': true,
+  'h': true,
+  'i': true,
+  'j': true,
+  'k': true,
+  'l': true,
+  'm': true,
+  'n': true,
+  'o': true,
+  'p': true,
+  'q': true,
+  'r': true,
+  's': true,
+  't': true,
+  'u': true,
+  'v': true,
+  'w': true,
+  'x': true,
+  'y': true,
+  'z': true,
+  '0': true,
+  '1': true,
+  '2': true,
+  '3': true,
+  '4': true,
+  '5': true,
+  '6': true,
+  '7': true,
+  '8': true,
+  '9': true,
+  '_': true,
+  '-': true,
 }
 
 # The single-character escapes TOML defines for a basic string.
 var _ESCAPES = {
-  '"':    '\\"',
-  '\\':   '\\\\',
-  '\b':   '\\b',
-  '\t':   '\\t',
-  '\n':   '\\n',
-  '\f':   '\\f',
-  '\r':   '\\r',
+  '"': '\\"',
+  '\\': '\\\\',
+  '\b': '\\b',
+  '\t': '\\t',
+  '\n': '\\n',
+  '\f': '\\f',
+  '\r': '\\r',
 }
 
 var _HEX = '0123456789abcdef'
-
 
 # Renders `code` as a four- or eight-digit TOML unicode escape.
 def _unicode_escape(code) {
@@ -74,7 +123,6 @@ def _unicode_escape(code) {
 
   return (width == 4 ? '\\u' : '\\U') + digits
 }
-
 
 /**
  * Returns `name` as TOML would spell it as a key: bare when every
@@ -105,7 +153,6 @@ def spell_key(name: string) {
 
   return spell_basic_string(name)
 }
-
 
 /**
  * Returns `text` as a TOML basic string, quoted and escaped.
@@ -142,7 +189,6 @@ def spell_basic_string(text: string) {
   return out + '"'
 }
 
-
 /**
  * Returns `text` as a TOML multi-line basic string.
  *
@@ -163,7 +209,7 @@ def spell_multiline_string(text: string) {
     # A run of three or more quotes has to be broken up, and escaping
     # the first of each three is the least invasive way to do it.
     if ch == '"' and i + 2 < text.length() and text[i + 1] == '"' and
-        text[i + 2] == '"' {
+      text[i + 2] == '"' {
       out += '\\"'
       i++
       continue
@@ -202,7 +248,6 @@ def spell_multiline_string(text: string) {
   return '"""' + out + '"""'
 }
 
-
 /**
  * Returns `value` as a TOML integer.
  *
@@ -221,13 +266,12 @@ def spell_integer(value) {
   # an integer, so the caller is told rather than handed a wrong number.
   if text.contains('e') or text.contains('E') {
     raise EncodeError(
-      'integer ${text} is too large to write exactly; use a bigint'
+      'integer ${text} is too large to write exactly; use a bigint',
     )
   }
 
   return text
 }
-
 
 /**
  * Returns `value` as a TOML float, including the `inf` and `nan`
@@ -242,7 +286,6 @@ def spell_integer(value) {
 def spell_float(value) {
   return Float(value).to_string()
 }
-
 
 /**
  * One value in a document: a scalar, an array, or an inline table.
@@ -313,7 +356,6 @@ class Value {
   }
 }
 
-
 /**
  * A TOML array, holding its items and the trivia between them.
  *
@@ -376,7 +418,6 @@ class Array {
   }
 }
 
-
 /**
  * A TOML inline table, holding its entries and the trivia between
  * them.
@@ -435,7 +476,6 @@ class InlineTable {
   }
 }
 
-
 /**
  * One `key = value` pair.
  *
@@ -476,8 +516,8 @@ class Entry {
    */
   to_string() {
     return self.prefix + self.key_raw + self.pre_eq + '=' +
-        self.value.prefix + self.value.to_string() + self.value.suffix +
-        self.newline
+      self.value.prefix + self.value.to_string() + self.value.suffix +
+      self.newline
   }
 
   @to_string() {
@@ -513,7 +553,6 @@ class Entry {
     return found
   }
 }
-
 
 /**
  * A table: a `[header]` block, the root of a document, or a parent
@@ -569,7 +608,7 @@ class Table {
     if self.header_raw != nil {
       var brackets = self.is_aot_element ? ['[[', ']]'] : ['[', ']']
       out += self.prefix + brackets[0] + self.header_raw + brackets[1] +
-          self.suffix + self.newline
+        self.suffix + self.newline
     }
 
     for entry in self.entries {
@@ -698,7 +737,7 @@ class Table {
     for entry in self.entries {
       if _is_prefix(entry.path, parts) {
         return _descend(entry.value.to_value(),
-            parts[entry.path.length(),])
+          parts[entry.path.length(),])
       }
     }
 
@@ -802,7 +841,6 @@ class Table {
   }
 }
 
-
 /**
  * A `[[header]]` array of tables.
  *
@@ -895,14 +933,13 @@ class ArrayOfTables {
     if index < 0 or index >= self.elements.length() {
       raise EditError(
         'element ${index} is outside an array of ${self.elements.length()}',
-        _join_path(self.path)
+        _join_path(self.path),
       )
     }
 
     return self.elements[index]
   }
 }
-
 
 # Writes `value` into `target` at `path`, creating the dictionaries the
 # path runs through. This is how a dotted key becomes nested.
@@ -922,7 +959,6 @@ def _graft(target, path, value) {
   at[path[path.length() - 1]] = value
 }
 
-
 # Follows `path` into an already-decoded plain value.
 def _descend(value, path) {
   var at = value
@@ -937,7 +973,6 @@ def _descend(value, path) {
 
   return at
 }
-
 
 # True when two key paths are the same.
 def _same_path(a, b) {
@@ -954,7 +989,6 @@ def _same_path(a, b) {
   return true
 }
 
-
 # True when `prefix` is `path` itself or leads into it.
 def _is_prefix(prefix, path) {
   if prefix.length() > path.length() {
@@ -969,7 +1003,6 @@ def _is_prefix(prefix, path) {
 
   return true
 }
-
 
 /**
  * Turns a dotted string or a list into a key path.
@@ -993,7 +1026,6 @@ def _as_path(path) {
   return path.split('.')
 }
 
-
 /**
  * Builds the `Value` node for a plain Zuri value, choosing the TOML
  * spelling as it goes.
@@ -1014,7 +1046,6 @@ def _as_path(path) {
 def spell_value(value, path) {
   return _spell(value, path == nil ? '' : path, {})
 }
-
 
 def _spell(value, path, seen) {
   if value == nil {
@@ -1045,7 +1076,7 @@ def _spell(value, path, seen) {
     # NaN and the infinities have no integer spelling, and neither has
     # a fractional number, so everything else is a float.
     if value == value and value != (1 / 0) and value != (-1 / 0) and
-        value == value.floor() {
+      value == value.floor() {
       return Value('integer', value, spell_integer(value))
     }
 
@@ -1083,17 +1114,15 @@ def _spell(value, path, seen) {
   raise EncodeError('${typeof(value)} has no TOML spelling', path)
 }
 
-
 # A `date.Date` always knows an offset, so it writes as TOML's one
 # temporal type that carries one.
 def _spell_date(value) {
   var minutes = (value.gmt_offset / 60).floor()
 
   return DateTime(value.year, value.month, value.day, value.hour,
-      value.minute, value.seconds, value.microseconds * 1000,
-      minutes).to_string()
+    value.minute, value.seconds, value.microseconds * 1000,
+    minutes).to_string()
 }
-
 
 def _spell_array(items, path, seen) {
   var key = id(items).to_string()
@@ -1121,7 +1150,6 @@ def _spell_array(items, path, seen) {
   return Value('array', node, nil)
 }
 
-
 def _spell_inline(source, path, seen) {
   var key = id(source).to_string()
 
@@ -1137,7 +1165,7 @@ def _spell_inline(source, path, seen) {
   for name, item in source {
     if !is_string(name) {
       raise EncodeError(
-        'a TOML key must be a string, got ${typeof(name)}', path
+        'a TOML key must be a string, got ${typeof(name)}', path,
       )
     }
 
@@ -1160,7 +1188,6 @@ def _spell_inline(source, path, seen) {
 
   return Value('inline-table', node, nil)
 }
-
 
 /**
  * A whole TOML document: every table in it, and every byte between
@@ -1283,7 +1310,6 @@ class Document {
   length() {
     return self.keys().length()
   }
-
 
   /**
    * Writes `value` at `path`.
@@ -1445,7 +1471,6 @@ class Document {
   }
 }
 
-
 # ---------------------------------------------------------------------------
 # Editing
 # ---------------------------------------------------------------------------
@@ -1461,7 +1486,6 @@ def _entry_owning(table, name) {
 
   return nil
 }
-
 
 # The indentation new pairs in this table should carry, taken from the
 # pairs already there so a nested style is not broken by an edit.
@@ -1485,7 +1509,6 @@ def _indent_of(table) {
   return tail
 }
 
-
 # Makes sure the table's last pair ends in a line break, so whatever is
 # appended next starts on a line of its own. A file that ended without
 # a trailing newline gets one here.
@@ -1504,7 +1527,6 @@ def _close_last_line(document, table) {
     last.newline = document.newline
   }
 }
-
 
 # Creates the table block for `path`, reusing whatever part of the
 # chain already exists and leaving the tables it had to invent on the
@@ -1540,7 +1562,6 @@ def _new_table(document, path) {
   return at
 }
 
-
 # A new table block is separated from whatever precedes it by one blank
 # line, unless the document is still empty.
 def _block_prefix(document) {
@@ -1549,14 +1570,13 @@ def _block_prefix(document) {
   }
 
   var previous = document.order.length() > 0
-      ? document.order[document.order.length() - 1]
-      : document.root
+    ? document.order[document.order.length() - 1]
+    : document.root
 
   _close_last_line(document, previous)
 
   return document.newline
 }
-
 
 # A dotted path as a header spells it, quoting the parts that need it.
 def _spell_path(path) {
@@ -1569,7 +1589,6 @@ def _spell_path(path) {
   return '.'.join(parts)
 }
 
-
 # Finds the table that should hold the last element of `parts`, and the
 # key path it should hold it under. The path comes back longer than one
 # element when the owner already holds that name through a dotted key,
@@ -1577,7 +1596,6 @@ def _spell_path(path) {
 def _locate(document, parts, create) {
   return _locate_in(document, document.root, parts, create)
 }
-
 
 def _locate_in(document, start, parts, create) {
   var at = start
@@ -1599,8 +1617,8 @@ def _locate_in(document, start, parts, create) {
     if instance_of(child, ArrayOfTables) {
       raise EditError(
         "'${'.'.join(parts[0, i + 1])}' is an array of tables; reach an " +
-        'element through array_of_tables()',
-        '.'.join(parts)
+          'element through array_of_tables()',
+        '.'.join(parts),
       )
     }
 
@@ -1618,7 +1636,6 @@ def _locate_in(document, start, parts, create) {
 
   return { table: at, path: parts[parts.length() - 1,] }
 }
-
 
 # Writes `value` at `path`, keeping the layout of a pair that is
 # already there and giving a new one the style of its neighbours.
@@ -1646,7 +1663,7 @@ def _set(document, start, parts, value) {
   if table.children.contains(path[0]) {
     raise EditError(
       "'${'.'.join(parts)}' is a table; a table cannot be replaced by a value",
-      '.'.join(parts)
+      '.'.join(parts),
     )
   }
 
@@ -1660,14 +1677,14 @@ def _set(document, start, parts, value) {
           ? "'${_join_path(entry.path)}' is an inline table, which TOML " +
             'seals once written; replace the whole value instead'
           : "'${_join_path(entry.path)}' is a value and cannot hold a key",
-        '.'.join(parts)
+        '.'.join(parts),
       )
     }
 
     if _is_prefix(path, entry.path) {
       raise EditError(
         "'${_join_path(path)}' already holds keys and cannot become a value",
-        '.'.join(parts)
+        '.'.join(parts),
       )
     }
   }
@@ -1685,7 +1702,6 @@ def _set(document, start, parts, value) {
 
   return entry
 }
-
 
 # Drops whatever sits at `path`, and says whether anything did.
 def _remove(document, start, parts) {
@@ -1718,7 +1734,6 @@ def _remove(document, start, parts) {
   return false
 }
 
-
 # Takes a table and everything under it out of the render order, so a
 # removed block stops being written.
 def _forget(document, node) {
@@ -1739,12 +1754,10 @@ def _forget(document, node) {
   }
 }
 
-
 # A key path as a message should show it.
 def _join_path(parts) {
   return '.'.join(parts)
 }
-
 
 # Replaces the comment block sitting in `prefix` with `text`, keeping
 # the blank lines that separated the pair from whatever came before and
@@ -1769,10 +1782,9 @@ def _rebuild_prefix(prefix, text, newline) {
   kept.append(indent)
 
   return newline == '\r\n'
-      ? '\r\n'.join(kept)
-      : '\n'.join(kept)
+    ? '\r\n'.join(kept)
+    : '\n'.join(kept)
 }
-
 
 # Finds or creates the array of tables at `parts`.
 def _ensure_aot(document, parts) {
@@ -1802,7 +1814,7 @@ def _ensure_aot(document, parts) {
     if !instance_of(found, ArrayOfTables) {
       raise EditError(
         "'${_join_path(parts)}' is a table, not an array of tables",
-        _join_path(parts)
+        _join_path(parts),
       )
     }
 

@@ -67,7 +67,6 @@ class Safe {
   }
 }
 
-
 /**
  * Marks _value_ as markup that Wire must not escape.
  *
@@ -87,7 +86,6 @@ def safe(value) {
   return Safe(stringify(value))
 }
 
-
 /**
  * True when _value_ is a `Safe`.
  *
@@ -97,7 +95,6 @@ def safe(value) {
 def is_safe(value) {
   return is_instance(value) and instance_of(value, Safe)
 }
-
 
 /**
  * Strips the `Safe` wrapper off _value_, leaving anything else alone.
@@ -115,7 +112,6 @@ def unwrap(value) {
 
   return value
 }
-
 
 /**
  * What _value_ looks like once it reaches the page, before escaping.
@@ -139,7 +135,6 @@ def stringify(value) {
 
   return value.to_string()
 }
-
 
 /**
  * Whether _value_ counts as true in an `x-if`, an `x-not`, or a
@@ -199,7 +194,6 @@ def truthy(value) {
   return true
 }
 
-
 /**
  * Whether _value_ has nothing in it, for the `empty` filter and for
  * anything else that wants the question asked of a collection rather
@@ -227,7 +221,6 @@ def is_empty(value) {
   return false
 }
 
-
 /**
  * Whether _text_ is empty or is nothing but whitespace.
  *
@@ -237,7 +230,6 @@ def is_empty(value) {
 def is_blank(text: string) {
   return text.is_empty() or text.is_space()
 }
-
 
 /**
  * Orders _a_ before, with or after _b_, returning `-1`, `0` or `1`.
@@ -295,7 +287,6 @@ def compare(a, b) {
   return _compare_strings(stringify(left), stringify(right))
 }
 
-
 /**
  * Where a value sits when booleans are being ordered: false first, then
  * true, then anything that is neither.
@@ -314,7 +305,6 @@ def _boolean_rank(value) {
 
   return 2
 }
-
 
 /**
  * Two strings ordered by code point.
@@ -344,7 +334,6 @@ def _compare_strings(a: string, b: string) {
   return _order(left.length(), right.length())
 }
 
-
 /**
  * Two numbers ordered.
  *
@@ -364,7 +353,6 @@ def _order(a: number, b: number) {
   return 0
 }
 
-
 /**
  * The most arguments a filter or a template function can be called
  * with.
@@ -376,7 +364,6 @@ def _order(a: number, b: number) {
  * without end.
  */
 var MAX_ARGUMENTS = 8
-
 
 /**
  * Calls _target_ with _arguments_ spread into its parameters.
@@ -416,36 +403,35 @@ def invoke(target, arguments: list) {
   if count == 5 {
     return target(
       arguments[0], arguments[1], arguments[2], arguments[3],
-      arguments[4]
+      arguments[4],
     )
   }
 
   if count == 6 {
     return target(
       arguments[0], arguments[1], arguments[2], arguments[3],
-      arguments[4], arguments[5]
+      arguments[4], arguments[5],
     )
   }
 
   if count == 7 {
     return target(
       arguments[0], arguments[1], arguments[2], arguments[3],
-      arguments[4], arguments[5], arguments[6]
+      arguments[4], arguments[5], arguments[6],
     )
   }
 
   if count == 8 {
     return target(
       arguments[0], arguments[1], arguments[2], arguments[3],
-      arguments[4], arguments[5], arguments[6], arguments[7]
+      arguments[4], arguments[5], arguments[6], arguments[7],
     )
   }
 
   raise ArgumentError(
-    'a template call takes at most ${MAX_ARGUMENTS} arguments, got ${count}'
+    'a template call takes at most ${MAX_ARGUMENTS} arguments, got ${count}',
   )
 }
-
 
 /**
  * Wire's name for _value_'s type, used in error messages so that a

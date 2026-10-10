@@ -25,12 +25,10 @@ def compress(data) {
  * @returns bytes
  */
 def decompress(data) {
- return _compress.deflate_decompress(data)
+  return _compress.deflate_decompress(data)
 }
 
-
 import .gzip { GzipDecoder, GzipEncoder }
-
 
 /**
  * A streaming Deflate encoder.
@@ -58,7 +56,6 @@ class DeflateEncoder < GzipEncoder {
     self._ptr = _compress.gzip_new_encoder(false, level)
   }
 }
-
 
 /**
  * Streaming deflate decompressor implemention. This decoder

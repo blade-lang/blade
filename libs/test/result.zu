@@ -12,7 +12,6 @@
 import .format
 import .source
 
-
 /** A test was declared and not yet run. */
 var PENDING = 'pending'
 
@@ -30,7 +29,6 @@ var TODO = 'todo'
 
 /** It failed, was retried, and then passed. */
 var FLAKY = 'flaky'
-
 
 /**
  * One thing that went wrong.
@@ -87,7 +85,6 @@ class Failure {
     return source.origin(self.stacktrace)
   }
 }
-
 
 /**
  * One declared test, and what became of it.
@@ -175,7 +172,6 @@ class Case {
     return is_list(tags) ? tags : [tags]
   }
 }
-
 
 /**
  * A `describe()` block: its tests, its nested suites, and its hooks.
@@ -297,7 +293,6 @@ class Suite {
     return found
   }
 }
-
 
 /**
  * What a whole run came to.

@@ -34,7 +34,7 @@ class Declarations {
 
   @new() {
     raise FfiError(
-      'declarations come from ffi.declarations(), never from the Declarations constructor'
+      'declarations come from ffi.declarations(), never from the Declarations constructor',
     )
   }
 

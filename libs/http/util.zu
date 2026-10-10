@@ -222,7 +222,10 @@ def parse_date(text: string) {
 
   # Collapse the run of spaces asctime uses to pad a single-digit day.
   var fields = []
-  for field in value.replace('  ', ' ', false).replace(',', ' ', false).split(' ') {
+  for field in value
+    .replace('  ', ' ', false)
+    .replace(',', ' ', false)
+    .split(' ') {
     if field {
       fields.append(field)
     }
@@ -546,7 +549,7 @@ def _init_unreserved() {
   iter var c = 97; c <= 122; c++ {
     _UNRESERVED[c] = true
   }
-  for c in [45, 46, 95, 126] {  # - . _ ~
+  for c in [45, 46, 95, 126] { # - . _ ~
     _UNRESERVED[c] = true
   }
 }
@@ -768,7 +771,7 @@ def is_valid_method(value) {
     var c = value[i].ord()
 
     var is_token = (c >= 48 and c <= 57) or (c >= 65 and c <= 90) or
-        (c >= 97 and c <= 122) or "!#$%&'*+-.^_`|~".index_of(value[i]) > -1
+      (c >= 97 and c <= 122) or "!#$%&'*+-.^_`|~".index_of(value[i]) > -1
 
     if !is_token {
       return false

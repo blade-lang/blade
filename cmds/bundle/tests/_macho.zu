@@ -20,7 +20,9 @@ def executable(signed: bool, first_section: number) {
 
   var count = signed ? 4 : 3
 
-  struct.pack_into('VVVVVVVV', data, 0, 0xfeedfacf, 0x0100000c, 0, 2, count, commands, 0, 0)
+  struct.pack_into(
+    'VVVVVVVV', data, 0, 0xfeedfacf, 0x0100000c, 0, 2, count, commands, 0, 0,
+  )
 
   var at = 32
   var base = 0x100000000
@@ -28,21 +30,23 @@ def executable(signed: bool, first_section: number) {
   # __TEXT and its one section.
   struct.pack_into(
     'VVa16PPPPVVVV', data, at,
-    0x19, 152, '__TEXT', base, TEXT_SIZE, 0, TEXT_SIZE, 5, 5, 1, 0
+    0x19, 152, '__TEXT', base, TEXT_SIZE, 0, TEXT_SIZE, 5, 5, 1, 0,
   )
   struct.pack_into(
     'a16a16PPVV', data, at + 72,
-    '__text', '__TEXT', base + first_section, 16, first_section, 4
+    '__text', '__TEXT', base + first_section, 16, first_section, 4,
   )
   at += 152
 
   struct.pack_into(
-    'VVa16PPPPVVVV', data, at,
-    0x19, 72, '__LINKEDIT', base + 0x4000, 16384, TEXT_SIZE, end - TEXT_SIZE, 1, 1, 0, 0
+    'VVa16PPPPVVVV', data, at, 0x19, 72, '__LINKEDIT', base + 0x4000, 16384,
+    TEXT_SIZE, end - TEXT_SIZE, 1, 1, 0, 0,
   )
   at += 72
 
-  struct.pack_into('VVVVVV', data, at, 0x2, 24, strings_at, 0, strings_at, STRINGS.length())
+  struct.pack_into(
+    'VVVVVV', data, at, 0x2, 24, strings_at, 0, strings_at, STRINGS.length(),
+  )
   at += 24
 
   if signed {
@@ -71,7 +75,7 @@ def executable(signed: bool, first_section: number) {
 def commands(data: bytes) {
   var header = struct.unpack(
     'V:magic/V:cputype/V:subtype/V:filetype/V:ncmds/V:size',
-    data
+    data,
   )
   var found = { count: header.ncmds }
   var at = 32
@@ -84,18 +88,22 @@ def commands(data: bytes) {
         var segment = struct.unpack(
           'Z16:name/P:vmaddr/P:vmsize/P:fileoff/P:filesize',
           data,
-          at + 8
+          at + 8,
         )
 
         found.set(segment.name, segment)
       }
       when 0x2 {
-        var symtab = struct.unpack('V:symoff/V:nsyms/V:stroff/V:strsize', data, at + 8)
+        var symtab = struct.unpack(
+          'V:symoff/V:nsyms/V:stroff/V:strsize', data, at + 8,
+        )
 
         found.set('symtab', symtab)
       }
       when 0x1d {
-        found.set('signature', struct.unpack('V:dataoff/V:datasize', data, at + 8))
+        found.set(
+          'signature', struct.unpack('V:dataoff/V:datasize', data, at + 8),
+        )
       }
     }
 

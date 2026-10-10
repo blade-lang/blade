@@ -173,7 +173,6 @@ class dict {
    */
   length() {}
 
-
   /**
    * Adds a new key-value pair to the dictionary with the given
    * key and value.<br>
@@ -191,7 +190,6 @@ class dict {
    * @param {any} value
    */
   add(key: string, value: any) {}
-
 
   /**
    * Sets the value of the given key to the given value in the
@@ -224,7 +222,6 @@ class dict {
    */
   set(key: string, value: any) {}
 
-
   /**
    * Clears the content of the dictionary.<br>
    *
@@ -240,7 +237,6 @@ class dict {
    * ```
    */
   clear() {}
-
 
   /**
    * Returns a new dictionary which is a deep copy of the
@@ -258,7 +254,6 @@ class dict {
    */
   clone() {}
 
-
   /**
    * Returns a new dictionary that contains every key-value pair
    * in the original dictionary except for keys whose associated
@@ -275,7 +270,6 @@ class dict {
    * @return {dict}
    */
   compact() {}
-
 
   /**
    * Returns `true` if any of the keys in the dictionary is equal
@@ -295,7 +289,6 @@ class dict {
    */
   contains(key: string) {}
 
-
   /**
    * Adds all key-value pairs in dictionary _x_ to the original
    * dictionary.<br>
@@ -312,7 +305,6 @@ class dict {
    * @param {dict} dict
    */
   extend(dict: dict) {}
-
 
   /**
    * Returns the value of the given _key_ in the dictionary. If
@@ -338,7 +330,6 @@ class dict {
    */
   get(key: string, default_value: any) {}
 
-
   /**
    * Returns a list containing the keys in the dictionary.<br>
    *
@@ -352,7 +343,6 @@ class dict {
    * @return {list}
    */
   keys() {}
-
 
   /**
    * Returns a list containing the value of all keys in the
@@ -368,7 +358,6 @@ class dict {
    * @return {list}
    */
   values() {}
-
 
   /**
    * Removes a given key and it's corresponding value from the
@@ -389,7 +378,6 @@ class dict {
    */
   remove(key) {}
 
-
   /**
    * Returns `true` if the dictionary is empty, otherwise returns
    * `false`.<br>
@@ -407,7 +395,6 @@ class dict {
    */
   is_empty() {}
 
-
   /**
    * Returns the key whose value is equal to _x_ in the
    * dictionary or `nil` if no key has the value _x_.<br>
@@ -424,7 +411,6 @@ class dict {
    * @return {string|nil}
    */
   find_key(value: any) {}
-
 
   /**
    * Returns a list that contains a list of key and a list of

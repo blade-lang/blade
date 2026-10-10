@@ -22,7 +22,6 @@ import .color { Color }
 import .constants { CAP_BUTT, CAP_ROUND, CAP_SQUARE }
 import .errors { BoundsError, ImageError }
 
-
 /**
  * How many sub-scanlines an anti-aliased fill samples per pixel row.
  *
@@ -41,7 +40,6 @@ var _SUBSAMPLES = 4
  */
 var _MIN_ELLIPSE_SEGMENTS = 16
 var _MAX_ELLIPSE_SEGMENTS = 512
-
 
 /**
  * A mutable RGBA pixel surface and everything that draws onto one.
@@ -113,7 +111,7 @@ class Canvas {
     var expected = width * height * 4
     if pixels.length() != expected {
       raise ImageError(
-        'pixel buffer holds ${pixels.length()} bytes, but ${width}x${height} RGBA needs ${expected}'
+        'pixel buffer holds ${pixels.length()} bytes, but ${width}x${height} RGBA needs ${expected}',
       )
     }
 
@@ -189,7 +187,7 @@ class Canvas {
     if pixels.length() != expected {
       raise ImageError(
         'pixel buffer holds ${pixels.length()} bytes, but this ' +
-        '${self._width}x${self._height} surface needs ${expected}'
+          '${self._width}x${self._height} surface needs ${expected}',
       )
     }
 
@@ -436,7 +434,7 @@ class Canvas {
 
     if self._clip != nil {
       if px < self._clip[0] or py < self._clip[1] or
-         px >= self._clip[2] or py >= self._clip[3] {
+        px >= self._clip[2] or py >= self._clip[3] {
         return false
       }
     }
@@ -452,7 +450,7 @@ class Canvas {
    * once. Kept in terms of plain numbers rather than `Color` because
    * a filled shape calls it once per pixel.
    */
-  
+
   /**
    * Draws one hairline segment straight onto the buffer.
    *
@@ -554,7 +552,8 @@ class Canvas {
           }
 
           var sy = y0 + gradient * (sx - x0)
-          var covered = (sy + half_span).min(row + 1) - (sy - half_span).max(row)
+          var covered = (sy + half_span).min(row + 1) -
+            (sy - half_span).max(row)
 
           if covered > 0 {
             total = total + covered
@@ -615,7 +614,9 @@ class Canvas {
     }
 
     var paint = Color.parse(color)
-    var even_odd = is_dict(options) ? options.get('even_odd', false) == true : false
+    var even_odd = is_dict(options)
+      ? options.get('even_odd', false) == true
+      : false
 
     self._scan_fill(flat, paint, even_odd)
     return self
@@ -773,7 +774,9 @@ class Canvas {
             dirty_hi = last
           }
 
-          self._accumulate(coverage, start_x, end_x, span[0], span[1], step_weight)
+          self._accumulate(
+            coverage, start_x, end_x, span[0], span[1], step_weight,
+          )
         }
       }
 
@@ -781,7 +784,10 @@ class Canvas {
         continue
       }
 
-      self._blend_row(py, start_x + dirty_lo, dirty_hi - dirty_lo + 1, coverage, paint, dirty_lo)
+      self._blend_row(
+        py, start_x + dirty_lo, dirty_hi - dirty_lo + 1, coverage, paint,
+        dirty_lo,
+      )
     }
   }
 
@@ -954,7 +960,7 @@ class Canvas {
       paint.r,
       paint.g,
       paint.b,
-      paint.a
+      paint.a,
     )
   }
 
@@ -1031,7 +1037,7 @@ class Canvas {
           flat[i * 2 + 1],
           flat[j * 2],
           flat[j * 2 + 1],
-          paint
+          paint,
         )
       }
 
@@ -1120,7 +1126,9 @@ class Canvas {
       return
     }
 
-    self._scan_fill(self._ellipse_points(cx, cy, radius, radius, 0, 360, false), paint, false)
+    self._scan_fill(
+      self._ellipse_points(cx, cy, radius, radius, 0, 360, false), paint, false,
+    )
   }
 
   # ------------------------------------------------------------------
@@ -1164,7 +1172,7 @@ class Canvas {
       [x, y, x + width, y, x + width, y + height, x, y + height],
       color,
       true,
-      options
+      options,
     )
   }
 
@@ -1185,7 +1193,7 @@ class Canvas {
 
     return self.fill_polygon(
       [x, y, x + width, y, x + width, y + height, x, y + height],
-      color
+      color,
     )
   }
 
@@ -1209,7 +1217,7 @@ class Canvas {
       self._rounded_points(x, y, width, height, radius),
       color,
       true,
-      options
+      options,
     )
   }
 
@@ -1229,7 +1237,9 @@ class Canvas {
       return self
     }
 
-    return self.fill_polygon(self._rounded_points(x, y, width, height, radius), color)
+    return self.fill_polygon(
+      self._rounded_points(x, y, width, height, radius), color,
+    )
   }
 
   /**
@@ -1257,7 +1267,9 @@ class Canvas {
 
     for corner in corners {
       iter var i = 0; i <= steps; i++ {
-        var angle = (corner[2] + (corner[3] - corner[2]) * i / steps) * math.PI / 180
+        var angle = (corner[2] + (corner[3] - corner[2]) * i / steps)
+          * math.PI
+          / 180
 
         points.append(corner[0] + angle.cos() * r)
         points.append(corner[1] + angle.sin() * r)
@@ -1314,7 +1326,7 @@ class Canvas {
       self._ellipse_points(cx, cy, rx, ry, 0, 360, false),
       color,
       true,
-      options
+      options,
     )
   }
 
@@ -1333,7 +1345,9 @@ class Canvas {
       return self
     }
 
-    return self.fill_polygon(self._ellipse_points(cx, cy, rx, ry, 0, 360, false), color)
+    return self.fill_polygon(
+      self._ellipse_points(cx, cy, rx, ry, 0, 360, false), color,
+    )
   }
 
   /**
@@ -1362,7 +1376,7 @@ class Canvas {
       self._ellipse_points(cx, cy, rx, ry, start, end, false),
       color,
       false,
-      options
+      options,
     )
   }
 
@@ -1383,7 +1397,9 @@ class Canvas {
       return self
     }
 
-    return self.fill_polygon(self._ellipse_points(cx, cy, rx, ry, start, end, true), color)
+    return self.fill_polygon(
+      self._ellipse_points(cx, cy, rx, ry, start, end, true), color,
+    )
   }
 
   /**
@@ -1403,7 +1419,9 @@ class Canvas {
       return self
     }
 
-    return self.fill_polygon(self._ellipse_points(cx, cy, rx, ry, start, end, false), color)
+    return self.fill_polygon(
+      self._ellipse_points(cx, cy, rx, ry, start, end, false), color,
+    )
   }
 
   /**
@@ -1426,7 +1444,8 @@ class Canvas {
     }
 
     var size = rx.max(ry)
-    var full = _MIN_ELLIPSE_SEGMENTS.max(_MAX_ELLIPSE_SEGMENTS.min((size * 2).ceil()))
+    var full = _MIN_ELLIPSE_SEGMENTS.max(_MAX_ELLIPSE_SEGMENTS.min((size
+      * 2).ceil()))
     var steps = (2).max((full * sweep / 360).ceil())
 
     var points = []
@@ -1469,7 +1488,7 @@ class Canvas {
       self._bezier_points(x1, y1, cx1, cy1, cx2, cy2, x2, y2),
       color,
       false,
-      options
+      options,
     )
   }
 
@@ -1571,7 +1590,7 @@ class Canvas {
     # Painting the seed colour over itself would never terminate, since
     # every filled pixel still matches.
     if paint.r == seed[0] and paint.g == seed[1] and
-       paint.b == seed[2] and paint.a == seed[3] {
+      paint.b == seed[2] and paint.a == seed[3] {
       return self
     }
 
@@ -1587,11 +1606,13 @@ class Canvas {
       var row = run[2]
 
       # Grow the run outwards before painting it.
-      while left - 1 >= bounds[0] and self._matches(left - 1, row, seed, limit) {
+      while left - 1 >= bounds[0]
+        and self._matches(left - 1, row, seed, limit) {
         left--
       }
 
-      while right + 1 < bounds[2] and self._matches(right + 1, row, seed, limit) {
+      while right + 1 < bounds[2]
+        and self._matches(right + 1, row, seed, limit) {
         right++
       }
 
@@ -1657,7 +1678,6 @@ class Canvas {
 
     return dr.max(dg.max(db.max(da))) <= limit
   }
-
 
   # ------------------------------------------------------------------
   # gradients
@@ -1789,7 +1809,7 @@ class Canvas {
       y1,
       dx,
       dy,
-      blend != true
+      blend != true,
     )
 
     return self
@@ -1807,7 +1827,7 @@ class Canvas {
       cx,
       cy,
       radius,
-      blend != true
+      blend != true,
     )
 
     return self
@@ -1836,7 +1856,7 @@ class Canvas {
   draw_mask(mask: bytes, mask_width, mask_height, x, y, color) {
     if mask.length() != mask_width * mask_height {
       raise ImageError(
-        'mask holds ${mask.length()} bytes, but ${mask_width}x${mask_height} needs ${mask_width * mask_height}'
+        'mask holds ${mask.length()} bytes, but ${mask_width}x${mask_height} needs ${mask_width * mask_height}',
       )
     }
 
@@ -1865,14 +1885,13 @@ class Canvas {
         paint.r,
         paint.g,
         paint.b,
-        paint.a
+        paint.a,
       )
     }
 
     return self
   }
 }
-
 
 /**
  * Turns a stop list into a 256-entry RGBA ramp.
@@ -1898,7 +1917,7 @@ def _build_ramp(stops: list) {
     # A two-element list is ambiguous: [0.5, 'red'] is a stop, but
     # [255, 0] would be a malformed colour. A leading number settles it.
     if is_list(entry) and entry.length() == 2 and is_number(entry[0]) and
-       !is_number(entry[1]) {
+      !is_number(entry[1]) {
       offsets.append((0).max((1).min(entry[0])))
       paints.append(Color.parse(entry[1]))
       continue
@@ -1958,7 +1977,6 @@ def _build_ramp(stops: list) {
   return ramp
 }
 
-
 # ---------------------------------------------------------------------
 # The per-pixel inner loops
 # ---------------------------------------------------------------------
@@ -1974,14 +1992,15 @@ def _build_ramp(stops: list) {
 # clipped, which is what makes that safe and is why none of them is
 # part of the public surface.
 
-
 /**
  * Source-over compositing of one pixel already known to be in range.
  *
  * The single place colour reaches a buffer. Straight (not
  * premultiplied) alpha, everything in 0-255 fixed point.
  */
-def _blend_at(pixels: bytes, at: number, r: number, g: number, b: number, a: number) {
+def _blend_at(
+  pixels: bytes, at: number, r: number, g: number, b: number, a: number,
+) {
   if a >= 255 {
     pixels[at] = r.round()
     pixels[at + 1] = g.round()
@@ -2018,11 +2037,12 @@ def _blend_at(pixels: bytes, at: number, r: number, g: number, b: number, a: num
   var dst_weight = 255 - src_weight
 
   pixels[at] = ((r * src_weight + pixels[at] * dst_weight) / 255).round()
-  pixels[at + 1] = ((g * src_weight + pixels[at + 1] * dst_weight) / 255).round()
-  pixels[at + 2] = ((b * src_weight + pixels[at + 2] * dst_weight) / 255).round()
+  pixels[at + 1] = ((g * src_weight + pixels[at + 1] * dst_weight)
+    / 255).round()
+  pixels[at + 2] = ((b * src_weight + pixels[at + 2] * dst_weight)
+    / 255).round()
   pixels[at + 3] = out_a.round()
 }
-
 
 /**
  * Blends one rasterized run, scaling the paint's alpha by the coverage
@@ -2037,7 +2057,7 @@ def _blend_coverage(
   r: number,
   g: number,
   b: number,
-  a: number
+  a: number,
 ) {
   iter var i = 0; i < count; i++ {
     var amount = coverage[offset + i]
@@ -2057,7 +2077,6 @@ def _blend_coverage(
   }
 }
 
-
 /**
  * Blends one row of an 8-bit coverage mask, which is how text and any
  * externally rasterized shape reach the surface.
@@ -2071,7 +2090,7 @@ def _blend_mask_row(
   r: number,
   g: number,
   b: number,
-  a: number
+  a: number,
 ) {
   iter var i = 0; i < count; i++ {
     var coverage = mask[mask_at + i]
@@ -2083,7 +2102,6 @@ def _blend_mask_row(
     _blend_at(pixels, at + i * 4, r, g, b, a * coverage / 255)
   }
 }
-
 
 /**
  * Writes one colour over every pixel of a buffer.
@@ -2098,7 +2116,6 @@ def _fill_buffer(pixels: bytes, r: number, g: number, b: number, a: number) {
     pixels[at + 3] = a
   }
 }
-
 
 /**
  * Copies one pixel between two buffers.
@@ -2127,7 +2144,7 @@ def _paint_linear(
   y1: number,
   dx: number,
   dy: number,
-  replace: bool
+  replace: bool,
 ) {
   var length_squared = dx * dx + dy * dy
   var flat = length_squared == 0
@@ -2137,7 +2154,9 @@ def _paint_linear(
     var oy = py + 0.5 - y1
 
     iter var px = left; px < right; px++ {
-      var step = flat ? 255 : (((px + 0.5 - x1) * dx + oy * dy) / length_squared * 255).round()
+      var step = flat
+        ? 255
+        : (((px + 0.5 - x1) * dx + oy * dy) / length_squared * 255).round()
 
       if step < 0 {
         step = 0
@@ -2157,11 +2176,12 @@ def _paint_linear(
         continue
       }
 
-      _blend_at(buffer, at, ramp[from], ramp[from + 1], ramp[from + 2], ramp[from + 3])
+      _blend_at(
+        buffer, at, ramp[from], ramp[from + 1], ramp[from + 2], ramp[from + 3],
+      )
     }
   }
 }
-
 
 /**
  * Paints a radial gradient over the given area, the ramp running from
@@ -2178,7 +2198,7 @@ def _paint_radial(
   cx: number,
   cy: number,
   radius: number,
-  replace: bool
+  replace: bool,
 ) {
   iter var py = top; py < bottom; py++ {
     var row = py * width * 4
@@ -2206,7 +2226,9 @@ def _paint_radial(
         continue
       }
 
-      _blend_at(buffer, at, ramp[from], ramp[from + 1], ramp[from + 2], ramp[from + 3])
+      _blend_at(
+        buffer, at, ramp[from], ramp[from + 1], ramp[from + 2], ramp[from + 3],
+      )
     }
   }
 }

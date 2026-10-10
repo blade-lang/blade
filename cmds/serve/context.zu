@@ -46,7 +46,9 @@ def iso(timestamp) {
  * @param string message
  * @param ?dict details: more fields for the error.
  */
-def fail(response, status: number, code: string, message: string, details: ?dict) {
+def fail(
+  response, status: number, code: string, message: string, details: ?dict,
+) {
   var error = { code, message }
 
   if details != nil {
@@ -137,7 +139,8 @@ class Nyssa {
    * @returns bool
    */
   mail_enabled() {
-    return self.settings.get('mail_url', nil) != nil and self.settings.get('mail_from', nil) != nil
+    return self.settings.get('mail_url', nil) != nil
+      and self.settings.get('mail_from', nil) != nil
   }
 
   /**
@@ -175,7 +178,11 @@ class Nyssa {
     var entry = self._pending.get(key, nil)
 
     if entry == nil {
-      entry = { version_id: version.id, package_id: version.package_id, count: 0 }
+      entry = {
+        version_id: version.id,
+        package_id: version.package_id,
+        count: 0,
+      }
       self._pending.set(key, entry)
     }
 
@@ -203,7 +210,9 @@ class Nyssa {
 
     self.db.transaction(@{
       for key, entry in pending {
-        self.db.add_downloads(entry.version_id, entry.package_id, entry.count, day)
+        self.db.add_downloads(
+          entry.version_id, entry.package_id, entry.count, day,
+        )
       }
     })
   }
@@ -280,7 +289,10 @@ class Nyssa {
     }
 
     if scope != nil and !token.scopes.split(' ').contains(scope) {
-      fail(response, 403, 'insufficient_scope', "this token does not carry the '${scope}' scope")
+      fail(
+        response, 403, 'insufficient_scope',
+        "this token does not carry the '${scope}' scope",
+      )
 
       return nil
     }
@@ -297,7 +309,10 @@ class Nyssa {
   refuse_if_read_only(response) {
     if self.settings.read_only == true {
       response.header('Retry-After', '300')
-      fail(response, 503, 'read_only', 'this repository is read-only at the moment')
+      fail(
+        response, 503, 'read_only',
+        'this repository is read-only at the moment',
+      )
 
       return true
     }

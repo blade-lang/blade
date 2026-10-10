@@ -374,8 +374,8 @@ class Cursor {
 
     raise ProtocolError(
       'the server sent a length-encoded integer starting ${first}, ' +
-      'which is not a length',
-      { driver: 'mysql' }
+        'which is not a length',
+      { driver: 'mysql' },
     )
   }
 
@@ -493,7 +493,7 @@ class Cursor {
     if count < 0 or self._at + count > self._data.length() {
       raise ProtocolError(
         'the server sent a packet that ended in the middle of a value',
-        { driver: 'mysql' }
+        { driver: 'mysql' },
       )
     }
   }
@@ -681,8 +681,8 @@ class PacketStream {
     } as error {
       raise ConnectionError(
         'the connection to the server failed while writing: ' +
-        error.message,
-        { driver: 'mysql' }
+          error.message,
+        { driver: 'mysql' },
       )
     }
   }
@@ -772,14 +772,14 @@ class PacketStream {
     } as error {
       raise ConnectionError(
         'the connection to the server failed while reading: ' +
-        error.message,
-        { driver: 'mysql' }
+          error.message,
+        { driver: 'mysql' },
       )
     }
 
     if chunk == nil or chunk.length() < count {
       raise ConnectionError(
-        'the server closed the connection', { driver: 'mysql' }
+        'the server closed the connection', { driver: 'mysql' },
       )
     }
 

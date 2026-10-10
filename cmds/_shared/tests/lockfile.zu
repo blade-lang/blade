@@ -2,7 +2,9 @@
 
 import test { * }
 
-import ..lockfile { Locked, Lockfile, LockfileError, Source, parse, parse_source }
+import ..lockfile {
+  Locked, Lockfile, LockfileError, Source, parse, parse_source,
+}
 
 describe('sources', @{
   it('reads and writes every kind', @{

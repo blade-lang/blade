@@ -78,7 +78,6 @@
  * either, and convert inside it.
  */
 
-
 class bigint {
 
   /**
@@ -106,7 +105,6 @@ class bigint {
    */
   to_string(radix) {}
 
-
   /**
    * Converts the bigint to a `number`.
    *
@@ -122,7 +120,6 @@ class bigint {
    * @returns {number}
    */
   to_number() {}
-
 
   /**
    * Converts the bigint to a boolean, by the same rule `if` uses.
@@ -141,7 +138,6 @@ class bigint {
    * @returns {boolean}
    */
   to_bool() {}
-
 
   /**
    * Returns the two's-complement byte representation, which
@@ -166,7 +162,6 @@ class bigint {
    */
   to_bytes(order) {}
 
-
   /**
    * Returns the base-2 digits, equivalent to `to_string(2)`.
    *
@@ -183,7 +178,6 @@ class bigint {
    */
   bin() {}
 
-
   /**
    * Returns the base-16 digits in lowercase, equivalent to
    * `to_string(16)`.
@@ -197,7 +191,6 @@ class bigint {
    */
   hex() {}
 
-
   /**
    * Returns the base-8 digits, equivalent to `to_string(8)`.
    *
@@ -210,7 +203,6 @@ class bigint {
    */
   oct() {}
 
-
   /**
    * Returns the absolute value.
    *
@@ -222,7 +214,6 @@ class bigint {
    * @returns {bigint}
    */
   abs() {}
-
 
   /**
    * Returns the sign as a plain `number`: `1` when positive,
@@ -239,7 +230,6 @@ class bigint {
    */
   sign() {}
 
-
   /**
    * Returns the larger of the two bigints.
    *
@@ -254,7 +244,6 @@ class bigint {
    */
   max(other) {}
 
-
   /**
    * Returns the smaller of the two bigints.
    *
@@ -268,7 +257,6 @@ class bigint {
    * @raises {TypeError} if `other` is not a bigint.
    */
   min(other) {}
-
 
   /**
    * Raises the bigint to `exponent`, the method form of `**`.
@@ -287,7 +275,6 @@ class bigint {
    */
   pow(exponent) {}
 
-
   /**
    * Returns the integer square root, truncated towards zero, so
    * `145n.sqrt()` is `12n` rather than `12.04...`.
@@ -304,7 +291,6 @@ class bigint {
    */
   sqrt() {}
 
-
   /**
    * Returns the integer cube root, truncated towards zero.
    * Negatives are fine here, unlike `sqrt()`.
@@ -317,7 +303,6 @@ class bigint {
    * @returns {bigint}
    */
   cbrt() {}
-
 
   /**
    * Returns the integer `n`th root, truncated towards zero.
@@ -335,7 +320,6 @@ class bigint {
    */
   nth_root(n) {}
 
-
   /**
    * Returns the greatest common divisor of the two bigints. The
    * result is always non-negative regardless of either sign, and
@@ -352,7 +336,6 @@ class bigint {
    */
   gcd(other) {}
 
-
   /**
    * Returns the least common multiple of the two bigints. The
    * result is always non-negative, and is `0n` when either side
@@ -368,7 +351,6 @@ class bigint {
    * @raises {TypeError} if `other` is not a bigint.
    */
   lcm(other) {}
-
 
   /**
    * Returns `(self ** exponent) % modulus` without ever building
@@ -393,7 +375,6 @@ class bigint {
    */
   modpow(exponent, modulus) {}
 
-
   /**
    * Returns the modular multiplicative inverse: the `x` solving
    * `self * x == 1 (mod modulus)`.
@@ -416,7 +397,6 @@ class bigint {
    */
   modinv(modulus) {}
 
-
   /**
    * Returns how many bits the magnitude occupies, ignoring the
    * sign. Zero occupies none.
@@ -431,7 +411,6 @@ class bigint {
    * @returns {number}
    */
   bits() {}
-
 
   /**
    * Returns whether the bit at `index` is set, counting from the
@@ -453,7 +432,6 @@ class bigint {
    */
   bit(index) {}
 
-
   /**
    * Returns a new bigint with the bit at `index` set or cleared.
    * The receiver is left untouched.
@@ -469,7 +447,6 @@ class bigint {
    * @raises {RangeError} if `index` is negative or fractional.
    */
   set_bit(index, value) {}
-
 
   /**
    * Returns the count of least-significant zero bits, which is
@@ -488,7 +465,6 @@ class bigint {
    */
   trailing_zeros() {}
 
-
   /**
    * Returns whether the bigint is zero.
    *
@@ -501,7 +477,6 @@ class bigint {
    */
   is_zero() {}
 
-
   /**
    * Returns whether the bigint is even. Zero is even.
    *
@@ -513,7 +488,6 @@ class bigint {
    * @returns {boolean}
    */
   is_even() {}
-
 
   /**
    * Returns whether the bigint is odd.

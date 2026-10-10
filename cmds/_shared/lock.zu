@@ -76,7 +76,9 @@ class Lock {
       var lines = fsx.read_text(self.path).split('\n')
 
       return {
-        pid: lines.length() > 0 and !lines[0].is_empty() ? lines[0].to_number() : 0,
+        pid: lines.length() > 0 and !lines[0].is_empty()
+          ? lines[0].to_number()
+          : 0,
         host: lines.length() > 1 ? lines[1] : '',
       }
     } as error {
@@ -149,7 +151,7 @@ class Lock {
       if time() >= deadline {
         raise LockError(
           'another zuri command (process ${holder.pid}${local ? "" : " on " + holder.host}) '
-            + "is still working here; if it is not, delete '${self.path}'"
+            + "is still working here; if it is not, delete '${self.path}'",
         )
       }
 

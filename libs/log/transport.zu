@@ -21,7 +21,6 @@ import enum
 import os
 import date
 
-
 /**
  * The Transport class acts as the base class for log transports
  * and handle the actual logging of the specified log records.
@@ -161,7 +160,9 @@ class Transport {
    * @returns self
    */
   show_name(show) {
-    if show == nil show = true
+    if show == nil {
+      show = true
+    }
 
     if !is_bool(show) {
       raise TypeError('boolean expected, ${typeof(show)} given')
@@ -179,7 +180,9 @@ class Transport {
    * @returns self
    */
   show_time(show) {
-    if show == nil show = true
+    if show == nil {
+      show = true
+    }
 
     if !is_bool(show) {
       raise TypeError('boolean expected, ${typeof(show)} given')
@@ -197,7 +200,9 @@ class Transport {
    * @returns self
    */
   show_level(show) {
-    if show == nil show = true
+    if show == nil {
+      show = true
+    }
 
     if !is_bool(show) {
       raise TypeError('boolean expected, ${typeof(show)} given')
@@ -405,7 +410,6 @@ class Transport {
   }
 }
 
-
 # Verifies that obj is a valid Transport and returns obj as is if true
 # or raises an Error if not.
 def _assert_transport(obj) {
@@ -415,7 +419,6 @@ def _assert_transport(obj) {
 
   return obj
 }
-
 
 # A list of registered transports. Starts empty here; the default
 # ConsoleTransport is registered by dispatch.zu at its own load time,
@@ -458,8 +461,10 @@ def _write(level, args, context) {
       var formatter = trans.get_formatter()
 
       trans.write(
-        formatter ? formatter(args, level, trans) : trans.format(args, level, context),
-        level
+        formatter
+          ? formatter(args, level, trans)
+          : trans.format(args, level, context),
+        level,
       )
     }
   }

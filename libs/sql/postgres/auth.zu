@@ -133,7 +133,7 @@ def client_proof(password: string, client_nonce: string,
   if server_nonce.is_empty() or salt.is_empty() or iterations.is_empty() {
     raise AuthenticationError(
       'the server sent a SCRAM challenge this adapter cannot read',
-      { driver: 'postgres' }
+      { driver: 'postgres' },
     )
   }
 
@@ -142,12 +142,14 @@ def client_proof(password: string, client_nonce: string,
   if !server_nonce.starts_with(client_nonce) {
     raise AuthenticationError(
       'the SCRAM nonce the server returned does not match the one sent',
-      { driver: 'postgres' }
+      { driver: 'postgres' },
     )
   }
 
   var rounds = iterations.to_number()
-  var salted = hash.pbkdf2('sha256', password, base64.decode(salt), rounds, 32, true)
+  var salted = hash.pbkdf2(
+    'sha256', password, base64.decode(salt), rounds, 32, true,
+  )
 
   var client_key = hash.hmac_sha256(salted, 'Client Key', true)
   var stored_key = hash.sha256(client_key, true)
@@ -164,7 +166,7 @@ def client_proof(password: string, client_nonce: string,
   return {
     message: '${without_proof},p=${base64.encode(proof)}',
     server_signature: base64.encode(
-      hash.hmac_sha256(server_key, auth_message, true)
+      hash.hmac_sha256(server_key, auth_message, true),
     ),
   }
 }
@@ -187,14 +189,14 @@ def verify_server(server_final: string, expected: string) {
   if signature.is_empty() {
     raise AuthenticationError(
       'the server finished SCRAM without proving itself',
-      { driver: 'postgres' }
+      { driver: 'postgres' },
     )
   }
 
   if signature != expected {
     raise AuthenticationError(
       'the server failed to prove it knows this password',
-      { driver: 'postgres' }
+      { driver: 'postgres' },
     )
   }
 }

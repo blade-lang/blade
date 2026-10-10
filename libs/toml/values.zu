@@ -39,11 +39,9 @@ import date
 
 import .errors { TomlError }
 
-
 # Days in each month outside a leap year, indexed from 1 so the month
 # number can be used directly.
 var _DAYS_IN_MONTH = [-1, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-
 
 # The proleptic Gregorian leap rule, which is the one RFC 3339 uses.
 def _is_leap(year) {
@@ -58,7 +56,6 @@ def _is_leap(year) {
   return year % 400 == 0
 }
 
-
 # How many days `month` has in `year`.
 def _days_in(year, month) {
   if month == 2 and _is_leap(year) {
@@ -67,7 +64,6 @@ def _days_in(year, month) {
 
   return _DAYS_IN_MONTH[month]
 }
-
 
 # Left-pads a non-negative integer with zeros to `width` digits.
 def _pad(value, width) {
@@ -80,7 +76,6 @@ def _pad(value, width) {
   return text
 }
 
-
 # Every field a TOML date or time carries has to be a whole number, and
 # a fractional one would render as digits that are not there.
 def _whole(value, name) {
@@ -88,7 +83,6 @@ def _whole(value, name) {
     raise TomlError('${name} must be a whole number, got ${value}')
   }
 }
-
 
 # Checks a year/month/day triple against the calendar.
 def _check_date(year, month, day) {
@@ -110,7 +104,6 @@ def _check_date(year, month, day) {
     raise TomlError('day must be from 1 to ${limit} for month ${month}, got ${day}')
   }
 }
-
 
 # Checks an hour/minute/second/nanosecond quadruple against the clock.
 def _check_time(hour, minute, second, nanosecond) {
@@ -138,7 +131,6 @@ def _check_time(hour, minute, second, nanosecond) {
   }
 }
 
-
 # Renders the fractional part of a second, or '' when there is none.
 # Trailing zeros are dropped, so 500000000ns is '.5' rather than
 # '.500000000'.
@@ -156,7 +148,6 @@ def _fraction(nanosecond) {
   return '.' + digits
 }
 
-
 # Renders a UTC offset in minutes as TOML spells it.
 def _offset_text(minutes) {
   if minutes == 0 {
@@ -168,7 +159,6 @@ def _offset_text(minutes) {
 
   return sign + _pad((total / 60).floor(), 2) + ':' + _pad(total % 60, 2)
 }
-
 
 /**
  * A calendar date with no time and no offset, TOML's `local-date`.
@@ -219,7 +209,11 @@ class LocalDate {
    * @returns string
    */
   to_string() {
-    return _pad(self.year, 4) + '-' + _pad(self.month, 2) + '-' + _pad(self.day, 2)
+    return _pad(self.year, 4)
+      + '-'
+      + _pad(self.month, 2)
+      + '-'
+      + _pad(self.day, 2)
   }
 
   @to_string() {
@@ -239,7 +233,7 @@ class LocalDate {
     }
 
     return self.year == other.year and self.month == other.month and
-        self.day == other.day
+      self.day == other.day
   }
 
   /**
@@ -265,7 +259,6 @@ class LocalDate {
     return date.Date(self.year, self.month, self.day, 0, 0, 0, 0, 0)
   }
 }
-
 
 /**
  * A wall-clock time with no date and no offset, TOML's `local-time`.
@@ -321,7 +314,7 @@ class LocalTime {
    */
   to_string() {
     return _pad(self.hour, 2) + ':' + _pad(self.minute, 2) + ':' +
-        _pad(self.second, 2) + _fraction(self.nanosecond)
+      _pad(self.second, 2) + _fraction(self.nanosecond)
   }
 
   @to_string() {
@@ -341,7 +334,7 @@ class LocalTime {
     }
 
     return self.hour == other.hour and self.minute == other.minute and
-        self.second == other.second and self.nanosecond == other.nanosecond
+      self.second == other.second and self.nanosecond == other.nanosecond
   }
 
   /**
@@ -354,7 +347,6 @@ class LocalTime {
     return self.equals(other)
   }
 }
-
 
 /**
  * A date and a wall-clock time with no offset, TOML's
@@ -413,9 +405,9 @@ class LocalDateTime {
    */
   to_string() {
     return _pad(self.year, 4) + '-' + _pad(self.month, 2) + '-' +
-        _pad(self.day, 2) + 'T' + _pad(self.hour, 2) + ':' +
-        _pad(self.minute, 2) + ':' + _pad(self.second, 2) +
-        _fraction(self.nanosecond)
+      _pad(self.day, 2) + 'T' + _pad(self.hour, 2) + ':' +
+      _pad(self.minute, 2) + ':' + _pad(self.second, 2) +
+      _fraction(self.nanosecond)
   }
 
   @to_string() {
@@ -435,9 +427,9 @@ class LocalDateTime {
     }
 
     return self.year == other.year and self.month == other.month and
-        self.day == other.day and self.hour == other.hour and
-        self.minute == other.minute and self.second == other.second and
-        self.nanosecond == other.nanosecond
+      self.day == other.day and self.hour == other.hour and
+      self.minute == other.minute and self.second == other.second and
+      self.nanosecond == other.nanosecond
   }
 
   /**
@@ -461,10 +453,9 @@ class LocalDateTime {
    */
   to_date() {
     return date.Date(self.year, self.month, self.day, self.hour, self.minute,
-        self.second, (self.nanosecond / 1000).floor(), 0)
+      self.second, (self.nanosecond / 1000).floor(), 0)
   }
 }
-
 
 /**
  * A date and time with a UTC offset, TOML's `offset-date-time`.
@@ -521,7 +512,7 @@ class DateTime {
 
     if offset_minutes < -1439 or offset_minutes > 1439 {
       raise TomlError(
-        'offset_minutes must be from -1439 to 1439, got ${offset_minutes}'
+        'offset_minutes must be from -1439 to 1439, got ${offset_minutes}',
       )
     }
 
@@ -543,9 +534,9 @@ class DateTime {
    */
   to_string() {
     return _pad(self.year, 4) + '-' + _pad(self.month, 2) + '-' +
-        _pad(self.day, 2) + 'T' + _pad(self.hour, 2) + ':' +
-        _pad(self.minute, 2) + ':' + _pad(self.second, 2) +
-        _fraction(self.nanosecond) + _offset_text(self.offset_minutes)
+      _pad(self.day, 2) + 'T' + _pad(self.hour, 2) + ':' +
+      _pad(self.minute, 2) + ':' + _pad(self.second, 2) +
+      _fraction(self.nanosecond) + _offset_text(self.offset_minutes)
   }
 
   @to_string() {
@@ -568,10 +559,10 @@ class DateTime {
     }
 
     return self.year == other.year and self.month == other.month and
-        self.day == other.day and self.hour == other.hour and
-        self.minute == other.minute and self.second == other.second and
-        self.nanosecond == other.nanosecond and
-        self.offset_minutes == other.offset_minutes
+      self.day == other.day and self.hour == other.hour and
+      self.minute == other.minute and self.second == other.second and
+      self.nanosecond == other.nanosecond and
+      self.offset_minutes == other.offset_minutes
   }
 
   /**
@@ -594,10 +585,9 @@ class DateTime {
    */
   to_date() {
     return date.Date(self.year, self.month, self.day, self.hour, self.minute,
-        self.second, (self.nanosecond / 1000).floor(), self.offset_minutes * 60)
+      self.second, (self.nanosecond / 1000).floor(), self.offset_minutes * 60)
   }
 }
-
 
 /**
  * A number that must be written as a TOML float.

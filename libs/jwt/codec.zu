@@ -12,7 +12,6 @@ import .errors { JwtError, MalformedTokenError }
 import hash
 import base64
 
-
 # ---------------------------------------------------------------------------
 # Algorithm identifiers
 # ---------------------------------------------------------------------------
@@ -76,7 +75,6 @@ var EDDSA = 'EdDSA'
  */
 var NONE = 'none'
 
-
 # ---------------------------------------------------------------------------
 # base64url
 # ---------------------------------------------------------------------------
@@ -86,8 +84,9 @@ var NONE = 'none'
  * characters.
  */
 def _b64_encode(data) {
-  if is_string(data)
+  if is_string(data) {
     data = data.to_bytes()
+  }
 
   var encoded = base64.encode(data)
   # URL-safe alphabet and strip padding
@@ -102,8 +101,11 @@ def _b64_encode(data) {
 def _b64_pad(data: string) {
   var s = data.replace('-', '+').replace('_', '/')
   var pad = s.length() % 4
-  if pad == 2 { s += '==' }
-  else if pad == 3 { s += '=' }
+  if pad == 2 {
+    s += '=='
+  } else if pad == 3 {
+    s += '='
+  }
   return s
 }
 
@@ -129,7 +131,6 @@ def _is_string(v) {
   return is_string(v) and v.length() > 0
 }
 
-
 # ---------------------------------------------------------------------------
 # HMAC
 # ---------------------------------------------------------------------------
@@ -139,9 +140,15 @@ def _is_string(v) {
 # the raw MAC bytes; callers never need to remember the `as_bytes`
 # argument themselves.
 def _hmac_fn(alg) {
-  if alg == HS256 return @(key, str) => hash.hmac_sha256(key, str, true)
-  if alg == HS384 return @(key, str) => hash.hmac_sha384(key, str, true)
-  if alg == HS512 return @(key, str) => hash.hmac_sha512(key, str, true)
+  if alg == HS256 {
+    return @(key, str) => hash.hmac_sha256(key, str, true)
+  }
+  if alg == HS384 {
+    return @(key, str) => hash.hmac_sha384(key, str, true)
+  }
+  if alg == HS512 {
+    return @(key, str) => hash.hmac_sha512(key, str, true)
+  }
   raise JwtError('unsupported HMAC algorithm: ' + alg)
 }
 
@@ -158,7 +165,6 @@ def _safe_equals(a: string, b: string) {
 
   return result == 0
 }
-
 
 # ---------------------------------------------------------------------------
 # ECDSA DER <-> raw R‖S
@@ -257,7 +263,7 @@ def _der_to_raw_ec(der: bytes, coord_len: number) {
 def _raw_to_der_ec(raw: bytes, coord_len: number) {
   if raw.length() != coord_len * 2 {
     raise MalformedTokenError(
-      'invalid ECDSA signature: expected ${coord_len * 2} raw bytes, got ${raw.length()}'
+      'invalid ECDSA signature: expected ${coord_len * 2} raw bytes, got ${raw.length()}',
     )
   }
 

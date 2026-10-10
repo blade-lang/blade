@@ -35,12 +35,10 @@ import zuri { reflect }
 
 import .style
 
-
 # What `inline()` uses when the caller says nothing.
 var DEFAULT_MAX_ITEMS = 8
 var DEFAULT_MAX_DEPTH = 3
 var DEFAULT_MAX_STRING = 60
-
 
 /**
  * The name of `value`'s type: `'nil'`, `'bool'`, `'int'`, `'float'`,
@@ -70,7 +68,6 @@ def type_name(value) {
   return named != kind ? kind : named
 }
 
-
 /**
  * How to name `value`'s type in a sentence a person reads.
  *
@@ -89,7 +86,6 @@ def type_label(value) {
   return type_name(value)
 }
 
-
 /**
  * `word` with the article that belongs in front of it.
  *
@@ -106,7 +102,6 @@ def with_article(word: string) {
 
   return 'aeiou'.contains(word[0, 1].lower()) ? 'an ${word}' : 'a ${word}'
 }
-
 
 /**
  * The names of an instance's own properties, in declaration order.
@@ -141,7 +136,6 @@ def property_of(value, name: string) {
   return reflect.get_prop(value, name)
 }
 
-
 /**
  * The name of the class `value` was built from, or `nil` when it is
  * not an instance.
@@ -161,7 +155,6 @@ def class_name(value) {
   return nil
 }
 
-
 def _options(given) {
   var options = {
     color: true,
@@ -180,7 +173,6 @@ def _options(given) {
   return options
 }
 
-
 # Colour, but only when this particular render asked for it. A
 # reporter writing JSON or TAP needs the same text with no escape
 # sequences in it, whatever the terminal supports.
@@ -191,7 +183,6 @@ def _paint(options, painter, text) {
 
   return painter(text)
 }
-
 
 # `seen` holds the actual container values currently being rendered,
 # not their identities, so it stays a real reference the collector
@@ -209,7 +200,6 @@ def _is_cyclic(seen, value) {
   return false
 }
 
-
 def _quote(text, options) {
   var body = text
     .replace('/\\\\/', '\\\\')
@@ -224,7 +214,6 @@ def _quote(text, options) {
 
   return _paint(options, style.green, "'${body}'")
 }
-
 
 def _number(value, options) {
   if is_bigint(value) {
@@ -242,7 +231,6 @@ def _number(value, options) {
   return _paint(options, style.yellow, value.to_string())
 }
 
-
 def _bytes(value, options) {
   var shown = []
   var limit = options.max_items > 0 ? options.max_items : value.length()
@@ -259,7 +247,6 @@ def _bytes(value, options) {
 
   return _paint(options, style.magenta, 'bytes(${value.length()})[${body}]')
 }
-
 
 def _instance(value, options, depth, seen) {
   var name = typeof(value)
@@ -285,14 +272,15 @@ def _instance(value, options, depth, seen) {
       break
     }
 
-    var rendered = _render(property_of(value, property), options, depth + 1, seen)
+    var rendered = _render(
+      property_of(value, property), options, depth + 1, seen,
+    )
     parts.append(_paint(options, style.white, property) + ': ' + rendered)
     shown++
   }
 
   return _paint(options, style.cyan, name) + ' { ' + ', '.join(parts) + ' }'
 }
-
 
 def _list(value, options, depth, seen) {
   if value.is_empty() {
@@ -307,7 +295,9 @@ def _list(value, options, depth, seen) {
   for item in value {
     if options.max_items > 0 and shown >= options.max_items {
       var remaining = value.length() - shown
-      parts.append(_paint(options, style.grey, '${style.symbols().ellipsis} ${remaining} more'))
+      parts.append(_paint(
+        options, style.grey, '${style.symbols().ellipsis} ${remaining} more',
+      ))
       break
     }
 
@@ -319,7 +309,6 @@ def _list(value, options, depth, seen) {
 
   return '[' + ', '.join(parts) + ']'
 }
-
 
 def _dict(value, options, depth, seen) {
   if value.is_empty() {
@@ -339,12 +328,18 @@ def _dict(value, options, depth, seen) {
   for key in keys {
     if options.max_items > 0 and shown >= options.max_items {
       var remaining = keys.length() - shown
-      parts.append(_paint(options, style.grey, '${style.symbols().ellipsis} ${remaining} more'))
+      parts.append(_paint(
+        options, style.grey, '${style.symbols().ellipsis} ${remaining} more',
+      ))
       break
     }
 
     var label = is_string(key) ? key : _render(key, options, depth + 1, seen)
-    parts.append(_paint(options, style.white, label) + ': ' + _render(value[key], options, depth + 1, seen))
+    parts.append(
+      _paint(options, style.white, label)
+        + ': '
+        + _render(value[key], options, depth + 1, seen),
+    )
     shown++
   }
 
@@ -352,7 +347,6 @@ def _dict(value, options, depth, seen) {
 
   return '{ ' + ', '.join(parts) + ' }'
 }
-
 
 def _render(value, options, depth, seen) {
   if value == nil {
@@ -382,7 +376,10 @@ def _render(value, options, depth, seen) {
 
     if options.max_depth > 0 and depth >= options.max_depth {
       var size = value.length()
-      return _paint(options, style.grey, is_list(value) ? '[${size} items]' : '{${size} keys}')
+      return _paint(
+        options, style.grey,
+        is_list(value) ? '[${size} items]' : '{${size} keys}',
+      )
     }
 
     return is_list(value) ?
@@ -391,7 +388,9 @@ def _render(value, options, depth, seen) {
   }
 
   if is_class(value) {
-    return _paint(options, style.cyan, 'class ${reflect.class_info(value).name}')
+    return _paint(
+      options, style.cyan, 'class ${reflect.class_info(value).name}',
+    )
   }
 
   if is_instance(value) {
@@ -412,16 +411,20 @@ def _render(value, options, depth, seen) {
 
   if is_callable(value) {
     var name = value.name()
-    return _paint(options, style.cyan, name.starts_with('@') ? 'function' : 'function ${name}')
+    return _paint(
+      options, style.cyan,
+      name.starts_with('@') ? 'function' : 'function ${name}',
+    )
   }
 
   if is_file(value) {
     return _paint(options, style.cyan, 'file ${value.path()}')
   }
 
-  return _paint(options, style.grey, '${reflect.kind(value)} ${value.to_string()}')
+  return _paint(
+    options, style.grey, '${reflect.kind(value)} ${value.to_string()}',
+  )
 }
-
 
 /**
  * `value` rendered as a single line, abbreviated to stay readable
@@ -463,7 +466,6 @@ def inline_plain(value, options: ?dict) {
   return _render(value, resolved, 0, [])
 }
 
-
 def _block(value, options, depth, seen, out) {
   var pad = '  ' * depth
 
@@ -497,7 +499,9 @@ def _block(value, options, depth, seen, out) {
     for key in keys {
       var label = is_string(key) ? key : _render(key, options, 0, [])
       var tail = index < keys.length() - 1 ? ',' : ''
-      _append_entry(out, pad + '  ', '${label}: ', value[key], options, depth, seen, tail)
+      _append_entry(
+        out, pad + '  ', '${label}: ', value[key], options, depth, seen, tail,
+      )
       index++
     }
 
@@ -511,7 +515,6 @@ def _block(value, options, depth, seen, out) {
 
   return out
 }
-
 
 # Renders one element or one key/value pair into `out`. A nested
 # container becomes several lines, the first of which has to carry the
@@ -528,7 +531,6 @@ def _append_entry(out, pad, prefix, value, options, depth, seen, tail) {
 
   out[out.length() - 1] = out[out.length() - 1] + tail
 }
-
 
 /**
  * `value` rendered over as many lines as it takes, with nothing
@@ -590,7 +592,6 @@ def serialize(value) {
   return '\n'.join(block(value, { color: false, sort_keys: true }))
 }
 
-
 /**
  * A duration in milliseconds, rendered the way a reader wants to see
  * it: whole milliseconds below a second, and seconds with one decimal
@@ -610,7 +611,6 @@ def duration(milliseconds: number) {
 
   return '${(milliseconds / 1000).fixed(1)}s'
 }
-
 
 /**
  * `count` followed by `singular` or `plural`, whichever the count

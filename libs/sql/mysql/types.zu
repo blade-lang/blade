@@ -383,9 +383,9 @@ def parameter_type(value) {
 
   raise QueryError(
     'a ${typeof(value)} has no MySQL representation; expected nil, a ' +
-    'bool, a number, a bigint, a string, bytes, a date, a time ' +
-    'interval, a decimal, or a list or dictionary to store as JSON',
-    { driver: 'mysql' }
+      'bool, a number, a bigint, a string, bytes, a date, a time ' +
+      'interval, a decimal, or a list or dictionary to store as JSON',
+    { driver: 'mysql' },
   )
 }
 
@@ -421,8 +421,8 @@ def write_parameter(writer, value) {
       if value >= _WRAP or value < -_SIGN_LIMIT {
         raise QueryError(
           'the value ${value} is too large for a MySQL integer, which ' +
-          'holds 64 bits',
-          { driver: 'mysql' }
+            'holds 64 bits',
+          { driver: 'mysql' },
         )
       }
     }
@@ -479,9 +479,9 @@ def _is_byte_column(type: number, column: dict) {
 
   return is_binary(column) and (
     type == TYPES.BLOB or type == TYPES.TINY_BLOB or
-    type == TYPES.MEDIUM_BLOB or type == TYPES.LONG_BLOB or
-    type == TYPES.VAR_STRING or type == TYPES.STRING or
-    type == TYPES.VARCHAR
+      type == TYPES.MEDIUM_BLOB or type == TYPES.LONG_BLOB or
+      type == TYPES.VAR_STRING or type == TYPES.STRING or
+      type == TYPES.VARCHAR
   )
 }
 
@@ -542,7 +542,8 @@ def _date_from_text(text: string) {
 
       if dot > 0 {
         second = clock[2][0, dot].to_number()
-        micros = (clock[2][dot + 1, clock[2].length()] + '000000')[0, 6].to_number()
+        micros = (clock[2][dot + 1, clock[2].length()]
+          + '000000')[0, 6].to_number()
       } else {
         second = clock[2].to_number()
       }
@@ -551,7 +552,7 @@ def _date_from_text(text: string) {
 
   return _make_date(
     day[0].to_number(), day[1].to_number(), day[2].to_number(),
-    hour, minute, second, micros
+    hour, minute, second, micros,
   )
 }
 

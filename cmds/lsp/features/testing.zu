@@ -161,7 +161,9 @@ class _Finder {
     }
 
     if node.kind == 'Call' {
-      var function_name = _test_function(self.server, self.key, self.summary, node, self.directory)
+      var function_name = _test_function(
+        self.server, self.key, self.summary, node, self.directory,
+      )
 
       if function_name != nil {
         var item = _item(node, function_name, names, patterns)
@@ -174,11 +176,15 @@ class _Finder {
             var inner_patterns = patterns.clone()
 
             inner_names.append(item.name)
-            inner_patterns.append(_pattern_of(item.name, item.modifier == 'each'))
+            inner_patterns.append(_pattern_of(
+              item.name, item.modifier == 'each',
+            ))
 
             var body = node.fields.arguments.last()
 
-            self.collect(common.children(body), inner_names, inner_patterns, item.children)
+            self.collect(
+              common.children(body), inner_names, inner_patterns, item.children,
+            )
           }
         }
 
@@ -309,7 +315,10 @@ def workspace_tests(server, params: dict, context) {
     var items = discover(server, key)
 
     if !items.is_empty() {
-      found.append({ uri: server.uri(key), tests: describe_items(server, key, items) })
+      found.append({
+        uri: server.uri(key),
+        tests: describe_items(server, key, items),
+      })
     }
   }
 
@@ -353,7 +362,11 @@ def lenses(server, document) {
       command: {
         title,
         command: RUN_COMMAND,
-        arguments: [{ uri: document.uri, name: item.full_name, filter: item.filter }],
+        arguments: [{
+          uri: document.uri,
+          name: item.full_name,
+          filter: item.filter,
+        }],
       },
     })
   }
@@ -377,7 +390,9 @@ def working_directory(server, path: string) {
   }
 
   for folder in server.folders {
-    var prefix = folder.ends_with(os.path_separator) ? folder : folder + os.path_separator
+    var prefix = folder.ends_with(os.path_separator)
+      ? folder
+      : folder + os.path_separator
 
     if path.starts_with(prefix) {
       return folder
@@ -459,7 +474,9 @@ def run_file(id: int, path: string, cwd: string, filter, results) {
   var code = child.wait()
   var stderr = child.read_stderr()
 
-  results.send({ id, kind: 'finished', code, stderr: stderr == nil ? '' : stderr.to_string() })
+  results.send({
+    id, kind: 'finished', code, stderr: stderr == nil ? '' : stderr.to_string(),
+  })
 
   return true
 }
@@ -495,7 +512,9 @@ def _report_line(id: int, line: string, results) {
  * @returns string
  */
 def failure_path(server, cwd: string, name: string) {
-  var path = os.abs_path(paths.is_absolute(name) ? name : os.join_paths(cwd, name))
+  var path = os.abs_path(
+    paths.is_absolute(name) ? name : os.join_paths(cwd, name),
+  )
 
   if os.platform != 'windows' {
     return path
@@ -546,11 +565,13 @@ def failure_diagnostics(server, cwd: string, tests: list) {
       }
 
       var text = lines.line_text(line - 1)
-      var start = lines.line_start(line - 1) + (text.length() - text.ltrim().length())
+      var start = lines.line_start(line - 1)
+        + (text.length() - text.ltrim().length())
       var end = lines.line_start(line - 1) + text.rtrim().length()
       var message = '${test.full_name}: ${failure.message}'
 
-      if failure.get('expected', nil) != nil or failure.get('received', nil) != nil {
+      if failure.get('expected', nil) != nil
+        or failure.get('received', nil) != nil {
         message += '\nexpected ${failure.expected}\nreceived ${failure.received}'
       }
 

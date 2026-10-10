@@ -220,7 +220,7 @@ class SqliteConnection < DriverConnection {
       described.columns,
       described.conversions,
       sql,
-      true
+      true,
     )
   }
 
@@ -418,14 +418,18 @@ class SqliteConnection < DriverConnection {
    * @param bool|nil writable Read-only when nil or false.
    * @returns Blob
    */
-  blob(database: string, table: string, column: string, rowid: number, writable) {
+  blob(
+    database: string, table: string, column: string, rowid: number, writable,
+  ) {
     self._open()
 
     var wanted = writable ? true : false
     var handle
 
     catch {
-      handle = _sqlite.blob_open(self._handle, database, table, column, rowid, wanted)
+      handle = _sqlite.blob_open(
+        self._handle, database, table, column, rowid, wanted,
+      )
     } as error {
       reraise(error, nil)
     }
@@ -453,7 +457,7 @@ class SqliteConnection < DriverConnection {
         destination.handle(),
         settings.get('target', 'main'),
         self._handle,
-        settings.get('source', 'main')
+        settings.get('source', 'main'),
       )
     } as error {
       reraise(error, nil)
@@ -560,7 +564,9 @@ class SqliteConnection < DriverConnection {
    * @param function step
    * @param function finish
    */
-  create_aggregate(name: string, arity: number, step: function, finish: function) {
+  create_aggregate(
+    name: string, arity: number, step: function, finish: function,
+  ) {
     self._open()
 
     catch {
@@ -762,7 +768,7 @@ class SqliteConnection < DriverConnection {
     if prepared.statement == nil {
       raise QueryError(
         'this text contains no statement to run',
-        { driver: 'sqlite', query: sql }
+        { driver: 'sqlite', query: sql },
       )
     }
 
@@ -771,8 +777,8 @@ class SqliteConnection < DriverConnection {
 
       raise QueryError(
         'this text contains more than one statement; run them one at ' +
-        'a time, or use exec() for a script',
-        { driver: 'sqlite', query: sql }
+          'a time, or use exec() for a script',
+        { driver: 'sqlite', query: sql },
       )
     }
 
@@ -809,8 +815,8 @@ class SqliteConnection < DriverConnection {
 
     raise NotSupportedError(
       'sqlite has no ${isolation} isolation; it offers read committed, ' +
-      'repeatable read and serializable',
-      { driver: 'sqlite' }
+        'repeatable read and serializable',
+      { driver: 'sqlite' },
     )
   }
 
@@ -818,14 +824,16 @@ class SqliteConnection < DriverConnection {
     if _sqlite.autocommit(self._handle) {
       raise TransactionError(
         'there is no open transaction to ${what}',
-        { driver: 'sqlite' }
+        { driver: 'sqlite' },
       )
     }
   }
 
   _open() {
     if self._closed {
-      raise ClosedError('this sqlite connection was closed', { driver: 'sqlite' })
+      raise ClosedError(
+        'this sqlite connection was closed', { driver: 'sqlite' },
+      )
     }
   }
 

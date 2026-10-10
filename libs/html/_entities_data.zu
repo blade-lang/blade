@@ -22,7 +22,6 @@
  * @copyright 2026, Richard Ore and The Zuri Contributors
  */
 
-
 /**
  * Maps a named character reference (without its leading `&`) to the
  * string it expands to.
@@ -2260,7 +2259,6 @@ var NAMED_REFERENCES = {
   'zwj;': '\u200D',
   'zwnj;': '\u200C',
 }
-
 
 /**
  * Length of the longest key in {NAMED_REFERENCES}. The tokenizer uses

@@ -17,7 +17,6 @@ import .canvas { Canvas }
 import .color { Color }
 import .errors { FontError }
 
-
 # ---------------------------------------------------------------------
 # Design grid
 # ---------------------------------------------------------------------
@@ -76,7 +75,6 @@ var DESCENDER = -5
  */
 var WEIGHT = 1.7
 
-
 # ---------------------------------------------------------------------
 # Glyph construction
 # ---------------------------------------------------------------------
@@ -91,14 +89,12 @@ var WEIGHT = 1.7
 # so the curved letters are stored as real point lists and cost nothing
 # to draw.
 
-
 /**
  * A polyline from a flat run of coordinates.
  */
 def _l(...points) {
   return points
 }
-
 
 /**
  * Points along an elliptical arc, in degrees measured anticlockwise
@@ -123,14 +119,12 @@ def _a(cx, cy, rx, ry, from_angle, to_angle) {
   return points
 }
 
-
 /**
  * A closed ellipse, as one polyline that returns to its start.
  */
 def _o(cx, cy, rx, ry) {
   return _a(cx, cy, rx, ry, 0, 360)
 }
-
 
 /**
  * Concatenates several point runs into one continuous polyline, so a
@@ -148,7 +142,6 @@ def _join(...runs) {
 
   return points
 }
-
 
 /**
  * Every glyph, keyed by character.
@@ -219,7 +212,9 @@ var GLYPHS = {
 
   P: { advance: 12, strokes: [
     _l(1.5, 0, 1.5, 14),
-    _join(_l(1.5, 14, 6.3, 14), _a(6.3, 10.75, 3.7, 3.25, 90, -90), _l(1.5, 7.5)),
+    _join(
+      _l(1.5, 14, 6.3, 14), _a(6.3, 10.75, 3.7, 3.25, 90, -90), _l(1.5, 7.5),
+    ),
   ] },
 
   Q: { advance: 13.5, strokes: [
@@ -229,7 +224,9 @@ var GLYPHS = {
 
   R: { advance: 12, strokes: [
     _l(1.5, 0, 1.5, 14),
-    _join(_l(1.5, 14, 6.3, 14), _a(6.3, 10.75, 3.7, 3.25, 90, -90), _l(1.5, 7.5)),
+    _join(
+      _l(1.5, 14, 6.3, 14), _a(6.3, 10.75, 3.7, 3.25, 90, -90), _l(1.5, 7.5),
+    ),
     _l(5.5, 7.5, 11, 0),
   ] },
 
@@ -453,7 +450,7 @@ var GLYPHS = {
     _join(
       _l(11.8, 2.6, 3.5, 9.4),
       _a(5.6, 11.2, 2.6, 2.6, 220, -40),
-      _a(5.8, 4.4, 4.3, 4.4, 65, 335)
+      _a(5.8, 4.4, 4.3, 4.4, 65, 335),
     ),
   ] },
 
@@ -537,7 +534,6 @@ var GLYPHS = {
   '~': { advance: 11, strokes: [_l(1.5, 7, 3.5, 9, 5.5, 7, 7.5, 5, 9.5, 7)] },
 }
 
-
 /**
  * What an unmapped character draws: an empty box, the same convention
  * a font uses for a glyph it does not have.
@@ -545,7 +541,6 @@ var GLYPHS = {
 var NOTDEF = { advance: 11, strokes: [
   _l(1.5, 0, 9.5, 0, 9.5, 13, 1.5, 13, 1.5, 0),
 ] }
-
 
 /**
  * The built-in font: a sans-serif drawn from centre-line strokes
@@ -874,7 +869,7 @@ class StrokeFont {
     var align = is_dict(options) ? options.get('align', 'left') : 'left'
 
     if align != 'left' and align != 'center' and
-       align != 'centre' and align != 'right' {
+      align != 'centre' and align != 'right' {
       raise FontError("unknown text alignment '${align}', expected left, center or right")
     }
 
@@ -929,7 +924,6 @@ class StrokeFont {
   }
 }
 
-
 /**
  * Places one stroke on the sheet: design units, y up from the
  * baseline, become pixels with y down from the top.
@@ -945,7 +939,6 @@ def _place(stroke, pen, baseline, scale) {
 
   return points
 }
-
 
 /**
  * The alpha channel of an RGBA buffer, as a coverage mask.

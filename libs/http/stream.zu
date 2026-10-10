@@ -330,7 +330,7 @@ class Connection {
     while self.buffered() < length {
       if self._fill() == 0 {
         raise ProtocolError(
-          'connection closed after ${self.buffered()} of ${length} expected bytes'
+          'connection closed after ${self.buffered()} of ${length} expected bytes',
         )
       }
     }
@@ -743,7 +743,7 @@ def tunnel(proxy: dict, host: string, port: int, options: ?dict) {
     if code < 200 or code > 299 {
       raise ConnectionError(
         'the proxy at ${proxy.host}:${proxy.port} refused to open a tunnel to ${target}: '
-          + status
+          + status,
       )
     }
 
@@ -780,7 +780,7 @@ def tunnel(proxy: dict, host: string, port: int, options: ?dict) {
   if tls_error {
     carrier.close()
     raise ConnectionError(
-      'TLS handshake with ${host} through the proxy failed: ${tls_error.message}'
+      'TLS handshake with ${host} through the proxy failed: ${tls_error.message}',
     )
   }
 

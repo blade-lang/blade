@@ -113,7 +113,8 @@ class MailboxInfo {
    * @returns bool
    */
   is_selectable() {
-    return !self.flags.contains('\\Noselect') and !self.flags.contains('\\NonExistent')
+    return !self.flags.contains('\\Noselect')
+      and !self.flags.contains('\\NonExistent')
   }
 
   to_string() {
@@ -192,7 +193,10 @@ class BodyPart {
    * @param ?number size
    * @param string section
    */
-  @new(type: string, subtype: string, parameters: dict, size: ?number, section: string) {
+  @new(
+    type: string, subtype: string, parameters: dict, size: ?number,
+    section: string,
+  ) {
     self.type = type
     self.subtype = subtype
     self.parameters = parameters
@@ -350,7 +354,7 @@ def _addresses_of(values: list, index: number) {
     catch {
       found.append(address.Address(
         domain == nil ? local : '${local}@${domain}',
-        name
+        name,
       ))
     } as error {
       # An envelope entry that will not make an address is skipped
@@ -457,7 +461,9 @@ class ImapClient {
     self.greeting = hello
 
     if hello.status == 'BYE' {
-      raise ImapError('${self._host} will not talk: ${hello.text}', 'BYE', hello.code_name)
+      raise ImapError(
+        '${self._host} will not talk: ${hello.text}', 'BYE', hello.code_name,
+      )
     }
 
     if hello.status == 'PREAUTH' {
@@ -560,7 +566,7 @@ class ImapClient {
     stream.start_tls(
       self._stream,
       self._options.get('server_name', self._host),
-      self._options.get('tls_config', nil)
+      self._options.get('tls_config', nil),
     )
 
     self.refresh_capabilities()
@@ -590,7 +596,7 @@ class ImapClient {
         offered,
         self._options,
         self._stream.is_secure(),
-        self._options.get('mechanisms', nil)
+        self._options.get('mechanisms', nil),
       )
     }
 
@@ -603,7 +609,7 @@ class ImapClient {
     if self.supports('LOGINDISABLED') or !self._stream.is_secure() {
       raise AuthenticationError(
         'no mechanism this connection can use without TLS; '
-        + 'the server offers ${', '.join(offered)}'
+          + 'the server offers ${', '.join(offered)}',
       )
     }
 
@@ -681,7 +687,7 @@ class ImapClient {
 
       if !response.is_ok() {
         raise AuthenticationError(
-          '${self._host} refused the credentials: ${response.text}'
+          '${self._host} refused the credentials: ${response.text}',
         )
       }
 
@@ -762,7 +768,7 @@ class ImapClient {
       raise ImapError(
         '${name} was refused: ${response.text}',
         response.status == nil ? 'NO' : response.status,
-        response.code_name
+        response.code_name,
       )
     }
   }
@@ -1036,7 +1042,7 @@ class ImapClient {
       found.append(MailboxInfo(
         _as_text(arguments[2]),
         _strings(arguments[0]),
-        arguments[1] == nil ? nil : _as_text(arguments[1])
+        arguments[1] == nil ? nil : _as_text(arguments[1]),
       ))
     }
 
@@ -1229,7 +1235,7 @@ class ImapClient {
     var responses = self._maybe_uid(
       'FETCH',
       by_uid,
-      [_id_set(ids), wanted.starts_with('(') ? wanted : '(${wanted})']
+      [_id_set(ids), wanted.starts_with('(') ? wanted : '(${wanted})'],
     )
 
     var found = []
@@ -1270,7 +1276,9 @@ class ImapClient {
    * @throws ImapError if there is no such message.
    */
   fetch_message(id: number, by_uid: ?bool, mark_seen: ?bool) {
-    var found = self.fetch(id, mark_seen == true ? 'BODY[]' : 'BODY.PEEK[]', by_uid)
+    var found = self.fetch(
+      id, mark_seen == true ? 'BODY[]' : 'BODY.PEEK[]', by_uid,
+    )
 
     if found.is_empty() {
       raise ImapError('no message ${id} in ${self.mailbox.name}', 'NO', nil)
@@ -1315,7 +1323,7 @@ class ImapClient {
     var responses = self._maybe_uid(
       'STORE',
       by_uid,
-      [_id_set(ids), action, '(${' '.join(flags)})']
+      [_id_set(ids), action, '(${' '.join(flags)})'],
     )
 
     var found = []
@@ -1520,7 +1528,9 @@ class ImapClient {
     var collected = []
 
     catch {
-      self._stream.transport().set_read_timeout(timeout == nil ? 1500000 : timeout)
+      self._stream
+        .transport()
+        .set_read_timeout(timeout == nil ? 1500000 : timeout)
     } as error {
       # A transport with no timeout of its own simply waits.
     }
@@ -1849,7 +1859,7 @@ def _read_structure(values: list, section: string) {
     subtype,
     _read_pairs(values.length() > 2 ? values[2] : nil),
     values.length() > 6 ? values[6] : nil,
-    section
+    section,
   )
 
   part.id = values.length() > 3 ? _as_text(values[3]) : nil

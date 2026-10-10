@@ -17,8 +17,8 @@
 import .body
 import .cookies { CookieJar }
 import .errors {
-  ConnectionError, HttpError, ProtocolError, TimeoutError, TooManyRedirectsError,
-  UnsupportedProtocolError
+  ConnectionError, HttpError, ProtocolError, TimeoutError,
+  TooManyRedirectsError, UnsupportedProtocolError,
 }
 import .h1
 import .h2
@@ -392,7 +392,7 @@ class HttpClient {
       request.method = request.method.upper()
       request.set_target(_origin_form(parsed, options.get('query', nil)))
       request.headers = self._request_headers(
-        parsed, options, payload, request.method, _origin_of(parsed) == origin
+        parsed, options, payload, request.method, _origin_of(parsed) == origin,
       )
 
       var attempt = 0
@@ -440,8 +440,8 @@ class HttpClient {
         var unheard = carrier[3] and transport.bytes_read() == read_before
 
         var retriable = instance_of(error, ConnectionError) and
-            (request.is_idempotent() or unheard) and
-            attempt < (self.max_retries > 0 ? self.max_retries : 1)
+          (request.is_idempotent() or unheard) and
+          attempt < (self.max_retries > 0 ? self.max_retries : 1)
 
         if !retriable {
           raise error
@@ -627,7 +627,7 @@ class HttpClient {
       var jar_cookies = self.cookie_jar.cookies_for(
         parsed.host,
         parsed.path or '/',
-        parsed.scheme == 'https'
+        parsed.scheme == 'https',
       )
 
       if jar_cookies.length() > 0 {
@@ -733,7 +733,7 @@ class HttpClient {
 
     if proxy.scheme != 'http' {
       raise UnsupportedProtocolError(
-        'a proxy is reached over plain http, and ${address} is ${proxy.scheme}'
+        'a proxy is reached over plain http, and ${address} is ${proxy.scheme}',
       )
     }
 
@@ -795,7 +795,7 @@ class HttpClient {
       var carrier = entry[0]
 
       var alive = time() - entry[1] < _IDLE_TIMEOUT and
-          (carrier[0] == 'h2' ? carrier[1].is_usable() : !carrier[1].is_closed())
+        (carrier[0] == 'h2' ? carrier[1].is_usable() : !carrier[1].is_closed())
 
       if alive {
         # The connection was opened for another request, which may
@@ -919,7 +919,7 @@ class HttpClient {
     var reader = response.body_reader
 
     var reusable = carrier[0] == 'h1' and reader != nil and
-        reader.drain(self.max_body_size)
+      reader.drain(self.max_body_size)
 
     if !reusable {
       self._discard(carrier)

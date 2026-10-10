@@ -26,7 +26,6 @@
 
 import ._entities_data { NAMED_REFERENCES, MAX_NAME_LENGTH }
 
-
 # The five characters that carry syntactic meaning in HTML source.
 # These always escape to a fixed form regardless of the `named`
 # option, because the whole point of escaping them is that the result
@@ -50,15 +49,33 @@ var _BASE_ESCAPES = {
 # The gaps (0x81, 0x8D, 0x8F, 0x90, 0x9D) have no Windows-1252
 # character and are left alone.
 var _C1_REPLACEMENTS = {
-  128: '\u20AC', 130: '\u201A', 131: '\u0192',
-  132: '\u201E', 133: '\u2026', 134: '\u2020',
-  135: '\u2021', 136: '\u02C6', 137: '\u2030',
-  138: '\u0160', 139: '\u2039', 140: '\u0152',
-  142: '\u017D', 145: '\u2018', 146: '\u2019',
-  147: '\u201C', 148: '\u201D', 149: '\u2022',
-  150: '\u2013', 151: '\u2014', 152: '\u02DC',
-  153: '\u2122', 154: '\u0161', 155: '\u203A',
-  156: '\u0153', 158: '\u017E', 159: '\u0178',
+  128: '\u20AC',
+  130: '\u201A',
+  131: '\u0192',
+  132: '\u201E',
+  133: '\u2026',
+  134: '\u2020',
+  135: '\u2021',
+  136: '\u02C6',
+  137: '\u2030',
+  138: '\u0160',
+  139: '\u2039',
+  140: '\u0152',
+  142: '\u017D',
+  145: '\u2018',
+  146: '\u2019',
+  147: '\u201C',
+  148: '\u201D',
+  149: '\u2022',
+  150: '\u2013',
+  151: '\u2014',
+  152: '\u02DC',
+  153: '\u2122',
+  154: '\u0161',
+  155: '\u203A',
+  156: '\u0153',
+  158: '\u017E',
+  159: '\u0178',
 }
 
 # What every ill-formed numeric reference collapses to: U+FFFD
@@ -74,7 +91,6 @@ var NO_BREAK_SPACE = '\u00A0'
 # name ends in a semicolon and whose expansion is exactly one code
 # point are usable for encoding.
 var _reverse = nil
-
 
 /**
  * Returns true when _c_ is one of `0-9`, `A-Z` or `a-z`.
@@ -96,7 +112,6 @@ def is_ascii_alphanumeric(c: string) {
     (n >= 97 and n <= 122)
 }
 
-
 /**
  * Returns true when _c_ is an ASCII decimal digit.
  *
@@ -111,7 +126,6 @@ def is_ascii_digit(c: string) {
   var n = c.ord()
   return n >= 48 and n <= 57
 }
-
 
 /**
  * Returns true when _c_ is an ASCII hexadecimal digit, in either case.
@@ -129,7 +143,6 @@ def is_ascii_hex_digit(c: string) {
     (n >= 65 and n <= 70) or
     (n >= 97 and n <= 102)
 }
-
 
 /**
  * Numeric value of the hexadecimal digit _c_, or `-1` when _c_ is not
@@ -156,7 +169,6 @@ def _hex_value(c: string) {
   return -1
 }
 
-
 /**
  * Returns true when _code_ is a Unicode noncharacter: the 32 code
  * points from U+FDD0 to U+FDEF, plus the last two code points of
@@ -173,7 +185,6 @@ def _is_noncharacter(code: number) {
   var low = code & 0xFFFF
   return low == 0xFFFE or low == 0xFFFF
 }
-
 
 /**
  * Returns true when _code_ is a control character that HTML treats as
@@ -197,7 +208,6 @@ def _is_control(code: number) {
   return !(code == 0x09 or code == 0x0A or
     code == 0x0C or code == 0x0D or code == 0x20)
 }
-
 
 /**
  * Applies the standard's "numeric character reference end state" rules
@@ -230,7 +240,6 @@ def code_point_to_string(code: number) {
   # failures; the character itself is still what the author wrote.
   return code.chr()
 }
-
 
 /**
  * The longest named reference that matches the characters of _chars_
@@ -272,7 +281,6 @@ def _longest_match(chars: list, start: number) {
 
   return nil
 }
-
 
 /**
  * Consumes a character reference from _chars_ beginning at the
@@ -358,7 +366,6 @@ def consume_reference(chars: list, start: number, in_attribute: bool) {
   return { text: hit.text, next: after, error }
 }
 
-
 /**
  * The `&#...` half of `consume_reference()`. _start_ is the index of
  * the ampersand and `chars[start + 1]` is known to be `#`.
@@ -423,7 +430,6 @@ def _consume_numeric_reference(chars: list, start: number) {
   return { text: code_point_to_string(code), next: pos, error }
 }
 
-
 /**
  * The parse error a numeric reference for _code_ raises, or `nil` when
  * the code point is unremarkable.
@@ -462,7 +468,6 @@ def _numeric_reference_error(code: number) {
   return nil
 }
 
-
 /**
  * Builds (once) and returns the character to named-reference map used
  * by `encode()`.
@@ -490,7 +495,7 @@ def _reverse_table() {
 
     if current == nil or name.length() < current.length() or
       (name.length() == current.length() and
-      name.compare(current) < 0) {
+        name.compare(current) < 0) {
       table[text] = name
     }
   }
@@ -498,7 +503,6 @@ def _reverse_table() {
   _reverse = table
   return _reverse
 }
-
 
 /**
  * Escapes _text_ so that it can be embedded in an HTML document
@@ -590,7 +594,6 @@ def encode(text: string, options: ?dict) {
   return ''.join(out)
 }
 
-
 /**
  * Decodes every character reference in _text_ and returns the result.
  *
@@ -653,7 +656,6 @@ def decode(text: string, in_attribute: ?bool) {
   return ''.join(out)
 }
 
-
 /**
  * Escapes _text_ the way the HTML fragment serialization algorithm
  * requires for element content.
@@ -695,7 +697,6 @@ def escape_text(text: string) {
   return ''.join(out)
 }
 
-
 /**
  * Escapes _value_ the way the HTML fragment serialization algorithm
  * requires for a double-quoted attribute value.
@@ -729,7 +730,6 @@ def escape_attribute(value: string) {
 
   return ''.join(out)
 }
-
 
 /**
  * Quick pre-check for the two escapers: most text in a real document

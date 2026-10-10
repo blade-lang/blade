@@ -374,7 +374,9 @@ class Headers {
    * @returns list of dict
    */
   entries() {
-    return self._entries.map(@(entry) => { name: entry.name, value: entry.value })
+    return self._entries.map(
+      @(entry) => { name: entry.name, value: entry.value },
+    )
   }
 
   /**

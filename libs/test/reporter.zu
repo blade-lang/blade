@@ -50,7 +50,6 @@ import .result
 import .source
 import .style
 
-
 /**
  * The interface the runner talks to, with every method doing nothing.
  *
@@ -106,18 +105,15 @@ class Reporter {
   run_finished(summary, root) {}
 }
 
-
 def _is_suite(node) {
   return is_instance(node) and typeof(node) == 'Suite'
 }
-
 
 # An indented blank line is trailing whitespace, which is noise in a
 # terminal and a diff complaint in a golden-output test.
 def _indented(indent, text) {
   echo text == '' ? '' : indent + text
 }
-
 
 # =========================================================================
 # spec
@@ -184,21 +180,36 @@ class Spec < Reporter {
 
     using test.status {
       when result.PASSED {
-        echo indent + style.green(symbols.pass) + ' ' + style.dim(test.name) + self._timing(test)
+        echo indent
+          + style.green(symbols.pass)
+          + ' '
+          + style.dim(test.name)
+          + self._timing(test)
       }
       when result.FLAKY {
         echo indent + style.magenta(symbols.flaky) + ' ' + test.name +
-          style.magenta(' (passed on attempt ${test.attempts})') + self._timing(test)
+          style.magenta(' (passed on attempt ${test.attempts})') +
+          self._timing(test)
       }
       when result.FAILED {
-        echo indent + style.red(symbols.fail) + ' ' + style.red(test.name) + self._timing(test)
+        echo indent
+          + style.red(symbols.fail)
+          + ' '
+          + style.red(test.name)
+          + self._timing(test)
       }
       when result.SKIPPED {
         echo indent + style.yellow(symbols.skip) + ' ' + style.dim(test.name) +
-          style.yellow(test.skip_reason == '' ? ' [skipped]' : ' [${test.skip_reason}]')
+          style.yellow(
+            test.skip_reason == '' ? ' [skipped]' : ' [${test.skip_reason}]',
+          )
       }
       when result.TODO {
-        echo indent + style.blue(symbols.todo) + ' ' + style.dim(test.name) + style.blue(' [todo]')
+        echo indent
+          + style.blue(symbols.todo)
+          + ' '
+          + style.dim(test.name)
+          + style.blue(' [todo]')
       }
     }
 
@@ -233,7 +244,6 @@ class Spec < Reporter {
   }
 }
 
-
 def _echo_output(output, depth) {
   var indent = style.indent(depth)
 
@@ -244,11 +254,12 @@ def _echo_output(output, depth) {
   }
 }
 
-
 def _echo_failure(number, test) {
   echo ''
   echo style.red('  ${number}) ') + style.dim(' > '.join(test.suite_path())) +
-    (test.suite_path().is_empty() ? '' : style.dim(' ${style.symbols().arrow} ')) +
+    (test.suite_path().is_empty()
+      ? ''
+      : style.dim(' ${style.symbols().arrow} ')) +
     style.bold(style.red(test.name))
 
   for failure in test.failures {
@@ -283,23 +294,27 @@ def _echo_failure(number, test) {
   }
 }
 
-
 def _echo_summary(summary, slow) {
   var symbols = style.symbols()
 
   echo ''
 
   if !summary.slow.is_empty() and slow > 0 {
-    echo style.yellow('  Slow tests') + style.dim(' (over ${format.duration(slow)})')
+    echo style.yellow('  Slow tests')
+      + style.dim(' (over ${format.duration(slow)})')
 
     var shown = 0
     for test in summary.slow {
       if shown >= 5 {
-        echo '    ' + style.dim('${symbols.ellipsis} ${format.plural(summary.slow.length() - shown, "more")}')
+        echo '    '
+          + style.dim('${symbols.ellipsis} ${format.plural(summary.slow.length() - shown, "more")}')
         break
       }
 
-      echo '    ' + style.yellow(format.duration(test.duration).lpad(8, ' ')) + '  ' + style.dim(test.full_name())
+      echo '    '
+        + style.yellow(format.duration(test.duration).lpad(8, ' '))
+        + '  '
+        + style.dim(test.full_name())
       shown++
     }
 
@@ -362,7 +377,6 @@ def _echo_summary(summary, slow) {
   echo ''
 }
 
-
 def _echo_snapshot_summary(snapshots) {
   if !is_dict(snapshots) {
     return
@@ -391,7 +405,6 @@ def _echo_snapshot_summary(snapshots) {
     (snapshots.get('obsolete', 0) > 0 ?
       style.dim('   remove them with ZURI_UPDATE_SNAPSHOTS=1') : '')
 }
-
 
 # =========================================================================
 # dot
@@ -463,7 +476,6 @@ class Dot < Reporter {
   }
 }
 
-
 # =========================================================================
 # tap
 # =========================================================================
@@ -510,7 +522,9 @@ class Tap < Reporter {
     }
 
     echo 'ok ${self._number} - ${name}' +
-      (test.status == result.FLAKY ? ' # flaky, passed on attempt ${test.attempts}' : '')
+      (test.status == result.FLAKY
+        ? ' # flaky, passed on attempt ${test.attempts}'
+        : '')
   }
 
   _diagnostics(test) {
@@ -543,11 +557,9 @@ class Tap < Reporter {
   }
 }
 
-
 def _yaml(text) {
   return "'" + text.replace("/'/", "''") + "'"
 }
-
 
 # =========================================================================
 # junit
@@ -571,7 +583,9 @@ class Junit < Reporter {
       'skipped="${summary.skipped + summary.todo}" time="${(summary.duration / 1000).fixed(3)}">'
 
     for suite in root.suites() {
-      var cases = suite.children.filter(@(child) { return !_is_suite(child) })
+      var cases = suite.children.filter(@(child) {
+        return !_is_suite(child)
+      })
 
       if cases.is_empty() {
         continue
@@ -584,7 +598,9 @@ class Junit < Reporter {
   }
 
   _suite(suite, cases) {
-    var failed = cases.filter(@(test) { return test.status == result.FAILED }).length()
+    var failed = cases.filter(@(test) {
+      return test.status == result.FAILED
+    }).length()
     var skipped = cases.filter(@(test) {
       return test.status == result.SKIPPED or test.status == result.TODO
     }).length()
@@ -626,7 +642,9 @@ class Junit < Reporter {
 
     for failure in test.failures {
       var origin = failure.origin()
-      var where = origin == nil ? '' : '\n${source.short_path(origin.file)}:${origin.line}'
+      var where = origin == nil
+        ? ''
+        : '\n${source.short_path(origin.file)}:${origin.line}'
 
       echo '      <failure type="${_xml(failure.kind)}" message="${_xml(style.strip(failure.message))}">'
       echo _xml(style.strip(failure.message) + where)
@@ -641,7 +659,6 @@ class Junit < Reporter {
   }
 }
 
-
 def _xml(text) {
   return text.to_string()
     .replace('/&/', '&amp;')
@@ -649,7 +666,6 @@ def _xml(text) {
     .replace('/>/', '&gt;')
     .replace('/"/', '&quot;')
 }
-
 
 # =========================================================================
 # json / ndjson
@@ -674,7 +690,6 @@ def _failure_dict(failure) {
   }
 }
 
-
 def _case_dict(test) {
   return {
     name: test.name,
@@ -689,7 +704,6 @@ def _case_dict(test) {
     failures: test.failures.map(_failure_dict),
   }
 }
-
 
 /**
  * One JSON document at the end, holding the summary and every test.
@@ -716,7 +730,6 @@ class Json < Reporter {
     })
   }
 }
-
 
 /**
  * One JSON object per line, emitted as each thing happens.
@@ -752,13 +765,11 @@ class Ndjson < Reporter {
   }
 }
 
-
 /**
  * What marks a line of `ndjson` output as protocol rather than as
  * something the test file happened to print.
  */
 var PREFIX = '@@zuri-test@@'
-
 
 /**
  * No output at all, for a caller reading the returned `Summary`
@@ -768,7 +779,6 @@ class Silent < Reporter {
 
   @new(options) {}
 }
-
 
 /**
  * Builds a reporter by name.
@@ -791,6 +801,6 @@ def create(name: string, options: ?dict) {
   }
 
   raise TestSetupError(
-    "there is no '${name}' reporter; the built-in ones are spec, dot, tap, junit, json, ndjson and silent"
+    "there is no '${name}' reporter; the built-in ones are spec, dot, tap, junit, json, ndjson and silent",
   )
 }

@@ -2,7 +2,9 @@
 
 import test { * }
 
-import ..manifest { DEFAULT_REGISTRY, ManifestError, parse, parse_dependency, resolve_registry }
+import ..manifest {
+  DEFAULT_REGISTRY, ManifestError, parse, parse_dependency, resolve_registry,
+}
 
 var SOURCE = '# ours
 [project]
@@ -131,7 +133,9 @@ describe('editing', @{
   })
 
   it('writes a git dependency as a table', @{
-    var dep = parse_dependency('forked', { git: 'https://a/b.git', rev: 'abc' }, false, nil, {})
+    var dep = parse_dependency(
+      'forked', { git: 'https://a/b.git', rev: 'abc' }, false, nil, {},
+    )
 
     expect(dep.declaration()).to_equal({ git: 'https://a/b.git', rev: 'abc' })
   })
@@ -142,8 +146,12 @@ describe('resolve_registry', @{
     var aliases = { company: 'https://packages.example.test/' }
 
     expect(resolve_registry(nil, {})).to_equal(DEFAULT_REGISTRY)
-    expect(resolve_registry('company', aliases)).to_equal('https://packages.example.test')
-    expect(resolve_registry('https://other.test', aliases)).to_equal('https://other.test')
+    expect(resolve_registry(
+      'company', aliases,
+    )).to_equal('https://packages.example.test')
+    expect(resolve_registry(
+      'https://other.test', aliases,
+    )).to_equal('https://other.test')
     var with_default = { 'default': 'https://mine.test' }
 
     expect(resolve_registry(nil, with_default)).to_equal('https://mine.test')

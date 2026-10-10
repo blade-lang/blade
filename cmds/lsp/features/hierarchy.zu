@@ -144,7 +144,9 @@ def incoming(server, params: dict, context) {
         order.append(key)
       }
 
-      callers[key].ranges.append(server.range(path, occurrence.start, occurrence.end))
+      callers[key].ranges.append(server.range(
+        path, occurrence.start, occurrence.end,
+      ))
     }
   }
 
@@ -216,7 +218,9 @@ def outgoing(server, params: dict) {
   var order = []
 
   for occurrence in query.occurrences(summary) {
-    if occurrence.start < start or occurrence.end > end or !_is_call(summary, occurrence) {
+    if occurrence.start < start
+      or occurrence.end > end
+      or !_is_call(summary, occurrence) {
       continue
     }
 
@@ -244,7 +248,9 @@ def outgoing(server, params: dict) {
       order.append(key)
     }
 
-    callees[key].ranges.append(server.range(path, occurrence.start, occurrence.end))
+    callees[key].ranges.append(server.range(
+      path, occurrence.start, occurrence.end,
+    ))
   }
 
   var answer = []

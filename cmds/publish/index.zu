@@ -73,14 +73,20 @@ def main() {
     } as error {
       # An upload that timed out may still have arrived. The registry
       # holding exactly this archive under this version means it did.
-      var same = instance_of(error, RegistryError) and error.code == 'version_exists'
-        and error.details != nil and error.details.get('checksum', nil) == packed.checksum
+      var same = instance_of(error, RegistryError)
+        and error.code == 'version_exists'
+        and error.details != nil
+        and error.details.get('checksum', nil) == packed.checksum
 
       if !same {
         raise error
       }
 
-      published = { name: prepared.name, version: prepared.version, checksum: packed.checksum }
+      published = {
+        name: prepared.name,
+        version: prepared.version,
+        checksum: packed.checksum,
+      }
       already = true
     }
 

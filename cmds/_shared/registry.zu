@@ -181,7 +181,7 @@ class Registry {
 
     raise CommandError(
       '${self.address} is not HTTPS, and credentials are never sent over a connection '
-        + 'anyone between here and there can read; use its https:// address'
+        + 'anyone between here and there can read; use its https:// address',
     )
   }
 
@@ -243,7 +243,7 @@ class Registry {
       if self.token == nil {
         raise RegistryError(
           '${doing}: you are not logged in to ${self.address}; run `zuri account login`',
-          401, 'unauthenticated'
+          401, 'unauthenticated',
         )
       }
 
@@ -302,7 +302,9 @@ class Registry {
 
   # Sends a request that is expected to answer with JSON and a 2xx.
   _json(method: string, path: string, options: ?dict) {
-    var doing = options == nil ? 'talking to ${self.address}' : options.get('doing', '')
+    var doing = options == nil
+      ? 'talking to ${self.address}'
+      : options.get('doing', '')
     var response = self.send(method, path, options)
 
     if !response.is_ok() {
@@ -326,12 +328,14 @@ class Registry {
    * @returns dict: `{ api, name, max_archive_size, signup }`.
    */
   info() {
-    var answer = self._json('GET', '/api/v1/config', { doing: 'reading ${self.address}' })
+    var answer = self._json(
+      'GET', '/api/v1/config', { doing: 'reading ${self.address}' },
+    )
 
     if answer.get('api', nil) != API_VERSION {
       raise RegistryError(
         '${self.address} speaks protocol version ${answer.get("api", "unknown")}, and this '
-          + 'version of zuri speaks ${API_VERSION}'
+          + 'version of zuri speaks ${API_VERSION}',
       )
     }
 
@@ -364,7 +368,7 @@ class Registry {
       if cached == nil {
         raise RegistryError(
           "working offline, and '${name}' from ${self.address} was never downloaded here",
-          404, 'not_found'
+          404, 'not_found',
         )
       }
 
@@ -390,7 +394,8 @@ class Registry {
 
     if response.status == 404 {
       raise RegistryError(
-        "there is no package called '${name}' on ${self.address}", 404, 'not_found'
+        "there is no package called '${name}' on ${self.address}", 404,
+        'not_found',
       )
     }
 
@@ -429,16 +434,19 @@ class Registry {
 
     if self.offline {
       raise RegistryError(
-        'working offline, and ${name} ${version} was never downloaded here', 404, 'not_found'
+        'working offline, and ${name} ${version} was never downloaded here',
+        404, 'not_found',
       )
     }
 
     var doing = 'downloading ${name} ${version} from ${self.address}'
-    var response = self.send('GET', '/api/v1/packages/${name}/${version}/archive', {
-      doing,
-      timeout: 300000,
-      auth: 'optional',
-    })
+    var response = self.send(
+      'GET', '/api/v1/packages/${name}/${version}/archive', {
+        doing,
+        timeout: 300000,
+        auth: 'optional',
+      },
+    )
 
     if !response.is_ok() {
       raise self._failure(response, doing)
@@ -452,7 +460,7 @@ class Registry {
         '${doing}: the archive does not match its checksum\n'
           + '  expected ${checksum}\n  received ${actual}\n'
           + 'Nothing was installed. The download was damaged on the way, or the registry '
-          + 'is not serving what it published.'
+          + 'is not serving what it published.',
       )
     }
 
@@ -504,7 +512,8 @@ class Registry {
 
     if response.status == 404 {
       raise RegistryError(
-        "there is no package called '${name}' on ${self.address}", 404, 'not_found'
+        "there is no package called '${name}' on ${self.address}", 404,
+        'not_found',
       )
     }
 
@@ -529,7 +538,9 @@ class Registry {
     var form = http.MultipartBuilder()
 
     form.add_field('metadata', json.encode(metadata))
-    form.add_file('archive', os.base_name(path), fsx.read_bytes(path), 'application/gzip')
+    form.add_file(
+      'archive', os.base_name(path), fsx.read_bytes(path), 'application/gzip',
+    )
 
     return self._json('PUT', '/api/v1/packages', {
       multipart: form,
@@ -682,5 +693,7 @@ class Registry {
 def cached_archive(checksum: string) {
   var hex = checksum.replace('sha256:', '', false)
 
-  return os.join_paths(paths.cache_dir(), 'archives', hex[0, 2], hex + '.tar.gz')
+  return os.join_paths(
+    paths.cache_dir(), 'archives', hex[0, 2], hex + '.tar.gz',
+  )
 }

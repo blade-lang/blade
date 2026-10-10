@@ -38,10 +38,8 @@ import colors
 import io
 import os
 
-
 var _enabled = false
 var _unicode = true
-
 
 def _detect_color() {
   var no_color = os.get_env('NO_COLOR')
@@ -61,7 +59,6 @@ def _detect_color() {
   return false
 }
 
-
 def _detect_unicode() {
   var ascii_only = os.get_env('ZURI_TEST_ASCII')
   if ascii_only != nil and ascii_only != '' {
@@ -77,10 +74,8 @@ def _detect_unicode() {
   return os.get_env('WT_SESSION') != nil
 }
 
-
 _enabled = _detect_color()
 _unicode = _detect_unicode()
-
 
 /**
  * Whether colour is currently being emitted.
@@ -119,7 +114,6 @@ def set_unicode(on: bool) {
   _unicode = on
 }
 
-
 def _paint(text, code, background) {
   if !_enabled {
     return text
@@ -131,7 +125,6 @@ def _paint(text, code, background) {
 
   return colors.text(text, code)
 }
-
 
 /**
  * Emphasis. Returns `text` unchanged when colour is off.
@@ -204,7 +197,6 @@ def white(text: string) {
   return _paint(text, colors.text_color.white, nil)
 }
 
-
 /**
  * A filled, inverted label, the way a status banner reads in a CI
  * log. `kind` is one of `'pass'`, `'fail'`, `'skip'`, `'todo'` or
@@ -227,7 +219,6 @@ def badge(kind: string, text: string) {
 
   return _paint(' ${text} ', colors.text_color.black, background)
 }
-
 
 /**
  * The symbol set in use, keyed by role.
@@ -278,12 +269,10 @@ def symbols() {
   }
 }
 
-
 # Matches one ANSI SGR sequence, which is the only kind anything here
 # emits. Kept as a module variable so the pattern is compiled once
 # rather than on every padded cell of a long report.
 var _ANSI = '/\x1b\[[0-9;]*m/'
-
 
 /**
  * `text` with every ANSI escape sequence removed.
@@ -409,7 +398,6 @@ def indent(depth: int) {
 
   return '  ' * depth
 }
-
 
 /**
  * The width to lay the report out to.

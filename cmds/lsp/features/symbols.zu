@@ -26,13 +26,17 @@ def _outlined(symbol: dict) {
     return false
   }
 
-  return ['class', 'function', 'method', 'field', 'variable', 'constant'].contains(symbol.kind)
+  return [
+    'class', 'function', 'method', 'field', 'variable', 'constant',
+  ].contains(symbol.kind)
 }
 
 # A short description of a declaration, beside its name.
 def _detail(symbol: dict) {
   using symbol.kind {
-    when 'function', 'method' return '(${render.parameters(symbol)})'
+    when 'function', 'method' {
+      return '(${render.parameters(symbol)})'
+    }
     when 'class' {
       var parent_text = symbol.get('superclass_text', nil)
 
@@ -40,7 +44,9 @@ def _detail(symbol: dict) {
         return ''
       }
 
-      return symbol.get('extension', false) ? '> ${parent_text}' : '< ${parent_text}'
+      return symbol.get('extension', false)
+        ? '> ${parent_text}'
+        : '< ${parent_text}'
     }
     default {
       var hint = symbol.get('hint', nil)
@@ -143,13 +149,18 @@ def _node(server, key: string, summary: dict, index: int, children: dict) {
   inner.sort(@(a, b) => summary.symbols[a].start - summary.symbols[b].start)
 
   if !inner.is_empty() {
-    node.children = inner.map(@(child) => _node(server, key, summary, child, children))
+    node.children = inner.map(
+      @(child) => _node(server, key, summary, child, children),
+    )
   }
 
   return node
 }
 
-def _flatten(server, key: string, summary: dict, index: int, container, children: dict, out: list) {
+def _flatten(
+  server, key: string, summary: dict, index: int, container, children: dict,
+  out: list,
+) {
   var symbol = summary.symbols[index]
   var item = {
     name: symbol.name,
@@ -243,7 +254,8 @@ def workspace(server, params: dict, context) {
     }
 
     for symbol in summary.symbols {
-      if !_outlined(symbol) or (symbol.scope != 0 and symbol.get('owner', nil) == nil) {
+      if !_outlined(symbol)
+        or (symbol.scope != 0 and symbol.get('owner', nil) == nil) {
         continue
       }
 

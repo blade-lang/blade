@@ -145,7 +145,9 @@ describe('create', @{
       handle.write('')
       handle.close()
 
-      expect(@{ create(blocker, a_manifest([]), nil) })
+      expect(@{
+        create(blocker, a_manifest([]), nil)
+      })
         .to_raise_instance_of(ScaffoldError)
     })
   })

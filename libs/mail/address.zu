@@ -128,7 +128,8 @@ class Address {
       return false
     }
 
-    return self.local == other.local and self.domain.lower() == other.domain.lower()
+    return self.local == other.local
+      and self.domain.lower() == other.domain.lower()
   }
 
   /**
@@ -417,7 +418,9 @@ def _parse_item(tokens: list, at: number) {
     index++
   }
 
-  if index >= tokens.length() or tokens[index].value == ',' or tokens[index].value == ';' {
+  if index >= tokens.length()
+    or tokens[index].value == ','
+    or tokens[index].value == ';' {
     return { item: _build(_addr_spec_of(prefix), ''), end: index }
   }
 
@@ -435,7 +438,10 @@ def _parse_item(tokens: list, at: number) {
       index++
     }
 
-    return { item: _build(_addr_spec_of(inside), _phrase_of(prefix)), end: index }
+    return {
+      item: _build(_addr_spec_of(inside), _phrase_of(prefix)),
+      end: index,
+    }
   }
 
   # A colon after a phrase opens a group, which runs to the semicolon.
@@ -489,7 +495,8 @@ def parse_groups(text: string) {
   while at < tokens.length() {
     var token = tokens[at]
 
-    if token.kind == 'space' or (token.kind == 'special' and token.value == ',') {
+    if token.kind == 'space'
+      or (token.kind == 'special' and token.value == ',') {
       at++
       continue
     }

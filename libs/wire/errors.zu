@@ -103,7 +103,6 @@ class WireError < Error {
   }
 }
 
-
 /**
  * Raised when a template file cannot be found, or when it resolves to
  * somewhere outside the root directory.
@@ -125,7 +124,6 @@ class TemplateNotFoundError < WireError {
     parent(reason, path, line, column)
   }
 }
-
 
 /**
  * Raised while compiling a template, for anything Wire can tell is
@@ -151,7 +149,6 @@ class TemplateSyntaxError < WireError {
   }
 }
 
-
 /**
  * Raised while rendering, for anything that depends on the values a
  * template was given: iterating something that cannot be iterated, a
@@ -175,7 +172,6 @@ class RenderError < WireError {
     parent(reason, path, line, column)
   }
 }
-
 
 /**
  * Glues a reason and a location into the message the error carries.

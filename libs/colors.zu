@@ -123,7 +123,9 @@ def _get_sequence(v, bg) {
   # `v == 0` (ANSI reset) is a real, present value, not an absent
   # one, so this checks for `nil` explicitly rather than truthiness;
   # `0 or bg` would treat a reset code the same as "nothing given".
-  if v == nil and bg == nil return nil
+  if v == nil and bg == nil {
+    return nil
+  }
 
   var v_str = v != nil ? v.to_string().lpad(2, '0') : ''
   var bg_str = bg != nil ? ';' + bg.to_string().lpad(2, '0') : ''
@@ -161,14 +163,18 @@ def rgb_to_ansi256(r: int, g: int, b: int) {
 
   # From https://github.com/Qix-/color-convert/blob/3f0e0d4e92e235796ccb17f6e85c72094a651f49/conversions.js
   if r == g and g == b {
-    if r < 8 return 16
-    if r > 248 return 231
+    if r < 8 {
+      return 16
+    }
+    if r > 248 {
+      return 231
+    }
     return (((r - 8) / 247) * 24).round() + 232
   }
 
   return 16 + (36 * (r / 255 * 5).round()) +
-      (6 * (g / 255 * 5).round()) +
-      (b / 255 * 5).round()
+    (6 * (g / 255 * 5).round()) +
+    (b / 255 * 5).round()
 }
 
 /**
@@ -179,8 +185,12 @@ def rgb_to_ansi256(r: int, g: int, b: int) {
  */
 def ansi256_to_ansi(code: int) {
 
-  if code < 8 return 30 + code
-  if code < 16 return 90 + (code - 8)
+  if code < 8 {
+    return 30 + code
+  }
+  if code < 16 {
+    return 90 + (code - 8)
+  }
 
   var r, g, b
 
@@ -199,10 +209,14 @@ def ansi256_to_ansi(code: int) {
   }
 
   var value = r.max(g).max(b) * 2
-  if value == 0 return 30
+  if value == 0 {
+    return 30
+  }
 
   var result = 30 + (r.round() | (g.round() << 1) | (b.round() << 2))
-  if value == 2 result += 60
+  if value == 2 {
+    result += 60
+  }
 
   return result
 }
@@ -212,7 +226,6 @@ def ansi256_to_ansi(code: int) {
  * `rgba`, `rrggbb` and `rrggbbaa`.
  */
 const _VALID_HEX_LENGTHS = [3, 4, 6, 8]
-
 
 /**
  * Whether _text_ is 3, 4, 6 or 8 hexadecimal digits, the four lengths
@@ -234,15 +247,14 @@ def _is_hex_digits(text) {
 
     # 0-9, then a-f, then A-F.
     if (code < 48 or code > 57) and
-       (code < 97 or code > 102) and
-       (code < 65 or code > 70) {
+      (code < 97 or code > 102) and
+      (code < 65 or code > 70) {
       return false
     }
   }
 
   return true
 }
-
 
 /**
  * Returns `true` if _color_ is a hexadecimal color that
@@ -275,7 +287,6 @@ def is_hex(color) {
   return _is_hex_digits(color)
 }
 
-
 /**
  * Converts the hexadecimal string _h_ to its RGBA component.
  *
@@ -291,7 +302,9 @@ def is_hex(color) {
  */
 def hex_to_rgb(h: string) {
   var s = h
-  if s.length() > 0 and s[0] == '#' s = s[1,]
+  if s.length() > 0 and s[0] == '#' {
+    s = s[1,]
+  }
 
   if !_is_hex_digits(s) {
     raise ValueError('invalid hexadecimal color: ${h}')
@@ -309,14 +322,16 @@ def hex_to_rgb(h: string) {
   }
 
   # RRGGBB with no alpha given: fully opaque.
-  if v.length() == 6 v += 'ff'
+  if v.length() == 6 {
+    v += 'ff'
+  }
 
   var number = v.to_number(16)
 
   var a = (number & 0xFF) / 255,
-      b = (number & 0xFF00) >> 8,
-      g = (number & 0xFF0000) >> 16,
-      r = (number & 0xFF000000) >> 24
+    b = (number & 0xFF00) >> 8,
+    g = (number & 0xFF0000) >> 16,
+    r = (number & 0xFF000000) >> 24
 
   return [r, g, b, a]
 }
@@ -358,7 +373,9 @@ def hex_to_ansi(color: string) {
  */
 def hex(color: string) {
 
-  if color[0] == '#' color = color[1,]
+  if color[0] == '#' {
+    color = color[1,]
+  }
   return hex_to_ansi(color)
 }
 
@@ -493,19 +510,30 @@ def rgb_to_hsl(r: int, g: int, b: int) {
   var _max = r.max(g).max(b)
   var delta = _max - _min, h, s
 
-  if delta == 0 h = 0
-  else if r == _max h = (g - b) / delta
-  else if g == _max h = 2 + (b - r) / delta
-  else if b == _max h = 4 + (r - g) / delta
+  if delta == 0 {
+    h = 0
+  } else if r == _max {
+    h = (g - b) / delta
+  } else if g == _max {
+    h = 2 + (b - r) / delta
+  } else if b == _max {
+    h = 4 + (r - g) / delta
+  }
 
   h = (h * 60).min(360)
-  if h < 0 h += 360
+  if h < 0 {
+    h += 360
+  }
 
   var l = (_min + _max) / 2
 
-  if delta == 0 s = 0
-  else if l <= 0.5 s = delta / (_max + _min)
-  else s = delta / (2 - _max - _min)
+  if delta == 0 {
+    s = 0
+  } else if l <= 0.5 {
+    s = delta / (_max + _min)
+  } else {
+    s = delta / (2 - _max - _min)
+  }
 
   return [h, s * 100, l * 100]
 }
@@ -527,16 +555,26 @@ def rgb_to_hsv(r: int, g: int, b: int) {
   var _max = r.max(g).max(b), _min = r.min(g).min(b)
   var delta = _max - _min, h, s
 
-  if delta == 0 h = 0
-  else if _max == r h = ((g - b) / delta) % 6
-  else if _max == g h = 2 + (b - r) / delta
-  else if _max == b h = 4 + (r - g) / delta
+  if delta == 0 {
+    h = 0
+  } else if _max == r {
+    h = ((g - b) / delta) % 6
+  } else if _max == g {
+    h = 2 + (b - r) / delta
+  } else if _max == b {
+    h = 4 + (r - g) / delta
+  }
 
   h = (h * 60).min(360)
-  if h < 0 h += 360
+  if h < 0 {
+    h += 360
+  }
 
-  if _max == 0 s = 0
-  else s = delta / _max
+  if _max == 0 {
+    s = 0
+  } else {
+    s = delta / _max
+  }
 
   return [h, s * 100, _max * 100]
 }
@@ -609,8 +647,8 @@ def rgb_to_xyz(r: int, g: int, b: int) {
   b = b > 0.04045 ? (((b + 0.055) / 1.055) ** 2.4) : (b / 12.92)
 
   var x = (r * 0.4124564) + (g * 0.3575761) + (b * 0.1804375),
-      y = (r * 0.2126729) + (g * 0.7151522) + (b * 0.072175),
-      z = (r * 0.0193339) + (g * 0.119192) + (b * 0.9503041)
+    y = (r * 0.2126729) + (g * 0.7151522) + (b * 0.072175),
+    z = (r * 0.0193339) + (g * 0.119192) + (b * 0.9503041)
 
   return [x * 100, y * 100, z * 100]
 }
@@ -639,7 +677,7 @@ def rgb_to_lab(r: int, g: int, b: int) {
   z = z > 0.008856 ? (z ** (1 / 3)) : (7.787 * z) + (16 / 116)
 
   var l = (116 * y) - 16,
-      a = 500 * (x - y)
+    a = 500 * (x - y)
   b = 200 * (y - z)
 
   return [l, a, b]
@@ -658,11 +696,14 @@ def hsl_to_rgb(h: number, s: number, l: number) {
 
   # Hue is circular, so it wraps rather than being rejected; s/l
   # (each 0-100) aren't, so those still raise on an out-of-range value.
-  if s < 0 or s > 100 or l < 0 or l > 100
+  if s < 0 or s > 100 or l < 0 or l > 100 {
     raise ValueError('invalid color components')
+  }
 
   h = h % 360
-  if h < 0 h += 360
+  if h < 0 {
+    h += 360
+  }
 
   # Based on https://github.com/Qix-/color-convert/blob/3f0e0d4e92e235796ccb17f6e85c72094a651f49/conversions.js#L244
 
@@ -684,7 +725,7 @@ def hsl_to_rgb(h: number, s: number, l: number) {
   }
 
   var t1 = 2 * l - t2,
-      rgb = [0, 0, 0]
+    rgb = [0, 0, 0]
 
   iter var i = 0; i < 3; i++ {
     t3 = h + 1 / 3 * -(i - 1)
@@ -742,18 +783,20 @@ def hsl_to_hsv(h: number, s: number, l: number) {
 def hsv_to_rgb(h: number, s: number, v: number) {
 
   h = h % 360
-  if h < 0 h += 360
+  if h < 0 {
+    h += 360
+  }
 
   h /= 60
   s /= 100
   v /= 100
-  
+
   var hi = h.floor() % 6,
-      f = h - h.floor(),
-      x = (255 * v * (1 - s)).round(),
-      y = (255 * v * (1 - (s *f))).round(),
-      z = (255 * v * (1 - (s * (1 - f)))).round()
-  
+    f = h - h.floor(),
+    x = (255 * v * (1 - s)).round(),
+    y = (255 * v * (1 - (s * f))).round(),
+    z = (255 * v * (1 - (s * (1 - f)))).round()
+
   v = (v * 255).round()
 
   using hi {
@@ -779,11 +822,11 @@ def hsv_to_hsl(h: number, s: number, v: number) {
 
   s /= 100
   v /= 100
-  
+
   var vmax = v.max(0.01),
-      l = (2 - s) * v,
-      lmax = (2 - s) * vmax,
-      sl = s * vmax
+    l = (2 - s) * v,
+    lmax = (2 - s) * vmax,
+    sl = s * vmax
 
   # The divisor can be exactly 0 (e.g. s=0, v=1, where lmax works out to
   # 2), which would divide sl's already-zero numerator into NaN rather
@@ -819,21 +862,47 @@ def hwb_to_rgb(h: number, w: number, b: number) {
   }
 
   var i = (6 * h).floor(),
-      v = 1 - b
+    v = 1 - b
   var f = 6 * h - i
 
-  if i & 0x01 != 0 f = 1 - f
+  if i & 0x01 != 0 {
+    f = 1 - f
+  }
 
   # Linear interpolation
   var n = w + f * (v - w), r, g, b2
 
   using i {
-    when 1 { r = n; g = v; b2 = w }
-    when 2 { r = w; g = v; b2 = n }
-    when 3 { r = w; g = n; b2 = v }
-    when 4 { r = n; g = w; b2 = v }
-    when 5 { r = v; g = w; b2 = n }
-    default { r = v; g = n; b2 = w }
+    when 1 {
+      r = n
+      g = v
+      b2 = w
+    }
+    when 2 {
+      r = w
+      g = v
+      b2 = n
+    }
+    when 3 {
+      r = w
+      g = n
+      b2 = v
+    }
+    when 4 {
+      r = n
+      g = w
+      b2 = v
+    }
+    when 5 {
+      r = v
+      g = w
+      b2 = n
+    }
+    default {
+      r = v
+      g = n
+      b2 = w
+    }
   }
 
   return [(r * 255).round(), (g * 255).round(), (b2 * 255).round()]
@@ -886,16 +955,16 @@ def xyz_to_rgb(x: number, y: number, z: number) {
 
   # Assume sRGB
   r = r > 0.0031308 ?
-      ((1.055 * (r ** (1.0 / 2.4))) - 0.055) :
-      r * 12.92
+    ((1.055 * (r ** (1.0 / 2.4))) - 0.055) :
+    r * 12.92
 
   g = g > 0.0031308 ?
-      ((1.055 * (g ** (1.0 / 2.4))) - 0.055) :
-      g * 12.92
+    ((1.055 * (g ** (1.0 / 2.4))) - 0.055) :
+    g * 12.92
 
   b = b > 0.0031308 ?
-      ((1.055 * (b ** (1.0 / 2.4))) - 0.055) :
-      b * 12.92
+    ((1.055 * (b ** (1.0 / 2.4))) - 0.055) :
+    b * 12.92
 
   r = 0.max(r).min(1)
   g = 0.max(g).min(1)
@@ -930,7 +999,6 @@ def lab_to_rgb(l: number, a: number, b: number) {
   return xyz_to_rgb(x, y, z)
 }
 
-
 # ---------------------------------------------------------------------------
 # Color manipulation
 # ---------------------------------------------------------------------------
@@ -959,7 +1027,9 @@ def lighten(hex: string, amount: number) {
   var hsl = rgb_to_hsl(rgb[0], rgb[1], rgb[2])
   var out = hsl_to_rgb(hsl[0], hsl[1], (hsl[2] + amount).max(0).min(100))
 
-  return rgb_to_hex(out[0].round(), out[1].round(), out[2].round(), _alpha_byte(rgb[3]))
+  return rgb_to_hex(
+    out[0].round(), out[1].round(), out[2].round(), _alpha_byte(rgb[3]),
+  )
 }
 
 /**
@@ -988,7 +1058,9 @@ def saturate(hex: string, amount: number) {
   var hsl = rgb_to_hsl(rgb[0], rgb[1], rgb[2])
   var out = hsl_to_rgb(hsl[0], (hsl[1] + amount).max(0).min(100), hsl[2])
 
-  return rgb_to_hex(out[0].round(), out[1].round(), out[2].round(), _alpha_byte(rgb[3]))
+  return rgb_to_hex(
+    out[0].round(), out[1].round(), out[2].round(), _alpha_byte(rgb[3]),
+  )
 }
 
 /**
@@ -1026,7 +1098,9 @@ def grayscale(hex) {
 def invert(hex: string) {
 
   var rgb = hex_to_rgb(hex)
-  return rgb_to_hex(255 - rgb[0], 255 - rgb[1], 255 - rgb[2], _alpha_byte(rgb[3]))
+  return rgb_to_hex(
+    255 - rgb[0], 255 - rgb[1], 255 - rgb[2], _alpha_byte(rgb[3]),
+  )
 }
 
 /**
@@ -1054,7 +1128,6 @@ def mix(hex_a: string, hex_b: string, weight: ?number) {
 
   return rgb_to_hex(r, g, b, _alpha_byte(a))
 }
-
 
 # ---------------------------------------------------------------------------
 # Accessibility
@@ -1126,7 +1199,6 @@ def contrast_ratio(hex_a: string, hex_b: string) {
   return (lighter + 0.05) / (darker + 0.05)
 }
 
-
 /**
  * The CSS Color Level 4 named colors, mapped to their hexadecimal
  * values.
@@ -1145,58 +1217,155 @@ def contrast_ratio(hex_a: string, hex_b: string) {
  */
 var NAMED = {
   transparent: '00000000',
-  aliceblue: 'f0f8ff', antiquewhite: 'faebd7', aqua: '00ffff',
-  aquamarine: '7fffd4', azure: 'f0ffff', beige: 'f5f5dc',
-  bisque: 'ffe4c4', black: '000000', blanchedalmond: 'ffebcd',
-  blue: '0000ff', blueviolet: '8a2be2', brown: 'a52a2a',
-  burlywood: 'deb887', cadetblue: '5f9ea0', chartreuse: '7fff00',
-  chocolate: 'd2691e', coral: 'ff7f50', cornflowerblue: '6495ed',
-  cornsilk: 'fff8dc', crimson: 'dc143c', cyan: '00ffff',
-  darkblue: '00008b', darkcyan: '008b8b', darkgoldenrod: 'b8860b',
-  darkgray: 'a9a9a9', darkgrey: 'a9a9a9', darkgreen: '006400',
-  darkkhaki: 'bdb76b', darkmagenta: '8b008b', darkolivegreen: '556b2f',
-  darkorange: 'ff8c00', darkorchid: '9932cc', darkred: '8b0000',
-  darksalmon: 'e9967a', darkseagreen: '8fbc8f', darkslateblue: '483d8b',
-  darkslategray: '2f4f4f', darkslategrey: '2f4f4f', darkturquoise: '00ced1',
-  darkviolet: '9400d3', deeppink: 'ff1493', deepskyblue: '00bfff',
-  dimgray: '696969', dimgrey: '696969', dodgerblue: '1e90ff',
-  firebrick: 'b22222', floralwhite: 'fffaf0', forestgreen: '228b22',
-  fuchsia: 'ff00ff', gainsboro: 'dcdcdc', ghostwhite: 'f8f8ff',
-  gold: 'ffd700', goldenrod: 'daa520', gray: '808080',
-  grey: '808080', green: '008000', greenyellow: 'adff2f',
-  honeydew: 'f0fff0', hotpink: 'ff69b4', indianred: 'cd5c5c',
-  indigo: '4b0082', ivory: 'fffff0', khaki: 'f0e68c',
-  lavender: 'e6e6fa', lavenderblush: 'fff0f5', lawngreen: '7cfc00',
-  lemonchiffon: 'fffacd', lightblue: 'add8e6', lightcoral: 'f08080',
-  lightcyan: 'e0ffff', lightgoldenrodyellow: 'fafad2', lightgray: 'd3d3d3',
-  lightgrey: 'd3d3d3', lightgreen: '90ee90', lightpink: 'ffb6c1',
-  lightsalmon: 'ffa07a', lightseagreen: '20b2aa', lightskyblue: '87cefa',
-  lightslategray: '778899', lightslategrey: '778899', lightsteelblue: 'b0c4de',
-  lightyellow: 'ffffe0', lime: '00ff00', limegreen: '32cd32',
-  linen: 'faf0e6', magenta: 'ff00ff', maroon: '800000',
-  mediumaquamarine: '66cdaa', mediumblue: '0000cd', mediumorchid: 'ba55d3',
-  mediumpurple: '9370db', mediumseagreen: '3cb371', mediumslateblue: '7b68ee',
-  mediumspringgreen: '00fa9a', mediumturquoise: '48d1cc', mediumvioletred: 'c71585',
-  midnightblue: '191970', mintcream: 'f5fffa', mistyrose: 'ffe4e1',
-  moccasin: 'ffe4b5', navajowhite: 'ffdead', navy: '000080',
-  oldlace: 'fdf5e6', olive: '808000', olivedrab: '6b8e23',
-  orange: 'ffa500', orangered: 'ff4500', orchid: 'da70d6',
-  palegoldenrod: 'eee8aa', palegreen: '98fb98', paleturquoise: 'afeeee',
-  palevioletred: 'db7093', papayawhip: 'ffefd5', peachpuff: 'ffdab9',
-  peru: 'cd853f', pink: 'ffc0cb', plum: 'dda0dd',
-  powderblue: 'b0e0e6', purple: '800080', rebeccapurple: '663399',
-  red: 'ff0000', rosybrown: 'bc8f8f', royalblue: '4169e1',
-  saddlebrown: '8b4513', salmon: 'fa8072', sandybrown: 'f4a460',
-  seagreen: '2e8b57', seashell: 'fff5ee', sienna: 'a0522d',
-  silver: 'c0c0c0', skyblue: '87ceeb', slateblue: '6a5acd',
-  slategray: '708090', slategrey: '708090', snow: 'fffafa',
-  springgreen: '00ff7f', steelblue: '4682b4', tan: 'd2b48c',
-  teal: '008080', thistle: 'd8bfd8', tomato: 'ff6347',
-  turquoise: '40e0d0', violet: 'ee82ee', wheat: 'f5deb3',
-  white: 'ffffff', whitesmoke: 'f5f5f5', yellow: 'ffff00',
+  aliceblue: 'f0f8ff',
+  antiquewhite: 'faebd7',
+  aqua: '00ffff',
+  aquamarine: '7fffd4',
+  azure: 'f0ffff',
+  beige: 'f5f5dc',
+  bisque: 'ffe4c4',
+  black: '000000',
+  blanchedalmond: 'ffebcd',
+  blue: '0000ff',
+  blueviolet: '8a2be2',
+  brown: 'a52a2a',
+  burlywood: 'deb887',
+  cadetblue: '5f9ea0',
+  chartreuse: '7fff00',
+  chocolate: 'd2691e',
+  coral: 'ff7f50',
+  cornflowerblue: '6495ed',
+  cornsilk: 'fff8dc',
+  crimson: 'dc143c',
+  cyan: '00ffff',
+  darkblue: '00008b',
+  darkcyan: '008b8b',
+  darkgoldenrod: 'b8860b',
+  darkgray: 'a9a9a9',
+  darkgrey: 'a9a9a9',
+  darkgreen: '006400',
+  darkkhaki: 'bdb76b',
+  darkmagenta: '8b008b',
+  darkolivegreen: '556b2f',
+  darkorange: 'ff8c00',
+  darkorchid: '9932cc',
+  darkred: '8b0000',
+  darksalmon: 'e9967a',
+  darkseagreen: '8fbc8f',
+  darkslateblue: '483d8b',
+  darkslategray: '2f4f4f',
+  darkslategrey: '2f4f4f',
+  darkturquoise: '00ced1',
+  darkviolet: '9400d3',
+  deeppink: 'ff1493',
+  deepskyblue: '00bfff',
+  dimgray: '696969',
+  dimgrey: '696969',
+  dodgerblue: '1e90ff',
+  firebrick: 'b22222',
+  floralwhite: 'fffaf0',
+  forestgreen: '228b22',
+  fuchsia: 'ff00ff',
+  gainsboro: 'dcdcdc',
+  ghostwhite: 'f8f8ff',
+  gold: 'ffd700',
+  goldenrod: 'daa520',
+  gray: '808080',
+  grey: '808080',
+  green: '008000',
+  greenyellow: 'adff2f',
+  honeydew: 'f0fff0',
+  hotpink: 'ff69b4',
+  indianred: 'cd5c5c',
+  indigo: '4b0082',
+  ivory: 'fffff0',
+  khaki: 'f0e68c',
+  lavender: 'e6e6fa',
+  lavenderblush: 'fff0f5',
+  lawngreen: '7cfc00',
+  lemonchiffon: 'fffacd',
+  lightblue: 'add8e6',
+  lightcoral: 'f08080',
+  lightcyan: 'e0ffff',
+  lightgoldenrodyellow: 'fafad2',
+  lightgray: 'd3d3d3',
+  lightgrey: 'd3d3d3',
+  lightgreen: '90ee90',
+  lightpink: 'ffb6c1',
+  lightsalmon: 'ffa07a',
+  lightseagreen: '20b2aa',
+  lightskyblue: '87cefa',
+  lightslategray: '778899',
+  lightslategrey: '778899',
+  lightsteelblue: 'b0c4de',
+  lightyellow: 'ffffe0',
+  lime: '00ff00',
+  limegreen: '32cd32',
+  linen: 'faf0e6',
+  magenta: 'ff00ff',
+  maroon: '800000',
+  mediumaquamarine: '66cdaa',
+  mediumblue: '0000cd',
+  mediumorchid: 'ba55d3',
+  mediumpurple: '9370db',
+  mediumseagreen: '3cb371',
+  mediumslateblue: '7b68ee',
+  mediumspringgreen: '00fa9a',
+  mediumturquoise: '48d1cc',
+  mediumvioletred: 'c71585',
+  midnightblue: '191970',
+  mintcream: 'f5fffa',
+  mistyrose: 'ffe4e1',
+  moccasin: 'ffe4b5',
+  navajowhite: 'ffdead',
+  navy: '000080',
+  oldlace: 'fdf5e6',
+  olive: '808000',
+  olivedrab: '6b8e23',
+  orange: 'ffa500',
+  orangered: 'ff4500',
+  orchid: 'da70d6',
+  palegoldenrod: 'eee8aa',
+  palegreen: '98fb98',
+  paleturquoise: 'afeeee',
+  palevioletred: 'db7093',
+  papayawhip: 'ffefd5',
+  peachpuff: 'ffdab9',
+  peru: 'cd853f',
+  pink: 'ffc0cb',
+  plum: 'dda0dd',
+  powderblue: 'b0e0e6',
+  purple: '800080',
+  rebeccapurple: '663399',
+  red: 'ff0000',
+  rosybrown: 'bc8f8f',
+  royalblue: '4169e1',
+  saddlebrown: '8b4513',
+  salmon: 'fa8072',
+  sandybrown: 'f4a460',
+  seagreen: '2e8b57',
+  seashell: 'fff5ee',
+  sienna: 'a0522d',
+  silver: 'c0c0c0',
+  skyblue: '87ceeb',
+  slateblue: '6a5acd',
+  slategray: '708090',
+  slategrey: '708090',
+  snow: 'fffafa',
+  springgreen: '00ff7f',
+  steelblue: '4682b4',
+  tan: 'd2b48c',
+  teal: '008080',
+  thistle: 'd8bfd8',
+  tomato: 'ff6347',
+  turquoise: '40e0d0',
+  violet: 'ee82ee',
+  wheat: 'f5deb3',
+  white: 'ffffff',
+  whitesmoke: 'f5f5f5',
+  yellow: 'ffff00',
   yellowgreen: '9acd32',
 }
-
 
 /**
  * Returns the hexadecimal value of a CSS named color.
@@ -1235,7 +1404,6 @@ def named(name: string) {
 
   return found
 }
-
 
 /**
  * Returns `true` if _name_ is a CSS color name that [[colors.named]]

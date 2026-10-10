@@ -96,7 +96,6 @@
 import io
 import math
 
-
 # ---------------------------------------------------------------------------
 # YamlError
 # ---------------------------------------------------------------------------
@@ -112,8 +111,8 @@ import math
  * @property string context Optional additional context string.
  */
 class YamlError < Error {
-  var line    = -1
-  var column  = -1
+  var line = -1
+  var column = -1
   var context = nil
 
   /**
@@ -126,52 +125,63 @@ class YamlError < Error {
    */
   @new(message, line, column, context) {
     parent(message)
-    if line    != nil { self.line    = line    }
-    if column  != nil { self.column  = column  }
-    if context != nil { self.context = context }
+    if line != nil {
+      self.line = line
+    }
+    if column != nil {
+      self.column = column
+    }
+    if context != nil {
+      self.context = context
+    }
   }
 }
-
 
 # ---------------------------------------------------------------------------
 # Internal constants and helpers
 # ---------------------------------------------------------------------------
 
 # Chomping indicator values for block scalars.
-var _CHOMP_CLIP  = 0   # default: single trailing newline
-var _CHOMP_STRIP = 1   # '-': no trailing newlines
-var _CHOMP_KEEP  = 2   # '+': all trailing newlines preserved
+var _CHOMP_CLIP = 0 # default: single trailing newline
+var _CHOMP_STRIP = 1 # '-': no trailing newlines
+var _CHOMP_KEEP = 2 # '+': all trailing newlines preserved
 
 # Characters that terminate a plain scalar when followed by a space.
 var _FLOW_INDICATORS = '{[,]}'
 
 # Core Schema null patterns.
-var _NULL_VALUES  = { 'null': true, 'Null': true, 'NULL': true, '~': true, '': true }
+var _NULL_VALUES = {
+  'null': true,
+  'Null': true,
+  'NULL': true,
+  '~': true,
+  '': true,
+}
 
 # Core Schema bool patterns.
-var _TRUE_VALUES  = { 'true': true, 'True': true, 'TRUE': true }
+var _TRUE_VALUES = { 'true': true, 'True': true, 'TRUE': true }
 var _FALSE_VALUES = { 'false': true, 'False': true, 'FALSE': true }
 
 # YAML double-quote escape map (single-char escapes).
 var _DQUOTE_ESCAPES = {
-  '0':  0.chr(),
-  'a':  7.chr(),
-  'b':  8.chr(),
-  't':  9.chr(),
+  '0': 0.chr(),
+  'a': 7.chr(),
+  'b': 8.chr(),
+  't': 9.chr(),
   '\t': 9.chr(),
-  'n':  10.chr(),
-  'v':  11.chr(),
-  'f':  12.chr(),
-  'r':  13.chr(),
-  'e':  27.chr(),
-  ' ':  ' ',
-  '"':  '"',
-  '/':  '/',
+  'n': 10.chr(),
+  'v': 11.chr(),
+  'f': 12.chr(),
+  'r': 13.chr(),
+  'e': 27.chr(),
+  ' ': ' ',
+  '"': '"',
+  '/': '/',
   '\\': '\\',
-  'N':  133.chr(),   # NEL
-  '_':  160.chr(),   # non-breaking space
-  'L':  8232.chr(),  # LS
-  'P':  8233.chr(),  # PS
+  'N': 133.chr(), # NEL
+  '_': 160.chr(), # non-breaking space
+  'L': 8232.chr(), # LS
+  'P': 8233.chr(), # PS
 }
 
 # Returns true if `ch` is a YAML whitespace character (space or tab).
@@ -197,13 +207,13 @@ def _hex_to_int(s) {
     result *= 16
     var c = ch.ord()
     if c >= 48 and c <= 57 { # 0-9
-      result += c - 48 
+      result += c - 48
     } else if c >= 65 and c <= 70 { # A-F
-      result += c - 55 
+      result += c - 55
     } else if c >= 97 and c <= 102 { # a-f
-      result += c - 87 
-    } else { 
-      raise YamlError('invalid hex digit: ' + ch, nil, nil, nil) 
+      result += c - 87
+    } else {
+      raise YamlError('invalid hex digit: ' + ch, nil, nil, nil)
     }
   }
 
@@ -212,32 +222,38 @@ def _hex_to_int(s) {
 
 # Converts a codepoint integer to a UTF-8 string.
 def _codepoint_to_str(cp) {
-  if cp < 0x80 { 
-    return cp.chr() 
+  if cp < 0x80 {
+    return cp.chr()
   }
-  
+
   if cp < 0x800 {
     return (0xc0 | (cp >> 6)).chr() + (0x80 | (cp & 0x3f)).chr()
   }
 
   if cp < 0x10000 {
     return (0xe0 | (cp >> 12)).chr() +
-           (0x80 | ((cp >> 6) & 0x3f)).chr() +
-           (0x80 | (cp & 0x3f)).chr()
+      (0x80 | ((cp >> 6) & 0x3f)).chr() +
+      (0x80 | (cp & 0x3f)).chr()
   }
 
   return (0xf0 | (cp >> 18)).chr() +
-         (0x80 | ((cp >> 12) & 0x3f)).chr() +
-         (0x80 | ((cp >> 6) & 0x3f)).chr() +
-         (0x80 | (cp & 0x3f)).chr()
+    (0x80 | ((cp >> 12) & 0x3f)).chr() +
+    (0x80 | ((cp >> 6) & 0x3f)).chr() +
+    (0x80 | (cp & 0x3f)).chr()
 }
 
 # Core Schema scalar type resolution.
 # Returns the resolved Zuri value for a plain scalar string.
 def _resolve_scalar(s) {
-  if _NULL_VALUES.contains(s) { return nil }
-  if _TRUE_VALUES.contains(s)  { return true }
-  if _FALSE_VALUES.contains(s) { return false }
+  if _NULL_VALUES.contains(s) {
+    return nil
+  }
+  if _TRUE_VALUES.contains(s) {
+    return true
+  }
+  if _FALSE_VALUES.contains(s) {
+    return false
+  }
 
   # Integer: decimal
   if s.match('/^[-+]?[0-9]+$/') {
@@ -267,7 +283,7 @@ def _resolve_scalar(s) {
 
   # Float: infinity
   if s == '.inf' or s == '.Inf' or s == '.INF' or
-     s == '+.inf' or s == '+.Inf' or s == '+.INF' {
+    s == '+.inf' or s == '+.Inf' or s == '+.INF' {
     return math.Infinity
   }
   if s == '-.inf' or s == '-.Inf' or s == '-.INF' {
@@ -276,7 +292,7 @@ def _resolve_scalar(s) {
 
   # Float: NaN
   if s == '.nan' or s == '.NaN' or s == '.NAN' {
-    return 0/0
+    return 0 / 0
   }
 
   return s
@@ -284,9 +300,11 @@ def _resolve_scalar(s) {
 
 # Applies an explicit tag to a raw string value, converting as required.
 def _apply_tag(tag, raw) {
-  if tag == '!!str'   or tag == 'tag:yaml.org,2002:str'   { return raw.to_string() }
+  if tag == '!!str' or tag == 'tag:yaml.org,2002:str' {
+    return raw.to_string()
+  }
 
-  if tag == '!!int'   or tag == 'tag:yaml.org,2002:int'   {
+  if tag == '!!int' or tag == 'tag:yaml.org,2002:int' {
     # Same three forms Core Schema implicit resolution accepts
     # (_resolve_scalar, above): decimal, octal, and hex: rather
     # than the bare `.to_number()` this used to call, which neither
@@ -309,28 +327,33 @@ def _apply_tag(tag, raw) {
       return raw.to_number()
     }
     if raw == '.inf' or raw == '.Inf' or raw == '.INF' or
-       raw == '+.inf' or raw == '+.Inf' or raw == '+.INF' {
+      raw == '+.inf' or raw == '+.Inf' or raw == '+.INF' {
       return math.Infinity
     }
     if raw == '-.inf' or raw == '-.Inf' or raw == '-.INF' {
       return -math.Infinity
     }
     if raw == '.nan' or raw == '.NaN' or raw == '.NAN' {
-      return 0/0
+      return 0 / 0
     }
     raise YamlError('invalid !!float value: ' + raw, nil, nil, nil)
   }
 
-  if tag == '!!bool'  or tag == 'tag:yaml.org,2002:bool'  {
-    if _TRUE_VALUES.contains(raw)  { return true  }
-    if _FALSE_VALUES.contains(raw) { return false }
+  if tag == '!!bool' or tag == 'tag:yaml.org,2002:bool' {
+    if _TRUE_VALUES.contains(raw) {
+      return true
+    }
+    if _FALSE_VALUES.contains(raw) {
+      return false
+    }
     raise YamlError('cannot coerce to bool: ' + raw, nil, nil, nil)
   }
-  if tag == '!!null'  or tag == 'tag:yaml.org,2002:null'  { return nil }
+  if tag == '!!null' or tag == 'tag:yaml.org,2002:null' {
+    return nil
+  }
   # !!binary, !!seq, !!map, etc.: for scalars just return raw string.
   return raw
 }
-
 
 # ---------------------------------------------------------------------------
 # Scanner / Lexer
@@ -345,11 +368,11 @@ def _apply_tag(tag, raw) {
  * @internal
  */
 class _Scanner {
-  var src     = ''    # full source text (normalised to LF)
-  var _pos     = 0    # current character index
-  var _line    = 1    # 1-based current line
-  var _col     = 1    # 1-based current column
-  var len     = 0    # source length
+  var src = '' # full source text (normalised to LF)
+  var _pos = 0 # current character index
+  var _line = 1 # 1-based current line
+  var _col = 1 # 1-based current column
+  var len = 0 # source length
 
   @new(source) {
     # Normalise all line endings to LF for uniform handling.
@@ -364,17 +387,25 @@ class _Scanner {
   # Peek at the character at offset `n` ahead of current position (default 0).
   peek(n) {
     var idx = self._pos + (n != nil ? n : 0)
-    if idx >= self.len { return '' }
+    if idx >= self.len {
+      return ''
+    }
     return self.src[idx]
   }
 
   # Consume and return the current character, advancing position.
   advance() {
-    if self._pos >= self.len { return '' }
+    if self._pos >= self.len {
+      return ''
+    }
     var ch = self.src[self._pos]
     self._pos++
-    if ch == '\n' { self._line++; self._col = 1 }
-    else          { self._col++ }
+    if ch == '\n' {
+      self._line++
+      self._col = 1
+    } else {
+      self._col++
+    }
     return ch
   }
 
@@ -391,13 +422,19 @@ class _Scanner {
   }
 
   # Returns the current line number.
-  line() { return self._line }
+  line() {
+    return self._line
+  }
 
   # Returns the current column number.
-  col() { return self._col }
+  col() {
+    return self._col
+  }
 
   # Returns the current position index.
-  pos() { return self._pos }
+  pos() {
+    return self._pos
+  }
 
   # ---------------------------------------------------------------------------
   # Whitespace and comment helpers
@@ -406,7 +443,7 @@ class _Scanner {
   # Skip spaces and tabs (not newlines).
   skip_spaces() {
     while self._pos < self.len and (self.src[self._pos] == ' ' or
-          self.src[self._pos] == '\t') {
+      self.src[self._pos] == '\t') {
       self.advance()
     }
   }
@@ -450,18 +487,24 @@ class _Scanner {
     var col = 1
     var idx = self._pos
     while idx < self.len and self.src[idx] == ' ' {
-      col++; idx++
+      col++
+      idx++
     }
-    return col - 1  # 0-based indent count
+    return col - 1 # 0-based indent count
   }
 
   # Returns the 0-based indentation of the current position.
   indent_of_pos() {
     # Walk back to find start of line.
     var idx = self._pos
-    while idx > 0 and self.src[idx - 1] != '\n' { idx-- }
+    while idx > 0 and self.src[idx - 1] != '\n' {
+      idx--
+    }
     var indent = 0
-    while idx < self.len and self.src[idx] == ' ' { indent++; idx++ }
+    while idx < self.len and self.src[idx] == ' ' {
+      indent++
+      idx++
+    }
     return indent
   }
 
@@ -484,7 +527,6 @@ class _Scanner {
   }
 }
 
-
 # ---------------------------------------------------------------------------
 # Parser
 # ---------------------------------------------------------------------------
@@ -499,9 +541,9 @@ class _Scanner {
  * @internal: use `parse()`, `parse_all()`, or `load_file()`.
  */
 class _Parser {
-  var _sc        = nil   # _Scanner instance
-  var _anchors   = {}    # name → value, for anchor/alias resolution
-  var _flow_depth = 0   # how many nested flow collections we are inside
+  var _sc = nil # _Scanner instance
+  var _anchors = {} # name → value, for anchor/alias resolution
+  var _flow_depth = 0 # how many nested flow collections we are inside
 
   @new(source) {
     self._sc = _Scanner(source)
@@ -523,11 +565,15 @@ class _Parser {
     while !self._sc.at_end() {
       # Skip directives, blank lines, and the '---' marker before each document.
       self._skip_document_prefix()
-      if self._sc.at_end() { break }
+      if self._sc.at_end() {
+        break
+      }
 
       # Skip to end-of-stream or '...' marker without content: no document.
       self._skip_ws_and_comments()
-      if self._sc.at_end() { break }
+      if self._sc.at_end() {
+        break
+      }
       var ch = self._sc.peek()
       if ch == '.' and self._sc.peek(1) == '.' and self._sc.peek(2) == '.' {
         self._skip_document_suffix()
@@ -538,7 +584,9 @@ class _Parser {
       docs.append(doc)
 
       if !self._skip_document_suffix() {
-        self._error('unexpected content after end of document: ' + self._sc.peek())
+        self._error(
+          'unexpected content after end of document: ' + self._sc.peek(),
+        )
       }
     }
 
@@ -550,7 +598,9 @@ class _Parser {
     self._skip_document_prefix()
     var val = self._parse_document()
     if !self._skip_document_suffix() {
-      self._error('unexpected content after end of document: ' + self._sc.peek())
+      self._error(
+        'unexpected content after end of document: ' + self._sc.peek(),
+      )
     }
 
     return val
@@ -566,8 +616,8 @@ class _Parser {
         # Directive line: consume to end of line.
         self._parse_directive()
       } else if ch == '-' and
-                self._sc.peek(1) == '-' and
-                self._sc.peek(2) == '-' {
+        self._sc.peek(1) == '-' and
+        self._sc.peek(2) == '-' {
         # '---' document-start marker.
         self._sc.skip(3)
         self._sc.skip_inline_ws()
@@ -589,14 +639,14 @@ class _Parser {
       if ch == '\n' {
         self._sc.advance()
       } else if ch == '.' and
-                self._sc.peek(1) == '.' and
-                self._sc.peek(2) == '.' {
+        self._sc.peek(1) == '.' and
+        self._sc.peek(2) == '.' {
         self._sc.skip(3)
         self._sc.skip_inline_ws()
         self._sc.consume_newline()
       } else if ch == '-' and
-                self._sc.peek(1) == '-' and
-                self._sc.peek(2) == '-' {
+        self._sc.peek(1) == '-' and
+        self._sc.peek(2) == '-' {
         # Next document starts here: stop suffix skipping.
         break
       } else {
@@ -609,13 +659,15 @@ class _Parser {
 
   # Parse a %YAML or %TAG directive.
   _parse_directive() {
-    self._sc.advance()  # consume '%'
+    self._sc.advance() # consume '%'
     var name = self._read_plain_to_ws()
     self._sc.skip_spaces()
 
     if name == 'YAML' {
       var version = ''
-      while !self._sc.at_end() and !_is_ws(self._sc.peek()) and self._sc.peek() != '\n' {
+      while !self._sc.at_end()
+        and !_is_ws(self._sc.peek())
+        and self._sc.peek() != '\n' {
         version += self._sc.advance()
       }
       if !version.match('/^[0-9]+\.[0-9]+$/') {
@@ -628,7 +680,11 @@ class _Parser {
       # rejected the way an entirely different major version is.
       var major = version.split('.')[0].to_number()
       if major != 1 {
-        self._error('unsupported YAML version ' + version + ' (this parser implements 1.2.2)')
+        self._error(
+          'unsupported YAML version '
+            + version
+            + ' (this parser implements 1.2.2)',
+        )
       }
     }
 
@@ -642,17 +698,19 @@ class _Parser {
   # Parse the root node of a YAML document.
   _parse_document() {
     self._skip_ws_and_comments()
-    if self._sc.at_end() { return nil }
+    if self._sc.at_end() {
+      return nil
+    }
 
     var ch = self._sc.peek()
     if ch == '.' and
-       self._sc.peek(1) == '.' and
-       self._sc.peek(2) == '.' {
+      self._sc.peek(1) == '.' and
+      self._sc.peek(2) == '.' {
       return nil
     }
     if ch == '-' and
-       self._sc.peek(1) == '-' and
-       self._sc.peek(2) == '-' {
+      self._sc.peek(1) == '-' and
+      self._sc.peek(2) == '-' {
       return nil
     }
 
@@ -668,9 +726,11 @@ class _Parser {
   # `in_flow` : whether we are inside a flow collection.
   _parse_node(indent, in_flow) {
     self._skip_ws_and_comments()
-    if self._sc.at_end() { return nil }
+    if self._sc.at_end() {
+      return nil
+    }
 
-    var tag    = nil
+    var tag = nil
     var anchor = nil
 
     # Consume optional anchor and/or tag (may appear in either order).
@@ -692,13 +752,17 @@ class _Parser {
     # Alias node.
     if self._sc.peek() == '*' {
       var alias_val = self._parse_alias()
-      if anchor != nil { self._anchors[anchor] = alias_val }
+      if anchor != nil {
+        self._anchors[anchor] = alias_val
+      }
       return alias_val
     }
 
     var val = self._parse_value(indent, in_flow, tag)
 
-    if anchor != nil { self._anchors[anchor] = val }
+    if anchor != nil {
+      self._anchors[anchor] = val
+    }
     return val
   }
 
@@ -712,25 +776,34 @@ class _Parser {
     if self._sc.peek() == '\n' or self._sc.at_end() {
       self._sc.consume_newline()
       self._skip_ws_and_comments()
-      if self._sc.at_end() { return nil }
+      if self._sc.at_end() {
+        return nil
+      }
       # Re-read the first character of the actual content.
       self._sc.skip_spaces()
     }
 
-
     var ch = self._sc.peek()
 
     # Flow sequence.
-    if ch == '[' { return self._parse_flow_sequence(tag) }
+    if ch == '[' {
+      return self._parse_flow_sequence(tag)
+    }
 
     # Flow mapping.
-    if ch == '{' { return self._parse_flow_mapping(tag) }
+    if ch == '{' {
+      return self._parse_flow_mapping(tag)
+    }
 
     # Block scalar: literal.
-    if ch == '|' { return self._parse_block_scalar(indent, true, tag) }
+    if ch == '|' {
+      return self._parse_block_scalar(indent, true, tag)
+    }
 
     # Block scalar: folded.
-    if ch == '>' { return self._parse_block_scalar(indent, false, tag) }
+    if ch == '>' {
+      return self._parse_block_scalar(indent, false, tag)
+    }
 
     # Block sequence.
     if ch == '-' and _is_ws(self._sc.peek(1)) {
@@ -754,12 +827,14 @@ class _Parser {
     }
 
     # Double-quoted scalar.
-    if ch == '"' { 
-      return self._parse_double_quoted(tag) 
+    if ch == '"' {
+      return self._parse_double_quoted(tag)
     }
 
     # Single-quoted scalar.
-    if ch == '\'' { return self._parse_single_quoted(tag) }
+    if ch == '\'' {
+      return self._parse_single_quoted(tag)
+    }
 
     # Fallback: plain scalar.
     return self._parse_plain_scalar(indent, in_flow, tag)
@@ -768,10 +843,12 @@ class _Parser {
   # Heuristic: is the current position the start of a block ?mapping
   # Scans ahead to find a ':' not inside a flow context.
   _could_be_block_mapping(indent) {
-    if self._flow_depth > 0 { return false }
-    var i     = self._sc.pos()
-    var src   = self._sc.src
-    var n     = self._sc.len
+    if self._flow_depth > 0 {
+      return false
+    }
+    var i = self._sc.pos()
+    var src = self._sc.src
+    var n = self._sc.len
     var depth = 0
     var in_single_quote = false
     var in_double_quote = false
@@ -787,9 +864,12 @@ class _Parser {
       }
 
       if !in_single_quote and !in_double_quote {
-        if ch == '[' or ch == '{' { depth++ }
-        else if ch == ']' or ch == '}' {
-          if depth == 0 { return false }
+        if ch == '[' or ch == '{' {
+          depth++
+        } else if ch == ']' or ch == '}' {
+          if depth == 0 {
+            return false
+          }
           depth--
         } else if ch == ':' and depth == 0 {
           var nx = i + 1 < n ? src[i + 1] : ''
@@ -798,7 +878,8 @@ class _Parser {
           }
         } else if ch == '\n' {
           return false
-        } else if ch == '#' and (i == self._sc.pos() or src[i - 1] == ' ' or src[i - 1] == '\t') {
+        } else if ch == '#'
+          and (i == self._sc.pos() or src[i - 1] == ' ' or src[i - 1] == '\t') {
           # A '#' preceded by whitespace (or right at the start of
           # this scan) starts a comment, the same rule
           # _parse_plain_scalar() itself uses: nothing past this
@@ -817,7 +898,7 @@ class _Parser {
   # ---------------------------------------------------------------------------
 
   _parse_anchor() {
-    self._sc.advance()  # '&'
+    self._sc.advance() # '&'
     var name = ''
     while !self._sc.at_end() {
       var ch = self._sc.peek()
@@ -831,12 +912,14 @@ class _Parser {
       }
       name += self._sc.advance()
     }
-    if name.length() == 0 { self._error('empty anchor name') }
+    if name.length() == 0 {
+      self._error('empty anchor name')
+    }
     return name
   }
 
   _parse_alias() {
-    self._sc.advance()  # '*'
+    self._sc.advance() # '*'
     var name = ''
     while !self._sc.at_end() {
       var ch = self._sc.peek()
@@ -848,7 +931,9 @@ class _Parser {
       }
       name += self._sc.advance()
     }
-    if name.length() == 0 { self._error('empty alias name') }
+    if name.length() == 0 {
+      self._error('empty alias name')
+    }
     if !self._anchors.contains(name) {
       self._error('undefined alias: *' + name)
     }
@@ -856,7 +941,7 @@ class _Parser {
   }
 
   _parse_tag() {
-    self._sc.advance()  # '!'
+    self._sc.advance() # '!'
     var ch = self._sc.peek()
 
     # Verbatim tag: !<...>
@@ -866,8 +951,10 @@ class _Parser {
       while !self._sc.at_end() and self._sc.peek() != '>' {
         uri += self._sc.advance()
       }
-      if self._sc.at_end() { self._error('unterminated verbatim tag') }
-      self._sc.advance()  # '>'
+      if self._sc.at_end() {
+        self._error('unterminated verbatim tag')
+      }
+      self._sc.advance() # '>'
       return 'tag:' + uri
     }
 
@@ -877,7 +964,9 @@ class _Parser {
       var name = ''
       while !self._sc.at_end() {
         var c = self._sc.peek()
-        if _is_ws(c) or _is_lb(c) { break }
+        if _is_ws(c) or _is_lb(c) {
+          break
+        }
         name += self._sc.advance()
       }
       return '!!' + name
@@ -887,10 +976,14 @@ class _Parser {
     var name = ''
     while !self._sc.at_end() {
       var c = self._sc.peek()
-      if _is_ws(c) or _is_lb(c) { break }
+      if _is_ws(c) or _is_lb(c) {
+        break
+      }
       name += self._sc.advance()
     }
-    if name.length() == 0 { return '!' }
+    if name.length() == 0 {
+      return '!'
+    }
     return '!' + name
   }
 
@@ -900,23 +993,23 @@ class _Parser {
 
   # Parse a double-quoted scalar.
   _parse_double_quoted(tag) {
-    self._sc.advance()  # opening '"'
+    self._sc.advance() # opening '"'
     var result = ''
 
     while !self._sc.at_end() {
       var ch = self._sc.peek()
 
       if ch == '"' {
-        self._sc.advance()  # closing '"'
+        self._sc.advance() # closing '"'
         return self._scalar_value(result, tag, true)
       }
 
       if ch == '\\' {
-        self._sc.advance()  # backslash
+        self._sc.advance() # backslash
         var esc = self._sc.peek()
 
-        if esc == '' { 
-          self._error('unexpected end after backslash in double-quoted scalar') 
+        if esc == '' {
+          self._error('unexpected end after backslash in double-quoted scalar')
         }
 
         if _DQUOTE_ESCAPES.contains(esc) {
@@ -950,7 +1043,6 @@ class _Parser {
         } else {
           self._error('unknown escape sequence: \\' + esc)
         }
-
       } else if ch == '\n' {
         # Unescaped newline in double-quoted scalar: fold to space,
         # but preserve empty lines as literal newlines.
@@ -981,7 +1073,7 @@ class _Parser {
 
   # Parse a single-quoted scalar.
   _parse_single_quoted(tag) {
-    self._sc.advance()  # opening "'"
+    self._sc.advance() # opening "'"
     var result = ''
 
     while !self._sc.at_end() {
@@ -1024,16 +1116,18 @@ class _Parser {
 
   # Parse a plain (unquoted) scalar.
   _parse_plain_scalar(indent, in_flow, tag) {
-    var result   = ''
-    var space_buf = ''  # pending whitespace between tokens
-    var first    = true
+    var result = ''
+    var space_buf = '' # pending whitespace between tokens
+    var first = true
 
     while !self._sc.at_end() {
       var ch = self._sc.peek()
 
       # Flow terminators.
       if in_flow or self._flow_depth > 0 {
-        if ch == ',' or ch == ']' or ch == '}' { break }
+        if ch == ',' or ch == ']' or ch == '}' {
+          break
+        }
       }
 
       if ch == '\n' {
@@ -1047,8 +1141,10 @@ class _Parser {
           var pos_save = self._sc.pos()
           # Check for blank line: only spaces/tabs then newline.
           var all_ws = true
-          var idx    = self._sc.pos()
-          while idx < self._sc.len and self._sc.src[idx] == ' ' { idx++ }
+          var idx = self._sc.pos()
+          while idx < self._sc.len and self._sc.src[idx] == ' ' {
+            idx++
+          }
           if idx < self._sc.len and self._sc.src[idx] == '\n' {
             self._sc.skip(idx - self._sc.pos() + 1)
             blank_lines++
@@ -1061,7 +1157,8 @@ class _Parser {
         var cont_indent = 0
         var idx = self._sc.pos()
         while idx < self._sc.len and self._sc.src[idx] == ' ' {
-          cont_indent++; idx++
+          cont_indent++
+          idx++
         }
 
         if cont_indent <= indent and !first {
@@ -1072,12 +1169,18 @@ class _Parser {
         # Check for document markers or block indicators on the next line.
         var nx = self._sc.peek()
         if nx == '-' and
-           self._sc.peek(1) == '-' and
-           self._sc.peek(2) == '-' { break }
+          self._sc.peek(1) == '-' and
+          self._sc.peek(2) == '-' {
+          break
+        }
         if nx == '.' and
-           self._sc.peek(1) == '.' and
-           self._sc.peek(2) == '.' { break }
-        if nx == '' { break }
+          self._sc.peek(1) == '.' and
+          self._sc.peek(2) == '.' {
+          break
+        }
+        if nx == '' {
+          break
+        }
 
         # Fold this newline to a single space and skip the leading indentation
         # spaces of the continuation line: they are not content.
@@ -1097,14 +1200,17 @@ class _Parser {
       }
 
       # Comment: '#' preceded by whitespace ends a plain scalar.
-      if ch == '#' and (result.length() == 0 or result[result.length() - 1] == ' ') {
+      if ch == '#'
+        and (result.length() == 0 or result[result.length() - 1] == ' ') {
         break
       }
 
       # ': ' or ':\n' ends a plain scalar (it becomes a mapping key).
       if ch == ':' and !in_flow {
         var nx = self._sc.peek(1)
-        if nx == ' ' or nx == '\t' or nx == '\n' or nx == '' { break }
+        if nx == ' ' or nx == '\t' or nx == '\n' or nx == '' {
+          break
+        }
       }
 
       if ch == ' ' or ch == '\t' {
@@ -1117,15 +1223,17 @@ class _Parser {
         }
         if nx == ':' {
           var nnx = self._sc.peek(1)
-          if nnx == ' ' or nnx == '\t' or nnx == '\n' or nnx == '' { break }
+          if nnx == ' ' or nnx == '\t' or nnx == '\n' or nnx == '' {
+            break
+          }
         }
         continue
       }
 
       # Normal character: flush space_buf then append character.
-      result   += space_buf + self._sc.advance()
+      result += space_buf + self._sc.advance()
       space_buf = ''
-      first     = false
+      first = false
     }
 
     return self._scalar_value(result, tag, false)
@@ -1133,8 +1241,12 @@ class _Parser {
 
   # Finalise a scalar: apply tag or type resolution.
   _scalar_value(s, tag, quoted) {
-    if tag != nil { return _apply_tag(tag, s) }
-    if quoted     { return s }  # quoted scalars are always strings
+    if tag != nil {
+      return _apply_tag(tag, s)
+    }
+    if quoted {
+      return s
+    } # quoted scalars are always strings
     return _resolve_scalar(s)
   }
 
@@ -1143,28 +1255,28 @@ class _Parser {
   # ---------------------------------------------------------------------------
 
   _parse_block_scalar(indent, literal, tag) {
-    self._sc.advance()  # '|' or '>'
+    self._sc.advance() # '|' or '>'
 
     # Parse the block scalar header: [indent indicator][chomping indicator]
     # (or in reverse order)
-    var chomp          = _CHOMP_CLIP
-    var explicit_indent = -1  # -1 = auto-detect
+    var chomp = _CHOMP_CLIP
+    var explicit_indent = -1 # -1 = auto-detect
 
     # Up to two header characters: one digit, one of '-' '+', in any order.
     iter var _h = 0; _h < 2; _h++ {
       var ch = self._sc.peek()
-      if ch == '-' { 
+      if ch == '-' {
         chomp = _CHOMP_STRIP
-        self._sc.advance() 
-      }
-      else if ch == '+' { 
+        self._sc.advance()
+      } else if ch == '+' {
         chomp = _CHOMP_KEEP
-        self._sc.advance() 
-      }
-      else if ch.ord() >= 49 and ch.ord() <= 57 {  # '1'-'9'
+        self._sc.advance()
+      } else if ch.ord() >= 49 and ch.ord() <= 57 { # '1'-'9'
         explicit_indent = ch.ord() - 48
         self._sc.advance()
-      } else { break }
+      } else {
+        break
+      }
     }
 
     # Optional comment and mandatory newline to end the header line.
@@ -1187,7 +1299,8 @@ class _Parser {
         var line_indent = 0
         var idx = scan_pos
         while idx < self._sc.len and self._sc.src[idx] == ' ' {
-          line_indent++; idx++
+          line_indent++
+          idx++
         }
         if idx < self._sc.len and self._sc.src[idx] != '\n' {
           if line_indent >= indent {
@@ -1199,18 +1312,22 @@ class _Parser {
         while scan_pos < self._sc.len and self._sc.src[scan_pos] != '\n' {
           scan_pos++
         }
-        if scan_pos < self._sc.len { scan_pos++ }
+        if scan_pos < self._sc.len {
+          scan_pos++
+        }
       }
-      if block_indent == -1 { block_indent = indent }
+      if block_indent == -1 {
+        block_indent = indent
+      }
     }
 
     # Collect lines.
-    var lines = []  # each element: { text: string, blank: bool }
+    var lines = [] # each element: { text: string, blank: bool }
 
     while !self._sc.at_end() {
       # Measure indentation of this line.
       var line_indent = 0
-      var idx         = self._sc.pos()
+      var idx = self._sc.pos()
       while idx < self._sc.len and self._sc.src[idx] == ' ' {
         line_indent++
         idx++
@@ -1225,7 +1342,9 @@ class _Parser {
       }
 
       # End of block: line is indented less than block_indent.
-      if line_indent < block_indent { break }
+      if line_indent < block_indent {
+        break
+      }
 
       # Consume the indent.
       self._sc.skip(block_indent)
@@ -1252,7 +1371,7 @@ class _Parser {
       # blank lines produce a literal newline; leading newline before first
       # non-blank line is preserved.
       var keep_blanks = chomp != _CHOMP_KEEP,
-          len = lines.length()
+        len = lines.length()
 
       iter var i = 0; i < len; i++ {
         var ln = lines[i]
@@ -1260,7 +1379,7 @@ class _Parser {
           result += '\n'
         } else {
           result += ln.text
-          
+
           # Determine what follows this non-blank line.
           if i < len - 1 {
             if lines[i + 1].blank {
@@ -1291,7 +1410,9 @@ class _Parser {
     }
     # CHOMP_KEEP: preserve all trailing newlines already in result.
 
-    if tag != nil { return _apply_tag(tag, result) }
+    if tag != nil {
+      return _apply_tag(tag, result)
+    }
     return result
   }
 
@@ -1301,23 +1422,31 @@ class _Parser {
 
   # Parse a block sequence (list of '- item' entries).
   _parse_block_sequence(indent, tag) {
-    var items       = []
-    var seq_indent  = self._sc.col() - 1  # 0-based column of the first '-'
+    var items = []
+    var seq_indent = self._sc.col() - 1 # 0-based column of the first '-'
 
     while !self._sc.at_end() {
       self._skip_ws_and_comments()
-      if self._sc.at_end() { break }
+      if self._sc.at_end() {
+        break
+      }
 
       # Check that we are still at the same indentation level.
       var cur_col = self._sc.col() - 1
-      if cur_col != seq_indent { break }
+      if cur_col != seq_indent {
+        break
+      }
 
       # Expect '- '.
-      if self._sc.peek() != '-' { break }
+      if self._sc.peek() != '-' {
+        break
+      }
       var nx = self._sc.peek(1)
-      if nx != ' ' and nx != '\t' and nx != '\n' and nx != '' { break }
+      if nx != ' ' and nx != '\t' and nx != '\n' and nx != '' {
+        break
+      }
 
-      self._sc.advance()  # '-'
+      self._sc.advance() # '-'
 
       if self._sc.peek() == '\n' or self._sc.at_end() {
         # Dash with no inline content. The item is nil unless the next
@@ -1356,32 +1485,40 @@ class _Parser {
 
   # Parse a block mapping.
   _parse_block_mapping(indent, tag) {
-    var map        = {}
-    var key_order  = []   # preserve insertion order
+    var map = {}
+    var key_order = [] # preserve insertion order
     var map_indent = self._sc.col() - 1
 
     while !self._sc.at_end() {
       self._skip_ws_and_comments()
-      if self._sc.at_end() { break }
+      if self._sc.at_end() {
+        break
+      }
 
       var cur_col = self._sc.col() - 1
-      if cur_col != map_indent { break }
+      if cur_col != map_indent {
+        break
+      }
 
       # Document markers end the mapping.
       if self._sc.peek() == '-' and
-         self._sc.peek(1) == '-' and
-         self._sc.peek(2) == '-' { break }
+        self._sc.peek(1) == '-' and
+        self._sc.peek(2) == '-' {
+        break
+      }
       if self._sc.peek() == '.' and
-         self._sc.peek(1) == '.' and
-         self._sc.peek(2) == '.' { break }
+        self._sc.peek(1) == '.' and
+        self._sc.peek(2) == '.' {
+        break
+      }
 
       var key
       var val
 
       # Complex key: '? key\n: value'
       if self._sc.peek() == '?' and
-         (_is_ws(self._sc.peek(1)) or self._sc.peek(1) == '\n') {
-        self._sc.advance()  # '?'
+        (_is_ws(self._sc.peek(1)) or self._sc.peek(1) == '\n') {
+        self._sc.advance() # '?'
         self._sc.skip_spaces()
         if self._sc.peek() == '\n' {
           self._sc.consume_newline()
@@ -1429,7 +1566,9 @@ class _Parser {
       if key_str == '<<' {
         self._apply_merge(map, key_order, val)
       } else {
-        if !map.contains(key_str) { key_order.append(key_str) }
+        if !map.contains(key_str) {
+          key_order.append(key_str)
+        }
         map[key_str] = val
       }
     }
@@ -1442,23 +1581,33 @@ class _Parser {
   _parse_block_mapping_key(indent) {
     self._sc.skip_spaces()
     var ch = self._sc.peek()
-    if ch == '"'  { return self._parse_double_quoted(nil) }
-    if ch == '\'' { return self._parse_single_quoted(nil) }
+    if ch == '"' {
+      return self._parse_double_quoted(nil)
+    }
+    if ch == '\'' {
+      return self._parse_single_quoted(nil)
+    }
     # An alias in key position dereferences to whatever value its
     # anchor pointed at, the same as it would anywhere else a node is
     # expected: it must not fall through to the plain-scalar loop
     # below, which would otherwise just take it literally as the
     # two-or-so-character text "*name".
-    if ch == '*'  { return self._parse_alias() }
+    if ch == '*' {
+      return self._parse_alias()
+    }
     # Plain key: stop at ': ' or ':\n'.
     var key = ''
     while !self._sc.at_end() {
       var c = self._sc.peek()
       if c == ':' {
         var nx = self._sc.peek(1)
-        if nx == ' ' or nx == '\t' or nx == '\n' or nx == '' { break }
+        if nx == ' ' or nx == '\t' or nx == '\n' or nx == '' {
+          break
+        }
       }
-      if c == '\n' { break }
+      if c == '\n' {
+        break
+      }
       key += self._sc.advance()
     }
     return key.trim()
@@ -1488,7 +1637,7 @@ class _Parser {
 
   # Parse a flow sequence: [ item, item, ... ]
   _parse_flow_sequence(tag) {
-    self._sc.advance()  # '['
+    self._sc.advance() # '['
     self._flow_depth++
     var items = []
 
@@ -1511,15 +1660,17 @@ class _Parser {
       }
     }
 
-    if self._sc.at_end() { self._error('unterminated flow sequence') }
-    self._sc.advance()  # ']'
+    if self._sc.at_end() {
+      self._error('unterminated flow sequence')
+    }
+    self._sc.advance() # ']'
     self._flow_depth--
     return items
   }
 
   # Parse a flow mapping: { key: value, ... }
   _parse_flow_mapping(tag) {
-    self._sc.advance()  # '{'
+    self._sc.advance() # '{'
     self._flow_depth++
     var map = {}
 
@@ -1559,8 +1710,10 @@ class _Parser {
       }
     }
 
-    if self._sc.at_end() { self._error('unterminated flow mapping') }
-    self._sc.advance()  # '}'
+    if self._sc.at_end() {
+      self._error('unterminated flow mapping')
+    }
+    self._sc.advance() # '}'
     self._flow_depth--
     return map
   }
@@ -1568,14 +1721,20 @@ class _Parser {
   # Parse a flow mapping key (plain, quoted, or complex).
   _parse_flow_key() {
     var ch = self._sc.peek()
-    if ch == '"'  { return self._parse_double_quoted(nil) }
-    if ch == '\'' { return self._parse_single_quoted(nil) }
+    if ch == '"' {
+      return self._parse_double_quoted(nil)
+    }
+    if ch == '\'' {
+      return self._parse_single_quoted(nil)
+    }
 
     # Plain key in flow context: terminates at ':', ',', '}', ']'.
     var key = ''
     while !self._sc.at_end() {
       var c = self._sc.peek()
-      if c == ':' or c == ',' or c == '}' or c == ']' or c == '\n' { break }
+      if c == ':' or c == ',' or c == '}' or c == ']' or c == '\n' {
+        break
+      }
       key += self._sc.advance()
     }
     return _resolve_scalar(key.trim())
@@ -1606,13 +1765,14 @@ class _Parser {
     var result = ''
     while !self._sc.at_end() {
       var ch = self._sc.peek()
-      if _is_ws(ch) or _is_lb(ch) { break }
+      if _is_ws(ch) or _is_lb(ch) {
+        break
+      }
       result += self._sc.advance()
     }
     return result
   }
 }
-
 
 # ---------------------------------------------------------------------------
 # Emitter
@@ -1631,22 +1791,26 @@ class _Parser {
  * @internal: use `dump()` or `dump_file()`.
  */
 class _Emitter {
-  var _indent    = 2
-  var _width     = 80
-  var _counts    = {}   # id(node) → how many times it's reached (pass 1)
-  var _anchors   = {}   # id(node) → assigned anchor name (pass 2, lazy)
-  var _rendering = {}   # id(node) → true while actively being rendered
+  var _indent = 2
+  var _width = 80
+  var _counts = {} # id(node) → how many times it's reached (pass 1)
+  var _anchors = {} # id(node) → assigned anchor name (pass 2, lazy)
+  var _rendering = {} # id(node) → true while actively being rendered
   var _anchor_id = 0
 
   @new(indent, width) {
-    if indent != nil { self._indent = indent }
-    if width   != nil { self._width  = width  }
+    if indent != nil {
+      self._indent = indent
+    }
+    if width != nil {
+      self._width = width
+    }
   }
 
   # Entry point: emit any Zuri value as a YAML document string.
   emit(value) {
-    self._counts    = {}
-    self._anchors   = {}
+    self._counts = {}
+    self._anchors = {}
     self._rendering = {}
     self._anchor_id = 0
     self._count_refs(value)
@@ -1719,7 +1883,11 @@ class _Emitter {
   # raises here instead of recursing until the stack overflows.
   _emit_keyed_child(value, depth) {
     if !(is_list(value) or is_dict(value)) {
-      return { prefix: '', body: self._emit_node(value, depth, false), is_flow: true }
+      return {
+        prefix: '',
+        body: self._emit_node(value, depth, false),
+        is_flow: true,
+      }
     }
 
     var node_id = id(value).to_string()
@@ -1727,7 +1895,7 @@ class _Emitter {
     if self._rendering.contains(node_id) {
       raise YamlError(
         'cannot dump a cyclic structure (a value refers back to one of its own ancestors)',
-        nil, nil, nil
+        nil, nil, nil,
       )
     }
 
@@ -1749,19 +1917,31 @@ class _Emitter {
       self._emit_mapping(value, depth, false)
     self._rendering.remove(node_id)
 
-    return { prefix: prefix, body: result.body, is_flow: result.is_flow }
+    return { prefix, body: result.body, is_flow: result.is_flow }
   }
 
   _emit_node(value, depth, in_flow) {
-    if value == nil   { return 'null' }
-    if value == true  { return 'true' }
-    if value == false { return 'false' }
+    if value == nil {
+      return 'null'
+    }
+    if value == true {
+      return 'true'
+    }
+    if value == false {
+      return 'false'
+    }
 
     if is_number(value) {
       var s = value.to_string()
-      if s == 'nan' or s == '-nan' { return '.nan' }
-      if s == 'inf'  { return '.inf'  }
-      if s == '-inf' { return '-.inf' }
+      if s == 'nan' or s == '-nan' {
+        return '.nan'
+      }
+      if s == 'inf' {
+        return '.inf'
+      }
+      if s == '-inf' {
+        return '-.inf'
+      }
       # If to_string produces excess precision (>15 significant digits),
       # the value round-trips through parse correctly anyway, but for
       # clean output we truncate trailing noise digits.
@@ -1790,7 +1970,9 @@ class _Emitter {
 
   # Emit a scalar string with appropriate quoting.
   _emit_scalar(s, depth, in_flow) {
-    if s.length() == 0 { return "''" }
+    if s.length() == 0 {
+      return "''"
+    }
 
     # Check if the plain (unquoted) representation would be misinterpreted.
     var needs_quoting = self._plain_needs_quoting(s)
@@ -1819,12 +2001,16 @@ class _Emitter {
       }
 
       var content_lines = content.split('\n')
-      return '|' + chomp_indicator + '\n' + pad + ('\n' + pad).join(content_lines)
+      return '|'
+        + chomp_indicator
+        + '\n'
+        + pad
+        + ('\n' + pad).join(content_lines)
     }
 
     # Prefer single-quoted when no backslashes or control chars are present.
     if !s.contains('\\') and !s.contains('\n') and
-       !s.contains('\r') and !s.contains('\t') {
+      !s.contains('\r') and !s.contains('\t') {
       # Single-quoted: escape embedded single quotes by doubling.
       var escaped = s.replace("/'/g", "''")
       if !escaped.contains('\n') {
@@ -1837,12 +2023,17 @@ class _Emitter {
     iter var i = 0; i < s.length(); i++ {
       var ch = s[i]
       var cp = ch.ord()
-      if ch == '"'  { escaped += '\\"'  }
-      else if ch == '\\' { escaped += '\\\\' }
-      else if ch == '\n' { escaped += '\\n'  }
-      else if ch == '\r' { escaped += '\\r'  }
-      else if ch == '\t' { escaped += '\\t'  }
-      else if cp < 32 or (cp >= 127 and cp <= 159) {
+      if ch == '"' {
+        escaped += '\\"'
+      } else if ch == '\\' {
+        escaped += '\\\\'
+      } else if ch == '\n' {
+        escaped += '\\n'
+      } else if ch == '\r' {
+        escaped += '\\r'
+      } else if ch == '\t' {
+        escaped += '\\t'
+      } else if cp < 32 or (cp >= 127 and cp <= 159) {
         escaped += '\\x' + _int_to_hex2(cp)
       } else {
         escaped += ch
@@ -1853,19 +2044,19 @@ class _Emitter {
 
   # Returns true if a plain scalar `s` would be misresolved.
   _plain_needs_quoting(s) {
-    if s.length() == 0 { 
-      return true 
+    if s.length() == 0 {
+      return true
     }
 
     # Cannot start with these indicator characters.
     var first = s[0]
-    if first == '-' and s.length() > 1 and s[1] == ' ' { 
-      return true 
+    if first == '-' and s.length() > 1 and s[1] == ' ' {
+      return true
     }
 
     if first == ':' or first == '#' or first == '&' or first == '*' or
-       first == '?' or first == '|' or first == '>' or first == '\'' or
-       first == '"' or first == '%' or first == '@' or first == '`' {
+      first == '?' or first == '|' or first == '>' or first == '\'' or
+      first == '"' or first == '%' or first == '@' or first == '`' {
       return true
     }
     if first == '{' or first == '}' or first == '[' or first == ']' {
@@ -1873,19 +2064,33 @@ class _Emitter {
     }
 
     # Would be misresolved by Core Schema.
-    if _NULL_VALUES.contains(s)  { return true }
-    if _TRUE_VALUES.contains(s)  { return true }
-    if _FALSE_VALUES.contains(s) { return true }
+    if _NULL_VALUES.contains(s) {
+      return true
+    }
+    if _TRUE_VALUES.contains(s) {
+      return true
+    }
+    if _FALSE_VALUES.contains(s) {
+      return true
+    }
 
     # Looks like a number.
-    if _resolve_scalar(s) != s { return true }
+    if _resolve_scalar(s) != s {
+      return true
+    }
 
     # Contains characters that are unsafe in plain scalars.
-    if s.contains(': ') or s.contains(' #') { return true }
-    if s.contains('\n') or s.contains('\r') { return true }
+    if s.contains(': ') or s.contains(' #') {
+      return true
+    }
+    if s.contains('\n') or s.contains('\r') {
+      return true
+    }
 
     # Ends with ':'.
-    if s[s.length() - 1] == ':' { return true }
+    if s[s.length() - 1] == ':' {
+      return true
+    }
 
     return false
   }
@@ -1917,8 +2122,8 @@ class _Emitter {
 
     var lines = ''
     for item in items {
-      var child      = self._emit_keyed_child(item, depth + 1)
-      var child_str  = child.body
+      var child = self._emit_keyed_child(item, depth + 1)
+      var child_str = child.body
       var has_anchor = child.prefix != ''
 
       # A block-style child needs its own indented line; a flow-style
@@ -1951,7 +2156,7 @@ class _Emitter {
   _emit_mapping(map, depth, in_flow) {
     var keys = map.keys()
 
-    var pad   = self._spaces(depth * self._indent)
+    var pad = self._spaces(depth * self._indent)
     var lines = ''
 
     # See _emit_sequence's own note: nothing returned here
@@ -1975,10 +2180,10 @@ class _Emitter {
     }
 
     for key in keys {
-      var val        = map[key]
-      var key_str    = self._emit_scalar(key.to_string(), depth, false)
-      var child      = self._emit_keyed_child(val, depth + 1)
-      var val_str    = child.body
+      var val = map[key]
+      var key_str = self._emit_scalar(key.to_string(), depth, false)
+      var child = self._emit_keyed_child(val, depth + 1)
+      var val_str = child.body
       var has_anchor = child.prefix != ''
 
       # Same reasoning as _emit_sequence's own loop: only a genuinely
@@ -2014,7 +2219,9 @@ class _Emitter {
   # shape has no room for).
   _all_scalars(items) {
     for item in items {
-      if is_list(item) or is_dict(item) { return false }
+      if is_list(item) or is_dict(item) {
+        return false
+      }
       if is_string(item) and item.contains('\n') {
         return false
       }
@@ -2049,10 +2256,9 @@ class _Emitter {
 
 # Convert integer to 2-digit lowercase hex.
 def _int_to_hex2(n) {
-  var hex  = '0123456789abcdef'
+  var hex = '0123456789abcdef'
   return hex[(n >> 4) & 0xf] + hex[n & 0xf]
 }
-
 
 # ---------------------------------------------------------------------------
 # BOM detection and encoding normalisation
@@ -2060,14 +2266,13 @@ def _int_to_hex2(n) {
 
 def _strip_bom_and_normalise(text) {
   if text.length() >= 3 and
-     text[0].ord() == 0xef and
-     text[1].ord() == 0xbb and
-     text[2].ord() == 0xbf {
+    text[0].ord() == 0xef and
+    text[1].ord() == 0xbb and
+    text[2].ord() == 0xbf {
     text = text[3, text.length()]
   }
   return text
 }
-
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -2256,7 +2461,7 @@ def dump(value: any, indent: ?int, width: ?int) {
  * @throws YamlError On emission error.
  */
 def dump_all(values: list, indent: ?int, width: ?int) {
-  var e      = _Emitter(indent, width)
+  var e = _Emitter(indent, width)
   var result = ''
   for value in values {
     result += '---\n' + e.emit(value)
@@ -2295,6 +2500,6 @@ def dump_file(path: string, value: any, indent: ?int, width: ?int) {
   } else {
     f.write(dump_all(value, indent, width))
   }
-  
+
   f.close()
 }

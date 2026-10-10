@@ -491,7 +491,6 @@ class string {
    */
   length() {}
 
-
   /**
    * Returns a copy of the string with all the cased characters
    * converted to uppercase. Note that the result of this method
@@ -509,7 +508,6 @@ class string {
    * @returns {string}
    */
   upper() {}
-
 
   /**
    * Return a copy of the string with all the cased characters
@@ -546,7 +544,6 @@ class string {
    */
   is_alpha() {}
 
-
   /**
    * Returns `true` if all the characters in the string are
    * either alphabets or numbers and the string is not empty,
@@ -574,7 +571,6 @@ class string {
    */
   is_alnum() {}
 
-
   /**
    * Returns `true` if all the characters in the string are all
    * digits and the string is not empty, otherwise returns
@@ -592,7 +588,6 @@ class string {
    * ```
    */
   is_number() {}
-
 
   /**
    * Returns `true` if at least one character in the string is
@@ -616,7 +611,6 @@ class string {
    */
   is_lower() {}
 
-
   /**
    * Returns `true` if at least one character in the string is
    * cased, all cased characters are upper cased and the string
@@ -639,7 +633,6 @@ class string {
    */
   is_upper() {}
 
-
   /**
    * Returns `true` if there are only whitespace characters in
    * the string and the string is not empty. Otherwise, it
@@ -660,7 +653,6 @@ class string {
    */
   is_space() {}
 
-
   /**
    * Returns the Unicode code point of the string, which must be
    * exactly one character long.
@@ -679,7 +671,6 @@ class string {
    * @returns {number}
    */
   ord() {}
-
 
   /**
    * Returns a copy of the string with characters stripped from both
@@ -720,7 +711,6 @@ class string {
    */
   trim(chars: ?string) {}
 
-
   /**
    * Returns a copy of the string with characters stripped from its
    * start only. The characters stripped are chosen exactly as they
@@ -744,7 +734,6 @@ class string {
    */
   ltrim(chars: ?string) {}
 
-
   /**
    * Returns a copy of the string with characters stripped from its
    * end only. The characters stripped are chosen exactly as they are
@@ -767,7 +756,6 @@ class string {
    * @returns {string}
    */
   rtrim(chars: ?string) {}
-
 
   /**
    * Returns a string which is a concatenation of the items in
@@ -795,7 +783,6 @@ class string {
    * @returns {string}
    */
   join(string: string) {}
-
 
   /**
    * Returns a list of words or characters in a string after
@@ -834,7 +821,6 @@ class string {
    */
   split(delimiter: string) {}
 
-
   /**
    * Returns the index position of the first occurrence of the
    * string _`str`_ in the string _`string`_. If the _str_ cannot
@@ -863,7 +849,6 @@ class string {
    * @returns {number}
    */
   index_of(str: string, start_index: ?number) {}
-
 
   /**
    * Returns the index position of the last occurrence of the
@@ -911,7 +896,6 @@ class string {
    */
   last_index_of(str: string, end_index: ?number) {}
 
-
   /**
    * Returns `true` if the string begins with the string or
    * character specified in _str_, otherwise it returns `false`.
@@ -930,7 +914,6 @@ class string {
    */
   starts_with(str: string) {}
 
-
   /**
    * Returns `true` if the string ends with the string or
    * character specified in _str_, otherwise it returns `false`.
@@ -948,7 +931,6 @@ class string {
    * @returns {boolean}
    */
   ends_with(str: string) {}
-
 
   /**
    * Returns the number of non-overlapping occurrences of the
@@ -976,7 +958,6 @@ class string {
    */
   count(str: string) {}
 
-
   /**
    * Returns the first numeric value contained in the string if
    * any exists or `0` if the string contains no numeric value.
@@ -1003,7 +984,6 @@ class string {
    * @raises {RangeError} if `base` is outside 2 to 36.
    */
   to_number(base) {}
-
 
   /**
    * Returns the integer value of the string as a `bigint`, or `0n`
@@ -1041,7 +1021,6 @@ class string {
    */
   to_bigint(base) {}
 
-
   /**
    * Returns a list whose elements consists of every character
    * contained in the string in order of appearance. Characters
@@ -1061,7 +1040,6 @@ class string {
    */
   to_list() {}
 
-
   /**
    * Returns the content of the string as a stream of `bytes`.
    *
@@ -1080,7 +1058,6 @@ class string {
    * @returns {bytes}
    */
   to_bytes() {}
-
 
   /**
    * Returns the string left justified in a string of length
@@ -1107,7 +1084,6 @@ class string {
    */
   lpad(width: number, fill: ?string) {}
 
-
   /**
    * Returns the string right justified in a string of length
    * _width_. Padding is done using the specified character
@@ -1132,7 +1108,6 @@ class string {
    * @returns {string}
    */
   rpad(width: number, fill: ?string) {}
-
 
   /**
    * If the string _str_ is a regular string, this method returns
@@ -1172,7 +1147,6 @@ class string {
    */
   match(str: string) {}
 
-
   /**
    * Returns a dictionary containing every match of the given
    * regular expression _reg_ in the source string. If no match
@@ -1194,7 +1168,6 @@ class string {
    * @returns {dictionary}
    */
   matches(reg: string) {}
-
 
   /**
    * Returns a copy of the string with all occurrences or matches
@@ -1232,7 +1205,6 @@ class string {
    * @returns {string}
    */
   replace(str: string, replacement: string, use_regex: ?bool) {}
-
 
   /**
    * Returns a copy of the string with all occurrences or matches
@@ -1298,7 +1270,6 @@ class string {
    */
   replace_with(regex: string, callback: function) {}
 
-
   /**
    * Reinterprets the string as a raw byte view: each byte of its
    * UTF-8 encoding becomes its own character (a codepoint
@@ -1330,7 +1301,6 @@ class string {
    */
   ascii() {}
 
-
   /**
    * Returns a copy of the string case-folded for
    * case-insensitive comparison, using full Unicode case folding
@@ -1353,7 +1323,6 @@ class string {
    * @returns {string}
    */
   case_fold() {}
-
 
   /**
    * Compares the string with another string.

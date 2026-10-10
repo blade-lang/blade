@@ -16,7 +16,6 @@
 
 import .error { TestSetupError }
 
-
 /**
  * The test the runner currently has open, as far as anything outside
  * the runner needs to know about it.
@@ -75,9 +74,7 @@ class Frame {
   }
 }
 
-
 var _current = nil
-
 
 /**
  * Opens a frame for a test about to run. Called by the runner, once
@@ -128,7 +125,6 @@ def active() {
   return _current != nil
 }
 
-
 /**
  * Counts one matcher against the current test. Every matcher calls
  * this, whether it passes or fails.
@@ -147,7 +143,6 @@ def record_assertion() {
 def assertion_count() {
   return _current != nil ? _current.assertions : 0
 }
-
 
 /**
  * Declares that the current test makes exactly `count` assertions.
@@ -177,7 +172,6 @@ def expect_some_assertions() {
   _current.requires_assertions = true
 }
 
-
 /**
  * Checks a finished test's assertion promises against what it
  * actually did.
@@ -190,7 +184,8 @@ def check(frame) {
     return nil
   }
 
-  if frame.expected_assertions >= 0 and frame.assertions != frame.expected_assertions {
+  if frame.expected_assertions >= 0
+    and frame.assertions != frame.expected_assertions {
     return 'Expected ${frame.expected_assertions} assertions but ${frame.assertions} ran'
   }
 
@@ -200,7 +195,6 @@ def check(frame) {
 
   return nil
 }
-
 
 /**
  * Claims the next snapshot key for the current test.

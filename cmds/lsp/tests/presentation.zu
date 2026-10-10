@@ -35,7 +35,9 @@ def decode(source: string, data: list) {
       }
     }
 
-    found['${line}:${word}'] = ' '.join([legend.tokenTypes[data[i + 3]]] + modifiers)
+    found['${line}:${word}'] = ' '.join(
+      [legend.tokenTypes[data[i + 3]]] + modifiers,
+    )
     i += 5
   }
 
@@ -110,7 +112,10 @@ describe('semantic tokens', @{
     var address = client.open(SCRATCH, source)
     var answer = client.request('textDocument/semanticTokens/range', {
       textDocument: { uri: address },
-      range: { start: { line: 1, character: 0 }, end: { line: 2, character: 0 } },
+      range: {
+        start: { line: 1, character: 0 },
+        end: { line: 2, character: 0 },
+      },
     })
 
     expect(answer.data).to_equal([1, 4, 1, 5, 1])
@@ -123,11 +128,18 @@ describe('inlay hints', @{
     var main = client.open(MAIN, nil)
     var hints = client.request('textDocument/inlayHint', {
       textDocument: { uri: main },
-      range: { start: { line: 0, character: 0 }, end: { line: 12, character: 0 } },
+      range: {
+        start: { line: 0, character: 0 },
+        end: { line: 12, character: 0 },
+      },
     })
-    var shown = hints.map(@(h) => '${h.position.line}:${h.position.character} ${h.label}')
+    var shown = hints.map(
+      @(h) => '${h.position.line}:${h.position.character} ${h.label}',
+    )
 
-    expect(shown).to_contain_all(['4:17 x:', '4:20 y:', '5:18 x:', '5:21 y:', '5:24 radius:'])
+    expect(shown).to_contain_all([
+      '4:17 x:', '4:20 y:', '5:18 x:', '5:21 y:', '5:24 radius:',
+    ])
     expect(shown).to_contain_all(['4:8 : Point', '5:8 : Circle'])
     client.notify('textDocument/didClose', { textDocument: { uri: main } })
   })
@@ -136,9 +148,14 @@ describe('inlay hints', @{
     var main = client.open(MAIN, nil)
     var hints = client.request('textDocument/inlayHint', {
       textDocument: { uri: main },
-      range: { start: { line: 4, character: 0 }, end: { line: 5, character: 0 } },
+      range: {
+        start: { line: 4, character: 0 },
+        end: { line: 5, character: 0 },
+      },
     })
-    var resolved = client.request('inlayHint/resolve', hints.find(@(h) => h.label == 'x:'))
+    var resolved = client.request(
+      'inlayHint/resolve', hints.find(@(h) => h.label == 'x:'),
+    )
 
     expect(resolved.tooltip.value).to_equal('`number` How far along.')
     client.notify('textDocument/didClose', { textDocument: { uri: main } })
@@ -148,9 +165,13 @@ describe('inlay hints', @{
 describe('code lenses', @{
   it('counts the uses of each declaration once resolved', @{
     var shapes = client.open(SHAPES, nil)
-    var lenses = client.request('textDocument/codeLens', { textDocument: { uri: shapes } })
+    var lenses = client.request(
+      'textDocument/codeLens', { textDocument: { uri: shapes } },
+    )
     var lines = client.texts[shapes].split('\n')
-    var origin = lenses.find(@(l) => lines[l.range.start.line].contains('def origin'))
+    var origin = lenses.find(
+      @(l) => lines[l.range.start.line].contains('def origin'),
+    )
     var resolved = client.request('codeLens/resolve', origin)
 
     expect(resolved.command.title).to_equal('3 references')
@@ -168,12 +189,16 @@ describe('hierarchies', @{
       textDocument: { uri: shapes },
       position: position(text, 'def orig', 0),
     })
-    var incoming = client.request('callHierarchy/incomingCalls', { item: items[0] })
+    var incoming = client.request(
+      'callHierarchy/incomingCalls', { item: items[0] },
+    )
     var callers = incoming.map(@(call) => call.from.name).sort()
 
     expect(callers).to_equal(['centre', 'main'])
 
-    var outgoing = client.request('callHierarchy/outgoingCalls', { item: items[0] })
+    var outgoing = client.request(
+      'callHierarchy/outgoingCalls', { item: items[0] },
+    )
 
     expect(outgoing.map(@(call) => call.to.name)).to_equal(['Point'])
     client.notify('textDocument/didClose', { textDocument: { uri: shapes } })

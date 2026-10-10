@@ -66,4 +66,3 @@ var Infinity = _math.Infinity
  * Mathematical NaN
  */
 var NaN = _math.NaN
-

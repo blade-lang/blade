@@ -11,7 +11,9 @@ var HOME = os.join_paths(ROOT, 'home')
 
 # The settings for `words` on the command line and `environment`.
 def settings(words: list, environment: ?dict) {
-  return plan.settings(plan.parser().parse(words), environment == nil ? {} : environment)
+  return plan.settings(
+    plan.parser().parse(words), environment == nil ? {} : environment,
+  )
 }
 
 # The message a failed call raised, or `nil`.
@@ -42,7 +44,9 @@ describe('defaults', @{
 
     expect(chosen.storage).to_equal(storage)
     expect(chosen.config).to_equal(os.join_paths(storage, 'nyssa.toml'))
-    expect(chosen.database).to_equal('sqlite://' + os.join_paths(storage, 'nyssa.db'))
+    expect(chosen.database).to_equal(
+      'sqlite://' + os.join_paths(storage, 'nyssa.db'),
+    )
     expect(chosen.host).to_equal('127.0.0.1')
     expect(chosen.port).to_equal(3000)
     expect(chosen.public_url).to_equal('http://127.0.0.1:3000')
@@ -62,7 +66,9 @@ describe('the environment', @{
 
     expect(chosen.storage).to_equal(storage)
     expect(chosen.port).to_equal(8080)
-    expect(chosen.database).to_equal('sqlite://' + os.join_paths(storage, 'nyssa.db'))
+    expect(chosen.database).to_equal(
+      'sqlite://' + os.join_paths(storage, 'nyssa.db'),
+    )
   })
 
   it('names the configuration file', @{
@@ -125,19 +131,28 @@ describe('precedence', @{
   it('takes a flag over the environment over the file', @{
     var storage = os.join_paths(HOME, 'nyssa')
 
-    put(os.join_paths(storage, 'nyssa.toml'), '[server]\nport = 8080\nhost = "0.0.0.0"\n')
+    put(
+      os.join_paths(storage, 'nyssa.toml'),
+      '[server]\nport = 8080\nhost = "0.0.0.0"\n',
+    )
 
     expect(settings([], nil).port).to_equal(8080)
     expect(settings([], { NYSSA_PORT: '9090' }).port).to_equal(9090)
-    expect(settings(['--port', '7070'], { NYSSA_PORT: '9090' }).port).to_equal(7070)
-    expect(settings(['--port', '7070'], { NYSSA_PORT: '9090' }).host).to_equal('0.0.0.0')
+    expect(settings(
+      ['--port', '7070'], { NYSSA_PORT: '9090' },
+    ).port).to_equal(7070)
+    expect(settings(
+      ['--port', '7070'], { NYSSA_PORT: '9090' },
+    ).host).to_equal('0.0.0.0')
   })
 
   it('takes a storage flag over the environment', @{
     var flag = os.join_paths(ROOT, 'flag')
     var variable = os.join_paths(ROOT, 'variable')
 
-    expect(settings(['--storage', flag], { NYSSA_STORAGE: variable }).storage).to_equal(flag)
+    expect(settings(
+      ['--storage', flag], { NYSSA_STORAGE: variable },
+    ).storage).to_equal(flag)
   })
 })
 
@@ -165,9 +180,11 @@ describe('checks', @{
   })
 
   it('warns about listening beyond this machine in the clear', @{
-    expect(plan.exposed_in_clear(settings(['--host', '0.0.0.0'], nil))).to_be_true()
+    expect(plan.exposed_in_clear(settings(
+      ['--host', '0.0.0.0'], nil,
+    ))).to_be_true()
     expect(plan.exposed_in_clear(
-      settings(['--host', '0.0.0.0', '--trust-proxy'], nil)
+      settings(['--host', '0.0.0.0', '--trust-proxy'], nil),
     )).to_be_false()
   })
 

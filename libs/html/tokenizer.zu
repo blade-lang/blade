@@ -43,7 +43,6 @@
 
 import .entities
 
-
 /**
  * Tag names whose content is text with character references but no
  * markup. A `<title>` may contain `&amp;` but never a nested element.
@@ -63,7 +62,6 @@ var _NULL = '\u0000'
 
 # U+FFFD, what a U+0000 in the source becomes.
 var _REPLACEMENT = '\uFFFD'
-
 
 /**
  * One token from the tokenizer.
@@ -231,7 +229,6 @@ class Token {
   }
 }
 
-
 /**
  * A parse error raised while tokenizing or building the tree.
  *
@@ -285,7 +282,6 @@ class ParseError {
     return self.to_string()
   }
 }
-
 
 /**
  * Turns markup into tokens, one call to `next_token()` at a time.
@@ -3016,7 +3012,6 @@ class Tokenizer {
   }
 }
 
-
 /**
  * Which quoted-public-identifier state a given quote character leads
  * to.
@@ -3032,7 +3027,6 @@ def _quoted_public_state(quote: string) {
   return 'doctype_public_identifier_single_quoted'
 }
 
-
 /**
  * Which quoted-system-identifier state a given quote character leads
  * to.
@@ -3047,7 +3041,6 @@ def _quoted_system_state(quote: string) {
 
   return 'doctype_system_identifier_single_quoted'
 }
-
 
 /**
  * True when _c_ is one of the five characters HTML treats as
@@ -3066,7 +3059,6 @@ def _is_whitespace(c: string) {
     c == '\f' or c == '\r'
 }
 
-
 /**
  * True when _c_ is an ASCII letter.
  *
@@ -3077,7 +3069,6 @@ def _is_ascii_alpha(c: string) {
   var n = c.ord()
   return (n >= 65 and n <= 90) or (n >= 97 and n <= 122)
 }
-
 
 /**
  * Applies the standard's input stream preprocessing and returns the
@@ -3118,7 +3109,6 @@ def _preprocess(source: string) {
 
   return out
 }
-
 
 /**
  * Tokenizes _source_ and returns every token, ending with the `eof`

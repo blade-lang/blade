@@ -14,7 +14,9 @@ var client = nil
 # `marker` when one is given.
 def labels_at(source: string, marker) {
   var address = client.open(SCRATCH, source)
-  var at = marker == nil ? position(source, source, 0) : position(source, marker, 0)
+  var at = marker == nil
+    ? position(source, source, 0)
+    : position(source, marker, 0)
   var asked = { textDocument: { uri: address }, position: at }
   var answer = client.request('textDocument/completion', asked)
 
@@ -47,9 +49,13 @@ after_all(@{
 
 describe('members', @{
   it('offers an instance its fields and methods, inherited ones too', @{
-    var found = labels_at('import .shapes { Circle }\nvar ring = Circle(0, 0, 1)\necho ring.', nil)
+    var found = labels_at(
+      'import .shapes { Circle }\nvar ring = Circle(0, 0, 1)\necho ring.', nil,
+    )
 
-    expect(found).to_contain_all(['radius', 'distance', 'move', 'x', 'y', 'to_string'])
+    expect(found).to_contain_all([
+      'radius', 'distance', 'move', 'x', 'y', 'to_string',
+    ])
     expect(found).not.to_contain('@new')
   })
 
@@ -61,11 +67,15 @@ describe('members', @{
   })
 
   it('offers a string its methods', @{
-    expect(labels_at("echo 'text'.", nil)).to_contain_all(['upper', 'split', 'trim'])
+    expect(labels_at(
+      "echo 'text'.", nil,
+    )).to_contain_all(['upper', 'split', 'trim'])
   })
 
   it('offers a dictionary written out the keys it was given', @{
-    expect(labels_at('var point = { x: 1, y: 2 }\necho point.', nil)).to_contain_all(['x', 'y'])
+    expect(labels_at(
+      'var point = { x: 1, y: 2 }\necho point.', nil,
+    )).to_contain_all(['x', 'y'])
   })
 
   it('offers self its private members, and other receivers not', @{
@@ -80,12 +90,20 @@ describe('members', @{
 })
 
 describe('names', @{
-  it('offers the names in scope, the built-ins and keywords that start a statement', @{
-    var found = labels_at('var total = 1\ndef add(a) {\n  var inner = a\n  \n}\n', 'inner = a\n  ')
+  it(
+    'offers the names in scope, the built-ins and keywords that start a statement',
+    @{
+      var found = labels_at(
+        'var total = 1\ndef add(a) {\n  var inner = a\n  \n}\n',
+        'inner = a\n  ',
+      )
 
-    expect(found).to_contain_all(['total', 'add', 'a', 'inner', 'print', 'Error'])
-    expect(found).to_contain_all(['if', 'return', 'nil'])
-  })
+      expect(found).to_contain_all([
+        'total', 'add', 'a', 'inner', 'print', 'Error',
+      ])
+      expect(found).to_contain_all(['if', 'return', 'nil'])
+    },
+  )
 
   it('offers what a module exports to be imported with it', @{
     var items = items_at('echo Circ', 'Circ')
@@ -104,7 +122,9 @@ describe('names', @{
 
 describe('imports', @{
   it('offers the modules beside the file', @{
-    expect(labels_at('import .', nil)).to_contain_all(['shapes', 'main', 'geometry'])
+    expect(labels_at(
+      'import .', nil,
+    )).to_contain_all(['shapes', 'main', 'geometry'])
   })
 
   it('offers what a module exports between the braces', @{
@@ -136,7 +156,9 @@ describe('other places', @{
   it('offers doc tags, and the parameters after @param', @{
     var source = '/**\n * @\n * @param \n */\ndef f(first, second) {\n}\n'
 
-    expect(labels_at(source, ' * @')).to_contain_all(['param', 'returns', 'throws'])
+    expect(labels_at(
+      source, ' * @',
+    )).to_contain_all(['param', 'returns', 'throws'])
     expect(labels_at(source, '@param ')).to_equal(['first', 'second'])
   })
 
@@ -148,7 +170,8 @@ describe('other places', @{
   it('tells code, strings and comments apart deep inside a class', @{
     # `${` is kept apart so this file does not interpolate it.
     var open = '$' + '{'
-    var source = "class Box {\n  var name\n\n  f() {\n    var s = 'a " + open + "self.} b.'\n" +
+    var source = "class Box {\n  var name\n\n  f() {\n    var s = 'a " + open +
+      "self.} b.'\n" +
       "    # self.\n    return self.\n  }\n}\n"
 
     expect(labels_at(source, open + 'self.')).to_contain_all(['name', 'f'])
@@ -160,7 +183,9 @@ describe('other places', @{
 
 describe('resolve', @{
   it('fills in the signature and documentation of the item looked at', @{
-    var items = items_at('import .shapes { Point }\nvar p = Point(1, 2)\necho p.dis', 'p.dis')
+    var items = items_at(
+      'import .shapes { Point }\nvar p = Point(1, 2)\necho p.dis', 'p.dis',
+    )
     var item = items.find(@(each) => each.label == 'distance')
     var resolved = client.request('completionItem/resolve', item)
 

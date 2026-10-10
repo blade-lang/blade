@@ -25,19 +25,19 @@ import .errors { ParseError }
 # double-quoted value. `\$` is deliberately absent: it survives the
 # scanner untouched so the expander can see it and decide.
 var _ESCAPES = {
-  'n':  '\n',
-  'r':  '\r',
-  't':  '\t',
-  'f':  12.chr(),
-  'v':  11.chr(),
-  'b':  8.chr(),
-  'a':  7.chr(),
-  'e':  27.chr(),
-  '0':  0.chr(),
+  'n': '\n',
+  'r': '\r',
+  't': '\t',
+  'f': 12.chr(),
+  'v': 11.chr(),
+  'b': 8.chr(),
+  'a': 7.chr(),
+  'e': 27.chr(),
+  '0': 0.chr(),
   '\\': '\\',
-  '"':  '"',
-  "'":  "'",
-  '`':  '`',
+  '"': '"',
+  "'": "'",
+  '`': '`',
 }
 
 # A value safe to write without quotes. Anything outside this set, and
@@ -251,7 +251,8 @@ class _Scanner {
 
       # A `#` only opens a comment where a reader would see one: at the
       # start of the value, or after a space. `db#1` is a password.
-      if ch == '#' and (self._pos == start or _is_space(self._src[self._pos - 1])) {
+      if ch == '#'
+        and (self._pos == start or _is_space(self._src[self._pos - 1])) {
         break
       }
 
@@ -278,7 +279,7 @@ class _Scanner {
     while true {
       if self._at_end() {
         raise ParseError(
-          'unterminated ${quote} quoted value', opened_on, opened_at
+          'unterminated ${quote} quoted value', opened_on, opened_at,
         )
       }
 
@@ -593,7 +594,7 @@ def _render(name, value) {
     text = value.to_string()
   } else if !is_string(value) {
     raise TypeError(
-      'stringify() cannot write a ${typeof(value)} as the value of ${name}'
+      'stringify() cannot write a ${typeof(value)} as the value of ${name}',
     )
   }
 

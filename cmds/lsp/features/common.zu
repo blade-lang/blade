@@ -107,8 +107,16 @@ def is_identifier(name: string) {
 def symbol_kind(symbol: dict) {
   using symbol.kind {
     when 'class' return SYMBOL_KIND['class']
-    when 'method' return symbol.name == '@new' ? SYMBOL_KIND.constructor : SYMBOL_KIND.method
-    when 'field' return symbol.get('constant', false) ? SYMBOL_KIND.constant : SYMBOL_KIND.field
+    when 'method' {
+      return symbol.name == '@new'
+        ? SYMBOL_KIND.constructor
+        : SYMBOL_KIND.method
+    }
+    when 'field' {
+      return symbol.get('constant', false)
+        ? SYMBOL_KIND.constant
+        : SYMBOL_KIND.field
+    }
     when 'function' return SYMBOL_KIND.function
     when 'constant' return SYMBOL_KIND.constant
     when 'module', 'import' return SYMBOL_KIND.module
@@ -128,7 +136,9 @@ def completion_kind(symbol: dict) {
   using symbol.kind {
     when 'class' return COMPLETION_KIND['class']
     when 'method' {
-      return symbol.name == '@new' ? COMPLETION_KIND.constructor : COMPLETION_KIND.method
+      return symbol.name == '@new'
+        ? COMPLETION_KIND.constructor
+        : COMPLETION_KIND.method
     }
     when 'field' return COMPLETION_KIND.field
     when 'function' return COMPLETION_KIND.function
@@ -274,7 +284,8 @@ def visible_names(summary: dict, offset: int) {
 
       # A local exists from its declaration on; a function's siblings
       # and the module's globals exist throughout.
-      var hoisted = symbol.kind == 'function' or scope == 0 and symbol.kind != 'module'
+      var hoisted = symbol.kind == 'function'
+        or scope == 0 and symbol.kind != 'module'
 
       if hoisted or symbol.name_start < offset {
         found[name] = index
@@ -322,7 +333,9 @@ def target_at(linker, path: string, summary: dict, offset: int) {
  * @returns bool
  */
 def is_node(value) {
-  return is_instance(value) and hasprop(value, 'kind') and hasprop(value, 'fields')
+  return is_instance(value)
+    and hasprop(value, 'kind')
+    and hasprop(value, 'fields')
 }
 
 /**
@@ -371,7 +384,10 @@ def path_to(nodes: list, offset: int) {
     var inner = nil
 
     for node in level {
-      if is_node(node) and node.start <= offset and offset <= node.end and node.end > node.start {
+      if is_node(node)
+        and node.start <= offset
+        and offset <= node.end
+        and node.end > node.start {
         if inner == nil or node.end - node.start < inner.end - inner.start {
           inner = node
         }
@@ -394,7 +410,9 @@ def _last_started(level: list, offset: int) {
   var last = nil
 
   for node in level {
-    if is_node(node) and node.start <= offset and (last == nil or node.start >= last.start) {
+    if is_node(node)
+      and node.start <= offset
+      and (last == nil or node.start >= last.start) {
       last = node
     }
   }
@@ -538,8 +556,15 @@ def callable(linker, callee) {
     for index in owner.get('members', []) {
       var member = linker.symbol({ path: ref.path, index })
 
-      if member != nil and member.name == '@new' and !member.get('is_static', false) {
-        return { symbol: member, name: class_symbol.name, path: ref.path, index }
+      if member != nil
+        and member.name == '@new'
+        and !member.get('is_static', false) {
+        return {
+          symbol: member,
+          name: class_symbol.name,
+          path: ref.path,
+          index,
+        }
       }
     }
   }
@@ -563,7 +588,10 @@ def workspace_edit(server, edits: dict) {
       var open = server.open_document(key)
 
       changes.append({
-        textDocument: { uri: server.uri(key), version: open == nil ? nil : open.version },
+        textDocument: {
+          uri: server.uri(key),
+          version: open == nil ? nil : open.version,
+        },
         edits: edits[key],
       })
     }
@@ -600,7 +628,9 @@ def import_line(nodes: list, lines) {
 
     if is_node(statement) and statement.kind == 'Import' {
       last = node.end
-    } else if node.kind == 'DocBlock' and last == nil and node.fields.text.contains('@module') {
+    } else if node.kind == 'DocBlock'
+      and last == nil
+      and node.fields.text.contains('@module') {
       last = node.end
     }
   }

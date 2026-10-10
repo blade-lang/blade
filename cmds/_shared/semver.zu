@@ -276,17 +276,19 @@ def parse(text: string) {
 
   if !_matched(found) {
     raise SemverError(
-      "'${text}' is not a valid version; use major.minor.patch, such as 1.0.0"
+      "'${text}' is not a valid version; use major.minor.patch, such as 1.0.0",
     )
   }
 
   # A numeric pre-release identifier with a leading zero is not
   # allowed, since `01` and `1` would otherwise be the same thing.
   for identifier in _identifiers(_group(found, 4)) {
-    if _is_numeric(identifier) and identifier.length() > 1 and identifier.starts_with('0') {
+    if _is_numeric(identifier)
+      and identifier.length() > 1
+      and identifier.starts_with('0') {
       raise SemverError(
         "'${text}' is not a valid version; the pre-release number '${identifier}' "
-          + 'has a leading zero'
+          + 'has a leading zero',
       )
     }
   }
@@ -443,7 +445,7 @@ def _desugar(term: string, whole: string) {
 
   if p == nil {
     raise SemverError(
-      "'${whole}' is not a valid version range; '${term}' is not a version"
+      "'${whole}' is not a valid version range; '${term}' is not a version",
     )
   }
 
@@ -455,7 +457,7 @@ def _desugar(term: string, whole: string) {
   if has_pre and patch == nil {
     raise SemverError(
       "'${whole}' is not a valid version range; a pre-release needs all three "
-        + 'numbers in front of it'
+        + 'numbers in front of it',
     )
   }
 
@@ -470,7 +472,9 @@ def _desugar(term: string, whole: string) {
     return [_Comparator('>=', Version(0, 0, 0), false)]
   }
 
-  var low = Version(major, minor == nil ? 0 : minor, patch == nil ? 0 : patch, p.pre)
+  var low = Version(
+    major, minor == nil ? 0 : minor, patch == nil ? 0 : patch, p.pre,
+  )
 
   # A written wildcard pins everything in front of it, the way `=`
   # does for a partial version.
@@ -505,7 +509,9 @@ def _desugar(term: string, whole: string) {
   }
 
   if op == '~' {
-    var high = minor == nil ? _floor(major + 1, 0, 0) : _floor(major, minor + 1, 0)
+    var high = minor == nil
+      ? _floor(major + 1, 0, 0)
+      : _floor(major, minor + 1, 0)
 
     return [_Comparator('>=', low, has_pre), _Comparator('<', high, false)]
   }
@@ -515,7 +521,9 @@ def _desugar(term: string, whole: string) {
       return [_Comparator('=', exact, has_pre)]
     }
 
-    var high = minor == nil ? _floor(major + 1, 0, 0) : _floor(major, minor + 1, 0)
+    var high = minor == nil
+      ? _floor(major + 1, 0, 0)
+      : _floor(major, minor + 1, 0)
 
     return [_Comparator('>=', low, false), _Comparator('<', high, false)]
   }
@@ -537,7 +545,9 @@ def _desugar(term: string, whole: string) {
       return [_Comparator('>', exact, has_pre)]
     }
 
-    var next = minor == nil ? Version(major + 1, 0, 0) : Version(major, minor + 1, 0)
+    var next = minor == nil
+      ? Version(major + 1, 0, 0)
+      : Version(major, minor + 1, 0)
 
     return [_Comparator('>=', next, false)]
   }
@@ -547,7 +557,9 @@ def _desugar(term: string, whole: string) {
     return [_Comparator('<=', exact, has_pre)]
   }
 
-  var ceiling = minor == nil ? _floor(major + 1, 0, 0) : _floor(major, minor + 1, 0)
+  var ceiling = minor == nil
+    ? _floor(major + 1, 0, 0)
+    : _floor(major, minor + 1, 0)
 
   return [_Comparator('<', ceiling, false)]
 }
@@ -764,7 +776,8 @@ def max_satisfying(versions: list, within) {
   for text in versions {
     var version = parse(text)
 
-    if within.satisfies(version) and (best == nil or version.compare(best) > 0) {
+    if within.satisfies(version)
+      and (best == nil or version.compare(best) > 0) {
       best = version
       best_text = text
     }

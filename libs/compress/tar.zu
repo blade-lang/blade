@@ -69,7 +69,6 @@ import .zlib
 import .gzip
 import .bzip2
 
-
 #--------------------------------------------------------------------------------
 # Constants
 #--------------------------------------------------------------------------------
@@ -94,8 +93,6 @@ var COMPRESS_GZIP = 1
  */
 var COMPRESS_BZIP = 2
 
-
-
 #--------------------------------------------------------------------------------
 # Errors
 #--------------------------------------------------------------------------------
@@ -116,9 +113,7 @@ class TarIOError < Error {}
 class TarIllegalCompressionError < Error {}
 
 var _header_unpack = 'a100:filename/a8:perm/a8:uid/a8:gid/a12:size/a12:mtime/a8:checksum/a1:typeflag' +
-    '/a100:link/a6:magic/a2:version/a32:uname/a32:gname/a8:devmajor/a8:devminor/a155:prefix'
-
-
+  '/a100:link/a6:magic/a2:version/a32:uname/a32:gname/a8:devmajor/a8:devminor/a155:prefix'
 
 #--------------------------------------------------------------------------------
 # Helpers
@@ -143,7 +138,6 @@ def _octdec(v) {
   }
   return v.to_number(8)
 }
-
 
 #--------------------------------------------------------------------------------
 # Class TAR
@@ -200,7 +194,7 @@ class Tar {
     }
 
     self._compression_check(type)
-    if level < -1 or level >  9 {
+    if level < -1 or level > 9 {
       raise TarIllegalCompressionError('compression level should be between -1 and 9')
     }
 
@@ -265,8 +259,10 @@ class Tar {
 
     while read = self._read_bytes(512) {
       var header = self._parse_header(read)
-      if !header or !is_dict(header) continue
-      
+      if !header or !is_dict(header) {
+        continue
+      }
+
       self._skip_bytes((header.size / 512).ceil() * 512)
       result.append(header)
     }
@@ -313,14 +309,18 @@ class Tar {
    *    `..`. Nothing past that entry is extracted.
    * @return {list[string]}
    */
-  extract(outdir: string, strip: ?int|string, exclude: ?string, include: ?string) {
-    if !is_string(outdir)
+  extract(
+    outdir: string, strip: ?int|string, exclude: ?string, include: ?string,
+  ) {
+    if !is_string(outdir) {
       raise Error('output directory required as first argument')
+    }
 
     outdir = _without_trailing_separator(outdir)
     if !os.dir_exists(outdir) {
-      if !os.create_dir(outdir, nil, true)
+      if !os.create_dir(outdir, nil, true) {
         raise TarIOError('could not create directory "${outdir}"')
+      }
     }
 
     var extracted = [], data
@@ -328,7 +328,9 @@ class Tar {
     while data = self._read_bytes(512) {
       # read the file header
       var header = self._parse_header(data)
-      if !header or !is_dict(header) continue
+      if !header or !is_dict(header) {
+        continue
+      }
 
       var is_dir = header.typeflag == 5
       if strip {
@@ -338,9 +340,15 @@ class Tar {
       header.filename = header.filename.trim('\0')
 
       # skip unwanted files
-      if header.filename.length() == 0 continue
-      if exclude and header.filename.match(exclude) continue
-      if include and !header.filename.match(include) continue
+      if header.filename.length() == 0 {
+        continue
+      }
+      if exclude and header.filename.match(exclude) {
+        continue
+      }
+      if include and !header.filename.match(include) {
+        continue
+      }
 
       # An entry named with an absolute path or enough `..` segments
       # would land outside `outdir`, which is how a malicious archive
@@ -353,12 +361,14 @@ class Tar {
         or !os.path_contains(outdir, output) {
         self.close()
         raise TarCorruptedError(
-          'entry "${header.filename}" would be written outside "${outdir}"'
+          'entry "${header.filename}" would be written outside "${outdir}"',
         )
       }
 
       # create output directory
-      var directory = _without_trailing_separator(is_dir ? output : os.dir_name(output))
+      var directory = _without_trailing_separator(
+        is_dir ? output : os.dir_name(output),
+      )
       if !os.dir_exists(directory) {
         # Recursively: an archive is not obliged to carry an entry for
         # every directory before the files inside it.
@@ -381,12 +391,16 @@ class Tar {
 
         fp.close()
 
-        if header.perm != nil
+        if header.perm != nil {
           fp.chmod(header.perm)
-        if header.mtime != nil
+        }
+        if header.mtime != nil {
           fp.set_times(-1, header.mtime)
+        }
       } else {
-        self._skip_bytes((header.size / 512).ceil() * 512)  # the size is usually 0 for directories
+        self._skip_bytes(
+          (header.size / 512).ceil() * 512,
+        ) # the size is usually 0 for directories
       }
 
       # handle callbacks
@@ -416,20 +430,22 @@ class Tar {
     self._memory = bytes(0)
 
     if self._file {
-      if self._comp_type == COMPRESS_AUTO
+      if self._comp_type == COMPRESS_AUTO {
         self.set_compression(self._comp_level, self.file_type(path))
+      }
 
-      if self._comp_type == COMPRESS_GZIP
+      if self._comp_type == COMPRESS_GZIP {
         self._handle = gzip.GzFile(self._file, 'wb')
-      else if self._comp_type == COMPRESS_BZIP
+      } else if self._comp_type == COMPRESS_BZIP {
         self._handle = bzip2.BzFile(self._file, 'wb')
-      else {
+      } else {
         self._handle = file(self._file, 'wb')
         self._handle.open()
       }
 
-      if !self._handle
+      if !self._handle {
         raise TarIOError('could not open file "${self._file}" for writing')
+      }
     }
 
     self._can_write = true
@@ -447,8 +463,9 @@ class Tar {
    * @throws {TarIOError}
    */
   add_file(path: string, header: ?string|dict) {
-    if self._closed
+    if self._closed {
       raise TarIOError('archive has been closed and files can no longer be added')
+    }
 
     if header == nil or is_string(header) {
       header = self._header_from_path(path, header)
@@ -464,7 +481,9 @@ class Tar {
 
       while read < total {
         var data = fp.gets(512)
-        if !data break
+        if !data {
+          break
+        }
         read += data.length()
         self._write_bytes(struct.pack('a512', data))
       }
@@ -497,8 +516,9 @@ class Tar {
    * @throws {TarIOError}
    */
   add_data(data: bytes, header: ?string|dict) {
-    if self._closed
+    if self._closed {
       raise TarIOError('archive has been closed and files can no longer be added')
+    }
 
     if header == nil or is_string(header) {
       header = {
@@ -522,7 +542,7 @@ class Tar {
       if end > data.length() {
         end = data.length()
       }
-      self._write_bytes(struct.pack('a512', data[i,end]))
+      self._write_bytes(struct.pack('a512', data[i, end]))
     }
 
     # handle callbacks
@@ -585,7 +605,10 @@ class Tar {
     }
 
     if self._comp_type == COMPRESS_GZIP {
-      return zlib.compress(self._memory, self._comp_level, zlib.DEFAULT_STRATEGY, zlib.MAX_WBITS | 16)
+      return zlib.compress(
+        self._memory, self._comp_level, zlib.DEFAULT_STRATEGY,
+        zlib.MAX_WBITS | 16,
+      )
     } else if self._comp_type == COMPRESS_BZIP {
       return bzip2.compress(self._memory, self._comp_level)
     }
@@ -622,7 +645,9 @@ class Tar {
    *    ignore every file with a matching extension.
    * @throws {TarIOError|Error}
    */
-  add_directory(directory: string, file_blacklist: ?list, ext_blacklist: ?list) {
+  add_directory(
+    directory: string, file_blacklist: ?list, ext_blacklist: ?list,
+  ) {
     directory = directory.replace('/\\\\/', '/')
 
     if !os.dir_exists(directory) {
@@ -637,20 +662,24 @@ class Tar {
       ext_blacklist = []
     }
 
-		self._add_files(directory, '', file_blacklist, ext_blacklist)
-	}
+    self._add_files(directory, '', file_blacklist, ext_blacklist)
+  }
 
   _add_files(path, dir, file_blacklist, ext_blacklist) {
-		var gpath = os.join_paths(path, dir)
-    
-		if os.dir_exists(gpath) {
-			var sources = os.read_dir(gpath)
+    var gpath = os.join_paths(path, dir)
+
+    if os.dir_exists(gpath) {
+      var sources = os.read_dir(gpath)
       for source in sources {
 
         # check ext blacklist here... (continue, not return: one
         # blacklisted file must skip only itself, not abandon the
         # rest of this directory)
-        if ext_blacklist.some(@(ext) { return source.ends_with('.${ext}') }) continue
+        if ext_blacklist.some(@(ext) {
+          return source.ends_with('.${ext}')
+        }) {
+          continue
+        }
 
         if source != '.' and source != '..' {
           var npath = os.join_paths(gpath, source)
@@ -660,12 +689,15 @@ class Tar {
             npath = npath[cur_dir.length(),]
 
             # Just in case...
-            if npath.starts_with('/')
+            if npath.starts_with('/') {
               npath = npath[1,]
+            }
           }
 
           # check file blacklist here...
-          if file_blacklist.contains(npath) continue
+          if file_blacklist.contains(npath) {
+            continue
+          }
 
           if os.is_dir(npath) {
             self._add_files(gpath, source, file_blacklist, ext_blacklist)
@@ -674,8 +706,8 @@ class Tar {
           }
         }
       }
-		}
-	}
+    }
+  }
 
   _compression_check(type) {
     if type < COMPRESS_AUTO or type > COMPRESS_BZIP {
@@ -775,14 +807,14 @@ class Tar {
     iter var i = 156; i < 512; i++ {
       chks += block[i].ord()
     }
-    
+
     var header = struct.unpack(_header_unpack, block)
     if !header {
       raise TarCorruptedError('failed to parse header')
     }
-    
+
     var result = {
-      checksum: _octdec(header.checksum.trim())
+      checksum: _octdec(header.checksum.trim()),
     }
 
     if result.checksum != chks {
@@ -830,13 +862,14 @@ class Tar {
   _strip(filename, is_dir, strip) {
     if is_number(strip) {
       # if strip is an integer we strip this many path components
-      var parts = filename.split('/'), 
-          base = is_dir ? '' : parts.pop()
+      var parts = filename.split('/'),
+        base = is_dir ? '' : parts.pop()
 
       filename = '/'.join(parts[strip,])
     } else {
-      if filename.starts_with(strip)
+      if filename.starts_with(strip) {
         filename = filename[strip.length(),]
+      }
     }
 
     return filename
@@ -872,7 +905,7 @@ class Tar {
       header.perm,
       header.size,
       header.mtime,
-      header.typeflag
+      header.typeflag,
     )
   }
 
@@ -892,14 +925,16 @@ class Tar {
 
       if file.length() > 100 or dir.length() > 155 {
         # we're still too large. Let's use GNU longlink
-        self._write_raw_file_header('././@LongLink', 0, 0, 0, name.length(), 0, 'L')
+        self._write_raw_file_header(
+          '././@LongLink', 0, 0, 0, name.length(), 0, 'L',
+        )
 
         iter var i = 0; i < name.length(); i += 512 {
           var end = i + 512
           if end > name.length() {
             end = name.length()
           }
-          self._write_bytes(struct.pack('a512', name[i,end]))
+          self._write_bytes(struct.pack('a512', name[i, end]))
         }
         name = name[,100] # cut off name
       } else {
@@ -916,9 +951,14 @@ class Tar {
     size = size.oct().to_string().lpad(11) + ' '
     mtime = mtime.oct().to_string().lpad(11)
 
-    var first_data = struct.pack('a100a8a8a8a12A12', name, perm, uid, gid, size, mtime)
-    var last_data = struct.pack('a1a100a6a2a32a32a8a8a155a12', typeflag, '', 'ustar', '', '', '', '', '', prefix, '')
-    
+    var first_data = struct.pack(
+      'a100a8a8a8a12A12', name, perm, uid, gid, size, mtime,
+    )
+    var last_data = struct.pack(
+      'a1a100a6a2a32a32a8a8a155a12', typeflag, '', 'ustar', '', '', '', '', '',
+      prefix, '',
+    )
+
     var chks = 0
     iter var i = 0; i < 148; i++ {
       chks += first_data[i]
@@ -935,8 +975,6 @@ class Tar {
     self._write_bytes(chks + last_data)
   }
 }
-
-
 
 #--------------------------------------------------------------------------------
 # Exported Functions
@@ -995,4 +1033,3 @@ def extract(file: string, destination: string) {
   tar.open(file)
   return tar.extract(destination)
 }
-

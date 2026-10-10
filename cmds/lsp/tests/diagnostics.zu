@@ -95,16 +95,24 @@ describe('pushed', @{
 
     for diagnostic in found {
       using diagnostic.code {
-        when 'unused', 'unreachable' expect(diagnostic.tags).to_equal([1])
-        when 'deprecated' expect(diagnostic.tags).to_equal([2])
-        when 'unknown-member' expect(diagnostic.severity).to_equal(2)
+        when 'unused', 'unreachable' {
+          expect(diagnostic.tags).to_equal([1])
+        }
+        when 'deprecated' {
+          expect(diagnostic.tags).to_equal([2])
+        }
+        when 'unknown-member' {
+          expect(diagnostic.severity).to_equal(2)
+        }
         default {
           expect(diagnostic.severity).to_equal(1)
         }
       }
     }
 
-    client.notify('textDocument/didClose', { textDocument: { uri: uri(SCRATCH) } })
+    client.notify(
+      'textDocument/didClose', { textDocument: { uri: uri(SCRATCH) } },
+    )
   })
 
   it('reports syntax errors, and the compiler only for source that parses', @{
@@ -138,7 +146,9 @@ describe('pushed', @{
 
     var shapes_path = os.join_paths(FIXTURE, 'shapes.zu')
     var shapes = client.open(shapes_path, nil)
-    var renamed = client.texts[shapes].replace('def origin()', 'def start()', false)
+    var renamed = client.texts[shapes].replace(
+      'def origin()', 'def start()', false,
+    )
 
     client.change(shapes, renamed)
     var rechecked = @() => client.diagnostics[main].diagnostics.length() > 0
@@ -173,7 +183,9 @@ describe('pulled', @{
 
   it('answers a document pull, and says when nothing changed', @{
     var address = client.open(SCRATCH, 'echo gone\n')
-    var first = client.request('textDocument/diagnostic', { textDocument: { uri: address } })
+    var first = client.request(
+      'textDocument/diagnostic', { textDocument: { uri: address } },
+    )
 
     expect(first.kind).to_equal('full')
     expect(first.items.length()).to_equal(1)
@@ -188,11 +200,17 @@ describe('pulled', @{
   })
 
   it('answers a workspace pull with every file nobody has open', @{
-    var answer = client.request('workspace/diagnostic', { previousResultIds: [] })
+    var answer = client.request(
+      'workspace/diagnostic', { previousResultIds: [] },
+    )
     var files = answer.items.map(@(item) => item.uri.split('/').last()).sort()
 
-    expect(files).to_equal(['area.zu', 'checks.zu', 'index.zu', 'main.zu', 'shapes.zu'])
-    var clean = answer.items.every(@(item) => item.kind == 'full' and item.items.is_empty())
+    expect(files).to_equal([
+      'area.zu', 'checks.zu', 'index.zu', 'main.zu', 'shapes.zu',
+    ])
+    var clean = answer.items.every(
+      @(item) => item.kind == 'full' and item.items.is_empty(),
+    )
 
     expect(clean).to_be_true()
   })
@@ -213,13 +231,21 @@ describe('settings', @{
     expect(client.diagnostics_of(address).length()).to_equal(2)
 
     client.settings = { diagnostics: { delay: 0, enable: false } }
-    client.notify('workspace/didChangeConfiguration', { settings: { zuri: client.settings } })
+    client.notify(
+      'workspace/didChangeConfiguration',
+      { settings: { zuri: client.settings } },
+    )
     var cleared = @() => client.diagnostics[address].diagnostics.is_empty()
 
     client.wait_for(cleared, 'diagnostics cleared')
 
-    client.settings = { diagnostics: { delay: 0, enable: true, unusedHints: false } }
-    client.notify('workspace/didChangeConfiguration', { settings: { zuri: client.settings } })
+    client.settings = {
+      diagnostics: { delay: 0, enable: true, unusedHints: false },
+    }
+    client.notify(
+      'workspace/didChangeConfiguration',
+      { settings: { zuri: client.settings } },
+    )
 
     var one = @() => client.diagnostics[address].diagnostics.length() == 1
 

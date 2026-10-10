@@ -21,7 +21,10 @@ def list_releases(versions: list) {
       tag_name: 'v${version}',
       assets: [
         { name, browser_download_url: '{base}/assets/${name}' },
-        { name: name + '.sha256', browser_download_url: '{base}/assets/${name}.sha256' },
+        {
+          name: name + '.sha256',
+          browser_download_url: '{base}/assets/${name}.sha256',
+        },
       ],
     }
   })
@@ -55,12 +58,14 @@ before_all(@{
   probe.close()
   base = 'http://127.0.0.1:${port}'
 
-  var helper = os.join_paths(os.dir_name(os.dir_name(os.dir_name(__file__))), '_shared',
-    'tests', '_release_server.zu')
+  var helper = os.join_paths(os.dir_name(os.dir_name(os.dir_name(__file__))),
+    '_shared', 'tests', '_release_server.zu')
 
   list_releases([])
   server = spawn(os.exe_path, ['run', helper, ROOT, port.to_string()], {
-    stdin: 'null', stdout: 'null', stderr: 'pipe',
+    stdin: 'null',
+    stdout: 'null',
+    stderr: 'pipe',
   })
 
   # Generous, since a loaded machine running every suite at once can
@@ -123,7 +128,11 @@ describe('upgrade --check', @{
     var checked = upgrade(['--check', '--json'])
     var answer = json.decode(checked.out)
 
-    expect(answer).to_equal({ current: os.version, latest: '99.0.0', newer: true })
+    expect(answer).to_equal({
+      current: os.version,
+      latest: '99.0.0',
+      newer: true,
+    })
   })
 
   it('leaves pre-releases out unless asked', @{

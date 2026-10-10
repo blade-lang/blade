@@ -44,7 +44,6 @@
  * @copyright 2026, Richard Ore and The Zuri Contributors
  */
 
-
 /**
  * Raised when a selector cannot be parsed, or uses syntax this
  * module deliberately does not support. The message names the
@@ -60,7 +59,6 @@ class SelectorError < Error {
   }
 }
 
-
 # Compiled selectors keyed by their source text. Querying in a loop is
 # the normal case and re-parsing the same string every time is pure
 # waste, but an unbounded cache in a long-running process is a leak;
@@ -75,7 +73,6 @@ var _CACHE_LIMIT = 256
 # The pseudo-classes this engine implements. Anything else is an
 # error, not a silent non-match.
 var _SUPPORTED_PSEUDOS = ['first-child', 'last-child', 'nth-child']
-
 
 /**
  * One `name`/`=value` test from a `[...]` block.
@@ -117,7 +114,6 @@ class AttributeTest {
     return element.get_attribute(self.name) == self.value
   }
 }
-
 
 /**
  * One `:pseudo` or `:pseudo(...)` test.
@@ -207,7 +203,6 @@ class PseudoTest {
   }
 }
 
-
 /**
  * Where an element sits among its siblings: `index` is its 1-based
  * position and `count` is how many element siblings there are in
@@ -245,7 +240,6 @@ def _child_position(element) {
 
   return { index, count }
 }
-
 
 /**
  * A run of simple selectors with nothing between them, such as
@@ -329,7 +323,6 @@ class CompoundSelector {
     return true
   }
 }
-
 
 /**
  * One selector from a comma-separated list: a chain of compounds
@@ -441,7 +434,6 @@ class ComplexSelector {
   }
 }
 
-
 /**
  * A compiled selector list: `h1, h2` is one of these holding two
  * `ComplexSelector` instances.
@@ -503,7 +495,6 @@ class Selector {
   }
 }
 
-
 /**
  * Compiles _source_ into a reusable `Selector`.
  *
@@ -542,7 +533,6 @@ def compile(source: string) {
   return compiled
 }
 
-
 /**
  * Parses a comma-separated selector list into `ComplexSelector`
  * instances.
@@ -575,7 +565,6 @@ def _parse_list(source: string) {
 
   return out
 }
-
 
 /**
  * Parses one selector from the list: a chain of compounds joined by
@@ -626,7 +615,6 @@ def _parse_complex(state: dict) {
 
   return complex
 }
-
 
 /**
  * Parses a single compound selector.
@@ -682,7 +670,6 @@ def _parse_compound(state: dict) {
   return compound
 }
 
-
 /**
  * Parses a `[...]` attribute test. The opening bracket is still
  * unconsumed when this is called.
@@ -713,7 +700,7 @@ def _parse_attribute(state: dict) {
     if ['^', '$', '*', '~', '|'].contains(operator) {
       _fail(state,
         'the "${operator}=" attribute operator is not supported; ' +
-        'only [attr] and [attr="value"] are')
+          'only [attr] and [attr="value"] are')
     }
 
     _fail(state, 'expected "=" or "]" in an attribute selector')
@@ -732,7 +719,6 @@ def _parse_attribute(state: dict) {
   state.pos++
   return AttributeTest(name, value)
 }
-
 
 /**
  * Reads the right-hand side of an `[attr=...]` test: a single-quoted
@@ -783,7 +769,6 @@ def _read_attribute_value(state: dict) {
   return ''.join(out)
 }
 
-
 /**
  * Parses a `:pseudo` or `:pseudo(...)` test. The colon is still
  * unconsumed when this is called.
@@ -804,7 +789,7 @@ def _parse_pseudo(state: dict) {
   if !_SUPPORTED_PSEUDOS.contains(name) {
     _fail(state,
       'the ":${name}" pseudo-class is not supported; ' +
-      'this engine implements :first-child, :last-child and :nth-child()')
+        'this engine implements :first-child, :last-child and :nth-child()')
   }
 
   if name != 'nth-child' {
@@ -836,7 +821,6 @@ def _parse_pseudo(state: dict) {
   var parsed = _parse_nth(''.join(argument), state)
   return PseudoTest(name, parsed.step, parsed.offset)
 }
-
 
 /**
  * Parses an `an+b` argument into its `step` (`a`) and `offset` (`b`).
@@ -937,7 +921,6 @@ def _parse_nth(text: string, state: dict) {
   return { step, offset: offset_sign * ''.join(offset_digits).to_number() }
 }
 
-
 /**
  * True when _c_ is an ASCII decimal digit.
  *
@@ -949,7 +932,6 @@ def _is_digit(c: string) {
   return n >= 48 and n <= 57
 }
 
-
 /**
  * True when the parser has run out of input.
  *
@@ -960,7 +942,6 @@ def _at_end(state: dict) {
   return state.pos >= state.chars.length()
 }
 
-
 /**
  * The character at the cursor, without consuming it.
  *
@@ -970,7 +951,6 @@ def _at_end(state: dict) {
 def _peek(state: dict) {
   return state.chars[state.pos]
 }
-
 
 /**
  * Advances past any whitespace and reports whether there was any.
@@ -990,7 +970,6 @@ def _skip_whitespace(state: dict) {
   return state.pos > start
 }
 
-
 /**
  * True when _c_ is one of the characters CSS treats as whitespace.
  *
@@ -1001,7 +980,6 @@ def _is_whitespace(c: string) {
   return c == ' ' or c == '\t' or c == '\n' or
     c == '\r' or c == '\f'
 }
-
 
 /**
  * True when _c_ can start an identifier: a letter, an underscore, a
@@ -1017,7 +995,6 @@ def _is_name_start(c: string) {
     n == 95 or n == 45 or n == 92 or n > 127
 }
 
-
 /**
  * True when _c_ can appear after the first character of an
  * identifier.
@@ -1030,7 +1007,6 @@ def _is_name_char(c: string) {
 
   return _is_name_start(c) or (n >= 48 and n <= 57)
 }
-
 
 /**
  * Reads an identifier at the cursor, resolving backslash escapes so
@@ -1074,7 +1050,6 @@ def _read_identifier(state: dict) {
   return ''.join(out)
 }
 
-
 /**
  * Raises a `SelectorError` naming the position the parser gave up at.
  *
@@ -1084,6 +1059,6 @@ def _read_identifier(state: dict) {
  */
 def _fail(state: dict, message: string) {
   raise SelectorError(
-    'invalid selector "${state.source}" at position ${state.pos}: ${message}'
+    'invalid selector "${state.source}" at position ${state.pos}: ${message}',
   )
 }

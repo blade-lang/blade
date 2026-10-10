@@ -49,7 +49,9 @@ def capabilities() {
       codeAction: {
         codeActionLiteralSupport: {
           codeActionKind: {
-            valueSet: ['quickfix', 'refactor', 'refactor.extract', 'refactor.inline'],
+            valueSet: [
+              'quickfix', 'refactor', 'refactor.extract', 'refactor.inline',
+            ],
           },
         },
       },
@@ -107,7 +109,9 @@ def position(source: string, marker: string, shift: ?int, encoding: ?string) {
 
   var offset = at + marker.length() - (shift == nil ? 0 : shift)
 
-  return text.LineIndex(source).position(offset, encoding == nil ? text.UTF16 : encoding)
+  return text
+    .LineIndex(source)
+    .position(offset, encoding == nil ? text.UTF16 : encoding)
 }
 
 /**
@@ -149,7 +153,9 @@ def apply(source: string, edits: list) {
   var result = source
 
   for span in spans {
-    result = result[0, span.start] + span.text + result[span.end, result.length()]
+    result = result[0, span.start]
+      + span.text
+      + result[span.end, result.length()]
   }
 
   return result
@@ -183,9 +189,11 @@ class Client {
     })
     self.endpoint = rpc.endpoint(rpc.process(self.child))
 
-    self.endpoint.on_notification('textDocument/publishDiagnostics', @(params, context) {
-      self.diagnostics[params.uri] = params
-    })
+    self.endpoint.on_notification(
+      'textDocument/publishDiagnostics', @(params, context) {
+        self.diagnostics[params.uri] = params
+      },
+    )
 
     # The answers to messages written with `send_together()`, which
     # nothing waits on, by id.
@@ -224,7 +232,10 @@ class Client {
       processId: os.pid(),
       clientInfo: { name: 'zuri lsp tests' },
       rootUri: uri(self.root),
-      workspaceFolders: [{ uri: uri(self.root), name: os.base_name(self.root) }],
+      workspaceFolders: [{
+        uri: uri(self.root),
+        name: os.base_name(self.root),
+      }],
       capabilities: given == nil ? capabilities() : given,
       initializationOptions: { zuri: self.settings },
     })
@@ -272,7 +283,12 @@ class Client {
     self.texts[address] = body
     self.diagnostics.remove(address)
     self.notify('textDocument/didOpen', {
-      textDocument: { uri: address, languageId: 'zuri', version: 1, text: body },
+      textDocument: {
+        uri: address,
+        languageId: 'zuri',
+        version: 1,
+        text: body,
+      },
     })
 
     return address
@@ -332,7 +348,9 @@ class Client {
    * Waits until the server has indexed the workspace.
    */
   wait_indexed() {
-    self.wait_for(@() => self.logged('indexed '), 'the workspace to be indexed', _INDEXING)
+    self.wait_for(
+      @() => self.logged('indexed '), 'the workspace to be indexed', _INDEXING,
+    )
   }
 
   /**
@@ -378,7 +396,8 @@ class Client {
     self.wait_for(@() {
       var pushed = self.diagnostics.get(address, nil)
 
-      return pushed != nil and (version == nil or pushed.get('version', nil) == version)
+      return pushed != nil
+        and (version == nil or pushed.get('version', nil) == version)
     }, 'diagnostics of ${address}')
 
     return self.diagnostics[address].diagnostics

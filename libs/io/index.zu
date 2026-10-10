@@ -226,8 +226,9 @@ def capture(body: function) {
  * Flushes the content of the given file handle
  */
 def flush(file) {
-  if !is_file(file)
+  if !is_file(file) {
     raise TypeError('file expected in argument 1 (file)')
+  }
 
   file.flush()
 }
@@ -239,8 +240,9 @@ def flush(file) {
  */
 def putc(c) {
   if is_number(c) {
-    if c < 0 or c > 255
+    if c < 0 or c > 255 {
       raise ValueError('character code must be in within range 0..255')
+    }
 
     c = c.chr()
   } else if !is_string(c) or c.length() != 1 {
@@ -263,11 +265,13 @@ def putc(c) {
  * @returns char|string
  */
 def getc(length) {
-  if length == nil
+  if length == nil {
     length = 1
+  }
 
-  if !is_number(length) or length < 0
+  if !is_number(length) or length < 0 {
     raise TypeError('non-negative number expected in argument 1 (length)')
+  }
 
   # stdin is binary, so decode here: this is a character-level API.
   var input = stdin.read(length).to_string()

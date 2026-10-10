@@ -26,7 +26,9 @@ def parser() {
 
   parser.add_index('package', 'The version, as name@version',
     { required: true, metavar: 'name@version' })
-  parser.add_option('undo', 'Let a yanked version be chosen again', { short_name: 'u' })
+  parser.add_option(
+    'undo', 'Let a yanked version be chosen again', { short_name: 'u' },
+  )
   cli.add_registry_option(parser)
   cli.add_json_option(parser)
 

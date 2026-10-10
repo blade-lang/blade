@@ -12,7 +12,6 @@
 
 import ._base { Array }
 
-
 /**
  * Maximum value that "should" exist in a list passed to
  * DoubleArray.
@@ -26,7 +25,6 @@ var DOUBLE_MAX = 1.79769313486231570815E+308
  * @type number
  */
 var DOUBLE_MIN = -DOUBLE_MAX
-
 
 /**
  * class DoubleArray represents an array of 64-bit IEEE-754
@@ -43,10 +41,12 @@ class DoubleArray < Array {
   var _data_type = 'd'
 
   _validate_value(value) {
-    if !is_number(value)
+    if !is_number(value) {
       raise TypeError('number expected')
-    if value < DOUBLE_MIN or value > DOUBLE_MAX
+    }
+    if value < DOUBLE_MIN or value > DOUBLE_MAX {
       raise ValueError('value out of double range')
+    }
   }
 
   /**

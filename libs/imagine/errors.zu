@@ -33,7 +33,6 @@ class ImageError < Error {
   }
 }
 
-
 /**
  * Raised when image data cannot be read: the bytes are not an image at
  * all, the format is one this build cannot decode, or the file is
@@ -55,7 +54,6 @@ class DecodeError < ImageError {
   }
 }
 
-
 /**
  * Raised when an image cannot be written in the requested format,
  * either because this build has no encoder for it or because the
@@ -73,7 +71,6 @@ class EncodeError < ImageError {
   }
 }
 
-
 /**
  * Raised when a format name is not one `imagine` knows, or when a file
  * extension cannot be mapped to a format.
@@ -89,7 +86,6 @@ class FormatError < ImageError {
     return self.to_string()
   }
 }
-
 
 /**
  * Raised when a rectangle, crop or resize falls outside the image, or
@@ -111,7 +107,6 @@ class BoundsError < ImageError {
     return self.to_string()
   }
 }
-
 
 /**
  * Raised when a font cannot be parsed, cannot be found on the system,

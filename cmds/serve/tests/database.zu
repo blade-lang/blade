@@ -22,7 +22,9 @@ def publisher(username: string) {
 
 # A package with a published version, so listings and search see it.
 def listed(name: string, fields: dict) {
-  var id = db.create_package({ name, name_key: name.lower().replace('-', '_', false) })
+  var id = db.create_package({
+    name, name_key: name.lower().replace('-', '_', false),
+  })
 
   db.update_package(id, {
     description: fields.get('description', ''),
@@ -141,7 +143,13 @@ describe('tokens', @{
   it('finds a token with its publisher, and revokes it once', @{
     var id = publisher('ada')
 
-    db.create_token({ id: 't1', publisher_id: id, name: 'ci', digest: 'd1', scopes: 'publish' })
+    db.create_token({
+      id: 't1',
+      publisher_id: id,
+      name: 'ci',
+      digest: 'd1',
+      scopes: 'publish',
+    })
 
     var found = db.token_by_digest('d1')
 
@@ -158,7 +166,13 @@ describe('tokens', @{
     var ada = publisher('ada')
     var grace = publisher('grace')
 
-    db.create_token({ id: 't1', publisher_id: ada, name: 'ci', digest: 'd1', scopes: 'publish' })
+    db.create_token({
+      id: 't1',
+      publisher_id: ada,
+      name: 'ci',
+      digest: 'd1',
+      scopes: 'publish',
+    })
 
     expect(db.revoke_token('t1', grace)).to_be_false()
     expect(db.tokens_of(ada).length()).to_equal(1)
@@ -265,7 +279,7 @@ describe('packages', @{
     expect(db.version_of(id, '1.0.0').downloads).to_equal(6)
     expect(db.connection.fetch_value(
       'select downloads from downloads_daily where version_id = ? and day = ?',
-      [v, '2026-01-02'], nil
+      [v, '2026-01-02'], nil,
     )).to_equal(5)
 
     var totals = db.statistics()
@@ -307,7 +321,9 @@ describe('search', @{
 
   it('treats % and _ as the characters they are', @{
     expect(db.search('%', 'relevance', 20, 0).total).to_equal(1)
-    expect(db.search('_', 'relevance', 20, 0).packages[0].name).to_equal('http-extra')
+    expect(db.search(
+      '_', 'relevance', 20, 0,
+    ).packages[0].name).to_equal('http-extra')
     expect(db.search('_', 'relevance', 20, 0).total).to_equal(1)
     expect(db.search('!', 'relevance', 20, 0).total).to_equal(0)
   })

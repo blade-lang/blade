@@ -150,7 +150,9 @@ class MySqlConnection < DriverConnection {
     # as text is compiled here and released when the cursor closes.
     var statement = self.prepare(sql)
 
-    return self.cursor_for_statement(statement, values or [], options or {}, true)
+    return self.cursor_for_statement(
+      statement, values or [], options or {}, true,
+    )
   }
 
   prepare(sql: string) {
@@ -322,7 +324,7 @@ class MySqlConnection < DriverConnection {
     self._open()
 
     var response = self._run(
-      self._compiled_of(statement), values or [], CURSOR_NONE, statement.sql()
+      self._compiled_of(statement), values or [], CURSOR_NONE, statement.sql(),
     )
 
     return self._remember(exec_result(response))
@@ -335,7 +337,7 @@ class MySqlConnection < DriverConnection {
     self._open()
 
     return select_result(self._run(
-      self._compiled_of(statement), values or [], CURSOR_NONE, statement.sql()
+      self._compiled_of(statement), values or [], CURSOR_NONE, statement.sql(),
     ))
   }
 
@@ -356,7 +358,7 @@ class MySqlConnection < DriverConnection {
 
     var response = self._run(
       self._compiled_of(statement), values or [], CURSOR_READ_ONLY,
-      statement.sql()
+      statement.sql(),
     )
 
     # A statement that returns nothing answers with an OK packet and
@@ -426,7 +428,7 @@ class MySqlConnection < DriverConnection {
     self._assert_no_cursor()
 
     return self._protocol.execute(
-      compiled.id, values, cursor_type, compiled.columns, sql
+      compiled.id, values, cursor_type, compiled.columns, sql,
     )
   }
 
@@ -521,7 +523,9 @@ class MySqlConnection < DriverConnection {
   }
 
   _isolation(isolation) {
-    for level in [READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE, READ_UNCOMMITTED] {
+    for level in [
+      READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE, READ_UNCOMMITTED,
+    ] {
       if isolation == level {
         return level
       }
@@ -529,7 +533,7 @@ class MySqlConnection < DriverConnection {
 
     raise NotSupportedError(
       'mysql has no ${isolation} isolation level',
-      { driver: 'mysql' }
+      { driver: 'mysql' },
     )
   }
 
@@ -537,8 +541,8 @@ class MySqlConnection < DriverConnection {
     if !self.in_transaction() {
       raise TransactionError(
         'there is no open transaction to ${what}; mysql commits the ' +
-        'transaction around any create, alter or drop',
-        { driver: 'mysql' }
+          'transaction around any create, alter or drop',
+        { driver: 'mysql' },
       )
     }
   }
@@ -549,8 +553,8 @@ class MySqlConnection < DriverConnection {
     if self._cursor_open {
       raise TransactionError(
         'this connection has a cursor open; read it to the end or ' +
-        'close it before running anything else on this connection',
-        { driver: 'mysql' }
+          'close it before running anything else on this connection',
+        { driver: 'mysql' },
       )
     }
   }
@@ -558,7 +562,7 @@ class MySqlConnection < DriverConnection {
   _open() {
     if self.is_closed() {
       raise ClosedError(
-        'this mysql connection was closed', { driver: 'mysql' }
+        'this mysql connection was closed', { driver: 'mysql' },
       )
     }
   }

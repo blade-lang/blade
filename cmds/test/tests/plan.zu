@@ -4,7 +4,9 @@
 import os
 import test { * }
 
-import ..plan { UsageError, bail_of, env_of, jobs_of, options, parser, resolve, timeout_of }
+import ..plan {
+  UsageError, bail_of, env_of, jobs_of, options, parser, resolve, timeout_of,
+}
 
 # A tree of empty files standing in for a project, so resolution can be
 # checked without a single test actually running.
@@ -30,16 +32,24 @@ describe('resolve', @{
   it('refuses when there is no tests directory to take', @{
     var bare = os.join_paths(FIXTURE, 'bare')
 
-    expect(@{ resolve(nil, bare) }).to_raise_instance_of(UsageError)
-    expect(@{ resolve(nil, bare) }).to_raise_with_message("no 'tests' directory")
+    expect(@{
+      resolve(nil, bare)
+    }).to_raise_instance_of(UsageError)
+    expect(@{
+      resolve(nil, bare)
+    }).to_raise_with_message("no 'tests' directory")
   })
 
   it('finds a test file by its bare name', @{
-    expect(resolve('alpha', FIXTURE)).to_equal({ directory: TESTS, file: 'alpha.zu' })
+    expect(resolve(
+      'alpha', FIXTURE,
+    )).to_equal({ directory: TESTS, file: 'alpha.zu' })
   })
 
   it('finds the same file with its extension written out', @{
-    expect(resolve('alpha.zu', FIXTURE)).to_equal({ directory: TESTS, file: 'alpha.zu' })
+    expect(resolve(
+      'alpha.zu', FIXTURE,
+    )).to_equal({ directory: TESTS, file: 'alpha.zu' })
   })
 
   it('finds a test file by the path it sits at', @{
@@ -58,7 +68,9 @@ describe('resolve', @{
   })
 
   it('takes a file that is nowhere near tests', @{
-    expect(resolve('loose', FIXTURE)).to_equal({ directory: FIXTURE, file: 'loose.zu' })
+    expect(resolve(
+      'loose', FIXTURE,
+    )).to_equal({ directory: FIXTURE, file: 'loose.zu' })
   })
 
   it('reaches into a subdirectory for a name it finds nowhere else', @{
@@ -67,11 +79,15 @@ describe('resolve', @{
   })
 
   it('says so rather than choosing between two files of one name', @{
-    expect(@{ resolve('twin', FIXTURE) }).to_raise_with_message('deep/twin.zu, other/twin.zu')
+    expect(@{
+      resolve('twin', FIXTURE)
+    }).to_raise_with_message('deep/twin.zu, other/twin.zu')
   })
 
   it('refuses a name that matches nothing', @{
-    expect(@{ resolve('nope', FIXTURE) }).to_raise_instance_of(UsageError)
+    expect(@{
+      resolve('nope', FIXTURE)
+    }).to_raise_instance_of(UsageError)
   })
 })
 
@@ -89,11 +105,15 @@ describe('jobs_of', @{
   })
 
   it('refuses a count below one', @{
-    expect(@{ jobs_of('0') }).to_raise_instance_of(UsageError)
+    expect(@{
+      jobs_of('0')
+    }).to_raise_instance_of(UsageError)
   })
 
   it('refuses anything that is not a count', @{
-    expect(@{ jobs_of('many') }).to_raise_instance_of(UsageError)
+    expect(@{
+      jobs_of('many')
+    }).to_raise_instance_of(UsageError)
   })
 })
 
@@ -114,7 +134,9 @@ describe('timeout_of', @{
   })
 
   it('refuses a duration in a unit it does not know', @{
-    expect(@{ timeout_of('30x') }).to_raise_instance_of(UsageError)
+    expect(@{
+      timeout_of('30x')
+    }).to_raise_instance_of(UsageError)
   })
 })
 
@@ -133,7 +155,9 @@ describe('bail_of', @{
   })
 
   it('says how to attach the count when a path was eaten instead', @{
-    expect(@{ bail_of('mytest') }).to_raise_with_message('--bail=<count>')
+    expect(@{
+      bail_of('mytest')
+    }).to_raise_with_message('--bail=<count>')
   })
 })
 
@@ -147,8 +171,12 @@ describe('env_of', @{
   })
 
   it('refuses a word with nothing to assign', @{
-    expect(@{ env_of(['A']) }).to_raise_instance_of(UsageError)
-    expect(@{ env_of(['=1']) }).to_raise_instance_of(UsageError)
+    expect(@{
+      env_of(['A'])
+    }).to_raise_instance_of(UsageError)
+    expect(@{
+      env_of(['=1'])
+    }).to_raise_instance_of(UsageError)
   })
 })
 
@@ -183,9 +211,13 @@ describe('options', @{
   })
 
   it('refuses a discovery flag alongside a single file', @{
-    expect(@{ options(parse(['-m', '*.zu']), 'alpha.zu') })
+    expect(@{
+      options(parse(['-m', '*.zu']), 'alpha.zu')
+    })
       .to_raise_instance_of(UsageError)
-    expect(@{ options(parse(['-i', '_*']), 'alpha.zu') })
+    expect(@{
+      options(parse(['-i', '_*']), 'alpha.zu')
+    })
       .to_raise_instance_of(UsageError)
   })
 })

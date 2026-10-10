@@ -233,7 +233,6 @@ import @.schema { Schema, ValidationError }
 import @.validator { Validator }
 import @.rule { Rule }
 
-
 /**
  * Creates a new `Schema` from the given ruleset dictionary.
  *

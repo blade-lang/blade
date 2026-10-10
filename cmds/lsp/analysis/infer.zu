@@ -117,7 +117,9 @@ def of(walker, node) {
     when 'Range' return builtin('range')
     when 'Anonymous' return builtin('function')
     when 'Logical' return builtin('bool')
-    when 'Identifier' return _named(walker, node.fields.name)
+    when 'Identifier' {
+      return _named(walker, node.fields.name)
+    }
     when 'Shorthand' return _named(walker, node.fields.name)
     when 'Grouping' return of(walker, node.fields.inner)
     when 'Assign' return of(walker, node.fields.value)
@@ -127,8 +129,14 @@ def of(walker, node) {
     when 'Parent' return _self(walker, 'super')
     when 'Unary' return _unary(walker, node)
     when 'Binary' return _binary(walker, node)
-    when 'Condition' return agree(of(walker, node.fields.then), of(walker, node.fields.otherwise))
-    when 'Circuit' return agree(of(walker, node.fields.left), of(walker, node.fields.right))
+    when 'Condition' {
+      return agree(
+        of(walker, node.fields.then), of(walker, node.fields.otherwise),
+      )
+    }
+    when 'Circuit' {
+      return agree(of(walker, node.fields.left), of(walker, node.fields.right))
+    }
     when 'Index' {
       var object = of(walker, node.fields.object)
 
@@ -158,7 +166,9 @@ def _call(walker, node) {
 def _member(walker, node) {
   var object = of(walker, node.fields.object)
 
-  return object == nil ? nil : { t: 'member', of: object, name: node.fields.name }
+  return object == nil
+    ? nil
+    : { t: 'member', of: object, name: node.fields.name }
 }
 
 def _self(walker, kind: string) {
@@ -168,7 +178,11 @@ def _self(walker, kind: string) {
     return nil
   }
 
-  return { t: kind, of: { t: 'symbol', module: walker.path, index: owner }, loose: true }
+  return {
+    t: kind,
+    of: { t: 'symbol', module: walker.path, index: owner },
+    loose: true,
+  }
 }
 
 def _unary(walker, node) {
@@ -199,7 +213,9 @@ def _binary(walker, node) {
     return nil
   }
 
-  return ['number', 'bigint', 'string', 'list', 'bytes'].contains(left.name) ? left : nil
+  return ['number', 'bigint', 'string', 'list', 'bytes'].contains(left.name)
+    ? left
+    : nil
 }
 
 /**
@@ -249,7 +265,9 @@ def of_hint(walker, hint) {
   if type.kind == 'Instance' and type.fields.class_name != nil {
     var class_type = _named(walker, type.fields.class_name)
 
-    return class_type == nil ? nil : { t: 'instance', of: class_type, loose: true }
+    return class_type == nil
+      ? nil
+      : { t: 'instance', of: class_type, loose: true }
   }
 
   return nil

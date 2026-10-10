@@ -271,7 +271,9 @@ class ReverseProxy {
     request.headers.each(@(name, value) {
       var lower = name.lower()
 
-      if !_HOP_BY_HOP.contains(lower) and lower != 'host' and lower != 'content-length' {
+      if !_HOP_BY_HOP.contains(lower)
+        and lower != 'host'
+        and lower != 'content-length' {
         forwarded.add(name, value)
       }
     })
@@ -299,14 +301,17 @@ class ReverseProxy {
       var existing = request.headers.get_joined('x-forwarded-for', nil)
       forwarded.set(
         'X-Forwarded-For',
-        existing == nil ? client_ip : '${existing}, ${client_ip}'
+        existing == nil ? client_ip : '${existing}, ${client_ip}',
       )
 
       forwarded.set('X-Forwarded-Proto', request.scheme)
       forwarded.set_default('X-Forwarded-Host', request.headers.get('host', ''))
 
       var by = request.headers.get('host', 'unknown')
-      forwarded.add('Forwarded', 'for=${_forwarded_node(client_ip)};proto=${request.scheme};host=${util.quote(by)}')
+      forwarded.add(
+        'Forwarded',
+        'for=${_forwarded_node(client_ip)};proto=${request.scheme};host=${util.quote(by)}',
+      )
     }
 
     return HttpRequest(request.method, request.target, forwarded)
@@ -421,7 +426,8 @@ class LoadBalancer {
 
       self._proxies[index].handle(request, response)
 
-      if response.status != status.BAD_GATEWAY and response.status != status.GATEWAY_TIMEOUT {
+      if response.status != status.BAD_GATEWAY
+        and response.status != status.GATEWAY_TIMEOUT {
         self._failed_until[index] = 0
         return
       }

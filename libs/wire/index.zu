@@ -400,7 +400,6 @@ import @.compile as _compile
 import @.loader as _loader
 import @.render as _render
 
-
 /**
  * A template engine: a root directory, a set of filters, and a cache of
  * everything compiled so far.
@@ -1019,19 +1018,18 @@ class Wire {
   _check_name(kind: string, name: string) {
     if name.match('/^[A-Za-z_][A-Za-z0-9_\\-]*$/') == false {
       raise ArgumentError(
-        'a ${kind} name has to be a plain name, not "${name}"'
+        'a ${kind} name has to be a plain name, not "${name}"',
       )
     }
 
     if name.starts_with('_') {
       raise ArgumentError(
         'a ${kind} name cannot start with an underscore, since a template ' +
-        'cannot read one'
+          'cannot read one',
       )
     }
   }
 }
-
 
 /**
  * A new `Wire`.
@@ -1057,12 +1055,10 @@ def wire(options: ?dict) {
   return Wire(options)
 }
 
-
 /**
  * The `Wire` the module-level `render()` and `render_string()` use.
  */
 var _shared = Wire()
-
 
 /**
  * The `Wire` behind the module-level `render()` and `render_string()`.
@@ -1084,7 +1080,6 @@ def shared() {
   return _shared
 }
 
-
 /**
  * Renders the template at _path_ using the shared `Wire`.
  *
@@ -1096,7 +1091,6 @@ def shared() {
 def render(path: string, variables: ?dict) {
   return _shared.render(path, variables)
 }
-
 
 /**
  * Renders _source_ using the shared `Wire`.
@@ -1110,7 +1104,6 @@ def render(path: string, variables: ?dict) {
 def render_string(source: string, variables: ?dict, path: ?string) {
   return _shared.render_string(source, variables, path)
 }
-
 
 /**
  * The variables a render was given, defaulting to none.

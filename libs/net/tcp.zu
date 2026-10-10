@@ -201,7 +201,7 @@ class TcpStream {
    *    timeout elapses first.
    */
   connect(address, timeout) {
-      _net_tcp.tcp_connect(self._ptr, _addr_string(address), timeout)
+    _net_tcp.tcp_connect(self._ptr, _addr_string(address), timeout)
   }
 
   /**

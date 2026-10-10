@@ -32,7 +32,6 @@ def decompress(data) {
   return _compress.brotli_decompress(data)
 }
 
-
 /**
  * A streaming Brotli encoder.
  *
@@ -159,7 +158,6 @@ class BrotliEncoder {
     return _compress.brotli_encoder_total_out(self._ptr)
   }
 }
-
 
 /**
  * Streaming Brotli decompressor implementation.

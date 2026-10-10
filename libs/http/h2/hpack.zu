@@ -24,7 +24,6 @@
 import ..errors { ProtocolError }
 import .huffman
 
-
 # RFC 7541 Appendix A. Index 0 is unused - HPACK indexes from 1 - so
 # the list starts with a placeholder to keep the arithmetic honest.
 var _STATIC = [

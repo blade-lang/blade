@@ -11,7 +11,6 @@ import .rule { Rule, instantiate_rule }
 import date
 import json
 
-
 # ---------------------------------------------------------------------------
 # Internal helpers (module-private)
 # ---------------------------------------------------------------------------
@@ -24,11 +23,21 @@ def _is_blank(value) {
 # Returns the character count of a string, or item count of a list, or the
 # numeric value itself.  Used by size-related rules.
 def _size(value) {
-  if is_string(value)  return value.length()
-  if is_bytes(value)  return value.length()
-  if is_list(value)    return value.length()
-  if is_dict(value)    return value.length()
-  if is_number(value)  return value
+  if is_string(value) {
+    return value.length()
+  }
+  if is_bytes(value) {
+    return value.length()
+  }
+  if is_list(value) {
+    return value.length()
+  }
+  if is_dict(value) {
+    return value.length()
+  }
+  if is_number(value) {
+    return value
+  }
   return 0
 }
 
@@ -40,7 +49,9 @@ def _size(value) {
 # first. (match() returns false, not nil, on no match, hence !! rather
 # than a != nil comparison.)
 def _is_numeric_string(value) {
-  if !is_string(value) return false
+  if !is_string(value) {
+    return false
+  }
   return !!value.match('/^[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)$/')
 }
 
@@ -48,77 +59,127 @@ def _is_numeric_string(value) {
 # genuinely numeric string, or nil otherwise; a real parse-failure
 # signal that plain string.to_number() doesn't give.
 def _coerce_number(value) {
-  if is_number(value) return value
-  if _is_numeric_string(value) return value.to_number()
+  if is_number(value) {
+    return value
+  }
+  if _is_numeric_string(value) {
+    return value.to_number()
+  }
   return nil
 }
 
 # Returns true when value is a syntactically valid email address.
 # Implements the subset of RFC 5321 that covers >99.9% of real addresses.
 def _is_email(value) {
-  if !is_string(value) return false
+  if !is_string(value) {
+    return false
+  }
   var parts = value.split('@')
-  if parts.length() != 2 return false
-  var local  = parts[0]
+  if parts.length() != 2 {
+    return false
+  }
+  var local = parts[0]
   var domain = parts[1]
-  if local.length() == 0 or local.length() > 64   return false
-  if domain.length() == 0 or domain.length() > 253 return false
-  if !domain.contains('.') return false
+  if local.length() == 0 or local.length() > 64 {
+    return false
+  }
+  if domain.length() == 0 or domain.length() > 253 {
+    return false
+  }
+  if !domain.contains('.') {
+    return false
+  }
   # domain must not start or end with a dot or hyphen
-  if domain.starts_with('.') or domain.ends_with('.') return false
-  if domain.starts_with('-') or domain.ends_with('-') return false
+  if domain.starts_with('.') or domain.ends_with('.') {
+    return false
+  }
+  if domain.starts_with('-') or domain.ends_with('-') {
+    return false
+  }
   return true
 }
 
 # Returns true when value is a syntactically valid URL (http or https).
 def _is_url(value) {
-  if !is_string(value) return false
+  if !is_string(value) {
+    return false
+  }
   var v = value.lower()
-  if !v.starts_with('http://') and !v.starts_with('https://') return false
+  if !v.starts_with('http://') and !v.starts_with('https://') {
+    return false
+  }
   # Must have something after the scheme+://
-  var rest = value[value.index_of('://') + 3, ]
-  if rest.length() < 1 return false
+  var rest = value[value.index_of('://') + 3,]
+  if rest.length() < 1 {
+    return false
+  }
   return true
 }
 
 # Returns true when value is a valid IPv4 address.
 def _is_ipv4(value) {
-  if !is_string(value) return false
+  if !is_string(value) {
+    return false
+  }
   var parts = value.split('.')
-  if parts.length() != 4 return false
+  if parts.length() != 4 {
+    return false
+  }
   for part in parts {
-    if part.length() == 0 return false
+    if part.length() == 0 {
+      return false
+    }
     var n = _coerce_number(part)
-    if n == nil return false
-    if n < 0 or n > 255 return false
-    if n.trunc().to_string() != part return false   # reject leading zeros / decimals
+    if n == nil {
+      return false
+    }
+    if n < 0 or n > 255 {
+      return false
+    }
+    if n.trunc().to_string() != part {
+      return false # reject leading zeros / decimals
+    }
   }
   return true
 }
 
 # Returns true when value is a valid IPv6 address (simplified check).
 def _is_ipv6(value) {
-  if !is_string(value) return false
+  if !is_string(value) {
+    return false
+  }
   # Allow compressed forms: split on ':' and count groups
   var s = value
   if s.starts_with('[') and s.ends_with(']') {
     s = s[1, s.length() - 1]
   }
-  if s.contains(':::') return false
+  if s.contains(':::') {
+    return false
+  }
   var double_colon = s.contains('::')
   var parts = s.split(':')
   if double_colon {
-    if parts.length() > 8 return false
+    if parts.length() > 8 {
+      return false
+    }
   } else {
-    if parts.length() != 8 return false
+    if parts.length() != 8 {
+      return false
+    }
   }
   for part in parts {
-    if part.length() == 0 continue   # from ::
-    if part.length() > 4  return false
+    if part.length() == 0 {
+      continue # from ::
+    }
+    if part.length() > 4 {
+      return false
+    }
     # Each group must be hex
     var hex = '0123456789abcdefABCDEF'
     for ch in part {
-      if !hex.contains(ch) return false
+      if !hex.contains(ch) {
+        return false
+      }
     }
   }
   return true
@@ -126,15 +187,23 @@ def _is_ipv6(value) {
 
 # Returns true when value is a valid UUID v4 (or any canonical UUID).
 def _is_uuid(value) {
-  if !is_string(value) return false
-  if value.length() != 36 return false
+  if !is_string(value) {
+    return false
+  }
+  if value.length() != 36 {
+    return false
+  }
   var hex = '0123456789abcdefABCDEF'
   var expected_dashes = [8, 13, 18, 23]
   iter var i = 0; i < 36; i++ {
     if expected_dashes.contains(i) {
-      if value[i] != '-' return false
+      if value[i] != '-' {
+        return false
+      }
     } else {
-      if !hex.contains(value[i]) return false
+      if !hex.contains(value[i]) {
+        return false
+      }
     }
   }
   return true
@@ -142,7 +211,9 @@ def _is_uuid(value) {
 
 # Returns true when value is a valid JSON string.
 def _is_json(value) {
-  if !is_string(value) return false
+  if !is_string(value) {
+    return false
+  }
   catch {
     json.decode(value)
     return true
@@ -152,37 +223,51 @@ def _is_json(value) {
 
 # Returns true when the string contains only ASCII alpha characters.
 def _is_alpha(value) {
-  if !is_string(value) or value.length() == 0 return false
+  if !is_string(value) or value.length() == 0 {
+    return false
+  }
   var alpha = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
   for ch in value {
-    if !alpha.contains(ch) return false
+    if !alpha.contains(ch) {
+      return false
+    }
   }
   return true
 }
 
 # Returns true when the string contains only ASCII alphanumeric characters.
 def _is_alnum(value) {
-  if !is_string(value) or value.length() == 0 return false
+  if !is_string(value) or value.length() == 0 {
+    return false
+  }
   var alnum = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
   for ch in value {
-    if !alnum.contains(ch) return false
+    if !alnum.contains(ch) {
+      return false
+    }
   }
   return true
 }
 
 # Returns true when the string contains only ASCII alphanumeric chars and dashes.
 def _is_alnum_dash(value) {
-  if !is_string(value) or value.length() == 0 return false
+  if !is_string(value) or value.length() == 0 {
+    return false
+  }
   var allowed = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_'
   for ch in value {
-    if !allowed.contains(ch) return false
+    if !allowed.contains(ch) {
+      return false
+    }
   }
   return true
 }
 
 # Returns true when value is a valid date string parseable by the date module.
 def _is_date(value) {
-  if !is_string(value) return false
+  if !is_string(value) {
+    return false
+  }
   catch {
     date.parse(value)
     return true
@@ -194,13 +279,14 @@ def _is_date(value) {
 # string.match() returns false (not nil) on no match, so this checks
 # truthiness rather than comparing against nil.
 def _matches(value, pattern) {
-  if !is_string(value) return false
+  if !is_string(value) {
+    return false
+  }
   catch {
     return !!value.match(pattern)
   }
   return false
 }
-
 
 # ===========================================================================
 # Presence / type rules
@@ -226,7 +312,7 @@ class Required < Rule {
  */
 class Nullable < Rule {
   validate(value) {
-    return true   # always passes; signals the chain to skip on nil
+    return true # always passes; signals the chain to skip on nil
   }
 
   error() {
@@ -266,7 +352,9 @@ class NumberRule < Rule {
 class IntegerRule < Rule {
   validate(value) {
     var n = _coerce_number(value)
-    if n == nil return false
+    if n == nil {
+      return false
+    }
     return n == n.trunc()
   }
 
@@ -282,8 +370,12 @@ class IntegerRule < Rule {
  */
 class BooleanRule < Rule {
   validate(value) {
-    if is_bool(value) return true
-    if is_number(value) return value == 0 or value == 1
+    if is_bool(value) {
+      return true
+    }
+    if is_number(value) {
+      return value == 0 or value == 1
+    }
     if is_string(value) {
       var v = value.lower()
       return v == 'true' or v == 'false' or v == '1' or v == '0'
@@ -335,7 +427,6 @@ class NumericRule < Rule {
     return 'The ${self.name} field must be numeric.'
   }
 }
-
 
 # ===========================================================================
 # Size / length rules
@@ -439,7 +530,9 @@ class Length < Rule {
   }
 
   validate(value) {
-    if !is_string(value) return false
+    if !is_string(value) {
+      return false
+    }
     return value.length() == self._n
   }
 
@@ -460,7 +553,9 @@ class MinLength < Rule {
   }
 
   validate(value) {
-    if !is_string(value) return false
+    if !is_string(value) {
+      return false
+    }
     return value.length() >= self._min
   }
 
@@ -481,7 +576,9 @@ class MaxLength < Rule {
   }
 
   validate(value) {
-    if !is_string(value) return false
+    if !is_string(value) {
+      return false
+    }
     return value.length() <= self._max
   }
 
@@ -505,7 +602,9 @@ class LengthBetween < Rule {
   }
 
   validate(value) {
-    if !is_string(value) return false
+    if !is_string(value) {
+      return false
+    }
     var l = value.length()
     return l >= self._min and l <= self._max
   }
@@ -514,7 +613,6 @@ class LengthBetween < Rule {
     return 'The ${self.name} field must be between ${self._min} and ${self._max} characters.'
   }
 }
-
 
 # ===========================================================================
 # Numeric comparison rules
@@ -533,7 +631,9 @@ class Gt < Rule {
 
   validate(value) {
     var v = _coerce_number(value)
-    if v == nil return false
+    if v == nil {
+      return false
+    }
     return v > self._n
   }
 
@@ -555,7 +655,9 @@ class Gte < Rule {
 
   validate(value) {
     var v = _coerce_number(value)
-    if v == nil return false
+    if v == nil {
+      return false
+    }
     return v >= self._n
   }
 
@@ -577,7 +679,9 @@ class Lt < Rule {
 
   validate(value) {
     var v = _coerce_number(value)
-    if v == nil return false
+    if v == nil {
+      return false
+    }
     return v < self._n
   }
 
@@ -599,7 +703,9 @@ class Lte < Rule {
 
   validate(value) {
     var v = _coerce_number(value)
-    if v == nil return false
+    if v == nil {
+      return false
+    }
     return v <= self._n
   }
 
@@ -614,7 +720,9 @@ class Lte < Rule {
 class Positive < Rule {
   validate(value) {
     var v = _coerce_number(value)
-    if v == nil return false
+    if v == nil {
+      return false
+    }
     return v > 0
   }
 
@@ -629,7 +737,9 @@ class Positive < Rule {
 class Negative < Rule {
   validate(value) {
     var v = _coerce_number(value)
-    if v == nil return false
+    if v == nil {
+      return false
+    }
     return v < 0
   }
 
@@ -644,7 +754,9 @@ class Negative < Rule {
 class PositiveOrZero < Rule {
   validate(value) {
     var v = _coerce_number(value)
-    if v == nil return false
+    if v == nil {
+      return false
+    }
     return v >= 0
   }
 
@@ -659,7 +771,9 @@ class PositiveOrZero < Rule {
 class NegativeOrZero < Rule {
   validate(value) {
     var v = _coerce_number(value)
-    if v == nil return false
+    if v == nil {
+      return false
+    }
     return v <= 0
   }
 
@@ -681,8 +795,12 @@ class MultipleOf < Rule {
 
   validate(value) {
     var v = _coerce_number(value)
-    if v == nil return false
-    if self._n == 0 return false
+    if v == nil {
+      return false
+    }
+    if self._n == 0 {
+      return false
+    }
     return v % self._n == 0
   }
 
@@ -690,7 +808,6 @@ class MultipleOf < Rule {
     return 'The ${self.name} field must be a multiple of ${self._n}.'
   }
 }
-
 
 # ===========================================================================
 # String content rules
@@ -748,9 +865,13 @@ class StartsWith < Rule {
   }
 
   validate(value) {
-    if !is_string(value) return false
+    if !is_string(value) {
+      return false
+    }
     for prefix in self._prefixes {
-      if value.starts_with(prefix) return true
+      if value.starts_with(prefix) {
+        return true
+      }
     }
     return false
   }
@@ -772,9 +893,13 @@ class DoesntStartWith < Rule {
   }
 
   validate(value) {
-    if !is_string(value) return false
+    if !is_string(value) {
+      return false
+    }
     for prefix in self._prefixes {
-      if value.starts_with(prefix) return false
+      if value.starts_with(prefix) {
+        return false
+      }
     }
     return true
   }
@@ -796,9 +921,13 @@ class EndsWith < Rule {
   }
 
   validate(value) {
-    if !is_string(value) return false
+    if !is_string(value) {
+      return false
+    }
     for suffix in self._suffixes {
-      if value.ends_with(suffix) return true
+      if value.ends_with(suffix) {
+        return true
+      }
     }
     return false
   }
@@ -820,9 +949,13 @@ class DoesntEndWith < Rule {
   }
 
   validate(value) {
-    if !is_string(value) return false
+    if !is_string(value) {
+      return false
+    }
     for suffix in self._suffixes {
-      if value.ends_with(suffix) return false
+      if value.ends_with(suffix) {
+        return false
+      }
     }
     return true
   }
@@ -844,7 +977,9 @@ class Contains < Rule {
   }
 
   validate(value) {
-    if !is_string(value) return false
+    if !is_string(value) {
+      return false
+    }
     return value.contains(self._needle)
   }
 
@@ -865,7 +1000,9 @@ class DoesntContain < Rule {
   }
 
   validate(value) {
-    if !is_string(value) return false
+    if !is_string(value) {
+      return false
+    }
     return !value.contains(self._needle)
   }
 
@@ -906,7 +1043,9 @@ class NotRegex < Rule {
   }
 
   validate(value) {
-    if !is_string(value) return false
+    if !is_string(value) {
+      return false
+    }
     return !_matches(value, self._pattern)
   }
 
@@ -920,7 +1059,9 @@ class NotRegex < Rule {
  */
 class Lowercase < Rule {
   validate(value) {
-    if !is_string(value) or value.length() == 0 return false
+    if !is_string(value) or value.length() == 0 {
+      return false
+    }
     return value == value.lower()
   }
 
@@ -934,7 +1075,9 @@ class Lowercase < Rule {
  */
 class Uppercase < Rule {
   validate(value) {
-    if !is_string(value) or value.length() == 0 return false
+    if !is_string(value) or value.length() == 0 {
+      return false
+    }
     return value == value.upper()
   }
 
@@ -949,7 +1092,9 @@ class Uppercase < Rule {
  */
 class NotBlank < Rule {
   validate(value) {
-    if !is_string(value) return true   # non-strings pass (not our concern here)
+    if !is_string(value) {
+      return true # non-strings pass (not our concern here)
+    }
     return value.trim().length() > 0
   }
 
@@ -957,7 +1102,6 @@ class NotBlank < Rule {
     return 'The ${self.name} field must not be blank.'
   }
 }
-
 
 # ===========================================================================
 # Format / pattern rules
@@ -1086,7 +1230,9 @@ class After < Rule {
   }
 
   validate(value) {
-    if !_is_date(value) return false
+    if !_is_date(value) {
+      return false
+    }
     catch {
       return date.parse(value).unix_time() > date.parse(self._ref).unix_time()
     }
@@ -1111,7 +1257,9 @@ class AfterOrEqual < Rule {
   }
 
   validate(value) {
-    if !_is_date(value) return false
+    if !_is_date(value) {
+      return false
+    }
     catch {
       return date.parse(value).unix_time() >= date.parse(self._ref).unix_time()
     }
@@ -1135,7 +1283,9 @@ class Before < Rule {
   }
 
   validate(value) {
-    if !_is_date(value) return false
+    if !_is_date(value) {
+      return false
+    }
     catch {
       return date.parse(value).unix_time() < date.parse(self._ref).unix_time()
     }
@@ -1160,7 +1310,9 @@ class BeforeOrEqual < Rule {
   }
 
   validate(value) {
-    if !_is_date(value) return false
+    if !_is_date(value) {
+      return false
+    }
     catch {
       return date.parse(value).unix_time() <= date.parse(self._ref).unix_time()
     }
@@ -1186,7 +1338,6 @@ class Timezone < Rule {
     return 'The ${self.name} field must be a valid timezone.'
   }
 }
-
 
 # ===========================================================================
 # Inclusion / exclusion rules
@@ -1246,9 +1397,13 @@ class InList < Rule {
   }
 
   validate(value) {
-    if !is_list(value) return false
+    if !is_list(value) {
+      return false
+    }
     for item in value {
-      if !self._values.contains(item) return false
+      if !self._values.contains(item) {
+        return false
+      }
     }
     return true
   }
@@ -1328,7 +1483,6 @@ class NotEquals < Rule {
   }
 }
 
-
 # ===========================================================================
 # Cross-field rules
 # ===========================================================================
@@ -1358,7 +1512,9 @@ class Same < Rule {
     self._other_field = other_field
   }
 
-  needs_data() { return true }
+  needs_data() {
+    return true
+  }
 
   validate(value) {
     return value == self._data.get(self._other_field, nil)
@@ -1380,7 +1536,9 @@ class Different < Rule {
     self._other_field = other_field
   }
 
-  needs_data() { return true }
+  needs_data() {
+    return true
+  }
 
   validate(value) {
     return value != self._data.get(self._other_field, nil)
@@ -1397,7 +1555,9 @@ class Different < Rule {
  * This is the canonical Zuri spelling of Laravel's `confirmed` rule.
  */
 class Confirmed < Rule {
-  needs_data() { return true }
+  needs_data() {
+    return true
+  }
 
   validate(value) {
     var confirmation_key = self.name.ends_with('_confirmation') ?
@@ -1432,11 +1592,13 @@ class RequiredIf < Rule {
 
   @new(name, other_field, other_values) {
     parent(name)
-    self._other_field  = other_field
+    self._other_field = other_field
     self._other_values = is_list(other_values) ? other_values : [other_values]
   }
 
-  needs_data() { return true }
+  needs_data() {
+    return true
+  }
 
   validate(value) {
     var other = self._data.get(self._other_field, nil)
@@ -1461,15 +1623,19 @@ class RequiredUnless < Rule {
 
   @new(name, other_field, other_values) {
     parent(name)
-    self._other_field  = other_field
+    self._other_field = other_field
     self._other_values = is_list(other_values) ? other_values : [other_values]
   }
 
-  needs_data() { return true }
+  needs_data() {
+    return true
+  }
 
   validate(value) {
     var other = self._data.get(self._other_field, nil)
-    if self._other_values.contains(other) return true
+    if self._other_values.contains(other) {
+      return true
+    }
     return !_is_blank(value)
   }
 
@@ -1490,7 +1656,9 @@ class RequiredWith < Rule {
     self._fields = is_list(fields) ? fields : [fields]
   }
 
-  needs_data() { return true }
+  needs_data() {
+    return true
+  }
 
   validate(value) {
     for field in self._fields {
@@ -1518,7 +1686,9 @@ class RequiredWithAll < Rule {
     self._fields = is_list(fields) ? fields : [fields]
   }
 
-  needs_data() { return true }
+  needs_data() {
+    return true
+  }
 
   validate(value) {
     var all_present = true
@@ -1528,7 +1698,9 @@ class RequiredWithAll < Rule {
         break
       }
     }
-    if all_present return !_is_blank(value)
+    if all_present {
+      return !_is_blank(value)
+    }
     return true
   }
 
@@ -1549,7 +1721,9 @@ class RequiredWithout < Rule {
     self._fields = is_list(fields) ? fields : [fields]
   }
 
-  needs_data() { return true }
+  needs_data() {
+    return true
+  }
 
   validate(value) {
     for field in self._fields {
@@ -1577,7 +1751,9 @@ class RequiredWithoutAll < Rule {
     self._fields = is_list(fields) ? fields : [fields]
   }
 
-  needs_data() { return true }
+  needs_data() {
+    return true
+  }
 
   validate(value) {
     var all_absent = true
@@ -1587,7 +1763,9 @@ class RequiredWithoutAll < Rule {
         break
       }
     }
-    if all_absent return !_is_blank(value)
+    if all_absent {
+      return !_is_blank(value)
+    }
     return true
   }
 
@@ -1608,12 +1786,18 @@ class Prohibits < Rule {
     self._fields = is_list(fields) ? fields : [fields]
   }
 
-  needs_data() { return true }
+  needs_data() {
+    return true
+  }
 
   validate(value) {
-    if _is_blank(value) return true
+    if _is_blank(value) {
+      return true
+    }
     for field in self._fields {
-      if !_is_blank(self._data.get(field, nil)) return false
+      if !_is_blank(self._data.get(field, nil)) {
+        return false
+      }
     }
     return true
   }
@@ -1647,15 +1831,19 @@ class ProhibitedIf < Rule {
 
   @new(name, other_field, other_values) {
     parent(name)
-    self._other_field  = other_field
+    self._other_field = other_field
     self._other_values = is_list(other_values) ? other_values : [other_values]
   }
 
-  needs_data() { return true }
+  needs_data() {
+    return true
+  }
 
   validate(value) {
     var other = self._data.get(self._other_field, nil)
-    if self._other_values.contains(other) return _is_blank(value)
+    if self._other_values.contains(other) {
+      return _is_blank(value)
+    }
     return true
   }
 
@@ -1674,15 +1862,19 @@ class ProhibitedUnless < Rule {
 
   @new(name, other_field, other_values) {
     parent(name)
-    self._other_field  = other_field
+    self._other_field = other_field
     self._other_values = is_list(other_values) ? other_values : [other_values]
   }
 
-  needs_data() { return true }
+  needs_data() {
+    return true
+  }
 
   validate(value) {
     var other = self._data.get(self._other_field, nil)
-    if self._other_values.contains(other) return true
+    if self._other_values.contains(other) {
+      return true
+    }
     return _is_blank(value)
   }
 
@@ -1690,7 +1882,6 @@ class ProhibitedUnless < Rule {
     return 'The ${self.name} field is prohibited.'
   }
 }
-
 
 # ===========================================================================
 # List / dict content rules
@@ -1701,10 +1892,14 @@ class ProhibitedUnless < Rule {
  */
 class Distinct < Rule {
   validate(value) {
-    if !is_list(value) return false
+    if !is_list(value) {
+      return false
+    }
     iter var i = 0; i < value.length(); i++ {
       iter var j = i + 1; j < value.length(); j++ {
-        if value[i] == value[j] return false
+        if value[i] == value[j] {
+          return false
+        }
       }
     }
     return true
@@ -1727,7 +1922,9 @@ class MinItems < Rule {
   }
 
   validate(value) {
-    if !is_list(value) return false
+    if !is_list(value) {
+      return false
+    }
     return value.length() >= self._min
   }
 
@@ -1748,7 +1945,9 @@ class MaxItems < Rule {
   }
 
   validate(value) {
-    if !is_list(value) return false
+    if !is_list(value) {
+      return false
+    }
     return value.length() <= self._max
   }
 
@@ -1780,7 +1979,9 @@ class Each < Rule {
   }
 
   validate(value) {
-    if !is_list(value) return false
+    if !is_list(value) {
+      return false
+    }
     iter var i = 0; i < value.length(); i++ {
       for entry in self._validator {
         var rule = instantiate_rule(entry, '${self.name}[${i}]')
@@ -1799,7 +2000,6 @@ class Each < Rule {
       'The ${self.name} field contains an invalid item.'
   }
 }
-
 
 # ===========================================================================
 # Miscellaneous rules
@@ -1843,7 +2043,7 @@ class CustomRule < Rule {
 
   @new(name, fn, message) {
     parent(name)
-    self._fn      = fn
+    self._fn = fn
     self._message = message
   }
 
@@ -1868,11 +2068,13 @@ class CustomRuleWithData < Rule {
 
   @new(name, fn, message) {
     parent(name)
-    self._fn      = fn
+    self._fn = fn
     self._message = message
   }
 
-  needs_data() { return true }
+  needs_data() {
+    return true
+  }
 
   validate(value) {
     return self._fn(value, self._data)

@@ -16,7 +16,6 @@
  * @copyright 2026, Richard Ore and The Zuri Contributors
  */
 
-
 /**
  * Base class for every error this module raises.
  *
@@ -43,7 +42,6 @@ class TomlError < Error {
   }
 }
 
-
 /**
  * Text that is not valid TOML.
  *
@@ -69,7 +67,7 @@ class TomlError < Error {
  * @printable
  */
 class ParseError < TomlError {
-  var line   = -1
+  var line = -1
   var column = -1
 
   /**
@@ -99,7 +97,6 @@ class ParseError < TomlError {
     return '<ParseError: ${self.message} at ${self.line}:${self.column}>'
   }
 }
-
 
 /**
  * A Zuri value that cannot be written as TOML.
@@ -139,7 +136,6 @@ class EncodeError < TomlError {
     return "<EncodeError: ${self.message} at '${self.path}'>"
   }
 }
-
 
 /**
  * An edit that the document cannot accept.

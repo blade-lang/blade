@@ -132,7 +132,6 @@
  * ```
  */
 
-
 class list {
 
   /**
@@ -148,7 +147,6 @@ class list {
    * @return {number}
    */
   length() {}
-
 
   /**
    * Adds the given value _x_ to the end of the list.
@@ -167,7 +165,6 @@ class list {
    */
   append(value: any) {}
 
-
   /**
    * Removes all items from the list.<br>
    *
@@ -183,7 +180,6 @@ class list {
    * ```
    */
   clear() {}
-
 
   /**
    * Returns a new list containing all items from the _list_. The
@@ -206,7 +202,6 @@ class list {
    */
   clone() {}
 
-
   /**
    * Returns the number of times item _x_ occurs in the list.
    *
@@ -221,7 +216,6 @@ class list {
    * @return {number}
    */
   count(value) {}
-
 
   /**
    * Updates the content of the _list_ by appending all the
@@ -244,7 +238,6 @@ class list {
    * @return {list}
    */
   extend(list: list) {}
-
 
   /**
    * Returns the zero-based index of the first occurrence of the
@@ -269,7 +262,6 @@ class list {
    * @return {number}
    */
   index_of(value: any, start_index: ?int) {}
-
 
   /**
    * Returns the zero-based index of the last occurrence of the
@@ -305,7 +297,6 @@ class list {
    */
   last_index_of(value: any, end_index: ?int) {}
 
-
   /**
    * Inserts the item _x_ into the list at the specified _index_.
    * By specifying an index of zero (`list.insert(x, 0)`), one
@@ -338,7 +329,6 @@ class list {
    */
   insert(value: any, index: int) {}
 
-
   /**
    * Removes the last item in a list and returns the value of
    * that item.<br>
@@ -356,7 +346,6 @@ class list {
    * @return {any}
    */
   pop() {}
-
 
   /**
    * Removed the specified count of items from the beginning of
@@ -395,7 +384,6 @@ class list {
    */
   shift(count: ?int) {}
 
-
   /**
    * Removes the item at the specified index in the list and
    * returns it. If the index is less than `0` or greater than
@@ -424,7 +412,6 @@ class list {
    */
   remove_at(index: int) {}
 
-
   /**
    * Removes the first occurrence of item _x_ from the list.
    *
@@ -444,7 +431,6 @@ class list {
    */
   remove(value: any) {}
 
-
   /**
    * Returns a new list containing the items in the original list
    * in reverse order.
@@ -460,7 +446,6 @@ class list {
    * @return {list}
    */
   reverse() {}
-
 
   /**
    * Sorts the items in the list in-place and returns the sorted
@@ -527,7 +512,6 @@ class list {
    */
   sort(comparator: ?function) {}
 
-
   /**
    * Returns `true` if the list contains the item _x_ or `false`
    * otherwise.
@@ -545,7 +529,6 @@ class list {
    * @return {boolean}
    */
   contains(value: any) {}
-
 
   /**
    * Deletes a range of items from the list starting from the
@@ -573,7 +556,6 @@ class list {
    */
   delete(start: int, end: int) {}
 
-
   /**
    * Returns the first item in the list or `nil` if the list is
    * empty.
@@ -588,7 +570,6 @@ class list {
    * @return {any}
    */
   first() {}
-
 
   /**
    * Returns the last item in the list or `nil` if the list is
@@ -605,7 +586,6 @@ class list {
    */
   last() {}
 
-
   /**
    * Returns `true` if the list is empty or `false` otherwise.
    *
@@ -621,7 +601,6 @@ class list {
    * @return {boolean}
    */
   is_empty() {}
-
 
   /**
    * Returns a new list containing the first _n_ items in the
@@ -646,7 +625,6 @@ class list {
    */
   take(n: int) {}
 
-
   /**
    * Returns the value at the specified index in the list. If
    * _index_ is outside the boundary of the list indexes
@@ -669,7 +647,6 @@ class list {
    */
   get(index: int) {}
 
-
   /**
    * Returns a new list containing the items in the original list
    * but with all `nil` values removed.
@@ -685,7 +662,6 @@ class list {
    */
   compact() {}
 
-
   /**
    * Returns a new list containing the unique values from the
    * original list.
@@ -700,7 +676,6 @@ class list {
    * @return {list}
    */
   unique() {}
-
 
   /**
    * Returns a list that contains the items in the original list
@@ -735,7 +710,6 @@ class list {
    */
   zip(...lists) {}
 
-
   /**
    * The same as `list.zip()` except that instead of accepting an
    * arbitrary list or arguments, it accepts a single list that
@@ -752,7 +726,6 @@ class list {
    * @return {list}
    */
   zip_from(list: list) {}
-
 
   /**
    * Returns a number indexed dictionary representing the list.

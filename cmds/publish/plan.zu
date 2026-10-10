@@ -33,9 +33,12 @@ def parser() {
   parser.epilog = 'Run it from anywhere inside the project. A published version never changes.'
 
   cli.add_registry_option(parser)
-  parser.add_option('dry-run', 'Show exactly what would be published and publish nothing',
+  parser.add_option('dry-run',
+    'Show exactly what would be published and publish nothing',
     { short_name: 'n' })
-  parser.add_option('allow-dirty', 'Publish even when git has uncommitted changes', nil)
+  parser.add_option(
+    'allow-dirty', 'Publish even when git has uncommitted changes', nil,
+  )
   parser.add_option('quiet', 'Print nothing but a failure', { short_name: 'q' })
   cli.add_json_option(parser)
 
@@ -45,7 +48,9 @@ def parser() {
 # What git prints for `arguments` run in `root`, or `nil` when it fails.
 def _git_output(root: string, arguments: list) {
   var child = spawn('git', ['-C', root] + arguments, {
-    stdout: 'pipe', stderr: 'pipe', stdin: 'null',
+    stdout: 'pipe',
+    stderr: 'pipe',
+    stdin: 'null',
   })
 
   if child.wait() != 0 {
@@ -162,7 +167,7 @@ def prepare(root: string, options: ?dict) {
       if dependency.kind != 'registry' {
         problems.append(
           '${dependency.name} is a ${dependency.kind} dependency; a published package can only '
-            + 'depend on packages from a registry'
+            + 'depend on packages from a registry',
         )
       }
     }
@@ -183,12 +188,15 @@ def prepare(root: string, options: ?dict) {
   if !selected.secrets.is_empty() {
     problems.append(
       'these look like they hold secrets and were left out, so nothing was published: '
-        + ', '.join(selected.secrets) + '; if they are meant to go, name them in [project] include'
+        + ', '.join(selected.secrets)
+        + '; if they are meant to go, name them in [project] include',
     )
   }
 
   if !selected.links.is_empty() {
-    problems.append('a package cannot hold symbolic links: ' + ', '.join(selected.links))
+    problems.append(
+      'a package cannot hold symbolic links: ' + ', '.join(selected.links),
+    )
   }
 
   if !selected.files.contains('project.toml') {
@@ -196,22 +204,27 @@ def prepare(root: string, options: ?dict) {
   }
 
   if options.get('allow_dirty', false) != true {
-    var dirty = _uncommitted(root).filter(@(path) => selected.files.contains(path))
+    var dirty = _uncommitted(root).filter(
+      @(path) => selected.files.contains(path),
+    )
 
     if !dirty.is_empty() {
-      var shown = dirty.length() > 5 ? dirty[0, 5] + ['and ${dirty.length() - 5} more'] : dirty
+      var shown = dirty.length() > 5
+        ? dirty[0, 5] + ['and ${dirty.length() - 5} more']
+        : dirty
 
       problems.append(
         'these have changes git has not committed: ' + ', '.join(shown)
           + '; commit them so the published version is one you can find again, or pass '
-          + 'allow-dirty'
+          + 'allow-dirty',
       )
     }
   }
 
   if !problems.is_empty() {
     raise UsageError(
-      'the package cannot be published:\n' + '\n'.join(problems.map(@(p) => '  - ' + p))
+      'the package cannot be published:\n'
+        + '\n'.join(problems.map(@(p) => '  - ' + p)),
     )
   }
 

@@ -308,4 +308,3 @@ class Broadcast {
 def broadcast(capacity: ?int) {
   return Broadcast(capacity)
 }
-

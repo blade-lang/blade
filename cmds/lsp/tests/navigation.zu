@@ -18,7 +18,10 @@ var main_text = nil
 
 # A request at the end of `marker` in main.zu, less `shift` characters.
 def ask(method: string, marker: string, shift, extra) {
-  var params = { textDocument: { uri: main_uri }, position: position(main_text, marker, shift) }
+  var params = {
+    textDocument: { uri: main_uri },
+    position: position(main_text, marker, shift),
+  }
 
   if extra != nil {
     for key, value in extra {
@@ -68,7 +71,9 @@ describe('definitions', @{
   })
 
   it('goes from an import path to its module', @{
-    expect(ask('textDocument/definition', 'import .geo', 0).map(place)).to_equal(['index.zu:0:0'])
+    expect(ask(
+      'textDocument/definition', 'import .geo', 0,
+    ).map(place)).to_equal(['index.zu:0:0'])
   })
 
   it('goes from a built-in to its stub', @{
@@ -96,13 +101,18 @@ describe('definitions', @{
 })
 
 describe('references', @{
-  it('finds every use across the workspace, the declaration included when asked', @{
-    var including = { context: { includeDeclaration: true } }
-    var found = ask('textDocument/references', 'here.distance', 0, including)
-    var places = found.map(place).sort()
+  it(
+    'finds every use across the workspace, the declaration included when asked',
+    @{
+      var including = { context: { includeDeclaration: true } }
+      var found = ask('textDocument/references', 'here.distance', 0, including)
+      var places = found.map(place).sort()
 
-    expect(places).to_equal(['checks.zu:5:23', 'main.zu:7:10', 'shapes.zu:31:2', 'shapes.zu:64:18'])
-  })
+      expect(places).to_equal([
+        'checks.zu:5:23', 'main.zu:7:10', 'shapes.zu:31:2', 'shapes.zu:64:18',
+      ])
+    },
+  )
 
   it('tells reads from writes in the file', @{
     var found = ask('textDocument/documentHighlight', 'var here', 0)
@@ -121,7 +131,9 @@ describe('references', @{
     })
 
     client.notify('textDocument/didClose', { textDocument: { uri: area } })
-    expect(found.map(place).sort()).to_equal(['area.zu:0:9', 'checks.zu:1:8', 'main.zu:1:8'])
+    expect(found
+      .map(place)
+      .sort()).to_equal(['area.zu:0:9', 'checks.zu:1:8', 'main.zu:1:8'])
   })
 })
 
@@ -142,7 +154,9 @@ describe('rename', @{
 
     expect(changed).to_equal({ 'main.zu': 2, 'shapes.zu': 2 })
 
-    var main_change = edit.documentChanges.find(@(c) => c.textDocument.uri == main_uri)
+    var main_change = edit.documentChanges.find(
+      @(c) => c.textDocument.uri == main_uri,
+    )
 
     expect(main_change.textDocument.version).to_equal(1)
     var renamed = apply(main_text, main_change.edits)
@@ -152,7 +166,9 @@ describe('rename', @{
 
   it('keeps the key of a { name } entry', @{
     var edit = ask('textDocument/rename', 'var here', 0, { newName: 'there' })
-    var main_change = edit.documentChanges.find(@(c) => c.textDocument.uri == main_uri)
+    var main_change = edit.documentChanges.find(
+      @(c) => c.textDocument.uri == main_uri,
+    )
     var renamed = apply(main_text, main_change.edits)
 
     expect(renamed).to_contain('var there = Point(3, 4)')
@@ -189,7 +205,9 @@ describe('rename', @{
     var by_file = {}
 
     for change in edit.documentChanges {
-      by_file[change.textDocument.uri.split('/').last()] = change.edits.map(@(e) => e.newText)
+      by_file[change.textDocument.uri
+        .split('/')
+        .last()] = change.edits.map(@(e) => e.newText)
     }
 
     expect(by_file).to_equal({

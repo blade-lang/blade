@@ -36,7 +36,6 @@ var DIRECTIVE_PREFIX = 'x-'
  */
 var CARRIER_TAG = 'template'
 
-
 # --------------------------------------------------------------------
 # Directive attributes
 # --------------------------------------------------------------------
@@ -185,7 +184,6 @@ var PATH_DIRECTIVES = [INCLUDE_ATTR, EXTEND_ATTR]
  */
 var FLAG_DIRECTIVES = [ELSE_ATTR, ONLY_ATTR, OVERRIDE_ATTR, SUPER_ATTR]
 
-
 # --------------------------------------------------------------------
 # Pseudo elements
 # --------------------------------------------------------------------
@@ -220,7 +218,6 @@ var PSEUDO_FLAGS = {
   only: ONLY_ATTR,
 }
 
-
 # --------------------------------------------------------------------
 # Interpolation
 # --------------------------------------------------------------------
@@ -250,7 +247,6 @@ var CALL_CLOSE = '!}'
  * braces literally instead of reading what is between them.
  */
 var ESCAPE_CHAR = '%'
-
 
 # --------------------------------------------------------------------
 # Defaults

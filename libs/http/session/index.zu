@@ -665,7 +665,7 @@ class Session {
       response.set_cookie(
         self._config.name,
         _encode_cookie(self._id, self._config.secret),
-        self._attributes(now)
+        self._attributes(now),
       )
 
       self._rotated = false
@@ -793,7 +793,7 @@ class Session {
     if payload.length() > self._config.max_size {
       raise SessionError(
         'the session serialises to ${payload.length()} bytes, over the ' +
-          '${self._config.max_size} byte limit'
+          '${self._config.max_size} byte limit',
       )
     }
 
@@ -874,7 +874,7 @@ def session(options: ?dict) {
       config.store,
       config,
       request.cookies.get(config.name, nil),
-      request.secure
+      request.secure,
     )
 
     request.context['session'] = current
@@ -919,7 +919,7 @@ def _configure(options) {
   if config.idle_timeout == nil and config.lifetime == nil {
     raise SessionError(
       'a session needs at least one of idle_timeout and lifetime; with ' +
-        'neither, nothing ever expires'
+        'neither, nothing ever expires',
     )
   }
 
@@ -932,21 +932,21 @@ def _configure(options) {
     and config.touch_interval >= config.idle_timeout {
     raise SessionError(
       'touch_interval has to be shorter than idle_timeout, or a session in ' +
-        'constant use still expires because nothing moves its expiry'
+        'constant use still expires because nothing moves its expiry',
     )
   }
 
   if !_SAME_SITE.contains(config.same_site) {
     raise SessionError(
       "same_site is '${config.same_site}'; it has to be one of " +
-        "${', '.join(_SAME_SITE)}"
+        "${', '.join(_SAME_SITE)}",
     )
   }
 
   if config.same_site == 'None' and config.secure == false {
     raise SessionError(
       'same_site None is only stored by a browser on a Secure cookie, so ' +
-        'secure cannot be false alongside it'
+        'secure cannot be false alongside it',
     )
   }
 
@@ -1027,7 +1027,7 @@ def _decode_cookie(value, secret) {
     id = value[0, ID_LENGTH]
 
     if !util.secure_equals(
-      value[ID_LENGTH + 1,], hash.hmac_sha256(secret, id)
+      value[ID_LENGTH + 1,], hash.hmac_sha256(secret, id),
     ) {
       return nil
     }

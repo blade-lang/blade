@@ -282,7 +282,9 @@ def _read_tags(value: string) {
       continue
     }
 
-    tags[name] = _squeeze(raw, name == 'b' or name == 'bh' or name == 'h' or name == 'z')
+    tags[name] = _squeeze(
+      raw, name == 'b' or name == 'bh' or name == 'h' or name == 'z',
+    )
   }
 
   return tags
@@ -343,7 +345,9 @@ class Signature {
     var slash = canon.index_of('/')
 
     self.header_canonicalisation = slash > -1 ? canon[0, slash] : canon
-    self.body_canonicalisation = slash > -1 ? canon[slash + 1, canon.length()] : 'simple'
+    self.body_canonicalisation = slash > -1
+      ? canon[slash + 1, canon.length()]
+      : 'simple'
 
     self.headers = []
 
@@ -592,7 +596,9 @@ def _instance_pool(entries: list) {
 # The canonical header block a signature covers: the listed headers in
 # the order listed, then the signature's own header with its `b=`
 # emptied and no line break after it.
-def _signed_headers(pool: dict, names: list, signature_value: string, method: string) {
+def _signed_headers(
+  pool: dict, names: list, signature_value: string, method: string,
+) {
   var parts = []
 
   for name in names {
@@ -608,7 +614,7 @@ def _signed_headers(pool: dict, names: list, signature_value: string, method: st
   parts.append(canonicalise_header(
     'DKIM-Signature',
     _blank_signature(signature_value),
-    method
+    method,
   ))
 
   return ''.join(parts)
@@ -680,7 +686,9 @@ class Signer {
     var slash = canon.index_of('/')
 
     self.header_canonicalisation = slash > -1 ? canon[0, slash] : canon
-    self.body_canonicalisation = slash > -1 ? canon[slash + 1, canon.length()] : 'simple'
+    self.body_canonicalisation = slash > -1
+      ? canon[slash + 1, canon.length()]
+      : 'simple'
 
     if !CANONICALISATIONS.contains(self.header_canonicalisation)
       or !CANONICALISATIONS.contains(self.body_canonicalisation) {
@@ -709,7 +717,9 @@ class Signer {
    */
   sign(message) {
     var digest = _digest_of(self.algorithm)
-    var body = canonicalise_body(_body_source(message), self.body_canonicalisation)
+    var body = canonicalise_body(
+      _body_source(message), self.body_canonicalisation,
+    )
     var body_hash = base64.encode(hash.sha256(body, true))
     var pool = _instance_pool(_header_source(message))
     var covered = []
@@ -755,7 +765,7 @@ class Signer {
       _instance_pool(_header_source(message)),
       covered,
       unsigned,
-      self.header_canonicalisation
+      self.header_canonicalisation,
     )
 
     var raw = nil
@@ -862,7 +872,9 @@ def _check(message, value: string, lookup) {
   }
 
   if !ALGORITHMS.contains(signature.algorithm) {
-    return Result(signature, false, 'unsupported algorithm ${signature.algorithm}')
+    return Result(
+      signature, false, 'unsupported algorithm ${signature.algorithm}',
+    )
   }
 
   if !CANONICALISATIONS.contains(signature.header_canonicalisation)
@@ -889,7 +901,7 @@ def _check(message, value: string, lookup) {
   }
 
   var computed = base64.encode(
-    hash.sha256(canonicalise_body(body, signature.body_canonicalisation), true)
+    hash.sha256(canonicalise_body(body, signature.body_canonicalisation), true),
   )
 
   if computed != signature.body_hash {
@@ -897,14 +909,15 @@ def _check(message, value: string, lookup) {
   }
 
   var entries = _header_source(message).filter(@(entry) {
-    return entry.name.lower() != 'dkim-signature' or entry.value.trim() != value.trim()
+    return entry.name.lower() != 'dkim-signature'
+      or entry.value.trim() != value.trim()
   })
 
   var block = _signed_headers(
     _instance_pool(entries),
     signature.headers,
     value,
-    signature.header_canonicalisation
+    signature.header_canonicalisation,
   )
 
   var key = nil
@@ -928,12 +941,18 @@ def _check(message, value: string, lookup) {
   catch {
     ok = signature.algorithm.starts_with('ed25519') ?
       crypto.ed25519.verify(key, block.to_bytes(), raw) :
-      crypto.rsa.verify(key, block.to_bytes(), raw, _digest_of(signature.algorithm), 'pkcs1')
+      crypto.rsa.verify(
+        key, block.to_bytes(), raw, _digest_of(signature.algorithm), 'pkcs1',
+      )
   } as error {
-    return Result(signature, false, 'could not check the signature: ${error.message}')
+    return Result(
+      signature, false, 'could not check the signature: ${error.message}',
+    )
   }
 
-  return Result(signature, ok, ok ? nil : 'the headers do not match the signature')
+  return Result(
+    signature, ok, ok ? nil : 'the headers do not match the signature',
+  )
 }
 
 /**

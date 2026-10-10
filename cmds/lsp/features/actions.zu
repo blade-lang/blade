@@ -168,7 +168,9 @@ def _fixes(server, document, diagnostic: dict) {
 
       var names = _names_at(server, document, start)
 
-      found.extend(_spelling_fixes(server, document, diagnostic, start, end, names))
+      found.extend(_spelling_fixes(
+        server, document, diagnostic, start, end, names,
+      ))
 
       return found
     }
@@ -185,7 +187,9 @@ def _fixes(server, document, diagnostic: dict) {
       return []
     }
     when 'undeclared-field' {
-      return _declare_field(server, document, diagnostic, start, document.text[start, end])
+      return _declare_field(
+        server, document, diagnostic, start, document.text[start, end],
+      )
     }
     default {
       return []
@@ -193,7 +197,10 @@ def _fixes(server, document, diagnostic: dict) {
   }
 }
 
-def _fix(server, document, title: string, diagnostic: dict, edits: list, preferred: bool) {
+def _fix(
+  server, document, title: string, diagnostic: dict, edits: list,
+  preferred: bool,
+) {
   var by_key = {}
 
   by_key[document.key] = edits
@@ -224,7 +231,9 @@ def _import_fixes(server, document, name: string, diagnostic: dict) {
   if module != nil and module.kind != 'internal' {
     var edit = common.import_edit(nodes, lines, 'import ${name}')
 
-    found.append(_fix(server, document, "Import module '${name}'", diagnostic, [edit], true))
+    found.append(_fix(
+      server, document, "Import module '${name}'", diagnostic, [edit], true,
+    ))
   }
 
   var linker = server.linker
@@ -262,10 +271,14 @@ def _import_fixes(server, document, name: string, diagnostic: dict) {
       break
     }
 
-    var edit = common.import_edit(nodes, lines, 'import ${import_path} { ${name} }')
+    var edit = common.import_edit(
+      nodes, lines, 'import ${import_path} { ${name} }',
+    )
     var title = "Import '${name}' from '${import_path}'"
 
-    found.append(_fix(server, document, title, diagnostic, [edit], found.is_empty()))
+    found.append(_fix(
+      server, document, title, diagnostic, [edit], found.is_empty(),
+    ))
   }
 
   return found
@@ -292,9 +305,12 @@ def _members_at(server, document, offset: int) {
       var owner = server.linker.resolve(access.receiver)
       var private_ok = access.self_receiver
 
-      return server.linker.members(owner).map(@(member) => member.name).filter(@(name) {
-        return private_ok or !name.starts_with('_')
-      })
+      return server.linker
+        .members(owner)
+        .map(@(member) => member.name)
+        .filter(@(name) {
+          return private_ok or !name.starts_with('_')
+        })
     }
   }
 
@@ -302,7 +318,9 @@ def _members_at(server, document, offset: int) {
 }
 
 # Replacements spelt closest to what was written.
-def _spelling_fixes(server, document, diagnostic: dict, start: int, end: int, candidates: list) {
+def _spelling_fixes(
+  server, document, diagnostic: dict, start: int, end: int, candidates: list,
+) {
   var written = document.text[start, end]
   var limit = written.length() <= 4 ? 1 : (written.length() <= 8 ? 2 : 3)
   var scored = []
@@ -323,7 +341,9 @@ def _spelling_fixes(server, document, diagnostic: dict, start: int, end: int, ca
   }
 
   scored.sort(@(a, b) {
-    return a.distance != b.distance ? a.distance - b.distance : a.candidate.compare(b.candidate)
+    return a.distance != b.distance
+      ? a.distance - b.distance
+      : a.candidate.compare(b.candidate)
   })
 
   var found = []
@@ -368,7 +388,9 @@ def edit_distance(a: string, b: string) {
   iter var i = 1; i <= a.length(); i++ {
     iter var j = 1; j <= b.length(); j++ {
       var cost = a[i - 1] == b[j - 1] ? 0 : 1
-      var best = (rows[i - 1][j] + 1).min(rows[i][j - 1] + 1).min(rows[i - 1][j - 1] + cost)
+      var best = (rows[i - 1][j] + 1)
+        .min(rows[i][j - 1] + 1)
+        .min(rows[i - 1][j - 1] + cost)
 
       if i > 1 and j > 1 and a[i - 1] == b[j - 2] and a[i - 2] == b[j - 1] {
         best = best.min(rows[i - 2][j - 2] + 1)
@@ -408,8 +430,12 @@ def _remove_import(server, document, diagnostic: dict, start: int) {
   }
 
   var subject = refactor.Subject(server, document, start, start)
-  var elements = statement.fields.elements.filter(@(element) => common.is_node(element))
-  var name = document.text[start, document.index().offset(diagnostic.range.end, server.encoding)]
+  var elements = statement.fields.elements.filter(
+    @(element) => common.is_node(element),
+  )
+  var name = document.text[start, document
+    .index()
+    .offset(diagnostic.range.end, server.encoding)]
 
   if elements.length() > 1 {
     var position = 0
@@ -438,13 +464,20 @@ def _remove_import(server, document, diagnostic: dict, start: int) {
     return []
   }
 
-  var edit = refactor.delete_statement(subject, holder == nil ? statement : holder)
+  var edit = refactor.delete_statement(
+    subject, holder == nil ? statement : holder,
+  )
 
-  return [_fix(server, document, "Remove the unused import of '${name}'", diagnostic, [edit], true)]
+  return [_fix(
+    server, document, "Remove the unused import of '${name}'", diagnostic,
+    [edit], true,
+  )]
 }
 
 # Declares a field in the class whose method sets it.
-def _declare_field(server, document, diagnostic: dict, start: int, name: string) {
+def _declare_field(
+  server, document, diagnostic: dict, start: int, name: string,
+) {
   var analysis = server.analysis(document)
   var summary = analysis.summary
   var scope = common.scope_at(summary, start)
@@ -500,7 +533,9 @@ def _declare_field(server, document, diagnostic: dict, start: int, name: string)
     text = '${indent}var ${name}\n${spacer}'
   }
 
-  var offset = line < lines.line_count() ? lines.line_start(line) : document.text.length()
+  var offset = line < lines.line_count()
+    ? lines.line_start(line)
+    : document.text.length()
   var edit = subject.edit(offset, offset, text)
   var title = "Declare '${name}' as a field of ${symbol.name}"
 

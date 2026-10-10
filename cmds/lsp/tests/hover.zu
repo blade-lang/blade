@@ -65,11 +65,15 @@ describe('hover', @{
   })
 
   it('shows the type a variable is inferred to hold', @{
-    expect(hover_at(SOURCE, 'var here', 1)).to_start_with('```zuri\nvar here: Point\n```')
+    expect(hover_at(
+      SOURCE, 'var here', 1,
+    )).to_start_with('```zuri\nvar here: Point\n```')
   })
 
   it('shows the value of a constant', @{
-    expect(hover_at(SOURCE, 'echo UNIT', 1)).to_start_with('```zuri\nconst UNIT = 1\n```')
+    expect(hover_at(
+      SOURCE, 'echo UNIT', 1,
+    )).to_start_with('```zuri\nconst UNIT = 1\n```')
   })
 
   it('shows a module and its overview', @{
@@ -89,7 +93,9 @@ describe('hover', @{
     var source = 'import .shapes { Point }\nclass P < Point {\n' +
       '  @new() {\n    parent(1, 2)\n  }\n}\n'
 
-    expect(hover_at(source, 'parent', 2)).to_start_with('```zuri\nclass Point\n```')
+    expect(hover_at(
+      source, 'parent', 2,
+    )).to_start_with('```zuri\nclass Point\n```')
   })
 
   it('shows nothing where nothing is named', @{
@@ -131,8 +137,13 @@ describe('signature help', @{
 
   it('finds the call being written inside a method', @{
     var head = 'def apply(items, fn, start) {\n  return items\n}\n\nclass Box {\n  f() {\n'
-    var past = help_at(head + '    apply([1], @(x) {\n      return x\n    }, ', '}, ')
-    var inside = help_at(head + '    apply([1], @(x) {\n      return apply(x, ', 'return apply(x, ')
+    var past = help_at(
+      head + '    apply([1], @(x) {\n      return x\n    }, ', '}, ',
+    )
+    var inside = help_at(
+      head + '    apply([1], @(x) {\n      return apply(x, ',
+      'return apply(x, ',
+    )
 
     expect(past.signatures[0].label).to_equal('apply(items, fn, start)')
     expect(past.activeParameter).to_equal(2)

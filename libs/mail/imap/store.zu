@@ -486,7 +486,7 @@ class MemoryStore < MailStore {
       box.uidnext,
       is_bytes(raw) ? raw : '${raw}'.to_bytes(),
       flags == nil ? [] : flags,
-      received == nil ? date.date() : received
+      received == nil ? date.date() : received,
     )
 
     box.uidnext = box.uidnext + 1
@@ -742,7 +742,9 @@ class MaildirStore < MailStore {
 
     os.create_dir(path, nil, true)
     self._ensure_maildir(path)
-    self._write_index(path, { uidvalidity: time().floor(), uidnext: 1, entries: {} })
+    self._write_index(
+      path, { uidvalidity: time().floor(), uidnext: 1, entries: {} },
+    )
   }
 
   remove(username: string, mailbox: string) {
@@ -895,7 +897,7 @@ class MaildirStore < MailStore {
         state.index.entries[key],
         raw,
         _flags_from_letters(_flag_part(name)),
-        _received_of(key)
+        _received_of(key),
       ))
     }
 
@@ -930,7 +932,7 @@ class MaildirStore < MailStore {
       uid,
       data,
       flags == nil ? [] : flags,
-      received == nil ? date.date() : received
+      received == nil ? date.date() : received,
     )
   }
 
@@ -952,7 +954,7 @@ class MaildirStore < MailStore {
 
       os.rename(
         os.join_paths(state.current, name),
-        os.join_paths(state.current, renamed)
+        os.join_paths(state.current, renamed),
       )
 
       return

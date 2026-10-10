@@ -25,7 +25,6 @@ import .validator { Validator }
 import .rules
 import .rule { instantiate_rule }
 
-
 # ---------------------------------------------------------------------------
 # ValidationError
 # ---------------------------------------------------------------------------
@@ -63,7 +62,6 @@ class ValidationError < Error {
   }
 }
 
-
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
@@ -72,15 +70,21 @@ class ValidationError < Error {
 # Returns the value at the path, or nil when any segment is absent.
 def _get_nested(data, key) {
   if !key.contains('.') {
-    if is_dict(data) return data.get(key, nil)
+    if is_dict(data) {
+      return data.get(key, nil)
+    }
     return nil
   }
   var parts = key.split('.')
   var cursor = data
   for part in parts {
-    if !is_dict(cursor) return nil
+    if !is_dict(cursor) {
+      return nil
+    }
     cursor = cursor.get(part, nil)
-    if cursor == nil return nil
+    if cursor == nil {
+      return nil
+    }
   }
   return cursor
 }
@@ -94,9 +98,13 @@ def _has_nested(data, key) {
   var parts = key.split('.')
   var cursor = data
   iter var i = 0; i < parts.length() - 1; i++ {
-    if !is_dict(cursor) return false
+    if !is_dict(cursor) {
+      return false
+    }
     cursor = cursor.get(parts[i], nil)
-    if cursor == nil return false
+    if cursor == nil {
+      return false
+    }
   }
   var last = parts[parts.length() - 1]
   return is_dict(cursor) and cursor.contains(last)
@@ -104,9 +112,15 @@ def _has_nested(data, key) {
 
 # Returns true when value is nil, an empty string, or an empty list.
 def _is_blank(value) {
-  if value == nil return true
-  if is_string(value) and value.trim().length() == 0 return true
-  if is_list(value)   and value.length() == 0 return true
+  if value == nil {
+    return true
+  }
+  if is_string(value) and value.trim().length() == 0 {
+    return true
+  }
+  if is_list(value) and value.length() == 0 {
+    return true
+  }
   return false
 }
 
@@ -114,7 +128,7 @@ def _is_blank(value) {
 # Returns a list of error strings (empty when all pass).
 def _run_chain(validator, field_name, value, data) {
 
-  var errors   = []
+  var errors = []
   var nullable = false
 
   for entry in validator {
@@ -127,8 +141,9 @@ def _run_chain(validator, field_name, value, data) {
 
     # Nullable short-circuit: if a Nullable rule was encountered and the
     # value is nil/blank, skip all subsequent rules.
-    if nullable and _is_blank(value)
+    if nullable and _is_blank(value) {
       break
+    }
 
     # Track whether a Nullable rule has been seen.
     if instance_of(rule, rules.Nullable) {
@@ -139,18 +154,19 @@ def _run_chain(validator, field_name, value, data) {
     if !rule.validate(value) {
 
       # If this rule wants to break out of all rules, that should happen here.
-      if rule.bails_all()
+      if rule.bails_all() {
         break
+      }
 
       errors.append(rule.error())
-      if validator.bail_enabled()
+      if validator.bail_enabled() {
         break
+      }
     }
   }
 
   return errors
 }
-
 
 # ---------------------------------------------------------------------------
 # Schema
@@ -232,7 +248,6 @@ class Schema {
   # dict: field_key → Validator instance
   var _ruleset = {}
 
-
   /**
    * @param dict ruleset  Map of field keys to `Validator` instances.
    * @throws ArgumentError  When `ruleset` is not a dictionary.
@@ -253,14 +268,13 @@ class Schema {
       if !instance_of(value, Validator) {
         raise ValueError(
           'Schema ruleset values must be Validator instances; ' +
-          'got ${typeof(value)} for key "${key}"'
+            'got ${typeof(value)} for key "${key}"',
         )
       }
     }
 
     self._ruleset = ruleset
   }
-
 
   # -------------------------------------------------------------------------
   # Public API
@@ -304,15 +318,16 @@ class Schema {
 
         if is_list(list_val) {
           iter var i = 0; i < list_val.length(); i++ {
-            var item_key   = '${base_key}.${i}'
+            var item_key = '${base_key}.${i}'
             var item_value = list_val[i]
 
-            var label      = validator.get_label() ?
+            var label = validator.get_label() ?
               validator.get_label() :
               item_key
 
-            if validator.is_sometimes() and _is_blank(item_value)
+            if validator.is_sometimes() and _is_blank(item_value) {
               continue
+            }
 
             var field_errors = _run_chain(validator, label, item_value, data)
             for msg in field_errors {
@@ -325,8 +340,9 @@ class Schema {
             validator.get_label() :
             base_key
 
-          if validator.is_sometimes()
+          if validator.is_sometimes() {
             continue
+          }
 
           var field_errors = _run_chain(validator, label, nil, data)
 
@@ -340,12 +356,14 @@ class Schema {
 
       # Regular field (including dot-notation paths).
       var field_present = _has_nested(data, field_key)
-      var field_value   = _get_nested(data, field_key)
-      var label         = validator.get_label() ? validator.get_label() : field_key
+      var field_value = _get_nested(data, field_key)
+      var label = validator.get_label() ? validator.get_label() : field_key
 
       # `sometimes`: skip entirely when absent.
-      if validator.is_sometimes() and (!field_present or _is_blank(field_value))
+      if validator.is_sometimes()
+        and (!field_present or _is_blank(field_value)) {
         continue
+      }
 
       var field_errors = _run_chain(validator, label, field_value, data)
       for msg in field_errors {
@@ -354,8 +372,8 @@ class Schema {
     }
 
     return {
-      valid:  errors.is_empty(),
-      errors: errors,
+      valid: errors.is_empty(),
+      errors,
     }
   }
 
@@ -433,8 +451,9 @@ class Schema {
    */
   first_error(errors, field_key) {
     for err in errors {
-      if err.field == field_key
+      if err.field == field_key {
         return err.message
+      }
     }
 
     return nil
@@ -451,8 +470,9 @@ class Schema {
   field_errors(errors, field_key) {
     var out = []
     for err in errors {
-      if err.field == field_key
+      if err.field == field_key {
         out.append(err.message)
+      }
     }
 
     return out
@@ -468,8 +488,9 @@ class Schema {
    */
   has_error(errors, field_key) {
     for err in errors {
-      if err.field == field_key
+      if err.field == field_key {
         return true
+      }
     }
 
     return false
@@ -503,7 +524,9 @@ class Schema {
    */
   extend(other) {
     var merged = {}
-    for k, v in self._ruleset { merged[k] = v }
+    for k, v in self._ruleset {
+      merged[k] = v
+    }
 
     if instance_of(other, Schema) {
       for k, v in other.ruleset() {

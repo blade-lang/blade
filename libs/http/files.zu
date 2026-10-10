@@ -21,7 +21,6 @@ import .util
 import mime
 import os
 
-
 /**
  * One byte range asked for by a `Range` header, already resolved
  * against the size of the representation.
@@ -456,7 +455,9 @@ class StaticFiles {
     }
 
     if self.cache_age > 0 {
-      response.headers.set('Cache-Control', 'public, max-age=${self.cache_age // 1}')
+      response.headers.set(
+        'Cache-Control', 'public, max-age=${self.cache_age // 1}',
+      )
     }
 
     if coding != nil {
@@ -482,7 +483,8 @@ class StaticFiles {
     # A range is only honoured when the client's If-Range validator
     # still matches; otherwise the representation changed under it and
     # it needs the whole thing.
-    if request.headers.contains('range') and self._if_range_holds(request, tag, stats.mtime) {
+    if request.headers.contains('range')
+      and self._if_range_holds(request, tag, stats.mtime) {
       ranges = parse_range(request.headers.get('range', nil), size)
     }
 
@@ -599,7 +601,9 @@ class StaticFiles {
     # An If-Range carrying an entity tag must match strongly - a weak
     # tag cannot guarantee two byte ranges came from the same bytes.
     if if_range.trim().starts_with('"') {
-      return tag != nil and !tag.starts_with('W/') and _strip_weak(if_range) == _strip_weak(tag)
+      return tag != nil
+        and !tag.starts_with('W/')
+        and _strip_weak(if_range) == _strip_weak(tag)
     }
 
     var since = util.parse_date(if_range)

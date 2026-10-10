@@ -82,7 +82,9 @@ class SqliteDriver < Driver {
     caps.set('named_parameters', true)
     caps.set('last_insert_id', true)
     caps.set('returning', true)
-    caps.set('isolation_levels', [READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE])
+    caps.set(
+      'isolation_levels', [READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE],
+    )
     caps.set('server_side_cursors', true)
     caps.set('upsert', true)
     caps.set('concurrent_writers', false)
@@ -137,8 +139,8 @@ class SqliteDriver < Driver {
     if !is_string(dsn) {
       raise ConnectionError(
         'a sqlite connection string is a string or a dictionary, ' +
-        'not ${typeof(dsn)}',
-        { driver: 'sqlite' }
+          'not ${typeof(dsn)}',
+        { driver: 'sqlite' },
       )
     }
 
@@ -147,8 +149,8 @@ class SqliteDriver < Driver {
     if text.is_empty() {
       raise ConnectionError(
         'a sqlite connection string cannot be empty; use ${MEMORY} for ' +
-        'an in-memory database',
-        { driver: 'sqlite' }
+          'an in-memory database',
+        { driver: 'sqlite' },
       )
     }
 
@@ -170,7 +172,7 @@ class SqliteDriver < Driver {
     if rest.is_empty() {
       raise ConnectionError(
         'this sqlite connection string names no database file',
-        { driver: 'sqlite' }
+        { driver: 'sqlite' },
       )
     }
 
@@ -235,8 +237,8 @@ class SqliteDriver < Driver {
     if !options.contains('path') or !is_string(options.path) {
       raise ConnectionError(
         'sqlite connection options need a path; use ${MEMORY} for an ' +
-        'in-memory database',
-        { driver: 'sqlite' }
+          'in-memory database',
+        { driver: 'sqlite' },
       )
     }
 
@@ -289,7 +291,7 @@ class SqliteDriver < Driver {
         if !value.is_number() {
           raise ConnectionError(
             'busy_timeout is a number of milliseconds, not ${value}',
-            { driver: 'sqlite' }
+            { driver: 'sqlite' },
           )
         }
 
@@ -322,8 +324,8 @@ class SqliteDriver < Driver {
       default {
         raise QueryError(
           'unknown sqlite mode ${options.mode}; it is one of ro, rw, ' +
-          'rwc or memory',
-          { driver: 'sqlite' }
+            'rwc or memory',
+          { driver: 'sqlite' },
         )
       }
     }

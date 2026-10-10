@@ -19,7 +19,6 @@ import math
 import .color { Color }
 import .errors { ImageError }
 
-
 /**
  * Rec. 601 luma weights.
  *
@@ -45,7 +44,6 @@ var LUMA = [0.299, 0.587, 0.114]
  */
 var MATRIX_LUMA = [0.213, 0.715, 0.072]
 
-
 /**
  * The identity colour matrix: applying it changes nothing.
  *
@@ -61,7 +59,6 @@ def identity_matrix() {
     0, 0, 0, 1, 0,
   ]
 }
-
 
 /**
  * A colour matrix that collapses every colour to its grey of equal
@@ -82,7 +79,6 @@ def grayscale_matrix() {
   ]
 }
 
-
 /**
  * A colour matrix approximating the warm brown cast of a sepia
  * photograph.
@@ -100,7 +96,6 @@ def sepia_matrix() {
     0, 0, 0, 1, 0,
   ]
 }
-
 
 /**
  * A colour matrix that scales saturation.
@@ -126,7 +121,6 @@ def saturation_matrix(amount: number) {
     0, 0, 0, 1, 0,
   ]
 }
-
 
 /**
  * A colour matrix that rotates every hue around the colour wheel by
@@ -164,7 +158,6 @@ def hue_rotate_matrix(degrees: number) {
   ]
 }
 
-
 /**
  * A colour matrix that replaces every pixel's colour with a blend
  * between two colours chosen by its brightness, a duotone.
@@ -197,7 +190,6 @@ def duotone_matrix(shadow, highlight) {
     0, 0, 0, 1, 0,
   ]
 }
-
 
 /**
  * Multiplies two colour matrices, giving one matrix with the effect
@@ -238,7 +230,6 @@ def combine_matrices(first: list, second: list) {
   return out
 }
 
-
 /**
  * Builds a 256-entry lookup table from a function.
  *
@@ -276,7 +267,6 @@ def build_lut(fn: function) {
   return table
 }
 
-
 /**
  * A lookup table that leaves every value alone.
  *
@@ -287,7 +277,6 @@ def identity_lut() {
     return value
   })
 }
-
 
 /**
  * A lookup table that adds a fixed amount to every value.
@@ -300,7 +289,6 @@ def brightness_lut(delta: number) {
     return value + delta
   })
 }
-
 
 /**
  * A lookup table that pushes values away from or toward mid-grey.
@@ -320,7 +308,6 @@ def contrast_lut(amount: number) {
     return factor * (value - 128) + 128
   })
 }
-
 
 /**
  * A lookup table applying a gamma curve.
@@ -344,7 +331,6 @@ def gamma_lut(gamma: number) {
   })
 }
 
-
 /**
  * A lookup table that inverts every value.
  *
@@ -355,7 +341,6 @@ def invert_lut() {
     return 255 - value
   })
 }
-
 
 /**
  * A lookup table that forces every value to black or white.
@@ -368,7 +353,6 @@ def threshold_lut(level: number) {
     return value < level ? 0 : 255
   })
 }
-
 
 /**
  * A lookup table that reduces each channel to a fixed number of
@@ -390,7 +374,6 @@ def posterize_lut(levels: number) {
   })
 }
 
-
 /**
  * A lookup table that scales every value by a factor.
  *
@@ -408,7 +391,6 @@ def scale_lut(factor: number) {
     return value * factor
   })
 }
-
 
 /**
  * A lookup table implementing a levels adjustment.
@@ -442,7 +424,6 @@ def levels_lut(black: number, white: number, gamma: ?number) {
   })
 }
 
-
 # ---------------------------------------------------------------------
 # Convolution kernels
 # ---------------------------------------------------------------------
@@ -467,7 +448,6 @@ def sharpen_kernel(strength) {
   ]
 }
 
-
 /**
  * A 3x3 box blur kernel; every neighbour counts equally.
  *
@@ -485,7 +465,6 @@ def box_blur_kernel() {
   ]
 }
 
-
 /**
  * A 3x3 kernel that lifts edges into a grey relief.
  *
@@ -501,7 +480,6 @@ def emboss_kernel() {
     0, 1, 2,
   ]
 }
-
 
 /**
  * A 3x3 Laplacian kernel that leaves only the edges.
@@ -519,7 +497,6 @@ def edge_kernel() {
   ]
 }
 
-
 /**
  * A 3x3 kernel that removes local mean, exaggerating detail.
  *
@@ -532,7 +509,6 @@ def mean_removal_kernel() {
     -1, -1, -1,
   ]
 }
-
 
 /**
  * A 3x3 smoothing kernel weighted toward the centre pixel.
@@ -551,7 +527,6 @@ def smooth_kernel(weight) {
     1, 1, 1,
   ]
 }
-
 
 /**
  * A square Gaussian kernel with the given standard deviation.

@@ -39,12 +39,18 @@ def _remove(files: list, root: string, dry_run: bool) {
 
   if !dry_run and os.dir_exists(root) {
     # Deepest first, so a directory is looked at after what it held.
-    var directories = fsx.walk(root).filter(@(entry) => entry.kind == 'dir').reverse()
+    var directories = fsx
+      .walk(root)
+      .filter(@(entry) => entry.kind == 'dir')
+      .reverse()
 
     for entry in directories {
       var full = os.join_paths(root, entry.path)
 
-      if os.read_dir(full).filter(@(name) => name != '.' and name != '..').is_empty() {
+      if os
+        .read_dir(full)
+        .filter(@(name) => name != '.' and name != '..')
+        .is_empty() {
         os.remove_dir(full)
       }
     }
@@ -129,9 +135,11 @@ def main() {
     shared()
   } else {
     fsx.ensure_dir(paths.cache_dir())
-    lock_module.holding(os.join_paths(paths.cache_dir(), 'lock'), shared, @(pid) {
-      echo ui.muted('Waiting for another zuri command (process ${pid}) to finish downloading')
-    })
+    lock_module.holding(
+      os.join_paths(paths.cache_dir(), 'lock'), shared, @(pid) {
+        echo ui.muted('Waiting for another zuri command (process ${pid}) to finish downloading')
+      },
+    )
   }
 
   if chosen.libs {
@@ -142,7 +150,10 @@ def main() {
     var cleaned = _clean_libs(project, dry_run)
 
     total += cleaned.freed
-    lines.append(['installed packages (${cleaned.removed.length()})', ui.size(cleaned.freed)])
+    lines.append([
+      'installed packages (${cleaned.removed.length()})',
+      ui.size(cleaned.freed),
+    ])
   }
 
   ui.say(ui.table(lines.map(@(line) => [line[0], ui.muted(line[1])])))

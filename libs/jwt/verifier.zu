@@ -39,7 +39,7 @@ import .errors { JwtError }
  */
 class Verifier {
 
-  var _secret  = ''
+  var _secret = ''
   var _options = {}
 
   /**
@@ -54,7 +54,7 @@ class Verifier {
     if !_is_string(secret) and !options.get('allow_none', false) {
       raise JwtError('Verifier secret must be a non-empty string')
     }
-    self._secret  = secret
+    self._secret = secret
     self._options = options
   }
 

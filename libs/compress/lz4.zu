@@ -54,9 +54,8 @@ def compress(data) {
  * @returns bytes
  */
 def decompress(data) {
- return _compress.lz4_decompress(data)
+  return _compress.lz4_decompress(data)
 }
-
 
 /**
  * Streaming lz4 compressor implemention. Data written to this
@@ -143,7 +142,6 @@ class Lz4Encoder {
     _compress.lz4_encoder_flush(self._ptr)
   }
 }
-
 
 /**
  * Streaming reader for decompressing the LZ4 frame format. Bytes

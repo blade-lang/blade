@@ -137,7 +137,7 @@ def load_installed(path: string) {
   } as error {
     raise StoreError(
       '${path} cannot be read: ${error.message}; delete it and run `zuri restore` to '
-        + 'install everything again'
+        + 'install everything again',
     )
   }
 }

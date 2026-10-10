@@ -77,13 +77,13 @@ def run(details: dict) {
   if !os.path_contains(dir, script) {
     raise HookError(
       "${details.name}'s ${details.hook} hook names '${details.script}', which is outside "
-        + 'the package'
+        + 'the package',
     )
   }
 
   if !file(script).exists() {
     raise HookError(
-      "${details.name}'s ${details.hook} hook names '${details.script}', which is not there"
+      "${details.name}'s ${details.hook} hook names '${details.script}', which is not there",
     )
   }
 
@@ -91,7 +91,8 @@ def run(details: dict) {
 
   var stamp = date().format('Ymd-His')
   var log = os.join_paths(
-    paths.logs_dir(), '${details.hook}-${names.import_name(details.name)}-${stamp}.log'
+    paths.logs_dir(),
+    '${details.hook}-${names.import_name(details.name)}-${stamp}.log',
   )
 
   var child = spawn(os.exe_path, ['run', script], {
@@ -122,14 +123,14 @@ def run(details: dict) {
   if status == nil {
     raise HookError(
       "${details.name}'s ${details.hook} hook ran for more than ${HOOK_TIMEOUT} seconds and "
-        + 'was stopped; its output is in ${log}'
+        + 'was stopped; its output is in ${log}',
     )
   }
 
   if status != 0 {
     raise HookError(
       "${details.name}'s ${details.hook} hook failed with status ${status}; its output is "
-        + 'in ${log}'
+        + 'in ${log}',
     )
   }
 

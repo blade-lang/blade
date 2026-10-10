@@ -60,7 +60,9 @@ const SHORTHAND = 8
 const REF_STRIDE = 5
 
 # The expression kinds whose value is known at a glance.
-const _CONSTANT_KINDS = ['Nil', 'Bool', 'Integer', 'Float', 'BigNumber', 'Literal']
+const _CONSTANT_KINDS = [
+  'Nil', 'Bool', 'Integer', 'Float', 'BigNumber', 'Literal',
+]
 
 # A span dictionary's offsets, as a pair.
 def _span(value) {
@@ -181,7 +183,10 @@ class Walker {
   # Adds a declaration and returns its index. `visible` says whether
   # the name enters the current scope now; a module global is already
   # there from the first pass.
-  _symbol(name: string, kind: string, node, name_range: list, extra: dict, visible: bool) {
+  _symbol(
+    name: string, kind: string, node, name_range: list, extra: dict,
+    visible: bool,
+  ) {
     var symbol = {
       name,
       kind,
@@ -190,7 +195,9 @@ class Walker {
       name_start: name_range[0],
       name_end: name_range[1],
       scope: self._current,
-      container: self._functions.is_empty() ? -1 : self._functions[self._functions.length() - 1],
+      container: self._functions.is_empty()
+        ? -1
+        : self._functions[self._functions.length() - 1],
       exported: false,
       doc: nil,
       reads: 0,
@@ -302,7 +309,7 @@ class Walker {
           decl,
           _span(decl.fields.name_span),
           { doc: attached == nil ? nil : attached.fields.text, exported: true },
-          false
+          false,
         )
 
         self._globals[decl.fields.name] = index
@@ -313,13 +320,19 @@ class Walker {
           'class',
           decl,
           _span(decl.fields.name_span),
-          { doc: attached == nil ? nil : attached.fields.text, exported: true, members: [] },
-          false
+          {
+            doc: attached == nil ? nil : attached.fields.text,
+            exported: true,
+            members: [],
+          },
+          false,
         )
 
         self._globals[decl.fields.name] = index
         self._predeclared[decl.start] = index
-      } else if decl.kind == 'Import' and decl.fields.exported and !decl.fields.imports_all {
+      } else if decl.kind == 'Import'
+        and decl.fields.exported
+        and !decl.fields.imports_all {
         self._predeclare_import(decl)
       }
     }
@@ -330,7 +343,8 @@ class Walker {
     # second time.
     var existing = self._globals.get(decl.fields.name, nil)
 
-    if existing != nil and ['variable', 'constant'].contains(self.symbols[existing].kind) {
+    if existing != nil
+      and ['variable', 'constant'].contains(self.symbols[existing].kind) {
       self._predeclared[decl.start] = existing
       self._redeclared[decl.start] = true
       return
@@ -343,7 +357,7 @@ class Walker {
       decl,
       _span(decl.fields.name_span),
       { doc: doc == nil ? nil : doc.fields.text, exported: true },
-      false
+      false,
     )
 
     self._globals[decl.fields.name] = index
@@ -380,7 +394,7 @@ class Walker {
             decl,
             _span(decl.fields.name_span),
             {},
-            true
+            true,
           )
 
           self._predeclared[decl.start] = index
@@ -393,7 +407,10 @@ class Walker {
 
     for node in nodes {
       if node.kind == 'DocBlock' {
-        if top and first and self.module_doc == nil and node.fields.text.contains('@module') {
+        if top
+          and first
+          and self.module_doc == nil
+          and node.fields.text.contains('@module') {
           self.module_doc = node.fields.text
         } else {
           doc = node
@@ -418,7 +435,9 @@ class Walker {
 
   _node(node, doc, top: bool) {
     using node.kind {
-      when 'Stmt' self._statement(node.fields.statement, doc, top)
+      when 'Stmt' {
+        self._statement(node.fields.statement, doc, top)
+      }
       when 'Function' self._function_decl(node, doc)
       when 'Class' self._class(node, doc)
       default {
@@ -433,7 +452,9 @@ class Walker {
     }
 
     using node.kind {
-      when 'Expression', 'Echo', 'Raise' self._expression(node.fields.value)
+      when 'Expression', 'Echo', 'Raise' {
+        self._expression(node.fields.value)
+      }
       when 'Return' self._return(node)
       when 'Var' self._var(node, doc, top)
       when 'VarList' {
@@ -477,7 +498,9 @@ class Walker {
         self._expression(node.fields.message)
       }
       when 'Import' self._import(node, top)
-      when 'Decl' self._function_decl(node.fields.declaration, doc)
+      when 'Decl' {
+        self._function_decl(node.fields.declaration, doc)
+      }
       default {
         # `break`, `continue`, comments and doc blocks bind nothing.
       }
@@ -512,7 +535,9 @@ class Walker {
     self._expression(node.fields.value)
 
     var hint = node.fields.type_hint
-    var type = _is_implicit(hint) ? infer.of(self, node.fields.value) : infer.of_hint(self, hint)
+    var type = _is_implicit(hint)
+      ? infer.of(self, node.fields.value)
+      : infer.of_hint(self, hint)
     var value = nil
 
     if node.fields.is_constant and node.fields.value != nil {
@@ -558,7 +583,7 @@ class Walker {
         hint: _is_implicit(hint) ? nil : self.text[hint.start, hint.end],
         keys: _literal_keys(node.fields.value),
       },
-      true
+      true,
     )
   }
 
@@ -575,7 +600,7 @@ class Walker {
         node,
         _span(node.fields.key_span),
         { loop: true, type: element.key },
-        true
+        true,
       )
     }
 
@@ -585,7 +610,7 @@ class Walker {
       node,
       _span(node.fields.value_span),
       { loop: true, type: element.value },
-      true
+      true,
     )
 
     self._statement(node.fields.body, nil, false)
@@ -618,7 +643,7 @@ class Walker {
         variable,
         [variable.start, variable.end],
         { caught: true, type: infer.error_type() },
-        true
+        true,
       )
     }
 
@@ -650,9 +675,13 @@ class Walker {
           [element.start, element.end],
           {
             exported,
-            source: { path: fields.path, member: element.fields.name, segments },
+            source: {
+              path: fields.path,
+              member: element.fields.name,
+              segments,
+            },
           },
-          false
+          false,
         ))
       }
 
@@ -668,10 +697,15 @@ class Walker {
       [name.start, name.end],
       {
         exported,
-        source: { path: fields.path, member: nil, segments, aliased: fields.aliased },
+        source: {
+          path: fields.path,
+          member: nil,
+          segments,
+          aliased: fields.aliased,
+        },
         type: { t: 'import', path: fields.path, importer: self.path },
       },
-      false
+      false,
     ))
 
     return bound
@@ -730,7 +764,7 @@ class Walker {
         node,
         _span(node.fields.name_span),
         {},
-        true
+        true,
       )
     }
 
@@ -780,8 +814,12 @@ class Walker {
         'parameter',
         param,
         _span(param.fields.name_span),
-        { type, hint: hint_text, nullable: hint == nil ? true : hint.fields.nullable },
-        true
+        {
+          type,
+          hint: hint_text,
+          nullable: hint == nil ? true : hint.fields.nullable,
+        },
+        true,
       )
     }
 
@@ -816,14 +854,16 @@ class Walker {
         node,
         _span(fields.name_span),
         { members: [], extension: fields.is_extension },
-        !fields.is_extension
+        !fields.is_extension,
       )
     }
 
     var symbol = self.symbols[index]
 
     symbol.extension = fields.is_extension
-    symbol.superclass = fields.superclass == nil ? nil : infer.of(self, fields.superclass)
+    symbol.superclass = fields.superclass == nil
+      ? nil
+      : infer.of(self, fields.superclass)
     symbol.superclass_range = fields.superclass == nil ? nil : [
       fields.superclass.start,
       fields.superclass.end,
@@ -870,7 +910,9 @@ class Walker {
     # `self.x = ...` in `@new` declares the field `x` as surely as
     # `var x` does.
     for method in fields.methods {
-      if method.kind == 'Method' and method.fields.name == '@new' and !method.fields.is_static {
+      if method.kind == 'Method'
+        and method.fields.name == '@new'
+        and !method.fields.is_static {
         self._implicit_fields(method.fields.body, index)
       }
     }
@@ -912,12 +954,14 @@ class Walker {
         is_static: fields.is_static,
         constant: fields.is_constant,
         hint: hint_text,
-        type: hint_text == nil ? infer.of(self, fields.value) : infer.of_hint(self, hint),
+        type: hint_text == nil
+          ? infer.of(self, fields.value)
+          : infer.of_hint(self, hint),
         owner: class_index,
         keys: _literal_keys(fields.value),
         loose_type: hint_text == nil,
       },
-      false
+      false,
     )
 
     self.symbols[class_index].members.append(member)
@@ -935,7 +979,7 @@ class Walker {
         is_static: fields.is_static,
         owner: class_index,
       },
-      false
+      false,
     )
 
     self.symbols[class_index].members.append(member)
@@ -971,7 +1015,7 @@ class Walker {
           owner: class_index,
           loose_type: true,
         },
-        false
+        false,
       )
 
       symbol.members.append(member)
@@ -988,7 +1032,9 @@ class Walker {
     }
 
     using node.kind {
-      when 'Identifier' self._reference(node.fields.name, node.start, node.end, READ)
+      when 'Identifier' {
+        self._reference(node.fields.name, node.start, node.end, READ)
+      }
       when 'Shorthand' self._shorthand(node)
       when 'Interpolation' {
         for part in node.fields.parts {
@@ -1040,9 +1086,15 @@ class Walker {
           self._expression(value)
         }
       }
-      when 'Assign' self._assign(node.fields.target, node.fields.value, WRITE)
-      when 'CompoundAssign' self._assign(node.fields.target, node.fields.value, WRITE | READ)
-      when 'Update' self._assign(node.fields.target, nil, WRITE | READ)
+      when 'Assign' {
+        self._assign(node.fields.target, node.fields.value, WRITE)
+      }
+      when 'CompoundAssign' {
+        self._assign(node.fields.target, node.fields.value, WRITE | READ)
+      }
+      when 'Update' {
+        self._assign(node.fields.target, nil, WRITE | READ)
+      }
       when 'Anonymous' self._anonymous(node)
       default {
         # Literals, `self` and `parent` refer to nothing by name.
@@ -1064,7 +1116,9 @@ class Walker {
 
     using target.kind {
       when 'Identifier' {
-        var index = self._reference(target.fields.name, target.start, target.end, flags)
+        var index = self._reference(
+          target.fields.name, target.start, target.end, flags,
+        )
 
         if index >= 0 and flags == WRITE {
           self._retype(self.symbols[index], infer.of(self, value))
@@ -1083,7 +1137,9 @@ class Walker {
     var target = nil
 
     if callee.kind == 'Identifier' {
-      target = self._reference(callee.fields.name, callee.start, callee.end, READ | CALL)
+      target = self._reference(
+        callee.fields.name, callee.start, callee.end, READ | CALL,
+      )
     } else if callee.kind == 'Get' {
       self._get(callee, false, true)
     } else {
@@ -1097,7 +1153,8 @@ class Walker {
       arguments.append({
         start: argument.start,
         end: argument.end,
-        literal: _CONSTANT_KINDS.contains(argument.kind) or argument.kind == 'Interpolation',
+        literal: _CONSTANT_KINDS.contains(argument.kind)
+          or argument.kind == 'Interpolation',
         kind: argument.kind,
       })
     }
@@ -1180,7 +1237,7 @@ class Walker {
       declaration,
       [declaration.start, declaration.start],
       { anonymous: true },
-      false
+      false,
     )
 
     self._function_body(declaration, index, self.enclosing_class())

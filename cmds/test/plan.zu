@@ -135,7 +135,7 @@ def resolve(target: ?string, root: ?string) {
 
     if !os.dir_exists(directory) {
       raise UsageError(
-        "there is no '${TESTS}' directory here; name a file or a directory to run instead"
+        "there is no '${TESTS}' directory here; name a file or a directory to run instead",
       )
     }
 
@@ -160,7 +160,7 @@ def resolve(target: ?string, root: ?string) {
   if matched.length() > 1 {
     raise UsageError(
       "'${target}' matches ${matched.length()} files under '${TESTS}': "
-        + "${', '.join(matched)}; say which one you mean"
+        + "${', '.join(matched)}; say which one you mean",
     )
   }
 
@@ -197,7 +197,7 @@ def jobs_of(value: ?string) {
 
   if jobs == nil or jobs < 1 {
     raise UsageError(
-      "--jobs expects a whole number of 1 or more, or 'auto', got '${value}'"
+      "--jobs expects a whole number of 1 or more, or 'auto', got '${value}'",
     )
   }
 
@@ -241,7 +241,7 @@ def timeout_of(value: ?string) {
 
   if millis == nil {
     raise UsageError(
-      "--timeout expects a duration such as 500ms, 30s, 2m or 1h, got '${value}'"
+      "--timeout expects a duration such as 500ms, 30s, 2m or 1h, got '${value}'",
     )
   }
 
@@ -275,7 +275,7 @@ def bail_of(value) {
   if count == nil {
     raise UsageError(
       "--bail expects a count, got '${value}'; attach it as --bail=<count>, "
-        + 'or put the test path before the flag'
+        + 'or put the test path before the flag',
     )
   }
 
@@ -326,7 +326,7 @@ def _reject_directory_flags(parsed) {
     if parsed.options.get(name, nil) != nil {
       raise UsageError(
         '--${name} picks files out of a directory, so it cannot be used '
-          + 'when a single test file was named'
+          + 'when a single test file was named',
       )
     }
   }
@@ -387,7 +387,8 @@ def parser() {
   parser.epilog = 'If no target is given, everything in the tests directory is run.'
 
   parser.add_index(
-    'target', 'A test file, or a directory of them; the tests directory by default'
+    'target',
+    'A test file, or a directory of them; the tests directory by default',
   )
 
   parser.add_option(

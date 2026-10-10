@@ -190,7 +190,7 @@ def encrypt_password(password: string, scramble, public_pem: string) {
   } as error {
     raise AuthenticationError(
       'the public key the server sent could not be used: ' + error.message,
-      { driver: 'mysql' }
+      { driver: 'mysql' },
     )
   }
 }
@@ -231,9 +231,9 @@ def response_for(plugin: string, password: string, scramble, private: bool) {
     if !private {
       raise AuthenticationError(
         'the server asked for ${CLEAR}, which sends the password with ' +
-        'nothing protecting it; connect with tls, or over a unix ' +
-        'socket, or use a different plugin',
-        { driver: 'mysql' }
+          'nothing protecting it; connect with tls, or over a unix ' +
+          'socket, or use a different plugin',
+        { driver: 'mysql' },
       )
     }
 
@@ -242,8 +242,8 @@ def response_for(plugin: string, password: string, scramble, private: bool) {
 
   raise AuthenticationError(
     'the server asked for the ${plugin} authentication plugin, which ' +
-    'this adapter does not implement',
-    { driver: 'mysql' }
+      'this adapter does not implement',
+    { driver: 'mysql' },
   )
 }
 

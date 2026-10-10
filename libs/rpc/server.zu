@@ -82,7 +82,9 @@ def _tls_config(settings: dict) {
   import net.tls
 
   var config = tls.TlsConfig()
-  config.set_cert_chain(settings.cert_chain, settings.private_key or settings.cert_chain)
+  config.set_cert_chain(
+    settings.cert_chain, settings.private_key or settings.cert_chain,
+  )
 
   return config
 }
@@ -409,7 +411,7 @@ def serve(setup, options: ?dict) {
     listener.close()
     raise ValueError(
       'cannot run ${settings.workers} workers on an isolate pool of ' +
-      '${isolate.pool_size()}; call isolate.configure() first, or ask for fewer'
+        '${isolate.pool_size()}; call isolate.configure() first, or ask for fewer',
     )
   }
 
@@ -426,7 +428,9 @@ def serve(setup, options: ?dict) {
   var acceptor = net.Acceptor(listener)
 
   if on_ready != nil {
-    var address = settings.path == nil ? listener.local_address() : settings.path
+    var address = settings.path == nil
+      ? listener.local_address()
+      : settings.path
 
     on_ready(address, @() {
       running[0] = false

@@ -45,7 +45,8 @@ def _runtime(target: string, given: ?string) {
     var root = os.abs_path(given)
     var executable = os.join_paths(root, executable_name)
 
-    if !file(executable).exists() or !os.dir_exists(os.join_paths(root, 'libs')) {
+    if !file(executable).exists()
+      or !os.dir_exists(os.join_paths(root, 'libs')) {
       raise UsageError('${root} does not hold a ${target} runtime and its libs')
     }
 
@@ -67,7 +68,7 @@ def _runtime(target: string, given: ?string) {
     raise CommandError(
       'there is no ${target} runtime for zuri ${os.version}: ${error.message}\n'
         + 'Build with a released version of zuri, or name an unpacked runtime with the '
-        + 'runtime option.'
+        + 'runtime option.',
     )
   }
 }
@@ -89,7 +90,7 @@ def _production_packages(project) {
     raise UsageError(
       'project.lock does not match project.toml, so what a bundle would carry is not '
         + 'settled:\n' + '\n'.join(differences.map(@(line) => '  - ' + line))
-        + '\nRun `zuri install`, then bundle.'
+        + '\nRun `zuri install`, then bundle.',
     )
   }
 
@@ -108,7 +109,7 @@ def _production_packages(project) {
       or !os.dir_exists(project.package_dir(entry.import_name())) {
       raise UsageError(
         '${entry.name} ${entry.version} is locked but not installed; run `zuri restore` '
-          + 'before bundling'
+          + 'before bundling',
       )
     }
 
@@ -121,7 +122,9 @@ def _production_packages(project) {
 # The bundle's contents, apart from the executable: the marker, the
 # standard library, and the application.
 def _contents(target, runtime, project, selected, packages, details) {
-  var content = os.join_paths(paths.cache_dir(), 'bundle', fsx.unique(), 'content')
+  var content = os.join_paths(
+    paths.cache_dir(), 'bundle', fsx.unique(), 'content',
+  )
 
   fsx.ensure_dir(content)
   fsx.atomic_write(os.join_paths(content, 'bundle.toml'), plan.marker(details))
@@ -160,7 +163,9 @@ def _sign(path: string) {
   }
 
   var child = spawn('codesign', ['--force', '--sign', '-', path], {
-    stdout: 'pipe', stderr: 'pipe', stdin: 'null',
+    stdout: 'pipe',
+    stderr: 'pipe',
+    stdin: 'null',
   })
 
   var status = child.wait()
@@ -228,7 +233,9 @@ def _build(target, format, runtime, content, destination, details) {
 
   # A directory, or an archive of one.
   var base = plan.output_name(details.name, details.version, target, 'dir')
-  var tree = format == 'dir' ? destination : os.join_paths(os.dir_name(content), base)
+  var tree = format == 'dir'
+    ? destination
+    : os.join_paths(os.dir_name(content), base)
 
   fsx.copy_tree(content, tree)
   _place_executable(runtime, os.join_paths(tree, exe_name))
@@ -247,7 +254,9 @@ def _build(target, format, runtime, content, destination, details) {
     for entry in files {
       var full = os.join_paths(tree, entry.path)
 
-      packed.create_file(base + '/' + entry.path, fsx.read_bytes(full), file(full).stats())
+      packed.create_file(
+        base + '/' + entry.path, fsx.read_bytes(full), file(full).stats(),
+      )
     }
 
     if !packed.save() {
@@ -306,7 +315,7 @@ def main() {
     if identifier == nil or !plan.valid_identifier(identifier) {
       raise UsageError(
         'a macOS application needs [bundle] identifier in project.toml, written in reverse '
-          + 'domain form, such as com.example.tool'
+          + 'domain form, such as com.example.tool',
       )
     }
 
@@ -319,11 +328,15 @@ def main() {
     }
   }
 
-  var output = os.abs_path(given.get('output', os.join_paths(project.root, 'dist')))
+  var output = os.abs_path(given.get(
+    'output', os.join_paths(project.root, 'dist'),
+  ))
   var skip = []
 
   if os.path_contains(project.root, output) {
-    skip.append(os.relative_path(project.root, output).replace('\\', '/', false))
+    skip.append(os
+      .relative_path(project.root, output)
+      .replace('\\', '/', false))
   }
 
   var selected = files.select(project.root, {
@@ -333,13 +346,15 @@ def main() {
   })
 
   if !selected.links.is_empty() {
-    raise UsageError('a bundle cannot carry symbolic links: ' + ', '.join(selected.links))
+    raise UsageError(
+      'a bundle cannot carry symbolic links: ' + ', '.join(selected.links),
+    )
   }
 
   for held in selected.secrets {
     ui.complain(ui.warn(
       'warning: ${held} looks like it holds a secret and was left out; name it in [project] '
-        + 'include to ship it'
+        + 'include to ship it',
     ))
   }
 
@@ -350,7 +365,9 @@ def main() {
 
   for target in targets {
     var runtime = _runtime(target, given.get('runtime', nil))
-    var destination = os.join_paths(output, plan.output_name(name, version, target, format))
+    var destination = os.join_paths(
+      output, plan.output_name(name, version, target, format),
+    )
     var details = {
       name,
       display: settings.get('name', name),
@@ -363,7 +380,9 @@ def main() {
 
     _claim(destination, force)
 
-    var content = _contents(target, runtime, project, selected.files, packages, details)
+    var content = _contents(
+      target, runtime, project, selected.files, packages, details,
+    )
 
     catch {
       _build(target, format, runtime, content, destination, details)

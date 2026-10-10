@@ -118,7 +118,9 @@ def lexical_state(text: string, start: int, offset: int) {
 
     if ch == '/' and i + 1 < length and text[i + 1] == '*' {
       var opened = i
-      var doc = i + 2 < length and text[i + 2] == '*' and !(i + 3 < length and text[i + 3] == '/')
+      var doc = i + 2 < length
+        and text[i + 2] == '*'
+        and !(i + 3 < length and text[i + 3] == '/')
       var depth = 1
 
       i += 2
@@ -273,7 +275,9 @@ class _Completion {
       data: { path: ref.path, index: ref.index },
     }
 
-    var callable = symbol.kind == 'function' or symbol.kind == 'method' or symbol.kind == 'class'
+    var callable = symbol.kind == 'function'
+      or symbol.kind == 'method'
+      or symbol.kind == 'class'
 
     if callable {
       item.labelDetails = { detail: '(${render.parameters(symbol)})' }
@@ -298,7 +302,9 @@ class _Completion {
   }
 
   run() {
-    var line_start = self.document.index().line_start(self.document.index().line_of(self.offset))
+    var line_start = self.document
+      .index()
+      .line_start(self.document.index().line_of(self.offset))
     var line = self.text[line_start, self.offset]
     var start = common.code_start(self.analysis.nodes, self.offset)
     var lexical = lexical_state(self.text, start, self.offset)
@@ -444,7 +450,9 @@ class _Completion {
 
     var roots = []
     var resolver = self.server.resolver
-    var project = self.document.path == nil ? nil : resolver.project_libs(self.document.path)
+    var project = self.document.path == nil
+      ? nil
+      : resolver.project_libs(self.document.path)
 
     for root in [project, resolver.stdlib, resolver.home_libs] {
       if root != nil {
@@ -489,7 +497,9 @@ class _Completion {
             kind: package ? COMPLETION_KIND.module : COMPLETION_KIND.folder,
             sortText: _GROUP.module + name,
           })
-        } else if name.ends_with('.zu') and !name.ends_with('.stub.zu') and name != 'index.zu' {
+        } else if name.ends_with('.zu')
+          and !name.ends_with('.stub.zu')
+          and name != 'index.zu' {
           var module = name[0, name.length() - 3]
 
           if full != self.document.path {
@@ -506,7 +516,11 @@ class _Completion {
     # Native modules are one name, written at the start.
     if !written.contains('.') {
       for name, stub in self.server.resolver.natives {
-        self._add({ label: name, kind: COMPLETION_KIND.module, sortText: _GROUP.module + name })
+        self._add({
+          label: name,
+          kind: COMPLETION_KIND.module,
+          sortText: _GROUP.module + name,
+        })
       }
     }
   }
@@ -550,7 +564,9 @@ class _Completion {
     # does.
     var rest = self.text[self.offset, self.text.length()]
     var patched = self.text[0, word.start] + _PLACEHOLDER + rest
-    var copy = summaries.analyze(self.key, patched, self.server.builtins.names).summary
+    var copy = summaries.analyze(
+      self.key, patched, self.server.builtins.names,
+    ).summary
 
     access = self._access_at(copy, word.start)
 
@@ -604,7 +620,9 @@ class _Completion {
         var symbol = self.linker.symbol(ref)
 
         if symbol != nil {
-          self._add(self._declaration_item(member.name, ref, symbol, _GROUP.member))
+          self._add(self._declaration_item(
+            member.name, ref, symbol, _GROUP.member,
+          ))
         }
       }
     }
@@ -613,12 +631,19 @@ class _Completion {
     var receiver = access.receiver
 
     if receiver != nil and receiver.t == 'symbol' {
-      var symbol = self.linker.symbol({ path: receiver.module, index: receiver.index })
+      var symbol = self.linker.symbol({
+        path: receiver.module,
+        index: receiver.index,
+      })
       var keys = symbol == nil ? nil : symbol.get('keys', nil)
 
       for key in keys == nil ? [] : keys {
         if !!key.match('/^[A-Za-z_][A-Za-z0-9_]*$/') {
-          self._add({ label: key, kind: COMPLETION_KIND.property, sortText: _GROUP.member + key })
+          self._add({
+            label: key,
+            kind: COMPLETION_KIND.property,
+            sortText: _GROUP.member + key,
+          })
         }
       }
     }
@@ -636,7 +661,9 @@ class _Completion {
     }
 
     var owner = self.summary.symbols[scope.owner]
-    var declared = owner.get('members', []).map(@(index) => self.summary.symbols[index].name)
+    var declared = owner
+      .get('members', [])
+      .map(@(index) => self.summary.symbols[index].name)
     var at = word.start - 1
     var range = self.server.range(self.key, at, self.offset)
 
@@ -647,7 +674,9 @@ class _Completion {
 
       var item = {
         label: name,
-        kind: name == '@new' ? COMPLETION_KIND.constructor : COMPLETION_KIND.method,
+        kind: name == '@new'
+          ? COMPLETION_KIND.constructor
+          : COMPLETION_KIND.method,
         sortText: _GROUP.member + name,
         filterText: name,
       }
@@ -667,7 +696,11 @@ class _Completion {
 
   _types(word: dict) {
     for name in common.TYPE_WORDS {
-      self._add({ label: name, kind: COMPLETION_KIND.type, sortText: _GROUP.builtin + name })
+      self._add({
+        label: name,
+        kind: COMPLETION_KIND.type,
+        sortText: _GROUP.builtin + name,
+      })
     }
 
     for name, index in common.visible_names(self.summary, self.offset) {
@@ -697,7 +730,9 @@ class _Completion {
 
   _names(word: dict, line: string) {
     var scope = self.summary.scopes[common.scope_at(self.summary, self.offset)]
-    var statement = line[0, line.length() - word.prefix.length()].trim().is_empty()
+    var statement = line[0, line.length() - word.prefix.length()]
+      .trim()
+      .is_empty()
 
     if scope.kind == 'class' {
       if statement {
@@ -717,7 +752,9 @@ class _Completion {
         continue
       }
 
-      self._add(self._declaration_item(name, { path: self.key, index }, symbol, group))
+      self._add(self._declaration_item(
+        name, { path: self.key, index }, symbol, group,
+      ))
     }
 
     for name, ref in self.linker.starred(self.key) {
@@ -756,7 +793,11 @@ class _Completion {
   }
 
   _keyword(keyword: string) {
-    self._add({ label: keyword, kind: COMPLETION_KIND.keyword, sortText: _GROUP.keyword + keyword })
+    self._add({
+      label: keyword,
+      kind: COMPLETION_KIND.keyword,
+      sortText: _GROUP.keyword + keyword,
+    })
   }
 
   # --------------------------------------------------------------
@@ -765,7 +806,9 @@ class _Completion {
 
   # An edit that adds an import line.
   _import_edit(line_text: string) {
-    return common.import_edit(self.analysis.nodes, self.document.index(), line_text)
+    return common.import_edit(
+      self.analysis.nodes, self.document.index(), line_text,
+    )
   }
 
   # The name this file already binds the module at `path` to, when it
@@ -774,7 +817,8 @@ class _Completion {
     for index in self.summary.imports {
       var symbol = self.summary.symbols[index]
 
-      if symbol.kind == 'module' and self.linker.module_path(symbol.source.path, self.key) == path {
+      if symbol.kind == 'module'
+        and self.linker.module_path(symbol.source.path, self.key) == path {
         return symbol.name
       }
     }
@@ -820,7 +864,9 @@ class _Completion {
       }
 
       for name, ref in self.linker.globals(path) {
-        if name.starts_with('_') or !name.lower().starts_with(prefix) or visible.contains(name) {
+        if name.starts_with('_')
+          or !name.lower().starts_with(prefix)
+          or visible.contains(name) {
           continue
         }
 
@@ -829,7 +875,8 @@ class _Completion {
 
         # One declaration can be exported by several modules; the one
         # with the shortest import path is offered.
-        if current == nil or import_path.length() < current.import_path.length() {
+        if current == nil
+          or import_path.length() < current.import_path.length() {
           best[identity] = { name, ref, path, import_path }
         }
       }
@@ -842,7 +889,9 @@ class _Completion {
         continue
       }
 
-      var item = self._declaration_item(candidate.name, candidate.ref, symbol, _GROUP.imported)
+      var item = self._declaration_item(
+        candidate.name, candidate.ref, symbol, _GROUP.imported,
+      )
       var relative = candidate.import_path.starts_with('.')
 
       if relative {
@@ -852,7 +901,9 @@ class _Completion {
         item.labelDetails = { description: candidate.import_path }
       } else {
         var bound = self._bound_module(candidate.path)
-        var module = bound == nil ? candidate.import_path.split('.').last() : bound
+        var module = bound == nil
+          ? candidate.import_path.split('.').last()
+          : bound
 
         item.insertText = '${module}.${item.get("insertText", candidate.name)}'
         item.filterText = candidate.name
@@ -897,14 +948,18 @@ class _Completion {
       for name in os.read_dir(root) {
         var module = name.ends_with('.zu') ? name[0, name.length() - 3] : name
 
-        if name.ends_with('.stub.zu') or module.starts_with('_') or module.starts_with('.') {
+        if name.ends_with('.stub.zu')
+          or module.starts_with('_')
+          or module.starts_with('.') {
           continue
         }
 
         var package = os.join_paths(root, name, 'index.zu')
         var is_module = name.ends_with('.zu') or file(package).exists()
 
-        if is_module and module.lower().starts_with(prefix) and !found.contains(module) {
+        if is_module
+          and module.lower().starts_with(prefix)
+          and !found.contains(module) {
           found.append(module)
         }
       }
@@ -987,7 +1042,9 @@ def resolve(server, item: dict) {
   var type = nil
 
   if symbol.kind == 'variable' or symbol.kind == 'field' {
-    type = common.describe(linker, linker.type_of({ path: data.path, index: data.index }))
+    type = common.describe(
+      linker, linker.type_of({ path: data.path, index: data.index }),
+    )
   }
 
   item.detail = render.signature(symbol, owner, type)

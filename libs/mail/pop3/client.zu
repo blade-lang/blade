@@ -262,7 +262,7 @@ class Pop3Client {
     stream.start_tls(
       self._stream,
       self._options.get('server_name', self._host),
-      self._options.get('tls_config', nil)
+      self._options.get('tls_config', nil),
     )
 
     self.refresh_capabilities()
@@ -293,7 +293,7 @@ class Pop3Client {
         offered,
         self._options,
         self._stream.is_secure(),
-        self._options.get('mechanisms', nil)
+        self._options.get('mechanisms', nil),
       )
     }
 
@@ -314,7 +314,7 @@ class Pop3Client {
     if !self._stream.is_secure() {
       raise AuthenticationError(
         'sending a password here would send it in the clear; '
-        + 'the server offers ${offered.is_empty() ? 'nothing else' : ', '.join(offered)}'
+          + 'the server offers ${offered.is_empty() ? 'nothing else' : ', '.join(offered)}',
       )
     }
 
@@ -374,7 +374,7 @@ class Pop3Client {
 
       if line.starts_with('-ERR') {
         raise AuthenticationError(
-          '${self._host} refused the credentials: ${_reason(line)}'
+          '${self._host} refused the credentials: ${_reason(line)}',
         )
       }
 
@@ -657,7 +657,9 @@ class Pop3Client {
         return out
       }
 
-      out.extend((line.starts_with('.') ? line[1, line.length()] : line).to_bytes())
+      out.extend((line.starts_with('.')
+        ? line[1, line.length()]
+        : line).to_bytes())
       out.extend('\r\n'.to_bytes())
     }
   }

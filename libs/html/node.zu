@@ -37,7 +37,6 @@ import .entities
 import .selector
 import .parser
 
-
 /**
  * Node type of an `Element`.
  */
@@ -68,7 +67,6 @@ var NODE_DOCUMENT_TYPE = 10
  * holds a `<template>` element's content.
  */
 var NODE_DOCUMENT_FRAGMENT = 11
-
 
 /**
  * The HTML elements that are written without a closing tag and can
@@ -107,7 +105,6 @@ var RAW_TEXT_ELEMENTS = [
   'plaintext',
 ]
 
-
 /**
  * Raised when a tree mutation would produce a structure that cannot
  * exist, such as inserting a node before something that is not a
@@ -122,7 +119,6 @@ class HierarchyError < Error {
     parent(message)
   }
 }
-
 
 /**
  * The base class every node in a parsed document inherits from.
@@ -513,7 +509,7 @@ class Node {
 
     if at < 0 or id(reference.parent_node) != id(self) {
       raise HierarchyError(
-        'the reference node is not a child of this node'
+        'the reference node is not a child of this node',
       )
     }
 
@@ -847,7 +843,9 @@ class Node {
     var wanted = names
 
     if is_string(names) {
-      wanted = names.split('/\\s+/').filter(@(n) { return !n.is_empty() })
+      wanted = names.split('/\\s+/').filter(@(n) {
+        return !n.is_empty()
+      })
     }
 
     var out = []
@@ -963,7 +961,6 @@ class Node {
   }
 }
 
-
 /**
  * A run of character data in the tree.
  *
@@ -1050,7 +1047,6 @@ class Text < Node {
   }
 }
 
-
 /**
  * An HTML comment.
  *
@@ -1110,7 +1106,6 @@ class Comment < Node {
     return Comment(self.data)
   }
 }
-
 
 /**
  * The `<!DOCTYPE ...>` node at the top of a document.
@@ -1205,7 +1200,6 @@ class DocumentType < Node {
   }
 }
 
-
 /**
  * A parentless container for a run of nodes.
  *
@@ -1239,7 +1233,6 @@ class DocumentFragment < Node {
     return DocumentFragment()
   }
 }
-
 
 /**
  * A whole parsed document.
@@ -1398,7 +1391,6 @@ class Document < Node {
     return copy
   }
 }
-
 
 /**
  * A live view of one element's `class` attribute.
@@ -1570,7 +1562,6 @@ class ClassList {
   }
 }
 
-
 /**
  * Appends every node beneath _node_ to _out_, in document order.
  *
@@ -1588,7 +1579,6 @@ def _collect_descendants(node, out: list) {
   }
 }
 
-
 /**
  * Rejects a class name that cannot be written into a `class`
  * attribute without changing its meaning.
@@ -1605,7 +1595,6 @@ def _check_class_name(name: string) {
     raise ArgumentError('a class name cannot contain whitespace: "${name}"')
   }
 }
-
 
 /**
  * An element in the tree.
@@ -2084,7 +2073,6 @@ class Element < Node {
   }
 }
 
-
 /**
  * Rejects an attribute name that could not be written back out as
  * markup.
@@ -2099,7 +2087,7 @@ def _check_attribute_name(name: string) {
 
   if name.match('/[\\s"\'>\\/=]/') != false {
     raise ArgumentError(
-      'an attribute name cannot contain whitespace or any of ` " \' > / = `: "${name}"'
+      'an attribute name cannot contain whitespace or any of ` " \' > / = `: "${name}"',
     )
   }
 }

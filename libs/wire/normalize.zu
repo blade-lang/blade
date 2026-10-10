@@ -44,7 +44,6 @@ import html
 
 import .constants { CARRIER_TAG, PSEUDO_ELEMENTS, PSEUDO_FLAGS }
 
-
 /**
  * A tokenizer that rewrites Wire's pseudo elements on the way past.
  *
@@ -200,7 +199,6 @@ class Normalizer {
   }
 }
 
-
 /**
  * A pseudo element's attributes, with the one that carries its value
  * turned into the directive it means.
@@ -243,7 +241,6 @@ def _translate(attributes: dict, pseudo: dict) {
   return out
 }
 
-
 /**
  * The end tag a self-closing pseudo element implies, positioned where
  * the start tag was so an error inside it still points somewhere real.
@@ -260,7 +257,6 @@ def _end_tag(start) {
 
   return token
 }
-
 
 /**
  * Parses _source_ into a tree with Wire's pseudo elements already
@@ -317,7 +313,7 @@ def parse(source: string, context: ?string) {
   }
 
   var host = builder.prepare_fragment(
-    html.Element(context.lower(), html.HTML_NAMESPACE, {})
+    html.Element(context.lower(), html.HTML_NAMESPACE, {}),
   )
 
   var document = builder.run()

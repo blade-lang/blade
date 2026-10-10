@@ -40,7 +40,6 @@
  * > number since the was not assigned to a variable.
  */
 
-
 class range {
 
   /**
@@ -57,7 +56,6 @@ class range {
    */
   lower() {}
 
-
   /**
    * Returns the upper limit of the range.
    *
@@ -71,7 +69,6 @@ class range {
    * @returns {number}
    */
   upper() {}
-
 
   /**
    * Returns a number equal to the numbers between the range.
@@ -96,7 +93,6 @@ class range {
    */
   range() {}
 
-
   /**
    * Returns true if the given number falls somewhere within the
    * or false otherwise.
@@ -114,7 +110,6 @@ class range {
    * @returns {boolean}
    */
   within(value: number) {}
-
 
   /**
    * Sets the step size of the range.
@@ -139,7 +134,6 @@ class range {
    * @returns {range}
    */
   step(size: int) {}
-
 
   /**
    * Returns the step size of the range.
@@ -190,7 +184,6 @@ class range {
    * @returns {list}
    */
   to_list() {}
-
 
   /**
    * Returns the string representation of the range.

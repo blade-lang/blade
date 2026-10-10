@@ -208,14 +208,14 @@ class Reader {
     } as error {
       raise ConnectionError(
         'the connection to the server failed while reading: ' +
-        error.message,
-        { driver: 'postgres' }
+          error.message,
+        { driver: 'postgres' },
       )
     }
 
     if chunk == nil or chunk.length() < count {
       raise ConnectionError(
-        'the server closed the connection', { driver: 'postgres' }
+        'the server closed the connection', { driver: 'postgres' },
       )
     }
 

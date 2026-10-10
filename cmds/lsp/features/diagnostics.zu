@@ -90,7 +90,10 @@ def _accepts(hint: string) {
     text = text[1, text.length()]
   }
 
-  var words = text.split('|').map(@(word) => word.trim()).filter(@(word) => !word.is_empty())
+  var words = text
+    .split('|')
+    .map(@(word) => word.trim())
+    .filter(@(word) => !word.is_empty())
 
   return { nullable, words }
 }
@@ -130,7 +133,9 @@ def _passes(given: string, word: string) {
       return given == word
     }
     when 'function', 'callable' return given == 'function'
-    when 'iterable' return ['string', 'list', 'dict', 'range'].contains(given)
+    when 'iterable' {
+      return ['string', 'list', 'dict', 'range'].contains(given)
+    }
     default {
       # A class: no literal is an instance of one.
       return false
@@ -157,7 +162,10 @@ class _Report {
     self._broken = {}
   }
 
-  _add(start: int, end: int, severity: int, code: string, message: string, extra: dict) {
+  _add(
+    start: int, end: int, severity: int, code: string, message: string,
+    extra: dict,
+  ) {
     var diagnostic = {
       range: self.server.range(self.key, start, end),
       severity,
@@ -237,7 +245,9 @@ class _Report {
 
   syntax() {
     for error in self.summary.errors {
-      self._add(error.start, error.end, SEVERITY.error, 'syntax', error.message, {})
+      self._add(
+        error.start, error.end, SEVERITY.error, 'syntax', error.message, {},
+      )
     }
   }
 
@@ -266,7 +276,10 @@ class _Report {
     }
 
     for problem in problems {
-      self._add(problem.start, problem.end, SEVERITY.error, 'compile', problem.message, {})
+      self._add(
+        problem.start, problem.end, SEVERITY.error, 'compile', problem.message,
+        {},
+      )
     }
   }
 
@@ -311,9 +324,12 @@ class _Report {
         var module = render.import_text(segments)
         var message = "module '${module}' has no member '${source.member}'"
 
-        self._add(symbol.name_start, symbol.name_end, SEVERITY.error, 'missing-member', message, {
-          data: { name: source.member },
-        })
+        self._add(
+          symbol.name_start, symbol.name_end, SEVERITY.error, 'missing-member',
+          message, {
+            data: { name: source.member },
+          },
+        )
       }
     }
 
@@ -338,7 +354,10 @@ class _Report {
       message = "cannot find module '${module}': a relative import needs the file to be saved"
     }
 
-    self._add(start, end, SEVERITY.error, 'module-not-found', message, { data: { module } })
+    self._add(
+      start, end, SEVERITY.error, 'module-not-found', message,
+      { data: { module } },
+    )
   }
 
   # Names nothing declares.
@@ -363,9 +382,11 @@ class _Report {
       if undefined {
         var message = "'${name}' is not defined"
 
-        self._add(refs[i], refs[i + 1], SEVERITY.error, 'undefined-name', message, {
-          data: { name },
-        })
+        self._add(
+          refs[i], refs[i + 1], SEVERITY.error, 'undefined-name', message, {
+            data: { name },
+          },
+        )
       }
 
       i += REF_STRIDE
@@ -409,24 +430,29 @@ class _Report {
         var module = self._module_label(access)
         var message = "module '${module}' has no member '${access.name}'"
 
-        self._add(access.start, access.end, SEVERITY.error, 'missing-member', message, {
-          data: { name: access.name },
-        })
+        self._add(
+          access.start, access.end, SEVERITY.error, 'missing-member', message, {
+            data: { name: access.name },
+          },
+        )
       }
 
       return
     }
 
-    if !['instance', 'builtin', 'class'].contains(owner.t) or !self.linker.fully_known(owner) {
+    if !['instance', 'builtin', 'class'].contains(owner.t)
+      or !self.linker.fully_known(owner) {
       return
     }
 
     var what = self._owner_label(owner)
     var message = "'${access.name}' is not a member of ${what}"
 
-    self._add(access.start, access.end, SEVERITY.warning, 'unknown-member', message, {
-      data: { name: access.name },
-    })
+    self._add(
+      access.start, access.end, SEVERITY.warning, 'unknown-member', message, {
+        data: { name: access.name },
+      },
+    )
   }
 
   _module_label(access: dict) {
@@ -477,7 +503,9 @@ class _Report {
       return
     }
 
-    if self._declared_below({ path: self.key, index: owner_index }, access.name, 0) {
+    if self._declared_below(
+      { path: self.key, index: owner_index }, access.name, 0,
+    ) {
       return
     }
 
@@ -486,9 +514,11 @@ class _Report {
     var message = "'${name}' is not a field of ${class_name}: declare it with `var ${name}` "
     message += 'in the class or set it in @new'
 
-    self._add(access.start, access.end, SEVERITY.error, 'undeclared-field', message, {
-      data: { name: access.name, owner: owner_index },
-    })
+    self._add(
+      access.start, access.end, SEVERITY.error, 'undeclared-field', message, {
+        data: { name: access.name, owner: owner_index },
+      },
+    )
   }
 
   # The method a scope is inside, through any anonymous functions in
@@ -547,9 +577,13 @@ class _Report {
     }
 
     var why = render.tag_text(symbol.doc, 'deprecated')
-    var message = why.is_empty() ? "'${name}' is deprecated" : "'${name}' is deprecated: ${why}"
+    var message = why.is_empty()
+      ? "'${name}' is deprecated"
+      : "'${name}' is deprecated: ${why}"
 
-    self._add(start, end, SEVERITY.hint, 'deprecated', message, { tags: [_DEPRECATED] })
+    self._add(
+      start, end, SEVERITY.hint, 'deprecated', message, { tags: [_DEPRECATED] },
+    )
   }
 
   _deprecated_names() {
@@ -570,7 +604,9 @@ class _Report {
         var target = query.canonical(self.linker, self.key, occurrence)
 
         if target != nil and !target.contains('module') {
-          self._deprecated(occurrence.start, occurrence.end, target, occurrence.name)
+          self._deprecated(
+            occurrence.start, occurrence.end, target, occurrence.name,
+          )
         }
       }
 
@@ -584,7 +620,9 @@ class _Report {
     var text = nil
 
     for call in self.summary.calls {
-      var target = common.callable(self.linker, self.linker.resolve(call.callee))
+      var target = common.callable(
+        self.linker, self.linker.resolve(call.callee),
+      )
 
       if target == nil {
         continue
@@ -621,13 +659,17 @@ class _Report {
       }
 
       var accepts = _accepts(param.hint)
-      var argument = position <= call.arguments.length() ? call.arguments[position - 1] : nil
+      var argument = position <= call.arguments.length()
+        ? call.arguments[position - 1]
+        : nil
       var given = 'nil'
       var start = call.callee_start
       var end = call.callee_end
 
       if argument != nil {
-        given = _literal_type(argument.kind, text == nil ? '' : text[argument.start, argument.end])
+        given = _literal_type(
+          argument.kind, text == nil ? '' : text[argument.start, argument.end],
+        )
         start = argument.start
         end = argument.end
       }
@@ -646,7 +688,9 @@ class _Report {
         continue
       }
 
-      var wanted = ' or '.join(accepts.words.map(@(word) => '${_article(word)} ${word}'))
+      var wanted = ' or '.join(accepts.words.map(
+        @(word) => '${_article(word)} ${word}',
+      ))
       var reported = given == 'int' ? 'number' : given
       var name = target.symbol.name
       var message = "${name}() expects parameter '${param.name}' (argument ${position}) "
@@ -659,9 +703,12 @@ class _Report {
 
   unreachable() {
     for span in self.summary.get('unreachable', []) {
-      self._add(span[0], span[1], SEVERITY.hint, 'unreachable', 'this code is never reached', {
-        tags: [_UNNECESSARY],
-      })
+      self._add(
+        span[0], span[1], SEVERITY.hint, 'unreachable',
+        'this code is never reached', {
+          tags: [_UNNECESSARY],
+        },
+      )
     }
   }
 
@@ -673,7 +720,9 @@ class _Report {
     for symbol in self.summary.symbols {
       # An import already reported as broken is not reported again as
       # unused.
-      var kind = self._broken.contains('${index}') ? nil : self._unused_kind(symbol)
+      var kind = self._broken.contains('${index}')
+        ? nil
+        : self._unused_kind(symbol)
 
       if kind == 'private' {
         if starred == nil {
@@ -686,14 +735,19 @@ class _Report {
       }
 
       if kind != nil {
-        var message = kind == 'import' ? "'${symbol.name}' is imported but never used" : (
-          "'${symbol.name}' is never used"
-        )
+        var message = kind == 'import'
+          ? "'${symbol.name}' is imported but never used"
+          : (
+            "'${symbol.name}' is never used"
+          )
 
-        self._add(symbol.name_start, symbol.name_end, SEVERITY.hint, 'unused', message, {
-          tags: [_UNNECESSARY],
-          data: { kind, index },
-        })
+        self._add(
+          symbol.name_start, symbol.name_end, SEVERITY.hint, 'unused', message,
+          {
+            tags: [_UNNECESSARY],
+            data: { kind, index },
+          },
+        )
       }
 
       index++
@@ -703,7 +757,9 @@ class _Report {
   # What sort of unused declaration a symbol is, or `nil` when it is
   # used or is never reported.
   _unused_kind(symbol: dict) {
-    if symbol.reads > 0 or symbol.get('anonymous', false) or symbol.name.is_empty() {
+    if symbol.reads > 0
+      or symbol.get('anonymous', false)
+      or symbol.name.is_empty() {
       return nil
     }
 
@@ -772,7 +828,9 @@ def _result_id(items: list) {
  */
 def document_report(server, params: dict) {
   var document = server.document(params.textDocument.uri)
-  var items = server.settings.get('diagnostics.enable') ? compute(server, document.key) : []
+  var items = server.settings.get('diagnostics.enable')
+    ? compute(server, document.key)
+    : []
   var id = _result_id(items)
 
   if params.get('previousResultId', nil) == id {

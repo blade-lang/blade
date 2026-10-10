@@ -641,7 +641,7 @@ class HttpServer {
     return self.use_tls(
       file(cert_path).read(),
       file(key).read(),
-      options
+      options,
     )
   }
 
@@ -917,7 +917,7 @@ class HttpServer {
       # An idle keep-alive connection timing out, or a peer closing
       # between requests, is the normal end of a connection.
       if instance_of(read_error, TimeoutError) or
-          instance_of(read_error, ConnectionError) {
+        instance_of(read_error, ConnectionError) {
         return false
       }
 
@@ -1180,7 +1180,9 @@ class HttpServer {
     # any one resource (RFC 9110 §9.3.7).
     if request.method == 'OPTIONS' and request.path == '*' {
       response.status = status.NO_CONTENT
-      response.headers.set('Allow', 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS')
+      response.headers.set(
+        'Allow', 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS',
+      )
       return
     }
 
@@ -1336,7 +1338,9 @@ class HttpServer {
     }
 
     catch {
-      var compressed = body.encode_content(response.body, coding, self.compression_quality)
+      var compressed = body.encode_content(
+        response.body, coding, self.compression_quality,
+      )
 
       # Compression that makes a body bigger is worse than none.
       if compressed.length() < response.body.length() {

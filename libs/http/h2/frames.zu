@@ -327,7 +327,9 @@ def decode_settings(payload) {
  *    never interpreted by the peer
  * @returns bytes
  */
-def encode_goaway(last_stream_id: int, error_code: int, debug_message: ?string) {
+def encode_goaway(
+  last_stream_id: int, error_code: int, debug_message: ?string,
+) {
   var out = bytes(0)
 
   write_u32(out, last_stream_id)

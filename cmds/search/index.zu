@@ -31,8 +31,12 @@ def parser() {
   parser.add_option('limit', 'Results per page, up to 100; 20 by default',
     { short_name: 'l', type: args.INT, metavar: 'count', value: 20 })
   parser.add_option('sort', 'relevance, downloads, updated or name',
-    { type: args.CHOICE, choices: ['relevance', 'downloads', 'updated', 'name'],
-      metavar: 'order', value: 'relevance' })
+    {
+      type: args.CHOICE,
+      choices: ['relevance', 'downloads', 'updated', 'name'],
+      metavar: 'order',
+      value: 'relevance',
+    })
   cli.add_json_option(parser)
 
   return parser
@@ -45,7 +49,9 @@ def main() {
   var page = parsed.options.page.max(1)
   var limit = parsed.options.limit.max(1).min(100)
 
-  var found = registry.search(query, { page, per_page: limit, sort: parsed.options.sort })
+  var found = registry.search(
+    query, { page, per_page: limit, sort: parsed.options.sort },
+  )
 
   if parsed.options.get('json', false) == true {
     cli.print_json(found)
@@ -68,7 +74,10 @@ def main() {
       about = about[0, 57] + '...'
     }
 
-    rows.append([ui.accent(package.name), package.latest == nil ? '' : package.latest, about])
+    rows.append([
+      ui.accent(package.name), package.latest == nil ? '' : package.latest,
+      about,
+    ])
   }
 
   ui.say(ui.table(rows))

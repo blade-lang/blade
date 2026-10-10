@@ -39,7 +39,6 @@
  * precision.
  */
 
-
 class number {
 
   /**
@@ -53,7 +52,6 @@ class number {
    * @returns {string}
    */
   to_string() {}
-
 
   /**
    * Converts the number to a boolean, by the same rule `if` uses.
@@ -74,7 +72,6 @@ class number {
    * @returns {boolean}
    */
   to_bool() {}
-
 
   /**
    * Converts the number to a `bigint`, the counterpart to
@@ -98,7 +95,6 @@ class number {
    */
   to_bigint() {}
 
-
   /**
    * Returns the absolute value of the number.
    *
@@ -113,7 +109,6 @@ class number {
    */
   abs() {}
 
-
   /**
    * Returns the Unicode character whose code point is equal to
    * the number.
@@ -126,7 +121,6 @@ class number {
    * @returns {string}
    */
   chr() {}
-
 
   /**
    * Converts the number to its binary string representation. The
@@ -143,7 +137,6 @@ class number {
    */
   bin() {}
 
-
   /**
    * Converts the number to its hexadecimal string
    * representation. The number is truncated to an integer first.
@@ -159,7 +152,6 @@ class number {
    */
   hex() {}
 
-
   /**
    * Converts the number to its octal string representation. The
    * number is truncated to an integer first.
@@ -174,7 +166,6 @@ class number {
    * @returns {string}
    */
   oct() {}
-
 
   /**
    * Truncates the number down to its integer part, discarding
@@ -192,7 +183,6 @@ class number {
    * @returns {number}
    */
   int() {}
-
 
   /**
    * Returns the larger of the number and _other_.
@@ -217,7 +207,6 @@ class number {
    */
   max(other: number) {}
 
-
   /**
    * Returns the smaller of the number and _other_.
    *
@@ -241,7 +230,6 @@ class number {
    */
   min(other: number) {}
 
-
   /**
    * Returns the factorial of the number, i.e. the product of
    * every positive integer less than or equal to it.
@@ -261,14 +249,12 @@ class number {
    */
   factorial() {}
 
-
   /**
    * Returns the sine of the number, taken to be in radians.
    *
    * @returns {number}
    */
   sin() {}
-
 
   /**
    * Returns the cosine of the number, taken to be in radians.
@@ -277,14 +263,12 @@ class number {
    */
   cos() {}
 
-
   /**
    * Returns the tangent of the number, taken to be in radians.
    *
    * @returns {number}
    */
   tan() {}
-
 
   /**
    * Returns the hyperbolic sine of the number.
@@ -293,7 +277,6 @@ class number {
    */
   sinh() {}
 
-
   /**
    * Returns the hyperbolic cosine of the number.
    *
@@ -301,14 +284,12 @@ class number {
    */
   cosh() {}
 
-
   /**
    * Returns the hyperbolic tangent of the number.
    *
    * @returns {number}
    */
   tanh() {}
-
 
   /**
    * Returns the arcsine (inverse sine) of the number, in
@@ -321,7 +302,6 @@ class number {
    */
   asin() {}
 
-
   /**
    * Returns the arccosine (inverse cosine) of the number, in
    * radians.
@@ -333,7 +313,6 @@ class number {
    */
   acos() {}
 
-
   /**
    * Returns the arctangent (inverse tangent) of the number, in
    * radians.
@@ -341,7 +320,6 @@ class number {
    * @returns {number}
    */
   atan() {}
-
 
   /**
    * Returns the four-quadrant arctangent of the number and _x_,
@@ -359,14 +337,12 @@ class number {
    */
   atan2(x: number) {}
 
-
   /**
    * Returns the inverse hyperbolic sine of the number.
    *
    * @returns {number}
    */
   asinh() {}
-
 
   /**
    * Returns the inverse hyperbolic cosine of the number.
@@ -378,7 +354,6 @@ class number {
    */
   acosh() {}
 
-
   /**
    * Returns the inverse hyperbolic tangent of the number.
    *
@@ -389,7 +364,6 @@ class number {
    */
   atanh() {}
 
-
   /**
    * Returns _e_ (Euler's number) raised to the power of the
    * number.
@@ -397,7 +371,6 @@ class number {
    * @returns {number}
    */
   exp() {}
-
 
   /**
    * Returns _e_ raised to the power of the number, minus `1`.
@@ -407,7 +380,6 @@ class number {
    * @returns {number}
    */
   expm1() {}
-
 
   /**
    * Returns the natural logarithm (base _e_) of the number.
@@ -421,7 +393,6 @@ class number {
    */
   log() {}
 
-
   /**
    * Returns the base-2 logarithm of the number.
    *
@@ -433,7 +404,6 @@ class number {
    * @returns {number}
    */
   log2() {}
-
 
   /**
    * Returns the base-10 logarithm of the number.
@@ -447,7 +417,6 @@ class number {
    */
   log10() {}
 
-
   /**
    * Returns the natural logarithm of `1` plus the number. For a
    * number close to zero, this is more numerically accurate than
@@ -456,7 +425,6 @@ class number {
    * @returns {number}
    */
   log1p() {}
-
 
   /**
    * Returns the cube root of the number.
@@ -469,7 +437,6 @@ class number {
    * @returns {number}
    */
   cbrt() {}
-
 
   /**
    * Returns the square root of the number.
@@ -487,7 +454,6 @@ class number {
    * @returns {number}
    */
   sqrt() {}
-
 
   /**
    * Returns the sign of the number: `1` if it is positive, `-1`
@@ -507,7 +473,6 @@ class number {
    */
   sign() {}
 
-
   /**
    * Returns the smallest whole number greater than or equal to
    * the number.
@@ -520,7 +485,6 @@ class number {
    * @returns {number}
    */
   ceil() {}
-
 
   /**
    * Rounds the number to the nearest whole number. A value
@@ -538,7 +502,6 @@ class number {
    */
   round() {}
 
-
   /**
    * Returns the largest whole number less than or equal to the
    * number.
@@ -552,7 +515,6 @@ class number {
    */
   floor() {}
 
-
   /**
    * Returns `true` if the number is NaN (not a number, e.g. the
    * result of `0/0`), `false` otherwise.
@@ -560,7 +522,6 @@ class number {
    * @returns {boolean}
    */
   is_nan() {}
-
 
   /**
    * Returns `true` if the number is positive or negative
@@ -570,7 +531,6 @@ class number {
    */
   is_inf() {}
 
-
   /**
    * Returns `true` if the number is neither infinite nor NaN,
    * `false` otherwise.
@@ -578,7 +538,6 @@ class number {
    * @returns {boolean}
    */
   is_finite() {}
-
 
   /**
    * Truncates the number towards zero, discarding anything after
@@ -596,7 +555,6 @@ class number {
    * @returns {number}
    */
   trunc() {}
-
 
   /**
    * Returns the digits after the number's decimal point, read as

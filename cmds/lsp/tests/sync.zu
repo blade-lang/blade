@@ -20,7 +20,9 @@ def span(line: int, character: int, end_line: int, end_character: int) {
 # The first line of a hover's markdown code block.
 def hover_line(client, address: string, at: dict) {
   var document = { uri: address }
-  var answer = client.request('textDocument/hover', { textDocument: document, position: at })
+  var answer = client.request(
+    'textDocument/hover', { textDocument: document, position: at },
+  )
 
   return answer == nil ? nil : answer.contents.value.split('\n')[1]
 }
@@ -49,7 +51,9 @@ describe('changes', @{
       ],
     })
 
-    expect(hover_line(client, address, { line: 1, character: 6 })).to_equal('var beta: number')
+    expect(hover_line(
+      client, address, { line: 1, character: 6 },
+    )).to_equal('var beta: number')
     client.notify('textDocument/didClose', { textDocument: { uri: address } })
   })
 
@@ -57,7 +61,9 @@ describe('changes', @{
     var address = client.open(SCRATCH, 'var one = 1\n')
 
     client.change(address, 'var two = "2"\necho two\n')
-    expect(hover_line(client, address, { line: 1, character: 6 })).to_equal('var two: string')
+    expect(hover_line(
+      client, address, { line: 1, character: 6 },
+    )).to_equal('var two: string')
     client.notify('textDocument/didClose', { textDocument: { uri: address } })
   })
 
@@ -101,22 +107,26 @@ describe('position encodings', @{
   # Multilingual Plane, where the encodings disagree.
   var SOURCE = "var face = '😀😀'; var name = 1\necho '😀' + name\n"
 
-  it_each([['utf-16'], ['utf-8'], ['utf-32']], 'counts positions in $0', @(encoding) {
-    var client = Client(FIXTURE, nil)
-    var asked = capabilities()
+  it_each(
+    [['utf-16'], ['utf-8'], ['utf-32']], 'counts positions in $0', @(encoding) {
+      var client = Client(FIXTURE, nil)
+      var asked = capabilities()
 
-    asked.general.positionEncodings = [encoding]
+      asked.general.positionEncodings = [encoding]
 
-    var result = client.initialize(asked)
+      var result = client.initialize(asked)
 
-    expect(result.capabilities.positionEncoding).to_equal(encoding)
+      expect(result.capabilities.positionEncoding).to_equal(encoding)
 
-    var address = client.open(SCRATCH, SOURCE)
-    var at = position(SOURCE, "'😀' + nam", 0, encoding)
-    var asked_at = { textDocument: { uri: address }, position: at }
-    var found = client.request('textDocument/definition', asked_at)
+      var address = client.open(SCRATCH, SOURCE)
+      var at = position(SOURCE, "'😀' + nam", 0, encoding)
+      var asked_at = { textDocument: { uri: address }, position: at }
+      var found = client.request('textDocument/definition', asked_at)
 
-    expect(found[0].range.start).to_equal(position(SOURCE, 'var name', 4, encoding))
-    client.stop()
-  })
+      expect(found[0].range.start).to_equal(position(
+        SOURCE, 'var name', 4, encoding,
+      ))
+      client.stop()
+    },
+  )
 })

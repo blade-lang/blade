@@ -100,8 +100,12 @@ describe('solve', @{
       json: { '1.0.0': {}, '1.4.0': {}, '1.9.0': {} },
     }, { json: '1.4.0' })
 
-    expect(solve(catalog, '0.1.0', needs({ json: '^1.0' })).json).to_equal('1.4.0')
-    expect(solve(catalog, '0.1.0', needs({ json: '>=1.5' })).json).to_equal('1.9.0')
+    expect(solve(
+      catalog, '0.1.0', needs({ json: '^1.0' }),
+    ).json).to_equal('1.4.0')
+    expect(solve(
+      catalog, '0.1.0', needs({ json: '>=1.5' }),
+    ).json).to_equal('1.9.0')
   })
 
   it('never picks a pre-release nobody asked for', @{
@@ -109,8 +113,12 @@ describe('solve', @{
       json: { '1.0.0': {}, '1.1.0-rc.1': {} },
     })
 
-    expect(solve(catalog, '0.1.0', needs({ json: '^1.0' })).json).to_equal('1.0.0')
-    expect(solve(catalog, '0.1.0', needs({ json: '^1.1.0-rc.1' })).json).to_equal('1.1.0-rc.1')
+    expect(solve(
+      catalog, '0.1.0', needs({ json: '^1.0' }),
+    ).json).to_equal('1.0.0')
+    expect(solve(
+      catalog, '0.1.0', needs({ json: '^1.1.0-rc.1' }),
+    ).json).to_equal('1.1.0-rc.1')
   })
 
   it('does not look up packages nothing needs', @{
@@ -138,7 +146,9 @@ describe('solve', @{
       })
     }
 
-    var chosen = solve(Catalog(packages), '0.1.0', needs({ a: '*', b: '*', c: '*', d: '^1' }))
+    var chosen = solve(
+      Catalog(packages), '0.1.0', needs({ a: '*', b: '*', c: '*', d: '^1' }),
+    )
 
     expect(chosen).to_equal({ a: '1.0.0', b: '1.0.0', c: '1.0.0', d: '1.0.0' })
   })
@@ -181,7 +191,9 @@ describe('explaining a failure', @{
     var message = nil
 
     catch {
-      solve(catalog, '0.1.0', needs({ http_extra: '^1', report_kit: '^1' }), 'shop')
+      solve(
+        catalog, '0.1.0', needs({ http_extra: '^1', report_kit: '^1' }), 'shop',
+      )
     } as error {
       message = error.message
     }

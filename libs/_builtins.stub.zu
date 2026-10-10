@@ -34,7 +34,6 @@ def time() {}
  */
 def sum(...values) {}
 
-
 /**
  * If x is a number, this function returns a new `bytes` object
  * with length x having all its bytes set to `0x0`.
@@ -55,7 +54,6 @@ def sum(...values) {}
  * @returns {bytes|any}
  */
 def bytes(x: number|list) {}
-
 
 /**
  * Returns an open file handle to the file specified in the path
@@ -94,7 +92,6 @@ def bytes(x: number|list) {}
  */
 def file(path: string, mode: ?string) {}
 
-
 /**
  * Returns `true` if x is an instance of the given class y or
  * `false` otherwise.
@@ -105,7 +102,6 @@ def file(path: string, mode: ?string) {}
  */
 def instance_of(x: any, y) {}
 
-
 /**
  * Returns the type of the given value as a string.
  *
@@ -113,7 +109,6 @@ def instance_of(x: any, y) {}
  * @returns {string}
  */
 def typeof(x: any) {}
-
 
 /**
  * Deletes the property name from the given instance of object.
@@ -124,7 +119,6 @@ def typeof(x: any) {}
  * @returns {void}
  */
 def delprop(object: instance, name: string) {}
-
 
 /**
  * Returns the value of the property name from the given instance
@@ -138,7 +132,6 @@ def delprop(object: instance, name: string) {}
  */
 def getprop(object: instance, name: string) {}
 
-
 /**
  * Returns true if the property name exists in the given instance
  * of object. If the object has no such property, `false` is
@@ -150,7 +143,6 @@ def getprop(object: instance, name: string) {}
  * @returns {boolean}
  */
 def hasprop(object: instance, name: string) {}
-
 
 /**
  * Sets the value of the object's property with the matching name
@@ -165,7 +157,6 @@ def hasprop(object: instance, name: string) {}
  */
 def setprop(obj: instance, prop: string, value: any) {}
 
-
 /**
  * Returns the unique identifier of value x within the system.
  * This value is also equivalent to the current address of object
@@ -175,7 +166,6 @@ def setprop(obj: instance, prop: string, value: any) {}
  * @returns {number}
  */
 def id(x: any) {}
-
 
 /**
  * Prints the given arguments to standard output.
@@ -194,7 +184,6 @@ def id(x: any) {}
  */
 def print(...values) {}
 
-
 /**
  * If no argument is given, returns a random number between 0 and
  * 1. If x is given, returns a random number between 0 and x. If
@@ -205,7 +194,6 @@ def print(...values) {}
  * @returns {number}
  */
 def rand(x: ?number, y: ?number) {}
-
 
 /**
  * Returns `true` if x is a bigint or `false` otherwise. A bigint is
@@ -221,7 +209,6 @@ def rand(x: ?number, y: ?number) {}
  */
 def is_bigint(x: any) {}
 
-
 /**
  * Returns `true` if x is a boolean or `false` otherwise.
  *
@@ -229,7 +216,6 @@ def is_bigint(x: any) {}
  * @returns {boolean}
  */
 def is_bool(x: any) {}
-
 
 /**
  * Returns `true` if x is a callable or `false` otherwise.
@@ -240,7 +226,6 @@ def is_bool(x: any) {}
  */
 def is_callable(x: any) {}
 
-
 /**
  * Returns `true` if x is a class or `false` otherwise.
  *
@@ -248,7 +233,6 @@ def is_callable(x: any) {}
  * @returns {boolean}
  */
 def is_class(x: any) {}
-
 
 /**
  * Returns `true` if x is a dictionary or `false` otherwise.
@@ -258,7 +242,6 @@ def is_class(x: any) {}
  */
 def is_dict(x: any) {}
 
-
 /**
  * Returns `true` if x is a function or `false` otherwise.
  *
@@ -266,7 +249,6 @@ def is_dict(x: any) {}
  * @returns {boolean}
  */
 def is_function(x: any) {}
-
 
 /**
  * Returns `true` if x is an instance of any class or `false`
@@ -277,7 +259,6 @@ def is_function(x: any) {}
  */
 def is_instance(x: any) {}
 
-
 /**
  * Returns `true` if x is an integer or `false` otherwise.
  *
@@ -285,7 +266,6 @@ def is_instance(x: any) {}
  * @returns {boolean}
  */
 def is_int(x: any) {}
-
 
 /**
  * Returns `true` if x is a list or `false` otherwise.
@@ -295,7 +275,6 @@ def is_int(x: any) {}
  */
 def is_list(x: any) {}
 
-
 /**
  * Returns `true` if x is a number or `false` otherwise.
  *
@@ -303,7 +282,6 @@ def is_list(x: any) {}
  * @returns {boolean}
  */
 def is_number(x: any) {}
-
 
 /**
  * Returns `true` if x is an object or `false` otherwise.
@@ -313,7 +291,6 @@ def is_number(x: any) {}
  */
 def is_object(x: any) {}
 
-
 /**
  * Returns `true` if x is a string or `false` otherwise.
  *
@@ -321,7 +298,6 @@ def is_object(x: any) {}
  * @returns {boolean}
  */
 def is_string(x: any) {}
-
 
 /**
  * Returns `true` if x is bytes or `false` otherwise.
@@ -331,7 +307,6 @@ def is_string(x: any) {}
  */
 def is_bytes(x: any) {}
 
-
 /**
  * Returns `true` if x is a file or `false` otherwise.
  *
@@ -339,7 +314,6 @@ def is_bytes(x: any) {}
  * @returns {boolean}
  */
 def is_file(x: any) {}
-
 
 /**
  * Returns `true` if x is an iterable object or `false`
@@ -352,7 +326,6 @@ def is_file(x: any) {}
  */
 def is_iterable(x: any) {}
 
-
 /**
  * The path of the file it is read in. In the file a program was
  * started from, it is the path the program was started with; in an
@@ -361,7 +334,6 @@ def is_iterable(x: any) {}
  * @type string
  */
 var __file__ = ''
-
 
 /**
  * The path of the file the program was started from, the same in
@@ -385,7 +357,6 @@ var __file__ = ''
  * @type string
  */
 var __root__ = ''
-
 
 /**
  * The methods every value carries whatever its type: `nil`, every

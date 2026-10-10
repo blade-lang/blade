@@ -209,7 +209,7 @@ def main() {
   if scaffold.has_project(directory) and !force {
     raise plan.UsageError(
       "a project already exists in '${directory}'; use --force to rewrite its "
-        + '${scaffold.MANIFEST} and leave everything else alone'
+        + '${scaffold.MANIFEST} and leave everything else alone',
     )
   }
 

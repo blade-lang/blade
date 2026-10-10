@@ -424,7 +424,9 @@ class Protocol {
     var column_count = cursor.int2()
     var parameter_count = cursor.int2()
 
-    var parameters = parameter_count > 0 ? self.read_columns(parameter_count, false) : []
+    var parameters = parameter_count > 0
+      ? self.read_columns(parameter_count, false)
+      : []
     var columns = column_count > 0 ? self.read_columns(column_count, false) : []
 
     return { id, parameters, columns, parameter_count }
@@ -442,7 +444,9 @@ class Protocol {
    * @returns dict
    */
   execute(id: number, values: list, cursor_type: number, columns: list, sql) {
-    self.send_command(COMMANDS.STMT_EXECUTE, self._execute_payload(id, values, cursor_type))
+    self.send_command(
+      COMMANDS.STMT_EXECUTE, self._execute_payload(id, values, cursor_type),
+    )
 
     if cursor_type == CURSOR_NONE {
       return self.read_response(sql, true)
@@ -588,8 +592,8 @@ class Protocol {
     if version != 10 {
       raise ProtocolError(
         'the server speaks handshake version ${version}; this adapter ' +
-        'speaks version 10',
-        { driver: 'mysql' }
+          'speaks version 10',
+        { driver: 'mysql' },
       )
     }
 
@@ -684,14 +688,15 @@ class Protocol {
     # preferred it carries on without.
     if (agreed & CAPABILITIES.SSL) == 0 and options.get('tls_required', false) {
       raise ConnectionError(
-        'this server does not offer tls', { driver: 'mysql' }
+        'this server does not offer tls', { driver: 'mysql' },
       )
     }
 
-    if compression != 'none' and (agreed & (CAPABILITIES.ZSTD | CAPABILITIES.COMPRESS)) == 0 {
+    if compression != 'none'
+      and (agreed & (CAPABILITIES.ZSTD | CAPABILITIES.COMPRESS)) == 0 {
       raise ConnectionError(
         'this server does not offer ${compression} compression',
-        { driver: 'mysql' }
+        { driver: 'mysql' },
       )
     }
 
@@ -758,7 +763,9 @@ class Protocol {
 
   # Works through whatever else the server asks for until it either
   # accepts the connection or refuses it.
-  _finish_authentication(plugin: string, scramble, password: string, options: dict) {
+  _finish_authentication(
+    plugin: string, scramble, password: string, options: dict,
+  ) {
     var current = plugin
     var nonce = scramble
 
@@ -787,7 +794,9 @@ class Protocol {
           nonce = nonce[0, nonce.length() - 1]
         }
 
-        self._send_auth(auth.response_for(current, password, nonce, self._private))
+        self._send_auth(auth.response_for(
+          current, password, nonce, self._private,
+        ))
 
         continue
       }
@@ -800,7 +809,7 @@ class Protocol {
 
       raise ProtocolError(
         'the server sent an unexpected packet while authenticating',
-        { driver: 'mysql' }
+        { driver: 'mysql' },
       )
     }
   }
@@ -823,8 +832,8 @@ class Protocol {
       if marker != 4 {
         raise ProtocolError(
           'the server asked for something this adapter does not ' +
-          'understand while authenticating',
-          { driver: 'mysql' }
+            'understand while authenticating',
+          { driver: 'mysql' },
         )
       }
 
@@ -858,7 +867,7 @@ class Protocol {
     if packet.length() < 2 or packet[0] != 0x01 {
       raise AuthenticationError(
         'the server did not send the public key this exchange needs',
-        { driver: 'mysql' }
+        { driver: 'mysql' },
       )
     }
 
@@ -881,9 +890,9 @@ class Protocol {
 
       raise ProtocolError(
         'the server asked this client to send the file ${name}, which ' +
-        'is refused; pass local_infile to allow it, and only to a ' +
-        'server you trust with the files this process can read',
-        { driver: 'mysql' }
+          'is refused; pass local_infile to allow it, and only to a ' +
+          'server you trust with the files this process can read',
+        { driver: 'mysql' },
       )
     }
 
@@ -895,8 +904,8 @@ class Protocol {
 
       raise ProtocolError(
         'local_infile has to be a function taking a file name and ' +
-        'returning its contents, not ${typeof(reader)}',
-        { driver: 'mysql' }
+          'returning its contents, not ${typeof(reader)}',
+        { driver: 'mysql' },
       )
     }
 
@@ -904,7 +913,9 @@ class Protocol {
       var content = reader(name)
 
       if content != nil and content.length() > 0 {
-        self._stream.write_packet(is_bytes(content) ? content : content.to_bytes())
+        self._stream.write_packet(
+          is_bytes(content) ? content : content.to_bytes(),
+        )
       }
     } as error {
       self._stream.write_packet(bytes(0))
@@ -912,7 +923,7 @@ class Protocol {
 
       raise ProtocolError(
         'the file ${name} could not be sent: ' + error.message,
-        { driver: 'mysql' }
+        { driver: 'mysql' },
       )
     }
 
@@ -1040,7 +1051,8 @@ class Protocol {
 
     iter var index = 0; index < values.length(); index++ {
       if values[index] == nil {
-        nulls[(index / 8).floor()] = nulls[(index / 8).floor()] | (1 << (index % 8))
+        nulls[(index / 8).floor()] = nulls[(index / 8).floor()]
+          | (1 << (index % 8))
       }
     }
 
@@ -1093,14 +1105,14 @@ class Protocol {
 
     raise_for(
       { code, sqlstate, message: cursor.rest().to_string() },
-      sql
+      sql,
     )
   }
 
   _require_open() {
     if self._closed {
       raise ConnectionError(
-        'this connection has been closed', { driver: 'mysql' }
+        'this connection has been closed', { driver: 'mysql' },
       )
     }
   }

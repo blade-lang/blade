@@ -61,13 +61,11 @@ import os
 import .error { TestSetupError }
 import .format
 
-
 var HEADER = '# Zuri snapshot file v1'
 
 # Every body line carries this, so nothing a value renders to can be
 # mistaken for a heading when the file is read back.
 var BODY_INDENT = '  '
-
 
 var _update = false
 var _ci = false
@@ -81,7 +79,6 @@ var _stats = {
   obsolete: 0,
   removed: 0,
 }
-
 
 /**
  * Every snapshot recorded for one test file, and the file they live
@@ -137,7 +134,9 @@ class Store {
       }
 
       if key != nil {
-        body.append(line.starts_with(BODY_INDENT) ? line[2, line.length()] : line)
+        body.append(
+          line.starts_with(BODY_INDENT) ? line[2, line.length()] : line,
+        )
       }
     }
 
@@ -219,10 +218,11 @@ class Store {
    * @returns list
    */
   obsolete() {
-    return self.entries.keys().filter(@(key) { return !self.used.contains(key) })
+    return self.entries.keys().filter(@(key) {
+      return !self.used.contains(key)
+    })
   }
 }
-
 
 def _heading_of(line) {
   if !line.starts_with('=== ') or !line.ends_with(' ===') or line.length() < 9 {
@@ -231,7 +231,6 @@ def _heading_of(line) {
 
   return line[4, line.length() - 4]
 }
-
 
 # Trailing blank lines belong to the file's layout, not to the value.
 def _join(body) {
@@ -244,7 +243,6 @@ def _join(body) {
   return '\n'.join(body[0, end])
 }
 
-
 /**
  * The `.snap` file that belongs to a given test file.
  *
@@ -255,10 +253,9 @@ def path_for(test_file: string) {
   return os.join_paths(
     os.dir_name(test_file),
     '__snapshots__',
-    os.base_name(test_file) + '.snap'
+    os.base_name(test_file) + '.snap',
   )
 }
-
 
 /**
  * The store for a test file, read from disk the first time it is
@@ -281,7 +278,6 @@ def store_for(test_file: string) {
 
   return store
 }
-
 
 /**
  * Whether snapshots are being rewritten rather than checked.
@@ -320,7 +316,6 @@ def strict() {
 def set_strict(on: bool) {
   _ci = on
 }
-
 
 /**
  * Compares one value against what the snapshot file holds for `key`,
@@ -373,7 +368,6 @@ def check(test_file: string, key: string, serialized: string) {
   return { status: 'mismatch', expected: recorded, received: serialized }
 }
 
-
 /**
  * The lines of the snapshot at `key`, as a list, for a reporter that
  * wants to show what was recorded.
@@ -391,7 +385,6 @@ def recorded_lines(test_file: string, key: string) {
 
   return store.entries[key].lines()
 }
-
 
 /**
  * Writes every changed store back to disk, and in update mode drops
@@ -420,7 +413,6 @@ def flush(prune: ?bool) {
   }
 }
 
-
 /**
  * What happened to snapshots over the whole run.
  *
@@ -431,7 +423,6 @@ def flush(prune: ?bool) {
 def summary() {
   return _stats.clone()
 }
-
 
 /**
  * Forgets every loaded store and zeroes the counters, so a second

@@ -24,7 +24,6 @@ import .elements
 
 import .namespaces { HTML_NAMESPACE, SVG_NAMESPACE, MATHML_NAMESPACE }
 
-
 # Elements that end an open paragraph when they start. Kept as one
 # list because the "in body" rules treat every one of them
 # identically.
@@ -101,7 +100,6 @@ var _REPLACEMENT = '\uFFFD'
 # clause.
 var _NOAHS_ARK_LIMIT = 3
 
-
 /**
  * One entry in the list of active formatting elements.
  *
@@ -146,7 +144,6 @@ class FormattingEntry {
     return self.element == nil
   }
 }
-
 
 /**
  * Builds a document tree from a token stream.
@@ -1683,7 +1680,9 @@ class TreeBuilder {
       return
     }
 
-    self.head_element = self._insert_element(_synthetic_start('head', token), nil)
+    self.head_element = self._insert_element(
+      _synthetic_start('head', token), nil,
+    )
     self.mode = 'in head'
     self._process(token)
   }
@@ -1850,8 +1849,8 @@ class TreeBuilder {
       token = _character_token(token, split.rest)
     } else if token.type == 'comment' or
       (token.type == 'start-tag' and
-       ['basefont', 'bgsound', 'link', 'meta', 'noframes', 'style']
-         .contains(token.name)) {
+        ['basefont', 'bgsound', 'link', 'meta', 'noframes', 'style']
+          .contains(token.name)) {
       self._process_in('in head', token)
       return
     }
@@ -3016,7 +3015,7 @@ class TreeBuilder {
 
     if token.type == 'end-tag' and
       ['body', 'col', 'colgroup', 'html', 'tbody', 'td', 'tfoot', 'th',
-       'thead', 'tr'].contains(token.name) {
+        'thead', 'tr'].contains(token.name) {
       self._error('unexpected-end-tag', token)
       return
     }
@@ -3135,7 +3134,8 @@ class TreeBuilder {
       return
     }
 
-    if token.type == 'start-tag' and (token.name == 'th' or token.name == 'td') {
+    if token.type == 'start-tag'
+      and (token.name == 'th' or token.name == 'td') {
       self._error('unexpected-start-tag', token)
       self._clear_stack_back_to(_TABLE_BODY_CONTEXT)
       self._insert_element(_synthetic_start('tr', token), nil)
@@ -3191,7 +3191,8 @@ class TreeBuilder {
    * @param Token token
    */
   _in_row(token) {
-    if token.type == 'start-tag' and (token.name == 'th' or token.name == 'td') {
+    if token.type == 'start-tag'
+      and (token.name == 'th' or token.name == 'td') {
       self._clear_stack_back_to(_TABLE_ROW_CONTEXT)
       self._insert_element(token, nil)
       self.mode = 'in cell'
@@ -3211,7 +3212,9 @@ class TreeBuilder {
       return
     }
 
-    var closers = ['caption', 'col', 'colgroup', 'tbody', 'tfoot', 'thead', 'tr']
+    var closers = [
+      'caption', 'col', 'colgroup', 'tbody', 'tfoot', 'thead', 'tr',
+    ]
 
     if (token.type == 'start-tag' and closers.contains(token.name)) or
       token.is_end('table') {
@@ -3935,7 +3938,7 @@ class TreeBuilder {
 
     if context.is_html() {
       self.tokenizer.set_state(
-        _fragment_tokenizer_state(context.tag_name, self.scripting)
+        _fragment_tokenizer_state(context.tag_name, self.scripting),
       )
     }
 
@@ -4118,7 +4121,6 @@ class TreeBuilder {
   }
 }
 
-
 /**
  * True when _token_ carries any of the attributes in _names_.
  *
@@ -4136,7 +4138,6 @@ def _has_any_attribute(token, names: list) {
   return false
 }
 
-
 /**
  * Copies any attributes of _token_ that _element_ does not already
  * carry onto it, which is how a second `<html>` or `<body>` tag adds
@@ -4152,7 +4153,6 @@ def _merge_attributes(element, token) {
     }
   }
 }
-
 
 /**
  * True when every character of _text_ is HTML whitespace. An empty
@@ -4171,7 +4171,6 @@ def _is_all_whitespace(text: string) {
   return true
 }
 
-
 /**
  * True when _c_ is one of the five characters HTML treats as
  * whitespace.
@@ -4183,7 +4182,6 @@ def _is_whitespace(c: string) {
   return c == ' ' or c == '\n' or c == '\t' or
     c == '\f' or c == '\r'
 }
-
 
 /**
  * Splits _text_ into its leading whitespace and the rest.
@@ -4210,7 +4208,6 @@ def _split_leading_whitespace(text: string) {
   }
 }
 
-
 /**
  * A character token holding _data_, borrowing _source_'s position so
  * that any error reported against it still points somewhere useful.
@@ -4228,7 +4225,6 @@ def _character_token(source, data: string) {
 
   return token
 }
-
 
 /**
  * A start tag token the parser invented, for the several rules that
@@ -4250,7 +4246,6 @@ def _synthetic_start(name: string, source) {
   return token
 }
 
-
 /**
  * An end tag token the parser invented.
  *
@@ -4269,7 +4264,6 @@ def _synthetic_end(name: string, source) {
 
   return token
 }
-
 
 /**
  * True when two elements are interchangeable for the Noah's Ark
@@ -4296,7 +4290,6 @@ def _same_formatting_shape(a, b) {
 
   return true
 }
-
 
 /**
  * Parses _source_ as a complete HTML document.
@@ -4352,7 +4345,6 @@ def parse(source: string, options: ?dict) {
   return TreeBuilder(stream, { scripting }).run()
 }
 
-
 /**
  * Reads the file at _path_ and parses it as HTML.
  *
@@ -4378,7 +4370,6 @@ def parse_file(path: string, options: ?dict) {
 
   return parse(source, options)
 }
-
 
 /**
  * Parses _source_ as a fragment, as though it had been written inside
@@ -4436,7 +4427,6 @@ def parse_fragment(source: string, context, options: ?dict) {
   return fragment
 }
 
-
 /**
  * Normalizes `parse_fragment()`'s _context_ argument into an element.
  *
@@ -4455,7 +4445,6 @@ def _fragment_context_element(context) {
   return context
 }
 
-
 /**
  * The quirks mode a fragment inherits from its context element's
  * document, defaulting to no-quirks for a detached context.
@@ -4472,7 +4461,6 @@ def _context_document_mode(element) {
 
   return 'no-quirks'
 }
-
 
 /**
  * Which tokenizer state a fragment starts in, given its context
@@ -4502,7 +4490,6 @@ def _fragment_tokenizer_state(name: string, scripting: bool) {
 
   return 'data'
 }
-
 
 /**
  * The nearest `<form>` at or above _element_, so that a fragment

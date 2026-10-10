@@ -29,13 +29,19 @@ def parser() {
 
   parser.description = 'Replaces this installation of zuri with a newer release.'
 
-  parser.add_option('version', 'The release to install; the newest one by default',
+  parser.add_option('version',
+    'The release to install; the newest one by default',
     { short_name: 'V', type: args.STRING, metavar: 'version' })
-  parser.add_option('check', 'Say whether a newer release exists, and exit 1 when one does', nil)
+  parser.add_option(
+    'check', 'Say whether a newer release exists, and exit 1 when one does',
+    nil,
+  )
   parser.add_option('prerelease', 'Consider pre-releases too', nil)
-  parser.add_option('allow-downgrade', 'Allow installing an older release than this one', nil)
-  parser.add_option('dry-run', 'Download and check the release, and replace nothing',
-    { short_name: 'n' })
+  parser.add_option(
+    'allow-downgrade', 'Allow installing an older release than this one', nil,
+  )
+  parser.add_option('dry-run',
+    'Download and check the release, and replace nothing', { short_name: 'n' })
   parser.add_option('json', 'Print the result as JSON', nil)
 
   return parser
@@ -55,10 +61,12 @@ def installation(executable: string, zuri_root: ?string) {
   var real = os.real_path(executable)
   var root = os.dir_name(real)
 
-  if zuri_root != nil and !zuri_root.is_empty() and os.abs_path(zuri_root) != root {
+  if zuri_root != nil
+    and !zuri_root.is_empty()
+    and os.abs_path(zuri_root) != root {
     raise UsageError(
       'ZURI_ROOT points this runtime at ${zuri_root}, which is not where it is installed; '
-        + 'unset it to upgrade, or upgrade however that installation was put there'
+        + 'unset it to upgrade, or upgrade however that installation was put there',
     )
   }
 
@@ -66,7 +74,7 @@ def installation(executable: string, zuri_root: ?string) {
     if !os.dir_exists(os.join_paths(root, part)) {
       raise UsageError(
         'this runtime at ${real} is not laid out the way a release is (it has no ${part} '
-          + 'beside it), so it was installed some other way; upgrade it the same way'
+          + 'beside it), so it was installed some other way; upgrade it the same way',
       )
     }
   }
@@ -130,7 +138,10 @@ def direction(current: string, offered: string) {
  * @param string platform: `os.platform`.
  * @raises CommandError when the swap failed and was undone.
  */
-def swap(root: string, executable: string, staged: string, stamp: string, platform: string) {
+def swap(
+  root: string, executable: string, staged: string, stamp: string,
+  platform: string,
+) {
   var done = []
   var windows = platform == 'windows'
   var exe_name = os.base_name(executable)

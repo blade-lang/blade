@@ -40,7 +40,6 @@
  * @copyright 2026, Richard Ore and Zuri contributors
  */
 
-
 def _validate_ipv4_octet(value) {
   if value == nil or !is_number(value) {
     raise Error('IPv4 address octets must be numbers between 0 and 255')
@@ -105,7 +104,7 @@ def _parse_group(group, original) {
     value = value * 16 + _hex_digit(group[i], original)
     i = i + 1
   }
-  
+
   return value
 }
 
@@ -558,8 +557,9 @@ class Ipv6 {
    */
   segments() {
     return [
-      self._segments[0], self._segments[1], self._segments[2], self._segments[3],
-      self._segments[4], self._segments[5], self._segments[6], self._segments[7],
+      self._segments[0], self._segments[1], self._segments[2],
+      self._segments[3], self._segments[4], self._segments[5],
+      self._segments[6], self._segments[7],
     ]
   }
 

@@ -61,10 +61,10 @@ class Token {
    * @param string raw
    */
   @new(header, payload, signature, raw) {
-    self.header    = header
-    self.payload   = payload
+    self.header = header
+    self.payload = payload
     self.signature = signature
-    self.raw       = raw
+    self.raw = raw
   }
 
   # Records the clock-skew leeway this Token was verified with. Called
@@ -128,6 +128,6 @@ class Token {
    */
   @to_string() {
     return '<Token alg=${self.header.get("alg", "?")} ' +
-           'sub=${self.payload.get("sub", "(none)")}>'
+      'sub=${self.payload.get("sub", "(none)")}>'
   }
 }

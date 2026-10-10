@@ -30,7 +30,7 @@ def _needs_terminal(what: string) {
   if !ui.interactive() {
     raise UsageError(
       '${what} asks for a password, which needs a terminal; sign in with a token from '
-        + 'standard input instead'
+        + 'standard input instead',
     )
   }
 }
@@ -145,7 +145,7 @@ def _logout(registry, as_json: bool) {
     if !revoked {
       ui.complain(ui.warn(
         'warning: the registry did not revoke the token (${error.message}); it is forgotten '
-          + 'here, and can be revoked from the account page'
+          + 'here, and can be revoked from the account page',
       ))
     }
   }
@@ -191,7 +191,10 @@ def _tokens(registry, as_json: bool) {
     return
   }
 
-  var rows = [[ui.heading('id'), ui.heading('name'), ui.heading('scopes'), ui.heading('expires')]]
+  var rows = [[
+    ui.heading('id'), ui.heading('name'), ui.heading('scopes'),
+    ui.heading('expires'),
+  ]]
 
   for token in tokens {
     var expires = token.expires_at == nil ? 'never' : token.expires_at[0, 10]

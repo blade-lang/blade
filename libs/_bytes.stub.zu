@@ -93,40 +93,38 @@
  * @note Byte streams are printed as hexadecimal lists.
  */
 
-
 class bytes {
 
-   /**
-   * Returns the number of bytes in the byte stream.
-   *
-   * ```zuri-repl
-   * %> bytes([25, 57]).length()
-   * 2
-   * ```
-   *
-   * @returns {number}
-   */
+  /**
+  * Returns the number of bytes in the byte stream.
+  *
+  * ```zuri-repl
+  * %> bytes([25, 57]).length()
+  * 2
+  * ```
+  *
+  * @returns {number}
+  */
   length() {}
 
-   /**
-   * Returns `true` if the byte stream holds no bytes at all, and
-   * `false` otherwise. Equivalent to testing `length() == 0`, and
-   * unaffected by whatever the bytes happen to contain: a stream of
-   * zero bytes is not empty.
-   *
-   * ```zuri-repl
-   * %> bytes(0).is_empty()
-   * true
-   * %> bytes(3).is_empty()
-   * false
-   * %> 'hi'.to_bytes().is_empty()
-   * false
-   * ```
-   *
-   * @returns {boolean}
-   */
+  /**
+  * Returns `true` if the byte stream holds no bytes at all, and
+  * `false` otherwise. Equivalent to testing `length() == 0`, and
+  * unaffected by whatever the bytes happen to contain: a stream of
+  * zero bytes is not empty.
+  *
+  * ```zuri-repl
+  * %> bytes(0).is_empty()
+  * true
+  * %> bytes(3).is_empty()
+  * false
+  * %> 'hi'.to_bytes().is_empty()
+  * false
+  * ```
+  *
+  * @returns {boolean}
+  */
   is_empty() {}
-
 
   /**
    * Adds an item to the top of a byte stream.
@@ -145,7 +143,6 @@ class bytes {
    */
   append(n: int) {}
 
-
   /**
    * Returns a deep clone of the byte stream.
    *
@@ -159,7 +156,6 @@ class bytes {
    * @returns {bytes}
    */
   clone() {}
-
 
   /**
    * Extends the byte stream with the bytes from the given byte
@@ -188,7 +184,6 @@ class bytes {
    */
   extend(n: bytes) {}
 
-
   /**
    * Returns the index of the first occurrence of the given byte
    * in the byte stream.
@@ -206,7 +201,6 @@ class bytes {
    * @returns {number}
    */
   index_of(byte: int, start_index: ?number) {}
-
 
   /**
    * Returns the index of the last occurrence of the given byte in
@@ -233,7 +227,6 @@ class bytes {
    */
   last_index_of(byte: int, end_index: ?number) {}
 
-
   /**
    * Removes the last item in a byte stream and returns it.
    *
@@ -248,7 +241,6 @@ class bytes {
    * @returns {number}
    */
   pop() {}
-
 
   /**
    * Removes the item at the specified index in the byte stream
@@ -267,7 +259,6 @@ class bytes {
    */
   remove(index: number) {}
 
-
   /**
    * Reverses the items in the byte stream.
    *
@@ -279,7 +270,6 @@ class bytes {
    * @returns {bytes}
    */
   reverse() {}
-
 
   /**
    * Returns the first item in the byte stream or `nil` if the
@@ -307,7 +297,6 @@ class bytes {
    */
   last() {}
 
-
   /**
    * Returns the item at the specified index in the byte stream.
    *
@@ -315,7 +304,6 @@ class bytes {
    * @returns {number}
    */
   get(index: number) {}
-
 
   /**
    * Returns a new byte stream containing the first _n_ items in the
@@ -340,7 +328,6 @@ class bytes {
    */
   take(n: int) {}
 
-
   /**
    * Splits the content of a byte stream based on the specified
    * delimiter.
@@ -358,7 +345,6 @@ class bytes {
    * @returns {list}
    */
   split(delimiter: bytes) {}
-
 
   /**
    * Due to the nature of byte stream and their use-case
@@ -380,7 +366,6 @@ class bytes {
    */
   dispose() {}
 
-
   /**
    * Returns `true` if the byte stream only contains alpha
    * characters, `false` otherwise.
@@ -395,7 +380,6 @@ class bytes {
    * @returns {boolean}
    */
   is_alpha() {}
-
 
   /**
    * Returns `true` if the byte stream only contains alpha
@@ -412,7 +396,6 @@ class bytes {
    */
   is_alnum() {}
 
-
   /**
    * Returns `true` if the byte stream only contains numbers,
    * `false` otherwise.
@@ -427,7 +410,6 @@ class bytes {
    * @returns {boolean}
    */
   is_number() {}
-
 
   /**
    * Returns `true` if the byte stream only contains lower case
@@ -444,7 +426,6 @@ class bytes {
    */
   is_lower(n) {}
 
-
   /**
    * Returns `true` if the byte stream only contains upper case
    * characters, `false` otherwise.
@@ -459,7 +440,6 @@ class bytes {
    * @returns {boolean}
    */
   is_upper() {}
-
 
   /**
    * Returns `true` if the byte stream only contains space
@@ -476,7 +456,6 @@ class bytes {
    */
   is_space() {}
 
-
   /**
    * Returns the byte stream as a list of bytes.
    *
@@ -488,7 +467,6 @@ class bytes {
    * @returns {list}
    */
   to_list() {}
-
 
   /**
    * Returns the byte stream as a string, reading it as UTF-8. Each
@@ -531,7 +509,6 @@ class bytes {
    * ```
    */
   each(callback: function) {}
-
 
   @value(n) {}
   @key(n) {}

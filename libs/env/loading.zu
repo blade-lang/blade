@@ -101,7 +101,7 @@ class _Resolution {
         }
 
         raise EnvError(
-          'circular reference: ' + ' -> '.join(self._stack) + ' -> ' + name
+          'circular reference: ' + ' -> '.join(self._stack) + ' -> ' + name,
         )
       }
 

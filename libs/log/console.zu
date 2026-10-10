@@ -13,7 +13,6 @@ import os
 import io
 import colors
 
-
 /**
  * ConsoleTransport is a log transport that facilitates sending
  * log streams to the console.
@@ -46,7 +45,9 @@ class ConsoleTransport < Transport {
       when LogLevel.Info return colors.text_color.cyan
       when LogLevel.Warning return colors.text_color.orange
       when LogLevel.Error return colors.text_color.red
-      when LogLevel.Critical return colors.text_color.light_red
+      when LogLevel.Critical {
+        return colors.text_color.light_red
+      }
       default return nil
     }
   }

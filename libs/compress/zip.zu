@@ -26,14 +26,14 @@ import date
 # and forced zip64 on them unnecessarily. Strict "<" against this value
 # in _is_within_bound() naturally reserves 0xFFFFFFFF itself, which
 # some tools treat as a "look in the zip64 extra field" sentinel.
-var ZIP_FILE_MAX = 4_294_967_295   # = 2 ** 32 - 1
+var ZIP_FILE_MAX = 4_294_967_295 # = 2 ** 32 - 1
 
 /**
  * The maximum number of files in a zip archive when zip64 is not
  * used
  * @type number
  */
-var ZIP_FILE_COUNT_LIMIT = 65_535  # = 2 ** 16 - 1
+var ZIP_FILE_COUNT_LIMIT = 65_535 # = 2 ** 16 - 1
 
 /**
  * The maximum size of a zip archive when zip64 is not used
@@ -92,13 +92,13 @@ var _locator_end_sign64 = 'PK\x06\x07'
 # Unpack formats.
 var _file_size_unpack = 'V1:crc/V1:size_compressed/V1:size_uncompressed'
 var _central_file_head_unpack = 'v1:creator/v1:version/v1:general_purpose/v1:compress_method/v1:file_time/' +
-    'v1:file_date/${_file_size_unpack}/v1:filename_length/v1:extra_field_length/' +
-    'v1:comment_length/v1:disk_offset/v1:internal_attribute/V1:external_attribute'
+  'v1:file_date/${_file_size_unpack}/v1:filename_length/v1:extra_field_length/' +
+  'v1:comment_length/v1:disk_offset/v1:internal_attribute/V1:external_attribute'
 
 var _local_file_head_unpack = 'v1:version/v1:general_purpose/v1:compress_method/v1:file_time/' +
-    'v1:file_date/${_file_size_unpack}/v1:filename_length/v1:extra_field_length'
-    # Note: local file headers have NO comment_length field: that only exists in
-    # central directory headers. Including it here would read 2 garbage bytes.
+  'v1:file_date/${_file_size_unpack}/v1:filename_length/v1:extra_field_length'
+# Note: local file headers have NO comment_length field: that only exists in
+# central directory headers. Including it here would read 2 garbage bytes.
 
 # CRC-32 stays a 4-byte field even in zip64: only the two size fields
 # grow to 8 bytes. Using 'P' (8-byte) for crc here was reading 4 bytes
@@ -110,7 +110,6 @@ var _file_size_unpack64 = 'V1:crc/P1:size_compressed/P1:size_uncompressed'
 
 # Error messages...
 var _64_required = 'Zip64 compression required'
-
 
 /**
  * ZipItem represents a single file or directory in a zip
@@ -198,8 +197,9 @@ class ZipItem {
    * @returns ZipItem
    */
   static from_dict(dict: dict) {
-    if !is_dict(dict)
+    if !is_dict(dict) {
       raise TypeError('dictionary expected from argument 1 (dict)')
+    }
 
     var f = ZipItem()
 
@@ -231,17 +231,21 @@ class ZipItem {
    * @returns bool
    */
   export(base_dir: ?string) {
-    if base_dir != nil and !is_string(base_dir)
+    if base_dir != nil and !is_string(base_dir) {
       raise TypeError('string expected in argument 1 (base_dir)')
+    }
 
     # An entry read() couldn't decode cleanly (encryption, an
     # unsupported compression method, or a CRC32 mismatch) has no data
     # to write: fail loudly rather than silently reporting success
     # for a file that was never actually extracted.
-    if self.error
+    if self.error {
       return false
+    }
 
-    if !base_dir base_dir = ''
+    if !base_dir {
+      base_dir = ''
+    }
 
     var final_dir = os.join_paths(base_dir, self.directory)
     var path = final_dir ? os.join_paths(final_dir, self.name) : self.name
@@ -284,14 +288,15 @@ class ZipItem {
         # bits: passing the file-type bits (S_IFMT, 0o170000) alongside them
         # produces the wrong mode or an outright error on some platforms.
         # Mask with 0o7777 to strip the file-type nibble before the call.
-        fh.chmod(self.permission & 0xFFF)  # 0xFFF = 0o7777: strips file-type bits, keeps rwx + setid + sticky
+        fh.chmod(
+          self.permission & 0xFFF,
+        ) # 0xFFF = 0o7777: strips file-type bits, keeps rwx + setid + sticky
       }
     }
 
     return true
   }
 }
-
 
 /**
  * ZipFile represents an instance of zip file.
@@ -348,19 +353,22 @@ class ZipFile {
    * @returns bool
    */
   export(base_dir: ?string) {
-    if base_dir != nil and !is_string(base_dir)
+    if base_dir != nil and !is_string(base_dir) {
       raise TypeError('string expected in argument 1 (base_dir)')
+    }
 
-    if !base_dir base_dir = ''
+    if !base_dir {
+      base_dir = ''
+    }
     for zip_item in self.files {
-      if !zip_item.export(base_dir)
+      if !zip_item.export(base_dir) {
         return false
+      }
     }
 
     return true
   }
 }
-
 
 /**
  * ZipArchive provides a class for zip archive creation,
@@ -377,10 +385,10 @@ class ZipArchive {
   var _handle
 
   # central directory
-	var _ctrl_dir = bytes(0) 
+  var _ctrl_dir = bytes(0)
 
   var _ctrl_dir_length = 0
-	var _old_offset = 0
+  var _old_offset = 0
   var _is_64 = false
   var _compression_method = ZIP_DEFLATE
 
@@ -392,15 +400,18 @@ class ZipArchive {
    * @constructor
    */
   @new(path: string, compression_method: ?number, use_zip_64: ?bool) {
-    if !is_string(path)
+    if !is_string(path) {
       raise TypeError('string expected in argument 1 (path)')
-    if compression_method != nil and !is_number(compression_method)
+    }
+    if compression_method != nil and !is_number(compression_method) {
       raise TypeError('number expected in argument 2 (compression_method)')
-    if use_zip_64 != nil and !is_bool(use_zip_64)
+    }
+    if use_zip_64 != nil and !is_bool(use_zip_64) {
       raise TypeError('boolean expected in argument 3 (use_zip_64)')
+    }
     self._file = path
     self._is_64 = use_zip_64 == nil ? false : use_zip_64
-    
+
     if compression_method != nil {
       self._compression_method = compression_method
     }
@@ -417,24 +428,27 @@ class ZipArchive {
   _write_open() {
     if self._handle == nil {
       self._handle = file(self._file, 'wb')
-      if !self._handle.open()
+      if !self._handle.open() {
         raise Error('could not create new zip file')
+      }
     }
   }
 
   _is_within_bound(data) {
     # zip64 is always within bound.
-    if self._is_64 return true
+    if self._is_64 {
+      return true
+    }
 
-    var min_size = self._ctrl_dir.length() + 
-          (self._handle ? self._handle.stats().size : 0) + 
-            _ZIP_META_SIZE
+    var min_size = self._ctrl_dir.length() +
+      (self._handle ? self._handle.stats().size : 0) +
+      _ZIP_META_SIZE
 
     var data_size = data ? data.length() : 0
 
     if min_size + data_size < ZIP_MAX and
-          data_size < ZIP_FILE_MAX and
-            self._ctrl_dir_length < ZIP_FILE_COUNT_LIMIT {
+      data_size < ZIP_FILE_MAX and
+      self._ctrl_dir_length < ZIP_FILE_COUNT_LIMIT {
       return true
     }
 
@@ -443,7 +457,7 @@ class ZipArchive {
 
   _dos_from_date(date) {
     var dos_date = (date.year - 1980) << 9 | date.month << 5 | date.day,
-        dos_time = date.hour << 11 | date.minute << 5 | (date.seconds // 2)
+      dos_time = date.hour << 11 | date.minute << 5 | (date.seconds // 2)
 
     return [dos_time, dos_date]
   }
@@ -457,12 +471,13 @@ class ZipArchive {
   create_dir(name: string) {
 
     # Ensure file is within Zip format limit bound.
-    if !self._is_within_bound()
+    if !self._is_within_bound() {
       return false
+    }
 
     self._write_open()
 
-		name = name.replace(_path_replace_regex, '/')
+    name = name.replace(_path_replace_regex, '/')
 
     var mod_date = self._dos_from_date(date.localtime())
 
@@ -478,46 +493,48 @@ class ZipArchive {
     var fr = _file_head_sig.to_bytes()
 
     fr.extend(pack(
-      'v5', 
-      self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION,  # version needed to extract
-      gpflag,                   # general purpose bit flag
-      ZIP_STORED,               # compression method: directories are always stored, never compressed
-      mod_date[0],              # last mod time
-      mod_date[1]               # last mod date
+      'v5',
+      self._is_64
+        ? _Z_64_VERSION
+        : _Z_DEFAULT_VERSION, # version needed to extract
+      gpflag, # general purpose bit flag
+      ZIP_STORED, # compression method: directories are always stored, never compressed
+      mod_date[0], # last mod time
+      mod_date[1], # last mod date
     ))
 
     fr.extend(pack(
-      'V3v2', 
-      0,                # crc32
-      0,                # compressed filesize
-      0,                # uncompressed filesize
-      name.length(),    # length of filename
-      0                 # extra field length
-    ))
-    
-		fr.extend(name.to_bytes())
-		# end of 'local file header' segment
-
-		# no 'file data' segment for path
-
-		# 'data descriptor' segment (optional but necessary if archive is not served as file)
-		# The signature PK\x07\x08 is required by the spec for strict parsers.
-		fr.extend('PK\x07\x08'.to_bytes())
-		fr.extend(pack(
-      self._is_64 ? 'P3' : 'V3', 
-      0,            # crc32
-      0,            # compressed filesize
-      0             # uncompressed filesize
+      'V3v2',
+      0, # crc32
+      0, # compressed filesize
+      0, # uncompressed filesize
+      name.length(), # length of filename
+      0, # extra field length
     ))
 
-		# add this entry to array
+    fr.extend(name.to_bytes())
+    # end of 'local file header' segment
+
+    # no 'file data' segment for path
+
+    # 'data descriptor' segment (optional but necessary if archive is not served as file)
+    # The signature PK\x07\x08 is required by the spec for strict parsers.
+    fr.extend('PK\x07\x08'.to_bytes())
+    fr.extend(pack(
+      self._is_64 ? 'P3' : 'V3',
+      0, # crc32
+      0, # compressed filesize
+      0, # uncompressed filesize
+    ))
+
+    # add this entry to array
     self._handle.puts(fr)
     fr.dispose()
 
     var new_offset = self._get_new_offset()
 
-		# ext. file attributes mirrors MS-DOS directory attr byte, detailed
-		# at http:#support.microsoft.com/support/kb/articles/Q125/0/19.asp
+    # ext. file attributes mirrors MS-DOS directory attr byte, detailed
+    # at http:#support.microsoft.com/support/kb/articles/Q125/0/19.asp
 
     var extract_version = self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION
     var creator = _os | extract_version
@@ -525,34 +542,34 @@ class ZipArchive {
     # now add to central record
     self._ctrl_dir.extend(_central_head_sign.to_bytes())
     self._ctrl_dir.extend(pack(
-      'v6V3v5V2',           
-      creator,                  # version made by
-      extract_version,          # version needed to extract
-      gpflag,                   # general purpose bit flag (matches local header)
-      0,                        # compression method (stored)
-      mod_date[0],              # last mod time
-      mod_date[1],              # last mod date
-      0,                        # crc32
-      0,                        # compressed filesize
-      0,                        # uncompressed filesize
-      name.length(),            # length of filename
-      0,                        # extra field length
-      0,                        # file comment length
-      0,                        # disk number start
-      0,                        # internal file attributes
-      0c0040755 << 16 >>> 0,    # external file attributes - 'archive' bit set
-      self._old_offset          # relative offset of local header
+      'v6V3v5V2',
+      creator, # version made by
+      extract_version, # version needed to extract
+      gpflag, # general purpose bit flag (matches local header)
+      0, # compression method (stored)
+      mod_date[0], # last mod time
+      mod_date[1], # last mod date
+      0, # crc32
+      0, # compressed filesize
+      0, # uncompressed filesize
+      name.length(), # length of filename
+      0, # extra field length
+      0, # file comment length
+      0, # disk number start
+      0, # internal file attributes
+      0c0040755 << 16 >>> 0, # external file attributes - 'archive' bit set
+      self._old_offset, # relative offset of local header
     ))
-    
-		self._old_offset = new_offset
 
-		self._ctrl_dir.extend(name.to_bytes())
+    self._old_offset = new_offset
 
-		# optional extra field, file comment goes here
+    self._ctrl_dir.extend(name.to_bytes())
+
+    # optional extra field, file comment goes here
     self._ctrl_dir_length++
 
     return true
-	}
+  }
 
   /**
    * Adds a file to the path specified with the contents given
@@ -577,12 +594,13 @@ class ZipArchive {
     }
 
     # Ensure file is within Zip format limit bound.
-    if !self._is_within_bound(data)
+    if !self._is_within_bound(data) {
       return false
+    }
 
     self._write_open()
 
-		path = path.replace(_path_replace_regex, '/')
+    path = path.replace(_path_replace_regex, '/')
 
     # # fix modified time bug
     # var _time = time()
@@ -592,7 +610,7 @@ class ZipArchive {
 
     var mod_date = self._dos_from_date(date.from_time(stat.mtime))
 
-		var fr = _file_head_sig.to_bytes()
+    var fr = _file_head_sig.to_bytes()
 
     # Set the EFS (encoding follows specification) flag: bit 11 (0x0800):
     # whenever the filename contains characters outside plain ASCII. This tells
@@ -600,22 +618,24 @@ class ZipArchive {
     var gpflag = 0
     for ch in path {
       if ch.to_number() > 127 {
-        gpflag = 0x0800   # UTF-8 filename flag
+        gpflag = 0x0800 # UTF-8 filename flag
         break
       }
     }
 
     fr.extend(pack(
-      'v5', 
-      self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION,  # version needed to extract
-      gpflag,                   # general purpose bit flag
+      'v5',
+      self._is_64
+        ? _Z_64_VERSION
+        : _Z_DEFAULT_VERSION, # version needed to extract
+      gpflag, # general purpose bit flag
       self._compression_method, # compression method
-      mod_date[0],              # last mod time
-      mod_date[1]               # last mod date
+      mod_date[0], # last mod time
+      mod_date[1], # last mod date
     ))
 
-		var unc_len = data.length()
-		var crc = checksum.crc32(data)
+    var unc_len = data.length()
+    var crc = checksum.crc32(data)
 
     var uzdata = data
     var was_compressed = false
@@ -627,22 +647,22 @@ class ZipArchive {
       was_compressed = true
     }
 
-		var c_len = uzdata.length()
+    var c_len = uzdata.length()
 
     fr.extend(pack(
-      'V3v2', 
-      crc,                # crc32
-      c_len,              # compressed filesize
-      unc_len,            # uncompressed filesize
-      path.length(),      # length of filename
-      0                   # extra field length
+      'V3v2',
+      crc, # crc32
+      c_len, # compressed filesize
+      unc_len, # uncompressed filesize
+      path.length(), # length of filename
+      0, # extra field length
     ))
-    
-		fr.extend(path.to_bytes())
-		# end of 'local file header' segment
 
-		# 'file data' segment
-		fr.extend(uzdata)
+    fr.extend(path.to_bytes())
+    # end of 'local file header' segment
+
+    # 'file data' segment
+    fr.extend(uzdata)
     # uzdata is a genuinely new buffer only when compression actually
     # ran; for ZIP_STORED it's the very same object as data, so
     # disposing both would be a double-dispose of one buffer.
@@ -656,21 +676,21 @@ class ZipArchive {
       data.dispose()
     }
 
-		# 'data descriptor' segment (optional but necessary if archive is not served as file)
-		# The signature PK\x07\x08 is required by the spec for strict parsers.
-		fr.extend('PK\x07\x08'.to_bytes())
+    # 'data descriptor' segment (optional but necessary if archive is not served as file)
+    # The signature PK\x07\x08 is required by the spec for strict parsers.
+    fr.extend('PK\x07\x08'.to_bytes())
     fr.extend(pack(
-      self._is_64 ? 'P3' : 'V3', 
-      crc,                # crc32
-      c_len,              # compressed filesize
-      unc_len             # uncompressed filesize
+      self._is_64 ? 'P3' : 'V3',
+      crc, # crc32
+      c_len, # compressed filesize
+      unc_len, # uncompressed filesize
     ))
 
-		# add this entry to array
+    # add this entry to array
     self._handle.puts(fr)
     fr.dispose()
 
-		var new_offset = self._get_new_offset()
+    var new_offset = self._get_new_offset()
 
     var extract_version = self._is_64 ? _Z_64_VERSION : _Z_DEFAULT_VERSION
 
@@ -685,45 +705,45 @@ class ZipArchive {
     # Fix: if the file-type nibble (bits 12-15, masked by S_IFMT = 0o170000)
     # is absent, inject S_IFREG (0o100000) before shifting into position.
     var _mode = stat.mode
-    if (_mode & 0xF000) == 0 {   # S_IFMT mask: no file-type bits present
-      _mode |= 0x8000             # S_IFREG: mark as regular file
+    if (_mode & 0xF000) == 0 { # S_IFMT mask: no file-type bits present
+      _mode |= 0x8000 # S_IFREG: mark as regular file
     }
     var permission = (_mode << 16) >>> 0
 
     var creator = _os | extract_version
 
-		# now add to central directory record
-		self._ctrl_dir.extend(_central_head_sign.to_bytes())
+    # now add to central directory record
+    self._ctrl_dir.extend(_central_head_sign.to_bytes())
     self._ctrl_dir.extend(pack(
-      'v6V3v5V2',           
-      creator,                  # version made by
-      extract_version,          # version needed to extract
-      gpflag,                   # general purpose bit flag (matches local header)
+      'v6V3v5V2',
+      creator, # version made by
+      extract_version, # version needed to extract
+      gpflag, # general purpose bit flag (matches local header)
       self._compression_method, # compression method
-      mod_date[0],              # last mod time
-      mod_date[1],              # last mod date
-      crc,                      # crc32
-      c_len,                    # compressed filesize
-      unc_len,                  # uncompressed filesize
-      path.length(),            # length of filename
-      0,                        # extra field length
-      0,                        # file comment length
-      0,                        # disk number start
-      0,                        # internal file attributes
-      permission,               # external file attributes (32 - DOS Archive flag)
-      self._old_offset          # relative offset of local header
+      mod_date[0], # last mod time
+      mod_date[1], # last mod date
+      crc, # crc32
+      c_len, # compressed filesize
+      unc_len, # uncompressed filesize
+      path.length(), # length of filename
+      0, # extra field length
+      0, # file comment length
+      0, # disk number start
+      0, # internal file attributes
+      permission, # external file attributes (32 - DOS Archive flag)
+      self._old_offset, # relative offset of local header
     ))
 
-		self._ctrl_dir.extend(path.to_bytes())
+    self._ctrl_dir.extend(path.to_bytes())
 
-		# best to set this after adding the central directory.
-		self._old_offset = new_offset
+    # best to set this after adding the central directory.
+    self._old_offset = new_offset
 
-		# optional extra field, file comment goes here
+    # optional extra field, file comment goes here
     self._ctrl_dir_length++
 
     return true
-	}
+  }
 
   /**
    * Adds an existing file to the archive. If destination is
@@ -736,11 +756,15 @@ class ZipArchive {
    */
   add_file(path: string, destination: ?string) {
     var f = file(path, 'rb')
-    if !f.exists()
+    if !f.exists() {
       raise Error('file ${path} not found')
+    }
 
-    if !destination destination = f.name()
-    else destination = destination.replace(_path_replace_regex, '/')
+    if !destination {
+      destination = f.name()
+    } else {
+      destination = destination.replace(_path_replace_regex, '/')
+    }
 
     var content = f.read()
     var r = self.create_file(destination, content, f.stats())
@@ -753,10 +777,10 @@ class ZipArchive {
   }
 
   _add_files(path, dir, file_blacklist, ext_blacklist) {
-		var gpath = os.join_paths(path, dir)
-    
-		if os.dir_exists(gpath) {
-			var sources = os.read_dir(gpath, true)
+    var gpath = os.join_paths(path, dir)
+
+    if os.dir_exists(gpath) {
+      var sources = os.read_dir(gpath, true)
       for source in sources {
 
         if source != '.' and source != '..' {
@@ -773,13 +797,15 @@ class ZipArchive {
             destination = destination[cur_dir.length(),]
 
             # Just in case...
-            if destination.starts_with(os.path_separator)
+            if destination.starts_with(os.path_separator) {
               destination = destination[1,]
+            }
           }
 
           # check file blacklist: skip this entry, do not abort the whole walk
-          if file_blacklist.contains(destination)
+          if file_blacklist.contains(destination) {
             continue
+          }
 
           # check ext blacklist: skip this entry, do not abort the whole walk
           var skip = false
@@ -795,8 +821,8 @@ class ZipArchive {
           }
 
           destination = destination.replace('~[.]+\\/~', '')
-            
-          var f =  file(npath, 'rb')
+
+          var f = file(npath, 'rb')
           var content = f.read()
           var r = self.create_file(destination, content, f.stats())
           content.dispose()
@@ -806,10 +832,10 @@ class ZipArchive {
           }
         }
       }
-		}
+    }
 
-		return true
-	}
+    return true
+  }
 
   /**
    * Adds the specified `directory` recursively to the archive
@@ -825,17 +851,24 @@ class ZipArchive {
    * @param ?list ext_blacklist: Default value is `[]`
    * @returns bool
    */
-  add_directory(directory: string, file_blacklist: ?list, ext_blacklist: ?list) {
+  add_directory(
+    directory: string, file_blacklist: ?list, ext_blacklist: ?list,
+  ) {
     directory = directory.replace(_path_replace_regex, '/')
 
-    if !os.dir_exists(directory)
+    if !os.dir_exists(directory) {
       raise Error('directory ${directory} not found')
+    }
 
-    if !file_blacklist file_blacklist = []
-    if !ext_blacklist ext_blacklist = []
+    if !file_blacklist {
+      file_blacklist = []
+    }
+    if !ext_blacklist {
+      ext_blacklist = []
+    }
 
-		return self._add_files(directory, '', file_blacklist, ext_blacklist)
-	}
+    return self._add_files(directory, '', file_blacklist, ext_blacklist)
+  }
 
   /**
    * Reads the zip file in the specified path and returns a list
@@ -850,39 +883,42 @@ class ZipArchive {
     var fh = file(self._file, 'rb')
     var zip_stats = fh.stats()
 
-    if zip_stats.size > ZIP_FILE_MAX
+    if zip_stats.size > ZIP_FILE_MAX {
       raise Error(_64_required)
+    }
 
     var zip_file = ZipFile()
 
-		# File information
-		zip_file.name = self._file
-		zip_file.last_modified = date.from_time(zip_stats.mtime)
-		zip_file.time_created = date.from_time(zip_stats.ctime)
-		zip_file.size = zip_stats.size
+    # File information
+    zip_file.name = self._file
+    zip_file.last_modified = date.from_time(zip_stats.mtime)
+    zip_file.time_created = date.from_time(zip_stats.ctime)
+    zip_file.size = zip_stats.size
     zip_file.handle = fh
 
-		# Read file
-		var filedata = fh.read()
+    # Read file
+    var filedata = fh.read()
 
-		# Break into sections
-	  var filesecta = filedata.split(
-      (self._is_64 ? _central_end_sign64 : _central_end_sign).to_bytes()
+    # Break into sections
+    var filesecta = filedata.split(
+      (self._is_64 ? _central_end_sign64 : _central_end_sign).to_bytes(),
     )
 
-    if filesecta.length() < 2 return zip_file
+    if filesecta.length() < 2 {
+      return zip_file
+    }
 
-		# ZIP Comment
-		var unpackeda = unpack('x16/v1:length', filesecta[1])
-		self.comment = filesecta[1][18, 18 + unpackeda['length']]
+    # ZIP Comment
+    var unpackeda = unpack('x16/v1:length', filesecta[1])
+    self.comment = filesecta[1][18, 18 + unpackeda['length']]
     # self.comment = self.comment.replace('~\\r(\\n)?~', '\n')  # CR + LF and CR -> LF
 
-		# Cut entries from the central directory
-		filesecta = filedata.split(
-      (self._is_64 ? _central_end_sign64 : _central_end_sign).to_bytes()
+    # Cut entries from the central directory
+    filesecta = filedata.split(
+      (self._is_64 ? _central_end_sign64 : _central_end_sign).to_bytes(),
     )
-		filesecta = filesecta[0].split(_file_head_sig.to_bytes())
-		filesecta = filesecta[1,] # Removes empty entry/signature
+    filesecta = filesecta[0].split(_file_head_sig.to_bytes())
+    filesecta = filesecta[1,] # Removes empty entry/signature
 
     var central_heads = filesecta[-1].split(_central_head_sign.to_bytes())
     central_heads = central_heads[1,]
@@ -892,63 +928,72 @@ class ZipArchive {
 
       # central_heads may have fewer entries than filesecta if any file payload
       # happens to contain the PK\x01\x02 byte sequence. Skip safely.
-      if i >= central_heads.length() break
+      if i >= central_heads.length() {
+        break
+      }
 
       var central_head = central_heads[i]
-      
-			# CRC:crc, FD:file date, FT: file time, CM: compression method, GPF: general purpose flag, VN: version needed, CS: compressed size, UCS: uncompressed size, FNL: filename length
-			var entrya = {}
-			entrya['error'] = nil
 
-			unpackeda = unpack(_central_file_head_unpack, central_head)
+      # CRC:crc, FD:file date, FT: file time, CM: compression method, GPF: general purpose flag, VN: version needed, CS: compressed size, UCS: uncompressed size, FNL: filename length
+      var entrya = {}
+      entrya['error'] = nil
 
-      # Since some zip archive creators can have misleading records in 
-      # the central directory, it is important that we decode the local 
+      unpackeda = unpack(_central_file_head_unpack, central_head)
+
+      # Since some zip archive creators can have misleading records in
+      # the central directory, it is important that we decode the local
       # file header as well so we can fix any discrepancies.
-			var local_unpackeda = unpack(_local_file_head_unpack, filedata)
+      var local_unpackeda = unpack(_local_file_head_unpack, filedata)
 
-			# Check for encryption
-			var isencrypted = (unpackeda['general_purpose'] & 0x0001) > 0 ? true : false
+      # Check for encryption
+      var isencrypted = (unpackeda['general_purpose'] & 0x0001) > 0
+        ? true
+        : false
 
-			# Check for value block after compressed data.
-			# The data descriptor is either 12 bytes (no signature, crc+sizes
+      # Check for value block after compressed data.
+      # The data descriptor is either 12 bytes (no signature, crc+sizes
       # only) or 16 bytes (an optional PK\x07\x08 signature followed by
       # the same values): 20 bytes instead of 12 in zip64, since the
       # two size fields grow from 4 to 8 bytes each. Either way, the
       # value block itself is always the LAST `value_size` bytes of
       # filedata regardless of whether the signature precedes it, so
       # there's no need to locate the signature just to unpack the values.
-			if unpackeda['general_purpose'] & 0x0008 > 0 {
+      if unpackeda['general_purpose'] & 0x0008 > 0 {
         var value_size = self._is_64 ? 20 : 12
         var dd_offset = filedata.length() - value_size
-				var unpackeda2 = unpack(
+        var unpackeda2 = unpack(
           self._is_64 ? _file_size_unpack64 : _file_size_unpack,
-          filedata[dd_offset,]
+          filedata[dd_offset,],
         )
 
-				unpackeda['crc'] = unpackeda2['crc']
-				unpackeda['size_compressed'] = unpackeda2['size_compressed']   # was wrongly set to size_uncompressed
-				unpackeda['size_uncompressed'] = unpackeda2['size_uncompressed']
-			}
-      
-      # A very common bug is to have different extra_field_length in the central 
-      # header and the local header. If we find ourselves here, the local header 
+        unpackeda['crc'] = unpackeda2['crc']
+        unpackeda['size_compressed'] = unpackeda2['size_compressed'] # was wrongly set to size_uncompressed
+        unpackeda['size_uncompressed'] = unpackeda2['size_uncompressed']
+      }
+
+      # A very common bug is to have different extra_field_length in the central
+      # header and the local header. If we find ourselves here, the local header
       # must be our final source of truth.
-      if local_unpackeda['extra_field_length'] != unpackeda['extra_field_length'] {
+      if local_unpackeda['extra_field_length']
+        != unpackeda['extra_field_length'] {
         unpackeda['extra_field_length'] = local_unpackeda['extra_field_length']
       }
 
-			entrya['name'] = filedata[26, 26 + unpackeda['filename_length']].to_string()
+      entrya['name'] = filedata[26, 26
+        + unpackeda['filename_length']].to_string()
 
       # skip directories
-			if entrya['name'][-1] == '/'
-				continue
+      if entrya['name'][-1] == '/' {
+        continue
+      }
 
-			entrya['dir'] = os.dir_name(entrya['name']) or nil
-			entrya['dir'] = entrya['dir'] == '.' ? '' : entrya['dir']
-			entrya['name'] = os.base_name(entrya['name'])
+      entrya['dir'] = os.dir_name(entrya['name']) or nil
+      entrya['dir'] = entrya['dir'] == '.' ? '' : entrya['dir']
+      entrya['name'] = os.base_name(entrya['name'])
 
-			filedata = filedata[26 + unpackeda['filename_length'] + unpackeda['extra_field_length'],]
+      filedata = filedata[26
+        + unpackeda['filename_length']
+        + unpackeda['extra_field_length'],]
 
       # Bound filedata to exactly the compressed payload. It was sliced
       # out by searching for the NEXT entry's PK\x03\x04 signature (or,
@@ -964,39 +1009,39 @@ class ZipArchive {
 
       var decoded = false
 
-			if isencrypted {
-				entrya['error'] = 'Encryption is not supported.'
-			} else {
+      if isencrypted {
+        entrya['error'] = 'Encryption is not supported.'
+      } else {
         var method = unpackeda['compress_method']
 
-				using method {
-					when 0 {
+        using method {
+          when 0 {
             # Stored: not compressed, continue as is
             decoded = filedata.clone()
           }
-					when 8 { # Deflated
+          when 8 { # Deflated
             catch {
               decoded = deflate.decompress(filedata)
             } as e {
               entrya['error'] = e.message
             }
           }
-					when 12 { # BZIP2
+          when 12 { # BZIP2
             catch {
               decoded = bzip2.decompress(filedata)
             } as e {
               entrya['error'] = e.message
             }
-					}
-					default {
-						entrya['error'] = 'Compression method (${method}) not supported.'
           }
-				}
+          default {
+            entrya['error'] = 'Compression method (${method}) not supported.'
+          }
+        }
 
-				if !entrya['error'] {
-					if decoded == false {
-						entrya['error'] = 'Decompression failed.'
-					} else if checksum.crc32(decoded) != unpackeda['crc'] {
+        if !entrya['error'] {
+          if decoded == false {
+            entrya['error'] = 'Decompression failed.'
+          } else if checksum.crc32(decoded) != unpackeda['crc'] {
             # A CRC32 mismatch means the extracted bytes don't match what
             # the archive claims they should be: corruption or tampering.
             # Flagged per-entry (see ZipItem.error) rather than aborting
@@ -1009,21 +1054,22 @@ class ZipArchive {
             #: but CRC32 is a real, standard integrity control and
             # skipping it entirely (as this used to) means a corrupted or
             # deliberately tampered entry would extract silently.
-						entrya['error'] = 'CRC32 checksum does not match the value given in the header: the entry may be corrupted or tampered with.'
-					}
-				}
-			}
+            entrya['error'] = 'CRC32 checksum does not match the value given in the header: the entry may be corrupted or tampered with.'
+          }
+        }
+      }
 
       var file_date = unpackeda['file_date']
       var file_time = unpackeda['file_time']
 
       entrya['filemtime'] = date(
-        ((file_date & 0xfe00) >>  9) + 1980, # year
-        (file_date  & 0x01e0) >>  5,         # month
-        (file_date  & 0x001f),               # day: DOS stores 1-31 directly, no adjustment needed
-        (file_time  & 0xf800) >> 11,         # hour: 0-23 direct, no adjustment needed
-        (file_time  & 0x07e0) >>  5,         # minute
-        (file_time  & 0x001f) <<  1          # second
+        ((file_date & 0xfe00) >> 9) + 1980, # year
+        (file_date & 0x01e0) >> 5, # month
+        (file_date
+          & 0x001f), # day: DOS stores 1-31 directly, no adjustment needed
+        (file_time & 0xf800) >> 11, # hour: 0-23 direct, no adjustment needed
+        (file_time & 0x07e0) >> 5, # minute
+        (file_time & 0x001f) << 1, # second
       )
 
       entrya['data'] = entrya['error'] ? nil : decoded
@@ -1042,12 +1088,12 @@ class ZipArchive {
       } else {
         entrya['permission'] = 0
       }
-      
+
       zip_file.files.append(ZipItem.from_dict(entrya))
-		}
+    }
 
     return zip_file
-	}
+  }
 
   /**
    * Saves the current Zip archive to file.
@@ -1077,19 +1123,19 @@ class ZipArchive {
 
         ending.extend(pack(
           'Pvv',
-          44,                 # size of zip64 end of central directory record
-          creator,            # version made by
-          extract_version     # version needed to extract
+          44, # size of zip64 end of central directory record
+          creator, # version made by
+          extract_version, # version needed to extract
         ))
-  
+
         ending.extend(_disk_record_sign64.to_bytes())
 
         ending.extend(pack(
           'P4',
-          self._ctrl_dir_length,      # total number of entries 'on this disk'
-          self._ctrl_dir_length,      # total number of entries overall
-          self._ctrl_dir.length(),    # size of central dir
-          0                           # starting disk number
+          self._ctrl_dir_length, # total number of entries 'on this disk'
+          self._ctrl_dir_length, # total number of entries overall
+          self._ctrl_dir.length(), # size of central dir
+          0, # starting disk number
         ))
 
         # zip64 end of central directory locator.
@@ -1098,7 +1144,7 @@ class ZipArchive {
           'VPV',
           0,
           self._ctrl_dir.length(),
-          1
+          1,
         ))
       }
 
@@ -1106,15 +1152,14 @@ class ZipArchive {
       var ending = _central_end_sign.to_bytes()
       ending.extend(_disk_record_sign.to_bytes())
 
-
       ending.extend(pack(
-        # self._is_64 ? 'PPPPv' : 'vvVVv', 
-        'vvVVv', 
-        self._ctrl_dir_length,      # total number of entries 'on this disk'
-        self._ctrl_dir_length,      # total number of entries overall
-        self._ctrl_dir.length(),    # size of central dir
-        ctrl_dir_offset,            # offset to start of central dir
-        0                           # .zip file comment length
+        # self._is_64 ? 'PPPPv' : 'vvVVv',
+        'vvVVv',
+        self._ctrl_dir_length, # total number of entries 'on this disk'
+        self._ctrl_dir_length, # total number of entries overall
+        self._ctrl_dir.length(), # size of central dir
+        ctrl_dir_offset, # offset to start of central dir
+        0, # .zip file comment length
       ))
 
       self._handle.puts(ending)
@@ -1126,11 +1171,10 @@ class ZipArchive {
 
       return true
     }
-    
-    raise Error('zip file not open')
-	}
-}
 
+    raise Error('zip file not open')
+  }
+}
 
 /**
  * Extracts the zip archive at the _file_ path to the given
@@ -1149,7 +1193,9 @@ class ZipArchive {
  * @returns bool
  */
 def extract(file: string, destination: ?string, is_zip64: ?bool) {
-  if is_zip64 == nil is_zip64 = false
+  if is_zip64 == nil {
+    is_zip64 = false
+  }
 
   var zip = ZipArchive(file, nil, is_zip64)
   var zip_file = zip.read()
@@ -1177,18 +1223,24 @@ def extract(file: string, destination: ?string, is_zip64: ?bool) {
  * @param ?bool is_zip64: Default value is `false`.
  * @returns bool
  */
-def compress(path: string, destination: ?string, compression_method: ?number, use_zip64: ?bool) {
+def compress(
+  path: string, destination: ?string, compression_method: ?number,
+  use_zip64: ?bool,
+) {
 
-  if !destination 
+  if !destination {
     destination = os.join_paths(os.cwd(), os.base_name(path)) + ZIP_EXT
+  }
   destination = os.abs_path(destination)
 
-  if use_zip64 == nil use_zip64 = false
+  if use_zip64 == nil {
+    use_zip64 = false
+  }
 
   var zip = ZipArchive(destination, compression_method, use_zip64)
 
   var completed = false
-  
+
   # If path points to a directory, archive a directory else archive as a file.
   if os.dir_exists(path) {
     var current_directory = os.cwd()
@@ -1207,9 +1259,9 @@ def compress(path: string, destination: ?string, compression_method: ?number, us
     completed = zip.add_file(path)
   }
 
-  if !completed or !zip.save()
+  if !completed or !zip.save() {
     raise Error(_64_required)
+  }
 
   return true
 }
-

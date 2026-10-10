@@ -59,7 +59,7 @@ class Array {
     } else if is_bytes(n) {
       if n.length() % self._item_size != 0 {
         raise ValueError(
-          'bytes length (${n.length()}) must be a multiple of the element size (${self._item_size})'
+          'bytes length (${n.length()}) must be a multiple of the element size (${self._item_size})',
         )
       }
       self._data = n.clone()
@@ -137,7 +137,7 @@ class Array {
       return struct.unpack(
         self._data_type,
         self._data[,self._item_size],
-        0
+        0,
       ).values().first()
     }
 
@@ -155,7 +155,7 @@ class Array {
       return struct.unpack(
         self._data_type,
         self._data[self._data.length() - self._item_size,],
-        0
+        0,
       ).values().first()
     }
 
@@ -172,8 +172,9 @@ class Array {
    * @returns ?number
    */
   get(index) {
-    if !is_number(index)
+    if !is_number(index) {
       raise ArgumentError('Arrays are numerically indexed')
+    }
 
     var idx = self._normalize_index(index, self.length())
     if idx == nil {
@@ -184,7 +185,7 @@ class Array {
     return struct.unpack(
       self._data_type,
       self._data[start, start + self._item_size],
-      0
+      0,
     ).values().first()
   }
 
@@ -200,8 +201,9 @@ class Array {
    * @returns number
    */
   set(index, value) {
-    if !is_number(index)
+    if !is_number(index) {
       raise ArgumentError('Arrays are numerically indexed')
+    }
     self._validate_value(value)
 
     var len = self.length()
@@ -251,8 +253,9 @@ class Array {
    * @param number value
    */
   insert(index, value) {
-    if !is_number(index)
+    if !is_number(index) {
       raise ArgumentError('Arrays are numerically indexed')
+    }
     self._validate_value(value)
 
     var len = self.length()
@@ -261,7 +264,7 @@ class Array {
       raise RangeError('insert index out of range')
     }
 
-    var pos      = idx * self._item_size
+    var pos = idx * self._item_size
     var as_bytes = struct.pack(self._data_type, [value])
 
     var new_data = self._data[,pos]
@@ -281,8 +284,9 @@ class Array {
    * @returns number
    */
   remove_at(index) {
-    if !is_number(index)
+    if !is_number(index) {
       raise ArgumentError('Arrays are numerically indexed')
+    }
 
     var len = self.length()
     var idx = index < 0 ? index + len : index
@@ -290,9 +294,9 @@ class Array {
       raise RangeError('remove_at index out of range')
     }
 
-    var pos     = idx * self._item_size
+    var pos = idx * self._item_size
     var removed = struct.unpack(
-      self._data_type, self._data[pos, pos + self._item_size], 0
+      self._data_type, self._data[pos, pos + self._item_size], 0,
     ).values().first()
 
     var new_data = self._data[,pos]
@@ -331,12 +335,20 @@ class Array {
     self._validate_value(value)
 
     var len = self.length()
-    if start == nil { start = 0 }
-    if end == nil { end = len }
-    if start < 0 { start += len }
-    if end < 0 { end += len }
+    if start == nil {
+      start = 0
+    }
+    if end == nil {
+      end = len
+    }
+    if start < 0 {
+      start += len
+    }
+    if end < 0 {
+      end += len
+    }
     start = 0.max(start).min(len)
-    end   = 0.max(end).min(len)
+    end = 0.max(end).min(len)
 
     var as_bytes = struct.pack(self._data_type, [value])
     iter var i = start; i < end; i++ {
@@ -353,12 +365,20 @@ class Array {
   # this does the actual range math and value extraction once.
   _sliced_list(start, end) {
     var len = self.length()
-    if start == nil { start = 0 }
-    if end == nil { end = len }
-    if start < 0 { start += len }
-    if end < 0 { end += len }
+    if start == nil {
+      start = 0
+    }
+    if end == nil {
+      end = len
+    }
+    if start < 0 {
+      start += len
+    }
+    if end < 0 {
+      end += len
+    }
     start = 0.max(start).min(len)
-    end   = 0.max(end).min(len)
+    end = 0.max(end).min(len)
 
     return self.to_list()[start, end]
   }
@@ -423,7 +443,7 @@ class Array {
     return struct.unpack(
       '${self._data_type}${self.length()}',
       self._data,
-      0
+      0,
     ).values()
   }
 
@@ -451,19 +471,25 @@ class Array {
   }
 
   @value(n) {
-    if !is_number(n)
+    if !is_number(n) {
       raise ArgumentError('Arrays are numerically indexed')
+    }
     return self.get(n)
   }
 
   @key(n) {
     if n == nil {
-      if self.length() == 0 return nil
+      if self.length() == 0 {
+        return nil
+      }
       return 0
     }
-    if !is_number(n)
+    if !is_number(n) {
       raise ArgumentError('Arrays are numerically indexed')
-    if n < self.length() - 1 return n + 1
+    }
+    if n < self.length() - 1 {
+      return n + 1
+    }
     return nil
   }
 }

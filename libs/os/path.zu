@@ -290,13 +290,17 @@ def relative_path(base: string, target: string) {
     }
   }
 
-  var base_segments = from.split(_sep).filter(@(s) { return s != '' })
-  var target_segments = to.split(_sep).filter(@(s) { return s != '' })
+  var base_segments = from.split(_sep).filter(@(s) {
+    return s != ''
+  })
+  var target_segments = to.split(_sep).filter(@(s) {
+    return s != ''
+  })
 
   var common = 0
   while common < base_segments.length() and
-        common < target_segments.length() and
-        _same_name(base_segments[common], target_segments[common]) {
+    common < target_segments.length() and
+    _same_name(base_segments[common], target_segments[common]) {
     common++
   }
 
@@ -379,9 +383,12 @@ def path_contains(base: string, candidate: string) {
   }
 
   # A root already ends with the separator everything under it follows.
-  var prefix = resolved_base.ends_with(_sep) ? resolved_base : resolved_base + _sep
+  var prefix = resolved_base.ends_with(_sep)
+    ? resolved_base
+    : resolved_base + _sep
 
-  return resolved_candidate == resolved_base or resolved_candidate.starts_with(prefix)
+  return resolved_candidate == resolved_base
+    or resolved_candidate.starts_with(prefix)
 }
 
 # Whether two segments of a path name the same thing. Windows looks

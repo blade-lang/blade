@@ -33,7 +33,7 @@ import .errors { JwtError }
  */
 class Signer {
 
-  var _secret  = ''
+  var _secret = ''
   var _options = {}
 
   /**
@@ -48,7 +48,7 @@ class Signer {
     if !_is_string(secret) and !options.get('allow_none', false) {
       raise JwtError('Signer secret must be a non-empty string')
     }
-    self._secret  = secret
+    self._secret = secret
     self._options = options
   }
 
@@ -67,7 +67,9 @@ class Signer {
    */
   sign(payload, options) {
     var merged = {}
-    for k, v in self._options { merged[k] = v }
+    for k, v in self._options {
+      merged[k] = v
+    }
     if options {
       for k, v in options {
         merged[k] = v

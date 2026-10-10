@@ -36,7 +36,11 @@ def _prose(lines: list) {
     if trimmed.starts_with('```') {
       if !fenced {
         var language = trimmed[3, trimmed.length()].split(',')[0].trim()
-        out.append(language == 'zuri-repl' or language.is_empty() ? '```zuri' : '```${language}')
+        out.append(
+          language == 'zuri-repl' or language.is_empty()
+            ? '```zuri'
+            : '```${language}',
+        )
         fenced = true
       } else {
         out.append('```')
@@ -169,7 +173,9 @@ def tag_text(text, name: string) {
  * @returns bool
  */
 def is_deprecated(text) {
-  return text != nil and text.contains('@deprecated') and zuri.doc.parse(text).has('deprecated')
+  return text != nil
+    and text.contains('@deprecated')
+    and zuri.doc.parse(text).has('deprecated')
 }
 
 /**
@@ -248,7 +254,9 @@ def signature(symbol: dict, owner, type) {
       var arrow = symbol.get('extension', false) ? ' > ' : ' < '
       var parent_text = symbol.get('superclass_text', nil)
 
-      return parent_text == nil ? 'class ${name}' : 'class ${name}${arrow}${parent_text}'
+      return parent_text == nil
+        ? 'class ${name}'
+        : 'class ${name}${arrow}${parent_text}'
     }
     when 'field' {
       var keyword = symbol.get('constant', false) ? 'const' : 'var'
@@ -268,9 +276,13 @@ def signature(symbol: dict, owner, type) {
     when 'parameter' {
       var hint = symbol.get('hint', nil)
 
-      return hint == nil ? '(parameter) ${name}' : '(parameter) ${name}: ${hint}'
+      return hint == nil
+        ? '(parameter) ${name}'
+        : '(parameter) ${name}: ${hint}'
     }
-    when 'module' return 'import ${import_text(symbol.source.segments)}'
+    when 'module' {
+      return 'import ${import_text(symbol.source.segments)}'
+    }
     when 'import' return 'import ${symbol.source.member}'
     default {
       var hint = symbol.get('hint', nil)

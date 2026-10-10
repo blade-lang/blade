@@ -114,7 +114,9 @@ def _collect_references(lines: list, refs: dict) {
       var label = found[1].lower().replace('/\\s+/', ' ', true).trim()
 
       if !refs.contains(label) {
-        refs.set(label, { href: found[2], title: found.length() > 3 ? found[3] : '' })
+        refs.set(
+          label, { href: found[2], title: found.length() > 3 ? found[3] : '' },
+        )
       }
 
       continue
@@ -182,7 +184,9 @@ def _code_block(lines: list, info: string) {
     body = _escape(source)
   }
 
-  var cls = is_dict(language.match('/^[a-z0-9_+-]+$/')) ? ' class="language-${language}"' : ''
+  var cls = is_dict(language.match('/^[a-z0-9_+-]+$/'))
+    ? ' class="language-${language}"'
+    : ''
 
   return '<pre><code${cls}>${body}\n</code></pre>'
 }
@@ -255,7 +259,8 @@ def _blocks(lines: list, refs: dict, tight: bool) {
 
         if inner != nil {
           quoted.append(inner[1])
-        } else if !_is_blank(lines[i]) and !quoted.is_empty() and !_is_blank(quoted.last())
+        } else if !_is_blank(lines[i]) and !quoted.is_empty()
+          and !_is_blank(quoted.last())
           and !_interrupts(lines[i]) {
           quoted.append(lines[i])
         } else {
@@ -297,7 +302,8 @@ def _blocks(lines: list, refs: dict, tight: bool) {
     if _indent(line) >= 4 {
       var code = []
 
-      while i < lines.length() and (_indent(lines[i]) >= 4 or _is_blank(lines[i])) {
+      while i < lines.length()
+        and (_indent(lines[i]) >= 4 or _is_blank(lines[i])) {
         code.append(_dedent(lines[i], 4))
         i++
       }
@@ -330,7 +336,8 @@ def _blocks(lines: list, refs: dict, tight: bool) {
       var table = ['<table><thead><tr>']
 
       for index, cell in header {
-        var align = index < alignments.length() and !alignments[index].is_empty()
+        var align = index < alignments.length()
+          and !alignments[index].is_empty()
           ? ' align="${alignments[index]}"'
           : ''
 
@@ -340,7 +347,9 @@ def _blocks(lines: list, refs: dict, tight: bool) {
       table.append('</tr></thead><tbody>')
       i += 2
 
-      while i < lines.length() and !_is_blank(lines[i]) and lines[i].contains('|') {
+      while i < lines.length()
+        and !_is_blank(lines[i])
+        and lines[i].contains('|') {
         table.append('<tr>')
 
         for index, cell in _cells(lines[i]) {
@@ -348,7 +357,8 @@ def _blocks(lines: list, refs: dict, tight: bool) {
             break
           }
 
-          var align = index < alignments.length() and !alignments[index].is_empty()
+          var align = index < alignments.length()
+            and !alignments[index].is_empty()
             ? ' align="${alignments[index]}"'
             : ''
 
@@ -490,7 +500,8 @@ def _list(lines: list, start: number, refs: dict) {
     items.append(body)
 
     var next_item = i < lines.length() ? _captures(lines[i], _ITEM) : nil
-    var continues = next_item != nil and _same_kind(next_item, ordered, delimiter)
+    var continues = next_item != nil
+      and _same_kind(next_item, ordered, delimiter)
 
     if saw_blank and continues {
       loose = true
@@ -589,7 +600,9 @@ def _destination(text: string, from: number) {
 
       if depth == 0 {
         var inside = text[from + 1, i].trim()
-        var parts = _captures(inside, '/^<?([^\\s>]*)>?(?:\\s+["\'(](.*)["\')])?$/')
+        var parts = _captures(
+          inside, '/^<?([^\\s>]*)>?(?:\\s+["\'(](.*)["\')])?$/',
+        )
 
         if parts == nil {
           return nil
@@ -607,9 +620,15 @@ def _destination(text: string, from: number) {
 
 var _EMPHASIS = [
   ['/\\*\\*(?=\\S)(.+?)(?<=\\S)\\*\\*/', '<strong>$1</strong>'],
-  ['/(?<![A-Za-z0-9_])__(?=\\S)(.+?)(?<=\\S)__(?![A-Za-z0-9_])/', '<strong>$1</strong>'],
+  [
+    '/(?<![A-Za-z0-9_])__(?=\\S)(.+?)(?<=\\S)__(?![A-Za-z0-9_])/',
+    '<strong>$1</strong>',
+  ],
   ['/\\*(?=[^\\s*])(.+?)(?<=[^\\s*])\\*/', '<em>$1</em>'],
-  ['/(?<![A-Za-z0-9_])_(?=[^\\s_])(.+?)(?<=[^\\s_])_(?![A-Za-z0-9_])/', '<em>$1</em>'],
+  [
+    '/(?<![A-Za-z0-9_])_(?=[^\\s_])(.+?)(?<=[^\\s_])_(?![A-Za-z0-9_])/',
+    '<em>$1</em>',
+  ],
   ['/~~(?=\\S)(.+?)(?<=\\S)~~/', '<del>$1</del>'],
 ]
 
@@ -729,7 +748,9 @@ def _inline(text: string, refs: dict) {
             }
           }
 
-          var found = refs.get(ref_name.lower().replace('/\\s+/', ' ', true).trim(), nil)
+          var found = refs.get(
+            ref_name.lower().replace('/\\s+/', ' ', true).trim(), nil,
+          )
 
           if found != nil {
             target = [found.href, found.title, ref_end]
@@ -740,7 +761,9 @@ def _inline(text: string, refs: dict) {
           flush()
 
           var href = _escape(target[0])
-          var title = target[1].is_empty() ? '' : ' title="${_escape(target[1])}"'
+          var title = target[1].is_empty()
+            ? ''
+            : ' title="${_escape(target[1])}"'
 
           if is_image {
             out.append('<img src="${href}" alt="${_escape(label)}"${title}>')
@@ -757,7 +780,9 @@ def _inline(text: string, refs: dict) {
 
     if c == '<' {
       var rest = text[i,]
-      var autolink = _captures(rest, '/^<([a-zA-Z][a-zA-Z0-9+.-]{1,31}:[^\\s<>]*)>/')
+      var autolink = _captures(
+        rest, '/^<([a-zA-Z][a-zA-Z0-9+.-]{1,31}:[^\\s<>]*)>/',
+      )
 
       if autolink != nil {
         flush()
@@ -777,7 +802,9 @@ def _inline(text: string, refs: dict) {
         continue
       }
 
-      var tag = _captures(rest, '/^<\\/?[a-zA-Z][a-zA-Z0-9-]*(?:\\s[^<>]*)?\\/?>/')
+      var tag = _captures(
+        rest, '/^<\\/?[a-zA-Z][a-zA-Z0-9-]*(?:\\s[^<>]*)?\\/?>/',
+      )
 
       if tag != nil {
         flush()
@@ -829,7 +856,8 @@ def _inline(text: string, refs: dict) {
  * @returns string
  */
 def render(source: string) {
-  var normalised = source.replace('\r\n', '\n', false).replace('\r', '\n', false)
+  var normalised = source.replace('\r\n', '\n', false)
+    .replace('\r', '\n', false)
     .replace('\t', '    ', false)
 
   var refs = {}

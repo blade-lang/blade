@@ -292,7 +292,8 @@ class Http2Connection {
       if error {
         # A peer that simply stops talking has closed the connection,
         # which is the ordinary end of one.
-        if instance_of(error, ConnectionError) or instance_of(error, TimeoutError) {
+        if instance_of(error, ConnectionError)
+          or instance_of(error, TimeoutError) {
           return
         }
 
@@ -386,7 +387,10 @@ class Http2Connection {
     # is deprecated but still legal to send.
     if frame.has_flag(frames.FLAG_PRIORITY) {
       if payload.length() < 5 {
-        self._go_away(frames.FRAME_SIZE_ERROR, 'HEADERS is too short for its priority field')
+        self._go_away(
+          frames.FRAME_SIZE_ERROR,
+          'HEADERS is too short for its priority field',
+        )
         return nil
       }
       payload = payload[5,]
@@ -421,7 +425,8 @@ class Http2Connection {
   }
 
   _on_continuation(frame) {
-    if self._pending_headers == nil or self._pending_headers.id != frame.stream_id {
+    if self._pending_headers == nil
+      or self._pending_headers.id != frame.stream_id {
       self._go_away(frames.PROTOCOL_ERROR, 'unexpected CONTINUATION')
       return nil
     }
@@ -557,14 +562,19 @@ class Http2Connection {
       using identifier {
         when frames.SETTINGS_MAX_FRAME_SIZE {
           if value < 16384 or value > 16777215 {
-            self._go_away(frames.PROTOCOL_ERROR, 'SETTINGS_MAX_FRAME_SIZE is out of range')
+            self._go_away(
+              frames.PROTOCOL_ERROR, 'SETTINGS_MAX_FRAME_SIZE is out of range',
+            )
             return
           }
           self._peer_max_frame = value
         }
         when frames.SETTINGS_INITIAL_WINDOW_SIZE {
           if value > 2147483647 {
-            self._go_away(frames.FLOW_CONTROL_ERROR, 'SETTINGS_INITIAL_WINDOW_SIZE is too large')
+            self._go_away(
+              frames.FLOW_CONTROL_ERROR,
+              'SETTINGS_INITIAL_WINDOW_SIZE is too large',
+            )
             return
           }
 
@@ -600,7 +610,9 @@ class Http2Connection {
 
     if increment == 0 {
       if frame.stream_id == 0 {
-        self._go_away(frames.PROTOCOL_ERROR, 'a zero connection window increment')
+        self._go_away(
+          frames.PROTOCOL_ERROR, 'a zero connection window increment',
+        )
       } else {
         self._reset(frame.stream_id, frames.PROTOCOL_ERROR)
       }
@@ -628,7 +640,9 @@ class Http2Connection {
       return
     }
 
-    frames.write_frame(self._conn, frames.PING, frames.FLAG_ACK, 0, frame.payload)
+    frames.write_frame(
+      self._conn, frames.PING, frames.FLAG_ACK, 0, frame.payload,
+    )
     self._conn.flush()
   }
 
@@ -674,7 +688,9 @@ class Http2Connection {
     self._going_away = true
 
     catch {
-      var payload = frames.encode_goaway(self._last_stream_id, error_code, message)
+      var payload = frames.encode_goaway(
+        self._last_stream_id, error_code, message,
+      )
       frames.write_frame(self._conn, frames.GOAWAY, 0, 0, payload)
       payload.dispose()
       self._conn.flush()
@@ -841,7 +857,8 @@ class Http2Connection {
       }
     })
 
-    var bodiless = status.is_bodiless(response.status) or request.method == 'HEAD'
+    var bodiless = status.is_bodiless(response.status)
+      or request.method == 'HEAD'
     var source = response.source()
 
     # A Content-Length is still meaningful in HTTP/2 - it is not
@@ -897,7 +914,8 @@ class Http2Connection {
 
     if block.length() <= limit {
       frames.write_frame(
-        self._conn, frames.HEADERS, flags | frames.FLAG_END_HEADERS, stream_id, block
+        self._conn, frames.HEADERS, flags | frames.FLAG_END_HEADERS, stream_id,
+        block,
       )
       return
     }
@@ -924,7 +942,7 @@ class Http2Connection {
         frames.CONTINUATION,
         last ? frames.FLAG_END_HEADERS : 0,
         stream_id,
-        piece
+        piece,
       )
       piece.dispose()
 
@@ -969,7 +987,7 @@ class Http2Connection {
         frames.DATA,
         last ? frames.FLAG_END_STREAM : 0,
         stream.id,
-        piece
+        piece,
       )
       piece.dispose()
 
@@ -982,7 +1000,9 @@ class Http2Connection {
     }
 
     if end_stream and data.length() == 0 {
-      frames.write_frame(self._conn, frames.DATA, frames.FLAG_END_STREAM, stream.id, nil)
+      frames.write_frame(
+        self._conn, frames.DATA, frames.FLAG_END_STREAM, stream.id, nil,
+      )
     }
   }
 
@@ -1046,7 +1066,6 @@ class Http2Connection {
 
     handle.close()
   }
-
 
   # ----------------------------------------------------------------
   # Client

@@ -123,7 +123,7 @@ class Statement {
 
     return ExecResult(
       result.get('rows_affected', 0),
-      result.get('last_insert_id', nil)
+      result.get('last_insert_id', nil),
     )
   }
 
@@ -141,7 +141,9 @@ class Statement {
   stream(params, options) {
     self._open()
 
-    return Cursor(self._statement.open_cursor(self._bind(params), options or {}))
+    return Cursor(self._statement.open_cursor(
+      self._bind(params), options or {},
+    ))
   }
 
   /**

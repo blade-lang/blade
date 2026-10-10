@@ -401,7 +401,7 @@ def parse(text: string, where: ?string) {
   if format != FORMAT {
     raise LockfileError(
       '${where} is in format ${format}, which this version of zuri does not read; '
-        + 'delete it and run `zuri install` to write it again'
+        + 'delete it and run `zuri install` to write it again',
     )
   }
 
@@ -409,7 +409,8 @@ def parse(text: string, where: ?string) {
 
   for entry in data.get('package', []) {
     if !is_dict(entry) or !is_string(entry.get('name', nil))
-      or !is_string(entry.get('version', nil)) or !is_string(entry.get('source', nil)) {
+      or !is_string(entry.get('version', nil))
+      or !is_string(entry.get('source', nil)) {
       raise LockfileError('${where} holds a package entry without a name, version and source')
     }
 

@@ -51,7 +51,8 @@ def _subject(server, params: dict) {
   var occurrence = found.occurrence
   var target = found.target
 
-  if occurrence.kind == 'segment' or (target != nil and target.contains('module')) {
+  if occurrence.kind == 'segment'
+    or (target != nil and target.contains('module')) {
     _refuse("a module is renamed by renaming its file")
   }
 
@@ -108,7 +109,11 @@ def rename(server, params: dict, context) {
   var old = subject.symbol.name
 
   if !common.is_identifier(name) {
-    _refuse(common.KEYWORDS.contains(name) ? "'${name}' is a keyword" : "'${name}' is not a name")
+    _refuse(
+      common.KEYWORDS.contains(name)
+        ? "'${name}' is a keyword"
+        : "'${name}' is not a name",
+    )
   }
 
   if name == old {
@@ -157,9 +162,12 @@ def _is_shorthand(server, place: dict) {
 
   var occurrence = query.at(summary, place.start)
 
-  return occurrence != nil and occurrence.kind == 'ref' and occurrence.start == place.start and (
-    occurrence.flags & SHORTHAND != 0
-  )
+  return occurrence != nil
+    and occurrence.kind == 'ref'
+    and occurrence.start == place.start
+    and (
+      occurrence.flags & SHORTHAND != 0
+    )
 }
 
 # Refuses making private what is used from outside: a module global
@@ -190,7 +198,9 @@ def _check_privacy(server, subject: dict, name: string, places: list) {
 
       var access = summary.members[occurrence.member]
       var text = server.text(place.path)
-      var receiver = text == nil ? '' : text[access.object_start, access.object_end]
+      var receiver = text == nil
+        ? ''
+        : text[access.object_start, access.object_end]
 
       if receiver != 'self' and receiver != 'parent' {
         _refuse("'${name}' would be private, but '${old}' is used through '${receiver}'")
@@ -221,7 +231,8 @@ def _check_clashes(server, subject: dict, name: string, places: list) {
     var instance = { t: 'instance', path: target.path, index: symbol.owner }
     var statics = { t: 'class', path: target.path, index: symbol.owner }
 
-    if linker.member(instance, name) != nil or linker.member(statics, name) != nil {
+    if linker.member(instance, name) != nil
+      or linker.member(statics, name) != nil {
       _refuse("the class already has a member named '${name}'")
     }
 
@@ -242,7 +253,8 @@ def _check_clashes(server, subject: dict, name: string, places: list) {
       _refuse("'${name}' is already declared where '${symbol.name}' is used, in ${place.path}")
     }
 
-    if linker.starred(place.path).contains(name) or server.builtins.global(name) != nil {
+    if linker.starred(place.path).contains(name)
+      or server.builtins.global(name) != nil {
       if symbol.scope == 0 or place.path != target.path {
         _refuse("'${name}' already names something in ${place.path}")
       }
@@ -309,7 +321,9 @@ def _report_unknown_receivers(server, old: string, places: list, context) {
   }
 
   var shown = left.length() > _LISTED ? left[0, _LISTED] : left
-  var more = left.length() > _LISTED ? ' and ${left.length() - _LISTED} more' : ''
+  var more = left.length() > _LISTED
+    ? ' and ${left.length() - _LISTED} more'
+    : ''
   var count = left.length()
   var message = "${count} use(s) of '.${old}' on a receiver of unknown type were left as they are: "
   message += ', '.join(shown) + more
@@ -336,11 +350,15 @@ def _moves(server, files: list) {
       continue
     }
 
-    var prefix = from.ends_with(os.path_separator) ? from : from + os.path_separator
+    var prefix = from.ends_with(os.path_separator)
+      ? from
+      : from + os.path_separator
 
     for path in server.paths() {
       if path.starts_with(prefix) {
-        moves[path] = to + os.path_separator + path[prefix.length(), path.length()]
+        moves[path] = to
+          + os.path_separator
+          + path[prefix.length(), path.length()]
       }
     }
   }
@@ -423,7 +441,10 @@ def will_rename_files(server, params: dict, context) {
         edits[path] = []
       }
 
-      edits[path].append({ range: server.range(path, start, end), newText: written })
+      edits[path].append({
+        range: server.range(path, start, end),
+        newText: written,
+      })
     }
   }
 

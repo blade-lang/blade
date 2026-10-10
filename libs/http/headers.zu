@@ -29,13 +29,13 @@ def _init_token_chars() {
   iter var i = 0; i < specials.length(); i++ {
     _TOKEN_CHARS[specials[i].ord()] = true
   }
-  iter var c = 48; c <= 57; c++ {   # 0-9
+  iter var c = 48; c <= 57; c++ { # 0-9
     _TOKEN_CHARS[c] = true
   }
-  iter var c = 65; c <= 90; c++ {   # A-Z
+  iter var c = 65; c <= 90; c++ { # A-Z
     _TOKEN_CHARS[c] = true
   }
-  iter var c = 97; c <= 122; c++ {  # a-z
+  iter var c = 97; c <= 122; c++ { # a-z
     _TOKEN_CHARS[c] = true
   }
 }
@@ -655,7 +655,7 @@ class Headers {
 
     if !is_valid_value(text) {
       raise ProtocolError(
-        'header ${name} contains a line break or NUL, which would split the response'
+        'header ${name} contains a line break or NUL, which would split the response',
       )
     }
 

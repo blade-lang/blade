@@ -79,19 +79,27 @@ describe('check_name', @{
   })
 
   it('refuses an empty name', @{
-    expect(@{ check_name('   ') }).to_raise_instance_of(UsageError)
+    expect(@{
+      check_name('   ')
+    }).to_raise_instance_of(UsageError)
   })
 
   it('refuses capitals and spaces', @{
-    expect(@{ check_name('My App') }).to_raise_instance_of(UsageError)
+    expect(@{
+      check_name('My App')
+    }).to_raise_instance_of(UsageError)
   })
 
   it('refuses a name that ends on a separator', @{
-    expect(@{ check_name('my-app-') }).to_raise_instance_of(UsageError)
+    expect(@{
+      check_name('my-app-')
+    }).to_raise_instance_of(UsageError)
   })
 
   it('refuses a name longer than the limit', @{
-    expect(@{ check_name('a' * 65) }).to_raise_with_message('at most 64')
+    expect(@{
+      check_name('a' * 65)
+    }).to_raise_with_message('at most 64')
   })
 })
 
@@ -105,11 +113,15 @@ describe('check_version', @{
   })
 
   it('refuses two numbers', @{
-    expect(@{ check_version('1.2') }).to_raise_instance_of(UsageError)
+    expect(@{
+      check_version('1.2')
+    }).to_raise_instance_of(UsageError)
   })
 
   it('refuses something that is not a version at all', @{
-    expect(@{ check_version('latest') })
+    expect(@{
+      check_version('latest')
+    })
       .to_raise_with_message('is not a valid version')
   })
 })
@@ -147,11 +159,15 @@ describe('answers', @{
   })
 
   it('checks the name the command line gave it', @{
-    expect(@{ chosen(['--name', 'My App']) }).to_raise_instance_of(UsageError)
+    expect(@{
+      chosen(['--name', 'My App'])
+    }).to_raise_instance_of(UsageError)
   })
 
   it('checks the version the command line gave it', @{
-    expect(@{ chosen(['--version', 'one']) }).to_raise_instance_of(UsageError)
+    expect(@{
+      chosen(['--version', 'one'])
+    }).to_raise_instance_of(UsageError)
   })
 
   it('takes every author that followed the flag', @{
@@ -224,7 +240,9 @@ describe('target_of', @{
 
   it('takes an absolute path as it stands', @{
     # On Windows a path rooted without a drive is on the current one.
-    var expected = os.platform == 'windows' ? os.cwd()[,2] + '\\srv\\app' : '/srv/app'
+    var expected = os.platform == 'windows'
+      ? os.cwd()[,2] + '\\srv\\app'
+      : '/srv/app'
 
     expect(target_of(parse(['/srv/app']), ROOT)).to_equal(expected)
   })

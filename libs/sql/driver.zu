@@ -391,7 +391,7 @@ class DriverConnection {
    */
   schema_adapter() {
     raise NotSupportedError(
-      'this adapter does not implement introspection'
+      'this adapter does not implement introspection',
     )
   }
 
@@ -556,7 +556,7 @@ class SchemaAdapter {
    */
   primary_key_columns(table, schema) {
     raise NotImplementedError(
-      'a schema adapter has to implement primary_key_columns()'
+      'a schema adapter has to implement primary_key_columns()',
     )
   }
 
@@ -581,7 +581,7 @@ class SchemaAdapter {
    */
   foreign_keys(table, schema) {
     raise NotImplementedError(
-      'a schema adapter has to implement foreign_keys()'
+      'a schema adapter has to implement foreign_keys()',
     )
   }
 }

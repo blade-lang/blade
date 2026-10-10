@@ -90,7 +90,9 @@ def quote_table(driver, table: string) {
     return table
   }
 
-  return '.'.join(table.split('.').map(@(part) => driver.quote_identifier(part)))
+  return '.'.join(table
+    .split('.')
+    .map(@(part) => driver.quote_identifier(part)))
 }
 
 /**
@@ -243,9 +245,9 @@ def insert_many(driver, table: string, rows: list) {
     if row.length() != columns.length() {
       raise QueryError(
         'row ${index + 1} names ${row.length()} column' +
-        '${row.length() == 1 ? "" : "s"} where the first names ' +
-        '${columns.length()}; every row of one insert has to name the ' +
-        'same columns'
+          '${row.length() == 1 ? "" : "s"} where the first names ' +
+          '${columns.length()}; every row of one insert has to name the ' +
+          'same columns',
       )
     }
 
@@ -254,7 +256,7 @@ def insert_many(driver, table: string, rows: list) {
     for column in columns {
       if !row.contains(column) {
         raise QueryError(
-          'row ${index + 1} has no ${column}, which the first row has'
+          'row ${index + 1} has no ${column}, which the first row has',
         )
       }
 

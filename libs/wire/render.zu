@@ -23,7 +23,6 @@ import .errors { RenderError, WireError }
 import .escape
 import .values { invoke, is_safe, stringify, truthy, type_name, unwrap }
 
-
 /**
  * One level of variables, pointing at the level around it.
  *
@@ -75,7 +74,6 @@ class Frame {
   }
 }
 
-
 /**
  * One definition of a region, and what to render it against.
  *
@@ -116,7 +114,6 @@ class Definition {
     self.path = path
   }
 }
-
 
 /**
  * Renders compiled templates.
@@ -218,8 +215,8 @@ class Renderer {
     if depth > MAX_DEPTH {
       raise RenderError(
         'templates nest more than ${MAX_DEPTH} deep, which is almost ' +
-        'certainly a cycle',
-        template.path, 0, 0
+          'certainly a cycle',
+        template.path, 0, 0,
       )
     }
 
@@ -271,14 +268,14 @@ class Renderer {
       self.path = current.path
 
       var base = self.environment.load(
-        self.plain(current.extends), nil, current.path, self.line, self.column
+        self.plain(current.extends), nil, current.path, self.line, self.column,
       )
 
       if chain.length() > MAX_DEPTH {
         raise RenderError(
           'templates extend more than ${MAX_DEPTH} deep, which is almost ' +
-          'certainly a cycle',
-          current.path, 0, 0
+            'certainly a cycle',
+          current.path, 0, 0,
         )
       }
 
@@ -386,8 +383,8 @@ class Renderer {
       self.pieces.append(
         escape.escape(
           segment.value.evaluate(self), node.context,
-          self.environment.url_schemes
-        )
+          self.environment.url_schemes,
+        ),
       )
     }
   }
@@ -467,7 +464,7 @@ class Renderer {
 
       if !is_dict(computed) {
         self.fail(
-          'x-attr needs a dictionary of attributes, got ${type_name(computed)}'
+          'x-attr needs a dictionary of attributes, got ${type_name(computed)}',
         )
       }
 
@@ -520,7 +517,7 @@ class Renderer {
 
     if escape.is_url_list_attribute(name) {
       return [name, escape.url_list(
-        value, self.environment.url_schemes, escape.uses_descriptors(name)
+        value, self.environment.url_schemes, escape.uses_descriptors(name),
       )]
     }
 
@@ -556,7 +553,7 @@ class Renderer {
 
       if attribute.url_list {
         return escape.url_list(
-          whole, self.environment.url_schemes, attribute.url_descriptors
+          whole, self.environment.url_schemes, attribute.url_descriptors,
         )
       }
 
@@ -573,7 +570,7 @@ class Renderer {
 
       var value = escape.escape(
         segment.value.evaluate(self), attribute.context,
-        self.environment.url_schemes
+        self.environment.url_schemes,
       )
 
       # A script context escapes for JavaScript, which says nothing
@@ -603,8 +600,8 @@ class Renderer {
 
     self.pieces.append(
       escape.escape(
-        value, escape.text_context(node.tag), self.environment.url_schemes
-      )
+        value, escape.text_context(node.tag), self.environment.url_schemes,
+      ),
     )
   }
 
@@ -802,7 +799,7 @@ class Renderer {
     self.column = node.column
 
     var template = self.environment.load(
-      self.plain(node.path), node.context, self.path, node.line, node.column
+      self.plain(node.path), node.context, self.path, node.line, node.column,
     )
 
     var variables = {}
@@ -820,7 +817,7 @@ class Renderer {
 
       if !is_dict(extra) {
         self.fail(
-          'x-with needs a dictionary of variables, got ${type_name(extra)}'
+          'x-with needs a dictionary of variables, got ${type_name(extra)}',
         )
       }
 
@@ -998,7 +995,6 @@ class Renderer {
   }
 }
 
-
 /**
  * Every region an inheritance chain defines, keyed by name, with the
  * most derived definition first.
@@ -1029,7 +1025,6 @@ def _collect_blocks(chain: list, supplied: dict) {
 
   return blocks
 }
-
 
 /**
  * Every variable a frame chain can see, flattened into one dictionary.

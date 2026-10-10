@@ -76,7 +76,11 @@ def _decode(body) {
   catch {
     return { kind: 'message', text, value: json.decode(text) }
   } as error {
-    return { kind: 'unreadable', text, message: 'Parse error: ${error.message}' }
+    return {
+      kind: 'unreadable',
+      text,
+      message: 'Parse error: ${error.message}',
+    }
   }
 }
 
@@ -118,7 +122,9 @@ class Context {
    * @param bool can_defer: Whether the request can be answered after
    *    its handler returns, which needs a connection to answer on.
    */
-  @new(endpoint, id, method: string, is_request: bool, request, can_defer: bool) {
+  @new(
+    endpoint, id, method: string, is_request: bool, request, can_defer: bool,
+  ) {
     self.endpoint = endpoint
     self.id = id
     self.method = method
@@ -464,7 +470,8 @@ class Service {
    * @returns string
    */
   to_string() {
-    var count = self._request_handlers.length() + self._notification_handlers.length()
+    var count = self._request_handlers.length()
+      + self._notification_handlers.length()
 
     return 'Service(${count} methods)'
   }
@@ -501,13 +508,17 @@ class Service {
     }
 
     if value.is_empty() {
-      var empty = RpcError(INVALID_REQUEST, 'Invalid Request: a batch must not be empty')
+      var empty = RpcError(
+        INVALID_REQUEST, 'Invalid Request: a batch must not be empty',
+      )
       return Response.failure(nil, empty)
     }
 
     if self._batch_limit != nil and value.length() > self._batch_limit {
       var detail = 'a batch of ${value.length()} messages is over the limit of ${self._batch_limit}'
-      return Response.failure(nil, RpcError(INVALID_REQUEST, 'Invalid Request: ${detail}'))
+      return Response.failure(
+        nil, RpcError(INVALID_REQUEST, 'Invalid Request: ${detail}'),
+      )
     }
 
     var answers = []
@@ -576,7 +587,9 @@ class Service {
   }
 
   _notify(notification, value, request) {
-    var handler = self._handler_for(self._notification_handlers, notification.method)
+    var handler = self._handler_for(
+      self._notification_handlers, notification.method,
+    )
 
     if handler == nil {
       return
@@ -595,11 +608,15 @@ class Service {
     var handler = self._handler_for(self._request_handlers, call.method)
 
     if handler == nil {
-      var missing = RpcError(METHOD_NOT_FOUND, 'Method not found: ${call.method}')
+      var missing = RpcError(
+        METHOD_NOT_FOUND, 'Method not found: ${call.method}',
+      )
       return Response.failure(call.id, missing)
     }
 
-    var context = Context(self, call.id, call.method, true, request, self._can_defer())
+    var context = Context(
+      self, call.id, call.method, true, request, self._can_defer(),
+    )
     var result = nil
 
     catch {

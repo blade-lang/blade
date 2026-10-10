@@ -132,7 +132,8 @@ def parse_accept(header) {
     iter var i = 0; i < ordered.length(); i++ {
       var other = ordered[i]
       var better = entry.quality > other.quality or
-          (entry.quality == other.quality and entry.specificity() > other.specificity())
+        (entry.quality == other.quality
+          and entry.specificity() > other.specificity())
 
       if better {
         ordered.insert(entry, i)
@@ -169,7 +170,9 @@ def quality_of(header, candidate: string) {
   }
 
   var wanted = candidate.lower()
-  var wanted_type = wanted.index_of('/') > -1 ? wanted[0, wanted.index_of('/')] : wanted
+  var wanted_type = wanted.index_of('/') > -1
+    ? wanted[0, wanted.index_of('/')]
+    : wanted
 
   var best = -1
   var best_specificity = -1
@@ -317,7 +320,7 @@ def preferred_language(header, available: list) {
 
     for entry in entries {
       var matches = entry.value == '*' or entry.value == lower or
-          lower.starts_with(entry.value + '-')
+        lower.starts_with(entry.value + '-')
 
       if matches and entry.quality > best_quality {
         best_quality = entry.quality

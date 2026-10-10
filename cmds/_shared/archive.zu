@@ -181,10 +181,12 @@ def _split_name(path: string) {
 def _header(path: string, mode: number, size: number, is_dir: bool) {
   var split = _split_name(path)
 
-  var head = _field(split[0], 100) + _octal(mode, 8) + _octal(0, 8) + _octal(0, 8)
+  var head = _field(split[0], 100) + _octal(mode, 8) + _octal(0, 8)
+    + _octal(0, 8)
     + _octal(size, 12) + _octal(0, 12)
 
-  var tail = (is_dir ? '5' : '0').to_bytes() + bytes(100) + 'ustar'.to_bytes() + bytes(1)
+  var tail = (is_dir ? '5' : '0').to_bytes() + bytes(100) + 'ustar'.to_bytes()
+    + bytes(1)
     + '00'.to_bytes() + bytes(32) + bytes(32) + _octal(0, 8) + _octal(0, 8)
     + _field(split[1], 155) + bytes(12)
 
@@ -210,13 +212,15 @@ def _padding(size: number) {
 
 # Refuses a set of files that is too many or too large before any of
 # it is read, naming what takes the room so it can be left out.
-def _check_totals(root: string, files: list, directories: number, limit: number) {
+def _check_totals(
+  root: string, files: list, directories: number, limit: number,
+) {
   var count = files.length() + directories
 
   if count > MAX_ENTRIES {
     raise ArchiveError(
       'the package would hold ${count} files and directories, and holds at most ${MAX_ENTRIES}; '
-        + 'leave some out with exclude in [project]'
+        + 'leave some out with exclude in [project]',
     )
   }
 
@@ -248,7 +252,7 @@ def _check_totals(root: string, files: list, directories: number, limit: number)
 
   raise ArchiveError(
     'the files come to ${ui.size(total)}, more than the ${ui.size(limit)} allowed; the largest '
-      + 'are ${", ".join(largest)}. Leave them out with exclude in [project]'
+      + 'are ${", ".join(largest)}. Leave them out with exclude in [project]',
   )
 }
 
@@ -340,11 +344,15 @@ def pack(root: string, files: list, destination: string, limit: ?number) {
     # Checked up front already; a file that grew while it was being
     # read is still caught.
     if unpacked > limit {
-      raise ArchiveError('${entry.path} grew while it was packed, past the ${ui.size(limit)} '
-        + 'the files may come to')
+      raise ArchiveError(
+        '${entry.path} grew while it was packed, past the ${ui.size(limit)} '
+          + 'the files may come to',
+      )
     }
 
-    encoder.write(_header(entry.path, executable ? 0c755 : 0c644, data.length(), false))
+    encoder.write(_header(
+      entry.path, executable ? 0c755 : 0c644, data.length(), false,
+    ))
     encoder.write(data)
     encoder.write(_padding(data.length()))
   }

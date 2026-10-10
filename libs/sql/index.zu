@@ -138,7 +138,7 @@ var _REGISTRY = {}
 def register(driver) {
   if !instance_of(driver, Driver) {
     raise SqlError(
-      'a driver has to extend sql.Driver, and ${typeof(driver)} does not'
+      'a driver has to extend sql.Driver, and ${typeof(driver)} does not',
     )
   }
 
@@ -169,8 +169,8 @@ def driver(name: string) {
   if found == nil {
     raise SqlError(
       'no database adapter called ${name} is registered; there ' +
-      '${_REGISTRY.length() == 1 ? "is" : "are"} ' +
-      '${', '.join(_REGISTRY.keys())}'
+        '${_REGISTRY.length() == 1 ? "is" : "are"} ' +
+        '${', '.join(_REGISTRY.keys())}',
     )
   }
 
@@ -203,8 +203,8 @@ def driver_for(dsn: string) {
 
   raise SqlError(
     'no database adapter handles ${scheme}:// connection strings; ' +
-    '${', '.join(_REGISTRY.keys())} ${_REGISTRY.length() == 1 ? "is" : "are"} ' +
-    'registered'
+      '${', '.join(_REGISTRY.keys())} ${_REGISTRY.length() == 1 ? "is" : "are"} ' +
+      'registered',
   )
 }
 
@@ -232,7 +232,9 @@ def driver_for(dsn: string) {
  * @throws ConnectionError if the database cannot be reached.
  */
 def open(dsn, options) {
-  var chosen = is_dict(dsn) ? driver(dsn.get('driver', 'sqlite')) : driver_for(dsn)
+  var chosen = is_dict(dsn)
+    ? driver(dsn.get('driver', 'sqlite'))
+    : driver_for(dsn)
   var settings = chosen.parse_dsn(dsn)
 
   if options != nil {
@@ -251,7 +253,9 @@ def open(dsn, options) {
  * @returns Pool
  */
 def pool(dsn, options) {
-  var chosen = is_dict(dsn) ? driver(dsn.get('driver', 'sqlite')) : driver_for(dsn)
+  var chosen = is_dict(dsn)
+    ? driver(dsn.get('driver', 'sqlite'))
+    : driver_for(dsn)
 
   return Pool(chosen, chosen.parse_dsn(dsn), options or {})
 }

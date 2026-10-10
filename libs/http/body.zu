@@ -26,7 +26,7 @@ import compress.zstd
 # header is hexadecimal and unbounded on the wire, so without a ceiling
 # a single line of `ffffffffffffffff` would ask us to allocate more
 # memory than the machine has.
-var _MAX_CHUNK_SIZE = 1073741824  # 1 GiB
+var _MAX_CHUNK_SIZE = 1073741824 # 1 GiB
 
 # How much of a chunk is pulled from the connection at a time when
 # streaming rather than materialising.
@@ -411,7 +411,7 @@ def reader_for(connection, headers, is_request: bool, bodiless: ?bool) {
     # we must not guess at.
     if encodings[encodings.length() - 1] != 'chunked' {
       raise ProtocolError(
-        'Transfer-Encoding must end with chunked, got: ${", ".join(encodings)}'
+        'Transfer-Encoding must end with chunked, got: ${", ".join(encodings)}',
       )
     }
 
@@ -642,7 +642,9 @@ def encode_content(data, coding: string, quality: ?number) {
     }
     when 'br' {
       var level = _clamped(quality, 0, 11)
-      return brotli.compress(data, level == nil ? DEFAULT_BROTLI_QUALITY : level)
+      return brotli.compress(
+        data, level == nil ? DEFAULT_BROTLI_QUALITY : level,
+      )
     }
     when 'zstd' {
       var level = _clamped(quality, 1, 22)

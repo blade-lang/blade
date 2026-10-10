@@ -167,7 +167,7 @@ class Schema {
   primary_key_columns(table: string, schema) {
     return self._ask(
       'primary_key_columns',
-      @(adapter) => adapter.primary_key_columns(table, schema)
+      @(adapter) => adapter.primary_key_columns(table, schema),
     )
   }
 
@@ -197,7 +197,7 @@ class Schema {
   foreign_keys(table: string, schema) {
     return self._ask(
       'foreign_keys',
-      @(adapter) => adapter.foreign_keys(table, schema)
+      @(adapter) => adapter.foreign_keys(table, schema),
     )
   }
 

@@ -48,7 +48,9 @@ describe('parse', @{
   })
 
   it('refuses what is not a version', @{
-    for text in ['1.2', '1.2.3.4', '01.2.3', '1.2.3-', '1.2.3-01', 'latest', ''] {
+    for text in [
+      '1.2', '1.2.3.4', '01.2.3', '1.2.3-', '1.2.3-01', 'latest', '',
+    ] {
       expect(is_valid(text)).to_be_false()
     }
   })
@@ -85,7 +87,9 @@ describe('compare', @{
   it('sorts a list without losing the text it was given', @{
     var shuffled = ['2.0.0', '1.0.0-rc.1', '1.10.0', '1.0.0', '1.2.0']
 
-    expect(sorted(shuffled)).to_equal(['1.0.0-rc.1', '1.0.0', '1.2.0', '1.10.0', '2.0.0'])
+    expect(sorted(shuffled)).to_equal([
+      '1.0.0-rc.1', '1.0.0', '1.2.0', '1.10.0', '2.0.0',
+    ])
   })
 })
 

@@ -375,4 +375,3 @@ def select(channels: list, timeout: ?number) {
   }
   return [channels[r[0]], r[2]]
 }
-

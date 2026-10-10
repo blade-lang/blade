@@ -175,7 +175,7 @@ class PostgresStatement < DriverStatement {
     if self._closed {
       raise ClosedError(
         'this prepared statement was closed',
-        { driver: 'postgres', query: self._sql }
+        { driver: 'postgres', query: self._sql },
       )
     }
   }

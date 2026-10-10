@@ -54,7 +54,9 @@ def open_call(text: string, start: int, offset: int) {
         if text[i] == '/' and i + 1 < text.length() and text[i + 1] == '*' {
           depth++
           i++
-        } else if text[i] == '*' and i + 1 < text.length() and text[i + 1] == '/' {
+        } else if text[i] == '*'
+          and i + 1 < text.length()
+          and text[i + 1] == '/' {
           depth--
           i++
         }
@@ -167,7 +169,9 @@ def _function_of(linker, target) {
   }
 
   if symbol.kind == 'class' {
-    return common.callable(linker, { t: 'class', path: target.path, index: target.index })
+    return common.callable(
+      linker, { t: 'class', path: target.path, index: target.index },
+    )
   }
 
   if symbol.kind == 'function' or symbol.kind == 'method' {
@@ -207,7 +211,9 @@ def help(server, params: dict) {
   var offset = server.offset(document, params.position)
   var analysis = server.analysis(document)
   var text = document.text
-  var call = open_call(text, common.statement_start(analysis.nodes, offset), offset)
+  var call = open_call(
+    text, common.statement_start(analysis.nodes, offset), offset,
+  )
 
   if call == nil {
     return nil
@@ -220,7 +226,9 @@ def help(server, params: dict) {
   }
 
   var linker = server.linker
-  var target = _function_of(linker, _callee(server, document, analysis, name_end, offset))
+  var target = _function_of(
+    linker, _callee(server, document, analysis, name_end, offset),
+  )
 
   if target == nil {
     return nil
@@ -276,5 +284,9 @@ def help(server, params: dict) {
 
   signature.activeParameter = active
 
-  return { signatures: [signature], activeSignature: 0, activeParameter: active }
+  return {
+    signatures: [signature],
+    activeSignature: 0,
+    activeParameter: active,
+  }
 }

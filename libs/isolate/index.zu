@@ -695,7 +695,8 @@ def scope(body: function) {
     catch {
       c.join()
     } as e {
-      if first_failure == nil and !e.message.starts_with('IsolateCancelledError:') {
+      if first_failure == nil
+        and !e.message.starts_with('IsolateCancelledError:') {
         first_failure = e
       }
     }

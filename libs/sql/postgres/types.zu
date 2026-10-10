@@ -101,12 +101,29 @@ var OIDS = {
  * The element type each array OID holds.
  */
 var ARRAY_ELEMENTS = {
-  '1000': 16, '1001': 17, '1002': 18, '1003': 19,
-  '1005': 21, '1007': 23, '1009': 25, '1014': 1042,
-  '1015': 1043, '1016': 20, '1017': 600, '1021': 700,
-  '1022': 701, '1028': 26, '1115': 1114, '1182': 1082,
-  '1183': 1083, '1185': 1184, '1187': 1186, '1231': 1700,
-  '2951': 2950, '199': 114, '3807': 3802,
+  '1000': 16,
+  '1001': 17,
+  '1002': 18,
+  '1003': 19,
+  '1005': 21,
+  '1007': 23,
+  '1009': 25,
+  '1014': 1042,
+  '1015': 1043,
+  '1016': 20,
+  '1017': 600,
+  '1021': 700,
+  '1022': 701,
+  '1028': 26,
+  '1115': 1114,
+  '1182': 1082,
+  '1183': 1083,
+  '1185': 1184,
+  '1187': 1186,
+  '1231': 1700,
+  '2951': 2950,
+  '199': 114,
+  '3807': 3802,
 }
 
 /**
@@ -441,7 +458,7 @@ def date_from_micros(micros: number) {
   return date.Date(
     moment.year, moment.month, moment.day,
     moment.hour, moment.minute, moment.seconds,
-    remainder, 0, false
+    remainder, 0, false,
   )
 }
 
@@ -684,7 +701,9 @@ def encode_float8(value) {
 }
 
 def encode_text(value) {
-  return is_string(value) ? value.to_bytes().to_list() : '${value}'.to_bytes().to_list()
+  return is_string(value)
+    ? value.to_bytes().to_list()
+    : '${value}'.to_bytes().to_list()
 }
 
 def encode_bytea(value) {
@@ -802,7 +821,10 @@ def decode_array(buffer, oid, registry) {
 # Folds a flat list back into the shape its dimensions describe.
 def _reshape(values, lengths, depth) {
   if depth == lengths.length() - 1 {
-    return { value: values[0, lengths[depth]], rest: values[lengths[depth], values.length()] }
+    return {
+      value: values[0, lengths[depth]],
+      rest: values[lengths[depth], values.length()],
+    }
   }
 
   var out = []
@@ -896,7 +918,8 @@ class TypeRegistry {
    * @returns bool
    */
   knows(oid: number) {
-    return self._decoders.contains('${oid}') or ARRAY_ELEMENTS.contains('${oid}')
+    return self._decoders.contains('${oid}')
+      or ARRAY_ELEMENTS.contains('${oid}')
   }
 
   /**
@@ -909,7 +932,8 @@ class TypeRegistry {
    * @returns bool
    */
   can_encode(oid: number) {
-    return self._encoders.contains('${oid}') or ARRAY_ELEMENTS.contains('${oid}')
+    return self._encoders.contains('${oid}')
+      or ARRAY_ELEMENTS.contains('${oid}')
   }
 
   /**

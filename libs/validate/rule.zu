@@ -122,7 +122,6 @@ class Rule {
   }
 }
 
-
 /**
  * Builds one `Rule` instance from a `[rule_class, ...args]` entry: the
  * shape `Validator._rules` stores each chained rule as: with
@@ -145,10 +144,18 @@ def instantiate_rule(entry, field_name) {
   var rule_class = entry[0]
   var args = entry.length() > 1 ? entry[1,] : []
 
-  if args.length() == 0 return rule_class(field_name)
-  if args.length() == 1 return rule_class(field_name, args[0])
-  if args.length() == 2 return rule_class(field_name, args[0], args[1])
-  if args.length() == 3 return rule_class(field_name, args[0], args[1], args[2])
+  if args.length() == 0 {
+    return rule_class(field_name)
+  }
+  if args.length() == 1 {
+    return rule_class(field_name, args[0])
+  }
+  if args.length() == 2 {
+    return rule_class(field_name, args[0], args[1])
+  }
+  if args.length() == 3 {
+    return rule_class(field_name, args[0], args[1], args[2])
+  }
 
   raise Error('validate: rule constructor with more than 3 extra arguments is not supported')
 }

@@ -24,7 +24,6 @@ import json
 
 import .values { Safe, is_blank, is_safe, stringify, unwrap }
 
-
 /**
  * Text between tags.
  */
@@ -50,7 +49,6 @@ var CONTEXT_SCRIPT = 'script'
  * The body of a `<style>` element.
  */
 var CONTEXT_STYLE = 'style'
-
 
 /**
  * The attributes whose value a browser resolves as a URL, and which
@@ -105,7 +103,6 @@ var BLOCKED_URL = 'about:blank'
  */
 var STYLE_SAFE = '/[^-a-zA-Z0-9 \\t\\n\\r#%.,()_\\/:;+*!@]/'
 
-
 /**
  * Escapes _value_ for the given _context_.
  *
@@ -145,7 +142,6 @@ def escape(value, context: string, schemes: ?list) {
   return text(value)
 }
 
-
 /**
  * Escapes _value_ for text between tags, turning `&`, `<` and `>` into
  * character references.
@@ -156,7 +152,6 @@ def escape(value, context: string, schemes: ?list) {
 def text(value) {
   return html.escape_text(stringify(value))
 }
-
 
 /**
  * Escapes _value_ for a double quoted attribute value, turning `&` and
@@ -171,7 +166,6 @@ def text(value) {
 def attribute(value) {
   return html.escape_attribute(stringify(value))
 }
-
 
 /**
  * Escapes _value_ for a place the browser reads as JavaScript, by
@@ -209,7 +203,6 @@ def script(value) {
   return encoded
 }
 
-
 /**
  * Escapes _value_ for the body of a `<style>` element by dropping every
  * character outside a conservative CSS-safe set.
@@ -225,7 +218,6 @@ def script(value) {
 def style(value) {
   return stringify(value).replace(STYLE_SAFE, '')
 }
-
 
 /**
  * Escapes _value_ for an attribute the browser resolves as a URL,
@@ -249,7 +241,6 @@ def url(value, schemes: ?list) {
 
   return html.escape_attribute(_sanitize_url(stringify(value), allowed))
 }
-
 
 /**
  * Escapes _value_ for an attribute holding several URLs, checking each
@@ -311,7 +302,6 @@ def url_list(value, schemes: ?list, descriptors: bool) {
   return html.escape_attribute(''.join(out))
 }
 
-
 /**
  * One token of a URL list: checked when it is a URL, kept as it is when
  * it is a descriptor.
@@ -329,7 +319,6 @@ def _list_entry(token: string, allowed: list, is_url: bool) {
   return _sanitize_url(token, allowed)
 }
 
-
 /**
  * Whether _name_ is an attribute the browser resolves as a single URL.
  *
@@ -339,7 +328,6 @@ def _list_entry(token: string, allowed: list, is_url: bool) {
 def is_url_attribute(name: string) {
   return URL_ATTRIBUTES.contains(name.lower())
 }
-
 
 /**
  * Whether _name_ is an attribute holding a list of URLs.
@@ -351,7 +339,6 @@ def is_url_list_attribute(name: string) {
   return URL_LIST_ATTRIBUTES.contains(name.lower())
 }
 
-
 /**
  * Whether a URL list attribute allows a descriptor after each URL, which
  * `srcset` does and `ping` does not.
@@ -362,7 +349,6 @@ def is_url_list_attribute(name: string) {
 def uses_descriptors(name: string) {
   return name.lower() == 'srcset'
 }
-
 
 /**
  * Whether _name_ is an event handler attribute, whose value a browser
@@ -378,7 +364,6 @@ def uses_descriptors(name: string) {
 def is_script_attribute(name: string) {
   return name.lower().starts_with('on')
 }
-
 
 /**
  * The escaping context an attribute named _name_ calls for.
@@ -398,7 +383,6 @@ def attribute_context(name: string) {
   return CONTEXT_ATTRIBUTE
 }
 
-
 /**
  * The escaping context text inside an element named _tag_ calls for.
  *
@@ -416,7 +400,6 @@ def text_context(tag: string) {
 
   return CONTEXT_TEXT
 }
-
 
 /**
  * Replaces _value_ with `about:blank` when the scheme it starts with is
@@ -441,7 +424,6 @@ def _sanitize_url(value: string, allowed: list) {
 
   return BLOCKED_URL
 }
-
 
 /**
  * The scheme _value_ begins with, folded to lower case, or `nil` when

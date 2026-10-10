@@ -16,7 +16,6 @@
  * ```
  */
 
-
 /**
  * The root of every error. Raise it for a general failure with
  * nothing more specific to say, and build on it for an error of

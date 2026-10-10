@@ -135,7 +135,6 @@ import @.formats
 import @.image { Image }
 import @.strokefont { StrokeFont }
 
-
 /**
  * Opens an image file.
  *
@@ -148,7 +147,6 @@ import @.strokefont { StrokeFont }
 def open(source, options) {
   return Image.open(source, options)
 }
-
 
 /**
  * Decodes image data held in memory.
@@ -163,7 +161,6 @@ def decode(data, options) {
   return Image.decode(data, options)
 }
 
-
 /**
  * Creates a new image.
  *
@@ -177,7 +174,6 @@ def decode(data, options) {
 def create(width, height, fill) {
   return Image(width, height, fill)
 }
-
 
 /**
  * Reads an image's format and dimensions from its header, without
@@ -195,7 +191,6 @@ def probe(data) {
   return formats.probe(data)
 }
 
-
 /**
  * Identifies image data by its contents, returning a format name or
  * `nil`.
@@ -206,7 +201,6 @@ def probe(data) {
 def detect(data) {
   return formats.detect(data)
 }
-
 
 /**
  * What this build can do, as a dictionary holding `decode`, `encode`

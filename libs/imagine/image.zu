@@ -21,10 +21,11 @@ import _imagine
 import .canvas { Canvas }
 import .color { Color, TRANSPARENT }
 import .constants { * }
-import .errors { BoundsError, DecodeError, EncodeError, FormatError, ImageError }
+import .errors {
+  BoundsError, DecodeError, EncodeError, FormatError, ImageError,
+}
 import .filters
 import .formats
-
 
 /**
  * How EXIF's eight orientation values map onto the operations that
@@ -43,7 +44,6 @@ var _ORIENTATIONS = {
   '7': [270, true],
   '8': [270, false],
 }
-
 
 /**
  * A raster image: a rectangle of 8-bit RGBA pixels, everything that
@@ -172,7 +172,8 @@ class Image < Canvas {
 
     # TGA and a few others carry no magic number, so sniffing cannot
     # place them. The file name is the only remaining evidence.
-    if (!is_dict(options) or options.get('format') == nil) and formats.detect(data) == nil {
+    if (!is_dict(options) or options.get('format') == nil)
+      and formats.detect(data) == nil {
       var guessed = formats.from_extension(handle.path())
 
       if guessed != nil {
@@ -223,7 +224,7 @@ class Image < Canvas {
     }
 
     var image = Image.from_pixels(
-      decoded.width, decoded.height, decoded.pixels, decoded.format
+      decoded.width, decoded.height, decoded.pixels, decoded.format,
     )
 
     var orient = is_dict(options) ? options.get('orient', true) : true
@@ -412,7 +413,7 @@ class Image < Canvas {
 
     var resampled = _imagine.resize(
       self._pixels, self._width, self._height, w, h,
-      filter == nil ? LANCZOS : filter
+      filter == nil ? LANCZOS : filter,
     )
 
     return self._derive(resampled, w, h)
@@ -433,7 +434,7 @@ class Image < Canvas {
     return self.resize(
       (self._width * factor).round().max(1),
       (self._height * factor).round().max(1),
-      filter
+      filter,
     )
   }
 
@@ -462,7 +463,7 @@ class Image < Canvas {
     return self.resize(
       (self._width * ratio).round().max(1),
       (self._height * ratio).round().max(1),
-      filter
+      filter,
     )
   }
 
@@ -484,7 +485,7 @@ class Image < Canvas {
     return self.resize(
       (self._width * ratio).round().max(1),
       (self._height * ratio).round().max(1),
-      filter
+      filter,
     )
   }
 
@@ -514,7 +515,7 @@ class Image < Canvas {
     var scaled = self.resize(
       (self._width * ratio).ceil().max(w),
       (self._height * ratio).ceil().max(h),
-      filter
+      filter,
     )
 
     var offset = _anchor_offset(anchor, scaled.width(), scaled.height(), w, h)
@@ -541,7 +542,9 @@ class Image < Canvas {
 
     var filter = is_dict(options) ? options.get('filter') : nil
     var anchor = is_dict(options) ? options.get('anchor', CENTER) : CENTER
-    var background = is_dict(options) ? options.get('background', TRANSPARENT) : TRANSPARENT
+    var background = is_dict(options)
+      ? options.get('background', TRANSPARENT)
+      : TRANSPARENT
 
     var scaled = self.fit(w, h, filter)
     var canvas = Image(w, h, background)
@@ -576,11 +579,13 @@ class Image < Canvas {
 
     if left < 0 or top < 0 or left + w > self._width or top + h > self._height {
       raise BoundsError(
-        '${w}x${h} at (${left}, ${top}) does not fit inside a ${self._width}x${self._height} image'
+        '${w}x${h} at (${left}, ${top}) does not fit inside a ${self._width}x${self._height} image',
       )
     }
 
-    var cropped = _imagine.crop(self._pixels, self._width, self._height, left, top, w, h)
+    var cropped = _imagine.crop(
+      self._pixels, self._width, self._height, left, top, w, h,
+    )
 
     return self._derive(cropped, w, h)
   }
@@ -610,7 +615,7 @@ class Image < Canvas {
 
     var box = _content_bounds(
       self._pixels, self._width, self._height,
-      seed.r, seed.g, seed.b, seed.a, tolerance
+      seed.r, seed.g, seed.b, seed.a, tolerance,
     )
 
     if box[1] < 0 {
@@ -643,7 +648,7 @@ class Image < Canvas {
     padded.draw_image(self, l, t)
 
     return Image.from_pixels(
-      padded.width(), padded.height(), padded.pixels(), self._format
+      padded.width(), padded.height(), padded.pixels(), self._format,
     )
   }
 
@@ -663,7 +668,7 @@ class Image < Canvas {
     var fill = background == nil ? TRANSPARENT : Color.parse(background)
 
     var rotated = _imagine.rotate(
-      self._pixels, self._width, self._height, degrees, fill.to_packed()
+      self._pixels, self._width, self._height, degrees, fill.to_packed(),
     )
 
     return self._derive(rotated.pixels, rotated.width, rotated.height)
@@ -707,11 +712,13 @@ class Image < Canvas {
     var direction = mode == nil ? FLIP_HORIZONTAL : mode
 
     if direction != FLIP_HORIZONTAL and direction != FLIP_VERTICAL and
-       direction != FLIP_BOTH {
+      direction != FLIP_BOTH {
       raise ImageError('flip mode must be FLIP_HORIZONTAL, FLIP_VERTICAL or FLIP_BOTH')
     }
 
-    var flipped = _imagine.flip(self._pixels, self._width, self._height, direction)
+    var flipped = _imagine.flip(
+      self._pixels, self._width, self._height, direction,
+    )
 
     return self._derive(flipped, self._width, self._height)
   }
@@ -1047,7 +1054,7 @@ class Image < Canvas {
     _imagine.quantize(
       self._pixels, self._width, self._height,
       colors == nil ? 256 : colors,
-      dither == true
+      dither == true,
     )
 
     return self
@@ -1110,7 +1117,7 @@ class Image < Canvas {
 
     return self._replace(_imagine.convolve(
       self._pixels, self._width, self._height,
-      kernel, divisor, offset, edge, keep_alpha == true
+      kernel, divisor, offset, edge, keep_alpha == true,
     ))
   }
 
@@ -1130,7 +1137,9 @@ class Image < Canvas {
    */
   blur(radius) {
     return self._replace(
-      _imagine.blur(self._pixels, self._width, self._height, radius == nil ? 2 : radius)
+      _imagine.blur(
+        self._pixels, self._width, self._height, radius == nil ? 2 : radius,
+      ),
     )
   }
 
@@ -1177,7 +1186,9 @@ class Image < Canvas {
    * @returns self
    */
   edges() {
-    return self.convolve(filters.edge_kernel(), { divisor: 1, keep_alpha: true })
+    return self.convolve(
+      filters.edge_kernel(), { divisor: 1, keep_alpha: true },
+    )
   }
 
   /**
@@ -1213,7 +1224,7 @@ class Image < Canvas {
       iter var bx = 0; bx < width; bx += block {
         _average_block(
           self._pixels, width,
-          bx, by, (bx + block).min(width), (by + block).min(height)
+          bx, by, (bx + block).min(width), (by + block).min(height),
         )
       }
     }
@@ -1247,7 +1258,9 @@ class Image < Canvas {
    */
   draw_image(source: Image, x, y, options) {
     var opacity = is_dict(options) ? options.get('opacity', 1) : 1
-    var blend = is_dict(options) ? options.get('blend', BLEND_NORMAL) : BLEND_NORMAL
+    var blend = is_dict(options)
+      ? options.get('blend', BLEND_NORMAL)
+      : BLEND_NORMAL
 
     # Compositing an image onto itself needs a snapshot of the source,
     # or reads would see pixels this call has already written.
@@ -1261,7 +1274,7 @@ class Image < Canvas {
       self._pixels, self._width, self._height,
       pixels, source.width(), source.height(),
       x == nil ? 0 : x, y == nil ? 0 : y,
-      opacity, blend
+      opacity, blend,
     )
 
     return self
@@ -1289,10 +1302,12 @@ class Image < Canvas {
       self._width - margin * 2,
       self._height - margin * 2,
       source.width(),
-      source.height()
+      source.height(),
     )
 
-    return self.draw_image(source, offset[0] + margin, offset[1] + margin, options)
+    return self.draw_image(
+      source, offset[0] + margin, offset[1] + margin, options,
+    )
   }
 
   /**
@@ -1315,7 +1330,7 @@ class Image < Canvas {
   mask(mask: Image) {
     if mask.width() != self._width or mask.height() != self._height {
       raise BoundsError(
-        'the mask is ${mask.width()}x${mask.height()} but the image is ${self._width}x${self._height}'
+        'the mask is ${mask.width()}x${mask.height()} but the image is ${self._width}x${self._height}',
       )
     }
 
@@ -1335,12 +1350,13 @@ class Image < Canvas {
    * @returns self
    */
   flatten(background) {
-    var under = background == nil ? Color(255, 255, 255) : Color.parse(background)
+    var under = background == nil
+      ? Color(255, 255, 255)
+      : Color.parse(background)
 
     _flatten_buffer(self._pixels, under.r, under.g, under.b)
     return self
   }
-
 
   # ------------------------------------------------------------------
   # analysis
@@ -1440,7 +1456,7 @@ class Image < Canvas {
       totals[0] / totals[4],
       totals[1] / totals[4],
       totals[2] / totals[4],
-      totals[3] / (self._pixels.length() / 4)
+      totals[3] / (self._pixels.length() / 4),
     )
   }
 
@@ -1498,7 +1514,7 @@ class Image < Canvas {
       found.append(Color(
         parts[0].to_number(),
         parts[1].to_number(),
-        parts[2].to_number()
+        parts[2].to_number(),
       ))
 
       keys.remove_at(best)
@@ -1586,7 +1602,9 @@ class Image < Canvas {
     }
 
     var rendered = font.render(content, options)
-    var from_baseline = is_dict(options) ? options.get('baseline', false) : false
+    var from_baseline = is_dict(options)
+      ? options.get('baseline', false)
+      : false
 
     # render_text() pads the mask so glyphs that overhang their box
     # are not clipped; the baseline it reports is inside that padding,
@@ -1598,7 +1616,7 @@ class Image < Canvas {
     var left = x - (rendered.baseline - font.metrics().ascent)
 
     return self.draw_mask(
-      rendered.coverage, rendered.width, rendered.height, left, top, color
+      rendered.coverage, rendered.width, rendered.height, left, top, color,
     )
   }
 
@@ -1648,10 +1666,12 @@ class Image < Canvas {
       self._width - margin * 2,
       self._height - margin * 2,
       box.width,
-      box.height
+      box.height,
     )
 
-    return self.text(offset[0] + margin, offset[1] + margin, text, font, color, options)
+    return self.text(
+      offset[0] + margin, offset[1] + margin, text, font, color, options,
+    )
   }
 
   # ------------------------------------------------------------------
@@ -1682,12 +1702,16 @@ class Image < Canvas {
    * @throws EncodeError When the format cannot be written.
    */
   encode(format, options) {
-    var target = formats.normalize(format == nil ? (self._format or PNG) : format)
+    var target = formats.normalize(
+      format == nil ? (self._format or PNG) : format,
+    )
 
     if target == 'wbmp' {
       var threshold = is_dict(options) ? options.get('threshold') : nil
 
-      return formats.encode_wbmp(self._pixels, self._width, self._height, threshold)
+      return formats.encode_wbmp(
+        self._pixels, self._width, self._height, threshold,
+      )
     }
 
     var settings = is_dict(options) ? options.clone() : {}
@@ -1699,7 +1723,9 @@ class Image < Canvas {
     }
 
     catch {
-      return _imagine.encode(self._pixels, self._width, self._height, target, settings)
+      return _imagine.encode(
+        self._pixels, self._width, self._height, target, settings,
+      )
     } as e {
       raise EncodeError(e.message)
     }
@@ -1727,7 +1753,7 @@ class Image < Canvas {
     if target == nil {
       raise FormatError(
         "cannot tell what format to write '${path}' as; " +
-        'give it a known extension, or pass a format option'
+          'give it a known extension, or pass a format option',
       )
     }
 
@@ -1879,7 +1905,9 @@ class Image < Canvas {
    * @returns bytes
    */
   to_wbmp(threshold) {
-    return formats.encode_wbmp(self._pixels, self._width, self._height, threshold)
+    return formats.encode_wbmp(
+      self._pixels, self._width, self._height, threshold,
+    )
   }
 
   to_string() {
@@ -1892,7 +1920,6 @@ class Image < Canvas {
     return self.to_string()
   }
 }
-
 
 /**
  * Applies an EXIF orientation, returning the upright image.
@@ -1920,7 +1947,6 @@ def _apply_orientation(image, orientation) {
 
   return result
 }
-
 
 /**
  * Where a `content_width x content_height` box sits inside a
@@ -1977,7 +2003,6 @@ def _anchor_offset(anchor, width, height, content_width, content_height) {
   return [x, y]
 }
 
-
 /**
  * The bucket a cumulative count lands in, walking a histogram from the
  * bottom. Used to find the tone that a given fraction of the image
@@ -1997,7 +2022,6 @@ def _percentile(counts, target) {
   return 255
 }
 
-
 # ---------------------------------------------------------------------
 # The whole-buffer passes
 # ---------------------------------------------------------------------
@@ -2007,7 +2031,6 @@ def _percentile(counts, target) {
 # indexed access, and cannot do the same for a value read out of a
 # field. Everything here walks every pixel at least once, which is
 # where that difference is worth the indirection.
-
 
 /**
  * Whether every pixel is fully opaque.
@@ -2023,7 +2046,6 @@ def _scan_opaque(pixels: bytes) {
 
   return true
 }
-
 
 /**
  * Composites every pixel over an opaque colour, in place.
@@ -2047,7 +2069,6 @@ def _flatten_buffer(pixels: bytes, r: number, g: number, b: number) {
   }
 }
 
-
 /**
  * Scales each pixel's alpha by the brightness and alpha of the
  * matching pixel in a mask.
@@ -2063,7 +2084,6 @@ def _apply_mask(pixels: bytes, mask: bytes) {
   }
 }
 
-
 /**
  * Replaces one rectangular block with its own average colour.
  */
@@ -2073,7 +2093,7 @@ def _average_block(
   from_x: number,
   from_y: number,
   to_x: number,
-  to_y: number
+  to_y: number,
 ) {
   var sum_r = 0
   var sum_g = 0
@@ -2118,11 +2138,12 @@ def _average_block(
   }
 }
 
-
 /**
  * Tallies every visible pixel into four 256-entry buckets.
  */
-def _count_values(pixels: bytes, red: list, green: list, blue: list, luma: list) {
+def _count_values(
+  pixels: bytes, red: list, green: list, blue: list, luma: list,
+) {
   var total = pixels.length()
 
   iter var at = 0; at < total; at += 4 {
@@ -2140,7 +2161,6 @@ def _count_values(pixels: bytes, red: list, green: list, blue: list, luma: list)
     luma[(0.299 * r + 0.587 * g + 0.114 * b).round()] += 1
   }
 }
-
 
 /**
  * Alpha-weighted channel sums, as `[r, g, b, alpha, weight]`.
@@ -2172,7 +2192,6 @@ def _sum_channels(pixels: bytes) {
   return [sum_r, sum_g, sum_b, sum_a, weight]
 }
 
-
 /**
  * The weighted channel difference between two buffers of one size, as
  * `[sum, weight]`.
@@ -2202,7 +2221,6 @@ def _score_difference(mine: bytes, theirs: bytes) {
   return [sum, weight]
 }
 
-
 /**
  * The bounding box of everything differing from a border colour by
  * more than `tolerance`, as `[left, right, top, bottom]`. A right edge
@@ -2216,7 +2234,7 @@ def _content_bounds(
   g: number,
   b: number,
   a: number,
-  tolerance: number
+  tolerance: number,
 ) {
   var left = width
   var right = -1
@@ -2255,7 +2273,6 @@ def _content_bounds(
 
   return [left, right, top, bottom]
 }
-
 
 /**
  * Counts how often each visible colour occurs, keyed by its channels.

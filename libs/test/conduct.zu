@@ -75,12 +75,10 @@ import .reporter as reporters
 import .source
 import .style
 
-
 # Set in every child. `runner.run()` looks for it and switches to the
 # ndjson reporter, whatever the file itself asked for, because the
 # parent is parsing that stream.
 var CONDUCTED = 'ZURI_TEST_CONDUCTED'
-
 
 def _defaults() {
   return {
@@ -94,7 +92,6 @@ def _defaults() {
   }
 }
 
-
 def _resolve(given) {
   var options = _defaults()
 
@@ -102,7 +99,7 @@ def _resolve(given) {
     for key, value in given {
       if !options.contains(key) {
         raise TestSetupError(
-          "conduct() does not know the option '${key}'; the ones it knows are ${', '.join(options.keys().clone().sort())}"
+          "conduct() does not know the option '${key}'; the ones it knows are ${', '.join(options.keys().clone().sort())}",
         )
       }
 
@@ -116,7 +113,6 @@ def _resolve(given) {
 
   return options
 }
-
 
 # A `*`/`?` glob over one path segment, which is all a filename
 # pattern ever needs. Turning it into a regular expression keeps the
@@ -144,7 +140,6 @@ def _glob_matches(pattern, name) {
   return is_dict(name.match('/${expression}$/'))
 }
 
-
 # Whether `path` is the script this process was started with.
 # `__root__` is already canonical, so the candidate has to be made
 # canonical too before they can be compared.
@@ -155,7 +150,6 @@ def _is_this_script(path) {
 
   return false
 }
-
 
 def _wanted(name, options) {
   for pattern in options.ignore {
@@ -172,7 +166,6 @@ def _wanted(name, options) {
 
   return false
 }
-
 
 /**
  * Every test file under `directory`, in the order they will run.
@@ -234,7 +227,6 @@ def discover(directory: string, options: ?dict) {
   return found
 }
 
-
 /**
  * What became of one file.
  */
@@ -273,7 +265,6 @@ class FileResult {
   }
 }
 
-
 class _Job {
 
   var path = ''
@@ -289,14 +280,12 @@ class _Job {
   }
 }
 
-
 def _now_ms() {
   return time() * 1000
 }
 
-
 def _spawn(directory, path, options) {
-  var environment = { }
+  var environment = {}
   environment.set(CONDUCTED, '1')
 
   if is_dict(options.env) {
@@ -313,10 +302,9 @@ def _spawn(directory, path, options) {
       stdin: 'null',
       stdout: 'pipe',
       stderr: 'pipe',
-    }
+    },
   )
 }
-
 
 def _drain(job) {
   var result = job.result
@@ -354,11 +342,12 @@ def _drain(job) {
 
     using payload.get('event', '') {
       when 'test_finished' result.tests.append(payload)
-      when 'run_finished' result.summary = payload.get('summary', {})
+      when 'run_finished' {
+        result.summary = payload.get('summary', {})
+      }
     }
   }
 }
-
 
 def _diagnose(result) {
   if result.problem != '' {
@@ -381,14 +370,15 @@ def _diagnose(result) {
   }
 }
 
-
 # =========================================================================
 # Reporting
 # =========================================================================
 
 def _echo_file(result, options) {
   var symbols = style.symbols()
-  var failed = result.tests.filter(@(test) { return test.status == 'failed' })
+  var failed = result.tests.filter(@(test) {
+    return test.status == 'failed'
+  })
 
   var badge = ''
   if result.problem != '' {
@@ -428,7 +418,6 @@ def _echo_file(result, options) {
   }
 }
 
-
 def _echo_totals(totals, duration) {
   var separator = style.dim('  ' + style.symbols().bullet + '  ')
 
@@ -467,7 +456,6 @@ def _echo_totals(totals, duration) {
   echo '  ' + style.dim('time ') + format.duration(duration)
   echo ''
 }
-
 
 # =========================================================================
 # The run
@@ -526,7 +514,9 @@ def conduct(directory: ?string, options: ?dict) {
   var where = source.short_path(directory)
 
   echo ''
-  echo '  ' + style.bold('zuri test') + style.dim('  ${format.plural(paths.length(), "file")} in ${where}')
+  echo '  '
+    + style.bold('zuri test')
+    + style.dim('  ${format.plural(paths.length(), "file")} in ${where}')
 
   if paths.is_empty() {
     echo ''
@@ -553,7 +543,9 @@ def conduct(directory: ?string, options: ?dict) {
 
   _echo_totals(totals, duration)
 
-  var ok = results.every(@(result) { return result.ok() })
+  var ok = results.every(@(result) {
+    return result.ok()
+  })
 
   if !ok {
     os.set_exit_code(1)
@@ -568,7 +560,6 @@ def conduct(directory: ?string, options: ?dict) {
   }
 }
 
-
 def _empty_totals() {
   return {
     passed: 0,
@@ -582,7 +573,6 @@ def _empty_totals() {
     errored_files: 0,
   }
 }
-
 
 # Test counts and file counts are kept apart on purpose. A file that
 # crashed before reporting has no tests to count, and inventing one
@@ -606,7 +596,6 @@ def _accumulate(totals, result) {
   }
 }
 
-
 # Files are started up to `jobs` at a time and collected as they
 # finish, but kept in discovery order for the report. Draining a
 # child's pipe is what would block, so it only ever happens once the
@@ -623,7 +612,9 @@ def _execute(directory, paths, options) {
         break
       }
 
-      running.append(_Job(paths[next], _spawn(directory, paths[next], options), _now_ms()))
+      running.append(_Job(
+        paths[next], _spawn(directory, paths[next], options), _now_ms(),
+      ))
       next++
     }
 
@@ -684,7 +675,6 @@ def _execute(directory, paths, options) {
   return _in_discovery_order(paths, results)
 }
 
-
 def _in_discovery_order(paths, results) {
   var ordered = []
 
@@ -699,7 +689,6 @@ def _in_discovery_order(paths, results) {
 
   return ordered
 }
-
 
 /**
  * Whether this process was started by the conductor.

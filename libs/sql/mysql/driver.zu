@@ -158,8 +158,8 @@ class MySqlDriver < Driver {
     if !is_string(dsn) {
       raise ConnectionError(
         'a ${self.name()} connection string is a string or a ' +
-        'dictionary, not ${typeof(dsn)}',
-        { driver: self.name() }
+          'dictionary, not ${typeof(dsn)}',
+        { driver: self.name() },
       )
     }
 
@@ -168,12 +168,12 @@ class MySqlDriver < Driver {
     if text.is_empty() {
       raise ConnectionError(
         'a ${self.name()} connection string cannot be empty',
-        { driver: self.name() }
+        { driver: self.name() },
       )
     }
 
     return self._defaults(
-      text.contains('://') ? self._parse_uri(text) : self._parse_keywords(text)
+      text.contains('://') ? self._parse_uri(text) : self._parse_keywords(text),
     )
   }
 
@@ -218,7 +218,7 @@ class MySqlDriver < Driver {
         },
         @(_capabilities) {
           return self._upgrade(stream, options)
-        }
+        },
       )
     } as error {
       protocol.quit()
@@ -253,8 +253,8 @@ class MySqlDriver < Driver {
     if !unix.is_supported() {
       raise NotSupportedError(
         'this platform has no unix domain sockets; connect over TCP ' +
-        'by giving a host name or address instead of ${path}',
-        { driver: self.name() }
+          'by giving a host name or address instead of ${path}',
+        { driver: self.name() },
       )
     }
 
@@ -267,7 +267,7 @@ class MySqlDriver < Driver {
     } as error {
       raise ConnectionError(
         'could not connect to ${path}: ${error.message}',
-        { driver: self.name() }
+        { driver: self.name() },
       )
     }
 
@@ -289,7 +289,7 @@ class MySqlDriver < Driver {
     } as error {
       raise ConnectionError(
         'could not connect to ${address}: ${error.message}',
-        { driver: self.name() }
+        { driver: self.name() },
       )
     }
 
@@ -304,7 +304,8 @@ class MySqlDriver < Driver {
       config.add_ca_pem(options.ssl_ca)
     }
 
-    if options.get('ssl_cert', nil) != nil and options.get('ssl_key', nil) != nil {
+    if options.get('ssl_cert', nil) != nil
+      and options.get('ssl_key', nil) != nil {
       config.set_cert_chain(options.ssl_cert, options.ssl_key)
     }
 
@@ -319,7 +320,7 @@ class MySqlDriver < Driver {
     } as error {
       raise ConnectionError(
         'the TLS handshake with ${options.host} failed: ${error.message}',
-        { driver: self.name() }
+        { driver: self.name() },
       )
     }
   }
@@ -340,8 +341,8 @@ class MySqlDriver < Driver {
 
         raise ConnectionError(
           'could not set the session time zone to ${zone}: ' +
-          error.message,
-          { driver: self.name() }
+            error.message,
+          { driver: self.name() },
         )
       }
     }
@@ -363,7 +364,7 @@ class MySqlDriver < Driver {
     } as error {
       raise ConnectionError(
         'could not read the connection string: ${error.message}',
-        { driver: self.name() }
+        { driver: self.name() },
       )
     }
 
@@ -426,8 +427,8 @@ class MySqlDriver < Driver {
       if mark == -1 {
         raise ConnectionError(
           'the connection string has "${pair}" where a name=value pair ' +
-          'was expected',
-          { driver: self.name() }
+            'was expected',
+          { driver: self.name() },
         )
       }
 
@@ -455,21 +456,29 @@ class MySqlDriver < Driver {
       }
     }
 
-    if !options.contains('host') or options.host == nil or options.host.is_empty() {
+    if !options.contains('host')
+      or options.host == nil
+      or options.host.is_empty() {
       options.set('host', '127.0.0.1')
     }
 
     # The keyword form and a URI query both arrive as text, so anything
     # that has to be a number or a flag is converted once, here.
     options.set('port', _number_of(options.get('port', nil), DEFAULT_PORT))
-    options.set('timeout', _number_of(options.get('timeout', nil), DEFAULT_TIMEOUT))
-    options.set('compress_level', _number_of(options.get('compress_level', nil), 3))
+    options.set(
+      'timeout', _number_of(options.get('timeout', nil), DEFAULT_TIMEOUT),
+    )
+    options.set(
+      'compress_level', _number_of(options.get('compress_level', nil), 3),
+    )
 
     if !options.contains('user') or options.user == nil {
       options.set('user', 'root')
     }
 
-    options.set('sslmode', _ssl_mode_of(options.get('sslmode', nil), self.name()))
+    options.set(
+      'sslmode', _ssl_mode_of(options.get('sslmode', nil), self.name()),
+    )
 
     for flag in ['multiple_statements', 'found_rows'] {
       options.set(flag, _flag_of(options.get(flag, false)))
@@ -488,7 +497,7 @@ class MySqlDriver < Driver {
     if !['none', 'zlib', 'zstd'].contains(compression) {
       raise ConnectionError(
         'compression is none, zlib or zstd, not ${compression}',
-        { driver: self.name() }
+        { driver: self.name() },
       )
     }
 
@@ -574,7 +583,7 @@ def _ssl_mode_of(value, driver) {
   if !SSL_MODES.contains(mode) {
     raise ConnectionError(
       'sslmode is one of ${", ".join(SSL_MODES)}, not ${value}',
-      { driver }
+      { driver },
     )
   }
 

@@ -67,7 +67,6 @@ import date
 import convert
 import crypto
 
-
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
@@ -92,11 +91,17 @@ def _uuid_byte(uuid_str, index) {
   #   bytes  8-9  chars 19-22
   #   bytes 10-15 chars 24-35
   var char_pos
-  if index < 4       { char_pos = index * 2 }
-  else if index < 6  { char_pos = 9  + (index - 4) * 2 }
-  else if index < 8  { char_pos = 14 + (index - 6) * 2 }
-  else if index < 10 { char_pos = 19 + (index - 8) * 2 }
-  else               { char_pos = 24 + (index - 10) * 2 }
+  if index < 4 {
+    char_pos = index * 2
+  } else if index < 6 {
+    char_pos = 9 + (index - 4) * 2
+  } else if index < 8 {
+    char_pos = 14 + (index - 6) * 2
+  } else if index < 10 {
+    char_pos = 19 + (index - 8) * 2
+  } else {
+    char_pos = 24 + (index - 10) * 2
+  }
   return uuid_str[char_pos, char_pos + 2].to_number(16)
 }
 
@@ -107,29 +112,35 @@ def _strip_hyphens(uuid_str) {
 
 # Formats a 32-character raw hex string into the canonical 8-4-4-4-12 form.
 def _format(hex32) {
-  return hex32[0,8] + '-' + hex32[8,12] + '-' + hex32[12,16] +
-         '-' + hex32[16,20] + '-' + hex32[20,32]
+  return hex32[0, 8] + '-' + hex32[8, 12] + '-' + hex32[12, 16] +
+    '-' + hex32[16, 20] + '-' + hex32[20, 32]
 }
 
 # Applies RFC 4122/9562 variant bits (10xx xxxx) to byte 8 of a raw 32-char
 # hex string.
 def _set_variant(hex32) {
   # Byte 8 (chars 16-17): top two bits must be '10'
-  var byte8  = hex32[16,18].to_number(16)
-  byte8 = (byte8 & 0x3f) | 0x80   # clear top 2, set '10'
+  var byte8 = hex32[16, 18].to_number(16)
+  byte8 = (byte8 & 0x3f) | 0x80 # clear top 2, set '10'
   var hi = (byte8 / 16).floor()
   var lo = byte8 % 16
-  return hex32[0,16] + '0123456789abcdef'[hi] + '0123456789abcdef'[lo] + hex32[18,32]
+  return hex32[0, 16]
+    + '0123456789abcdef'[hi]
+    + '0123456789abcdef'[lo]
+    + hex32[18, 32]
 }
 
 # Applies a version nibble (1-8) to byte 6 of a raw 32-char hex string.
 def _set_version(hex32, version) {
   # Byte 6 (chars 12-13): top nibble is the version.
-  var byte6 = hex32[12,14].to_number(16)
+  var byte6 = hex32[12, 14].to_number(16)
   byte6 = (byte6 & 0x0f) | (version * 16)
   var hi = (byte6 / 16).floor()
   var lo = byte6 % 16
-  return hex32[0,12] + '0123456789abcdef'[hi] + '0123456789abcdef'[lo] + hex32[14,32]
+  return hex32[0, 12]
+    + '0123456789abcdef'[hi]
+    + '0123456789abcdef'[lo]
+    + hex32[14, 32]
 }
 
 # Computes the number of 100-nanosecond intervals since 1582-10-15 00:00:00 UTC
@@ -140,7 +151,7 @@ def _gregorian_timestamp() {
   #
   # Zuri's date module gives milliseconds since Unix epoch.  We multiply by
   # 10 000 to convert ms → 100-ns intervals, then add the Gregorian offset.
-  var unix_ms  = (date.Date().to_time() * 1000).floor()
+  var unix_ms = (date.Date().to_time() * 1000).floor()
   var ts_100ns = unix_ms * 10000 + 122192928000000000
   return ts_100ns
 }
@@ -177,9 +188,9 @@ def _bigint_to_hex32(n) {
 }
 
 # Shared clock-sequence state for v1/v6 (module-level, reset per process).
-var _v1_clock_seq = convert.bytes_to_decimal(crypto.random_bytes(2)) % 16384  # 14-bit random seed
-var _v1_last_ts   = 0
-
+var _v1_clock_seq = convert.bytes_to_decimal(crypto.random_bytes(2))
+  % 16384 # 14-bit random seed
+var _v1_last_ts = 0
 
 # ---------------------------------------------------------------------------
 # Namespace UUID constants  (RFC 9562 Appendix C / RFC 4122 Appendix C)
@@ -192,7 +203,7 @@ var _v1_last_ts   = 0
  *
  * Value: `6ba7b810-9dad-11d1-80b4-00c04fd430c8`
  */
-var NAMESPACE_DNS  = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
+var NAMESPACE_DNS = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
 
 /**
  * Pre-defined namespace UUID for URLs. Use with `uuid.v3()` or
@@ -200,7 +211,7 @@ var NAMESPACE_DNS  = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
  *
  * Value: `6ba7b811-9dad-11d1-80b4-00c04fd430c8`
  */
-var NAMESPACE_URL  = '6ba7b811-9dad-11d1-80b4-00c04fd430c8'
+var NAMESPACE_URL = '6ba7b811-9dad-11d1-80b4-00c04fd430c8'
 
 /**
  * Pre-defined namespace UUID for ISO Object Identifiers (OID).
@@ -209,7 +220,7 @@ var NAMESPACE_URL  = '6ba7b811-9dad-11d1-80b4-00c04fd430c8'
  *
  * Value: `6ba7b812-9dad-11d1-80b4-00c04fd430c8`
  */
-var NAMESPACE_OID  = '6ba7b812-9dad-11d1-80b4-00c04fd430c8'
+var NAMESPACE_OID = '6ba7b812-9dad-11d1-80b4-00c04fd430c8'
 
 /**
  * Pre-defined namespace UUID for X.500 Distinguished Names. Use
@@ -235,7 +246,6 @@ var NIL = '00000000-0000-0000-0000-000000000000'
  * Value: `ffffffff-ffff-ffff-ffff-ffffffffffff`
  */
 var MAX = 'ffffffff-ffff-ffff-ffff-ffffffffffff'
-
 
 # ---------------------------------------------------------------------------
 # UUID class
@@ -350,9 +360,15 @@ class UUID {
     # Byte 8 is at char position 19-20 in the canonical form (after hyphens at
     # 8, 13, and 18).
     var byte8 = _uuid_byte(self.value, 8)
-    if (byte8 & 0x80) == 0    { return 'NCS' }
-    if (byte8 & 0xc0) == 0x80 { return 'RFC 9562' }
-    if (byte8 & 0xe0) == 0xc0 { return 'Microsoft' }
+    if (byte8 & 0x80) == 0 {
+      return 'NCS'
+    }
+    if (byte8 & 0xc0) == 0x80 {
+      return 'RFC 9562'
+    }
+    if (byte8 & 0xe0) == 0xc0 {
+      return 'Microsoft'
+    }
     return 'Future'
   }
 
@@ -400,7 +416,8 @@ class UUID {
     var raw = _strip_hyphens(self.value)
     var result = 0n
     for ch in raw {
-      result = result * 16n + _HEX_DIGIT_BIGINTS[('0123456789abcdef').index_of(ch)]
+      result = result * 16n
+        + _HEX_DIGIT_BIGINTS[('0123456789abcdef').index_of(ch)]
     }
     return result
   }
@@ -482,7 +499,6 @@ class UUID {
   }
 }
 
-
 # ---------------------------------------------------------------------------
 # Validation helpers
 # ---------------------------------------------------------------------------
@@ -511,7 +527,9 @@ class UUID {
  * @return bool
  */
 def is_valid(str: any) {
-  if !is_string(str) { return false }
+  if !is_string(str) {
+    return false
+  }
   # Canonical form: 8-4-4-4-12 lowercase or uppercase hex digits.
   # .match() (singular) returns false for no match or a dict of
   # capture groups for a match (never a plain boolean), so this
@@ -530,12 +548,15 @@ def is_valid(str: any) {
  * @return number | nil
  */
 def version(str: string) {
-  if !is_valid(str) { return nil }
+  if !is_valid(str) {
+    return nil
+  }
   var s = str.lower()
-  if s == NIL or s == MAX { return nil }
+  if s == NIL or s == MAX {
+    return nil
+  }
   return s[14].to_number(16)
 }
-
 
 # ---------------------------------------------------------------------------
 # Generator functions
@@ -589,19 +610,19 @@ def v1(node: ?string, clock_seq: ?number) {
 
   # Zuri integers lose precision beyond 2^53; we perform split arithmetic.
   # ts fits in ~57 bits at year 2024 so direct modulo is safe here.
-  var time_low      = ts % 4294967296                        # lower 32 bits
-  var time_upper    = (ts / 4294967296).floor()            # upper bits
-  var time_mid      = time_upper % 65536                     # bits 32-47
-  var time_hi       = ((time_upper / 65536) % 4096).floor() # bits 48-59
+  var time_low = ts % 4294967296 # lower 32 bits
+  var time_upper = (ts / 4294967296).floor() # upper bits
+  var time_mid = time_upper % 65536 # bits 32-47
+  var time_hi = ((time_upper / 65536) % 4096).floor() # bits 48-59
 
-  var tl  = _int_to_hex(time_low, 8)
-  var tm  = _int_to_hex(time_mid, 4)
-  var th  = _int_to_hex(time_hi, 3)
+  var tl = _int_to_hex(time_low, 8)
+  var tm = _int_to_hex(time_mid, 4)
+  var th = _int_to_hex(time_hi, 3)
 
   # Clock sequence: high byte has variant bits in top 2, low 6 bits of seq hi.
-  var seq_hi = ((seq / 256) | 0x80).floor()   # variant '10' in top 2 bits
+  var seq_hi = ((seq / 256) | 0x80).floor() # variant '10' in top 2 bits
   var seq_lo = seq % 256
-  var cs  = _int_to_hex(seq_hi, 2) + _int_to_hex(seq_lo, 2)
+  var cs = _int_to_hex(seq_hi, 2) + _int_to_hex(seq_lo, 2)
 
   # Node: use caller-supplied node or generate a random multicast one.
   var nd
@@ -610,8 +631,8 @@ def v1(node: ?string, clock_seq: ?number) {
   } else {
     # Set multicast bit on the first octet per RFC 4122 §4.5.
     var rand_node = _random_hex(12)
-    var first_byte = rand_node[0,2].to_number(16) | 0x01
-    nd = _int_to_hex(first_byte, 2) + rand_node[2,12]
+    var first_byte = rand_node[0, 2].to_number(16) | 0x01
+    nd = _int_to_hex(first_byte, 2) + rand_node[2, 12]
   }
 
   return tl + '-' + tm + '-1' + th + '-' + cs + '-' + nd
@@ -767,7 +788,7 @@ def v5(namespace: string, name: string) {
  * @return string Canonical UUID string.
  */
 def v6(node: ?string, clock_seq: ?number) {
-  var ts  = _gregorian_timestamp()
+  var ts = _gregorian_timestamp()
   var seq = clock_seq != nil ? (clock_seq & 0x3fff) : _v1_clock_seq
 
   # v6 reorders the 60-bit timestamp so the high 48 bits come first,
@@ -778,34 +799,34 @@ def v6(node: ?string, clock_seq: ?number) {
   #   clock_seq          (variant + 14 bits)                           → 4 hex
   #   node                                                             → 12 hex
 
-  var time_upper = (ts / 4096).floor()      # bits 12-59
-  var time_lo12  = ts % 4096                  # bits 0-11
+  var time_upper = (ts / 4096).floor() # bits 12-59
+  var time_lo12 = ts % 4096 # bits 0-11
 
   # Split time_upper into two 32-bit halves for hex encoding.
   var tu_hi = (time_upper / 4294967296).floor()
   var tu_lo = time_upper % 4294967296
 
-  var th   = _int_to_hex(tu_hi, 8)            # time high (bits 28-59)
-  var tm   = _int_to_hex(tu_lo, 4)            # time mid  (bits 12-27): only 4 hex
+  var th = _int_to_hex(tu_hi, 8) # time high (bits 28-59)
+  var tm = _int_to_hex(tu_lo, 4) # time mid  (bits 12-27): only 4 hex
 
   # Wait: tu_lo holds 32 bits but we only want 4 hex (16 bits) here.
   # Full split: time_upper is 48 bits = 12 hex total.
   var tu_str = _int_to_hex(tu_hi, 4) + _int_to_hex(tu_lo % 4294967296, 8)
   # tu_str is now 12 hex chars covering bits 12-59 of the Gregorian ts.
 
-  var time_low12 = _int_to_hex(time_lo12, 3)  # low 12 bits of timestamp
+  var time_low12 = _int_to_hex(time_lo12, 3) # low 12 bits of timestamp
 
   var seq_hi = ((seq / 256) | 0x80).floor()
   var seq_lo = seq % 256
-  var cs     = _int_to_hex(seq_hi, 2) + _int_to_hex(seq_lo, 2)
+  var cs = _int_to_hex(seq_hi, 2) + _int_to_hex(seq_lo, 2)
 
   var nd
   if node != nil {
     nd = node.lower()
   } else {
     var rand_node = _random_hex(12)
-    var first_byte = rand_node[0,2].to_number(16) | 0x01
-    nd = _int_to_hex(first_byte, 2) + rand_node[2,12]
+    var first_byte = rand_node[0, 2].to_number(16) | 0x01
+    nd = _int_to_hex(first_byte, 2) + rand_node[2, 12]
   }
 
   # Build the raw 32-char hex:
@@ -870,9 +891,9 @@ def v7() {
   # 62-bit random (rand_b): we generate 16 hex chars (64 bits) and set the
   # top 2 bits for the variant (10xx xxxx) in the first byte.
   var rand_b_raw = _random_hex(16)
-  var rand_b_byte0 = rand_b_raw[0,2].to_number(16)
+  var rand_b_byte0 = rand_b_raw[0, 2].to_number(16)
   rand_b_byte0 = (rand_b_byte0 & 0x3f) | 0x80
-  var rand_b = _int_to_hex(rand_b_byte0, 2) + rand_b_raw[2,16]
+  var rand_b = _int_to_hex(rand_b_byte0, 2) + rand_b_raw[2, 16]
 
   # Full raw 32 hex: ts(12) + '7' + rand_a(3) + rand_b(16)
   var raw = ts_hex + '7' + rand_a + rand_b
@@ -911,15 +932,17 @@ def v7() {
  */
 def v8(a: number, b: number, c: number) {
 
-  var field_a = _int_to_hex(a % 281474976710656, 12)  # 48-bit max
-  var field_b = _int_to_hex(b % 4096, 3)              # 12-bit max
+  var field_a = _int_to_hex(a % 281474976710656, 12) # 48-bit max
+  var field_b = _int_to_hex(b % 4096, 3) # 12-bit max
 
   # c occupies 62 bits; we embed variant bits (10) in the top 2 of those 64.
-  var c_hi  = ((c / 4294967296) & 0x3fffffff ).floor() # top 30 bits of 62
-  var c_lo  = c % 4294967296
-  var byte8 = ((c_hi / 16777216).floor() & 0x3f) | 0x80  # variant
+  var c_hi = ((c / 4294967296) & 0x3fffffff).floor() # top 30 bits of 62
+  var c_lo = c % 4294967296
+  var byte8 = ((c_hi / 16777216).floor() & 0x3f) | 0x80 # variant
   var c_hi2 = c_hi & 0x00ffffff
-  var field_c = _int_to_hex(byte8, 2) + _int_to_hex(c_hi2, 6) + _int_to_hex(c_lo, 8)
+  var field_c = _int_to_hex(byte8, 2)
+    + _int_to_hex(c_hi2, 6)
+    + _int_to_hex(c_lo, 8)
 
   # raw: field_a(12) + '8' + field_b(3) + field_c(16)
   var raw = field_a + '8' + field_b + field_c
@@ -949,7 +972,6 @@ def nil_uuid() {
 def max_uuid() {
   return MAX
 }
-
 
 # ---------------------------------------------------------------------------
 # Parsing / conversion helpers
@@ -998,7 +1020,9 @@ def from_bytes(bytes_list: list|bytes) {
   }
 
   if bytes_list.length() != 16 {
-    raise Error('uuid.from_bytes: expected exactly 16 bytes, got ' + bytes_list.length())
+    raise Error(
+      'uuid.from_bytes: expected exactly 16 bytes, got ' + bytes_list.length(),
+    )
   }
 
   return _format(convert.bytes_to_hex(bytes(bytes_list)))

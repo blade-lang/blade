@@ -57,7 +57,7 @@ var FILE_MODE = 0c600
  */
 def default_directory() {
   return os.join_paths(
-    os.temp_dir(), 'zuri-sessions-' + hash.sha256(os.cwd())[0, 16]
+    os.temp_dir(), 'zuri-sessions-' + hash.sha256(os.cwd())[0, 16],
   )
 }
 
@@ -180,7 +180,7 @@ class FileStore < SessionStore {
       }
 
       raise SessionError(
-        'could not write the session to ${self._directory}: ${error.message}'
+        'could not write the session to ${self._directory}: ${error.message}',
       )
     }
 
@@ -266,14 +266,14 @@ class FileStore < SessionStore {
       } as error {
         raise SessionError(
           'could not create the session directory ${self._directory}: ' +
-            error.message
+            error.message,
         )
       }
     }
 
     if !os.dir_exists(self._directory) {
       raise SessionError(
-        '${self._directory} is not a directory sessions can be kept in'
+        '${self._directory} is not a directory sessions can be kept in',
       )
     }
 
@@ -290,7 +290,7 @@ class FileStore < SessionStore {
       raise SessionError(
         'the session directory ${self._directory} is open to every user ' +
           'on this machine (mode ${mode.oct()}); tighten it, or pass ' +
-          'strict_permissions: false to use it anyway'
+          'strict_permissions: false to use it anyway',
       )
     }
   }

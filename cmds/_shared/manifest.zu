@@ -257,7 +257,9 @@ def _optional_string(value, key: string, where: string) {
  * @returns Dependency
  * @raises ManifestError
  */
-def parse_dependency(name: string, value, dev: bool, where: ?string, stdlib: ?dict) {
+def parse_dependency(
+  name: string, value, dev: bool, where: ?string, stdlib: ?dict,
+) {
   var section = dev ? DEV_DEPENDENCIES : DEPENDENCIES
 
   if where == nil {
@@ -300,7 +302,9 @@ def parse_dependency(name: string, value, dev: bool, where: ?string, stdlib: ?di
 
   var git = _optional_string(value.get('git', nil), 'git', context)
   var path = _optional_string(value.get('path', nil), 'path', context)
-  var registry = _optional_string(value.get('registry', nil), 'registry', context)
+  var registry = _optional_string(
+    value.get('registry', nil), 'registry', context,
+  )
 
   if git != nil and path != nil {
     raise ManifestError('${context}: a dependency comes from git or from a path, not both')
@@ -402,7 +406,9 @@ class Manifest {
    * @returns ?string
    */
   name() {
-    return _optional_string(self._project().get('name', nil), 'name', self._where())
+    return _optional_string(
+      self._project().get('name', nil), 'name', self._where(),
+    )
   }
 
   /**
@@ -411,7 +417,9 @@ class Manifest {
    * @returns ?string
    */
   version() {
-    return _optional_string(self._project().get('version', nil), 'version', self._where())
+    return _optional_string(
+      self._project().get('version', nil), 'version', self._where(),
+    )
   }
 
   /**
@@ -486,12 +494,14 @@ class Manifest {
         if seen.contains(key) {
           raise ManifestError(
             "${self._where()}: '${name}' is declared twice; keep it in one section "
-              + 'under one spelling'
+              + 'under one spelling',
           )
         }
 
         seen.set(key, true)
-        found.append(parse_dependency(name, value, pair[1], self._where(), stdlib))
+        found.append(parse_dependency(
+          name, value, pair[1], self._where(), stdlib,
+        ))
       }
     }
 
@@ -549,7 +559,9 @@ class Manifest {
       raise ManifestError('${self._where()}: [hooks] must be a table')
     }
 
-    return _optional_string(table.get(hook, nil), hook, '${self._where()} [hooks]')
+    return _optional_string(
+      table.get(hook, nil), hook, '${self._where()} [hooks]',
+    )
   }
 
   /**
@@ -565,7 +577,9 @@ class Manifest {
       raise ManifestError('${self._where()}: [install] must be a table')
     }
 
-    var allowed = _string_list(table.get('allow-hooks', nil), 'allow-hooks', self._where())
+    var allowed = _string_list(
+      table.get('allow-hooks', nil), 'allow-hooks', self._where(),
+    )
 
     return allowed.map(@(name) => names.normalized(name))
   }
@@ -596,7 +610,9 @@ class Manifest {
 
     var section = dependency.dev ? DEV_DEPENDENCIES : DEPENDENCIES
 
-    self.document.table(section).set([dependency.name], dependency.declaration())
+    self.document
+      .table(section)
+      .set([dependency.name], dependency.declaration())
     self.data = self.document.to_value()
   }
 
@@ -729,7 +745,7 @@ def resolve_registry(alias_or_address: ?string, aliases: dict) {
   } else if !address.contains('://') {
     raise ManifestError(
       "'${alias_or_address}' is not a registry alias this project or your configuration "
-        + 'defines; add it under [registries] or give its address'
+        + 'defines; add it under [registries] or give its address',
     )
   }
 

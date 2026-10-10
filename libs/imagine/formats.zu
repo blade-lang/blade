@@ -19,7 +19,6 @@ import _imagine
 
 import .errors { DecodeError, EncodeError, FormatError }
 
-
 /**
  * Extension to format name.
  *
@@ -28,16 +27,25 @@ import .errors { DecodeError, EncodeError, FormatError }
  */
 var _BY_EXTENSION = {
   png: 'png',
-  jpg: 'jpeg', jpeg: 'jpeg', jpe: 'jpeg', jfif: 'jpeg',
+  jpg: 'jpeg',
+  jpeg: 'jpeg',
+  jpe: 'jpeg',
+  jfif: 'jpeg',
   gif: 'gif',
-  bmp: 'bmp', dib: 'bmp',
-  tif: 'tiff', tiff: 'tiff',
-  tga: 'tga', targa: 'tga',
+  bmp: 'bmp',
+  dib: 'bmp',
+  tif: 'tiff',
+  tiff: 'tiff',
+  tga: 'tga',
+  targa: 'tga',
   webp: 'webp',
   avif: 'avif',
   qoi: 'qoi',
   ico: 'ico',
-  pnm: 'pnm', ppm: 'pnm', pgm: 'pnm', pbm: 'pnm',
+  pnm: 'pnm',
+  ppm: 'pnm',
+  pgm: 'pnm',
+  pbm: 'pnm',
   wbmp: 'wbmp',
 }
 
@@ -46,9 +54,18 @@ var _BY_EXTENSION = {
  * produced rather than read.
  */
 var _EXTENSIONS = {
-  png: 'png', jpeg: 'jpg', gif: 'gif', bmp: 'bmp', tiff: 'tiff',
-  tga: 'tga', webp: 'webp', avif: 'avif', qoi: 'qoi', ico: 'ico',
-  pnm: 'ppm', wbmp: 'wbmp',
+  png: 'png',
+  jpeg: 'jpg',
+  gif: 'gif',
+  bmp: 'bmp',
+  tiff: 'tiff',
+  tga: 'tga',
+  webp: 'webp',
+  avif: 'avif',
+  qoi: 'qoi',
+  ico: 'ico',
+  pnm: 'ppm',
+  wbmp: 'wbmp',
 }
 
 /**
@@ -68,7 +85,6 @@ var _MIME_TYPES = {
   pnm: 'image/x-portable-anymap',
   wbmp: 'image/vnd.wap.wbmp',
 }
-
 
 /**
  * The format name a file extension implies, or `nil` when the
@@ -90,7 +106,6 @@ var _MIME_TYPES = {
 def from_extension(path: string) {
   return _BY_EXTENSION.get(_extension(path))
 }
-
 
 /**
  * The last dot-separated piece of a path, lower-cased.
@@ -115,7 +130,6 @@ def _extension(path) {
   return parts[parts.length() - 1]
 }
 
-
 /**
  * The file extension a format is normally written with, without a
  * leading dot.
@@ -134,7 +148,6 @@ def extension_for(format: string) {
   return found
 }
 
-
 /**
  * The IANA media type for a format, suitable for a `Content-Type`
  * header.
@@ -152,7 +165,6 @@ def mime_for(format: string) {
 
   return found
 }
-
 
 /**
  * Normalises a format name, accepting the common aliases.
@@ -173,7 +185,6 @@ def normalize(format: string) {
 
   return found
 }
-
 
 /**
  * Identifies image data by its content rather than its name, or
@@ -207,7 +218,6 @@ def detect(data: bytes) {
   return probed.format
 }
 
-
 /**
  * Reads an image's format and dimensions without decoding its pixels.
  *
@@ -238,7 +248,6 @@ def probe(data: bytes) {
   return _imagine.probe(data)
 }
 
-
 /**
  * Every format this build can read.
  *
@@ -247,7 +256,6 @@ def probe(data: bytes) {
 def readable() {
   return _imagine.capabilities().decode + ['wbmp']
 }
-
 
 /**
  * Every format this build can write.
@@ -258,7 +266,6 @@ def writable() {
   return _imagine.capabilities().encode + ['wbmp']
 }
 
-
 /**
  * Every format this build can read as an animation.
  *
@@ -267,7 +274,6 @@ def writable() {
 def animatable() {
   return _imagine.capabilities().animated
 }
-
 
 # ---------------------------------------------------------------------
 # WBMP
@@ -282,7 +288,6 @@ def animatable() {
 # so _is_wbmp() has to validate the whole header before it can claim a
 # buffer; that is why detection tries it before anything else rather
 # than after.
-
 
 /**
  * True when the data looks like a type-0 WBMP.
@@ -303,7 +308,6 @@ def _is_wbmp(data) {
 
   return _read_wbmp_header(data) != nil
 }
-
 
 /**
  * Reads a WBMP's dimensions, returning `{width, height, offset}` where
@@ -357,7 +361,6 @@ def _read_wbmp_header(data) {
   return { width, height, offset }
 }
 
-
 /**
  * Decodes a WBMP into straight RGBA pixels.
  *
@@ -399,7 +402,6 @@ def decode_wbmp(data: bytes) {
   return { pixels, width, height }
 }
 
-
 /**
  * Encodes straight RGBA pixels as a WBMP.
  *
@@ -414,10 +416,12 @@ def decode_wbmp(data: bytes) {
  * @param ?number threshold: The brightness cut, 0-255 - Default: 128.
  * @returns bytes
  */
-def encode_wbmp(pixels: bytes, width: number, height: number, threshold: ?number) {
+def encode_wbmp(
+  pixels: bytes, width: number, height: number, threshold: ?number,
+) {
   if pixels.length() != width * height * 4 {
     raise EncodeError(
-      'pixel buffer holds ${pixels.length()} bytes, but ${width}x${height} RGBA needs ${width * height * 4}'
+      'pixel buffer holds ${pixels.length()} bytes, but ${width}x${height} RGBA needs ${width * height * 4}',
     )
   }
 
@@ -443,7 +447,9 @@ def encode_wbmp(pixels: bytes, width: number, height: number, threshold: ?number
       var at = (y * width + x) * 4
       var alpha = pixels[at + 3]
 
-      var luma = 0.299 * pixels[at] + 0.587 * pixels[at + 1] + 0.114 * pixels[at + 2]
+      var luma = 0.299 * pixels[at]
+        + 0.587 * pixels[at + 1]
+        + 0.114 * pixels[at + 2]
 
       # Composite against white before thresholding, so a faint mark on
       # a transparent background does not come out solid black.
@@ -468,7 +474,6 @@ def encode_wbmp(pixels: bytes, width: number, height: number, threshold: ?number
 
   return out
 }
-
 
 /**
  * A WBMP variable-length integer: seven bits per byte, most

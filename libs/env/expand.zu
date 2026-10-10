@@ -71,7 +71,9 @@ class _Expander {
 
       # `\$` is how a value says it wants a dollar sign and no
       # expansion. The backslash goes, the dollar stays.
-      if ch == '\\' and self._pos + 1 < self._len and self._src[self._pos + 1] == '$' {
+      if ch == '\\'
+        and self._pos + 1 < self._len
+        and self._src[self._pos + 1] == '$' {
         out.append('$')
         self._pos += 2
         continue
@@ -181,7 +183,7 @@ def _modified(body, resolve) {
 
   if !['-', '+', '?'].contains(modifier) {
     raise EnvError(
-      '$' + '{' + body + '} uses a modifier this module does not know'
+      '$' + '{' + body + '} uses a modifier this module does not know',
     )
   }
 

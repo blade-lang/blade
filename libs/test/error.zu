@@ -10,7 +10,6 @@
  * how the framework itself was used, and is meant to stop the run.
  */
 
-
 /**
  * A matcher that did not hold.
  *
@@ -83,7 +82,6 @@ class AssertionError < Error {
     }
   }
 }
-
 
 /**
  * The framework was asked to do something that does not make sense:

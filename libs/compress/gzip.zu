@@ -28,7 +28,6 @@ def decompress(data) {
   return _compress.gzip_decompress(data)
 }
 
-
 /**
  * A streaming GZip encoder.
  *
@@ -152,7 +151,6 @@ class GzipEncoder {
     return _compress.gzip_encoder_total_out(self._ptr)
   }
 }
-
 
 /**
  * Streaming gzip decompressor implemention. This decoder reads
@@ -292,7 +290,6 @@ class GzipDecoder {
     return _compress.gzip_decoder_total_out(self._ptr)
   }
 }
-
 
 /**
  * The GzFile class implements a GZip based I/O system that
@@ -506,7 +503,7 @@ class GzFile {
    * @returns bool
    */
   is_open() {
-    return self._file.is_open() 
+    return self._file.is_open()
       and !self._inner.finished()
   }
 
@@ -515,7 +512,7 @@ class GzFile {
    * writing and `false` otherwise.
    */
   is_closed() {
-    return self._file.is_closed() 
+    return self._file.is_closed()
       or self._inner.finished()
   }
 
@@ -603,7 +600,7 @@ class GzFile {
   truncate(length: ?int) {
     return self._file.truncate(length)
   }
-  
+
   /**
    * Updates the permission for the file bounded by GzFile.
    *

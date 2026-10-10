@@ -61,7 +61,8 @@ def _client() {
   var headers = { Accept: 'application/vnd.github+json' }
   var token = os.get_env('GITHUB_TOKEN', '')
 
-  if !token.is_empty() and listing_url().starts_with('https://api.github.com/') {
+  if !token.is_empty()
+    and listing_url().starts_with('https://api.github.com/') {
     headers.set('Authorization', 'Bearer ' + token)
   }
 
@@ -108,7 +109,7 @@ def available(target: string, prereleases: ?bool) {
   if response.status == 403 or response.status == 429 {
     raise ReleaseError(
       'GitHub refused the request, most likely for its rate limit; set GITHUB_TOKEN to a '
-        + 'token of your own and try again'
+        + 'token of your own and try again',
     )
   }
 
@@ -144,7 +145,8 @@ def available(target: string, prereleases: ?bool) {
 
     version = semver.parse(version).to_string()
 
-    var is_pre = release.get('prerelease', false) == true or semver.parse(version).is_prerelease()
+    var is_pre = release.get('prerelease', false) == true
+      or semver.parse(version).is_prerelease()
 
     if is_pre and prereleases != true {
       continue
@@ -237,7 +239,9 @@ def _fetch(client, url: string, what: string) {
 def download(release: dict, target: string, destination: string) {
   var client = _client()
   var name = asset_name(release.version, target)
-  var listed = _fetch(client, release.checksum, name + '.sha256').to_string().trim()
+  var listed = _fetch(client, release.checksum, name + '.sha256')
+    .to_string()
+    .trim()
   var expected = listed.split(' ')[0].lower().trim()
 
   if !is_dict(expected.match('/^[0-9a-f]{64}$/')) {
@@ -251,7 +255,7 @@ def download(release: dict, target: string, destination: string) {
     raise ReleaseError(
       '${name} does not match its published checksum\n  expected ${expected}\n  received '
         + '${actual}\nNothing was used. The download was damaged on the way, or the release '
-        + 'is not what it claims to be.'
+        + 'is not what it claims to be.',
     )
   }
 
@@ -271,7 +275,9 @@ def download(release: dict, target: string, destination: string) {
  * @returns string
  * @raises ReleaseError when the archive does not hold a runtime.
  */
-def unpack(archive_path: string, destination: string, version: string, target: string) {
+def unpack(
+  archive_path: string, destination: string, version: string, target: string,
+) {
   fsx.ensure_dir(destination)
 
   catch {
@@ -293,7 +299,9 @@ def unpack(archive_path: string, destination: string, version: string, target: s
   }
 
   var root = os.join_paths(destination, 'zuri-${version}-${target}')
-  var runtime = os.join_paths(root, target.contains('windows') ? 'zuri.exe' : 'zuri')
+  var runtime = os.join_paths(
+    root, target.contains('windows') ? 'zuri.exe' : 'zuri',
+  )
 
   if !file(runtime).exists() or !os.dir_exists(os.join_paths(root, 'libs')) {
     fsx.remove(destination)

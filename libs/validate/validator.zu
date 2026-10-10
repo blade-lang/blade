@@ -15,7 +15,6 @@
 
 import .rules
 
-
 /**
  * Fluent rule chain builder for a single field.
  *
@@ -70,7 +69,6 @@ class Validator {
   # Optional human-readable label override used in error messages.
   var _label = nil
 
-
   # -------------------------------------------------------------------------
   # Configuration
   # -------------------------------------------------------------------------
@@ -119,11 +117,13 @@ class Validator {
    * @returns Validator
    */
   bail(enabled) {
-    if enabled == nil { self._bail = true }
-    else { self._bail = enabled }
+    if enabled == nil {
+      self._bail = true
+    } else {
+      self._bail = enabled
+    }
     return self
   }
-
 
   # -------------------------------------------------------------------------
   # Presence / type rules
@@ -224,7 +224,6 @@ class Validator {
     return self
   }
 
-
   # -------------------------------------------------------------------------
   # Size / length rules
   # -------------------------------------------------------------------------
@@ -322,7 +321,6 @@ class Validator {
     self._rules.append([rules.LengthBetween, min, max])
     return self
   }
-
 
   # -------------------------------------------------------------------------
   # Numeric comparison rules
@@ -422,7 +420,6 @@ class Validator {
     self._rules.append([rules.MultipleOf, n])
     return self
   }
-
 
   # -------------------------------------------------------------------------
   # String content rules
@@ -577,7 +574,6 @@ class Validator {
     return self
   }
 
-
   # -------------------------------------------------------------------------
   # Format / pattern rules
   # -------------------------------------------------------------------------
@@ -718,7 +714,6 @@ class Validator {
     return self
   }
 
-
   # -------------------------------------------------------------------------
   # Inclusion / exclusion rules
   # -------------------------------------------------------------------------
@@ -799,7 +794,6 @@ class Validator {
     self._rules.append([rules.NotEquals, forbidden])
     return self
   }
-
 
   # -------------------------------------------------------------------------
   # Cross-field rules
@@ -959,7 +953,6 @@ class Validator {
     return self
   }
 
-
   # -------------------------------------------------------------------------
   # List / dict content rules
   # -------------------------------------------------------------------------
@@ -1016,7 +1009,6 @@ class Validator {
     return self
   }
 
-
   # -------------------------------------------------------------------------
   # Miscellaneous rules
   # -------------------------------------------------------------------------
@@ -1040,7 +1032,6 @@ class Validator {
     self._rules.append([rules.NotNil])
     return self
   }
-
 
   # -------------------------------------------------------------------------
   # Custom rules
@@ -1115,7 +1106,6 @@ class Validator {
     return self
   }
 
-
   # -------------------------------------------------------------------------
   # Read-only accessors: consumed by Schema, which doesn't own this
   # Validator and so can't reach its private fields directly.
@@ -1151,7 +1141,6 @@ class Validator {
     return self._label
   }
 
-
   # -------------------------------------------------------------------------
   # Iteration protocol: consumed by Schema
   # -------------------------------------------------------------------------
@@ -1162,12 +1151,17 @@ class Validator {
 
   @key(n) {
     if n == nil {
-      if self._rules.is_empty() return nil
+      if self._rules.is_empty() {
+        return nil
+      }
       return 0
     }
-    if !is_number(n)
+    if !is_number(n) {
       raise ArgumentError('validate.Validator is numerically indexed')
-    if n < self._rules.length() - 1 return n + 1
+    }
+    if n < self._rules.length() - 1 {
+      return n + 1
+    }
     return nil
   }
 }

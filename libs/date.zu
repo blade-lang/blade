@@ -29,7 +29,6 @@
 
 import _date
 
-
 /**
  * Minimum year supported.
  * @type number
@@ -92,10 +91,10 @@ var _date_ends = ['th', 'st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th', 'th']
 
 var _weekday_month_offsets = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4]
 
-
 def _check_int_field(field, name) {
-  if !is_int(field)
+  if !is_int(field) {
     raise TypeError('${name} must be an integer')
+  }
 }
 
 def _check_date_fields(year, month, day, hour, minute, seconds) {
@@ -111,29 +110,31 @@ def _check_date_fields(year, month, day, hour, minute, seconds) {
   }
 
   var dim = _dim(year, month)
-  if 1 > day or day > dim
+  if 1 > day or day > dim {
     raise ValueError('day must be in 1..${dim}')
+  }
 
   _check_int_field(hour, 'hour')
   _check_int_field(minute, 'minute')
   _check_int_field(seconds, 'seconds')
 
-  if 0 > hour or hour > 23
+  if 0 > hour or hour > 23 {
     raise ValueError('hour must be in 0..23')
-  if 0 > minute or minute > 59
+  }
+  if 0 > minute or minute > 59 {
     raise ValueError('minute must be in 0..59')
-  if 0 > seconds or seconds > 59
+  }
+  if 0 > seconds or seconds > 59 {
     raise ValueError('seconds must be in 0..59')
+  }
 }
-
-
 
 # the name of months in a year
 # the nil is meant for proper indexing
 var _months_in_year = [
   nil,
-  'January', 'February', 'March', 'April', 'May', 'June', 
-  'July', 'August', 'September', 'October', 'November', 'December'
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
 ]
 
 # the short name of months in a year
@@ -141,21 +142,21 @@ var _months_in_year = [
 var _months_in_year_short = [
   nil,
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ]
 
 # the short name of days in a week
 # the nil is meant for proper indexing
 var _weekdays_short = [
   'Sun',
-  'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'
+  'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
 ]
 
 # the long name of days in a week
 # the nil is meant for proper indexing
 var _weekdays_long = [
   'Sunday',
-  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
 ]
 
 # Days in the year preceding month `g`, counting from month `m` (i.e.
@@ -167,7 +168,7 @@ def _days_before_month(m, g, leap) {
   var days_before_month = []
   var days = 0
   var i = m
-  for f in _days_in_month[m,MAX_MONTH+1] {
+  for f in _days_in_month[m, MAX_MONTH + 1] {
     days_before_month.append(days)
     days += (leap and i == 2) ? 29 : f
     i++
@@ -177,7 +178,7 @@ def _days_before_month(m, g, leap) {
 
 def _days_before_year(year) {
   var y = year - 1
-  return y*365 + y//4 - y//100 + y//400
+  return y * 365 + y // 4 - y // 100 + y // 400
 }
 
 def _is_leap(year) {
@@ -186,8 +187,9 @@ def _is_leap(year) {
 }
 
 def _dim(year, month) {
-  if month == 2 and _is_leap(year)
+  if month == 2 and _is_leap(year) {
     return 29
+  }
   return _days_in_month[month]
 }
 
@@ -198,10 +200,10 @@ def _dim(year, month) {
 # the raw (possibly negative) offset, as the old code did, mixes up
 # which part carries the sign and garbles anything past a whole hour.
 def _format_offset(gmt_offset) {
-  var sign        = gmt_offset < 0 ? '-' : '+'
-  var abs_offset  = gmt_offset.abs()
-  var hour        = (abs_offset / 3600).int()
-  var minute      = ((abs_offset % 3600) / 60).int()
+  var sign = gmt_offset < 0 ? '-' : '+'
+  var abs_offset = gmt_offset.abs()
+  var hour = (abs_offset / 3600).int()
+  var minute = ((abs_offset % 3600) / 60).int()
 
   return [
     sign,
@@ -218,8 +220,8 @@ def _format_offset(gmt_offset) {
 # them directly for a date built from already-computed y/m/d/h/m/s.
 def _copy_zone(target, source) {
   target.gmt_offset = source.gmt_offset
-  target.zone       = source.zone
-  target.is_dst     = source.is_dst
+  target.zone = source.zone
+  target.is_dst = source.is_dst
   return target
 }
 
@@ -381,32 +383,52 @@ class Date {
    * @param ?number gmt_offset
    * @param ?bool is_dst
    */
-  @new(year, month, day, hour, minute, seconds, microseconds, gmt_offset, is_dst) {
+  @new(
+    year, month, day, hour, minute, seconds, microseconds, gmt_offset, is_dst,
+  ) {
 
-    if year != nil{
+    if year != nil {
       self.year = year
 
-      if month != nil self.month = month
-      else self.month = MIN_MONTH
+      if month != nil {
+        self.month = month
+      } else {
+        self.month = MIN_MONTH
+      }
 
-      if day != nil self.day = day
-      else self.day = MIN_DAY
+      if day != nil {
+        self.day = day
+      } else {
+        self.day = MIN_DAY
+      }
 
-      if hour != nil self.hour = hour
-      else self.hour = 0
+      if hour != nil {
+        self.hour = hour
+      } else {
+        self.hour = 0
+      }
 
-      if minute != nil self.minute = minute
-      else self.minute = 0
+      if minute != nil {
+        self.minute = minute
+      } else {
+        self.minute = 0
+      }
 
-      if seconds != nil self.seconds = seconds
-      else self.seconds = 0
+      if seconds != nil {
+        self.seconds = seconds
+      } else {
+        self.seconds = 0
+      }
 
-      if microseconds != nil self.microseconds = microseconds
-      else self.microseconds = 0
-    
+      if microseconds != nil {
+        self.microseconds = microseconds
+      } else {
+        self.microseconds = 0
+      }
+
       # check for valid input values
-      _check_date_fields(self.year, self.month, self.day, 
-          self.hour, self.minute, self.seconds)
+      _check_date_fields(self.year, self.month, self.day,
+        self.hour, self.minute, self.seconds)
 
       if gmt_offset != nil {
         if !is_number(gmt_offset) {
@@ -424,11 +446,10 @@ class Date {
         self.is_dst = is_dst or false
       }
 
-
       self.week_day = self.weekday()
-      self.year_day = _days_before_month(1, self.month, _is_leap(self.year)) + self.day
+      self.year_day = _days_before_month(1, self.month, _is_leap(self.year))
+        + self.day
       self.zone = 'UTC'
-
     } else {
       var date = localtime()
 
@@ -577,7 +598,13 @@ class Date {
     }
 
     return (
-      (year + year // 4 - year // 100 + year // 400 + _weekday_month_offsets[month - 1] + day) % 7
+      (year +
+        year // 4 -
+        year // 100 +
+        year // 400 +
+        _weekday_month_offsets[month - 1] +
+        day)
+        % 7
     ).int()
   }
 
@@ -689,16 +716,25 @@ class Date {
           result += format[i]
         }
         when 'a' {
-          if self.hour >= 12 result += 'pm'
-          else result += 'am'
+          if self.hour >= 12 {
+            result += 'pm'
+          } else {
+            result += 'am'
+          }
         }
         when 'A' {
-          if self.hour >= 12 result += 'PM'
-          else result += 'AM'
+          if self.hour >= 12 {
+            result += 'PM'
+          } else {
+            result += 'AM'
+          }
         }
         when 'd' {
-          if self.day <= 9 result += '0${self.day}'
-          else result += self.day
+          if self.day <= 9 {
+            result += '0${self.day}'
+          } else {
+            result += self.day
+          }
         }
         when 'j' {
           result += self.day
@@ -722,8 +758,11 @@ class Date {
           result += self.week_number()
         }
         when 'm' {
-          if self.month <= 9 result += '0${self.month}'
-          else result += self.month
+          if self.month <= 9 {
+            result += '0${self.month}'
+          } else {
+            result += self.month
+          }
         }
         when 'n' {
           result += self.month
@@ -732,16 +771,23 @@ class Date {
           result += _days_in_month[self.month]
         }
         when 'L' {
-          if self.is_leap() result += 1
-          else result += 0
+          if self.is_leap() {
+            result += 1
+          } else {
+            result += 0
+          }
         }
         when 'H' {
           result += self.hour <= 9 ? '0${self.hour}' : self.hour
         }
         when 'h' {
           var hour = self.hour
-          if hour > 12 hour -= 12
-          if hour == 0 hour = 12
+          if hour > 12 {
+            hour -= 12
+          }
+          if hour == 0 {
+            hour = 12
+          }
 
           result += hour <= 9 ? '0${hour}' : hour
         }
@@ -845,8 +891,8 @@ class Date {
   jd() {
     # calculate the julian day i.e. Y-m-d value
     var jday = (367 * self.year - 7 * (self.year + (self.month + 9) / 12) / 4 +
-              275 * self.month / 9 +
-              self.day + 1721014).int()
+      275 * self.month / 9 +
+      self.day + 1721014).int()
 
     # calculate the time i.e. h:m:s value
     var jdate = jday - 0.5
@@ -865,8 +911,8 @@ class Date {
    *    precision.
    */
   unix_time() {
-    return _date.mktime(self.year, self.month, self.day, self.hour, 
-              self.minute, self.seconds, self.is_dst)
+    return _date.mktime(self.year, self.month, self.day, self.hour,
+      self.minute, self.seconds, self.is_dst)
   }
 
   /**
@@ -880,7 +926,7 @@ class Date {
     # ordinal gives the exact day count since the Epoch, leap years
     # included correctly by construction since to_ordinal() already is.
     var epoch_ordinal = _days_before_year(1970) + 1
-    var total_days    = self.to_ordinal() - epoch_ordinal
+    var total_days = self.to_ordinal() - epoch_ordinal
 
     var tm = total_days * 86400
     tm += self.hour * 3600
@@ -900,8 +946,11 @@ class Date {
    */
   clone() {
     return _copy_zone(
-      Date(self.year, self.month, self.day, self.hour, self.minute, self.seconds, self.microseconds),
-      self
+      Date(
+        self.year, self.month, self.day, self.hour, self.minute, self.seconds,
+        self.microseconds,
+      ),
+      self,
     )
   }
 
@@ -1027,7 +1076,7 @@ class Date {
     }
 
     var total = (self.month - 1) + n
-    var year  = self.year + (total / 12).floor()
+    var year = self.year + (total / 12).floor()
     var month = total % 12
     if month < 0 {
       month += 12
@@ -1036,7 +1085,9 @@ class Date {
 
     var day = self.day.min(_dim(year, month))
 
-    var result = Date(year, month, day, self.hour, self.minute, self.seconds, self.microseconds)
+    var result = Date(
+      year, month, day, self.hour, self.minute, self.seconds, self.microseconds,
+    )
     return _copy_zone(result, self)
   }
 
@@ -1123,7 +1174,7 @@ class Date {
    */
   to_string() {
     return '<Date year: ${self.year}, month: ${self.month}, day: ${self.day}, hour: ' +
-        '${self.hour}, minute: ${self.minute}, seconds: ${self.seconds}, micro_seconds: ${self.microseconds}>'
+      '${self.hour}, minute: ${self.minute}, seconds: ${self.seconds}, micro_seconds: ${self.microseconds}>'
   }
 
   /**
@@ -1199,7 +1250,6 @@ class Date {
   }
 }
 
-
 # The real maximum valid seconds-since-Epoch value this module can
 # represent (Date(MAX_YEAR, 12, 31, 23, 59, 59).to_time()); the
 # boundary from_time() uses to tell a genuine large seconds value
@@ -1207,7 +1257,6 @@ class Date {
 # hardcoded a second time, since it must always match to_time()'s own
 # definition of the module's supported range.
 var _MAX_TIME_SECONDS = Date(MAX_YEAR, 12, 31, 23, 59, 59).to_time()
-
 
 /**
  * Returns a date object from a unix timestamp.
@@ -1285,76 +1334,76 @@ def from_time(time) {
   var second = day_remainder % 60
 
   # Algorithm: Gregorian Epoch shift method
-  # 
-  # The algorithm uses an optimization trick formalized by computer 
+  #
+  # The algorithm uses an optimization trick formalized by computer
   # scientist Peter Baum.
-  # 
-  # It temporarily shifts the entire calendar baseline back to March 
-  # 1, Year 0. By starting the calendar year in March instead of 
-  # January, February 29th (the leap day) becomes the absolute last 
-  # day of the year cycle, making the mathematical patterns 
+  #
+  # It temporarily shifts the entire calendar baseline back to March
+  # 1, Year 0. By starting the calendar year in March instead of
+  # January, February 29th (the leap day) becomes the absolute last
+  # day of the year cycle, making the mathematical patterns
   # incredibly clean.
-  # 
-  # Shift origin to Year 0, March 1st (makes leap days fall at the 
+  #
+  # Shift origin to Year 0, March 1st (makes leap days fall at the
   # end)
-  # 
+  #
   # Constants Definition:
   # -------------------------------------------------------------
-  # 1. `719468` (The Day-Shift Anchor): The exact number of days 
+  # 1. `719468` (The Day-Shift Anchor): The exact number of days
   #     between March 1, Year 0 and January 1, 1970 (the Unix Epoch).
-  # 
-  #     Adding this to our Unix day count instantly transforms a 
+  #
+  #     Adding this to our Unix day count instantly transforms a
   #     standard timestamp into an absolute day count starting from
   #     Year 0, anchored smoothly to a March-first cycle.
-  # 
-  # 2. `146097` (The Gregorian Cycle Block):  The total number of 
+  #
+  # 2. `146097` (The Gregorian Cycle Block):  The total number of
   #     days in a full 400-year Gregorian calendar cycle.
-  # 
+  #
   #     365 days * 400 years + 97 leap days = 146,097 days
-  # 
-  #     Because the Gregorian leap year pattern repeats perfectly 
-  #     every 400 years, dividing our total days by 146097 splits the 
+  #
+  #     Because the Gregorian leap year pattern repeats perfectly
+  #     every 400 years, dividing our total days by 146097 splits the
   #     timeline into predictable chunks called "eras" (era).
-  # 
+  #
   # The Leap Year correction matrix:
-  # 
+  #
   # 3. `1460`: The number of days in a standard 4-year cycle (365 * 4).
-  # 4. `36524`: The number of days in a standard 100-year century cycle 
+  # 4. `36524`: The number of days in a standard 100-year century cycle
   #     (365 * 100 + 24 leap days).
-  # 5. `146096`: The maximum day index of a 400-year cycle (0 to 146096 
+  # 5. `146096`: The maximum day index of a 400-year cycle (0 to 146096
   #     equals 146,097 total days).
-  # 6. `365`: Standard days in a non-leap year, used to divide the 
+  # 6. `365`: Standard days in a non-leap year, used to divide the
   #     remaining day pool down into the final individual calendar year.
-  # 
+  #
   # The Magic Month Scalars (`153` and `5`):
-  # 
-  # If we plot out the number of days in each month starting from March, 
+  #
+  # If we plot out the number of days in each month starting from March,
   # the pattern is remarkably stable:
-  # 
-  #         March (31), April (30), May (31), June (30), July (31) 
+  #
+  #         March (31), April (30), May (31), June (30), July (31)
   #                      : repeats as -
-  # August (31), September (30), October (31), November (30), December 
+  # August (31), September (30), October (31), November (30), December
   # (31).
-  # 
-  # This specific sequence averages out perfectly to exactly 30.6 days 
+  #
+  # This specific sequence averages out perfectly to exactly 30.6 days
   # per month.
-  # 
-  # Because computers handle integers better than decimals, the fraction 
-  # \(30.6\) is rewritten as the integer fraction 153 / 5. The math 
-  # expression (5 * doy + 2) / 153 treats months as consecutive linear 
+  #
+  # Because computers handle integers better than decimals, the fraction
+  # \(30.6\) is rewritten as the integer fraction 153 / 5. The math
+  # expression (5 * doy + 2) / 153 treats months as consecutive linear
   # steps, letting us extract the correct month instantly.
-  # 
+  #
   # The Month Displacement Offset (`3` and `-9`):
-  # 
-  # This is used for the final structural correction for the March 
+  #
+  # This is used for the final structural correction for the March
   # alignment.
-  # 
-  # Because the mathematical cycle treated March as month 0, the output 
-  # variable mp returns a 0 for March, 1 for April... and 11 for 
-  # February. The conditional step (mp < 10 ? 3 : -9) shifts the sequence 
-  # back to our standard calendar format, turning March back into 3 and 
+  #
+  # Because the mathematical cycle treated March as month 0, the output
+  # variable mp returns a 0 for March, 1 for April... and 11 for
+  # February. The conditional step (mp < 10 ? 3 : -9) shifts the sequence
+  # back to our standard calendar format, turning March back into 3 and
   # February back into 2.
-  # 
+  #
   var g = total_days + 719468
   var era = (g >= 0 ? g : g - 146096) // 146097
   var doe = g - era * 146097
@@ -1364,17 +1413,15 @@ def from_time(time) {
   var mp = (5 * doy + 2) // 153
   var d = doy - (153 * mp + 2) // 5 + 1
   var m = mp + (mp < 10 ? 3 : -9)
-  
+
   if m <= 2 {
     y += 1
   }
-
 
   # Now the year and month are correct, and n is the offset from the
   # start of that month:  we're done!
   return Date(y, m, d, hour, minute, second, microseconds)
 }
-
 
 /**
  * Returns a `Date` from wall-clock fields understood as a local time
@@ -1426,14 +1473,18 @@ def from_timezone(name, year, month, day, hour, minute, seconds, is_dst) {
   # own fields; those come straight from the caller's own arguments,
   # so the Date this returns shows exactly the wall-clock reading asked
   # for, not a UTC-rebased approximation of it.
-  var unix_time = _date.tz_from_local(name, year, month, day, hour, minute, seconds, is_dst)
+  var unix_time = _date.tz_from_local(
+    name, year, month, day, hour, minute, seconds, is_dst,
+  )
   var offset = _date.tz_offset(name, unix_time)
 
-  var result = Date(year, month, day, hour, minute, seconds, 0, offset.gmt_offset, offset.is_dst)
+  var result = Date(
+    year, month, day, hour, minute, seconds, 0, offset.gmt_offset,
+    offset.is_dst,
+  )
   result.zone = offset.abbreviation
   return result
 }
-
 
 /**
  * Returns a date instance representing the julian date.
@@ -1458,7 +1509,7 @@ def from_jd(jdate) {
   }
 
   var x = jdate + 1.0, z = x.int(), f = x - z
-  
+
   var y = ((z - 1867216.25) / 36524.25).int()
   var a = z + 1 + y - (y / 4).int(), b = a + 1524
   var c = ((b - 122.1) / 365.25).int(), d = (365.25 * c).int()
@@ -1519,18 +1570,30 @@ def _is_space(ch) {
 # ---------------------------------------------------------------------------
 
 var _month_name_map = {
-  'january': 1,  'jan': 1,
-  'february': 2, 'feb': 2,
-  'march': 3,    'mar': 3,
-  'april': 4,    'apr': 4,
+  'january': 1,
+  'jan': 1,
+  'february': 2,
+  'feb': 2,
+  'march': 3,
+  'mar': 3,
+  'april': 4,
+  'apr': 4,
   'may': 5,
-  'june': 6,     'jun': 6,
-  'july': 7,     'jul': 7,
-  'august': 8,   'aug': 8,
-  'september': 9,'sep': 9, 'sept': 9,
-  'october': 10, 'oct': 10,
-  'november': 11,'nov': 11,
-  'december': 12,'dec': 12,
+  'june': 6,
+  'jun': 6,
+  'july': 7,
+  'jul': 7,
+  'august': 8,
+  'aug': 8,
+  'september': 9,
+  'sep': 9,
+  'sept': 9,
+  'october': 10,
+  'oct': 10,
+  'november': 11,
+  'nov': 11,
+  'december': 12,
+  'dec': 12,
 }
 
 # Weekday names: used to skip over them during auto-detection parsing.
@@ -1547,22 +1610,28 @@ var _weekday_name_set = [
 # Returns [value: number, new_pos: number].  Returns [-1, pos] on failure.
 def _scan_int(s, pos, max_digits) {
   var start = pos
-  var len   = s.length()
-  iter var count = 0; pos < len and count < max_digits and _is_digit(s[pos]); pos++ {
+  var len = s.length()
+  iter var count = 0; pos < len
+    and count < max_digits
+    and _is_digit(s[pos]); pos++ {
     count++
   }
-  if pos == start return [-1, start]
+  if pos == start {
+    return [-1, start]
+  }
   return [s[start, pos].to_number(), pos]
 }
 
 # Read a run of ASCII alpha characters; returns [token_lower, new_pos].
 def _scan_alpha(s, pos) {
   var start = pos
-  var len   = s.length()
+  var len = s.length()
   while pos < len and _is_alpha_ch(s[pos]) {
     pos++
   }
-  if pos == start return ['', start]
+  if pos == start {
+    return ['', start]
+  }
   return [s[start, pos].lower(), pos]
 }
 
@@ -1577,7 +1646,9 @@ def _skip_space(s, pos) {
 
 # Skip exactly one character if it matches `ch`; returns new position.
 def _skip_char(s, pos, ch) {
-  if pos < s.length() and s[pos] == ch return pos + 1
+  if pos < s.length() and s[pos] == ch {
+    return pos + 1
+  }
   return pos
 }
 
@@ -1592,12 +1663,16 @@ def _skip_char(s, pos, ch) {
 def _parse_tz(s, pos) {
   pos = _skip_space(s, pos)
   var len = s.length()
-  if pos >= len return [0, pos, 'UTC']
+  if pos >= len {
+    return [0, pos, 'UTC']
+  }
 
   var ch = s[pos]
 
   # 'Z': UTC shorthand (ISO 8601)
-  if ch == 'Z' or ch == 'z' return [0, pos + 1, 'UTC']
+  if ch == 'Z' or ch == 'z' {
+    return [0, pos + 1, 'UTC']
+  }
 
   # Named offsets: UTC, GMT (and variants like UTC+5)
   if _is_alpha_ch(ch) {
@@ -1614,27 +1689,33 @@ def _parse_tz(s, pos) {
   }
 
   # Numeric offset: (+|-)HH:MM or (+|-)HHMM
-  if ch != '+' and ch != '-' return [0, pos, 'UTC']
+  if ch != '+' and ch != '-' {
+    return [0, pos, 'UTC']
+  }
 
   var sign = ch == '+' ? 1 : -1
   pos++
 
-  var hr_res  = _scan_int(s, pos, 2)
+  var hr_res = _scan_int(s, pos, 2)
   var tz_hour = hr_res[0]
-  pos         = hr_res[1]
+  pos = hr_res[1]
 
-  if tz_hour < 0 return [0, pos, 'UTC']   # no digits after sign
+  if tz_hour < 0 {
+    return [0, pos, 'UTC'] # no digits after sign
+  }
 
-  pos = _skip_char(s, pos, ':')            # optional colon
+  pos = _skip_char(s, pos, ':') # optional colon
 
-  var mn_res  = _scan_int(s, pos, 2)
-  var tz_min  = mn_res[0] < 0 ? 0 : mn_res[0]
-  if mn_res[0] >= 0 pos = mn_res[1]
+  var mn_res = _scan_int(s, pos, 2)
+  var tz_min = mn_res[0] < 0 ? 0 : mn_res[0]
+  if mn_res[0] >= 0 {
+    pos = mn_res[1]
+  }
 
-  var offset  = sign * (tz_hour * 3600 + tz_min * 60)
-  var name    = sign > 0 ? '+' : '-'
-  name       += tz_hour <= 9 ? '0${tz_hour}' : tz_hour.to_string()
-  name       += tz_min  <= 9 ? '0${tz_min}'  : tz_min.to_string()
+  var offset = sign * (tz_hour * 3600 + tz_min * 60)
+  var name = sign > 0 ? '+' : '-'
+  name += tz_hour <= 9 ? '0${tz_hour}' : tz_hour.to_string()
+  name += tz_min <= 9 ? '0${tz_min}' : tz_min.to_string()
 
   return [offset, pos, name]
 }
@@ -1646,13 +1727,19 @@ def _parse_tz(s, pos) {
 # Adjusts `hour` (1-12) to 24h given an am_pm token ('am'|'pm').
 # If am_pm is nil (not present), returns hour unchanged.
 def _apply_ampm(hour, am_pm) {
-  if am_pm == nil return hour
+  if am_pm == nil {
+    return hour
+  }
   if am_pm == 'pm' {
-    if hour != 12 return hour + 12
+    if hour != 12 {
+      return hour + 12
+    }
     return 12
   }
   # am
-  if hour == 12 return 0
+  if hour == 12 {
+    return 0
+  }
   return hour
 }
 
@@ -1662,9 +1749,16 @@ def _apply_ampm(hour, am_pm) {
 
 def _default_fields() {
   return {
-    year: 1970, month: 1, day: 1,
-    hour: 0, minute: 0, seconds: 0, microseconds: 0,
-    gmt_offset: 0, zone: 'UTC', is_dst: false,
+    year: 1970,
+    month: 1,
+    day: 1,
+    hour: 0,
+    minute: 0,
+    seconds: 0,
+    microseconds: 0,
+    gmt_offset: 0,
+    zone: 'UTC',
+    is_dst: false,
     am_pm: nil,
   }
 }
@@ -1672,10 +1766,12 @@ def _default_fields() {
 # Build a Date from an accumulator dictionary, applying AM/PM last.
 def _fields_to_date(f) {
   var hour = _apply_ampm(f.hour, f.am_pm)
-  var d = Date(f.year, f.month, f.day, hour, f.minute, f.seconds, f.microseconds)
+  var d = Date(
+    f.year, f.month, f.day, hour, f.minute, f.seconds, f.microseconds,
+  )
   d.gmt_offset = f.gmt_offset
-  d.zone       = f.zone
-  d.is_dst     = f.is_dst
+  d.zone = f.zone
+  d.is_dst = f.is_dst
   return d
 }
 
@@ -1712,11 +1808,11 @@ def _fields_to_date(f) {
 #
 # Ambiguity policy for MM/DD vs DD/MM:
 #   - When the first numeric field is > 12 it must be a day.
-#   - When the first numeric field is <= 12 and the second is > 12 it 
+#   - When the first numeric field is <= 12 and the second is > 12 it
 #     is a month.
-#   - When both are <= 12 the format is treated as MM/DD/YYYY (US 
+#   - When both are <= 12 the format is treated as MM/DD/YYYY (US
 #     convention).
-#   - Callers who require DD/MM should use parse_format() with 
+#   - Callers who require DD/MM should use parse_format() with
 #     '%d/%m/%Y'.
 
 def _auto_parse(s) {
@@ -1739,18 +1835,18 @@ def _auto_parse(s) {
     var yr_r = _scan_int(s, 0, 4)
     var mo_r = _scan_int(s, yr_r[1], 2)
     var dy_r = _scan_int(s, mo_r[1], 2)
-    f.year   = yr_r[0]
-    f.month  = mo_r[0]
-    f.day    = dy_r[0]
-    var pos  = dy_r[1]
+    f.year = yr_r[0]
+    f.month = mo_r[0]
+    f.day = dy_r[0]
+    var pos = dy_r[1]
 
     if pos < s.length() and (s[pos] == 'T' or s[pos] == 't') {
       pos++
       var hh_r = _scan_int(s, pos, 2)
       var mm_r = _scan_int(s, hh_r[1], 2)
       var ss_r = _scan_int(s, mm_r[1], 2)
-      f.hour    = hh_r[0] < 0 ? 0 : hh_r[0]
-      f.minute  = mm_r[0] < 0 ? 0 : mm_r[0]
+      f.hour = hh_r[0] < 0 ? 0 : hh_r[0]
+      f.minute = mm_r[0] < 0 ? 0 : mm_r[0]
       f.seconds = ss_r[0] < 0 ? 0 : ss_r[0]
       pos = ss_r[1]
 
@@ -1764,7 +1860,7 @@ def _auto_parse(s) {
       }
       var tz = _parse_tz(s, pos)
       f.gmt_offset = tz[0]
-      f.zone       = tz[2]
+      f.zone = tz[2]
     }
     return _fields_to_date(f)
   }
@@ -1775,15 +1871,15 @@ def _auto_parse(s) {
   # ------------------------------------------------------------------
   if s.match('/^\\d{4}-\\d{1,2}-\\d{1,2}/') {
     var yr_r = _scan_int(s, 0, 4)
-    var pos  = _skip_char(s, yr_r[1], '-')
+    var pos = _skip_char(s, yr_r[1], '-')
     var mo_r = _scan_int(s, pos, 2)
-    pos      = _skip_char(s, mo_r[1], '-')
+    pos = _skip_char(s, mo_r[1], '-')
     var dy_r = _scan_int(s, pos, 2)
-    pos      = dy_r[1]
+    pos = dy_r[1]
 
-    f.year   = yr_r[0]
-    f.month  = mo_r[0]
-    f.day    = dy_r[0]
+    f.year = yr_r[0]
+    f.month = mo_r[0]
+    f.day = dy_r[0]
 
     if pos < s.length() and (s[pos] == 'T' or s[pos] == 't' or s[pos] == ' ') {
       pos++
@@ -1791,15 +1887,15 @@ def _auto_parse(s) {
       var hh_r = _scan_int(s, pos, 2)
       if hh_r[0] >= 0 {
         f.hour = hh_r[0]
-        pos    = _skip_char(s, hh_r[1], ':')
+        pos = _skip_char(s, hh_r[1], ':')
         var mm_r = _scan_int(s, pos, 2)
         if mm_r[0] >= 0 {
           f.minute = mm_r[0]
-          pos      = _skip_char(s, mm_r[1], ':')
+          pos = _skip_char(s, mm_r[1], ':')
           var ss_r = _scan_int(s, pos, 2)
           if ss_r[0] >= 0 {
             f.seconds = ss_r[0]
-            pos       = ss_r[1]
+            pos = ss_r[1]
           }
         }
         # Fractional seconds
@@ -1822,7 +1918,7 @@ def _auto_parse(s) {
         }
         var tz = _parse_tz(s, pos)
         f.gmt_offset = tz[0]
-        f.zone       = tz[2]
+        f.zone = tz[2]
       }
     }
     return _fields_to_date(f)
@@ -1848,46 +1944,56 @@ def _auto_parse(s) {
 
     # Day
     var dy_r = _scan_int(str, pos, 2)
-    if dy_r[0] < 0 return nil
+    if dy_r[0] < 0 {
+      return nil
+    }
     pos = _skip_space(str, dy_r[1])
 
     # Month name
-    if !_is_alpha_ch(str[pos]) return nil
+    if !_is_alpha_ch(str[pos]) {
+      return nil
+    }
     var mn_r = _scan_alpha(str, pos)
-    if !_month_name_map.contains(mn_r[0]) return nil
+    if !_month_name_map.contains(mn_r[0]) {
+      return nil
+    }
     pos = _skip_space(str, mn_r[1])
 
     # Year (2 or 4 digits)
     var yr_r = _scan_int(str, pos, 4)
-    if yr_r[0] < 0 return nil
+    if yr_r[0] < 0 {
+      return nil
+    }
     var year = yr_r[0]
-    if year < 100 year += year < 70 ? 2000 : 1900   # 2-digit year heuristic
+    if year < 100 {
+      year += year < 70 ? 2000 : 1900 # 2-digit year heuristic
+    }
     pos = _skip_space(str, yr_r[1])
 
     var ff = _default_fields()
-    ff.year  = year
+    ff.year = year
     ff.month = _month_name_map[mn_r[0]]
-    ff.day   = dy_r[0]
+    ff.day = dy_r[0]
 
     # Optional time
     var hh_r = _scan_int(str, pos, 2)
     if hh_r[0] >= 0 {
       ff.hour = hh_r[0]
-      pos     = _skip_char(str, hh_r[1], ':')
+      pos = _skip_char(str, hh_r[1], ':')
       var mm_r = _scan_int(str, pos, 2)
       if mm_r[0] >= 0 {
         ff.minute = mm_r[0]
-        pos       = _skip_char(str, mm_r[1], ':')
-        var ss_r  = _scan_int(str, pos, 2)
+        pos = _skip_char(str, mm_r[1], ':')
+        var ss_r = _scan_int(str, pos, 2)
         if ss_r[0] >= 0 {
           ff.seconds = ss_r[0]
-          pos        = ss_r[1]
+          pos = ss_r[1]
         }
       }
       pos = _skip_space(str, pos)
       var tz = _parse_tz(str, pos)
       ff.gmt_offset = tz[0]
-      ff.zone       = tz[2]
+      ff.zone = tz[2]
     }
     return _fields_to_date(ff)
   }
@@ -1912,39 +2018,49 @@ def _auto_parse(s) {
       }
     }
 
-    if pos >= str.length() or !_is_alpha_ch(str[pos]) return nil
+    if pos >= str.length() or !_is_alpha_ch(str[pos]) {
+      return nil
+    }
     var mn_r = _scan_alpha(str, pos)
-    if !_month_name_map.contains(mn_r[0]) return nil
+    if !_month_name_map.contains(mn_r[0]) {
+      return nil
+    }
     pos = _skip_space(str, mn_r[1])
 
     var dy_r = _scan_int(str, pos, 2)
-    if dy_r[0] < 0 return nil
+    if dy_r[0] < 0 {
+      return nil
+    }
     pos = _skip_char(str, dy_r[1], ',')
     pos = _skip_space(str, pos)
 
     var yr_r = _scan_int(str, pos, 4)
-    if yr_r[0] < 0 return nil
+    if yr_r[0] < 0 {
+      return nil
+    }
     var year = yr_r[0]
-    if year < 100 year += year < 70 ? 2000 : 1900
+    if year < 100 {
+      year += year < 70 ? 2000 : 1900
+    }
     pos = _skip_space(str, yr_r[1])
 
     var ff = _default_fields()
-    ff.year  = year
+    ff.year = year
     ff.month = _month_name_map[mn_r[0]]
-    ff.day   = dy_r[0]
+    ff.day = dy_r[0]
 
     var hh_r = _scan_int(str, pos, 2)
     if hh_r[0] >= 0 {
       ff.hour = hh_r[0]
-      pos     = _skip_char(str, hh_r[1], ':')
+      pos = _skip_char(str, hh_r[1], ':')
       var mm_r = _scan_int(str, pos, 2)
       if mm_r[0] >= 0 {
         ff.minute = mm_r[0]
-        pos       = _skip_char(str, mm_r[1], ':')
-        var ss_r  = _scan_int(str, pos, 2)
+        pos = _skip_char(str, mm_r[1], ':')
+        var ss_r = _scan_int(str, pos, 2)
         if ss_r[0] >= 0 {
           ff.seconds = ss_r[0]
-          pos        = ss_r[1]
+          pos = ss_r[1]
         }
       }
       pos = _skip_space(str, pos)
@@ -1958,7 +2074,7 @@ def _auto_parse(s) {
       pos = _skip_space(str, pos)
       var tz = _parse_tz(str, pos)
       ff.gmt_offset = tz[0]
-      ff.zone       = tz[2]
+      ff.zone = tz[2]
     }
 
     return _fields_to_date(ff)
@@ -1968,26 +2084,32 @@ def _auto_parse(s) {
   # 5. Slash / dot / hyphen numeric: MM/DD/YYYY, DD.MM.YYYY, YYYY/MM/DD, etc.
   # ------------------------------------------------------------------
   var _try_numeric_separated = @(str) {
-    var pos  = 0
-    var a_r  = _scan_int(str, pos, 4)
-    if a_r[0] < 0 
+    var pos = 0
+    var a_r = _scan_int(str, pos, 4)
+    if a_r[0] < 0 {
       return nil
+    }
     pos = a_r[1]
 
-    if pos >= str.length() 
+    if pos >= str.length() {
       return nil
-    var sep  = str[pos]
-    if sep != '/' and sep != '.' and sep != '-' 
+    }
+    var sep = str[pos]
+    if sep != '/' and sep != '.' and sep != '-' {
       return nil
+    }
     pos++
 
     var b_r = _scan_int(str, pos, 4)
-    if b_r[0] < 0 return nil
+    if b_r[0] < 0 {
+      return nil
+    }
     pos = _skip_char(str, b_r[1], sep)
 
     var c_r = _scan_int(str, pos, 4)
-    if c_r[0] < 0 
+    if c_r[0] < 0 {
       return nil
+    }
     pos = c_r[1]
 
     var a = a_r[0], b = b_r[0], c = c_r[0]
@@ -1995,41 +2117,53 @@ def _auto_parse(s) {
 
     # YYYY/MM/DD (first field is 4-digit year)
     if a > 31 {
-      year = a; month = b; day = c
+      year = a
+      month = b
+      day = c
     }
     # DD.MM.YYYY or DD/MM/YYYY where day > 12
     else if a > 12 {
-      day = a; month = b; year = c
+      day = a
+      month = b
+      year = c
     }
     # MM/DD/YYYY where month <= 12, day > 12
     else if c > 31 {
       # Last field is year: determine order of first two
       year = c
-      if b > 12 { day = b; month = a }
-      else       { month = a; day = b }   # MM/DD ambiguity → US convention
-    }
-    else {
-      return nil   # cannot resolve unambiguously
+      if b > 12 {
+        day = b
+        month = a
+      } else {
+        month = a
+        day = b
+      } # MM/DD ambiguity → US convention
+    } else {
+      return nil # cannot resolve unambiguously
     }
 
-    if year < 100 year += year < 70 ? 2000 : 1900
+    if year < 100 {
+      year += year < 70 ? 2000 : 1900
+    }
 
     var ff = _default_fields()
-    ff.year = year; ff.month = month; ff.day = day
+    ff.year = year
+    ff.month = month
+    ff.day = day
 
     pos = _skip_space(str, pos)
     var hh_r = _scan_int(str, pos, 2)
     if hh_r[0] >= 0 {
       ff.hour = hh_r[0]
-      pos     = _skip_char(str, hh_r[1], ':')
+      pos = _skip_char(str, hh_r[1], ':')
       var mm_r = _scan_int(str, pos, 2)
       if mm_r[0] >= 0 {
         ff.minute = mm_r[0]
-        pos       = _skip_char(str, mm_r[1], ':')
-        var ss_r  = _scan_int(str, pos, 2)
+        pos = _skip_char(str, mm_r[1], ':')
+        var ss_r = _scan_int(str, pos, 2)
         if ss_r[0] >= 0 {
           ff.seconds = ss_r[0]
-          pos        = ss_r[1]
+          pos = ss_r[1]
         }
       }
       pos = _skip_space(str, pos)
@@ -2043,7 +2177,7 @@ def _auto_parse(s) {
       pos = _skip_space(str, pos)
       var tz = _parse_tz(str, pos)
       ff.gmt_offset = tz[0]
-      ff.zone       = tz[2]
+      ff.zone = tz[2]
     }
     return _fields_to_date(ff)
   }
@@ -2052,26 +2186,30 @@ def _auto_parse(s) {
   # 6. Time-only: HH:MM[:SS][.ffffff] [AM|PM] [tz]
   # ------------------------------------------------------------------
   var _try_time_only = @(str) {
-    var pos  = 0
+    var pos = 0
     var hh_r = _scan_int(str, pos, 2)
-    if hh_r[0] < 0 or hh_r[0] > 23 
+    if hh_r[0] < 0 or hh_r[0] > 23 {
       return nil
+    }
     pos = hh_r[1]
-    if pos >= str.length() or str[pos] != ':' 
+    if pos >= str.length() or str[pos] != ':' {
       return nil
+    }
     pos++
 
     var mm_r = _scan_int(str, pos, 2)
-    if mm_r[0] < 0 
+    if mm_r[0] < 0 {
       return nil
+    }
     pos = mm_r[1]
 
     var ss = 0
     if pos < str.length() and str[pos] == ':' {
       pos++
       var ss_r = _scan_int(str, pos, 2)
-      if ss_r[0] >= 0 { 
-        ss = ss_r[0]; pos = ss_r[1] 
+      if ss_r[0] >= 0 {
+        ss = ss_r[0]
+        pos = ss_r[1]
       }
     }
 
@@ -2079,8 +2217,9 @@ def _auto_parse(s) {
     if pos < str.length() and str[pos] == '.' {
       pos++
       var us_r = _scan_int(str, pos, 6)
-      if us_r[0] >= 0 { 
-        us = us_r[0]; pos = us_r[1] 
+      if us_r[0] >= 0 {
+        us = us_r[0]
+        pos = us_r[1]
       }
     }
 
@@ -2090,7 +2229,7 @@ def _auto_parse(s) {
       var ap_r = _scan_alpha(str, pos)
       if ap_r[0] == 'am' or ap_r[0] == 'pm' {
         am_pm = ap_r[0]
-        pos   = ap_r[1]
+        pos = ap_r[1]
       }
     }
 
@@ -2098,13 +2237,13 @@ def _auto_parse(s) {
     var tz = _parse_tz(str, pos)
 
     var ff = _default_fields()
-    ff.hour         = hh_r[0]
-    ff.minute       = mm_r[0]
-    ff.seconds      = ss
+    ff.hour = hh_r[0]
+    ff.minute = mm_r[0]
+    ff.seconds = ss
     ff.microseconds = us
-    ff.am_pm        = am_pm
-    ff.gmt_offset   = tz[0]
-    ff.zone         = tz[2]
+    ff.am_pm = am_pm
+    ff.gmt_offset = tz[0]
+    ff.zone = tz[2]
     return _fields_to_date(ff)
   }
 
@@ -2114,24 +2253,29 @@ def _auto_parse(s) {
   # RFC 2822 heuristic: starts with alpha
   if _is_alpha_ch(s[0]) {
     r = _try_alpha_month_first(s)
-    if r != nil 
+    if r != nil {
       return r
+    }
     r = _try_rfc2822(s)
-    if r != nil 
+    if r != nil {
       return r
+    }
   }
 
   # Numeric: starts with digit
   if _is_digit(s[0]) {
     r = _try_rfc2822(s)
-    if r != nil 
+    if r != nil {
       return r
+    }
     r = _try_numeric_separated(s)
-    if r != nil 
+    if r != nil {
       return r
+    }
     r = _try_time_only(s)
-    if r != nil 
+    if r != nil {
       return r
+    }
   }
 
   raise ValueError('unable to parse date string: "${s}"')
@@ -2177,15 +2321,19 @@ def _auto_parse(s) {
 #   N, w, z, W, S, t, L, I : output-only fields (skipped in input)
 
 def _format_parse(s, fmt) {
-  if !is_string(s)   raise TypeError('input must be a string')
-  if !is_string(fmt) raise TypeError('format must be a string')
+  if !is_string(s) {
+    raise TypeError('input must be a string')
+  }
+  if !is_string(fmt) {
+    raise TypeError('format must be a string')
+  }
 
   # Shorthand passthrough for composite format directives
   if fmt == 'c' or fmt == 'r' {
     return _auto_parse(s)
   }
 
-  var f    = _default_fields()
+  var f = _default_fields()
   var spos = 0
   var flen = fmt.length()
   var slen = s.length()
@@ -2196,12 +2344,14 @@ def _format_parse(s, fmt) {
     # Backslash escape: literal match
     if fc == '\\' {
       fi++
-      if fi >= flen break
+      if fi >= flen {
+        break
+      }
       var lit = fmt[fi]
 
-      if spos < slen and s[spos] == lit { 
+      if spos < slen and s[spos] == lit {
         spos++
-        continue 
+        continue
       }
 
       raise ValueError('parse_format: expected literal "${lit}" at position ${spos} in "${s}"')
@@ -2217,7 +2367,7 @@ def _format_parse(s, fmt) {
         }
 
         f.year = r[0]
-        spos   = r[1]
+        spos = r[1]
       }
       when 'y' {
         var r = _scan_int(s, spos, 2)
@@ -2226,7 +2376,7 @@ def _format_parse(s, fmt) {
         }
 
         f.year = r[0] < 70 ? 2000 + r[0] : 1900 + r[0]
-        spos   = r[1]
+        spos = r[1]
       }
 
       # ---- Month ----
@@ -2237,7 +2387,7 @@ def _format_parse(s, fmt) {
         }
 
         f.month = r[0]
-        spos    = r[1]
+        spos = r[1]
       }
       when 'n' {
         var r = _scan_int(s, spos, 2)
@@ -2246,7 +2396,7 @@ def _format_parse(s, fmt) {
         }
 
         f.month = r[0]
-        spos    = r[1]
+        spos = r[1]
       }
       when 'M' {
         var r = _scan_alpha(s, spos)
@@ -2255,7 +2405,7 @@ def _format_parse(s, fmt) {
         }
 
         f.month = _month_name_map[r[0]]
-        spos    = r[1]
+        spos = r[1]
       }
       when 'F' {
         var r = _scan_alpha(s, spos)
@@ -2264,7 +2414,7 @@ def _format_parse(s, fmt) {
         }
 
         f.month = _month_name_map[r[0]]
-        spos    = r[1]
+        spos = r[1]
       }
 
       # ---- Day ----
@@ -2275,7 +2425,7 @@ def _format_parse(s, fmt) {
         }
 
         f.day = r[0]
-        spos  = r[1]
+        spos = r[1]
       }
       when 'j' {
         var r = _scan_int(s, spos, 2)
@@ -2284,17 +2434,17 @@ def _format_parse(s, fmt) {
         }
 
         f.day = r[0]
-        spos  = r[1]
+        spos = r[1]
       }
 
       # ---- Weekday (consumed but ignored) ----
       when 'D' {
         var r = _scan_alpha(s, spos)
-        spos  = r[1]   # skip abbreviated weekday
+        spos = r[1] # skip abbreviated weekday
       }
       when 'l' {
         var r = _scan_alpha(s, spos)
-        spos  = r[1]   # skip full weekday
+        spos = r[1] # skip full weekday
       }
 
       # ---- Hour ----
@@ -2305,7 +2455,7 @@ def _format_parse(s, fmt) {
         }
 
         f.hour = r[0]
-        spos   = r[1]
+        spos = r[1]
       }
       when 'G' {
         var r = _scan_int(s, spos, 2)
@@ -2314,7 +2464,7 @@ def _format_parse(s, fmt) {
         }
 
         f.hour = r[0]
-        spos   = r[1]
+        spos = r[1]
       }
       when 'h' {
         var r = _scan_int(s, spos, 2)
@@ -2323,7 +2473,7 @@ def _format_parse(s, fmt) {
         }
 
         f.hour = r[0]
-        spos   = r[1]
+        spos = r[1]
       }
       when 'g' {
         var r = _scan_int(s, spos, 2)
@@ -2332,7 +2482,7 @@ def _format_parse(s, fmt) {
         }
 
         f.hour = r[0]
-        spos   = r[1]
+        spos = r[1]
       }
 
       # ---- Minute ----
@@ -2343,7 +2493,7 @@ def _format_parse(s, fmt) {
         }
 
         f.minute = r[0]
-        spos     = r[1]
+        spos = r[1]
       }
 
       # ---- Seconds ----
@@ -2354,17 +2504,23 @@ def _format_parse(s, fmt) {
         }
 
         f.seconds = r[0]
-        spos      = r[1]
+        spos = r[1]
       }
 
       # ---- Subseconds ----
       when 'u' {
         var r = _scan_int(s, spos, 6)
-        if r[0] >= 0 { f.microseconds = r[0]; spos = r[1] }
+        if r[0] >= 0 {
+          f.microseconds = r[0]
+          spos = r[1]
+        }
       }
       when 'v' {
         var r = _scan_int(s, spos, 3)
-        if r[0] >= 0 { f.microseconds = r[0] * 1000; spos = r[1] }
+        if r[0] >= 0 {
+          f.microseconds = r[0] * 1000
+          spos = r[1]
+        }
       }
 
       # ---- AM / PM ----
@@ -2376,7 +2532,7 @@ def _format_parse(s, fmt) {
         }
 
         f.am_pm = v
-        spos    = r[1]
+        spos = r[1]
       }
       when 'a' {
         var r = _scan_alpha(s, spos)
@@ -2386,37 +2542,43 @@ def _format_parse(s, fmt) {
         }
 
         f.am_pm = v
-        spos    = r[1]
+        spos = r[1]
       }
 
       # ---- Timezone ----
       when 'e' {
         var r = _scan_alpha(s, spos)
-        if r[0].length() > 0 { 
-          f.zone = r[0].upper(); spos = r[1] 
+        if r[0].length() > 0 {
+          f.zone = r[0].upper()
+          spos = r[1]
         }
       }
       when 'O' {
         var tz = _parse_tz(s, spos)
         f.gmt_offset = tz[0]
-        f.zone       = tz[2]
-        spos         = tz[1]
+        f.zone = tz[2]
+        spos = tz[1]
       }
       when 'P' {
         var tz = _parse_tz(s, spos)
         f.gmt_offset = tz[0]
-        f.zone       = tz[2]
-        spos         = tz[1]
+        f.zone = tz[2]
+        spos = tz[1]
       }
       when 'Z' {
         # Offset in seconds: may be signed integer
         var sign = 1
         if spos < slen and (s[spos] == '+' or s[spos] == '-') {
-          if s[spos] == '-' sign = -1
+          if s[spos] == '-' {
+            sign = -1
+          }
           spos++
         }
         var r = _scan_int(s, spos, 6)
-        if r[0] >= 0 { f.gmt_offset = sign * r[0]; spos = r[1] }
+        if r[0] >= 0 {
+          f.gmt_offset = sign * r[0]
+          spos = r[1]
+        }
       }
 
       # ---- Output-only fields (skipped without consuming input) ----
@@ -2428,33 +2590,80 @@ def _format_parse(s, fmt) {
         # Skip up to 2 alpha chars (st/nd/rd/th)
         if spos < slen and _is_alpha_ch(s[spos]) {
           spos++
-          if spos < slen and _is_alpha_ch(s[spos]) spos++
+          if spos < slen and _is_alpha_ch(s[spos]) {
+            spos++
+          }
         }
       }
-      when 't' { var r = _scan_int(s, spos, 2); if r[0] >= 0 spos = r[1] }
-      when 'L' { var r = _scan_int(s, spos, 1); if r[0] >= 0 spos = r[1] }
-      when 'N' { var r = _scan_int(s, spos, 1); if r[0] >= 0 spos = r[1] }
-      when 'w' { var r = _scan_int(s, spos, 1); if r[0] >= 0 spos = r[1] }
-      when 'z' { var r = _scan_int(s, spos, 3); if r[0] >= 0 spos = r[1] }
-      when 'W' { var r = _scan_int(s, spos, 2); if r[0] >= 0 spos = r[1] }
-      when 'I' { var r = _scan_int(s, spos, 1); if r[0] >= 0 spos = r[1] }
+      when 't' {
+        var r = _scan_int(s, spos, 2)
+        if r[0] >= 0 {
+          spos = r[1]
+        }
+      }
+      when 'L' {
+        var r = _scan_int(s, spos, 1)
+        if r[0] >= 0 {
+          spos = r[1]
+        }
+      }
+      when 'N' {
+        var r = _scan_int(s, spos, 1)
+        if r[0] >= 0 {
+          spos = r[1]
+        }
+      }
+      when 'w' {
+        var r = _scan_int(s, spos, 1)
+        if r[0] >= 0 {
+          spos = r[1]
+        }
+      }
+      when 'z' {
+        var r = _scan_int(s, spos, 3)
+        if r[0] >= 0 {
+          spos = r[1]
+        }
+      }
+      when 'W' {
+        var r = _scan_int(s, spos, 2)
+        if r[0] >= 0 {
+          spos = r[1]
+        }
+      }
+      when 'I' {
+        var r = _scan_int(s, spos, 1)
+        if r[0] >= 0 {
+          spos = r[1]
+        }
+      }
 
       # ---- Composite directives ----
       when 'c' {
         # ISO 8601 full: delegate to auto-parser for the rest of the string
         var d2 = _auto_parse(s[spos,])
-        f.year = d2.year; f.month = d2.month; f.day = d2.day
-        f.hour = d2.hour; f.minute = d2.minute; f.seconds = d2.seconds
+        f.year = d2.year
+        f.month = d2.month
+        f.day = d2.day
+        f.hour = d2.hour
+        f.minute = d2.minute
+        f.seconds = d2.seconds
         f.microseconds = d2.microseconds
-        f.gmt_offset = d2.gmt_offset; f.zone = d2.zone
-        spos = slen   # consumed remainder
+        f.gmt_offset = d2.gmt_offset
+        f.zone = d2.zone
+        spos = slen # consumed remainder
       }
       when 'r' {
         var d2 = _auto_parse(s[spos,])
-        f.year = d2.year; f.month = d2.month; f.day = d2.day
-        f.hour = d2.hour; f.minute = d2.minute; f.seconds = d2.seconds
+        f.year = d2.year
+        f.month = d2.month
+        f.day = d2.day
+        f.hour = d2.hour
+        f.minute = d2.minute
+        f.seconds = d2.seconds
         f.microseconds = d2.microseconds
-        f.gmt_offset = d2.gmt_offset; f.zone = d2.zone
+        f.gmt_offset = d2.gmt_offset
+        f.zone = d2.zone
         spos = slen
       }
 
@@ -2474,7 +2683,6 @@ def _format_parse(s, fmt) {
 
   return _fields_to_date(f)
 }
-
 
 /**
  * Parses a date string into a `Date` instance, automatically
@@ -2544,7 +2752,6 @@ def _format_parse(s, fmt) {
 def parse(date_string) {
   return _auto_parse(date_string)
 }
-
 
 /**
  * Parses a date string using an explicit format pattern and
@@ -2637,7 +2844,6 @@ def parse(date_string) {
 def parse_format(date_string, format) {
   return _format_parse(date_string, format)
 }
-
 
 /**
  * Returns a new `Date` instance representing the given system

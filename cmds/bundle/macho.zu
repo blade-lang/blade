@@ -115,7 +115,7 @@ def embed(runtime: bytes, payload: bytes, identifier: string) {
   # would end up inside the payload's span.
   if strings_end > cut or cut - strings_end >= 16 {
     raise CommandError(
-      'the runtime has data after its string table, so it cannot carry a payload'
+      'the runtime has data after its string table, so it cannot carry a payload',
     )
   }
 
@@ -123,7 +123,7 @@ def embed(runtime: bytes, payload: bytes, identifier: string) {
 
   if linkedit_end != runtime.length() {
     raise CommandError(
-      'the runtime has data past its __LINKEDIT segment, so it cannot carry a payload'
+      'the runtime has data past its __LINKEDIT segment, so it cannot carry a payload',
     )
   }
 
@@ -176,13 +176,13 @@ def _read(data: bytes) {
 
   if big == _FAT_MAGIC or big == _FAT_MAGIC_64 {
     raise CommandError(
-      'the runtime is a universal binary; a single-file bundle is built from one architecture'
+      'the runtime is a universal binary; a single-file bundle is built from one architecture',
     )
   }
 
   var header = struct.unpack(
     'V:magic/V:cputype/V:subtype/V:filetype/V:ncmds/V:sizeofcmds',
-    data
+    data,
   )
 
   if header.magic != _MH_MAGIC_64 or header.filetype != _MH_EXECUTE {
@@ -249,7 +249,7 @@ def _read_segment(data: bytes, at: number, image: dict) {
   var segment = struct.unpack(
     'Z16:name/P:vmaddr/P:vmsize/P:fileoff/P:filesize/V:maxprot/V:initprot/V:nsects',
     data,
-    at + 8
+    at + 8,
   )
 
   var entry = {
@@ -276,7 +276,9 @@ def _read_segment(data: bytes, at: number, image: dict) {
     section += _SECTION_SIZE
   }
 
-  if segment.fileoff > 0 and segment.filesize > 0 and segment.fileoff < image.first_data {
+  if segment.fileoff > 0
+    and segment.filesize > 0
+    and segment.fileoff < image.first_data {
     image.first_data = segment.fileoff
   }
 }
@@ -293,7 +295,9 @@ def _add_signature_command(data: bytes, image: dict) {
   }
 
   struct.pack_into('VVVV', data, at, _LC_CODE_SIGNATURE, 16, 0, 0)
-  struct.pack_into('VV', data, 16, image.ncmds + 1, image.commands_end + 16 - _HEADER_SIZE)
+  struct.pack_into(
+    'VV', data, 16, image.ncmds + 1, image.commands_end + 16 - _HEADER_SIZE,
+  )
 
   image.signature_at = at
 }
@@ -302,7 +306,8 @@ def _add_signature_command(data: bytes, image: dict) {
 # `strings_end`, which is where the payload ends.
 def _cover(data: bytes, image: dict, end: number, strings_end: number) {
   var filesize = end - image.linkedit.fileoff
-  var vmsize = ((filesize + _SEGMENT_ALIGN - 1) / _SEGMENT_ALIGN).floor() * _SEGMENT_ALIGN
+  var vmsize = ((filesize + _SEGMENT_ALIGN - 1) / _SEGMENT_ALIGN).floor()
+    * _SEGMENT_ALIGN
 
   if vmsize < image.linkedit.vmsize {
     vmsize = image.linkedit.vmsize
@@ -310,7 +315,9 @@ def _cover(data: bytes, image: dict, end: number, strings_end: number) {
 
   struct.pack_into('P', data, image.linkedit.at + 8 + 16 + 8, vmsize)
   struct.pack_into('P', data, image.linkedit.at + 8 + 16 + 24, filesize)
-  struct.pack_into('V', data, image.symtab.at + 20, strings_end - image.symtab.stroff)
+  struct.pack_into(
+    'V', data, image.symtab.at + 20, strings_end - image.symtab.stroff,
+  )
 }
 
 # How many bytes the signature takes for `code_length` bytes of code
@@ -355,7 +362,7 @@ def _sign(data: bytes, identity: bytes, text: dict) {
     0,
     text.fileoff,
     text.filesize,
-    _CS_EXECSEG_MAIN_BINARY
+    _CS_EXECSEG_MAIN_BINARY,
   )
 
   directory.extend(identity)
@@ -387,7 +394,7 @@ def _sign(data: bytes, identity: bytes, text: dict) {
     _CSSLOT_REQUIREMENTS,
     requirements_at,
     _CSSLOT_SIGNATURESLOT,
-    wrapper_at
+    wrapper_at,
   )
 
   blob.extend(directory)

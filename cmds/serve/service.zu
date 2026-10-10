@@ -108,7 +108,8 @@ def _published_dependencies(nyssa, found) {
       }
     }
 
-    if address == nil and nyssa.db.package_by_name(names.normalized(dependency.name)) == nil {
+    if address == nil
+      and nyssa.db.package_by_name(names.normalized(dependency.name)) == nil {
       raise ServiceError(422, 'unknown_dependency',
         "${dependency.name} is not published here; publish it first, or name the registry "
           + 'it comes from')
@@ -185,13 +186,17 @@ def publish(nyssa, token: dict, data: bytes, metadata: dict, address: string) {
   fsx.remove(staged)
 
   if !files.contains('project.toml') {
-    raise ServiceError(422, 'bad_archive', 'the archive holds no project.toml at its root')
+    raise ServiceError(
+      422, 'bad_archive', 'the archive holds no project.toml at its root',
+    )
   }
 
   var found
 
   catch {
-    found = manifest_module.parse(files.get('project.toml').to_string(), 'project.toml')
+    found = manifest_module.parse(
+      files.get('project.toml').to_string(), 'project.toml',
+    )
   } as error {
     raise ServiceError(422, 'bad_manifest', error.message)
   }
@@ -200,7 +205,9 @@ def publish(nyssa, token: dict, data: bytes, metadata: dict, address: string) {
   var version = found.version()
 
   if name == nil or version == nil {
-    raise ServiceError(422, 'bad_manifest', 'project.toml must state a name and a version')
+    raise ServiceError(
+      422, 'bad_manifest', 'project.toml must state a name and a version',
+    )
   }
 
   catch {
@@ -210,12 +217,15 @@ def publish(nyssa, token: dict, data: bytes, metadata: dict, address: string) {
   }
 
   if !semver.is_valid(version) {
-    raise ServiceError(422, 'bad_version', "'${version}' is not a valid version")
+    raise ServiceError(
+      422, 'bad_version', "'${version}' is not a valid version",
+    )
   }
 
   version = semver.parse(version).to_string()
 
-  if metadata.get('name', nil) != name or metadata.get('version', nil) != version {
+  if metadata.get('name', nil) != name
+    or metadata.get('version', nil) != version {
     raise ServiceError(422, 'metadata_mismatch',
       'the upload says ${metadata.get("name", "?")} ${metadata.get("version", "?")}, and '
         + 'its project.toml says ${name} ${version}')
@@ -224,7 +234,9 @@ def publish(nyssa, token: dict, data: bytes, metadata: dict, address: string) {
   var description = found.text('description')
 
   if description == nil or description.trim().is_empty() {
-    raise ServiceError(422, 'missing_description', 'project.toml must describe the package')
+    raise ServiceError(
+      422, 'missing_description', 'project.toml must describe the package',
+    )
   }
 
   var zuri_range = nil
@@ -247,10 +259,13 @@ def publish(nyssa, token: dict, data: bytes, metadata: dict, address: string) {
     raise ServiceError(422, 'bad_manifest', error.message)
   }
 
-  var readme_name = found.text('readme') == nil ? 'README.md' : found.text('readme')
+  var readme_name = found.text('readme') == nil
+    ? 'README.md'
+    : found.text('readme')
   var readme = nil
 
-  if files.contains(readme_name) and files.get(readme_name).length() <= MAX_README {
+  if files.contains(readme_name)
+    and files.get(readme_name).length() <= MAX_README {
     catch {
       readme = files.get(readme_name).to_string()
     } as error {
@@ -276,7 +291,9 @@ def publish(nyssa, token: dict, data: bytes, metadata: dict, address: string) {
       }
 
       if !nyssa.db.is_owner(package.id, token.publisher_id) {
-        raise ServiceError(403, 'not_owner', 'you are not an owner of ${package.name}')
+        raise ServiceError(
+          403, 'not_owner', 'you are not an owner of ${package.name}',
+        )
       }
 
       var existing = nyssa.db.version_of(package.id, version_key)
@@ -284,7 +301,8 @@ def publish(nyssa, token: dict, data: bytes, metadata: dict, address: string) {
       if existing != nil {
         raise ServiceError(409, 'version_exists',
           '${name} ${existing.version} is already published, and a published version never '
-            + 'changes; publish a new version', { checksum: existing.checksum })
+            + 'changes; publish a new version',
+          { checksum: existing.checksum })
       }
     }
 
@@ -305,7 +323,10 @@ def publish(nyssa, token: dict, data: bytes, metadata: dict, address: string) {
 
     _refresh_package(nyssa, package.id, found)
 
-    nyssa.db.audit(token.publisher_id, 'publish', '${name} ${version}', { checksum }, address)
+    nyssa.db.audit(
+      token.publisher_id, 'publish', '${name} ${version}', { checksum },
+      address,
+    )
 
     return { name, version, checksum }
   })
@@ -373,17 +394,24 @@ def _manifest_text(row: dict) {
  * @param string address
  * @returns dict
  */
-def yank(nyssa, publisher_id: number, name: string, version: string, undo: bool, address: string) {
+def yank(
+  nyssa, publisher_id: number, name: string, version: string, undo: bool,
+  address: string,
+) {
   var package = _owned(nyssa, publisher_id, name)
 
   if !semver.is_valid(version) {
-    raise ServiceError(400, 'bad_version', "'${version}' is not a valid version")
+    raise ServiceError(
+      400, 'bad_version', "'${version}' is not a valid version",
+    )
   }
 
   var row = nyssa.db.version_of(package.id, _version_key(version))
 
   if row == nil {
-    raise ServiceError(404, 'not_found', '${package.name} has no version ${version}')
+    raise ServiceError(
+      404, 'not_found', '${package.name} has no version ${version}',
+    )
   }
 
   nyssa.db.transaction(@{
@@ -398,7 +426,9 @@ def yank(nyssa, publisher_id: number, name: string, version: string, undo: bool,
     })
     var action = undo ? 'unyank' : 'yank'
 
-    nyssa.db.audit(publisher_id, action, '${package.name} ${row.version}', nil, address)
+    nyssa.db.audit(
+      publisher_id, action, '${package.name} ${row.version}', nil, address,
+    )
   })
 
   return { name: package.name, version: row.version, yanked: !undo }
@@ -416,7 +446,9 @@ def yank(nyssa, publisher_id: number, name: string, version: string, undo: bool,
 def is_admin(nyssa, publisher_id) {
   var publisher = nyssa.db.publisher_by_id(publisher_id)
 
-  return publisher != nil and publisher.role == 'admin' and publisher.suspended_at == nil
+  return publisher != nil
+    and publisher.role == 'admin'
+    and publisher.suspended_at == nil
 }
 
 # The package, when `publisher_id` owns it or administers the
@@ -425,11 +457,16 @@ def _owned(nyssa, publisher_id: number, name: string) {
   var package = nyssa.db.package_by_name(names.normalized(name))
 
   if package == nil {
-    raise ServiceError(404, 'not_found', "there is no package called '${name}' here")
+    raise ServiceError(
+      404, 'not_found', "there is no package called '${name}' here",
+    )
   }
 
-  if !nyssa.db.is_owner(package.id, publisher_id) and !is_admin(nyssa, publisher_id) {
-    raise ServiceError(403, 'not_owner', 'you are not an owner of ${package.name}')
+  if !nyssa.db.is_owner(package.id, publisher_id)
+    and !is_admin(nyssa, publisher_id) {
+    raise ServiceError(
+      403, 'not_owner', 'you are not an owner of ${package.name}',
+    )
   }
 
   return package
@@ -446,7 +483,9 @@ def owners(nyssa, name: string) {
   var package = nyssa.db.package_by_name(names.normalized(name))
 
   if package == nil {
-    raise ServiceError(404, 'not_found', "there is no package called '${name}' here")
+    raise ServiceError(
+      404, 'not_found', "there is no package called '${name}' here",
+    )
   }
 
   return nyssa.db.owners_of(package.id)
@@ -462,16 +501,23 @@ def owners(nyssa, name: string) {
  * @param string address
  * @returns list[string]: the owners now.
  */
-def add_owner(nyssa, publisher_id: number, name: string, username: string, address: string) {
+def add_owner(
+  nyssa, publisher_id: number, name: string, username: string, address: string,
+) {
   var package = _owned(nyssa, publisher_id, name)
   var adding = nyssa.db.publisher_by_name(username)
 
   if adding == nil or adding.suspended_at != nil {
-    raise ServiceError(404, 'not_found', "there is no publisher called '${username}' here")
+    raise ServiceError(
+      404, 'not_found', "there is no publisher called '${username}' here",
+    )
   }
 
   nyssa.db.add_owner(package.id, adding.id)
-  nyssa.db.audit(publisher_id, 'add_owner', package.name, { owner: adding.username }, address)
+  nyssa.db.audit(
+    publisher_id, 'add_owner', package.name, { owner: adding.username },
+    address,
+  )
 
   return nyssa.db.owners_of(package.id)
 }
@@ -486,12 +532,16 @@ def add_owner(nyssa, publisher_id: number, name: string, username: string, addre
  * @param string address
  * @returns list[string]
  */
-def remove_owner(nyssa, publisher_id: number, name: string, username: string, address: string) {
+def remove_owner(
+  nyssa, publisher_id: number, name: string, username: string, address: string,
+) {
   var package = _owned(nyssa, publisher_id, name)
   var removing = nyssa.db.publisher_by_name(username)
 
   if removing == nil or !nyssa.db.is_owner(package.id, removing.id) {
-    raise ServiceError(404, 'not_found', '${username} is not an owner of ${package.name}')
+    raise ServiceError(
+      404, 'not_found', '${username} is not an owner of ${package.name}',
+    )
   }
 
   if nyssa.db.owners_of(package.id).length() <= 1 {
@@ -500,7 +550,10 @@ def remove_owner(nyssa, publisher_id: number, name: string, username: string, ad
   }
 
   nyssa.db.remove_owner(package.id, removing.id)
-  nyssa.db.audit(publisher_id, 'remove_owner', package.name, { owner: removing.username }, address)
+  nyssa.db.audit(
+    publisher_id, 'remove_owner', package.name, { owner: removing.username },
+    address,
+  )
 
   return nyssa.db.owners_of(package.id)
 }
@@ -517,7 +570,9 @@ def remove_owner(nyssa, publisher_id: number, name: string, username: string, ad
  */
 def create_account(nyssa, details: dict, address: string, by_admin: ?bool) {
   if by_admin != true and nyssa.settings.signup != 'open' {
-    raise ServiceError(403, 'signup_closed', 'this repository is not taking new accounts')
+    raise ServiceError(
+      403, 'signup_closed', 'this repository is not taking new accounts',
+    )
   }
 
   var username = details.get('username', '').to_string().trim()
@@ -530,7 +585,8 @@ def create_account(nyssa, details: dict, address: string, by_admin: ?bool) {
         + 'with a letter and ending with a letter or digit')
   }
 
-  if names.RESERVED.contains(username) or ['admin', 'root', 'api', 'www'].contains(username) {
+  if names.RESERVED.contains(username)
+    or ['admin', 'root', 'api', 'www'].contains(username) {
     raise ServiceError(422, 'bad_username', "'${username}' is reserved")
   }
 
@@ -545,11 +601,15 @@ def create_account(nyssa, details: dict, address: string, by_admin: ?bool) {
   }
 
   if nyssa.db.publisher_by_name(username) != nil {
-    raise ServiceError(409, 'username_taken', "the username '${username}' is taken")
+    raise ServiceError(
+      409, 'username_taken', "the username '${username}' is taken",
+    )
   }
 
   if nyssa.db.publisher_by_email(email) != nil {
-    raise ServiceError(409, 'email_taken', 'that email address already has an account')
+    raise ServiceError(
+      409, 'email_taken', 'that email address already has an account',
+    )
   }
 
   var recovery = auth.new_recovery_key()
@@ -572,7 +632,11 @@ def create_account(nyssa, details: dict, address: string, by_admin: ?bool) {
     send_confirmation(nyssa, id, email)
   }
 
-  return { publisher: nyssa.db.publisher_by_id(id), recovery_key: recovery.key, token }
+  return {
+    publisher: nyssa.db.publisher_by_id(id),
+    recovery_key: recovery.key,
+    token,
+  }
 }
 
 /**
@@ -585,7 +649,9 @@ def create_account(nyssa, details: dict, address: string, by_admin: ?bool) {
 def send_confirmation(nyssa, publisher_id: number, email: string) {
   var code = fsx.hex(crypto.random_bytes(24))
 
-  nyssa.db.create_code(auth.digest(code), publisher_id, 'confirm', time().floor() + 86400)
+  nyssa.db.create_code(
+    auth.digest(code), publisher_id, 'confirm', time().floor() + 86400,
+  )
   nyssa.send_mail(email, 'confirm your email address',
     'Confirm this address for your ${nyssa.settings.name} account by opening:\n\n'
       + '${nyssa.settings.public_url}/confirm/${code}\n\n'
@@ -608,8 +674,10 @@ def sign_in(nyssa, username: string, password: string, address: string) {
   var account_key = 'user:' + username.lower()
   var address_key = 'address:' + address
 
-  var held = nyssa.db.failures(account_key, auth.FAILURE_WINDOW) >= auth.MAX_FAILURES
-    or nyssa.db.failures(address_key, auth.FAILURE_WINDOW) >= auth.MAX_FAILURES * 4
+  var held = nyssa.db.failures(account_key, auth.FAILURE_WINDOW)
+    >= auth.MAX_FAILURES
+    or nyssa.db.failures(address_key, auth.FAILURE_WINDOW)
+      >= auth.MAX_FAILURES * 4
 
   if held {
     raise ServiceError(429, 'too_many_attempts',
@@ -629,7 +697,9 @@ def sign_in(nyssa, username: string, password: string, address: string) {
     nyssa.db.record_failure(account_key, auth.FAILURE_WINDOW)
     nyssa.db.record_failure(address_key, auth.FAILURE_WINDOW)
 
-    raise ServiceError(401, 'invalid_credentials', 'the username or the password is wrong')
+    raise ServiceError(
+      401, 'invalid_credentials', 'the username or the password is wrong',
+    )
   }
 
   if publisher.suspended_at != nil {
@@ -653,7 +723,9 @@ def sign_in(nyssa, username: string, password: string, address: string) {
  * @returns dict: `{ id, token, name, scopes, expires_at }`, the token
  *    in the clear, which is never available again.
  */
-def create_token(nyssa, publisher_id: number, name: ?string, scopes, days: ?number) {
+def create_token(
+  nyssa, publisher_id: number, name: ?string, scopes, days: ?number,
+) {
   var label = name == nil ? 'zuri' : name.trim()
 
   if label.is_empty() or label.length() > 64 {
@@ -671,7 +743,9 @@ def create_token(nyssa, publisher_id: number, name: ?string, scopes, days: ?numb
   var lifetime = days == nil ? DEFAULT_TOKEN_DAYS : days
 
   if !is_number(lifetime) or lifetime < 1 or lifetime > MAX_TOKEN_DAYS {
-    raise ServiceError(422, 'bad_expiry', 'a token lasts 1 to ${MAX_TOKEN_DAYS} days')
+    raise ServiceError(
+      422, 'bad_expiry', 'a token lasts 1 to ${MAX_TOKEN_DAYS} days',
+    )
   }
 
   var fresh = auth.new_token()
@@ -727,7 +801,9 @@ def tokens(nyssa, publisher_id: number) {
  * @param string address
  * @returns string: the new recovery key.
  */
-def recover(nyssa, username: string, key: string, password: string, address: string) {
+def recover(
+  nyssa, username: string, key: string, password: string, address: string,
+) {
   var account_key = 'recover:' + username.lower()
 
   if nyssa.db.failures(account_key, auth.FAILURE_WINDOW) >= auth.MAX_FAILURES {
@@ -737,10 +813,13 @@ def recover(nyssa, username: string, key: string, password: string, address: str
 
   var publisher = nyssa.db.publisher_by_name(username)
 
-  if publisher == nil or !auth.same(publisher.recovery_digest, auth.recovery_digest(key)) {
+  if publisher == nil
+    or !auth.same(publisher.recovery_digest, auth.recovery_digest(key)) {
     nyssa.db.record_failure(account_key, auth.FAILURE_WINDOW)
 
-    raise ServiceError(401, 'invalid_credentials', 'the username or the recovery key is wrong')
+    raise ServiceError(
+      401, 'invalid_credentials', 'the username or the recovery key is wrong',
+    )
   }
 
   var problem = auth.password_problem(password, publisher.username)
@@ -771,9 +850,13 @@ def recover(nyssa, username: string, key: string, password: string, address: str
  * @param string password
  * @param string address
  */
-def change_password(nyssa, publisher: dict, current: string, password: string, address: string) {
+def change_password(
+  nyssa, publisher: dict, current: string, password: string, address: string,
+) {
   if !auth.check_password(publisher.password_hash, current) {
-    raise ServiceError(401, 'invalid_credentials', 'the current password is wrong')
+    raise ServiceError(
+      401, 'invalid_credentials', 'the current password is wrong',
+    )
   }
 
   var problem = auth.password_problem(password, publisher.username)
@@ -783,7 +866,9 @@ def change_password(nyssa, publisher: dict, current: string, password: string, a
   }
 
   nyssa.db.set_password(publisher.id, auth.hash_password(password))
-  nyssa.db.audit(publisher.id, 'change_password', publisher.username, nil, address)
+  nyssa.db.audit(
+    publisher.id, 'change_password', publisher.username, nil, address,
+  )
 }
 
 /**
@@ -807,7 +892,9 @@ def request_reset(nyssa, email: string) {
 
   var code = fsx.hex(crypto.random_bytes(24))
 
-  nyssa.db.create_code(auth.digest(code), publisher.id, 'reset', time().floor() + CODE_LIFETIME)
+  nyssa.db.create_code(
+    auth.digest(code), publisher.id, 'reset', time().floor() + CODE_LIFETIME,
+  )
   nyssa.send_mail(publisher.email, 'reset your password',
     'Someone asked to reset the password for ${publisher.username}. To choose a new one, '
       + 'open:\n\n${nyssa.settings.public_url}/reset/${code}\n\n'
@@ -826,7 +913,9 @@ def complete_reset(nyssa, code: string, password: string, address: string) {
   var publisher_id = nyssa.db.use_code(auth.digest(code), 'reset')
 
   if publisher_id == nil {
-    raise ServiceError(410, 'expired', 'that link has expired or has already been used')
+    raise ServiceError(
+      410, 'expired', 'that link has expired or has already been used',
+    )
   }
 
   var publisher = nyssa.db.publisher_by_id(publisher_id)
@@ -838,7 +927,9 @@ def complete_reset(nyssa, code: string, password: string, address: string) {
 
   nyssa.db.set_password(publisher.id, auth.hash_password(password))
   nyssa.db.revoke_all_tokens(publisher.id)
-  nyssa.db.audit(publisher.id, 'reset_password', publisher.username, nil, address)
+  nyssa.db.audit(
+    publisher.id, 'reset_password', publisher.username, nil, address,
+  )
 }
 
 /**

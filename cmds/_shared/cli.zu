@@ -26,7 +26,8 @@ import .ui
  */
 def add_registry_option(parser) {
   parser.add_option(
-    'registry', 'The registry to use, by alias or address; the default one otherwise',
+    'registry',
+    'The registry to use, by alias or address; the default one otherwise',
     { short_name: 'r', type: args.STRING, metavar: 'registry' },
   )
   parser.add_option(
@@ -40,7 +41,9 @@ def add_registry_option(parser) {
  * @param parser
  */
 def add_json_option(parser) {
-  parser.add_option('json', 'Print the result as JSON, for another program to read', nil)
+  parser.add_option(
+    'json', 'Print the result as JSON, for another program to read', nil,
+  )
 }
 
 /**
@@ -56,7 +59,7 @@ def require_project(command: string) {
   if found == nil {
     raise UsageError(
       "there is no project.toml here or above; run 'zuri init' to start a project, or "
-        + 'pass --global to work on the packages installed for your user'
+        + 'pass --global to work on the packages installed for your user',
     )
   }
 
@@ -85,7 +88,9 @@ def local_manifest() {
 def registry_from(parsed, offline: ?bool) {
   var manifest = local_manifest()
   var aliases = config.registries(manifest)
-  var address = manifest_module.resolve_registry(parsed.options.get('registry', nil), aliases)
+  var address = manifest_module.resolve_registry(
+    parsed.options.get('registry', nil), aliases,
+  )
 
   return Registry(address, {
     token: config.token_for(address, aliases),
@@ -130,7 +135,7 @@ def report(outcome) {
   for hook in outcome.hooks_skipped {
     ui.complain(ui.warn(
       "  ${hook.name}'s ${hook.hook} hook was not run; allow it with "
-        + "[install] allow-hooks = [\"${hook.name}\"] in project.toml"
+        + "[install] allow-hooks = [\"${hook.name}\"] in project.toml",
     ))
   }
 
@@ -147,7 +152,7 @@ def report(outcome) {
 
   if !outcome.removed.is_empty() {
     summary.append(
-      '${would ? "would remove" : "removed"} ${ui.count(outcome.removed.length(), "package")}'
+      '${would ? "would remove" : "removed"} ${ui.count(outcome.removed.length(), "package")}',
     )
   }
 

@@ -154,7 +154,9 @@ def _always_out(path: string) {
 # Runs git quietly, answering its exit status and what it printed.
 def _git(root: string, arguments: list) {
   var child = spawn('git', ['-C', root] + arguments, {
-    stdout: 'pipe', stderr: 'pipe', stdin: 'null',
+    stdout: 'pipe',
+    stderr: 'pipe',
+    stdin: 'null',
   })
   var status = child.wait()
 
@@ -192,7 +194,8 @@ def in_git_tree(root: string) {
 # What git tracks, or would, under `root`, relative to it.
 def _git_candidates(root: string) {
   var child = spawn('git', [
-    '-C', root, 'ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', '.',
+    '-C', root, 'ls-files', '-z', '--cached', '--others', '--exclude-standard',
+    '--', '.',
   ], { stdout: 'pipe', stderr: 'pipe', stdin: 'null' })
 
   var status = child.wait()

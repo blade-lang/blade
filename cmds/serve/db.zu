@@ -30,7 +30,12 @@ import .._shared.fsx
 var _MIGRATIONS = os.join_paths(os.dir_name(__file__), 'migrations')
 
 # The engine a migration directory is named for. MariaDB reads MySQL's.
-var _SCHEMA_FOR = { sqlite: 'sqlite', postgres: 'postgres', mysql: 'mysql', mariadb: 'mysql' }
+var _SCHEMA_FOR = {
+  sqlite: 'sqlite',
+  postgres: 'postgres',
+  mysql: 'mysql',
+  mariadb: 'mysql',
+}
 
 /** The character `like_escape()` escapes with, which every engine accepts. */
 var LIKE_ESCAPE = '!'
@@ -44,7 +49,10 @@ var LIKE_ESCAPE = '!'
  * @returns string
  */
 def like_escape(text: string) {
-  return text.replace('!', '!!', false).replace('%', '!%', false).replace('_', '!_', false)
+  return text
+    .replace('!', '!!', false)
+    .replace('%', '!%', false)
+    .replace('_', '!_', false)
 }
 
 /**
@@ -114,7 +122,9 @@ class Database {
 
       # Write-ahead logging lets every worker read while one writes, and
       # a writer waits for another rather than failing at once.
-      self.connection = sql.open(connection_string, { journal_mode: 'wal', busy_timeout: 15000 })
+      self.connection = sql.open(
+        connection_string, { journal_mode: 'wal', busy_timeout: 15000 },
+      )
     } else {
       self.connection = sql.open(connection_string)
     }
@@ -156,10 +166,11 @@ class Database {
       'CREATE TABLE IF NOT EXISTS migrations ('
         + '  name VARCHAR(100) NOT NULL PRIMARY KEY,'
         + '  applied_at BIGINT NOT NULL'
-        + ')'
+        + ')',
     )
 
-    return self.connection.find('migrations', nil, { columns: ['name'], order: ['name'] })
+    return self.connection
+      .find('migrations', nil, { columns: ['name'], order: ['name'] })
       .column('name')
   }
 
@@ -224,7 +235,9 @@ class Database {
   # Publishers
 
   publisher_by_name(username: string) {
-    return self.connection.find_one('publishers', { username_key: username.lower() })
+    return self.connection.find_one(
+      'publishers', { username_key: username.lower() },
+    )
   }
 
   publisher_by_email(email: string) {
@@ -266,7 +279,9 @@ class Database {
   }
 
   set_suspended(id, suspended: bool) {
-    self.connection.update('publishers', { suspended_at: suspended ? _now() : nil }, { id })
+    self.connection.update(
+      'publishers', { suspended_at: suspended ? _now() : nil }, { id },
+    )
   }
 
   set_email_verified(id) {
@@ -298,7 +313,9 @@ class Database {
 
   tokens_of(publisher_id) {
     return self.connection.find('tokens', { publisher_id, revoked_at: nil }, {
-      columns: ['id', 'name', 'scopes', 'created_at', 'expires_at', 'last_used_at'],
+      columns: [
+        'id', 'name', 'scopes', 'created_at', 'expires_at', 'last_used_at',
+      ],
       order: ['created_at desc'],
     }).rows
   }
@@ -316,7 +333,9 @@ class Database {
   }
 
   revoke_all_tokens(publisher_id) {
-    self.connection.update('tokens', { revoked_at: _now() }, { publisher_id, revoked_at: nil })
+    self.connection.update(
+      'tokens', { revoked_at: _now() }, { publisher_id, revoked_at: nil },
+    )
   }
 
   # Sign-in failures, counted per key across every worker.
@@ -344,12 +363,15 @@ class Database {
           first_at: now,
         }, { returning: 'failure_key' })
       } else if now - row.first_at > window {
-        self.connection.update('login_failures', { failures: 1, first_at: now }, {
-          failure_key: key,
-        })
+        self.connection.update(
+          'login_failures', { failures: 1, first_at: now }, {
+            failure_key: key,
+          },
+        )
       } else {
         self.connection.exec(
-          'update login_failures set failures = failures + 1 where failure_key = ?', [key]
+          'update login_failures set failures = failures + 1 where failure_key = ?',
+          [key],
         )
       }
     })
@@ -375,7 +397,9 @@ class Database {
 
   # One-time codes: password resets and email confirmations.
 
-  create_code(digest: string, publisher_id, purpose: string, expires_at: number) {
+  create_code(
+    digest: string, publisher_id, purpose: string, expires_at: number,
+  ) {
     self.connection.insert('one_time_codes', {
       digest,
       publisher_id,
@@ -385,7 +409,9 @@ class Database {
   }
 
   use_code(digest: string, purpose: string) {
-    var row = self.connection.find_one('one_time_codes', { digest, purpose, used_at: nil })
+    var row = self.connection.find_one(
+      'one_time_codes', { digest, purpose, used_at: nil },
+    )
 
     if row == nil or row.expires_at <= _now() {
       return nil
@@ -438,7 +464,9 @@ class Database {
   }
 
   versions_of(package_id) {
-    return self.connection.find('versions', { package_id }, { order: ['published_at', 'id'] })
+    return self.connection.find(
+      'versions', { package_id }, { order: ['published_at', 'id'] },
+    )
       .rows
   }
 
@@ -464,21 +492,27 @@ class Database {
   }
 
   set_yanked(version_id, yanked: bool) {
-    self.connection.update('versions', { yanked_at: yanked ? _now() : nil }, { id: version_id })
+    self.connection.update(
+      'versions', { yanked_at: yanked ? _now() : nil }, { id: version_id },
+    )
   }
 
   add_downloads(version_id, package_id, count: number, day: string) {
-    self.connection.exec('update versions set downloads = downloads + ? where id = ?', [
-      count, version_id,
-    ])
-    self.connection.exec('update packages set downloads = downloads + ? where id = ?', [
-      count, package_id,
-    ])
+    self.connection.exec(
+      'update versions set downloads = downloads + ? where id = ?', [
+        count, version_id,
+      ],
+    )
+    self.connection.exec(
+      'update packages set downloads = downloads + ? where id = ?', [
+        count, package_id,
+      ],
+    )
 
     self._upsert(@{
       var moved = self.connection.exec(
         'update downloads_daily set downloads = downloads + ? where version_id = ? and day = ?',
-        [count, version_id, day]
+        [count, version_id, day],
       )
 
       if moved.rows_affected == 0 {
@@ -543,7 +577,7 @@ class Database {
       versions: self.connection.count('versions', nil),
       publishers: self.count_publishers(),
       downloads: _number(self.connection.fetch_value(
-        'select coalesce(sum(downloads), 0) from packages', [], 0
+        'select coalesce(sum(downloads), 0) from packages', [], 0,
       )),
     }
   }
@@ -552,7 +586,7 @@ class Database {
     return self.connection.fetch_all(
       'select * from packages where latest is not null order by downloads desc, name_key'
         + ' limit ${limit.floor()}',
-      []
+      [],
     )
   }
 
@@ -560,7 +594,7 @@ class Database {
     return self.connection.fetch_all(
       'select * from packages where latest is not null order by created_at desc, name_key'
         + ' limit ${limit.floor()}',
-      []
+      [],
     )
   }
 
@@ -568,7 +602,7 @@ class Database {
     return self.connection.fetch_all(
       'select * from packages where latest is not null order by updated_at desc, name_key'
         + ' limit ${limit.floor()}',
-      []
+      [],
     )
   }
 
@@ -619,7 +653,7 @@ class Database {
     }
 
     var total = self.connection.fetch_value(
-      'select count(*) from packages where ${where}', params, 0
+      'select count(*) from packages where ${where}', params, 0,
     )
 
     # A limit and an offset cannot be bound on every engine, so they go
@@ -627,7 +661,7 @@ class Database {
     var rows = self.connection.fetch_all(
       'select * from packages where ${where} order by ${order}'
         + ' limit ${limit.floor()} offset ${offset.floor()}',
-      params
+      params,
     )
 
     return { total, packages: rows }

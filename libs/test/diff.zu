@@ -31,7 +31,6 @@
 import .format
 import .style
 
-
 # The deepest nesting `render()` walks into before it stops describing
 # a difference in place and just prints the two subtrees. Deeper than
 # this and the annotated form stops being easier to read than the
@@ -42,7 +41,6 @@ var MAX_DIFF_DEPTH = 6
 # the rest. Enough to see the shape of the mismatch, few enough that
 # one bad assertion does not bury the report.
 var MAX_DIFF_LINES = 30
-
 
 # `pairs` holds the (expected, received) pairs currently being
 # compared further up the stack, as real values rather than
@@ -60,7 +58,6 @@ def _seen_pair(pairs, left, right) {
 
   return false
 }
-
 
 # Containers are decided here, element by element, and never by `==`.
 # Zuri's own `==` walks a list or a dictionary structurally with no
@@ -164,7 +161,6 @@ def _equal(left, right, pairs) {
   return left == right
 }
 
-
 # Through `format` rather than reaching for `zuri.reflect` again here.
 # `format` is the one place that knows how to look inside an instance,
 # so equality and rendering can never disagree about what an object
@@ -177,7 +173,6 @@ def _property(instance, name) {
   return format.property_of(instance, name)
 }
 
-
 /**
  * Whether `left` and `right` are structurally equal.
  *
@@ -188,7 +183,6 @@ def _property(instance, name) {
 def equal(left, right) {
   return _equal(left, right, [])
 }
-
 
 /**
  * Whether every key in `subset` is present in `value` with a
@@ -242,7 +236,6 @@ def subset(expected: dict, value) {
   return false
 }
 
-
 # One key's worth of the comparison: a dictionary of expectations
 # against a dictionary or an object recurses as a subset, and
 # anything else has to match outright.
@@ -253,7 +246,6 @@ def _entry_matches(wanted, actual) {
 
   return equal(wanted, actual)
 }
-
 
 def _marker_added(text) {
   return style.green('+ ' + text)
@@ -267,17 +259,19 @@ def _marker_same(text) {
   return style.dim('  ' + text)
 }
 
-
 def _header(lines) {
-  lines.append(style.dim('  ') + style.green('+ expected') + style.dim('  ') + style.red('- received'))
+  lines.append(
+    style.dim('  ')
+      + style.green('+ expected')
+      + style.dim('  ')
+      + style.red('- received'),
+  )
   lines.append('')
 }
-
 
 def _truncated(lines, remaining) {
   lines.append(style.dim('  ${style.symbols().ellipsis} ${format.plural(remaining, "more line")}'))
 }
-
 
 # A multi-line string is the case where a plain "expected X, received
 # Y" is least useful: the two are long, nearly identical, and the
@@ -314,11 +308,12 @@ def _string_diff(expected, received, lines) {
   }
 }
 
-
 # For two single-line strings, the useful thing is where they first
 # part company, marked under the text rather than described in prose.
 def _string_point(expected, received, lines) {
-  var limit = expected.length() < received.length() ? expected.length() : received.length()
+  var limit = expected.length() < received.length()
+    ? expected.length()
+    : received.length()
   var at = limit
 
   iter var index = 0; index < limit; index++ {
@@ -337,9 +332,10 @@ def _string_point(expected, received, lines) {
   lines.append(style.dim('  first difference at index ${at}'))
 }
 
-
 def _list_diff(expected, received, lines) {
-  var count = expected.length() > received.length() ? expected.length() : received.length()
+  var count = expected.length() > received.length()
+    ? expected.length()
+    : received.length()
   var shown = 0
 
   _header(lines)
@@ -353,21 +349,26 @@ def _list_diff(expected, received, lines) {
     var has_expected = index < expected.length()
     var has_received = index < received.length()
 
-    if has_expected and has_received and equal(expected[index], received[index]) {
+    if has_expected
+      and has_received
+      and equal(expected[index], received[index]) {
       lines.append(_marker_same('[${index}] ' + format.inline(expected[index])))
     } else {
       if has_received {
-        lines.append(_marker_removed('[${index}] ' + format.inline(received[index])))
+        lines.append(_marker_removed(
+          '[${index}] ' + format.inline(received[index]),
+        ))
       }
       if has_expected {
-        lines.append(_marker_added('[${index}] ' + format.inline(expected[index])))
+        lines.append(_marker_added(
+          '[${index}] ' + format.inline(expected[index]),
+        ))
       }
     }
 
     shown++
   }
 }
-
 
 def _keyed_diff(expected_keys, expected_at, received_keys, received_at, lines) {
   _header(lines)
@@ -383,7 +384,9 @@ def _keyed_diff(expected_keys, expected_at, received_keys, received_at, lines) {
     shown++
 
     if !received_keys.contains(key) {
-      lines.append(_marker_added('${key}: ' + format.inline(expected_at(key)) + style.dim('  (missing)')))
+      lines.append(_marker_added(
+        '${key}: ' + format.inline(expected_at(key)) + style.dim('  (missing)'),
+      ))
       continue
     }
 
@@ -403,16 +406,18 @@ def _keyed_diff(expected_keys, expected_at, received_keys, received_at, lines) {
       continue
     }
 
-    lines.append(_marker_removed('${key}: ' + format.inline(received_at(key)) + style.dim('  (unexpected)')))
+    lines.append(_marker_removed(
+      '${key}: '
+        + format.inline(received_at(key))
+        + style.dim('  (unexpected)'),
+    ))
   }
 }
-
 
 def _plain(expected, received, lines) {
   lines.append(_marker_added('expected  ' + format.inline(expected)))
   lines.append(_marker_removed('received  ' + format.inline(received)))
 }
-
 
 def _render(expected, received, depth) {
   var lines = []
@@ -423,8 +428,16 @@ def _render(expected, received, depth) {
   # Two different types is the whole story; annotating their insides
   # against each other would just be noise on top of it.
   if expected_type != received_type {
-    lines.append(_marker_added('expected  ' + format.inline(expected) + style.dim('  (${expected_type})')))
-    lines.append(_marker_removed('received  ' + format.inline(received) + style.dim('  (${received_type})')))
+    lines.append(_marker_added(
+      'expected  '
+        + format.inline(expected)
+        + style.dim('  (${expected_type})'),
+    ))
+    lines.append(_marker_removed(
+      'received  '
+        + format.inline(received)
+        + style.dim('  (${received_type})'),
+    ))
     return lines
   }
 
@@ -450,18 +463,26 @@ def _render(expected, received, depth) {
 
   if is_dict(expected) {
     _keyed_diff(
-      expected.keys(), @(key) { return expected[key] },
-      received.keys(), @(key) { return received[key] },
-      lines
+      expected.keys(), @(key) {
+        return expected[key]
+      },
+      received.keys(), @(key) {
+        return received[key]
+      },
+      lines,
     )
     return lines
   }
 
   if is_instance(expected) {
     _keyed_diff(
-      _properties(expected), @(key) { return _property(expected, key) },
-      _properties(received), @(key) { return _property(received, key) },
-      lines
+      _properties(expected), @(key) {
+        return _property(expected, key)
+      },
+      _properties(received), @(key) {
+        return _property(received, key)
+      },
+      lines,
     )
     return lines
   }
@@ -470,7 +491,6 @@ def _render(expected, received, depth) {
 
   return lines
 }
-
 
 /**
  * The lines to print underneath a failure message, showing what the

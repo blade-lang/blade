@@ -321,7 +321,7 @@ class HttpResponse {
 
     self.headers.set(
       'Content-Disposition',
-      'attachment; filename=${util.quote(offered)}'
+      'attachment; filename=${util.quote(offered)}',
     )
     self.headers.set('Content-Type', 'application/octet-stream')
 
@@ -525,7 +525,9 @@ class HttpResponse {
    * @returns HttpResponse: this same instance, for chaining
    */
   no_cache() {
-    self.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+    self.headers.set(
+      'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0',
+    )
     self.headers.set('Pragma', 'no-cache')
     self.headers.set('Expires', '0')
 
@@ -652,7 +654,7 @@ class HttpResponse {
     if self.is_error() {
       raise StatusError(
         '${self.status} ${self.reason_phrase()} for ${self.responder or "request"}',
-        self
+        self,
       )
     }
 

@@ -40,10 +40,14 @@ import .store { MailStore }
 
 # What the server says it can do. Everything listed is implemented
 # here; nothing is advertised that is not.
-var BASE_CAPABILITIES = ['IMAP4rev1', 'UNSELECT', 'MOVE', 'IDLE', 'LITERAL+', 'SASL-IR', 'ID']
+var BASE_CAPABILITIES = [
+  'IMAP4rev1', 'UNSELECT', 'MOVE', 'IDLE', 'LITERAL+', 'SASL-IR', 'ID',
+]
 
 # The flags a client may set on a message here.
-var ALLOWED_FLAGS = ['\\Seen', '\\Answered', '\\Flagged', '\\Deleted', '\\Draft']
+var ALLOWED_FLAGS = [
+  '\\Seen', '\\Answered', '\\Flagged', '\\Deleted', '\\Draft',
+]
 
 var DEFAULT_TIMEOUT = 1800000
 
@@ -461,7 +465,9 @@ class ImapServer {
         return
       }
 
-      var outcome = self._dispatch(connection, session, tag, name, arguments, source)
+      var outcome = self._dispatch(
+        connection, session, tag, name, arguments, source,
+      )
 
       if outcome == 'close' {
         return
@@ -469,7 +475,9 @@ class ImapServer {
     }
   }
 
-  _dispatch(connection, session, tag: string, name: string, arguments: list, source) {
+  _dispatch(
+    connection, session, tag: string, name: string, arguments: list, source,
+  ) {
     catch {
       return self._run(connection, session, tag, name, arguments, source)
     } as error {
@@ -490,7 +498,9 @@ class ImapServer {
     }
   }
 
-  _run(connection, session, tag: string, name: string, arguments: list, source) {
+  _run(
+    connection, session, tag: string, name: string, arguments: list, source,
+  ) {
     if name == 'CAPABILITY' {
       connection.write_line('* CAPABILITY ${' '.join(self._capabilities(session))}')
       _reply(connection, tag, 'OK', nil, 'CAPABILITY completed')
@@ -549,7 +559,9 @@ class ImapServer {
     }
 
     if name == 'RENAME' {
-      self.store.rename(session.username, _text(arguments, 0), _text(arguments, 1))
+      self.store.rename(
+        session.username, _text(arguments, 0), _text(arguments, 1),
+      )
       _reply(connection, tag, 'OK', nil, 'RENAME completed')
 
       return 'ok'
@@ -693,7 +705,9 @@ class ImapServer {
     _reply(connection, tag, 'OK', nil, 'begin TLS')
 
     catch {
-      connection.upgrade(tls.TlsStream.accept(connection.transport(), self._tls), true)
+      connection.upgrade(
+        tls.TlsStream.accept(connection.transport(), self._tls), true,
+      )
     } as error {
       self._report(error, session)
 
@@ -722,7 +736,10 @@ class ImapServer {
     var password = _text(arguments, 1)
 
     if !self.store.authenticate(username, password) {
-      _reply(connection, tag, 'NO', 'AUTHENTICATIONFAILED', 'those are not the credentials')
+      _reply(
+        connection, tag, 'NO', 'AUTHENTICATIONFAILED',
+        'those are not the credentials',
+      )
 
       return 'ok'
     }
@@ -735,7 +752,7 @@ class ImapServer {
       tag,
       'OK',
       'CAPABILITY ${' '.join(self._capabilities(session))}',
-      'LOGIN completed'
+      'LOGIN completed',
     )
 
     return 'ok'
@@ -780,7 +797,10 @@ class ImapServer {
     }
 
     if !credentials.ok {
-      _reply(connection, tag, 'NO', 'AUTHENTICATIONFAILED', 'those are not the credentials')
+      _reply(
+        connection, tag, 'NO', 'AUTHENTICATIONFAILED',
+        'those are not the credentials',
+      )
 
       return 'ok'
     }
@@ -793,7 +813,7 @@ class ImapServer {
       tag,
       'OK',
       'CAPABILITY ${' '.join(self._capabilities(session))}',
-      'AUTHENTICATE completed'
+      'AUTHENTICATE completed',
     )
 
     return 'ok'
@@ -896,7 +916,7 @@ class ImapServer {
       tag,
       'OK',
       session.read_only ? 'READ-ONLY' : 'READ-WRITE',
-      '${name} completed'
+      '${name} completed',
     )
 
     return 'ok'
@@ -911,7 +931,10 @@ class ImapServer {
     session.mailbox = nil
     session.snapshot = []
 
-    _reply(connection, tag, 'OK', nil, '${expunging ? 'CLOSE' : 'UNSELECT'} completed')
+    _reply(
+      connection, tag, 'OK', nil,
+      '${expunging ? 'CLOSE' : 'UNSELECT'} completed',
+    )
 
     return 'ok'
   }
@@ -954,7 +977,9 @@ class ImapServer {
 
     var messages = self.store.messages(session.username, mailbox)
     var counters = self.store.counters(session.username, mailbox)
-    var wanted = arguments.length() > 1 and is_list(arguments[1]) ? arguments[1] : []
+    var wanted = arguments.length() > 1 and is_list(arguments[1])
+      ? arguments[1]
+      : []
     var pairs = []
 
     for item in wanted {
@@ -1033,7 +1058,7 @@ class ImapServer {
       tag,
       'OK',
       'APPENDUID ${counters.uidvalidity} ${stored.uid}',
-      'APPEND completed'
+      'APPEND completed',
     )
 
     return 'ok'
@@ -1227,7 +1252,10 @@ class ImapServer {
     }
 
     if arguments.length() < 3 {
-      _reply(connection, tag, 'BAD', nil, 'STORE needs a set, an action and some flags')
+      _reply(
+        connection, tag, 'BAD', nil,
+        'STORE needs a set, an action and some flags',
+      )
 
       return 'ok'
     }
@@ -1247,7 +1275,9 @@ class ImapServer {
     for entry in chosen {
       var flags = _apply_flags(entry.message.flags, action, wanted)
 
-      self.store.set_flags(session.username, session.mailbox, entry.message.uid, flags)
+      self.store.set_flags(
+        session.username, session.mailbox, entry.message.uid, flags,
+      )
       entry.message.flags = flags
 
       if silent {
@@ -1270,7 +1300,10 @@ class ImapServer {
     return 'ok'
   }
 
-  _do_copy(connection, session, tag: string, arguments: list, by_uid: bool, moving: bool) {
+  _do_copy(
+    connection, session, tag: string, arguments: list, by_uid: bool,
+    moving: bool,
+  ) {
     if arguments.length() < 2 {
       _reply(connection, tag, 'BAD', nil, 'this needs a set and a mailbox')
 
@@ -1294,12 +1327,14 @@ class ImapServer {
         target,
         entry.message.raw,
         entry.message.flags,
-        entry.message.received
+        entry.message.received,
       )
     }
 
     if !moving {
-      _reply(connection, tag, 'OK', nil, '${by_uid ? 'UID ' : ''}COPY completed')
+      _reply(
+        connection, tag, 'OK', nil, '${by_uid ? 'UID ' : ''}COPY completed',
+      )
 
       return 'ok'
     }
@@ -1311,7 +1346,7 @@ class ImapServer {
         entry.message.uid,
         entry.message.flags.contains('\\Deleted') ?
           entry.message.flags :
-          entry.message.flags + ['\\Deleted']
+          entry.message.flags + ['\\Deleted'],
       )
     }
 
@@ -1351,7 +1386,9 @@ class ImapServer {
   }
 }
 
-def _reply(connection, tag: string, status: string, code: ?string, text: string) {
+def _reply(
+  connection, tag: string, status: string, code: ?string, text: string,
+) {
   var bracket = code == nil ? '' : '[${code}] '
 
   connection.write_line('${tag} ${status} ${bracket}${text}')
@@ -1501,7 +1538,9 @@ def _select_ids(set_text: string, messages: list, by_uid: bool) {
   iter var index = 0; index < messages.length(); index++ {
     var number = by_uid ? messages[index].uid : index + 1
 
-    if _in_set(set_text, number, by_uid ? _highest_uid(messages) : messages.length()) {
+    if _in_set(
+      set_text, number, by_uid ? _highest_uid(messages) : messages.length(),
+    ) {
       chosen.append({ position: index + 1, message: messages[index] })
     }
   }
@@ -1655,7 +1694,9 @@ def _extract(stored, section: string) {
   }
 
   if name.starts_with('HEADER.FIELDS') {
-    return _pick_headers(split.headers, section, !name.starts_with('HEADER.FIELDS.NOT'))
+    return _pick_headers(
+      split.headers, section, !name.starts_with('HEADER.FIELDS.NOT'),
+    )
   }
 
   # A numbered section names a part of a multipart message, which means
@@ -1686,7 +1727,9 @@ def _split_message(raw) {
         return { headers: raw[0, next + 1], body: raw[next + 1, raw.length()] }
       }
 
-      if next + 1 < raw.length() and raw[next] == 0x0d and raw[next + 1] == 0x0a {
+      if next + 1 < raw.length()
+        and raw[next] == 0x0d
+        and raw[next + 1] == 0x0a {
         return { headers: raw[0, next + 2], body: raw[next + 2, raw.length()] }
       }
     }
@@ -1870,7 +1913,9 @@ def _quoted(value) {
     return 'NIL'
   }
 
-  return '"' + '${value}'.replace('/\\\\/', '\\\\\\\\').replace('/"/', '\\"') + '"'
+  return '"'
+    + '${value}'.replace('/\\\\/', '\\\\\\\\').replace('/"/', '\\"')
+    + '"'
 }
 
 # The shape of a message, so a client can decide what to fetch without
@@ -1950,7 +1995,8 @@ def _matches_search(stored, position: number, terms: list) {
       continue
     }
 
-    if key == 'SEEN' or key == 'UNSEEN' or key == 'ANSWERED' or key == 'UNANSWERED'
+    if key == 'SEEN' or key == 'UNSEEN' or key == 'ANSWERED'
+      or key == 'UNANSWERED'
       or key == 'FLAGGED' or key == 'UNFLAGGED' or key == 'DELETED'
       or key == 'UNDELETED' or key == 'DRAFT' or key == 'UNDRAFT'
       or key == 'NEW' or key == 'OLD' or key == 'RECENT' {
@@ -2042,7 +2088,8 @@ def _matches_search(stored, position: number, terms: list) {
 def _is_key(term: string) {
   var upper = term.upper()
 
-  return upper == 'ALL' or upper == 'SEEN' or upper == 'UNSEEN' or upper == 'NOT'
+  return upper == 'ALL' or upper == 'SEEN' or upper == 'UNSEEN'
+    or upper == 'NOT'
     or upper == 'OR' or upper == 'DELETED' or upper == 'UNDELETED'
 }
 
@@ -2107,7 +2154,9 @@ def _contains_text(note, stored, key: string, wanted: string) {
     return body != nil and body.lower().index_of(wanted) > -1
   }
 
-  var header = key == 'FROM' ? 'From' : (key == 'TO' ? 'To' : (key == 'CC' ? 'Cc' : 'Bcc'))
+  var header = key == 'FROM'
+    ? 'From'
+    : (key == 'TO' ? 'To' : (key == 'CC' ? 'Cc' : 'Bcc'))
   var value = note.headers.get(header, nil)
 
   return value != nil and value.lower().index_of(wanted) > -1

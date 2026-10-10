@@ -172,7 +172,7 @@ class Connection {
 
     return ExecResult(
       result.get('rows_affected', 0),
-      result.get('last_insert_id', nil)
+      result.get('last_insert_id', nil),
     )
   }
 
@@ -240,7 +240,9 @@ class Connection {
     var prepared = self._translate(sql, params)
 
     return Cursor(
-      self._connection.open_cursor(prepared.sql, prepared.values, options or {})
+      self._connection.open_cursor(
+        prepared.sql, prepared.values, options or {},
+      ),
     )
   }
 
@@ -256,7 +258,7 @@ class Connection {
     if !self.supports('prepared_statements') {
       raise NotSupportedError(
         '${self.driver_name()} cannot prepare statements',
-        { driver: self.driver_name() }
+        { driver: self.driver_name() },
       )
     }
 
@@ -270,7 +272,7 @@ class Connection {
       self._connection.prepare(prepared.sql),
       sql,
       prepared.sql,
-      self._style
+      self._style,
     )
   }
 
@@ -345,8 +347,8 @@ class Connection {
     if id == nil and !self.supports('last_insert_id') {
       raise NotSupportedError(
         '${self.driver_name()} does not report the id of an inserted ' +
-        'row; name the column to read it from with the returning option',
-        { driver: self.driver_name(), query: built.sql }
+          'row; name the column to read it from with the returning option',
+        { driver: self.driver_name(), query: built.sql },
       )
     }
 
@@ -696,8 +698,8 @@ class Connection {
     if per_batch < 1 {
       raise QueryError(
         'a row of ${per_row} columns binds more parameters than ' +
-        '${self.driver_name()} allows in one statement (${limit})',
-        { driver: self.driver_name() }
+          '${self.driver_name()} allows in one statement (${limit})',
+        { driver: self.driver_name() },
       )
     }
 

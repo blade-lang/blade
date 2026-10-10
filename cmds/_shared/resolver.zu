@@ -167,7 +167,9 @@ class Solver {
    * @param ?string root_name: what to call the project in an
    *    explanation.
    */
-  @new(provider, root_version: string, root_dependencies: list, root_name: ?string) {
+  @new(
+    provider, root_version: string, root_dependencies: list, root_name: ?string,
+  ) {
     self._provider = provider
     self._root_version = root_version
     self._root_dependencies = root_dependencies
@@ -270,14 +272,17 @@ class Solver {
     # The project is always selected, so a derived fact that also
     # mentions it positively says nothing more for the mention.
     if kind == 'derived' and merged.length() > 1 {
-      merged = merged.filter(@(term) => !(term.package == ROOT and term.positive()))
+      merged = merged.filter(
+        @(term) => !(term.package == ROOT and term.positive()),
+      )
     }
 
     return _Incompatibility(merged, kind, data, causes)
   }
 
   _everything(term) {
-    return term.states.absent and term.states.count() == self._universe(term.package).length()
+    return term.states.absent
+      and term.states.count() == self._universe(term.package).length()
   }
 
   _add(incompatibility) {
@@ -321,13 +326,17 @@ class Solver {
   }
 
   _assign(term, cause, decision: bool) {
-    var assignment = _Assignment(term, self._level, self._assignments.length(), cause, decision)
+    var assignment = _Assignment(
+      term, self._level, self._assignments.length(), cause, decision,
+    )
 
     self._assignments.append(assignment)
 
     var current = self._current.get(term.package, nil)
 
-    self._current.set(term.package, current == nil ? term : self._intersect(current, term))
+    self._current.set(
+      term.package, current == nil ? term : self._intersect(current, term),
+    )
 
     if decision {
       self._decided.set(term.package, term.states.versions.keys()[0])
@@ -446,7 +455,8 @@ class Solver {
       return true
     }
 
-    return incompatibility.terms.length() == 1 and incompatibility.terms[0].package == ROOT
+    return incompatibility.terms.length() == 1
+      and incompatibility.terms[0].package == ROOT
       and incompatibility.terms[0].positive()
   }
 
@@ -516,7 +526,9 @@ class Solver {
         terms.append(self._negate(difference))
       }
 
-      incompatibility = self._make(terms, 'derived', nil, [incompatibility, recent.cause])
+      incompatibility = self._make(
+        terms, 'derived', nil, [incompatibility, recent.cause],
+      )
       learned = true
     }
 
@@ -612,7 +624,9 @@ class Solver {
 
     var wanted = self._in_range(dependency.name, dependency.range)
     var depender = Term(package, _States(only, false), version)
-    var needed = self._negate(Term(dependency.name, _States(wanted, false), dependency.range))
+    var needed = self._negate(Term(
+      dependency.name, _States(wanted, false), dependency.range,
+    ))
 
     return self._make([depender, needed], 'dependency', {
       package,
@@ -657,7 +671,9 @@ class Solver {
   # one for each step that led to it.
 
   _name(package: string) {
-    return package == ROOT ? self._root_name : self._provider.display_name(package)
+    return package == ROOT
+      ? self._root_name
+      : self._provider.display_name(package)
   }
 
   # A set of versions of `package` in words.
@@ -798,7 +814,8 @@ class Solver {
       self._visit(failure, lines, [0], true)
     }
 
-    return 'no set of versions satisfies every requirement:\n\n' + '\n'.join(lines)
+    return 'no set of versions satisfies every requirement:\n\n'
+      + '\n'.join(lines)
   }
 
   # Writes the steps behind `incompatibility`, causes first. Every step
@@ -842,6 +859,8 @@ class Solver {
  * @returns dict: name to chosen version.
  * @raises SolveError
  */
-def solve(provider, root_version: string, dependencies: list, root_name: ?string) {
+def solve(
+  provider, root_version: string, dependencies: list, root_name: ?string,
+) {
   return Solver(provider, root_version, dependencies, root_name).solve()
 }

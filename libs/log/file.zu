@@ -9,7 +9,6 @@ import .transport { Transport }
 
 import os
 
-
 /**
  * FileTransport is a log transport that facilitates sending log
  * streams to an on-disk file.

@@ -204,7 +204,9 @@ class DtlsSocket {
    *    `server_name`
    */
   connect(config, address, server_name) {
-    _net_dtls.dtls_connect(self._ptr, config.native_ptr(), _addr_string(address), server_name)
+    _net_dtls.dtls_connect(
+      self._ptr, config.native_ptr(), _addr_string(address), server_name,
+    )
   }
 
   /**
@@ -316,7 +318,7 @@ class DtlsSocket {
       _net_dtls.dtls_peer_certificate_issuer(self._ptr),
       _net_dtls.dtls_peer_certificate_sans(self._ptr),
       _net_dtls.dtls_peer_certificate_not_before(self._ptr),
-      _net_dtls.dtls_peer_certificate_not_after(self._ptr)
+      _net_dtls.dtls_peer_certificate_not_after(self._ptr),
     )
   }
 

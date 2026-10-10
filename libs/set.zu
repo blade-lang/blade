@@ -73,7 +73,6 @@
  * @copyright Richard Ore, 2025
  */
 
-
 /**
  * The Set class provides some methods that allow you to compose
  * sets like you would with mathematical operations.
@@ -99,7 +98,7 @@ class Set {
       if is_dict(items) {
         items = items.keys()
       }
-  
+
       # only keep unique items
       self._items = items.unique()
     }
@@ -463,7 +462,7 @@ class Set {
   to_string() {
     return '<Set(${self.length()}) {' +
       ', '.join(self._items) +
-    '}>'
+      '}>'
   }
 
   @to_string() {
@@ -505,7 +504,6 @@ class Set {
     return self.difference(other)
   }
 }
-
 
 /**
  * Default export function for the {set.Set} class.

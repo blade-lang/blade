@@ -136,12 +136,16 @@ def resolve(address: string, ref: ?dict) {
   if ref != nil {
     using ref.kind {
       when 'branch' patterns = ['refs/heads/${ref.value}']
-      when 'tag' patterns = ['refs/tags/${ref.value}', 'refs/tags/${ref.value}^{}']
+      when 'tag' {
+        patterns = ['refs/tags/${ref.value}', 'refs/tags/${ref.value}^{}']
+      }
       default patterns = [ref.value]
     }
   }
 
-  var listing = run(['-c', 'protocol.ext.allow=never', 'ls-remote', '--', address] + patterns)
+  var listing = run(
+    ['-c', 'protocol.ext.allow=never', 'ls-remote', '--', address] + patterns,
+  )
 
   var candidates = []
 
@@ -212,18 +216,33 @@ def fetch(name: ?string, address: string, commit: string, checksum: ?string) {
 
   catch {
     run(['init', '--quiet'], scratch)
-    run(['-c', 'protocol.ext.allow=never', 'remote', 'add', 'origin', '--', address], scratch)
+    run(
+      [
+        '-c', 'protocol.ext.allow=never', 'remote', 'add', 'origin', '--',
+        address,
+      ],
+      scratch,
+    )
 
     # A shallow fetch of the one commit, where the server allows it,
     # then the whole history where it does not.
     catch {
-      run(['-c', 'protocol.ext.allow=never', 'fetch', '--quiet', '--depth', '1', 'origin',
-        commit], scratch)
+      run(
+        ['-c', 'protocol.ext.allow=never', 'fetch', '--quiet', '--depth', '1',
+          'origin', commit],
+        scratch,
+      )
     } as shallow {
-      run(['-c', 'protocol.ext.allow=never', 'fetch', '--quiet', 'origin'], scratch)
+      run(
+        ['-c', 'protocol.ext.allow=never', 'fetch', '--quiet', 'origin'],
+        scratch,
+      )
     }
 
-    run(['-c', 'advice.detachedHead=false', 'checkout', '--quiet', commit], scratch)
+    run(
+      ['-c', 'advice.detachedHead=false', 'checkout', '--quiet', commit],
+      scratch,
+    )
 
     var full = run(['rev-parse', 'HEAD'], scratch).trim()
 
@@ -265,7 +284,9 @@ def _read_manifest_from(path: string) {
  * @param ?string checksum
  * @returns dict
  */
-def pack_checkout(name: ?string, root: string, commit: string, checksum: ?string) {
+def pack_checkout(
+  name: ?string, root: string, commit: string, checksum: ?string,
+) {
   var manifest_path = os.join_paths(root, 'project.toml')
 
   if !file(manifest_path).exists() {
@@ -283,7 +304,7 @@ def pack_checkout(name: ?string, root: string, commit: string, checksum: ?string
     name = declared
   } else if names.normalized(declared) != names.normalized(name) {
     raise GitError(
-      "the repository's project.toml names the package '${declared}', not '${name}'"
+      "the repository's project.toml names the package '${declared}', not '${name}'",
     )
   }
 
@@ -305,7 +326,7 @@ def pack_checkout(name: ?string, root: string, commit: string, checksum: ?string
 
     raise GitError(
       '${name} at commit ${commit[0, 12]} no longer packs to the checksum the lockfile '
-        + 'recorded; the repository was rewritten, or its files changed'
+        + 'recorded; the repository was rewritten, or its files changed',
     )
   }
 

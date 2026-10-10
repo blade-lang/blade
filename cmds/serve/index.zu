@@ -84,7 +84,7 @@ def _backup(settings: dict, target: string) {
   if nyssa.db.engine != 'sqlite' {
     raise UsageError(
       'backup copies a SQLite database; back up ${nyssa.db.engine} with its own tools, '
-        + 'such as pg_dump or mysqldump'
+        + 'such as pg_dump or mysqldump',
     )
   }
 
@@ -112,8 +112,8 @@ def _admin(settings: dict, words: list) {
     }
 
     catch {
-      var created = service.create_account(nyssa, { username, email, password }, 'command line',
-        true)
+      var created = service.create_account(nyssa, { username, email, password },
+        'command line', true)
 
       nyssa.db.revoke_token(created.token.id, created.publisher.id)
 
@@ -140,15 +140,21 @@ def _admin(settings: dict, words: list) {
 
   using action {
     when 'promote' nyssa.db.set_role(publisher.id, 'admin')
-    when 'demote' nyssa.db.set_role(publisher.id, 'publisher')
+    when 'demote' {
+      nyssa.db.set_role(publisher.id, 'publisher')
+    }
     when 'suspend' {
       nyssa.db.set_suspended(publisher.id, true)
       nyssa.db.revoke_all_tokens(publisher.id)
     }
-    when 'restore' nyssa.db.set_suspended(publisher.id, false)
+    when 'restore' {
+      nyssa.db.set_suspended(publisher.id, false)
+    }
     default {
-      raise UsageError("'${action}' is not an admin action; use create, promote, demote, "
-        + 'suspend or restore')
+      raise UsageError(
+        "'${action}' is not an admin action; use create, promote, demote, "
+          + 'suspend or restore',
+      )
     }
   }
 
@@ -161,7 +167,7 @@ def _serve(settings: dict) {
     ui.complain(ui.warn(
       'warning: listening on ${settings.host} without TLS; passwords and tokens will cross '
         + 'the network in the clear. Give --tls-cert and --tls-key, or put a proxy that '
-        + 'terminates TLS in front and pass --trust-proxy.'
+        + 'terminates TLS in front and pass --trust-proxy.',
     ))
   }
 

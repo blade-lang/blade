@@ -583,7 +583,7 @@ class Protocol {
   _send(payload) {
     if self._closed {
       raise ConnectionError(
-        'this connection has been closed', { driver: 'postgres' }
+        'this connection has been closed', { driver: 'postgres' },
       )
     }
 
@@ -594,8 +594,8 @@ class Protocol {
 
       raise ConnectionError(
         'the connection to the server failed while writing: ' +
-        error.message,
-        { driver: 'postgres' }
+          error.message,
+        { driver: 'postgres' },
       )
     }
   }
@@ -693,8 +693,8 @@ class Protocol {
         if !auth.offers_scram(message.payload[4, message.payload.length()]) {
           raise ProtocolError(
             'the server offered no authentication mechanism this ' +
-            'adapter implements; it supports ${auth.SCRAM_SHA_256}',
-            { driver: 'postgres' }
+              'adapter implements; it supports ${auth.SCRAM_SHA_256}',
+            { driver: 'postgres' },
           )
         }
 
@@ -718,8 +718,8 @@ class Protocol {
 
       raise ProtocolError(
         'the server asked for an authentication method this adapter ' +
-        'does not implement (${kind})',
-        { driver: 'postgres' }
+          'does not implement (${kind})',
+        { driver: 'postgres' },
       )
     }
   }
@@ -747,7 +747,7 @@ class Protocol {
     if scram == nil {
       raise ProtocolError(
         'the server continued a SCRAM exchange that never started',
-        { driver: 'postgres' }
+        { driver: 'postgres' },
       )
     }
 
@@ -773,7 +773,7 @@ class Protocol {
     if password == nil or password == '' {
       raise ConnectionError(
         'the server asked for ${what} and none was given',
-        { driver: 'postgres' }
+        { driver: 'postgres' },
       )
     }
   }

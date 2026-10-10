@@ -485,7 +485,9 @@ class WebSocket {
     # client must reject a masked frame from a server.
     if self.is_client == masked {
       raise ProtocolError(
-        masked ? 'a server may not mask a frame' : 'a client must mask every frame'
+        masked
+          ? 'a server may not mask a frame'
+          : 'a client must mask every frame',
       )
     }
 
@@ -797,7 +799,9 @@ def connect(target: string, options: ?dict) {
     raise HttpError('the server returned the wrong Sec-WebSocket-Accept')
   }
 
-  var socket = WebSocket(connection, true, fields.get('sec-websocket-protocol', nil))
+  var socket = WebSocket(
+    connection, true, fields.get('sec-websocket-protocol', nil),
+  )
 
   var limit = settings.get('max_message_size', nil)
   if limit != nil {

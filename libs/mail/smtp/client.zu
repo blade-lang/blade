@@ -516,7 +516,7 @@ class SmtpClient {
     stream.start_tls(
       self._stream,
       self._options.get('server_name', self._host),
-      self._options.get('tls_config', nil)
+      self._options.get('tls_config', nil),
     )
 
     # Everything the server advertised in the clear is worth nothing
@@ -545,7 +545,7 @@ class SmtpClient {
         offered,
         self._options,
         self._stream.is_secure(),
-        self._options.get('mechanisms', nil)
+        self._options.get('mechanisms', nil),
       )
     }
 
@@ -553,7 +553,7 @@ class SmtpClient {
       if !self._stream.is_secure() {
         raise AuthenticationError(
           'no mechanism this connection can use without TLS; '
-          + 'the server offers ${', '.join(offered)}'
+            + 'the server offers ${', '.join(offered)}',
         )
       }
 
@@ -595,7 +595,7 @@ class SmtpClient {
 
     if !reply.is_positive() {
       raise AuthenticationError(
-        '${self._host} refused the credentials: ${reply.code} ${reply.text}'
+        '${self._host} refused the credentials: ${reply.code} ${reply.text}',
       )
     }
 
@@ -799,7 +799,7 @@ class SmtpClient {
         'the message is ${raw.length()} bytes and ${self._host} takes ${limit}',
         552,
         '5.3.4',
-        []
+        [],
       )
     }
 

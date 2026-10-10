@@ -8,7 +8,6 @@
 
 import _compress
 
-
 # compression levels
 
 /**
@@ -34,7 +33,6 @@ var BEST_COMPRESSION = 9
  * @type number
  */
 var DEFAULT_COMPRESSION = -1
-
 
 # compression strategy: see compress() for details
 
@@ -66,7 +64,6 @@ var FIXED = 4
  * @type number
  */
 var DEFAULT_STRATEGY = 0
-
 
 # others
 
@@ -216,9 +213,7 @@ def decompress(data, wbits) {
   return _compress.decompress(data, wbits)
 }
 
-
 import .gzip { GzipDecoder, GzipEncoder }
-
 
 /**
  * A streaming Deflate encoder.
@@ -246,7 +241,6 @@ class ZlibEncoder < GzipEncoder {
     self._ptr = _compress.gzip_new_encoder(true, level)
   }
 }
-
 
 /**
  * Streaming zlib decompressor implemention. This decoder reads
