@@ -201,6 +201,41 @@ pub(crate) fn descriptor_of(value: Value) -> Option<crate::modules::net_tcp::Des
     ZuriTlsStream::Closed => None,
   }
 }
+
+/// Whether the TLS stream in `value` holds data its next read returns
+/// without touching the socket.
+///
+/// The socket is read a chunk at a time, and every record in the chunk
+/// is decrypted with it. What a client sends straight after its last
+/// handshake message is read along with that message, and a read that
+/// asks for less than the stream holds leaves the rest. Neither is in
+/// the socket any more, so the socket never becomes readable for them.
+/// Records that will not decrypt count as well: the next read is what
+/// reports them.
+pub(crate) fn has_pending_plaintext(value: Value) -> bool {
+  if !value.is_ptr_type(TLS_STREAM) {
+    return false;
+  }
+
+  let mut cell = value.as_ptr_cell().borrow_mut();
+  let Some(stream) = cell.downcast_mut::<ZuriTlsStream>() else {
+    return false;
+  };
+
+  // Processes what is already buffered, and nothing more: it never
+  // reads from the socket.
+  let state = match stream {
+    ZuriTlsStream::Client(s) => s.conn.process_new_packets(),
+    ZuriTlsStream::Server(s) => s.conn.process_new_packets(),
+    ZuriTlsStream::Closed => return false,
+  };
+
+  match state {
+    Ok(io) => io.plaintext_bytes_to_read() > 0 || io.peer_has_closed(),
+    Err(_) => true,
+  }
+}
+
 const TLS_STREAM_CLOSED: &str = "zuri::net::TlsStream::__closed__";
 
 // ---------------------------------------------------------------------------

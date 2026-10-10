@@ -82,10 +82,10 @@ type Descriptor = std::os::windows::io::RawSocket;
 
 /// The descriptor behind whichever kind of socket handle this is, or
 /// `None` when the handle cannot supply one - it was closed, consumed
-/// by a TLS upgrade, or moved to another isolate. Both a `TcpStream`
-/// A `TcpStream`, a `UnixStream`, and a `TlsStream` wrapping a socket
-/// are all pollable; for TLS this is the socket underneath, which is
-/// what readiness actually describes.
+/// by a TLS upgrade, or moved to another isolate. A `TcpStream`, a
+/// `UnixStream`, and a `TlsStream` wrapping a socket are all pollable;
+/// for TLS this is the socket underneath, and `poll_wait` adds what the
+/// stream already holds decrypted.
 fn descriptor_of(value: Value) -> Option<Descriptor> {
   if let Some(fd) = crate::modules::net_tcp::descriptor_of(value) {
     return Some(fd);
@@ -136,10 +136,29 @@ fn poll_wait(ctx: &mut ZuriContext) -> Result<Value, String> {
 
   let mut events: Vec<(usize, u8)> = unusable.into_iter().map(|i| (i, ERROR)).collect();
 
+  // A TLS stream can hold data its socket no longer shows: records read
+  // off along with the handshake or an earlier read, already decrypted.
+  // It is readable now, whatever the socket says, and asking the socket
+  // alone would leave its reader waiting for data that has already
+  // arrived.
+  let held: Vec<usize> = origin
+    .iter()
+    .copied()
+    .filter(|&index| {
+      interests[index].as_number() as u8 & READABLE != 0
+        && crate::modules::net_tls::has_pending_plaintext(sockets[index])
+    })
+    .collect();
+
   if !descriptors.is_empty() {
-    // Anything already known to be unusable is reported at once; there
-    // is no point sleeping for a timeout when the caller has work.
-    let effective = if events.is_empty() { timeout } else { 0.0 };
+    // Anything already known to be ready or unusable is reported at
+    // once; there is no point sleeping for a timeout when the caller
+    // has work.
+    let effective = if events.is_empty() && held.is_empty() {
+      timeout
+    } else {
+      0.0
+    };
     let ready = platform_poll(&mut descriptors, effective)?;
 
     if ready > 0 {
@@ -149,6 +168,13 @@ fn poll_wait(ctx: &mut ZuriContext) -> Result<Value, String> {
           events.push((origin[slot], flags));
         }
       }
+    }
+  }
+
+  for index in held {
+    match events.iter_mut().find(|(other, _)| *other == index) {
+      Some(event) => event.1 |= READABLE,
+      None => events.push((index, READABLE)),
     }
   }
 

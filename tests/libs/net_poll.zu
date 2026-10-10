@@ -3,7 +3,8 @@
  *
  * Test suite for `net.Poller`: registration, readiness for reads,
  * writes and listeners, what happens to a socket that is closed or
- * moved to another isolate, and polling a TLS connection.
+ * moved to another isolate, and polling a TLS connection, including
+ * one that already holds data it decrypted along with its handshake.
  *
  * The certificate fixture is the same throwaway self-signed pair the
  * `net.tls` suite uses, committed rather than generated so this suite
@@ -295,6 +296,61 @@ secure.close()
 catch {
   tls_task.join(5000)
 }
+
+# What a client sends straight after its handshake can be read off the
+# socket along with its last handshake message. The relay makes sure
+# it is, however quickly this side reads, and the server is held to
+# TLS 1.3, where the client is the one to finish the handshake.
+var relay_ready = isolate.channel(1)
+var relay_done = isolate.channel(1)
+var origin = net.TcpStream()
+origin.bind('127.0.0.1:0')
+
+var relay_task = isolate.spawn(
+  net_poll_helper.coalescing_relay, relay_ready, origin.local_address().to_string(), relay_done,
+)
+
+var hurried_done = isolate.channel(1)
+var hurried_task = isolate.spawn(
+  net_poll_helper.tls_hurried_client, relay_ready.recv(), hurried_done,
+)
+
+var arrived = origin.accept()
+arrived.set_read_timeout(5000)
+
+var serving = tls.TlsConfig()
+serving.set_cert_chain(server_cert, server_key)
+serving.set_versions('1.3', '1.3')
+
+var held = tls.TlsStream.accept(arrived, serving)
+var held_poller = net.Poller()
+held_poller.add(held, 5, net.READABLE)
+
+var started = time()
+var held_events = held_poller.wait(5000)
+
+assert held_events.length() == 1 and held_events[0][1] & net.READABLE != 0,
+  'data that arrived with the handshake makes a TLS stream readable'
+assert time() - started < 1, 'at once, rather than once the timeout is up'
+assert held.read(5).to_string() == 'early', 'and the read returns it'
+
+started = time()
+held_events = held_poller.wait(5000)
+
+assert held_events.length() == 1 and held_events[0][1] & net.READABLE != 0,
+  'so does what a short read leaves behind'
+assert time() - started < 1, 'just as quickly'
+assert held.read(16).to_string() == ' bird', 'and the next read returns the rest'
+ok('a TLS stream is readable for data it already holds')
+
+relay_done.send('done')
+hurried_done.send('done')
+held.close()
+catch {
+  relay_task.join(5000)
+  hurried_task.join(5000)
+}
+origin.close()
 
 listener.close()
 

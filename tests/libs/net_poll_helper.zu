@@ -42,3 +42,109 @@ def tls_echo(port_channel, cert, key) {
   secure.close()
   server.close()
 }
+
+# How many whole application-data records `data` holds. TLS 1.3 seals
+# everything after the hellos this way, the client's Finished included.
+def _sealed_records(data) {
+  var count = 0
+  var at = 0
+
+  while at + 5 <= data.length() {
+    var size = data[at + 3] * 256 + data[at + 4]
+
+    if at + 5 + size > data.length() {
+      break
+    }
+
+    if data[at] == 23 {
+      count++
+    }
+
+    at += 5 + size
+  }
+
+  return count
+}
+
+/**
+ * Relays one connection to `target`, so that the client's last
+ * handshake message and the first data it sends reach the server in a
+ * single write, however quickly the server reads.
+ *
+ * Once the server has answered the client's hello, everything the
+ * client sends is held back until it adds up to two sealed records,
+ * its Finished and its data, and then delivered at once. From there
+ * on the relay passes everything straight through, in both
+ * directions, until `finish` says the test is done with it.
+ */
+def coalescing_relay(ready, target, finish) {
+  var listener = net.TcpStream()
+  listener.bind('127.0.0.1:0')
+  ready.send(listener.local_address().to_string())
+
+  var client = listener.accept()
+  var server = net.TcpStream()
+  server.connect(target)
+
+  var ends = [client, server]
+  var poller = net.Poller()
+  poller.add(client, 0, net.READABLE)
+  poller.add(server, 1, net.READABLE)
+
+  var holding = false
+  var released = false
+  var held = bytes(0)
+
+  while finish.try_recv() == nil {
+    for event in poller.wait(20) {
+      var chunk = ends[event[0]].read(65536)
+
+      if chunk.length() == 0 {
+        poller.remove(event[0])
+        continue
+      }
+
+      if event[0] == 1 {
+        holding = !released
+        client.write_all(chunk)
+        continue
+      }
+
+      if !holding {
+        server.write_all(chunk)
+        continue
+      }
+
+      held = held + chunk
+
+      if _sealed_records(held) >= 2 {
+        server.write_all(held)
+        held = bytes(0)
+        holding = false
+        released = true
+      }
+    }
+  }
+
+  client.close()
+  server.close()
+  listener.close()
+}
+
+/**
+ * Connects through `address` and writes the moment its handshake is
+ * done, then holds the connection open until told to close it.
+ */
+def tls_hurried_client(address, done) {
+  var config = tls.TlsConfig()
+  config.set_insecure(true)
+
+  var tcp = net.TcpStream()
+  tcp.connect(address)
+
+  var secure = tls.TlsStream.connect(tcp, config, 'localhost')
+  secure.write_all('early bird')
+
+  done.recv()
+  secure.close()
+}

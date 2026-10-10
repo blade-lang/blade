@@ -72,6 +72,17 @@
  * is not possible for a poller to end up watching a descriptor that
  * the operating system has since handed to something else.
  *
+ * ### TLS streams
+ *
+ * A `TlsStream` is `READABLE` whenever its next read returns data
+ * without waiting. Its socket having bytes is one way. The other is
+ * data the stream already holds, decrypted: what a client sends
+ * straight after its last handshake message is read off the socket
+ * along with that message, and a read that asks for less than the
+ * stream holds leaves the rest. That data is no longer in the socket,
+ * and `wait()` reports the stream readable for it all the same, at
+ * once rather than after its timeout.
+ *
  * ### What polling does not do
  *
  * Readiness is not a guarantee. A socket reported `READABLE` has data
