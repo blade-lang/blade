@@ -48,6 +48,14 @@
  * Reading a file, or opening one without writing to it, is never
  * reported.
  *
+ * A file saved by an editor, a formatter or `git` is reported the
+ * moment it is saved, on every platform. The platforms differ only for
+ * a file a program writes through a handle it holds open between
+ * writes, such as a log it keeps appending to: Linux reports each
+ * write, macOS reports the change when the program closes the file, and
+ * Windows when the program closes it or the system writes its cache to
+ * disk.
+ *
  * On macOS a change made just before `add()` can be reported after it,
  * because FSEvents hands changes over asynchronously. Call `next()`
  * with a short timeout until it returns `nil` to set aside anything

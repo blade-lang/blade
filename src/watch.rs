@@ -22,7 +22,7 @@
 //! The standard library is left out. It changes only when Zuri itself
 //! is upgraded.
 
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::{LazyLock, Mutex, OnceLock};
@@ -32,7 +32,12 @@ use rustc_hash::FxHashSet;
 /// The variable watch mode names the report file in.
 pub const REPORT_VAR: &str = "ZURI_WATCH_REPORT";
 
-static REPORT: OnceLock<Option<Mutex<File>>> = OnceLock::new();
+/// The report file, when this program runs under watch mode.
+static REPORT: OnceLock<Option<PathBuf>> = OnceLock::new();
+
+/// Held while a line is appended, so lines from different isolates
+/// never interleave.
+static APPENDING: Mutex<()> = Mutex::new(());
 
 /// Every path recorded so far, across all isolates.
 static RECORDED: LazyLock<Mutex<FxHashSet<PathBuf>>> = LazyLock::new(Default::default);
@@ -50,9 +55,17 @@ pub fn init() {
     unsafe { std::env::remove_var(REPORT_VAR) };
   }
 
-  let file = target.and_then(|path| OpenOptions::new().append(true).create(true).open(path).ok());
+  // Created here, so a report that cannot be written switches watch
+  // reporting off once rather than failing on every file.
+  let report = target.map(PathBuf::from).filter(|path| {
+    OpenOptions::new()
+      .append(true)
+      .create(true)
+      .open(path)
+      .is_ok()
+  });
 
-  let _ = REPORT.set(file.map(Mutex::new));
+  let _ = REPORT.set(report);
 }
 
 /// Whether this program is running under `zuri run --watch`.
@@ -123,10 +136,18 @@ fn write_line(fingerprint: &str, path: &Path) {
   };
 
   let line = format!("{fingerprint}\t{path}\n");
-  let mut file = report.lock().unwrap_or_else(|e| e.into_inner());
+  let _appending = APPENDING.lock().unwrap_or_else(|e| e.into_inner());
 
-  // One write per line, so a reader never sees half of one, whichever
-  // isolate is reporting.
+  // Opened and closed again for every line. macOS reports a write to a
+  // file only once the file is closed, and Windows updates what it
+  // reports about a file still held open only lazily, so a report kept
+  // open for the whole run would tell watch mode nothing until the
+  // program ended.
+  let Ok(mut file) = OpenOptions::new().append(true).open(report) else {
+    return;
+  };
+
+  // One write per line, so a reader never sees half of one.
   let _ = file.write_all(line.as_bytes());
 }
 
