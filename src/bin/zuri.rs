@@ -246,20 +246,20 @@ fn print_help() {
 
   println!();
   println!(
-    "{} {}                    start the interactive REPL",
+    "{} {}                    Start the interactive REPL",
     palette.heading.paint("Usage:"),
     palette.accent.paint("zuri")
   );
   println!(
-    "       {} run [PATH]         run a script, a package, or this directory",
+    "       {} run [PATH]         Run a script, a package, or project",
     palette.accent.paint("zuri")
   );
   println!(
-    "       {} run -w [PATH]      run it again whenever a file it uses changes",
+    "       {} run -w [PATH]      Run and watch for file changes",
     palette.accent.paint("zuri")
   );
   println!(
-    "       {} <command> [ARGS]   run a command",
+    "       {} <command> [ARGS]   Run a command",
     palette.accent.paint("zuri")
   );
   println!();

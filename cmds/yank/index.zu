@@ -1,7 +1,7 @@
 /**
  * @command yank
- * @description Stops a published version from being chosen, or with
- *    undo, lets it be chosen again.
+ * @description Delists a published version of a package from being 
+ *    installable for new projects.
  *
  *   zuri yank <package@version> [options]
  *
@@ -22,7 +22,7 @@ import .._shared.semver
 def parser() {
   var parser = args.Parser('yank', true)
 
-  parser.description = 'Stops a published version from being chosen for new installs.'
+  parser.description = 'Delists a published version of a package from being installable for new projects.'
 
   parser.add_index('package', 'The version, as name@version',
     { required: true, metavar: 'name@version' })

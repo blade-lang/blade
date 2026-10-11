@@ -1,6 +1,6 @@
 /**
  * @command update
- * @description Moves packages to the newest versions their ranges
+ * @description Updates packages to the newest versions their ranges
  *    allow, or with latest, to the newest there are.
  *
  *   zuri update [package...] [options]
@@ -30,7 +30,7 @@ import .._shared.ui
 def parser() {
   var parser = args.Parser('update', false)
 
-  parser.description = 'Moves packages to the newest versions their ranges allow.'
+  parser.description = 'Updates packages to the newest versions their ranges allow.'
 
   parser.add_index('packages', 'Only these; every package when none is named',
     { type: args.LIST, metavar: 'package' })

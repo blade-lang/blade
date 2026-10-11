@@ -1,7 +1,6 @@
 /**
  * @command install
- * @description Adds packages to the project, or installs everything
- *    it declares.
+ * @description Adds package dependencies to a project.
  *
  *   zuri install [package[@range]...] [options]
  *

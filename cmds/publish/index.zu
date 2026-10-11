@@ -1,6 +1,6 @@
 /**
  * @command publish
- * @description Publishes the project as a new version on a registry.
+ * @description Publishes a project to a package registry.
  *
  *   zuri publish [options]
  *

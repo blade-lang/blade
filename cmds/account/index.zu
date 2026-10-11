@@ -1,7 +1,6 @@
 /**
  * @command account
- * @description Signs in to a registry, and manages the account and
- *    its tokens there.
+ * @description Manages account information and tokens for a registry.
  *
  *   zuri account create | login | logout | whoami | tokens
  *   zuri account token [name]

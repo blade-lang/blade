@@ -1,7 +1,6 @@
 /**
  * @command serve
- * @description Runs Nyssa, the package repository that zuri install
- *    and zuri publish talk to.
+ * @description Runs Nyssa, the package repository and the registry API.
  *
  *   zuri serve [options]
  *   zuri serve migrate | check | backup <file> | admin <action> <username>

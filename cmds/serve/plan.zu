@@ -145,8 +145,7 @@ var _BOOLEANS = ['trust_proxy', 'read_only']
 def parser() {
   var parser = args.Parser('serve', false)
 
-  parser.description = 'Runs Nyssa, the package repository: the site, and the registry API '
-    + 'that zuri install and zuri publish talk to.'
+  parser.description = 'Runs Nyssa, the package repository and the registry API.'
   parser.epilog = 'With no subcommand, the repository starts and serves until stopped.'
 
   parser.add_option('host', 'The address to listen on; 127.0.0.1 by default',

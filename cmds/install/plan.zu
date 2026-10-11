@@ -22,7 +22,7 @@ import .._shared.semver
 def parser() {
   var parser = args.Parser('install', false)
 
-  parser.description = 'Adds packages to the project, or installs everything it declares.'
+  parser.description = 'Adds package dependencies to a project.'
   parser.epilog = 'With no package named, every dependency in project.toml is installed at '
     + 'the versions project.lock pins, and the lockfile is brought up to date when project.toml '
     + 'has changed.'

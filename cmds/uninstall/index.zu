@@ -1,7 +1,7 @@
 /**
  * @command uninstall
- * @description Removes packages from the project, along with anything
- *    only they needed.
+ * @description Removes packages from the project, along with 
+ *    dependencies that are only needed by them.
  *
  *   zuri uninstall <package...> [options]
  *
@@ -25,7 +25,7 @@ import .._shared.ui
 def parser() {
   var parser = args.Parser('uninstall', true)
 
-  parser.description = 'Removes packages from the project, along with anything only they needed.'
+  parser.description = 'Removes packages from the project, along with dependencies that are only needed by them.'
 
   parser.add_index('packages', 'The packages to remove',
     { type: args.LIST, metavar: 'package', required: true })

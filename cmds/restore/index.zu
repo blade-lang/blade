@@ -1,6 +1,7 @@
 /**
  * @command restore
- * @description Installs exactly the packages project.lock names.
+ * @description Restores the project dependencies with their locked 
+ *    versions.
  *
  *   zuri restore [options]
  *
@@ -24,7 +25,7 @@ import .._shared.ui
 def parser() {
   var parser = args.Parser('restore', false)
 
-  parser.description = 'Installs exactly the packages project.lock names.'
+  parser.description = 'Restores the project dependencies with their locked versions.'
 
   parser.add_option('frozen',
     'Refuse, rather than resolve again, when project.lock is out of date', nil)

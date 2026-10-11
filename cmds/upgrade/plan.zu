@@ -27,7 +27,7 @@ var EXTRAS = ['LICENSE', 'README.md']
 def parser() {
   var parser = args.Parser('upgrade', false)
 
-  parser.description = 'Replaces this installation of zuri with a newer release.'
+  parser.description = 'Upgrades this installation of zuri with a newer release.'
 
   parser.add_option('version',
     'The release to install; the newest one by default',

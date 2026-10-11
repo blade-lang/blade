@@ -1,6 +1,6 @@
 /**
  * @command owner
- * @description Lists, adds and removes the publishers who own a
+ * @description Shows, adds and removes a publisher from a
  *    package.
  *
  *   zuri owner list <package>
@@ -22,7 +22,7 @@ import .._shared.names
 def parser() {
   var parser = args.Parser('owner', true)
 
-  parser.description = 'Lists, adds and removes the publishers who own a package.'
+  parser.description = 'Shows, adds and removes a publisher from a package.'
 
   parser.add_index('action', 'list, add or remove',
     { type: args.CHOICE, choices: ['list', 'add', 'remove'], required: true })

@@ -1,8 +1,7 @@
 /**
  * @command lsp
- * @description Runs the Zuri language server, which gives an editor
- *    completion, navigation, diagnostics, refactoring and the rest of
- *    the Language Server Protocol.
+ * @description Runs the Zuri language server for editor integration 
+ *    and support.
  *
  * Editors start the server themselves and talk to it over its
  * standard input and output:
@@ -32,7 +31,7 @@ import .server { Server }
 def main() {
   var parser = args.Parser('lsp', false)
 
-  parser.description = 'Runs the Zuri language server over standard input and output.'
+  parser.description = 'Runs the Zuri language server for editor integration and support.'
   parser.epilog = 'Editors start the server themselves; see the Editor Support chapter of the book.'
   parser.add_option(
     'stdio', 'Talk over standard input and output, as the server always does',
