@@ -1347,21 +1347,34 @@ impl VM {
             resolved
           };
           let target_class = self.read_resolved(gmod, is_root, slot);
-          target_class.is_class() && {
-            let mut cur = Some(v.as_instance().class);
-            let mut matched = false;
-            while let Some(c) = cur {
-              if c.equals(&target_class) {
-                matched = true;
-                break;
-              }
-              cur = c.as_class().superclass;
-            }
-            matched
-          }
+          Self::is_instance_of(v, target_class)
+        }
+      },
+      // The check runs first thing in the function's own frame, so the
+      // closure on top of the stack is the one whose upvalue this is.
+      ParamType::Captured { upvalue, .. } => {
+        v.is_instance() && {
+          let cell = self.current_closure_val().as_closure().upvalues[upvalue as usize];
+          cell.is_upvalue() && Self::is_instance_of(v, self.read_upvalue(cell))
         }
       },
     })
+  }
+
+  /// Whether instance `v`'s class is `target` or inherits from it. False
+  /// when `target` is not a class at all.
+  fn is_instance_of(v: Value, target: Value) -> bool {
+    if !target.is_class() {
+      return false;
+    }
+    let mut cur = Some(v.as_instance().class);
+    while let Some(c) = cur {
+      if c.equals(&target) {
+        return true;
+      }
+      cur = c.as_class().superclass;
+    }
+    false
   }
 
   /// Raw (path, line, function-name) per live frame, innermost first --

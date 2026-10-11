@@ -81,13 +81,15 @@ NYSSA_DATABASE=postgres://nyssa:secret@db.internal/nyssa zuri serve
 NYSSA_DATABASE=mysql://nyssa:secret@db.internal:3306/nyssa zuri serve
 ```
 
-The schema is kept up to date by numbered migrations, applied when the
-repository starts, so starting a newer Zuri against an older database
-brings it up to date. `zuri serve migrate` does the same and exits, for
-preparing a database ahead of a deployment. On PostgreSQL and SQLite
-each migration runs in a transaction; MySQL and MariaDB commit at every
-schema change, so there each migration runs on its own and is recorded
-once it has finished.
+The schema is kept up to date by [migrations](ch17-02-migrations.md),
+each written once for every engine and applied when the repository
+starts, so starting a newer Zuri against an older database brings it up
+to date. `zuri serve migrate` does the same and exits, for preparing a
+database ahead of a deployment. On PostgreSQL and SQLite each migration
+runs in a transaction; MySQL and MariaDB commit at every schema change,
+so there each migration runs on its own and is recorded once it has
+finished. Several repositories starting against one database apply each
+migration once.
 
 Published archives are stored under the storage directory by checksum,
 so the database and that directory are what a backup has to hold.

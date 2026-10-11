@@ -31,6 +31,7 @@
  */
 
 import .errors { TransactionError }
+import .schema { Schema }
 
 /**
  * An open transaction.
@@ -57,6 +58,15 @@ class Transaction {
    */
   var nested = false
 
+  /**
+   * Introspection and schema changes, run on the transaction's
+   * connection and so inside the transaction. The same `Schema` as the
+   * connection's own.
+   *
+   * @type Schema
+   */
+  var schema: Schema
+
   var _finished = false
 
   /**
@@ -66,6 +76,7 @@ class Transaction {
   @new(connection, nested) {
     self.connection = connection
     self.nested = nested ? true : false
+    self.schema = connection.schema
   }
 
   /**
@@ -283,6 +294,20 @@ class Transaction {
   count(table: string, where) {
     self._active()
     return self.connection.count(table, where)
+  }
+
+  /**
+   * A query over a model's rows inside this transaction.
+   *
+   * @param class model A class extending `sql.model.Model`.
+   * @returns Query
+   */
+  model(model) {
+    self._active()
+
+    import .model as models
+
+    return models.query(self, model)
   }
 
   /**

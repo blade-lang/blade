@@ -2891,7 +2891,7 @@ impl<'a, 'b> Lowering<'a, 'b> {
           object::OBJ_TAG_BOUND_METHOD,
           object::OBJ_TAG_CLASS,
         ],
-        ParamType::Instance(_) | ParamType::Iterable => {
+        ParamType::Instance(_) | ParamType::Captured { .. } | ParamType::Iterable => {
           unreachable!("the builder keeps these checks on the runtime path")
         },
       };

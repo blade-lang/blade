@@ -1,0 +1,18 @@
+# Runs every pending migration of a directory against a database and
+# prints what it applied, one name a line. sql_migrate.zu starts several
+# of these at once to see each migration applied exactly once.
+#
+#   zuri run sql_migrate_helper.zu <connection string> <directory>
+
+import os
+import sql
+import sql.migrate { Migrator }
+
+var db = sql.open(os.args[2], { busy_timeout: 30000 })
+var applied = Migrator(db, { directory: os.args[3] }).up()
+
+for name in applied {
+  echo name
+}
+
+db.close()

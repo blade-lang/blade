@@ -1,0 +1,13 @@
+# A model named Item, as sql_model_twin_a.zu declares one too, so
+# sql_model.zu can check the two are kept apart.
+
+import sql.model { Model }
+
+class Item < Model {
+  var id
+  var name
+
+  static define(model) {
+    model.table('twin_b_items')
+  }
+}

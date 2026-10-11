@@ -290,6 +290,48 @@ def compile_file(path) {
 }
 
 /**
+ * Imports the module at `path` and returns it, the way an `import`
+ * statement naming that file would.
+ *
+ * `import` takes its path as written in the source, so it cannot
+ * reach a file whose name is only known once the program runs. This
+ * can: a plugin directory, a set of migrations, a file named on the
+ * command line.
+ *
+ * ```zuri,ignore
+ * import zuri
+ *
+ * var plugin = zuri.import_file('plugins/greeter.zu')
+ *
+ * echo plugin.greet('Ada')
+ * ```
+ *
+ * A relative `path` is taken from the working directory, as every
+ * file function takes one, not from the file making the call. The
+ * file is found the way `import` finds one: `path` itself when it has
+ * an extension, otherwise `path.zu`, and then `path/index.zu`.
+ *
+ * The module is the one `import` would give, from the same cache. Its
+ * top level runs the first time it is imported, by this or by an
+ * `import`, and never again: importing the same file twice returns
+ * the same module, and an `import` statement elsewhere naming the
+ * same file sees it too. Under `zuri run --watch`, a file imported
+ * this way is watched like any other module.
+ *
+ * Read what the module exports through ordinary member access, or
+ * `zuri.reflect.module_info()` to find out what is there first.
+ *
+ * @param string path: The file to import
+ * @returns module
+ * @throws ModuleNotFoundError if no file is found at `path`
+ * @throws Error if the file does not parse or compile, or raises
+ *    while its top level runs; what it raised is raised unchanged
+ */
+def import_file(path: string) {
+  return _zuri_compile.import_file(path)
+}
+
+/**
  * Every problem compiling `source` would report, as a list of
  * {zuri.Diagnostic} in the order they occur, without running
  * anything and without raising. An empty list means `source`

@@ -8,3 +8,5 @@ def g() {
 
 echo f == f
 echo f == g
+echo print == print
+echo print == time

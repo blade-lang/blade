@@ -47,6 +47,18 @@ const _TYPE_WORDS = {
   bigint: 'bigint',
 }
 
+# The key an owner's member table is kept under.
+def _owner_key(owner) {
+  if owner.t == 'union' {
+    return 'union ' + '|'.join(owner.of.map(@(one) => _owner_key(one)))
+  }
+
+  var place = owner.get('path', owner.get('name', ''))
+  var index = owner.get('index', '')
+
+  return '${owner.t} ${place}#${index}'
+}
+
 # The type a `@returns` tag's type names, read as a word: `?dict` and
 # `dict|nil` are `dict`, `list[bytes]` and `number[]` are `list`, and
 # a union of two real types is no one type.
@@ -484,6 +496,10 @@ class Linker {
    * | `'builtin'` | `name` |
    * | `'class'`, `'instance'`, `'super'`, `'function'` | `path`, `index` |
    * | `'module'` | `path`: the module's summary path |
+   * | `'union'` | `of`: two or more of the others, each different |
+   *
+   * A union whose types all come to the same one is that one, and one
+   * with a type that cannot be told is `nil`.
    *
    * @param ?dict type: A type from a summary.
    * @returns ?dict
@@ -547,12 +563,37 @@ class Linker {
       }
       when 'member' {
         var owner = self._resolve(type.of, depth + 1)
+
+        # Through a union, the member as each of its types has it.
+        if owner != nil and owner.t == 'union' {
+          var found = []
+
+          for one in owner.of {
+            var member = self._member(one, type.name)
+
+            found.append(
+              member == nil ? nil : self._symbol_type(member, depth + 1),
+            )
+          }
+
+          return self._union(found)
+        }
+
         var member = self._member(owner, type.name)
 
         return member == nil ? nil : self._symbol_type(member, depth + 1)
       }
       when 'call' {
         return self._call(self._resolve(type.of, depth + 1), depth + 1)
+      }
+      when 'union' {
+        var found = []
+
+        for one in type.of {
+          found.append(self._resolve(one, depth + 1))
+        }
+
+        return self._union(found)
       }
       default {
         return nil
@@ -629,10 +670,45 @@ class Linker {
     }
   }
 
+  # One type for a value that may be any of `types`: that type when they
+  # all come to the same one, a union of the different ones otherwise,
+  # and `nil` when any of them cannot be told.
+  _union(types) {
+    var found = []
+
+    for type in types {
+      if type == nil {
+        return nil
+      }
+
+      for one in type.t == 'union' ? type.of : [type] {
+        if !found.contains(one) {
+          found.append(one)
+        }
+      }
+    }
+
+    if found.is_empty() {
+      return nil
+    }
+
+    return found.length() == 1 ? found[0] : { t: 'union', of: found }
+  }
+
   # What calling something of the concrete type `callee` gives.
   _call(callee, depth) {
     if callee == nil {
       return nil
+    }
+
+    if callee.t == 'union' {
+      var found = []
+
+      for one in callee.of {
+        found.append(self._call(one, depth + 1))
+      }
+
+      return self._union(found)
     }
 
     if callee.t == 'class' {
@@ -930,9 +1006,7 @@ class Linker {
   # looking up every member access in it, so the table is built once
   # per owner rather than once per access.
   _member_table(owner) {
-    var place = owner.get('path', owner.get('name', ''))
-    var index = owner.get('index', '')
-    var key = '${owner.t} ${place}#${index}'
+    var key = _owner_key(owner)
     var table = self._member_tables.get(key, nil)
 
     if table != nil {
@@ -971,6 +1045,23 @@ class Linker {
       when 'module' {
         for name, ref in self.globals(owner.path) {
           add(name, ref, 'export')
+        }
+
+        return found
+      }
+      when 'union' {
+        # What every one of its types has, declared as the first one
+        # declares it.
+        var tables = []
+
+        for one in owner.of {
+          tables.append(self._member_table(one))
+        }
+
+        for member in tables[0].list {
+          if tables.every(@(table) => table.by_name.contains(member.name)) {
+            add(member.name, member, member.via)
+          }
         }
 
         return found
@@ -1091,6 +1182,40 @@ class Linker {
     var found = self._member_table(owner).by_name.get(name, nil)
 
     return found == nil ? nil : { path: found.path, index: found.index }
+  }
+
+  /**
+   * Every declaration of the member `name` a value of `owner` may
+   * reach: its one declaration for a single type, and for a union the
+   * declaration on each of its types that has it, in the union's order.
+   *
+   * @param ?dict owner
+   * @param string name
+   * @returns list[dict]: `{ path, index }` each, empty when there is
+   *    none.
+   */
+  declarations(owner, name: string) {
+    if owner == nil {
+      return []
+    }
+
+    if owner.t != 'union' {
+      var member = self._member(owner, name)
+
+      return member == nil ? [] : [member]
+    }
+
+    var found = []
+
+    for one in owner.of {
+      var member = self._member(one, name)
+
+      if member != nil and !found.contains(member) {
+        found.append(member)
+      }
+    }
+
+    return found
   }
 
   /**

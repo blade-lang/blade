@@ -816,6 +816,17 @@ pub enum ParamType {
   /// `ObjClass::superclass`), same as the reference C runtime's
   /// `instance_of`.
   Instance(u16),
+  /// A user class the function reaches through one of its own upvalues
+  /// rather than by global name: one a selective import brought into the
+  /// file, or one held in a local of an enclosing function. `upvalue`
+  /// indexes the running closure's `upvalues` and is read on every
+  /// check; `name` indexes `Chunk::constants` for the class's name, which
+  /// only messages use. Matches the class or any of its subclasses, the
+  /// same as `Instance`.
+  Captured {
+    upvalue: u8,
+    name: u16,
+  },
 }
 
 /// One `Instr::CheckParamType` site's full declared constraint;
@@ -863,7 +874,10 @@ impl ParamType {
       ParamType::Class => "a type".to_string(),
       ParamType::Callable => "a callable".to_string(),
       ParamType::Iterable => "an iterable".to_string(),
-      ParamType::Instance(name_const) => {
+      ParamType::Instance(name_const)
+      | ParamType::Captured {
+        name: name_const, ..
+      } => {
         format!("a {}", chunk.constants[name_const as usize].as_str())
       },
     }

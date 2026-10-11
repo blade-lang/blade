@@ -79,7 +79,7 @@ a doc block stating its parameters, its defaults and its edge cases.
 
 | Module | What it is for | Book |
 | --- | --- | --- |
-| `sql` | one contract for every relational database, with SQLite, PostgreSQL and MySQL adapters | [17](ch17-00-sql.md) |
+| `sql` | one contract for every relational database, with SQLite, PostgreSQL and MySQL adapters, schema changes, migrations and models | [17](ch17-00-sql.md) |
 
 ## Mail
 
@@ -309,7 +309,11 @@ One module per element width, each exporting a single class.
 | `sql.transaction` | `Transaction`, and the savepoints inside it |
 | `sql.connection` | the `Connection` a program holds |
 | `sql.crud` | building the four statements that are always the same |
-| `sql.schema` | asking a database what is in it |
+| `sql.schema` | asking a database what is in it, and changing it |
+| `sql.blueprint` | a table described once for every engine |
+| `sql.ddl` | turning a blueprint into one engine's statements |
+| `sql.migrate` | versioned schema changes, applied once each and recorded |
+| `sql.model` | models: records that save and check themselves, queries and associations |
 | `sql.pool` | keeping connections open and lending them out |
 | `sql.sqlite` | the SQLite adapter, and its blobs, backups and hooks |
 | `sql.postgres` | the PostgreSQL adapter, and LISTEN/NOTIFY |

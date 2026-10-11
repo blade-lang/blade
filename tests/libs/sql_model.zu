@@ -1,0 +1,977 @@
+# Models: records that save, check and delete themselves, queries that
+# build them, and the associations between them.
+#
+# Everything runs against SQLite, and the portable part against
+# PostgreSQL, MySQL and MariaDB when ZURI_TEST_POSTGRES, ZURI_TEST_MYSQL
+# and ZURI_TEST_MARIADB name a server.
+
+import date
+import json
+import os
+import sql
+import validate
+import sql.model {
+  Model, Query, ModelError, RecordNotFound, RecordInvalid, definition_of,
+}
+
+import .sql_model_twin_a as twin_a
+import .sql_model_twin_b as twin_b
+
+def raises(body, kind) {
+  catch {
+    body()
+  } as error {
+    return instance_of(error, kind)
+  }
+
+  return false
+}
+
+# Hooks append to this, so the order they ran in can be checked.
+var calls = []
+
+class Author < Model {
+  var id
+  var name
+  var email
+  var password_hash
+  var created_at
+  var updated_at
+
+  var posts
+  var profile
+
+  static define(model) {
+    model.timestamps()
+    model.has_many('posts', Post)
+    model.has_one('profile', Profile)
+    model.hidden(['password_hash'])
+    model.validate('name', validate.required().string().max_length(80))
+    model.validate('email', validate.nullable().string().email().sometimes())
+    model.unique('name')
+  }
+}
+
+class Profile < Model {
+  var id
+  var author_id
+  var bio
+
+  var author
+
+  static define(model) {
+    model.belongs_to('author', Author)
+  }
+}
+
+class Post < Model {
+  var id
+  var author_id
+  var title
+  var views = 0
+  var published = false
+  var tags = []
+  var price
+  var created_at
+  var updated_at
+
+  var author
+  var labels
+  var draft_note
+
+  static define(model) {
+    model.timestamps()
+    model.cast('published', 'bool')
+    model.cast('tags', 'json')
+    model.cast('price', 'decimal')
+    model.belongs_to('author', Author)
+    model.belongs_to_many('labels', Label)
+    model.transient(['draft_note'])
+    model.validate('title', validate.required().string().max_length(200))
+    model.scope('published', @(query, _) => query.where({ published: true }))
+    model.scope(
+      'popular', @(query, least) => query.where('views >= ?', [least]),
+    )
+  }
+
+  before_validate(db) {
+    calls.append('before_validate')
+
+    if is_string(self.title) {
+      self.title = self.title.trim()
+    }
+  }
+
+  validate(errors) {
+    calls.append('validate')
+
+    if self.title == 'forbidden' {
+      errors.add('title', 'That title is not allowed.')
+    }
+  }
+
+  after_validate(db) {
+    calls.append('after_validate')
+  }
+
+  before_save(db) {
+    calls.append('before_save')
+  }
+
+  before_create(db) {
+    calls.append('before_create')
+  }
+
+  after_create(db) {
+    calls.append('after_create')
+
+    if self.title == 'explode after create' {
+      raise Error('after_create refused')
+    }
+  }
+
+  before_update(db) {
+    calls.append('before_update')
+  }
+
+  after_update(db) {
+    calls.append('after_update')
+  }
+
+  after_save(db) {
+    calls.append('after_save')
+  }
+
+  before_delete(db) {
+    calls.append('before_delete')
+  }
+
+  after_delete(db) {
+    calls.append('after_delete')
+  }
+}
+
+class Label < Model {
+  var id
+  var name
+
+  var posts
+
+  static define(model) {
+    model.belongs_to_many('posts', Post)
+  }
+}
+
+class Category < Model {
+  var id
+  var name
+  var loaded = false
+
+  static define(model) {
+    model.fillable(['name'])
+    model.transient(['loaded'])
+  }
+
+  after_load() {
+    self.loaded = true
+  }
+}
+
+class Address < Model {
+  var code
+  var line
+
+  static define(model) {
+    model.table('addresses')
+    model.primary_key('code')
+  }
+}
+
+class BlogPost < Model {
+  var id
+}
+
+class Broken < Model {
+  var id
+
+  static define(model) {
+    model.belongs_to('owner', Author)
+  }
+}
+
+class NotAModel {
+  var id
+}
+
+def schema(db) {
+  db.schema.create_table('authors', @(table) {
+    table.id()
+    table.string('name', 80).unique()
+    table.string('email', 120).nullable()
+    table.string('password_hash', 120).nullable()
+    table.timestamps()
+  })
+
+  db.schema.create_table('profiles', @(table) {
+    table.id()
+    table.references('author_id', 'authors').on_delete('cascade')
+    table.text('bio').nullable()
+  })
+
+  db.schema.create_table('posts', @(table) {
+    table.id()
+    table.references('author_id', 'authors').nullable().on_delete('cascade')
+    table.string('title', 200)
+    table.integer('views').default_value(0)
+    table.boolean('published').default_value(false)
+    table.json('tags').default_value([])
+    table.decimal('price', 10, 2).nullable()
+    table.timestamps()
+  })
+
+  db.schema.create_table('labels', @(table) {
+    table.id()
+    table.string('name', 40)
+  })
+
+  db.schema.create_table('label_post', @(table) {
+    table.references('label_id', 'labels').on_delete('cascade')
+    table.references('post_id', 'posts').on_delete('cascade')
+    table.primary(['label_id', 'post_id'])
+  })
+
+  db.schema.create_table('categories', @(table) {
+    table.id()
+    table.string('name', 40)
+  })
+
+  db.schema.create_table('addresses', @(table) {
+    table.string('code', 10).primary()
+    table.string('line', 100).default_value('unknown')
+  })
+}
+
+def fresh() {
+  var db = sql.open(':memory:')
+  schema(db)
+  return db
+}
+
+def test_definitions() {
+  assert definition_of(Post).table_name == 'posts'
+  assert definition_of(Category).table_name == 'categories'
+  assert definition_of(Address).table_name == 'addresses'
+  assert definition_of(BlogPost).table_name == 'blog_posts'
+  assert definition_of(Address).primary == 'code'
+
+  # Columns are the declared fields, without associations or what is
+  # transient, in order.
+  assert definition_of(Post).columns == [
+    'id', 'author_id', 'title', 'views', 'published', 'tags', 'price',
+    'created_at', 'updated_at',
+  ]
+
+  assert definition_of(Post).fillable_columns == [
+    'author_id', 'title', 'views', 'published', 'tags', 'price',
+  ]
+
+  # A definition that cannot work says so the first time it is used.
+  assert raises(@() {
+    definition_of(Broken)
+  }, ModelError)
+
+  assert raises(@() {
+    definition_of(NotAModel)
+  }, ModelError)
+
+  assert raises(@() {
+    definition_of('posts')
+  }, ModelError)
+
+  var db = fresh()
+
+  assert raises(@() {
+    db.model(NotAModel)
+  }, ModelError)
+
+  # Two classes called Item, in two modules, are two models.
+  assert definition_of(twin_a.Item).table_name == 'twin_a_items'
+  assert definition_of(twin_b.Item).table_name == 'twin_b_items'
+
+  db.close()
+  echo 'test_definitions passed'
+}
+
+def test_saving() {
+  var db = fresh()
+  var ada = db.model(Author).create({ name: 'Ada', email: 'ada@example.com' })
+
+  assert ada.is_persisted()
+  assert ada.id == 1
+  assert typeof(ada.created_at) == 'Date'
+  assert ada.created_at == ada.updated_at
+
+  # A column left nil takes the database's default, and the record
+  # holds what was stored.
+  var post = Post({ title: '  On Engines  ', author_id: ada.id })
+
+  post.views = nil
+  post.save(db)
+
+  assert post.title == 'On Engines'
+  assert post.views == 0
+  assert post.published == false
+  assert post.tags == []
+  assert !post.is_dirty(nil)
+
+  # Only what changed is written: a change made under the record is not
+  # overwritten by saving a different column.
+  db.exec('update posts set views = 41 where id = ?', [post.id])
+  post.title = 'On Analytical Engines'
+
+  assert post.changes() == { title: 'On Analytical Engines' }
+  assert post.is_dirty('title')
+  assert post.original('title') == 'On Engines'
+
+  post.save(db)
+
+  var stored = db.model(Post).find(post.id)
+
+  assert stored.title == 'On Analytical Engines'
+  assert stored.views == 41
+  assert stored.updated_at >= stored.created_at
+
+  # A list changed in place is a change.
+  stored.tags.append('history')
+  assert stored.changes() == { tags: ['history'] }
+  stored.save(db)
+  assert db.model(Post).find(post.id).tags == ['history']
+
+  # Reloading discards what was not saved.
+  stored.title = 'unsaved'
+  stored.reload(db)
+  assert stored.title == 'On Analytical Engines'
+
+  stored.delete(db)
+  assert !stored.is_persisted()
+  assert db.model(Post).count() == 0
+
+  assert raises(@() {
+    stored.reload(db)
+  }, RecordNotFound)
+
+  assert raises(@() {
+    Post().delete(db)
+  }, ModelError)
+
+  # Saving it again inserts it anew.
+  stored.id = nil
+  stored.save(db)
+  assert db.model(Post).count() == 1
+
+  # A key the program chooses is assigned rather than filled, since a
+  # key is never fillable unless the model says so, and is kept.
+  var home = Address()
+  home.code = 'HOME'
+  home.save(db)
+
+  assert home.code == 'HOME'
+  assert home.line == 'unknown'
+  assert db.model(Address).find('HOME').line == 'unknown'
+
+  db.close()
+  echo 'test_saving passed'
+}
+
+def test_casts_and_output() {
+  var db = fresh()
+  var ada = db.model(Author).create({ name: 'Ada' })
+
+  ada.password_hash = 'secret'
+  ada.save(db)
+
+  db.exec(
+    "insert into posts (title, published, tags, price) values ('raw', 1, '[1,2]', '19.99')",
+    nil,
+  )
+
+  var post = db.model(Post).find_by({ title: 'raw' })
+
+  assert post.published == true
+  assert post.tags == [1, 2]
+  assert instance_of(post.price, sql.Decimal)
+  assert post.price.to_string() == '19.99'
+
+  # Hidden columns stay out, loaded associations come in.
+  var listed = db.model(Author).include('posts').first().to_dict()
+
+  assert !listed.contains('password_hash')
+  assert listed.name == 'Ada'
+  assert listed.posts == []
+
+  var encoded = json.decode(json.encode(post))
+
+  assert encoded.price == 19.99
+  assert encoded.created_at.ends_with('+00:00')
+  assert !encoded.contains('author')
+
+  assert post.to_string() == '<Post ${post.id}>'
+  assert Post().to_string() == '<Post new>'
+
+  db.close()
+  echo 'test_casts_and_output passed'
+}
+
+def test_filling() {
+  # The key and the timestamps are not filled from a dictionary.
+  assert raises(@() {
+    Post({ id: 5, title: 'x' })
+  }, ModelError)
+
+  assert raises(@() {
+    Post({ created_at: date.from_time(time()) })
+  }, ModelError)
+
+  assert raises(@() {
+    Post({ nonsense: 1 })
+  }, ModelError)
+
+  # `only` takes the keys asked for and leaves the rest, as a form
+  # carrying more than the record should take.
+  var form = { title: 'From a form', id: 99, _csrf: 'token' }
+  var post = Post().fill(form, ['title'])
+
+  assert post.title == 'From a form'
+  assert post.id == nil
+
+  assert raises(@() {
+    Post().fill(form, ['title', 'id'])
+  }, ModelError)
+
+  # A declared list is all that fills.
+  assert Category({ name: 'Tools' }).name == 'Tools'
+
+  echo 'test_filling passed'
+}
+
+def test_validation() {
+  var db = fresh()
+
+  var invalid = Post({ title: '' })
+
+  assert !invalid.is_valid(db)
+  assert invalid.errors()[0].field == 'title'
+
+  var raised = nil
+
+  catch {
+    Post({ title: 'forbidden' }).save(db)
+  } as error {
+    raised = error
+  }
+
+  assert instance_of(raised, RecordInvalid)
+  assert instance_of(raised, validate.ValidationError)
+  assert raised.errors
+    == [{ field: 'title', message: 'That title is not allowed.' }]
+  assert raised.record.title == 'forbidden'
+  assert db.model(Post).count() == 0
+
+  var ada = db.model(Author).create({ name: 'Ada' })
+
+  assert raises(@() {
+    db.model(Author).create({ name: 'Ada' })
+  }, RecordInvalid)
+
+  # A record is not taken by itself.
+  ada.email = 'ada@example.com'
+  ada.save(db)
+
+  assert raises(@() {
+    db.model(Author).create({ name: 'Grace', email: 'not an email' })
+  }, RecordInvalid)
+
+  db.close()
+  echo 'test_validation passed'
+}
+
+def test_hooks() {
+  var db = fresh()
+
+  calls = []
+  var post = Post({ title: 'Hooked' })
+  post.save(db)
+
+  assert calls == [
+    'before_validate', 'validate', 'after_validate', 'before_save',
+    'before_create', 'after_create', 'after_save',
+  ]
+
+  calls = []
+  post.title = 'Hooked again'
+  post.save(db)
+
+  assert calls == [
+    'before_validate', 'validate', 'after_validate', 'before_save',
+    'before_update', 'after_update', 'after_save',
+  ]
+
+  calls = []
+  post.delete(db)
+  assert calls == ['before_delete', 'after_delete']
+
+  # A hook that raises undoes the write it surrounds.
+  assert raises(@() {
+    Post({ title: 'explode after create' }).save(db)
+  }, Error)
+
+  assert db.model(Post).count() == 0
+
+  # after_load runs as records are built.
+  db.model(Category).create({ name: 'Tools' })
+  assert db.model(Category).first().loaded
+
+  db.close()
+  echo 'test_hooks passed'
+}
+
+def test_transactions() {
+  var db = fresh()
+
+  catch {
+    db.transaction(@(tx) {
+      tx.model(Author).create({ name: 'Ada' })
+      Post({ title: 'Inside' }).save(tx)
+
+      assert tx.model(Post).count() == 1
+
+      raise Error('undo it all')
+    })
+  } as _ignored {
+  }
+
+  assert db.model(Author).count() == 0
+  assert db.model(Post).count() == 0
+
+  db.transaction(@(tx) {
+    tx.model(Author).create({ name: 'Kept' })
+  })
+
+  assert db.model(Author).count() == 1
+
+  db.close()
+  echo 'test_transactions passed'
+}
+
+def test_queries() {
+  var db = fresh()
+  var ada = db.model(Author).create({ name: 'Ada' })
+
+  db
+    .model(Post)
+    .create({ title: 'One', views: 10, published: true, author_id: ada.id })
+  db.model(Post).create({ title: 'Two', views: 200, published: true })
+  db
+    .model(Post)
+    .create({
+      title: 'Three',
+      views: 50,
+      published: false,
+      price: sql.Decimal('5.50'),
+    })
+  db
+    .model(Post)
+    .create({
+      title: 'Four',
+      views: 0,
+      published: false,
+      price: sql.Decimal('1.25'),
+    })
+
+  var all = db.model(Post)
+
+  assert all.count() == 4
+  assert all.where({ published: true }).count() == 2
+  assert all.where({ author_id: nil }).count() == 3
+  assert all.where({ title: ['One', 'Four'] }).count() == 2
+  assert all.where({ title: [] }).count() == 0
+  assert all.where({ views: sql.raw('views') }).count() == 4
+  assert all.where('views > ? or title = ?', [100, 'Four']).count() == 2
+
+  # Every condition holds, and an or inside a fragment stays inside it.
+  assert all
+    .where('views > ? or title = ?', [100, 'Four'])
+    .where({ published: true })
+    .count()
+    == 1
+
+  # A null is not equal to anything, so it is among what a value
+  # excludes.
+  assert all.where_not({ author_id: ada.id }).count() == 3
+  assert all.where_not({ author_id: nil }).count() == 1
+  assert all.where_not({ title: ['One', 'Two'] }).count() == 2
+  assert all.where_not({ title: [] }).count() == 4
+
+  assert all.order('views desc').pluck('title')
+    == ['Two', 'Three', 'One', 'Four']
+  assert all.order(['published desc', 'title']).pluck('title')
+    == ['One', 'Two', 'Four', 'Three']
+  assert all.order('views').limit(2).pluck('views') == [0, 10]
+  assert all.order('views').offset(3).pluck('views') == [200]
+  assert all.order('views').limit(1).offset(1).pluck('title') == ['One']
+  assert all.order('views').limit(1).count() == 4
+
+  # first() is the same one every time, the lowest key when unordered.
+  assert all.first().title == 'One'
+  assert all.order('views desc').first().title == 'Two'
+  assert all.where({ title: 'Nope' }).first() == nil
+
+  assert all.find(2).title == 'Two'
+  assert all.find_by({ title: 'Three' }).views == 50
+  assert all.find_by({ title: 'Nope' }) == nil
+  assert all.exists()
+  assert !all.where({ title: 'Nope' }).exists()
+
+  assert raises(@() {
+    all.find(99)
+  }, RecordNotFound)
+
+  assert all.pluck('published') == [true, true, false, false]
+  assert all.sum('views') == 260
+  assert all.min('views') == 0
+  assert all.max('views') == 200
+  assert all.average('views') == 65
+  assert all.where({ title: 'Nope' }).max('views') == nil
+
+  var page = all.order('id').page(2, 3)
+
+  assert page.records.map(@(post) => post.title) == ['Four']
+  assert page.total == 4
+  assert page.pages == 2
+  assert all.where({ title: 'Nope' }).page(1, 10).pages == 1
+
+  assert all.scope('published', nil).count() == 2
+  assert all.scope('popular', 50).count() == 2
+  assert all.scope('published', nil).scope('popular', 50).count() == 1
+
+  assert raises(@() {
+    all.scope('missing', nil)
+  }, ModelError)
+
+  # Narrowing returns a new query and leaves the old one alone.
+  var published = all.where({ published: true })
+  published.where({ views: 10 })
+  assert published.count() == 2
+
+  var titles = []
+
+  for post in all.order('id') {
+    titles.append(post.title)
+  }
+
+  assert titles == ['One', 'Two', 'Three', 'Four']
+
+  var streamed = []
+
+  for post in all.order('id').stream() {
+    streamed.append(post.title)
+  }
+
+  assert streamed == titles
+
+  assert raises(@() {
+    all.include('author').stream()
+  }, ModelError)
+
+  var built = all.where({ published: true }).order('id').limit(5).to_sql()
+
+  assert built.sql
+    == 'select * from "posts" where "published" = ? order by "id" limit 5'
+  assert built.values == [true]
+
+  assert all
+    .from_sql('select * from posts where views > ? order by views', [20])
+    .map(@(post) => post.title)
+    == ['Three', 'Two']
+
+  assert raises(@() {
+    all.limit(-1)
+  }, ModelError)
+
+  db.close()
+  echo 'test_queries passed'
+}
+
+def test_bulk() {
+  var db = fresh()
+
+  db.model(Post).create({ title: 'A', views: 1 })
+  db.model(Post).create({ title: 'B', views: 2 })
+  db.model(Post).create({ title: 'C', views: 3 })
+
+  var before = db.model(Post).find(1).updated_at
+
+  calls = []
+  assert db
+    .model(Post)
+    .where('views >= ?', [2])
+    .update({ views: sql.raw('views + 10') })
+    == 2
+  assert calls.is_empty(), 'bulk updates call no hooks'
+  assert db.model(Post).order('id').pluck('views') == [1, 12, 13]
+  assert db.model(Post).find(2).updated_at >= before
+
+  assert db.model(Post).where({ title: 'A' }).delete() == 1
+  assert db.model(Post).count() == 2
+  assert db.model(Post).delete() == 2
+
+  db.close()
+  echo 'test_bulk passed'
+}
+
+def test_associations() {
+  var db = fresh()
+  var ada = db.model(Author).create({ name: 'Ada' })
+  var grace = db.model(Author).create({ name: 'Grace' })
+
+  # A record in a belongs_to field sets the key referring to it.
+  var engines = Post({ title: 'Engines' })
+  engines.author = ada
+  engines.save(db)
+
+  assert engines.author_id == ada.id
+
+  assert raises(@() {
+    var orphan = Post({ title: 'Orphan' })
+    orphan.author = Author({ name: 'Unsaved' })
+    orphan.save(db)
+  }, ModelError)
+
+  db.model(Post).create({ title: 'Looms', author_id: ada.id })
+  db.model(Post).create({ title: 'Bugs', author_id: grace.id })
+  db.model(Post).create({ title: 'Nobody' })
+
+  Profile({ author_id: ada.id, bio: 'Mathematician' }).save(db)
+
+  var authors = db.model(Author).order('id').include(['posts', 'profile']).all()
+
+  assert authors[0].posts.map(@(post) => post.title) == ['Engines', 'Looms']
+  assert authors[0].profile.bio == 'Mathematician'
+  assert authors[1].posts.map(@(post) => post.title) == ['Bugs']
+  assert authors[1].profile == nil
+
+  var posts = db.model(Post).order('id').include('author').all()
+
+  assert posts[0].author.name == 'Ada'
+  assert posts[3].author == nil
+
+  # Dotted names load what an association loads.
+  var nested = db.model(Author).order('id').include('posts.author').first()
+  assert nested.posts[1].author.name == 'Ada'
+
+  assert raises(@() {
+    db.model(Post).include('comments')
+  }, ModelError)
+
+  # Loading onto a record in hand, and querying an association.
+  var fresh_ada = db.model(Author).find(ada.id)
+
+  assert fresh_ada.posts == nil
+  assert fresh_ada.load(db, 'posts').length() == 2
+  assert fresh_ada.posts.length() == 2
+  assert fresh_ada.related(db, 'posts').where({ title: 'Looms' }).count() == 1
+  assert fresh_ada.related(db, 'profile').first().bio == 'Mathematician'
+  assert engines.related(db, 'author').first().name == 'Ada'
+
+  # Many to many, through label_post.
+  var red = db.model(Label).create({ name: 'red' })
+  var blue = db.model(Label).create({ name: 'blue' })
+  var green = db.model(Label).create({ name: 'green' })
+
+  assert engines.attach(db, 'labels', [red, blue.id]) == 2
+  assert engines.attach(db, 'labels', red) == 0
+
+  assert engines.load(db, 'labels').map(@(label) => label.name)
+    == ['red', 'blue']
+  assert engines.related(db, 'labels').count() == 2
+  assert red.load(db, 'posts').map(@(post) => post.title) == ['Engines']
+
+  var synced = engines.sync(db, 'labels', [blue, green])
+
+  assert synced.attached == [green.id]
+  assert synced.detached == [red.id]
+  assert engines.load(db, 'labels').map(@(label) => label.name)
+    == ['blue', 'green']
+
+  assert engines.detach(db, 'labels', green) == 1
+  assert engines.detach(db, 'labels', nil) == 1
+  assert engines.related(db, 'labels').count() == 0
+
+  assert raises(@() {
+    engines.attach(db, 'author', [red])
+  }, ModelError)
+
+  assert raises(@() {
+    Post({ title: 'New' }).attach(db, 'labels', [red])
+  }, ModelError)
+
+  db.close()
+  echo 'test_associations passed'
+}
+
+def test_batches() {
+  var db = fresh()
+  var authors = []
+
+  iter var i = 0; i < 620; i++ {
+    authors.append({ name: 'author ${i}' })
+  }
+
+  db.insert_many('authors', authors)
+
+  var rows = []
+
+  for author in db.model(Author).all() {
+    rows.append({ title: 'by ${author.id}', author_id: author.id, views: 0 })
+  }
+
+  db.insert_many('posts', rows)
+
+  # More keys than one statement takes are loaded in batches.
+  var loaded = db.model(Post).include('author').all()
+
+  assert loaded.length() == 620
+  assert loaded.filter(@(post) => post.author == nil).is_empty()
+  assert loaded[619].author.name == 'author 619'
+
+  db.close()
+  echo 'test_batches passed'
+}
+
+def test_equality() {
+  var db = fresh()
+  var ada = db.model(Author).create({ name: 'Ada' })
+  var again = db.model(Author).find(ada.id)
+
+  assert ada == again
+  assert ada != db.model(Author).create({ name: 'Grace' })
+
+  var post = db.model(Post).create({ title: 'x' })
+  assert post.id == ada.id
+  assert ada != post, 'records of two models are not equal, whatever their keys'
+
+  var unsaved = Post({ title: 'y' })
+
+  assert unsaved == unsaved
+  assert unsaved != Post({ title: 'y' })
+
+  db.close()
+  echo 'test_equality passed'
+}
+
+# What every engine does the same, run against a live server.
+def portable(db) {
+  for table in [
+    'label_post', 'labels', 'posts', 'profiles', 'authors', 'categories',
+    'addresses',
+  ] {
+    db.schema.drop_table(table, { if_exists: true })
+  }
+
+  schema(db)
+
+  var ada = db.model(Author).create({ name: 'Ada' })
+  var post = Post({ title: 'Engines', price: sql.Decimal('19.99') })
+
+  post.author = ada
+  post.save(db)
+
+  var stored = db.model(Post).include('author').find(post.id)
+
+  assert stored.published == false
+  assert stored.tags == []
+  assert stored.price.to_string().starts_with('19.99')
+  assert stored.author.name == 'Ada'
+  assert typeof(stored.created_at) == 'Date'
+
+  stored.published = true
+  stored.tags.append('x')
+  stored.save(db)
+
+  var again = db.model(Post).find(post.id)
+
+  assert again.published == true
+  assert again.tags == ['x']
+
+  assert raises(@() {
+    db.model(Author).create({ name: 'Ada' })
+  }, RecordInvalid)
+
+  var red = db.model(Label).create({ name: 'red' })
+
+  stored.attach(db, 'labels', [red])
+  assert db.model(Post).include('labels').first().labels[0].name == 'red'
+
+  assert db.model(Post).where({ published: true }).count() == 1
+  assert db.model(Post).page(1, 10).total == 1
+
+  db.transaction(@(tx) {
+    tx.model(Author).create({ name: 'Grace' })
+  })
+
+  assert db.model(Author).count() == 2
+
+  for table in [
+    'label_post', 'labels', 'posts', 'profiles', 'authors', 'categories',
+    'addresses',
+  ] {
+    db.schema.drop_table(table, { if_exists: true })
+  }
+}
+
+def test_servers() {
+  var servers = {
+    ZURI_TEST_POSTGRES: 'postgres',
+    ZURI_TEST_MYSQL: 'mysql',
+    ZURI_TEST_MARIADB: 'mariadb',
+  }
+
+  for variable, label in servers {
+    var dsn = os.get_env(variable, nil)
+
+    if dsn == nil or dsn == '' {
+      echo 'test_servers ${label} skipped: set ${variable} to a connection string'
+      continue
+    }
+
+    var db = sql.open(dsn)
+
+    if label != 'postgres' {
+      db.exec_script('create database if not exists zuri_sql_model')
+      db.exec('use zuri_sql_model', nil)
+    }
+
+    portable(db)
+
+    if label != 'postgres' {
+      db.exec_script('drop database if exists zuri_sql_model')
+    }
+
+    db.close()
+    echo 'test_servers ${label} passed'
+  }
+}
+
+test_definitions()
+test_saving()
+test_casts_and_output()
+test_filling()
+test_validation()
+test_hooks()
+test_transactions()
+test_queries()
+test_bulk()
+test_associations()
+test_batches()
+test_equality()
+test_servers()

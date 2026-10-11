@@ -483,6 +483,28 @@ class Connection {
   }
 
   /**
+   * A query over a model's rows on this connection: the start of
+   * everything `sql.model` does.
+   *
+   * ```zuri,ignore
+   * var post = db.model(Post).find(7)
+   * var drafts = db.model(Post).where({ published: false }).all()
+   * ```
+   *
+   * The model layer is loaded the first time this is called, so a
+   * program that never uses a model never loads it.
+   *
+   * @param class model A class extending `sql.model.Model`.
+   * @returns Query
+   * @throws ModelError if `model` is not one.
+   */
+  model(model) {
+    import .model as models
+
+    return models.query(self, model)
+  }
+
+  /**
    * Runs `body` inside a transaction, committing when it returns and
    * rolling back when it raises.
    *

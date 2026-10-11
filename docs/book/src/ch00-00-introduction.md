@@ -79,6 +79,7 @@ subcommand of `zuri`, and every one has its place in this book:
 | `zuri init` | starts a project | [Chapter 1](ch01-02-hello-world.md#starting-a-project) |
 | `zuri fmt` | lays out Zuri source in the house style | [Chapter 1](ch01-02-hello-world.md#formatting) |
 | `zuri test` | runs a project's tests | [Chapter 23](ch23-00-testing.md) |
+| `zuri migrate` | applies and rolls back database migrations | [Chapter 17](ch17-02-migrations.md) |
 | `zuri lsp` | the language server behind your editor | [Chapter 29](ch29-00-editors.md) |
 | `zuri install` | adds packages, resolved into a lockfile | [Chapter 27](ch27-02-installing.md) |
 | `zuri publish` | shares a package on a registry | [Chapter 27](ch27-03-publishing.md) |

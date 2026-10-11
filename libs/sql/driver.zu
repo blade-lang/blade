@@ -216,6 +216,25 @@ class Driver {
   supports(flag: string) {
     return self.capabilities().get(flag, false) ? true : false
   }
+
+  /**
+   * The adapter that turns a `Blueprint` into this engine's
+   * statements, which `db.schema.create_table()` and the other schema
+   * changes go through.
+   *
+   * The default refuses, so an adapter without one says so plainly. An
+   * adapter of one's own subclasses `sql.DdlAdapter` and returns an
+   * instance of it here.
+   *
+   * @returns DdlAdapter
+   * @throws NotSupportedError if the adapter has none.
+   */
+  ddl() {
+    raise NotSupportedError(
+      '${self.name()} does not implement schema changes',
+      { driver: self.name() },
+    )
+  }
 }
 
 /**

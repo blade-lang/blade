@@ -2895,7 +2895,12 @@ fn inline_param_check(proto: &ObjFunction, check_idx: u16) -> bool {
   proto.chunk.param_checks[check_idx as usize]
     .types
     .iter()
-    .all(|t| !matches!(t, ParamType::Instance(_) | ParamType::Iterable))
+    .all(|t| {
+      !matches!(
+        t,
+        ParamType::Instance(_) | ParamType::Captured { .. } | ParamType::Iterable
+      )
+    })
 }
 
 fn jump_target(ip: usize, offset: i16) -> usize {

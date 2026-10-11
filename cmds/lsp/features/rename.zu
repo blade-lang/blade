@@ -121,7 +121,9 @@ def rename(server, params: dict, context) {
   }
 
   var target = subject.target
-  var places = references.find(server, target, true, context)
+  var found = references.find(server, target, true, context)
+  var places = found.filter(@(place) => !place.get('several', false))
+  var shared = found.filter(@(place) => place.get('several', false))
 
   _check_privacy(server, subject, name, places)
   _check_clashes(server, subject, name, places)
@@ -146,7 +148,7 @@ def rename(server, params: dict, context) {
   }
 
   if subject.symbol.get('owner', nil) != nil {
-    _report_unknown_receivers(server, old, places, context)
+    _report_left_uses(server, old, places, shared, context)
   }
 
   return common.workspace_edit(server, edits)
@@ -281,17 +283,28 @@ def _check_clashes(server, subject: dict, name: string, places: list) {
   }
 }
 
-# Tells the client about uses of a member name on receivers whose type
-# is unknown, which are left as they are.
-def _report_unknown_receivers(server, old: string, places: list, context) {
+# Tells the client about uses of a member name left as they are: those
+# on receivers whose type is unknown, and the `shared` ones, reached
+# through a value of a union type, where renaming the member on one of
+# the union's types alone would leave the use broken for the others.
+def _report_left_uses(
+  server, old: string, places: list, shared: list, context,
+) {
   var linker = server.linker
   var renamed = {}
 
-  for place in places {
+  for place in places + shared {
     renamed['${place.path}:${place.start}'] = true
   }
 
   var left = []
+
+  for place in shared {
+    var lines = server.index(place.path)
+    var line = lines == nil ? 0 : lines.line_of(place.start)
+
+    left.append('${place.path}:${line + 1}')
+  }
 
   for path in server.paths().sort() {
     server.interrupted(context, nil)
@@ -325,7 +338,8 @@ def _report_unknown_receivers(server, old: string, places: list, context) {
     ? ' and ${left.length() - _LISTED} more'
     : ''
   var count = left.length()
-  var message = "${count} use(s) of '.${old}' on a receiver of unknown type were left as they are: "
+  var message = "${count} use(s) of '.${old}' on a receiver of unknown type, " +
+    'or one that may be of several types, were left as they are: '
   message += ', '.join(shown) + more
 
   log.info(message)

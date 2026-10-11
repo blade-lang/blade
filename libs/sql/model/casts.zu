@@ -1,0 +1,157 @@
+/**
+ * @module casts
+ *
+ * Turning what an engine hands back into what a model's field holds.
+ *
+ * Most values arrive already as the type they were stored as. The rest
+ * depend on the engine: MySQL has no boolean and returns `1`, and
+ * MariaDB keeps JSON as text. A cast declared on a field turns such a
+ * value into the type the field holds on every engine, as it is read.
+ *
+ * | Cast | The field holds |
+ * | - | - |
+ * | `bool` | `true` or `false`, from a bool, a number or `'0'`, `'1'`, `'true'` and `'false'` |
+ * | `integer` | a whole number, from a number, a numeric string or a decimal |
+ * | `number` | a number, from a number, a numeric string or a decimal |
+ * | `decimal` | a `sql.Decimal`, from a number, a string or a decimal |
+ * | `string` | text, from anything |
+ * | `json` | a list or dictionary, from JSON text or one already decoded |
+ * | `date` | a `date.Date`, from one, or from ISO 8601 text |
+ *
+ * Null stays `nil` under every cast, and a value that will not convert
+ * is left as it was read rather than lost.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import date
+import json
+
+import ..decimal { Decimal }
+import .errors { ModelError }
+
+/**
+ * Every cast a field can declare.
+ */
+var CASTS = ['bool', 'integer', 'number', 'decimal', 'string', 'json', 'date']
+
+/**
+ * Checks `kind` is a cast there is.
+ *
+ * @param string kind
+ * @returns string
+ * @throws ModelError for any other.
+ */
+def check_cast(kind) {
+  if !CASTS.contains(kind) {
+    raise ModelError('a cast is one of ${", ".join(CASTS)}, not ${kind}', nil)
+  }
+
+  return kind
+}
+
+/**
+ * `value` as cast `kind` makes it.
+ *
+ * @param string kind One of `CASTS`.
+ * @param any value
+ * @returns any
+ */
+def cast(kind: string, value) {
+  if value == nil {
+    return nil
+  }
+
+  using kind {
+    when 'bool' return _bool(value)
+    when 'integer' return _number(value, true)
+    when 'number' return _number(value, false)
+    when 'decimal' return _decimal(value)
+    when 'string' {
+      return is_string(value) ? value : value.to_string()
+    }
+    when 'json' return _json(value)
+    when 'date' return _date(value)
+  }
+
+  return value
+}
+
+def _bool(value) {
+  if is_bool(value) {
+    return value
+  }
+
+  if is_number(value) {
+    return value != 0
+  }
+
+  if is_string(value) {
+    var text = value.lower()
+
+    if text == '1' or text == 'true' {
+      return true
+    }
+
+    if text == '0' or text == 'false' {
+      return false
+    }
+  }
+
+  return value
+}
+
+def _number(value, whole) {
+  var number = value
+
+  if is_string(value) or instance_of(value, Decimal) {
+    var text = value.to_string()
+    number = text.to_number()
+
+    if number == 0 and !text.match('/^\\s*[-+]?0*(\\.0*)?\\s*$/') {
+      return value
+    }
+  }
+
+  if !is_number(number) {
+    return value
+  }
+
+  return whole ? number.int() : number
+}
+
+def _decimal(value) {
+  if instance_of(value, Decimal) {
+    return value
+  }
+
+  catch {
+    return Decimal(value.to_string())
+  } as _error {
+    return value
+  }
+}
+
+def _json(value) {
+  if !is_string(value) {
+    return value
+  }
+
+  catch {
+    return json.decode(value)
+  } as _error {
+    return value
+  }
+}
+
+def _date(value) {
+  if instance_of(value, date.Date) or !is_string(value) {
+    return value
+  }
+
+  catch {
+    return date.parse(value)
+  } as _error {
+    return value
+  }
+}

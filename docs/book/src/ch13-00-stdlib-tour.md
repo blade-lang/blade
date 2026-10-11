@@ -677,7 +677,9 @@ defines what an adapter has to provide and supplies everything that is
 the same across engines: parameters, transactions and savepoints,
 cursors, pooling, introspection, and one error hierarchy. SQLite,
 PostgreSQL and MySQL adapters ship with it, and changing between them
-means changing the connection string.
+means changing the connection string. On top of it, `db.schema` changes
+tables described once for every engine, `sql.migrate` applies versioned
+migrations, and `sql.model` gives each table a class.
 
 ```zuri,ignore
 import sql

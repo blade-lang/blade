@@ -12,6 +12,7 @@ var MAIN = os.join_paths(FIXTURE, 'main.zu')
 var SHAPES = os.join_paths(FIXTURE, 'shapes.zu')
 var AREA = os.join_paths(FIXTURE, 'geometry', 'area.zu')
 var MOVED = os.join_paths(FIXTURE, 'geometry', 'shapes.zu')
+var SCRATCH = os.join_paths(FIXTURE, 'scratch.zu')
 var client = nil
 var main_uri = nil
 var main_text = nil
@@ -31,6 +32,34 @@ def ask(method: string, marker: string, shift, extra) {
 
   return client.request(method, params)
 }
+
+# A request at the end of `marker` in a scratch file holding `source`.
+def ask_scratch(source: string, method: string, marker: string, extra) {
+  var address = client.open(SCRATCH, source)
+  var params = {
+    textDocument: { uri: address },
+    position: position(source, marker, 0),
+  }
+
+  if extra != nil {
+    for key, value in extra {
+      params[key] = value
+    }
+  }
+
+  var answer = client.request(method, params)
+
+  client.notify('textDocument/didClose', { textDocument: { uri: address } })
+
+  return answer
+}
+
+# A function whose parameter may be either of two classes that both
+# declare `distance`.
+var UNION = 'import .shapes { Point, Circle }\n\n' +
+  'def gap(shape: Point|Circle) {\n' +
+  '  return shape.distance(shape)\n' +
+  '}\n'
 
 # Where a location points, as `file:line:character`.
 def place(location: dict) {
@@ -98,6 +127,12 @@ describe('definitions', @{
     client.notify('textDocument/didClose', { textDocument: { uri: shapes } })
     expect(found.map(place)).to_equal(['shapes.zu:63:2'])
   })
+
+  it('goes from a member reached through a union to each declaration', @{
+    var found = ask_scratch(UNION, 'textDocument/definition', 'shape.dist', nil)
+
+    expect(found.map(place)).to_equal(['shapes.zu:31:2', 'shapes.zu:63:2'])
+  })
 })
 
 describe('references', @{
@@ -113,6 +148,15 @@ describe('references', @{
       ])
     },
   )
+
+  it('counts a use through a union for each declaration it reaches', @{
+    var asked = { context: { includeDeclaration: false } }
+    var found = ask_scratch(
+      UNION, 'textDocument/references', 'shape.dist', asked,
+    )
+
+    expect(found.map(place)).to_contain('scratch.zu:3:15')
+  })
 
   it('tells reads from writes in the file', @{
     var found = ask('textDocument/documentHighlight', 'var here', 0)
@@ -162,6 +206,21 @@ describe('rename', @{
     var renamed = apply(main_text, main_change.edits)
 
     expect(renamed).to_contain('import .shapes { Point, Circle, start }')
+  })
+
+  it('leaves a use through a union as it is, and says so', @{
+    var edit = ask_scratch(
+      UNION, 'textDocument/rename', 'shape.dist', { newName: 'span' },
+    )
+    var files = edit.documentChanges.map(
+      @(change) => change.textDocument.uri.split('/').last(),
+    )
+
+    expect(files).not.to_contain('scratch.zu')
+    expect(client.notifications.some(@(n) {
+      return n.method == 'window/showMessage'
+        and n.params.message.contains('may be of several types')
+    })).to_be_true()
   })
 
   it('keeps the key of a { name } entry', @{

@@ -404,6 +404,7 @@ Values correspond like this:
 | `bytes` | a blob |
 | `date.Date` | a timestamp |
 | `sql.Time` | a `TIME` interval, on an engine that has one |
+| `sql.Decimal` | an exact decimal |
 | `list`, `dict` | JSON |
 
 Not every engine has every one of those. PostgreSQL has a real boolean
@@ -489,9 +490,12 @@ echo Decimal('0.1').add(Decimal('0.2')).to_string()
 0.3
 ```
 
-PostgreSQL's `numeric` and MySQL's `DECIMAL` columns read and write as
-`Decimal` automatically. SQLite has no exact decimal type, so store one
-as text or as an integer count of the smallest unit.
+PostgreSQL's `numeric`, MySQL's `DECIMAL`, and SQLite's `DECIMAL` and
+`NUMERIC` columns read and write as `Decimal`. SQLite keeps a decimal as
+a double, which holds fifteen significant digits exactly, so a decimal
+column there holds at most fifteen, and `table.decimal()` refuses a
+larger precision on SQLite. An aggregate such as `sum()` has no declared
+type, and comes back as a number.
 
 ## The CRUD Helpers
 
@@ -1294,6 +1298,10 @@ column level `references` clause and then ignores it, so a foreign key
 declared that way exists on the other two and not there. Declared at
 table level it exists on all three.
 
+Changing what is there, creating, altering and dropping tables
+described once for every engine, is
+[Changing the Schema](ch17-01-schema-changes.md).
+
 ## Switching Databases
 
 The claim this module makes is that a program moves between engines by
@@ -1825,8 +1833,16 @@ var db = sql.open('duckdb://./app.duckdb')
 ```
 
 Everything above the adapter comes for free: pooling, transactions and
-savepoints, the CRUD helpers, placeholder translation, cursors, and the
-error hierarchy. What the adapter supplies is the engine.
+savepoints, the CRUD helpers, placeholder translation, cursors, the
+error hierarchy, and models. What the adapter supplies is the engine.
+
+Schema changes and migrations need one thing more: the engine's
+spelling of a table. An adapter supplies it by subclassing
+`sql.DdlAdapter`, which already writes standard SQL, overriding what the
+engine says differently, `type_name()` for each column type and
+`key_definition()` for an `id()` among them, and returning an instance
+from its driver's `ddl()`. A driver with none refuses schema changes
+with `NotSupportedError`.
 
 The base classes raise `NotImplementedError` for anything left out, so
 an unfinished adapter fails where the gap is. An engine that genuinely
@@ -1836,15 +1852,13 @@ is an honest limit.
 
 ## What the Module Refuses
 
-**It is not an ORM.** There is no model class, no lazy loading and no
-identity map. Rows are dictionaries.
+**Rows are dictionaries.** The connection hands back rows, never
+objects. Models are [`sql.model`](ch17-03-models.md), built on top and
+loaded only by a program that uses them.
 
 **It does not write your joins.** The CRUD helpers cover a flat list of
-equality conditions. Anything past that is SQL.
-
-**It does not migrate schemas.** `exec_script()` runs a schema file and
-`db.schema` reports what is there; deciding what to change and in what
-order is a separate problem.
+equality conditions, and models their own columns and associations.
+Anything past that is SQL.
 
 **It does not translate SQL.** Placeholders are rewritten. Statements
 are not parsed, and a function only one engine has stays a function
@@ -1869,6 +1883,9 @@ shape of the module:
 | `sql.Decimal(text)` | an exact decimal |
 | `sql.time(h, m, s)` | a signed span, as a `TIME` column holds one |
 | `sql.parse_time(text)` | the same, read from text |
+| `sql.blueprint` | a table described once for every engine |
+| `sql.migrate` | versioned schema changes, and `Migrator` to apply them |
+| `sql.model` | models: `Model`, `Query` and the errors they raise |
 
 On a `Connection`:
 
@@ -1879,7 +1896,8 @@ On a `Connection`:
 | `stream`, `prepare` | a cursor, and a compiled statement |
 | `insert`, `insert_many`, `update`, `delete`, `find`, `find_one`, `count` | the four statements that are always the same |
 | `transaction`, `begin`, `in_transaction` | transactions |
-| `schema` | introspection |
+| `schema` | introspection, and `create_table`, `alter_table`, `rename_table`, `drop_table` |
+| `model` | a query over a model's rows |
 | `driver`, `driver_name`, `capabilities`, `supports` | what this engine is |
 | `native` | the adapter underneath |
 | `ping`, `close`, `is_closed` | the connection itself |
@@ -1891,5 +1909,6 @@ On a `Transaction`:
 | `query`, `exec` | run a statement |
 | `fetch_one`, `fetch_all`, `fetch_value` | read a result |
 | `insert`, `insert_many`, `update`, `delete`, `find`, `find_one`, `count` | the same helpers a connection has |
+| `schema`, `model` | the connection's schema and models, inside the transaction |
 | `commit`, `rollback`, `is_finished` | ending it |
 | `connection`, `nested` | what it is running on, and whether it is a savepoint |

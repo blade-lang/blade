@@ -273,6 +273,36 @@ of built-ins from [Chapter 6](ch06-04-encapsulation.md).
 They cannot create a field. A class is sealed, so `set_prop()` on a name
 the class never declared returns `false` and changes nothing.
 
+`class_of()` goes the other way, from an instance to the class it was
+built from, as the class itself:
+
+```zuri
+import zuri
+
+class Point {}
+class Labelled < Point {}
+
+var p = Labelled()
+
+echo zuri.reflect.class_of(p) == Labelled
+echo zuri.reflect.class_of(p) == Point
+echo zuri.reflect.class_info(zuri.reflect.class_of(p)).name
+echo zuri.reflect.class_of(42)
+```
+
+```console
+true
+false
+Labelled
+nil
+```
+
+`typeof()` gives the class's name, and two classes declared with the
+same name in different modules give the same one. Only the class tells
+them apart, and only the class can be called, handed to `class_info()`,
+or used as a dictionary key, which is how a library keeps something
+per class: `sql.model` keeps each model's definition that way.
+
 ### Methods by Name
 
 Three calls turn a method name into something callable:
@@ -409,8 +439,43 @@ true
 ```
 
 `module_info()` reports a module's name, its path and the members it
-exports. That is enough for a plugin loader: import a directory of modules,
-ask each whether it has a known function, and call the ones that do.
+exports.
+
+`import` takes its path as written, so it cannot reach a file whose name
+the program only learns as it runs. `zuri.import_file()` can. It imports
+the module at a path, the way an `import` naming that file would, and
+returns it:
+
+```zuri
+import os
+import zuri
+
+var plugins = os.create_temp_dir('plugins-')
+
+file(os.join_paths(plugins, 'greeter.zu'), 'w').write(
+  "def greet(name) {\n  return 'hello ' + name\n}\n",
+)
+
+for name in os.read_dir(plugins).filter(@(entry) => entry.ends_with('.zu')) {
+  var plugin = zuri.import_file(os.join_paths(plugins, name))
+
+  if zuri.reflect.module_info(plugin).members.get('greet', nil) == 'function' {
+    echo plugin.greet('Ada')
+  }
+}
+```
+
+```console
+hello Ada
+```
+
+That is a plugin loader: import a directory of modules, ask each
+whether it has a known function, and call the ones that do. A relative
+path is taken from the working directory. The module comes from the
+same cache `import` uses, so its top level runs once however many
+times, and by whichever route, it is imported, and two imports of one
+file are the same module, `==` to each other. `sql.migrate` reads its
+migrations this way.
 
 ### The Collector
 

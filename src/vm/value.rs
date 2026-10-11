@@ -756,6 +756,23 @@ impl Value {
       return self.as_number() == other.as_number();
     }
     if self.is_obj() && other.is_obj() {
+      // A module reached through an `import` binding is the module the
+      // binding names, so the binding and the module itself compare
+      // equal to each other as well as to themselves.
+      let module_of = |value: &Value| {
+        if value.is_module_binding() {
+          value.as_module_binding().module
+        } else {
+          *value
+        }
+      };
+
+      let (left, right) = (module_of(self), module_of(other));
+
+      if left.is_module() && right.is_module() {
+        return left.0 == right.0;
+      }
+
       unsafe {
         return match (&*self.as_obj(), &*other.as_obj()) {
           (a @ Obj::Str(..), b @ Obj::Str(..)) => a.str_text() == b.str_text(),
@@ -763,6 +780,7 @@ impl Value {
           (Obj::Bytes(a), Obj::Bytes(b)) => a.borrow().eq(&*b.borrow()),
           (Obj::Func(a), Obj::Func(b)) => std::ptr::eq(a, b),
           (Obj::Closure(a), Obj::Closure(b)) => std::ptr::eq(a, b),
+          (Obj::Native(a), Obj::Native(b)) => std::ptr::eq(a, b),
           (Obj::BoundMethod(a), Obj::BoundMethod(b)) => std::ptr::eq(a, b),
           (Obj::Upvalue(a), Obj::Upvalue(b)) => std::ptr::eq(a, b),
           (Obj::Class(a), Obj::Class(b)) => std::ptr::eq(a, b),

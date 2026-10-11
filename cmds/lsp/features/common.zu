@@ -152,7 +152,8 @@ def completion_kind(symbol: dict) {
 
 /**
  * A type as a person reads it: `string`, `Point`, `module json`,
- * `class Point` or `function`. `nil` for a type that cannot be told.
+ * `class Point`, `function`, or a union as it is written, such as
+ * `Transaction|Connection`. `nil` for a type that cannot be told.
  *
  * @param Linker linker
  * @param ?dict type: A type `linker.resolve()` returned.
@@ -177,6 +178,11 @@ def describe(linker, type) {
     }
     when 'module' return 'module ' + module_name(type.path)
     when 'function' return 'function'
+    when 'union' {
+      var names = type.of.map(@(one) => describe(linker, one))
+
+      return names.contains(nil) ? nil : '|'.join(names)
+    }
     default {
       return nil
     }
@@ -324,6 +330,26 @@ def target_at(linker, path: string, summary: dict, offset: int) {
   }
 
   return { occurrence, target: query.canonical(linker, path, occurrence) }
+}
+
+/**
+ * Every declaration what `target_at()` found may stand for: the one
+ * it names, or for a member reached through a value of a union type,
+ * that member as each of the union's types declares it.
+ *
+ * @param Linker linker
+ * @param string path
+ * @param dict found: What `target_at()` returned.
+ * @returns list[dict]
+ */
+def targets_of(linker, path: string, found: dict) {
+  if found.target == nil {
+    return []
+  }
+
+  var several = query.declarations(linker, path, found.occurrence)
+
+  return several == nil ? [found.target] : several
 }
 
 /**
@@ -524,6 +550,10 @@ def owner_name(linker, path: string, symbol: dict) {
  * function or method itself, or a class's `@new`, inherited when the
  * class has none of its own.
  *
+ * A union is called through its first type, when every type in it
+ * takes the same parameters. When they differ, what a call takes
+ * cannot be told.
+ *
  * @param Linker linker
  * @param ?dict callee: A type `linker.resolve()` returned.
  * @returns ?dict: `{ symbol, name, path, index }`, `name` the class's
@@ -532,6 +562,25 @@ def owner_name(linker, path: string, symbol: dict) {
 def callable(linker, callee) {
   if callee == nil {
     return nil
+  }
+
+  if callee.t == 'union' {
+    var first = callable(linker, callee.of[0])
+
+    if first == nil {
+      return nil
+    }
+
+    for one in callee.of[1,] {
+      var other = callable(linker, one)
+
+      if other == nil
+        or _parameters(other.symbol) != _parameters(first.symbol) {
+        return nil
+      }
+    }
+
+    return first
   }
 
   if callee.t == 'function' {
@@ -570,6 +619,14 @@ def callable(linker, callee) {
   }
 
   return nil
+}
+
+# The parameters a function takes, as far as a call can tell them
+# apart: their names, and whether the last gathers the rest.
+def _parameters(symbol) {
+  var names = symbol.get('params', []).map(@(param) => param.name)
+
+  return { names, variadic: symbol.get('variadic', false) }
 }
 
 /**

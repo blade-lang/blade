@@ -37,6 +37,14 @@ var SOURCE = 'import json\nimport .shapes { Point, Circle, UNIT }\n\n' +
   'var here = Point(3, 4)\nvar ring = Circle(0, 0, 1)\n' +
   'echo here.distance(ring)\necho UNIT\necho json.encode(here.x)\nprint(here)\n'
 
+var UNION = 'import sql { Blueprint, Connection, Transaction }\n\n' +
+  'def up(db: Transaction|Connection) {\n' +
+  "  db.schema.create_table('posts', @(table: Blueprint) {\n" +
+  '    table.id()\n' +
+  '  })\n' +
+  "  db.exec('select 1', nil)\n" +
+  '}\n'
+
 before_all(@{
   client = Client(FIXTURE, { diagnostics: { delay: 0 } })
   client.initialize(nil)
@@ -101,6 +109,20 @@ describe('hover', @{
   it('shows nothing where nothing is named', @{
     expect(hover_at(SOURCE, '\n\nvar', 3)).to_be_nil()
   })
+
+  it('shows a parameter of a union type as it is written', @{
+    expect(hover_at(UNION, 'def up(db', 0)).to_contain(
+      'db: Transaction|Connection',
+    )
+  })
+
+  it('shows a member reached through a union as each type declares it', @{
+    var shown = hover_at(UNION, 'db.exe', 0)
+
+    expect(shown.split('\n---\n').length()).to_equal(2)
+    expect(shown).to_contain('Transaction')
+    expect(shown).to_contain('Connection')
+  })
 })
 
 describe('signature help', @{
@@ -133,6 +155,13 @@ describe('signature help', @{
 
   it('is not offered inside a list written as an argument', @{
     expect(help_at(SOURCE + 'here.move([1, ', 'here.move([1, ')).to_be_nil()
+  })
+
+  it('shows a method reached through a union its types declare alike', @{
+    var help = help_at(UNION, "db.exec('select 1', ")
+
+    expect(help.signatures[0].label).to_contain('exec(sql')
+    expect(help.activeParameter).to_equal(1)
   })
 
   it('finds the call being written inside a method', @{

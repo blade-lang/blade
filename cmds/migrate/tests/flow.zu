@@ -1,0 +1,152 @@
+# `zuri migrate` run the way a person runs it, in a project of its own.
+
+import os
+import os.process { spawn }
+import test { * }
+
+var ROOT = os.create_temp_dir('zuri-migrate-flow-')
+var PROJECT = os.join_paths(ROOT, 'project')
+
+def put(path: string, text: string) {
+  os.create_dir(os.dir_name(path), 0c755, true)
+
+  var handle = file(path, 'w')
+  handle.write(text)
+  handle.close()
+}
+
+# Runs `zuri migrate` with `words` in the project.
+def migrate(words: list) {
+  var child = spawn(os.exe_path, ['migrate'] + words, {
+    cwd: PROJECT,
+    env: { NO_COLOR: '1', DATABASE_URL: '' },
+    stdin: 'null',
+    stdout: 'pipe',
+    stderr: 'pipe',
+  })
+
+  var status = child.wait(120000)
+  var out = child.read_stdout().to_string().replace('\r\n', '\n', false)
+  var err = child.read_stderr().to_string().replace('\r\n', '\n', false)
+
+  return { status, out, err }
+}
+
+def migrations() {
+  var names = os
+    .read_dir(os.join_paths(PROJECT, 'migrations'))
+    .filter(@(name) => name.ends_with('.zu'))
+  names.sort(@(a, b) => a.compare(b))
+  return names
+}
+
+before_each(@{
+  if os.dir_exists(PROJECT) {
+    os.remove_dir(PROJECT, true)
+  }
+
+  put(os.join_paths(PROJECT, 'project.toml'), '[project]\nname = "app"\n')
+  put(os.join_paths(PROJECT, '.env'), 'DATABASE_URL=sqlite://./app.db\n')
+})
+
+after_all(@{
+  os.remove_dir(ROOT, true)
+})
+
+describe('a project', @{
+  it('writes, applies and rolls back its migrations', @{
+    var made = migrate(['new', 'create_posts', 'add_slug_to_posts'])
+    var created = made.out
+      .split('\n')
+      .filter(@(line) => line.starts_with('Created migrations/'))
+
+    expect(made.status).to_equal(0)
+    expect(created.length()).to_equal(2)
+
+    var names = migrations()
+
+    expect(names.length()).to_equal(2)
+    expect(names[0]).to_contain('_create_posts.zu')
+    expect(names[1]).to_contain('_add_slug_to_posts.zu')
+
+    var status = migrate(['status'])
+
+    expect(status.status).to_equal(0)
+    expect(status.out).to_contain('pending')
+
+    var applied = migrate([])
+
+    expect(applied.status).to_equal(0)
+    expect(applied.out).to_contain('Applied 2 migrations:')
+
+    expect(migrate(['up']).out).to_contain('Nothing to apply')
+    expect(migrate(['status']).out).to_contain('batch 1')
+
+    var undone = migrate(['down', '--steps', '1'])
+
+    expect(undone.out).to_contain('Rolled back 1 migration:')
+    expect(undone.out).to_contain('_add_slug_to_posts')
+
+    expect(migrate(['reset']).out).to_contain('Rolled back 1 migration:')
+    expect(migrate(['down']).out).to_contain('Nothing to roll back.')
+  })
+
+  it('says when a migration changed after it ran', @{
+    migrate(['new', 'create_posts'])
+    migrate([])
+
+    var path = os.join_paths(PROJECT, 'migrations', migrations()[0])
+    var handle = file(path, 'a')
+
+    handle.write('\n# changed\n')
+    handle.close()
+
+    var status = migrate(['status'])
+
+    expect(status.out).to_contain('changed')
+    expect(status.out).to_contain('changed since it ran')
+  })
+
+  it('reports a migration that fails, and stops there', @{
+    put(
+      os.join_paths(PROJECT, 'migrations', '1_broken.zu'),
+      'import sql { Connection, Transaction }\n\n' +
+        'def up(db: Transaction|Connection) {\n  db.exec("not sql", nil)\n}\n',
+    )
+
+    var failed = migrate([])
+
+    expect(failed.status).to_equal(1)
+    expect(failed.err).to_contain('migrate:')
+    expect(migrate(['status']).out).to_contain('pending')
+  })
+
+  it('reports a migration it cannot read', @{
+    put(
+      os.join_paths(PROJECT, 'migrations', 'not_versioned.zu'),
+      'def up(db) {\n}\n',
+    )
+
+    var failed = migrate(['status'])
+
+    expect(failed.status).to_equal(1)
+    expect(failed.err).to_contain('is not named as a migration is')
+  })
+
+  it('writes nothing when a name is refused', @{
+    var refused = migrate(['new', 'create_posts', 'add-slug'])
+
+    expect(refused.status).to_equal(1)
+    expect(refused.err).to_contain('"add-slug" is not a migration name')
+    expect(os.dir_exists(os.join_paths(PROJECT, 'migrations'))).to_be_false()
+  })
+
+  it('needs a database', @{
+    file(os.join_paths(PROJECT, '.env')).delete()
+
+    var failed = migrate(['status'])
+
+    expect(failed.status).to_equal(1)
+    expect(failed.err).to_contain('there is no database to migrate')
+  })
+})

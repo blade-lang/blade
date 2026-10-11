@@ -1,5 +1,6 @@
 //! `_zuri_compile` builtin module; the native backing for
-//! `zuri.compile()`.
+//! `zuri.compile()`, and for `zuri.import_file()`, which takes the same
+//! pipeline through to running the result.
 //!
 //! Runs the real `Lexer` -> `Parser` -> `Compiler` pipeline (the exact
 //! same one `import`/the REPL/`run_file` use, just stopped one step
@@ -45,7 +46,34 @@ fn build(vm: &mut VM) -> Vec<(&'static str, Value)> {
   vec![
     ("compile", native(vm, "compile", 2, false, compile_fn)),
     ("check", native(vm, "check", 1, false, check_fn)),
+    (
+      "import_file",
+      native(vm, "import_file", 1, false, import_file_fn),
+    ),
   ]
+}
+
+/// `_zuri_compile.import_file(path)`: imports the module at `path` the
+/// way an `import` naming that file would, and returns it.
+///
+/// A relative path is taken from the working directory, the way every
+/// file function takes one. Resolution is the import statement's own:
+/// `path` itself when it has an extension, then `path.zu`, then
+/// `path/index.zu`. The module goes through the same cache as every
+/// import, so a file already imported, here or by an `import`
+/// statement, comes back as it is without running a second time.
+///
+/// What the import raises is raised unchanged, so a missing file is the
+/// same `ModuleNotFoundError` an `import` reports.
+fn import_file_fn(ctx: &mut ZuriContext) -> Result<Value, String> {
+  enforce_arg_count!(ctx, 1);
+  enforce_arg_type!(ctx, 0, ArgType::String);
+
+  let raw = ctx.args[0].as_str().to_string();
+  let base = std::path::absolute(&raw).unwrap_or_else(|_| std::path::PathBuf::from(&raw));
+
+  crate::vm::modules::load_from_candidate(ctx.vm, &base, &raw)
+    .map_err(|error| ctx.vm.rethrow(error))
 }
 
 /// `_zuri_compile.check(source)`: the problems compiling `source` would
@@ -268,7 +296,10 @@ fn param_type_to_value(ctx: &mut ZuriContext, chunk: &Chunk, t: &ParamType) -> V
     ParamType::Class => ("Class", None),
     ParamType::Callable => ("Callable", None),
     ParamType::Iterable => ("Iterable", None),
-    ParamType::Instance(name_const) => (
+    ParamType::Instance(name_const)
+    | ParamType::Captured {
+      name: name_const, ..
+    } => (
       "Instance",
       Some(chunk.constants[*name_const as usize].as_str().to_string()),
     ),

@@ -1,0 +1,111 @@
+/**
+ * @module naming
+ *
+ * The names a model takes when it does not say otherwise.
+ *
+ * A model's table is its class name in snake case, made plural by the
+ * regular rules of English: `Post` is `posts`, `BlogPost` is
+ * `blog_posts`, `Category` is `categories` and `Address` is
+ * `addresses`. A word that makes its plural any other way, `Person` to
+ * `people`, says its table with `model.table()`.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+var _UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+var _VOWELS = 'aeiou'
+
+/**
+ * A class name in snake case: `BlogPost` is `blog_post`, `HTTPRequest`
+ * is `http_request`, and a name in snake case already stays as it is.
+ *
+ * @param string name
+ * @returns string
+ */
+def snake(name: string) {
+  var out = []
+  var length = name.length()
+
+  iter var i = 0; i < length; i++ {
+    var ch = name[i]
+
+    if _UPPER.contains(ch) {
+      var after_lower = i > 0
+        and !_UPPER.contains(name[i - 1])
+        and name[i - 1] != '_'
+      var before_lower = i > 0 and i + 1 < length and
+        _UPPER.contains(name[i - 1]) and
+        !_UPPER.contains(name[i + 1]) and name[i + 1] != '_'
+
+      if after_lower or before_lower {
+        out.append('_')
+      }
+
+      out.append(ch.lower())
+    } else {
+      out.append(ch)
+    }
+  }
+
+  return ''.join(out)
+}
+
+/**
+ * A word made plural by the regular rules: `s`, `x`, `z`, `ch` and
+ * `sh` take `es`; a `y` after a consonant becomes `ies`; everything
+ * else takes `s`. Only the last word of a snake case name changes.
+ *
+ * @param string word
+ * @returns string
+ */
+def plural(word: string) {
+  if word.ends_with('s') or word.ends_with('x') or word.ends_with('z') or
+    word.ends_with('ch') or word.ends_with('sh') {
+    return word + 'es'
+  }
+
+  if word.ends_with('y') and word.length() > 1 and
+    !_VOWELS.contains(word[word.length() - 2]) {
+    return word[0, word.length() - 1] + 'ies'
+  }
+
+  return word + 's'
+}
+
+/**
+ * The table a class of this name maps to: `plural(snake(name))`.
+ *
+ * @param string name
+ * @returns string
+ */
+def table_for(name: string) {
+  return plural(snake(name))
+}
+
+/**
+ * The column another table refers to this class's rows by: its snake
+ * case name and `_id`, as `author_id` refers to an `Author`.
+ *
+ * @param string name
+ * @returns string
+ */
+def key_for(name: string) {
+  return snake(name) + '_id'
+}
+
+/**
+ * The table joining two classes in a many-to-many association: their
+ * snake case names in alphabetical order, joined by an underscore, as
+ * `post_tag` joins `Post` and `Tag`.
+ *
+ * @param string first
+ * @param string second
+ * @returns string
+ */
+def join_table_for(first: string, second: string) {
+  var names = [snake(first), snake(second)]
+
+  names.sort(@(a, b) => a.compare(b))
+
+  return '_'.join(names)
+}

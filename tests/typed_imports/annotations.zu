@@ -1,0 +1,157 @@
+/**
+ * A parameter annotated with a class finds the class wherever the same
+ * name would resolve in the function's body: a class declared in the
+ * module, one a selective import brought in, or one held in a local of
+ * an enclosing function. Each is checked with an instance of the class, a
+ * subclass, the wrong class, nil and a union, in calls repeated past
+ * the point a function is compiled.
+ */
+
+import .shapes { Shape, Circle, Plain, VERSION }
+import .checker
+
+var _passed = 0
+
+def ok(label) {
+  _passed++
+  echo '  [PASS] ${label}'
+}
+
+# The message a call raises, or nil when it does not raise.
+def failure(body) {
+  catch {
+    body()
+  } as error {
+    assert instance_of(error, TypeError),
+      'expected a TypeError, got ${typeof(error)}'
+    return error.message
+  }
+
+  return nil
+}
+
+def area(shape: Shape) {
+  return 'shape'
+}
+
+for i in 0..5000 {
+  assert area(Shape()) == 'shape'
+  assert area(Circle()) == 'shape'
+}
+
+assert failure(@() {
+  area(Plain())
+}) == "area() expects parameter 'shape' (argument 1) to be a Shape, got instance"
+assert failure(@() {
+  area(nil)
+}) != nil
+ok('an imported class accepts its instances and subclasses, and refuses others')
+
+def maybe(shape: ?Shape) {
+  return shape == nil ? 'none' : 'shape'
+}
+
+assert maybe(nil) == 'none'
+assert maybe(Circle()) == 'shape'
+assert failure(@() {
+  maybe(Plain())
+}) != nil
+ok('a nullable imported class takes nil')
+
+def either(value: Circle|Plain) {
+  return 'either'
+}
+
+for i in 0..5000 {
+  assert either(Circle()) == 'either'
+  assert either(Plain()) == 'either'
+}
+
+assert failure(@() {
+  either(Shape())
+}) == "either() expects parameter 'value' (argument 1) to be a Circle or a Plain, got instance"
+ok('a union of imported classes takes either one')
+
+def make_checker() {
+  var Kind = Circle
+
+  def check(value: Kind) {
+    return 'local'
+  }
+
+  return check
+}
+
+var check = make_checker()
+
+for i in 0..5000 {
+  assert check(Circle()) == 'local'
+}
+
+assert failure(@() {
+  check(Shape())
+}) == "check() expects parameter 'value' (argument 1) to be a Kind, got instance"
+ok('a class held in a local of an enclosing function')
+
+def names(shapes: list) {
+  return shapes.map(@(shape: Shape) => 'mapped')
+}
+
+assert names([Shape(), Circle()]) == ['mapped', 'mapped']
+assert failure(@() {
+  names([Plain()])
+}) != nil
+ok('a lambda parameter inside a function')
+
+class Box {
+  put(shape: Shape) {
+    return 'boxed'
+  }
+}
+
+var box = Box()
+
+for i in 0..5000 {
+  assert box.put(Circle()) == 'boxed'
+}
+
+assert failure(@() {
+  box.put(Plain())
+}) != nil
+ok('a method parameter')
+
+for i in 0..5000 {
+  assert checker.accepts(Circle())
+}
+
+assert failure(@() {
+  checker.accepts(Plain())
+}) == "accepts() expects parameter 'shape' (argument 1) to be a Shape, got instance"
+ok('a function in a module that has finished loading')
+
+class Own {}
+
+def own(value: Own) {
+  return 'own'
+}
+
+for i in 0..5000 {
+  assert own(Own()) == 'own'
+}
+
+assert failure(@() {
+  own(Shape())
+}) != nil
+ok('a class declared in the module itself is unchanged')
+
+def versioned(value: VERSION) {
+  return 'never'
+}
+
+assert failure(@() {
+  versioned(Shape())
+}) == "versioned() expects parameter 'value' (argument 1) to be a VERSION, got instance"
+ok('a name that is not a class matches nothing, rather than failing to resolve')
+
+echo ''
+echo '  All ${_passed} checks passed.'

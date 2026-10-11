@@ -1,0 +1,10 @@
+# A command declared with a value, given none, prints the error and the
+# command's usage and calls os.exit(1), which terminates the process, so
+# this is spawned as a real subprocess from tests/libs/args.zu rather
+# than run in-process. No .out file on purpose: it's a helper, not a
+# fixture in its own right.
+import args
+
+var p = args.Parser('commandval', false)
+p.add_command('new', 'Makes things', { type: args.LIST, metavar: 'name' })
+p.parse(['new'])

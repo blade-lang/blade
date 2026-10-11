@@ -207,9 +207,16 @@ impl<'a> Compiler<'a> {
 
   /// `ast::Type` (what the parser produced) -> `chunk::ParamType` (what
   /// `Instr::CheckParamType` actually reads at runtime); a plain
-  /// rename for every built-in, except `Instance`, whose class name
-  /// needs interning as a string constant the check can look up by
-  /// index. Never called for `Type::Any`: see
+  /// rename for every built-in, except a class, whose name needs
+  /// interning as a string constant.
+  ///
+  /// A class name resolves the way the same name would in the body,
+  /// minus the function's own parameters: a local of an enclosing
+  /// function, which is where a selective import lives, becomes an
+  /// upvalue the check reads
+  /// (`ParamType::Captured`); anything else is looked up as a global
+  /// (`ParamType::Instance`). Must run with the function's own scope
+  /// already pushed. Never called for `Type::Any`: see
   /// `emit_param_type_checks`'s own docs on why that one skips
   /// emission entirely rather than becoming a `ParamType` variant.
   fn ast_type_to_param_type(&mut self, t: &Type) -> ParamType {
@@ -231,9 +238,17 @@ impl<'a> Compiler<'a> {
       Type::Iterable => ParamType::Iterable,
       Type::Instance(token) => {
         let name = Self::identifier_name(token);
+        let top = self.scopes.len() - 1;
+        let upvalue = self.resolve_upvalue(top, &name);
         let name_val = self.heap.alloc_string_old(name);
         let name_const = self.add_constant(name_val);
-        ParamType::Instance(name_const)
+        match upvalue {
+          Some(upvalue) => ParamType::Captured {
+            upvalue,
+            name: name_const,
+          },
+          None => ParamType::Instance(name_const),
+        }
       },
     }
   }

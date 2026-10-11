@@ -30,7 +30,7 @@ def hover(server, params: dict) {
   var end = offset
 
   if found != nil {
-    value = _describe(server, key, found.occurrence, found.target)
+    value = _describe(server, key, found)
     start = found.occurrence.start
     end = found.occurrence.end
   } else {
@@ -68,9 +68,12 @@ def _markup(server, value: string) {
   return { kind: 'markdown', value }
 }
 
-# The text shown for what an occurrence names.
-def _describe(server, key: string, occurrence: dict, target) {
+# The text shown for what an occurrence names. A member reached
+# through a value of a union type shows as each of the union's types
+# declares it.
+def _describe(server, key: string, found: dict) {
   var linker = server.linker
+  var target = found.target
 
   if target == nil {
     return nil
@@ -80,7 +83,17 @@ def _describe(server, key: string, occurrence: dict, target) {
     return target.module == nil ? nil : module_text(linker, target.module)
   }
 
-  return declaration_text(server, target)
+  var texts = []
+
+  for ref in common.targets_of(linker, key, found) {
+    var text = declaration_text(server, ref)
+
+    if text != nil {
+      texts.append(text)
+    }
+  }
+
+  return texts.is_empty() ? nil : '\n\n---\n\n'.join(texts)
 }
 
 /**

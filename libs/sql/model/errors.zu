@@ -1,0 +1,202 @@
+/**
+ * @module errors
+ *
+ * What the model layer raises, and the list a model's own checks add
+ * to.
+ *
+ * A mistake in how a model is declared and a record that cannot be
+ * found are database errors, so `ModelError` and `RecordNotFound` are
+ * `sql.SqlError`s like everything else `sql` raises. A record that
+ * fails its validation is a different thing: the same failure a form
+ * reports, so `RecordInvalid` is a `validate.ValidationError`, and the
+ * code that answers a bad form with a 422 answers a bad record the
+ * same way.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import validate { ValidationError }
+
+import ..errors { SqlError }
+
+/**
+ * A model the layer cannot use as it is declared, or a call that asks
+ * a model for something it does not have: an association that was
+ * never declared, a field that is not a column, an attribute that may
+ * not be filled.
+ *
+ * @printable
+ */
+class ModelError < SqlError {}
+
+/**
+ * No row matched what a record was looked up by.
+ *
+ * @printable
+ */
+class RecordNotFound < SqlError {
+  /**
+   * The name of the model's class.
+   * @type string
+   */
+  var model
+
+  /**
+   * What was looked up: the key, or the conditions.
+   * @type any
+   */
+  var key
+
+  /**
+   * @param string model
+   * @param any key
+   */
+  @new(model, key) {
+    parent(
+      'there is no ${model} ${is_dict(key) ? "matching " + _conditions_text(key) : key}',
+      nil,
+    )
+    self.model = model
+    self.key = key
+  }
+}
+
+/**
+ * A record failed its validation, and was not saved.
+ *
+ * `errors` is the list `validate` reports, one `{ field, message }`
+ * per failure, so `validate.Schema.group_errors()` and the rest read it
+ * as they read a form's.
+ *
+ * ```zuri,ignore
+ * catch {
+ *   post.save(db)
+ * } as error {
+ *   if instance_of(error, RecordInvalid) {
+ *     return response.json({ errors: error.errors }, 422)
+ *   }
+ *
+ *   raise error
+ * }
+ * ```
+ *
+ * @printable
+ */
+class RecordInvalid < ValidationError {
+  /**
+   * The record that failed.
+   * @type Model
+   */
+  var record
+
+  /**
+   * @param Model record
+   * @param list[dict] errors
+   */
+  @new(record, errors) {
+    parent(errors)
+    self.record = record
+
+    var first = errors.is_empty() ? '' : ': ' + errors[0].message
+    var more = errors.length() > 1 ? ' (and ${errors.length() - 1} more)' : ''
+
+    self.message = '${typeof(record)} is not valid${first}${more}'
+  }
+
+  to_string() {
+    return '<RecordInvalid ${self.message}>'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+/**
+ * The failures a record's validation found, which a model's own
+ * `validate()` adds to.
+ *
+ * ```zuri,ignore
+ * validate(errors) {
+ *   if self.ends_at != nil and self.ends_at < self.starts_at {
+ *     errors.add('ends_at', 'The end has to come after the start.')
+ *   }
+ * }
+ * ```
+ *
+ * @printable
+ */
+class Errors {
+  var _found = []
+
+  /**
+   * Records a failure.
+   *
+   * @param string field The field it concerns.
+   * @param string message What is wrong, as a person should read it.
+   * @returns Errors This list, for chaining.
+   */
+  add(field: string, message: string) {
+    self._found.append({ field, message })
+    return self
+  }
+
+  /**
+   * Whether nothing has failed.
+   *
+   * @returns bool
+   */
+  is_empty() {
+    return self._found.is_empty()
+  }
+
+  /**
+   * How many failures there are.
+   *
+   * @returns number
+   */
+  length() {
+    return self._found.length()
+  }
+
+  /**
+   * The messages about `field`.
+   *
+   * @param string field
+   * @returns list[string]
+   */
+  on(field: string) {
+    return self._found
+      .filter(@(found) => found.field == field)
+      .map(@(found) => found.message)
+  }
+
+  /**
+   * Every failure, as `{ field, message }`, in the order they were
+   * found.
+   *
+   * @returns list[dict]
+   */
+  list() {
+    return self._found.clone()
+  }
+
+  to_string() {
+    return '<Errors ${self._found.length()}>'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+# Conditions as they read in a message.
+def _conditions_text(conditions) {
+  var parts = []
+
+  for key, value in conditions {
+    parts.append('${key} ${value}')
+  }
+
+  return ', '.join(parts)
+}

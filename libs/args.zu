@@ -202,6 +202,17 @@ def _metavar(word, type) {
   return type == OPTIONAL ? '[${word}]' : '<${word}>'
 }
 
+# Whether the word at `index` asks for help, so a command still waiting
+# on its value shows its usage instead of complaining the value is
+# missing.
+def _asks_for_help(words, index) {
+  if index >= words.length() {
+    return false
+  }
+
+  return words[index] == '--help' or words[index] == '-h'
+}
+
 # ---------------------------------------------------------------------------
 # ANSI / colour helpers
 # ---------------------------------------------------------------------------
@@ -942,6 +953,7 @@ class Parser < _Optionable {
           # If a command has already been found, show its help
           if command_found and command {
             self._help_command(command)
+            os.exit(0)
           } else {
             # --help [command_name]?
             var next = (i + 1 < cli_args.length()
@@ -1133,7 +1145,8 @@ class Parser < _Optionable {
               } else {
                 parsed_args.command = { name: command.name, value: v }
               }
-            } else if command.type != OPTIONAL {
+            } else if command.type != OPTIONAL
+              and !_asks_for_help(cli_args, i + 1) {
               var word = command.metavar
                 ? command.metavar
                 : _type_name[command.type]
@@ -1706,7 +1719,8 @@ class Parser < _Optionable {
     }
   }
 
-  # Print help for a single command and exit
+  # Print help for a single command. The caller decides how the process
+  # ends: 0 when help was asked for, 1 when it follows an error.
   _help_command(command) {
     self._usage_hint(command)
 
@@ -1753,8 +1767,6 @@ class Parser < _Optionable {
       }
       echo ''
     }
-
-    os.exit(0)
   }
 
   # Called for `--help [name]` at top level

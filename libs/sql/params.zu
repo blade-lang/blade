@@ -338,9 +338,28 @@ def scan(sql: string) {
  * Splits a script into its statements.
  *
  * Only semicolons outside strings, identifiers and comments separate,
- * so a semicolon inside a string literal or a trigger body does not
- * split the statement it belongs to. Empty pieces, which a trailing
- * semicolon leaves behind, are dropped.
+ * so a semicolon inside a string literal does not split the statement
+ * it belongs to. Empty pieces, which a trailing semicolon leaves
+ * behind, are dropped.
+ *
+ * A statement creating a trigger, procedure, function or event can
+ * carry a body of statements of its own between `BEGIN` and `END`, as
+ * SQLite and MySQL triggers and PostgreSQL's `BEGIN ATOMIC` functions
+ * do. The semicolons inside that body belong to it, so the statement
+ * ends at the first semicolon after its outermost `END`. Inside such a
+ * body, `CASE` opens a block that `END` closes as well, while
+ * `END IF`, `END WHILE`, `END LOOP` and `END REPEAT` close blocks that
+ * were never counted open.
+ *
+ * ```zuri,ignore
+ * split_statements('
+ *   create table log (what text);
+ *   create trigger noted after insert on posts begin
+ *     insert into log values (new.title);
+ *   end;
+ * ')
+ * # two statements, the trigger with its body whole
+ * ```
  *
  * @param string sql
  * @returns list[string]
@@ -349,15 +368,73 @@ def split_statements(sql: string) {
   var statements = []
   var current = []
 
+  # What is known about the statement being gathered: its first few
+  # words, whether it is one that carries a body, how deep inside that
+  # body the scan is, and whether the last word was an `END` whose
+  # meaning waits on the word after it.
+  var head = []
+  var bodied = false
+  var depth = 0
+  var pending_end = false
+
+  def finish() {
+    var text = ''.join(current).trim()
+
+    if !text.is_empty() {
+      statements.append(text)
+    }
+
+    current = []
+    head = []
+    bodied = false
+    depth = 0
+    pending_end = false
+  }
+
+  def settle_end(word) {
+    pending_end = false
+
+    if !_CLOSES_UNCOUNTED.contains(word) and depth > 0 {
+      depth--
+    }
+  }
+
+  def read_word(word) {
+    if head.length() < _HEAD_WORDS {
+      head.append(word)
+
+      if !bodied and head[0] == 'create' and _BODIED.contains(word) {
+        bodied = true
+      }
+    }
+
+    if !bodied {
+      return
+    }
+
+    if pending_end {
+      settle_end(word)
+    }
+
+    if word == 'begin' or word == 'case' {
+      depth++
+    } else if word == 'end' {
+      pending_end = true
+    }
+  }
+
   for token in tokenize(sql) {
     if token.kind == 'separator' {
-      var text = ''.join(current).trim()
-
-      if !text.is_empty() {
-        statements.append(text)
+      if pending_end {
+        settle_end('')
       }
 
-      current = []
+      if bodied and depth > 0 {
+        current.append(';')
+        continue
+      }
+
+      finish()
       continue
     }
 
@@ -367,16 +444,54 @@ def split_statements(sql: string) {
       current.append(':' + token.name)
     } else {
       current.append(token.text)
+
+      # Words matter only while the statement's opening is still being
+      # read, or inside a body, so the rest of a long script is copied
+      # without being looked at twice.
+      if token.kind == 'text' and (bodied or head.length() < _HEAD_WORDS) {
+        for word in _words(token.text) {
+          read_word(word)
+        }
+      }
     }
   }
 
-  var last = ''.join(current).trim()
-
-  if !last.is_empty() {
-    statements.append(last)
-  }
+  finish()
 
   return statements
+}
+
+# How many of a statement's opening words decide whether it carries a
+# body. `create or replace temporary trigger` is five, and a MySQL
+# `definer = user@host` clause sits among them too.
+var _HEAD_WORDS = 8
+
+# What a statement carrying a body creates.
+var _BODIED = ['trigger', 'procedure', 'function', 'event']
+
+# What follows an `END` that closes a block `BEGIN` and `CASE` did not
+# open.
+var _CLOSES_UNCOUNTED = ['if', 'while', 'loop', 'repeat']
+
+# The words of a run of ordinary SQL, lower cased.
+def _words(text) {
+  var words = []
+  var word = []
+
+  for ch in text {
+    if _is_ident_rest(ch) {
+      word.append(ch)
+    } else if !word.is_empty() {
+      words.append(''.join(word).lower())
+      word = []
+    }
+  }
+
+  if !word.is_empty() {
+    words.append(''.join(word).lower())
+  }
+
+  return words
 }
 
 /**

@@ -288,6 +288,16 @@ class Decimal {
   }
 
   /**
+   * What `json.encode()` writes for the decimal: its value as a
+   * number, such as `19.99`.
+   *
+   * @returns number
+   */
+  @to_json() {
+    return self.to_number()
+  }
+
+  /**
    * Makes `==` and `!=` compare the way `equals()` does.
    *
    * @param any other

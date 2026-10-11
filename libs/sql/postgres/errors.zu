@@ -64,6 +64,10 @@ var CLASSES = {
   # Integrity constraint violation.
   '23': IntegrityError,
 
+  # Dependent objects still exist: dropping a table, a column or a key
+  # that something else still depends on.
+  '2B': QueryError,
+
   # Invalid transaction state.
   '25': TransactionError,
 

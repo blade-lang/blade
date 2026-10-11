@@ -1,0 +1,605 @@
+# Versioned schema changes: applied once each, in order, recorded, and
+# rolled back newest first.
+#
+# Everything runs against SQLite, and the portable part against
+# PostgreSQL, MySQL and MariaDB when ZURI_TEST_POSTGRES, ZURI_TEST_MYSQL
+# and ZURI_TEST_MARIADB name a server. Several processes migrating one
+# database at once are run for real, through sql_migrate_helper.zu.
+
+import os
+import sql
+import sql.migrate { Migrator, MigrationError, create, is_name, DEFAULT_TABLE }
+
+def raises(body, kind) {
+  catch {
+    body()
+  } as error {
+    return instance_of(error, kind)
+  }
+
+  return false
+}
+
+def write(path, text) {
+  var handle = file(path, 'w')
+  handle.write(text)
+  handle.close()
+}
+
+def scratch() {
+  return os.create_temp_dir('zuri-migrate-')
+}
+
+# A directory of three migrations: two tables and a column.
+def three(directory) {
+  os.create_dir(directory, 0c755, true)
+
+  write(os.join_paths(directory, '001_create_authors.zu'), "
+import sql { Blueprint, Connection, Transaction }
+
+def up(db: Transaction|Connection) {
+  db.schema.create_table('authors', @(table: Blueprint) {
+    table.id()
+    table.string('name', 80).unique()
+  })
+}
+
+def down(db: Transaction|Connection) {
+  db.schema.drop_table('authors')
+}
+")
+
+  write(os.join_paths(directory, '002_create_books.zu'), "
+import sql { Blueprint, Connection, Transaction }
+
+def up(db: Transaction|Connection) {
+  db.schema.create_table('books', @(table: Blueprint) {
+    table.id()
+    table.references('author_id', 'authors').on_delete('cascade')
+    table.string('title', 120)
+  })
+}
+
+def down(db: Transaction|Connection) {
+  db.schema.drop_table('books')
+}
+")
+
+  write(os.join_paths(directory, '010_add_pages_to_books.zu'), "
+import sql { Blueprint, Connection, Transaction }
+
+def up(db: Transaction|Connection) {
+  db.schema.alter_table('books', @(table: Blueprint) {
+    table.integer('pages').default_value(0)
+  })
+}
+
+def down(db: Transaction|Connection) {
+  db.schema.alter_table('books', @(table: Blueprint) {
+    table.drop_column('pages')
+  })
+}
+")
+}
+
+def names(rows) {
+  return rows.map(@(row) => row.name)
+}
+
+def test_up_and_status() {
+  var root = scratch()
+  var directory = os.join_paths(root, 'migrations')
+  three(directory)
+
+  var db = sql.open(':memory:')
+  var migrator = Migrator(db, { directory })
+
+  assert migrator.table == DEFAULT_TABLE
+  assert migrator.status().map(@(entry) => entry.state)
+    == ['pending', 'pending', 'pending']
+
+  # Ordered by version as a number: 010 after 002, not between them.
+  assert names(migrator.pending()) == [
+    '001_create_authors', '002_create_books', '010_add_pages_to_books',
+  ]
+
+  var applied = migrator.up()
+
+  assert applied == names(migrator.migrations())
+  assert db.schema.column_names('books')
+    == ['id', 'author_id', 'title', 'pages']
+  assert migrator.pending().is_empty()
+  assert migrator.applied().map(@(row) => row.batch) == [1, 1, 1]
+  assert migrator.status().map(@(entry) => entry.state)
+    == ['applied', 'applied', 'applied']
+  assert typeof(migrator.applied()[0].applied_at) == 'Date'
+
+  # Nothing left to do is not an error.
+  assert migrator.up() == []
+
+  db.close()
+  os.remove_dir(root, true)
+  echo 'test_up_and_status passed'
+}
+
+def test_batches_and_rollback() {
+  var root = scratch()
+  var directory = os.join_paths(root, 'migrations')
+  three(directory)
+
+  var db = sql.open(':memory:')
+  var migrator = Migrator(db, { directory })
+
+  assert migrator.up({ steps: 1 }) == ['001_create_authors']
+  assert migrator.up({ to: '002_create_books' }) == ['002_create_books']
+  assert migrator.up() == ['010_add_pages_to_books']
+  assert migrator.applied().map(@(row) => row.batch) == [1, 2, 3]
+
+  # The latest batch goes on its own.
+  assert migrator.down() == ['010_add_pages_to_books']
+  assert !db.schema.column_names('books').contains('pages')
+
+  assert migrator.up() == ['010_add_pages_to_books']
+  assert migrator.down({ steps: 2 })
+    == ['010_add_pages_to_books', '002_create_books']
+  assert !db.schema.has_table('books')
+
+  assert migrator.up() == ['002_create_books', '010_add_pages_to_books']
+  assert migrator.down({ to: '001_create_authors' })
+    == ['010_add_pages_to_books', '002_create_books']
+  assert names(migrator.applied()) == ['001_create_authors']
+
+  assert raises(@() {
+    migrator.up({ to: '001_create_authors' })
+  }, MigrationError)
+
+  assert raises(@() {
+    migrator.down({ to: '010_add_pages_to_books' })
+  }, MigrationError)
+
+  assert raises(@() {
+    migrator.up({ steps: 0 })
+  }, MigrationError)
+
+  migrator.up()
+  assert migrator.reset().length() == 3
+  assert db.schema.tables() == [DEFAULT_TABLE]
+  assert migrator.applied().is_empty()
+
+  db.close()
+  os.remove_dir(root, true)
+  echo 'test_batches_and_rollback passed'
+}
+
+def test_failure() {
+  var root = scratch()
+  var directory = os.join_paths(root, 'migrations')
+  three(directory)
+
+  write(os.join_paths(directory, '005_broken.zu'), "
+import sql { Blueprint, Connection, Transaction }
+
+def up(db: Transaction|Connection) {
+  db.schema.create_table('half', @(table: Blueprint) {
+    table.id()
+  })
+
+  db.exec('this is not sql', nil)
+}
+
+def down(db: Transaction|Connection) {
+}
+")
+
+  var db = sql.open(':memory:')
+  var migrator = Migrator(db, { directory })
+
+  assert raises(@() {
+    migrator.up()
+  }, sql.QueryError)
+
+  # What ran before it stays, it is undone whole, and what comes after
+  # it waits.
+  assert names(migrator.applied()) == ['001_create_authors', '002_create_books']
+  assert !db.schema.has_table('half')
+  assert names(migrator.pending()) == ['005_broken', '010_add_pages_to_books']
+
+  db.close()
+  os.remove_dir(root, true)
+  echo 'test_failure passed'
+}
+
+def test_changed_and_missing() {
+  var root = scratch()
+  var directory = os.join_paths(root, 'migrations')
+  three(directory)
+
+  var db = sql.open(':memory:')
+  var migrator = Migrator(db, { directory })
+
+  migrator.up()
+
+  write(os.join_paths(directory, '001_create_authors.zu'), '# edited\n' +
+    file(os.join_paths(directory, '001_create_authors.zu')).read())
+  file(os.join_paths(directory, '010_add_pages_to_books.zu')).delete()
+
+  var states = {}
+
+  for entry in migrator.status() {
+    states.set(entry.name, entry.state)
+  }
+
+  assert states['001_create_authors'] == 'changed'
+  assert states['002_create_books'] == 'applied'
+  assert states['010_add_pages_to_books'] == 'missing'
+
+  # A rollback reaching a migration with no file rolls back nothing.
+  assert raises(@() {
+    migrator.down()
+  }, MigrationError)
+
+  assert migrator.applied().length() == 3
+  assert db.schema.column_names('books').contains('pages')
+
+  db.close()
+  os.remove_dir(root, true)
+  echo 'test_changed_and_missing passed'
+}
+
+def test_files() {
+  var root = scratch()
+  var directory = os.join_paths(root, 'migrations')
+  os.create_dir(directory, 0c755, true)
+
+  # Shared code lives in files starting with an underscore, and other
+  # files are left alone.
+  write(os.join_paths(directory, '_tables.zu'), "
+import sql { Blueprint, Connection, Transaction }
+
+def make(db: Transaction|Connection, name: string) {
+  db.schema.create_table(name, @(table: Blueprint) {
+    table.id()
+  })
+}
+")
+
+  write(os.join_paths(directory, 'README.md'), 'notes')
+
+  write(os.join_paths(directory, '1_shared.zu'), "
+import sql { Connection, Transaction }
+import ._tables
+
+def up(db: Transaction|Connection) {
+  _tables.make(db, 'shared')
+}
+")
+
+  write(os.join_paths(directory, '2_outside.zu'), "
+import sql { Blueprint, Connection, Transaction }
+
+var transaction = false
+
+def up(db: Transaction|Connection) {
+  db.schema.create_table('outside', @(table: Blueprint) {
+    table.id()
+  })
+}
+")
+
+  var db = sql.open(':memory:')
+  var migrator = Migrator(db, { directory })
+
+  assert names(migrator.migrations()) == ['1_shared', '2_outside']
+  assert !migrator.migrations()[0].has_down()
+  assert migrator.migrations()[0].in_transaction()
+  assert !migrator.migrations()[1].in_transaction()
+
+  migrator.up()
+
+  assert db.schema.has_table('shared')
+  assert db.schema.has_table('outside')
+
+  # No down() means no rollback, and nothing is rolled back.
+  assert raises(@() {
+    migrator.down()
+  }, MigrationError)
+
+  assert migrator.applied().length() == 2
+
+  write(os.join_paths(directory, '3 bad name.zu'), 'def up(db) {\n}\n')
+
+  assert raises(@() {
+    migrator.migrations()
+  }, MigrationError)
+
+  file(os.join_paths(directory, '3 bad name.zu')).delete()
+  write(os.join_paths(directory, '02_twin.zu'), 'def up(db) {\n}\n')
+
+  assert raises(@() {
+    migrator.migrations()
+  }, MigrationError)
+
+  file(os.join_paths(directory, '02_twin.zu')).delete()
+  write(os.join_paths(directory, '3_no_up.zu'), 'def down(db) {\n}\n')
+
+  assert raises(@() {
+    migrator.up()
+  }, MigrationError)
+
+  assert raises(@() {
+    Migrator(db, { directory: os.join_paths(root, 'nowhere') }).up()
+  }, MigrationError)
+
+  db.close()
+  os.remove_dir(root, true)
+  echo 'test_files passed'
+}
+
+def test_rebuild_inside_a_migration() {
+  var root = scratch()
+  var directory = os.join_paths(root, 'migrations')
+  three(directory)
+
+  write(os.join_paths(directory, '020_widen_names.zu'), "
+import sql { Blueprint, Connection, Transaction }
+
+def up(db: Transaction|Connection) {
+  db.schema.alter_table('authors', @(table: Blueprint) {
+    table.string('name', 200).change()
+  })
+}
+
+def down(db: Transaction|Connection) {
+  db.schema.alter_table('authors', @(table: Blueprint) {
+    table.string('name', 80).change()
+  })
+}
+")
+
+  var db = sql.open(':memory:')
+  var migrator = Migrator(db, { directory })
+
+  migrator.up({ steps: 3 })
+
+  var ada = db.insert('authors', { name: 'Ada' })
+  db.insert('books', { author_id: ada, title: 'Engines' })
+
+  # SQLite builds authors again to change the column, and the book
+  # referring to it is still there afterwards.
+  migrator.up()
+
+  assert db.count('books') == 1
+  assert db.fetch_value('pragma foreign_keys', nil, nil) == 1
+
+  migrator.down()
+  assert db.count('books') == 1
+
+  db.close()
+  os.remove_dir(root, true)
+  echo 'test_rebuild_inside_a_migration passed'
+}
+
+def test_create() {
+  var root = scratch()
+  var directory = os.join_paths(root, 'migrations')
+
+  var made = create(directory, 'create_posts')
+  var again = create(directory, 'add_slug_to_posts')
+
+  assert os.base_name(made).ends_with('_create_posts.zu')
+  assert os.base_name(again).ends_with('_add_slug_to_posts.zu')
+  assert os.base_name(made)[0, 14].match('/^[0-9]{14}$/')
+
+  # Two made in the same second still get versions of their own.
+  assert os.base_name(made)[0, 14] != os.base_name(again)[0, 14]
+
+  var text = file(made).read()
+
+  assert text.contains("db.schema.create_table('posts'")
+  assert text.contains("db.schema.drop_table('posts')")
+  assert !file(again).read().contains('create_table')
+
+  # Both start typed, importing what their annotations name.
+  assert text.contains('import sql { Blueprint, Connection, Transaction }')
+  assert text.contains('def up(db: Transaction|Connection)')
+  assert text.contains('def down(db: Transaction|Connection)')
+  assert text.contains('@(table: Blueprint)')
+  assert file(again).read().contains('import sql { Connection, Transaction }')
+  assert file(again).read().contains('def up(db: Transaction|Connection)')
+
+  var refused = [
+    'bad/name', 'create posts', 'add-slug', '', ' create_posts', 'posts\n',
+  ]
+
+  for name in refused {
+    assert !is_name(name)
+    assert raises(@() {
+      create(directory, name)
+    }, MigrationError)
+  }
+
+  assert is_name('create_posts')
+  assert is_name('Add2FA_to_users')
+
+  # A refused name writes nothing.
+  var written = os
+    .read_dir(directory)
+    .filter(@(entry) => entry.ends_with('.zu'))
+  assert written.length() == 2
+
+  var db = sql.open(':memory:')
+  var migrator = Migrator(db, { directory })
+
+  migrator.up()
+  assert db.schema.column_names('posts') == ['id', 'created_at', 'updated_at']
+  migrator.reset()
+  assert !db.schema.has_table('posts')
+
+  db.close()
+  os.remove_dir(root, true)
+  echo 'test_create passed'
+}
+
+# Starts `count` processes migrating one database at once, and returns
+# what each applied.
+def race(dsn, directory, count) {
+  var helper = os.join_paths(os.dir_name(__file__), 'sql_migrate_helper.zu')
+  var children = []
+
+  iter var i = 0; i < count; i++ {
+    children.append(os.spawn(
+      os.exe_path, ['run', helper, dsn, directory], { stdin: 'null' },
+    ))
+  }
+
+  var outputs = []
+
+  for child in children {
+    var status = child.wait()
+    var output = child.read_stdout().to_string()
+
+    assert status == 0,
+      'a migrating process failed: ${child.read_stderr().to_string()}'
+    outputs.append(output
+      .trim()
+      .split('\n')
+      .filter(@(line) => !line.is_empty()))
+  }
+
+  return outputs
+}
+
+def slow(directory) {
+  three(directory)
+
+  # Long enough that the runs overlap.
+  write(os.join_paths(directory, '005_fill.zu'), "
+import sql { Connection, Transaction }
+
+def up(db: Transaction|Connection) {
+  iter var i = 0; i < 300; i++ {
+    db.insert('authors', { name: 'author ' + i })
+  }
+}
+
+def down(db: Transaction|Connection) {
+  db.delete('authors', nil)
+}
+")
+}
+
+def test_concurrent_sqlite() {
+  var root = scratch()
+  var directory = os.join_paths(root, 'migrations')
+  var path = os.join_paths(root, 'race.db')
+
+  slow(directory)
+
+  var setup = sql.open(path, { journal_mode: 'wal' })
+  setup.close()
+
+  var outputs = race(path, directory, 3)
+  var applied = []
+
+  for output in outputs {
+    applied.extend(output)
+  }
+
+  applied.sort()
+
+  assert applied == [
+    '001_create_authors', '002_create_books', '005_fill',
+    '010_add_pages_to_books',
+  ], 'each migration is applied by exactly one process, not ${outputs}'
+
+  var db = sql.open(path)
+
+  assert db.count('authors') == 300
+  assert db.count(DEFAULT_TABLE) == 4
+
+  db.close()
+  os.remove_dir(root, true)
+  echo 'test_concurrent_sqlite passed'
+}
+
+def test_servers() {
+  var servers = {
+    ZURI_TEST_POSTGRES: 'postgres',
+    ZURI_TEST_MYSQL: 'mysql',
+    ZURI_TEST_MARIADB: 'mariadb',
+  }
+
+  for variable, label in servers {
+    var dsn = os.get_env(variable, nil)
+
+    if dsn == nil or dsn == '' {
+      echo 'test_servers ${label} skipped: set ${variable} to a connection string'
+      continue
+    }
+
+    var target = dsn
+    var admin = sql.open(dsn)
+
+    if label == 'postgres' {
+      admin.exec('drop database if exists zuri_sql_migrate', nil)
+      admin.exec('create database zuri_sql_migrate', nil)
+      target = dsn[0, dsn.last_index_of('/')] + '/zuri_sql_migrate'
+    } else {
+      admin.exec_script('drop database if exists zuri_sql_migrate')
+      admin.exec_script('create database zuri_sql_migrate')
+      target = dsn.ends_with('/')
+        ? dsn + 'zuri_sql_migrate'
+        : dsn + '/zuri_sql_migrate'
+    }
+
+    var root = scratch()
+    var directory = os.join_paths(root, 'migrations')
+
+    slow(directory)
+
+    var outputs = race(target, directory, 3)
+    var applied = []
+
+    for output in outputs {
+      applied.extend(output)
+    }
+
+    applied.sort()
+    assert applied.length() == 4,
+      '${label}: each migration applied once, not ${outputs}'
+
+    var db = sql.open(target)
+    var migrator = Migrator(db, { directory })
+
+    assert db.count('authors') == 300
+    assert migrator.pending().is_empty()
+    assert migrator.down()
+      == [
+        '010_add_pages_to_books', '005_fill', '002_create_books',
+        '001_create_authors',
+      ]
+    assert !db.schema.has_table('authors')
+
+    db.close()
+
+    if label == 'postgres' {
+      admin.exec('drop database zuri_sql_migrate', nil)
+    } else {
+      admin.exec_script('drop database zuri_sql_migrate')
+    }
+
+    admin.close()
+    os.remove_dir(root, true)
+    echo 'test_servers ${label} passed'
+  }
+}
+
+test_up_and_status()
+test_batches_and_rollback()
+test_failure()
+test_changed_and_missing()
+test_files()
+test_rebuild_inside_a_migration()
+test_create()
+test_concurrent_sqlite()
+test_servers()

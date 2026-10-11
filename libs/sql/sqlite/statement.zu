@@ -183,6 +183,10 @@ class SqliteStatement < DriverStatement {
       reraise(error, self._query)
     }
 
+    # The tables may have changed since this was prepared, in which
+    # case the steps above compiled it again; what it is now is what
+    # the rows are.
+    self._describe()
     _sqlite.reset(self._statement)
 
     var conversions = self._conversions
@@ -209,6 +213,20 @@ class SqliteStatement < DriverStatement {
     _sqlite.clear_bindings(self._statement)
     bind_all(self._statement, values, self._query)
 
+    # The first step is taken here rather than by the cursor. It is the
+    # step that compiles the statement again when its tables changed
+    # since it was prepared, and the cursor reports its columns before
+    # it hands out a row, so they have to be described after it.
+    var outcome
+
+    catch {
+      outcome = _sqlite.step(self._statement)
+    } as error {
+      _sqlite.reset(self._statement)
+      reraise(error, self._query)
+    }
+
+    self._describe()
     self._lent = true
 
     return SqliteCursor(
@@ -217,6 +235,7 @@ class SqliteStatement < DriverStatement {
       self._conversions,
       self._query,
       false,
+      { row: outcome == 'row' ? _sqlite.row(self._statement) : nil },
     )
   }
 
@@ -240,6 +259,14 @@ class SqliteStatement < DriverStatement {
    */
   is_closed() {
     return self._closed
+  }
+
+  # Reads the columns the statement has now.
+  _describe() {
+    var described = describe(self._statement)
+
+    self._columns = described.columns
+    self._conversions = described.conversions
   }
 
   # Raises unless the statement is in a state to be run.

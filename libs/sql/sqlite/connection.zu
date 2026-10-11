@@ -167,7 +167,6 @@ class SqliteConnection < DriverConnection {
     _sqlite.clear_bindings(statement)
     bind_all(statement, values, sql)
 
-    var described = describe(statement)
     var rows = []
 
     catch {
@@ -178,6 +177,12 @@ class SqliteConnection < DriverConnection {
       _sqlite.reset(statement)
       reraise(error, sql)
     }
+
+    # Described after stepping, not before. A cached statement whose
+    # tables changed since it was compiled is compiled again by its
+    # first step, and only then does it report the columns its rows
+    # have.
+    var described = describe(statement)
 
     _sqlite.reset(statement)
 

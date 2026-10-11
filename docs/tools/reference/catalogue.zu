@@ -77,7 +77,7 @@ var GROUPS = [
   },
   {
     title: 'Databases',
-    blurb: 'One contract every relational database answers, and the adapters that answer it.',
+    blurb: 'One contract every relational database answers, the adapters that answer it, and the schema changes, migrations and models built on top.',
     modules: ['sql'],
   },
   {

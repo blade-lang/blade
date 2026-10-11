@@ -1,0 +1,851 @@
+/**
+ * @module migrate
+ *
+ * Versioned changes to a database's schema, applied once each, in
+ * order, on every engine.
+ *
+ * A migration is a Zuri file in a directory of them. Its name starts
+ * with a version, a run of digits, and says what it does:
+ *
+ * ```text
+ * migrations/
+ *   20261011143000_create_posts.zu
+ *   20261012091500_add_slug_to_posts.zu
+ * ```
+ *
+ * Each exports `up(db)`, which makes the change, and `down(db)`, which
+ * undoes it. `db` is the `Transaction` the migration runs in, or the
+ * `Connection` itself where it runs outside one: always on MySQL and
+ * MariaDB, and anywhere for a migration that asks to. Its type is
+ * `Transaction|Connection`, and the change is described with
+ * `db.schema` and its `Blueprint`, once, for every engine the program
+ * runs against:
+ *
+ * ```zuri,ignore
+ * import sql { Blueprint, Connection, Transaction }
+ *
+ * def up(db: Transaction|Connection) {
+ *   db.schema.create_table('posts', @(table: Blueprint) {
+ *     table.id()
+ *     table.string('title', 200)
+ *     table.timestamps()
+ *   })
+ * }
+ *
+ * def down(db: Transaction|Connection) {
+ *   db.schema.drop_table('posts')
+ * }
+ * ```
+ *
+ * `Migrator` applies what a database has not had and rolls back what
+ * it has, and records each one in a table of its own, `zuri_migrations`
+ * by default:
+ *
+ * ```zuri,ignore
+ * import sql
+ * import sql.migrate { Migrator }
+ *
+ * var db = sql.open(env.require('DATABASE_URL'))
+ *
+ * Migrator(db, { directory: 'migrations' }).up()
+ * ```
+ *
+ * `zuri migrate` does the same from the command line.
+ *
+ * ### How a migration runs
+ *
+ * Each migration runs in a transaction of its own, together with the
+ * row recording it, so on SQLite and PostgreSQL a migration that fails
+ * part way leaves nothing behind and is not recorded. MySQL and MariaDB
+ * commit at every schema change: there a migration runs on its own and
+ * is recorded once it has finished, and one that fails part way leaves
+ * the statements before the failure in place.
+ *
+ * On SQLite, foreign key enforcement is switched off while a migration
+ * runs, so a change that builds a table again cannot take the rows
+ * referring to it along, and every foreign key is checked before the
+ * migration commits.
+ *
+ * A migration that has to run outside a transaction, as PostgreSQL's
+ * `create index concurrently` does, says so:
+ *
+ * ```zuri,ignore
+ * var transaction = false
+ * ```
+ *
+ * ### Several processes at once
+ *
+ * Two processes migrating one database at the same moment apply each
+ * migration once. On PostgreSQL, MySQL and MariaDB a run holds the
+ * engine's own lock, and a second run waits for the first to finish.
+ * On SQLite each migration takes the write lock as it starts, and every
+ * migration checks the record again once it holds the lock, so one
+ * another process applied meanwhile is passed over.
+ *
+ * ### Batches
+ *
+ * Every migration one `up()` applies shares a batch number, and
+ * `down()` with no options rolls back the latest batch whole: what the
+ * last run applied, however many that was.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import date
+import hash
+import os
+import zuri
+
+import .blueprint { Blueprint }
+import .errors { SqlError }
+
+/**
+ * The table a `Migrator` records migrations in unless told another.
+ */
+var DEFAULT_TABLE = 'zuri_migrations'
+
+/**
+ * The directory a `Migrator` reads migrations from unless told
+ * another, relative to the working directory.
+ */
+var DEFAULT_DIRECTORY = 'migrations'
+
+/**
+ * A migration that cannot be run as asked: a directory or a file that
+ * breaks the naming rules, a file without `up()`, a rollback of one
+ * without `down()`, or a version two files share.
+ *
+ * `migration` names the migration concerned, where there is one.
+ *
+ * @printable
+ */
+class MigrationError < SqlError {
+  /**
+   * The migration's name, or nil.
+   * @default nil
+   */
+  var migration
+
+  /**
+   * @param string message
+   * @param string|nil migration
+   */
+  @new(message, migration) {
+    parent(message, nil)
+    self.migration = migration
+  }
+}
+
+/**
+ * One migration file.
+ *
+ * @printable
+ */
+class Migration {
+  /**
+   * The migration's name: its file name without `.zu`, such as
+   * `20261011143000_create_posts`. This is what is recorded.
+   * @type string
+   */
+  var name
+
+  /**
+   * The digits the name starts with.
+   * @type string
+   */
+  var version
+
+  /**
+   * The file.
+   * @type string
+   */
+  var path
+
+  /**
+   * The SHA-256 of the file as it is now, in hex.
+   * @type string
+   */
+  var checksum
+
+  var _module
+
+  /**
+   * @param string path
+   * @param string name
+   * @param string version
+   * @param string checksum
+   */
+  @new(path, name, version, checksum) {
+    self.path = path
+    self.name = name
+    self.version = version
+    self.checksum = checksum
+  }
+
+  /**
+   * The migration's module, imported the first time it is asked for.
+   *
+   * @returns module
+   * @throws MigrationError if it does not export `up()`.
+   */
+  module() {
+    if self._module == nil {
+      var loaded = zuri.import_file(self.path)
+
+      if !_exports_function(loaded, 'up') {
+        raise MigrationError(
+          '${self.name} does not export an up() function', self.name,
+        )
+      }
+
+      self._module = loaded
+    }
+
+    return self._module
+  }
+
+  /**
+   * Whether the migration can be rolled back.
+   *
+   * @returns bool
+   */
+  has_down() {
+    return _exports_function(self.module(), 'down')
+  }
+
+  /**
+   * Whether the migration runs inside a transaction: true unless it
+   * sets `transaction` to false.
+   *
+   * @returns bool
+   */
+  in_transaction() {
+    var loaded = self.module()
+
+    if zuri.reflect.has_prop(loaded, 'transaction') {
+      return zuri.reflect.get_prop(loaded, 'transaction') != false
+    }
+
+    return true
+  }
+
+  to_string() {
+    return '<Migration ${self.name}>'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+/**
+ * Applies a directory of migrations to one database, and rolls them
+ * back.
+ *
+ * ```zuri,ignore
+ * var migrator = Migrator(db, { directory: 'migrations' })
+ *
+ * for entry in migrator.status() {
+ *   echo '${entry.state} ${entry.name}'
+ * }
+ *
+ * migrator.up()
+ * ```
+ *
+ * The record of what has been applied lives in the database, in the
+ * table `table` names, created the first time a `Migrator` needs it.
+ *
+ * @printable
+ */
+class Migrator {
+  /**
+   * The connection migrated.
+   * @type Connection
+   */
+  var connection
+
+  /**
+   * The directory the migrations are read from.
+   * @type string
+   */
+  var directory
+
+  /**
+   * The table migrations are recorded in.
+   * @type string
+   */
+  var table
+
+  /**
+   * @param Connection connection A connection of its own: a run holds
+   *    it, and on PostgreSQL and MySQL a session lock on it, from
+   *    start to finish. A connection taken from a pool is returned to
+   *    it afterwards by the caller, as any other.
+   * @param dict|nil options `directory`, the directory of migrations,
+   *    `migrations` by default; and `table`, the table recording them,
+   *    `zuri_migrations` by default.
+   */
+  @new(connection, options) {
+    var settings = options or {}
+
+    self.connection = connection
+    self.directory = settings.get('directory', DEFAULT_DIRECTORY)
+    self.table = settings.get('table', DEFAULT_TABLE)
+  }
+
+  /**
+   * Every migration in the directory, in the order they apply: by
+   * version, then by name.
+   *
+   * A `.zu` file whose name starts with `_` is not a migration, which
+   * is where code several migrations share goes. Files that are not
+   * `.zu` are left alone.
+   *
+   * @returns list[Migration]
+   * @throws MigrationError if the directory is not there, a file's name
+   *    does not start with a version and an underscore, or two files
+   *    share a version.
+   */
+  migrations() {
+    if !os.dir_exists(self.directory) {
+      raise MigrationError(
+        'there is no directory of migrations at ${self.directory}', nil,
+      )
+    }
+
+    var found = []
+    var versions = {}
+
+    for entry in os.read_dir(self.directory) {
+      if !entry.ends_with('.zu') or entry.starts_with('_') {
+        continue
+      }
+
+      var path = os.join_paths(self.directory, entry)
+
+      if os.dir_exists(path) {
+        continue
+      }
+
+      var name = entry[0, entry.length() - 3]
+      var parsed = name.match('/^([0-9]+)_[A-Za-z0-9_]+$/')
+
+      if !parsed {
+        raise MigrationError(
+          '${entry} is not named as a migration is: a version, an underscore and ' +
+            'a name of letters, digits and underscores, such as 20261011143000_create_posts.zu',
+          name,
+        )
+      }
+
+      var version = parsed[1]
+      var key = _ordering(version)
+
+      if versions.contains(key) {
+        raise MigrationError(
+          '${versions[key]} and ${name} share the version ${version}; give one another',
+          name,
+        )
+      }
+
+      versions.set(key, name)
+      found.append(Migration(
+        path, name, version, hash.sha256(file(path).read()),
+      ))
+    }
+
+    found.sort(@(a, b) {
+      var order = _ordering(a.version).compare(_ordering(b.version))
+      return order != 0 ? order : a.name.compare(b.name)
+    })
+
+    return found
+  }
+
+  /**
+   * What the database records as applied, oldest first. Each is
+   * `{ name, batch, checksum, applied_at }`.
+   *
+   * @returns list[dict]
+   */
+  applied() {
+    self._prepare()
+
+    var rows = self.connection.find(self.table, nil, {
+      columns: ['name', 'batch', 'checksum', 'applied_at'],
+    }).rows
+
+    rows.sort(@(a, b) {
+      var order = _ordering(_version_of(a.name)).compare(_ordering(_version_of(b.name)))
+      return order != 0 ? order : a.name.compare(b.name)
+    })
+
+    return rows
+  }
+
+  /**
+   * The migrations the database has not had, in the order they apply.
+   *
+   * @returns list[Migration]
+   */
+  pending() {
+    var applied = self.applied().map(@(row) => row.name)
+    return self
+      .migrations()
+      .filter(@(migration) => !applied.contains(migration.name))
+  }
+
+  /**
+   * Every migration, in a file or in the record or both, with what is
+   * known about it. Each is `{ name, state, batch, applied_at }`, and
+   * `state` is one of:
+   *
+   * | State | Meaning |
+   * | - | - |
+   * | `applied` | recorded, and the file is as it was when it ran |
+   * | `changed` | recorded, and the file has changed since it ran |
+   * | `missing` | recorded, and there is no file for it any more |
+   * | `pending` | a file the database has not had |
+   *
+   * `batch` and `applied_at` are nil for a pending migration.
+   *
+   * @returns list[dict]
+   */
+  status() {
+    var files = {}
+
+    for migration in self.migrations() {
+      files.set(migration.name, migration)
+    }
+
+    var entries = []
+    var recorded = {}
+
+    for row in self.applied() {
+      recorded.set(row.name, true)
+
+      var migration = files.get(row.name, nil)
+      var state = migration == nil
+        ? 'missing'
+        : migration.checksum == row.checksum ? 'applied' : 'changed'
+
+      entries.append({
+        name: row.name,
+        state,
+        batch: row.batch,
+        applied_at: row.applied_at,
+      })
+    }
+
+    for name, migration in files {
+      if !recorded.contains(name) {
+        entries.append({ name, state: 'pending', batch: nil, applied_at: nil })
+      }
+    }
+
+    entries.sort(@(a, b) {
+      var order = _ordering(_version_of(a.name)).compare(_ordering(_version_of(b.name)))
+      return order != 0 ? order : a.name.compare(b.name)
+    })
+
+    return entries
+  }
+
+  /**
+   * Applies pending migrations, in order, as one batch.
+   *
+   * ```zuri,ignore
+   * migrator.up()                  # everything pending
+   * migrator.up({ steps: 1 })      # the next one
+   * migrator.up({ to: '20261012091500_add_slug_to_posts' })
+   * ```
+   *
+   * A migration that fails stops the run where it is. Those before it
+   * stay applied, and it and those after it stay pending.
+   *
+   * @param dict|nil options `steps`, how many to apply at most; or
+   *    `to`, the name of the last one to apply. Everything pending
+   *    when neither is given.
+   * @returns list[string] The names applied, in order.
+   * @throws MigrationError if `to` names no pending migration, or a
+   *    file cannot be run.
+   */
+  up(options) {
+    var settings = options or {}
+
+    return self._locked(@() {
+      var pending = self.pending()
+      var chosen = pending
+
+      if settings.get('steps', nil) != nil {
+        chosen = pending[0, _steps(settings.steps).min(pending.length())]
+      } else if settings.get('to', nil) != nil {
+        var at = pending
+          .map(@(migration) => migration.name)
+          .index_of(settings.to)
+
+        if at == -1 {
+          raise MigrationError(
+            '${settings.to} is not a pending migration', settings.to,
+          )
+        }
+
+        chosen = pending[0, at + 1]
+      }
+
+      for migration in chosen {
+        migration.module()
+      }
+
+      var batch = self._latest_batch() + 1
+      var done = []
+
+      for migration in chosen {
+        if self._apply(migration, batch) {
+          done.append(migration.name)
+        }
+      }
+
+      return done
+    })
+  }
+
+  /**
+   * Rolls applied migrations back, newest first.
+   *
+   * ```zuri,ignore
+   * migrator.down()                # the latest batch
+   * migrator.down({ steps: 2 })    # the two most recent
+   * migrator.down({ to: '20261011143000_create_posts' })
+   * ```
+   *
+   * Every migration about to be rolled back is checked first: each has
+   * to have its file, with a `down()`, or nothing is rolled back at all.
+   *
+   * @param dict|nil options `steps`, how many to roll back; or `to`,
+   *    the name of a migration to leave as the latest applied, rolling
+   *    back everything after it. The latest batch when neither is
+   *    given.
+   * @returns list[string] The names rolled back, in the order they
+   *    were.
+   * @throws MigrationError if `to` names no applied migration, or one
+   *    to be rolled back has no file or no `down()`.
+   */
+  down(options) {
+    var settings = options or {}
+
+    return self._locked(@() {
+      var applied = self.applied().reverse()
+      var chosen = []
+
+      if settings.get('steps', nil) != nil {
+        chosen = applied[0, _steps(settings.steps).min(applied.length())]
+      } else if settings.get('to', nil) != nil {
+        var at = applied.map(@(row) => row.name).index_of(settings.to)
+
+        if at == -1 {
+          raise MigrationError(
+            '${settings.to} is not an applied migration', settings.to,
+          )
+        }
+
+        chosen = applied[0, at]
+      } else if !applied.is_empty() {
+        var latest = applied[0].batch
+        chosen = applied.filter(@(row) => row.batch == latest)
+      }
+
+      return self._roll_back(chosen)
+    })
+  }
+
+  /**
+   * Rolls back every applied migration, newest first.
+   *
+   * @returns list[string] The names rolled back.
+   * @throws MigrationError if one has no file or no `down()`; nothing
+   *    is rolled back then.
+   */
+  reset() {
+    return self._locked(@() {
+      return self._roll_back(self.applied().reverse())
+    })
+  }
+
+  # Rolls back `rows`, every one of them checked before the first runs.
+  _roll_back(rows) {
+    var files = {}
+
+    for migration in self.migrations() {
+      files.set(migration.name, migration)
+    }
+
+    var chosen = []
+
+    for row in rows {
+      var migration = files.get(row.name, nil)
+
+      if migration == nil {
+        raise MigrationError(
+          '${row.name} cannot be rolled back: its file is not in ${self.directory}',
+          row.name,
+        )
+      }
+
+      if !migration.has_down() {
+        raise MigrationError(
+          '${row.name} cannot be rolled back: it has no down() function',
+          row.name,
+        )
+      }
+
+      chosen.append(migration)
+    }
+
+    var done = []
+
+    for migration in chosen {
+      if self._revert(migration) {
+        done.append(migration.name)
+      }
+    }
+
+    return done
+  }
+
+  # Applies one migration with its record, unless another process got
+  # there first.
+  _apply(migration, batch) {
+    var ddl = self.connection.driver().ddl()
+
+    return ddl.schema_change(self.connection, @(db) {
+      if self._recorded(migration.name) {
+        return false
+      }
+
+      migration.module().up(db)
+
+      self.connection.insert(self.table, {
+        name: migration.name,
+        batch,
+        checksum: migration.checksum,
+        applied_at: date.from_time(time()),
+      }, { returning: 'name' })
+
+      return true
+    }, migration.in_transaction())
+  }
+
+  # Rolls back one migration with its record.
+  _revert(migration) {
+    var ddl = self.connection.driver().ddl()
+
+    return ddl.schema_change(self.connection, @(db) {
+      if !self._recorded(migration.name) {
+        return false
+      }
+
+      migration.module().down(db)
+      self.connection.delete(self.table, { name: migration.name })
+
+      return true
+    }, migration.in_transaction())
+  }
+
+  _recorded(name) {
+    return self.connection.count(self.table, { name }) > 0
+  }
+
+  _latest_batch() {
+    var latest = self.connection.fetch_value(
+      'select max(batch) from ${self.connection.driver().ddl().table_name(self.table)}',
+      nil,
+      nil,
+    )
+
+    if latest == nil {
+      return 0
+    }
+
+    # An aggregate is a number on some engines and a decimal or a
+    # bigint on others.
+    return is_number(latest) ? latest : latest.to_string().to_number()
+  }
+
+  # Holds the engine's lock for a run.
+  _locked(body) {
+    self._prepare()
+
+    var ddl = self.connection.driver().ddl()
+
+    return ddl.migration_lock(
+      self.connection, 'zuri_migrate_' + self.table, body,
+    )
+  }
+
+  # Creates the record's table the first time it is needed.
+  _prepare() {
+    if self.connection.schema.has_table(self.table) {
+      return
+    }
+
+    self.connection.schema.create_table(self.table, @(table: Blueprint) {
+      table.string('name', 255).primary()
+      table.integer('batch')
+      table.string('checksum', 64)
+      table.datetime('applied_at')
+    }, { if_not_exists: true })
+  }
+
+  to_string() {
+    return '<Migrator ${self.directory} into ${self.table}>'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+/**
+ * Whether `name` can name a migration: one or more letters, digits
+ * and underscores, such as `create_posts`.
+ *
+ * @param string name
+ * @returns bool
+ */
+def is_name(name: string) {
+  return !!name.match('/^[A-Za-z0-9_]+\\z/')
+}
+
+/**
+ * Writes a new, empty migration into `directory`, and returns its path.
+ *
+ * The version is the moment it was made, in UTC, as
+ * `YYYYMMDDHHMMSS`, moved on a second at a time past any version the
+ * directory already holds. The file is the version, an underscore and
+ * `name`, exactly as given.
+ *
+ * A name of the form `create_<table>` starts the migration creating
+ * that table, with an `id()` and `timestamps()`, and dropping it on
+ * the way down. Any other name starts it empty. Either way `up()` and
+ * `down()` start typed, `db: Transaction|Connection`, with the classes
+ * imported from `sql`.
+ *
+ * ```zuri,ignore
+ * migrate.create('migrations', 'create_posts')
+ * # migrations/20261011143000_create_posts.zu
+ * ```
+ *
+ * @param string directory Created when it is not there.
+ * @param string name Letters, digits and underscores.
+ * @returns string The new file's path.
+ * @throws MigrationError if `name` is empty or has anything but
+ *    letters, digits and underscores in it, and nothing is written.
+ */
+def create(directory: string, name: string) {
+  if !is_name(name) {
+    raise MigrationError(
+      '"${name}" is not a migration name; use letters, digits and underscores, ' +
+        'such as create_posts',
+      nil,
+    )
+  }
+
+  if !os.dir_exists(directory) {
+    os.create_dir(directory, 0c755, true)
+  }
+
+  var taken = []
+
+  for entry in os.read_dir(directory) {
+    var found = entry.match('/^([0-9]+)_/')
+
+    if found {
+      taken.append(found[1])
+    }
+  }
+
+  var moment = time().floor()
+  var version = date.from_time(moment).format('YmdHis')
+
+  while taken.contains(version) {
+    moment++
+    version = date.from_time(moment).format('YmdHis')
+  }
+
+  var path = os.join_paths(directory, '${version}_${name}.zu')
+  var handle = file(path, 'w')
+
+  handle.write(_template(name))
+  handle.close()
+
+  return path
+}
+
+# What a new migration starts as.
+def _template(name) {
+  var described = name.replace('_', ' ')
+  var creating = name.match('/^create_([A-Za-z0-9_]+?)(_table)?$/')
+
+  if creating {
+    var table = creating[1]
+
+    return '# ${described[0].upper()}${described[1,]}.\n' +
+      '\n' +
+      'import sql { Blueprint, Connection, Transaction }\n' +
+      '\n' +
+      'def up(db: Transaction|Connection) {\n' +
+      "  db.schema.create_table('${table}', @(table: Blueprint) {\n" +
+      '    table.id()\n' +
+      '    table.timestamps()\n' +
+      '  })\n' +
+      '}\n' +
+      '\n' +
+      'def down(db: Transaction|Connection) {\n' +
+      "  db.schema.drop_table('${table}')\n" +
+      '}\n'
+  }
+
+  return '# ${described[0].upper()}${described[1,]}.\n' +
+    '\n' +
+    'import sql { Connection, Transaction }\n' +
+    '\n' +
+    'def up(db: Transaction|Connection) {\n' +
+    '}\n' +
+    '\n' +
+    'def down(db: Transaction|Connection) {\n' +
+    '}\n'
+}
+
+# Whether `module` exports a function called `name`.
+def _exports_function(module, name) {
+  var members = zuri.reflect.module_info(module).members
+  return members.get(name, nil) == 'function'
+}
+
+# A version made comparable as text: digits padded to one width, so
+# `9` comes before `10` and `001` keeps its place among `1`s.
+def _ordering(version) {
+  var digits = version
+
+  while digits.length() > 1 and digits[0] == '0' {
+    digits = digits[1,]
+  }
+
+  return digits.lpad(40, '0')
+}
+
+# The version a recorded name starts with.
+def _version_of(name) {
+  var found = name.match('/^([0-9]+)_/')
+  return found ? found[1] : '0'
+}
+
+# A count of steps, checked.
+def _steps(value) {
+  if !is_number(value) or value != value.floor() or value < 1 {
+    raise MigrationError('steps is a whole number from 1, not ${value}', nil)
+  }
+
+  return value
+}

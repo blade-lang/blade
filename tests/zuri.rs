@@ -1935,6 +1935,11 @@ mod command_suites {
   fn fmt() {
     suite("fmt");
   }
+
+  #[test]
+  fn migrate() {
+    suite("migrate");
+  }
 }
 
 /// `zuri lsp` reached the way an editor reaches it: through the command

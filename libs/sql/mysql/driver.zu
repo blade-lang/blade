@@ -20,6 +20,7 @@ import ..driver {
 import ..errors { ConnectionError, NotSupportedError }
 import ..params { QUESTION }
 import .connection { MySqlConnection }
+import .ddl { MySqlDdl }
 import .packets { PacketStream }
 import .protocol { Protocol }
 
@@ -73,6 +74,8 @@ var _SSL_ALIASES = {
  * Opens MySQL connections.
  */
 class MySqlDriver < Driver {
+  var _ddl
+
   name() {
     return 'mysql'
   }
@@ -123,6 +126,19 @@ class MySqlDriver < Driver {
     caps.set('default_port', DEFAULT_PORT)
 
     return caps
+  }
+
+  /**
+   * MySQL and MariaDB's schema changes, from `MySqlDdl`.
+   *
+   * @returns MySqlDdl
+   */
+  ddl() {
+    if self._ddl == nil {
+      self._ddl = MySqlDdl(self)
+    }
+
+    return self._ddl
   }
 
   /**

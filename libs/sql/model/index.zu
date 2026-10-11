@@ -1,0 +1,105 @@
+/**
+ * @module model
+ *
+ * Rows as objects: a class per table, records that save and check
+ * themselves, and the associations between them.
+ *
+ * A model is a class extending `Model`. Its fields are its table's
+ * columns, read and written by name, and a static `define()` says the
+ * rest: the table, how values are cast and checked, and what the model
+ * is associated with.
+ *
+ * ```zuri,ignore
+ * import sql
+ * import sql.model { Definition, Model }
+ * import validate
+ *
+ * class Author < Model {
+ *   var id
+ *   var name
+ *
+ *   var posts
+ *
+ *   static define(model: Definition) {
+ *     model.has_many('posts', Post)
+ *     model.validate('name', validate.required().string().max_length(80))
+ *   }
+ * }
+ *
+ * class Post < Model {
+ *   var id
+ *   var author_id
+ *   var title
+ *   var published = false
+ *   var created_at
+ *   var updated_at
+ *
+ *   var author
+ *
+ *   static define(model: Definition) {
+ *     model.timestamps()
+ *     model.cast('published', 'bool')
+ *     model.belongs_to('author', Author)
+ *   }
+ * }
+ *
+ * var db = sql.open('app.db')
+ *
+ * var ada = db.model(Author).create({ name: 'Ada' })
+ * var post = Post({ title: 'On Engines', author_id: ada.id })
+ *
+ * post.save(db)
+ *
+ * for recent in db.model(Post).where({ published: false }).include('author').all() {
+ *   echo '${recent.title}, by ${recent.author.name}'
+ * }
+ * ```
+ *
+ * ### Records and connections
+ *
+ * `db.model(Post)` starts a `Query` on a connection or a transaction,
+ * and every record method that touches the database takes the one to
+ * use: `post.save(db)`, `post.delete(tx)`. A record never holds a
+ * connection of its own, so the same record saves inside whichever
+ * transaction the code saving it opened, and one kept after its
+ * connection went back to a pool cannot write through a connection
+ * that is now somebody else's.
+ *
+ * ### What is loaded
+ *
+ * Associations are loaded when asked for: by `include()` on a query,
+ * one query per association however many records there are, or by
+ * `load()` on a record. A field holding an association is nil until
+ * then. Each query builds its own records, so two queries reaching the
+ * same row build two records of it, which are `==` to each other.
+ *
+ * ### Tables
+ *
+ * A model maps a table that exists; `sql.migrate` and `db.schema` are
+ * what create and change it.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import @.record { Model }
+import @.query { Query, RecordCursor }
+import @.definition {
+  Definition, Association, definition_of,
+  BELONGS_TO, HAS_ONE, HAS_MANY, BELONGS_TO_MANY, HOOKS,
+}
+import @.errors { ModelError, RecordNotFound, RecordInvalid, Errors }
+import @.casts { CASTS }
+import @.naming { table_for }
+
+/**
+ * A query over `model`'s rows on `db`. What `db.model()` returns.
+ *
+ * @param Connection|Transaction db
+ * @param class model A class extending `Model`.
+ * @returns Query
+ * @throws ModelError if `model` is not one, or its definition cannot
+ *    work.
+ */
+def query(db, model) {
+  return Query(db, definition_of(model), nil)
+}

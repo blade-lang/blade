@@ -46,7 +46,8 @@
  * | `ResultSet` | the rows a query returned |
  * | `Decimal` | an exact decimal, for a column a float must not hold |
  * | `Time` | a signed span of time, as a `TIME` column holds one |
- * | `Schema` | what tables exist and what is in them |
+ * | `Schema` | what tables exist and what is in them, and changing them |
+ * | `Blueprint` | a table's shape, described once for every engine |
  * | `SqlError` | the root of every error a database raises |
  *
  * ### Parameters
@@ -102,6 +103,8 @@ import @.cursor { Cursor }
 import @.statement { Statement }
 import @.transaction { Transaction }
 import @.schema { Schema, column_shape }
+import @.blueprint { Blueprint, Column, ForeignKey }
+import @.ddl { DdlAdapter }
 import @.crud { Raw, raw }
 import @.connection { Connection }
 import @.pool { Pool }

@@ -1367,7 +1367,7 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
         continue;
       }
       let shape = match check.types[0] {
-        ParamType::Instance(_) => ParamShape::Instance,
+        ParamType::Instance(_) | ParamType::Captured { .. } => ParamShape::Instance,
         _ => continue,
       };
       let rewritten = proto
@@ -6995,7 +6995,15 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
   /// being this cheap is what makes an object-typed parameter's check
   /// worth inlining at all, instead of paying a full opaque helper call
   /// on every invocation regardless of how the value turns out.
-  fn emit_instance_class_test(&mut self, v: IrValue, target_bits: u64) -> IrValue {
+  ///
+  /// `target` produces the class to compare against, inside the block
+  /// that compares: a baked constant for a class resolved statically,
+  /// or a value already read for one held in an upvalue.
+  fn emit_instance_class_test(
+    &mut self,
+    v: IrValue,
+    target: impl FnOnce(&mut Self) -> IrValue,
+  ) -> IrValue {
     let is_obj = self.is_obj(v);
     let obj_block = self.fb.create_block();
     let done_block = self.fb.create_block();
@@ -7021,7 +7029,7 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
     let flags = cranelift_codegen::ir::MemFlagsData::trusted();
     let class_off = object::obj_instance_class_offset() as i32;
     let class_bits = self.fb.ins().load(types::I64, flags, ptr, class_off);
-    let target = self.u64c(target_bits);
+    let target = target(self);
     let same_class = self.fb.ins().icmp(IntCC::Equal, class_bits, target);
     self.fb.ins().jump(done_block, &[same_class.into()]);
 
@@ -7031,13 +7039,17 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
 
   /// `Instr::CheckParamType`; inlines every member of the declared
   /// union that's a plain `Value`/`Obj` tag test (everything except
-  /// `Iterable`, a method-table probe, and `Instance`, a possibly-
-  /// failing global lookup plus a superclass walk), OR'd together with
+  /// `Iterable`, a method-table probe, and a class, a possibly-failing
+  /// lookup plus a superclass walk), OR'd together with
   /// the same `emit_is_bool_test`/`emit_is_int_test`/`emit_obj_tag_test`
   /// `emit_native_intrinsic` itself uses for the `is_*` builtins; so a
   /// typed parameter and an explicit `is_list(x)` check compile to
   /// identical machine code, not two independently-maintained ideas of
   /// what "a list" means.
+  ///
+  /// A class is still compared inline for an exact match whenever the
+  /// class is at hand: `Instance` when `param_class_bits` resolved it
+  /// statically, `Captured` by reading its upvalue first.
   ///
   /// A hit skips the helper entirely; a miss (or a union containing
   /// ONLY `Iterable`/`Instance`, which never sets `cond` at all) falls
@@ -7111,9 +7123,17 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
         // always does.
         ParamType::Instance(_) => {
           if let Some(target_bits) = self.param_class_bits(reg) {
-            let c = self.emit_instance_class_test(v, target_bits);
+            let c = self.emit_instance_class_test(v, |fc| fc.u64c(target_bits));
             or_in(self, &mut cond, c);
           }
+        },
+        // The class lives in one of this closure's upvalues, read inline
+        // the way `Instr::GetUpval` reads it. A subclass, a mismatch or
+        // an upvalue that is somehow not one all end at the helper.
+        ParamType::Captured { upvalue, .. } => {
+          let target = self.emit_upvalue_read(upvalue, slow_block);
+          let c = self.emit_instance_class_test(v, |_| target);
+          or_in(self, &mut cond, c);
         },
         ParamType::Iterable => {},
       }
@@ -11348,6 +11368,50 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
 
     self.fb.switch_to_block(checked_block);
     ptr
+  }
+
+  /// The current value of upvalue `uidx` on the running closure, read
+  /// inline the same way `emit_get_upval_fast` reads it, but handed back
+  /// rather than stored to a register. Jumps to `slow_block` on anything
+  /// unexpected, as `emit_upvalue_obj_ptr` does.
+  fn emit_upvalue_read(&mut self, uidx: u8, slow_block: Block) -> IrValue {
+    let ptr = self.emit_upvalue_obj_ptr(uidx, slow_block);
+    let flags = cranelift_codegen::ir::MemFlagsData::trusted();
+    let tag8 = self.fb.ins().load(
+      types::I8,
+      flags,
+      ptr,
+      object::obj_upvalue_state_tag_offset() as i32,
+    );
+    let state_tag = self.fb.ins().uextend(types::I64, tag8);
+    let closed_tag = self.i64c(object::UPVALUE_STATE_TAG_CLOSED as i64);
+    let is_closed = self.fb.ins().icmp(IntCC::Equal, state_tag, closed_tag);
+
+    let closed_block = self.fb.create_block();
+    let open_block = self.fb.create_block();
+    let done_block = self.fb.create_block();
+    self.fb.append_block_param(done_block, types::I64);
+    self
+      .fb
+      .ins()
+      .brif(is_closed, closed_block, &[], open_block, &[]);
+
+    let payload_off = object::obj_upvalue_state_payload_offset() as i32;
+
+    self.fb.switch_to_block(closed_block);
+    let closed = self.fb.ins().load(types::I64, flags, ptr, payload_off);
+    self.fb.ins().jump(done_block, &[closed.into()]);
+
+    self.fb.switch_to_block(open_block);
+    let abs_idx = self.fb.ins().load(types::I64, flags, ptr, payload_off);
+    let regs = self.fb.use_var(self.regs_var);
+    let byte_off = self.fb.ins().imul_imm_s(abs_idx, 8);
+    let addr = self.fb.ins().iadd(regs, byte_off);
+    let open = self.fb.ins().load(types::I64, flags, addr, 0);
+    self.fb.ins().jump(done_block, &[open.into()]);
+
+    self.fb.switch_to_block(done_block);
+    self.fb.block_params(done_block)[0]
   }
 
   /// `Instr::GetUpval`'s inline fast path: no helper call for either

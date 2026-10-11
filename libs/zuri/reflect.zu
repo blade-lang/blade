@@ -99,6 +99,37 @@ def class_info(c) {
 }
 
 /**
+ * The class `value` is an instance of, or `nil` when `value` is not
+ * an instance.
+ *
+ * This is the class itself, not its name. `typeof()` names the
+ * class, and two classes declared with the same name in different
+ * modules give the same name; only the class tells them apart, and
+ * only the class can be called, compared with `==`, used as a
+ * dictionary key or handed to `class_info()`.
+ *
+ * ```zuri
+ * import zuri
+ *
+ * class Point {}
+ *
+ * var p = Point()
+ *
+ * echo zuri.reflect.class_of(p) == Point  # true
+ * echo zuri.reflect.class_of(42)          # nil
+ * ```
+ *
+ * An instance of a subclass reports the subclass, the class it was
+ * built from, never one of its parents.
+ *
+ * @param any value
+ * @returns class|nil
+ */
+def class_of(value) {
+  return _zuri_reflect.class_of(value)
+}
+
+/**
  * Metadata for a module: `{ name, path, loaded, members }`.
  * `members` is a dict from every top-level name the module
  * declares to that binding's own `kind` (see `kind` above), e.g.

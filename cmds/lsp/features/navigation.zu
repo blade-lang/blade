@@ -114,7 +114,9 @@ def _keyword_target(server, at: dict) {
   return ref == nil ? nil : { ref, start: node.start, end: node.end }
 }
 
-# The declaration at the cursor, as `{ ref, start, end }`.
+# The declaration at the cursor, as `{ ref, refs, start, end }`: `refs`
+# holds every declaration it may stand for, which is more than `ref`
+# for a member reached through a value of a union type.
 def _target(server, at: dict) {
   var found = common.target_at(
     server.linker, at.key, at.analysis.summary, at.offset,
@@ -127,18 +129,32 @@ def _target(server, at: dict) {
 
     return {
       ref: found.target,
+      refs: common.targets_of(server.linker, at.key, found),
       start: found.occurrence.start,
       end: found.occurrence.end,
     }
   }
 
-  return _keyword_target(server, at)
+  var keyword = _keyword_target(server, at)
+
+  if keyword != nil {
+    keyword.refs = [keyword.ref]
+  }
+
+  return keyword
+}
+
+# Where each declaration a target may stand for is.
+def _locations_of(server, target: dict) {
+  return target.refs.map(@(ref) => _location_of(server, ref))
 }
 
 /**
  * Answers `textDocument/definition`: where the name at the cursor is
  * declared, after following imports back to the module that declares
- * it. A built-in leads to its stub, and a module to its file.
+ * it. A built-in leads to its stub, and a module to its file. A member
+ * reached through a value of a union type leads to its declaration on
+ * each of the union's types.
  *
  * @param Server server
  * @param dict params
@@ -154,9 +170,7 @@ def definition(server, params: dict) {
 
   var origin = server.range(at.key, target.start, target.end)
 
-  return _answer(
-    server, 'definition', origin, [_location_of(server, target.ref)],
-  )
+  return _answer(server, 'definition', origin, _locations_of(server, target))
 }
 
 /**
@@ -193,9 +207,7 @@ def declaration(server, params: dict) {
 
   var origin = server.range(at.key, target.start, target.end)
 
-  return _answer(
-    server, 'declaration', origin, [_location_of(server, target.ref)],
-  )
+  return _answer(server, 'declaration', origin, _locations_of(server, target))
 }
 
 /**

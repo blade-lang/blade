@@ -1,0 +1,948 @@
+/**
+ * @module record
+ *
+ * The class every model extends, and what a record does: save itself,
+ * delete itself, check itself, and reach the records it is associated
+ * with.
+ *
+ * A record never holds a connection. Every method that touches the
+ * database takes the connection or transaction to use, so a record
+ * loaded on one connection saves on whichever the code saving it is
+ * using, a transaction included, and one kept after its connection was
+ * closed or returned to a pool cannot write through it by accident.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import date
+import zuri
+
+import ..transaction { Transaction }
+import .casts { cast }
+import .definition { definition_of, set_base }
+import .errors { Errors, ModelError, RecordInvalid, RecordNotFound }
+import .query { Query }
+
+/**
+ * The class a model extends.
+ *
+ * ```zuri,ignore
+ * class Post < Model {
+ *   var id
+ *   var title
+ *   var published = false
+ *   var created_at
+ *   var updated_at
+ *
+ *   static define(model: Definition) {
+ *     model.timestamps()
+ *     model.validate('title', validate.required().string().max_length(200))
+ *   }
+ *
+ *   before_save(db) {
+ *     self.title = self.title.trim()
+ *   }
+ * }
+ * ```
+ *
+ * Calling the class builds a new record, from a dictionary of
+ * attributes when one is given, which are assigned as `fill()` assigns
+ * them. Records loaded from the database are built the same way, with
+ * no arguments, so a model's own `@new` takes no required arguments,
+ * and calls `parent(attributes)` when it takes attributes.
+ *
+ * ### Hooks
+ *
+ * A model overrides any of these to run code at that point of a
+ * record's life. Each is handed the connection or transaction the
+ * record is going through, and when a model has any of them, saving and
+ * deleting run in a transaction, a savepoint inside an open one, so
+ * what a hook writes is undone with the rest when anything fails. A
+ * hook raises to stop the save or the delete.
+ *
+ * | Hook | Runs |
+ * | - | - |
+ * | `before_validate(db)` | before the record is checked |
+ * | `validate(errors)` | as it is checked, to add failures of the model's own |
+ * | `after_validate(db)` | after it is checked, whatever was found |
+ * | `before_save(db)` | before it is written, new or not |
+ * | `before_create(db)` | before a new record is inserted |
+ * | `after_create(db)` | after it is inserted, with its key |
+ * | `before_update(db)` | before a saved record's changes are written |
+ * | `after_update(db)` | after they are written |
+ * | `after_save(db)` | after it is written, new or not |
+ * | `before_delete(db)` | before it is deleted |
+ * | `after_delete(db)` | after it is deleted |
+ * | `after_load()` | as a record is built from a row |
+ *
+ * A model's methods share a namespace with these and with the methods
+ * below, so a model does not declare a method of the same name as one
+ * of them for anything else. A field may share a name with any of them.
+ *
+ * @printable
+ */
+class Model {
+  var _persisted = false
+
+  # The columns as the database last held them, for telling what
+  # changed.
+  var _original
+
+  # What the last validation found.
+  var _errors
+
+  /**
+   * @param dict|nil attributes Assigned as `fill()` assigns them.
+   */
+  @new(attributes) {
+    if attributes != nil {
+      self.fill(attributes, nil)
+    }
+  }
+
+  /**
+   * Called before the record is checked.
+   *
+   * @param Connection|Transaction db
+   */
+  before_validate(db) {
+  }
+
+  /**
+   * Called as the record is checked, after its declared rules, to add
+   * failures of the model's own.
+   *
+   * @param Errors errors
+   */
+  validate(errors) {
+  }
+
+  /**
+   * Called after the record is checked.
+   *
+   * @param Connection|Transaction db
+   */
+  after_validate(db) {
+  }
+
+  /**
+   * Called before the record is written.
+   *
+   * @param Connection|Transaction db
+   */
+  before_save(db) {
+  }
+
+  /**
+   * Called after the record is written.
+   *
+   * @param Connection|Transaction db
+   */
+  after_save(db) {
+  }
+
+  /**
+   * Called before a new record is inserted.
+   *
+   * @param Connection|Transaction db
+   */
+  before_create(db) {
+  }
+
+  /**
+   * Called after a new record is inserted, when it has its key.
+   *
+   * @param Connection|Transaction db
+   */
+  after_create(db) {
+  }
+
+  /**
+   * Called before a saved record's changes are written.
+   *
+   * @param Connection|Transaction db
+   */
+  before_update(db) {
+  }
+
+  /**
+   * Called after a saved record's changes are written.
+   *
+   * @param Connection|Transaction db
+   */
+  after_update(db) {
+  }
+
+  /**
+   * Called before the record is deleted.
+   *
+   * @param Connection|Transaction db
+   */
+  before_delete(db) {
+  }
+
+  /**
+   * Called after the record is deleted.
+   *
+   * @param Connection|Transaction db
+   */
+  after_delete(db) {
+  }
+
+  /**
+   * Called as a record is built from a row, once its fields hold the
+   * row's values.
+   */
+  after_load() {
+  }
+
+  /**
+   * Whether the record is in the database: loaded from it, or saved
+   * and not deleted since.
+   *
+   * @returns bool
+   */
+  is_persisted() {
+    return self._persisted
+  }
+
+  /**
+   * The value of the record's primary key.
+   *
+   * @returns any
+   */
+  key() {
+    return zuri.reflect.get_prop(self, self._definition().primary)
+  }
+
+  /**
+   * The columns whose values differ from what the database last held,
+   * with their values now. For a record not yet saved, every column
+   * holding a value.
+   *
+   * @returns dict
+   */
+  changes() {
+    var definition = self._definition()
+    var changed = {}
+
+    for column in definition.columns {
+      var now = zuri.reflect.get_prop(self, column)
+
+      if !self._persisted {
+        if now != nil {
+          changed.set(column, now)
+        }
+
+        continue
+      }
+
+      var before = self._original == nil ? nil : self._original.get(column, nil)
+
+      if before != now {
+        changed.set(column, now)
+      }
+    }
+
+    return changed
+  }
+
+  /**
+   * Whether a column, or any column, has changed since the database
+   * last held the record.
+   *
+   * @param string|nil column Any column when nil.
+   * @returns bool
+   */
+  is_dirty(column) {
+    var changed = self.changes()
+    return column == nil ? !changed.is_empty() : changed.contains(column)
+  }
+
+  /**
+   * A column's value as the database last held it, or nil for a record
+   * not yet saved.
+   *
+   * @param string column
+   * @returns any
+   */
+  original(column: string) {
+    return self._original == nil ? nil : self._original.get(column, nil)
+  }
+
+  /**
+   * Assigns attributes from a dictionary, as a form or a request body
+   * supplies them.
+   *
+   * Only fillable columns are assigned: those the model lists with
+   * `fillable()`, or every column but the primary key and the
+   * timestamps when it lists none. That is what keeps a request from
+   * setting a record's key, or a column it was never meant to reach.
+   *
+   * ```zuri,ignore
+   * post.fill(request.form(), ['title', 'body'])
+   * ```
+   *
+   * @param dict attributes
+   * @param list[string]|nil only The keys to take from `attributes`,
+   *    leaving the rest. Every key when nil.
+   * @returns Model The record, for chaining.
+   * @throws ModelError for a key taken that is not fillable.
+   */
+  fill(attributes: dict, only) {
+    var definition = self._definition()
+    var keys = only == nil
+      ? attributes.keys()
+      : only.filter(@(key) => attributes.contains(key))
+
+    for key in keys {
+      if !definition.fillable_columns.contains(key) {
+        raise ModelError(
+          '${key} cannot be filled on ${definition.name}; the columns that can are ' +
+            '${", ".join(definition.fillable_columns)}',
+          nil,
+        )
+      }
+
+      zuri.reflect.set_prop(self, key, attributes[key])
+    }
+
+    return self
+  }
+
+  /**
+   * Checks the record: its declared rules, its unique columns, and its
+   * own `validate()`.
+   *
+   * @param Connection|Transaction db For the unique checks.
+   * @returns bool Whether it passed. `errors()` has what it found.
+   */
+  is_valid(db) {
+    var definition = self._definition()
+    var errors = Errors()
+
+    if definition.hooks.before_validate {
+      self.before_validate(db)
+    }
+
+    if definition.schema != nil {
+      for found in definition.schema.check(definition.values_of(self)).errors {
+        errors.add(found.field, found.message)
+      }
+    }
+
+    for unique in definition.uniques {
+      if self._is_taken(db, definition, unique.columns) {
+        var message = unique.message == nil
+          ? 'The ${unique.columns[0]} field has already been taken.'
+          : unique.message
+
+        errors.add(unique.columns[0], message)
+      }
+    }
+
+    if definition.hooks.validate {
+      self.validate(errors)
+    }
+
+    if definition.hooks.after_validate {
+      self.after_validate(db)
+    }
+
+    self._errors = errors.list()
+
+    return errors.is_empty()
+  }
+
+  /**
+   * What the last check found, each `{ field, message }`. Empty before
+   * the record was ever checked.
+   *
+   * @returns list[dict]
+   */
+  errors() {
+    return self._errors == nil ? [] : self._errors.clone()
+  }
+
+  /**
+   * Saves the record: inserts it when it is new, writes its changes
+   * when it is not.
+   *
+   * It is checked first, and not written when it fails. A new record
+   * leaves out every column still nil, so the database's default fills
+   * it, then reads those columns back, so the record holds what was
+   * stored. A record already saved writes only the columns that
+   * changed, and nothing at all when none did. A record held in a
+   * `belongs_to` association sets the column referring to it.
+   *
+   * @param Connection|Transaction db
+   * @returns Model The record.
+   * @throws RecordInvalid if it fails its checks.
+   * @throws ModelError if a record it belongs to has not been saved.
+   */
+  save(db) {
+    var definition = self._definition()
+
+    return self._within(db, definition, @(target) {
+      self._take_owner_keys(definition)
+
+      if !self.is_valid(target) {
+        raise RecordInvalid(self, self._errors)
+      }
+
+      var creating = !self._persisted
+
+      if definition.hooks.before_save {
+        self.before_save(target)
+      }
+
+      if creating {
+        if definition.hooks.before_create {
+          self.before_create(target)
+        }
+
+        self._insert(target, definition)
+
+        if definition.hooks.after_create {
+          self.after_create(target)
+        }
+      } else {
+        if definition.hooks.before_update {
+          self.before_update(target)
+        }
+
+        self._update(target, definition)
+
+        if definition.hooks.after_update {
+          self.after_update(target)
+        }
+      }
+
+      if definition.hooks.after_save {
+        self.after_save(target)
+      }
+
+      return self
+    })
+  }
+
+  /**
+   * Deletes the record's row. The record keeps its values, and saving
+   * it again inserts it anew.
+   *
+   * @param Connection|Transaction db
+   * @returns Model The record.
+   * @throws ModelError if the record was never saved.
+   */
+  delete(db) {
+    var definition = self._definition()
+
+    if !self._persisted {
+      raise ModelError(
+        'a ${definition.name} that was never saved cannot be deleted', nil,
+      )
+    }
+
+    return self._within(db, definition, @(target) {
+      if definition.hooks.before_delete {
+        self.before_delete(target)
+      }
+
+      target.delete(definition.table_name, self._own_filter(definition))
+      self._persisted = false
+
+      if definition.hooks.after_delete {
+        self.after_delete(target)
+      }
+
+      return self
+    })
+  }
+
+  /**
+   * Reads the record again from the database, discarding changes not
+   * saved and any associations loaded.
+   *
+   * @param Connection|Transaction db
+   * @returns Model The record.
+   * @throws RecordNotFound if its row is gone.
+   */
+  reload(db) {
+    var definition = self._definition()
+    var filter = self._own_filter(definition)
+    var row = db.find_one(definition.table_name, filter, nil)
+
+    if row == nil {
+      raise RecordNotFound(definition.name, self.key())
+    }
+
+    definition.load(self, row)
+
+    for name, association in definition.associations {
+      zuri.reflect.set_prop(self, name, nil)
+    }
+
+    return self
+  }
+
+  /**
+   * Loads an association into its field and returns what it loaded: a
+   * record or nil for `belongs_to` and `has_one`, a list for the rest.
+   *
+   * @param Connection|Transaction db
+   * @param string name Dotted to load what it loads, as
+   *    `comments.author`.
+   * @returns Model|list|nil
+   */
+  load(db, name: string) {
+    var definition = self._definition()
+
+    Query(db, definition, nil).load([self], name)
+
+    return zuri.reflect.get_prop(self, name.split('.')[0])
+  }
+
+  /**
+   * A query over the records an association reaches, to narrow further
+   * rather than load whole.
+   *
+   * ```zuri,ignore
+   * var drafts = author.related(db, 'posts').where({ published: false }).count()
+   * ```
+   *
+   * @param Connection|Transaction db
+   * @param string name
+   * @returns Query
+   */
+  related(db, name: string) {
+    var definition = self._definition()
+    var association = definition.association(name)
+    var target = definition_of(association.model)
+    var query = Query(db, target, nil)
+    var filter = {}
+
+    using association.kind {
+      when 'belongs_to' {
+        var owner_key = association.key == nil
+          ? target.primary
+          : association.key
+        filter.set(
+          owner_key, zuri.reflect.get_prop(self, association.foreign_key),
+        )
+      }
+      when 'has_one', 'has_many' {
+        filter.set(
+          association.foreign_key, zuri.reflect.get_prop(self, association.key),
+        )
+      }
+      when 'belongs_to_many' {
+        var quote = @(name) => _driver(db).quote_identifier(name)
+        var through = _driver(db).ddl().table_name(association.through)
+
+        return query.where(
+          '${quote(target.primary)} in (select ${quote(association.other_key)} from ' +
+            '${through} where ${quote(association.foreign_key)} = ?)',
+          [zuri.reflect.get_prop(self, association.key)],
+        )
+      }
+    }
+
+    return query.where(filter, nil)
+  }
+
+  /**
+   * Joins records to this one through a `belongs_to_many`
+   * association's table. One already joined is left as it is.
+   *
+   * @param Connection|Transaction db
+   * @param string name
+   * @param Model|any|list targets Records, keys, or a list of either.
+   * @returns number How many were joined.
+   */
+  attach(db, name: string, targets) {
+    var link = self._link(name)
+    var joined = self._joined(db, link)
+    var rows = []
+
+    for key in _keys_of(targets, link.target) {
+      if !joined.contains(key) {
+        var row = {}
+
+        row.set(link.association.foreign_key, link.own)
+        row.set(link.association.other_key, key)
+        rows.append(row)
+        joined.append(key)
+      }
+    }
+
+    if !rows.is_empty() {
+      db.insert_many(link.association.through, rows)
+    }
+
+    return rows.length()
+  }
+
+  /**
+   * Separates records from this one in a `belongs_to_many`
+   * association's table.
+   *
+   * @param Connection|Transaction db
+   * @param string name
+   * @param Model|any|list|nil targets Records, keys, or a list of
+   *    either; every joined record when nil.
+   * @returns number How many were separated.
+   */
+  detach(db, name: string, targets) {
+    var link = self._link(name)
+    var filter = {}
+
+    filter.set(link.association.foreign_key, link.own)
+
+    if targets != nil {
+      filter.set(link.association.other_key, _keys_of(targets, link.target))
+    }
+
+    return db.delete(link.association.through, filter)
+  }
+
+  /**
+   * Makes the records joined to this one in a `belongs_to_many`
+   * association exactly `targets`, joining and separating as needed.
+   *
+   * @param Connection|Transaction db
+   * @param string name
+   * @param list targets Records or keys.
+   * @returns dict `{ attached, detached }`, the keys of each.
+   */
+  sync(db, name: string, targets: list) {
+    var link = self._link(name)
+    var wanted = _keys_of(targets, link.target)
+    var joined = self._joined(db, link)
+    var attached = wanted.filter(@(key) => !joined.contains(key))
+    var detached = joined.filter(@(key) => !wanted.contains(key))
+
+    if !attached.is_empty() {
+      self.attach(db, name, attached)
+    }
+
+    if !detached.is_empty() {
+      self.detach(db, name, detached)
+    }
+
+    return { attached, detached }
+  }
+
+  /**
+   * The record as a dictionary: every column but the hidden ones, and
+   * every association that has been loaded, as dictionaries in turn.
+   *
+   * @returns dict
+   */
+  to_dict() {
+    var definition = self._definition()
+    var out = {}
+
+    for column in definition.columns {
+      if !definition.hidden_columns.contains(column) {
+        out.set(column, zuri.reflect.get_prop(self, column))
+      }
+    }
+
+    for name, association in definition.associations {
+      var value = zuri.reflect.get_prop(self, name)
+
+      if is_list(value) {
+        out.set(
+          name,
+          value.map(
+            @(item) => instance_of(item, Model) ? item.to_dict() : item,
+          ),
+        )
+      } else if instance_of(value, Model) {
+        out.set(name, value.to_dict())
+      }
+    }
+
+    return out
+  }
+
+  /**
+   * What `json.encode()` writes for the record: `to_dict()`.
+   *
+   * @returns dict
+   */
+  @to_json() {
+    return self.to_dict()
+  }
+
+  /**
+   * Two records are equal when they are of the same model and hold the
+   * same primary key. A record not yet saved equals only itself.
+   *
+   * @param any other
+   * @returns bool
+   */
+  @eq(other) {
+    if !instance_of(other, Model) {
+      return false
+    }
+
+    if zuri.reflect.class_of(other) != zuri.reflect.class_of(self) {
+      return false
+    }
+
+    var key = self.key()
+
+    if key == nil {
+      return id(self) == id(other)
+    }
+
+    return key == other.key()
+  }
+
+  to_string() {
+    var key = self._persisted ? '${self.key()}' : 'new'
+    return '<${self._definition().name} ${key}>'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+
+  _definition() {
+    return definition_of(zuri.reflect.class_of(self))
+  }
+
+  # Runs `body` in a transaction of its own when the model's hooks or
+  # checks belong with the write.
+  _within(db, definition, body) {
+    if !definition.transactional {
+      return body(db)
+    }
+
+    var connection = instance_of(db, Transaction) ? db.connection : db
+
+    return connection.transaction(@(transaction) {
+      return body(transaction)
+    })
+  }
+
+  # The record's own row, by the key the database knows it by.
+  _own_filter(definition) {
+    var filter = {}
+    var key = self._original == nil
+      ? nil
+      : self._original.get(definition.primary, nil)
+
+    filter.set(definition.primary, key == nil ? self.key() : key)
+
+    return filter
+  }
+
+  # Sets each column referring to a record held in a belongs_to field.
+  _take_owner_keys(definition) {
+    for name, association in definition.associations {
+      if association.kind != 'belongs_to' {
+        continue
+      }
+
+      var owner = zuri.reflect.get_prop(self, name)
+
+      if !instance_of(owner, Model) {
+        continue
+      }
+
+      if !owner.is_persisted() {
+        raise ModelError(
+          'save the ${typeof(owner)} in ${definition.name}.${name} before the ' +
+            '${definition.name} that belongs to it',
+          nil,
+        )
+      }
+
+      var target = definition_of(association.model)
+      var owner_key = association.key == nil ? target.primary : association.key
+
+      zuri.reflect.set_prop(
+        self, association.foreign_key, zuri.reflect.get_prop(owner, owner_key),
+      )
+    }
+  }
+
+  _insert(db, definition) {
+    var now = date.from_time(time())
+
+    for column in [definition.created_column, definition.updated_column] {
+      if column != nil and zuri.reflect.get_prop(self, column) == nil {
+        zuri.reflect.set_prop(self, column, now)
+      }
+    }
+
+    var values = {}
+    var left = []
+
+    for column in definition.columns {
+      var value = zuri.reflect.get_prop(self, column)
+
+      if value != nil {
+        values.set(column, value)
+      } else if column != definition.primary {
+        left.append(column)
+      }
+    }
+
+    if values.is_empty() {
+      raise ModelError(
+        'a ${definition.name} needs a value in at least one column to be saved',
+        nil,
+      )
+    }
+
+    var key = db.insert(
+      definition.table_name, values, { returning: definition.primary },
+    )
+
+    if self.key() == nil {
+      zuri.reflect.set_prop(self, definition.primary, key)
+    }
+
+    # The columns left to the database hold whatever it filled them
+    # with, which the record should hold too.
+    if !left.is_empty() {
+      var filter = {}
+      filter.set(definition.primary, self.key())
+
+      var row = db.find_one(definition.table_name, filter, { columns: left })
+
+      if row != nil {
+        for column in left {
+          var kind = definition.casts.get(column, nil)
+          var value = row.get(column, nil)
+
+          zuri.reflect.set_prop(
+            self, column, kind == nil ? value : cast(kind, value),
+          )
+        }
+      }
+    }
+
+    definition.saved(self)
+  }
+
+  _update(db, definition) {
+    var changed = self.changes()
+
+    if changed.is_empty() {
+      return
+    }
+
+    var stamp = definition.updated_column
+
+    if stamp != nil and !changed.contains(stamp) {
+      var now = date.from_time(time())
+
+      zuri.reflect.set_prop(self, stamp, now)
+      changed.set(stamp, now)
+    }
+
+    db.update(definition.table_name, changed, self._own_filter(definition))
+    definition.saved(self)
+  }
+
+  # Whether another row holds the record's values in `columns`.
+  _is_taken(db, definition, columns) {
+    var filter = {}
+
+    for column in columns {
+      var value = zuri.reflect.get_prop(self, column)
+
+      if value == nil {
+        return false
+      }
+
+      filter.set(column, value)
+    }
+
+    var query = Query(db, definition, nil).where(filter, nil)
+
+    if self._persisted {
+      var own = {}
+      own.set(
+        definition.primary, self._own_filter(definition)[definition.primary],
+      )
+      query = query.where_not(own)
+    }
+
+    return query.exists()
+  }
+
+  # What a belongs_to_many association needs to reach its table.
+  _link(name) {
+    var definition = self._definition()
+    var association = definition.association(name)
+
+    if association.kind != 'belongs_to_many' {
+      raise ModelError(
+        '${definition.name}.${name} is not a belongs_to_many association', nil,
+      )
+    }
+
+    if !self._persisted {
+      raise ModelError(
+        'save the ${definition.name} before joining records to it', nil,
+      )
+    }
+
+    return {
+      association,
+      target: definition_of(association.model),
+      own: zuri.reflect.get_prop(self, association.key),
+    }
+  }
+
+  # The keys joined to this record in a link's table.
+  _joined(db, link) {
+    var quote = @(name) => _driver(db).quote_identifier(name)
+
+    return db.fetch_column(
+      'select ${quote(link.association.other_key)} from ' +
+        '${_driver(db).ddl().table_name(link.association.through)} where ' +
+        '${quote(link.association.foreign_key)} = ?',
+      [link.own],
+      0,
+    )
+  }
+}
+
+# The driver behind a connection or a transaction.
+def _driver(db) {
+  return instance_of(db, Transaction) ? db.connection.driver() : db.driver()
+}
+
+# The keys of records, or keys as they are, distinct.
+def _keys_of(targets, target) {
+  var list = is_list(targets) ? targets : [targets]
+  var keys = []
+
+  for item in list {
+    var key = item
+
+    if instance_of(item, Model) {
+      if !item.is_persisted() {
+        raise ModelError(
+          'save the ${typeof(item)} before joining it to anything', nil,
+        )
+      }
+
+      key = zuri.reflect.get_prop(item, target.primary)
+    }
+
+    if !keys.contains(key) {
+      keys.append(key)
+    }
+  }
+
+  return keys
+}
+
+set_base(Model)

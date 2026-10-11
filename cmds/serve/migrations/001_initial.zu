@@ -1,0 +1,118 @@
+# Nyssa's schema: publishers and their tokens, packages, their versions
+# and owners, download counts, sign-in failures, one-time codes, and the
+# record of every change.
+#
+# Times are whole seconds since the epoch and flags are 0 and 1, which
+# every engine stores alike. Keys a request looks things up by compare
+# byte for byte, so two names differing only in case or accents never
+# collide or match each other.
+
+import sql { Blueprint, Connection, Transaction }
+
+def up(db: Transaction|Connection) {
+  db.schema.create_table('publishers', @(table: Blueprint) {
+    table.id()
+    table.string('username', 40)
+    table.string('username_key', 40).exact().unique()
+    table.string('email', 254)
+    table.string('email_key', 254).exact().unique()
+    table.string('password_hash', 255)
+    table.string('recovery_digest', 64)
+    table.string('role', 16).default_value('publisher')
+    table.integer('email_verified').default_value(0)
+    table.big_integer('suspended_at').nullable()
+    table.big_integer('created_at')
+  })
+
+  db.schema.create_table('tokens', @(table: Blueprint) {
+    table.string('id', 32).primary()
+    table.references('publisher_id', 'publishers').on_delete('cascade').index()
+    table.string('name', 64)
+    table.string('digest', 64).unique()
+    table.string('scopes', 64)
+    table.big_integer('created_at')
+    table.big_integer('expires_at').nullable()
+    table.big_integer('last_used_at').nullable()
+    table.big_integer('revoked_at').nullable()
+  })
+
+  db.schema.create_table('packages', @(table: Blueprint) {
+    table.id()
+    table.string('name', 64)
+    table.string('name_key', 64).exact().unique()
+    table.text('description').default_value('')
+    table.text('homepage').nullable()
+    table.text('repository').nullable()
+    table.string('license', 255).nullable()
+    table.text('keywords').default_value('')
+    table.string('latest', 255).nullable()
+    table.big_integer('downloads').default_value(0)
+    table.big_integer('created_at')
+    table.big_integer('updated_at')
+  })
+
+  db.schema.create_table('owners', @(table: Blueprint) {
+    table.references('package_id', 'packages').on_delete('cascade')
+    table.references('publisher_id', 'publishers').on_delete('cascade')
+    table.big_integer('added_at')
+    table.primary(['package_id', 'publisher_id'])
+  })
+
+  db.schema.create_table('versions', @(table: Blueprint) {
+    table.id()
+    table.references('package_id', 'packages').on_delete('cascade')
+    table.string('version', 255)
+    table.string('version_key', 255).exact()
+    table.string('checksum', 80)
+    table.big_integer('size')
+    table.text('manifest')
+    table.text('dependencies')
+    table.string('zuri', 255).nullable()
+    table.text('readme').nullable()
+    table.big_integer('yanked_at').nullable()
+    table.references('published_by', 'publishers').nullable()
+    table.big_integer('published_at')
+    table.big_integer('downloads').default_value(0)
+    table.unique(['package_id', 'version_key'])
+  })
+
+  db.schema.create_table('downloads_daily', @(table: Blueprint) {
+    table.references('version_id', 'versions').on_delete('cascade')
+    table.string('day', 10)
+    table.big_integer('downloads')
+    table.primary(['version_id', 'day'])
+  })
+
+  db.schema.create_table('audit_log', @(table: Blueprint) {
+    table.id()
+    table.big_integer('at')
+    table.big_integer('publisher_id').nullable()
+    table.string('action', 32)
+    table.string('subject', 255)
+    table.text('detail').nullable()
+    table.string('address', 64).nullable()
+  })
+
+  db.schema.create_table('login_failures', @(table: Blueprint) {
+    table.string('failure_key', 255).exact().primary()
+    table.integer('failures')
+    table.big_integer('first_at')
+  })
+
+  db.schema.create_table('one_time_codes', @(table: Blueprint) {
+    table.string('digest', 64).primary()
+    table.references('publisher_id', 'publishers').on_delete('cascade')
+    table.string('purpose', 16)
+    table.big_integer('expires_at')
+    table.big_integer('used_at').nullable()
+  })
+}
+
+def down(db: Transaction|Connection) {
+  for table in [
+    'one_time_codes', 'login_failures', 'audit_log', 'downloads_daily',
+    'versions', 'owners', 'packages', 'tokens', 'publishers',
+  ] {
+    db.schema.drop_table(table)
+  }
+}

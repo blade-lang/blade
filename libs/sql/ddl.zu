@@ -1,0 +1,780 @@
+/**
+ * @module ddl
+ *
+ * Turning a `Blueprint` into the statements one engine understands,
+ * and running them the way that engine needs them run.
+ *
+ * Every engine spells a table differently. An auto-numbered key is
+ * `autoincrement` to SQLite, an identity column to PostgreSQL and
+ * `auto_increment` to MySQL; a byte-for-byte comparison is SQLite's
+ * default, PostgreSQL's `"C"` collation and MySQL's `utf8mb4_bin`; and
+ * a change SQLite's `ALTER TABLE` cannot make has to be carried out by
+ * building the table again. `DdlAdapter` holds what is the same for
+ * all of them, and each adapter's subclass supplies the rest.
+ *
+ * A program never calls this directly. `db.schema.create_table()` and
+ * the other schema changes go through `Driver.ddl()`, and an adapter of
+ * one's own subclasses `DdlAdapter` and returns it from its driver's
+ * `ddl()` to get them.
+ *
+ * ### Running a change
+ *
+ * Each method takes the `Connection` to change and runs its statements
+ * on it. `schema_change()` is the envelope a change runs in when the
+ * caller has no transaction open, and what `sql.migrate` runs every
+ * migration in: a transaction on an engine that can roll a schema
+ * change back, nothing on one that cannot, and on SQLite foreign key
+ * enforcement switched off around it, checked again before it commits.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import json
+
+import .blueprint { index_name }
+import .crud { Raw, quote_table }
+import .decimal { Decimal }
+import .errors { NotSupportedError, QueryError }
+
+/**
+ * Turns blueprints into one engine's statements and runs them.
+ *
+ * The methods a subclass overrides fall into two groups. What the
+ * engine calls things: `type_name()`, `key_definition()`,
+ * `exact_collation()`, `boolean_literal()`, `string_literal()`,
+ * `current_default()`, `table_suffix()`, `parenthesised_default()` and
+ * `inline_indexes()`. And how the engine changes a table that exists:
+ * `change_column()`, `drop_column()`, `drop_index()`, `drop_foreign()`
+ * and `drop_primary()`. The defaults are standard SQL, and raise
+ * `NotImplementedError` where there is no standard to fall back on.
+ */
+class DdlAdapter {
+  /**
+   * The driver this adapter writes for.
+   * @type Driver
+   */
+  var driver
+
+  /**
+   * @param Driver driver
+   */
+  @new(driver) {
+    self.driver = driver
+  }
+
+  /**
+   * The engine's type for `column`. Called for every column but an
+   * `id()`, which `key_definition()` describes whole.
+   *
+   * @param Column column
+   * @returns string
+   */
+  type_name(column) {
+    raise NotImplementedError('a DDL adapter has to implement type_name()')
+  }
+
+  /**
+   * Everything after the name of an `id()` column: its type, and that
+   * it is the primary key and numbered by the engine.
+   *
+   * @param Column column
+   * @returns string
+   */
+  key_definition(column) {
+    raise NotImplementedError('a DDL adapter has to implement key_definition()')
+  }
+
+  /**
+   * The collation that compares byte for byte, written as it follows a
+   * column's type, or nil where the engine's default already does.
+   *
+   * @returns string|nil
+   */
+  exact_collation() {
+    return nil
+  }
+
+  /**
+   * A bool as a literal.
+   *
+   * @param bool value
+   * @returns string
+   */
+  boolean_literal(value: bool) {
+    return value ? 'true' : 'false'
+  }
+
+  /**
+   * A string as a literal, quoted so whatever it holds stays inside
+   * it.
+   *
+   * @param string text
+   * @returns string
+   */
+  string_literal(text: string) {
+    return "'" + text.replace("'", "''") + "'"
+  }
+
+  /**
+   * The default that stamps a `datetime()` column with the moment a
+   * row is inserted.
+   *
+   * @param Column column
+   * @returns string
+   */
+  current_default(column) {
+    return 'current_timestamp'
+  }
+
+  /**
+   * What follows the closing parenthesis of `create table`.
+   *
+   * @returns string
+   */
+  table_suffix() {
+    return ''
+  }
+
+  /**
+   * Whether a default on `column` has to be written in parentheses,
+   * as MySQL requires of text, binary and JSON columns.
+   *
+   * @param Column column
+   * @returns bool
+   */
+  parenthesised_default(column) {
+    return false
+  }
+
+  /**
+   * Whether indexes are declared inside `create table`, rather than by
+   * `create index` statements after it.
+   *
+   * @returns bool
+   */
+  inline_indexes() {
+    return false
+  }
+
+  /**
+   * An identifier, quoted.
+   *
+   * @param string name
+   * @returns string
+   */
+  quote(name: string) {
+    return self.driver.quote_identifier(name)
+  }
+
+  /**
+   * A table name, quoted, with any schema in front of it quoted too.
+   *
+   * @param string name
+   * @returns string
+   */
+  table_name(name: string) {
+    return quote_table(self.driver, name)
+  }
+
+  /**
+   * An index name as it is addressed on its own, in the schema of the
+   * table it belongs to.
+   *
+   * @param string table
+   * @param string name
+   * @returns string
+   */
+  index_reference(table: string, name: string) {
+    var parts = table.split('.')
+
+    if parts.length() < 2 {
+      return self.quote(name)
+    }
+
+    return self.quote(parts[0]) + '.' + self.quote(name)
+  }
+
+  /**
+   * The definition of `column`, as it appears in `create table` and in
+   * `add column`: its name, type, collation, whether it may be null
+   * and its default. A key it carries is written separately, by
+   * `foreign_key_sql()`.
+   *
+   * @param Column column
+   * @returns string
+   */
+  column_definition(column) {
+    if column.is_generated {
+      return self.quote(column.name) + ' ' + self.key_definition(column)
+    }
+
+    var parts = [self.quote(column.name), self.type_name(column)]
+    var collation = self.exact_collation()
+
+    if column.is_exact and collation != nil {
+      parts.append(collation)
+    }
+
+    parts.append(column.is_nullable ? 'null' : 'not null')
+
+    if column.is_current or column.has_default {
+      parts.append('default ' + self.default_sql(column))
+    }
+
+    return ' '.join(parts)
+  }
+
+  /**
+   * The default of `column`, as SQL.
+   *
+   * @param Column column
+   * @returns string
+   */
+  default_sql(column) {
+    if column.is_current {
+      return self.current_default(column)
+    }
+
+    var value = column.initial
+
+    if instance_of(value, Raw) {
+      return value.sql
+    }
+
+    var rendered = self.literal(value)
+
+    return self.parenthesised_default(column) ? '(${rendered})' : rendered
+  }
+
+  /**
+   * A value as a literal: nil, a bool, a number, a bigint, a string, a
+   * `Decimal`, or a list or dictionary as JSON text.
+   *
+   * @param any value
+   * @returns string
+   * @throws QueryError for anything else, and for a number that is not
+   *    finite.
+   */
+  literal(value) {
+    if value == nil {
+      return 'null'
+    }
+
+    if is_bool(value) {
+      return self.boolean_literal(value)
+    }
+
+    if is_number(value) {
+      if value != value or value == 1 / 0 or value == -1 / 0 {
+        raise QueryError('a default has to be a finite number, not ${value}')
+      }
+
+      return '${value}'
+    }
+
+    if is_bigint(value) {
+      return value.to_string()
+    }
+
+    if is_string(value) {
+      return self.string_literal(value)
+    }
+
+    if instance_of(value, Decimal) {
+      return value.to_string()
+    }
+
+    if is_list(value) or is_dict(value) {
+      return self.string_literal(json.encode(value, false))
+    }
+
+    raise QueryError(
+      'a default is nil, a bool, a number, a string, a sql.Decimal, a list ' +
+        'or a dictionary, not ${typeof(value)}; write anything else with sql.raw()',
+    )
+  }
+
+  /**
+   * A foreign key as a table constraint, named.
+   *
+   * @param string table The referring table.
+   * @param ForeignKey key
+   * @returns string
+   */
+  foreign_key_sql(table: string, key) {
+    var sql = 'constraint ${self.quote(key.name_on(table))} foreign key ' +
+      '(${self._list(key.columns)}) references ${self.table_name(key.table)} ' +
+      '(${self._list(key.references)})'
+
+    if key.on_delete_action != nil {
+      sql += ' on delete ' + key.on_delete_action
+    }
+
+    if key.on_update_action != nil {
+      sql += ' on update ' + key.on_update_action
+    }
+
+    return sql
+  }
+
+  /**
+   * A `create index` statement.
+   *
+   * @param string table
+   * @param string kind `index` or `unique`.
+   * @param string name
+   * @param list[string] columns
+   * @param bool if_not_exists
+   * @returns string
+   */
+  index_sql(
+    table: string, kind: string, name: string, columns: list,
+    if_not_exists: bool,
+  ) {
+    var unique = kind == 'unique' ? 'unique ' : ''
+    var guard = if_not_exists ? 'if not exists ' : ''
+
+    return 'create ${unique}index ${guard}${self.quote(name)} on ' +
+      '${self.table_name(table)} (${self._list(columns)})'
+  }
+
+  /**
+   * An index declared inside `create table`, for an engine whose
+   * `inline_indexes()` is true.
+   *
+   * @param string kind `index` or `unique`.
+   * @param string name
+   * @param list[string] columns
+   * @returns string
+   */
+  inline_index_sql(kind: string, name: string, columns: list) {
+    var word = kind == 'unique' ? 'unique key' : 'key'
+
+    return '${word} ${self.quote(name)} (${self._list(columns)})'
+  }
+
+  /**
+   * The statements that create the table `blueprint` describes, without
+   * running them.
+   *
+   * @param Blueprint blueprint
+   * @param dict options `{ if_not_exists }`, false by default.
+   * @returns list[string]
+   * @throws QueryError if the blueprint changes or drops anything, or
+   *    declares two primary keys.
+   */
+  create_table_statements(blueprint, options: dict) {
+    var table = blueprint.table
+    var if_not_exists = options.get('if_not_exists', false) == true
+    var columns = []
+    var constraints = []
+    var indexes = []
+    var primary = []
+    var generated = nil
+
+    for operation in blueprint.operations {
+      using operation.kind {
+        when 'column' {
+          var column = operation.column
+
+          if column.is_change {
+            raise QueryError(
+              'change() alters a column that exists, and ${table} is being created',
+            )
+          }
+
+          self.check_column(column)
+          columns.append(self.column_definition(column))
+
+          if column.is_generated {
+            generated = column.name
+          } else if column.is_primary {
+            primary.append(column.name)
+          }
+
+          if column.is_unique {
+            indexes.append(self._own_index(table, 'unique', column))
+          }
+
+          if column.is_indexed {
+            indexes.append(self._own_index(table, 'index', column))
+          }
+
+          if column.foreign != nil {
+            constraints.append(self.foreign_key_sql(table, column.foreign))
+          }
+        }
+        when 'primary' {
+          primary.extend(operation.columns)
+        }
+        when 'unique', 'index' {
+          indexes.append(operation)
+        }
+        when 'foreign' {
+          constraints.append(self.foreign_key_sql(table, operation.key))
+        }
+      }
+    }
+
+    if columns.is_empty() {
+      raise QueryError('a table needs at least one column, and ${table} was given none')
+    }
+
+    if generated != nil and !primary.is_empty() {
+      raise QueryError(
+        '${table} has two primary keys: the id() column ${generated} and ' +
+          '(${", ".join(primary)})',
+      )
+    }
+
+    if !primary.is_empty() {
+      constraints.insert('primary key (${self._list(primary)})', 0)
+    }
+
+    var after = []
+
+    for index in indexes {
+      self.check_index(table, index.columns, blueprint.columns())
+
+      if self.inline_indexes() {
+        constraints.append(self.inline_index_sql(
+          index.kind, index.name, index.columns,
+        ))
+      } else {
+        after.append(
+          self.index_sql(
+            table, index.kind, index.name, index.columns, if_not_exists,
+          ),
+        )
+      }
+    }
+
+    var guard = if_not_exists ? 'if not exists ' : ''
+    var items = columns + constraints
+    var create = 'create table ${guard}${self.table_name(table)} (\n  ' +
+      ',\n  '.join(items) + '\n)' + self.table_suffix()
+
+    return [create] + after
+  }
+
+  /**
+   * Checks the engine can hold `column` as described, before anything
+   * is run. The default accepts everything.
+   *
+   * @param Column column
+   * @throws NotSupportedError where the engine cannot.
+   */
+  check_column(column) {
+  }
+
+  /**
+   * Checks the engine can index `columns` of `table`, given the
+   * columns described alongside. The default accepts everything.
+   *
+   * @param string table
+   * @param list[string] columns
+   * @param list[Column] described
+   * @throws NotSupportedError where the engine cannot.
+   */
+  check_index(table: string, columns: list, described: list) {
+  }
+
+  /**
+   * Creates the table `blueprint` describes.
+   *
+   * @param Connection connection
+   * @param Blueprint blueprint
+   * @param dict options `{ if_not_exists }`.
+   */
+  create_table(connection, blueprint, options: dict) {
+    self.run(connection, self.create_table_statements(blueprint, options))
+  }
+
+  /**
+   * Carries out the changes `blueprint` describes, one at a time, in
+   * the order they were described.
+   *
+   * @param Connection connection
+   * @param Blueprint blueprint
+   */
+  alter_table(connection, blueprint) {
+    for operation in blueprint.operations {
+      self.alter(connection, blueprint, operation)
+    }
+  }
+
+  /**
+   * Carries out one change to a table that exists.
+   *
+   * @param Connection connection
+   * @param Blueprint blueprint
+   * @param dict operation One of `blueprint.operations`.
+   */
+  alter(connection, blueprint, operation) {
+    var table = blueprint.table
+    var target = self.table_name(table)
+
+    using operation.kind {
+      when 'column' {
+        var column = operation.column
+
+        self.check_column(column)
+
+        if column.is_change {
+          self.run(connection, self.change_column(connection, table, column))
+        } else {
+          self.add_column(connection, table, column)
+        }
+
+        var wanted = { unique: column.is_unique, index: column.is_indexed }
+
+        for kind, asked in wanted {
+          if asked {
+            var own = self._own_index(table, kind, column)
+
+            self.check_index(table, own.columns, [column])
+            self.run(
+              connection,
+              [self.index_sql(table, kind, own.name, own.columns, false)],
+            )
+          }
+        }
+      }
+      when 'primary' {
+        self.run(connection, [
+          'alter table ${target} add primary key (${self._list(operation.columns)})',
+        ])
+      }
+      when 'unique', 'index' {
+        self.check_index(table, operation.columns, [])
+        self.run(connection, [
+          self.index_sql(
+            table, operation.kind, operation.name, operation.columns, false,
+          ),
+        ])
+      }
+      when 'foreign' {
+        self.run(connection, [
+          'alter table ${target} add '
+            + self.foreign_key_sql(table, operation.key),
+        ])
+      }
+      when 'rename_column' {
+        self.run(connection, [
+          'alter table ${target} rename column ${self.quote(operation.from)} to ' +
+            self.quote(operation.to),
+        ])
+      }
+      when 'drop_column' {
+        self.run(
+          connection, self.drop_column(connection, table, operation.name),
+        )
+      }
+      when 'drop_index', 'drop_unique' {
+        self.run(connection, self.drop_index(connection, table, operation.name))
+      }
+      when 'drop_foreign' {
+        self.run(
+          connection, self.drop_foreign(connection, table, operation.name),
+        )
+      }
+      when 'drop_primary' {
+        self.run(connection, self.drop_primary(connection, table))
+      }
+    }
+  }
+
+  /**
+   * Adds `column` to `table`, with the key it carries.
+   *
+   * A required column with no default can only be added to a table
+   * with no rows, since there is nothing to fill the rows with; the
+   * default raises `NotNullViolation` from the engine when there are
+   * some.
+   *
+   * @param Connection connection
+   * @param string table
+   * @param Column column
+   */
+  add_column(connection, table: string, column) {
+    var target = self.table_name(table)
+    var statements = ['alter table ${target} add column ${self.column_definition(column)}']
+
+    if column.is_primary and !column.is_generated {
+      statements.append('alter table ${target} add primary key (${self.quote(column.name)})')
+    }
+
+    if column.foreign != nil {
+      statements.append(
+        'alter table ${target} add '
+          + self.foreign_key_sql(table, column.foreign),
+      )
+    }
+
+    self.run(connection, statements)
+  }
+
+  /**
+   * The statements that give an existing column the definition
+   * `column` describes.
+   *
+   * @param Connection connection
+   * @param string table
+   * @param Column column
+   * @returns list[string]
+   */
+  change_column(connection, table: string, column) {
+    raise NotImplementedError('a DDL adapter has to implement change_column()')
+  }
+
+  /**
+   * The statements that drop column `name`, with the indexes and keys
+   * it is part of.
+   *
+   * @param Connection connection
+   * @param string table
+   * @param string name
+   * @returns list[string]
+   */
+  drop_column(connection, table: string, name: string) {
+    return ['alter table ${self.table_name(table)} drop column ${self.quote(name)}']
+  }
+
+  /**
+   * The statements that drop index `name` of `table`.
+   *
+   * @param Connection connection
+   * @param string table
+   * @param string name
+   * @returns list[string]
+   */
+  drop_index(connection, table: string, name: string) {
+    return ['drop index ${self.index_reference(table, name)}']
+  }
+
+  /**
+   * The statements that drop foreign key `name` of `table`.
+   *
+   * @param Connection connection
+   * @param string table
+   * @param string name
+   * @returns list[string]
+   */
+  drop_foreign(connection, table: string, name: string) {
+    return ['alter table ${self.table_name(table)} drop constraint ${self.quote(name)}']
+  }
+
+  /**
+   * The statements that drop the primary key of `table`.
+   *
+   * @param Connection connection
+   * @param string table
+   * @returns list[string]
+   */
+  drop_primary(connection, table: string) {
+    raise NotImplementedError('a DDL adapter has to implement drop_primary()')
+  }
+
+  /**
+   * Drops `table`.
+   *
+   * A table another one refers to through a foreign key is refused, on
+   * every engine, rather than taking the referring rows with it.
+   *
+   * @param Connection connection
+   * @param string table
+   * @param dict options `{ if_exists }`, false by default: when true, a
+   *    table that is not there is left alone rather than an error.
+   */
+  drop_table(connection, table: string, options: dict) {
+    var guard = options.get('if_exists', false) == true ? 'if exists ' : ''
+
+    self.run(connection, ['drop table ${guard}${self.table_name(table)}'])
+  }
+
+  /**
+   * Renames table `from` to `to`. Foreign keys referring to it follow
+   * it; its indexes keep the names they had.
+   *
+   * @param Connection connection
+   * @param string from
+   * @param string to
+   */
+  rename_table(connection, from: string, to: string) {
+    var parts = to.split('.')
+    var bare = parts[parts.length() - 1]
+
+    self.run(connection, [
+      'alter table ${self.table_name(from)} rename to ${self.quote(bare)}',
+    ])
+  }
+
+  /**
+   * Runs `body` as one schema change.
+   *
+   * On an engine that can roll a schema change back, and when
+   * `transactional` is true, `body` runs inside a transaction and is
+   * passed the `Transaction`; otherwise it is passed the connection
+   * and runs as it is.
+   *
+   * @param Connection connection Not already in a transaction.
+   * @param function body
+   * @param bool transactional
+   * @returns any What `body` returned.
+   */
+  schema_change(connection, body: function, transactional: bool) {
+    if transactional and self.driver.supports('transactional_ddl') {
+      return connection.transaction(@(transaction) {
+        return body(transaction)
+      })
+    }
+
+    return body(connection)
+  }
+
+  /**
+   * Runs `body` holding a lock named `name` that only one connection
+   * to the database can hold at a time, waiting for it as long as
+   * another holds it.
+   *
+   * The default takes no lock, for an engine that has none, where
+   * `schema_change()` alone has to keep two changes apart.
+   *
+   * @param Connection connection
+   * @param string name
+   * @param function body
+   * @returns any What `body` returned.
+   */
+  migration_lock(connection, name: string, body: function) {
+    return body()
+  }
+
+  /**
+   * Runs `statements` on `connection`, as written: nothing in them is
+   * read as a placeholder.
+   *
+   * @param Connection connection
+   * @param list[string] statements
+   */
+  run(connection, statements: list) {
+    var native = connection.driver_connection()
+
+    for statement in statements {
+      native.execute(statement, [])
+    }
+  }
+
+  # The index a column asks for of its own.
+  _own_index(table, kind, column) {
+    return {
+      kind,
+      columns: [column.name],
+      name: index_name(table, [column.name], kind),
+    }
+  }
+
+  # A list of names, quoted and separated.
+  _list(names) {
+    return ', '.join(names.map(@(name) => self.quote(name)))
+  }
+}

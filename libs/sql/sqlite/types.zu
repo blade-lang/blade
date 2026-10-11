@@ -23,6 +23,7 @@
  * @copyright 2026, Richard Ore and Zuri contributors
  */
 
+import ..decimal { Decimal }
 import ..types { from_iso, from_json }
 
 /**
@@ -39,6 +40,15 @@ var TEMPORAL_TYPES = ['DATE', 'DATETIME', 'TIMESTAMP', 'TIMESTAMPTZ']
  * Declared types that mean JSON held in a text column.
  */
 var JSON_TYPES = ['JSON', 'JSONB']
+
+/**
+ * Declared types that mean an exact decimal.
+ *
+ * SQLite gives these numeric affinity, so a decimal is held as an
+ * integer or a double, which keeps fifteen significant digits exactly.
+ * Read back, each is the `Decimal` those digits spell.
+ */
+var DECIMAL_TYPES = ['DECIMAL', 'NUMERIC']
 
 /**
  * The bare type name from a declaration, upper cased and without any
@@ -63,7 +73,8 @@ def base_type(declared) {
 
 /**
  * Which conversion a column's declaration calls for: `'bool'`,
- * `'date'`, `'json'`, or `nil` for a column that needs none.
+ * `'date'`, `'json'`, `'decimal'`, or `nil` for a column that needs
+ * none.
  *
  * @param string|nil declared The column's declared type.
  * @returns string|nil
@@ -81,6 +92,10 @@ def conversion_for(declared) {
 
   if JSON_TYPES.contains(name) {
     return 'json'
+  }
+
+  if DECIMAL_TYPES.contains(name) {
+    return 'decimal'
   }
 
   return nil
@@ -120,6 +135,30 @@ def decode(value, conversion) {
   if conversion == 'json' {
     var parsed = from_json(value)
     return parsed != nil ? parsed : value
+  }
+
+  if conversion == 'decimal' {
+    return _decimal(value)
+  }
+
+  return value
+}
+
+# A stored decimal as a `Decimal`. A double is written out in the
+# shortest digits that read back as the same double, which for one
+# holding fifteen significant digits or fewer are the digits it was
+# stored from. Text that is not a number comes back as it is.
+def _decimal(value) {
+  if is_number(value) or is_bigint(value) {
+    return Decimal(value.to_string())
+  }
+
+  if is_string(value) {
+    catch {
+      return Decimal(value)
+    } as _error {
+      return value
+    }
   }
 
   return value

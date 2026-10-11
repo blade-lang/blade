@@ -42,6 +42,7 @@
 import date
 import json
 
+import .decimal { Decimal }
 import .errors { QueryError }
 
 /**
@@ -149,9 +150,9 @@ def from_json(text) {
 
 /**
  * Reduces `value` to something an engine with no richer type can
- * store: a timestamp becomes ISO text, a list or dictionary becomes
- * JSON text, and everything else is already storable and passes
- * through.
+ * store: a timestamp becomes ISO text, a `Decimal` its exact text, a
+ * list or dictionary JSON text, and everything else is already
+ * storable and passes through.
  *
  * Adapters for engines that do have those types encode them natively
  * instead and never call this.
@@ -174,6 +175,10 @@ def flatten(value) {
     return value.to_string()
   }
 
+  if instance_of(value, Decimal) {
+    return value.to_string()
+  }
+
   if is_structured(value) {
     return to_json(value)
   }
@@ -181,7 +186,7 @@ def flatten(value) {
   raise QueryError(
     'a ${typeof(value)} has no database representation; expected nil, ' +
       'a bool, a number, a bigint, a string, bytes, a date, a time ' +
-      'interval, or a list or dictionary to store as JSON',
+      'interval, a sql.Decimal, or a list or dictionary to store as JSON',
   )
 }
 

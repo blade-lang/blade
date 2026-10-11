@@ -1,7 +1,7 @@
 /**
  * @module schema
  *
- * Asking a database what is in it.
+ * What is in a database, and changing it.
  *
  * Every engine can list its tables and describe its columns, and every
  * engine does it differently: PostgreSQL has `information_schema`,
@@ -22,8 +22,35 @@
  * insert id, the insert needs a `RETURNING` clause, and the column to
  * return is the table's primary key, which is asked for here.
  *
+ * ### Changing it
+ *
+ * Tables are created, altered, renamed and dropped through the same
+ * object, described once in a `Blueprint` that the adapter turns into
+ * its own engine's statements:
+ *
+ * ```zuri,ignore
+ * db.schema.create_table('posts', @(table: Blueprint) {
+ *   table.id()
+ *   table.string('title', 200)
+ *   table.timestamps()
+ * })
+ *
+ * db.schema.alter_table('posts', @(table: Blueprint) {
+ *   table.text('body').nullable()
+ *   table.index('title')
+ * })
+ * ```
+ *
+ * A change made with no transaction open runs as a whole: inside a
+ * transaction of its own on SQLite and PostgreSQL, where a failure part
+ * way leaves nothing behind. MySQL and MariaDB commit at every schema
+ * change, so there each statement stands once it has run. A change
+ * made inside a transaction runs in it, as part of it.
+ *
  * @copyright 2026, Richard Ore and Zuri contributors
  */
+
+import .blueprint { Blueprint }
 
 /**
  * The description of one column, as every adapter returns it.
@@ -199,6 +226,128 @@ class Schema {
       'foreign_keys',
       @(adapter) => adapter.foreign_keys(table, schema),
     )
+  }
+
+  /**
+   * Creates a table.
+   *
+   * `body` is called with a `Blueprint` to describe the table on, and
+   * the table is created once it returns.
+   *
+   * ```zuri,ignore
+   * db.schema.create_table('comments', @(table: Blueprint) {
+   *   table.id()
+   *   table.references('post_id', 'posts').on_delete('cascade')
+   *   table.text('body')
+   *   table.timestamps()
+   * })
+   * ```
+   *
+   * @param string name
+   * @param function body Called with the `Blueprint`.
+   * @param dict|nil options `{ if_not_exists }`, false by default:
+   *    when true, a table of that name that exists already is left as
+   *    it is, indexes included, rather than an error.
+   * @throws QueryError if the description is not a table, or the
+   *    engine refuses it.
+   */
+  create_table(name: string, body: function, options) {
+    var blueprint = Blueprint(name, true)
+
+    body(blueprint)
+
+    var settings = options or {}
+
+    self._change(@(ddl) {
+      ddl.create_table(self._connection, blueprint, settings)
+    })
+  }
+
+  /**
+   * Changes a table that exists.
+   *
+   * `body` is called with a `Blueprint` on which each change is
+   * described, and they are made in the order they were described once
+   * it returns.
+   *
+   * ```zuri,ignore
+   * db.schema.alter_table('posts', @(table: Blueprint) {
+   *   table.string('slug', 200).nullable().unique()
+   *   table.string('title', 300).change()
+   *   table.rename_column('body', 'content')
+   *   table.drop_column('views')
+   * })
+   * ```
+   *
+   * On SQLite, a change its `ALTER TABLE` cannot make is made by
+   * building the table again, which needs foreign keys switched off and
+   * so cannot happen inside a transaction while they are on. Made with
+   * no transaction open, or inside a migration, it always can.
+   *
+   * @param string name
+   * @param function body Called with the `Blueprint`.
+   * @throws QueryError if a change names what is not there, or the
+   *    engine refuses it.
+   * @throws NotSupportedError if SQLite has to build the table again
+   *    inside a transaction while foreign keys are on.
+   */
+  alter_table(name: string, body: function) {
+    var blueprint = Blueprint(name, false)
+
+    body(blueprint)
+
+    self._change(@(ddl) {
+      ddl.alter_table(self._connection, blueprint)
+    })
+  }
+
+  /**
+   * Drops a table.
+   *
+   * A table another table refers to through a foreign key is refused,
+   * rather than taking the referring rows with it.
+   *
+   * @param string name
+   * @param dict|nil options `{ if_exists }`, false by default: when
+   *    true, a table that is not there is left alone rather than an
+   *    error.
+   * @throws QueryError if the table is not there, or another refers to
+   *    it.
+   */
+  drop_table(name: string, options) {
+    var settings = options or {}
+
+    self._change(@(ddl) {
+      ddl.drop_table(self._connection, name, settings)
+    })
+  }
+
+  /**
+   * Renames a table. Foreign keys referring to it follow it; its
+   * indexes keep the names they had.
+   *
+   * @param string from
+   * @param string to
+   */
+  rename_table(from: string, to: string) {
+    self._change(@(ddl) {
+      ddl.rename_table(self._connection, from, to)
+    })
+  }
+
+  # Runs a change in the caller's transaction, or as a change of its
+  # own when there is none.
+  _change(body) {
+    var connection = self._connection
+    var ddl = connection.driver().ddl()
+
+    if connection.in_transaction() {
+      return body(ddl)
+    }
+
+    return ddl.schema_change(connection, @(_transaction) {
+      return body(ddl)
+    }, true)
   }
 
   # Runs `body` against the adapter's introspection. An adapter with

@@ -27,6 +27,7 @@
 import .store { SessionError, SessionStore }
 
 import sql
+import sql { Blueprint }
 
 # What the table is called when the store is not told otherwise.
 var DEFAULT_TABLE = 'sessions'
@@ -119,39 +120,22 @@ class SqlStore < SessionStore {
    * | Column | Type | |
    * | - | - | - |
    * | `id` | `varchar(64)` | the storage key, primary key |
-   * | `payload` | `text` | what the session holds |
+   * | `payload` | text of any length | what the session holds |
    * | `expires_at` | `bigint` | epoch seconds |
    *
    * @returns SqlStore: this same instance, for chaining
    */
   migrate() {
     self._run(@(database) {
-      database.exec(
-        'create table if not exists ${self._table} (' +
-          'id varchar(64) not null, ' +
-          'payload text not null, ' +
-          'expires_at bigint not null, ' +
-          'primary key (id))',
-      )
-
       # The sweep is the only thing that reads by expiry, and on a
-      # table of any size it is the difference between a seek and a
-      # scan. `create index if not exists` is not portable, so the
-      # index is looked for instead.
-      var wanted = '${self._table}_expires_at'
-      var present = false
-
-      for index in database.schema.indexes(self._table, nil) {
-        if index.name.lower() == wanted {
-          present = true
-        }
-      }
-
-      if !present {
-        database.exec(
-          'create index ${wanted} on ${self._table} (expires_at)',
-        )
-      }
+      # table of any size the index is the difference between a seek
+      # and a scan.
+      database.schema.create_table(self._table, @(table: Blueprint) {
+        table.string('id', 64).primary()
+        table.text('payload')
+        table.big_integer('expires_at')
+        table.index('expires_at', '${self._table}_expires_at')
+      }, { if_not_exists: true })
     })
 
     return self

@@ -14,10 +14,12 @@
  * | `'import'` | the module an import of `path` from `importer` binds |
  * | `'member'` | member `name` of the type `of` |
  * | `'call'` | what calling the type `of` returns |
+ * | `'union'` | a value of any one of the types in the list `of` |
  *
- * The last six are deferred: they name where a type comes from, and
- * the linker works out what it is when something asks, following
- * other files' summaries as it goes. Anything that cannot be told is
+ * The six before the last are deferred: they name where a type comes
+ * from, and the linker works out what it is when something asks,
+ * following other files' summaries as it goes. A union holds two or
+ * more types, any of them deferred. Anything that cannot be told is
  * `nil`, and nothing is ever concluded from `nil`.
  *
  * An instance is `loose` when it may be of a subclass: `self`, a
@@ -244,18 +246,38 @@ def agree(a, b) {
 
 /**
  * The type a type hint names: a built-in type, or an instance of the
- * class it names. A hint naming more than one type tells nothing.
+ * class it names. A hint naming several types, such as
+ * `Transaction|Connection`, is a union of them; one that names a type
+ * this cannot tell tells nothing at all.
  *
  * @param Walker walker
  * @param any hint: A `TypeHint` node.
  * @returns ?dict
  */
 def of_hint(walker, hint) {
-  if hint == nil or hint.fields.types.length() != 1 {
+  if hint == nil or hint.fields.types.is_empty() {
     return nil
   }
 
-  var type = hint.fields.types[0]
+  var found = []
+
+  for type in hint.fields.types {
+    var one = _of_hint_type(walker, type)
+
+    if one == nil {
+      return nil
+    }
+
+    if !found.contains(one) {
+      found.append(one)
+    }
+  }
+
+  return found.length() == 1 ? found[0] : { t: 'union', of: found }
+}
+
+# The type one name in a type hint names.
+def _of_hint_type(walker, type) {
   var name = _HINT_TYPES.get(type.kind, nil)
 
   if name != nil {

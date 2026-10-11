@@ -4,9 +4,9 @@
  *
  * It runs on any engine the `sql` module speaks: SQLite, which needs
  * nothing set up and is the default, PostgreSQL, MySQL and MariaDB,
- * chosen by the connection string. The schema lives in
- * `migrations/<engine>`, one numbered file per change, each applied
- * once and recorded in `migrations`, so starting any version of the
+ * chosen by the connection string. The schema lives in `migrations`,
+ * one numbered `sql.migrate` migration per change, each written once
+ * for every engine and applied once, so starting any version of the
  * repository against any older database brings it up to date.
  *
  * Flat reads and writes go through the `sql` module's own helpers,
@@ -24,18 +24,11 @@ import json
 import os
 import sql
 import sql.errors { UniqueViolation }
+import sql.migrate { Migrator }
 
 import .._shared.fsx
 
 var _MIGRATIONS = os.join_paths(os.dir_name(__file__), 'migrations')
-
-# The engine a migration directory is named for. MariaDB reads MySQL's.
-var _SCHEMA_FOR = {
-  sqlite: 'sqlite',
-  postgres: 'postgres',
-  mysql: 'mysql',
-  mariadb: 'mysql',
-}
 
 /** The character `like_escape()` escapes with, which every engine accepts. */
 var LIKE_ESCAPE = '!'
@@ -112,7 +105,6 @@ class Database {
 
   /**
    * @param string connection_string
-   * @raises Error for an engine Nyssa has no schema for.
    */
   @new(connection_string: string) {
     var path = sqlite_path(connection_string)
@@ -130,87 +122,15 @@ class Database {
     }
 
     self.engine = self.connection.driver_name()
-
-    if !_SCHEMA_FOR.contains(self.engine) {
-      raise Error('Nyssa has no schema for ${self.engine} databases')
-    }
   }
 
   /**
-   * The migrations there are for this engine, in the order they apply.
-   *
-   * @returns list[string]: file names.
-   */
-  available_migrations() {
-    var directory = os.join_paths(_MIGRATIONS, _SCHEMA_FOR.get(self.engine))
-    var found = []
-
-    for entry in os.read_dir(directory) {
-      if entry.ends_with('.sql') {
-        found.append(entry)
-      }
-    }
-
-    found.sort()
-
-    return found
-  }
-
-  /**
-   * The migrations the database has had.
-   *
-   * @returns list[string]
-   */
-  applied_migrations() {
-    self.connection.exec_script(
-      'CREATE TABLE IF NOT EXISTS migrations ('
-        + '  name VARCHAR(100) NOT NULL PRIMARY KEY,'
-        + '  applied_at BIGINT NOT NULL'
-        + ')',
-    )
-
-    return self.connection
-      .find('migrations', nil, { columns: ['name'], order: ['name'] })
-      .column('name')
-  }
-
-  /**
-   * Applies every migration the database has not had, each one in a
-   * transaction of its own along with the record of it.
-   *
-   * MySQL and MariaDB commit at every schema change, so there each
-   * migration runs on its own and is recorded once it has finished. A
-   * migration that fails there part way leaves the statements before
-   * the failure applied, and is tried in full again next time.
+   * Applies every migration the database has not had.
    *
    * @returns number: how many were applied.
    */
   migrate() {
-    var applied = self.applied_migrations()
-    var directory = os.join_paths(_MIGRATIONS, _SCHEMA_FOR.get(self.engine))
-    var count = 0
-
-    for name in self.available_migrations() {
-      if applied.contains(name) {
-        continue
-      }
-
-      var script = fsx.read_text(os.join_paths(directory, name))
-
-      if self.connection.supports('transactional_ddl') {
-        self.connection.transaction(@(tx) {
-          tx.exec_script(script)
-          tx.insert('migrations', { name, applied_at: _now() })
-        })
-      } else {
-        self.connection.exec_script(script)
-        self.connection.insert('migrations', { name, applied_at: _now() })
-      }
-
-      count++
-    }
-
-    return count
+    return Migrator(self.connection, { directory: _MIGRATIONS }).up().length()
   }
 
   /**

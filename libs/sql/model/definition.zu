@@ -1,0 +1,869 @@
+/**
+ * @module definition
+ *
+ * What a model is: its table, its columns, how its values are cast and
+ * checked, what it is associated with, and which of its hooks it has.
+ *
+ * A model's class says most of it. Every field it declares that does
+ * not start with `_` is a column of the same name, read and written as
+ * the field. The rest it says in a static `define()`, which is handed a
+ * `Definition` to describe itself on:
+ *
+ * ```zuri,ignore
+ * class Post < Model {
+ *   var id
+ *   var title
+ *   var author_id
+ *   var author
+ *
+ *   static define(model: Definition) {
+ *     model.belongs_to('author', Author)
+ *     model.validate('title', validate.required().string().max_length(200))
+ *   }
+ * }
+ * ```
+ *
+ * `define()` runs once, the first time the model is used, not when its
+ * class is declared, so it can name a model declared after it in the
+ * same file. What it describes is checked against the class then, and
+ * a definition that cannot work, an association with no field to hold
+ * it, a cast on a field that is not a column, raises `ModelError` at
+ * that first use rather than somewhere further on.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import validate
+import zuri
+
+import .casts { cast, check_cast }
+import .errors { ModelError }
+import .naming { table_for, key_for, join_table_for }
+
+/** A record holding the key of another, which it belongs to. */
+var BELONGS_TO = 'belongs_to'
+
+/** A record that another holds the key of, one of at most. */
+var HAS_ONE = 'has_one'
+
+/** A record that others hold the key of, any number of them. */
+var HAS_MANY = 'has_many'
+
+/** Records joined to others through a table holding both keys. */
+var BELONGS_TO_MANY = 'belongs_to_many'
+
+/**
+ * The methods a model overrides to run code around its own life. Each
+ * is called with the connection or transaction the record is being
+ * saved or deleted through, except `after_load()`, called as a record
+ * is built from a row.
+ */
+var HOOKS = [
+  'before_validate', 'after_validate', 'before_save', 'after_save',
+  'before_create', 'after_create', 'before_update', 'after_update',
+  'before_delete', 'after_delete', 'after_load', 'validate',
+]
+
+# The hooks whose code has to run in the same transaction as the write.
+var _WRITE_HOOKS = [
+  'before_validate', 'after_validate', 'before_save', 'after_save',
+  'before_create', 'after_create', 'before_update', 'after_update',
+  'before_delete', 'after_delete', 'validate',
+]
+
+/**
+ * One association of a model.
+ *
+ * @printable
+ */
+class Association {
+  /**
+   * The association's name, which is also the field its records are
+   * loaded into.
+   * @type string
+   */
+  var name
+
+  /**
+   * One of `BELONGS_TO`, `HAS_ONE`, `HAS_MANY` and `BELONGS_TO_MANY`.
+   * @type string
+   */
+  var kind
+
+  /**
+   * The model on the other side.
+   * @type class
+   */
+  var model
+
+  /**
+   * The column holding the other side's key. For `BELONGS_TO`, a
+   * column of this model; for `HAS_ONE` and `HAS_MANY`, of the other;
+   * for `BELONGS_TO_MANY`, the join table's column for this model.
+   * @type string
+   */
+  var foreign_key
+
+  /**
+   * The column the foreign key holds the value of. For `BELONGS_TO`,
+   * the other model's; for the rest, this model's. Nil until the
+   * definition is finished, for the primary key.
+   * @type string|nil
+   */
+  var key
+
+  /**
+   * For `BELONGS_TO_MANY`, the join table.
+   * @type string|nil
+   */
+  var through
+
+  /**
+   * For `BELONGS_TO_MANY`, the join table's column for the other model.
+   * @type string|nil
+   */
+  var other_key
+
+  /**
+   * @param string name
+   * @param string kind
+   * @param class model
+   */
+  @new(name, kind, model) {
+    self.name = name
+    self.kind = kind
+    self.model = model
+  }
+
+  /**
+   * Whether the association holds a list of records rather than one.
+   *
+   * @returns bool
+   */
+  is_many() {
+    return self.kind == HAS_MANY or self.kind == BELONGS_TO_MANY
+  }
+
+  to_string() {
+    return '<Association ${self.name} ${self.kind}>'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+/**
+ * A model's description: what `define()` is handed to write it on, and
+ * what everything else reads once it is finished.
+ *
+ * The methods a model calls in `define()` each return the definition,
+ * so they can be chained, and each is checked against the class when
+ * the definition is finished.
+ *
+ * @printable
+ */
+class Definition {
+  /**
+   * The model's class.
+   * @type class
+   */
+  var model
+
+  /**
+   * The model's class name.
+   * @type string
+   */
+  var name
+
+  /**
+   * The table.
+   * @type string
+   */
+  var table_name
+
+  /**
+   * The primary key's column.
+   * @default 'id'
+   */
+  var primary = 'id'
+
+  /**
+   * The columns, in the order the class declares their fields.
+   * @type list[string]
+   */
+  var columns = []
+
+  /**
+   * The column stamped when a record is created, or nil.
+   * @default nil
+   */
+  var created_column
+
+  /**
+   * The column stamped whenever a record is saved with a change, or
+   * nil.
+   * @default nil
+   */
+  var updated_column
+
+  /**
+   * The cast of each column that has one.
+   * @type dict
+   */
+  var casts = {}
+
+  /**
+   * The `validate.Validator` of each column that has one.
+   * @type dict
+   */
+  var validators = {}
+
+  /**
+   * The checks for values no other row may share, each `{ columns,
+   * message }`.
+   * @type list[dict]
+   */
+  var uniques = []
+
+  /**
+   * The columns `fill()` assigns.
+   * @type list[string]
+   */
+  var fillable_columns
+
+  /**
+   * The columns left out of `to_dict()` and `@to_json()`.
+   * @type list[string]
+   */
+  var hidden_columns = []
+
+  /**
+   * The fields that are not columns.
+   * @type list[string]
+   */
+  var transient_fields = []
+
+  /**
+   * The scopes, by name.
+   * @type dict
+   */
+  var scopes = {}
+
+  /**
+   * The associations, by name.
+   * @type dict
+   */
+  var associations = {}
+
+  /**
+   * Which hooks the model overrides, by name.
+   * @type dict
+   */
+  var hooks = {}
+
+  /**
+   * The validators as one `validate.Schema`, or nil when there are
+   * none.
+   * @default nil
+   */
+  var schema
+
+  /**
+   * Whether saving and deleting run in a transaction of their own:
+   * when the model has hooks or unique checks, whose reads and writes
+   * belong with the write they surround.
+   * @default false
+   */
+  var transactional = false
+
+  /**
+   * @param class model
+   * @param string name
+   */
+  @new(model, name) {
+    self.model = model
+    self.name = name
+    self.table_name = table_for(name)
+  }
+
+  /**
+   * Names the model's table, in place of the plural of its class name.
+   *
+   * @param string name
+   * @returns Definition
+   */
+  table(name: string) {
+    self.table_name = name
+    return self
+  }
+
+  /**
+   * Names the primary key's column, in place of `id`.
+   *
+   * A model's key is one column. A table keyed by several, such as a
+   * join table, is reached through `belongs_to_many()` or with SQL.
+   *
+   * @param string column
+   * @returns Definition
+   */
+  primary_key(column: string) {
+    self.primary = column
+    return self
+  }
+
+  /**
+   * Has the model stamp a column with the time a record is created,
+   * and another with the time it is saved with a change. Both are
+   * set as `date.Date`s in UTC.
+   *
+   * @param string|nil created `created_at` when nil.
+   * @param string|nil updated `updated_at` when nil.
+   * @returns Definition
+   */
+  timestamps(created, updated) {
+    self.created_column = created == nil ? 'created_at' : created
+    self.updated_column = updated == nil ? 'updated_at' : updated
+    return self
+  }
+
+  /**
+   * Casts a column's value as it is read, so the field holds the same
+   * type on every engine. See the `casts` module for each cast.
+   *
+   * ```zuri,ignore
+   * model.cast('published', 'bool')
+   * model.cast('settings', 'json')
+   * ```
+   *
+   * @param string column
+   * @param string kind One of `bool`, `integer`, `number`, `decimal`,
+   *    `string`, `json` and `date`.
+   * @returns Definition
+   * @throws ModelError for any other kind.
+   */
+  cast(column: string, kind: string) {
+    self.casts.set(column, check_cast(kind))
+    return self
+  }
+
+  /**
+   * Checks a column's value with a `validate` chain before a record is
+   * saved.
+   *
+   * ```zuri,ignore
+   * model.validate('email', validate.required().string().email())
+   * ```
+   *
+   * @param string column
+   * @param validate.Validator rules
+   * @returns Definition
+   * @throws ModelError if the column already has rules.
+   */
+  validate(column: string, rules) {
+    if self.validators.contains(column) {
+      raise ModelError(
+        '${self.name} already validates ${column}; chain every rule for it in one call',
+        nil,
+      )
+    }
+
+    self.validators.set(column, rules)
+    return self
+  }
+
+  /**
+   * Checks before a record is saved that no other row holds the same
+   * values in `columns`. A record with nil in any of them is not
+   * checked, as a unique index lets any number of nulls through.
+   *
+   * This reports a taken value as a validation failure, with the rest.
+   * Only a unique index in the database makes two records saved at the
+   * same moment unable to take the same value; keep one there too.
+   *
+   * @param string|list[string] columns
+   * @param string|nil message What a person reads, `The <column> field
+   *    has already been taken.` when nil.
+   * @returns Definition
+   */
+  unique(columns, message) {
+    var list = is_list(columns) ? columns : [columns]
+
+    self.uniques.append({ columns: list, message })
+    return self
+  }
+
+  /**
+   * The columns `fill()` and building a record from a dictionary
+   * assign. Every column but the primary key and the timestamps when
+   * this is not called.
+   *
+   * @param list[string] columns
+   * @returns Definition
+   */
+  fillable(columns: list) {
+    self.fillable_columns = columns
+    return self
+  }
+
+  /**
+   * Columns left out of `to_dict()` and `@to_json()`, such as a
+   * password's hash, so a record handed to a response does not carry
+   * them.
+   *
+   * @param list[string] columns
+   * @returns Definition
+   */
+  hidden(columns: list) {
+    self.hidden_columns = columns
+    return self
+  }
+
+  /**
+   * Fields of the class that are not columns: values a record works
+   * with that the table does not hold.
+   *
+   * @param list[string] fields
+   * @returns Definition
+   */
+  transient(fields: list) {
+    self.transient_fields = fields
+    return self
+  }
+
+  /**
+   * A reusable piece of a query, applied with `Query.scope()`.
+   *
+   * ```zuri,ignore
+   * model.scope('published', @(query, _) => query.where({ published: true }))
+   * model.scope('by', @(query, author) => query.where({ author_id: author.id }))
+   * ```
+   *
+   * @param string name
+   * @param function body Called with the query and the argument given
+   *    to `scope()`, and returns the query to use.
+   * @returns Definition
+   */
+  scope(name: string, body: function) {
+    self.scopes.set(name, body)
+    return self
+  }
+
+  /**
+   * This model holds the key of another, which it belongs to: a post
+   * belongs to its author.
+   *
+   * ```zuri,ignore
+   * model.belongs_to('author', Author)
+   * ```
+   *
+   * @param string name The association, and the field it loads into.
+   * @param class model
+   * @param dict|nil options `foreign_key`, this model's column holding
+   *    the key, `<name>_id` when not given; and `owner_key`, the column
+   *    of the other model it holds, that model's primary key when not
+   *    given.
+   * @returns Definition
+   */
+  belongs_to(name: string, model, options) {
+    var settings = options or {}
+    var association = Association(name, BELONGS_TO, model)
+
+    association.foreign_key = settings.get('foreign_key', name + '_id')
+    association.key = settings.get('owner_key', nil)
+
+    return self._associate(association)
+  }
+
+  /**
+   * Another model holds this one's key, and there is at most one of
+   * it: a user has one profile.
+   *
+   * @param string name
+   * @param class model
+   * @param dict|nil options `foreign_key`, the other model's column
+   *    holding this one's key, this class's name in snake case and
+   *    `_id` when not given; and `local_key`, this model's column it
+   *    holds, the primary key when not given.
+   * @returns Definition
+   */
+  has_one(name: string, model, options) {
+    return self._has(name, HAS_ONE, model, options)
+  }
+
+  /**
+   * Other models hold this one's key, any number of them: an author
+   * has many posts.
+   *
+   * @param string name
+   * @param class model
+   * @param dict|nil options As `has_one()` takes.
+   * @returns Definition
+   */
+  has_many(name: string, model, options) {
+    return self._has(name, HAS_MANY, model, options)
+  }
+
+  /**
+   * Records of this model and another are joined through a table
+   * holding both keys: a post belongs to many tags, and a tag to many
+   * posts.
+   *
+   * @param string name
+   * @param class model
+   * @param dict|nil options `through`, the join table, the two class
+   *    names in snake case, in alphabetical order, joined by an
+   *    underscore when not given, as `post_tag`; `foreign_key`, its
+   *    column holding this model's key, and `other_key`, its column
+   *    holding the other's, each the class name in snake case and
+   *    `_id` when not given.
+   * @returns Definition
+   */
+  belongs_to_many(name: string, model, options) {
+    var settings = options or {}
+    var association = Association(name, BELONGS_TO_MANY, model)
+    var other = zuri.reflect.class_info(model).name
+
+    association.through = settings.get(
+      'through', join_table_for(self.name, other),
+    )
+    association.foreign_key = settings.get('foreign_key', key_for(self.name))
+    association.other_key = settings.get('other_key', key_for(other))
+
+    return self._associate(association)
+  }
+
+  /**
+   * The association called `name`.
+   *
+   * @param string name
+   * @returns Association
+   * @throws ModelError if there is none.
+   */
+  association(name: string) {
+    var found = self.associations.get(name, nil)
+
+    if found == nil {
+      raise ModelError('${self.name} has no association called ${name}', nil)
+    }
+
+    return found
+  }
+
+  /**
+   * Whether the model overrides hook `name`.
+   *
+   * @param string name
+   * @returns bool
+   */
+  has_hook(name: string) {
+    return self.hooks.get(name, false)
+  }
+
+  /**
+   * Checks what `define()` described against the class, and works out
+   * the rest. Called once, by `definition_of()`.
+   *
+   * @param dict info `zuri.reflect.class_info()` of the model.
+   * @param string base The name of the class models extend.
+   * @throws ModelError for a definition that cannot work.
+   */
+  finish(info: dict, base: string) {
+    var fields = info.fields.filter(@(field) => !field.starts_with('_'))
+
+    for name, association in self.associations {
+      if !fields.contains(name) {
+        raise ModelError(
+          '${self.name} declares the association ${name} but has no field called ' +
+            '${name} to load it into; add var ${name} to the class',
+          nil,
+        )
+      }
+    }
+
+    for field in self.transient_fields {
+      self._must_have(fields, field, 'a transient field')
+    }
+
+    self.columns = fields.filter(@(field) {
+      return !self.associations.contains(field)
+        and !self.transient_fields.contains(field)
+    })
+
+    self._must_be_column(self.primary, 'the primary key')
+
+    for column in [self.created_column, self.updated_column] {
+      if column != nil {
+        self._must_be_column(column, 'a timestamp')
+      }
+    }
+
+    for column, kind in self.casts {
+      self._must_be_column(column, 'a cast')
+    }
+
+    for column, rules in self.validators {
+      self._must_be_column(column, 'a validation')
+    }
+
+    for unique in self.uniques {
+      for column in unique.columns {
+        self._must_be_column(column, 'a unique check')
+      }
+    }
+
+    for column in self.hidden_columns {
+      self._must_be_column(column, 'a hidden column')
+    }
+
+    if self.fillable_columns == nil {
+      var stamped = [self.primary, self.created_column, self.updated_column]
+      self.fillable_columns = self.columns.filter(
+        @(column) => !stamped.contains(column),
+      )
+    } else {
+      for column in self.fillable_columns {
+        self._must_be_column(column, 'a fillable column')
+      }
+    }
+
+    for name, association in self.associations {
+      if association.kind == BELONGS_TO {
+        self._must_be_column(association.foreign_key, 'the key of ${name}')
+      } else if association.key == nil {
+        association.key = self.primary
+      } else {
+        self._must_be_column(association.key, 'the key of ${name}')
+      }
+    }
+
+    for hook in HOOKS {
+      var method = info.methods.get(hook, nil)
+      self.hooks.set(hook, method != nil and method.owning_class_name != base)
+    }
+
+    if !self.validators.is_empty() {
+      self.schema = validate.schema(self.validators)
+    }
+
+    self.transactional = !self.uniques.is_empty() or
+      _WRITE_HOOKS.filter(@(hook) => self.hooks[hook]).length() > 0
+  }
+
+  /**
+   * Builds a record from a row, as it would be after being loaded.
+   *
+   * @param dict row Column to value.
+   * @returns Model
+   */
+  build(row: dict) {
+    var record = self.model()
+
+    self.load(record, row)
+
+    return record
+  }
+
+  /**
+   * Gives `record` the values of `row`, cast, and marks it as holding
+   * what the database holds.
+   *
+   * @param Model record
+   * @param dict row
+   */
+  load(record, row: dict) {
+    for column in self.columns {
+      if row.contains(column) {
+        var value = row[column]
+        var kind = self.casts.get(column, nil)
+
+        zuri.reflect.set_prop(
+          record, column, kind == nil ? value : cast(kind, value),
+        )
+      }
+    }
+
+    self.saved(record)
+
+    if self.hooks.after_load {
+      record.after_load()
+    }
+  }
+
+  /**
+   * Marks `record` as holding what the database holds.
+   *
+   * @param Model record
+   */
+  saved(record) {
+    zuri.reflect.set_prop(record, '_original', self.snapshot(record))
+    zuri.reflect.set_prop(record, '_persisted', true)
+  }
+
+  /**
+   * The value of each column of `record`.
+   *
+   * @param Model record
+   * @returns dict
+   */
+  values_of(record) {
+    var values = {}
+
+    for column in self.columns {
+      values.set(column, zuri.reflect.get_prop(record, column))
+    }
+
+    return values
+  }
+
+  /**
+   * The values of `record`, copied deep enough that changing a list or
+   * dictionary in place still shows as a change against it.
+   *
+   * @param Model record
+   * @returns dict
+   */
+  snapshot(record) {
+    var values = {}
+
+    for column in self.columns {
+      values.set(column, _copy(zuri.reflect.get_prop(record, column)))
+    }
+
+    return values
+  }
+
+  _has(name, kind, model, options) {
+    var settings = options or {}
+    var association = Association(name, kind, model)
+
+    association.foreign_key = settings.get('foreign_key', key_for(self.name))
+    association.key = settings.get('local_key', nil)
+
+    return self._associate(association)
+  }
+
+  _associate(association) {
+    if !is_class(association.model) {
+      raise ModelError(
+        '${self.name}.${association.name} has to name a model class, not a ${typeof(association.model)}',
+        nil,
+      )
+    }
+
+    if self.associations.contains(association.name) {
+      raise ModelError('${self.name} declares ${association.name} twice', nil)
+    }
+
+    self.associations.set(association.name, association)
+    return self
+  }
+
+  _must_have(fields, field, what) {
+    if !fields.contains(field) {
+      raise ModelError(
+        '${what} of ${self.name}, ${field}, is not a field of the class', nil,
+      )
+    }
+  }
+
+  _must_be_column(column, what) {
+    if !self.columns.contains(column) {
+      raise ModelError(
+        '${what} of ${self.name}, ${column}, is not one of its columns: ' +
+          '${", ".join(self.columns)}',
+        nil,
+      )
+    }
+  }
+
+  to_string() {
+    return '<Definition ${self.name} on ${self.table_name}>'
+  }
+
+  @to_string() {
+    return self.to_string()
+  }
+}
+
+# Every model's definition, by class.
+var _DEFINITIONS = {}
+
+# The class every model extends, given by the module that declares it.
+var _BASE = nil
+
+/**
+ * Tells this module which class models extend. The module declaring
+ * `Model` calls it once, as it loads.
+ *
+ * @internal
+ * @param class base
+ */
+def set_base(base) {
+  _BASE = base
+}
+
+/**
+ * The definition of `model`, made the first time it is asked for and
+ * kept from then on.
+ *
+ * Making it builds one record of the class, with no arguments, to be
+ * sure it is a model, then runs its `define()` when it has one.
+ *
+ * @param class model
+ * @returns Definition
+ * @throws ModelError if `model` is not a class extending `Model`, or
+ *    its definition cannot work.
+ */
+def definition_of(model) {
+  var known = _DEFINITIONS.get(model, nil)
+
+  if known != nil {
+    return known
+  }
+
+  if !is_class(model) {
+    raise ModelError(
+      'a model is a class extending Model, not a ${typeof(model)}', nil,
+    )
+  }
+
+  var info = zuri.reflect.class_info(model)
+
+  if !instance_of(model(), _BASE) {
+    raise ModelError(
+      '${info.name} is not a model: it does not extend Model', nil,
+    )
+  }
+
+  var definition = Definition(model, info.name)
+
+  if info.statics.contains('define') {
+    model.define(definition)
+  }
+
+  definition.finish(info, zuri.reflect.class_info(_BASE).name)
+  _DEFINITIONS.set(model, definition)
+
+  return definition
+}
+
+# A copy of a list or dictionary deep enough to hold its contents as
+# they are now; anything else as it is.
+def _copy(value) {
+  if is_list(value) {
+    return value.map(@(item) => _copy(item))
+  }
+
+  if is_dict(value) {
+    var copied = {}
+
+    for key, item in value {
+      copied.set(key, _copy(item))
+    }
+
+    return copied
+  }
+
+  return value
+}

@@ -37,6 +37,7 @@ fn build(vm: &mut VM) -> Vec<(&'static str, Value)> {
       "class_info",
       native(vm, "class_info", 1, false, class_info_fn),
     ),
+    ("class_of", native(vm, "class_of", 1, false, class_of_fn)),
     (
       "module_info",
       native(vm, "module_info", 1, false, module_info_fn),
@@ -295,6 +296,22 @@ fn class_info_fn(ctx: &mut ZuriContext) -> Result<Value, String> {
     (fields_key, fields_value),
     (statics_key, statics_value),
   ]))
+}
+
+/// `_zuri_reflect.class_of(value)`: the class `value` is an instance
+/// of, as the class value itself, or `nil` for anything that is not an
+/// instance. The class rather than its name: two classes declared with
+/// the same name in different modules report the same `typeof()`, and
+/// only the class tells them apart.
+fn class_of_fn(ctx: &mut ZuriContext) -> Result<Value, String> {
+  enforce_arg_count!(ctx, 1);
+  let value = ctx.args[0];
+
+  if value.is_instance() {
+    Ok(value.as_instance().class)
+  } else {
+    Ok(Value::nil())
+  }
 }
 
 /// `_zuri_reflect.module_info(m)`: `{ name, path, loaded, members }`

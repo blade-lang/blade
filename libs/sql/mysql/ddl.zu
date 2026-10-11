@@ -1,0 +1,398 @@
+/**
+ * @module ddl
+ *
+ * Schema changes for MySQL and MariaDB.
+ *
+ * Both commit at every statement that changes a table's definition,
+ * whatever transaction is open, so a schema change here is never rolled
+ * back: each statement stands once it has run.
+ *
+ * Tables are created with InnoDB, the engine that enforces foreign
+ * keys, and `utf8mb4`, the character set that holds all of Unicode.
+ * Indexes are declared inside `create table`, so `if_not_exists` covers
+ * them with the table. A text, binary or JSON column can carry a
+ * default only as an expression, so its default is written in
+ * parentheses.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import ..ddl { DdlAdapter }
+import ..errors {
+  ForeignKeyViolation, NotNullViolation, NotSupportedError, QueryError,
+}
+
+# The kinds MySQL holds as text or bytes of any length, which it cannot
+# index whole and gives a default only as an expression.
+var _UNBOUNDED = ['text', 'binary', 'json']
+
+# How long, in seconds, one GET_LOCK call waits before it is asked
+# again. MariaDB refuses the negative timeout MySQL reads as no limit,
+# so the wait is a long one, repeated.
+var _LOCK_WAIT = 3600
+
+/**
+ * Turns blueprints into the statements MySQL and MariaDB share.
+ */
+class MySqlDdl < DdlAdapter {
+
+  /**
+   * @param Column column
+   * @returns string
+   */
+  type_name(column) {
+    using column.kind {
+      when 'integer' return 'int'
+      when 'big_integer' return 'bigint'
+      when 'small_integer' return 'smallint'
+      when 'float' return 'double'
+      when 'decimal' {
+        return 'decimal(${column.precision}, ${column.scale})'
+      }
+      when 'string' return 'varchar(${column.length})'
+      when 'text' return 'longtext'
+      when 'boolean' return 'tinyint(1)'
+      when 'date' return 'date'
+      when 'datetime' return 'datetime(6)'
+      when 'time' return 'time(6)'
+      when 'binary' return 'longblob'
+      when 'json' return 'json'
+      when 'uuid' return 'char(36)'
+    }
+
+    raise QueryError('MySQL has no column type for ${column.kind}')
+  }
+
+  /**
+   * @param Column column
+   * @returns string
+   */
+  key_definition(column) {
+    return 'bigint auto_increment primary key'
+  }
+
+  /**
+   * @returns string
+   */
+  exact_collation() {
+    return 'collate utf8mb4_bin'
+  }
+
+  /**
+   * @param bool value
+   * @returns string
+   */
+  boolean_literal(value: bool) {
+    return value ? '1' : '0'
+  }
+
+  /**
+   * A string as a literal. One holding a backslash is written as hex
+   * with a character set, which reads the same whether or not the
+   * server treats a backslash as an escape.
+   *
+   * @param string text
+   * @returns string
+   */
+  string_literal(text: string) {
+    if text.contains('\\') {
+      var digits = ''.join(text
+        .to_bytes()
+        .to_list()
+        .map(@(byte) => byte.hex().lpad(2, '0')))
+      return "_utf8mb4 X'" + digits + "'"
+    }
+
+    return "'" + text.replace("'", "''") + "'"
+  }
+
+  /**
+   * @param Column column
+   * @returns string
+   */
+  current_default(column) {
+    return 'current_timestamp(6)'
+  }
+
+  /**
+   * @returns string
+   */
+  table_suffix() {
+    return ' engine=InnoDB default charset=utf8mb4'
+  }
+
+  /**
+   * @param Column column
+   * @returns bool
+   */
+  parenthesised_default(column) {
+    return _UNBOUNDED.contains(column.kind)
+  }
+
+  /**
+   * @returns bool
+   */
+  inline_indexes() {
+    return true
+  }
+
+  /**
+   * Refuses an index on a text, binary or JSON column described
+   * alongside it, which MySQL cannot index whole.
+   *
+   * @param string table
+   * @param list[string] columns
+   * @param list[Column] described
+   * @throws NotSupportedError for such a column.
+   */
+  check_index(table: string, columns: list, described: list) {
+    for column in described {
+      if columns.contains(column.name) and _UNBOUNDED.contains(column.kind) {
+        raise NotSupportedError(
+          'MySQL cannot index ${column.name} of ${table}, a ${column.kind} column, ' +
+            'whole; index a string() column instead',
+          { driver: self.driver.name() },
+        )
+      }
+    }
+  }
+
+  /**
+   * Adds a column, refusing a required one with no default while the
+   * table has rows. MySQL would fill them with a value of its own
+   * choosing; the other engines refuse, and so does this.
+   *
+   * @param Connection connection
+   * @param string table
+   * @param Column column
+   * @throws NotNullViolation for a required column with no default on
+   *    a table with rows.
+   */
+  add_column(connection, table: string, column) {
+    var filled = column.is_nullable or column.has_default or
+      column.is_current or
+      column.is_generated
+
+    if !filled {
+      var rows = connection.fetch_value(
+        'select count(*) from (select 1 from ${self.table_name(table)} limit 1) as probe',
+        nil, 0,
+      )
+
+      if rows > 0 {
+        raise NotNullViolation(
+          '${column.name} is required and has no default, so it cannot be added ' +
+            'to ${table} while ${table} has rows',
+          { driver: self.driver.name() },
+        )
+      }
+    }
+
+    parent.add_column(connection, table, column)
+  }
+
+  /**
+   * @param Connection connection
+   * @param string table
+   * @param Column column
+   * @returns list[string]
+   */
+  change_column(connection, table: string, column) {
+    if column.is_generated {
+      raise QueryError('an id() column cannot be changed; ${column.name} is one')
+    }
+
+    var target = self.table_name(table)
+    var statements = ['alter table ${target} modify column ${self.column_definition(column)}']
+
+    if column.foreign != nil {
+      statements.append(
+        'alter table ${target} add '
+          + self.foreign_key_sql(table, column.foreign),
+      )
+    }
+
+    return statements
+  }
+
+  /**
+   * Drops the foreign keys and indexes the column is part of before
+   * the column. MySQL would otherwise refuse while a key uses it, and
+   * take the column out of a composite index rather than drop it.
+   *
+   * @param Connection connection
+   * @param string table
+   * @param string name
+   * @returns list[string]
+   */
+  drop_column(connection, table: string, name: string) {
+    var place = self._place(table)
+    var target = self.table_name(table)
+
+    var keys = connection.fetch_column(
+      'select distinct constraint_name from information_schema.key_column_usage ' +
+        'where table_schema = ${place.schema} and table_name = ? and column_name = ? ' +
+        'and referenced_table_name is not null',
+      place.values + [place.name, name],
+      nil,
+    )
+
+    var indexes = connection.fetch_column(
+      'select distinct index_name from information_schema.statistics ' +
+        "where table_schema = ${place.schema} and table_name = ? and column_name = ? " +
+        "and index_name <> 'PRIMARY'",
+      place.values + [place.name, name],
+      nil,
+    )
+
+    var statements = []
+
+    for key in keys {
+      statements.append('alter table ${target} drop foreign key ${self.quote(key)}')
+    }
+
+    for index in indexes {
+      statements.append('drop index ${self.quote(index)} on ${target}')
+    }
+
+    statements.append('alter table ${target} drop column ${self.quote(name)}')
+
+    return statements
+  }
+
+  /**
+   * @param Connection connection
+   * @param string table
+   * @param string name
+   * @returns list[string]
+   */
+  drop_index(connection, table: string, name: string) {
+    return ['drop index ${self.quote(name)} on ${self.table_name(table)}']
+  }
+
+  /**
+   * Drops the key, and the index of the same name InnoDB made for it
+   * when the key was added, so what is left is what the other engines
+   * leave.
+   *
+   * @param Connection connection
+   * @param string table
+   * @param string name
+   * @returns list[string]
+   */
+  drop_foreign(connection, table: string, name: string) {
+    var place = self._place(table)
+    var target = self.table_name(table)
+    var statements = ['alter table ${target} drop foreign key ${self.quote(name)}']
+
+    var indexed = connection.fetch_value(
+      'select count(*) from information_schema.statistics where table_schema = ' +
+        '${place.schema} and table_name = ? and index_name = ?',
+      place.values + [place.name, name],
+      0,
+    )
+
+    if indexed > 0 {
+      statements.append('drop index ${self.quote(name)} on ${target}')
+    }
+
+    return statements
+  }
+
+  /**
+   * @param Connection connection
+   * @param string table
+   * @returns list[string]
+   */
+  drop_primary(connection, table: string) {
+    return ['alter table ${self.table_name(table)} drop primary key']
+  }
+
+  /**
+   * @param Connection connection
+   * @param string table
+   * @param dict options
+   */
+  drop_table(connection, table: string, options: dict) {
+    catch {
+      parent.drop_table(connection, table, options)
+    } as error {
+      # MariaDB reports a table that foreign keys still refer to as a
+      # broken foreign key, the way it reports a refused delete. During a
+      # drop it can only mean the drop cannot run, which is how MySQL and
+      # the other engines report it.
+      if instance_of(error, ForeignKeyViolation) {
+        raise QueryError(error.message, {
+          code: error.code,
+          sqlstate: error.sqlstate,
+          driver: error.driver,
+          query: error.query,
+        })
+      }
+
+      raise error
+    }
+  }
+
+  /**
+   * @param Connection connection
+   * @param string from
+   * @param string to
+   */
+  rename_table(connection, from: string, to: string) {
+    self.run(
+      connection,
+      ['rename table ${self.table_name(from)} to ${self.table_name(to)}'],
+    )
+  }
+
+  /**
+   * Holds the named lock `GET_LOCK` takes while `body` runs, waiting
+   * for another session holding it to let go, however long it takes.
+   *
+   * @param Connection connection
+   * @param string name
+   * @param function body
+   * @returns any What `body` returned.
+   * @throws QueryError when the server answers the request for the
+   *    lock with an error rather than the lock, and `body` never runs.
+   */
+  migration_lock(connection, name: string, body: function) {
+    var granted = 0
+
+    while granted == 0 {
+      granted = connection.fetch_value(
+        'select get_lock(?, ?)', [name, _LOCK_WAIT], nil,
+      )
+    }
+
+    if granted != 1 {
+      raise QueryError('the server would not take the lock ${name}')
+    }
+
+    var result
+
+    catch {
+      result = body()
+    } as error {
+      connection.fetch_value('select release_lock(?)', [name], nil)
+      raise error
+    }
+
+    connection.fetch_value('select release_lock(?)', [name], nil)
+
+    return result
+  }
+
+  # The database a table is in, as SQL and the values it binds, and the
+  # table's own name.
+  _place(table) {
+    var parts = table.split('.')
+
+    if parts.length() > 1 {
+      return { schema: '?', values: [parts[0]], name: '.'.join(parts[1,]) }
+    }
+
+    return { schema: 'database()', values: [], name: table }
+  }
+}

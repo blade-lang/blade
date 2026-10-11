@@ -243,6 +243,32 @@ def canonical(linker, path: string, occurrence: dict) {
   }
 }
 
+/**
+ * The declarations a member occurrence may stand for when its receiver
+ * is of a union type: the member on each of the union's types that has
+ * it. `nil` for any other occurrence, which stands for the one
+ * declaration `canonical()` gives.
+ *
+ * @param Linker linker
+ * @param string path
+ * @param dict occurrence
+ * @returns ?list[dict]
+ */
+def declarations(linker, path: string, occurrence: dict) {
+  if occurrence.kind != 'member' {
+    return nil
+  }
+
+  var access = linker.summary(path).members[occurrence.member]
+  var owner = linker.resolve(access.receiver)
+
+  if owner == nil or owner.t != 'union' {
+    return nil
+  }
+
+  return linker.declarations(owner, access.name)
+}
+
 # An import's name stands for what it imports; anything else stands
 # for itself.
 def _declaration(linker, ref) {
@@ -300,7 +326,12 @@ def is_shared(linker, ref) {
 
 /**
  * Every place the declaration `target` is named, in the files at
- * `paths`, as `{ path, start, end, write, declaration }`.
+ * `paths`, as `{ path, start, end, write, declaration, several }`.
+ *
+ * A member reached through a value of a union type names its
+ * declaration on each of the union's types, and is marked `several`:
+ * renaming one of them alone would leave that use reaching the others
+ * under the old name.
  *
  * @param Linker linker
  * @param dict target: `{ path, index }`.
@@ -347,7 +378,14 @@ def references(linker, target: dict, paths: list, include_declaration: bool) {
         continue
       }
 
-      if is_declaration or same(canonical(linker, path, occurrence), target) {
+      var several = is_declaration
+        ? nil
+        : declarations(linker, path, occurrence)
+      var named = several == nil
+        ? same(canonical(linker, path, occurrence), target)
+        : several.some(@(ref) => same(ref, target))
+
+      if is_declaration or named {
         var write = occurrence.kind == 'ref' and occurrence.flags & 1 != 0
 
         if occurrence.kind == 'member' {
@@ -360,6 +398,7 @@ def references(linker, target: dict, paths: list, include_declaration: bool) {
           end: occurrence.end,
           write,
           declaration: is_declaration,
+          several: several != nil,
         })
       }
     }

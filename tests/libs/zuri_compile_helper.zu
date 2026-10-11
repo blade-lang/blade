@@ -1,0 +1,8 @@
+# Imported both by an import statement and by zuri.import_file() in
+# zuri_compile.zu, which checks the two reach the same module.
+
+var loads = []
+
+def greet(name) {
+  return 'hello ' + name
+}

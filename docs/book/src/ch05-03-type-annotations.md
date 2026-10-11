@@ -173,6 +173,24 @@ echo distance_from_origin(Point(3, 4))
 5
 ```
 
+The name means what it would mean in the function's body, so the class
+can be declared in the same file, brought in with an import, or held in
+a variable the function can see:
+
+```zuri
+import date { Date, from_time }
+
+def year_of(moment: Date) {
+  return moment.year
+}
+
+echo year_of(from_time(0))
+```
+
+```console
+1970
+```
+
 This is what makes error handling readable, since every built-in error
 subclasses `Error`:
 

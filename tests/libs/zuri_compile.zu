@@ -6,7 +6,10 @@
  * through a Closure instruction.
  */
 
+import os
 import zuri
+
+import .zuri_compile_helper as helper
 
 var _passed = 0
 
@@ -209,6 +212,78 @@ var file_problems = zuri.check_file(check_path)
 assert file_problems.length() == 1, 'check_file() checks the file content'
 assert file_problems[0].message == "'continue' used outside of a loop", 'and reports it'
 ok('check_file() reads and checks a real file')
+
+# ---------------------------------------------------------------------------
+# import_file()
+# ---------------------------------------------------------------------------
+var helper_path = os.join_paths(os.dir_name(__file__), 'zuri_compile_helper.zu')
+var imported = zuri.import_file(helper_path)
+
+assert imported == helper, 'import_file() returns the module an import statement gave'
+assert imported.greet('Ada') == 'hello Ada', 'its members are reached as on any module'
+
+helper.loads.append('first')
+assert zuri.import_file(helper_path).loads.length() == 1, 'and its top level does not run again'
+ok('import_file() shares the import cache')
+
+var scratch = os.create_temp_dir('zuri-import-file-')
+var plugin_dir = os.join_paths(scratch, 'plugin')
+
+os.create_dir(plugin_dir)
+
+var plain = file(os.join_paths(scratch, 'plain.zu'), 'w')
+plain.write('var name = "plain"\n')
+plain.close()
+
+var package = file(os.join_paths(plugin_dir, 'index.zu'), 'w')
+package.write('var name = "package"\n')
+package.close()
+
+assert zuri.import_file(os.join_paths(scratch, 'plain')).name == 'plain', 'a path without an extension finds the .zu file'
+assert zuri.import_file(plugin_dir).name == 'package', 'a directory finds its index.zu'
+
+var started_in = os.cwd()
+os.change_dir(scratch)
+
+var relative = zuri.import_file('plain.zu')
+
+os.change_dir(started_in)
+assert relative.name == 'plain', 'a relative path is taken from the working directory'
+ok('import_file() finds a file the way import does')
+
+var missing_kind = nil
+
+catch {
+  zuri.import_file(os.join_paths(scratch, 'missing.zu'))
+} as error {
+  missing_kind = typeof(error)
+}
+
+assert missing_kind == 'ModuleNotFoundError', 'a missing file raises ModuleNotFoundError'
+
+var failing = file(os.join_paths(scratch, 'failing.zu'), 'w')
+failing.write('raise ValueError("raised while loading")\n')
+failing.close()
+
+var raised = nil
+
+catch {
+  zuri.import_file(os.join_paths(scratch, 'failing.zu'))
+} as error {
+  raised = error
+}
+
+assert instance_of(raised, ValueError), 'what the module raises is raised unchanged'
+assert raised.message == 'raised while loading', 'message and all'
+
+var broken = file(os.join_paths(scratch, 'broken.zu'), 'w')
+broken.write('def oops( {\n')
+broken.close()
+
+assert raises(@() { zuri.import_file(os.join_paths(scratch, 'broken.zu')) }), 'a file that does not parse raises'
+ok('import_file() raises what the import raised')
+
+os.remove_dir(scratch, true)
 
 # ===========================================================================
 # Final summary

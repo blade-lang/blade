@@ -20,6 +20,7 @@ import ..driver {
 import ..errors { ConnectionError, NotSupportedError }
 import ..params { NUMBERED }
 import .connection { PostgresConnection }
+import .ddl { PostgresDdl }
 import .messages { Writer, SSL_REQUEST }
 import .protocol { Protocol }
 import .types { DEFAULT_REGISTRY }
@@ -54,6 +55,8 @@ var SSL_MODES = ['disable', 'prefer', 'require']
  * Opens PostgreSQL connections.
  */
 class PostgresDriver < Driver {
+  var _ddl
+
   name() {
     return 'postgres'
   }
@@ -92,6 +95,19 @@ class PostgresDriver < Driver {
     caps.set('default_port', DEFAULT_PORT)
 
     return caps
+  }
+
+  /**
+   * PostgreSQL's schema changes, from `PostgresDdl`.
+   *
+   * @returns PostgresDdl
+   */
+  ddl() {
+    if self._ddl == nil {
+      self._ddl = PostgresDdl(self)
+    }
+
+    return self._ddl
   }
 
   /**

@@ -88,6 +88,9 @@ var SPECIFIC = {
   # A statement the server's own configuration forbids, which in
   # practice is nearly always a write to a read-only replica.
   1290: QueryError,
+
+  # Dropping a table a foreign key of another table still refers to.
+  3730: QueryError,
 }
 
 /**

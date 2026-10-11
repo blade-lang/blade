@@ -758,9 +758,25 @@ var p8 = date.parse('2024-06-15T14:30:00.123456Z')
 check('ISO fractional microseconds', p8.microseconds, 123456)
 check('ISO fractional hour still correct', p8.hour, 14)
 
-# Fractional seconds shorter than 6 digits
+# Fractional seconds shorter than 6 digits are a fraction all the same:
+# .123 is 123 milliseconds and .5 half a second.
 var p9 = date.parse('2024-06-15T14:30:00.123Z')
-check('ISO 3-digit fractional',   p9.microseconds, 123)
+check('ISO 3-digit fractional',   p9.microseconds, 123000)
+check('ISO 1-digit fractional',   date.parse('2024-06-15T14:30:00.5Z').microseconds, 500000)
+check('ISO leading-zero fraction', date.parse('2024-06-15 14:30:00.000005').microseconds, 5)
+
+# Digits finer than a microsecond are read over, and the offset after
+# them still counts.
+var p9n = date.parse('2024-06-15T14:30:00.123456789+01:00')
+check('ISO nanosecond digits truncated', p9n.microseconds, 123456)
+check('ISO offset after nanoseconds',    p9n.gmt_offset, 3600)
+
+# Formatting pads the fraction, so it reads back as written.
+var p9f = date.Date(2024, 6, 15, 14, 30, 0, 5)
+check('format u pads to six digits',  p9f.format('u'), '000005')
+check('format v pads to three digits', p9f.format('v'), '000')
+check('padded fraction round-trips',  date.parse(p9f.format('Y-m-d\\TH:i:s.uP')).microseconds, 5)
+check('parse_format u reads a fraction', date.parse_format('14:30:00.25', 'H:i:s.u').microseconds, 250000)
 
 # GMT named timezone
 var p10 = date.parse('2024-06-15T14:30:00 GMT')

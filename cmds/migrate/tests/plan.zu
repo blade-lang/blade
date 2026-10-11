@@ -1,0 +1,160 @@
+# What `zuri migrate` makes of its command line, its environment and
+# the project it runs in.
+
+import os
+import test { * }
+
+import ..plan
+
+var ROOT = os.create_temp_dir('zuri-migrate-plan-')
+var PROJECT = os.join_paths(ROOT, 'project')
+var STARTED_IN = os.cwd()
+
+def put(path: string, text: string) {
+  os.create_dir(os.dir_name(path), 0c755, true)
+
+  var handle = file(path, 'w')
+  handle.write(text)
+  handle.close()
+}
+
+def settings(words: list) {
+  return plan.settings(plan.parser().parse(words))
+}
+
+def failure(body: function) {
+  catch {
+    body()
+  } as error {
+    return error.message
+  }
+
+  return nil
+}
+
+before_each(@{
+  if os.dir_exists(PROJECT) {
+    os.remove_dir(PROJECT, true)
+  }
+
+  put(os.join_paths(PROJECT, 'project.toml'), '[project]\nname = "app"\n')
+  os.create_dir(os.join_paths(PROJECT, 'deep', 'down'), 0c755, true)
+  os.change_dir(os.join_paths(PROJECT, 'deep', 'down'))
+  os.set_env('DATABASE_URL', '', true)
+})
+
+after_all(@{
+  os.change_dir(STARTED_IN)
+  os.remove_dir(ROOT, true)
+})
+
+describe('the command', @{
+  it('applies pending migrations when given none', @{
+    expect(settings(['--database', 'app.db']).command).to_equal('up')
+  })
+
+  it('takes the names of new migrations, and no database', @{
+    var chosen = settings(['new', 'create_posts', 'add_slug_to_posts'])
+
+    expect(chosen.command).to_equal('new')
+    expect(chosen.names).to_equal(['create_posts', 'add_slug_to_posts'])
+    expect(chosen.database).to_be_nil()
+  })
+
+  it('takes one name as a list of one', @{
+    expect(settings(['new', 'create_posts']).names).to_equal(['create_posts'])
+  })
+
+  it('refuses a name with a space or a dash in it', @{
+    expect(failure(@{
+      settings(['new', 'create posts'])
+    })).to_contain('"create posts" is not a migration name')
+    expect(failure(@{
+      settings(['new', 'create_posts', 'add-slug'])
+    })).to_contain('"add-slug" is not a migration name')
+  })
+
+  it('has no names for any other command', @{
+    expect(settings(['status', '-d', 'a.db']).names).to_be_nil()
+  })
+})
+
+describe('where things are', @{
+  it('finds the migrations in the project, from anywhere inside it', @{
+    var chosen = settings(['status', '--database', 'app.db'])
+
+    expect(chosen.directory).to_equal(os.join_paths(
+      os.abs_path(PROJECT), 'migrations',
+    ))
+    expect(chosen.table).to_equal('zuri_migrations')
+  })
+
+  it('takes a directory and a table of its own', @{
+    var chosen = settings([
+      '--dir', 'elsewhere', '--table', 'versions', '-d', 'app.db',
+    ])
+
+    expect(chosen.directory).to_equal(os.abs_path('elsewhere'))
+    expect(chosen.table).to_equal('versions')
+  })
+})
+
+describe('the database', @{
+  it('comes from the flag first', @{
+    os.set_env('DATABASE_URL', 'sqlite://from-the-environment.db', true)
+    expect(settings([
+      '-d', 'sqlite://flag.db',
+    ]).database).to_equal('sqlite://flag.db')
+  })
+
+  it('then from the environment', @{
+    os.set_env('DATABASE_URL', 'sqlite://from-the-environment.db', true)
+    put(
+      os.join_paths(PROJECT, '.env'),
+      'DATABASE_URL=sqlite://from-the-file.db\n',
+    )
+
+    expect(settings([]).database).to_equal('sqlite://from-the-environment.db')
+  })
+
+  it('then from the project .env', @{
+    put(
+      os.join_paths(PROJECT, '.env'),
+      'DATABASE_URL=sqlite://from-the-file.db\n',
+    )
+    expect(settings(['status']).database).to_equal('sqlite://from-the-file.db')
+  })
+
+  it('is required for everything but new', @{
+    expect(failure(@{
+      settings(['status'])
+    })).to_contain('there is no database to migrate')
+  })
+})
+
+describe('limits', @{
+  it('take steps or a name', @{
+    expect(settings(['down', '--steps', '2', '-d', 'a.db']).steps).to_equal(2)
+    expect(settings([
+      'up', '--to', '001_first', '-d', 'a.db',
+    ]).to).to_equal('001_first')
+  })
+
+  it('refuse both at once', @{
+    expect(failure(@{
+      settings(['down', '--steps', '1', '--to', 'x', '-d', 'a.db'])
+    })).to_contain('give one')
+  })
+
+  it('belong to up and down alone', @{
+    expect(failure(@{
+      settings(['reset', '--steps', '1', '-d', 'a.db'])
+    })).to_contain('go with up and down')
+  })
+
+  it('count from one', @{
+    expect(failure(@{
+      settings(['down', '--steps', '0', '-d', 'a.db'])
+    })).to_contain('a count from 1')
+  })
+})

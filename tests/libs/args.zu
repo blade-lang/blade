@@ -368,6 +368,22 @@ assert required_missing.output.contains('required option --name is missing'),
   'the error message must name the missing required option'
 ok('a missing required option prints a clear error and exits 1')
 
+var command_value = run_helper('args_command_value_error.zu')
+assert command_value.exit_code == 1, 'a command missing its value must exit non-zero'
+assert command_value.output.contains('command "new" expects <name...>'),
+  'the error must name the command and its value placeholder'
+assert command_value.output.contains('Usage: commandval new <name...>'),
+  'the command\'s own usage must follow the error'
+ok('a command missing its value prints its usage and exits 1')
+
+var command_help = run_helper('args_command_value_help.zu')
+assert command_help.exit_code == 0, '--help after a command that takes a value must exit 0'
+assert command_help.output.contains('Usage: commandhelp new <name...>'),
+  'the command\'s own usage must be shown'
+assert !command_help.output.contains('error:'),
+  'asking for help is not a missing value'
+ok('--help after a command that takes a value shows its usage and exits 0')
+
 # ---------------------------------------------------------------------------
 # Declare-time errors: these raise ArgsError directly (not via
 # os.exit()), since they happen at add_option()/add_command() call time,

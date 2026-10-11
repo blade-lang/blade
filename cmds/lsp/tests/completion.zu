@@ -10,6 +10,14 @@ var FIXTURE = os.join_paths(os.dir_name(__file__), '_fixture')
 var SCRATCH = os.join_paths(FIXTURE, 'scratch.zu')
 var client = nil
 
+var UNION = 'import sql { Blueprint, Connection, Transaction }\n\n' +
+  'def up(db: Transaction|Connection) {\n' +
+  "  db.schema.create_table('posts', @(table: Blueprint) {\n" +
+  '    table.id()\n' +
+  '  })\n' +
+  "  db.exec('select 1', nil)\n" +
+  '}\n'
+
 # The labels completion offers at the end of `source`, or just past
 # `marker` when one is given.
 def labels_at(source: string, marker) {
@@ -76,6 +84,28 @@ describe('members', @{
     expect(labels_at(
       'var point = { x: 1, y: 2 }\necho point.', nil,
     )).to_contain_all(['x', 'y'])
+  })
+
+  it('offers a union the members every one of its types has', @{
+    var found = labels_at(UNION, '  db.')
+
+    expect(found).to_contain_all([
+      'exec', 'fetch_all', 'insert', 'count', 'schema', 'model',
+    ])
+    expect(found).not.to_contain('commit')
+    expect(found).not.to_contain('close')
+  })
+
+  it('follows a member both types of a union declare alike', @{
+    expect(labels_at(UNION, 'db.schema.')).to_contain_all([
+      'create_table', 'alter_table', 'drop_table', 'has_table',
+    ])
+  })
+
+  it('offers a callback parameter the members of its class', @{
+    expect(labels_at(UNION, '    table.')).to_contain_all([
+      'id', 'string', 'timestamps', 'foreign',
+    ])
   })
 
   it('offers self its private members, and other receivers not', @{

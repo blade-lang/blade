@@ -1,0 +1,131 @@
+/**
+ * What `zuri migrate` was asked to do, worked out before anything
+ * touches a database.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+import args
+import env
+import os
+import sql.migrate { DEFAULT_DIRECTORY, DEFAULT_TABLE, is_name }
+
+import .._shared.errors { UsageError }
+import .._shared.paths
+
+/**
+ * The command's parser.
+ *
+ * @returns args.Parser
+ */
+def parser() {
+  var parser = args.Parser('migrate', false)
+
+  parser.description = 'Applies, rolls back and reports database migrations.'
+  parser.epilog = 'With no subcommand, every pending migration is applied.'
+
+  parser.add_option('database',
+    'The connection string; DATABASE_URL, from the environment or .env, by default',
+    { short_name: 'd', type: args.STRING, metavar: 'url' })
+  parser.add_option('dir',
+    'The directory of migrations; migrations in the project by default',
+    { type: args.STRING, metavar: 'path' })
+  parser.add_option('table',
+    'The table recording migrations; ${DEFAULT_TABLE} by default',
+    { type: args.STRING, metavar: 'name' })
+  parser.add_option('steps',
+    'With up or down, how many migrations at most',
+    { short_name: 's', type: args.INT, metavar: 'count' })
+  parser.add_option('to',
+    'With up, the last migration to apply; with down, the one to leave latest',
+    { type: args.STRING, metavar: 'name' })
+
+  parser.add_command('up', 'Applies pending migrations')
+  parser.add_command('status', 'Lists every migration and whether it has run')
+  parser.add_command('down', 'Rolls back the latest batch, or --steps, or --to')
+  parser.add_command('reset', 'Rolls back every migration')
+  parser.add_command('new', 'Writes a new, empty migration for each <name>',
+    { type: args.LIST, metavar: 'name' })
+
+  return parser
+}
+
+/**
+ * The settings for a parse of the command line.
+ *
+ * The project is the nearest directory above the working directory
+ * holding a `project.toml`, or the working directory when there is
+ * none. Its `.env` is read into the environment first, without
+ * replacing anything already set there.
+ *
+ * @param args.Result parsed
+ * @returns dict: `{ command, names, database, directory, table, steps,
+ *    to }`, where `names` is the list given to `new` and nil for every
+ *    other command.
+ * @throws UsageError for options that do not go together, a name `new`
+ *    cannot use, or no database where one is needed.
+ */
+def settings(parsed) {
+  var root = paths.find_root(nil)
+  var base = root == nil ? os.cwd() : root
+  var command = parsed.command == nil ? 'up' : parsed.command.name
+  var options = parsed.options
+  var steps = options.get('steps', nil)
+  var to = options.get('to', nil)
+
+  if steps != nil and to != nil {
+    raise UsageError('--steps and --to say the same thing two ways; give one')
+  }
+
+  if (steps != nil or to != nil) and command != 'up' and command != 'down' {
+    raise UsageError('--steps and --to go with up and down, not ${command}')
+  }
+
+  if steps != nil and steps < 1 {
+    raise UsageError('--steps is a count from 1, not ${steps}')
+  }
+
+  var names = command == 'new' ? parsed.command.value : nil
+
+  if names != nil {
+    for name in names {
+      if !is_name(name) {
+        raise UsageError(
+          '"${name}" is not a migration name; use letters, digits and ' +
+            'underscores, such as create_posts',
+        )
+      }
+    }
+  }
+
+  var directory = options.get('dir', nil)
+
+  directory = directory == nil
+    ? os.join_paths(base, DEFAULT_DIRECTORY)
+    : os.abs_path(directory)
+
+  var database = options.get('database', nil)
+
+  if database == nil and command != 'new' {
+    env.load(os.join_paths(base, '.env'))
+
+    database = os.get_env('DATABASE_URL', nil)
+
+    if database == nil or database.trim().is_empty() {
+      raise UsageError(
+        'there is no database to migrate; pass --database, or set DATABASE_URL ' +
+          'in the environment or in ${os.join_paths(base, ".env")}',
+      )
+    }
+  }
+
+  return {
+    command,
+    names,
+    database,
+    directory,
+    table: options.get('table', DEFAULT_TABLE),
+    steps,
+    to,
+  }
+}

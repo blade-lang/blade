@@ -670,8 +670,8 @@ class Date {
    * G         | 24 hour format of an hour without leading zeros           | 1 - 24
    * i         | minutes with leading zero                                 | 00 - 59
    * s         | seconds with leading zero                                 | 00 - 59
-   * u         | microseconds                                              | e.g. 987654
-   * v         | milliseconds                                              | e.g. 987
+   * u         | microseconds, always six digits                           | 000005 - 999999
+   * v         | milliseconds, always three digits                         | 000 - 999
    * e         | timezone identifier                                       | e.g. GMT, UTC, WAT
    * I         | whether or not the date is in daylight saving time        | 1 for true, 0 otherwise
    * O         | difference to GMT without colon between hours and minutes | e.g. +0100
@@ -810,10 +810,10 @@ class Date {
           result += self.seconds <= 9 ? '0${self.seconds}' : self.seconds
         }
         when 'u' {
-          result += self.microseconds
+          result += '${self.microseconds}'.lpad(6, '0')
         }
         when 'v' {
-          result += (self.microseconds / 1000).int()
+          result += '${(self.microseconds / 1000).int()}'.lpad(3, '0')
         }
         when 'S' {
           if (self.day % 100) >= 11 and (self.day % 100) <= 13 {
@@ -1237,8 +1237,16 @@ class Date {
     return self.to_string()
   }
 
+  /**
+   * What `json.encode()` writes for the date: ISO 8601 text with the
+   * microseconds and the offset, such as
+   * `2026-10-11T12:30:45.000005+01:00`, which is the form JavaScript's
+   * `Date` and every HTTP API read. `to_dict()` gives the parts.
+   *
+   * @returns string
+   */
   @to_json() {
-    return self.to_dict()
+    return self.format('Y-m-d\\TH:i:s.uP')
   }
 
   @to_number() {
@@ -1622,6 +1630,36 @@ def _scan_int(s, pos, max_digits) {
   return [s[start, pos].to_number(), pos]
 }
 
+# Read the digits of a fraction of a second; returns [microseconds,
+# new_pos], or [-1, pos] when there are none. The digits are a
+# fraction, so `.5` is half a second and `.123` is 123 milliseconds.
+# Digits past the sixth are finer than a microsecond: they are read
+# over and dropped.
+def _scan_fraction(s, pos) {
+  var start = pos
+  var len = s.length()
+
+  while pos < len and _is_digit(s[pos]) {
+    pos++
+  }
+
+  if pos == start {
+    return [-1, start]
+  }
+
+  var digits = s[start, pos]
+
+  if digits.length() > 6 {
+    digits = digits[0, 6]
+  }
+
+  while digits.length() < 6 {
+    digits += '0'
+  }
+
+  return [digits.to_number(), pos]
+}
+
 # Read a run of ASCII alpha characters; returns [token_lower, new_pos].
 def _scan_alpha(s, pos) {
   var start = pos
@@ -1852,7 +1890,7 @@ def _auto_parse(s) {
 
       if pos < s.length() and s[pos] == '.' {
         pos++
-        var us_r = _scan_int(s, pos, 6)
+        var us_r = _scan_fraction(s, pos)
         if us_r[0] >= 0 {
           f.microseconds = us_r[0]
           pos = us_r[1]
@@ -1901,7 +1939,7 @@ def _auto_parse(s) {
         # Fractional seconds
         if pos < s.length() and s[pos] == '.' {
           pos++
-          var us_r = _scan_int(s, pos, 6)
+          var us_r = _scan_fraction(s, pos)
           if us_r[0] >= 0 {
             f.microseconds = us_r[0]
             pos = us_r[1]
@@ -2216,7 +2254,7 @@ def _auto_parse(s) {
     var us = 0
     if pos < str.length() and str[pos] == '.' {
       pos++
-      var us_r = _scan_int(str, pos, 6)
+      var us_r = _scan_fraction(str, pos)
       if us_r[0] >= 0 {
         us = us_r[0]
         pos = us_r[1]
@@ -2308,8 +2346,9 @@ def _auto_parse(s) {
 #   g : 12-hour hour without leading zero (1-12)
 #   i : minutes with leading zero (00-59)
 #   s : seconds with leading zero (00-59)
-#   u : microseconds (up to 6 digits)
-#   v : milliseconds (up to 3 digits; stored as microseconds × 1000)
+#   u : a fraction of a second, its digits read as a fraction (`5` is
+#       half a second, `000005` five microseconds), to the microsecond
+#   v : the same; written by `format()` as three digits of milliseconds
 #   A : uppercase AM/PM
 #   a : lowercase am/pm
 #   e : timezone name/identifier
@@ -2509,16 +2548,16 @@ def _format_parse(s, fmt) {
 
       # ---- Subseconds ----
       when 'u' {
-        var r = _scan_int(s, spos, 6)
+        var r = _scan_fraction(s, spos)
         if r[0] >= 0 {
           f.microseconds = r[0]
           spos = r[1]
         }
       }
       when 'v' {
-        var r = _scan_int(s, spos, 3)
+        var r = _scan_fraction(s, spos)
         if r[0] >= 0 {
-          f.microseconds = r[0] * 1000
+          f.microseconds = r[0]
           spos = r[1]
         }
       }
@@ -2788,8 +2827,8 @@ def parse(date_string) {
  * `g`       | 12-hour hour without leading zero (1–12)                | `2`
  * `i`       | Minutes with leading zero (00–59)                       | `30`
  * `s`       | Seconds with leading zero (00–59)                       | `00`
- * `u`       | Microseconds (up to 6 digits)                           | `123456`
- * `v`       | Milliseconds (up to 3 digits)                           | `123`
+ * `u`       | Fraction of a second, digits read as a fraction         | `5`, `123456`
+ * `v`       | Fraction of a second, digits read as a fraction         | `5`, `123`
  * `A`       | Uppercase AM/PM                                         | `PM`
  * `a`       | Lowercase am/pm                                         | `pm`
  * `e`       | Timezone name/identifier                                | `UTC`

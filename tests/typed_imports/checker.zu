@@ -1,0 +1,9 @@
+# A function annotated with an imported class, called once this module
+# has finished loading, by which time the import it reads is no longer
+# a live register of a running script.
+
+import .shapes { Shape }
+
+def accepts(shape: Shape) {
+  return true
+}

@@ -1,0 +1,10 @@
+# The classes annotations.zu and checker.zu name in their annotations,
+# brought in with selective imports.
+
+class Shape {}
+
+class Circle < Shape {}
+
+class Plain {}
+
+var VERSION = 1

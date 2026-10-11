@@ -1,0 +1,6 @@
+# A class sharing its name with one in zuri_reflect.zu, so the suite
+# can tell two same-named classes apart.
+
+class Animal {
+  var name = 'elsewhere'
+}

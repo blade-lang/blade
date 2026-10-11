@@ -8,6 +8,8 @@
 
 import zuri
 
+import .zuri_reflect_helper as elsewhere
+
 var _passed = 0
 
 def ok(label) {
@@ -138,11 +140,39 @@ assert zuri.reflect.del_prop(rex, 'nickname') == false,
 ok('del_prop() resets an existing field and refuses an undeclared one')
 
 # ---------------------------------------------------------------------------
+# class_of()
+# ---------------------------------------------------------------------------
+assert zuri.reflect.class_of(Animal('Rex')) == Animal, 'class_of() returns the class itself'
+assert zuri.reflect.class_of(Dog('Fido')) == Dog, 'a subclass instance reports the subclass'
+assert zuri.reflect.class_of(Dog('Fido')) != Animal, 'and not its parent'
+assert zuri.reflect.class_of(Animal('Rex'))('Max').name == 'Max', 'the class it returns can be called'
+
+var twin = elsewhere.Animal()
+assert typeof(twin) == typeof(Animal('Rex')), 'two classes named Animal give the same typeof()'
+assert zuri.reflect.class_of(twin) == elsewhere.Animal, 'class_of() finds the right one'
+assert zuri.reflect.class_of(twin) != Animal, 'and tells it from the other'
+
+var by_class = {}
+by_class.set(zuri.reflect.class_of(twin), 'elsewhere')
+by_class.set(zuri.reflect.class_of(Animal('Rex')), 'here')
+assert by_class.length() == 2, 'the two classes are different dictionary keys'
+
+for value in [nil, 1, 'text', [], {}, Animal, add, zuri] {
+  assert zuri.reflect.class_of(value) == nil, 'class_of() is nil for anything but an instance'
+}
+ok('class_of() returns the class an instance was built from')
+
+# ---------------------------------------------------------------------------
 # Module property access
 # ---------------------------------------------------------------------------
 assert zuri.reflect.has_prop(zuri, 'tokenize'), 'the zuri module must have a tokenize member'
 assert !zuri.reflect.has_prop(zuri, 'not_a_real_export'), 'a made-up member name must not be found'
 ok('has_prop()/get_prop() also work against a module')
+
+assert zuri == zuri, 'a module equals itself'
+assert elsewhere == elsewhere, 'so does one imported under another name'
+assert zuri != elsewhere, 'and two modules are not equal'
+ok('modules compare by identity')
 
 # ---------------------------------------------------------------------------
 # Method lookup and binding

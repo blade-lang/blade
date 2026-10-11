@@ -34,6 +34,10 @@ class SqliteCursor < DriverCursor {
   var _closed = false
   var _owned = true
 
+  # The first row, when the step that read it was taken before the
+  # cursor was made.
+  var _first
+
   /**
    * @param ptr statement A prepared native statement, already bound.
    * @param list columns Column descriptors.
@@ -43,13 +47,17 @@ class SqliteCursor < DriverCursor {
    *    statement, which it does for a cursor the connection compiled
    *    and does not for one belonging to a prepared statement the
    *    caller still holds.
+   * @param dict|nil first `{ row }` when the first step was already
+   *    taken, `row` being the row it read or nil when it found none;
+   *    nil when the cursor takes every step itself.
    */
-  @new(statement, columns, conversions, query, owned) {
+  @new(statement, columns, conversions, query, owned, first) {
     self._statement = statement
     self._columns = columns
     self._conversions = conversions
     self._query = query
     self._owned = owned
+    self._first = first
   }
 
   columns() {
@@ -67,6 +75,18 @@ class SqliteCursor < DriverCursor {
   next_row() {
     if self._closed {
       return nil
+    }
+
+    if self._first != nil {
+      var first = self._first.row
+      self._first = nil
+
+      if first == nil {
+        self.close()
+        return nil
+      }
+
+      return decode_row(first, self._conversions)
     }
 
     var outcome
