@@ -15,7 +15,9 @@
 //! dominator is also its sole predecessor; any merge or loop header starts
 //! fresh, so a write on some other path in is never missed. A field store
 //! also makes its value available to a later read of the same field on
-//! the same object.
+//! the same object. A global is tracked slot by slot: storing one makes
+//! the stored value what a later read of that slot sees, and leaves what
+//! is known about every other global alone.
 
 use rustc_hash::FxHashMap;
 
@@ -163,7 +165,17 @@ fn visit(
       Op::BytesStore => versions.elems = bump(next),
       Op::DictSet => versions.dicts = bump(next),
       Op::StoreUpval => versions.upvals = bump(next),
-      Op::StoreGlobal(_) => versions.globals = bump(next),
+      Op::StoreGlobal(slot) => {
+        // Only that slot changes, and a read of it next sees the value
+        // just stored. The entry takes the place of whatever a read of
+        // the slot gave before.
+        let key = (
+          Key::Global(GlobalRef::Root(*slot), versions.globals),
+          Vec::new(),
+        );
+        table.insert(key.clone(), inst.args[0]);
+        added.push(key);
+      },
       Op::StoreField(slot) => {
         versions.fields = bump(next);
         // The stored value is what a read of that field sees next.

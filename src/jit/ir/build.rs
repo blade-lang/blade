@@ -984,7 +984,7 @@ impl<'a> Builder<'a> {
       return Err(format!("no runtime helper for {instr:?} at ip {ip}"));
     }
     if let Some(what) = self.baseline_faster(ip, &instr)
-      && !self.passed_once(ip)
+      && !self.constructs_once(ip, &instr)
     {
       let place = if self.cx.id == 0 {
         String::new()
@@ -1002,14 +1002,23 @@ impl<'a> Builder<'a> {
     Ok(false)
   }
 
-  /// Whether `ip` is a site of the compiled function's own that runs once
-  /// a call, outside every one of its loops, in a compile a loop asked
-  /// for. Its helper costs it once a call, which the loop that made the
-  /// function hot, built in this tier, more than repays; so it does not
-  /// send the whole function back to the baseline tier the way a site
-  /// inside the loop does.
-  fn passed_once(&self, ip: usize) -> bool {
-    self.cx.id == 0
+  /// Whether `instr` constructs an instance of a class held in a global, at
+  /// a site of the compiled function's own outside every one of its loops,
+  /// in a compile a loop asked for. The baseline tier builds the instance
+  /// inline and this tier calls the runtime for it, once a call, which the
+  /// loop that made the function hot more than repays when it is built
+  /// here; so it does not send the whole function back to the baseline
+  /// tier. Every other site the baseline tier runs faster still does,
+  /// wherever it sits.
+  fn constructs_once(&self, ip: usize, instr: &Instr) -> bool {
+    let Instr::Call { func, .. } = *instr else {
+      return false;
+    };
+    let constructs = self
+      .callee_global(func)
+      .is_some_and(|global| self.cx.feedback.global_classes.contains(&global));
+    constructs
+      && self.cx.id == 0
       && self
         .func_feedback
         .entries

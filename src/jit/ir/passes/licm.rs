@@ -10,9 +10,10 @@
 //! Pure operations move freely. A guard or a read from memory only moves
 //! from a block every iteration passes through, so it never runs on entry
 //! when the loop body would not have run it; a memory read only moves
-//! when nothing in the loop writes that kind of memory; and nothing that
-//! produces a raw pointer moves out of a loop that can collect, since a
-//! pointer from before a collection is not valid after it.
+//! when nothing in the loop writes that kind of memory (for a global,
+//! that slot); and nothing that produces a raw pointer moves out of a
+//! loop that can collect, since a pointer from before a collection is
+//! not valid after it.
 //!
 //! A guard that moves deoptimizes at the loop header, with the values the
 //! preheader was given: the interpreter then runs the loop from its start,
@@ -21,7 +22,8 @@
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::jit::ir::{
-  BlockId, FrameState, Func, InstId, Op, Terminator, Ty, ValueDef, ValueId, dominates, dominators,
+  BlockId, FrameState, Func, GlobalRef, InstId, Op, Terminator, Ty, ValueDef, ValueId, dominates,
+  dominators,
 };
 
 pub fn run(f: &mut Func) {
@@ -54,7 +56,8 @@ fn hoist_loop(f: &mut Func, header: BlockId, body: &FxHashSet<BlockId>, latches:
   let mut writes_elems = false;
   let mut writes_fields = false;
   let mut writes_upvals = false;
-  let mut writes_globals = false;
+  // The loop stores only to root slots, and only these.
+  let mut written_globals: FxHashSet<u32> = FxHashSet::default();
   for &b in body {
     for &i in &f.block(b).insts {
       match f.inst(i).op {
@@ -65,7 +68,9 @@ fn hoist_loop(f: &mut Func, header: BlockId, body: &FxHashSet<BlockId>, latches:
         },
         Op::StoreField(_) => writes_fields = true,
         Op::StoreUpval => writes_upvals = true,
-        Op::StoreGlobal(_) => writes_globals = true,
+        Op::StoreGlobal(slot) => {
+          written_globals.insert(slot);
+        },
         ref op if op.may_collect() => collects = true,
         _ => {},
       }
@@ -133,7 +138,14 @@ fn hoist_loop(f: &mut Func, header: BlockId, body: &FxHashSet<BlockId>, latches:
         Op::BytesLoad => every_iteration(b) && !collects && !writes_elems,
         Op::LoadElem => every_iteration(b) && !collects && !writes_elems,
         Op::LoadField(_) => every_iteration(b) && !collects && !writes_fields,
-        Op::LoadGlobal(_) => every_iteration(b) && !collects && !writes_globals,
+        Op::LoadGlobal(global) => {
+          every_iteration(b)
+            && !collects
+            && match global {
+              GlobalRef::Root(slot) => !written_globals.contains(slot),
+              GlobalRef::Module { .. } => true,
+            }
+        },
         Op::MethodGeneration => every_iteration(b) && !collects,
         Op::UpvalCell(_) => every_iteration(b) && !collects,
         Op::LoadUpval => every_iteration(b) && !collects && !writes_upvals,
