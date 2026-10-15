@@ -26,7 +26,7 @@ import ..errors { ConnectionError, ProtocolError, QueryError }
 import .auth
 import .errors { raise_for }
 import .messages { * }
-import .types { read_int16, read_int32, read_uint32, text_of }
+import .types { read_int16, read_uint16, read_int32, read_uint32, text_of }
 
 /**
  * Drives one connection's conversation with the server.
@@ -249,7 +249,9 @@ class Protocol {
       var message = self._read()
 
       if message.tag == PARAMETER_DESCRIPTION {
-        var count = read_int16(message.payload, 0)
+        # A statement takes up to 65535 parameters, so the count has to
+        # be read unsigned.
+        var count = read_uint16(message.payload, 0)
 
         for index in 0..count {
           parameters.append(read_uint32(message.payload, 2 + index * 4))

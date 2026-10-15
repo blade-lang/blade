@@ -140,6 +140,35 @@ def test_inserts_and_ids() {
   echo 'test_inserts_and_ids passed'
 }
 
+def test_large_inserts() {
+  var db = connect()
+
+  db.exec_script(
+    'create table wide (id integer primary key, title text, made timestamp)',
+  )
+
+  # Twelve thousand rows of three columns go out as one statement of
+  # 36000 parameters, more than a signed 16 bit count can describe, and
+  # every one of them still binds as the type the server asked for.
+  var made = date.Date(2026, 1, 1, 0, 0, 0)
+  var rows = []
+
+  for i in 0..12000 {
+    rows.append({ id: i, title: 'row ${i}', made })
+  }
+
+  assert db.insert_many('wide', rows) == 12000
+  assert db.count('wide', nil) == 12000
+  assert db.fetch_value('select title from wide where id = 11999', nil, nil) ==
+    'row 11999'
+  assert db.fetch_value(
+    'select count(*) from wide where made = ?', [made], nil,
+  ) == 12000
+
+  finish(db)
+  echo 'test_large_inserts passed'
+}
+
 def test_transactions() {
   var db = connect()
   db.exec_script('create table t (id serial primary key, name text)')
@@ -421,6 +450,7 @@ def run() {
   test_connection()
   test_types()
   test_inserts_and_ids()
+  test_large_inserts()
   test_transactions()
   test_cursors()
   test_prepared()
