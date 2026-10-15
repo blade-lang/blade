@@ -244,7 +244,9 @@ def open(dsn, options) {
     settings.extend(options)
   }
 
-  return Connection(chosen.connect(settings), chosen)
+  var connection = chosen.connect(settings)
+
+  return Connection(connection, chosen.describing(connection))
 }
 
 /**

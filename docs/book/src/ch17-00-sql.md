@@ -151,7 +151,9 @@ sql.open('mariadb://localhost/app')
 ```
 
 The scheme picks the adapter. A string with no scheme at all is taken
-as a SQLite path, since nothing else it could be.
+as a SQLite path, since nothing else it could be. MySQL and MariaDB
+speak one protocol, so either scheme reaches either server, and the
+connection is described by the adapter for the server it found.
 
 Options can also be given as a dictionary, which is how anything an
 adapter accepts beyond the connection string is passed:
@@ -1634,8 +1636,10 @@ true
 MySQL keeps `?` as it is written, and reports the id of an inserted row
 rather than returning it, so `insert()` reads the reported id instead of
 adding a `RETURNING` clause. MariaDB differs in two ways that change
-what the layer above generates, which is why `mariadb://` is a scheme
-of its own: it has `RETURNING`, and it has no JSON type.
+what the layer above generates: it has `RETURNING`, and it has no JSON
+type. The server decides which applies, whatever the scheme: a MariaDB
+server reached through `mysql://` reports `db.driver_name()` as
+`'mariadb'` and `db.supports('json')` as false.
 
 ### What arrives from where
 

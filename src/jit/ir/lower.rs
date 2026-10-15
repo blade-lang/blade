@@ -764,7 +764,7 @@ impl<'a, 'b> Lowering<'a, 'b> {
       GuardKind::True => (x, None),
       GuardKind::Param { frame, check } => {
         let (proto, _) = self.frame(frame);
-        (self.param_check(x, proto, check), None)
+        (self.param_check(x, proto, frame, check, state), None)
       },
       GuardKind::Proto(bits) => (self.closure_of(x, bits), None),
       GuardKind::Elems { whole } => {
@@ -2832,11 +2832,28 @@ impl<'a, 'b> Lowering<'a, 'b> {
   }
 
   /// Whether `v` passes parameter check `check_idx`, testing each type
-  /// the way `VM::param_type_matches` does. The builder only makes this
-  /// guard for checks with no instance or iterable type.
-  fn param_check(&mut self, v: IrValue, proto: &ObjFunction, check_idx: u16) -> IrValue {
+  /// the way `VM::param_type_matches` does. A class is the one the builder
+  /// recorded for this frame and check, and matches an instance of it or
+  /// of any class descending from it. A class read through an upvalue
+  /// matches only while the upvalue still holds it. The builder makes
+  /// this guard for no check with an iterable type.
+  fn param_check(
+    &mut self,
+    v: IrValue,
+    proto: &ObjFunction,
+    frame: u16,
+    check_idx: u16,
+    state: &FrameState,
+  ) -> IrValue {
     use crate::vm::chunk::ParamType;
     let check = proto.chunk.param_checks[check_idx as usize].clone();
+    let classes = self
+      .ir
+      .param_classes
+      .get(&(frame, check_idx))
+      .cloned()
+      .unwrap_or_default();
+    let mut next_class = classes.iter();
     let mut ok = self.fb.ins().iconst(types::I8, 0);
     if check.nullable {
       let nil = self.u64c(value::NIL_VAL);
@@ -2891,8 +2908,23 @@ impl<'a, 'b> Lowering<'a, 'b> {
           object::OBJ_TAG_BOUND_METHOD,
           object::OBJ_TAG_CLASS,
         ],
-        ParamType::Instance(_) | ParamType::Captured { .. } | ParamType::Iterable => {
-          unreachable!("the builder keeps these checks on the runtime path")
+        ParamType::Instance(_) | ParamType::Captured { .. } => {
+          let class = *next_class
+            .next()
+            .expect("the builder records a class for every one the check names");
+          let mut c = self.instance_in_family(v, class.bits, class.depth);
+          if let Some(n) = class.upvalue {
+            let cell = self.upval_cell(n, state);
+            let held = self.load_upval(cell);
+            let want = self.u64c(class.bits);
+            let same = self.fb.ins().icmp(IntCC::Equal, held, want);
+            c = self.fb.ins().band(c, same);
+          }
+          ok = self.fb.ins().bor(ok, c);
+          continue;
+        },
+        ParamType::Iterable => {
+          unreachable!("the builder keeps iterable checks on the runtime path")
         },
       };
       for &tag in tags {

@@ -43,7 +43,8 @@
  */
 
 import @.driver {
-  MariaDbDriver, MySqlDriver, DEFAULT_PORT, MAX_PARAMETERS, SSL_MODES,
+  MariaDbDriver, MySqlDriver, DRIVER, MARIADB_DRIVER, DEFAULT_PORT,
+  MAX_PARAMETERS, SSL_MODES,
 }
 import @.connection { MySqlConnection }
 import @.statement { MySqlStatement }
@@ -53,16 +54,6 @@ import @.packets { PacketStream }
 import @.types { FLAGS, TYPES, type_name_of }
 import @.errors { class_for, raise_for }
 import @.auth { CACHING_SHA2, CLEAR, ED25519, NATIVE, SHA256 }
-
-/**
- * The driver instance `sql` registers for MySQL.
- */
-var DRIVER = MySqlDriver()
-
-/**
- * The driver instance `sql` registers for MariaDB.
- */
-var MARIADB_DRIVER = MariaDbDriver()
 
 /**
  * Opens a MySQL connection directly, without going through `sql`.

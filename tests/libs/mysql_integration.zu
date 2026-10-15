@@ -622,6 +622,45 @@ def test_ed25519() {
   echo 'test_ed25519 passed'
 }
 
+# Either scheme reaches either server, and the server, not the scheme,
+# decides which adapter describes the connection: what it supports, and
+# so what the layer above generates for it.
+def test_scheme_follows_server(flavor) {
+  var other = flavor == 'mariadb' ? 'mysql' : 'mariadb'
+  var swapped = other + DSN[DSN.index_of('://'), DSN.length()]
+  var db = sql.open(swapped, nil)
+
+  assert db.driver_name() == flavor
+  assert db.native().flavor() == flavor
+  assert db.supports('returning') == (flavor == 'mariadb')
+  assert db.supports('json') == (flavor == 'mysql')
+
+  db.exec_script('drop database if exists ${DATABASE}')
+  db.exec_script('create database ${DATABASE}')
+  db.exec('use ${DATABASE}', nil)
+  db.exec_script(
+    'create table followed (id int auto_increment primary key, word varchar(16))',
+  )
+
+  # MySQL refuses RETURNING, so an insert through mariadb:// only works
+  # when the connection is described as the MySQL it is.
+  assert db.insert('followed', { word: 'one' }, nil) == 1
+  assert db.insert('followed', { word: 'two' }, nil) == 2
+
+  finish(db)
+
+  var pool = sql.pool(swapped, { size: 1 })
+  var lent = pool.acquire()
+
+  assert lent.driver_name() == flavor
+  assert lent.supports('returning') == (flavor == 'mariadb')
+
+  lent.close()
+  pool.close()
+
+  echo 'test_scheme_follows_server ${flavor} passed'
+}
+
 def run_against(dsn, label) {
   DSN = dsn
 
@@ -635,6 +674,7 @@ def run_against(dsn, label) {
   test_multiple_results()
   test_schema()
   test_pool()
+  test_scheme_follows_server(label)
 
   echo '${label} passed every shared case'
 }

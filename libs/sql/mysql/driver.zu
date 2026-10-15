@@ -80,6 +80,35 @@ class MySqlDriver < Driver {
     return 'mysql'
   }
 
+  /**
+   * The server this driver describes, as `MySqlConnection.flavor()`
+   * names it: `'mysql'`.
+   *
+   * @returns string
+   */
+  flavor() {
+    return 'mysql'
+  }
+
+  /**
+   * This driver when the server is the one it describes, and the
+   * registered driver for the other otherwise. MySQL and MariaDB speak
+   * one protocol and either scheme reaches either server, so the
+   * server's own answer, read during the handshake, decides.
+   *
+   * @param MySqlConnection connection
+   * @returns Driver
+   */
+  describing(connection) {
+    var found = connection.flavor()
+
+    if found == self.flavor() {
+      return self
+    }
+
+    return found == 'mariadb' ? MARIADB_DRIVER : DRIVER
+  }
+
   schemes() {
     return ['mysql']
   }
@@ -528,14 +557,22 @@ class MySqlDriver < Driver {
  *
  * MariaDB speaks the same protocol, so everything about the exchange
  * is shared. It differs in what it can be asked to do: `RETURNING`
- * works there and does not on MySQL, which is the one capability that
- * changes what the layer above generates.
+ * works there and does not on MySQL, and JSON is text.
  *
- * A MariaDB server reached through `mysql://` works, and simply
- * reports the smaller set of capabilities.
+ * Which of the two describes a connection is the server's answer, not
+ * the scheme's: a MariaDB server reached through `mysql://` is
+ * described by this driver, and a MySQL server reached through
+ * `mariadb://` by MySQL's.
  */
 class MariaDbDriver < MySqlDriver {
   name() {
+    return 'mariadb'
+  }
+
+  /**
+   * @returns string `'mariadb'`.
+   */
+  flavor() {
     return 'mariadb'
   }
 
@@ -557,6 +594,16 @@ class MariaDbDriver < MySqlDriver {
     return caps
   }
 }
+
+/**
+ * The driver instance `sql` registers for MySQL.
+ */
+var DRIVER = MySqlDriver()
+
+/**
+ * The driver instance `sql` registers for MariaDB.
+ */
+var MARIADB_DRIVER = MariaDbDriver()
 
 def _number_of(value, fallback) {
   if value == nil {

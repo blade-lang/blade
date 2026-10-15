@@ -404,7 +404,9 @@ class Pool {
   # Opens one connection and records when.
   _open() {
     var driver_connection = self._driver.connect(self._options)
-    var connection = Connection(driver_connection, self._driver)
+    var connection = Connection(
+      driver_connection, self._driver.describing(driver_connection),
+    )
     var now = _now()
 
     # Bound to a local before it is called: `settings.on_connect(x)`

@@ -181,6 +181,18 @@ pub struct InlineFrame {
   pub closure: FrameClosure,
 }
 
+/// A class a parameter check names, resolved where the compile was set
+/// up: its `Value` bits and its depth in `ObjClass::display`, so the check
+/// is the same test a field family's guard makes. A class the function
+/// reaches through an upvalue also names that upvalue, which compiled
+/// code reads to confirm it still holds this class.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ParamClass {
+  pub bits: u64,
+  pub depth: u8,
+  pub upvalue: Option<u8>,
+}
+
 /// A global a function resolved: a slot of `VM::global_slots`, or a slot
 /// of its own module's table, named by that table's address (see
 /// `object::module_slots_table`). A call built in from another module
@@ -772,6 +784,9 @@ pub struct Func {
   /// bits. A closure holding that function is called without looking
   /// into it for its shape.
   pub known_calls: FxHashMap<(u16, usize), (usize, u64)>,
+  /// For a parameter check tested inline, by frame and check, the classes
+  /// it names, in the order its types name them.
+  pub param_classes: FxHashMap<(u16, u16), Vec<ParamClass>>,
 }
 
 impl Func {
@@ -795,6 +810,7 @@ impl Func {
         closure: FrameClosure::Reg(0),
       }],
       known_calls: FxHashMap::default(),
+      param_classes: FxHashMap::default(),
     }
   }
 

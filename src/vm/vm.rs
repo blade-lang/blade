@@ -3072,9 +3072,83 @@ impl VM {
       global_classes,
       global_numbers,
       invoke_callees,
+      param_classes: self.resolve_param_classes(proto),
       young_budget: self.heap.young_ceiling() as u64,
       entries: None,
     }
+  }
+
+  /// For each of `proto`'s parameter checks that names classes, those
+  /// classes as the optimizing tier tests them, when every one resolves
+  /// to a class the display records; a check with one that does not is
+  /// left out and goes through the runtime.
+  ///
+  /// A class named through an upvalue is read from the running closure,
+  /// and only when that closure is `proto`'s own: which class an upvalue
+  /// holds belongs to a closure, not to the prototype, and compiled code
+  /// confirms the upvalue still holds it before relying on it.
+  fn resolve_param_classes(
+    &self,
+    proto: &ObjFunction,
+  ) -> FxHashMap<u16, Vec<crate::jit::ir::ParamClass>> {
+    let running = self.current_closure_val();
+    let own = running.is_closure() && std::ptr::eq(running.as_closure().function.as_func(), proto);
+    let mut out = FxHashMap::default();
+    for instr in &proto.chunk.code {
+      let Instr::CheckParamType { check_idx, .. } = *instr else {
+        continue;
+      };
+      let check = &proto.chunk.param_checks[check_idx as usize];
+      let mut classes = Vec::new();
+      let mut complete = true;
+      for &t in &check.types {
+        let (class, upvalue) = match t {
+          ParamType::Instance(name_const) => {
+            let name = proto.chunk.constants[name_const as usize];
+            match self.resolve_global(proto.globals_module, name.as_str()) {
+              Some((is_root, slot)) => (
+                self.read_resolved(proto.globals_module, is_root, slot),
+                None,
+              ),
+              None => {
+                complete = false;
+                break;
+              },
+            }
+          },
+          ParamType::Captured { upvalue, .. } if own => {
+            let cell = running.as_closure().upvalues[upvalue as usize];
+            if !cell.is_upvalue() {
+              complete = false;
+              break;
+            }
+            (self.read_upvalue(cell), Some(upvalue))
+          },
+          ParamType::Captured { .. } => {
+            complete = false;
+            break;
+          },
+          _ => continue,
+        };
+        let depth = class
+          .is_class()
+          .then(|| class.as_class().display_depth(class.to_bits()))
+          .flatten();
+        let Some(depth) = depth else {
+          complete = false;
+          break;
+        };
+        classes.push(crate::jit::ir::ParamClass {
+          bits: class.to_bits(),
+          depth: depth as u8,
+          upvalue,
+        });
+      }
+      if complete && !classes.is_empty() {
+        out.insert(check_idx, classes);
+      }
+    }
+    out
   }
 
   /// The class that declares field `name` at `slot` for `class`, as

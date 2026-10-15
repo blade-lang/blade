@@ -190,6 +190,22 @@ class Driver {
   }
 
   /**
+   * The driver that describes `connection`, which this driver has just
+   * opened: whose capabilities, name and schema changes the connection
+   * reports. The default is this driver.
+   *
+   * An adapter whose connection strings reach more than one engine
+   * returns the driver for the engine the connection actually found,
+   * so a program is told what the server in front of it can do.
+   *
+   * @param DriverConnection connection
+   * @returns Driver
+   */
+  describing(connection) {
+    return self
+  }
+
+  /**
    * Quotes `name` so the engine reads it as an identifier whatever it
    * contains or collides with.
    *

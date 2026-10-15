@@ -34,7 +34,7 @@ def area(shape: Shape) {
   return 'shape'
 }
 
-for i in 0..5000 {
+for i in 0..100000 {
   assert area(Shape()) == 'shape'
   assert area(Circle()) == 'shape'
 }
@@ -62,7 +62,7 @@ def either(value: Circle|Plain) {
   return 'either'
 }
 
-for i in 0..5000 {
+for i in 0..100000 {
   assert either(Circle()) == 'either'
   assert either(Plain()) == 'either'
 }
@@ -84,7 +84,7 @@ def make_checker() {
 
 var check = make_checker()
 
-for i in 0..5000 {
+for i in 0..100000 {
   assert check(Circle()) == 'local'
 }
 
@@ -92,6 +92,33 @@ assert failure(@() {
   check(Shape())
 }) == "check() expects parameter 'value' (argument 1) to be a Kind, got instance"
 ok('a class held in a local of an enclosing function')
+
+# One function, two closures, each holding a different class. Compiled
+# code settles on one closure's class first, and the other's calls must
+# still be checked against their own.
+def checker_for(Kind) {
+  def check(value: Kind) {
+    return true
+  }
+
+  return check
+}
+
+var circles = checker_for(Circle)
+var plains = checker_for(Plain)
+
+for i in 0..100000 {
+  assert circles(Circle())
+  assert plains(Plain())
+}
+
+assert failure(@() {
+  circles(Plain())
+}) != nil
+assert failure(@() {
+  plains(Circle())
+}) != nil
+ok('closures of one function, each checked against its own class')
 
 def names(shapes: list) {
   return shapes.map(@(shape: Shape) => 'mapped')
@@ -111,7 +138,7 @@ class Box {
 
 var box = Box()
 
-for i in 0..5000 {
+for i in 0..100000 {
   assert box.put(Circle()) == 'boxed'
 }
 
@@ -120,7 +147,7 @@ assert failure(@() {
 }) != nil
 ok('a method parameter')
 
-for i in 0..5000 {
+for i in 0..100000 {
   assert checker.accepts(Circle())
 }
 
@@ -135,7 +162,7 @@ def own(value: Own) {
   return 'own'
 }
 
-for i in 0..5000 {
+for i in 0..100000 {
   assert own(Own()) == 'own'
 }
 

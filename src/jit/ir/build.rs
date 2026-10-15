@@ -30,7 +30,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::{
   BitOp, BlockId, Cmp, FTest, FUnary, FrameClosure, FrameState, Func, GlobalRef, GuardKind,
-  InlineFrame, IntOp, NO_VALUE, Op, Terminator, Ty, ValueId,
+  InlineFrame, IntOp, NO_VALUE, Op, ParamClass, Terminator, Ty, ValueId,
 };
 use crate::jit::typeflow;
 use crate::vm::chunk::{Instr, ParamType, kind};
@@ -90,6 +90,9 @@ pub struct Feedback {
   /// For a method call site whose cache holds a class, the method that
   /// class resolves it to.
   pub invoke_callees: FxHashMap<usize, Box<Callee>>,
+  /// For a parameter check whose every class resolved to one the class
+  /// display records, those classes in the order the check names them.
+  pub param_classes: FxHashMap<u16, Vec<ParamClass>>,
   /// How many young bytes may be allocated before a collection is owed.
   pub young_budget: u64,
   /// The loop headers that get a way in from a frame already running;
@@ -303,6 +306,9 @@ struct Builder<'a> {
   /// Integers known to lie in `-2^53..2^53`, where a double holds every
   /// one exactly, none is -0, and the bitwise operators keep them there.
   small_ints: FxHashSet<ValueId>,
+  /// The compiled function's own loops, each as the span from its header
+  /// to its backward `Jmp`.
+  loops: Vec<(usize, usize)>,
 }
 
 impl<'a> Builder<'a> {
@@ -328,6 +334,16 @@ impl<'a> Builder<'a> {
       inlined_ops: 0,
       extent: proto.num_registers as usize,
       small_ints: FxHashSet::default(),
+      loops: proto
+        .chunk
+        .code
+        .iter()
+        .enumerate()
+        .filter_map(|(ip, instr)| match *instr {
+          Instr::Jmp { offset } if offset < 0 => Some((jump_target(ip, offset), ip)),
+          _ => None,
+        })
+        .collect(),
     })
   }
 
@@ -967,7 +983,9 @@ impl<'a> Builder<'a> {
     if super::lower::generic_helper(&instr).is_none() {
       return Err(format!("no runtime helper for {instr:?} at ip {ip}"));
     }
-    if let Some(what) = self.baseline_faster(ip, &instr) {
+    if let Some(what) = self.baseline_faster(ip, &instr)
+      && !self.passed_once(ip)
+    {
       let place = if self.cx.id == 0 {
         String::new()
       } else {
@@ -982,6 +1000,25 @@ impl<'a> Builder<'a> {
     self.after_collect(ip + 1, typeflow::any_dst(&instr));
     self.in_memory = true;
     Ok(false)
+  }
+
+  /// Whether `ip` is a site of the compiled function's own that runs once
+  /// a call, outside every one of its loops, in a compile a loop asked
+  /// for. Its helper costs it once a call, which the loop that made the
+  /// function hot, built in this tier, more than repays; so it does not
+  /// send the whole function back to the baseline tier the way a site
+  /// inside the loop does.
+  fn passed_once(&self, ip: usize) -> bool {
+    self.cx.id == 0
+      && self
+        .func_feedback
+        .entries
+        .as_ref()
+        .is_some_and(|entries| !entries.is_empty())
+      && !self
+        .loops
+        .iter()
+        .any(|&(start, end)| start <= ip && ip <= end)
   }
 
   /// Whether `instr` is a site the interpreter records feedback for and
@@ -1072,6 +1109,31 @@ impl<'a> Builder<'a> {
       Instr::CheckParamType { .. } => Some("a parameter check"),
       _ => None,
     }
+  }
+
+  /// Whether every type parameter check `check_idx` accepts can be tested
+  /// inline. An iterable type needs the runtime's lookup. A class can be
+  /// tested when the feedback resolved every class the check names, the
+  /// check at `ip` has never failed in compiled code, and, for a class
+  /// read through an upvalue, the check is the compiled function's own.
+  fn inline_param_check(&self, ip: usize, check_idx: u16) -> bool {
+    let check = &self.cx.proto.chunk.param_checks[check_idx as usize];
+    let mut classes = 0;
+    for t in &check.types {
+      match t {
+        ParamType::Iterable => return false,
+        ParamType::Instance(_) | ParamType::Captured { .. } => classes += 1,
+        _ => {},
+      }
+    }
+    if classes == 0 {
+      return true;
+    }
+    let Some(resolved) = self.cx.feedback.param_classes.get(&check_idx) else {
+      return false;
+    };
+    let own = self.cx.id == 0 || resolved.iter().all(|c| c.upvalue.is_none());
+    resolved.len() == classes && own && self.cx.feedback.open(ip)
   }
 
   /// The global a call's callee register was just loaded from.
@@ -1615,7 +1677,13 @@ impl<'a> Builder<'a> {
         let v = self.tagged(src);
         self.push(Op::StoreGlobal(slot), vec![v], None, None);
       },
-      Instr::CheckParamType { reg, check_idx } if inline_param_check(self.cx.proto, check_idx) => {
+      Instr::CheckParamType { reg, check_idx } if self.inline_param_check(ip, check_idx) => {
+        if let Some(classes) = self.cx.feedback.param_classes.get(&check_idx) {
+          self
+            .func
+            .param_classes
+            .insert((self.cx.id, check_idx), classes.clone());
+        }
         let v = self.tagged(reg);
         let state = self.state(ip);
         self.push(
@@ -2887,20 +2955,6 @@ impl NumberMethod {
       _ => 0,
     }
   }
-}
-
-/// Whether every type parameter check `check_idx` accepts can be tested
-/// inline. An instance or iterable type needs the runtime's lookup.
-fn inline_param_check(proto: &ObjFunction, check_idx: u16) -> bool {
-  proto.chunk.param_checks[check_idx as usize]
-    .types
-    .iter()
-    .all(|t| {
-      !matches!(
-        t,
-        ParamType::Instance(_) | ParamType::Captured { .. } | ParamType::Iterable
-      )
-    })
 }
 
 fn jump_target(ip: usize, offset: i16) -> usize {
