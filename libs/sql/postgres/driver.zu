@@ -542,7 +542,7 @@ def _decode(text) {
       }
     }
 
-    out += ch.to_bytes().to_list()
+    out.extend(ch.to_bytes().to_list())
     index++
   }
 

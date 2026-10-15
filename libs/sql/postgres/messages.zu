@@ -90,7 +90,7 @@ class Writer {
    * @returns Writer
    */
   int16(value: number) {
-    self._bytes += write_int16(value)
+    self._bytes.extend(write_int16(value))
 
     return self
   }
@@ -102,7 +102,7 @@ class Writer {
    * @returns Writer
    */
   int32(value: number) {
-    self._bytes += write_int32(value)
+    self._bytes.extend(write_int32(value))
 
     return self
   }
@@ -114,7 +114,7 @@ class Writer {
    * @returns Writer
    */
   cstring(value: string) {
-    self._bytes += value.to_bytes().to_list()
+    self._bytes.extend(value.to_bytes().to_list())
     self._bytes.append(0)
 
     return self
@@ -127,7 +127,7 @@ class Writer {
    * @returns Writer
    */
   raw(values: list) {
-    self._bytes += values
+    self._bytes.extend(values)
 
     return self
   }
@@ -156,8 +156,8 @@ class Writer {
     }
 
     # The length counts itself but not the tag.
-    out += write_int32(self._bytes.length() + 4)
-    out += self._bytes
+    out.extend(write_int32(self._bytes.length() + 4))
+    out.extend(self._bytes)
 
     return bytes(out)
   }

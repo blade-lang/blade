@@ -437,7 +437,7 @@ def encode_numeric(value) {
     write_int16(display_scale)
 
   for digit in digits {
-    out += write_int16(digit)
+    out.extend(write_int16(digit))
   }
 
   return out
@@ -765,12 +765,14 @@ def encode_array(value, element_oid, registry) {
 
   for item in value {
     if item == nil {
-      out += write_int32(-1)
+      out.extend(write_int32(-1))
       continue
     }
 
     var encoded = registry.encode(item, element_oid)
-    out += write_int32(encoded.length()) + encoded
+
+    out.extend(write_int32(encoded.length()))
+    out.extend(encoded)
   }
 
   return out
